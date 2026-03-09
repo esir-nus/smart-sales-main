@@ -1,6 +1,6 @@
 package com.smartsales.prism.data.rl
 
-import com.smartsales.prism.data.fakes.FakeUserHabitRepository
+import com.smartsales.core.test.fakes.FakeUserHabitRepository
 
 import com.smartsales.prism.domain.habit.UserHabitRepository
 import com.smartsales.prism.domain.rl.ObservationSource

@@ -77,7 +77,7 @@ fun ResponseBubble(
         }
         
         is UiState.ExecutingTool -> {
-            // ExecutingTool (TaskBoard bypass loading) is rendered as an AgentActivity or skipped here since it's handled in PrismChatScreen history rendering directly
+            // ExecutingTool (TaskBoard bypass loading) is rendered as an AgentActivity or skipped here since it's handled in AgentChatScreen history rendering directly
         }
 
     }

@@ -19,7 +19,7 @@ interface ToolRegistry {
     }
 
     /**
-     * 执行指定工具 (Legacy fallback for PrismViewModel / FakeToolRegistry)
+     * 执行指定工具 (Legacy fallback for AgentViewModel / FakeToolRegistry)
      * @param toolId 工具 ID
      * @param context 执行上下文 (如用户输入、计划内容)
      */

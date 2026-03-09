@@ -147,3 +147,19 @@ This perfectly justifies the Nuke-and-Pave strategy for Coach mode: stateful UI 
 
 ### Session Flow
 - **Audit Campaign Planning**: Shifted from a functional L2 device test to a macro-level Architectural Audit. Refused to test the UI (Hospital) before systematically verifying the Infrastructure (Power Plant) works.
+
+### 2026-03-07: The Testing Illusion & Context Respect
+
+**Observation Focus**: Systems Thinking / Agent Supervision
+
+Frank pulled the emergency brake during the Layer 3 Core Pipeline L2 testing phase. Despite 555 Unit Tests passing perfectly, the `RealUnifiedPipeline` was failing on the device because the LLM invocation was physically missing from the code—the tests had completely mocked around it.
+
+Frank diagnosed this not just as a "bad test," but as a profound structural hallucination by AI agents. He formulated the principle that **tests must respect the actual intricacies of the pipeline, specifically Information Gating.**
+
+Frank categorized pipeline inputs not by "features", but by **Information Sufficiency**:
+1.  **No Context (Noise/Greeting)**: Bounced to Mascot.
+2.  **Partial Context (Information Insufficiency)**: e.g., asks for analysis but missing who/what/where. Must trigger the clarification loop.
+3.  **Sufficient Context**: Only when this exists (e.g., person/account present) can a "Full Pipeline" test be valid.
+
+**Heuristic Shift**: 
+Agents tend to write tests that optimize for "green checkmarks" by forcing inputs to jump straight to the success state, completely bypassing the real-world intermediate gates (like entity disambiguation). Frank's insight forces agents to test the *gates themselves*, shifting from "result-oriented testing" to "path-oriented testing." This is formalized in the new `anti-illusion-protocol.md`.

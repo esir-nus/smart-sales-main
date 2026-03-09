@@ -14,6 +14,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
+import com.smartsales.core.llm.Executor
+import com.smartsales.core.llm.LlmProfile
+import com.smartsales.core.llm.ExecutorResult
 import com.smartsales.prism.domain.scheduler.SchedulerLinter
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.memory.ScheduleBoard
@@ -38,7 +41,11 @@ class RealUnifiedPipeline @Inject constructor(
     private val inspirationRepository: InspirationRepository,
     private val alarmScheduler: AlarmScheduler,
     // Wave 4: Synchronous Auto-Renaming
-    private val sessionTitleGenerator: com.smartsales.prism.domain.session.SessionTitleGenerator
+    private val sessionTitleGenerator: com.smartsales.prism.domain.session.SessionTitleGenerator,
+    
+    // Wave 3: Extracted LLM Execution
+    private val promptCompiler: PromptCompiler,
+    private val executor: Executor
 ) : UnifiedPipeline {
     
     override suspend fun processInput(input: PipelineInput): Flow<PipelineResult> = flow {
@@ -121,7 +128,7 @@ class RealUnifiedPipeline @Inject constructor(
         }
 
         // Wave 1: Parallel Context Assembly (Extract-Transform-Load)
-        val finalPayload = coroutineScope {
+        val (enhancedContext, finalPayload) = coroutineScope {
             // Task 1: Fetch session context from Kernel (RAM)
             val contextDeferred = async {
                 Log.d("RealUnifiedPipeline", "fetch: ContextBuilder enhanced context...")
@@ -145,14 +152,30 @@ class RealUnifiedPipeline @Inject constructor(
             
             Log.d("RealUnifiedPipeline", "Context Assembly Complete. History turns: ${enhancedContext.sessionHistory.size}")
             
-            "Context [Mode: ${enhancedContext.modeMetadata.currentMode}, Metadata: $metadata]"
+            Pair(enhancedContext, "Context [Mode: ${enhancedContext.modeMetadata.currentMode}, Metadata: $metadata]")
         }
         
         Log.d("RealUnifiedPipeline", "✅ ETL Phase finished. Proceeding to Execution.")
         
         // --- Wave 3: CRM Task Execution Route ---
         if (input.intent == QueryQuality.CRM_TASK) {
-            val lintResult = schedulerLinter.lint(resolvedInputText)
+            
+            // 🆕 LLM Execution Block
+            val prompt = promptCompiler.compile(enhancedContext)
+            Log.d("RealUnifiedPipeline", "🤖 Executing LLM Scheduler Prompt...")
+            val llmResult = executor.execute(LlmProfile.DEFAULT, prompt)
+            
+            val lintResult = when (llmResult) {
+                is ExecutorResult.Success -> {
+                    Log.d("RealUnifiedPipeline", "LLM Execution Success, parsing JSON payload.")
+                    schedulerLinter.lint(llmResult.content)
+                }
+                is ExecutorResult.Failure -> {
+                    Log.e("RealUnifiedPipeline", "LLM Execution Failed: ${llmResult.error}")
+                    LintResult.Error("LLM 调用失败: ${llmResult.error}")
+                }
+            }
+            
             val today = java.time.LocalDate.now()
             val zone = ZoneId.systemDefault()
             

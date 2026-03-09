@@ -141,6 +141,7 @@ dependencies {
     implementation(libs.room.ktx)
 
     // Test
+    testImplementation(project(":core:test-fakes"))
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
     testImplementation(libs.mockito.core)

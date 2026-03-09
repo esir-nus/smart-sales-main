@@ -16,19 +16,19 @@ import androidx.core.content.ContextCompat
 import androidx.compose.runtime.*
 
 import com.smartsales.prism.data.onboarding.OnboardingGate
-import com.smartsales.prism.ui.PrismShell
+import com.smartsales.prism.ui.AgentShell
 import com.smartsales.prism.ui.onboarding.OnboardingScreen
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 /**
- * Prism Main Activity
+ * Agent Main Activity
  * 
- * Entry point for the Prism Clean Room application.
- * Hosts the PrismShell with Scheduler/History drawers.
+ * Entry point for the Agent Clean Room application.
+ * Hosts the AgentShell with Scheduler/History drawers.
  */
 @AndroidEntryPoint
-class PrismMainActivity : ComponentActivity() {
+class AgentMainActivity : ComponentActivity() {
     
     @Inject
     lateinit var onboardingGate: OnboardingGate
@@ -63,7 +63,7 @@ class PrismMainActivity : ComponentActivity() {
                             onboardingGate.markCompleted()
                         })
                     } else {
-                        PrismShell(
+                        AgentShell(
                             onNavigateToSetup = { onboardingGate.reset() }
                         )
                     }

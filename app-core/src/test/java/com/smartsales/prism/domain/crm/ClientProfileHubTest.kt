@@ -1,8 +1,8 @@
 package com.smartsales.prism.domain.crm
 
 import com.smartsales.prism.data.fakes.FakeClientProfileHub
-import com.smartsales.prism.data.fakes.FakeEntityRepository
-import com.smartsales.prism.data.fakes.FakeMemoryRepository
+import com.smartsales.core.test.fakes.FakeEntityRepository
+import com.smartsales.core.test.fakes.FakeMemoryRepository
 import com.smartsales.prism.domain.memory.EntityEntry
 import com.smartsales.prism.domain.memory.EntityType
 import com.smartsales.prism.domain.memory.MemoryEntry

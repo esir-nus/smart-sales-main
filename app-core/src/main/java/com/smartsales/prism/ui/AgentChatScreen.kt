@@ -72,8 +72,8 @@ import com.smartsales.prism.ui.components.agent.*
  * - Aurora Home Hero
  */
 @Composable
-fun PrismChatScreen(
-    viewModel: PrismViewModel = hiltViewModel(),
+fun AgentChatScreen(
+    viewModel: AgentViewModel = hiltViewModel(),
     onMenuClick: () -> Unit = {},
     onNewSessionClick: () -> Unit = {},
     onAudioBadgeClick: () -> Unit = {},

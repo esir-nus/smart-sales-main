@@ -40,7 +40,7 @@ class DashscopeAiChatService @Inject constructor(
             if (credentials.apiKey.isBlank()) {
                 return@withContext Result.Error(missingCredentialsError())
             }
-            val dashscopeRequest = buildDashscopeRequest(request, credentials)
+            val dashscopeRequest = buildDashscopeRequest(request, credentials, isStreaming = false)
             executeWithRetry(dashscopeRequest) { completion ->
                 val markdown = buildMarkdown(completion.displayText, request)
                 AiChatResponse(
@@ -69,7 +69,7 @@ class DashscopeAiChatService @Inject constructor(
         if (!networkChecker.isNetworkAvailable()) {
             return flowOf(AiChatStreamEvent.Error(noNetworkError()))
         }
-        val dashscopeRequest = buildDashscopeRequest(request, credentials)
+        val dashscopeRequest = buildDashscopeRequest(request, credentials, isStreaming = true)
         // DEBUG: 验证请求参数
         android.util.Log.d(
             "DashscopeAiChat",
@@ -150,7 +150,8 @@ class DashscopeAiChatService @Inject constructor(
 
     private fun buildDashscopeRequest(
         request: AiChatRequest,
-        credentials: DashscopeCredentials
+        credentials: DashscopeCredentials,
+        isStreaming: Boolean
     ): DashscopeRequest {
         val dashScopeSettings = aiParaSettingsProvider.snapshot().dashScope
         val modelOverride = request.model?.trim()?.takeIf { it.isNotBlank() }
@@ -165,7 +166,7 @@ class DashscopeAiChatService @Inject constructor(
             model = modelOverride ?: credentials.model,
             messages = buildMessages(request),
             temperature = request.temperature ?: dashScopeSettings.temperature.toFloat(),
-            incrementalOutput = dashScopeSettings.incrementalOutput,
+            incrementalOutput = if (isStreaming) dashScopeSettings.incrementalOutput else false,
             enableThinking = shouldEnableThinking
         )
     }

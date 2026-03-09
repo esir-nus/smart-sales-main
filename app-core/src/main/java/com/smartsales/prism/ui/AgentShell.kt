@@ -45,7 +45,7 @@ enum class DrawerType {
  * @see prism-ui-ux-contract.md §1.1
  */
 @Composable
-fun PrismShell(
+fun AgentShell(
     onNavigateToSetup: () -> Unit = {}
 ) {
     // Atomic Drawer State (Mutex)
@@ -53,7 +53,7 @@ fun PrismShell(
     var activeDrawer by remember { mutableStateOf<DrawerType?>(DrawerType.SCHEDULER) }
     var showUserCenter by remember { mutableStateOf(false) }
     var showDebugHud by remember { mutableStateOf(false) }
-    val prismViewModel: PrismViewModel = hiltViewModel()
+    val agentViewModel: AgentViewModel = hiltViewModel()
     val historyViewModel: HistoryViewModel = hiltViewModel()
     
     // 每次app回到前台时自动展示日程抽屉
@@ -71,11 +71,11 @@ fun PrismShell(
     
     // HistoryViewModel 提供分组数据
     val groupedSessions by historyViewModel.groupedSessions.collectAsState()
-    // 用户显示名 — 从 PrismViewModel 的 heroGreeting 间接获取
-    val heroGreeting by prismViewModel.heroGreeting.collectAsState()
+    // 用户显示名 — 从 AgentViewModel 的 heroGreeting 间接获取
+    val heroGreeting by agentViewModel.heroGreeting.collectAsState()
     
     // Wave 4: Mascot UI State
-    val mascotState by prismViewModel.mascotState.collectAsState()
+    val mascotState by agentViewModel.mascotState.collectAsState()
 
     Box(
         modifier = Modifier
@@ -85,9 +85,9 @@ fun PrismShell(
     ) {
         // Main Content Layer
         Column(modifier = Modifier.fillMaxSize()) {
-            PrismChatScreen(
+            AgentChatScreen(
                 onMenuClick = { activeDrawer = DrawerType.HISTORY },
-                onNewSessionClick = { prismViewModel.startNewSession() },
+                onNewSessionClick = { agentViewModel.startNewSession() },
                 onAudioBadgeClick = { activeDrawer = DrawerType.CONNECTIVITY },
                 onAudioDrawerClick = { activeDrawer = DrawerType.AUDIO },
                 onTingwuClick = { activeDrawer = DrawerType.TINGWU },
@@ -116,10 +116,10 @@ fun PrismShell(
             Box(modifier = Modifier.zIndex(PrismElevation.Drawer)) {
                 HistoryDrawer(
                     groupedSessions = groupedSessions,
-                    displayName = prismViewModel.currentDisplayName,
+                    displayName = agentViewModel.currentDisplayName,
                     onSessionClick = { sessionId ->
                         activeDrawer = null
-                        prismViewModel.switchSession(sessionId)
+                        agentViewModel.switchSession(sessionId)
                     },
                     onDeviceClick = {
                         activeDrawer = DrawerType.CONNECTIVITY
@@ -151,7 +151,7 @@ fun PrismShell(
                 isOpen = activeDrawer == DrawerType.SCHEDULER,
                 onDismiss = {
                     activeDrawer = null
-                    prismViewModel.refreshHeroDashboard()
+                    agentViewModel.refreshHeroDashboard()
                 }
             )
         }
@@ -163,11 +163,11 @@ fun PrismShell(
                 onDismiss = { activeDrawer = null },
                 onNavigateToChat = { sessionId, isNew ->
                     activeDrawer = null
-                    println("PrismShell: Navigate to chat session: $sessionId")
+                    println("AgentShell: Navigate to chat session: $sessionId")
                     if (isNew) {
-                        prismViewModel.switchSession(sessionId, triggerAutoRename = true)
+                        agentViewModel.switchSession(sessionId, triggerAutoRename = true)
                     } else {
-                        prismViewModel.switchSession(sessionId)
+                        agentViewModel.switchSession(sessionId)
                     }
                 }
             )
@@ -243,7 +243,7 @@ fun PrismShell(
         // Floating slightly down from the top (120dp) to cleanly avoid the Scheduler GhostHandle
         com.smartsales.prism.ui.components.MascotOverlay(
             state = mascotState,
-            onInteract = { interaction -> prismViewModel.interactWithMascot(interaction) },
+            onInteract = { interaction -> agentViewModel.interactWithMascot(interaction) },
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .padding(top = 120.dp)

@@ -50,6 +50,7 @@ include(":core:context")
 include(":core:pipeline")
 includeModule(":core:database")
 includeModule(":core:test")
+includeModule(":core:test-fakes")
 // ARCHIVED: domain:prism-core, data:prism-lib, feature:* (see archived/ folder)
 
 includeModule(":domain:crm")

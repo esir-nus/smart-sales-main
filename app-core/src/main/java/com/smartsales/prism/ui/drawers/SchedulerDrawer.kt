@@ -172,7 +172,7 @@ fun SchedulerDrawer(
         uiItems.filter { it !is TimelineItem.Inspiration }
     }
 
-    // Drawer container — no internal scrim (PrismShell provides global scrim)
+    // Drawer container — no internal scrim (AgentShell provides global scrim)
     // Use AnimatedVisibility to slide content in from top
     AnimatedVisibility(
         visible = isOpen,

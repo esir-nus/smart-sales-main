@@ -6,7 +6,7 @@ import com.smartsales.prism.domain.model.UiState
  * Extension functions to map the domain [UiState] to our decoupled 
  * Agent Intelligence UI Primitives.
  * 
- * This ensures the PrismChatScreen remains clean and the Primitives
+ * This ensures the AgentChatScreen remains clean and the Primitives
  * remain completely agnostic of the domain models.
  */
 

@@ -6,7 +6,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class PromptCompiler @Inject constructor() {
+open class PromptCompiler @Inject constructor() {
 
     /**
      * 构建完整的提示词

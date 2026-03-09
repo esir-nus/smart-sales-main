@@ -3,11 +3,11 @@ package com.smartsales.prism.data.real
 import com.smartsales.core.context.RealContextBuilder
 import com.smartsales.core.pipeline.RealUnifiedPipeline
 
-import com.smartsales.prism.data.fakes.FakeEntityRepository
-import com.smartsales.prism.data.fakes.FakeMemoryRepository
+import com.smartsales.core.test.fakes.FakeEntityRepository
+import com.smartsales.core.test.fakes.FakeMemoryRepository
 import com.smartsales.prism.data.rl.RealReinforcementLearner
 import com.smartsales.prism.data.fakes.FakeTimeProvider
-import com.smartsales.prism.data.fakes.FakeUserHabitRepository
+import com.smartsales.core.test.fakes.FakeUserHabitRepository
 import com.smartsales.prism.domain.memory.EntityEntry
 import com.smartsales.prism.domain.memory.EntityType
 import com.smartsales.prism.domain.model.Mode

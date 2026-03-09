@@ -67,6 +67,8 @@
 
 ### 2026-03-09
 
+- **architecture**: Testing Strategy Pivot SHIPPED. Formally paused the 'Great Assembly' at Layer 3 to prioritize the 'Anti-Illusion Test Overhaul' across the Core Pipeline. Mocks that bypass information gates have created a testing illusion, hiding critical routing defects. Future work will focus exclusively on Mock Eviction (Wave 2) and Context Branch Coverage (Wave 1).
+
 - **agent-intelligence-ui**: Wave 2 SHIPPED — Successfully executed the "Nuke & Pave" refactor of the monolithic `PrismViewModel` into `AgentViewModel`. Completely decoupled Layer 3 AI routing logic out of the Presentation layer into a dedicated `:core:pipeline:IntentOrchestrator`. Physically eliminated `PrismShell`, `PrismChatScreen`, and `PrismMainActivity` in favor of their `Agent*` equivalents via AST manipulation. All tests pass, proving perfect routing encapsulation.
 - **test-infrastructure**: Wave 1 SHIPPED — Successfully extracted fragmented `Fake*Repository` classes (`FakeMemoryRepository`, `FakeEntityRepository`, `FakeUserHabitRepository`) out of the monolithic `app-core` test directory into a strictly isolated `:core:test-fakes` Gradle module. Purged hardcoded skeleton data to enforce the Clean Before Build Anti-Drift protocol. All consumers refactored and unit tests passed.
 
@@ -298,7 +300,7 @@
 
 ## The Great Assembly (Core-to-Periphery Architecture Audit)
 
-> **Phase Context**: The era of rapid, parallel "Lego block" development is complete. We are now in the rigorous assembly phase. We evaluate each module strictly from Core (Layer 1) to Periphery (Layer 5). Good code is integrated; rotten/drifted code is subjected to "Rewrite Over Extract" to perfectly match the Spec and `interface-map.md`. No new concepts allowed.
+> **Phase Context**: ⏸️ **PAUSED (2026-03-09)**. The 'Great Assembly' is paused while we execute the 'Anti-Illusion Test Overhaul' to secure the Layer 3 core pipeline tests. Before advancing to Layer 4/5 integration, we MUST prove the pipeline routes intent correctly without `mockito` hallucinations.
 
 ### Layer 1: Infrastructure Services (The Power Plant & Water)
 *Self-contained libraries with no upstream dependencies. Must be perfect.*

@@ -7,7 +7,7 @@
 ## Overview
 
 The `unified-pipeline` is the central traffic cop for the Assistant (System II), operating strictly *after* the Mascot has filtered out NOISE and GREETINGS. 
-It replaces the complex state-machine driven `analyst-orchestrator` with a linear, high-performance Extract-Transform-Load (ETL) pipeline, entirely decoupled from background Reinforcement Learning operations.
+It replaces the complex state-machine driven `analyst-orchestrator` with a linear, high-performance Extract-Transform-Load (ETL) pipeline, entirely decoupled from background Reinforcement Learning operations. It is directly invoked by the `IntentOrchestrator` (Layer 3), never by the presentation layer.
 
 ## The Linear Execution Flow
 

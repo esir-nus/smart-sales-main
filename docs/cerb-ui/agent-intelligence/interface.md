@@ -69,7 +69,8 @@ The UI component emits these events back to the RAM layer:
 ## 5. You Should NOT
 - **Do not** bind these UI components directly to the network or the SSD (Database). They strictly read the emitted `UiState`.
 - **Do not** pass raw `qwen-max` response models into this UI. Parse them in the Domain layer into the `*State` data classes defined above.
-- **Do not** pass `ViewModel` instances (e.g., `PrismViewModel`) directly into these UI components. They must be "Dumb UI" components that only accept the defined `*State` data classes and emit simple event callbacks (e.g., `onCancelClicked: () -> Unit`). This ensures they remain decoupled and reusable on any screen.
+- **Do not** pass `ViewModel` instances (e.g., `AgentViewModel`) directly into these UI components. They must be "Dumb UI" components that only accept the defined `*State` data classes and emit simple event callbacks (e.g., `onCancelClicked: () -> Unit`). This ensures they remain decoupled and reusable on any screen.
+- **Do not** allow the UI components, nor the enclosing ViewModel, to handle intent routing (e.g., evaluating NOISE, skipping LLM, etc.). Intent routing must occur downstream in Layer 3 (e.g., `IntentOrchestrator`). The UI is strictly a dumb state-collector.
 
 ## 6. Code Reusability & Pipeline Integration (The "Plugin" Rule)
 To prevent the anti-pattern of writing new UI code for every new plugin, we enforce strict **Decoupled State Emission**:

@@ -23,6 +23,7 @@ Leaf services with no upstream dependencies. They don't call other modules.
 | **[ASR](./asr-service/spec.md)** | Hardware & Audio | Transcription results | OSS (downloads audio files to transcribe) | `transcribe(File) -> AsrResult` | — | ✅ |
 | **[TingwuPipeline](./tingwu-pipeline/spec.md)** | Hardware & Audio | Transcription & Audio Intelligence | OSS (reads `fileUrl`) | `submit(TingwuRequest) -> Result<String>` | OS: SSD | ✅ |
 | **[PipelineTelemetry](./pipeline-telemetry/spec.md)** | System II & Routing | Pipeline logs (to Logcat) | — | `recordEvent(PipelinePhase, String) -> Unit` | OS: RAM | ✅ |
+| **[TestInfrastructure](./test-infrastructure/spec.md)** | Testing | Standardized State-Backed Fakes | All Domain Interfaces | `PrismTestRig.setup()` | — | 📐 |
 
 ---
 
@@ -61,6 +62,7 @@ Orchestrates LLM-powered processing. Reads from Layer 2 data services.
 | **[Executor](./model-routing/spec.md)** | System II & Routing | Raw LLM output (stateless — no storage) | ModelRouter | `execute(LlmProfile, EnhancedContext) -> ExecutorResult` | — | ✅ |
 | **[PluginRegistry](./plugin-registry/spec.md)** | System II & Routing | Executable pure-Kotlin workflows (Tools) | — | `executeTool(ToolId, PluginRequest) -> Flow<UiState>` | OS: App | ✅ |
 | **[UnifiedPipeline](./unified-pipeline/spec.md)** | System II & Routing | System II context ETL & execution | EntityRegistry, UserHabit, MemoryCenter, ContextBuilder | `processInput(PipelineInput) -> Flow<PipelineResult>` | OS: App | ✅ |
+| **IntentOrchestrator** | System II & Routing | High-level intent routing (Phase 0) | AgentViewModel, LightningRouter, UnifiedPipeline | `processInput(String) -> Flow<UiState>` | OS: App | 🚧 |
 
 > **UnifiedPipeline is the only module that calls EntityWriter during task creation.** Feature modules (Scheduler, Mascot) receive results from UnifiedPipeline; they don't call EntityWriter themselves. (Exception: debug seed code in SchedulerViewModel, guarded by `DEBUG` build type.)
 >
@@ -117,8 +119,10 @@ graph TD
     A["Badge Mic"] --> B["ConnectivityBridge"]
     B --> C["BadgeAudioPipeline"]
     C --> D["ASR (Tingwu)"]
-    D --> E["Orchestrator"]
-    E --> F["Executor (LLM)"]
+    D --> E["IntentOrchestrator (Layer 3)"]
+    E -->|GREETING| F1["MascotService"]
+    E -->|TASK/NOISE| E2["UnifiedPipeline"]
+    E2 --> F["Executor (LLM)"]
     F --> G["SchedulerLinter"]
     G --> H1["Orchestrator calls EntityRepository.findByAlias()"]
     H1 --> H2["Orchestrator calls EntityWriter.upsertFromClue()"]

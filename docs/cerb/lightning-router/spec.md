@@ -8,7 +8,7 @@
 
 ## Overview
 
-The `LightningRouter` acts as the human-in-the-loop gatekeeper for the entire Dual-Engine architecture. It sits at **Phase 0** within the `PrismOrchestrator`, determining whether user input should be handled by the ephemeral **Mascot (System I)** or routed to the heavy-duty **UnifiedPipeline (System II)**. 
+The `LightningRouter` acts as the human-in-the-loop gatekeeper for the entire Dual-Engine architecture. It sits at **Phase 0** within the `IntentOrchestrator`, determining whether user input should be handled by the ephemeral **Mascot (System I)** or routed to the heavy-duty **UnifiedPipeline (System II)**. 
 
 It evaluates the user's request against a minimal `EnhancedContext` (RAM), acting as a **4-Tier Intent Gateway** to protect expensive downstream LLM calls from conversational noise.
 
@@ -29,7 +29,7 @@ It evaluates the user's request against a minimal `EnhancedContext` (RAM), actin
 
 | Rule | Enforcer | Explanation |
 |------|----------|-------------|
-| **Gateway Routing** | PrismOrchestrator| If `query_quality` is NOISE or GREETINGS, `UnifiedPipeline` is never called. |
+| **Gateway Routing** | IntentOrchestrator| If `query_quality` is NOISE or GREETINGS, `UnifiedPipeline` is never called. |
 | **Lazy Context** | ContextBuilder | The Router runs on bare minimum context (`MINIMAL`) to ensure near-zero latency. |
 | **No File Execution** | Prompt | Router must not attempt to use execution tools. |
 
@@ -43,4 +43,4 @@ It evaluates the user's request against a minimal `EnhancedContext` (RAM), actin
 | **2** | **LLM Integration** | ✅ SHIPPED | `RealConsultantService` using `qwen3-max`. System prompt and simple JSON parser. |
 | **3** | **Entity Intent Extraction** | ✅ SHIPPED | JSON schema update to extract `missing_entities` for disambiguation loop. |
 | **4** | **Lightning Router (Phase 1)** | ✅ SHIPPED | `query_quality` 4-tier routing with `qwen-turbo` and `ContextDepth.MINIMAL` to solve latency. |
-| **5** | **Architecture Nuke & Pave** | ✅ DONE | Move Router to the top of `PrismOrchestrator`, severing ties from `AnalystPipeline`. Rename interfaces. Migrated to UnifiedPipeline. |
+| **5** | **Architecture Nuke & Pave** | ✅ DONE | Move Router to the top of `IntentOrchestrator`, severing ties from `AnalystPipeline`. Rename interfaces. Migrated to UnifiedPipeline. |

@@ -6,7 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.core.app.NotificationManagerCompat
-import com.smartsales.prism.PrismMainActivity
+import com.smartsales.prism.AgentMainActivity
 import com.smartsales.prism.domain.notification.NotificationService
 import dagger.hilt.android.EntryPointAccessors
 
@@ -86,7 +86,7 @@ class AlarmDismissReceiver : BroadcastReceiver() {
 
         // 4. 若需要打开应用
         if (openApp) {
-            val launchIntent = Intent(context, PrismMainActivity::class.java).apply {
+            val launchIntent = Intent(context, AgentMainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 putExtra("navigate_to", "scheduler")
                 putExtra("task_id", taskId)

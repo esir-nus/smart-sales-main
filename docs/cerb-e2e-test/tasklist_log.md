@@ -33,12 +33,21 @@ This document is the **dynamic tracker, implementation spec, and North Star road
   - [ ] **Overhaul W2: Context Branch Coverage**: Write explicit tests for the 3 Context States (No Context/Noise, Partial Context/Trap, Sufficient Context/Execution). Prove the pipeline traps and clarifies intents dynamically.
 - [ ] **Target:** `RealInputParserServiceTest.kt` & `EntityDisambiguator`
   - [ ] **Overhaul W3: Strict Interface Integrity**: Ensure tests do not mock the string parsing or bypass Linter gates.
+  
+> 🧠 **Agent Foresight & Reality Gaps (Phase 1)**: 
+> *Here we log predictive limitations where L1/L2 code tests diverge from L3 physical reality.*
+> - *Prediction*: While Mock Eviction proves the logic routes correctly, we cannot simulate the raw latency of the physical `Tingwu` ASR pipeline here. The pipeline might time out in reality if the real ContextBuilder takes too long constructing the prompt.
+> - *Gap*: Unit tests cannot verify if the Android OS will kill the background service executing this pipeline mid-flight.
 
 #### Phase 2: Layer 4 Feature Sweeps (Integration Veracity)
 - [ ] **Target:** Scheduler & Notifications
   - [ ] **Overhaul W4: Payload Verification**: Enforce `verify(mock).method(argThat { ... })` payloads. Never assert success without proving the structure sent to the `SchedulerLinter` or `ToolRegistry`.
 - [ ] **Target:** `AgentViewModelTest.kt` & `IntentOrchestratorTest.kt`
   - [ ] **Overhaul W5: Red-First State Triggers**: Prove the UI state machine organically falls back to `STATE_IDLE` or throws `ClarificationNeeded` when fed empty data.
+
+> 🧠 **Agent Foresight & Reality Gaps (Phase 2)**:
+> - *Prediction*: Even if UI tests prove `AgentViewModel` emits the right state, Compose UI rendering bugs (like the Scrim Drawer anti-pattern) might silently hide the `ClarificationNeeded` amber card from the user.
+> - *Gap*: We cannot unit-test if a user will actually understand the "amber breathing" visual cue. UI telemetry will be needed post-launch.
 
 #### Phase 3: E2E Pillar Resumption
 > Only after Phase 1 and 2 pass the Anti-Illusion protocol will we resume the 6 E2E Test Waves below.

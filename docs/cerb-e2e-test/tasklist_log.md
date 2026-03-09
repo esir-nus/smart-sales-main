@@ -36,8 +36,11 @@ This document is the **dynamic tracker, implementation spec, and North Star road
   
 > 🧠 **Agent Foresight & Reality Gaps (Phase 1)**: 
 > *Here we log predictive limitations where L1/L2 code tests diverge from L3 physical reality.*
-> - *Prediction*: While Mock Eviction proves the logic routes correctly, we cannot simulate the raw latency of the physical `Tingwu` ASR pipeline here. The pipeline might time out in reality if the real ContextBuilder takes too long constructing the prompt.
-> - *Gap*: Unit tests cannot verify if the Android OS will kill the background service executing this pipeline mid-flight.
+> - *Prediction (ASR Latency)*: While Mock Eviction proves the logic routes correctly, we cannot simulate the raw latency of the physical `Tingwu` ASR pipeline. The pipeline might time out in reality if the real ContextBuilder takes too long constructing the prompt.
+> - *Gap (Service Lifecycle)*: Unit tests cannot verify if the Android OS will kill the background service executing this pipeline mid-flight during a heavy inference step.
+> - *Prediction (Phonetic Brittleness)*: Strict string parsing in `EntityDisambiguator` might pass L1 tests beautifully, but fail in reality when Tingwu ASR outputs phonetically similar errors (e.g., "Chef Cook" vs "Jeff Cook"). 
+> - *Gap (Concurrency)*: `FakeMemoryRepository` simulates immediate, linear SSD read/writes. In reality, Room/SQLite database locks under concurrent asynchronous load map to real-world race conditions that a synchronous unit test completely misses.
+> - *Prediction (Token Limits)*: L1 tests inject small, clean session histories. In reality, a power user's `EnhancedContext` might breach the LLM's token limit, causing a hard crash that tests never surface.
 
 #### Phase 2: Layer 4 Feature Sweeps (Integration Veracity)
 - [ ] **Target:** Scheduler & Notifications
@@ -46,8 +49,11 @@ This document is the **dynamic tracker, implementation spec, and North Star road
   - [ ] **Overhaul W5: Red-First State Triggers**: Prove the UI state machine organically falls back to `STATE_IDLE` or throws `ClarificationNeeded` when fed empty data.
 
 > 🧠 **Agent Foresight & Reality Gaps (Phase 2)**:
-> - *Prediction*: Even if UI tests prove `AgentViewModel` emits the right state, Compose UI rendering bugs (like the Scrim Drawer anti-pattern) might silently hide the `ClarificationNeeded` amber card from the user.
-> - *Gap*: We cannot unit-test if a user will actually understand the "amber breathing" visual cue. UI telemetry will be needed post-launch.
+> - *Prediction (UI Masking)*: Even if UI tests prove `AgentViewModel` emits the `ClarificationNeeded` state perfectly, tricky Compose UI rendering bugs (like the Scrim Drawer anti-pattern) might invisibly mask the amber card behind another layer.
+> - *Gap (User Psychology)*: We cannot unit-test if a user will actually understand the "amber breathing" visual cue or what to say next to resolve the trap. UI telemetry is mandatory post-launch.
+> - *Prediction (OEM Killers)*: `SchedulerLinter` might perfectly validate the target alarm time, but aggressive OEM battery management (Xiaomi/Oppo/Vivo MIUI/ColorOS) might silently block the `AlarmManager` broadcast from ever waking the app.
+> - *Gap (Hardware State)*: `AgentViewModel` might confidently transition to `STATE_LISTENING`, but tests cannot predict if the OS silently revoked the `RECORD_AUDIO` permission in the background, or if the mic hardware is locked by another app.
+> - *Gap (Flow Conflation)*: Unit tests using `UnconfinedTestDispatcher` run synchronously. In the real app, rapid state emissions might be silently conflated by Compose observers, causing skipped interface frames.
 
 #### Phase 3: E2E Pillar Resumption
 > Only after Phase 1 and 2 pass the Anti-Illusion protocol will we resume the 6 E2E Test Waves below.

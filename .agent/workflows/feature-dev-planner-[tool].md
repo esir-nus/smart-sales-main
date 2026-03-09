@@ -14,6 +14,7 @@ description: Gateway workflow for feature development - enforces single-spec sco
 | Phase | Gate | Action |
 |-------|------|--------|
 | **-2** | Tracker | Read `docs/plans/tracker.md`, verify feature exists, find owning Cerb shard |
+| **-1.5**| Spec Triage | Validate spec necessity (feature, ui, testing, plugin). Missing? Create docs first. Multi-spec? Skip creation. |
 | **-1** | Lessons | Read `.agent/rules/lessons-learned.md`, check for matching patterns |
 | **0** | Spec Scope | Read owning spec COMPLETELY, fill Cerb Scope Declaration, quote behavior |
 | **0.1** | OS Model | Classify OS layer, verify layer rules |
@@ -62,6 +63,23 @@ Tracker entry → "session-context: PARTIAL"
 > Tracker entries are derived FROM specs, never the other way around.
 > **Interface Map = Truth of how modules connect.**
 > NEVER invent a connection between modules if it is not in the Interface Map.
+
+---
+
+## Phase -1.5: 🔒 Spec Generation & Triage (CRITICAL)
+
+Before reading code or planning, evaluate if a dedicated spec document is REQUIRED for this task. The project now has four primary spec types: **Feature**, **UI**, **Plugin**, and **Testing**.
+
+### Routing Logic
+1. **Does the target task require a specific Cerb spec?**
+   - 🔴 **Yes, but it doesn't exist**: 🛑 **STOP planning.** Execute one of the spec creation workflows FIRST:
+     - `/cerb-spec-template` (for Features / UI / Testing scripts)
+     - `/cerb-plugin-template` (for Independent Plugins / Workflows)
+     - *You must finish generating the spec before returning to plan implementation.*
+   - 🟢 **Yes, and it already exists**: Proceed to Phase 0.
+   - 🟡 **No (Cross-cutting / Multi-spec task)**: If the task inherently spans multiple established specs (and therefore doesn't "own" a single cohesive new domain), DO NOT force the creation of a new Cerb doc. Acknowledge this explicit exception, bypass Cerb Scope Declaration, and proceed to plan implementation.
+
+**Motto**: Always Docs First, Make Plan Later, Execute Last.
 
 ---
 

@@ -73,8 +73,10 @@ Before reading code or planning, evaluate if a dedicated spec document is REQUIR
 ### Routing Logic
 1. **Does the target task require a specific Cerb spec?**
    - 🔴 **Yes, but it doesn't exist**: 🛑 **STOP planning.** Execute one of the spec creation workflows FIRST:
-     - `/cerb-spec-template` (for Features / UI / Testing scripts)
+     - `/cerb-spec-template` (for Features)
      - `/cerb-plugin-template` (for Independent Plugins / Workflows)
+     - `/cerb-ui-template` (for UI / UX Screens)
+     - `/cerb-e2e-testing-template` (for Test Scripts & infrastructure)
      - *You must finish generating the spec before returning to plan implementation.*
    - 🟢 **Yes, and it already exists**: Proceed to Phase 0.
    - 🟡 **No (Cross-cutting / Multi-spec task)**: If the task inherently spans multiple established specs (and therefore doesn't "own" a single cohesive new domain), DO NOT force the creation of a new Cerb doc. Acknowledge this explicit exception, bypass Cerb Scope Declaration, and proceed to plan implementation.

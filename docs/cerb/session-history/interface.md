@@ -56,7 +56,7 @@ This interface is consumed by:
 | Consumer | How |
 |----------|-----|
 | `HistoryViewModel` | Calls `getGroupedSessions()`, `togglePin()`, `renameSession()`, `deleteSession()` |
-| `PrismViewModel` | Calls `createSession()` on new session |
+| `AgentViewModel` | Calls `createSession()` on new session |
 | `AudioViewModel` | Calls `createSession()` to link audio analysis sessions |
 
 ---

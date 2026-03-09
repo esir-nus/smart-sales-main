@@ -241,7 +241,7 @@ User Action → ConnectivityViewModel → ConnectivityService → ConnectivityBr
 
 ### Problem Summary
 
-1. **Onboarding reset on app restart**: `PrismMainActivity` used `rememberSaveable` → not persisted across process death → always showed onboarding
+1. **Onboarding reset on app restart**: `AgentMainActivity` used `rememberSaveable` → not persisted across process death → always showed onboarding
 2. **Session lost on disconnect**: `DeviceConnectionManager` stored BLE session in-memory only → lost after app restart → reconnection impossible
 3. **Disconnect nuked session**: `disconnect()` called `forgetDevice()` → cleared session → forced full re-onboarding
 
@@ -285,7 +285,7 @@ User Action → ConnectivityViewModel → ConnectivityService → ConnectivityBr
 - **Test Cases**:
   - [x] Unit: `DefaultDeviceConnectionManagerTest` with `InMemorySessionStore`
   - [ ] L2: Fresh install → onboarding shown
-  - [ ] L2: Complete onboarding → force-close app → relaunch → **PrismShell shown (not onboarding)**
+  - [ ] L2: Complete onboarding → force-close app → relaunch → **AgentShell shown (not onboarding)**
   - [ ] L2: Disconnect → reconnect → **reconnects without onboarding**
 
 ### Files Changed
@@ -296,7 +296,7 @@ User Action → ConnectivityViewModel → ConnectivityService → ConnectivityBr
 - `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/SessionStoreImpl.kt`
 
 **Modified** (11):
-- `app-core/src/main/java/com/smartsales/prism/PrismMainActivity.kt`
+- `app-core/src/main/java/com/smartsales/prism/AgentMainActivity.kt`
 - `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/DeviceConnectionManager.kt`
 - `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/ConnectivityModule.kt`
 - `app-core/src/test/java/com/smartsales/prism/data/connectivity/legacy/DefaultDeviceConnectionManagerTest.kt`

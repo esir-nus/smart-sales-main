@@ -1,6 +1,6 @@
 # Scheduler Interface
 
-> **Blackbox contract** — For consumers (Chat, PrismShell). Don't read implementation.  
+> **Blackbox contract** — For consumers (Chat, AgentShell). Don't read implementation.  
 > **OS Model**: Consumer of RAM (reads entity context from SessionWorkingSet Section 1)
 
 ---

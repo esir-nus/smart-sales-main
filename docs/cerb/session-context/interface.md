@@ -87,7 +87,7 @@ This interface is consumed by:
 |----------|-----|
 | `RealCoachPipeline` | Calls `contextBuilder.build()` |
 | `PrismOrchestrator` | Calls `contextBuilder.build()` / `buildWithClues()` |
-| `PrismViewModel` | Calls `contextBuilder.resetSession()` on new session |
+| `AgentViewModel` | Calls `contextBuilder.resetSession()` on new session |
 | `ChatViewModel` | Calls `contextBuilder.recordUserMessage()` / `recordAssistantMessage()` |
 
 ---

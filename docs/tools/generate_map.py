@@ -1,4 +1,5 @@
 import os
+import sys
 import re
 import json
 
@@ -49,6 +50,72 @@ MODULE_EXPLANATIONS = {
 import json
 
 MAP_PATH = "docs/cerb/interface-map.md"
+
+def get_sunburst_data():
+    valid_exts = {'.kt', '.java', '.xml'}
+    ignore_dirs = {'build', '.git', '.gradle', 'docs', 'tmp', 'res'}
+    skip_structural = {'src', 'main', 'java', 'com', 'smartsales', 'prism'}
+    
+    def crawl(path, depth=1, max_depth=4):
+        try:
+            entries = os.listdir(path)
+        except Exception:
+            return []
+            
+        children = []
+        files_loc = 0
+        
+        for entry in entries:
+            full_path = os.path.join(path, entry)
+            if os.path.isdir(full_path):
+                if entry in ignore_dirs:
+                    continue
+                
+                # If it's a structural dir, we don't increase depth, and we just return its children directly 
+                if entry in skip_structural or entry == os.path.basename(path).replace('-', '_'):
+                    sub_children = crawl(full_path, depth, max_depth)
+                    children.extend(sub_children)
+                    continue
+                
+                if depth >= max_depth:
+                    loc = sum(1 for root, _, files in os.walk(full_path) for f in files if os.path.splitext(f)[1] in valid_exts for _ in open(os.path.join(root, f), 'r', encoding='utf-8', errors='ignore'))
+                    if loc > 0:
+                        children.append({"name": entry, "value": loc})
+                else:
+                    sub_children = crawl(full_path, depth + 1, max_depth)
+                    if sub_children:
+                        children.append({"name": entry, "children": sub_children})
+                        
+            elif os.path.splitext(entry)[1] in valid_exts:
+                try:
+                    with open(full_path, 'r', encoding='utf-8', errors='ignore') as f:
+                        files_loc += sum(1 for _ in f)
+                except Exception:
+                    pass
+        
+        if files_loc > 0:
+            children.append({"name": "(根目录文件)", "value": files_loc})
+                
+        optimized = []
+        for c in children:
+            if "children" in c and len(c["children"]) == 1 and c["children"][0]["name"] == "(根目录文件)":
+                optimized.append({"name": c["name"], "value": c["children"][0]["value"]})
+            else:
+                optimized.append(c)
+                
+        return optimized
+
+    top_level = ['app', 'app-core', 'app-prism', 'core', 'data', 'domain']
+    data = []
+    for mod in top_level:
+        if os.path.exists(mod):
+            child_nodes = crawl(mod, depth=1, max_depth=4)
+            if len(child_nodes) == 1 and child_nodes[0].get("name") == "(根目录文件)":
+                data.append({"name": mod, "value": child_nodes[0]["value"]})
+            elif child_nodes:
+                data.append({"name": mod, "children": child_nodes})
+                
+    return data
 OUTPUT_PATH = "docs/cerb/dashboard.html" # Obsolete
 
 def parse_markdown_table(lines):
@@ -70,7 +137,9 @@ def parse_markdown_table(lines):
 def parse_estimate():
     metrics = {
         "total": 0, "core": 0, "tests": 0, "res": 0,
-        "conservative": 0, "ideal": 0
+        "conservative": 0, "ideal": 0,
+        "pie_labels": "['核心 Kotlin 代码', '测试 Kotlin 代码', '资源 XML 文件']",
+        "pie_data": "[0, 0, 0]"
     }
     try:
         with open("PRODUCTION_CODE_ESTIMATE.md", "r", encoding="utf-8") as f:
@@ -78,7 +147,8 @@ def parse_estimate():
             m_total = re.search(r"Current XP\*\*:\s*`([\d,]+)`", text)
             if m_total: metrics["total"] = int(m_total.group(1).replace(",", ""))
             
-            m_breakdown = re.search(r"\*\(Core:\s*`([\d,]+)`\s*\|\s*Tests:\s*`([\d,]+)`\s*\|\s*Resources:\s*`([\d,]+)`\)\*", text)
+            # Match both the old 'Core' and new 'Business Logic & Core Layers'
+            m_breakdown = re.search(r"\*\((?:Core|Business Logic & Core Layers):\s*`([\d,]+)`\s*\|\s*Tests:\s*`([\d,]+)`\s*\|\s*Resources:\s*`([\d,]+)`\)\*", text)
             if m_breakdown:
                 metrics["core"] = int(m_breakdown.group(1).replace(",", ""))
                 metrics["tests"] = int(m_breakdown.group(2).replace(",", ""))
@@ -86,13 +156,87 @@ def parse_estimate():
                 
             m_target = re.search(r"Target XP\*\*:\s*`~([\d,]+)`", text)
             if m_target:
-                # We know the conservative is +22k from total, ideal is +38k (which matches 238k)
                 ideal = int(m_target.group(1).replace(",", ""))
                 metrics["ideal"] = ideal
                 metrics["conservative"] = metrics["total"] + 22000
+            
+            # Support dynamic pie charts if defined via mermaid pie
+            mermaid_pie_match = re.search(r"pie title.*?$.*?(?:^    .*?$.*?)+", text, re.MULTILINE | re.DOTALL)
+            if mermaid_pie_match:
+                pie_block = mermaid_pie_match.group(0)
+                labels = []
+                data = []
+                # Use regex to safely extract "Label" : Value even if Label contains colons
+                for match in re.finditer(r'"(.*?)"\s*:\s*(\d+)', pie_block):
+                    label = match.group(1).strip()
+                    val = match.group(2).strip()
+                    labels.append(f"'{label}'")
+                    data.append(val)
+                    
+                if labels and data:
+                    metrics["pie_labels"] = "[" + ", ".join(labels) + "]"
+                    metrics["pie_data"] = "[" + ", ".join(data) + "]"
+
+            metrics["trajectory_rows"] = []
+            metrics["senior_take"] = ""
+            
+            # Find the table rows after "## 📉 Codebase Trajectory"
+            traj_section = re.search(r"## 📉 Codebase Trajectory(.*?)(?=\n---|##)", text, re.MULTILINE | re.DOTALL)
+            if traj_section:
+                section_text = traj_section.group(1)
+                for line in section_text.split('\n'):
+                    if line.startswith('|') and '---' not in line and 'Module Layer' not in line:
+                        cols = [c.strip().replace('`', '') for c in line.split('|')[1:-1]]
+                        if len(cols) == 5:
+                            metrics["trajectory_rows"].append({
+                                "module": cols[0], "in": cols[1], "out": cols[2], "net": cols[3], "traj": cols[4].replace("**", "")
+                            })
+                
+                senior_match = re.search(r"> \*\*资深架构师评估\*\*: \"(.*?)\"", section_text, re.DOTALL)
+                if senior_match:
+                    metrics["senior_take"] = senior_match.group(1).strip()
+
     except Exception as e:
         print("Error parsing estimate:", e)
     return metrics
+
+def parse_reports():
+    import re
+    reports = []
+    reports_dir = "docs/reports"
+    if not os.path.exists(reports_dir):
+        return reports
+        
+    for f in os.listdir(reports_dir):
+        if not f.endswith(".md") or f == "index.md":
+            continue
+            
+        repo_path = os.path.join(reports_dir, f)
+        try:
+            with open(repo_path, "r", encoding="utf-8") as file:
+                text = file.read()
+                
+                title_match = re.search(r"^#\s+(.*)", text, re.MULTILINE)
+                date_match = re.search(r"\*\*Date\*\*:\s*(.*)", text)
+                protocol_match = re.search(r"\*\*Protocol on Trial\*\*:\s*(.*)", text)
+                target_match = re.search(r"\*\*Target Implementation\*\*:\s*(.*)", text)
+                
+                summary_match = re.search(r"##\s+(?:2\.\s+Executive Summary|1\.\s+Contextual Anchor.*)\n+(.*?)(?=\n\n|\n##|$)", text, re.DOTALL | re.IGNORECASE)
+                summary_text = summary_match.group(1).replace("\n", " ").strip() if summary_match else ""
+                
+                reports.append({
+                    "filename": f,
+                    "title": title_match.group(1).strip() if title_match else f,
+                    "date": date_match.group(1).strip() if date_match else "Unknown",
+                    "protocol": protocol_match.group(1).strip() if protocol_match else "Unknown",
+                    "target": target_match.group(1).strip() if target_match else "Unknown",
+                    "summary": summary_text
+                })
+        except Exception as e:
+            print(f"Error parsing report {f}: {e}")
+            
+    reports.sort(key=lambda x: x.get("date", ""), reverse=True)
+    return reports
 
 def parse_interface_map():
     with open(MAP_PATH, "r", encoding="utf-8") as f:
@@ -148,7 +292,8 @@ def parse_interface_map():
     # The flex-direction: column-reverse handles the visual stacking.
     return layers
 
-def generate_html_single(layers, page_type, metrics):
+def generate_html_single(layers, page_type, metrics, reports=None):
+    if reports is None: reports = []
     css = """
     :root {
         --bg: #0f172a;
@@ -458,6 +603,29 @@ def generate_html_single(layers, page_type, metrics):
     .gap-warning { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid var(--warning); }
     .gap-error { background: rgba(239, 68, 68, 0.15); color: var(--error); border: 1px solid var(--error); }
     
+    .reports-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 30px;
+        margin-top: 20px;
+    }
+    .report-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 24px;
+        transition: all 0.3s;
+        display: flex;
+        flex-direction: column;
+    }
+    .report-card:hover { border-color: var(--glow); transform: translateY(-3px); box-shadow: 0 5px 20px rgba(192, 132, 252, 0.2); }
+    .report-date { font-family: 'Fira Code', monospace; color: var(--accent); font-size: 0.85rem; margin-bottom: 8px; }
+    .report-title { font-size: 1.25rem; font-weight: 600; color: var(--text); margin-bottom: 12px; }
+    .report-body { flex: 1; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px; display: -webkit-box; -webkit-line-clamp: 4; line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+    .report-meta { font-size: 0.8rem; color: #64748b; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; margin-bottom: 15px; line-height: 1.4; }
+    .report-link { margin-top: auto; display: inline-block; padding: 8px 16px; background: rgba(59, 130, 246, 0.15); color: #60a5fa; border-radius: 6px; text-decoration: none; font-size: 0.9rem; font-weight: 500; text-align: center; border: 1px solid rgba(59, 130, 246, 0.3); transition: all 0.2s; }
+    .report-link:hover { background: rgba(59, 130, 246, 0.3); color: #fff; border-color: #60a5fa; }
+
     .increment-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
     .increment-item:last-child { border-bottom: none; }
     .increment-title { font-weight: 500; color: var(--text); }
@@ -528,6 +696,28 @@ def generate_html_single(layers, page_type, metrics):
         50% { opacity: 0.8; transform: translateY(-5px); }
         100% { opacity: 0.3; transform: translateY(0); }
     }
+
+    .two-col-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px; }
+    .stat-grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+    @media (max-width: 992px) {
+        .modules-grid { grid-template-columns: repeat(2, 1fr); }
+        .container { grid-template-columns: 1fr; }
+        .two-col-grid { grid-template-columns: 1fr; }
+        .stat-grid-4 { grid-template-columns: repeat(2, 1fr); }
+    }
+    
+    @media (max-width: 768px) {
+        body { padding: 10px; }
+        .header h1 { font-size: 2rem; }
+        .modules-grid { grid-template-columns: 1fr; }
+        .stat-grid { grid-template-columns: 1fr; }
+        .stat-grid-4 { grid-template-columns: 1fr; }
+        .tabs { flex-direction: column; }
+        .layer-container { gap: 30px; padding-left: 10px; }
+        .chart-container { height: 300px !important; }
+        #compositionList { max-height: 400px; }
+    }
     """
 
     def clean_markdown(text):
@@ -540,12 +730,12 @@ def generate_html_single(layers, page_type, metrics):
         return text
 
     def get_status_class_and_label(status_str):
-        if "✅" in status_str: return "status-shipped", "Shipped"
-        if "🔲" in status_str: return "status-planned", "Planned"
-        if "📐" in status_str: return "status-interface", "Interface"
-        if "🚧" in status_str: return "status-wip", "WIP"
-        if "⏸️" in status_str: return "status-blocked", "Blocked"
-        return "status-planned", "Unknown"
+        if "✅" in status_str: return "status-shipped", "已上线"
+        if "🔲" in status_str: return "status-planned", "计划中"
+        if "📐" in status_str: return "status-interface", "接口定义"
+        if "🚧" in status_str: return "status-wip", "开发中"
+        if "⏸️" in status_str: return "status-blocked", "已阻塞"
+        return "status-planned", "未知"
 
     html_content = f"""
     <!DOCTYPE html>
@@ -562,21 +752,23 @@ def generate_html_single(layers, page_type, metrics):
     <body>
         
         <div class="header">
-            <h1>Cerb Architecture Dashboard <br><span style="font-size: 1.5rem; color: #a78bfa;">(分布式架构与项目规模面板)</span></h1>
-            <p>Real-time module status, domain I/O contracts, and codebase footprint</p>
+            <h1>Cerb 服务端架构大盘 <br><span style="font-size: 1.5rem; color: #a78bfa;">(分布式架构与项目规模面板)</span></h1>
+            <p>实时模块状态、领域层读写数据流契约与代码库物理演进大盘</p>
         </div>
         
         <div class="legend">
-            <div class="legend-item"><span class="module-status status-shipped">Shipped</span> (Real impl) / <span class="translation-hint">已上线</span></div>
-            <div class="legend-item"><span class="module-status status-interface">Interface</span> (Fake impl) / <span class="translation-hint">仅接口 (假实现)</span></div>
-            <div class="legend-item"><span class="module-status status-planned">Planned</span> (Not coded) / <span class="translation-hint">计划中 (未开发)</span></div>
-            <div class="legend-item"><span class="module-status status-wip">WIP</span> / <span class="translation-hint">开发中</span></div>
+            <div class="legend-item"><span class="module-status status-shipped">已上线</span> <span class="translation-hint">(真实且完整的业务实现)</span></div>
+            <div class="legend-item"><span class="module-status status-interface">接口定义</span> <span class="translation-hint">(仅接口契约声明或内存模拟器)</span></div>
+            <div class="legend-item"><span class="module-status status-planned">计划中</span> <span class="translation-hint">(系统设计中，暂未投入研发)</span></div>
+            <div class="legend-item"><span class="module-status status-wip">开发中</span> <span class="translation-hint">(特性代码施工中)</span></div>
+            <div class="legend-item"><span class="module-status status-blocked">已阻塞</span> <span class="translation-hint">(被其他前置任务挂起)</span></div>
         </div>
 
         <div class="tabs">
             <a href="dashboard-topology.html" class="tab-btn {{top_active}}" style="text-decoration: none; display: inline-block;">拓扑层级</a>
             <a href="dashboard-dataflow.html" class="tab-btn {{feat_active}}" style="text-decoration: none; display: inline-block;">跨模块数据流</a>
             <a href="dashboard-estimate.html" class="tab-btn {{est_active}}" style="text-decoration: none; display: inline-block;">代码量估算</a>
+            <a href="dashboard-reports.html" class="tab-btn {{rep_active}}" style="text-decoration: none; display: inline-block;">报告中心</a>
         </div>
 
         <!-- 1. Topology View -->
@@ -586,11 +778,11 @@ def generate_html_single(layers, page_type, metrics):
     """
     
     layer_descriptions = {
-        "Layer 5": "Cross-cutting services that aggregate data from multiple Layer 2 sources.",
-        "Layer 4": "User-facing features. Each receives processed results from Orchestrator (Layer 3) and reads from Data Services (Layer 2).",
-        "Layer 3": "Orchestrates LLM-powered processing. Reads from Layer 2 data services.",
-        "Layer 2": "Store and query domain data. Other modules use their interfaces but never each other's storage.",
-        "Layer 1": "Leaf services with no upstream dependencies. They don't call other modules."
+        "Layer 5": "全端聚合与学习层 (跨场景聚合汇总下层多源数据，承载深度学习模型训练数据流)",
+        "Layer 4": "特性层与交互界面 (面向用户的顶层业务入口，接收底座引擎流水线处理结果)",
+        "Layer 3": "系统核心中枢与分发编排引擎 (负责执行 AI 运算推理或跨服务业务流，属于全局大脑，严格限制直接读取本地设备)",
+        "Layer 2": "核心领域防腐层及存储仓 (独占式接管业务领域底层数据交互、数据库操作，彻底打断非正常跨组件越权与耦合)",
+        "Layer 1": "外部设施网络及端能力基建 (仅提供基础能力或无状态连接外部 API 的叶子节点服务，杜绝内联任何系统业务相关逻辑)"
     }
 
     # Sequence diagram: Render layers top to bottom (Layer 5 -> Layer 1)
@@ -682,7 +874,7 @@ def generate_html_single(layers, page_type, metrics):
 
         reads_from = raw_reads_from
         if "Receives From (via Orchestrator)" in mod:
-            reads_from = f"Direct / 直接读取: {raw_reads_direct} <br> Via Orch / 经编排器接收: {mod.get('Receives From (via Orchestrator)', '')}".replace("`", "")
+            reads_from = f"直接依赖读取: {raw_reads_direct} <br> 经由核心层编排解耦: {mod.get('Receives From (via Orchestrator)', '')}".replace("`", "")
         else:
             reads_from = clean_markdown(reads_from)
             
@@ -707,8 +899,8 @@ def generate_html_single(layers, page_type, metrics):
                 </div>
                 
                 <div class="module-detail">
-                    <div><span class="label">Owns / 拥有 (写入):</span> {owns_html}</div>
-                    <div><span class="label">Reads From / 读取自:</span> {reads_from}</div>
+                    <div><span class="label">拥有 (写入控制权):</span> {owns_html}</div>
+                    <div><span class="label">读取 (依赖源头):</span> {reads_from}</div>
                 </div>
                 
                 <div class="card-signature">{signature}</div>
@@ -716,11 +908,22 @@ def generate_html_single(layers, page_type, metrics):
             </div>
         """
 
+    track_translation_map = {
+        "Hardware & Audio": "终端硬件与核心音频流通道",
+        "Entity Resolution": "人物公司实体解析与关联引擎",
+        "System II & Routing": "系统二大脑深度推理与神经路由",
+        "Intelligent Scheduler": "多端智能时间排期与日程引擎",
+        "System I & Ambient": "系统一直觉响应与环境级轻交互基石",
+        "Memory & OS": "全局长时记忆中枢与应用级系统底座",
+        "Uncategorized": "未分类系统组件"
+    }
+    
     for track_name, track_modules in sorted_tracks.items():
+        display_track_name = track_translation_map.get(track_name, track_name)
         html_content += f"""
         <div class="layer" style="margin-bottom: 20px;">
-            <div class="layer-title" style="border-color: var(--glow); color: var(--glow); box-shadow: 0 0 10px rgba(192, 132, 252, 0.2);">{track_name}</div>
-            <div class="modules-grid" style="grid-template-columns: repeat(3, 1fr);">
+            <div class="layer-title" style="border-color: var(--glow); color: var(--glow); box-shadow: 0 0 10px rgba(192, 132, 252, 0.2);">{display_track_name}</div>
+            <div class="modules-grid">
         """
 
         for mod in track_modules:
@@ -740,7 +943,7 @@ def generate_html_single(layers, page_type, metrics):
             <div class="container">
                 <div class="card full-width">
                     <h2>当前状态快照 (代码清理后)</h2>
-                    <div class="stat-grid" style="grid-template-columns: repeat(4, 1fr);">
+                    <div class="stat-grid stat-grid-4">
                         <div class="stat-box"><div class="stat-value glow">{total:,}</div><div class="stat-label">总代码行数</div></div>
                         <div class="stat-box"><div class="stat-value">{core:,}</div><div class="stat-label">核心 Kotlin 代码</div></div>
                         <div class="stat-box"><div class="stat-value">{tests:,}</div><div class="stat-label">测试 Kotlin 代码</div></div>
@@ -749,34 +952,43 @@ def generate_html_single(layers, page_type, metrics):
                 </div>
 
                 <div class="card full-width" style="margin-top: 40px;">
-                    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px; align-items: center;">
-                        <div>
-                            <h2>生产级别投产预测目标</h2>
-                            <div class="stat-grid">
-                                <div class="stat-box" style="border-color: var(--warning);">
-                                    <div class="stat-value" style="color: var(--warning);">{conservative:,}</div>
-                                    <div class="stat-label">保守预测 (最小可行)</div>
-                                    <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 5px;">约增加 22,000 行</div>
-                                </div>
-                                <div class="stat-box" style="border-color: var(--success);">
-                                    <div class="stat-value" style="color: var(--success);">{ideal:,}</div>
-                                    <div class="stat-label">理想预测 (完整指标)</div>
-                                    <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 5px;">约增加 38,000 行</div>
-                                </div>
+                    <h2>生产级别投产预测目标</h2>
+                    <div class="two-col-grid" style="align-items: center; margin-top: 20px;">
+                        <div class="stat-grid">
+                            <div class="stat-box" style="border-color: var(--warning);">
+                                <div class="stat-value" style="color: var(--warning);">{conservative:,}</div>
+                                <div class="stat-label">保守预测 (最小可行)</div>
+                                <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 5px;">约增加 22,000 行</div>
                             </div>
-                            <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 20px;">
-                                未来的代码增长必须集中在<strong>测试覆盖率</strong>（需增加 1.5万 - 2万行）以及<strong>错误处理和性能监控</strong>（需增加 5千 - 1.3万行），只有稳固这些模块才能将项目成功演进至重度生产阶段 (T2-T3)。
-                            </p>
+                            <div class="stat-box" style="border-color: var(--success);">
+                                <div class="stat-value" style="color: var(--success);">{ideal:,}</div>
+                                <div class="stat-label">理想预测 (完整指标)</div>
+                                <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 5px;">约增加 38,000 行</div>
+                            </div>
                         </div>
-                        <div>
-                            <h2>当前代码组成分布</h2>
-                            <div class="chart-container" style="height: 300px;"><canvas id="compositionChart"></canvas></div>
+                        <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 20px; line-height: 1.6;">
+                            未来的代码增长必须集中在<strong>测试覆盖率</strong>（需增加 1.5万 - 2万行）以及<strong>错误处理和性能监控</strong>（需增加 5千 - 1.3万行），只有稳固这些模块才能将项目成功演进至重度生产阶段 (T2-T3)。
+                        </p>
+                    </div>
+                </div>
+
+                <div class="card full-width" style="margin-top: 40px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+                        <h2 style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">当前代码物理文件组成分布 (实时扫描)</h2>
+                        <button onclick="if(window.compositionChartInstance && typeof window.originalSunburstDataString !== 'undefined') { window.compositionChartInstance.setOption({series: {data: JSON.parse(window.originalSunburstDataString)}}); }" style="background: rgba(59, 130, 246, 0.15); border: 1px solid var(--accent); color: var(--accent); padding: 6px 16px; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-size: 0.9rem; font-weight: 500; display: flex; align-items: center; gap: 6px;" onmouseover="this.style.background='rgba(59, 130, 246, 0.3)'" onmouseout="this.style.background='rgba(59, 130, 246, 0.15)'">
+                            <span style="font-size: 1.1rem;">↺</span> 重置视图 (Reset Zoom)
+                        </button>
+                    </div>
+                    <div class="two-col-grid" style="align-items: start; margin-top: 20px;">
+                        <div class="chart-container" style="height: 500px; padding: 10px;"><div id="compositionChart" style="width: 100%; height: 100%;"></div></div>
+                        <div id="compositionList" style="max-height: 500px; overflow-y: auto; padding-right: 15px;">
+                            <!-- JS will populate this list -->
                         </div>
                     </div>
                 </div>
 
                 <!-- Comprehensive Metrics Row -->
-                <div class="card full-width" style="margin-top: 40px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px; background: rgba(0,0,0,0.2);">
+                <div class="card full-width two-col-grid" style="margin-top: 40px; background: rgba(0,0,0,0.2);">
                     <!-- Key Gaps -->
                     <div>
                         <h2>产研关键差距分析 (T2-T3)</h2>
@@ -840,8 +1052,40 @@ def generate_html_single(layers, page_type, metrics):
                 </div>
 
                 <div class="card full-width" style="margin-top: 40px;">
+                    <h2>代码演进轨迹与增长速率 (最近 30 天)</h2>
+                    <div style="overflow-x: auto; margin-top: 20px;">
+                        <table style="width: 100%; text-align: left; border-collapse: collapse; margin-bottom: 20px; font-size: 0.95rem;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid var(--border); color: var(--text-muted);">
+                                    <th style="padding: 12px;">模块分层</th>
+                                    <th style="padding: 12px;">新增代码 (Insertions)</th>
+                                    <th style="padding: 12px;">删除代码 (Deletions)</th>
+                                    <th style="padding: 12px;">净增长趋势 (Net Change)</th>
+                                    <th style="padding: 12px;">演进结论 (Trajectory)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {trajectory_rows_html}
+                            </tbody>
+                        </table>
+                    </div>
+                    {senior_take_html}
+                </div>
+
+                <div class="card full-width" style="margin-top: 40px;">
                     <h2>历史代码量增长趋势</h2>
                     <div class="chart-container" style="height: 400px;"><canvas id="trendChart"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Report Center View -->
+        <div id="reports" class="tab-content {rep_container_active}">
+            <div class="container" style="display: block;">
+                <h2 style="color: var(--glow); margin-bottom: 10px;">系统评估与试验报告</h2>
+                <p style="color: var(--text-muted); margin-bottom: 30px;">架构复盘、协议试验结果和高级研判的报告墓地</p>
+                <div class="reports-grid">
+                    {reports_html}
                 </div>
             </div>
         </div>
@@ -918,24 +1162,91 @@ def generate_html_single(layers, page_type, metrics):
             
             
             let chartsInitialized = false;
+            let sunburstData = {sunburst_data};
+            window.originalSunburstDataString = JSON.stringify(sunburstData);
             function initCharts() {
                 if (chartsInitialized) return;
                 chartsInitialized = true;
                 
-                const ctxPie = document.getElementById('compositionChart').getContext('2d');
-                new Chart(ctxPie, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['核心 Kotlin 代码', '测试 Kotlin 代码', '资源 XML 文件'],
-                        datasets: [{
-                            data: [{core}, {tests}, {res}],
-                            backgroundColor: ['rgba(59, 130, 246, 0.8)', 'rgba(192, 132, 252, 0.8)', 'rgba(34, 197, 94, 0.8)'],
-                            borderColor: '#1e293b',
-                            borderWidth: 2
-                        }]
-                    },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#f8fafc', font: { family: 'Inter' } } } } }
-                });
+                const ctxPie = document.getElementById('compositionChart');
+                if (ctxPie && typeof echarts !== 'undefined') {
+                    let myChart = echarts.init(ctxPie);
+                    window.compositionChartInstance = myChart;
+                    window.compositionChartOption = {
+                        series: {
+                            type: 'sunburst',
+                            data: sunburstData,
+                            radius: [0, '95%'],
+                            sort: null,
+                            emphasis: { focus: 'ancestor' },
+                            itemStyle: { borderRadius: 4, borderWidth: 1, borderColor: '#1e293b' },
+                            label: { show: false }
+                        },
+                        tooltip: {
+                            formatter: function (info) {
+                                var value = info.value;
+                                var treePathInfo = info.treePathInfo;
+                                var treePath = [];
+                                for (var i = 1; i < treePathInfo.length; i++) {
+                                    treePath.push(treePathInfo[i].name);
+                                }
+                                return '<div style="font-family: Inter;"><strong>' + treePath.join('/') + '</strong><br>物理代码行数 (LOC): ' + value.toLocaleString() + '</div>';
+                            }
+                        }
+                    };
+                    myChart.setOption(window.compositionChartOption);
+                    
+                    const listContainer = document.getElementById('compositionList');
+                    if (listContainer) {
+                        function calculateValue(node) {
+                            if (node.value !== undefined) return node.value;
+                            if (node.children) {
+                                let sum = 0;
+                                node.children.forEach(c => sum += calculateValue(c));
+                                node.value = sum;
+                                return sum;
+                            }
+                            return 0;
+                        }
+                        sunburstData.forEach(calculateValue);
+                        
+                        let html = '<table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem;">';
+                        html += '<tr style="border-bottom: 1px solid var(--border); color: var(--text-muted);"><th style="padding: 10px;">物流模块 (Directory)</th><th style="padding: 10px; text-align: right;">代码行数 (LOC)</th></tr>';
+                        
+                        let sortedData = [...sunburstData].sort((a, b) => b.value - a.value);
+                        
+                        sortedData.forEach(item => {
+                            html += '<tr style="border-bottom: 1px dashed rgba(255,255,255,0.1);">';
+                            html += '<td style="padding: 10px; font-weight: 500; display: flex; align-items: center; gap: 10px;">';
+                            html += '<div style="width: 10px; height: 10px; border-radius: 50%; background: var(--glow);"></div>';
+                            html += item.name + '</td>';
+                            html += '<td style="padding: 10px; text-align: right; color: var(--glow); font-family: monospace; font-weight: bold;">' + item.value.toLocaleString() + '</td>';
+                            html += '</tr>';
+                            
+                            if (item.children) {
+                                let sortedChildren = [...item.children].sort((a, b) => b.value - a.value);
+                                sortedChildren.forEach(child => {
+                                    html += '<tr style="border-bottom: 1px dashed rgba(255,255,255,0.05);">';
+                                    html += '<td style="padding: 6px 10px 6px 30px; color: var(--text-muted); font-size: 0.85rem; font-family: monospace;">↳ ' + child.name + '</td>';
+                                    html += '<td style="padding: 6px 10px; text-align: right; color: var(--text-muted); font-family: monospace; font-size: 0.85rem;">' + child.value.toLocaleString() + '</td>';
+                                    html += '</tr>';
+                                    
+                                    if (child.children) {
+                                        let nestedChildren = [...child.children].sort((a, b) => b.value - a.value);
+                                        nestedChildren.forEach(nested => {
+                                            html += '<tr style="border-bottom: 1px dashed rgba(255,255,255,0.02);">';
+                                            html += '<td style="padding: 4px 10px 4px 50px; color: rgba(255,255,255,0.3); font-size: 0.8rem; font-family: monospace;">- ' + nested.name + '</td>';
+                                            html += '<td style="padding: 4px 10px; text-align: right; color: rgba(255,255,255,0.3); font-family: monospace; font-size: 0.8rem;">' + nested.value.toLocaleString() + '</td>';
+                                            html += '</tr>';
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                        html += '</table>';
+                        listContainer.innerHTML = html;
+                    }
+                }
 
                 const ctxTrend = document.getElementById('trendChart').getContext('2d');
                 new Chart(ctxTrend, {
@@ -954,27 +1265,50 @@ def generate_html_single(layers, page_type, metrics):
             {init_script}
         </script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
     </body>
     </html>
 
     """
+    
+    rep_cards = ""
+    for rep in reports:
+        protocol_html = clean_markdown(rep.get('protocol', 'Unknown'))
+        target_html = clean_markdown(rep.get('target', 'Unknown'))
+        rep_cards += f'''
+        <div class="report-card">
+            <div class="report-date">{rep.get('date', '')}</div>
+            <div class="report-title">{rep.get('title', '')}</div>
+            <div class="report-body">{rep.get('summary', '')}</div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> {protocol_html}</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> {target_html}</div>
+            </div>
+            <a href="../reports/{rep.get('filename', '')}" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        '''
+    html_content = html_content.replace("{reports_html}", rep_cards)
+    
     return html_content
 
 def generate_html(layers):
     metrics = parse_estimate()
+    reports = parse_reports()
     
-    # We will generate the 3 files
-    for page_type in ["topology", "feature", "estimate"]:
-        html = generate_html_single(layers, page_type, metrics)
+    # We will generate the 4 files
+    for page_type in ["topology", "feature", "estimate", "reports"]:
+        html = generate_html_single(layers, page_type, metrics, reports)
         
         # Setup tags
         html = html.replace('{top_active}', 'active' if page_type == 'topology' else '')
         html = html.replace('{feat_active}', 'active' if page_type == 'feature' else '')
         html = html.replace('{est_active}', 'active' if page_type == 'estimate' else '')
+        html = html.replace('{rep_active}', 'active' if page_type == 'reports' else '')
         
         html = html.replace('{top_container_active}', 'active' if page_type == 'topology' else '')
         html = html.replace('{feat_container_active}', 'active' if page_type == 'feature' else '')
         html = html.replace('{est_container_active}', 'active' if page_type == 'estimate' else '')
+        html = html.replace('{rep_container_active}', 'active' if page_type == 'reports' else '')
         
         html = html.replace('{total:,}', f"{metrics['total']:,}")
         html = html.replace('{core:,}', f"{metrics['core']:,}")
@@ -990,22 +1324,45 @@ def generate_html(layers):
         html = html.replace('{conservative}', str(metrics['conservative']))
         html = html.replace('{ideal}', str(metrics['ideal']))
         
+        html = html.replace('{pie_labels}', str(metrics.get('pie_labels', '[]')))
+        html = html.replace('{pie_data}', str(metrics.get('pie_data', '[]')))
+        
+        traj_html = ""
+        for row in metrics.get("trajectory_rows", []):
+            traj_html += f'''
+            <tr style="border-bottom: 1px dashed rgba(255,255,255,0.1);">
+                <td style="padding: 12px; font-weight: 500;">{row["module"]}</td>
+                <td style="padding: 12px; color: var(--success); font-family: 'Fira Code', monospace;">{row["in"]}</td>
+                <td style="padding: 12px; color: var(--error); font-family: 'Fira Code', monospace;">{row["out"]}</td>
+                <td style="padding: 12px; color: var(--glow); font-family: 'Fira Code', monospace; font-weight: bold;">{row["net"]}</td>
+                <td style="padding: 12px; font-weight: 600;">{row["traj"]}</td>
+            </tr>
+            '''
+        html = html.replace('{trajectory_rows_html}', traj_html)
+        
+        take = metrics.get("senior_take", "")
+        take_html = f'<div style="margin-top: 20px; padding: 20px; background: rgba(245, 158, 11, 0.1); border-left: 4px solid var(--warning); border-radius: 4px;"><strong style="color: var(--warning); font-size: 1.1rem; display: block; margin-bottom: 8px;">资深架构师评估结论诊断:</strong> <span style="color: #e2e8f0; font-size: 0.95rem; line-height: 1.6; display: inline-block;">"{take}"</span></div>' if take else ""
+        html = html.replace('{senior_take_html}', take_html)
+        
         # Calculate derived core
         conservative_core = metrics['core'] + 15000
         ideal_core = metrics['core'] + 30000
         html = html.replace('{conservative_core}', str(conservative_core))
         html = html.replace('{ideal_core}', str(ideal_core))
+        html = html.replace('{sunburst_data}', json.dumps(get_sunburst_data()))
         
         # Safely slice the HTML based on page type to prevent regex failures
         top_start = html.find('<!-- 1. Topology View -->')
         feat_start = html.find('<!-- 2. Feature Dataflow View -->')
         est_start = html.find('<!-- 3. Code Estimate View -->')
+        rep_start = html.find('<!-- 4. Report Center View -->')
         script_start = html.find('        <script>')
         
         header_html = html[:top_start]
         top_html = html[top_start:feat_start]
         feat_html = html[feat_start:est_start]
-        est_html = html[est_start:script_start]
+        est_html = html[est_start:rep_start]
+        rep_html = html[rep_start:script_start]
         footer_html = html[script_start:]
 
         if page_type == 'topology':
@@ -1019,8 +1376,18 @@ def generate_html(layers):
             html = header_html + est_html + footer_html
             js = "window.addEventListener('load', () => { initCharts(); });"
             html = html.replace('{init_script}', js)
+        elif page_type == 'reports':
+            html = header_html + rep_html + footer_html
+            html = html.replace('{init_script}', '')
 
-        out_name = "dashboard-topology.html" if page_type == "topology" else ("dashboard-dataflow.html" if page_type == "feature" else "dashboard-estimate.html")
+        if page_type == "topology":
+            out_name = "dashboard-topology.html"
+        elif page_type == "feature":
+            out_name = "dashboard-dataflow.html"
+        elif page_type == "estimate":
+            out_name = "dashboard-estimate.html"
+        else:
+            out_name = "dashboard-reports.html" 
         out_path = os.path.join("docs", "cerb", out_name)
         with open(out_path, "w", encoding="utf-8") as f:
             f.write(html)

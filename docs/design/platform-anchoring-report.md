@@ -112,4 +112,4 @@ New UI architecture and tokens are defined in the Agent Intelligence `cerb-ui` s
 
 Shipped components available in:
 - [ResponseBubble.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/ui/components/ResponseBubble.kt)
-- [PrismChatScreen.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/ui/PrismChatScreen.kt)
+- [AgentChatScreen.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/ui/AgentChatScreen.kt)

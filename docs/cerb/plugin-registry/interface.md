@@ -1,7 +1,7 @@
 # Plugin Registry Interface
 
 > **Owner**: PluginRegistry Module
-> **Consumers**: Analyst Orchestrator, PrismViewModel, UI Task Board
+> **Consumers**: Analyst Orchestrator, AgentViewModel, UI Task Board
 
 ## Public Interface
 

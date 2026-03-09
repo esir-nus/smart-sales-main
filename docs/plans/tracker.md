@@ -51,6 +51,7 @@
 
 | Cerb Shard | State | Next Wave |
 |------------|-------|-----------|
+| [test-infrastructure](../cerb/test-infrastructure/spec.md) | ACTIVE | Wave 2: State Completeness |
 
 ### UI & Presentation
 
@@ -63,6 +64,11 @@
 ## Changelog
 
 > Key spec/impl changes, newest first. Like `git log --oneline`.
+
+### 2026-03-09
+
+- **agent-intelligence-ui**: Wave 2 SHIPPED — Successfully executed the "Nuke & Pave" refactor of the monolithic `PrismViewModel` into `AgentViewModel`. Completely decoupled Layer 3 AI routing logic out of the Presentation layer into a dedicated `:core:pipeline:IntentOrchestrator`. Physically eliminated `PrismShell`, `PrismChatScreen`, and `PrismMainActivity` in favor of their `Agent*` equivalents via AST manipulation. All tests pass, proving perfect routing encapsulation.
+- **test-infrastructure**: Wave 1 SHIPPED — Successfully extracted fragmented `Fake*Repository` classes (`FakeMemoryRepository`, `FakeEntityRepository`, `FakeUserHabitRepository`) out of the monolithic `app-core` test directory into a strictly isolated `:core:test-fakes` Gradle module. Purged hardcoded skeleton data to enforce the Clean Before Build Anti-Drift protocol. All consumers refactored and unit tests passed.
 
 ### 2026-03-07
 
@@ -95,8 +101,8 @@
 - **plugin-registry**: Wave 1-4 COMPLETED — RealToolRegistry, flow execution, structure plugins.
 - **analyst-orchestrator**: Wave 6 SHIPPED — Analyze Gateway & Plugin Routing (Expert Bypass) implemented. `RealArchitectService` now dynamically injects `ToolRegistry` into the Planning phase to strictly enforce tool execution boundaries via `PlanResult.ExpertBypass`.
 - **mascot-service**: Wave 3 SHIPPED (EventBus Integration and AppIdle Latch).
-- **mascot-service**: Wave 4 SHIPPED — Integrated Compose UI `MascotOverlay` out-of-band in `PrismShell`.
-- **mascot-service**: Wave 3 SHIPPED — Wired Mascot EventBus to `PrismViewModel` AppIdle trigger.
+- **mascot-service**: Wave 4 SHIPPED — Integrated Compose UI `MascotOverlay` out-of-band in `AgentShell`.
+- **mascot-service**: Wave 3 SHIPPED — Wired Mascot EventBus to `AgentViewModel` AppIdle trigger.
 - **mascot-service**: Wave 2 SHIPPED (Basic Routing and Intent disambiguation). `LightningRouter` now distinguishes between `NOISE` and `GREETING` and routes both to Mascot, while correctly routing `VAGUE` to the persistent Analyst flow.
 - **mascot-service**: Wave 1 SHIPPED — `MascotService` interface and `FakeMascotService` prototype formally integrated and wired into dependency injection. Spec upgraded to PARTIAL state.
 - **architecture**: Wave 5 Dual-Engine Architecture SHIPPED. Established "Mascot (System I)" vs "Prism Orchestrator (System II)" boundary.
@@ -131,7 +137,7 @@
 - **analyst-orchestrator**: Wave 3 & 5 SHIPPED 🎯 Extracted consultant logic, transitioned state to PROPOSAL without `PlannerTable`, and wired `EntityResolverService` disambiguation loops natively into `handleInput`.
 - **analyst-consultant**: Wave 3 SHIPPED 🎯 Formalized `ConsultantResult` to correctly extract `missingEntities` and provide raw clarifying text.
 - **tingwu-pipeline**: Wave 1-4 SHIPPED 🎯 Decoupled Tingwu API from legacy ai-core into a clean Prism Feature. Wired Real/Fake pipelines to AudioRepository.
-- **analyst-orchestrator**: Wave 1 SHIPPED — Domain models, FakeAnalystPipeline L2 simulator, wiring with PrismViewModel, and verification tests passing.
+- **analyst-orchestrator**: Wave 1 SHIPPED — Domain models, FakeAnalystPipeline L2 simulator, wiring with AgentViewModel, and verification tests passing.
 
 ### 2026-02-14
 
@@ -266,6 +272,19 @@
 | **Confidence-Based Reminder Interceptor** | Replace deterministic round-1 wrap-up with LLM confidence-based interception. Agent decides when to surface schedule context: (1) User greets/noise → inject, (2) User discusses agenda → inject, (3) User wraps up work → suggest completion. Requires classifier or LLM self-assessment of conversation intent. Current workaround: smarter prompting that lets LLM decide naturally. | Medium |
 | **L2 UI Verification** | `MarkdownStrategyBubble.kt` — Verify the title extraction and rendering styling (T2 test from `l2_test_plan.md`) after major component refactoring is complete. | High |
 | **NotificationService Layer Violation** | `NotificationService.kt` in `domain` imports `android.app.PendingIntent` | High |
+
+---
+
+## Tech Debt: The Anti-Illusion Test Overhaul
+
+> **Context**: See `anti-illusion-protocol.md`. Tests were mocking happy paths and ignoring pipeline information gates (Context Sufficiency). We need to overhaul tests to reflect reality.
+
+| Overhaul Wave | Description | Status |
+|---------------|-------------|--------|
+| **Wave 1: Context Branch Coverage** | Audit `RealUnifiedPipelineTest` and `RealAnalystPipelineTest`. Enforce testing of all Enum branches (`CRM_TASK`, `NOISE`, `GREETING`, `VAGUE`) to verify proper routing. | 🔲 |
+| **Wave 2: Complete Mock Eviction** | Purge lazy `whenever(repo.something()).thenReturn()` calls from all `*Test.kt` files. Replace with rigorous `Fake*Repository` implementations that enforce state integrity. | 🔲 |
+| **Wave 3: The Verification Rule** | Enforce `verify(mock).method(argThat { ... })` across all tests when a downstream service is invoked. Never assert success without proving the correct data payload was sent. | 🔲 |
+
 ---
 
 ## Quick Links

@@ -13,6 +13,6 @@
 1. Implement the `/SOP-ui-building` process specifically for `AudioDrawer`.
 2. Connect the `AudioViewModel` actions to the `TingwuJobState` Flow originating from the repository.
 3. Polish the multi-state UI representation of an `AudioFile` (e.g., Circular progress bar during `TRANSCRIBING`, rendering the "智能摘要" field returned by Tingwu when `TRANSCRIBED`).
-4. Apply the `compose-scrim-drawer-pattern.md` rigorously to ensure the Drawer overlaps the `PrismShell` natively without dual-scrim conflicts.
+4. Apply the `compose-scrim-drawer-pattern.md` rigorously to ensure the Drawer overlaps the `AgentShell` natively without dual-scrim conflicts.
 
 Please analyze `app-core/src/main/java/com/smartsales/prism/ui/drawers/AudioDrawer.kt` and `docs/cerb/audio-management/spec.md` to begin Phase 1: Planning for the Audio Drawer UI.

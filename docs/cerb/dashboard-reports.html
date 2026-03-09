@@ -452,184 +452,33 @@
         <div class="tabs">
             <a href="dashboard-topology.html" class="tab-btn " style="text-decoration: none; display: inline-block;">拓扑层级</a>
             <a href="dashboard-dataflow.html" class="tab-btn " style="text-decoration: none; display: inline-block;">跨模块数据流</a>
-            <a href="dashboard-estimate.html" class="tab-btn active" style="text-decoration: none; display: inline-block;">代码量估算</a>
-            <a href="dashboard-reports.html" class="tab-btn " style="text-decoration: none; display: inline-block;">报告中心</a>
+            <a href="dashboard-estimate.html" class="tab-btn " style="text-decoration: none; display: inline-block;">代码量估算</a>
+            <a href="dashboard-reports.html" class="tab-btn active" style="text-decoration: none; display: inline-block;">报告中心</a>
         </div>
 
-        <!-- 3. Code Estimate View -->
-<div id="estimate" class="tab-content active">
-            <div class="container">
-                <div class="card full-width">
-                    <h2>当前状态快照 (代码清理后)</h2>
-                    <div class="stat-grid stat-grid-4">
-                        <div class="stat-box"><div class="stat-value glow">185,200</div><div class="stat-label">总代码行数</div></div>
-                        <div class="stat-box"><div class="stat-value">172,000</div><div class="stat-label">核心 Kotlin 代码</div></div>
-                        <div class="stat-box"><div class="stat-value">13,100</div><div class="stat-label">测试 Kotlin 代码</div></div>
-                        <div class="stat-box"><div class="stat-value">100</div><div class="stat-label">资源 XML 文件</div></div>
-                    </div>
-                </div>
-
-                <div class="card full-width" style="margin-top: 40px;">
-                    <h2>生产级别投产预测目标</h2>
-                    <div class="two-col-grid" style="align-items: center; margin-top: 20px;">
-                        <div class="stat-grid">
-                            <div class="stat-box" style="border-color: var(--warning);">
-                                <div class="stat-value" style="color: var(--warning);">207,200</div>
-                                <div class="stat-label">保守预测 (最小可行)</div>
-                                <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 5px;">约增加 22,000 行</div>
-                            </div>
-                            <div class="stat-box" style="border-color: var(--success);">
-                                <div class="stat-value" style="color: var(--success);">200,200</div>
-                                <div class="stat-label">理想预测 (完整指标)</div>
-                                <div style="font-size: 0.8rem; color: #94a3b8; margin-top: 5px;">约增加 38,000 行</div>
-                            </div>
-                        </div>
-                        <p style="color: var(--text-muted); font-size: 0.95rem; margin-top: 20px; line-height: 1.6;">
-                            未来的代码增长必须集中在<strong>测试覆盖率</strong>（需增加 1.5万 - 2万行）以及<strong>错误处理和性能监控</strong>（需增加 5千 - 1.3万行），只有稳固这些模块才能将项目成功演进至重度生产阶段 (T2-T3)。
-                        </p>
-                    </div>
-                </div>
-
-                <div class="card full-width" style="margin-top: 40px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
-                        <h2 style="border-bottom: none; margin-bottom: 0; padding-bottom: 0;">当前代码物理文件组成分布 (实时扫描)</h2>
-                        <button onclick="if(window.compositionChartInstance && typeof window.originalSunburstDataString !== 'undefined') { window.compositionChartInstance.setOption({series: {data: JSON.parse(window.originalSunburstDataString)}}); }" style="background: rgba(59, 130, 246, 0.15); border: 1px solid var(--accent); color: var(--accent); padding: 6px 16px; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-size: 0.9rem; font-weight: 500; display: flex; align-items: center; gap: 6px;" onmouseover="this.style.background='rgba(59, 130, 246, 0.3)'" onmouseout="this.style.background='rgba(59, 130, 246, 0.15)'">
-                            <span style="font-size: 1.1rem;">↺</span> 重置视图 (Reset Zoom)
-                        </button>
-                    </div>
-                    <div class="two-col-grid" style="align-items: start; margin-top: 20px;">
-                        <div class="chart-container" style="height: 500px; padding: 10px;"><div id="compositionChart" style="width: 100%; height: 100%;"></div></div>
-                        <div id="compositionList" style="max-height: 500px; overflow-y: auto; padding-right: 15px;">
-                            <!-- JS will populate this list -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Comprehensive Metrics Row -->
-                <div class="card full-width two-col-grid" style="margin-top: 40px; background: rgba(0,0,0,0.2);">
-                    <!-- Key Gaps -->
-                    <div>
-                        <h2>产研关键差距分析 (T2-T3)</h2>
-                        <div style="margin-top: 20px;">
-                            <div class="increment-item">
-                                <span class="increment-title">测试覆盖率 (单元/集成 L1-L3)</span>
-                                <span class="gap-badge gap-success">✅ 已达标</span>
-                            </div>
-                            <div class="increment-item">
-                                <span class="increment-title">错误处理与异常恢复机制</span>
-                                <span class="gap-badge gap-warning">⚠️ 需要增强 (高优)</span>
-                            </div>
-                            <div class="increment-item">
-                                <span class="increment-title">性能监控与埋点 (Crashlytics)</span>
-                                <span class="gap-badge gap-error">❌ 缺失 (高优)</span>
-                            </div>
-                            <div class="increment-item">
-                                <span class="increment-title">安全性 (加密, Keystore, 证书)</span>
-                                <span class="gap-badge gap-warning">⚠️ 需要提升 (高优)</span>
-                            </div>
-                            <div class="increment-item">
-                                <span class="increment-title">真实云端集成验证 (Aliyun/Tingwu)</span>
-                                <span class="gap-badge gap-warning">⚠️ 需要验证 (高优)</span>
-                            </div>
-                            <div class="increment-item">
-                                <span class="increment-title">文档与注释完整性 (KDoc)</span>
-                                <span class="gap-badge gap-warning">⚠️ 需要完善 (中优)</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Incremental Needs -->
-                    <div>
-                        <h2>核心增量分布 (+38k)</h2>
-                        <div style="margin-top: 20px;">
-                            <div class="increment-item" style="border: none; padding-bottom: 5px;">
-                                <span class="increment-title">1. 完整测试覆盖补充</span>
-                                <span class="increment-lines">+15,000 ~ 20,000 行</span>
-                            </div>
-                            <div class="increment-progress"><div class="increment-bar" style="width: 50%; background: var(--success);"></div></div>
-                            
-                            <div class="increment-item" style="border: none; padding-bottom: 5px; margin-top: 10px;">
-                                <span class="increment-title">2. 缺失核心功能 (连接/同步/设置)</span>
-                                <span class="increment-lines">+5,000 ~ 8,000 行</span>
-                            </div>
-                            <div class="increment-progress"><div class="increment-bar" style="width: 25%; background: var(--warning);"></div></div>
-
-                            <div class="increment-item" style="border: none; padding-bottom: 5px; margin-top: 10px;">
-                                <span class="increment-title">3. UX/UI 用户体验深度优化</span>
-                                <span class="increment-lines">+3,000 ~ 5,000 行</span>
-                            </div>
-                            <div class="increment-progress"><div class="increment-bar" style="width: 15%; background: var(--glow);"></div></div>
-
-                            <div class="increment-item" style="border: none; padding-bottom: 5px; margin-top: 10px;">
-                                <span class="increment-title">4. 错误容错与数据持久化</span>
-                                <span class="increment-lines">+4,000 ~ 6,000 行</span>
-                            </div>
-                            <div class="increment-progress"><div class="increment-bar" style="width: 20%; background: var(--error);"></div></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card full-width" style="margin-top: 40px;">
-                    <h2>代码演进轨迹与增长速率 (最近 30 天)</h2>
-                    <div style="overflow-x: auto; margin-top: 20px;">
-                        <table style="width: 100%; text-align: left; border-collapse: collapse; margin-bottom: 20px; font-size: 0.95rem;">
-                            <thead>
-                                <tr style="border-bottom: 1px solid var(--border); color: var(--text-muted);">
-                                    <th style="padding: 12px;">模块分层</th>
-                                    <th style="padding: 12px;">新增代码 (Insertions)</th>
-                                    <th style="padding: 12px;">删除代码 (Deletions)</th>
-                                    <th style="padding: 12px;">净增长趋势 (Net Change)</th>
-                                    <th style="padding: 12px;">演进结论 (Trajectory)</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                
-            <tr style="border-bottom: 1px dashed rgba(255,255,255,0.1);">
-                <td style="padding: 12px; font-weight: 500;">代码模块分层 (Layer)</td>
-                <td style="padding: 12px; color: var(--success); font-family: 'Fira Code', monospace;">🟢 新增行数 (In)</td>
-                <td style="padding: 12px; color: var(--error); font-family: 'Fira Code', monospace;">🔴 移除行数 (Out)</td>
-                <td style="padding: 12px; color: var(--glow); font-family: 'Fira Code', monospace; font-weight: bold;">🟡 净增长 (Net)</td>
-                <td style="padding: 12px; font-weight: 600;">📉 演进趋势健康度</td>
-            </tr>
-            
-            <tr style="border-bottom: 1px dashed rgba(255,255,255,0.1);">
-                <td style="padding: 12px; font-weight: 500;">app-core (历史包袱遗留)</td>
-                <td style="padding: 12px; color: var(--success); font-family: 'Fira Code', monospace;">+31,926</td>
-                <td style="padding: 12px; color: var(--error); font-family: 'Fira Code', monospace;">-5,468</td>
-                <td style="padding: 12px; color: var(--glow); font-family: 'Fira Code', monospace; font-weight: bold;">+26,458</td>
-                <td style="padding: 12px; font-weight: 600;">❌ 巨石失控 (Regressing)</td>
-            </tr>
-            
-            <tr style="border-bottom: 1px dashed rgba(255,255,255,0.1);">
-                <td style="padding: 12px; font-weight: 500;">data (Layer 2 隔离层)</td>
-                <td style="padding: 12px; color: var(--success); font-family: 'Fira Code', monospace;">+8,242</td>
-                <td style="padding: 12px; color: var(--error); font-family: 'Fira Code', monospace;">-5</td>
-                <td style="padding: 12px; color: var(--glow); font-family: 'Fira Code', monospace; font-weight: bold;">+8,237</td>
-                <td style="padding: 12px; font-weight: 600;">✅ 健康增长</td>
-            </tr>
-            
-            <tr style="border-bottom: 1px dashed rgba(255,255,255,0.1);">
-                <td style="padding: 12px; font-weight: 500;">core (Layer 3 中枢层)</td>
-                <td style="padding: 12px; color: var(--success); font-family: 'Fira Code', monospace;">+5,610</td>
-                <td style="padding: 12px; color: var(--error); font-family: 'Fira Code', monospace;">0</td>
-                <td style="padding: 12px; color: var(--glow); font-family: 'Fira Code', monospace; font-weight: bold;">+5,610</td>
-                <td style="padding: 12px; font-weight: 600;">✅ 健康增长</td>
-            </tr>
-            
-                            </tbody>
-                        </table>
-                    </div>
-                    <div style="margin-top: 20px; padding: 20px; background: rgba(245, 158, 11, 0.1); border-left: 4px solid var(--warning); border-radius: 4px;"><strong style="color: var(--warning); font-size: 1.1rem; display: block; margin-bottom: 8px;">资深架构师评估结论诊断:</strong> <span style="color: #e2e8f0; font-size: 0.95rem; line-height: 1.6; display: inline-block;">"这是一个极其严峻的危险信号。虽然我们本周顺利移除了 1.5 万行冗余代码，但从你过去 30 天的 git 分支历史数据可见，在我们严格强制实施 Layer 2/3 边界隔离策略之前，`app-core` 疯狂滋生了近 2.6 万行净增代码。这便是为何 '推翻重建 (Nuke and Pave)' 是我们目前唯一出路的最佳铁证。如果在当时没有果断进行 Layer 2 和 3 的强制抽离，`app-core` 的无序膨胀将彻底失控，越过无法挽回的系统性崩塌临界点。"</span></div>
-                </div>
-
-                <div class="card full-width" style="margin-top: 40px;">
-                    <h2>历史代码量增长趋势</h2>
-                    <div class="chart-container" style="height: 400px;"><canvas id="trendChart"></canvas></div>
+        <!-- 4. Report Center View -->
+        <div id="reports" class="tab-content active">
+            <div class="container" style="display: block;">
+                <h2 style="color: var(--glow); margin-bottom: 10px;">系统评估与试验报告</h2>
+                <p style="color: var(--text-muted); margin-bottom: 30px;">架构复盘、协议试验结果和高级研判的报告墓地</p>
+                <div class="reports-grid">
+                    
+        <div class="report-card">
+            <div class="report-date">2026-03-09</div>
+            <div class="report-title">Assessment Report: Wave 1 Lightning Router E2E Trial</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> `docs/cerb-e2e-test/testing-protocol.md`</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> `RealLightningRouterTest.kt` & `PrismViewModelTest.kt`</div>
+            </div>
+            <a href="../reports/20260309-e2e-lightning-router-wave1.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
                 </div>
             </div>
         </div>
 
-                <script>
+        <script>
             let lines = [];
             let linesInitialized = false;
 
@@ -801,7 +650,7 @@
                 });
             }
 
-            window.addEventListener('load', () => { initCharts(); });
+            
         </script>
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>

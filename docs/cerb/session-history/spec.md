@@ -144,7 +144,7 @@ data class SessionPreview(
 When user taps "+" (new session):
 
 ```
-1. PrismViewModel.startNewSession()
+1. AgentViewModel.startNewSession()
    ├── Clear UI: history, title→"新对话", input, uiState→Idle
    ├── Reset RAM: contextBuilder.resetSession()
    │   └── Clears _sessionHistory, _turnCount, creates new WorkingSet
@@ -155,7 +155,7 @@ When user taps "+" (new session):
 **Key decisions**:
 - **No auto-save of previous session** — current conversation persists via `memory_entries` (MemoryRepository), not via session table. Session table is metadata only.
 - **`ContextBuilder.resetSession()`** needs to be exposed on the `ContextBuilder` interface (currently only on `RealContextBuilder` concrete class).
-- **`PrismViewModel`** needs `ContextBuilder` and `HistoryRepository` injected.
+- **`AgentViewModel`** needs `ContextBuilder` and `HistoryRepository` injected.
 
 **Interface change** (`ContextBuilder`):
 ```kotlin
@@ -170,7 +170,7 @@ interface ContextBuilder {
 **Trigger**: When a **new session** (default title "新对话") receives its **first successful AI response**.
 
 **Mechanism**:
-1. `PrismViewModel` detects `sessionTitle == "新对话"` after a successful turn.
+1. `AgentViewModel` detects `sessionTitle == "新对话"` after a successful turn.
 2. Calls `SessionTitleGenerator.generateTitle(history)`.
    - Uses `AiChatService` (lightweight model) to avoid pipeline contention.
    - Prompt: "Analyze conversation. Extract Client Name (or 'Unknown') and 6-char Summary."

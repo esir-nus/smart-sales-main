@@ -287,7 +287,7 @@ The pipeline calls `PrismOrchestrator.processSchedulerAction()` which already ha
 ## UI Integration
 
 ```kotlin
-// In SchedulerViewModel or PrismShell
+// In SchedulerViewModel or AgentShell
 @Inject lateinit var pipeline: BadgeAudioPipeline
 
 init {

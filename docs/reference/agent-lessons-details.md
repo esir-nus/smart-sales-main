@@ -27,8 +27,8 @@ When adding a new lesson (after USER confirms "problem fixed"):
 ### Compose Scrim Inside AnimatedVisibility — 2026-02-02
 
 **Symptom**: Grey screen covers drawer, clicking anywhere dismisses  
-**Root Cause**: **Double scrim conflict** — PrismShell has global scrim at `zIndex(Scrim)`, but SchedulerDrawer had its own internal scrim AND was not wrapped in `zIndex(Drawer)`.  
-**Quick Fix**: 1) Remove internal scrim from drawer (rely on PrismShell global scrim), 2) Wrap drawer call in `Box(zIndex(Drawer))`.  
+**Root Cause**: **Double scrim conflict** — AgentShell has global scrim at `zIndex(Scrim)`, but SchedulerDrawer had its own internal scrim AND was not wrapped in `zIndex(Drawer)`.  
+**Quick Fix**: 1) Remove internal scrim from drawer (rely on AgentShell global scrim), 2) Wrap drawer call in `Box(zIndex(Drawer))`.  
 **Deep Dive**: [compose-scrim-drawer-pattern.md](file:///home/cslh-frank/main_app/.agent/rules/compose-scrim-drawer-pattern.md)  
 **Status**: ✅ CONFIRMED 2026-02-02
 

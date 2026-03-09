@@ -1,6 +1,6 @@
 # Badge Audio Pipeline Interface
 
-> **Blackbox contract** — For consumers (PrismShell, UI). Don't read implementation.
+> **Blackbox contract** — For consumers (AgentShell, UI). Don't read implementation.
 
 ---
 

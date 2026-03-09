@@ -25,7 +25,7 @@ The `EntityDisambiguator` is a **Stateful RAM Application**. It prevents the `Pr
 | **Orchestrator Gateway First** | `PrismOrchestrator` must pass all raw input to this service *before* calling the standard pipeline routes. If this returns `Intercepted` or `Resumed`, the Orchestrator bypasses its normal flow. |
 | **No Direct Persistence** | This module does not write to SSD directly. It delegates to `EntityWriter.upsertFromClue()`. |
 | **Volatile State** | `PendingIntent` lives entirely in short-lived memory. If the app dies, the disambiguation state dies (acceptable degradation). |
-| **Orchestrator Yield** | Because `PrismViewModel` routes tasks through the Orchestrator, we must ensure inputs ALSO pass through this gateway to cure entities detected during complex workflows. |
+| **Orchestrator Yield** | Because `AgentViewModel` routes tasks through the Orchestrator, we must ensure inputs ALSO pass through this gateway to cure entities detected during complex workflows. |
 
 ---
 

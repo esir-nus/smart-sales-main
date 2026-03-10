@@ -65,8 +65,12 @@
 
 > Key spec/impl changes, newest first. Like `git log --oneline`.
 
-### 2026-03-09
+### 2026-03-10
 
+- **architecture**: "New Assembly" Pivot DECLARED. Abandoned the original "Great Assembly" due to compiler-driven extraction causing hidden coupling (Layer 3 depending on Layer 1) and abandoned test files. Initiating a bottom-up Layer 2 rebuild enforcing the 4 Cerb Pillars (Feature Purity, Anti-Illusion Testing, UI Literal Sync, Observable Telemetry).
+- **docs**: Deprecated `prism-ui-ux-contract.md`. The Single Source of Truth for UI/UX is now exclusively the `docs/cerb/[feature]/spec.md` files to prevent multi-spec architectural drift.
+
+### 2026-03-09
 - **architecture**: Testing Strategy Pivot SHIPPED. Formally paused the 'Great Assembly' at Layer 3 to prioritize the 'Anti-Illusion Test Overhaul' across the Core Pipeline. Mocks that bypass information gates have created a testing illusion, hiding critical routing defects. Future work will focus exclusively on Mock Eviction (Wave 2) and Context Branch Coverage (Wave 1).
 
 - **agent-intelligence-ui**: Wave 2 SHIPPED — Successfully executed the "Nuke & Pave" refactor of the monolithic `PrismViewModel` into `AgentViewModel`. Completely decoupled Layer 3 AI routing logic out of the Presentation layer into a dedicated `:core:pipeline:IntentOrchestrator`. Physically eliminated `PrismShell`, `PrismChatScreen`, and `PrismMainActivity` in favor of their `Agent*` equivalents via AST manipulation. All tests pass, proving perfect routing encapsulation.
@@ -298,45 +302,28 @@
 
 ---
 
-## The Great Assembly (Core-to-Periphery Architecture Audit)
+## The New Assembly (Layer 2 Upward Rebuild)
 
-> **Phase Context**: ⏸️ **PAUSED (2026-03-09)**. The 'Great Assembly' is paused while we execute the 'Anti-Illusion Test Overhaul' to secure the Layer 3 core pipeline tests. Before advancing to Layer 4/5 integration, we MUST prove the pipeline routes intent correctly without `mockito` hallucinations.
+> **Phase Context**: **ACTIVE (2026-03-10)**. The original 'Great Assembly' was declared bankrupt due to compiler-driven extraction causing severe Layer 3/Layer 1 coupling and abandoned tests. We are restarting the assembly from Layer 2 marching upwards. 
+> 
+> **The 4 Cerb Pillars Gate:** Every module must pass this gate before moving up:
+> 1. **Feature Purity**: Strict `interface-map.md` compliance. Zero illegal imports (e.g. Domain cannot see Android/Platform).
+> 2. **Anti-Illusion Testing (L1/L2)**: Verified exclusively with physical `Fake` implementations to prove real data flow. No Mockito for internal state.
+> 3. **UI Contract Literal Sync**: `/06-audit` literal match against Cerb specs. No synonyms.
+> 4. **Observable Telemetry**: All phase emissions logged to ADB.
 
-### Layer 1: Infrastructure Services (The Power Plant & Water)
-*Self-contained libraries with no upstream dependencies. Must be perfect.*
-- [x] `ConnectivityBridge` (extracted to `:data:connectivity`)
-- [x] `NotificationService` (extracted to `:core:notifications`)
-- [x] `OSS` (extracted to `:data:oss`)
-- [x] `ASR` (extracted to `:data:asr`)
-- [x] `TingwuPipeline` (extracted to `:data:tingwu`)
-- [x] `PipelineTelemetry` (extracted to `:core:telemetry`)
+### Phase 1: Layer 2 Data Services Purity
+- [x] `EntityWriter` & `EntityRegistry` (CRM)
+- [x] `MemoryCenter`
+- [x] `UserHabit`
+- [x] `SessionHistory` & `SessionContext`
 
-### Layer 2: Data Services (The Foundation)
-*Stores and queries domain data. SSD and RAM storage boundaries.*
-- [x] `EntityWriter` (extracted to `:data:crm`)
-- [x] `EntityRegistry` (extracted to `:data:crm`)
-- [x] `MemoryCenter` (extracted to `:data:memory`)
-- [x] `UserHabit` (extracted to `:data:habit`)
-- [x] `SessionHistory` (extracted to `:data:session`)
-- [x] `SessionContext`
+### Phase 2: Layer 3 Core Pipeline Purge
+- [ ] `Executor` Extraction (Sever from AiChatService)
+- [ ] `InputParserService` Rebuild & Test Port
+- [ ] `EntityDisambiguator` Rebuild & Test Port
+- [ ] `LightningRouter` & Orchestration Purity
 
-### Layer 3: Core Pipeline (The Roads & Intersections)
-*Orchestrates the LLM processing and routes intents.*
-- [x] `ContextBuilder`
-- [x] `InputParser`
-- [x] `EntityDisambiguator`
-- [x] `LightningRouter`
-- [x] `ModelRegistry` & `Executor`
-- [x] `PluginRegistry`
-- [x] `UnifiedPipeline`
-
-### Layer 4 & 5: Features & Intelligence (The Hospitals & Schools)
-*User-facing integrations that consume Layer 2/3.*
-- [ ] `MascotService`
-- [ ] `Scheduler` & `ScheduleBoard`
-- [ ] `BadgeAudioPipeline`
-- [ ] `ConflictResolver`
-- [ ] `DevicePairing`
-- [ ] `SessionTitleGenerator`
-- [ ] `ClientProfileHub` (Layer 5)
-- [ ] `RLModule` (Layer 5)
+### Phase 3: Layer 4 Feature Wiring
+- [ ] `Scheduler` & `ScheduleBoard` Reconnection
+- [ ] `MascotService` Reconnection

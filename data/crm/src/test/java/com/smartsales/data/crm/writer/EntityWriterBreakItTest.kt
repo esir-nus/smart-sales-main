@@ -1,13 +1,8 @@
-package com.smartsales.prism.data.real
+package com.smartsales.data.crm.writer
 
-import com.smartsales.core.context.RealContextBuilder
-import com.smartsales.core.pipeline.RealUnifiedPipeline
-
+import com.smartsales.core.test.fakes.FakeKernelWriteBack
 import com.smartsales.core.test.fakes.FakeEntityRepository
-import com.smartsales.core.test.fakes.FakeMemoryRepository
-import com.smartsales.prism.data.rl.RealReinforcementLearner
 import com.smartsales.prism.data.fakes.FakeTimeProvider
-import com.smartsales.core.test.fakes.FakeUserHabitRepository
 import com.smartsales.prism.domain.memory.EntityType
 import kotlinx.coroutines.test.runTest
 import org.json.JSONArray
@@ -24,25 +19,14 @@ class EntityWriterBreakItTest {
 
     private lateinit var repo: FakeEntityRepository
     private lateinit var writer: RealEntityWriter
-    private lateinit var contextBuilder: RealContextBuilder
-    private lateinit var scheduledTaskRepository: TestScheduledTaskRepository
+    private lateinit var writeBack: FakeKernelWriteBack
 
     @Before
     fun setup() {
         repo = FakeEntityRepository()
         val timeProvider = FakeTimeProvider()
-        val habitRepository = FakeUserHabitRepository()
-
-        scheduledTaskRepository = TestScheduledTaskRepository()
-        contextBuilder = RealContextBuilder(
-            timeProvider = timeProvider,
-            reinforcementLearner = RealReinforcementLearner(habitRepository),
-            memoryRepository = FakeMemoryRepository(),
-            entityRepository = FakeEntityRepository(),
-            scheduledTaskRepository = TestScheduledTaskRepository(),
-            telemetry = com.smartsales.prism.data.fakes.FakePipelineTelemetry()
-        )
-        writer = RealEntityWriter(repo, timeProvider, contextBuilder)
+        writeBack = FakeKernelWriteBack()
+        writer = RealEntityWriter(repo, timeProvider, writeBack)
     }
 
     // --- Null / Empty / Blank ---

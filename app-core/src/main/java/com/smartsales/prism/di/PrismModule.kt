@@ -47,8 +47,9 @@ abstract class PrismModule {
     @Binds @Singleton
     abstract fun bindContextBuilder(impl: RealContextBuilder): ContextBuilder
 
-    @Binds @Singleton
-    abstract fun bindKernelWriteBack(impl: RealContextBuilder): com.smartsales.core.context.KernelWriteBack
+    @Binds
+    @Singleton
+    abstract fun bindKernelWriteBack(impl: RealContextBuilder): com.smartsales.prism.domain.crm.writeback.KernelWriteBack
     
     @Binds @Singleton
     abstract fun bindPipelineTelemetry(impl: RealPipelineTelemetry): PipelineTelemetry
@@ -128,8 +129,9 @@ abstract class PrismModule {
 
     // === Entity Writer ===
 
-    @Binds @Singleton
-    abstract fun bindEntityWriter(impl: com.smartsales.prism.data.real.RealEntityWriter): com.smartsales.prism.domain.memory.EntityWriter
+    @Binds
+    @Singleton
+    abstract fun bindEntityWriter(impl: com.smartsales.data.crm.writer.RealEntityWriter): com.smartsales.prism.domain.memory.EntityWriter
 
     @Binds @Singleton
     abstract fun bindSessionTitleGenerator(impl: com.smartsales.prism.data.real.session.SemanticSessionTitleGenerator): SessionTitleGenerator

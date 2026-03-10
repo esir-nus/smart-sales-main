@@ -30,6 +30,7 @@ dependencies {
     implementation(project(":domain:habit"))
     implementation(project(":domain:session"))
     implementation(project(":domain:scheduler"))
+    implementation(project(":core:util"))
     
     // Core Infrastructure Contracts
     implementation(project(":core:llm"))

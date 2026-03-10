@@ -412,6 +412,21 @@ This happens when an agent uses a tool to write or replace file content and mist
 
 ---
 
+### Physical vs Logical Modularization (Compiler-Driven Extraction) — 2026-03-10
+
+**Symptom**: A module extraction is marked "complete" because the Gradle build passes, but the domain dependency graph remains a monolithic hairball (e.g., `:core:pipeline` depending on `:data:ai-core`).
+**Root Cause**: **Compiler-Driven Extraction.** The agent hoisted a file into a new module, hit unresolved reference errors, and bypassed them by injecting the legacy module into `build.gradle.kts` instead of rewriting the logic to use the new isolated interface.
+**Wrong Approach**: "Silencing the compiler" by adding `implementation(project(":data:..."))` just to get a green checkmark. Abandoning test files in the old module because they didn't cleanly migrate.
+**Correct Fix**: 
+1. **The Audit**: Read the code to understand *what* it does. Map its usage of legacy components.
+2. **The Rewrite**: Rewrite it in the new module targeting the pure interface (e.g., `Executor`).
+3. **The Cleanse**: Rip the legacy dependency entirely out of `build.gradle.kts`.
+4. **The Test Port**: Rescue the abandoned tests, move them to the new module, and rewrite them using Fakes.
+**Pattern**: Physical modularization (moving files) without logical modularization (inverting dependencies) is a failure. **Don't decide by compiler errors. Decide by alignment and coupling.**
+**Status**: ✅ CONFIRMED 2026-03-10
+
+---
+
 <!-- Add new lessons above this line -->
 
 ### JSON Schema Fragility vs Raw Markdown — 2026-03-02

@@ -10,65 +10,60 @@ import com.smartsales.core.context.EnhancedContext
 import com.smartsales.core.context.ModeMetadata
 import com.smartsales.core.pipeline.PipelineInput
 import com.smartsales.core.pipeline.PipelineResult
-import kotlinx.coroutines.delay
+import com.smartsales.core.pipeline.ParseResult
+import com.smartsales.core.pipeline.DisambiguationResult
+import com.smartsales.core.pipeline.QueryQuality
+import com.smartsales.prism.domain.scheduler.SchedulerLinter
+import com.smartsales.prism.domain.scheduler.TimelineItemModel
+import com.smartsales.prism.data.fakes.FakeTimeProvider
+import com.smartsales.prism.data.fakes.FakeAlarmScheduler
+import com.smartsales.prism.domain.scheduler.FakeScheduledTaskRepository
+import com.smartsales.core.test.fakes.*
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
-import org.mockito.kotlin.any
-import org.mockito.kotlin.doAnswer
-import org.mockito.kotlin.mock
-import org.mockito.kotlin.mock as mockk
+import com.smartsales.core.llm.ExecutorResult
 
 class RealUnifiedPipelineTest {
 
     private lateinit var pipeline: RealUnifiedPipeline
-    private lateinit var contextBuilder: ContextBuilder
-
-    private lateinit var entityDisambiguationService: com.smartsales.core.pipeline.EntityDisambiguationService
-    private lateinit var inputParserService: com.smartsales.core.pipeline.InputParserService
-    private lateinit var entityWriter: com.smartsales.prism.domain.memory.EntityWriter
-    private lateinit var schedulerLinter: com.smartsales.prism.domain.scheduler.SchedulerLinter
-    private lateinit var scheduledTaskRepository: com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
-    private lateinit var scheduleBoard: com.smartsales.prism.domain.memory.ScheduleBoard
-    private lateinit var inspirationRepository: com.smartsales.prism.domain.scheduler.InspirationRepository
-    private lateinit var alarmScheduler: com.smartsales.prism.domain.scheduler.AlarmScheduler
-    private lateinit var sessionTitleGenerator: com.smartsales.prism.domain.session.SessionTitleGenerator
-    private lateinit var promptCompiler: com.smartsales.core.pipeline.PromptCompiler
-    private lateinit var executor: com.smartsales.core.llm.Executor
+    
+    // 11 Fakes
+    private lateinit var contextBuilder: FakeContextBuilder
+    private lateinit var entityDisambiguationService: FakeEntityDisambiguationService
+    private lateinit var inputParserService: FakeInputParserService
+    private lateinit var entityWriter: FakeEntityWriter
+    private lateinit var schedulerLinter: SchedulerLinter
+    private lateinit var scheduledTaskRepository: FakeScheduledTaskRepository
+    private lateinit var scheduleBoard: FakeScheduleBoard
+    private lateinit var inspirationRepository: FakeInspirationRepository
+    private lateinit var alarmScheduler: FakeAlarmScheduler
+    private lateinit var sessionTitleGenerator: FakeSessionTitleGenerator
+    private lateinit var promptCompiler: FakePromptCompiler
+    private lateinit var executor: FakeExecutor
+    private lateinit var timeProvider: FakeTimeProvider
 
     @Before
     fun setup() {
-        entityDisambiguationService = mock()
-        inputParserService = mock()
-        entityWriter = mock()
-        schedulerLinter = mock()
-        scheduledTaskRepository = mock()
-        scheduleBoard = mock()
-        inspirationRepository = mock()
-        alarmScheduler = mock()
-        sessionTitleGenerator = mock()
-        promptCompiler = mock()
-        executor = mock()
-
-        // Create an explicit mock for ContextBuilder that simulates delay
-        contextBuilder = mock {
-            onBlocking { build(any(), any(), any(), any()) } doAnswer {
-                // Simulate I/O latency to test parallel execution
-                kotlinx.coroutines.runBlocking { delay(100) }
-                EnhancedContext(
-                    userText = "test",
-                    modeMetadata = ModeMetadata(currentMode = Mode.ANALYST, sessionId = "session-1", turnIndex = 1),
-                    sessionHistory = emptyList(),
-                    currentDate = "2026-03-05",
-                    currentInstant = 0L,
-                    executedTools = emptySet()
-                )
-            }
-        }
+        contextBuilder = FakeContextBuilder()
+        entityDisambiguationService = FakeEntityDisambiguationService()
+        inputParserService = FakeInputParserService()
+        entityWriter = FakeEntityWriter()
         
+        timeProvider = FakeTimeProvider()
+        schedulerLinter = SchedulerLinter(timeProvider)
+        
+        scheduledTaskRepository = FakeScheduledTaskRepository()
+        scheduleBoard = FakeScheduleBoard()
+        inspirationRepository = FakeInspirationRepository()
+        alarmScheduler = FakeAlarmScheduler()
+        sessionTitleGenerator = FakeSessionTitleGenerator()
+        promptCompiler = FakePromptCompiler()
+        executor = FakeExecutor()
+
         pipeline = RealUnifiedPipeline(
             contextBuilder = contextBuilder,
             entityDisambiguationService = entityDisambiguationService,
@@ -86,26 +81,71 @@ class RealUnifiedPipelineTest {
     }
 
     @Test
-    fun `processInput assembles parallel context and returns ConversationalReply`() = runTest {
+    fun `processInput Context Branch - CRM_TASK execution routing`() = runTest {
         // Arrange
-        val input = PipelineInput(rawText = "Please analyze my pipeline", isVoice = false)
+        // Fake Parser bypasses clarifying blocks with a success payload
+        val jsonStr = """{"intent": "scheduler"}"""
+        inputParserService.nextResult = ParseResult.Success(emptyList(), null, jsonStr)
+        entityDisambiguationService.nextResult = DisambiguationResult.PassThrough
+        
+        // Fake Executor returns carefully crafted JSON matching SchedulerLinter schema
+        val controlledLlmOutput = """{
+            "classification": "schedulable",
+            "tasks": [{
+                "title": "Discuss Anti-Illusion Protocol",
+                "startTime": "2026-03-10 10:00",
+                "duration": "30m",
+                "urgency": "L2_IMPORTANT"
+            }]
+        }"""
+        executor.defaultResponse = ExecutorResult.Success(
+            content = controlledLlmOutput,
+            tokenUsage = com.smartsales.core.llm.TokenUsage(100, 10)
+        )
+        
+        val input = PipelineInput(rawText = "Schedule a meeting", isVoice = false, intent = QueryQuality.CRM_TASK)
 
         // Act
         val results = pipeline.processInput(input).toList()
 
         // Assert
-        assertEquals(1, results.size)
-        val result = results.first()
-        assertTrue(result is PipelineResult.ConversationalReply)
-        val reply = result as PipelineResult.ConversationalReply
-        val expectedText = "Unified Pipeline ETL assembled successfully. Payload: Context [Mode: ANALYST, Metadata: User Metadata: Active]"
-        assertTrue("Expected '$expectedText' but got '${reply.text}'", reply.text.contains(expectedText))
+        assertTrue("Pipeline did not emit results", results.isNotEmpty())
+        val taskResult = results.filterIsInstance<PipelineResult.SchedulerTaskCreated>().firstOrNull()
+        assertTrue("Expected SchedulerTaskCreated but it was not emitted. Results: ${results.map { it::class.simpleName }}", taskResult != null)
+        assertEquals("Discuss Anti-Illusion Protocol", taskResult!!.title)
+        assertEquals(30, taskResult.durationMinutes)
     }
 
     @Test
-    fun `processInput with empty string handles gracefully (Break-It)`() = runTest {
+    fun `processInput Context Branch - ClarificationNeeded Trap`() = runTest {
         // Arrange
-        val input = PipelineInput(rawText = "   ", isVoice = false)
+        // Force the InputParser to flag an ambiguous entity
+        inputParserService.nextResult = ParseResult.NeedsClarification(
+            ambiguousName = "Alex",
+            suggestedMatches = emptyList(),
+            clarificationPrompt = "Which Alex do you mean?"
+        )
+        entityDisambiguationService.nextResult = DisambiguationResult.PassThrough
+        
+        val input = PipelineInput(rawText = "Set a meeting with Alex", isVoice = false, intent = QueryQuality.CRM_TASK)
+
+        // Act
+        val results = pipeline.processInput(input).toList()
+
+        // Assert
+        assertTrue("Pipeline did not emit results", results.isNotEmpty())
+        val result = results.first()
+        // It should intercept and yield UI state
+        assertTrue("Expected DisambiguationIntercepted but got ${result::class.simpleName}", result is PipelineResult.DisambiguationIntercepted)
+    }
+
+    @Test
+    fun `processInput empty string handles gracefully (Break-It)`() = runTest {
+        // Arrange
+        val input = PipelineInput(rawText = "   ", isVoice = false, intent = QueryQuality.NOISE)
+        
+        // By default, FakeDisambiguation is PassThrough. FakeParser uses ParseResult.Success empty JSON.
+        // It routes to Analyst/Consultant fallback (NOISE)
 
         // Act
         val results = pipeline.processInput(input).toList()

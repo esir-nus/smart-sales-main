@@ -1,13 +1,8 @@
-package com.smartsales.prism.data.real
+package com.smartsales.data.crm.writer
 
-import com.smartsales.core.context.RealContextBuilder
-import com.smartsales.core.pipeline.RealUnifiedPipeline
-
+import com.smartsales.core.test.fakes.FakeKernelWriteBack
 import com.smartsales.core.test.fakes.FakeEntityRepository
-import com.smartsales.core.test.fakes.FakeMemoryRepository
-import com.smartsales.prism.data.rl.RealReinforcementLearner
 import com.smartsales.prism.data.fakes.FakeTimeProvider
-import com.smartsales.core.test.fakes.FakeUserHabitRepository
 import com.smartsales.prism.domain.memory.EntityType
 import kotlinx.coroutines.test.runTest
 import org.json.JSONArray
@@ -15,7 +10,6 @@ import org.json.JSONObject
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import org.mockito.Mockito.mock
 
 /**
  * RealEntityWriter 单元测试 — 覆盖 spec 全部 test cases
@@ -27,29 +21,15 @@ import org.mockito.Mockito.mock
 class RealEntityWriterTest {
 
     private lateinit var repo: FakeEntityRepository
-    private lateinit var memoryRepo: FakeMemoryRepository
+    private lateinit var writeBack: FakeKernelWriteBack
     private lateinit var writer: RealEntityWriter
-    private lateinit var contextBuilder: RealContextBuilder
-    private lateinit var scheduledTaskRepository: TestScheduledTaskRepository
 
     @Before
     fun setup() {
         repo = FakeEntityRepository()
-        memoryRepo = FakeMemoryRepository()
         val timeProvider = FakeTimeProvider()
-        val habitRepository = FakeUserHabitRepository()
-        scheduledTaskRepository = TestScheduledTaskRepository()
-        // Define mockEntityRepo for the contextBuilder
-        val mockEntityRepo = mock(FakeEntityRepository::class.java)
-        contextBuilder = RealContextBuilder(
-            timeProvider = timeProvider,
-            reinforcementLearner = RealReinforcementLearner(habitRepository),
-            memoryRepository = memoryRepo,
-            entityRepository = mockEntityRepo,
-            scheduledTaskRepository = scheduledTaskRepository,
-            telemetry = com.smartsales.prism.data.fakes.FakePipelineTelemetry()
-        )
-        writer = RealEntityWriter(repo, timeProvider, contextBuilder)
+        writeBack = FakeKernelWriteBack()
+        writer = RealEntityWriter(repo, timeProvider, writeBack)
     }
 
     // ========================================
@@ -281,13 +261,8 @@ class RealEntityWriterTest {
             )
         )
 
-        // 验证 MemoryRepository 中记录了活动
-        // recordActivity 存储在 structuredJson 中包含 entityId
-        val memories = memoryRepo.getByEntityId(created.entityId)
-        val activityMemories = memories.filter {
-            it.structuredJson?.contains("activityType") == true
-        }
-        assertEquals("应记录2条历史", 2, activityMemories.size)
+        // 验证 FakeKernelWriteBack 中记录了活动
+        assertEquals("应记录2条历史", 2, writeBack.activities.size)
     }
 
     @Test(expected = IllegalArgumentException::class)
@@ -317,11 +292,8 @@ class RealEntityWriterTest {
         assertEquals("安排下周回访", saved.nextAction)
 
         // 验证历史记录
-        val memories = memoryRepo.getByEntityId(created.entityId)
-        val activityMemories = memories.filter {
-            it.structuredJson?.contains("NEXT_ACTION_SET") == true
-        }
-        assertEquals("应记录1条 NEXT_ACTION_SET 历史", 1, activityMemories.size)
+        val nextActionActivities = writeBack.activities.filter { it.contains("NEXT_ACTION_SET") }
+        assertEquals("应记录1条 NEXT_ACTION_SET 历史", 1, nextActionActivities.size)
     }
 
     // ========================================

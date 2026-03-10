@@ -1,7 +1,11 @@
 # Prism UI/UX Contract
 
-> **Status:** Active (Federated)  
-> **Last Updated:** 2026-02-01  
+> [!WARNING]
+> **⚠️ DEPRECATED - REFERENCE ONLY**
+> Do not use this document for implementation. The Single Source of Truth for all UI/UX states has been migrated directly into the respective `docs/cerb/[feature]/spec.md` files to prevent drift.
+
+> **Status:** Deprecated (See Cerb Specs)  
+> **Last Updated:** 2026-03-10  
 > **Architecture Companion:** [Prism-V1.md](./Prism-V1.md)  
 > **Terminology**: [GLOSSARY.md](./GLOSSARY.md)  
 > **Supersedes:** ux-contract.md, ux-experience.md, ui-ux-contract-v2.md

@@ -1,4 +1,4 @@
-package com.smartsales.prism.data.real
+package com.smartsales.data.crm.writer
 
 import android.util.Log
 import com.smartsales.prism.domain.crm.ActivityType
@@ -10,11 +10,11 @@ import com.smartsales.prism.domain.memory.ProfileChange
 import com.smartsales.prism.domain.memory.ProfileUpdateResult
 import com.smartsales.prism.domain.memory.UpsertResult
 import com.smartsales.prism.domain.memory.EntityRef
-import com.smartsales.prism.domain.time.TimeProvider
+// import removed to use FQCN
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
-import com.smartsales.core.context.KernelWriteBack
+import com.smartsales.prism.domain.crm.writeback.KernelWriteBack
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -26,7 +26,7 @@ import javax.inject.Singleton
 @Singleton
 class RealEntityWriter @Inject constructor(
     private val entityRepository: EntityRepository,
-    private val timeProvider: TimeProvider,
+    private val timeProvider: com.smartsales.prism.domain.time.TimeProvider,
     private val kernelWriteBack: KernelWriteBack // Breaks concrete coupling to RealContextBuilder
 ) : EntityWriter {
 

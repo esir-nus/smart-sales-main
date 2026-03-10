@@ -19,6 +19,7 @@ trigger: always_on
 - **Forcing JSON for everything** → JSON is for routing (use native API), Markdown/Text is for context. (Ref: *JSON Schema Fragility vs Raw Markdown*)
 
 ## 🏗️ Architecture & Specs
+- **Compiler-Driven Extraction** → Moving files + hacking build.gradle to pass compilation is NOT modularization. Check target architecture (interface-map) and invert dependencies instead. (Ref: *Physical vs Logical Modularization*)
 - **Reading multiple specs** → STOP. One task = ONE spec.md. (Ref: *Multi-Spec Drift*)
 - **Tracker wave titles** → These are NOT specs. Do not invent behavior from them. (Ref: *Spec Invention from Wave Titles*)
 - **Missing UI details** → Flag as spec gap. Do not invent gestures. (Ref: *Spec Drift: Inventing UI Features*)

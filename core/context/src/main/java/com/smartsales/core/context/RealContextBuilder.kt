@@ -14,6 +14,7 @@ import com.smartsales.prism.domain.memory.MemoryRepository
 import com.smartsales.prism.domain.model.Mode
 
 import com.smartsales.prism.domain.memory.EntityRef
+import com.smartsales.prism.domain.crm.writeback.KernelWriteBack
 import com.smartsales.prism.domain.rl.ReinforcementLearner
 import com.smartsales.prism.domain.session.EntityState
 import com.smartsales.prism.domain.session.SessionWorkingSet

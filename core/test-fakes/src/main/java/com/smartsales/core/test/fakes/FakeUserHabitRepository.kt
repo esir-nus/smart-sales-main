@@ -25,39 +25,7 @@ class FakeUserHabitRepository @Inject constructor() : UserHabitRepository {
     private val habits = mutableMapOf<String, UserHabit>()
 
     init {
-        // Seed global habits for Coach Mode L2 testing (Wave 3)
-        val now = System.currentTimeMillis()
-        val seedHabits = listOf(
-            UserHabit(
-                habitKey = "communication_style",
-                habitValue = "用户偏好用案例和故事说服客户，不喜欢纯理论讲解",
-                entityId = null,
-                inferredCount = 5,
-                lastObservedAt = now - 86400000,
-                createdAt = now - 604800000
-            ),
-            UserHabit(
-                habitKey = "meeting_time_pref",
-                habitValue = "用户习惯在上午安排重要客户会议，下午处理内部事务",
-                entityId = null,
-                inferredCount = 8,
-                lastObservedAt = now - 43200000,
-                createdAt = now - 1209600000
-            ),
-            UserHabit(
-                habitKey = "objection_handling",
-                habitValue = "用户擅长用'假设成交法'处理价格异议，成功率高",
-                entityId = null,
-                inferredCount = 12,
-                explicitPositive = 3,
-                lastObservedAt = now - 21600000,
-                createdAt = now - 1814400000
-            )
-        )
-        seedHabits.forEach { habit ->
-            habits[makeKey(habit.habitKey, habit.entityId)] = habit
-        }
-        android.util.Log.d("CoachMemory", "🌱 FakeUserHabitRepository seeded with ${seedHabits.size} global habits: ${seedHabits.map { it.habitKey }}")
+        android.util.Log.d("CoachMemory", "🌱 FakeUserHabitRepository initialized (Clean Blank Slate)")
     }
 
     override suspend fun getGlobalHabits(): List<UserHabit> {

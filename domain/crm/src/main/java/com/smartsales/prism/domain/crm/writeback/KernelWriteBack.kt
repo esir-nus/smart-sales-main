@@ -1,4 +1,4 @@
-package com.smartsales.core.context
+package com.smartsales.prism.domain.crm.writeback
 
 import com.smartsales.prism.domain.memory.EntityRef
 

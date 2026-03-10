@@ -28,9 +28,9 @@ This document is the **dynamic tracker, implementation spec, and North Star road
 > **Context**: The Anti-Illusion protocol is the fair judge of the Great Assembly. We are looking back to rigorously evaluate the layers we have already assembled before adding new features. We cannot test E2E flows on an illusion. All downstream E2E testing relies on the Pipeline routing intents correctly based on physical information gates, not mocked success.
 
 #### Phase 1: Layer 3 Core Pipeline Sweeps (The Epicenter)
-- [ ] **Target:** `RealUnifiedPipelineTest.kt`
-  - [ ] **Overhaul W1: Complete Mock Eviction**: Purge `mockito` intercepts for state layers. Inject `:core:test-fakes` (`FakeEntityRepository`, `FakeMemoryRepository`, `FakeContextBuilder` if applicable).
-  - [ ] **Overhaul W2: Context Branch Coverage**: Write explicit tests for the 3 Context States (No Context/Noise, Partial Context/Trap, Sufficient Context/Execution). Prove the pipeline traps and clarifies intents dynamically.
+- [x] **Target:** `RealUnifiedPipelineTest.kt`
+  - [x] **Overhaul W1: Complete Mock Eviction**: Purge `mockito` intercepts for state layers. Inject `:core:test-fakes` (`FakeEntityRepository`, `FakeMemoryRepository`, `FakeContextBuilder` if applicable).
+  - [x] **Overhaul W2: Context Branch Coverage**: Write explicit tests for the 3 Context States (No Context/Noise, Partial Context/Trap, Sufficient Context/Execution). Prove the pipeline traps and clarifies intents dynamically.
 - [ ] **Target:** `RealInputParserServiceTest.kt` & `EntityDisambiguator`
   - [ ] **Overhaul W3: Strict Interface Integrity**: Ensure tests do not mock the string parsing or bypass Linter gates.
   

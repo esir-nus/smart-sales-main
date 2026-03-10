@@ -24,6 +24,12 @@ android {
         jvmTarget = "17"
     }
 
+    testOptions {
+        unitTests {
+            isReturnDefaultValues = true
+        }
+    }
+
     buildFeatures {
         buildConfig = true
     }
@@ -42,6 +48,7 @@ dependencies {
     implementation(project(":domain:crm"))
     implementation(project(":domain:memory"))
     implementation(project(":core:database"))
+    implementation(project(":core:util"))
 
     // Other utilities
     implementation(libs.coroutines.android)
@@ -50,4 +57,5 @@ dependencies {
     // Test
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
+    testImplementation(project(":core:test-fakes"))
 }

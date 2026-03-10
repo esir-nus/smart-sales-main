@@ -64,6 +64,15 @@ Tracker entry → "session-context: PARTIAL"
 
 ---
 
+## Phase -1: Lessons Learned
+
+Always check for historical context to avoid repeating past mistakes.
+
+- **Read `.agent/rules/lessons-learned.md`**: Scan the index of triggers and symptoms.
+- If the current task matches any of the listed triggers or architectural patterns, you MUST read the corresponding full entry in `docs/reference/agent-lessons-details.md` BEFORE writing any implementation plan.
+
+---
+
 ## Phase -1.5: 🔒 Spec Generation & Triage (CRITICAL)
 
 Before reading code or planning, evaluate if a dedicated spec document is REQUIRED for this task. The project now has four primary spec types: **Feature**, **UI**, **Plugin**, and **Testing**.

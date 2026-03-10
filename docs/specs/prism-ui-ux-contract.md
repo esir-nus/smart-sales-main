@@ -20,15 +20,15 @@
 
 | Module | Status | Spec File |
 |--------|--------|-----------|
-| Home Screen | ✅ Shipped | [HomeScreen.md](./modules/HomeScreen.md) |
-| Chat Interface | ✅ Shipped | [ChatInterface.md](./modules/ChatInterface.md) |
-| Scheduler Drawer | ✅ Shipped | [SchedulerDrawer.md](./modules/SchedulerDrawer.md) |
-| History Drawer | ✅ Shipped | [HistoryDrawer.md](./modules/HistoryDrawer.md) |
-| Audio Drawer | ✅ Shipped | [AudioDrawer.md](./modules/AudioDrawer.md) |
-| Connectivity Modal | ✅ Shipped | [ConnectivityModal.md](./modules/ConnectivityModal.md) |
-| User Center | ✅ Shipped | [UserCenter.md](./modules/UserCenter.md) |
-| Analyst Mode | 🟡 In Progress | [AnalystMode.md](./modules/AnalystMode.md) |
-| Knot FAB | 🔲 Deferred | [KnotFAB.md](./modules/KnotFAB.md) |
+| Home Screen | ✅ Shipped | [HomeScreen.md](../cerb-ui/agent-intelligence/spec.md) |
+| Chat Interface | ✅ Shipped | [ChatInterface.md](../cerb-ui/agent-intelligence/spec.md) |
+| Scheduler Drawer | ✅ Shipped | [SchedulerDrawer.md](../cerb/scheduler/spec.md) |
+| History Drawer | ✅ Shipped | [HistoryDrawer.md](../cerb/session-history/spec.md) |
+| Audio Drawer | ✅ Shipped | [AudioDrawer.md](../cerb/audio-management/spec.md) |
+| Connectivity Modal | ✅ Shipped | [ConnectivityModal.md](../cerb/connectivity-bridge/spec.md) |
+| User Center | ✅ Shipped | [UserCenter.md](../cerb/user-habit/spec.md) |
+| Analyst Mode | 🟡 In Progress | [AnalystMode.md](../cerb/model-routing/spec.md) |
+| Knot FAB | 🔲 Deferred | [KnotFAB.md](../cerb-ui/agent-intelligence/spec.md) |
 
 ### Components
 
@@ -63,7 +63,7 @@
 
 ### 1.1 Home Screen
 
-> 📎 **Modularized**: Authoritative spec → [HomeScreen.md](./modules/HomeScreen.md)
+> 📎 **Modularized**: Authoritative spec → [HomeScreen.md](../cerb-ui/agent-intelligence/spec.md)
 
 
 ---
@@ -73,25 +73,25 @@
 
 ### 1.2 Chat Interface
 
-> 📎 **Modularized**: Authoritative spec → [ChatInterface.md](./modules/ChatInterface.md)
+> 📎 **Modularized**: Authoritative spec → [ChatInterface.md](../cerb-ui/agent-intelligence/spec.md)
 
 ---
 
 ### 1.3 Scheduler Drawer
 
-> 📎 **Modularized**: Authoritative spec → [SchedulerDrawer.md](./modules/SchedulerDrawer.md)
+> 📎 **Modularized**: Authoritative spec → [SchedulerDrawer.md](../cerb/scheduler/spec.md)
 
 
 
 ---
 ### 1.4 History Drawer
 
-> 📎 **Modularized**: Authoritative spec → [HistoryDrawer.md](./modules/HistoryDrawer.md)
+> 📎 **Modularized**: Authoritative spec → [HistoryDrawer.md](../cerb/session-history/spec.md)
 
 ---
 ### 1.5 Knot FAB
 
-> 📎 **Modularized**: Authoritative spec → [KnotFAB.md](./modules/KnotFAB.md)
+> 📎 **Modularized**: Authoritative spec → [KnotFAB.md](../cerb-ui/agent-intelligence/spec.md)
 
 ### 1.6 Onboarding Flow
 
@@ -99,15 +99,15 @@
 
 ### 1.6.1 Connectivity Modal
 
-> 📎 **Modularized**: Authoritative spec → [ConnectivityModal.md](./modules/ConnectivityModal.md)
+> 📎 **Modularized**: Authoritative spec → [ConnectivityModal.md](../cerb/connectivity-bridge/spec.md)
 ---
 
 ### 1.7 User Center
 
-> 📎 **Modularized**: Authoritative spec → [UserCenter.md](./modules/UserCenter.md)
+> 📎 **Modularized**: Authoritative spec → [UserCenter.md](../cerb/user-habit/spec.md)
 ### 1.8 Audio Drawer
 
-> 📎 **Modularized**: Authoritative spec → [AudioDrawer.md](./modules/AudioDrawer.md)
+> 📎 **Modularized**: Authoritative spec → [AudioDrawer.md](../cerb/audio-management/spec.md)
 
 ## §3. User Flows
 

@@ -119,7 +119,7 @@ enum class TranscriptionStatus {
 
 ## UI Reference
 
-> **UX Contract**: See [AudioDrawer.md](../../specs/modules/AudioDrawer.md) for interaction flows, card states, and gesture patterns.
+> **UX Contract**: See `spec.md` for interaction flows, card states, and gesture patterns.
 
 ---
 

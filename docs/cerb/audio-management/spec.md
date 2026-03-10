@@ -174,7 +174,7 @@ See [interface.md](./interface.md) for:
 
 ## UX Reference
 
-> **Spec**: See [AudioDrawer.md](../../specs/modules/AudioDrawer.md) for layouts, interactions, gestures, card states.
+> **Spec**: See the UX Reference section below for layouts, interactions, gestures, and card states.
 
 **Audio Drawer UI Strategy ("Dumb Data, Smart UI")**
 - [x] **Arrangement**: Transcription section MUST be at the top as the primary raw source of truth.

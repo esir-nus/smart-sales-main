@@ -29,7 +29,7 @@
 
 | Task | Read These |
 |------|-----------|
-| **Home Screen** | `modules/HomeScreen.md` |
+| **Home Screen** | `../cerb-ui/agent-intelligence/spec.md` |
 | **Audio Drawer** | `prism-ui-ux-contract.md` |
 | **User Center** | `prism-ui-ux-contract.md` |
 | **Connectivity Modal** | `prism-ui-ux-contract.md` |

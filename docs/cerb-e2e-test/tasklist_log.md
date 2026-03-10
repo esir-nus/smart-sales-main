@@ -31,8 +31,8 @@ This document is the **dynamic tracker, implementation spec, and North Star road
 - [x] **Target:** `RealUnifiedPipelineTest.kt`
   - [x] **Overhaul W1: Complete Mock Eviction**: Purge `mockito` intercepts for state layers. Inject `:core:test-fakes` (`FakeEntityRepository`, `FakeMemoryRepository`, `FakeContextBuilder` if applicable).
   - [x] **Overhaul W2: Context Branch Coverage**: Write explicit tests for the 3 Context States (No Context/Noise, Partial Context/Trap, Sufficient Context/Execution). Prove the pipeline traps and clarifies intents dynamically.
-- [ ] **Target:** `RealInputParserServiceTest.kt` & `EntityDisambiguator`
-  - [ ] **Overhaul W3: Strict Interface Integrity**: Ensure tests do not mock the string parsing or bypass Linter gates.
+- [x] **Target:** `RealInputParserServiceTest.kt` & `EntityDisambiguator`
+  - [x] **Overhaul W3: Strict Interface Integrity**: Ensure tests do not mock the string parsing or bypass Linter gates.
   
 > 🧠 **Agent Foresight & Reality Gaps (Phase 1)**: 
 > *Here we log predictive limitations where L1/L2 code tests diverge from L3 physical reality.*
@@ -95,4 +95,5 @@ This document is the **dynamic tracker, implementation spec, and North Star road
 ## Changelog
 *Hooks to automatic updates as waves are shipped. Do not place static rules here.*
 
+- **2026-03-10**: Completed Phase 2 of Layer 3 Core Pipeline Purge. Refactored `InputParserService` & `EntityDisambiguator` to use native `:core:llm` `Executor` and evicted Mockito from `RealInputParserServiceTest.kt`. Validated via Acceptance Team testing (`FakeExecutor`).
 - **2026-03-09**: Initialized cerb-e2e-test domain. Separated static testing protocols (`testing-protocol.md`) from this dynamic task tracking (`spec.md`). Defined the 6 initial E2E Waves.

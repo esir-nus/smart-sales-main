@@ -69,6 +69,7 @@ interface L2DebugHudEntryPoint {
 fun L2DebugHud(
     isVisible: Boolean,
     onDismiss: () -> Unit,
+    onTestMarkdownBubble: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     if (!BuildConfig.DEBUG) return
@@ -264,6 +265,29 @@ fun L2DebugHud(
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4F46E5))
                 ) {
                     Text("Emit AppIdle (Trigger Mascot)", color = Color.White)
+                }
+                
+                // ═══════════════════════════════════════════════════
+                // Section 1.8: UI Component Tests
+                // ═══════════════════════════════════════════════════
+                Text(
+                    "🎨 UI Component Tests",
+                    color = Color(0xFF9CA3AF),
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                Button(
+                    onClick = {
+                        Log.i(TAG, "🧪 L2 TEST: Injecting MarkdownStrategyBubble Mock UI State")
+                        onTestMarkdownBubble()
+                        lastResult = "🎨 Injected MarkdownStrategyBubble"
+                        showToast = true
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669))
+                ) {
+                    Text("Test Markdown Bubble (L2)", color = Color.White)
                 }
                 
                 // ═══════════════════════════════════════════════════

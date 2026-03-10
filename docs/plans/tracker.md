@@ -7,69 +7,33 @@
 
 ---
 
-## 🚧 ACTIVE EPIC: The Great Assembly Audit (Anti-Illusion Overhaul)
-> **Context**: The Anti-Illusion protocol is the fair judge of the Great Assembly. We are looking back to rigorously evaluate the layers we have already assembled before adding new features. We cannot test E2E flows on an illusion. All downstream E2E testing relies on the Pipeline routing intents correctly based on physical information gates, not mocked success.
+## 🚧 ACTIVE EPIC: The Great Assembly (Core to Outer Rim / Anti-Illusion Protocol)
+> **Context**: We construct the system from the *Inside Out* (Kernel → RAM → SSD → App). Each ring must be physically decoupled and mathematically proven (Anti-Illusion Protocol) before the next ring is mounted. Mockito is evicted. 3-Level Testing (L1 Unit, L2 Sim, L3 Device) is strictly enforced.
 
-### Phase 1: Layer 3 Core Pipeline Sweeps (The Epicenter)
-- [x] **Target:** `RealUnifiedPipelineTest.kt`
-  - [x] **Overhaul W1: Complete Mock Eviction**: Purge `mockito` intercepts for state layers. Inject `:core:test-fakes` (`FakeEntityRepository`, `FakeMemoryRepository`, `FakeContextBuilder` if applicable).
-  - [x] **Overhaul W2: Context Branch Coverage**: Write explicit tests for the 3 Context States (No Context/Noise, Partial Context/Trap, Sufficient Context/Execution). Prove the pipeline traps and clarifies intents dynamically.
-- [x] **Target:** `RealInputParserServiceTest.kt` & `EntityDisambiguator`
-  - [x] **Overhaul W3: Strict Interface Integrity**: Ensure tests do not mock the string parsing or bypass Linter gates.
+### 💍 Ring 1: Layer 1 Infrastructure (Kernel Services)
+> The raw I/O and hardware interaction layer. Must operate independently of all higher-level domain models.
+- [x] **Extraction**: `:data:connectivity`, `:core:notifications`, `:data:asr`, `:data:tingwu`, `:core:telemetry`
+- [x] **Verification**: All L1 tests pass. Independent contracts proven.
 
-> 🧠 **Agent Foresight & Reality Gaps (Phase 1)**: 
-> *Here we log predictive limitations where L1/L2 code tests diverge from L3 physical reality.*
-> - *Prediction (ASR Latency)*: While Mock Eviction proves the logic routes correctly, we cannot simulate the raw latency of the physical `Tingwu` ASR pipeline. The pipeline might time out in reality if the real ContextBuilder takes too long constructing the prompt.
-> - *Gap (Service Lifecycle)*: Unit tests cannot verify if the Android OS will kill the background service executing this pipeline mid-flight during a heavy inference step.
-> - *Prediction (Phonetic Brittleness)*: Strict string parsing in `EntityDisambiguator` might pass L1 tests beautifully, but fail in reality when Tingwu ASR outputs phonetically similar errors (e.g., "Chef Cook" vs "Jeff Cook"). 
-> - *Gap (Concurrency)*: `FakeMemoryRepository` simulates immediate, linear SSD read/writes. In reality, Room/SQLite database locks under concurrent asynchronous load map to real-world race conditions that a synchronous unit test completely misses.
-> - *Prediction (Token Limits)*: L1 tests inject small, clean session histories. In reality, a power user's `EnhancedContext` might breach the LLM's token limit, causing a hard crash that tests never surface.
+### 💍 Ring 2: Layer 2 Data Services (SSD & RAM)
+> The memory and state layer. SSD (Room) and RAM (SessionWorkingSet) must be strictly decoupled. No internal tracking mutations allowed during Read.
+- [x] **Domain Extraction**: Extract pure Kotlin contracts for `session` (STM), `memory` (LTM), `habit` (RL), `crm` (LTM).
+- [x] **Persistence Isolation**: Extract `PrismDatabase` into `:core:database`. Wire concrete DAOs to feature data modules (`:data:habit`, `:data:memory`, etc.).
+- [x] **Anti-Illusion Audit W1 (`session`)**: ✅ SHIPPED Ensure `SessionWorkingSet` RAM updates mathematically sync with `HistoryRepository` SSD writes. App-core double-write anomaly fixed and proven via `SessionAntiIllusionIntegrationTest`.
+- [x] **Anti-Illusion Audit W2 (`memory/crm`)**: ✅ SHIPPED Enforce exact entity extraction/disambiguation mapping between raw Strings and `sealed class` domain representations.
 
-### Phase 2: Layer 4 Feature Sweeps (Integration Veracity)
-- [x] **Target:** Scheduler & Notifications
-  - [x] **Overhaul W4: Payload Verification**: Enforce `verify(mock).method(argThat { ... })` payloads. Never assert success without proving the structure sent to the `SchedulerLinter` or `ToolRegistry`.
-- [x] **Target:** `AgentViewModelTest.kt` & `IntentOrchestratorTest.kt`
-  - [x] **Overhaul W5: Red-First State Triggers**: Prove the UI state machine organically falls back to `STATE_IDLE` or throws `ClarificationNeeded` when fed empty data.
+### 💍 Ring 3: Layer 3 Core Pipeline (The Orchestrator)
+> The brain. Connects user input to LLM mapping, then routes to physical features. Cannot invoke Fake/Dead logic.
+- [x] **Physical Extraction**: `:core:llm`, `:core:context`, `:core:pipeline`. Solved circular dependencies and smart-casting traps.
+- [x] **Mock Eviction W1 (Routing)**: ✅ SHIPPED Purge `mockito` intercepts from `RealUnifiedPipelineTest`. Inject `:core:test-fakes` to prove physical routing behavior (e.g., LightningFastTrack drops to Mascot vs deep Analyst loop).
+- [x] **Context Branch Coverage W2**: ✅ SHIPPED Prove `RealContextBuilder` accurately toggles `ContextDepth` (Minimal vs Full) under load without out-of-memory or timeout illusions.
+- [x] **Strict Interface Integrity W3**: ✅ SHIPPED Assert that `EntityDisambiguator` and `InputParser` accurately reject/clarify corrupted LLM JSON without hallucinating a successful pipeline emission.
 
-> 🧠 **Agent Foresight & Reality Gaps (Phase 2)**:
-> - *Prediction (UI Masking)*: Even if UI tests prove `AgentViewModel` emits the `ClarificationNeeded` state perfectly, tricky Compose UI rendering bugs (like the Scrim Drawer anti-pattern) might invisibly mask the amber card behind another layer.
-> - *Gap (User Psychology)*: We cannot unit-test if a user will actually understand the "amber breathing" visual cue or what to say next to resolve the trap. UI telemetry is mandatory post-launch.
-> - *Prediction (OEM Killers)*: `SchedulerLinter` might perfectly validate the target alarm time, but aggressive OEM battery management (Xiaomi/Oppo/Vivo MIUI/ColorOS) might silently block the `AlarmManager` broadcast from ever waking the app.
-> - *Gap (Hardware State)*: `AgentViewModel` might confidently transition to `STATE_LISTENING`, but tests cannot predict if the OS silently revoked the `RECORD_AUDIO` permission in the background, or if the mic hardware is locked by another app.
-> - *Gap (Flow Conflation)*: Unit tests using `UnconfinedTestDispatcher` run synchronously. In the real app, rapid state emissions might be silently conflated by Compose observers, causing skipped interface frames.
-
-### Phase 3: E2E Pillar Resumption (The 6 Waves)
-> Only after Phase 1 and 2 pass the Anti-Illusion protocol will we resume the 6 E2E Test Waves below.
-
-#### Wave 1: The Lightning Fast-Track 
-- [x] **L2 Sim**: Inject `GREETING` intent. Verify `LightningRouter` short-circuits to `MascotService` without triggering `Executor`.
-- [x] **L3 Manual**: Speak "Hello" into badge. Verify instant auditory response with zero delay in UI.
-- [x] **Acceptance Team**: Check passed.
-
-#### Wave 2: The Dual-Engine Bridge
-- [ ] **L2 Sim**: Run a two-turn simulation adjusting CRM record value mid-stream without deadlocking.
-- [ ] **L3 Manual**: Natural multi-sentence interruption verifying CRM delta.
-- [ ] **Acceptance Team**: Check passed.
-
-#### Wave 3: Strict Interface Integrity
-- [ ] **L2 Sim**: Inject poisoned/hallucinated `TargetId`. Verify Interface Linter aborts SSD write.
-- [ ] **L3 Manual**: Speak confusing, contradictory prompt; verify graceful clarification.
-- [ ] **Acceptance Team**: Check passed.
-
-#### Wave 4: The Adaptive Habit Loop
-- [ ] **L2 Sim**: Reject proposal 3 times -> verify `HabitScore` shifts on SSD.
-- [ ] **L3 Manual**: Explicitly retrain the Agent over repeated days.
-- [ ] **Acceptance Team**: Check passed.
-
-#### Wave 5: The Efficiency Overload
-- [ ] **L2 Sim**: Assert `Alias` routing natively returns pre-compiled DB result, bypassing LLM.
-- [ ] **L3 Manual**: Tap shortcut; verify sub-second loading vs generic query latency.
-- [ ] **Acceptance Team**: Check passed.
-
-#### Wave 6: The Transparent Mind
-- [ ] **L2 Sim**: EventBus emits exact state array matches (`STATE_RETRIEVING`, `STATE_EXECUTING`).
-- [ ] **L3 Manual**: Ask complex question; verify UI Thinking Box exactly matches backend.
-- [ ] **Acceptance Team**: Check passed.
+### 💍 Ring 4: Layer 4 Features & UI (The Outer Rim)
+> The App layer. The literal physical manifestation of the system. State emissions must translate 1:1 to UI visual updates.
+- [x] **Dataflow Veracity W1 (`Scheduler`)**: ✅ SHIPPED Enforce `verify(mock).method(argThat { ... })` structure over all `ToolRegistry` and `SchedulerLinter` payloads.
+- [x] **UI Literal Sync W2 (`AgentViewModel`)**: ✅ SHIPPED Prove the Orchestrator's `State` emissions (e.g., `ClarificationNeeded`) physically trigger the exact `prism-ui-ux-contract.md` Compose layouts, not invisible states masked by anti-patterns (e.g., Drawer Scrim).
+- [ ] **3-Level Testing Validation W3 (L2 → L3)**: For any new UI flow, an explicit L2 Simulated test *must pass* before attempting an L3 manual physical device test.
 
 ---
 
@@ -83,8 +47,9 @@
 | TOCTOU in observe() | `RoomUserHabitRepository.kt` | Low |
 | Room error handling | `Room*Repository` — no try-catch on writes | Low |
 | **Confidence-Based Reminder Interceptor** | Replace deterministic round-1 wrap-up with LLM confidence-based interception. Agent decides when to surface schedule context. Requires classifier or LLM self-assessment of conversation intent. Current workaround: smarter prompting that lets LLM decide naturally. | Medium |
-| **L2 UI Verification** | `MarkdownStrategyBubble.kt` — Verify the title extraction and rendering styling (T2 test from `l2_test_plan.md`) after major component refactoring is complete. | High |
-| **NotificationService Layer Violation** | `NotificationService.kt` in `domain` imports `android.app.PendingIntent` | High |
+| ~~**L2 UI Verification**~~ | ~~`MarkdownStrategyBubble.kt` — Verify the title extraction and rendering styling (T2 test from `l2_test_plan.md`) after major component refactoring is complete.~~ | ~~High~~ | ✅ **Resolved** — L2 isolated UI injection built and verified via Debug HUD. Header parsing and styled layouts proven without Mockito. |
+| ~~**NotificationService Layer Violation**~~ | ~~`NotificationService.kt` in `domain` imports `android.app.PendingIntent`~~ | ~~High~~ | ✅ **Resolved** — Ghost Debt. `PendingIntent` was previously abstracted into the pure Kotlin `NotificationAction` sealed class. Domain purity confirmed via grep audit. |
+| **Phase 3 E2E Pillar Resumption (The 6 Waves)** | System-wide E2E Device Tests for: Lightning Fast-Track, Dual-Engine Bridge, Strict Interface Integrity, Adaptive Habit Loop, Efficiency Overload, Transparent Mind. Deferred until all inner rings (1-4) mathematically pass the Anti-Illusion protocol without Mockito. | High |
 
 ---
 
@@ -102,6 +67,8 @@
 > Key spec/impl changes, newest first. Like `git log --oneline`.
 
 ### 2026-03-10
+- **agent-intelligence-ui**: MarkdownStrategyBubble L2 Verification SHIPPED. Built an isolated L2 UI injection testing mechanism via `L2DebugHud` and `AgentViewModel.debugRunScenario()`. Fixed legacy `LiveArtifactBuilder` routing bug in `AgentChatScreen` and upgraded `MarkdownText.kt` to natively parse headers and lists. The UI now explicitly verifies title extraction and rendering styling without relying on LLM executor passes.
+- **scheduler**: W1 Dataflow Veracity SHIPPED. Retrofitted `FakeToolRegistry` and `FakeExecutor` to track exact execution payloads (`executedRequests` and `executedPrompts`) natively without Mockito. Enforced explicit payload structure and Dataflow Context assertions in `AgentViewModelTest.kt` and `RealUnifiedPipelineTest.kt`, eliminating Testing Illusions in the scheduler pipeline.
 - **architecture**: Tracker Philosophy SHIPPED. Established `tracker.md` as the "Master Status Ledger" and Active Epic scratchpad while deferring to `spec.md` for architectural contracts and `interface-map.md` for global topology. Enforced "Operational Law" requiring evidence for any tracker updates. Removed redundant `Cerb Spec Index`.
 - **architecture**: Completed Phase 2 of Layer 4 Feature Sweeps. Relocated `SchedulerLinterTest` and `AlarmSchedulerTest` to `:domain:scheduler:test`. Evicted Mockito from `AgentViewModelTest` by generating and injecting pure test Fakes from `:core:test-fakes`. Verified via Acceptance Team testing (`FakeUnifiedPipeline`).
 - **architecture**: Completed Phase 2 of Layer 3 Core Pipeline Purge. Refactored `InputParserService` & `EntityDisambiguator` to use native `:core:llm` `Executor` and evicted Mockito from `RealInputParserServiceTest.kt`. Validated via Acceptance Team testing (`FakeExecutor`).

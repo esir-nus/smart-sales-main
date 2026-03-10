@@ -210,18 +210,9 @@ class AgentViewModel @Inject constructor(
     }
 
     private fun persistCurrentMessages() {
-        val sid = currentSessionId ?: return
-        val msgs = _history.value
-        if (msgs.isEmpty()) return
-        viewModelScope.launch(Dispatchers.IO) {
-            historyRepository.clearMessages(sid)
-            msgs.forEachIndexed { idx, msg ->
-                when (msg) {
-                    is ChatMessage.User -> historyRepository.saveMessage(sid, true, msg.content, idx)
-                    is ChatMessage.Ai -> historyRepository.saveMessage(sid, false, (msg.uiState as? UiState.Response)?.content ?: "", idx)
-                }
-            }
-        }
+        // Architecture update: Kernel (ContextBuilder) now auto-syncs chat turns to HistoryRepository 
+        // via KernelWriteBack when IntentOrchestrator generates responses.
+        // We no longer double-write from the UI layer.
     }
 
     fun clearToast() { _toastMessage.value = null }
@@ -438,6 +429,39 @@ class AgentViewModel @Inject constructor(
             }
             is PipelineResult.SchedulerMultiTaskCreated -> {
                 val ui = UiState.Response("已为您创建 ${result.tasks.size} 个日程")
+                _uiState.value = ui
+                _history.value += ChatMessage.Ai(
+                    id = java.util.UUID.randomUUID().toString(),
+                    timestamp = System.currentTimeMillis(),
+                    uiState = ui
+                )
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------------
+    // Debug Testing
+    // ------------------------------------------------------------------------
+    fun debugRunScenario(scenario: String) {
+        when (scenario) {
+            "MARKDOWN_BUBBLE" -> {
+                val markdownContent = """
+                    ### 周会分析报告
+                    
+                    以下是为您准备的客户跟进分析：
+                    
+                    * **流失预警**: A客户上周未拜访。
+                    * **高意向**: B客户主动索要了报价单。
+                    
+                    **建议行动**：
+                    请尽快安排针对A客户的回访，并准备B客户的合同草案。
+                """.trimIndent()
+                
+                val ui = UiState.MarkdownStrategyState(
+                    title = "深度分析完成",
+                    markdownContent = markdownContent
+                )
+                
                 _uiState.value = ui
                 _history.value += ChatMessage.Ai(
                     id = java.util.UUID.randomUUID().toString(),

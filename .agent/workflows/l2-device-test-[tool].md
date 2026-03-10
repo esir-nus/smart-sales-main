@@ -61,31 +61,54 @@ Use `notify_user` with `BlockedOnUser = true`.
 
 ---
 
-## Phase 4: Evaluate (Agent)
+## Phase 4: Evaluate & Document (Agent)
 
 When user returns:
 
 1. Read adb logcat output from the background command
-2. For each test item, check:
-   - ✅ PASS: Expected log lines found
-   - ❌ FAIL: Expected log lines missing or error logs present
-   - ⚠️ PARTIAL: Some expected logs found, some missing
-3. Produce evaluation report:
+2. For each test item, evaluate Pass/Fail based on explicit log evidence.
+3. Generate a formal Test Execution Record (TER) using the following template:
 
 ```markdown
-## L2 Test Report
+# L2 Simulated Test Record: [Component / Feature Name]
 
-| # | Test | Log Evidence | Result |
-|---|------|-------------|--------|
-| T1 | [name] | `💡 Tips loaded: 3 tips` | ✅ PASS |
-| T2 | [name] | Missing `📝 Prompt built` | ❌ FAIL |
+**Date**: [YYYY-MM-DD]
+**Tester**: [Agent/User]
+**Target Build**: `[Module]:assembleDebug`
 
-### Evidence
-[Paste relevant log lines]
+---
 
-### Verdict
-X/Y tests passed. [Ship / Debug]
+## 1. Test Context & Entry State
+* **Objective**: [Brief description]
+* **Testing Medium**: L2 Debug HUD Injection (Bypassing LLM execution).
+* **Initial Device State**: [e.g., Fresh app launch, Agent timeline empty].
+
+## 2. Execution Plan
+* **Trigger Action**: [e.g., Tapped "Test XYZ" in HUD].
+* **Input Payload**: [Brief description of injected data].
+
+## 3. Expected vs Actual Results
+
+| Checkpoint | Expected Behavior | Actual Behavior | Result |
+| :--- | :--- | :--- | :---: |
+| **UI Literal** | [Expected visual] | [Actual visual from user] | ✅/❌ |
+| **Log Evidence** | `[Expected log]` | `[Actual log snippet]` | ✅/❌ |
+| **Negative Check**| [What shouldn't happen] | [What actually didn't happen] | ✅/❌ |
+
+---
+
+## 4. Deviation & Resolution Log
+*(Only filled if initial passes failed)*
+* **Attempt 1 Failure**: [Description]
+  - **Root Cause**: [Why it failed]
+  - **Resolution**: [How it was fixed]
+
+## 5. Final Verdict
+**[✅ SHIPPED / ❌ FAILED]**. 
 ```
+
+4. **Save the Record**: Write the populated template to a new file in `docs/reports/tests/L2-[YYYYMMDD]-[FeatureName].md`.
+5. **Update Tracker**: Add a link to the new test report in `docs/plans/tracker.md` under the relevant Epic or Tech Debt item.
 
 ---
 

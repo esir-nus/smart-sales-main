@@ -43,36 +43,50 @@ fun MarkdownText(
 /**
  * 解析 markdown 文本 → AnnotatedString
  * 
- * 当前仅处理 **加粗**，后续可扩展斜体、链接等。
+ * 处理了 ### 标题、* 列表项 和 **加粗**。
  */
 private fun parseMarkdown(text: String, defaultColor: Color): AnnotatedString {
-    // 匹配 **bold** 模式
-    val boldPattern = Regex("\\*\\*(.+?)\\*\\*")
-    
     return buildAnnotatedString {
-        var lastIndex = 0
-        
-        boldPattern.findAll(text).forEach { match ->
-            // 追加匹配前的普通文本
-            if (match.range.first > lastIndex) {
+        val lines = text.split('\n')
+        lines.forEachIndexed { index, line ->
+            var currentLine = line
+            var isHeader = false
+            
+            if (currentLine.startsWith("### ")) {
+                isHeader = true
+                currentLine = currentLine.removePrefix("### ")
+            } else if (currentLine.startsWith("* ")) {
+                currentLine = currentLine.removePrefix("* ")
                 withStyle(SpanStyle(color = defaultColor)) {
-                    append(text.substring(lastIndex, match.range.first))
+                    append("• ")
                 }
             }
             
-            // 追加加粗文本
-            withStyle(SpanStyle(color = defaultColor, fontWeight = FontWeight.Bold)) {
-                append(match.groupValues[1])
+            val boldPattern = Regex("\\*\\*(.+?)\\*\\*")
+            var lastIndex = 0
+            
+            val lineStyle = if (isHeader) {
+                SpanStyle(color = defaultColor, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            } else {
+                SpanStyle(color = defaultColor)
             }
             
-            lastIndex = match.range.last + 1
-        }
-        
-        // 追加剩余文本
-        if (lastIndex < text.length) {
-            withStyle(SpanStyle(color = defaultColor)) {
-                append(text.substring(lastIndex))
+            withStyle(lineStyle) {
+                boldPattern.findAll(currentLine).forEach { match ->
+                    if (match.range.first > lastIndex) {
+                        append(currentLine.substring(lastIndex, match.range.first))
+                    }
+                    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                        append(match.groupValues[1])
+                    }
+                    lastIndex = match.range.last + 1
+                }
+                if (lastIndex < currentLine.length) {
+                    append(currentLine.substring(lastIndex))
+                }
             }
+            
+            if (index < lines.size - 1) append("\n")
         }
     }
 }

@@ -228,14 +228,15 @@ fun AgentChatScreen(
                     if (agentActivity == null && currentUiState !is UiState.Idle && currentUiState !is UiState.Error) {
                         item {
                             when (currentUiState) {
-                                is UiState.Response -> ResponseBubble(
+                                is UiState.Response,
+                                is UiState.AwaitingClarification,
+                                is UiState.SchedulerTaskCreated,
+                                is UiState.SchedulerMultiTaskCreated,
+                                is UiState.MarkdownStrategyState,
+                                is UiState.Error -> ResponseBubble(
                                     uiState = currentUiState,
                                     onConfirmPlan = viewModel::confirmAnalystPlan,
                                     onAmendPlan = viewModel::amendAnalystPlan
-                                )
-                                is UiState.MarkdownStrategyState -> LiveArtifactBuilder(
-                                    state = currentUiState.toLiveArtifactBuilderState(),
-                                    onResolveConflict = { _, _ -> }
                                 )
                                 is UiState.Streaming -> ThinkingCanvas(
                                     state = currentUiState.toThinkingCanvasState(isCollapsed = isThinkingCollapsed),
@@ -252,7 +253,12 @@ fun AgentChatScreen(
                             is ChatMessage.User -> UserBubble(text = message.content)
                             is ChatMessage.Ai -> {
                                 when (val state = message.uiState) {
-                                    is UiState.Response -> {
+                                    is UiState.Response,
+                                    is UiState.AwaitingClarification,
+                                    is UiState.SchedulerTaskCreated,
+                                    is UiState.SchedulerMultiTaskCreated,
+                                    is UiState.MarkdownStrategyState,
+                                    is UiState.Error -> {
                                         ResponseBubble(
                                             uiState = state,
                                             onConfirmPlan = viewModel::confirmAnalystPlan,
@@ -260,10 +266,6 @@ fun AgentChatScreen(
                                         )
 
                                     }
-                                    is UiState.MarkdownStrategyState -> LiveArtifactBuilder(
-                                        state = state.toLiveArtifactBuilderState(),
-                                        onResolveConflict = { _, _ -> }
-                                    )
                                     is UiState.Thinking -> {
                                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(8.dp)) {
                                             Text("🧠", fontSize = 12.sp) 

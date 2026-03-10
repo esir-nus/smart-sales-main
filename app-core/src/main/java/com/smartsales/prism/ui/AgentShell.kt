@@ -236,6 +236,7 @@ fun AgentShell(
         com.smartsales.prism.ui.debug.L2DebugHud(
             isVisible = showDebugHud,
             onDismiss = { showDebugHud = false },
+            onTestMarkdownBubble = { agentViewModel.debugRunScenario("MARKDOWN_BUBBLE") },
             modifier = Modifier.zIndex(PrismElevation.Drawer + 10f)
         )
         

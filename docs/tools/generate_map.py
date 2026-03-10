@@ -196,6 +196,23 @@ def parse_estimate():
                 if senior_match:
                     metrics["senior_take"] = senior_match.group(1).strip()
 
+            metrics["doc_stats"] = []
+            metrics["senior_doc_take"] = ""
+            doc_section = re.search(r"## 📚 Documentation & Knowledge Base(.*?)(?=\n---|##)", text, re.MULTILINE | re.DOTALL)
+            if doc_section:
+                section_text = doc_section.group(1)
+                for line in section_text.split('\n'):
+                    if line.startswith('|') and '---' not in line and 'Knowledge Domain' not in line:
+                        cols = [c.strip().replace('`', '') for c in line.split('|')[1:-1]]
+                        if len(cols) == 4:
+                            metrics["doc_stats"].append({
+                                "domain": cols[0].replace("**", ""), "count": cols[1], "metric": cols[2], "status": cols[3].replace("**", "")
+                            })
+                            
+                senior_doc_match = re.search(r"> \*\*资深架构师评估\*\*: \"(.*?)\"", section_text, re.DOTALL)
+                if senior_doc_match:
+                    metrics["senior_doc_take"] = senior_doc_match.group(1).strip()
+
     except Exception as e:
         print("Error parsing estimate:", e)
     return metrics
@@ -323,11 +340,22 @@ def generate_html_single(layers, page_type, metrics, reports=None):
     * { box-sizing: border-box; margin: 0; padding: 0; }
     
     body {
-        font-family: 'Inter', -apple-system, sans-serif;
-        background-color: var(--bg);
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        background: radial-gradient(circle at top, #1e293b 0%, #020617 100%);
         color: var(--text);
         line-height: 1.6;
         padding: 40px;
+    }
+    body::before {
+        content: '';
+        position: fixed;
+        top: -200px;
+        left: -200px;
+        width: 600px;
+        height: 600px;
+        background: radial-gradient(circle, rgba(167, 139, 250, 0.15) 0%, transparent 60%);
+        pointer-events: none;
+        z-index: 1;
     }
 
     .header {
@@ -539,19 +567,24 @@ def generate_html_single(layers, page_type, metrics, reports=None):
     }
 
     .tabs {
-        display: flex;
+        display: inline-flex;
         justify-content: center;
-        gap: 15px;
+        gap: 5px;
         margin-bottom: 40px;
         position: relative;
         z-index: 20;
+        background: rgba(0,0,0,0.2);
+        padding: 6px;
+        border-radius: 12px;
+        left: 50%;
+        transform: translateX(-50%);
     }
     
     .tab-btn {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        color: var(--text-muted);
-        padding: 12px 24px;
+        background: transparent;
+        border: none;
+        color: #94a3b8;
+        padding: 10px 24px;
         border-radius: 8px;
         font-size: 1.05rem;
         font-weight: 600;
@@ -560,15 +593,15 @@ def generate_html_single(layers, page_type, metrics, reports=None):
     }
     
     .tab-btn:hover {
-        background: var(--surface-hover);
+        background: rgba(255,255,255,0.05);
         color: var(--text);
     }
     
     .tab-btn.active {
-        background: rgba(59, 130, 246, 0.15);
-        border-color: var(--accent);
-        color: var(--accent);
-        box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+        background: #3b82f6;
+        color: white;
+        box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.5);
+        border-color: transparent;
     }
     
     .tab-content {
@@ -587,12 +620,26 @@ def generate_html_single(layers, page_type, metrics, reports=None):
     
     /* Code Estimate CSS */
     .container { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px; }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); transition: transform 0.3s ease; }
-    .card:hover { transform: translateY(-5px); border-color: var(--accent); box-shadow: 0 8px 30px rgba(59, 130, 246, 0.2); }
+    .card { 
+        background: rgba(30, 41, 59, 0.5); 
+        backdrop-filter: blur(12px); 
+        border: 1px solid rgba(255, 255, 255, 0.08); 
+        border-radius: 16px; 
+        padding: 30px; 
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.05); 
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; 
+        position: relative;
+        z-index: 2;
+    }
+    .card:hover { 
+        transform: translateY(-4px); 
+        border-color: rgba(255, 255, 255, 0.2); 
+        box-shadow: 0 14px 20px -5px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255, 255, 255, 0.1); 
+    }
     .card h2 { font-size: 1.5rem; color: var(--accent); margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
     .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 30px; }
     .stat-box { background: rgba(0,0,0,0.4); padding: 20px; border-radius: 12px; text-align: center; border: 1px solid var(--border); }
-    .stat-value { font-size: 2rem; font-weight: 700; color: var(--text); font-family: 'Fira Code', monospace; margin-bottom: 5px; }
+    .stat-value { font-size: 2.2rem; font-weight: 700; color: var(--text); font-family: 'Fira Code', monospace; margin-bottom: 5px; letter-spacing: -1px; text-shadow: 0 0 15px rgba(192, 132, 252, 0.3); }
     .stat-value.glow { color: var(--glow); text-shadow: 0 0 10px rgba(192, 132, 252, 0.5); }
     .stat-label { font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
     .full-width { grid-column: 1 / -1; }
@@ -632,6 +679,14 @@ def generate_html_single(layers, page_type, metrics, reports=None):
     .increment-lines { font-family: 'Fira Code', monospace; color: var(--accent); }
     .increment-progress { height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; margin-top: 8px; overflow: hidden; }
     .increment-bar { height: 100%; border-radius: 3px; }
+
+    .card table { width: 100%; text-align: left; border-collapse: collapse; margin-bottom: 20px; font-size: 0.95rem; }
+    .card th { text-transform: uppercase; font-size: 11px; font-weight: 600; color: #64748b; letter-spacing: 0.1em; padding: 16px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+    .card td { padding: 12px 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+    .card tr:hover td { background: rgba(255, 255, 255, 0.02); }
+    
+    .diagnosis { border-left: 4px solid; border-image: linear-gradient(to bottom, #f59e0b, #d97706) 1; background: rgba(245, 158, 11, 0.03); padding: 20px; color: #e2e8f0; }
+    .diagnosis-doc { border-left: 4px solid; border-image: linear-gradient(to bottom, #c084fc, #9333ea) 1; background: rgba(192, 132, 252, 0.03); padding: 20px; color: #e2e8f0; }
 
     /* Topology specific CSS */
     .topology-sequence {
@@ -1054,14 +1109,14 @@ def generate_html_single(layers, page_type, metrics, reports=None):
                 <div class="card full-width" style="margin-top: 40px;">
                     <h2>代码演进轨迹与增长速率 (最近 30 天)</h2>
                     <div style="overflow-x: auto; margin-top: 20px;">
-                        <table style="width: 100%; text-align: left; border-collapse: collapse; margin-bottom: 20px; font-size: 0.95rem;">
+                        <table>
                             <thead>
-                                <tr style="border-bottom: 1px solid var(--border); color: var(--text-muted);">
-                                    <th style="padding: 12px;">模块分层</th>
-                                    <th style="padding: 12px;">新增代码 (Insertions)</th>
-                                    <th style="padding: 12px;">删除代码 (Deletions)</th>
-                                    <th style="padding: 12px;">净增长趋势 (Net Change)</th>
-                                    <th style="padding: 12px;">演进结论 (Trajectory)</th>
+                                <tr>
+                                    <th>模块分层</th>
+                                    <th>新增代码 (Insertions)</th>
+                                    <th>删除代码 (Deletions)</th>
+                                    <th>净增长趋势 (Net Change)</th>
+                                    <th>演进结论 (Trajectory)</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1070,6 +1125,26 @@ def generate_html_single(layers, page_type, metrics, reports=None):
                         </table>
                     </div>
                     {senior_take_html}
+                </div>
+
+                <div class="card full-width" style="margin-top: 40px;">
+                    <h2>📚 知识库与架构沉淀 (文档级资产)</h2>
+                    <div style="overflow-x: auto; margin-top: 20px;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>知识领域 (Knowledge Domain)</th>
+                                    <th>文稿数量 (File Count)</th>
+                                    <th>度量指标 (Metric)</th>
+                                    <th>健康度 (Status)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {doc_stats_html}
+                            </tbody>
+                        </table>
+                    </div>
+                    {senior_doc_take_html}
                 </div>
 
                 <div class="card full-width" style="margin-top: 40px;">
@@ -1210,40 +1285,40 @@ def generate_html_single(layers, page_type, metrics, reports=None):
                         }
                         sunburstData.forEach(calculateValue);
                         
-                        let html = '<table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.95rem;">';
-                        html += '<tr style="border-bottom: 1px solid var(--border); color: var(--text-muted);"><th style="padding: 10px;">物流模块 (Directory)</th><th style="padding: 10px; text-align: right;">代码行数 (LOC)</th></tr>';
+                        let html = '<table>';
+                        html += '<thead><tr><th>物理模块 (Directory)</th><th style="text-align: right;">代码行数 (LOC)</th></tr></thead><tbody>';
                         
                         let sortedData = [...sunburstData].sort((a, b) => b.value - a.value);
                         
                         sortedData.forEach(item => {
-                            html += '<tr style="border-bottom: 1px dashed rgba(255,255,255,0.1);">';
-                            html += '<td style="padding: 10px; font-weight: 500; display: flex; align-items: center; gap: 10px;">';
+                            html += '<tr>';
+                            html += '<td style="font-weight: 500; display: flex; align-items: center; gap: 10px;">';
                             html += '<div style="width: 10px; height: 10px; border-radius: 50%; background: var(--glow);"></div>';
                             html += item.name + '</td>';
-                            html += '<td style="padding: 10px; text-align: right; color: var(--glow); font-family: monospace; font-weight: bold;">' + item.value.toLocaleString() + '</td>';
+                            html += '<td style="text-align: right; color: var(--glow); font-family: monospace; font-weight: bold;">' + item.value.toLocaleString() + '</td>';
                             html += '</tr>';
                             
                             if (item.children) {
                                 let sortedChildren = [...item.children].sort((a, b) => b.value - a.value);
                                 sortedChildren.forEach(child => {
-                                    html += '<tr style="border-bottom: 1px dashed rgba(255,255,255,0.05);">';
-                                    html += '<td style="padding: 6px 10px 6px 30px; color: var(--text-muted); font-size: 0.85rem; font-family: monospace;">↳ ' + child.name + '</td>';
-                                    html += '<td style="padding: 6px 10px; text-align: right; color: var(--text-muted); font-family: monospace; font-size: 0.85rem;">' + child.value.toLocaleString() + '</td>';
+                                    html += '<tr>';
+                                    html += '<td style="padding-left: 30px; color: var(--text-muted); font-size: 0.85rem; font-family: monospace;">↳ ' + child.name + '</td>';
+                                    html += '<td style="text-align: right; color: var(--text-muted); font-family: monospace; font-size: 0.85rem;">' + child.value.toLocaleString() + '</td>';
                                     html += '</tr>';
                                     
                                     if (child.children) {
                                         let nestedChildren = [...child.children].sort((a, b) => b.value - a.value);
                                         nestedChildren.forEach(nested => {
-                                            html += '<tr style="border-bottom: 1px dashed rgba(255,255,255,0.02);">';
-                                            html += '<td style="padding: 4px 10px 4px 50px; color: rgba(255,255,255,0.3); font-size: 0.8rem; font-family: monospace;">- ' + nested.name + '</td>';
-                                            html += '<td style="padding: 4px 10px; text-align: right; color: rgba(255,255,255,0.3); font-family: monospace; font-size: 0.8rem;">' + nested.value.toLocaleString() + '</td>';
+                                            html += '<tr>';
+                                            html += '<td style="padding-left: 50px; color: rgba(255,255,255,0.3); font-size: 0.8rem; font-family: monospace;">- ' + nested.name + '</td>';
+                                            html += '<td style="text-align: right; color: rgba(255,255,255,0.3); font-family: monospace; font-size: 0.8rem;">' + nested.value.toLocaleString() + '</td>';
                                             html += '</tr>';
                                         });
                                     }
                                 });
                             }
                         });
-                        html += '</table>';
+                        html += '</tbody></table>';
                         listContainer.innerHTML = html;
                     }
                 }
@@ -1330,19 +1405,35 @@ def generate_html(layers):
         traj_html = ""
         for row in metrics.get("trajectory_rows", []):
             traj_html += f'''
-            <tr style="border-bottom: 1px dashed rgba(255,255,255,0.1);">
-                <td style="padding: 12px; font-weight: 500;">{row["module"]}</td>
-                <td style="padding: 12px; color: var(--success); font-family: 'Fira Code', monospace;">{row["in"]}</td>
-                <td style="padding: 12px; color: var(--error); font-family: 'Fira Code', monospace;">{row["out"]}</td>
-                <td style="padding: 12px; color: var(--glow); font-family: 'Fira Code', monospace; font-weight: bold;">{row["net"]}</td>
-                <td style="padding: 12px; font-weight: 600;">{row["traj"]}</td>
+            <tr>
+                <td style="font-weight: 500;">{row["module"]}</td>
+                <td style="color: var(--success); font-family: 'Fira Code', monospace;">{row["in"]}</td>
+                <td style="color: var(--error); font-family: 'Fira Code', monospace;">{row["out"]}</td>
+                <td style="color: var(--glow); font-family: 'Fira Code', monospace; font-weight: bold;">{row["net"]}</td>
+                <td style="font-weight: 600;">{row["traj"]}</td>
             </tr>
             '''
         html = html.replace('{trajectory_rows_html}', traj_html)
         
         take = metrics.get("senior_take", "")
-        take_html = f'<div style="margin-top: 20px; padding: 20px; background: rgba(245, 158, 11, 0.1); border-left: 4px solid var(--warning); border-radius: 4px;"><strong style="color: var(--warning); font-size: 1.1rem; display: block; margin-bottom: 8px;">资深架构师评估结论诊断:</strong> <span style="color: #e2e8f0; font-size: 0.95rem; line-height: 1.6; display: inline-block;">"{take}"</span></div>' if take else ""
+        take_html = f'<div class="diagnosis" style="margin-top: 20px;"><strong style="color: var(--warning); font-size: 1.1rem; display: block; margin-bottom: 8px;">资深架构师评估:</strong> <span style="font-size: 0.95rem; line-height: 1.6; display: inline-block;">"{take}"</span></div>' if take else ""
         html = html.replace('{senior_take_html}', take_html)
+        
+        doc_html = ""
+        for row in metrics.get("doc_stats", []):
+            doc_html += f'''
+            <tr>
+                <td style="font-weight: 500;">{row["domain"]}</td>
+                <td style="color: var(--glow); font-family: 'Fira Code', monospace; font-weight: bold;">{row["count"]}</td>
+                <td style="color: var(--text-muted); font-family: 'Fira Code', monospace;">{row["metric"]}</td>
+                <td style="font-weight: 600;">{row["status"]}</td>
+            </tr>
+            '''
+        html = html.replace('{doc_stats_html}', doc_html)
+        
+        take_doc = metrics.get("senior_doc_take", "")
+        take_doc_html = f'<div class="diagnosis-doc" style="margin-top: 20px;"><strong style="color: var(--glow); font-size: 1.1rem; display: block; margin-bottom: 8px;">资深架构师评估:</strong> <span style="font-size: 0.95rem; line-height: 1.6; display: inline-block;">"{take_doc}"</span></div>' if take_doc else ""
+        html = html.replace('{senior_doc_take_html}', take_doc_html)
         
         # Calculate derived core
         conservative_core = metrics['core'] + 15000

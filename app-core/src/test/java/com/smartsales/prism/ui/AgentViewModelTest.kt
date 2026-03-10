@@ -8,6 +8,7 @@ import com.smartsales.prism.domain.scheduler.FakeScheduledTaskRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.*
 import org.junit.After
 import org.junit.Assert.*
@@ -129,5 +130,35 @@ class AgentViewModelTest {
         val uiState = viewModel.uiState.value
         assertTrue("Expected Response state, got ${uiState.javaClass.simpleName}", uiState is UiState.Response)
         assertEquals("分析已完成", (uiState as UiState.Response).content)
+    }
+
+    @Test
+    fun `selectTaskBoardItem submits correct payload to ToolRegistry`() = runTest {
+        // Arrange
+        val expectedToolId = "test_tool_123"
+        val expectedInputText = "some context text"
+        
+        // Use reflection to mock the UI state since it's populated from an external source not easily faked here
+        val field = AgentViewModel::class.java.getDeclaredField("_taskBoardItems")
+        field.isAccessible = true
+        val stateFlow = field.get(viewModel) as MutableStateFlow<List<com.smartsales.prism.domain.analyst.TaskBoardItem>>
+        stateFlow.value = listOf(
+            com.smartsales.prism.domain.analyst.TaskBoardItem(
+                id = expectedToolId, title = "Test Tool", description = "", icon = ""
+            )
+        )
+        
+        viewModel.updateInput(expectedInputText)
+        
+        // Act - Call the method directly rather than relying on LLM auto-dispatch
+        viewModel.selectTaskBoardItem(expectedToolId)
+        advanceUntilIdle()
+        
+        // Assert
+        assertEquals("ToolRegistry should have been called once", 1, fakeToolRegistry.executedRequests.size)
+        val request = fakeToolRegistry.executedRequests.first()
+        
+        assertEquals("The extracted text context should match the ViewModel's input text", expectedInputText, request.rawInput)
+        assertEquals("The parameters should be empty when invoked directly from UI", emptyMap<String, Any>(), request.parameters)
     }
 }

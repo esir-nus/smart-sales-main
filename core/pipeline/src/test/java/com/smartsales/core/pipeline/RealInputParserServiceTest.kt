@@ -132,9 +132,43 @@ class RealInputParserServiceTest {
 
         val result = parserService.parseIntent("下周二开会")
         
-        assertTrue(result is ParseResult.Success)
-        val success = result as ParseResult.Success
-        assertTrue(success.resolvedEntityIds.isEmpty())
-        assertEquals(null, success.temporalIntent)
+        assertTrue(result is ParseResult.NeedsClarification)
+        val clarification = result as ParseResult.NeedsClarification
+        assertEquals("未知意图", clarification.ambiguousName)
+        assertEquals(0, clarification.suggestedMatches.size)
+        assertTrue(clarification.clarificationPrompt.contains("系统未能理解您的语义意图"))
+    }
+
+    @Test
+    fun `test entity declaration exact sealed class mapping`() = runTest {
+        setupMockEntities()
+        val llmJson = """
+            {
+              "temporal_intent": null,
+              "declaration": {
+                "name": "司马懿",
+                "company": "曹魏集团",
+                "job_title": "大都督",
+                "aliases": ["仲达", "司马公"],
+                "notes": "非常聪明，防守反击大师"
+              }
+            }
+        """.trimIndent()
+        mockLlmResponse(llmJson)
+
+        val result = parserService.parseIntent("仲达，曹魏集团的大都督司马公，非常聪明，防守反击大师")
+        
+        assertTrue(result is ParseResult.EntityDeclaration)
+        val declaration = result as ParseResult.EntityDeclaration
+        
+        // Mathematically prove every single json field is accurately mapped to the sealed class
+        // This explicitly prevents the Entity-Domain Mapping Gap lesson learned
+        assertEquals("司马懿", declaration.name)
+        assertEquals("曹魏集团", declaration.company)
+        assertEquals("大都督", declaration.jobTitle)
+        assertEquals(2, declaration.aliases.size)
+        assertTrue(declaration.aliases.contains("仲达"))
+        assertTrue(declaration.aliases.contains("司马公"))
+        assertEquals("非常聪明，防守反击大师", declaration.notes)
     }
 }

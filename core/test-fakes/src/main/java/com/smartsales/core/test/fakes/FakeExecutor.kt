@@ -21,6 +21,8 @@ class FakeExecutor : Executor {
 
     // Store responses mapped by expected prompt keywords or profiles
     private val responseQueue = mutableListOf<ExecutorResult>()
+    
+    val executedPrompts = mutableListOf<String>()
 
     /**
      * Enqueue a specific result to be returned by the next `execute` call.
@@ -30,6 +32,7 @@ class FakeExecutor : Executor {
     }
 
     override suspend fun execute(profile: LlmProfile, prompt: String): ExecutorResult {
+        executedPrompts.add(prompt)
         return if (responseQueue.isNotEmpty()) {
             responseQueue.removeAt(0)
         } else {

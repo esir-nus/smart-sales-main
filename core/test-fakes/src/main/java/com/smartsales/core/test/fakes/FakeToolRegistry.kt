@@ -13,6 +13,8 @@ class FakeToolRegistry : ToolRegistry {
     
     var tools = mutableListOf<AnalystTool>()
     var executeFlow: Flow<UiState> = emptyFlow()
+    
+    val executedRequests = mutableListOf<PluginRequest>()
 
     override fun getToolsForRole(role: String): List<AnalystTool> = tools
 
@@ -27,6 +29,7 @@ class FakeToolRegistry : ToolRegistry {
         request: PluginRequest,
         gateway: PluginGateway
     ): Flow<UiState> {
+        executedRequests.add(request)
         return executeFlow
     }
 }

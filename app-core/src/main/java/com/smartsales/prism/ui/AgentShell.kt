@@ -237,6 +237,9 @@ fun AgentShell(
             isVisible = showDebugHud,
             onDismiss = { showDebugHud = false },
             onTestMarkdownBubble = { agentViewModel.debugRunScenario("MARKDOWN_BUBBLE") },
+            onTestClarificationBubble = { agentViewModel.debugRunScenario("CLARIFICATION_BUBBLE") },
+            onTestTaskCreatedBubble = { agentViewModel.debugRunScenario("TASK_CREATED_BUBBLE") },
+            onTestMultiTaskBubble = { agentViewModel.debugRunScenario("MULTI_TASK_CREATED_BUBBLE") },
             modifier = Modifier.zIndex(PrismElevation.Drawer + 10f)
         )
         

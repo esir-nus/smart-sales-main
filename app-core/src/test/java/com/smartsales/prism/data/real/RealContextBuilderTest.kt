@@ -33,6 +33,7 @@ class RealContextBuilderTest {
     private lateinit var scheduledTaskRepository: TestScheduledTaskRepository
     private lateinit var mockMemoryRepo: FakeMemoryRepository
     private lateinit var mockEntityRepo: FakeEntityRepository
+    private lateinit var mockHistoryRepo: com.smartsales.core.test.fakes.FakeHistoryRepository
     
     @Before
     fun setup() {
@@ -45,6 +46,7 @@ class RealContextBuilderTest {
         // Initialize mock repos for the new constructor call
         mockMemoryRepo = FakeMemoryRepository()
         mockEntityRepo = FakeEntityRepository()
+        mockHistoryRepo = com.smartsales.core.test.fakes.FakeHistoryRepository()
         
         contextBuilder = RealContextBuilder(
             timeProvider = timeProvider,
@@ -52,6 +54,7 @@ class RealContextBuilderTest {
             memoryRepository = mockMemoryRepo,
             entityRepository = mockEntityRepo,
             scheduledTaskRepository = scheduledTaskRepository,
+            historyRepository = mockHistoryRepo,
             telemetry = com.smartsales.prism.data.fakes.FakePipelineTelemetry()
         )
     }
@@ -147,6 +150,68 @@ class RealContextBuilderTest {
         assert(schedule.contains("Important Meeting"))
         assert(schedule.contains("关键人: Boss"))
         assert(schedule.contains("地点: Room 101"))
+    }
+
+    @Test
+    fun `build() with ContextDepth FULL loads all 3 sections`() = runTest {
+        // Arrange
+        habitRepository.observe("key", "val", null, ObservationSource.USER_POSITIVE)
+        val entityId = "e123"
+        val entry = com.smartsales.prism.domain.memory.EntityEntry(
+            entityId = entityId,
+            displayName = "Frank",
+            aliasesJson = "[]",
+            entityType = com.smartsales.prism.domain.memory.EntityType.PERSON,
+            createdAt = 0L,
+            lastUpdatedAt = 0L
+        )
+        mockEntityRepo.save(entry)
+        
+        // Act (First turn, SHOULD search memory)
+        val context = contextBuilder.build(
+            userText = "hello", 
+            mode = Mode.ANALYST,
+            resolvedEntityIds = listOf(entityId),
+            depth = com.smartsales.core.context.ContextDepth.FULL
+        )
+
+        // Assert
+        assertNotNull("FULL should load habit context", context.habitContext)
+        assertEquals("Should have queried global habits", 1, habitRepository.getGlobalHabitsCount)
+        assertNotNull("FULL should load entity knowledge", context.entityKnowledge)
+        assertEquals("Should have queried entity by ID", 1, mockEntityRepo.getByIdCount)
+    }
+
+    @Test
+    fun `build() with ContextDepth MINIMAL bypasses DB reads`() = runTest {
+        // Arrange
+        val entityId = "e123"
+        val entry = com.smartsales.prism.domain.memory.EntityEntry(
+            entityId = entityId,
+            displayName = "Frank",
+            aliasesJson = "[]",
+            entityType = com.smartsales.prism.domain.memory.EntityType.PERSON,
+            createdAt = 0L,
+            lastUpdatedAt = 0L
+        )
+        mockEntityRepo.save(entry)
+
+        // Act (First turn, but MINIMAL depth)
+        val context = contextBuilder.build(
+            userText = "hello",
+            mode = Mode.ANALYST,
+            resolvedEntityIds = listOf(entityId),
+            depth = com.smartsales.core.context.ContextDepth.MINIMAL
+        )
+
+        // Assert Data Payload (Testing Illusion Preventer)
+        org.junit.Assert.assertNull("MINIMAL should NOT load habit context", context.habitContext)
+        org.junit.Assert.assertNull("MINIMAL should NOT load entity knowledge", context.entityKnowledge)
+        org.junit.Assert.assertNull("MINIMAL should NOT load schedule context", context.scheduleContext)
+
+        // Assert Physical Layer Bypasses (Mathematical Proof)
+        assertEquals("MINIMAL should physically bypass UserHabitRepository LTM queries", 0, habitRepository.getGlobalHabitsCount)
+        assertEquals("MINIMAL should physically bypass EntityRepository LTM queries", 0, mockEntityRepo.getByIdCount)
     }
 }
 

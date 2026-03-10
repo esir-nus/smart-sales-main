@@ -70,6 +70,9 @@ fun L2DebugHud(
     isVisible: Boolean,
     onDismiss: () -> Unit,
     onTestMarkdownBubble: () -> Unit = {},
+    onTestClarificationBubble: () -> Unit = {},
+    onTestTaskCreatedBubble: () -> Unit = {},
+    onTestMultiTaskBubble: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     if (!BuildConfig.DEBUG) return
@@ -288,6 +291,45 @@ fun L2DebugHud(
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669))
                 ) {
                     Text("Test Markdown Bubble (L2)", color = Color.White)
+                }
+                
+                Button(
+                    onClick = {
+                        Log.i(TAG, "🧪 L2 TEST: Injecting AwaitingClarification Mock UI State")
+                        onTestClarificationBubble()
+                        lastResult = "🎨 Injected Clarification Bubble"
+                        showToast = true
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD97706))
+                ) {
+                    Text("Test Clarification Bubble (L2)", color = Color.White)
+                }
+                
+                Button(
+                    onClick = {
+                        Log.i(TAG, "🧪 L2 TEST: Injecting SchedulerTaskCreated Mock UI State")
+                        onTestTaskCreatedBubble()
+                        lastResult = "🎨 Injected Single Task Bubble"
+                        showToast = true
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))
+                ) {
+                    Text("Test Single Task Bubble (L2)", color = Color.White)
+                }
+                
+                Button(
+                    onClick = {
+                        Log.i(TAG, "🧪 L2 TEST: Injecting SchedulerMultiTaskCreated Mock UI State")
+                        onTestMultiTaskBubble()
+                        lastResult = "🎨 Injected Multi Task Bubble"
+                        showToast = true
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7C3AED))
+                ) {
+                    Text("Test Multi Task Bubble (L2)", color = Color.White)
                 }
                 
                 // ═══════════════════════════════════════════════════

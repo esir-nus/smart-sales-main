@@ -469,6 +469,63 @@ class AgentViewModel @Inject constructor(
                     uiState = ui
                 )
             }
+            "CLARIFICATION_BUBBLE" -> {
+                android.util.Log.d("AgentVM", "🧪 Injecting UiState.AwaitingClarification")
+                val ui = UiState.AwaitingClarification(
+                    question = "抱歉主理人，我需要一点细节，请问您想订个多长时间的会议？",
+                    clarificationType = com.smartsales.prism.domain.model.ClarificationType.MISSING_DURATION
+                )
+                _uiState.value = ui
+                _history.value += ChatMessage.Ai(
+                    id = java.util.UUID.randomUUID().toString(),
+                    timestamp = System.currentTimeMillis(),
+                    uiState = ui
+                )
+            }
+            "TASK_CREATED_BUBBLE" -> {
+                android.util.Log.d("AgentVM", "🧪 Injecting UiState.SchedulerTaskCreated")
+                val ui = UiState.SchedulerTaskCreated(
+                    taskId = "debug-task-001",
+                    title = "部门周会",
+                    dayOffset = 0,
+                    scheduledAtMillis = System.currentTimeMillis() + 3600_000,
+                    durationMinutes = 60,
+                    isReschedule = false
+                )
+                _uiState.value = ui
+                _history.value += ChatMessage.Ai(
+                    id = java.util.UUID.randomUUID().toString(),
+                    timestamp = System.currentTimeMillis(),
+                    uiState = ui
+                )
+            }
+            "MULTI_TASK_CREATED_BUBBLE" -> {
+                android.util.Log.d("AgentVM", "🧪 Injecting UiState.SchedulerMultiTaskCreated")
+                val task1 = UiState.SchedulerTaskCreated(
+                    taskId = "m-debug-01",
+                    title = "产品对焦",
+                    dayOffset = 0,
+                    scheduledAtMillis = System.currentTimeMillis() + 3600_000,
+                    durationMinutes = 30
+                )
+                val task2 = UiState.SchedulerTaskCreated(
+                    taskId = "m-debug-02",
+                    title = "技术调研",
+                    dayOffset = 0,
+                    scheduledAtMillis = System.currentTimeMillis() + 7200_000,
+                    durationMinutes = 120
+                )
+                val ui = UiState.SchedulerMultiTaskCreated(
+                    tasks = listOf(task1, task2),
+                    hasConflict = false
+                )
+                _uiState.value = ui
+                _history.value += ChatMessage.Ai(
+                    id = java.util.UUID.randomUUID().toString(),
+                    timestamp = System.currentTimeMillis(),
+                    uiState = ui
+                )
+            }
         }
     }
 }

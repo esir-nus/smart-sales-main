@@ -110,6 +110,12 @@ class RealUnifiedPipelineTest {
 
         // Assert
         assertTrue("Pipeline did not emit results", results.isNotEmpty())
+        
+        // Anti-Illusion: Verify the actual downstream Payload using the recorded Executor prompts
+        assertEquals("Executor should have been called exactly once", 1, executor.executedPrompts.size)
+        val generatedPrompt = executor.executedPrompts.first()
+        assertTrue("Prompt must explicitly contain the user's intent text for Dataflow Veracity", generatedPrompt.contains("Schedule a meeting"))
+        
         val taskResult = results.filterIsInstance<PipelineResult.SchedulerTaskCreated>().firstOrNull()
         assertTrue("Expected SchedulerTaskCreated but it was not emitted. Results: ${results.map { it::class.simpleName }}", taskResult != null)
         assertEquals("Discuss Anti-Illusion Protocol", taskResult!!.title)
@@ -152,5 +158,38 @@ class RealUnifiedPipelineTest {
 
         // Assert
         assertTrue(results.isNotEmpty())
+    }
+
+    @Test
+    fun `processInput LightningFastTrack drops to Mascot for GREETING`() = runTest {
+        // Arrange
+        val input = PipelineInput(rawText = "Hello Smart Sales", isVoice = false, intent = QueryQuality.GREETING)
+        
+        // Lightning Extractor Model returns a GREETING intent
+        val jsonPayload = """
+            {
+                "query_quality": "greeting",
+                "info_sufficient": false,
+                "response": "Hello Frank!"
+            }
+        """.trimIndent()
+        executor.enqueueResponse(ExecutorResult.Success(jsonPayload))
+
+        // Act
+        val results = pipeline.processInput(input).toList()
+
+        // Assert
+        assertTrue("Pipeline did not emit results", results.isNotEmpty())
+        
+        // Assert exactly two results: AutoRenameTriggered (from Parser) and ConversationalReply (from Pipeline fallback)
+        assertEquals("Should terminate early and emit fallback ConversationalReply", 2, results.size)
+        val renameResult = results[0]
+        assertTrue("Expected AutoRenameTriggered but got ${renameResult::class.simpleName}", renameResult is PipelineResult.AutoRenameTriggered)
+        
+        val replyResult = results[1]
+        assertTrue("Expected ConversationalReply but got ${replyResult::class.simpleName}", replyResult is PipelineResult.ConversationalReply)
+        
+        // Prove downstream EntityWriter/Scheduler was bypassed because CRM was skipped
+        // By defining a strict L1 route test, we explicitly prevent Mockito mapping illusions.
     }
 }

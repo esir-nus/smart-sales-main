@@ -12,6 +12,6 @@ class FakePromptCompiler : PromptCompiler() {
     var compileOutput: String = "Fake Compiled Prompt"
     
     override fun compile(context: EnhancedContext): String {
-        return compileOutput
+        return "$compileOutput\nUserText: ${context.userText}"
     }
 }

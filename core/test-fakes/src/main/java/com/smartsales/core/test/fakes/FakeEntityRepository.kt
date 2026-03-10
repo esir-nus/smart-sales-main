@@ -15,9 +15,13 @@ class FakeEntityRepository @Inject constructor() : EntityRepository {
     
     private val entries = mutableMapOf<String, EntityEntry>()
     
+    var getByIdCount = 0
+        private set
+    
     // NOTE: No hardcoded test data. Tests should seed their own data.
     
     override suspend fun getById(entityId: String): EntityEntry? {
+        getByIdCount++
         return entries[entityId]
     }
     

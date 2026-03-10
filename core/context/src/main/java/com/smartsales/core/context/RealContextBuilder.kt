@@ -12,6 +12,7 @@ import com.smartsales.prism.domain.memory.MemoryEntry
 import com.smartsales.prism.domain.memory.MemoryEntryType
 import com.smartsales.prism.domain.memory.MemoryRepository
 import com.smartsales.prism.domain.model.Mode
+import com.smartsales.prism.domain.repository.HistoryRepository
 
 import com.smartsales.prism.domain.memory.EntityRef
 import com.smartsales.prism.domain.crm.writeback.KernelWriteBack
@@ -46,6 +47,7 @@ class RealContextBuilder @Inject constructor(
     private val memoryRepository: MemoryRepository,
     private val entityRepository: EntityRepository,
     private val scheduledTaskRepository: ScheduledTaskRepository,
+    private val historyRepository: HistoryRepository,
     private val telemetry: PipelineTelemetry
 ) : ContextBuilder, KernelWriteBack {
 
@@ -183,6 +185,11 @@ class RealContextBuilder @Inject constructor(
         _turnCount++
         _sessionHistory.add(ChatTurn(role = "user", content = content))
         pruneHistory()
+        
+        // Write-through to SSD
+        val turnIndex = _sessionHistory.size - 1
+        historyRepository.saveMessage(_workingSet.sessionId, isUser = true, content = content, orderIndex = turnIndex)
+        
         saveToMemory(content, MemoryEntryType.USER_MESSAGE)
     }
 
@@ -190,6 +197,11 @@ class RealContextBuilder @Inject constructor(
         _turnCount++
         _sessionHistory.add(ChatTurn(role = "assistant", content = content))
         pruneHistory()
+        
+        // Write-through to SSD
+        val turnIndex = _sessionHistory.size - 1
+        historyRepository.saveMessage(_workingSet.sessionId, isUser = false, content = content, orderIndex = turnIndex)
+        
         saveToMemory(content, MemoryEntryType.ASSISTANT_RESPONSE)
     }
 

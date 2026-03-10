@@ -115,7 +115,11 @@ Rule: Return ONLY valid JSON without Markdown blocks or backticks.
         } catch (e: Exception) {
             telemetry.recordError(PipelinePhase.ENTITY_RESOLUTION, "Failed to parse JSON: $cleanJson", e)
             Log.e("InputParser", "Failed to parse JSON: $cleanJson")
-            return ParseResult.Success(emptyList(), null, cleanJson)
+            return ParseResult.NeedsClarification(
+                ambiguousName = "未知意图",
+                suggestedMatches = emptyList(),
+                clarificationPrompt = "系统未能理解您的语义意图，请您换个说法再试一次。"
+            )
         }
 
         val temporalIntent = jsonObject.optString("temporal_intent").takeIf { it != "null" && it.isNotBlank() }

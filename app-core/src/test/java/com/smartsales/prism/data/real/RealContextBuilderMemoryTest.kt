@@ -36,6 +36,7 @@ class RealContextBuilderMemoryTest {
     private lateinit var reinforcementLearner: RealReinforcementLearner
     private lateinit var scheduledTaskRepository: TestScheduledTaskRepository
     private lateinit var memoryRepository: FakeMemoryRepository
+    private lateinit var historyRepository: com.smartsales.core.test.fakes.FakeHistoryRepository
 
     @Before
     fun setup() {
@@ -44,6 +45,7 @@ class RealContextBuilderMemoryTest {
         reinforcementLearner = RealReinforcementLearner(habitRepository)
         entityRepository = FakeEntityRepository()
         memoryRepository = FakeMemoryRepository()
+        historyRepository = com.smartsales.core.test.fakes.FakeHistoryRepository()
 
         scheduledTaskRepository = TestScheduledTaskRepository()
         contextBuilder = RealContextBuilder(
@@ -52,6 +54,7 @@ class RealContextBuilderMemoryTest {
             memoryRepository = memoryRepository,
             entityRepository = entityRepository,
             scheduledTaskRepository = scheduledTaskRepository,
+            historyRepository = historyRepository,
             telemetry = FakePipelineTelemetry()
         )
     }

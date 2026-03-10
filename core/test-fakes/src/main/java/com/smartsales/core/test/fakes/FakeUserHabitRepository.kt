@@ -23,12 +23,16 @@ import javax.inject.Singleton
 class FakeUserHabitRepository @Inject constructor() : UserHabitRepository {
 
     private val habits = mutableMapOf<String, UserHabit>()
+    
+    var getGlobalHabitsCount = 0
+        private set
 
     init {
         android.util.Log.d("CoachMemory", "🌱 FakeUserHabitRepository initialized (Clean Blank Slate)")
     }
 
     override suspend fun getGlobalHabits(): List<UserHabit> {
+        getGlobalHabitsCount++
         return habits.values.filter { it.entityId == null }
     }
 
@@ -86,6 +90,7 @@ class FakeUserHabitRepository @Inject constructor() : UserHabitRepository {
      */
     fun clear() {
         habits.clear()
+        getGlobalHabitsCount = 0
     }
 
     /**

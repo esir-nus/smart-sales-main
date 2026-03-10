@@ -7,73 +7,44 @@
 This interface defines the data contract for rendering the "Agent Intelligence" wait-state UX. It visualizes the processing pipeline (Agent Thoughts, Tool Execution, Plan Generation) without exposing the user to raw JSON or blocking the conversation flow.
 
 ## 2. Dependencies
-- **Consumer**: Any ViewModel or Pipeline outputting `UiState` (e.g., `UnifiedPipeline`, `DashscopeExecutor`).
-- **Data Source**: Replaces legacy `AgentActivityBanner`, `ThinkingBox`, and `PlanCard`.
+- **Consumer**: Any ViewModel or Pipeline outputting `UiState` (e.g., `IntentOrchestrator`, `UnifiedPipeline`).
+- **Data Source**: Replaces legacy `AgentActivityBanner`, `ThinkingBox`, and components now managed natively by Compose `ResponseBubble`.
 
 ## 3. Data Contract (Input States)
 
-The UI component requires the following State classes from the RAM layer (ViewModel):
+The UI component requires the following State classes from the RAM layer (`com.smartsales.prism.domain.model.UiState`):
 
-### 3.1 `ActiveTaskHorizonState`
-Represents a long-running, multi-step agent process.
+### 3.1 Transitory States
+Visualize the latency of network calls.
+- `UiState.Loading`: Generic spinner.
+- `UiState.Thinking(hint)`: Displays a pulsing brain and a textual hint.
+- `UiState.Streaming(partialContent)`: Shows raw tokens arriving sequentially.
+- `UiState.ExecutingTool(toolName, parameters)`: Bypasses standard output while an internal tool runs.
 
-```kotlin
-data class ActiveTaskHorizonState(
-    val isVisible: Boolean,
-    val overarchingGoal: String,          // e.g., "Analyzing Q3 Competitor Data"
-    val currentActivity: String,          // e.g., "Reading transcripts..."
-    val activeToolStream: String?,        // e.g., "[Tool: query_relevancy_lib]"
-    val canCancel: Boolean                // Whether the user can manually abort
-)
-```
+### 3.2 Actionable States
+Require user interaction to proceed.
+- `UiState.AwaitingClarification(question, type, candidates)`: The LLM missing required details (e.g. Schedule duration) or entities.
+- `UiState.MarkdownStrategyState(title, markdownContent)`: A rich text output (plan, summary) supporting CTAs.
 
-### 3.2 `ThinkingCanvasState`
-Represents the live streaming Chain-of-Thought (CoT) from an LLM.
-
-```kotlin
-data class ThinkingCanvasState(
-    val isVisible: Boolean,
-    val streamingContent: String,         // The raw thought text
-    val isCollapsed: Boolean              // True when final answer is ready
-)
-```
-
-### 3.3 `LiveArtifactBuilderState`
-Represents the structured JSON/Markdown payload being written as a final deliverable by the agent.
-
-```kotlin
-data class LiveArtifactBuilderState(
-    val isVisible: Boolean,
-    val title: String,
-    val markdownContent: String,
-    val conflictNode: ConflictData?       // Null unless a blocker (e.g., schedule overlap) occurs
-)
-
-data class ConflictData(
-    val title: String,
-    val description: String,
-    val resolvable: Boolean
-)
-```
+### 3.3 Final Render States
+Asynchronous or immediate background notifications.
+- `UiState.SchedulerTaskCreated(taskId, title, ...)`: Confirmation of a created task.
+- `UiState.SchedulerMultiTaskCreated(tasks, hasConflict)`: Confirmation of batch task creation.
 
 ## 4. Event Contract (Output Actions)
 
-The UI component emits these events back to the RAM layer:
+The UI component emits these events back to the RAM layer (`AgentViewModel`):
 
 | Event | Trigger | Expected Action |
 |-------|---------|-----------------|
-| `OnCancelHorizonTap` | User taps the (X) button on the Task Horizon. | Cancel the async coroutine pipeline and revert state to Idle. |
-| `OnCanvasToggleTap` | User taps the collapsed "Agent Context" pill. | Expand to show the historical LLM thoughts for that specific bubble. |
-| `OnResolveConflict` | User taps a resolution CTA inside the Artifact Builder. | Dispatch resolution data to the Agent pipeline to resume execution. |
+| `onConfirmPlan` | User taps the "确认执行" CTA on a `MarkdownStrategyBubble`. | Triggers `intentOrchestrator.processInput("确认执行")` |
+| `onAmendPlan` | User taps "修改计划" CTA on a `MarkdownStrategyBubble`. | Surfaces a Toast prompting the user to type their amendments. |
 
 ## 5. You Should NOT
 - **Do not** bind these UI components directly to the network or the SSD (Database). They strictly read the emitted `UiState`.
-- **Do not** pass raw `qwen-max` response models into this UI. Parse them in the Domain layer into the `*State` data classes defined above.
-- **Do not** pass `ViewModel` instances (e.g., `AgentViewModel`) directly into these UI components. They must be "Dumb UI" components that only accept the defined `*State` data classes and emit simple event callbacks (e.g., `onCancelClicked: () -> Unit`). This ensures they remain decoupled and reusable on any screen.
+- **Do not** pass raw `qwen-max` response models into this UI. Parse them in the Domain layer into the `UiState` data classes defined above.
+- **Do not** pass `ViewModel` instances (e.g., `AgentViewModel`) directly into these UI components. They must be "Dumb UI" components passing callbacks (e.g., `onConfirmPlan: () -> Unit`). This ensures they remain decoupled and reusable on any screen.
 - **Do not** allow the UI components, nor the enclosing ViewModel, to handle intent routing (e.g., evaluating NOISE, skipping LLM, etc.). Intent routing must occur downstream in Layer 3 (e.g., `IntentOrchestrator`). The UI is strictly a dumb state-collector.
 
 ## 6. Code Reusability & Pipeline Integration (The "Plugin" Rule)
-To prevent the anti-pattern of writing new UI code for every new plugin, we enforce strict **Decoupled State Emission**:
-- **Plugin Ignorance**: Individual plugins (e.g., TranslationTool, WeatherPlugin) MUST NOT directly construct or emit `ActiveTaskHorizonState` or `ThinkingCanvasState`. Plugins should only emit raw domain events or simply execute their logic.
-- **Orchestrator Translation**: A centralized entity (e.g., `UnifiedPipeline` or `ToolRegistry`) automatically wraps plugin execution and translates the backend progress into these standard UI data contracts.
-- **Zero-UI Plugin Addition**: Adding a new "Tool 03" requires **ZERO** new UI code. Because the UI only listens to the generic `*State` emitted by the pipeline, any new tool plugged into the backend automatically gets the full Agent Intelligence visual treatment (Horizon tracking, Canvas logging) for free.
+- **Zero-UI Plugin Addition**: Because the UI only listens to the generic `UiState` emitted by the pipeline, any new tool plugged into the backend automatically gets the full Agent Intelligence visual treatment (Streaming, Loading, Testing) for free.

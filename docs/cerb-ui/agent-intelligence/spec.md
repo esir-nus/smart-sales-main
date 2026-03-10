@@ -3,44 +3,42 @@
 > **UX Philosophy**: "Transparent Autonomy" (Android Version of Antigravity)
 > **Status**: PARTIAL
 
-## 1. Core Visual Mechanics
+## 1. Wave Plan (Delivery Matrix)
+
+| Wave | Theme | Target | Status |
+|------|-------|--------|--------|
+| **Wave 1** | **Wait-State Basics** | Support `UiState.Thinking`, `UiState.Streaming`, Error states. | ✅ SHIPPED |
+| **Wave 2** | **UI Literal Sync** | Render actual payloads: `MarkdownStrategyBubble`, `ClarifyingBubble`, `TaskCreatedBubble`. Stop swallowing pipeline states in the Presentation layer. | ✅ SHIPPED |
+| **Wave 3** | **L2 Testing Validation** | Explicitly inject isolated `UiState` test fixtures via `L2DebugHud` to mathematically prove Compose layouts map to pipeline results. | 🔲 |
+
+## 2. Core Visual Mechanics
 
 To convey "watching an expert work," the UI must feel alive, structured, and interruptible—replacing simplistic "Thinking..." spinners.
 
-### 1.1 Active Task Horizon (Replaces `AgentActivityBanner`)
-A sticky container at the top of the chat view when a task is ongoing.
+### 2.1 Thinking Indicator (`UiState.Thinking`)
+A compact indicator that the LLM is actively reasoning.
+- **Visuals**: A soft pulsing brain emoji (🧠) or generic hint text: "正在思考...".
+- **Tokens Used**: `surface.thinking` (Dark background `#1A1A2E`).
 
-- **Positioning**: Sticky top (below main header). Does NOT scroll with chat.
-- **Visuals**: Dynamic Island style. Expands horizontally based on content.
-- **Tokens Used**:
-  - Background: `surface.plan`
-  - Border: Subtle pulsing `accent.primary` (1px solid)
-- **Trace Animation**: Micro-text of `activeToolStream` flashes through actual backend actions (`[Tool: get_sales_data]`).
-- **User Control**: Must ALWAYS have a clearly visible "(X) Cancel" button on the right edge.
+### 2.2 Streaming Bubble (`UiState.Streaming`)
+Visualizes partial LLM output arriving token-by-token.
+- **Visuals**: Standard response card rendering plaintext with a blinking text cursor `▌` appended to the end to simulate typing.
 
-### 1.2 Thinking Canvas (Replaces `ThinkingBox`)
-A fluid container visualizing raw LLM Chain-of-Thought processing.
+### 2.3 Clarifying Bubble (`UiState.AwaitingClarification`)
+Renders the `AwaitingClarification` state when the downstream pipeline flags ambiguity (e.g., missing scheduling duration).
+- **Visuals**: An inline card prefixed with a `❓ 需要更多信息` header, styled in `accent.info` (`#88CCFF`). 
 
-- **Positioning**: Inline chat stream, placed *above* the final markdown response.
-- **Visuals**:
-  - Background: `surface.thinking` (Glassmorphism / Blur `Color(0x881A1A2E)` where supported)
-  - Typography: `text.thinking` (Monospace, `#AAFFAA`)
-- **Interaction Rule (Auto-Collapse)**: The canvas MUST auto-collapse into an "Agent Context" pill the moment `ThinkingCanvasState.isCollapsed = true`.
-- **Expansion Rule**: Tap the pill to expand and read full thoughts. 
-- **Zero-Chrome Policy**: ABSOLUTELY NO internal scrollbars inside the canvas. It either displays fully (expanded) or collapses (pill).
+### 2.4 Markdown Strategy Bubble (`UiState.MarkdownStrategyState`)
+The primary vehicle for Analyst-mode multi-step plans and structured summaries.
+- **Positioning**: Inline chat stream as a distinct, actionable card.
+- **Visuals**: Renders standard Markdown syntax (headers, lists, bold) via `MarkdownText`.
+- **Interaction**: Features inline CTA buttons (e.g., "确认执行", "修改计划") that map back to the `IntentOrchestrator`.
 
-### 1.3 Live Artifact Builder (Replaces `PlanCard` & `ConflictResolver`)
-A specialized payload container showing a document or plan being built.
+### 2.5 Notification / Action Bubbles (`UiState.SchedulerTaskCreated`)
+Lightweight inline confirmations for asynchronous or background executions.
+- **Visuals**: Standard response bubble prefixed with "已创建任务: [标题]" or "✅ 已创建 N 个任务".
 
-- **Positioning**: Inline chat stream. 
-- **Visuals**:
-  - Background: `surface.response`
-- **Animation**: "Document Skeleton" layout. A glowing cursor moves down placeholder lines as new blocks arrive.
-- **Conflict State**: If `conflictNode` is present, the card pauses rendering. The border and conflicting section glow in `accent.warning` (`#FFAA00`).
-- **Resolution CTA**: The CTA to solve the conflict must be placed inline, immediately adjacent to the highlighted conflict text.
-
-## 2. Invariants & Guardrails
+## 3. Invariants & Guardrails
 - **No Mystery Meat Loading**: No spinners without associated text explaining what is happening.
-- **Immediate Cancellation**: The "Cancel" action in the Task Horizon must respond immediately (≤200ms visual feedback even if backend takes longer to halt).
-- **Responsive Layout**: Designed for mobile viewports (360dp - 430dp width). Horizon must not break layout boundaries.
+- **Responsive Layout**: Designed for mobile viewports (360dp - 430dp width).
 - **Universal Context Independence**: These components are foundational "Agent UI primitives." They must not assume they are living inside a Chat layout. They must be generic enough to render correctly anywhere in the app (e.g., on a Dashboard or floating over a calendar).

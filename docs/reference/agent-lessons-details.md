@@ -427,6 +427,21 @@ This happens when an agent uses a tool to write or replace file content and mist
 
 ---
 
+### Intelligent Orchestration vs Manual Choreography — 2026-03-10
+
+**Symptom**: Agents/Users constantly forgetting to run `/cerb-check`, or choosing the wrong template, leading to hallucinated implementations that bypass the OS Model boundaries.
+**Root Cause**: **Manual DX Choreography.** We built strict linters and templates, but forced the human/agent to manually string them together in the right order. This puts the cognitive load of architectural routing completely on the practitioner.
+**Wrong Approach**: Adding more templates and slash commands without a central entry point, assuming the agent will perfectly guess the routing.
+**Correct Fix**: **Paved Road Orchestration.** 
+1. Make the Planner (`/feature-dev-planner`) the single intelligent entry point.
+2. The Planner reads the PRD and global topologies (`tracker.md`, `interface-map.md`) first.
+3. The Planner dynamically routes the task to the correct template (`/cerb-ui-template`, etc.).
+4. The Planner runs the linter (`/cerb-check`) internally.
+**Pattern**: **Don't ask the engineer to run 5 linters; give them one entry point that enforces the SOP under the hood.** The easiest path must be the compliant path.
+**Status**: ✅ CONFIRMED 2026-03-10
+
+---
+
 <!-- Add new lessons above this line -->
 
 ### JSON Schema Fragility vs Raw Markdown — 2026-03-02

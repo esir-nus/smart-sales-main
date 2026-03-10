@@ -19,6 +19,7 @@ trigger: always_on
 - **Forcing JSON for everything** → JSON is for routing (use native API), Markdown/Text is for context. (Ref: *JSON Schema Fragility vs Raw Markdown*)
 
 ## 🏗️ Architecture & Specs
+- **Manual DX Choreography** → Don't make agents/users orchestrate strict SOPs manually. Build Paved Road orchestrators (like Planners) that enforce compliance dynamically. (Ref: *Intelligent Orchestration vs Manual Choreography*)
 - **Compiler-Driven Extraction** → Moving files + hacking build.gradle to pass compilation is NOT modularization. Check target architecture (interface-map) and invert dependencies instead. (Ref: *Physical vs Logical Modularization*)
 - **Reading multiple specs** → STOP. One task = ONE spec.md. (Ref: *Multi-Spec Drift*)
 - **Tracker wave titles** → These are NOT specs. Do not invent behavior from them. (Ref: *Spec Invention from Wave Titles*)

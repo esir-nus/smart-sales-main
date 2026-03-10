@@ -13,7 +13,7 @@ description: Gateway workflow for feature development - enforces single-spec sco
 
 | Phase | Gate | Action |
 |-------|------|--------|
-| **-2** | Tracker | Read `docs/plans/tracker.md`, verify feature exists, find owning Cerb shard |
+| **-2** | Global Scope & PRD | Read `SmartSales_PRD.md`, `tracker.md`, and `interface-map.md` to ensure business alignment and find owning Cerb shard |
 | **-1.5**| Spec Triage | Validate spec necessity (feature, ui, testing, plugin). Missing? Create docs first. Multi-spec? Skip creation. |
 | **-1** | Lessons | Read `.agent/rules/lessons-learned.md`, check for matching patterns |
 | **0** | Spec Scope | Read owning spec COMPLETELY, fill Cerb Scope Declaration, quote behavior |
@@ -30,15 +30,13 @@ description: Gateway workflow for feature development - enforces single-spec sco
 
 ---
 
-## Phase -2: Tracker & Interface Map → Cerb Shard
+## Phase -2: Global Scope, PRD Alignment & Topology
 
-```bash
-cat docs/plans/tracker.md
-cat docs/cerb/interface-map.md
-```
+Always read the Product Requirements Document (PRD) and global registries to maintain architectural and business alignment before touching any specs.
 
-**Tracker is an INDEX, not a spec.** It faithfully reflects spec implementation status — it never invents tasks. 
-**Interface Map is the TOPOLOGY**. It defines module ownership and data flow. You MUST check it to know which modules to read from and write to.
+- **Read `SmartSales_PRD.md`**: Keep the feature on track with the overarching business goals and constraints. Do not build features that drift from the PRD.
+- **Read `docs/plans/tracker.md`**: The **index** of spec states. It faithfully reflects spec implementation status — it never invents tasks.
+- **Read `docs/cerb/interface-map.md`**: The **topology**. It defines module ownership and data flow. You MUST check it to know which modules to read from and write to.
 
 Find the owning Cerb shard and its connections:
 

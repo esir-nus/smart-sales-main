@@ -1,1 +1,0 @@
-- [Artifact Engine (System IV)](/docs/to-cerb/artifact-engine/concept.md)

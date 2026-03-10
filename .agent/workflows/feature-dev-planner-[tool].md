@@ -14,7 +14,7 @@ description: Gateway workflow for feature development - enforces single-spec sco
 | Phase | Gate | Action |
 |-------|------|--------|
 | **-2** | Global Scope & PRD | Read `SmartSales_PRD.md`, `tracker.md`, and `interface-map.md` to ensure business alignment and find owning Cerb shard |
-| **-1.5**| Spec Triage | Validate spec necessity (feature, ui, testing, plugin). Missing? Create docs first. Multi-spec? Skip creation. |
+| **-1.5**| Spec Triage & Concept | Validate if task requires unconstrained brainstorming (`to-cerb`) or direct specification (`cerb`). Missing? Create docs first. Multi-spec? Skip creation. |
 | **-1** | Lessons | Read `.agent/rules/lessons-learned.md`, check for matching patterns |
 | **0** | Spec Scope | Read owning spec COMPLETELY, fill Cerb Scope Declaration, quote behavior |
 | **0.1** | OS Model | Classify OS layer, verify layer rules |
@@ -73,22 +73,27 @@ Always check for historical context to avoid repeating past mistakes.
 
 ---
 
-## Phase -1.5: 🔒 Spec Generation & Triage (CRITICAL)
+## Phase -1.5: 🔒 Spec Generation, Concept Building & Triage (CRITICAL)
 
-Before reading code or planning, evaluate if a dedicated spec document is REQUIRED for this task. The project now has four primary spec types: **Feature**, **UI**, **Plugin**, and **Testing**.
+Before reading code or planning, evaluate the required documentation hierarchy for this task. The project has four primary spec types (**Feature**, **UI**, **Plugin**, **Testing**) and an optional **Concept** incubation phase.
 
 ### Routing Logic
-1. **Does the target task require a specific Cerb spec?**
+1. **Does the target task require unconstrained conceptual brainstorming?**
+   - 🔴 **Yes (Brand new domain, unclear user flow)**: 🛑 **STOP planning code.**
+     - Run `/cerb-concept-template` to scaffold a loose, code-free mental model document at `docs/to-cerb/[feature]/concept.md`.
+     - Output the concept for user review. *Do not proceed to Phase 0 until the concept is approved.*
+2. **Does the target task require a specific formal Cerb spec?**
    - 🔴 **Yes, but it doesn't exist**: 🛑 **STOP planning.** Execute one of the spec creation workflows FIRST:
      - `/cerb-spec-template` (for Features)
      - `/cerb-plugin-template` (for Independent Plugins / Workflows)
      - `/cerb-ui-template` (for UI / UX Screens)
      - `/cerb-e2e-testing-template` (for Test Scripts & infrastructure)
+     - **CRITICAL RULE**: If a `docs/to-cerb/[feature]/concept.md` exists for this task, you MUST read it, migrate its constraints into the new `docs/cerb/` spec, and completely **DELETE the `to-cerb` directory** for that feature to prevent duplicate/stale documentation rot.
      - *You must finish generating the spec before returning to plan implementation.*
    - 🟢 **Yes, and it already exists**: Proceed to Phase 0.
-   - 🟡 **No (Cross-cutting / Multi-spec task)**: If the task inherently spans multiple established specs (and therefore doesn't "own" a single cohesive new domain), DO NOT force the creation of a new Cerb doc. Acknowledge this explicit exception, bypass Cerb Scope Declaration, and proceed to plan implementation.
+   - 🟡 **No (Cross-cutting / Multi-spec task)**: If the task inherently spans multiple established specs, DO NOT force the creation of a new Cerb doc. Acknowledge this explicit exception, bypass Cerb Scope Declaration, and proceed to plan implementation.
 
-**Motto**: Always Docs First, Make Plan Later, Execute Last.
+**Motto**: Concept First, Docs Second, Make Plan Later, Execute Last.
 
 ---
 

@@ -16,7 +16,7 @@ import com.smartsales.core.pipeline.QueryQuality
 import com.smartsales.prism.domain.scheduler.SchedulerLinter
 import com.smartsales.prism.domain.scheduler.TimelineItemModel
 import com.smartsales.prism.data.fakes.FakeTimeProvider
-import com.smartsales.prism.data.fakes.FakeAlarmScheduler
+import com.smartsales.core.test.fakes.FakeAlarmScheduler
 import com.smartsales.prism.domain.scheduler.FakeScheduledTaskRepository
 import com.smartsales.core.test.fakes.*
 import kotlinx.coroutines.flow.toList

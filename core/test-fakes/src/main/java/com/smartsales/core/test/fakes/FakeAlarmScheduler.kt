@@ -1,4 +1,4 @@
-package com.smartsales.prism.data.fakes
+package com.smartsales.core.test.fakes
 
 import com.smartsales.prism.domain.scheduler.AlarmScheduler
 import com.smartsales.prism.domain.scheduler.UrgencyLevel

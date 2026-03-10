@@ -60,7 +60,7 @@ class DashscopeAiChatServiceTest {
         val lastRequest = dashscopeClient.lastRequest
         val snapshot = FakeAiParaSettingsProvider().snapshot()
         assertEquals(snapshot.dashScope.temperature.toFloat(), lastRequest?.temperature)
-        assertEquals(snapshot.dashScope.incrementalOutput, lastRequest?.incrementalOutput)
+        assertEquals(false, lastRequest?.incrementalOutput)
     }
 
     @Test

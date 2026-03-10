@@ -1,8 +1,8 @@
 ---
-description: Run L2 manual tests on device with adb log monitoring and agent-evaluated pass/fail
+description: Run manual physical device tests (L2/L3) with adb log monitoring and agent-evaluated pass/fail
 ---
 
-# L2 On-Device Test Runner
+# On-Device Test Runner (L2/L3)
 
 Agent-assisted manual testing. Agent monitors adb logs while user tests on device.
 
@@ -70,7 +70,7 @@ When user returns:
 3. Generate a formal Test Execution Record (TER) using the following template:
 
 ```markdown
-# L2 Simulated Test Record: [Component / Feature Name]
+# L2/L3 On-Device Test Record: [Component / Feature Name]
 
 **Date**: [YYYY-MM-DD]
 **Tester**: [Agent/User]
@@ -80,7 +80,7 @@ When user returns:
 
 ## 1. Test Context & Entry State
 * **Objective**: [Brief description]
-* **Testing Medium**: L2 Debug HUD Injection (Bypassing LLM execution).
+* **Testing Medium**: [e.g., L2 Debug HUD Injection (Mock) OR L3 Physical Device Test (Real LLM)]
 * **Initial Device State**: [e.g., Fresh app launch, Agent timeline empty].
 
 ## 2. Execution Plan
@@ -107,7 +107,7 @@ When user returns:
 **[✅ SHIPPED / ❌ FAILED]**. 
 ```
 
-4. **Save the Record**: Write the populated template to a new file in `docs/reports/tests/L2-[YYYYMMDD]-[FeatureName].md`.
+4. **Save the Record**: Write the populated template to a new file in `docs/reports/tests/L[2|3]-[YYYYMMDD]-[FeatureName].md`.
 5. **Update Tracker**: Add a link to the new test report in `docs/plans/tracker.md` under the relevant Epic or Tech Debt item.
 
 ---

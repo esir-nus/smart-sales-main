@@ -2,8 +2,9 @@ package com.smartsales.core.pipeline
 
 import android.util.Log
 import com.smartsales.core.util.Result
-import com.smartsales.data.aicore.AiChatRequest
-import com.smartsales.data.aicore.AiChatService
+import com.smartsales.core.llm.Executor
+import com.smartsales.core.llm.ExecutorResult
+import com.smartsales.core.llm.ModelRegistry
 import com.smartsales.prism.domain.memory.EntityRepository
 import com.smartsales.prism.domain.memory.EntityType
 
@@ -18,7 +19,7 @@ import javax.inject.Singleton
 
 @Singleton
 class RealInputParserService @Inject constructor(
-    private val aiChatService: AiChatService,
+    private val executor: Executor,
     private val entityRepository: EntityRepository,
     private val telemetry: PipelineTelemetry
 ) : InputParserService {
@@ -94,21 +95,15 @@ Rule: Return ONLY valid JSON without Markdown blocks or backticks.
         // Step 2: System Prompt
         val prompt = String.format(SYSTEM_PROMPT, contactSheet.toString())
 
-        // Step 3: Execution (Mocked due to broken AiChatRequest / ModelRegistry imports)
-        val request = AiChatRequest(
-            prompt = "${prompt}\n\nUSER INPUT: $rawInput",
-            model = com.smartsales.core.llm.ModelRegistry.EXTRACTOR.modelId,
-            temperature = com.smartsales.core.llm.ModelRegistry.EXTRACTOR.temperature,
-            skillTags = setOf("extraction", "json")
-        )
-
-        val response = when (val result = aiChatService.sendMessage(request)) {
-            is Result.Success<com.smartsales.data.aicore.AiChatResponse> -> {
-                val data = result.data
-                data.displayText ?: data.structuredMarkdown ?: ""
+        // Step 3: Execution
+        val fullPrompt = "${prompt}\n\nUSER INPUT: $rawInput"
+        
+        val response = when (val result = executor.execute(ModelRegistry.EXTRACTOR, fullPrompt)) {
+            is ExecutorResult.Success -> {
+                result.content
             }
-            is Result.Error -> {
-                Log.e("InputParser", "LLM extraction failed: ${result.throwable.message}")
+            is ExecutorResult.Failure -> {
+                Log.e("InputParser", "LLM extraction failed: ${result.error}")
                 return ParseResult.Success(emptyList(), null, "{}")
             }
         }

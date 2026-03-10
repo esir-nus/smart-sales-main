@@ -2,7 +2,7 @@
 
 > **Cerb-compliant spec** — Semantic parsing, alias disambiguation, and session auto-renaming trigger.
 > **OS Layer**: RAM Application (Gateway before Kernel context assembly)
-> **State**: 🔲 PLANNED
+> **State**: ✅ SHIPPED
 
 ---
 
@@ -88,9 +88,9 @@ sealed class ParseResult {
 
 | Wave | Focus | Status | Deliverables |
 |------|-------|--------|--------------|
-| **1** | **Contracts & Payload Generation** | 🔲 PLANNED | `InputParserService`, `ParseResult`, Semantic Mapping JSON generation. |
-| **2** | **Turbo LLM Disambiguation** | 🔲 PLANNED | `RealInputParserService` injecting Payload into `qwen-turbo`. |
-| **3** | **Orchestrator Wiring** | 🔲 PLANNED | Mount at the front of `PrismOrchestrator`. Handle Clarification loop UI state. |
+| **1** | **Contracts & Payload Generation** | ✅ SHIPPED | `InputParserService`, `ParseResult`, Semantic Mapping JSON generation. |
+| **2** | **Turbo LLM Disambiguation** | ✅ SHIPPED | `RealInputParserService` injecting Payload into `qwen-turbo`. |
+| **3** | **Orchestrator Wiring** | ✅ SHIPPED | Mount at the front of `PrismOrchestrator`. Handle Clarification loop UI state. |
 | **4** | **Auto-Renaming Hook** | ✅ SHIPPED | Fire `SemanticSessionTitleGenerator` using the parsed JSON synchronously. |
 
 ---

@@ -319,9 +319,9 @@
 - [x] `SessionHistory` & `SessionContext`
 
 ### Phase 2: Layer 3 Core Pipeline Purge
-- [ ] `Executor` Extraction (Sever from AiChatService)
-- [ ] `InputParserService` Rebuild & Test Port
-- [ ] `EntityDisambiguator` Rebuild & Test Port
+- [x] `Executor` Extraction (Sever from AiChatService)
+- [x] `InputParserService` Rebuild & Test Port
+- [x] `EntityDisambiguator` Rebuild & Test Port
 - [ ] `LightningRouter` & Orchestration Purity
 
 ### Phase 3: Layer 4 Feature Wiring

@@ -1,63 +1,98 @@
 # Smart Sales Prism Tracker
 
-> **Purpose**: Cerb spec index + changelog. Faithfully tracks spec states and key history.
-> **Rule**: Rows are derived FROM specs. History entries are commit-style — key info only.
-> **Last Updated**: 2026-02-14
+> **Purpose**: Central project history and active epic tracking.
+> **Rule**: History entries are commit-style — key info only.
+> **Last Updated**: 2026-03-10
 
 ---
 
-## Cerb Spec Index
+## 🚧 ACTIVE EPIC: The Great Assembly Audit (Anti-Illusion Overhaul)
+> **Context**: The Anti-Illusion protocol is the fair judge of the Great Assembly. We are looking back to rigorously evaluate the layers we have already assembled before adding new features. We cannot test E2E flows on an illusion. All downstream E2E testing relies on the Pipeline routing intents correctly based on physical information gates, not mocked success.
 
-### Pipeline & Modes
+### Phase 1: Layer 3 Core Pipeline Sweeps (The Epicenter)
+- [x] **Target:** `RealUnifiedPipelineTest.kt`
+  - [x] **Overhaul W1: Complete Mock Eviction**: Purge `mockito` intercepts for state layers. Inject `:core:test-fakes` (`FakeEntityRepository`, `FakeMemoryRepository`, `FakeContextBuilder` if applicable).
+  - [x] **Overhaul W2: Context Branch Coverage**: Write explicit tests for the 3 Context States (No Context/Noise, Partial Context/Trap, Sufficient Context/Execution). Prove the pipeline traps and clarifies intents dynamically.
+- [x] **Target:** `RealInputParserServiceTest.kt` & `EntityDisambiguator`
+  - [x] **Overhaul W3: Strict Interface Integrity**: Ensure tests do not mock the string parsing or bypass Linter gates.
 
-| Cerb Shard | State | Next Wave |
-|------------|-------|-----------|
-| [model-routing](../cerb/model-routing/spec.md) | SHIPPED | — |
-| [input-parser](../cerb/input-parser/spec.md) | SHIPPED | — |
-| [entity-disambiguation](../cerb/entity-disambiguation/spec.md) | SHIPPED | — |
-| [pipeline-telemetry](../cerb/pipeline-telemetry/spec.md) | SHIPPED | — |
-| [scheduler](../cerb/scheduler/spec.md) | PARTIAL | W8: Pipeline Unification |
-| [conflict-resolver](../cerb/conflict-resolver/spec.md) | SHIPPED | — |
-| [badge-audio-pipeline](../cerb/badge-audio-pipeline/spec.md) | SHIPPED | W4: Error Recovery |
-| [lightning-router](../cerb/lightning-router/spec.md) | SHIPPED | — |
-| [mascot-service](../cerb/mascot-service/spec.md) | SHIPPED | Wave 4: UI Integration | System I Overlay |
-| [plugin-registry](../cerb/plugin-registry/spec.md) | SHIPPED | — |
+> 🧠 **Agent Foresight & Reality Gaps (Phase 1)**: 
+> *Here we log predictive limitations where L1/L2 code tests diverge from L3 physical reality.*
+> - *Prediction (ASR Latency)*: While Mock Eviction proves the logic routes correctly, we cannot simulate the raw latency of the physical `Tingwu` ASR pipeline. The pipeline might time out in reality if the real ContextBuilder takes too long constructing the prompt.
+> - *Gap (Service Lifecycle)*: Unit tests cannot verify if the Android OS will kill the background service executing this pipeline mid-flight during a heavy inference step.
+> - *Prediction (Phonetic Brittleness)*: Strict string parsing in `EntityDisambiguator` might pass L1 tests beautifully, but fail in reality when Tingwu ASR outputs phonetically similar errors (e.g., "Chef Cook" vs "Jeff Cook"). 
+> - *Gap (Concurrency)*: `FakeMemoryRepository` simulates immediate, linear SSD read/writes. In reality, Room/SQLite database locks under concurrent asynchronous load map to real-world race conditions that a synchronous unit test completely misses.
+> - *Prediction (Token Limits)*: L1 tests inject small, clean session histories. In reality, a power user's `EnhancedContext` might breach the LLM's token limit, causing a hard crash that tests never surface.
 
-### Data & Memory
+### Phase 2: Layer 4 Feature Sweeps (Integration Veracity)
+- [x] **Target:** Scheduler & Notifications
+  - [x] **Overhaul W4: Payload Verification**: Enforce `verify(mock).method(argThat { ... })` payloads. Never assert success without proving the structure sent to the `SchedulerLinter` or `ToolRegistry`.
+- [x] **Target:** `AgentViewModelTest.kt` & `IntentOrchestratorTest.kt`
+  - [x] **Overhaul W5: Red-First State Triggers**: Prove the UI state machine organically falls back to `STATE_IDLE` or throws `ClarificationNeeded` when fed empty data.
 
-| Cerb Shard | State | Next Wave |
-|------------|-------|-----------|
-| [session-context](../cerb/session-context/spec.md) | SHIPPED | W5: Context Compression |
-| [session-history](../cerb/session-history/spec.md) | SHIPPED | — |
-| [memory-center](../cerb/memory-center/spec.md) | SHIPPED | — |
-| [entity-registry](../cerb/entity-registry/spec.md) | SHIPPED | — |
-| [entity-writer](../cerb/entity-writer/spec.md) | SHIPPED | — |
-| [user-habit](../cerb/user-habit/spec.md) | SHIPPED | — |
-| [rl-module](../cerb/rl-module/spec.md) | SHIPPED | — |
-| [client-profile-hub](../cerb/client-profile-hub/spec.md) | PARTIAL | W3: CRM Export |
+> 🧠 **Agent Foresight & Reality Gaps (Phase 2)**:
+> - *Prediction (UI Masking)*: Even if UI tests prove `AgentViewModel` emits the `ClarificationNeeded` state perfectly, tricky Compose UI rendering bugs (like the Scrim Drawer anti-pattern) might invisibly mask the amber card behind another layer.
+> - *Gap (User Psychology)*: We cannot unit-test if a user will actually understand the "amber breathing" visual cue or what to say next to resolve the trap. UI telemetry is mandatory post-launch.
+> - *Prediction (OEM Killers)*: `SchedulerLinter` might perfectly validate the target alarm time, but aggressive OEM battery management (Xiaomi/Oppo/Vivo MIUI/ColorOS) might silently block the `AlarmManager` broadcast from ever waking the app.
+> - *Gap (Hardware State)*: `AgentViewModel` might confidently transition to `STATE_LISTENING`, but tests cannot predict if the OS silently revoked the `RECORD_AUDIO` permission in the background, or if the mic hardware is locked by another app.
+> - *Gap (Flow Conflation)*: Unit tests using `UnconfinedTestDispatcher` run synchronously. In the real app, rapid state emissions might be silently conflated by Compose observers, causing skipped interface frames.
 
-### Connectivity & Hardware
+### Phase 3: E2E Pillar Resumption (The 6 Waves)
+> Only after Phase 1 and 2 pass the Anti-Illusion protocol will we resume the 6 E2E Test Waves below.
 
-| Cerb Shard | State | Next Wave |
-|------------|-------|-----------|
-| [connectivity-bridge](../cerb/connectivity-bridge/spec.md) | SHIPPED | W4: Battery (pending HW) |
-| [device-pairing](../cerb/device-pairing/spec.md) | PARTIAL | W2: Robustness |
-| [asr-service](../cerb/asr-service/spec.md) | SHIPPED | W3: Retry |
-| [oss-service](../cerb/oss-service/spec.md) | SHIPPED | W2: Resilience |
-| [audio-management](../cerb/audio-management/spec.md) | ACTIVE | W2: Real Repository Wiring |
-| [tingwu-pipeline](../cerb/tingwu-pipeline/spec.md) | SHIPPED | — |
+#### Wave 1: The Lightning Fast-Track 
+- [x] **L2 Sim**: Inject `GREETING` intent. Verify `LightningRouter` short-circuits to `MascotService` without triggering `Executor`.
+- [x] **L3 Manual**: Speak "Hello" into badge. Verify instant auditory response with zero delay in UI.
+- [x] **Acceptance Team**: Check passed.
 
-### Plugins & Tools
+#### Wave 2: The Dual-Engine Bridge
+- [ ] **L2 Sim**: Run a two-turn simulation adjusting CRM record value mid-stream without deadlocking.
+- [ ] **L3 Manual**: Natural multi-sentence interruption verifying CRM delta.
+- [ ] **Acceptance Team**: Check passed.
 
-| Cerb Shard | State | Next Wave |
-|------------|-------|-----------|
-| [test-infrastructure](../cerb/test-infrastructure/spec.md) | ACTIVE | Wave 2: State Completeness |
+#### Wave 3: Strict Interface Integrity
+- [ ] **L2 Sim**: Inject poisoned/hallucinated `TargetId`. Verify Interface Linter aborts SSD write.
+- [ ] **L3 Manual**: Speak confusing, contradictory prompt; verify graceful clarification.
+- [ ] **Acceptance Team**: Check passed.
 
-### UI & Presentation
+#### Wave 4: The Adaptive Habit Loop
+- [ ] **L2 Sim**: Reject proposal 3 times -> verify `HabitScore` shifts on SSD.
+- [ ] **L3 Manual**: Explicitly retrain the Agent over repeated days.
+- [ ] **Acceptance Team**: Check passed.
 
-| Cerb Shard | State | Next Wave |
-|------------|-------|-----------|
-| [agent-intelligence](../cerb-ui/agent-intelligence/spec.md) | SPEC_ONLY | W1: Basic Components |
+#### Wave 5: The Efficiency Overload
+- [ ] **L2 Sim**: Assert `Alias` routing natively returns pre-compiled DB result, bypassing LLM.
+- [ ] **L3 Manual**: Tap shortcut; verify sub-second loading vs generic query latency.
+- [ ] **Acceptance Team**: Check passed.
+
+#### Wave 6: The Transparent Mind
+- [ ] **L2 Sim**: EventBus emits exact state array matches (`STATE_RETRIEVING`, `STATE_EXECUTING`).
+- [ ] **L3 Manual**: Ask complex question; verify UI Thinking Box exactly matches backend.
+- [ ] **Acceptance Team**: Check passed.
+
+---
+
+## Tech Debt (Deferred for Beta)
+
+| Item | Location | Priority |
+|------|----------|----------|
+| `delay()` in UI | `ResponseBubble.kt`, `ConnectivityModal.kt`, `OnboardingScreen.kt` | Low |
+| FTS4 Search | `MemoryDao.kt` — LIKE for Chinese | Medium |
+| Remaining Fakes | `FakeHistoryRepository`, `FakeAudioRepository` — not Room-backed | Low |
+| TOCTOU in observe() | `RoomUserHabitRepository.kt` | Low |
+| Room error handling | `Room*Repository` — no try-catch on writes | Low |
+| **Confidence-Based Reminder Interceptor** | Replace deterministic round-1 wrap-up with LLM confidence-based interception. Agent decides when to surface schedule context. Requires classifier or LLM self-assessment of conversation intent. Current workaround: smarter prompting that lets LLM decide naturally. | Medium |
+| **L2 UI Verification** | `MarkdownStrategyBubble.kt` — Verify the title extraction and rendering styling (T2 test from `l2_test_plan.md`) after major component refactoring is complete. | High |
+| **NotificationService Layer Violation** | `NotificationService.kt` in `domain` imports `android.app.PendingIntent` | High |
+
+---
+
+## Quick Links
+
+- [os-model-architecture.md](../specs/os-model-architecture.md) — RAM/SSD mental model
+- [prism-ui-ux-contract.md](../specs/prism-ui-ux-contract.md) — (Deprecated) The Single Source of Truth for UI/UX is now exclusively the `docs/cerb/[feature]/spec.md` files.
+- [interface-map.md](../cerb/interface-map.md) — Module ownership + data flow
+- [legacy-to-prism-dictionary.md](../reference/legacy-to-prism-dictionary.md) — Legacy mapping
 
 ---
 
@@ -66,42 +101,34 @@
 > Key spec/impl changes, newest first. Like `git log --oneline`.
 
 ### 2026-03-10
-
+- **architecture**: Completed Phase 2 of Layer 4 Feature Sweeps. Relocated `SchedulerLinterTest` and `AlarmSchedulerTest` to `:domain:scheduler:test`. Evicted Mockito from `AgentViewModelTest` by generating and injecting pure test Fakes from `:core:test-fakes`. Verified via Acceptance Team testing (`FakeUnifiedPipeline`).
+- **architecture**: Completed Phase 2 of Layer 3 Core Pipeline Purge. Refactored `InputParserService` & `EntityDisambiguator` to use native `:core:llm` `Executor` and evicted Mockito from `RealInputParserServiceTest.kt`. Validated via Acceptance Team testing (`FakeExecutor`).
 - **architecture**: "New Assembly" Pivot DECLARED. Abandoned the original "Great Assembly" due to compiler-driven extraction causing hidden coupling (Layer 3 depending on Layer 1) and abandoned test files. Initiating a bottom-up Layer 2 rebuild enforcing the 4 Cerb Pillars (Feature Purity, Anti-Illusion Testing, UI Literal Sync, Observable Telemetry).
-- **docs**: Deprecated `prism-ui-ux-contract.md`. The Single Source of Truth for UI/UX is now exclusively the `docs/cerb/[feature]/spec.md` files to prevent multi-spec architectural drift.
 
 ### 2026-03-09
 - **architecture**: Testing Strategy Pivot SHIPPED. Formally paused the 'Great Assembly' at Layer 3 to prioritize the 'Anti-Illusion Test Overhaul' across the Core Pipeline. Mocks that bypass information gates have created a testing illusion, hiding critical routing defects. Future work will focus exclusively on Mock Eviction (Wave 2) and Context Branch Coverage (Wave 1).
-
 - **agent-intelligence-ui**: Wave 2 SHIPPED — Successfully executed the "Nuke & Pave" refactor of the monolithic `PrismViewModel` into `AgentViewModel`. Completely decoupled Layer 3 AI routing logic out of the Presentation layer into a dedicated `:core:pipeline:IntentOrchestrator`. Physically eliminated `PrismShell`, `PrismChatScreen`, and `PrismMainActivity` in favor of their `Agent*` equivalents via AST manipulation. All tests pass, proving perfect routing encapsulation.
 - **test-infrastructure**: Wave 1 SHIPPED — Successfully extracted fragmented `Fake*Repository` classes (`FakeMemoryRepository`, `FakeEntityRepository`, `FakeUserHabitRepository`) out of the monolithic `app-core` test directory into a strictly isolated `:core:test-fakes` Gradle module. Purged hardcoded skeleton data to enforce the Clean Before Build Anti-Drift protocol. All consumers refactored and unit tests passed.
 
 ### 2026-03-07
-
 - **architecture**: Layer 3 Core Pipeline Physical Extraction (Phase 2) SHIPPED — Physically extracted the Orchestrator, Context Builder, and LLM plugins from the `app-core` monolith into strictly isolated Gradle library modules (`:core:llm`, `:core:context`, `:core:pipeline`). Decoupled DashscopeExecutor constraints, repaired global Dagger bindings, and bridged cross-module Kotlin smart-casting limits. Verification passed perfectly.
 
 ### 2026-03-06
-
 - **architecture**: Layer 2 Domain Modularization (Stage 2) SHIPPED — Extracted monolithic `PrismDatabase` and Room DAOs into a strictly decoupled `:core:database` module. Successfully moved and wired `RoomUserHabitRepository`, `RoomMemoryRepository`, and `RoomEntityRepository` to isolated `:data:habit`, `:data:memory`, and `:data:crm` feature data modules. Additionally, surgically extracted `RoomHistoryRepository` to `:data:session` to complete 100% of the Layer 2 Data Services assembly.
 - **architecture**: The Great Renaming & OS Layer Standardization SHIPPED — Renamed the `app-core` prototype codename to `app-core` consistently across folders, `settings.gradle.kts`, and all documentation. Formally standardized the `docs/cerb/interface-map.md` OS Layer taxonomy to enforce a strict `OS: Kernel`, `OS: RAM`, `OS: SSD`, `OS: App` architecture definition.
-
 - **architecture**: Layer 2 Domain Modularization (Stage 1) SHIPPED — Physically extracted pure Kotlin domain contracts for STM (`session`), LTM (`crm`, `memory`), and RL (`habit`) out of `app-core` into four distinct, isolated Gradle library modules. Passed rigorous Architectural Drift Audit mathematically proving strict one-way dependency isolation between SSD and RAM boundaries.
 - **architecture**: The Great Assembly (Phase 1) SHIPPED — Extracted all 5 core Layer 1 Infrastructure modules from `app-core/domain` into physically isolated Gradle libraries (`:data:connectivity`, `:core:notifications`, `:data:asr`, `:data:tingwu`, `:core:telemetry`). Passed strict Acceptance Team build & contract verification.
-
 - **architecture**: Finalized "Analyst Mode" sunsetting. Removed ghost "Analyst pending" tech debt from M3 milestone goals in favor of tracking actual Unified Pipeline blockers. Synced `plugin-registry` spec state to **SHIPPED** (Wave 4 Async Execution Wiring was previously implemented natively). Confirmed `audio-management` (Wave 2) is the true remaining blocker for full operational parity.
 - **agent-intelligence-ui**: Spec Created — Added dual-document specs (`spec.md` and `interface.md`) in new `docs/cerb-ui/` hierarchy. Strictly enforced "Dumb UI" and absolute decoupling from ViewModel and Plugins.
 - **input-parser**: Wave 4 SHIPPED — Refactored `SessionTitleGenerator` to `SemanticSessionTitleGenerator`, removing redundant LLM calls. Name and temporal intent are now synchronously extracted from `InputParserService` JSON and routed natively via `PipelineResult.AutoRenameTriggered`. Proven bypass logic where Mascot `NOISE`/`GREETING` intents correctly avoid the trigger entirely.
 
 ### 2026-03-05
-
 - **architecture**: Comprehensive Interface Map Audit SHIPPED — Identified extensive signature drift across 17 modules and corrected `interface-map.md` to reflect exact Kotlin boundaries. Downgraded `RLModule` from SHIPPED to PARTIAL (Fake masquerade). Flagged `NotificationService` domain-layer Android import rule violation.
-
 - **infra**: Fixed missing `UnifiedPipeline` constructor binding in `PrismModule` which broke L2 simulation testing.
 - **oss-service**: Wave 1 SHIPPED — Passed Anti-Laziness testing gates by implementing unit tests with simulated Dashscope/Aliyun API failures (`RealOssUploaderTest`).
 - **asr-service**: Wave 1 SHIPPED — Passed Anti-Laziness testing gates by implementing comprehensive L1 unit tests (`FunAsrServiceTest`).
 
 ### 2026-03-04
-
 - **analyst-orchestrator**: Dual-Engine UI Alignment SHIPPED. Completely removed legacy `Mode.COACH` enum, UI toggles, and Switchers.
 - **analyst-orchestrator**: Analyst Pipeline State Machine Ghost State FIX. Wired session switches to automatically call `AnalystPipeline.reset()`.
 - **plugin-registry**: Wave 1-4 COMPLETED — RealToolRegistry, flow execution, structure plugins.
@@ -119,7 +146,6 @@
 - **analyst-orchestrator**: Wave 2/4 SHIPPED (Fast Track Refinement) — Implemented exact spec "Open-Loop Lifecycle", routing `SIMPLE_QA` Consultant intents directly to `IDLE` with immediate answers, bypassing the `PROPOSAL` and `INVESTIGATING` states. Validated with `FakeAnalystPipeline` simulation.
 
 ### 2026-03-03
-
 - **entity-disambiguation**: W1-3 SHIPPED — `EntityDisambiguator` Global Gateway implemented. Intercept & Resume loop successfully wired into `PrismOrchestrator` and `AnalystPipeline`. LLM semantic disambiguation and explicit entity declarations gracefully route to `EntityWriter`.
 - **session-context**: W4 OS Model Refinement — Implemented Delta Loading Entity Cache (`entityCache` Map) in `SessionWorkingSet` and `RealContextBuilder`. Fixed infinite pipeline loops and redundant SSD queries.
 - **session-context**: W5 SHIPPED — Context Compression / Lazy Loading implemented via `ContextDepth` enum in `ContextBuilder`. Eliminates full DB and Habitat loads for NOISE/QA intents.
@@ -127,31 +153,25 @@
 - **audio-management**: Ask AI Dataflow Verification — Reworked "Ask AI" entrance. Implemented zero-latency ASCII overview card generation, standard `Mode.ANALYST` routing, and invisible `documentContext` binding in `SessionWorkingSet` to offload heavy payload rendering from the UI.
 
 ### 2026-03-02
-
 - **entity-writer**: W5 SHIPPED — Audited `upsertFromClue` Resolution Cascade (`resolvedId` → `findByAlias` → `findByDisplayName`), which is organically functioning correctly and conforms to the `InputParser`'s upstream LLM entity resolution payload contract. All existing 18 unit tests verified and passed.
-
 - **pipeline-telemetry**: W1-W2 SHIPPED — `PipelineTelemetry` abstracted and injected into `PrismOrchestrator`, `RealContextBuilder`, and `RealInputParserService`. Granular Tagging implemented to perfectly map the Layer 2 & Layer 3 architecture diagram into ADB logcat output.
-
 - **infra**: Holistic Cleanup SHIPPED — Purged dead Analyst routing from Orchestrator, fixed ContextBuilder `structuredJson` schema drift (Activity records), and removed dead `httpChecker` from Connectivity. Fixed tech debt ticking time-bombs.
-### 2026-02-27
 
+### 2026-02-27
 - **audio-management**: Wave 2 partial — Implemented `RealAudioRepository` with file storage, wired `TingwuPipeline`, and added Fake Streaming (Typewriter effect / Shimmer loading) to Audio UI.
 - **tingwu-pipeline**: Decoupled legacy Tingwu API into Prism domain feature.
 
 ### 2026-02-25
-
 - **analyst-orchestrator**: Wave 3 & 5 SHIPPED 🎯 Extracted consultant logic, transitioned state to PROPOSAL without `PlannerTable`, and wired `EntityResolverService` disambiguation loops natively into `handleInput`.
 - **analyst-consultant**: Wave 3 SHIPPED 🎯 Formalized `ConsultantResult` to correctly extract `missingEntities` and provide raw clarifying text.
 - **tingwu-pipeline**: Wave 1-4 SHIPPED 🎯 Decoupled Tingwu API from legacy ai-core into a clean Prism Feature. Wired Real/Fake pipelines to AudioRepository.
 - **analyst-orchestrator**: Wave 1 SHIPPED — Domain models, FakeAnalystPipeline L2 simulator, wiring with AgentViewModel, and verification tests passing.
 
 ### 2026-02-14
-
 - **session-history**: Wave 4 SHIPPED — Auto-Renaming (`SessionTitleGenerator`, `LlmSessionTitleGenerator`, PrismVM trigger on first response, horizontal HistoryDrawer layout)
 - **infra**: Added `mockito-core` + `mockito-kotlin` to `libs.versions.toml` and `app-core/build.gradle.kts`
 
 ### 2026-02-13
-
 - **scheduler**: Wave 10 SHIPPED — CRM Hierarchy Wiring (business gate + `keyCompany` extraction + ACCOUNT creation + `accountId` linking)
 - **entity-writer**: Wave 1.5 UNWINDING resolved — Sticky Notes abandoned, Scheduler is permanent caller
 - **scheduler**: Wave 9 SHIPPED — Smart Tips (TipGenerator, LlmTipGenerator, ViewModel lazy-load, shimmer/bubble UI)
@@ -165,7 +185,6 @@
 - **mascot-service**: Output Quality hardened (4-Layer Fix) — Plain text system prompt (no `##`), `<KNOWN_FACTS>` data envelope, Positive-only hallucination guard, `MarkdownSanitizer` safety net. Fixed "delivery cycle sensitivity" hallucination.
 
 ### 2026-02-12
-
 - **scheduler**: Task Completion Lifecycle section — isDone toggle, grey/strikethrough, voice scope exclusion, alarm lifecycle, reactivation safety
 - **scheduler**: Wave 12 planned — ViewModel toggleDone wiring + alarm cancel/restore on completion
 - **scheduler**: Voice Command Scope section — 5 classifications, scheduler-mode + active-session only, card-context-free
@@ -183,7 +202,6 @@
 - **client-profile-hub**: Tracker corrected → PARTIAL (W1+W2+W4 shipped, W3 CRM Export remaining)
 
 ### 2026-02-11
-
 - **session-context**: W4 SHIPPED — Clean rewrite (SessionWorkingSet, KernelWriteBack, 3-Section RAM)
 - **real-context-builder**: Tech Debt fixed — `runBlocking` removed, `kernelWriteBack` implemented
 - **session-context**: Spec updated — EntityKnowledge section added (pointer cache, pathIndex, EntityState machine)
@@ -194,7 +212,6 @@
 - **lessons-learned**: Logged Multi-Spec Drift (Cerb Scope Violation)
 
 ### 2026-02-10
-
 - **rl-module**: W5 SHIPPED — OS Model Upgrade. Split `getHabitContext()` → `loadUserHabits()` + `loadClientHabits()`
 - **entity-writer**: OS Model aligned — write-through to RAM S1
 - **mascot-service**: OS Model aligned — consumer of RAM, reads from SessionWorkingSet
@@ -205,7 +222,6 @@
 - **badge-audio-pipeline**: W3 wired — pipeline merge with scheduler post-processing
 
 ### 2026-02-09
-
 - **connectivity-bridge**: W3 SHIPPED — `log#` recording handler (BLE notification→download trigger)
 - **entity-writer**: Spec created — centralized entity writes with name/company/title change tracking
 - **badge-audio-pipeline**: W3 SHIPPED — Real implementation (download→transcribe→schedule)
@@ -213,117 +229,32 @@
 - **entity-registry**: Entity resolution wired into scheduler pipeline (all paths: single/multi/delete)
 
 ### 2026-02-08
-
 - **mascot-service**: W3-4 SHIPPED — Memory + habit integration, proactive suggestion mode
 - **client-profile-hub**: W1-2 SHIPPED — Interface + models, timeline aggregation
 - **entity-registry**: W3 SHIPPED → spawned Client Profile Hub
 - **memory-center**: Entity-tagged `structuredJson` via `saveToMemory()`
 
 ### 2026-02-07
-
 - **session-context**: W1-3 SHIPPED — SessionContext, EntityTrace, EntityState, path index cache
 - **connectivity-bridge**: Reconnect race condition fixed — replaced fire-and-poll with `reconnectAndWait()`
 - **connectivity-bridge**: HTTP gate removed from `connectUsingSession()` — BLE ≠ HTTP
 
 ### 2026-02-05
-
 - **rl-module**: W1.5-3 SHIPPED — Schema migration (4-rule model), orchestrator + context builder integration
 - **scheduler**: W5-7 SHIPPED — Inspiration storage, conflict resolution, NL deletion
 - **badge-audio-pipeline**: W1-2 SHIPPED — Interface + state machine, fake pipeline
 
 ### 2026-02-04
-
 - **memory-center**: W2 SHIPPED — Active/Archived lazy compaction, SubscriptionConfig tiers
 - **entity-registry**: W2.5 SHIPPED — CRM schema, `RelevancyEntry` → `EntityEntry` rename
 - **user-habit**: W1 SHIPPED — Schema + repository (storage layer)
 - **rl-module**: W1 SHIPPED — Interface + observation schema
 
 ### 2026-02-03
-
 - **memory-center**: W1 SHIPPED — ScheduleBoard, conflict detection, `excludeId` self-exclusion
 - **scheduler**: W1-4 SHIPPED — Core CRUD, alarm cascade, reminder inference, multi-task
 - **entity-registry**: W2 SHIPPED — LLM disambiguation flow, ParsedClues carrier
 
 ### 2026-02-02
-
 - **scheduler**: W1-1.5 SHIPPED — Repository + linter, ViewModel wiring
 - **mascot-service**: W1-2 SHIPPED — Interface + fake, real LLM + context
-
----
-
-## Product Milestones
-
-| Milestone | Status |
-|-----------|--------|
-| **M0: Prism Spec** | ✅ |
-| **M1: Core Pipeline** | ✅ |
-| **M2: Memory Integration** | ✅ |
-| **M3: All Modes** | 🚧 (Blocked by audio-management W2) |
-| **M4: Polish** | 🔲 |
-
----
-
-## Tech Debt (Deferred for Beta)
-
-| Item | Location | Priority |
-|------|----------|----------|
-| `delay()` in UI | `ResponseBubble.kt`, `ConnectivityModal.kt`, `OnboardingScreen.kt` | Low |
-| FTS4 Search | `MemoryDao.kt` — LIKE for Chinese | Medium |
-| Remaining Fakes | `FakeHistoryRepository`, `FakeAudioRepository` — not Room-backed | Low |
-| TOCTOU in observe() | `RoomUserHabitRepository.kt` | Low |
-| Room error handling | `Room*Repository` — no try-catch on writes | Low |
-| ~~Dead `httpChecker`~~ | ~~`DefaultDeviceConnectionManager.kt`~~ | ~~Low~~ | ✅ **Resolved** — Deleted interface and removed Dagger bindings. |
-| ~~`structuredJson` schema inconsistency~~ | ~~`RealContextBuilder.recordActivity()`~~ | ~~Low~~ | ✅ **Resolved** — Updated schema to include both `relatedEntityIds` array and scalar `entityId`. |
-| ~~Sticky Notes Boundary~~ | ~~`PrismOrchestrator.createScheduledTask()` calls `entityWriter.upsertFromClue()`~~ | ~~**High**~~ | ✅ **Resolved** — Sticky Notes abandoned. Scheduler creates PERSON + ACCOUNT entities for business-relevant contacts (Wave 10 SHIPPED). |
-| **Confidence-Based Reminder Interceptor** | Replace deterministic round-1 wrap-up with LLM confidence-based interception. Agent decides when to surface schedule context: (1) User greets/noise → inject, (2) User discusses agenda → inject, (3) User wraps up work → suggest completion. Requires classifier or LLM self-assessment of conversation intent. Current workaround: smarter prompting that lets LLM decide naturally. | Medium |
-| **L2 UI Verification** | `MarkdownStrategyBubble.kt` — Verify the title extraction and rendering styling (T2 test from `l2_test_plan.md`) after major component refactoring is complete. | High |
-| **NotificationService Layer Violation** | `NotificationService.kt` in `domain` imports `android.app.PendingIntent` | High |
-
----
-
-## Tech Debt: The Anti-Illusion Test Overhaul
-
-> **Context**: See `anti-illusion-protocol.md`. Tests were mocking happy paths and ignoring pipeline information gates (Context Sufficiency). We need to overhaul tests to reflect reality.
-
-| Overhaul Wave | Description | Status |
-|---------------|-------------|--------|
-| **Wave 1: Context Branch Coverage** | Audit `RealUnifiedPipelineTest` and `RealAnalystPipelineTest`. Enforce testing of all Enum branches (`CRM_TASK`, `NOISE`, `GREETING`, `VAGUE`) to verify proper routing. | 🔲 |
-| **Wave 2: Complete Mock Eviction** | Purge lazy `whenever(repo.something()).thenReturn()` calls from all `*Test.kt` files. Replace with rigorous `Fake*Repository` implementations that enforce state integrity. | 🔲 |
-| **Wave 3: The Verification Rule** | Enforce `verify(mock).method(argThat { ... })` across all tests when a downstream service is invoked. Never assert success without proving the correct data payload was sent. | 🔲 |
-
----
-
-## Quick Links
-
-- [os-model-architecture.md](../specs/os-model-architecture.md) — RAM/SSD mental model
-- [prism-ui-ux-contract.md](../specs/prism-ui-ux-contract.md) — UX SOT
-- [interface-map.md](../cerb/interface-map.md) — Module ownership + data flow
-- [legacy-to-prism-dictionary.md](../reference/legacy-to-prism-dictionary.md) — Legacy mapping
-
----
-
-## The New Assembly (Layer 2 Upward Rebuild)
-
-> **Phase Context**: **ACTIVE (2026-03-10)**. The original 'Great Assembly' was declared bankrupt due to compiler-driven extraction causing severe Layer 3/Layer 1 coupling and abandoned tests. We are restarting the assembly from Layer 2 marching upwards. 
-> 
-> **The 4 Cerb Pillars Gate:** Every module must pass this gate before moving up:
-> 1. **Feature Purity**: Strict `interface-map.md` compliance. Zero illegal imports (e.g. Domain cannot see Android/Platform).
-> 2. **Anti-Illusion Testing (L1/L2)**: Verified exclusively with physical `Fake` implementations to prove real data flow. No Mockito for internal state.
-> 3. **UI Contract Literal Sync**: `/06-audit` literal match against Cerb specs. No synonyms.
-> 4. **Observable Telemetry**: All phase emissions logged to ADB.
-
-### Phase 1: Layer 2 Data Services Purity
-- [x] `EntityWriter` & `EntityRegistry` (CRM)
-- [x] `MemoryCenter`
-- [x] `UserHabit`
-- [x] `SessionHistory` & `SessionContext`
-
-### Phase 2: Layer 3 Core Pipeline Purge
-- [x] `Executor` Extraction (Sever from AiChatService)
-- [x] `InputParserService` Rebuild & Test Port
-- [x] `EntityDisambiguator` Rebuild & Test Port
-- [ ] `LightningRouter` & Orchestration Purity
-
-### Phase 3: Layer 4 Feature Wiring
-- [ ] `Scheduler` & `ScheduleBoard` Reconnection
-- [ ] `MascotService` Reconnection

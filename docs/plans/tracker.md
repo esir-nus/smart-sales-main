@@ -33,7 +33,7 @@
 > The App layer. The literal physical manifestation of the system. State emissions must translate 1:1 to UI visual updates.
 - [x] **Dataflow Veracity W1 (`Scheduler`)**: ✅ SHIPPED Enforce `verify(mock).method(argThat { ... })` structure over all `ToolRegistry` and `SchedulerLinter` payloads.
 - [x] **UI Literal Sync W2 (`AgentViewModel`)**: ✅ SHIPPED Prove the Orchestrator's `State` emissions (e.g., `ClarificationNeeded`) physically trigger the exact `prism-ui-ux-contract.md` Compose layouts, not invisible states masked by anti-patterns (e.g., Drawer Scrim).
-- [ ] **3-Level Testing Validation W3 (L2 → L3)**: For any new UI flow, an explicit L2 Simulated test *must pass* before attempting an L3 manual physical device test.
+- [x] **3-Level Testing Validation W3 (L2 → L3)**: ✅ SHIPPED For any new UI flow, an explicit L2 Simulated test *must pass* before attempting an L3 manual physical device test. Verified agent-intelligence UI wait states ([L2-20260310-agent-intelligence-wait-states](../reports/tests/L2-20260310-agent-intelligence-wait-states.md)).
 
 ---
 
@@ -67,6 +67,7 @@
 > Key spec/impl changes, newest first. Like `git log --oneline`.
 
 ### 2026-03-10
+- **agent-intelligence-ui**: W3 L2 Testing Validation SHIPPED. Added strict isolated L2 test fixtures for `UiState.AwaitingClarification`, `SchedulerTaskCreated`, and `SchedulerMultiTaskCreated` natively to `AgentViewModel` via `L2DebugHud`. Device tests verified Compose UI Literal Sync perfectly rendered inline notifications. [Report](../reports/tests/L2-20260310-agent-intelligence-wait-states.md).
 - **agent-intelligence-ui**: MarkdownStrategyBubble L2 Verification SHIPPED. Built an isolated L2 UI injection testing mechanism via `L2DebugHud` and `AgentViewModel.debugRunScenario()`. Fixed legacy `LiveArtifactBuilder` routing bug in `AgentChatScreen` and upgraded `MarkdownText.kt` to natively parse headers and lists. The UI now explicitly verifies title extraction and rendering styling without relying on LLM executor passes.
 - **scheduler**: W1 Dataflow Veracity SHIPPED. Retrofitted `FakeToolRegistry` and `FakeExecutor` to track exact execution payloads (`executedRequests` and `executedPrompts`) natively without Mockito. Enforced explicit payload structure and Dataflow Context assertions in `AgentViewModelTest.kt` and `RealUnifiedPipelineTest.kt`, eliminating Testing Illusions in the scheduler pipeline.
 - **architecture**: Tracker Philosophy SHIPPED. Established `tracker.md` as the "Master Status Ledger" and Active Epic scratchpad while deferring to `spec.md` for architectural contracts and `interface-map.md` for global topology. Enforced "Operational Law" requiring evidence for any tracker updates. Removed redundant `Cerb Spec Index`.

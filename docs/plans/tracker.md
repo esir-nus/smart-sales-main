@@ -1,6 +1,7 @@
 # Smart Sales Prism Tracker
 
 > **Purpose**: Central project history and active epic tracking.
+> **Operational Law**: No task is added to the Active Epic without a compiler error, a failing test, or a direct user command. The roadmap is adaptive but driven by evidence, not hallucination.
 > **Rule**: History entries are commit-style — key info only.
 > **Last Updated**: 2026-03-10
 
@@ -101,6 +102,7 @@
 > Key spec/impl changes, newest first. Like `git log --oneline`.
 
 ### 2026-03-10
+- **architecture**: Tracker Philosophy SHIPPED. Established `tracker.md` as the "Master Status Ledger" and Active Epic scratchpad while deferring to `spec.md` for architectural contracts and `interface-map.md` for global topology. Enforced "Operational Law" requiring evidence for any tracker updates. Removed redundant `Cerb Spec Index`.
 - **architecture**: Completed Phase 2 of Layer 4 Feature Sweeps. Relocated `SchedulerLinterTest` and `AlarmSchedulerTest` to `:domain:scheduler:test`. Evicted Mockito from `AgentViewModelTest` by generating and injecting pure test Fakes from `:core:test-fakes`. Verified via Acceptance Team testing (`FakeUnifiedPipeline`).
 - **architecture**: Completed Phase 2 of Layer 3 Core Pipeline Purge. Refactored `InputParserService` & `EntityDisambiguator` to use native `:core:llm` `Executor` and evicted Mockito from `RealInputParserServiceTest.kt`. Validated via Acceptance Team testing (`FakeExecutor`).
 - **architecture**: "New Assembly" Pivot DECLARED. Abandoned the original "Great Assembly" due to compiler-driven extraction causing hidden coupling (Layer 3 depending on Layer 1) and abandoned test files. Initiating a bottom-up Layer 2 rebuild enforcing the 4 Cerb Pillars (Feature Purity, Anti-Illusion Testing, UI Literal Sync, Observable Telemetry).

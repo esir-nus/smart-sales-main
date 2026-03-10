@@ -24,16 +24,16 @@
 - **State**: Minimal Context.
 - **Expect**: `IntentOrchestrator` passes intent to `UnifiedPipeline` and forwards its emission.
 
-### 5. *BLOCKED*: The Lightning Answer (SIMPLE_QA)
+### 5. The Lightning Answer (SIMPLE_QA)
 - **Inject**: Factual query soluble from RAM.
 - **State**: Minimal Context.
 - **Expect**: Fast-tracked by the router returning an immediate answer. 
-- **Current Status**: ❌ Spec Drift (Currently falls through to `UnifiedPipeline`).
+- **Current Status**: ✅ Spec Drift Resolved (Properly intercepted in `IntentOrchestrator`).
 
 ## Wave Plan
 
 | Wave | Focus | Status | Deliverables |
 |------|-------|--------|--------------|
-| **1** | Anti-Drift Remediation | 🔲 PLANNED | Align `IntentOrchestrator` to handle `SIMPLE_QA` per spec. |
+| **1** | Anti-Drift Remediation | ✅ SHIPPED | Align `IntentOrchestrator` to handle `SIMPLE_QA` per spec. |
 | **2** | Mock Eviction Structure | 🔲 PLANNED | Setup `RealIntentOrchestratorTest` with injected Fakes. |
 | **3** | Scenario Executions | 🔲 PLANNED | All 5 Context Branches written and passing L2 simulation. |

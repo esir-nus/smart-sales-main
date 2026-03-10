@@ -33,11 +33,11 @@ class IntentOrchestrator @Inject constructor(
                 // No PipelineResult emitted, as Mascot handles it ambiently
             }
             QueryQuality.VAGUE, QueryQuality.SIMPLE_QA -> {
-                // Fast-track: Route back to user for clarification or immediate simple answer
+                // Route back to user for clarification or immediate answer
                 emit(PipelineResult.ConversationalReply(routerResult.response))
             }
             else -> {
-                // System II Task (Deep Analysis or CRM Task)
+                // System II Task (Deep Analysis or Direct Task)
                 val pipelineInput = PipelineInput(
                     rawText = input,
                     isVoice = false,

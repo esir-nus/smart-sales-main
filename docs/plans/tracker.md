@@ -12,9 +12,9 @@
 
 ### 🌊 Wave 1: Lightning Fast-Track
 > Verify the Phase 0 Gateway (`LightningRouter`) accurately intercepts or forwards inputs based on minimal context.
-- [ ] **Data Drift Remediation**: 🚨 BLOCKED by Spec-Code misalignment for `SIMPLE_QA`.
-- [ ] **L2 Mock Eviction**: Inject `FakeUnifiedPipeline` into `RealIntentOrchestratorTest`.
-- [ ] **L2 Scenario Execution**: Pass all Context Branches (NOISE, GREETING, VAGUE, DEEP_ANALYSIS, SIMPLE_QA).
+- [x] **Data Drift Remediation**: 🚨 RESOLVED Spec-Code misalignment for `SIMPLE_QA`.
+- [x] **L2 Mock Eviction**: Inject `FakeUnifiedPipeline` into `RealIntentOrchestratorTest`.
+- [x] **L2 Scenario Execution**: Pass all Context Branches (NOISE, GREETING, VAGUE, DEEP_ANALYSIS, SIMPLE_QA).
 - [ ] **L3 Device Verification**: Run manual device test verifying end-to-end routing.
 
 ### 🌊 Wave 2: Dual-Engine Bridge

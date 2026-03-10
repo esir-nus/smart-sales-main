@@ -83,7 +83,20 @@ class IntentOrchestratorTest {
         assertEquals(clarification, (result as PipelineResult.ConversationalReply).text)
         assertTrue(fakeMascotService.interactions.isEmpty())
 
-        // --- SCENARIO 4: DEEP_ANALYSIS ---
+        // --- SCENARIO 4: SIMPLE_QA ---
+        setup()
+        input = "今天天气怎么样？"
+        val simpleAnswer = "今天天气晴朗。"
+        fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.SIMPLE_QA, true, simpleAnswer))
+        result = orchestrator.processInput(input).firstOrNull()
+
+        assertNotNull(result)
+        assertTrue(result is PipelineResult.ConversationalReply)
+        assertEquals(simpleAnswer, (result as PipelineResult.ConversationalReply).text)
+        assertTrue(fakeMascotService.interactions.isEmpty())
+        assertTrue(fakeUnifiedPipeline.processedInputs.isEmpty())
+
+        // --- SCENARIO 5: DEEP_ANALYSIS ---
         setup()
         input = "帮我分析一下华为的最新进展"
         fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.DEEP_ANALYSIS, true, ""))

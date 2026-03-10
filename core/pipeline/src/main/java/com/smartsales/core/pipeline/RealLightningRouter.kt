@@ -42,7 +42,7 @@ class RealLightningRouter @Inject constructor(
                 else -> QueryQuality.VAGUE
             }
             
-            Log.d(TAG, "⚡ Lightning Router Intent: [\$queryQualityStr] -> \$queryQuality")
+            Log.d(TAG, "⚡ Lightning Router Intent: [$queryQualityStr] -> $queryQuality")
             
             val analysisObj = json.optJSONObject("analysis")
             val infoSufficient = analysisObj?.optBoolean("info_sufficient", false) 

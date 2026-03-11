@@ -36,8 +36,8 @@
 
 ### 🧪 Infrastructure: L2 Context Seeder
 > Blockers identified by `/06-audit` before Wave 6 can be tested reliably. The OS Architecture requires Disambiguation (Interrupt & Resume) and Context Assembly (Profile+Habits+Schedule) to be proven against organic chaos.
-- [ ] **Data Generation**: Create `WorldStateSeeder` DSL to inject fragmented, overlapping aliases, and authentic Chinese B2B business noise into SSD.
-- [ ] **Data Drift Sync**: 🚨 RESOLVED `entity-writer` Spec drift regarding `aliasesJson` FIFO history preservation.
+- [x] **Data Generation**: Create `WorldStateSeeder` DSL to inject fragmented, overlapping aliases, and authentic Chinese B2B business noise into SSD.
+- [x] **Data Drift Sync**: 🚨 RESOLVED `entity-writer` Spec drift regarding `aliasesJson` FIFO history preservation.
 
 ### 🌊 Wave 6: Transparent Mind
 > Prove the full thinking process and state changes are visible to the user.
@@ -74,7 +74,8 @@
 
 > Key spec/impl changes, newest first. Like `git log --oneline`.
 
-### 2026-03-10
+### 2026-03-11
+- **test-infrastructure**: WorldStateSeeder DSL SHIPPED. Built the `WorldStateSeeder` in `:core:test-fakes` and verified integration via `L2WorldStateSeederTest` covering fragmented aliases, overlapping company noise, and contextual assembly (RAM aggregation with SessionWorkingSet). Fixed `entity-writer` Spec drift regarding `aliasesJson` FIFO history preservation.
 - **architecture**: The Great Assembly Epic SHIPPED! All 4 rings of the inside-out architecture (Kernel → RAM → SSD → App) have been physically decoupled and mathematically proven. Mockito is fully evicted and L2 UI simulation validation is rigorously enforced. Upgrading Phase 3 E2E Pillar Resumption to the new Active Epic.
 - **agent-intelligence-ui**: W3 L2 Testing Validation SHIPPED. Added strict isolated L2 test fixtures for `UiState.AwaitingClarification`, `SchedulerTaskCreated`, and `SchedulerMultiTaskCreated` natively to `AgentViewModel` via `L2DebugHud`. Device tests verified Compose UI Literal Sync perfectly rendered inline notifications. [Report](../reports/tests/L2-20260310-agent-intelligence-wait-states.md).
 - **agent-intelligence-ui**: MarkdownStrategyBubble L2 Verification SHIPPED. Built an isolated L2 UI injection testing mechanism via `L2DebugHud` and `AgentViewModel.debugRunScenario()`. Fixed legacy `LiveArtifactBuilder` routing bug in `AgentChatScreen` and upgraded `MarkdownText.kt` to natively parse headers and lists. The UI now explicitly verifies title extraction and rendering styling without relying on LLM executor passes.

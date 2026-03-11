@@ -23,8 +23,8 @@ Crucially, the RL system is **Event-Driven**. To preserve mobile battery and ens
 
 | Spec | Responsibility |
 |------|----------------|
-| [User Habit](../user-habit/spec.md) | **SSD Storage** — The permanent record |
-| [Session Context](../session-context/spec.md) | **RAM** — The workspace where habits are loaded |
+| [User Habit](../user-habit/interface.md) | **SSD Storage** — The permanent record |
+| [Session Context](../session-context/interface.md) | **RAM** — The workspace where habits are loaded |
 
 ---
 
@@ -97,12 +97,12 @@ Preferences fade if not reinforced. Half-life ~30 days.
 
 ## Structured Output Integration
 
-LLM includes `rl_observations` when it detects learnable preferences:
+Instead of forcing the main `Analyst` or `Scheduler` prompt to extract observations (violating single responsibility and diluting the token window), the RL Module operates on a **Background Path**.
+
+At the start of the Unified Pipeline (Step 1), `RealUnifiedPipeline` asynchronously fires `HabitListener.analyzeAsync`. This daemon uses a specialized prompt directed at the `EXTRACTOR` model to parse the user's input against the entire context.
 
 ```json
 {
-  "displayContent": "好的，已安排明天10点...",
-  "schedulerJson": { ... },
   "rl_observations": [
     {
       "entityId": "c-001",
@@ -116,26 +116,6 @@ LLM includes `rl_observations` when it detects learnable preferences:
 ```
 
 ---
-
-## Domain Models
-
-### RlObservation
-
-```kotlin
-data class RlObservation(
-    val entityId: String?,          // null = user global, else client ID
-    val key: String,                // Habit key
-    val value: String,              // Observed value
-    val source: ObservationSource,  // Signal type
-    val evidence: String?           // Original text (debugging)
-)
-
-enum class ObservationSource {
-    INFERRED,       // LLM inferred from context (weight: 1x)
-    USER_POSITIVE,  // User explicitly confirmed (weight: 3x)
-    USER_NEGATIVE   // User explicitly rejected (weight: -2x)
-}
-```
 
 ### UserHabit (Storage)
 
@@ -155,8 +135,8 @@ data class UserHabit(
     val explicitNegative: Int = 0,
     
     // Rule 4: Recency tracking
-    val lastObservedAt: Instant,
-    val createdAt: Instant
+    val lastObservedAt: Long,
+    val createdAt: Long
 )
 ```
 
@@ -164,8 +144,8 @@ data class UserHabit(
 
 ```kotlin
 data class HabitContext(
-    val userHabits: List<Habit>,      // Global preferences
-    val clientHabits: List<Habit>,    // Per-entity preferences
+    val userHabits: List<UserHabit>,      // Global preferences
+    val clientHabits: List<UserHabit>,    // Per-entity preferences
     val suggestedDefaults: Map<String, String>
 )
 ```
@@ -192,14 +172,15 @@ interface ReinforcementLearner {
 ## Learning Flow
 
 ```
-LLM Response
+Unified Pipeline (Step 1)
     │
-    ├── rl_observations present?
-    │   ├── YES → RL Module processes
-    │   └── NO  → Skip (no-op)
+    ├── Asynchronous Launch: HabitListener.analyzeAsync
+    │   ├── LLM (EXTRACTOR) evaluates User Input + EnhancedContext
+    │   ├── Returns JSON with rl_observations
+    │   └── ReinforcementLearner.processObservations() called
     │
     ▼
-For each observation:
+For each observation (in Background):
     ├── source = INFERRED      → inferredCount++
     ├── source = USER_POSITIVE → explicitPositive++
     └── source = USER_NEGATIVE → explicitNegative++

@@ -77,7 +77,7 @@ sealed class ParseResult {
 
 | Rule | Enforcer | Explanation |
 |------|----------|-------------|
-| **Gateway Enforcement** | `PrismOrchestrator` | `InputParserService` must run *before* `ContextBuilder.build()`. |
+| **Gateway Enforcement** | `UnifiedPipeline` | `InputParserService` must run *before* `ContextBuilder.build()`. |
 | **Declarative Cure Precedence** | `InputParserService` | If an explicit `EntityDeclaration` is parsed, it MUST return that result immediately, bypassing any `unknown_names` identification arrays to allow the `EntityWriter` to proceed. |
 | **Fail-Safe** | `ParseResult` | If `NeedsClarification` is returned, the Orchestrator must NOT call the main LLM. It must echo the `clarificationPrompt` to the user. |
 | **No DB Flooding** | `ContextBuilder` | The Kernel only loads data for the exact `resolvedEntityIds` returned by this parser. |
@@ -90,7 +90,7 @@ sealed class ParseResult {
 |------|-------|--------|--------------|
 | **1** | **Contracts & Payload Generation** | ✅ SHIPPED | `InputParserService`, `ParseResult`, Semantic Mapping JSON generation. |
 | **2** | **Turbo LLM Disambiguation** | ✅ SHIPPED | `RealInputParserService` injecting Payload into `qwen-turbo`. |
-| **3** | **Orchestrator Wiring** | ✅ SHIPPED | Mount at the front of `PrismOrchestrator`. Handle Clarification loop UI state. |
+| **3** | **Pipeline Wiring** | ✅ SHIPPED | Mount at the front of `UnifiedPipeline`. Handle Clarification loop UI state. |
 | **4** | **Auto-Renaming Hook** | ✅ SHIPPED | Fire `SemanticSessionTitleGenerator` using the parsed JSON synchronously. |
 
 ---

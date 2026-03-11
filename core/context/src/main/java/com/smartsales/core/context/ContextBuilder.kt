@@ -59,4 +59,9 @@ interface ContextBuilder {
      * 用于跨流传递大文本（例如音频分析时的转写结果）
      */
     fun loadDocumentContext(payload: String)
+
+    /**
+     * 将习惯观察结果同步回 RAM工作区 (Write-Through)
+     */
+    suspend fun applyHabitUpdates(observations: List<com.smartsales.prism.domain.rl.RlObservation>)
 }

@@ -167,25 +167,23 @@ interface ContextBuilder {
 
 ### Wave 4: Auto-Renaming
 
-**Trigger**: When a **new session** (default title "新对话") receives its **first successful AI response**.
+**Trigger**: When a **new session** (default title "新对话") receives its first parsed JSON payload from the `IntentOrchestrator`.
 
 **Mechanism**:
-1. `AgentViewModel` detects `sessionTitle == "新对话"` after a successful turn.
-2. Calls `SessionTitleGenerator.generateTitle(history)`.
-   - Uses `AiChatService` (lightweight model) to avoid pipeline contention.
-   - Prompt: "Analyze conversation. Extract Client Name (or 'Unknown') and 6-char Summary."
-3. Updates `SessionEntity` via `HistoryRepository.renameSession()`.
-4. Updates UI `_sessionTitle`.
+1. `RealUnifiedPipeline` (Layer 3) handles the raw parsed JSON.
+2. Calls `SessionTitleGenerator.generateTitle(rawParsedJson, resolvedEntityIds)`.
+3. Emits `PipelineResult.AutoRenameTriggered(title.clientName)` to the UI tier.
+4. `AgentViewModel` intercepts the event, checks if `sessionTitle == "新对话"`, and commits the rename via `HistoryRepository.renameSession()`.
 
 **Contract**:
 ```kotlin
 interface SessionTitleGenerator {
-    suspend fun generateTitle(history: List<ChatTurn>): TitleResult
+    suspend fun generateTitle(rawParsedJson: String, resolvedNames: List<String>): TitleResult
 }
 
 data class TitleResult(
     val clientName: String,
-    val summary: String
+    val summary: String // Deprecated field (currently ignored in UI)
 )
 ```
 

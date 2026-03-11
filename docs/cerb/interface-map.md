@@ -53,15 +53,15 @@ Orchestrates LLM-powered processing. Reads from Layer 2 data services.
 
 | Module | Track | Owns (Writes) | Reads From | Key Interface | OS Layer | Status |
 |--------|-------|--------------|------------|---------------|----------|--------|
-| **ContextBuilder** | System II & Routing | `EnhancedContext` (assembled prompt context) | EntityRegistry, MemoryCenter, SessionContext | `build(String, Mode, ...) -> EnhancedContext` | OS: Kernel | ✅ |
+| **ContextBuilder** | System II & Routing | `EnhancedContext` (assembled prompt context) | EntityRegistry, MemoryCenter, ScheduledTaskRepository, HistoryRepository | `build(String, Mode, ...) -> EnhancedContext` | OS: Kernel | ✅ |
 | **[InputParser](./input-parser/spec.md)** | System II & Routing | Semantic intent and EntityID resolution | AliasIndex (internal) | `parseIntent(String) -> ParseResult` | OS: App | ✅ |
-| **[EntityDisambiguator](./entity-disambiguation/spec.md)** | Entity Resolution | `PendingIntent` interruption state | EntityWriter (to write cures) | `process(String) -> DisambiguationResult` | OS: App | ✅ |
+| **[EntityDisambiguator](./entity-disambiguation/spec.md)** | Entity Resolution | `PendingIntent` interruption state | InputParser | `process(String) -> DisambiguationResult` | OS: App | ✅ |
 | **[LightningRouter](./lightning-router/spec.md)** | System II & Routing | Intent evaluation (Phase 0) | ContextBuilder | `evaluateIntent(EnhancedContext) -> RouterResult?` | OS: App | ✅ |
-| **EntityResolver** | Entity Resolution | Entity disambiguation matching | EntityRegistry | `resolve(String, List<EntityEntry>) -> EntityEntry?` | OS: App | ✅ |
+| **EntityResolverService** | Entity Resolution | Entity disambiguation matching | EntityRegistry | `resolve(String, List<EntityEntry>) -> EntityEntry?` | OS: App | ✅ |
 | **ModelRegistry** | System II & Routing | Static LLM Profiles (models, temps, skills) | — | `ModelRegistry` | OS: App | ✅ |
 | **[Executor](./model-routing/spec.md)** | System II & Routing | Raw LLM output (stateless — no storage) | ModelRouter | `execute(LlmProfile, EnhancedContext) -> ExecutorResult` | — | ✅ |
 | **[PluginRegistry](./plugin-registry/spec.md)** | System II & Routing | Executable pure-Kotlin workflows (Tools) | — | `executeTool(ToolId, PluginRequest) -> Flow<UiState>` | OS: App | ✅ |
-| **[UnifiedPipeline](./unified-pipeline/spec.md)** | System II & Routing | System II context ETL & execution | EntityRegistry, UserHabit, MemoryCenter, ContextBuilder | `processInput(PipelineInput) -> Flow<PipelineResult>` | OS: App | ✅ |
+| **[UnifiedPipeline](./unified-pipeline/spec.md)** | System II & Routing | System II context ETL & execution | ContextBuilder, InputParser, EntityDisambiguator | `processInput(PipelineInput) -> Flow<PipelineResult>` | OS: App | ✅ |
 | **IntentOrchestrator** | System II & Routing | High-level intent routing (Phase 0) | AgentViewModel, LightningRouter, UnifiedPipeline | `processInput(String) -> Flow<UiState>` | OS: App | 🚧 |
 
 > **UnifiedPipeline is the only module that calls EntityWriter during task creation.** Feature modules (Scheduler, Mascot) receive results from UnifiedPipeline; they don't call EntityWriter themselves. (Exception: debug seed code in SchedulerViewModel, guarded by `DEBUG` build type.)
@@ -119,15 +119,17 @@ graph TD
     A["Badge Mic"] --> B["ConnectivityBridge"]
     B --> C["BadgeAudioPipeline"]
     C --> D["ASR (Tingwu)"]
-    D --> E["IntentOrchestrator (Layer 3)"]
-    E -->|GREETING| F1["MascotService"]
-    E -->|TASK/NOISE| E2["UnifiedPipeline"]
-    E2 --> F["Executor (LLM)"]
-    F --> G["SchedulerLinter"]
-    G --> H1["Orchestrator calls EntityRepository.findByAlias()"]
-    H1 --> H2["Orchestrator calls EntityWriter.upsertFromClue()"]
+    D -->|Submits to| E["IntentOrchestrator (Phase 0)"]
+    E -->|GREETING/NOISE| F1["MascotService"]
+    E -->|TASK/CRM| E2["UnifiedPipeline"]
+    E2 --> F0["EntityDisambiguator (Gateway)"]
+    F0 --> F2["ContextBuilder (Kernel ETL)"]
+    F2 --> F["Executor (LLM)"]
+    F --> G["SchedulerLinter / Evaluators"]
+    G --> H1["UnifiedPipeline calls EntityWriter.upsertFromClue()"]
+    H1 --> H2["EntityWriter updateProfile & registerAlias"]
     H2 --> H3["EntityWriter write-through → RAM S1"]
-    H2 --> I["ScheduledTaskRepository.insert()"]
+    G --> I["ScheduledTaskRepository.insert()"]
     I --> J["ScheduleBoard.refresh()"]
     J --> K["SchedulerViewModel (UI)"]
 ```

@@ -49,7 +49,7 @@ sealed class MascotState {
 
 | ❌ Don't | ✅ Do Instead |
 |----------|--------------|
-| Feed it complex context or audio transcripts | Route complex tasks to `AnalystOrchestrator` (System II) |
+| Feed it complex context or audio transcripts | Route complex tasks to `UnifiedPipeline` (System II) |
 | Save its interactions to the 'SessionHistory' | Treat it as ephemeral and off-the-record |
 | Use it for system unrecoverable errors | Use standard dialogs for critical issues |
 | Rely on it to confirm critical system actions | Use OS Toasts (`NotificationService`) |

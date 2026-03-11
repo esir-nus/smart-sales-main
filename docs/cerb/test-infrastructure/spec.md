@@ -10,7 +10,7 @@ Testing infrastructure is treated as a first-class Cerb feature to enforce stric
 ## 2. Core Components
 - **PrismTestRig**: A unified dependency injection container for tests that provides pre-wired Fakes. Replaces 40+ lines of Mockito initialization logic.
 - **Fake Repositories**: Concrete, state-backed implementations of domain interfaces (`FakeHistoryRepository`, `FakeEntityRegistry`, `FakeMemoryRepository`, etc.).
-- **AcceptanceFixtureBuilder**: Standardizer for generating deterministically repeatable seed data.
+- **WorldStateSeeder**: (Formerly AcceptanceFixtureBuilder) The centralized, deterministic factory for generating B2B "chaos data" (aliases, overlapping context, homophones). Used to "pre-seed" memory injections into Fakes to prove routing logic handles reality and to prevent the "Empty DB Hallucination" bug.
 
 ## 3. Wave Plan
 

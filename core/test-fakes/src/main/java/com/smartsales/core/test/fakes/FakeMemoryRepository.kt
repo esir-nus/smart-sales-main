@@ -129,5 +129,10 @@ class FakeMemoryRepository @Inject constructor() : MemoryRepository {
         Log.d("CoachMemory", "🔗 getByEntityId('$entityId') → ${results.size} hits")
         return results
     }
+    
+    // Test helper: get all entries
+    fun getAll(limit: Int): List<MemoryEntry> {
+        return entries.value.take(limit)
+    }
 }
 

@@ -22,7 +22,12 @@ import com.smartsales.prism.data.real.telemetry.RealPipelineTelemetry
 import com.smartsales.prism.domain.telemetry.PipelineTelemetry
 import com.smartsales.prism.domain.repository.HistoryRepository
 import com.smartsales.prism.domain.repository.UserProfileRepository
-
+import com.smartsales.core.pipeline.HabitListener
+import com.smartsales.core.pipeline.RealHabitListener
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import javax.inject.Named
 import com.smartsales.core.metahub.MetaHub
 import com.smartsales.core.metahub.InMemoryMetaHub
 import com.smartsales.data.aicore.AiCoreConfig
@@ -97,10 +102,11 @@ abstract class PrismModule {
 
 
 
-    // === RL Module ===
-
     @Binds @Singleton
     abstract fun bindReinforcementLearner(real: com.smartsales.prism.data.rl.RealReinforcementLearner): com.smartsales.prism.domain.rl.ReinforcementLearner
+
+    @Binds @Singleton
+    abstract fun bindHabitListener(real: RealHabitListener): HabitListener
 
     // === Time ===
 
@@ -148,6 +154,13 @@ abstract class PrismModule {
     abstract fun bindUnifiedPipeline(impl: com.smartsales.core.pipeline.RealUnifiedPipeline): com.smartsales.core.pipeline.UnifiedPipeline
 
     companion object {
+        @Provides
+        @Singleton
+        @Named("AppScope")
+        fun provideAppCoroutineScope(): CoroutineScope {
+            return CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        }
+
         @Provides
         @Singleton
         fun provideAiCoreConfig(): AiCoreConfig {

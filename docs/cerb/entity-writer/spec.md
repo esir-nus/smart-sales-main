@@ -249,7 +249,7 @@ Convention: Keys prefixed with `_` are metadata, not business attributes.
 |------|-------|--------|--------------|
 | **0** | Prerequisites (delete infra) | ✅ SHIPPED | `EntityRepository.delete()` + DAO + impls |
 | **1** | Core Writer | ✅ SHIPPED | `EntityWriter` interface + `RealEntityWriter` + tests |
-| **1.5** | Wiring | ✅ SHIPPED | Wire into `PrismOrchestrator` Scheduler path — creates PERSON + ACCOUNT entities for business-relevant contacts |
+| **1.5** | Wiring | ✅ SHIPPED | Wire into `UnifiedPipeline` Scheduler path — creates PERSON + ACCOUNT entities for business-relevant contacts |
 | **2** | Change-Aware Profile Management | ✅ SHIPPED | `updateProfile()`, `ProfileUpdateResult`, `ProfileChange`, history emission via `recordActivity()` |
 | ~~3~~ | ~~Conflict Merge~~ | ❌ KILLED | See architectural decision below |
 | **4** | **OS Model Upgrade** (RAM Application) | ✅ SHIPPED | Write-through to RAM Section 1 on all 4 mutation methods + `recordActivity()` App→Kernel callback |

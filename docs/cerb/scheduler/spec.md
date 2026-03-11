@@ -410,7 +410,7 @@ First gate: classify user input before parsing. See **[Voice Command Scope](#voi
     - [ ] "以后想学吉他" → classification=inspiration
     - [ ] "明天找Jake" → classification=inspiration (有日期无时间点)
     - [ ] "明天下午2点开会" → classification=schedulable (有具体时间点)
-- **Deliverables**: Prompt update in `DashscopeExecutor`, classification handling in `PrismOrchestrator`
+- **Deliverables**: Prompt update in `DashscopeExecutor`, classification handling in `IntentOrchestrator`
 
 #### 4.1: Multi-Task Splitting
 
@@ -424,7 +424,7 @@ Handle input with multiple tasks.
     - [ ] Toast shows: "✅ 已创建 N 个任务"
     - [ ] Each task gets conflict check (warning appended if any conflict)
     - [ ] All tasks get alarms if reminder type specified
-- **Deliverables**: Direct batch insert in `PrismOrchestrator`, conflict warning in toast
+- **Deliverables**: Direct batch insert in `UnifiedPipeline`, conflict warning in toast
 
 #### 4.2: Reschedule Flow
 
@@ -512,7 +512,7 @@ Eliminate `processSchedulerAction` and unify all scheduler operations into `crea
     - [ ] "明天开会" → no regression
     - [x] Past-due task auto-marked isDone on drawer open
     - [x] Task with cascade alarm: early alarm fire does NOT auto-expire
-- **Deliverables**: Updated `Orchestrator` interface, rewritten `PrismOrchestrator`, cleaned `SchedulerViewModel`
+- **Deliverables**: Updated `Orchestrator` interface, rewritten `IntentOrchestrator`, cleaned `SchedulerViewModel`
 - **Code Removed**: `processSchedulerAction`, `buildReschedulePrompt`, `SchedulerActionResult`, date regex hack (~173 lines)
 
 ### Wave 9: Smart Tips ✅ SHIPPED
@@ -599,7 +599,7 @@ Scheduler creates PERSON + ACCOUNT entities for business-relevant contacts. Pers
   - LLM prompt extracts `keyCompany` from input or conversation history (last 6 turns)
   - Business relevance gate: `keyPerson` only for business contacts (skip 爷爷/奶奶/老婆/朋友)
   - `ParsedClues.company` carries extracted company through pipeline
-  - `PrismOrchestrator`: upsert PERSON → upsert ACCOUNT (if company present) → link via `updateProfile(accountId)`
+  - `UnifiedPipeline`: upsert PERSON → upsert ACCOUNT (if company present) → link via `updateProfile(accountId)`
 - **Ship Criteria**: ✅ Business-relevant scheduled tasks create PERSON + ACCOUNT entities with CRM linking
 - **Test Cases**:
     - [x] "去墨生态拜访蔡总" → PERSON(蔡总) + ACCOUNT(墨生态) + linked

@@ -5,7 +5,7 @@
 
 ## Overview
 
-Mascot Service handles **System I** interactions in the Dual-Engine Architecture. It is stateless, ephemeral, and provides a playful, empathetic UI layer without polluting the formal `SessionHistory` used by the `PrismOrchestrator` (System II).
+Mascot Service handles **System I** interactions in the Dual-Engine Architecture. It is stateless, ephemeral, and provides a playful, empathetic UI layer without polluting the formal `SessionHistory` used by the `IntentOrchestrator` (System II).
 
 **Core Responsibilities**:
 1.  **Casual Greetings & Small Talk**: Responds to "Hello", "Thanks", etc.

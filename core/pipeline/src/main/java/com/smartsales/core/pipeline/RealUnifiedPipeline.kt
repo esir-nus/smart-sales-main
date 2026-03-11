@@ -17,7 +17,11 @@ import java.time.temporal.ChronoUnit
 import com.smartsales.core.llm.Executor
 import com.smartsales.core.llm.LlmProfile
 import com.smartsales.core.llm.ExecutorResult
+import com.smartsales.core.pipeline.HabitListener
+import com.smartsales.prism.domain.telemetry.PipelinePhase
+import com.smartsales.prism.domain.telemetry.PipelineTelemetry
 import com.smartsales.prism.domain.scheduler.SchedulerLinter
+import javax.inject.Named
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.memory.ScheduleBoard
 import com.smartsales.prism.domain.scheduler.InspirationRepository
@@ -45,11 +49,15 @@ class RealUnifiedPipeline @Inject constructor(
     
     // Wave 3: Extracted LLM Execution
     private val promptCompiler: PromptCompiler,
-    private val executor: Executor
+    private val executor: Executor,
+    private val telemetry: PipelineTelemetry,
+    private val habitListener: HabitListener,
+    @Named("AppScope") private val appScope: kotlinx.coroutines.CoroutineScope
 ) : UnifiedPipeline {
     
     override suspend fun processInput(input: PipelineInput): Flow<PipelineResult> = flow {
         Log.d("RealUnifiedPipeline", "🚀 Starting unified pipeline ETL for input: ${input.rawText}")
+        telemetry.recordEvent(PipelinePhase.ROUTER, "Started processing input: ${input.rawText}")
         emit(PipelineResult.Progress("正在提取意图..."))
         
         // Wave 2: Semantic Disambiguation (Interrupt & Resume)
@@ -122,7 +130,9 @@ class RealUnifiedPipeline @Inject constructor(
                             resolvedNames = parseResult.resolvedEntityIds // In reality we'd want names, but IDs are safer than nothing for debugging
                         )
                         Log.d("RealUnifiedPipeline", "Auto-Rename prepared via JSON: $generatedTitle")
-                        emit(PipelineResult.AutoRenameTriggered(generatedTitle!!.clientName))
+                        generatedTitle?.clientName?.let { name ->
+                            emit(PipelineResult.AutoRenameTriggered(name))
+                        }
                     }
                 }
             }
@@ -130,6 +140,7 @@ class RealUnifiedPipeline @Inject constructor(
 
         // Wave 1: Parallel Context Assembly (Extract-Transform-Load)
         emit(PipelineResult.Progress("正在梳理上下文..."))
+        val contextStart = System.currentTimeMillis()
         val (enhancedContext, finalPayload) = coroutineScope {
             // Task 1: Fetch session context from Kernel (RAM)
             val contextDeferred = async {
@@ -156,9 +167,15 @@ class RealUnifiedPipeline @Inject constructor(
             
             Pair(enhancedContext, "Context [Mode: ${enhancedContext.modeMetadata.currentMode}, Metadata: $metadata]")
         }
+        telemetry.recordEvent(PipelinePhase.CONTEXT_BUILDER, "Context Assemble Time: ${System.currentTimeMillis() - contextStart} ms")
         
         Log.d("RealUnifiedPipeline", "✅ ETL Phase finished. Proceeding to Execution.")
         
+        // Background Path: Reinforcement Learning (Habit Listener)
+        // Fire-and-forget; does not block the pipeline Flow.
+        // Uses the App-level CoroutineScope so it survives if this Flow is cancelled.
+        habitListener.analyzeAsync(input.rawText, enhancedContext, appScope)
+
         // --- Wave 3: CRM Task Execution Route ---
         if (input.intent == QueryQuality.CRM_TASK) {
             
@@ -192,17 +209,33 @@ class RealUnifiedPipeline @Inject constructor(
                     }
                     
                     val person = lintResult.parsedClues.person
+                    val company = lintResult.parsedClues.company
                     if (lintResult.urgencyLevel in listOf(UrgencyLevel.L1_CRITICAL, UrgencyLevel.L2_IMPORTANT) && 
                         person != null) {
                         try {
-                            val personEntityId = entityDisambiguationService.startDisambiguation(
-                                person, Mode.SCHEDULER, person, emptyList()
+                            // 1. Create/find PERSON entity
+                            val personResult = entityWriter.upsertFromClue(
+                                clue = person,
+                                resolvedId = null,
+                                type = com.smartsales.prism.domain.memory.EntityType.PERSON,
+                                source = "scheduler_pipeline"
                             )
-                            if (personEntityId is com.smartsales.prism.domain.model.UiState.Response) {
-                                // Ignore disambig intercepts safely in background for now
+                            
+                            // 2 & 3. Create ACCOUNT and Link
+                            if (company != null) {
+                                val accountResult = entityWriter.upsertFromClue(
+                                    clue = company,
+                                    resolvedId = null,
+                                    type = com.smartsales.prism.domain.memory.EntityType.ACCOUNT,
+                                    source = "scheduler_pipeline"
+                                )
+                                entityWriter.updateProfile(
+                                    entityId = personResult.entityId,
+                                    updates = mapOf("accountId" to accountResult.entityId)
+                                )
                             }
                         } catch (e: Exception) {
-                            Log.e("RealUnifiedPipeline", "Failed inline profile update", e)
+                            Log.e("RealUnifiedPipeline", "Failed CRM Entity Linking", e)
                         }
                     }
                     

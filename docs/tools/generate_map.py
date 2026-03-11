@@ -3,7 +3,7 @@ import sys
 import re
 import json
 
-# Plain language explanations for stakeholders (Chinese)
+# 面向利益相关者的通俗解释 (中文)
 MODULE_EXPLANATIONS = {
     # Layer 1
     "ConnectivityBridge": "管理与实体蓝牙工牌的连接状态。",
@@ -185,7 +185,7 @@ def parse_estimate():
             if traj_section:
                 section_text = traj_section.group(1)
                 for line in section_text.split('\n'):
-                    if line.startswith('|') and '---' not in line and 'Module Layer' not in line:
+                    if line.startswith('|') and '---' not in line and 'Module Layer' not in line and '代码模块分层' not in line:
                         cols = [c.strip().replace('`', '') for c in line.split('|')[1:-1]]
                         if len(cols) == 5:
                             metrics["trajectory_rows"].append({
@@ -202,7 +202,7 @@ def parse_estimate():
             if doc_section:
                 section_text = doc_section.group(1)
                 for line in section_text.split('\n'):
-                    if line.startswith('|') and '---' not in line and 'Knowledge Domain' not in line:
+                    if line.startswith('|') and '---' not in line and 'Knowledge Domain' not in line and '知识领域' not in line:
                         cols = [c.strip().replace('`', '') for c in line.split('|')[1:-1]]
                         if len(cols) == 4:
                             metrics["doc_stats"].append({
@@ -418,22 +418,24 @@ def generate_html_single(layers, page_type, metrics, reports=None):
     }
 
     .module-card {
-        border-radius: 12px;
+        border-radius: 16px;
         padding: 20px;
-        background: var(--surface);
-        backdrop-filter: blur(10px);
-        border: 1px solid var(--border);
-        transition: all 0.3s ease;
+        background: rgba(30, 41, 59, 0.5);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
         position: relative;
         overflow: visible;
         z-index: 15; /* Ensure cards are above everything else in grid */
     }
 
     .module-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+        transform: translateY(-4px);
+        border-color: rgba(255, 255, 255, 0.2);
+        box-shadow: 0 14px 20px -5px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255, 255, 255, 0.1);
         z-index: 20;
-        border-color: var(--accent);
     }
 
     /* Connection anchoring points */
@@ -657,15 +659,23 @@ def generate_html_single(layers, page_type, metrics, reports=None):
         margin-top: 20px;
     }
     .report-card {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: 12px;
+        background: rgba(30, 41, 59, 0.5);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
         padding: 24px;
-        transition: all 0.3s;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
         display: flex;
         flex-direction: column;
+        z-index: 2;
     }
-    .report-card:hover { border-color: var(--glow); transform: translateY(-3px); box-shadow: 0 5px 20px rgba(192, 132, 252, 0.2); }
+    .report-card:hover {
+        transform: translateY(-4px);
+        border-color: rgba(255, 255, 255, 0.2);
+        box-shadow: 0 14px 20px -5px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+    }
     .report-date { font-family: 'Fira Code', monospace; color: var(--accent); font-size: 0.85rem; margin-bottom: 8px; }
     .report-title { font-size: 1.25rem; font-weight: 600; color: var(--text); margin-bottom: 12px; }
     .report-body { flex: 1; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px; display: -webkit-box; -webkit-line-clamp: 4; line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
@@ -697,26 +707,30 @@ def generate_html_single(layers, page_type, metrics, reports=None):
         padding: 40px 0;
     }
     .layer-block {
-        background: var(--surface);
-        border: 2px solid var(--border);
+        background: rgba(30, 41, 59, 0.5);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
         border-radius: 16px;
         padding: 24px 32px;
         width: 100%;
         max-width: 800px;
         text-align: center;
         position: relative;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-        transition: all 0.3s ease;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        z-index: 2;
     }
     .layer-block:hover {
-        border-color: var(--accent);
-        box-shadow: 0 8px 30px rgba(59, 130, 246, 0.2);
-        transform: translateY(-2px);
+        transform: translateY(-4px);
+        border-color: rgba(255, 255, 255, 0.2);
+        box-shadow: 0 14px 20px -5px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255, 255, 255, 0.1);
     }
     .layer-block h2 {
         color: var(--accent);
         font-size: 1.5rem;
         margin-bottom: 12px;
+        text-shadow: 0 0 10px rgba(167, 139, 250, 0.3);
     }
     .layer-desc {
         color: var(--text-muted);
@@ -727,17 +741,23 @@ def generate_html_single(layers, page_type, metrics, reports=None):
     .layer-modules-list {
         display: flex;
         flex-wrap: wrap;
-        gap: 10px;
+        gap: 12px;
         justify-content: center;
     }
     .mini-module {
-        background: rgba(0,0,0,0.4);
-        border: 1px solid var(--border);
-        padding: 6px 14px;
+        background: rgba(30, 41, 59, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 8px 18px;
         border-radius: 20px;
-        font-size: 0.85rem;
-        color: var(--text);
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #e2e8f0;
         font-family: 'Fira Code', monospace;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
+        transition: background 0.2s;
+    }
+    .mini-module:hover {
+        background: rgba(255, 255, 255, 0.1);
     }
     .seq-arrow {
         color: var(--accent);

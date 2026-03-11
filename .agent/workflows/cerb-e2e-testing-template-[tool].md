@@ -43,17 +43,19 @@ Create `docs/cerb-e2e-test/specs/[test-name]/spec.md`.
 Define the exact execution paths the test must prove.
 
 ```markdown
-## Execution Scenarios
+## Execution Scenarios (Mandatory)
 
-### 1. The Ideal Path
-- **Inject**: [Clean Input]
-- **State**: [Perfect Context]
-- **Expect**: [Route to Tool, 0 Clarification]
+> **Rule**: Every test must prove both Cold Start (Zero Context) and Warm Start (Chaos Context) to prevent Testing Illusions.
 
-### 2. The Trap (Context Branch)
-- **Inject**: [Ambiguous Input]
-- **State**: [Empty Repository / Missing Field]
-- **Expect**: [ClarificationNeeded Error / Rejection]
+### 1. Cold Start (Zero Seed)
+- **State**: `WorldStateSeeder` is EMPTY.
+- **Inject**: [Input]
+- **Expect**: [Proof that LLM doesn't hallucinate / gracefully asks for clarification]
+
+### 2. Warm Start (Chaos Seed)
+- **State**: `WorldStateSeeder` injects dense, messy B2B context (aliases, overlapping data).
+- **Inject**: [Ambiguous/Complex Input]
+- **Expect**: [Proof that semantic routing/disambiguation works correctly]
 
 ### 3. The Linter Verification
 - **Test**: Send hallucinated data from upstream.

@@ -54,7 +54,7 @@ The line count alone doesn't tell the full story. The *velocity* of where code i
 
 | 代码模块分层 (Layer) | 🟢 新增行数 (In) | 🔴 移除行数 (Out) | 🟡 净增长 (Net) | 📉 演进趋势健康度 |
 |--------------|------------|-----------|------------|------------|
-| `app-core` (历史包袱遗留) | `+0` | `-4,820` | `-4,820` | ✅ **持续消解 (Improving)** |
+| `app-core` (历史包袱遗留) | `+0` | `-4,820` | `-4,820` | ✅ **持续消解** |
 | `data` (Layer 2 隔离层) | `+8,242` | `-5` | `+8,237` | ✅ **健康增长** |
 | `core` (Layer 3 中枢层) | `+5,610` | `0` | `+5,610` | ✅ **健康增长** |
 | `tests` (L1-L3 测试护甲) | `+3,060` | `0` | `+3,060` | ✅ **防护力提升** |
@@ -84,13 +84,13 @@ These are the immediate engineering challenges standing between the current T1 s
 
 The Smart Sales project maintains a robust, Living Architecture knowledge base to ensure the agent ecosystem operates with perfect context alignment.
 
-| Knowledge Domain | File Count | Metric | Status |
+| 知识领域 (Knowledge Domain) | 文稿数量 (File Count) | 度量指标 (Metric) | 健康度 (Status) |
 |------------------|------------|--------|--------|
-| **Total Markdown Docs** | `177` | `~119,300` Words | 🧠 **Massive Context Context** |
-| **Cerb Specs (SOT)** | `27` | Strict Architectural Boundaries | ✅ **Strong Alignment** |
-| **Testing & Audit Reports** | `16` | Evidence-Based Logs | 🔍 **Active Validation** |
-| **SOPs** | `3` | Operational Workflows | ⚙️ **Process Defined** |
-| **Agent Workflows** | `34` | `.agent/workflows/` automation | 🤖 **High Automation** |
+| **Markdown 文档总数** | `177` | 约 `119,300` 字 | 🧠 **海量上下文护城河** |
+| **Cerb 架构规约 (SOT)** | `27` | 严格的架构边界约束 | ✅ **强一致性对齐** |
+| **测试与审计报告** | `16` | 基于证据的验证日志 | 🔍 **验证护栏常态化** |
+| **标准作业程序 (SOP)** | `3` | 研发流程规范指引 | ⚙️ **工程规范已定义** |
+| **Agent 工作流** | `34` | `.agent/workflows/` 自动化 | 🤖 **高度自动化构建** |
 
 > **资深架构师评估**: "系统虽然庞大，但约 12 万字的高质量体系化文档（共 177 篇）以及 27 篇严谨的 Cerb 架构规约，是保证 Agent 与人类工程师在此重型企业级基建中不迷失、不幻觉的防御中枢。文档即代码的工程成熟度极高。"
 

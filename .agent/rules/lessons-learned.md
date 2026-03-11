@@ -28,6 +28,8 @@ trigger: always_on
 - **Independent flows sharing a resource** → Serialize at the lowest transport level. (Ref: *Application-Level Coupling*)
 - **Fake → Real DB swap** → Fakes hide "empty state" bugs. Audit empty returns. (Ref: *Fake→Real Swap*)
 - **Soft-deprecated fields in core pipelines** → Rip them out. They confuse future agents/devs. (Ref: *Soft-Deprecation Rot ("memoryHits")*)
+- **Spec Drift from Component Extraction** → Extracting logic (like Session Renaming) from UI to pure Pipeline layers renders old specs inaccurate. ALWAYS update the `trigger` definitions in the matching spec. (Ref: *Architectural Extraction Spec Drift*)
+- **Bypassing Centralized Writers** → Bypassing the central `EntityWriter` for "quick" entity resolutions causes downstream ghosting (e.g., missing CRM account linkages). All state mutations must funnel through the unified writer. (Ref: *Bypassing Centralized Writers*)
 
 ## 🐛 Core Data & Kotlin
 - **Stale UI after update** → 90% chance it's a missing Flow trigger, not persistence. (Ref: *Ghost UI After Update*)
@@ -51,3 +53,4 @@ trigger: always_on
 ## 🛠️ Tooling & Editor
 - **Compiler line number errors** → Do not ignore exact line numbers. Often caused by injecting markdown tags. (Ref: *Markdown Tag Injection & Ignoring Line Numbers*)
 - **NoClassDefFoundError on standalone interfaces** → D8 may drop them. Move declaration into consumer file. (Ref: *D8/R8 Silent Interface Dropping*)
+- **Signature Changes vs Fakes** → When changing a core interface signature (e.g. adding a constructor dependency), failing to update the `TestFake` will silently kill the test suite compilation. Always grep for usages in `test-fakes`. (Ref: *Divergent Test Fakes*)

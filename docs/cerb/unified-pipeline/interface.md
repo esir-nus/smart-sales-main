@@ -20,17 +20,20 @@ interface UnifiedPipeline {
 ```kotlin
 data class PipelineInput(
     val rawText: String,
-    val isVoice: Boolean
+    val isVoice: Boolean = false,
+    val intent: QueryQuality = QueryQuality.DEEP_ANALYSIS,
+    val replaceItemId: String? = null,
+    val requestedDepth: ContextDepth = ContextDepth.FULL
 )
 
 sealed class PipelineResult {
-    // Standard conversational output (verdict or chat)
     data class ConversationalReply(val text: String) : PipelineResult()
-    
-    // CRM "Two-Ask" clarification request
+    data class Progress(val message: String) : PipelineResult()
     data class ClarificationNeeded(val question: String) : PipelineResult()
-    
-    // Explicit trigger of a plugin (Expert Bypass or Post-Verdict Execution)
-    data class ToolDispatch(val toolId: String, val params: Map<String, String>) : PipelineResult()
+    data class ToolDispatch(val toolId: String, val params: Map<String, Any>) : PipelineResult()
+    data class DisambiguationIntercepted(val uiState: UiState) : PipelineResult()
+    data class SchedulerTaskCreated(val taskId: String, val title: String, val dayOffset: Int, val scheduledAtMillis: Long, val durationMinutes: Int, val isReschedule: Boolean) : PipelineResult()
+    data class SchedulerMultiTaskCreated(val tasks: List<SchedulerTaskCreated>, val hasConflict: Boolean) : PipelineResult()
+    data class AutoRenameTriggered(val newTitle: String) : PipelineResult()
 }
 ```

@@ -17,10 +17,10 @@ When a user provides substantive input, the pipeline executes the following sequ
 - **Background (Write/RL) [WIP]**: *Planned* copy of the input dispatched to the RL Module to trigger habit learning. Currently deferred/faked.
 - **Foreground (Read)**: A fast Turbo model extracts core clues (`time`, `location`, `person`, `intent`).
 
-### 2. Semantic Disambiguation
-- Fetches a Candidate List of recent entities from the SSD (EntityRegistry).
-- Passes the Clues and Candidate List to a lightweight LLM Disambiguator to handle typos, aliases, and homophones (bypassing strict SQL matching).
-- **The "Two-Ask" CRM Rule**: If the entity is central (Person/Company) and missing or highly ambiguous, the pipeline halts and asks for clarification once (*"Did you mean Acme Corp?"*). If still unclear after 2 turns, it saves as a Draft/Unassigned entity instead of trapping the user in a loop.
+### 2. Semantic Disambiguation (The Gateway)
+- `UnifiedPipeline` checks `EntityDisambiguator.process(input)`. 
+- If input is currently intercepted, it evaluates the clarification. If resolved, `UnifiedPipeline` natively writes the new alias/profile update via `EntityWriter`.
+- If pass-through, `InputParser` executes. If ambiguous entities are found, it triggers `startDisambiguation()` and yields back to the user.
 
 ### 3. Context ETL (Only when `info_sufficient = true`)
 - Once entities are resolved, executes parallel DB reads:
@@ -31,16 +31,16 @@ When a user provides substantive input, the pipeline executes the following sequ
 - Assembles a single `PipelineContext` payload. Note: The pipeline relies on pure Coroutines (`async`/`await`), entirely avoiding complex Redux/State Machines for data fetching.
 - **State Streaming**: Emits `PipelineResult.Progress` at major milestones (e.g., "正在梳理上下文...") to update the UI instantly without waiting for the full LLM completion.
 
-### 4. LLM Execution & Routing
-The Agent receives the context and determines the outcome:
-- **Conversational Verdicts**: If the LLM determines a specific plugin (e.g., Export CSV, Talk Simulator) is needed, it generates a native text tip explaining *why* it recommends the tool rather than rendering intrusive UI buttons automatically.
-- **Expert Bypass (Functional Calling)**: If the user explicitly asks for a tool ("Give me the PDF report"), the pipeline bypasses conversational planning and triggers the plugin immediately.
+### 4. LLM Execution & Twin Writers
+- The Agent (`Executor`) receives the compiled context (`PromptCompiler`) and returns a structured JSON result.
+- The result is validated via Evaluators (e.g., `SchedulerLinter`).
+- **Write-Backs**: If the intent is CRM_TASK, the pipeline saves the parsed tasks via `ScheduledTaskRepository.insert()`. Entity profile mutations trigger `EntityWriter` updates, which synchronously write-through to the Kernel RAM.
 
 ## Wave Plan
 
 | Wave | Focus | Status | Deliverables |
 |------|-------|--------|--------------|
 | **1** | Core Linear ETL | ✅ SHIPPED | Interface + Fake + RealImpl (Parallel kickoff, Context Assembly) |
-| **2** | Semantic Disambiguation | 🔲 PLANNED | Re-wire lightweight LLM Disambiguator + "Two-Ask" logic |
-| **3** | Tool Execution Routing | 🔲 PLANNED | Hook up Plugin Registry for Functional Calling and Verdicts |
+| **2** | Semantic Disambiguation | ✅ SHIPPED | `EntityDisambiguator` integration and explicit writing via `EntityWriter` |
+| **3** | Extracted LLM Execution | ✅ SHIPPED | PromptCompiler, Executor, and SchedulerLinter integration |
 | **4** | Transparent Mind State Streaming | ✅ SHIPPED | Emit intermediate `PipelineResult.Progress` during execution |

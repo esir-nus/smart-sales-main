@@ -56,4 +56,8 @@ class FakeContextBuilder : ContextBuilder {
     override fun loadDocumentContext(payload: String) {
         // No-op for now unless explicitly needed in tests
     }
+
+    override suspend fun applyHabitUpdates(observations: List<com.smartsales.prism.domain.rl.RlObservation>) {
+        // No-op for now unless explicitly needed in tests
+    }
 }

@@ -25,6 +25,7 @@ class L2WorldStateSeederTest {
     private lateinit var fakeEntityRepo: FakeEntityRepository
     private lateinit var fakeMemoryRepo: FakeMemoryRepository
     private lateinit var fakeHabitRepo: FakeUserHabitRepository
+    private lateinit var fakeTaskRepo: ScheduledTaskRepository
     private lateinit var entityWriter: RealEntityWriter
 
     @Before
@@ -47,6 +48,7 @@ class L2WorldStateSeederTest {
             override suspend fun getRecentCompleted(limit: Int): List<TimelineItemModel.Task> = emptyList()
             override suspend fun getTopUrgentActiveForEntity(entityId: String): TimelineItemModel.Task? = null
         }
+        this.fakeTaskRepo = fakeTaskRepo
 
         contextBuilder = RealContextBuilder(
             timeProvider = timeProvider,
@@ -67,7 +69,7 @@ class L2WorldStateSeederTest {
 
     @Test
     fun `Scenario 1 - Fragmented Aliases`() = runTest {
-        seedWorldState(entityWriter, fakeMemoryRepo, fakeHabitRepo) {
+        seedWorldState(entityWriter, fakeMemoryRepo, fakeHabitRepo, fakeEntityRepo, fakeTaskRepo) {
             val baseId = entityClue("字节")
             // Simulate the LLM knowing that "字节跳动" is actually the same company
             entityClue("字节跳动", resolvedId = baseId)
@@ -86,7 +88,7 @@ class L2WorldStateSeederTest {
 
     @Test
     fun `Scenario 2 - Overlapping Noise`() = runTest {
-        seedWorldState(entityWriter, fakeMemoryRepo, fakeHabitRepo) {
+        seedWorldState(entityWriter, fakeMemoryRepo, fakeHabitRepo, fakeEntityRepo, fakeTaskRepo) {
             // Zhang Wei at ByteDance
             val id1 = entityClue("张伟 (字节)", "字节跳动", "CEO")
             entityClue("张伟", resolvedId = id1)
@@ -106,7 +108,7 @@ class L2WorldStateSeederTest {
 
     @Test
     fun `Scenario 3 - Contextual Assembly`() = runTest {
-        seedWorldState(entityWriter, fakeMemoryRepo, fakeHabitRepo) {
+        seedWorldState(entityWriter, fakeMemoryRepo, fakeHabitRepo, fakeEntityRepo, fakeTaskRepo) {
             val cxoId = entityClue("马化腾", "腾讯")
             
             memory("Discussed the new cloud strategy", cxoId)
@@ -137,5 +139,28 @@ class L2WorldStateSeederTest {
             assertEquals("Memory should be successfully injected and linked to entity (including 1 auto-generated TASK_RECORD from Profile update)", 3, allMemories.size)
             assertTrue("Memory content is present", allMemories.any { it.content.contains("Discussed the new cloud strategy") })
         }
+    }
+
+    @Test
+    fun `Scenario 4 - Chaos Seed Injection`() = runTest {
+        seedWorldState(entityWriter, fakeMemoryRepo, fakeHabitRepo, fakeEntityRepo, fakeTaskRepo) {
+            injectChaosSeed()
+        }
+        
+        val allMemories = fakeMemoryRepo.getAll(100)
+        assertEquals("Should be 5 memories from chaos seed", 5, allMemories.size)
+        
+        val mem005 = allMemories.find { it.entryId == "mem_005" }
+        assertNotNull("mem_005 should be successfully injected", mem005)
+        assertEquals("VERBAL_WIN", mem005?.outcomeStatus)
+        assertEquals("技术拉通并解决异议，法务走账中", mem005?.displayContent)
+        
+        val allEntities = fakeEntityRepo.getAll(10)
+        assertEquals("Should be 2 entities from chaos seed", 2, allEntities.size)
+        
+        val ent101 = allEntities.find { it.entityId == "ent_101" }
+        assertNotNull("ent_101 should be successfully injected", ent101)
+        assertEquals("CONTRACT_NEGOTIATION", ent101?.dealStage)
+        assertEquals("字节跳动", ent101?.displayName)
     }
 }

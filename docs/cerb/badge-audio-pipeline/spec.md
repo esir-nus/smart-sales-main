@@ -219,7 +219,7 @@ sealed class SchedulerResult {
 class RealBadgeAudioPipeline @Inject constructor(
     private val connectivity: ConnectivityBridge,
     private val asr: AsrService,
-    private val schedulerOrchestrator: PrismOrchestrator  // existing
+    private val schedulerOrchestrator: IntentOrchestrator  // existing
 ) : BadgeAudioPipeline {
     
     private val _events = MutableSharedFlow<PipelineEvent>()
@@ -274,7 +274,7 @@ class RealBadgeAudioPipeline @Inject constructor(
 
 ### Integration with Scheduler
 
-The pipeline calls `PrismOrchestrator.processSchedulerAction()` which already handles:
+The pipeline calls `IntentOrchestrator.processSchedulerAction()` which already handles:
 - Input classification (schedulable/inspiration/non_intent)
 - Multi-task splitting
 - Conflict detection

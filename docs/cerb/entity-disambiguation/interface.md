@@ -38,6 +38,9 @@ sealed class DisambiguationResult {
     /** Disambiguation was successful. Replay the original intent. */
     data class Resumed(val originalInput: String, val mode: Mode) : DisambiguationResult()
     
+    /** Disambiguation successful via explicit declaration. Pipeline should write entities. */
+    data class Resolved(val declaration: ParseResult.EntityDeclaration, val originalInput: String, val mode: Mode) : DisambiguationResult()
+    
     /** Not in disambiguation state, proceed with normal parsing. */
     object PassThrough : DisambiguationResult()
 }

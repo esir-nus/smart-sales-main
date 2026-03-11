@@ -8,7 +8,7 @@
 ```kotlin
 interface LightningRouter {
     /**
-     * Phase 0 of PrismOrchestrator: Evaluates user intent against MINIMAL RAM context.
+     * Phase 0 of IntentOrchestrator: Evaluates user intent against MINIMAL RAM context.
      * Determines whether the input is NOISE, GREETING, SIMPLE_QA, or a TASK/ANALYSIS.
      *
      * @param context MINIMAL RAM snapshot loaded by Kernel

@@ -33,7 +33,7 @@ It satisfies two critical constraints:
 | Wave | Focus | Status | Deliverables |
 |------|-------|--------|--------------|
 | **1** | Core Contract | ✅ SHIPPED | `PipelineTelemetry`, `PipelinePhase`, `FakePipelineTelemetry`, `RealPipelineTelemetry`. |
-| **2** | Seeding Dev Logs | ✅ SHIPPED | Inject the logger into `PrismOrchestrator`, `InputParserService`, `ContextBuilder`, and `CoachPipeline`. |
+| **2** | Seeding Dev Logs | ✅ SHIPPED | Inject the logger into `IntentOrchestrator`, `InputParserService`, `ContextBuilder`, and `CoachPipeline`. |
 
 ---
 

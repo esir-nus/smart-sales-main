@@ -3,6 +3,8 @@
 > **OS Layer**: L2 Testing Environment (RAM + SSD Integration)
 > **State**: SHIPPED
 
+**Reference**: The exact Chaos Seed data payload is stored in [`dataset.md`](dataset.md).
+
 ## Execution Scenarios
 
 ### 1. The Fragmented Aliases
@@ -19,6 +21,11 @@
 - **Inject**: A rich profile containing previous meeting notes (Memory), typical reading times (Habits), and upcoming follow-ups (Scheduler).
 - **State**: Full multi-domain data is seeded.
 - **Expect**: The `ContextBuilder` can successfully assemble a `ContextDepth.FULL` snapshot that includes all dimensions without hitting token overflow or missing critical context boundaries.
+
+### 4. Chaos Seed Injection
+- **Inject**: The definitive `dataset.md` JSON payload directly into the Repositories, bypassing `EntityWriter` logic to forcibly set historical timestamps. Contains a 6-month sporadic history and a 1-week dense history for multiple entities.
+- **State**: Complex legacy context and active deal negotiations are established natively in SSD.
+- **Expect**: The graph natively reflects the semantic evolution and exact metadata required for precise temporal extraction testing in upper layers.
 
 ## Wave Plan
 

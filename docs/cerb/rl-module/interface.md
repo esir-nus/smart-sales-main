@@ -7,19 +7,20 @@
 
 ## Methods
 
-### getHabitContext
+### loadUserHabits & loadClientHabits
 
 ```kotlin
-suspend fun getHabitContext(): HabitContext
+suspend fun loadUserHabits(): HabitContext
+suspend fun loadClientHabits(entityIds: List<String>): HabitContext
 ```
 
-Returns habit context for LLM prompt enrichment. Called by Context Builder on every LLM call.
+Returns habit context for Kernel RAM population. Called by Kernel when caching SessionWorkingSet.
 
-**OS Model Note**: Reads directly from `SessionWorkingSet` (RAM Sections 2 & 3). No `entityIds` parameter needed because the RAM is already populated with the active entity context.
+**OS Model Note**: Reads global habits and entity-specific habits from `UserHabitRepository` (SSD) to populate `SessionWorkingSet` Sections 2 and 3.
 
 | Output | Type | Description |
 |--------|------|-------------|
-| `HabitContext` | `UserHabit` list | Merged User (global) + Client (contextual) habits |
+| `HabitContext` | `UserHabit` list | Specific habits loaded from SSD |
 
 ---
 
@@ -87,7 +88,7 @@ Confidence is calculated at **query time** using 4 rules:
 | ❌ Don't | ✅ Do Instead |
 |----------|--------------|
 | Access `UserHabit` table directly | READ the RAM (Section 2/3) or WRITE via `processObservations` |
-| Pass `entityIds` to `getHabitContext` | RAM already has the active entities loaded |
+| Pass `entityIds` arbitrarily | Let the Kernel handle `loadClientHabits` with active Entities |
 | Parse `rl_observations` JSON manually | Orchestrator provides parsed list |
 | Call `processObservations` when section is empty | Check for null/empty first |
 | Modify habit confidence manually | Let RL Module manage via observations |

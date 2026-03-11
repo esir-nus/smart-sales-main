@@ -234,6 +234,25 @@ class RealContextBuilder @Inject constructor(
         }
     }
 
+    override suspend fun applyHabitUpdates(observations: List<com.smartsales.prism.domain.rl.RlObservation>) {
+        _writeLock.withLock {
+            val hasGlobal = observations.any { it.entityId == null }
+            val hasClient = observations.any { it.entityId != null }
+            
+            if (hasGlobal) {
+                _workingSet.userHabitContext = reinforcementLearner.loadUserHabits()
+                Log.d("Kernel", "📦 Section 2 (Global Habits) refreshed via Write-Through")
+            }
+            if (hasClient) {
+                val activeIds = _workingSet.entityContext.values.map { it.entityId }
+                if (activeIds.isNotEmpty()) {
+                    _workingSet.clientHabitContext = reinforcementLearner.loadClientHabits(activeIds)
+                    Log.d("Kernel", "📦 Section 3 (Client Habits) refreshed via Write-Through")
+                }
+            }
+        }
+    }
+
     override suspend fun recordActivity(entityId: String, type: ActivityType, summary: String) {
         val entryId = UUID.randomUUID().toString()
         val structuredJson = """{"activityType":"${type.name}","relatedEntityIds":["$entityId"],"entityId":"$entityId","summary":"$summary"}"""
@@ -274,6 +293,10 @@ class RealContextBuilder @Inject constructor(
         Log.d("Kernel", "📂 Session loaded: $sessionId, ${history.size} turns")
     }
 
+    /**
+     * 加载临时文档上下文到 RAM
+     * 用于跨流传递大文本（例如音频分析时的转写结果）
+     */
     override fun loadDocumentContext(payload: String) {
         _workingSet.documentContext = payload
         Log.d("Kernel", "📄 Document context loaded: ${payload.length} chars")

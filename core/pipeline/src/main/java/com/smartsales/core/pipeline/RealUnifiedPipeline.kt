@@ -50,6 +50,7 @@ class RealUnifiedPipeline @Inject constructor(
     
     override suspend fun processInput(input: PipelineInput): Flow<PipelineResult> = flow {
         Log.d("RealUnifiedPipeline", "🚀 Starting unified pipeline ETL for input: ${input.rawText}")
+        emit(PipelineResult.Progress("正在提取意图..."))
         
         // Wave 2: Semantic Disambiguation (Interrupt & Resume)
         val resolvedEntities = mutableListOf<String>()
@@ -79,7 +80,7 @@ class RealUnifiedPipeline @Inject constructor(
                     dResult.declaration.company?.let { profileUpdates.add("公司: $it") }
                     dResult.declaration.notes?.let { profileUpdates.add("备注: $it") }
                     if (profileUpdates.isNotEmpty()) {
-                        entityWriter.updateProfile(upsertResult.entityId, mapOf("notes" to profileUpdates.joinToString("\n")))
+                        entityWriter.updateAttribute(upsertResult.entityId, "notes", profileUpdates.joinToString("\n"))
                     }
                 }
                 
@@ -128,6 +129,7 @@ class RealUnifiedPipeline @Inject constructor(
         }
 
         // Wave 1: Parallel Context Assembly (Extract-Transform-Load)
+        emit(PipelineResult.Progress("正在梳理上下文..."))
         val (enhancedContext, finalPayload) = coroutineScope {
             // Task 1: Fetch session context from Kernel (RAM)
             val contextDeferred = async {
@@ -161,6 +163,7 @@ class RealUnifiedPipeline @Inject constructor(
         if (input.intent == QueryQuality.CRM_TASK) {
             
             // 🆕 LLM Execution Block
+            emit(PipelineResult.Progress("正在进行深度分析..."))
             val prompt = promptCompiler.compile(enhancedContext)
             Log.d("RealUnifiedPipeline", "🤖 Executing LLM Scheduler Prompt...")
             val llmResult = executor.execute(LlmProfile.DEFAULT, prompt)

@@ -33,6 +33,11 @@ sealed class PipelineResult {
     data class ConversationalReply(val text: String) : PipelineResult()
 
     /**
+     * Intermediate UI progress state for Transparent Mind (Wave 6).
+     */
+    data class Progress(val message: String) : PipelineResult()
+
+    /**
      * CRM "Two-Ask" clarification request ("Did you mean Acme Corp?").
      */
     data class ClarificationNeeded(val question: String) : PipelineResult()

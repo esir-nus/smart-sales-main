@@ -382,6 +382,9 @@ class AgentViewModel @Inject constructor(
 
     private suspend fun handlePipelineResult(result: PipelineResult) {
         when (result) {
+            is PipelineResult.Progress -> {
+                _uiState.value = UiState.Thinking(hint = result.message)
+            }
             is PipelineResult.ConversationalReply -> {
                 val ui = UiState.Response(result.text)
                 _uiState.value = ui

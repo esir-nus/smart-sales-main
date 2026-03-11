@@ -53,8 +53,8 @@ Here is the proposed, pragmatic Tasklist (Epic Roadmap) for validating `pipeline
 
 ### 🌊 Wave 4: Write-Back Concurrency (Step 5)
 *Target: Prove the Twin Engines (CRM + RL) don't overwrite each other in RAM or SSD.*
-- [ ] Send back-to-back rapid-fire intents ("Change their address" immediately followed by "Remind me to call them").
-- [ ] Verify the pipeline handles queued writes and the `SessionWorkingSet` stays perfectly synchronized with the SSD.
+- [x] Send back-to-back rapid-fire intents ("Change their address" immediately followed by "Remind me to call them").
+- [x] Verify the pipeline handles queued writes and the `SessionWorkingSet` stays perfectly synchronized with the SSD.
 
 ---
 

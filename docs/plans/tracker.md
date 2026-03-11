@@ -41,7 +41,9 @@
 
 ### 🌊 Wave 6: Transparent Mind
 > Prove the full thinking process and state changes are visible to the user.
-- [ ] *Pending*
+- [x] **State Streaming**: Added `PipelineResult.Progress` and mapped to `UiState.Thinking(hint)`.
+- [x] **OS Pipeline Integration**: Emitted intermediate states from `RealUnifiedPipeline.kt` during ETL phases.
+- [ ] **L3 Device Verification**: Manual test required to confirm UI `ThinkingIndicator` renders updates gracefully without severe flickering.
 
 ---
 

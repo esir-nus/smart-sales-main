@@ -29,6 +29,7 @@ When a user provides substantive input, the pipeline executes the following sequ
   - Session Memory
   - Kanban / Schedule
 - Assembles a single `PipelineContext` payload. Note: The pipeline relies on pure Coroutines (`async`/`await`), entirely avoiding complex Redux/State Machines for data fetching.
+- **State Streaming**: Emits `PipelineResult.Progress` at major milestones (e.g., "正在梳理上下文...") to update the UI instantly without waiting for the full LLM completion.
 
 ### 4. LLM Execution & Routing
 The Agent receives the context and determines the outcome:
@@ -42,3 +43,4 @@ The Agent receives the context and determines the outcome:
 | **1** | Core Linear ETL | ✅ SHIPPED | Interface + Fake + RealImpl (Parallel kickoff, Context Assembly) |
 | **2** | Semantic Disambiguation | 🔲 PLANNED | Re-wire lightweight LLM Disambiguator + "Two-Ask" logic |
 | **3** | Tool Execution Routing | 🔲 PLANNED | Hook up Plugin Registry for Functional Calling and Verdicts |
+| **4** | Transparent Mind State Streaming | ✅ SHIPPED | Emit intermediate `PipelineResult.Progress` during execution |

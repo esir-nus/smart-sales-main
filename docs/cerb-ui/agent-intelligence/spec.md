@@ -9,7 +9,8 @@
 |------|-------|--------|--------|
 | **Wave 1** | **Wait-State Basics** | Support `UiState.Thinking`, `UiState.Streaming`, Error states. | ✅ SHIPPED |
 | **Wave 2** | **UI Literal Sync** | Render actual payloads: `MarkdownStrategyBubble`, `ClarifyingBubble`, `TaskCreatedBubble`. Stop swallowing pipeline states in the Presentation layer. | ✅ SHIPPED |
-| **Wave 3** | **L2 Testing Validation** | Explicitly inject isolated `UiState` test fixtures via `L2DebugHud` to mathematically prove Compose layouts map to pipeline results. | 🔲 |
+| **Wave 3** | **L2 Testing Validation** | Explicitly inject isolated `UiState` test fixtures via `L2DebugHud` to mathematically prove Compose layouts map to pipeline results. | ✅ SHIPPED |
+| **Wave 4** | **Transparent Mind Integration** | Dynamically update `UiState.Thinking(hint)` locally based on `PipelineResult.Progress` emissions. | ✅ SHIPPED |
 
 ## 2. Core Visual Mechanics
 

@@ -180,8 +180,8 @@ suspend fun upsertFromClue(...): UpsertResult {
 
 | Field | Policy | Implementation | Via |
 |-------|--------|----------------|-----|
-| `displayName` | **Immutable / Canonical** | `upsertFromClue` NEVER overwrites. Only explicit `updateProfile` changes it. | `upsertFromClue` |
-| `aliasesJson` | **Curated Only** | `upsertFromClue` NEVER adds aliases. Only `registerAlias` adds them. | `registerAlias` |
+| `displayName` | **Canonical Evolution** | `upsertFromClue` NEVER overwrites. When `updateProfile` changes it, the old name is automatically pushed to `aliasesJson`. | `updateProfile` |
+| `aliasesJson` | **Curated & Historical** | `upsertFromClue` NEVER adds aliases. Tracks manual additions + historical `displayName`s via FIFO. | `registerAlias` / `updateProfile` |
 | `demeanorJson` | Upsert per key | `oldMap + newMap` | `updateAttribute` |
 | `attributesJson` | Upsert per key | `oldMap + newMap` | `updateAttribute` |
 | `metricsHistoryJson` | Append per key | `oldTimeSeries + newEntry` | `updateAttribute` |
@@ -257,12 +257,12 @@ Convention: Keys prefixed with `_` are metadata, not business attributes.
 
 ### ~~Wave 3~~ Architectural Decision: No Merge UI Needed
 
-**Killed 2026-02-11.** Deterministic latest-write-wins is sufficient. Rationale:
+**Superseded by Positive Code Drift (2026-03-11).** Pure deterministic "latest-write-wins" is not sufficient. Instead, we use **FIFO History Preservation**. Rationale:
 
 1. **Every write is grounded** — User input → LLM → RelevancyLib (entity resolution) → EntityWriter. The agent never presumes; `resolvedId` comes from RelevancyLib.
-2. **User corrections are self-resolving** — If user said something wrong and it was recorded, they make an explicit correction statement. This is another deterministic override through the same pipeline.
-3. **History is preserved** — `recordActivity()` tracks every change (`承时利和 → 华为 → 承时利和`), so corrections are auditable.
-4. **True duplicates are a dedup problem** — If two `entityId`s exist for the same person because alias matching failed, the fix is better RelevancyLib matching, not a merge UI.
+2. **User corrections preserve context** — When a user says "His name is actually X", `updateProfile` changes the `displayName` but *appends* the old name to the `aliasesJson` array (FIFO, max 8). This ensures future fuzzy searches still find the entity using the old, misspelled/outdated context.
+3. **History is preserved** — `recordActivity()` tracks every change (`承时利和 → 华为 → 承时利和`), making corrections visually auditable in the timeline. Additionally, the preserved `aliasesJson` keeps the entity robust against ASR errors over time.
+4. **True duplicates are a dedup problem** — If two `entityId`s exist for the same person because alias matching failed, the fix is better RelevancyLib matching, not a manual merge UI.
 
 ### Wave 4 Scope (OS Model) — ✅ SHIPPED
 - ✅ `upsertFromClue` / `registerAlias` / `updateAttribute` / `delete` write-through to RAM Section 1

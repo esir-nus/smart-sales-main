@@ -387,12 +387,12 @@ class AgentViewModel @Inject constructor(
             }
             is PipelineResult.ConversationalReply -> {
                 val ui = UiState.Response(result.text)
-                _uiState.value = ui
                 _history.value += ChatMessage.Ai(
                     id = java.util.UUID.randomUUID().toString(),
                     timestamp = System.currentTimeMillis(),
                     uiState = ui
                 )
+                _uiState.value = UiState.Idle // Clear active state
             }
             is PipelineResult.AutoRenameTriggered -> {
                 if (_sessionTitle.value == "新对话") {
@@ -400,7 +400,6 @@ class AgentViewModel @Inject constructor(
                 }
             }
             is PipelineResult.DisambiguationIntercepted -> {
-                _uiState.value = result.uiState
                 if (result.uiState !is UiState.Idle) {
                     _history.value += ChatMessage.Ai(
                         id = java.util.UUID.randomUUID().toString(),
@@ -408,36 +407,37 @@ class AgentViewModel @Inject constructor(
                         uiState = result.uiState
                     )
                 }
+                _uiState.value = UiState.Idle // Clear active state
             }
             is PipelineResult.ClarificationNeeded -> {
                 val ui = UiState.Response(result.question)
-                _uiState.value = ui
                 _history.value += ChatMessage.Ai(
                     id = java.util.UUID.randomUUID().toString(),
                     timestamp = System.currentTimeMillis(),
                     uiState = ui
                 )
+                _uiState.value = UiState.Idle
             }
             is PipelineResult.ToolDispatch -> {
                 executeToolDirectly(result.toolId, result.params)
             }
             is PipelineResult.SchedulerTaskCreated -> {
                 val ui = UiState.Response("已为您创建日程：${result.title}")
-                _uiState.value = ui
                 _history.value += ChatMessage.Ai(
                     id = java.util.UUID.randomUUID().toString(),
                     timestamp = System.currentTimeMillis(),
                     uiState = ui
                 )
+                _uiState.value = UiState.Idle
             }
             is PipelineResult.SchedulerMultiTaskCreated -> {
                 val ui = UiState.Response("已为您创建 ${result.tasks.size} 个日程")
-                _uiState.value = ui
                 _history.value += ChatMessage.Ai(
                     id = java.util.UUID.randomUUID().toString(),
                     timestamp = System.currentTimeMillis(),
                     uiState = ui
                 )
+                _uiState.value = UiState.Idle
             }
         }
     }

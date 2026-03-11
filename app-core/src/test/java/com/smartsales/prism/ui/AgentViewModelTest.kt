@@ -101,10 +101,11 @@ class AgentViewModelTest {
         // Assert no delegates to UnifiedPipeline because L3 LightningRouter intercepted it
         assertEquals(0, fakeUnifiedPipeline.processedInputs.size)
         
-        // And it emits Response back to the UI
-        val uiState = viewModel.uiState.value
-        assertTrue("Expected Response state, got ${uiState.javaClass.simpleName}", uiState is UiState.Response)
-        assertEquals("您想查什么数据？", (uiState as UiState.Response).content)
+        // And it emits Response back to the history, clearing uiState
+        val historyMsg = viewModel.history.value.last() as com.smartsales.prism.domain.model.ChatMessage.Ai
+        assertTrue("Expected Response state, got ${historyMsg.uiState.javaClass.simpleName}", historyMsg.uiState is UiState.Response)
+        assertEquals("您想查什么数据？", (historyMsg.uiState as UiState.Response).content)
+        assertEquals(UiState.Idle, viewModel.uiState.value)
     }
 
     @Test
@@ -126,10 +127,11 @@ class AgentViewModelTest {
         assertEquals("分析销售报表", fakeUnifiedPipeline.processedInputs[0].rawText)
         assertEquals(QueryQuality.DEEP_ANALYSIS, fakeUnifiedPipeline.processedInputs[0].intent)
         
-        // Ensure ViewModel surfaced the response
-        val uiState = viewModel.uiState.value
-        assertTrue("Expected Response state, got ${uiState.javaClass.simpleName}", uiState is UiState.Response)
-        assertEquals("分析已完成", (uiState as UiState.Response).content)
+        // Ensure ViewModel surfaced the response to history
+        val historyMsg = viewModel.history.value.last() as com.smartsales.prism.domain.model.ChatMessage.Ai
+        assertTrue("Expected Response state, got ${historyMsg.uiState.javaClass.simpleName}", historyMsg.uiState is UiState.Response)
+        assertEquals("分析已完成", (historyMsg.uiState as UiState.Response).content)
+        assertEquals(UiState.Idle, viewModel.uiState.value)
     }
 
     @Test

@@ -13,8 +13,8 @@ It replaces the complex state-machine driven `analyst-orchestrator` with a linea
 
 When a user provides substantive input, the pipeline executes the following sequence:
 
-### 1. Parallel Kickoff (Fast Path)
-- **Background (Write)**: A copy of the input is dispatched to the RL Module to trigger habit learning. This is a fire-and-forget operation to prevent latency.
+### 1. Kickoff (Fast Path)
+- **Background (Write/RL) [WIP]**: *Planned* copy of the input dispatched to the RL Module to trigger habit learning. Currently deferred/faked.
 - **Foreground (Read)**: A fast Turbo model extracts core clues (`time`, `location`, `person`, `intent`).
 
 ### 2. Semantic Disambiguation

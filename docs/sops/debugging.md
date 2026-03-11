@@ -164,7 +164,7 @@ git log --oneline -20 -- [affected file]
 
 ### Common Logcat Tags
 ```bash
-adb logcat -s SchedulerVM:D PrismOrchestrator:D DashscopeExecutor:D
+adb logcat -s SchedulerVM:D IntentOrchestrator:D DashscopeExecutor:D
 ```
 
 ### Diagnostic Workflows

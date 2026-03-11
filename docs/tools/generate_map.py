@@ -30,7 +30,7 @@ MODULE_EXPLANATIONS = {
     "ModelRegistry": "管理不同的AI大模型配置 (例如：小模型快速响应 vs 大模型深度思考)。",
     "Executor": "真正负责向云端AI (如通义千问) 发请求并接收结果的桥梁。",
     "PluginRegistry": "负责执行具体的动作，比如生成PDF文件或发短信。",
-    "PrismOrchestrator": "系统大脑(系统二)：指挥整个深度思考流程，决定先做什么后做什么。",
+    "IntentOrchestrator": "系统大脑(系统二)：指挥整个深度思考流程，决定先做什么后做什么。",
     "UnifiedPipeline": "处理流水线：将复杂请求按步骤 (提取-组装-路由) 流水化处理。",
     
     # Layer 4

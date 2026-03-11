@@ -1,7 +1,7 @@
 # Entity Disambiguation Interface
 
 > **Owner**: EntityDisambiguator
-> **Consumers**: PrismOrchestrator
+> **Consumers**: UnifiedPipeline
 
 ## Public Interface
 

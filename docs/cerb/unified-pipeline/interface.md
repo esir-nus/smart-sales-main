@@ -1,7 +1,7 @@
 # Unified Pipeline Interface
 
 > **Owner**: Core Pipeline
-> **Consumers**: PrismOrchestrator
+> **Consumers**: IntentOrchestrator
 
 ## Public Interface
 

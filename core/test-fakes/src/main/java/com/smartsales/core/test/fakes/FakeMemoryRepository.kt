@@ -8,6 +8,8 @@ import com.smartsales.prism.domain.memory.MemoryRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 import android.util.Log
@@ -19,6 +21,7 @@ import android.util.Log
 @Singleton
 class FakeMemoryRepository @Inject constructor() : MemoryRepository {
     
+    private val mutex = Mutex()
     private val entries = MutableStateFlow<List<MemoryEntry>>(emptyList())
     
     // 用于测试注入当前时间
@@ -94,21 +97,25 @@ class FakeMemoryRepository @Inject constructor() : MemoryRepository {
     }
     
     override suspend fun save(entry: MemoryEntry) {
-        Log.d("CoachMemory", "💾 MemoryRepository.save(id=${entry.entryId}, type=${entry.entryType}, content='${entry.content.take(40)}...')")
-        val current = entries.value.toMutableList()
-        current.removeAll { it.entryId == entry.entryId }
-        current.add(entry)
-        entries.value = current
-        Log.d("CoachMemory", "💾 MemoryRepository total entries: ${entries.value.size}")
+        mutex.withLock {
+            Log.d("CoachMemory", "💾 MemoryRepository.save(id=${entry.entryId}, type=${entry.entryType}, content='${entry.content.take(40)}...')")
+            val current = entries.value.toMutableList()
+            current.removeAll { it.entryId == entry.entryId }
+            current.add(entry)
+            entries.value = current
+            Log.d("CoachMemory", "💾 MemoryRepository total entries: ${entries.value.size}")
+        }
     }
     
     override suspend fun markAsArchived(entryId: String) {
-        Log.d("CoachMemory", "📦 markAsArchived(id=$entryId)")
-        val current = entries.value.map { entry ->
-            if (entry.entryId == entryId) entry.copy(isArchived = true)
-            else entry
+        mutex.withLock {
+            Log.d("CoachMemory", "📦 markAsArchived(id=$entryId)")
+            val current = entries.value.map { entry ->
+                if (entry.entryId == entryId) entry.copy(isArchived = true)
+                else entry
+            }
+            entries.value = current
         }
-        entries.value = current
     }
     
     // Test helper: clear all entries

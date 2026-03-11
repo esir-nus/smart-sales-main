@@ -3,6 +3,9 @@ package com.smartsales.core.test.fakes
 import com.smartsales.prism.domain.habit.UserHabit
 import com.smartsales.prism.domain.habit.UserHabitRepository
 import com.smartsales.prism.domain.rl.ObservationSource
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -22,6 +25,7 @@ import javax.inject.Singleton
 @Singleton
 class FakeUserHabitRepository @Inject constructor() : UserHabitRepository {
 
+    private val mutex = Mutex()
     private val habits = mutableMapOf<String, UserHabit>()
     
     var getGlobalHabitsCount = 0
@@ -31,17 +35,17 @@ class FakeUserHabitRepository @Inject constructor() : UserHabitRepository {
         android.util.Log.d("CoachMemory", "🌱 FakeUserHabitRepository initialized (Clean Blank Slate)")
     }
 
-    override suspend fun getGlobalHabits(): List<UserHabit> {
+    override suspend fun getGlobalHabits(): List<UserHabit> = mutex.withLock {
         getGlobalHabitsCount++
-        return habits.values.filter { it.entityId == null }
+        return@withLock habits.values.filter { it.entityId == null }
     }
 
-    override suspend fun getByEntity(entityId: String): List<UserHabit> {
-        return habits.values.filter { it.entityId == entityId }
+    override suspend fun getByEntity(entityId: String): List<UserHabit> = mutex.withLock {
+        return@withLock habits.values.filter { it.entityId == entityId }
     }
 
-    override suspend fun getHabit(key: String, entityId: String?): UserHabit? {
-        return habits[makeKey(key, entityId)]
+    override suspend fun getHabit(key: String, entityId: String?): UserHabit? = mutex.withLock {
+        return@withLock habits[makeKey(key, entityId)]
     }
 
     override suspend fun observe(
@@ -49,7 +53,7 @@ class FakeUserHabitRepository @Inject constructor() : UserHabitRepository {
         value: String,
         entityId: String?,
         source: ObservationSource
-    ) {
+    ) = mutex.withLock {
         val habitKey = makeKey(key, entityId)
         val existing = habits[habitKey]
         val now = System.currentTimeMillis()
@@ -82,15 +86,19 @@ class FakeUserHabitRepository @Inject constructor() : UserHabitRepository {
     }
 
     override suspend fun delete(key: String, entityId: String?) {
-        habits.remove(makeKey(key, entityId))
+        mutex.withLock {
+            habits.remove(makeKey(key, entityId))
+        }
     }
 
     /**
      * 清空所有习惯 — 用于测试环境重置
      */
-    fun clear() {
-        habits.clear()
-        getGlobalHabitsCount = 0
+    fun clear() = runBlocking {
+        mutex.withLock {
+            habits.clear()
+            getGlobalHabitsCount = 0
+        }
     }
 
     /**

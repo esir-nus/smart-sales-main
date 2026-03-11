@@ -18,20 +18,26 @@
 - [x] **L3 Device Verification**: Run manual device test verifying end-to-end routing. -> [L3 Test Record (2026-03-10)](../reports/tests/L3-20260310-LightningFastTrack.md)
 
 ### 🌊 Wave 2: Dual-Engine Bridge
-> Prove the Analyst pipeline successfully bridges structured context to plugin execution.
-- [ ] *Pending*
+> Prove the system successfully extracts data, persists it to SSD, and instantly surfaces it back into RAM for the next turn (Multi-turn conversation adjusting a CRM record).
+- [x] **L2 Scenario Execution**: `L2DualEngineBridgeTest.kt` built and verified (Ideal Path Multi-Turn, Trap Context Branch, Linter Verification).
+- [x] **Mock Eviction**: Validated native context pipeline integration between `RealEntityWriter`, `SessionWorkingSet`, and `FakeEntityRepository`.
 
 ### 🌊 Wave 3: Strict Interface Integrity
 > Prove the system correctly rejects and clarifies corrupted upstream data.
-- [ ] *Pending*
+- [x] **Scenarios Validated**: `L2StrictInterfaceIntegrityTest.kt` built and verified against Semantic Ambiguity, Linter Recovery, and Context Pass-Through. Mockito completely evicted.
 
 ### 🌊 Wave 4: Adaptive Habit Loop
 > Prove RL modules learn from and mutate based on interactions.
-- [ ] *Pending*
+- [x] **Scenarios Validated**: `L2AdaptiveHabitLoopTest.kt` built and verified against Reinforcement Amplification, Garbage Collection, and Context Injection. Mockito completely evicted.
 
 ### 🌊 Wave 5: Efficiency Overload
 > Prove system handles bulk parallel task execution safely.
-- [ ] *Pending*
+- [x] **Scenarios Validated**: `L2EfficiencyOverloadTest.kt` built and verified against Multi-Task Burst, Conflict Cascade, and Alarm Array. Mockito completely evicted.
+
+### 🧪 Infrastructure: L2 Context Seeder
+> Blockers identified by `/06-audit` before Wave 6 can be tested reliably. The OS Architecture requires Disambiguation (Interrupt & Resume) and Context Assembly (Profile+Habits+Schedule) to be proven against organic chaos.
+- [ ] **Data Generation**: Create `WorldStateSeeder` DSL to inject fragmented, overlapping aliases, and authentic Chinese B2B business noise into SSD.
+- [ ] **Data Drift Sync**: 🚨 RESOLVED `entity-writer` Spec drift regarding `aliasesJson` FIFO history preservation.
 
 ### 🌊 Wave 6: Transparent Mind
 > Prove the full thinking process and state changes are visible to the user.

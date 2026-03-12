@@ -41,37 +41,9 @@
 ---
 
 ## ⏸️ PAUSED EPIC: The Crucible (Pipeline Validation)
-> **Context**: Paused to implement the Data-Oriented OS foundational architecture, which will mathematically resolve the remaining User-Flow Purity Remediation bugs.
-- [x] Perform architectural repair on RL Module (Write-Through implementation)
-- [x] Update specs for Time and Domain modeling
-- [x] Fix DOC interface rules for RL module
+> **Context**: Partially complete (Waves 1-4 shipped to changelog). Paused to implement the Data-Oriented OS foundational architecture, which will mathematically resolve the remaining User-Flow Purity Remediation bugs.
 
-### 🌊 Wave 1: Completing the Missing Twin (Step 5)
-> Replace the Fake RL Engine with the Real RL Subsystem.
-- [x] Build `RealHabitListener` (The Background Path in Step 1).
-- [x] Wire the RL Engine write-back loop (Step 5).
-- [x] Verify `loadUserHabits()` organically feeds back into Step 3 (RAM Assembly) on the *next* turn.
-
-### 🌊 Wave 2: The Gateway Gauntlet (Step 2)
-> Prove the Disambiguator cannot be tricked.
-- [x] Use `WorldStateSeeder` to inject 10 identically named companies, but with different geographies.
-- [x] Run L2 Simulation queries forcing the LLM to disambiguate based on location/history instead of raw name.
-- [x] Explicitly verify the `Intercept & Resume` loop handles deep contextual ambiguity.
-
-### 🌊 Wave 3: Context Poisoning Defense (Step 3)
-> Prove the RAM Assembly only gives the LLM exactly what it needs, and nothing more.
-- [x] Inject massive, irrelevant `noise` into a client's SSD history to mathematically assert O(1) entity token scaling.
-- [x] Flood the `SessionWorkingSet` with 50+ chat messages to prove strict `sessionHistory` (RAM) pruning boundaries.check log 
-
-SOP-debugging.md
-  produce report for evaluation first. don't proceed to change yet 
-
-### 🌊 Wave 4: Write-Back Concurrency (Step 5)
-> Prove the Twin Engines (CRM + RL) don't overwrite each other in RAM or SSD.
-- [x] Send back-to-back rapid-fire intents ("Change their address" immediately followed by "Remind me to call them").
-- [x] Verify the pipeline handles queued writes and the `SessionWorkingSet` stays synchronized with the SSD.
-
-### 🌊 Wave 5: User-Flow Purity Remediation
+### 🌊 Wave 5: User-Flow Purity Remediation (Pending Mono Upgrade)
 > Prove the L3 UI handles human-centric workflows, decoupled intents, and context memory flawlessly (based on L2 User Flow Test Failures from 2026-03-12).
 
 #### T1 & T2: Context Flow & Gateway Thresholds
@@ -97,8 +69,6 @@ SOP-debugging.md
 | TOCTOU in observe() | `RoomUserHabitRepository.kt` | Low |
 | Room error handling | `Room*Repository` — no try-catch on writes | Low |
 | **Confidence-Based Reminder Interceptor** | Replace deterministic round-1 wrap-up with LLM confidence-based interception. Agent decides when to surface schedule context. Requires classifier or LLM self-assessment of conversation intent. Current workaround: smarter prompting that lets LLM decide naturally. | Medium |
-| ~~**L2 UI Verification**~~ | ~~`MarkdownStrategyBubble.kt` — Verify the title extraction and rendering styling (T2 test from `l2_test_plan.md`) after major component refactoring is complete.~~ | ~~High~~ | ✅ **Resolved** — L2 isolated UI injection built and verified via Debug HUD. Header parsing and styled layouts proven without Mockito. |
-| ~~**NotificationService Layer Violation**~~ | ~~`NotificationService.kt` in `domain` imports `android.app.PendingIntent`~~ | ~~High~~ | ✅ **Resolved** — Ghost Debt. `PendingIntent` was previously abstracted into the pure Kotlin `NotificationAction` sealed class. Domain purity confirmed via grep audit. |
 | **Phase 3 E2E Pillar Resumption (The 6 Waves)** | System-wide E2E Device Tests for: Lightning Fast-Track, Dual-Engine Bridge, Strict Interface Integrity, Adaptive Habit Loop, Efficiency Overload, Transparent Mind. Deferred until all inner rings (1-4) mathematically pass the Anti-Illusion protocol without Mockito. | High |
 
 ---

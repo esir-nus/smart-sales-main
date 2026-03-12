@@ -32,12 +32,12 @@ class IntentOrchestrator @Inject constructor(
                 mascotService.interact(MascotInteraction.Text(input))
                 // No PipelineResult emitted, as Mascot handles it ambiently
             }
-            QueryQuality.VAGUE, QueryQuality.SIMPLE_QA -> {
+            QueryQuality.VAGUE -> {
                 // Route back to user for clarification or immediate answer
                 emit(PipelineResult.ConversationalReply(routerResult.response))
             }
             else -> {
-                // System II Task (Deep Analysis or Direct Task)
+                // System II Task (Deep Analysis, Simple QA, or Direct Task)
                 val pipelineInput = PipelineInput(
                     rawText = input,
                     isVoice = false,

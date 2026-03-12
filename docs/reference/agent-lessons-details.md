@@ -442,6 +442,17 @@ This happens when an agent uses a tool to write or replace file content and mist
 
 ---
 
+### SIMPLE_QA Bypassing UnifiedPipeline (Empty AI Answers) — 2026-03-12
+
+**Symptom**: User asks a factual question (e.g., "What is Zhang Wei's job title?"), and the LLM responds "I have no information" even though the data exists in the database.
+**Root Cause**: The `IntentOrchestrator` identified the question as `SIMPLE_QA` but treated it like `VAGUE`—instantly short-circuiting to the UI without loading context. The query *never reached* the `UnifiedPipeline` to actually load the Entity Knowledge.
+**Wrong Approach**: Assuming the LLM failed to understand the user, or that the database write failed over concurrency issues.
+**Correct Fix**: Separate the routing branches in `IntentOrchestrator`. `VAGUE` should still short-circuit to the UI for clarification. `SIMPLE_QA` must fall through to the heavy `UnifiedPipeline` so that `ContextBuilder` can load `KNOWN_FACTS` before answering.
+**File(s)**: [IntentOrchestrator.kt](file:///home/cslh-frank/main_app/core/pipeline/src/main/java/com/smartsales/core/pipeline/IntentOrchestrator.kt)
+**Status**: ✅ CONFIRMED 2026-03-12
+
+---
+
 <!-- Add new lessons above this line -->
 
 ### JSON Schema Fragility vs Raw Markdown — 2026-03-02

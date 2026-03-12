@@ -120,6 +120,31 @@ class RealUnifiedPipeline @Inject constructor(
                     emit(PipelineResult.DisambiguationIntercepted(uiState))
                     return@flow
                 }
+                if (parseResult is ParseResult.EntityDeclaration) {
+                    Log.d("RealUnifiedPipeline", "Proactive EntityDeclaration. Writing to EntityWriter directly.")
+                    val upsertResult = entityWriter.upsertFromClue(
+                        clue = parseResult.name,
+                        resolvedId = null,
+                        type = com.smartsales.prism.domain.memory.EntityType.PERSON,
+                        source = "proactive_pipeline"
+                    )
+                    if (!parseResult.jobTitle.isNullOrBlank() || !parseResult.company.isNullOrBlank() || !parseResult.notes.isNullOrBlank()) {
+                        val profileUpdates = mutableListOf<String>()
+                        parseResult.jobTitle?.let { profileUpdates.add("职位: $it") }
+                        parseResult.company?.let { profileUpdates.add("公司: $it") }
+                        parseResult.notes?.let { profileUpdates.add("备注: $it") }
+                        if (profileUpdates.isNotEmpty()) {
+                            entityWriter.updateAttribute(upsertResult.entityId, "notes", profileUpdates.joinToString("\n"))
+                        }
+                    }
+                    if (parseResult.aliases.isNotEmpty()) {
+                        parseResult.aliases.forEach { alias ->
+                            entityWriter.registerAlias(upsertResult.entityId, alias)
+                        }
+                    }
+                    emit(PipelineResult.ConversationalReply("好的，已更新相关信息。"))
+                    return@flow
+                }
                 if (parseResult is ParseResult.Success) {
                     resolvedEntities.addAll(parseResult.resolvedEntityIds)
                     
@@ -147,7 +172,7 @@ class RealUnifiedPipeline @Inject constructor(
                 Log.d("RealUnifiedPipeline", "fetch: ContextBuilder enhanced context...")
                 contextBuilder.build(
                     userText = resolvedInputText,
-                    mode = Mode.ANALYST,
+                    mode = if (input.intent == QueryQuality.CRM_TASK) Mode.SCHEDULER else Mode.ANALYST,
                     resolvedEntityIds = resolvedEntities, 
                     depth = input.requestedDepth
                 )
@@ -336,7 +361,27 @@ class RealUnifiedPipeline @Inject constructor(
             }
         } else {
             // --- Wave 3: Analyst Execution Route ---
-            emit(PipelineResult.ConversationalReply("Unified Pipeline ETL assembled successfully. Payload: $finalPayload"))
+            emit(PipelineResult.Progress("正在深度分析与检索..."))
+            val prompt = promptCompiler.compile(enhancedContext)
+            Log.d("RealUnifiedPipeline", "🤖 Executing LLM Analyst Prompt...")
+            val llmResult = executor.execute(LlmProfile.DEFAULT, prompt)
+
+            when (llmResult) {
+                is ExecutorResult.Success -> {
+                    try {
+                        val json = org.json.JSONObject(llmResult.content)
+                        val responseText = json.optString("response", "分析完成，但未返回内容。")
+                        emit(PipelineResult.ConversationalReply(responseText))
+                    } catch (e: Exception) {
+                        Log.e("RealUnifiedPipeline", "Failed to parse Analyst JSON, falling back to raw content", e)
+                        emit(PipelineResult.ConversationalReply(llmResult.content))
+                    }
+                }
+                is ExecutorResult.Failure -> {
+                    Log.e("RealUnifiedPipeline", "LLM Execution Failed: ${llmResult.error}")
+                    emit(PipelineResult.ConversationalReply("分析失败: ${llmResult.error}"))
+                }
+            }
         }
     }
 }

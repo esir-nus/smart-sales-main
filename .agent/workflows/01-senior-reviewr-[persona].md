@@ -250,6 +250,7 @@ Readiness = (Verified/Total Assumptions × 60) + Evidence(0-20) + Risk(0-20)
 
 - [ ] Searched for existing implementations
 - [ ] Read relevant spec/doc sections
+- [ ] Read `docs/specs/project-mono-master-guide.md` to enforce the Data-Oriented OS contract
 - [ ] Verified file/class existence
 - [ ] Checked for dependencies
 - [ ] **Verified config is in native `.agent/` structure**

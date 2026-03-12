@@ -50,6 +50,9 @@ interface L2DebugHudEntryPoint {
     fun schedulerLinter(): SchedulerLinter
     fun unifiedPipeline(): UnifiedPipeline
     fun systemEventBus(): com.smartsales.prism.domain.system.SystemEventBus
+    fun entityRepository(): com.smartsales.prism.domain.memory.EntityRepository
+    fun memoryRepository(): com.smartsales.prism.domain.memory.MemoryRepository
+    fun inputParserService(): com.smartsales.core.pipeline.InputParserService
 }
 
 /**
@@ -84,6 +87,9 @@ fun L2DebugHud(
     val schedulerLinter = remember { entryPoint.schedulerLinter() }
     val unifiedPipeline = remember { entryPoint.unifiedPipeline() }
     val eventBus = remember { entryPoint.systemEventBus() }
+    val entityRepo = remember { entryPoint.entityRepository() }
+    val memoryRepo = remember { entryPoint.memoryRepository() }
+    val inputParserService = remember { entryPoint.inputParserService() }
     val scope = rememberCoroutineScope()
     
     var lastResult by remember { mutableStateOf<String?>(null) }
@@ -170,7 +176,18 @@ fun L2DebugHud(
                             scope.launch {
                                 isProcessing = true
                                 try {
-                                    val pipelineInput = PipelineInput(text, isVoice = false, intent = QueryQuality.CRM_TASK)
+                                    val intentResult = inputParserService.parseIntent(text)
+                                    val intent = if (intentResult is ParseResult.Success) {
+                                        Log.d(TAG, "🤖 Parse Success: ${intentResult.temporalIntent}")
+                                        // Simple logic: If temporal parsing succeeded (meaning they asked to schedule/remind something), route to CRM_TASK. 
+                                        // Otherwise, it's a general question / data update -> DEEP_ANALYSIS
+                                        if (intentResult.temporalIntent != null) QueryQuality.CRM_TASK else QueryQuality.DEEP_ANALYSIS
+                                    } else {
+                                        Log.d(TAG, "🤖 Intent Parse Failed, defaulting to DEEP_ANALYSIS")
+                                        QueryQuality.DEEP_ANALYSIS
+                                    }
+                                
+                                    val pipelineInput = PipelineInput(text, isVoice = false, intent = intent)
                                     var hasResult = false
                                     unifiedPipeline.processInput(pipelineInput).collect { pResult ->
                                         when (pResult) {
@@ -198,6 +215,15 @@ fun L2DebugHud(
                                             is PipelineResult.SchedulerMultiTaskCreated -> {
                                                 Log.d(TAG, "✅ Tasks Created! ${pResult.tasks.size}")
                                                 lastResult = "✅ ${pResult.tasks.size} Tasks Created"
+                                                showToast = true
+                                                hasResult = true
+                                            }
+                                            is PipelineResult.Progress -> {
+                                                Log.d(TAG, "⏳ Progress: ${pResult.message}")
+                                            }
+                                            is PipelineResult.ConversationalReply -> {
+                                                Log.d(TAG, "✅ Answer: ${pResult.text}")
+                                                lastResult = "💬 Answer: ${pResult.text.take(30)}..."
                                                 showToast = true
                                                 hasResult = true
                                             }
@@ -268,6 +294,40 @@ fun L2DebugHud(
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4F46E5))
                 ) {
                     Text("Emit AppIdle (Trigger Mascot)", color = Color.White)
+                }
+                
+                // ═══════════════════════════════════════════════════
+                // Section 1.6: L3 State Seeder
+                // ═══════════════════════════════════════════════════
+                Text(
+                    "🌱 State Injection (L3)",
+                    color = Color(0xFF9CA3AF),
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+
+                Button(
+                    onClick = {
+                        scope.launch {
+                            isProcessing = true
+                            try {
+                                Log.d(TAG, "WorldStateSeeder: Injecting Chaos Seed")
+                                DebugWorldStateSeeder(entityRepo, memoryRepo).injectChaosSeed()
+                                lastResult = "✅ World State Seeded (L3)"
+                                showToast = true
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Failed to seed", e)
+                                lastResult = "❌ Seed Failed: ${e.message}"
+                                showToast = true
+                            } finally {
+                                isProcessing = false
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFBE185D))
+                ) {
+                    Text("Seed World State (L3)", color = Color.White)
                 }
                 
                 // ═══════════════════════════════════════════════════
@@ -414,12 +474,11 @@ private fun L2ScenarioButton(
 
 private fun formatResult(name: String, result: LintResult, expected: String): String {
     val status = when (result) {
-        is LintResult.Success -> "✅ duration=${result.task.durationMinutes}, cascade=${result.task.alarmCascade}"
-        is LintResult.MultiTask -> "🔢 ${result.tasks.size} tasks: ${result.tasks.map { it.title }}"
+        is LintResult.Success -> "✅ duration=${result.task?.durationMinutes ?: "N/A"}, cascade=${result.task?.alarmCascade ?: "N/A"}, mutations=${result.profileMutations.size}"
+        is LintResult.MultiTask -> "🔢 ${result.tasks.size} tasks: ${result.tasks.map { it.title }}, mutations=${result.profileMutations.size}"
         is LintResult.Incomplete -> "⚠️ ${result.missingField}: ${result.question}"
         is LintResult.Error -> "❌ ${result.message}"
         is LintResult.NonIntent -> "🚫 non_intent: ${result.reason}"
-        is LintResult.Inspiration -> "💡 inspiration: ${result.content}"
         is LintResult.Deletion -> "🗑️ deletion: ${result.targetTitle}"
         is LintResult.Reschedule -> "🔄 reschedule: ${result.targetTitle} → ${result.newInstruction}"
     }

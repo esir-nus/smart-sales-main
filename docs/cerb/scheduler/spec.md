@@ -42,7 +42,6 @@ All scheduler voice commands work **globally within scheduler mode** — no card
 | `schedulable`  | "明天下午2点开会" | Create task | Not needed |
 | `deletion`     | "取消会议", "不去开会了" | Fuzzy match → delete | Not needed (Wave 7) |
 | `reschedule`   | "把会推迟两小时", "会改到后天" | Fuzzy match → create-and-delete | Not needed (Wave 11) |
-| `inspiration`  | "以后想学吉他" | Save to inspiration | Not needed |
 | `non_intent`   | "你好" | Reject (no action) | N/A |
 
 **Card-level mic** (with `replaceItemId`) remains as a power-user shortcut for unambiguous single-task edits.
@@ -404,11 +403,10 @@ First gate: classify user input before parsing. See **[Voice Command Scope](#voi
 > `reschedule` classification added in Wave 11. All other classifications shipped in Wave 4.0.
 
 - **Ship Criteria**: Non-scheduling input (e.g., "你好") does NOT create bogus task
-- **Ship Criteria (Wave 4.3)**: Input without explicit clock time routes to inspiration, not schedulable
+- **Ship Criteria (Wave 4.3)**: Input without explicit clock time now routes to `schedulable` but fails validation (Incomplete) instead of hijacking as inspiration.
 - **Test Cases**:
     - [ ] "你好" → AwaitingClarification
-    - [ ] "以后想学吉他" → classification=inspiration
-    - [ ] "明天找Jake" → classification=inspiration (有日期无时间点)
+    - [ ] "明天找Jake" → classification=schedulable -> LintResult.Incomplete (missing explicitly scheduled time)
     - [ ] "明天下午2点开会" → classification=schedulable (有具体时间点)
 - **Deliverables**: Prompt update in `DashscopeExecutor`, classification handling in `IntentOrchestrator`
 

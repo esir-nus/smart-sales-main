@@ -57,6 +57,27 @@ sealed class PipelineResult {
         val uiState: com.smartsales.prism.domain.model.UiState
     ) : PipelineResult()
     
+    data class ProfileMutation(
+        val entityId: String,
+        val field: String,
+        val value: String
+    )
+
+    /**
+     * T3 Open-Loop Defense: Proposal to mutate the database, requiring user confirmation.
+     */
+    data class MutationProposal(
+        val task: com.smartsales.prism.domain.scheduler.TimelineItemModel.Task? = null,
+        val profileMutations: List<ProfileMutation> = emptyList(),
+        val isConflict: Boolean = false
+    ) : PipelineResult() {
+        init {
+            require(task != null || profileMutations.isNotEmpty()) {
+                "MutationProposal must contain at least one task or profile mutation"
+            }
+        }
+    }
+    
     /**
      * A singular CRM task was created successfully.
      */

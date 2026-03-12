@@ -19,7 +19,7 @@ Here is the exact journey of a memory, from the user's mouth to the permanent da
 #### You Say: *"Follow up with Dingsheng about the 5% discount"*
 
 ### Step 1: The Input & Fast Parse
-**What**: The user speaks. The Turbo model instantly extracts the physical clues (Who, What, When). *(Note: The architecture plans for a background job to start learning habits here, but it is currently [WIP]/Deferred)*.
+**What**: The user speaks. The Turbo model instantly extracts the physical clues (Who, What, When).
 **Where**: [`RealInputParserService.kt`](file:///home/cslh-frank/main_app/core/pipeline/src/main/java/com/smartsales/core/pipeline/RealInputParserService.kt)
 **Result**: Clues extracted: `{ intent: CRM_TASK, entities: ["Dingsheng"], action: "follow up" }`
 
@@ -34,9 +34,11 @@ Here is the exact journey of a memory, from the user's mouth to the permanent da
 **Result**: `PipelineContext` is built (The "Prompt").
 
 ### Step 4: LLM Brain Execution
-**What**: The heavy LLM reads the `PipelineContext` package. It figures out the best response and creates a structured JSON output (including the response text, proposed calendar events, and observed habits).
+**What**: The pipeline forks into two concurrent execution streams reading the same `PipelineContext` package:
+- **Foreground (CRM LLM)**: The heavy LLM figures out the best response and creates a structured JSON output (including the response text and proposed calendar events).
+- **Background (RL Engine)**: The `HabitListener` spins up a separate asynchronous LLM call to extract observed user habits without blocking the UI response.
 **Where**: [`UnifiedPipeline.kt`](file:///home/cslh-frank/main_app/core/pipeline/src/main/java/com/smartsales/core/pipeline/RealUnifiedPipeline.kt)
-**Result**: Structured AI Output.
+**Result**: Structured CRM Action Payload (Foreground) & Habit Extraction (Background).
 
 ### Step 5: The Write-Backs (Twin Engines)
 **What**: The pipeline is finished, but the OS must save the work. 

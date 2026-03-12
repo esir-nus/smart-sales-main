@@ -35,12 +35,7 @@ class SchedulerLinter @Inject constructor(
                         reason = json.optString("reason", "未检测到日程安排意图")
                     )
                 }
-                "inspiration" -> {
-                    // Wave 5: 读取 inspirationText 字段（prompt 已要求必填）
-                    val content = json.optString("inspirationText", 
-                        json.optString("title", json.optString("content", "")))
-                    return LintResult.Inspiration(content = content)
-                }
+
                 // Wave 7: NL Deletion
                 "deletion" -> {
                     val targetTitle = json.optString("targetTitle", "")
@@ -61,32 +56,59 @@ class SchedulerLinter @Inject constructor(
                 // "schedulable" → continue to full parsing below
             }
             
+            // Parse Profile Mutations
+            val mutationsArray = json.optJSONArray("profile_mutations")
+            val profileMutations = mutableListOf<ParsedProfileMutation>()
+            if (mutationsArray != null) {
+                for (i in 0 until mutationsArray.length()) {
+                    val m = mutationsArray.optJSONObject(i) ?: continue
+                    val entityId = m.optString("entityId")
+                    val field = m.optString("field")
+                    val value = m.optString("value")
+                    if (entityId.isNotBlank() && field.isNotBlank()) {
+                        profileMutations.add(ParsedProfileMutation(entityId, field, value))
+                    }
+                }
+            }
+
             // Wave 4.1: Parse tasks array
             val tasksArray = json.optJSONArray("tasks")
             
-            if (tasksArray == null || tasksArray.length() == 0) {
+            val tasks = mutableListOf<com.smartsales.prism.domain.scheduler.TimelineItemModel.Task>()
+            var singleSuccessResult: LintResult.Success? = null
+            
+            if (tasksArray != null && tasksArray.length() > 0) {
+                for (i in 0 until tasksArray.length()) {
+                    val result = parseSingleTask(tasksArray.getJSONObject(i))
+                    if (result is LintResult.Success && result.task != null) {
+                        tasks.add(result.task)
+                        if (singleSuccessResult == null) singleSuccessResult = result
+                    } else if (result is LintResult.Incomplete && tasks.isEmpty() && profileMutations.isEmpty()) {
+                        return result
+                    }
+                }
+            } else if (json.has("title")) {
                 // Backward compat: try parsing as single object
-                return parseSingleTask(json)
-            }
-            
-            if (tasksArray.length() == 1) {
-                // Single task → return Success
-                return parseSingleTask(tasksArray.getJSONObject(0))
-            }
-            
-            // Multi-task → parse all and return MultiTask
-            val tasks = (0 until tasksArray.length()).mapNotNull { i ->
-                val result = parseSingleTask(tasksArray.getJSONObject(i))
-                when (result) {
-                    is LintResult.Success -> result.task
-                    else -> null // 跳过解析失败的任务
+                val result = parseSingleTask(json)
+                if (result is LintResult.Success && result.task != null) {
+                    tasks.add(result.task)
+                    singleSuccessResult = result
+                } else if (result is LintResult.Incomplete && profileMutations.isEmpty()) {
+                    return result
                 }
             }
             
-            return if (tasks.isNotEmpty()) {
-                LintResult.MultiTask(tasks)
+            return if (tasks.size > 1) {
+                LintResult.MultiTask(tasks, profileMutations)
+            } else if (tasks.size == 1 && singleSuccessResult != null) {
+                singleSuccessResult.copy(profileMutations = profileMutations)
+            } else if (profileMutations.isNotEmpty()) {
+                LintResult.Success(
+                    task = null,
+                    profileMutations = profileMutations
+                )
             } else {
-                LintResult.Error("无法解析任务列表")
+                LintResult.Error("无法解析任务列表或记录更新")
             }
         } catch (e: Exception) {
             LintResult.Error("JSON 解析失败: ${e.message}")
@@ -281,14 +303,21 @@ data class ParsedClues(
     val durationMinutes: Int? = null    // 持续时间（用于冲突检测）
 )
 
+data class ParsedProfileMutation(
+    val entityId: String,
+    val field: String,
+    val value: String
+)
+
 /**
  * 校验结果
  */
 sealed class LintResult {
     data class Success(
-        val task: TimelineItemModel.Task,
-        val urgencyLevel: UrgencyLevel,
-        val parsedClues: ParsedClues = ParsedClues()  // Phase 1 → Phase 2 桥梁
+        val task: TimelineItemModel.Task? = null,
+        val urgencyLevel: UrgencyLevel = UrgencyLevel.L3_NORMAL,
+        val parsedClues: ParsedClues = ParsedClues(),  // Phase 1 → Phase 2 桥梁
+        val profileMutations: List<ParsedProfileMutation> = emptyList()
     ) : LintResult()
     
     /**
@@ -296,7 +325,8 @@ sealed class LintResult {
      * LLM 返回多个任务时使用此结果
      */
     data class MultiTask(
-        val tasks: List<TimelineItemModel.Task>
+        val tasks: List<TimelineItemModel.Task>,
+        val profileMutations: List<ParsedProfileMutation> = emptyList()
     ) : LintResult()
     
     /**
@@ -312,7 +342,7 @@ sealed class LintResult {
     
     // Wave 4.0: Input Classification Results
     data class NonIntent(val reason: String) : LintResult()
-    data class Inspiration(val content: String) : LintResult()
+
     
     // Wave 7: NL Deletion
     data class Deletion(val targetTitle: String) : LintResult()

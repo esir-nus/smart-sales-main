@@ -129,11 +129,10 @@ class RealUnifiedPipelineTest {
         assertEquals("Executor should have been called exactly once", 1, executor.executedPrompts.size)
         val generatedPrompt = executor.executedPrompts.first()
         assertTrue("Prompt must explicitly contain the user's intent text for Dataflow Veracity", generatedPrompt.contains("Schedule a meeting"))
-        
-        val taskResult = results.filterIsInstance<PipelineResult.SchedulerTaskCreated>().firstOrNull()
-        assertTrue("Expected SchedulerTaskCreated but it was not emitted. Results: ${results.map { it::class.simpleName }}", taskResult != null)
-        assertEquals("Discuss Anti-Illusion Protocol", taskResult!!.title)
-        assertEquals(30, taskResult.durationMinutes)
+        val taskResult = results.filterIsInstance<PipelineResult.MutationProposal>().firstOrNull()
+        assertTrue("Expected MutationProposal but it was not emitted. Results: ${results.map { it::class.simpleName }}", taskResult != null)
+        assertEquals("Discuss Anti-Illusion Protocol", taskResult!!.task!!.title)
+        assertEquals(30, taskResult.task!!.durationMinutes)
         
         // Background Path Validation
         assertEquals("Habit listener MUST be triggered after ETL", 1, habitListener.analyzeAsyncCallCount)

@@ -15,27 +15,17 @@ open class PromptCompiler @Inject constructor() {
     open fun compile(context: EnhancedContext): String = buildString {
         val mode = context.modeMetadata.currentMode
         
-        // Wave 2: 各模式使用专用系统提示词
         if (context.systemPromptOverride != null) {
             appendLine(context.systemPromptOverride)
             appendLine()
             appendLine("---")
             appendLine()
         } else {
-            when (mode) {
-                Mode.ANALYST -> {
-                    appendLine(buildAnalystSystemPrompt())
-                    appendLine()
-                    appendLine("---")
-                    appendLine()
-                }
-                Mode.SCHEDULER -> {
-                    appendLine(buildSchedulerSystemPrompt())
-                    appendLine()
-                    appendLine("---")
-                    appendLine()
-                }
-            }
+            // Unified System II Prompt handling both Analyst and Scheduler intents
+            appendLine(buildAnalystSystemPrompt())
+            appendLine()
+            appendLine("---")
+            appendLine()
         }
         
         // 添加会话历史（如果有）
@@ -75,7 +65,8 @@ open class PromptCompiler @Inject constructor() {
         }
         
         // 🕐 相对时间预解析（Kotlin 确定性 > LLM 数学）
-        if (context.modeMetadata.currentMode == Mode.SCHEDULER && context.currentInstant > 0) {
+        // Applied globally since the unified Prompt can handle scheduling
+        if (context.currentInstant > 0) {
             com.smartsales.prism.domain.scheduler.RelativeTimeResolver
                 .buildHint(context.userText, context.currentInstant, java.time.ZoneId.systemDefault())
                 ?.let { hint ->
@@ -177,10 +168,10 @@ open class PromptCompiler @Inject constructor() {
 第一步，强制评估用户输入的意图质量（query_quality）。由于每次调用大模型都很昂贵，你需要过滤掉无意义的噪音并将任务路由：
 1. `noise`：无意义的输入、测试字符或纯杂音（如："asdf"、"喂喂喂"）。如果你识别为 `noise`，请将 `response` 设置为微弱的视觉反馈标志：`"..."` 或 `"（未听清）"`，**不要**再去评估 `info_sufficient` 或 `missing_entities`。
 2. `greeting`：简短问候语（如："你好"、"早安"、"辛苦了"）。如果你识别为 `greeting`，请在 `response` 中给出**极度简短、口语化**的回应（如："我在"、"听着呢"、"怎么了"），绝不要使用长句或客服套话，**不要**评估其他字段。
-3. `vague`：指代不清，无法回答（如："他刚才说了什么？" - "他"是谁？）。如果你识别为 `vague`，请在 `response` 中用极其口语、短促的方式请求澄清（如："你想分析哪方面？" 或 "听到你在说话，具体是想？"），**不要**再去评估其他字段。
+3. `vague`：指代不清，无法回答（如："他刚才说了什么？" - "他"是谁？）。如果你识别为 `vague`，请在 `response` 中用极其口语、短促的方式请求澄清（如："你想分析哪方面？" 或 "听到你在说话，具体是想？"），**不要**再去评估其他字段。注意：如果输入中带有明确的人名/公司名（如"张总"），即使问题部分宽泛或含有代词，也绝不能判定为 vague，应判定为 simple_qa 或 deep_analysis，以便系统去数据库检索档案。
 4. `simple_qa`：简单的事实问答，纯内容查询（如："会议讲了啥？"、"价格报了多少？"）。这类问题可以直接从历史或简短截图中找到答案，不需要深度策略分析。
 5. `deep_analysis`：复杂的业务分析、策略制定、对比（如："怎么应对他的价格异议？"、"帮我制定下步策略"）。这需要深度思考和规划。
-6. `crm_task`：明确的建档或信息录入指令（如："帮我建个叫雷军的客户"、"把刚刚的情况记录下来"）。
+6. `crm_task`：明确的建档或日程录入指令（如："帮我建个叫雷军的客户"、"把刚刚的情况记录下来"）。注意：系统不会自动保存任何修改。你的响应必须提示用户："我已经为您起草了以下更新，请点击下方的卡片进行确认"，让用户知道他们需要在 UI 上操作。
 
 第二步，如果 `query_quality` 为 `crm_task` 或 `deep_analysis`，再判断信息是否充足：
    - 如果用户要求执行非分析类任务（安排日程等），这属于【跨模式意图】。`info_sufficient` = false，在 response 中提示用户切换模式。
@@ -200,11 +191,45 @@ open class PromptCompiler @Inject constructor() {
     "recommended_tactics": ["value_stack", "tco_comparison", "urgency"]
   },
   "missing_entities": ["如果用户提到了需要建档的重要客户但 <KNOWN_FACTS> 中没有，提取到这里"],
+  "profile_mutations": [
+    {
+      "entityId": "实体ID（必须从<KNOWN_FACTS>提取）",
+      "field": "要修改的字段名（如dealStage, budget等）",
+      "value": "新值"
+    }
+  ],
+  "classification": "schedulable|deletion|reschedule|non_intent",
+  "targetTitle": "删除或改期任务时的目标关键词（可选，没有则为空字符串）",
+  "newInstruction": "改期任务时的新时间/新指令（可选，没有则为空字符串）",
+  "tasks": [
+    {
+      "title": "任务标题（简洁明了）",
+      "startTime": "YYYY-MM-DD HH:mm",
+      "endTime": "YYYY-MM-DD HH:mm (可选)",
+      "duration": "预估时长（如 30m、1h、15m）— 见下方推断规则",
+      "location": "地点（可选，没有则省略此字段）",
+      "notes": "备注（可选，没有则省略此字段）",
+      "keyPerson": "关键人物（仅商务相关）",
+      "keyCompany": "关联公司/组织（可选，从输入或对话历史中提取）",
+      "highlights": "高亮信息（可选）",
+      "urgency": "L1|L2|L3|FIRE_OFF（赶飞机L1, 会议L2, 日常L3, 即时FIRE_OFF）"
+    }
+  ],
   "thought": "你的分析思路（中文）",
   "response": "给用户的专业建议或简短回应（中文）"
 }
 
 注意：如果 query_quality 不是 deep_analysis 或 crm_task，你仍必须输出结构完整的 JSON，只是 analysis 内的字段无实际意义。
+如果用户意图包含日程安排、删除或改期，请填写 tasks 和 classification 等字段。具体规则如下：
+
+### 日程处理规则（如果包含日程意图）
+1. `classification`: "schedulable"（常规安排）、"deletion"（取消已有）、"reschedule"（改期已有）、"non_intent"（无日程）。
+2. 如果是 deletion，必须提供 `targetTitle`。
+3. 如果是 reschedule，必须提供 `targetTitle` 和 `newInstruction`。
+4. 如果是 schedulable，必须提供 `tasks` 数组。
+5. 推断合理 urgency（赶飞机L1, 会议L2, 日常L3, 即时FIRE_OFF）。如果是FIRE_OFF，duration为null。
+6. keyPerson 仅提取商务相关人物，忽略非商务人物。
+7. duration推断（15m通讯, 1h会议, 30m用餐运动）。
 """.trimIndent()
     
     /**
@@ -219,7 +244,7 @@ open class PromptCompiler @Inject constructor() {
 ## 响应格式（必须是严格的 JSON，不允许 markdown）
 
 {
-  "classification": "schedulable|deletion|reschedule|inspiration|non_intent",
+  "classification": "schedulable|deletion|reschedule|non_intent",
   "tasks": [
     {
       "title": "任务标题（简洁明了）",
@@ -245,8 +270,7 @@ open class PromptCompiler @Inject constructor() {
 | "schedulable" | 包含**具体时间点**（几点几分）的日程安排 | "明天下午2点开会"、"后天3点会议"、"8点吃面" |
 | "deletion" | 明确要取消/删除某个已有任务 | "取消会议"、"把会议删了"、"不去开会了" |
 | "reschedule" | 明确要改期/推迟/提前某个已有任务 | "把会推迟两小时"、"把开会时间延迟一个小时"、"会改到后天"、"开会提前到3点"、"推后一天" |
-| "inspiration" | 想法、计划，或有日期但**无具体时间点** | "以后想学吉他"、"明天找Jake"、"明天早上吃饭"、"提醒我明天去银行" |
-| "non_intent" | 普通对话，无日程或想法意图 | "你好"、"今天天气怎么样" |
+| "non_intent" | 普通对话，无日程意图 | "你好"、"今天天气怎么样" |
 
 **⚠️ 关键区分：时间段 vs 具体时间点**
 - **不是**具体时间点：早上、上午、中午、下午、傍晚、晚上 → 这些是时间段，不是具体几点
@@ -258,13 +282,12 @@ open class PromptCompiler @Inject constructor() {
 
 | 用户输入 | classification | 原因 |
 |----------|---------------|------|
-| "明天早上吃饭" | inspiration | "早上"是时间段，不是几点 |
-| "明天下午开会" | inspiration | "下午"是时间段，不是几点 |
+| "明天早上吃饭" | schedulable | 意图是日程安排，但"早上"是时间段，具体时间需后续追问 |
+| "明天下午开会" | schedulable | 意图是日程安排，但"下午"是时间段 |
 | "明天下午2点开会" | schedulable | "下午2点"是具体时间点 |
 | "8点吃面" | schedulable | "8点"是具体时间点 |
 
 **规则**：
-- 如果是 "inspiration"，必须返回 classification 和 inspirationText 字段（包含用户的灵感内容）
 - 如果是 "non_intent"，只需返回 classification 字段
 - 如果是 "deletion"，必须返回 classification 和 targetTitle 字段（用户想删除的任务关键词）
 - 如果是 "reschedule"，必须返回 classification、targetTitle（任务关键词）和 newInstruction（改期指令）
@@ -287,14 +310,7 @@ open class PromptCompiler @Inject constructor() {
   "targetTitle": "打电话"
 }
 
-## Inspiration 示例
 
-用户：以后想学吉他
-输出：
-{
-  "classification": "inspiration",
-  "inspirationText": "以后想学吉他"
-}
 
 ## Reschedule 示例
 

@@ -88,7 +88,17 @@ class RealContextBuilder @Inject constructor(
         }
 
         // Section 1: Entity Knowledge Context
-        val allEntityIds = (resolvedEntityIds + _workingSet.entityContext.values.map { it.entityId }).distinct()
+        val previouslyActiveIds = _workingSet.entityStates
+            .filter { it.value.state == EntityState.ACTIVE || it.value.state == EntityState.MENTIONED }
+            .keys.toList()
+            
+        val allEntityIds = (resolvedEntityIds + _workingSet.entityContext.values.map { it.entityId } + previouslyActiveIds).distinct()
+        
+        // Enforce state machine for explicit mentions
+        resolvedEntityIds.forEach { 
+            _workingSet.markActive(it) 
+        }
+        
         val missingIds = allEntityIds - _workingSet.entityCache.keys
         
         if (depth == ContextDepth.FULL) {

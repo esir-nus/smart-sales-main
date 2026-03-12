@@ -7,11 +7,41 @@
 
 ---
 
-## 🚧 ACTIVE EPIC: The Crucible (Pipeline Validation)
-> **Context**: The `pipeline-explainer.md` documents a 5-Step OS Intelligence Pipeline, but Step 1 (Habit Parsing) and Step 5 (RL Engine Write-Backs) are [WIP]/deferred. To mathematically prove the pipeline, we must complete these missing engines and subject all 5 steps to intense contextual poisoning and disambiguation chaos.
+## 🚧 ACTIVE EPIC: The Data-Oriented OS ("Project Mono")
+> **Context**: Transitioning the architecture from "Behavioral Contracts" (Essay Questions) to "Data Contracts" (Multiple Choice). The SSD (Memory) becomes the absolute center of the universe. All LLM Prompts, Linters, and Interfaces must be driven directly by Kotlin Data Classes. 
+> **Migration Law**: Strict Cerb Compliance. Each module is migrated incrementally. The lifecycle must NEVER be bypassed: [1. Docs/Specs 🔄 2. Interface Map 🔄 3. Plan 🔄 4. Execute 🔄 5. E2E Test]. 
 
-## Phase 6: Drift Audit execution
-- [x] Run Drift and Ghosting Sentinel test
+### 🌊 Wave 1: The Contract Foundation (Core Types)
+> Establish the strict Data Classes that will define the rest of the OS.
+- [ ] **Docs**: Create `docs/cerb/core-contracts/spec.md` defining `UnifiedMutation` and domain mutations.
+- [ ] **Docs**: Update `docs/cerb/interface-map.md` to reflect the new Data Contract boundary between LLM and CRM.
+- [ ] **Plan**: Run `/feature-dev-planner` to establish execution steps.
+- [ ] **Execute**: Define pure Kotlin data classes and `PromptCompiler` auto-generation via `kotlinx.serialization`.
+- [ ] **Test**: L1 Unit tests assert that altering a Kotlin data class strictly alters the generated prompt string.
+
+### 🌊 Wave 2: The EntityWriter Linter Upgrade (The Hands)
+> Refactor the Linters to act as pure Type Checkers, eliminating regex and guessing.
+- [ ] **Docs**: Update `docs/cerb/entity-writer/spec.md` and `interface.md`.
+- [ ] **Plan**: Run `/feature-dev-planner` for the Linter rework.
+- [ ] **Execute**: Refactor `EntityWriter` inputs and upgrade the Linter to use strict JSON deserialization.
+- [ ] **Test**: Execute L2 World State Seeder Flow ensuring hallucinated fields trigger safe `SerializationException` without ghosting.
+
+### 🌊 Wave 3: The Scheduler Migration (The First Refactor)
+> Migrate a single vertical slice to the new Mono architecture.
+- [ ] **Docs**: Rewrite `docs/cerb/scheduler/spec.md` removing `CRM_TASK` hard fork logic.
+- [ ] **Plan**: Run `/feature-dev-planner`.
+- [ ] **Execute**: Replace `SchedulerLinter` with the strict Data Contract approach.
+- [ ] **Test**: Full L2/L3 scheduling flow succeeds natively under the Mono pipeline.
+
+### 🌊 Wave 4: Analyst & RL Harmonization (The Integration)
+> Roll out the Mono contract to the complex modules.
+- [ ] **Docs**: Update `docs/cerb/analyst-orchestrator` and `rl-module` specs.
+- [ ] **Execute**: Migrate the Analyst/Consultant pipeline and RL Subsystem to conform to multiple-choice selection.
+
+---
+
+## ⏸️ PAUSED EPIC: The Crucible (Pipeline Validation)
+> **Context**: Paused to implement the Data-Oriented OS foundational architecture, which will mathematically resolve the remaining User-Flow Purity Remediation bugs.
 - [x] Perform architectural repair on RL Module (Write-Through implementation)
 - [x] Update specs for Time and Domain modeling
 - [x] Fix DOC interface rules for RL module
@@ -41,6 +71,20 @@ SOP-debugging.md
 - [x] Send back-to-back rapid-fire intents ("Change their address" immediately followed by "Remind me to call them").
 - [x] Verify the pipeline handles queued writes and the `SessionWorkingSet` stays synchronized with the SSD.
 
+### 🌊 Wave 5: User-Flow Purity Remediation
+> Prove the L3 UI handles human-centric workflows, decoupled intents, and context memory flawlessly (based on L2 User Flow Test Failures from 2026-03-12).
+
+#### T1 & T2: Context Flow & Gateway Thresholds
+- [ ] Fix the `LightningRouter` Intent Thresholds: Prevent strict `VAGUE` classification from prematurely dropping `SIMPLE_QA`/`DEEP_ANALYSIS` intents requiring memory lookbacks.
+- [ ] Audit `Kernel` / `ContextBuilder` state management: Fix the fatal `entityKnowledge=0` bug. Ensure implicit Entity Binding (`ent_201`) persists deterministically across multi-turn sessions for Follow-Up queries.
+
+#### T3: The Open-Loop Mutation Defense (Option 1)
+- [ ] Implement **Decoupled Physical Scheduling**: Strip `CRM_TASK` execution routing out of the NLP Chat `mode=SCHEDULER` loop entirely. 
+- [ ] Enforce the Open-Loop state machine: High-value database writes (e.g. `dealStage` mutation) must route exclusively to the `PROPOSAL` Linter check, forcing physical UI confirmations, not silent Scheduler sticky notes.
+
+#### T4: Mascot Presentation Collection
+- [ ] Fix the Presentation Layer (UI) `Flow` collection for `MascotService`. Guarantee that sub-500ms `NOISE`/`GREETING` intents successfully trigger the Mascot Overlay rendering without halting the `AgentChatScreen` or generating an infinite Shimmer state.
+
 ---
 
 ## Tech Debt (Deferred for Beta)
@@ -62,6 +106,7 @@ SOP-debugging.md
 ## Quick Links
 
 - [os-model-architecture.md](../specs/os-model-architecture.md) — RAM/SSD mental model
+- [project-mono-master-guide.md](../specs/project-mono-master-guide.md) — The Data-Oriented OS Migration Guide (Read before any Mono tasks)
 - [prism-ui-ux-contract.md](../specs/prism-ui-ux-contract.md) — (Deprecated) The Single Source of Truth for UI/UX is now exclusively the `docs/cerb/[feature]/spec.md` files.
 - [interface-map.md](../cerb/interface-map.md) — Module ownership + data flow
 - [legacy-to-prism-dictionary.md](../reference/legacy-to-prism-dictionary.md) — Legacy mapping
@@ -73,6 +118,9 @@ SOP-debugging.md
 > Key spec/impl changes, newest first. Like `git log --oneline`.
 
 ### 2026-03-12
+- **test-infrastructure**: L2 User Flow Purity Testing FAILED. Executed pure User-Flow L2 scenarios (`l2-user-flow-tests.md`) powered by chronological `dataset.md`. Discovered severe architectural defects across domains: T1 (LightningRouter misclassified `SIMPLE_QA`), T2 (ContextBuilder failed to inherit entity pointer causing amnesiac scheduling hallucination), T3 (Intent Routing Overload pushing high-stakes CRM mutations into Scheduler Linter).
+  - [Decision Log]: Committing to **Option 1**: Decoupled Physical Scheduling. Chat will no longer be the entrance for hard NLP calendar writes to prevent L3 Analyst pipeline contamination.
+  - [TER: L2 World State Seeder User Flow Tests](file:///home/cslh-frank/main_app/docs/reports/tests/L2-20260312-world-state-seeder-user-flow.md)
 - **architecture**: Intent Routing & Disambiguation Reliability Hotfixes SHIPPED. Resolved "Intent Routing Overload" where all `CRM_TASK` intents were blindly run through the Scheduler Linter by dynamically decoupling the fallback LLM mode (Mode.SCHEDULER vs Mode.ANALYST) in `RealUnifiedPipeline`. Implemented native OS-level write-backs for proactive `EntityDeclaration` parsing, entirely bypassing the heavy LLM. Fixed `IntentOrchestrator` to properly route `SIMPLE_QA` intents to the Unified Pipeline so facts are loaded from the database instead of short-circuiting to UI hallucinations.
   - [TER: L3 Analyst Mode Execution](file:///home/cslh-frank/main_app/docs/reports/tests/L3-20260312-AnalystModeExecution.md)
 

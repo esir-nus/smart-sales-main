@@ -1,0 +1,151 @@
+03-11 21:29:21.538  5813  5813 D Modem_MESensor: onSensorChanged grip posturestate = 4, foldingState = 0
+03-11 21:29:21.688  3364  4782 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+03-11 21:29:21.689  3364  4782 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+03-11 21:29:21.689  3364  4782 D InetDiagMessage: Destroyed live tcp sockets for uids={10321} in 3ms
+03-11 21:29:21.689  3364  4782 D ActionExecute: frozen uid = 10321 reason=check binder
+03-11 21:29:21.689  3364  4782 D ExternalInterface: setUidState, uid = 10321 allow = false
+03-11 21:29:21.689  3364  4782 D MiSensorServiceImpl: PowerKeeperSensor stop iUid:10321 but app has Controlled
+03-11 21:29:21.690  3364  4782 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+03-11 21:29:21.691  3364  4782 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+03-11 21:29:21.691  3364  4782 D InetDiagMessage: Destroyed live tcp sockets for uids={10356} in 2ms
+03-11 21:29:21.691  3364  4782 D ActionExecute: frozen uid = 10356 reason=check binder
+03-11 21:29:21.691  3364  4782 D ExternalInterface: setUidState, uid = 10356 allow = false
+03-11 21:29:21.691  3364  4782 D MiSensorServiceImpl: PowerKeeperSensor stop iUid:10356 but app has Controlled
+03-11 21:29:21.692  3364  4782 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+03-11 21:29:21.693  3364  4782 D InetDiagMessage: Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+03-11 21:29:21.693  3364  4782 D InetDiagMessage: Destroyed live tcp sockets for uids={10344} in 2ms
+03-11 21:29:21.693  3364  4782 D ActionExecute: frozen uid = 10344 reason=check binder
+03-11 21:29:21.693  3364  4782 D ExternalInterface: setUidState, uid = 10344 allow = false
+03-11 21:29:21.693  3364  4782 D MiSensorServiceImpl: PowerKeeperSensor stop iUid:10344 but app has Controlled
+03-11 21:29:21.776  1854  2216 I SDM     : HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+03-11 21:29:21.777  1854  2632 I vendor.qti.hardware.display.composer-service: Sensor: notify citsensorservice to trigger cwb, misForced = 0
+03-11 21:29:21.778  1854  2644 I SDM     : CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+03-11 21:29:21.847  1854  2216 I SDM     : DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+03-11 21:29:21.905 20147  4653 D AidlBufferPool: bufferpool2 0xb40000775a828548 : 51(77802 size) total buffers - 1(2434 size) used buffers - 159/1339 (recycle/alloc) - 1187/1338 (fetch/transfer)
+03-11 21:29:21.929  1854  2216 I SDM     : DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+03-11 21:29:21.940  1854  2644 I SDM     : PartialUpdateSrcSplit::SetCwbRoiForNonPU: CWB ROI Rect(699.000000 110.000000 940.000000 351.000000)
+03-11 21:29:21.961  1854  4709 I SDM     : NotifyCWBStatus: Notify the client about buffer (0x80d163d0) status 0 for display-0.
+03-11 21:29:21.961  1854  4709 I SDM     : SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+03-11 21:29:21.992  5813  5813 D Modem_MESensor: onSensorChanged grip posturestate = 4, foldingState = 0
+03-11 21:29:22.011  3364  4698 I MiuiNetworkPolicy: bandwidth: 0 KB/s, Max bandwidth: 964 KB/s
+03-11 21:29:22.013  1854  2216 I SDM     : DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+03-11 21:29:22.086  1830  4556 I sensors-hal: handle_sns_std_sensor_event:67, light_event: ts=358499145110702, lux: 116.7, powermode=1 
+03-11 21:29:22.086  1899  1924 D SRE     : sensorCallback mDisplayId = 0 dataCallback value=< 116.7500,   0.0000,   0.0000>, time=358499145110702, sensortype=5
+03-11 21:29:22.086  1899  1924 D IGCDither: sensorCallback mDisplayId = 0 dataCallback value=< 116.7500,   0.0000,   0.0000>, time=358499145110702, sensor=5
+03-11 21:29:22.087  1830  4556 I sensors-hal: handle_sns_std_sensor_event:67, light_event: ts=358499145932838, lux: 116.7, powermode=1 
+03-11 21:29:22.087  1899  1924 D SRE     : sensorCallback mDisplayId = 0 dataCallback value=< 116.7500,   0.0000,   0.0000>, time=358499145932838, sensortype=5
+03-11 21:29:22.087  1899  1924 D IGCDither: sensorCallback mDisplayId = 0 dataCallback value=< 116.7500,   0.0000,   0.0000>, time=358499145932838, sensor=5
+03-11 21:29:22.135  3000  4705 I libsensor-boledalgo: dbv:847,lux:110.5,cct:4868.3,hsv:-1.0, CWB R:114568.9,G:117591.7,B:117638.2 Event C:5709.4,R:2985.3,G:2180.0,B:1096.0 Cali C:3577.2,R:1967.5,G:1264.3,B:679.1 
+03-11 21:29:22.149  3364  6534 D SLM-SRV-SLAService: checktemp temperature = 39766 temperature_average = 39358 isPerformanceMode = true thermal_enable_slm = true
+03-11 21:29:22.275  1854  2216 I SDM     : HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+03-11 21:29:22.276  1854  2632 I vendor.qti.hardware.display.composer-service: Sensor: notify citsensorservice to trigger cwb, misForced = 0
+03-11 21:29:22.278  1854  2644 I SDM     : CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+03-11 21:29:22.305 16927 13521 D JavaheapMonitor: Java heap used=2M max=256M, proc: org.ifaa.aidl.manager
+03-11 21:29:22.305 16927 13521 V JavaheapMonitor: Check java heap usage finished! Next check delay: 300000
+03-11 21:29:22.348  1854  2216 I SDM     : DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 69999 us
+03-11 21:29:22.354  3364  3524 D GnssSsruImpl: onLocationPermissionsChanged provider:passive packageName:com.tencent.mobileqq
+03-11 21:29:22.354  3364  3524 D GnssSsruImpl: onLocationPermissionsChanged provider:network packageName:com.tencent.mobileqq
+03-11 21:29:22.354  3364  3524 D GnssSsruImpl: onLocationPermissionsChanged provider:fused packageName:com.tencent.mobileqq
+03-11 21:29:22.400 31579  5411 D SmartSalesAi/DashscopeAiChat: DashScope 调用成功（attempt=1, model=qwen-max）
+03-11 21:29:22.400 31579 31579 D DashscopeExecutor: ✅ 分析完成
+03-11 21:29:22.400 31579 31579 D RealUnifiedPipeline: LLM Execution Success, parsing JSON payload.
+03-11 21:29:22.429  1854  2216 I SDM     : DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 69999 us
+03-11 21:29:22.438  1854  2644 I SDM     : PartialUpdateSrcSplit::SetCwbRoiForNonPU: CWB ROI Rect(699.000000 110.000000 940.000000 351.000000)
+03-11 21:29:22.448  5813  5813 D Modem_MESensor: onSensorChanged grip posturestate = 4, foldingState = 0
+03-11 21:29:22.454  1830 26554 E sensors-hal: handle_sns_client_event:58, har: time = 358499516772265 data 0.000000
+03-11 21:29:22.454  3364  3364 I NetworkAccelerateSwitchService: onSensorChanged:33171070
+03-11 21:29:22.454  3364  6948 I NetworkAccelerateSwitchService: onMovementSensorChanged State:false
+03-11 21:29:22.455  1854  2216 I SDM     : HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+03-11 21:29:22.460  1854  4709 I SDM     : NotifyCWBStatus: Notify the client about buffer (0x80d146f0) status 0 for display-0.
+03-11 21:29:22.460  1854  4709 I SDM     : SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+03-11 21:29:22.504  3364  6619 W ActivityManagerServiceImpl: Sending non-protected broadcast com.modemenhance.ACTION_MODEMWIFI_RSSI_POLL from system 5813:com.android.phone/1001 pkg com.android.phone. Callers=
+03-11 21:29:22.504  3364  3717 D BroadcastQueue: Logging broadcast for com.android.phone, stopped=false, firstLaunch=false
+03-11 21:29:22.504  3364  6619 I WifiService: getConnectionInfo uid=1001
+03-11 21:29:22.505  3364  6619 V WifiService: Clearing REDACT_FOR_LOCAL_MAC_ADDRESS for com.android.phone(uid=1001)
+03-11 21:29:22.505  3364  6619 V WifiService: Clearing REDACT_FOR_NETWORK_SETTINGS for com.android.phone(uid=1001)
+03-11 21:29:22.505  3364  6619 V WifiService: Clearing REDACT_FOR_ACCESS_FINE_LOCATION for com.android.phone(uid=1001)
+03-11 21:29:22.505  5813  5813 D SlaveWifiManager: getWifiSlaveConnectionInfo
+03-11 21:29:22.542  1854  2216 I SDM     : DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+03-11 21:29:22.551  3364  4908 E HyperSentinel: ->pid:6712,processName:"usap64",Rss Memory Size Change 11308kb -> 22632kb
+03-11 21:29:22.551  3364  4908 E HyperSentinel: ->pid:6712,processName:"usap64",Rss Memory Size Change 22632kb -> 87392kb
+03-11 21:29:22.551  3364  4907 W MiuiSentinelMemoryManager: Proc create was not completed, cmdline could not be read correctly
+03-11 21:29:22.552  3364  4907 W MiuiSentinelMemoryManager: Proc create was not completed, cmdline could not be read correctly
+03-11 21:29:22.622  1854  2632 I vendor.qti.hardware.display.composer-service: Sensor: notify citsensorservice to trigger cwb, misForced = 1
+03-11 21:29:22.622  1854  2644 I SDM     : CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+03-11 21:29:22.638  1854  2644 I SDM     : PartialUpdateSrcSplit::SetCwbRoiForNonPU: CWB ROI Rect(699.000000 110.000000 940.000000 351.000000)
+03-11 21:29:22.651  1677  1689 D vendor.xiaomi.hardware.mimd2-service: psi 10 is triggered, settimer.
+03-11 21:29:22.652  1677  1689 D vendor.xiaomi.hardware.mimd2-service: psi partial stall call back reclaimed -1 delay tasks
+03-11 21:29:22.660  1854  4709 I SDM     : NotifyCWBStatus: Notify the client about buffer (0x80d163d0) status 0 for display-0.
+03-11 21:29:22.660  1854  4709 I SDM     : SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+03-11 21:29:22.709  1854  2216 I SDM     : DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+03-11 21:29:22.771  3000  4705 I libsensor-boledalgo: dbv:847,lux:112.8,cct:4928.7,hsv:-1.0, CWB R:114568.9,G:117591.7,B:117638.2 Event C:5769.7,R:3021.2,G:2205.3,B:1112.9 Cali C:3577.2,R:1967.5,G:1264.3,B:679.1 
+03-11 21:29:22.771  3000  4705 I libsensor-boledalgo: dbv:847,lux:112.4,cct:4791.0,hsv:-1.0, CWB R:114568.9,G:117591.7,B:117638.2 Event C:5755.7,R:3018.9,G:2193.3,B:1099.8 Cali C:3577.2,R:1967.5,G:1264.3,B:679.1 
+03-11 21:29:22.772  3000  4705 I libsensor-boledalgo: dbv:847,lux:112.3,cct:4845.0,hsv:-1.0, CWB R:114568.9,G:117591.7,B:117638.2 Event C:5764.4,R:3004.7,G:2185.9,B:1104.6 Cali C:3577.2,R:1967.5,G:1264.3,B:679.1 
+03-11 21:29:22.773  3000  4705 I libsensor-boledalgo: dbv:847,lux:112.7,cct:4901.7,hsv:-1.0, CWB R:114568.9,G:117591.7,B:117638.2 Event C:5737.2,R:3007.0,G:2208.3,B:1104.5 Cali C:3577.2,R:1967.5,G:1264.3,B:679.1 
+03-11 21:29:22.773  3000  4705 I libsensor-boledalgo: dbv:847,lux:112.2,cct:4806.8,hsv:-1.0, CWB R:114568.9,G:117591.7,B:117638.2 Event C:5743.0,R:3003.7,G:2189.7,B:1097.9 Cali C:3577.2,R:1967.5,G:1264.3,B:679.1 
+03-11 21:29:22.775  1854  2216 I SDM     : HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+03-11 21:29:22.846  1854  2216 I SDM     : DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+03-11 21:29:22.904  5813  5813 D Modem_MESensor: onSensorChanged grip posturestate = 4, foldingState = 0
+03-11 21:29:22.972 16718 17088 D JavaheapMonitor: Java heap used=26M max=256M, proc: com.miui.daemon
+03-11 21:29:22.972 16718 17088 V JavaheapMonitor: Check java heap usage finished! Next check delay: 300000
+03-11 21:29:22.982  3000  4705 I libsensor-boledalgo: dbv:847,lux:112.6,cct:4886.1,hsv:-1.0, CWB R:114568.9,G:117591.7,B:117638.2 Event C:5761.6,R:3006.6,G:2195.2,B:1107.4 Cali C:3577.2,R:1967.5,G:1264.3,B:679.1 
+03-11 21:29:22.982  3000  4705 I libsensor-boledalgo: dbv:847,lux:112.0,cct:4807.2,hsv:-1.0, CWB R:114568.9,G:117591.7,B:117638.2 Event C:5752.5,R:3008.2,G:2185.6,B:1099.9 Cali C:3577.2,R:1967.5,G:1264.3,B:679.1 
+03-11 21:29:22.982  3000  4705 I libsensor-boledalgo: dbv:847,lux:110.1,cct:4880.1,hsv:-1.0, CWB R:114568.9,G:117591.7,B:117638.2 Event C:5710.5,R:2986.1,G:2176.9,B:1097.1 Cali C:3577.2,R:1967.5,G:1264.3,B:679.1 
+03-11 21:29:22.982  3000  4705 I libsensor-boledalgo: dbv:847,lux:113.6,cct:4812.9,hsv:-1.0, CWB R:114568.9,G:117591.7,B:117638.2 Event C:5768.5,R:3006.7,G:2197.1,B:1102.8 Cali C:3577.2,R:1967.5,G:1264.3,B:679.1 
+03-11 21:29:22.982  3000  4705 I libsensor-boledalgo: dbv:847,lux:119.5,cct:4975.6,hsv:-1.0, CWB R:114568.9,G:117591.7,B:117638.2 Event C:5913.2,R:3080.8,G:2258.9,B:1144.5 Cali C:3577.2,R:1967.5,G:1264.3,B:679.1 
+03-11 21:29:23.172  5977  5977 D wpa_supplicant: nl80211: Drv Event 81 (NL80211_CMD_TDLS_OPER) received for wlan0
+03-11 21:29:23.173  5977  5977 D wpa_supplicant: nl80211: TDLS operation event
+03-11 21:29:23.173  5977  5977 D wpa_supplicant: nl80211: TDLS discovery request for peer b4:5f:84:de:d4:d0
+03-11 21:29:23.173  5977  5977 D wpa_supplicant: wlan0: Event TDLS (7) received
+03-11 21:29:23.173  5977  5977 D wpa_supplicant: nl80211: Drv Event 81 (NL80211_CMD_TDLS_OPER) received for wlan0
+03-11 21:29:23.173  5977  5977 D wpa_supplicant: nl80211: TDLS operation event
+03-11 21:29:23.173  5977  5977 D wpa_supplicant: nl80211: TDLS discovery request for peer 74:39:89:2a:67:26
+03-11 21:29:23.173  5977  5977 D wpa_supplicant: wlan0: Event TDLS (7) received
+03-11 21:29:23.184  3364  6948 I NetworkAccelerateSwitchService: EVENT_RSSI_POLL. mRssiPoll=true
+03-11 21:29:23.184  3364  6948 I WifiService: getConnectionInfo uid=1000
+03-11 21:29:23.185  3364  6948 V WifiService: Clearing REDACT_FOR_LOCAL_MAC_ADDRESS for android(uid=1000)
+03-11 21:29:23.185  3364  6948 V WifiService: Clearing REDACT_FOR_NETWORK_SETTINGS for android(uid=1000)
+03-11 21:29:23.185  3364  6948 V WifiService: Clearing REDACT_FOR_ACCESS_FINE_LOCATION for android(uid=1000)
+03-11 21:29:23.185  3364  6948 I WifiService: getVerboseLoggingLevel uid=1000
+03-11 21:29:23.185  3364  6948 I NetworkAccelerateSwitchService: ================= checkWifiRssiAndLinkSpeed START ================
+03-11 21:29:23.185  3364  6948 I NetworkAccelerateSwitchService: checkWifiRssiAndLinkSpeed mMinRssiFastFadeDifference:9 mMedRssiFastFadeDifference:13 mMaxRssiFastFadeDifference:15
+03-11 21:29:23.185  3364  6948 I NetworkAccelerateSwitchService: checkWifiRssiAndLinkSpeed txBandwidthCapMbps:866
+03-11 21:29:23.185  3364  6948 I NetworkAccelerateSwitchService: checkWifiRssiAndLinkSpeed rxBandwidthCapMbps:866
+03-11 21:29:23.185  3364  6948 I NetworkAccelerateSwitchService: checkWifiRssiAndLinkSpeed mcsidx:-1
+03-11 21:29:23.185  3364  6948 I NetworkAccelerateSwitchService: checkWifiRssiAndLinkSpeed rssi difference:0
+03-11 21:29:23.185  3364  6948 I NetworkAccelerateSwitchService: checkWifiRssiAndLinkSpeed txBandwidthCapMbps proportions:1.0
+03-11 21:29:23.185  3364  6948 I NetworkAccelerateSwitchService: checkWifiRssiAndLinkSpeed rxBandwidthCapMbps proportions:1.0
+03-11 21:29:23.185  3364  6948 I NetworkAccelerateSwitchService: checkWifiRssiAndLinkSpeed mcsidx difference:0
+03-11 21:29:23.185  3364  6948 I NetworkAccelerateSwitchService: checkWifiRssiAndLinkSpeed FastFadeWeakNetThresholdAdjustment:0
+03-11 21:29:23.185  3364  6948 I NetworkAccelerateSwitchService: ================= checkWifiRssiAndLinkSpeed END ================
+03-11 21:29:23.185  3364  6948 I NetworkAccelerateSwitchService: checkWifiRssiAndLinkSpeed rssi:45
+03-11 21:29:23.185  3364  6948 I NetworkAccelerateSwitchService: checkWifiRssiAndLinkSpeed mWifiFastFade:false mWifiFastFadeAdjustThreshold:false
+03-11 21:29:23.185  3364  6948 I NetworkAccelerateSwitchService: getAverageWifiRssi:46
+03-11 21:29:23.185  3364  6948 D NetworkAccelerateSwitchService: checkIntervalModeChange mMovementState:false mIntervalMode:0 mIsBadLinkLayerQoE:false mBadLinkLayerQoETimes = 0
+03-11 21:29:23.193  3000  4705 I libsensor-boledalgo: dbv:847,lux:110.6,cct:4791.3,hsv:-1.0, CWB R:114568.9,G:117591.7,B:117638.2 Event C:5711.8,R:2979.7,G:2170.3,B:1090.2 Cali C:3577.2,R:1967.5,G:1264.3,B:679.1 
+03-11 21:29:23.193  3000  4705 I libsensor-boledalgo: dbv:847,lux:112.8,cct:4851.5,hsv:-1.0, CWB R:114568.9,G:117591.7,B:117638.2 Event C:5761.9,R:3018.0,G:2199.8,B:1105.4 Cali C:3577.2,R:1967.5,G:1264.3,B:679.1 
+03-11 21:29:23.193  3000  4705 I libsensor-boledalgo: dbv:847,lux:110.2,cct:4740.5,hsv:-1.0, CWB R:114568.9,G:117591.7,B:117638.2 Event C:5694.2,R:2973.6,G:2165.1,B:1083.0 Cali C:3577.2,R:1967.5,G:1264.3,B:679.1 
+03-11 21:29:23.194  3000  4705 I libsensor-boledalgo: dbv:847,lux:112.3,cct:4873.8,hsv:-1.0, CWB R:114568.9,G:117591.7,B:117638.2 Event C:5755.3,R:3012.2,G:2195.7,B:1105.7 Cali C:3577.2,R:1967.5,G:1264.3,B:679.1 
+03-11 21:29:23.194  3000  4705 I libsensor-boledalgo: dbv:847,lux:117.7,cct:4794.8,hsv:-1.0, CWB R:114568.9,G:117591.7,B:117638.2 Event C:5858.0,R:3054.2,G:2230.2,B:1119.0 Cali C:3577.2,R:1967.5,G:1264.3,B:679.1 
+03-11 21:29:23.276  1854  2632 I vendor.qti.hardware.display.composer-service: Sensor: notify citsensorservice to trigger cwb, misForced = 0
+03-11 21:29:23.277  1854  2644 I SDM     : CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+03-11 21:29:23.346  1854  2216 I SDM     : DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+03-11 21:29:23.356  1854  2644 I SDM     : PartialUpdateSrcSplit::SetCwbRoiForNonPU: CWB ROI Rect(699.000000 110.000000 940.000000 351.000000)
+03-11 21:29:23.360  5813  5813 D Modem_MESensor: onSensorChanged grip posturestate = 4, foldingState = 0
+03-11 21:29:23.376  1854  4709 I SDM     : NotifyCWBStatus: Notify the client about buffer (0x80d146f0) status 0 for display-0.
+03-11 21:29:23.377  1854  4709 I SDM     : SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+03-11 21:29:23.429  1854  2216 I SDM     : DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+03-11 21:29:23.512 17947 22177 D JavaheapMonitor: Java heap used=14M max=256M, proc: com.miui.securitycenter.remote
+03-11 21:29:23.512 17947 22177 V JavaheapMonitor: Check java heap usage finished! Next check delay: 300000
+03-11 21:29:23.776  1854  2216 I SDM     : HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+03-11 21:29:23.777  1854  2632 I vendor.qti.hardware.display.composer-service: Sensor: notify citsensorservice to trigger cwb, misForced = 0
+03-11 21:29:23.778  1854  2644 I SDM     : CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+03-11 21:29:23.815  5813  5813 D Modem_MESensor: onSensorChanged grip posturestate = 4, foldingState = 0
+03-11 21:29:23.847  1854  2216 I SDM     : DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+03-11 21:29:23.891  3364  4706 D MiuiWifiCommonBase: band: 1, compensate: 0
+03-11 21:29:23.891  3364  4706 D WifiClientModeImpl[19654:wlan0]: updateLinkLayerStatsRssiSpeedFrequencyCapabilities rssi=-46 TxLinkspeed=866 freq=5200 RxLinkSpeed=866
+03-11 21:29:23.891  3364  4706 I WifiService: getConnectionInfo uid=1000
+03-11 21:29:23.892  3364  4706 V WifiService: Clearing REDACT_FOR_LOCAL_MAC_ADDRESS for android(uid=1000)
+03-11 21:29:23.892  3364  4706 V WifiService: Clearing REDACT_FOR_NETWORK_SETTINGS for android(uid=1000)
+03-11 21:29:23.892  3364  4706 V WifiService: Clearing REDACT_FOR_ACCESS_FINE_LOCATION for android(uid=1000)
+03-11 21:29:23.892  3364  4706 D WifiDataStall: tx tput in kbps: 603290

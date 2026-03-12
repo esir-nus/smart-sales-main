@@ -39,10 +39,10 @@ class SchedulerLinterTest {
         
         assertTrue("Expected LintResult.Success, got: $result", result is LintResult.Success)
         val success = result as LintResult.Success
-        assertEquals("赶飞机", success.task.title)
+        assertEquals("赶飞机", success.task!!.title)
         assertEquals(UrgencyLevel.L1_CRITICAL, success.urgencyLevel)
-        assertTrue(success.task.isSmartAlarm)
-        assertEquals(6, success.task.alarmCascade.size) // L1 = 6 alarms (including 0m)
+        assertTrue(success.task!!.isSmartAlarm)
+        assertEquals(6, success.task!!.alarmCascade.size) // L1 = 6 alarms (including 0m)
     }
     
     @Test
@@ -59,7 +59,7 @@ class SchedulerLinterTest {
         assertTrue("Expected LintResult.Success, got: $result", result is LintResult.Success)
         val success = result as LintResult.Success
         assertEquals(UrgencyLevel.L3_NORMAL, success.urgencyLevel)
-        assertEquals(3, success.task.alarmCascade.size) // L3 = 3 alarms (-15m, -1m, 0m)
+        assertEquals(3, success.task!!.alarmCascade.size) // L3 = 3 alarms (-15m, -1m, 0m)
     }
     
     @Test
@@ -77,9 +77,9 @@ class SchedulerLinterTest {
         assertTrue("Expected LintResult.Success, got: $result", result is LintResult.Success)
         val success = result as LintResult.Success
         assertEquals(UrgencyLevel.FIRE_OFF, success.urgencyLevel)
-        assertEquals(ConflictPolicy.COEXISTING, success.task.conflictPolicy)
-        assertEquals(listOf("0m"), success.task.alarmCascade)
-        assertEquals(true, success.task.hasAlarm)
+        assertEquals(ConflictPolicy.COEXISTING, success.task!!.conflictPolicy)
+        assertEquals(listOf("0m"), success.task!!.alarmCascade)
+        assertEquals(true, success.task!!.hasAlarm)
     }
     
     @Test
@@ -97,8 +97,8 @@ class SchedulerLinterTest {
         assertTrue("Expected LintResult.Success, got: $result", result is LintResult.Success)
         val success = result as LintResult.Success
         assertEquals(UrgencyLevel.L1_CRITICAL, success.urgencyLevel)
-        assertEquals(ConflictPolicy.EXCLUSIVE, success.task.conflictPolicy)
-        assertTrue(success.task.isSmartAlarm)
+        assertEquals(ConflictPolicy.EXCLUSIVE, success.task!!.conflictPolicy)
+        assertTrue(success.task!!.isSmartAlarm)
     }
     
     @Test
@@ -150,7 +150,7 @@ class SchedulerLinterTest {
         
         assertTrue("Expected LintResult.Success, got: $result", result is LintResult.Success)
         val success = result as LintResult.Success
-        assertEquals(10, success.task.durationMinutes)
+        assertEquals(10, success.task!!.durationMinutes)
     }
     
     // Existing validation tests maintained below
@@ -186,15 +186,4 @@ class SchedulerLinterTest {
         assertTrue(result is LintResult.NonIntent)
     }
     
-    @Test
-    fun `classification inspiration returns Inspiration`() {
-        val json = """
-            {
-                "classification": "inspiration",
-                "inspirationText": "Idea"
-            }
-        """.trimIndent()
-        val result = linter.lint(json)
-        assertTrue(result is LintResult.Inspiration)
-    }
 }

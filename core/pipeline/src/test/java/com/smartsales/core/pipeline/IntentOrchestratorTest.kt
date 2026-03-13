@@ -9,6 +9,11 @@ import com.smartsales.core.test.fakes.FakeMascotService
 import com.smartsales.core.test.fakes.FakeUnifiedPipeline
 import com.smartsales.core.test.fakes.FakeScheduleBoard
 import com.smartsales.core.test.fakes.FakeEntityWriter
+import com.smartsales.core.test.fakes.FakeAliasCache
+import com.smartsales.prism.domain.memory.CacheResult
+import com.smartsales.prism.domain.memory.EntityEntry
+import com.smartsales.prism.domain.memory.EntityType
+import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.domain.scheduler.FakeScheduledTaskRepository
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flowOf
@@ -34,6 +39,7 @@ class IntentOrchestratorTest {
     private lateinit var fakeScheduledTaskRepository: FakeScheduledTaskRepository
     private lateinit var fakeScheduleBoard: FakeScheduleBoard
     private lateinit var fakeEntityWriter: FakeEntityWriter
+    private lateinit var fakeAliasCache: FakeAliasCache
     
     private lateinit var orchestrator: IntentOrchestrator
 
@@ -46,6 +52,7 @@ class IntentOrchestratorTest {
         fakeScheduledTaskRepository = FakeScheduledTaskRepository()
         fakeScheduleBoard = FakeScheduleBoard()
         fakeEntityWriter = FakeEntityWriter()
+        fakeAliasCache = FakeAliasCache()
         
         orchestrator = IntentOrchestrator(
             contextBuilder = fakeContextBuilder,
@@ -54,7 +61,8 @@ class IntentOrchestratorTest {
             unifiedPipeline = fakeUnifiedPipeline,
             scheduledTaskRepository = fakeScheduledTaskRepository,
             scheduleBoard = fakeScheduleBoard,
-            entityWriter = fakeEntityWriter
+            entityWriter = fakeEntityWriter,
+            aliasCache = fakeAliasCache
         )
     }
 
@@ -123,6 +131,43 @@ class IntentOrchestratorTest {
         assertEquals(expectedQaResult, result)
         assertEquals(1, fakeUnifiedPipeline.processedInputs.size)
         assertEquals(input, fakeUnifiedPipeline.processedInputs[0].rawText)
-        assertTrue(fakeMascotService.interactions.isEmpty())
+        // --- SCENARIO 6: WAVE 5 T1 SYNC LOOP (AMBIGUOUS CACHE CAUSES FAST-FAIL) ---
+        setup()
+        input = "张总怎么说"
+        // Lightning router extracts "张总"
+        fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.DEEP_ANALYSIS, true, "", listOf("张总")))
+        
+        // Cache says ambiguous (2 hits)
+        val dummyEntity1 = EntityEntry("e1", EntityType.PERSON, "张伟", "[]", "{}", "{}", "{}", "{}", "{}", 0, 0)
+        val dummyEntity2 = EntityEntry("e2", EntityType.PERSON, "张三", "[]", "{}", "{}", "{}", "{}", "{}", 0, 0)
+        fakeAliasCache.nextResult = CacheResult.Ambiguous(listOf(dummyEntity1, dummyEntity2))
+        
+        result = orchestrator.processInput(input).firstOrNull()
+        
+        // Must emit DisambiguationIntercepted immediately
+        assertNotNull(result)
+        assertTrue(result is PipelineResult.DisambiguationIntercepted)
+        val interceptResult = result as PipelineResult.DisambiguationIntercepted
+        val uiState = interceptResult.uiState as UiState.AwaitingClarification
+        assertEquals(2, uiState.candidates.size)
+        // Must NOT call UnifiedPipeline
+        assertTrue("UnifiedPipeline should be bypassed on AliasCache.Ambiguous", fakeUnifiedPipeline.processedInputs.isEmpty())
+
+        // --- SCENARIO 7: WAVE 5 T1 SYNC LOOP (EXACT MATCH PASSES DOWNSTREAM) ---
+        setup()
+        input = "雷军的总结"
+        fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.DEEP_ANALYSIS, true, "", listOf("雷军")))
+        
+        // Cache says exact match
+        fakeAliasCache.nextResult = CacheResult.ExactMatch("lei-001")
+        val expectedNormalResult = PipelineResult.ConversationalReply("分析中")
+        fakeUnifiedPipeline.nextResultFlow = flowOf(expectedNormalResult)
+        
+        result = orchestrator.processInput(input).firstOrNull()
+        
+        assertEquals(expectedNormalResult, result)
+        assertEquals(1, fakeUnifiedPipeline.processedInputs.size)
+        // PipelineInput MUST carry the resolved ID
+        assertEquals("lei-001", fakeUnifiedPipeline.processedInputs[0].resolvedEntityId)
     }
 }

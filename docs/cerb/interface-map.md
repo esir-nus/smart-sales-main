@@ -41,6 +41,7 @@ Store and query domain data. Other modules use their interfaces but never each o
 | **[UserHabit](./user-habit/spec.md)** (RL) | Memory & OS | Behavioral pattern observations | — | `observe(key, value, source...) -> Unit` | OS: SSD | ✅ |
 | **[SessionHistory](./session-history/spec.md)** (STM) | Memory & OS | Session navigation metadata (list, pin, rename) | — | `getGroupedSessionsFlow() -> Flow<Map>` | OS: SSD | ✅ |
 | **[SessionContext](./session-context/spec.md)** (STM) | Memory & OS | Per-session workspace (3 sections) | EntityWriter (S1 via write-through), RLModule (S2/S3) | *(Merged into ContextBuilder)* | OS: Kernel | ✅ |
+| **AliasCache** (L1 Cache) | Entity Resolution | Fast-lookup mapping for EntityCandidates | EntityRegistry (Hydration) | `suspend match(List<String>) -> CacheResult` | OS: RAM | ✅ |
 
 > **EntityWriter vs EntityRegistry**: Writer handles mutations (dedup, merge, alias registration) AND write-through to RAM S1. Registry handles queries. Callers MUST use Writer for writes, Registry for reads. Never call `EntityRepository.save()` directly.
 >
@@ -57,7 +58,7 @@ Orchestrates LLM-powered processing. Reads from Layer 2 data services.
 | **ContextBuilder** | System II & Routing | `EnhancedContext` (assembled prompt context) | EntityRegistry, MemoryCenter, ScheduledTaskRepository, HistoryRepository | `build(String, Mode, ...) -> EnhancedContext` | OS: Kernel | ✅ |
 | **[InputParser](./input-parser/spec.md)** | System II & Routing | Semantic intent and EntityID resolution | AliasIndex (internal) | `parseIntent(String) -> ParseResult` | OS: App | ✅ |
 | **[EntityDisambiguator](./entity-disambiguation/spec.md)** | Entity Resolution | `PendingIntent` interruption state | InputParser | `process(String) -> DisambiguationResult` | OS: App | ✅ |
-| **[LightningRouter](./lightning-router/spec.md)** | System II & Routing | Intent evaluation (Phase 0) | ContextBuilder | `evaluateIntent(EnhancedContext) -> RouterResult?` | OS: App | ✅ |
+| **[LightningRouter](./lightning-router/spec.md)** | System II & Routing | Intent evaluation & Fast-fail alias check (Phase 0) | ContextBuilder, AliasCache | `evaluateIntent(EnhancedContext) -> RouterResult?` | OS: App | ✅ |
 | **EntityResolverService** | Entity Resolution | Entity disambiguation matching | EntityRegistry | `resolve(String, List<EntityEntry>) -> EntityEntry?` | OS: App | ✅ |
 | **ModelRegistry** | System II & Routing | Static LLM Profiles (models, temps, skills) | — | `ModelRegistry` | OS: App | ✅ |
 | **[Executor](./model-routing/spec.md)** | System II & Routing | Raw LLM output (stateless — no storage) | ModelRouter | `execute(LlmProfile, EnhancedContext) -> ExecutorResult` | — | ✅ |
@@ -121,14 +122,18 @@ graph TD
     B --> C["BadgeAudioPipeline"]
     C --> D["ASR (Tingwu)"]
     D -->|Submits to| E["IntentOrchestrator (Phase 0)"]
-    E -->|GREETING/NOISE| F1["MascotService"]
-    E -->|TASK/CRM/TOOL| E2["UnifiedPipeline"]
-    E2 --> F0["EntityDisambiguator (Gateway)"]
-    F0 --> F2["ContextBuilder (Kernel ETL)"]
+    E -->|1. Gateway| E1["LightningRouter"]
+    E1 -->|GREETING/NOISE| F1["MascotService"]
+    E1 -->|Entity Candidate| E1a["AliasCache (L1 Lookup)"]
+    E1a -->|Fast-Fail >1| H2["IntentOrchestrator holds Pending State"]
+    E1a -->|1 Exact Match| E2["UnifiedPipeline (with injected EntityID)"]
+    E1 -->|No Candidate / CRM_TASK| E2
+    E2 --> F0["EntityDisambiguator (Heavy Gateway)"]
+    F0 --> F2["ContextBuilder (Kernel ETL fetching SSD Graph)"]
     F2 --> F["Executor (LLM)"]
     F --> G["SchedulerLinter / Evaluators"]
     G --> H1["UnifiedPipeline emits MutationProposal or ToolDispatch"]
-    H1 --> H2["IntentOrchestrator holds Pending State"]
+    H1 --> H2
     H2 -->|User Confirms| H3["IntentOrchestrator dispatches actions/mutations"]
     H3 --> I["Task Repo / EntityWriter / PluginRegistry"]
 ```

@@ -6,6 +6,7 @@ import com.smartsales.core.test.fakes.FakeContextBuilder
 import com.smartsales.core.test.fakes.FakeExecutor
 import com.smartsales.core.test.fakes.FakeScheduleBoard
 import com.smartsales.core.test.fakes.FakeEntityWriter
+import com.smartsales.core.test.fakes.FakeAliasCache
 import com.smartsales.prism.domain.scheduler.FakeScheduledTaskRepository
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.test.runTest
@@ -30,6 +31,7 @@ class RealIntentOrchestratorTest {
     private lateinit var fakeScheduledTaskRepository: FakeScheduledTaskRepository
     private lateinit var fakeScheduleBoard: FakeScheduleBoard
     private lateinit var fakeEntityWriter: FakeEntityWriter
+    private lateinit var fakeAliasCache: FakeAliasCache
 
     @Before
     fun setup() {
@@ -42,6 +44,7 @@ class RealIntentOrchestratorTest {
         fakeScheduledTaskRepository = FakeScheduledTaskRepository()
         fakeScheduleBoard = FakeScheduleBoard()
         fakeEntityWriter = FakeEntityWriter()
+        fakeAliasCache = FakeAliasCache()
 
         orchestrator = IntentOrchestrator(
             contextBuilder = fakeContextBuilder,
@@ -50,7 +53,8 @@ class RealIntentOrchestratorTest {
             unifiedPipeline = fakeUnifiedPipeline,
             scheduledTaskRepository = fakeScheduledTaskRepository,
             scheduleBoard = fakeScheduleBoard,
-            entityWriter = fakeEntityWriter
+            entityWriter = fakeEntityWriter,
+            aliasCache = fakeAliasCache
         )
     }
 

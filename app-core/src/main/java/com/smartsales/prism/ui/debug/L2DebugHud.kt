@@ -481,6 +481,7 @@ private fun formatResult(name: String, result: LintResult, expected: String): St
         is LintResult.NonIntent -> "🚫 non_intent: ${result.reason}"
         is LintResult.Deletion -> "🗑️ deletion: ${result.targetTitle}"
         is LintResult.Reschedule -> "🔄 reschedule: ${result.targetTitle} → ${result.newInstruction}"
+        is LintResult.ToolDispatch -> "🛠️ dispatch: ${result.workflowId}"
     }
     return "[$name] $status (预期: $expected)"
 }

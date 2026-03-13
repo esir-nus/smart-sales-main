@@ -2,7 +2,7 @@
 
 > **Cerb-compliant spec** — Reinforcement learning from structured LLM output.  
 > **OS Layer**: RAM Application
-> **State**: PARTIAL
+> **State**: SHIPPED
 
 ---
 
@@ -246,6 +246,7 @@ Habits with confidence < 0.1 are **deleted** on next query (garbage collection).
 | **2** | Orchestrator Integration (Parser) | ✅ SHIPPED (2026-02-05) |
 | **3** | Context Builder Integration | ✅ SHIPPED (2026-02-05) |
 | **4** | Time Decay + Deletion Cleanup | ✅ SHIPPED (2026-02-12) |
+| **4.5**| Mono Contract Harmonization (`UnifiedMutation`) | ✅ SHIPPED (2026-03-13) |
 | **5** | **OS Model Upgrade** (RAM Application) | ✅ SHIPPED (2026-02-10) |
 
 ### Wave 5 Scope (OS Model)

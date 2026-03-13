@@ -42,7 +42,25 @@ data class UnifiedMutation(
     // Analyst Engine tool recommendations (Mono Contract)
     // ----------------------------------------------------
     @SerialName("recommended_workflows")
-    val recommendedWorkflows: List<WorkflowRecommendation> = emptyList()
+    val recommendedWorkflows: List<WorkflowRecommendation> = emptyList(),
+
+    // ----------------------------------------------------
+    // Reinforcement Learning background observations
+    // ----------------------------------------------------
+    @SerialName("rl_observations")
+    val rlObservations: List<RlObservationMutation> = emptyList()
+)
+
+/**
+ * Defines a structured RL observation extracted from the background daemon.
+ */
+@Serializable
+data class RlObservationMutation(
+    val entityId: String? = null,
+    val key: String,
+    val value: String,
+    val source: String = "INFERRED",
+    val evidence: String? = null
 )
 
 /**

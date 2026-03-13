@@ -11,7 +11,8 @@ data class PipelineInput(
     val isVoice: Boolean = false,
     val intent: QueryQuality = QueryQuality.DEEP_ANALYSIS,
     val replaceItemId: String? = null,
-    val requestedDepth: ContextDepth = ContextDepth.FULL
+    val requestedDepth: ContextDepth = ContextDepth.FULL,
+    val resolvedEntityId: String? = null
 )
 
 /**
@@ -54,6 +55,7 @@ sealed class PipelineResult {
      * Disambiguation intercepted the flow, UI state needs to be rendered.
      */
     data class DisambiguationIntercepted(
+        // Wave 5 T1: Pass the ambiguous candidates straight to the UI State
         val uiState: com.smartsales.prism.domain.model.UiState
     ) : PipelineResult()
     

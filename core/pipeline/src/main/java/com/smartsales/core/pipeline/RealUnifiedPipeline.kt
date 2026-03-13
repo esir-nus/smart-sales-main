@@ -62,7 +62,6 @@ class RealUnifiedPipeline @Inject constructor(
         // Wave 2: Semantic Disambiguation (Interrupt & Resume)
         val resolvedEntities = mutableListOf<String>()
         var resolvedInputText = input.rawText
-        var generatedTitle: com.smartsales.prism.domain.session.TitleResult? = null // Wave 4
 
         when (val dResult = entityDisambiguationService.process(input.rawText)) {
             is DisambiguationResult.Intercepted -> {
@@ -149,12 +148,12 @@ class RealUnifiedPipeline @Inject constructor(
                     
                     // Wave 4: Generate title synchronously from the raw JSON payload
                     if (parseResult.rawParsedJson.isNotBlank()) {
-                        generatedTitle = sessionTitleGenerator.generateTitle(
+                        val generatedTitle = sessionTitleGenerator.generateTitle(
                             rawParsedJson = parseResult.rawParsedJson,
                             resolvedNames = parseResult.resolvedEntityIds // In reality we'd want names, but IDs are safer than nothing for debugging
                         )
                         Log.d("RealUnifiedPipeline", "Auto-Rename prepared via JSON: $generatedTitle")
-                        generatedTitle?.clientName?.let { name ->
+                        generatedTitle.clientName?.let { name ->
                             emit(PipelineResult.AutoRenameTriggered(name))
                         }
                     }
@@ -165,10 +164,15 @@ class RealUnifiedPipeline @Inject constructor(
         // Wave 1: Parallel Context Assembly (Extract-Transform-Load)
         emit(PipelineResult.Progress("正在梳理上下文..."))
         val contextStart = System.currentTimeMillis()
-        val (enhancedContext, finalPayload) = coroutineScope {
+        val (enhancedContext, _) = coroutineScope {
             // Task 1: Fetch session context from Kernel (RAM)
             val contextDeferred = async {
                 Log.d("RealUnifiedPipeline", "fetch: ContextBuilder enhanced context...")
+                // Wave 5 T1: Inject the resolvedEntityId from the Gatekeeper if present
+                if (input.resolvedEntityId != null && !resolvedEntities.contains(input.resolvedEntityId)) {
+                    resolvedEntities.add(input.resolvedEntityId)
+                }
+                
                 contextBuilder.build(
                     userText = resolvedInputText,
                     mode = if (input.intent == QueryQuality.CRM_TASK) Mode.SCHEDULER else Mode.ANALYST,

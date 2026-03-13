@@ -11,4 +11,7 @@ import dagger.hilt.components.SingletonComponent
 abstract class CrmDataModule {
     @Binds
     abstract fun bindEntityRepository(impl: RoomEntityRepository): EntityRepository
+
+    @Binds
+    abstract fun bindAliasCache(impl: RealAliasCache): com.smartsales.prism.domain.memory.AliasCache
 }

@@ -6,8 +6,13 @@ import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.memory.ScheduleBoard
 import com.smartsales.prism.domain.memory.EntityWriter
+import com.smartsales.prism.domain.memory.AliasCache
+import com.smartsales.prism.domain.memory.CacheResult
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.smartsales.prism.domain.model.UiState
+import com.smartsales.prism.domain.model.ClarificationType
+import com.smartsales.prism.domain.model.CandidateOption
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 
@@ -29,7 +34,8 @@ class IntentOrchestrator @Inject constructor(
     private val unifiedPipeline: UnifiedPipeline,
     private val scheduledTaskRepository: ScheduledTaskRepository,
     private val scheduleBoard: ScheduleBoard,
-    private val entityWriter: EntityWriter
+    private val entityWriter: EntityWriter,
+    private val aliasCache: AliasCache
 ) {
     private var pendingProposal: PipelineResult.MutationProposal? = null
     private var pendingToolDispatch: PipelineResult.ToolDispatch? = null
@@ -88,11 +94,46 @@ class IntentOrchestrator @Inject constructor(
                 emit(PipelineResult.ConversationalReply(routerResult.response))
             }
             else -> {
+                // T1 Sync Loop: Fast-Fail Entity Disambiguation before hitting System II
+                val missingList = routerResult?.missingEntities ?: emptyList()
+                val cacheResult = aliasCache.match(missingList)
+                
+                var resolvedEntityId: String? = null
+                when (cacheResult) {
+                    is CacheResult.Ambiguous -> {
+                        // HALT - Do not hit UnifiedPipeline
+                        // Map the cache candidates directly into a UI State so the ViewModel doesn't need to know about EntityEntry
+                        val uiCandidates = cacheResult.candidates.map { entry ->
+                            CandidateOption(
+                                entityId = entry.entityId,
+                                displayName = entry.displayName,
+                                description = entry.jobTitle
+                            )
+                        }
+                        
+                        val uiState = UiState.AwaitingClarification(
+                            question = "找到多个由于同名或别名冲突的实体，请选择：",
+                            clarificationType = ClarificationType.AMBIGUOUS_PERSON,
+                            candidates = uiCandidates
+                        )
+                        
+                        emit(PipelineResult.DisambiguationIntercepted(uiState))
+                        return@flow
+                    }
+                    is CacheResult.ExactMatch -> {
+                        resolvedEntityId = cacheResult.entityId
+                    }
+                    is CacheResult.Miss -> {
+                        // Proceed normally to System II, it might handle creation or search
+                    }
+                }
+                
                 // System II Task (Deep Analysis, Simple QA, or Direct Task)
                 val pipelineInput = PipelineInput(
                     rawText = input,
                     isVoice = false,
-                    intent = routerResult?.queryQuality ?: QueryQuality.DEEP_ANALYSIS
+                    intent = routerResult?.queryQuality ?: QueryQuality.DEEP_ANALYSIS,
+                    resolvedEntityId = resolvedEntityId
                 )
                 
                 // Delegate to the heavy-duty pipeline and forward its results

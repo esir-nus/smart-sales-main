@@ -173,9 +173,9 @@ open class PromptCompiler @Inject constructor() {
 
 第二步，如果 `query_quality` 为 `crm_task` 或 `deep_analysis`，再判断信息是否充足：
    - 如果用户要求执行非分析类任务（安排日程等），这属于【跨模式意图】。`info_sufficient` = false，在 response 中提示用户切换模式。
-   - 评估上下文：如果你发现用户提及了某个具体的、具有商业价值的人或公司（而非流行文化人物或随意提及），但在 <KNOWN_FACTS> 中找不到其档案，这可能是一个需要补充的新客户。此时应视为 `crm_task`，`info_sufficient` = false，并将名字放入 `missing_entities`。
-   - 如果用户只是询问某个人是否在文档/录音中被提到（纯内容查询，没有明显的建档意图），请将 query_quality 设为 `simple_qa`，**不要**放进 `missing_entities` 强迫用户建档。
-   - 否则（条件充足），`info_sufficient` = true。
+   - 评估上下文：如果你发现用户提及了某个具体的、具有商业价值的人或公司（而非流行文化人物或随意提及），**必须将这些名字提取到 `missing_entities` 数组中**。即使你在 <KNOWN_FACTS> 中找不到它们，系统也会先拿这个数组去 L1 别名缓存中快速碰撞。
+   - 如果用户只是询问某个人是否在文档/录音中被提到（纯内容查询，没有明显的建档意图），请将 query_quality 设为 `simple_qa`，但**依然可以提取人名到 `missing_entities`**，以便系统能精确命中档案。
+   - 否则（条件充足，无需查库），`info_sufficient` = true。
 
 ## 响应格式（必须是严格的 JSON）
 

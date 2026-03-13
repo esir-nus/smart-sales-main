@@ -32,6 +32,7 @@ class AgentViewModelTest {
     private lateinit var fakeUnifiedPipeline: FakeUnifiedPipeline
     private lateinit var fakeScheduleBoard: FakeScheduleBoard
     private lateinit var fakeEntityWriter: FakeEntityWriter
+    private lateinit var fakeAliasCache: FakeAliasCache
     private lateinit var intentOrchestrator: IntentOrchestrator
 
     private lateinit var viewModel: AgentViewModel
@@ -54,6 +55,7 @@ class AgentViewModelTest {
         fakeUnifiedPipeline = FakeUnifiedPipeline()
         fakeScheduleBoard = FakeScheduleBoard()
         fakeEntityWriter = FakeEntityWriter()
+        fakeAliasCache = FakeAliasCache()
 
         intentOrchestrator = IntentOrchestrator(
             contextBuilder = fakeContextBuilder,
@@ -62,7 +64,8 @@ class AgentViewModelTest {
             unifiedPipeline = fakeUnifiedPipeline,
             scheduledTaskRepository = fakeScheduledTaskRepo,
             scheduleBoard = fakeScheduleBoard,
-            entityWriter = fakeEntityWriter
+            entityWriter = fakeEntityWriter,
+            aliasCache = fakeAliasCache
         )
 
         viewModel = AgentViewModel(

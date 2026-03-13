@@ -142,7 +142,11 @@ class L2StrictInterfaceIntegrityTest {
         val badJson = """
             {
               "classification": "schedulable",
-              "title": ""
+              "tasks": [
+                {
+                  "title": ""
+                }
+              ]
             }
         """.trimIndent()
         

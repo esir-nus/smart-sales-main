@@ -1,22 +1,25 @@
 package com.smartsales.prism.domain.scheduler
 
+import android.util.Log
+import com.smartsales.prism.domain.core.UnifiedMutation
+import com.smartsales.prism.domain.core.TaskMutation
 import com.smartsales.prism.domain.memory.ConflictPolicy
 import com.smartsales.prism.domain.time.TimeProvider
-import org.json.JSONObject
+import kotlinx.serialization.json.Json
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * 调度器校验器 — 验证 LLM 输出的 JSON 结构和日期合理性
+ * 调度器校验器 — 验证 LLM 输出的 JSON 结构和日期合理性 (Project Mono Wave 2)
  */
 @Singleton
 class SchedulerLinter @Inject constructor(
     private val timeProvider: TimeProvider
 ) {
+    private val jsonInterpreter = Json { ignoreUnknownKeys = true }
 
     /**
      * 验证并解析 LLM 输出
@@ -24,77 +27,50 @@ class SchedulerLinter @Inject constructor(
      */
     fun lint(llmOutput: String): LintResult {
         return try {
-            val json = JSONObject(llmOutput)
+            val mutation = jsonInterpreter.decodeFromString<UnifiedMutation>(llmOutput)
+            Log.d("SchedulerLinter", "lint: Parsed UnifiedMutation successfully: classification=${mutation.classification}")
             
-            // Wave 4.0: Check classification first
-            val classification = json.optString("classification", "schedulable")
-            
-            when (classification) {
+            when (mutation.classification) {
                 "non_intent" -> {
                     return LintResult.NonIntent(
-                        reason = json.optString("reason", "未检测到日程安排意图")
+                        reason = mutation.reason ?: "未检测到日程安排意图"
                     )
                 }
-
-                // Wave 7: NL Deletion
                 "deletion" -> {
-                    val targetTitle = json.optString("targetTitle", "")
+                    val targetTitle = mutation.targetTitle ?: ""
                     if (targetTitle.isBlank()) {
                         return LintResult.Error("未指定要删除的任务")
                     }
                     return LintResult.Deletion(targetTitle = targetTitle)
                 }
-                // Wave 11: Global Reschedule
                 "reschedule" -> {
-                    val targetTitle = json.optString("targetTitle", "")
-                    val newInstruction = json.optString("newInstruction", "")
+                    val targetTitle = mutation.targetTitle ?: ""
+                    val newInstruction = mutation.newInstruction ?: ""
                     if (targetTitle.isBlank() || newInstruction.isBlank()) {
                         return LintResult.Error("改期请求缺少目标任务或新指令")
                     }
                     return LintResult.Reschedule(targetTitle = targetTitle, newInstruction = newInstruction)
                 }
-                // "schedulable" → continue to full parsing below
             }
             
             // Parse Profile Mutations
-            val mutationsArray = json.optJSONArray("profile_mutations")
-            val profileMutations = mutableListOf<ParsedProfileMutation>()
-            if (mutationsArray != null) {
-                for (i in 0 until mutationsArray.length()) {
-                    val m = mutationsArray.optJSONObject(i) ?: continue
-                    val entityId = m.optString("entityId")
-                    val field = m.optString("field")
-                    val value = m.optString("value")
-                    if (entityId.isNotBlank() && field.isNotBlank()) {
-                        profileMutations.add(ParsedProfileMutation(entityId, field, value))
-                    }
-                }
+            val profileMutations = mutation.profileMutations.map {
+                ParsedProfileMutation(it.entityId, it.field, it.value)
             }
 
-            // Wave 4.1: Parse tasks array
-            val tasksArray = json.optJSONArray("tasks")
-            
-            val tasks = mutableListOf<com.smartsales.prism.domain.scheduler.TimelineItemModel.Task>()
+            // Parse Tasks
+            val tasks = mutableListOf<TimelineItemModel.Task>()
             var singleSuccessResult: LintResult.Success? = null
             
-            if (tasksArray != null && tasksArray.length() > 0) {
-                for (i in 0 until tasksArray.length()) {
-                    val result = parseSingleTask(tasksArray.getJSONObject(i))
+            if (mutation.tasks.isNotEmpty()) {
+                for (taskMutation in mutation.tasks) {
+                    val result = parseSingleTask(taskMutation)
                     if (result is LintResult.Success && result.task != null) {
                         tasks.add(result.task)
                         if (singleSuccessResult == null) singleSuccessResult = result
                     } else if (result is LintResult.Incomplete && tasks.isEmpty() && profileMutations.isEmpty()) {
                         return result
                     }
-                }
-            } else if (json.has("title")) {
-                // Backward compat: try parsing as single object
-                val result = parseSingleTask(json)
-                if (result is LintResult.Success && result.task != null) {
-                    tasks.add(result.task)
-                    singleSuccessResult = result
-                } else if (result is LintResult.Incomplete && profileMutations.isEmpty()) {
-                    return result
                 }
             }
             
@@ -111,37 +87,29 @@ class SchedulerLinter @Inject constructor(
                 LintResult.Error("无法解析任务列表或记录更新")
             }
         } catch (e: Exception) {
+            Log.d("SchedulerLinter", "lint: JSON mapping error: ${e.message}")
             LintResult.Error("JSON 解析失败: ${e.message}")
         }
     }
     
     /**
-     * 解析单个任务对象
-     * Wave 4.1: 提取为独立方法，供 tasks 数组解析复用
+     * 解析单个任务对象 (Project Mono Wave 2: Using TaskMutation)
      */
-    private fun parseSingleTask(json: JSONObject): LintResult {
-        val title = json.optString("title", "")
+    private fun parseSingleTask(taskMutation: TaskMutation): LintResult {
+        val title = taskMutation.title
         if (title.isBlank()) {
             return LintResult.Error("任务标题不能为空")
         }
 
-        val startTimeStr = json.optString("startTime", "")
-        val endTimeStr = if (json.isNull("endTime")) null else json.optString("endTime", null)
-        
-        // Phase 1 Clues 先提取（用于 Incomplete 返回）
-        val location = if (json.isNull("location")) null else json.optString("location", null)
-        val notes = if (json.isNull("notes")) null else json.optString("notes", null)
-        val keyPerson = if (json.isNull("keyPerson")) null else json.optString("keyPerson", null)
-        val keyCompany = if (json.isNull("keyCompany")) null else json.optString("keyCompany", null)
         val partialClues = ParsedClues(
-            person = keyPerson,
-            company = keyCompany,
-            location = location,
-            briefSummary = if (notes.isNullOrBlank()) title else notes
+            person = taskMutation.keyPerson,
+            company = taskMutation.keyCompany,
+            location = taskMutation.location,
+            briefSummary = if (taskMutation.notes.isNullOrBlank()) title else taskMutation.notes
         )
         
         // 验证日期 — 如果缺失，返回 Incomplete 而不是 Error（Phase 1 循环）
-        val startTime = parseDateTime(startTimeStr)
+        val startTime = parseDateTime(taskMutation.startTime)
         if (startTime == null) {
             return LintResult.Incomplete(
                 missingField = "startTime",
@@ -151,7 +119,7 @@ class SchedulerLinter @Inject constructor(
         }
         
         // endTime 可选，null 表示开放式任务
-        val endTime: Instant? = endTimeStr?.let { parseDateTime(it) }
+        val endTime: Instant? = taskMutation.endTime?.let { parseDateTime(it) }
 
         if (endTime != null && endTime.isBefore(startTime)) {
             return LintResult.Error("结束时间不能早于开始时间")
@@ -164,7 +132,7 @@ class SchedulerLinter @Inject constructor(
         }
 
         // Duration: LLM 推断为主，无需确认
-        val explicitDuration = json.optString("duration", null)
+        val explicitDuration = taskMutation.duration
         
         val durationMinutes: Int = when {
             !explicitDuration.isNullOrBlank() -> parseDuration(explicitDuration) ?: 0
@@ -172,8 +140,8 @@ class SchedulerLinter @Inject constructor(
             else -> 0  // fire-off 提醒没有时长
         }
         
-        // UrgencyLevel 解析 (Wave 4.2)
-        val urgencyStr = json.optString("urgency", "L3") // 默认 L3
+        // UrgencyLevel 解析
+        val urgencyStr = taskMutation.urgency
         val urgencyLevel = try {
             UrgencyLevel.valueOf(urgencyStr.uppercase())
         } catch (e: IllegalArgumentException) {
@@ -189,8 +157,6 @@ class SchedulerLinter @Inject constructor(
         val policy = if (urgencyLevel == UrgencyLevel.FIRE_OFF) 
             ConflictPolicy.COEXISTING else ConflictPolicy.EXCLUSIVE
 
-        val highlights = if (json.isNull("highlights")) null else json.optString("highlights", null)
-        
         // 级联提醒: 由 UrgencyLevel 决定
         val alarmCascade = UrgencyLevel.buildCascade(urgencyLevel)
 
@@ -207,10 +173,10 @@ class SchedulerLinter @Inject constructor(
                 durationMinutes = durationMinutes,
                 conflictPolicy = policy,
                 dateRange = formatDateRange(startTime, endTime),
-                location = location,
-                notes = notes,
-                keyPerson = keyPerson,
-                highlights = highlights,
+                location = taskMutation.location,
+                notes = taskMutation.notes,
+                keyPerson = taskMutation.keyPerson,
+                highlights = taskMutation.highlights,
                 alarmCascade = alarmCascade
             ),
             urgencyLevel = urgencyLevel,
@@ -222,7 +188,6 @@ class SchedulerLinter @Inject constructor(
     private fun parseDateTime(dateTimeStr: String): Instant? {
         return try {
             // 规范化 LLM 输出格式 (处理缺失空格等问题)
-            // e.g. "2026-02-0303:00" -> "2026-02-03 03:00"
             val normalized = dateTimeStr
                 .replace(Regex("(\\d{4}-\\d{2}-\\d{2})(\\d{2}:\\d{2})"), "$1 $2")
                 .trim()
@@ -237,7 +202,6 @@ class SchedulerLinter @Inject constructor(
     }
     
     private fun parseDuration(durationStr: String): Int? {
-        // Simple parsing: "30m" -> 30, "1h" -> 60, "1.5h" -> 90
         val lower = durationStr.lowercase().trim()
         return try {
             if (lower.endsWith("min") || lower.endsWith("m")) {
@@ -246,7 +210,7 @@ class SchedulerLinter @Inject constructor(
                 val num = lower.filter { it.isDigit() || it == '.' }.toFloat()
                 (num * 60).toInt()
             } else if (lower.all { it.isDigit() }) {
-                lower.toInt() // Assume minutes
+                lower.toInt()
             } else {
                 null
             }
@@ -258,11 +222,7 @@ class SchedulerLinter @Inject constructor(
     private fun formatTimeDisplay(start: Instant, end: Instant?): String {
         val formatter = DateTimeFormatter.ofPattern("HH:mm")
         val startStr = start.atZone(timeProvider.zoneId).format(formatter)
-        return if (end == null) {
-            startStr // Open-ended: just show start
-        } else {
-            startStr
-        }
+        return startStr
     }
 
     private fun formatDateRange(start: Instant, end: Instant?): String {
@@ -272,35 +232,26 @@ class SchedulerLinter @Inject constructor(
         val startZone = start.atZone(timeProvider.zoneId)
         
         if (end == null) {
-            // Open-ended: 2026-02-03 03:00 - ...
             return "${startZone.format(dateParams)} ${startZone.format(timeParams)} - ..."
         }
         
         val endZone = end.atZone(timeProvider.zoneId)
         
-        val fullFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
         return if (startZone.toLocalDate() == endZone.toLocalDate()) {
-            // Same day: 03:00 - 04:00 (Spec aligned)
             "${startZone.format(timeParams)} - ${endZone.format(timeParams)}"
         } else {
-            // Multi-day
             val fullFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
             "${startZone.format(fullFormatter)} ~ ${endZone.format(fullFormatter)}"
         }
     }
 }
 
-/**
- * Phase 1 解析线索 — 传递到 Phase 2 进行实体消歧
- * 
- * @see docs/cerb/memory-center/spec.md §Two-Phase Scheduler Pipeline
- */
 data class ParsedClues(
-    val person: String? = null,        // 人物（原始提取，仅商务相关）
-    val company: String? = null,       // 公司/组织（从输入或对话历史提取）
-    val location: String? = null,      // 地点（原始提取，未解析）
-    val briefSummary: String? = null,   // 简要摘要
-    val durationMinutes: Int? = null    // 持续时间（用于冲突检测）
+    val person: String? = null,
+    val company: String? = null,
+    val location: String? = null,
+    val briefSummary: String? = null,
+    val durationMinutes: Int? = null
 )
 
 data class ParsedProfileMutation(
@@ -309,44 +260,30 @@ data class ParsedProfileMutation(
     val value: String
 )
 
-/**
- * 校验结果
- */
 sealed class LintResult {
     data class Success(
         val task: TimelineItemModel.Task? = null,
         val urgencyLevel: UrgencyLevel = UrgencyLevel.L3_NORMAL,
-        val parsedClues: ParsedClues = ParsedClues(),  // Phase 1 → Phase 2 桥梁
+        val parsedClues: ParsedClues = ParsedClues(),
         val profileMutations: List<ParsedProfileMutation> = emptyList()
     ) : LintResult()
     
-    /**
-     * Wave 4.1: Multi-Task Detected
-     * LLM 返回多个任务时使用此结果
-     */
     data class MultiTask(
         val tasks: List<TimelineItemModel.Task>,
         val profileMutations: List<ParsedProfileMutation> = emptyList()
     ) : LintResult()
     
-    /**
-     * 缺少必填字段 — 需要用户澄清（Phase 1 循环）
-     */
     data class Incomplete(
-        val missingField: String,  // "startTime" | "duration"
-        val question: String,      // 向用户展示的问题
+        val missingField: String,
+        val question: String,
         val partialClues: ParsedClues
     ) : LintResult()
 
     data class Error(val message: String) : LintResult()
     
-    // Wave 4.0: Input Classification Results
     data class NonIntent(val reason: String) : LintResult()
 
-    
-    // Wave 7: NL Deletion
     data class Deletion(val targetTitle: String) : LintResult()
     
-    // Wave 11: Global Reschedule
     data class Reschedule(val targetTitle: String, val newInstruction: String) : LintResult()
 }

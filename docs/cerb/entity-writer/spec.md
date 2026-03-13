@@ -1,8 +1,7 @@
 # Entity Writer Spec
 
-> **Cerb-compliant spec** — Internal implementation of centralized entity writes.  
+> **State**: Mono Wave 2 SHIPPED
 > **OS Layer**: RAM Application
-> **State**: Mono Wave 2 IN PROGRESS
 
 ---
 
@@ -258,7 +257,7 @@ Convention: Keys prefixed with `_` are metadata, not business attributes.
 | ~~3~~ | ~~Conflict Merge~~ | ❌ KILLED | See architectural decision below |
 | **4** | **OS Model Upgrade** (RAM Application) | ✅ SHIPPED | Write-through to RAM Section 1 on all 4 mutation methods + `recordActivity()` App→Kernel callback |
 | **5** | **Alignment & Disambiguation** | ✅ SHIPPED | Curated Alias Model, Resolution Cascade, Entity Confirmation Flow |
-| **Mono W2**| **The Linter Upgrade (The Bouncer)** | 🔲 PENDING | Refactoring Linters to pure Type Checkers using strict JSON deserialization against `domain:core:UnifiedMutation`. No more regex guessing. |
+| **Mono W2**| **The Linter Upgrade (The Bouncer)** | ✅ SHIPPED | Refactoring Linters to pure Type Checkers using strict JSON deserialization against `domain:core:UnifiedMutation`. No more regex guessing. |
 
 ### ~~Wave 3~~ Architectural Decision: No Merge UI Needed
 

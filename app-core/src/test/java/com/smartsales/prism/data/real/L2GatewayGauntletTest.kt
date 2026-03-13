@@ -170,7 +170,6 @@ class L2GatewayGauntletTest {
             aliases = emptyList()
         )
         
-        // Fake Executor returns successfully to parse the scheduled task
         executor.defaultResponse = ExecutorResult.Success(
             content = """{
                 "classification": "schedulable",

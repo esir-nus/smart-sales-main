@@ -8,8 +8,8 @@ import org.junit.Before
 import org.junit.Test
 
 /**
- * SchedulerLinter 单元测试
- * 验证 LLM 输出解析 (UrgencyLevel) 和日期验证逻辑
+ * SchedulerLinter 单元测试 (Project Mono Wave 2)
+ * 验证 LLM 输出解析 (UrgencyLevel) 和日期验证逻辑，使用严苛的 kotlinx.serialization
  */
 class SchedulerLinterTest {
     
@@ -28,10 +28,15 @@ class SchedulerLinterTest {
     fun `valid JSON returns Success`() {
         val validJson = """
             {
-                "title": "赶飞机",
-                "startTime": "2026-02-03 03:00",
-                "endTime": "2026-02-03 04:00",
-                "urgency": "L1"
+                "classification": "schedulable",
+                "tasks": [
+                    {
+                        "title": "赶飞机",
+                        "startTime": "2026-02-03 03:00",
+                        "endTime": "2026-02-03 04:00",
+                        "urgency": "L1"
+                    }
+                ]
             }
         """.trimIndent()
         
@@ -49,8 +54,13 @@ class SchedulerLinterTest {
     fun `missing urgency defaults to L3`() {
         val noUrgencyJson = """
             {
-                "title": "买牛奶",
-                "startTime": "2026-02-03 14:00"
+                "classification": "schedulable",
+                "tasks": [
+                    {
+                        "title": "买牛奶",
+                        "startTime": "2026-02-03 14:00"
+                    }
+                ]
             }
         """.trimIndent()
         
@@ -66,9 +76,14 @@ class SchedulerLinterTest {
     fun `FIRE_OFF urgency sets COEXISTING policy and single 0m alarm`() {
         val fireOffJson = """
             {
-                "title": "喝水",
-                "startTime": "2026-02-03 10:15",
-                "urgency": "FIRE_OFF"
+                "classification": "schedulable",
+                "tasks": [
+                    {
+                        "title": "喝水",
+                        "startTime": "2026-02-03 10:15",
+                        "urgency": "FIRE_OFF"
+                    }
+                ]
             }
         """.trimIndent()
         
@@ -86,9 +101,14 @@ class SchedulerLinterTest {
     fun `L1 urgency sets EXCLUSIVE policy and smart alarm`() {
         val l1Json = """
             {
-                "title": "重要面试",
-                "startTime": "2026-02-03 14:00",
-                "urgency": "L1"
+                "classification": "schedulable",
+                "tasks": [
+                    {
+                        "title": "重要面试",
+                        "startTime": "2026-02-03 14:00",
+                        "urgency": "L1"
+                    }
+                ]
             }
         """.trimIndent()
         
@@ -105,9 +125,14 @@ class SchedulerLinterTest {
     fun `lowercase urgency is normalized`() {
         val lowerCaseJson = """
             {
-                "title": "测试",
-                "startTime": "2026-02-03 14:00",
-                "urgency": "l2"
+                "classification": "schedulable",
+                "tasks": [
+                    {
+                        "title": "测试",
+                        "startTime": "2026-02-03 14:00",
+                        "urgency": "l2"
+                    }
+                ]
             }
         """.trimIndent()
         
@@ -122,9 +147,14 @@ class SchedulerLinterTest {
     fun `unknown urgency string falls back to L3`() {
         val unknownJson = """
             {
-                "title": "测试",
-                "startTime": "2026-02-03 14:00",
-                "urgency": "SOMETHING_ELSE"
+                "classification": "schedulable",
+                "tasks": [
+                    {
+                        "title": "测试",
+                        "startTime": "2026-02-03 14:00",
+                        "urgency": "SOMETHING_ELSE"
+                    }
+                ]
             }
         """.trimIndent()
         
@@ -139,10 +169,15 @@ class SchedulerLinterTest {
     fun `explicit duration overrides default`() {
         val durationJson = """
             {
-                "title": "短会",
-                "startTime": "2026-02-03 14:00",
-                "duration": "10m",
-                "urgency": "L2"
+                "classification": "schedulable",
+                "tasks": [
+                    {
+                        "title": "短会",
+                        "startTime": "2026-02-03 14:00",
+                        "duration": "10m",
+                        "urgency": "L2"
+                    }
+                ]
             }
         """.trimIndent()
         
@@ -153,14 +188,17 @@ class SchedulerLinterTest {
         assertEquals(10, success.task!!.durationMinutes)
     }
     
-    // Existing validation tests maintained below
-    
     @Test
     fun `missing title returns Error`() {
         val noTitleJson = """
             {
-                "startTime": "2026-02-03 03:00",
-                "endTime": "2026-02-03 04:00"
+                "classification": "schedulable",
+                "tasks": [
+                    {
+                        "startTime": "2026-02-03 03:00",
+                        "endTime": "2026-02-03 04:00"
+                    }
+                ]
             }
         """.trimIndent()
         val result = linter.lint(noTitleJson)
@@ -171,8 +209,13 @@ class SchedulerLinterTest {
     fun `past date returns Error`() {
         val pastDateJson = """
             {
-                "title": "过去",
-                "startTime": "2020-01-01 10:00"
+                "classification": "schedulable",
+                "tasks": [
+                    {
+                        "title": "过去",
+                        "startTime": "2020-01-01 10:00"
+                    }
+                ]
             }
         """.trimIndent()
         val result = linter.lint(pastDateJson)
@@ -181,9 +224,17 @@ class SchedulerLinterTest {
     
     @Test
     fun `classification non_intent returns NonIntent`() {
-        val json = """{"classification": "non_intent"}"""
+        val json = """{"classification": "non_intent", "reason": "Just chatting", "tasks": []}"""
         val result = linter.lint(json)
         assertTrue(result is LintResult.NonIntent)
     }
     
+    @Test
+    fun `invalid json returns Error (SerializationException)`() {
+        // Missing the "tasks" array which is NOT optional (though it can be empty) in UnifiedMutation depending on how we define it, assuming defaults.
+        // Even if empty array is fine, completely malformed JSON should error.
+        val badJson = "not json"
+        val result = linter.lint(badJson)
+        assertTrue("Expected Error due to SerializationException", result is LintResult.Error)
+    }
 }

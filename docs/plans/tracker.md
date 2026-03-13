@@ -29,6 +29,7 @@
 ### 🌊 Wave 3: The Scheduler Migration (The First Refactor)
 > Migrate a single vertical slice to the new Mono architecture.
 - [ ] **Docs**: Rewrite `docs/cerb/scheduler/spec.md` removing `CRM_TASK` hard fork logic.
+- [ ] **Interface Map**: Update `docs/cerb/interface-map.md`.
 - [ ] **Plan**: Run `/feature-dev-planner`.
 - [ ] **Execute**: Replace `SchedulerLinter` with the strict Data Contract approach.
 - [ ] **Test**: Full L2/L3 scheduling flow succeeds natively under the Mono pipeline.
@@ -36,7 +37,10 @@
 ### 🌊 Wave 4: Analyst & RL Harmonization (The Integration)
 > Roll out the Mono contract to the complex modules.
 - [ ] **Docs**: Update `docs/cerb/analyst-orchestrator` and `rl-module` specs.
+- [ ] **Interface Map**: Update `docs/cerb/interface-map.md`.
+- [ ] **Plan**: Run `/feature-dev-planner`.
 - [ ] **Execute**: Migrate the Analyst/Consultant pipeline and RL Subsystem to conform to multiple-choice selection.
+- [ ] **Test**: Verify Analyst Mode pipeline processes JSON multiple-choice cleanly without prompt drift.
 
 ---
 
@@ -45,19 +49,27 @@
 
 #### T1: The Sync Loop (Fast Query)
 - [ ] **Docs**: Update `docs/cerb/lightning-router/spec.md` with the "Entity Candidate Gatekeeper" protocol.
+- [ ] **Interface Map**: Update `docs/cerb/interface-map.md` for fast alias cache boundary.
+- [ ] **Plan**: Run `/feature-dev-planner`.
 - [ ] **Execute**: Wire the Lightning Router to strictly intercept intents lacking names. Build the clarification loop yield state (`UiState.AwaitingClarification`).
 - [ ] **Execute**: Connect the Lightning Router to the `Alias Lib` (L1 Cache) to instantly resolve `EntityID` before pushing the state into the SSD Graph fetch.
 - [ ] **Execute**: Build the Disambiguation yield state for multiple/missing `Alias Lib` returns.
+- [ ] **Test**: Verify sub-second Lightning Router responses via test simulations and adb logcat output.
 
 #### T2: The Async Loop (Background Mutations)
 - [ ] **Docs**: Update `docs/cerb/entity-writer/spec.md` for asynchronous mutation decoupling.
-- [ ] **Test**: Write a strict `EntityContractTest.kt` utility that uses `kotlinx.serialization` or Reflection to mechanically prove the LLM JSON output 100% matches the Kotlin `data class` signature before the Linter executes.
+- [ ] **Interface Map**: Update `docs/cerb/interface-map.md`.
+- [ ] **Plan**: Run `/feature-dev-planner`.
 - [ ] **Execute**: Rip the heavy `decodeFromString` EntityWriter SSD mutation out of the main conversational execution path.
 - [ ] **Execute**: Schedule SSD writes in an isolated Coroutines background scope (or WorkManager) and stream the completion event back into the RAM Context Table.
+- [ ] **Test**: Verify background SSD writes via Logcat without stalling main conversational response text generation.
 
 #### T3: The RL Harmonization (Background Learnings)
+- [ ] **Docs**: Update `docs/cerb/rl-module/spec.md` denoting the "Secondary Currency" contract for background Habit Extraction.
+- [ ] **Interface Map**: Update `docs/cerb/interface-map.md` to define the secondary contract boundary.
+- [ ] **Plan**: Run `/feature-dev-planner`.
 - [ ] **Execute**: Decouple the `RL Module` habit extraction into a background listener that passively ingests the chat transcript without blocking the next user turn.
-- [ ] **Test**: Write a mechanical schema verification script for the RL module's JSON output to guarantee adherence to the Kotlin `data class`.
+- [ ] **Test**: Write a mechanical schema verification script for the RL module's JSON output (Secondary Currency) to guarantee adherence to the Kotlin `data class`.
 
 ---
 

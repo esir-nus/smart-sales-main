@@ -11,6 +11,7 @@
 | **Wave 2** | **UI Literal Sync** | Render actual payloads: `MarkdownStrategyBubble`, `ClarifyingBubble`, `TaskCreatedBubble`. Stop swallowing pipeline states in the Presentation layer. | ✅ SHIPPED |
 | **Wave 3** | **L2 Testing Validation** | Explicitly inject isolated `UiState` test fixtures via `L2DebugHud` to mathematically prove Compose layouts map to pipeline results. | ✅ SHIPPED |
 | **Wave 4** | **Transparent Mind Integration** | Dynamically update `UiState.Thinking(hint)` locally based on `PipelineResult.Progress` emissions. | ✅ SHIPPED |
+| **Wave 5** | **Hand-Off Animation (Wave 6 T5)** | Visual bridging between voice ingestion and LLM execution, eliminating "dead air". | 🔲 |
 
 ## 2. Core Visual Mechanics
 
@@ -38,6 +39,11 @@ The primary vehicle for Analyst-mode multi-step plans and structured summaries.
 ### 2.5 Notification / Action Bubbles (`UiState.SchedulerTaskCreated`)
 Lightweight inline confirmations for asynchronous or background executions.
 - **Visuals**: Standard response bubble prefixed with "已创建任务: [标题]" or "✅ 已创建 N 个任务".
+
+### 2.6 Voice Handling UI States (`UiState.AudioProcessing`)
+Visualizes the transition from voice ingestion (Badge or Mic) to LLM execution, eliminating the "dead air" gap.
+- **Visuals**: A dynamic waveform or pulsing "Transcribing..." indicator that replaces the generic `UiState.Loading` spinner.
+- **Contract**: The UI layer (`AgentChatScreen`) must remain oblivious to the specific hardware (Badge vs. Phone). It strictly reacts to a unified `UiState.AudioProcessing` emitted by the `IntentOrchestrator`, preserving the OS Model boundaries.
 
 ## 3. Invariants & Guardrails
 - **No Mystery Meat Loading**: No spinners without associated text explaining what is happening.

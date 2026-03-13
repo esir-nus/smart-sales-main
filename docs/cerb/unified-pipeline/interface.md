@@ -29,6 +29,7 @@ data class PipelineInput(
 sealed class PipelineResult {
     data class ConversationalReply(val text: String) : PipelineResult()
     data class Progress(val message: String) : PipelineResult()
+    data class AudioProcessing(val stage: String) : PipelineResult()
     data class ClarificationNeeded(val question: String) : PipelineResult()
     data class ToolDispatch(val toolId: String, val params: Map<String, Any>) : PipelineResult()
     data class DisambiguationIntercepted(val uiState: UiState) : PipelineResult()

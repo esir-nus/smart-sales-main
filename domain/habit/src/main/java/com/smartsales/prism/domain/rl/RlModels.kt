@@ -21,11 +21,16 @@ data class RlPayload(
  */
 @Serializable
 data class RlObservation(
-    val entityId: String? = null,          // null = 全局用户习惯, 否则为客户/实体 ID
-    val key: String,                // 习惯键 (e.g., "preferred_meeting_time")
-    val value: String,              // 观察值 (e.g., "morning")
-    val source: ObservationSource = ObservationSource.INFERRED,  // USER_INPUT 或 INFERRED
-    val evidence: String? = null           // 原始文本 (调试用)
+    // null = 全局用户习惯, 否则为客户/实体 ID
+    val entityId: String? = null,
+    // 习惯键 (e.g., "preferred_meeting_time")
+    val key: String,
+    // 观察值 (e.g., "morning")
+    val value: String,
+    // USER_INPUT 或 INFERRED
+    val source: ObservationSource = ObservationSource.INFERRED,
+    // 原始文本 (调试用)
+    val evidence: String? = null
 )
 
 /**
@@ -35,9 +40,12 @@ data class RlObservation(
  */
 @Serializable
 enum class ObservationSource {
-    INFERRED,       // LLM 从上下文推断 (权重: 1x)
-    USER_POSITIVE,  // 用户明确确认 (权重: 3x)
-    USER_NEGATIVE   // 用户明确拒绝 (权重: -2x)
+    // LLM 从上下文推断 (权重: 1x)
+    INFERRED,
+    // 用户明确确认 (权重: 3x)
+    USER_POSITIVE,
+    // 用户明确拒绝 (权重: -2x)
+    USER_NEGATIVE
 }
 
 /**
@@ -46,7 +54,10 @@ enum class ObservationSource {
  * 来源: docs/cerb/rl-module/spec.md L75-80
  */
 data class HabitContext(
-    val userHabits: List<UserHabit>,      // 全局偏好
-    val clientHabits: List<UserHabit>,    // 特定实体偏好
-    val suggestedDefaults: Map<String, String>  // Wave 3: 智能默认值
+    // 全局偏好
+    val userHabits: List<UserHabit>,
+    // 特定实体偏好
+    val clientHabits: List<UserHabit>,
+    // Wave 3: 智能默认值
+    val suggestedDefaults: Map<String, String>
 )

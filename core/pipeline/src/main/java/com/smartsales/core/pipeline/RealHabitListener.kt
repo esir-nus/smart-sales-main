@@ -10,7 +10,7 @@ import com.smartsales.prism.domain.rl.RlObservation
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
-import com.smartsales.prism.domain.core.UnifiedMutation
+import com.smartsales.prism.domain.rl.RlPayload
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -89,41 +89,29 @@ REQUIRED JSON SCHEMA:
                 }
 
                 val cleanJson = response.replace("```json", "").replace("```", "").trim()
-                val mutation = try {
-                    Json { ignoreUnknownKeys = true }.decodeFromString<UnifiedMutation>(cleanJson)
+                val payload = try {
+                    Json { ignoreUnknownKeys = true }.decodeFromString<RlPayload>(cleanJson)
                 } catch (e: Exception) {
-                    Log.w(TAG, "analyzeAsync: Failed to parse UnifiedMutation JSON, ignoring. Error: ${e.message}")
+                    Log.w(TAG, "analyzeAsync: Failed to parse RlPayload JSON, ignoring. Error: ${e.message}")
                     return@launch
                 }
 
-                if (mutation.rlObservations.isEmpty()) {
-                    Log.d(TAG, "analyzeAsync: No learnable habits detected in UnifiedMutation.")
+                if (payload.rlObservations.isEmpty()) {
+                    Log.d(TAG, "analyzeAsync: No learnable habits detected in RlPayload.")
                     return@launch
                 }
 
                 val parsedObservations = mutableListOf<RlObservation>()
-                for (obs in mutation.rlObservations) {
+                for (obs in payload.rlObservations) {
                     val entityIdRaw = obs.entityId
                     val entityId = if (entityIdRaw == "null" || entityIdRaw.isNullOrBlank()) null else entityIdRaw
                     
                     if (obs.key.isBlank() || obs.value.isBlank()) continue
 
-                    val source = try {
-                        ObservationSource.valueOf(obs.source.uppercase())
-                    } catch (e: IllegalArgumentException) {
-                        ObservationSource.INFERRED
-                    }
-
                     parsedObservations.add(
-                        RlObservation(
-                            entityId = entityId,
-                            key = obs.key,
-                            value = obs.value,
-                            source = source,
-                            evidence = obs.evidence
-                        )
+                        obs.copy(entityId = entityId)
                     )
-                    Log.d(TAG, "analyzeAsync: Parsed observation: key=${obs.key} value=${obs.value} source=$source entityId=$entityId")
+                    Log.d(TAG, "analyzeAsync: Parsed observation: key=${obs.key} value=${obs.value} source=${obs.source} entityId=$entityId")
                 }
 
                 if (parsedObservations.isNotEmpty()) {

@@ -79,7 +79,8 @@ class L2AdaptiveHabitLoopTest {
         val entityWriter = RealEntityWriter(
             entityRepository = fakeEntityRepo,
             timeProvider = fakeTimeProvider,
-            kernelWriteBack = contextBuilder
+            kernelWriteBack = contextBuilder,
+            appScope = testScope
         )
 
         pipeline = RealUnifiedPipeline(

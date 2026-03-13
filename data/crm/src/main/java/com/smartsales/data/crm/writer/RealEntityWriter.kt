@@ -280,7 +280,8 @@ class RealEntityWriter @Inject constructor(
     private suspend fun writeThrough(entry: EntityEntry) {
         kernelWriteBack.updateEntityInSession(
             entry.entityId,
-            EntityRef(entry.entityId, entry.displayName, entry.entityType.name)
+            EntityRef(entry.entityId, entry.displayName, entry.entityType.name),
+            entry
         )
     }
 

@@ -86,7 +86,8 @@ class L2EfficiencyOverloadTest {
         val entityWriter = RealEntityWriter(
             entityRepository = FakeEntityRepository(),
             timeProvider = fakeTimeProvider,
-            kernelWriteBack = contextBuilder
+            kernelWriteBack = contextBuilder,
+            appScope = testScope
         )
 
         pipeline = RealUnifiedPipeline(

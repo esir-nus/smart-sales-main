@@ -83,7 +83,8 @@ class L2DualEngineBridgeTest {
         entityWriter = RealEntityWriter(
             entityRepository = fakeEntityRepo,
             timeProvider = timeProvider,
-            kernelWriteBack = contextBuilder
+            kernelWriteBack = contextBuilder,
+            appScope = testScope
         )
 
         fakeDisambiguationService = FakeEntityDisambiguationService()

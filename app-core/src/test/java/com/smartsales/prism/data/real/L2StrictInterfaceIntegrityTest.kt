@@ -80,7 +80,8 @@ class L2StrictInterfaceIntegrityTest {
         val entityWriter = RealEntityWriter(
             entityRepository = fakeEntityRepo,
             timeProvider = timeProvider,
-            kernelWriteBack = contextBuilder
+            kernelWriteBack = contextBuilder,
+            appScope = testScope
         )
 
         fakeDisambiguationService = FakeEntityDisambiguationService()

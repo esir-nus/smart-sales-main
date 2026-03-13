@@ -65,7 +65,8 @@ class AgentViewModelTest {
             scheduledTaskRepository = fakeScheduledTaskRepo,
             scheduleBoard = fakeScheduleBoard,
             entityWriter = fakeEntityWriter,
-            aliasCache = fakeAliasCache
+            aliasCache = fakeAliasCache,
+            appScope = TestScope(testDispatcher)
         )
 
         viewModel = AgentViewModel(

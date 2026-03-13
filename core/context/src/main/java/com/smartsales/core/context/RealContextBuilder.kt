@@ -217,12 +217,17 @@ class RealContextBuilder @Inject constructor(
 
     // === KernelWriteBack Implementation (Write) ===
 
-    override suspend fun updateEntityInSession(entityId: String, ref: EntityRef) {
+    override suspend fun updateEntityInSession(entityId: String, ref: EntityRef, entry: EntityEntry?) {
         _writeLock.withLock {
             // Section 1: Write-through update
             _workingSet.entityContext["entity_$entityId"] = ref
             _workingSet.markActive(entityId)
-            _workingSet.entityCache.remove(entityId) // Force refresh on next context build
+            
+            if (entry != null) {
+                _workingSet.entityCache[entityId] = entry
+            } else {
+                _workingSet.entityCache.remove(entityId) // Force refresh on next context build
+            }
             Log.d("Kernel", "📝 Write-through S1: $entityId → ${ref.displayName}")
 
             // Section 3: Auto-refresh client habits

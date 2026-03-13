@@ -1,7 +1,7 @@
 package com.smartsales.prism.domain.crm.writeback
 
 import com.smartsales.prism.domain.memory.EntityRef
-
+import com.smartsales.prism.domain.memory.EntityEntry
 import com.smartsales.prism.domain.crm.ActivityType
 
 /**
@@ -26,7 +26,7 @@ interface KernelWriteBack {
      * EntityWriter 在 SSD 写入后调用此方法。
      * Kernel 同时刷新 Section 3（客户习惯）。
      */
-    suspend fun updateEntityInSession(entityId: String, ref: EntityRef)
+    suspend fun updateEntityInSession(entityId: String, ref: EntityRef, entry: EntityEntry? = null)
 
     /**
      * 从 RAM Section 1 移除实体（删除时调用）

@@ -86,7 +86,8 @@ class L2GatewayGauntletTest {
         entityWriter = RealEntityWriter(
             entityRepository = fakeEntityRepo,
             timeProvider = timeProvider,
-            kernelWriteBack = contextBuilder
+            kernelWriteBack = contextBuilder,
+            appScope = testScope
         )
 
         inputParserService = FakeInputParserService()

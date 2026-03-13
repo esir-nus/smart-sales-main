@@ -213,7 +213,6 @@ class L2WriteBackConcurrencyTest {
 
         // 4. Verify RAM State synchrony
         val finalContext = contextBuilder.build("verify", Mode.ANALYST, listOf(clientId), ContextDepth.FULL)
-        println("DEBUG THOUGHT: entityKnowledge = ${finalContext.entityKnowledge}")
         
         assertTrue(
             "RAM Entity Cache must reflect the new CRM updates", 

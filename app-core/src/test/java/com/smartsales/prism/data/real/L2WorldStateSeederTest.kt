@@ -12,6 +12,8 @@ import com.smartsales.prism.domain.scheduler.TimelineItemModel
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -63,7 +65,8 @@ class L2WorldStateSeederTest {
         entityWriter = RealEntityWriter(
             entityRepository = fakeEntityRepo,
             timeProvider = timeProvider,
-            kernelWriteBack = contextBuilder
+            kernelWriteBack = contextBuilder,
+            appScope = TestScope(UnconfinedTestDispatcher())
         )
     }
 

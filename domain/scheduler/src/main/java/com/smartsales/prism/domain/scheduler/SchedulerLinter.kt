@@ -1,6 +1,5 @@
 package com.smartsales.prism.domain.scheduler
 
-import android.util.Log
 import com.smartsales.prism.domain.core.UnifiedMutation
 import com.smartsales.prism.domain.core.TaskMutation
 import com.smartsales.prism.domain.memory.ConflictPolicy
@@ -28,7 +27,6 @@ class SchedulerLinter @Inject constructor(
     fun lint(llmOutput: String): LintResult {
         return try {
             val mutation = jsonInterpreter.decodeFromString<UnifiedMutation>(llmOutput)
-            Log.d("SchedulerLinter", "lint: Parsed UnifiedMutation successfully: classification=${mutation.classification}")
             
             when (mutation.classification) {
                 "non_intent" -> {
@@ -87,7 +85,6 @@ class SchedulerLinter @Inject constructor(
                 LintResult.Error("无法解析任务列表或记录更新")
             }
         } catch (e: Exception) {
-            Log.d("SchedulerLinter", "lint: JSON mapping error: ${e.message}")
             LintResult.Error("JSON 解析失败: ${e.message}")
         }
     }

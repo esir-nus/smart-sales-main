@@ -21,10 +21,10 @@
 
 ### 🌊 Wave 2: The EntityWriter Linter Upgrade (The Bouncer)
 > Refactor the Linters to act as pure Type Checkers (The Teller/Bouncer), eliminating regex and LLM-translation guessing.
-- [ ] **Docs**: Update `docs/cerb/entity-writer/spec.md` and `interface.md`.
-- [ ] **Plan**: Run `/feature-dev-planner` for the Linter rework.
-- [ ] **Execute**: Refactor `EntityWriter` inputs and upgrade the Linter to use a strict 1-line JSON deserialization against the "One Currency" Kotlin class.
-- [ ] **Test**: Execute L2 World State Seeder Flow ensuring hallucinated fields (counterfeit currency) trigger a safe `SerializationException` without ghosting.
+- [x] **Docs**: Update `docs/cerb/entity-writer/spec.md` and `interface.md`.
+- [x] **Plan**: Run `/feature-dev-planner` for the Linter rework.
+- [x] **Execute**: Refactor `EntityWriter` inputs and upgrade the Linter to use a strict 1-line JSON deserialization against the "One Currency" Kotlin class.
+- [x] **Test**: Execute L2 World State Seeder Flow ensuring hallucinated fields (counterfeit currency) trigger a safe `SerializationException` without ghosting.
 
 ### 🌊 Wave 3: The Scheduler Migration (The First Refactor)
 > Migrate a single vertical slice to the new Mono architecture.

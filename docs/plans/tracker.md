@@ -73,11 +73,11 @@
 - [x] **Test**: Verify background SSD writes via Logcat without stalling main conversational response text generation.
 
 #### T3: The RL Harmonization (Background Learnings)
-- [ ] **Docs**: Update `docs/cerb/rl-module/spec.md` denoting the "Secondary Currency" contract for background Habit Extraction.
-- [ ] **Interface Map**: Update `docs/cerb/interface-map.md` to define the secondary contract boundary.
-- [ ] **Plan**: Run `/feature-dev-planner`.
-- [ ] **Execute**: Decouple the `RL Module` habit extraction into a background listener that passively ingests the chat transcript without blocking the next user turn.
-- [ ] **Test**: Write a mechanical schema verification script for the RL module's JSON output (Secondary Currency) to guarantee adherence to the Kotlin `data class`.
+- [x] **Docs**: Update `docs/cerb/rl-module/spec.md` denoting the "Secondary Currency" contract for background Habit Extraction.
+- [x] **Interface Map**: Update `docs/cerb/interface-map.md` to define the secondary contract boundary.
+- [x] **Plan**: Run `/feature-dev-planner`.
+- [x] **Execute**: Decouple the `RL Module` habit extraction into a background listener that passively ingests the chat transcript without blocking the next user turn.
+- [x] **Test**: Write a mechanical schema verification script for the RL module's JSON output (Secondary Currency) to guarantee adherence to the Kotlin `data class`.
 
 ---
 
@@ -123,6 +123,8 @@
 > Key spec/impl changes, newest first. Like `git log --oneline`.
 
 ### 2026-03-13
+- **architecture**: Wave 5 T3 The RL Harmonization SHIPPED. Extracted the background Reinforcement Learning habit mapping into a strict Secondary Currency contract (`RlPayload`) defined in `:domain:habit`, decoupling it entirely from the main conversational SSD mutation pipeline (`UnifiedMutation`). Created `RlPayloadSchemaTest` to mechanically prove that the LLM system prompt output matches the Kotlin data class properties exactly.
+- **architecture**: KernelWriteBack Async Race Condition HOTFIXED. Discovered a dirty-reading gap in `L2WriteBackConcurrencyTest` where parallel rapid-fire intents fetched stale SSD graphs into the `RealContextBuilder`'s RAM before background DB writes completed. Updated the `KernelWriteBack` abstract contract to natively seed the dirty `EntityEntry` payload completely into RAM via a synchronized WriteThrough, physically sealing the race condition. 
 - **architecture**: Wave 5 T1 The Sync Loop SHIPPED. Implemented the "Entity Candidate Gatekeeper" protocol via `AliasCache` in `:domain:crm` and `:data:crm`. `IntentOrchestrator` successfully intercepts candidates via Lightning Router's `missing_entities` and fast-fails ambiguous queries into `UiState.AwaitingClarification`, avoiding the heavy `UnifiedPipeline` and saving significant SSD/LLM transit time.
 - **architecture**: 100% test coverage proven for the L1 cache logic (`RealAliasCacheTest.kt` handling cache misses, ExactMatch, Ambiguous clashes, and graceful malformed JSON handling). Verified Acceptance Team Spec, Contract, Build, and Break-It examiners flawlessly.
 

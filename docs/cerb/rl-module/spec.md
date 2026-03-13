@@ -101,6 +101,8 @@ Instead of forcing the main `Analyst` or `Scheduler` prompt to extract observati
 
 At the start of the Unified Pipeline (Step 1), `RealUnifiedPipeline` asynchronously fires `HabitListener.analyzeAsync`. This daemon uses a specialized prompt directed at the `EXTRACTOR` model to parse the user's input against the entire context.
 
+To properly decouple and establish true OS model constraints, we enforce a **Secondary Currency** contract (`RlPayload`) specifically designed for background Habit Extraction. This ensures the background listener mathematically aligns with its own Kotlin data class without artificially tangling itself to the main conversational SSD mutation pipeline (`UnifiedMutation`).
+
 ```json
 {
   "rl_observations": [

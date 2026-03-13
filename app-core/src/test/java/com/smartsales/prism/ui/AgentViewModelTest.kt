@@ -30,6 +30,8 @@ class AgentViewModelTest {
     private lateinit var fakeToolRegistry: FakeToolRegistry
     private lateinit var fakeLightningRouter: FakeLightningRouter
     private lateinit var fakeUnifiedPipeline: FakeUnifiedPipeline
+    private lateinit var fakeScheduleBoard: FakeScheduleBoard
+    private lateinit var fakeEntityWriter: FakeEntityWriter
     private lateinit var intentOrchestrator: IntentOrchestrator
 
     private lateinit var viewModel: AgentViewModel
@@ -50,12 +52,17 @@ class AgentViewModelTest {
         fakeToolRegistry = FakeToolRegistry()
         fakeLightningRouter = FakeLightningRouter()
         fakeUnifiedPipeline = FakeUnifiedPipeline()
+        fakeScheduleBoard = FakeScheduleBoard()
+        fakeEntityWriter = FakeEntityWriter()
 
         intentOrchestrator = IntentOrchestrator(
             contextBuilder = fakeContextBuilder,
             lightningRouter = fakeLightningRouter,
             mascotService = fakeMascotService,
-            unifiedPipeline = fakeUnifiedPipeline
+            unifiedPipeline = fakeUnifiedPipeline,
+            scheduledTaskRepository = fakeScheduledTaskRepo,
+            scheduleBoard = fakeScheduleBoard,
+            entityWriter = fakeEntityWriter
         )
 
         viewModel = AgentViewModel(

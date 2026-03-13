@@ -28,11 +28,11 @@
 
 ### 🌊 Wave 3: The Scheduler Migration (The First Refactor)
 > Migrate a single vertical slice to the new Mono architecture.
-- [ ] **Docs**: Rewrite `docs/cerb/scheduler/spec.md` removing `CRM_TASK` hard fork logic.
-- [ ] **Interface Map**: Update `docs/cerb/interface-map.md`.
-- [ ] **Plan**: Run `/feature-dev-planner`.
-- [ ] **Execute**: Replace `SchedulerLinter` with the strict Data Contract approach.
-- [ ] **Test**: Full L2/L3 scheduling flow succeeds natively under the Mono pipeline.
+- [x] **Docs**: Rewrite `docs/cerb/scheduler/spec.md` removing `CRM_TASK` hard fork logic.
+- [x] **Interface Map**: Update `docs/cerb/interface-map.md` with Open-Loop Architecture.
+- [x] **Plan**: Run `/feature-dev-planner`.
+- [x] **Execute**: Replace `SchedulerLinter` with strict Data Contract and implement PendingProposalStore.
+- [x] **Test**: Full L1/L2 scheduling flow succeeds natively under the Mono pipeline.
 
 ### 🌊 Wave 4: Analyst & RL Harmonization (The Integration)
 > Roll out the Mono contract to the complex modules.

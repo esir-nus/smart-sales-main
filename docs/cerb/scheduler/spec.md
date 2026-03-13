@@ -196,33 +196,32 @@ enum class UrgencyLevel {
 
 ## Scheduler Pipeline
 
-Task creation follows a **gated pipeline** with conflict resolution.
+Task creation natively operates under the Mono **Unified Pipeline**, governed by the **Open-Loop Lifecycle** (Chat → Proposal → Confirm → Result).
 
 > [!NOTE]
-> **CRM entity writes in this pipeline.** When `keyPerson` is present, Scheduler calls `entityWriter.upsertFromClue()` for PERSON (and ACCOUNT if `keyCompany` present). Business relevance gate at LLM prompt level filters personal contacts.
+> **CRM profile writes are handled automatically.** The `UnifiedMutation` schema accepts both `tasks` and `profileMutations`. The Unified Pipeline merges and proposes them simultaneously.
 
 ```
 User Voice Input
     ↓
-Orchestrator (MODE_SCHEDULER)
+LightningRouter (Phase 0) → Routes substantive intents to System II
     ↓
-LLM Parse → [PromptCompiler enforces UnifiedMutation schema]
+UnifiedPipeline (Phase 1-3)
     ↓
-SchedulerLinter.lint(json) → Strict kotlinx.serialization against UnifiedMutation.tasks 
+LLM Parse → [PromptCompiler imposes strict `UnifiedMutation` Data Contract]
     ↓
-ScheduleBoard.checkConflict() → Clear | Conflict
+SchedulerLinter.lint(json) → Type-checks `UnifiedMutation`, checks conflicts via `ScheduleBoard`
     ↓
-[If Conflict] → UI shows resolution options → User picks
+UnifiedPipeline emits `MutationProposal` (Task + Profile updates + Conflict Flags)
     ↓
-EntityWriter.upsertFromClue(keyPerson, PERSON) → PERSON entity
+IntentOrchestrator catches `MutationProposal` in memory (`PendingProposalStore`)
     ↓
-[If keyCompany] EntityWriter.upsertFromClue(keyCompany, ACCOUNT) → ACCOUNT entity
+AgentViewModel renders Proposal UI Card → User clicks "确认执行" (Confirm)
     ↓
-[If ACCOUNT] EntityWriter.updateProfile(personId, {accountId}) → linked
-    ↓
-Repository.insertTask(enrichedTask) → ID returned
-    ↓
-ScheduleBoard.refresh() → Index updated
+IntentOrchestrator executes Open-Loop Writes:
+  ├─ `EntityWriter.updateAttribute(...)`
+  ├─ `ScheduledTaskRepository.insertTask(task)`
+  └─ `ScheduleBoard.refresh()`
     ↓
 AlarmScheduler.scheduleAlarm() (if reminder set)
 ```

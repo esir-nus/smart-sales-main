@@ -127,12 +127,12 @@ graph TD
     F0 --> F2["ContextBuilder (Kernel ETL)"]
     F2 --> F["Executor (LLM)"]
     F --> G["SchedulerLinter / Evaluators"]
-    G --> H1["UnifiedPipeline calls EntityWriter.upsertFromClue()"]
-    H1 --> H2["EntityWriter updateProfile & registerAlias"]
-    H2 --> H3["EntityWriter write-through → RAM S1"]
-    G --> I["ScheduledTaskRepository.insert()"]
+    G --> H1["UnifiedPipeline emits MutationProposal"]
+    H1 --> H2["IntentOrchestrator holds Pending State"]
+    H2 -->|User Confirms| H3["IntentOrchestrator calls EntityWriter & Repo"]
+    H3 --> I["ScheduledTaskRepository.insertTask()"]
     I --> J["ScheduleBoard.refresh()"]
-    J --> K["SchedulerViewModel (UI)"]
+    J --> K["AgentViewModel (UI)"]
 ```
 
 ---

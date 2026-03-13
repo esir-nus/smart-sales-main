@@ -5,7 +5,7 @@ description: Run the Verification Acceptance Team to validate work
 # Acceptance Team
 
 > **Purpose**: Automated, blackbox verification of work products.
-> **Role**: The "Teacher grading the essay." Does not care about effort, only correctness.
+> **Role**: The "Teacher grading the Multiple Choice exam." Does not care about effort, only correctness.
 > **Philosophy**: Trust is good, proof is better.
 
 ## When to Use

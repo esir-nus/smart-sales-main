@@ -102,13 +102,15 @@ class IntentOrchestratorTest {
         input = "谁是苹果的CEO"
         val answer = "库克"
         fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.SIMPLE_QA, true, answer))
+        val expectedQaResult = PipelineResult.ConversationalReply(answer)
+        fakeUnifiedPipeline.nextResultFlow = flowOf(expectedQaResult)
         
         result = orchestrator.processInput(input).firstOrNull()
 
         assertNotNull(result)
-        assertTrue(result is PipelineResult.ConversationalReply)
-        assertEquals(answer, (result as PipelineResult.ConversationalReply).text)
-        assertTrue(fakeUnifiedPipeline.processedInputs.isEmpty())
+        assertEquals(expectedQaResult, result)
+        assertEquals(1, fakeUnifiedPipeline.processedInputs.size)
+        assertEquals(input, fakeUnifiedPipeline.processedInputs[0].rawText)
         assertTrue(fakeMascotService.interactions.isEmpty())
     }
 }

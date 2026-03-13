@@ -181,45 +181,15 @@ open class PromptCompiler @Inject constructor() {
 
 ## 响应格式（必须是严格的 JSON）
 
-{
-  "query_quality": "noise|greeting|vague|simple_qa|deep_analysis|crm_task",
-  "analysis": {
-    "scenario_type": "price_objection",
-    "info_sufficient": true,
-    "objection_root": "perceived_value_gap",
-    "customer_state": "ready_to_buy_but_price_sensitive",
-    "recommended_tactics": ["value_stack", "tco_comparison", "urgency"]
-  },
-  "missing_entities": ["如果用户提到了需要建档的重要客户但 <KNOWN_FACTS> 中没有，提取到这里"],
-  "profile_mutations": [
-    {
-      "entityId": "实体ID（必须从<KNOWN_FACTS>提取）",
-      "field": "要修改的字段名（如dealStage, budget等）",
-      "value": "新值"
-    }
-  ],
-  "classification": "schedulable|deletion|reschedule|non_intent",
-  "targetTitle": "删除或改期任务时的目标关键词（可选，没有则为空字符串）",
-  "newInstruction": "改期任务时的新时间/新指令（可选，没有则为空字符串）",
-  "tasks": [
-    {
-      "title": "任务标题（简洁明了）",
-      "startTime": "YYYY-MM-DD HH:mm",
-      "endTime": "YYYY-MM-DD HH:mm (可选)",
-      "duration": "预估时长（如 30m、1h、15m）— 见下方推断规则",
-      "location": "地点（可选，没有则省略此字段）",
-      "notes": "备注（可选，没有则省略此字段）",
-      "keyPerson": "关键人物（仅商务相关）",
-      "keyCompany": "关联公司/组织（可选，从输入或对话历史中提取）",
-      "highlights": "高亮信息（可选）",
-      "urgency": "L1|L2|L3|FIRE_OFF（赶飞机L1, 会议L2, 日常L3, 即时FIRE_OFF）"
-    }
-  ],
-  "thought": "你的分析思路（中文）",
-  "response": "给用户的专业建议或简短回应（中文）"
+${
+    // Dynamically generate the core mutation payload shape from the strictly typed Kotlin Data Class
+    com.smartsales.core.pipeline.JsonSchemaGenerator.generateSchema(
+        com.smartsales.prism.domain.core.UnifiedMutation.serializer().descriptor, 
+        "  "
+    )
 }
 
-注意：如果 query_quality 不是 deep_analysis 或 crm_task，你仍必须输出结构完整的 JSON，只是 analysis 内的字段无实际意义。
+注意：如果 query_quality 是 noise 或 greeting，你只需给出对应的 response（建议极其简短），其余字段和数组保持空即可。
 如果用户意图包含日程安排、删除或改期，请填写 tasks 和 classification 等字段。具体规则如下：
 
 ### 日程处理规则（如果包含日程意图）
@@ -243,22 +213,12 @@ open class PromptCompiler @Inject constructor() {
 
 ## 响应格式（必须是严格的 JSON，不允许 markdown）
 
-{
-  "classification": "schedulable|deletion|reschedule|non_intent",
-  "tasks": [
-    {
-      "title": "任务标题（简洁明了）",
-      "startTime": "YYYY-MM-DD HH:mm",
-      "endTime": "YYYY-MM-DD HH:mm (可选，若用户未指定则为 null)",
-      "duration": "预估时长（如 30m、1h、15m）— 见下方推断规则",
-      "location": "地点（可选，没有则省略此字段）",
-      "notes": "备注（可选，没有则省略此字段）",
-      "keyPerson": "关键人物（仅商务相关，见下方过滤规则）",
-      "keyCompany": "关联公司/组织（可选，从输入或对话历史中提取）",
-      "highlights": "高亮信息（可选，提取必须注意的细节，如带身份证、正装等）",
-      "urgency": "L1|L2|L3|FIRE_OFF（见下方推断规则）"
-    }
-  ]
+${
+    // Dynamically generate the schedule payload shape from the strictly typed Kotlin Data Class
+    com.smartsales.core.pipeline.JsonSchemaGenerator.generateSchema(
+        com.smartsales.prism.domain.core.UnifiedMutation.serializer().descriptor, 
+        "  "
+    )
 }
 
 ## 输入分类规则（Wave 4.0）
@@ -299,6 +259,7 @@ open class PromptCompiler @Inject constructor() {
 用户：取消明天的会议
 输出：
 {
+  "query_quality": "schedulable",
   "classification": "deletion",
   "targetTitle": "会议"
 }
@@ -306,17 +267,17 @@ open class PromptCompiler @Inject constructor() {
 用户：把打电话删了
 输出：
 {
+  "query_quality": "schedulable",
   "classification": "deletion",
   "targetTitle": "打电话"
 }
-
-
 
 ## Reschedule 示例
 
 用户：把会推迟两小时
 输出：
 {
+  "query_quality": "schedulable",
   "classification": "reschedule",
   "targetTitle": "会",
   "newInstruction": "推迟两小时"
@@ -325,6 +286,7 @@ open class PromptCompiler @Inject constructor() {
 用户：开会改到后天下午3点
 输出：
 {
+  "query_quality": "schedulable",
   "classification": "reschedule",
   "targetTitle": "开会",
   "newInstruction": "改到后天下午3点"
@@ -396,15 +358,21 @@ open class PromptCompiler @Inject constructor() {
 
 输出：
 {
-  "title": "赶飞机",
-  "startTime": "2026-02-03 03:00",
-  "endTime": null,
-  "duration": "2h",
-  "location": "T2航站楼",
-  "keyPerson": null,
-  "keyCompany": null,
-  "highlights": "必须带好护照",
-  "urgency": "L1"
+  "query_quality": "schedulable",
+  "classification": "schedulable",
+  "tasks": [
+    {
+      "title": "赶飞机",
+      "startTime": "2026-02-03 03:00",
+      "endTime": null,
+      "duration": "2h",
+      "location": "T2航站楼",
+      "keyPerson": null,
+      "keyCompany": null,
+      "highlights": "必须带好护照",
+      "urgency": "L1"
+    }
+  ]
 }
 
 用户：明天下午给张总打个电话
@@ -412,13 +380,19 @@ open class PromptCompiler @Inject constructor() {
 
 输出：
 {
-  "title": "给张总打电话",
-  "startTime": "2026-02-03 14:00",
-  "endTime": null,
-  "duration": "15m",
-  "keyPerson": "张总",
-  "keyCompany": null,
-  "urgency": "L2"
+  "query_quality": "schedulable",
+  "classification": "schedulable",
+  "tasks": [
+    {
+      "title": "给张总打电话",
+      "startTime": "2026-02-03 14:00",
+      "endTime": null,
+      "duration": "15m",
+      "keyPerson": "张总",
+      "keyCompany": null,
+      "urgency": "L2"
+    }
+  ]
 }
 
 用户：2分钟以后提醒我看手机
@@ -426,11 +400,17 @@ open class PromptCompiler @Inject constructor() {
 
 输出：
 {
-  "title": "看手机",
-  "startTime": "2026-02-10 17:42",
-  "endTime": null,
-  "duration": null,
-  "urgency": "FIRE_OFF"
+  "query_quality": "schedulable",
+  "classification": "schedulable",
+  "tasks": [
+    {
+      "title": "看手机",
+      "startTime": "2026-02-10 17:42",
+      "endTime": null,
+      "duration": null,
+      "urgency": "FIRE_OFF"
+    }
+  ]
 }
 
 只输出 JSON，不要有任何其他文字。

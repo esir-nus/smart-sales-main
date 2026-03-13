@@ -139,13 +139,12 @@ class L2EfficiencyOverloadTest {
 
         val results = pipeline.processInput(PipelineInput("schedule 3 items", intent = QueryQuality.CRM_TASK)).toList()
         
-        val multiTaskResult = results.filterIsInstance<PipelineResult.SchedulerMultiTaskCreated>().firstOrNull()
+        val mutations = results.filterIsInstance<PipelineResult.MutationProposal>()
         println("DEBUG SCENE 1 RESULTS: $results")
-        assertNotNull("Pipeline must output SchedulerMultiTaskCreated", multiTaskResult)
-        assertEquals("Must create exactly 3 tasks", 3, multiTaskResult!!.tasks.size)
-        assertEquals("Task One", multiTaskResult.tasks[0].title)
-        assertEquals("Task Two", multiTaskResult.tasks[1].title)
-        assertEquals("Task Three", multiTaskResult.tasks[2].title)
+        assertEquals("Must create exactly 3 tasks", 3, mutations.size)
+        assertEquals("Task One", mutations[0].task!!.title)
+        assertEquals("Task Two", mutations[1].task!!.title)
+        assertEquals("Task Three", mutations[2].task!!.title)
     }
 
     @Test
@@ -175,11 +174,10 @@ class L2EfficiencyOverloadTest {
         fakeExecutor.enqueueResponse(ExecutorResult.Success(rawJson, TokenUsage(10, 10)))
         val results = pipeline.processInput(PipelineInput("schedule overlap", intent = QueryQuality.CRM_TASK)).toList()
         
-        val multiTaskResult = results.filterIsInstance<PipelineResult.SchedulerMultiTaskCreated>().firstOrNull()
+        val mutations = results.filterIsInstance<PipelineResult.MutationProposal>()
         println("DEBUG SCENE 2 RESULTS: $results")
-        assertNotNull(multiTaskResult)
-        assertEquals(2, multiTaskResult!!.tasks.size)
-        assertTrue("hasConflict flagged to true when 1/N tasks overlaps existing board state", multiTaskResult.hasConflict)
+        assertEquals(2, mutations.size)
+        assertTrue("hasConflict flagged to true when 1/N tasks overlaps existing board state", mutations.any { it.isConflict })
     }
 
     @Test
@@ -209,7 +207,9 @@ class L2EfficiencyOverloadTest {
         val results = pipeline.processInput(PipelineInput("schedule alarms", intent = QueryQuality.CRM_TASK)).toList()
         println("DEBUG SCENE 3 RESULTS: $results")
         
-        // Assert: tasks naturally fell down the cascade queue
-        assertTrue("Tasks must have fired alarmScheduler cascades", fakeAlarmScheduler.scheduledAlarms.isNotEmpty())
+        // Assert: tasks naturally fell down the cascade queue and were proposed with alarms natively
+        val mutations = results.filterIsInstance<PipelineResult.MutationProposal>()
+        assertTrue("Tasks must have proposed alarms", mutations.isNotEmpty())
+        assertTrue("All proposed tasks must have alarms active", mutations.all { it.task!!.hasAlarm })
     }
 }

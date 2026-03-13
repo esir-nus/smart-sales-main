@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     // alias(libs.plugins.kotlin.kapt)
     // alias(libs.plugins.hilt)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -31,6 +32,7 @@ dependencies {
     
     implementation(project(":data:ai-core"))
     
+    api(project(":domain:core"))
     api(project(":domain:crm"))
     api(project(":domain:memory"))
     api(project(":domain:session"))
@@ -38,6 +40,7 @@ dependencies {
 
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
+    implementation(libs.kotlinx.serialization.json)
     
     // Core annotations
     implementation("javax.inject:javax.inject:1")

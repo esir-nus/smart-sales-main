@@ -189,7 +189,7 @@ class L2GatewayGauntletTest {
         
         // 4. The Resume
         // Verify that the pipeline received a Resolved state and proceeded to the LLM Scheduler phase
-        val taskResult = resultsTurn2.filterIsInstance<PipelineResult.SchedulerTaskCreated>().firstOrNull()
+        val taskResult = resultsTurn2.filterIsInstance<PipelineResult.MutationProposal>().firstOrNull()?.task
         
         assertNotNull("Pipeline must successfully resume execution and schedule the task", taskResult)
         assertEquals("Meeting with 字节跳动 (深圳)", taskResult!!.title)

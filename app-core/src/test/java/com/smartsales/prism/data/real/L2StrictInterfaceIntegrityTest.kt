@@ -141,6 +141,7 @@ class L2StrictInterfaceIntegrityTest {
         // This JSON is structurally valid but has a blank title, which triggers LintResult.Error
         val badJson = """
             {
+              "classification": "schedulable",
               "title": ""
             }
         """.trimIndent()
@@ -154,7 +155,7 @@ class L2StrictInterfaceIntegrityTest {
         // Assert pipeline did not crash, but correctly returned the linter's rejection
         val replyStr = results.filterIsInstance<PipelineResult.ConversationalReply>().firstOrNull()?.text
         assertNotNull("Must return ConversationalReply containing error", replyStr)
-        assertTrue("Must contain failure phrase", replyStr!!.contains("创建日程失败"))
+        assertTrue("Must contain failure phrase", replyStr!!.contains("操作解析失败"))
         
         assertEquals("Linter failure should not touch entity SSD", 0, fakeEntityRepo.getAll(10).size)
     }

@@ -11,20 +11,20 @@
 > **Context**: Transitioning the architecture from "Behavioral Contracts" (Essay Questions) to "Data Contracts" (Multiple Choice). The SSD (Memory) becomes the absolute center of the universe. All LLM Prompts, Linters, and Interfaces must be driven directly by Kotlin Data Classes. 
 > **Migration Law**: Strict Cerb Compliance. Each module is migrated incrementally. The lifecycle must NEVER be bypassed: [1. Docs/Specs 🔄 2. Interface Map 🔄 3. Plan 🔄 4. Execute 🔄 5. E2E Test]. 
 
-### 🌊 Wave 1: The Contract Foundation (Core Types)
-> Establish the strict Data Classes that will define the rest of the OS.
-- [ ] **Docs**: Create `docs/cerb/core-contracts/spec.md` defining `UnifiedMutation` and domain mutations.
-- [ ] **Docs**: Update `docs/cerb/interface-map.md` to reflect the new Data Contract boundary between LLM and CRM.
-- [ ] **Plan**: Run `/feature-dev-planner` to establish execution steps.
-- [ ] **Execute**: Define pure Kotlin data classes and `PromptCompiler` auto-generation via `kotlinx.serialization`.
-- [ ] **Test**: L1 Unit tests assert that altering a Kotlin data class strictly alters the generated prompt string.
+### 🌊 Wave 1: The Contract Foundation (The One Currency)
+> Establish the strict Data Classes that will act as the single currency for the entire OS.
+- [x] **Docs**: Create `docs/cerb/core-contracts/spec.md` defining `UnifiedMutation` and domain mutations.
+- [x] **Docs**: Update `docs/cerb/interface-map.md` to reflect the new Data Contract boundary between LLM and CRM.
+- [x] **Plan**: Run `/feature-dev-planner` to establish execution steps for the mechanical test.
+- [x] **Execute**: Build the `BrainBodyAlignmentTest.kt` to mechanically enforce the contract. Use Kotlin Reflection / `kotlinx.serialization` to dynamically extract the schema from the Kotlin `data class`.
+- [x] **Test**: L1 Unit tests assert that the `PromptCompiler` output explicitly contains all JSON keys defined by the Kotlin domain `data class`, proving the Prompt cannot drift from the Database reality.
 
-### 🌊 Wave 2: The EntityWriter Linter Upgrade (The Hands)
-> Refactor the Linters to act as pure Type Checkers, eliminating regex and guessing.
+### 🌊 Wave 2: The EntityWriter Linter Upgrade (The Bouncer)
+> Refactor the Linters to act as pure Type Checkers (The Teller/Bouncer), eliminating regex and LLM-translation guessing.
 - [ ] **Docs**: Update `docs/cerb/entity-writer/spec.md` and `interface.md`.
 - [ ] **Plan**: Run `/feature-dev-planner` for the Linter rework.
-- [ ] **Execute**: Refactor `EntityWriter` inputs and upgrade the Linter to use strict JSON deserialization.
-- [ ] **Test**: Execute L2 World State Seeder Flow ensuring hallucinated fields trigger safe `SerializationException` without ghosting.
+- [ ] **Execute**: Refactor `EntityWriter` inputs and upgrade the Linter to use a strict 1-line JSON deserialization against the "One Currency" Kotlin class.
+- [ ] **Test**: Execute L2 World State Seeder Flow ensuring hallucinated fields (counterfeit currency) trigger a safe `SerializationException` without ghosting.
 
 ### 🌊 Wave 3: The Scheduler Migration (The First Refactor)
 > Migrate a single vertical slice to the new Mono architecture.
@@ -40,19 +40,34 @@
 
 ---
 
+### 🌊 Wave 5: The Dual-Loop CQRS Engine (Sync vs Async)
+> Implement the Dual-Loop UJM architecture defined in `project-mono-master-guide.md` (Section 6), decoupling fast Entity ID lookup (Sync) from SSD Mutation (Async).
+
+#### T1: The Sync Loop (Fast Query)
+- [ ] **Docs**: Update `docs/cerb/lightning-router/spec.md` with the "Entity Candidate Gatekeeper" protocol.
+- [ ] **Execute**: Wire the Lightning Router to strictly intercept intents lacking names. Build the clarification loop yield state (`UiState.AwaitingClarification`).
+- [ ] **Execute**: Connect the Lightning Router to the `Alias Lib` (L1 Cache) to instantly resolve `EntityID` before pushing the state into the SSD Graph fetch.
+- [ ] **Execute**: Build the Disambiguation yield state for multiple/missing `Alias Lib` returns.
+
+#### T2: The Async Loop (Background Mutations)
+- [ ] **Docs**: Update `docs/cerb/entity-writer/spec.md` for asynchronous mutation decoupling.
+- [ ] **Test**: Write a strict `EntityContractTest.kt` utility that uses `kotlinx.serialization` or Reflection to mechanically prove the LLM JSON output 100% matches the Kotlin `data class` signature before the Linter executes.
+- [ ] **Execute**: Rip the heavy `decodeFromString` EntityWriter SSD mutation out of the main conversational execution path.
+- [ ] **Execute**: Schedule SSD writes in an isolated Coroutines background scope (or WorkManager) and stream the completion event back into the RAM Context Table.
+
+#### T3: The RL Harmonization (Background Learnings)
+- [ ] **Execute**: Decouple the `RL Module` habit extraction into a background listener that passively ingests the chat transcript without blocking the next user turn.
+- [ ] **Test**: Write a mechanical schema verification script for the RL module's JSON output to guarantee adherence to the Kotlin `data class`.
+
+---
+
 ## ⏸️ PAUSED EPIC: The Crucible (Pipeline Validation)
 > **Context**: Partially complete (Waves 1-4 shipped to changelog). Paused to implement the Data-Oriented OS foundational architecture, which will mathematically resolve the remaining User-Flow Purity Remediation bugs.
 
-### 🌊 Wave 5: User-Flow Purity Remediation (Pending Mono Upgrade)
+### 🌊 Wave 6: User-Flow Purity Remediation (Pending Mono Upgrade)
 > Prove the L3 UI handles human-centric workflows, decoupled intents, and context memory flawlessly (based on L2 User Flow Test Failures from 2026-03-12).
 
-#### T1 & T2: Context Flow & Gateway Thresholds
-- [ ] Fix the `LightningRouter` Intent Thresholds: Prevent strict `VAGUE` classification from prematurely dropping `SIMPLE_QA`/`DEEP_ANALYSIS` intents requiring memory lookbacks.
-- [ ] Audit `Kernel` / `ContextBuilder` state management: Fix the fatal `entityKnowledge=0` bug. Ensure implicit Entity Binding (`ent_201`) persists deterministically across multi-turn sessions for Follow-Up queries.
-
-#### T3: The Open-Loop Mutation Defense (Option 1)
-- [ ] Implement **Decoupled Physical Scheduling**: Strip `CRM_TASK` execution routing out of the NLP Chat `mode=SCHEDULER` loop entirely. 
-- [ ] Enforce the Open-Loop state machine: High-value database writes (e.g. `dealStage` mutation) must route exclusively to the `PROPOSAL` Linter check, forcing physical UI confirmations, not silent Scheduler sticky notes.
+*Note: T1 (Context Flow), T2 (Thresholds), and T3 (Mutation Defense) have been conceptually solved and superseded by the active "Project Mono Wave 5: CQRS Dual-Engine" refactor. They will be mathematically resolved once the new architecture is fully online.*
 
 #### T4: Mascot Presentation Collection
 - [ ] Fix the Presentation Layer (UI) `Flow` collection for `MascotService`. Guarantee that sub-500ms `NOISE`/`GREETING` intents successfully trigger the Mascot Overlay rendering without halting the `AgentChatScreen` or generating an infinite Shimmer state.

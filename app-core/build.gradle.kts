@@ -97,6 +97,7 @@ dependencies {
     // =============================================
     // Shared Infrastructure
     // =============================================
+    implementation(project(":domain:core"))
     implementation(project(":domain:crm"))
     implementation(project(":domain:memory"))
     implementation(project(":domain:habit"))

@@ -251,6 +251,7 @@ Readiness = (Verified/Total Assumptions × 60) + Evidence(0-20) + Risk(0-20)
 - [ ] Searched for existing implementations
 - [ ] Read relevant spec/doc sections
 - [ ] Read `docs/specs/project-mono-master-guide.md` to enforce the Data-Oriented OS contract
+- [ ] **Verified the Brain/Body Contract:** No PromptCompiler/free-form JSON/regex Linters. MUST use Kotlin `data class` + `docs/cerb/interface-map.md`
 - [ ] Verified file/class existence
 - [ ] Checked for dependencies
 - [ ] **Verified config is in native `.agent/` structure**
@@ -266,3 +267,12 @@ If the Literal Comparison Table contains ANY ❌:
 - Do NOT proceed until all rows are ✅
 
 **Motto**: "Spec says `最近30天`, code says `最近30天`. No synonyms."
+
+### Project Mono Alignment Gate (Architecture Plans)
+
+> **For any plan touching LLM integration or data models, verify the Brain/Body Connection.**
+
+- **Brain/Body Disconnect?** Look for old behavioral contracts (PromptCompiler generating "essays", JSON schemas hardcoded in strings, regex linters).
+- **If found:** **BLOCK** the plan.
+- **Enforce the Solution:** The plan MUST define the contract as a Kotlin `data class` in `:domain`, rely on strict deserialization (not regex), and update `docs/cerb/interface-map.md` to establish the contract boundary.
+- **Mandatory Mechanical Verification:** The plan MUST include a step to execute a mechanical test script (e.g., extracting the schema via `kotlinx.serialization` or Reflection) to mathematically validate that the LLM Prompt explicitly matches the Kotlin Data Class. Do not rely on "vibe checking" the interface map.

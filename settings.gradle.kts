@@ -53,6 +53,7 @@ includeModule(":core:test")
 includeModule(":core:test-fakes")
 // ARCHIVED: domain:prism-core, data:prism-lib, feature:* (see archived/ folder)
 
+includeModule(":domain:core")
 includeModule(":domain:crm")
 includeModule(":domain:memory")
 includeModule(":domain:habit")

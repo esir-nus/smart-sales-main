@@ -7,6 +7,9 @@ import com.smartsales.core.test.fakes.FakeContextBuilder
 import com.smartsales.core.test.fakes.FakeLightningRouter
 import com.smartsales.core.test.fakes.FakeMascotService
 import com.smartsales.core.test.fakes.FakeUnifiedPipeline
+import com.smartsales.core.test.fakes.FakeScheduleBoard
+import com.smartsales.core.test.fakes.FakeEntityWriter
+import com.smartsales.prism.domain.scheduler.FakeScheduledTaskRepository
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -28,6 +31,9 @@ class IntentOrchestratorTest {
     private lateinit var fakeLightningRouter: FakeLightningRouter
     private lateinit var fakeMascotService: FakeMascotService
     private lateinit var fakeUnifiedPipeline: FakeUnifiedPipeline
+    private lateinit var fakeScheduledTaskRepository: FakeScheduledTaskRepository
+    private lateinit var fakeScheduleBoard: FakeScheduleBoard
+    private lateinit var fakeEntityWriter: FakeEntityWriter
     
     private lateinit var orchestrator: IntentOrchestrator
 
@@ -37,12 +43,18 @@ class IntentOrchestratorTest {
         fakeLightningRouter = FakeLightningRouter()
         fakeMascotService = FakeMascotService()
         fakeUnifiedPipeline = FakeUnifiedPipeline()
+        fakeScheduledTaskRepository = FakeScheduledTaskRepository()
+        fakeScheduleBoard = FakeScheduleBoard()
+        fakeEntityWriter = FakeEntityWriter()
         
         orchestrator = IntentOrchestrator(
             contextBuilder = fakeContextBuilder,
             lightningRouter = fakeLightningRouter,
             mascotService = fakeMascotService,
-            unifiedPipeline = fakeUnifiedPipeline
+            unifiedPipeline = fakeUnifiedPipeline,
+            scheduledTaskRepository = fakeScheduledTaskRepository,
+            scheduleBoard = fakeScheduleBoard,
+            entityWriter = fakeEntityWriter
         )
     }
 

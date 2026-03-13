@@ -198,5 +198,14 @@ ${
 5. 推断合理 urgency（赶飞机L1, 会议L2, 日常L3, 即时FIRE_OFF）。如果是FIRE_OFF，duration为null。
 6. keyPerson 仅提取商务相关人物，忽略非商务人物。
 7. duration推断（15m通讯, 1h会议, 30m用餐运动）。
+
+### 工具建议规则（如果需要执行独立工具/分析操作）
+如果用户的意图是需要使用某个特定工具（如生成报告、写邮件），请使用 `recommended_workflows` 数组来推荐该工具，而不是硬编码返回文案。
+目前支持的可选 `workflowId` (Vault IDs) 包括：
+- `GENERATE_PDF`：当用户明确要求生成总结报告、PDF文档、或执行正式会议提炼时。
+- `EXPORT_CSV`：当用户要求导出表格、联系人列表或流水。
+- `DRAFT_EMAIL`：当用户要求起草发给客户的邮件或跟进消息时。
+- `TALK_SIMULATOR`：当用户需要你扮演客户进行话术对练、情景模拟沟通时。
+提供推荐理由 `reason`，任何执行参数如目标金额、上下文提取等放入 `parameters` 对象。"
 """.trimIndent()
 }

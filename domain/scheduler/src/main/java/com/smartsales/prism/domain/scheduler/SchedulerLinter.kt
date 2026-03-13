@@ -51,6 +51,11 @@ class SchedulerLinter @Inject constructor(
                 }
             }
             
+            if (mutation.recommendedWorkflows.isNotEmpty()) {
+                val recommendation = mutation.recommendedWorkflows.first()
+                return LintResult.ToolDispatch(recommendation.workflowId, recommendation.parameters)
+            }
+
             // Parse Profile Mutations
             val profileMutations = mutation.profileMutations.map {
                 ParsedProfileMutation(it.entityId, it.field, it.value)
@@ -283,4 +288,6 @@ sealed class LintResult {
     data class Deletion(val targetTitle: String) : LintResult()
     
     data class Reschedule(val targetTitle: String, val newInstruction: String) : LintResult()
+    
+    data class ToolDispatch(val workflowId: String, val params: Map<String, String>) : LintResult()
 }

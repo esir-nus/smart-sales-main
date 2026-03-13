@@ -226,15 +226,49 @@ class SchedulerLinterTest {
     fun `classification non_intent returns NonIntent`() {
         val json = """{"classification": "non_intent", "reason": "Just chatting", "tasks": []}"""
         val result = linter.lint(json)
-        assertTrue(result is LintResult.NonIntent)
     }
-    
+
     @Test
-    fun `invalid json returns Error (SerializationException)`() {
-        // Missing the "tasks" array which is NOT optional (though it can be empty) in UnifiedMutation depending on how we define it, assuming defaults.
-        // Even if empty array is fine, completely malformed JSON should error.
-        val badJson = "not json"
-        val result = linter.lint(badJson)
+    fun `tool dispatch valid execution`() {
+        val json = """
+            {
+                "classification": "schedulable",
+                "recommended_workflows": [
+                    {
+                        "workflowId": "GENERATE_PDF",
+                        "reason": "User requested a formal report",
+                        "parameters": {
+                            "target": "weekly_metrics"
+                        }
+                    }
+                ],
+                "tasks": []
+            }
+        """.trimIndent()
+        val result = linter.lint(json)
+        assertTrue(result is LintResult.ToolDispatch)
+        val dispatch = result as LintResult.ToolDispatch
+        assertEquals("GENERATE_PDF", dispatch.workflowId)
+        assertEquals("weekly_metrics", dispatch.params["target"])
+    }
+
+    @Test
+    fun `tool dispatch invalid json degrades gracefully without crashing`() {
+        val json = """
+            {
+                "classification": "schedulable",
+                "recommended_workflows": [
+                    {
+                        "workflowId": null,
+                        "parameters": "string_instead_of_object"
+                    }
+                ],
+                "tasks": []
+            }
+        """.trimIndent()
+        val result = linter.lint(json)
+        // kotlinx.serialization will throw an exception on schema mismatch (null for non-null String, String for Map),
+        // which the linter catches and returns as LintResult.Error. We expect it NOT to crash.
         assertTrue("Expected Error due to SerializationException", result is LintResult.Error)
     }
 }

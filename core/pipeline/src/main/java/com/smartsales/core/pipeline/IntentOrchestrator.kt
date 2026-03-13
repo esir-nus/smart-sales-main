@@ -32,6 +32,7 @@ class IntentOrchestrator @Inject constructor(
     private val entityWriter: EntityWriter
 ) {
     private var pendingProposal: PipelineResult.MutationProposal? = null
+    private var pendingToolDispatch: PipelineResult.ToolDispatch? = null
 
     suspend fun processInput(input: String): Flow<PipelineResult> {
         return flow {
@@ -39,8 +40,17 @@ class IntentOrchestrator @Inject constructor(
             // to avoid committing stale LLM hallucinations if the user ignored a previous confirmation card.
             if (input != "确认执行") {
                 pendingProposal = null
+                pendingToolDispatch = null
             } else {
                 // If it is a confirmation, execute the pending plan
+                if (pendingToolDispatch != null) {
+                    val dispatch = pendingToolDispatch!!
+                    pendingToolDispatch = null
+                    // Actually emit the ToolDispatch to the UI/PluginRegistry layer for execution
+                    emit(dispatch) 
+                    return@flow
+                }
+                
                 val proposal = pendingProposal
                 if (proposal == null) {
                     emit(PipelineResult.ConversationalReply("没有可执行的草案。"))
@@ -87,9 +97,13 @@ class IntentOrchestrator @Inject constructor(
                 
                 // Delegate to the heavy-duty pipeline and forward its results
                 unifiedPipeline.processInput(pipelineInput).collect { result ->
-                    // Intercept MutationProposals to cache them for Open-Loop confirmation
+                    // Intercept MutationProposals and ToolDispatch to cache them for Open-Loop confirmation
                     if (result is PipelineResult.MutationProposal) {
                         this@IntentOrchestrator.pendingProposal = result
+                    } else if (result is PipelineResult.ToolDispatch && result.toolId != "reschedule") {
+                        // "reschedule" is an internal legacy tool hack bypassing this block normally,
+                        // but Vault IDs like GENERATE_PDF should require confirmation.
+                        this@IntentOrchestrator.pendingToolDispatch = result
                     }
                     emit(result)
                 }

@@ -34,13 +34,21 @@
 - [x] **Execute**: Replace `SchedulerLinter` with strict Data Contract and implement PendingProposalStore.
 - [x] **Test**: Full L1/L2 scheduling flow succeeds natively under the Mono pipeline.
 
-### 🌊 Wave 4: Analyst & RL Harmonization (The Integration)
-> Roll out the Mono contract to the complex modules.
-- [ ] **Docs**: Update `docs/cerb/analyst-orchestrator` and `rl-module` specs.
+### 🌊 Wave 4: Analyst Harmonization (The Integration)
+> Roll out the Mono contract to the Analyst/Consultant pipeline.
+- [x] **Docs**: Update `docs/cerb/unified-pipeline/spec.md`.
+- [x] **Interface Map**: Update `docs/cerb/interface-map.md`.
+- [x] **Plan**: Run `/feature-dev-planner`.
+- [x] **Execute**: Migrate the Analyst/Consultant pipeline to conform to multiple-choice selection.
+- [x] **Test**: Verify Analyst Mode pipeline processes JSON multiple-choice cleanly without prompt drift.
+
+### 🌊 Wave 4.5: RL Harmonization (The Integration)
+> Roll out the Mono contract to the RL Subsystem.
+- [ ] **Docs**: Update `docs/cerb/rl-module/spec.md`.
 - [ ] **Interface Map**: Update `docs/cerb/interface-map.md`.
 - [ ] **Plan**: Run `/feature-dev-planner`.
-- [ ] **Execute**: Migrate the Analyst/Consultant pipeline and RL Subsystem to conform to multiple-choice selection.
-- [ ] **Test**: Verify Analyst Mode pipeline processes JSON multiple-choice cleanly without prompt drift.
+- [ ] **Execute**: Migrate the RL Subsystem to conform to multiple-choice selection.
+- [ ] **Test**: Verify RL module processes JSON multiple-choice cleanly without prompt drift.
 
 ---
 

@@ -287,6 +287,10 @@ class RealUnifiedPipeline @Inject constructor(
                             emit(PipelineResult.ConversationalReply("找到多个匹配项或未找到匹配项，无法改期"))
                         }
                     }
+                    is LintResult.ToolDispatch -> {
+                        Log.d("RealUnifiedPipeline", "ToolDispatch: key=\${lintResult.workflowId}")
+                        emit(PipelineResult.ToolDispatch(lintResult.workflowId, lintResult.params))
+                    }
                     is LintResult.NonIntent -> {
                         // Do nothing, just a normal reply which was already emitted above
                     }

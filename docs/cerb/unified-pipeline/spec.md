@@ -44,3 +44,4 @@ When a user provides substantive input, the pipeline executes the following sequ
 | **2** | Semantic Disambiguation | ✅ SHIPPED | `EntityDisambiguator` integration and explicit writing via `EntityWriter` |
 | **3** | Extracted LLM Execution | ✅ SHIPPED | PromptCompiler, Executor, and SchedulerLinter integration |
 | **4** | Transparent Mind State Streaming | ✅ SHIPPED | Emit intermediate `PipelineResult.Progress` during execution |
+| **5** | Analyst Harmonization (Mono Contract) | ✅ SHIPPED | Migrate Analyst/Consultant pipeline to conform to multiple-choice selection |

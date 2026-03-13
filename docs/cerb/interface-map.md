@@ -63,7 +63,7 @@ Orchestrates LLM-powered processing. Reads from Layer 2 data services.
 | **[Executor](./model-routing/spec.md)** | System II & Routing | Raw LLM output (stateless — no storage) | ModelRouter | `execute(LlmProfile, EnhancedContext) -> ExecutorResult` | — | ✅ |
 | **[PluginRegistry](./plugin-registry/spec.md)** | System II & Routing | Executable pure-Kotlin workflows (Tools) | — | `executeTool(ToolId, PluginRequest) -> Flow<UiState>` | OS: App | ✅ |
 | **[UnifiedPipeline](./unified-pipeline/spec.md)** | System II & Routing | System II context ETL & execution | ContextBuilder, InputParser, EntityDisambiguator | `processInput(PipelineInput) -> Flow<PipelineResult>` | OS: App | ✅ |
-| **IntentOrchestrator** | System II & Routing | High-level intent routing (Phase 0) | AgentViewModel, LightningRouter, UnifiedPipeline | `processInput(String) -> Flow<UiState>` | OS: App | 🚧 |
+| **IntentOrchestrator** | System II & Routing | High-level intent routing (Phase 0) | AgentViewModel, LightningRouter, UnifiedPipeline | `processInput(String) -> Flow<UiState>` | OS: App | ✅ |
 
 > **UnifiedPipeline is the only module that calls EntityWriter during task creation.** Feature modules (Scheduler, Mascot) receive results from UnifiedPipeline; they don't call EntityWriter themselves. (Exception: debug seed code in SchedulerViewModel, guarded by `DEBUG` build type.)
 >
@@ -122,17 +122,15 @@ graph TD
     C --> D["ASR (Tingwu)"]
     D -->|Submits to| E["IntentOrchestrator (Phase 0)"]
     E -->|GREETING/NOISE| F1["MascotService"]
-    E -->|TASK/CRM| E2["UnifiedPipeline"]
+    E -->|TASK/CRM/TOOL| E2["UnifiedPipeline"]
     E2 --> F0["EntityDisambiguator (Gateway)"]
     F0 --> F2["ContextBuilder (Kernel ETL)"]
     F2 --> F["Executor (LLM)"]
     F --> G["SchedulerLinter / Evaluators"]
-    G --> H1["UnifiedPipeline emits MutationProposal"]
+    G --> H1["UnifiedPipeline emits MutationProposal or ToolDispatch"]
     H1 --> H2["IntentOrchestrator holds Pending State"]
-    H2 -->|User Confirms| H3["IntentOrchestrator calls EntityWriter & Repo"]
-    H3 --> I["ScheduledTaskRepository.insertTask()"]
-    I --> J["ScheduleBoard.refresh()"]
-    J --> K["AgentViewModel (UI)"]
+    H2 -->|User Confirms| H3["IntentOrchestrator dispatches actions/mutations"]
+    H3 --> I["Task Repo / EntityWriter / PluginRegistry"]
 ```
 
 ---

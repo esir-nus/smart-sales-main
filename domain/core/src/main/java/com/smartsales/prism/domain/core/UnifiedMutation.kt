@@ -36,7 +36,23 @@ data class UnifiedMutation(
     @SerialName("profile_mutations")
     val profileMutations: List<ProfileMutation> = emptyList(),
     
-    val tasks: List<TaskMutation> = emptyList()
+    val tasks: List<TaskMutation> = emptyList(),
+    
+    // ----------------------------------------------------
+    // Analyst Engine tool recommendations (Mono Contract)
+    // ----------------------------------------------------
+    @SerialName("recommended_workflows")
+    val recommendedWorkflows: List<WorkflowRecommendation> = emptyList()
+)
+
+/**
+ * Defines an explicitly structured tool dispatch payload for the Analyst engine.
+ */
+@Serializable
+data class WorkflowRecommendation(
+    val workflowId: String,
+    val reason: String? = null,
+    val parameters: Map<String, String> = emptyMap()
 )
 
 /**

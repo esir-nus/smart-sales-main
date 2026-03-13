@@ -1,7 +1,7 @@
 # Core Contracts Spec
 
 > **OS Layer**: OS: App
-> **State**: SPEC_ONLY
+> **State**: SHIPPED
 
 ## 1. Overview
 The Core Contracts module defines the absolute boundary between the LLM ("The Brain") and the Application ("The Body") in Project Mono. 
@@ -43,4 +43,4 @@ The `UnifiedMutation` data class is the central nervous system. When the Brain p
 |------|-------|--------|--------------|
 | **1** | Core Contract Definition | ✅ SHIPPED | `UnifiedMutation`, `ProfileMutation`, `TaskMutation` data classes |
 | **2** | Prompt Compiler Integration | ✅ SHIPPED | Serializer extraction and schema generation in Prompt |
-| **3** | Linter Decoupling | 🔲 PLANNED | Replacing `SchedulerLinter` `org.json.JSONObject` string parsing with strict `decodeFromString<UnifiedMutation>()` |
+| **3** | Linter Decoupling | ✅ SHIPPED | Replacing `SchedulerLinter` `org.json.JSONObject` string parsing with strict `decodeFromString<UnifiedMutation>()` |

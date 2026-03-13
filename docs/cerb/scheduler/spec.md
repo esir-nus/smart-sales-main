@@ -206,9 +206,9 @@ User Voice Input
     ↓
 Orchestrator (MODE_SCHEDULER)
     ↓
-LLM Parse → JSON { title, startTime, endTime?, location?, keyPerson?, keyCompany?, ... }
+LLM Parse → [PromptCompiler enforces UnifiedMutation schema]
     ↓
-SchedulerLinter.lint() → LintResult.Success(parsedClues) | Error
+SchedulerLinter.lint(json) → Strict kotlinx.serialization against UnifiedMutation.tasks 
     ↓
 ScheduleBoard.checkConflict() → Clear | Conflict
     ↓
@@ -253,7 +253,7 @@ sealed class UiState {
 
 ### DateTime Normalization
 
-LLM sometimes outputs malformed dates. Linter normalizes:
+LLM sometimes outputs malformed dates. Linter normalizes before strict ISO-8601 parsing:
 ```kotlin
 // "2026-02-0303:00" → "2026-02-03 03:00"
 val normalized = dateTimeStr
@@ -304,13 +304,13 @@ fun buildCascade(level: UrgencyLevel): List<String> = when (level) {
 ### Linter Validation
 
 ```kotlin
-val urgency = json.optString("urgency", "L3")  // 默认 L3
-val urgencyLevel = when (urgency.uppercase()) {
-    "L1" -> UrgencyLevel.L1_CRITICAL
-    "L2" -> UrgencyLevel.L2_IMPORTANT
-    "L3" -> UrgencyLevel.L3_NORMAL
-    "FIRE_OFF" -> UrgencyLevel.FIRE_OFF
-    else -> UrgencyLevel.L3_NORMAL  // 无法识别 → 安全默认
+// (Project Mono Wave 2): Extracted directly from TaskMutation data class
+val urgencyStr = taskMutation.urgency
+val urgencyLevel = try {
+    UrgencyLevel.valueOf(urgencyStr.uppercase())
+} catch (e: IllegalArgumentException) {
+    // Fallback logic
+    UrgencyLevel.L3_NORMAL
 }
 val alarmCascade = buildCascade(urgencyLevel)
 val policy = if (urgencyLevel == UrgencyLevel.FIRE_OFF) 

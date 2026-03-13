@@ -33,7 +33,7 @@ When a user provides substantive input, the pipeline executes the following sequ
 
 ### 4. LLM Execution & Twin Writers
 - The Agent (`Executor`) receives the compiled context (`PromptCompiler`) and returns a structured JSON result.
-- The result is validated via Evaluators (e.g., `SchedulerLinter`).
+- The result is validated via Evaluators (e.g., `SchedulerLinter` enforcing the strict `UnifiedMutation` contract).
 - **Write-Backs**: If the intent is CRM_TASK, the pipeline saves the parsed tasks via `ScheduledTaskRepository.insert()`. Entity profile mutations trigger `EntityWriter` updates, which synchronously write-through to the Kernel RAM.
 
 ## Wave Plan

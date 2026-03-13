@@ -43,4 +43,4 @@ The `UnifiedMutation` data class is the central nervous system. When the Brain p
 |------|-------|--------|--------------|
 | **1** | Core Contract Definition | ✅ SHIPPED | `UnifiedMutation`, `ProfileMutation`, `TaskMutation` data classes |
 | **2** | Prompt Compiler Integration | ✅ SHIPPED | Serializer extraction and schema generation in Prompt |
-| **3** | Linter Decoupling | 🔲 PLANNED | Replacing `SchedulerLinter` JSON string parsing with `decodeFromString` |
+| **3** | Linter Decoupling | 🔲 PLANNED | Replacing `SchedulerLinter` `org.json.JSONObject` string parsing with strict `decodeFromString<UnifiedMutation>()` |

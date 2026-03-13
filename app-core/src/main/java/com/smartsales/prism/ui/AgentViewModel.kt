@@ -422,22 +422,10 @@ class AgentViewModel @Inject constructor(
                 executeToolDirectly(result.toolId, result.params)
             }
             is PipelineResult.SchedulerTaskCreated -> {
-                val ui = UiState.Response("已为您创建日程：${result.title}")
-                _history.value += ChatMessage.Ai(
-                    id = java.util.UUID.randomUUID().toString(),
-                    timestamp = System.currentTimeMillis(),
-                    uiState = ui
-                )
-                _uiState.value = UiState.Idle
+                android.util.Log.w("AgentVM", "Deprecated: Received SchedulerTaskCreated routing. Use MutationProposal instead.")
             }
             is PipelineResult.SchedulerMultiTaskCreated -> {
-                val ui = UiState.Response("已为您创建 ${result.tasks.size} 个日程")
-                _history.value += ChatMessage.Ai(
-                    id = java.util.UUID.randomUUID().toString(),
-                    timestamp = System.currentTimeMillis(),
-                    uiState = ui
-                )
-                _uiState.value = UiState.Idle
+                android.util.Log.w("AgentVM", "Deprecated: Received SchedulerMultiTaskCreated routing. Use MutationProposal instead.")
             }
             is PipelineResult.MutationProposal -> {
                 // T3 Open-Loop Defense: Render a proposal card instead of mutating
@@ -505,50 +493,7 @@ class AgentViewModel @Inject constructor(
                     uiState = ui
                 )
             }
-            "TASK_CREATED_BUBBLE" -> {
-                android.util.Log.d("AgentVM", "🧪 Injecting UiState.SchedulerTaskCreated")
-                val ui = UiState.SchedulerTaskCreated(
-                    taskId = "debug-task-001",
-                    title = "部门周会",
-                    dayOffset = 0,
-                    scheduledAtMillis = System.currentTimeMillis() + 3600_000,
-                    durationMinutes = 60,
-                    isReschedule = false
-                )
-                _uiState.value = ui
-                _history.value += ChatMessage.Ai(
-                    id = java.util.UUID.randomUUID().toString(),
-                    timestamp = System.currentTimeMillis(),
-                    uiState = ui
-                )
-            }
-            "MULTI_TASK_CREATED_BUBBLE" -> {
-                android.util.Log.d("AgentVM", "🧪 Injecting UiState.SchedulerMultiTaskCreated")
-                val task1 = UiState.SchedulerTaskCreated(
-                    taskId = "m-debug-01",
-                    title = "产品对焦",
-                    dayOffset = 0,
-                    scheduledAtMillis = System.currentTimeMillis() + 3600_000,
-                    durationMinutes = 30
-                )
-                val task2 = UiState.SchedulerTaskCreated(
-                    taskId = "m-debug-02",
-                    title = "技术调研",
-                    dayOffset = 0,
-                    scheduledAtMillis = System.currentTimeMillis() + 7200_000,
-                    durationMinutes = 120
-                )
-                val ui = UiState.SchedulerMultiTaskCreated(
-                    tasks = listOf(task1, task2),
-                    hasConflict = false
-                )
-                _uiState.value = ui
-                _history.value += ChatMessage.Ai(
-                    id = java.util.UUID.randomUUID().toString(),
-                    timestamp = System.currentTimeMillis(),
-                    uiState = ui
-                )
-            }
+
             "MULTI_INTENT_PROPOSAL" -> {
                 android.util.Log.d("AgentVM", "🧪 Injecting simulated Multi-Intent Proposal")
                 val ui = UiState.Response("已为您起草更新：调度会议 [与张总沟通价格] 并更新字段 [dealStage -> Won]。请点击卡片确认。")

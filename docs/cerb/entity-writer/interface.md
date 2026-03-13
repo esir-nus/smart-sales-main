@@ -132,7 +132,7 @@ data class ProfileChange(
 
 | Method | Precondition |
 |--------|--------------|
-| `upsertFromClue` | `clue` must be non-blank. Throws `IllegalArgumentException` otherwise. |
+| `upsertFromClue` | `clue` must be non-blank. Throws `IllegalArgumentException` otherwise. Input must be extracted from strict `ProfileMutation` structures defined in `domain:core`. |
 | `updateAttribute` | `entityId` must exist. No-op if not found. `key` must not start with `_`. |
 | `updateProfile` | `entityId` must exist. Throws `IllegalArgumentException` if not found. Only tracked fields accepted. |
 | `registerAlias` | `entityId` must exist. No-op if not found. |
@@ -158,6 +158,7 @@ data class ProfileChange(
 
 | ❌ Don't | ✅ Do Instead |
 |----------|--------------|
+| Use legacy regex or string-matching to extract fields | Use strict JSON deserialization against `UnifiedMutation` |
 | Call `EntityRepository.save()` directly | Use `EntityWriter.upsertFromClue()` — it handles write-through (RAM + SSD) |
 | Implement dedup logic in your feature | EntityWriter handles alias-based dedup |
 | Build your own field merge logic | EntityWriter enforces update policies |
@@ -167,9 +168,10 @@ data class ProfileChange(
 
 ---
 
-## Usage Example (Scheduler)
+## Usage Example (UnifiedPipeline Linter)
 
 ```kotlin
+// Driven by strict JSON extraction from UnifiedMutation (Project Mono)
 // After entity resolution in Phase 2:
 val resolvedId = entityContext["person_candidate_0"]?.entityId
 

@@ -2,7 +2,7 @@
 
 > **Cerb-compliant spec** — Internal implementation of centralized entity writes.  
 > **OS Layer**: RAM Application
-> **State**: Wave 5 IN PROGRESS
+> **State**: Mono Wave 2 IN PROGRESS
 
 ---
 
@@ -78,11 +78,15 @@ graph TD
 
 ---
 
+## The "One Currency" Contract (Project Mono)
+
+EntityWriter no longer relies on legacy regex linters or LLM-translation guessing. It is driven by strict JSON deserialization against the `UnifiedMutation` (data class defined in `domain:core`). The `ProfileMutation` elements within that parsed payload dictate the exact entity mutations to perform.
+
 ## Architecture
 
 ```
-Caller (Scheduler/Coach/Analyst)
-       │
+Caller (UnifiedPipeline Linter deserializing UnifiedMutation)
+       │ (Passes strict JSON-extracted fields)
        ▼
 [EntityWriter.upsertFromClue()]
        │
@@ -254,6 +258,7 @@ Convention: Keys prefixed with `_` are metadata, not business attributes.
 | ~~3~~ | ~~Conflict Merge~~ | ❌ KILLED | See architectural decision below |
 | **4** | **OS Model Upgrade** (RAM Application) | ✅ SHIPPED | Write-through to RAM Section 1 on all 4 mutation methods + `recordActivity()` App→Kernel callback |
 | **5** | **Alignment & Disambiguation** | ✅ SHIPPED | Curated Alias Model, Resolution Cascade, Entity Confirmation Flow |
+| **Mono W2**| **The Linter Upgrade (The Bouncer)** | 🔲 PENDING | Refactoring Linters to pure Type Checkers using strict JSON deserialization against `domain:core:UnifiedMutation`. No more regex guessing. |
 
 ### ~~Wave 3~~ Architectural Decision: No Merge UI Needed
 

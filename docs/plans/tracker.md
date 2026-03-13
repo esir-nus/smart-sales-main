@@ -91,7 +91,7 @@
 - [x] ✅ **T2: The Async Loop** (Unbinding System II execution from Voice completion)
 - [x] ✅ **T3: Secondary Currency RL Harmonization** (`HabitContext` -> `EnhancedContext` injection)
 - [x] ✅ **T4: Mascot Presentation Collection** (Migrate from single-frame shimmer to sustained lifecycle collection)
-- [ ] 🔲 **T5: The Hand-Off Animation** (Visual bridging between voice ingestion and LLM execution)
+- [ ] ⏬ **T5: DEFERRED: The Hand-Off Animation** (Visual bridging between voice ingestion and LLM execution. Paused due to Voice Source ambiguity — see Tech Debt)
 
 ### 🌊 Wave 7: The Final Audit (Phase 3 E2E Pillar Resumption)
 > System-wide E2E Device Tests for: Lightning Fast-Track, Dual-Engine Bridge, Strict Interface Integrity, Adaptive Habit Loop, Efficiency Overload, Transparent Mind. This is the capstone requirement before declaring the foundational architecture stable.
@@ -109,6 +109,7 @@
 | TOCTOU in observe() | `RoomUserHabitRepository.kt` | Low |
 | Room error handling | `Room*Repository` — no try-catch on writes | Low |
 | **Confidence-Based Reminder Interceptor** | Replace deterministic round-1 wrap-up with LLM confidence-based interception. Agent decides when to surface schedule context. Requires classifier or LLM self-assessment of conversation intent. Current workaround: smarter prompting that lets LLM decide naturally. | Medium |
+| **Voice Hand-Off Animation** | `AgentChatScreen.kt`, `UiState.kt` — Visual bridging for voice ingestion. Deferred due to architectural ambiguity: must decide if `AgentChatScreen` mic records directly, or if it strictly observes `BadgeAudioPipeline` global states. Spec updated (`UiState.AudioProcessing`), but implementation pending source definition. | Medium |
 
 ---
 
@@ -127,6 +128,7 @@
 > Key spec/impl changes, newest first. Like `git log --oneline`.
 
 ### 2026-03-13
+- **agent-intelligence-ui**: Wave 6 T5 (Hand-Off Animation) DEFERRED. Review Conference identified critical architectural ambiguity regarding the source of voice ingestion (Badge vs Phone Mic). `UiState.AudioProcessing` contract drafted in spec, but implementation deferred as Tech Debt until the hardware source is formally defined to prevent breaking the OS Model. Wave 6 is otherwise complete.
 - **architecture**: Wave 5 T3 The RL Harmonization SHIPPED. Extracted the background Reinforcement Learning habit mapping into a strict Secondary Currency contract (`RlPayload`) defined in `:domain:habit`, decoupling it entirely from the main conversational SSD mutation pipeline (`UnifiedMutation`). Created `RlPayloadSchemaTest` to mechanically prove that the LLM system prompt output matches the Kotlin data class properties exactly.
 - **architecture**: KernelWriteBack Async Race Condition HOTFIXED. Discovered a dirty-reading gap in `L2WriteBackConcurrencyTest` where parallel rapid-fire intents fetched stale SSD graphs into the `RealContextBuilder`'s RAM before background DB writes completed. Updated the `KernelWriteBack` abstract contract to natively seed the dirty `EntityEntry` payload completely into RAM via a synchronized WriteThrough, physically sealing the race condition. 
 - **architecture**: Wave 5 T1 The Sync Loop SHIPPED. Implemented the "Entity Candidate Gatekeeper" protocol via `AliasCache` in `:domain:crm` and `:data:crm`. `IntentOrchestrator` successfully intercepts candidates via Lightning Router's `missing_entities` and fast-fails ambiguous queries into `UiState.AwaitingClarification`, avoiding the heavy `UnifiedPipeline` and saving significant SSD/LLM transit time.

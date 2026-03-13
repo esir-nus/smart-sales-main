@@ -181,6 +181,7 @@ find app-core/src/main/java -name "*[Feature]*" -type f | grep -i "ui/"
 - [ ] Fakes clean (no skeleton data)
 - [ ] L2 scenario planned (if UI feature)
 - [ ] Tagged `Log.d` calls added to trace data flow (`adb logcat -s Tag:D`)
+- [ ] **Mandatory Mechanical Verification:** The plan MUST include a step to execute a mechanical test script (e.g., `grep` for forbidden imports, or Kotlin Reflection schema validation) to mathematically validate the contract. Do not rely on "vibe checking" the interface map.
 ```
 
 **STOP if any box unchecked.**

@@ -33,18 +33,22 @@ The acceptance team consists of specialized examiners. You (the agent) act as th
   - Are all "MUST" requirements locally verifiable?
 
 ### 2. Contract Examiner 🤝
-*Ensures architectural integrity and ownership rules.*
+*Ensures architectural integrity, ownership rules, and strict Brain/Body data contracts via MECHANICAL validation.*
 
 - **Input**: `docs/cerb/interface-map.md` + Changed Files
-- **Command**:
+- **Command**: MUST run a result-oriented mechanical script. **"Vibe checking" by reading code is strictly FORBIDDEN.**
   ```bash
-  # Check for forbidden imports
+  # Example 1: Check for forbidden imports (OS Layer Isolation)
   grep -r "import com.smartsales.prism.data" [feature_domain_path]
+  grep -r "import android." [core_pipeline_path]
+  
+  # Example 2: Mathematical Schema Validation (Anti-Hallucination)
+  # Write a temporary Kotlin test/script via Reflection to prove the LLM Prompt matches the :domain Data Class.
   ```
 - **Rubric**:
-  - Does the code import only from allowed layers? (See `interface-map.md`)
-  - Are "Writes" going through the owner module?
-  - Are "Reads" going through the public interface?
+  - Did the mechanical `grep` script return 0 forbidden imports?
+  - Does the mechanical reflection/schema test prove the LLM JSON strictly maps to the Kotlin Data Class?
+  - Are "Writes" going through the owner module? (Verified via grep, not guessing)
 
 ### 3. Build Examiner 🏗️
 *Ensures it actually works.*

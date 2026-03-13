@@ -89,14 +89,14 @@ open class PromptCompiler @Inject constructor() {
         // Wave 3: Entity Knowledge Context（替代原始 memoryHits）
         val entityKnowledge = context.entityKnowledge
         if (!entityKnowledge.isNullOrEmpty()) {
-            android.util.Log.d("CoachMemory", "📝 PromptCompiler: injecting entityKnowledge (${entityKnowledge.length} chars)")
+            Log.d("CoachMemory", "📝 PromptCompiler: injecting entityKnowledge (${entityKnowledge.length} chars)")
             appendLine()
             appendLine("<KNOWN_FACTS>")
             appendLine(entityKnowledge)
             appendLine("</KNOWN_FACTS>")
             appendLine("回复中涉及客户的每句话，必须能在 KNOWN_FACTS 中找到原文。标签外的客户信息你一概不知。")
         } else {
-            android.util.Log.d("CoachMemory", "📝 PromptCompiler: no entityKnowledge in context")
+            Log.d("CoachMemory", "📝 PromptCompiler: no entityKnowledge in context")
             appendLine()
             appendLine("<KNOWN_FACTS>无</KNOWN_FACTS>")
             appendLine("你没有客户信息。回复中不要提及客户，也不要说\"暂无信息\"。直接跳过客户相关话题。")
@@ -104,7 +104,7 @@ open class PromptCompiler @Inject constructor() {
         // Wave 4: 临时文档上下文 (Transient Payload)
         context.documentContext?.let { doc ->
             if (doc.isNotBlank()) {
-                android.util.Log.d("CoachMemory", "📝 PromptCompiler: injecting documentContext (${doc.length} chars)")
+                Log.d("CoachMemory", "📝 PromptCompiler: injecting documentContext (${doc.length} chars)")
                 appendLine()
                 appendLine("<DOCUMENT_CONTEXT>")
                 appendLine("以下是你需要分析或参考的底层文档内容：")
@@ -126,17 +126,17 @@ open class PromptCompiler @Inject constructor() {
         context.habitContext?.let { habits ->
             val allHabits = habits.userHabits + habits.clientHabits
             if (allHabits.isNotEmpty()) {
-                android.util.Log.d("CoachMemory", "📝 PromptCompiler: injecting ${allHabits.size} habit(s) into prompt")
+                Log.d("CoachMemory", "📝 PromptCompiler: injecting ${allHabits.size} habit(s) into prompt")
                 appendLine()
                 appendLine("## 用户偏好")
                 allHabits.take(5).forEach { habit ->
                     appendLine("- ${habit.habitKey}: ${habit.habitValue}")
-                    android.util.Log.d("CoachMemory", "📝 PromptCompiler: → '${habit.habitKey}: ${habit.habitValue.take(30)}...'")
+                    Log.d("CoachMemory", "📝 PromptCompiler: → '${habit.habitKey}: ${habit.habitValue.take(30)}...'")
                 }
             } else {
-                android.util.Log.d("CoachMemory", "📝 PromptCompiler: no habit context")
+                Log.d("CoachMemory", "📝 PromptCompiler: no habit context")
             }
-        } ?: android.util.Log.d("CoachMemory", "📝 PromptCompiler: habitContext is null")
+        } ?: Log.d("CoachMemory", "📝 PromptCompiler: habitContext is null")
 
         // Sticky Notes: 近期日程（上下文驱动，非强制汇报）
         context.scheduleContext?.let { schedule ->

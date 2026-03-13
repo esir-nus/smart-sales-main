@@ -6,7 +6,7 @@
 - [x] The OS documentation `docs/cerb/scheduler/spec.md` accurately describes the UI confirming pipeline rather than the legacy branch.
 
 ## 2. Contract Examiner 🤝
-- [x] No `android.*` imports exist in `domain` logic or `core/pipeline`.
+- [x] No `android.*` imports exist in `domain` logic or `core/pipeline`. *(Fixed: Purged `android.util.Log` from 6 timeline files and injected pure Kotlin `Log` object)*.
 - [x] Data boundaries respect `docs/cerb/interface-map.md`. All writes to `ScheduleBoard` and `EntityWriter` execute strictly inside `IntentOrchestrator` post-confirmation.
 - [x] The `UnifiedPipeline` remains stateless and correctly returns `PipelineResult.MutationProposal`.
 

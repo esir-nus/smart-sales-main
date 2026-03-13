@@ -16,7 +16,7 @@ class RealToolRegistry @Inject constructor(
     }
 
     override fun executeTool(toolId: String, request: PluginRequest, gateway: PluginGateway): Flow<UiState> {
-        android.util.Log.d("ToolRegistry", "Executing tool: $toolId")
+        Log.d("ToolRegistry", "Executing tool: $toolId")
         val plugin = plugins.find { it.metadata.id == toolId }
         return if (plugin != null) {
             plugin.execute(request, gateway)

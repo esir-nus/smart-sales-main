@@ -15,6 +15,9 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
 import com.smartsales.prism.domain.crm.writeback.KernelWriteBack
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import javax.inject.Named
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -27,7 +30,8 @@ import javax.inject.Singleton
 class RealEntityWriter @Inject constructor(
     private val entityRepository: EntityRepository,
     private val timeProvider: com.smartsales.prism.domain.time.TimeProvider,
-    private val kernelWriteBack: KernelWriteBack // Breaks concrete coupling to RealContextBuilder
+    private val kernelWriteBack: KernelWriteBack, // Breaks concrete coupling to RealContextBuilder
+    @Named("AppScope") private val appScope: CoroutineScope
 ) : EntityWriter {
 
     companion object {
@@ -59,10 +63,14 @@ class RealEntityWriter @Inject constructor(
         return if (existingEntry != null) {
             // 已有实体 → read-modify-write
             val merged = mergeFields(existingEntry, clue, source, now)
-            entityRepository.save(merged)
-            Log.d(TAG, "📝 更新实体: id=${merged.entityId} name=${merged.displayName} source=$source")
+            
+            // Fire-and-forget: 异步持久化到 SSD
+            appScope.launch {
+                entityRepository.save(merged)
+                Log.d(TAG, "📝 异步更新实体SSD完毕: id=${merged.entityId} name=${merged.displayName} source=$source")
+            }
 
-            // Write-through → RAM Section 1
+            // Sync Write-through → RAM Section 1
             writeThrough(merged)
 
             UpsertResult(
@@ -85,10 +93,14 @@ class RealEntityWriter @Inject constructor(
                 lastUpdatedAt = now,
                 createdAt = now
             )
-            entityRepository.save(newEntry)
-            Log.d(TAG, "✨ 创建实体: id=$entityId name=$clue type=$type source=$source")
+            
+            // Fire-and-forget: 异步持久化到 SSD
+            appScope.launch {
+                entityRepository.save(newEntry)
+                Log.d(TAG, "✨ 异步创建实体SSD完毕: id=$entityId name=$clue type=$type source=$source")
+            }
 
-            // Write-through → RAM Section 1
+            // Sync Write-through → RAM Section 1
             writeThrough(newEntry)
 
             UpsertResult(
@@ -115,12 +127,15 @@ class RealEntityWriter @Inject constructor(
             attributesJson = attrs.toString(),
             lastUpdatedAt = timeProvider.now.toEpochMilli()
         )
-        entityRepository.save(updated)
+        
+        // Fire-and-forget: 异步持久化到 SSD
+        appScope.launch {
+            entityRepository.save(updated)
+            Log.d(TAG, "📝 异步属性更新SSD完毕: id=$entityId key=$key")
+        }
 
-        // Write-through → RAM Section 1
+        // Sync Write-through → RAM Section 1
         writeThrough(updated)
-
-        Log.d(TAG, "📝 属性更新: id=$entityId key=$key")
     }
 
     override suspend fun registerAlias(entityId: String, alias: String) {
@@ -145,12 +160,15 @@ class RealEntityWriter @Inject constructor(
             aliasesJson = JSONArray(newAliases).toString(),
             lastUpdatedAt = timeProvider.now.toEpochMilli()
         )
-        entityRepository.save(updated)
+        
+        // Fire-and-forget: 异步持久化到 SSD
+        appScope.launch {
+            entityRepository.save(updated)
+            Log.d(TAG, "🏷️ 异步别名注册SSD完毕: id=$entityId alias=$alias (total=${newAliases.size})")
+        }
 
-        // Write-through → RAM Section 1
+        // Sync Write-through → RAM Section 1
         writeThrough(updated)
-
-        Log.d(TAG, "🏷️ 别名注册: id=$entityId alias=$alias (total=${newAliases.size})")
     }
 
     override suspend fun updateProfile(
@@ -219,30 +237,39 @@ class RealEntityWriter @Inject constructor(
 
         if (changes.isNotEmpty()) {
             val finalEntry = merged.copy(lastUpdatedAt = timeProvider.now.toEpochMilli())
-            entityRepository.save(finalEntry)
+            
+            // 同步写入 RAM Section 1
             writeThrough(finalEntry)
-
-            // Kernel 回调: 记录历史事件
-            for (change in changes) {
-                val activityType = TRACKED_FIELDS[change.field] ?: continue
-                kernelWriteBack.recordActivity(
-                    entityId = entityId,
-                    type = activityType,
-                    summary = "${change.oldValue ?: "（空）"} → ${change.newValue}"
-                )
+            
+            // 异步持久化到 SSD 与 Kernel 记录历史
+            appScope.launch {
+                entityRepository.save(finalEntry)
+                
+                // Kernel 回调: 记录历史事件
+                for (change in changes) {
+                    val activityType = TRACKED_FIELDS[change.field] ?: continue
+                    kernelWriteBack.recordActivity(
+                        entityId = entityId,
+                        type = activityType,
+                        summary = "${change.oldValue ?: "（空）"} → ${change.newValue}"
+                    )
+                }
+                Log.d(TAG, "👤 异步Profile更新SSD及记录历史完毕: id=$entityId changes=${changes.size}")
             }
-
-            Log.d(TAG, "👤 Profile更新: id=$entityId changes=${changes.size}")
         }
 
         return ProfileUpdateResult(entityId = entityId, changes = changes)
     }
 
     override suspend fun delete(entityId: String) {
-        entityRepository.delete(entityId)
-        // Write-through → 从 RAM Section 1 移除
+        // 异步删除 SSD
+        appScope.launch {
+            entityRepository.delete(entityId)
+            Log.d(TAG, "🗑️ 异步删除实体SSD完毕: id=$entityId")
+        }
+        
+        // Sync Write-through → 从 RAM Section 1 移除
         kernelWriteBack.removeEntityFromSession(entityId)
-        Log.d(TAG, "🗑️ 删除实体: id=$entityId")
     }
 
     // --- Private helpers ---

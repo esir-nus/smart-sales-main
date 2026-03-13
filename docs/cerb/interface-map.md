@@ -45,7 +45,7 @@ Store and query domain data. Other modules use their interfaces but never each o
 
 > **EntityWriter vs EntityRegistry**: Writer handles mutations (dedup, merge, alias registration) AND write-through to RAM S1. Registry handles queries. Callers MUST use Writer for writes, Registry for reads. Never call `EntityRepository.save()` directly.
 >
-> **EntityWriter → SessionContext (write-through)**: After persisting to SSD, EntityWriter calls `RealContextBuilder.updateEntityInSession()` to keep RAM Section 1 in sync. This is an App→Kernel internal edge (concrete injection, not on ContextBuilder interface).
+> **EntityWriter → SessionContext (CQRS write-through)**: EntityWriter synchronously updates RAM Section 1 via `RealContextBuilder.updateEntityInSession()` to keep memory instantly consistent. It defers SSD persistence to an asynchronous `AppScope`. Callers experience zero SSD transit latency.
 
 ---
 

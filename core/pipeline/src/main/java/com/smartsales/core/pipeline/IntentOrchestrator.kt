@@ -15,6 +15,9 @@ import com.smartsales.prism.domain.model.ClarificationType
 import com.smartsales.prism.domain.model.CandidateOption
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import javax.inject.Named
 
 /**
  * IntentOrchestrator (Phase 0 Gateway)
@@ -35,7 +38,8 @@ class IntentOrchestrator @Inject constructor(
     private val scheduledTaskRepository: ScheduledTaskRepository,
     private val scheduleBoard: ScheduleBoard,
     private val entityWriter: EntityWriter,
-    private val aliasCache: AliasCache
+    private val aliasCache: AliasCache,
+    @Named("AppScope") private val appScope: CoroutineScope
 ) {
     private var pendingProposal: PipelineResult.MutationProposal? = null
     private var pendingToolDispatch: PipelineResult.ToolDispatch? = null
@@ -63,15 +67,17 @@ class IntentOrchestrator @Inject constructor(
                     return@flow
                 }
                 
-                // Execute actual database writes
-                proposal.task?.let { task ->
-                    scheduledTaskRepository.insertTask(task)
-                    scheduleBoard.refresh()
-                }
-                
-                proposal.profileMutations.forEach { mut ->
-                    // Wave 3: Safe interaction with EntityWriter
-                    entityWriter.updateAttribute(mut.entityId, mut.field, mut.value)
+                // Execute actual database writes asynchronously so UI responds instantly
+                appScope.launch {
+                    proposal.task?.let { task ->
+                        scheduledTaskRepository.insertTask(task)
+                        scheduleBoard.refresh()
+                    }
+                    
+                    proposal.profileMutations.forEach { mut ->
+                        // Wave 3: Safe interaction with EntityWriter
+                        entityWriter.updateAttribute(mut.entityId, mut.field, mut.value)
+                    }
                 }
                 
                 pendingProposal = null

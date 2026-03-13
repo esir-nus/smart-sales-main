@@ -65,12 +65,12 @@
 - [x] **Test**: Verify sub-second Lightning Router responses via test simulations and adb logcat output.
 
 #### T2: The Async Loop (Background Mutations)
-- [ ] **Docs**: Update `docs/cerb/entity-writer/spec.md` for asynchronous mutation decoupling.
-- [ ] **Interface Map**: Update `docs/cerb/interface-map.md`.
-- [ ] **Plan**: Run `/feature-dev-planner`.
-- [ ] **Execute**: Rip the heavy `decodeFromString` EntityWriter SSD mutation out of the main conversational execution path.
-- [ ] **Execute**: Schedule SSD writes in an isolated Coroutines background scope (or WorkManager) and stream the completion event back into the RAM Context Table.
-- [ ] **Test**: Verify background SSD writes via Logcat without stalling main conversational response text generation.
+- [x] **Docs**: Update `docs/cerb/entity-writer/spec.md` for asynchronous mutation decoupling.
+- [x] **Interface Map**: Update `docs/cerb/interface-map.md`.
+- [x] **Plan**: Run `/feature-dev-planner`.
+- [x] **Execute**: Rip the heavy `decodeFromString` EntityWriter SSD mutation out of the main conversational execution path.
+- [x] **Execute**: Schedule SSD writes in an isolated Coroutines background scope (or WorkManager) and stream the completion event back into the RAM Context Table.
+- [x] **Test**: Verify background SSD writes via Logcat without stalling main conversational response text generation.
 
 #### T3: The RL Harmonization (Background Learnings)
 - [ ] **Docs**: Update `docs/cerb/rl-module/spec.md` denoting the "Secondary Currency" contract for background Habit Extraction.

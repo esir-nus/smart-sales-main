@@ -11,8 +11,8 @@ EntityWriter is an **Application** that runs on the SessionWorkingSet (RAM). It 
 
 **OS Model Role**:
 - **Searcher**: Queries full SSD catalog for dedup/resolution (allowed per OS Model boundary rules).
-- **Writer**: Mutations write-through — update RAM Section 1 AND persist to SSD.
-- **Kernel Invoker**: `updateProfile()` calls `ContextBuilder.recordActivity()` (App → Kernel) to emit history events.
+- **Writer**: Mutations write-through — **synchronous** update to RAM Section 1, and **asynchronous** persistence to SSD.
+- **Kernel Invoker**: `updateProfile()` calls `ContextBuilder.recordActivity()` (App → Kernel) to emit history events asynchronously.
 - **Constraint**: Callers must NOT call `EntityRepository.save()` directly. All mutations go through EntityWriter.
 
 Ensures consistent:
@@ -39,9 +39,9 @@ Ensures consistent:
 
 | Old Model (Silo) | New OS Model (RAM Application) |
 |------------------|--------------------------------|
-| EntityWriter calls `EntityRepository.save()` directly | Mutations write-through: RAM Section 1 + SSD |
-| Callers don't know if entity is session-active | Mutations update the active session context |
-| `updateProfile()` only persists to SSD | `updateProfile()` updates RAM + SSD + emits Kernel history event |
+| EntityWriter calls `EntityRepository.save()` directly | Mutations write-through: **Synchronous** RAM + **Async** SSD |
+| Callers don't know if entity is session-active | Mutations instantly update the active session context |
+| `updateProfile()` only persists to SSD | `updateProfile()` synchronously updates RAM, async saves to SSD + emits Kernel history event |
 | New entities invisible until next session | New entities immediately available in current session RAM |
 
 ### 1. Search & Dedup (SSD Allowed)
@@ -56,8 +56,8 @@ Ensures consistent:
 **Trigger**: Any `save()` or `delete()` call.
 **Action**: Write-Through (Atomic).
 
-1. **Persist to SSD**: Write to `EntityRepository` (Room).
-2. **Update RAM**: If entity is in Session Section 1, update the in-memory reference.
+1. **Update RAM (Sync)**: If entity is in Session Section 1, update the in-memory reference immediately so subsequent LLM or logic turns see the new data.
+2. **Persist to SSD (Async)**: Fire-and-forget write to `EntityRepository` (Room) via `AppScope`.
 
 ```mermaid
 graph TD
@@ -255,9 +255,10 @@ Convention: Keys prefixed with `_` are metadata, not business attributes.
 | **1.5** | Wiring | ✅ SHIPPED | Wire into `UnifiedPipeline` Scheduler path — creates PERSON + ACCOUNT entities for business-relevant contacts |
 | **2** | Change-Aware Profile Management | ✅ SHIPPED | `updateProfile()`, `ProfileUpdateResult`, `ProfileChange`, history emission via `recordActivity()` |
 | ~~3~~ | ~~Conflict Merge~~ | ❌ KILLED | See architectural decision below |
-| **4** | **OS Model Upgrade** (RAM Application) | ✅ SHIPPED | Write-through to RAM Section 1 on all 4 mutation methods + `recordActivity()` App→Kernel callback |
+| **4** | **OS Model Upgrade** (RAM Application) | ✅ SHIPPED | Write-through to RAM Section 1 on all mutation methods + `recordActivity()` App→Kernel callback |
 | **5** | **Alignment & Disambiguation** | ✅ SHIPPED | Curated Alias Model, Resolution Cascade, Entity Confirmation Flow |
 | **Mono W2**| **The Linter Upgrade (The Bouncer)** | ✅ SHIPPED | Refactoring Linters to pure Type Checkers using strict JSON deserialization against `domain:core:UnifiedMutation`. No more regex guessing. |
+| **Mono W5**| **The Async Loop (CQRS Engine)** | ✅ SHIPPED | Decoupled EntityWriter SSD mutation from RAM context update. RAM sync is instant, SSD save and heavy DB decode strings are pushed to background coroutines. |
 
 ### ~~Wave 3~~ Architectural Decision: No Merge UI Needed
 

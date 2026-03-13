@@ -5,6 +5,8 @@ import com.smartsales.core.test.fakes.FakeEntityRepository
 import com.smartsales.prism.data.fakes.FakeTimeProvider
 import com.smartsales.prism.domain.memory.EntityType
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.json.JSONArray
 import org.junit.Assert.*
 import org.junit.Before
@@ -20,13 +22,14 @@ class EntityWriterBreakItTest {
     private lateinit var repo: FakeEntityRepository
     private lateinit var writer: RealEntityWriter
     private lateinit var writeBack: FakeKernelWriteBack
+    private val testScope = TestScope(UnconfinedTestDispatcher())
 
     @Before
     fun setup() {
         repo = FakeEntityRepository()
         val timeProvider = FakeTimeProvider()
         writeBack = FakeKernelWriteBack()
-        writer = RealEntityWriter(repo, timeProvider, writeBack)
+        writer = RealEntityWriter(repo, timeProvider, writeBack, testScope)
     }
 
     // --- Null / Empty / Blank ---

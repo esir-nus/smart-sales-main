@@ -465,32 +465,25 @@ $taskContext
             )
             unifiedPipeline.processInput(pipelineInput).collect { pResult ->
                 when(pResult) {
-                    is PipelineResult.SchedulerTaskCreated -> {
-                        val uiResult = UiState.SchedulerTaskCreated(
-                            taskId = pResult.taskId,
-                            title = pResult.title,
-                            dayOffset = pResult.dayOffset,
-                            scheduledAtMillis = pResult.scheduledAtMillis,
-                            durationMinutes = pResult.durationMinutes,
-                            isReschedule = pResult.isReschedule || isReschedule
-                        )
-                        handleCreateResult(uiResult, isReschedule = uiResult.isReschedule)
-                        triggerRefresh()
-                    }
-                    is PipelineResult.SchedulerMultiTaskCreated -> {
-                        val uiTasks = pResult.tasks.map { pt ->
-                            UiState.SchedulerTaskCreated(
-                                taskId = pt.taskId,
-                                title = pt.title,
-                                dayOffset = pt.dayOffset,
-                                scheduledAtMillis = pt.scheduledAtMillis,
-                                durationMinutes = pt.durationMinutes,
-                                isReschedule = pt.isReschedule || isReschedule
+                    is PipelineResult.MutationProposal -> {
+                        if (pResult.task != null) {
+                            val uiResult = UiState.SchedulerTaskCreated(
+                                taskId = pResult.task!!.id,
+                                title = pResult.task!!.title,
+                                dayOffset = java.time.temporal.ChronoUnit.DAYS.between(
+                                    java.time.LocalDate.now(),
+                                    java.time.Instant.ofEpochMilli(pResult.task!!.startTime.toEpochMilli())
+                                        .atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                                ).toInt(),
+                                scheduledAtMillis = pResult.task!!.startTime.toEpochMilli(),
+                                durationMinutes = pResult.task!!.durationMinutes,
+                                isReschedule = isReschedule
                             )
+                            handleCreateResult(uiResult, isReschedule = isReschedule)
+                            triggerRefresh()
+                        } else {
+                            android.util.Log.d("SchedulerVM", "🎙️ MutationProposal contained no task, ignoring.")
                         }
-                        val uiResult = UiState.SchedulerMultiTaskCreated(uiTasks, pResult.hasConflict)
-                        handleCreateResult(uiResult, isReschedule = isReschedule)
-                        triggerRefresh()
                     }
                     is PipelineResult.ClarificationNeeded -> {
                         handleCreateResult(UiState.AwaitingClarification(pResult.question, com.smartsales.prism.domain.model.ClarificationType.MISSING_TIME), isReschedule = isReschedule)
@@ -526,32 +519,25 @@ $taskContext
                     )
                     unifiedPipeline.processInput(pipelineInput).collect { pResult ->
                         when(pResult) {
-                            is PipelineResult.SchedulerTaskCreated -> {
-                                val uiResult = UiState.SchedulerTaskCreated(
-                                    taskId = pResult.taskId,
-                                    title = pResult.title,
-                                    dayOffset = pResult.dayOffset,
-                                    scheduledAtMillis = pResult.scheduledAtMillis,
-                                    durationMinutes = pResult.durationMinutes,
-                                    isReschedule = pResult.isReschedule
-                                )
-                                handleCreateResult(uiResult)
-                                triggerRefresh()
-                            }
-                            is PipelineResult.SchedulerMultiTaskCreated -> {
-                                val uiTasks = pResult.tasks.map { pt ->
-                                    UiState.SchedulerTaskCreated(
-                                        taskId = pt.taskId,
-                                        title = pt.title,
-                                        dayOffset = pt.dayOffset,
-                                        scheduledAtMillis = pt.scheduledAtMillis,
-                                        durationMinutes = pt.durationMinutes,
-                                        isReschedule = pt.isReschedule
+                            is PipelineResult.MutationProposal -> {
+                                if (pResult.task != null) {
+                                    val uiResult = UiState.SchedulerTaskCreated(
+                                        taskId = pResult.task!!.id,
+                                        title = pResult.task!!.title,
+                                        dayOffset = java.time.temporal.ChronoUnit.DAYS.between(
+                                            java.time.LocalDate.now(),
+                                            java.time.Instant.ofEpochMilli(pResult.task!!.startTime.toEpochMilli())
+                                                .atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+                                        ).toInt(),
+                                        scheduledAtMillis = pResult.task!!.startTime.toEpochMilli(),
+                                        durationMinutes = pResult.task!!.durationMinutes,
+                                        isReschedule = false
                                     )
+                                    handleCreateResult(uiResult)
+                                    triggerRefresh()
+                                } else {
+                                    android.util.Log.d("SchedulerVM", "🎙️ MutationProposal contained no task, ignoring.")
                                 }
-                                val uiResult = UiState.SchedulerMultiTaskCreated(uiTasks, pResult.hasConflict)
-                                handleCreateResult(uiResult)
-                                triggerRefresh()
                             }
                             else -> {
                                 android.util.Log.d("SchedulerVM", "🎙️ Ignoring non-task pipeline result: $pResult")

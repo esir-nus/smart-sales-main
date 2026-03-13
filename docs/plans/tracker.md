@@ -7,7 +7,7 @@
 
 ---
 
-## 🚧 ACTIVE EPIC: The Data-Oriented OS ("Project Mono")
+## ✅ COMPLETED EPIC: The Data-Oriented OS ("Project Mono")
 > **Context**: Transitioning the architecture from "Behavioral Contracts" (Essay Questions) to "Data Contracts" (Multiple Choice). The SSD (Memory) becomes the absolute center of the universe. All LLM Prompts, Linters, and Interfaces must be driven directly by Kotlin Data Classes. 
 > **Migration Law**: Strict Cerb Compliance. Each module is migrated incrementally. The lifecycle must NEVER be bypassed: [1. Docs/Specs 🔄 2. Interface Map 🔄 3. Plan 🔄 4. Execute 🔄 5. E2E Test]. 
 
@@ -81,16 +81,21 @@
 
 ---
 
-## ⏸️ PAUSED EPIC: The Crucible (Pipeline Validation)
-> **Context**: Partially complete (Waves 1-4 shipped to changelog). Paused to implement the Data-Oriented OS foundational architecture, which will mathematically resolve the remaining User-Flow Purity Remediation bugs.
+## 🚧 ACTIVE EPIC: The Crucible (Pipeline Validation)
+> **Context**: Paused to implement the Data-Oriented OS foundational architecture, which mathematically resolved foundational User-Flow Purity Remediation bugs. Resumed to prove the architecture and fix remaining UI racing issues.
 
-### 🌊 Wave 6: User-Flow Purity Remediation (Pending Mono Upgrade)
+### 🌊 Wave 6: User-Flow Purity Remediation (Mono Upgrade Polish)
 > Prove the L3 UI handles human-centric workflows, decoupled intents, and context memory flawlessly (based on L2 User Flow Test Failures from 2026-03-12).
 
-*Note: T1 (Context Flow), T2 (Thresholds), and T3 (Mutation Defense) have been conceptually solved and superseded by the active "Project Mono Wave 5: CQRS Dual-Engine" refactor. They will be mathematically resolved once the new architecture is fully online.*
+#### T1/T2/T3: User Flow Architecture Proof
+- [ ] **Test**: Execute the L2 User Flow tests for the "conceptually solved" T1 (Context Flow), T2 (Thresholds), and T3 (Mutation Defense). Prove the Dual-Loop Mono engine mathematically fixes them without Mockito.
 
 #### T4: Mascot Presentation Collection
-- [ ] Fix the Presentation Layer (UI) `Flow` collection for `MascotService`. Guarantee that sub-500ms `NOISE`/`GREETING` intents successfully trigger the Mascot Overlay rendering without halting the `AgentChatScreen` or generating an infinite Shimmer state.
+- [ ] **Fix**: Resolve the Presentation Layer (UI) `Flow` collection for `MascotService`. Guarantee that sub-500ms `NOISE`/`GREETING` intents successfully trigger the Mascot Overlay rendering without halting the `AgentChatScreen` or generating an infinite Shimmer state. Use proper `collectAsStateWithLifecycle` and ensure a distinct terminal state.
+
+### 🌊 Wave 7: The Final Audit (Phase 3 E2E Pillar Resumption)
+> System-wide E2E Device Tests for: Lightning Fast-Track, Dual-Engine Bridge, Strict Interface Integrity, Adaptive Habit Loop, Efficiency Overload, Transparent Mind. This is the capstone requirement before declaring the foundational architecture stable.
+- [ ] **System Audit**: Execute comprehensive E2E tests for all 6 core pillars to guarantee that the Phase 3 mono-architecture performs perfectly under L3 operational stress.
 
 ---
 
@@ -104,7 +109,6 @@
 | TOCTOU in observe() | `RoomUserHabitRepository.kt` | Low |
 | Room error handling | `Room*Repository` — no try-catch on writes | Low |
 | **Confidence-Based Reminder Interceptor** | Replace deterministic round-1 wrap-up with LLM confidence-based interception. Agent decides when to surface schedule context. Requires classifier or LLM self-assessment of conversation intent. Current workaround: smarter prompting that lets LLM decide naturally. | Medium |
-| **Phase 3 E2E Pillar Resumption (The 6 Waves)** | System-wide E2E Device Tests for: Lightning Fast-Track, Dual-Engine Bridge, Strict Interface Integrity, Adaptive Habit Loop, Efficiency Overload, Transparent Mind. Deferred until all inner rings (1-4) mathematically pass the Anti-Illusion protocol without Mockito. | High |
 
 ---
 

@@ -96,6 +96,8 @@
 ### 🌊 Wave 7: The Final Audit (Phase 3 E2E Pillar Resumption)
 > System-wide E2E Device Tests for: Lightning Fast-Track, Dual-Engine Bridge, Strict Interface Integrity, Adaptive Habit Loop, Efficiency Overload, Transparent Mind. This is the capstone requirement before declaring the foundational architecture stable.
 - [ ] **System Audit**: Execute comprehensive E2E tests for all 6 core pillars to guarantee that the Phase 3 mono-architecture performs perfectly under L3 operational stress.
+  - **Spec**: [`docs/cerb-e2e-test/specs/wave7-final-audit/spec.md`](../cerb-e2e-test/specs/wave7-final-audit/spec.md)
+  - **Boundaries**: [`docs/cerb-e2e-test/specs/wave7-final-audit/boundaries.md`](../cerb-e2e-test/specs/wave7-final-audit/boundaries.md)
 
 ---
 

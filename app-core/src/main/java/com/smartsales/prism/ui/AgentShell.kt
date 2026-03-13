@@ -12,6 +12,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 import com.smartsales.prism.ui.drawers.AudioDrawer
 import com.smartsales.prism.ui.drawers.HistoryDrawer
@@ -75,7 +76,7 @@ fun AgentShell(
     val heroGreeting by agentViewModel.heroGreeting.collectAsState()
     
     // Wave 4: Mascot UI State
-    val mascotState by agentViewModel.mascotState.collectAsState()
+    val mascotState by agentViewModel.mascotState.collectAsStateWithLifecycle()
 
     Box(
         modifier = Modifier

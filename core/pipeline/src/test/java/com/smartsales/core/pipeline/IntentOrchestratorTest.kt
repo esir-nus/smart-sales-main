@@ -78,7 +78,7 @@ class IntentOrchestratorTest {
         fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.NOISE, true, ""))
         var result = orchestrator.processInput(input).firstOrNull()
         
-        assertNull("NOISE should emit nothing", result)
+        assertEquals("NOISE should emit MascotIntercepted", PipelineResult.MascotIntercepted, result)
         assertEquals(1, fakeMascotService.interactions.size)
         assertTrue(fakeMascotService.interactions[0] is MascotInteraction.Text)
         assertEquals(input, (fakeMascotService.interactions[0] as MascotInteraction.Text).content)
@@ -90,7 +90,7 @@ class IntentOrchestratorTest {
         fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.GREETING, true, ""))
         result = orchestrator.processInput(input).firstOrNull()
 
-        assertNull("GREETING should emit nothing", result)
+        assertEquals("GREETING should emit MascotIntercepted", PipelineResult.MascotIntercepted, result)
         assertEquals(1, fakeMascotService.interactions.size)
         assertEquals(input, (fakeMascotService.interactions[0] as MascotInteraction.Text).content)
         assertTrue(fakeUnifiedPipeline.processedInputs.isEmpty())

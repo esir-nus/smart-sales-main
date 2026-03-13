@@ -447,6 +447,10 @@ class AgentViewModel @Inject constructor(
                 )
                 _uiState.value = UiState.Idle
             }
+            is PipelineResult.MascotIntercepted -> {
+                Log.d("AgentVM", "Intent intercepted by Mascot. Dropping to Idle.")
+                _uiState.value = UiState.Idle 
+            }
         }
     }
 

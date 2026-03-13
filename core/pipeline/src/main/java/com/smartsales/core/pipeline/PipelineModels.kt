@@ -59,6 +59,12 @@ sealed class PipelineResult {
         val uiState: com.smartsales.prism.domain.model.UiState
     ) : PipelineResult()
     
+    /**
+     * T4 Mascot Flow Control: Explicitly signals the UI that the pipeline 
+     * halted to route noise/greetings to the Mascot Service.
+     */
+    object MascotIntercepted : PipelineResult()
+    
     data class ProfileMutation(
         val entityId: String,
         val field: String,

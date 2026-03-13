@@ -21,6 +21,18 @@ class FakeMascotService : MascotService {
 
     override suspend fun interact(input: MascotInteraction): MascotResponse {
         interactions.add(input)
+        
+        if (input is MascotInteraction.Text) {
+            _state.value = MascotState.Active("收到：${input.content}", "happy")
+            // In a real test, we might advance time to see it go hidden, 
+            // but for simple fakes, we just leave it active unless a test clears it, 
+            // or we launch a minimal scope if needed. We'll simulate it by launching
+            // on a GlobalScope or we just let the test assert Active.
+            // Actually, we can just leave it Active to allow tests to assert on it. The real one auto-clears.
+        } else if (input is MascotInteraction.Tap) {
+            _state.value = MascotState.Hidden
+        }
+        
         return nextResponse
     }
 }

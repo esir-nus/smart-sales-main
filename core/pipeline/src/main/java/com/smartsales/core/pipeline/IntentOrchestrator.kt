@@ -91,9 +91,12 @@ class IntentOrchestrator @Inject constructor(
 
         when (routerResult?.queryQuality) {
             QueryQuality.NOISE, QueryQuality.GREETING -> {
-                // Short-circuit to System I (Mascot)
-                mascotService.interact(MascotInteraction.Text(input))
-                // No PipelineResult emitted, as Mascot handles it ambiently
+                // Short-circuit to System I (Mascot) without blocking the flow
+                appScope.launch {
+                    mascotService.interact(MascotInteraction.Text(input))
+                }
+                emit(PipelineResult.MascotIntercepted)
+                return@flow
             }
             QueryQuality.VAGUE -> {
                 // Route back to user for clarification or immediate answer

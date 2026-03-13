@@ -87,11 +87,11 @@
 ### 🌊 Wave 6: User-Flow Purity Remediation (Mono Upgrade Polish)
 > Prove the L3 UI handles human-centric workflows, decoupled intents, and context memory flawlessly (based on L2 User Flow Test Failures from 2026-03-12).
 
-#### T1/T2/T3: User Flow Architecture Proof
-- [ ] **Test**: Execute the L2 User Flow tests for the "conceptually solved" T1 (Context Flow), T2 (Thresholds), and T3 (Mutation Defense). Prove the Dual-Loop Mono engine mathematically fixes them without Mockito.
-
-#### T4: Mascot Presentation Collection
-- [ ] **Fix**: Resolve the Presentation Layer (UI) `Flow` collection for `MascotService`. Guarantee that sub-500ms `NOISE`/`GREETING` intents successfully trigger the Mascot Overlay rendering without halting the `AgentChatScreen` or generating an infinite Shimmer state. Use proper `collectAsStateWithLifecycle` and ensure a distinct terminal state.
+- [x] ✅ **T1: Disambiguation Fast-Fail Routing** (Entity resolution before LLM lock-in) - `/00-review-conference` completed.
+- [x] ✅ **T2: The Async Loop** (Unbinding System II execution from Voice completion)
+- [x] ✅ **T3: Secondary Currency RL Harmonization** (`HabitContext` -> `EnhancedContext` injection)
+- [x] ✅ **T4: Mascot Presentation Collection** (Migrate from single-frame shimmer to sustained lifecycle collection)
+- [ ] 🔲 **T5: The Hand-Off Animation** (Visual bridging between voice ingestion and LLM execution)
 
 ### 🌊 Wave 7: The Final Audit (Phase 3 E2E Pillar Resumption)
 > System-wide E2E Device Tests for: Lightning Fast-Track, Dual-Engine Bridge, Strict Interface Integrity, Adaptive Habit Loop, Efficiency Overload, Transparent Mind. This is the capstone requirement before declaring the foundational architecture stable.

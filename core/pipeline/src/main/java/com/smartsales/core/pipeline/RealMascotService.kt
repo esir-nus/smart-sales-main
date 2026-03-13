@@ -71,7 +71,17 @@ class RealMascotService @Inject constructor(
                 MascotResponse.Ignore
             }
             is MascotInteraction.Text -> {
-                // Future UI integration for back-and-forth chatter
+                Log.d(TAG, "Mascot actively rendering response to Chat Text")
+                _state.value = MascotState.Active("收到：${input.content}", "happy")
+                
+                // Auto-hide the mascot toast after 8 seconds
+                scope.launch {
+                    delay(8000)
+                    if (_state.value is MascotState.Active) {
+                        _state.value = MascotState.Hidden
+                        Log.d(TAG, "Mascot auto-hid after 8s from direct interaction")
+                    }
+                }
                 MascotResponse.Speak("收到：${input.content}")
             }
         }

@@ -42,6 +42,8 @@ Mascot Service handles **System I** interactions in the Dual-Engine Architecture
 1.  **No Persistence**: The Mascot must NEVER push chat turns to the `HistoryRepository`. Every UI mount is a blank slate.
 2.  **No Critical Toasts**: The Mascot is NOT a replacement for OS Toasts. System completion events (e.g. "Audio done") **MUST** remain native OS `NotificationService` toasts. The Mascot is for *engagement*, not *confirmation*.
 3.  **No Heavy Context**: Do not feed the Mascot the `EnhancedContext` DB loads. It only needs the User Profile (Name) and current Time of Day.
+4.  **No Silent Gateway Drops**: The `IntentOrchestrator` MUST emit `PipelineResult.MascotIntercepted` when routing to the mascot asynchronously. Do not silently let the flow end, as this breaks the deterministic state machine of `AgentViewModel` and causes the 'Infinite Shimmer' bug.
+5.  **No Permanent Overlays**: `RealMascotService` must actively mutate `_state.value` to `MascotState.Active` upon handling text intents, and is directly responsible for launching its own coroutine delay to revert the state back to `MascotState.Hidden`. UI layers (`AgentShell`) merely observe this via `collectAsStateWithLifecycle()`.
 
 ## Wave Plan
 

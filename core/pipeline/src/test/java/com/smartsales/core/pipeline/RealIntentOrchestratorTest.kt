@@ -72,7 +72,7 @@ class RealIntentOrchestratorTest {
         ))
         var result = orchestrator.processInput(input).firstOrNull()
 
-        assertNull("NOISE should emit nothing", result)
+        assertEquals("NOISE should emit MascotIntercepted", PipelineResult.MascotIntercepted, result)
         assertEquals(1, fakeMascotService.interactions.size)
         assertTrue(fakeUnifiedPipeline.processedInputs.isEmpty())
 
@@ -84,7 +84,7 @@ class RealIntentOrchestratorTest {
         ))
         result = orchestrator.processInput(input).firstOrNull()
 
-        assertNull("GREETING should emit nothing", result)
+        assertEquals("GREETING should emit MascotIntercepted", PipelineResult.MascotIntercepted, result)
         assertEquals(1, fakeMascotService.interactions.size)
         assertTrue(fakeUnifiedPipeline.processedInputs.isEmpty())
 

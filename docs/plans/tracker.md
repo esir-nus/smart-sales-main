@@ -95,9 +95,10 @@
 
 ### 🌊 Wave 7: The Final Audit (Phase 3 E2E Pillar Resumption)
 > System-wide E2E Device Tests for: Lightning Fast-Track, Dual-Engine Bridge, Strict Interface Integrity, Adaptive Habit Loop, Efficiency Overload, Transparent Mind. This is the capstone requirement before declaring the foundational architecture stable.
-- [ ] **System Audit**: Execute comprehensive E2E tests for all 6 core pillars to guarantee that the Phase 3 mono-architecture performs perfectly under L3 operational stress.
+- [x] **System Audit**: Execute comprehensive E2E tests for all 6 core pillars to guarantee that the Phase 3 mono-architecture performs perfectly under L3 operational stress.
   - **Spec**: [`docs/cerb-e2e-test/specs/wave7-final-audit/spec.md`](../cerb-e2e-test/specs/wave7-final-audit/spec.md)
   - **Boundaries**: [`docs/cerb-e2e-test/specs/wave7-final-audit/boundaries.md`](../cerb-e2e-test/specs/wave7-final-audit/boundaries.md)
+  - [TER: L3 Wave 7 Final Audit](file:///home/cslh-frank/main_app/docs/reports/tests/L3-20260313-wave7-final-audit.md)
 
 ---
 
@@ -130,6 +131,10 @@
 > Key spec/impl changes, newest first. Like `git log --oneline`.
 
 ### 2026-03-13
+- **architecture**: Wave 7 The Final Audit (Phase 3 E2E Pillar Resumption) SHIPPED. Executing 5 rigorous L3 On-Device test scenarios proven across the 6 Core Pillars (Lightning Fast-Track, Dual-Engine Bridge, Strict Interface Integrity, Adaptive Habit Loop, Efficiency Overload, and Transparent Mind). The architecture behaves flawlessly under real-world input and ContextAssembly stress. Project Mono's foundational Phase 3 architecture is now declared stable.
+  - [TER: L3 Wave 7 Final Audit](file:///home/cslh-frank/main_app/docs/reports/tests/L3-20260313-wave7-final-audit.md)
+  - [Spec: Wave 7 Final Audit Boundaries & Scenarios](../cerb-e2e-test/specs/wave7-final-audit/)
+- **architecture**: JSON Coercion Hotfix (Project Mono). Discovered a systemic Kotlin deserialization crash during L3 tests where LLM JSON payloads containing explicit `null` tokens failed against native Kotlin non-nullable defaults (e.g., `classification = "schedulable"`). Mechanically resolved across the pipeline by enforcing `coerceInputValues = true` within local `PrismJson` instances for `SchedulerLinter` and `RealHabitListener`, and adding resilient Array-List fallback parsing for hallucinations.
 - **test-infrastructure**: L2 User Flow Purity Remediation VALIDATED. Executed the exact chronological dataset that failed on March 12th (`"张总的顾虑主要是..."`, `"帮我定一个周五..."`, `"把阶段往后挪一下..."`). All three architectural defects (T1 Misclassification, T2 Context Dropping, T3 Intent Routing Overload) have been mathematically proven fixed via `L2DebugHud` injection and ADB logcat verification. Wave 6 is officially completely validated.
   - [TER: L2 World State Seeder User Flow Tests (Re-run)](file:///home/cslh-frank/main_app/docs/reports/tests/L2-20260313-world-state-seeder-user-flow-rerun.md)
 - **agent-intelligence-ui**: Wave 6 T5 (Hand-Off Animation) DEFERRED. Review Conference identified critical architectural ambiguity regarding the source of voice ingestion (Badge vs Phone Mic). `UiState.AudioProcessing` contract drafted in spec, but implementation deferred as Tech Debt until the hardware source is formally defined to prevent breaking the OS Model. Wave 6 is otherwise complete.

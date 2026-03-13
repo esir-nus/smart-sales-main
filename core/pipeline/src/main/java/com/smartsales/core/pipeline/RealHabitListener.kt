@@ -89,10 +89,20 @@ REQUIRED JSON SCHEMA:
                 }
 
                 val cleanJson = response.replace("```json", "").replace("```", "").trim()
+                val jsonInterpreter = Json { 
+                    ignoreUnknownKeys = true
+                    coerceInputValues = true
+                }
+                
                 val payload = try {
-                    Json { ignoreUnknownKeys = true }.decodeFromString<RlPayload>(cleanJson)
+                    if (cleanJson.startsWith("[")) {
+                        val list = jsonInterpreter.decodeFromString<List<RlObservation>>(cleanJson)
+                        RlPayload(rlObservations = list)
+                    } else {
+                        jsonInterpreter.decodeFromString<RlPayload>(cleanJson)
+                    }
                 } catch (e: Exception) {
-                    Log.w(TAG, "analyzeAsync: Failed to parse RlPayload JSON, ignoring. Error: ${e.message}")
+                    Log.w(TAG, "analyzeAsync: Failed to parse RlPayload JSON, ignoring. Error: ${e.message}\nJSON input: $cleanJson")
                     return@launch
                 }
 

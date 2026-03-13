@@ -18,7 +18,10 @@ import javax.inject.Singleton
 class SchedulerLinter @Inject constructor(
     private val timeProvider: TimeProvider
 ) {
-    private val jsonInterpreter = Json { ignoreUnknownKeys = true }
+    private val jsonInterpreter = Json { 
+        ignoreUnknownKeys = true 
+        coerceInputValues = true 
+    }
 
     /**
      * 验证并解析 LLM 输出

@@ -94,7 +94,7 @@
 - [x] ✅ **T3: Secondary Currency RL Harmonization** (`HabitContext` -> `EnhancedContext` injection)
 - [x] ✅ **T4: Mascot Presentation Collection** (Migrate from single-frame shimmer to sustained lifecycle collection)
 - [x] ✅ **T5: Hardware Badge Delegation Constraint** (Strictly separating phone app (`badge_delegation`) vs physical badge (`crm_task`) scheduling capabilities)
-- [ ] ⏬ **T6: DEFERRED: The Hand-Off Animation** (Visual bridging between voice ingestion and LLM execution. Paused due to Voice Source ambiguity — see Tech Debt)
+- [x] 🛑 **T6: CANCELLED: The Hand-Off Animation** (Visual bridging between voice ingestion and LLM execution. Cancelled due to Voice Source ambiguity — accepted as minor UX debt to preserve OS Model boundaries)
 - [x] ✅ **T7: Parallel UI Skin Contract** (Extracted IAgentViewModel from AgentViewModel to decouple Layer 4 UI from Layer 3 Pipeline allowing Fake ViewModel vibe coding)
 - [x] ✅ **T8: Mechanical UI Contract Verification** (Implement UiSpecAlignmentTest.kt to mechanically enforce Docs-First Protocol between interface.md and UiState)
 
@@ -130,19 +130,7 @@
 - [x] ✅ **Phase 2: The Parallel Proving Ground (Scheduler)** - Rewrite `SchedulerViewModel` to purge pipeline/conflict logic, creating a pure `ISchedulerViewModel` boundary. Implement `FakeSchedulerViewModel` and prove we can build the new UI Skin purely in Compose previews.
 - [ ] 🔲 **Phase 3: Formalize UI Antigravity Protocol** - After proving success in Phase 1 and 2, create the official SOP rule (`.agent/rules/ui-development-protocol.md`) demanding strict `@Preview` logic isolation, Fake ViewModels, and `interface.md` synchronization for all subsequent UI features.
 
-### 🌊 Wave 13: Scheduler Domain Isolation (Clean Practice)
-> Objective: Refactor `domain/scheduler` to resolve tight coupling and enforce strict Project Mono layer segregation (Domain vs UI), utilizing an iterative "Trojan Horse" extraction strategy to prevent breaking 130+ downstream tests.
-- [ ] 🔲 **T1: Phase 1 - Stop the Bleeding (The UI Mapper)**
-  - [ ] **Docs**: Update Master Guide (`project-mono-master-guide.md`) with the new architectural paradigm for Timeline Models.
-  - [ ] **Interface Map**: Update `docs/cerb/interface-map.md` with layer decoupling rules between `domain/scheduler` and `app-core`.
-  - [ ] **Plan**: Formulate the `/feature-dev-planner` strategy for introducing `SchedulerTaskUiState` and the pure Kotlin mapper.
-  - [ ] **Execute**: Implement `SchedulerTaskUiState` in `app-core` and its mapper, decoupling the UI (`SchedulerDrawer`, `SchedulerCards`) from `TimelineItemModel` without touching tests.
-  - [ ] **Test**: Verify UI presentation remains identical via Compose Previews and manual visual checks.
-- [ ] 🔲 **T2: Phase 2 - Purge the False Flags**
-  - [ ] **Plan**: Strategy for soft-deprecating UI flags (e.g., `tipsLoading`) in the Domain model.
-  - [ ] **Execute**: Migrate logic setting UI flags out of the pipeline/Domain and exclusively into the UI Mapper.
-- [ ] 🔲 **T3: Phase 3 - True Cleanup (Deferred)**
-  - [ ] **Execute**: Migrate the 130+ test sites to a pristine `ScheduledTaskDomainModel` when tech-debt budget allows.
+
 
 ---
 

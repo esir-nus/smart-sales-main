@@ -11,14 +11,14 @@
 
 ```kotlin
 interface ScheduledTaskRepository {
-    fun getTimelineItems(dayOffset: Int): Flow<List<TimelineItemModel>>
-    fun queryByDateRange(start: LocalDate, end: LocalDate): Flow<List<TimelineItemModel>>
-    suspend fun insertTask(task: TimelineItemModel.Task): String
-    suspend fun getTask(id: String): TimelineItemModel.Task?
-    suspend fun updateTask(task: TimelineItemModel.Task)
+    fun getTimelineItems(dayOffset: Int): Flow<List<SchedulerTimelineItem>>
+    fun queryByDateRange(start: LocalDate, end: LocalDate): Flow<List<SchedulerTimelineItem>>
+    suspend fun insertTask(task: ScheduledTask): String
+    suspend fun getTask(id: String): ScheduledTask?
+    suspend fun updateTask(task: ScheduledTask)
     suspend fun deleteItem(id: String)
-    suspend fun getRecentCompleted(limit: Int): List<TimelineItemModel.Task>
-    suspend fun getTopUrgentActiveForEntity(entityId: String): TimelineItemModel.Task?
+    suspend fun getRecentCompleted(limit: Int): List<ScheduledTask>
+    suspend fun getTopUrgentActiveForEntity(entityId: String): ScheduledTask?
 }
 ```
 
@@ -33,13 +33,13 @@ class SchedulerLinter @Inject constructor(
 
 sealed class LintResult {
     data class Success(
-        val task: TimelineItemModel.Task,
+        val task: ScheduledTask,
         val urgencyLevel: UrgencyLevel,
         val parsedClues: ParsedClues = ParsedClues()  // Phase 1 → Phase 2 bridge
     ) : LintResult()
 
     data class MultiTask(
-        val tasks: List<TimelineItemModel.Task>
+        val tasks: List<ScheduledTask>
     ) : LintResult()
 
     data class Incomplete(
@@ -91,7 +91,7 @@ interface AlarmScheduler {
 
 ```kotlin
 interface TipGenerator {
-    suspend fun generate(task: TimelineItemModel.Task): List<String>
+    suspend fun generate(task: ScheduledTask): List<String>
 }
 ```
 
@@ -105,7 +105,7 @@ Lazy-loads 2-5 contextual tips per task using entity data from ClientProfileHub.
 ```kotlin
 interface InspirationRepository {
     suspend fun insert(text: String): String
-    fun getAll(): Flow<List<TimelineItemModel.Inspiration>>
+    fun getAll(): Flow<List<SchedulerTimelineItem.Inspiration>>
     suspend fun delete(id: String)
 }
 ```
@@ -130,51 +130,49 @@ enum class UrgencyLevel {
 }
 ```
 
-### TimelineItemModel
+### ScheduledTask & SchedulerTimelineItem
 
 ```kotlin
-sealed class TimelineItemModel {
-    abstract val id: String
-    abstract val timeDisplay: String
-
-    data class Task(
-        override val id: String,
-        override val timeDisplay: String,
-        val title: String,
-        val urgencyLevel: UrgencyLevel = UrgencyLevel.L3_NORMAL,
-        val isDone: Boolean = false,
-        val hasAlarm: Boolean = false,
-        val isSmartAlarm: Boolean = false,
-        val startTime: Instant,
-        val endTime: Instant? = null,
-        val durationMinutes: Int = 0,
-        val durationSource: DurationSource = DurationSource.DEFAULT,
-        val conflictPolicy: ConflictPolicy = ConflictPolicy.EXCLUSIVE,
-        val dateRange: String = "",
-        val location: String? = null,
-        val notes: String? = null,
-        val keyPerson: String? = null,
-        val keyPersonEntityId: String? = null,  // Wave 9: Entity ID for tip generation
-        val highlights: String? = null,
-        val tips: List<String> = emptyList(),   // Wave 9: LLM-generated context tips
-        val tipsLoading: Boolean = false,       // Wave 9: Shimmer animation state
-        val alarmCascade: List<String> = emptyList()
-    ) : TimelineItemModel()
+interface SchedulerTimelineItem {
+    val id: String
+    val timeDisplay: String
 
     data class Inspiration(
         override val id: String,
         override val timeDisplay: String,
         val title: String
-    ) : TimelineItemModel()
-
+    ) : SchedulerTimelineItem
+    
     data class Conflict(
         override val id: String,
         override val timeDisplay: String,
         val conflictText: String,
         val taskA: ScheduleItem,
         val taskB: ScheduleItem
-    ) : TimelineItemModel()
+    ) : SchedulerTimelineItem
 }
+
+data class ScheduledTask(
+    override val id: String,
+    override val timeDisplay: String,
+    val title: String,
+    val urgencyLevel: UrgencyLevel = UrgencyLevel.L3_NORMAL,
+    val isDone: Boolean = false,
+    val hasAlarm: Boolean = false,
+    val isSmartAlarm: Boolean = false,
+    val startTime: Instant,
+    val endTime: Instant? = null,
+    val durationMinutes: Int = 0,
+    val durationSource: DurationSource = DurationSource.DEFAULT,
+    val conflictPolicy: ConflictPolicy = ConflictPolicy.EXCLUSIVE,
+    val dateRange: String = "",
+    val location: String? = null,
+    val notes: String? = null,
+    val keyPerson: String? = null,
+    val keyPersonEntityId: String? = null,  // Wave 9: Entity ID for tip generation
+    val highlights: String? = null,
+    val alarmCascade: List<String> = emptyList()
+) : SchedulerTimelineItem
 ```
 
 ---

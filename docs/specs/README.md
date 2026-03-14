@@ -49,7 +49,7 @@ docs/specs/
 ├── GLOSSARY.md               ← Terms & Rules
 ├── Prism-V1.md               ← Architecture SOT
 ├── prism-ui-ux-contract.md   ← UI INDEX
-├── modules/                  ← UI module specs (<100 lines each)
+├── cerb-ui/                  ← UI module specs (<100 lines each)
 │   ├── HomeScreen.md
 │   ├── AudioDrawer.md
 │   └── ...

@@ -97,7 +97,7 @@ data class FocusedContext(
 ```kotlin
 data class ProfileActivityState(
     // The Actionable feed is pure, unmodified Scheduler Tasks. 
-    val actionableItems: List<com.smartsales.prism.domain.scheduler.TimelineItemModel.Task>,
+    val actionableItems: List<com.smartsales.prism.domain.scheduler.ScheduledTask>,
     
     // The Factual feed is pure, unmodified Memory Entries. 
     val factualItems: List<com.smartsales.prism.domain.memory.MemoryEntry>

@@ -104,42 +104,18 @@ Tasks have a checkbox that toggles `isDone` state. Completed tasks are permanent
 
 ## Domain Models
 
-### TimelineItemModel
+### ScheduledTask & SchedulerTimelineItem
 
 ```kotlin
-sealed class TimelineItemModel {
-    abstract val id: String
-    abstract val timeDisplay: String
-    
-    data class Task(
-        override val id: String,
-        override val timeDisplay: String,
-        val title: String,
-        val urgencyLevel: UrgencyLevel = UrgencyLevel.L3_NORMAL,
-        val isDone: Boolean = false,
-        val hasAlarm: Boolean = false,
-        val isSmartAlarm: Boolean = false,
-        val startTime: Instant,
-        val endTime: Instant? = null,
-        val durationMinutes: Int = 0,
-        val durationSource: DurationSource = DurationSource.DEFAULT,
-        val conflictPolicy: ConflictPolicy = ConflictPolicy.EXCLUSIVE,
-        val dateRange: String = "",
-        val location: String? = null,
-        val notes: String? = null,
-        val keyPerson: String? = null,         // Business contact name from LLM (personal contacts filtered)
-        val keyPersonEntityId: String? = null,  // Populated by entity resolution in pipeline
-        val highlights: String? = null,
-        val tips: List<String> = emptyList(),  // Wave 9: LLM-generated context tips
-        val tipsLoading: Boolean = false,       // Wave 9: Generation animation state
-        val alarmCascade: List<String> = emptyList() // e.g. ["-1h", "-15m", "-5m"]
-    ) : TimelineItemModel()
+interface SchedulerTimelineItem {
+    val id: String
+    val timeDisplay: String
     
     data class Inspiration(
         override val id: String,
         override val timeDisplay: String,
         val title: String
-    ) : TimelineItemModel()
+    ) : SchedulerTimelineItem
     
     data class Conflict(
         override val id: String,
@@ -147,8 +123,30 @@ sealed class TimelineItemModel {
         val conflictText: String,
         val taskA: ScheduleItem,
         val taskB: ScheduleItem
-    ) : TimelineItemModel()
+    ) : SchedulerTimelineItem
 }
+
+data class ScheduledTask(
+    override val id: String,
+    override val timeDisplay: String,
+    val title: String,
+    val urgencyLevel: UrgencyLevel = UrgencyLevel.L3_NORMAL,
+    val isDone: Boolean = false,
+    val hasAlarm: Boolean = false,
+    val isSmartAlarm: Boolean = false,
+    val startTime: Instant,
+    val endTime: Instant? = null,
+    val durationMinutes: Int = 0,
+    val durationSource: DurationSource = DurationSource.DEFAULT,
+    val conflictPolicy: ConflictPolicy = ConflictPolicy.EXCLUSIVE,
+    val dateRange: String = "",
+    val location: String? = null,
+    val notes: String? = null,
+    val keyPerson: String? = null,         // Business contact name from LLM (personal contacts filtered)
+    val keyPersonEntityId: String? = null,  // Populated by entity resolution in pipeline
+    val highlights: String? = null,
+    val alarmCascade: List<String> = emptyList() // e.g. ["-1h", "-15m", "-5m"]
+) : SchedulerTimelineItem
 ```
 
 ### LintResult
@@ -156,7 +154,7 @@ sealed class TimelineItemModel {
 ```kotlin
 sealed class LintResult {
     data class Success(
-        val task: TimelineItemModel.Task,
+        val task: ScheduledTask,
         val urgencyLevel: UrgencyLevel,
         val parsedClues: ParsedClues = ParsedClues()
     ) : LintResult()
@@ -655,6 +653,17 @@ Wire `isDone` toggle through ViewModel + alarm lifecycle.
     - [x] Alarm cancelled on completion (`SchedulerViewModel.kt:358`)
     - [x] Alarm re-scheduled on reactivation if future time (`SchedulerViewModel.kt:362-370`)
     - [x] Alarm NOT re-scheduled on reactivation if past time (`SchedulerViewModel.kt:371-372`)
+
+---
+
+### Wave 13: Scheduler Domain Isolation (Clean Practice) ✅ SHIPPED (Phases 1-2)
+
+Enforce strict Project Mono decoupling between the Domain State (SSD truth) and UI State (`app-core` visual representation) using an iterative Trojan Horse strategy.
+
+- **Phase 1: The UI Mapper**: Create `TimelineItem` sealed class within `app-core` to represent pure UI state. Introduce `TimelineItemModel.toUiState()` to handle the mapping. Compose UI components in `SchedulerDrawer` now solely consume `TimelineItem`.
+- **Phase 2: Purge False Flags**: Soft-deprecate (`@Deprecated`) visual UI flags inside `TimelineItemModel` (e.g., `tips`, `tipsLoading`). Move the logic that populates these fields strictly into the `app-core` Mapper.
+- **Phase 3 (Deferred)**: Rip out `TimelineItemModel` entirely from the 130+ downstream usages when tech debt budget allows, mapping tests to a pristine `ScheduledTaskDomainModel`.
+- **Ship Criteria**: ✅ UI successfully consumes `TimelineItem` via `toUiState()` mapper. L2 and CRM tests continue to build without regression because Domain signatures were preserved.
 
 ---
 

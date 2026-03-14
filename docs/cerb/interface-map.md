@@ -89,7 +89,7 @@ User-facing features. Each receives processed results from Orchestrator (Layer 3
 
 > **"Reads From" vs "Receives From"**: "Reads From" = the feature calls the interface directly. "Receives From" = UnifiedPipeline pushes results into the feature's ViewModel. This distinction prevents confusion about who initiates the call.
 
-> **Domain vs UI Decoupling Rule (Wave 13)**: Features in Layer 4 (e.g., Scheduler, CRM) MUST define their own internal UI State projections (e.g., `SchedulerUiState`). They MUST NOT leak `app-core` ViewModels or UI State flags directly into Layer 2 Domain contracts. The Domain contract (`TimelineItemModel`) is the SSD truth; the UI translates it.
+> **Domain vs UI Decoupling Rule (Wave 13)**: Features in Layer 4 (e.g., Scheduler, CRM) MUST define their own internal UI State projections (e.g., `SchedulerUiState`). They MUST NOT leak `app-core` ViewModels or UI State flags directly into Layer 2 Domain contracts. The Domain contract (`ScheduledTask`) is the SSD truth; the UI translates it.
 
 ---
 

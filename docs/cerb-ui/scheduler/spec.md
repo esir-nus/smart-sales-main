@@ -21,24 +21,25 @@ The UI consumes a sealed class stream from the ViewModel:
 
 ```mermaid
 classDiagram
-    class TimelineItemModel {
-        <<sealed>>
+    class SchedulerTimelineItem {
+        <<interface>>
         +String id
-        +Boolean isDone
+        +String timeDisplay
     }
-    class Task {
+    class ScheduledTask {
         +String title
         +Instant startTime
         +Long durationMinutes
         +Boolean hasAlarm
         +String linkedEntityId
+        +Boolean isDone
     }
     class Inspiration {
         +String text
         +List~String~ tags
     }
-    TimelineItemModel <|-- Task
-    TimelineItemModel <|-- Inspiration
+    SchedulerTimelineItem <|-- ScheduledTask
+    SchedulerTimelineItem <|-- Inspiration
 ```
 
 > **Crucial Distinction**: The UI `isDone` property on a `Task` means it actually originates from the backend `MemoryRepository` as a locked factual record, not the Actionable feed.

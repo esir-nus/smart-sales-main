@@ -23,7 +23,8 @@ Leaf services with no upstream dependencies. They don't call other modules.
 | **[ASR](./asr-service/spec.md)** | Hardware & Audio | Transcription results | OSS (downloads audio files to transcribe) | `transcribe(File) -> AsrResult` | — | ✅ |
 | **[TingwuPipeline](./tingwu-pipeline/spec.md)** | Hardware & Audio | Transcription & Audio Intelligence | OSS (reads `fileUrl`) | `submit(TingwuRequest) -> Result<String>` | OS: SSD | ✅ |
 | **[PipelineTelemetry](./pipeline-telemetry/spec.md)** | System II & Routing | Pipeline logs (to Logcat) | — | `recordEvent(PipelinePhase, String) -> Unit` | OS: RAM | ✅ |
-| **[TestInfrastructure](./test-infrastructure/spec.md)** | Testing | Standardized State-Backed Fakes | All Domain Interfaces | `PrismTestRig.setup()` | — | 📐 |
+| **[TestFakesDomain](./test-infrastructure/spec.md)** | Testing | Pure JVM Domain Fakes | All Pure Domain Interfaces | `FakeMemoryRepository`, `FakeEntityRegistry` | OS: JVM | ✅ |
+| **[TestFakesPlatform](./test-infrastructure/spec.md)** | Testing | Android/Platform State | test-fakes-domain, App-Core | `PrismTestRig.setup()` | OS: Android | ✅ |
 
 ---
 

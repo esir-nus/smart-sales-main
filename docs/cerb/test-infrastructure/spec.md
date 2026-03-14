@@ -19,3 +19,4 @@ Testing infrastructure is treated as a first-class Cerb feature to enforce stric
 | **1** | Core Fakes Migration | ✅ SHIPPED | Extract existing fragmented Fake classes out of `app-core` and centralize them into `:core:test-fakes`. |
 | **2** | State Completeness | ✅ SHIPPED | Built missing Fakes (`FakeMemoryRepository`, `FakeEntityWriter`). Upgraded Fakes with `Mutex` locks to guarantee thread-safety during highly parallel L2 Simulation testing (Write-Back Concurrency limits). |
 | **3** | The Test Rig | 🔲 PLANNED | Build `PrismTestRig`, handle `runTest` integration seamlessly, and roll out to support `MascotService` L2 simulation test. |
+| **4** | Domain Fake Isolation | 🔲 PLANNED | Split `:core:test-fakes` into `:core:test-fakes-domain` (Pure JVM) and `:core:test-fakes-platform` (Android). Allows `:domain` and `:data` modules to consume domain fakes without Android classpath contamination. |

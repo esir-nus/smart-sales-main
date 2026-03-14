@@ -148,7 +148,7 @@
   - [x] **Execute (Path B)**: Route the slow background CRM Disambiguation through the `UnifiedPipeline` targeting the exact same `unifiedID`.
   - [x] **Test**: L2 simulated pipeline test tracking both forks resolving correctly.
 
-- [ ] 🔲 **T4: Shard 3 Execution (UI Presentation Teardown)**
+- [x] ✅ **T4: Shard 3 Execution (UI Presentation Teardown)**
   - [x] **Specs**: Ensure `scheduler-drawer/contract.md` defines pure state execution and handles Dual-Path rendering mapped from individual `TimelineItem` states.
   - [x] **Execute**: Hoist `PhoneAudioRecorder` out of the visual card layer up to ViewModel/Screen.
   - [x] **Execute**: Dismantle 700-line `SchedulerCards.kt/SchedulerTaskCard.kt`. Move atomic components (`TaskCardHeader`, `TaskCardDetails`, etc.) into `components/` package.

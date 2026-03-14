@@ -177,7 +177,8 @@ class RealUnifiedPipeline @Inject constructor(
                     userText = resolvedInputText,
                     mode = if (input.intent == QueryQuality.CRM_TASK) Mode.SCHEDULER else Mode.ANALYST,
                     resolvedEntityIds = resolvedEntities, 
-                    depth = input.requestedDepth
+                    depth = input.requestedDepth,
+                    isBadge = input.isBadge
                 )
             }
             

@@ -19,7 +19,8 @@ interface ContextBuilder {
         userText: String, 
         mode: Mode, 
         resolvedEntityIds: List<String> = emptyList(),
-        depth: ContextDepth = ContextDepth.FULL
+        depth: ContextDepth = ContextDepth.FULL,
+        isBadge: Boolean = false
     ): EnhancedContext
     
     /**

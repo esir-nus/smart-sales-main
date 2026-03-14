@@ -121,6 +121,7 @@ class RealBadgeAudioPipeline @Inject constructor(
             val pipelineInput = com.smartsales.core.pipeline.PipelineInput(
                 rawText = transcript,
                 isVoice = true,
+                isBadge = true,
                 intent = com.smartsales.core.pipeline.QueryQuality.CRM_TASK
             )
             

@@ -37,6 +37,12 @@ All scheduler voice commands work **globally within scheduler mode** — no card
 > **Scheduler-mode only.** Voice commands modify schedules exclusively when the scheduler drawer is active. Other modes (Coach/Analyst) may READ schedule data but do NOT mutate it — they guide the user to switch to scheduler mode instead.
 > **Active session only.** Commands operate on the current session's schedule. Past/finished sessions are not in scope.
 
+> [!CAUTION]
+> **Wave 6 Hardware Delegation Constraint**: 
+> The Mobile App LLM (Voice/Text) is strictly prohibited from generating scheduling JSON (`tasks` array). 
+> If a user attempts to schedule a task via the phone app, the system (`LightningRouter` + `PromptCompiler`) will explicitly classify it as `badge_delegation`. The `IntentOrchestrator` intercepts this and triggers a `BadgeDelegationHint` UI state, prompting the user to long-press the physical ESP32 Badge.
+> **Only audio sent through the `BadgeAudioPipeline` (`isBadge=true`) is permitted to bypass this rule and generate formal timeline mutations.**
+
 | Classification | Input Examples | Action | Card Context? |
 |----------------|---------------|--------|---------------|
 | `schedulable`  | "明天下午2点开会" | Create task | Not needed |

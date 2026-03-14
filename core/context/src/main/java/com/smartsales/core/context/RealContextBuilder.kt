@@ -3,7 +3,7 @@ package com.smartsales.core.context
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.TimelineItemModel
 import kotlinx.coroutines.flow.first
-import android.util.Log
+import com.smartsales.core.context.Log
 import com.smartsales.prism.domain.crm.ActivityType
 import com.smartsales.prism.domain.memory.EntityEntry
 import com.smartsales.prism.domain.memory.EntityRepository
@@ -75,7 +75,8 @@ class RealContextBuilder @Inject constructor(
         userText: String, 
         mode: Mode, 
         resolvedEntityIds: List<String>,
-        depth: ContextDepth
+        depth: ContextDepth,
+        isBadge: Boolean
     ): EnhancedContext {
         Log.d("Kernel", "🚀 Building EnhancedContext with depth=$depth for mode=${mode.name}")
         _currentMode = mode
@@ -130,6 +131,7 @@ class RealContextBuilder @Inject constructor(
 
         return EnhancedContext(
             userText = userText,
+            isBadge = isBadge,
 
             entityKnowledge = if (depth == ContextDepth.FULL) _workingSet.entityKnowledge else null,
             entityContext = if (depth == ContextDepth.FULL) _workingSet.entityContext else emptyMap(),

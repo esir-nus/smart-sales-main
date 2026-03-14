@@ -9,6 +9,7 @@ import com.smartsales.core.context.ContextDepth
 data class PipelineInput(
     val rawText: String,
     val isVoice: Boolean = false,
+    val isBadge: Boolean = false,
     val intent: QueryQuality = QueryQuality.DEEP_ANALYSIS,
     val replaceItemId: String? = null,
     val requestedDepth: ContextDepth = ContextDepth.FULL,
@@ -64,6 +65,12 @@ sealed class PipelineResult {
      * halted to route noise/greetings to the Mascot Service.
      */
     object MascotIntercepted : PipelineResult()
+    
+    /**
+     * Wave 6: Explicitly signals the UI that a scheduling intent was intercepted
+     * and the pipeline halted to route a hardware delegation hint.
+     */
+    object BadgeDelegationIntercepted : PipelineResult()
     
     data class ProfileMutation(
         val entityId: String,

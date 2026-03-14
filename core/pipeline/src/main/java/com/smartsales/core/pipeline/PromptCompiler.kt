@@ -20,7 +20,7 @@ open class PromptCompiler @Inject constructor() {
             appendLine()
         } else {
             // Unified System II Prompt handling both Analyst and Scheduler intents
-            appendLine(buildAnalystSystemPrompt())
+            appendLine(buildAnalystSystemPrompt(context.isBadge))
             appendLine()
             appendLine("---")
             appendLine()
@@ -156,7 +156,7 @@ open class PromptCompiler @Inject constructor() {
      * Analyst 模式系统提示词
      * Wave 4: Lightning Router (4-Tier Intent Gateway)
      */
-    private fun buildAnalystSystemPrompt(): String = """
+    private fun buildAnalystSystemPrompt(isBadge: Boolean): String = """
 你是一位资深销售教练。分析用户场景后，提供专业建议。
 
 重要规则：绝不编造历史。不要引用或捏造任何以前的对话内容。如果没有历史记忆提供给你，就说"我没有相关记录"。
@@ -169,7 +169,11 @@ open class PromptCompiler @Inject constructor() {
 3. `vague`：指代不清，无法回答（如："他刚才说了什么？" - "他"是谁？）。如果你识别为 `vague`，请在 `response` 中用极其口语、短促的方式请求澄清（如："你想分析哪方面？" 或 "听到你在说话，具体是想？"），**不要**再去评估其他字段。注意：如果输入中带有明确的人名/公司名（如"张总"），即使问题部分宽泛或含有代词，也绝不能判定为 vague，应判定为 simple_qa 或 deep_analysis，以便系统去数据库检索档案。
 4. `simple_qa`：简单的事实问答，纯内容查询（如："会议讲了啥？"、"价格报了多少？"）。这类问题可以直接从历史或简短截图中找到答案，不需要深度策略分析。
 5. `deep_analysis`：复杂的业务分析、策略制定、对比（如："怎么应对他的价格异议？"、"帮我制定下步策略"）。这需要深度思考和规划。
-6. `crm_task`：明确的建档或日程录入指令（如："帮我建个叫雷军的客户"、"把刚刚的情况记录下来"）。注意：系统不会自动保存任何修改。你的响应必须提示用户："我已经为您起草了以下更新，请点击下方的卡片进行确认"，让用户知道他们需要在 UI 上操作。
+${if (isBadge) {
+"6. `crm_task`：明确的建档或日程录入指令（如：\"帮我建个叫雷军的客户\"、\"把刚刚的情况记录下来\"）。注意：系统不会自动保存任何修改。你的响应必须提示用户：\"我已经为您起草了以下更新，请点击下方的卡片进行确认\"，让用户知道他们需要在 UI 上操作。"
+} else {
+"6. `crm_task`：明确的建档或录入CRM数据的指令（如：\"帮我建个叫雷军的客户\"）。**注意：不包括新建日程！**\n7. `badge_delegation`：任何试图创建日程、安排会议、提醒或记录时间待办的指令（如：\"帮我建个明天下午的日程\"、\"提醒我明天开会\"）。由于本系统采用物理智能工牌进行日程管理，你**绝对不能**在 JSON 中生成 `tasks` 数组。必须直接将 `query_quality` 设为 `\"badge_delegation\"`，响应文案可以随意填写占位符。"
+}}
 
 第二步，如果 `query_quality` 为 `crm_task` 或 `deep_analysis`，再判断信息是否充足：
    - 如果用户要求执行非分析类任务（安排日程等），这属于【跨模式意图】。`info_sufficient` = false，在 response 中提示用户切换模式。

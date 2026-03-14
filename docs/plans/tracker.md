@@ -91,7 +91,8 @@
 - [x] ✅ **T2: The Async Loop** (Unbinding System II execution from Voice completion)
 - [x] ✅ **T3: Secondary Currency RL Harmonization** (`HabitContext` -> `EnhancedContext` injection)
 - [x] ✅ **T4: Mascot Presentation Collection** (Migrate from single-frame shimmer to sustained lifecycle collection)
-- [ ] ⏬ **T5: DEFERRED: The Hand-Off Animation** (Visual bridging between voice ingestion and LLM execution. Paused due to Voice Source ambiguity — see Tech Debt)
+- [x] ✅ **T5: Hardware Badge Delegation Constraint** (Strictly separating phone app (`badge_delegation`) vs physical badge (`crm_task`) scheduling capabilities)
+- [ ] ⏬ **T6: DEFERRED: The Hand-Off Animation** (Visual bridging between voice ingestion and LLM execution. Paused due to Voice Source ambiguity — see Tech Debt)
 
 ### 🌊 Wave 7: The Final Audit (Phase 3 E2E Pillar Resumption)
 > System-wide E2E Device Tests for: Lightning Fast-Track, Dual-Engine Bridge, Strict Interface Integrity, Adaptive Habit Loop, Efficiency Overload, Transparent Mind. This is the capstone requirement before declaring the foundational architecture stable.
@@ -129,6 +130,9 @@
 ## Changelog
 
 > Key spec/impl changes, newest first. Like `git log --oneline`.
+
+### 2026-03-14
+- **architecture**: Wave 6 T5 Hardware Badge Delegation Constraint SHIPPED. Added a strict architectural boundary (`isBadge`) separating phone app intelligence from physical hardware capabilities. The phone app LLM is now mathematically proven (via `PromptCompilerBadgeTest.kt`) to route all scheduling attempts to a `badge_delegation` UI hint overlay (`AgentChatScreen.kt`), strictly forcing the user to utilize the ESP32 physical badge for calendar mutations.
 
 ### 2026-03-13
 - **architecture**: Wave 7 The Final Audit (Phase 3 E2E Pillar Resumption) SHIPPED. Executing 5 rigorous L3 On-Device test scenarios proven across the 6 Core Pillars (Lightning Fast-Track, Dual-Engine Bridge, Strict Interface Integrity, Adaptive Habit Loop, Efficiency Overload, and Transparent Mind). The architecture behaves flawlessly under real-world input and ContextAssembly stress. Project Mono's foundational Phase 3 architecture is now declared stable.

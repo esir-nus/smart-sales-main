@@ -10,6 +10,7 @@ import com.smartsales.prism.domain.rl.HabitContext
  */
 data class EnhancedContext(
     val userText: String,
+    val isBadge: Boolean = false,
     val audioTranscripts: List<TranscriptBlock> = emptyList(),
     val imageAnalysis: List<VisionResult> = emptyList(),
     val entityKnowledge: String? = null,

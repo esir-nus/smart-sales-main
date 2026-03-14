@@ -15,7 +15,8 @@ class FakeContextBuilder : ContextBuilder {
         sessionHistory = emptyList(),
         currentDate = "2026-03-09",
         currentInstant = 0L,
-        executedTools = emptySet()
+        executedTools = emptySet(),
+        isBadge = false // Added isBadge with a default value
     )
 
     private val history = mutableListOf<ChatTurn>()
@@ -25,7 +26,8 @@ class FakeContextBuilder : ContextBuilder {
         userText: String,
         mode: Mode,
         resolvedEntityIds: List<String>,
-        depth: ContextDepth
+        depth: ContextDepth,
+        isBadge: Boolean
     ): EnhancedContext {
         return buildResult.copy(userText = userText, modeMetadata = buildResult.modeMetadata.copy(currentMode = mode))
     }

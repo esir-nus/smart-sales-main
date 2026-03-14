@@ -42,6 +42,7 @@ When reviewing a Project Mono PR or Plan, verify the following:
 - **No Hardcoded Schemas**: If you see `{ "deal_stage": "string" }` hardcoded inside a Prompt string, **Reject it**. It must say `json.dumps(QuoteMutation.model_json_schema())` or the Kotlin equivalent via `kotlinx.serialization`.
 - **Domain Purity**: Are the Mutation Data Classes inside pure Kotlin `:domain` modules? If they contain `import android.*`, **Reject it**.
 - **Linter Simplicity**: If the Linter contains regex (`Regex("date=.*")`) or manual string-parsing math to figure out the LLM's intent, **Reject it**. It should be a 1-line `decodeFromString()`.
+- **JSON Coercion Resilience**: All `PrismJson` instances parsing LLM outputs MUST set `coerceInputValues = true`. The LLM frequently hallucinates explicit `null` tokens; if this flag is missing, `kotlinx.serialization` will crash against native Kotlin non-nullable default values (e.g., `classification = "schedulable"`). Do not solve this with regex null-stripping.
 - **Visual Spec Alignment**: "Spec says `最近30天`, code says `最近30天`. No synonyms."
 
 ---

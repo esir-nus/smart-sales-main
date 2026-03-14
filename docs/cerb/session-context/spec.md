@@ -47,7 +47,6 @@ Interface for `EntityWriter` to synchronize SSD writes back to RAM.
 - `suspend` methods (no blocking).
 - `updateEntityInSession`: Syncs Section 1 & 3 after SSD upsert.
 - `removeEntityFromSession`: Syncs removal.
-- `recordActivity`: Logs historical events.
 
 ---
 

@@ -12,7 +12,6 @@ EntityWriter is an **Application** that runs on the SessionWorkingSet (RAM). It 
 **OS Model Role**:
 - **Searcher**: Queries full SSD catalog for dedup/resolution (allowed per OS Model boundary rules).
 - **Writer**: Mutations write-through — **synchronous** update to RAM Section 1, and **asynchronous** persistence to SSD.
-- **Kernel Invoker**: `updateProfile()` calls `ContextBuilder.recordActivity()` (App → Kernel) to emit history events asynchronously.
 - **Constraint**: Callers must NOT call `EntityRepository.save()` directly. All mutations go through EntityWriter.
 
 Ensures consistent:
@@ -65,15 +64,14 @@ graph TD
     EW -->|findByAlias| SSD[EntityRepository SSD]
     EW -->|1. Persist| SSD
     EW -->|2. Update RAM| RAM[SessionWorkingSet Section 1]
-    EW -->|3. recordActivity| Kernel[ContextBuilder Kernel]
 ```
 
 > [!NOTE]
 > **Scheduler creates PERSON + ACCOUNT entities** for business-relevant contacts. Personal contacts (family, friends) are filtered at the LLM prompt level. See [Scheduler spec §CRM Entity Creation Policy](../scheduler/spec.md).
 
-### 3. App → Kernel Callback
+### 3. App → Kernel Callback (Pending)
 
-`updateProfile()` detects field changes and calls `ContextBuilder.recordActivity()` — this is an **Application invoking a Kernel service** to emit `MemoryEntry` history events. The Kernel persists these to Memory Center (SSD).
+_Pending future timeline integration to emit history events._
 
 ---
 
@@ -210,13 +208,9 @@ These fields trigger a `MemoryEntry` history event when changed:
 ```kotlin
 // Inside EntityWriter.updateProfile()
 if (newJobTitle != null && newJobTitle != existing.jobTitle) {
-    // 1. Record history BEFORE overwrite
-    contextBuilder.recordActivity(
-        entityId = entityId,
-        type = ActivityType.TITLE_CHANGE,
-        summary = "${existing.jobTitle} → $newJobTitle"
-    )
-    // 2. Update the field
+    // Collect the change
+    changes.add(ProfileChange("jobTitle", existing.jobTitle, newJobTitle))
+    // Update the field
     merged = merged.copy(jobTitle = newJobTitle)
 }
 ```
@@ -253,9 +247,9 @@ Convention: Keys prefixed with `_` are metadata, not business attributes.
 | **0** | Prerequisites (delete infra) | ✅ SHIPPED | `EntityRepository.delete()` + DAO + impls |
 | **1** | Core Writer | ✅ SHIPPED | `EntityWriter` interface + `RealEntityWriter` + tests |
 | **1.5** | Wiring | ✅ SHIPPED | Wire into `UnifiedPipeline` Scheduler path — creates PERSON + ACCOUNT entities for business-relevant contacts |
-| **2** | Change-Aware Profile Management | ✅ SHIPPED | `updateProfile()`, `ProfileUpdateResult`, `ProfileChange`, history emission via `recordActivity()` |
+| **2** | Change-Aware Profile Management | ✅ SHIPPED | `updateProfile()`, `ProfileUpdateResult`, `ProfileChange` |
 | ~~3~~ | ~~Conflict Merge~~ | ❌ KILLED | See architectural decision below |
-| **4** | **OS Model Upgrade** (RAM Application) | ✅ SHIPPED | Write-through to RAM Section 1 on all mutation methods + `recordActivity()` App→Kernel callback |
+| **4** | **OS Model Upgrade** (RAM Application) | ✅ SHIPPED | Write-through to RAM Section 1 on all mutation methods |
 | **5** | **Alignment & Disambiguation** | ✅ SHIPPED | Curated Alias Model, Resolution Cascade, Entity Confirmation Flow |
 | **Mono W2**| **The Linter Upgrade (The Bouncer)** | ✅ SHIPPED | Refactoring Linters to pure Type Checkers using strict JSON deserialization against `domain:core:UnifiedMutation`. No more regex guessing. |
 | **Mono W5**| **The Async Loop (CQRS Engine)** | ✅ SHIPPED | Decoupled EntityWriter SSD mutation from RAM context update. RAM sync is instant, SSD save and heavy DB decode strings are pushed to background coroutines. |
@@ -266,12 +260,11 @@ Convention: Keys prefixed with `_` are metadata, not business attributes.
 
 1. **Every write is grounded** — User input → LLM → RelevancyLib (entity resolution) → EntityWriter. The agent never presumes; `resolvedId` comes from RelevancyLib.
 2. **User corrections preserve context** — When a user says "His name is actually X", `updateProfile` changes the `displayName` but *appends* the old name to the `aliasesJson` array (FIFO, max 8). This ensures future fuzzy searches still find the entity using the old, misspelled/outdated context.
-3. **History is preserved** — `recordActivity()` tracks every change (`承时利和 → 华为 → 承时利和`), making corrections visually auditable in the timeline. Additionally, the preserved `aliasesJson` keeps the entity robust against ASR errors over time.
+3. **History tracking (Pending)** — Future timeline integration will track every change. Additionally, the preserved `aliasesJson` keeps the entity robust against ASR errors over time.
 4. **True duplicates are a dedup problem** — If two `entityId`s exist for the same person because alias matching failed, the fix is better RelevancyLib matching, not a manual merge UI.
 
 ### Wave 4 Scope (OS Model) — ✅ SHIPPED
 - ✅ `upsertFromClue` / `registerAlias` / `updateAttribute` / `delete` write-through to RAM Section 1
-- ✅ `updateProfile()` calls `ContextBuilder.recordActivity()` (App → Kernel)
 - SSD reads for dedup remain (full catalog search requires SSD, per os-model-architecture.md)
 
 ---

@@ -128,24 +128,27 @@
 > Objective: Formalize the "Town and Highway" protocol for the DEV Audio Hook by decoupling optimistic UI Task Creation (Path A) from heavyweight async CRM Entity Disambiguation (Path B).
 > 🧭 **North Star**: [Wave 14 Master Guide](../specs/wave14-dual-path-master-guide.md)
 
-- [ ] 🔲 **T0: The God Spec Splice (Context Isolation)**
-  - [ ] **Plan**: Shard `docs/cerb/scheduler/` into `scheduler-domain`, `scheduler-linter`, and `scheduler-drawer`.
-  - [ ] **Execute**: Run `/cerb-spec-template` and `/cerb-ui-template` to scaffold the 3 new directories. Migrate the 32KB content appropriately. Append to `interface-map.md`.
-  - [ ] **Test**: Run `/cerb-check` on all three new specs. Delete the old `scheduler/` doc directory.
+- [x] ✅ **T0: Campaign North Star**
+  - [x] **Docs**: Create `docs/specs/wave14-dual-path-master-guide.md` to establish architectural principles and Intricacies.
 
-- [ ] 🔲 **T1: Shard 1 Execution (Domain `unifiedID` Infrastructure)**
-  - [ ] **Specs**: Ensure `scheduler-domain/interface.md` is strictly pure.
-  - [ ] **Execute**: Update ASR transcription layer (or core IntentOrchestrator generation) to mint a random `unifiedID`. 
-  - [ ] **Execute**: Update `ScheduledTask` entity if necessary to accept `unifiedID`.
-  - [ ] **Test**: Unit tests verify `unifiedID` propagates into the pipeline `Input` object.
+- [x] ✅ **T1: The God Spec Splice (Context Isolation)**
+  - [x] **Plan**: Shard `docs/cerb/scheduler/` into `scheduler-domain`, `scheduler-linter`, and `scheduler-drawer`.
+  - [x] **Execute**: Run `/cerb-spec-template` and `/cerb-ui-template` to scaffold the 3 new directories. Migrate the 32KB content appropriately. Append to `interface-map.md`.
+  - [x] **Test**: Run `/cerb-check` on all three new specs. Delete the old `scheduler/` doc directory.
 
-- [ ] 🔲 **T2: Shard 2 Execution (Linter Path A & B Dual-Routing)**
+- [x] ✅ **T2: Shard 1 Execution (Domain `unifiedID` Infrastructure)**
+  - [x] **Specs**: Ensure `scheduler-domain/interface.md` is strictly pure.
+  - [x] **Execute**: Update ASR transcription layer (or core IntentOrchestrator generation) to mint a random `unifiedID`. 
+  - [x] **Execute**: Update `ScheduledTask` entity if necessary to accept `unifiedID`.
+  - [x] **Test**: Unit tests verify `unifiedID` propagates into the pipeline `Input` object.
+
+- [ ] 🔲 **T3: Shard 2 Execution (Linter Path A & B Dual-Routing)**
   - [ ] **Specs**: Adhere to `scheduler-linter/interface.md`.
   - [ ] **Execute (Path A)**: Implement lightweight fast-track parser to instantly generate a `ScheduledTask` via DB insertion with the `unifiedID`.
   - [ ] **Execute (Path B)**: Route the slow background CRM Disambiguation through the `UnifiedPipeline` targeting the exact same `unifiedID`.
   - [ ] **Test**: L2 simulated pipeline test tracking both forks resolving correctly.
 
-- [ ] 🔲 **T3: Shard 3 Execution (UI Presentation Teardown)**
+- [ ] 🔲 **T4: Shard 3 Execution (UI Presentation Teardown)**
   - [ ] **Specs**: Ensure `scheduler-drawer/interface.md` defines pure state execution.
   - [ ] **Execute**: Hoist `PhoneAudioRecorder` out of the visual card layer up to ViewModel/Screen.
   - [ ] **Execute**: Dismantle 700-line `SchedulerCards.kt`. Move atomic components (`TaskCardHeader`, `TaskCardDetails`, etc.) into `components/` package.

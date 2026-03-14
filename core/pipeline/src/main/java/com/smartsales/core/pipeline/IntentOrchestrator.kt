@@ -44,7 +44,7 @@ class IntentOrchestrator @Inject constructor(
     private var pendingProposal: PipelineResult.MutationProposal? = null
     private var pendingToolDispatch: PipelineResult.ToolDispatch? = null
 
-    suspend fun processInput(input: String): Flow<PipelineResult> {
+    suspend fun processInput(input: String, isVoice: Boolean = false): Flow<PipelineResult> {
         return flow {
             // Wave 3 Open-Loop Protocol: Any new substantive input clears the pending state
             // to avoid committing stale LLM hallucinations if the user ignored a previous confirmation card.
@@ -89,6 +89,8 @@ class IntentOrchestrator @Inject constructor(
         val context = contextBuilder.build(input, Mode.ANALYST, depth = ContextDepth.MINIMAL)
         val routerResult = lightningRouter.evaluateIntent(context)
 
+        // BugFix 4.3/4.5: 短路拦截 — 只有非语音时才阻断 BADGE_DELEGATION
+        // Kotlin when 不支持 fall-through，所以拦截逻辑提前处理
         when (routerResult?.queryQuality) {
             QueryQuality.NOISE, QueryQuality.GREETING -> {
                 // Short-circuit to System I (Mascot) without blocking the flow
@@ -101,68 +103,73 @@ class IntentOrchestrator @Inject constructor(
             QueryQuality.VAGUE -> {
                 // Route back to user for clarification or immediate answer
                 emit(PipelineResult.ConversationalReply(routerResult.response))
-            }
-            QueryQuality.BADGE_DELEGATION -> {
-                // Wave 6: Hardware Delegation Enforcement
-                emit(PipelineResult.BadgeDelegationIntercepted)
                 return@flow
             }
-            else -> {
-                // T1 Sync Loop: Fast-Fail Entity Disambiguation before hitting System II
-                val missingList = routerResult?.missingEntities ?: emptyList()
-                val cacheResult = aliasCache.match(missingList)
-                
-                var resolvedEntityId: String? = null
-                when (cacheResult) {
-                    is CacheResult.Ambiguous -> {
-                        // HALT - Do not hit UnifiedPipeline
-                        // Map the cache candidates directly into a UI State so the ViewModel doesn't need to know about EntityEntry
-                        val uiCandidates = cacheResult.candidates.map { entry ->
-                            CandidateOption(
-                                entityId = entry.entityId,
-                                displayName = entry.displayName,
-                                description = entry.jobTitle
-                            )
-                        }
-                        
-                        val uiState = UiState.AwaitingClarification(
-                            question = "找到多个由于同名或别名冲突的实体，请选择：",
-                            clarificationType = ClarificationType.AMBIGUOUS_PERSON,
-                            candidates = uiCandidates
-                        )
-                        
-                        emit(PipelineResult.DisambiguationIntercepted(uiState))
-                        return@flow
-                    }
-                    is CacheResult.ExactMatch -> {
-                        resolvedEntityId = cacheResult.entityId
-                    }
-                    is CacheResult.Miss -> {
-                        // Proceed normally to System II, it might handle creation or search
-                    }
+            QueryQuality.BADGE_DELEGATION -> {
+                if (!isVoice) {
+                    // Wave 6: Hardware Delegation Enforcement — 非语音输入不走任务创建
+                    emit(PipelineResult.BadgeDelegationIntercepted)
+                    return@flow
+                }
+                // isVoice=true → 继续往下走 System II pipeline
+            }
+            else -> { /* SIMPLE_QA, DEEP_ANALYSIS, CRM_TASK, null → 继续往下走 System II pipeline */ }
+        }
+
+        // === System II Pipeline 入口 ===
+        // 所有未被短路的 intent (BADGE_DELEGATION+voice, DEEP_ANALYSIS, etc.) 都走这里
+        val missingList = routerResult?.missingEntities ?: emptyList()
+        val cacheResult = aliasCache.match(missingList)
+        
+        var resolvedEntityId: String? = null
+        when (cacheResult) {
+            is CacheResult.Ambiguous -> {
+                val uiCandidates = cacheResult.candidates.map { entry ->
+                    CandidateOption(
+                        entityId = entry.entityId,
+                        displayName = entry.displayName,
+                        description = entry.jobTitle
+                    )
                 }
                 
-                // System II Task (Deep Analysis, Simple QA, or Direct Task)
-                val pipelineInput = PipelineInput(
-                    rawText = input,
-                    isVoice = false,
-                    intent = routerResult?.queryQuality ?: QueryQuality.DEEP_ANALYSIS,
-                    resolvedEntityId = resolvedEntityId
+                val uiState = UiState.AwaitingClarification(
+                    question = "找到多个由于同名或别名冲突的实体，请选择：",
+                    clarificationType = ClarificationType.AMBIGUOUS_PERSON,
+                    candidates = uiCandidates
                 )
                 
-                // Delegate to the heavy-duty pipeline and forward its results
-                unifiedPipeline.processInput(pipelineInput).collect { result ->
-                    // Intercept MutationProposals and ToolDispatch to cache them for Open-Loop confirmation
-                    if (result is PipelineResult.MutationProposal) {
-                        this@IntentOrchestrator.pendingProposal = result
-                    } else if (result is PipelineResult.ToolDispatch && result.toolId != "reschedule") {
-                        // "reschedule" is an internal legacy tool hack bypassing this block normally,
-                        // but Vault IDs like GENERATE_PDF should require confirmation.
-                        this@IntentOrchestrator.pendingToolDispatch = result
-                    }
-                    emit(result)
-                }
+                emit(PipelineResult.DisambiguationIntercepted(uiState))
+                return@flow
             }
+            is CacheResult.ExactMatch -> {
+                resolvedEntityId = cacheResult.entityId
+            }
+            is CacheResult.Miss -> {
+                // Proceed normally to System II
+            }
+        }
+        
+        val unifiedId = java.util.UUID.randomUUID().toString()
+        android.util.Log.d("IntentOrchestrator", "processInput: Minted unifiedId=\$unifiedId for input=\$input")
+        
+        val pipelineInput = PipelineInput(
+            rawText = input,
+            isVoice = isVoice,
+            isBadge = isVoice,
+            intent = routerResult?.queryQuality ?: QueryQuality.DEEP_ANALYSIS,
+            resolvedEntityId = resolvedEntityId,
+            unifiedId = unifiedId
+        )
+        
+        // Delegate to the heavy-duty pipeline and forward its results
+        unifiedPipeline.processInput(pipelineInput).collect { result ->
+            // Intercept MutationProposals and ToolDispatch to cache them for Open-Loop confirmation
+            if (result is PipelineResult.MutationProposal) {
+                this@IntentOrchestrator.pendingProposal = result
+            } else if (result is PipelineResult.ToolDispatch && result.toolId != "reschedule") {
+                this@IntentOrchestrator.pendingToolDispatch = result
+            }
+            emit(result)
         }
     }
 }

@@ -11,14 +11,15 @@ import com.smartsales.core.context.RealContextBuilder
 import com.smartsales.core.llm.ExecutorResult
 import com.smartsales.core.test.fakes.*
 import com.smartsales.prism.data.fakes.FakePipelineTelemetry
-import com.smartsales.prism.data.fakes.FakeTimeProvider
+import com.smartsales.prism.domain.scheduler.fakes.FakeTimeProvider
 import com.smartsales.prism.data.rl.RealReinforcementLearner
 import com.smartsales.data.crm.writer.RealEntityWriter
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.SchedulerLinter
 import com.smartsales.prism.domain.scheduler.LintResult
-import com.smartsales.prism.domain.scheduler.TimelineItemModel
+import com.smartsales.prism.domain.scheduler.SchedulerTimelineItem
+import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.domain.model.UiState
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.toList
@@ -60,15 +61,15 @@ class L2DualEngineBridgeTest {
         val historyRepo = FakeHistoryRepository()
 
         val fakeTaskRepo = object : ScheduledTaskRepository {
-            override fun getTimelineItems(dayOffset: Int): Flow<List<TimelineItemModel>> = emptyFlow()
-            override fun queryByDateRange(start: LocalDate, end: LocalDate): Flow<List<TimelineItemModel>> = emptyFlow()
-            override suspend fun insertTask(task: TimelineItemModel.Task): String = "fake-task"
-            override suspend fun getTask(id: String): TimelineItemModel.Task? = null
-            override suspend fun updateTask(task: TimelineItemModel.Task) {}
+            override fun getTimelineItems(dayOffset: Int): Flow<List<SchedulerTimelineItem>> = emptyFlow()
+            override fun queryByDateRange(start: LocalDate, end: LocalDate): Flow<List<SchedulerTimelineItem>> = emptyFlow()
+            override suspend fun insertTask(task: ScheduledTask): String = "fake-task"
+            override suspend fun getTask(id: String): ScheduledTask? = null
+            override suspend fun updateTask(task: ScheduledTask) {}
             override suspend fun deleteItem(id: String) {}
-            override suspend fun getRecentCompleted(limit: Int): List<TimelineItemModel.Task> = emptyList()
-            override suspend fun getTopUrgentActiveForEntity(entityId: String): TimelineItemModel.Task? = null
-            override fun observeByEntityId(entityId: String): kotlinx.coroutines.flow.Flow<List<TimelineItemModel.Task>> = kotlinx.coroutines.flow.emptyFlow()
+            override suspend fun getRecentCompleted(limit: Int): List<ScheduledTask> = emptyList()
+            override suspend fun getTopUrgentActiveForEntity(entityId: String): ScheduledTask? = null
+            override fun observeByEntityId(entityId: String): kotlinx.coroutines.flow.Flow<List<ScheduledTask>> = kotlinx.coroutines.flow.emptyFlow()
         }
 
         contextBuilder = RealContextBuilder(
@@ -130,7 +131,7 @@ class L2DualEngineBridgeTest {
         )
 
         pipeline.processInput(
-            PipelineInput("Client X wants 50 widgets", intent = QueryQuality.DEEP_ANALYSIS, requestedDepth = ContextDepth.FULL)
+            PipelineInput("Client X wants 50 widgets", intent = QueryQuality.DEEP_ANALYSIS, requestedDepth = ContextDepth.FULL, unifiedId = "test_unified_id")
         ).toList()
 
         // Assert Entity is written to SSD
@@ -158,7 +159,7 @@ class L2DualEngineBridgeTest {
         )
 
         pipeline.processInput(
-            PipelineInput("Actually, make it 100", intent = QueryQuality.DEEP_ANALYSIS, requestedDepth = ContextDepth.FULL)
+            PipelineInput("Actually, make it 100", intent = QueryQuality.DEEP_ANALYSIS, requestedDepth = ContextDepth.FULL, unifiedId = "test_unified_id")
         ).toList()
 
         // Assert SSD was updated natively
@@ -185,7 +186,7 @@ class L2DualEngineBridgeTest {
         )
         
         val results = pipeline.processInput(
-            PipelineInput("Change the order to 100", intent = QueryQuality.DEEP_ANALYSIS, requestedDepth = ContextDepth.FULL)
+            PipelineInput("Change the order to 100", intent = QueryQuality.DEEP_ANALYSIS, requestedDepth = ContextDepth.FULL, unifiedId = "test_unified_id")
         ).toList()
 
         // Expect ClarificationNeeded fallback instead of crashing
@@ -215,7 +216,7 @@ class L2DualEngineBridgeTest {
         var threwException = false
         try {
             pipeline.processInput(
-                PipelineInput("Corrupt intent", intent = QueryQuality.DEEP_ANALYSIS, requestedDepth = ContextDepth.FULL)
+                PipelineInput("Corrupt intent", intent = QueryQuality.DEEP_ANALYSIS, requestedDepth = ContextDepth.FULL, unifiedId = "test_unified_id")
             ).toList()
         } catch (e: IllegalArgumentException) {
             threwException = true

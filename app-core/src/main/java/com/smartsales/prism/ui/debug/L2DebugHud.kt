@@ -187,7 +187,7 @@ fun L2DebugHud(
                                         QueryQuality.DEEP_ANALYSIS
                                     }
                                 
-                                    val pipelineInput = PipelineInput(text, isVoice = false, intent = intent)
+                                    val pipelineInput = PipelineInput(text, isVoice = false, intent = intent, unifiedId = "test_unified_id_l2_debug")
                                     var hasResult = false
                                     unifiedPipeline.processInput(pipelineInput).collect { pResult ->
                                         when (pResult) {

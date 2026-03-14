@@ -12,13 +12,14 @@ import com.smartsales.core.llm.ExecutorResult
 import com.smartsales.core.llm.TokenUsage
 import com.smartsales.core.test.fakes.*
 import com.smartsales.prism.data.fakes.FakePipelineTelemetry
-import com.smartsales.prism.data.fakes.FakeTimeProvider
+import com.smartsales.prism.domain.scheduler.fakes.FakeTimeProvider
 import com.smartsales.prism.data.rl.RealReinforcementLearner
 import com.smartsales.data.crm.writer.RealEntityWriter
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.SchedulerLinter
-import com.smartsales.prism.domain.scheduler.TimelineItemModel
+import com.smartsales.prism.domain.scheduler.SchedulerTimelineItem
+import com.smartsales.prism.domain.scheduler.ScheduledTask
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.flow.Flow
@@ -64,15 +65,15 @@ class L2WriteBackConcurrencyTest {
         val historyRepo = FakeHistoryRepository()
 
         val fakeTaskRepo = object : ScheduledTaskRepository {
-            override fun getTimelineItems(dayOffset: Int): Flow<List<TimelineItemModel>> = emptyFlow()
-            override fun queryByDateRange(start: LocalDate, end: LocalDate): Flow<List<TimelineItemModel>> = emptyFlow()
-            override suspend fun insertTask(task: TimelineItemModel.Task): String = "fake-task"
-            override suspend fun getTask(id: String): TimelineItemModel.Task? = null
-            override suspend fun updateTask(task: TimelineItemModel.Task) {}
+            override fun getTimelineItems(dayOffset: Int): Flow<List<SchedulerTimelineItem>> = emptyFlow()
+            override fun queryByDateRange(start: LocalDate, end: LocalDate): Flow<List<SchedulerTimelineItem>> = emptyFlow()
+            override suspend fun insertTask(task: ScheduledTask): String = "fake-task"
+            override suspend fun getTask(id: String): ScheduledTask? = null
+            override suspend fun updateTask(task: ScheduledTask) {}
             override suspend fun deleteItem(id: String) {}
-            override suspend fun getRecentCompleted(limit: Int): List<TimelineItemModel.Task> = emptyList()
-            override suspend fun getTopUrgentActiveForEntity(entityId: String): TimelineItemModel.Task? = null
-            override fun observeByEntityId(entityId: String): Flow<List<TimelineItemModel.Task>> = emptyFlow()
+            override suspend fun getRecentCompleted(limit: Int): List<ScheduledTask> = emptyList()
+            override suspend fun getTopUrgentActiveForEntity(entityId: String): ScheduledTask? = null
+            override fun observeByEntityId(entityId: String): Flow<List<ScheduledTask>> = emptyFlow()
         }
 
         contextBuilder = RealContextBuilder(
@@ -133,7 +134,7 @@ class L2WriteBackConcurrencyTest {
 
         // Seed run
         pipeline.processInput(
-            PipelineInput("Add Client X", intent = QueryQuality.DEEP_ANALYSIS, requestedDepth = ContextDepth.FULL)
+            PipelineInput("Add Client X", intent = QueryQuality.DEEP_ANALYSIS, requestedDepth = ContextDepth.FULL, unifiedId = "test_unified_id")
         ).toList()
         advanceUntilIdle()
 
@@ -166,7 +167,7 @@ class L2WriteBackConcurrencyTest {
         // Launch A
         val jobA = async {
             pipeline.processInput(
-                PipelineInput("Change their address to 123 Main St", intent = QueryQuality.DEEP_ANALYSIS, requestedDepth = ContextDepth.FULL)
+                PipelineInput("Change their address to 123 Main St", intent = QueryQuality.DEEP_ANALYSIS, requestedDepth = ContextDepth.FULL, unifiedId = "test_unified_id")
             ).toList()
         }
 

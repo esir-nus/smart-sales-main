@@ -11,13 +11,14 @@ import com.smartsales.core.pipeline.PipelineResult
 import com.smartsales.core.pipeline.QueryQuality
 import com.smartsales.core.test.fakes.*
 import com.smartsales.prism.data.fakes.FakePipelineTelemetry
-import com.smartsales.prism.data.fakes.FakeTimeProvider
+import com.smartsales.prism.domain.scheduler.fakes.FakeTimeProvider
 import com.smartsales.prism.data.rl.RealReinforcementLearner
 import com.smartsales.data.crm.writer.RealEntityWriter
 import com.smartsales.prism.domain.memory.EntityRef
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.SchedulerLinter
-import com.smartsales.prism.domain.scheduler.TimelineItemModel
+import com.smartsales.prism.domain.scheduler.SchedulerTimelineItem
+import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.core.llm.ExecutorResult
 import com.smartsales.core.llm.TokenUsage
 import kotlinx.coroutines.flow.toList
@@ -62,15 +63,15 @@ class L2GatewayGauntletTest {
         val historyRepo = FakeHistoryRepository()
 
         val fakeTaskRepo = object : ScheduledTaskRepository {
-            override fun getTimelineItems(dayOffset: Int): Flow<List<TimelineItemModel>> = emptyFlow()
-            override fun queryByDateRange(start: LocalDate, end: LocalDate): Flow<List<TimelineItemModel>> = emptyFlow()
-            override suspend fun insertTask(task: TimelineItemModel.Task): String = "fake-task"
-            override suspend fun getTask(id: String): TimelineItemModel.Task? = null
-            override suspend fun updateTask(task: TimelineItemModel.Task) {}
+            override fun getTimelineItems(dayOffset: Int): Flow<List<SchedulerTimelineItem>> = emptyFlow()
+            override fun queryByDateRange(start: LocalDate, end: LocalDate): Flow<List<SchedulerTimelineItem>> = emptyFlow()
+            override suspend fun insertTask(task: ScheduledTask): String = "fake-task"
+            override suspend fun getTask(id: String): ScheduledTask? = null
+            override suspend fun updateTask(task: ScheduledTask) {}
             override suspend fun deleteItem(id: String) {}
-            override suspend fun getRecentCompleted(limit: Int): List<TimelineItemModel.Task> = emptyList()
-            override suspend fun getTopUrgentActiveForEntity(entityId: String): TimelineItemModel.Task? = null
-            override fun observeByEntityId(entityId: String): kotlinx.coroutines.flow.Flow<List<TimelineItemModel.Task>> = kotlinx.coroutines.flow.emptyFlow()
+            override suspend fun getRecentCompleted(limit: Int): List<ScheduledTask> = emptyList()
+            override suspend fun getTopUrgentActiveForEntity(entityId: String): ScheduledTask? = null
+            override fun observeByEntityId(entityId: String): kotlinx.coroutines.flow.Flow<List<ScheduledTask>> = kotlinx.coroutines.flow.emptyFlow()
         }
         this.fakeTaskRepo = fakeTaskRepo
 
@@ -149,7 +150,7 @@ class L2GatewayGauntletTest {
             clarificationPrompt = "找到多个'字节跳动'，请问是指哪家分公司？"
         )
         
-        val inputTurn1 = PipelineInput(rawText = "Schedule a meeting with 字节跳动", isVoice = false, intent = QueryQuality.CRM_TASK)
+        val inputTurn1 = PipelineInput(rawText = "Schedule a meeting with 字节跳动", isVoice = false, intent = QueryQuality.CRM_TASK, unifiedId = "test_unified_id")
         val resultsTurn1 = pipeline.processInput(inputTurn1).toList()
         
         val interceptResult = resultsTurn1.filterIsInstance<PipelineResult.DisambiguationIntercepted>().firstOrNull()
@@ -185,7 +186,7 @@ class L2GatewayGauntletTest {
             tokenUsage = TokenUsage(100, 10)
         )
         
-        val inputTurn2 = PipelineInput(rawText = "我是说深圳那个分公司", isVoice = false, intent = QueryQuality.CRM_TASK)
+        val inputTurn2 = PipelineInput(rawText = "我是说深圳那个分公司", isVoice = false, intent = QueryQuality.CRM_TASK, unifiedId = "test_unified_id")
         val resultsTurn2 = pipeline.processInput(inputTurn2).toList()
         
         // 4. The Resume

@@ -14,9 +14,10 @@ import com.smartsales.core.pipeline.ParseResult
 import com.smartsales.core.pipeline.DisambiguationResult
 import com.smartsales.core.pipeline.QueryQuality
 import com.smartsales.prism.domain.scheduler.SchedulerLinter
-import com.smartsales.prism.domain.scheduler.TimelineItemModel
+import com.smartsales.prism.domain.scheduler.SchedulerTimelineItem
+import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.domain.scheduler.FakeScheduledTaskRepository
-import com.smartsales.prism.data.fakes.FakeTimeProvider
+import com.smartsales.prism.domain.scheduler.fakes.FakeTimeProvider
 import com.smartsales.core.test.fakes.*
 import com.smartsales.prism.domain.telemetry.PipelineTelemetry
 import com.smartsales.prism.domain.telemetry.PipelinePhase
@@ -117,7 +118,7 @@ class RealUnifiedPipelineTest {
             tokenUsage = com.smartsales.core.llm.TokenUsage(100, 10)
         )
         
-        val input = PipelineInput(rawText = "Schedule a meeting", isVoice = false, intent = QueryQuality.CRM_TASK)
+        val input = PipelineInput(rawText = "Schedule a meeting", isVoice = false, intent = QueryQuality.CRM_TASK, unifiedId = "test_unified_id")
 
         // Act
         val results = pipeline.processInput(input).toList()
@@ -150,7 +151,7 @@ class RealUnifiedPipelineTest {
         )
         entityDisambiguationService.nextResult = DisambiguationResult.PassThrough
         
-        val input = PipelineInput(rawText = "Set a meeting with Alex", isVoice = false, intent = QueryQuality.CRM_TASK)
+        val input = PipelineInput(rawText = "Set a meeting with Alex", isVoice = false, intent = QueryQuality.CRM_TASK, unifiedId = "test_unified_id")
 
         // Act
         val results = pipeline.processInput(input).toList()
@@ -166,7 +167,7 @@ class RealUnifiedPipelineTest {
     @Test
     fun `processInput empty string handles gracefully (Break-It)`() = runTest {
         // Arrange
-        val input = PipelineInput(rawText = "   ", isVoice = false, intent = QueryQuality.NOISE)
+        val input = PipelineInput(rawText = "   ", isVoice = false, intent = QueryQuality.NOISE, unifiedId = "test_unified_id")
         
         // By default, FakeDisambiguation is PassThrough. FakeParser uses ParseResult.Success empty JSON.
         // It routes to Analyst/Consultant fallback (NOISE)
@@ -181,7 +182,7 @@ class RealUnifiedPipelineTest {
     @Test
     fun `processInput LightningFastTrack drops to Mascot for GREETING`() = runTest {
         // Arrange
-        val input = PipelineInput(rawText = "Hello Smart Sales", isVoice = false, intent = QueryQuality.GREETING)
+        val input = PipelineInput(rawText = "Hello Smart Sales", isVoice = false, intent = QueryQuality.GREETING, unifiedId = "test_unified_id")
         
         // Lightning Extractor Model returns a GREETING intent
         val jsonPayload = """

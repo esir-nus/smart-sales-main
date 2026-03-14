@@ -118,11 +118,15 @@ class RealBadgeAudioPipeline @Inject constructor(
             _events.emit(PipelineEvent.Processing(transcript))
             android.util.Log.d(TAG, "Scheduling task...")
             
+            val unifiedId = java.util.UUID.randomUUID().toString()
+            android.util.Log.d(TAG, "processFile: Minted unifiedId=\$unifiedId for scheduling task")
+            
             val pipelineInput = com.smartsales.core.pipeline.PipelineInput(
                 rawText = transcript,
                 isVoice = true,
                 isBadge = true,
-                intent = com.smartsales.core.pipeline.QueryQuality.CRM_TASK
+                intent = com.smartsales.core.pipeline.QueryQuality.CRM_TASK,
+                unifiedId = unifiedId
             )
             
             var schedulerResult: SchedulerResult = SchedulerResult.Ignored

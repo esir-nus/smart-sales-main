@@ -11,13 +11,14 @@ import com.smartsales.core.context.RealContextBuilder
 import com.smartsales.core.llm.ExecutorResult
 import com.smartsales.core.test.fakes.*
 import com.smartsales.prism.data.fakes.FakePipelineTelemetry
-import com.smartsales.prism.data.fakes.FakeTimeProvider
+import com.smartsales.prism.domain.scheduler.fakes.FakeTimeProvider
 import com.smartsales.prism.data.rl.RealReinforcementLearner
 import com.smartsales.data.crm.writer.RealEntityWriter
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.SchedulerLinter
-import com.smartsales.prism.domain.scheduler.TimelineItemModel
+import com.smartsales.prism.domain.scheduler.SchedulerTimelineItem
+import com.smartsales.prism.domain.scheduler.ScheduledTask
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.flow.Flow
@@ -57,15 +58,15 @@ class L2StrictInterfaceIntegrityTest {
         val historyRepo = FakeHistoryRepository()
 
         fakeTaskRepo = object : ScheduledTaskRepository {
-            override fun getTimelineItems(dayOffset: Int): Flow<List<TimelineItemModel>> = emptyFlow()
-            override fun queryByDateRange(start: LocalDate, end: LocalDate): Flow<List<TimelineItemModel>> = emptyFlow()
-            override suspend fun insertTask(task: TimelineItemModel.Task): String = "fake-task"
-            override suspend fun getTask(id: String): TimelineItemModel.Task? = null
-            override suspend fun updateTask(task: TimelineItemModel.Task) {}
+            override fun getTimelineItems(dayOffset: Int): Flow<List<SchedulerTimelineItem>> = emptyFlow()
+            override fun queryByDateRange(start: LocalDate, end: LocalDate): Flow<List<SchedulerTimelineItem>> = emptyFlow()
+            override suspend fun insertTask(task: ScheduledTask): String = "fake-task"
+            override suspend fun getTask(id: String): ScheduledTask? = null
+            override suspend fun updateTask(task: ScheduledTask) {}
             override suspend fun deleteItem(id: String) {}
-            override suspend fun getRecentCompleted(limit: Int): List<TimelineItemModel.Task> = emptyList()
-            override suspend fun getTopUrgentActiveForEntity(entityId: String): TimelineItemModel.Task? = null
-            override fun observeByEntityId(entityId: String): kotlinx.coroutines.flow.Flow<List<TimelineItemModel.Task>> = kotlinx.coroutines.flow.flowOf(emptyList())
+            override suspend fun getRecentCompleted(limit: Int): List<ScheduledTask> = emptyList()
+            override suspend fun getTopUrgentActiveForEntity(entityId: String): ScheduledTask? = null
+            override fun observeByEntityId(entityId: String): kotlinx.coroutines.flow.Flow<List<ScheduledTask>> = kotlinx.coroutines.flow.flowOf(emptyList())
         }
 
         contextBuilder = RealContextBuilder(
@@ -122,7 +123,7 @@ class L2StrictInterfaceIntegrityTest {
         )
         
         val results = pipeline.processInput(
-            PipelineInput("Update the order quantity", intent = QueryQuality.DEEP_ANALYSIS, requestedDepth = ContextDepth.FULL)
+            PipelineInput("Update the order quantity", intent = QueryQuality.DEEP_ANALYSIS, requestedDepth = ContextDepth.FULL, unifiedId = "test_unified_id")
         ).toList()
 
         // Assert Pipeline suspended gracefully and emitted Intercepted result
@@ -155,7 +156,7 @@ class L2StrictInterfaceIntegrityTest {
         fakeExecutor.enqueueResponse(ExecutorResult.Success(badJson))
 
         val results = pipeline.processInput(
-            PipelineInput("Schedule something broken", intent = QueryQuality.CRM_TASK, requestedDepth = ContextDepth.FULL)
+            PipelineInput("Schedule something broken", intent = QueryQuality.CRM_TASK, requestedDepth = ContextDepth.FULL, unifiedId = "test_unified_id")
         ).toList()
 
         // Assert pipeline did not crash, but correctly returned the linter's rejection
@@ -173,7 +174,7 @@ class L2StrictInterfaceIntegrityTest {
         fakeInputParserService.nextResult = ParseResult.Success(emptyList(), null, "{}")
         
         val results = pipeline.processInput(
-            PipelineInput("Whatever, Just log a note that I called", intent = QueryQuality.DEEP_ANALYSIS, requestedDepth = ContextDepth.FULL)
+            PipelineInput("Whatever, Just log a note that I called", intent = QueryQuality.DEEP_ANALYSIS, requestedDepth = ContextDepth.FULL, unifiedId = "test_unified_id")
         ).toList()
         
         val reply = results.filterIsInstance<PipelineResult.ConversationalReply>().firstOrNull()

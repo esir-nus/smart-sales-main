@@ -13,7 +13,8 @@ data class PipelineInput(
     val intent: QueryQuality = QueryQuality.DEEP_ANALYSIS,
     val replaceItemId: String? = null,
     val requestedDepth: ContextDepth = ContextDepth.FULL,
-    val resolvedEntityId: String? = null
+    val resolvedEntityId: String? = null,
+    val unifiedId: String // Wave 14: Dual-Path sync token (No default to enforce determinism)
 )
 
 /**
@@ -82,7 +83,7 @@ sealed class PipelineResult {
      * T3 Open-Loop Defense: Proposal to mutate the database, requiring user confirmation.
      */
     data class MutationProposal(
-        val task: com.smartsales.prism.domain.scheduler.TimelineItemModel.Task? = null,
+        val task: com.smartsales.prism.domain.scheduler.ScheduledTask? = null,
         val profileMutations: List<ProfileMutation> = emptyList(),
         val isConflict: Boolean = false
     ) : PipelineResult() {

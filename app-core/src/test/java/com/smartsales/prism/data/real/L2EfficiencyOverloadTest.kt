@@ -10,11 +10,12 @@ import com.smartsales.core.llm.TokenUsage
 import com.smartsales.core.context.RealContextBuilder
 import com.smartsales.core.test.fakes.*
 import com.smartsales.prism.data.fakes.FakePipelineTelemetry
-import com.smartsales.prism.data.fakes.FakeTimeProvider
+import com.smartsales.prism.domain.scheduler.fakes.FakeTimeProvider
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
-import com.smartsales.prism.domain.scheduler.TimelineItemModel
+import com.smartsales.prism.domain.scheduler.SchedulerTimelineItem
+import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.domain.rl.ReinforcementLearner
 import com.smartsales.prism.domain.rl.RlObservation
 import com.smartsales.prism.domain.rl.HabitContext
@@ -52,15 +53,15 @@ class L2EfficiencyOverloadTest {
         fakeTimeProvider.fixedInstant = Instant.parse("2026-03-11T09:00:00Z")
         
         fakeTaskRepo = object : ScheduledTaskRepository {
-            override fun getTimelineItems(dayOffset: Int): Flow<List<TimelineItemModel>> = emptyFlow()
-            override fun queryByDateRange(start: LocalDate, end: LocalDate): Flow<List<TimelineItemModel>> = emptyFlow()
-            override suspend fun insertTask(task: TimelineItemModel.Task): String = "fake-task-${System.currentTimeMillis()}"
-            override suspend fun getTask(id: String): TimelineItemModel.Task? = null
-            override suspend fun updateTask(task: TimelineItemModel.Task) {}
+            override fun getTimelineItems(dayOffset: Int): Flow<List<SchedulerTimelineItem>> = emptyFlow()
+            override fun queryByDateRange(start: LocalDate, end: LocalDate): Flow<List<SchedulerTimelineItem>> = emptyFlow()
+            override suspend fun insertTask(task: ScheduledTask): String = "fake-task-${System.currentTimeMillis()}"
+            override suspend fun getTask(id: String): ScheduledTask? = null
+            override suspend fun updateTask(task: ScheduledTask) {}
             override suspend fun deleteItem(id: String) {}
-            override suspend fun getRecentCompleted(limit: Int): List<TimelineItemModel.Task> = emptyList()
-            override suspend fun getTopUrgentActiveForEntity(entityId: String): TimelineItemModel.Task? = null
-            override fun observeByEntityId(entityId: String): kotlinx.coroutines.flow.Flow<List<TimelineItemModel.Task>> = kotlinx.coroutines.flow.emptyFlow()
+            override suspend fun getRecentCompleted(limit: Int): List<ScheduledTask> = emptyList()
+            override suspend fun getTopUrgentActiveForEntity(entityId: String): ScheduledTask? = null
+            override fun observeByEntityId(entityId: String): kotlinx.coroutines.flow.Flow<List<ScheduledTask>> = kotlinx.coroutines.flow.emptyFlow()
         }
         
         val fakeRL = object : ReinforcementLearner {
@@ -139,7 +140,7 @@ class L2EfficiencyOverloadTest {
         fakeInputParserService.nextResult = ParseResult.Success(emptyList(), null, rawJson) // keep for title generation
         fakeExecutor.enqueueResponse(ExecutorResult.Success(rawJson, TokenUsage(10, 10)))
 
-        val results = pipeline.processInput(PipelineInput("schedule 3 items", intent = QueryQuality.CRM_TASK)).toList()
+        val results = pipeline.processInput(PipelineInput("schedule 3 items", intent = QueryQuality.CRM_TASK, unifiedId = "test_unified_id")).toList()
         
         val mutations = results.filterIsInstance<PipelineResult.MutationProposal>()
         println("DEBUG SCENE 1 RESULTS: $results")
@@ -174,7 +175,7 @@ class L2EfficiencyOverloadTest {
         
         fakeInputParserService.nextResult = ParseResult.Success(emptyList(), null, rawJson)
         fakeExecutor.enqueueResponse(ExecutorResult.Success(rawJson, TokenUsage(10, 10)))
-        val results = pipeline.processInput(PipelineInput("schedule overlap", intent = QueryQuality.CRM_TASK)).toList()
+        val results = pipeline.processInput(PipelineInput("schedule overlap", intent = QueryQuality.CRM_TASK, unifiedId = "test_unified_id")).toList()
         
         val mutations = results.filterIsInstance<PipelineResult.MutationProposal>()
         println("DEBUG SCENE 2 RESULTS: $results")
@@ -206,7 +207,7 @@ class L2EfficiencyOverloadTest {
 
         fakeInputParserService.nextResult = ParseResult.Success(emptyList(), null, rawJson)
         fakeExecutor.enqueueResponse(ExecutorResult.Success(rawJson, TokenUsage(10, 10)))
-        val results = pipeline.processInput(PipelineInput("schedule alarms", intent = QueryQuality.CRM_TASK)).toList()
+        val results = pipeline.processInput(PipelineInput("schedule alarms", intent = QueryQuality.CRM_TASK, unifiedId = "test_unified_id")).toList()
         println("DEBUG SCENE 3 RESULTS: $results")
         
         // Assert: tasks naturally fell down the cascade queue and were proposed with alarms natively

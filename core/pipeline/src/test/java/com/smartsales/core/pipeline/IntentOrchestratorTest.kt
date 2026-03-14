@@ -174,4 +174,34 @@ class IntentOrchestratorTest {
         // PipelineInput MUST carry the resolved ID
         assertEquals("lei-001", fakeUnifiedPipeline.processedInputs[0].resolvedEntityId)
     }
+
+    @Test
+    fun `verify unifiedID propagates into PipelineInput`() = runTest {
+        // According to Wave 14 Shard 1 Specs, the orchestrator must mint a non-null unifiedId
+        // and attach it to the PipelineInput for Dual-Path architecture sync.
+        setup()
+        val input = "Schedule a meeting for tomorrow"
+        
+        // Route it as a standard scheduler intent
+        fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.CRM_TASK, true, ""))
+        val expectedResult = PipelineResult.ConversationalReply("Scheduled.")
+        fakeUnifiedPipeline.nextResultFlow = flowOf(expectedResult)
+        
+        val result = orchestrator.processInput(input).firstOrNull()
+        
+        // Verify orchestrator execution completes successfully
+        assertNotNull(result)
+        assertEquals(expectedResult, result)
+        
+        // Check UnifiedPipeline hook for mechanical verification
+        assertEquals(1, fakeUnifiedPipeline.processedInputs.size)
+        val pipelineInput = fakeUnifiedPipeline.processedInputs[0]
+        
+        // Assert intent is preserved
+        assertEquals(QueryQuality.CRM_TASK, pipelineInput.intent)
+        
+        // Mechanical Verification: unifiedId must be explicitly present and non-empty
+        assertNotNull("unifiedId must not be null", pipelineInput.unifiedId)
+        assertTrue("unifiedId must be a populated UUID token", pipelineInput.unifiedId.isNotBlank())
+    }
 }

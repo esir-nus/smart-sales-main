@@ -7,8 +7,8 @@
 
 ## 📈 Current Level: T1 (Early Stage)
 
-**Current XP**: `180,410` Total Lines *(Down from 185,200)*
-*(Business Logic & Core Layers: `164,250` | Tests: `16,160` | Resources: `0`)*
+**Current XP**: `181,010` Total Lines *(Down from 185,200)*
+*(Business Logic & Core Layers: `164,060` | Tests: `16,950` | Resources: `0`)*
 
 **App Weight Class**: **Large System**
 - You have crossed the `100k` boundary. However, the system is getting *lighter and stronger*. By executing the "Great Legacy Purge" and strictly enforcing Layer 2 (Data) and Layer 3 (Core Pipeline) isolation, we've successfully dropped **~15,000 lines** of legacy rot while increasing architectural stability.
@@ -18,12 +18,12 @@
 To ensure this Heavyweight system doesn't collapse under its own gravity, logic is strictly distributed across isolated modules.
 
 ```mermaid
-pie title "Code Weight Distribution (180.4k Lines)"
+pie title "Code Weight Distribution (181.0k Lines)"
     "🧠 Core System & UI" : 123000
-    "🏚️ Legacy Monolith (app-core)" : 21320
-    "🛡️ Testing Armor" : 16160
-    "💾 Layer 2: Data & Persistence" : 10350
-    "⚙️ Layer 3: Core Pipelines (LLM/Context)" : 5120
+    "🏚️ Legacy Monolith (app-core)" : 21670
+    "🛡️ Testing Armor" : 16950
+    "💾 Layer 2: Data & Persistence" : 10490
+    "⚙️ Layer 3: Core Pipelines (LLM/Context)" : 6750
     "📜 Layer 2: Domain Contracts" : 2150
 ```
 
@@ -54,12 +54,12 @@ The line count alone doesn't tell the full story. The *velocity* of where code i
 
 | 代码模块分层 (Layer) | 🟢 新增行数 (In) | 🔴 移除行数 (Out) | 🟡 净增长 (Net) | 📉 演进趋势健康度 |
 |--------------|------------|-----------|------------|------------|
-| `app-core` (历史包袱遗留) | `+0` | `-4,820` | `-4,820` | ✅ **持续消解** |
-| `data` (Layer 2 隔离层) | `+8,242` | `-5` | `+8,237` | ✅ **健康增长** |
-| `core` (Layer 3 中枢层) | `+5,610` | `0` | `+5,610` | ✅ **健康增长** |
-| `tests` (L1-L3 测试护甲) | `+3,060` | `0` | `+3,060` | ✅ **防护力提升** |
+| `app-core` (遗留 + 纯 UI 并行) | `+1,200` | `-847` | `+353` | 🟡 **UI 平行迁移中** |
+| `data` (Layer 2 隔离层) | `+8,384` | `-5` | `+8,379` | ✅ **健康增长** |
+| `core` (Layer 3 中枢层) | `+7,237` | `0` | `+7,237` | ✅ **健康增长** |
+| `tests` (L1-L3 测试护甲) | `+3,849` | `0` | `+3,849` | ✅ **防护力提升** |
 
-> **资深架构师评估**: "系统正处于强劲的康复期。本周我们成功扭转了此前 `app-core` 疯狂膨胀的局面，净移除了约 4.8 千行历史包袱代码。同时，代表基础设施的 `data` 层和代表大脑中枢的 `core` 层迎来了健康增长，这证明新的架构边界（Layer 2/3）已被严格遵守。测试护甲 (`tests`) 的同步提升意味着系统正变得更加坚固。坚持当前的隔离底线，系统坍塌的危机已经解除。"
+> **资深架构师评估**: "系统正处于稳步的推进期。虽然 `app-core` 表面上略有反弹净增 (+353行)，但这是因为我们正在实施平行替代策略（例如并排开发无污染的 AgentIntelligenceScreen 来替换废弃的 AgentChatScreen）。在此期间，`data`/`core` 层依然遵守严格隔离并且测试护甲 (`tests`) 稳定提升。待平行验证完成后，必须执行清理行动彻底消灭 `app-core` 旧 UI，完成重构闭环。"
 
 ---
 

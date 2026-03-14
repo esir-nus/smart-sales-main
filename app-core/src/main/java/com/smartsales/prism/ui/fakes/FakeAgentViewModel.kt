@@ -86,15 +86,39 @@ class FakeAgentViewModel : IAgentViewModel {
     // or debug testing without the real pipeline.
     override fun debugRunScenario(scenario: String) {
         when (scenario) {
+            "IDLE" -> _uiState.value = UiState.Idle
+            "LOADING" -> _uiState.value = UiState.Loading
+            "THINKING" -> _uiState.value = UiState.Thinking("正在分析数据...")
+            "STREAMING" -> _uiState.value = UiState.Streaming("好的，我正在为您处理这")
+            "RESPONSE" -> _uiState.value = UiState.Response("处理完成。")
+            "SCHEDULER_TASK" -> _uiState.value = UiState.SchedulerTaskCreated(
+                taskId = "task_123",
+                title = "与张总过技术方案",
+                dayOffset = 1,
+                scheduledAtMillis = System.currentTimeMillis() + 86400000,
+                durationMinutes = 60,
+                isReschedule = false
+            )
+            "SCHEDULER_MULTI_TASK" -> _uiState.value = UiState.SchedulerMultiTaskCreated(
+                tasks = listOf(
+                    UiState.SchedulerTaskCreated("t1", "任务1", 0, System.currentTimeMillis(), 30),
+                    UiState.SchedulerTaskCreated("t2", "任务2", 1, System.currentTimeMillis() + 86400000, 60)
+                ),
+                hasConflict = false
+            )
+            "TOAST" -> _uiState.value = UiState.Toast("背景任务已更新")
+            "HW_HINT" -> _uiState.value = UiState.BadgeDelegationHint
+            "ERROR" -> _uiState.value = UiState.Error("网络连接超时，请重试")
             "WAITING_CLARIFICATION" -> _uiState.value = UiState.AwaitingClarification(
-                question = "How long should the meeting be?",
+                question = "开会需要多久？",
                 clarificationType = com.smartsales.prism.domain.model.ClarificationType.MISSING_DURATION
             )
-            "RESPONSE" -> _uiState.value = UiState.Response("Here is a mocked success response.")
-            "LOADING" -> _uiState.value = UiState.Loading
-            "THINKING" -> _uiState.value = UiState.Thinking("Fetching data from mock layer...")
-            "ERROR" -> _errorMessage.value = "Mocked network failure"
-            "HW_HINT" -> _uiState.value = UiState.BadgeDelegationHint
+            "MARKDOWN_STRATEGY" -> _uiState.value = UiState.MarkdownStrategyState(
+                title = "跟进策略建议",
+                markdownContent = "### 核心建议\n1. **确认预算**：确保对方预算>50k。\n2. **推进试用**：建议提供两周免费试用。"
+            )
+            "EXECUTING_TOOL" -> _uiState.value = UiState.ExecutingTool("系统搜索工具")
+            else -> _uiState.value = UiState.Idle
         }
     }
 }

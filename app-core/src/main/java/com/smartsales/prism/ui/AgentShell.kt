@@ -87,6 +87,7 @@ fun AgentShell(
         // Main Content Layer
         Column(modifier = Modifier.fillMaxSize()) {
             AgentChatScreen(
+                viewModel = agentViewModel,
                 onMenuClick = { activeDrawer = DrawerType.HISTORY },
                 onNewSessionClick = { agentViewModel.startNewSession() },
                 onAudioBadgeClick = { activeDrawer = DrawerType.CONNECTIVITY },

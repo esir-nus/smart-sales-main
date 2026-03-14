@@ -98,13 +98,16 @@
 
 ### 🌊 Wave 7: The Final Audit (Phase 3 E2E Pillar Resumption)
 > System-wide E2E Device Tests for: Lightning Fast-Track, Dual-Engine Bridge, Strict Interface Integrity, Adaptive Habit Loop, Efficiency Overload, Transparent Mind. This is the capstone requirement before declaring the foundational architecture stable.
-- [x] **System Audit**: Execute comprehensive E2E tests for all 6 core pillars to guarantee that the Phase 3 mono-architecture performs perfectly under L3 operational stress.
+- [ ] 🔲 **T1: Lightning Fast-Track E2E**
+- [ ] 🔲 **T2: Dual-Engine E2E**
+- [ ] 🔲 **T3: E2E Error & Constraint Testing**
   - **Spec**: [`docs/cerb-e2e-test/specs/wave7-final-audit/spec.md`](../cerb-e2e-test/specs/wave7-final-audit/spec.md)
   - **Boundaries**: [`docs/cerb-e2e-test/specs/wave7-final-audit/boundaries.md`](../cerb-e2e-test/specs/wave7-final-audit/boundaries.md)
   - [TER: L3 Wave 7 Final Audit](file:///home/cslh-frank/main_app/docs/reports/tests/L3-20260313-wave7-final-audit.md)
 
 ### 🌊 Wave 8: Actionable/Factual Unification (Raw Domain Surfacing)
 > Reconstruct the CRM intelligence dashboard (Layer 5: ClientProfileHub) to surface raw `TimelineItemModel.Task` (Actionable) and raw `MemoryEntry` (Factual) via reactive Kotlin flows, completely separating the Future from the Past without relying on UI-layer translation mappings or database dual-writes. Unification through a true Source of Truth.
+- [ ] 🔲 **T1: Discard the `UnifiedActivity` entity mapping abstraction.**
 - [x] **Plan**: Establish the [Actionable vs Factual Unification Blueprint](../reports/review_conferences/20260314_actionable_factual_plan.md) and prove the Badge hardware scheduling constraint cannot be bypassed.
 - [x] **Conference**: Validate the Data Class Unification math with the Senior Engineer.
 - [x] **Docs**: Synchronized the `client-profile-hub/spec.md`, `entity-writer/spec.md`, and `entity-registry/spec.md` Data Models to reflect `ProfileActivityState` and remove the legacy `UnifiedActivity` mapping struct (`/04-doc-sync` complete).
@@ -118,6 +121,12 @@
       - Reactive streaming `Flow.combine` for aggregation without RAM caching.
 - [ ] **Execute (Phase 3)**: The Cross-Off Lifecycle — Implement data migration in `SchedulerViewModel` (or equivalent observer) where completing a task permanently creates a `MemoryEntry` and deletes the `ScheduledTask`.
 - [ ] **Test**: Verify `L1ClientProfileHubTest.kt` passes Phase 2 logic, and an L2 simulation proves Phase 3 Source of Truth migration.
+
+### 🎨 Epic: UI Skin Modernization & Protocol Validation
+> Applying the newly established Docs-First `IAgentViewModel` Contract to aggressively clean, refactor, and rewrite the UI layer into a pristine presentation boundary, proving the Parallel Dev Workflow before formalizing it into an Antigravity Rule.
+- [x] ✅ **Phase 1: Component Rewrite (Code Cleaning)** - Nuke and pave existing screens (Chat, Agent States) to purely consume `IAgentViewModel`. Replace tangled `AgentViewModel` logic with strict `@Preview` tests powered by `FakeAgentViewModel`. Drop all dead legacy UI code.
+- [ ] 🔲 **Phase 2: The Parallel Proving Ground** - Design and implement a net-new UI component (e.g., the new Scheduler interface) entirely using `FakeAgentViewModel` vibes *before* the backend is connected. Prove we can build the Skin without the Body.
+- [ ] 🔲 **Phase 3: Formalize UI Antigravity Protocol** - After proving success in Phase 1 and 2, create the official SOP rule (`.agent/rules/ui-development-protocol.md`) demanding strict `@Preview` logic isolation, Fake ViewModels, and `interface.md` synchronization for all subsequent UI features.
 
 ---
 

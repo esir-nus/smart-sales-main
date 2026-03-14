@@ -1,6 +1,6 @@
 package com.smartsales.prism.domain.scheduler
 
-import com.smartsales.core.test.fakes.FakeAlarmScheduler
+import com.smartsales.prism.domain.scheduler.fakes.FakeAlarmScheduler
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Before

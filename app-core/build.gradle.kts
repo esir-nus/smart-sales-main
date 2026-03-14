@@ -142,7 +142,7 @@ dependencies {
     implementation(libs.room.ktx)
 
     // Test
-    testImplementation(project(":core:test-fakes"))
+    testImplementation(project(":core:test-fakes-platform"))
     testImplementation("org.jetbrains.kotlin:kotlin-reflect")
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)

@@ -11,7 +11,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import android.util.Log
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
-import com.smartsales.prism.domain.scheduler.TimelineItemModel
+import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.domain.repository.UserProfileRepository
 import com.smartsales.prism.domain.repository.HistoryRepository
 import com.smartsales.core.pipeline.IntentOrchestrator
@@ -83,10 +83,10 @@ class AgentViewModel @Inject constructor(
     private val _sessionTitle = MutableStateFlow("新对话")
     override val sessionTitle = _sessionTitle.asStateFlow()
 
-    private val _heroUpcoming = MutableStateFlow<List<TimelineItemModel.Task>>(emptyList())
+    private val _heroUpcoming = MutableStateFlow<List<ScheduledTask>>(emptyList())
     override val heroUpcoming = _heroUpcoming.asStateFlow()
 
-    private val _heroAccomplished = MutableStateFlow<List<TimelineItemModel.Task>>(emptyList())
+    private val _heroAccomplished = MutableStateFlow<List<ScheduledTask>>(emptyList())
     override val heroAccomplished = _heroAccomplished.asStateFlow()
 
     override val mascotState = mascotService.state
@@ -100,10 +100,10 @@ class AgentViewModel @Inject constructor(
         .map { profile ->
             val hour = java.time.LocalTime.now().hour
             val timeGreeting = when {
-                hour < 5 -> "🌙 夜深了"
-                hour < 12 -> "☀️ 早上好"
-                hour < 18 -> "✨ 下午好"
-                else -> "🌙 晚上好"
+                hour < 5 -> "夜深了"
+                hour < 12 -> "早上好"
+                hour < 18 -> "下午好"
+                else -> "晚上好"
             }
             "$timeGreeting, ${profile.displayName}"
         }
@@ -133,7 +133,7 @@ class AgentViewModel @Inject constructor(
             .queryByDateRange(today, today.plusDays(3))
             .first()
         _heroUpcoming.value = allUpcoming
-            .filterIsInstance<TimelineItemModel.Task>()
+            .filterIsInstance<ScheduledTask>()
             .filter { !it.isDone }
             .filter { it.urgencyLevel != UrgencyLevel.FIRE_OFF }
             .take(3)

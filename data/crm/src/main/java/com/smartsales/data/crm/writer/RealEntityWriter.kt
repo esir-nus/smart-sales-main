@@ -331,6 +331,7 @@ class RealEntityWriter @Inject constructor(
 
     private fun generateEntityId(type: EntityType): String {
         val prefix = when (type) {
+            EntityType.UNKNOWN -> "u"
             EntityType.PERSON -> "p"
             EntityType.PRODUCT -> "pd"
             EntityType.LOCATION -> "l"

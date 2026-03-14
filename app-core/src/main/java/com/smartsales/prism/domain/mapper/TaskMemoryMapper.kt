@@ -2,7 +2,7 @@ package com.smartsales.prism.domain.mapper
 
 import com.smartsales.prism.domain.memory.MemoryEntry
 import com.smartsales.prism.domain.memory.MemoryEntryType
-import com.smartsales.prism.domain.scheduler.TimelineItemModel
+import com.smartsales.prism.domain.scheduler.ScheduledTask
 
 /**
  * Maps actionable UI layer Scheduler Tasks into factual Domain layer Memory Entries.
@@ -10,7 +10,7 @@ import com.smartsales.prism.domain.scheduler.TimelineItemModel
  */
 object TaskMemoryMapper {
 
-    fun toMemoryEntry(task: TimelineItemModel.Task): MemoryEntry {
+    fun toMemoryEntry(task: ScheduledTask): MemoryEntry {
         val now = System.currentTimeMillis()
         
         // Preserve CRM linkage if it exists

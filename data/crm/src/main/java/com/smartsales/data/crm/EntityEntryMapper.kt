@@ -3,6 +3,7 @@ package com.smartsales.data.crm
 import com.smartsales.prism.data.persistence.EntityEntryEntity
 import com.smartsales.prism.domain.memory.EntityEntry
 import com.smartsales.prism.domain.memory.EntityType
+import com.smartsales.prism.domain.core.safeEnumValueOf
 
 fun EntityEntry.toEntity(): EntityEntryEntity = EntityEntryEntity(
     entityId = entityId,
@@ -28,7 +29,7 @@ fun EntityEntry.toEntity(): EntityEntryEntity = EntityEntryEntity(
 
 fun EntityEntryEntity.toDomain(): EntityEntry = EntityEntry(
     entityId = entityId,
-    entityType = EntityType.valueOf(entityType),
+    entityType = safeEnumValueOf(entityType, fallback = EntityType.UNKNOWN),
     displayName = displayName,
     aliasesJson = aliasesJson,
     demeanorJson = demeanorJson,

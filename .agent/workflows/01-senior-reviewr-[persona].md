@@ -250,6 +250,7 @@ Readiness = (Verified/Total Assumptions × 60) + Evidence(0-20) + Risk(0-20)
 
 - [ ] Searched for existing implementations
 - [ ] Read relevant spec/doc sections
+- [ ] **Verified Tracker State:** Check `docs/plans/tracker.md` status BEFORE updating any docs or writing code to ensure epic alignment.
 - [ ] Read `docs/specs/project-mono-master-guide.md` to enforce the Data-Oriented OS contract
 - [ ] **Verified the Brain/Body Contract:** No PromptCompiler/free-form JSON/regex Linters. MUST use Kotlin `data class` + `docs/cerb/interface-map.md`
 - [ ] Verified file/class existence

@@ -5,7 +5,7 @@ import com.smartsales.core.pipeline.RealUnifiedPipeline
 
 import com.smartsales.core.test.fakes.FakeEntityRepository
 import com.smartsales.prism.data.rl.RealReinforcementLearner
-import com.smartsales.prism.data.fakes.FakeTimeProvider
+import com.smartsales.prism.domain.scheduler.fakes.FakeTimeProvider
 import com.smartsales.core.test.fakes.FakeUserHabitRepository
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.rl.ObservationSource
@@ -132,12 +132,11 @@ class RealContextBuilderTest {
     @Test
     fun `build() injects schedule context`() = runTest {
         // Arrange: Seed a task
-        val task = com.smartsales.prism.domain.scheduler.TimelineItemModel.Task(
+        val task = com.smartsales.prism.domain.scheduler.ScheduledTask(
             id = "t1",
             timeDisplay = "10:00",
             title = "Important Meeting",
             urgencyLevel = com.smartsales.prism.domain.scheduler.UrgencyLevel.L1_CRITICAL,
-            dateRange = "10:00 - 11:00",
             startTime = java.time.Instant.now(),
             keyPerson = "Boss",
             location = "Room 101"

@@ -58,6 +58,11 @@ interface MemoryRepository {
      * 观察实体的关联记忆
      */
     fun observeByEntityId(entityId: String): Flow<List<MemoryEntry>>
+    
+    /**
+     * 按时间范围观察特定类型的记忆 (用于 Scheduler Reactive Unification)
+     */
+    fun observeByTypeAndDateRange(entryType: MemoryEntryType, startMs: Long, endMs: Long): Flow<List<MemoryEntry>>
 }
 
 // Backwards compatibility aliases (deprecated, will be removed)

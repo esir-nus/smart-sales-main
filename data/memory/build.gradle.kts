@@ -40,6 +40,7 @@ dependencies {
 
     // Domain Models & Core Database
     implementation(project(":domain:memory"))
+    implementation(project(":domain:core"))
     implementation(project(":core:database"))
 
     // Other utilities

@@ -19,7 +19,7 @@ interface InspirationRepository {
     /**
      * 获取所有灵感（全局列表，按创建时间倒序）
      */
-    fun getAll(): Flow<List<TimelineItemModel.Inspiration>>
+    fun getAll(): Flow<List<SchedulerTimelineItem.Inspiration>>
     
     /**
      * 删除指定灵感

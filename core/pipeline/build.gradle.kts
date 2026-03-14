@@ -51,6 +51,6 @@ dependencies {
     testImplementation(libs.coroutines.test)
     testImplementation(libs.mockito.core)
     testImplementation(libs.mockito.kotlin)
-    testImplementation(project(":core:test-fakes"))
+    testImplementation(project(":core:test-fakes-platform"))
     testImplementation("org.json:json:20231013")
 }

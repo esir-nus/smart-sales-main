@@ -43,7 +43,9 @@ When reviewing a Project Mono PR or Plan, verify the following:
 - **Domain Purity**: Are the Mutation Data Classes inside pure Kotlin `:domain` modules? If they contain `import android.*`, **Reject it**.
 - **Linter Simplicity**: If the Linter contains regex (`Regex("date=.*")`) or manual string-parsing math to figure out the LLM's intent, **Reject it**. It should be a 1-line `decodeFromString()`.
 - **JSON Coercion Resilience**: All `PrismJson` instances parsing LLM outputs MUST set `coerceInputValues = true`. The LLM frequently hallucinates explicit `null` tokens; if this flag is missing, `kotlinx.serialization` will crash against native Kotlin non-nullable default values (e.g., `classification = "schedulable"`). Do not solve this with regex null-stripping.
+- **Defensive Deserialization (Enum Safety)**: Never use standard `enumValueOf<T>()` or `T.valueOf()` when mapping strings from the Room Database to Kotlin Enums. If the DB schema changes, the app will crash instantly. Use the centralized `safeEnumValueOf<T>(value, fallback)` function (`com.smartsales.prism.domain.core.SafeEnum`) to gracefully handle legacy or corrupted DB string variants.
 - **Visual Spec Alignment**: "Spec says `最近30天`, code says `最近30天`. No synonyms."
+- **Domain vs UI State Decoupling**: Pure Domain Kotlin `data classes` represent the factual SSD truth. They must NEVER be overloaded with UI-specific rendering flags (like `tipsLoading`, `isExpanded`, or `amberGlow`). UI Layer must define its own `UiState` mapping to render Domain reality. Overloading Domain Models with UI flags breaks the Brain/Body disconnect and couples the Database to the View.
 
 ---
 

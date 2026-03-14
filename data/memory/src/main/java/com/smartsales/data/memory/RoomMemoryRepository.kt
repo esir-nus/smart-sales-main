@@ -66,4 +66,8 @@ class RoomMemoryRepository @Inject constructor(
     override fun observeByEntityId(entityId: String): Flow<List<MemoryEntry>> {
         return dao.observeByEntityId(entityId).map { list -> list.map { it.toDomain() } }
     }
+    
+    override fun observeByTypeAndDateRange(entryType: com.smartsales.prism.domain.memory.MemoryEntryType, startMs: Long, endMs: Long): Flow<List<MemoryEntry>> {
+        return dao.observeByTypeAndDateRange(entryType.name, startMs, endMs).map { list -> list.map { it.toDomain() } }
+    }
 }

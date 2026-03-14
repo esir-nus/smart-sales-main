@@ -3,6 +3,7 @@ package com.smartsales.data.memory
 import com.smartsales.prism.data.persistence.MemoryEntryEntity
 import com.smartsales.prism.domain.memory.MemoryEntry
 import com.smartsales.prism.domain.memory.MemoryEntryType
+import com.smartsales.prism.domain.core.safeEnumValueOf
 
 fun MemoryEntry.toEntity(): MemoryEntryEntity = MemoryEntryEntity(
     entryId = entryId,
@@ -28,7 +29,7 @@ fun MemoryEntryEntity.toDomain(): MemoryEntry = MemoryEntry(
     entryId = entryId,
     sessionId = sessionId,
     content = content,
-    entryType = MemoryEntryType.valueOf(entryType),
+    entryType = safeEnumValueOf(entryType, fallback = MemoryEntryType.UNKNOWN),
     createdAt = createdAt,
     updatedAt = updatedAt,
     isArchived = isArchived,

@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.domain.model.ChatMessage
-import com.smartsales.prism.domain.scheduler.TimelineItemModel
+import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.core.pipeline.AgentActivity
 import com.smartsales.core.pipeline.MascotState
 import com.smartsales.core.pipeline.MascotInteraction
@@ -45,10 +45,10 @@ class FakeAgentViewModel : IAgentViewModel {
     private val _sessionTitle = MutableStateFlow("UI Preview Session")
     override val sessionTitle = _sessionTitle.asStateFlow()
 
-    private val _heroUpcoming = MutableStateFlow<List<TimelineItemModel.Task>>(emptyList())
+    private val _heroUpcoming = MutableStateFlow<List<ScheduledTask>>(emptyList())
     override val heroUpcoming = _heroUpcoming.asStateFlow()
 
-    private val _heroAccomplished = MutableStateFlow<List<TimelineItemModel.Task>>(emptyList())
+    private val _heroAccomplished = MutableStateFlow<List<ScheduledTask>>(emptyList())
     override val heroAccomplished = _heroAccomplished.asStateFlow()
 
     private val _mascotState = MutableStateFlow<MascotState>(MascotState.Hidden)

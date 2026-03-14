@@ -1,7 +1,7 @@
 package com.smartsales.core.context
 
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
-import com.smartsales.prism.domain.scheduler.TimelineItemModel
+import com.smartsales.prism.domain.scheduler.ScheduledTask
 import kotlinx.coroutines.flow.first
 import com.smartsales.core.context.Log
 import com.smartsales.prism.domain.memory.EntityEntry
@@ -160,10 +160,10 @@ class RealContextBuilder @Inject constructor(
         return try {
             val undoneTasks = scheduledTaskRepository.queryByDateRange(today, endDate)
                 .first()
-                .filterIsInstance<TimelineItemModel.Task>()
+                .filterIsInstance<ScheduledTask>()
                 .filter { !it.isDone }
                 .sortedWith(
-                    compareBy<TimelineItemModel.Task> { it.urgencyLevel.ordinal } // L1 critical first
+                    compareBy<ScheduledTask> { it.urgencyLevel.ordinal } // L1 critical first
                         .thenBy { it.startTime } // Closer time first
                 )
 

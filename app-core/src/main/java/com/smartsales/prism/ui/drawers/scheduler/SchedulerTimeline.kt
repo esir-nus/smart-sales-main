@@ -28,6 +28,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.material3.ExperimentalMaterial3Api
 import com.smartsales.prism.ui.theme.*
 import com.smartsales.prism.ui.drawers.scheduler.ConflictVisual
+import com.smartsales.prism.ui.drawers.scheduler.components.SchedulerTaskCard
+import com.smartsales.prism.ui.drawers.scheduler.components.InspirationCard
 
 /**
  * Scheduler Timeline Layout (Sleek Glass Version)
@@ -40,8 +42,6 @@ fun SchedulerTimeline(
     causingTaskId: String? = null,
     onItemClick: (String) -> Unit,
     onDelete: (String) -> Unit,
-    onReschedule: (String, String) -> Unit, // id, userText
-    onMicRecord: (java.io.File) -> Unit = {},
     onMultiSelectToggle: (String) -> Unit,
     onEnterMultiSelect: () -> Unit,
     onConflictResolve: (com.smartsales.prism.domain.scheduler.ConflictResolution) -> Unit,
@@ -61,8 +61,6 @@ fun SchedulerTimeline(
                 causingTaskId = causingTaskId,
                 onItemClick = onItemClick,
                 onDelete = onDelete,
-                onReschedule = onReschedule,
-                onMicRecord = onMicRecord,
                 onMultiSelectToggle = onMultiSelectToggle,
                 onEnterMultiSelect = onEnterMultiSelect,
                 onConflictResolve = onConflictResolve,
@@ -84,8 +82,6 @@ private fun TimelineRow(
     causingTaskId: String?,
     onItemClick: (String) -> Unit,
     onDelete: (String) -> Unit,
-    onReschedule: (String, String) -> Unit,
-    onMicRecord: (java.io.File) -> Unit,
     onMultiSelectToggle: (String) -> Unit,
     onEnterMultiSelect: () -> Unit,
     onConflictResolve: (com.smartsales.prism.domain.scheduler.ConflictResolution) -> Unit,
@@ -142,21 +138,17 @@ private fun TimelineRow(
                             onDelete = { onDelete(item.id) },
                             enabled = !isExpanded
                         ) {
-                            TaskCard(
+                            SchedulerTaskCard(
                                 state = taskWithVisual,
                                 isExpanded = isExpanded,
-                                onExpandToggle = {
+                                onClick = {
                                     val wasExpanded = isExpanded
                                     isExpanded = !isExpanded
-                                    // Wave 9: Trigger tips loading on first expand
                                     if (!wasExpanded) {
                                         onCardExpanded(item.id, item.keyPersonEntityId)
                                     }
-                                },
-                                onClick = { onItemClick(item.id) },
-                                onReschedule = { text -> onReschedule(item.id, text) },
-                                onMicRecord = onMicRecord,
-                                onToggleDone = { onToggleDone(item.id) }
+                                    onItemClick(item.id)
+                                }
                             )
                         }
                     }

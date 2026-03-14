@@ -6,7 +6,7 @@ import com.smartsales.data.aicore.AiChatService
 import com.smartsales.core.llm.ModelRegistry
 import com.smartsales.prism.domain.crm.ClientProfileHub
 import com.smartsales.prism.domain.crm.FocusedContext
-import com.smartsales.prism.domain.scheduler.TimelineItemModel
+import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.domain.scheduler.TipGenerator
 import com.smartsales.core.util.MarkdownSanitizer
 import org.json.JSONArray
@@ -30,7 +30,7 @@ class LlmTipGenerator @Inject constructor(
     private val aiChatService: AiChatService
 ) : TipGenerator {
 
-    override suspend fun generate(task: TimelineItemModel.Task): List<String> {
+    override suspend fun generate(task: ScheduledTask): List<String> {
         val entityId = task.keyPersonEntityId
         if (entityId == null) {
             Log.d(TAG, "🔕 No keyPersonEntityId, skipping tip generation")
@@ -88,7 +88,7 @@ class LlmTipGenerator @Inject constructor(
     /**
      * 构建提示提示词（根据 spec L477-491）
      */
-    private fun buildTipPrompt(task: TimelineItemModel.Task, ctx: FocusedContext): String {
+    private fun buildTipPrompt(task: ScheduledTask, ctx: FocusedContext): String {
         val taskTime = formatTime(task.startTime)
         val contextStr = ctx.toPromptString()
         

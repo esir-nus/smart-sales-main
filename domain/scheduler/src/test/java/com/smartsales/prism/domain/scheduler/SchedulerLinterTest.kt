@@ -1,6 +1,6 @@
 package com.smartsales.prism.domain.scheduler
 
-import com.smartsales.prism.data.fakes.FakeTimeProvider
+import com.smartsales.prism.domain.scheduler.fakes.FakeTimeProvider
 import com.smartsales.prism.domain.memory.ConflictPolicy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

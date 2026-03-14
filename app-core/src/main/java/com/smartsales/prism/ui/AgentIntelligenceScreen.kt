@@ -33,7 +33,7 @@ import com.smartsales.prism.domain.activity.ThinkingPolicy
 import com.smartsales.prism.domain.model.ChatMessage
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.model.UiState
-import com.smartsales.prism.domain.scheduler.TimelineItemModel
+import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.ui.components.*
 import com.smartsales.prism.ui.components.agent.*
 import com.smartsales.prism.ui.fakes.FakeAgentViewModel
@@ -41,6 +41,7 @@ import com.smartsales.prism.ui.theme.*
 import androidx.compose.foundation.border
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.clip
 
 @Composable
 fun AgentIntelligenceScreen(
@@ -113,8 +114,8 @@ internal fun AgentIntelligenceContent(
     sessionTitle: String,
     agentActivity: AgentActivity?,
     taskBoardItems: List<com.smartsales.prism.domain.analyst.TaskBoardItem>,
-    heroUpcoming: List<TimelineItemModel.Task>,
-    heroAccomplished: List<TimelineItemModel.Task>,
+    heroUpcoming: List<ScheduledTask>,
+    heroAccomplished: List<ScheduledTask>,
     heroGreeting: String,
     onMenuClick: () -> Unit,
     onNewSessionClick: () -> Unit,
@@ -164,16 +165,20 @@ internal fun AgentIntelligenceContent(
         }
     }
 
+    val ProMaxOnyx = Color(0xFF0B0C10)
+    val ProMaxAccentGlow = Color(0xFF38BDF8).copy(alpha = 0.08f)
+    // 使 glow 半径与屏幕宽度成正比，确保在不同 DPI 设备上视觉一致
+    val screenWidthDp = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp
+    val glowRadiusPx = with(LocalDensity.current) { (screenWidthDp * 2.5f).toPx() }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .background(ProMaxOnyx)
             .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFFFAFAFC), // Top: Very light gray
-                        Color(0xFFF5F0F8), // Middle: Soft lavender hint
-                        Color(0xFFEDE5F2)  // Bottom: Subtle purple aurora
-                    )
+                brush = Brush.radialGradient(
+                    colors = listOf(ProMaxAccentGlow, Color.Transparent),
+                    radius = glowRadiusPx
                 )
             )
             .nestedScroll(nestedScrollConnection)
@@ -382,6 +387,30 @@ internal fun AgentIntelligenceContent(
 
 // Local Pro Max Components (Copied from AgentChatScreen for encapsulation)
 
+private val ProMaxTextPrimary = Color.White.copy(alpha = 0.95f)
+private val ProMaxTextSecondary = Color.White.copy(alpha = 0.6f)
+private val ProMaxTextMuted = Color.White.copy(alpha = 0.3f)
+private val ProMaxDanger = Color(0xFFEF4444)
+private val ProMaxWarning = Color(0xFFF59E0B)
+private val ProMaxSuccess = Color(0xFF10B981)
+private val ProMaxAccent = Color(0xFF38BDF8)
+
+private fun Modifier.glassPanel(
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(16.dp)
+) = this
+    .clip(shape)
+    .background(Color.White.copy(alpha = 0.05f))
+    .border(
+        width = 1.dp,
+        brush = Brush.linearGradient(
+            colors = listOf(
+                Color.White.copy(alpha = 0.1f),
+                Color.White.copy(alpha = 0.02f)
+            )
+        ),
+        shape = shape
+    )
+
 @Composable
 private fun ProMaxHeader(
     sessionTitle: String,
@@ -397,17 +426,18 @@ private fun ProMaxHeader(
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             GlassCircleButton(icon = Icons.Filled.Menu, onClick = onMenuClick)
-            GlassCircleButton(icon = Icons.Filled.Bluetooth, onClick = onDeviceClick, tint = AccentYellow)
+            GlassCircleButton(icon = Icons.Filled.Bluetooth, onClick = onDeviceClick, tint = ProMaxAccent)
         }
         Box(modifier = Modifier.height(40.dp), contentAlignment = Alignment.Center) {
             Text(
                 text = sessionTitle.ifEmpty { "新对话" },
                 style = MaterialTheme.typography.labelLarge,
-                color = TextPrimary
+                color = ProMaxTextSecondary,
+                letterSpacing = 0.5.sp
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            GlassCircleButton(icon = Icons.Filled.BugReport, onClick = onDebugClick, tint = TextMuted)
+            GlassCircleButton(icon = Icons.Filled.BugReport, onClick = onDebugClick, tint = ProMaxTextMuted)
             GlassCircleButton(icon = Icons.Filled.Add, onClick = onNewSessionClick)
         }
     }
@@ -416,31 +446,43 @@ private fun ProMaxHeader(
 @Composable
 private fun HomeHeroDashboard(
     greeting: String,
-    upcoming: List<TimelineItemModel.Task>,
-    accomplished: List<TimelineItemModel.Task>,
+    upcoming: List<ScheduledTask>,
+    accomplished: List<ScheduledTask>,
     onProfileClick: () -> Unit = {}
 ) {
     Column(modifier = Modifier.fillMaxWidth().padding(top = 24.dp, start = 20.dp, end = 20.dp)) {
         Text(
-            text = greeting,
-            style = MaterialTheme.typography.headlineSmall,
+            text = greeting.replace(", ", ",\n").replace("，", "，\n"),
+            fontSize = 32.sp,
             fontWeight = FontWeight.Bold,
-            color = TextPrimary,
+            color = ProMaxTextPrimary,
+            lineHeight = 40.sp,
+            letterSpacing = (-0.5).sp,
             modifier = Modifier.clickable { onProfileClick() }
         )
         if (upcoming.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(24.dp))
-            Text("📋 待办 (${upcoming.size})", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = TextSecondary)
-            Spacer(modifier = Modifier.height(8.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Spacer(modifier = Modifier.height(32.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("待办", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = ProMaxTextSecondary, letterSpacing = 1.sp)
+                Spacer(modifier = Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .background(Color.White.copy(alpha = 0.1f), CircleShape)
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                ) {
+                    Text(upcoming.size.toString(), color = ProMaxTextPrimary, fontSize = 11.sp)
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 upcoming.forEach { HeroTaskRow(task = it, isDone = false) }
             }
         }
         if (accomplished.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(20.dp))
-            Text("✅ 已完成", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = TextSecondary)
-            Spacer(modifier = Modifier.height(8.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Spacer(modifier = Modifier.height(32.dp))
+            Text("已完成", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = ProMaxTextSecondary, letterSpacing = 1.sp)
+            Spacer(modifier = Modifier.height(16.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 accomplished.forEach { HeroTaskRow(task = it, isDone = true) }
             }
         }
@@ -448,50 +490,95 @@ private fun HomeHeroDashboard(
 }
 
 @Composable
-private fun HeroTaskRow(task: TimelineItemModel.Task, isDone: Boolean) {
-    val urgencyDot = when (task.urgencyLevel) {
-        com.smartsales.prism.domain.scheduler.UrgencyLevel.L1_CRITICAL -> "🔴"
-        com.smartsales.prism.domain.scheduler.UrgencyLevel.L2_IMPORTANT -> "🟡"
-        else -> "⚪"
+private fun HeroTaskRow(task: ScheduledTask, isDone: Boolean) {
+    val barColor = when (task.urgencyLevel) {
+        com.smartsales.prism.domain.scheduler.UrgencyLevel.L1_CRITICAL -> ProMaxDanger
+        com.smartsales.prism.domain.scheduler.UrgencyLevel.L2_IMPORTANT -> ProMaxWarning
+        else -> Color.Transparent
     }
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (isDone) {
-            Text("✓", color = AccentGreen, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-        } else {
-            Text(urgencyDot, fontSize = 10.sp)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .glassPanel(RoundedCornerShape(16.dp))
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(45.dp)) {
+            Text(
+                text = task.timeDisplay.split(" - ").firstOrNull() ?: "",
+                style = MaterialTheme.typography.labelMedium,
+                color = if (isDone) ProMaxTextMuted else ProMaxTextSecondary,
+                fontWeight = FontWeight.SemiBold
+            )
         }
-        Spacer(modifier = Modifier.width(6.dp))
-        Text(task.timeDisplay.split(" - ").firstOrNull() ?: "", style = MaterialTheme.typography.labelSmall, color = TextMuted, fontSize = 12.sp)
         Spacer(modifier = Modifier.width(8.dp))
-        Text(task.title, style = MaterialTheme.typography.bodySmall, color = if (isDone) TextMuted else TextSecondary, fontWeight = FontWeight.Normal)
+        
+        // Vertical priority line
+        Box(
+            modifier = Modifier
+                .width(2.dp)
+                .height(24.dp)
+                .background(
+                    if (isDone) ProMaxSuccess else if (barColor == Color.Transparent) Color.White.copy(alpha = 0.1f) else barColor,
+                    RoundedCornerShape(2.dp)
+                )
+        )
+        
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = task.title,
+                fontSize = 15.sp,
+                color = if (isDone) ProMaxTextSecondary else ProMaxTextPrimary,
+                fontWeight = FontWeight.Medium,
+                textDecoration = if (isDone) androidx.compose.ui.text.style.TextDecoration.LineThrough else null
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            val meta = listOfNotNull(
+                if (task.urgencyLevel == com.smartsales.prism.domain.scheduler.UrgencyLevel.L1_CRITICAL) "核心" else null,
+                task.location,
+                task.keyPerson
+            ).joinToString(" • ")
+            if (meta.isNotEmpty()) {
+                Text(meta, fontSize = 12.sp, color = ProMaxTextMuted)
+            }
+        }
     }
 }
 
 @Composable
 private fun GlassInputCapsule(text: String, onTextChanged: (String) -> Unit, onSend: () -> Unit, onAttachClick: () -> Unit) {
-    PrismSurface(shape = CircleShape, modifier = Modifier.fillMaxWidth().height(56.dp)) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(64.dp)
+            .glassPanel(CircleShape)
+    ) {
         Row(modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onAttachClick) {
-                Icon(Icons.Filled.AttachFile, "Attach", tint = TextPrimary)
+                Icon(Icons.Filled.AttachFile, "Attach", tint = ProMaxTextMuted)
             }
             Box(modifier = Modifier.weight(1f).padding(horizontal = 8.dp), contentAlignment = Alignment.CenterStart) {
-                if (text.isEmpty()) Text("输入消息...", color = TextMuted)
+                if (text.isEmpty()) Text("输入消息，或长按工牌说话...", color = ProMaxTextMuted)
                 androidx.compose.foundation.text.BasicTextField(
                     value = text,
                     onValueChange = onTextChanged,
-                    textStyle = androidx.compose.ui.text.TextStyle(color = TextPrimary, fontSize = 16.sp),
-                    cursorBrush = SolidColor(AccentBlue)
+                    textStyle = androidx.compose.ui.text.TextStyle(color = ProMaxTextPrimary, fontSize = 16.sp),
+                    cursorBrush = SolidColor(ProMaxAccent)
                 )
             }
             Box(
-                modifier = Modifier.size(40.dp).background(Color.Black, CircleShape).clickable { onSend() },
+                modifier = Modifier
+                    .size(48.dp)
+                    .background(ProMaxTextPrimary, CircleShape)
+                    .clickable { onSend() },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = if (text.isEmpty()) Icons.Filled.Mic else Icons.AutoMirrored.Filled.Send,
                     contentDescription = "Send",
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
+                    tint = Color(0xFF0B0C10),
+                    modifier = Modifier.size(24.dp)
                 )
             }
         }
@@ -499,9 +586,15 @@ private fun GlassInputCapsule(text: String, onTextChanged: (String) -> Unit, onS
 }
 
 @Composable
-private fun GlassCircleButton(icon: ImageVector, onClick: () -> Unit, tint: Color = TextPrimary) {
-    PrismSurface(shape = CircleShape, modifier = Modifier.size(44.dp).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-        Icon(icon, contentDescription = null, tint = tint)
+private fun GlassCircleButton(icon: ImageVector, onClick: () -> Unit, tint: Color = ProMaxTextPrimary) {
+    Box(
+        modifier = Modifier
+            .size(44.dp)
+            .glassPanel(CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
     }
 }
 

@@ -11,7 +11,8 @@ import com.smartsales.prism.domain.memory.MemoryEntryType
 import com.smartsales.prism.domain.scheduler.AlarmScheduler
 import com.smartsales.prism.domain.scheduler.InspirationRepository
 import com.smartsales.prism.domain.memory.ScheduleBoard
-import com.smartsales.prism.domain.scheduler.TimelineItemModel
+import com.smartsales.prism.domain.scheduler.SchedulerTimelineItem
+import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.domain.scheduler.FakeScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.SchedulerLinter
 import com.smartsales.prism.ui.drawers.scheduler.SchedulerViewModel
@@ -51,29 +52,22 @@ class L2CrossOffLifecycleTest {
         memoryRepository = FakeMemoryRepository()
 
         // Mock out dependencies not relevant to the Cross-Off lifecycle
-        val schedulerLinter = mock(SchedulerLinter::class.java)
-        val unifiedPipeline = mock(UnifiedPipeline::class.java)
+        val coordinator = mock(com.smartsales.prism.domain.scheduler.SchedulerCoordinator::class.java)
         val appContext = mock(Context::class.java)
-        val scheduleBoard = mock(ScheduleBoard::class.java)
         val inspirationRepository = mock(InspirationRepository::class.java)
-        val badgeAudioPipeline = mock(BadgeAudioPipeline::class.java)
-        `when`(badgeAudioPipeline.events).thenReturn(MutableSharedFlow())
-        val asrService = mock(AsrService::class.java)
         val tipGenerator = mock(TipGenerator::class.java)
-        val alarmScheduler = mock(AlarmScheduler::class.java)
+        val asrService = mock(com.smartsales.prism.domain.asr.AsrService::class.java)
+        val intentOrchestrator = mock(com.smartsales.core.pipeline.IntentOrchestrator::class.java)
 
         viewModel = SchedulerViewModel(
-            schedulerLinter = schedulerLinter,
-            unifiedPipeline = unifiedPipeline,
             appContext = appContext,
             taskRepository = taskRepository,
-            scheduleBoard = scheduleBoard,
-            inspirationRepository = inspirationRepository,
             memoryRepository = memoryRepository,
-            badgeAudioPipeline = badgeAudioPipeline,
-            asrService = asrService,
+            inspirationRepository = inspirationRepository,
+            coordinator = coordinator,
             tipGenerator = tipGenerator,
-            alarmScheduler = alarmScheduler
+            asrService = asrService,
+            intentOrchestrator = intentOrchestrator
         )
     }
 
@@ -85,7 +79,7 @@ class L2CrossOffLifecycleTest {
     @Test
     fun `toggleDone true migrates task to factual memory and deletes from actionable feed`() = runTest {
         // 1. Setup Phase: Create an active task
-        val activeTask = TimelineItemModel.Task(
+        val activeTask = ScheduledTask(
             id = "temp-id",
             timeDisplay = "10:00",
             title = "Follow up with client",

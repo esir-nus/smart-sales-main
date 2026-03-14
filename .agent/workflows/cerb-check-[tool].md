@@ -63,7 +63,15 @@ Before checking domain rules, verify these baseline invariants:
 | Are all necessary domain models defined inline? | ✅ Yes |
 | Are edge cases defined inline, not linked? | ✅ Yes |
 
-### 3. Wave Planning
+### 3. Atomicity (The "Cerb Shard" Rule)
+| Check | Pass | Fail |
+|-------|------|------|
+| **Scope** | ✅ Single component/slice | ❌ "God Spec" covering entire subsystems |
+| **Responsibility** | ✅ One clear architectural role | ❌ Mixes SSD mutation, RAM caching, and UI layouts |
+
+- **No God Specs**: A spec must represent a manageable "Cerb Shard" (e.g., just the Repository layer, or just the Pipeline router). If a spec dictates UI animations *and* database migrations, it FAILS atomicity and must be broken down.
+
+### 4. Wave Planning
 | Check | Expected |
 |-------|----------|
 | Does `spec.md` contain a Wave Plan (delivery states) table? | ✅ Required for all domains |
@@ -125,6 +133,7 @@ Generate your audit report precisely in this format:
 ### Stage 1: Universal Rules
 - [x] Link Purity (No spec-to-spec logic chains)
 - [x] Self-containment (Models/Edge cases inline)
+- [x] Atomicity (Scope is a manageable 'Cerb Shard', not a God Spec)
 - [ ] FAILED: Wave Plan missing from spec.md
 
 ### Stage 2: [Domain Name] Checks

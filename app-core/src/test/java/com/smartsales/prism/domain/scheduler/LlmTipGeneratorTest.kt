@@ -104,11 +104,10 @@ class LlmTipGeneratorTest {
     }
 
     // ========== Helper ==========
-
     private fun makeTask(
         entityId: String? = "entity-001",
         keyPerson: String? = "张总"
-    ) = TimelineItemModel.Task(
+    ) = ScheduledTask(
         id = "task-001",
         timeDisplay = "14:00",
         title = "部门会议",

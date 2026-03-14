@@ -40,7 +40,7 @@ class RealScheduleBoard @Inject constructor(
             
             taskRepository.queryByDateRange(today, endDate).collect { items ->
                 _upcomingItems.value = items
-                    .filterIsInstance<TimelineItemModel.Task>()
+                    .filterIsInstance<ScheduledTask>()
                     .filter { !it.isDone }  // 只检测未完成任务
                     .map { it.toScheduleItem() }
             }
@@ -86,7 +86,7 @@ class RealScheduleBoard @Inject constructor(
     /**
      * Task -> ScheduleItem 转换
      */
-    private fun TimelineItemModel.Task.toScheduleItem(): ScheduleItem {
+    private fun ScheduledTask.toScheduleItem(): ScheduleItem {
         return ScheduleItem(
             entryId = id,
             title = title,

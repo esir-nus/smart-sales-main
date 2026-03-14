@@ -4,22 +4,23 @@ import com.smartsales.core.context.RealContextBuilder
 import com.smartsales.core.pipeline.RealUnifiedPipeline
 
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
-import com.smartsales.prism.domain.scheduler.TimelineItemModel
+import com.smartsales.prism.domain.scheduler.SchedulerTimelineItem
+import com.smartsales.prism.domain.scheduler.ScheduledTask
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.time.LocalDate
 
 /** Shared Fake for Component Testing */
 class TestScheduledTaskRepository : ScheduledTaskRepository {
-    val items = MutableStateFlow<List<TimelineItemModel>>(emptyList())
+    val items = MutableStateFlow<List<SchedulerTimelineItem>>(emptyList())
 
     override fun queryByDateRange(start: LocalDate, end: LocalDate) = items
     override fun getTimelineItems(dayOffset: Int) = items
     
-    override suspend fun insertTask(task: TimelineItemModel.Task): String = "id"
-    override suspend fun getTask(id: String): TimelineItemModel.Task? = null
-    override suspend fun updateTask(task: TimelineItemModel.Task) {}
+    override suspend fun insertTask(task: ScheduledTask): String = "id"
+    override suspend fun getTask(id: String): ScheduledTask? = null
+    override suspend fun updateTask(task: ScheduledTask) {}
     override suspend fun deleteItem(id: String) {}
-    override suspend fun getRecentCompleted(limit: Int): List<TimelineItemModel.Task> = emptyList()
-    override suspend fun getTopUrgentActiveForEntity(entityId: String): TimelineItemModel.Task? = null
-    override fun observeByEntityId(entityId: String): kotlinx.coroutines.flow.Flow<List<TimelineItemModel.Task>> = kotlinx.coroutines.flow.emptyFlow()
+    override suspend fun getRecentCompleted(limit: Int): List<ScheduledTask> = emptyList()
+    override suspend fun getTopUrgentActiveForEntity(entityId: String): ScheduledTask? = null
+    override fun observeByEntityId(entityId: String): kotlinx.coroutines.flow.Flow<List<ScheduledTask>> = kotlinx.coroutines.flow.emptyFlow()
 }

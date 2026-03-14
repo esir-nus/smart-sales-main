@@ -16,6 +16,6 @@ dependencies {
     
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
+    testImplementation(project(":core:test-fakes-domain"))
     testImplementation("org.json:json:20231013")
-    testImplementation(project(":core:test-fakes"))
 }

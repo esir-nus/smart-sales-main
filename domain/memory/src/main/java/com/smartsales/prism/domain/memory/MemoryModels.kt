@@ -28,6 +28,7 @@ data class MemoryEntry(
  * 记忆条目类型
  */
 enum class MemoryEntryType {
+    UNKNOWN,
     USER_MESSAGE,
     ASSISTANT_RESPONSE,
     TASK_RECORD,

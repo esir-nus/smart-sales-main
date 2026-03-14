@@ -75,6 +75,16 @@ grep -rn "modules/" docs/ .agent/workflows/
 
 ---
 
+## Step 2.6: Campaign Archival (The Cleanup)
+
+If the work completed effectively ends a an "Active Epic" or "Campaign" in `docs/plans/tracker.md`:
+1. Parse the completed Campaign block from `tracker.md`.
+2. Move the entire Campaign block into `docs/plans/changelog.md` under the current date.
+3. Remove the block from the Active Epic taskboard in `tracker.md` to prevent content explosion.
+4. Add this archival operation to the sync proposal.
+
+---
+
 ## Step 3: Analyze and Propose (USER CONFIRMATION REQUIRED)
 
 Based on context, create a sync proposal:
@@ -92,8 +102,10 @@ Based on context, create a sync proposal:
 - [ ] All file links point to existing files
 - [ ] `docs/plans/tracker.md` reflects current spec wave status accurately
 - [ ] `docs/cerb/interface-map.md` includes any newly added interfaces or cross-module edges
+- [ ] Completed Campaigns relocated to `changelog.md` (if applicable)
 
 ### Docs to Update
+
 
 #### 1. <doc_path>
 **Why:** <reason this doc is relevant>

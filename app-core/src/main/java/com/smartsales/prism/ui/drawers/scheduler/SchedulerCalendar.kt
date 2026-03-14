@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.smartsales.prism.ui.theme.*
+import com.smartsales.prism.ui.drawers.scheduler.components.GlassCard
 import java.time.LocalDate
 
 /**
@@ -61,13 +62,18 @@ fun SchedulerCalendar(
     // For now, empty until we wire up CalendarRepository query
     val eventDots = remember { emptyMap<Int, Boolean>() }
     
-    // Transparent container to let glass sheet show through
-    Column(
+    GlassCard(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 8.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        // 1. Header (Month Carousel)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp)
+                .padding(top = 16.dp)
+        ) {
+            // 1. Header (Month Carousel)
         CalendarHeader(
             year = todayYear,
             selectedMonth = selectedMonth,
@@ -96,11 +102,12 @@ fun SchedulerCalendar(
             rescheduledDates = rescheduledDates
         )
         
-        // 3. Expansion Handle
-        ExpansionHandle(
-            isExpanded = isExpanded,
-            onExpandChange = onExpandChange
-        )
+            // 3. Expansion Handle
+            ExpansionHandle(
+                isExpanded = isExpanded,
+                onExpandChange = onExpandChange
+            )
+        }
     }
 }
 
@@ -112,19 +119,18 @@ private fun CalendarHeader(
 ) {
     Column(modifier = Modifier.padding(horizontal = 20.dp)) {
         // Year + Month Text
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(
-                text = "${year}年",
-                fontSize = 16.sp,
-                color = TextSecondary,
-                modifier = Modifier.padding(end = 8.dp)
-            )
-            Text(
-                text = "${selectedMonth}月",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
+                text = "${selectedMonth}月 $year",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
                 color = TextPrimary
             )
+            // Icon removed to avoid missing compose-material-icons-extended classpath issues
         }
         
         Spacer(modifier = Modifier.height(12.dp))
@@ -297,29 +303,29 @@ private fun CalendarRow(
                     )
                     .then(
                         when {
-                            isTodaySelected -> Modifier.background(TextPrimary, CircleShape)
-                            isToday -> Modifier.background(TextMuted, CircleShape) // Grey when not selected
-                            isSelected -> Modifier.border(2.dp, TextPrimary, CircleShape)
+                            isTodaySelected -> Modifier.background(TextPrimary, RoundedCornerShape(10.dp))
+                            isToday -> Modifier.background(Color.White.copy(alpha=0.05f), RoundedCornerShape(10.dp))
+                            isSelected -> Modifier.background(TextPrimary, RoundedCornerShape(10.dp))
                             else -> Modifier
                         }
                     )
-                    .clip(CircleShape)
+                    .clip(RoundedCornerShape(10.dp))
                     .clickable { onDateSelected(dayNum) },
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = dayNum.toString(),
-                        color = if (isToday) Color.White else TextPrimary,
+                        color = if (isSelected || isTodaySelected) Color.Black else (if (isToday) Color.White else TextPrimary),
                         fontSize = 14.sp,
-                        fontWeight = if (isTodaySelected) FontWeight.Bold else FontWeight.Normal
+                        fontWeight = if (isSelected || isTodaySelected) FontWeight.SemiBold else FontWeight.Medium
                     )
-                    if (!isToday && hasEvent) { 
+                    if (hasEvent) { 
                         Spacer(modifier = Modifier.height(2.dp))
                         Box(
                             modifier = Modifier
                                 .size(4.dp)
-                                .background(AccentSecondary, CircleShape)
+                                .background(if (isSelected || isTodaySelected) Color.Black else TextSecondary, CircleShape)
                         )
                     }
                 }

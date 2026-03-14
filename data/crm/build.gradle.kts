@@ -47,6 +47,7 @@ dependencies {
     // Domain Models & Core Database
     implementation(project(":domain:crm"))
     implementation(project(":domain:memory"))
+    implementation(project(":domain:core"))
     implementation(project(":core:database"))
     implementation(project(":core:util"))
 
@@ -57,5 +58,5 @@ dependencies {
     // Test
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
-    testImplementation(project(":core:test-fakes"))
+    testImplementation(project(":core:test-fakes-platform"))
 }

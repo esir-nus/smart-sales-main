@@ -29,7 +29,7 @@ data class FocusedContext(
  * 时间轴与待办聚合状态
  */
 data class ProfileActivityState(
-    val actionableItems: List<com.smartsales.prism.domain.scheduler.TimelineItemModel.Task>,
+    val actionableItems: List<com.smartsales.prism.domain.scheduler.ScheduledTask>,
     val factualItems: List<com.smartsales.prism.domain.memory.MemoryEntry>
 )
 

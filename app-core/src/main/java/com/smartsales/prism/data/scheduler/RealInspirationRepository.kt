@@ -2,7 +2,7 @@ package com.smartsales.prism.data.scheduler
 
 import android.content.Context
 import com.smartsales.prism.domain.scheduler.InspirationRepository
-import com.smartsales.prism.domain.scheduler.TimelineItemModel
+import com.smartsales.prism.domain.scheduler.SchedulerTimelineItem
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -55,7 +55,7 @@ class RealInspirationRepository @Inject constructor(
         return id
     }
     
-    override fun getAll(): Flow<List<TimelineItemModel.Inspiration>> {
+    override fun getAll(): Flow<List<SchedulerTimelineItem.Inspiration>> {
         return _inspirations.asStateFlow().map { list ->
             list.map { it.toModel() }
         }
@@ -99,8 +99,8 @@ class RealInspirationRepository @Inject constructor(
         prefs.edit().putString(KEY_INSPIRATIONS, array.toString()).apply()
     }
     
-    private fun InspirationData.toModel(): TimelineItemModel.Inspiration {
-        return TimelineItemModel.Inspiration(
+    private fun InspirationData.toModel(): SchedulerTimelineItem.Inspiration {
+        return SchedulerTimelineItem.Inspiration(
             id = id,
             timeDisplay = timeFormatter.format(Instant.ofEpochMilli(createdAt)),
             title = text

@@ -90,17 +90,23 @@ class FunAsrService @Inject constructor(
                     .build()
                 
                 // 提交异步任务
+                android.util.Log.d("FunAsrService", "Submitting async task to DashScope...")
                 val asyncResult = transcription.asyncCall(param)
                 val taskId = asyncResult.taskId
-                    ?: return@withTimeout AsrResult.Error(
+                android.util.Log.d("FunAsrService", "TaskId received: $taskId")
+                if (taskId == null) {
+                    return@withTimeout AsrResult.Error(
                         code = AsrResult.ErrorCode.API_ERROR,
                         message = "未返回 taskId"
                     )
+                }
                 
                 // 轮询等待结果
+                android.util.Log.d("FunAsrService", "Waiting for transcription result...")
                 val taskResult = transcription.wait(
                     TranscriptionQueryParam.FromTranscriptionParam(param, taskId)
                 )
+                android.util.Log.d("FunAsrService", "Wait finished. Results size: ${taskResult.results?.size}")
                 
                 // 获取转写结果 URL
                 val results = taskResult.results
@@ -130,11 +136,13 @@ class FunAsrService @Inject constructor(
                 AsrResult.Success(text = text)
             }
         } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+            android.util.Log.e("FunAsrService", "Transcription timed out")
             AsrResult.Error(
                 code = AsrResult.ErrorCode.API_ERROR,
                 message = "转写超时 (180s)"
             )
         } catch (e: Exception) {
+            android.util.Log.e("FunAsrService", "Exception during transcribe", e)
             val code = classifyError(e)
             AsrResult.Error(code = code, message = e.message ?: "未知错误")
         }

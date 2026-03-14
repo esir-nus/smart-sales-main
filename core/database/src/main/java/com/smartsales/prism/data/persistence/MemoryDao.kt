@@ -81,6 +81,12 @@ interface MemoryDao {
     fun observeByEntityId(entityId: String): Flow<List<MemoryEntryEntity>>
     
     /**
+     * 按时间范围观察特定类型的记忆 (用于 Scheduler Reactive Unification)
+     */
+    @Query("SELECT * FROM memory_entries WHERE entryType = :entryType AND scheduledAt >= :startMs AND scheduledAt < :endMs ORDER BY scheduledAt ASC")
+    fun observeByTypeAndDateRange(entryType: String, startMs: Long, endMs: Long): Flow<List<MemoryEntryEntity>>
+    
+    /**
      * Test helper: 清空所有数据
      */
     @Query("DELETE FROM memory_entries")

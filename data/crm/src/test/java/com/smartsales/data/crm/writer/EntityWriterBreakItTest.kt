@@ -2,7 +2,7 @@ package com.smartsales.data.crm.writer
 
 import com.smartsales.core.test.fakes.FakeKernelWriteBack
 import com.smartsales.core.test.fakes.FakeEntityRepository
-import com.smartsales.prism.data.fakes.FakeTimeProvider
+import com.smartsales.prism.domain.scheduler.fakes.FakeTimeProvider
 import com.smartsales.prism.domain.memory.EntityType
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.TestScope

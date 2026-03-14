@@ -32,6 +32,9 @@ data class EntityEntry(
  * 实体类型
  */
 enum class EntityType {
+    // General Corrupted/Fallback State
+    UNKNOWN,
+    
     // Core Types
     PERSON,       // Individual (non-CRM)
     PRODUCT,

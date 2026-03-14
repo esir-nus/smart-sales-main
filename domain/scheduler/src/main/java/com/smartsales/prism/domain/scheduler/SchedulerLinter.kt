@@ -65,7 +65,7 @@ class SchedulerLinter @Inject constructor(
             }
 
             // Parse Tasks
-            val tasks = mutableListOf<TimelineItemModel.Task>()
+            val tasks = mutableListOf<ScheduledTask>()
             var singleSuccessResult: LintResult.Success? = null
             
             if (mutation.tasks.isNotEmpty()) {
@@ -166,7 +166,7 @@ class SchedulerLinter @Inject constructor(
         val alarmCascade = UrgencyLevel.buildCascade(urgencyLevel)
 
         return LintResult.Success(
-            task = TimelineItemModel.Task(
+            task = ScheduledTask(
                 id = "", // 新任务，ID 由 Repository 生成
                 timeDisplay = formatTimeDisplay(startTime, endTime),
                 title = title,
@@ -267,14 +267,14 @@ data class ParsedProfileMutation(
 
 sealed class LintResult {
     data class Success(
-        val task: TimelineItemModel.Task? = null,
+        val task: ScheduledTask? = null,
         val urgencyLevel: UrgencyLevel = UrgencyLevel.L3_NORMAL,
         val parsedClues: ParsedClues = ParsedClues(),
         val profileMutations: List<ParsedProfileMutation> = emptyList()
     ) : LintResult()
     
     data class MultiTask(
-        val tasks: List<TimelineItemModel.Task>,
+        val tasks: List<ScheduledTask>,
         val profileMutations: List<ParsedProfileMutation> = emptyList()
     ) : LintResult()
     

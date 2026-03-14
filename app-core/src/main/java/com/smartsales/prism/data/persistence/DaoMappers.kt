@@ -1,8 +1,9 @@
 package com.smartsales.prism.data.persistence
 
+import com.smartsales.prism.domain.core.safeEnumValueOf
 import com.smartsales.prism.domain.memory.ConflictPolicy
 import com.smartsales.prism.domain.memory.DurationSource
-import com.smartsales.prism.domain.scheduler.TimelineItemModel
+import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.domain.scheduler.UrgencyLevel
 import com.smartsales.prism.domain.memory.EntityEntry
 import com.smartsales.prism.domain.memory.EntityType
@@ -15,7 +16,7 @@ import java.time.Instant
 
 // === ScheduledTaskEntity Mappers ===
 
-fun TimelineItemModel.Task.toEntity(): ScheduledTaskEntity = ScheduledTaskEntity(
+fun ScheduledTask.toEntity(): ScheduledTaskEntity = ScheduledTaskEntity(
     taskId = id,
     title = title,
     startTimeMillis = startTime.toEpochMilli(),
@@ -35,7 +36,7 @@ fun TimelineItemModel.Task.toEntity(): ScheduledTaskEntity = ScheduledTaskEntity
     urgencyLevel = urgencyLevel.name
 )
 
-fun ScheduledTaskEntity.toDomain(): TimelineItemModel.Task {
+fun ScheduledTaskEntity.toDomain(): ScheduledTask {
     val startInstant = Instant.ofEpochMilli(startTimeMillis)
     val endInstant = endTimeMillis?.let { Instant.ofEpochMilli(it) }
     val zone = java.time.ZoneId.systemDefault()
@@ -63,16 +64,21 @@ fun ScheduledTaskEntity.toDomain(): TimelineItemModel.Task {
         val array = JSONArray(json)
         List(array.length()) { i -> array.getString(i) }
     } ?: emptyList()
+
+    // If the DB has the legacy 'ESTIMATED' string, fallback handles it
+    val durationSourceEnum = safeEnumValueOf(durationSource, fallback = DurationSource.DEFAULT).let {
+        if (durationSource == "ESTIMATED") DurationSource.INFERRED else it
+    }
     
-    return TimelineItemModel.Task(
+    return ScheduledTask(
         id = taskId,
         timeDisplay = timeDisplay,
         title = title,
         startTime = startInstant,
         endTime = endInstant,
         durationMinutes = durationMinutes,
-        durationSource = DurationSource.valueOf(durationSource),
-        conflictPolicy = ConflictPolicy.valueOf(conflictPolicy),
+        durationSource = durationSourceEnum,
+        conflictPolicy = safeEnumValueOf(conflictPolicy, fallback = ConflictPolicy.EXCLUSIVE),
         location = location,
         notes = notes,
         keyPerson = keyPerson,
@@ -82,12 +88,7 @@ fun ScheduledTaskEntity.toDomain(): TimelineItemModel.Task {
         hasAlarm = hasAlarm,
         isSmartAlarm = isSmartAlarm,
         alarmCascade = cascade,
-        urgencyLevel = runCatching { UrgencyLevel.valueOf(urgencyLevel) }.getOrDefault(UrgencyLevel.L3_NORMAL),
+        urgencyLevel = safeEnumValueOf(urgencyLevel, fallback = UrgencyLevel.L3_NORMAL),
         dateRange = dateRange
     )
 }
-
-
-
-
-

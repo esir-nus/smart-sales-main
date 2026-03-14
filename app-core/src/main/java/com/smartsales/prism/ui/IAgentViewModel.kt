@@ -3,7 +3,7 @@ package com.smartsales.prism.ui
 import kotlinx.coroutines.flow.StateFlow
 import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.domain.model.ChatMessage
-import com.smartsales.prism.domain.scheduler.TimelineItemModel
+import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.core.pipeline.AgentActivity
 import com.smartsales.core.pipeline.MascotState
 import com.smartsales.core.pipeline.MascotInteraction
@@ -24,8 +24,8 @@ interface IAgentViewModel {
     val history: StateFlow<List<ChatMessage>>
     val taskBoardItems: StateFlow<List<TaskBoardItem>>
     val sessionTitle: StateFlow<String>
-    val heroUpcoming: StateFlow<List<TimelineItemModel.Task>>
-    val heroAccomplished: StateFlow<List<TimelineItemModel.Task>>
+    val heroUpcoming: StateFlow<List<ScheduledTask>>
+    val heroAccomplished: StateFlow<List<ScheduledTask>>
     val mascotState: StateFlow<MascotState>
     val currentDisplayName: String
     val heroGreeting: StateFlow<String>

@@ -149,7 +149,7 @@
   - [x] **Test**: L2 simulated pipeline test tracking both forks resolving correctly.
 
 - [ ] 🔲 **T4: Shard 3 Execution (UI Presentation Teardown)**
-  - [ ] **Specs**: Ensure `scheduler-drawer/interface.md` defines pure state execution.
+  - [x] **Specs**: Ensure `scheduler-drawer/contract.md` defines pure state execution and handles Dual-Path rendering mapped from individual `TimelineItem` states.
   - [ ] **Execute**: Hoist `PhoneAudioRecorder` out of the visual card layer up to ViewModel/Screen.
   - [ ] **Execute**: Dismantle 700-line `SchedulerCards.kt`. Move atomic components (`TaskCardHeader`, `TaskCardDetails`, etc.) into `components/` package.
   - [ ] **Test**: Mechanical `grep` proves no raw Android dependencies inside the nested UI component layer.

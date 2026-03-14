@@ -69,8 +69,8 @@ interface EntityWriter {
     suspend fun registerAlias(entityId: String, alias: String)
 
     /**
-     * Update tracked profile fields on an existing entity.
-     * If a tracked field changes, EntityWriter emits a UnifiedActivity
+      * Update tracked profile fields on an existing entity.
+     * If a tracked field changes, EntityWriter emits a MemoryEntry
      * history event BEFORE overwriting the field.
      *
      * Tracked fields: displayName, jobTitle, accountId, buyingRole, dealStage

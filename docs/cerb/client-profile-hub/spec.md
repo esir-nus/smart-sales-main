@@ -76,7 +76,7 @@ data class EntitySnapshot(
     val entityId: String,
     val displayName: String,
     val entityType: EntityType,
-    val lastActivity: UnifiedActivity?
+    val lastActivity: com.smartsales.prism.domain.memory.MemoryEntry?
 )
 ```
 
@@ -87,36 +87,21 @@ data class FocusedContext(
     val entity: EntityEntry,
     val relatedContacts: List<EntityEntry>,
     val relatedDeals: List<EntityEntry>,
-    val timeline: List<UnifiedActivity>,
+    val activityState: ProfileActivityState,
     val habitContext: HabitContext  // from RL module
 )
 ```
 
-### UnifiedActivity (Timeline View)
+### ProfileActivityState (Timeline & Future View)
 
 ```kotlin
-data class UnifiedActivity(
-    val id: String,
-    val type: ActivityType,
-    val timestamp: Long,
-    val summary: String,
-    val location: String?,     // Plain string (NOT entity)
-    val assetId: String?,      // Artifact traceability
-    val relatedEntityIds: List<String>
+data class ProfileActivityState(
+    // The Actionable feed is pure, unmodified Scheduler Tasks. 
+    val actionableItems: List<com.smartsales.prism.domain.scheduler.TimelineItemModel.Task>,
+    
+    // The Factual feed is pure, unmodified Memory Entries. 
+    val factualItems: List<com.smartsales.prism.domain.memory.MemoryEntry>
 )
-
-enum class ActivityType {
-    MEETING, CALL, NOTE, ARTIFACT_GENERATED, DEAL_STAGE_CHANGE, TASK_COMPLETED,
-    
-    // Change-Aware Profile Tracking (EntityWriter Wave 2)
-    NAME_CHANGE,       // Account/Contact renamed (e.g., 索尼娱乐集团 → SONY)
-    TITLE_CHANGE,      // Contact promoted/changed role
-    COMPANY_CHANGE,    // Contact moved companies
-    ROLE_CHANGE,       // Buying role changed (champion → economic_buyer)
-    
-    // RL Module Insights
-    INSIGHT_LEARNED    // RL discovered high-confidence habit
-}
 ```
 
 ---
@@ -137,12 +122,12 @@ enum class ActivityType {
 interface ClientProfileHub {
     suspend fun getQuickContext(entityIds: List<String>): QuickContext
     suspend fun getFocusedContext(entityId: String): FocusedContext
-    suspend fun getUnifiedTimeline(entityId: String): List<UnifiedActivity>
+    suspend fun observeProfileActivityState(entityId: String): Flow<ProfileActivityState>
 }
 
 data class QuickContext(
     val entitySnapshots: Map<String, EntitySnapshot>,
-    val recentActivities: List<UnifiedActivity>,
+    val recentActivities: List<com.smartsales.prism.domain.memory.MemoryEntry>,
     val suggestedNextSteps: List<String>
 )
 ```
@@ -177,6 +162,6 @@ data class QuickContext(
 
 > **Note**: CRM schema (ACCOUNT, CONTACT, DEAL types + EntityEntry CRM fields) already shipped in Entity Registry Wave 2.5.
 
-> **Shipped 2026-02-08 (Wave 1)**: ClientProfileHub interface, FocusedContext, QuickContext, EntitySnapshot, UnifiedActivity, FakeClientProfileHub
+> **Shipped 2026-02-08 (Wave 1)**: ClientProfileHub interface, FocusedContext, QuickContext, EntitySnapshot, FakeClientProfileHub
 
-> **Shipped 2026-02-08 (Wave 2)**: Entity-tagged MemoryEntry via `structuredJson`, `MemoryRepository.getByEntityId()`, `getUnifiedTimeline()` with MemoryEntry→UnifiedActivity mapping, `ContextBuilder.record*()` now suspend + persists to MemoryRepository
+> **Shipped 2026-02-08 (Wave 2)**: Entity-tagged MemoryEntry via `structuredJson`, `MemoryRepository.getByEntityId()`, `observeProfileActivityState()` with `MemoryEntry` timeline aggregation, `ContextBuilder.record*()` now suspend + persists to MemoryRepository

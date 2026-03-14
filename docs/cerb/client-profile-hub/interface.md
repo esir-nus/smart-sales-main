@@ -35,13 +35,13 @@ Returns deep dive context for a single entity (Account/Contact/Deal).
 
 ---
 
-### getUnifiedTimeline
+### observeProfileActivityState
 
 ```kotlin
-suspend fun getUnifiedTimeline(entityId: String): List<UnifiedActivity>
+suspend fun observeProfileActivityState(entityId: String): Flow<ProfileActivityState>
 ```
 
-Aggregates timeline activities for an entity (includes all related contacts for Accounts).
+Aggregates timeline activities and actionable tasks for an entity (includes all related contacts for Accounts).
 
 ---
 
@@ -50,7 +50,7 @@ Aggregates timeline activities for an entity (includes all related contacts for 
 ```kotlin
 data class QuickContext(
     val entitySnapshots: Map<String, EntitySnapshot>,
-    val recentActivities: List<UnifiedActivity>,
+    val recentActivities: List<com.smartsales.prism.domain.memory.MemoryEntry>,
     val suggestedNextSteps: List<String>
 )
 
@@ -58,39 +58,26 @@ data class EntitySnapshot(
     val entityId: String,
     val displayName: String,
     val entityType: EntityType,
-    val lastActivity: UnifiedActivity?
+    val lastActivity: com.smartsales.prism.domain.memory.MemoryEntry?
 )
 
 data class FocusedContext(
     val entity: EntityEntry,
     val relatedContacts: List<EntityEntry>,
     val relatedDeals: List<EntityEntry>,
-    val timeline: List<UnifiedActivity>,
+    val activityState: ProfileActivityState,
     val habitContext: HabitContext
 )
 
-data class UnifiedActivity(
-    val id: String,
-    val type: ActivityType,
-    val timestamp: Long,
-    val summary: String,
-    val location: String?,
-    val assetId: String?,
-    val relatedEntityIds: List<String>
+data class ProfileActivityState(
+    // The Actionable feed is pure, unmodified Scheduler Tasks. 
+    val actionableItems: List<com.smartsales.prism.domain.scheduler.TimelineItemModel.Task>,
+    
+    // The Factual feed is pure, unmodified Memory Entries. 
+    val factualItems: List<com.smartsales.prism.domain.memory.MemoryEntry>
 )
 
-enum class ActivityType {
-    MEETING, CALL, NOTE, ARTIFACT_GENERATED, DEAL_STAGE_CHANGE, TASK_COMPLETED,
 
-    // Change-Aware Profile Tracking
-    NAME_CHANGE,       // Account/Contact renamed
-    TITLE_CHANGE,      // Contact promoted/changed role
-    COMPANY_CHANGE,    // Contact moved companies
-    ROLE_CHANGE,       // Buying role changed
-
-    // RL Module Insights
-    INSIGHT_LEARNED    // RL discovered high-confidence habit
-}
 ```
 
 ---
@@ -100,7 +87,7 @@ enum class ActivityType {
 | ❌ Don't | ✅ Do Instead |
 |----------|--------------|
 | Access `RelevancyEntry` directly | Use `ClientProfileHub` methods |
-| Parse `MemoryEntry.entitiesJson` manually | Use `getUnifiedTimeline()` |
+| Parse `MemoryEntry.entitiesJson` manually | Use `observeProfileActivityState()` |
 | Query habit data here | Use `ReinforcementLearner.getHabitContext()` |
 | Assume entity exists | Check for null/empty returns |
 | Depend on session state (SessionWorkingSet) | CRM Hub reads SSD directly — no session dependency |

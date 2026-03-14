@@ -73,7 +73,7 @@ graph TD
 
 ### 3. App → Kernel Callback
 
-`updateProfile()` detects field changes and calls `ContextBuilder.recordActivity()` — this is an **Application invoking a Kernel service** to emit `UnifiedActivity` history events. The Kernel persists these to Memory Center (SSD).
+`updateProfile()` detects field changes and calls `ContextBuilder.recordActivity()` — this is an **Application invoking a Kernel service** to emit `MemoryEntry` history events. The Kernel persists these to Memory Center (SSD).
 
 ---
 
@@ -189,12 +189,12 @@ suspend fun upsertFromClue(...): UpsertResult {
 | `attributesJson` | Upsert per key | `oldMap + newMap` | `updateAttribute` |
 | `metricsHistoryJson` | Append per key | `oldTimeSeries + newEntry` | `updateAttribute` |
 | `relatedEntitiesJson` | Append (dedupe) | `(oldList + newId).distinct()` | Future wave |
-| `decisionLogJson` | ~~Append-only~~ **Deprecated** | Superseded by `UnifiedActivity` timeline | — |
+| `decisionLogJson` | ~~Append-only~~ **Deprecated** | Superseded by `MemoryEntry` timeline | — |
 | `nextAction` | **Replace** | Latest action overwrites. `null` clears. | `updateProfile` |
 
 #### Tracked Profile Fields (Change-Aware)
 
-These fields trigger a `UnifiedActivity` history event when changed:
+These fields trigger a `MemoryEntry` history event when changed:
 
 | Field | ActivityType | Example |
 |-------|-------------|----------|

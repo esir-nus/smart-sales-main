@@ -79,7 +79,7 @@ data class AliasMapping(
 | `demeanorJson` | Upsert per key | Latest observation wins |
 | `attributesJson` | Upsert per key | Current state snapshot |
 | `metricsHistoryJson` | Append per key | Time-series, never overwrite |
-| `decisionLogJson` | ~~Append-only~~ **Deprecated** | Superseded by `UnifiedActivity` timeline |
+| `decisionLogJson` | ~~Append-only~~ **Deprecated** | Superseded by `MemoryEntry` timeline |
 
 ---
 

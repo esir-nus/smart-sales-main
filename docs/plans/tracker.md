@@ -142,11 +142,11 @@
   - [x] **Execute**: Update `ScheduledTask` entity if necessary to accept `unifiedID`.
   - [x] **Test**: Unit tests verify `unifiedID` propagates into the pipeline `Input` object.
 
-- [ ] 🔲 **T3: Shard 2 Execution (Linter Path A & B Dual-Routing)**
-  - [ ] **Specs**: Adhere to `scheduler-linter/interface.md`.
-  - [ ] **Execute (Path A)**: Implement lightweight fast-track parser to instantly generate a `ScheduledTask` via DB insertion with the `unifiedID`.
-  - [ ] **Execute (Path B)**: Route the slow background CRM Disambiguation through the `UnifiedPipeline` targeting the exact same `unifiedID`.
-  - [ ] **Test**: L2 simulated pipeline test tracking both forks resolving correctly.
+- [x] ✅ **T3: Shard 2 Execution (Linter Path A & B Dual-Routing)**
+  - [x] **Specs**: Adhere to `scheduler-linter/interface.md`.
+  - [x] **Execute (Path A)**: Implement lightweight fast-track parser to instantly generate a `ScheduledTask` via DB insertion with the `unifiedID`.
+  - [x] **Execute (Path B)**: Route the slow background CRM Disambiguation through the `UnifiedPipeline` targeting the exact same `unifiedID`.
+  - [x] **Test**: L2 simulated pipeline test tracking both forks resolving correctly.
 
 - [ ] 🔲 **T4: Shard 3 Execution (UI Presentation Teardown)**
   - [ ] **Specs**: Ensure `scheduler-drawer/interface.md` defines pure state execution.

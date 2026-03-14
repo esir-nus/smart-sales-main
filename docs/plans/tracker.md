@@ -150,9 +150,9 @@
 
 - [ ] 🔲 **T4: Shard 3 Execution (UI Presentation Teardown)**
   - [x] **Specs**: Ensure `scheduler-drawer/contract.md` defines pure state execution and handles Dual-Path rendering mapped from individual `TimelineItem` states.
-  - [ ] **Execute**: Hoist `PhoneAudioRecorder` out of the visual card layer up to ViewModel/Screen.
-  - [ ] **Execute**: Dismantle 700-line `SchedulerCards.kt`. Move atomic components (`TaskCardHeader`, `TaskCardDetails`, etc.) into `components/` package.
-  - [ ] **Test**: Mechanical `grep` proves no raw Android dependencies inside the nested UI component layer.
+  - [x] **Execute**: Hoist `PhoneAudioRecorder` out of the visual card layer up to ViewModel/Screen.
+  - [x] **Execute**: Dismantle 700-line `SchedulerCards.kt/SchedulerTaskCard.kt`. Move atomic components (`TaskCardHeader`, `TaskCardDetails`, etc.) into `components/` package.
+  - [x] **Test**: Mechanical `grep` proves no raw Android dependencies inside the nested UI component layer (the atomic TaskCard components are pure Compose).
 
 ### 🎨 Epic: UI Skin Modernization & Protocol Validation
 > Applying the newly established Docs-First `IAgentViewModel` Contract to aggressively clean, refactor, and rewrite the UI layer into a pristine presentation boundary, proving the Parallel Dev Workflow before formalizing it into an Antigravity Rule.

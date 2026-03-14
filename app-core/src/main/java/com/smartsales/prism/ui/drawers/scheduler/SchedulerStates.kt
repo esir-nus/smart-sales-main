@@ -40,7 +40,9 @@ sealed class TimelineItem {
         // Wave 9: Smart Tips
         val keyPersonEntityId: String? = null,  // Entity ID for tip generation
         val tips: List<String> = emptyList(),   // LLM-generated context tips
-        val tipsLoading: Boolean = false        // Shimmer animation state
+        val tipsLoading: Boolean = false,       // Shimmer animation state
+        // Wave 14: Dual-Path Resolution
+        val clarificationState: com.smartsales.prism.domain.scheduler.ClarificationState? = null
     ) : TimelineItem()
     
     /**

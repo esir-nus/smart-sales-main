@@ -16,7 +16,7 @@ interface ClientProfileHub {
     suspend fun getFocusedContext(entityId: String): FocusedContext
     
     /**
-     * 获取统一时间轴
+     * 获取统一活动状态流
      */
-    suspend fun getUnifiedTimeline(entityId: String): List<UnifiedActivity>
+    suspend fun observeProfileActivityState(entityId: String): kotlinx.coroutines.flow.Flow<ProfileActivityState>
 }

@@ -34,6 +34,7 @@ kotlin {
 }
 
 dependencies {
+    api(project(":domain:core"))
     implementation(libs.coroutines.core)
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)

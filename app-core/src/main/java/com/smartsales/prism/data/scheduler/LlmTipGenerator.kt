@@ -51,10 +51,10 @@ class LlmTipGenerator @Inject constructor(
             "attrsLen=${context.entity.attributesJson.length}, " +
             "demeanor=${context.entity.demeanorJson.take(50)}, " +
             "relatedContacts=${context.relatedContacts.size}, " +
-            "timeline=${context.timeline.size}, " +
+            "timeline=${context.activityState.factualItems.size}, " +
             "habits=${context.habitContext.clientHabits.size}")
-        context.timeline.forEachIndexed { i, a ->
-            Log.d(TAG, "🔍 timeline[$i]: ${a.summary.take(80)}")
+        context.activityState.factualItems.forEachIndexed { i, a ->
+            Log.d(TAG, "🔍 timeline[$i]: ${a.content.take(80)}")
         }
         
         // Build prompt from spec L477-491
@@ -176,9 +176,9 @@ private fun FocusedContext.toPromptString(): String = buildString {
         appendLine("关联联系人: ${relatedContacts.joinToString { it.displayName }}")
     }
     
-    if (timeline.isNotEmpty()) {
+    if (activityState.factualItems.isNotEmpty()) {
         appendLine("最近活动:")
-        timeline.take(5).forEach { appendLine("  - ${it.summary}") }
+        activityState.factualItems.take(5).forEach { appendLine("  - ${it.content}") }
     }
     
     if (habitContext.clientHabits.isNotEmpty()) {

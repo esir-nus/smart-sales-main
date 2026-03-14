@@ -79,6 +79,10 @@ fun ResponseBubble(
         is UiState.ExecutingTool -> {
             // ExecutingTool (TaskBoard bypass loading) is rendered as an AgentActivity or skipped here since it's handled in AgentChatScreen history rendering directly
         }
+        
+        is UiState.BadgeDelegationHint -> {
+            // Already handled in AgentChatScreen explicitly. Ignored here.
+        }
 
     }
 }

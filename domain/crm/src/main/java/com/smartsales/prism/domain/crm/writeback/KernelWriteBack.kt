@@ -2,7 +2,6 @@ package com.smartsales.prism.domain.crm.writeback
 
 import com.smartsales.prism.domain.memory.EntityRef
 import com.smartsales.prism.domain.memory.EntityEntry
-import com.smartsales.prism.domain.crm.ActivityType
 
 /**
  * Kernel 写回接口 — Application (EntityWriter) → Kernel 的写入通道
@@ -33,8 +32,4 @@ interface KernelWriteBack {
      */
     suspend fun removeEntityFromSession(entityId: String)
 
-    /**
-     * 记录实体变更历史（Profile 变更检测后调用）
-     */
-    suspend fun recordActivity(entityId: String, type: ActivityType, summary: String)
 }

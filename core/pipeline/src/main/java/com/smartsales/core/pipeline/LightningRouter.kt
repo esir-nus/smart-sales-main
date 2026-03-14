@@ -3,7 +3,7 @@ package com.smartsales.core.pipeline
 import com.smartsales.core.context.EnhancedContext
 
 enum class QueryQuality {
-    NOISE, GREETING, SIMPLE_QA, DEEP_ANALYSIS, CRM_TASK, VAGUE
+    NOISE, GREETING, SIMPLE_QA, DEEP_ANALYSIS, CRM_TASK, VAGUE, BADGE_DELEGATION
 }
 
 /**

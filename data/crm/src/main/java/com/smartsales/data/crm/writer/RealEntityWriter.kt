@@ -1,7 +1,6 @@
 package com.smartsales.data.crm.writer
 
 import android.util.Log
-import com.smartsales.prism.domain.crm.ActivityType
 import com.smartsales.prism.domain.memory.EntityEntry
 import com.smartsales.prism.domain.memory.EntityRepository
 import com.smartsales.prism.domain.memory.EntityType
@@ -38,13 +37,7 @@ class RealEntityWriter @Inject constructor(
         private const val TAG = "EntityWriter"
         private const val MAX_ALIASES = 8
 
-        // updateProfile 跟踪的字段 → ActivityType 映射
-        private val TRACKED_FIELDS = mapOf(
-            "displayName" to ActivityType.NAME_CHANGE,
-            "jobTitle" to ActivityType.TITLE_CHANGE,
-            "accountId" to ActivityType.COMPANY_CHANGE,
-            "nextAction" to ActivityType.NEXT_ACTION_SET
-        )
+
     }
 
     override suspend fun upsertFromClue(
@@ -245,16 +238,7 @@ class RealEntityWriter @Inject constructor(
             appScope.launch {
                 entityRepository.save(finalEntry)
                 
-                // Kernel 回调: 记录历史事件
-                for (change in changes) {
-                    val activityType = TRACKED_FIELDS[change.field] ?: continue
-                    kernelWriteBack.recordActivity(
-                        entityId = entityId,
-                        type = activityType,
-                        summary = "${change.oldValue ?: "（空）"} → ${change.newValue}"
-                    )
-                }
-                Log.d(TAG, "👤 异步Profile更新SSD及记录历史完毕: id=$entityId changes=${changes.size}")
+                Log.d(TAG, "👤 异步Profile更新SSD完毕: id=$entityId changes=${changes.size}")
             }
         }
 

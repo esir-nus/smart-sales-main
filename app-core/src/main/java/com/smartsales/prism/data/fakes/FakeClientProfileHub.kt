@@ -1,11 +1,10 @@
 package com.smartsales.prism.data.fakes
 
-import com.smartsales.prism.domain.crm.ActivityType
 import com.smartsales.prism.domain.crm.ClientProfileHub
 import com.smartsales.prism.domain.crm.EntitySnapshot
 import com.smartsales.prism.domain.crm.FocusedContext
 import com.smartsales.prism.domain.crm.QuickContext
-import com.smartsales.prism.domain.crm.UnifiedActivity
+import com.smartsales.prism.domain.crm.ProfileActivityState
 import com.smartsales.prism.domain.memory.EntityRepository
 import com.smartsales.prism.domain.memory.MemoryEntry
 import com.smartsales.prism.domain.memory.MemoryEntryType
@@ -66,7 +65,7 @@ class FakeClientProfileHub @Inject constructor(
             entity = entity,
             relatedContacts = relatedContacts,
             relatedDeals = relatedDeals,
-            timeline = getUnifiedTimeline(entityId),
+            activityState = ProfileActivityState(emptyList(), emptyList()),
             habitContext = HabitContext(
                 userHabits = emptyList(),
                 clientHabits = emptyList(),
@@ -75,50 +74,7 @@ class FakeClientProfileHub @Inject constructor(
         )
     }
     
-    override suspend fun getUnifiedTimeline(entityId: String): List<UnifiedActivity> {
-        return memoryRepository.getByEntityId(entityId)
-            .map { it.toUnifiedActivity() }
-    }
-}
-
-/**
- * MemoryEntry → UnifiedActivity 类型映射
- */
-private fun MemoryEntry.toUnifiedActivity(): UnifiedActivity {
-    val entityIds = parseRelatedEntityIds(structuredJson)
-    
-    return UnifiedActivity(
-        id = entryId,
-        type = entryType.toActivityType(),
-        timestamp = createdAt,
-        summary = content,
-        location = null,
-        assetId = null,
-        relatedEntityIds = entityIds
-    )
-}
-
-/**
- * MemoryEntryType → ActivityType 枚举映射
- */
-private fun MemoryEntryType.toActivityType(): ActivityType = when (this) {
-    MemoryEntryType.SCHEDULE_ITEM -> ActivityType.MEETING
-    MemoryEntryType.TASK_RECORD -> ActivityType.TASK_COMPLETED
-    MemoryEntryType.INSPIRATION -> ActivityType.NOTE
-    MemoryEntryType.USER_MESSAGE -> ActivityType.NOTE
-    MemoryEntryType.ASSISTANT_RESPONSE -> ActivityType.NOTE
-}
-
-/**
- * 从 structuredJson 解析 relatedEntityIds
- */
-private fun parseRelatedEntityIds(json: String?): List<String> {
-    if (json.isNullOrBlank()) return emptyList()
-    return try {
-        val obj = JSONObject(json)
-        val arr = obj.optJSONArray("relatedEntityIds") ?: return emptyList()
-        (0 until arr.length()).map { arr.getString(it) }
-    } catch (_: Exception) {
-        emptyList()
+    override suspend fun observeProfileActivityState(entityId: String): kotlinx.coroutines.flow.Flow<ProfileActivityState> {
+        return kotlinx.coroutines.flow.flowOf(ProfileActivityState(emptyList(), emptyList()))
     }
 }

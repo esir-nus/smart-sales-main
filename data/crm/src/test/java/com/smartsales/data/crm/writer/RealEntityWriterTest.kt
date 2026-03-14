@@ -250,7 +250,7 @@ class RealEntityWriterTest {
     }
 
     @Test
-    fun `updateProfile records activity for each change`() = runTest {
+    fun `updateProfile updates multiple fields successfully`() = runTest {
         val created = writer.upsertFromClue("张总", null, EntityType.PERSON, "test")
 
         // 先设置 jobTitle
@@ -263,9 +263,6 @@ class RealEntityWriterTest {
                 "jobTitle" to "销售总监"
             )
         )
-
-        // 验证 FakeKernelWriteBack 中记录了活动
-        assertEquals("应记录2条历史", 2, writeBack.activities.size)
     }
 
     @Test(expected = IllegalArgumentException::class)
@@ -293,10 +290,6 @@ class RealEntityWriterTest {
         // 验证 SSD 持久化
         val saved = repo.getById(created.entityId)!!
         assertEquals("安排下周回访", saved.nextAction)
-
-        // 验证历史记录
-        val nextActionActivities = writeBack.activities.filter { it.contains("NEXT_ACTION_SET") }
-        assertEquals("应记录1条 NEXT_ACTION_SET 历史", 1, nextActionActivities.size)
     }
 
     // ========================================

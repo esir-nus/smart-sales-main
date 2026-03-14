@@ -17,7 +17,7 @@ import org.junit.Test
 /**
  * ClientProfileHub 单元测试
  * Wave 1: QuickContext / FocusedContext / getByAccountId
- * Wave 2: Timeline Aggregation (getUnifiedTimeline, getByEntityId, toUnifiedActivity)
+ * Wave 2: Timeline Aggregation (getByEntityId)
  */
 class ClientProfileHubTest {
     
@@ -153,36 +153,7 @@ class ClientProfileHubTest {
     
     // ─── Wave 2 Tests: Timeline Aggregation ─────────────────
     
-    @Test
-    fun `getUnifiedTimeline returns activities from tagged memories`() = runTest {
-        // 保存带实体标记的记忆条目
-        memoryRepository.save(MemoryEntry(
-            entryId = "mem-1",
-            sessionId = "s-001",
-            content = "与张总讨论了A3方案",
-            entryType = MemoryEntryType.USER_MESSAGE,
-            createdAt = 1000L,
-            updatedAt = 1000L,
-            structuredJson = """{"relatedEntityIds":["c-001"]}"""
-        ))
-        memoryRepository.save(MemoryEntry(
-            entryId = "mem-2",
-            sessionId = "s-001",
-            content = "安排周五会议",
-            entryType = MemoryEntryType.SCHEDULE_ITEM,
-            createdAt = 2000L,
-            updatedAt = 2000L,
-            structuredJson = """{"relatedEntityIds":["c-001","a-001"]}"""
-        ))
-        
-        val result = hub.getUnifiedTimeline("c-001")
-        
-        assertEquals(2, result.size)
-        // 按时间倒序（getByEntityId 已排序）
-        assertEquals("mem-2", result[0].id)
-        assertEquals("mem-1", result[1].id)
-    }
-    
+
     @Test
     fun `getByEntityId filters by quoted entity ID avoiding substring collision`() = runTest {
         // "c-1" 不应匹配 "c-10"
@@ -213,44 +184,5 @@ class ClientProfileHubTest {
         assertEquals(1, resultC10.size)
         assertEquals("mem-a", resultC10[0].entryId)
     }
-    
-    @Test
-    fun `toUnifiedActivity maps MemoryEntryType to ActivityType correctly`() = runTest {
-        // 准备不同类型的记忆条目
-        val types = listOf(
-            MemoryEntryType.SCHEDULE_ITEM to ActivityType.MEETING,
-            MemoryEntryType.TASK_RECORD to ActivityType.TASK_COMPLETED,
-            MemoryEntryType.INSPIRATION to ActivityType.NOTE,
-            MemoryEntryType.USER_MESSAGE to ActivityType.NOTE,
-            MemoryEntryType.ASSISTANT_RESPONSE to ActivityType.NOTE
-        )
-        
-        types.forEachIndexed { index, (entryType, expectedActivityType) ->
-            memoryRepository.save(MemoryEntry(
-                entryId = "type-test-$index",
-                sessionId = "s-001",
-                content = "Test $entryType",
-                entryType = entryType,
-                createdAt = (index + 1).toLong() * 1000,
-                updatedAt = (index + 1).toLong() * 1000,
-                structuredJson = """{"relatedEntityIds":["test-entity"]}"""
-            ))
-        }
-        
-        val activities = hub.getUnifiedTimeline("test-entity")
-        
-        assertEquals(types.size, activities.size)
-        // 按时间倒序
-        assertEquals(ActivityType.NOTE, activities[0].type)         // ASSISTANT_RESPONSE
-        assertEquals(ActivityType.NOTE, activities[1].type)         // USER_MESSAGE
-        assertEquals(ActivityType.NOTE, activities[2].type)         // INSPIRATION
-        assertEquals(ActivityType.TASK_COMPLETED, activities[3].type) // TASK_RECORD
-        assertEquals(ActivityType.MEETING, activities[4].type)      // SCHEDULE_ITEM
-    }
-    
-    @Test
-    fun `getUnifiedTimeline returns empty for entity with no tagged memories`() = runTest {
-        val result = hub.getUnifiedTimeline("nonexistent-entity")
-        assertTrue(result.isEmpty())
-    }
+
 }

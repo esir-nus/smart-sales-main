@@ -4,7 +4,6 @@ import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.TimelineItemModel
 import kotlinx.coroutines.flow.first
 import com.smartsales.core.context.Log
-import com.smartsales.prism.domain.crm.ActivityType
 import com.smartsales.prism.domain.memory.EntityEntry
 import com.smartsales.prism.domain.memory.EntityRepository
 import com.smartsales.prism.domain.memory.EntityType
@@ -270,22 +269,6 @@ class RealContextBuilder @Inject constructor(
         }
     }
 
-    override suspend fun recordActivity(entityId: String, type: ActivityType, summary: String) {
-        val entryId = UUID.randomUUID().toString()
-        val structuredJson = """{"activityType":"${type.name}","relatedEntityIds":["$entityId"],"entityId":"$entityId","summary":"$summary"}"""
-
-        memoryRepository.save(MemoryEntry(
-            entryId = entryId,
-            sessionId = _workingSet.sessionId,
-            content = summary,
-            entryType = MemoryEntryType.TASK_RECORD,
-            createdAt = timeProvider.now.toEpochMilli(),
-            updatedAt = timeProvider.now.toEpochMilli(),
-            structuredJson = structuredJson,
-            workflow = "entity_writer"
-        ))
-        Log.d("Kernel", "📜 recordActivity: type=${type.name} entity=$entityId")
-    }
 
     // === Lifecycle ===
     

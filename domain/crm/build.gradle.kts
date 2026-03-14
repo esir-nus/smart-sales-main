@@ -9,6 +9,8 @@ kotlin {
 
 dependencies {
     api(project(":domain:habit"))
+    api(project(":domain:memory"))
+    api(project(":domain:scheduler"))
     implementation(libs.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
 }

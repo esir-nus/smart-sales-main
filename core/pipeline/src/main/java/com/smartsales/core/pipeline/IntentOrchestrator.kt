@@ -102,6 +102,11 @@ class IntentOrchestrator @Inject constructor(
                 // Route back to user for clarification or immediate answer
                 emit(PipelineResult.ConversationalReply(routerResult.response))
             }
+            QueryQuality.BADGE_DELEGATION -> {
+                // Wave 6: Hardware Delegation Enforcement
+                emit(PipelineResult.BadgeDelegationIntercepted)
+                return@flow
+            }
             else -> {
                 // T1 Sync Loop: Fast-Fail Entity Disambiguation before hitting System II
                 val missingList = routerResult?.missingEntities ?: emptyList()

@@ -51,52 +51,52 @@ class AgentViewModel @Inject constructor(
     private val audioRepository: AudioRepository,
     private val contextBuilder: ContextBuilder,
     private val toolRegistry: ToolRegistry
-) : ViewModel() {
+) : ViewModel(), IAgentViewModel {
 
     // ------------------------------------------------------------------------
     // UI States
     // ------------------------------------------------------------------------
-    val agentActivity = activityController.activity
+    override val agentActivity = activityController.activity
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
-    val uiState = _uiState.asStateFlow()
+    override val uiState = _uiState.asStateFlow()
 
     private val _inputText = MutableStateFlow("")
-    val inputText = _inputText.asStateFlow()
+    override val inputText = _inputText.asStateFlow()
 
     private val _isSending = MutableStateFlow(false)
-    val isSending = _isSending.asStateFlow()
+    override val isSending = _isSending.asStateFlow()
 
     private val _errorMessage = MutableStateFlow<String?>(null)
-    val errorMessage = _errorMessage.asStateFlow()
+    override val errorMessage = _errorMessage.asStateFlow()
 
     private val _toastMessage = MutableStateFlow<String?>(null)
-    val toastMessage = _toastMessage.asStateFlow()
+    override val toastMessage = _toastMessage.asStateFlow()
 
     private val _history = MutableStateFlow<List<ChatMessage>>(emptyList())
-    val history = _history.asStateFlow()
+    override val history = _history.asStateFlow()
 
     // Task Board integration (mocked data collection)
     private val _taskBoardItems = MutableStateFlow<List<com.smartsales.prism.domain.analyst.TaskBoardItem>>(emptyList())
-    val taskBoardItems = _taskBoardItems.asStateFlow()
+    override val taskBoardItems = _taskBoardItems.asStateFlow()
 
     private val _sessionTitle = MutableStateFlow("新对话")
-    val sessionTitle = _sessionTitle.asStateFlow()
+    override val sessionTitle = _sessionTitle.asStateFlow()
 
     private val _heroUpcoming = MutableStateFlow<List<TimelineItemModel.Task>>(emptyList())
-    val heroUpcoming = _heroUpcoming.asStateFlow()
+    override val heroUpcoming = _heroUpcoming.asStateFlow()
 
     private val _heroAccomplished = MutableStateFlow<List<TimelineItemModel.Task>>(emptyList())
-    val heroAccomplished = _heroAccomplished.asStateFlow()
+    override val heroAccomplished = _heroAccomplished.asStateFlow()
 
-    val mascotState = mascotService.state
+    override val mascotState = mascotService.state
 
     private var currentSessionId: String? = null
 
-    val currentDisplayName: String
+    override val currentDisplayName: String
         get() = userProfileRepository.profile.value.displayName
 
-    val heroGreeting = userProfileRepository.profile
+    override val heroGreeting = userProfileRepository.profile
         .map { profile ->
             val hour = java.time.LocalTime.now().hour
             val timeGreeting = when {
@@ -215,20 +215,20 @@ class AgentViewModel @Inject constructor(
         // We no longer double-write from the UI layer.
     }
 
-    fun clearToast() { _toastMessage.value = null }
-    fun updateInput(text: String) { _inputText.value = text }
-    fun clearError() { _errorMessage.value = null }
+    override fun clearToast() { _toastMessage.value = null }
+    override fun updateInput(text: String) { _inputText.value = text }
+    override fun clearError() { _errorMessage.value = null }
     fun cycleDebugState() { } // Deprecated
-    fun amendAnalystPlan() {
+    override fun amendAnalystPlan() {
         _uiState.value = UiState.Idle
         _toastMessage.value = "请在底部输入框输入您要修改的计划内容"
     }
 
-    fun interactWithMascot(interaction: MascotInteraction) {
+    override fun interactWithMascot(interaction: MascotInteraction) {
         viewModelScope.launch { mascotService.interact(interaction) }
     }
 
-    fun updateSessionTitle(newTitle: String) {
+    override fun updateSessionTitle(newTitle: String) {
         val title = newTitle.trim()
         if (title.isBlank()) return
         _sessionTitle.value = title
@@ -240,7 +240,7 @@ class AgentViewModel @Inject constructor(
         }
     }
 
-    fun selectTaskBoardItem(itemId: String) {
+    override fun selectTaskBoardItem(itemId: String) {
         if (_isSending.value) return
         val items = _taskBoardItems.value
         val item = items.find { it.id == itemId } ?: return
@@ -327,7 +327,7 @@ class AgentViewModel @Inject constructor(
         }
     }
 
-    fun confirmAnalystPlan() {
+    override fun confirmAnalystPlan() {
         if (_isSending.value) return
         _isSending.value = true
         val input = "确认执行" 
@@ -347,7 +347,7 @@ class AgentViewModel @Inject constructor(
         }
     }
 
-    fun send() {
+    override fun send() {
         if (_isSending.value) return
         val input = _inputText.value.trim()
         if (input.isBlank()) return
@@ -451,13 +451,23 @@ class AgentViewModel @Inject constructor(
                 Log.d("AgentVM", "Intent intercepted by Mascot. Dropping to Idle.")
                 _uiState.value = UiState.Idle 
             }
+            is PipelineResult.BadgeDelegationIntercepted -> {
+                Log.d("AgentVM", "Hardware delegation intercepted. Emitting BadgeDelegationHint.")
+                val ui = UiState.BadgeDelegationHint
+                _history.value += ChatMessage.Ai(
+                    id = java.util.UUID.randomUUID().toString(),
+                    timestamp = System.currentTimeMillis(),
+                    uiState = ui
+                )
+                _uiState.value = UiState.Idle 
+            }
         }
     }
 
     // ------------------------------------------------------------------------
     // Debug Testing
     // ------------------------------------------------------------------------
-    fun debugRunScenario(scenario: String) {
+    override fun debugRunScenario(scenario: String) {
         when (scenario) {
             "MARKDOWN_BUBBLE" -> {
                 val markdownContent = """
@@ -501,6 +511,17 @@ class AgentViewModel @Inject constructor(
             "MULTI_INTENT_PROPOSAL" -> {
                 android.util.Log.d("AgentVM", "🧪 Injecting simulated Multi-Intent Proposal")
                 val ui = UiState.Response("已为您起草更新：调度会议 [与张总沟通价格] 并更新字段 [dealStage -> Won]。请点击卡片确认。")
+                
+                _uiState.value = ui
+                _history.value += ChatMessage.Ai(
+                    id = java.util.UUID.randomUUID().toString(),
+                    timestamp = System.currentTimeMillis(),
+                    uiState = ui
+                )
+            }
+            "BADGE_DELEGATION_HINT" -> {
+                android.util.Log.d("AgentVM", "🧪 Injecting simulated Badge Delegation Hint")
+                val ui = UiState.BadgeDelegationHint
                 
                 _uiState.value = ui
                 _history.value += ChatMessage.Ai(

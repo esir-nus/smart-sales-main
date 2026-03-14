@@ -73,7 +73,7 @@ import com.smartsales.prism.ui.components.agent.*
  */
 @Composable
 fun AgentChatScreen(
-    viewModel: AgentViewModel = hiltViewModel(),
+    viewModel: IAgentViewModel = hiltViewModel<AgentViewModel>(),
     onMenuClick: () -> Unit = {},
     onNewSessionClick: () -> Unit = {},
     onAudioBadgeClick: () -> Unit = {},
@@ -282,6 +282,27 @@ fun AgentChatScreen(
                                             )
                                             Spacer(Modifier.width(8.dp))
                                             Text("正在执行: ${state.toolName}", color = TextSecondary, fontSize = 13.sp)
+                                        }
+                                    }
+                                    is UiState.BadgeDelegationHint -> {
+                                        // Hardware Delegation UI Hint
+                                        PrismSurface(
+                                            shape = RoundedCornerShape(16.dp),
+                                            backgroundColor = AccentYellow.copy(alpha = 0.1f),
+                                            modifier = Modifier.padding(vertical = 4.dp).border(1.dp, AccentYellow.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically, 
+                                                modifier = Modifier.padding(12.dp)
+                                            ) {
+                                                Text("🎙️", fontSize = 16.sp)
+                                                Spacer(Modifier.width(8.dp))
+                                                Text(
+                                                    "请长按您的智能工牌专属按键来录入此日程。",
+                                                    color = TextSecondary,
+                                                    style = MaterialTheme.typography.bodyMedium
+                                                )
+                                            }
                                         }
                                     }
                                     else -> {}

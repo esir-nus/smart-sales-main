@@ -38,6 +38,7 @@ class RealLightningRouter @Inject constructor(
                 "simple_qa" -> QueryQuality.SIMPLE_QA
                 "deep_analysis" -> QueryQuality.DEEP_ANALYSIS
                 "crm_task" -> QueryQuality.CRM_TASK
+                "badge_delegation" -> QueryQuality.BADGE_DELEGATION
                 else -> QueryQuality.VAGUE
             }
             
@@ -57,7 +58,7 @@ class RealLightningRouter @Inject constructor(
                 }
             }
             
-            if (queryQuality == QueryQuality.NOISE || queryQuality == QueryQuality.GREETING || queryQuality == QueryQuality.VAGUE) {
+            if (queryQuality == QueryQuality.NOISE || queryQuality == QueryQuality.GREETING || queryQuality == QueryQuality.VAGUE || queryQuality == QueryQuality.BADGE_DELEGATION) {
                 missingEntitiesList.clear() // Prevent disambiguation loop for rejected/cross-domain intents
             }
             

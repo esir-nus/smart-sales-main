@@ -9,7 +9,7 @@ import com.smartsales.prism.data.scheduler.LlmTipGenerator
 import com.smartsales.prism.domain.crm.ClientProfileHub
 import com.smartsales.prism.domain.crm.FocusedContext
 import com.smartsales.prism.domain.crm.QuickContext
-import com.smartsales.prism.domain.crm.UnifiedActivity
+import com.smartsales.prism.domain.crm.ProfileActivityState
 import com.smartsales.prism.domain.memory.EntityEntry
 import com.smartsales.prism.domain.memory.EntityType
 import com.smartsales.prism.domain.rl.HabitContext
@@ -91,7 +91,7 @@ class LlmTipGeneratorTest {
                 entity = entity,
                 relatedContacts = emptyList(),
                 relatedDeals = emptyList(),
-                timeline = emptyList(),
+                activityState = ProfileActivityState(emptyList(), emptyList()),
                 habitContext = HabitContext(
                     userHabits = emptyList(),
                     clientHabits = emptyList(),
@@ -100,7 +100,7 @@ class LlmTipGeneratorTest {
             )
         }
         
-        override suspend fun getUnifiedTimeline(entityId: String): List<UnifiedActivity> = emptyList()
+        override suspend fun observeProfileActivityState(entityId: String): kotlinx.coroutines.flow.Flow<ProfileActivityState> = emptyFlow()
     }
 
     // ========== Helper ==========

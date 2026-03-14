@@ -37,6 +37,11 @@ sealed class UiState {
      */
     data class Toast(val message: String) : UiState()
     
+    /**
+     * Wave 6: 硬件委托拦截 — 提示用户使用工牌硬件进行日程安排
+     */
+    object BadgeDelegationHint : UiState()
+    
     data class Error(val message: String, val retryable: Boolean = true) : UiState()
     
     /**

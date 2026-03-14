@@ -139,7 +139,7 @@ class L2WorldStateSeederTest {
             assertTrue("Should contain communication_style", allHabits.any { it.habitKey == "communication_style" && it.habitValue == "direct" })
             
             val allMemories = fakeMemoryRepo.getByEntityId(cxoId, limit = 10)
-            assertEquals("Memory should be successfully injected and linked to entity (including 1 auto-generated TASK_RECORD from Profile update)", 3, allMemories.size)
+            assertEquals("Memory should be successfully injected and linked to entity", 2, allMemories.size)
             assertTrue("Memory content is present", allMemories.any { it.content.contains("Discussed the new cloud strategy") })
         }
     }

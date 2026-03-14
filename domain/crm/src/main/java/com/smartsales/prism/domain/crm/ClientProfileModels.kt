@@ -11,7 +11,7 @@ data class EntitySnapshot(
     val entityId: String,
     val displayName: String,
     val entityType: EntityType,
-    val lastActivity: UnifiedActivity?
+    val lastActivity: com.smartsales.prism.domain.memory.MemoryEntry?
 )
 
 /**
@@ -21,8 +21,16 @@ data class FocusedContext(
     val entity: EntityEntry,
     val relatedContacts: List<EntityEntry>,
     val relatedDeals: List<EntityEntry>,
-    val timeline: List<UnifiedActivity>,
+    val activityState: ProfileActivityState,
     val habitContext: HabitContext
+)
+
+/**
+ * 时间轴与待办聚合状态
+ */
+data class ProfileActivityState(
+    val actionableItems: List<com.smartsales.prism.domain.scheduler.TimelineItemModel.Task>,
+    val factualItems: List<com.smartsales.prism.domain.memory.MemoryEntry>
 )
 
 /**
@@ -30,37 +38,8 @@ data class FocusedContext(
  */
 data class QuickContext(
     val entitySnapshots: Map<String, EntitySnapshot>,
-    val recentActivities: List<UnifiedActivity>,
+    val recentActivities: List<com.smartsales.prism.domain.memory.MemoryEntry>,
     val suggestedNextSteps: List<String>
 )
 
-/**
- * 统一活动条目 — 时间轴项
- */
-data class UnifiedActivity(
-    val id: String,
-    val type: ActivityType,
-    val timestamp: Long,
-    val summary: String,
-    val location: String?,
-    val assetId: String?,
-    val relatedEntityIds: List<String>
-)
 
-/**
- * 活动类型
- */
-enum class ActivityType {
-    MEETING,
-    CALL,
-    NOTE,
-    ARTIFACT_GENERATED,
-    DEAL_STAGE_CHANGE,
-    TASK_COMPLETED,
-    // Wave 2: 变更感知 Profile 跟踪
-    NAME_CHANGE,
-    TITLE_CHANGE,
-    COMPANY_CHANGE,
-    ROLE_CHANGE,
-    NEXT_ACTION_SET
-}

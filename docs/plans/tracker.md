@@ -101,6 +101,16 @@
   - **Boundaries**: [`docs/cerb-e2e-test/specs/wave7-final-audit/boundaries.md`](../cerb-e2e-test/specs/wave7-final-audit/boundaries.md)
   - [TER: L3 Wave 7 Final Audit](file:///home/cslh-frank/main_app/docs/reports/tests/L3-20260313-wave7-final-audit.md)
 
+### 🌊 Wave 8: Actionable/Factual Unification (Raw Domain Surfacing)
+> Reconstruct the CRM intelligence dashboard (Layer 5: ClientProfileHub) to surface raw `TimelineItemModel.Task` (Actionable) and raw `MemoryEntry` (Factual) via reactive Kotlin flows, completely separating the Future from the Past without relying on UI-layer translation mappings or database dual-writes. Unification through a true Source of Truth.
+- [x] **Plan**: Establish the [Actionable vs Factual Unification Blueprint](../reports/review_conferences/20260314_actionable_factual_plan.md) and prove the Badge hardware scheduling constraint cannot be bypassed.
+- [x] **Conference**: Validate the Data Class Unification math with the Senior Engineer.
+- [x] **Docs**: Synchronized the `client-profile-hub/spec.md`, `entity-writer/spec.md`, and `entity-registry/spec.md` Data Models to reflect `ProfileActivityState` and remove the legacy `UnifiedActivity` mapping struct (`/04-doc-sync` complete).
+- [ ] **Execute (Phase 1)**: Domain Contract Purge — Rip out `UnifiedActivity` from `:domain:crm`, update `ClientProfileHub` interface to `observeProfileActivityState`, and stub `FakeClientProfileHub` to pass compilation.
+- [ ] **Execute (Phase 2)**: The Reactive Engine — Implement `RealClientProfileHub` injecting `ScheduledTaskRepository` and `MemoryRepository`, wiring the time-based `combine` flow.
+- [ ] **Execute (Phase 3)**: The Cross-Off Lifecycle — Implement data migration in `SchedulerViewModel` (or equivalent observer) where completing a task permanently creates a `MemoryEntry` and deletes the `ScheduledTask`.
+- [ ] **Test**: Verify `L1ClientProfileHubTest.kt` passes Phase 2 logic, and an L2 simulation proves Phase 3 Source of Truth migration.
+
 ---
 
 ## Tech Debt (Deferred for Beta)

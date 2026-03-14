@@ -1,29 +1,63 @@
-# Scheduler UI Specification
+# Scheduler Dashboard (Skin Modernization)
 
-> **Context Boundary**: `docs/cerb-ui/scheduler/`
-> **OS Layer**: RAM Application (UI Presentation)
-> **Status**: PARTIAL
+> **State**: SPEC_ONLY
+> **OS Model Layer**: Application (Layer 4)
+> **UI Layer**: Pure Compose Client (observing `ISchedulerViewModel`)
 
-## Component Topology
+## Overview
 
-- `SchedulerDrawer`: The top-level stateful container (Bottom sheet or side drawer).
-- `SchedulerContent`: The stateless presentation layer that consumes `SchedulerUiState`.
-- `TaskPreviewCard`: Reusable layout chunk showing the proposed task details.
-- `ConflictAlert`: Reusable layout chunk showing scheduling overlap warnings.
+A complete rewrite of the `SchedulerViewModel` and its associated Compose UI to decouple raw Pipeline Execution logic from Presentation logic, and formally institute the "Reactive Unification" of Actionable Timeline Tasks with Factual Memory Entries.
 
-## Interaction Rules & Gestures
+This fulfills Phase 2 (Parallel Proving Ground) of the `tracker.md` UI Skin Epic, and Phase 3 (Cross-Off Lifecycle) of the Actionable/Factual Unification wave.
 
-- **Scrim & Drawer**: Must follow the "Scrim + Drawer Pattern" (Scrim fades, Drawer slides, separate AnimatedVisibility).
-- **Empty State**: `Idle` shows nothing or a generic "Ready to Schedule" placeholder.
-- **Loading State**: `ScanningTimeline` and `Executing` use shimmer effects on the `TaskPreviewCard` outline.
-- **Error State**: Displays inline Amber Card preventing confirmation until resolved.
-- **Confirmation Gestures**: Requires explicit tap on "Confirm". Swipe-to-dismiss implies Cancellation/Abort.
+## 🧠 Intricacies & Organic UX Constraints
+- **Organic UX (The Cross-Off)**: Users derive psychological satisfaction from crossing items off a list. If we blindly follow the "Tasks are deleted and moved to Memory" data rule, the check-marked item instantly vanishes from the screen. 
+- **The Reactive Solution**: The UI `TimelineItems` stream must dynamically combine active tasks from `ScheduledTaskRepository` with completed `SCHEDULE_ITEM` entries from `MemoryRepository` mapped into a unified list. 
+- **Conflict Anxiety**: When a user's new request conflicts with existing tasks, they freeze if they don't know *what* they are overwriting. The UI must aggressively highlight (amber/red glow) the conflicting items BEFORE asking them how to proceed.
 
-## Wave Plan
+## Domain Models (Mapped for UI)
 
-| Wave | Focus | Status | Deliverables |
-|------|-------|--------|--------------|
-| **1** | Scaffold & State | ✅ SHIPPED | `contract.md` + basic Compose outlines |
-| **2** | Visual Polish | ✅ SHIPPED | Exact styling, padding, theme integration via `FakeAgentViewModel` previews |
-| **3** | Interaction & Gestures | ✅ SHIPPED | Animations, Scrim + Drawer rules, edge cases |
-| **4** | Backend Integration | 🔲 PLANNED | Connect to actual `SchedulerViewModel` and `UnifiedPipeline` |
+The UI consumes a sealed class stream from the ViewModel:
+
+```mermaid
+classDiagram
+    class TimelineItemModel {
+        <<sealed>>
+        +String id
+        +Boolean isDone
+    }
+    class Task {
+        +String title
+        +Instant startTime
+        +Long durationMinutes
+        +Boolean hasAlarm
+        +String linkedEntityId
+    }
+    class Inspiration {
+        +String text
+        +List~String~ tags
+    }
+    TimelineItemModel <|-- Task
+    TimelineItemModel <|-- Inspiration
+```
+
+> **Crucial Distinction**: The UI `isDone` property on a `Task` means it actually originates from the backend `MemoryRepository` as a locked factual record, not the Actionable feed.
+
+## Interaction States
+
+| User Action | UI Feedback | ViewModel Action | Backend Reality |
+|-------------|-------------|------------------|-----------------|
+| Check task  | Checkmark fills, text strikethrough (immediate) | `onToggleDone(id)` | Task deleted from `ScheduledTask`, `MemoryEntry(SCHEDULE_ITEM)` created. |
+| Uncheck task| Checkmark clears, text normalizes | `onToggleDone(id)` | `MemoryEntry` deleted, `ScheduledTask` recreated. |
+| Hold Mic    | Loading state, waveform animation | (Handled by Audio Pipeline) | Audio → ASR → IntentOrchestrator| 
+| Speaks conflicting task | Amber glow on conflicting tasks, warning text | `conflictWarning` set | Pipeline yields `PendingIntent`, awaits user routing |
+| Long Press Task | Selection Mode opens (Trash/Edit icons) | `onLongPress(id)` | Local UI selection state |
+
+## Wave Plan: UI Skin Modernization
+
+| Wave | Title | Status | Goal |
+|------|-------|--------|------|
+| 1 | **The Parallel Fake** | ✅ SHIPPED | Build the pure Compose UI driven exclusively by `FakeSchedulerViewModel`. Prove all states (loading, multi-select, conflict glow, disabled tasks) work visually without a database. |
+| 2 | **ViewModel Ejection** | ✅ SHIPPED | Gut the 860-line `SchedulerViewModel`. Extract conflict logic to `SchedulerCoordinator`, AST simulation to `IntentOrchestrator`, and routing logic out of the UI. |
+| 3 | **Reactive Unification** | ✅ SHIPPED | Implement `Flow.combine` mapping in the new, slim `SchedulerViewModel` to stitch Actionable and Memory backends into the `timelineItems` stream. |
+| 4 | **The Integration** | 🔲 | Swap the `FakeSchedulerViewModel` for the real one in the parent `NavHost`. Ensure the old UI behaves correctly under the new architecture. |

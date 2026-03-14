@@ -93,6 +93,8 @@
 - [x] ✅ **T4: Mascot Presentation Collection** (Migrate from single-frame shimmer to sustained lifecycle collection)
 - [x] ✅ **T5: Hardware Badge Delegation Constraint** (Strictly separating phone app (`badge_delegation`) vs physical badge (`crm_task`) scheduling capabilities)
 - [ ] ⏬ **T6: DEFERRED: The Hand-Off Animation** (Visual bridging between voice ingestion and LLM execution. Paused due to Voice Source ambiguity — see Tech Debt)
+- [x] ✅ **T7: Parallel UI Skin Contract** (Extracted IAgentViewModel from AgentViewModel to decouple Layer 4 UI from Layer 3 Pipeline allowing Fake ViewModel vibe coding)
+- [x] ✅ **T8: Mechanical UI Contract Verification** (Implement UiSpecAlignmentTest.kt to mechanically enforce Docs-First Protocol between interface.md and UiState)
 
 ### 🌊 Wave 7: The Final Audit (Phase 3 E2E Pillar Resumption)
 > System-wide E2E Device Tests for: Lightning Fast-Track, Dual-Engine Bridge, Strict Interface Integrity, Adaptive Habit Loop, Efficiency Overload, Transparent Mind. This is the capstone requirement before declaring the foundational architecture stable.
@@ -106,8 +108,14 @@
 - [x] **Plan**: Establish the [Actionable vs Factual Unification Blueprint](../reports/review_conferences/20260314_actionable_factual_plan.md) and prove the Badge hardware scheduling constraint cannot be bypassed.
 - [x] **Conference**: Validate the Data Class Unification math with the Senior Engineer.
 - [x] **Docs**: Synchronized the `client-profile-hub/spec.md`, `entity-writer/spec.md`, and `entity-registry/spec.md` Data Models to reflect `ProfileActivityState` and remove the legacy `UnifiedActivity` mapping struct (`/04-doc-sync` complete).
-- [x] **Execute (Phase 1)**: Domain Contract Purge — Rip out `UnifiedActivity` from `:domain:crm`, update `ClientProfileHub` interface to `observeProfileActivityState`, and stub `FakeClientProfileHub` to pass compilation.
-- [ ] **Execute (Phase 2)**: The Reactive Engine — Implement `RealClientProfileHub` injecting `ScheduledTaskRepository` and `MemoryRepository`, wiring the time-based `combine` flow.
+- [x] **Execute**:
+   1. ✅ **Phase 1: Domain Contract Purge**
+      - Clean slate isolation for `:domain:scheduler` and `:domain:core`
+      - Verified JVM compliance via Linter.
+   2. ✅ **Phase 2: The Reactive Engine**
+      - Implementation of `RealClientProfileHub`
+      - DAO up-conversions to `observeByEntityId` (`LIKE` operator for `MemoryDao`)
+      - Reactive streaming `Flow.combine` for aggregation without RAM caching.
 - [ ] **Execute (Phase 3)**: The Cross-Off Lifecycle — Implement data migration in `SchedulerViewModel` (or equivalent observer) where completing a task permanently creates a `MemoryEntry` and deletes the `ScheduledTask`.
 - [ ] **Test**: Verify `L1ClientProfileHubTest.kt` passes Phase 2 logic, and an L2 simulation proves Phase 3 Source of Truth migration.
 
@@ -142,6 +150,8 @@
 > Key spec/impl changes, newest first. Like `git log --oneline`.
 
 ### 2026-03-14
+- **agent-intelligence-ui**: Docs-First UI Verification (Skin Verification). Wrote `UiSpecAlignmentTest.kt` to mathematically bind `docs/cerb-ui/agent-intelligence/interface.md` with compiling `UiState` via Reflection. Any drift in the docs now strictly fails the android build tests.
+- **agent-intelligence-ui**: Parallel UI Contract (Skin) Established. Gutted deprecated 160-line legacy `prism-ui-ux-contract.md`. Extracted `IAgentViewModel` to unblock UI developers from Project Mono backend restructuring. Provided `FakeAgentViewModel` strictly implementing `UiState` and `AgentActivity` mocks for Compose @Preview design validation.
 - **architecture**: Wave 6 T5 Hardware Badge Delegation Constraint SHIPPED. Added a strict architectural boundary (`isBadge`) separating phone app intelligence from physical hardware capabilities. The phone app LLM is now mathematically proven (via `PromptCompilerBadgeTest.kt`) to route all scheduling attempts to a `badge_delegation` UI hint overlay (`AgentChatScreen.kt`), strictly forcing the user to utilize the ESP32 physical badge for calendar mutations.
 
 ### 2026-03-13

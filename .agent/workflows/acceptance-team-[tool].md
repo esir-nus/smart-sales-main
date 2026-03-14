@@ -38,16 +38,21 @@ The acceptance team consists of specialized examiners. You (the agent) act as th
 - **Input**: `docs/cerb/interface-map.md` + Changed Files
 - **Command**: MUST run a result-oriented mechanical script. **"Vibe checking" by reading code is strictly FORBIDDEN.**
   ```bash
-  # Example 1: Check for forbidden imports (OS Layer Isolation)
+  # 1. OS Layer Isolation (Forbidden Imports)
   grep -r "import com.smartsales.prism.data" [feature_domain_path]
   grep -r "import android." [core_pipeline_path]
   
-  # Example 2: Mathematical Schema Validation (Anti-Hallucination)
-  # Write a temporary Kotlin test/script via Reflection to prove the LLM Prompt matches the :domain Data Class.
+  # 2. Strict Mathematical Alignment (Anti-Hallucination Guardrails)
+  # MUST explicitly run these two project-level Contract Verify scripts if the domain or UI changed:
+  # A) Brain/Body Contract (LLM Schema vs Data Class)
+  ./gradlew :app-core:testDebugUnitTest --tests "*PromptCompilerBadgeTest*"
+  # B) UI/Skin Contract (Markdown Docs vs Kotlin UiState)
+  ./gradlew :app-core:testDebugUnitTest --tests "*UiSpecAlignmentTest*"
   ```
 - **Rubric**:
   - Did the mechanical `grep` script return 0 forbidden imports?
-  - Does the mechanical reflection/schema test prove the LLM JSON strictly maps to the Kotlin Data Class?
+  - Did `PromptCompilerBadgeTest` pass? (Proves Brain/Body schema alignment)
+  - Did `UiSpecAlignmentTest` pass? (Proves Docs-First UI protocol)
   - Are "Writes" going through the owner module? (Verified via grep, not guessing)
 
 ### 3. Build Examiner 🏗️

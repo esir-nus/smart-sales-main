@@ -75,6 +75,12 @@ interface MemoryDao {
     suspend fun getByEntityId(entityId: String, limit: Int): List<MemoryEntryEntity>
     
     /**
+     * 按实体 ID 观察 (引号包裹避免子串误匹配)
+     */
+    @Query("SELECT * FROM memory_entries WHERE structuredJson LIKE '%\"' || :entityId || '\"%' ORDER BY createdAt DESC")
+    fun observeByEntityId(entityId: String): Flow<List<MemoryEntryEntity>>
+    
+    /**
      * Test helper: 清空所有数据
      */
     @Query("DELETE FROM memory_entries")

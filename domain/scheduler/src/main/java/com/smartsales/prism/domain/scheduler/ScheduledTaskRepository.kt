@@ -51,6 +51,11 @@ interface ScheduledTaskRepository {
      * 获取实体关联的最紧急的活跃 L1/L2 任务（nextAction 缓存用）
      */
     suspend fun getTopUrgentActiveForEntity(entityId: String): TimelineItemModel.Task?
+
+    /**
+     * 按实体ID观察任务
+     */
+    fun observeByEntityId(entityId: String): Flow<List<TimelineItemModel.Task>>
 }
 
 

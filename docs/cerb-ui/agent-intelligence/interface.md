@@ -16,20 +16,25 @@ The UI component requires the following State classes from the RAM layer (`com.s
 
 ### 3.1 Transitory States
 Visualize the latency of network calls.
+- `UiState.Idle`: Resting state of the pipeline.
 - `UiState.Loading`: Generic spinner.
-- `UiState.Thinking(hint)`: Displays a pulsing brain and a textual hint.
-- `UiState.Streaming(partialContent)`: Shows raw tokens arriving sequentially.
-- `UiState.ExecutingTool(toolName, parameters)`: Bypasses standard output while an internal tool runs.
+- `UiState.Thinking`: Displays a pulsing brain and a textual hint.
+- `UiState.Streaming`: Shows raw tokens arriving sequentially.
+- `UiState.ExecutingTool`: Bypasses standard output while an internal tool runs.
 
 ### 3.2 Actionable States
 Require user interaction to proceed.
-- `UiState.AwaitingClarification(question, type, candidates)`: The LLM missing required details (e.g. Schedule duration) or entities.
-- `UiState.MarkdownStrategyState(title, markdownContent)`: A rich text output (plan, summary) supporting CTAs.
+- `UiState.AwaitingClarification`: The LLM missing required details (e.g. Schedule duration) or entities.
+- `UiState.MarkdownStrategyState`: A rich text output (plan, summary) supporting CTAs.
 
 ### 3.3 Final Render States
 Asynchronous or immediate background notifications.
-- `UiState.SchedulerTaskCreated(taskId, title, ...)`: Confirmation of a created task.
-- `UiState.SchedulerMultiTaskCreated(tasks, hasConflict)`: Confirmation of batch task creation.
+- `UiState.Response`: Standard text response holding structural JSON.
+- `UiState.SchedulerTaskCreated`: Confirmation of a created task.
+- `UiState.SchedulerMultiTaskCreated`: Confirmation of batch task creation.
+- `UiState.Toast`: Fire-and-forget lightweight feedback.
+- `UiState.BadgeDelegationHint`: Wave 6 hardware delegation overlay.
+- `UiState.Error`: Pipeline malfunction or network outage.
 
 ## 4. Event Contract (Output Actions)
 

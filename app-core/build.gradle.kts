@@ -143,7 +143,7 @@ dependencies {
 
     // Test
     testImplementation(project(":core:test-fakes"))
-    testImplementation(kotlin("reflect"))
+    testImplementation("org.jetbrains.kotlin:kotlin-reflect")
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
     testImplementation(libs.mockito.core)

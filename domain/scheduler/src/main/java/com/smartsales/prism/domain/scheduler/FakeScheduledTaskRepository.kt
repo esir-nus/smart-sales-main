@@ -3,6 +3,7 @@ package com.smartsales.prism.domain.scheduler
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 import javax.inject.Inject
 
@@ -115,5 +116,11 @@ class FakeScheduledTaskRepository @Inject constructor() : ScheduledTaskRepositor
             }
             .sortedWith(compareBy<TimelineItemModel.Task> { it.urgencyLevel.ordinal }.thenBy { it.startTime })
             .firstOrNull()
+    }
+
+    override fun observeByEntityId(entityId: String): Flow<List<TimelineItemModel.Task>> {
+        return _items.map { items ->
+            items.filterIsInstance<TimelineItemModel.Task>().filter { it.keyPersonEntityId == entityId }
+        }
     }
 }

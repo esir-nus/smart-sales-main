@@ -72,6 +72,7 @@ class L2WriteBackConcurrencyTest {
             override suspend fun deleteItem(id: String) {}
             override suspend fun getRecentCompleted(limit: Int): List<TimelineItemModel.Task> = emptyList()
             override suspend fun getTopUrgentActiveForEntity(entityId: String): TimelineItemModel.Task? = null
+            override fun observeByEntityId(entityId: String): Flow<List<TimelineItemModel.Task>> = emptyFlow()
         }
 
         contextBuilder = RealContextBuilder(

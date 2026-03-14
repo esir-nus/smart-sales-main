@@ -1,64 +1,62 @@
 package com.smartsales.prism.ui
 
 import com.smartsales.prism.domain.model.UiState
-import org.junit.Assert.assertTrue
-import org.junit.Assert.fail
+import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.io.File
 
 /**
- * UiSpecAlignmentTest
+ * Anti-Drift Mechanical Check: The Docs-First UI Protocol Guard.
+ * This test enforces that the Cerb Specification (interface.md) and the Kotlin Code (UiState)
+ * are in mathematically perfect 100% bijection.
  * 
- * Enforces the "Docs-First Protocol" for the Presentation Layer.
- * This test uses Kotlin Reflection to scan the UiState sealed class
- * and matches it against the markdown table in `docs/cerb-ui/agent-intelligence/interface.md`.
- * 
- * If a developer adds a new state to the code but forgets to document it, this test fails.
- * If a PM adds a state to the spec but it's not implemented, this test fails.
+ * Hallucination Prevention:
+ * 1. An Agent reads interface.md and assumes a state exists.
+ * 2. If the state was deleted in code but the spec was not updated, an Agent hallucinates.
+ * 3. This test breaks the build if they drift, forcing developers to sync the Docs.
  */
 class UiSpecAlignmentTest {
 
     @Test
-    fun `UiState code exactly matches Cerb interface documentation`() {
-        // 1. Get all UiState names from Kotlin Code
-        val codeStates = UiState::class.sealedSubclasses.map { it.simpleName }.toSet()
-
-        // 2. Read the Cerb Spec from the filesystem
-        // We navigate up from the app-core/src/test/java directory to the project root
-        val projectRoot = File(".").absoluteFile.parentFile.parentFile ?: File(".")
-        val interfaceFile = File(projectRoot, "docs/cerb-ui/agent-intelligence/interface.md")
+    fun verifyUiStateMatchesCerbSpec() {
+        // 1. Resolve relative path (from app-core/ to project root)
+        val projectRoot = File("..")
+        val specFile = File(projectRoot, "docs/cerb-ui/agent-intelligence/interface.md")
         
-        if (!interfaceFile.exists()) {
-            fail("CRITICAL: Cerb UI Interface Spec missing at ${interfaceFile.absolutePath}")
-        }
+        // Failsafe: Ensure the file actually exists
+        assert(specFile.exists()) { "Cerb Interface Spec missing at: ${specFile.absolutePath}" }
 
-        val specContent = interfaceFile.readText()
+        val specContent = specFile.readText()
 
-        // 3. Extract documented states using a stricter regex parsing strategy
-        // We look for "- `UiState.ClassName" or "- `UiState.ClassName(" 
+        // 2. Parse Markdown for UI States
+        // We look for strict list items starting with "- `UiState.X"
         val stateRegex = Regex("""-\s*`UiState\.([A-Za-z0-9_]+)""")
         val documentedStates = stateRegex.findAll(specContent)
             .map { it.groupValues[1] }
             .toSet()
 
-        // 4. Calculate Drift (The Anti-Illusion Check)
-        val undocumentedCode = codeStates - documentedStates
-        val unimplementedDocs = documentedStates - codeStates
+        // 3. Parse Kotlin via Reflection
+        // Get all sealed subclasses of UiState
+        val compiledClasses = UiState::class.sealedSubclasses
+        val compiledStates = compiledClasses.mapNotNull { it.simpleName }.toSet()
 
-        // 5. Build Error Report
+        // 4. Mathematical Bijection Check
+        val missingInCode = documentedStates - compiledStates
+        val missingInDocs = compiledStates - documentedStates
+
         val errorMessage = buildString {
-            if (undocumentedCode.isNotEmpty()) {
-                append("\n❌ CODE DRIFT: The following UiStates exist in code but are NOT in docs/cerb-ui/agent-intelligence/interface.md:\n")
-                undocumentedCode.forEach { append("  - $it\n") }
-                append("Fix: Add them to the 'Data Contract' section of the spec.\n")
+            if (missingInCode.isNotEmpty()) {
+                append("❌ States documented in Markdown but missing in Kotlin code: $missingInCode\n")
             }
-            if (unimplementedDocs.isNotEmpty()) {
-                append("\n❌ SPEC DRIFT: The following UiStates are documented in Cerb but DO NOT exist as Kotlin classes in UiState.kt:\n")
-                unimplementedDocs.forEach { append("  - $it\n") }
-                append("Fix: Implement them in UiState.kt or remove them from the spec if deprecated.\n")
+            if (missingInDocs.isNotEmpty()) {
+                append("❌ States existing in Kotlin code but missing in Markdown: $missingInDocs\n")
             }
         }
 
-        assertTrue(errorMessage, undocumentedCode.isEmpty() && unimplementedDocs.isEmpty())
+        assertEquals(
+            "UI SPEC DRIFT DETECTED!\n$errorMessage\nSolution: Update interface.md or UiState.kt to re-establish Bijection.",
+            documentedStates,
+            compiledStates
+        )
     }
 }

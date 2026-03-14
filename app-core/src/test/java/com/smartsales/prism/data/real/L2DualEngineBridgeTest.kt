@@ -68,6 +68,7 @@ class L2DualEngineBridgeTest {
             override suspend fun deleteItem(id: String) {}
             override suspend fun getRecentCompleted(limit: Int): List<TimelineItemModel.Task> = emptyList()
             override suspend fun getTopUrgentActiveForEntity(entityId: String): TimelineItemModel.Task? = null
+            override fun observeByEntityId(entityId: String): kotlinx.coroutines.flow.Flow<List<TimelineItemModel.Task>> = kotlinx.coroutines.flow.emptyFlow()
         }
 
         contextBuilder = RealContextBuilder(

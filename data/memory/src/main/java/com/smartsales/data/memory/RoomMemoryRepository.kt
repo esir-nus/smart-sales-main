@@ -62,4 +62,8 @@ class RoomMemoryRepository @Inject constructor(
     override suspend fun getByEntityId(entityId: String, limit: Int): List<MemoryEntry> {
         return dao.getByEntityId(entityId, limit).map { it.toDomain() }
     }
+    
+    override fun observeByEntityId(entityId: String): Flow<List<MemoryEntry>> {
+        return dao.observeByEntityId(entityId).map { list -> list.map { it.toDomain() } }
+    }
 }

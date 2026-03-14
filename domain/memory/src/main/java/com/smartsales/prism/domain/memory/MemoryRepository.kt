@@ -53,6 +53,11 @@ interface MemoryRepository {
      * @param limit 返回数量上限
      */
     suspend fun getByEntityId(entityId: String, limit: Int = 50): List<MemoryEntry>
+
+    /**
+     * 观察实体的关联记忆
+     */
+    fun observeByEntityId(entityId: String): Flow<List<MemoryEntry>>
 }
 
 // Backwards compatibility aliases (deprecated, will be removed)

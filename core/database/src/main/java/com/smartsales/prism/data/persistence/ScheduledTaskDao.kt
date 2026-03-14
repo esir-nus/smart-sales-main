@@ -47,4 +47,7 @@ interface ScheduledTaskDao {
         LIMIT 1
     """)
     suspend fun getTopUrgentActiveTask(entityId: String): ScheduledTaskEntity?
+
+    @Query("SELECT * FROM scheduled_tasks WHERE keyPersonEntityId = :entityId ORDER BY startTimeMillis DESC")
+    fun observeByEntityId(entityId: String): Flow<List<ScheduledTaskEntity>>
 }

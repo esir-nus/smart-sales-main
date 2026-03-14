@@ -123,10 +123,6 @@ class FakeMemoryRepository @Inject constructor() : MemoryRepository {
         entries.value = emptyList()
     }
     
-    /**
-     * 按实体 ID 查询（通过 structuredJson 中的 relatedEntityIds）
-     * 用引号包裹 entityId 避免子串误匹配（如 "c-1" 不匹配 "c-10"）
-     */
     override suspend fun getByEntityId(entityId: String, limit: Int): List<MemoryEntry> {
         val quoted = "\"$entityId\""
         val results = entries.value
@@ -135,6 +131,14 @@ class FakeMemoryRepository @Inject constructor() : MemoryRepository {
             .take(limit)
         Log.d("CoachMemory", "🔗 getByEntityId('$entityId') → ${results.size} hits")
         return results
+    }
+    
+    override fun observeByEntityId(entityId: String): Flow<List<MemoryEntry>> {
+        val quoted = "\"$entityId\""
+        return entries.map { list ->
+            list.filter { it.structuredJson?.contains(quoted) == true }
+                .sortedByDescending { it.createdAt }
+        }
     }
     
     // Test helper: get all entries

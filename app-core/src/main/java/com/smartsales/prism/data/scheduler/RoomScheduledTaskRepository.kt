@@ -63,4 +63,8 @@ class RoomScheduledTaskRepository @Inject constructor(
     override suspend fun getTopUrgentActiveForEntity(entityId: String): TimelineItemModel.Task? {
         return dao.getTopUrgentActiveTask(entityId)?.toDomain()
     }
+
+    override fun observeByEntityId(entityId: String): Flow<List<TimelineItemModel.Task>> {
+        return dao.observeByEntityId(entityId).map { entities -> entities.map { it.toDomain() } }
+    }
 }

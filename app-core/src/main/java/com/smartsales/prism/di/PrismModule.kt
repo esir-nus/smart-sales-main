@@ -72,7 +72,7 @@ abstract class PrismModule {
     
     
     @Binds @Singleton
-    abstract fun bindClientProfileHub(fake: com.smartsales.prism.data.fakes.FakeClientProfileHub): com.smartsales.prism.domain.crm.ClientProfileHub
+    abstract fun bindClientProfileHub(real: com.smartsales.data.crm.hub.RealClientProfileHub): com.smartsales.prism.domain.crm.ClientProfileHub
     
 
     // === Audio ===

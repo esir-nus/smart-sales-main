@@ -59,4 +59,41 @@ class UiSpecAlignmentTest {
             compiledStates
         )
     }
+
+    @Test
+    fun verifySchedulerUiStateMatchesCerbSpec() {
+        val projectRoot = File("..")
+        val specFile = File(projectRoot, "docs/cerb-ui/scheduler/contract.md")
+        
+        assert(specFile.exists()) { "Cerb Scheduler Contract missing at: ${specFile.absolutePath}" }
+
+        val specContent = specFile.readText()
+
+        val stateRegex = Regex("""(object|data class)\s+([A-Za-z0-9_]+)""")
+        val documentedStates = stateRegex.findAll(specContent)
+            .map { it.groupValues[2] }
+            .filter { it != "SchedulerUiState" && it != "SchedulerIntent" && it != "OnConfirm" && it != "OnCancel" && it != "OnEditField" && it != "OnResolveConflict" }
+            .toSet()
+
+        val compiledClasses = com.smartsales.prism.ui.drawers.scheduler.SchedulerUiState::class.sealedSubclasses
+        val compiledStates = compiledClasses.mapNotNull { it.simpleName }.toSet()
+
+        val missingInCode = documentedStates.subtract(compiledStates)
+        val missingInDocs = compiledStates.subtract(documentedStates)
+
+        val errorMessage = buildString {
+            if (missingInCode.isNotEmpty()) {
+                append("❌ States documented in Markdown but missing in Kotlin code: $missingInCode\n")
+            }
+            if (missingInDocs.isNotEmpty()) {
+                append("❌ States existing in Kotlin code but missing in Markdown: $missingInDocs\n")
+            }
+        }
+
+        assertEquals(
+            "SCHEDULER UI SPEC DRIFT DETECTED!\n$errorMessage\nSolution: Update contract.md or SchedulerUiState.kt to re-establish Bijection.",
+            documentedStates,
+            compiledStates
+        )
+    }
 }

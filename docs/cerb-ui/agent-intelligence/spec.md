@@ -43,7 +43,7 @@ Lightweight inline confirmations for asynchronous or background executions.
 ### 2.6 Voice Handling UI States (`UiState.AudioProcessing`)
 Visualizes the transition from voice ingestion (Badge or Mic) to LLM execution, eliminating the "dead air" gap.
 - **Visuals**: A dynamic waveform or pulsing "Transcribing..." indicator that replaces the generic `UiState.Loading` spinner.
-- **Contract**: The UI layer (`AgentChatScreen`) must remain oblivious to the specific hardware (Badge vs. Phone). It strictly reacts to a unified `UiState.AudioProcessing` emitted by the `IntentOrchestrator`, preserving the OS Model boundaries.
+- **Contract**: The UI layer (`AgentIntelligenceScreen`) must remain oblivious to the specific hardware (Badge vs. Phone). It strictly reacts to a unified `UiState.AudioProcessing` emitted by the `IntentOrchestrator`, preserving the OS Model boundaries.
 
 ## 3. Invariants & Guardrails
 - **No Mystery Meat Loading**: No spinners without associated text explaining what is happening.

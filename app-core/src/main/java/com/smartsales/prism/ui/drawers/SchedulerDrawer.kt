@@ -39,6 +39,9 @@ import com.smartsales.prism.ui.drawers.scheduler.ExitDirection
 import com.smartsales.prism.ui.drawers.scheduler.CollapsibleInspirationShelf
 import com.smartsales.prism.domain.scheduler.TimelineItemModel
 import com.smartsales.prism.ui.theme.*
+import androidx.compose.ui.tooling.preview.Preview
+import com.smartsales.prism.ui.fakes.FakeSchedulerViewModel
+import com.smartsales.prism.ui.drawers.scheduler.ISchedulerViewModel
 
 /**
  * Scheduler Drawer — Top-Down Glass Sheet
@@ -51,7 +54,7 @@ fun SchedulerDrawer(
     isOpen: Boolean,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: SchedulerViewModel = hiltViewModel()
+    viewModel: ISchedulerViewModel = hiltViewModel<SchedulerViewModel>()
 ) {
     // Height: ~85% of screen
     val drawerFraction = 0.85f 
@@ -72,8 +75,9 @@ fun SchedulerDrawer(
     
     // Show Toast when pipeline status changes
     LaunchedEffect(pipelineStatus) {
-        if (!pipelineStatus.isNullOrEmpty()) {
-            Toast.makeText(context, pipelineStatus, Toast.LENGTH_SHORT).show()
+        val status = pipelineStatus
+        if (!status.isNullOrEmpty()) {
+            Toast.makeText(context, status as CharSequence, Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -120,7 +124,7 @@ fun SchedulerDrawer(
     val expandedConflictIds by viewModel.expandedConflictIds.collectAsState()
     
     val uiItems = remember(timelineItems, isSelectionMode, selectedInspirationIds, expandedConflictIds, tipsLoadingSet) {
-        timelineItems.map { model ->
+        timelineItems.mapNotNull { model: TimelineItemModel ->
             when (model) {
                 is TimelineItemModel.Task -> TimelineItem.Task(
                     id = model.id,
@@ -135,6 +139,7 @@ fun SchedulerDrawer(
                     keyPerson = model.keyPerson,
                     highlights = model.highlights,
                     alarmCascade = model.alarmCascade,
+                    urgencyLevel = model.urgencyLevel,
                     // UI-only animation state (not from Domain)
                     processingStatus = null,
                     isExiting = false,
@@ -142,8 +147,7 @@ fun SchedulerDrawer(
                     // Wave 9: Smart Tips
                     keyPersonEntityId = model.keyPersonEntityId,
                     tips = viewModel.getCachedTips(model.id),
-                    tipsLoading = model.id in tipsLoadingSet,
-                    urgencyLevel = model.urgencyLevel
+                    tipsLoading = model.id in tipsLoadingSet
                 )
                 is TimelineItemModel.Inspiration -> TimelineItem.Inspiration(
                     id = model.id,
@@ -160,6 +164,7 @@ fun SchedulerDrawer(
                     taskB = model.taskB,
                     isExpanded = expandedConflictIds.contains(model.id)
                 )
+                else -> null
             }
         }
     }
@@ -169,7 +174,7 @@ fun SchedulerDrawer(
         uiItems.filterIsInstance<TimelineItem.Inspiration>()
     }
     val taskItems = remember(uiItems) {
-        uiItems.filter { it !is TimelineItem.Inspiration }
+        uiItems.filter { item: TimelineItem -> item !is TimelineItem.Inspiration }
     }
 
     // Drawer container — no internal scrim (AgentShell provides global scrim)
@@ -196,7 +201,8 @@ fun SchedulerDrawer(
                 .fillMaxWidth()
                 .fillMaxHeight(drawerFraction),
             shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
-            backgroundColor = BackgroundSurface.copy(alpha = 0.98f),
+            // Sleek Glass: Use Frosted Ice styling (BackgroundSurface is 70% White)
+            backgroundColor = com.smartsales.prism.ui.theme.BackgroundSurface,
             elevation = 16.dp
         ) {
             Column(
@@ -457,4 +463,32 @@ private fun DragHandle(onDismiss: () -> Unit) {
                 .background(BorderSubtle, RoundedCornerShape(2.dp))
         )
     }
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF000000)
+@Composable
+fun SchedulerDrawer_Empty_Preview() {
+    val fakeViewModel = FakeSchedulerViewModel().apply { debugRunScenario("EMPTY") }
+    SchedulerDrawer(isOpen = true, onDismiss = {}, viewModel = fakeViewModel)
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF000000)
+@Composable
+fun SchedulerDrawer_Loaded_Preview() {
+    val fakeViewModel = FakeSchedulerViewModel().apply { debugRunScenario("LOADED") }
+    SchedulerDrawer(isOpen = true, onDismiss = {}, viewModel = fakeViewModel)
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF000000)
+@Composable
+fun SchedulerDrawer_Conflict_Preview() {
+    val fakeViewModel = FakeSchedulerViewModel().apply { debugRunScenario("CONFLICT") }
+    SchedulerDrawer(isOpen = true, onDismiss = {}, viewModel = fakeViewModel)
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF000000)
+@Composable
+fun SchedulerDrawer_Inspirations_Preview() {
+    val fakeViewModel = FakeSchedulerViewModel().apply { debugRunScenario("INSPIRATIONS") }
+    SchedulerDrawer(isOpen = true, onDismiss = {}, viewModel = fakeViewModel)
 }

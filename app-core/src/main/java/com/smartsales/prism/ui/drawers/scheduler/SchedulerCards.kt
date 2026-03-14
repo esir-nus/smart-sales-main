@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.compose.ui.draw.scale
 import com.smartsales.prism.data.audio.PhoneAudioRecorder
 import com.smartsales.prism.ui.components.PrismCard
 import com.smartsales.prism.ui.components.PrismButton
@@ -86,15 +87,15 @@ fun TaskCard(
             if (!isExpanded) {
                 // Pulsing state (when collapsed)
                 Modifier
-                    .background(Color(0xFFFF9800).copy(alpha = bgAlpha), RoundedCornerShape(12.dp))
-                    .border(3.dp, Color(0xFFFF9800).copy(alpha = borderAlpha), RoundedCornerShape(12.dp))
+                    .background(AccentAmber.copy(alpha = bgAlpha), RoundedCornerShape(12.dp))
+                    .border(2.dp, AccentAmber.copy(alpha = borderAlpha), RoundedCornerShape(12.dp))
             } else {
                 // Static state (when expanded) - stop distraction
-                Modifier.border(2.dp, Color(0xFFFF9800), RoundedCornerShape(12.dp))
+                Modifier.border(1.5.dp, AccentAmber, RoundedCornerShape(12.dp))
             }
         }
         ConflictVisual.IN_GROUP -> {
-            Modifier.border(2.dp, Color(0xFFFF9800).copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+            Modifier.border(1.5.dp, AccentAmber.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
         }
         ConflictVisual.NONE -> Modifier
     }
@@ -160,7 +161,18 @@ fun TaskCard(
                     // Alarm Icon / Smart Badge
                     if (state.hasAlarm) {
                         if (state.isSmartAlarm) {
-                            // Smart Badge
+                            // Smart Badge (Living Intelligence Pulse)
+                            val infiniteTransition = rememberInfiniteTransition(label = "smart_badge_pulse")
+                            val badgeAlpha by infiniteTransition.animateFloat(
+                                initialValue = 0.5f,
+                                targetValue = 1.0f,
+                                animationSpec = infiniteRepeatable(
+                                    animation = tween(2000, easing = FastOutSlowInEasing),
+                                    repeatMode = RepeatMode.Reverse
+                                ),
+                                label = "badge_alpha"
+                            )
+
                             Row(
                                 modifier = Modifier
                                     .background(AccentBlue.copy(alpha = 0.1f), RoundedCornerShape(4.dp))
@@ -170,7 +182,7 @@ fun TaskCard(
                                 Icon(
                                     imageVector = Icons.Outlined.QueryBuilder,
                                     contentDescription = "Smart Alarm",
-                                    tint = AccentBlue,
+                                    tint = AccentBlue.copy(alpha = badgeAlpha),
                                     modifier = Modifier.size(12.dp)
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
@@ -447,27 +459,66 @@ fun TaskCard(
                 }
             }
             
-            // Processing Overlay
+            // Processing Overlay (Premium Sleek Glass Pulse)
             if (state.processingStatus != null) {
+                val infiniteTransition = rememberInfiniteTransition(label = "processing_pulse")
+                val pulseScale by infiniteTransition.animateFloat(
+                    initialValue = 0.8f,
+                    targetValue = 1.1f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(1000, easing = FastOutSlowInEasing),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "pulse_scale"
+                )
+                val pulseAlpha by infiniteTransition.animateFloat(
+                    initialValue = 0.4f,
+                    targetValue = 0.1f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(1000, easing = FastOutSlowInEasing),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "pulse_alpha"
+                )
+
                 Box(
                     modifier = Modifier
                         .matchParentSize()
-                        .background(BackgroundSurface.copy(alpha = 0.8f))
+                        .background(BackgroundSurface.copy(alpha = 0.85f))
                         .zIndex(1f),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            strokeWidth = 2.dp,
-                            color = AccentBlue
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        // Premium Pulse Ring
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            // Outer Glow
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .scale(pulseScale)
+                                    .background(AccentBlue.copy(alpha = pulseAlpha), CircleShape)
+                            )
+                            // Inner Core
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.dp,
+                                color = AccentBlue,
+                                trackColor = AccentBlue.copy(alpha = 0.2f)
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(12.dp))
+                        
                         Text(
                             text = state.processingStatus ?: "",
-                            fontSize = 12.sp,
+                            fontSize = 13.sp,
                             color = AccentBlue,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.5.sp
                         )
                     }
                 }

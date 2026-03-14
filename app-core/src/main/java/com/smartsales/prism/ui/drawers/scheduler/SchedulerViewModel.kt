@@ -64,7 +64,7 @@ class SchedulerViewModel @Inject constructor(
     private val asrService: AsrService,
     private val tipGenerator: TipGenerator,  // Wave 9: Smart Tips
     private val alarmScheduler: AlarmScheduler  // Wave 12: Task Completion
-) : ViewModel() {
+) : ViewModel(), ISchedulerViewModel {
 
     init {
         // 监听 Badge Audio Pipeline 事件，合并到 SchedulerViewModel 后处理
@@ -120,69 +120,69 @@ class SchedulerViewModel @Inject constructor(
     
     // Day Selection (offset from today: 0=today, 1=tomorrow, -1=yesterday)
     private val _activeDayOffset = MutableStateFlow(0)
-    val activeDayOffset: StateFlow<Int> = _activeDayOffset.asStateFlow()
+    override val activeDayOffset: StateFlow<Int> = _activeDayOffset.asStateFlow()
     
     // 刷新触发器 — 用于手动刷新 timeline
     private val _refreshTrigger = MutableSharedFlow<Unit>(replay = 1).apply { tryEmit(Unit) }
     
     // Multi-Select Mode
     private val _isSelectionMode = MutableStateFlow(false)
-    val isSelectionMode: StateFlow<Boolean> = _isSelectionMode.asStateFlow()
+    override val isSelectionMode: StateFlow<Boolean> = _isSelectionMode.asStateFlow()
     
     // Selection Set
     private val _selectedInspirationIds = MutableStateFlow(setOf<String>())
-    val selectedInspirationIds: StateFlow<Set<String>> = _selectedInspirationIds.asStateFlow()
+    override val selectedInspirationIds: StateFlow<Set<String>> = _selectedInspirationIds.asStateFlow()
     
     // Wave 9: Smart Tips — 提示缓存（taskId → List<String>）
     private val _tipsCache = mutableMapOf<String, List<String>>()
     
     // Wave 9: Tips 加载状态（taskId → Boolean）
     private val _tipsLoading = MutableStateFlow<Set<String>>(emptySet())
-    val tipsLoading: StateFlow<Set<String>> = _tipsLoading.asStateFlow()
+    override val tipsLoading: StateFlow<Set<String>> = _tipsLoading.asStateFlow()
     
     /**
      * Wave 9: 获取已缓存的提示
      */
-    fun getCachedTips(taskId: String): List<String> = _tipsCache[taskId] ?: emptyList()
+    override fun getCachedTips(taskId: String): List<String> = _tipsCache[taskId] ?: emptyList()
     
     // Pipeline 状态反馈
     private val _pipelineStatus = MutableStateFlow<String?>(null)
-    val pipelineStatus: StateFlow<String?> = _pipelineStatus.asStateFlow()
+    override val pipelineStatus: StateFlow<String?> = _pipelineStatus.asStateFlow()
 
     // 未确认的日期 (显示呼吸发光效果的日期)
     private val _unacknowledgedDates = MutableStateFlow<Set<Int>>(emptySet())
-    val unacknowledgedDates: StateFlow<Set<Int>> = _unacknowledgedDates.asStateFlow()
+    override val unacknowledgedDates: StateFlow<Set<Int>> = _unacknowledgedDates.asStateFlow()
     
     // 改期目标日期 (显示琥珀色发光效果)
     private val _rescheduledDates = MutableStateFlow<Set<Int>>(emptySet())
-    val rescheduledDates: StateFlow<Set<Int>> = _rescheduledDates.asStateFlow()
+    override val rescheduledDates: StateFlow<Set<Int>> = _rescheduledDates.asStateFlow()
 
     // 冲突警告
     private val _conflictWarning = MutableStateFlow<String?>(null)
-    val conflictWarning: StateFlow<String?> = _conflictWarning.asStateFlow()
+    override val conflictWarning: StateFlow<String?> = _conflictWarning.asStateFlow()
 
     // 冲突视觉指示器 — 标记所有冲突卡片的 ID
     private val _conflictedTaskIds = MutableStateFlow<Set<String>>(emptySet())
-    val conflictedTaskIds: StateFlow<Set<String>> = _conflictedTaskIds.asStateFlow()
+    override val conflictedTaskIds: StateFlow<Set<String>> = _conflictedTaskIds.asStateFlow()
 
     // 引发冲突的卡片 ID (呼吸发光)
     private val _causingTaskId = MutableStateFlow<String?>(null)
-    val causingTaskId: StateFlow<String?> = _causingTaskId.asStateFlow()
+    override val causingTaskId: StateFlow<String?> = _causingTaskId.asStateFlow()
 
     // 灵感箱展开状态
     private val _isInspirationsExpanded = MutableStateFlow(false)
-    val isInspirationsExpanded: StateFlow<Boolean> = _isInspirationsExpanded.asStateFlow()
+    override val isInspirationsExpanded: StateFlow<Boolean> = _isInspirationsExpanded.asStateFlow()
     
     // 冲突卡片展开状态
     private val _expandedConflictIds = MutableStateFlow<Set<String>>(emptySet())
-    val expandedConflictIds: StateFlow<Set<String>> = _expandedConflictIds.asStateFlow()
+    override val expandedConflictIds: StateFlow<Set<String>> = _expandedConflictIds.asStateFlow()
 
     // 精确闹钟权限请求 — 一次性事件
     private val _exactAlarmPermissionNeeded = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    val exactAlarmPermissionNeeded = _exactAlarmPermissionNeeded.asSharedFlow()
+    override val exactAlarmPermissionNeeded = _exactAlarmPermissionNeeded.asSharedFlow()
     private val exactAlarmPrompted = AtomicBoolean(false)
 
-    fun toggleConflictExpansion(id: String) {
+    override fun toggleConflictExpansion(id: String) {
         val current = _expandedConflictIds.value
         if (current.contains(id)) {
             _expandedConflictIds.value = current - id
@@ -193,7 +193,7 @@ class SchedulerViewModel @Inject constructor(
 
     // Timeline Items — 响应 dayOffset 和刷新触发器变化
     // 合并：日期特定任务 + 全局灵感
-    val timelineItems: StateFlow<List<TimelineItemModel>> = combine(
+    override val timelineItems: StateFlow<List<TimelineItemModel>> = combine(
         combine(_activeDayOffset, _refreshTrigger.asSharedFlow()) { offset, _ -> offset }
             .flatMapLatest { offset -> taskRepository.getTimelineItems(offset) },
         inspirationRepository.getAll()
@@ -203,11 +203,11 @@ class SchedulerViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     // --- Aliased Actions ---
-    fun onItemClick(id: String) {
+    override fun onItemClick(id: String) {
         android.util.Log.d("SchedulerVM", "Item clicked: $id")
     }
     
-    fun onDeleteItem(id: String) = deleteItem(id)
+    override fun onDeleteItem(id: String) = deleteItem(id)
     
     /**
      * 改期操作 — 检测冲突组，走对应管线
@@ -215,7 +215,7 @@ class SchedulerViewModel @Inject constructor(
      * 如果任务在冲突组中: 删除所有冲突任务 → 用 LLM 重建用户想要的任务
      * 否则: 常规单任务改期（Wave 8 管线）
      */
-    fun onReschedule(id: String, text: String) {
+    override fun onReschedule(id: String, text: String) {
         val conflictGroup = _conflictedTaskIds.value
         if (id in conflictGroup && conflictGroup.size > 1) {
             android.util.Log.d("SchedulerVM", "🔀 Conflict group reschedule: ${conflictGroup.size} tasks, input='$text'")
@@ -280,13 +280,13 @@ $taskContext
         }
     }
     
-    fun onToggleSelection(id: String) = toggleItemSelection(id)
-    fun onEnterSelectionMode() = toggleSelectionMode(true)
-    fun onExitSelectionMode() = toggleSelectionMode(false)
+    override fun onToggleSelection(id: String) = toggleItemSelection(id)
+    override fun onEnterSelectionMode() = toggleSelectionMode(true)
+    override fun onExitSelectionMode() = toggleSelectionMode(false)
 
     // --- Actions ---
 
-    fun onDateSelected(dayOffset: Int) {
+    override fun onDateSelected(dayOffset: Int) {
         _activeDayOffset.value = dayOffset
         // 确认日期 (停止发光)
         acknowledgeDate(dayOffset)
@@ -301,7 +301,7 @@ $taskContext
      * @param taskId 任务 ID
      * @param keyPersonEntityId 关键人物实体 ID（如果没有则跳过）
      */
-    fun onCardExpanded(taskId: String, keyPersonEntityId: String?) {
+    override fun onCardExpanded(taskId: String, keyPersonEntityId: String?) {
         if (keyPersonEntityId == null) {
             android.util.Log.d("SchedulerVM", "🔕 No keyPersonEntityId for task=$taskId, skipping tips")
             return
@@ -336,7 +336,7 @@ $taskContext
     /**
      * 确认日期 — 从未确认集合中移除 (停止发光)
      */
-    fun acknowledgeDate(dayOffset: Int) {
+    override fun acknowledgeDate(dayOffset: Int) {
         _unacknowledgedDates.value -= dayOffset
         _rescheduledDates.value -= dayOffset  // 同时清除改期高亮
     }
@@ -350,14 +350,14 @@ $taskContext
         _unacknowledgedDates.value = current
     }
 
-    fun toggleSelectionMode(enabled: Boolean) {
+    override fun toggleSelectionMode(enabled: Boolean) {
         _isSelectionMode.value = enabled
         if (!enabled) {
             _selectedInspirationIds.value = emptySet()
         }
     }
 
-    fun toggleItemSelection(id: String) {
+    override fun toggleItemSelection(id: String) {
         val current = _selectedInspirationIds.value.toMutableSet()
         if (current.contains(id)) {
             current.remove(id)
@@ -367,7 +367,7 @@ $taskContext
         _selectedInspirationIds.value = current
     }
 
-    fun deleteItem(id: String) {
+    override fun deleteItem(id: String) {
         viewModelScope.launch {
             val task = taskRepository.getTask(id)  // 删除前获取实体关联
             taskRepository.deleteItem(id)
@@ -387,7 +387,7 @@ $taskContext
      * isDone=true  → 取消所有闹钟
      * isDone=false → 如果任务在未来，重新注册闹钟
      */
-    fun toggleDone(taskId: String) {
+    override fun toggleDone(taskId: String) {
         viewModelScope.launch {
             val task = taskRepository.getTask(taskId) ?: run {
                 android.util.Log.w("SchedulerVM", "toggleDone: task not found: $taskId")
@@ -399,7 +399,13 @@ $taskContext
             if (newDone) {
                 // 完成 → 取消闹钟
                 alarmScheduler.cancelReminder(taskId)
-                android.util.Log.d("SchedulerVM", "toggleDone: id=$taskId, isDone=true → alarms cancelled")
+                
+                // Cross-Off Lifecycle (Phase 3): Migrate to Factual Memory and delete from feed
+                val memoryEntry = com.smartsales.prism.domain.mapper.TaskMemoryMapper.toMemoryEntry(task)
+                memoryRepository.save(memoryEntry)
+                taskRepository.deleteItem(taskId) // Remove from actionable feed
+                
+                android.util.Log.d("SchedulerVM", "toggleDone: id=$taskId, isDone=true → migrated to memory & deleted")
             } else {
                 // 恢复 → 只对未来任务重新注册闹钟
                 if (task.hasAlarm && task.alarmCascade.isNotEmpty() &&
@@ -436,11 +442,11 @@ $taskContext
 
     // --- Inspiration Actions ---
     
-    fun toggleInspirations() {
+    override fun toggleInspirations() {
         _isInspirationsExpanded.value = !_isInspirationsExpanded.value
     }
     
-    fun deleteInspiration(id: String) {
+    override fun deleteInspiration(id: String) {
         viewModelScope.launch {
             inspirationRepository.delete(id)
         }
@@ -449,7 +455,7 @@ $taskContext
     /**
      * 🧪 DEV ONLY: 模拟转录消息，绕过硬件直接测试 Pipeline
      */
-    fun simulateTranscript(fakeMessage: String) {
+    override fun simulateTranscript(fakeMessage: String) {
         android.util.Log.d("SchedulerVM", "🧪 Simulating transcript: $fakeMessage")
         _pipelineStatus.value = "处理中..."
         processThroughPipeline(fakeMessage)
@@ -503,7 +509,7 @@ $taskContext
      * 与硬件 badge 完全相同的管线，跳过 BLE 下载步骤:
      * WAV 文件 → AsrService.transcribe() → Orchestrator.createScheduledTask()
      */
-    fun simulateFromMic(wavFile: java.io.File) {
+    override fun simulateFromMic(wavFile: java.io.File) {
         viewModelScope.launch {
             android.util.Log.d("SchedulerVM", "🎙️ Mic recording → ASR: ${wavFile.name} (${wavFile.length()} bytes)")
             _pipelineStatus.value = "🎙️ 转写中..."
@@ -733,14 +739,14 @@ $taskContext
     /**
      * 手动触发 Timeline 刷新
      */
-    fun triggerRefresh() {
+    override fun triggerRefresh() {
         _refreshTrigger.tryEmit(Unit)
     }
 
     /**
      * Drawer 打开时调用 — 刷新 + 清理过期任务
      */
-    fun onDrawerOpened() {
+    override fun onDrawerOpened() {
         viewModelScope.launch { autoCompleteExpiredTasks() }
         triggerRefresh()
     }
@@ -748,14 +754,14 @@ $taskContext
     /**
      * 清除 Pipeline 状态
      */
-    fun clearPipelineStatus() {
+    override fun clearPipelineStatus() {
         _pipelineStatus.value = null
     }
 
     /**
      * 清除冲突警告
      */
-    fun clearConflictWarning() {
+    override fun clearConflictWarning() {
         _conflictWarning.value = null
         _conflictedTaskIds.value = emptySet()
         _causingTaskId.value = null
@@ -764,7 +770,7 @@ $taskContext
     /**
      * 处理冲突解决 — 顺序执行多个动作（支持复合指令如"取消A，改期B"）
      */
-    fun handleConflictResolution(resolution: com.smartsales.prism.domain.scheduler.ConflictResolution) {
+    override fun handleConflictResolution(resolution: com.smartsales.prism.domain.scheduler.ConflictResolution) {
         viewModelScope.launch {
             android.util.Log.d("SchedulerVM", "Conflict resolution: ${resolution.actions.size} actions")
             

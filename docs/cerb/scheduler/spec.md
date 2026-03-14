@@ -56,29 +56,24 @@ All scheduler voice commands work **globally within scheduler mode** — no card
 
 ## Task Completion Lifecycle
 
-Tasks have a checkbox that toggles `isDone` state. Completed tasks remain in storage but are visually deactivated and excluded from voice command scope.
+Tasks have a checkbox that toggles `isDone` state. Completed tasks are permanently migrated to the Memory Center (Factual Knowledge) as a `SCHEDULE_ITEM` and deleted from the ScheduledTaskRepository (Actionable Timeline).
 
 ```
 [ ] Active Task          →  tap checkbox  →  [✓] Completed Task
 (normal colors)                               (grey, strikethrough)
-(in voice command scope)                      (excluded from voice scope)
-(alarms active)                               (alarms cancelled)
-
-[✓] Completed Task      →  tap checkbox  →  [ ] Reactivated Task
-(grey, strikethrough)                         (normal colors restored)
-(excluded)                                    (back in voice scope)
-(no alarms)                                   (alarms re-scheduled if future)
+(in voice command scope)                      (deleted from Actionable feed)
+(alarms active)                               (migrated to Factual memory)
 ```
 
-| State | Visual | Voice Scope | Alarms |
-|-------|--------|-------------|--------|
-| `isDone = false` | Normal colors | ✅ Included in `upcomingItems` | Active |
-| `isDone = true` | Grey text, strikethrough, filled checkmark | ❌ Excluded from `upcomingItems` | Cancelled |
+| State | Visual | Storage | Alarms |
+|-------|--------|---------|--------|
+| `isDone = false` | Normal colors | ✅ `ScheduledTaskRepository` | Active |
+| `isDone = true` | Grey text, strikethrough, filled checkmark | ➡️ `MemoryRepository` (Hard Deleted from Timeline) | Cancelled |
 
-**Auto-Expiry**: Tasks whose `endTime` (or `startTime + durationMinutes`) is in the past are automatically marked `isDone = true`. Sweep triggers: (1) scheduler drawer opens, (2) day switch, (3) ViewModel init, (4) real-time alarm fire via `SchedulerRefreshBus` (DEADLINE tier emits → ViewModel sweeps). Uses `endTime`, NOT alarm fire time — cascade alarms `[-1h, -15m, 0m]` firing early do NOT trigger auto-expiry. Today-only sweep; multi-day sweep deferred as tech debt.
+**Auto-Expiry**: Tasks whose `endTime` (or `startTime + durationMinutes`) is in the past are automatically marked `isDone = true` (migrating them to memory). Sweep triggers: (1) scheduler drawer opens, (2) day switch, (3) ViewModel init, (4) real-time alarm fire via `SchedulerRefreshBus` (DEADLINE tier emits → ViewModel sweeps).
 
 > [!NOTE]
-> **Reactivation Safety (Safe Fallback)**: Unchecking a completed task restores it to active state. All data is preserved in Room — no re-scheduling required. Alarms are re-scheduled only if the task's start time is still in the future. This ensures users can undo completion without losing any information.
+> **One-Way Migration (Source of Truth)**: Toggling a task to completed triggers a one-way mechanical data migration. The task ceases to exist in the `ScheduledTaskRepository`. To 'reactivate' it, the user must recreate the intent contextually. This ensures absolute Pipeline/SSD Source of Truth integrity.
 
 **Inspiration**:
 - Standalone notes, **not time-bound**

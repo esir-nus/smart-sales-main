@@ -119,13 +119,13 @@
       - Implementation of `RealClientProfileHub`
       - DAO up-conversions to `observeByEntityId` (`LIKE` operator for `MemoryDao`)
       - Reactive streaming `Flow.combine` for aggregation without RAM caching.
-- [ ] **Execute (Phase 3)**: The Cross-Off Lifecycle — Implement data migration in `SchedulerViewModel` (or equivalent observer) where completing a task permanently creates a `MemoryEntry` and deletes the `ScheduledTask`.
-- [ ] **Test**: Verify `L1ClientProfileHubTest.kt` passes Phase 2 logic, and an L2 simulation proves Phase 3 Source of Truth migration.
+- [x] **Execute (Phase 3)**: The Cross-Off Lifecycle — Implement data migration in `SchedulerViewModel` (or equivalent observer) where completing a task permanently creates a `MemoryEntry` and deletes the `ScheduledTask`.
+- [x] **Test**: Verify `L1ClientProfileHubTest.kt` passes Phase 2 logic, and an L2 simulation proves Phase 3 Source of Truth migration.
 
 ### 🎨 Epic: UI Skin Modernization & Protocol Validation
 > Applying the newly established Docs-First `IAgentViewModel` Contract to aggressively clean, refactor, and rewrite the UI layer into a pristine presentation boundary, proving the Parallel Dev Workflow before formalizing it into an Antigravity Rule.
 - [x] ✅ **Phase 1: Component Rewrite (Code Cleaning)** - Nuke and pave existing screens (Chat, Agent States) to purely consume `IAgentViewModel`. Replace tangled `AgentViewModel` logic with strict `@Preview` tests powered by `FakeAgentViewModel`. Drop all dead legacy UI code.
-- [ ] 🔲 **Phase 2: The Parallel Proving Ground** - Design and implement a net-new UI component (e.g., the new Scheduler interface) entirely using `FakeAgentViewModel` vibes *before* the backend is connected. Prove we can build the Skin without the Body.
+- [x] ✅ **Phase 2: The Parallel Proving Ground** - Design and implement a net-new UI component (e.g., the new Scheduler interface) entirely using `FakeAgentViewModel` vibes *before* the backend is connected. Prove we can build the Skin without the Body.
 - [ ] 🔲 **Phase 3: Formalize UI Antigravity Protocol** - After proving success in Phase 1 and 2, create the official SOP rule (`.agent/rules/ui-development-protocol.md`) demanding strict `@Preview` logic isolation, Fake ViewModels, and `interface.md` synchronization for all subsequent UI features.
 
 ---
@@ -140,7 +140,7 @@
 | TOCTOU in observe() | `RoomUserHabitRepository.kt` | Low |
 | Room error handling | `Room*Repository` — no try-catch on writes | Low |
 | **Confidence-Based Reminder Interceptor** | Replace deterministic round-1 wrap-up with LLM confidence-based interception. Agent decides when to surface schedule context. Requires classifier or LLM self-assessment of conversation intent. Current workaround: smarter prompting that lets LLM decide naturally. | Medium |
-| **Voice Hand-Off Animation** | `AgentChatScreen.kt`, `UiState.kt` — Visual bridging for voice ingestion. Deferred due to architectural ambiguity: must decide if `AgentChatScreen` mic records directly, or if it strictly observes `BadgeAudioPipeline` global states. Spec updated (`UiState.AudioProcessing`), but implementation pending source definition. | Medium |
+| **Voice Hand-Off Animation** | `AgentIntelligenceScreen.kt`, `UiState.kt` — Visual bridging for voice ingestion. Deferred due to architectural ambiguity: must decide if `AgentIntelligenceScreen` mic records directly, or if it strictly observes `BadgeAudioPipeline` global states. Spec updated (`UiState.AudioProcessing`), but implementation pending source definition. | Medium |
 
 ---
 
@@ -159,6 +159,7 @@
 > Key spec/impl changes, newest first. Like `git log --oneline`.
 
 ### 2026-03-14
+- **agent-intelligence-ui**: Phase 1 Component Rewrite (Skin) SHIPPED. Built `AgentIntelligenceScreen.kt` side-by-side to natively replace `AgentChatScreen.kt`. Transferred UI ownership purely to Compose and exhausted all 13 `UiState` variants via `FakeAgentViewModel` previews. Validated mathematically via `UiSpecAlignmentTest` and the Acceptance Team workflow.
 - **agent-intelligence-ui**: Docs-First UI Verification (Skin Verification). Wrote `UiSpecAlignmentTest.kt` to mathematically bind `docs/cerb-ui/agent-intelligence/interface.md` with compiling `UiState` via Reflection. Any drift in the docs now strictly fails the android build tests.
 - **agent-intelligence-ui**: Parallel UI Contract (Skin) Established. Gutted deprecated 160-line legacy `prism-ui-ux-contract.md`. Extracted `IAgentViewModel` to unblock UI developers from Project Mono backend restructuring. Provided `FakeAgentViewModel` strictly implementing `UiState` and `AgentActivity` mocks for Compose @Preview design validation.
 - **architecture**: Wave 6 T5 Hardware Badge Delegation Constraint SHIPPED. Added a strict architectural boundary (`isBadge`) separating phone app intelligence from physical hardware capabilities. The phone app LLM is now mathematically proven (via `PromptCompilerBadgeTest.kt`) to route all scheduling attempts to a `badge_delegation` UI hint overlay (`AgentChatScreen.kt`), strictly forcing the user to utilize the ESP32 physical badge for calendar mutations.

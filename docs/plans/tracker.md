@@ -124,11 +124,38 @@
 - [x] ✅ **Execute (Phase 3)**: The Cross-Off Lifecycle — Implement data migration in `SchedulerViewModel` (or equivalent observer) where completing a task permanently creates a `MemoryEntry` and deletes the `ScheduledTask`.
 - [ ] 🔲 **Test**: Verify `L1ClientProfileHubTest.kt` passes Phase 2 logic, and an L2 simulation proves Phase 3 Source of Truth migration.
 
+### 🌊 Wave 14: Dual-Path Scheduler Architecture
+> Objective: Formalize the "Town and Highway" protocol for the DEV Audio Hook by decoupling optimistic UI Task Creation (Path A) from heavyweight async CRM Entity Disambiguation (Path B).
+> 🧭 **North Star**: [Wave 14 Master Guide](../specs/wave14-dual-path-master-guide.md)
+
+- [ ] 🔲 **T0: The God Spec Splice (Context Isolation)**
+  - [ ] **Plan**: Shard `docs/cerb/scheduler/` into `scheduler-domain`, `scheduler-linter`, and `scheduler-drawer`.
+  - [ ] **Execute**: Run `/cerb-spec-template` and `/cerb-ui-template` to scaffold the 3 new directories. Migrate the 32KB content appropriately. Append to `interface-map.md`.
+  - [ ] **Test**: Run `/cerb-check` on all three new specs. Delete the old `scheduler/` doc directory.
+
+- [ ] 🔲 **T1: Shard 1 Execution (Domain `unifiedID` Infrastructure)**
+  - [ ] **Specs**: Ensure `scheduler-domain/interface.md` is strictly pure.
+  - [ ] **Execute**: Update ASR transcription layer (or core IntentOrchestrator generation) to mint a random `unifiedID`. 
+  - [ ] **Execute**: Update `ScheduledTask` entity if necessary to accept `unifiedID`.
+  - [ ] **Test**: Unit tests verify `unifiedID` propagates into the pipeline `Input` object.
+
+- [ ] 🔲 **T2: Shard 2 Execution (Linter Path A & B Dual-Routing)**
+  - [ ] **Specs**: Adhere to `scheduler-linter/interface.md`.
+  - [ ] **Execute (Path A)**: Implement lightweight fast-track parser to instantly generate a `ScheduledTask` via DB insertion with the `unifiedID`.
+  - [ ] **Execute (Path B)**: Route the slow background CRM Disambiguation through the `UnifiedPipeline` targeting the exact same `unifiedID`.
+  - [ ] **Test**: L2 simulated pipeline test tracking both forks resolving correctly.
+
+- [ ] 🔲 **T3: Shard 3 Execution (UI Presentation Teardown)**
+  - [ ] **Specs**: Ensure `scheduler-drawer/interface.md` defines pure state execution.
+  - [ ] **Execute**: Hoist `PhoneAudioRecorder` out of the visual card layer up to ViewModel/Screen.
+  - [ ] **Execute**: Dismantle 700-line `SchedulerCards.kt`. Move atomic components (`TaskCardHeader`, `TaskCardDetails`, etc.) into `components/` package.
+  - [ ] **Test**: Mechanical `grep` proves no raw Android dependencies inside the nested UI component layer.
 
 ### 🎨 Epic: UI Skin Modernization & Protocol Validation
 > Applying the newly established Docs-First `IAgentViewModel` Contract to aggressively clean, refactor, and rewrite the UI layer into a pristine presentation boundary, proving the Parallel Dev Workflow before formalizing it into an Antigravity Rule.
 - [x] ✅ **Phase 1: Component Rewrite (Code Cleaning)** - Nuke and pave existing screens (Chat, Agent States) to purely consume `IAgentViewModel`. Replace tangled `AgentViewModel` logic with strict `@Preview` tests powered by `FakeAgentViewModel`. Drop all dead legacy UI code.
 - [x] ✅ **Phase 2: The Parallel Proving Ground (Scheduler)** - Rewrite `SchedulerViewModel` to purge pipeline/conflict logic, creating a pure `ISchedulerViewModel` boundary. Implement `FakeSchedulerViewModel` and prove we can build the new UI Skin purely in Compose previews.
+  - [TER: L3 Scheduler DEV Audio Hook Validation (BugFix 4.4)](file:///home/cslh-frank/main_app/docs/reports/tests/L3-20260314-Scheduler-AudioHook.md)
 - [ ] 🔲 **Phase 3: Formalize UI Antigravity Protocol** - After proving success in Phase 1 and 2, create the official SOP rule (`.agent/rules/ui-development-protocol.md`) demanding strict `@Preview` logic isolation, Fake ViewModels, and `interface.md` synchronization for all subsequent UI features.
 
 

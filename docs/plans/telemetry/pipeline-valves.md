@@ -37,11 +37,14 @@
 | `[LINTER_DECODED]` | Typed Kotlin `data class` | Field/Task Count | ✅ SHIPPED |
 
 ## Phase 4: System III (The Towns / Plugins)
-*The generic Highway handing off to specialized feature modules.*
+*First-party plugins functioning as extended arms of the OS. They inherit the right to use OS-level telemetry.*
 
 | Valve Identifier | OS Function | Payload Metric | Status |
 |------------------|-------------|----------------|--------|
-| `[PLUGIN_DISPATCH_RECEIVED]` | E.g., Scheduler Gateway | Parameter Count | 🔲 PENDING |
+| `[PLUGIN_DISPATCH_RECEIVED]` | Plugin boundary entry (e.g. Scheduler) | Parameter Count | 🔲 PENDING |
+| `[PLUGIN_INTERNAL_ROUTING]` | Plugin decides sub-task (e.g. ASR, Web) | Target string | 🔲 PENDING |
+| `[PLUGIN_EXTERNAL_CALL]` | Plugin talks to 3rd party API | Payload Size | 🔲 PENDING |
+| `[PLUGIN_YIELDED_TO_OS]` | Plugin returns control upstream | Data Variant | 🔲 PENDING |
 
 ## Phase 5: The SSD (Layer 2 Persistence)
 *The Async Loop saving state to disk.*

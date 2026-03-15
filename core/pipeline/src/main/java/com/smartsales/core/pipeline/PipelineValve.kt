@@ -26,8 +26,11 @@ object PipelineValve {
         LLM_BRAIN_EMISSION,     
         LINTER_DECODED,
         
-        // Phase 4: System III (Plugins)
+        // Phase 4: System III (First-Party Plugins)
         PLUGIN_DISPATCH_RECEIVED,
+        PLUGIN_INTERNAL_ROUTING,
+        PLUGIN_EXTERNAL_CALL,
+        PLUGIN_YIELDED_TO_OS,
         
         // Phase 5: Persistence
         DB_WRITE_EXECUTED,

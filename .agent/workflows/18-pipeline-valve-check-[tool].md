@@ -10,7 +10,7 @@ This workflow acts as an evidence-based audit of the Data-Oriented OS Pipeline. 
 ## Phase 1: The Evidence Gatherer (Code vs Docs)
 
 1. **Read the Spec**: 
-   - `view_file docs/specs/project-mono-master-guide.md` (Read Section 7 for the intended checkpoints).
+   - `view_file docs/specs/Architecture.md` (Read Section 4 for the intended checkpoints).
    - `view_file docs/plans/telemetry/pipeline-valves.md` (Read the current tracker status).
 2. **Scan the Codebase (The Ground Truth)**:
    - Run a strict grep to find every implemented valve: 

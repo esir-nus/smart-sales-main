@@ -45,8 +45,7 @@ docs/
 | File | Domain | Purpose |
 |------|--------|---------|
 | [README.md](docs/specs/README.md) | Navigation | **Spec Navigation SOP** — reading order |
-| [Prism-V1.md](docs/specs/Prism-V1.md) | Architecture | **SOT** — Unified Pipeline, Memory, Modes |
-| [Prism-V1.md](docs/specs/Prism-V1.md) | Architecture | **SOT** — The Dual-Engine OS Lifecycle |
+| [Architecture.md](docs/specs/Architecture.md) | Architecture | **SOT** — The Data-Oriented OS Migration Guide |
 | [gateway-spec.md](docs/cerb-plugin/architecture/gateway-spec.md) | Extensibility | **SOT** — System III Plugin Gateway & Protocol |
 | [prism-ui-ux-contract.md](docs/specs/prism-ui-ux-contract.md) | UX | **INDEX** — Modules, Flows, Components |
 | [style-guide.md](docs/specs/style-guide.md) | UI | Visual design system, typography, components |
@@ -70,7 +69,7 @@ docs/
 ## 3️⃣ Quick Navigation for Agents & Devs
 
 ### I'm implementing a new feature
-1. Read `Prism-V1.md` to understand the rules.
+1. Read `Architecture.md` to understand the rules.
 2. Read [docs/sops/feature-development.md](docs/sops/feature-development.md) — **START HERE**.
 3. Use `/feature-dev-planner` workflow to begin.
 
@@ -92,6 +91,6 @@ docs/
 ## Source of Truth Hierarchy
 When documents conflict, follow this precedence:
 1. **The Kotlin `data class`** in `:domain` (Ultimate SSD Contract).
-2. **Prism-V1.md / Master Guide** (Architectural Laws).
+2. **Architecture.md** (Architectural Laws).
 3. **tracker.md / interface-map.md** (Current State).
 4. Module/Spec definitions.

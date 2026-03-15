@@ -2,6 +2,12 @@
 
 > Key spec/impl changes, newest first. Like `git log --oneline`.
 
+### 2026-03-15
+- **architecture**: The Data-Oriented OS ("Project Mono") Master Epic SHIPPED. Successfully transitioned the entire architecture from "Behavioral Contracts" to strict "Data Contracts" (The One Currency Rule). 
+  - **Wave 1-2 (Foundation)**: Established UnifiedMutation data classes and strict JSON deserialization linters.
+  - **Wave 3-4.5 (Harmonization)**: Rebuilt Scheduler, Analyst, and RL pipelines to OS standards.
+  - **Wave 5 (CQRS)**: Implemented the Dual-Loop CQRS Engine. Sync Loop (Lightning Router + Alias Cache) delivers sub-second resolution; Async Loop mutates SSD out-of-band.
+
 ### 2026-03-14
 - **architecture**: Interface Map Audit SHIPPED. Executed `/07-interface-map-audit` to mathematically align `interface-map.md` with active Kotlin module definitions. Discovered and corrected 9 signature drifts (e.g., `IntentOrchestrator` returning `PipelineResult`, `executeTool` receiving `PluginGateway`). Discovered and resolved a Clean Architecture domain violation (`android.util.Log` inside `SchedulerCoordinator.kt`).
 - **architecture**: Wave 9 Fortification Campaign (T1 & T2) SHIPPED. Executed T1 Defensive Deserialization by introducing `safeEnumValueOf` to prevent legacy SQLite string crashes on App restart. Executed T2 Test Fake Centralization by structurally bifurcating `:core:test-fakes` into `:core:test-fakes-domain` (pure JVM) and `:core:test-fakes-platform` (Android). Resolved cross-module compilation and strictly isolated domain fakes from the SDK framework. Verified natively via the `Acceptance Team` mechanical pipeline (Spec, Contract, Build, Break-It).

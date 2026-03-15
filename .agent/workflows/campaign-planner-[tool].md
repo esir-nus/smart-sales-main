@@ -68,7 +68,7 @@ Based on the classification and the Cerb Shard rule, generate the exact Markdown
 - [ ] 🔲 **T0: Campaign North Star**
   - [ ] **Docs**: Create `docs/specs/waveX-[name]-master-guide.md` outlining the Refactoring Constraints.
 - [ ] 🔲 **T1: [Task Name]**
-  - [ ] **Docs**: Update Master Guide (`project-mono-master-guide.md`) with the new architectural paradigm.
+  - [ ] **Docs**: Update Master Guide (`Architecture.md`) with the new architectural paradigm.
   - [ ] **Interface Map**: Update `docs/cerb/interface-map.md` with layer decoupling rules.
   - [ ] **Plan**: Review Strategy (Extract vs Rewrite) with `/01-senior-reviewr`.
   - [ ] **Execute**: Implement physical isolation (Kotlin/Gradle changes).

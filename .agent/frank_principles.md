@@ -32,6 +32,11 @@ When something feels off, dig deeper. Root cause > symptom fix.
 - **Origin**: Observed in debugging sessions
 - **Evidence**: Prevents whack-a-mole bug fixing
 
+### 6. ASCII Graphs Lower Hallucination
+When writing documentation, always include an ASCII diagram of the architecture or flow. Spatial relationships in text dramatically ground the LLM's understanding and prevent hallucination.
+- **Origin**: Explicit user mandate (2026-03-15)
+- **Evidence**: Without explicit visual graphs, agents hallucinate structural topologies.
+
 ---
 
 ## Communication Style
@@ -61,6 +66,7 @@ When something feels off, dig deeper. Root cause > symptom fix.
 | Rewrite or extract? | Check alignment + coupling first |
 | Spec vs code mismatch? | Favor code unless spec was designed to prevent it |
 | Unsure what user wants? | Ask, don't assume |
+| Writing new documentation? | Call `/01-senior-reviewr` or template workflows (Cerb spec, UI, Plugin, E2E). **Must include ASCII graph.** |
 
 ---
 

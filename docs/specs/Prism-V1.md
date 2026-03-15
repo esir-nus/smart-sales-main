@@ -29,15 +29,15 @@
 
 ## 1. Executive Summary
 
-**Prism** is the architectural standard for the Intelligent Personal Assistant system. It replaces complex, stateful coordination with a **Unified Pipeline** that delegates specific behaviors to **Mode Strategies**.
+**Prism** is the architectural standard for the Intelligent Personal Assistant system. It replaces complex, stateful coordination with a **Dual-Engine Unified Pipeline** that rigidly separates fast User Interface interactions from complex background data mutations.
 
-The name "Prism" reflects the core pattern: a single stream of user intent enters the system and is "refracted" into specific execution paths (Chat, Analyze, Schedule) by the Orchestrator, while sharing a common foundation of Context, Memory, and Intelligence.
+The name "Prism" reflects the core pattern: a single stream of user intent enters the system and is "refracted" into specific execution paths (General Chat vs Hardware Interrogation vs System Tools) by the Lightning Router, while sharing a common foundation of strict SSD-backed reality. 
 
 ### Core Principles
-1.  **Unified Pipeline**: All modes share the same high-level flow (Context → Execute → Publish → Persist).
-2.  **Strategy Pattern**: Mode-specific logic (LLM selection, Rendering, Tools) is encapsulated in switchable strategies.
-3.  **Fire-and-Forget Persistence**: Memory writes happen in the background. The User Interface never blocks on database operations.
-4.  **Streaming First**: The architecture is built around native streaming (DashScope Flow<Token>) for minimal latency.
+1.  **Dual-Engine Architecture (CQRS)**: Strict separation between the high-speed "Sync/Query" loop and the slow, complex "Async/Command" background loops.
+2.  **Zero Ghosting**: The LLM operates purely on strictly typed Kotlin `data classes` (the "One Currency"); untyped string outputs for database mutations are strictly forbidden.
+3.  **No Manual Modes**: The user does not manually toggle between "Coach" and "Analyst" modes. The Lightning Router automatically evaluates intent and routes the payload to the correct internal system (Clarification, Disambiguation, or Execution).
+4.  **Streaming First**: The Chat interface is built around native streaming for minimal latency. Structured data parsing happens invisibly in the Async layer.
 
 ---
 
@@ -180,69 +180,31 @@ The LLM does NOT directly write to the database in the critical UX path. Writes 
 │       │               │                   │      ┌──────────────┐  │
 │       │               │                   └─────▶│ Tool Agents  │  │
 │       │               │                          │ (If Needed)  │  │
-│       │               │                          └──────────────┘  │
 │       │               │                                             │
 │       │               ▼                                             │
 │       │        [Memory Writer] ──fire & forget──▶ [Hot Zone]       │
 │       │                                                             │
-│       ▼                                                             │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │                    MODE STRATEGY MATRIX                      │   │
-│  ├────────────┬───────────────┬──────────────────┬─────────────┤   │
-│  │ Component  │    CHAT       │     ANALYZE      │  SCHEDULE   │   │
-│  ├────────────┼───────────────┼──────────────────┼─────────────┤   │
-│  │ Executor   │ Lightweight   │ Reasoning Model  │ Structured  │   │
-│  │ (LLM)      │ (qwen-turbo)  │ (qwen-max3)      │ Output LLM  │   │
-│  ├────────────┼───────────────┼──────────────────┼─────────────┤   │
-│  │ Publisher  │ ChatPublisher │ AnalystPublisher │ SchedPub    │   │
-│  │            │ (stream +     │ (format chapters │ (calendar   │   │
-│  │            │  context      │  insights, call  │  entry +    │   │
-│  │            │  aware)       │  chart tools)    │  smart tips)│   │
-│  ├────────────┼───────────────┼──────────────────┼─────────────┤   │
-│  │ Tools      │ None          │ Charts, Reports  │ Calendar,   │   │
-│  │            │               │ Recommendations  │ Tip Writer  │   │
-│  └────────────┴───────────────┴──────────────────┴─────────────┘   │
-└─────────────────────────────────────────────────────────────────────┘
+└───────┴─────────────────────────────────────────────────────────────┘
 ```
 
-### 2.2 Core Components
+### 3.2 Core Components
 
 #### 1. Context Builder (Shared)
-The foundation of intelligence. Runs for **every** request regardless of mode.
+The foundation of intelligence. Runs for **every** request.
 
 **Role:** Normalize heterogeneous inputs into a unified context payload for the Executor LLM.
 
 **Input Normalization Tools:**
 
-All user inputs are processed via specialized tools before reaching the Planner/Executor:
+All user inputs are processed via specialized tools before reaching the main prompt builder:
 
 | Input Type | Tool | Output | Notes |
 |------------|------|--------|-------|
 | **Text** | — (passthrough) | Raw text | Direct injection |
 | **Audio** | `tingwu.transcribe` | Transcript + metadata | Speaker diarization, timestamps |
 | **Image** | `qwen_vl.analyze` | OCR text / scene description | Supports batch (up to 5) |
-| **Video** | `qwen_vl.video` | Scene analysis / key frames | Future capability |
-| **URL** | `fetch.text` | Page content | Web content extraction |
 
 > **Architectural Note:** In the old architecture, Tingwu was a standalone workflow. In Prism, it is **demoted to a tool** that feeds the Context Builder. All modalities are now unified input sources, not destinations.
-
-> **Future Note:** Tingwu provides native structured outputs (mindmaps, summaries, chapters, speaker key points) via its API. These can be exposed as **structured tool outputs** for the Planner, enabling richer downstream tool composition. To be explored in a future iteration.
-
-**Context Payload:**
-```kotlin
-data class EnhancedContext(
-    val userText: String,
-    val audioTranscripts: List<TranscriptBlock>,  // From Tingwu
-    val imageAnalysis: List<VisionResult>,        // From Qwen-VL
-    val memoryHits: List<MemoryEntry>,            // From Hot Zone
-    val entityContext: Map<String, Entity>,       // From Relevancy Library
-    val modeMetadata: ModeMetadata
-)
-```
-
-**Inputs:** User query, current screen context, User Profile (§5.8), attached media.
-**Memory Query:** Hot Zone (active entries) + Relevancy Library (entity context).
-**Output:** `EnhancedContext` object for Planner/Executor.
 
 #### 1b. Session Cache (In-Task Memory)
 
@@ -255,108 +217,25 @@ Lightweight in-memory cache for fast context access during task execution. Avoid
 
 **Write Pattern:**
 ```
-Tool Output ──▶ Session Cache (sync, fast)
-                    │
-                    └── Async Delta Push ──▶ Relevancy Library / Hot Zone
+Output ──▶ Session Cache (sync, fast)
+               │
+               └── Async Delta Push ──▶ Relevancy Library / Hot Zone
 ```
 
-1. Tool outputs → Session Cache (synchronous, in-memory)
-2. Cache → Relevancy Library (async delta update, on boundary triggers)
+#### 2. Lightning Router (Gatekeeper)
+Stateless router. Evaluates intent at the beginning of the Sync Loop to determine the correct pathway.
+Replaces the old "Mode Toggle" system.
 
-**Flush Triggers:**
-| Trigger | Action |
-|---------|--------|
-| Plan Card completion | Flush entire cache to memory |
-| User sends new message | Flush cache, rebuild for new turn |
-| App backgrounded > 30s | Flush cache for session continuity |
+#### 3. LLM Executor
+The generation engine. Driven dynamically by the Model Router depending on the pipeline phase (Sync/Async).
 
-**Benefits:**
-- Task execution reads from cache (fast, no DB queries)
-- Memory stays fresh via delta updates
-- Lightweight: no heavy push/pull during tool execution
-
-> **Consistency Note:** During task execution, Session Cache is the source of truth. A brief consistency window exists until the next flush trigger. This is accepted practice to ensure zero-latency tool execution.
-
-#### 2. Orchestrator (The Prism)
-Stateless router. Selects mode and invokes the pipeline.
-
-**Mode Selection Rules:**
-
-| Trigger | Mode | Control |
-|---------|------|---------|
-| **Toggle Switch** | Coach ↔ Analyst | User manual |
-| **ESP32 Event** (`record#end` + filename) | Scheduler | System trigger (see [esp32-protocol.md](./esp32-protocol.md)) |
-
-**No Auto-Switch Rule:**
--   Agent may **suggest** a mode switch based on parsed intent (e.g., "This looks like a scheduling request").
--   Agent **never** auto-switches modes without user confirmation.
--   User must manually switch via toggle or confirm the suggestion.
-
-**Behavior:**
--   Maintains ephemeral in-turn state (scope).
--   Invokes the pipeline steps based on current mode.
-
-#### 3. Executor (Strategy-Based)
-The brain. Implementation varies by mode (`LlmProvider` interface).
--   **Chat:** Uses fast, conversational models (e.g., Qwen Turbo). Focus: Engagement.
--   **Analyze:** Uses reasoning-heavy models (e.g., Qwen Max). Focus: Depth, Tool Calling.
--   **Schedule:** Uses structured output models. Focus: JSON correctness for calendar actions.
-
-> **Note:** Analyst mode uses a **Planner LLM** before the main Executor to generate a visible task list. See §4.5 Plan-Once Execution and §4.6 Analyst Planner-Centric Paradigm.
-
-#### 4. Publisher (Strategy-Based)
-The output shaper. Implementation varies by mode (`ModePublisher` interface).
--   **ChatPublisher:** Streams tokens directly to UI bubles.
--   **AnalystPublisher:** Accumulates tokens, formats into Chapters/Insights, renders Chart Cards.
--   **SchedulePublisher:** Parses JSON, calls Calendar API, renders "Smart Tips" (conflicts/context).
-
-#### 5. Memory Writer (Background)
-The memory system. Writes to Hot Zone and triggers Relevancy Library update.
--   **Pattern:** Fire-and-Forget with Retry.
--   **Write-Through:** After Hot Zone write, triggers Relevancy Writer to update Relevancy Library.
--   **Behavior:** Runs in a detached CoroutineScope (`GlobalScope` or application lifecycle scope).
--   **Retry:** Exponential backoff for SQLite/Room writes.
--   **Invariant:** UI **never** waits for memory writes.
-
-#### 6. Schema Linter (Hardcoded Quality Gate)
-Validates ALL AI-generated structured outputs before persistence. **No LLM in the validation loop** — purely deterministic.
-
-**Multiple Linter Patterns:**
-
-| Linter | Output Type | Validates |
-|--------|-------------|-----------|
-| `EntityLinter` | Chat/Analyst `structuredJson` | JSON valid, entity types, ID format, required fields |
-| `PlanLinter` | ExecutionPlan | Required fields, valid enums, step structure |
-| `SchedulerLinter` | Scheduler JSON | Schema compliance, date validity, conflict detection |
-| `RelevancyLinter` | Relevancy updates | Entity type, field constraints, alias uniqueness |
+#### 4. The Linter (decodeFromString)
+Validates ALL AI-generated structured outputs for background mutations.
 
 **Failure Behavior:**
-1. On lint failure → Return errors to agent
-2. Agent regenerates/fixes the output
-3. Retry until linter passes (max 3 attempts)
-4. If still fails → Log error, skip persistence, notify user
-
-```kotlin
-interface LinterRegistry {
-    fun getLinter(outputType: OutputType): Linter
-}
-
-sealed class OutputType {
-    object EntityExtraction : OutputType()
-    object ExecutionPlan : OutputType()
-    object SchedulerCommand : OutputType()
-    object RelevancyUpdate : OutputType()
-}
-
-interface Linter {
-    fun validate(content: String): LintResult
-}
-
-sealed class LintResult {
-    object Pass : LintResult()
-    data class Fail(val errors: List<LintError>) : LintResult()
-}
-```
+1. If the LLM generates an invalid payload, `decodeFromString` throws.
+2. The exception is caught cleanly.
+3. The background mutation halts. The system DOES NOT crash the UI thread.
 
 #### 7. Memory Center Notifier (Snackbar Updates)
 Dedicated UI component for notifying users of significant memory updates. Covers 4 categories:
@@ -376,63 +255,9 @@ Dedicated UI component for notifying users of significant memory updates. Covers
 -   Snackbar auto-dismisses after 3 seconds (tappable to expand details).
 -   `<content>` is truncated to 20 characters max.
 
-### 2.3 Mode-Specific Context Strategies
+### 3.3 Model Router
 
-Context Builder applies different retrieval strategies based on the active mode:
-
-#### Scheduler Mode
-```
-User Input (transcribed audio)
-    ↓
-Step 1: Check current Inspirations + Scheduled Tasks (today's scope)
-    ↓
-Step 2: Query Relevancy Library for entity matches (fast O(1))
-    ↓
-Step 3: Apply 14-day rule:
-    - If lastMentionedAt < 14 days → check Hot Zone
-    - If lastMentionedAt ≥ 14 days → check Cement Zone
-    ↓
-Step 4: Build context with pointers from Relevancy Library
-```
-
-#### Coach Mode
-```
-User Input
-    ↓
-Step 1: In-session chat history (primary context)
-    ↓
-Step 2: Context enrichment (deterministic):
-    ├─ First turn of session → MemoryRepository.search() for relevant context
-    ├─ Entity mentions detected → EntityRepository.findByAlias() for known entities
-    └─ Subsequent turns → session context is sufficient (no re-search)
-    ↓
-Step 3: Analyst suggestion is an output flag from the main LLM call
-        (not a pre-execution LLM check)
-```
-
-**Coach Prompt Checks:**
-
-| Check | Purpose | User Control |
-|-------|---------|--------------|
-| **Analyst Suggestion** | Detects analysis-heavy requests | Output flag from response (User confirms) |
-| **Memory Search** | Provides historical context | Triggered on first turn or entity state change |
-
-#### Analyst Mode
-```
-User Input
-    ↓
-Step 1: Query Relevancy Library (entity context, decision history)
-    ↓
-Step 2: Query Hot Zone (recent relevant entries)
-    ↓
-Step 3: Generate ExecutionPlan via Planner LLM (§4.5)
-    ↓
-(Rest follows Plan-Once paradigm)
-```
-
-### 2.3 Model Router
-
-Central routing for LLM model selection based on **task type**, not mode.
+Central routing for LLM model selection based on **task type**.
 
 > **Location**: `domain/config/ModelRouter.kt`
 
@@ -441,378 +266,70 @@ Central routing for LLM model selection based on **task type**, not mode.
 | Input Condition        | Model          | Context Window |
 |-----------------------|----------------|----------------|
 | Image/Video present    | `qwen-vl-plus` | Vision         |
-| Tool-calling required  | `qwen3-max`    | 32k tokens     |
 | Default (fast chat)    | `qwen-plus`    | 1M tokens      |
 
 #### Memory Layer Routing (`forMemoryLayer`)
 
 | Layer      | Model       | Rationale                                |
 |------------|-------------|------------------------------------------|
-| RELEVANCY  | `qwen3-max` | Tool-calling for entity search           |
+| RELEVANCY  | `qwen3-max` | Advanced parsing for entity extraction   |
 | HOT        | `qwen-plus` | Fast index navigation (14 days context)  |
 | CEMENT     | `qwen-long` | Deep history retrieval (10M tokens)      |
 
-> **Pattern**: Blackboxes call `ModelRouter` to get model string. Routing logic is centralized, not scattered across implementations.
-
 ---
 
-### 2.4 Auto-Quote Module
+## 4. Data Flow & Consistency
 
-> **[FUTURE]** Universal module for automatic excerpt quoting from historical context.
+### 4.1 Sync Loop Output Flow (Native Streaming)
+In Project Mono, because we strictly decouple the structured JSON data mutations (Async) from the user conversation (Sync), **The Chat UI can use true native flow streaming**. 
 
-When context retrieval returns relevant entries, this module:
-- Extracts key excerpt from matched entry
-- Formats as inline quote in agent response
-- Links to source entry for user navigation
+We do not buffer tokens waiting to see if there is JSON inside. The prompt restricts the LLM to pure markdown in the Sync loop.
 
-*Implementation deferred. Applies to all modes.*
-
----
-
-## 3. Data Flow & Consistency
-
-### 3.1 Buffered Streaming Flow
-
-**Trade-off:** We cannot use true native streaming because the Linter must validate structured output BEFORE displaying to user. Instead, we use **buffered streaming with simulated animation**.
-
-```
-Orchestrator ──▶ DashScope API (stream=true)
-                       │
-                       ▼
-               [Response Buffer] ──accumulate tokens──▶ Complete Response
-                       │
-                       ▼
-               [Linter] ──validate structured section──▶ Pass/Fail?
-                       │
-         ┌─────────────┴─────────────┐
-         ▼                           ▼
-       Pass                        Fail
-         │                           │
-         ▼                           ▼
-[Publisher]                    [Retry] → agent regenerates
-  │                            (max 3 attempts)
-  ├─▶ Simulated streaming animation (displayContent)
-  └─▶ [Memory Writer] → Hot Zone (async)
-```
-
-**Simulated Streaming:**
-```kotlin
-// After linter passes, animate displayContent at 20ms per character
-suspend fun simulateStreaming(content: String, charDelayMs: Long = 20) {
-    content.forEach { char ->
-        emit(char)
-        delay(charDelayMs)
-    }
-}
-```
-
-**Why this works:**
-- User still sees "typing" animation — feels responsive
-- All structured data is validated before any display
-- Retry happens invisibly if linter fails
-
-### 3.2 Consistency Model
+### 4.2 Consistency Model
 
 | Dimension | Guarantee | Implication |
 |-----------|-----------|-------------|
-| **UI Responsiveness** | **Evaluate-Now** | UI always shows immediate AI response. |
-| **Memory Persistence** | **Eventual** | Writes happen milliseconds/seconds after response. |
+| **UI Responsiveness** | **Immediate** | UI streams token-by-token. Zero blocking. |
+| **Memory Persistence** | **Eventual** | Writes happen in background (Async Loop). |
 | **Cross-Session** | **Strong** | Next session guaranteed to see previous session's commits. |
-| **Intra-Session** | **Read-Your-Writes** | *Best effort.* Fast follow-up turns *may* run before previous turn's write completes. |
-
-**Accepted Tradeoff:** In ultra-fast conversational turns, the memory context *might* be slightly stale (missing the immediately preceding turn). This is accepted industrial practice to ensure zero UI blocking.
+| **Intra-Session** | **Read-Your-Writes** | *Best effort.* In ultra-fast conversational turns, memory context bounding *might* be slightly stale (missing the immediately preceding turn). |
 
 ---
 
-## 4. Mode Pipelines (ASCII Visualization)
+## 5. Agent Visibility System
 
-### 4.1 Chat Mode (The Coach)
-Lightweight conversational path with optional memory search. See **§2.3 Coach Mode** for context strategy details.
+> **Philosophy**: The user should *feel* the agent is smart. This section defines how intelligence is made visible during the Sync/Async lifecycles.
 
-```
-User Input
-    │
-    ▼
-[Context Builder: Session History]
-    │
-    ├─▶ LLM Check A: Suggest Analyst switch? ──(if yes)──▶ Prompt user
-    │
-    ├─▶ LLM Check B: Memory threshold score
-    │       │
-    │       ├─▶ Score > threshold: Search Relevancy Library
-    │       │                      (emit "Searching memory...")
-    │       └─▶ Score ≤ threshold: Stay with session context
-    │
-    ▼
-[Qwen Turbo] ──stream──▶ [ChatPublisher] ──▶ UI
-                              │
-                              └─async─▶ [Memory Writer] ──▶ Hot Zone
-```
+The UI avoids "Boolean Soup" (`isThinking`, `isParsing`) scattered across a ViewModel, instead using a dedicated `AgentActivityController` to surface background work to a top Activity Banner without blocking the chat.
 
-### 4.2 Analyze Mode (The Analyst)
-Heavy reasoning path with Thinking Trace and Planner Table. See **§2.3 Analyst Mode** and **§4.5-4.6** for planning details.
-
-```
-User Input
-    │
-    ▼
-[Context Builder: Relevancy Library + Hot Zone]
-    │
-    ▼
-[Qwen Max (Thinking)] ──stream──▶ [Thinking Trace UI]
-    │
-    ▼
-[Qwen Max (Structured)] ──stream──▶ [Planner Table (Chat Bubble)]
-    │                                  │
-    │                            [Tool Execution]
-    │                                  │
-    └─async─▶ [Memory Writer] ──▶ Hot Zone
-```
-
-### 4.3 Schedule Mode (Global Top Drawer)
-Structured command path with multi-step context. See **§2.3 Scheduler Mode** for context strategy and [scheduler-v1.md](./scheduler-v1.md) for full spec.
-
-```
-Voice Note (ESP32 trigger)
-    │
-    ▼
-[Context Builder]
-    ├─▶ Step 1: Check Inspirations + Scheduled Tasks
-    ├─▶ Step 2: Query Relevancy Library (entity match)
-    └─▶ Step 3: Apply 14-day rule (Hot vs Cement)
-    │
-    ▼
-[Qwen Structured] ──json──▶ [SchedulePublisher]
-    │                              │
-    │                       [Calendar API]
-    │                       [Tips Renderer]
-    │                              │
-    └─async─▶ [Memory Writer] ─────┴──▶ UI
-```
-
-### 4.5 Plan-Once Execution Model
-
-Prism minimizes latency and token costs with a **Plan-Once** model: one comprehensive planning call per turn.
-
-**The 3-Step Lifecycle:**
-1. **Pre-Fetch (Deterministic)**: Load Hot Zone Snapshot + invoke Relevancy Checker (Radar) for O(1) context.
-2. **Planning (LLM)**: Planner LLM outputs structured `ExecutionPlan`.
-3. **Execute & Respond**: Execute plan, generate output with native structured tags.
-
-```kotlin
-data class ExecutionPlan(
-    val retrievalScope: RetrievalScope,  // NONE, HOT_ONLY, HOT_AND_CEMENT, DEEP
-    val toolsToInvoke: List<ToolCall>,
-    val deliverables: List<DeliverableType>,
-    val workflowSuggestion: WorkflowType?,
-    val responseType: ResponseType
-)
-
-enum class RetrievalScope { NONE, HOT_ONLY, HOT_AND_CEMENT, DEEP }
-```
-
-### 4.6 Agent Visibility System
-
-> **Philosophy**: The user should *feel* the agent is smart. This section defines how intelligence is made visible.
->
-> For detailed audit protocols, see `/agent-visibility` workflow.
-
-The Analyst workflow uses a **three-layer visibility architecture** to showcase agent cognition:
-
-| Layer | Component | Purpose |
-|-------|-----------|---------|
-| **1. Cognition** | **Thinking Trace** | Inline raw reasoning streamed before response. |
-| **2. Structure** | **Planner Table** | Self-updating markdown table within a chat bubble. |
-| **3. Access** | **Task Board** | Sticky top row of shortcut buttons. |
-
-```
-┌─────────────────────────────────────────┐
-│  📊 Sales   📈 Competitor   [+] Custom  │ ← Task Board (Sticky)
-├─────────────────────────────────────────┤
-│  [AI]                                   │
-│  ┌── Thinking ───────────────────────┐  │ ← Thinking Trace
-│  │ Checking Q4 data...               │  │
-│  └───────────────────────────────────┘  │
-│                                         │
-│  | Step | Task | Status |               │ ← Planner Table (Bubble)
-│  |------|------|--------|               │
-│  | 1    | Data | ✅     |               │
-│  | 2    | Viz  | ⏳     |               │
-└─────────────────────────────────────────┘
-```
-
-#### 4.6.1 Analyst Pipeline Orchestration
-
-The Analyst mode uses a **stateful controller** to orchestrate multi-step analysis flows. This is a **pipeline mechanism**, not a visibility concern — the visibility is handled by `AgentActivityController` (§4.6.2).
-
-**Design Rationale**: Instead of "Boolean Soup" (`isThinking`, `isParsing`, `isRunning`) scattered across a ViewModel, we use a sealed hierarchy managed by a Controller.
-- **Debuggability**: Log every state change in one place.
-- **Testability**: Unit test the Controller without mounting UI.
-- **Reusability**: Decoupled from `ChatViewModel`.
-
-**State Hierarchy:**
-```kotlin
-sealed interface AnalystState {
-    data object Idle : AnalystState
-    data class Parsing(val currentTask: String, val progress: Float) : AnalystState
-    data class Planning(val trace: List<String>) : AnalystState
-    data class Proposal(val plan: AnalystPlan, val queue: List<String> = emptyList()) : AnalystState
-    data class Executing(val plan: AnalystPlan, val currentStepId: String) : AnalystState
-    data class Result(val artifact: PlanArtifact) : AnalystState
-}
-```
-
-**Controller Contract:**
-```kotlin
-class AnalystFlowController @Inject constructor() {
-    val state: StateFlow<AnalystState>
-    suspend fun startAnalysis(input: String)
-    suspend fun confirmPlan()
-    fun handleInterruption(msg: String)
-}
-```
-
-**Interruption Handling (Queueing):**
-If user sends input during `Planning` or `Parsing` state, the message is queued in the `Proposal.queue` and processed after the current flow settles. This avoids race conditions.
-
-#### 4.6.2 Visibility Mechanism: AgentActivityController
+#### 5.1 Visibility Mechanism: AgentActivityController
 
 The **AgentActivityController** is the PRIMARY visibility mechanism — it makes agent cognition visible to users via the **AgentActivityBanner**.
 
-> **Hierarchy**: Visibility channels are the **first debugging entry point**. If the app "feels dumb", audit visibility first, then pipeline logic.
-
-**Two-Tier Structure:**
-
-| Layer | Role | Example |
-|-------|------|---------|
-| **Phase** | High-level task (always visible) | "📝 规划分析步骤", "⚙️ 执行工具: PDF生成" |
-| **Action** | Specific operation (optional) | "🧠 思考中...", "📚 检索记忆..." |
-| **Trace** | Streaming content (optional) | Native CoT, transcript, memory hits |
+> **Note**: This replaces the old legacy 3-layer Analyst UI (Planner Table / Sticky Board). Activity relies solely on the top-level banner and inline streaming.
 
 **State Hierarchy:**
 ```kotlin
 enum class ActivityPhase {
-    PLANNING,      // 📝 规划...
-    EXECUTING,     // ⚙️ 执行工具...
-    RESPONDING,    // 💬 生成回复...
-    COMPLETED,     // ✅ 思考完成（持久化展示）
-    ERROR          // ⚠️ 发生错误
-}
-
-enum class ActivityAction {
-    THINKING,      // 🧠 思考中... (Qwen3-Max CoT)
-    PARSING,       // 📄 解析中... (Qwen-VL)
-    TRANSCRIBING,  // 🎙️ 转写中... (Tingwu)
-    RETRIEVING,    // 📚 检索记忆... (Relevancy)
-    ASSEMBLING,    // 📋 整理上下文...
-    STREAMING      // ✨ 生成中...
-}
-
-data class AgentActivity(
-    val phase: ActivityPhase,
-    val action: ActivityAction? = null,
-    val trace: String? = null
-)
-```
-
-**Trace Sources:**
-
-| Source | Type | Details |
-|--------|------|---------|
-| **Qwen3-Max CoT** | Native | `enable_thinking` returns real reasoning trace |
-| **Qwen-VL** | Native | Vision model streaming output |
-| **Tingwu** | Native | Real-time transcript (pseudo-thinking) |
-| **Relevancy Library** | Synthetic | Show matched entities/memories |
-| **Context Assembly** | Synthetic | Show assembled sources |
-
-**Controller Contract:**
-```kotlin
-class AgentActivityController @Inject constructor() {
-    val activity: StateFlow<AgentActivity?>
-    fun startPhase(phase: ActivityPhase, action: ActivityAction? = null)
-    fun updateTrace(line: String)
-    fun complete()
+    DISAMBIGUATING, // 📝 正在理解您的意图...
+    PARSING,        // 📄 解析附件中...
+    TRANSCRIBING,   // 🎙️ 音频转写中...
+    RETRIEVING,     // 📚 检索记忆图谱...
+    EXECUTING,      // ⚙️ 执行特殊工具...
 }
 ```
 
-> **UI Reference**: See [AgentActivityBanner.md](./components/AgentActivityBanner.md) for rendering rules.
+#### 5.2 Conflict Resolution (Rethink Model)
 
-#### 4.6.3 ThinkingPolicy
+Conflicts encountered during Async Mutations are treated as **creative prompts**, not merge decisions. 
+Because the Sync Loop already responded to the user, if the Async Loop hits a primary key conflict or date conflict:
 
-**All Qwen models use `enable_thinking=true`**. The policy controls UI display truncation based on mode:
-
-```kotlin
-object ThinkingPolicy {
-    fun maxTraceLines(mode: Mode): Int = when (mode) {
-        Mode.COACH -> 3       // Quick, truncated — "feels understood"
-        Mode.ANALYST -> 20    // Full trace — transparency matters
-        Mode.SCHEDULER -> 5   // Moderate
-    }
-}
-```
-
-**Model Thinking Behavior:**
-
-| Model | API Param | Trace Field | Use Case |
-|-------|-----------|-------------|----------|
-| Qwen3-Max | `enable_thinking=true` | `reasoning_content` | Analyst (full CoT) |
-| Qwen-Plus | `enable_thinking=true` | `reasoning_content` | Coach (truncated) |
-| Qwen-VL | `enable_thinking=true` | `reasoning_content` | Vision parsing |
-
-> **Note**: All models return thinking traces. UI truncates per `ThinkingPolicy`, not the API.
-
-#### 4.6.4 Simulated Streaming Architecture
-
-**Native Qwen streaming is NOT used.** The system uses a **linter-first** pattern:
-
-```
-┌─────────────────────────────────────────────────────────┐
-│ 1. LLM Call (non-streaming)                             │
-│    → Returns complete response + thinking trace         │
-└───────────────────────┬─────────────────────────────────┘
-                        ▼
-┌─────────────────────────────────────────────────────────┐
-│ 2. Linter validates response                            │
-│    → Structured output check, toxicity, etc.            │
-└───────────────────────┬─────────────────────────────────┘
-                        ▼
-┌─────────────────────────────────────────────────────────┐
-│ 3. AgentActivityController.complete()                   │
-│    → Thinking phase ends, banner collapses              │
-└───────────────────────┬─────────────────────────────────┘
-                        ▼
-┌─────────────────────────────────────────────────────────┐
-│ 4. SimulatedStreamer                                    │
-│    → Emit chars at 20ms/char for "typing" effect        │
-│    → UI shows progressive text rendering                │
-└─────────────────────────────────────────────────────────┘
-```
-
-**Benefits:**
-- **Reliability**: Full response validated before display
-- **Consistency**: Same UX whether LLM streams or not
-- **Control**: Exact typing speed tuned for UX
+**Detection → Suggestion:**
+1. **Detection**: Linter or DB layer catches a conflict.
+2. **Alert**: Pushes a structured warning card into the chat timeline automatically.
+3. **Rethink Suggestion**: Agent proposes a "Third Option" (e.g., "Merge these", "Override", "Cancel").
 
 
-
-### 4.7 Conflict Resolution (Rethink Model)
-
-Conflicts are treated as **creative prompts**, not merge decisions.
-
-**Detection → Suggestion → Resolution:**
-1. **Detection**: Relevancy Checker scans for time/resource overlaps.
-2. **Rethink Suggestion**: Agent proposes a "Third Option" (e.g., "Combine into joint meeting").
-3. **User Choice**: Override, Merge, or type a **Rethink** instruction.
-
-| Choice | Action |
-|--------|--------|
-| **Override** | Replace conflicting entry |
-| **Merge** | Combine both entries |
-| **Rethink** | User types custom resolution → creates new entry |
-
-**Rethink decisions are logged** to `decisionLogJson` in the Relevancy Library for future learning.
-
----
 
 ## 5. Memory System & Relevancy Library
 
@@ -1080,7 +597,7 @@ data class MemoryEntryEntity(
     @PrimaryKey val id: String,
     
     // BaseEntry (indexed)
-    val workflow: String,        // COACH, ANALYST, SCHEDULER
+    val workflow: String,        // CHAT, COMMAND, SCHEDULE
     val title: String,
     val isArchived: Boolean,
     val createdAt: Long,
@@ -1105,8 +622,8 @@ data class MemoryEntryEntity(
 
 | Workflow | Key Fields |
 |----------|------------|
-| **Coach** | `messages: List<ChatMessage>`, `topic: String?` |
-| **Analyst** | `chapters: List<AnalysisChapter>`, `keyInsights: List<String>` |
+| **Chat** | `messages: List<ChatMessage>`, `topic: String?` |
+| **Command** | `commands: List<CommandAction>`, `targets: List<String>` |
 | **Scheduler** | `scheduledAt: Instant?`, `priority: Priority`, `status: TaskStatus` |
 
 ### 5.8 User Profile (Static — User Center)
@@ -1128,7 +645,7 @@ data class UserProfile(
 
 | Field | Source | Purpose |
 |-------|--------|---------|
-| `experienceLevel` | User Center | Adjust coaching depth |
+| `experienceLevel` | User Center | Adjust response depth |
 | `industry` | User Center | Domain-specific context |
 | `role` | User Center | Seniority-appropriate suggestions |
 
@@ -1160,7 +677,7 @@ data class UserHabit(
 | **Meeting Time** | `meeting_time` | `morning`, `afternoon`, `evening` | Suggest slots |
 | **Business Trip** | `business_trip` | `monthly_travel`, `regional_focus` | Scheduling context |
 | **Follow-up Style** | `follow_up` | `immediate`, `next_day`, `weekly_batch` | Reminder timing |
-| **Analysis Focus** | `analysis_focus` | `data_heavy`, `painpoint_focus`, `psychology_insight` | Tailor Analyst |
+| **Analysis Focus** | `analysis_focus` | `data_heavy`, `painpoint_focus`, `psychology_insight` | Tailor responses |
 | **Client Tone** | `client_tone` | `formal`, `casual`, `technical` | Per-client (`entityId`) |
 | **Verbosity** | `verbosity` | `concise`, `detailed`, `bullet_points` | Response length |
 

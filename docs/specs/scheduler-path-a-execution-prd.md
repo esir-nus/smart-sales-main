@@ -24,7 +24,8 @@ When Path A completes an execution, the UI reacts based on the entity state.
 | Scenario | Background Action | UI / Visual Feedback |
 |----------|-------------------|----------------------|
 | **Perfect Creation** | `ScheduledTask` inserted normally. | Timeline updates. System emits a soft "Success" sound. `isReschedule=true` triggers Amber Glow. |
-| **Missing Date (Lexical)** | NLP fails to parse absolute ISO. | NLP emits intent. Timeline inserts a **Red-Flagged Card**. Native Android Pop-up/Toast fires: *"请问明天几点？"* (What time tomorrow?). |
+| **Missing Date (Temporal Vague)** | User says "明天开会" but skips the time. | `CreateTasksParams` fires, but NLP omits `startTimeIso`. Timeline inserts a **Red-Flagged Schedulable Card**. Native Android Pop-up/Toast fires: *"请问明天几点？"* (What time tomorrow?). |
+| **Timeless Query (Inspiration)** | User says "早上好" or "以后想学吉他". | Evaluates as `Inspiration`. Saved to `InspirationRepository` (not the main schedule). UI renders a distinct Inspiration Note card (not a schedulable task block). |
 | **Time Conflict** | Mutation Module detects Kanban overlap. | Task inserted. Timeline renders task with **Caution Banner / Red Border**. UI requires user interaction to accept or manually drag-and-drop. |
 | **Path B Vague Name (Future)** | Path B resolves "李总" to 3 different IDs. | Path B updates the existing Card state. Card turns Red-Flagged. User taps card to open inline resolution picker. |
 
@@ -101,6 +102,17 @@ Global cross-session deletion.
 @Serializable
 data class DeleteTaskParams(
     val targetTaskQuery: String         // Lexical fuzzy search term (e.g., "下午的电话")
+)
+```
+
+### Tool 4: `CreateInspirationParams` (Timeless Intent)
+A separate tool strictly for timeless queries, aspirations, or general notes that don't belong on a strict ISO-bounded timeline layout.
+
+```kotlin
+@Serializable
+data class CreateInspirationParams(
+    val unifiedId: String? = null,
+    val content: String                 // The raw timeless note (e.g., "想学吉他")
 )
 ```
 

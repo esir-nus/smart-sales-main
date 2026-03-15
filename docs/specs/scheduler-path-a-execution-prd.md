@@ -14,7 +14,7 @@ The Scheduler Path A is designed for **Sub-second Optimistic Execution** with **
 ### A. The Dedicated Mutation Module
 A pure Kotlin domain module responsible for executing the One-Currency LLM intents.
 - **Batch Create**: Handles arrays of tasks atomically.
-- **Single Reschedule**: Enforces the atomic `Insert New -> Delete Old` transaction to prevent data loss. *(Note: Global voice deletions and batch rescheduling are intentionally disabled to prevent premature UX failures).*
+- **Single Reschedule**: Enforces an atomic `Delete Old -> Insert New` mutation wrapped in a Room `@Transaction`. This completely replaces the old task state with the new LLM extraction (accommodating complex user follow-ups) while ensuring Room emits only one UI update to prevent Compose flashing. *(Note: Global voice deletions and batch rescheduling are intentionally disabled to prevent premature UX failures).*
 - **Conflict Evaluation**: Checks the `ScheduleBoard`. If a conflict exists, it **still creates the task**, but attaches a `hasConflict=true` or similar flag to trigger the UI Attention Flow.
 
 ### B. The User Experience (The Small Attention Flow)
@@ -23,7 +23,7 @@ When Path A completes an execution, the UI reacts based on the entity state.
 | Scenario | Background Action | UI / Visual Feedback |
 |----------|-------------------|----------------------|
 | **Perfect Creation** | `ScheduledTask` inserted normally. | Timeline updates. System emits a soft "Success" sound. `isReschedule=true` triggers Amber Glow. |
-| **Missing Date (Temporal Vague)** | User says "明天开会" but skips the time. | `CreateTasksParams` fires, but NLP omits `startTimeIso`. Timeline inserts a **Red-Flagged Schedulable Card**. Native Android Pop-up/Toast fires: *"请问明天几点？"* (What time tomorrow?). |
+| **Missing Date (Temporal Vague)** | User says "开会" but skips the time. | `CreateTasksParams` fires, but NLP omits `startTimeIso`. The task is created with `isVague = true` and left off the main Kanban timeline ("Purgatory"). UI renders a **Red-Flagged Schedulable Card**. When user follows up ("明天下午三点"), it triggers a Reschedule that patches the old vague task into a valid timeline task. |
 | **Timeless Query (Inspiration)** | User says "早上好" or "以后想学吉他". | Evaluates as `Inspiration`. Saved to `InspirationRepository` (not the main schedule). UI renders a distinct Inspiration Note card (not a schedulable task block). |
 | **Time Conflict** | Mutation Module detects Kanban overlap. | Task inserted. Timeline renders task with **Caution Banner / Red Border**. UI requires user interaction to accept or manually drag-and-drop. |
 | **Path B Vague Name (Future)** | Path B resolves "李总" to 3 different IDs. | Path B updates the existing Card state. Card turns Red-Flagged. User taps card to open inline resolution picker. |
@@ -47,13 +47,8 @@ When Path A completes an execution, the UI reacts based on the entity state.
         ▼
 ┌───────────────┐
 │ Timeline UI   │───► DB emits new task layer.
-│ (Compose)     │───► UI detects `conflict_flag`.
-└───────┬───────┘───► Renders RED CAUTION CARD.
-        ▼
-┌───────────────┐
-│ Native OS     │───► Triggers error/alert Sound.
-│ Triggers      │───► Displays Native Banner/Popup: "⚠️ 该时间段已有安排，请确认"
-└───────────────┘
+│ (Compose)     │───► UI detects `conflict_flag` or `isVague` state.
+└───────┬───────┘───► Renders RED CAUTION CARD (inline resolution).
         ▼
    [ User Taps Card ] ──► Opens Small Attention Flow (Inline resolution/edit).
 ```
@@ -69,7 +64,7 @@ Path A fundamentally distrusts LLM-generated IDs for global targeting. When exec
 
 **Match Evaluation Rules:**
 - **0 Matches**: Abort operations. System emits Toast/Voice prompt: *"⚠️ 未找到匹配的日程，请更具体一些。"* (Prevents hallucinated modifications).
-- **1 Exact Match**: Happy Path. The transaction (Create + Delete under the hood) proceeds atomically.
+- **1 Exact Match**: Happy Path. The `@Transaction` (Delete old + Insert new, preserving GUID) proceeds atomically.
 - **2+ Matches (Ambiguity)**: Abort operations. System emits Toast/Voice prompt: *"⚠️ 找到多个匹配的日程，请进入日程面板手动调整。"* (Prevents destroying the wrong task).
 
 ### B. Auto-Expiry and Scope Limiting
@@ -101,14 +96,19 @@ data class TaskDefinition(
 ```
 
 ### Tool 2: `RescheduleTaskParams`
-Evaluates fuzzy matches against the active timeline. Handles Date shifts natively because `newStartTimeIso` is an absolute anchor.
+Evaluates matches against the active timeline using a dual-path approach (Temporal first, Lexical fallback). Handles Date shifts and conversational follow-ups.
 
 ```kotlin
 @Serializable
 data class RescheduleTaskParams(
     val unifiedId: String? = null,
-    val targetTaskQuery: String,        // Lexical fuzzy search term (e.g., "两点的开会")
-    val newStartTimeIso: String,        // The absolute new ISO-8601 target
+    
+    // TARGETING (LLM must provide context; Kotlin determines the exact match)
+    val targetTimeIso: String? = null, // Path 1: Kanban temporal lookup (Preferred, structurally exact)
+    val targetQuery: String? = null,   // Path 2: Lexical scan over active Kanban (Fallback for timeless queries)
+    
+    // MUTATION
+    val newStartTimeIso: String,
     val newDurationMinutes: Int? = null 
 )
 ```

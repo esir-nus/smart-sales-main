@@ -49,7 +49,7 @@ Create `docs/cerb/[feature-name]/spec.md`.
 
 ### 2.1 OS Layer Declaration (Mandatory)
 
-> **Reference**: `docs/specs/os-model-architecture.md`
+> **Reference**: `docs/specs/Architecture.md`
 
 Every spec MUST declare its OS layer at the top:
 

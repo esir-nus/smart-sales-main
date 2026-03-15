@@ -14,7 +14,7 @@ The STM `SessionWorkingSet` is dynamically populated using a **Lazy Loading** st
 
 **Lifecycle**: Created and managed by the Kernel (`ContextBuilder`) when a session starts. Destroyed when session ends or resets.
 
-> **OS Model Reference**: [`os-model-architecture.md`](../../specs/os-model-architecture.md)
+> **OS Model Reference**: [`Architecture.md`](../../specs/Architecture.md)
 
 ---
 

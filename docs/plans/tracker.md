@@ -102,7 +102,7 @@
 
 ## Quick Links
 
-- [os-model-architecture.md](../specs/os-model-architecture.md) — RAM/SSD mental model
+- [Architecture.md](../specs/Architecture.md) — RAM/SSD mental model
 - [Architecture.md](../specs/Architecture.md) — The Data-Oriented OS Migration Guide (Read before any Mono tasks)
 - [prism-ui-ux-contract.md](../specs/prism-ui-ux-contract.md) — (Deprecated) The Single Source of Truth for UI/UX is now exclusively the `docs/cerb/[feature]/spec.md` files.
 - [interface-map.md](../cerb/interface-map.md) — Module ownership + data flow

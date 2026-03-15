@@ -45,7 +45,7 @@ Ensures consistent:
 
 ### 1. Search & Dedup (SSD Allowed)
 
-**Why SSD?** Entity dedup requires the **full catalog** — not just session-active entities. The OS Model explicitly allows this (see `os-model-architecture.md` L103: "Full entity search hits SSD").
+**Why SSD?** Entity dedup requires the **full catalog** — not just session-active entities. The OS Model explicitly allows this (see `Architecture.md`: "Full entity search hits SSD").
 
 - `findByAlias()` → SSD (EntityRepository)
 - `getById()` for read-modify-write → SSD (EntityRepository)
@@ -265,7 +265,7 @@ Convention: Keys prefixed with `_` are metadata, not business attributes.
 
 ### Wave 4 Scope (OS Model) — ✅ SHIPPED
 - ✅ `upsertFromClue` / `registerAlias` / `updateAttribute` / `delete` write-through to RAM Section 1
-- SSD reads for dedup remain (full catalog search requires SSD, per os-model-architecture.md)
+- SSD reads for dedup remain (full catalog search requires SSD, per Architecture.md)
 
 ---
 

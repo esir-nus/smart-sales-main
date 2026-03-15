@@ -148,6 +148,14 @@ class RealUnifiedPipeline @Inject constructor(
                 }
             }
         }
+        
+        // 🚦 VALVE: Track the Alias Resolution
+        PipelineValve.tag(
+            checkpoint = PipelineValve.Checkpoint.ALIAS_RESOLUTION,
+            payloadSize = resolvedEntities.size,
+            summary = "Entity disambiguation/resolution completed",
+            rawDataDump = "Resolved IDs: $resolvedEntities\nFinal Input: $resolvedInputText"
+        )
 
         // Wave 1: Parallel Context Assembly (Extract-Transform-Load)
         emit(PipelineResult.Progress("正在梳理上下文..."))

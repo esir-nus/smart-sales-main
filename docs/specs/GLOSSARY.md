@@ -60,7 +60,7 @@ App
 
 ## OS Model Terms
 
-> **Reference**: [`os-model-architecture.md`](./os-model-architecture.md)
+> **Reference**: [`Architecture.md`](./Architecture.md)
 
 | Term | Definition | OS Analogy |
 |------|------------|------------|

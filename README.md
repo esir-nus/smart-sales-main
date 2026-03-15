@@ -1,4 +1,7 @@
-# main_app
+# Smart Sales / Project Mono
+> ⚠️ **ARCHITECTURAL HUB**: For all system documentation, specs, and the Plugin Gateway API, see the authoritative index at: **[docs/README.md](./docs/README.md)**
+
+---
 
 A self-contained multi-module Android project that merges the proven pieces from:
 

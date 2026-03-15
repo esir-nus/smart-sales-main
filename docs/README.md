@@ -55,6 +55,7 @@ docs/
 | [README.md](./specs/README.md) | Navigation | **Spec Navigation SOP** — reading order |
 | [Prism-V1.md](./specs/Prism-V1.md) | Architecture | **SOT** — Unified Pipeline, Memory, Modes |
 | [prism-ui-ux-contract.md](./specs/prism-ui-ux-contract.md) | UX | **INDEX** — Modules, Flows, Components |
+| [gateway-spec.md](./cerb-plugin/architecture/gateway-spec.md) | Architecture | **SOT** — System III Plugin Gateway & Protocol |
 | [GLOSSARY.md](./specs/GLOSSARY.md) | Terminology | Terms, no-synonyms rule |
 | [style-guide.md](./specs/style-guide.md) | UI | Visual design system, typography, components |
 | [connectivity-spec.md](./cerb/connectivity-bridge/spec.md) | Connectivity | BLE/WiFi/HTTP contracts |

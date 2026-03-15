@@ -9,13 +9,31 @@ import android.util.Log
  */
 object PipelineValve {
     enum class Checkpoint {
-        INPUT_RECEIVED,         // The raw text/voice origin
-        ROUTER_DECISION,        // Leaving Lightning Router
-        ALIAS_RESOLUTION,       // Leaving Alias Lib
-        SSD_GRAPH_FETCHED,      // SSD Data retrieved
-        LIVING_RAM_ASSEMBLED,   // Final context injected to Brain
-        LLM_BRAIN_EMISSION,     // Raw JSON out of LLM
-        LINTER_DECODED          // Typed data class ready for UI/DB
+        // Phase 0: The Edge
+        HARDWARE_AUDIO_RECEIVED,
+        STT_TRANSCRIPT_DECODED,
+        
+        // Phase 1: The Gatekeeper
+        INPUT_RECEIVED,         
+        ROUTER_DECISION,        
+        
+        // Phase 2: Context Assembly
+        ALIAS_RESOLUTION,       
+        SSD_GRAPH_FETCHED,      
+        LIVING_RAM_ASSEMBLED,   
+        
+        // Phase 3: The Brain
+        LLM_BRAIN_EMISSION,     
+        LINTER_DECODED,
+        
+        // Phase 4: System III (Plugins)
+        PLUGIN_DISPATCH_RECEIVED,
+        
+        // Phase 5: Persistence
+        DB_WRITE_EXECUTED,
+        
+        // Phase 6: Presentation
+        UI_STATE_EMITTED
     }
 
     /**

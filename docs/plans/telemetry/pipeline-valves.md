@@ -1,43 +1,58 @@
 # Pipeline Valve Telemetry Status
 
-> **Purpose**: This document tracks the implementation status of `PipelineValve` checkpoints across the Data-Oriented OS (Project Mono).
-> **Goal**: 100% Observability. Zero "Ghost Passengers" in the ETL flow.
+> **Purpose**: This document tracks the implementation status of `PipelineValve` checkpoints across the Data-Oriented OS.
+> **Mental Model**: This is the GPS route of a "Passenger" (Data Payload) traveling from the Hardware Edge, down the OS Highway to the Brain, out to the Plugin Towns, and finally resting in the SSD Database.
 
-## 🚦 Core Pipeline (The Main Highway)
+## Phase 0: The Edge (Hardware & Ingestion)
+*Data entering the system from the physical world.*
 
-These checkpoints track the primary life cycle of a user request through `IntentOrchestrator` and `RealUnifiedPipeline`.
+| Valve Identifier | OS Function | Payload Metric | Status |
+|------------------|-------------|----------------|--------|
+| `[HARDWARE_AUDIO_RECEIVED]` | Microphone/Agent Central | Byte Size | 🔲 PENDING |
+| `[STT_TRANSCRIPT_DECODED]` | Tingwu/ASR Service | String Length | 🔲 PENDING |
 
-| Checkpoint | Location | Status | Payload Metric |
-|------------|----------|--------|----------------|
-| `[INPUT_RECEIVED]` | `IntentOrchestrator.kt` | ✅ SHIPPED | String Length |
-| `[ROUTER_DECISION]` | `IntentOrchestrator.kt` | ✅ SHIPPED | 1 (Classification) |
-| `[ALIAS_RESOLUTION]` | `RealUnifiedPipeline.kt` | ✅ SHIPPED | Entity Count |
-| `[LIVING_RAM_ASSEMBLED]` | `RealUnifiedPipeline.kt`| ✅ SHIPPED | Node Count (History + Profiles) |
-| `[LLM_BRAIN_EMISSION]` | `RealUnifiedPipeline.kt` | ✅ SHIPPED | String Length (JSON) |
-| `[LINTER_DECODED]` | `RealUnifiedPipeline.kt` | ✅ SHIPPED | Mutation Count |
+## Phase 1: The Gatekeeper (Layer 3 Routing)
+*The OS deciding if the input is noise, clarification, or a real task.*
 
-## 🏙️ Specific Domains (The Towns)
+| Valve Identifier | OS Function | Payload Metric | Status |
+|------------------|-------------|----------------|--------|
+| `[INPUT_RECEIVED]` | Highway Entry / Orchestrator | String Length | ✅ SHIPPED |
+| `[ROUTER_DECISION]` | Lightning Router Short-circuit | Confidence/Target | ✅ SHIPPED |
 
-As we decentralize the monolith into specific domain plugins (like Scheduler, CRM), they must implement their own local valves to track data entering and leaving their specific boundaries.
+## Phase 2: Context Assembly (The Sync Loop)
+*The OS gathering reality before waking up the Brain.*
 
-### Wave 16: Scheduler Plugin
+| Valve Identifier | OS Function | Payload Metric | Status |
+|------------------|-------------|----------------|--------|
+| `[ALIAS_RESOLUTION]` | Entity Disambiguation | Entity Count | ✅ SHIPPED |
+| `[SSD_GRAPH_FETCHED]` | Database query for context | Node Count | 🔲 PENDING |
+| `[LIVING_RAM_ASSEMBLED]`| Final payload handed to LLM | Token/Turn Count | ✅ SHIPPED |
 
-| Checkpoint | Planned Location | Status | Payload Metric |
-|------------|------------------|--------|----------------|
-| `[PLUGIN_DISPATCH_RECEIVED]` | `SchedulerToolPlugin.kt` | 🔲 PENDING | Parameter Count |
-| `[DB_WRITE_EXECUTED]` | `RealScheduledTaskRepository.kt` | 🔲 PENDING | Entity ID |
-| `[UI_STATE_EMITTED]` | `SchedulerViewModel.kt` | 🔲 PENDING | UI State Variant |
+## Phase 3: The Brain (LLM Execution)
+*The non-deterministic barrier.*
 
-### CRM Writer Plugin
+| Valve Identifier | OS Function | Payload Metric | Status |
+|------------------|-------------|----------------|--------|
+| `[LLM_BRAIN_EMISSION]` | Raw string out of AI | String Length | ✅ SHIPPED |
+| `[LINTER_DECODED]` | Typed Kotlin `data class` | Field/Task Count | ✅ SHIPPED |
 
-| Checkpoint | Planned Location | Status | Payload Metric |
-|------------|------------------|--------|----------------|
-| `[ENTITY_MERGE_STARTED]` | `EntityWriter.kt` | 🔲 PENDING | Schema Diff Size |
-| `[DB_WRITE_EXECUTED]` | `EntityWriter.kt` | 🔲 PENDING | Entity ID |
+## Phase 4: System III (The Towns / Plugins)
+*The generic Highway handing off to specialized feature modules.*
 
----
+| Valve Identifier | OS Function | Payload Metric | Status |
+|------------------|-------------|----------------|--------|
+| `[PLUGIN_DISPATCH_RECEIVED]` | E.g., Scheduler Gateway | Parameter Count | 🔲 PENDING |
 
-## Maintenance Rules
+## Phase 5: The SSD (Layer 2 Persistence)
+*The Async Loop saving state to disk.*
 
-1. **Never mark SHIPPED without a Test Run**: You must prove the valve prints to `adb logcat -s VALVE_PROTOCOL` before checking the box.
-2. **One Currency**: Payload metrics should represent structural complexity (count, size, ID), not arbitrary text.
+| Valve Identifier | OS Function | Payload Metric | Status |
+|------------------|-------------|----------------|--------|
+| `[DB_WRITE_EXECUTED]` | E.g., Room EntityWriter | Diff Size / Entity ID | 🔲 PENDING |
+
+## Phase 6: The Skin (Layer 1 Presentation)
+*The state bouncing back up to the user's eyes.*
+
+| Valve Identifier | OS Function | Payload Metric | Status |
+|------------------|-------------|----------------|--------|
+| `[UI_STATE_EMITTED]` | ViewModel emitting to Compose | Data Class Variant | 🔲 PENDING |

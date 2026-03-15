@@ -40,7 +40,7 @@ In Wave 5 (Dual-Loop CQRS Engine), the Router is upgraded to act as the **Entity
 
 ## The Sync Loop: Alias Cache (L1)
 
-> **Architectural Standard**: Ref `project-mono-master-guide.md` §6.A
+> **Architectural Standard**: Ref `Prism-V1.md` §6.A
 
 The Lightning Router enforces the first stage of the Sync Loop for extreme latency reduction:
 

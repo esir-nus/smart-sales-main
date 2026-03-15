@@ -55,7 +55,7 @@
 ---
 
 ### 🌊 Wave 5: The Dual-Loop CQRS Engine (Sync vs Async)
-> Implement the Dual-Loop UJM architecture defined in `project-mono-master-guide.md` (Section 6), decoupling fast Entity ID lookup (Sync) from SSD Mutation (Async).
+> Implement the Dual-Loop UJM architecture defined in `Prism-V1.md` (Section 6), decoupling fast Entity ID lookup (Sync) from SSD Mutation (Async).
 
 #### T1: The Sync Loop (Fast Query)
 - [x] **Docs**: Update `docs/cerb/lightning-router/spec.md` with the "Entity Candidate Gatekeeper" protocol.
@@ -176,7 +176,7 @@
 ## Quick Links
 
 - [os-model-architecture.md](../specs/os-model-architecture.md) — RAM/SSD mental model
-- [project-mono-master-guide.md](../specs/project-mono-master-guide.md) — The Data-Oriented OS Migration Guide (Read before any Mono tasks)
+- [Prism-V1.md](../specs/Prism-V1.md) — The Data-Oriented OS Migration Guide (Read before any Mono tasks)
 - [prism-ui-ux-contract.md](../specs/prism-ui-ux-contract.md) — (Deprecated) The Single Source of Truth for UI/UX is now exclusively the `docs/cerb/[feature]/spec.md` files.
 - [interface-map.md](../cerb/interface-map.md) — Module ownership + data flow
 - [legacy-to-prism-dictionary.md](../reference/legacy-to-prism-dictionary.md) — Legacy mapping

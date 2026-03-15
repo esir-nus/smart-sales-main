@@ -46,7 +46,7 @@ docs/
 |------|--------|---------|
 | [README.md](docs/specs/README.md) | Navigation | **Spec Navigation SOP** — reading order |
 | [Prism-V1.md](docs/specs/Prism-V1.md) | Architecture | **SOT** — Unified Pipeline, Memory, Modes |
-| [project-mono-master-guide.md](docs/specs/project-mono-master-guide.md) | Architecture | **SOT** — The Dual-Engine OS Lifecycle |
+| [Prism-V1.md](docs/specs/Prism-V1.md) | Architecture | **SOT** — The Dual-Engine OS Lifecycle |
 | [gateway-spec.md](docs/cerb-plugin/architecture/gateway-spec.md) | Extensibility | **SOT** — System III Plugin Gateway & Protocol |
 | [prism-ui-ux-contract.md](docs/specs/prism-ui-ux-contract.md) | UX | **INDEX** — Modules, Flows, Components |
 | [style-guide.md](docs/specs/style-guide.md) | UI | Visual design system, typography, components |
@@ -70,7 +70,7 @@ docs/
 ## 3️⃣ Quick Navigation for Agents & Devs
 
 ### I'm implementing a new feature
-1. Read `project-mono-master-guide.md` to understand the rules.
+1. Read `Prism-V1.md` to understand the rules.
 2. Read [docs/sops/feature-development.md](docs/sops/feature-development.md) — **START HERE**.
 3. Use `/feature-dev-planner` workflow to begin.
 

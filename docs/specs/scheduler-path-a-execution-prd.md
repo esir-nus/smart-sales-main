@@ -14,8 +14,7 @@ The Scheduler Path A is designed for **Sub-second Optimistic Execution** with **
 ### A. The Dedicated Mutation Module
 A pure Kotlin domain module responsible for executing the One-Currency LLM intents.
 - **Batch Create**: Handles arrays of tasks atomically.
-- **Batch Delete**: Lexically maps terms ("删掉下午的全部会议") and removes them.
-- **Reschedule**: Enforces the atomic `Insert New -> Delete Old` transaction to prevent data loss.
+- **Single Reschedule**: Enforces the atomic `Insert New -> Delete Old` transaction to prevent data loss. *(Note: Global voice deletions and batch rescheduling are intentionally disabled to prevent premature UX failures).*
 - **Conflict Evaluation**: Checks the `ScheduleBoard`. If a conflict exists, it **still creates the task**, but attaches a `hasConflict=true` or similar flag to trigger the UI Attention Flow.
 
 ### B. The User Experience (The Small Attention Flow)
@@ -61,16 +60,16 @@ When Path A completes an execution, the UI reacts based on the entity state.
 
 ## 4. Global Task Management & Lexical Matching Flows
 
-The true power of Path A is **Global Voice Execution**. The user does not need to explicitly open a specific card or context to modify it. The user can press the physical Badge (or the Rec button) from anywhere in the OS and say "取消下午的开会".
+The true power of Path A is **Global Voice Execution**. The user does not need to explicitly open a specific card or context to modify it. The user can press the physical Badge (or the Rec button) from anywhere in the OS and say "把下午的开会推迟两小时".
 
 ### A. The Lexical Fuzzy Match Protocol (Anti-Hallucination)
-Path A fundamentally distrusts LLM-generated IDs for global targeting. When executing a `Reschedule` or `Delete` intent, the LLM emits a `targetTaskQuery` (e.g., "下午的开会"). The Dedicated Mutation Module executes a deterministic Kotlin lexical search against the `ScheduleBoard.upcomingItems` (which explicitly filters out completed/expired tasks).
+Path A fundamentally distrusts LLM-generated IDs for global targeting. When executing a `Reschedule` intent, the LLM emits a `targetTaskQuery` (e.g., "下午的开会"). The Dedicated Mutation Module executes a deterministic Kotlin lexical search against the `ScheduleBoard.upcomingItems` (which explicitly filters out completed/expired tasks).
 
 **GUID Inheritance Rule**: During a Reschedule (which is an atomic Create + Delete), the newly inserted task MUST forcefully inherit the exact `id` (the code-generated GUID) of the original matched task. This ensures any downstream links (like Path B CRM bindings) remain unbroken.
 
 **Match Evaluation Rules:**
-- **0 Matches**: Abort operations. System emits Toast/Voice prompt: *"⚠️ 未找到匹配的日程，请更具体一些。"* (Prevents hallucinated deletions).
-- **1 Exact Match**: Happy Path. The transaction (Create + Delete or just Delete) proceeds atomically.
+- **0 Matches**: Abort operations. System emits Toast/Voice prompt: *"⚠️ 未找到匹配的日程，请更具体一些。"* (Prevents hallucinated modifications).
+- **1 Exact Match**: Happy Path. The transaction (Create + Delete under the hood) proceeds atomically.
 - **2+ Matches (Ambiguity)**: Abort operations. System emits Toast/Voice prompt: *"⚠️ 找到多个匹配的日程，请进入日程面板手动调整。"* (Prevents destroying the wrong task).
 
 ### B. Auto-Expiry and Scope Limiting
@@ -114,17 +113,7 @@ data class RescheduleTaskParams(
 )
 ```
 
-### Tool 3: `DeleteTaskParams`
-Global cross-session deletion.
-
-```kotlin
-@Serializable
-data class DeleteTaskParams(
-    val targetTaskQuery: String         // Lexical fuzzy search term (e.g., "下午的电话")
-)
-```
-
-### Tool 4: `CreateInspirationParams` (Timeless Intent)
+### Tool 3: `CreateInspirationParams` (Timeless Intent)
 A separate tool strictly for timeless queries, aspirations, or general notes that don't belong on a strict ISO-bounded timeline layout.
 
 ```kotlin

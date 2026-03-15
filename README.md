@@ -88,6 +88,22 @@ docs/
 
 ---
 
+## 4️⃣ Core Protocols (`.agent/rules/`)
+*The behavioral, architectural, and quality rules agents must follow.*
+
+| Protocol | Purpose |
+|----------|---------|
+| [anti-drift-protocol.md](.agent/rules/anti-drift-protocol.md) | Spec-First development, preventing skeleton code & assumed features |
+| [anti-laziness.md](.agent/rules/anti-laziness.md) | Concrete, comprehensive, negative verification requirements |
+| [docs-first-protocol.md](.agent/rules/docs-first-protocol.md) | The 3 Gates: No code without docs. Sync specs on every change |
+| [context-boundaries.md](.agent/rules/context-boundaries.md) | Anthropic context separation rules (Same Context vs Blackbox) |
+| [prism-clean-env.md](.agent/rules/prism-clean-env.md) | Golden Rule: `domain/` must never import Android or Legacy code |
+| [human-intricacies-protocol.md](.agent/rules/human-intricacies-protocol.md) | Handling organic UX chaos instead of building "perfect" pipelines |
+| [cross-module-check.md](.agent/rules/cross-module-check.md) | Interface Map checks before crossing domain boundaries |
+| [lessons-learned.md](.agent/rules/lessons-learned.md) | Index of previous agent hallucination traps and architectural fixes |
+
+---
+
 ## Source of Truth Hierarchy
 When documents conflict, follow this precedence:
 1. **The Kotlin `data class`** in `:domain` (Ultimate SSD Contract).

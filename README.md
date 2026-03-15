@@ -1,52 +1,97 @@
-# Smart Sales / Project Mono
-> ⚠️ **ARCHITECTURAL HUB**: For all system documentation, specs, and the Plugin Gateway API, see the authoritative index at: **[docs/README.md](./docs/README.md)**
+# Smart Sales OS & Documentation Index
+
+> **Navigation hub for AI agents and developers**  
+> **Architecture**: Prism (Unified Pipeline)  
+> **Last Updated**: 2026-03-15
 
 ---
 
-A self-contained multi-module Android project that merges the proven pieces from:
+## 🏗️ Project Mono: The Data-Oriented OS
+A self-contained multi-module Android project implementing the Dual-Engine Architecture (Sync/Query vs Async/Command).
 
-1. `aiFeatureTestApp` – Compose shell that already wires DashScope chat, media preview, Tingwu diagnostics, and the Wi-Fi/BLE tester UI.
-2. `tingwuTestApp` – The standalone Tingwu + OSS coordinator used by the tester card.
-3. `feature/connectivity` + shared `core`/`data` libraries – BLE scanning/provisioning stack, DashScope chat pipeline, media state, and platform utilities.
-
-All of the modules live under this new root, so you can archive or iterate on them independently before running `git pull` on the original repo.
-
-> Note: due to workspace permissions the project lives at `smart-sales-app/main_app` rather than `/main_app`. Feel free to move it elsewhere if needed.
-
-## Module map
-
-| Module | Purpose |
-| --- | --- |
-| `:app` | Copy of the proven `aiFeatureTestApp`, now serving as the main entry point. It renders chat/media panels, Tingwu upload diagnostics, and the WiFi/BLE/HTTP tester cards in one Compose screen. Hilt config + overrides are already in `AiFeatureTestApplication`. |
-| `:tingwuTestApp` | Tingwu playground that exposes `TingwuTestViewModel`, OSS upload helpers, and config overrides reused by `:app`. |
-| `:feature:connectivity` | BLE profile/scanner abstractions, `DeviceConnectionManager`, Wi-Fi provisioning state machine, media server HTTP helper, etc. |
-| `:feature:chat` / `:feature:media` | DashScope chat state + Media sync coordinators. |
-| `:data:ai-core` | DashScope + Tingwu + OSS clients (reads secrets from `local.properties`). |
-| `:core:util` / `:core:test` | Shared dispatcher/result utilities and JVM test helpers. |
-
-The Gradle settings include only these modules, so the dependency graph stays lean.
-
-## Building & running
-
+To run the application:
 ```bash
-cd smart-sales-app/main_app
 ./gradlew :app:assembleDebug
-adb install app/build/outputs/apk/debug/app-debug.apk
-adb shell am start com.smartsales.aitest/.AiFeatureTestActivity
 ```
 
-Requirements:
+---
 
-- JDK 17 is pinned in `gradle.properties`.
-- `local.properties` already mirrors the original project (SDK path plus DashScope/Tingwu/OSS credentials). Update it if you rotate keys.
-- If Gradle cannot download dependencies in this environment (sandbox), copy the project to a writable location and rerun the commands.
+## 🗂️ Folder Structure
 
-### Tingwu base URL
+```
+docs/
+├── AGENTS.md        # 🤖 AI collaboration rules (generic behavior)
+├── specs/           # 🔒 Locked contracts (WHAT to build)
+│   └── README.md    # 📍 Spec navigation SOP
+├── cerb/            # 🔲 Cerb-compliant modules (self-contained specs)
+│   └── memory-center/  # Memory Center spec + interface
+├── cerb-plugin/     # 🔌 System III Plugins (Towns)
+├── sops/            # 📋 Standard Operating Procedures
+├── plans/           # 🔄 Living trackers (WHERE we are)
+├── reports/         # 📊 Audit and Verification Reports
+├── dev-notes/       # 📝 Human handovers (agent ignores)
+└── archived/        # 💀 Dead docs
 
-`TINGWU_BASE_URL` now points directly at whatever host/path you configure. When you enter an Aliyun host such as `https://tingwu.cn-beijing.aliyuncs.com/`, we automatically append `/openapi/tingwu/v2/` so it matches the official API in `tingwu-doc.md`. If you explicitly set a proxy URL (for example `https://tingwu.cn/api/v1/`), that value is used verbatim. Retrofit paths stay relative (`tasks`, `tasks/{taskId}`, …), so the base you provide controls exactly which service receives the requests.
+.agent/
+├── rules/smart-sales.md   # 📍 Project context (nav + commands)
+└── workflows/             # ⚡ Slash commands
+```
 
-## Next steps
+---
 
-1. Confirm Gradle has permission to write to `~/.gradle` (the CLI sandbox blocked me when I tried running `./gradlew :app:help`).
-2. After verifying builds/tests locally, optionally prune modules you no longer need or move the entire `main_app` directory outside the repo to keep it safe from upcoming `git pull` operations.
-3. When you are ready, integrate this project (or cherry-pick modules) back into the refreshed repo.
+## 1️⃣ Locked Contracts (`specs/` & `cerb*/`)
+*The unchangeable laws of the OS.*
+
+| File | Domain | Purpose |
+|------|--------|---------|
+| [README.md](docs/specs/README.md) | Navigation | **Spec Navigation SOP** — reading order |
+| [Prism-V1.md](docs/specs/Prism-V1.md) | Architecture | **SOT** — Unified Pipeline, Memory, Modes |
+| [project-mono-master-guide.md](docs/specs/project-mono-master-guide.md) | Architecture | **SOT** — The Dual-Engine OS Lifecycle |
+| [gateway-spec.md](docs/cerb-plugin/architecture/gateway-spec.md) | Extensibility | **SOT** — System III Plugin Gateway & Protocol |
+| [prism-ui-ux-contract.md](docs/specs/prism-ui-ux-contract.md) | UX | **INDEX** — Modules, Flows, Components |
+| [style-guide.md](docs/specs/style-guide.md) | UI | Visual design system, typography, components |
+| [connectivity-spec.md](docs/cerb/connectivity-bridge/spec.md) | Connectivity | BLE/WiFi/HTTP contracts |
+| [GLOSSARY.md](docs/specs/GLOSSARY.md) | Terminology | Terms, no-synonyms rule |
+
+---
+
+## 2️⃣ Living Trackers (`plans/` & `reports/`)
+*The current state of the world. Updated daily.*
+
+| File | Purpose |
+|------|---------|
+| **[tracker.md](docs/plans/tracker.md)** | **Main tracker** — architecture, modules, milestones (Always start here) |
+| [interface-map.md](docs/cerb/interface-map.md) | **Interface boundaries** — what module owns what |
+| [pipeline-valves.md](docs/plans/telemetry/pipeline-valves.md) | **Telemetry** — OS GPS Checkpoints |
+| [changelog.md](docs/plans/changelog.md) | History of completed epics |
+
+---
+
+## 3️⃣ Quick Navigation for Agents & Devs
+
+### I'm implementing a new feature
+1. Read `project-mono-master-guide.md` to understand the rules.
+2. Read [docs/sops/feature-development.md](docs/sops/feature-development.md) — **START HERE**.
+3. Use `/feature-dev-planner` workflow to begin.
+
+### I'm building a System III Plugin
+1. Read the Extensibility manifesto: [gateway-spec.md](docs/cerb-plugin/architecture/gateway-spec.md).
+2. Look at the reference implementation: `docs/cerb-plugin/echo-test/spec.md`.
+3. Use `/cerb-plugin-template` to scaffold your new town.
+
+### I'm debugging missing data
+1. Open Logcat and filter by `VALVE_PROTOCOL`.
+2. Check [pipeline-valves.md](docs/plans/telemetry/pipeline-valves.md) to see which GPS checkpoint the payload vanished at.
+
+### I'm designing UI/UX
+1. Read [prism-ui-ux-contract.md](docs/specs/prism-ui-ux-contract.md) for INDEX.
+2. Apply [style-guide.md](docs/specs/style-guide.md) for visuals.
+
+---
+
+## Source of Truth Hierarchy
+When documents conflict, follow this precedence:
+1. **The Kotlin `data class`** in `:domain` (Ultimate SSD Contract).
+2. **Prism-V1.md / Master Guide** (Architectural Laws).
+3. **tracker.md / interface-map.md** (Current State).
+4. Module/Spec definitions.

@@ -66,6 +66,8 @@ The true power of Path A is **Global Voice Execution**. The user does not need t
 ### A. The Lexical Fuzzy Match Protocol (Anti-Hallucination)
 Path A fundamentally distrusts LLM-generated IDs for global targeting. When executing a `Reschedule` or `Delete` intent, the LLM emits a `targetTaskQuery` (e.g., "下午的开会"). The Dedicated Mutation Module executes a deterministic Kotlin lexical search against the `ScheduleBoard.upcomingItems` (which explicitly filters out completed/expired tasks).
 
+**GUID Inheritance Rule**: During a Reschedule (which is an atomic Create + Delete), the newly inserted task MUST forcefully inherit the exact `id` (the code-generated GUID) of the original matched task. This ensures any downstream links (like Path B CRM bindings) remain unbroken.
+
 **Match Evaluation Rules:**
 - **0 Matches**: Abort operations. System emits Toast/Voice prompt: *"⚠️ 未找到匹配的日程，请更具体一些。"* (Prevents hallucinated deletions).
 - **1 Exact Match**: Happy Path. The transaction (Create + Delete or just Delete) proceeds atomically.

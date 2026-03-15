@@ -59,7 +59,24 @@ When Path A completes an execution, the UI reacts based on the entity state.
    [ User Taps Card ] ──► Opens Small Attention Flow (Inline resolution/edit).
 ```
 
-## 4. The Data Contracts (The "One Currency" Schema)
+## 4. Global Task Management & Lexical Matching Flows
+
+The true power of Path A is **Global Voice Execution**. The user does not need to explicitly open a specific card or context to modify it. The user can press the physical Badge (or the Rec button) from anywhere in the OS and say "取消下午的开会".
+
+### A. The Lexical Fuzzy Match Protocol (Anti-Hallucination)
+Path A fundamentally distrusts LLM-generated IDs for global targeting. When executing a `Reschedule` or `Delete` intent, the LLM emits a `targetTaskQuery` (e.g., "下午的开会"). The Dedicated Mutation Module executes a deterministic Kotlin lexical search against the `ScheduleBoard.upcomingItems` (which explicitly filters out completed/expired tasks).
+
+**Match Evaluation Rules:**
+- **0 Matches**: Abort operations. System emits Toast/Voice prompt: *"⚠️ 未找到匹配的日程，请更具体一些。"* (Prevents hallucinated deletions).
+- **1 Exact Match**: Happy Path. The transaction (Create + Delete or just Delete) proceeds atomically.
+- **2+ Matches (Ambiguity)**: Abort operations. System emits Toast/Voice prompt: *"⚠️ 找到多个匹配的日程，请进入日程面板手动调整。"* (Prevents destroying the wrong task).
+
+### B. Auto-Expiry and Scope Limiting
+To ensure the Lexical Fuzzy Matcher remains lightning fast and accurate, the active search pool (`ScheduleBoard.upcomingItems`) must be aggressively pruned.
+- **Manual Completion**: User taps the checkbox on the UI. `isDone = true`. The task is immediately filtered out of the active voice scope.
+- **Auto-Expiry Sweep**: The `SchedulerViewModel` initializes a sweep of past-due tasks (where `startTime + duration` < Now) on load, implicitly migrating them to historical memory and immediately removing them from the global voice scope.
+
+## 5. The Data Contracts (The "One Currency" Schema)
 
 The FastTrack Parser must output these exact explicit DTOs. 
 
@@ -116,7 +133,8 @@ data class CreateInspirationParams(
 )
 ```
 
-## 5. Why This Wins (Architectural Defense)
+## 6. Why This Wins (Architectural Defense)
 1. **Zero Black Holes**: The user always gets visual proof their audio was heard. Ghosting is entirely eliminated.
 2. **Re-usability**: By cementing the "Red-Flagged Card" pattern for Path A conflicts now, Path B can perfectly recycle this exact same UI component to solve CRM disambiguation later. It unifies the error-handling experience across the entire App.
 3. **Decoupled Logic**: The UI doesn't evaluate conflicts. The UI just renders whatever the Dedicated Mutation Module saves to the SSD.
+4. **Resilient Matching**: Lexical match limits LLM hallucination scope. If the LLM gets confused, the rigid Kotlin scope checks prevent collateral data damage.

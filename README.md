@@ -44,7 +44,6 @@ docs/
 
 | File | Domain | Purpose |
 |------|--------|---------|
-| [README.md](docs/specs/README.md) | Navigation | **Spec Navigation SOP** — reading order |
 | [Architecture.md](docs/specs/Architecture.md) | Architecture | **SOT** — The Data-Oriented OS Migration Guide |
 | [gateway-spec.md](docs/cerb-plugin/architecture/gateway-spec.md) | Extensibility | **SOT** — System III Plugin Gateway & Protocol |
 | [prism-ui-ux-contract.md](docs/specs/prism-ui-ux-contract.md) | UX | **INDEX** — Modules, Flows, Components |

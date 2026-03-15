@@ -50,6 +50,7 @@ docs/
 | [prism-ui-ux-contract.md](docs/specs/prism-ui-ux-contract.md) | UX | **INDEX** — Modules, Flows, Components |
 | [style-guide.md](docs/specs/style-guide.md) | UI | Visual design system, typography, components |
 | [connectivity-spec.md](docs/cerb/connectivity-bridge/spec.md) | Connectivity | BLE/WiFi/HTTP contracts |
+| [testing-protocol.md](docs/cerb-e2e-test/testing-protocol.md) | Testing | **SOT** — The 3-Level Standard & E2E Pillars |
 | [GLOSSARY.md](docs/specs/GLOSSARY.md) | Terminology | Terms, no-synonyms rule |
 
 ---
@@ -61,7 +62,7 @@ docs/
 |------|---------|
 | **[tracker.md](docs/plans/tracker.md)** | **Main tracker** — architecture, modules, milestones (Always start here) |
 | [interface-map.md](docs/cerb/interface-map.md) | **Interface boundaries** — what module owns what |
-| [pipeline-valves.md](docs/plans/telemetry/pipeline-valves.md) | **Telemetry** — OS GPS Checkpoints |
+| [pipeline-valves.md](docs/plans/telemetry/pipeline-valves.md) | **Telemetry Protocol** — OS GPS Checkpoints (Must be updated on new edges) |
 | [changelog.md](docs/plans/changelog.md) | History of completed epics |
 
 ---

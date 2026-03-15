@@ -11,14 +11,16 @@
 | Section | Description | Lines |
 |---------|-------------|-------|
 | [§1 Executive Summary](#1-executive-summary) | Core principles, unified pipeline overview | 9-22 |
-| [§2 Architecture Blueprint](#2-architecture-blueprint) | Pipeline diagram, Core Components, Model Router, Auto-Quote | 23-340 |
-| [§3 Data Flow & Consistency](#3-data-flow--consistency) | Buffered streaming, consistency model | 304-358 |
-| [§4 Mode Pipelines](#4-mode-pipelines-ascii-visualization) | Coach, Analyst, Scheduler mode flows | 359-487 |
-| [§5 Memory System](#5-memory-system--relevancy-library) | Hot/Cement Zones, RelevancyEntry schema, Entity Disambiguation, User Habits | 488-863 |
-| [§6 Crash Recovery](#6-crash-recovery--checkpoints) | Local Recovery Queue, checkpoints | 864-927 |
-| [§7 Testability Contract](#7-testability-contract-lattice-compliance) | Lattice compliance rules | 928-964 |
-| [§8 Extension Guidelines](#8-extension-guidelines) | Future extensibility | 965-974 |
-| [§9 Relationship to Lattice](#9-relationship-to-lattice) | Architecture evolution | 975-987 |
+| [§2 Project Mono Philosophy & Lifecycle](#2-project-mono-philosophy--lifecycle) | Brain/Body Disconnect, One Currency Rule, Validation Gates | 29-75 |
+| [§3 Architecture Blueprint](#3-architecture-blueprint) | Pipeline diagram, Core Components, Model Router, Auto-Quote | 76-340 |
+| [§4 Data Flow & Consistency](#4-data-flow--consistency) | Buffered streaming, consistency model | 341-390 |
+| [§5 Mode Pipelines](#5-mode-pipelines-ascii-visualization) | Coach, Analyst, Scheduler mode flows | 391-487 |
+| [§6 Memory System](#6-memory-system--relevancy-library) | Hot/Cement Zones, RelevancyEntry schema, Entity Disambiguation, User Habits | 488-863 |
+| [§7 Crash Recovery](#7-crash-recovery--checkpoints) | Local Recovery Queue, checkpoints | 864-927 |
+| [§8 Testability Contract](#8-testability-contract-lattice-compliance) | Lattice compliance rules | 928-964 |
+| [§9 Extension Guidelines](#9-extension-guidelines) | Future extensibility | 965-974 |
+| [§10 Pipeline Valve Protocol](#10-pipeline-valve-protocol-observable-architecture) | SOT for Data Observability | 1000-1030 |
+| [§11 Relationship to Lattice](#11-relationship-to-lattice) | Architecture evolution | 975-987 |
 | [Appendix A: Changelog](#appendix-a-changelog) | Version history | 988-1002 |
 | [Appendix B: Memory Trinity](#appendix-b-memory-trinity-overview) | Memory layer diagram | 1003-1042 |
 | [Appendix C: Hybrid RAG](#appendix-c-hybrid-rag-strategy) | RAG integration strategy | 1043-1061 |
@@ -39,9 +41,131 @@ The name "Prism" reflects the core pattern: a single stream of user intent enter
 
 ---
 
-## 2. Architecture Blueprint
+## 2. Project Mono Philosophy & Lifecycle
 
-### 2.1 The Unified Pipeline
+**Project Mono** resolves the "Brain/Body Disconnect" by fundamentally changing the contract between the AI Engine (The Brain) and the Android Application (The Body). This is the governing philosophy of the Prism architecture.
+
+### 2.1 The "One Currency" Rule (The Illusion of Interfaces)
+Previously, modules were connected by clean interfaces (e.g., `fun process(json: String)`), but they traded in "multiple currencies" (raw Strings, custom JSON, regex). Because the data was shapeless, the LLM was forced to act as the Currency Exchange, guessing what each module required, causing Ghosting (the LLM hallucinated fields a downstream module couldn't parse).
+
+In Project Mono, **there is only one currency**: The strictly typed SSD Kotlin `data class`. 
+- **Module B (Database)** defines the currency.
+- **Module A (Prompt/Brain)** is forced to use that exact currency via schema generation.
+- **The Linter (Teller)** verifies the currency via strict deserialization. This eliminates hallucination at the boundary.
+
+### 2.2 The Strict Cerb Lifecycle
+Every module migrating to Project Mono **MUST** follow this exact lifecycle. Bypassing these steps is an automatic failure.
+
+1. **Docs/Specs**: The feature spec (`docs/cerb/[feature]/spec.md`) must be written/updated defining the exact Data Contract (the fields that mutate).
+2. **Interface Map**: `docs/cerb/interface-map.md` must be updated to denote the new API boundary.
+3. **Plan**: Execute the `/feature-dev-planner` workflow to generate the implementation plan based strictly on the Docs.
+4. **Execute**: Write the code, ensuring pure Kotlin `data classes` live in the `:domain` layer without Android imports.
+5. **E2E Test**: The migration must withstand a full end-to-end lifecycle test. If the full pipeline isn't built yet, use `WorldStateSeeder` to inject a simulated fragment. The code cannot be marked SHIPPED without a passing E2E log.
+
+### 2.3 What to Check (Validation Gates)
+When reviewing a Project Mono PR or Plan, verify the following:
+
+- **No Hardcoded Schemas**: If you see `{ "deal_stage": "string" }` hardcoded inside a Prompt string, **Reject it**. It must say `json.dumps(QuoteMutation.model_json_schema())` or the Kotlin equivalent via `kotlinx.serialization`.
+- **Domain Purity**: Are the Mutation Data Classes inside pure Kotlin `:domain` modules? If they contain `import android.*`, **Reject it**.
+- **Linter Simplicity**: If the Linter contains regex (`Regex("date=.*")`) or manual string-parsing math to figure out the LLM's intent, **Reject it**. It should be a 1-line `decodeFromString()`.
+- **JSON Coercion Resilience**: All `PrismJson` instances parsing LLM outputs MUST set `coerceInputValues = true`. The LLM frequently hallucinates explicit `null` tokens.
+- **Defensive Deserialization (Enum Safety)**: Never use standard `enumValueOf<T>()` or `T.valueOf()` when mapping strings from the Room Database to Kotlin Enums. Use `safeEnumValueOf<T>(value, fallback)`.
+- **Domain vs UI State Decoupling**: Pure Domain Kotlin `data classes` represent the factual SSD truth. They must NEVER be overloaded with UI-specific rendering flags (like `tipsLoading`, `isExpanded`, or `amberGlow`).
+
+---
+
+## 3. Architecture Blueprint
+
+### 3.1 The CQRS Dual-Engine Pattern (Master UJM)
+
+To understand Project Mono's "Intelligence," an agent must understand the **Dual-Loop Architecture** during a Chat Session. We strictly decouple the high-speed "Sync/Query" loop from the slow, complex "Async/Command" loops.
+
+#### Architectural ASCII Map
+
+```text
+================================================================================================
+                        SYNC LOOP (Fast Query & RAM Assembly)
+================================================================================================
+                                      
+[User Input] 
+      │
+      ▼
+┌───────────────┐     [NO NAME]     ┌──────────────────┐
+│ Lightning     ├──────────────────►│ Clarification    │──► (Halt: Ask User "Who?")
+│ Router        │                   │ Minor Loop       │
+└───────┬───────┘                   └──────────────────┘
+        │
+   [CANDIDATE]
+        │
+        ▼
+┌───────────────┐   [MULTIPLE]      ┌──────────────────┐
+│ Alias Lib     ├──────────────────►│ Disambiguation   │──► (Halt: Yield Options to User)
+│ (L1 Cache)    │   [MISSING]       │ Minor Loop       │
+└───────┬───────┘                   └──────────────────┘
+        │
+    [EXACT ID]
+        │
+        ▼
+┌───────────────┐
+│ SSD Graph     │ (Heavy SQL Fetch)
+│ Query         │
+└───────┬───────┘
+        │
+        ▼
+┌───────────────┐
+│ Living RAM    │◄──────────┐ (Injected Context for Future Turns)
+│ Assembly      │           │
+└───────┬───────┘           │
+        │                   │
+        ▼                   │
+┌───────────────┐           │
+│ LLM Brain     │           │
+│ Generation    │           │
+└───────┬───────┘           │
+        │                   │
+        ▼                   │
+ [Chat Response]            │
+                            │
+============================│===================================================================
+                        ASYNC LOOPS (Background Mutations)
+============================│===================================================================
+                            │
+   [Entity Mutated]         │ 
+        │                   │
+        ▼                   │
+┌───────────────┐           │
+│ decodeFromStr │ (Linter)  │
+└───────┬───────┘           │
+        │                   │
+        ▼                   │
+┌───────────────┐           │
+│ SSD Write /   │───────────┘
+│ Entity Merge  │
+└───────────────┘
+
+┌───────────────┐
+│ RL Module     │ (Listens passively to user input for async habit updates)
+└───────────────┘
+```
+
+#### A. The Sync Loop (Fast RAM Assembly & Query)
+This is the main interaction pipeline. Its entire goal is to build context (RAM) from the SSD with zero LLM hallucination and sub-second latency *before* generation begins.
+
+1. **Lightning Router (Gatekeeper)**: Does this input contain an "Entity Candidate"? If NO -> trigger the Clarification Minor Loop.
+2. **Alias Lib (L1 Cache)**: Given the Entity Candidate, look up the `EntityID` in the fast, in-memory alias dictionary.
+3. **Disambiguation Minor Loop**: If multiple hits -> Suspend pipeline. Yield to user.
+4. **SSD Graph Fetch -> RAM**: Query the heavy SQL SSD. Pull the target's entire relationship graph into Living RAM.
+5. **The Brain Acts (LLM)**: Generates the chat response using verified intelligence.
+
+#### B. The Async Loops (Background Mutations & Commands)
+The LLM does NOT directly write to the database in the critical UX path. Writes are asynchronous events.
+
+1. **Decoupled Entity Writing & Merging**: If the LLM determines an Entity mutation occurred, it emits a strict Kotlin `data class`. The Background Writer runs the `decodeFromString` Linter, mutates SSD, and merges back into RAM.
+2. **Decoupled Reinforcement Learning (RL)**: Every user turn is quietly copied to the RL Module to update Habits independently.
+
+---
+
+### 3.2 The Unified Pipeline
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐

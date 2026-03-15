@@ -31,7 +31,7 @@ This document provides human-readable guidelines for:
 
 **Docs > Code > Guessing**
 
-1. Architecture SOT: `docs/specs/Prism-V1.md`
+1. Architecture SOT: `docs/specs/Architecture.md`
 2. UX SOT: `docs/specs/prism-ui-ux-contract.md`
 3. Tracker: `docs/plans/tracker.md`
 4. Archived docs (`docs/archived/**`) are historical only

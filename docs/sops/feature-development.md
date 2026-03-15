@@ -35,7 +35,7 @@
 
 | Layer | SOT Document | Question |
 |-------|--------------|----------|
-| **Brain** | `Prism-V1.md` §relevant | What's the core logic? |
+| **Brain** | `Architecture.md` §relevant | What's the core logic? |
 | **Soul** | `prism-ui-ux-contract.md` | What's the UX intent? |
 | **Body** | Module/Component specs | What's the layout? |
 

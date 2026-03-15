@@ -9,7 +9,7 @@
 
 | Document | Role |
 |----------|------|
-| [`Prism-V1.md`](../specs/Prism-V1.md) | **Architecture**: Unified Pipeline, Mode Strategies, Memory, Schemas |
+| [`Architecture.md`](../specs/Architecture.md) | **Architecture**: Unified Pipeline, Mode Strategies, Memory, Schemas |
 | [`prism-ui-ux-contract.md`](../specs/prism-ui-ux-contract.md) | **Presentation**: Layouts, Gestures, Component Registry, Flows |
 
 ---

@@ -1,6 +1,6 @@
 # Prism Spec-to-Interface Mapping
 
-> **Purpose**: Bidirectional sync table between Prism-V1.md and codebase.
+> **Purpose**: Bidirectional sync table between Architecture.md and codebase.
 > **Usage**: When spec changes → update interfaces. When interfaces change → update spec.
 > **Last Synced**: 2026-01-26
 

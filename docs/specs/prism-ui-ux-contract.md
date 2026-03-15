@@ -2,7 +2,7 @@
 
 > **Status:** Active Index & Policy Rule
 > **Last Updated:** 2026-03-14
-> **Architecture Companion:** [Prism-V1.md](./Prism-V1.md)
+> **Architecture Companion:** [Architecture.md](./Architecture.md)
 > **Terminology:** [GLOSSARY.md](./GLOSSARY.md)
 
 ---

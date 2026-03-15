@@ -1,15 +1,26 @@
-# Project Mono Architecture: The OS Mental Model
+# Project Mono: Master Architectural Guide
 
 **Status:** Active SOT  
 **Successor to:** Prism-V1.md, Lattice Architecture  
 
+> **Preamble**: This is the authoritative framework for the "Project Mono" (Data-Oriented OS) architecture migration. Any agent executing tasks, writing specs, or generating code *must* read this document first.
+
 ---
 
-## 1. Executive Summary
+## 1. The Philosophy & Purpose
 
-**Project Mono** is the architectural standard for the Intelligent Personal Assistant system. It replaces the legacy, stateful "Mode" coordination of Prism-V1 with a **Dual-Engine CQRS Pipeline** running on an **Operating System (OS) Mental Model**.
+### What is Project Mono?
+Project Mono resolves the "Brain/Body Disconnect" by fundamentally changing the contract between the AI Engine (The Brain) and the Android Application (The Body). It replaces the legacy, stateful "Mode" coordination of Prism-V1 with a **Dual-Engine CQRS Pipeline** running on an **Operating System (OS) Mental Model**.
 
-The core philosophy resolves the "Brain/Body Disconnect" by enforcing the **One Currency Rule**: The LLM Engine and the Android Application communicate exclusively via strictly typed Kotlin `data classes`. Untyped JSON strings and regex parsers are forbidden.
+### The Core Problem ("Essay Questions")
+Previously, the system relied on "Behavioral Contracts." The AI was asked to write an essay (free-form JSON) based on a hardcoded, handwritten string block inside the `PromptCompiler`. If the database schema changed, developers had to manually update the prompt strings and the regex-heavy Linters. This caused "Ghosting" (the AI hallucinating fields the DB didn't support).
+
+### The "One Currency" Rule (The Illusion of Interfaces)
+Previously, modules were connected by clean interfaces (e.g., `fun process(json: String)`), but they traded in "multiple currencies" (raw Strings, custom JSON, regex). Because the data was shapeless, the LLM was forced to act as the Currency Exchange, guessing what each module required. This caused Ghosting.
+In Project Mono, **there is only one currency**: The strictly typed SSD Kotlin `data class`. 
+- **Module B (Database)** defines the currency.
+- **Module A (Prompt/Brain)** is forced to use that exact currency via schema generation.
+- **The Linter (Teller)** verifies the currency via strict deserialization. If it doesn't match the Kotlin object, it crashes safely before touching the disk. This eliminates hallucination at the boundary.
 
 ---
 
@@ -60,61 +71,165 @@ The Kernel (`ContextBuilder`) incrementally builds the RAM into three bounded se
 
 ---
 
-## 3. The Dual-Engine Pipeline (CQRS)
+## 3. The CQRS Dual-Engine Pattern (Master UJM)
 
-The pipeline separates high-speed user conversational queries from slow, complex database mutations.
+To understand Project Mono's "Intelligence," an agent must understand the **Dual-Loop Architecture** during a Chat Session. We strictly decouple the high-speed "Sync/Query" loop from the slow, complex "Async/Command" loops.
 
+### Architectural ASCII Map
+
+```text
+================================================================================================
+                        SYNC LOOP (Fast Query & RAM Assembly)
+================================================================================================
+                                      
+[User Input] 
+      │
+      ▼
+┌───────────────┐     [NO NAME]     ┌──────────────────┐
+│ Lightning     ├──────────────────►│ Clarification    │──► (Halt: Ask User "Who?")
+│ Router        │                   │ Minor Loop       │
+└───────┬───────┘                   └──────────────────┘
+        │
+   [CANDIDATE]
+        │
+        ▼
+┌───────────────┐   [MULTIPLE]      ┌──────────────────┐
+│ Alias Lib     ├──────────────────►│ Disambiguation   │──► (Halt: Yield Options to User)
+│ (L1 Cache)    │   [MISSING]       │ Minor Loop       │
+└───────┬───────┘                   └──────────────────┘
+        │
+    [EXACT ID]
+        │
+        ▼
+┌───────────────┐
+│ SSD Graph     │ (Heavy SQL Fetch)
+│ Query         │
+└───────┬───────┘
+        │
+        ▼
+┌───────────────┐
+│ Living RAM    │◄──────────┐ (Injected Context for Future Turns)
+│ Assembly      │           │
+└───────┬───────┘           │
+        │                   │
+        ▼                   │
+┌───────────────┐           │
+│ LLM Brain     │           │
+│ Generation    │           │
+└───────┬───────┘           │
+        │                   │
+        ▼                   │
+ [Chat Response]            │
+                            │
+============================│===================================================================
+                        ASYNC LOOPS (Background Mutations)
+============================│===================================================================
+                            │
+   [Entity Mutated]         │ 
+        │                   │
+        ▼                   │
+┌───────────────┐           │
+│ decodeFromStr │ (Linter)  │
+└───────┬───────┘           │
+        │                   │
+        ▼                   │
+┌───────────────┐           │
+│ SSD Write /   │───────────┘
+│ Entity Merge  │
+└───────────────┘
+
+┌───────────────┐
+│ RL Module     │ (Listens passively to user input for async habit updates)
+└───────────────┘
 ```
-┌───────────────────────────────────────────────────────────────┐
-│                 DUAL-ENGINE CQRS PIPELINE                     │
-├───────────────────────────────────────────────────────────────┤
-│                                                               │
-│   [ User Input ]                                              │
-│         │                                                     │
-│   ┌─────┴──────────┐                                          │
-│   │Lightning Router│ (Gatekeeper)                             │
-│   └─────┬──────────┘                                          │
-│         │                                                     │
-│         ├──▶ [ Sync Loop ]    ──(Fast Query)──▶ [ UI Stream ] │
-│         │       (Kernel Load + LLM Markdown)                  │
-│         │                                                     │
-│         └──▶ [ Async Loop ]   ──(Mutation)────▶ [ OS: SSD ]   │
-│                 (JSON + Linter + DB Write)                    │
-│                                                               │
-└───────────────────────────────────────────────────────────────┘
-```
 
-### A. The Sync Loop (Fast Query)
-Optimized for sub-second latency and zero hallucination.
-1. **Lightning Router**: Gatekeeper that evaluates intent. Drops the old "Manual Coach/Analyst" toggles.
-2. **Alias Lib (L1 Cache)**: Instantly resolves named entities (e.g., "张总" -> `z-001`).
-3. **Kernel Load**: Pulls the entity graph from SSD to RAM.
-4. **LLM Generation**: Streams pure conversational Markdown directly to the UI. **No mixed JSON/Markdown**.
+### 3.1 The Sync Loop (Fast RAM Assembly & Query)
+This is the main interaction pipeline. Its entire goal is to build context (RAM) from the SSD with zero LLM hallucination and sub-second latency *before* generation begins.
 
-### B. The Async Loop (Background Command)
-Handles LLM-driven state mutations without blocking the UI.
-1. **Data Class Emission**: LLM determines a mutation occurred and emits pure JSON matching a target schema.
-2. **The Linter (`decodeFromString`)**: Strict deserialization. If it fails, the mutation halts without crashing the app.
-3. **Memory Writer**: Writes the validated Kotlin `data class` to the OS: SSD and updates the RAM.
+1. **Lightning Router (Gatekeeper)**: Does this input contain an "Entity Candidate" (e.g., a person's name)? If NO -> Route to Noise/Greetings or trigger the **Clarification Minor Loop** ("Who are you talking about?").
+2. **Alias Lib (L1 Cache)**: Given the Entity Candidate, look up the `EntityID` in the fast, in-memory alias dictionary.
+3. **Disambiguation Minor Loop**: If the Alias Lib returns multiple hits (e.g., two Bobs) or a vague hit -> Suspend pipeline. Yield to user.
+4. **SSD Graph Fetch -> RAM**: Armed with a pure `EntityID`, query the heavy SQL SSD. Pull the target's entire relationship graph into the **Living RAM Context**.
+5. **The Brain Acts (LLM)**: The LLM receives the prompt + the Mega Context (RAM). It generates the chat response using verified intelligence. Streams pure conversational Markdown directly to the UI. **No mixed JSON/Markdown**.
+
+### 3.2 The Async Loops (Background Mutations & Commands)
+The LLM does NOT directly write to the database in the critical UX path. Writes are asynchronous background events.
+
+1. **Decoupled Entity Writing & Merging**: As the conversation progresses, if the LLM determines an Entity mutation occurred, it emits a strict Kotlin `data class` JSON schema payload. The Background Writer runs the `decodeFromString` Linter, mutates the SSD, and eventually merges that result back into the living RAM.
+2. **Decoupled Reinforcement Learning (RL)**: Every user turn is quietly copied to the RL Module. The RL subsystem learns and injects updated "Habits" completely independent of the main session flow.
+3. **Session Memory**: The raw chat transcript operates on its own growth logic, injecting recent turns directly into RAM without needing full SSD processing every time. 
+
+**Takeaway for Agents**: Do not treat the LLM as a monolithic text-to-JSON box. It is a dual-engine reasoning brain. The **Sync Loop** strictly bounds the LLM's reality via the Alias Lib and SSD IDs. The **Async Loop** strictly bounds what the LLM is allowed to mutate via Kotlin Data Classes.
 
 ---
 
-## 4. The "One Currency" Contract
+## 4. The Pipeline Valve Protocol (Observable Architecture)
 
-To prevent LLM ghosting and schema drift, we enforce strict boundary definitions.
+In a Data-Oriented OS, debugging requires tracking the data payload (the "Passenger") as it moves across architectural junctions (the "Cities"). We do not rely on shallow, unstructured `Log.d()` statements. We use **Pipeline Valves**.
 
-1. **No Hardcoded Prompts**: You may not hardcode a JSON schema in a prompt string. You must generate the schema programmatically from the Kotlin `data class` (e.g., via `kotlinx.serialization` or reflection).
-2. **Defensive Deserialization**: Always use `safeEnumValueOf<T>(value, fallback)` when mapping strings from the Room Database to Kotlin Enums. Never use standard `enumValueOf()`.
-3. **Domain Purity**: Data classes defining the contract must live in the `:domain` layer. They cannot contain `import android.*` or UI rendering flags (`isLoading`, `isExpanded`).
+### The Mental Model: "Google Maps"
+- **The Code Functions** are the physical roads and highways (they define where data *can* go).
+- **The Data (Payload)** is the actual car driving on the road.
+- **The Pipeline Valves (Anchors)** are the GPS checkpoints or toll booths. 
+
+When a bug occurs (e.g., a missing `dateRange`), you do not read 50 files of code. You check the GPS logs to see at which Toll Booth the data was lost.
+
+### The Contract (`PipelineValve`)
+Every major checkpoint in the `Core Pipeline` must invoke a standardized logging contract. This is typically implemented via a centralized logger (e.g., `PipelineValve.tag(...)`).
+
+**Required Checkpoints (The Toll Booths):**
+1. `[INPUT_RECEIVED]` - The raw text/voice origin entering the system.
+2. `[ROUTER_DECISION]` - The classification result leaving the Lightning Router (e.g., `SIMPLE_QA`, `VAGUE`, `INTENT`).
+3. `[ALIAS_RESOLUTION]` - The exact `EntityID` resolved by the Alias Lib.
+4. `[SSD_GRAPH_FETCHED]` - The payload shape retrieved from the database.
+5. `[LIVING_RAM_ASSEMBLED]` - The final context payload handed to the LLM Prompt Compiler.
+6. `[LLM_BRAIN_EMISSION]` - The raw JSON string emitted by the LLM.
+7. `[LINTER_DECODED]` - The strictly typed Kotlin `data class` parsed from the LLM, ready for UI/DB consumption.
+
+**Rule for Agents & Developers:**
+For any feature traversing the Core Pipeline, if you cannot trace the exact shape of your data through these 7 checkpoints via a simple log filter (e.g., `adb logcat -s VALVE_PROTOCOL`), the pipeline observability is broken and must be fixed before the feature is marked `SHIPPED`.
 
 ---
 
-## 5. Architectural Sources of Truth (Cerb)
+## 5. The Strict Cerb Lifecycle
 
-This document provides the high-level OS Model. For explicit implementation boundaries, refer to the following Living SOTs:
+Every module (Core, Scheduler, CRM, etc.) migrating to Project Mono **MUST** follow this exact lifecycle. Bypassing these steps is an automatic failure.
 
-- **[interface-map.md](./../cerb/interface-map.md)**: The strict ownership table defining which module owns which data and interface edges.
-- **[pipeline-valves.md](./../plans/telemetry/pipeline-valves.md)**: The Observability Protocol defining how telemetry and state changes are surfaced invisibly via unified Pipeline flow triggers.
-- **[prism-ui-ux-contract.md](./prism-ui-ux-contract.md)**: Layouts, explicit Component Registry, and UI/UX state matrix.
+1. **Docs/Specs**: The feature spec (`docs/cerb/[feature]/spec.md`) must be written/updated defining the exact Data Contract (the fields that mutate).
+2. **Interface Map**: `docs/cerb/interface-map.md` must be updated to denote the new API boundary.
+3. **Plan**: Execute the `/feature-dev-planner` workflow to generate the implementation plan based strictly on the Docs.
+4. **Execute**: Write the code, ensuring pure Kotlin `data classes` live in the `:domain` layer without Android imports.
+5. **E2E Test**: The migration must withstand a full end-to-end lifecycle test. If the full pipeline isn't built yet, use `WorldStateSeeder` to inject a simulated fragment. The code cannot be marked SHIPPED without a passing E2E log.
 
-> **Extensibility**: When creating a new feature, do not bolt it onto the monolith. It is an "App" that reads from the `OS: RAM`. Define its contract in the Interface Map, ensure its data class is in `:domain`, and rely on the Kernel for context.
+---
+
+## 6. What to Check (Validation Gates)
+
+When reviewing a Project Mono PR or Plan, verify the following:
+
+- **No Hardcoded Schemas**: If you see `{ "deal_stage": "string" }` hardcoded inside a Prompt string, **Reject it**. It must say `json.dumps(QuoteMutation.model_json_schema())` or the Kotlin equivalent via `kotlinx.serialization`.
+- **Domain Purity**: Are the Mutation Data Classes inside pure Kotlin `:domain` modules? If they contain `import android.*`, **Reject it**.
+- **Linter Simplicity**: If the Linter contains regex (`Regex("date=.*")`) or manual string-parsing math to figure out the LLM's intent, **Reject it**. It should be a 1-line `decodeFromString()`.
+- **JSON Coercion Resilience**: All `PrismJson` instances parsing LLM outputs MUST set `coerceInputValues = true`. The LLM frequently hallucinates explicit `null` tokens; if this flag is missing, `kotlinx.serialization` will crash against native Kotlin non-nullable default values (e.g., `classification = "schedulable"`). Do not solve this with regex null-stripping.
+- **Defensive Deserialization (Enum Safety)**: Never use standard `enumValueOf<T>()` or `T.valueOf()` when mapping strings from the Room Database to Kotlin Enums. If the DB schema changes, the app will crash instantly. Use the centralized `safeEnumValueOf<T>(value, fallback)` function (`com.smartsales.prism.domain.core.SafeEnum`) to gracefully handle legacy or corrupted DB string variants.
+- **Visual Spec Alignment**: "Spec says `最近30天`, code says `最近30天`. No synonyms."
+- **Domain vs UI State Decoupling**: Pure Domain Kotlin `data classes` represent the factual SSD truth. They must NEVER be overloaded with UI-specific rendering flags (like `tipsLoading`, `isExpanded`, or `amberGlow`). UI Layer must define its own `UiState` mapping to render Domain reality. Overloading Domain Models with UI flags breaks the Brain/Body disconnect and couples the Database to the View.
+
+---
+
+## 7. Source of Truth (SOT) Hierarchy
+
+For Project Mono development, resolve conflicts using this hierarchy:
+
+1. **The Kotlin `data class`** in the `:domain` module (Ultimate SSD Contract).
+2. **`docs/cerb/[feature]/spec.md`** (The Feature Requirement).
+3. **`docs/plans/tracker.md`** (The Active Epic constraints).
+4. **`interface-map.md`** (Module Boundaries).
+
+---
+
+## 8. User POV & UX Implications
+
+From the user's perspective, Project Mono is completely invisible, but it results in **Zero Ghosting**.
+
+**UX Rule**: Project Mono enforces that the UI only ever attempts to display mathematically validated SSD records. If there is an anomaly, it yields to the User via `UiState.AwaitingClarification`.

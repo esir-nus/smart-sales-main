@@ -9,7 +9,7 @@
 > - Use references to understand **WHAT** something does, not **HOW** to build it
 > - When implementing for Prism, **REWRITE from spec**, don't copy-paste legacy
 > - The dictionary is for **terminology mapping**, not architecture guidance
-> - **Prism-V1.md is the SOT** — legacy code is just a learning reference
+> - **Architecture.md is the SOT** — legacy code is just a learning reference
 
 ---
 
@@ -21,7 +21,7 @@
 |-----|------|--------|
 | **Orchestrator-V1** | `docs/archived/Orchestrator-V1.md` | ❌ Deprecated |
 | **Lattice** | `docs/archived/Orchestrator-Lattice.md` | ❌ Deprecated |
-| **Prism** | `docs/specs/Prism-V1.md` | ✅ Current SOT |
+| **Prism** | `docs/specs/Architecture.md` | ✅ Current SOT |
 
 ### Core Concepts
 

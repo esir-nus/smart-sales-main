@@ -11,7 +11,7 @@
 ### 1. 🟢 Senior Engineer (The Realist)
 > "We are not building a backend today. We are building a *behavior simulator*."
 
-*   **Constraint**: The prototype must strictly follow the **Prism V1 Data Flow** (§3.1 in `Prism-V1.md`), specifically the **Simulated Streaming** (20ms/char). We are *not* hooking up a real LLM yet; we need to validate the *feel* of the interaction first.
+*   **Constraint**: The prototype must strictly follow the **Prism V1 Data Flow** (§3.1 in `Architecture.md`), specifically the **Simulated Streaming** (20ms/char). We are *not* hooking up a real LLM yet; we need to validate the *feel* of the interaction first.
 *   **Architecture**: Use a simple local state store (Zustand or React Context) to mimic the `Orchestrator` state. I don't want to see complex Redux boilerplate for a prototype.
 *   **Mock Strategy**: We need hardcoded "Scenario Data" (e.g., "Scenario A: Complexity Analysis", "Scenario B: Schedule Conflict") to force the UI into specific states (Thinking Box, Plan Card, Conflict Card) without relying on random AI output.
 

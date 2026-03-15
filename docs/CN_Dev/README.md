@@ -11,7 +11,7 @@
 | [开发者SOP.md](开发者SOP.md) | [feature-development.md](../sops/feature-development.md) | 功能开发标准流程 |
 | [元素注册表.md](元素注册表.md) | [ui_element_registry.md](../specs/ui_element_registry.md) | UI组件速查表 |
 | [UX合约](UX合约/00-总览.md) | [prism-ui-ux-contract.md](../specs/prism-ui-ux-contract.md) | 用户体验规范 (整合版) |
-| [架构规范](架构规范/00-架构总览.md) | [Prism-V1.md](../specs/Prism-V1.md) | 系统架构规范 (整合版) |
+| [架构规范](架构规范/00-架构总览.md) | [Architecture.md](../specs/Architecture.md) | 系统架构规范 (整合版) |
 
 ---
 

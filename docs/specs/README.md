@@ -19,9 +19,9 @@
 
 | Order | File | Purpose |
 |-------|------|---------|
-| 3 | [Prism-V1.md](./Prism-V1.md) | Core pipeline, memory, modes, visibility system |
+| 3 | [Architecture.md](./Architecture.md) | Core pipeline, memory, modes, visibility system |
 
-**⚠️ Do NOT read entire Prism-V1.md upfront.** Use TOC to jump to relevant sections.
+**⚠️ Do NOT read entire Architecture.md upfront.** Use TOC to jump to relevant sections.
 
 ---
 
@@ -33,11 +33,11 @@
 | **Audio Drawer** | `prism-ui-ux-contract.md` |
 | **User Center** | `prism-ui-ux-contract.md` |
 | **Connectivity Modal** | `prism-ui-ux-contract.md` |
-| **Analyst Mode** | `Prism-V1.md §4.6` → `flows/AnalystFlows.md` |
+| **Analyst Mode** | `Architecture.md §4.6` → `flows/AnalystFlows.md` |
 | **Coach Mode** | `flows/CoachFlows.md` |
 | **Scheduler** | `flows/SchedulerFlows.md` |
 | **Agent Visibility** | `components/AgentActivityBanner.md` |
-| **Memory/RAG** | `Prism-V1.md §5` |
+| **Memory/RAG** | `Architecture.md §5` |
 
 ---
 
@@ -47,7 +47,7 @@
 docs/specs/
 ├── README.md                 ← YOU ARE HERE (Navigation SOP)
 ├── GLOSSARY.md               ← Terms & Rules
-├── Prism-V1.md               ← Architecture SOT
+├── Architecture.md               ← Architecture SOT
 ├── prism-ui-ux-contract.md   ← UI INDEX
 ├── cerb-ui/                  ← UI module specs (<100 lines each)
 │   ├── HomeScreen.md
@@ -68,7 +68,7 @@ docs/specs/
 
 | ❌ Don't | ✅ Do |
 |----------|------|
-| Read entire Prism-V1.md first | Read GLOSSARY → INDEX → then jump to section |
+| Read entire Architecture.md first | Read GLOSSARY → INDEX → then jump to section |
 | Guess file locations | Use this README to route |
 | Read specs top-to-bottom | Read by feature need |
 

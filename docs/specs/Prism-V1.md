@@ -15,7 +15,7 @@
 | [§3 Architecture Blueprint](#3-architecture-blueprint) | Pipeline diagram, Core Components, Model Router, Auto-Quote | 76-340 |
 | [§4 Data Flow & Consistency](#4-data-flow--consistency) | Buffered streaming, consistency model | 341-390 |
 | [§5 Mode Pipelines](#5-mode-pipelines-ascii-visualization) | Coach, Analyst, Scheduler mode flows | 391-487 |
-| [§6 Memory System](#6-memory-system--relevancy-library) | Hot/Cement Zones, RelevancyEntry schema, Entity Disambiguation, User Habits | 488-863 |
+| [§6 Memory System](#6-os-mental-model--relevancy-library) | OS Layers (RAM/SSD), RelevancyEntry schema, Entity Disambiguation, User Habits | 334-700 |
 | [§7 Crash Recovery](#7-crash-recovery--checkpoints) | Local Recovery Queue, checkpoints | 864-927 |
 | [§8 Testability Contract](#8-testability-contract-lattice-compliance) | Lattice compliance rules | 928-964 |
 | [§9 Extension Guidelines](#9-extension-guidelines) | Future extensibility | 965-974 |
@@ -182,7 +182,7 @@ The LLM does NOT directly write to the database in the critical UX path. Writes 
 │       │               │                          │ (If Needed)  │  │
 │       │               │                                             │
 │       │               ▼                                             │
-│       │        [Memory Writer] ──fire & forget──▶ [Hot Zone]       │
+│       │        [Memory Writer] ──fire & forget──▶ [OS: SSD]        │
 │       │                                                             │
 └───────┴─────────────────────────────────────────────────────────────┘
 ```
@@ -213,13 +213,13 @@ Lightweight in-memory cache for fast context access during task execution. Avoid
 | Layer | Role | Lifetime |
 |-------|------|----------|
 | **Session Cache** | Fast in-memory store for ongoing task context | Current task execution |
-| **Relevancy Library** | Persistent structured memory | Cross-session |
+| **Relevancy Library (SSD)** | Persistent structured memory index | Cross-session |
 
 **Write Pattern:**
 ```
 Output ──▶ Session Cache (sync, fast)
                │
-               └── Async Delta Push ──▶ Relevancy Library / Hot Zone
+               └── Async Delta Push ──▶ OS: SSD (Memory / Relevancy)
 ```
 
 #### 2. Lightning Router (Gatekeeper)
@@ -250,7 +250,7 @@ Dedicated UI component for notifying users of significant memory updates. Covers
 | **User Profile** | `资料已更新：` | `资料已更新：<语言偏好>` |
 
 **Behavior:**
--   Async observer on Hot Zone + Relevancy Library writes.
+-   Async observer on OS: SSD writes.
 -   Does not block main pipeline.
 -   Snackbar auto-dismisses after 3 seconds (tappable to expand details).
 -   `<content>` is truncated to 20 characters max.
@@ -331,27 +331,24 @@ Because the Sync Loop already responded to the user, if the Async Loop hits a pr
 
 
 
-## 6. Memory System & Relevancy Library
+## 6. OS Mental Model & Relevancy Library
 
-Prism uses a simplified **Two-Zone Model** with an indexed **Relevancy Library** for client-centric operations.
+Prism explicitly replaces the old "Two-Zone Model" (Hot/Cement) with the **OS Mental Model**, mapped to standard computer hardware concepts. This enforces strict separation between session state (RAM) and persistent world knowledge (SSD).
 
-### 6.1 Two-Zone Model
+### 6.1 The SSD vs. RAM Metaphor
 
-**Hot Zone Definition:**
-- All **active entries** (`isArchived = false`)
-- All **scheduled items** within 14 days (past or future)
-- **Excludes:** Inspirations (standalone notes, not time-bound)
+| OS Layer | Scope | Persistence | Module Path | Role |
+|----------|-------|-------------|-------------|------|
+| **OS: Kernel** | System | Core | `app-core` | Native lifecycle, Dagger setup. |
+| **OS: RAM** | Session | Volatile | `domain:session` | The Active Workspace. Ephemeral, session-scoped intent and context. |
+| **OS: SSD** | Cross-Session | Persistent | `domain:crm`, `data:*` | The Knowledge Base. Stable domain data (CRM, Habits, Memory). |
+| **OS: App** | Bridge | Orchestrator| `app-core` | Orchestrates reads/writes across the SSD-RAM divide. |
 
-| Zone | Criteria | Contents | Notes |
-|------|----------|----------|-------|
-| **Hot** | `isArchived = false` OR `scheduledAt` within 14 days | Active entries, upcoming/recent tasks | Frequency is observable but doesn't determine hotness |
-| **Cement** | `isArchived = true` AND `scheduledAt` > 14 days ago | Completed entries, old schedules | Archive/history browsing |
+> **Boundary Rule**: The foundation (SSD) MUST be oblivious to the transient workspace (RAM). No module in the `OS: SSD` layer is permitted to depend on or import classes from the `OS: RAM` layer. All coordination must happen in the `OS: App` bridge.
 
-**Same schema, different flag.** Entries age from Hot → Cement via background compaction.
+### 6.2 Relevancy Library Schema (SSD)
 
-### 6.2 Relevancy Library Schema
-
-The **Relevancy Library** is a persistent, write-through index for O(1) entity lookup and conflict detection.
+The **Relevancy Library** resides in the OS: SSD layer. It is a persistent, write-through index for O(1) entity lookup and conflict detection.
 
 ```kotlin
 @Entity(tableName = "relevancy_library")
@@ -657,7 +654,7 @@ The system uses a **minimal checkpoint strategy**: cache only the `EnhancedConte
 │  User Input ──▶ [ChatHistory.insert()] ── CHECKPOINT 0             │
 │       │                                                             │
 │       ▼                                                             │
-│  [Context Builder] ── Hot Zone query ~~~ $$$                        │
+│  [Context Builder] ── OS: SSD query ~~~ $$$                        │
 │       │                                                             │
 │       ▼                                                             │
 │  Enhanced Context ──▶ [ContextCache.save()] ── CHECKPOINT 1        │
@@ -718,7 +715,7 @@ Every box MUST have an interface and a Fake for testing.
 | `LlmProvider` | `FakeLlmProvider` | Returns canned responses |
 | `ContextBuilder` | `FakeContextBuilder` | Returns preset EnhancedContext |
 | `ContextCache` | `FakeContextCache` | In-memory map |
-| `MemoryRepository` | `FakeMemoryRepository` | In-memory store (Hot Zone access) |
+| `MemoryRepository` | `FakeMemoryRepository` | In-memory store (OS: SSD access) |
 | `MemoryWriter` | `FakeMemoryWriter` | No-op or capture |
 | `ToolAgent` | `FakeToolAgent` | Returns preset results |
 
@@ -778,43 +775,36 @@ Every box MUST have an interface and a Fake for testing.
 
 ---
 
-## Appendix B: Memory Trinity Overview
+## Appendix B: OS Mental Model Overview
 
-Prism's memory system is built on three core stores:
+Prism's architecture represents a physical transition from monolithic processing to an Operating System metaphor:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    PRISM MEMORY TRINITY                         │
+│                    THE OS MENTAL MODEL                          │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
-│   ┌─────────────────┐    ┌─────────────────┐                   │
-│   │    HOT ZONE     │───▶│  CEMENT ZONE    │                   │
-│   │   (Active)      │    │  (Archived)     │                   │
-│   └────────┬────────┘    └─────────────────┘                   │
-│            │                                                    │
-│            │ write-through                                      │
-│            ▼                                                    │
-│   ┌─────────────────────────────────────────┐                  │
-│   │         RELEVANCY LIBRARY               │                  │
-│   │  (Client Index + Decision History)      │                  │
-│   └─────────────────────────────────────────┘                  │
+│   ┌─────────────────┐       ┌─────────────────┐                 │
+│   │    OS: RAM      │◄──────│    OS: SSD      │                 │
+│   │ (Active Session)│       │ (Knowledge Base)│                 │
+│   └────────┬────────┘       └─────────────────┘                 │
+│            │                         ▲                          │
+│            │ Write (Async)           │                          │
+│            └─────────────────────────┘                          │
 │                                                                 │
-│   + USER PROFILE (Static Preferences)  — see §5.8              │
-│   + CLOUD RAG (External Knowledge)     — see Appendix C        │
+│   + OS: Kernel (Core Services, DI)                              │
+│   + OS: App (User Shell & Bridge)                               │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-| Store | Role | Contents |
-|-------|------|----------|
-| **Hot Zone** | Active work | Today's entries, ongoing sessions (`isArchived=false`) |
-| **Cement Zone** | Archive | Completed entries >14 days (`isArchived=true`) |
-| **Relevancy Library** | Client index | Aggregated entities, aliases, decision history |
-| **User Profile** | Static settings | Experience level, industry, role (§5.8) |
-| **User Habit** | Learned patterns | Meeting time, verbosity, client tone (§5.9) |
-| **Cloud RAG** | External knowledge | Product catalogs, CMS docs (Appendix C) |
+| Layer | Responsibility | 
+|-------|----------------|
+| **RAM** | `SessionWorkingSet`: Holds current context, active entities. Volatile. |
+| **SSD** | `MemoryCenter`/`EntityWriter`: Permanent storage of facts across zones. |
+| **Kernel/App** | Drives the lifecycle and bridges the RAM/SSD divide. |
 
-> **Note**: The legacy "M1/M2/M3/M4" terminology is **deprecated**. Use the intuitive names above.
+> **Note**: The legacy "Two-Zone Model" (Hot/Cement) terminology is **deprecated**. Use the OS layers above.
 
 ---
 

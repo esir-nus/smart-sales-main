@@ -165,13 +165,34 @@ The LLM does NOT directly write to the database in the critical UX path. Writes 
 
 ---
 
+### 3.2 The Unified Pipeline
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    UNIFIED ORCHESTRATION PIPELINE                   │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  ┌─────────┐   ┌──────────────┐   ┌───────────────┐   ┌──────────┐ │
+│  │ Context │──▶│   Executor   │──▶│   Publisher   │──▶│   UI     │ │
+│  │ Builder │   │    (LLM)     │   │   (Per Mode)  │   │          │ │
+│  └─────────┘   └──────────────┘   └───────────────┘   └──────────┘ │
+│       │               │                   │                         │
+│       │               │                   │      ┌──────────────┐  │
+│       │               │                   └─────▶│ Tool Agents  │  │
+│       │               │                          │ (If Needed)  │  │
+│       │               │                                             │
+│       │               ▼                                             │
+│       │        [Memory Writer] ──fire & forget──▶ [Hot Zone]       │
+│       │                                                             │
+└───────┴─────────────────────────────────────────────────────────────┘
+```
 
 ### 3.2 Core Components
 
 #### 1. Context Builder (Shared)
 The foundation of intelligence. Runs for **every** request.
 
-**Role:** Normalize heterogeneous inputs into a unified context payload for the LLM Brain.
+**Role:** Normalize heterogeneous inputs into a unified context payload for the Executor LLM.
 
 **Input Normalization Tools:**
 
@@ -205,8 +226,8 @@ Output ──▶ Session Cache (sync, fast)
 Stateless router. Evaluates intent at the beginning of the Sync Loop to determine the correct pathway.
 Replaces the old "Mode Toggle" system.
 
-#### 3. LLM Brain
-The generation engine. Driven dynamically depending on the pipeline phase (Sync/Async).
+#### 3. LLM Executor
+The generation engine. Driven dynamically by the Model Router depending on the pipeline phase (Sync/Async).
 
 #### 4. The Linter (decodeFromString)
 Validates ALL AI-generated structured outputs for background mutations.
@@ -216,7 +237,7 @@ Validates ALL AI-generated structured outputs for background mutations.
 2. The exception is caught cleanly.
 3. The background mutation halts. The system DOES NOT crash the UI thread.
 
-#### 5. Memory Center Notifier (Snackbar Updates)
+#### 7. Memory Center Notifier (Snackbar Updates)
 Dedicated UI component for notifying users of significant memory updates. Covers 4 categories:
 
 **Notification Format:** `[Category]已更新：<truncated content>`
@@ -233,6 +254,27 @@ Dedicated UI component for notifying users of significant memory updates. Covers
 -   Does not block main pipeline.
 -   Snackbar auto-dismisses after 3 seconds (tappable to expand details).
 -   `<content>` is truncated to 20 characters max.
+
+### 3.3 Model Router
+
+Central routing for LLM model selection based on **task type**.
+
+> **Location**: `domain/config/ModelRouter.kt`
+
+#### Task-Based Routing (`forContext`)
+
+| Input Condition        | Model          | Context Window |
+|-----------------------|----------------|----------------|
+| Image/Video present    | `qwen-vl-plus` | Vision         |
+| Default (fast chat)    | `qwen-plus`    | 1M tokens      |
+
+#### Memory Layer Routing (`forMemoryLayer`)
+
+| Layer      | Model       | Rationale                                |
+|------------|-------------|------------------------------------------|
+| RELEVANCY  | `qwen3-max` | Advanced parsing for entity extraction   |
+| HOT        | `qwen-plus` | Fast index navigation (14 days context)  |
+| CEMENT     | `qwen-long` | Deep history retrieval (10M tokens)      |
 
 ---
 
@@ -289,11 +331,11 @@ Because the Sync Loop already responded to the user, if the Async Loop hits a pr
 
 
 
-## 5. Memory System & Relevancy Library
+## 6. Memory System & Relevancy Library
 
 Prism uses a simplified **Two-Zone Model** with an indexed **Relevancy Library** for client-centric operations.
 
-### 5.1 Two-Zone Model
+### 6.1 Two-Zone Model
 
 **Hot Zone Definition:**
 - All **active entries** (`isArchived = false`)
@@ -307,7 +349,7 @@ Prism uses a simplified **Two-Zone Model** with an indexed **Relevancy Library**
 
 **Same schema, different flag.** Entries age from Hot → Cement via background compaction.
 
-### 5.2 Relevancy Library Schema
+### 6.2 Relevancy Library Schema
 
 The **Relevancy Library** is a persistent, write-through index for O(1) entity lookup and conflict detection.
 
@@ -374,9 +416,9 @@ Stores historical changes for key sales metrics. Enables turnkey data visualizat
 
 > **Linter Rule:** Agent MUST extract and specify `unit` for all numeric values. If user says "两百万", agent infers "CNY" from User Profile locale. If ambiguous, agent asks.
 
-> **Viz Integration:** The system can generate charts directly from this time-series data: "Show Zhang's budget trend over the last 6 months."
+> **Viz Integration:** Report Center can generate charts directly from this data: "Show Zhang's budget trend over the last 6 months."
 
-### 5.3 Field Update Policies
+### 6.3 Field Update Policies
 
 | Field | Update Policy | Rationale |
 |-------|---------------|-----------|
@@ -394,7 +436,7 @@ Stores historical changes for key sales metrics. Enables turnkey data visualizat
 - `attributesJson`: Current state (what's true *now*)
 - `metricsHistoryJson`: Historical changes (how it *evolved*)
 
-### 5.4 Entity Disambiguation (Counter-Based Reinforcement)
+### 6.4 Entity Disambiguation (Counter-Based Reinforcement)
 
 When voice input contains ambiguous references (e.g., "张总" matches multiple people), the system uses **counter-based reinforcement learning** through user confirmations.
 
@@ -460,7 +502,7 @@ if candidates.size > 1:
 | **Counter informs, doesn't dictate** | Counter is one input; context and recency also matter |
 | **Transparent reasoning** | Agent may explain: "Based on recent A3 project discussions..." |
 
-### 5.5 Supporting Types
+### 6.5 Supporting Types
 
 ```kotlin
 data class EntryRef(
@@ -479,7 +521,7 @@ data class DecisionRecord(
 )
 ```
 
-### 5.6 Memory Entry Schema
+### 6.6 Memory Entry Schema
 
 All memory entries share a unified Room entity with workflow-specific payloads.
 
@@ -518,7 +560,7 @@ data class MemoryEntryEntity(
 | **Command** | `commands: List<CommandAction>`, `targets: List<String>` |
 | **Scheduler** | `scheduledAt: Instant?`, `priority: Priority`, `status: TaskStatus` |
 
-### 5.7 User Profile (Static — User Center)
+### 6.7 User Profile (Static — User Center)
 
 User-level configuration from User Center. User sets these explicitly.
 
@@ -543,7 +585,7 @@ data class UserProfile(
 
 ---
 
-### 5.8 User Habit (Growing — Learned Patterns)
+### 6.8 User Habit (Growing — Learned Patterns)
 
 Behavior patterns learned automatically. Context Builder uses these for personalization.
 
@@ -599,13 +641,13 @@ data class UserHabit(
 
 ---
 
-## 6. Crash Recovery & Checkpoints
+## 7. Crash Recovery & Checkpoints
 
-### 6.1 Recovery Philosophy
+### 7.1 Recovery Philosophy
 
 The system uses a **minimal checkpoint strategy**: cache only the `EnhancedContext` (the expensive artifact). Everything else is either already persisted (chat history) or cheap to rebuild.
 
-### 6.2 Checkpoint Strategy
+### 7.2 Checkpoint Strategy
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -615,7 +657,7 @@ The system uses a **minimal checkpoint strategy**: cache only the `EnhancedConte
 │  User Input ──▶ [ChatHistory.insert()] ── CHECKPOINT 0             │
 │       │                                                             │
 │       ▼                                                             │
-│  [Context Builder] ── Hot Zone query + LLM conflict detection ~~~ $$$   │
+│  [Context Builder] ── Hot Zone query ~~~ $$$                        │
 │       │                                                             │
 │       ▼                                                             │
 │  Enhanced Context ──▶ [ContextCache.save()] ── CHECKPOINT 1        │
@@ -624,7 +666,7 @@ The system uses a **minimal checkpoint strategy**: cache only the `EnhancedConte
 │  [LLM Streaming] ~~~ $$$                                            │
 │       │                                                             │
 │       ▼                                                             │
-│  [Publisher] ──▶ [ChatHistory.update()] ── CHECKPOINT 2 (done)     │
+│  [UI Stream Complete] ──▶ [ChatHistory.update()] ── CHECKPOINT 2   │
 │                                                                     │
 ├─────────────────────────────────────────────────────────────────────┤
 │  ON CRASH + RESTART:                                                │
@@ -639,7 +681,7 @@ The system uses a **minimal checkpoint strategy**: cache only the `EnhancedConte
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-### 6.3 Checkpoint Data Model
+### 7.3 Checkpoint Data Model
 
 | Checkpoint | What's Saved | When Cleared | Blocking? |
 |------------|--------------|--------------|-----------|
@@ -647,7 +689,7 @@ The system uses a **minimal checkpoint strategy**: cache only the `EnhancedConte
 | 1 | Enhanced Context | On completion | ✅ Yes |
 | 2 | AI response | Never (history) | ✅ Yes |
 
-### 6.4 Recovery Behavior
+### 7.4 Recovery Behavior
 
 | Crash Point | Recovery Action | Cost |
 |-------------|-----------------|------|
@@ -655,7 +697,7 @@ The system uses a **minimal checkpoint strategy**: cache only the `EnhancedConte
 | After Checkpoint 1 | Load cached context, resume LLM | Low (skip context) |
 | After Checkpoint 2 | No recovery needed | None |
 
-### 6.5 Context Cache Hygiene
+### 7.5 Context Cache Hygiene
 
 -   **TTL:** Stale checkpoints (older than 24h) are purged on app start.
 -   **Scope:** One checkpoint per active turn. Overwritten on new turn.
@@ -663,11 +705,11 @@ The system uses a **minimal checkpoint strategy**: cache only the `EnhancedConte
 
 ---
 
-## 7. Testability Contract (Lattice Compliance)
+## 8. Testability Contract (Lattice Compliance)
 
 Prism inherits and extends **Lattice Architecture** principles. While Lattice focuses on modularity and testability through black-box isolation, Prism focuses on intelligent agent patterns (Memory System, RAG, streaming). They are complementary layers.
 
-### 7.1 Required Interfaces & Fakes
+### 8.1 Required Interfaces & Fakes
 
 Every box MUST have an interface and a Fake for testing.
 
@@ -680,7 +722,7 @@ Every box MUST have an interface and a Fake for testing.
 | `MemoryWriter` | `FakeMemoryWriter` | No-op or capture |
 | `ToolAgent` | `FakeToolAgent` | Returns preset results |
 
-### 7.2 Dependency Rules
+### 8.2 Dependency Rules
 
 | Rule | Enforcement |
 |------|-------------|
@@ -688,7 +730,7 @@ Every box MUST have an interface and a Fake for testing.
 | **No Android imports in domain** | Domain layer is pure Kotlin (KMP-ready) |
 | **Orchestrator is thin** | Delegates to boxes, no inline business logic |
 
-### 7.3 Test Strategy
+### 8.3 Test Strategy
 
 | Layer | Test Type | Dependencies |
 |-------|-----------|--------------|
@@ -699,17 +741,16 @@ Every box MUST have an interface and a Fake for testing.
 
 ---
 
-## 8. Extension Guidelines
+## 9. Extension Guidelines
 
-1.  **New Modes**: Implement `ModeStrategy`, `LlmProvider`, and `ModePublisher`. Register in Orchestrator.
-2.  **New Tools**: Implement `ToolAgent` interface. Add to relevant Mode Strategy tool list.
+1.  **New Tools**: Implement `ToolAgent` interface. Add to relevant Gateway permissions.
 3.  **Platform Expansion**:
     -   Keep Orchestrator and Context Builder pure Kotlin (KMP-ready).
     -   `MemoryRepository` is the boundary for Room (Android) vs CoreData/SQLDelight (iOS).
 
 ---
 
-## 9. Relationship to Lattice
+## 10. Relationship to Lattice
 
 | Aspect | Lattice | Prism |
 |--------|---------|-------|

@@ -19,14 +19,7 @@ import com.smartsales.core.llm.ExecutorResult
 import com.smartsales.core.pipeline.HabitListener
 import com.smartsales.prism.domain.telemetry.PipelinePhase
 import com.smartsales.prism.domain.telemetry.PipelineTelemetry
-import com.smartsales.prism.domain.scheduler.SchedulerLinter
 import javax.inject.Named
-import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
-import com.smartsales.prism.domain.memory.ScheduleBoard
-import com.smartsales.prism.domain.scheduler.InspirationRepository
-import com.smartsales.prism.domain.scheduler.AlarmScheduler
-import com.smartsales.prism.domain.scheduler.LintResult
-import com.smartsales.prism.domain.scheduler.UrgencyLevel
 
 /**
  * Unified Pipeline (System II) Implementation
@@ -38,11 +31,6 @@ class RealUnifiedPipeline @Inject constructor(
     private val entityDisambiguationService: EntityDisambiguationService,
     private val inputParserService: InputParserService,
     private val entityWriter: com.smartsales.prism.domain.memory.EntityWriter,
-    private val schedulerLinter: SchedulerLinter,
-    private val scheduledTaskRepository: ScheduledTaskRepository,
-    private val scheduleBoard: ScheduleBoard,
-    private val inspirationRepository: InspirationRepository,
-    private val alarmScheduler: AlarmScheduler,
     // Wave 4: Synchronous Auto-Renaming
     private val sessionTitleGenerator: com.smartsales.prism.domain.session.SessionTitleGenerator,
     
@@ -194,6 +182,14 @@ class RealUnifiedPipeline @Inject constructor(
             
             Log.d("RealUnifiedPipeline", "Context Assembly Complete. History turns: ${enhancedContext.sessionHistory.size}")
             
+            // 🚦 VALVE: Track the living RAM assembly before it enters the prompt compiler
+            PipelineValve.tag(
+                checkpoint = PipelineValve.Checkpoint.LIVING_RAM_ASSEMBLED,
+                payloadSize = enhancedContext.sessionHistory.size + enhancedContext.entityContext.size,
+                summary = "Living RAM assembled and ready for LLM",
+                rawDataDump = "Mode: ${enhancedContext.modeMetadata.currentMode}\nEntities: ${enhancedContext.entityContext.keys}\nHistory Turns: ${enhancedContext.sessionHistory.size}"
+            )
+            
             Pair(enhancedContext, "Context [Mode: ${enhancedContext.modeMetadata.currentMode}, Metadata: $metadata]")
         }
         telemetry.recordEvent(PipelinePhase.CONTEXT_BUILDER, "Context Assemble Time: ${System.currentTimeMillis() - contextStart} ms")
@@ -215,6 +211,14 @@ class RealUnifiedPipeline @Inject constructor(
             is ExecutorResult.Success -> {
                 Log.d("RealUnifiedPipeline", "LLM Execution Success, parsing JSON payload.")
                 
+                // 🚦 VALVE: Track the raw JSON out of the LLM
+                PipelineValve.tag(
+                    checkpoint = PipelineValve.Checkpoint.LLM_BRAIN_EMISSION,
+                    payloadSize = llmResult.content.length,
+                    summary = "LLM emitted JSON payload",
+                    rawDataDump = llmResult.content
+                )
+                
                 // 1. Always extract and emit the conversational response first
                 try {
                     val json = org.json.JSONObject(llmResult.content)
@@ -228,82 +232,69 @@ class RealUnifiedPipeline @Inject constructor(
                     return@flow
                 }
                 
-                // 2. Lint for physical mutations (Tasks and CRM fields)
-                val lintResult = schedulerLinter.lint(llmResult.content)
-                when (lintResult) {
-                    is LintResult.Success -> {
-                        val mappedMutations = lintResult.profileMutations.map {
-                            PipelineResult.ProfileMutation(it.entityId, it.field, it.value)
-                        }
-                        emit(PipelineResult.MutationProposal(task = lintResult.task, profileMutations = mappedMutations))
+                // 2. Parse One Currency standard contract
+                try {
+                    val jsonInterpreter = kotlinx.serialization.json.Json { 
+                        ignoreUnknownKeys = true 
+                        coerceInputValues = true 
                     }
-                    is LintResult.MultiTask -> {
-                        val mappedMutations = lintResult.profileMutations.map {
-                            PipelineResult.ProfileMutation(it.entityId, it.field, it.value)
-                        }
-                        // Emit the first task alongside the profile mutations
-                        val firstTask = lintResult.tasks.firstOrNull()
-                        if (firstTask != null) {
-                            val anyConflict = scheduleBoard.checkConflict(
-                                firstTask.startTime.toEpochMilli(), firstTask.durationMinutes, null
-                            ) is com.smartsales.prism.domain.memory.ConflictResult.Conflict
-                            emit(PipelineResult.MutationProposal(task = firstTask, profileMutations = mappedMutations, isConflict = anyConflict))
-                        } else if (mappedMutations.isNotEmpty()) {
-                            emit(PipelineResult.MutationProposal(profileMutations = mappedMutations))
-                        }
-                        
-                        // Emit remaining tasks without duplicating profile mutations
-                        lintResult.tasks.drop(1).forEach { enrichedTask ->
-                            val conflict = scheduleBoard.checkConflict(
-                                enrichedTask.startTime.toEpochMilli(), enrichedTask.durationMinutes, null
-                            ) is com.smartsales.prism.domain.memory.ConflictResult.Conflict
-                            emit(PipelineResult.MutationProposal(task = enrichedTask, profileMutations = emptyList(), isConflict = conflict))
-                        }
+                    val mutation = jsonInterpreter.decodeFromString(
+                        com.smartsales.prism.domain.core.UnifiedMutation.serializer(),
+                        llmResult.content
+                    )
+                    
+                    // 🚦 VALVE: Track the strictly typed Linter output
+                    PipelineValve.tag(
+                        checkpoint = PipelineValve.Checkpoint.LINTER_DECODED,
+                        payloadSize = mutation.profileMutations.size + mutation.tasks.size + mutation.recommendedWorkflows.size,
+                        summary = "Linter successfully decoded strict data class",
+                        rawDataDump = "Classification: ${mutation.classification}\nTasks: ${mutation.tasks.size}\nMutations: ${mutation.profileMutations.size}"
+                    )
+                    
+                    val profileMutations = mutation.profileMutations.map {
+                        PipelineResult.ProfileMutation(it.entityId, it.field, it.value)
                     }
-                    is LintResult.Incomplete -> {
-                        emit(PipelineResult.ClarificationNeeded(lintResult.question))
+                    if (profileMutations.isNotEmpty()) {
+                        emit(PipelineResult.MutationProposal(profileMutations = profileMutations))
                     }
-                    is LintResult.Deletion -> {
-                        if (input.replaceItemId != null) {
-                            scheduledTaskRepository.deleteItem(input.replaceItemId)
-                            alarmScheduler.cancelReminder(input.replaceItemId)
-                            scheduleBoard.refresh()
-                            emit(PipelineResult.ConversationalReply("🗑️ 已删除任务"))
-                        } else {
-                            val matches = scheduleBoard.upcomingItems.value.filter { 
-                                it.title.contains(lintResult.targetTitle, ignoreCase = true) 
-                            }
-                            if (matches.size == 1) {
-                                scheduledTaskRepository.deleteItem(matches.first().entryId)
-                                scheduleBoard.refresh()
-                                emit(PipelineResult.ConversationalReply("🗑️ 已删除'${matches.first().title}'"))
-                            } else {
-                                emit(PipelineResult.ConversationalReply("未找到明确要删除的任务，请提供更具体的名字。"))
+                    
+                    if (mutation.recommendedWorkflows.isNotEmpty()) {
+                        val recommendation = mutation.recommendedWorkflows.first()
+                        emit(PipelineResult.ToolDispatch(recommendation.workflowId, recommendation.parameters))
+                    }
+                    
+                    // Wave 16 T1: Safely pass the raw scheduling data as tool dispatches 
+                    // until T3 wires up the real plugin
+                    when (mutation.classification) {
+                        "schedulable" -> {
+                            if (mutation.tasks.isNotEmpty()) {
+                                // Provide as generic ToolDispatch
+                                val tasksJson = kotlinx.serialization.json.Json.encodeToString(
+                                    kotlinx.serialization.builtins.ListSerializer(com.smartsales.prism.domain.core.TaskMutation.serializer()),
+                                    mutation.tasks
+                                )
+                                emit(PipelineResult.ToolDispatch("CREATE_TASK", mapOf("tasks" to tasksJson)))
                             }
                         }
-                    }
-                    is LintResult.Reschedule -> {
-                        val matches = scheduleBoard.upcomingItems.value.filter {
-                            it.title.contains(lintResult.targetTitle, ignoreCase = true)
+                        "deletion" -> {
+                            mutation.targetTitle?.let {
+                                emit(PipelineResult.ToolDispatch("DELETE_TASK", mapOf("targetTitle" to it)))
+                            }
                         }
-                        if (matches.size == 1) {
-                            emit(PipelineResult.ToolDispatch("reschedule", mapOf("targetId" to matches.first().entryId, "instruction" to lintResult.newInstruction)))
-                        } else {
-                            emit(PipelineResult.ConversationalReply("找到多个匹配项或未找到匹配项，无法改期"))
+                        "reschedule" -> {
+                            if (!mutation.targetTitle.isNullOrBlank() && !mutation.newInstruction.isNullOrBlank()) {
+                                emit(PipelineResult.ToolDispatch("RESCHEDULE_TASK", mapOf(
+                                    "targetTitle" to (mutation.targetTitle ?: ""), 
+                                    "newInstruction" to (mutation.newInstruction ?: "")
+                                )))
+                            }
                         }
                     }
-                    is LintResult.ToolDispatch -> {
-                        Log.d("RealUnifiedPipeline", "ToolDispatch: key=\${lintResult.workflowId}")
-                        emit(PipelineResult.ToolDispatch(lintResult.workflowId, lintResult.params))
-                    }
-                    is LintResult.NonIntent -> {
-                        // Do nothing, just a normal reply which was already emitted above
-                    }
-                    is LintResult.Error -> {
-                        val classification = try { org.json.JSONObject(llmResult.content).optString("classification", "non_intent") } catch (e: Exception) { "non_intent" }
-                        if (classification != "non_intent") {
-                            emit(PipelineResult.ConversationalReply("操作解析失败: ${lintResult.message}"))
-                        }
+                } catch (e: Exception) {
+                    val classification = try { org.json.JSONObject(llmResult.content).optString("classification", "non_intent") } catch (jsonE: Exception) { "non_intent" }
+                    if (classification != "non_intent") {
+                        Log.e("RealUnifiedPipeline", "Failed to decode UnifiedMutation", e)
+                        emit(PipelineResult.ConversationalReply("操作解析失败: \${e.message}"))
                     }
                 }
             }

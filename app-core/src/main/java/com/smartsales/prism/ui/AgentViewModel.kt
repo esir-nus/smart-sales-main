@@ -421,31 +421,34 @@ class AgentViewModel @Inject constructor(
             is PipelineResult.ToolDispatch -> {
                 executeToolDirectly(result.toolId, result.params)
             }
-            is PipelineResult.SchedulerTaskCreated -> {
-                android.util.Log.w("AgentVM", "Deprecated: Received SchedulerTaskCreated routing. Use MutationProposal instead.")
-            }
-            is PipelineResult.SchedulerMultiTaskCreated -> {
-                android.util.Log.w("AgentVM", "Deprecated: Received SchedulerMultiTaskCreated routing. Use MutationProposal instead.")
-            }
+
             is PipelineResult.MutationProposal -> {
-                // T3 Open-Loop Defense: Render a proposal card instead of mutating
-                // In a full implementation, this would translate the Task domain/profile models into a UI card.
-                // For now, we simulate the proposal with a conversational response.
-                val prefix = if (result.isConflict) "⚠️ 有时间冲突。" else ""
-                val taskStr = result.task?.let { "调度会议 [${it.title}]" } ?: ""
                 val mutationStr = if (result.profileMutations.isNotEmpty()) {
                     "更新字段 [" + result.profileMutations.joinToString(", ") { "${it.field} -> ${it.value}" } + "]"
                 } else ""
                 
-                val combined = listOf(taskStr, mutationStr).filter { it.isNotBlank() }.joinToString(" 并")
+                val combined = listOf(mutationStr).filter { it.isNotBlank() }.joinToString(" 并")
                 
-                val ui = UiState.Response("$prefix 已为您起草更新：$combined。请点击卡片确认。")
+                val ui = UiState.Response("已为您起草更新：$combined。请点击卡片确认。")
                 _history.value += ChatMessage.Ai(
                     id = java.util.UUID.randomUUID().toString(),
                     timestamp = System.currentTimeMillis(),
                     uiState = ui
                 )
                 _uiState.value = UiState.Idle
+            }
+            is PipelineResult.PluginExecutionStarted -> {
+                _uiState.value = UiState.ExecutingTool(result.toolId)
+            }
+            is PipelineResult.PluginExecutionEmittedState -> {
+                if (result.uiState is UiState.Response) {
+                    _history.value += ChatMessage.Ai(
+                        id = java.util.UUID.randomUUID().toString(),
+                        timestamp = System.currentTimeMillis(),
+                        uiState = result.uiState
+                    )
+                }
+                _uiState.value = result.uiState
             }
             is PipelineResult.MascotIntercepted -> {
                 Log.d("AgentVM", "Intent intercepted by Mascot. Dropping to Idle.")

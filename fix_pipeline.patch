@@ -1,0 +1,31 @@
+--- core/pipeline/src/main/java/com/smartsales/core/pipeline/RealUnifiedPipeline.kt
++++ core/pipeline/src/main/java/com/smartsales/core/pipeline/RealUnifiedPipeline.kt
+@@ -109,14 +109,19 @@
+                 val parseResult = inputParserService.parseIntent(input.rawText)
+                 if (parseResult is ParseResult.NeedsClarification) {
+                     Log.d("RealUnifiedPipeline", "Pipeline semantic check requires clarification")
+-                    val uiState = entityDisambiguationService.startDisambiguation(
+-                        originalInput = input.rawText,
+-                        originalMode = Mode.ANALYST,
+-                        ambiguousName = parseResult.ambiguousName,
+-                        candidates = parseResult.suggestedMatches
+-                    )
+-                    emit(PipelineResult.DisambiguationIntercepted(uiState))
+-                    return@flow
++                    
++                    if (input.isVoice || input.isBadge) {
++                        Log.w("RealUnifiedPipeline", "Bypassing Clarification for Voice Input to prevent silent failures")
++                        // Allow to fall through. Non-database entities will be treated as plain string names by the main LLM.
++                    } else {
++                        val uiState = entityDisambiguationService.startDisambiguation(
++                            originalInput = input.rawText,
++                            originalMode = Mode.ANALYST,
++                            ambiguousName = parseResult.ambiguousName,
++                            candidates = parseResult.suggestedMatches
++                        )
++                        emit(PipelineResult.DisambiguationIntercepted(uiState))
++                        return@flow
++                    }
+                 }
+                 if (parseResult is ParseResult.EntityDeclaration) {
+                     Log.d("RealUnifiedPipeline", "Proactive EntityDeclaration. Writing to EntityWriter directly.")

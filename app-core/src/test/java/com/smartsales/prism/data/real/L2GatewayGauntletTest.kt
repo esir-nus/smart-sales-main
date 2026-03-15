@@ -68,6 +68,7 @@ class L2GatewayGauntletTest {
             override suspend fun insertTask(task: ScheduledTask): String = "fake-task"
             override suspend fun getTask(id: String): ScheduledTask? = null
             override suspend fun updateTask(task: ScheduledTask) {}
+            override suspend fun upsertTask(task: com.smartsales.prism.domain.scheduler.ScheduledTask): String = task.id
             override suspend fun deleteItem(id: String) {}
             override suspend fun getRecentCompleted(limit: Int): List<ScheduledTask> = emptyList()
             override suspend fun getTopUrgentActiveForEntity(entityId: String): ScheduledTask? = null
@@ -101,11 +102,6 @@ class L2GatewayGauntletTest {
             entityDisambiguationService = entityDisambiguationService,
             inputParserService = inputParserService,
             entityWriter = entityWriter,
-            schedulerLinter = SchedulerLinter(timeProvider),
-            scheduledTaskRepository = fakeTaskRepo,
-            scheduleBoard = FakeScheduleBoard(),
-            inspirationRepository = FakeInspirationRepository(),
-            alarmScheduler = FakeAlarmScheduler(),
             sessionTitleGenerator = FakeSessionTitleGenerator(),
             promptCompiler = FakePromptCompiler(),
             executor = executor,
@@ -191,10 +187,11 @@ class L2GatewayGauntletTest {
         
         // 4. The Resume
         // Verify that the pipeline received a Resolved state and proceeded to the LLM Scheduler phase
-        val taskResult = resultsTurn2.filterIsInstance<PipelineResult.MutationProposal>().firstOrNull()?.task
+        val toolDispatch = resultsTurn2.filterIsInstance<PipelineResult.ToolDispatch>().firstOrNull()
         
-        assertNotNull("Pipeline must successfully resume execution and schedule the task", taskResult)
-        assertEquals("Meeting with 字节跳动 (深圳)", taskResult!!.title)
+        assertNotNull("Pipeline must successfully emit ToolDispatch for CREATE_TASK", toolDispatch)
+        assertEquals("CREATE_TASK", toolDispatch!!.toolId)
+        assertTrue("Params should contain tasks", toolDispatch.params.containsKey("tasks"))
         
         // Anti-Illusion check: We must also verify the EntityWriter updated the existing entity or gracefully merged
         // Since inputParser returned the correct declaration, and Disambiguator passed the Resolved object back,

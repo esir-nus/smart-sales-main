@@ -36,6 +36,12 @@ interface ScheduledTaskRepository {
      * 更新任务
      */
     suspend fun updateTask(task: ScheduledTask)
+    
+    /**
+     * Wave 14: Upsert任务 (存在则更新，不存在则插入)
+     * 用于保证 Path B 和 Path A 的竞争安全
+     */
+    suspend fun upsertTask(task: ScheduledTask): String
 
     /**
      * 删除时间线项目

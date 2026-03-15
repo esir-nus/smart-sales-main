@@ -4,10 +4,8 @@ import com.smartsales.core.test.fakes.FakeUnifiedPipeline
 import com.smartsales.core.test.fakes.FakeMascotService
 import com.smartsales.core.test.fakes.FakeContextBuilder
 import com.smartsales.core.test.fakes.FakeLightningRouter
-import com.smartsales.core.test.fakes.FakeScheduleBoard
 import com.smartsales.core.test.fakes.FakeEntityWriter
 import com.smartsales.core.test.fakes.FakeAliasCache
-import com.smartsales.prism.domain.scheduler.FakeScheduledTaskRepository
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.TestScope
@@ -23,8 +21,6 @@ class IntentOrchestratorBreakItTest {
     private lateinit var fakeLightningRouter: FakeLightningRouter
     private lateinit var fakeMascotService: FakeMascotService
     private lateinit var fakeUnifiedPipeline: FakeUnifiedPipeline
-    private lateinit var fakeScheduledTaskRepository: FakeScheduledTaskRepository
-    private lateinit var fakeScheduleBoard: FakeScheduleBoard
     private lateinit var fakeEntityWriter: FakeEntityWriter
     private lateinit var fakeAliasCache: FakeAliasCache
     private val testScope = TestScope(UnconfinedTestDispatcher())
@@ -35,8 +31,6 @@ class IntentOrchestratorBreakItTest {
         fakeLightningRouter = FakeLightningRouter()
         fakeMascotService = FakeMascotService()
         fakeUnifiedPipeline = FakeUnifiedPipeline()
-        fakeScheduledTaskRepository = FakeScheduledTaskRepository()
-        fakeScheduleBoard = FakeScheduleBoard()
         fakeEntityWriter = FakeEntityWriter()
         fakeAliasCache = FakeAliasCache()
 
@@ -45,8 +39,6 @@ class IntentOrchestratorBreakItTest {
             lightningRouter = fakeLightningRouter,
             mascotService = fakeMascotService,
             unifiedPipeline = fakeUnifiedPipeline,
-            scheduledTaskRepository = fakeScheduledTaskRepository,
-            scheduleBoard = fakeScheduleBoard,
             entityWriter = fakeEntityWriter,
             aliasCache = fakeAliasCache,
             appScope = testScope

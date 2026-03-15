@@ -62,16 +62,7 @@ open class PromptCompiler @Inject constructor() {
             appendLine()
         }
         
-        // 🕐 相对时间预解析（Kotlin 确定性 > LLM 数学）
-        // Applied globally since the unified Prompt can handle scheduling
-        if (context.currentInstant > 0) {
-            com.smartsales.prism.domain.scheduler.RelativeTimeResolver
-                .buildHint(context.userText, context.currentInstant, java.time.ZoneId.systemDefault())
-                ?.let { hint ->
-                    appendLine(hint)
-                    appendLine()
-                }
-        }
+
         
         // 基础用户输入
         appendLine("## 当前用户输入")
@@ -202,6 +193,7 @@ ${
 5. 推断合理 urgency（赶飞机L1, 会议L2, 日常L3, 即时FIRE_OFF）。如果是FIRE_OFF，duration为null。
 6. keyPerson 仅提取商务相关人物，忽略非商务人物。
 7. duration推断（15m通讯, 1h会议, 30m用餐运动）。
+8. 中文计时习惯(重要)：日常使用12小时制时，数字默认指代白天/下午。例如说“2点”代表 14:00，“4点”代表 16:00。如果是凌晨（如 2:00），用户一定会明确加上前缀，如“凌晨2点”、“半夜3点”。除非有此类明确前缀，否则 1-6 点默认解析为 13:00 - 18:00。如果是上午（如 9点），则正常解析为 09:00。
 
 ### 工具建议规则（如果需要执行独立工具/分析操作）
 如果用户的意图是需要使用某个特定工具（如生成报告、写邮件），请使用 `recommended_workflows` 数组来推荐该工具，而不是硬编码返回文案。

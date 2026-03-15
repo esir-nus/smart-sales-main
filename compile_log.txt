@@ -1,62 +1,380 @@
 Type-safe project accessors is an incubating feature.
-> Task :feature:connectivity:preBuild UP-TO-DATE
-> Task :feature:connectivity:preDebugBuild UP-TO-DATE
-> Task :core:util:checkKotlinGradlePluginConfigurationErrors
-> Task :core:test:checkKotlinGradlePluginConfigurationErrors
+> Task :app-core:checkKotlinGradlePluginConfigurationErrors
+> Task :domain:core:checkKotlinGradlePluginConfigurationErrors
+> Task :domain:memory:checkKotlinGradlePluginConfigurationErrors
+> Task :app-core:preBuild UP-TO-DATE
+> Task :app-core:preDebugBuild UP-TO-DATE
+> Task :domain:habit:checkKotlinGradlePluginConfigurationErrors
+> Task :app-core:generateDebugBuildConfig UP-TO-DATE
+> Task :core:context:preBuild UP-TO-DATE
+> Task :core:context:preDebugBuild UP-TO-DATE
+> Task :domain:crm:checkKotlinGradlePluginConfigurationErrors
+> Task :core:llm:preBuild UP-TO-DATE
+> Task :core:llm:preDebugBuild UP-TO-DATE
+> Task :core:database:preBuild UP-TO-DATE
+> Task :core:context:writeDebugAarMetadata UP-TO-DATE
+> Task :core:database:preDebugBuild UP-TO-DATE
+> Task :domain:crm:processResources NO-SOURCE
+> Task :core:pipeline:preBuild UP-TO-DATE
+> Task :core:pipeline:preDebugBuild UP-TO-DATE
+> Task :core:notifications:preBuild UP-TO-DATE
+> Task :core:telemetry:preBuild UP-TO-DATE
+> Task :core:notifications:preDebugBuild UP-TO-DATE
+> Task :core:telemetry:preDebugBuild UP-TO-DATE
+> Task :core:llm:writeDebugAarMetadata UP-TO-DATE
+> Task :core:pipeline:writeDebugAarMetadata UP-TO-DATE
 > Task :core:util:preBuild UP-TO-DATE
-> Task :core:test:preBuild UP-TO-DATE
+> Task :core:database:writeDebugAarMetadata UP-TO-DATE
+> Task :core:notifications:writeDebugAarMetadata UP-TO-DATE
 > Task :core:util:preDebugBuild UP-TO-DATE
-> Task :core:test:preDebugBuild UP-TO-DATE
-> Task :feature:connectivity:generateDebugResValues UP-TO-DATE
-> Task :core:util:generateDebugResValues UP-TO-DATE
-> Task :feature:connectivity:generateDebugResources UP-TO-DATE
-> Task :core:util:generateDebugResources UP-TO-DATE
-> Task :core:test:generateDebugResValues UP-TO-DATE
-> Task :core:test:generateDebugResources UP-TO-DATE
-> Task :feature:connectivity:packageDebugResources UP-TO-DATE
-> Task :core:util:packageDebugResources UP-TO-DATE
+> Task :domain:scheduler:checkKotlinGradlePluginConfigurationErrors
+> Task :data:ai-core:preBuild UP-TO-DATE
+> Task :data:ai-core:preDebugBuild UP-TO-DATE
+> Task :core:telemetry:writeDebugAarMetadata UP-TO-DATE
+> Task :data:asr:preBuild UP-TO-DATE
+> Task :data:asr:preDebugBuild UP-TO-DATE
+> Task :data:connectivity:preBuild UP-TO-DATE
+> Task :data:connectivity:preDebugBuild UP-TO-DATE
+> Task :data:habit:preBuild UP-TO-DATE
+> Task :data:habit:preDebugBuild UP-TO-DATE
+> Task :domain:session:checkKotlinGradlePluginConfigurationErrors
+> Task :core:util:writeDebugAarMetadata UP-TO-DATE
+> Task :data:memory:preBuild UP-TO-DATE
+> Task :data:memory:preDebugBuild UP-TO-DATE
+> Task :data:ai-core:writeDebugAarMetadata UP-TO-DATE
+> Task :data:session:preBuild UP-TO-DATE
+> Task :data:session:preDebugBuild UP-TO-DATE
+> Task :data:oss:preBuild UP-TO-DATE
+> Task :data:oss:preDebugBuild UP-TO-DATE
+> Task :data:connectivity:writeDebugAarMetadata UP-TO-DATE
+> Task :data:habit:writeDebugAarMetadata UP-TO-DATE
+> Task :data:tingwu:preBuild UP-TO-DATE
+> Task :data:tingwu:preDebugBuild UP-TO-DATE
+> Task :domain:scheduler:processResources NO-SOURCE
+> Task :domain:session:processResources NO-SOURCE
+> Task :data:asr:writeDebugAarMetadata UP-TO-DATE
+> Task :data:crm:preBuild UP-TO-DATE
+> Task :data:memory:writeDebugAarMetadata UP-TO-DATE
+> Task :data:crm:preDebugBuild UP-TO-DATE
+> Task :data:session:writeDebugAarMetadata UP-TO-DATE
+> Task :data:oss:writeDebugAarMetadata UP-TO-DATE
+> Task :core:context:processDebugNavigationResources UP-TO-DATE
+> Task :data:tingwu:writeDebugAarMetadata UP-TO-DATE
+> Task :core:database:processDebugNavigationResources UP-TO-DATE
+> Task :core:llm:processDebugNavigationResources UP-TO-DATE
+> Task :core:notifications:processDebugNavigationResources UP-TO-DATE
+> Task :data:crm:writeDebugAarMetadata UP-TO-DATE
+> Task :core:pipeline:processDebugNavigationResources UP-TO-DATE
+> Task :core:telemetry:processDebugNavigationResources UP-TO-DATE
 > Task :core:util:processDebugNavigationResources UP-TO-DATE
-> Task :core:test:packageDebugResources UP-TO-DATE
-> Task :core:test:processDebugNavigationResources UP-TO-DATE
-> Task :feature:connectivity:processDebugNavigationResources UP-TO-DATE
-> Task :core:test:parseDebugLocalResources UP-TO-DATE
-> Task :feature:connectivity:parseDebugLocalResources UP-TO-DATE
+> Task :data:ai-core:processDebugNavigationResources UP-TO-DATE
+> Task :data:asr:processDebugNavigationResources UP-TO-DATE
+> Task :data:connectivity:processDebugNavigationResources UP-TO-DATE
+> Task :data:habit:processDebugNavigationResources UP-TO-DATE
+> Task :data:crm:processDebugNavigationResources UP-TO-DATE
+> Task :data:memory:processDebugNavigationResources UP-TO-DATE
+> Task :data:session:processDebugNavigationResources UP-TO-DATE
+> Task :data:oss:processDebugNavigationResources UP-TO-DATE
+> Task :data:tingwu:processDebugNavigationResources UP-TO-DATE
+> Task :core:database:generateDebugResValues UP-TO-DATE
+> Task :core:llm:generateDebugResValues UP-TO-DATE
+> Task :core:context:generateDebugResValues UP-TO-DATE
+> Task :core:notifications:generateDebugResValues UP-TO-DATE
+> Task :core:telemetry:generateDebugResValues UP-TO-DATE
+> Task :core:pipeline:generateDebugResValues UP-TO-DATE
+> Task :data:ai-core:generateDebugResValues UP-TO-DATE
+> Task :core:database:generateDebugResources UP-TO-DATE
+> Task :core:llm:generateDebugResources UP-TO-DATE
+> Task :core:context:generateDebugResources UP-TO-DATE
+> Task :core:notifications:generateDebugResources UP-TO-DATE
+> Task :core:telemetry:generateDebugResources UP-TO-DATE
+> Task :data:ai-core:generateDebugResources UP-TO-DATE
+> Task :core:pipeline:generateDebugResources UP-TO-DATE
+> Task :core:util:generateDebugResValues UP-TO-DATE
+> Task :core:util:generateDebugResources UP-TO-DATE
+> Task :core:database:packageDebugResources UP-TO-DATE
+> Task :core:llm:packageDebugResources UP-TO-DATE
+> Task :data:ai-core:packageDebugResources UP-TO-DATE
+> Task :core:telemetry:packageDebugResources UP-TO-DATE
+> Task :core:notifications:packageDebugResources UP-TO-DATE
+> Task :domain:core:compileKotlin UP-TO-DATE
+> Task :core:context:packageDebugResources UP-TO-DATE
+> Task :core:pipeline:packageDebugResources UP-TO-DATE
+> Task :domain:habit:compileKotlin UP-TO-DATE
+> Task :domain:core:compileJava NO-SOURCE
+> Task :domain:habit:compileJava NO-SOURCE
+> Task :domain:core:processResources NO-SOURCE
+> Task :domain:habit:processResources NO-SOURCE
+> Task :domain:core:classes UP-TO-DATE
+> Task :domain:habit:classes UP-TO-DATE
+> Task :data:asr:generateDebugResValues UP-TO-DATE
+> Task :data:crm:generateDebugResValues UP-TO-DATE
+> Task :data:connectivity:generateDebugResValues UP-TO-DATE
+> Task :data:habit:generateDebugResValues UP-TO-DATE
+> Task :data:memory:generateDebugResValues UP-TO-DATE
+> Task :data:oss:generateDebugResValues UP-TO-DATE
+> Task :domain:memory:compileKotlin UP-TO-DATE
+> Task :domain:memory:compileJava NO-SOURCE
+> Task :data:session:generateDebugResValues UP-TO-DATE
+> Task :domain:habit:jar UP-TO-DATE
+> Task :domain:core:jar UP-TO-DATE
+> Task :data:crm:generateDebugResources UP-TO-DATE
+> Task :domain:memory:processResources NO-SOURCE
+> Task :domain:memory:classes UP-TO-DATE
+> Task :data:asr:generateDebugResources UP-TO-DATE
+> Task :data:connectivity:generateDebugResources UP-TO-DATE
+> Task :data:memory:generateDebugResources UP-TO-DATE
+> Task :data:oss:generateDebugResources UP-TO-DATE
+> Task :data:tingwu:generateDebugResValues UP-TO-DATE
+> Task :core:context:extractDeepLinksDebug UP-TO-DATE
+> Task :data:habit:generateDebugResources UP-TO-DATE
+> Task :domain:memory:jar UP-TO-DATE
+> Task :data:session:generateDebugResources UP-TO-DATE
+> Task :core:util:packageDebugResources UP-TO-DATE
+> Task :data:tingwu:generateDebugResources UP-TO-DATE
+> Task :core:database:extractDeepLinksDebug UP-TO-DATE
+> Task :data:crm:packageDebugResources UP-TO-DATE
+> Task :data:asr:packageDebugResources UP-TO-DATE
+> Task :data:oss:packageDebugResources UP-TO-DATE
+> Task :core:llm:extractDeepLinksDebug UP-TO-DATE
+> Task :data:habit:packageDebugResources UP-TO-DATE
+> Task :core:notifications:extractDeepLinksDebug UP-TO-DATE
+> Task :data:session:packageDebugResources UP-TO-DATE
+> Task :core:pipeline:extractDeepLinksDebug UP-TO-DATE
+> Task :data:tingwu:packageDebugResources UP-TO-DATE
+> Task :core:context:processDebugManifest UP-TO-DATE
+> Task :data:memory:packageDebugResources UP-TO-DATE
+> Task :data:connectivity:packageDebugResources UP-TO-DATE
+> Task :data:ai-core:extractDeepLinksDebug UP-TO-DATE
+> Task :data:asr:extractDeepLinksDebug UP-TO-DATE
+> Task :core:telemetry:extractDeepLinksDebug UP-TO-DATE
+> Task :data:crm:extractDeepLinksDebug UP-TO-DATE
+> Task :core:util:extractDeepLinksDebug UP-TO-DATE
+> Task :data:connectivity:extractDeepLinksDebug UP-TO-DATE
+> Task :domain:scheduler:compileKotlin UP-TO-DATE
+> Task :domain:scheduler:compileJava NO-SOURCE
+> Task :domain:scheduler:classes UP-TO-DATE
+> Task :core:pipeline:processDebugManifest UP-TO-DATE
+> Task :core:database:processDebugManifest UP-TO-DATE
+> Task :domain:scheduler:jar UP-TO-DATE
+> Task :core:llm:processDebugManifest UP-TO-DATE
+> Task :data:ai-core:processDebugManifest UP-TO-DATE
+> Task :data:memory:extractDeepLinksDebug UP-TO-DATE
+> Task :core:telemetry:processDebugManifest UP-TO-DATE
+> Task :core:notifications:processDebugManifest UP-TO-DATE
+> Task :data:habit:extractDeepLinksDebug UP-TO-DATE
+> Task :data:oss:extractDeepLinksDebug UP-TO-DATE
+> Task :data:session:extractDeepLinksDebug UP-TO-DATE
+> Task :data:crm:processDebugManifest UP-TO-DATE
+> Task :data:asr:processDebugManifest UP-TO-DATE
+> Task :data:connectivity:processDebugManifest UP-TO-DATE
+> Task :data:tingwu:extractDeepLinksDebug UP-TO-DATE
+> Task :core:context:compileDebugLibraryResources UP-TO-DATE
+> Task :core:util:processDebugManifest UP-TO-DATE
+> Task :core:database:compileDebugLibraryResources UP-TO-DATE
+> Task :core:llm:compileDebugLibraryResources UP-TO-DATE
+> Task :core:notifications:compileDebugLibraryResources UP-TO-DATE
+> Task :core:context:parseDebugLocalResources UP-TO-DATE
+> Task :core:pipeline:compileDebugLibraryResources UP-TO-DATE
+> Task :core:database:parseDebugLocalResources UP-TO-DATE
+> Task :core:llm:parseDebugLocalResources UP-TO-DATE
+> Task :data:memory:processDebugManifest UP-TO-DATE
+> Task :data:session:processDebugManifest UP-TO-DATE
+> Task :data:habit:processDebugManifest UP-TO-DATE
+> Task :data:oss:processDebugManifest UP-TO-DATE
+> Task :data:tingwu:processDebugManifest UP-TO-DATE
+> Task :core:util:compileDebugLibraryResources UP-TO-DATE
+> Task :data:ai-core:compileDebugLibraryResources UP-TO-DATE
+> Task :core:notifications:parseDebugLocalResources UP-TO-DATE
+> Task :core:telemetry:compileDebugLibraryResources UP-TO-DATE
+> Task :data:asr:compileDebugLibraryResources UP-TO-DATE
+> Task :data:connectivity:compileDebugLibraryResources UP-TO-DATE
+> Task :core:pipeline:parseDebugLocalResources UP-TO-DATE
+> Task :app-core:checkDebugAarMetadata UP-TO-DATE
 > Task :core:util:parseDebugLocalResources UP-TO-DATE
-> Task :feature:connectivity:generateDebugRFile UP-TO-DATE
+> Task :core:context:generateDebugRFile UP-TO-DATE
+> Task :data:ai-core:parseDebugLocalResources UP-TO-DATE
+> Task :core:database:generateDebugRFile UP-TO-DATE
+> Task :core:llm:generateDebugRFile UP-TO-DATE
+> Task :core:telemetry:parseDebugLocalResources UP-TO-DATE
+> Task :domain:crm:compileKotlin UP-TO-DATE
+> Task :data:asr:parseDebugLocalResources UP-TO-DATE
+> Task :data:habit:compileDebugLibraryResources UP-TO-DATE
+> Task :core:notifications:generateDebugRFile UP-TO-DATE
+> Task :data:memory:compileDebugLibraryResources UP-TO-DATE
+> Task :domain:crm:compileJava NO-SOURCE
+> Task :domain:crm:classes UP-TO-DATE
+> Task :data:connectivity:parseDebugLocalResources UP-TO-DATE
+> Task :data:crm:compileDebugLibraryResources UP-TO-DATE
+> Task :data:oss:compileDebugLibraryResources UP-TO-DATE
+> Task :data:habit:parseDebugLocalResources UP-TO-DATE
+> Task :domain:crm:jar UP-TO-DATE
+> Task :data:memory:parseDebugLocalResources UP-TO-DATE
+> Task :app-core:processDebugNavigationResources UP-TO-DATE
+> Task :data:crm:parseDebugLocalResources UP-TO-DATE
+> Task :data:ai-core:generateDebugRFile UP-TO-DATE
+> Task :core:pipeline:generateDebugRFile UP-TO-DATE
 > Task :core:util:generateDebugRFile UP-TO-DATE
-> Task :core:test:generateDebugRFile UP-TO-DATE
-> Task :feature:connectivity:checkKotlinGradlePluginConfigurationErrors
-> Task :feature:connectivity:generateDebugBuildConfig UP-TO-DATE
-> Task :core:test:javaPreCompileDebug UP-TO-DATE
-> Task :feature:connectivity:javaPreCompileDebug UP-TO-DATE
-> Task :feature:connectivity:preDebugUnitTestBuild UP-TO-DATE
-> Task :feature:connectivity:generateDebugUnitTestStubRFile UP-TO-DATE
+> Task :core:telemetry:generateDebugRFile UP-TO-DATE
+> Task :data:oss:parseDebugLocalResources UP-TO-DATE
+> Task :core:context:checkKotlinGradlePluginConfigurationErrors
+> Task :core:telemetry:checkKotlinGradlePluginConfigurationErrors
+> Task :core:database:checkKotlinGradlePluginConfigurationErrors
+> Task :app-core:compileDebugNavigationResources UP-TO-DATE
+> Task :data:asr:generateDebugRFile UP-TO-DATE
+> Task :core:util:checkKotlinGradlePluginConfigurationErrors
+> Task :data:session:compileDebugLibraryResources UP-TO-DATE
+> Task :data:tingwu:compileDebugLibraryResources UP-TO-DATE
+> Task :data:connectivity:generateDebugRFile UP-TO-DATE
+> Task :core:database:generateDebugBuildConfig UP-TO-DATE
+> Task :app-core:generateDebugResValues UP-TO-DATE
+> Task :data:session:parseDebugLocalResources UP-TO-DATE
+> Task :data:memory:generateDebugRFile UP-TO-DATE
+> Task :core:llm:checkKotlinGradlePluginConfigurationErrors
+> Task :data:ai-core:checkKotlinGradlePluginConfigurationErrors
+> Task :data:habit:generateDebugRFile UP-TO-DATE
+> Task :data:tingwu:parseDebugLocalResources UP-TO-DATE
+> Task :domain:session:compileKotlin UP-TO-DATE
+> Task :domain:session:compileJava NO-SOURCE
+> Task :domain:session:classes UP-TO-DATE
+> Task :data:crm:generateDebugRFile UP-TO-DATE
+> Task :data:oss:generateDebugRFile UP-TO-DATE
+> Task :core:notifications:checkKotlinGradlePluginConfigurationErrors
+> Task :core:pipeline:checkKotlinGradlePluginConfigurationErrors
+> Task :data:ai-core:generateDebugBuildConfig UP-TO-DATE
+> Task :app-core:mapDebugSourceSetPaths UP-TO-DATE
+> Task :domain:session:jar UP-TO-DATE
+> Task :data:asr:checkKotlinGradlePluginConfigurationErrors
+> Task :data:oss:checkKotlinGradlePluginConfigurationErrors
+> Task :core:pipeline:javaPreCompileDebug UP-TO-DATE
+> Task :app-core:generateDebugResources UP-TO-DATE
+> Task :data:oss:generateDebugBuildConfig UP-TO-DATE
+> Task :data:session:generateDebugRFile UP-TO-DATE
+> Task :data:connectivity:checkKotlinGradlePluginConfigurationErrors
+> Task :core:llm:javaPreCompileDebug UP-TO-DATE
+> Task :data:crm:checkKotlinGradlePluginConfigurationErrors
+> Task :data:ai-core:javaPreCompileDebug UP-TO-DATE
+> Task :data:habit:checkKotlinGradlePluginConfigurationErrors
+> Task :data:tingwu:generateDebugRFile UP-TO-DATE
+> Task :data:memory:checkKotlinGradlePluginConfigurationErrors
+> Task :core:context:javaPreCompileDebug UP-TO-DATE
+> Task :data:session:checkKotlinGradlePluginConfigurationErrors
+> Task :data:asr:javaPreCompileDebug UP-TO-DATE
+> Task :data:tingwu:checkKotlinGradlePluginConfigurationErrors
+> Task :data:connectivity:javaPreCompileDebug UP-TO-DATE
+> Task :data:habit:generateDebugBuildConfig UP-TO-DATE
+> Task :data:memory:generateDebugBuildConfig UP-TO-DATE
+> Task :data:crm:generateDebugBuildConfig UP-TO-DATE
+> Task :data:session:javaPreCompileDebug UP-TO-DATE
+> Task :core:telemetry:compileDebugKotlin UP-TO-DATE
+> Task :data:tingwu:javaPreCompileDebug UP-TO-DATE
+> Task :data:habit:javaPreCompileDebug UP-TO-DATE
+> Task :data:memory:javaPreCompileDebug UP-TO-DATE
+> Task :data:crm:javaPreCompileDebug UP-TO-DATE
+> Task :core:notifications:compileDebugKotlin UP-TO-DATE
+> Task :core:notifications:javaPreCompileDebug UP-TO-DATE
+> Task :core:telemetry:javaPreCompileDebug UP-TO-DATE
+> Task :core:notifications:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:telemetry:compileDebugJavaWithJavac NO-SOURCE
+> Task :app-core:mergeDebugResources UP-TO-DATE
+> Task :core:notifications:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:database:kaptGenerateStubsDebugKotlin UP-TO-DATE
 > Task :core:util:compileDebugKotlin UP-TO-DATE
+> Task :core:telemetry:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:telemetry:bundleLibRuntimeToJarDebug UP-TO-DATE
 > Task :core:util:javaPreCompileDebug UP-TO-DATE
+> Task :app-core:packageDebugResources UP-TO-DATE
+> Task :data:oss:kaptGenerateStubsDebugKotlin UP-TO-DATE
+> Task :app-core:parseDebugLocalResources UP-TO-DATE
+> Task :app-core:createDebugCompatibleScreenManifests UP-TO-DATE
+> Task :app-core:extractDeepLinksDebug UP-TO-DATE
 > Task :core:util:compileDebugJavaWithJavac NO-SOURCE
 > Task :core:util:bundleLibCompileToJarDebug UP-TO-DATE
 > Task :core:util:bundleLibRuntimeToJarDebug UP-TO-DATE
-> Task :core:test:compileDebugKotlin UP-TO-DATE
-> Task :core:test:compileDebugJavaWithJavac NO-SOURCE
-> Task :core:test:bundleLibCompileToJarDebug UP-TO-DATE
-> Task :feature:connectivity:kaptGenerateStubsDebugKotlin UP-TO-DATE
-> Task :feature:connectivity:kaptDebugKotlin UP-TO-DATE
-> Task :feature:connectivity:compileDebugKotlin UP-TO-DATE
-> Task :feature:connectivity:compileDebugJavaWithJavac UP-TO-DATE
-> Task :feature:connectivity:transformDebugClassesWithAsm UP-TO-DATE
-> Task :feature:connectivity:bundleLibCompileToJarDebug UP-TO-DATE
-> Task :feature:connectivity:kaptGenerateStubsDebugUnitTestKotlin UP-TO-DATE
-> Task :feature:connectivity:kaptDebugUnitTestKotlin UP-TO-DATE
+> Task :core:database:kaptDebugKotlin UP-TO-DATE
+> Task :core:database:compileDebugKotlin UP-TO-DATE
+> Task :data:oss:kaptDebugKotlin UP-TO-DATE
+> Task :app-core:processDebugMainManifest UP-TO-DATE
+> Task :core:database:javaPreCompileDebug UP-TO-DATE
+> Task :app-core:processDebugManifest UP-TO-DATE
+> Task :app-core:processDebugManifestForPackage UP-TO-DATE
+> Task :data:oss:compileDebugKotlin UP-TO-DATE
+> Task :data:oss:javaPreCompileDebug UP-TO-DATE
+> Task :core:database:compileDebugJavaWithJavac UP-TO-DATE
+> Task :data:oss:compileDebugJavaWithJavac UP-TO-DATE
+> Task :core:database:transformDebugClassesWithAsm UP-TO-DATE
+> Task :data:oss:transformDebugClassesWithAsm UP-TO-DATE
+> Task :data:oss:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:database:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:database:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :data:connectivity:compileDebugKotlin UP-TO-DATE
+> Task :data:connectivity:compileDebugJavaWithJavac NO-SOURCE
+> Task :data:connectivity:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :data:asr:compileDebugKotlin UP-TO-DATE
+> Task :data:asr:compileDebugJavaWithJavac NO-SOURCE
+> Task :data:asr:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :data:tingwu:compileDebugKotlin UP-TO-DATE
+> Task :data:tingwu:compileDebugJavaWithJavac NO-SOURCE
+> Task :data:tingwu:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :data:memory:kaptGenerateStubsDebugKotlin UP-TO-DATE
+> Task :core:context:kaptGenerateStubsDebugKotlin UP-TO-DATE
+> Task :app-core:processDebugResources UP-TO-DATE
+> Task :data:session:kaptGenerateStubsDebugKotlin UP-TO-DATE
+> Task :data:habit:kaptGenerateStubsDebugKotlin UP-TO-DATE
+> Task :data:crm:kaptGenerateStubsDebugKotlin UP-TO-DATE
+> Task :data:memory:kaptDebugKotlin UP-TO-DATE
+> Task :data:ai-core:kaptGenerateStubsDebugKotlin UP-TO-DATE
+> Task :data:habit:kaptDebugKotlin UP-TO-DATE
+> Task :core:context:kaptDebugKotlin UP-TO-DATE
+> Task :data:session:kaptDebugKotlin UP-TO-DATE
+> Task :data:memory:compileDebugKotlin UP-TO-DATE
+> Task :data:crm:kaptDebugKotlin UP-TO-DATE
+> Task :data:habit:compileDebugKotlin UP-TO-DATE
+> Task :core:context:compileDebugKotlin UP-TO-DATE
+> Task :data:habit:compileDebugJavaWithJavac UP-TO-DATE
+> Task :data:crm:compileDebugKotlin UP-TO-DATE
+> Task :data:habit:transformDebugClassesWithAsm UP-TO-DATE
+> Task :data:habit:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:context:compileDebugJavaWithJavac UP-TO-DATE
+> Task :data:memory:compileDebugJavaWithJavac UP-TO-DATE
+> Task :data:ai-core:kaptDebugKotlin UP-TO-DATE
+> Task :data:session:compileDebugKotlin UP-TO-DATE
+> Task :data:crm:compileDebugJavaWithJavac UP-TO-DATE
+> Task :core:context:transformDebugClassesWithAsm UP-TO-DATE
+> Task :core:context:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :data:memory:transformDebugClassesWithAsm UP-TO-DATE
+> Task :data:memory:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :data:session:compileDebugJavaWithJavac UP-TO-DATE
+> Task :data:crm:transformDebugClassesWithAsm UP-TO-DATE
+> Task :data:crm:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :data:session:transformDebugClassesWithAsm UP-TO-DATE
+> Task :data:session:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :data:ai-core:compileDebugKotlin UP-TO-DATE
+> Task :data:ai-core:compileDebugJavaWithJavac UP-TO-DATE
+> Task :data:ai-core:transformDebugClassesWithAsm UP-TO-DATE
+> Task :data:ai-core:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :data:ai-core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :core:llm:kaptGenerateStubsDebugKotlin UP-TO-DATE
+> Task :core:llm:kaptDebugKotlin UP-TO-DATE
+> Task :core:llm:compileDebugKotlin UP-TO-DATE
+> Task :core:llm:compileDebugJavaWithJavac UP-TO-DATE
+> Task :core:llm:transformDebugClassesWithAsm UP-TO-DATE
+> Task :core:llm:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :core:pipeline:compileDebugKotlin UP-TO-DATE
+> Task :core:pipeline:compileDebugJavaWithJavac NO-SOURCE
+> Task :core:pipeline:bundleLibCompileToJarDebug UP-TO-DATE
 
-> Task :feature:connectivity:compileDebugUnitTestKotlin FAILED
-e: file:///home/cslh-frank/main_app/feature/connectivity/src/test/java/com/smartsales/feature/connectivity/AndroidBleWifiProvisionerTest.kt:127:13 Class 'RecordingGateway' is not abstract and does not implement abstract member public abstract fun listenForTimeSync(session: BleSession): Flow<TimeSyncEvent> defined in com.smartsales.feature.connectivity.gateway.BleGateway
+> Task :app-core:kaptGenerateStubsDebugKotlin
+e: file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/ui/drawers/SchedulerDrawer.kt:432:2 Expecting '}'
+
+> Task :app-core:kaptGenerateStubsDebugKotlin FAILED
 
 [Incubating] Problems report is available at: file:///home/cslh-frank/main_app/build/reports/problems/problems-report.html
 
 FAILURE: Build failed with an exception.
 
 * What went wrong:
-Execution failed for task ':feature:connectivity:compileDebugUnitTestKotlin'.
+Execution failed for task ':app-core:kaptGenerateStubsDebugKotlin'.
 > A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
    > Compilation error. See log for more details
 
@@ -72,5 +390,5 @@ You can use '--warning-mode all' to show the individual deprecation warnings and
 
 For more on this, please refer to https://docs.gradle.org/8.13/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
 
-BUILD FAILED in 3s
-40 actionable tasks: 4 executed, 36 up-to-date
+BUILD FAILED in 9s
+306 actionable tasks: 24 executed, 282 up-to-date

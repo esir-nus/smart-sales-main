@@ -19,7 +19,8 @@ class TestScheduledTaskRepository : ScheduledTaskRepository {
     override suspend fun insertTask(task: ScheduledTask): String = "id"
     override suspend fun getTask(id: String): ScheduledTask? = null
     override suspend fun updateTask(task: ScheduledTask) {}
-    override suspend fun deleteItem(id: String) {}
+    override suspend fun upsertTask(task: ScheduledTask): String = "id"
+            override suspend fun deleteItem(id: String) {}
     override suspend fun getRecentCompleted(limit: Int): List<ScheduledTask> = emptyList()
     override suspend fun getTopUrgentActiveForEntity(entityId: String): ScheduledTask? = null
     override fun observeByEntityId(entityId: String): kotlinx.coroutines.flow.Flow<List<ScheduledTask>> = kotlinx.coroutines.flow.emptyFlow()

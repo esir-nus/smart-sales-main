@@ -157,3 +157,31 @@ The LLM does NOT directly write to the database in the critical UX path. Writes 
 3. **Session Memory**: The raw chat transcript operates on its own growth logic, injecting recent turns directly into RAM without needing full SSD processing every time. 
 
 **Takeaway for Agents**: Do not treat the LLM as a monolithic text-to-JSON box. It is a dual-engine reasoning brain. The **Sync Loop** strictly bounds the LLM's reality via the Alias Lib and SSD IDs. The **Async Loop** strictly bounds what the LLM is allowed to mutate via Kotlin Data Classes.
+
+---
+
+## 7. The Pipeline Valve Protocol (Observable Architecture)
+
+In a Data-Oriented OS, debugging requires tracking the data payload (the "Passenger") as it moves across architectural junctions (the "Cities"). We do not rely on shallow, unstructured `Log.d()` statements. We use **Pipeline Valves**.
+
+### The Mental Model: "Google Maps"
+- **The Code Functions** are the physical roads and highways (they define where data *can* go).
+- **The Data (Payload)** is the actual car driving on the road.
+- **The Pipeline Valves (Anchors)** are the GPS checkpoints or toll booths. 
+
+When a bug occurs (e.g., a missing `dateRange`), you do not read 50 files of code. You check the GPS logs to see at which Toll Booth the data was lost.
+
+### The Contract (`PipelineValve`)
+Every major checkpoint in the `Core Pipeline` must invoke a standardized logging contract. This is typically implemented via a centralized logger (e.g., `PipelineValve.tag(...)`).
+
+**Required Checkpoints (The Toll Booths):**
+1. `[INPUT_RECEIVED]` - The raw text/voice origin entering the system.
+2. `[ROUTER_DECISION]` - The classification result leaving the Lightning Router (e.g., `SIMPLE_QA`, `VAGUE`, `INTENT`).
+3. `[ALIAS_RESOLUTION]` - The exact `EntityID` resolved by the Alias Lib.
+4. `[SSD_GRAPH_FETCHED]` - The payload shape retrieved from the database.
+5. `[LIVING_RAM_ASSEMBLED]` - The final context payload handed to the LLM Prompt Compiler.
+6. `[LLM_BRAIN_EMISSION]` - The raw JSON string emitted by the LLM.
+7. `[LINTER_DECODED]` - The strictly typed Kotlin `data class` parsed from the LLM, ready for UI/DB consumption.
+
+**Rule for Agents & Developers:**
+For any feature traversing the Core Pipeline, if you cannot trace the exact shape of your data through these 7 checkpoints via a simple log filter (e.g., `adb logcat -s VALVE_PROTOCOL`), the pipeline observability is broken and must be fixed before the feature is marked `SHIPPED`.

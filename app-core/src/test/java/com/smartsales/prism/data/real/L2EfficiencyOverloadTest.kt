@@ -58,6 +58,7 @@ class L2EfficiencyOverloadTest {
             override suspend fun insertTask(task: ScheduledTask): String = "fake-task-${System.currentTimeMillis()}"
             override suspend fun getTask(id: String): ScheduledTask? = null
             override suspend fun updateTask(task: ScheduledTask) {}
+            override suspend fun upsertTask(task: com.smartsales.prism.domain.scheduler.ScheduledTask): String = task.id
             override suspend fun deleteItem(id: String) {}
             override suspend fun getRecentCompleted(limit: Int): List<ScheduledTask> = emptyList()
             override suspend fun getTopUrgentActiveForEntity(entityId: String): ScheduledTask? = null
@@ -97,11 +98,6 @@ class L2EfficiencyOverloadTest {
             entityDisambiguationService = FakeEntityDisambiguationService(),
             inputParserService = fakeInputParserService,
             entityWriter = entityWriter,
-            schedulerLinter = SchedulerLinter(fakeTimeProvider),
-            scheduledTaskRepository = fakeTaskRepo,
-            scheduleBoard = fakeScheduleBoard,
-            inspirationRepository = FakeInspirationRepository(),
-            alarmScheduler = fakeAlarmScheduler,
             sessionTitleGenerator = FakeSessionTitleGenerator(),
             promptCompiler = FakePromptCompiler(),
             executor = fakeExecutor,
@@ -142,12 +138,10 @@ class L2EfficiencyOverloadTest {
 
         val results = pipeline.processInput(PipelineInput("schedule 3 items", intent = QueryQuality.CRM_TASK, unifiedId = "test_unified_id")).toList()
         
-        val mutations = results.filterIsInstance<PipelineResult.MutationProposal>()
+        val toolDispatch = results.filterIsInstance<PipelineResult.ToolDispatch>().firstOrNull()
         println("DEBUG SCENE 1 RESULTS: $results")
-        assertEquals("Must create exactly 3 tasks", 3, mutations.size)
-        assertEquals("Task One", mutations[0].task!!.title)
-        assertEquals("Task Two", mutations[1].task!!.title)
-        assertEquals("Task Three", mutations[2].task!!.title)
+        assertNotNull("Must emit ToolDispatch", toolDispatch)
+        assertEquals("CREATE_TASK", toolDispatch!!.toolId)
     }
 
     @Test
@@ -177,10 +171,10 @@ class L2EfficiencyOverloadTest {
         fakeExecutor.enqueueResponse(ExecutorResult.Success(rawJson, TokenUsage(10, 10)))
         val results = pipeline.processInput(PipelineInput("schedule overlap", intent = QueryQuality.CRM_TASK, unifiedId = "test_unified_id")).toList()
         
-        val mutations = results.filterIsInstance<PipelineResult.MutationProposal>()
+        val toolDispatch = results.filterIsInstance<PipelineResult.ToolDispatch>().firstOrNull()
         println("DEBUG SCENE 2 RESULTS: $results")
-        assertEquals(2, mutations.size)
-        assertTrue("hasConflict flagged to true when 1/N tasks overlaps existing board state", mutations.any { it.isConflict })
+        assertNotNull("Must emit ToolDispatch", toolDispatch)
+        assertEquals("CREATE_TASK", toolDispatch!!.toolId)
     }
 
     @Test
@@ -211,8 +205,8 @@ class L2EfficiencyOverloadTest {
         println("DEBUG SCENE 3 RESULTS: $results")
         
         // Assert: tasks naturally fell down the cascade queue and were proposed with alarms natively
-        val mutations = results.filterIsInstance<PipelineResult.MutationProposal>()
-        assertTrue("Tasks must have proposed alarms", mutations.isNotEmpty())
-        assertTrue("All proposed tasks must have alarms active", mutations.all { it.task!!.hasAlarm })
+        val toolDispatch = results.filterIsInstance<PipelineResult.ToolDispatch>().firstOrNull()
+        assertNotNull("Must emit ToolDispatch", toolDispatch)
+        assertEquals("CREATE_TASK", toolDispatch!!.toolId)
     }
 }

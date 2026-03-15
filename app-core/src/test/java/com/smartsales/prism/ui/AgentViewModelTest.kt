@@ -30,7 +30,6 @@ class AgentViewModelTest {
     private lateinit var fakeToolRegistry: FakeToolRegistry
     private lateinit var fakeLightningRouter: FakeLightningRouter
     private lateinit var fakeUnifiedPipeline: FakeUnifiedPipeline
-    private lateinit var fakeScheduleBoard: FakeScheduleBoard
     private lateinit var fakeEntityWriter: FakeEntityWriter
     private lateinit var fakeAliasCache: FakeAliasCache
     private lateinit var intentOrchestrator: IntentOrchestrator
@@ -53,7 +52,6 @@ class AgentViewModelTest {
         fakeToolRegistry = FakeToolRegistry()
         fakeLightningRouter = FakeLightningRouter()
         fakeUnifiedPipeline = FakeUnifiedPipeline()
-        fakeScheduleBoard = FakeScheduleBoard()
         fakeEntityWriter = FakeEntityWriter()
         fakeAliasCache = FakeAliasCache()
 
@@ -62,8 +60,6 @@ class AgentViewModelTest {
             lightningRouter = fakeLightningRouter,
             mascotService = fakeMascotService,
             unifiedPipeline = fakeUnifiedPipeline,
-            scheduledTaskRepository = fakeScheduledTaskRepo,
-            scheduleBoard = fakeScheduleBoard,
             entityWriter = fakeEntityWriter,
             aliasCache = fakeAliasCache,
             appScope = TestScope(testDispatcher)

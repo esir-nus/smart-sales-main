@@ -191,15 +191,7 @@ fun L2DebugHud(
                                     var hasResult = false
                                     unifiedPipeline.processInput(pipelineInput).collect { pResult ->
                                         when (pResult) {
-                                            is PipelineResult.SchedulerTaskCreated -> {
-                                                Log.d(TAG, "✅ Task Created!")
-                                                Log.d(TAG, "   title: ${pResult.title}")
-                                                Log.d(TAG, "   dayOffset: ${pResult.dayOffset}")
-                                                Log.d(TAG, "   taskId: ${pResult.taskId}")
-                                                lastResult = "✅ Task: ${pResult.title}"
-                                                showToast = true
-                                                hasResult = true
-                                            }
+
                                             is PipelineResult.ClarificationNeeded -> {
                                                 Log.d(TAG, "⚠️ Clarification needed: ${pResult.question}")
                                                 lastResult = "⚠️ ${pResult.question}"
@@ -212,12 +204,7 @@ fun L2DebugHud(
                                                 showToast = true
                                                 hasResult = true
                                             }
-                                            is PipelineResult.SchedulerMultiTaskCreated -> {
-                                                Log.d(TAG, "✅ Tasks Created! ${pResult.tasks.size}")
-                                                lastResult = "✅ ${pResult.tasks.size} Tasks Created"
-                                                showToast = true
-                                                hasResult = true
-                                            }
+
                                             is PipelineResult.Progress -> {
                                                 Log.d(TAG, "⏳ Progress: ${pResult.message}")
                                             }

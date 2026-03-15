@@ -23,6 +23,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
+import com.smartsales.prism.domain.scheduler.FastTrackParser
+import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 
 /**
  * Real Badge Audio Pipeline — 录音 → 转写 → 调度
@@ -34,7 +36,9 @@ import javax.inject.Singleton
 class RealBadgeAudioPipeline @Inject constructor(
     private val connectivityBridge: ConnectivityBridge,
     private val asrService: AsrService,
-    private val unifiedPipeline: UnifiedPipeline
+    private val unifiedPipeline: UnifiedPipeline,
+    private val fastTrackParser: FastTrackParser,
+    private val scheduledTaskRepository: ScheduledTaskRepository
 ) : BadgeAudioPipeline {
     
     companion object {
@@ -129,65 +133,56 @@ class RealBadgeAudioPipeline @Inject constructor(
                 unifiedId = unifiedId
             )
             
-            var schedulerResult: SchedulerResult = SchedulerResult.Ignored
+            // --- PATH A: The Town (Fast-Track Optimistic UI) ---
+            val optimisticTask = fastTrackParser.parseToOptimisticTask(unifiedId, transcript)
+            scheduledTaskRepository.upsertTask(optimisticTask)
             
-            try {
-                unifiedPipeline.processInput(pipelineInput).collect { pResult ->
-                    when(pResult) {
-                         is com.smartsales.core.pipeline.PipelineResult.SchedulerTaskCreated -> {
-                             schedulerResult = SchedulerResult.TaskCreated(
-                                 pResult.taskId, pResult.title,
-                                 pResult.dayOffset, pResult.scheduledAtMillis, pResult.durationMinutes
-                             )
-                         }
-                         is com.smartsales.core.pipeline.PipelineResult.SchedulerMultiTaskCreated -> {
-                             schedulerResult = SchedulerResult.MultiTaskCreated(
-                                 tasks = pResult.tasks.map { task ->
-                                     SchedulerResult.TaskCreated(
-                                         task.taskId, task.title,
-                                         task.dayOffset, task.scheduledAtMillis, task.durationMinutes
-                                     )
-                                 }
-                             )
-                         }
-                         is com.smartsales.core.pipeline.PipelineResult.DisambiguationIntercepted -> {
-                             schedulerResult = SchedulerResult.AwaitingClarification("需要进一步确认")
-                         }
-                         is com.smartsales.core.pipeline.PipelineResult.ClarificationNeeded -> {
-                             schedulerResult = SchedulerResult.AwaitingClarification(pResult.question)
-                         }
-                         else -> { /* Ignore intermediate states from RealUnifiedPipeline */ }
-                    }
-                }
-            } catch (e: Exception) {
-                _currentState.value = PipelineState.IDLE
-                _events.emit(PipelineEvent.Error(
-                    stage = PipelineEvent.Stage.SCHEDULE,
-                    message = e.message ?: "调度失败",
-                    filename = filename
-                ))
-                android.util.Log.w(TAG, "Scheduling failed: ${e.message}")
-                localFile.delete()
-                return@processFile
-            }
+            val schedulerResult = SchedulerResult.TaskCreated(
+                taskId = optimisticTask.id,
+                title = optimisticTask.title,
+                dayOffset = 0,
+                scheduledAtMillis = optimisticTask.startTime.toEpochMilli(),
+                durationMinutes = optimisticTask.durationMinutes
+            )
 
+            android.util.Log.d(TAG, "Path A Scheduled Optimistic Task: \$schedulerResult")
             
-            android.util.Log.d(TAG, "Scheduled: $schedulerResult")
-            
-            // 4. Cleanup
+            // 4. Cleanup (Emit Completion for Path A to close Drawer)
             currentStage = PipelineEvent.Stage.CLEANUP
             _currentState.value = PipelineState.IDLE
-            
-            // Ignored 结果不发送 Complete 事件（非调度意图）
-            if (schedulerResult !is SchedulerResult.Ignored) {
-                _events.emit(PipelineEvent.Complete(schedulerResult, filename, transcript))
-            } else {
-                android.util.Log.d(TAG, "Non-scheduling audio, skipping Complete event")
-            }
+            _events.emit(PipelineEvent.Complete(schedulerResult, filename, transcript))
             
             val deleted = connectivityBridge.deleteRecording(filename)
             localFile.delete()
-            android.util.Log.d(TAG, "Cleanup: badge=${if (deleted) "✓" else "✗"}, local=✓")
+            android.util.Log.d(TAG, "Path A Cleanup: badge=\${if (deleted) \"✓\" else \"✗\"}, local=✓")
+            
+            // --- PATH B: The Highway (Heavyweight CRM Disambiguation) ---
+            scope.launch(Dispatchers.IO) {
+                try {
+                    android.util.Log.d(TAG, "Path B starting UnifiedPipeline for \$unifiedId")
+                    unifiedPipeline.processInput(pipelineInput).collect { pResult ->
+                        when(pResult) {
+                            is com.smartsales.core.pipeline.PipelineResult.ToolDispatch -> {
+                                android.util.Log.d(TAG, "Path B Enriched Task via ToolDispatch, plugin handles Upsert.")
+                                // TODO: Plugin registry handles the final upsert asynchronously.
+                            }
+                            is com.smartsales.core.pipeline.PipelineResult.DisambiguationIntercepted -> {
+                                val existing = scheduledTaskRepository.getTask(unifiedId) ?: optimisticTask
+                                val state = com.smartsales.prism.domain.scheduler.ClarificationState.MissingInformation("需要进一步确认")
+                                scheduledTaskRepository.upsertTask(existing.copy(clarificationState = state))
+                            }
+                            is com.smartsales.core.pipeline.PipelineResult.ClarificationNeeded -> {
+                                val existing = scheduledTaskRepository.getTask(unifiedId) ?: optimisticTask
+                                val state = com.smartsales.prism.domain.scheduler.ClarificationState.MissingInformation(pResult.question)
+                                scheduledTaskRepository.upsertTask(existing.copy(clarificationState = state))
+                            }
+                            else -> { /* Ignore intermediate states from RealUnifiedPipeline */ }
+                        }
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.e(TAG, "Path B Highway failed: \${e.message}", e)
+                }
+            }
             
         } catch (e: Exception) {
             _currentState.value = PipelineState.IDLE
@@ -196,7 +191,7 @@ class RealBadgeAudioPipeline @Inject constructor(
                 message = e.message ?: "未知错误",
                 filename = filename
             ))
-            android.util.Log.e(TAG, "Pipeline error at stage $currentStage", e)
+            android.util.Log.e(TAG, "Pipeline error at stage \$currentStage", e)
         }
     }
     

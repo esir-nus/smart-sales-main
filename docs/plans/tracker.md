@@ -124,35 +124,29 @@
 - [x] ✅ **Execute (Phase 3)**: The Cross-Off Lifecycle — Implement data migration in `SchedulerViewModel` (or equivalent observer) where completing a task permanently creates a `MemoryEntry` and deletes the `ScheduledTask`.
 - [ ] 🔲 **Test**: Verify `L1ClientProfileHubTest.kt` passes Phase 2 logic, and an L2 simulation proves Phase 3 Source of Truth migration.
 
-### 🌊 Wave 14: Dual-Path Scheduler Architecture
-> Objective: Formalize the "Town and Highway" protocol for the DEV Audio Hook by decoupling optimistic UI Task Creation (Path A) from heavyweight async CRM Entity Disambiguation (Path B).
-> 🧭 **North Star**: [Wave 14 Master Guide](../specs/wave14-dual-path-master-guide.md)
+### 🌊 Wave 14: Scheduler Architecture Refinement (Monolithic)
+> Objective: Enhance the monolithic Scheduler pipeline to handle Voice Hooks deterministically.
 
 - [x] ✅ **T0: Campaign North Star**
-  - [x] **Docs**: Create `docs/specs/wave14-dual-path-master-guide.md` to establish architectural principles and Intricacies.
+  - [x] **Docs**: Enhance `docs/cerb/scheduler/spec.md` to establish architectural principles and Intricacies.
 
-- [x] ✅ **T1: The God Spec Splice (Context Isolation)**
-  - [x] **Plan**: Shard `docs/cerb/scheduler/` into `scheduler-domain`, `scheduler-linter`, and `scheduler-drawer`.
-  - [x] **Execute**: Run `/cerb-spec-template` and `/cerb-ui-template` to scaffold the 3 new directories. Migrate the 32KB content appropriately. Append to `interface-map.md`.
-  - [x] **Test**: Run `/cerb-check` on all three new specs. Delete the old `scheduler/` doc directory.
-
-- [x] ✅ **T2: Shard 1 Execution (Domain `unifiedID` Infrastructure)**
-  - [x] **Specs**: Ensure `scheduler-domain/interface.md` is strictly pure.
+- [x] ✅ **T2: Domain `unifiedID` Infrastructure**
   - [x] **Execute**: Update ASR transcription layer (or core IntentOrchestrator generation) to mint a random `unifiedID`. 
   - [x] **Execute**: Update `ScheduledTask` entity if necessary to accept `unifiedID`.
   - [x] **Test**: Unit tests verify `unifiedID` propagates into the pipeline `Input` object.
 
-- [x] ✅ **T3: Shard 2 Execution (Linter Path A & B Dual-Routing)**
-  - [x] **Specs**: Adhere to `scheduler-linter/interface.md`.
-  - [x] **Execute (Path A)**: Implement lightweight fast-track parser to instantly generate a `ScheduledTask` via DB insertion with the `unifiedID`.
-  - [x] **Execute (Path B)**: Route the slow background CRM Disambiguation through the `UnifiedPipeline` targeting the exact same `unifiedID`.
-  - [x] **Test**: L2 simulated pipeline test tracking both forks resolving correctly.
+- [ ] 🔲 **T3: Semantic Path A via Monolithic Pipeline**
+  - [ ] **Execute**: Run the monolithic `SchedulerLinter` + LLM Extractor purely to immediately insert an optimistic task with an accurate semantic ISO time.
 
-- [x] ✅ **T4: Shard 3 Execution (UI Presentation Teardown)**
-  - [x] **Specs**: Ensure `scheduler-drawer/contract.md` defines pure state execution and handles Dual-Path rendering mapped from individual `TimelineItem` states.
+- [ ] 🔲 **T4: Presentation Teardown**
+  - [x] **Specs**: Ensure `scheduler/contract.md` defines pure state execution.
   - [x] **Execute**: Hoist `PhoneAudioRecorder` out of the visual card layer up to ViewModel/Screen.
-  - [x] **Execute**: Dismantle 700-line `SchedulerCards.kt/SchedulerTaskCard.kt`. Move atomic components (`TaskCardHeader`, `TaskCardDetails`, etc.) into `components/` package.
-  - [x] **Test**: Mechanical `grep` proves no raw Android dependencies inside the nested UI component layer (the atomic TaskCard components are pure Compose).
+  - [x] **Execute**: Dismantle 700-line `SchedulerCards.kt/SchedulerTaskCard.kt`. Move atomic components into `components/` package.
+  - [x] **Test**: Mechanical `grep` proves no raw Android dependencies inside the nested UI component layer.
+
+### 🌊 Wave 15: Dual-Path Asynchronous Scheduling (Plugin Demotion)
+> Objective: Formalize the "Town and Highway" protocol for the DEV Audio Hook by decoupling optimistic UI Task Creation (Path A) from heavyweight async CRM Entity Disambiguation (Path B).
+> Note: This architecture has been demoted to a future plugin-like capability. The primary scheduler will remain monolithic.
 
 ### 🎨 Epic: UI Skin Modernization & Protocol Validation
 > Applying the newly established Docs-First `IAgentViewModel` Contract to aggressively clean, refactor, and rewrite the UI layer into a pristine presentation boundary, proving the Parallel Dev Workflow before formalizing it into an Antigravity Rule.
@@ -194,3 +188,22 @@
 The changelog has been moved to a standalone file to prevent content explosion. 
 
 👉 **[View Changelog](changelog.md)**
+### 🌊 Wave 16: Scheduler Decoupling (The Archival Purge)
+> Objective: Formalize the Scheduler as a standalone plugin/domain by severing all hardcoded dependencies from the Core OS Pipeline (`IntentOrchestrator`, `RealUnifiedPipeline`, `PromptCompiler`).
+> 🧭 **North Star**: [docs/specs/wave16-scheduler-decoupling-guide.md]()
+- [x] ✅ **T0: Campaign North Star**
+  - [x] **Docs**: Create `docs/specs/wave16-scheduler-decoupling-guide.md` defining the Plugin interface boundary.
+- [x] ✅ **T1: Interface Extraction**
+  - [x] **Docs**: Update `docs/cerb/interface-map.md` to reflect the Pipeline -> Plugin boundary.
+  - [x] **Plan**: Run `/feature-dev-planner` to map out the generic `ToolDispatcher` interface.
+  - [x] **Execute**: Wire the existing `ToolRegistry` / `PluginGateway` into `:core:pipeline`.
+  - [x] **Test**: L1 tests verify the new interface contract without Scheduler imports.
+- [x] ✅ **T2: Pipeline Purge**
+  - [x] **Plan**: Run `/feature-dev-planner` to replace Scheduler imports with the generic interface.
+  - [x] **Execute**: Nuke all `com.smartsales.prism.domain.scheduler.*` imports from `IntentOrchestrator`, `RealUnifiedPipeline`, and `PromptCompiler`. 
+  - [x] **Execute**: Rewrite the Reschedule/Lint logic to be domain-agnostic (mapped direct to `ToolDispatch`).
+  - [x] **Test**: Mechanical Check: `grep` proves zero Scheduler imports exist in `:core:pipeline`.
+- [ ] 🔲 **T3: Scheduler Plugin Wiring**
+  - [ ] **Execute**: Implement the generic Plugin interface within the `:domain:scheduler` module.
+  - [ ] **Execute**: Wire the Scheduler Plugin into the App-level DI graph (so the Pipeline can use it at runtime without compile-time knowledge).
+  - [ ] **Test**: L3 Scheduler audio hook validation passes (proving the plugin still works when decoupled).

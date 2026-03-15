@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.launch
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -66,6 +67,7 @@ class L2DualEngineBridgeTest {
             override suspend fun insertTask(task: ScheduledTask): String = "fake-task"
             override suspend fun getTask(id: String): ScheduledTask? = null
             override suspend fun updateTask(task: ScheduledTask) {}
+            override suspend fun upsertTask(task: com.smartsales.prism.domain.scheduler.ScheduledTask): String = task.id
             override suspend fun deleteItem(id: String) {}
             override suspend fun getRecentCompleted(limit: Int): List<ScheduledTask> = emptyList()
             override suspend fun getTopUrgentActiveForEntity(entityId: String): ScheduledTask? = null
@@ -100,11 +102,6 @@ class L2DualEngineBridgeTest {
             entityDisambiguationService = fakeDisambiguationService,
             inputParserService = fakeInputParserService,
             entityWriter = entityWriter,
-            schedulerLinter = fakeLinter,
-            scheduledTaskRepository = fakeTaskRepo,
-            scheduleBoard = FakeScheduleBoard(),
-            inspirationRepository = FakeInspirationRepository(),
-            alarmScheduler = FakeAlarmScheduler(),
             sessionTitleGenerator = FakeSessionTitleGenerator(),
             promptCompiler = FakePromptCompiler(),
             executor = FakeExecutor(),
@@ -227,5 +224,93 @@ class L2DualEngineBridgeTest {
         assertTrue("Should have thrown exception before SSD", threwException)
 
         assertEquals("Data should be REJECTED by linter before hitting SSD reads/writes", initialSaveCount, fakeEntityRepo.getByIdCount)
+    }
+
+    @Test
+    fun `Scenario 4 - Dual Path Town and Highway Concurrency`() = runTest {
+        // Setup Path A/B dependencies
+        val timeProvider = FakeTimeProvider()
+        val fakeTaskRepo = object : ScheduledTaskRepository {
+            val tasks = mutableMapOf<String, ScheduledTask>()
+            var upsertCount = 0
+
+            override fun getTimelineItems(dayOffset: Int) = emptyFlow<List<SchedulerTimelineItem>>()
+            override fun queryByDateRange(start: LocalDate, end: LocalDate) = emptyFlow<List<SchedulerTimelineItem>>()
+            override suspend fun insertTask(task: ScheduledTask): String {
+                tasks[task.id] = task
+                return task.id
+            }
+            override suspend fun getTask(id: String): ScheduledTask? = tasks[id]
+            override suspend fun updateTask(task: ScheduledTask) { tasks[task.id] = task }
+            override suspend fun upsertTask(task: ScheduledTask): String {
+                upsertCount++
+                tasks[task.id] = task
+                return task.id
+            }
+            override suspend fun deleteItem(id: String) { tasks.remove(id) }
+            override suspend fun getRecentCompleted(limit: Int): List<ScheduledTask> = emptyList()
+            override suspend fun getTopUrgentActiveForEntity(entityId: String): ScheduledTask? = null
+            override fun observeByEntityId(entityId: String) = emptyFlow<List<ScheduledTask>>()
+        }
+
+        val fastTrackParser = com.smartsales.prism.domain.scheduler.FastTrackParser(timeProvider)
+
+        val fakeAsr = object : com.smartsales.prism.domain.asr.AsrService {
+            override suspend fun transcribe(file: java.io.File) = com.smartsales.prism.domain.asr.AsrResult.Success("明天开会")
+            override suspend fun isAvailable() = true
+        }
+
+        val fakeConnectivity = object : com.smartsales.prism.domain.connectivity.ConnectivityBridge {
+            override val connectionState = kotlinx.coroutines.flow.MutableStateFlow(com.smartsales.prism.domain.connectivity.BadgeConnectionState.Disconnected)
+            override suspend fun downloadRecording(filename: String) = com.smartsales.prism.domain.connectivity.WavDownloadResult.Success(java.io.File.createTempFile("test", ".wav").apply { deleteOnExit() }, "test.wav", 100L)
+            override suspend fun listRecordings() = com.smartsales.core.util.Result.Success(emptyList<String>())
+            override fun recordingNotifications() = kotlinx.coroutines.flow.emptyFlow<com.smartsales.prism.domain.connectivity.RecordingNotification>()
+            override suspend fun isReady() = true
+            override suspend fun deleteRecording(filename: String) = true
+        }
+
+        // We fake the UnifiedPipeline to realistically delay its emission representing the "Heavyweight" Path B LLM call
+        val fakeUnifiedPipeline = object : com.smartsales.core.pipeline.UnifiedPipeline {
+            override suspend fun processInput(input: PipelineInput): Flow<PipelineResult> = kotlinx.coroutines.flow.flow {
+                // Emulate LLM dispatch safely
+                kotlinx.coroutines.delay(10) 
+                val enrichedTask = ScheduledTask(
+                    id = input.unifiedId, // Uses the exact unifiedId passed from audio pipeline
+                    title = "明天下午和张总开会 (LLM Enriched)",
+                    timeDisplay = "14:00",
+                    startTime = Instant.now(),
+                    endTime = null
+                )
+                emit(PipelineResult.ToolDispatch("CREATE_TASK", emptyMap()))
+            }
+        }
+
+        val audioPipeline = com.smartsales.prism.data.audio.RealBadgeAudioPipeline(
+            connectivityBridge = fakeConnectivity,
+            asrService = fakeAsr,
+            unifiedPipeline = fakeUnifiedPipeline,
+            fastTrackParser = fastTrackParser,
+            scheduledTaskRepository = fakeTaskRepo
+        )
+
+        // 1. Trigger the transaction. By the time this suspend function returns, Path A is fully complete, and Path B is launched.
+        audioPipeline.processFile("test.wav")
+
+        // Assert Path A inserted optimistic task
+        assertTrue("Task should be immediately inserted optimistically by Path A", fakeTaskRepo.tasks.isNotEmpty())
+        val unifiedId = fakeTaskRepo.tasks.keys.first()
+        assertEquals("Optimistic task title should be transcript", "明天开会", fakeTaskRepo.tasks[unifiedId]?.title)
+        assertEquals("Optimistic task timeDisplay should be UI placeholder", "处理中...", fakeTaskRepo.tasks[unifiedId]?.timeDisplay)
+        assertEquals("Upsert should have been called once by Path A", 1, fakeTaskRepo.upsertCount)
+
+        // 3. Wait for Path B (LLM) finish on Dispatchers.IO
+        java.lang.Thread.sleep(500) // Wait physically for Dispatchers.IO
+        kotlinx.coroutines.yield()
+
+        // Assert Path B successfully decoupled the task logic
+        // The ToolDispatch is now handled by the ToolRegistry (System III)
+        // therefore RealBadgeAudioPipeline no longer blindly upserts JSON on its own.
+        // It's the Plugin's job to upsert it asynchronously afterwards.
+        assertEquals("Upsert should only be called by Path A (optimistic)", 1, fakeTaskRepo.upsertCount)
     }
 }

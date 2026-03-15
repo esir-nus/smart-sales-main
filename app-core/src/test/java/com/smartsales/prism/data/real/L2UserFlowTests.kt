@@ -48,6 +48,7 @@ class L2UserFlowTests {
     private lateinit var inputParserService: FakeInputParserService
     private lateinit var disambiguationService: RealEntityDisambiguationService
     private lateinit var fakeMascotService: FakeMascotService
+    private lateinit var fastTrackParser: com.smartsales.prism.domain.scheduler.FastTrackParser
 
 
     private val testDispatcher = UnconfinedTestDispatcher()
@@ -69,6 +70,7 @@ class L2UserFlowTests {
             override suspend fun insertTask(task: ScheduledTask): String = "fake-task"
             override suspend fun getTask(id: String): ScheduledTask? = null
             override suspend fun updateTask(task: ScheduledTask) {}
+            override suspend fun upsertTask(task: com.smartsales.prism.domain.scheduler.ScheduledTask): String = task.id
             override suspend fun deleteItem(id: String) {}
             override suspend fun getRecentCompleted(limit: Int): List<ScheduledTask> = emptyList()
             override suspend fun getTopUrgentActiveForEntity(entityId: String): ScheduledTask? = null
@@ -107,11 +109,6 @@ class L2UserFlowTests {
             entityDisambiguationService = disambiguationService,
             inputParserService = inputParserService,
             entityWriter = entityWriter,
-            schedulerLinter = SchedulerLinter(timeProvider),
-            scheduledTaskRepository = fakeTaskRepo,
-            scheduleBoard = FakeScheduleBoard(),
-            inspirationRepository = FakeInspirationRepository(),
-            alarmScheduler = FakeAlarmScheduler(),
             sessionTitleGenerator = FakeSessionTitleGenerator(),
             promptCompiler = promptCompiler,
             executor = executor,
@@ -121,14 +118,13 @@ class L2UserFlowTests {
         )
 
         fakeMascotService = FakeMascotService()
+        fastTrackParser = com.smartsales.prism.domain.scheduler.FastTrackParser(timeProvider)
 
         intentOrchestrator = IntentOrchestrator(
             contextBuilder = contextBuilder,
             lightningRouter = lightningRouter,
             mascotService = fakeMascotService,
             unifiedPipeline = pipeline,
-            scheduledTaskRepository = fakeTaskRepo,
-            scheduleBoard = FakeScheduleBoard(),
             entityWriter = entityWriter,
             aliasCache = aliasCache,
             appScope = testScope

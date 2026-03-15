@@ -41,8 +41,6 @@ import com.smartsales.prism.domain.scheduler.SchedulerTimelineItem
 import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.ui.scheduler.mapper.toUiState
 import com.smartsales.prism.ui.theme.*
-import com.smartsales.prism.ui.drawers.scheduler.components.CommandInputPill
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.tooling.preview.Preview
 import com.smartsales.prism.ui.drawers.scheduler.ISchedulerViewModel
 import com.smartsales.prism.ui.drawers.scheduler.FakeSchedulerViewModel
@@ -60,6 +58,8 @@ fun SchedulerDrawer(
     modifier: Modifier = Modifier,
     viewModel: ISchedulerViewModel = hiltViewModel<SchedulerViewModel>()
 ) {
+    // Height: ~85% of screen
+    val drawerFraction = 0.85f 
     
     // UI State: View-specific (Animation/Layout)
     var isCalendarExpanded by remember { mutableStateOf(false) }
@@ -72,7 +72,6 @@ fun SchedulerDrawer(
     val pipelineStatus by viewModel.pipelineStatus.collectAsState()
     val isInspirationsExpanded by viewModel.isInspirationsExpanded.collectAsState()
     val tipsLoadingSet by viewModel.tipsLoading.collectAsState()  // Wave 9: Tips loading state
-    val causingId by viewModel.causingTaskId.collectAsState()
     
     val context = LocalContext.current
     
@@ -165,50 +164,29 @@ fun SchedulerDrawer(
             )
         )
     ) {
-        Box(
+        PrismSurface(
             modifier = modifier
-                .fillMaxSize()
-                .background(Color(0xFF0A0A0F)) // DeepOnyx
-                .pointerInput(Unit) {
-                    awaitPointerEventScope {
-                        while (true) { awaitPointerEvent() }
-                    }
-                }
+                .fillMaxWidth()
+                .fillMaxHeight(drawerFraction),
+            shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
+            // Sleek Glass: Use Frosted Ice styling (BackgroundSurface is 70% White)
+            backgroundColor = com.smartsales.prism.ui.theme.BackgroundSurface,
+            elevation = 16.dp
         ) {
-            // Ambient Glow (Top Right)
-            Box(
-                modifier = Modifier
-                    .size(300.dp)
-                    .align(Alignment.TopEnd)
-                    .offset(x = 50.dp, y = (-20).dp)
-                    .background(
-                        brush = Brush.radialGradient(
-                            colors = listOf(com.smartsales.prism.ui.theme.AccentBlue.copy(alpha = 0.05f), Color.Transparent),
-                            radius = 500f
-                        )
-                    )
-            )
-
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(bottom = 100.dp) // Space for Command Dock
+                    // Consume all pointer events so clicks don't pass through to scrim
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                awaitPointerEvent()
+                                // Just consume, don't do anything
+                            }
+                        }
+                    }
             ) {
-                // Header
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 20.dp)
-                ) {
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Text(
-                        text = "日程安排,\nFrank.",
-                        fontSize = 32.sp,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                        color = Color.White,
-                        lineHeight = 38.sp
-                    )
-                }
-
-                // 1. Calendar Section (Expandable)
+                    // 1. Calendar Section (Expandable)
                     val unacknowledgedDates by viewModel.unacknowledgedDates.collectAsState()
                     val rescheduledDates by viewModel.rescheduledDates.collectAsState()
                     SchedulerCalendar(
@@ -251,6 +229,7 @@ fun SchedulerDrawer(
                     // 4. Timeline Section (只显示任务，不显示灵感)
                     Box(modifier = Modifier.weight(1f)) {
                         val conflictedIds by viewModel.conflictedTaskIds.collectAsState()
+                        val causingId by viewModel.causingTaskId.collectAsState()
                         
                         SchedulerTimeline(
                             items = taskItems,
@@ -258,6 +237,8 @@ fun SchedulerDrawer(
                             causingTaskId = causingId,
                             onItemClick = { id -> viewModel.onItemClick(id) },
                             onDelete = { id -> viewModel.deleteItem(id) },
+                            onReschedule = { id, text -> viewModel.onReschedule(id, text) },
+                            onMicRecord = { wavFile -> viewModel.processAudio(wavFile) },
                             onMultiSelectToggle = { id -> viewModel.toggleItemSelection(id) },
                             onEnterMultiSelect = { viewModel.toggleSelectionMode(true) },
                             onConflictResolve = { action -> viewModel.handleConflictResolution(action) },
@@ -309,54 +290,149 @@ fun SchedulerDrawer(
                         }
                     }
 
-            }
-
-            // --- Unified Command Dock ---
-            var inputText by remember { mutableStateOf("") }
-            var isRecordingMic by remember { mutableStateOf(false) }
-            val recorder = remember { com.smartsales.prism.data.audio.PhoneAudioRecorder(context) }
-            
-            val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-            DisposableEffect(lifecycleOwner) {
-                val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-                    if (event == androidx.lifecycle.Lifecycle.Event.ON_PAUSE && isRecordingMic) {
-                        recorder.cancel()
-                        isRecordingMic = false
-                    }
-                }
-                lifecycleOwner.lifecycle.addObserver(observer)
-                onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-            }
-
-            if (!isSelectionMode) {
-                CommandInputPill(
-                    inputText = inputText,
-                    onInputTextChanged = { inputText = it },
-                    onSubmitText = { 
-                        viewModel.onReschedule(causingId ?: "", it)
-                        inputText = "" 
-                    },
-                    isRecordingMic = isRecordingMic,
-                    onRecordStart = {
-                        recorder.startRecording()
-                        isRecordingMic = true
-                    },
-                    onRecordStop = { released ->
-                        isRecordingMic = false
-                        if (released) {
-                            val wavFile = recorder.stopRecording()
-                            if (wavFile != null) viewModel.processAudio(wavFile)
-                        } else {
-                            recorder.cancel()
+                    // 🧪 DEV ONLY: 录音 + 文本模拟 (bypasses hardware)
+                    if (com.smartsales.prism.BuildConfig.DEBUG) {
+                        val scope = rememberCoroutineScope()
+                        val devContext = LocalContext.current
+                        
+                        // 录音状态
+                        var isRecordingMic by remember { mutableStateOf(false) }
+                        val recorder = remember { com.smartsales.prism.data.audio.PhoneAudioRecorder(devContext) }
+                        
+                        // 安全网：Activity 暂停时自动取消录音
+                        // 权限对话框、来电、Home键等都会触发 ON_PAUSE
+                        val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+                        DisposableEffect(lifecycleOwner) {
+                            val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+                                if (event == androidx.lifecycle.Lifecycle.Event.ON_PAUSE && isRecordingMic) {
+                                    recorder.cancel()
+                                    isRecordingMic = false
+                                }
+                            }
+                            lifecycleOwner.lifecycle.addObserver(observer)
+                            onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
                         }
-                    },
-                    modifier = Modifier.align(Alignment.BottomCenter)
-                )
+                        
+                        // 权限请求
+                        val permissionLauncher = rememberLauncherForActivityResult(
+                            androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+                        ) { granted ->
+                            if (!granted) {
+                                Toast.makeText(devContext, "❌ 需要录音权限", Toast.LENGTH_SHORT).show()
+                            }
+                            // 权限获得后不自动录音 — 原始 press 手势已被权限对话框中断，
+                            // 不存在对应的 tryAwaitRelease() 来停止录音。
+                            // 用户下次按住即可正常录音。
+                        }
+                        
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            color = Color(0xFF2ECC71).copy(alpha = 0.9f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                // 🎙️ Mic Record Button (hold-to-record)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(
+                                            if (isRecordingMic) Color(0xFFE74C3C).copy(alpha = 0.8f)
+                                            else Color.White.copy(alpha = 0.2f),
+                                            RoundedCornerShape(4.dp)
+                                        )
+                                        .pointerInput(Unit) {
+                                            detectTapGestures(
+                                                onPress = {
+                                                    // 检查权限
+                                                    val hasPermission = androidx.core.content.ContextCompat
+                                                        .checkSelfPermission(
+                                                            devContext,
+                                                            android.Manifest.permission.RECORD_AUDIO
+                                                        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                                                    
+                                                    if (!hasPermission) {
+                                                        permissionLauncher.launch(
+                                                            android.Manifest.permission.RECORD_AUDIO
+                                                        )
+                                                        return@detectTapGestures
+                                                    }
+                                                    
+                                                    // 开始录音
+                                                    recorder.startRecording()
+                                                    isRecordingMic = true
+                                                    
+                                                    // 等松手或取消
+                                                    val released = tryAwaitRelease()
+                                                    
+                                                    // 停止录音 → 提交
+                                                    isRecordingMic = false
+                                                    if (released) {
+                                                        val wavFile = recorder.stopRecording()
+                                                        if (wavFile != null) {
+                                                            viewModel.processAudio(wavFile)
+                                                        }
+                                                    } else {
+                                                        recorder.cancel()
+                                                    }
+                                                }
+                                            )
+                                        }
+                                        .padding(12.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = if (isRecordingMic) "🔴 松开结束录音..." else "🎙️ 按住录音",
+                                        color = Color.White,
+                                        fontSize = 14.sp,
+                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Drag Handle
+                    DragHandle(onDismiss = onDismiss)
             }
         }
     }
 }
 
+@Composable
+private fun DragHandle(onDismiss: () -> Unit) {
+    var accumulatedDrag by remember { mutableStateOf(0f) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 12.dp)
+            .pointerInput(Unit) {
+                detectVerticalDragGestures(
+                    onDragEnd = { accumulatedDrag = 0f },
+                    onDragCancel = { accumulatedDrag = 0f }
+                ) { change, dragAmount ->
+                    change.consume()
+                    accumulatedDrag += dragAmount
+                    // Drag UP to close
+                    if (accumulatedDrag < -50) {
+                        onDismiss()
+                        accumulatedDrag = 0f
+                    }
+                }
+            },
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .width(40.dp)
+                .height(4.dp)
+                .background(BorderSubtle, RoundedCornerShape(2.dp))
+        )
+    }
+}
 
 @Preview(showBackground = true, backgroundColor = 0xFF000000)
 @Composable

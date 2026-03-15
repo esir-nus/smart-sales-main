@@ -51,6 +51,18 @@ class RoomScheduledTaskRepository @Inject constructor(
         dao.update(task.toEntity())
     }
 
+    override suspend fun upsertTask(task: ScheduledTask): String {
+        val existing = dao.getById(task.id)
+        if (existing != null) {
+            dao.update(task.toEntity())
+            return task.id
+        } else {
+            val entity = task.toEntity()
+            dao.insert(entity)
+            return entity.taskId
+        }
+    }
+
     override suspend fun deleteItem(id: String) {
         dao.deleteById(id)
     }

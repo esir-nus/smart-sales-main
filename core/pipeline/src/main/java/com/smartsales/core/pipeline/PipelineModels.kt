@@ -83,36 +83,20 @@ sealed class PipelineResult {
      * T3 Open-Loop Defense: Proposal to mutate the database, requiring user confirmation.
      */
     data class MutationProposal(
-        val task: com.smartsales.prism.domain.scheduler.ScheduledTask? = null,
-        val profileMutations: List<ProfileMutation> = emptyList(),
-        val isConflict: Boolean = false
+        val profileMutations: List<ProfileMutation> = emptyList()
     ) : PipelineResult() {
         init {
-            require(task != null || profileMutations.isNotEmpty()) {
-                "MutationProposal must contain at least one task or profile mutation"
+            require(profileMutations.isNotEmpty()) {
+                "MutationProposal must contain at least one profile mutation"
             }
         }
     }
     
     /**
-     * A singular CRM task was created successfully.
+     * T1: Plugin system execution tracking events.
      */
-    data class SchedulerTaskCreated(
-        val taskId: String,
-        val title: String,
-        val dayOffset: Int,
-        val scheduledAtMillis: Long,
-        val durationMinutes: Int,
-        val isReschedule: Boolean = false
-    ) : PipelineResult()
-    
-    /**
-     * Multiple CRM tasks were created successfully.
-     */
-    data class SchedulerMultiTaskCreated(
-        val tasks: List<SchedulerTaskCreated>,
-        val hasConflict: Boolean
-    ) : PipelineResult()
+    data class PluginExecutionStarted(val toolId: String) : PipelineResult()
+    data class PluginExecutionEmittedState(val uiState: com.smartsales.prism.domain.model.UiState) : PipelineResult()
 
     /**
      * Wave 4: Auto-Renaming

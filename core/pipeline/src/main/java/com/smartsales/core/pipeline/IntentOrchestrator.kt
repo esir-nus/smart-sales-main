@@ -3,8 +3,6 @@ package com.smartsales.core.pipeline
 import com.smartsales.core.context.ContextBuilder
 import com.smartsales.core.context.ContextDepth
 import com.smartsales.prism.domain.model.Mode
-import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
-import com.smartsales.prism.domain.memory.ScheduleBoard
 import com.smartsales.prism.domain.memory.EntityWriter
 import com.smartsales.prism.domain.memory.AliasCache
 import com.smartsales.prism.domain.memory.CacheResult
@@ -35,8 +33,6 @@ class IntentOrchestrator @Inject constructor(
     private val lightningRouter: LightningRouter,
     private val mascotService: MascotService,
     private val unifiedPipeline: UnifiedPipeline,
-    private val scheduledTaskRepository: ScheduledTaskRepository,
-    private val scheduleBoard: ScheduleBoard,
     private val entityWriter: EntityWriter,
     private val aliasCache: AliasCache,
     @Named("AppScope") private val appScope: CoroutineScope
@@ -69,11 +65,6 @@ class IntentOrchestrator @Inject constructor(
                 
                 // Execute actual database writes asynchronously so UI responds instantly
                 appScope.launch {
-                    proposal.task?.let { task ->
-                        scheduledTaskRepository.insertTask(task)
-                        scheduleBoard.refresh()
-                    }
-                    
                     proposal.profileMutations.forEach { mut ->
                         // Wave 3: Safe interaction with EntityWriter
                         entityWriter.updateAttribute(mut.entityId, mut.field, mut.value)
@@ -86,7 +77,16 @@ class IntentOrchestrator @Inject constructor(
             }
 
         // Build minimal context for latency-sensitive phase 0 evaluation
-        val context = contextBuilder.build(input, Mode.ANALYST, depth = ContextDepth.MINIMAL)
+        val context = contextBuilder.build(input, Mode.ANALYST, depth = ContextDepth.MINIMAL, isBadge = isVoice)
+        
+        // 🚦 VALVE: Track the raw input entering the OS
+        PipelineValve.tag(
+            checkpoint = PipelineValve.Checkpoint.INPUT_RECEIVED,
+            payloadSize = input.length,
+            summary = "Raw user input received by Gatekeeper",
+            rawDataDump = input
+        )
+        
         val routerResult = lightningRouter.evaluateIntent(context)
 
         // BugFix 4.3/4.5: 短路拦截 — 只有非语音时才阻断 BADGE_DELEGATION
@@ -101,6 +101,13 @@ class IntentOrchestrator @Inject constructor(
                 return@flow
             }
             QueryQuality.VAGUE -> {
+                // 🚦 VALVE: Track the routing decision out of the OS
+                PipelineValve.tag(
+                    checkpoint = PipelineValve.Checkpoint.ROUTER_DECISION,
+                    payloadSize = 0,
+                    summary = "Routed to VAGUE (Clarification Requested)",
+                    rawDataDump = "Classification: Vague"
+                )
                 // Route back to user for clarification or immediate answer
                 emit(PipelineResult.ConversationalReply(routerResult.response))
                 return@flow
@@ -113,7 +120,16 @@ class IntentOrchestrator @Inject constructor(
                 }
                 // isVoice=true → 继续往下走 System II pipeline
             }
-            else -> { /* SIMPLE_QA, DEEP_ANALYSIS, CRM_TASK, null → 继续往下走 System II pipeline */ }
+            else -> { 
+                // SIMPLE_QA, DEEP_ANALYSIS, CRM_TASK, null → 继续往下走 System II pipeline
+                // 🚦 VALVE: Track the routing decision out of the OS
+                PipelineValve.tag(
+                    checkpoint = PipelineValve.Checkpoint.ROUTER_DECISION,
+                    payloadSize = 1,
+                    summary = "Routed to System II Unified Pipeline",
+                    rawDataDump = "Classification: ${routerResult?.queryQuality} | Entities: ${routerResult?.missingEntities}"
+                )
+            }
         }
 
         // === System II Pipeline 入口 ===
@@ -161,13 +177,33 @@ class IntentOrchestrator @Inject constructor(
             unifiedId = unifiedId
         )
         
-        // Delegate to the heavy-duty pipeline and forward its results
+        // --- PATH A: Optimistic UI for Voice Tasks ---
+        if (isVoice && (pipelineInput.intent == QueryQuality.CRM_TASK || pipelineInput.intent == QueryQuality.BADGE_DELEGATION)) {
+            // Wave 16 T1: FastTrack scheduling is demoted to a plugin responsibility. 
+            // Orchestrator no longer manually hacks ScheduledTaskRepository.
+            android.util.Log.d("IntentOrchestrator", "Path A Fast-Track skipped (Plugin demotion) for \$unifiedId")
+        }
+        
+        // Delegate to the heavy-duty pipeline and forward its results (PATH B)
         unifiedPipeline.processInput(pipelineInput).collect { result ->
             // Intercept MutationProposals and ToolDispatch to cache them for Open-Loop confirmation
             if (result is PipelineResult.MutationProposal) {
-                this@IntentOrchestrator.pendingProposal = result
+                if (isVoice) {
+                    // --- PATH B: Auto-Commit for Voice ---
+                    appScope.launch {
+                        result.profileMutations.forEach { mut ->
+                            entityWriter.updateAttribute(mut.entityId, mut.field, mut.value)
+                        }
+                    }
+                    // Leak 3 Fix: Silence the mutation proposal for voice so UI just shows 'done' from conversational reply
+                    return@collect
+                } else {
+                    this@IntentOrchestrator.pendingProposal = result
+                }
             } else if (result is PipelineResult.ToolDispatch && result.toolId != "reschedule") {
-                this@IntentOrchestrator.pendingToolDispatch = result
+                if (!isVoice) {
+                    this@IntentOrchestrator.pendingToolDispatch = result
+                }
             }
             emit(result)
         }

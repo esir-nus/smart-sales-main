@@ -62,6 +62,7 @@ class L2AdaptiveHabitLoopTest {
             override suspend fun insertTask(task: ScheduledTask): String = "fake-task"
             override suspend fun getTask(id: String): ScheduledTask? = null
             override suspend fun updateTask(task: ScheduledTask) {}
+            override suspend fun upsertTask(task: com.smartsales.prism.domain.scheduler.ScheduledTask): String = task.id
             override suspend fun deleteItem(id: String) {}
             override suspend fun getRecentCompleted(limit: Int): List<ScheduledTask> = emptyList()
             override suspend fun getTopUrgentActiveForEntity(entityId: String): ScheduledTask? = null
@@ -90,11 +91,6 @@ class L2AdaptiveHabitLoopTest {
             entityDisambiguationService = FakeEntityDisambiguationService(),
             inputParserService = FakeInputParserService(),
             entityWriter = entityWriter,
-            schedulerLinter = SchedulerLinter(fakeTimeProvider),
-            scheduledTaskRepository = fakeTaskRepo,
-            scheduleBoard = FakeScheduleBoard(),
-            inspirationRepository = FakeInspirationRepository(),
-            alarmScheduler = FakeAlarmScheduler(),
             sessionTitleGenerator = FakeSessionTitleGenerator(),
             promptCompiler = FakePromptCompiler(),
             executor = FakeExecutor(),

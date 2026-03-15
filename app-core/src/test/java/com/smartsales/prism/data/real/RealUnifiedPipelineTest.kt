@@ -81,11 +81,6 @@ class RealUnifiedPipelineTest {
             entityDisambiguationService = entityDisambiguationService,
             inputParserService = inputParserService,
             entityWriter = entityWriter,
-            schedulerLinter = schedulerLinter,
-            scheduledTaskRepository = scheduledTaskRepository,
-            scheduleBoard = scheduleBoard,
-            inspirationRepository = inspirationRepository,
-            alarmScheduler = alarmScheduler,
             sessionTitleGenerator = sessionTitleGenerator,
             promptCompiler = promptCompiler,
             executor = executor,
@@ -130,10 +125,10 @@ class RealUnifiedPipelineTest {
         assertEquals("Executor should have been called exactly once", 1, executor.executedPrompts.size)
         val generatedPrompt = executor.executedPrompts.first()
         assertTrue("Prompt must explicitly contain the user's intent text for Dataflow Veracity", generatedPrompt.contains("Schedule a meeting"))
-        val taskResult = results.filterIsInstance<PipelineResult.MutationProposal>().firstOrNull()
-        assertTrue("Expected MutationProposal but it was not emitted. Results: ${results.map { it::class.simpleName }}", taskResult != null)
-        assertEquals("Discuss Anti-Illusion Protocol", taskResult!!.task!!.title)
-        assertEquals(30, taskResult.task!!.durationMinutes)
+        val toolDispatch = results.filterIsInstance<PipelineResult.ToolDispatch>().firstOrNull()
+        assertTrue("Expected ToolDispatch but it was not emitted.", toolDispatch != null)
+        assertEquals("CREATE_TASK", toolDispatch!!.toolId)
+        assertTrue("Should contain tasks json", toolDispatch.params.containsKey("tasks"))
         
         // Background Path Validation
         assertEquals("Habit listener MUST be triggered after ETL", 1, habitListener.analyzeAsyncCallCount)

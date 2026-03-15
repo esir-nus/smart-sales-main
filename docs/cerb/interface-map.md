@@ -66,8 +66,7 @@ Orchestrates LLM-powered processing. Reads from Layer 2 data services.
 | **[Executor](./model-routing/spec.md)** | System II & Routing | Raw LLM output (stateless — no storage) | ModelRouter | `suspend execute(LlmProfile, String) -> ExecutorResult` | — | ✅ |
 | **[PluginRegistry](./plugin-registry/spec.md)** | System II & Routing | Executable pure-Kotlin workflows (Tools) | — | `executeTool(ToolId, PluginRequest, PluginGateway) -> Flow<UiState>` | OS: App | ✅ |
 | **[UnifiedPipeline](./unified-pipeline/spec.md)** | System II & Routing | System II context ETL & execution | ContextBuilder, InputParser, EntityDisambiguator | `suspend processInput(PipelineInput) -> Flow<PipelineResult>` | OS: App | ✅ |
-| **IntentOrchestrator** | System II & Routing | High-level intent routing (Phase 0) | AgentViewModel, LightningRouter, UnifiedPipeline | `suspend processInput(String) -> Flow<PipelineResult>` | OS: App | ✅ |
-| **[SchedulerLinter](./scheduler-linter/spec.md)** | System II & Routing | Task language parsing | SchedulerDomain | `SchedulerLinter.lint(String) -> LintResult` | OS: App | ✅ |
+| **IntentOrchestrator** | System II & Routing | High-level intent routing (Phase 0) | AgentViewModel, LightningRouter, UnifiedPipeline, PluginRegistry | `suspend processInput(String) -> Flow<PipelineResult>` | OS: App | ✅ |
 
 > **UnifiedPipeline is the only module that calls EntityWriter during task creation.** Feature modules (Scheduler, Mascot) receive results from UnifiedPipeline; they don't call EntityWriter themselves. (Exception: debug seed code in SchedulerViewModel, guarded by `DEBUG` build type.)
 >
@@ -82,8 +81,8 @@ User-facing features. Each receives processed results from Orchestrator (Layer 3
 | Module | Track | Owns (Writes) | Reads From (directly) | Receives From (via Orchestrator) | OS Layer | Status |
 |--------|-------|--------------|----------------------|----------------------------------|----------|--------|
 | **[Mascot (System I)](./mascot-service/spec.md)** | System I & Ambient | Ephemeral interactions, greetings | EventBus (Idle, Error) | `StateFlow<MascotState>` | OS: App | ✅ |
-| **[SchedulerDrawer](../cerb-ui/scheduler-drawer/spec.md)** | Intelligent Scheduler | Visual UI states | SchedulerDomain, ScheduleBoard | `ISchedulerViewModel` | OS: App | ✅ |
-| **[ScheduleBoard](./scheduler-domain/spec.md)** | Intelligent Scheduler | Conflict index (in-memory cache) | ScheduledTaskRepository (populates index) | — | OS: SSD | ✅ |
+| **[SchedulerDrawer](./scheduler/spec.md)** | Intelligent Scheduler | Visual UI states | Scheduler, ScheduleBoard | `ISchedulerViewModel` | OS: App | ✅ |
+| **[ScheduleBoard](./scheduler/spec.md)** | Intelligent Scheduler | Conflict index (in-memory cache) | ScheduledTaskRepository (populates index) | — | OS: SSD | ✅ |
 | **[BadgeAudioPipeline](./badge-audio-pipeline/spec.md)** | Hardware & Audio | Audio recording lifecycle | ASR, OSS, ConnectivityBridge | Triggers UnifiedPipeline on transcription complete | — | ✅ |
 | **[AudioManagement](./audio-management/spec.md)** | Hardware & Audio | Manual sync/transcribe states | ConnectivityBridge, TingwuPipeline | *Observes DB State* | OS: App | 🚧 |
 | **[ConflictResolver](./conflict-resolver/spec.md)** | Intelligent Scheduler | Conflict resolution actions | ScheduleBoard | `resolve(...) -> ConflictResolution` | OS: App | ✅ |
@@ -136,11 +135,11 @@ graph TD
     E2 --> F0["EntityDisambiguator (Heavy Gateway)"]
     F0 --> F2["ContextBuilder (Kernel ETL fetching SSD Graph)"]
     F2 --> F["Executor (LLM)"]
-    F --> G["SchedulerLinter / Evaluators"]
-    G --> H1["UnifiedPipeline emits MutationProposal or ToolDispatch"]
+    F --> G["UnifiedMutation JSON Contract (One Currency)"]
+    G --> H1["UnifiedPipeline emits ToolDispatch & ProfileMutations"]
     H1 --> H2
-    H2 -->|User Confirms| H3["IntentOrchestrator dispatches actions/mutations"]
-    H3 --> I["Task Repo / EntityWriter / PluginRegistry"]
+    H2 -->|User Confirms| H3["IntentOrchestrator dispatches async actions"]
+    H3 --> I["EntityWriter / PluginRegistry (System III)"]
 ```
 
 ---

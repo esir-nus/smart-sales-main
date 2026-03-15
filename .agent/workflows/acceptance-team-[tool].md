@@ -35,7 +35,7 @@ The acceptance team consists of specialized examiners. You (the agent) act as th
 ### 2. Contract Examiner 🤝
 *Ensures architectural integrity, ownership rules, and strict Brain/Body data contracts via MECHANICAL validation.*
 
-- **Input**: `docs/cerb/interface-map.md` + Changed Files
+- **Input**: `docs/cerb/interface-map.md` + `docs/plans/telemetry/pipeline-valves.md` + Changed Files
 - **Command**: MUST run a result-oriented mechanical script. **"Vibe checking" by reading code is strictly FORBIDDEN.**
   ```bash
   # 1. OS Layer Isolation (Forbidden Imports)
@@ -48,12 +48,16 @@ The acceptance team consists of specialized examiners. You (the agent) act as th
   ./gradlew :app-core:testDebugUnitTest --tests "*PromptCompilerBadgeTest*"
   # B) UI/Skin Contract (Markdown Docs vs Kotlin UiState)
   ./gradlew :app-core:testDebugUnitTest --tests "*UiSpecAlignmentTest*"
+
+  # 3. Telemetry Alignment (Pipeline Valves)
+  grep -rn "PipelineValve.tag" [feature_path]
   ```
 - **Rubric**:
   - Did the mechanical `grep` script return 0 forbidden imports?
   - Did `PromptCompilerBadgeTest` pass? (Proves Brain/Body schema alignment)
   - Did `UiSpecAlignmentTest` pass? (Proves Docs-First UI protocol)
-  - Are "Writes" going through the owner module? (Verified via grep, not guessing)
+  - Are "Writes" going through the owner module as defined in `interface-map.md`? (Verified via grep, not guessing)
+  - If a core pipeline boundary was crossed, is there a `PipelineValve.tag` matching `pipeline-valves.md`?
 
 ### 3. Build Examiner 🏗️
 *Ensures it actually works.*
@@ -106,7 +110,8 @@ The acceptance team consists of specialized examiners. You (the agent) act as th
 
 ## 2. Contract Examiner 🤝
 - [x] No `android.*` imports in domain
-- [x] Writes go via `EntityWriter`
+- [x] Writes go via `EntityWriter` (matches `interface-map.md`)
+- [x] Target feature emits `PipelineValve.tag[PLUGIN_DISPATCH_RECEIVED]`
 
 ## 3. Build Examiner 🏗️
 - [x] Build Success

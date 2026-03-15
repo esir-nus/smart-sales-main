@@ -1,7 +1,3 @@
----
-description: Sync documentation after completing work - discovers relevant docs from context and proposes targeted updates
----
-
 # DocSync Workflow
 
 Synchronize documentation after completing development work. This workflow is **context-driven** - it discovers what needs updating based on the work done.
@@ -35,6 +31,7 @@ grep -r "<component_name>" docs/
 **Common doc patterns to look for:**
 - `docs/plans/tracker.md` (MUST be updated if feature implementation status changed and is NOT an index)
 - `docs/cerb/interface-map.md` (MUST be updated if module ownership, new modules, or new interface methods were added)
+- `docs/plans/telemetry/pipeline-valves.md` (MUST be updated if new GPS checkpoints were added to track data flow)
 - Architecture guides (track file structure, milestones)
 - Changelogs (track waves, releases)
 - Spec docs (track implementation status)
@@ -95,13 +92,14 @@ Based on context, create a sync proposal:
 ### Context
 <Brief summary of work completed>
 
-### Cross-Reference Audit
+### Cross-Reference & Telemetry Audit
 - [ ] No deprecated `docs/guides/` refs
 - [ ] No `RealizeTheArchi` refs (now `tracker.md`)
 - [ ] No `ux-tracker.md` refs (now `ux-experience.md`)
 - [ ] All file links point to existing files
 - [ ] `docs/plans/tracker.md` reflects current spec wave status accurately
 - [ ] `docs/cerb/interface-map.md` includes any newly added interfaces or cross-module edges
+- [ ] `docs/plans/telemetry/pipeline-valves.md` includes any newly added GPS data checkpoints
 - [ ] Completed Campaigns relocated to `changelog.md` (if applicable)
 
 ### Docs to Update

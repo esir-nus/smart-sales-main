@@ -165,34 +165,13 @@ The LLM does NOT directly write to the database in the critical UX path. Writes 
 
 ---
 
-### 3.2 The Unified Pipeline
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                    UNIFIED ORCHESTRATION PIPELINE                   │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  ┌─────────┐   ┌──────────────┐   ┌───────────────┐   ┌──────────┐ │
-│  │ Context │──▶│   Executor   │──▶│   Publisher   │──▶│   UI     │ │
-│  │ Builder │   │    (LLM)     │   │   (Per Mode)  │   │          │ │
-│  └─────────┘   └──────────────┘   └───────────────┘   └──────────┘ │
-│       │               │                   │                         │
-│       │               │                   │      ┌──────────────┐  │
-│       │               │                   └─────▶│ Tool Agents  │  │
-│       │               │                          │ (If Needed)  │  │
-│       │               │                                             │
-│       │               ▼                                             │
-│       │        [Memory Writer] ──fire & forget──▶ [Hot Zone]       │
-│       │                                                             │
-└───────┴─────────────────────────────────────────────────────────────┘
-```
 
 ### 3.2 Core Components
 
 #### 1. Context Builder (Shared)
 The foundation of intelligence. Runs for **every** request.
 
-**Role:** Normalize heterogeneous inputs into a unified context payload for the Executor LLM.
+**Role:** Normalize heterogeneous inputs into a unified context payload for the LLM Brain.
 
 **Input Normalization Tools:**
 
@@ -226,8 +205,8 @@ Output ──▶ Session Cache (sync, fast)
 Stateless router. Evaluates intent at the beginning of the Sync Loop to determine the correct pathway.
 Replaces the old "Mode Toggle" system.
 
-#### 3. LLM Executor
-The generation engine. Driven dynamically by the Model Router depending on the pipeline phase (Sync/Async).
+#### 3. LLM Brain
+The generation engine. Driven dynamically depending on the pipeline phase (Sync/Async).
 
 #### 4. The Linter (decodeFromString)
 Validates ALL AI-generated structured outputs for background mutations.
@@ -237,7 +216,7 @@ Validates ALL AI-generated structured outputs for background mutations.
 2. The exception is caught cleanly.
 3. The background mutation halts. The system DOES NOT crash the UI thread.
 
-#### 7. Memory Center Notifier (Snackbar Updates)
+#### 5. Memory Center Notifier (Snackbar Updates)
 Dedicated UI component for notifying users of significant memory updates. Covers 4 categories:
 
 **Notification Format:** `[Category]已更新：<truncated content>`
@@ -254,27 +233,6 @@ Dedicated UI component for notifying users of significant memory updates. Covers
 -   Does not block main pipeline.
 -   Snackbar auto-dismisses after 3 seconds (tappable to expand details).
 -   `<content>` is truncated to 20 characters max.
-
-### 3.3 Model Router
-
-Central routing for LLM model selection based on **task type**.
-
-> **Location**: `domain/config/ModelRouter.kt`
-
-#### Task-Based Routing (`forContext`)
-
-| Input Condition        | Model          | Context Window |
-|-----------------------|----------------|----------------|
-| Image/Video present    | `qwen-vl-plus` | Vision         |
-| Default (fast chat)    | `qwen-plus`    | 1M tokens      |
-
-#### Memory Layer Routing (`forMemoryLayer`)
-
-| Layer      | Model       | Rationale                                |
-|------------|-------------|------------------------------------------|
-| RELEVANCY  | `qwen3-max` | Advanced parsing for entity extraction   |
-| HOT        | `qwen-plus` | Fast index navigation (14 days context)  |
-| CEMENT     | `qwen-long` | Deep history retrieval (10M tokens)      |
 
 ---
 
@@ -416,7 +374,7 @@ Stores historical changes for key sales metrics. Enables turnkey data visualizat
 
 > **Linter Rule:** Agent MUST extract and specify `unit` for all numeric values. If user says "两百万", agent infers "CNY" from User Profile locale. If ambiguous, agent asks.
 
-> **Viz Integration:** Analyst mode can generate charts directly from this data: "Show Zhang's budget trend over the last 6 months."
+> **Viz Integration:** The system can generate charts directly from this time-series data: "Show Zhang's budget trend over the last 6 months."
 
 ### 5.3 Field Update Policies
 
@@ -521,73 +479,7 @@ data class DecisionRecord(
 )
 ```
 
-### 5.6 Structured Output Model (Separated Sections)
-
-LLM outputs are split into two distinct sections — no inline markup mixing.
-
-> **Note:** Schema Linter (§2.2 #6) validates the structured section before persistence.
-
-**Output Structure:**
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                   LLM OUTPUT                            │
-├─────────────────────────────────────────────────────────┤
-│                                                         │
-│  [STRUCTURED SECTION] (agent + linter only)             │
-│  {                                                      │
-│    "entities": [                                        │
-│      {"type": "person", "id": "z-001", "name": "张总",   │
-│       "context": "A3项目负责人"},                        │
-│      {"type": "location", "id": "l-001", "name": "北京办公室"},│
-│      {"type": "product", "id": "p-042", "name": "A3打印机"},│
-│      {"type": "date", "raw": "周三", "resolved": "2026-01-29"}│
-│    ]                                                    │
-│  }                                                      │
-│                                                         │
-│  [USER CONTENT] (clean, user-visible)                   │
-│  「张总希望在周三于北京办公室讨论A3打印机方案」            │
-│                                                         │
-└─────────────────────────────────────────────────────────┘
-```
-
-**Storage Model:**
-
-| Field | Content | Visibility |
-|-------|---------|------------|
-| `displayContent` | Clean transcription/response | User |
-| `structuredJson` | Extracted entities (JSON) | Agent + Linter |
-
-**Processing Flow:**
-1. **LLM** outputs structured section + user content
-2. **Schema Linter** validates `structuredJson`
-3. **Publisher** displays `displayContent` to user
-4. **Relevancy Writer** parses `structuredJson` → upserts to Relevancy Library
-
-#### Schema Linter Rules
-
-| Check | Rule | Failure Action |
-|-------|------|----------------|
-| **JSON Valid** | `structuredJson` must be valid JSON | Reject, retry |
-| **Entity Type** | Must be one of: `person`, `product`, `location`, `date`, `event` | Reject, retry |
-| **ID Format** | ID must match `[a-z]-[0-9]{3}` (e.g., `z-001`) | Reject, retry |
-| **Required Fields** | Each entity must have `type`, `id`, `name` | Reject, retry |
-
-```kotlin
-data class ExtractedEntity(
-    val type: String,      // "person", "product", "location", "date", "event"
-    val id: String,        // "z-001"
-    val name: String,      // "张总"
-    val context: String?,  // Optional additional context
-    val resolved: String?  // For dates: ISO format
-)
-
-interface StructuredOutputLinter {
-    fun validate(json: String): LintResult
-}
-```
-
-### 5.7 Memory Entry Schema
+### 5.6 Memory Entry Schema
 
 All memory entries share a unified Room entity with workflow-specific payloads.
 
@@ -626,7 +518,7 @@ data class MemoryEntryEntity(
 | **Command** | `commands: List<CommandAction>`, `targets: List<String>` |
 | **Scheduler** | `scheduledAt: Instant?`, `priority: Priority`, `status: TaskStatus` |
 
-### 5.8 User Profile (Static — User Center)
+### 5.7 User Profile (Static — User Center)
 
 User-level configuration from User Center. User sets these explicitly.
 
@@ -651,7 +543,7 @@ data class UserProfile(
 
 ---
 
-### 5.9 User Habit (Growing — Learned Patterns)
+### 5.8 User Habit (Growing — Learned Patterns)
 
 Behavior patterns learned automatically. Context Builder uses these for personalization.
 
@@ -782,7 +674,6 @@ Every box MUST have an interface and a Fake for testing.
 | Interface | Fake | Purpose |
 |-----------|------|---------|
 | `LlmProvider` | `FakeLlmProvider` | Returns canned responses |
-| `ModePublisher` | `FakeModePublisher` | Captures output for assertions |
 | `ContextBuilder` | `FakeContextBuilder` | Returns preset EnhancedContext |
 | `ContextCache` | `FakeContextCache` | In-memory map |
 | `MemoryRepository` | `FakeMemoryRepository` | In-memory store (Hot Zone access) |

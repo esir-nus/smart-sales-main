@@ -23,4 +23,10 @@ class FakeScheduleBoard : ScheduleBoard {
     override suspend fun refresh() {
         // No-op
     }
+
+    var nextLexicalMatch: ScheduleItem? = null
+
+    override suspend fun findLexicalMatch(targetQuery: String): ScheduleItem? {
+        return nextLexicalMatch
+    }
 }

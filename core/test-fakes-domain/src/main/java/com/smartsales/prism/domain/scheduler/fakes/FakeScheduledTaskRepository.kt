@@ -14,51 +14,8 @@ import javax.inject.Inject
 class FakeScheduledTaskRepository @Inject constructor() : ScheduledTaskRepository {
 
     // Initial Mock Data
-    private val _items = MutableStateFlow<List<SchedulerTimelineItem>>(
-        listOf(
-            ScheduledTask(
-                "1", "08:00", "与张总会议 (A3项目)",
-                hasAlarm = true, dateRange = "08:00 - 09:00", location = "会议室 A",
-                notes = "讨论Q4预算审核细节，确认最终报价范围。",
-                startTime = java.time.Instant.now(), // Fake
-                endTime = java.time.Instant.now().plusSeconds(3600)
-            ),
-            SchedulerTimelineItem.Inspiration("2", "10:30", "研究竞品报价策略"),
-            SchedulerTimelineItem.Conflict(
-                "3", "12:00", "李总电话 vs 午餐会议",
-                taskA = com.smartsales.prism.domain.memory.ScheduleItem(
-                    entryId = "conflict_a",
-                    title = "李总电话",
-                    scheduledAt = java.time.Instant.now().plusSeconds(14400).toEpochMilli(),
-                    durationMinutes = 30,
-                    durationSource = com.smartsales.prism.domain.memory.DurationSource.DEFAULT,
-                    conflictPolicy = com.smartsales.prism.domain.memory.ConflictPolicy.EXCLUSIVE
-                ),
-                taskB = com.smartsales.prism.domain.memory.ScheduleItem(
-                    entryId = "conflict_b",
-                    title = "午餐会议",
-                    scheduledAt = java.time.Instant.now().plusSeconds(14400).toEpochMilli(),
-                    durationMinutes = 60,
-                    durationSource = com.smartsales.prism.domain.memory.DurationSource.DEFAULT,
-                    conflictPolicy = com.smartsales.prism.domain.memory.ConflictPolicy.EXCLUSIVE
-                )
-            ),
-            ScheduledTask(
-                "4", "14:00", "提交季度报告 (已完成)",
-                isDone = true, dateRange = "14:00 - 15:30", location = "工位",
-                notes = "已通过邮件发送给运营总监。",
-                startTime = java.time.Instant.now(),
-                endTime = java.time.Instant.now().plusSeconds(5400)
-            ),
-            ScheduledTask(
-                "5", "16:00", "跟进上周客户反馈",
-                dateRange = "16:00 - 17:00", location = "远程",
-                notes = "将此任务改期至上周三。",
-                startTime = java.time.Instant.now(),
-                endTime = java.time.Instant.now().plusSeconds(3600)
-            )
-        )
-    )
+    // Initial Mock Data (Cleaned per Clean Slate Protocol)
+    private val _items = MutableStateFlow<List<SchedulerTimelineItem>>(emptyList())
 
     override fun getTimelineItems(dayOffset: Int): Flow<List<SchedulerTimelineItem>> {
         return _items
@@ -108,6 +65,31 @@ class FakeScheduledTaskRepository @Inject constructor() : ScheduledTaskRepositor
         val current = _items.value.toMutableList()
         current.removeAll { it.id == id }
         _items.value = current
+    }
+
+    override suspend fun batchInsertTasks(tasks: List<ScheduledTask>): List<String> {
+        delay(200) // Fake transaction
+        val ids = mutableListOf<String>()
+        val current = _items.value.toMutableList()
+        for (task in tasks) {
+            val newId = (System.currentTimeMillis() % 100000 + ids.size).toString()
+            current.add(task.copy(id = newId))
+            ids.add(newId)
+        }
+        _items.value = current
+        return ids
+    }
+
+    override suspend fun rescheduleTask(oldTaskId: String, newTask: ScheduledTask) {
+        delay(200) // Fake transaction
+        val current = _items.value.toMutableList()
+        val oldIndex = current.indexOfFirst { it.id == oldTaskId }
+        if (oldIndex >= 0) {
+            current.removeAt(oldIndex)
+            // Forcefully inherit GUID as per Path A contract
+            current.add(newTask.copy(id = oldTaskId))
+            _items.value = current
+        }
     }
 
     override suspend fun getRecentCompleted(limit: Int): List<ScheduledTask> {

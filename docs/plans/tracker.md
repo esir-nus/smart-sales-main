@@ -97,12 +97,12 @@ The changelog has been moved to a standalone file to prevent content explosion.
   - [x] **Plan**: `/feature-dev-planner` — approved.
   - [x] **Execute**: Implemented FastTrack Parser to emit deterministic DTOs (`CreateTasksParams`, `RescheduleTaskParams`, `CreateInspirationParams`).
   - [x] **Test**: L1 (10/10 green), Mechanical (4/4 clean), Full build passes.
-- [ ] 🔲 **T2: Dedicated Mutation Module (Atomic Operations & Conflict Evaluation)**
-  - [ ] **Docs**: Create/update `docs/cerb/scheduler-domain/spec.md` and `interface.md`.
-  - [ ] **Interface Map**: Read/update `docs/cerb/interface-map.md`.
-  - [ ] **Plan**: `/feature-dev-planner`
-  - [ ] **Execute**: Implement Lexical Fuzzy Matcher, ScheduleBoard conflict check, and atomic Delete -> Insert `@Transaction` updates.
-  - [ ] **Test**: L1/L2 Verification passes against the spec.
+- [x] ✅ **T2: Dedicated Mutation Module (Atomic Operations & Conflict Evaluation)**
+  - [x] **Docs**: Created `docs/cerb/scheduler-domain/spec.md` and `interface.md`.
+  - [x] **Interface Map**: Read/update `docs/cerb/interface-map.md`.
+  - [x] **Plan**: `/feature-dev-planner`
+  - [x] **Execute**: Implement Lexical Fuzzy Matcher, ScheduleBoard conflict check, and atomic Delete -> Insert `@Transaction` updates.
+  - [x] **Test**: L1/L2 Verification passes against the spec.
 - [ ] 🔲 **T3: The Small Attention Flow (Presentation Layer)**
   - [ ] **Docs**: Create/update `docs/cerb-ui/scheduler-drawer/spec.md` and `contract.md`.
   - [ ] **Interface Map**: Verify `IAgentViewModel` isolation (No backend logic).

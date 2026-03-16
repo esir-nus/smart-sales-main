@@ -34,6 +34,7 @@ class SchedulerBreakItTest {
             override val upcomingItems = kotlinx.coroutines.flow.MutableStateFlow(emptyList<com.smartsales.prism.domain.memory.ScheduleItem>())
             override suspend fun checkConflict(proposedStart: Long, durationMinutes: Int, excludeId: String?) = com.smartsales.prism.domain.memory.ConflictResult.Clear
             override suspend fun refresh() {}
+            override suspend fun findLexicalMatch(targetQuery: String): com.smartsales.prism.domain.memory.ScheduleItem? = null
         }
         alarmScheduler = object : AlarmScheduler {
             override suspend fun cancelReminder(taskId: String) {}

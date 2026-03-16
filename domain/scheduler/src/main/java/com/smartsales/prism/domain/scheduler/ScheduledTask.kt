@@ -29,6 +29,8 @@ data class ScheduledTask(
     val keyPersonEntityId: String? = null,  // Wave 9: Entity ID for tip generation
     val highlights: String? = null,
     val alarmCascade: List<String> = emptyList(), // e.g. ["-1h", "-15m", "-5m"]
+    val hasConflict: Boolean = false, // Wave 17 Path A
+    val isVague: Boolean = false,     // Wave 17 Path A
     val clarificationState: ClarificationState? = null // Wave 14: Anchor for Path B disambiguation
 ) : SchedulerTimelineItem
 

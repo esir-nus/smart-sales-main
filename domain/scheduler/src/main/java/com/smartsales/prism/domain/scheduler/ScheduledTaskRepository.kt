@@ -44,6 +44,17 @@ interface ScheduledTaskRepository {
     suspend fun upsertTask(task: ScheduledTask): String
 
     /**
+     * Path A (Wave 17): Batch inserts multiple tasks atomically.
+     */
+    suspend fun batchInsertTasks(tasks: List<ScheduledTask>): List<String>
+    
+    /**
+     * Path A (Wave 17): Reschedules an existing task.
+     * Evaluates conflict rules, deletes old task, and inserts new task identically, forcefully inheriting GUID.
+     */
+    suspend fun rescheduleTask(oldTaskId: String, newTask: ScheduledTask)
+
+    /**
      * 删除时间线项目
      */
     suspend fun deleteItem(id: String)

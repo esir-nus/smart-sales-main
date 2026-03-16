@@ -27,6 +27,11 @@ android {
     testOptions {
         unitTests {
             isReturnDefaultValues = true
+            all { test ->
+                test.testLogging {
+                    showStandardStreams = true
+                }
+            }
         }
     }
 

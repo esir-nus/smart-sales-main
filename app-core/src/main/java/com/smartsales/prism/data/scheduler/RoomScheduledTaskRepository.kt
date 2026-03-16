@@ -43,6 +43,18 @@ class RoomScheduledTaskRepository @Inject constructor(
         return entity.taskId
     }
 
+    override suspend fun batchInsertTasks(tasks: List<ScheduledTask>): List<String> {
+        val entities = tasks.map { it.copy(id = UUID.randomUUID().toString()).toEntity() }
+        dao.insertAll(entities)
+        return entities.map { it.taskId }
+    }
+
+    override suspend fun rescheduleTask(oldTaskId: String, newTask: ScheduledTask) {
+        // Enforce GUID inheritance per Path A spec
+        val entity = newTask.copy(id = oldTaskId).toEntity()
+        dao.reschedule(oldTaskId, entity)
+    }
+
     override suspend fun getTask(id: String): ScheduledTask? {
         return dao.getById(id)?.toDomain()
     }

@@ -62,6 +62,8 @@ class RealScheduleBoard @Inject constructor(
         val overlaps = _upcomingItems.value.filter { slot ->
             // 排除指定ID (避免新任务与自己冲突)
             slot.entryId != excludeId &&
+            // 不检测模糊任务的冲突
+            !slot.isVague &&
             // 只检查 EXCLUSIVE 策略的项目
             slot.conflictPolicy == ConflictPolicy.EXCLUSIVE &&
             // 时间重叠判断
@@ -83,6 +85,21 @@ class RealScheduleBoard @Inject constructor(
         // No need to manually re-query or block execution
     }
     
+    override suspend fun findLexicalMatch(targetQuery: String): ScheduleItem? {
+        val query = targetQuery.trim().lowercase()
+        if (query.isEmpty()) return null
+
+        val candidates = _upcomingItems.value
+        val exactMatches = candidates.filter { it.title.lowercase().contains(query) }
+
+        return if (exactMatches.size == 1) {
+            exactMatches.first()
+        } else {
+            // Null indicates 0 or 2+ matches
+            null
+        }
+    }
+    
     /**
      * Task -> ScheduleItem 转换
      */
@@ -95,7 +112,8 @@ class RealScheduleBoard @Inject constructor(
             durationSource = durationSource,
             conflictPolicy = conflictPolicy,
             participants = keyPerson?.let { listOf(it) } ?: emptyList(),
-            location = location
+            location = location,
+            isVague = isVague
         )
     }
 }

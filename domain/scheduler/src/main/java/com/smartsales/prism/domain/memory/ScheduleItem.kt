@@ -15,7 +15,8 @@ data class ScheduleItem(
     val durationSource: DurationSource, // 持续时间来源
     val conflictPolicy: ConflictPolicy, // 冲突策略
     val participants: List<String> = emptyList(),  // 实体 ID 列表
-    val location: String? = null        // 位置实体 ID
+    val location: String? = null,       // 位置实体 ID
+    val isVague: Boolean = false        // Wave 17 Path A
 ) {
     /**
      * 计算结束时间 (epoch millis)

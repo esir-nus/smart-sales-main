@@ -34,6 +34,13 @@ interface ScheduleBoard {
      * 强制从 ScheduledTaskRepository 刷新
      */
     suspend fun refresh()
+    
+    /**
+     * Path A (Wave 17): Lexical fuzzy match against upcoming items.
+     * Evaluates strictly for 1 exact match (anti-hallucination).
+     * @return The exactly matched ScheduleItem, or null if 0 or 2+ matches.
+     */
+    suspend fun findLexicalMatch(targetQuery: String): ScheduleItem?
 }
 
 /**

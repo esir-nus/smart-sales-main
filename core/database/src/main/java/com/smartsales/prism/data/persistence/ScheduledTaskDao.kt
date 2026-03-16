@@ -18,6 +18,9 @@ interface ScheduledTaskDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(entity: ScheduledTaskEntity)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(entities: List<ScheduledTaskEntity>)
+
     @Update
     suspend fun update(entity: ScheduledTaskEntity)
 
@@ -26,6 +29,12 @@ interface ScheduledTaskDao {
 
     @Query("DELETE FROM scheduled_tasks WHERE taskId = :id")
     suspend fun deleteById(id: String)
+
+    @androidx.room.Transaction
+    suspend fun reschedule(oldId: String, newEntity: ScheduledTaskEntity) {
+        deleteById(oldId)
+        insert(newEntity)
+    }
 
     @Query("SELECT * FROM scheduled_tasks WHERE hasAlarm = 1 AND isDone = 0 AND startTimeMillis > :nowMs")
     suspend fun getFutureTasksWithAlarm(nowMs: Long): List<ScheduledTaskEntity>

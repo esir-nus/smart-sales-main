@@ -40,6 +40,11 @@ object PipelineValve {
     }
 
     /**
+     * Test-only hook to capture telemetry without polluting stdout.
+     */
+    var testInterceptor: ((Checkpoint, Int, String) -> Unit)? = null
+
+    /**
      * Tags a data payload as it crosses an architectural junction.
      * 
      * @param checkpoint The architectural toll booth the data is passing through.
@@ -55,6 +60,9 @@ object PipelineValve {
             logBuilder.append(rawDataDump)
             logBuilder.append("\n==================================================")
         }
+        
+        // Fire interceptor for unit tests
+        testInterceptor?.invoke(checkpoint, payloadSize, summary)
         
         // Log at INFO level for production/debug visibility without excessive noise
         Log.i("VALVE_PROTOCOL", logBuilder.toString())

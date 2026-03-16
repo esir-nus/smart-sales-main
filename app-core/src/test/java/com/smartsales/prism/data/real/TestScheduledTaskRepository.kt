@@ -17,6 +17,8 @@ class TestScheduledTaskRepository : ScheduledTaskRepository {
     override fun getTimelineItems(dayOffset: Int) = items
     
     override suspend fun insertTask(task: ScheduledTask): String = "id"
+    override suspend fun batchInsertTasks(tasks: List<ScheduledTask>): List<String> = emptyList()
+    override suspend fun rescheduleTask(oldTaskId: String, newTask: ScheduledTask) {}
     override suspend fun getTask(id: String): ScheduledTask? = null
     override suspend fun updateTask(task: ScheduledTask) {}
     override suspend fun upsertTask(task: ScheduledTask): String = "id"

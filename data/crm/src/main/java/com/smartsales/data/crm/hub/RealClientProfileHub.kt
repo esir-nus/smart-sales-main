@@ -74,7 +74,11 @@ class RealClientProfileHub @Inject constructor(
         val clientHabitsContext = rlModule.loadClientHabits(listOf(entityId))
         
         // Merge them
-        val habitContext = com.smartsales.prism.domain.rl.HabitContext(emptyList(), emptyList(), emptyMap())
+        val habitContext = com.smartsales.prism.domain.rl.HabitContext(
+            userHabits = userHabitsContext.userHabits,
+            clientHabits = clientHabitsContext.clientHabits,
+            suggestedDefaults = emptyMap()
+        )
 
         return FocusedContext(
             entity = entity,

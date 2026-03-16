@@ -56,6 +56,8 @@ class L2EfficiencyOverloadTest {
             override fun getTimelineItems(dayOffset: Int): Flow<List<SchedulerTimelineItem>> = emptyFlow()
             override fun queryByDateRange(start: LocalDate, end: LocalDate): Flow<List<SchedulerTimelineItem>> = emptyFlow()
             override suspend fun insertTask(task: ScheduledTask): String = "fake-task-${System.currentTimeMillis()}"
+            override suspend fun batchInsertTasks(tasks: List<ScheduledTask>): List<String> = emptyList()
+            override suspend fun rescheduleTask(oldTaskId: String, newTask: ScheduledTask) {}
             override suspend fun getTask(id: String): ScheduledTask? = null
             override suspend fun updateTask(task: ScheduledTask) {}
             override suspend fun upsertTask(task: com.smartsales.prism.domain.scheduler.ScheduledTask): String = task.id

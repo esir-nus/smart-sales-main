@@ -180,4 +180,11 @@ class FakeScheduleBoard : ScheduleBoard {
     override suspend fun refresh() {
         // No-op in fake
     }
+
+    override suspend fun findLexicalMatch(targetQuery: String): ScheduleItem? {
+        val query = targetQuery.trim().lowercase()
+        if (query.isEmpty()) return null
+        val exactMatches = _items.value.filter { it.title.lowercase().contains(query) }
+        return if (exactMatches.size == 1) exactMatches.first() else null
+    }
 }

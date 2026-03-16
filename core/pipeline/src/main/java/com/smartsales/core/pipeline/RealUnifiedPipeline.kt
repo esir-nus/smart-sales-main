@@ -19,6 +19,7 @@ import com.smartsales.core.llm.ExecutorResult
 import com.smartsales.core.pipeline.HabitListener
 import com.smartsales.prism.domain.telemetry.PipelinePhase
 import com.smartsales.prism.domain.telemetry.PipelineTelemetry
+import com.smartsales.core.telemetry.PipelineValve
 import javax.inject.Named
 
 /**

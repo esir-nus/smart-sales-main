@@ -25,7 +25,7 @@
 | Valve Identifier | OS Function | Payload Metric | Status |
 |------------------|-------------|----------------|--------|
 | `[ALIAS_RESOLUTION]` | Entity Disambiguation | Entity Count | ✅ SHIPPED |
-| `[SSD_GRAPH_FETCHED]` | Database query for context | Node Count | 🔲 PENDING |
+| `[SSD_GRAPH_FETCHED]` | Database query for context | Node Count | ✅ SHIPPED |
 | `[LIVING_RAM_ASSEMBLED]`| Final payload handed to LLM | Token/Turn Count | ✅ SHIPPED |
 
 ## Phase 3: The Brain (LLM Execution)
@@ -41,7 +41,7 @@
 
 | Valve Identifier | OS Function | Payload Metric | Status |
 |------------------|-------------|----------------|--------|
-| `[PLUGIN_DISPATCH_RECEIVED]` | Plugin boundary entry (e.g. Scheduler) | Parameter Count | 🔲 PENDING |
+| `[PLUGIN_DISPATCH_RECEIVED]` | Plugin boundary entry (e.g. Scheduler) | Parameter Count | ✅ SHIPPED |
 | `[PLUGIN_INTERNAL_ROUTING]` | Plugin decides sub-task (e.g. ASR, Web) | Target string | 🔲 PENDING |
 | `[PLUGIN_EXTERNAL_CALL]` | Plugin talks to 3rd party API | Payload Size | 🔲 PENDING |
 | `[PLUGIN_YIELDED_TO_OS]` | Plugin returns control upstream | Data Variant | 🔲 PENDING |
@@ -51,7 +51,7 @@
 
 | Valve Identifier | OS Function | Payload Metric | Status |
 |------------------|-------------|----------------|--------|
-| `[DB_WRITE_EXECUTED]` | E.g., Room EntityWriter | Diff Size / Entity ID | 🔲 PENDING |
+| `[DB_WRITE_EXECUTED]` | E.g., Room EntityWriter | Diff Size / Entity ID | ✅ SHIPPED |
 
 ## Phase 6: The Skin (Layer 1 Presentation)
 *The state bouncing back up to the user's eyes.*

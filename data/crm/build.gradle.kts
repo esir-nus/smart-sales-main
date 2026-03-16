@@ -49,6 +49,7 @@ dependencies {
     implementation(project(":domain:memory"))
     implementation(project(":domain:core"))
     implementation(project(":core:database"))
+    implementation(project(":core:telemetry"))
     implementation(project(":core:util"))
 
     // Other utilities

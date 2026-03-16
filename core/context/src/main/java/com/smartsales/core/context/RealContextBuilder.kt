@@ -108,6 +108,12 @@ class RealContextBuilder @Inject constructor(
                 // Delta Loading: Only fetch missing entities from DB
                 if (missingIds.isNotEmpty()) {
                     val fetched = missingIds.mapNotNull { entityRepository.getById(it) }
+                    com.smartsales.core.telemetry.PipelineValve.tag(
+                        checkpoint = com.smartsales.core.telemetry.PipelineValve.Checkpoint.SSD_GRAPH_FETCHED,
+                        payloadSize = fetched.size,
+                        summary = "RAM cache miss, fetched graph from SSD",
+                        rawDataDump = "Fetched IDs: ${fetched.map { it.entityId }}"
+                    )
                     fetched.forEach { _workingSet.entityCache[it.entityId] = it }
                 }
                 

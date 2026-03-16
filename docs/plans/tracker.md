@@ -34,53 +34,6 @@
   - **Boundaries**: [`docs/cerb-e2e-test/specs/wave7-final-audit/boundaries.md`](../cerb-e2e-test/specs/wave7-final-audit/boundaries.md)
   - [TER: L3 Wave 7 Final Audit](file:///home/cslh-frank/main_app/docs/reports/tests/L3-20260313-wave7-final-audit.md)
 
-### 🌊 Wave 8: Actionable/Factual Unification (Raw Domain Surfacing)
-> Reconstruct the CRM intelligence dashboard (Layer 5: ClientProfileHub) to surface raw `TimelineItemModel.Task` (Actionable) and raw `MemoryEntry` (Factual) via reactive Kotlin flows, completely separating the Future from the Past without relying on UI-layer translation mappings or database dual-writes. Unification through a true Source of Truth.
-- [ ] 🔲 **T1: Discard the `UnifiedActivity` entity mapping abstraction.**
-- [x] **Plan**: Establish the [Actionable vs Factual Unification Blueprint](../reports/review_conferences/20260314_actionable_factual_plan.md) and prove the Badge hardware scheduling constraint cannot be bypassed.
-- [x] **Conference**: Validate the Data Class Unification math with the Senior Engineer.
-- [x] **Docs**: Synchronized the `client-profile-hub/spec.md`, `entity-writer/spec.md`, and `entity-registry/spec.md` Data Models to reflect `ProfileActivityState` and remove the legacy `UnifiedActivity` mapping struct (`/04-doc-sync` complete).
-- [x] **Execute**:
-   1. ✅ **Phase 1: Domain Contract Purge**
-      - Clean slate isolation for `:domain:scheduler` and `:domain:core`
-      - Verified JVM compliance via Linter.
-   2. ✅ **Phase 2: The Reactive Engine**
-      - Implementation of `RealClientProfileHub`
-      - DAO up-conversions to `observeByEntityId` (`LIKE` operator for `MemoryDao`)
-      - Reactive streaming `Flow.combine` for aggregation without RAM caching.
-- [x] ✅ **Execute (Phase 3)**: The Cross-Off Lifecycle — Implement data migration in `SchedulerViewModel` (or equivalent observer) where completing a task permanently creates a `MemoryEntry` and deletes the `ScheduledTask`.
-- [ ] 🔲 **Test**: Verify `L1ClientProfileHubTest.kt` passes Phase 2 logic, and an L2 simulation proves Phase 3 Source of Truth migration.
-
-### 🌊 Wave 14: Scheduler Architecture Refinement (Monolithic)
-> Objective: Enhance the monolithic Scheduler pipeline to handle Voice Hooks deterministically.
-
-- [x] ✅ **T0: Campaign North Star**
-  - [x] **Docs**: Enhance `docs/cerb/scheduler/spec.md` to establish architectural principles and Intricacies.
-
-- [x] ✅ **T2: Domain `unifiedID` Infrastructure**
-  - [x] **Execute**: Update ASR transcription layer (or core IntentOrchestrator generation) to mint a random `unifiedID`. 
-  - [x] **Execute**: Update `ScheduledTask` entity if necessary to accept `unifiedID`.
-  - [x] **Test**: Unit tests verify `unifiedID` propagates into the pipeline `Input` object.
-
-- [ ] 🔲 **T3: Semantic Path A via Monolithic Pipeline**
-  - [ ] **Execute**: Run the monolithic `SchedulerLinter` + LLM Extractor purely to immediately insert an optimistic task with an accurate semantic ISO time.
-
-- [ ] 🔲 **T4: Presentation Teardown**
-  - [x] **Specs**: Ensure `scheduler/contract.md` defines pure state execution.
-  - [x] **Execute**: Hoist `PhoneAudioRecorder` out of the visual card layer up to ViewModel/Screen.
-  - [x] **Execute**: Dismantle 700-line `SchedulerCards.kt/SchedulerTaskCard.kt`. Move atomic components into `components/` package.
-  - [x] **Test**: Mechanical `grep` proves no raw Android dependencies inside the nested UI component layer.
-
-### 🌊 Wave 15: Dual-Path Asynchronous Scheduling (Plugin Demotion)
-> Objective: Formalize the "Town and Highway" protocol for the DEV Audio Hook by decoupling optimistic UI Task Creation (Path A) from heavyweight async CRM Entity Disambiguation (Path B).
-> Note: This architecture has been demoted to a future plugin-like capability. The primary scheduler will remain monolithic.
-
-### 🎨 Epic: UI Skin Modernization & Protocol Validation
-> Applying the newly established Docs-First `IAgentViewModel` Contract to aggressively clean, refactor, and rewrite the UI layer into a pristine presentation boundary, proving the Parallel Dev Workflow before formalizing it into an Antigravity Rule.
-- [x] ✅ **Phase 1: Component Rewrite (Code Cleaning)** - Nuke and pave existing screens (Chat, Agent States) to purely consume `IAgentViewModel`. Replace tangled `AgentViewModel` logic with strict `@Preview` tests powered by `FakeAgentViewModel`. Drop all dead legacy UI code.
-- [x] ✅ **Phase 2: The Parallel Proving Ground (Scheduler)** - Rewrite `SchedulerViewModel` to purge pipeline/conflict logic, creating a pure `ISchedulerViewModel` boundary. Implement `FakeSchedulerViewModel` and prove we can build the new UI Skin purely in Compose previews.
-  - [TER: L3 Scheduler DEV Audio Hook Validation (BugFix 4.4)](file:///home/cslh-frank/main_app/docs/reports/tests/L3-20260314-Scheduler-AudioHook.md)
-- [ ] 🔲 **Phase 3: Formalize UI Antigravity Protocol** - After proving success in Phase 1 and 2, create the official SOP rule (`.agent/rules/ui-development-protocol.md`) demanding strict `@Preview` logic isolation, Fake ViewModels, and `interface.md` synchronization for all subsequent UI features.
 
 
 
@@ -115,7 +68,7 @@
 The changelog has been moved to a standalone file to prevent content explosion. 
 
 👉 **[View Changelog](changelog.md)**
-### 🌊 Wave 16: Scheduler Decoupling (The Archival Purge)
+### ✅ Wave 16: Scheduler Decoupling (The Archival Purge)
 > Objective: Formalize the Scheduler as a standalone plugin/domain by severing all hardcoded dependencies from the Core OS Pipeline (`IntentOrchestrator`, `RealUnifiedPipeline`, `PromptCompiler`).
 > 🧭 **North Star**: [docs/specs/wave16-scheduler-decoupling-guide.md]()
 - [x] ✅ **T0: Campaign North Star**
@@ -130,7 +83,29 @@ The changelog has been moved to a standalone file to prevent content explosion.
   - [x] **Execute**: Nuke all `com.smartsales.prism.domain.scheduler.*` imports from `IntentOrchestrator`, `RealUnifiedPipeline`, and `PromptCompiler`. 
   - [x] **Execute**: Rewrite the Reschedule/Lint logic to be domain-agnostic (mapped direct to `ToolDispatch`).
   - [x] **Test**: Mechanical Check: `grep` proves zero Scheduler imports exist in `:core:pipeline`.
-- [ ] 🔲 **T3: Scheduler Plugin Wiring**
-  - [ ] **Execute**: Implement the generic Plugin interface within the `:domain:scheduler` module.
-  - [ ] **Execute**: Wire the Scheduler Plugin into the App-level DI graph (so the Pipeline can use it at runtime without compile-time knowledge).
-  - [ ] **Test**: L3 Scheduler audio hook validation passes (proving the plugin still works when decoupled).
+
+### 🌊 Wave 17: Scheduler Fast-Track (Path A Execution)
+> Objective: Implement the System III Dual-Path Architecture's Optimistic UI Execution (Path A), including a dedicated mutation module with lexical matching and the Small Attention Flow for conflict resolution. - 🧭 **North Star**: [docs/specs/scheduler-path-a-execution-prd.md](../specs/scheduler-path-a-execution-prd.md)
+> ⚠️ **Campaign Constraints**:
+> 1. **Legacy Reference Only**: Treat legacy code as a learning source, not the Source of Truth.
+> 2. **UI Isolation**: Do not change current UI unless absolutely necessary (strict FE/BE separation).
+- [x] ✅ **T0: Campaign North Star**
+  - [x] **Docs**: Created `docs/specs/scheduler-path-a-execution-prd.md` to establish architectural principles and Intricacies.
+- [x] ✅ **T1: Data Contracts & Linter Pipeline (One Currency Schema)**
+  - [x] **Docs**: Created `docs/cerb/scheduler-linter/spec.md` and `interface.md`.
+  - [x] **Interface Map**: Updated `docs/cerb/interface-map.md`.
+  - [x] **Plan**: `/feature-dev-planner` — approved.
+  - [x] **Execute**: Implemented FastTrack Parser to emit deterministic DTOs (`CreateTasksParams`, `RescheduleTaskParams`, `CreateInspirationParams`).
+  - [x] **Test**: L1 (10/10 green), Mechanical (4/4 clean), Full build passes.
+- [ ] 🔲 **T2: Dedicated Mutation Module (Atomic Operations & Conflict Evaluation)**
+  - [ ] **Docs**: Create/update `docs/cerb/scheduler-domain/spec.md` and `interface.md`.
+  - [ ] **Interface Map**: Read/update `docs/cerb/interface-map.md`.
+  - [ ] **Plan**: `/feature-dev-planner`
+  - [ ] **Execute**: Implement Lexical Fuzzy Matcher, ScheduleBoard conflict check, and atomic Delete -> Insert `@Transaction` updates.
+  - [ ] **Test**: L1/L2 Verification passes against the spec.
+- [ ] 🔲 **T3: The Small Attention Flow (Presentation Layer)**
+  - [ ] **Docs**: Create/update `docs/cerb-ui/scheduler-drawer/spec.md` and `contract.md`.
+  - [ ] **Interface Map**: Verify `IAgentViewModel` isolation (No backend logic).
+  - [ ] **Plan**: Run `/08-ux-specialist` for interaction design.
+  - [ ] **Execute**: Implement UI feedback mechanisms (Caution Banner, Red Flag Cards, Inspiration Note Cards).
+  - [ ] **Test**: Mechanical Check: `grep` to prove no concrete ViewModel imports.

@@ -17,6 +17,12 @@ class RealToolRegistry @Inject constructor(
 
     override fun executeTool(toolId: String, request: PluginRequest, gateway: PluginGateway): Flow<UiState> {
         Log.d("ToolRegistry", "Executing tool: $toolId")
+        com.smartsales.core.telemetry.PipelineValve.tag(
+            checkpoint = com.smartsales.core.telemetry.PipelineValve.Checkpoint.PLUGIN_DISPATCH_RECEIVED,
+            payloadSize = request.toString().length,
+            summary = "Core pipeline dispatched payload to plugin: $toolId",
+            rawDataDump = request.toString()
+        )
         val plugin = plugins.find { it.metadata.id == toolId }
         return if (plugin != null) {
             plugin.execute(request, gateway)

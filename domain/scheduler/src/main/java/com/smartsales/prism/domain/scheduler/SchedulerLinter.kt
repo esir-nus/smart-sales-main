@@ -5,6 +5,7 @@ import com.smartsales.prism.domain.core.TaskMutation
 import com.smartsales.prism.domain.memory.ConflictPolicy
 import com.smartsales.prism.domain.time.TimeProvider
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.SerializationException
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.time.format.DateTimeFormatter
@@ -12,20 +13,171 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * 调度器校验器 — 验证 LLM 输出的 JSON 结构和日期合理性 (Project Mono Wave 2)
+ * 调度器校验器 — Path A FastTrack Parser (新) + Legacy lint() 兼容层 (旧)
+ *
+ * 新代码应使用 parseFastTrackIntent() 获取纯 DTO。
+ * 旧代码 (L2DebugHud, L2StrictInterfaceIntegrityTest) 暂时继续使用 lint() → LintResult。
  */
 @Singleton
-class SchedulerLinter @Inject constructor(
-    private val timeProvider: TimeProvider
-) {
+class SchedulerLinter @Inject constructor() {
+
+    /** 兼容旧调用方式: SchedulerLinter(timeProvider) */
+    @Suppress("unused")
+    constructor(timeProvider: TimeProvider) : this() {
+        this.legacyTimeProvider = timeProvider
+    }
+
+    private var legacyTimeProvider: TimeProvider? = null
+
     private val jsonInterpreter = Json { 
         ignoreUnknownKeys = true 
         coerceInputValues = true 
     }
 
     /**
-     * 验证并解析 LLM 输出
-     * @return LintResult.Success 包含解析后的任务，或 LintResult.Error 包含错误信息
+     * Parses real-time ASR audio intents into exact one-currency DTOs for Path A optimistic execution.
+     * Operates purely on lexical/semantic input without requiring an LLM if local rules match, 
+     * or via a fast LLM extraction pass.
+     */
+    fun parseFastTrackIntent(input: String): FastTrackResult {
+        return try {
+            val mutation = jsonInterpreter.decodeFromString<UnifiedMutation>(input)
+            
+            when (mutation.classification.lowercase()) {
+                "non_intent", "none" -> {
+                    return FastTrackResult.NoMatch(
+                        reason = mutation.reason ?: "未检测到日程安排意图"
+                    )
+                }
+                "deletion" -> {
+                    // Path A specifically blocks global deletions due to safety constraints.
+                    return FastTrackResult.NoMatch(
+                        reason = "语音删除操作已被系统限制，请在面板手动操作。"
+                    )
+                }
+                "inspiration" -> {
+                    val content = mutation.tasks.firstOrNull()?.notes 
+                        ?: mutation.response 
+                        ?: mutation.thought
+                        ?: return FastTrackResult.NoMatch("未检测到灵感内容")
+
+                    return FastTrackResult.CreateInspiration(
+                        params = CreateInspirationParams(content = content)
+                    )
+                }
+                "reschedule" -> {
+                    val targetTitle = mutation.targetTitle ?: ""
+                    val newInstruction = mutation.newInstruction ?: ""
+                    if (targetTitle.isBlank() || newInstruction.isBlank()) {
+                        return FastTrackResult.NoMatch("改期请求缺少目标任务或新指令")
+                    }
+                    
+                    return FastTrackResult.RescheduleTask(
+                        params = RescheduleTaskParams(
+                            targetQuery = targetTitle,
+                            newStartTimeIso = newInstruction
+                            // Note: actual Temporal targeting mapping depends on LLM explicit capability.
+                            // Falling back to Lexical targeting for now as requested by Path A PRD.
+                        )
+                    )
+                }
+                // Default to creating tasks, but gracefully fail if missing data
+                "schedulable" -> {
+                    if (mutation.tasks.isEmpty()) {
+                        return FastTrackResult.NoMatch("无可用日程")
+                    }
+
+                    val definitions = mutation.tasks.mapNotNull { parseTaskDefinition(it) }
+
+                    if (definitions.isEmpty()) {
+                        return FastTrackResult.NoMatch("时间格式无法解析为精准日程")
+                    }
+
+                    return FastTrackResult.CreateTasks(
+                        params = CreateTasksParams(
+                            tasks = definitions
+                        )
+                    )
+                }
+                else -> {
+                    return FastTrackResult.NoMatch("未知的操作意图: ${mutation.classification}")
+                }
+            }
+        } catch (e: SerializationException) {
+            FastTrackResult.NoMatch("JSON 结构异常: ${e.message}")
+        } catch (e: Exception) {
+            FastTrackResult.NoMatch("无法解析该意图: ${e.message}")
+        }
+    }
+    
+    private fun parseTaskDefinition(taskMutation: TaskMutation): TaskDefinition? {
+        val title = taskMutation.title
+        if (title.isBlank()) return null
+        
+        // Path A requires an explicit ISO string. If it's missing or blank, we drop the task.
+        // It will be caught downstream by Path B (which handles vague temporalities).
+        if (taskMutation.startTime.isBlank()) return null
+        
+        // Ensure standard ISO-8601 formatting or standard UI format before pushing to DTO
+        val normalizedStartTime = normalizeTime(taskMutation.startTime)
+
+        val explicitDuration = taskMutation.duration
+        val durationMinutes: Int = when {
+            !explicitDuration.isNullOrBlank() -> parseDuration(explicitDuration) ?: 0
+            else -> 0  // fire-off 提醒没有时长
+        }
+        
+        val urgencyStr = taskMutation.urgency
+        val urgencyLevel = try {
+            UrgencyEnum.valueOf(urgencyStr.uppercase())
+        } catch (e: IllegalArgumentException) {
+            when {
+                urgencyStr.uppercase().startsWith("L1") -> UrgencyEnum.L1_CRITICAL
+                urgencyStr.uppercase().startsWith("L2") -> UrgencyEnum.L2_IMPORTANT
+                urgencyStr.uppercase() == "FIRE_OFF" -> UrgencyEnum.FIRE_OFF
+                else -> UrgencyEnum.L3_NORMAL // 安全默认
+            }
+        }
+        
+        return TaskDefinition(
+            title = title,
+            startTimeIso = normalizedStartTime,
+            durationMinutes = durationMinutes,
+            urgency = urgencyLevel
+        )
+    }
+
+    private fun parseDuration(durationStr: String): Int? {
+        val lower = durationStr.lowercase().trim()
+        return try {
+            if (lower.endsWith("min") || lower.endsWith("m")) {
+                lower.filter { it.isDigit() }.toInt()
+            } else if (lower.endsWith("h") || lower.endsWith("hour")) {
+                val num = lower.filter { it.isDigit() || it == '.' }.toFloat()
+                (num * 60).toInt()
+            } else if (lower.all { it.isDigit() }) {
+                lower.toInt()
+            } else {
+                null
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun normalizeTime(dateTimeStr: String): String {
+        return dateTimeStr
+            .replace(Regex("(\\d{4}-\\d{2}-\\d{2})(\\d{2}:\\d{2})"), "$1 $2")
+            .trim()
+    }
+
+    // ════════════════════════════════════════════════════════════════
+    // BACKWARD COMPAT: Legacy lint() method for L2DebugHud and tests
+    // Will be removed when L2DebugHud migrates to parseFastTrackIntent()
+    // ════════════════════════════════════════════════════════════════
+
+    /**
+     * @deprecated 使用 parseFastTrackIntent() 代替
      */
     fun lint(llmOutput: String): LintResult {
         return try {
@@ -59,18 +211,16 @@ class SchedulerLinter @Inject constructor(
                 return LintResult.ToolDispatch(recommendation.workflowId, recommendation.parameters)
             }
 
-            // Parse Profile Mutations
             val profileMutations = mutation.profileMutations.map {
                 ParsedProfileMutation(it.entityId, it.field, it.value)
             }
 
-            // Parse Tasks
             val tasks = mutableListOf<ScheduledTask>()
             var singleSuccessResult: LintResult.Success? = null
             
             if (mutation.tasks.isNotEmpty()) {
                 for (taskMutation in mutation.tasks) {
-                    val result = parseSingleTask(taskMutation)
+                    val result = parseSingleTaskLegacy(taskMutation)
                     if (result is LintResult.Success && result.task != null) {
                         tasks.add(result.task)
                         if (singleSuccessResult == null) singleSuccessResult = result
@@ -97,10 +247,7 @@ class SchedulerLinter @Inject constructor(
         }
     }
     
-    /**
-     * 解析单个任务对象 (Project Mono Wave 2: Using TaskMutation)
-     */
-    private fun parseSingleTask(taskMutation: TaskMutation): LintResult {
+    private fun parseSingleTaskLegacy(taskMutation: TaskMutation): LintResult {
         val title = taskMutation.title
         if (title.isBlank()) {
             return LintResult.Error("任务标题不能为空")
@@ -113,8 +260,9 @@ class SchedulerLinter @Inject constructor(
             briefSummary = if (taskMutation.notes.isNullOrBlank()) title else taskMutation.notes
         )
         
-        // 验证日期 — 如果缺失，返回 Incomplete 而不是 Error（Phase 1 循环）
-        val startTime = parseDateTime(taskMutation.startTime)
+        val tp = legacyTimeProvider ?: return LintResult.Error("TimeProvider not available for legacy lint()")
+        
+        val startTime = parseDateTimeLegacy(taskMutation.startTime, tp)
         if (startTime == null) {
             return LintResult.Incomplete(
                 missingField = "startTime",
@@ -123,29 +271,25 @@ class SchedulerLinter @Inject constructor(
             )
         }
         
-        // endTime 可选，null 表示开放式任务
-        val endTime: Instant? = taskMutation.endTime?.let { parseDateTime(it) }
+        val endTime: Instant? = taskMutation.endTime?.let { parseDateTimeLegacy(it, tp) }
 
         if (endTime != null && endTime.isBefore(startTime)) {
             return LintResult.Error("结束时间不能早于开始时间")
         }
 
-        // 检查是否是过去的时间 (允许今天的任务)
-        val todayStart = timeProvider.today.atStartOfDay(timeProvider.zoneId).toInstant()
+        val todayStart = tp.today.atStartOfDay(tp.zoneId).toInstant()
         if (startTime.isBefore(todayStart)) {
             return LintResult.Error("不能创建过去的任务")
         }
 
-        // Duration: LLM 推断为主，无需确认
         val explicitDuration = taskMutation.duration
         
         val durationMinutes: Int = when {
             !explicitDuration.isNullOrBlank() -> parseDuration(explicitDuration) ?: 0
             endTime != null -> ChronoUnit.MINUTES.between(startTime, endTime).toInt().coerceAtLeast(1)
-            else -> 0  // fire-off 提醒没有时长
+            else -> 0
         }
         
-        // UrgencyLevel 解析
         val urgencyStr = taskMutation.urgency
         val urgencyLevel = try {
             UrgencyLevel.valueOf(urgencyStr.uppercase())
@@ -154,30 +298,28 @@ class SchedulerLinter @Inject constructor(
                 urgencyStr.uppercase().startsWith("L1") -> UrgencyLevel.L1_CRITICAL
                 urgencyStr.uppercase().startsWith("L2") -> UrgencyLevel.L2_IMPORTANT
                 urgencyStr.uppercase() == "FIRE_OFF" -> UrgencyLevel.FIRE_OFF
-                else -> UrgencyLevel.L3_NORMAL // 安全默认
+                else -> UrgencyLevel.L3_NORMAL
             }
         }
         
-        // 冲突策略: 根据紧急程度决定 (FIRE_OFF -> COEXISTING)
         val policy = if (urgencyLevel == UrgencyLevel.FIRE_OFF) 
             ConflictPolicy.COEXISTING else ConflictPolicy.EXCLUSIVE
 
-        // 级联提醒: 由 UrgencyLevel 决定
         val alarmCascade = UrgencyLevel.buildCascade(urgencyLevel)
 
         return LintResult.Success(
             task = ScheduledTask(
-                id = "", // 新任务，ID 由 Repository 生成
-                timeDisplay = formatTimeDisplay(startTime, endTime),
+                id = "",
+                timeDisplay = formatTimeDisplayLegacy(startTime, tp),
                 title = title,
                 isDone = false,
-                hasAlarm = alarmCascade.isNotEmpty(), // 有级联就有提醒
+                hasAlarm = alarmCascade.isNotEmpty(),
                 isSmartAlarm = urgencyLevel == UrgencyLevel.L1_CRITICAL || urgencyLevel == UrgencyLevel.L2_IMPORTANT,
                 startTime = startTime,
                 endTime = endTime,
                 durationMinutes = durationMinutes,
                 conflictPolicy = policy,
-                dateRange = formatDateRange(startTime, endTime),
+                dateRange = formatDateRangeLegacy(startTime, endTime, tp),
                 location = taskMutation.location,
                 notes = taskMutation.notes,
                 keyPerson = taskMutation.keyPerson,
@@ -185,63 +327,37 @@ class SchedulerLinter @Inject constructor(
                 alarmCascade = alarmCascade
             ),
             urgencyLevel = urgencyLevel,
-            // Phase 1 线索 → Phase 2 实体消歧
             parsedClues = partialClues.copy(durationMinutes = durationMinutes)
         )
     }
 
-    private fun parseDateTime(dateTimeStr: String): Instant? {
+    private fun parseDateTimeLegacy(dateTimeStr: String, tp: TimeProvider): Instant? {
         return try {
-            // 规范化 LLM 输出格式 (处理缺失空格等问题)
             val normalized = dateTimeStr
                 .replace(Regex("(\\d{4}-\\d{2}-\\d{2})(\\d{2}:\\d{2})"), "$1 $2")
                 .trim()
-            
             val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
             java.time.LocalDateTime.parse(normalized, formatter)
-                .atZone(timeProvider.zoneId)
+                .atZone(tp.zoneId)
                 .toInstant()
         } catch (e: Exception) {
             null
         }
     }
-    
-    private fun parseDuration(durationStr: String): Int? {
-        val lower = durationStr.lowercase().trim()
-        return try {
-            if (lower.endsWith("min") || lower.endsWith("m")) {
-                lower.filter { it.isDigit() }.toInt()
-            } else if (lower.endsWith("h") || lower.endsWith("hour")) {
-                val num = lower.filter { it.isDigit() || it == '.' }.toFloat()
-                (num * 60).toInt()
-            } else if (lower.all { it.isDigit() }) {
-                lower.toInt()
-            } else {
-                null
-            }
-        } catch (e: Exception) {
-            null
-        }
-    }
 
-    private fun formatTimeDisplay(start: Instant, end: Instant?): String {
+    private fun formatTimeDisplayLegacy(start: Instant, tp: TimeProvider): String {
         val formatter = DateTimeFormatter.ofPattern("HH:mm")
-        val startStr = start.atZone(timeProvider.zoneId).format(formatter)
-        return startStr
+        return start.atZone(tp.zoneId).format(formatter)
     }
 
-    private fun formatDateRange(start: Instant, end: Instant?): String {
+    private fun formatDateRangeLegacy(start: Instant, end: Instant?, tp: TimeProvider): String {
         val dateParams = DateTimeFormatter.ofPattern("yyyy-MM-dd")
         val timeParams = DateTimeFormatter.ofPattern("HH:mm")
-        
-        val startZone = start.atZone(timeProvider.zoneId)
-        
+        val startZone = start.atZone(tp.zoneId)
         if (end == null) {
             return "${startZone.format(dateParams)} ${startZone.format(timeParams)} - ..."
         }
-        
-        val endZone = end.atZone(timeProvider.zoneId)
-        
+        val endZone = end.atZone(tp.zoneId)
         return if (startZone.toLocalDate() == endZone.toLocalDate()) {
             "${startZone.format(timeParams)} - ${endZone.format(timeParams)}"
         } else {
@@ -250,6 +366,10 @@ class SchedulerLinter @Inject constructor(
         }
     }
 }
+
+// ════════════════════════════════════════════════════════════════
+// BACKWARD COMPAT: Legacy data classes for L2DebugHud and tests
+// ════════════════════════════════════════════════════════════════
 
 data class ParsedClues(
     val person: String? = null,
@@ -294,3 +414,4 @@ sealed class LintResult {
     
     data class ToolDispatch(val workflowId: String, val params: Map<String, String>) : LintResult()
 }
+

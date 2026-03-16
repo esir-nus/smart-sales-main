@@ -1,4 +1,4 @@
-package com.smartsales.core.pipeline
+package com.smartsales.core.telemetry
 
 import android.util.Log
 

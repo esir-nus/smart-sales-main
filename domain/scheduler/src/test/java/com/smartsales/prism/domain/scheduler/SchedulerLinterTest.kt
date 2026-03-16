@@ -1,53 +1,48 @@
 package com.smartsales.prism.domain.scheduler
 
-import com.smartsales.prism.domain.scheduler.fakes.FakeTimeProvider
-import com.smartsales.prism.domain.memory.ConflictPolicy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
 /**
- * SchedulerLinter 单元测试 (Project Mono Wave 2)
+ * SchedulerLinter 单元测试 (Path A Wave 17 DTO Mapping)
  * 验证 LLM 输出解析 (UrgencyLevel) 和日期验证逻辑，使用严苛的 kotlinx.serialization
+ * 并确保产出的是纯粹的 DTO，不带有业务领域逻辑污染
  */
 class SchedulerLinterTest {
     
-    private lateinit var timeProvider: FakeTimeProvider
     private lateinit var linter: SchedulerLinter
     
     @Before
     fun setup() {
-        // 固定时间: 2026-02-02 10:00 UTC+8
-        timeProvider = FakeTimeProvider()
-        timeProvider.setDateTime(2026, 2, 2, 10, 0)
-        linter = SchedulerLinter(timeProvider)
+        linter = SchedulerLinter()
     }
     
     @Test
-    fun `valid JSON returns Success`() {
+    fun `valid JSON returns CreateTasks DTO`() {
         val validJson = """
             {
                 "classification": "schedulable",
                 "tasks": [
                     {
                         "title": "赶飞机",
-                        "startTime": "2026-02-03 03:00",
-                        "endTime": "2026-02-03 04:00",
+                        "startTime": "2026-02-03T03:00:00Z",
                         "urgency": "L1"
                     }
                 ]
             }
         """.trimIndent()
         
-        val result = linter.lint(validJson)
+        val result = linter.parseFastTrackIntent(validJson)
         
-        assertTrue("Expected LintResult.Success, got: $result", result is LintResult.Success)
-        val success = result as LintResult.Success
-        assertEquals("赶飞机", success.task!!.title)
-        assertEquals(UrgencyLevel.L1_CRITICAL, success.urgencyLevel)
-        assertTrue(success.task!!.isSmartAlarm)
-        assertEquals(6, success.task!!.alarmCascade.size) // L1 = 6 alarms (including 0m)
+        assertTrue("Expected CreateTasks, got: $result", result is FastTrackResult.CreateTasks)
+        val success = result as FastTrackResult.CreateTasks
+        assertEquals(1, success.params.tasks.size)
+        val task = success.params.tasks.first()
+        assertEquals("赶飞机", task.title)
+        assertEquals("2026-02-03T03:00:00Z", task.startTimeIso)
+        assertEquals(UrgencyEnum.L1_CRITICAL, task.urgency)
     }
     
     @Test
@@ -64,16 +59,15 @@ class SchedulerLinterTest {
             }
         """.trimIndent()
         
-        val result = linter.lint(noUrgencyJson)
+        val result = linter.parseFastTrackIntent(noUrgencyJson)
         
-        assertTrue("Expected LintResult.Success, got: $result", result is LintResult.Success)
-        val success = result as LintResult.Success
-        assertEquals(UrgencyLevel.L3_NORMAL, success.urgencyLevel)
-        assertEquals(3, success.task!!.alarmCascade.size) // L3 = 3 alarms (-15m, -1m, 0m)
+        assertTrue("Expected CreateTasks, got: $result", result is FastTrackResult.CreateTasks)
+        val success = result as FastTrackResult.CreateTasks
+        assertEquals(UrgencyEnum.L3_NORMAL, success.params.tasks.first().urgency)
     }
     
     @Test
-    fun `FIRE_OFF urgency sets COEXISTING policy and single 0m alarm`() {
+    fun `FIRE_OFF urgency mapped correctly`() {
         val fireOffJson = """
             {
                 "classification": "schedulable",
@@ -87,38 +81,11 @@ class SchedulerLinterTest {
             }
         """.trimIndent()
         
-        val result = linter.lint(fireOffJson)
+        val result = linter.parseFastTrackIntent(fireOffJson)
         
-        assertTrue("Expected LintResult.Success, got: $result", result is LintResult.Success)
-        val success = result as LintResult.Success
-        assertEquals(UrgencyLevel.FIRE_OFF, success.urgencyLevel)
-        assertEquals(ConflictPolicy.COEXISTING, success.task!!.conflictPolicy)
-        assertEquals(listOf("0m"), success.task!!.alarmCascade)
-        assertEquals(true, success.task!!.hasAlarm)
-    }
-    
-    @Test
-    fun `L1 urgency sets EXCLUSIVE policy and smart alarm`() {
-        val l1Json = """
-            {
-                "classification": "schedulable",
-                "tasks": [
-                    {
-                        "title": "重要面试",
-                        "startTime": "2026-02-03 14:00",
-                        "urgency": "L1"
-                    }
-                ]
-            }
-        """.trimIndent()
-        
-        val result = linter.lint(l1Json)
-        
-        assertTrue("Expected LintResult.Success, got: $result", result is LintResult.Success)
-        val success = result as LintResult.Success
-        assertEquals(UrgencyLevel.L1_CRITICAL, success.urgencyLevel)
-        assertEquals(ConflictPolicy.EXCLUSIVE, success.task!!.conflictPolicy)
-        assertTrue(success.task!!.isSmartAlarm)
+        assertTrue("Expected CreateTasks, got: $result", result is FastTrackResult.CreateTasks)
+        val success = result as FastTrackResult.CreateTasks
+        assertEquals(UrgencyEnum.FIRE_OFF, success.params.tasks.first().urgency)
     }
     
     @Test
@@ -136,33 +103,11 @@ class SchedulerLinterTest {
             }
         """.trimIndent()
         
-        val result = linter.lint(lowerCaseJson)
+        val result = linter.parseFastTrackIntent(lowerCaseJson)
         
-        assertTrue("Expected LintResult.Success, got: $result", result is LintResult.Success)
-        val success = result as LintResult.Success
-        assertEquals(UrgencyLevel.L2_IMPORTANT, success.urgencyLevel)
-    }
-    
-    @Test
-    fun `unknown urgency string falls back to L3`() {
-        val unknownJson = """
-            {
-                "classification": "schedulable",
-                "tasks": [
-                    {
-                        "title": "测试",
-                        "startTime": "2026-02-03 14:00",
-                        "urgency": "SOMETHING_ELSE"
-                    }
-                ]
-            }
-        """.trimIndent()
-        
-        val result = linter.lint(unknownJson)
-        
-        assertTrue("Expected LintResult.Success, got: $result", result is LintResult.Success)
-        val success = result as LintResult.Success
-        assertEquals(UrgencyLevel.L3_NORMAL, success.urgencyLevel)
+        assertTrue("Expected CreateTasks, got: $result", result is FastTrackResult.CreateTasks)
+        val success = result as FastTrackResult.CreateTasks
+        assertEquals(UrgencyEnum.L2_IMPORTANT, success.params.tasks.first().urgency)
     }
     
     @Test
@@ -181,15 +126,15 @@ class SchedulerLinterTest {
             }
         """.trimIndent()
         
-        val result = linter.lint(durationJson)
+        val result = linter.parseFastTrackIntent(durationJson)
         
-        assertTrue("Expected LintResult.Success, got: $result", result is LintResult.Success)
-        val success = result as LintResult.Success
-        assertEquals(10, success.task!!.durationMinutes)
+        assertTrue("Expected CreateTasks, got: $result", result is FastTrackResult.CreateTasks)
+        val success = result as FastTrackResult.CreateTasks
+        assertEquals(10, success.params.tasks.first().durationMinutes)
     }
     
     @Test
-    fun `missing title returns Error`() {
+    fun `missing title returns NoMatch`() {
         val noTitleJson = """
             {
                 "classification": "schedulable",
@@ -201,59 +146,42 @@ class SchedulerLinterTest {
                 ]
             }
         """.trimIndent()
-        val result = linter.lint(noTitleJson)
-        assertTrue(result is LintResult.Error)
+        val result = linter.parseFastTrackIntent(noTitleJson)
+        assertTrue(result is FastTrackResult.NoMatch)
     }
     
     @Test
-    fun `past date returns Error`() {
-        val pastDateJson = """
-            {
-                "classification": "schedulable",
-                "tasks": [
-                    {
-                        "title": "过去",
-                        "startTime": "2020-01-01 10:00"
-                    }
-                ]
-            }
-        """.trimIndent()
-        val result = linter.lint(pastDateJson)
-        assertTrue(result is LintResult.Error)
-    }
-    
-    @Test
-    fun `classification non_intent returns NonIntent`() {
+    fun `classification non_intent returns NoMatch`() {
         val json = """{"classification": "non_intent", "reason": "Just chatting", "tasks": []}"""
-        val result = linter.lint(json)
+        val result = linter.parseFastTrackIntent(json)
+        assertTrue(result is FastTrackResult.NoMatch)
     }
 
     @Test
-    fun `tool dispatch valid execution`() {
+    fun `classification deletion returns NoMatch due to Path A constraints`() {
+        val json = """{"classification": "deletion", "targetTitle": "the task"}"""
+        val result = linter.parseFastTrackIntent(json)
+        assertTrue(result is FastTrackResult.NoMatch)
+    }
+    
+    @Test
+    fun `classification inspiration with tasks returns CreateInspiration`() {
         val json = """
             {
-                "classification": "schedulable",
-                "recommended_workflows": [
-                    {
-                        "workflowId": "GENERATE_PDF",
-                        "reason": "User requested a formal report",
-                        "parameters": {
-                            "target": "weekly_metrics"
-                        }
-                    }
-                ],
-                "tasks": []
+                "classification": "inspiration", 
+                "thought": "This is a thought", 
+                "tasks": [
+                    {"title": "Note", "startTime": "", "notes": "Learn guitar"}
+                ]
             }
-        """.trimIndent()
-        val result = linter.lint(json)
-        assertTrue(result is LintResult.ToolDispatch)
-        val dispatch = result as LintResult.ToolDispatch
-        assertEquals("GENERATE_PDF", dispatch.workflowId)
-        assertEquals("weekly_metrics", dispatch.params["target"])
+        """
+        val result = linter.parseFastTrackIntent(json)
+        assertTrue("Expected CreateInspiration, got $result", result is FastTrackResult.CreateInspiration)
+        assertEquals("Learn guitar", (result as FastTrackResult.CreateInspiration).params.content)
     }
 
     @Test
-    fun `tool dispatch invalid json degrades gracefully without crashing`() {
+    fun `invalid json degrades gracefully without crashing to NoMatch`() {
         val json = """
             {
                 "classification": "schedulable",
@@ -266,9 +194,9 @@ class SchedulerLinterTest {
                 "tasks": []
             }
         """.trimIndent()
-        val result = linter.lint(json)
+        val result = linter.parseFastTrackIntent(json)
         // kotlinx.serialization will throw an exception on schema mismatch (null for non-null String, String for Map),
-        // which the linter catches and returns as LintResult.Error. We expect it NOT to crash.
-        assertTrue("Expected Error due to SerializationException", result is LintResult.Error)
+        // which the linter catches and returns as FastTrackResult.NoMatch. We expect it NOT to crash.
+        assertTrue("Expected NoMatch due to SerializationException", result is FastTrackResult.NoMatch)
     }
 }

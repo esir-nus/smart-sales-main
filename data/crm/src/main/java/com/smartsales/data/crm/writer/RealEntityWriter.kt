@@ -59,6 +59,7 @@ class RealEntityWriter @Inject constructor(
             
             // Fire-and-forget: 异步持久化到 SSD
             appScope.launch {
+                com.smartsales.core.telemetry.PipelineValve.tag(com.smartsales.core.telemetry.PipelineValve.Checkpoint.DB_WRITE_EXECUTED, 1, "Entity write to SSD: id=${merged.entityId}")
                 entityRepository.save(merged)
                 Log.d(TAG, "📝 异步更新实体SSD完毕: id=${merged.entityId} name=${merged.displayName} source=$source")
             }
@@ -89,6 +90,7 @@ class RealEntityWriter @Inject constructor(
             
             // Fire-and-forget: 异步持久化到 SSD
             appScope.launch {
+                com.smartsales.core.telemetry.PipelineValve.tag(com.smartsales.core.telemetry.PipelineValve.Checkpoint.DB_WRITE_EXECUTED, 1, "Entity created to SSD: id=$entityId")
                 entityRepository.save(newEntry)
                 Log.d(TAG, "✨ 异步创建实体SSD完毕: id=$entityId name=$clue type=$type source=$source")
             }
@@ -123,6 +125,7 @@ class RealEntityWriter @Inject constructor(
         
         // Fire-and-forget: 异步持久化到 SSD
         appScope.launch {
+            com.smartsales.core.telemetry.PipelineValve.tag(com.smartsales.core.telemetry.PipelineValve.Checkpoint.DB_WRITE_EXECUTED, 1, "Entity update attr to SSD: id=$entityId")
             entityRepository.save(updated)
             Log.d(TAG, "📝 异步属性更新SSD完毕: id=$entityId key=$key")
         }
@@ -156,6 +159,7 @@ class RealEntityWriter @Inject constructor(
         
         // Fire-and-forget: 异步持久化到 SSD
         appScope.launch {
+            com.smartsales.core.telemetry.PipelineValve.tag(com.smartsales.core.telemetry.PipelineValve.Checkpoint.DB_WRITE_EXECUTED, 1, "Entity alias registered to SSD: id=$entityId")
             entityRepository.save(updated)
             Log.d(TAG, "🏷️ 异步别名注册SSD完毕: id=$entityId alias=$alias (total=${newAliases.size})")
         }
@@ -236,6 +240,7 @@ class RealEntityWriter @Inject constructor(
             
             // 异步持久化到 SSD 与 Kernel 记录历史
             appScope.launch {
+                com.smartsales.core.telemetry.PipelineValve.tag(com.smartsales.core.telemetry.PipelineValve.Checkpoint.DB_WRITE_EXECUTED, 1, "Entity profile updated to SSD: id=$entityId")
                 entityRepository.save(finalEntry)
                 
                 Log.d(TAG, "👤 异步Profile更新SSD完毕: id=$entityId changes=${changes.size}")
@@ -248,6 +253,7 @@ class RealEntityWriter @Inject constructor(
     override suspend fun delete(entityId: String) {
         // 异步删除 SSD
         appScope.launch {
+            com.smartsales.core.telemetry.PipelineValve.tag(com.smartsales.core.telemetry.PipelineValve.Checkpoint.DB_WRITE_EXECUTED, 1, "Entity deleted from SSD: id=$entityId")
             entityRepository.delete(entityId)
             Log.d(TAG, "🗑️ 异步删除实体SSD完毕: id=$entityId")
         }

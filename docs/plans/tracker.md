@@ -5,7 +5,7 @@
 > **Campaign Lifecycle**: Every major initiative (rewrite, refactor, UI polish, large fix) is an "Epic" or "Campaign". Every Campaign MUST be initialized using the `/campaign-planner` workflow to enforce the following checklist sequence:
 > 1. **Docs** (Ensure Specs exist) 🔄 2. **Interface Map** (Ensure Layer/Contract boundaries align) 🔄 3. **Plan** (Dev Planner) 🔄 4. **Execute** (Implementation) 🔄 5. **Test** (E2E/L2 Verification). 
 > **Master Guide Alignment**: The Master Guide acts as the overarching strategy doc for a campaign. Agents MUST NEVER auto-update the Master Guide without strict explicit human review (like a Review Conference) to prevent architectural hallucination drift. Instead, run `/04-doc-sync` at the *end* of a campaign.
-> **Last Updated**: 2026-03-14
+> **Last Updated**: 2026-03-17
 
 ---
 
@@ -109,3 +109,64 @@ The changelog has been moved to a standalone file to prevent content explosion.
   - [ ] **Plan**: Run `/08-ux-specialist` for interaction design.
   - [ ] **Execute**: Implement UI feedback mechanisms (Caution Banner, Red Flag Cards, Inspiration Note Cards).
   - [ ] **Test**: Mechanical Check: `grep` to prove no concrete ViewModel imports.
+
+### 🌊 Wave 19: Scheduler Fast-Track Core-Flow Completion (Universe-Driven Delivery)
+> Objective: Use the Path A Core Flow as the behavioral north star and complete implementation universe-by-universe instead of as one vague backend rewrite.
+> 🧭 **North Star**: [docs/core-flow/scheduler-fast-track-flow.md](../core-flow/scheduler-fast-track-flow.md)
+> 📐 **Implementation Contract**: [docs/specs/scheduler-path-a-execution-prd.md](../specs/scheduler-path-a-execution-prd.md)
+> **Delivery Law**: For each universe or safety branch, follow `Flow -> Spec -> Code -> PU Test -> Fix Loop` before advancing.
+> **Execution Order**: Build the shared Path A spine first, then deliver `Uni-A`, then the safety/guardrail universes, then the reschedule branches.
+- [ ] 🔲 **T0: Shared Path A Spine**
+  - [ ] **Flow**: Lock the common Path A skeleton from the Core Flow (`ASR_CAPTURED -> GUID_ALLOCATED -> INTENT_CLASSIFIED -> DB_WRITE_EXECUTED/UI_RENDERED or FAST_FAIL_RETURNED`).
+  - [ ] **Spec**: Align shared parser/mutation/UI contract language in `docs/specs/scheduler-path-a-execution-prd.md`.
+  - [ ] **Code**: Wire the minimum shared execution path used by all Path A universes.
+  - [ ] **PU Test**: Define the baseline PU harness / valve assertions needed by every Path A run.
+  - [ ] **Fix Loop**: Repair spec/code drift before universe-specific work continues.
+- [ ] 🔲 **T1: Uni-A Specific Creation**
+  - [ ] **Flow**: Implement [Uni-A](../core-flow/scheduler-fast-track-flow.md) as the first happy-path slice.
+  - [ ] **Spec**: Align exact-create wording, exact-time resolution, and success-state rendering.
+  - [ ] **Code**: Deliver exact schedulable creation with no-conflict persistence and visible timeline render.
+  - [ ] **PU Test**: Add one-universe validation for exact create with no conflict.
+  - [ ] **Fix Loop**: Repair any drift against the Core Flow before advancing.
+- [ ] 🔲 **T2: Uni-B Vague Creation**
+  - [ ] **Flow**: Implement vague / needs-time handling without fabricated time.
+  - [ ] **Spec**: Align vague-task representation and out-of-slot render behavior.
+  - [ ] **Code**: Deliver explicit vague persistence plus red-flagged / awaiting-time UI treatment.
+  - [ ] **PU Test**: Add one-universe validation for vague create with conflict bypass.
+  - [ ] **Fix Loop**: Repair any lower-layer mismatch before advancing.
+- [ ] 🔲 **T3: Uni-C Inspiration**
+  - [ ] **Flow**: Implement inspiration routing as a non-schedulable, non-task branch.
+  - [ ] **Spec**: Align inspiration-only persistence and display contract.
+  - [ ] **Code**: Deliver inspiration write path isolated from the task table.
+  - [ ] **PU Test**: Add one-universe validation for timeless intent -> inspiration output.
+  - [ ] **Fix Loop**: Repair any task-table bleed or UI drift before advancing.
+- [ ] 🔲 **T4: Uni-D Conflict-Visible Create**
+  - [ ] **Flow**: Implement conflict-visible creation without rejecting user intent.
+  - [ ] **Spec**: Align conflict semantics and caution-state rendering contract.
+  - [ ] **Code**: Deliver exact create with persisted conflict-visible state and caution treatment.
+  - [ ] **PU Test**: Add one-universe validation for overlap detection with successful creation.
+  - [ ] **Fix Loop**: Repair any reject-on-conflict drift before advancing.
+- [ ] 🔲 **T5: Branch-S0 Null / Garbled Fast-Fail**
+  - [ ] **Flow**: Implement explicit non-mutation fast-fail for empty or unusable input.
+  - [ ] **Spec**: Align fast-fail wording, traceability, and non-write behavior.
+  - [ ] **Code**: Deliver no-op feedback path with no task or inspiration write.
+  - [ ] **PU Test**: Add one-branch validation for null / garbled input.
+  - [ ] **Fix Loop**: Repair any silent-drop or mutation drift before advancing.
+- [ ] 🔲 **T6: Branch-S1 Reschedule Happy Path**
+  - [ ] **Flow**: Implement replacement-style reschedule with lineage preservation and latest-revision result.
+  - [ ] **Spec**: Align session-memory usage, replacement semantics, and follow-up parsing contract.
+  - [ ] **Code**: Deliver create-new -> retire-old handling for successful reschedule follow-up.
+  - [ ] **PU Test**: Add one-branch validation for successful contextual replacement.
+  - [ ] **Fix Loop**: Repair any surgical-edit drift before advancing.
+- [ ] 🔲 **T7: Branch-S2 Reschedule No-Match**
+  - [ ] **Flow**: Implement explicit safe failure when no target can be resolved.
+  - [ ] **Spec**: Align target-missing branch and non-mutation feedback contract.
+  - [ ] **Code**: Deliver no-match fast-fail with zero mutation.
+  - [ ] **PU Test**: Add one-branch validation for target missing.
+  - [ ] **Fix Loop**: Repair any accidental mutation before advancing.
+- [ ] 🔲 **T8: Branch-S3 Reschedule Ambiguous Match**
+  - [ ] **Flow**: Implement explicit safe failure when multiple targets match.
+  - [ ] **Spec**: Align target-ambiguous branch and manual-resolution feedback contract.
+  - [ ] **Code**: Deliver ambiguity fast-fail with zero mutation.
+  - [ ] **PU Test**: Add one-branch validation for ambiguous reschedule targeting.
+  - [ ] **Fix Loop**: Repair any wrong-target mutation drift before advancing.

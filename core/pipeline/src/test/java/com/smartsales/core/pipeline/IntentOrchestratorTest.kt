@@ -15,12 +15,22 @@ import com.smartsales.prism.domain.memory.EntityType
 import com.smartsales.prism.domain.model.UiState
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
+import com.smartsales.prism.domain.scheduler.SchedulerTimelineItem
+import com.smartsales.prism.domain.scheduler.ScheduledTask
+import com.smartsales.prism.domain.scheduler.FastTrackParser
+import com.smartsales.prism.domain.time.TimeProvider
+import java.time.Instant
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.Flow
+import com.smartsales.core.test.fakes.FakeToolRegistry
 
 /**
  * L1 Logic Verification Test - Intent Orchestrator
@@ -38,6 +48,7 @@ class IntentOrchestratorTest {
     private lateinit var fakeUnifiedPipeline: FakeUnifiedPipeline
     private lateinit var fakeEntityWriter: FakeEntityWriter
     private lateinit var fakeAliasCache: FakeAliasCache
+    private lateinit var fakeTaskRepository: ScheduledTaskRepository
     private val testScope = TestScope(UnconfinedTestDispatcher())
     
     private lateinit var orchestrator: IntentOrchestrator
@@ -50,6 +61,30 @@ class IntentOrchestratorTest {
         fakeUnifiedPipeline = FakeUnifiedPipeline()
         fakeEntityWriter = FakeEntityWriter()
         fakeAliasCache = FakeAliasCache()
+        fakeTaskRepository = object : ScheduledTaskRepository {
+            val tasks = mutableMapOf<String, ScheduledTask>()
+
+            override suspend fun batchInsertTasks(rules: List<ScheduledTask>): List<String> = emptyList()
+            override suspend fun upsertTask(task: ScheduledTask): String {
+                tasks[task.id] = task
+                return task.id
+            }
+            override suspend fun insertTask(task: ScheduledTask): String {
+                tasks[task.id] = task
+                return task.id
+            }
+            override suspend fun updateTask(task: ScheduledTask) {
+                tasks[task.id] = task
+            }
+            override suspend fun getTask(id: String): ScheduledTask? = tasks[id]
+            override fun queryByDateRange(start: java.time.LocalDate, end: java.time.LocalDate): Flow<List<SchedulerTimelineItem>> = emptyFlow()
+            override fun getTimelineItems(dayOffset: Int): Flow<List<SchedulerTimelineItem>> = emptyFlow()
+            override suspend fun getRecentCompleted(limit: Int): List<ScheduledTask> = emptyList()
+            override suspend fun getTopUrgentActiveForEntity(entityId: String): ScheduledTask? = null
+            override fun observeByEntityId(entityId: String): Flow<List<ScheduledTask>> = emptyFlow()
+            override suspend fun deleteItem(id: String) {}
+            override suspend fun rescheduleTask(oldTaskId: String, newTask: ScheduledTask) {}
+        }
         
         orchestrator = IntentOrchestrator(
             contextBuilder = fakeContextBuilder,
@@ -58,6 +93,15 @@ class IntentOrchestratorTest {
             unifiedPipeline = fakeUnifiedPipeline,
             entityWriter = fakeEntityWriter,
             aliasCache = fakeAliasCache,
+            fastTrackParser = FastTrackParser(object : TimeProvider {
+                override val now: Instant = Instant.now()
+                override val currentTime: java.time.LocalTime = java.time.LocalTime.now()
+                override val today: java.time.LocalDate = java.time.LocalDate.now()
+                override val zoneId: java.time.ZoneId = java.time.ZoneId.systemDefault()
+                override fun formatForLlm(): String = ""
+            }),
+            taskRepository = fakeTaskRepository,
+            toolRegistry = FakeToolRegistry(),
             appScope = testScope
         )
     }
@@ -195,5 +239,24 @@ class IntentOrchestratorTest {
         // Mechanical Verification: unifiedId must be explicitly present and non-empty
         assertNotNull("unifiedId must not be null", pipelineInput.unifiedId)
         assertTrue("unifiedId must be a populated UUID token", pipelineInput.unifiedId.isNotBlank())
+    }
+
+    @Test
+    fun `voice scheduler path emits PathACommitted before downstream results`() = runTest {
+        setup()
+        val input = "明天开会"
+
+        fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.CRM_TASK, true, ""))
+        val expectedReply = PipelineResult.ConversationalReply("Scheduled.")
+        fakeUnifiedPipeline.nextResultFlow = flowOf(expectedReply)
+
+        val results = orchestrator.processInput(input, isVoice = true).toList()
+
+        assertTrue(results.first() is PipelineResult.PathACommitted)
+        val pathAResult = results.first() as PipelineResult.PathACommitted
+        assertEquals(input, pathAResult.task.title)
+        assertEquals(pathAResult.task.id, fakeUnifiedPipeline.processedInputs.first().unifiedId)
+        assertNotNull(fakeTaskRepository.getTask(pathAResult.task.id))
+        assertTrue(results.contains(expectedReply))
     }
 }

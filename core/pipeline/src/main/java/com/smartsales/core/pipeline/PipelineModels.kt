@@ -1,6 +1,7 @@
 package com.smartsales.core.pipeline
 
 import com.smartsales.core.context.ContextDepth
+import com.smartsales.prism.domain.scheduler.ScheduledTask
 
 
 /**
@@ -30,6 +31,13 @@ data class PipelineContext(
  * Outcomes of the Unified Pipeline matching the spec.
  */
 sealed class PipelineResult {
+    /**
+     * Shared Path A optimistic write committed through the single scheduler spine.
+     */
+    data class PathACommitted(
+        val task: ScheduledTask
+    ) : PipelineResult()
+
     /**
      * Standard conversational output (verdict or chat).
      */
@@ -92,6 +100,13 @@ sealed class PipelineResult {
         }
     }
     
+    /**
+     * T1: LLM recommended workflows for the user to optionally execute.
+     */
+    data class ToolRecommendation(
+        val recommendations: List<com.smartsales.prism.domain.core.WorkflowRecommendation>
+    ) : PipelineResult()
+
     /**
      * T1: Plugin system execution tracking events.
      */

@@ -116,12 +116,12 @@ The changelog has been moved to a standalone file to prevent content explosion.
 > 📐 **Implementation Contract**: [docs/specs/scheduler-path-a-execution-prd.md](../specs/scheduler-path-a-execution-prd.md)
 > **Delivery Law**: For each universe or safety branch, follow `Flow -> Spec -> Code -> PU Test -> Fix Loop` before advancing.
 > **Execution Order**: Build the shared Path A spine first, then deliver `Uni-A`, then the safety/guardrail universes, then the reschedule branches.
-- [ ] 🔲 **T0: Shared Path A Spine**
-  - [ ] **Flow**: Lock the common Path A skeleton from the Core Flow (`ASR_CAPTURED -> GUID_ALLOCATED -> INTENT_CLASSIFIED -> DB_WRITE_EXECUTED/UI_RENDERED or FAST_FAIL_RETURNED`).
-  - [ ] **Spec**: Align shared parser/mutation/UI contract language in `docs/specs/scheduler-path-a-execution-prd.md`.
-  - [ ] **Code**: Wire the minimum shared execution path used by all Path A universes.
-  - [ ] **PU Test**: Define the baseline PU harness / valve assertions needed by every Path A run.
-  - [ ] **Fix Loop**: Repair spec/code drift before universe-specific work continues.
+- [x] ✅ **T0: Shared Path A Spine**
+  - [x] **Flow**: Locked the common Path A skeleton from the Core Flow (`ASR_CAPTURED -> GUID_ALLOCATED -> INTENT_CLASSIFIED -> DB_WRITE_EXECUTED/UI_RENDERED or FAST_FAIL_RETURNED`) with `IntentOrchestrator` as the single shared spine owner.
+  - [x] **Spec**: Aligned shared parser/mutation/UI contract language in `docs/specs/scheduler-path-a-execution-prd.md`, explicitly documenting rewrite-over-refactor and replacing duplicate legacy Path A writers.
+  - [x] **Code**: Wired the minimum shared execution path used by all Path A universes by routing badge audio transcript scheduling through `IntentOrchestrator` and surfacing `PipelineResult.PathACommitted` as the early completion checkpoint.
+  - [x] **PU Test**: Added baseline Path A assertions in targeted orchestrator and badge-audio tests so every later universe inherits one shared entry seam.
+  - [x] **Fix Loop**: Repaired the ownership drift between implementation docs and the delivered single-spine behavior before universe-specific work continues.
 - [ ] 🔲 **T1: Uni-A Specific Creation**
   - [ ] **Flow**: Implement [Uni-A](../core-flow/scheduler-fast-track-flow.md) as the first happy-path slice.
   - [ ] **Spec**: Align exact-create wording, exact-time resolution, and success-state rendering.

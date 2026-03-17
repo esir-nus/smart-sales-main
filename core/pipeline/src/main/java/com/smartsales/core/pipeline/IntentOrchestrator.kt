@@ -11,12 +11,18 @@ import javax.inject.Singleton
 import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.domain.model.ClarificationType
 import com.smartsales.prism.domain.model.CandidateOption
+import com.smartsales.prism.domain.scheduler.ClarificationState
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import javax.inject.Named
 import com.smartsales.core.telemetry.PipelineValve
+import com.smartsales.prism.domain.scheduler.FastTrackParser
+import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
+import com.smartsales.core.pipeline.ToolRegistry
+import com.smartsales.core.pipeline.PluginRequest
+import com.smartsales.core.pipeline.PluginGateway
 
 /**
  * IntentOrchestrator (Phase 0 Gateway)
@@ -36,6 +42,9 @@ class IntentOrchestrator @Inject constructor(
     private val unifiedPipeline: UnifiedPipeline,
     private val entityWriter: EntityWriter,
     private val aliasCache: AliasCache,
+    private val fastTrackParser: FastTrackParser,
+    private val taskRepository: ScheduledTaskRepository,
+    private val toolRegistry: ToolRegistry,
     @Named("AppScope") private val appScope: CoroutineScope
 ) {
     private var pendingProposal: PipelineResult.MutationProposal? = null
@@ -178,11 +187,32 @@ class IntentOrchestrator @Inject constructor(
             unifiedId = unifiedId
         )
         
+        var pathATaskId: String? = null
+        
         // --- PATH A: Optimistic UI for Voice Tasks ---
         if (isVoice && (pipelineInput.intent == QueryQuality.CRM_TASK || pipelineInput.intent == QueryQuality.BADGE_DELEGATION)) {
-            // Wave 16 T1: FastTrack scheduling is demoted to a plugin responsibility. 
-            // Orchestrator no longer manually hacks ScheduledTaskRepository.
-            android.util.Log.d("IntentOrchestrator", "Path A Fast-Track skipped (Plugin demotion) for \$unifiedId")
+            // Wave 17 T2: Restored Path A Native OS execution
+            val optimisticTask = fastTrackParser.parseToOptimisticTask(unifiedId, input)
+            pathATaskId = optimisticTask.id
+
+            PipelineValve.tag(
+                checkpoint = PipelineValve.Checkpoint.PATH_A_PARSED,
+                payloadSize = input.length,
+                summary = "Optimistic Task Parsed | Title: ${optimisticTask.title}",
+                rawDataDump = optimisticTask.toString()
+            )
+
+            taskRepository.upsertTask(optimisticTask)
+
+            PipelineValve.tag(
+                checkpoint = PipelineValve.Checkpoint.PATH_A_DB_WRITTEN,
+                payloadSize = optimisticTask.id.hashCode(),
+                summary = "Optimistic Task Persisted (Hash ID)",
+                rawDataDump = "TaskID: ${optimisticTask.id}"
+            )
+
+            emit(PipelineResult.PathACommitted(optimisticTask))
+            android.util.Log.d("IntentOrchestrator", "Path A Native Fast-Track Executed for \$unifiedId")
         }
         
         // Delegate to the heavy-duty pipeline and forward its results (PATH B)
@@ -201,10 +231,60 @@ class IntentOrchestrator @Inject constructor(
                 } else {
                     this@IntentOrchestrator.pendingProposal = result
                 }
-            } else if (result is PipelineResult.ToolDispatch && result.toolId != "reschedule") {
-                if (!isVoice) {
+            } else if (result is PipelineResult.ToolDispatch) {
+                if (isVoice) {
+                    // --- PATH B: Auto-Commit for Voice Plugins ---
+                    val request = PluginRequest(input, result.params)
+                    val silentGateway = object : PluginGateway {
+                        override suspend fun getSessionHistory(turns: Int) = ""
+                        override suspend fun appendToHistory(message: String) {}
+                        override suspend fun emitProgress(message: String) {}
+                    }
+                    appScope.launch {
+                        toolRegistry.executeTool(result.toolId, request, silentGateway).collect {
+                            // Run silently in background to complete the auto-commit
+                        }
+                    }
+                    // Swallow ToolDispatch for voice so OS UI doesn't try to render it
+                    return@collect
+                } else if (result.toolId != "reschedule") {
                     this@IntentOrchestrator.pendingToolDispatch = result
                 }
+            } else if (isVoice && result is PipelineResult.DisambiguationIntercepted) {
+                val taskId = pathATaskId
+                if (taskId != null) {
+                    val existing = taskRepository.getTask(taskId)
+                    val awaitingClarification = result.uiState as? UiState.AwaitingClarification
+                    val clarificationState = awaitingClarification?.let { uiState ->
+                        ClarificationState.AmbiguousPerson(
+                            question = uiState.question,
+                            candidates = uiState.candidates.map { candidate ->
+                                ClarificationState.PersonCandidate(
+                                    entityId = candidate.entityId,
+                                    displayName = candidate.displayName,
+                                    description = candidate.description
+                                )
+                            }
+                        )
+                    } ?: ClarificationState.MissingInformation("需要进一步确认")
+                    if (existing != null) {
+                        taskRepository.upsertTask(existing.copy(clarificationState = clarificationState))
+                    }
+                }
+                return@collect
+            } else if (isVoice && result is PipelineResult.ClarificationNeeded) {
+                val taskId = pathATaskId
+                if (taskId != null) {
+                    val existing = taskRepository.getTask(taskId)
+                    if (existing != null) {
+                        taskRepository.upsertTask(
+                            existing.copy(
+                                clarificationState = ClarificationState.MissingInformation(result.question)
+                            )
+                        )
+                    }
+                }
+                return@collect
             }
             emit(result)
         }

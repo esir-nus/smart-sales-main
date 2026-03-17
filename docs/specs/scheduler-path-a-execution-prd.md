@@ -17,6 +17,51 @@ A pure Kotlin domain module responsible for executing the One-Currency LLM inten
 - **Single Reschedule**: Enforces an atomic `Delete Old -> Insert New` mutation wrapped in a Room `@Transaction`. This completely replaces the old task state with the new LLM extraction (accommodating complex user follow-ups) while ensuring Room emits only one UI update to prevent Compose flashing. *(Note: Global voice deletions and batch rescheduling are intentionally disabled to prevent premature UX failures).*
 - **Conflict Evaluation**: Checks the `ScheduleBoard`. If a conflict exists, it **still creates the task**, but attaches a `hasConflict=true` or similar flag to trigger the UI Attention Flow.
 
+### A1. Wave 19 T0: Shared Path A Spine
+
+Before finishing any individual universe, Path A must be rewritten onto one shared execution spine.
+
+This repo values **rewriting over refactoring** when legacy scheduler code is structurally misaligned.
+If two different runtime seams currently perform Path A writes, do not preserve both and add glue.
+Replace the duplicate path with one clean owner chain.
+
+#### Ownership Decision
+
+- `IntentOrchestrator` is the single Path A spine owner
+- `SchedulerLinter` / FastTrack DTO decoding is the scheduler intent decode seam
+- the Dedicated Mutation Module is the deterministic scheduler write seam
+- `ScheduledTaskRepository` / `InspirationRepository` are the persistence owners
+- `SchedulerViewModel` remains the UI projection owner
+
+#### Legacy Replacement Rule
+
+`RealBadgeAudioPipeline` must not remain a second live Path A writer.
+It may continue to own audio/transcript lifecycle concerns, but scheduler optimistic creation must route through the shared Path A spine instead of writing directly.
+
+#### Shared Spine Sequence
+
+Every Path A universe must pass through the same minimum sequence:
+
+1. `ASR_CAPTURED`
+2. `GUID_ALLOCATED`
+3. `INTENT_CLASSIFIED`
+4. shared scheduler decode / branch selection
+5. deterministic mutation or explicit fast-fail
+6. `DB_WRITE_EXECUTED` and `UI_RENDERED`, or `FAST_FAIL_RETURNED`
+
+#### Shared Metadata
+
+The shared Path A spine must carry these values even before every later universe fully uses them:
+
+- `unifiedId` as the stable thread identity
+- task level / urgency classification
+- optional first-pass candidate entity
+- schedulable branch shape (`exact`, `vague`, `inspiration`, `reschedule`, `fast-fail`)
+
+#### T0 Deliverable
+
+Wave 19 T0 is complete only when later universes can plug into one shared spine without re-deciding ownership, telemetry, or entry routing.
+
 ### B. The User Experience (The Small Attention Flow)
 When Path A completes an execution, the UI reacts based on the entity state.
 
@@ -29,6 +74,34 @@ When Path A completes an execution, the UI reacts based on the entity state.
 | **Path B Vague Name (Future)** | Path B resolves "李总" to 3 different IDs. | Path B updates the existing Card state. Card turns Red-Flagged. User taps card to open inline resolution picker. |
 
 ## 3. The Execution Flow
+
+### Shared Spine Routing
+
+The old scheduler code may contain multiple entry seams, but the intended implementation contract is one spine:
+
+```text
+[Badge / App Voice] or [App Voice/Text Entry]
+        |
+        v
+[IntentOrchestrator]
+        |
+        v
+[Path A Classification + Shared Metadata]
+        |
+        v
+[SchedulerLinter / FastTrack DTO Decode]
+        |
+        v
+[Dedicated Mutation Module]
+        |
+        v
+[Repository Write or Fast-Fail]
+        |
+        v
+[SchedulerViewModel / UI Projection]
+```
+
+This shared spine is the T0 prerequisite for `Uni-A`, `Uni-B`, `Uni-C`, `Uni-D`, and the reschedule branches.
 
 ```text
 [Badge / App Rec Button] "把会推迟到跟他重叠的时间"
@@ -129,3 +202,4 @@ data class CreateInspirationParams(
 2. **Re-usability**: By cementing the "Red-Flagged Card" pattern for Path A conflicts now, Path B can perfectly recycle this exact same UI component to solve CRM disambiguation later. It unifies the error-handling experience across the entire App.
 3. **Decoupled Logic**: The UI doesn't evaluate conflicts. The UI just renders whatever the Dedicated Mutation Module saves to the SSD.
 4. **Resilient Matching**: Lexical match limits LLM hallucination scope. If the LLM gets confused, the rigid Kotlin scope checks prevent collateral data damage.
+5. **Rewrite Beats Glue**: Replacing duplicate legacy write paths with one shared Path A spine is safer than preserving both and layering compatibility hacks over them.

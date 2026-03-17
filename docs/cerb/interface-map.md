@@ -68,7 +68,7 @@ Orchestrates LLM-powered processing. Reads from Layer 2 data services.
 | **[PluginRegistry](./plugin-registry/spec.md)** | System II & Routing | Executable pure-Kotlin workflows (Tools) | — | `executeTool(ToolId, PluginRequest, PluginGateway) -> Flow<UiState>` | OS: App | ✅ |
 | **[SchedulerLinter](./scheduler-linter/spec.md)** | Intelligent Scheduler | Intent parsing to DTOs | — | `suspend parseFastTrackIntent(String) -> FastTrackResult` | OS: App | ✅ |
 | **[UnifiedPipeline](./unified-pipeline/spec.md)** | System II & Routing | System II context ETL & execution | ContextBuilder, InputParser, EntityDisambiguator | `suspend processInput(PipelineInput) -> Flow<PipelineResult>` | OS: App | ✅ |
-| **IntentOrchestrator** | System II & Routing | High-level intent routing (Phase 0) | AgentViewModel, LightningRouter, UnifiedPipeline, PluginRegistry | `suspend processInput(String) -> Flow<PipelineResult>` | OS: App | ✅ |
+| **IntentOrchestrator** | System II & Routing | High-level intent routing (Phase 0) and shared Path A scheduler spine | AgentViewModel, LightningRouter, UnifiedPipeline, PluginRegistry | `suspend processInput(String, isVoice) -> Flow<PipelineResult>` | OS: App | ✅ |
 
 > **UnifiedPipeline is the only module that calls EntityWriter during task creation.** Feature modules (Scheduler, Mascot) receive results from UnifiedPipeline; they don't call EntityWriter themselves. (Exception: debug seed code in SchedulerViewModel, guarded by `DEBUG` build type.)
 >
@@ -85,7 +85,7 @@ User-facing features. Each receives processed results from Orchestrator (Layer 3
 | **[Mascot (System I)](./mascot-service/spec.md)** | System I & Ambient | Ephemeral interactions, greetings | EventBus (Idle, Error) | `StateFlow<MascotState>` | OS: App | ✅ |
 | **[SchedulerDrawer](./scheduler/spec.md)** | Intelligent Scheduler | Visual UI states | Scheduler, ScheduleBoard | `ISchedulerViewModel` | OS: App | ✅ |
 | **[ScheduleBoard](./scheduler/spec.md)** | Intelligent Scheduler | Conflict index (in-memory cache) | ScheduledTaskRepository (populates index) | — | OS: SSD | ✅ |
-| **[BadgeAudioPipeline](./badge-audio-pipeline/spec.md)** | Hardware & Audio | Audio recording lifecycle | ASR, OSS, ConnectivityBridge | Triggers UnifiedPipeline on transcription complete | — | ✅ |
+| **[BadgeAudioPipeline](./badge-audio-pipeline/spec.md)** | Hardware & Audio | Audio recording lifecycle | ASR, OSS, ConnectivityBridge | Delegates transcript to `IntentOrchestrator`; consumes early `PathACommitted` completion while Path B continues in background | — | ✅ |
 | **[AudioManagement](./audio-management/spec.md)** | Hardware & Audio | Manual sync/transcribe states | ConnectivityBridge, TingwuPipeline | *Observes DB State* | OS: App | 🚧 |
 | **[ConflictResolver](./conflict-resolver/spec.md)** | Intelligent Scheduler | Conflict resolution actions | ScheduleBoard | `resolve(...) -> ConflictResolution` | OS: App | ✅ |
 | **[AgentIntelligenceUI](../cerb-ui/agent-intelligence/spec.md)** | System II & Routing | Wait-state UI components | — | `StateFlow<UiState>` | OS: App | 📐 |
@@ -169,5 +169,4 @@ graph TD
 | Cache MemoryEntry on ViewModel | Query MemoryRepository per request | Memory entries are mutable hot storage |
 | Feature module calls EntityWriter (production) | UnifiedPipeline calls EntityWriter | Only Layer 3 writes entities; Layer 4 receives results |
 | Bypass ContextBuilder for RAM writes | EntityWriter calls `RealContextBuilder.updateEntityInSession()` | Write-through keeps SSD and RAM in sync automatically |
-
 

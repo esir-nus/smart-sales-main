@@ -5,6 +5,8 @@ import com.smartsales.core.pipeline.PipelineInput
 import com.smartsales.core.pipeline.PipelineResult
 import com.smartsales.core.pipeline.ParseResult
 import com.smartsales.core.pipeline.DisambiguationResult
+import com.smartsales.core.pipeline.IntentOrchestrator
+import com.smartsales.core.pipeline.RouterResult
 import com.smartsales.core.pipeline.QueryQuality
 import com.smartsales.core.context.ContextDepth
 import com.smartsales.core.context.RealContextBuilder
@@ -37,6 +39,8 @@ import org.junit.Before
 import org.junit.Test
 import java.time.LocalDate
 import java.time.Instant
+import java.time.LocalTime
+import java.time.ZoneId
 
 class L2DualEngineBridgeTest {
 
@@ -257,8 +261,6 @@ class L2DualEngineBridgeTest {
             override fun observeByEntityId(entityId: String) = emptyFlow<List<ScheduledTask>>()
         }
 
-        val fastTrackParser = com.smartsales.prism.domain.scheduler.FastTrackParser(timeProvider)
-
         val fakeAsr = object : com.smartsales.prism.domain.asr.AsrService {
             override suspend fun transcribe(file: java.io.File) = com.smartsales.prism.domain.asr.AsrResult.Success("明天开会")
             override suspend fun isAvailable() = true
@@ -278,23 +280,39 @@ class L2DualEngineBridgeTest {
             override suspend fun processInput(input: PipelineInput): Flow<PipelineResult> = kotlinx.coroutines.flow.flow {
                 // Emulate LLM dispatch safely
                 kotlinx.coroutines.delay(10) 
-                val enrichedTask = ScheduledTask(
-                    id = input.unifiedId, // Uses the exact unifiedId passed from audio pipeline
-                    title = "明天下午和张总开会 (LLM Enriched)",
-                    timeDisplay = "14:00",
-                    startTime = Instant.now(),
-                    endTime = null
-                )
                 emit(PipelineResult.ToolDispatch("CREATE_TASK", emptyMap()))
             }
         }
 
+        val fakeLightningRouter = FakeLightningRouter().apply {
+            enqueueResult(RouterResult(QueryQuality.CRM_TASK, true, ""))
+        }
+
+        val orchestrator = IntentOrchestrator(
+            contextBuilder = FakeContextBuilder(),
+            lightningRouter = fakeLightningRouter,
+            mascotService = FakeMascotService(),
+            unifiedPipeline = fakeUnifiedPipeline,
+            entityWriter = FakeEntityWriter(),
+            aliasCache = FakeAliasCache(),
+            fastTrackParser = com.smartsales.prism.domain.scheduler.FastTrackParser(
+                object : com.smartsales.prism.domain.time.TimeProvider {
+                    override val now: Instant = timeProvider.now
+                    override val currentTime: LocalTime = LocalTime.now()
+                    override val today: LocalDate = LocalDate.now()
+                    override val zoneId: ZoneId = ZoneId.systemDefault()
+                    override fun formatForLlm(): String = ""
+                }
+            ),
+            taskRepository = fakeTaskRepo,
+            toolRegistry = FakeToolRegistry(),
+            appScope = testScope
+        )
+
         val audioPipeline = com.smartsales.prism.data.audio.RealBadgeAudioPipeline(
             connectivityBridge = fakeConnectivity,
             asrService = fakeAsr,
-            unifiedPipeline = fakeUnifiedPipeline,
-            fastTrackParser = fastTrackParser,
-            scheduledTaskRepository = fakeTaskRepo
+            intentOrchestrator = orchestrator
         )
 
         // 1. Trigger the transaction. By the time this suspend function returns, Path A is fully complete, and Path B is launched.

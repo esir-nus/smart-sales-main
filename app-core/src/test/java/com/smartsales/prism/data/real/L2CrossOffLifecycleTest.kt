@@ -3,6 +3,7 @@ package com.smartsales.prism.data.real
 import android.content.Context
 
 import com.smartsales.core.pipeline.UnifiedPipeline
+import com.smartsales.core.test.fakes.FakeToolRegistry
 import com.smartsales.prism.domain.audio.BadgeAudioPipeline
 import com.smartsales.prism.domain.scheduler.TipGenerator
 import com.smartsales.core.test.fakes.FakeMemoryRepository
@@ -67,7 +68,8 @@ class L2CrossOffLifecycleTest {
             coordinator = coordinator,
             tipGenerator = tipGenerator,
             asrService = asrService,
-            intentOrchestrator = intentOrchestrator
+            intentOrchestrator = intentOrchestrator,
+            toolRegistry = FakeToolRegistry()
         )
     }
 

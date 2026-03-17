@@ -219,7 +219,7 @@ sealed class SchedulerResult {
 class RealBadgeAudioPipeline @Inject constructor(
     private val connectivity: ConnectivityBridge,
     private val asr: AsrService,
-    private val schedulerOrchestrator: IntentOrchestrator  // existing
+    private val intentOrchestrator: IntentOrchestrator
 ) : BadgeAudioPipeline {
     
     private val _events = MutableSharedFlow<PipelineEvent>()
@@ -257,16 +257,32 @@ class RealBadgeAudioPipeline @Inject constructor(
         val transcript = (transcription as AsrResult.Success).text
         _events.emit(PipelineEvent.Processing(transcript))
         
-        // Step 3: Schedule (reuse existing pipeline)
-        // Note: Using createScheduledTask for new tasks vs processSchedulerAction for updates
-        val uiState = schedulerOrchestrator.createScheduledTask(transcript)
-        
+        // Step 3: Delegate transcript into the shared Path A / Path B spine
+        val completion = CompletableDeferred<SchedulerResult>()
+        scope.launch {
+            intentOrchestrator.processInput(transcript, isVoice = true).collect { result ->
+                when (result) {
+                    is PipelineResult.PathACommitted -> {
+                        completion.complete(
+                            SchedulerResult.TaskCreated(
+                                taskId = result.task.id,
+                                title = result.task.title,
+                                dayOffset = 0,
+                                scheduledAtMillis = result.task.startTime.toEpochMilli(),
+                                durationMinutes = result.task.durationMinutes
+                            )
+                        )
+                    }
+                    else -> if (!completion.isCompleted) completion.complete(SchedulerResult.Ignored)
+                }
+            }
+        }
+        val schedulerResult = completion.await()
+
         // Step 4: Cleanup
         connectivity.deleteRecording(filename)
         file.delete()
-        
-        // Map UiState to domain-agnostic SchedulerResult
-        val schedulerResult = uiState.toSchedulerResult()
+
         _events.emit(PipelineEvent.Complete(schedulerResult, filename))
     }
 }
@@ -274,11 +290,14 @@ class RealBadgeAudioPipeline @Inject constructor(
 
 ### Integration with Scheduler
 
-The pipeline calls `IntentOrchestrator.processSchedulerAction()` which already handles:
-- Input classification (schedulable/inspiration/non_intent)
-- Multi-task splitting
-- Conflict detection
-- Task creation
+The pipeline delegates the transcript to `IntentOrchestrator.processInput(transcript, isVoice = true)`.
+
+Wave 19 T0 makes `IntentOrchestrator` the single live Path A writer. `RealBadgeAudioPipeline` no longer mints scheduler IDs or writes optimistic tasks directly.
+
+The delivered split is:
+- `RealBadgeAudioPipeline` owns recording, download, transcription, cleanup, and drawer-facing pipeline events.
+- `IntentOrchestrator` owns voice intent classification, `unifiedId` allocation, optimistic Path A write, and downstream Path B continuation.
+- `PipelineResult.PathACommitted` is the early completion checkpoint that lets the drawer close as soon as the optimistic scheduler write lands.
 
 **No duplication of scheduler logic.**
 

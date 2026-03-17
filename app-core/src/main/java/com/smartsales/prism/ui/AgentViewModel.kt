@@ -382,6 +382,9 @@ class AgentViewModel @Inject constructor(
 
     private suspend fun handlePipelineResult(result: PipelineResult) {
         when (result) {
+            is PipelineResult.PathACommitted -> {
+                _uiState.value = UiState.Idle
+            }
             is PipelineResult.Progress -> {
                 _uiState.value = UiState.Thinking(hint = result.message)
             }

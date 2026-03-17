@@ -1,6 +1,9 @@
 # Repository Guidelines (Human Reference)
 
-> ⚠️ **Note for Agents**: This file is for **human onboarding only**. Agent rules are in `.agent/rules/smart-sales.md` which is auto-loaded. Do not treat this file as authoritative config.
+> Shared human-readable reference for the project's dual-runtime setup.
+> Codex uses root `AGENTS.md`.
+> Antigravity keeps using `.agent/rules/*.md`.
+> Both share the same `docs/` system.
 
 ---
 
@@ -9,9 +12,16 @@
 This document provides human-readable guidelines for:
 - New team members joining the project
 - Chinese dev colleagues who need full context
-- Reference when `.agent/` rules need clarification
+- Reference when runtime-specific agent rules need clarification
 
-**For agents**: Read `.agent/rules/*.md` instead — those are auto-loaded.
+Runtime model:
+- `AGENTS.md`: Codex-native repo rules
+- `.codex/skills/*/SKILL.md`: Codex-native project skill library
+- `.agent/rules/*.md`: Antigravity-native auto-loaded rules
+- `.agent/workflows/*.md`: Antigravity-native workflow library
+- `docs/**`: Shared documentation backbone for both
+
+This file is not intended to replace either runtime-specific layer.
 
 ---
 
@@ -42,6 +52,36 @@ When code diverges from spec:
 - **Favor CODE** if it's battle-tested and intentional
 - **Favor SPEC** if code is a quick hack that shipped
 - Document the decision and update the appropriate source
+
+### Core Flow Rule
+
+For active feature development, this repo uses a stricter chain than ordinary spec-first projects:
+
+1. Core Flow (`docs/core-flow/**`) defines what must happen
+2. Spec defines how to build it
+3. Code is the delivered result
+4. PU Test validates delivered code against Core Flow
+5. Fix loops repair lower layers until they match the Core Flow
+
+This means a Core Flow doc may legitimately be ahead of specs and code.
+When this happens, treat the lower layers as drift candidates unless the user says the Core Flow itself is obsolete.
+
+### Shared Rule
+
+Do not reorganize the documentation tree just because the active agent runtime changes.
+The migration path is:
+- Preserve `docs/**` as the shared source of project memory
+- Preserve `.agent/**` for Antigravity workflows
+- Express Codex-specific operating rules in root `AGENTS.md`
+
+### Workflow Transfer Principle
+
+The `.agent/workflows/**` files are important and often transferable.
+
+- Procedural workflows can usually be reused by Codex as playbooks or SOPs.
+- Persona workflows can usually be reused as lenses, checklists, or output formats.
+- Antigravity-specific slash-command behavior should remain in `.agent/` unless there is a deliberate Codex migration.
+- Reuse the knowledge first; only convert it into a Codex skill when the workflow is both repeatable and worth packaging.
 
 ---
 

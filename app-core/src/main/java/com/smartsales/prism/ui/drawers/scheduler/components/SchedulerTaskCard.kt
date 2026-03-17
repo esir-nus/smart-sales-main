@@ -58,7 +58,9 @@ fun SchedulerTaskCard(
             .fillMaxWidth()
             .clickable { onClick() }
             .then(
-                if (state.conflictVisual == ConflictVisual.CAUSING && isExpanded) {
+                if (state.isVague) {
+                    Modifier.border(1.dp, com.smartsales.prism.ui.theme.AccentDanger.copy(alpha = 0.8f), RoundedCornerShape(16.dp))
+                } else if (state.conflictVisual == ConflictVisual.CAUSING && isExpanded) {
                     Modifier.border(1.dp, AccentAmber.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
                 } else Modifier
             )
@@ -71,6 +73,25 @@ fun SchedulerTaskCard(
                     .fillMaxWidth()
                     .padding(vertical = 16.dp, horizontal = 12.dp)
             ) {
+                // Wave 17: Caution Banner for Conflicts
+                if (state.hasConflict) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp)
+                            .background(AccentAmber.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "⚠️ 发现冲突",
+                            color = AccentAmber,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+
                 // Header Component
                 TaskCardHeader(state = state, isExpanded = isExpanded)
                 

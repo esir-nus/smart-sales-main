@@ -95,7 +95,7 @@ class RealLightningRouterTest {
     }
 
     @Test
-    fun `VAGUE maps correctly from arbitrary unsupported strings`() = runTest {
+    fun `DEEP_ANALYSIS maps as fallback from arbitrary unsupported strings`() = runTest {
         // Arrange
         val jsonPayload = """
             {
@@ -112,6 +112,6 @@ class RealLightningRouterTest {
         
         // Assert
         assertNotNull(result)
-        assertEquals(QueryQuality.VAGUE, result?.queryQuality)
+        assertEquals(QueryQuality.DEEP_ANALYSIS, result?.queryQuality)
     }
 }

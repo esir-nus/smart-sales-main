@@ -9,6 +9,6 @@ data class LlmProfile(
     val skillTags: Set<String> = emptySet()
 ) {
     companion object {
-        val DEFAULT = LlmProfile(modelId = "qwen-max", temperature = 0.5f)
+        val DEFAULT = LlmProfile(modelId = "qwen-turbo", temperature = 0.5f)
     }
 }

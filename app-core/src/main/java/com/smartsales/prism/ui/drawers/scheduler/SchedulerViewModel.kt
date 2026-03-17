@@ -1,3 +1,4 @@
+
 package com.smartsales.prism.ui.drawers.scheduler
 
 import android.content.Context
@@ -13,6 +14,10 @@ import com.smartsales.prism.domain.scheduler.SchedulerCoordinator
 import com.smartsales.prism.domain.scheduler.TipGenerator
 import com.smartsales.prism.domain.scheduler.SchedulerTimelineItem
 import com.smartsales.prism.domain.scheduler.ScheduledTask
+import com.smartsales.core.pipeline.PluginGateway
+import com.smartsales.core.pipeline.ToolRegistry
+import com.smartsales.core.pipeline.PluginRequest
+import com.smartsales.core.telemetry.PipelineValve
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -51,7 +56,8 @@ class SchedulerViewModel @Inject constructor(
     private val coordinator: SchedulerCoordinator,
     private val tipGenerator: TipGenerator,
     private val asrService: com.smartsales.prism.domain.asr.AsrService,
-    private val intentOrchestrator: com.smartsales.core.pipeline.IntentOrchestrator
+    private val intentOrchestrator: com.smartsales.core.pipeline.IntentOrchestrator,
+    private val toolRegistry: ToolRegistry
 ) : ViewModel(), ISchedulerViewModel {
 
     // --- State Streams ---
@@ -147,11 +153,21 @@ class SchedulerViewModel @Inject constructor(
         val crossedOffIds = crossedOffTasks.map { it.id }.toSet()
         val filteredActiveTasks = activeTasks.filter { it.id !in crossedOffIds }
         
-        val combinedTasks = (filteredActiveTasks + crossedOffTasks).sortedBy { 
-            if (it is ScheduledTask) it.startTime else Instant.MAX 
-        }
+        val combinedTasks = (filteredActiveTasks + crossedOffTasks).sortedWith(
+            compareByDescending<SchedulerTimelineItem> { it is ScheduledTask && it.isVague }
+                .thenBy { if (it is ScheduledTask) it.startTime else Instant.MAX }
+        )
         
-        inspirations + combinedTasks
+        val finalResult = inspirations + combinedTasks
+        
+        PipelineValve.tag(
+            checkpoint = PipelineValve.Checkpoint.UI_STATE_EMITTED,
+            payloadSize = finalResult.size,
+            summary = "Scheduler UI State Emitted (Active/Crossed/Insp)",
+            rawDataDump = null
+        )
+        
+        finalResult
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     // --- Actions ---

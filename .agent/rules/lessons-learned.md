@@ -19,6 +19,7 @@ trigger: always_on
 - **Forcing JSON for everything** → JSON is for routing (use native API), Markdown/Text is for context. (Ref: *JSON Schema Fragility vs Raw Markdown*)
 
 ## 🏗️ Architecture & Specs
+- **Fixing without reading Docs (Superficial Fixes)** → DO NOT patch code based on an isolated symptom. ALWAYS read the relevant spec/tracker first, or your fix will be a "happy-path hallucination" that breaks the deeper contract. (Ref: *Docs-First Protocol Violation*)
 - **SIMPLE_QA Bypassing Pipeline** → Do not short-circuit factual questions. They must go through the Unified Pipeline to load database context. (Ref: *SIMPLE_QA Bypassing UnifiedPipeline*)
 - **Manual DX Choreography** → Don't make agents/users orchestrate strict SOPs manually. Build Paved Road orchestrators (like Planners) that enforce compliance dynamically. (Ref: *Intelligent Orchestration vs Manual Choreography*)
 - **Compiler-Driven Extraction** → Moving files + hacking build.gradle to pass compilation is NOT modularization. Check target architecture (interface-map) and invert dependencies instead. (Ref: *Physical vs Logical Modularization*)

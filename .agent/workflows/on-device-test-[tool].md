@@ -24,13 +24,14 @@ Generate a test checklist in this format:
 ### T1: [Test Name]
 **Action**: [Exact steps for user]
 **Expected UI**: [What user should see]
-**Expected Logs**: [adb log lines that MUST appear]
+**Telemetry (GPS) Route**: [Expected VALVE_PROTOCOL checkpoints (e.g. INPUT_RECEIVED -> PATH_A_PARSED -> UI_STATE_EMITTED)]
+**Expected Logs**: [Implementation-specific Log.d tags that MUST appear]
 **Negative Check**: [What should NOT happen]
 ```
 
 Rules:
-- Each test item must have at least ONE expected log pattern
-- Expected logs use the exact `Log.d` tag from code (grep first)
+- **Telemetry traces are mandatory.** You MUST define the expected `PipelineValve` (GPS) route based on the architectural data path.
+- Expected logs use the exact `Log.d` tag from code for implementation-specific details.
 - Include at least one negative test (error path, missing data)
 
 ---
@@ -43,8 +44,8 @@ Rules:
 # Clear old logs
 adb logcat -c
 
-# Start monitoring with relevant tags
-adb logcat -s TAG1:D TAG2:D TAG3:D | head -200
+# Start monitoring with GPS Telemetry ALWAYS ON + relevant tags
+adb logcat -s VALVE_PROTOCOL:I TAG1:D TAG2:D | head -200
 ```
 
 Run this as a background command. Store the command ID.
@@ -92,7 +93,8 @@ When user returns:
 | Checkpoint | Expected Behavior | Actual Behavior | Result |
 | :--- | :--- | :--- | :---: |
 | **UI Literal** | [Expected visual] | [Actual visual from user] | ✅/❌ |
-| **Log Evidence** | `[Expected log]` | `[Actual log snippet]` | ✅/❌ |
+| **Telemetry (GPS)** | `[Expected route (e.g. INPUT -> DB -> UI)]` | `[Actual checkpoints hit]` | ✅/❌ |
+| **Log Evidence** | `[Expected internal Log.d]` | `[Actual log snippet]` | ✅/❌ |
 | **Negative Check**| [What shouldn't happen] | [What actually didn't happen] | ✅/❌ |
 
 ---
@@ -114,6 +116,7 @@ When user returns:
 
 ## Key Principles
 
-1. **Logs are evidence, not user reports.** User says "it worked" but logs show error → FAIL.
-2. **Negative tests are mandatory.** Always test the "no data" / "missing entity" path.
-3. **Cache tests require two passes.** First expand = generation. Second expand = cache hit.
+1. **Telemetry is the ONLY mathematical proof of data survival.** A random `Log.d` deep in a repository doesn't prove the data surfaced to the UI. You must track the full `VALVE_PROTOCOL` GPS route (Layer 0 to Layer 4) to eliminate OS ghosting.
+2. **Logs are evidence, not user reports.** User says "it worked" but logs show error → FAIL.
+3. **Negative tests are mandatory.** Always test the "no data" / "missing entity" path.
+4. **Cache tests require two passes.** First expand = generation. Second expand = cache hit.

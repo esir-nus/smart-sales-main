@@ -43,7 +43,9 @@ fun SchedulerTimelineItem.toUiState(
             keyPersonEntityId = keyPersonEntityId,
             tips = cachedTips ?: emptyList(),
             tipsLoading = id in tipsLoadingSet,
-            clarificationState = clarificationState
+            clarificationState = clarificationState,
+            isVague = isVague,
+            hasConflict = hasConflict
         )
         is SchedulerTimelineItem.Inspiration -> TimelineItem.Inspiration(
             id = id,

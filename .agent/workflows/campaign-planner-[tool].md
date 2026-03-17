@@ -16,7 +16,7 @@ When invoked with `/campaign-planner`, follow these steps:
 
 Determine the nature of the Campaign by asking the user:
 - What is the objective?
-- What type of work is this? (Feature, UI/UX, Architecture Refactor, E2E Testing, or Bug Fix?)
+- What type of work is this? (Feature, UI/UX, Architecture Refactor, E2E Testing, Bug Fix, or Parallel Universe Validation?)
 
 ---
 
@@ -89,11 +89,32 @@ Based on the classification and the Cerb Shard rule, generate the exact Markdown
   - [ ] **Test**: Tests pass without Mockito illusions. Log results in `TER`.
 ```
 
+### Structure 5: Parallel Universe Validation (PU-Testing protocol)
+> *Note: This structure goes into `PU-tracker.md`, NOT `tracker.md`.*
+```markdown
+### 🚧 ACTIVE EPIC: Wave X [Campaign Name] ([Feature Module])
+> **Context**: Validation tasklist for isolated, deterministic universe testing.
+> 🧭 **North Star**: [docs/core-flow/[feature]-flow.md]()
+- [ ] 🔲 **T0: The Core Flow Map (Anti-Hallucination Blueprint)**
+  - [ ] **Docs**: Create `docs/core-flow/[feature]-flow.md`.
+  - [ ] **Visualize**: Draw the exact ASCII map from `[User Input]` -> `[Intent/DataClass]` -> `[Pipeline State]` -> `[UI Result]`.
+  - [ ] **Audit**: Present the ASCII map to the Human for verification *before* writing any test logic.
+
+### Universe Test Matrix
+
+| Universe ID | Core Flow Ref | Input / Condition | Expected Pipeline DTO | Accept / Result UI | `/acceptance-team` Status |
+|---|---|---|---|---|---|
+| **Uni-A ([Name])** | `[feature]-flow.md` | *[Input]* | `[Expected State]` | `[Expected UI]` | 🔲 Pending |
+| **Uni-B ([Name])** | `[feature]-flow.md` | *[Input]* | `[Expected State]` | `[Expected UI]` | 🔲 Pending |
+```
+
 ---
 
 ## Phase 3: Immediate Execution Hook
 
 After generating the checklist structure:
-1. Propose injecting this block directly into `docs/plans/tracker.md`.
-2. Explicitly state: "I will NOT auto-update the Master Guide. I will update the tracker and await your command to start T1."
+1. Propose injecting this block directly into the appropriate tracker.
+   - For Structures 1-4: Update `docs/plans/tracker.md`
+   - For Structure 5 (Parallel Universe Validation): Update `docs/plans/PU-tracker.md`
+2. Explicitly state: "I will NOT auto-update the Master Guide. I will update the appropriate tracker and await your command to start T1 (or Uni-A)."
 3. Wait for the user to approve the addition.

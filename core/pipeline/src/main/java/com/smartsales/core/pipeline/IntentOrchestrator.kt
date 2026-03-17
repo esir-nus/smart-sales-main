@@ -18,11 +18,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import javax.inject.Named
 import com.smartsales.core.telemetry.PipelineValve
-import com.smartsales.prism.domain.scheduler.FastTrackParser
-import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
-import com.smartsales.core.pipeline.ToolRegistry
-import com.smartsales.core.pipeline.PluginRequest
-import com.smartsales.core.pipeline.PluginGateway
 
 /**
  * IntentOrchestrator (Phase 0 Gateway)
@@ -34,6 +29,12 @@ import com.smartsales.core.pipeline.PluginGateway
  * Wave 3: Houses the Open-Loop `PendingProposalStore` to bridge stateless pipeline evaluations
  * with stateful database write-backs.
  */
+import com.smartsales.prism.domain.scheduler.FastTrackParser
+import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
+import com.smartsales.core.pipeline.ToolRegistry
+import com.smartsales.core.pipeline.PluginRequest
+import com.smartsales.core.pipeline.PluginGateway
+
 @Singleton
 class IntentOrchestrator @Inject constructor(
     private val contextBuilder: ContextBuilder,
@@ -88,7 +89,7 @@ class IntentOrchestrator @Inject constructor(
 
         // Build minimal context for latency-sensitive phase 0 evaluation
         val context = contextBuilder.build(input, Mode.ANALYST, depth = ContextDepth.MINIMAL, isBadge = isVoice)
-        
+
         // 🚦 VALVE: Track the raw input entering the OS
         PipelineValve.tag(
             checkpoint = PipelineValve.Checkpoint.INPUT_RECEIVED,
@@ -98,6 +99,23 @@ class IntentOrchestrator @Inject constructor(
         )
         
         val routerResult = lightningRouter.evaluateIntent(context)
+
+        // 🚦 VALVE: Track the routing decision out of the OS globally
+        // SPEC COMPLIANCE (Wave 16 Audit): Payload size must represent the node count of the evaluated context, NOT a lazy boolean.
+        val gatekeeperNodeCount = context.entityContext.size + context.sessionHistory.size + context.audioTranscripts.size
+        
+        val routeSummary = when (routerResult?.queryQuality) {
+            QueryQuality.NOISE, QueryQuality.GREETING -> "Short-circuited to System I (Mascot)"
+            QueryQuality.BADGE_DELEGATION -> if (!isVoice) "Intercepted: Hardware Delegation Enforcement" else "Routed to System II Unified Pipeline"
+            else -> "Routed to System II Unified Pipeline"
+        }
+        
+        PipelineValve.tag(
+            checkpoint = PipelineValve.Checkpoint.ROUTER_DECISION,
+            payloadSize = gatekeeperNodeCount,
+            summary = routeSummary,
+            rawDataDump = "Classification: ${routerResult?.queryQuality} | Entities: ${routerResult?.missingEntities ?: "[]"}"
+        )
 
         // BugFix 4.3/4.5: 短路拦截 — 只有非语音时才阻断 BADGE_DELEGATION
         // Kotlin when 不支持 fall-through，所以拦截逻辑提前处理
@@ -110,18 +128,6 @@ class IntentOrchestrator @Inject constructor(
                 emit(PipelineResult.MascotIntercepted)
                 return@flow
             }
-            QueryQuality.VAGUE -> {
-                // 🚦 VALVE: Track the routing decision out of the OS
-                PipelineValve.tag(
-                    checkpoint = PipelineValve.Checkpoint.ROUTER_DECISION,
-                    payloadSize = 0,
-                    summary = "Routed to VAGUE (Clarification Requested)",
-                    rawDataDump = "Classification: Vague"
-                )
-                // Route back to user for clarification or immediate answer
-                emit(PipelineResult.ConversationalReply(routerResult.response))
-                return@flow
-            }
             QueryQuality.BADGE_DELEGATION -> {
                 if (!isVoice) {
                     // Wave 6: Hardware Delegation Enforcement — 非语音输入不走任务创建
@@ -132,13 +138,6 @@ class IntentOrchestrator @Inject constructor(
             }
             else -> { 
                 // SIMPLE_QA, DEEP_ANALYSIS, CRM_TASK, null → 继续往下走 System II pipeline
-                // 🚦 VALVE: Track the routing decision out of the OS
-                PipelineValve.tag(
-                    checkpoint = PipelineValve.Checkpoint.ROUTER_DECISION,
-                    payloadSize = 1,
-                    summary = "Routed to System II Unified Pipeline",
-                    rawDataDump = "Classification: ${routerResult?.queryQuality} | Entities: ${routerResult?.missingEntities}"
-                )
             }
         }
 
@@ -186,7 +185,7 @@ class IntentOrchestrator @Inject constructor(
             resolvedEntityId = resolvedEntityId,
             unifiedId = unifiedId
         )
-        
+
         var pathATaskId: String? = null
         
         // --- PATH A: Optimistic UI for Voice Tasks ---
@@ -194,7 +193,7 @@ class IntentOrchestrator @Inject constructor(
             // Wave 17 T2: Restored Path A Native OS execution
             val optimisticTask = fastTrackParser.parseToOptimisticTask(unifiedId, input)
             pathATaskId = optimisticTask.id
-
+            
             PipelineValve.tag(
                 checkpoint = PipelineValve.Checkpoint.PATH_A_PARSED,
                 payloadSize = input.length,

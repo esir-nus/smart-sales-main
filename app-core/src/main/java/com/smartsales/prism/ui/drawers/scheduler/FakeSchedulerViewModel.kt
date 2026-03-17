@@ -80,6 +80,17 @@ class FakeSchedulerViewModel : ISchedulerViewModel {
         keyPersonEntityId = null
     )
 
+    private val fakeTaskVague = ScheduledTask(
+        id = "task_vague_1",
+        timeDisplay = "--:--", // Should be overridden by "待定" in UI
+        title = "Arrange flight to Beijing",
+        startTime = Instant.EPOCH, // Purgatory default
+        durationMinutes = 0,
+        hasAlarm = false,
+        isDone = false,
+        isVague = true
+    )
+
     // --- State Implementations ---
 
     private val _activeDayOffset = MutableStateFlow(0)
@@ -230,6 +241,10 @@ class FakeSchedulerViewModel : ISchedulerViewModel {
             "INSPIRATIONS" -> {
                 _timelineItems.value = listOf(fakeInspiration, fakeTaskActive)
                 _isInspirationsExpanded.value = true
+            }
+            "VAGUE" -> {
+                _timelineItems.value = listOf(fakeTaskVague, fakeTaskActive)
+                _conflictWarning.value = null
             }
         }
     }

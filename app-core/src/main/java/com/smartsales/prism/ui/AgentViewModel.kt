@@ -59,7 +59,14 @@ class AgentViewModel @Inject constructor(
     override val agentActivity = activityController.activity
 
     private val _uiState = MutableStateFlow<UiState>(UiState.Idle)
-    override val uiState = _uiState.asStateFlow()
+    override val uiState = _uiState.onEach { state ->
+        com.smartsales.core.telemetry.PipelineValve.tag(
+            checkpoint = com.smartsales.core.telemetry.PipelineValve.Checkpoint.UI_STATE_EMITTED,
+            payloadSize = state.javaClass.simpleName.hashCode(),
+            summary = "AgentViewModel emitted ${state.javaClass.simpleName}",
+            rawDataDump = state.toString()
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UiState.Idle)
 
     private val _inputText = MutableStateFlow("")
     override val inputText = _inputText.asStateFlow()
@@ -152,6 +159,8 @@ class AgentViewModel @Inject constructor(
         _sessionTitle.value = "新对话"
         _inputText.value = ""
         _uiState.value = UiState.Idle
+        _errorMessage.value = null
+        _taskBoardItems.value = emptyList()
         activityController.reset()
         contextBuilder.resetSession()
         
@@ -247,6 +256,8 @@ class AgentViewModel @Inject constructor(
         
         _isSending.value = true
         _uiState.value = UiState.ExecutingTool(item.title)
+        _errorMessage.value = null
+        _taskBoardItems.value = emptyList()
         
         viewModelScope.launch {
             try {
@@ -330,6 +341,8 @@ class AgentViewModel @Inject constructor(
     override fun confirmAnalystPlan() {
         if (_isSending.value) return
         _isSending.value = true
+        _errorMessage.value = null
+        _taskBoardItems.value = emptyList()
         val input = "确认执行" 
         
         viewModelScope.launch {
@@ -360,6 +373,8 @@ class AgentViewModel @Inject constructor(
         _inputText.value = ""
         _isSending.value = true
         _uiState.value = UiState.Loading 
+        _errorMessage.value = null
+        _taskBoardItems.value = emptyList()
         
         viewModelScope.launch {
             try {
@@ -414,6 +429,27 @@ class AgentViewModel @Inject constructor(
             }
             is PipelineResult.ClarificationNeeded -> {
                 val ui = UiState.Response(result.question)
+                _history.value += ChatMessage.Ai(
+                    id = java.util.UUID.randomUUID().toString(),
+                    timestamp = System.currentTimeMillis(),
+                    uiState = ui
+                )
+                _uiState.value = UiState.Idle
+            }
+            is PipelineResult.ToolRecommendation -> {
+                val tools = toolRegistry.getAllTools()
+                val items = result.recommendations.mapNotNull { rec ->
+                    val tool = tools.find { it.id == rec.workflowId } ?: return@mapNotNull null
+                    com.smartsales.prism.domain.analyst.TaskBoardItem(
+                        id = tool.id,
+                        icon = tool.icon,
+                        title = tool.label,
+                        description = tool.description
+                    )
+                }
+                _taskBoardItems.value = items
+
+                val ui = UiState.Response("我发现了几个可以帮您执行的工具，请在任务板确认运行。")
                 _history.value += ChatMessage.Ai(
                     id = java.util.UUID.randomUUID().toString(),
                     timestamp = System.currentTimeMillis(),

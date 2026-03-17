@@ -94,6 +94,14 @@ abstract class PrismModule {
     @dagger.multibindings.IntoSet
     abstract fun bindExportCsvPlugin(plugin: com.smartsales.prism.data.real.plugins.ExportCsvPlugin): com.smartsales.core.pipeline.PrismPlugin
 
+    @Binds
+    @dagger.multibindings.IntoSet
+    abstract fun bindTestingPdfPlugin(plugin: com.smartsales.prism.data.real.plugins.TestingPdfPlugin): com.smartsales.core.pipeline.PrismPlugin
+
+    @Binds
+    @dagger.multibindings.IntoSet
+    abstract fun bindTestingEmailPlugin(plugin: com.smartsales.prism.data.real.plugins.TestingEmailPlugin): com.smartsales.core.pipeline.PrismPlugin
+
     @Binds @Singleton
     abstract fun bindLightningRouter(impl: com.smartsales.core.pipeline.RealLightningRouter): com.smartsales.core.pipeline.LightningRouter
 

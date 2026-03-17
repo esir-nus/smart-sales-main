@@ -4,6 +4,7 @@ import com.smartsales.core.pipeline.*
 import com.smartsales.core.test.fakes.*
 import com.smartsales.prism.data.fakes.FakeAudioRepository
 import com.smartsales.prism.domain.model.UiState
+import com.smartsales.prism.domain.scheduler.FastTrackParser
 import com.smartsales.prism.domain.scheduler.FakeScheduledTaskRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -36,6 +37,7 @@ class AgentViewModelTest {
 
     private lateinit var viewModel: AgentViewModel
     private val testDispatcher = StandardTestDispatcher()
+    private val testScope = TestScope(testDispatcher)
 
     @Before
     fun setup() {
@@ -62,7 +64,29 @@ class AgentViewModelTest {
             unifiedPipeline = fakeUnifiedPipeline,
             entityWriter = fakeEntityWriter,
             aliasCache = fakeAliasCache,
-            appScope = TestScope(testDispatcher)
+            fastTrackParser = FastTrackParser(object : com.smartsales.prism.domain.time.TimeProvider {
+                override val now: Instant = Instant.now()
+                override val currentTime: java.time.LocalTime = java.time.LocalTime.now()
+                override val today: java.time.LocalDate = java.time.LocalDate.now()
+                override val zoneId: java.time.ZoneId = java.time.ZoneId.systemDefault()
+                override fun formatForLlm(): String = ""
+            }),
+            taskRepository = object : com.smartsales.prism.domain.scheduler.ScheduledTaskRepository {
+                override suspend fun batchInsertTasks(rules: List<com.smartsales.prism.domain.scheduler.ScheduledTask>): List<String> = emptyList()
+                override suspend fun upsertTask(task: com.smartsales.prism.domain.scheduler.ScheduledTask): String = ""
+                override suspend fun insertTask(task: com.smartsales.prism.domain.scheduler.ScheduledTask): String = ""
+                override suspend fun updateTask(task: com.smartsales.prism.domain.scheduler.ScheduledTask) {}
+                override suspend fun getTask(id: String): com.smartsales.prism.domain.scheduler.ScheduledTask? = null
+                override fun queryByDateRange(start: java.time.LocalDate, end: java.time.LocalDate): kotlinx.coroutines.flow.Flow<List<com.smartsales.prism.domain.scheduler.ScheduledTask>> = kotlinx.coroutines.flow.emptyFlow()
+                override fun getTimelineItems(dayOffset: Int): kotlinx.coroutines.flow.Flow<List<com.smartsales.prism.domain.scheduler.SchedulerTimelineItem>> = kotlinx.coroutines.flow.emptyFlow()
+                override suspend fun getRecentCompleted(limit: Int): List<com.smartsales.prism.domain.scheduler.ScheduledTask> = emptyList()
+                override suspend fun getTopUrgentActiveForEntity(entityId: String): com.smartsales.prism.domain.scheduler.ScheduledTask? = null
+                override fun observeByEntityId(entityId: String): kotlinx.coroutines.flow.Flow<List<com.smartsales.prism.domain.scheduler.ScheduledTask>> = kotlinx.coroutines.flow.emptyFlow()
+                override suspend fun deleteItem(id: String) {}
+                override suspend fun rescheduleTask(oldTaskId: String, newTask: com.smartsales.prism.domain.scheduler.ScheduledTask) {}
+            },
+            toolRegistry = fakeToolRegistry,
+            appScope = testScope
         )
 
         viewModel = AgentViewModel(
@@ -95,23 +119,22 @@ class AgentViewModelTest {
     }
 
     @Test
-    fun `vague intent triggers clarification intercept from IntentOrchestrator`() = runTest {
-        // Enqueue VAGUE result from LightningRouter
+    fun `noise intent triggers mascot intercept from IntentOrchestrator`() = runTest {
+        // Enqueue NOISE result from LightningRouter
         fakeLightningRouter.enqueueResult(
-            RouterResult(QueryQuality.VAGUE, false, "您想查什么数据？")
+            RouterResult(QueryQuality.NOISE, false, "输入为空")
         )
 
-        viewModel.updateInput("查数据")
+        viewModel.updateInput("测试噪音")
         viewModel.send()
         advanceUntilIdle()
 
         // Assert no delegates to UnifiedPipeline because L3 LightningRouter intercepted it
         assertEquals(0, fakeUnifiedPipeline.processedInputs.size)
         
-        // And it emits Response back to the history, clearing uiState
-        val historyMsg = viewModel.history.value.last() as com.smartsales.prism.domain.model.ChatMessage.Ai
-        assertTrue("Expected Response state, got ${historyMsg.uiState.javaClass.simpleName}", historyMsg.uiState is UiState.Response)
-        assertEquals("您想查什么数据？", (historyMsg.uiState as UiState.Response).content)
+        // Ensure ViewModel dropped to Idle without emitting an AI response
+        val lastMsg = viewModel.history.value.last()
+        assertTrue("Expected User message, got Ai", lastMsg is com.smartsales.prism.domain.model.ChatMessage.User)
         assertEquals(UiState.Idle, viewModel.uiState.value)
     }
 

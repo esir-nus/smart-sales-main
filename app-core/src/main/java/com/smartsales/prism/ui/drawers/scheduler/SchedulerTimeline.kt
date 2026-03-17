@@ -53,8 +53,7 @@ fun SchedulerTimeline(
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        contentPadding = PaddingValues(vertical = 16.dp)
     ) {
         items(items, key = { it.id }) { item ->
             TimelineRow(
@@ -101,11 +100,12 @@ private fun TimelineRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .height(IntrinsicSize.Min)
             .padding(horizontal = 16.dp)
     ) {
         // Left: Time Label
         Text(
-            text = item.timeDisplay,
+            text = if (item is TimelineItem.Task && item.isVague) "待定" else item.timeDisplay,
             fontSize = 12.sp,
             color = TextMuted,
             fontFamily = FontFamily.Monospace,
@@ -114,8 +114,32 @@ private fun TimelineRow(
                 .padding(top = 4.dp)
         )
         
+        // Middle: Timeline Axis (Dot + Line)
+        Column(
+            modifier = Modifier
+                .width(24.dp)
+                .fillMaxHeight(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(modifier = Modifier.height(10.dp))
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .background(Color(0xFFD1D1D6), androidx.compose.foundation.shape.CircleShape)
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Box(
+                modifier = Modifier
+                    .width(2.dp)
+                    .fillMaxHeight()
+                    .background(Color(0xFFE5E5EA))
+            )
+        }
+        
+        Spacer(modifier = Modifier.width(8.dp))
+        
         // Right: Card Content
-        Column(modifier = Modifier.weight(1f)) {
+        Column(modifier = Modifier.weight(1f).padding(bottom = 16.dp)) {
             when (item) {
                 is TimelineItem.Task -> {
                     // 映射冲突视觉状态

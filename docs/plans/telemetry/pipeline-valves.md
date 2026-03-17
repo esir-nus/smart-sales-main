@@ -19,6 +19,14 @@
 | `[INPUT_RECEIVED]` | Highway Entry / Orchestrator | String Length | ✅ SHIPPED |
 | `[ROUTER_DECISION]` | Lightning Router Short-circuit | Confidence/Target | ✅ SHIPPED |
 
+## Phase 1.5: Path A (Native Fast-Track)
+*Optimistic UI execution bypassing the non-deterministic Brain.*
+
+| Valve Identifier | OS Function | Payload Metric | Status |
+|------------------|-------------|----------------|--------|
+| `[PATH_A_PARSED]` | Native Regex/Logic match | Input Length | ✅ SHIPPED |
+| `[PATH_A_DB_WRITTEN]` | Optimistic DB entity insertion | DB ID Hash | ✅ SHIPPED |
+
 ## Phase 2: Context Assembly (The Sync Loop)
 *The OS gathering reality before waking up the Brain.*
 
@@ -58,4 +66,4 @@
 
 | Valve Identifier | OS Function | Payload Metric | Status |
 |------------------|-------------|----------------|--------|
-| `[UI_STATE_EMITTED]` | ViewModel emitting to Compose | Data Class Variant | 🔲 PENDING |
+| `[UI_STATE_EMITTED]` | ViewModel emitting to Compose | Data Class Variant | ✅ SHIPPED |

@@ -1,10 +1,12 @@
 ---
 description: Systematic debugging process with phase gates, severity classification, and evidence-based diagnosis
+trigger: auto-invoke on ANY user request containing "bug", "debug", "fix", or "issue"
 ---
 
 # SOP: Debugging
 
 > **Entry point** for debugging issues following the Debugging SOP.
+> **MANDATORY TRIGGER**: All agents must invoke and follow this workflow for any debugging task. Bypassing this workflow is a critical violation.
 
 ---
 
@@ -12,12 +14,13 @@ description: Systematic debugging process with phase gates, severity classificat
 
 > **No phase transition without explicit user approval.**
 
-| Transition | Gate |
-|------------|------|
+| Transitiion | Gate |
+|-------------|------|
 | Entry → INTAKE | Auto (start) |
 | INTAKE → DIAGNOSE | 🔒 Approval required |
 | DIAGNOSE → HYPOTHESIZE | 🔒 Approval required |
-| HYPOTHESIZE → FIX | 🔒 Approval required |
+| HYPOTHESIZE → PROPOSE (Report) | 🔒 Approval required |
+| PROPOSE → FIX | ❌ ABSOLUTE ZERO VIOLATION: Wait for user approval on Report |
 | FIX → VERIFY | 🔒 Approval required |
 | VERIFY → CLOSE | 🔒 Approval required |
 
@@ -48,13 +51,14 @@ Reading: docs/sops/debugging.md
 
 **Read the SOP**: [`docs/sops/debugging.md`](file:///home/cslh-frank/main_app/docs/sops/debugging.md)
 
-Follow the 6-phase process:
+Follow the 7-phase process:
 1. **INTAKE** — Screenshot + STR + Environment + Severity → 🔒 Gate
 2. **DIAGNOSE** — Trace through Brain/Guard/Face/Mapper → 🔒 Gate
 3. **HYPOTHESIZE** — Root cause with evidence → 🔒 Gate
-4. **FIX** — Red-Green (failing test first) → 🔒 Gate
-5. **VERIFY** — Build + Tests + E2E → 🔒 Gate
-6. **CLOSE** — Update lessons-learned (only after user confirms)
+4. **PROPOSE** — Generate mandatory Pre-Fix Report (Evidence, Spec Alignment Gate, Risk, Readiness Score) → ❌ ZERO VIOLATION GATE: Wait for Approval
+5. **FIX** — Red-Green (failing test first) → 🔒 Gate
+6. **VERIFY** — Build + Tests + E2E → 🔒 Gate
+7. **CLOSE** — Update lessons-learned (only after user confirms)
 
 ---
 

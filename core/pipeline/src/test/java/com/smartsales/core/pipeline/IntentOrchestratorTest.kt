@@ -22,6 +22,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import com.smartsales.core.pipeline.ToolRegistry
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.SchedulerTimelineItem
 import com.smartsales.prism.domain.scheduler.ScheduledTask
@@ -93,8 +94,8 @@ class IntentOrchestratorTest {
             unifiedPipeline = fakeUnifiedPipeline,
             entityWriter = fakeEntityWriter,
             aliasCache = fakeAliasCache,
-            fastTrackParser = FastTrackParser(object : TimeProvider {
-                override val now: Instant = Instant.now()
+            fastTrackParser = FastTrackParser(object : TimeProvider { 
+                override val now: Instant = Instant.now() 
                 override val currentTime: java.time.LocalTime = java.time.LocalTime.now()
                 override val today: java.time.LocalDate = java.time.LocalDate.now()
                 override val zoneId: java.time.ZoneId = java.time.ZoneId.systemDefault()
@@ -131,17 +132,6 @@ class IntentOrchestratorTest {
         assertEquals(input, (fakeMascotService.interactions[0] as MascotInteraction.Text).content)
         assertTrue(fakeUnifiedPipeline.processedInputs.isEmpty())
 
-        // --- SCENARIO 3: VAGUE ---
-        setup()
-        input = "那个功能"
-        val clarification = "你指的是具体哪个功能？"
-        fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.VAGUE, false, clarification))
-        result = orchestrator.processInput(input).firstOrNull()
-
-        assertNotNull(result)
-        assertTrue(result is PipelineResult.ConversationalReply)
-        assertEquals(clarification, (result as PipelineResult.ConversationalReply).text)
-        assertTrue(fakeMascotService.interactions.isEmpty())
 
         // --- SCENARIO 4: DEEP_ANALYSIS ---
         setup()

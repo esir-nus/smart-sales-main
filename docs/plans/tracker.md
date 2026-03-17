@@ -33,6 +33,7 @@
   - **Spec**: [`docs/cerb-e2e-test/specs/wave7-final-audit/spec.md`](../cerb-e2e-test/specs/wave7-final-audit/spec.md)
   - **Boundaries**: [`docs/cerb-e2e-test/specs/wave7-final-audit/boundaries.md`](../cerb-e2e-test/specs/wave7-final-audit/boundaries.md)
   - [TER: L3 Wave 7 Final Audit](file:///home/cslh-frank/main_app/docs/reports/tests/L3-20260313-wave7-final-audit.md)
+  - [TER: L3 GPS Valves (World State)](file:///home/cslh-frank/main_app/docs/reports/tests/L3-20260316-gps-valves.md)
 
 
 
@@ -68,57 +69,16 @@
 The changelog has been moved to a standalone file to prevent content explosion. 
 
 👉 **[View Changelog](changelog.md)**
-### ✅ Wave 16: Scheduler Decoupling (The Archival Purge)
-> Objective: Formalize the Scheduler as a standalone plugin/domain by severing all hardcoded dependencies from the Core OS Pipeline (`IntentOrchestrator`, `RealUnifiedPipeline`, `PromptCompiler`).
-> 🧭 **North Star**: [docs/specs/wave16-scheduler-decoupling-guide.md]()
-- [x] ✅ **T0: Campaign North Star**
-  - [x] **Docs**: Create `docs/specs/wave16-scheduler-decoupling-guide.md` defining the Plugin interface boundary.
-- [x] ✅ **T1: Interface Extraction**
-  - [x] **Docs**: Update `docs/cerb/interface-map.md` to reflect the Pipeline -> Plugin boundary.
-  - [x] **Plan**: Run `/feature-dev-planner` to map out the generic `ToolDispatcher` interface.
-  - [x] **Execute**: Wire the existing `ToolRegistry` / `PluginGateway` into `:core:pipeline`.
-  - [x] **Test**: L1 tests verify the new interface contract without Scheduler imports.
-- [x] ✅ **T2: Pipeline Purge**
-  - [x] **Plan**: Run `/feature-dev-planner` to replace Scheduler imports with the generic interface.
-  - [x] **Execute**: Nuke all `com.smartsales.prism.domain.scheduler.*` imports from `IntentOrchestrator`, `RealUnifiedPipeline`, and `PromptCompiler`. 
-  - [x] **Execute**: Rewrite the Reschedule/Lint logic to be domain-agnostic (mapped direct to `ToolDispatch`).
-  - [x] **Test**: Mechanical Check: `grep` proves zero Scheduler imports exist in `:core:pipeline`.
-
-### 🌊 Wave 17: Scheduler Fast-Track (Path A Execution)
-> Objective: Implement the System III Dual-Path Architecture's Optimistic UI Execution (Path A), including a dedicated mutation module with lexical matching and the Small Attention Flow for conflict resolution. - 🧭 **North Star**: [docs/specs/scheduler-path-a-execution-prd.md](../specs/scheduler-path-a-execution-prd.md)
-> ⚠️ **Campaign Constraints**:
-> 1. **Legacy Reference Only**: Treat legacy code as a learning source, not the Source of Truth.
-> 2. **UI Isolation**: Do not change current UI unless absolutely necessary (strict FE/BE separation).
-- [x] ✅ **T0: Campaign North Star**
-  - [x] **Docs**: Created `docs/specs/scheduler-path-a-execution-prd.md` to establish architectural principles and Intricacies.
-- [x] ✅ **T1: Data Contracts & Linter Pipeline (One Currency Schema)**
-  - [x] **Docs**: Created `docs/cerb/scheduler-linter/spec.md` and `interface.md`.
-  - [x] **Interface Map**: Updated `docs/cerb/interface-map.md`.
-  - [x] **Plan**: `/feature-dev-planner` — approved.
-  - [x] **Execute**: Implemented FastTrack Parser to emit deterministic DTOs (`CreateTasksParams`, `RescheduleTaskParams`, `CreateInspirationParams`).
-  - [x] **Test**: L1 (10/10 green), Mechanical (4/4 clean), Full build passes.
-- [x] ✅ **T2: Dedicated Mutation Module (Atomic Operations & Conflict Evaluation)**
-  - [x] **Docs**: Created `docs/cerb/scheduler-domain/spec.md` and `interface.md`.
-  - [x] **Interface Map**: Read/update `docs/cerb/interface-map.md`.
-  - [x] **Plan**: `/feature-dev-planner`
-  - [x] **Execute**: Implement Lexical Fuzzy Matcher, ScheduleBoard conflict check, and atomic Delete -> Insert `@Transaction` updates.
-  - [x] **Test**: L1/L2 Verification passes against the spec.
-- [ ] 🔲 **T3: The Small Attention Flow (Presentation Layer)**
-  - [ ] **Docs**: Create/update `docs/cerb-ui/scheduler-drawer/spec.md` and `contract.md`.
-  - [ ] **Interface Map**: Verify `IAgentViewModel` isolation (No backend logic).
-  - [ ] **Plan**: Run `/08-ux-specialist` for interaction design.
-  - [ ] **Execute**: Implement UI feedback mechanisms (Caution Banner, Red Flag Cards, Inspiration Note Cards).
-  - [ ] **Test**: Mechanical Check: `grep` to prove no concrete ViewModel imports.
 
 ### 🌊 Wave 19: Scheduler Fast-Track Core-Flow Completion (Universe-Driven Delivery)
 > Objective: Use the Path A Core Flow as the behavioral north star and complete implementation universe-by-universe instead of as one vague backend rewrite.
 > 🧭 **North Star**: [docs/core-flow/scheduler-fast-track-flow.md](../core-flow/scheduler-fast-track-flow.md)
-> 📐 **Implementation Contract**: [docs/specs/scheduler-path-a-execution-prd.md](../specs/scheduler-path-a-execution-prd.md)
+> 📐 **Implementation Contract**: [docs/cerb/scheduler-path-a-spine/spec.md](../cerb/scheduler-path-a-spine/spec.md)
 > **Delivery Law**: For each universe or safety branch, follow `Flow -> Spec -> Code -> PU Test -> Fix Loop` before advancing.
 > **Execution Order**: Build the shared Path A spine first, then deliver `Uni-A`, then the safety/guardrail universes, then the reschedule branches.
 - [x] ✅ **T0: Shared Path A Spine**
   - [x] **Flow**: Locked the common Path A skeleton from the Core Flow (`ASR_CAPTURED -> GUID_ALLOCATED -> INTENT_CLASSIFIED -> DB_WRITE_EXECUTED/UI_RENDERED or FAST_FAIL_RETURNED`) with `IntentOrchestrator` as the single shared spine owner.
-  - [x] **Spec**: Aligned shared parser/mutation/UI contract language in `docs/specs/scheduler-path-a-execution-prd.md`, explicitly documenting rewrite-over-refactor and replacing duplicate legacy Path A writers.
+  - [x] **Spec**: Created the owning T0 Cerb shard in `docs/cerb/scheduler-path-a-spine/`, defining the shared spine contract and replacing stale implementation-contract assumptions.
   - [x] **Code**: Wired the minimum shared execution path used by all Path A universes by routing badge audio transcript scheduling through `IntentOrchestrator` and surfacing `PipelineResult.PathACommitted` as the early completion checkpoint.
   - [x] **PU Test**: Added baseline Path A assertions in targeted orchestrator and badge-audio tests so every later universe inherits one shared entry seam.
   - [x] **Fix Loop**: Repaired the ownership drift between implementation docs and the delivered single-spine behavior before universe-specific work continues.

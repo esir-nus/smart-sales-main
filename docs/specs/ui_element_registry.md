@@ -144,6 +144,14 @@ Every element definition follows this strict logic:
 | **Inspiration** | `Idle` → Tap | Multi-Select Mode | Required | ✅ Impl | [SchedulerViewModel.kt:L46](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerViewModel.kt#L46) |
 | **Date Cell (New Task)** | `Glow` | `infiniteTransition` 2s breathing | Required | ✅ Impl | [SchedulerCalendar.kt:L240](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerCalendar.kt#L240) |
 
+### 4.3 Small Attention Flow (Path A)
+
+| Element | State | Animation | Spec | Code | Lnk |
+|---------|-------|-----------|------|------|------|
+| **Red Flag Card** | `Vague Task` | **Breathing Red Border** | Required | ❌ Missing | — |
+| **Caution Banner** | `Conflict` | Slide Down (Inline Header) | Required | ❌ Missing | — |
+| **Inspiration Note** | `Timeless` | **Distinct Note Stylization** | Required | ❌ Missing | — |
+
 ---
 
 ## 5. Audio Drawer (Bottom)

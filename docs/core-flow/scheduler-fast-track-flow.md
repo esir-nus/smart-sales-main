@@ -277,6 +277,7 @@ Before any scheduler mutation occurs, the system classifies input into one of th
      - exact create
      - vague create
      - reschedule
+   - Exact vs vague determination is semantic extraction work, not string-heuristic work
    - Carries shared pre-fork data:
      - lineage GUID
      - urgency / task level
@@ -290,6 +291,8 @@ These are the main behavioral universes for Path A creation flow.
 
 ### Uni-A: Specific Creation (Perfect Creation)
 **Scenario**: User provides actionable intent with a specific time and no conflict exists.
+
+**Extraction rule**: `Uni-A` exact-create should be decided by a lightweight semantic parsing pass, such as a small fast model, not by hardcoded Kotlin heuristics pretending to understand human time semantics.
 
 ```text
 [User Input] "Tomorrow at 3pm, team standup"
@@ -313,8 +316,10 @@ These are the main behavioral universes for Path A creation flow.
          |
          v
 +-----------------+
-| FastTrack Parse | --> Title extracted + exact absolute time extracted
+| Lightweight     | --> Semantic scheduler extraction returns exact title + exact absolute time
+| Semantic Parse  |
 +--------+--------+     [Guardrail] Relative wording may be spoken by user, but downstream behavior must resolve to an exact schedulable time.
+  [Guardrail] Hardcoded regex/heuristic parsing is not the behavioral source of truth for exact understanding.
   [Valve: TASK_EXTRACTED]
          |
          v
@@ -335,6 +340,12 @@ These are the main behavioral universes for Path A creation flow.
 +-----------------+
   [Valve: UI_RENDERED]
 ```
+
+Behavioral rule:
+
+- if the lightweight semantic parse yields an exact schedulable task, Path A may commit `Uni-A`
+- if that parse does not yield exact time semantics, Path A must not fake `Uni-A` by inventing exact structure from heuristic code
+- those cases should fall through to vague, inspiration, or later handling according to the actual extracted meaning
 
 ---
 

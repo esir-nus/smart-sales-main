@@ -228,20 +228,7 @@ class RealUnifiedPipeline @Inject constructor(
                     rawDataDump = llmResult.content
                 )
                 
-                // 1. Always extract and emit the conversational response first
-                try {
-                    val json = org.json.JSONObject(llmResult.content)
-                    val responseText = json.optString("response", "")
-                    if (responseText.isNotBlank()) {
-                        emit(PipelineResult.ConversationalReply(responseText))
-                    }
-                } catch (e: Exception) {
-                    Log.e("RealUnifiedPipeline", "Failed to parse Unified JSON, falling back to raw content", e)
-                    emit(PipelineResult.ConversationalReply(llmResult.content))
-                    return@flow
-                }
-                
-                // 2. Parse One Currency standard contract
+                // 2. Parse One Currency standard contract strictly
                 try {
                     val jsonInterpreter = kotlinx.serialization.json.Json { 
                         ignoreUnknownKeys = true 
@@ -251,6 +238,12 @@ class RealUnifiedPipeline @Inject constructor(
                         com.smartsales.prism.domain.core.UnifiedMutation.serializer(),
                         llmResult.content
                     )
+                    
+                    // 1. Extract and emit the conversational response strictly from the DTO
+                    val responseText = mutation.response ?: ""
+                    if (responseText.isNotBlank()) {
+                        emit(PipelineResult.ConversationalReply(responseText))
+                    }
                     
                     // 🚦 VALVE: Track the strictly typed Linter output
                     PipelineValve.tag(
@@ -268,8 +261,7 @@ class RealUnifiedPipeline @Inject constructor(
                     }
                     
                     if (mutation.recommendedWorkflows.isNotEmpty()) {
-                        val recommendation = mutation.recommendedWorkflows.first()
-                        emit(PipelineResult.ToolDispatch(recommendation.workflowId, recommendation.parameters))
+                        emit(PipelineResult.ToolRecommendation(mutation.recommendedWorkflows))
                     }
                     
                     // Wave 16 T1: Safely pass the raw scheduling data as tool dispatches 
@@ -300,11 +292,8 @@ class RealUnifiedPipeline @Inject constructor(
                         }
                     }
                 } catch (e: Exception) {
-                    val classification = try { org.json.JSONObject(llmResult.content).optString("classification", "non_intent") } catch (jsonE: Exception) { "non_intent" }
-                    if (classification != "non_intent") {
-                        Log.e("RealUnifiedPipeline", "Failed to decode UnifiedMutation", e)
-                        emit(PipelineResult.ConversationalReply("操作解析失败: \${e.message}"))
-                    }
+                    Log.e("RealUnifiedPipeline", "Failed to decode UnifiedMutation", e)
+                    emit(PipelineResult.ConversationalReply("操作解析失败：系统未能理解解析指令格式，请重试。（${e.message}）"))
                 }
             }
             is ExecutorResult.Failure -> {

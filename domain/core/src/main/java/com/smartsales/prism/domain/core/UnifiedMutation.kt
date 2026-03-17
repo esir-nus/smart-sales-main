@@ -90,10 +90,18 @@ data class ProfileMutation(
 @Serializable
 data class TaskMutation(
     val title: String,
+    
+    /** MUST BE in ISO-8601 format or "YYYY-MM-DD HH:mm". Examples: "2026-03-16 18:00" or "2026-03-16T18:00:00Z" */
     val startTime: String,                     
+    
+    /** MUST BE in ISO-8601 format or "YYYY-MM-DD HH:mm". Null if absent. */
     val endTime: String? = null,
+    
     val duration: String? = null,              // e.g., "30m", "1h"
-    val urgency: String = "L3",                // "L1", "L2", "L3", "FIRE_OFF"
+    
+    /** MUST BE ONE OF: "L1", "L2", "L3", "FIRE_OFF" */
+    val urgency: String = "L3",                
+    
     val location: String? = null,
     val notes: String? = null,
     val keyPerson: String? = null,

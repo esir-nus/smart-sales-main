@@ -17,6 +17,10 @@ object PipelineValve {
         INPUT_RECEIVED,         
         ROUTER_DECISION,        
         
+        // Phase 1.5: Path A Optimistic UI
+        PATH_A_PARSED,
+        PATH_A_DB_WRITTEN,
+        
         // Phase 2: Context Assembly
         ALIAS_RESOLUTION,       
         SSD_GRAPH_FETCHED,      

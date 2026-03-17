@@ -100,7 +100,40 @@ git log --oneline -20 -- [affected file]
 
 ---
 
-## Phase 4: FIX (Red-Green)
+## Phase 4: PROPOSE (The Pre-Fix Report)
+**[ABSOLUTE ZERO VIOLATION RULE]**
+
+**Goal**: Produce an evidence-based, spec-based report before writing any code. MUST assess gaps and risks proactively.
+
+### The Mandatory Report Format
+Before touching code, you **MUST** present the following report to the user:
+
+```markdown
+### Pre-Fix Report
+
+**1. Evidence-Based Root Cause**:
+- [Literal logcat/grep proof]
+
+**2. Spec Alignment Gate (from 01-senior-reviewr)**:
+- [What the spec says] vs [What the code currently does]
+- **Literal Audit**: Output of `/06-audit`. If ANY ❌ exists, BLOCK the fix until spec is resolved.
+- Is this a code bug or a spec gap?
+
+**3. Proposed Fix**:
+- [Exact file and logic changes]
+
+**4. Proactive Risk Assessment & Readiness (Crucial)**:
+- **Readiness Score**: (Verified/Total Assumptions × 60) + Evidence(0-20) + Risk(0-20). Minimum score of 90% required to proceed.
+- **Potential Gaps**: What edge cases might this fix miss?
+- **Blast Radius**: What other modules/features could this break?
+- **L1/L2 Testability**: Can this actually be proven in unit tests?
+```
+
+**Checkpoint**: Report generated. Wait for user approval before writing code.
+
+---
+
+## Phase 5: FIX (Red-Green)
 
 **Goal**: Fix with minimal change + regression test.
 
@@ -110,6 +143,7 @@ git log --oneline -20 -- [affected file]
 | Refactor during bugfix | Fix only the bug |
 | "While I'm here" changes | Separate PR for improvements |
 | Fix without test | Write failing test FIRST |
+| Fix without Report | Provide Pre-Fix Report first |
 
 ### Red-Green Process
 1. **RED**: Write test that reproduces the bug (fails)
@@ -120,7 +154,7 @@ git log --oneline -20 -- [affected file]
 
 ---
 
-## Phase 5: VERIFY
+## Phase 6: VERIFY
 
 **Goal**: Confirm bug is fixed E2E.
 
@@ -138,7 +172,7 @@ git log --oneline -20 -- [affected file]
 
 ---
 
-## Phase 6: CLOSE
+## Phase 7: CLOSE
 
 **Goal**: Document and prevent regression.
 

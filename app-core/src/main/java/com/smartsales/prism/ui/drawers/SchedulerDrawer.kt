@@ -169,8 +169,8 @@ fun SchedulerDrawer(
                 .fillMaxWidth()
                 .fillMaxHeight(drawerFraction),
             shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
-            // Sleek Glass: Use Frosted Ice styling (BackgroundSurface is 70% White)
-            backgroundColor = com.smartsales.prism.ui.theme.BackgroundSurface,
+            // Sleek Solid: Removing Glassmorphism opacity for better readability
+            backgroundColor = Color(0xFFF9F9F9),
             elevation = 16.dp
         ) {
             Column(
@@ -459,5 +459,12 @@ fun SchedulerDrawer_Conflict_Preview() {
 @Composable
 fun SchedulerDrawer_Inspirations_Preview() {
     val fakeViewModel = FakeSchedulerViewModel().apply { debugRunScenario("INSPIRATIONS") }
+    SchedulerDrawer(isOpen = true, onDismiss = {}, viewModel = fakeViewModel)
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF000000)
+@Composable
+fun SchedulerDrawer_Vague_Preview() {
+    val fakeViewModel = FakeSchedulerViewModel().apply { debugRunScenario("VAGUE") }
     SchedulerDrawer(isOpen = true, onDismiss = {}, viewModel = fakeViewModel)
 }

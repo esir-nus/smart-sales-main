@@ -2,6 +2,11 @@
 
 > Key spec/impl changes, newest first. Like `git log --oneline`.
 
+### 2026-03-17
+- **scheduler**: Wave 16 Scheduler Decoupling (The Archival Purge) SHIPPED. Formalized the Scheduler as a standalone plugin/domain by severing all hardcoded dependencies from the Core OS Pipeline.
+- **scheduler**: Wave 17 Scheduler Fast-Track (Path A Execution) SHIPPED. Implemented the System III Dual-Path Architecture's Optimistic UI Execution (Path A), including a dedicated mutation module with lexical matching and the Small Attention Flow for conflict resolution.
+- **scheduler**: Wave 18 Path A Surgical Migration (ID Conservation) SHIPPED. Elevated legacy synchronous ID conservation into the System III Dual-Engine Architecture to fix orphaned optimistic tasks.
+
 ### 2026-03-15
 - **architecture**: The Data-Oriented OS ("Project Mono") Master Epic SHIPPED. Successfully transitioned the entire architecture from "Behavioral Contracts" to strict "Data Contracts" (The One Currency Rule). 
   - **Wave 1-2 (Foundation)**: Established UnifiedMutation data classes and strict JSON deserialization linters.

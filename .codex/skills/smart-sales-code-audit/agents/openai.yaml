@@ -1,0 +1,3 @@
+interface:
+  display_name: "Smart Sales Code Audit"
+  short_description: "Audit Smart Sales code, specs, interfaces, and telemetry"

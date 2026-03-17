@@ -31,7 +31,7 @@ class RealLightningRouter @Inject constructor(
         return try {
             val json = JSONObject(sanitized)
             
-            val queryQualityStr = json.optString("query_quality", "vague").lowercase()
+            val queryQualityStr = json.optString("query_quality", "deep_analysis").lowercase()
             val queryQuality = when (queryQualityStr) {
                 "noise" -> QueryQuality.NOISE
                 "greeting" -> QueryQuality.GREETING
@@ -39,7 +39,7 @@ class RealLightningRouter @Inject constructor(
                 "deep_analysis" -> QueryQuality.DEEP_ANALYSIS
                 "crm_task" -> QueryQuality.CRM_TASK
                 "badge_delegation" -> QueryQuality.BADGE_DELEGATION
-                else -> QueryQuality.VAGUE
+                else -> QueryQuality.DEEP_ANALYSIS
             }
             
             Log.d(TAG, "⚡ Lightning Router Intent: [$queryQualityStr] -> $queryQuality")
@@ -58,7 +58,7 @@ class RealLightningRouter @Inject constructor(
                 }
             }
             
-            if (queryQuality == QueryQuality.NOISE || queryQuality == QueryQuality.GREETING || queryQuality == QueryQuality.VAGUE || queryQuality == QueryQuality.BADGE_DELEGATION) {
+            if (queryQuality == QueryQuality.NOISE || queryQuality == QueryQuality.GREETING || queryQuality == QueryQuality.BADGE_DELEGATION) {
                 missingEntitiesList.clear() // Prevent disambiguation loop for rejected/cross-domain intents
             }
             

@@ -10,6 +10,7 @@
 ## Purpose
 
 This document is the UI-facing source of truth for the sealed states emitted by the Scheduler Drawer presentation layer.
+It also owns the scheduler card indicator contract used by the scheduler surface outside the transient drawer states.
 
 It does not redefine scheduler business behavior.
 It defines the exact UI projection names that must stay aligned with `SchedulerUiState`.
@@ -50,3 +51,25 @@ sealed class SchedulerUiState {
 - `Executing` means the confirmed mutation is in flight and the drawer should suppress duplicate user actions.
 - `Success` means the mutation completed and the drawer can surface the completion message.
 - `Error` means the drawer must show explicit fast-fail feedback instead of silently dropping the action.
+
+## Scheduler Card Indicator Contract
+
+Collapsed scheduler cards must preserve separate glanceable signals for urgency, conflict, and completion.
+
+### Urgency Channel
+
+- The vertical urgency bar is owned by `ScheduledTask.urgencyLevel`.
+- The accepted urgency values are `L1_CRITICAL`, `L2_IMPORTANT`, `L3_NORMAL`, and `FIRE_OFF`.
+- Lower UI layers may choose the exact color tokens, but the bar must remain the scheduler card's urgency channel rather than being repurposed for conflict or done state.
+
+### Conflict Channel
+
+- Conflict visibility is a separate card treatment from urgency.
+- A conflicted task must still show its urgency bar.
+- Conflict state must not be hidden, replaced, or implied only through the urgency treatment.
+
+### Completion Channel
+
+- Completion visibility is a separate card treatment from urgency.
+- A completed task may be visually de-emphasized, but completion must remain explicitly visible.
+- Completion state must not erase or redefine the underlying urgency classification.

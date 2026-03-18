@@ -49,6 +49,7 @@ These are behavioral laws. Lower layers may choose different types or DTO shapes
 12. **Shared pre-fork extraction is reusable**: GUID, urgency level, and first-pass candidate entity extraction should happen once and feed both paths.
 13. **Path B is value-gated**: Only high-value tasks should pay the Path B enrichment cost.
 14. **L1 fire-off tasks bypass collision logic**: One-time fire-off tasks do not collide with other tasks, even if the UI still reflects urgency visually.
+15. **Scheduler cards preserve separate glanceable signals**: Task level / urgency must stay glanceable on scheduler cards, while conflict state and completion state remain independently visible rather than collapsing into one merged signal.
 
 ---
 
@@ -148,6 +149,17 @@ Clarification:
 - this is acceptable for impersonal high-value tasks such as flights or self-only tasks
 - no clarification loop is required by this Core Flow when candidate extraction is absent
 - future habit-based or suggestion-based enrichment may be added later as tech debt, but it is not required behavior here
+
+### Scheduler Card Signal Rule
+
+The scheduler card surface must preserve three separate user-visible meanings:
+
+- task level / urgency stays glanceable on the collapsed card
+- conflict state remains independently visible from urgency
+- completion state remains independently visible from urgency
+
+Lower layers own the concrete bar, chip, icon, color, or typography treatment.
+This Core Flow only requires that those meanings do not collapse into a single visual channel.
 
 ### Expanded Card Window Rule
 

@@ -103,6 +103,7 @@ class L2GatewayGauntletTest {
             contextBuilder = contextBuilder,
             entityDisambiguationService = entityDisambiguationService,
             inputParserService = inputParserService,
+            schedulerLinter = SchedulerLinter(),
             entityWriter = entityWriter,
             sessionTitleGenerator = FakeSessionTitleGenerator(),
             promptCompiler = FakePromptCompiler(),
@@ -189,11 +190,13 @@ class L2GatewayGauntletTest {
         
         // 4. The Resume
         // Verify that the pipeline received a Resolved state and proceeded to the LLM Scheduler phase
-        val toolDispatch = resultsTurn2.filterIsInstance<PipelineResult.ToolDispatch>().firstOrNull()
+        val taskCommand = resultsTurn2.filterIsInstance<PipelineResult.TaskCommandProposal>().firstOrNull()
         
-        assertNotNull("Pipeline must successfully emit ToolDispatch for CREATE_TASK", toolDispatch)
-        assertEquals("CREATE_TASK", toolDispatch!!.toolId)
-        assertTrue("Params should contain tasks", toolDispatch.params.containsKey("tasks"))
+        assertNotNull("Pipeline must successfully emit typed scheduler command for create", taskCommand)
+        assertTrue(
+            "Expected typed create-task command",
+            taskCommand!!.command is com.smartsales.core.pipeline.SchedulerTaskCommand.CreateTasks
+        )
         
         // Anti-Illusion check: We must also verify the EntityWriter updated the existing entity or gracefully merged
         // Since inputParser returned the correct declaration, and Disambiguator passed the Resolved object back,

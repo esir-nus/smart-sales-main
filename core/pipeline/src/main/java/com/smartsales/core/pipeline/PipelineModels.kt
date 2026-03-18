@@ -1,8 +1,23 @@
 package com.smartsales.core.pipeline
 
 import com.smartsales.core.context.ContextDepth
+import com.smartsales.prism.domain.scheduler.CreateTasksParams
+import com.smartsales.prism.domain.scheduler.RescheduleTaskParams
 import com.smartsales.prism.domain.scheduler.ScheduledTask
 
+sealed interface SchedulerTaskCommand {
+    data class CreateTasks(
+        val params: CreateTasksParams
+    ) : SchedulerTaskCommand
+
+    data class DeleteTask(
+        val targetTitle: String
+    ) : SchedulerTaskCommand
+
+    data class RescheduleTask(
+        val params: RescheduleTaskParams
+    ) : SchedulerTaskCommand
+}
 
 /**
  * Raw input details from the user.
@@ -52,6 +67,14 @@ sealed class PipelineResult {
      * CRM "Two-Ask" clarification request ("Did you mean Acme Corp?").
      */
     data class ClarificationNeeded(val question: String) : PipelineResult()
+
+    /**
+     * Explicit typed scheduler/task command proposal.
+     * This stays outside the generic plugin lane.
+     */
+    data class TaskCommandProposal(
+        val command: SchedulerTaskCommand
+    ) : PipelineResult()
 
     /**
      * Explicit trigger of a plugin (Expert Bypass or Post-Verdict Execution).

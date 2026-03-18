@@ -125,6 +125,7 @@ class L2CrossOffLifecycleTest {
                 inspirationRepository = inspirationRepository
             ),
             taskRepository = taskRepository,
+            scheduleBoard = FakeScheduleBoard(),
             toolRegistry = FakeToolRegistry(),
             timeProvider = timeProvider,
             appScope = TestScope(testDispatcher)

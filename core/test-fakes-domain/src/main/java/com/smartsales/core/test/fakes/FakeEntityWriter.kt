@@ -8,6 +8,9 @@ import com.smartsales.prism.domain.memory.ProfileUpdateResult
 class FakeEntityWriter : EntityWriter {
     
     var nextUpsertResult: UpsertResult = UpsertResult("fake-entity-id", true, "Fake Entity")
+    val updatedAttributes = mutableListOf<Triple<String, String, String>>()
+    val registeredAliases = mutableListOf<Pair<String, String>>()
+    val deletedEntityIds = mutableListOf<String>()
 
     override suspend fun upsertFromClue(
         clue: String,
@@ -19,11 +22,11 @@ class FakeEntityWriter : EntityWriter {
     }
 
     override suspend fun updateAttribute(entityId: String, key: String, value: String) {
-        // No-op
+        updatedAttributes.add(Triple(entityId, key, value))
     }
 
     override suspend fun registerAlias(entityId: String, alias: String) {
-        // No-op
+        registeredAliases.add(entityId to alias)
     }
 
     override suspend fun updateProfile(
@@ -34,6 +37,6 @@ class FakeEntityWriter : EntityWriter {
     }
 
     override suspend fun delete(entityId: String) {
-        // No-op
+        deletedEntityIds.add(entityId)
     }
 }

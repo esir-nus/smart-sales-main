@@ -6,8 +6,10 @@ import com.smartsales.core.pipeline.PipelineResult
 import com.smartsales.core.pipeline.ParseResult
 import com.smartsales.core.pipeline.DisambiguationResult
 import com.smartsales.core.pipeline.IntentOrchestrator
+import com.smartsales.core.pipeline.PromptCompiler
 import com.smartsales.core.pipeline.RouterResult
 import com.smartsales.core.pipeline.QueryQuality
+import com.smartsales.core.pipeline.RealUniAExtractionService
 import com.smartsales.core.context.ContextDepth
 import com.smartsales.core.context.RealContextBuilder
 import com.smartsales.core.llm.ExecutorResult
@@ -22,6 +24,7 @@ import com.smartsales.prism.domain.scheduler.SchedulerLinter
 import com.smartsales.prism.domain.scheduler.LintResult
 import com.smartsales.prism.domain.scheduler.SchedulerTimelineItem
 import com.smartsales.prism.domain.scheduler.ScheduledTask
+import com.smartsales.prism.domain.scheduler.FastTrackMutationEngine
 import com.smartsales.prism.domain.model.UiState
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.toList
@@ -107,6 +110,7 @@ class L2DualEngineBridgeTest {
             contextBuilder = contextBuilder,
             entityDisambiguationService = fakeDisambiguationService,
             inputParserService = fakeInputParserService,
+            schedulerLinter = fakeLinter,
             entityWriter = entityWriter,
             sessionTitleGenerator = FakeSessionTitleGenerator(),
             promptCompiler = FakePromptCompiler(),
@@ -280,12 +284,35 @@ class L2DualEngineBridgeTest {
             override suspend fun processInput(input: PipelineInput): Flow<PipelineResult> = kotlinx.coroutines.flow.flow {
                 // Emulate LLM dispatch safely
                 kotlinx.coroutines.delay(10) 
-                emit(PipelineResult.ToolDispatch("CREATE_TASK", emptyMap()))
+                emit(
+                    PipelineResult.TaskCommandProposal(
+                        com.smartsales.core.pipeline.SchedulerTaskCommand.CreateTasks(
+                            com.smartsales.prism.domain.scheduler.CreateTasksParams(tasks = emptyList())
+                        )
+                    )
+                )
             }
         }
 
         val fakeLightningRouter = FakeLightningRouter().apply {
             enqueueResult(RouterResult(QueryQuality.CRM_TASK, true, ""))
+        }
+        val fakeUniAExecutor = FakeExecutor().apply {
+            enqueueResponse(
+                ExecutorResult.Success(
+                    """
+                    {
+                      "decision": "EXACT_CREATE",
+                      "task": {
+                        "title": "开会",
+                        "startTimeIso": "2026-03-18T02:00:00Z",
+                        "durationMinutes": 30,
+                        "urgency": "L2"
+                      }
+                    }
+                    """.trimIndent()
+                )
+            )
         }
 
         val orchestrator = IntentOrchestrator(
@@ -295,17 +322,26 @@ class L2DualEngineBridgeTest {
             unifiedPipeline = fakeUnifiedPipeline,
             entityWriter = FakeEntityWriter(),
             aliasCache = FakeAliasCache(),
-            fastTrackParser = com.smartsales.prism.domain.scheduler.FastTrackParser(
-                object : com.smartsales.prism.domain.time.TimeProvider {
-                    override val now: Instant = timeProvider.now
-                    override val currentTime: LocalTime = LocalTime.now()
-                    override val today: LocalDate = LocalDate.now()
-                    override val zoneId: ZoneId = ZoneId.systemDefault()
-                    override fun formatForLlm(): String = ""
-                }
+            uniAExtractionService = RealUniAExtractionService(
+                executor = fakeUniAExecutor,
+                promptCompiler = PromptCompiler(),
+                schedulerLinter = SchedulerLinter()
+            ),
+            fastTrackMutationEngine = FastTrackMutationEngine(
+                taskRepository = fakeTaskRepo,
+                scheduleBoard = FakeScheduleBoard(),
+                inspirationRepository = FakeInspirationRepository()
             ),
             taskRepository = fakeTaskRepo,
+            scheduleBoard = FakeScheduleBoard(),
             toolRegistry = FakeToolRegistry(),
+            timeProvider = object : com.smartsales.prism.domain.time.TimeProvider {
+                override val now: Instant = timeProvider.now
+                override val currentTime: LocalTime = LocalTime.now()
+                override val today: LocalDate = LocalDate.now()
+                override val zoneId: ZoneId = ZoneId.systemDefault()
+                override fun formatForLlm(): String = ""
+            },
             appScope = testScope
         )
 
@@ -319,10 +355,10 @@ class L2DualEngineBridgeTest {
         audioPipeline.processFile("test.wav")
 
         // Assert Path A inserted optimistic task
-        assertTrue("Task should be immediately inserted optimistically by Path A", fakeTaskRepo.tasks.isNotEmpty())
+        assertTrue("Task should be immediately inserted by Path A", fakeTaskRepo.tasks.isNotEmpty())
         val unifiedId = fakeTaskRepo.tasks.keys.first()
-        assertEquals("Optimistic task title should be transcript", "明天开会", fakeTaskRepo.tasks[unifiedId]?.title)
-        assertEquals("Optimistic task timeDisplay should be UI placeholder", "处理中...", fakeTaskRepo.tasks[unifiedId]?.timeDisplay)
+        assertEquals("Exact task title should come from Uni-A extraction", "开会", fakeTaskRepo.tasks[unifiedId]?.title)
+        assertEquals("Exact task start time should come from Uni-A extraction", Instant.parse("2026-03-18T02:00:00Z"), fakeTaskRepo.tasks[unifiedId]?.startTime)
         assertEquals("Upsert should have been called once by Path A", 1, fakeTaskRepo.upsertCount)
 
         // 3. Wait for Path B (LLM) finish on Dispatchers.IO
@@ -333,6 +369,6 @@ class L2DualEngineBridgeTest {
         // The ToolDispatch is now handled by the ToolRegistry (System III)
         // therefore RealBadgeAudioPipeline no longer blindly upserts JSON on its own.
         // It's the Plugin's job to upsert it asynchronously afterwards.
-        assertEquals("Upsert should only be called by Path A (optimistic)", 1, fakeTaskRepo.upsertCount)
+        assertEquals("Upsert should only be called by Path A exact-create", 1, fakeTaskRepo.upsertCount)
     }
 }

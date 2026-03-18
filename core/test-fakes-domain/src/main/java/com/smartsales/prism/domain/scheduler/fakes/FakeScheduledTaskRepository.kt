@@ -28,7 +28,7 @@ class FakeScheduledTaskRepository @Inject constructor() : ScheduledTaskRepositor
 
     override suspend fun insertTask(task: ScheduledTask): String {
         delay(200) // Fake write
-        val newId = (System.currentTimeMillis() % 100000).toString()
+        val newId = task.id.ifBlank { (System.currentTimeMillis() % 100000).toString() }
         val newTask = task.copy(id = newId)
         val current = _items.value.toMutableList()
         current.add(newTask)
@@ -72,7 +72,7 @@ class FakeScheduledTaskRepository @Inject constructor() : ScheduledTaskRepositor
         val ids = mutableListOf<String>()
         val current = _items.value.toMutableList()
         for (task in tasks) {
-            val newId = (System.currentTimeMillis() % 100000 + ids.size).toString()
+            val newId = task.id.ifBlank { (System.currentTimeMillis() % 100000 + ids.size).toString() }
             current.add(task.copy(id = newId))
             ids.add(newId)
         }

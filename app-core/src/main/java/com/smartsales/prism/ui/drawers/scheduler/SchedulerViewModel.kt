@@ -278,13 +278,37 @@ class SchedulerViewModel @Inject constructor(
                 val result = asrService.transcribe(file)
                 if (result is com.smartsales.prism.domain.asr.AsrResult.Success) {
                     _pipelineStatus.value = "处理意图..."
+                    var schedulerWriteProven = false
                     intentOrchestrator.processInput(result.text, isVoice = true).collect { res ->
                         // Add some rudimentary UI feedback
-                        if (res is com.smartsales.core.pipeline.PipelineResult.ConversationalReply) {
-                            _pipelineStatus.value = "✅ 搞定"
-                        } else if (res is com.smartsales.core.pipeline.PipelineResult.MutationProposal) {
-                            _pipelineStatus.value = "请确认执行"
+                        when (res) {
+                            is com.smartsales.core.pipeline.PipelineResult.PathACommitted -> {
+                                schedulerWriteProven = true
+                                _pipelineStatus.value = "✅ 搞定"
+                                android.util.Log.d("SchedulerVM", "processAudio: success status emitted after PathACommitted")
+                            }
+                            is com.smartsales.core.pipeline.PipelineResult.ConversationalReply -> {
+                                if (!schedulerWriteProven) {
+                                    _pipelineStatus.value = "未创建日程"
+                                    android.util.Log.d("SchedulerVM", "processAudio: conversational reply without scheduler write proof")
+                                }
+                            }
+                            is com.smartsales.core.pipeline.PipelineResult.MutationProposal -> {
+                                _pipelineStatus.value = "请确认执行"
+                            }
+                            is com.smartsales.core.pipeline.PipelineResult.TaskCommandProposal -> {
+                                _pipelineStatus.value = "请确认执行"
+                            }
+                            is com.smartsales.core.pipeline.PipelineResult.ClarificationNeeded,
+                            is com.smartsales.core.pipeline.PipelineResult.DisambiguationIntercepted -> {
+                                _pipelineStatus.value = "需要进一步确认"
+                            }
+                            else -> Unit
                         }
+                    }
+                    if (!schedulerWriteProven && _pipelineStatus.value == "处理意图...") {
+                        _pipelineStatus.value = "未创建日程"
+                        android.util.Log.d("SchedulerVM", "processAudio: pipeline completed without scheduler write proof")
                     }
                 } else if (result is com.smartsales.prism.domain.asr.AsrResult.Error) {
                     android.util.Log.e("SchedulerVM", "Transcribe Result Error: ${result.message}")

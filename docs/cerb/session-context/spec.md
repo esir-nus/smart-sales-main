@@ -99,6 +99,19 @@ enum class EntityState {
 | **Context Depth (Lazy Loading)** | `MINIMAL`: History only. `DOCUMENT_QA`: +Audio Transcript. `FULL`: 3-Section Architecture (Habits, Sticky Notes, CRM DB). |
 | **3-Section Loading (FULL)** | S2 loads once (Turn 1). S1 Knowledge loads once (Turn 1). S3 loads dynamically on `markActive()`. |
 | **Concurrency** | Kernel uses `Mutex` to serialize writes to the Working Set. |
+| **Runtime Turn Admission** | Live user turns and assistant turns must enter RAM through `recordUserMessage()` / `recordAssistantMessage()` before downstream resume depends on them. |
+| **Clarification Resume** | Clarification and disambiguation prompts are session-memory repair points. Follow-up input resumes the same parent lane through bounded `sessionHistory`, not a UI-only cache. |
+
+### Wave 21 Runtime Wiring Note
+
+The live query lane now depends on the following contract:
+
+1. `AgentViewModel` binds the created or switched session ID back into the Kernel via `loadSession()`.
+2. visible user turns call `recordUserMessage()` before routing deeper
+3. visible assistant turns call `recordAssistantMessage()` when they represent conversational output or anti-guessing prompts
+4. clarification follow-up and disambiguation follow-up therefore re-enter the parent query lane with bounded session context already admitted into RAM
+
+This keeps `query -> session memory` as a real runtime seam instead of a test-only capability.
 
 ---
 

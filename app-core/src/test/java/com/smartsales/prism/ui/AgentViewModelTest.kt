@@ -4,8 +4,9 @@ import com.smartsales.core.pipeline.*
 import com.smartsales.core.test.fakes.*
 import com.smartsales.prism.data.fakes.FakeAudioRepository
 import com.smartsales.prism.domain.model.UiState
-import com.smartsales.prism.domain.scheduler.FastTrackParser
+import com.smartsales.prism.domain.scheduler.FastTrackMutationEngine
 import com.smartsales.prism.domain.scheduler.FakeScheduledTaskRepository
+import com.smartsales.prism.domain.scheduler.SchedulerLinter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
@@ -57,6 +58,21 @@ class AgentViewModelTest {
         fakeEntityWriter = FakeEntityWriter()
         fakeAliasCache = FakeAliasCache()
 
+        val fakeTaskRepository = object : com.smartsales.prism.domain.scheduler.ScheduledTaskRepository {
+            override suspend fun batchInsertTasks(rules: List<com.smartsales.prism.domain.scheduler.ScheduledTask>): List<String> = emptyList()
+            override suspend fun upsertTask(task: com.smartsales.prism.domain.scheduler.ScheduledTask): String = ""
+            override suspend fun insertTask(task: com.smartsales.prism.domain.scheduler.ScheduledTask): String = ""
+            override suspend fun updateTask(task: com.smartsales.prism.domain.scheduler.ScheduledTask) {}
+            override suspend fun getTask(id: String): com.smartsales.prism.domain.scheduler.ScheduledTask? = null
+            override fun queryByDateRange(start: java.time.LocalDate, end: java.time.LocalDate): kotlinx.coroutines.flow.Flow<List<com.smartsales.prism.domain.scheduler.ScheduledTask>> = kotlinx.coroutines.flow.emptyFlow()
+            override fun getTimelineItems(dayOffset: Int): kotlinx.coroutines.flow.Flow<List<com.smartsales.prism.domain.scheduler.SchedulerTimelineItem>> = kotlinx.coroutines.flow.emptyFlow()
+            override suspend fun getRecentCompleted(limit: Int): List<com.smartsales.prism.domain.scheduler.ScheduledTask> = emptyList()
+            override suspend fun getTopUrgentActiveForEntity(entityId: String): com.smartsales.prism.domain.scheduler.ScheduledTask? = null
+            override fun observeByEntityId(entityId: String): kotlinx.coroutines.flow.Flow<List<com.smartsales.prism.domain.scheduler.ScheduledTask>> = kotlinx.coroutines.flow.emptyFlow()
+            override suspend fun deleteItem(id: String) {}
+            override suspend fun rescheduleTask(oldTaskId: String, newTask: com.smartsales.prism.domain.scheduler.ScheduledTask) {}
+        }
+
         intentOrchestrator = IntentOrchestrator(
             contextBuilder = fakeContextBuilder,
             lightningRouter = fakeLightningRouter,
@@ -64,28 +80,26 @@ class AgentViewModelTest {
             unifiedPipeline = fakeUnifiedPipeline,
             entityWriter = fakeEntityWriter,
             aliasCache = fakeAliasCache,
-            fastTrackParser = FastTrackParser(object : com.smartsales.prism.domain.time.TimeProvider {
+            uniAExtractionService = RealUniAExtractionService(
+                executor = FakeExecutor(),
+                promptCompiler = PromptCompiler(),
+                schedulerLinter = SchedulerLinter()
+            ),
+            fastTrackMutationEngine = FastTrackMutationEngine(
+                taskRepository = fakeTaskRepository,
+                scheduleBoard = FakeScheduleBoard(),
+                inspirationRepository = FakeInspirationRepository()
+            ),
+            taskRepository = fakeTaskRepository,
+            scheduleBoard = FakeScheduleBoard(),
+            toolRegistry = fakeToolRegistry,
+            timeProvider = object : com.smartsales.prism.domain.time.TimeProvider {
                 override val now: Instant = Instant.now()
                 override val currentTime: java.time.LocalTime = java.time.LocalTime.now()
                 override val today: java.time.LocalDate = java.time.LocalDate.now()
                 override val zoneId: java.time.ZoneId = java.time.ZoneId.systemDefault()
                 override fun formatForLlm(): String = ""
-            }),
-            taskRepository = object : com.smartsales.prism.domain.scheduler.ScheduledTaskRepository {
-                override suspend fun batchInsertTasks(rules: List<com.smartsales.prism.domain.scheduler.ScheduledTask>): List<String> = emptyList()
-                override suspend fun upsertTask(task: com.smartsales.prism.domain.scheduler.ScheduledTask): String = ""
-                override suspend fun insertTask(task: com.smartsales.prism.domain.scheduler.ScheduledTask): String = ""
-                override suspend fun updateTask(task: com.smartsales.prism.domain.scheduler.ScheduledTask) {}
-                override suspend fun getTask(id: String): com.smartsales.prism.domain.scheduler.ScheduledTask? = null
-                override fun queryByDateRange(start: java.time.LocalDate, end: java.time.LocalDate): kotlinx.coroutines.flow.Flow<List<com.smartsales.prism.domain.scheduler.ScheduledTask>> = kotlinx.coroutines.flow.emptyFlow()
-                override fun getTimelineItems(dayOffset: Int): kotlinx.coroutines.flow.Flow<List<com.smartsales.prism.domain.scheduler.SchedulerTimelineItem>> = kotlinx.coroutines.flow.emptyFlow()
-                override suspend fun getRecentCompleted(limit: Int): List<com.smartsales.prism.domain.scheduler.ScheduledTask> = emptyList()
-                override suspend fun getTopUrgentActiveForEntity(entityId: String): com.smartsales.prism.domain.scheduler.ScheduledTask? = null
-                override fun observeByEntityId(entityId: String): kotlinx.coroutines.flow.Flow<List<com.smartsales.prism.domain.scheduler.ScheduledTask>> = kotlinx.coroutines.flow.emptyFlow()
-                override suspend fun deleteItem(id: String) {}
-                override suspend fun rescheduleTask(oldTaskId: String, newTask: com.smartsales.prism.domain.scheduler.ScheduledTask) {}
             },
-            toolRegistry = fakeToolRegistry,
             appScope = testScope
         )
 
@@ -162,6 +176,57 @@ class AgentViewModelTest {
         assertTrue("Expected Response state, got ${historyMsg.uiState.javaClass.simpleName}", historyMsg.uiState is UiState.Response)
         assertEquals("分析已完成", (historyMsg.uiState as UiState.Response).content)
         assertEquals(UiState.Idle, viewModel.uiState.value)
+        assertEquals(
+            listOf(
+                com.smartsales.core.context.ChatTurn("user", "分析销售报表"),
+                com.smartsales.core.context.ChatTurn("assistant", "分析已完成")
+            ),
+            fakeContextBuilder.getSessionHistory()
+        )
+    }
+
+    @Test
+    fun `clarification follow-up resumes through kernel session memory`() = runTest {
+        fakeLightningRouter.enqueueResult(
+            RouterResult(QueryQuality.DEEP_ANALYSIS, false, "")
+        )
+        fakeUnifiedPipeline.nextResultFlow = flowOf(
+            PipelineResult.ClarificationNeeded("你指的是 Tom 吗？")
+        )
+
+        viewModel.updateInput("他说了什么")
+        viewModel.send()
+        advanceUntilIdle()
+
+        fakeLightningRouter.enqueueResult(
+            RouterResult(QueryQuality.DEEP_ANALYSIS, false, "")
+        )
+        fakeUnifiedPipeline.nextResultFlow = flowOf(
+            PipelineResult.ConversationalReply("Tom 说先推进报价。")
+        )
+
+        viewModel.updateInput("Tom")
+        viewModel.send()
+        advanceUntilIdle()
+
+        assertEquals(2, fakeLightningRouter.evaluatedContexts.size)
+        assertEquals(
+            listOf(
+                com.smartsales.core.context.ChatTurn("user", "他说了什么"),
+                com.smartsales.core.context.ChatTurn("assistant", "你指的是 Tom 吗？"),
+                com.smartsales.core.context.ChatTurn("user", "Tom")
+            ),
+            fakeLightningRouter.evaluatedContexts[1].sessionHistory
+        )
+        assertEquals(
+            listOf(
+                com.smartsales.core.context.ChatTurn("user", "他说了什么"),
+                com.smartsales.core.context.ChatTurn("assistant", "你指的是 Tom 吗？"),
+                com.smartsales.core.context.ChatTurn("user", "Tom"),
+                com.smartsales.core.context.ChatTurn("assistant", "Tom 说先推进报价。")
+            ),
+            fakeContextBuilder.getSessionHistory()
+        )
     }
 
     @Test

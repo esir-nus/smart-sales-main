@@ -202,6 +202,12 @@ class RealContextBuilder @Inject constructor(
         _turnCount++
         _sessionHistory.add(ChatTurn(role = "user", content = content))
         pruneHistory()
+        com.smartsales.core.telemetry.PipelineValve.tag(
+            checkpoint = com.smartsales.core.telemetry.PipelineValve.Checkpoint.SESSION_MEMORY_UPDATED,
+            payloadSize = _sessionHistory.size,
+            summary = "Kernel admitted user turn into session memory",
+            rawDataDump = content
+        )
         
         // Write-through to SSD
         val turnIndex = _sessionHistory.size - 1
@@ -214,6 +220,12 @@ class RealContextBuilder @Inject constructor(
         _turnCount++
         _sessionHistory.add(ChatTurn(role = "assistant", content = content))
         pruneHistory()
+        com.smartsales.core.telemetry.PipelineValve.tag(
+            checkpoint = com.smartsales.core.telemetry.PipelineValve.Checkpoint.SESSION_MEMORY_UPDATED,
+            payloadSize = _sessionHistory.size,
+            summary = "Kernel admitted assistant turn into session memory",
+            rawDataDump = content
+        )
         
         // Write-through to SSD
         val turnIndex = _sessionHistory.size - 1
@@ -282,6 +294,12 @@ class RealContextBuilder @Inject constructor(
         _sessionHistory.clear()
         _turnCount = 0
         _workingSet = createNewWorkingSet()
+        com.smartsales.core.telemetry.PipelineValve.tag(
+            checkpoint = com.smartsales.core.telemetry.PipelineValve.Checkpoint.SESSION_MEMORY_UPDATED,
+            payloadSize = 0,
+            summary = "Kernel reset session working set",
+            rawDataDump = _workingSet.sessionId
+        )
         Log.d("Kernel", "🔄 Session reset: ${_workingSet.sessionId}")
     }
 
@@ -295,6 +313,12 @@ class RealContextBuilder @Inject constructor(
         _workingSet = SessionWorkingSet(
             sessionId = sessionId,
             createdAt = timeProvider.now.toEpochMilli()
+        )
+        com.smartsales.core.telemetry.PipelineValve.tag(
+            checkpoint = com.smartsales.core.telemetry.PipelineValve.Checkpoint.SESSION_MEMORY_UPDATED,
+            payloadSize = _sessionHistory.size,
+            summary = "Kernel loaded session working set",
+            rawDataDump = "SessionId=$sessionId"
         )
         Log.d("Kernel", "📂 Session loaded: $sessionId, ${history.size} turns")
     }

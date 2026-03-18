@@ -31,6 +31,7 @@ import com.smartsales.prism.domain.audio.AudioRepository
 import com.smartsales.prism.domain.scheduler.UrgencyLevel
 import javax.inject.Inject
 import java.time.LocalDate
+import kotlinx.coroutines.Job
 
 /**
  * AgentViewModel (Layer 4/5 Presentation)
@@ -99,6 +100,7 @@ class AgentViewModel @Inject constructor(
     override val mascotState = mascotService.state
 
     private var currentSessionId: String? = null
+    private var sessionBootstrapJob: Job? = null
 
     override val currentDisplayName: String
         get() = userProfileRepository.profile.value.displayName
@@ -163,9 +165,13 @@ class AgentViewModel @Inject constructor(
         _taskBoardItems.value = emptyList()
         activityController.reset()
         contextBuilder.resetSession()
+        currentSessionId = null
+        sessionBootstrapJob?.cancel()
         
-        viewModelScope.launch(Dispatchers.IO) {
-            currentSessionId = historyRepository.createSession("新对话", "新会话")
+        sessionBootstrapJob = viewModelScope.launch(Dispatchers.IO) {
+            val sessionId = historyRepository.createSession("新对话", "新会话")
+            contextBuilder.loadSession(sessionId, emptyList())
+            currentSessionId = sessionId
         }
     }
 
@@ -224,6 +230,60 @@ class AgentViewModel @Inject constructor(
         // We no longer double-write from the UI layer.
     }
 
+    private suspend fun ensureActiveSessionReady(): String {
+        sessionBootstrapJob?.join()
+        currentSessionId?.let { return it }
+
+        return withContext(Dispatchers.IO) {
+            val sessionId = historyRepository.createSession("新对话", "新会话")
+            contextBuilder.loadSession(sessionId, emptyList())
+            currentSessionId = sessionId
+            sessionId
+        }
+    }
+
+    private suspend fun appendUserTurn(content: String) {
+        ensureActiveSessionReady()
+        withContext(Dispatchers.IO) {
+            contextBuilder.recordUserMessage(content)
+        }
+        _history.value += ChatMessage.User(
+            id = java.util.UUID.randomUUID().toString(),
+            timestamp = System.currentTimeMillis(),
+            content = content
+        )
+    }
+
+    private fun sessionMemoryText(uiState: UiState): String? {
+        return when (uiState) {
+            is UiState.Response -> uiState.content
+            is UiState.AwaitingClarification -> buildString {
+                append(uiState.question)
+                if (uiState.candidates.isNotEmpty()) {
+                    append("\n候选项: ")
+                    append(uiState.candidates.joinToString(" / ") { candidate -> candidate.displayName })
+                }
+            }
+            UiState.BadgeDelegationHint -> "该请求需要通过胸牌端继续完成。"
+            is UiState.Error -> uiState.message
+            else -> null
+        }
+    }
+
+    private suspend fun appendAssistantTurn(uiState: UiState) {
+        ensureActiveSessionReady()
+        sessionMemoryText(uiState)?.let { content ->
+            withContext(Dispatchers.IO) {
+                contextBuilder.recordAssistantMessage(content)
+            }
+        }
+        _history.value += ChatMessage.Ai(
+            id = java.util.UUID.randomUUID().toString(),
+            timestamp = System.currentTimeMillis(),
+            uiState = uiState
+        )
+    }
+
     override fun clearToast() { _toastMessage.value = null }
     override fun updateInput(text: String) { _inputText.value = text }
     override fun clearError() { _errorMessage.value = null }
@@ -262,10 +322,10 @@ class AgentViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val context = _inputText.value
-                val request = PluginRequest(context, emptyMap())
-                val gateway = object : PluginGateway {
-                    override suspend fun getSessionHistory(turns: Int) = ""
-                    override suspend fun appendToHistory(message: String) {}
+            val request = PluginRequest(context, emptyMap())
+            val gateway = object : PluginGateway {
+                override suspend fun getSessionHistory(turns: Int) = ""
+                override suspend fun appendToHistory(message: String) {}
                     override suspend fun emitProgress(message: String) {}
                 }
                 
@@ -273,11 +333,7 @@ class AgentViewModel @Inject constructor(
                     withContext(Dispatchers.Main) {
                         if (state is UiState.Response || state is UiState.Error) {
                             if (state is UiState.Response) {
-                                _history.value += ChatMessage.Ai(
-                                    id = java.util.UUID.randomUUID().toString(),
-                                    timestamp = System.currentTimeMillis(),
-                                    uiState = state
-                                )
+                                appendAssistantTurn(state)
                             } else if (state is UiState.Error) {
                                 _errorMessage.value = "工具执行失败: ${state.message}"
                             }
@@ -316,11 +372,7 @@ class AgentViewModel @Inject constructor(
                 withContext(Dispatchers.Main) {
                     if (state is UiState.Response || state is UiState.Error) {
                         if (state is UiState.Response) {
-                            _history.value += ChatMessage.Ai(
-                                id = java.util.UUID.randomUUID().toString(),
-                                timestamp = System.currentTimeMillis(),
-                                uiState = state
-                            )
+                            appendAssistantTurn(state)
                         } else if (state is UiState.Error) {
                             _errorMessage.value = state.message
                         }
@@ -347,6 +399,7 @@ class AgentViewModel @Inject constructor(
         
         viewModelScope.launch {
             try {
+                appendUserTurn(input)
                 // Now delegates to the pure L3 IntentOrchestrator
                 intentOrchestrator.processInput(input).collect { result ->
                      handlePipelineResult(result)
@@ -364,12 +417,6 @@ class AgentViewModel @Inject constructor(
         if (_isSending.value) return
         val input = _inputText.value.trim()
         if (input.isBlank()) return
-        
-        _history.value += ChatMessage.User(
-            id = java.util.UUID.randomUUID().toString(),
-            timestamp = System.currentTimeMillis(),
-            content = input
-        )
         _inputText.value = ""
         _isSending.value = true
         _uiState.value = UiState.Loading 
@@ -378,6 +425,7 @@ class AgentViewModel @Inject constructor(
         
         viewModelScope.launch {
             try {
+                appendUserTurn(input)
                 // The magic of Nuke & Pave: all routing logic is gone. 
                 // Only clean delegation remains.
                 intentOrchestrator.processInput(input).collect { result ->
@@ -405,11 +453,7 @@ class AgentViewModel @Inject constructor(
             }
             is PipelineResult.ConversationalReply -> {
                 val ui = UiState.Response(result.text)
-                _history.value += ChatMessage.Ai(
-                    id = java.util.UUID.randomUUID().toString(),
-                    timestamp = System.currentTimeMillis(),
-                    uiState = ui
-                )
+                appendAssistantTurn(ui)
                 _uiState.value = UiState.Idle // Clear active state
             }
             is PipelineResult.AutoRenameTriggered -> {
@@ -419,21 +463,25 @@ class AgentViewModel @Inject constructor(
             }
             is PipelineResult.DisambiguationIntercepted -> {
                 if (result.uiState !is UiState.Idle) {
-                    _history.value += ChatMessage.Ai(
-                        id = java.util.UUID.randomUUID().toString(),
-                        timestamp = System.currentTimeMillis(),
-                        uiState = result.uiState
-                    )
+                    appendAssistantTurn(result.uiState)
                 }
                 _uiState.value = UiState.Idle // Clear active state
             }
             is PipelineResult.ClarificationNeeded -> {
                 val ui = UiState.Response(result.question)
-                _history.value += ChatMessage.Ai(
-                    id = java.util.UUID.randomUUID().toString(),
-                    timestamp = System.currentTimeMillis(),
-                    uiState = ui
-                )
+                appendAssistantTurn(ui)
+                _uiState.value = UiState.Idle
+            }
+            is PipelineResult.TaskCommandProposal -> {
+                val message = when (val command = result.command) {
+                    is com.smartsales.core.pipeline.SchedulerTaskCommand.CreateTasks ->
+                        "已为您起草日程创建，请点击卡片确认。"
+                    is com.smartsales.core.pipeline.SchedulerTaskCommand.DeleteTask ->
+                        "已为您起草日程删除，请点击卡片确认。"
+                    is com.smartsales.core.pipeline.SchedulerTaskCommand.RescheduleTask ->
+                        "已为您起草日程改期，请点击卡片确认。"
+                }
+                appendAssistantTurn(UiState.Response(message))
                 _uiState.value = UiState.Idle
             }
             is PipelineResult.ToolRecommendation -> {
@@ -450,11 +498,7 @@ class AgentViewModel @Inject constructor(
                 _taskBoardItems.value = items
 
                 val ui = UiState.Response("我发现了几个可以帮您执行的工具，请在任务板确认运行。")
-                _history.value += ChatMessage.Ai(
-                    id = java.util.UUID.randomUUID().toString(),
-                    timestamp = System.currentTimeMillis(),
-                    uiState = ui
-                )
+                appendAssistantTurn(ui)
                 _uiState.value = UiState.Idle
             }
             is PipelineResult.ToolDispatch -> {
@@ -469,11 +513,7 @@ class AgentViewModel @Inject constructor(
                 val combined = listOf(mutationStr).filter { it.isNotBlank() }.joinToString(" 并")
                 
                 val ui = UiState.Response("已为您起草更新：$combined。请点击卡片确认。")
-                _history.value += ChatMessage.Ai(
-                    id = java.util.UUID.randomUUID().toString(),
-                    timestamp = System.currentTimeMillis(),
-                    uiState = ui
-                )
+                appendAssistantTurn(ui)
                 _uiState.value = UiState.Idle
             }
             is PipelineResult.PluginExecutionStarted -> {
@@ -481,11 +521,7 @@ class AgentViewModel @Inject constructor(
             }
             is PipelineResult.PluginExecutionEmittedState -> {
                 if (result.uiState is UiState.Response) {
-                    _history.value += ChatMessage.Ai(
-                        id = java.util.UUID.randomUUID().toString(),
-                        timestamp = System.currentTimeMillis(),
-                        uiState = result.uiState
-                    )
+                    appendAssistantTurn(result.uiState)
                 }
                 _uiState.value = result.uiState
             }
@@ -496,11 +532,7 @@ class AgentViewModel @Inject constructor(
             is PipelineResult.BadgeDelegationIntercepted -> {
                 Log.d("AgentVM", "Hardware delegation intercepted. Emitting BadgeDelegationHint.")
                 val ui = UiState.BadgeDelegationHint
-                _history.value += ChatMessage.Ai(
-                    id = java.util.UUID.randomUUID().toString(),
-                    timestamp = System.currentTimeMillis(),
-                    uiState = ui
-                )
+                appendAssistantTurn(ui)
                 _uiState.value = UiState.Idle 
             }
         }

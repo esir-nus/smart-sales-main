@@ -6,6 +6,9 @@ import com.smartsales.core.test.fakes.FakeContextBuilder
 import com.smartsales.core.test.fakes.FakeLightningRouter
 import com.smartsales.core.test.fakes.FakeEntityWriter
 import com.smartsales.core.test.fakes.FakeAliasCache
+import com.smartsales.core.test.fakes.FakeExecutor
+import com.smartsales.core.test.fakes.FakeInspirationRepository
+import com.smartsales.core.test.fakes.FakeScheduleBoard
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.TestScope
@@ -17,7 +20,8 @@ import com.smartsales.core.pipeline.ToolRegistry
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.SchedulerTimelineItem
 import com.smartsales.prism.domain.scheduler.ScheduledTask
-import com.smartsales.prism.domain.scheduler.FastTrackParser
+import com.smartsales.prism.domain.scheduler.FastTrackMutationEngine
+import com.smartsales.prism.domain.scheduler.SchedulerLinter
 import com.smartsales.prism.domain.time.TimeProvider
 import java.time.Instant
 import kotlinx.coroutines.flow.emptyFlow
@@ -44,6 +48,21 @@ class IntentOrchestratorBreakItTest {
         fakeEntityWriter = FakeEntityWriter()
         fakeAliasCache = FakeAliasCache()
 
+        val fakeTaskRepository = object : ScheduledTaskRepository {
+            override suspend fun batchInsertTasks(rules: List<ScheduledTask>): List<String> = emptyList()
+            override suspend fun upsertTask(task: ScheduledTask): String = ""
+            override suspend fun insertTask(task: ScheduledTask): String = ""
+            override suspend fun updateTask(task: ScheduledTask) {}
+            override suspend fun getTask(id: String): ScheduledTask? = null
+            override fun queryByDateRange(start: java.time.LocalDate, end: java.time.LocalDate): Flow<List<ScheduledTask>> = emptyFlow()
+            override fun getTimelineItems(dayOffset: Int): Flow<List<SchedulerTimelineItem>> = emptyFlow()
+            override suspend fun getRecentCompleted(limit: Int): List<ScheduledTask> = emptyList()
+            override suspend fun getTopUrgentActiveForEntity(entityId: String): ScheduledTask? = null
+            override fun observeByEntityId(entityId: String): Flow<List<ScheduledTask>> = emptyFlow()
+            override suspend fun deleteItem(id: String) {}
+            override suspend fun rescheduleTask(oldTaskId: String, newTask: ScheduledTask) {}
+        }
+
         orchestrator = IntentOrchestrator(
             contextBuilder = fakeContextBuilder,
             lightningRouter = fakeLightningRouter,
@@ -51,28 +70,26 @@ class IntentOrchestratorBreakItTest {
             unifiedPipeline = fakeUnifiedPipeline,
             entityWriter = fakeEntityWriter,
             aliasCache = fakeAliasCache,
-            fastTrackParser = FastTrackParser(object : TimeProvider { 
+            uniAExtractionService = RealUniAExtractionService(
+                executor = FakeExecutor(),
+                promptCompiler = PromptCompiler(),
+                schedulerLinter = SchedulerLinter()
+            ),
+            fastTrackMutationEngine = FastTrackMutationEngine(
+                taskRepository = fakeTaskRepository,
+                scheduleBoard = FakeScheduleBoard(),
+                inspirationRepository = FakeInspirationRepository()
+            ),
+            taskRepository = fakeTaskRepository,
+            scheduleBoard = FakeScheduleBoard(),
+            toolRegistry = FakeToolRegistry(),
+            timeProvider = object : TimeProvider { 
                 override val now: Instant = Instant.now() 
                 override val currentTime: java.time.LocalTime = java.time.LocalTime.now()
                 override val today: java.time.LocalDate = java.time.LocalDate.now()
                 override val zoneId: java.time.ZoneId = java.time.ZoneId.systemDefault()
                 override fun formatForLlm(): String = ""
-            }),
-            taskRepository = object : ScheduledTaskRepository {
-                override suspend fun batchInsertTasks(rules: List<ScheduledTask>): List<String> = emptyList()
-                override suspend fun upsertTask(task: ScheduledTask): String = ""
-                override suspend fun insertTask(task: ScheduledTask): String = ""
-                override suspend fun updateTask(task: ScheduledTask) {}
-                override suspend fun getTask(id: String): ScheduledTask? = null
-                override fun queryByDateRange(start: java.time.LocalDate, end: java.time.LocalDate): Flow<List<ScheduledTask>> = emptyFlow()
-                override fun getTimelineItems(dayOffset: Int): Flow<List<SchedulerTimelineItem>> = emptyFlow()
-                override suspend fun getRecentCompleted(limit: Int): List<ScheduledTask> = emptyList()
-                override suspend fun getTopUrgentActiveForEntity(entityId: String): ScheduledTask? = null
-                override fun observeByEntityId(entityId: String): Flow<List<ScheduledTask>> = emptyFlow()
-                override suspend fun deleteItem(id: String) {}
-                override suspend fun rescheduleTask(oldTaskId: String, newTask: ScheduledTask) {}
             },
-            toolRegistry = FakeToolRegistry(),
             appScope = testScope
         )
     }

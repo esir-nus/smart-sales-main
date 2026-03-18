@@ -21,6 +21,7 @@ class FakeContextBuilder : ContextBuilder {
 
     private val history = mutableListOf<ChatTurn>()
     private var activeSessionId = "fake-session"
+    var buildCalls = mutableListOf<EnhancedContext>()
 
     override suspend fun build(
         userText: String,
@@ -29,7 +30,13 @@ class FakeContextBuilder : ContextBuilder {
         depth: ContextDepth,
         isBadge: Boolean
     ): EnhancedContext {
-        return buildResult.copy(userText = userText, modeMetadata = buildResult.modeMetadata.copy(currentMode = mode))
+        val context = buildResult.copy(
+            userText = userText,
+            modeMetadata = buildResult.modeMetadata.copy(currentMode = mode),
+            sessionHistory = history.toList()
+        )
+        buildCalls.add(context)
+        return context
     }
 
     override fun getSessionHistory(): List<ChatTurn> = history

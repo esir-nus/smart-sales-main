@@ -44,6 +44,15 @@ interface ContextBuilder {
 - Subsequent turns: cached entity data used, no redundant DB queries
 - Entity aliases resolved via `pathIndex` (O(1) after first lookup)
 
+### Runtime Admission Contract
+
+Live runtime must feed recent-turn context through the Kernel, not only through UI-local history.
+
+- user turns must call `recordUserMessage()` before the parent lane proceeds
+- assistant turns that become visible chat history must call `recordAssistantMessage()`
+- clarification and disambiguation prompts are not UI-only; they are repair prompts and must be admitted into session memory
+- follow-up repair input resumes the parent lane through `build(...).sessionHistory`, not through a hidden UI cache
+
 ### Output Types
 
 ```kotlin
@@ -92,8 +101,7 @@ This interface is consumed by:
 |----------|-----|
 | `RealCoachPipeline` | Calls `contextBuilder.build()` |
 | `IntentOrchestrator` / `UnifiedPipeline` | Calls `contextBuilder.build()` / `buildWithClues()` |
-| `AgentViewModel` | Calls `contextBuilder.resetSession()` on new session |
-| `ChatViewModel` | Calls `contextBuilder.recordUserMessage()` / `recordAssistantMessage()` |
+| `AgentViewModel` | Calls `resetSession()`, `loadSession()`, `recordUserMessage()`, and `recordAssistantMessage()` |
 
 ---
 

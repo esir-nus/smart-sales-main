@@ -92,6 +92,7 @@ class L2AdaptiveHabitLoopTest {
             contextBuilder = contextBuilder,
             entityDisambiguationService = FakeEntityDisambiguationService(),
             inputParserService = FakeInputParserService(),
+            schedulerLinter = SchedulerLinter(),
             entityWriter = entityWriter,
             sessionTitleGenerator = FakeSessionTitleGenerator(),
             promptCompiler = FakePromptCompiler(),

@@ -99,6 +99,7 @@ class L2EfficiencyOverloadTest {
             contextBuilder = contextBuilder,
             entityDisambiguationService = FakeEntityDisambiguationService(),
             inputParserService = fakeInputParserService,
+            schedulerLinter = SchedulerLinter(),
             entityWriter = entityWriter,
             sessionTitleGenerator = FakeSessionTitleGenerator(),
             promptCompiler = FakePromptCompiler(),
@@ -140,10 +141,10 @@ class L2EfficiencyOverloadTest {
 
         val results = pipeline.processInput(PipelineInput("schedule 3 items", intent = QueryQuality.CRM_TASK, unifiedId = "test_unified_id")).toList()
         
-        val toolDispatch = results.filterIsInstance<PipelineResult.ToolDispatch>().firstOrNull()
+        val taskCommand = results.filterIsInstance<PipelineResult.TaskCommandProposal>().firstOrNull()
         println("DEBUG SCENE 1 RESULTS: $results")
-        assertNotNull("Must emit ToolDispatch", toolDispatch)
-        assertEquals("CREATE_TASK", toolDispatch!!.toolId)
+        assertNotNull("Must emit typed scheduler command", taskCommand)
+        assertTrue(taskCommand!!.command is com.smartsales.core.pipeline.SchedulerTaskCommand.CreateTasks)
     }
 
     @Test
@@ -173,10 +174,10 @@ class L2EfficiencyOverloadTest {
         fakeExecutor.enqueueResponse(ExecutorResult.Success(rawJson, TokenUsage(10, 10)))
         val results = pipeline.processInput(PipelineInput("schedule overlap", intent = QueryQuality.CRM_TASK, unifiedId = "test_unified_id")).toList()
         
-        val toolDispatch = results.filterIsInstance<PipelineResult.ToolDispatch>().firstOrNull()
+        val taskCommand = results.filterIsInstance<PipelineResult.TaskCommandProposal>().firstOrNull()
         println("DEBUG SCENE 2 RESULTS: $results")
-        assertNotNull("Must emit ToolDispatch", toolDispatch)
-        assertEquals("CREATE_TASK", toolDispatch!!.toolId)
+        assertNotNull("Must emit typed scheduler command", taskCommand)
+        assertTrue(taskCommand!!.command is com.smartsales.core.pipeline.SchedulerTaskCommand.CreateTasks)
     }
 
     @Test
@@ -207,8 +208,8 @@ class L2EfficiencyOverloadTest {
         println("DEBUG SCENE 3 RESULTS: $results")
         
         // Assert: tasks naturally fell down the cascade queue and were proposed with alarms natively
-        val toolDispatch = results.filterIsInstance<PipelineResult.ToolDispatch>().firstOrNull()
-        assertNotNull("Must emit ToolDispatch", toolDispatch)
-        assertEquals("CREATE_TASK", toolDispatch!!.toolId)
+        val taskCommand = results.filterIsInstance<PipelineResult.TaskCommandProposal>().firstOrNull()
+        assertNotNull("Must emit typed scheduler command", taskCommand)
+        assertTrue(taskCommand!!.command is com.smartsales.core.pipeline.SchedulerTaskCommand.CreateTasks)
     }
 }

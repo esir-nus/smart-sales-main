@@ -16,6 +16,7 @@ object PipelineValve {
         // Phase 1: The Gatekeeper
         INPUT_RECEIVED,         
         ROUTER_DECISION,        
+        SESSION_MEMORY_UPDATED,
         
         // Phase 1.5: Path A Optimistic UI
         PATH_A_PARSED,
@@ -29,6 +30,10 @@ object PipelineValve {
         // Phase 3: The Brain
         LLM_BRAIN_EMISSION,     
         LINTER_DECODED,
+        MUTATION_PROPOSAL_CACHED,
+        MUTATION_COMMIT_REQUESTED,
+        TASK_COMMAND_EMITTED,
+        TASK_COMMAND_ROUTED,
         
         // Phase 4: System III (First-Party Plugins)
         PLUGIN_DISPATCH_RECEIVED,

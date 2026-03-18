@@ -9,12 +9,14 @@ class FakeLightningRouter : LightningRouter {
     
     // Controlled queue for evaluation results
     private val resultQueue = mutableListOf<RouterResult?>()
+    val evaluatedContexts = mutableListOf<EnhancedContext>()
     
     fun enqueueResult(result: RouterResult?) {
         resultQueue.add(result)
     }
 
     override suspend fun evaluateIntent(context: EnhancedContext): RouterResult? {
+        evaluatedContexts.add(context)
         return if (resultQueue.isNotEmpty()) {
             resultQueue.removeAt(0)
         } else {

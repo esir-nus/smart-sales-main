@@ -11,11 +11,15 @@ import javax.inject.Singleton
 import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.domain.model.ClarificationType
 import com.smartsales.prism.domain.model.CandidateOption
+import com.smartsales.prism.domain.memory.ScheduleBoard
 import com.smartsales.prism.domain.scheduler.ClarificationState
+import com.smartsales.prism.domain.scheduler.FastTrackResult
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Named
 import com.smartsales.core.telemetry.PipelineValve
 
@@ -29,11 +33,13 @@ import com.smartsales.core.telemetry.PipelineValve
  * Wave 3: Houses the Open-Loop `PendingProposalStore` to bridge stateless pipeline evaluations
  * with stateful database write-backs.
  */
-import com.smartsales.prism.domain.scheduler.FastTrackParser
+import com.smartsales.prism.domain.scheduler.FastTrackMutationEngine
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
+import com.smartsales.prism.domain.scheduler.UniAExtractionRequest
 import com.smartsales.core.pipeline.ToolRegistry
 import com.smartsales.core.pipeline.PluginRequest
 import com.smartsales.core.pipeline.PluginGateway
+import com.smartsales.prism.domain.time.TimeProvider
 
 @Singleton
 class IntentOrchestrator @Inject constructor(
@@ -43,47 +49,76 @@ class IntentOrchestrator @Inject constructor(
     private val unifiedPipeline: UnifiedPipeline,
     private val entityWriter: EntityWriter,
     private val aliasCache: AliasCache,
-    private val fastTrackParser: FastTrackParser,
+    private val uniAExtractionService: RealUniAExtractionService,
+    private val fastTrackMutationEngine: FastTrackMutationEngine,
     private val taskRepository: ScheduledTaskRepository,
+    private val scheduleBoard: ScheduleBoard,
     private val toolRegistry: ToolRegistry,
+    private val timeProvider: TimeProvider,
     @Named("AppScope") private val appScope: CoroutineScope
 ) {
-    private var pendingProposal: PipelineResult.MutationProposal? = null
-    private var pendingToolDispatch: PipelineResult.ToolDispatch? = null
+    private sealed interface PendingExecution {
+        data class ProfileMutation(
+            val mutations: List<PipelineResult.ProfileMutation>
+        ) : PendingExecution
+
+        data class SchedulerTask(
+            val command: SchedulerTaskCommand
+        ) : PendingExecution
+
+        data class PluginDispatch(
+            val toolId: String,
+            val params: Map<String, Any>
+        ) : PendingExecution
+    }
+
+    private var pendingExecution: PendingExecution? = null
 
     suspend fun processInput(input: String, isVoice: Boolean = false): Flow<PipelineResult> {
         return flow {
             // Wave 3 Open-Loop Protocol: Any new substantive input clears the pending state
             // to avoid committing stale LLM hallucinations if the user ignored a previous confirmation card.
             if (input != "确认执行") {
-                pendingProposal = null
-                pendingToolDispatch = null
+                pendingExecution = null
             } else {
-                // If it is a confirmation, execute the pending plan
-                if (pendingToolDispatch != null) {
-                    val dispatch = pendingToolDispatch!!
-                    pendingToolDispatch = null
-                    // Actually emit the ToolDispatch to the UI/PluginRegistry layer for execution
-                    emit(dispatch) 
-                    return@flow
-                }
-                
-                val proposal = pendingProposal
-                if (proposal == null) {
+                val execution = pendingExecution
+                pendingExecution = null
+                if (execution == null) {
                     emit(PipelineResult.ConversationalReply("没有可执行的草案。"))
                     return@flow
                 }
-                
-                // Execute actual database writes asynchronously so UI responds instantly
-                appScope.launch {
-                    proposal.profileMutations.forEach { mut ->
-                        // Wave 3: Safe interaction with EntityWriter
-                        entityWriter.updateAttribute(mut.entityId, mut.field, mut.value)
+
+                when (execution) {
+                    is PendingExecution.PluginDispatch -> {
+                        emit(PipelineResult.ToolDispatch(execution.toolId, execution.params))
+                    }
+                    is PendingExecution.ProfileMutation -> {
+                        PipelineValve.tag(
+                            checkpoint = PipelineValve.Checkpoint.MUTATION_COMMIT_REQUESTED,
+                            payloadSize = execution.mutations.size,
+                            summary = "Profile mutation commit requested",
+                            rawDataDump = execution.mutations.joinToString("\n") { "${it.entityId}:${it.field}=${it.value}" }
+                        )
+                        withContext(Dispatchers.IO) {
+                            execution.mutations.forEach { mut ->
+                                entityWriter.updateAttribute(mut.entityId, mut.field, mut.value)
+                            }
+                        }
+                        emit(PipelineResult.ConversationalReply("✅ 执行成功。"))
+                    }
+                    is PendingExecution.SchedulerTask -> {
+                        PipelineValve.tag(
+                            checkpoint = PipelineValve.Checkpoint.MUTATION_COMMIT_REQUESTED,
+                            payloadSize = 1,
+                            summary = "Scheduler task command commit requested",
+                            rawDataDump = execution.command.toString()
+                        )
+                        val commitReply = withContext(Dispatchers.IO) {
+                            executeSchedulerTaskCommand(execution.command)
+                        }
+                        emit(PipelineResult.ConversationalReply(commitReply))
                     }
                 }
-                
-                pendingProposal = null
-                emit(PipelineResult.ConversationalReply("✅ 执行成功。"))
                 return@flow
             }
 
@@ -187,40 +222,86 @@ class IntentOrchestrator @Inject constructor(
         )
 
         var pathATaskId: String? = null
+        var attemptedUniA = false
         
-        // --- PATH A: Optimistic UI for Voice Tasks ---
-        if (isVoice && (pipelineInput.intent == QueryQuality.CRM_TASK || pipelineInput.intent == QueryQuality.BADGE_DELEGATION)) {
-            // Wave 17 T2: Restored Path A Native OS execution
-            val optimisticTask = fastTrackParser.parseToOptimisticTask(unifiedId, input)
-            pathATaskId = optimisticTask.id
-            
-            PipelineValve.tag(
-                checkpoint = PipelineValve.Checkpoint.PATH_A_PARSED,
-                payloadSize = input.length,
-                summary = "Optimistic Task Parsed | Title: ${optimisticTask.title}",
-                rawDataDump = optimisticTask.toString()
+        // --- PATH A: Bounded Uni-A attempt for surviving voice input ---
+        if (isVoice) {
+            attemptedUniA = true
+            android.util.Log.d(
+                "IntentOrchestrator",
+                "Uni-A attempt started for $unifiedId with router=${pipelineInput.intent}"
             )
-
-            taskRepository.upsertTask(optimisticTask)
-
-            PipelineValve.tag(
-                checkpoint = PipelineValve.Checkpoint.PATH_A_DB_WRITTEN,
-                payloadSize = optimisticTask.id.hashCode(),
-                summary = "Optimistic Task Persisted (Hash ID)",
-                rawDataDump = "TaskID: ${optimisticTask.id}"
+            val extractionRequest = UniAExtractionRequest(
+                transcript = input,
+                nowIso = timeProvider.now.toString(),
+                timezone = timeProvider.zoneId.id,
+                unifiedId = unifiedId
             )
+            when (val fastTrackIntent = uniAExtractionService.extract(extractionRequest)) {
+                is FastTrackResult.CreateTasks -> {
+                    PipelineValve.tag(
+                        checkpoint = PipelineValve.Checkpoint.PATH_A_PARSED,
+                        payloadSize = input.length,
+                        summary = "Uni-A exact task parsed",
+                        rawDataDump = fastTrackIntent.toString()
+                    )
 
-            emit(PipelineResult.PathACommitted(optimisticTask))
-            android.util.Log.d("IntentOrchestrator", "Path A Native Fast-Track Executed for \$unifiedId")
+                    when (val mutationResult = fastTrackMutationEngine.execute(fastTrackIntent)) {
+                        is com.smartsales.prism.domain.scheduler.MutationResult.Success -> {
+                            val exactTaskId = mutationResult.taskIds.firstOrNull() ?: unifiedId
+                            val exactTask = taskRepository.getTask(exactTaskId)
+                            if (exactTask != null) {
+                                pathATaskId = exactTask.id
+                                PipelineValve.tag(
+                                    checkpoint = PipelineValve.Checkpoint.PATH_A_DB_WRITTEN,
+                                    payloadSize = exactTask.id.hashCode(),
+                                    summary = "Uni-A exact task persisted",
+                                    rawDataDump = "TaskID: ${exactTask.id}"
+                                )
+                                emit(PipelineResult.PathACommitted(exactTask))
+                                android.util.Log.d("IntentOrchestrator", "Uni-A exact Path A committed for $unifiedId")
+                            }
+                        }
+                        is com.smartsales.prism.domain.scheduler.MutationResult.NoMatch -> {
+                            android.util.Log.d(
+                                "IntentOrchestrator",
+                                "Uni-A exact create rejected for $unifiedId: ${mutationResult.reason}"
+                            )
+                        }
+                        else -> Unit
+                    }
+                }
+                is FastTrackResult.NoMatch -> {
+                    PipelineValve.tag(
+                        checkpoint = PipelineValve.Checkpoint.PATH_A_PARSED,
+                        payloadSize = input.length,
+                        summary = "Uni-A exited without exact commit",
+                        rawDataDump = fastTrackIntent.reason
+                    )
+                    android.util.Log.d(
+                        "IntentOrchestrator",
+                        "Uni-A exited NotExact for $unifiedId: ${fastTrackIntent.reason}"
+                    )
+                }
+                else -> Unit
+            }
+        }
+        if (attemptedUniA && pathATaskId == null) {
+            android.util.Log.d("IntentOrchestrator", "Uni-A produced no commit for $unifiedId; falling through to Path B")
         }
         
         // Delegate to the heavy-duty pipeline and forward its results (PATH B)
         unifiedPipeline.processInput(pipelineInput).collect { result ->
-            // Intercept MutationProposals and ToolDispatch to cache them for Open-Loop confirmation
+            // Intercept proposals and typed task commands to cache them for Open-Loop confirmation
             if (result is PipelineResult.MutationProposal) {
                 if (isVoice) {
-                    // --- PATH B: Auto-Commit for Voice ---
-                    appScope.launch {
+                    PipelineValve.tag(
+                        checkpoint = PipelineValve.Checkpoint.MUTATION_COMMIT_REQUESTED,
+                        payloadSize = result.profileMutations.size,
+                        summary = "Voice profile mutation auto-commit requested",
+                        rawDataDump = result.profileMutations.joinToString("\n") { "${it.entityId}:${it.field}=${it.value}" }
+                    )
+                    appScope.launch(Dispatchers.IO) {
                         result.profileMutations.forEach { mut ->
                             entityWriter.updateAttribute(mut.entityId, mut.field, mut.value)
                         }
@@ -228,7 +309,34 @@ class IntentOrchestrator @Inject constructor(
                     // Leak 3 Fix: Silence the mutation proposal for voice so UI just shows 'done' from conversational reply
                     return@collect
                 } else {
-                    this@IntentOrchestrator.pendingProposal = result
+                    pendingExecution = PendingExecution.ProfileMutation(result.profileMutations)
+                    PipelineValve.tag(
+                        checkpoint = PipelineValve.Checkpoint.MUTATION_PROPOSAL_CACHED,
+                        payloadSize = result.profileMutations.size,
+                        summary = "Profile mutation proposal cached for confirmation",
+                        rawDataDump = result.profileMutations.joinToString("\n") { "${it.entityId}:${it.field}=${it.value}" }
+                    )
+                }
+            } else if (result is PipelineResult.TaskCommandProposal) {
+                if (isVoice) {
+                    PipelineValve.tag(
+                        checkpoint = PipelineValve.Checkpoint.TASK_COMMAND_ROUTED,
+                        payloadSize = 1,
+                        summary = "Voice scheduler command routed to owning executor",
+                        rawDataDump = result.command.toString()
+                    )
+                    appScope.launch(Dispatchers.IO) {
+                        executeSchedulerTaskCommand(result.command)
+                    }
+                    return@collect
+                } else {
+                    pendingExecution = PendingExecution.SchedulerTask(result.command)
+                    PipelineValve.tag(
+                        checkpoint = PipelineValve.Checkpoint.MUTATION_PROPOSAL_CACHED,
+                        payloadSize = 1,
+                        summary = "Scheduler task command cached for confirmation",
+                        rawDataDump = result.command.toString()
+                    )
                 }
             } else if (result is PipelineResult.ToolDispatch) {
                 if (isVoice) {
@@ -247,7 +355,13 @@ class IntentOrchestrator @Inject constructor(
                     // Swallow ToolDispatch for voice so OS UI doesn't try to render it
                     return@collect
                 } else if (result.toolId != "reschedule") {
-                    this@IntentOrchestrator.pendingToolDispatch = result
+                    pendingExecution = PendingExecution.PluginDispatch(result.toolId, result.params)
+                    PipelineValve.tag(
+                        checkpoint = PipelineValve.Checkpoint.MUTATION_PROPOSAL_CACHED,
+                        payloadSize = 1,
+                        summary = "Plugin dispatch cached for confirmation",
+                        rawDataDump = "${result.toolId}:${result.params}"
+                    )
                 }
             } else if (isVoice && result is PipelineResult.DisambiguationIntercepted) {
                 val taskId = pathATaskId
@@ -288,5 +402,40 @@ class IntentOrchestrator @Inject constructor(
             emit(result)
         }
     }
-}
+    }
+
+    private suspend fun executeSchedulerTaskCommand(command: SchedulerTaskCommand): String {
+        PipelineValve.tag(
+            checkpoint = PipelineValve.Checkpoint.TASK_COMMAND_ROUTED,
+            payloadSize = 1,
+            summary = "Scheduler task command handed to owning executor",
+            rawDataDump = command.toString()
+        )
+        return when (command) {
+            is SchedulerTaskCommand.CreateTasks -> {
+                when (val result = fastTrackMutationEngine.execute(FastTrackResult.CreateTasks(command.params))) {
+                    is com.smartsales.prism.domain.scheduler.MutationResult.Success -> "✅ 日程已创建。"
+                    is com.smartsales.prism.domain.scheduler.MutationResult.NoMatch -> "未能创建日程：${result.reason}"
+                    is com.smartsales.prism.domain.scheduler.MutationResult.AmbiguousMatch -> "未找到唯一匹配的任务，请在面板手动处理。"
+                    is com.smartsales.prism.domain.scheduler.MutationResult.Error -> "日程创建失败：${result.exception.message ?: "未知错误"}"
+                    is com.smartsales.prism.domain.scheduler.MutationResult.InspirationCreated -> "当前命令不支持灵感写入。"
+                }
+            }
+            is SchedulerTaskCommand.RescheduleTask -> {
+                when (val result = fastTrackMutationEngine.execute(FastTrackResult.RescheduleTask(command.params))) {
+                    is com.smartsales.prism.domain.scheduler.MutationResult.Success -> "✅ 日程已改期。"
+                    is com.smartsales.prism.domain.scheduler.MutationResult.NoMatch -> "未能改期：${result.reason}"
+                    is com.smartsales.prism.domain.scheduler.MutationResult.AmbiguousMatch -> "未找到唯一匹配的任务，请在面板手动处理。"
+                    is com.smartsales.prism.domain.scheduler.MutationResult.Error -> "改期失败：${result.exception.message ?: "未知错误"}"
+                    is com.smartsales.prism.domain.scheduler.MutationResult.InspirationCreated -> "当前命令不支持灵感写入。"
+                }
+            }
+            is SchedulerTaskCommand.DeleteTask -> {
+                val match = scheduleBoard.findLexicalMatch(command.targetTitle)
+                    ?: return "未找到唯一匹配的任务，请在面板手动处理。"
+                taskRepository.deleteItem(match.entryId)
+                "✅ 日程已删除。"
+            }
+        }
+    }
 }

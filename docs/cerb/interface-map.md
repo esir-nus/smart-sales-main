@@ -4,7 +4,7 @@
 >
 > **Purpose**: Module ownership + data flow. Read this BEFORE any cross-module change.
 > **Rule**: If data belongs to Module B, query B's interface at runtime. Don't store B's data on A's model.
-> **Last Updated**: 2026-02-10 (OS Model Upgrade sync)
+> **Last Updated**: 2026-03-18 (Test infrastructure sync)
 >
 > **Status Legend**: ✅ = Shipped (Real impl) · 📐 = Interface only (Fake impl) · 🔲 = Not yet coded
 
@@ -23,8 +23,8 @@ Leaf services with no upstream dependencies. They don't call other modules.
 | **[ASR](./asr-service/spec.md)** | Hardware & Audio | Transcription results | OSS (downloads audio files to transcribe) | `transcribe(File) -> AsrResult` | — | ✅ |
 | **[TingwuPipeline](./tingwu-pipeline/spec.md)** | Hardware & Audio | Transcription & Audio Intelligence | OSS (reads `fileUrl`) | `submit(TingwuRequest) -> Result<String>` | OS: SSD | ✅ |
 | **[PipelineTelemetry](./pipeline-telemetry/spec.md)** | System II & Routing | Pipeline logs (to Logcat) | — | `recordEvent(PipelinePhase, String) -> Unit` | OS: RAM | ✅ |
-| **[TestFakesDomain](./test-infrastructure/spec.md)** | Testing | Pure JVM Domain Fakes | All Pure Domain Interfaces | `FakeMemoryRepository`, `FakeEntityRegistry` | OS: JVM | ✅ |
-| **[TestFakesPlatform](./test-infrastructure/spec.md)** | Testing | Android/Platform State | test-fakes-domain, App-Core | `PrismTestRig.setup()` | OS: Android | ✅ |
+| **[TestFakesDomain](./test-infrastructure/spec.md)** | Testing | Pure JVM Domain Fakes | All Pure Domain Interfaces | `FakeMemoryRepository`, `FakeEntityRepository` | OS: JVM | ✅ |
+| **[TestFakesPlatform](./test-infrastructure/spec.md)** | Testing | Android/Platform State | test-fakes-domain, App-Core | `FakeExecutor`, `FakeContextBuilder`, `FakeToolRegistry` | OS: Android | ✅ |
 
 ---
 
@@ -67,10 +67,10 @@ Orchestrates LLM-powered processing. Reads from Layer 2 data services.
 | **[Executor](./model-routing/spec.md)** | System II & Routing | Raw LLM output (stateless — no storage) | ModelRouter | `suspend execute(LlmProfile, String) -> ExecutorResult` | — | ✅ |
 | **[PluginRegistry](./plugin-registry/spec.md)** | System II & Routing | Executable pure-Kotlin workflows (Tools) | — | `executeTool(ToolId, PluginRequest, PluginGateway) -> Flow<UiState>` | OS: App | ✅ |
 | **[SchedulerLinter](./scheduler-linter/spec.md)** | Intelligent Scheduler | Intent parsing to DTOs | — | `suspend parseFastTrackIntent(String) -> FastTrackResult` | OS: App | ✅ |
-| **[UnifiedPipeline](./unified-pipeline/spec.md)** | System II & Routing | System II context ETL & execution | ContextBuilder, InputParser, EntityDisambiguator | `suspend processInput(PipelineInput) -> Flow<PipelineResult>` | OS: App | ✅ |
+| **[UnifiedPipeline](./unified-pipeline/spec.md)** | System II & Routing | System II context ETL, typed profile proposals, typed scheduler task-command proposals | ContextBuilder, InputParser, EntityDisambiguator | `suspend processInput(PipelineInput) -> Flow<PipelineResult>` | OS: App | ✅ |
 | **[IntentOrchestrator](./scheduler-path-a-spine/spec.md)** | System II & Routing | High-level intent routing (Phase 0) and shared Path A scheduler spine | AgentViewModel, LightningRouter, UnifiedPipeline, PluginRegistry | `suspend processInput(String, isVoice) -> Flow<PipelineResult>` | OS: App | ✅ |
 
-> **UnifiedPipeline is the only module that calls EntityWriter during task creation.** Feature modules (Scheduler, Mascot) receive results from UnifiedPipeline; they don't call EntityWriter themselves. (Exception: debug seed code in SchedulerViewModel, guarded by `DEBUG` build type.)
+> **UnifiedPipeline emits typed proposals; IntentOrchestrator owns commit handoff.** Profile/entity proposals commit through `EntityWriter`. Scheduler create/delete/reschedule proposals commit through scheduler-owned paths (`FastTrackMutationEngine`, `ScheduledTaskRepository`, `ScheduleBoard`). Feature modules still receive results; they do not own these writes.
 >
 > **ContextBuilder reads EntityRegistry for Entity Knowledge Context.** `ContextBuilder.buildEntityKnowledge()` calls `EntityRepository.getAll()` at session start to load the structured entity graph into the LLM prompt (RAM Section 1). This is a Kernel → SSD read.
 
@@ -138,10 +138,10 @@ graph TD
     F0 --> F2["ContextBuilder (Kernel ETL fetching SSD Graph)"]
     F2 --> F["Executor (LLM)"]
     F --> G["UnifiedMutation JSON Contract (One Currency)"]
-    G --> H1["UnifiedPipeline emits ToolDispatch & ProfileMutations"]
+    G --> H1["UnifiedPipeline emits MutationProposal / TaskCommandProposal"]
     H1 --> H2
-    H2 -->|User Confirms| H3["IntentOrchestrator dispatches async actions"]
-    H3 --> I["EntityWriter / PluginRegistry (System III)"]
+    H2 -->|User Confirms| H3["IntentOrchestrator routes to owning executor"]
+    H3 --> I["EntityWriter / Scheduler Owner"]
 ```
 
 ---

@@ -80,6 +80,7 @@ class RealUnifiedPipelineTest {
             contextBuilder = contextBuilder,
             entityDisambiguationService = entityDisambiguationService,
             inputParserService = inputParserService,
+            schedulerLinter = SchedulerLinter(),
             entityWriter = entityWriter,
             sessionTitleGenerator = sessionTitleGenerator,
             promptCompiler = promptCompiler,
@@ -125,10 +126,12 @@ class RealUnifiedPipelineTest {
         assertEquals("Executor should have been called exactly once", 1, executor.executedPrompts.size)
         val generatedPrompt = executor.executedPrompts.first()
         assertTrue("Prompt must explicitly contain the user's intent text for Dataflow Veracity", generatedPrompt.contains("Schedule a meeting"))
-        val toolDispatch = results.filterIsInstance<PipelineResult.ToolDispatch>().firstOrNull()
-        assertTrue("Expected ToolDispatch but it was not emitted.", toolDispatch != null)
-        assertEquals("CREATE_TASK", toolDispatch!!.toolId)
-        assertTrue("Should contain tasks json", toolDispatch.params.containsKey("tasks"))
+        val taskCommand = results.filterIsInstance<PipelineResult.TaskCommandProposal>().firstOrNull()
+        assertTrue("Expected TaskCommandProposal but it was not emitted.", taskCommand != null)
+        assertTrue(
+            "Expected typed create-task command",
+            taskCommand!!.command is com.smartsales.core.pipeline.SchedulerTaskCommand.CreateTasks
+        )
         
         // Background Path Validation
         assertEquals("Habit listener MUST be triggered after ETL", 1, habitListener.analyzeAsyncCallCount)

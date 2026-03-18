@@ -3,6 +3,8 @@ package com.smartsales.core.pipeline
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.core.context.ContextBuilder
 import com.smartsales.core.context.ContextDepth
+import com.smartsales.prism.domain.scheduler.FastTrackResult
+import com.smartsales.prism.domain.scheduler.SchedulerLinter
 
 
 import kotlinx.coroutines.async
@@ -31,6 +33,7 @@ class RealUnifiedPipeline @Inject constructor(
     private val contextBuilder: ContextBuilder,
     private val entityDisambiguationService: EntityDisambiguationService,
     private val inputParserService: InputParserService,
+    private val schedulerLinter: SchedulerLinter,
     private val entityWriter: com.smartsales.prism.domain.memory.EntityWriter,
     // Wave 4: Synchronous Auto-Renaming
     private val sessionTitleGenerator: com.smartsales.prism.domain.session.SessionTitleGenerator,
@@ -264,32 +267,18 @@ class RealUnifiedPipeline @Inject constructor(
                         emit(PipelineResult.ToolRecommendation(mutation.recommendedWorkflows))
                     }
                     
-                    // Wave 16 T1: Safely pass the raw scheduling data as tool dispatches 
-                    // until T3 wires up the real plugin
-                    when (mutation.classification) {
-                        "schedulable" -> {
-                            if (mutation.tasks.isNotEmpty()) {
-                                // Provide as generic ToolDispatch
-                                val tasksJson = kotlinx.serialization.json.Json.encodeToString(
-                                    kotlinx.serialization.builtins.ListSerializer(com.smartsales.prism.domain.core.TaskMutation.serializer()),
-                                    mutation.tasks
-                                )
-                                emit(PipelineResult.ToolDispatch("CREATE_TASK", mapOf("tasks" to tasksJson)))
-                            }
-                        }
-                        "deletion" -> {
-                            mutation.targetTitle?.let {
-                                emit(PipelineResult.ToolDispatch("DELETE_TASK", mapOf("targetTitle" to it)))
-                            }
-                        }
-                        "reschedule" -> {
-                            if (!mutation.targetTitle.isNullOrBlank() && !mutation.newInstruction.isNullOrBlank()) {
-                                emit(PipelineResult.ToolDispatch("RESCHEDULE_TASK", mapOf(
-                                    "targetTitle" to (mutation.targetTitle ?: ""), 
-                                    "newInstruction" to (mutation.newInstruction ?: "")
-                                )))
-                            }
-                        }
+                    buildSchedulerTaskCommand(
+                        mutation = mutation,
+                        rawJson = llmResult.content,
+                        unifiedId = input.unifiedId
+                    )?.let { command ->
+                        PipelineValve.tag(
+                            checkpoint = PipelineValve.Checkpoint.TASK_COMMAND_EMITTED,
+                            payloadSize = 1,
+                            summary = "Unified pipeline emitted typed scheduler command",
+                            rawDataDump = command.toString()
+                        )
+                        emit(PipelineResult.TaskCommandProposal(command))
                     }
                 } catch (e: Exception) {
                     Log.e("RealUnifiedPipeline", "Failed to decode UnifiedMutation", e)
@@ -300,6 +289,35 @@ class RealUnifiedPipeline @Inject constructor(
                 Log.e("RealUnifiedPipeline", "LLM Execution Failed: ${llmResult.error}")
                 emit(PipelineResult.ConversationalReply("分析失败: ${llmResult.error}"))
             }
+        }
+    }
+
+    private fun buildSchedulerTaskCommand(
+        mutation: com.smartsales.prism.domain.core.UnifiedMutation,
+        rawJson: String,
+        unifiedId: String
+    ): SchedulerTaskCommand? {
+        return when (mutation.classification.lowercase()) {
+            "schedulable" -> when (val parsed = schedulerLinter.parseFastTrackIntent(rawJson)) {
+                is FastTrackResult.CreateTasks -> {
+                    SchedulerTaskCommand.CreateTasks(
+                        parsed.params.copy(unifiedId = unifiedId)
+                    )
+                }
+                else -> null
+            }
+            "reschedule" -> when (val parsed = schedulerLinter.parseFastTrackIntent(rawJson)) {
+                is FastTrackResult.RescheduleTask -> {
+                    SchedulerTaskCommand.RescheduleTask(
+                        parsed.params.copy(unifiedId = unifiedId)
+                    )
+                }
+                else -> null
+            }
+            "deletion" -> mutation.targetTitle
+                ?.takeIf { it.isNotBlank() }
+                ?.let { SchedulerTaskCommand.DeleteTask(it) }
+            else -> null
         }
     }
 }

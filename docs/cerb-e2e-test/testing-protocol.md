@@ -85,18 +85,38 @@ Our QA protocol strictly divides testing into three boundaries:
 
 ---
 
-## 4. Domain Storage Structure
+## 4. Domain Storage Structure & Governance
 
-To prevent testing from becoming a monolithic diary, the `cerb-e2e-test` domain is strictly decoupled into three layers:
+To prevent testing from becoming a monolithic diary, the `cerb-e2e-test` domain is strictly decoupled into three local layers plus two project-level governance mirrors:
 
 ### 1. The Static Constitution (`testing-protocol.md`)
 - **Rules & Principles**: This file. It defines the Blackbox mindset, the 3-Level Standard, and the 6 Core End-to-End pillars. It never changes unless the architecture's fundamental rules change.
 
 ### 2. The Dynamic Index Ledger (`tasklist_log.md`)
-- **Tracking & Automation**: The active tracker and change log for the QA operations. It holds the states (🔲 / ✅) of all testing objects and integrates with automation hooks to record when a Wave is SHIPPED. This file is dynamic and constantly evolving.
+- **Tracking & Automation**: The active execution ledger for QA operations. It mirrors the current testing targets, links evidence, and records when a Wave is SHIPPED. This file is dynamic and constantly evolving.
 
 ### 3. The Isolated Test Spec (`spec_test-[feature].md`)
 - **Execution Target**: A meticulously crafted, single-purpose specification. E.g., `spec_test-lightningRouter.md`. When testing a pillar, we create a dedicated spec for it. It hardcodes pointers to the target feature's interfaces and specs (e.g., `docs/cerb/lightning-router/interface.md` and `docs/cerb/interface-map.md`), allowing the agent workflow to strictly scope its execution.
+
+### 4. The Active Project Tracker (`docs/plans/tracker.md`)
+- **Active Status Owner**: The tracker owns whether a testing wave is still open, blocked, or closed in the live project plan. If a testing wave is still unchecked or marked open in `tracker.md`, it is not closed, even if a changelog line already says SHIPPED.
+
+### 5. The Historical Shipment Log (`docs/plans/changelog.md`)
+- **History Only**: The changelog records that a shipment happened and links historical artifacts. It does **not** own active open/closed status for testing work, and it must never be used as the tie-breaker when tracker or ledger state drifts.
+
+### Status Ownership & Drift Law
+
+When the same testing wave appears in multiple places, ownership is:
+
+1. `docs/plans/tracker.md` owns active status and remaining work.
+2. `docs/cerb-e2e-test/tasklist_log.md` owns the operational mirror: spec path, evidence path, and the last synced test-wave record.
+3. `docs/plans/changelog.md` is append-only historical narrative.
+
+If any of these disagree:
+
+- treat the wave as **not fully closed**
+- repair `tracker.md` and `tasklist_log.md` first
+- only then keep or add the changelog entry as historical evidence
 
 ---
 
@@ -108,3 +128,14 @@ Writing an E2E test requires just as much architectural rigor as writing a featu
 2. **Planner Initiation**: Invoke `@[/feature-dev-planner]` aimed explicitly at the isolated test spec. The planner reads the test spec, maps the `interface-map.md`, and enforces OS Layer rules.
 3. **Acceptance Team**: The E2E test suite itself must be verified by `@[/acceptance-team]` to ensure it is valid, robust, and includes Break-It (hallucination/poison) tests.
 4. **Logcat Tracing**: You MUST debug using `adb logcat -s Tag:D`. We trace the exact data crossing the boundaries; no guessing allowed.
+
+### Testing Wave Ship Gate
+
+A testing wave may be marked `✅ SHIPPED` only when all of the following are true in the same closeout session:
+
+1. The acceptance evidence exists and is linkable.
+2. `tasklist_log.md` mirrors the shipped wave with the active spec path and evidence path.
+3. `docs/plans/tracker.md` closes the corresponding testing wave or task without leaving contradictory open boxes.
+4. `docs/plans/changelog.md` is updated only as the historical shipment record, never as the active status owner.
+
+Failure of any one item means the wave remains open, even if the changelog already says SHIPPED.

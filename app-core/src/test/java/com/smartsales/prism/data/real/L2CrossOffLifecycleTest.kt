@@ -1,28 +1,38 @@
 package com.smartsales.prism.data.real
 
 import android.content.Context
-
-import com.smartsales.core.pipeline.UnifiedPipeline
+import com.smartsales.core.pipeline.IntentOrchestrator
+import com.smartsales.core.pipeline.RealUniAExtractionService
 import com.smartsales.core.test.fakes.FakeToolRegistry
-import com.smartsales.prism.domain.audio.BadgeAudioPipeline
+import com.smartsales.core.test.fakes.FakeAlarmScheduler
+import com.smartsales.core.test.fakes.FakeAliasCache
+import com.smartsales.core.test.fakes.FakeContextBuilder
+import com.smartsales.core.test.fakes.FakeExecutor
+import com.smartsales.core.test.fakes.FakeLightningRouter
+import com.smartsales.core.test.fakes.FakeMascotService
 import com.smartsales.prism.domain.scheduler.TipGenerator
 import com.smartsales.core.test.fakes.FakeMemoryRepository
-import com.smartsales.prism.domain.asr.AsrService
+import com.smartsales.core.test.fakes.FakePromptCompiler
+import com.smartsales.core.test.fakes.FakeScheduleBoard
+import com.smartsales.core.test.fakes.FakeUnifiedPipeline
 import com.smartsales.prism.domain.memory.MemoryEntryType
-import com.smartsales.prism.domain.scheduler.AlarmScheduler
 import com.smartsales.prism.domain.scheduler.InspirationRepository
-import com.smartsales.prism.domain.memory.ScheduleBoard
 import com.smartsales.prism.domain.scheduler.SchedulerTimelineItem
 import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.domain.scheduler.FakeScheduledTaskRepository
+import com.smartsales.prism.domain.scheduler.FastTrackMutationEngine
 import com.smartsales.prism.domain.scheduler.SchedulerLinter
+import com.smartsales.prism.domain.scheduler.fakes.FakeTimeProvider
+import com.smartsales.prism.domain.asr.AsrResult
+import com.smartsales.prism.domain.asr.AsrService
 import com.smartsales.prism.ui.drawers.scheduler.SchedulerViewModel
-import kotlinx.coroutines.flow.MutableSharedFlow
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.`when`
+import com.smartsales.prism.domain.scheduler.SchedulerCoordinator
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -32,9 +42,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
+import org.mockito.Mockito.mock
 import java.time.Instant
+import java.io.File
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class L2CrossOffLifecycleTest {
@@ -51,14 +62,24 @@ class L2CrossOffLifecycleTest {
 
         taskRepository = FakeScheduledTaskRepository()
         memoryRepository = FakeMemoryRepository()
-
-        // Mock out dependencies not relevant to the Cross-Off lifecycle
-        val coordinator = mock(com.smartsales.prism.domain.scheduler.SchedulerCoordinator::class.java)
+        val scheduleBoard = FakeScheduleBoard()
+        val unifiedPipeline = FakeUnifiedPipeline()
+        val coordinator = SchedulerCoordinator(
+            taskRepository = taskRepository,
+            memoryRepository = memoryRepository,
+            scheduleBoard = scheduleBoard,
+            alarmScheduler = FakeAlarmScheduler(),
+            unifiedPipeline = unifiedPipeline
+        )
+        // Local JVM test leaf seam: Android Context has no shared fake and is not on the behavior path here.
         val appContext = mock(Context::class.java)
-        val inspirationRepository = mock(InspirationRepository::class.java)
-        val tipGenerator = mock(TipGenerator::class.java)
-        val asrService = mock(com.smartsales.prism.domain.asr.AsrService::class.java)
-        val intentOrchestrator = mock(com.smartsales.core.pipeline.IntentOrchestrator::class.java)
+        val inspirationRepository = StubInspirationRepository()
+        val tipGenerator = StubTipGenerator()
+        val asrService = StubAsrService()
+        val intentOrchestrator = buildIntentOrchestrator(
+            taskRepository = taskRepository,
+            inspirationRepository = inspirationRepository
+        )
 
         viewModel = SchedulerViewModel(
             appContext = appContext,
@@ -76,6 +97,38 @@ class L2CrossOffLifecycleTest {
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+    }
+
+    private fun buildIntentOrchestrator(
+        taskRepository: FakeScheduledTaskRepository,
+        inspirationRepository: InspirationRepository
+    ): IntentOrchestrator {
+        val timeProvider = FakeTimeProvider()
+        val schedulerLinter = SchedulerLinter(timeProvider)
+        val uniAExtractionService = RealUniAExtractionService(
+            executor = FakeExecutor(),
+            promptCompiler = FakePromptCompiler(),
+            schedulerLinter = schedulerLinter
+        )
+
+        return IntentOrchestrator(
+            contextBuilder = FakeContextBuilder(),
+            lightningRouter = FakeLightningRouter(),
+            mascotService = FakeMascotService(),
+            unifiedPipeline = FakeUnifiedPipeline(),
+            entityWriter = com.smartsales.core.test.fakes.FakeEntityWriter(),
+            aliasCache = FakeAliasCache(),
+            uniAExtractionService = uniAExtractionService,
+            fastTrackMutationEngine = FastTrackMutationEngine(
+                taskRepository = taskRepository,
+                scheduleBoard = FakeScheduleBoard(),
+                inspirationRepository = inspirationRepository
+            ),
+            taskRepository = taskRepository,
+            toolRegistry = FakeToolRegistry(),
+            timeProvider = timeProvider,
+            appScope = TestScope(testDispatcher)
+        )
     }
 
     @Test
@@ -113,5 +166,23 @@ class L2CrossOffLifecycleTest {
         // 4. Verification - Actionable Feed (ScheduledTask)
         // Task MUST be deleted from the actionable feed to prevent pipeline ghosting
         assertNull("Task should be deleted from actionable feed after migration", taskRepository.getTask(insertedId))
+    }
+
+    private class StubInspirationRepository : InspirationRepository {
+        override suspend fun insert(text: String): String = "stub-inspiration"
+
+        override fun getAll(): Flow<List<SchedulerTimelineItem.Inspiration>> = flowOf(emptyList())
+
+        override suspend fun delete(id: String) = Unit
+    }
+
+    private class StubTipGenerator : TipGenerator {
+        override suspend fun generate(task: ScheduledTask): List<String> = emptyList()
+    }
+
+    private class StubAsrService : AsrService {
+        override suspend fun transcribe(file: File): AsrResult = AsrResult.Success("")
+
+        override suspend fun isAvailable(): Boolean = true
     }
 }

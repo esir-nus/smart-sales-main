@@ -15,10 +15,12 @@
 - `FakeDispatcherProvider`：为 `runTest` 注入统一调度器。
 - （待补充）Fake Wi-Fi/BLE、Fake OSS、Fake AI 响应、样例 Markdown/音频等。
 - 约定：所有 Fake 需有可配置延迟/错误参数，确保状态机可测试。
+- 仓库级统一入口：优先使用 `scripts/run-tests.sh` 触发当前自动化测试任务。
 
 ## 当前状态（T0）
 - 目前只有 `FakeDispatcherProvider`，无法覆盖连接、AI、媒体等复杂流程。
-- 没有测试，只提供基础工具。
+- 已有基础断言测试，机械验证 `FakeDispatcherProvider` 的统一调度与可控推进。
+- 更完整的共享 Fake 已迁移到 `:core:test-fakes-domain` 与 `:core:test-fakes-platform`。
 
 ## 风险与限制
 - Fake 太少导致 Feature 测试不得不创建自定义 stub，进而分散维护成本。
@@ -30,5 +32,10 @@
 - 在 Fake 更新后同步修改各模块 README，确保测试步骤清晰。
 
 ## 调试与验证
-- 运行 `./gradlew :core:test:test`（补充样例后启用）。
+- 运行 `scripts/run-tests.sh infra` 检查测试基础设施相关任务。
+- 运行 `scripts/run-tests.sh l2` 执行高价值 L2 模拟测试切片。
+- 运行 `scripts/run-tests.sh pipeline` / `scheduler` 执行命名验证切片。
+- 运行 `scripts/run-tests.sh all` 执行当前仓库级默认单测入口。
+- `all` 是策展后的默认切片，不是所有模式的并集。
+- `./gradlew :core:test:test` 仍可单独执行，但当前仅用于确认模块装配是否正常。
 - 在 Feature 单测中引用 Fake 时，请更新 `docs/progress-log.md`，说明新增测试覆盖范围。

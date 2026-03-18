@@ -1,6 +1,7 @@
 ## Changelog
 
 > Key spec/impl changes, newest first. Like `git log --oneline`.
+> Historical shipment log only. Do not use this file as the active source of open/closed testing-wave status; `docs/plans/tracker.md` and `docs/cerb-e2e-test/tasklist_log.md` own that.
 
 ### 2026-03-17
 - **scheduler**: Wave 16 Scheduler Decoupling (The Archival Purge) SHIPPED. Formalized the Scheduler as a standalone plugin/domain by severing all hardcoded dependencies from the Core OS Pipeline.

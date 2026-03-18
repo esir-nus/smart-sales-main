@@ -1,22 +1,35 @@
-> **OS Layer**: —
+> **OS Layer**: JVM / Android Test
 
 # Test Infrastructure Spec
 
 ## 1. Description
-The `:core:test-fakes` module acts as the Single Source of Truth for Dual-Engine Data Fakes. It provides a standardized `PrismTestRig` to eliminate Mockito `whenever()` boilerplate in feature tests, specifically resolving Coroutine Scope crashes and Kotlin type-erasure issues that plagued UI component testing in Layer 4 assemblies. 
+The active shared test infrastructure is split across three modules:
+
+- `:core:test` for lightweight shared test helpers such as `FakeDispatcherProvider`
+- `:core:test-fakes-domain` for pure JVM, state-backed domain fakes
+- `:core:test-fakes-platform` for Android/platform-facing fakes layered on top of the domain fakes
+
+Together these modules are the current source of truth for reusable test doubles and helpers. The repo does not currently ship a `PrismTestRig`; tests wire the specific fakes they need directly.
 
 Testing infrastructure is treated as a first-class Cerb feature to enforce strict Anti-Drift and Anti-Illusion protocols.
 
 ## 2. Core Components
-- **PrismTestRig**: A unified dependency injection container for tests that provides pre-wired Fakes. Replaces 40+ lines of Mockito initialization logic.
-- **Fake Repositories**: Concrete, state-backed implementations of domain interfaces (`FakeHistoryRepository`, `FakeEntityRegistry`, `FakeMemoryRepository`, etc.).
-- **WorldStateSeeder**: (Formerly AcceptanceFixtureBuilder) The centralized, deterministic factory for generating B2B "chaos data" (aliases, overlapping context, homophones). Used to "pre-seed" memory injections into Fakes to prove routing logic handles reality and to prevent the "Empty DB Hallucination" bug.
+- **`:core:test`**: Shared helpers that do not belong to a fake data owner module.
+- **`:core:test-fakes-domain`**: Concrete, state-backed domain fakes (`FakeHistoryRepository`, `FakeEntityRepository`, `FakeMemoryRepository`, `FakeEntityWriter`, etc.).
+- **`:core:test-fakes-platform`**: Platform-aware fakes for pipeline and Android-facing seams (`FakeExecutor`, `FakeContextBuilder`, `FakeToolRegistry`, etc.).
+- **WorldStateSeeder**: The centralized, deterministic factory for generating B2B "chaos data" (aliases, overlapping context, homophones).
+- **`scripts/run-tests.sh`**: Canonical repo entrypoint for the current automated Gradle test targets.
+  First-class slices: `all` (curated repo-default), `infra`, `pipeline`, `scheduler`, `l2`.
+  Convenience alias: `app`.
 
-## 3. Wave Plan
+## 3. Current Status
 
-| Wave | Focus | Status | Deliverables |
-|------|-------|--------|--------------|
-| **1** | Core Fakes Migration | ✅ SHIPPED | Extract existing fragmented Fake classes out of `app-core` and centralize them into `:core:test-fakes`. |
-| **2** | State Completeness | ✅ SHIPPED | Built missing Fakes (`FakeMemoryRepository`, `FakeEntityWriter`). Upgraded Fakes with `Mutex` locks to guarantee thread-safety during highly parallel L2 Simulation testing (Write-Back Concurrency limits). |
-| **3** | The Test Rig | 🔲 PLANNED | Build `PrismTestRig`, handle `runTest` integration seamlessly, and roll out to support `MascotService` L2 simulation test. |
-| **4** | Domain Fake Isolation | 🔲 PLANNED | Split `:core:test-fakes` into `:core:test-fakes-domain` (Pure JVM) and `:core:test-fakes-platform` (Android). Allows `:domain` and `:data` modules to consume domain fakes without Android classpath contamination. |
+| Area | Status | Notes |
+|------|--------|-------|
+| Shared helper module | ✅ SHIPPED | `:core:test` exists as a lightweight helper module and currently exposes `FakeDispatcherProvider`. |
+| State-backed fake coverage | ✅ SHIPPED | Shared domain and platform fakes exist across the split fake modules. |
+| Domain/platform isolation | ✅ SHIPPED | The fake stack is split into `:core:test-fakes-domain` and `:core:test-fakes-platform`. |
+| Canonical runner | ✅ SHIPPED | `scripts/run-tests.sh` is the current repo-level wrapper for automated Gradle test targets. |
+| Runner slice contract | ✅ SHIPPED | `all` is explicitly a curated repo-default slice, while `infra`, `pipeline`, `scheduler`, and `l2` are first-class named verification slices. |
+| Infra assertion reality | ✅ SHIPPED | The infra runner now executes real assertions for dispatcher control, state-backed fake read-through, and platform fake collaboration behavior. |
+| `PrismTestRig` | ⏸️ DEFERRED | Historical proposal only. It is not part of the current delivered contract and should not be treated as live infrastructure. |

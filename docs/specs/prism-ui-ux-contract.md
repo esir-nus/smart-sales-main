@@ -1,7 +1,7 @@
 # Prism UI/UX Contract (The Skin)
 
 > **Status:** Active Index & Policy Rule
-> **Last Updated:** 2026-03-14
+> **Last Updated:** 2026-03-18
 > **Architecture Companion:** [Architecture.md](./Architecture.md)
 > **Terminology:** [GLOSSARY.md](./GLOSSARY.md)
 
@@ -32,7 +32,7 @@ To enable **Parallel UI Development** without being blocked by backend pipeline 
 |--------|--------|-----------|
 | Home Screen | ✅ Shipped | [HomeScreen.md](../cerb-ui/agent-intelligence/spec.md) |
 | Chat Interface | ✅ Shipped | [ChatInterface.md](../cerb-ui/agent-intelligence/spec.md) |
-| Scheduler Drawer | ✅ Shipped | [SchedulerDrawer.md](../cerb-ui/scheduler-drawer/spec.md) |
+| Scheduler Drawer | ✅ Shipped | [SchedulerDrawer.md](../cerb-ui/scheduler/contract.md) |
 | History Drawer | ✅ Shipped | [HistoryDrawer.md](../cerb/session-history/spec.md) |
 | Audio Drawer | ✅ Shipped | [AudioDrawer.md](../cerb/audio-management/spec.md) |
 | Connectivity Modal | ✅ Shipped | [ConnectivityModal.md](../cerb/connectivity-bridge/spec.md) |

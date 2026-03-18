@@ -17,6 +17,51 @@ Crucially, the RL system is **Event-Driven**. To preserve mobile battery and ens
 - **Writer**: Writes new observations to RAM *and* persists them to SSD (write-through).
 - **Constraint**: Never reads/writes `UserHabitRepository` directly. Always operates through the Kernel or RAM.
 
+### Wave 21 T5 Packet Contract
+
+For the current hardened lane, the RL learning packet is intentionally narrow:
+
+1. latest user input
+2. bounded recent session turns
+3. active entity context
+4. optional `schedulerPatternContext` for **user-global habits only**
+
+Explicitly deferred from the packet unless a later spec adds them:
+
+- existing habit context
+- raw `scheduleContext`
+- tool artifacts
+- document context
+
+This keeps the lane contextual without silently turning RL into a broad active-RAM scrape.
+
+### Scheduler Signals For User Habits
+
+Scheduler information is worth learning from, but only in a bounded way.
+
+The intended rule is:
+
+- scheduler-derived pattern signals may inform **user-global** habits
+- scheduler context should not silently become a general-purpose RL packet
+- scheduler-derived signals should not infer **client/entity** habits by default
+
+Good scheduler-derived user signals include:
+
+- preferred meeting times
+- preferred durations
+- scheduling lead time
+- reschedule tendency
+- urgency style
+
+If this expands in code later, it should preferably enter as a narrow summarized field such as `schedulerPatternContext`, not as raw scheduler text or a broad schedule dump.
+
+Runtime boundary for this follow-up:
+
+- `schedulerPatternContext` is supporting context, not the RL trigger
+- latest user input remains the trigger
+- contextual/client habits still require active entity context; scheduler pattern signals alone must not mint client/entity habits by default
+- in the current Wave 21 runtime, when `schedulerPatternContext` is attached, entity-bound RL observations are rejected by default and only user-global observations may pass
+
 ---
 
 ## Related Cerb Specs
@@ -99,9 +144,11 @@ Preferences fade if not reinforced. Half-life ~30 days.
 
 Instead of forcing the main `Analyst` or `Scheduler` prompt to extract observations (violating single responsibility and diluting the token window), the RL Module operates on a **Background Path**.
 
-At the start of the Unified Pipeline (Step 1), `RealUnifiedPipeline` asynchronously fires `HabitListener.analyzeAsync`. This daemon uses a specialized prompt directed at the `EXTRACTOR` model to parse the user's input against the entire context.
+At the start of the Unified Pipeline (Step 1), `RealUnifiedPipeline` asynchronously fires `HabitListener.analyzeAsync`. This daemon uses a specialized prompt directed at the `EXTRACTOR` model to parse the user's input against the bounded learning packet.
 
 To properly decouple and establish true OS model constraints, we enforce a **Secondary Currency** contract (`RlPayload`) specifically designed for background Habit Extraction. This ensures the background listener mathematically aligns with its own Kotlin data class without artificially tangling itself to the main conversational SSD mutation pipeline (`UnifiedMutation`).
+
+The RL module consumes Kernel-admitted session memory, but it does not own session admission or session-retention policy.
 
 ```json
 {

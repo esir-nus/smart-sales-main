@@ -20,12 +20,20 @@ object PipelineValve {
         
         // Phase 1.5: Path A Optimistic UI
         PATH_A_PARSED,
+        TASK_EXTRACTED_VAGUE,
+        THOUGHT_EXTRACTED,
         PATH_A_DB_WRITTEN,
         
         // Phase 2: Context Assembly
         ALIAS_RESOLUTION,       
         SSD_GRAPH_FETCHED,      
         LIVING_RAM_ASSEMBLED,   
+        RL_LISTENER_TRIGGERED,
+        RL_SCHEDULER_PATTERN_ATTACHED,
+        RL_EXTRACTION_EMITTED,
+        RL_PAYLOAD_DECODED,
+        RL_HABIT_WRITE_EXECUTED,
+        RL_RAM_REFRESH_APPLIED,
         
         // Phase 3: The Brain
         LLM_BRAIN_EMISSION,     
@@ -38,6 +46,7 @@ object PipelineValve {
         // Phase 4: System III (First-Party Plugins)
         PLUGIN_DISPATCH_RECEIVED,
         PLUGIN_INTERNAL_ROUTING,
+        PLUGIN_CAPABILITY_CALL,
         PLUGIN_EXTERNAL_CALL,
         PLUGIN_YIELDED_TO_OS,
         

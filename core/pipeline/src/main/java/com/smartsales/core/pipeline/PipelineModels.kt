@@ -54,6 +54,14 @@ sealed class PipelineResult {
     ) : PipelineResult()
 
     /**
+     * Shared Path A inspiration write committed through the single inspiration owner.
+     */
+    data class InspirationCommitted(
+        val id: String,
+        val content: String
+    ) : PipelineResult()
+
+    /**
      * Standard conversational output (verdict or chat).
      */
     data class ConversationalReply(val text: String) : PipelineResult()

@@ -2,6 +2,12 @@ package com.smartsales.core.pipeline
 
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.core.context.EnhancedContext
+import com.smartsales.prism.domain.scheduler.UniAExtractionPayload
+import com.smartsales.prism.domain.scheduler.UniAExtractionRequest
+import com.smartsales.prism.domain.scheduler.UniBExtractionPayload
+import com.smartsales.prism.domain.scheduler.UniBExtractionRequest
+import com.smartsales.prism.domain.scheduler.UniCExtractionPayload
+import com.smartsales.prism.domain.scheduler.UniCExtractionRequest
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -142,6 +148,138 @@ open class PromptCompiler @Inject constructor() {
             }
         }
     }
+
+    /**
+     * 构建 Uni-A 轻量精确提取 Prompt。
+     * 说明：机器路由 schema 必须直接来自 Kotlin contract，不能手写 JSON 模板。
+     */
+    open fun compileUniAExtractionPrompt(request: UniAExtractionRequest): String = """
+你是日程 Path A 的轻量精确提取器。
+
+你的任务不是全面理解一切，而是只回答一个问题：
+这段话是否足够精确，可以直接进入 Uni-A exact create？
+
+当前时间锚点：
+- now_iso: ${request.nowIso}
+- timezone: ${request.timezone}
+- displayed_date_iso: ${request.displayedDateIso ?: "null"}
+
+规则：
+1. 如果输入是单个、明确、可落库的精确日程，就输出 `decision = "EXACT_CREATE"`。
+2. 如果时间含糊、需要澄清、包含多任务、是改期/删除/灵感、或你没有把握，就输出 `decision = "NOT_EXACT"`。
+3. `EXACT_CREATE` 时，必须填写 `task`，并满足：
+   - `title` 为非空自然语言标题
+   - `startTimeIso` 必须是严格 ISO-8601，带时区偏移或 `Z`
+   - `durationMinutes` 为整数分钟；即时提醒可为 `0`
+   - `urgency` 只能是 `L1` / `L2` / `L3` / `FIRE_OFF`
+4. 相对日期锚点规则：
+   - `明天` / `tomorrow` 必须锚定 `now_iso` 所在真实日期，不得改锚到日历当前页。
+   - `下一天` / `后一天` 可以锚定 `displayed_date_iso`；如果该值为 `null`，则输出 `NOT_EXACT`，不要猜页面日期。
+5. 只有“日期锚点”但没有明确钟点的输入，不属于 `Uni-A`。
+   - 例如 `明天提醒我打电话`、`tomorrow remind me to go to the airport`、`后一天提醒我吃饭`
+   - 这些都必须输出 `NOT_EXACT`，交给 `Uni-B`，不得擅自补成 `00:00`、当前时刻、午间或任何猜测时刻。
+6. 中文口语时间规则：
+   - 裸 `一点` / `1点` 默认解释为 `13:00`。
+   - 只有显式早晨前缀（如 `凌晨一点`、`凌晨1点`）才可解释为 `01:00`。
+7. `NOT_EXACT` 时，不要猜时间，不要输出伪精确结果，在 `reason` 中简短说明原因。
+8. 只能输出严格 JSON，禁止 Markdown 包裹。
+
+严格输出以下 Kotlin contract 对应的 JSON：
+${
+    JsonSchemaGenerator.generateSchema(
+        UniAExtractionPayload.serializer().descriptor,
+        "  "
+    )
+}
+
+用户输入：
+${request.transcript}
+""".trimIndent()
+
+    /**
+     * 构建 Uni-B 轻量模糊提取 Prompt。
+     * 说明：机器路由 schema 必须直接来自 Kotlin contract，不能手写 JSON 模板。
+     */
+    open fun compileUniBExtractionPrompt(request: UniBExtractionRequest): String = """
+你是日程 Path A 的轻量模糊提取器。
+
+你的任务不是判断“是否能大概安排”，而是只回答一个问题：
+这段话是否应该进入 Uni-B vague create？
+
+当前时间锚点：
+- now_iso: ${request.nowIso}
+- timezone: ${request.timezone}
+- displayed_date_iso: ${request.displayedDateIso ?: "null"}
+
+规则：
+1. 只有在“用户明确想安排日程”且“存在真实日期锚点”但“时间仍不够精确进入 Uni-A”时，才输出 `decision = "VAGUE_CREATE"`。
+2. 如果输入已经足够精确，应输出 `NOT_VAGUE`，让系统保留给 Uni-A，而不是把精确任务降级成模糊任务。
+3. 如果输入根本不属于 schedulable，或连日期锚点都没有，也输出 `NOT_VAGUE`。
+4. `VAGUE_CREATE` 时，必须填写 `task`，并满足：
+   - `title` 为非空自然语言标题
+   - `anchorDateIso` 必须是严格 `yyyy-MM-dd`
+   - `timeHint` 可为空；若存在，用于保留“下午/下班后”等模糊时间线索
+   - `urgency` 只能是 `L1` / `L2` / `L3` / `FIRE_OFF`
+5. 相对日期锚点规则：
+   - `明天` / `tomorrow` 必须锚定 `now_iso` 所在真实日期
+   - `下一天` / `后一天` 可以锚定 `displayed_date_iso`；如果该值为 `null`，不要猜页面日期，输出 `NOT_VAGUE`
+6. 只有“日期锚点”但没有明确钟点的输入，优先属于 `Uni-B`。
+   - 例如 `明天提醒我打电话`、`tomorrow remind me to go to the airport`、`后一天提醒我吃饭`
+   - 这些都应保留为模糊任务，不得补出 `00:00`、当前时刻或任何猜测时刻。
+7. 中文口语时间规则：
+   - 裸 `一点` / `1点` 默认解释为 `13:00`
+   - 只有显式早晨前缀（如 `凌晨一点`）才可解释为 `01:00`
+8. 如果用户完全没有给出日期锚点，例如“安排 team standup”，不要编造今天或当前页日期；输出 `NOT_VAGUE`。
+9. 只能输出严格 JSON，禁止 Markdown 包裹。
+
+严格输出以下 Kotlin contract 对应的 JSON：
+${
+    JsonSchemaGenerator.generateSchema(
+        UniBExtractionPayload.serializer().descriptor,
+        "  "
+    )
+}
+
+用户输入：
+${request.transcript}
+""".trimIndent()
+
+    /**
+     * 构建 Uni-C 轻量灵感提取 Prompt。
+     * 说明：机器路由 schema 必须直接来自 Kotlin contract，不能手写 JSON 模板。
+     */
+    open fun compileUniCExtractionPrompt(request: UniCExtractionRequest): String = """
+你是日程 Path A 的轻量灵感提取器。
+
+你的任务不是安排日程，而是只回答一个问题：
+这段话是否属于 timeless inspiration，应该进入 Uni-C inspiration create？
+
+当前时间锚点：
+- now_iso: ${request.nowIso}
+- timezone: ${request.timezone}
+
+规则：
+1. 只有当输入表达的是想法、愿望、提醒自己、未来某天再说、值得记住的念头，而不是当前可执行的排程承诺时，才输出 `decision = "INSPIRATION_CREATE"`。
+2. 如果输入其实是在安排日程，哪怕时间不完整，也必须输出 `NOT_INSPIRATION`，留给 `Uni-A` / `Uni-B`。
+3. `INSPIRATION_CREATE` 时，必须填写 `idea`，并满足：
+   - `content` 为非空自然语言核心内容
+   - `title` 可为空；若存在，只能是短标题，不能夹带时间/任务字段
+4. 不要把 schedulable 语句伪装成 inspiration。
+   - 例如 `明天提醒我打电话`、`三天以后提醒我开会` 都不是 `Uni-C`
+5. 如果你没有把握，输出 `NOT_INSPIRATION`，不要“为了保存点什么”就输出灵感。
+6. 只能输出严格 JSON，禁止 Markdown 包裹。
+
+严格输出以下 Kotlin contract 对应的 JSON：
+${
+    JsonSchemaGenerator.generateSchema(
+        UniCExtractionPayload.serializer().descriptor,
+        "  "
+    )
+}
+
+用户输入：
+${request.transcript}
+""".trimIndent()
 
     /**
      * Analyst 模式系统提示词

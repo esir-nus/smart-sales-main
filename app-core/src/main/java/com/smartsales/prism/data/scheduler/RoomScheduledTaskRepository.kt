@@ -39,14 +39,16 @@ class RoomScheduledTaskRepository @Inject constructor(
     }
 
     override suspend fun insertTask(task: ScheduledTask): String {
-        val entity = task.copy(id = UUID.randomUUID().toString()).toEntity()
+        val entity = task.copy(id = task.id.ifBlank { UUID.randomUUID().toString() }).toEntity()
         dao.insert(entity)
         PipelineValve.tag(PipelineValve.Checkpoint.DB_WRITE_EXECUTED, entity.taskId.hashCode(), "Task Inserted (Fast-Track/Room)", entity.taskId)
         return entity.taskId
     }
 
     override suspend fun batchInsertTasks(tasks: List<ScheduledTask>): List<String> {
-        val entities = tasks.map { it.copy(id = UUID.randomUUID().toString()).toEntity() }
+        val entities = tasks.map { task ->
+            task.copy(id = task.id.ifBlank { UUID.randomUUID().toString() }).toEntity()
+        }
         dao.insertAll(entities)
         PipelineValve.tag(PipelineValve.Checkpoint.DB_WRITE_EXECUTED, entities.size, "Batch Tasks Inserted (Room)", entities.joinToString { it.taskId })
         return entities.map { it.taskId }

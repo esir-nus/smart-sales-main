@@ -199,4 +199,144 @@ class SchedulerLinterTest {
         // which the linter catches and returns as FastTrackResult.NoMatch. We expect it NOT to crash.
         assertTrue("Expected NoMatch due to SerializationException", result is FastTrackResult.NoMatch)
     }
+
+    @Test
+    fun `Uni-A exact extraction returns CreateTasks with unifiedId`() {
+        val json = """
+            {
+              "decision": "EXACT_CREATE",
+              "task": {
+                "title": "开会",
+                "startTimeIso": "2026-03-18T02:00:00Z",
+                "durationMinutes": 45,
+                "urgency": "L2"
+              }
+            }
+        """.trimIndent()
+
+        val result = linter.parseUniAExtraction(json, unifiedId = "uni-a-001")
+
+        assertTrue(result is FastTrackResult.CreateTasks)
+        val success = result as FastTrackResult.CreateTasks
+        assertEquals("uni-a-001", success.params.unifiedId)
+        assertEquals(1, success.params.tasks.size)
+        assertEquals("开会", success.params.tasks.first().title)
+        assertEquals("2026-03-18T02:00:00Z", success.params.tasks.first().startTimeIso)
+        assertEquals(45, success.params.tasks.first().durationMinutes)
+        assertEquals(UrgencyEnum.L2_IMPORTANT, success.params.tasks.first().urgency)
+    }
+
+    @Test
+    fun `Uni-A not exact returns NoMatch`() {
+        val json = """
+            {
+              "decision": "NOT_EXACT",
+              "reason": "缺少明确时间"
+            }
+        """.trimIndent()
+
+        val result = linter.parseUniAExtraction(json, unifiedId = "uni-a-002")
+
+        assertTrue(result is FastTrackResult.NoMatch)
+        assertEquals("缺少明确时间", (result as FastTrackResult.NoMatch).reason)
+    }
+
+    @Test
+    fun `Uni-A exact extraction rejects fabricated time for date-only tomorrow input`() {
+        val json = """
+            {
+              "decision": "EXACT_CREATE",
+              "task": {
+                "title": "提醒我打车去机场",
+                "startTimeIso": "2026-03-19T04:44:30.211935Z",
+                "durationMinutes": 0,
+                "urgency": "L2"
+              }
+            }
+        """.trimIndent()
+
+        val result = linter.parseUniAExtraction(
+            input = json,
+            unifiedId = "uni-a-003",
+            transcript = "明天提醒我打车去机场"
+        )
+
+        assertTrue(result is FastTrackResult.NoMatch)
+        assertTrue((result as FastTrackResult.NoMatch).reason.contains("date-only input"))
+    }
+
+    @Test
+    fun `Uni-B vague extraction returns CreateVagueTask with unifiedId`() {
+        val json = """
+            {
+              "decision": "VAGUE_CREATE",
+              "task": {
+                "title": "提醒我开会",
+                "anchorDateIso": "2026-03-21",
+                "timeHint": "下午",
+                "urgency": "L3"
+              }
+            }
+        """.trimIndent()
+
+        val result = linter.parseUniBExtraction(json, unifiedId = "uni-b-001")
+
+        assertTrue(result is FastTrackResult.CreateVagueTask)
+        val success = result as FastTrackResult.CreateVagueTask
+        assertEquals("uni-b-001", success.params.unifiedId)
+        assertEquals("提醒我开会", success.params.title)
+        assertEquals("2026-03-21", success.params.anchorDateIso)
+        assertEquals("下午", success.params.timeHint)
+        assertEquals(UrgencyEnum.L3_NORMAL, success.params.urgency)
+    }
+
+    @Test
+    fun `Uni-B not vague returns NoMatch`() {
+        val json = """
+            {
+              "decision": "NOT_VAGUE",
+              "reason": "没有日期锚点"
+            }
+        """.trimIndent()
+
+        val result = linter.parseUniBExtraction(json, unifiedId = "uni-b-002")
+
+        assertTrue(result is FastTrackResult.NoMatch)
+        assertEquals("没有日期锚点", (result as FastTrackResult.NoMatch).reason)
+    }
+
+    @Test
+    fun `Uni-C inspiration extraction returns CreateInspiration with unifiedId`() {
+        val json = """
+            {
+              "decision": "INSPIRATION_CREATE",
+              "idea": {
+                "content": "以后想练口语",
+                "title": "口语想法"
+              }
+            }
+        """.trimIndent()
+
+        val result = linter.parseUniCExtraction(json, unifiedId = "uni-c-001")
+
+        assertTrue(result is FastTrackResult.CreateInspiration)
+        val success = result as FastTrackResult.CreateInspiration
+        assertEquals("uni-c-001", success.params.unifiedId)
+        assertEquals("以后想练口语", success.params.content)
+    }
+
+    @Test
+    fun `Uni-C not inspiration returns NoMatch`() {
+        val json = """
+            {
+              "decision": "NOT_INSPIRATION",
+              "reason": "仍然属于 schedulable"
+            }
+        """.trimIndent()
+
+        val result = linter.parseUniCExtraction(json, unifiedId = "uni-c-002")
+
+        assertTrue(result is FastTrackResult.NoMatch)
+        assertEquals("仍然属于 schedulable", (result as FastTrackResult.NoMatch).reason)
+    }
 }

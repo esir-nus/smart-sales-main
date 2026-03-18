@@ -132,12 +132,14 @@ class RealContextBuilderTest {
     @Test
     fun `build() injects schedule context`() = runTest {
         // Arrange: Seed a task
+        timeProvider.setDateTime(2026, 2, 2, 9, 0)
         val task = com.smartsales.prism.domain.scheduler.ScheduledTask(
             id = "t1",
             timeDisplay = "10:00",
             title = "Important Meeting",
             urgencyLevel = com.smartsales.prism.domain.scheduler.UrgencyLevel.L1_CRITICAL,
-            startTime = java.time.Instant.now(),
+            startTime = timeProvider.now.plusSeconds(60 * 60),
+            durationMinutes = 45,
             keyPerson = "Boss",
             location = "Room 101"
         )
@@ -152,6 +154,13 @@ class RealContextBuilderTest {
         assert(schedule.contains("Important Meeting"))
         assert(schedule.contains("关键人: Boss"))
         assert(schedule.contains("地点: Room 101"))
+        assertNotNull(context.schedulerPatternContext)
+        val pattern = context.schedulerPatternContext!!
+        assertEquals(1, pattern.upcomingTaskCount)
+        assertEquals("morning", pattern.preferredTimeWindow)
+        assertEquals(45, pattern.preferredDurationMinutes)
+        assertEquals("same_day", pattern.leadTimeStyle)
+        assertEquals("critical_heavy", pattern.urgencyStyle)
     }
 
     @Test
@@ -210,6 +219,7 @@ class RealContextBuilderTest {
         assertNull("MINIMAL should NOT load habit context", context.habitContext)
         assertNull("MINIMAL should NOT load entity knowledge", context.entityKnowledge)
         assertNull("MINIMAL should NOT load schedule context", context.scheduleContext)
+        assertNull("MINIMAL should NOT load scheduler pattern context", context.schedulerPatternContext)
 
         // Assert Physical Layer Bypasses (Mathematical Proof)
         assertEquals("MINIMAL should physically bypass UserHabitRepository LTM queries", 0, habitRepository.getGlobalHabitsCount)

@@ -72,11 +72,14 @@ data class EnhancedContext(
     val documentContext: String? = null,
     val habitContext: HabitContext? = null,
     val scheduleContext: String? = null,
+    val schedulerPatternContext: SchedulerPatternContext? = null,
     val systemPromptOverride: String? = null
 )
 ```
 
 > **Note**: `habitContext` is auto-populated from the Working Set. Applications should NOT pass `entityIds` explicitly — the Kernel handles entity-to-habit resolution automatically.
+>
+> `schedulerPatternContext` is a separate summarized scheduler-owned signal for RL user-habit learning. It is not raw `scheduleContext`, and it does not authorize default client/entity-habit inference.
 
 ---
 

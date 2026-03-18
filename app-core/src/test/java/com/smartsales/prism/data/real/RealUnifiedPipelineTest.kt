@@ -8,6 +8,7 @@ import com.smartsales.core.context.ContextBuilder
 import com.smartsales.core.context.ContextDepth
 import com.smartsales.core.context.EnhancedContext
 import com.smartsales.core.context.ModeMetadata
+import com.smartsales.core.pipeline.HabitListener
 import com.smartsales.core.pipeline.PipelineInput
 import com.smartsales.core.pipeline.PipelineResult
 import com.smartsales.core.pipeline.ParseResult
@@ -21,9 +22,14 @@ import com.smartsales.prism.domain.scheduler.fakes.FakeTimeProvider
 import com.smartsales.core.test.fakes.*
 import com.smartsales.prism.domain.telemetry.PipelineTelemetry
 import com.smartsales.prism.domain.telemetry.PipelinePhase
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -32,6 +38,7 @@ import org.junit.Test
 import org.mockito.kotlin.mock
 import com.smartsales.core.llm.ExecutorResult
 
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class RealUnifiedPipelineTest {
 
     private lateinit var pipeline: RealUnifiedPipeline
@@ -207,5 +214,68 @@ class RealUnifiedPipelineTest {
         
         // Prove downstream EntityWriter/Scheduler was bypassed because CRM was skipped
         // By defining a strict L1 route test, we explicitly prevent Mockito mapping illusions.
+    }
+
+    @Test
+    fun `processInput does not block main reply on slow RL listener`() = runTest {
+        val slowListener = object : HabitListener {
+            var started = false
+            var completed = false
+
+            override fun analyzeAsync(rawInput: String, context: EnhancedContext, coroutineScope: CoroutineScope) {
+                started = true
+                coroutineScope.launch {
+                    delay(5_000)
+                    completed = true
+                }
+            }
+        }
+
+        val localPipeline = RealUnifiedPipeline(
+            contextBuilder = contextBuilder,
+            entityDisambiguationService = entityDisambiguationService,
+            inputParserService = inputParserService,
+            schedulerLinter = SchedulerLinter(),
+            entityWriter = entityWriter,
+            sessionTitleGenerator = sessionTitleGenerator,
+            promptCompiler = promptCompiler,
+            executor = executor,
+            telemetry = telemetry,
+            habitListener = slowListener,
+            appScope = this
+        )
+
+        inputParserService.nextResult = ParseResult.Success(emptyList(), null, """{"intent":"scheduler"}""")
+        entityDisambiguationService.nextResult = DisambiguationResult.PassThrough
+        executor.defaultResponse = ExecutorResult.Success(
+            content = """{
+                "classification": "schedulable",
+                "tasks": [{
+                    "title": "Call Tom",
+                    "startTime": "2026-03-10 10:00",
+                    "duration": "30m",
+                    "urgency": "L2_IMPORTANT"
+                }]
+            }""".trimIndent(),
+            tokenUsage = com.smartsales.core.llm.TokenUsage(100, 10)
+        )
+
+        val results = localPipeline.processInput(
+            PipelineInput(
+                rawText = "Schedule a call with Tom",
+                isVoice = false,
+                intent = QueryQuality.CRM_TASK,
+                unifiedId = "test_unified_id"
+            )
+        ).toList()
+
+        assertTrue(slowListener.started)
+        assertTrue(results.any { it is PipelineResult.TaskCommandProposal })
+        assertTrue("Main pipeline should complete before slow RL finishes", !slowListener.completed)
+
+        advanceTimeBy(5_000)
+        runCurrent()
+
+        assertTrue("Slow RL listener should finish after the main reply path completes", slowListener.completed)
     }
 }

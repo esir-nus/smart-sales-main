@@ -138,6 +138,11 @@ class RealBadgeAudioPipeline @Inject constructor(
                                     )
                                 }
                             }
+                            is PipelineResult.InspirationCommitted -> {
+                                if (!pathACompletion.isCompleted) {
+                                    pathACompletion.complete(SchedulerResult.InspirationSaved(result.id))
+                                }
+                            }
                             is PipelineResult.MascotIntercepted,
                             is PipelineResult.BadgeDelegationIntercepted,
                             is PipelineResult.ConversationalReply,

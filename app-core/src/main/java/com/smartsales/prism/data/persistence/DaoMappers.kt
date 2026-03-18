@@ -33,7 +33,9 @@ fun ScheduledTask.toEntity(): ScheduledTaskEntity = ScheduledTaskEntity(
     hasAlarm = hasAlarm,
     isSmartAlarm = isSmartAlarm,
     alarmCascadeJson = if (alarmCascade.isEmpty()) null else JSONArray(alarmCascade).toString(),
-    urgencyLevel = urgencyLevel.name
+    urgencyLevel = urgencyLevel.name,
+    hasConflict = hasConflict,
+    isVague = isVague
 )
 
 fun ScheduledTaskEntity.toDomain(): ScheduledTask {
@@ -46,7 +48,9 @@ fun ScheduledTaskEntity.toDomain(): ScheduledTask {
     // 重建 timeDisplay（左侧时间标签）
     val startZoned = startInstant.atZone(zone)
     val endZoned = endInstant?.atZone(zone)
-    val timeDisplay = if (endZoned != null) {
+    val timeDisplay = if (isVague) {
+        "待定"
+    } else if (endZoned != null) {
         "${startZoned.format(timeFormatter)} - ${endZoned.format(timeFormatter)}"
     } else {
         "${startZoned.format(timeFormatter)} - ..."
@@ -54,6 +58,7 @@ fun ScheduledTaskEntity.toDomain(): ScheduledTask {
     
     // 重建 dateRange（展开卡片的 📅 行）
     val dateRange = when {
+        isVague -> "${startZoned.format(dateFormatter)} · 时间待定"
         endZoned == null -> "${startZoned.format(dateFormatter)} ${startZoned.format(timeFormatter)} - ..."
         startZoned.toLocalDate() == endZoned.toLocalDate() -> "${startZoned.format(timeFormatter)} - ${endZoned.format(timeFormatter)}"
         else -> "${startZoned.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))} ~ ${endZoned.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))}"
@@ -89,6 +94,8 @@ fun ScheduledTaskEntity.toDomain(): ScheduledTask {
         isSmartAlarm = isSmartAlarm,
         alarmCascade = cascade,
         urgencyLevel = safeEnumValueOf(urgencyLevel, fallback = UrgencyLevel.L3_NORMAL),
-        dateRange = dateRange
+        dateRange = dateRange,
+        hasConflict = hasConflict,
+        isVague = isVague
     )
 }

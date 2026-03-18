@@ -35,7 +35,7 @@ This file is allowed to be ahead of the codebase.
 
 1. **Reinforcement never blocks the main response**: The user-facing query lane must not wait on the habit learner to finish.
 2. **The trigger is always the latest user input**: The reinforcement lane starts from a new user utterance event, not from continuous rescanning of the whole session.
-3. **Learning material is contextual**: The learner should assess the latest user input together with bounded session history and active RAM context, not the latest utterance in isolation.
+3. **Learning material is contextual**: The learner should assess the latest user input together with bounded session history and active entity context, not the latest utterance in isolation.
 4. **Observation extraction is typed**: Background observations must be parsed into structured RL payloads before they reach storage.
 5. **Empty learning is a valid outcome**: If no habit is learned, the system should no-op quietly.
 6. **SSD truth and RAM should converge**: When a new habit is accepted, the active session should refresh the relevant RAM sections through approved write-through.
@@ -43,8 +43,11 @@ This file is allowed to be ahead of the codebase.
 8. **The active entity set matters**: Contextual habits should derive from the currently active session context, not random global lookup.
 9. **Fragmented turns are normal**: Users may express a habit across multiple short or incomplete turns, so the learner must treat the session as accumulating material rather than demand one perfect sentence.
 10. **Session-memory ownership stays outside RL**: The learner may consume bounded recent-turn context, but it does not own session-memory admission rules.
-11. **Presentation is downstream of learned truth**: UI may reflect new habits after RAM refresh, but presentation state is not itself the learned fact.
-12. **The lane is observable**: Background learning and refresh should be testable and traceable even if it is not user-blocking.
+11. **Broader RAM expansion must be explicit**: Existing habit context, tool artifacts, and document context do not silently enter the learning packet unless a later spec explicitly adds them.
+12. **Scheduler signals are user-habit only by default**: Scheduler-derived pattern signals may inform user-global habits, but they must not silently bleed into client/entity habit inference.
+13. **Contextual habits require active entity grounding**: A non-null entity habit must resolve against the active entity set in session context before it is accepted.
+14. **Presentation is downstream of learned truth**: UI may reflect new habits after RAM refresh, but presentation state is not itself the learned fact.
+15. **The lane is observable**: Background learning and refresh should be testable and traceable even if it is not user-blocking.
 
 ---
 
@@ -68,7 +71,11 @@ This means:
 
 - latest user input
 - bounded recent session history
-- currently active RAM context
+- active entity context
+
+### Optional Supporting Signal
+
+- `schedulerPatternContext` for **user-global** habit learning only
 
 ### Why
 
@@ -79,22 +86,52 @@ The real signal may only emerge across turns, for example:
 - "Make it shorter next time"
 - "Actually with Tom, keep it brief"
 
-The learner should therefore treat the newest utterance as the trigger, but use recent session buildup as the learning material.
+The learner should therefore treat the newest utterance as the trigger, but use recent session buildup plus the active entity set as the learning material.
 
 ### Rule
 
 The newest user input is the **trigger** and **entrypoint**.
-The recent session history plus active RAM context are the **interpretation frame**.
+The recent session history plus active entity context are the **interpretation frame**.
 
 The learner must not require all habit meaning to be fully contained inside one isolated utterance.
+Broader RAM fields may be added later, but only through an explicit contract update.
+
+### Scheduler-Derived Habit Signals
+
+Scheduler behavior is a legitimate source of **user-global** habit learning, but it should be treated carefully.
+
+Allowed direction:
+
+- learn stable user scheduling tendencies from scheduler-derived pattern signals
+- examples:
+  - preferred meeting times
+  - preferred durations
+  - scheduling lead time
+  - reschedule tendency
+  - urgency style
+
+Not allowed by default:
+
+- using raw scheduler context as a blanket RL packet
+- using scheduler-derived signals to infer **client/entity** habits unless a later feature spec explicitly allows it
+
+Rule:
+
+- scheduler-derived signals may enrich **user habit** learning
+- active entity context remains the default source for **client habit** learning
+- if scheduler context is later added to the runtime packet, it should enter as a narrow summarized signal such as `schedulerPatternContext`, not as a raw transcript dump
 
 ---
 
 ## Canonical Valves
 
 - `LIVING_RAM_ASSEMBLED`
-- `LLM_BRAIN_EMISSION`
-- `LINTER_DECODED`
+- `RL_LISTENER_TRIGGERED`
+- `RL_SCHEDULER_PATTERN_ATTACHED`
+- `RL_EXTRACTION_EMITTED`
+- `RL_PAYLOAD_DECODED`
+- `RL_HABIT_WRITE_EXECUTED`
+- `RL_RAM_REFRESH_APPLIED`
 - `DB_WRITE_EXECUTED`
 
 ---

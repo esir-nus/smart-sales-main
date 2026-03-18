@@ -15,6 +15,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * Version 5: ScheduledTask 添加 urgencyLevel 列
  * Version 6: 添加 sessions 表
  * Version 7: 添加 session_messages 表 (会话消息持久化)
+ * Version 8: ScheduledTask 添加 hasConflict / isVague 列
  * exportSchema = false: 不导出 schema JSON (简化 MVP)
  */
 @Database(
@@ -26,7 +27,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SessionEntity::class,
         MessageEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 abstract class PrismDatabase : RoomDatabase() {
@@ -97,6 +98,13 @@ abstract class PrismDatabase : RoomDatabase() {
                     )
                 """.trimIndent())
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_session_messages_sessionId ON session_messages(sessionId)")
+            }
+        }
+
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE scheduled_tasks ADD COLUMN hasConflict INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE scheduled_tasks ADD COLUMN isVague INTEGER NOT NULL DEFAULT 0")
             }
         }
     }

@@ -18,6 +18,7 @@ Its job is architectural, not semantic-completion work:
 
 This shard is intentionally narrower than later universe specs.
 It does **not** define `Uni-A` exact semantic understanding.
+That universe now lives in `docs/cerb/scheduler-path-a-uni-a/spec.md`.
 
 ## T0 Goal
 
@@ -90,6 +91,7 @@ It owns:
 - persistence hand-off into `ScheduledTaskRepository`
 - `PathACommitted` emission
 - clarification-state updates when downstream Path B yields disambiguation or clarification results
+- suppression of later-lane voice scheduler commands once `PathACommitted` already exists for the same thread
 
 It must not share live Path A write ownership with `RealBadgeAudioPipeline`.
 

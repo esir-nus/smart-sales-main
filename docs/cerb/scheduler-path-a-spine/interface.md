@@ -79,3 +79,5 @@ It deliberately leaves later universe semantics open:
 - reschedule universe rules
 
 Those must be defined by later Cerb shards or later revisions of this shard before coding proceeds.
+
+`Uni-A` exact-create is now defined in `docs/cerb/scheduler-path-a-uni-a/spec.md`.

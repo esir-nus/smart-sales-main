@@ -3,7 +3,7 @@
 <!-- 文件目的: 规范复用的假数据与测试基建 -->
 <!-- 相关文件: docs/current-state.md, core/util/README.md, plans/tdd-plan.md -->
 
-> ⚠️ 在阅读本模块说明之前，请先阅读 `docs/current-state.md` 了解项目当前快照和全局约束。
+> 注意：在阅读本模块说明之前，请先阅读 `docs/current-state.md` 了解项目当前快照和全局约束。
 
 # Core Test 模块
 

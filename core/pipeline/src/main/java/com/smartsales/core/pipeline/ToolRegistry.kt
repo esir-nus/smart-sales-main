@@ -63,8 +63,9 @@ enum class CoreModulePermission {
  */
 interface PluginGateway {
     suspend fun getSessionHistory(turns: Int): String
-    suspend fun appendToHistory(message: String)
     suspend fun emitProgress(message: String)
+
+    fun grantedPermissions(): Set<CoreModulePermission> = emptySet()
 }
 
 interface PrismPlugin {

@@ -2,6 +2,7 @@ package com.smartsales.core.context
 
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.ScheduledTask
+import com.smartsales.prism.domain.scheduler.SchedulerPatternContext
 import kotlinx.coroutines.flow.first
 import com.smartsales.core.context.Log
 import com.smartsales.prism.domain.memory.EntityEntry
@@ -26,6 +27,7 @@ import kotlinx.coroutines.sync.withLock
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.UUID
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -125,10 +127,15 @@ class RealContextBuilder @Inject constructor(
             }
 
             if (shouldSearchMemory(_sessionHistory)) {
+                val upcomingTasks = loadUpcomingUndoneTasks()
                 // Sticky Notes: 加载近期日程
-                val schedule = buildScheduleContext()
+                val schedule = buildScheduleContext(upcomingTasks)
                 _workingSet.scheduleContext = schedule
                 Log.d("Kernel", "📅 Sticky Notes: ${schedule?.length ?: 0} chars")
+
+                val schedulerPattern = buildSchedulerPatternContext(upcomingTasks)
+                _workingSet.schedulerPatternContext = schedulerPattern
+                Log.d("Kernel", "🧭 Scheduler Pattern: ${schedulerPattern?.toPromptSummary()?.length ?: 0} chars")
             }
         }
 
@@ -154,17 +161,17 @@ class RealContextBuilder @Inject constructor(
             currentDate = timeProvider.formatForLlm(),
             currentInstant = timeProvider.now.toEpochMilli(),
             habitContext = if (depth == ContextDepth.FULL) _workingSet.getCombinedHabitContext() else null,
-            scheduleContext = if (depth == ContextDepth.FULL) _workingSet.scheduleContext else null
+            scheduleContext = if (depth == ContextDepth.FULL) _workingSet.scheduleContext else null,
+            schedulerPatternContext = if (depth == ContextDepth.FULL) _workingSet.schedulerPatternContext else null
         )
     }
 
-    // Sticky Notes: 构建近期日程上下文 (Priority: Urgency > Time)
-    private suspend fun buildScheduleContext(): String? {
+    private suspend fun loadUpcomingUndoneTasks(): List<ScheduledTask> {
         val today = timeProvider.today
         val endDate = today.plusDays(3)
 
         return try {
-            val undoneTasks = scheduledTaskRepository.queryByDateRange(today, endDate)
+            scheduledTaskRepository.queryByDateRange(today, endDate)
                 .first()
                 .filterIsInstance<ScheduledTask>()
                 .filter { !it.isDone }
@@ -172,28 +179,40 @@ class RealContextBuilder @Inject constructor(
                     compareBy<ScheduledTask> { it.urgencyLevel.ordinal } // L1 critical first
                         .thenBy { it.startTime } // Closer time first
                 )
-
-            if (undoneTasks.isEmpty()) return null
-
-            val totalCount = undoneTasks.size
-            val top3 = undoneTasks.take(3)
-
-            buildString {
-                // 总数提示（让 LLM 知道还有更多未显示的任务）
-                if (totalCount > 3) {
-                    appendLine("共 ${totalCount} 个待办（显示前3）：")
-                }
-                top3.forEach { task ->
-                    append("- ${task.dateRange} ${task.title}")
-                    task.keyPerson?.let { append("（关键人: $it）") }
-                    task.location?.let { append("（地点: $it）") }
-                    appendLine()
-                }
-            }.trimEnd()
         } catch (e: Exception) {
             Log.e("Kernel", "Failed to load sticky notes: ${e.message}")
-            null
+            emptyList()
         }
+    }
+
+    // Sticky Notes: 构建近期日程上下文 (Priority: Urgency > Time)
+    private fun buildScheduleContext(undoneTasks: List<ScheduledTask>): String? {
+        if (undoneTasks.isEmpty()) return null
+
+        val totalCount = undoneTasks.size
+        val top3 = undoneTasks.take(3)
+
+        return buildString {
+            // 总数提示（让 LLM 知道还有更多未显示的任务）
+            if (totalCount > 3) {
+                appendLine("共 ${totalCount} 个待办（显示前3）：")
+            }
+            top3.forEach { task ->
+                append("- ${task.dateRange} ${task.title}")
+                task.keyPerson?.let { append("（关键人: $it）") }
+                task.location?.let { append("（地点: $it）") }
+                appendLine()
+            }
+        }.trimEnd()
+    }
+
+    // Scheduler Pattern Signals: 提炼用户排程习惯摘要，供 RL 作为用户习惯辅助信号使用
+    private fun buildSchedulerPatternContext(undoneTasks: List<ScheduledTask>): SchedulerPatternContext? {
+        return SchedulerPatternContext.fromTasks(
+            tasks = undoneTasks,
+            today = timeProvider.today,
+            zoneId = ZoneId.systemDefault()
+        )
     }
 
     override fun getSessionHistory(): List<ChatTurn> = _sessionHistory.toList()

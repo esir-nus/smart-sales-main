@@ -5,6 +5,7 @@ import com.smartsales.prism.domain.memory.ConflictPolicy
 import com.smartsales.prism.domain.memory.ConflictResult
 import com.smartsales.prism.domain.memory.DurationSource
 import com.smartsales.prism.domain.memory.ScheduleItem
+import com.smartsales.prism.domain.scheduler.fakes.FakeTimeProvider
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.runTest
@@ -26,7 +27,7 @@ class FastTrackMutationEngineTest {
         // Ensure starting clean per Clean Slate protocol
         scheduleBoard = FakeScheduleBoard()
         inspirationRepository = FakeInspirationRepository()
-        engine = FastTrackMutationEngine(taskRepository, scheduleBoard, inspirationRepository)
+        engine = FastTrackMutationEngine(taskRepository, scheduleBoard, inspirationRepository, FakeTimeProvider())
     }
 
     @Test
@@ -100,6 +101,92 @@ class FastTrackMutationEngineTest {
         val inspirations = inspirationRepository.inspirations
         assertEquals(1, inspirations.size)
         assertEquals("Buy a guitar", inspirations.first().text)
+    }
+
+    @Test
+    fun `CreateTasks with unifiedId preserves exact task id`() = runTest {
+        val intent = FastTrackResult.CreateTasks(
+            CreateTasksParams(
+                unifiedId = "uni-a-123",
+                tasks = listOf(
+                    TaskDefinition(
+                        title = "开会",
+                        startTimeIso = "2026-03-20T14:00:00Z",
+                        durationMinutes = 30,
+                        urgency = UrgencyEnum.L2_IMPORTANT
+                    )
+                )
+            )
+        )
+
+        val result = engine.execute(intent)
+
+        assertTrue(result is MutationResult.Success)
+        assertEquals(listOf("uni-a-123"), (result as MutationResult.Success).taskIds)
+        val persisted = taskRepository.getTask("uni-a-123")
+        assertNotNull(persisted)
+        assertEquals("开会", persisted?.title)
+        assertEquals(Instant.parse("2026-03-20T14:00:00Z"), persisted?.startTime)
+        assertFalse(persisted!!.isVague)
+        assertFalse(persisted.hasConflict)
+    }
+
+    @Test
+    fun `CreateTasks with unifiedId and conflict exits Uni-A without persisting`() = runTest {
+        scheduleBoard.nextConflictResult = ConflictResult.Conflict(
+            overlaps = emptyList()
+        )
+
+        val intent = FastTrackResult.CreateTasks(
+            CreateTasksParams(
+                unifiedId = "uni-a-conflict",
+                tasks = listOf(
+                    TaskDefinition(
+                        title = "冲突会议",
+                        startTimeIso = "2026-03-20T14:00:00Z",
+                        durationMinutes = 30,
+                        urgency = UrgencyEnum.L2_IMPORTANT
+                    )
+                )
+            )
+        )
+
+        val result = engine.execute(intent)
+
+        assertTrue(result is MutationResult.NoMatch)
+        val noMatch = result as MutationResult.NoMatch
+        assertEquals("冲突会议", noMatch.query)
+        assertEquals("Uni-A exact create requires a no-conflict slot", noMatch.reason)
+        assertNull(taskRepository.getTask("uni-a-conflict"))
+    }
+
+    @Test
+    fun `CreateVagueTask preserves unifiedId and bypasses conflict evaluation`() = runTest {
+        scheduleBoard.nextConflictResult = ConflictResult.Conflict(
+            overlaps = emptyList()
+        )
+
+        val intent = FastTrackResult.CreateVagueTask(
+            CreateVagueTaskParams(
+                unifiedId = "uni-b-123",
+                title = "提醒我开会",
+                anchorDateIso = "2026-03-21",
+                timeHint = "下午",
+                urgency = UrgencyEnum.L3_NORMAL
+            )
+        )
+
+        val result = engine.execute(intent)
+
+        assertTrue(result is MutationResult.Success)
+        assertEquals(listOf("uni-b-123"), (result as MutationResult.Success).taskIds)
+        val persisted = taskRepository.getTask("uni-b-123")
+        assertNotNull(persisted)
+        assertTrue(persisted!!.isVague)
+        assertFalse(persisted.hasConflict)
+        assertEquals("待定", persisted.timeDisplay)
+        assertEquals("时间待定（线索：下午）", persisted.notes)
+        assertEquals(Instant.parse("2026-03-20T16:00:00Z"), persisted.startTime)
     }
 }
 

@@ -18,6 +18,7 @@ import com.smartsales.prism.domain.memory.EntityType
 import com.smartsales.prism.domain.memory.ConflictResult
 import com.smartsales.prism.domain.model.UiState
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.TestScope
@@ -58,6 +59,7 @@ class IntentOrchestratorTest {
     private lateinit var fakeUniAExecutor: FakeExecutor
     private lateinit var fakeTaskRepository: ScheduledTaskRepository
     private lateinit var fakeScheduleBoard: FakeScheduleBoard
+    private lateinit var fakeInspirationRepository: FakeInspirationRepository
     private lateinit var storedTasks: MutableMap<String, ScheduledTask>
     private val testScope = TestScope(UnconfinedTestDispatcher())
     
@@ -73,6 +75,7 @@ class IntentOrchestratorTest {
         fakeAliasCache = FakeAliasCache()
         fakeUniAExecutor = FakeExecutor()
         fakeScheduleBoard = FakeScheduleBoard()
+        fakeInspirationRepository = FakeInspirationRepository()
         storedTasks = mutableMapOf()
         fakeTaskRepository = object : ScheduledTaskRepository {
             override suspend fun batchInsertTasks(rules: List<ScheduledTask>): List<String> {
@@ -108,6 +111,14 @@ class IntentOrchestratorTest {
             }
         }
         
+        val testTimeProvider = object : TimeProvider {
+            override val now: Instant = Instant.now()
+            override val currentTime: java.time.LocalTime = java.time.LocalTime.now()
+            override val today: java.time.LocalDate = java.time.LocalDate.now()
+            override val zoneId: java.time.ZoneId = java.time.ZoneId.systemDefault()
+            override fun formatForLlm(): String = ""
+        }
+
         orchestrator = IntentOrchestrator(
             contextBuilder = fakeContextBuilder,
             lightningRouter = fakeLightningRouter,
@@ -120,21 +131,26 @@ class IntentOrchestratorTest {
                 promptCompiler = PromptCompiler(),
                 schedulerLinter = SchedulerLinter()
             ),
+            uniBExtractionService = RealUniBExtractionService(
+                executor = fakeUniAExecutor,
+                promptCompiler = PromptCompiler(),
+                schedulerLinter = SchedulerLinter()
+            ),
+            uniCExtractionService = RealUniCExtractionService(
+                executor = fakeUniAExecutor,
+                promptCompiler = PromptCompiler(),
+                schedulerLinter = SchedulerLinter()
+            ),
             fastTrackMutationEngine = FastTrackMutationEngine(
                 taskRepository = fakeTaskRepository,
                 scheduleBoard = fakeScheduleBoard,
-                inspirationRepository = FakeInspirationRepository()
+                inspirationRepository = fakeInspirationRepository,
+                timeProvider = testTimeProvider
             ),
             taskRepository = fakeTaskRepository,
             scheduleBoard = fakeScheduleBoard,
             toolRegistry = FakeToolRegistry(),
-            timeProvider = object : TimeProvider { 
-                override val now: Instant = Instant.now() 
-                override val currentTime: java.time.LocalTime = java.time.LocalTime.now()
-                override val today: java.time.LocalDate = java.time.LocalDate.now()
-                override val zoneId: java.time.ZoneId = java.time.ZoneId.systemDefault()
-                override fun formatForLlm(): String = ""
-            },
+            timeProvider = testTimeProvider,
             appScope = testScope
         )
     }
@@ -359,6 +375,183 @@ class IntentOrchestratorTest {
     }
 
     @Test
+    fun `voice later-lane scheduler command is suppressed after Path A commit`() = runTest {
+        setup()
+        val input = "明天上午十点开会"
+
+        fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.DEEP_ANALYSIS, true, ""))
+        fakeUniAExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "EXACT_CREATE",
+                  "task": {
+                    "title": "开会",
+                    "startTimeIso": "2026-03-18T02:00:00Z",
+                    "durationMinutes": 60,
+                    "urgency": "L2"
+                  }
+                }
+                """.trimIndent()
+            )
+        )
+        fakeUnifiedPipeline.nextResultFlow = flowOf(
+            PipelineResult.TaskCommandProposal(
+                SchedulerTaskCommand.CreateTasks(
+                    com.smartsales.prism.domain.scheduler.CreateTasksParams(
+                        unifiedId = "path-b-followup",
+                        tasks = listOf(
+                            com.smartsales.prism.domain.scheduler.TaskDefinition(
+                                title = "Path B hallucinated follow-up",
+                                startTimeIso = "2026-03-18T04:44:00Z",
+                                durationMinutes = 60,
+                                urgency = com.smartsales.prism.domain.scheduler.UrgencyEnum.L2_IMPORTANT
+                            )
+                        )
+                    )
+                )
+            ),
+            PipelineResult.ConversationalReply("Scheduled.")
+        )
+
+        val results = orchestrator.processInput(input, isVoice = true).toList()
+
+        assertTrue(results.first() is PipelineResult.PathACommitted)
+        assertEquals(1, storedTasks.size)
+        assertNull(storedTasks["path-b-followup"])
+        assertTrue(results.any { it is PipelineResult.ConversationalReply })
+    }
+
+    @Test
+    fun `voice scheduler path forwards displayed page anchor into Uni-A prompt`() = runTest {
+        setup()
+        val input = "后一天一点提醒我开会"
+
+        fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.DEEP_ANALYSIS, true, ""))
+        fakeUniAExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "NOT_EXACT",
+                  "reason": "测试页锚点"
+                }
+                """.trimIndent()
+            )
+        )
+        fakeUnifiedPipeline.nextResultFlow = emptyFlow()
+
+        orchestrator.processInput(
+            input,
+            isVoice = true,
+            displayedDateIso = "2026-03-19"
+        ).toList()
+
+        assertTrue(
+            fakeUniAExecutor.executedPrompts.any { it.contains("displayed_date_iso: 2026-03-19") }
+        )
+        assertTrue(fakeUniAExecutor.executedPrompts.any { it.contains("后一天") })
+        assertTrue(fakeUniAExecutor.executedPrompts.any { it.contains("13:00") })
+        assertTrue(fakeUniAExecutor.executedPrompts.any { it.contains("01:00") })
+    }
+
+    @Test
+    fun `voice scheduler path emits PathACommitted for Uni-B vague create after Uni-A NotExact`() = runTest {
+        setup()
+        val input = "三天以后提醒我开会"
+
+        fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.DEEP_ANALYSIS, true, ""))
+        fakeUniAExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "NOT_EXACT",
+                  "reason": "缺少明确时间"
+                }
+                """.trimIndent()
+            )
+        )
+        fakeUniAExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "VAGUE_CREATE",
+                  "task": {
+                    "title": "提醒我开会",
+                    "anchorDateIso": "2026-03-21",
+                    "timeHint": "时间待定",
+                    "urgency": "L3"
+                  }
+                }
+                """.trimIndent()
+            )
+        )
+        val expectedReply = PipelineResult.ConversationalReply("Path B reply")
+        fakeUnifiedPipeline.nextResultFlow = flowOf(expectedReply)
+
+        val results = orchestrator.processInput(input, isVoice = true).toList()
+
+        assertTrue(results.first() is PipelineResult.PathACommitted)
+        val pathAResult = results.first() as PipelineResult.PathACommitted
+        assertEquals("提醒我开会", pathAResult.task.title)
+        assertTrue(pathAResult.task.isVague)
+        assertFalse(pathAResult.task.hasConflict)
+        assertEquals(pathAResult.task.id, fakeUnifiedPipeline.processedInputs.first().unifiedId)
+        assertNotNull(fakeTaskRepository.getTask(pathAResult.task.id))
+        assertTrue(results.contains(expectedReply))
+        assertTrue(fakeUniAExecutor.executedPrompts.last().contains("anchorDateIso"))
+    }
+
+    @Test
+    fun `date-only tomorrow input must fall through Uni-A and commit as Uni-B vague task`() = runTest {
+        setup()
+        val input = "明天提醒我打车去机场"
+
+        fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.DEEP_ANALYSIS, true, ""))
+        fakeUniAExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "EXACT_CREATE",
+                  "task": {
+                    "title": "提醒我打车去机场",
+                    "startTimeIso": "2026-03-19T04:44:30.211935Z",
+                    "durationMinutes": 0,
+                    "urgency": "L2"
+                  }
+                }
+                """.trimIndent()
+            )
+        )
+        fakeUniAExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "VAGUE_CREATE",
+                  "task": {
+                    "title": "提醒我打车去机场",
+                    "anchorDateIso": "2026-03-19",
+                    "timeHint": null,
+                    "urgency": "L2"
+                  }
+                }
+                """.trimIndent()
+            )
+        )
+        val expectedReply = PipelineResult.ConversationalReply("Path B reply")
+        fakeUnifiedPipeline.nextResultFlow = flowOf(expectedReply)
+
+        val results = orchestrator.processInput(input, isVoice = true).toList()
+
+        assertTrue(results.first() is PipelineResult.PathACommitted)
+        val pathAResult = results.first() as PipelineResult.PathACommitted
+        assertEquals("提醒我打车去机场", pathAResult.task.title)
+        assertTrue(pathAResult.task.isVague)
+        assertFalse(pathAResult.task.hasConflict)
+        assertNotNull(fakeTaskRepository.getTask(pathAResult.task.id))
+        assertTrue(results.contains(expectedReply))
+    }
+
+    @Test
     fun `voice scheduler path does not fake PathA commit when Uni-A is not exact`() = runTest {
         setup()
         val input = "明天开会"
@@ -417,5 +610,59 @@ class IntentOrchestratorTest {
         assertTrue(results.none { it is PipelineResult.PathACommitted })
         assertNull(fakeTaskRepository.getTask(fakeUnifiedPipeline.processedInputs.first().unifiedId))
         assertTrue(results.contains(expectedReply))
+    }
+
+    @Test
+    fun `voice timeless intent commits inspiration and never enters scheduler lane`() = runTest {
+        setup()
+        val input = "以后想练口语"
+
+        fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.DEEP_ANALYSIS, true, ""))
+        fakeUniAExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "NOT_EXACT",
+                  "reason": "没有时间承诺"
+                }
+                """.trimIndent()
+            )
+        )
+        fakeUniAExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "NOT_VAGUE",
+                  "reason": "不是待定日程"
+                }
+                """.trimIndent()
+            )
+        )
+        fakeUniAExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "INSPIRATION_CREATE",
+                  "idea": {
+                    "content": "以后想练口语",
+                    "title": "练口语"
+                  }
+                }
+                """.trimIndent()
+            )
+        )
+
+        val results = orchestrator.processInput(input, isVoice = true).toList()
+
+        assertTrue(results.first() is PipelineResult.InspirationCommitted)
+        val inspirationResult = results.first() as PipelineResult.InspirationCommitted
+        assertEquals("以后想练口语", inspirationResult.content)
+        assertTrue(storedTasks.isEmpty())
+        assertEquals(0, fakeUnifiedPipeline.processedInputs.size)
+        val inspirations = fakeInspirationRepository.getAll().first()
+        assertEquals(1, inspirations.size)
+        assertEquals("以后想练口语", inspirations.first().title)
+        val finalPrompt = fakeUniAExecutor.executedPrompts.last()
+        assertTrue(finalPrompt.contains("INSPIRATION_CREATE"))
     }
 }

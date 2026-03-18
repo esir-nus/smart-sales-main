@@ -36,6 +36,7 @@ data class ScheduledTaskEntity(
     val hasAlarm: Boolean,
     val isSmartAlarm: Boolean,
     val alarmCascadeJson: String?,  // JSON serialized List<String>
-    val urgencyLevel: String = "L3_NORMAL"  // UrgencyLevel enum stored as String
+    val urgencyLevel: String = "L3_NORMAL",  // UrgencyLevel enum stored as String
+    val hasConflict: Boolean = false,
+    val isVague: Boolean = false
 )
-

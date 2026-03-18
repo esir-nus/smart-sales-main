@@ -41,7 +41,7 @@ Store and query domain data. Other modules use their interfaces but never each o
 | **[MemoryCenter](./memory-center/spec.md)** (LTM) | Memory & OS | Conversation memory entries | — | `suspend search(String) -> List<MemoryEntry>` | OS: SSD | ✅ |
 | **[UserHabit](./user-habit/spec.md)** (RL) | Memory & OS | Behavioral pattern observations | — | `RlPayload` (Secondary Currency for HabitListener) | OS: SSD | ✅ |
 | **[SessionHistory](./session-history/spec.md)** (STM) | Memory & OS | Session navigation metadata (list, pin, rename) | — | `getGroupedSessionsFlow() -> Flow<Map>` | OS: SSD | ✅ |
-| **[SessionContext](./session-context/spec.md)** (STM) | Memory & OS | Per-session workspace (3 sections) | EntityWriter (S1 via write-through), RLModule (S2/S3) | *(Merged into ContextBuilder)* | OS: Kernel | ✅ |
+| **[SessionContext](./session-context/spec.md)** (STM) | Memory & OS | Per-session workspace (3 sections), sticky notes, scheduler pattern signal transport | EntityWriter (S1 via write-through), RLModule (S2/S3) | *(Merged into ContextBuilder)* | OS: Kernel | ✅ |
 | **AliasCache** (L1 Cache) | Entity Resolution | Fast-lookup mapping for EntityCandidates | EntityRegistry (Hydration) | `suspend match(List<String>) -> CacheResult` | OS: RAM | ✅ |
 | **[Mutation Module](./scheduler-domain/spec.md)** | Intelligent Scheduler | Atomic Operations, Lexical Conflict Checks, Delete->Insert Reschedule | ScheduleBoard | `suspend rescheduleTask(...)`, `insertTask(...)` | OS: RAM | ✅ |
 | **[SchedulerDomain](./scheduler-domain/spec.md)** (LTM) | Intelligent Scheduler | ScheduledTask, InspirationEntry | — | `ScheduledTaskRepository` | OS: SSD | ✅ |
@@ -58,14 +58,14 @@ Orchestrates LLM-powered processing. Reads from Layer 2 data services.
 
 | Module | Track | Owns (Writes) | Reads From | Key Interface | OS Layer | Status |
 |--------|-------|--------------|------------|---------------|----------|--------|
-| **ContextBuilder** | System II & Routing | `EnhancedContext` (assembled prompt context) | EntityRegistry, MemoryCenter, ScheduledTaskRepository, HistoryRepository | `suspend build(String, Mode, ...) -> EnhancedContext` | OS: Kernel | ✅ |
+| **ContextBuilder** | System II & Routing | `EnhancedContext` (assembled prompt context incl. `scheduleContext` and `schedulerPatternContext`) | EntityRegistry, MemoryCenter, ScheduledTaskRepository, HistoryRepository | `suspend build(String, Mode, ...) -> EnhancedContext` | OS: Kernel | ✅ |
 | **[InputParser](./input-parser/spec.md)** | System II & Routing | Semantic intent and EntityID resolution | AliasIndex (internal) | `suspend parseIntent(String) -> ParseResult` | OS: App | ✅ |
 | **[EntityDisambiguator](./entity-disambiguation/spec.md)** | Entity Resolution | `PendingIntent` interruption state | InputParser | `suspend process(String) -> DisambiguationResult` | OS: App | ✅ |
 | **[LightningRouter](./lightning-router/spec.md)** | System II & Routing | Intent evaluation & Fast-fail alias check (Phase 0) | ContextBuilder, AliasCache | `suspend evaluateIntent(EnhancedContext) -> RouterResult?` | OS: App | ✅ |
 | **EntityResolverService** | Entity Resolution | Entity disambiguation matching | EntityRegistry | `suspend resolve(String, List<EntityEntry>) -> EntityEntry?` | OS: App | ✅ |
 | **ModelRegistry** | System II & Routing | Static LLM Profiles (models, temps, skills) | — | `ModelRegistry` | OS: App | ✅ |
 | **[Executor](./model-routing/spec.md)** | System II & Routing | Raw LLM output (stateless — no storage) | ModelRouter | `suspend execute(LlmProfile, String) -> ExecutorResult` | — | ✅ |
-| **[PluginRegistry](./plugin-registry/spec.md)** | System II & Routing | Executable pure-Kotlin workflows (Tools) | — | `executeTool(ToolId, PluginRequest, PluginGateway) -> Flow<UiState>` | OS: App | ✅ |
+| **[PluginRegistry](./plugin-registry/spec.md)** | System II & Routing | Executable pure-Kotlin workflows (Tools), runtime capability-gateway dispatch | SessionContext / Kernel (read-only via PluginGateway), future bounded OS capabilities | `executeTool(ToolId, PluginRequest, PluginGateway) -> Flow<UiState>` | OS: App | ✅ |
 | **[SchedulerLinter](./scheduler-linter/spec.md)** | Intelligent Scheduler | Intent parsing to DTOs | — | `suspend parseFastTrackIntent(String) -> FastTrackResult` | OS: App | ✅ |
 | **[UnifiedPipeline](./unified-pipeline/spec.md)** | System II & Routing | System II context ETL, typed profile proposals, typed scheduler task-command proposals | ContextBuilder, InputParser, EntityDisambiguator | `suspend processInput(PipelineInput) -> Flow<PipelineResult>` | OS: App | ✅ |
 | **[IntentOrchestrator](./scheduler-path-a-spine/spec.md)** | System II & Routing | High-level intent routing (Phase 0) and shared Path A scheduler spine | AgentViewModel, LightningRouter, UnifiedPipeline, PluginRegistry | `suspend processInput(String, isVoice) -> Flow<PipelineResult>` | OS: App | ✅ |
@@ -73,6 +73,8 @@ Orchestrates LLM-powered processing. Reads from Layer 2 data services.
 > **UnifiedPipeline emits typed proposals; IntentOrchestrator owns commit handoff.** Profile/entity proposals commit through `EntityWriter`. Scheduler create/delete/reschedule proposals commit through scheduler-owned paths (`FastTrackMutationEngine`, `ScheduledTaskRepository`, `ScheduleBoard`). Feature modules still receive results; they do not own these writes.
 >
 > **ContextBuilder reads EntityRegistry for Entity Knowledge Context.** `ContextBuilder.buildEntityKnowledge()` calls `EntityRepository.getAll()` at session start to load the structured entity graph into the LLM prompt (RAM Section 1). This is a Kernel → SSD read.
+>
+> **PluginRegistry runtime boundary (Wave 21 / T3)**: runtime plugins may read bounded session history and emit bounded progress only through `PluginGateway`. Plugin-caused writes remain deferred to the later typed mutation re-entry contract.
 
 ---
 

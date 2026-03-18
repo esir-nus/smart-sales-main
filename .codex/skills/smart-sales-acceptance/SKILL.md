@@ -14,6 +14,8 @@ Verification must be concrete, hostile, and evidence-based.
 - Do not claim “verified manually” without concrete steps.
 - Prefer affected-module verification over a single cherry-picked test.
 - Include failure-path thinking, not only the happy path.
+- When a corresponding `docs/core-flow/**` document exists, acceptance MUST read it first and use it as the behavioral north star.
+- A green build does not override Core Flow drift. Acceptance must explicitly judge whether the delivered result aligns with the Core Flow, not only whether tests passed.
 
 Validate against the Core Flow north star when one exists, not only against the current implementation.
 
@@ -21,10 +23,12 @@ Validate against the Core Flow north star when one exists, not only against the 
 
 ### 1. Load the contract
 
-- Read the relevant Core Flow doc when it exists.
+- Read the relevant Core Flow doc when it exists. This is mandatory, not optional.
 - Read the owning spec, interface, or acceptance target doc.
 - Read the touched code.
 - Read relevant tests before judging coverage.
+
+If no Core Flow doc exists, say that explicitly in the acceptance result instead of silently falling back to lower docs.
 
 ### 2. Run the four examiners
 
@@ -32,6 +36,7 @@ Validate against the Core Flow north star when one exists, not only against the 
 
 - Does the implementation match the required behavior and states?
 - Are exact strings, states, or structure requirements satisfied?
+- Does the implementation align with the corresponding Core Flow branches, invariants, and exit conditions?
 
 #### Contract examiner
 
@@ -71,6 +76,7 @@ An acceptance result should state:
 - What evidence exists
 - What failed or remains unverified
 - Whether the change is accepted, conditionally accepted, or blocked
+- Whether the result is aligned with the corresponding Core Flow doc, and if not, which branch or invariant still drifts
 
 ## Anti-Patterns
 

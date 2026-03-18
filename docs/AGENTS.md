@@ -30,7 +30,7 @@ This file is not intended to replace either runtime-specific layer.
 | Context | Language | Notes |
 |---------|----------|-------|
 | Agent communication | **English** | All conversations with agents |
-| Documentation prose | **English** | Specs, plans, READMEs |
+| Documentation prose | **English** | Specs, plans, READMEs. No emoji; use plain professional prose. |
 | Code comments | **Simplified Chinese** | 方便中文开发同事阅读 |
 | File headers | **Simplified Chinese** | Summary行使用中文 |
 | Inline annotations | **Simplified Chinese** | 代码块内使用中文 |

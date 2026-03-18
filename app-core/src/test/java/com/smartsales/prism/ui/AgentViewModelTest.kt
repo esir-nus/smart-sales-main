@@ -9,6 +9,7 @@ import com.smartsales.prism.domain.scheduler.FakeScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.SchedulerLinter
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.*
@@ -73,6 +74,14 @@ class AgentViewModelTest {
             override suspend fun rescheduleTask(oldTaskId: String, newTask: com.smartsales.prism.domain.scheduler.ScheduledTask) {}
         }
 
+        val testTimeProvider = object : com.smartsales.prism.domain.time.TimeProvider {
+            override val now: Instant = Instant.now()
+            override val currentTime: java.time.LocalTime = java.time.LocalTime.now()
+            override val today: java.time.LocalDate = java.time.LocalDate.now()
+            override val zoneId: java.time.ZoneId = java.time.ZoneId.systemDefault()
+            override fun formatForLlm(): String = ""
+        }
+
         intentOrchestrator = IntentOrchestrator(
             contextBuilder = fakeContextBuilder,
             lightningRouter = fakeLightningRouter,
@@ -85,21 +94,26 @@ class AgentViewModelTest {
                 promptCompiler = PromptCompiler(),
                 schedulerLinter = SchedulerLinter()
             ),
+            uniBExtractionService = RealUniBExtractionService(
+                executor = FakeExecutor(),
+                promptCompiler = PromptCompiler(),
+                schedulerLinter = SchedulerLinter()
+            ),
+            uniCExtractionService = RealUniCExtractionService(
+                executor = FakeExecutor(),
+                promptCompiler = PromptCompiler(),
+                schedulerLinter = SchedulerLinter()
+            ),
             fastTrackMutationEngine = FastTrackMutationEngine(
                 taskRepository = fakeTaskRepository,
                 scheduleBoard = FakeScheduleBoard(),
-                inspirationRepository = FakeInspirationRepository()
+                inspirationRepository = FakeInspirationRepository(),
+                timeProvider = testTimeProvider
             ),
             taskRepository = fakeTaskRepository,
             scheduleBoard = FakeScheduleBoard(),
             toolRegistry = fakeToolRegistry,
-            timeProvider = object : com.smartsales.prism.domain.time.TimeProvider {
-                override val now: Instant = Instant.now()
-                override val currentTime: java.time.LocalTime = java.time.LocalTime.now()
-                override val today: java.time.LocalDate = java.time.LocalDate.now()
-                override val zoneId: java.time.ZoneId = java.time.ZoneId.systemDefault()
-                override fun formatForLlm(): String = ""
-            },
+            timeProvider = testTimeProvider,
             appScope = testScope
         )
 
@@ -257,5 +271,38 @@ class AgentViewModelTest {
         
         assertEquals("The extracted text context should match the ViewModel's input text", expectedInputText, request.rawInput)
         assertEquals("The parameters should be empty when invoked directly from UI", emptyMap<String, Any>(), request.parameters)
+    }
+
+    @Test
+    fun `selectTaskBoardItem builds runtime plugin gateway with bounded session-read capability`() = runTest {
+        val expectedToolId = "test_tool_456"
+
+        val field = AgentViewModel::class.java.getDeclaredField("_taskBoardItems")
+        field.isAccessible = true
+        val stateFlow = field.get(viewModel) as MutableStateFlow<List<com.smartsales.prism.domain.analyst.TaskBoardItem>>
+        stateFlow.value = listOf(
+            com.smartsales.prism.domain.analyst.TaskBoardItem(
+                id = expectedToolId, title = "Test Tool", description = "", icon = ""
+            )
+        )
+
+        fakeContextBuilder.loadSession(
+            "session-1",
+            listOf(
+                com.smartsales.core.context.ChatTurn("user", "跟 Tom 跟进报价"),
+                com.smartsales.core.context.ChatTurn("assistant", "好的")
+            )
+        )
+        fakeToolRegistry.executeFlow = emptyFlow()
+
+        viewModel.selectTaskBoardItem(expectedToolId)
+        advanceUntilIdle()
+
+        assertEquals(1, fakeToolRegistry.executedGateways.size)
+        val gateway = fakeToolRegistry.executedGateways.single()
+        assertTrue(gateway.grantedPermissions().contains(CoreModulePermission.READ_SESSION_HISTORY))
+
+        val history = gateway.getSessionHistory(2)
+        assertTrue(history.contains("跟 Tom 跟进报价"))
     }
 }

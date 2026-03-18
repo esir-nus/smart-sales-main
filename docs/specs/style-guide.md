@@ -2,7 +2,7 @@
 
 > **Scope & Ownership**
 >
-> **Status**: 📝 **LIVING DOCUMENT** (Owned by UI Designer Persona)
+> **Status**: LIVING DOCUMENT (Owned by UI Designer Persona)
 >
 > This document defines the **visual language** for SmartSales mobile.
 >
@@ -18,7 +18,7 @@
 
 ---
 
-## 🎨 Design Tokens (Source of Truth)
+## Design Tokens (Source of Truth)
 
 All color, spacing, typography, and component values are defined in:
 
@@ -76,9 +76,9 @@ All color, spacing, typography, and component values are defined in:
 
 8. **MANDATE: Zero-Spec-Contamination**
    - Spec ASCII diagrams (e.g., `HistoryDrawer.md`) define **STRUCTURE** only, not styling.
-   - **Emojis in specs** (📌, 📅, 🗓️) are for documentation readability — **NOT** for visual implementation.
+   - Specs and style docs must use plain professional prose with no emoji.
    - Real UI uses **design system icons** (Material Icons, custom SVGs). Never render emoji Unicode as UI.
-   - **Never copy spec formatting** literally. Example: Spec "📌 置顶" → Code: `Icon(PushPin) + Text("置顶")`
+   - **Never copy spec formatting** literally. Example: textual "置顶" in spec -> Code: `Icon(PushPin) + Text("置顶")`
 
 ---
 
@@ -107,7 +107,7 @@ The palette uses clean, neutral surfaces to let the **AI Intelligence** (Chroma 
 ### 3.1 Home Hero (`ChatWelcome`) (V12 Blueprint)
 
 **A. Top Bar Layout (Target UI):**
-*   **Left**: `[≡]` Hamburger (Open History Drawer) + `[⚡]` Device Icon (Device Status/Manager).
+*   **Left**: Hamburger button (Open History Drawer) + Device Status button (Device Status/Manager).
 *   **Center**: `New Session` (Placeholder Title) or Current Session Title.
 *   **Right**: `[+]` Icon (Create New Session).
 *   **Removed**: Avatar (moved to Drawer), Profile Pill.

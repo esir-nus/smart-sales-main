@@ -27,7 +27,6 @@ class FakeConfigurablePluginBreakItTest {
         val request = PluginRequest(rawInput = "do it", parameters = emptyMap())
         val gateway = object : PluginGateway {
             override suspend fun getSessionHistory(turns: Int) = ""
-            override suspend fun appendToHistory(message: String) {}
             override suspend fun emitProgress(message: String) {}
         }
         val states = plugin.execute(request, gateway).toList()
@@ -53,7 +52,6 @@ class FakeConfigurablePluginBreakItTest {
         )
         val gateway = object : PluginGateway {
             override suspend fun getSessionHistory(turns: Int) = ""
-            override suspend fun appendToHistory(message: String) {}
             override suspend fun emitProgress(message: String) {}
         }
         val states = plugin.execute(request, gateway).toList()

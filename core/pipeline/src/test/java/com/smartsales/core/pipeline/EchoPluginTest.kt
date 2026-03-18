@@ -16,20 +16,11 @@ class FakePluginGateway(
     private val grantedPermissions: Set<CoreModulePermission>
 ) : PluginGateway {
 
-    private val historyLog = mutableListOf<String>()
-
     override suspend fun getSessionHistory(turns: Int): String {
         if (!grantedPermissions.contains(CoreModulePermission.READ_SESSION_HISTORY)) {
             throw SecurityException("Plugin does not have READ_SESSION_HISTORY permission")
         }
         return "Simulated Session History (Last $turns turns)"
-    }
-
-    override suspend fun appendToHistory(message: String) {
-        if (!grantedPermissions.contains(CoreModulePermission.WRITE_SESSION_HISTORY)) {
-            throw SecurityException("Plugin does not have WRITE_SESSION_HISTORY permission")
-        }
-        historyLog.add(message)
     }
 
     override suspend fun emitProgress(message: String) {

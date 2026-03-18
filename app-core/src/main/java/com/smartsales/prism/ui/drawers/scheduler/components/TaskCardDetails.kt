@@ -44,6 +44,14 @@ fun TaskCardDetails(
                 Text(it, style = metaStyle)
             }
         }
+        // Notes Row
+        state.notes?.let {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
+                Icon(Icons.Outlined.Notes, contentDescription = null, tint = TextMuted, modifier = Modifier.size(14.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(it, style = metaStyle)
+            }
+        }
         // Key Person
         state.keyPerson?.let {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {

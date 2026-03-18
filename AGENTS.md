@@ -67,6 +67,8 @@ Interpret this hierarchy strictly:
 - Documentation prose: English
 - Code comments: Simplified Chinese
 - File headers and inline annotations: Simplified Chinese when the codebase expects them
+- Documentation, trackers, plans, changelogs, and reports must not use emoji
+- Use plain text, checkboxes, and status words instead of decorative symbols or emoji in repo prose
 
 ### Docs-First Delivery
 

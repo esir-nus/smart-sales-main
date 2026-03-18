@@ -10,6 +10,8 @@ import com.smartsales.core.pipeline.PromptCompiler
 import com.smartsales.core.pipeline.RouterResult
 import com.smartsales.core.pipeline.QueryQuality
 import com.smartsales.core.pipeline.RealUniAExtractionService
+import com.smartsales.core.pipeline.RealUniBExtractionService
+import com.smartsales.core.pipeline.RealUniCExtractionService
 import com.smartsales.core.context.ContextDepth
 import com.smartsales.core.context.RealContextBuilder
 import com.smartsales.core.llm.ExecutorResult
@@ -266,7 +268,7 @@ class L2DualEngineBridgeTest {
         }
 
         val fakeAsr = object : com.smartsales.prism.domain.asr.AsrService {
-            override suspend fun transcribe(file: java.io.File) = com.smartsales.prism.domain.asr.AsrResult.Success("明天开会")
+            override suspend fun transcribe(file: java.io.File) = com.smartsales.prism.domain.asr.AsrResult.Success("明天下午三点开会")
             override suspend fun isAvailable() = true
         }
 
@@ -327,10 +329,21 @@ class L2DualEngineBridgeTest {
                 promptCompiler = PromptCompiler(),
                 schedulerLinter = SchedulerLinter()
             ),
+            uniBExtractionService = RealUniBExtractionService(
+                executor = fakeUniAExecutor,
+                promptCompiler = PromptCompiler(),
+                schedulerLinter = SchedulerLinter()
+            ),
+            uniCExtractionService = RealUniCExtractionService(
+                executor = fakeUniAExecutor,
+                promptCompiler = PromptCompiler(),
+                schedulerLinter = SchedulerLinter()
+            ),
             fastTrackMutationEngine = FastTrackMutationEngine(
                 taskRepository = fakeTaskRepo,
                 scheduleBoard = FakeScheduleBoard(),
-                inspirationRepository = FakeInspirationRepository()
+                inspirationRepository = FakeInspirationRepository(),
+                timeProvider = timeProvider
             ),
             taskRepository = fakeTaskRepo,
             scheduleBoard = FakeScheduleBoard(),

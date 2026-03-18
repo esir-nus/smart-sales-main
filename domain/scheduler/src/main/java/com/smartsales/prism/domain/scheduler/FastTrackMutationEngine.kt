@@ -4,8 +4,10 @@ import com.smartsales.prism.domain.memory.ConflictResult
 import com.smartsales.prism.domain.memory.ScheduleBoard
 import kotlinx.coroutines.flow.first
 import java.time.Instant
+import java.time.LocalDate
 import java.util.UUID
 import javax.inject.Inject
+import com.smartsales.prism.domain.time.TimeProvider
 
 /**
  * Result of a FastTrack execution.
@@ -26,7 +28,8 @@ sealed class MutationResult {
 class FastTrackMutationEngine @Inject constructor(
     private val taskRepository: ScheduledTaskRepository,
     private val scheduleBoard: ScheduleBoard,
-    private val inspirationRepository: InspirationRepository
+    private val inspirationRepository: InspirationRepository,
+    private val timeProvider: TimeProvider
 ) {
     /**
      * Executes the incoming FastTrack DTO from the Linter.
@@ -35,6 +38,7 @@ class FastTrackMutationEngine @Inject constructor(
         return try {
             when (intent) {
                 is FastTrackResult.CreateTasks -> handleCreateTasks(intent.params)
+                is FastTrackResult.CreateVagueTask -> handleCreateVagueTask(intent.params)
                 is FastTrackResult.RescheduleTask -> handleRescheduleTask(intent.params)
                 is FastTrackResult.CreateInspiration -> handleCreateInspiration(intent.params)
                 is FastTrackResult.NoMatch -> MutationResult.NoMatch("UNKNOWN", intent.reason)
@@ -45,9 +49,6 @@ class FastTrackMutationEngine @Inject constructor(
     }
 
     private suspend fun handleCreateTasks(params: CreateTasksParams): MutationResult {
-        val activeTasks = taskRepository.getTimelineItems(0) // Simplified active fetch for conflict check, usually Board does it but Board uses Memory's ScheduleItem! 
-        // Wait, ScheduleBoard checkConflict takes (Long, Int)
-        
         val newTasks = params.tasks.map { def ->
             val startInst = Instant.parse(def.startTimeIso)
             
@@ -57,10 +58,13 @@ class FastTrackMutationEngine @Inject constructor(
                 durationMinutes = def.durationMinutes
             )
             val hasConflict = conflictResult is ConflictResult.Conflict
-            val isVague = def.startTimeIso.isEmpty() // Example vague check. If parser provided empty string, it fails Instant.parse. But ISO 8601 parser would throw. Let's assume vague implies start_time_iso is some specific format or omitted? DTO requires String. If it's vague, maybe it's passed as default epoch or omitted? We will assume isVague = false for now unless explicit.
             
             ScheduledTask(
-                id = UUID.randomUUID().toString(), // Will be overwritten by Room anyway or used if Room upserts
+                id = if (params.tasks.size == 1 && !params.unifiedId.isNullOrBlank()) {
+                    params.unifiedId
+                } else {
+                    UUID.randomUUID().toString()
+                },
                 timeDisplay = "", // Rendered in UI layer
                 title = def.title,
                 urgencyLevel = UrgencyLevel.valueOf(def.urgency.name),
@@ -71,8 +75,48 @@ class FastTrackMutationEngine @Inject constructor(
             )
         }
         
+        if (newTasks.size == 1 && !params.unifiedId.isNullOrBlank()) {
+            val task = newTasks.first().copy(id = params.unifiedId)
+            if (task.hasConflict) {
+                return MutationResult.NoMatch(
+                    query = task.title,
+                    reason = "Uni-A exact create requires a no-conflict slot"
+                )
+            }
+            val id = taskRepository.upsertTask(task)
+            return MutationResult.Success(listOf(id))
+        }
+
         val ids = taskRepository.batchInsertTasks(newTasks)
         return MutationResult.Success(ids)
+    }
+
+    private suspend fun handleCreateVagueTask(params: CreateVagueTaskParams): MutationResult {
+        val anchorDate = LocalDate.parse(params.anchorDateIso)
+        val anchorInstant = anchorDate.atStartOfDay(timeProvider.zoneId).toInstant()
+        val vagueNotes = buildString {
+            append("时间待定")
+            params.timeHint?.takeIf { it.isNotBlank() }?.let {
+                append("（线索：")
+                append(it)
+                append("）")
+            }
+        }
+
+        val task = ScheduledTask(
+            id = params.unifiedId?.takeIf { it.isNotBlank() } ?: UUID.randomUUID().toString(),
+            timeDisplay = "待定",
+            title = params.title,
+            urgencyLevel = UrgencyLevel.valueOf(params.urgency.name),
+            startTime = anchorInstant,
+            durationMinutes = 0,
+            hasConflict = false,
+            isVague = true,
+            notes = vagueNotes
+        )
+
+        val id = taskRepository.upsertTask(task)
+        return MutationResult.Success(listOf(id))
     }
 
     private suspend fun handleRescheduleTask(params: RescheduleTaskParams): MutationResult {

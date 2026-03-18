@@ -306,6 +306,20 @@ These are the main behavioral universes for Path A creation flow.
 
 **Extraction rule**: `Uni-A` exact-create should be decided by a lightweight semantic parsing pass, such as a small fast model, not by hardcoded Kotlin heuristics pretending to understand human time semantics.
 
+**Anchor rule**: relative-date wording is not one single bucket.
+- `明天` / `tomorrow` anchor to the real current date
+- `下一天` / `后一天` anchor to the calendar date currently being displayed in the scheduler UI, when that UI context exists
+- if UI-relative wording is used but no displayed-date anchor exists, the system must not silently guess a page-relative date
+
+**Time-default rule**: colloquial Chinese hour expressions are not neutral.
+- bare `一点` / `1点` default to `13:00`
+- explicit early-morning wording like `凌晨一点` anchors to `01:00`
+- the system must treat this as semantic interpretation law, not local regex/date-math guesswork
+
+**Anti-fabrication rule**: date-only input is not exact input.
+- `明天提醒我打电话` / `tomorrow remind me to go to the airport` must not become `00:00`, current-clock time, lunch time, or any other guessed exact time
+- those inputs belong to `Uni-B` as long as the day anchor is real
+
 ```text
 [User Input] "Tomorrow at 3pm, team standup"
       |
@@ -332,6 +346,9 @@ These are the main behavioral universes for Path A creation flow.
 | Semantic Parse  |
 +--------+--------+     [Guardrail] Relative wording may be spoken by user, but downstream behavior must resolve to an exact schedulable time.
   [Guardrail] Hardcoded regex/heuristic parsing is not the behavioral source of truth for exact understanding.
+  [Guardrail] Real-day language like `明天` must not be re-anchored to the currently opened calendar page.
+  [Guardrail] UI-relative language like `下一天` / `后一天` may use the displayed calendar date as anchor when the UI provides it.
+  [Guardrail] Bare colloquial Chinese `一点` must not silently default to `01:00`; only explicit early-morning wording may anchor there.
   [Valve: TASK_EXTRACTED]
          |
          v

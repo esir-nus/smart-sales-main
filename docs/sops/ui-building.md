@@ -5,7 +5,7 @@
 
 ---
 
-## 🛑 Cardinal Rules
+## Cardinal Rules
 
 ### 1. Zero-Contamination Principle
 - **Wireframe** shows WHAT elements exist, NOT how they look.
@@ -14,9 +14,9 @@
 
 ### 1a. Zero-Spec-Contamination (Literal Reading Trap)
 - **Spec ASCII diagrams** define STRUCTURE and HIERARCHY only.
-- **Emojis in specs** (📌, 📅, 🗓️) are for **documentation readability** — NOT for visual implementation.
+- Specs and SOPs must use plain professional prose with no emoji.
 - Real UI uses **icons from the design system** (e.g., Material Icons, custom SVGs), never emoji Unicode.
-- **Do NOT copy spec formatting** as UI styling. "📌 置顶" in spec → `PinIcon + "置顶"` in code.
+- **Do NOT copy spec formatting** as UI styling. A textual "置顶" marker in spec becomes `PinIcon + "置顶"` in code.
 
 ### 2. Explicit Checkpoints
 Every phase transition requires **user's explicit declaration**:
@@ -32,7 +32,7 @@ Android implementation MUST reference `ui_element_registry.md` for:
 
 ---
 
-## 📋 Phase 0: Intake
+## Phase 0: Intake
 
 **Trigger**: User demand + optional wireframe screenshot.
 
@@ -48,7 +48,7 @@ Android implementation MUST reference `ui_element_registry.md` for:
 
 ---
 
-## 📝 Phase 1: Design Brief (`/12-ui-director`)
+## Phase 1: Design Brief (`/12-ui-director`)
 
 **Purpose**: Define WHAT to build with explicit guardrails.
 
@@ -65,7 +65,7 @@ Android implementation MUST reference `ui_element_registry.md` for:
 
 ---
 
-## 🌐 Phase 2: Web Prototype (`/13-web-prototype`)
+## Phase 2: Web Prototype (`/13-web-prototype`)
 
 **Purpose**: Create a high-fidelity visual reference in browser.
 
@@ -82,7 +82,7 @@ Android implementation MUST reference `ui_element_registry.md` for:
 
 ---
 
-## 📲 Phase 3: Android Transplant
+## Phase 3: Android Transplant
 
 **Purpose**: Implement the approved prototype in Kotlin/Compose.
 
@@ -107,7 +107,7 @@ Android implementation MUST reference `ui_element_registry.md` for:
 
 ---
 
-## 🔄 Iteration Protocol
+## Iteration Protocol
 
 | Scenario | Action |
 |----------|--------|
@@ -117,19 +117,19 @@ Android implementation MUST reference `ui_element_registry.md` for:
 
 ---
 
-## 📊 Workflow Diagram
+## Workflow Diagram
 
 ```
-Phase 0: INTAKE → Phase 1: BRIEF → 🛑 "Brief Approved"
-                                          ↓
-                 Phase 2: PROTOTYPE → 🛑 "Prototype Passed"
-                                          ↓
-                 Phase 3: TRANSPLANT → 🔄 Iterate → 🛑 "Ship It"
+Phase 0: INTAKE -> Phase 1: BRIEF -> "Brief Approved"
+                                          |
+                 Phase 2: PROTOTYPE -> "Prototype Passed"
+                                          |
+                 Phase 3: TRANSPLANT -> Iterate -> "Ship It"
 ```
 
 ---
 
-## 📚 Reference Documents
+## Reference Documents
 
 | Document | Purpose |
 |----------|---------|
@@ -139,7 +139,7 @@ Phase 0: INTAKE → Phase 1: BRIEF → 🛑 "Brief Approved"
 
 ---
 
-## ✅ Completion Criteria
+## Completion Criteria
 
 A UI feature is **DONE** when:
 1. [ ] Design Brief approved

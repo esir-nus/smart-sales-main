@@ -63,6 +63,14 @@ class IntentOrchestratorBreakItTest {
             override suspend fun rescheduleTask(oldTaskId: String, newTask: ScheduledTask) {}
         }
 
+        val testTimeProvider = object : TimeProvider {
+            override val now: Instant = Instant.now()
+            override val currentTime: java.time.LocalTime = java.time.LocalTime.now()
+            override val today: java.time.LocalDate = java.time.LocalDate.now()
+            override val zoneId: java.time.ZoneId = java.time.ZoneId.systemDefault()
+            override fun formatForLlm(): String = ""
+        }
+
         orchestrator = IntentOrchestrator(
             contextBuilder = fakeContextBuilder,
             lightningRouter = fakeLightningRouter,
@@ -75,21 +83,26 @@ class IntentOrchestratorBreakItTest {
                 promptCompiler = PromptCompiler(),
                 schedulerLinter = SchedulerLinter()
             ),
+            uniBExtractionService = RealUniBExtractionService(
+                executor = FakeExecutor(),
+                promptCompiler = PromptCompiler(),
+                schedulerLinter = SchedulerLinter()
+            ),
+            uniCExtractionService = RealUniCExtractionService(
+                executor = FakeExecutor(),
+                promptCompiler = PromptCompiler(),
+                schedulerLinter = SchedulerLinter()
+            ),
             fastTrackMutationEngine = FastTrackMutationEngine(
                 taskRepository = fakeTaskRepository,
                 scheduleBoard = FakeScheduleBoard(),
-                inspirationRepository = FakeInspirationRepository()
+                inspirationRepository = FakeInspirationRepository(),
+                timeProvider = testTimeProvider
             ),
             taskRepository = fakeTaskRepository,
             scheduleBoard = FakeScheduleBoard(),
             toolRegistry = FakeToolRegistry(),
-            timeProvider = object : TimeProvider { 
-                override val now: Instant = Instant.now() 
-                override val currentTime: java.time.LocalTime = java.time.LocalTime.now()
-                override val today: java.time.LocalDate = java.time.LocalDate.now()
-                override val zoneId: java.time.ZoneId = java.time.ZoneId.systemDefault()
-                override fun formatForLlm(): String = ""
-            },
+            timeProvider = testTimeProvider,
             appScope = testScope
         )
     }

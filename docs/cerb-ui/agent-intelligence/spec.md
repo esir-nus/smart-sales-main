@@ -7,11 +7,11 @@
 
 | Wave | Theme | Target | Status |
 |------|-------|--------|--------|
-| **Wave 1** | **Wait-State Basics** | Support `UiState.Thinking`, `UiState.Streaming`, Error states. | ✅ SHIPPED |
-| **Wave 2** | **UI Literal Sync** | Render actual payloads: `MarkdownStrategyBubble`, `ClarifyingBubble`, `TaskCreatedBubble`. Stop swallowing pipeline states in the Presentation layer. | ✅ SHIPPED |
-| **Wave 3** | **L2 Testing Validation** | Explicitly inject isolated `UiState` test fixtures via `L2DebugHud` to mathematically prove Compose layouts map to pipeline results. | ✅ SHIPPED |
-| **Wave 4** | **Transparent Mind Integration** | Dynamically update `UiState.Thinking(hint)` locally based on `PipelineResult.Progress` emissions. | ✅ SHIPPED |
-| **Wave 5** | **Hand-Off Animation (Wave 6 T5)** | Visual bridging between voice ingestion and LLM execution, eliminating "dead air". | 🔲 |
+| **Wave 1** | **Wait-State Basics** | Support `UiState.Thinking`, `UiState.Streaming`, Error states. | SHIPPED |
+| **Wave 2** | **UI Literal Sync** | Render actual payloads: `MarkdownStrategyBubble`, `ClarifyingBubble`, `TaskCreatedBubble`. Stop swallowing pipeline states in the Presentation layer. | SHIPPED |
+| **Wave 3** | **L2 Testing Validation** | Explicitly inject isolated `UiState` test fixtures via `L2DebugHud` to mathematically prove Compose layouts map to pipeline results. | SHIPPED |
+| **Wave 4** | **Transparent Mind Integration** | Dynamically update `UiState.Thinking(hint)` locally based on `PipelineResult.Progress` emissions. | SHIPPED |
+| **Wave 5** | **Hand-Off Animation (Wave 6 T5)** | Visual bridging between voice ingestion and LLM execution, eliminating "dead air". | OPEN |
 
 ## 2. Core Visual Mechanics
 
@@ -19,7 +19,7 @@ To convey "watching an expert work," the UI must feel alive, structured, and int
 
 ### 2.1 Thinking Indicator (`UiState.Thinking`)
 A compact indicator that the LLM is actively reasoning.
-- **Visuals**: A soft pulsing brain emoji (🧠) or generic hint text: "正在思考...".
+- **Visuals**: A soft pulsing thinking indicator or generic hint text: "正在思考...".
 - **Tokens Used**: `surface.thinking` (Dark background `#1A1A2E`).
 
 ### 2.2 Streaming Bubble (`UiState.Streaming`)
@@ -28,7 +28,7 @@ Visualizes partial LLM output arriving token-by-token.
 
 ### 2.3 Clarifying Bubble (`UiState.AwaitingClarification`)
 Renders the `AwaitingClarification` state when the downstream pipeline flags ambiguity (e.g., missing scheduling duration).
-- **Visuals**: An inline card prefixed with a `❓ 需要更多信息` header, styled in `accent.info` (`#88CCFF`). 
+- **Visuals**: An inline card prefixed with a textual "需要更多信息" header, styled in `accent.info` (`#88CCFF`). 
 
 ### 2.4 Markdown Strategy Bubble (`UiState.MarkdownStrategyState`)
 The primary vehicle for Analyst-mode multi-step plans and structured summaries.
@@ -38,7 +38,7 @@ The primary vehicle for Analyst-mode multi-step plans and structured summaries.
 
 ### 2.5 Notification / Action Bubbles (`UiState.SchedulerTaskCreated`)
 Lightweight inline confirmations for asynchronous or background executions.
-- **Visuals**: Standard response bubble prefixed with "已创建任务: [标题]" or "✅ 已创建 N 个任务".
+- **Visuals**: Standard response bubble prefixed with "已创建任务: [标题]" or "已创建 N 个任务".
 
 ### 2.6 Voice Handling UI States (`UiState.AudioProcessing`)
 Visualizes the transition from voice ingestion (Badge or Mic) to LLM execution, eliminating the "dead air" gap.

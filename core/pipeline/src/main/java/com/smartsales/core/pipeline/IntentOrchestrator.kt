@@ -36,6 +36,8 @@ import com.smartsales.core.telemetry.PipelineValve
 import com.smartsales.prism.domain.scheduler.FastTrackMutationEngine
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.UniAExtractionRequest
+import com.smartsales.prism.domain.scheduler.UniBExtractionRequest
+import com.smartsales.prism.domain.scheduler.UniCExtractionRequest
 import com.smartsales.core.pipeline.ToolRegistry
 import com.smartsales.core.pipeline.PluginRequest
 import com.smartsales.core.pipeline.PluginGateway
@@ -50,6 +52,8 @@ class IntentOrchestrator @Inject constructor(
     private val entityWriter: EntityWriter,
     private val aliasCache: AliasCache,
     private val uniAExtractionService: RealUniAExtractionService,
+    private val uniBExtractionService: RealUniBExtractionService,
+    private val uniCExtractionService: RealUniCExtractionService,
     private val fastTrackMutationEngine: FastTrackMutationEngine,
     private val taskRepository: ScheduledTaskRepository,
     private val scheduleBoard: ScheduleBoard,
@@ -74,7 +78,11 @@ class IntentOrchestrator @Inject constructor(
 
     private var pendingExecution: PendingExecution? = null
 
-    suspend fun processInput(input: String, isVoice: Boolean = false): Flow<PipelineResult> {
+    suspend fun processInput(
+        input: String,
+        isVoice: Boolean = false,
+        displayedDateIso: String? = null
+    ): Flow<PipelineResult> {
         return flow {
             // Wave 3 Open-Loop Protocol: Any new substantive input clears the pending state
             // to avoid committing stale LLM hallucinations if the user ignored a previous confirmation card.
@@ -223,6 +231,8 @@ class IntentOrchestrator @Inject constructor(
 
         var pathATaskId: String? = null
         var attemptedUniA = false
+        var attemptedUniB = false
+        var attemptedUniC = false
         
         // --- PATH A: Bounded Uni-A attempt for surviving voice input ---
         if (isVoice) {
@@ -235,7 +245,8 @@ class IntentOrchestrator @Inject constructor(
                 transcript = input,
                 nowIso = timeProvider.now.toString(),
                 timezone = timeProvider.zoneId.id,
-                unifiedId = unifiedId
+                unifiedId = unifiedId,
+                displayedDateIso = displayedDateIso
             )
             when (val fastTrackIntent = uniAExtractionService.extract(extractionRequest)) {
                 is FastTrackResult.CreateTasks -> {
@@ -282,12 +293,120 @@ class IntentOrchestrator @Inject constructor(
                         "IntentOrchestrator",
                         "Uni-A exited NotExact for $unifiedId: ${fastTrackIntent.reason}"
                     )
+
+                    attemptedUniB = true
+                    android.util.Log.d(
+                        "IntentOrchestrator",
+                        "Uni-B attempt started for $unifiedId after Uni-A NotExact"
+                    )
+                    val vagueRequest = UniBExtractionRequest(
+                        transcript = input,
+                        nowIso = timeProvider.now.toString(),
+                        timezone = timeProvider.zoneId.id,
+                        unifiedId = unifiedId,
+                        displayedDateIso = displayedDateIso
+                    )
+                    when (val vagueIntent = uniBExtractionService.extract(vagueRequest)) {
+                        is FastTrackResult.CreateVagueTask -> {
+                            PipelineValve.tag(
+                                checkpoint = PipelineValve.Checkpoint.TASK_EXTRACTED_VAGUE,
+                                payloadSize = input.length,
+                                summary = "Uni-B vague task parsed",
+                                rawDataDump = vagueIntent.toString()
+                            )
+                            when (val mutationResult = fastTrackMutationEngine.execute(vagueIntent)) {
+                                is com.smartsales.prism.domain.scheduler.MutationResult.Success -> {
+                                    val vagueTaskId = mutationResult.taskIds.firstOrNull() ?: unifiedId
+                                    val vagueTask = taskRepository.getTask(vagueTaskId)
+                                    if (vagueTask != null) {
+                                        pathATaskId = vagueTask.id
+                                        PipelineValve.tag(
+                                            checkpoint = PipelineValve.Checkpoint.PATH_A_DB_WRITTEN,
+                                            payloadSize = vagueTask.id.hashCode(),
+                                            summary = "Uni-B vague task persisted",
+                                            rawDataDump = "TaskID: ${vagueTask.id}"
+                                        )
+                                        emit(PipelineResult.PathACommitted(vagueTask))
+                                        android.util.Log.d("IntentOrchestrator", "Uni-B vague Path A committed for $unifiedId")
+                                    }
+                                }
+                                is com.smartsales.prism.domain.scheduler.MutationResult.NoMatch -> {
+                                    android.util.Log.d(
+                                        "IntentOrchestrator",
+                                        "Uni-B vague create rejected for $unifiedId: ${mutationResult.reason}"
+                                    )
+                                }
+                                else -> Unit
+                            }
+                        }
+                        is FastTrackResult.NoMatch -> {
+                            android.util.Log.d(
+                                "IntentOrchestrator",
+                                "Uni-B exited without vague commit for $unifiedId: ${vagueIntent.reason}"
+                            )
+
+                            attemptedUniC = true
+                            android.util.Log.d(
+                                "IntentOrchestrator",
+                                "Uni-C attempt started for $unifiedId after Uni-B declined"
+                            )
+                            val inspirationRequest = UniCExtractionRequest(
+                                transcript = input,
+                                nowIso = timeProvider.now.toString(),
+                                timezone = timeProvider.zoneId.id,
+                                unifiedId = unifiedId
+                            )
+                            when (val inspirationIntent = uniCExtractionService.extract(inspirationRequest)) {
+                                is FastTrackResult.CreateInspiration -> {
+                                    PipelineValve.tag(
+                                        checkpoint = PipelineValve.Checkpoint.THOUGHT_EXTRACTED,
+                                        payloadSize = input.length,
+                                        summary = "Uni-C inspiration parsed",
+                                        rawDataDump = inspirationIntent.toString()
+                                    )
+                                    when (val mutationResult = fastTrackMutationEngine.execute(inspirationIntent)) {
+                                        is com.smartsales.prism.domain.scheduler.MutationResult.InspirationCreated -> {
+                                            PipelineValve.tag(
+                                                checkpoint = PipelineValve.Checkpoint.PATH_A_DB_WRITTEN,
+                                                payloadSize = mutationResult.id.hashCode(),
+                                                summary = "Uni-C inspiration persisted",
+                                                rawDataDump = "InspirationID: ${mutationResult.id}"
+                                            )
+                                            emit(
+                                                PipelineResult.InspirationCommitted(
+                                                    id = mutationResult.id,
+                                                    content = inspirationIntent.params.content
+                                                )
+                                            )
+                                            android.util.Log.d("IntentOrchestrator", "Uni-C inspiration committed for $unifiedId")
+                                            return@flow
+                                        }
+                                        is com.smartsales.prism.domain.scheduler.MutationResult.NoMatch -> {
+                                            android.util.Log.d(
+                                                "IntentOrchestrator",
+                                                "Uni-C inspiration rejected for $unifiedId: ${mutationResult.reason}"
+                                            )
+                                        }
+                                        else -> Unit
+                                    }
+                                }
+                                is FastTrackResult.NoMatch -> {
+                                    android.util.Log.d(
+                                        "IntentOrchestrator",
+                                        "Uni-C exited without inspiration commit for $unifiedId: ${inspirationIntent.reason}"
+                                    )
+                                }
+                                else -> Unit
+                            }
+                        }
+                        else -> Unit
+                    }
                 }
                 else -> Unit
             }
         }
-        if (attemptedUniA && pathATaskId == null) {
-            android.util.Log.d("IntentOrchestrator", "Uni-A produced no commit for $unifiedId; falling through to Path B")
+        if ((attemptedUniA || attemptedUniB || attemptedUniC) && pathATaskId == null) {
+            android.util.Log.d("IntentOrchestrator", "Path A produced no commit for $unifiedId; falling through to Path B")
         }
         
         // Delegate to the heavy-duty pipeline and forward its results (PATH B)
@@ -319,6 +438,13 @@ class IntentOrchestrator @Inject constructor(
                 }
             } else if (result is PipelineResult.TaskCommandProposal) {
                 if (isVoice) {
+                    if (pathATaskId != null) {
+                        android.util.Log.d(
+                            "IntentOrchestrator",
+                            "Suppressing later-lane scheduler command for $unifiedId because Path A already committed task=$pathATaskId"
+                        )
+                        return@collect
+                    }
                     PipelineValve.tag(
                         checkpoint = PipelineValve.Checkpoint.TASK_COMMAND_ROUTED,
                         payloadSize = 1,
@@ -342,13 +468,13 @@ class IntentOrchestrator @Inject constructor(
                 if (isVoice) {
                     // --- PATH B: Auto-Commit for Voice Plugins ---
                     val request = PluginRequest(input, result.params)
-                    val silentGateway = object : PluginGateway {
-                        override suspend fun getSessionHistory(turns: Int) = ""
-                        override suspend fun appendToHistory(message: String) {}
-                        override suspend fun emitProgress(message: String) {}
-                    }
+                    val runtimeGateway = RuntimePluginGateway(
+                        toolId = result.toolId,
+                        contextBuilder = contextBuilder,
+                        allowedPermissions = setOf(CoreModulePermission.READ_SESSION_HISTORY)
+                    )
                     appScope.launch {
-                        toolRegistry.executeTool(result.toolId, request, silentGateway).collect {
+                        toolRegistry.executeTool(result.toolId, request, runtimeGateway).collect {
                             // Run silently in background to complete the auto-commit
                         }
                     }

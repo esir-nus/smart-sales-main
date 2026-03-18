@@ -7,6 +7,7 @@ import com.smartsales.prism.domain.time.TimeProvider
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.SerializationException
 import java.time.Instant
+import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import java.time.format.DateTimeFormatter
 import javax.inject.Inject
@@ -109,6 +110,192 @@ class SchedulerLinter @Inject constructor() {
             FastTrackResult.NoMatch("无法解析该意图: ${e.message}")
         }
     }
+
+    /**
+     * 解析 Uni-A 轻量提取结果。
+     * 说明：必须和 PromptCompiler 使用同一个 @Serializable contract。
+     */
+    fun parseUniAExtraction(
+        input: String,
+        unifiedId: String,
+        transcript: String? = null
+    ): FastTrackResult {
+        return try {
+            val payload = jsonInterpreter.decodeFromString<UniAExtractionPayload>(cleanJson(input))
+            when (payload.decision.uppercase()) {
+                "EXACT_CREATE" -> {
+                    val task = payload.task ?: return FastTrackResult.NoMatch("Uni-A exact result missing task payload")
+                    val title = task.title.trim()
+                    if (title.isBlank()) {
+                        return FastTrackResult.NoMatch("Uni-A exact task title is blank")
+                    }
+
+                    val startTimeIso = task.startTimeIso.trim()
+                    if (startTimeIso.isBlank()) {
+                        return FastTrackResult.NoMatch("Uni-A exact task time is blank")
+                    }
+                    try {
+                        Instant.parse(startTimeIso)
+                    } catch (_: Exception) {
+                        return FastTrackResult.NoMatch("Uni-A exact task time must be strict ISO-8601")
+                    }
+
+                    val antiFabricationReason = rejectFabricatedExactTime(
+                        transcript = transcript,
+                        startTimeIso = startTimeIso
+                    )
+                    if (antiFabricationReason != null) {
+                        return FastTrackResult.NoMatch(antiFabricationReason)
+                    }
+
+                    val urgency = normalizeUrgency(task.urgency)
+                    return FastTrackResult.CreateTasks(
+                        params = CreateTasksParams(
+                            unifiedId = unifiedId,
+                            tasks = listOf(
+                                TaskDefinition(
+                                    title = title,
+                                    startTimeIso = startTimeIso,
+                                    durationMinutes = task.durationMinutes.coerceAtLeast(0),
+                                    urgency = urgency
+                                )
+                            )
+                        )
+                    )
+                }
+                "NOT_EXACT" -> {
+                    FastTrackResult.NoMatch(payload.reason ?: "Uni-A decided input is not exact")
+                }
+                else -> FastTrackResult.NoMatch("Unknown Uni-A decision: ${payload.decision}")
+            }
+        } catch (e: SerializationException) {
+            FastTrackResult.NoMatch("Uni-A JSON 结构异常: ${e.message}")
+        } catch (e: Exception) {
+            FastTrackResult.NoMatch("Uni-A 解析失败: ${e.message}")
+        }
+    }
+
+    private fun rejectFabricatedExactTime(
+        transcript: String?,
+        startTimeIso: String
+    ): String? {
+        val normalized = transcript
+            ?.lowercase()
+            ?.trim()
+            ?: return null
+
+        val hasRelativeDayAnchor = listOf(
+            "明天",
+            "tomorrow",
+            "下一天",
+            "后一天",
+            "nextday",
+            "next day"
+        ).any { normalized.contains(it) }
+        if (!hasRelativeDayAnchor) return null
+
+        val hasExplicitClockCue = listOf(
+            Regex("""\b\d{1,2}:\d{1,2}\b"""),
+            Regex("""\b\d{1,2}([:.]\d{1,2})?\s*(am|pm|a\.m\.|p\.m\.)\b"""),
+            Regex("""\bat\s*\d{1,2}([:.]\d{1,2})?\s*(am|pm|a\.m\.|p\.m\.)\b"""),
+            Regex("""(?:凌晨|早上|上午|中午|下午|晚上|今晚|午夜|半夜)?(?:[零一二两三四五六七八九十百\d]{1,3})点半"""),
+            Regex("""(?:凌晨|早上|上午|中午|下午|晚上|今晚|午夜|半夜)?(?:[零一二两三四五六七八九十百\d]{1,3})点"""),
+            Regex("""(?:凌晨|早上|上午|中午|下午|晚上|今晚|午夜|半夜)?一点半"""),
+            Regex("""(?:凌晨|早上|上午|中午|下午|晚上|今晚|午夜|半夜)?一点"""),
+            Regex("""(?:零点|午夜|midnight|noon)""")
+        ).any { it.containsMatchIn(normalized) }
+
+        if (hasExplicitClockCue) return null
+
+        val instant = try {
+            Instant.parse(startTimeIso)
+        } catch (_: Exception) {
+            return null
+        }
+
+        return "Uni-A exact time rejected: date-only input must not fabricate exact clock time (${instant.truncatedTo(ChronoUnit.SECONDS)})"
+    }
+
+    /**
+     * 解析 Uni-B 模糊提取结果。
+     * 说明：必须和 PromptCompiler 使用同一个 @Serializable contract。
+     */
+    fun parseUniBExtraction(input: String, unifiedId: String): FastTrackResult {
+        return try {
+            val payload = jsonInterpreter.decodeFromString<UniBExtractionPayload>(cleanJson(input))
+            when (payload.decision.uppercase()) {
+                "VAGUE_CREATE" -> {
+                    val task = payload.task ?: return FastTrackResult.NoMatch("Uni-B vague result missing task payload")
+                    val title = task.title.trim()
+                    if (title.isBlank()) {
+                        return FastTrackResult.NoMatch("Uni-B vague task title is blank")
+                    }
+
+                    val anchorDateIso = task.anchorDateIso.trim()
+                    if (anchorDateIso.isBlank()) {
+                        return FastTrackResult.NoMatch("Uni-B vague task anchor date is blank")
+                    }
+                    try {
+                        LocalDate.parse(anchorDateIso)
+                    } catch (_: Exception) {
+                        return FastTrackResult.NoMatch("Uni-B anchor date must be yyyy-MM-dd")
+                    }
+
+                    return FastTrackResult.CreateVagueTask(
+                        params = CreateVagueTaskParams(
+                            unifiedId = unifiedId,
+                            title = title,
+                            anchorDateIso = anchorDateIso,
+                            timeHint = task.timeHint?.trim()?.takeIf { it.isNotBlank() },
+                            urgency = normalizeUrgency(task.urgency)
+                        )
+                    )
+                }
+                "NOT_VAGUE" -> {
+                    FastTrackResult.NoMatch(payload.reason ?: "Uni-B decided input is not vague-create")
+                }
+                else -> FastTrackResult.NoMatch("Unknown Uni-B decision: ${payload.decision}")
+            }
+        } catch (e: SerializationException) {
+            FastTrackResult.NoMatch("Uni-B JSON 结构异常: ${e.message}")
+        } catch (e: Exception) {
+            FastTrackResult.NoMatch("Uni-B 解析失败: ${e.message}")
+        }
+    }
+
+    /**
+     * 解析 Uni-C 灵感提取结果。
+     * 说明：必须和 PromptCompiler 使用同一个 @Serializable contract。
+     */
+    fun parseUniCExtraction(input: String, unifiedId: String): FastTrackResult {
+        return try {
+            val payload = jsonInterpreter.decodeFromString<UniCExtractionPayload>(cleanJson(input))
+            when (payload.decision.uppercase()) {
+                "INSPIRATION_CREATE" -> {
+                    val idea = payload.idea ?: return FastTrackResult.NoMatch("Uni-C inspiration result missing idea payload")
+                    val content = idea.content.trim()
+                    if (content.isBlank()) {
+                        return FastTrackResult.NoMatch("Uni-C inspiration content is blank")
+                    }
+
+                    return FastTrackResult.CreateInspiration(
+                        params = CreateInspirationParams(
+                            unifiedId = unifiedId,
+                            content = content
+                        )
+                    )
+                }
+                "NOT_INSPIRATION" -> {
+                    FastTrackResult.NoMatch(payload.reason ?: "Uni-C decided input is not inspiration-create")
+                }
+                else -> FastTrackResult.NoMatch("Unknown Uni-C decision: ${payload.decision}")
+            }
+        } catch (e: SerializationException) {
+            FastTrackResult.NoMatch("Uni-C JSON 结构异常: ${e.message}")
+        } catch (e: Exception) {
+            FastTrackResult.NoMatch("Uni-C 解析失败: ${e.message}")
+        }
+    }
     
     private fun parseTaskDefinition(taskMutation: TaskMutation): TaskDefinition? {
         val title = taskMutation.title
@@ -127,17 +314,7 @@ class SchedulerLinter @Inject constructor() {
             else -> 0  // fire-off 提醒没有时长
         }
         
-        val urgencyStr = taskMutation.urgency
-        val urgencyLevel = try {
-            UrgencyEnum.valueOf(urgencyStr.uppercase())
-        } catch (e: IllegalArgumentException) {
-            when {
-                urgencyStr.uppercase().startsWith("L1") -> UrgencyEnum.L1_CRITICAL
-                urgencyStr.uppercase().startsWith("L2") -> UrgencyEnum.L2_IMPORTANT
-                urgencyStr.uppercase() == "FIRE_OFF" -> UrgencyEnum.FIRE_OFF
-                else -> UrgencyEnum.L3_NORMAL // 安全默认
-            }
-        }
+        val urgencyLevel = normalizeUrgency(taskMutation.urgency)
         
         return TaskDefinition(
             title = title,
@@ -145,6 +322,26 @@ class SchedulerLinter @Inject constructor() {
             durationMinutes = durationMinutes,
             urgency = urgencyLevel
         )
+    }
+
+    private fun normalizeUrgency(raw: String): UrgencyEnum {
+        return try {
+            UrgencyEnum.valueOf(raw.uppercase())
+        } catch (e: IllegalArgumentException) {
+            when {
+                raw.uppercase().startsWith("L1") -> UrgencyEnum.L1_CRITICAL
+                raw.uppercase().startsWith("L2") -> UrgencyEnum.L2_IMPORTANT
+                raw.uppercase() == "FIRE_OFF" -> UrgencyEnum.FIRE_OFF
+                else -> UrgencyEnum.L3_NORMAL
+            }
+        }
+    }
+
+    private fun cleanJson(input: String): String {
+        return input
+            .replace("```json", "")
+            .replace("```", "")
+            .trim()
     }
 
     private fun parseDuration(durationStr: String): Int? {
@@ -414,4 +611,3 @@ sealed class LintResult {
     
     data class ToolDispatch(val workflowId: String, val params: Map<String, String>) : LintResult()
 }
-

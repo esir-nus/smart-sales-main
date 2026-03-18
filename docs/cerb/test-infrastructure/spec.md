@@ -26,10 +26,10 @@ Testing infrastructure is treated as a first-class Cerb feature to enforce stric
 
 | Area | Status | Notes |
 |------|--------|-------|
-| Shared helper module | ✅ SHIPPED | `:core:test` exists as a lightweight helper module and currently exposes `FakeDispatcherProvider`. |
-| State-backed fake coverage | ✅ SHIPPED | Shared domain and platform fakes exist across the split fake modules. |
-| Domain/platform isolation | ✅ SHIPPED | The fake stack is split into `:core:test-fakes-domain` and `:core:test-fakes-platform`. |
-| Canonical runner | ✅ SHIPPED | `scripts/run-tests.sh` is the current repo-level wrapper for automated Gradle test targets. |
-| Runner slice contract | ✅ SHIPPED | `all` is explicitly a curated repo-default slice, while `infra`, `pipeline`, `scheduler`, and `l2` are first-class named verification slices. |
-| Infra assertion reality | ✅ SHIPPED | The infra runner now executes real assertions for dispatcher control, state-backed fake read-through, and platform fake collaboration behavior. |
-| `PrismTestRig` | ⏸️ DEFERRED | Historical proposal only. It is not part of the current delivered contract and should not be treated as live infrastructure. |
+| Shared helper module | SHIPPED | `:core:test` exists as a lightweight helper module and currently exposes `FakeDispatcherProvider`. |
+| State-backed fake coverage | SHIPPED | Shared domain and platform fakes exist across the split fake modules. |
+| Domain/platform isolation | SHIPPED | The fake stack is split into `:core:test-fakes-domain` and `:core:test-fakes-platform`. |
+| Canonical runner | SHIPPED | `scripts/run-tests.sh` is the current repo-level wrapper for automated Gradle test targets. |
+| Runner slice contract | SHIPPED | `all` is explicitly a curated repo-default slice, while `infra`, `pipeline`, `scheduler`, and `l2` are first-class named verification slices. |
+| Infra assertion reality | SHIPPED | The infra runner now executes real assertions for dispatcher control, state-backed fake read-through, and platform fake collaboration behavior. |
+| `PrismTestRig` | DEFERRED | Historical proposal only. It is not part of the current delivered contract and should not be treated as live infrastructure. |

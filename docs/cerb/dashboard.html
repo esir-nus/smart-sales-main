@@ -8,6 +8,7 @@
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code&display=swap" rel="stylesheet">
         <!-- SVG drawing library for architecture maps -->
         <script src="https://cdn.jsdelivr.net/npm/leader-line-new@1.1.9/leader-line.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
         <style>
     :root {
         --bg: #0f172a;
@@ -324,6 +325,26 @@
     .increment-progress { height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; margin-top: 8px; overflow: hidden; }
     .increment-bar { height: 100%; border-radius: 3px; }
 
+    /* Markdown Styles for Tracker */
+    #tracker-content h1, #tracker-content h2, #tracker-content h3 { color: var(--accent); margin-top: 25px; margin-bottom: 12px; }
+    #tracker-content h1 { font-size: 1.8rem; margin-top: 0; }
+    #tracker-content h2 { font-size: 1.4rem; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    #tracker-content ul, #tracker-content ol { padding-left: 20px; margin-bottom: 20px; }
+    #tracker-content li { margin-bottom: 8px; line-height: 1.6; }
+    #tracker-content li.task-list-item { list-style-type: none; margin-left: -20px; }
+    #tracker-content a { color: var(--glow); text-decoration: none; }
+    #tracker-content a:hover { text-decoration: underline; }
+    #tracker-content code { background: rgba(0,0,0,0.3); padding: 3px 6px; border-radius: 4px; font-family: 'Fira Code', monospace; font-size: 0.9em; color: #e2e8f0; border: 1px solid rgba(255,255,255,0.1); }
+    #tracker-content pre { background: rgba(0,0,0,0.4); padding: 15px; border-radius: 8px; overflow-x: auto; margin-bottom: 20px; border: 1px solid var(--border); }
+    #tracker-content pre code { background: transparent; padding: 0; border-radius: 0; border: none; }
+    #tracker-content table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 0.95rem; }
+    #tracker-content th, #tracker-content td { border: 1px solid var(--border); padding: 10px 15px; text-align: left; }
+    #tracker-content th { background: rgba(0,0,0,0.2); color: var(--accent); font-weight: 600; }
+    #tracker-content blockquote { border-left: 4px solid var(--accent); margin: 0 0 20px 0; padding: 12px 18px; color: var(--text-muted); background: rgba(59, 130, 246, 0.05); border-radius: 0 8px 8px 0; font-style: italic; }
+    #tracker-content input[type="checkbox"] { margin-right: 10px; accent-color: var(--accent); transform: scale(1.1); }
+    #tracker-content strong { color: var(--text); font-weight: 700; }
+    #tracker-content em { color: #cbd5e1; }
+
     /* Topology specific CSS */
     .topology-sequence {
         display: flex;
@@ -407,6 +428,7 @@
             <button class="tab-btn active" onclick="switchTab(event, 'topology')">Topology Sequence (Layers)</button>
             <button class="tab-btn" onclick="switchTab(event, 'feature')">Feature Dataflow (Tracks)</button>
             <button class="tab-btn" onclick="switchTab(event, 'estimate')">代码量估算 (Code Estimates)</button>
+            <button class="tab-btn" onclick="switchTab(event, 'tracker')">Project Tracker (Live)</button>
         </div>
 
         <!-- 1. Topology View -->
@@ -1188,11 +1210,11 @@
             </div>
         </div>
         
-
+            </div>
         </div>
-        
+
         <!-- 3. Code Estimate View -->
-<div id="estimate" class="tab-content">
+        <div id="estimate" class="tab-content">
             <div class="container">
                 <div class="card full-width">
                     <h2>当前状态快照 (代码清理后)</h2>
@@ -1222,11 +1244,6 @@
                         未来的代码增长必须集中在<strong>测试覆盖率</strong>（需增加 1.5万 - 2万行）以及<strong>错误处理和性能监控</strong>（需增加 5千 - 1.3万行），只有稳固这些模块才能将项目成功演进至重度生产阶段 (T2-T3)。
                     </p>
                 </div>
-
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <!-- Additional Container for Full Width Metrics -->
             <div class="container" style="margin-top: 40px; display: block;">
@@ -1307,9 +1324,170 @@
             </div>
         </div>
 
+        <!-- 4. Tracker View -->
+        <div id="tracker" class="tab-content">
+            <div class="container" style="display: block; width: 100%;">
+                <div class="card full-width" style="margin-bottom: 40px; border-color: rgba(192, 132, 252, 0.5); box-shadow: 0 4px 25px rgba(192, 132, 252, 0.1);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 15px; margin-bottom: 25px;">
+                        <h2 style="margin: 0; border: none; padding: 0;">Project Tracker (Auto-Syncing)</h2>
+                        <div style="text-align: right;">
+                            <span id="tracker-last-sync" style="font-size: 0.85rem; color: var(--success); font-weight: 500; display: block;">Syncing...</span>
+                            <span style="font-size: 0.75rem; color: var(--text-muted);">Updates every 2 min from docs/plans/tracker.md</span>
+                        </div>
+                    </div>
+                    <div id="tracker-dashboard-container"></div>
+                    <div id="tracker-content" style="color: var(--text); line-height: 1.7;">
+                        <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+                            <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(192, 132, 252, 0.3); border-radius: 50%; border-top-color: var(--glow); animation: spin 1s ease-in-out infinite; margin-bottom: 15px;"></div>
+                            <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+                            <div>Loading tracker payload...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <script>
             let lines = [];
             let linesInitialized = false;
+
+            // Tracker logic
+            let trackerInterval;
+            
+            async function fetchAndRenderTracker() {
+                try {
+                    // Prevent caching with timestamp
+                    const response = await fetch('../plans/tracker.md?t=' + new Date().getTime());
+                    if (!response.ok) throw new Error('Failed to fetch tracker.md');
+                    let text = await response.text();
+                    
+                    // --- Parse Tracker Data ---
+                    const lines = text.split('\n');
+                    let totalTasks = 0;
+                    let completedTasks = 0;
+                    
+                    let activeEpic = "Unknown Epic";
+                    let waves = [];
+                    let currentWave = null;
+                    
+                    for (let line of lines) {
+                        // Find Active Epic
+                        const epicMatch = line.match(/^## Active Epic:\s*(.*)/);
+                        if (epicMatch) {
+                            activeEpic = epicMatch[1].trim();
+                        }
+                        
+                        // Find Waves
+                        const waveMatch = line.match(/^### (Wave\s*\d+:\s*.*)/);
+                        if (waveMatch) {
+                            if (currentWave) {
+                                waves.push(currentWave);
+                            }
+                            currentWave = {
+                                title: waveMatch[1],
+                                total: 0,
+                                completed: 0
+                            };
+                        }
+                        
+                        // Count Tasks
+                        if (line.match(/^\s*-\s*\[x\]/i)) {
+                            totalTasks++;
+                            completedTasks++;
+                            if (currentWave) {
+                                currentWave.total++;
+                                currentWave.completed++;
+                            }
+                        } else if (line.match(/^\s*-\s*\[\s\]/)) {
+                            totalTasks++;
+                            if (currentWave) {
+                                currentWave.total++;
+                            }
+                        }
+                    }
+                    if (currentWave) {
+                        waves.push(currentWave);
+                    }
+                    
+                    // --- Build Visual Dashboard ---
+                    const overallPercent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+                    
+                    let wavesHtml = '';
+                    // Only show the 4 most recent waves to save space
+                    const recentWaves = waves.slice(-4).reverse();
+                    
+                    recentWaves.forEach(w => {
+                        const wp = w.total > 0 ? Math.round((w.completed / w.total) * 100) : 0;
+                        const wcolor = wp === 100 ? 'var(--success)' : (wp > 0 ? 'var(--glow)' : 'var(--text-muted)');
+                        
+                        wavesHtml += `
+                        <div style="margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                                <span style="font-weight: 500; font-size: 0.9rem; color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 15px;">${w.title}</span>
+                                <span style="color: ${wcolor}; font-size: 0.85rem; font-family: 'Fira Code', monospace;">${w.completed}/${w.total} (${wp}%)</span>
+                            </div>
+                            <div style="height: 6px; background: rgba(0,0,0,0.3); border-radius: 3px; overflow: hidden;">
+                                <div style="height: 100%; width: ${wp}%; background: ${wcolor}; box-shadow: 0 0 8px ${wcolor}; transition: width 0.5s ease-out;"></div>
+                            </div>
+                        </div>
+                        `;
+                    });
+                    
+                    const dashboardHtml = `
+                    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 30px; margin-bottom: 30px; padding-bottom: 30px; border-bottom: 1px dashed var(--border);">
+                        
+                        <!-- Overall Stats -->
+                        <div style="background: rgba(0,0,0,0.2); padding: 25px; border-radius: 12px; border: 1px solid rgba(192, 132, 252, 0.2); display: flex; flex-direction: column; justify-content: center;">
+                            <div style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 10px;">Active Epic Master Progress</div>
+                            <div style="font-size: 1.1rem; font-weight: 600; color: #fff; margin-bottom: 20px;">${activeEpic}</div>
+                            
+                            <div style="display: flex; align-items: baseline; gap: 10px; margin-bottom: 15px;">
+                                <div style="font-size: 3.5rem; font-weight: 700; color: var(--glow); line-height: 1; text-shadow: 0 0 20px rgba(192, 132, 252, 0.3);">${overallPercent}%</div>
+                                <div style="color: var(--text-muted); font-size: 1rem;">Completion</div>
+                            </div>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 10px;">
+                                <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; border-left: 3px solid var(--success);">
+                                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">Completed Tasks</div>
+                                    <div style="font-size: 1.4rem; font-weight: 600; font-family: 'Fira Code', monospace;">${completedTasks}</div>
+                                </div>
+                                <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; border-left: 3px solid var(--warning);">
+                                    <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px;">Pending Tasks</div>
+                                    <div style="font-size: 1.4rem; font-weight: 600; font-family: 'Fira Code', monospace;">${totalTasks - completedTasks}</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Wave Breakdown -->
+                        <div style="background: rgba(0,0,0,0.2); padding: 25px; border-radius: 12px; border: 1px solid rgba(255, 255, 255, 0.05); display: flex; flex-direction: column;">
+                            <div style="font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 20px; display: flex; justify-content: space-between;">
+                                <span>Recent Waves Tracking</span>
+                                <span style="color: rgba(255,255,255,0.3);">Top 4</span>
+                            </div>
+                            <div style="flex-grow: 1; display: flex; flex-direction: column; justify-content: space-around;">
+                                ${wavesHtml || '<div style="color: var(--text-muted);">No active waves found.</div>'}
+                            </div>
+                        </div>
+
+                    </div>
+                    `;
+                    
+                    // Inject Visual Dashboard
+                    document.getElementById('tracker-dashboard-container').innerHTML = dashboardHtml;
+                    
+                    // Render raw text
+                    document.getElementById('tracker-content').innerHTML = marked.parse(text, { gfm: true, breaks: true });
+                    
+                    const now = new Date();
+                    document.getElementById('tracker-last-sync').textContent = `Last synced: ${now.toLocaleTimeString()}`;
+                    document.getElementById('tracker-last-sync').style.color = 'var(--success)';
+                } catch (error) {
+                    console.error('Error fetching tracker:', error);
+                    document.getElementById('tracker-content').innerHTML = `<p style="color: var(--error); padding: 20px; text-align: center;">Error loading tracker: ${error.message}</p>`;
+                    document.getElementById('tracker-last-sync').textContent = 'Sync Failed';
+                    document.getElementById('tracker-last-sync').style.color = 'var(--error)';
+                }
+            }
 
             function initLines() {
                 if (linesInitialized) return;
@@ -1399,6 +1577,12 @@
                     } else if (tabId === 'estimate') {
                         lines.forEach(l => l.hide('fade', {duration: 100}));
                         initCharts();
+                    } else if (tabId === 'tracker') {
+                        lines.forEach(l => l.hide('fade', {duration: 100}));
+                        fetchAndRenderTracker();
+                        if (!trackerInterval) {
+                            trackerInterval = setInterval(fetchAndRenderTracker, 120000); // 2 minutes
+                        }
                     } else {
                         lines.forEach(l => l.hide('fade', {duration: 100}));
                     }

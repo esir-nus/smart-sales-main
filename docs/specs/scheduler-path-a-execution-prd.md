@@ -1,6 +1,12 @@
-# 🚀 PRD: Scheduler Fast-Track (Path A Execution)
+# DEPRECATED: Scheduler Fast-Track (Path A Execution)
 
-> **Context**: This is the North Star PRD for decoupling the Scheduler capabilities away from the monolithic pipeline and migrating them into the System III Dual-Path Architecture.
+> **Status**: Deprecated for active feature delivery
+> **Reason**: Wave 19 now uses Cerb shards as the implementation contract layer.
+> **Do Not Build From This Doc**: Use `docs/core-flow/scheduler-fast-track-flow.md` as the behavioral source, then use the active Cerb shard under `docs/cerb/**` as the coding contract.
+> **Current Active T0 Contract**: `docs/cerb/scheduler-path-a-spine/spec.md`
+> **Current Active T1 Contract**: `docs/cerb/scheduler-path-a-uni-a/spec.md`
+
+> **Historical Context**: This doc captured an earlier Path A planning model for decoupling the Scheduler away from the monolithic pipeline and migrating it into the System III Dual-Path Architecture.
 > **Scope**: Path A (The Town) - Optimistic UI Execution.
 
 ## 1. Core Philosophy

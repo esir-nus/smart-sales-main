@@ -2,6 +2,7 @@ package com.smartsales.prism.domain.session
 
 import com.smartsales.prism.domain.memory.EntityRef
 import com.smartsales.prism.domain.rl.HabitContext
+import com.smartsales.prism.domain.scheduler.SchedulerPatternContext
 
 /**
  * 会话工作集 — 每个会话的 "RAM"
@@ -43,6 +44,9 @@ class SessionWorkingSet(
 
     /** Sticky Notes: 近期日程摘要 — 首轮由 Kernel 构建 */
     var scheduleContext: String? = null
+
+    /** Scheduler Pattern Signals: 用户排程习惯摘要 — 供 RL 用户习惯学习使用 */
+    var schedulerPatternContext: SchedulerPatternContext? = null
 
     /** 临时文档上下文 (Transient Payload) — 比如从音频加载的摘要等 */
     var documentContext: String? = null

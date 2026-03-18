@@ -4,6 +4,7 @@ import kotlinx.serialization.Serializable
 
 sealed class FastTrackResult {
     data class CreateTasks(val params: CreateTasksParams) : FastTrackResult()
+    data class CreateVagueTask(val params: CreateVagueTaskParams) : FastTrackResult()
     data class RescheduleTask(val params: RescheduleTaskParams) : FastTrackResult()
     data class CreateInspiration(val params: CreateInspirationParams) : FastTrackResult()
     data class NoMatch(val reason: String) : FastTrackResult()
@@ -13,6 +14,15 @@ sealed class FastTrackResult {
 data class CreateTasksParams(
     val unifiedId: String? = null,
     val tasks: List<TaskDefinition>
+)
+
+@Serializable
+data class CreateVagueTaskParams(
+    val unifiedId: String? = null,
+    val title: String,
+    val anchorDateIso: String,
+    val timeHint: String? = null,
+    val urgency: UrgencyEnum = UrgencyEnum.L3_NORMAL
 )
 
 @Serializable

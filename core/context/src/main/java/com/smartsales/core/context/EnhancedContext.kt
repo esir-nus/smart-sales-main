@@ -3,6 +3,7 @@ package com.smartsales.core.context
 import com.smartsales.prism.domain.memory.EntityRef
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.rl.HabitContext
+import com.smartsales.prism.domain.scheduler.SchedulerPatternContext
 
 /**
  * 增强上下文 — 统一输入载体
@@ -30,6 +31,8 @@ data class EnhancedContext(
     val habitContext: HabitContext? = null,
     // Sticky Notes: 近期日程摘要（由ContextBuilder从ScheduledTaskRepository读取）
     val scheduleContext: String? = null,
+    // Scheduler Pattern Signals: 用户排程习惯摘要（供 RL 用户习惯学习使用）
+    val schedulerPatternContext: SchedulerPatternContext? = null,
     // Architect override
     val systemPromptOverride: String? = null
 )

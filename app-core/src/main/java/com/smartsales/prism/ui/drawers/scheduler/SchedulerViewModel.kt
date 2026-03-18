@@ -279,7 +279,15 @@ class SchedulerViewModel @Inject constructor(
                 if (result is com.smartsales.prism.domain.asr.AsrResult.Success) {
                     _pipelineStatus.value = "处理意图..."
                     var schedulerWriteProven = false
-                    intentOrchestrator.processInput(result.text, isVoice = true).collect { res ->
+                    var inspirationWriteProven = false
+                    val displayedDateIso = LocalDate.now()
+                        .plusDays(_activeDayOffset.value.toLong())
+                        .toString()
+                    intentOrchestrator.processInput(
+                        result.text,
+                        isVoice = true,
+                        displayedDateIso = displayedDateIso
+                    ).collect { res ->
                         // Add some rudimentary UI feedback
                         when (res) {
                             is com.smartsales.core.pipeline.PipelineResult.PathACommitted -> {
@@ -287,8 +295,13 @@ class SchedulerViewModel @Inject constructor(
                                 _pipelineStatus.value = "✅ 搞定"
                                 android.util.Log.d("SchedulerVM", "processAudio: success status emitted after PathACommitted")
                             }
+                            is com.smartsales.core.pipeline.PipelineResult.InspirationCommitted -> {
+                                inspirationWriteProven = true
+                                _pipelineStatus.value = "💡 已保存灵感"
+                                android.util.Log.d("SchedulerVM", "processAudio: inspiration status emitted after InspirationCommitted")
+                            }
                             is com.smartsales.core.pipeline.PipelineResult.ConversationalReply -> {
-                                if (!schedulerWriteProven) {
+                                if (!schedulerWriteProven && !inspirationWriteProven) {
                                     _pipelineStatus.value = "未创建日程"
                                     android.util.Log.d("SchedulerVM", "processAudio: conversational reply without scheduler write proof")
                                 }
@@ -306,7 +319,7 @@ class SchedulerViewModel @Inject constructor(
                             else -> Unit
                         }
                     }
-                    if (!schedulerWriteProven && _pipelineStatus.value == "处理意图...") {
+                    if (!schedulerWriteProven && !inspirationWriteProven && _pipelineStatus.value == "处理意图...") {
                         _pipelineStatus.value = "未创建日程"
                         android.util.Log.d("SchedulerVM", "processAudio: pipeline completed without scheduler write proof")
                     }

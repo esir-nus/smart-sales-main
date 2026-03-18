@@ -73,8 +73,9 @@ These are behavioral laws. Lower layers may choose different tables, DTOs, or se
 9. **Old derived context is superseded, not merged by hand**: Radical reschedule should prefer rerun-and-replace semantics over complicated field-level correction logic.
 10. **Disambiguation is reusable architecture**: Name changes like Jack -> Tom must trigger the same disambiguation architecture again, not a shortcut patch.
 11. **Path B may enrich around a task; it may not redefine Path A's core execution result**.
-12. **Only high-value tasks enter Path B**: Default gate is `L3` and `L4` only.
-13. **L1 fire-off tasks do not enter Path B**: One-time fire-off chores do not justify heavy memory enrichment and do not participate in collision logic.
+12. **Path B may not re-enter scheduler mutation after Path A commit for the same voice turn**: once Path A has already persisted the scheduler result, later-lane scheduler commands for that same thread must be suppressed rather than silently creating a second competing task.
+13. **Only high-value tasks enter Path B**: Default gate is `L3` and `L4` only.
+14. **L1 fire-off tasks do not enter Path B**: One-time fire-off chores do not justify heavy memory enrichment and do not participate in collision logic.
 
 ---
 

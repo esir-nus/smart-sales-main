@@ -3,6 +3,8 @@ package com.smartsales.prism.data.real
 import android.content.Context
 import com.smartsales.core.pipeline.IntentOrchestrator
 import com.smartsales.core.pipeline.RealUniAExtractionService
+import com.smartsales.core.pipeline.RealUniBExtractionService
+import com.smartsales.core.pipeline.RealUniCExtractionService
 import com.smartsales.core.test.fakes.FakeToolRegistry
 import com.smartsales.core.test.fakes.FakeAlarmScheduler
 import com.smartsales.core.test.fakes.FakeAliasCache
@@ -110,6 +112,16 @@ class L2CrossOffLifecycleTest {
             promptCompiler = FakePromptCompiler(),
             schedulerLinter = schedulerLinter
         )
+        val uniBExtractionService = RealUniBExtractionService(
+            executor = FakeExecutor(),
+            promptCompiler = FakePromptCompiler(),
+            schedulerLinter = schedulerLinter
+        )
+        val uniCExtractionService = RealUniCExtractionService(
+            executor = FakeExecutor(),
+            promptCompiler = FakePromptCompiler(),
+            schedulerLinter = schedulerLinter
+        )
 
         return IntentOrchestrator(
             contextBuilder = FakeContextBuilder(),
@@ -119,10 +131,13 @@ class L2CrossOffLifecycleTest {
             entityWriter = com.smartsales.core.test.fakes.FakeEntityWriter(),
             aliasCache = FakeAliasCache(),
             uniAExtractionService = uniAExtractionService,
+            uniBExtractionService = uniBExtractionService,
+            uniCExtractionService = uniCExtractionService,
             fastTrackMutationEngine = FastTrackMutationEngine(
                 taskRepository = taskRepository,
                 scheduleBoard = FakeScheduleBoard(),
-                inspirationRepository = inspirationRepository
+                inspirationRepository = inspirationRepository,
+                timeProvider = timeProvider
             ),
             taskRepository = taskRepository,
             scheduleBoard = FakeScheduleBoard(),

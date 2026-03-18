@@ -65,6 +65,7 @@ class SessionWorkingSet(
     var entityKnowledge: String?                     // Knowledge Graph JSON (Rendered)
     val entityCache: MutableMap<String, EntityEntry> // RAM Cache: Delta Loading Source
     var scheduleContext: String?                     // Sticky Notes: top 3 upcoming tasks
+    var schedulerPatternContext: SchedulerPatternContext? // Scheduler-owned summarized RL signal (user habits only)
     var documentContext: String?                     // Transient Document Artifact Payload
     val entityContext: MutableMap<String, EntityRef> // Entity Pointers
     
@@ -101,6 +102,8 @@ enum class EntityState {
 | **Concurrency** | Kernel uses `Mutex` to serialize writes to the Working Set. |
 | **Runtime Turn Admission** | Live user turns and assistant turns must enter RAM through `recordUserMessage()` / `recordAssistantMessage()` before downstream resume depends on them. |
 | **Clarification Resume** | Clarification and disambiguation prompts are session-memory repair points. Follow-up input resumes the same parent lane through bounded `sessionHistory`, not a UI-only cache. |
+| **RL Consumption Boundary** | RL may consume Kernel-admitted recent turns, but it does not control session admission, retention, or eviction policy. |
+| **Scheduler Pattern Transport** | Kernel may carry a summarized `schedulerPatternContext` for RL, but it must not pass raw `scheduleContext` as a blanket RL packet and must not reinterpret scheduler semantics into client/entity habits by default. |
 
 ### Wave 21 Runtime Wiring Note
 
@@ -112,6 +115,10 @@ The live query lane now depends on the following contract:
 4. clarification follow-up and disambiguation follow-up therefore re-enter the parent query lane with bounded session context already admitted into RAM
 
 This keeps `query -> session memory` as a real runtime seam instead of a test-only capability.
+
+For the current RL hardening wave, the session-memory contribution to RL is intentionally bounded to recent turns. Broader RAM fields remain opt-in and must be added through explicit spec change rather than accidental prompt growth.
+
+Scheduler-derived RL enrichment follows the same rule: the Kernel may transport a narrow `schedulerPatternContext`, but the summarization remains scheduler-owned in meaning and is user-habit-only by default.
 
 ---
 

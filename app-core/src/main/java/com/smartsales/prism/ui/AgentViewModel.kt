@@ -23,7 +23,8 @@ import com.smartsales.core.pipeline.MascotState
 import com.smartsales.core.pipeline.PipelineResult
 import com.smartsales.core.pipeline.ToolResult
 import com.smartsales.core.pipeline.PluginRequest
-import com.smartsales.core.pipeline.PluginGateway
+import com.smartsales.core.pipeline.CoreModulePermission
+import com.smartsales.core.pipeline.RuntimePluginGateway
 import com.smartsales.core.context.ChatTurn
 import com.smartsales.core.context.ContextBuilder
 import com.smartsales.prism.domain.system.SystemEventBus
@@ -322,12 +323,8 @@ class AgentViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 val context = _inputText.value
-            val request = PluginRequest(context, emptyMap())
-            val gateway = object : PluginGateway {
-                override suspend fun getSessionHistory(turns: Int) = ""
-                override suspend fun appendToHistory(message: String) {}
-                    override suspend fun emitProgress(message: String) {}
-                }
+                val request = PluginRequest(context, emptyMap())
+                val gateway = createRuntimePluginGateway(itemId)
                 
                 toolRegistry.executeTool(itemId, request, gateway).collect { state ->
                     withContext(Dispatchers.Main) {
@@ -362,11 +359,7 @@ class AgentViewModel @Inject constructor(
         try {
             val context = _inputText.value
             val request = PluginRequest(context, parameters)
-            val gateway = object : PluginGateway {
-                override suspend fun getSessionHistory(turns: Int) = ""
-                override suspend fun appendToHistory(message: String) {}
-                override suspend fun emitProgress(message: String) {}
-            }
+            val gateway = createRuntimePluginGateway(toolId)
             
             toolRegistry.executeTool(toolId, request, gateway).collect { state ->
                 withContext(Dispatchers.Main) {
@@ -388,6 +381,14 @@ class AgentViewModel @Inject constructor(
                 _uiState.value = UiState.Idle
             }
         }
+    }
+
+    private fun createRuntimePluginGateway(toolId: String): RuntimePluginGateway {
+        return RuntimePluginGateway(
+            toolId = toolId,
+            contextBuilder = contextBuilder,
+            allowedPermissions = setOf(CoreModulePermission.READ_SESSION_HISTORY)
+        )
     }
 
     override fun confirmAnalystPlan() {
@@ -446,6 +447,11 @@ class AgentViewModel @Inject constructor(
     private suspend fun handlePipelineResult(result: PipelineResult) {
         when (result) {
             is PipelineResult.PathACommitted -> {
+                _uiState.value = UiState.Idle
+            }
+            is PipelineResult.InspirationCommitted -> {
+                val ui = UiState.Response("已保存为灵感。")
+                appendAssistantTurn(ui)
                 _uiState.value = UiState.Idle
             }
             is PipelineResult.Progress -> {

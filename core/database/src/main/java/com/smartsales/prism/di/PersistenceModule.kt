@@ -41,7 +41,8 @@ object PersistenceModule {
                 PrismDatabase.MIGRATION_4_5,
                 PrismDatabase.MIGRATION_5_6,
                 PrismDatabase.MIGRATION_6_7,
-                PrismDatabase.MIGRATION_7_8
+                PrismDatabase.MIGRATION_7_8,
+                PrismDatabase.MIGRATION_8_9
             )
             .addCallback(SeedMemoryCallback)
             .build()

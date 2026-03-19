@@ -35,6 +35,8 @@ fun ScheduledTask.toEntity(): ScheduledTaskEntity = ScheduledTaskEntity(
     alarmCascadeJson = if (alarmCascade.isEmpty()) null else JSONArray(alarmCascade).toString(),
     urgencyLevel = urgencyLevel.name,
     hasConflict = hasConflict,
+    conflictWithTaskId = conflictWithTaskId,
+    conflictSummary = conflictSummary,
     isVague = isVague
 )
 
@@ -96,6 +98,8 @@ fun ScheduledTaskEntity.toDomain(): ScheduledTask {
         urgencyLevel = safeEnumValueOf(urgencyLevel, fallback = UrgencyLevel.L3_NORMAL),
         dateRange = dateRange,
         hasConflict = hasConflict,
+        conflictWithTaskId = conflictWithTaskId,
+        conflictSummary = conflictSummary,
         isVague = isVague
     )
 }

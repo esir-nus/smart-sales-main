@@ -5,7 +5,41 @@
 > **Campaign Lifecycle**: Every major initiative (rewrite, refactor, UI polish, large fix) is an "Epic" or "Campaign". Every Campaign MUST be initialized using the `/campaign-planner` workflow to enforce the following checklist sequence:
 > 1. **Docs** (Ensure Specs exist) -> 2. **Interface Map** (Ensure Layer/Contract boundaries align) -> 3. **Plan** (Dev Planner) -> 4. **Execute** (Implementation) -> 5. **Test** (E2E/L2 Verification). 
 > **Master Guide Alignment**: The Master Guide acts as the overarching strategy doc for a campaign. Agents MUST NEVER auto-update the Master Guide without strict explicit human review (like a Review Conference) to prevent architectural hallucination drift. Instead, run `/04-doc-sync` at the *end* of a campaign.
-> **Last Updated**: 2026-03-18
+> **Last Updated**: 2026-03-19
+
+---
+
+## Planned Mission: SIM Standalone Prototype
+> **Context**: Direct user-requested standalone prototype mission. This work is intentionally separate from the current agent app and must not contaminate the live agent runtime by default.
+
+- **Status**: Wave 1 Implemented / Runtime Verification Pending
+- **Primary Product Doc**: [`docs/to-cerb/sim-standalone-prototype/concept.md`](../to-cerb/sim-standalone-prototype/concept.md)
+- **Mental Model Doc**: [`docs/to-cerb/sim-standalone-prototype/mental-model.md`](../to-cerb/sim-standalone-prototype/mental-model.md)
+- **Mission Tracker**: [`docs/plans/sim-tracker.md`](./sim-tracker.md)
+- **Implementation Brief**: [`docs/plans/sim_implementation_brief.md`](./sim_implementation_brief.md)
+- **Wave 1 Execution Brief**: [`docs/plans/sim-wave1-execution-brief.md`](./sim-wave1-execution-brief.md)
+- **Audit Output**: [`docs/reports/20260319-sim-standalone-code-audit.md`](../reports/20260319-sim-standalone-code-audit.md)
+- **Clarification Audit**: [`docs/reports/20260319-sim-clarification-evidence-audit.md`](../reports/20260319-sim-clarification-evidence-audit.md)
+- **Cerb Shards**:
+  - [`docs/cerb/sim-shell/spec.md`](../cerb/sim-shell/spec.md)
+  - [`docs/cerb/sim-shell/interface.md`](../cerb/sim-shell/interface.md)
+  - [`docs/cerb/sim-scheduler/spec.md`](../cerb/sim-scheduler/spec.md)
+  - [`docs/cerb/sim-scheduler/interface.md`](../cerb/sim-scheduler/interface.md)
+  - [`docs/cerb/sim-audio-chat/spec.md`](../cerb/sim-audio-chat/spec.md)
+  - [`docs/cerb/sim-audio-chat/interface.md`](../cerb/sim-audio-chat/interface.md)
+  - [`docs/cerb/sim-connectivity/spec.md`](../cerb/sim-connectivity/spec.md)
+  - [`docs/cerb/sim-connectivity/interface.md`](../cerb/sim-connectivity/interface.md)
+- **Core Flows**:
+  - [`docs/core-flow/sim-shell-routing-flow.md`](../core-flow/sim-shell-routing-flow.md)
+  - [`docs/core-flow/sim-scheduler-path-a-flow.md`](../core-flow/sim-scheduler-path-a-flow.md)
+  - [`docs/core-flow/sim-audio-artifact-chat-flow.md`](../core-flow/sim-audio-artifact-chat-flow.md)
+- **Scope**:
+  - Scheduler using Path A only
+  - Tingwu transcription via Audio Drawer
+  - Simple audio-grounded chat as continuation of the audio discussion
+  - Connectivity retained as a decoupled support module
+  - Source-led Tingwu artifacts with optional readability polishing
+  - No agent memory or smart-agent system integration
 
 ---
 
@@ -240,8 +274,19 @@
     - [ ] Ensure permissions and telemetry attach to the capability framework itself, not to ad-hoc plugin code.
   - [ ] **Phase A: Spec / Ownership Decision**
     - [ ] Reconcile `docs/core-flow/system-plugin-gateway-flow.md` with `docs/core-flow/system-typed-mutation-flow.md` around the capability-framework model.
-    - [ ] Update `docs/cerb/plugin-registry/spec.md` and `docs/cerb/plugin-registry/interface.md` so plugin development is described as:
+    - [x] Formalized the north-star orchestration law in `docs/core-flow/system-plugin-gateway-flow.md`:
+      main orchestrator owns the outer loop,
+      plugins run as bounded sub-pipelines,
+      and plugin completion returns control to the main workflow for the next routing/recommendation round.
+    - [x] Updated `docs/cerb/plugin-registry/spec.md` and `docs/cerb/plugin-registry/interface.md` so plugin development now names the first real semantic entry lanes:
+      `artifact.generate`,
+      `audio.analyze`,
+      `crm.sheet.generate`,
+      `simulation.talk`,
+      with `toolId` selecting the lane and `ruleId` specializing behavior inside that lane.
+    - [ ] Continue expanding `docs/cerb/plugin-registry/spec.md` and `docs/cerb/plugin-registry/interface.md` so plugin development is described as:
       capability call -> framework routing -> owner handling -> bounded result / write request.
+    - [x] Updated `docs/cerb/interface-map.md` so the plugin registry now advertises semantic entry-lane routing rather than opaque vault IDs.
     - [ ] Update `docs/cerb/interface-map.md` to show that the framework routes each capability to its owning module rather than treating plugins as first-class writers.
     - [ ] Explicitly state that plugin-facing APIs are reusable contracts, while real wiring remains owner-specific behind the framework.
   - [ ] **Phase B: Capability Contract Framework**
@@ -274,6 +319,47 @@
       yield back to OS after commit.
     - [ ] Reuse existing mutation/plugin valves where they fit; add new valves only at true framework transfer points.
   - [ ] **Validation**
+    - [x] **Main Orchestrator Verification Plan**
+      Validate the outer-loop contract in `IntentOrchestrator` using:
+      real `IntentOrchestrator`,
+      real `RealToolRegistry`,
+      runtime `PluginGateway`,
+      and fake scenario-matched plugins rather than a fake registry shell.
+    - [x] **Scenario Plugin Set**
+      Add four bounded fake plugins that match the first real semantic entry lanes:
+      `artifact.generate`,
+      `audio.analyze`,
+      `crm.sheet.generate`,
+      `simulation.talk`.
+    - [x] **Outer-Loop Resume Proof**
+      Add focused orchestrator coverage proving:
+      recommendation or dispatch enters the plugin lane,
+      plugin progress/result yields back to the OS,
+      and the main orchestrator remains the owner of the next conversational round.
+    - [x] **Non-Voice Confirmation Proof**
+      Add one orchestrator slice where a non-voice plugin dispatch is proposed,
+      cached as pending execution,
+      confirmed by the user,
+      and then executed through the real plugin registry rather than through a generic fake shortcut.
+    - [x] **Voice Auto-Commit Proof**
+      Add one orchestrator slice where a voice-approved plugin dispatch auto-enters a plugin lane and still yields bounded completion evidence back to the OS/main loop.
+    - [x] **Safety Branch Proof**
+      Add bounded failure coverage for:
+      denied permission,
+      unknown tool / rejected dispatch,
+      plugin-internal safe failure.
+    - [x] **Per-Lane Expectations**
+      Use the four scenario plugins to prove these shapes:
+      `artifact.generate` -> bounded draft / artifact-request style result,
+      `audio.analyze` -> bounded read-heavy analysis result,
+      `crm.sheet.generate` -> structured worksheet-style result,
+      `simulation.talk` -> bounded interactive coaching/simulation result.
+    - [x] **Delivered Evidence**
+      Added `IntentOrchestratorPluginLaneTest` plus scenario plugins under `core/test-fakes-platform`,
+      updated `AgentViewModel` to surface non-voice plugin proposals and plugin execution states,
+      and verified the current outer-loop contract with:
+      `./gradlew :core:pipeline:testDebugUnitTest --tests com.smartsales.core.pipeline.IntentOrchestratorPluginLaneTest --tests com.smartsales.core.pipeline.RealToolRegistryTest`
+      `./gradlew --no-daemon :app-core:testDebugUnitTest --tests com.smartsales.prism.ui.AgentViewModelTest`
     - [ ] Add one framework-level integration test proving a plugin composes at least one approved capability through the new routing path.
     - [ ] Add one plugin result -> typed mutation integration test proving:
       typed write request,
@@ -502,6 +588,38 @@ See **[View Changelog](changelog.md)**
     `下一天` / `后一天` anchor to displayed scheduler page date when provided,
     and bare Chinese `一点` defaults to `13:00` while explicit `凌晨一点` resolves to `01:00`.
     The `Uni-A` request contract now carries optional `displayedDateIso`, the scheduler UI forwards the active page date, and the lightweight extraction prompt carries both anchor laws and the Chinese time-default law.
+  - [x] **Anchor Law Repair: Deterministic Relative-Day Validator**
+    - [x] **Problem**: On-device evidence showed the lightweight model could still mis-anchor closed-set Chinese relative-day phrases, especially `后天`, by leaking page-relative interpretation into a real-day phrase. When this wrong date landed in the past, the cross-off sweep could immediately migrate the task into completed memory, making the failure look even worse.
+    - [x] **Flow**: Added a deterministic post-extraction validator/normalizer for a small closed set of relative-day phrases instead of relying purely on model obedience for anchor semantics.
+    - [x] **Spec**: Freeze the closed-set law explicitly:
+      `明天` / `tomorrow` / `后天` = real-date family,
+      `下一天` / `后一天` = page-relative family.
+      Any extracted date outside the legal family must be rejected or normalized before persistence.
+    - [x] **Code**:
+      classify closed-set relative-day tokens deterministically from transcript,
+      compute the only legal anchor date from `nowIso` and/or `displayedDateIso`,
+      rewrite mismatched model dates before they can reach Path A persistence when the phrase family is unambiguous and context exists,
+      and reject only when required page context is missing.
+    - [x] **Guardrail**: Keep title/time semantics in the lightweight model, but remove anchor-family choice for these closed-set phrases from model discretion.
+    - [x] **Validation**:
+      add focused L1 cases for:
+      page on March 15, 2026 + `后天...` -> March 20, 2026 is the only valid real-date anchor when real today is March 18, 2026,
+      page on March 19, 2026 + `后一天...` -> March 20, 2026,
+      page on March 19, 2026 + `明天...` -> March 19, 2026 only if real today is March 18, 2026.
+    - [ ] **L3**: Re-run on-device after the validator lands and confirm wrong past-date anchoring no longer produces immediate crossed-off artifacts.
+  - [x] **Fix Loop: Explicit-Clock Promotion Recovery**
+    - [x] **Problem**: After anchor normalization was repaired, on-device behavior could still degrade `后天晚上九点去接李总` into a vague `时间待定` card because the fallback `Uni-B` pass preserved the day but failed to hold the utterance in exact-create.
+    - [x] **Flow**: Froze lawful day-anchor plus explicit clock cue as an exact-create floor, even when fallback extraction emits a vague-shaped payload.
+    - [x] **Code**:
+      `SchedulerLinter` now normalizes closed-set anchors in `Uni-B`,
+      reconstructs exact clock time from transcript/`timeHint`,
+      and promotes that payload into `CreateTasks`;
+      `IntentOrchestrator` then routes the promoted result through the normal exact/conflict-visible Path A commit lane instead of persisting vague.
+    - [x] **Validation**:
+      added focused L1/L2 coverage in `SchedulerLinterTest` and `IntentOrchestratorTest` proving
+      `后天晚上九点去接李总` resolves to March 20, 2026 exact create,
+      and lawful day-anchor plus explicit clock cue no longer commits as `Uni-B`.
+    - [ ] **L3**: Re-run on-device with `后天晚上九点去接李总` and confirm the app creates an exact task on March 20, 2026 instead of a vague card.
 - [ ] **T2: Uni-B Vague Creation**
   - [x] **Flow (Date-Anchored Slice)**: Implemented vague / needs-time handling for date-anchored schedulable input without fabricated exact time, using the now-validated `Uni-A` path as the exact-create floor rather than widening `Uni-A` by stealth.
   - [x] **Spec (Date-Anchored Slice)**: Created a dedicated `Uni-B` Cerb shard that defines:
@@ -520,6 +638,10 @@ See **[View Changelog](changelog.md)**
     and no false exact-success telemetry.
   - [ ] **Follow-Up Gap**: Fully undated vague inputs such as `schedule team standup` are not yet committed in this slice, because current scheduler persistence still requires a real day anchor and Core Flow forbids silently inventing one.
   - [ ] **Fix Loop**: Close the no-day vague follow-up before marking the whole `Uni-B` universe complete.
+  - [ ] **Tech Debt: Crossed-Off Legacy Card Deletion**
+    - Legacy checked/crossed-off scheduler cards are still sourced from `MemoryRepository` in the unified timeline instead of the active task table.
+    - Current delete actions remove active `scheduled_tasks` rows, but do not remove the memory-backed crossed-off artifacts, so some checked legacy cards appear undeletable.
+    - Need a dedicated ownership path and delete contract for crossed-off memory-backed scheduler items.
 - [x] **T3: Uni-C Inspiration**
   - [x] **Working T3 Contract**:
     - [`docs/cerb/scheduler-path-a-uni-c/spec.md`](../cerb/scheduler-path-a-uni-c/spec.md)
@@ -543,17 +665,35 @@ See **[View Changelog](changelog.md)**
     - `./gradlew :core:pipeline:testDebugUnitTest --tests com.smartsales.core.pipeline.IntentOrchestratorTest --tests com.smartsales.core.pipeline.UniCContractAlignmentTest --tests com.smartsales.core.pipeline.IntentOrchestratorBreakItTest --tests com.smartsales.core.pipeline.RealIntentOrchestratorTest`
     - `./gradlew :app-core:testDebugUnitTest --tests com.smartsales.prism.ui.drawers.scheduler.SchedulerViewModelAudioStatusTest --tests com.smartsales.prism.ui.AgentViewModelTest --tests com.smartsales.prism.data.real.L2DualEngineBridgeTest --tests com.smartsales.prism.data.real.L2CrossOffLifecycleTest --tests com.smartsales.prism.data.real.L2UserFlowTests`
   - [x] **Fix Loop**: Repaired prompt-order test drift and exact-input test fixtures so verification matches the shipped bounded-runtime behavior without weakening the Uni-C boundary.
-- [ ] **T4: Uni-D Conflict-Visible Create**
+- [x] **T4: Uni-D Conflict-Visible Create**
   - [x] **Working T4 Contract**:
     - [`docs/cerb/scheduler-path-a-uni-d/spec.md`](../cerb/scheduler-path-a-uni-d/spec.md)
     - [`docs/cerb/scheduler-path-a-uni-d/interface.md`](../cerb/scheduler-path-a-uni-d/interface.md)
   - [x] **Plan**:
     - [`docs/plans/wave19-t4-uni-d-plan.md`](wave19-t4-uni-d-plan.md)
-  - [ ] **Flow**: Implement conflict-visible creation without rejecting user intent.
-  - [ ] **Spec**: Align conflict semantics and caution-state rendering contract.
-  - [ ] **Code**: Deliver exact create with persisted conflict-visible state and caution treatment.
-  - [ ] **PU Test**: Add one-universe validation for overlap detection with successful creation.
-  - [ ] **Fix Loop**: Repair any reject-on-conflict drift before advancing.
+  - [x] **Flow**: Implemented conflict-visible creation without rejecting user intent; exact overlap now commits through the shared Path A spine instead of degrading into rejection.
+  - [x] **Spec**: Synced the Uni-D shard to the shipped conflict contract, including concrete persisted evidence fields (`conflictWithTaskId`, `conflictSummary`) and explicit caution-state UI law.
+  - [x] **Code**: Delivered exact create with persisted conflict-visible state and caution treatment across deterministic mutation, Room mapping, scheduler timeline mapping, task-card details, and foreground scheduler status copy.
+  - [x] **PU Test**: Added one-universe validation for overlap detection with successful creation across mutation, orchestrator, mapper, and scheduler status surfaces.
+  - [x] **Verification**:
+    - [x] `./gradlew :core:pipeline:testDebugUnitTest --tests com.smartsales.core.pipeline.IntentOrchestratorTest`
+    - [x] `./gradlew :domain:scheduler:test --tests com.smartsales.prism.domain.scheduler.FastTrackMutationEngineTest`
+    - [x] `./gradlew :app-core:testDebugUnitTest --tests com.smartsales.prism.data.persistence.DaoMappersTest --tests com.smartsales.prism.ui.drawers.scheduler.SchedulerViewModelAudioStatusTest`
+  - [x] **Fix Loop**: Replaced legacy reject-on-conflict behavior with persisted conflict evidence and tightened the scheduler UI so `Uni-D` is caution-visible instead of being flattened into clean success.
+  - [ ] **L3 Regression (2026-03-19)**: On-device explicit-clock exact create `后天晚上九点去接李总` anchored to March 21, 2026 correctly, but overlap still emitted `Uni-A conflict clear` and persisted as a clean exact task because the live task carried `durationMinutes=0`.
+    - [TER: L3 Wave 19 Explicit-Clock Conflict Regression](../reports/tests/L3-20260319-wave19-explicit-clock-conflict-regression.md)
+  - [x] **Fix Loop: Zero-Duration Exact Conflict Law**
+    - [x] **Problem**: Exact tasks with lawful time anchors could still arrive at deterministic conflict evaluation with `durationMinutes=0`, causing interval-overlap math to treat them as empty spans and emit false `conflict clear`.
+    - [x] **Code**: Moved the board overlap law to deterministic point-or-interval logic:
+      normal durations still use interval overlap,
+      zero-duration exact tasks now use point-in-time occupancy checks against exclusive slots,
+      and no fake default duration is invented.
+    - [x] **Verification**:
+      `./gradlew :app-core:testDebugUnitTest --tests com.smartsales.prism.domain.memory.ScheduleBoardTest`
+    - [ ] **Blocked Verification**:
+      `./gradlew :core:pipeline:testDebugUnitTest --tests com.smartsales.core.pipeline.IntentOrchestratorTest`
+      is currently blocked by unrelated compile drift in `core/pipeline/src/test/java/com/smartsales/core/pipeline/RealToolRegistryTest.kt` (`Unresolved reference: Flow`).
+    - [ ] **L3**: Reinstall and rerun `后天晚上九点去接李总` to confirm the same-slot exact task now persists as `Uni-D` conflict-visible instead of clean `Uni-A`.
 - [ ] **T5: Branch-S0 Null / Garbled Fast-Fail**
   - [ ] **Flow**: Implement explicit non-mutation fast-fail for empty or unusable input.
   - [ ] **Spec**: Align fast-fail wording, traceability, and non-write behavior.

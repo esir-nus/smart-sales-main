@@ -4,6 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.time.OffsetDateTime
 
 /**
  * SchedulerLinter 单元测试 (Path A Wave 17 DTO Mapping)
@@ -266,6 +267,68 @@ class SchedulerLinterTest {
     }
 
     @Test
+    fun `Uni-A exact extraction normalizes houtian against real today not displayed page`() {
+        val json = """
+            {
+              "decision": "EXACT_CREATE",
+              "task": {
+                "title": "和张总吃饭",
+                "startTimeIso": "2026-03-17T20:00:00+08:00",
+                "durationMinutes": 90,
+                "urgency": "L2"
+              }
+            }
+        """.trimIndent()
+
+        val result = linter.parseUniAExtraction(
+            input = json,
+            unifiedId = "uni-a-004",
+            transcript = "后天晚上八点和张总吃饭",
+            nowIso = "2026-03-18T08:00:00+08:00",
+            timezone = "Asia/Shanghai",
+            displayedDateIso = "2026-03-15"
+        )
+
+        assertTrue(result is FastTrackResult.CreateTasks)
+        val success = result as FastTrackResult.CreateTasks
+        assertEquals(
+            OffsetDateTime.parse("2026-03-20T20:00:00+08:00"),
+            OffsetDateTime.parse(success.params.tasks.first().startTimeIso)
+        )
+    }
+
+    @Test
+    fun `Uni-A exact extraction normalizes hou yi tian against displayed page`() {
+        val json = """
+            {
+              "decision": "EXACT_CREATE",
+              "task": {
+                "title": "和李总吃饭",
+                "startTimeIso": "2026-03-19T18:30:00+08:00",
+                "durationMinutes": 60,
+                "urgency": "L2"
+              }
+            }
+        """.trimIndent()
+
+        val result = linter.parseUniAExtraction(
+            input = json,
+            unifiedId = "uni-a-005",
+            transcript = "后一天晚上六点半和李总吃饭",
+            nowIso = "2026-03-18T08:00:00+08:00",
+            timezone = "Asia/Shanghai",
+            displayedDateIso = "2026-03-19"
+        )
+
+        assertTrue(result is FastTrackResult.CreateTasks)
+        val success = result as FastTrackResult.CreateTasks
+        assertEquals(
+            OffsetDateTime.parse("2026-03-20T18:30:00+08:00"),
+            OffsetDateTime.parse(success.params.tasks.first().startTimeIso)
+        )
+    }
+
+    @Test
     fun `Uni-B vague extraction returns CreateVagueTask with unifiedId`() {
         val json = """
             {
@@ -303,6 +366,99 @@ class SchedulerLinterTest {
 
         assertTrue(result is FastTrackResult.NoMatch)
         assertEquals("没有日期锚点", (result as FastTrackResult.NoMatch).reason)
+    }
+
+    @Test
+    fun `Uni-B extraction with explicit clock cue normalizes houtian anchor and promotes to exact`() {
+        val json = """
+            {
+              "decision": "VAGUE_CREATE",
+              "task": {
+                "title": "要去趟高铁站",
+                "anchorDateIso": "2026-03-17",
+                "timeHint": "早上八点",
+                "urgency": "L3"
+              }
+            }
+        """.trimIndent()
+
+        val result = linter.parseUniBExtraction(
+            input = json,
+            unifiedId = "uni-b-003",
+            transcript = "后天要去趟高铁站",
+            nowIso = "2026-03-18T08:00:00+08:00",
+            timezone = "Asia/Shanghai",
+            displayedDateIso = "2026-03-15"
+        )
+
+        assertTrue(result is FastTrackResult.CreateTasks)
+        val success = result as FastTrackResult.CreateTasks
+        assertEquals(
+            OffsetDateTime.parse("2026-03-20T08:00:00+08:00"),
+            OffsetDateTime.parse(success.params.tasks.first().startTimeIso)
+        )
+    }
+
+    @Test
+    fun `Uni-B vague extraction normalizes xia yi tian anchor against displayed page`() {
+        val json = """
+            {
+              "decision": "VAGUE_CREATE",
+              "task": {
+                "title": "提醒我吃饭",
+                "anchorDateIso": "2026-03-19",
+                "timeHint": "晚上",
+                "urgency": "L3"
+              }
+            }
+        """.trimIndent()
+
+        val result = linter.parseUniBExtraction(
+            input = json,
+            unifiedId = "uni-b-004",
+            transcript = "下一天提醒我吃饭",
+            nowIso = "2026-03-18T08:00:00+08:00",
+            timezone = "Asia/Shanghai",
+            displayedDateIso = "2026-03-19"
+        )
+
+        assertTrue(result is FastTrackResult.CreateVagueTask)
+        val success = result as FastTrackResult.CreateVagueTask
+        assertEquals("2026-03-20", success.params.anchorDateIso)
+    }
+
+    @Test
+    fun `Uni-B extraction promotes explicit clock cue into exact create`() {
+        val json = """
+            {
+              "decision": "VAGUE_CREATE",
+              "task": {
+                "title": "去接李总",
+                "anchorDateIso": "2026-03-20",
+                "timeHint": "晚上九点",
+                "urgency": "L2"
+              }
+            }
+        """.trimIndent()
+
+        val result = linter.parseUniBExtraction(
+            input = json,
+            unifiedId = "uni-b-005",
+            transcript = "后天晚上九点去接李总",
+            nowIso = "2026-03-18T08:00:00+08:00",
+            timezone = "Asia/Shanghai",
+            displayedDateIso = "2026-03-15"
+        )
+
+        assertTrue(result is FastTrackResult.CreateTasks)
+        val success = result as FastTrackResult.CreateTasks
+        assertEquals("uni-b-005", success.params.unifiedId)
+        assertEquals("去接李总", success.params.tasks.first().title)
+        assertEquals(
+            OffsetDateTime.parse("2026-03-20T21:00:00+08:00"),
+            OffsetDateTime.parse(success.params.tasks.first().startTimeIso)
+        )
+        assertEquals(UrgencyEnum.L2_IMPORTANT, success.params.tasks.first().urgency)
     }
 
     @Test

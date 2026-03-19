@@ -132,9 +132,18 @@ class FastTrackMutationEngineTest {
     }
 
     @Test
-    fun `CreateTasks with unifiedId and conflict exits Uni-A without persisting`() = runTest {
+    fun `CreateTasks with unifiedId and conflict persists Uni-D caution state`() = runTest {
         scheduleBoard.nextConflictResult = ConflictResult.Conflict(
-            overlaps = emptyList()
+            overlaps = listOf(
+                ScheduleItem(
+                    entryId = "existing-1",
+                    title = "牙医预约",
+                    scheduledAt = Instant.parse("2026-03-20T14:00:00Z").toEpochMilli(),
+                    durationMinutes = 30,
+                    durationSource = DurationSource.DEFAULT,
+                    conflictPolicy = ConflictPolicy.EXCLUSIVE
+                )
+            )
         )
 
         val intent = FastTrackResult.CreateTasks(
@@ -153,11 +162,15 @@ class FastTrackMutationEngineTest {
 
         val result = engine.execute(intent)
 
-        assertTrue(result is MutationResult.NoMatch)
-        val noMatch = result as MutationResult.NoMatch
-        assertEquals("冲突会议", noMatch.query)
-        assertEquals("Uni-A exact create requires a no-conflict slot", noMatch.reason)
-        assertNull(taskRepository.getTask("uni-a-conflict"))
+        assertTrue(result is MutationResult.Success)
+        assertEquals(listOf("uni-a-conflict"), (result as MutationResult.Success).taskIds)
+        val persisted = taskRepository.getTask("uni-a-conflict")
+        assertNotNull(persisted)
+        assertTrue(persisted!!.hasConflict)
+        assertFalse(persisted.isVague)
+        assertEquals("existing-1", persisted.conflictWithTaskId)
+        assertEquals("与「牙医预约」时间冲突", persisted.conflictSummary)
+        assertEquals(Instant.parse("2026-03-20T14:00:00Z"), persisted.startTime)
     }
 
     @Test

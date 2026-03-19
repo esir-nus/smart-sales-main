@@ -103,6 +103,11 @@ enum class DurationSource { USER_SET, INFERRED, FOLLOW_UP, LEARNED, DEFAULT }
 enum class ConflictPolicy { EXCLUSIVE, COEXISTING, BACKGROUND }
 ```
 
+Conflict check law:
+- `durationMinutes > 0` participates as a real interval
+- exact tasks with `durationMinutes == 0` still participate as point-in-time occupancy checks
+- vague tasks remain excluded by scheduler-path rules above this layer
+
 ---
 
 ## Guarantees

@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.smartsales.prism.ui.drawers.scheduler.TimelineItem
 import com.smartsales.prism.ui.theme.AccentBlue
+import com.smartsales.prism.ui.theme.AccentAmber
 import com.smartsales.prism.ui.theme.BorderSubtle
 import com.smartsales.prism.ui.theme.TextMuted
 import com.smartsales.prism.ui.theme.TextSecondary
@@ -29,6 +30,14 @@ fun TaskCardDetails(
             .padding(start = 58.dp, top = 16.dp)
     ) {
         val metaStyle = androidx.compose.material3.MaterialTheme.typography.bodySmall.copy(color = TextSecondary, fontSize = 12.sp)
+
+        state.conflictSummary?.let {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
+                Icon(Icons.Outlined.Info, contentDescription = null, tint = AccentAmber, modifier = Modifier.size(14.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(it, style = metaStyle.copy(color = AccentAmber, fontWeight = FontWeight.Medium))
+            }
+        }
 
         // Date Row
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {

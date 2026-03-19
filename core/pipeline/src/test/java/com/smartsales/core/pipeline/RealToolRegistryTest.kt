@@ -4,6 +4,7 @@ import com.smartsales.core.context.ChatTurn
 import com.smartsales.core.telemetry.PipelineValve
 import com.smartsales.core.test.fakes.FakeContextBuilder
 import com.smartsales.prism.domain.model.UiState
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -126,5 +127,40 @@ class RealToolRegistryTest {
         } finally {
             PipelineValve.testInterceptor = null
         }
+    }
+
+    @Test
+    fun `executeTool resolves legacy alias to semantic plugin id`() = runTest {
+        val aliasPlugin = object : PrismPlugin {
+            override val metadata = AnalystTool(
+                id = PluginToolIds.ARTIFACT_GENERATE,
+                label = "Artifact Generate",
+                description = "Alias resolution test plugin",
+                icon = "pdf"
+            )
+            override val requiredPermissions = emptySet<CoreModulePermission>()
+
+            override fun execute(request: PluginRequest, gateway: PluginGateway): Flow<UiState> {
+                return flowOf(UiState.Response("alias-ok:${request.parameters["accountName"]}"))
+            }
+        }
+        val registry = RealToolRegistry(setOf(aliasPlugin))
+        val gateway = RuntimePluginGateway(
+            toolId = "GENERATE_PDF",
+            contextBuilder = FakeContextBuilder(),
+            allowedPermissions = setOf(CoreModulePermission.READ_SESSION_HISTORY)
+        )
+
+        val states = registry.executeTool(
+            toolId = "GENERATE_PDF",
+            request = PluginRequest(
+                rawInput = "帮我生成字节跳动的汇报",
+                parameters = mapOf("accountName" to "字节跳动")
+            ),
+            gateway = gateway
+        ).toList()
+
+        val response = states.last() as UiState.Response
+        assertEquals("alias-ok:字节跳动", response.content)
     }
 }

@@ -20,6 +20,8 @@ object PipelineValve {
         
         // Phase 1.5: Path A Optimistic UI
         PATH_A_PARSED,
+        TASK_EXTRACTED,
+        CONFLICT_EVALUATED,
         TASK_EXTRACTED_VAGUE,
         THOUGHT_EXTRACTED,
         PATH_A_DB_WRITTEN,
@@ -54,7 +56,8 @@ object PipelineValve {
         DB_WRITE_EXECUTED,
         
         // Phase 6: Presentation
-        UI_STATE_EMITTED
+        UI_STATE_EMITTED,
+        UI_RENDERED
     }
 
     /**

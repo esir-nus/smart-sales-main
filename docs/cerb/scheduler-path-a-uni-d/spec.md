@@ -2,7 +2,7 @@
 
 > **OS Layer**: System II / Scheduler fast-track conflict-visible exact-create universe
 > **Scope**: `Uni-D` exact schedulable creation when overlap exists and the task must still persist with caution-state treatment
-> **Status**: PLANNED
+> **Status**: SHIPPED
 > **Behavioral Authority Above This Doc**: `docs/core-flow/scheduler-fast-track-flow.md`
 > **Foundation Contract Below This Universe**: `docs/cerb/scheduler-path-a-spine/spec.md`
 
@@ -104,8 +104,8 @@ For `Uni-D`, persistence must:
 - set `hasConflict = true`
 - preserve the exact resolved time
 - preserve enough overlap evidence for caution-state render, at minimum:
-  - one conflicting task identifier or stable conflict token
-  - one user-visible conflict summary string or equivalent caution text
+  - `conflictWithTaskId`
+  - `conflictSummary`
 
 `hasConflict = true` alone is not a sufficient long-term contract if the UI cannot explain why the card requires attention.
 
@@ -154,10 +154,20 @@ Own:
 
 - overlap detection
 - converting exact-create into clear exact or conflict-visible exact
+- constructing the persisted overlap evidence from the detected overlap set
 - persisting the final task state
 
 Conflict check is mandatory here.
 Reject-on-conflict is a behavioral violation for `Uni-D`.
+
+Exact tasks with `durationMinutes == 0` are still conflict-participating.
+They must be evaluated as point-in-time occupancy against exclusive slots rather than as silently non-conflicting empty intervals.
+This shard does not permit inventing a fake default duration just to make overlap math work.
+
+In the shipped T4 slice, deterministic mutation derives the caution payload from the first overlapping board item:
+
+- `conflictWithTaskId = overlap.entryId`
+- `conflictSummary = 与「<overlap.title>」时间冲突`
 
 ## Telemetry Contract
 
@@ -167,7 +177,8 @@ Reject-on-conflict is a behavioral violation for `Uni-D`.
 - `CONFLICT_EVALUATED` with overlap result
 - `DB_WRITE_EXECUTED` for persisted conflict-visible task state
 - `PATH_A_DB_WRITTEN` for Path A write proof when used by the shared spine
-- `UI_STATE_EMITTED` / `UI_RENDERED` for caution-state scheduler treatment, depending on the consuming layer's vocabulary
+- `UI_STATE_EMITTED` for foreground caution-state scheduler status
+- `UI_RENDERED` for the conflict-visible scheduler card render
 
 It must not reuse clean exact-create summaries that make a conflicted task look conflict-free.
 

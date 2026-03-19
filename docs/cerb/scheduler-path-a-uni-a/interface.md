@@ -63,9 +63,11 @@ sealed class UniAExtractionResult {
 - Kotlin regex or handcrafted date math must not be treated as the semantic truth source for this seam
 - the machine-routing schema must come from a real `@Serializable` Kotlin contract, not a handwritten prompt schema
 - the linter must decode the exact same contract the prompt advertises
-- `明天` / `tomorrow` must anchor to `nowIso`, not to `displayedDateIso`
+- `明天` / `tomorrow` / `后天` must anchor to `nowIso`, not to `displayedDateIso`
 - `下一天` / `后一天` may anchor to `displayedDateIso`; if that field is absent, the seam should return `NotExact`
 - bare Chinese `一点` / `1点` defaults to `13:00`; explicit `凌晨一点` may resolve to `01:00`
+- closed-set relative-day family is not left to model discretion once the transcript is known; the linter must deterministically normalize or reject illegal anchor dates before persistence
+- lawful day-anchor plus explicit clock cue remains an exact-create case even if a fallback vague payload surfaces it first; downstream normalization must yield an exact task DTO, not a vague commit
 
 ### Protocol Note
 
@@ -103,6 +105,7 @@ Rules:
 - exactly one task only
 - `unifiedId` must be preserved
 - blank title or vague time is invalid for `Uni-A`
+- date/time semantics remain model-driven, but closed-set anchor-family law is enforced deterministically at the linter boundary
 
 ---
 

@@ -195,6 +195,10 @@ For `Uni-A`, it should validate that:
 - `startTimeIso` is explicit and parseable
 - `durationMinutes` is valid for deterministic persistence
 - urgency normalizes into the current scheduler enum space
+- closed-set relative-day anchors are normalized deterministically before persistence:
+  - `明天` / `tomorrow` / `后天` = real-date family from `nowIso`
+  - `下一天` / `后一天` = page-relative family from `displayedDateIso`
+  - when the transcript family is unambiguous and context exists, normalization is preferred over rejection
 
 `SchedulerLinter` is not the semantic source of truth for exactness.
 It validates model output; it does not replace the model with local time heuristics.
@@ -252,7 +256,7 @@ What matters is the behavioral contract:
 
 `Uni-A` must also obey two semantic time laws:
 
-- real-day language such as `明天` / `tomorrow` anchors to the real current date from `nowIso`
+- real-day language such as `明天` / `tomorrow` / `后天` anchors to the real current date from `nowIso`
 - UI-relative language such as `下一天` / `后一天` anchors to `displayedDateIso` when that UI context exists; if it does not exist, the extractor must return `NotExact` rather than silently guessing
 
 And one locale-default law:
@@ -265,6 +269,8 @@ And one anti-fabrication law:
 - date-only inputs such as `明天提醒我打电话` or `tomorrow remind me to go to the airport` are not exact enough for `Uni-A`
 - `Uni-A` must not invent `00:00`, current-clock time, lunch time, or any other guessed exact time for those inputs
 - those inputs must exit to `Uni-B` if they still contain a valid date anchor
+- lawful day-anchor input with an explicit clock cue such as `后天晚上九点去接李总` remains exact enough for `Uni-A`
+- if a fallback `Uni-B` payload still carries that lawful day anchor plus explicit clock evidence, the runtime must promote it back into exact create instead of persisting a vague task
 - explicit early-morning wording such as `凌晨一点` may resolve to `01:00`
 - this default belongs in semantic interpretation, not Kotlin heuristic fallback
 
@@ -288,7 +294,7 @@ For T1, the chosen implementation shape is:
 
 The prompt text must explicitly carry the anchor/default laws above so the model and linter contract remain aligned on:
 
-- `明天` vs `下一天` / `后一天`
+- `明天` / `后天` vs `下一天` / `后一天`
 - real current date vs displayed calendar page
 - colloquial Chinese daytime default for bare `一点`
 
@@ -375,7 +381,7 @@ Scheduler speech can refer to two different date anchors in the same UI:
 
 This shard requires the system to keep them distinct.
 
-- `明天` / `tomorrow` must stay attached to real current date semantics
+- `明天` / `tomorrow` / `后天` must stay attached to real current date semantics
 - `下一天` / `后一天` may attach to the displayed scheduler page date
 - if the UI does not supply page-anchor context, page-relative phrasing must exit `Uni-A` as `NotExact`
 
@@ -409,3 +415,4 @@ T1 verification should prove:
 - `hasConflict = false`
 - the task renders normally on the timeline
 - non-exact model output does not masquerade as `Uni-A`
+- a lawful day-anchor plus explicit clock cue that falls through the fallback extractor is still recovered as exact create, not persisted as `Uni-B`

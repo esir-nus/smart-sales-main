@@ -35,6 +35,9 @@ Examples:
 
 This slice does **not** yet commit fully undated vague requests such as `schedule team standup`, because current scheduler persistence still requires a day anchor and Core Flow forbids silently inventing one.
 
+This slice also does **not** own lawful day-anchor input that still carries an explicit clock cue.
+If fallback extraction preserves a real day anchor plus a concrete cue such as `晚上九点`, the runtime must promote that payload back into exact Path A create instead of persisting vague.
+
 ## Date-Only Law
 
 Date-only requests belong to `Uni-B`, not `Uni-A`.
@@ -44,6 +47,7 @@ Examples:
 - `明天提醒我打电话`
 - `tomorrow remind me to go to the airport`
 - `后一天提醒我吃饭`
+- `后天晚上提醒我打电话`
 
 For these inputs:
 
@@ -61,9 +65,10 @@ The required execution law is:
    - schedulable intent is real
    - a real day anchor exists
    - exact time is still unresolved
-4. conflict check must be bypassed
-5. the task must persist in explicit vague state
-6. UI must render an awaiting-time scheduler card, not an exact-slot card
+4. if transcript or preserved `timeHint` contains an explicit clock cue on that lawful day anchor, `Uni-B` must not commit vague; it must yield back to exact-create handling
+5. conflict check must be bypassed
+6. the task must persist in explicit vague state
+7. UI must render an awaiting-time scheduler card, not an exact-slot card
 
 ## Human Reality Constraint
 
@@ -88,6 +93,7 @@ The runtime contract is:
 - `Uni-A` exact-create attempt
 - if `Uni-A` returns `NotExact`, try bounded `Uni-B`
 - if `Uni-B` returns vague-create, commit Path A with explicit vague semantics
+- if `Uni-B` returns a vague payload that still contains lawful day-anchor plus explicit clock evidence, promote it back into exact Path A create
 - if `Uni-B` does not return vague-create, fall through to later-lane handling
 
 `Uni-B` must not be entered in parallel with `Uni-A`, and it must not widen `Uni-A` by stealth.
@@ -165,6 +171,11 @@ Owns:
 - strict decode of the `Uni-B` serializer-backed contract
 - validating title is non-blank
 - validating anchor date is parseable
+- deterministically normalizing closed-set relative-day anchors before persistence:
+  - `明天` / `tomorrow` / `后天` = real-date family from `nowIso`
+  - `下一天` / `后一天` = page-relative family from `displayedDateIso`
+- rebuilding an exact start time when a lawful day anchor and explicit clock cue are both present
+- promoting fallback vague payloads back into `CreateTasks` instead of persisting false vague state
 - refusing malformed vague payloads
 
 ### FastTrackMutationEngine
@@ -184,3 +195,4 @@ T2 verification should prove:
 - conflict check is bypassed
 - the task appears as a red-flagged / awaiting-time card
 - `Uni-A` exact-create telemetry is not reused as if vague were exact
+- lawful day-anchor plus explicit clock cue is promoted back into exact create rather than committed as a vague card

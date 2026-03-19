@@ -30,6 +30,8 @@ data class ScheduledTask(
     val highlights: String? = null,
     val alarmCascade: List<String> = emptyList(), // e.g. ["-1h", "-15m", "-5m"]
     val hasConflict: Boolean = false, // Wave 17 Path A
+    val conflictWithTaskId: String? = null, // Wave 19 T4: 冲突对端任务 ID
+    val conflictSummary: String? = null,    // Wave 19 T4: 用户可见的冲突说明
     val isVague: Boolean = false,     // Wave 17 Path A
     val clarificationState: ClarificationState? = null // Wave 14: Anchor for Path B disambiguation
 ) : SchedulerTimelineItem

@@ -31,19 +31,20 @@ class RealToolRegistry @Inject constructor(
     }
 
     override fun executeTool(toolId: String, request: PluginRequest, gateway: PluginGateway): Flow<UiState> {
-        Log.d("ToolRegistry", "Executing tool: $toolId")
+        val canonicalToolId = PluginToolIds.canonicalize(toolId)
+        Log.d("ToolRegistry", "Executing tool: $canonicalToolId")
         com.smartsales.core.telemetry.PipelineValve.tag(
             checkpoint = com.smartsales.core.telemetry.PipelineValve.Checkpoint.PLUGIN_DISPATCH_RECEIVED,
             payloadSize = request.toString().length,
-            summary = "Core pipeline dispatched payload to plugin: $toolId",
-            rawDataDump = request.toString()
+            summary = "Core pipeline dispatched payload to plugin: $canonicalToolId",
+            rawDataDump = "requested=$toolId canonical=$canonicalToolId payload=$request"
         )
-        val plugin = plugins.find { it.metadata.id == toolId }
+        val plugin = plugins.find { it.metadata.id == canonicalToolId }
         return if (plugin != null) {
             val missingPermissions = plugin.requiredPermissions - gateway.grantedPermissions()
             if (missingPermissions.isNotEmpty()) {
                 pluginError(
-                    summary = "Plugin denied due to missing runtime permissions: $toolId",
+                    summary = "Plugin denied due to missing runtime permissions: $canonicalToolId",
                     message = "Plugin Execution Failed: missing permissions ${missingPermissions.joinToString()}"
                 )
             } else {
@@ -53,7 +54,7 @@ class RealToolRegistry @Inject constructor(
                         com.smartsales.core.telemetry.PipelineValve.tag(
                             checkpoint = com.smartsales.core.telemetry.PipelineValve.Checkpoint.PLUGIN_YIELDED_TO_OS,
                             payloadSize = message.length,
-                            summary = "Plugin failed during execution: $toolId",
+                            summary = "Plugin failed during execution: $canonicalToolId",
                             rawDataDump = message
                         )
                         emit(
@@ -76,8 +77,8 @@ class RealToolRegistry @Inject constructor(
             }
         } else {
             pluginError(
-                summary = "Plugin rejected because tool id is unknown: $toolId",
-                message = "Unknown tool ID: $toolId"
+                summary = "Plugin rejected because tool id is unknown: $canonicalToolId",
+                message = "Unknown tool ID: $canonicalToolId"
             )
         }
     }

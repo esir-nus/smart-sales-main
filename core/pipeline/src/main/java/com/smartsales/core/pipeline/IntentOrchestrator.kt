@@ -40,7 +40,6 @@ import com.smartsales.prism.domain.scheduler.UniBExtractionRequest
 import com.smartsales.prism.domain.scheduler.UniCExtractionRequest
 import com.smartsales.core.pipeline.ToolRegistry
 import com.smartsales.core.pipeline.PluginRequest
-import com.smartsales.core.pipeline.PluginGateway
 import com.smartsales.prism.domain.time.TimeProvider
 
 @Singleton
@@ -72,7 +71,8 @@ class IntentOrchestrator @Inject constructor(
 
         data class PluginDispatch(
             val toolId: String,
-            val params: Map<String, Any>
+            val params: Map<String, Any>,
+            val rawInput: String
         ) : PendingExecution
     }
 
@@ -98,7 +98,17 @@ class IntentOrchestrator @Inject constructor(
 
                 when (execution) {
                     is PendingExecution.PluginDispatch -> {
-                        emit(PipelineResult.ToolDispatch(execution.toolId, execution.params))
+                        val canonicalToolId = PluginToolIds.canonicalize(execution.toolId)
+                        val request = PluginRequest(execution.rawInput, execution.params)
+                        val runtimeGateway = RuntimePluginGateway(
+                            toolId = canonicalToolId,
+                            contextBuilder = contextBuilder,
+                            allowedPermissions = setOf(CoreModulePermission.READ_SESSION_HISTORY)
+                        )
+                        emit(PipelineResult.PluginExecutionStarted(canonicalToolId))
+                        toolRegistry.executeTool(canonicalToolId, request, runtimeGateway).collect { state ->
+                            emit(PipelineResult.PluginExecutionEmittedState(state))
+                        }
                     }
                     is PendingExecution.ProfileMutation -> {
                         PipelineValve.tag(
@@ -256,6 +266,12 @@ class IntentOrchestrator @Inject constructor(
                         summary = "Uni-A exact task parsed",
                         rawDataDump = fastTrackIntent.toString()
                     )
+                    PipelineValve.tag(
+                        checkpoint = PipelineValve.Checkpoint.TASK_EXTRACTED,
+                        payloadSize = input.length,
+                        summary = "Uni-A/Uni-D exact task extracted",
+                        rawDataDump = fastTrackIntent.toString()
+                    )
 
                     when (val mutationResult = fastTrackMutationEngine.execute(fastTrackIntent)) {
                         is com.smartsales.prism.domain.scheduler.MutationResult.Success -> {
@@ -264,9 +280,23 @@ class IntentOrchestrator @Inject constructor(
                             if (exactTask != null) {
                                 pathATaskId = exactTask.id
                                 PipelineValve.tag(
+                                    checkpoint = PipelineValve.Checkpoint.CONFLICT_EVALUATED,
+                                    payloadSize = exactTask.durationMinutes,
+                                    summary = if (exactTask.hasConflict) {
+                                        "Uni-D overlap detected"
+                                    } else {
+                                        "Uni-A conflict clear"
+                                    },
+                                    rawDataDump = exactTask.conflictSummary ?: exactTask.id
+                                )
+                                PipelineValve.tag(
                                     checkpoint = PipelineValve.Checkpoint.PATH_A_DB_WRITTEN,
                                     payloadSize = exactTask.id.hashCode(),
-                                    summary = "Uni-A exact task persisted",
+                                    summary = if (exactTask.hasConflict) {
+                                        "Uni-D conflict-visible task persisted"
+                                    } else {
+                                        "Uni-A exact task persisted"
+                                    },
                                     rawDataDump = "TaskID: ${exactTask.id}"
                                 )
                                 emit(PipelineResult.PathACommitted(exactTask))
@@ -307,6 +337,52 @@ class IntentOrchestrator @Inject constructor(
                         displayedDateIso = displayedDateIso
                     )
                     when (val vagueIntent = uniBExtractionService.extract(vagueRequest)) {
+                        is FastTrackResult.CreateTasks -> {
+                            PipelineValve.tag(
+                                checkpoint = PipelineValve.Checkpoint.TASK_EXTRACTED,
+                                payloadSize = input.length,
+                                summary = "Uni-B explicit-clock exact task promoted",
+                                rawDataDump = vagueIntent.toString()
+                            )
+                            when (val mutationResult = fastTrackMutationEngine.execute(vagueIntent)) {
+                                is com.smartsales.prism.domain.scheduler.MutationResult.Success -> {
+                                    val exactTaskId = mutationResult.taskIds.firstOrNull() ?: unifiedId
+                                    val exactTask = taskRepository.getTask(exactTaskId)
+                                    if (exactTask != null) {
+                                        pathATaskId = exactTask.id
+                                        PipelineValve.tag(
+                                            checkpoint = PipelineValve.Checkpoint.CONFLICT_EVALUATED,
+                                            payloadSize = exactTask.durationMinutes,
+                                            summary = if (exactTask.hasConflict) {
+                                                "Uni-D overlap detected"
+                                            } else {
+                                                "Uni-A conflict clear"
+                                            },
+                                            rawDataDump = exactTask.conflictSummary ?: exactTask.id
+                                        )
+                                        PipelineValve.tag(
+                                            checkpoint = PipelineValve.Checkpoint.PATH_A_DB_WRITTEN,
+                                            payloadSize = exactTask.id.hashCode(),
+                                            summary = if (exactTask.hasConflict) {
+                                                "Uni-D conflict-visible task persisted"
+                                            } else {
+                                                "Uni-B explicit-clock exact task persisted"
+                                            },
+                                            rawDataDump = "TaskID: ${exactTask.id}"
+                                        )
+                                        emit(PipelineResult.PathACommitted(exactTask))
+                                        android.util.Log.d("IntentOrchestrator", "Uni-B explicit-clock exact Path A committed for $unifiedId")
+                                    }
+                                }
+                                is com.smartsales.prism.domain.scheduler.MutationResult.NoMatch -> {
+                                    android.util.Log.d(
+                                        "IntentOrchestrator",
+                                        "Uni-B exact promotion rejected for $unifiedId: ${mutationResult.reason}"
+                                    )
+                                }
+                                else -> Unit
+                            }
+                        }
                         is FastTrackResult.CreateVagueTask -> {
                             PipelineValve.tag(
                                 checkpoint = PipelineValve.Checkpoint.TASK_EXTRACTED_VAGUE,
@@ -465,29 +541,34 @@ class IntentOrchestrator @Inject constructor(
                     )
                 }
             } else if (result is PipelineResult.ToolDispatch) {
+                val canonicalToolId = PluginToolIds.canonicalize(result.toolId)
                 if (isVoice) {
                     // --- PATH B: Auto-Commit for Voice Plugins ---
                     val request = PluginRequest(input, result.params)
                     val runtimeGateway = RuntimePluginGateway(
-                        toolId = result.toolId,
+                        toolId = canonicalToolId,
                         contextBuilder = contextBuilder,
                         allowedPermissions = setOf(CoreModulePermission.READ_SESSION_HISTORY)
                     )
-                    appScope.launch {
-                        toolRegistry.executeTool(result.toolId, request, runtimeGateway).collect {
-                            // Run silently in background to complete the auto-commit
-                        }
+                    emit(PipelineResult.PluginExecutionStarted(canonicalToolId))
+                    toolRegistry.executeTool(canonicalToolId, request, runtimeGateway).collect { state ->
+                        emit(PipelineResult.PluginExecutionEmittedState(state))
                     }
-                    // Swallow ToolDispatch for voice so OS UI doesn't try to render it
                     return@collect
-                } else if (result.toolId != "reschedule") {
-                    pendingExecution = PendingExecution.PluginDispatch(result.toolId, result.params)
+                } else if (canonicalToolId != "reschedule") {
+                    pendingExecution = PendingExecution.PluginDispatch(
+                        toolId = canonicalToolId,
+                        params = result.params,
+                        rawInput = input
+                    )
                     PipelineValve.tag(
                         checkpoint = PipelineValve.Checkpoint.MUTATION_PROPOSAL_CACHED,
                         payloadSize = 1,
                         summary = "Plugin dispatch cached for confirmation",
-                        rawDataDump = "${result.toolId}:${result.params}"
+                        rawDataDump = "$canonicalToolId:${result.params}"
                     )
+                    emit(PipelineResult.ToolDispatchProposal(canonicalToolId, result.params))
+                    return@collect
                 }
             } else if (isVoice && result is PipelineResult.DisambiguationIntercepted) {
                 val taskId = pathATaskId

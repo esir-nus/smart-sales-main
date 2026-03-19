@@ -173,16 +173,19 @@ open class PromptCompiler @Inject constructor() {
    - `durationMinutes` 为整数分钟；即时提醒可为 `0`
    - `urgency` 只能是 `L1` / `L2` / `L3` / `FIRE_OFF`
 4. 相对日期锚点规则：
-   - `明天` / `tomorrow` 必须锚定 `now_iso` 所在真实日期，不得改锚到日历当前页。
+   - `明天` / `tomorrow` / `后天` 必须锚定 `now_iso` 所在真实日期，不得改锚到日历当前页。
    - `下一天` / `后一天` 可以锚定 `displayed_date_iso`；如果该值为 `null`，则输出 `NOT_EXACT`，不要猜页面日期。
-5. 只有“日期锚点”但没有明确钟点的输入，不属于 `Uni-A`。
-   - 例如 `明天提醒我打电话`、`tomorrow remind me to go to the airport`、`后一天提醒我吃饭`
+5. 只要日期锚点合法，且出现明确钟点，就属于 `Uni-A`，不能降级成 `Uni-B`。
+   - 例如 `后天晚上九点去接张总`、`明天下午三点半开会`、`tomorrow 6:30 pm remind me to go off office`
+   - 这些都必须输出 `EXACT_CREATE`
+6. 只有“日期锚点”但没有明确钟点的输入，不属于 `Uni-A`。
+   - 例如 `明天提醒我打电话`、`tomorrow remind me to go to the airport`、`后一天提醒我吃饭`、`后天提醒我打电话`
    - 这些都必须输出 `NOT_EXACT`，交给 `Uni-B`，不得擅自补成 `00:00`、当前时刻、午间或任何猜测时刻。
-6. 中文口语时间规则：
+7. 中文口语时间规则：
    - 裸 `一点` / `1点` 默认解释为 `13:00`。
    - 只有显式早晨前缀（如 `凌晨一点`、`凌晨1点`）才可解释为 `01:00`。
-7. `NOT_EXACT` 时，不要猜时间，不要输出伪精确结果，在 `reason` 中简短说明原因。
-8. 只能输出严格 JSON，禁止 Markdown 包裹。
+8. `NOT_EXACT` 时，不要猜时间，不要输出伪精确结果，在 `reason` 中简短说明原因。
+9. 只能输出严格 JSON，禁止 Markdown 包裹。
 
 严格输出以下 Kotlin contract 对应的 JSON：
 ${
@@ -221,16 +224,19 @@ ${request.transcript}
    - `timeHint` 可为空；若存在，用于保留“下午/下班后”等模糊时间线索
    - `urgency` 只能是 `L1` / `L2` / `L3` / `FIRE_OFF`
 5. 相对日期锚点规则：
-   - `明天` / `tomorrow` 必须锚定 `now_iso` 所在真实日期
+   - `明天` / `tomorrow` / `后天` 必须锚定 `now_iso` 所在真实日期
    - `下一天` / `后一天` 可以锚定 `displayed_date_iso`；如果该值为 `null`，不要猜页面日期，输出 `NOT_VAGUE`
 6. 只有“日期锚点”但没有明确钟点的输入，优先属于 `Uni-B`。
-   - 例如 `明天提醒我打电话`、`tomorrow remind me to go to the airport`、`后一天提醒我吃饭`
+   - 例如 `明天提醒我打电话`、`tomorrow remind me to go to the airport`、`后一天提醒我吃饭`、`后天提醒我打电话`
    - 这些都应保留为模糊任务，不得补出 `00:00`、当前时刻或任何猜测时刻。
-7. 中文口语时间规则：
+7. 只要日期锚点合法且出现明确钟点，就不属于 `Uni-B`。
+   - 例如 `后天晚上九点去接张总`、`明天下午三点半开会`
+   - 这些应输出 `NOT_VAGUE`，让系统保留给精确创建分支，而不是降级成模糊任务。
+8. 中文口语时间规则：
    - 裸 `一点` / `1点` 默认解释为 `13:00`
    - 只有显式早晨前缀（如 `凌晨一点`）才可解释为 `01:00`
-8. 如果用户完全没有给出日期锚点，例如“安排 team standup”，不要编造今天或当前页日期；输出 `NOT_VAGUE`。
-9. 只能输出严格 JSON，禁止 Markdown 包裹。
+9. 如果用户完全没有给出日期锚点，例如“安排 team standup”，不要编造今天或当前页日期；输出 `NOT_VAGUE`。
+10. 只能输出严格 JSON，禁止 Markdown 包裹。
 
 严格输出以下 Kotlin contract 对应的 JSON：
 ${
@@ -333,14 +339,32 @@ ${
 8. duration推断（15m通讯, 1h会议, 30m用餐运动）。
 9. 中文计时习惯(重要)：日常使用12小时制时，数字默认指代白天/下午。例如说“2点”代表 14:00，“4点”代表 16:00。如果是凌晨（如 2:00），用户一定会明确加上前缀，如“凌晨2点”、“半夜3点”。除非有此类明确前缀，否则 1-6 点默认解析为 13:00 - 18:00。如果是上午（如 9点），则正常解析为 09:00。
 
-### 工具建议规则（极度重要：禁止硬编码回复）
-如果用户的话语中表现出需要**生成报告、写邮件、收集资料、导出表格、列出注意事项、或是提建议/模拟对话**的意图，你必须**优先**在 `recommended_workflows` 数组中推荐对应的工具，**绝对不能**仅仅在 `response` 里表示"我会为您做"就结束了。你是个没有手臂的AI，只有依靠 `recommended_workflows` 里的工具才能干活！
-如果找到了匹配的工具，在 `response` 中只需简短回应（如："好的，我为您找到了相关工具，请确认。"），并务必将工具 ID 放入 `recommended_workflows` 数组。
-目前支持的可选 `workflowId` (Vault IDs) 包括：
-- `GENERATE_PDF`：适用于生成报告、总结资料、列出注意事项、或正式提炼。
-- `EXPORT_CSV`：适用于导出表格、列表数据。
-- `DRAFT_EMAIL`：适用于起草商业邮件或外部跟进消息。
-- `TALK_SIMULATOR`：适用于分析历史、情景模拟、或推荐对练工具。
-提供推荐理由 `reason`（让用户明白为什么推荐这个工具），任何执行参数放入 `parameters` 对象。
+### 工具路由规则（极度重要：禁止硬编码回复）
+如果用户的话语中表现出需要**生成报告、分析音频、生成CRM工作表、或进行模拟对话**，并且这是一个**单一且明确的执行请求**，你必须优先填写 `plugin_dispatch`，而不是只给 `response`。
+`plugin_dispatch.toolId` 必须使用稳定语义 ID：
+- `artifact.generate`：生成报告、PDF汇报、正式提炼
+- `audio.analyze`：分析录音、会议音频、通话内容
+- `crm.sheet.generate`：生成CRM工作表、客户梳理表、机会概览表
+- `simulation.talk`：模拟对话、角色扮演、话术对练
+
+当你填写 `plugin_dispatch` 时：
+- `response` 只需简短说明（如："好的，我已为您起草工具执行。"）或留空
+- `recommended_workflows` 保持空数组，避免同时再推荐一遍
+- 执行参数放入 `plugin_dispatch.parameters`
+
+只有在以下情况下，才使用 `recommended_workflows`：
+- 你需要给用户提供**多个备选工具**
+- 用户只是泛泛询问“有什么工具可以帮我”
+- 当前更适合任务板确认而不是单一路由执行
+
+`recommended_workflows` 中允许的 `workflowId` 包括：
+- `artifact.generate`
+- `audio.analyze`
+- `crm.sheet.generate`
+- `simulation.talk`
+- `EXPORT_CSV`
+- `DRAFT_EMAIL`
+
+如果使用 `recommended_workflows`，请提供 `reason`，并将任何执行参数放入 `parameters` 对象。
 """.trimIndent()
 }

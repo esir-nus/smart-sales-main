@@ -14,7 +14,8 @@ interface ToolRegistry {
 
     /**
      * Execute a specific tool workflow by its ID.
-     * @param toolId The ID of the tool (e.g. "EXPORT_CSV")
+     * @param toolId The semantic entry ID of the tool
+     *        (e.g. "artifact.generate", "audio.analyze")
      * @param request The structured request containing parameters extracted by the LLM
      * @return A Flow of UiState allowing the OS shell to surface bounded progress
      *         and the plugin to yield a final Result/Response.
@@ -43,7 +44,12 @@ enum class CoreModulePermission {
     WRITE_CRM_MEMORY,
     READ_USER_HABITS,
     USE_RL_ENGINE,
-    HIJACK_AUDIO_STREAM
+    HIJACK_AUDIO_STREAM,
+    READ_ARTIFACT_CONTEXT,
+    READ_AUDIO_CONTEXT,
+    READ_SIMULATION_CONTEXT,
+    MINT_ARTIFACT,
+    EXPORT_ARTIFACT
 }
 
 interface PluginGateway {
@@ -66,7 +72,7 @@ data class AnalystTool(
     val id: String,
     val label: String,
     val description: String,
-    val requiredParams: Map<String, String> = emptyMap() // e.g. "targetDate" -> "ISO8601 string"
+    val requiredParams: Map<String, String> = emptyMap() // e.g. "ruleId" -> "executive_report"
 )
 
 /**
@@ -80,6 +86,59 @@ data class PluginRequest(
 )
 ```
 
+## Semantic Entry IDs
+
+The outer orchestrator should route plugins by stable semantic entry IDs, not by opaque numeric slots.
+
+Current preferred entry IDs:
+
+- `artifact.generate`
+- `audio.analyze`
+- `crm.sheet.generate`
+- `simulation.talk`
+
+Routing law:
+
+- `toolId` selects the plugin family
+- `ruleId` inside `PluginRequest.parameters` selects the behavior variant within that family
+- deep capability choreography remains internal to the plugin lane
+
+Example:
+
+```json
+{
+  "toolId": "artifact.generate",
+  "parameters": {
+    "ruleId": "executive_report",
+    "targetRef": "account:huawei",
+    "audience": "executive"
+  }
+}
+```
+
+## T4 Capability-Facing Direction
+
+The current Kotlin interface still reflects the transitional T3 shell.
+
+For T4+, the plugin-facing contract should evolve toward:
+
+- semantic `toolId` at dispatch time
+- bounded `ruleId`-driven specialization
+- reusable capability calls behind `PluginGateway`
+- bounded result types that distinguish:
+  - transient progress
+  - read-only final result
+  - write-request / artifact-mint request
+
+The semantic tool families currently expected to drive that evolution are:
+
+| `toolId` | Primary Capabilities |
+|------|-----------------------|
+| `artifact.generate` | `READ_ARTIFACT_CONTEXT`, `MINT_ARTIFACT`, `EXPORT_ARTIFACT` |
+| `audio.analyze` | `READ_AUDIO_CONTEXT`, `READ_SESSION_HISTORY` |
+| `crm.sheet.generate` | `READ_CRM_MEMORY`, `READ_SESSION_HISTORY`, later artifact mint |
+| `simulation.talk` | `READ_SIMULATION_CONTEXT`, `READ_SESSION_HISTORY` |
+
 ## T3 Runtime Contract Notes
 
 - The first delivered runtime gateway bundle is intentionally narrow:
@@ -88,3 +147,7 @@ data class PluginRequest(
 - The active T3 gateway surface is read-only; history append remains out of scope until a later write-capability wave.
 - Plugin-caused writes remain out of scope for this interface wave and re-enter later through the mutation lane.
 - `Flow<UiState>` remains a transitional shell for the outer plugin lane, but the gateway itself is the ownership boundary for runtime capabilities and permissions.
+- Current outer-loop delivery contract:
+  - non-voice plugin dispatch is surfaced as a proposal and requires the existing `"确认执行"` commit step before real registry execution begins
+  - approved voice plugin dispatch may auto-enter the plugin lane, but it must still yield bounded execution states back to the OS shell
+  - the OS currently observes plugin entry and yield through `PluginExecutionStarted` and `PluginExecutionEmittedState`

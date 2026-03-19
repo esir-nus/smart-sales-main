@@ -63,6 +63,11 @@ sealed class UniBExtractionResult {
 - bare vague inputs with no day anchor must not fabricate a date just to satisfy this seam
 - the machine-routing schema must come from a real `@Serializable` Kotlin contract
 - the linter must decode that same contract directly
+- closed-set relative-day family must be enforced deterministically after extraction:
+  - `明天` / `tomorrow` / `后天` anchor to `nowIso`
+  - `下一天` / `后一天` anchor to `displayedDateIso`
+  - illegal model anchors must be normalized or rejected before they can persist
+- if lawful day-anchor plus explicit clock evidence survives in transcript or `timeHint`, this seam must yield an exact-create DTO instead of a vague-task DTO
 
 ---
 
@@ -88,6 +93,7 @@ Rules:
 - `unifiedId` must be preserved
 - title and anchor date are required
 - no exact `startTimeIso` is emitted for this universe
+- lawful day-anchor plus explicit clock cue is an exit condition for this vague lane, not a valid vague commit
 
 ---
 

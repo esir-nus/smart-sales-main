@@ -84,7 +84,7 @@ fun SchedulerTaskCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "⚠️ 发现冲突",
+                            text = state.conflictSummary ?: "⚠️ 发现冲突",
                             color = AccentAmber,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold

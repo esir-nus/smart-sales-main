@@ -111,7 +111,8 @@ For `Uni-D`, `PathACommitted` implies:
 - `task.id == unifiedId`
 - `task.isVague == false`
 - `task.hasConflict == true`
-- the committed task carries enough conflict evidence for caution-state render, not only a bare boolean
+- `task.conflictWithTaskId` carries one persisted overlap identifier
+- `task.conflictSummary` carries one user-visible caution string
 - UI must not treat it as a clean `Uni-A` card
 
 `ConversationalReply` is not equivalent to conflict-visible success.
@@ -141,6 +142,8 @@ Rules:
 
 - overlap must produce `ConflictExact`, not `Rejected`
 - `Rejected` is reserved for malformed or non-creatable cases, not valid overlap
+- exact tasks with `durationMinutes == 0` still enter this boundary as point-in-time occupancy checks
+- this boundary must not fabricate a fake duration merely to trigger overlap math
 
 ---
 
@@ -154,6 +157,13 @@ Minimum expectation:
 
 - the card visibly differs from clean `Uni-A`
 - the user can tell why attention is required without opening logs or developer tooling
+- the foreground scheduler status is caution-state, not clean success
+
+In the shipped T4 slice, this means:
+
+- scheduler foreground status uses `⚠️ 已创建，发现冲突`
+- timeline/task-card render consumes `conflictSummary`
+- task details surface repeats the conflict summary in caution styling
 
 They must not render it as:
 

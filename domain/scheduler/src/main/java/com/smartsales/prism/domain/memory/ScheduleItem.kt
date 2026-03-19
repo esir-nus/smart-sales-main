@@ -25,6 +25,38 @@ data class ScheduleItem(
 }
 
 /**
+ * Deterministic overlap law for exact scheduler tasks.
+ *
+ * A zero-duration exact task is treated as a point-in-time occupancy check rather than a
+ * silently non-conflicting empty interval. This preserves conflict visibility without
+ * inventing a fake duration.
+ */
+fun overlapsInScheduleBoard(
+    proposedStart: Long,
+    proposedDurationMinutes: Int,
+    existingStart: Long,
+    existingDurationMinutes: Int
+): Boolean {
+    val proposedHasSpan = proposedDurationMinutes > 0
+    val existingHasSpan = existingDurationMinutes > 0
+    val proposedEnd = proposedStart + (proposedDurationMinutes * 60_000L)
+    val existingEnd = existingStart + (existingDurationMinutes * 60_000L)
+
+    return when {
+        proposedHasSpan && existingHasSpan -> {
+            existingStart < proposedEnd && proposedStart < existingEnd
+        }
+        !proposedHasSpan && existingHasSpan -> {
+            existingStart <= proposedStart && proposedStart < existingEnd
+        }
+        proposedHasSpan && !existingHasSpan -> {
+            proposedStart <= existingStart && existingStart < proposedEnd
+        }
+        else -> proposedStart == existingStart
+    }
+}
+
+/**
  * 持续时间来源
  * 
  * 记录持续时间是如何获取的，用于调试和用户反馈。

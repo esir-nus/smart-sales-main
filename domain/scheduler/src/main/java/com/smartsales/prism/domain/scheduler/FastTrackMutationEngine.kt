@@ -1,10 +1,10 @@
 package com.smartsales.prism.domain.scheduler
-
 import com.smartsales.prism.domain.memory.ConflictResult
 import com.smartsales.prism.domain.memory.ScheduleBoard
 import kotlinx.coroutines.flow.first
 import java.time.Instant
 import java.time.LocalDate
+import java.time.OffsetDateTime
 import java.util.UUID
 import javax.inject.Inject
 import com.smartsales.prism.domain.time.TimeProvider
@@ -50,7 +50,7 @@ class FastTrackMutationEngine @Inject constructor(
 
     private suspend fun handleCreateTasks(params: CreateTasksParams): MutationResult {
         val newTasks = params.tasks.map { def ->
-            val startInst = Instant.parse(def.startTimeIso)
+            val startInst = parseExactStartInstant(def.startTimeIso)
             
             // 1. Evaluate temporal conflict
             val conflictResult = scheduleBoard.checkConflict(
@@ -58,6 +58,14 @@ class FastTrackMutationEngine @Inject constructor(
                 durationMinutes = def.durationMinutes
             )
             val hasConflict = conflictResult is ConflictResult.Conflict
+            val conflictSummary = (conflictResult as? ConflictResult.Conflict)
+                ?.overlaps
+                ?.firstOrNull()
+                ?.let { overlap -> "与「${overlap.title}」时间冲突" }
+            val conflictWithTaskId = (conflictResult as? ConflictResult.Conflict)
+                ?.overlaps
+                ?.firstOrNull()
+                ?.entryId
             
             ScheduledTask(
                 id = if (params.tasks.size == 1 && !params.unifiedId.isNullOrBlank()) {
@@ -71,18 +79,14 @@ class FastTrackMutationEngine @Inject constructor(
                 startTime = startInst,
                 durationMinutes = def.durationMinutes,
                 hasConflict = hasConflict,
+                conflictWithTaskId = conflictWithTaskId,
+                conflictSummary = conflictSummary,
                 isVague = false // Or derive from NLP payload
             )
         }
         
         if (newTasks.size == 1 && !params.unifiedId.isNullOrBlank()) {
             val task = newTasks.first().copy(id = params.unifiedId)
-            if (task.hasConflict) {
-                return MutationResult.NoMatch(
-                    query = task.title,
-                    reason = "Uni-A exact create requires a no-conflict slot"
-                )
-            }
             val id = taskRepository.upsertTask(task)
             return MutationResult.Success(listOf(id))
         }
@@ -163,5 +167,10 @@ class FastTrackMutationEngine @Inject constructor(
     private suspend fun handleCreateInspiration(params: CreateInspirationParams): MutationResult {
         val id = inspirationRepository.insert(params.content)
         return MutationResult.InspirationCreated(id)
+    }
+
+    private fun parseExactStartInstant(raw: String): Instant {
+        return runCatching { Instant.parse(raw) }
+            .getOrElse { OffsetDateTime.parse(raw).toInstant() }
     }
 }

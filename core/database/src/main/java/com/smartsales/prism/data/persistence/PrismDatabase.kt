@@ -16,6 +16,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * Version 6: 添加 sessions 表
  * Version 7: 添加 session_messages 表 (会话消息持久化)
  * Version 8: ScheduledTask 添加 hasConflict / isVague 列
+ * Version 9: ScheduledTask 添加 conflictWithTaskId / conflictSummary 列
  * exportSchema = false: 不导出 schema JSON (简化 MVP)
  */
 @Database(
@@ -27,7 +28,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SessionEntity::class,
         MessageEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = false
 )
 abstract class PrismDatabase : RoomDatabase() {
@@ -105,6 +106,13 @@ abstract class PrismDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE scheduled_tasks ADD COLUMN hasConflict INTEGER NOT NULL DEFAULT 0")
                 db.execSQL("ALTER TABLE scheduled_tasks ADD COLUMN isVague INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE scheduled_tasks ADD COLUMN conflictWithTaskId TEXT DEFAULT NULL")
+                db.execSQL("ALTER TABLE scheduled_tasks ADD COLUMN conflictSummary TEXT DEFAULT NULL")
             }
         }
     }

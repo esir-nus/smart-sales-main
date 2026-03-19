@@ -123,14 +123,16 @@ enum class ConflictPolicy {
 
 ```kotlin
 fun checkConflict(start: Long, durationMin: Int, excludeId: String? = null): ConflictResult {
-    val proposedEnd = start + (durationMin * 60_000L)
-    
     val overlaps = getDay(start.toLocalDate())
         .filter { slot ->
             slot.entryId != excludeId &&  // Exclude self
             slot.conflictPolicy == EXCLUSIVE &&
-            slot.scheduledAt < proposedEnd && 
-            start < slot.scheduledAt + (slot.durationMinutes * 60_000L)
+            overlapsInScheduleBoard(
+                proposedStart = start,
+                proposedDurationMinutes = durationMin,
+                existingStart = slot.scheduledAt,
+                existingDurationMinutes = slot.durationMinutes
+            )
         }
     
     return when {
@@ -139,6 +141,11 @@ fun checkConflict(start: Long, durationMin: Int, excludeId: String? = null): Con
     }
 }
 ```
+
+Law:
+- normal exact tasks with real durations use interval overlap
+- zero-duration exact tasks are treated as point-in-time occupancy checks, not as silently non-conflicting empty intervals
+- this preserves conflict visibility without fabricating a fake default duration
 
 ---
 
@@ -176,7 +183,7 @@ data class DecisionRecord(
 
 - **Goal**: Conflict detection via hardcoded Kotlin
 - **Exit Criteria**: `checkConflict()` returns correct overlap results
-- **Test Cases**: ✅ Time overlap detection, ✅ `excludeId` self-exclusion, ✅ `ConflictPolicy.COEXISTING` passthrough
+- **Test Cases**: ✅ Time overlap detection, ✅ zero-duration exact point conflict detection, ✅ `excludeId` self-exclusion, ✅ `ConflictPolicy.COEXISTING` passthrough
 
 ### Wave 2 Ship Criteria (✅ SHIPPED)
 
@@ -305,4 +312,3 @@ suspend fun completeTask(taskId: String) {
 **Token budget**: ~2500 tokens (~10K chars). Entity payload size logged for monitoring.
 
 **Cost guardrail**: Max 50 Archived entries per LLM request.
-

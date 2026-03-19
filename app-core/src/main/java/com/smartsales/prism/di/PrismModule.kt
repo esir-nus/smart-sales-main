@@ -96,7 +96,19 @@ abstract class PrismModule {
 
     @Binds
     @dagger.multibindings.IntoSet
-    abstract fun bindTestingPdfPlugin(plugin: com.smartsales.prism.data.real.plugins.TestingPdfPlugin): com.smartsales.core.pipeline.PrismPlugin
+    abstract fun bindArtifactGeneratePlugin(plugin: com.smartsales.prism.data.real.plugins.ArtifactGeneratePlugin): com.smartsales.core.pipeline.PrismPlugin
+
+    @Binds
+    @dagger.multibindings.IntoSet
+    abstract fun bindAudioAnalyzePlugin(plugin: com.smartsales.prism.data.real.plugins.AudioAnalyzePlugin): com.smartsales.core.pipeline.PrismPlugin
+
+    @Binds
+    @dagger.multibindings.IntoSet
+    abstract fun bindCrmSheetGeneratePlugin(plugin: com.smartsales.prism.data.real.plugins.CrmSheetGeneratePlugin): com.smartsales.core.pipeline.PrismPlugin
+
+    @Binds
+    @dagger.multibindings.IntoSet
+    abstract fun bindSimulationTalkPlugin(plugin: com.smartsales.prism.data.real.plugins.SimulationTalkPlugin): com.smartsales.core.pipeline.PrismPlugin
 
     @Binds
     @dagger.multibindings.IntoSet

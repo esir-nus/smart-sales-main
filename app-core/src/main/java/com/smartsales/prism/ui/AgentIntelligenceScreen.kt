@@ -53,7 +53,8 @@ fun AgentIntelligenceScreen(
     onTingwuClick: () -> Unit = {},
     onArtifactsClick: () -> Unit = {},
     onDebugClick: () -> Unit = {},
-    onProfileClick: () -> Unit = {}
+    onProfileClick: () -> Unit = {},
+    showDebugButton: Boolean = true
 ) {
     val history by viewModel.history.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
@@ -96,6 +97,7 @@ fun AgentIntelligenceScreen(
         onArtifactsClick = onArtifactsClick,
         onDebugClick = onDebugClick,
         onProfileClick = onProfileClick,
+        showDebugButton = showDebugButton,
         onUpdateInput = viewModel::updateInput,
         onSend = viewModel::send,
         onConfirmPlan = viewModel::confirmAnalystPlan,
@@ -125,6 +127,7 @@ internal fun AgentIntelligenceContent(
     onArtifactsClick: () -> Unit,
     onDebugClick: () -> Unit,
     onProfileClick: () -> Unit,
+    showDebugButton: Boolean,
     onUpdateInput: (String) -> Unit,
     onSend: () -> Unit,
     onConfirmPlan: () -> Unit,
@@ -351,7 +354,8 @@ internal fun AgentIntelligenceContent(
                 onMenuClick = onMenuClick,
                 onNewSessionClick = onNewSessionClick,
                 onDebugClick = onDebugClick,
-                onDeviceClick = onAudioBadgeClick
+                onDeviceClick = onAudioBadgeClick,
+                showDebugButton = showDebugButton
             )
         }
 
@@ -417,7 +421,8 @@ private fun ProMaxHeader(
     onMenuClick: () -> Unit,
     onNewSessionClick: () -> Unit,
     onDebugClick: () -> Unit,
-    onDeviceClick: () -> Unit
+    onDeviceClick: () -> Unit,
+    showDebugButton: Boolean
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -437,7 +442,9 @@ private fun ProMaxHeader(
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            GlassCircleButton(icon = Icons.Filled.BugReport, onClick = onDebugClick, tint = ProMaxTextMuted)
+            if (showDebugButton) {
+                GlassCircleButton(icon = Icons.Filled.BugReport, onClick = onDebugClick, tint = ProMaxTextMuted)
+            }
             GlassCircleButton(icon = Icons.Filled.Add, onClick = onNewSessionClick)
         }
     }

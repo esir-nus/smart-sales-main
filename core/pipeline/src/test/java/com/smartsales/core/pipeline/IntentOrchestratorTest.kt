@@ -28,6 +28,7 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import com.smartsales.core.pipeline.ToolRegistry
+import com.smartsales.core.telemetry.PipelineValve
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.SchedulerTimelineItem
 import com.smartsales.prism.domain.scheduler.ScheduledTask
@@ -35,6 +36,7 @@ import com.smartsales.prism.domain.scheduler.FastTrackMutationEngine
 import com.smartsales.prism.domain.scheduler.SchedulerLinter
 import com.smartsales.prism.domain.time.TimeProvider
 import java.time.Instant
+import java.time.OffsetDateTime
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.Flow
 import com.smartsales.core.test.fakes.FakeToolRegistry
@@ -349,7 +351,7 @@ class IntentOrchestratorTest {
                   "decision": "EXACT_CREATE",
                   "task": {
                     "title": "开会",
-                    "startTimeIso": "2026-03-18T02:00:00Z",
+                    "startTimeIso": "2026-03-19T02:00:00Z",
                     "durationMinutes": 60,
                     "urgency": "L2"
                   }
@@ -367,7 +369,7 @@ class IntentOrchestratorTest {
         assertEquals("开会", pathAResult.task.title)
         assertEquals(pathAResult.task.id, fakeUnifiedPipeline.processedInputs.first().unifiedId)
         assertEquals(QueryQuality.DEEP_ANALYSIS, fakeUnifiedPipeline.processedInputs.first().intent)
-        assertEquals(Instant.parse("2026-03-18T02:00:00Z"), pathAResult.task.startTime)
+        assertEquals(Instant.parse("2026-03-19T02:00:00Z"), pathAResult.task.startTime)
         assertFalse(pathAResult.task.isVague)
         assertFalse(pathAResult.task.hasConflict)
         assertNotNull(fakeTaskRepository.getTask(pathAResult.task.id))
@@ -387,7 +389,7 @@ class IntentOrchestratorTest {
                   "decision": "EXACT_CREATE",
                   "task": {
                     "title": "开会",
-                    "startTimeIso": "2026-03-18T02:00:00Z",
+                    "startTimeIso": "2026-03-19T02:00:00Z",
                     "durationMinutes": 60,
                     "urgency": "L2"
                   }
@@ -403,7 +405,7 @@ class IntentOrchestratorTest {
                         tasks = listOf(
                             com.smartsales.prism.domain.scheduler.TaskDefinition(
                                 title = "Path B hallucinated follow-up",
-                                startTimeIso = "2026-03-18T04:44:00Z",
+                                startTimeIso = "2026-03-19T04:44:00Z",
                                 durationMinutes = 60,
                                 urgency = com.smartsales.prism.domain.scheduler.UrgencyEnum.L2_IMPORTANT
                             )
@@ -485,6 +487,26 @@ class IntentOrchestratorTest {
                 """.trimIndent()
             )
         )
+        println(
+            "DEBUG promoted linter=" + SchedulerLinter().parseUniBExtraction(
+                input = """
+                {
+                  "decision": "VAGUE_CREATE",
+                  "task": {
+                    "title": "去接李总",
+                    "anchorDateIso": "2026-03-20",
+                    "timeHint": "晚上九点",
+                    "urgency": "L2"
+                  }
+                }
+                """.trimIndent(),
+                unifiedId = "debug-promoted",
+                transcript = input,
+                nowIso = java.time.Instant.now().toString(),
+                timezone = java.time.ZoneId.systemDefault().id,
+                displayedDateIso = "2026-03-15"
+            )
+        )
         val expectedReply = PipelineResult.ConversationalReply("Path B reply")
         fakeUnifiedPipeline.nextResultFlow = flowOf(expectedReply)
 
@@ -552,6 +574,51 @@ class IntentOrchestratorTest {
     }
 
     @Test
+    fun `explicit clock cue in Uni-B response must promote to exact Path A commit`() = runTest {
+        setup()
+        val input = "后天晚上九点去接李总"
+
+        fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.DEEP_ANALYSIS, true, ""))
+        fakeUniAExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "NOT_EXACT",
+                  "reason": "测试降级"
+                }
+                """.trimIndent()
+            )
+        )
+        fakeUniAExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "VAGUE_CREATE",
+                  "task": {
+                    "title": "去接李总",
+                    "anchorDateIso": "2026-03-20",
+                    "timeHint": "晚上九点",
+                    "urgency": "L2"
+                  }
+                }
+                """.trimIndent()
+            )
+        )
+        val expectedReply = PipelineResult.ConversationalReply("Path B reply")
+        fakeUnifiedPipeline.nextResultFlow = flowOf(expectedReply)
+
+        val results = orchestrator.processInput(input, isVoice = true, displayedDateIso = "2026-03-15").toList()
+
+        assertTrue(results.first() is PipelineResult.PathACommitted)
+        val pathAResult = results.first() as PipelineResult.PathACommitted
+        assertEquals("去接李总", pathAResult.task.title)
+        assertFalse(pathAResult.task.isVague)
+        assertFalse(pathAResult.task.hasConflict)
+        assertEquals(OffsetDateTime.parse("2026-03-20T13:00:00Z").toInstant(), pathAResult.task.startTime)
+        assertTrue(results.contains(expectedReply))
+    }
+
+    @Test
     fun `voice scheduler path does not fake PathA commit when Uni-A is not exact`() = runTest {
         setup()
         val input = "明天开会"
@@ -579,7 +646,7 @@ class IntentOrchestratorTest {
     }
 
     @Test
-    fun `voice scheduler path does not fake PathA commit when Uni-A exact task conflicts`() = runTest {
+    fun `voice scheduler path commits Uni-D conflict-visible exact task when overlap exists`() = runTest {
         setup()
         val input = "明天上午十点开会"
 
@@ -591,7 +658,7 @@ class IntentOrchestratorTest {
                   "decision": "EXACT_CREATE",
                   "task": {
                     "title": "开会",
-                    "startTimeIso": "2026-03-18T02:00:00Z",
+                    "startTimeIso": "2026-03-19T02:00:00Z",
                     "durationMinutes": 60,
                     "urgency": "L2"
                   }
@@ -600,15 +667,29 @@ class IntentOrchestratorTest {
             )
         )
         fakeScheduleBoard.nextConflictResult = ConflictResult.Conflict(
-            overlaps = emptyList()
+            overlaps = listOf(
+                com.smartsales.prism.domain.memory.ScheduleItem(
+                    entryId = "existing-1",
+                    title = "牙医预约",
+                    scheduledAt = Instant.parse("2026-03-19T02:00:00Z").toEpochMilli(),
+                    durationMinutes = 60,
+                    durationSource = com.smartsales.prism.domain.memory.DurationSource.DEFAULT,
+                    conflictPolicy = com.smartsales.prism.domain.memory.ConflictPolicy.EXCLUSIVE
+                )
+            )
         )
         val expectedReply = PipelineResult.ConversationalReply("Scheduled.")
         fakeUnifiedPipeline.nextResultFlow = flowOf(expectedReply)
 
         val results = orchestrator.processInput(input, isVoice = true).toList()
 
-        assertTrue(results.none { it is PipelineResult.PathACommitted })
-        assertNull(fakeTaskRepository.getTask(fakeUnifiedPipeline.processedInputs.first().unifiedId))
+        assertTrue(results.first() is PipelineResult.PathACommitted)
+        val pathAResult = results.first() as PipelineResult.PathACommitted
+        assertTrue(pathAResult.task.hasConflict)
+        assertFalse(pathAResult.task.isVague)
+        assertEquals("existing-1", pathAResult.task.conflictWithTaskId)
+        assertEquals("与「牙医预约」时间冲突", pathAResult.task.conflictSummary)
+        assertNotNull(fakeTaskRepository.getTask(pathAResult.task.id))
         assertTrue(results.contains(expectedReply))
     }
 
@@ -664,5 +745,101 @@ class IntentOrchestratorTest {
         assertEquals("以后想练口语", inspirations.first().title)
         val finalPrompt = fakeUniAExecutor.executedPrompts.last()
         assertTrue(finalPrompt.contains("INSPIRATION_CREATE"))
+    }
+
+    @Test
+    fun `voice exact conflict emits Uni-D core-flow checkpoints`() = runTest {
+        setup()
+        val input = "明天下午三点开会"
+        val checkpoints = mutableListOf<PipelineValve.Checkpoint>()
+        PipelineValve.testInterceptor = { checkpoint, _, _ ->
+            checkpoints += checkpoint
+        }
+
+        try {
+            fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.DEEP_ANALYSIS, true, ""))
+            fakeUniAExecutor.enqueueResponse(
+                ExecutorResult.Success(
+                    """
+                    {
+                      "decision": "EXACT_CREATE",
+                      "task": {
+                        "title": "开会",
+                        "startTimeIso": "2026-03-19T07:00:00Z",
+                        "durationMinutes": 60,
+                        "urgency": "L2"
+                      }
+                    }
+                    """.trimIndent()
+                )
+            )
+            fakeScheduleBoard.nextConflictResult = ConflictResult.Conflict(
+                overlaps = listOf(
+                    com.smartsales.prism.domain.memory.ScheduleItem(
+                        entryId = "existing-1",
+                        title = "牙医预约",
+                        scheduledAt = Instant.parse("2026-03-19T07:00:00Z").toEpochMilli(),
+                        durationMinutes = 60,
+                        durationSource = com.smartsales.prism.domain.memory.DurationSource.DEFAULT,
+                        conflictPolicy = com.smartsales.prism.domain.memory.ConflictPolicy.EXCLUSIVE
+                    )
+                )
+            )
+            fakeUnifiedPipeline.nextResultFlow = flowOf(PipelineResult.ConversationalReply("Scheduled."))
+
+            orchestrator.processInput(input, isVoice = true).toList()
+
+            assertTrue(checkpoints.contains(PipelineValve.Checkpoint.TASK_EXTRACTED))
+            assertTrue(checkpoints.contains(PipelineValve.Checkpoint.CONFLICT_EVALUATED))
+            assertTrue(checkpoints.contains(PipelineValve.Checkpoint.PATH_A_DB_WRITTEN))
+        } finally {
+            PipelineValve.testInterceptor = null
+        }
+    }
+
+    @Test
+    fun `voice exact zero-duration task still commits Uni-D when board reports occupied point`() = runTest {
+        setup()
+        val input = "后天晚上九点去接李总"
+
+        fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.DEEP_ANALYSIS, true, ""))
+        fakeUniAExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "EXACT_CREATE",
+                  "task": {
+                    "title": "去接李总",
+                    "startTimeIso": "2026-03-21T13:00:00Z",
+                    "durationMinutes": 0,
+                    "urgency": "L2"
+                  }
+                }
+                """.trimIndent()
+            )
+        )
+        fakeScheduleBoard.nextConflictResult = ConflictResult.Conflict(
+            overlaps = listOf(
+                com.smartsales.prism.domain.memory.ScheduleItem(
+                    entryId = "existing-21",
+                    title = "回家睡觉",
+                    scheduledAt = Instant.parse("2026-03-21T13:00:00Z").toEpochMilli(),
+                    durationMinutes = 60,
+                    durationSource = com.smartsales.prism.domain.memory.DurationSource.DEFAULT,
+                    conflictPolicy = com.smartsales.prism.domain.memory.ConflictPolicy.EXCLUSIVE
+                )
+            )
+        )
+        fakeUnifiedPipeline.nextResultFlow = flowOf(PipelineResult.ConversationalReply("Scheduled."))
+
+        val results = orchestrator.processInput(input, isVoice = true).toList()
+
+        assertTrue(results.first() is PipelineResult.PathACommitted)
+        val pathAResult = results.first() as PipelineResult.PathACommitted
+        assertEquals("去接李总", pathAResult.task.title)
+        assertTrue(pathAResult.task.hasConflict)
+        assertEquals("existing-21", pathAResult.task.conflictWithTaskId)
+        assertEquals("与「回家睡觉」时间冲突", pathAResult.task.conflictSummary)
+        assertEquals(0, pathAResult.task.durationMinutes)
     }
 }

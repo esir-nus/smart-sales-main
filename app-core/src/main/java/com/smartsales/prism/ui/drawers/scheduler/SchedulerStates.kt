@@ -46,7 +46,8 @@ sealed class TimelineItem {
         
         // Wave 17: Path A FastTrack (Small Attention Flow)
         val isVague: Boolean = false,
-        val hasConflict: Boolean = false
+        val hasConflict: Boolean = false,
+        val conflictSummary: String? = null
     ) : TimelineItem()
     
     /**
@@ -83,4 +84,3 @@ enum class ConflictVisual {
     IN_GROUP,   // 琥珀色边框 (冲突组内的已有卡片)
     CAUSING     // 琥珀色边框 + 呼吸发光 (引发冲突的新卡片)
 }
-

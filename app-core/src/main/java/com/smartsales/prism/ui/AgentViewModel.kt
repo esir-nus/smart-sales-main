@@ -25,6 +25,7 @@ import com.smartsales.core.pipeline.ToolResult
 import com.smartsales.core.pipeline.PluginRequest
 import com.smartsales.core.pipeline.CoreModulePermission
 import com.smartsales.core.pipeline.RuntimePluginGateway
+import com.smartsales.core.pipeline.PluginToolIds
 import com.smartsales.core.context.ChatTurn
 import com.smartsales.core.context.ContextBuilder
 import com.smartsales.prism.domain.system.SystemEventBus
@@ -314,6 +315,7 @@ class AgentViewModel @Inject constructor(
         if (_isSending.value) return
         val items = _taskBoardItems.value
         val item = items.find { it.id == itemId } ?: return
+        val canonicalToolId = PluginToolIds.canonicalize(item.id)
         
         _isSending.value = true
         _uiState.value = UiState.ExecutingTool(item.title)
@@ -324,9 +326,9 @@ class AgentViewModel @Inject constructor(
             try {
                 val context = _inputText.value
                 val request = PluginRequest(context, emptyMap())
-                val gateway = createRuntimePluginGateway(itemId)
+                val gateway = createRuntimePluginGateway(canonicalToolId)
                 
-                toolRegistry.executeTool(itemId, request, gateway).collect { state ->
+                toolRegistry.executeTool(canonicalToolId, request, gateway).collect { state ->
                     withContext(Dispatchers.Main) {
                         if (state is UiState.Response || state is UiState.Error) {
                             if (state is UiState.Response) {
@@ -350,8 +352,9 @@ class AgentViewModel @Inject constructor(
     }
 
     private suspend fun executeToolDirectly(toolId: String, parameters: Map<String, Any> = emptyMap()) {
+        val canonicalToolId = PluginToolIds.canonicalize(toolId)
         val tools = toolRegistry.getAllTools()
-        val tool = tools.find { it.id == toolId }
+        val tool = tools.find { it.id == canonicalToolId }
         val title = tool?.label ?: "未知工具"
         
         withContext(Dispatchers.Main) { _uiState.value = UiState.ExecutingTool(title) }
@@ -359,9 +362,9 @@ class AgentViewModel @Inject constructor(
         try {
             val context = _inputText.value
             val request = PluginRequest(context, parameters)
-            val gateway = createRuntimePluginGateway(toolId)
+            val gateway = createRuntimePluginGateway(canonicalToolId)
             
-            toolRegistry.executeTool(toolId, request, gateway).collect { state ->
+            toolRegistry.executeTool(canonicalToolId, request, gateway).collect { state ->
                 withContext(Dispatchers.Main) {
                     if (state is UiState.Response || state is UiState.Error) {
                         if (state is UiState.Response) {
@@ -385,7 +388,7 @@ class AgentViewModel @Inject constructor(
 
     private fun createRuntimePluginGateway(toolId: String): RuntimePluginGateway {
         return RuntimePluginGateway(
-            toolId = toolId,
+            toolId = PluginToolIds.canonicalize(toolId),
             contextBuilder = contextBuilder,
             allowedPermissions = setOf(CoreModulePermission.READ_SESSION_HISTORY)
         )
@@ -493,9 +496,10 @@ class AgentViewModel @Inject constructor(
             is PipelineResult.ToolRecommendation -> {
                 val tools = toolRegistry.getAllTools()
                 val items = result.recommendations.mapNotNull { rec ->
-                    val tool = tools.find { it.id == rec.workflowId } ?: return@mapNotNull null
+                    val canonicalToolId = PluginToolIds.canonicalize(rec.workflowId)
+                    val tool = tools.find { it.id == canonicalToolId } ?: return@mapNotNull null
                     com.smartsales.prism.domain.analyst.TaskBoardItem(
-                        id = tool.id,
+                        id = canonicalToolId,
                         icon = tool.icon,
                         title = tool.label,
                         description = tool.description
@@ -505,6 +509,15 @@ class AgentViewModel @Inject constructor(
 
                 val ui = UiState.Response("我发现了几个可以帮您执行的工具，请在任务板确认运行。")
                 appendAssistantTurn(ui)
+                _uiState.value = UiState.Idle
+            }
+            is PipelineResult.ToolDispatchProposal -> {
+                val canonicalToolId = PluginToolIds.canonicalize(result.toolId)
+                val tool = toolRegistry.getAllTools().find { it.id == canonicalToolId }
+                val toolLabel = tool?.label ?: canonicalToolId
+                appendAssistantTurn(
+                    UiState.Response("已为您起草工具执行：$toolLabel。如需继续，请回复“确认执行”。")
+                )
                 _uiState.value = UiState.Idle
             }
             is PipelineResult.ToolDispatch -> {

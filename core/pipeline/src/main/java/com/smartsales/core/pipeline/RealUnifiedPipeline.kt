@@ -242,9 +242,39 @@ class RealUnifiedPipeline @Inject constructor(
                         llmResult.content
                     )
                     
+                    val directPluginDispatch = mutation.pluginDispatch
+                        ?.takeIf { it.toolId.isNotBlank() }
+                        ?.let { dispatch ->
+                            PipelineResult.ToolDispatch(
+                                toolId = PluginToolIds.canonicalize(dispatch.toolId),
+                                params = dispatch.parameters
+                            )
+                        }
+
+                    val normalizedRecommendations = mutation.recommendedWorkflows.map { recommendation ->
+                        recommendation.copy(
+                            workflowId = PluginToolIds.canonicalize(recommendation.workflowId)
+                        )
+                    }
+
+                    val legacySingleDispatchFallback = normalizedRecommendations
+                        .singleOrNull()
+                        ?.takeIf { directPluginDispatch == null && PluginToolIds.isDirectDispatchLane(it.workflowId) }
+                        ?.let { recommendation ->
+                            PipelineResult.ToolDispatch(
+                                toolId = recommendation.workflowId,
+                                params = recommendation.parameters
+                            )
+                        }
+
                     // 1. Extract and emit the conversational response strictly from the DTO
                     val responseText = mutation.response ?: ""
-                    if (responseText.isNotBlank()) {
+                    if (responseText.isNotBlank() &&
+                        !shouldSuppressToolRoutingReply(
+                            responseText = responseText,
+                            directDispatch = directPluginDispatch ?: legacySingleDispatchFallback
+                        )
+                    ) {
                         emit(PipelineResult.ConversationalReply(responseText))
                     }
                     
@@ -263,8 +293,16 @@ class RealUnifiedPipeline @Inject constructor(
                         emit(PipelineResult.MutationProposal(profileMutations = profileMutations))
                     }
                     
-                    if (mutation.recommendedWorkflows.isNotEmpty()) {
-                        emit(PipelineResult.ToolRecommendation(mutation.recommendedWorkflows))
+                    when {
+                        directPluginDispatch != null -> {
+                            emit(directPluginDispatch)
+                        }
+                        legacySingleDispatchFallback != null -> {
+                            emit(legacySingleDispatchFallback)
+                        }
+                        normalizedRecommendations.isNotEmpty() -> {
+                            emit(PipelineResult.ToolRecommendation(normalizedRecommendations))
+                        }
                     }
                     
                     buildSchedulerTaskCommand(
@@ -319,5 +357,14 @@ class RealUnifiedPipeline @Inject constructor(
                 ?.let { SchedulerTaskCommand.DeleteTask(it) }
             else -> null
         }
+    }
+
+    private fun shouldSuppressToolRoutingReply(
+        responseText: String,
+        directDispatch: PipelineResult.ToolDispatch?
+    ): Boolean {
+        if (directDispatch == null) return false
+        return responseText == "好的，我为您找到了相关工具，请确认。" ||
+            responseText == "好的，我已为您起草工具执行。"
     }
 }

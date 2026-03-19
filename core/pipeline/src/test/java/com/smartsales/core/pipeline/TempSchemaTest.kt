@@ -15,7 +15,11 @@ class TempSchemaTest {
         val hasRecommendedWorkflows = (0 until descriptor.elementsCount).any { 
             descriptor.getElementName(it) == "recommended_workflows"
         }
+        val hasPluginDispatch = (0 until descriptor.elementsCount).any {
+            descriptor.getElementName(it) == "plugin_dispatch"
+        }
         assertTrue("UnifiedMutation is missing recommended_workflows", hasRecommendedWorkflows)
+        assertTrue("UnifiedMutation is missing plugin_dispatch", hasPluginDispatch)
         println("SUCCESS: unified_mutation_schema_valid")
     }
 }

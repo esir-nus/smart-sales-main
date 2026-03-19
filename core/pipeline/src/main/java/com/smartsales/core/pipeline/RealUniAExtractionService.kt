@@ -26,7 +26,10 @@ class RealUniAExtractionService @Inject constructor(
             is ExecutorResult.Success -> schedulerLinter.parseUniAExtraction(
                 input = result.content,
                 unifiedId = request.unifiedId,
-                transcript = request.transcript
+                transcript = request.transcript,
+                nowIso = request.nowIso,
+                timezone = request.timezone,
+                displayedDateIso = request.displayedDateIso
             )
             is ExecutorResult.Failure -> {
                 FastTrackResult.NoMatch(

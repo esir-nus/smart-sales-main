@@ -31,4 +31,27 @@ class DaoMappersTest {
         assertEquals("待定", domain.timeDisplay)
         assertEquals("2026-03-21 · 时间待定", domain.dateRange)
     }
+
+    @Test
+    fun `scheduled task mapper preserves Uni-D conflict evidence`() {
+        val task = ScheduledTask(
+            id = "uni-d-001",
+            timeDisplay = "14:00",
+            title = "开会",
+            startTime = Instant.parse("2026-03-21T14:00:00Z"),
+            hasConflict = true,
+            conflictWithTaskId = "existing-1",
+            conflictSummary = "与「牙医预约」时间冲突"
+        )
+
+        val entity = task.toEntity()
+        assertTrue(entity.hasConflict)
+        assertEquals("existing-1", entity.conflictWithTaskId)
+        assertEquals("与「牙医预约」时间冲突", entity.conflictSummary)
+
+        val domain = entity.toDomain()
+        assertTrue(domain.hasConflict)
+        assertEquals("existing-1", domain.conflictWithTaskId)
+        assertEquals("与「牙医预约」时间冲突", domain.conflictSummary)
+    }
 }

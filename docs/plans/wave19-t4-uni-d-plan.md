@@ -4,6 +4,7 @@
 > **Implementation Contract**:
 > - `docs/cerb/scheduler-path-a-uni-d/spec.md`
 > - `docs/cerb/scheduler-path-a-uni-d/interface.md`
+> **Status**: EXECUTED
 
 ## Goal
 
@@ -128,3 +129,9 @@ The second trap is softer but still serious:
 So the decisive rule is:
 
 - overlap must persist, and the warning must remain visible to the user
+
+## Delivered Verification
+
+- `./gradlew :core:pipeline:testDebugUnitTest --tests com.smartsales.core.pipeline.IntentOrchestratorTest`
+- `./gradlew :domain:scheduler:test --tests com.smartsales.prism.domain.scheduler.FastTrackMutationEngineTest`
+- `./gradlew :app-core:testDebugUnitTest --tests com.smartsales.prism.data.persistence.DaoMappersTest --tests com.smartsales.prism.ui.drawers.scheduler.SchedulerViewModelAudioStatusTest`

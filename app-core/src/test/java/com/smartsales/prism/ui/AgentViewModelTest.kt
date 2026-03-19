@@ -7,6 +7,7 @@ import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.domain.scheduler.FastTrackMutationEngine
 import com.smartsales.prism.domain.scheduler.FakeScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.SchedulerLinter
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.emptyFlow
@@ -38,11 +39,13 @@ class AgentViewModelTest {
     private lateinit var intentOrchestrator: IntentOrchestrator
 
     private lateinit var viewModel: AgentViewModel
-    private val testDispatcher = StandardTestDispatcher()
-    private val testScope = TestScope(testDispatcher)
+    private lateinit var testDispatcher: TestDispatcher
+    private lateinit var testScope: TestScope
 
     @Before
     fun setup() {
+        testDispatcher = StandardTestDispatcher()
+        testScope = TestScope(testDispatcher)
         Dispatchers.setMain(testDispatcher)
 
         fakeHistoryRepo = FakeHistoryRepository()
@@ -134,6 +137,7 @@ class AgentViewModelTest {
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+        testScope.cancel()
     }
 
     @Test
@@ -241,6 +245,143 @@ class AgentViewModelTest {
             ),
             fakeContextBuilder.getSessionHistory()
         )
+    }
+
+    @Test
+    fun `non voice plugin dispatch waits for confirm and then executes through real registry`() = runTest {
+        val scenarioPlugin = artifactGeneratePlugin()
+        val realToolRegistry = RealToolRegistry(setOf(scenarioPlugin))
+
+        val fakeTaskRepository = object : com.smartsales.prism.domain.scheduler.ScheduledTaskRepository {
+            override suspend fun batchInsertTasks(rules: List<com.smartsales.prism.domain.scheduler.ScheduledTask>): List<String> = emptyList()
+            override suspend fun upsertTask(task: com.smartsales.prism.domain.scheduler.ScheduledTask): String = ""
+            override suspend fun insertTask(task: com.smartsales.prism.domain.scheduler.ScheduledTask): String = ""
+            override suspend fun updateTask(task: com.smartsales.prism.domain.scheduler.ScheduledTask) {}
+            override suspend fun getTask(id: String): com.smartsales.prism.domain.scheduler.ScheduledTask? = null
+            override fun queryByDateRange(start: java.time.LocalDate, end: java.time.LocalDate): kotlinx.coroutines.flow.Flow<List<com.smartsales.prism.domain.scheduler.ScheduledTask>> = kotlinx.coroutines.flow.emptyFlow()
+            override fun getTimelineItems(dayOffset: Int): kotlinx.coroutines.flow.Flow<List<com.smartsales.prism.domain.scheduler.SchedulerTimelineItem>> = kotlinx.coroutines.flow.emptyFlow()
+            override suspend fun getRecentCompleted(limit: Int): List<com.smartsales.prism.domain.scheduler.ScheduledTask> = emptyList()
+            override suspend fun getTopUrgentActiveForEntity(entityId: String): com.smartsales.prism.domain.scheduler.ScheduledTask? = null
+            override fun observeByEntityId(entityId: String): kotlinx.coroutines.flow.Flow<List<com.smartsales.prism.domain.scheduler.ScheduledTask>> = kotlinx.coroutines.flow.emptyFlow()
+            override suspend fun deleteItem(id: String) {}
+            override suspend fun rescheduleTask(oldTaskId: String, newTask: com.smartsales.prism.domain.scheduler.ScheduledTask) {}
+        }
+
+        val testTimeProvider = object : com.smartsales.prism.domain.time.TimeProvider {
+            override val now: Instant = Instant.parse("2026-03-18T00:00:00Z")
+            override val currentTime: java.time.LocalTime = java.time.LocalTime.NOON
+            override val today: java.time.LocalDate = java.time.LocalDate.parse("2026-03-18")
+            override val zoneId: java.time.ZoneId = java.time.ZoneId.of("UTC")
+            override fun formatForLlm(): String = "2026-03-18"
+        }
+
+        val orchestrator = IntentOrchestrator(
+            contextBuilder = fakeContextBuilder,
+            lightningRouter = fakeLightningRouter,
+            mascotService = fakeMascotService,
+            unifiedPipeline = fakeUnifiedPipeline,
+            entityWriter = fakeEntityWriter,
+            aliasCache = fakeAliasCache,
+            uniAExtractionService = RealUniAExtractionService(
+                executor = FakeExecutor(),
+                promptCompiler = PromptCompiler(),
+                schedulerLinter = SchedulerLinter()
+            ),
+            uniBExtractionService = RealUniBExtractionService(
+                executor = FakeExecutor(),
+                promptCompiler = PromptCompiler(),
+                schedulerLinter = SchedulerLinter()
+            ),
+            uniCExtractionService = RealUniCExtractionService(
+                executor = FakeExecutor(),
+                promptCompiler = PromptCompiler(),
+                schedulerLinter = SchedulerLinter()
+            ),
+            fastTrackMutationEngine = FastTrackMutationEngine(
+                taskRepository = fakeTaskRepository,
+                scheduleBoard = FakeScheduleBoard(),
+                inspirationRepository = FakeInspirationRepository(),
+                timeProvider = testTimeProvider
+            ),
+            taskRepository = fakeTaskRepository,
+            scheduleBoard = FakeScheduleBoard(),
+            toolRegistry = realToolRegistry,
+            timeProvider = testTimeProvider,
+            appScope = testScope
+        )
+
+        val vm = AgentViewModel(
+            intentOrchestrator = orchestrator,
+            historyRepository = fakeHistoryRepo,
+            userProfileRepository = fakeUserProfileRepo,
+            scheduledTaskRepository = fakeScheduledTaskRepo,
+            activityController = activityController,
+            mascotService = fakeMascotService,
+            eventBus = fakeEventBus,
+            audioRepository = fakeAudioRepo,
+            contextBuilder = fakeContextBuilder,
+            toolRegistry = realToolRegistry
+        )
+
+        fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.DEEP_ANALYSIS, true, ""))
+        fakeUnifiedPipeline.nextResultFlow = flowOf(
+            PipelineResult.ToolDispatch(
+                toolId = "artifact.generate",
+                params = mapOf("ruleId" to "executive_report")
+            )
+        )
+
+        vm.updateInput("生成华为汇报")
+        vm.send()
+        advanceUntilIdle()
+
+        assertTrue(scenarioPlugin.executedRequests.isEmpty())
+        val proposalMsg = vm.history.value.last() as com.smartsales.prism.domain.model.ChatMessage.Ai
+        val proposalText = (proposalMsg.uiState as UiState.Response).content
+        assertTrue(proposalText.contains("确认执行"))
+
+        vm.updateInput("确认执行")
+        vm.send()
+        advanceUntilIdle()
+
+        assertEquals(1, scenarioPlugin.executedRequests.size)
+        val finalMsg = vm.history.value.last() as com.smartsales.prism.domain.model.ChatMessage.Ai
+        val finalText = (finalMsg.uiState as UiState.Response).content
+        assertTrue(finalText.contains("artifact.generate completed"))
+        assertTrue(finalText.contains("executive_report"))
+    }
+
+    @Test
+    fun `legacy workflow recommendation is normalized to canonical task board item`() = runTest {
+        fakeToolRegistry.tools.add(
+            AnalystTool(
+                id = PluginToolIds.ARTIFACT_GENERATE,
+                icon = "pdf",
+                label = "PDF Report",
+                description = "Generate a report"
+            )
+        )
+        fakeLightningRouter.enqueueResult(
+            RouterResult(QueryQuality.DEEP_ANALYSIS, true, "")
+        )
+        fakeUnifiedPipeline.nextResultFlow = flowOf(
+            PipelineResult.ToolRecommendation(
+                listOf(
+                    com.smartsales.prism.domain.core.WorkflowRecommendation(
+                        workflowId = "GENERATE_PDF",
+                        reason = "legacy alias",
+                        parameters = emptyMap()
+                    )
+                )
+            )
+        )
+
+        viewModel.updateInput("帮我生成 PDF")
+        viewModel.send()
+        advanceUntilIdle()
+
+        assertEquals(1, viewModel.taskBoardItems.value.size)
+        assertEquals(PluginToolIds.ARTIFACT_GENERATE, viewModel.taskBoardItems.value.single().id)
     }
 
     @Test

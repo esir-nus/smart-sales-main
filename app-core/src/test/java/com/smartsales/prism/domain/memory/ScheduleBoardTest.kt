@@ -90,6 +90,37 @@ class ScheduleBoardTest {
         // Then: 冲突
         assertTrue(result is ConflictResult.Conflict)
     }
+
+    @Test
+    fun `zero-duration exact task inside occupied slot still conflicts`() = runTest {
+        scheduleBoard.setItems(listOf(
+            createScheduleItem("1", hour = 21, durationMin = 60)
+        ))
+
+        val result = scheduleBoard.checkConflict(
+            proposedStart = 21 * 60 * 60 * 1000L,
+            durationMinutes = 0
+        )
+
+        assertTrue(result is ConflictResult.Conflict)
+        val conflict = result as ConflictResult.Conflict
+        assertEquals(1, conflict.overlaps.size)
+        assertEquals("1", conflict.overlaps.first().entryId)
+    }
+
+    @Test
+    fun `zero-duration exact task at free point stays clear`() = runTest {
+        scheduleBoard.setItems(listOf(
+            createScheduleItem("1", hour = 20, durationMin = 60)
+        ))
+
+        val result = scheduleBoard.checkConflict(
+            proposedStart = 21 * 60 * 60 * 1000L,
+            durationMinutes = 0
+        )
+
+        assertEquals(ConflictResult.Clear, result)
+    }
     
     // ===== 冲突策略场景 =====
     
@@ -162,12 +193,15 @@ class FakeScheduleBoard : ScheduleBoard {
         durationMinutes: Int,
         excludeId: String?
     ): ConflictResult {
-        val proposedEnd = proposedStart + (durationMinutes * 60_000L)
-        
         val overlaps = _items.value.filter { slot ->
             slot.entryId != excludeId &&
             slot.conflictPolicy == ConflictPolicy.EXCLUSIVE &&
-            slot.scheduledAt < proposedEnd && proposedStart < slot.endAt
+            overlapsInScheduleBoard(
+                proposedStart = proposedStart,
+                proposedDurationMinutes = durationMinutes,
+                existingStart = slot.scheduledAt,
+                existingDurationMinutes = slot.durationMinutes
+            )
         }
         
         return if (overlaps.isEmpty()) {

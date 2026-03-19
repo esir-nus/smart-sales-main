@@ -61,6 +61,12 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".SimMainActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.Prism" />
+
         <!-- 闹钟全屏 Activity — 半透明覆盖层 -->
         <activity
             android:name=".ui.alarm.AlarmActivity"
@@ -103,4 +109,3 @@
     </application>
 
 </manifest>
-

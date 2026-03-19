@@ -57,8 +57,6 @@ class RealScheduleBoard @Inject constructor(
         durationMinutes: Int,
         excludeId: String?
     ): ConflictResult {
-        val proposedEnd = proposedStart + (durationMinutes * 60_000L)
-        
         val overlaps = _upcomingItems.value.filter { slot ->
             // 排除指定ID (避免新任务与自己冲突)
             slot.entryId != excludeId &&
@@ -66,8 +64,13 @@ class RealScheduleBoard @Inject constructor(
             !slot.isVague &&
             // 只检查 EXCLUSIVE 策略的项目
             slot.conflictPolicy == ConflictPolicy.EXCLUSIVE &&
-            // 时间重叠判断
-            slot.scheduledAt < proposedEnd && proposedStart < slot.endAt
+            // 精准任务即使没有显式时长，也必须参与点位占用冲突判断
+            overlapsInScheduleBoard(
+                proposedStart = proposedStart,
+                proposedDurationMinutes = durationMinutes,
+                existingStart = slot.scheduledAt,
+                existingDurationMinutes = slot.durationMinutes
+            )
         }
         
         return if (overlaps.isEmpty()) {

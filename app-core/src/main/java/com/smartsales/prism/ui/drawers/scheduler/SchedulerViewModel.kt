@@ -292,8 +292,25 @@ class SchedulerViewModel @Inject constructor(
                         when (res) {
                             is com.smartsales.core.pipeline.PipelineResult.PathACommitted -> {
                                 schedulerWriteProven = true
-                                _pipelineStatus.value = "✅ 搞定"
-                                android.util.Log.d("SchedulerVM", "processAudio: success status emitted after PathACommitted")
+                                if (res.task.hasConflict) {
+                                    _pipelineStatus.value = "⚠️ 已创建，发现冲突"
+                                    PipelineValve.tag(
+                                        checkpoint = PipelineValve.Checkpoint.UI_STATE_EMITTED,
+                                        payloadSize = res.task.id.hashCode(),
+                                        summary = "Uni-D caution status emitted",
+                                        rawDataDump = res.task.conflictSummary
+                                    )
+                                    PipelineValve.tag(
+                                        checkpoint = PipelineValve.Checkpoint.UI_RENDERED,
+                                        payloadSize = res.task.id.hashCode(),
+                                        summary = "Uni-D conflict-visible scheduler render requested",
+                                        rawDataDump = res.task.conflictSummary
+                                    )
+                                    android.util.Log.d("SchedulerVM", "processAudio: caution status emitted after conflict PathACommitted")
+                                } else {
+                                    _pipelineStatus.value = "✅ 搞定"
+                                    android.util.Log.d("SchedulerVM", "processAudio: success status emitted after PathACommitted")
+                                }
                             }
                             is com.smartsales.core.pipeline.PipelineResult.InspirationCommitted -> {
                                 inspirationWriteProven = true

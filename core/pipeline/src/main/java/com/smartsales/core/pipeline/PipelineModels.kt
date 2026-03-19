@@ -91,6 +91,15 @@ sealed class PipelineResult {
         val toolId: String,
         val params: Map<String, Any>
     ) : PipelineResult()
+
+    /**
+     * Explicit proposal to execute a plugin after user confirmation.
+     * Keeps non-voice plugin dispatch aligned with the outer-loop confirmation contract.
+     */
+    data class ToolDispatchProposal(
+        val toolId: String,
+        val params: Map<String, Any>
+    ) : PipelineResult()
     
     /**
      * Disambiguation intercepted the flow, UI state needs to be rendered.

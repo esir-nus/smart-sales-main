@@ -9,6 +9,7 @@ import com.smartsales.core.pipeline.RealUniAExtractionService
 import com.smartsales.core.pipeline.RealUniBExtractionService
 import com.smartsales.core.pipeline.RealUniCExtractionService
 import com.smartsales.core.pipeline.RouterResult
+import com.smartsales.core.telemetry.PipelineValve
 import com.smartsales.core.test.fakes.FakeAlarmScheduler
 import com.smartsales.core.test.fakes.FakeAliasCache
 import com.smartsales.core.test.fakes.FakeContextBuilder
@@ -22,6 +23,10 @@ import com.smartsales.core.test.fakes.FakeScheduleBoard
 import com.smartsales.core.test.fakes.FakeToolRegistry
 import com.smartsales.core.test.fakes.FakeUnifiedPipeline
 import com.smartsales.core.llm.ExecutorResult
+import com.smartsales.prism.domain.memory.ConflictPolicy
+import com.smartsales.prism.domain.memory.ConflictResult
+import com.smartsales.prism.domain.memory.DurationSource
+import com.smartsales.prism.domain.memory.ScheduleItem
 import com.smartsales.prism.domain.asr.AsrResult
 import com.smartsales.prism.domain.asr.AsrService
 import com.smartsales.prism.domain.scheduler.FakeScheduledTaskRepository
@@ -67,6 +72,7 @@ class SchedulerViewModelAudioStatusTest {
     private lateinit var fakeUniAExecutor: FakeExecutor
     private lateinit var fakeUnifiedPipeline: FakeUnifiedPipeline
     private lateinit var fakeInspirationRepository: FakeInspirationRepository
+    private lateinit var fakeScheduleBoard: FakeScheduleBoard
     private lateinit var asrService: StubAsrService
     private lateinit var viewModel: SchedulerViewModel
 
@@ -80,12 +86,13 @@ class SchedulerViewModelAudioStatusTest {
         fakeUniAExecutor = FakeExecutor()
         fakeUnifiedPipeline = FakeUnifiedPipeline()
         fakeInspirationRepository = FakeInspirationRepository()
+        fakeScheduleBoard = FakeScheduleBoard()
         asrService = StubAsrService()
 
         val coordinator = SchedulerCoordinator(
             taskRepository = taskRepository,
             memoryRepository = memoryRepository,
-            scheduleBoard = FakeScheduleBoard(),
+            scheduleBoard = fakeScheduleBoard,
             alarmScheduler = FakeAlarmScheduler(),
             unifiedPipeline = fakeUnifiedPipeline
         )
@@ -114,12 +121,12 @@ class SchedulerViewModelAudioStatusTest {
             ),
             fastTrackMutationEngine = FastTrackMutationEngine(
                 taskRepository = taskRepository,
-                scheduleBoard = FakeScheduleBoard(),
+                scheduleBoard = fakeScheduleBoard,
                 inspirationRepository = fakeInspirationRepository,
                 timeProvider = FakeTimeProvider()
             ),
             taskRepository = taskRepository,
-            scheduleBoard = FakeScheduleBoard(),
+            scheduleBoard = fakeScheduleBoard,
             toolRegistry = FakeToolRegistry(),
             timeProvider = FakeTimeProvider(),
             appScope = TestScope(testDispatcher)
@@ -321,6 +328,61 @@ class SchedulerViewModelAudioStatusTest {
         assertEquals(true, observedStatuses.contains("💡 已保存灵感"))
         assertEquals(false, observedStatuses.contains("✅ 搞定"))
         assertEquals(0, taskRepository.getTimelineItems(0).first().filterIsInstance<ScheduledTask>().size)
+        collectJob.cancel()
+    }
+
+    @Test
+    fun `processAudio shows caution status for Uni-D conflict-visible exact commit`() = kotlinx.coroutines.test.runTest {
+        val checkpoints = mutableListOf<PipelineValve.Checkpoint>()
+        PipelineValve.testInterceptor = { checkpoint, _, _ ->
+            checkpoints += checkpoint
+        }
+        asrService.nextResult = AsrResult.Success("明天下午三点开会")
+        fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.DEEP_ANALYSIS, true, ""))
+        fakeUniAExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "EXACT_CREATE",
+                  "task": {
+                    "title": "开会",
+                    "startTimeIso": "2026-03-18T07:00:00Z",
+                    "durationMinutes": 60,
+                    "urgency": "L2"
+                  }
+                }
+                """.trimIndent()
+            )
+        )
+        fakeScheduleBoard.nextConflictResult = ConflictResult.Conflict(
+            overlaps = listOf(
+                ScheduleItem(
+                    entryId = "existing-1",
+                    title = "牙医预约",
+                    scheduledAt = java.time.Instant.parse("2026-03-18T07:00:00Z").toEpochMilli(),
+                    durationMinutes = 60,
+                    durationSource = DurationSource.DEFAULT,
+                    conflictPolicy = ConflictPolicy.EXCLUSIVE
+                )
+            )
+        )
+        fakeUnifiedPipeline.nextResultFlow = flowOf(PipelineResult.ConversationalReply("Path B reply"))
+        val observedStatuses = mutableListOf<String?>()
+        val collectJob = backgroundScope.launch(testDispatcher) {
+            viewModel.pipelineStatus.take(5).toList(observedStatuses)
+        }
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        assertEquals(true, observedStatuses.contains("⚠️ 已创建，发现冲突"))
+        assertEquals(false, observedStatuses.contains("✅ 搞定"))
+        val persisted = taskRepository.getTimelineItems(0).first().filterIsInstance<ScheduledTask>().first()
+        assertTrue(persisted.hasConflict)
+        assertEquals("与「牙医预约」时间冲突", persisted.conflictSummary)
+        assertEquals(true, checkpoints.contains(PipelineValve.Checkpoint.UI_STATE_EMITTED))
+        assertEquals(true, checkpoints.contains(PipelineValve.Checkpoint.UI_RENDERED))
+        PipelineValve.testInterceptor = null
         collectJob.cancel()
     }
 

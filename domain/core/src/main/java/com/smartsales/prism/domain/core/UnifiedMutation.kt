@@ -41,6 +41,9 @@ data class UnifiedMutation(
     // ----------------------------------------------------
     // Analyst Engine tool recommendations (Mono Contract)
     // ----------------------------------------------------
+    @SerialName("plugin_dispatch")
+    val pluginDispatch: PluginDispatchInstruction? = null,
+
     @SerialName("recommended_workflows")
     val recommendedWorkflows: List<WorkflowRecommendation> = emptyList(),
 
@@ -61,6 +64,16 @@ data class RlObservationMutation(
     val value: String,
     val source: String = "INFERRED",
     val evidence: String? = null
+)
+
+/**
+ * Defines a direct plugin dispatch emitted by the LLM when one clear tool lane
+ * should be entered immediately after outer-loop confirmation.
+ */
+@Serializable
+data class PluginDispatchInstruction(
+    val toolId: String,
+    val parameters: Map<String, String> = emptyMap()
 )
 
 /**

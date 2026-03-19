@@ -13,6 +13,7 @@ import com.smartsales.core.pipeline.PipelineInput
 import com.smartsales.core.pipeline.PipelineResult
 import com.smartsales.core.pipeline.ParseResult
 import com.smartsales.core.pipeline.DisambiguationResult
+import com.smartsales.core.pipeline.PluginToolIds
 import com.smartsales.core.pipeline.QueryQuality
 import com.smartsales.prism.domain.scheduler.SchedulerLinter
 import com.smartsales.prism.domain.scheduler.SchedulerTimelineItem
@@ -143,6 +144,87 @@ class RealUnifiedPipelineTest {
         // Background Path Validation
         assertEquals("Habit listener MUST be triggered after ETL", 1, habitListener.analyzeAsyncCallCount)
         assertEquals("Schedule a meeting", habitListener.rawInputCaptured)
+    }
+
+    @Test
+    fun `processInput emits direct semantic plugin dispatch when plugin_dispatch is present`() = runTest {
+        inputParserService.nextResult = ParseResult.Success(emptyList(), null, """{"intent":"analyst"}""")
+        entityDisambiguationService.nextResult = DisambiguationResult.PassThrough
+        executor.defaultResponse = ExecutorResult.Success(
+            content = """{
+                "query_quality": "deep_analysis",
+                "classification": "non_intent",
+                "response": "好的，我已为您起草工具执行。",
+                "plugin_dispatch": {
+                    "toolId": "artifact.generate",
+                    "parameters": {
+                        "ruleId": "executive_report",
+                        "targetRef": "account:bytedance"
+                    }
+                }
+            }""".trimIndent(),
+            tokenUsage = com.smartsales.core.llm.TokenUsage(80, 10)
+        )
+
+        val input = PipelineInput(
+            rawText = "帮我生成字节跳动的汇报",
+            isVoice = false,
+            intent = QueryQuality.DEEP_ANALYSIS,
+            unifiedId = "plugin_dispatch_unified_id"
+        )
+
+        val results = pipeline.processInput(input).toList()
+
+        assertTrue(results.any {
+            it is PipelineResult.ToolDispatch &&
+                it.toolId == PluginToolIds.ARTIFACT_GENERATE &&
+                it.params["ruleId"] == "executive_report"
+        })
+        assertTrue(results.none { it is PipelineResult.ToolRecommendation })
+        assertTrue(results.none {
+            it is PipelineResult.ConversationalReply && it.text == "好的，我已为您起草工具执行。"
+        })
+    }
+
+    @Test
+    fun `processInput upgrades single legacy workflow recommendation into direct semantic dispatch`() = runTest {
+        inputParserService.nextResult = ParseResult.Success(emptyList(), null, """{"intent":"analyst"}""")
+        entityDisambiguationService.nextResult = DisambiguationResult.PassThrough
+        executor.defaultResponse = ExecutorResult.Success(
+            content = """{
+                "query_quality": "deep_analysis",
+                "classification": "non_intent",
+                "response": "好的，我为您找到了相关工具，请确认。",
+                "recommended_workflows": [
+                    {
+                        "workflowId": "GENERATE_PDF",
+                        "reason": "生成正式汇报",
+                        "parameters": {
+                            "accountName": "字节跳动"
+                        }
+                    }
+                ]
+            }""".trimIndent(),
+            tokenUsage = com.smartsales.core.llm.TokenUsage(80, 10)
+        )
+
+        val input = PipelineInput(
+            rawText = "帮我生成字节跳动的PDF汇报",
+            isVoice = false,
+            intent = QueryQuality.DEEP_ANALYSIS,
+            unifiedId = "legacy_pdf_unified_id"
+        )
+
+        val results = pipeline.processInput(input).toList()
+
+        val dispatch = results.filterIsInstance<PipelineResult.ToolDispatch>().singleOrNull()
+        assertTrue(dispatch != null)
+        assertEquals(PluginToolIds.ARTIFACT_GENERATE, dispatch!!.toolId)
+        assertEquals("字节跳动", dispatch.params["accountName"])
+        assertTrue(results.none { it is PipelineResult.ToolRecommendation })
+        assertTrue(results.none {
+            it is PipelineResult.ConversationalReply && it.text == "好的，我为您找到了相关工具，请确认。"
+        })
     }
 
     @Test

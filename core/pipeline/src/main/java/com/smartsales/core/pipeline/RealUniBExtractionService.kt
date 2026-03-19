@@ -25,7 +25,11 @@ class RealUniBExtractionService @Inject constructor(
         return when (val result = executor.execute(ModelRegistry.EXTRACTOR, prompt)) {
             is ExecutorResult.Success -> schedulerLinter.parseUniBExtraction(
                 input = result.content,
-                unifiedId = request.unifiedId
+                unifiedId = request.unifiedId,
+                transcript = request.transcript,
+                nowIso = request.nowIso,
+                timezone = request.timezone,
+                displayedDateIso = request.displayedDateIso
             )
             is ExecutorResult.Failure -> {
                 FastTrackResult.NoMatch(

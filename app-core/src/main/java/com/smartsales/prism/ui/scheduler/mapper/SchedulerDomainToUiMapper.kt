@@ -45,7 +45,8 @@ fun SchedulerTimelineItem.toUiState(
             tipsLoading = id in tipsLoadingSet,
             clarificationState = clarificationState,
             isVague = isVague,
-            hasConflict = hasConflict
+            hasConflict = hasConflict,
+            conflictSummary = conflictSummary
         )
         is SchedulerTimelineItem.Inspiration -> TimelineItem.Inspiration(
             id = id,

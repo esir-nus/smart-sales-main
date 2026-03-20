@@ -56,6 +56,8 @@ fun SchedulerDrawer(
     isOpen: Boolean,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    onInspirationAskAi: ((String) -> Unit)? = null,
+    enableInspirationMultiSelect: Boolean = true,
     viewModel: ISchedulerViewModel = hiltViewModel<SchedulerViewModel>()
 ) {
     // Height: ~85% of screen
@@ -72,6 +74,12 @@ fun SchedulerDrawer(
     val pipelineStatus by viewModel.pipelineStatus.collectAsState()
     val isInspirationsExpanded by viewModel.isInspirationsExpanded.collectAsState()
     val tipsLoadingSet by viewModel.tipsLoading.collectAsState()  // Wave 9: Tips loading state
+    val effectiveIsSelectionMode = enableInspirationMultiSelect && isSelectionMode
+    val effectiveSelectedInspirationIds = if (enableInspirationMultiSelect) {
+        selectedInspirationIds
+    } else {
+        emptySet()
+    }
     
     val context = LocalContext.current
     
@@ -125,11 +133,17 @@ fun SchedulerDrawer(
     
     val expandedConflictIds by viewModel.expandedConflictIds.collectAsState()
     
-    val uiItems = remember(timelineItems, isSelectionMode, selectedInspirationIds, expandedConflictIds, tipsLoadingSet) {
+    val uiItems = remember(
+        timelineItems,
+        effectiveIsSelectionMode,
+        effectiveSelectedInspirationIds,
+        expandedConflictIds,
+        tipsLoadingSet
+    ) {
         timelineItems.map { model: SchedulerTimelineItem ->
             model.toUiState(
-                isSelectionMode = isSelectionMode,
-                selectedInspirationIds = selectedInspirationIds,
+                isSelectionMode = effectiveIsSelectionMode,
+                selectedInspirationIds = effectiveSelectedInspirationIds,
                 expandedConflictIds = expandedConflictIds,
                 tipsLoadingSet = tipsLoadingSet,
                 cachedTips = if (model is ScheduledTask) viewModel.getCachedTips(model.id) else null
@@ -222,7 +236,7 @@ fun SchedulerDrawer(
                         isExpanded = isInspirationsExpanded,
                         onToggle = { viewModel.toggleInspirations() },
                         onDelete = { id -> viewModel.deleteInspiration(id) },
-                        onAskAI = { id -> /* 等待 Coach Mode */ },
+                        onAskAI = onInspirationAskAi,
                         modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
                     )
                     
@@ -239,8 +253,16 @@ fun SchedulerDrawer(
                             onDelete = { id -> viewModel.deleteItem(id) },
                             onReschedule = { id, text -> viewModel.onReschedule(id, text) },
                             onMicRecord = { wavFile -> viewModel.processAudio(wavFile) },
-                            onMultiSelectToggle = { id -> viewModel.toggleItemSelection(id) },
-                            onEnterMultiSelect = { viewModel.toggleSelectionMode(true) },
+                            onMultiSelectToggle = { id ->
+                                if (enableInspirationMultiSelect) {
+                                    viewModel.toggleItemSelection(id)
+                                }
+                            },
+                            onEnterMultiSelect = {
+                                if (enableInspirationMultiSelect) {
+                                    viewModel.toggleSelectionMode(true)
+                                }
+                            },
                             onConflictResolve = { action -> viewModel.handleConflictResolution(action) },
                             onConflictToggle = { id -> viewModel.toggleConflictExpansion(id) },
                             onCardExpanded = { id, entityId -> /* no-op for now */ },  // Wave 9
@@ -248,7 +270,7 @@ fun SchedulerDrawer(
                         )
                         
                         // Swipe to exit multi-select
-                        if (isSelectionMode) {
+                        if (effectiveIsSelectionMode) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -265,7 +287,7 @@ fun SchedulerDrawer(
                     }
 
                     // Multi-Select Action Bar
-                    if (isSelectionMode && selectedInspirationIds.isNotEmpty()) {
+                    if (effectiveIsSelectionMode && effectiveSelectedInspirationIds.isNotEmpty()) {
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
                             color = Color(0xFFAF52DE), // iOS Purple
@@ -281,7 +303,7 @@ fun SchedulerDrawer(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    text = "问AI (${selectedInspirationIds.size})",
+                                    text = "问AI (${effectiveSelectedInspirationIds.size})",
                                     color = Color.White,
                                     fontSize = 16.sp,
                                     fontWeight = androidx.compose.ui.text.font.FontWeight.Bold

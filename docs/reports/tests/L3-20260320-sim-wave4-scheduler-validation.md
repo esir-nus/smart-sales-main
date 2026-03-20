@@ -10,7 +10,7 @@
 
 * **Objective**: Validate the active Wave 4 SIM scheduler acceptance slice against `docs/core-flow/sim-scheduler-path-a-flow.md` and `docs/cerb/sim-scheduler/spec.md`.
 * **Testing Medium**: L3 physical device test with live `adb logcat` monitoring.
-* **Initial Device State**: Existing SIM debug build already installed. Scheduler drawer available in the standalone SIM shell. No fresh assemble/install was rerun during this acceptance step.
+* **Initial Device State**: Fresh `:app-core:installDebug` rerun completed on the connected device. Runtime permissions were granted over `adb` so `SimMainActivity` could open directly into the standalone SIM shell instead of stopping at the Android permission controller.
 
 ## 2. Execution Plan
 
@@ -55,15 +55,15 @@
 | Checkpoint | Expected Behavior | Actual Behavior | Result |
 | :--- | :--- | :--- | :---: |
 | **UI Literal** | Drawer closes, fresh SIM chat opens, inspiration text is auto-seeded and auto-submitted | User marked T4 green; on device the chat opened with the inspiration text `我想学吉他。` auto-seeded and sent | ✅ |
-| **Telemetry (GPS)** | Scheduler UI handoff into seeded chat session | No dedicated telemetry tag currently exists for this handoff branch | ⚠️ |
-| **Log Evidence** | Prefer dedicated scheduler-to-chat handoff logs | No dedicated `Log.d` or `VALVE_PROTOCOL` checkpoint exists yet for shelf-card `Ask AI` handoff, so this branch is proven primarily by UI evidence rather than explicit internal telemetry | ⚠️ |
-| **Negative Check** | Must not create or mutate a scheduler task | User-reported UI result matches launcher-only behavior; no scheduler mutation was required for the visible handoff outcome | ✅ |
+| **Telemetry (GPS)** | Scheduler UI handoff into seeded chat session | Focused rerun observed exact `VALVE_PROTOCOL` summaries at `20:07:07`: `SIM scheduler shelf Ask AI handoff requested` followed immediately by `SIM scheduler shelf seeded chat session started` | ✅ |
+| **Log Evidence** | Prefer dedicated scheduler-to-chat handoff logs | Focused rerun observed matching `SimSchedulerShelf` log lines at `20:07:07` for both request and session start, with payload `我想学游泳。` | ✅ |
+| **Negative Check** | Must not create or mutate a scheduler task | No `DB_WRITE_EXECUTED` evidence appeared in the filtered handoff log window, so the branch stayed launcher-only with no scheduler mutation | ✅ |
 
 ## 4. Deviation & Resolution Log
 
-* **Telemetry gap**: The scheduler-to-chat handoff branch is functionally green on device, but it still lacks a dedicated telemetry/log checkpoint.
-  - **Impact**: L3 proof for T4 relies mainly on visible UI behavior instead of full internal routing evidence.
-  - **Resolution**: Keep the branch accepted for current Wave 4 scope, but log dedicated scheduler-to-chat handoff telemetry as follow-up validation debt.
+* **Focused rerun requirement**: The first device pass proved the UI branch before dedicated scheduler-to-chat telemetry landed.
+  - **Impact**: Acceptance still needed one narrow L3 rerun for exact request/session-start log capture.
+  - **Resolution**: The focused rerun is now complete. Device logs recorded both new telemetry summaries and both `SimSchedulerShelf` lines without any `DB_WRITE_EXECUTED` evidence in the handoff window.
 
 * **Out-of-scope logic note**: After the T4 handoff, chat content still behaves like the current SIM placeholder/standalone chat layer rather than a fully wired scheduler follow-up intelligence path.
   - **Impact**: This is not a blocker for the base shelf-card launcher contract.
@@ -80,7 +80,6 @@ This device run gives acceptance evidence for the current active Wave 4 validati
 * unsupported voice reschedule/delete-style input safe-fails without mutation
 * inspiration shelf `Ask AI` launcher is green on device for the required UI contract
 
-Residual validation debt remains:
+Residual product debt remains:
 
-* add explicit telemetry/logging for scheduler-to-chat handoff
-* keep timeline/multi-select inspiration AI behavior deferred and documented rather than implied
+* keep the physical-badge-origin global follow-up owner as explicit carry debt until it is completed across interfaces

@@ -18,8 +18,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.smartsales.prism.ui.components.PrismButton
+import com.smartsales.prism.ui.components.PrismButtonStyle
 import com.smartsales.prism.ui.theme.*
 
 /**
@@ -35,7 +38,7 @@ fun CollapsibleInspirationShelf(
     isExpanded: Boolean,
     onToggle: () -> Unit,
     onDelete: (String) -> Unit,
-    onAskAI: (String) -> Unit,
+    onAskAI: ((String) -> Unit)?,
     modifier: Modifier = Modifier
 ) {
     // 空时隐藏
@@ -91,7 +94,7 @@ fun CollapsibleInspirationShelf(
                     ) {
                         InspirationShelfCard(
                             title = item.title,
-                            onAskAI = { onAskAI(item.id) }
+                            onAskAI = onAskAI?.let { callback -> { callback(item.title) } }
                         )
                     }
                 }
@@ -106,7 +109,7 @@ fun CollapsibleInspirationShelf(
 @Composable
 private fun InspirationShelfCard(
     title: String,
-    onAskAI: () -> Unit
+    onAskAI: (() -> Unit)?
 ) {
     Row(
         modifier = Modifier
@@ -118,6 +121,7 @@ private fun InspirationShelfCard(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(
+            modifier = Modifier.weight(1f),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
@@ -128,17 +132,21 @@ private fun InspirationShelfCard(
             Text(
                 text = title,
                 fontSize = 14.sp,
-                color = TextPrimary
+                color = TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
         
-        // [问AI] 按钮暂时隐藏 (等待 Coach Mode)
-        // Text(
-        //     text = "[问AI]",
-        //     fontSize = 12.sp,
-        //     color = AccentPrimary,
-        //     modifier = Modifier.clickable { onAskAI() }
-        // )
+        if (onAskAI != null) {
+            Spacer(modifier = Modifier.width(12.dp))
+            PrismButton(
+                text = "Ask AI",
+                onClick = onAskAI,
+                style = PrismButtonStyle.GHOST,
+                modifier = Modifier.height(32.dp)
+            )
+        }
     }
 }
 

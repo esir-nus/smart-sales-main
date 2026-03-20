@@ -1,15 +1,19 @@
 package com.smartsales.prism.ui.sim
 
+import android.util.Log
+import com.smartsales.core.telemetry.PipelineValve
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.smartsales.core.pipeline.AgentActivity
 import com.smartsales.core.pipeline.MascotInteraction
 import com.smartsales.core.pipeline.MascotState
+import com.smartsales.prism.domain.audio.TranscriptionStatus
 import com.smartsales.prism.domain.analyst.TaskBoardItem
 import com.smartsales.prism.domain.model.ChatMessage
 import com.smartsales.prism.domain.model.SessionPreview
 import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.domain.scheduler.ScheduledTask
+import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
 import com.smartsales.prism.ui.IAgentViewModel
 import java.util.UUID
 import kotlinx.coroutines.delay
@@ -17,6 +21,14 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+
+internal const val SIM_SCHEDULER_SHELF_HANDOFF_REQUEST_SUMMARY =
+    "SIM scheduler shelf Ask AI handoff requested"
+internal const val SIM_SCHEDULER_SHELF_SESSION_STARTED_SUMMARY =
+    "SIM scheduler shelf seeded chat session started"
+private const val SIM_SCHEDULER_SHELF_LOG_TAG = "SimSchedulerShelf"
 
 /**
  * SIM 壳层专用聊天 ViewModel。
@@ -29,9 +41,15 @@ class SimAgentViewModel : ViewModel(), IAgentViewModel {
         val messages: List<ChatMessage>
     )
 
+    data class ArtifactTranscriptRevealState(
+        val consumed: Boolean = false,
+        val isLongTranscript: Boolean = false
+    )
+
     private val sessions = linkedMapOf<String, SimSessionRecord>()
     private val audioBindings = linkedMapOf<String, String>()
     private var currentSessionId: String? = null
+    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
     private val _agentActivity = MutableStateFlow<AgentActivity?>(null)
     override val agentActivity: StateFlow<AgentActivity?> = _agentActivity.asStateFlow()
@@ -77,6 +95,18 @@ class SimAgentViewModel : ViewModel(), IAgentViewModel {
     private val _groupedSessions = MutableStateFlow<Map<String, List<SessionPreview>>>(emptyMap())
     val groupedSessions: StateFlow<Map<String, List<SessionPreview>>> = _groupedSessions.asStateFlow()
 
+    private val _currentLinkedAudioId = MutableStateFlow<String?>(null)
+    val currentLinkedAudioId: StateFlow<String?> = _currentLinkedAudioId.asStateFlow()
+
+    private val _artifactTranscriptRevealState =
+        MutableStateFlow<Map<String, ArtifactTranscriptRevealState>>(emptyMap())
+    val artifactTranscriptRevealState: StateFlow<Map<String, ArtifactTranscriptRevealState>> =
+        _artifactTranscriptRevealState.asStateFlow()
+
+    init {
+        seedWave1SampleSessions()
+    }
+
     fun startNewSession() {
         currentSessionId = null
         _history.value = emptyList()
@@ -84,6 +114,29 @@ class SimAgentViewModel : ViewModel(), IAgentViewModel {
         _inputText.value = ""
         _uiState.value = UiState.Idle
         _errorMessage.value = null
+        _currentLinkedAudioId.value = null
+    }
+
+    fun startSeededSession(initialUserInput: String) {
+        if (initialUserInput.isBlank()) return
+        startNewSession()
+        updateInput(initialUserInput)
+        send()
+    }
+
+    fun startSchedulerShelfSession(initialUserInput: String) {
+        if (initialUserInput.isBlank()) return
+        PipelineValve.tag(
+            checkpoint = PipelineValve.Checkpoint.UI_STATE_EMITTED,
+            payloadSize = initialUserInput.length,
+            summary = SIM_SCHEDULER_SHELF_SESSION_STARTED_SUMMARY,
+            rawDataDump = initialUserInput
+        )
+        Log.d(
+            SIM_SCHEDULER_SHELF_LOG_TAG,
+            "scheduler shelf seeded chat session started: $initialUserInput"
+        )
+        startSeededSession(initialUserInput)
     }
 
     fun switchSession(sessionId: String) {
@@ -93,6 +146,7 @@ class SimAgentViewModel : ViewModel(), IAgentViewModel {
         _sessionTitle.value = record.preview.clientName
         _uiState.value = UiState.Idle
         _inputText.value = ""
+        _currentLinkedAudioId.value = record.preview.linkedAudioId
     }
 
     fun togglePin(sessionId: String) {
@@ -113,17 +167,25 @@ class SimAgentViewModel : ViewModel(), IAgentViewModel {
     }
 
     fun deleteSession(sessionId: String) {
-        sessions.remove(sessionId)
+        val removed = sessions.remove(sessionId)
         audioBindings.entries.removeAll { it.value == sessionId }
+        removed?.messages?.let(::clearTranscriptRevealState)
         if (currentSessionId == sessionId) {
             currentSessionId = null
             _history.value = emptyList()
             _sessionTitle.value = "SIM"
+            _uiState.value = UiState.Idle
+            _currentLinkedAudioId.value = null
         }
         refreshGroupedSessions()
     }
 
-    fun openAudioDiscussion(audioId: String, title: String, summary: String?): String {
+    fun openAudioDiscussion(
+        audioId: String,
+        title: String,
+        summary: String?,
+        summaryLabel: String = "当前预览"
+    ): String {
         val existing = audioBindings[audioId]
         if (existing != null && sessions.containsKey(existing)) {
             switchSession(existing)
@@ -136,7 +198,9 @@ class SimAgentViewModel : ViewModel(), IAgentViewModel {
             append(title)
             append("》的讨论模式。")
             if (!summary.isNullOrBlank()) {
-                append("\n\n当前预览：")
+                append("\n\n")
+                append(summaryLabel)
+                append("：")
                 append(summary)
             } else {
                 append("\n\n当前为 Wave 1 壳层接入，完整转写内容将在后续音频波次接入。")
@@ -159,6 +223,105 @@ class SimAgentViewModel : ViewModel(), IAgentViewModel {
         switchSession(sessionId)
         refreshGroupedSessions()
         return sessionId
+    }
+
+    fun selectAudioForChat(
+        audioId: String,
+        title: String,
+        summary: String?,
+        entersPendingFlow: Boolean
+    ): String {
+        val effectiveSummary = if (entersPendingFlow) {
+            "SIM 已接管该音频，正在自动提交 Tingwu 转写任务。完成后结果会同步回录音抽屉。"
+        } else {
+            summary
+        }
+        val summaryLabel = if (entersPendingFlow) "当前状态" else "当前预览"
+        val sessionId = openAudioDiscussion(audioId, title, effectiveSummary, summaryLabel)
+        if (entersPendingFlow) {
+            updatePendingAudioState(audioId, TranscriptionStatus.PENDING, 0f)
+        } else if (currentSessionId == sessionId) {
+            _uiState.value = UiState.Idle
+        }
+        return sessionId
+    }
+
+    fun updatePendingAudioState(audioId: String, status: TranscriptionStatus, progress: Float) {
+        val sessionId = audioBindings[audioId] ?: return
+        if (currentSessionId != sessionId) return
+
+        val sessionTitle = sessions[sessionId]?.preview?.clientName ?: "当前音频"
+        _uiState.value = UiState.Thinking(
+            hint = buildPendingAudioHint(
+                title = sessionTitle,
+                status = status,
+                progress = progress
+            )
+        )
+    }
+
+    fun completePendingAudio(audioId: String) {
+        val sessionId = audioBindings[audioId] ?: return
+        val title = sessions[sessionId]?.preview?.clientName ?: "当前音频"
+        appendAiMessage(
+            sessionId = sessionId,
+            uiState = UiState.Response("《$title》转写已完成，结果已同步回录音抽屉，现在可以继续围绕这段音频讨论。")
+        )
+        if (currentSessionId == sessionId) {
+            _uiState.value = UiState.Idle
+        }
+    }
+
+    fun markArtifactTranscriptRevealConsumed(messageId: String, isLongTranscript: Boolean) {
+        val current = _artifactTranscriptRevealState.value[messageId]
+        if (current?.consumed == true && (current.isLongTranscript || !isLongTranscript)) {
+            return
+        }
+        _artifactTranscriptRevealState.value = _artifactTranscriptRevealState.value + (
+            messageId to ArtifactTranscriptRevealState(
+                consumed = true,
+                isLongTranscript = current?.isLongTranscript == true || isLongTranscript
+            )
+        )
+    }
+
+    fun appendCompletedAudioArtifacts(audioId: String, artifacts: TingwuJobArtifacts) {
+        val sessionId = audioBindings[audioId] ?: return
+        val record = sessions[sessionId] ?: return
+        val title = record.preview.clientName
+        val alreadyPresent = record.messages.any { message ->
+            val state = (message as? ChatMessage.Ai)?.uiState
+            state is UiState.AudioArtifacts && state.audioId == audioId
+        }
+        if (alreadyPresent) {
+            if (currentSessionId == sessionId) {
+                _uiState.value = UiState.Idle
+            }
+            return
+        }
+
+        appendAiMessage(
+            sessionId = sessionId,
+            uiState = UiState.AudioArtifacts(
+                audioId = audioId,
+                title = title,
+                artifactsJson = json.encodeToString(artifacts)
+            )
+        )
+        if (currentSessionId == sessionId) {
+            _uiState.value = UiState.Idle
+        }
+    }
+
+    fun failPendingAudio(audioId: String, message: String) {
+        val sessionId = audioBindings[audioId] ?: currentSessionId ?: return
+        appendAiMessage(
+            sessionId = sessionId,
+            uiState = UiState.Error(message)
+        )
+        if (currentSessionId == sessionId) {
+            _uiState.value = UiState.Error(message)
+        }
     }
 
     override fun clearToast() {
@@ -256,6 +419,7 @@ class SimAgentViewModel : ViewModel(), IAgentViewModel {
         sessions[sessionId] = SimSessionRecord(preview = preview, messages = emptyList())
         currentSessionId = sessionId
         _sessionTitle.value = preview.clientName
+        _currentLinkedAudioId.value = preview.linkedAudioId
         refreshGroupedSessions()
         return sessionId
     }
@@ -267,6 +431,7 @@ class SimAgentViewModel : ViewModel(), IAgentViewModel {
         if (currentSessionId == sessionId) {
             _history.value = updated.messages
             _sessionTitle.value = updated.preview.clientName
+            _currentLinkedAudioId.value = updated.preview.linkedAudioId
         }
         refreshGroupedSessions()
     }
@@ -289,11 +454,100 @@ class SimAgentViewModel : ViewModel(), IAgentViewModel {
         _groupedSessions.value = grouped
     }
 
+    private fun seedWave1SampleSessions() {
+        if (sessions.isNotEmpty()) return
+
+        val now = System.currentTimeMillis()
+        val pinnedSessionId = UUID.randomUUID().toString()
+        val audioSessionId = UUID.randomUUID().toString()
+
+        sessions[pinnedSessionId] = SimSessionRecord(
+            preview = SessionPreview(
+                id = pinnedSessionId,
+                clientName = "SIM 演示会话",
+                summary = "可置顶改名",
+                timestamp = now - 60_000,
+                isPinned = true
+            ),
+            messages = listOf(
+                ChatMessage.Ai(
+                    id = UUID.randomUUID().toString(),
+                    timestamp = now - 60_000,
+                    uiState = UiState.Response("这是 Wave 1 的本地演示会话，用来验证历史抽屉的切换、置顶、改名和删除能力。")
+                )
+            )
+        )
+
+        sessions[audioSessionId] = SimSessionRecord(
+            preview = SessionPreview(
+                id = audioSessionId,
+                clientName = "录音讨论样例",
+                summary = "音频讨论",
+                timestamp = now - 30_000,
+                linkedAudioId = "sim_audio_seed"
+            ),
+            messages = listOf(
+                ChatMessage.Ai(
+                    id = UUID.randomUUID().toString(),
+                    timestamp = now - 30_000,
+                    uiState = UiState.Response("这是 SIM 的音频讨论样例。Wave 1 先验证壳层路由和会话边界。")
+                )
+            )
+        )
+
+        refreshGroupedSessions()
+    }
+
     private fun buildReply(content: String, linkedAudioId: String?): String {
         return if (linkedAudioId != null) {
             "当前是音频讨论会话。\n\n你刚才说的是：$content\n\nWave 1 先证明壳层和会话边界，完整的音频上下文注入会在后续波次接入。"
         } else {
             "SIM Wave 1 已接管聊天壳层。\n\n你刚才说的是：$content\n\n当前阶段只验证独立 Shell、历史、抽屉路由和无污染会话能力。"
+        }
+    }
+
+    private fun appendAiMessage(sessionId: String, uiState: UiState) {
+        val record = sessions[sessionId] ?: return
+        val timestamp = System.currentTimeMillis()
+        val newMessage = ChatMessage.Ai(
+            id = UUID.randomUUID().toString(),
+            timestamp = timestamp,
+            uiState = uiState
+        )
+        sessions[sessionId] = record.copy(
+            preview = record.preview.copy(timestamp = timestamp),
+            messages = record.messages + newMessage
+        )
+        if (currentSessionId == sessionId) {
+            _history.value = sessions.getValue(sessionId).messages
+        }
+        refreshGroupedSessions()
+    }
+
+    private fun clearTranscriptRevealState(messages: List<ChatMessage>) {
+        val messageIds = messages.mapNotNull { message ->
+            (message as? ChatMessage.Ai)
+                ?.takeIf { it.uiState is UiState.AudioArtifacts }
+                ?.id
+        }
+        if (messageIds.isEmpty()) return
+        _artifactTranscriptRevealState.value =
+            _artifactTranscriptRevealState.value - messageIds.toSet()
+    }
+
+    private fun buildPendingAudioHint(
+        title: String,
+        status: TranscriptionStatus,
+        progress: Float
+    ): String {
+        return when (status) {
+            TranscriptionStatus.PENDING -> "已选择《$title》，正在提交 Tingwu 任务"
+            TranscriptionStatus.TRANSCRIBING -> when {
+                progress < 0.2f -> "《$title》已提交 Tingwu，正在准备转写"
+                progress < 0.7f -> "《$title》正在转写中"
+                else -> "《$title》正在整理转写结果"
+            }
+            TranscriptionStatus.TRANSCRIBED -> "《$title》转写已完成"
         }
     }
 }

@@ -1,9 +1,9 @@
 # SIM Mission Tracker
 
 > **Mission**: Standalone prototype app with two main feature lanes, Scheduler Path A and Tingwu transcription plus simple audio-grounded chat, plus a decoupled connectivity support module.
-> **Status**: Wave 1 Accepted / Wave 2 Closeout In Progress / Wave 4 Scheduler Validation Active
+> **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Pending
 > **Started**: 2026-03-19
-> **Current Gate**: Scheduler-only session on Wave 4 validation and acceptance, with Wave 2 residual debt carried but not active in this session
+> **Current Gate**: Wave 4 scheduler closeout is accepted with focused on-device telemetry proof recorded. The next active implementation lane is Wave 5 connectivity hard migration.
 > **Primary Product Doc**: `docs/to-cerb/sim-standalone-prototype/concept.md`
 > **Mental Model Doc**: `docs/to-cerb/sim-standalone-prototype/mental-model.md`
 > **Implementation Brief**: `docs/plans/sim_implementation_brief.md`
@@ -13,6 +13,7 @@
 > **Code Audit**: `docs/reports/20260319-sim-standalone-code-audit.md`
 > **Clarification Audit**: `docs/reports/20260319-sim-clarification-evidence-audit.md`
 > **Wave 1 Acceptance**: `docs/reports/tests/L3-20260319-sim-wave1-shell-acceptance.md`
+> **Wave 2 Negative-Branch Acceptance**: `docs/reports/tests/L3-20260320-sim-wave2-negative-branch-validation.md`
 > **Wave 4 Acceptance**: `docs/reports/tests/L3-20260320-sim-wave4-scheduler-validation.md`
 > **Formal Cerb Shards**:
 > - `docs/cerb/sim-shell/spec.md`
@@ -336,9 +337,9 @@ The SIM mission follows this chain:
   - [ ] prove the baseline audio inventory works even before optional badge-sync expansion
   - [ ] prove returned Tingwu artifacts remain source-led after polishing
   - [ ] prove already-transcribed audio does not rerun Tingwu
-  - [ ] prove missing Tingwu sections are not locally invented
-  - [ ] prove polisher failure falls back to provider-led output rather than blanking the view
-  - [ ] prove transcription failure remains explicit
+  - [x] prove missing Tingwu sections are not locally invented
+  - [x] prove polisher failure falls back to provider-led output rather than blanking the view
+  - [x] prove transcription failure remains explicit
   - [ ] prove cold-start acceptance rather than warm-state-only behavior
   - [ ] **2026-03-20 On-Device Note**
     Cold-start L3 pass on phone currently shows `1` launch/audio drawer green, `2` inventory baseline green, `3` already-transcribed artifact reuse green after confirming the check means no rerun when opening an already-transcribed card, `4` transcription lifecycle functionally green but with a glitchy/non-smooth progress bar, `8` `Ask AI` handoff green, and `10` storage namespace isolation green.
@@ -348,11 +349,13 @@ The SIM mission follows this chain:
   - [x] **2026-03-20 Debug Closeout Aid**
     Because the remaining Wave 2 branches are hard to trigger natively on demand, the chosen closeout path is a SIM-local debug-only quick-test panel inside the audio drawer browse mode. It seeds three dedicated validation cards for: explicit transcription failure, missing optional artifact sections, and a synthetic provider-led fallback scenario. This stays out of the global `L2DebugHud` and does not change production SIM behavior.
   - [x] **2026-03-20 Debug Scenario Panel Implemented**
-    The SIM-local Wave 2 quick-test panel is now implemented in code. Audio drawer browse mode can seed all three closeout scenarios on demand: explicit transcription failure, missing optional artifact sections, and provider-led raw fallback. The fixture path stays inside SIM-owned repository and drawer state, remains separate from the global `L2DebugHud`, and keeps production SIM ingress unchanged. Focused L1 verification is green with `SimAudioDebugScenarioTest`.
-  - [ ] **2026-03-20 Clarification Note**
+    The SIM-local Wave 2 quick-test panel is now implemented in code. Audio drawer browse mode can seed all three closeout scenarios on demand: explicit transcription failure, missing optional artifact sections, and provider-led raw fallback. The fixture path stays inside SIM-owned repository and drawer state, remains separate from the global `L2DebugHud`, and keeps production SIM ingress unchanged. Focused L1 verification is green with `:app-core:compileDebugKotlin`, `SimAudioDebugScenarioTest`, and `UiSpecAlignmentTest`.
+  - [x] **2026-03-20 Clarification Note**
     Product SIM audio still enters from badge synchronization. Seeded inventory and any future phone-local import affordance exist only to support acceptance/developer testing and must not be mistaken for the production ingress story.
-  - [ ] **2026-03-20 Carry Debt**
-    Wave 2 still owes focused L3 proof for the three hard-to-trigger negative branches: `5` explicit transcription failure, `6` absent-section rendering, and `7` polisher fallback. Keep this debt recorded, but do not treat it as the active next task in a scheduler-only session.
+  - [x] **2026-03-20 Carry Debt**
+    Wave 2 previously carried focused L3 debt for the three hard-to-trigger negative branches: `5` explicit transcription failure, `6` absent-section rendering, and `7` polisher fallback. That debt is now closed by the focused device validation recorded below.
+  - [x] **2026-03-20 Focused Negative-Branch L3**
+    Focused L3 device validation is now recorded in `docs/reports/tests/L3-20260320-sim-wave2-negative-branch-validation.md`. The SIM-local drawer browse-mode debug panel successfully exercised all three previously hard-to-trigger Wave 2 branches on device: explicit transcription failure, missing optional sections, and provider-led raw fallback. This also confirms the validation aid lives in the audio drawer rather than a global SIM debug HUD button.
 - [ ] **Done When**
   - [ ] users can browse a real SIM audio inventory
   - [ ] transcribed cards open and display Tingwu-returned artifacts in readable form
@@ -502,28 +505,38 @@ The SIM mission follows this chain:
   - [x] route shelf-card clicks through a shell-owned callback rather than scheduler runtime ownership
   - [x] create a fresh SIM chat session and auto-submit the exact shelf-card text as the first user turn
   - [x] close the scheduler drawer and land in the normal SIM chat surface
-  - [x] leave timeline/multi-select inspiration AI behavior deferred and untouched in SIM V1
-- [ ] **T4.5: Validation**
+  - [x] hard-disable deprecated timeline/multi-select inspiration AI behavior in the SIM drawer while keeping the base shelf-card launcher
+- [x] **T4.5: Validation**
   - [x] define Path A-only tests
   - [x] define ambiguous/no-match safe-fail tests
   - [x] prove scheduler still preserves conflict-visible behavior
   - [x] prove shelf-card `Ask AI` is equivalent to manually opening a new chat, seeding the first user turn with the card text, and auto-submitting it
-  - [ ] prove timeline/multi-select inspiration AI behavior remains deferred in SIM V1
-  - [ ] **2026-03-20 Execution Note**
-    Inspiration shelf remains visible in SIM for Wave 4, and the base shelf-card `Ask AI` action is in-scope as a plain seeded new-chat launcher. Timeline/multi-select inspiration AI remains deferred. Only deeper inspiration-specific upgrades stay deferred as explicit tech debt.
-  - [ ] **2026-03-20 Implementation Note**
-    Shelf-card `Ask AI` is now wired in code through a shell-owned callback: SIM restores a visible shelf button, starts a fresh chat session, seeds the exact inspiration text as the first user turn, and auto-submits it immediately. L1 coverage is added for seeded-session behavior in `SimAgentViewModelTest`, and a focused Compose test covers shelf-button visibility/callback payload. Remaining acceptance work is to run the focused Android Compose test and perform L3 drawer-to-chat proof on device.
+  - [x] prove deprecated timeline/multi-select inspiration AI behavior is unreachable in SIM V1
+  - [x] **2026-03-20 Execution Note**
+    Inspiration shelf remains visible in SIM for Wave 4, and the base shelf-card `Ask AI` action is in-scope as a plain seeded new-chat launcher. The old inspiration timeline/multi-select `问AI (N)` branch is now explicitly deprecated in SIM V1 rather than left as a silently reachable deferred path. Only deeper inspiration-specific upgrades stay deferred as explicit tech debt.
+  - [x] **2026-03-20 Implementation Note**
+    Shelf-card `Ask AI` is now wired in code through a shell-owned callback: SIM restores a visible shelf button, starts a fresh chat session, seeds the exact inspiration text as the first user turn, and auto-submits it immediately. L1 coverage exists for seeded-session behavior in `SimAgentViewModelTest`, focused Compose coverage proves shelf-button visibility and SIM multi-select suppression, and L3 drawer-to-chat proof is now recorded on device.
+  - [x] **2026-03-20 Deprecation Hardening**
+    SIM now hard-disables the deprecated inspiration multi-select branch at the shared drawer boundary. The old bulk `问AI (N)` action bar is no longer rendered in SIM even if selection state is forced underneath, while the smart/default drawer path keeps its existing behavior. Focused Compose coverage now proves both SIM suppression and non-SIM default visibility.
+  - [x] **2026-03-20 Telemetry Hardening**
+    Shelf-card `Ask AI` handoff now emits explicit `VALVE_PROTOCOL` and `Log.d` evidence on both sides of the SIM path: `SIM scheduler shelf Ask AI handoff requested` at the shell boundary and `SIM scheduler shelf seeded chat session started` at the SIM chat-session boundary. Focused unit coverage now captures this through `PipelineValve.testInterceptor`.
+  - [x] **2026-03-20 UI Fit Fix**
+    The inspiration shelf card now reserves horizontal space for the `Ask AI` button so long inspiration text no longer pushes the button off the card edge. The title stays single-line with ellipsis, and focused Compose coverage now includes a long-title visibility check for the button.
   - [x] **2026-03-20 On-Device Validation**
-    Focused L3 device validation is now recorded in `docs/reports/tests/L3-20260320-sim-wave4-scheduler-validation.md`. Exact Path A create, conflict-visible create, unsupported voice reschedule/delete-style safe-fail, and shelf-card `Ask AI` handoff all passed on device. Shared scheduler logs and valve telemetry cover the create/conflict branches; the shelf-card launcher branch is functionally green but still lacks a dedicated scheduler-to-chat telemetry checkpoint.
-  - [ ] **2026-03-20 Next Task**
-    Keep this session in the scheduler lane. The next acceptance slice is to add explicit scheduler-to-chat handoff telemetry/logging and finish the remaining deferred-behavior proof that timeline/multi-select inspiration AI is still suppressed in SIM V1.
+    Focused L3 device validation is now recorded in `docs/reports/tests/L3-20260320-sim-wave4-scheduler-validation.md`. Exact Path A create, conflict-visible create, unsupported voice reschedule/delete-style safe-fail, and shelf-card `Ask AI` handoff all passed on device. A focused rerun now also records the exact scheduler-to-chat request/session-start telemetry and matching `SimSchedulerShelf` log lines on device, with no `DB_WRITE_EXECUTED` evidence during the handoff window.
+  - [x] **2026-03-20 Deferred-Branch Proof**
+    Focused Compose coverage now proves the deprecated inspiration bulk-action branch stays unreachable in SIM V1 while the shelf-only launcher remains available. `SchedulerDrawerSimModeTest` confirms SIM does not surface `问AI (N)` even if selection state is forced underneath, and still exposes exactly one working `Ask AI` launcher from the inspiration shelf.
+  - [x] **2026-03-20 Telemetry Proof**
+    The shell-owned request checkpoint is now covered directly in `SimShellHandoffTest`, while `SimAgentViewModelTest` continues to prove the seeded session-start checkpoint. This closes the remaining code-level observability gap for the scheduler-to-chat handoff path without widening scheduler runtime ownership.
+  - [x] **2026-03-20 Remaining L3 Note**
+    The narrow observability confirmation rerun is complete. Device logs now prove both exact telemetry summaries, both matching `SimSchedulerShelf` lines, and absence of scheduler write evidence during the shelf-card handoff.
   - [ ] **2026-03-20 Known Gap**
     The real product follow-up path is physical-badge-origin and therefore global across interfaces. This Wave 4 slice may still stop short of a fully shared badge-thread follow-up context owner across chat, scheduler, settings, and shell entry points. If that global owner is not completed in code, log it as explicit carry debt instead of pretending the scheduler-drawer mic path fully solves the product requirement.
-- [ ] **Done When**
-  - [ ] scheduler works in the standalone shell
-  - [ ] Path A laws remain intact
-  - [ ] shelf-card `Ask AI` behaves like a plain seeded new-chat launcher
-  - [ ] no hidden Path B dependency is required for normal scheduler use
+- [x] **Done When**
+  - [x] scheduler works in the standalone shell
+  - [x] Path A laws remain intact
+  - [x] shelf-card `Ask AI` behaves like a plain seeded new-chat launcher
+  - [x] no hidden Path B dependency is required for normal scheduler use
 
 ### Wave 5: Connectivity Hard Migration
 > Objective: Reuse the mature badge connectivity stack as a decoupled SIM support module.

@@ -1,9 +1,9 @@
 # SIM Mission Tracker
 
 > **Mission**: Standalone prototype app with two main feature lanes, Scheduler Path A and Tingwu transcription plus simple audio-grounded chat, plus a decoupled connectivity support module.
-> **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Accepted / Wave 6 Isolation Accepted / Wave 7 Feature Acceptance Accepted / Wave 7 Isolation Acceptance Next
+> **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Accepted / Wave 6 Isolation Accepted / Wave 7 Feature Acceptance Accepted / Wave 7 Isolation Acceptance Accepted / Wave 7 Closeout Synced
 > **Started**: 2026-03-19
-> **Current Gate**: `T7.1` feature acceptance is now accepted on **2026-03-22** by reusing the accepted Wave 1 shell, Wave 2 negative audio, Wave 4 scheduler, Wave 5 connectivity, and Wave 6 isolation evidence, then adding a new focused device-side positive-path audio/chat run in `docs/reports/tests/L3-20260322-sim-wave7-audio-chat-validation.md` plus the umbrella acceptance record `docs/reports/tests/L3-20260322-sim-wave7-feature-acceptance.md`. The next active gate is `T7.2` isolation acceptance. Wave 7 reminder acceptance separately has connected-device proof for the exact-alarm redirect CTA plus EARLY/DEADLINE native posting in `docs/reports/tests/L2-20260321-sim-wave7-reminder-connected-validation.md`, but manual visual L3 for banner/full-screen presentation remains open.
+> **Current Gate**: `T7.3` doc sync and closeout is now completed on **2026-03-22** together with the accepted `T7.2` isolation slice. The tracker and main mission record are now synced to `docs/reports/tests/L3-20260322-sim-wave7-isolation-acceptance.md`, and this acceptance-only pass did not require lower-layer Cerb or `docs/cerb/interface-map.md` changes because it introduced no new module ownership edges. Wave 7 reminder acceptance separately now has both connected-device proof for the exact-alarm redirect CTA plus EARLY/DEADLINE native posting in `docs/reports/tests/L2-20260321-sim-wave7-reminder-connected-validation.md` and a later real-device visual/operator pass in `docs/reports/tests/L3-20260322-sim-wave7-reminder-visual-validation.md`. A follow-up wake/capture pass on **2026-03-22** now closes the last EARLY proof gap by showing `⏰ SIM EARLY Visual` with `15分钟后开始` on the secure lock screen while `dumpsys notification` still reported the matching active EARLY record.
 > **Primary Product Doc**: `docs/to-cerb/sim-standalone-prototype/concept.md`
 > **Mental Model Doc**: `docs/to-cerb/sim-standalone-prototype/mental-model.md`
 > **Implementation Brief**: `docs/plans/sim_implementation_brief.md`
@@ -23,7 +23,9 @@
 > **Wave 6 Isolation Validation**: `docs/reports/tests/L1-20260321-sim-wave6-isolation-validation.md`
 > **Wave 7 Audio Chat Validation**: `docs/reports/tests/L3-20260322-sim-wave7-audio-chat-validation.md`
 > **Wave 7 Feature Acceptance**: `docs/reports/tests/L3-20260322-sim-wave7-feature-acceptance.md`
+> **Wave 7 Isolation Acceptance**: `docs/reports/tests/L3-20260322-sim-wave7-isolation-acceptance.md`
 > **Wave 7 Reminder Connected Validation**: `docs/reports/tests/L2-20260321-sim-wave7-reminder-connected-validation.md`
+> **Wave 7 Reminder Visual Validation**: `docs/reports/tests/L3-20260322-sim-wave7-reminder-visual-validation.md`
 > **Formal Cerb Shards**:
 > - `docs/cerb/sim-shell/spec.md`
 > - `docs/cerb/sim-shell/interface.md`
@@ -590,7 +592,7 @@ The SIM mission follows this chain:
   - [x] prove the rescheduled move is visually legible in both visible-day and off-page cases
   - [x] **2026-03-21 Focused Compose/Device Proof**
     `:app-core:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.smartsales.prism.ui.drawers.scheduler.SchedulerDrawerSimModeTest` is now green on the connected device. Focused drawer-level proof covers the two required presentation branches: a visible-day exiting source card renders and then clears through the live animation window, while an off-page reschedule does not leave a stray source card on the current day and instead preserves warning-priority destination-date attention in the shared calendar surface.
-- [ ] **T4.8: Native Banner / Alarm Integration**
+- [x] **T4.8: Native Banner / Alarm Integration**
   - [x] **2026-03-21 Audit Note**
     Legacy reminder infrastructure already exists in `RealAlarmScheduler`, `TaskReminderReceiver`, `AlarmActivity`, and `RealNotificationService`. Reminder cadence is domain-owned by `UrgencyLevel.buildCascade(...)`, and visual delivery tier is split by `CascadeTier` (`EARLY` banner, `DEADLINE` full-screen alarm).
   - [x] **2026-03-21 Implementation Note**
@@ -605,11 +607,13 @@ The SIM mission follows this chain:
     The scheduler reminder prompt is now adaptive instead of exact-alarm-only copy. `SchedulerDrawer` derives an OEM-aware checklist from `ReminderReliabilityAdvisor` and routes the user to the nearest relevant settings page: exact alarm, battery optimization, MIUI permission editor, auto-start, or generic notification settings. The same prompt seam remains process-lifetime gated and now covers Xiaomi/HyperOS visibility risks as well as broader Chinese OEM background-delivery hardening.
   - [x] **2026-03-21 Connected Proof**
     Connected-device verification is now recorded in `docs/reports/tests/L2-20260321-sim-wave7-reminder-connected-validation.md`. `SchedulerDrawerSimModeTest` proves the exact-alarm guidance CTA path on device, and `TaskReminderReceiverDeviceTest` proves EARLY reminder posting on `prism_task_reminders_v3_early` plus DEADLINE reminder posting on `prism_task_reminders_v3_deadline` with `fullScreenIntent` configured. Focused verification is green with `:app-core:compileDebugKotlin`, the focused reminder unit pack, `:app-core:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.smartsales.prism.ui.drawers.scheduler.SchedulerDrawerSimModeTest,com.smartsales.prism.data.scheduler.TaskReminderReceiverDeviceTest`, the focused rerun for `TaskReminderReceiverDeviceTest`, and `adb logcat -d -s TestRunner TaskReminderReceiver AlarmActivity`.
-  - [ ] **2026-03-21 Remaining Visual L3 Gap**
-    The connected run does not yet prove human-visible banner or lock-screen/full-screen alarm presentation. An initial stronger instrumentation assertion that DEADLINE should auto-resume `AlarmActivity` failed even though `TaskReminderReceiver` logged `fullScreenIntent 已设置 (DEADLINE)` and `通知已显示`. Treat manual/operator L3 guided by `docs/sops/oem-alarm-notification-checklist.md` as the remaining closeout step for this slice.
-  - [ ] prove exact-alarm permission, banner delivery, and full-screen deadline behavior against the chosen SIM contract
-- [ ] **2026-03-21 Next Scheduler Slice**
-  T4.8 boundary/implementation is now in code with focused L1 proof and connected-device proof for CTA/native posting. The remaining scheduler closeout for this lane is manual/operator L3 for human-visible EARLY banner plus DEADLINE lock-screen/full-screen presentation without widening SIM into immediate create/conflict/completion notifications.
+  - [x] **2026-03-22 Visual / Operator Pass**
+    Real-device operator-style validation is now recorded in `docs/reports/tests/L3-20260322-sim-wave7-reminder-visual-validation.md`. On **2026-03-22**, EARLY reminder delivery was re-proven on device through `TaskReminderReceiver` logs plus active `NotificationRecord` evidence for `⏰ SIM EARLY Visual` on channel `prism_task_reminders_v3_early` with importance `4`. A later wake/capture follow-up on the same secure-keyguard device then surfaced `⏰ SIM EARLY Visual` with `15分钟后开始` as a human-visible lock-screen card while `dumpsys notification --noredact` still showed the matching active EARLY record. DEADLINE reminder also has strong live proof on the same device: an unlocked run showed a visible `🚨 SIM DEADLINE Visual` reminder surface with `知道了`, while a later locked-device run logged both `fullScreenIntent 已设置 (DEADLINE)` and `AlarmActivity` `onCreate`.
+  - [x] **2026-03-22 Reminder Closeout**
+    T4.8 reminder acceptance is now fully closed for the narrowed SIM contract: exact-alarm guidance is proven, EARLY has both native-delivery and human-visible lock-screen proof, and DEADLINE has both unlocked visible-surface proof and locked-device `AlarmActivity` creation proof. No reminder-specific blocker remains for this lane.
+  - [x] prove exact-alarm permission, banner delivery, and full-screen deadline behavior against the chosen SIM contract
+- [x] **2026-03-22 Reminder Lane Closed**
+  T4.8 boundary/implementation is now in code with focused L1 proof, connected-device proof for CTA/native posting, and a later real-device visual/operator pass that now covers EARLY human-visible delivery plus DEADLINE unlocked/locked behavior without widening SIM into immediate create/conflict/completion notifications.
 
 ### Wave 5: Connectivity Hard Migration
 > Objective: Reuse the mature badge connectivity stack as a decoupled SIM support module.
@@ -722,18 +726,22 @@ The SIM mission follows this chain:
   - [x] `Ask AI` continuation proof
   - [x] scheduler Path A proof
   - [x] connectivity support-module proof
-- [ ] **T7.2: Isolation Acceptance**
-  - [ ] smart app boot/regression check
-  - [ ] storage namespace isolation check
-  - [ ] DI/root isolation sanity check
-- [ ] **T7.3: Doc Sync and Closeout**
-  - [ ] update SIM tracker statuses
-  - [ ] sync related Cerb docs if implementation changes lower-layer details
-  - [ ] decide whether `docs/cerb/interface-map.md` now needs SIM registration
-- [ ] **Done When**
-  - [ ] SIM feature slice is working
-  - [ ] smart app remains unaffected
-  - [ ] docs and verification evidence are in sync
+- [x] **T7.2: Isolation Acceptance**
+  - [x] smart app boot/regression check
+  - [x] storage namespace isolation check
+  - [x] DI/root isolation sanity check
+  - [x] **2026-03-22 Closeout Note**
+    `T7.2` is now accepted in `docs/reports/tests/L3-20260322-sim-wave7-isolation-acceptance.md`. This slice explicitly stayed narrower than full smart-app feature acceptance: it proved launcher/root sanity from `AndroidManifest.xml` and `AgentMainActivity.kt`, re-ran the focused Wave 6 L1 isolation pack, confirmed on device that explicit smart launch resolves to `AgentMainActivity` while explicit SIM launch resolves to `SimMainActivity`, and used `adb shell run-as com.smartsales.prism ls files` to support the existing `sim_*` storage namespace contract. No conflicting Wave 7 evidence was found against the accepted Wave 6 runtime/storage isolation proof.
+- [x] **T7.3: Doc Sync and Closeout**
+  - [x] update SIM tracker statuses
+  - [x] sync related Cerb docs if implementation changes lower-layer details
+  - [x] decide whether `docs/cerb/interface-map.md` now needs SIM registration
+  - [x] **2026-03-22 Closeout Note**
+    Tracker sync is now complete for the Wave 7 isolation closeout. This session updated both `docs/plans/sim-tracker.md` and `docs/plans/tracker.md` to register the new `T7.2` acceptance report. No lower-layer Cerb shard changed in this acceptance-only pass, so no additional Cerb sync was required. `docs/cerb/interface-map.md` also does not need SIM registration from this slice because no new cross-module ownership edge or public interface contract was introduced.
+- [x] **Done When**
+  - [x] SIM feature slice is working
+  - [x] smart root still boots correctly with no new cross-contamination evidence in this acceptance slice
+  - [x] docs and verification evidence are in sync
 
 ---
 

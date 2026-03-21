@@ -12,7 +12,7 @@
 ## Planned Mission: SIM Standalone Prototype
 > **Context**: Direct user-requested standalone prototype mission. This work is intentionally separate from the current agent app and must not contaminate the live agent runtime by default.
 
-- **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Accepted / Validation Active
+- **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Accepted / Wave 6 Isolation Accepted / Wave 7 Feature Acceptance Accepted / Wave 7 Isolation Acceptance Next
 - **Primary Product Doc**: [`docs/to-cerb/sim-standalone-prototype/concept.md`](../to-cerb/sim-standalone-prototype/concept.md)
 - **Mental Model Doc**: [`docs/to-cerb/sim-standalone-prototype/mental-model.md`](../to-cerb/sim-standalone-prototype/mental-model.md)
 - **Mission Tracker**: [`docs/plans/sim-tracker.md`](./sim-tracker.md)
@@ -26,6 +26,9 @@
 - **Wave 5 Acceptance**: [`docs/reports/tests/L3-20260321-sim-wave5-connectivity-validation.md`](../reports/tests/L3-20260321-sim-wave5-connectivity-validation.md)
 - **Wave 5 Connectivity-Absent Acceptance**: [`docs/reports/tests/L3-20260321-sim-wave5-connectivity-absent-validation.md`](../reports/tests/L3-20260321-sim-wave5-connectivity-absent-validation.md)
 - **Wave 5 UX Cleanup Smoke**: [`docs/reports/tests/L3-20260321-sim-wave5-ux-cleanup-smoke.md`](../reports/tests/L3-20260321-sim-wave5-ux-cleanup-smoke.md)
+- **Wave 6 Isolation Validation**: [`docs/reports/tests/L1-20260321-sim-wave6-isolation-validation.md`](../reports/tests/L1-20260321-sim-wave6-isolation-validation.md)
+- **Wave 7 Audio Chat Validation**: [`docs/reports/tests/L3-20260322-sim-wave7-audio-chat-validation.md`](../reports/tests/L3-20260322-sim-wave7-audio-chat-validation.md)
+- **Wave 7 Feature Acceptance**: [`docs/reports/tests/L3-20260322-sim-wave7-feature-acceptance.md`](../reports/tests/L3-20260322-sim-wave7-feature-acceptance.md)
 - **Wave 5 Boundary Audit**: [`docs/reports/20260321-sim-wave5-boundary-audit.md`](../reports/20260321-sim-wave5-boundary-audit.md)
 - **Audit Output**: [`docs/reports/20260319-sim-standalone-code-audit.md`](../reports/20260319-sim-standalone-code-audit.md)
 - **Clarification Audit**: [`docs/reports/20260319-sim-clarification-evidence-audit.md`](../reports/20260319-sim-clarification-evidence-audit.md)
@@ -50,7 +53,7 @@
   - Source-led Tingwu artifacts with optional readability polishing
   - No agent memory or smart-agent system integration
 - **Current Carry Debt**:
-  - SIM now has a shell-owned badge scheduler follow-up continuity binding with real `BadgeAudioPipeline.Complete` ingress, live `Uni-M` multi-task scheduler create ingress is wired in code, and Wave 5 connectivity is accepted across manager-routing proof, the disconnected connectivity-absent rerun, and the later UX-cleanup smoke check. Remaining debt is now outside this Wave 5 UX slice: hardware-specific L3 remains deferred until the physical badge is available, deeper scheduler follow-up intelligence beyond the metadata-only binding remains open, focused scheduler L1 plus focused Compose/device validation are now green for date attention and reschedule motion, and scheduler shipping hardening now mainly needs the later alarm/notification lane
+  - SIM now has a shell-owned badge scheduler follow-up continuity binding with real `BadgeAudioPipeline.Complete` ingress, live `Uni-M` multi-task scheduler create ingress is wired in code, and the T4.8 narrowed reminder-adoption slice is now implemented: persisted exact SIM tasks reuse the shared alarm stack with focused unit proof, while vague tasks do not and immediate create/conflict/completion native notifications stay deferred. Connected-device proof now exists for the exact-alarm redirect CTA plus EARLY/DEADLINE native posting in `docs/reports/tests/L2-20260321-sim-wave7-reminder-connected-validation.md`, but human-visible manual L3 for banner / lock-screen / full-screen presentation still remains open. Wave 5 connectivity is accepted across manager-routing proof, the disconnected connectivity-absent rerun, and the later UX-cleanup smoke check. Wave 6 now has the `T6.1` root-policy freeze in `docs/cerb/sim-shell/spec.md`, the `T6.2` SIM audio storage-namespace closeout in `SimAudioRepository`, the `T6.3` SIM-only session persistence closeout in `SimSessionRepository`, and focused `T6.4` isolation validation in `docs/reports/tests/L1-20260321-sim-wave6-isolation-validation.md`. Remaining debt beyond that closeout is hardware-specific L3, deeper scheduler follow-up intelligence beyond the metadata-only binding, and the remaining manual/operator reminder-visibility acceptance pass.
 
 ---
 

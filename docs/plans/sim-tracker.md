@@ -1,9 +1,9 @@
 # SIM Mission Tracker
 
 > **Mission**: Standalone prototype app with two main feature lanes, Scheduler Path A and Tingwu transcription plus simple audio-grounded chat, plus a decoupled connectivity support module.
-> **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Accepted / Validation Active
+> **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Accepted / Wave 6 Isolation Accepted / Wave 7 Feature Acceptance Accepted / Wave 7 Isolation Acceptance Next
 > **Started**: 2026-03-19
-> **Current Gate**: Wave 5 connectivity is now accepted on **2026-03-21**. The pairing domain contract no longer leaks `BlePeripheral`, the SIM setup path now depends on a pairing-only viewmodel seam instead of onboarding profile/account collaborators, and the disconnected T5.4 device rerun is now green: scheduler use, persisted artifact reuse, grounded `Ask AI`, and disconnected manual badge-sync failure all behaved as required while offline. The post-acceptance UX cleanup is now also implemented and L1-verified: the manager renders as a contained support panel instead of a heavy full-screen surface, and manual offline badge sync now shows human-readable failure copy instead of raw `oss_unknown null`. The next non-closed SIM shipping debt remains outside Wave 5.
+> **Current Gate**: `T7.1` feature acceptance is now accepted on **2026-03-22** by reusing the accepted Wave 1 shell, Wave 2 negative audio, Wave 4 scheduler, Wave 5 connectivity, and Wave 6 isolation evidence, then adding a new focused device-side positive-path audio/chat run in `docs/reports/tests/L3-20260322-sim-wave7-audio-chat-validation.md` plus the umbrella acceptance record `docs/reports/tests/L3-20260322-sim-wave7-feature-acceptance.md`. The next active gate is `T7.2` isolation acceptance. Wave 7 reminder acceptance separately has connected-device proof for the exact-alarm redirect CTA plus EARLY/DEADLINE native posting in `docs/reports/tests/L2-20260321-sim-wave7-reminder-connected-validation.md`, but manual visual L3 for banner/full-screen presentation remains open.
 > **Primary Product Doc**: `docs/to-cerb/sim-standalone-prototype/concept.md`
 > **Mental Model Doc**: `docs/to-cerb/sim-standalone-prototype/mental-model.md`
 > **Implementation Brief**: `docs/plans/sim_implementation_brief.md`
@@ -20,6 +20,10 @@
 > **Wave 5 Acceptance**: `docs/reports/tests/L3-20260321-sim-wave5-connectivity-validation.md`
 > **Wave 5 Connectivity-Absent Acceptance**: `docs/reports/tests/L3-20260321-sim-wave5-connectivity-absent-validation.md`
 > **Wave 5 UX Cleanup Smoke**: `docs/reports/tests/L3-20260321-sim-wave5-ux-cleanup-smoke.md`
+> **Wave 6 Isolation Validation**: `docs/reports/tests/L1-20260321-sim-wave6-isolation-validation.md`
+> **Wave 7 Audio Chat Validation**: `docs/reports/tests/L3-20260322-sim-wave7-audio-chat-validation.md`
+> **Wave 7 Feature Acceptance**: `docs/reports/tests/L3-20260322-sim-wave7-feature-acceptance.md`
+> **Wave 7 Reminder Connected Validation**: `docs/reports/tests/L2-20260321-sim-wave7-reminder-connected-validation.md`
 > **Formal Cerb Shards**:
 > - `docs/cerb/sim-shell/spec.md`
 > - `docs/cerb/sim-shell/interface.md`
@@ -589,11 +593,23 @@ The SIM mission follows this chain:
 - [ ] **T4.8: Native Banner / Alarm Integration**
   - [x] **2026-03-21 Audit Note**
     Legacy reminder infrastructure already exists in `RealAlarmScheduler`, `TaskReminderReceiver`, `AlarmActivity`, and `RealNotificationService`. Reminder cadence is domain-owned by `UrgencyLevel.buildCascade(...)`, and visual delivery tier is split by `CascadeTier` (`EARLY` banner, `DEADLINE` full-screen alarm).
-  - [ ] define which scheduler create/conflict/completion states upgrade from toast-level feedback to native banner/notification behavior in SIM
-  - [ ] decide SIM adoption boundary for legacy alarm stack vs shared main-app behavior
+  - [x] **2026-03-21 Implementation Note**
+    T4.8 is now implemented with a narrowed SIM contract. `SimSchedulerViewModel` adopts the shared `AlarmScheduler` / reminder stack only for persisted exact tasks, conflict-persisted exact tasks still arm reminders, vague tasks do not, delete and mark-done cancel reminders, reschedule cancels then rearms, and restore-from-done does not rearm in this slice. Exact-alarm permission prompting stays on the scheduler UI boundary through a process-lifetime gate, and scheduling failures degrade without rolling back task persistence.
+  - [x] decide SIM adoption boundary for legacy alarm stack vs shared main-app behavior
+  - [x] define which scheduler create/conflict/completion states upgrade from toast-level feedback to native banner/notification behavior in SIM
+  - [x] **2026-03-21 Narrowed Decision**
+    SIM does not emit immediate native create/conflict/completion notifications in T4.8. Mutation feedback remains in-drawer through `pipelineStatus`; the native OS stack is reused only at reminder time for persisted exact tasks.
+  - [x] **2026-03-21 Focused L1**
+    `SimSchedulerViewModelTest` now proves: exact create reminder scheduling, conflict-exact reminder scheduling, vague no-op behavior, mixed `Uni-M` exact/vague batches scheduling only exact reminders, delete cancellation, mark-done cancellation, restore-without-rearm, reschedule cancel-plus-rearm, and one-shot exact-alarm permission prompt emission while scheduling continues. `:app-core:testDebugUnitTest --tests "com.smartsales.prism.ui.sim.SimSchedulerViewModelTest"` and `:app-core:compileDebugKotlin` are green.
+  - [x] **2026-03-21 OEM Guidance Hardening**
+    The scheduler reminder prompt is now adaptive instead of exact-alarm-only copy. `SchedulerDrawer` derives an OEM-aware checklist from `ReminderReliabilityAdvisor` and routes the user to the nearest relevant settings page: exact alarm, battery optimization, MIUI permission editor, auto-start, or generic notification settings. The same prompt seam remains process-lifetime gated and now covers Xiaomi/HyperOS visibility risks as well as broader Chinese OEM background-delivery hardening.
+  - [x] **2026-03-21 Connected Proof**
+    Connected-device verification is now recorded in `docs/reports/tests/L2-20260321-sim-wave7-reminder-connected-validation.md`. `SchedulerDrawerSimModeTest` proves the exact-alarm guidance CTA path on device, and `TaskReminderReceiverDeviceTest` proves EARLY reminder posting on `prism_task_reminders_v3_early` plus DEADLINE reminder posting on `prism_task_reminders_v3_deadline` with `fullScreenIntent` configured. Focused verification is green with `:app-core:compileDebugKotlin`, the focused reminder unit pack, `:app-core:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.smartsales.prism.ui.drawers.scheduler.SchedulerDrawerSimModeTest,com.smartsales.prism.data.scheduler.TaskReminderReceiverDeviceTest`, the focused rerun for `TaskReminderReceiverDeviceTest`, and `adb logcat -d -s TestRunner TaskReminderReceiver AlarmActivity`.
+  - [ ] **2026-03-21 Remaining Visual L3 Gap**
+    The connected run does not yet prove human-visible banner or lock-screen/full-screen alarm presentation. An initial stronger instrumentation assertion that DEADLINE should auto-resume `AlarmActivity` failed even though `TaskReminderReceiver` logged `fullScreenIntent 已设置 (DEADLINE)` and `通知已显示`. Treat manual/operator L3 guided by `docs/sops/oem-alarm-notification-checklist.md` as the remaining closeout step for this slice.
   - [ ] prove exact-alarm permission, banner delivery, and full-screen deadline behavior against the chosen SIM contract
 - [ ] **2026-03-21 Next Scheduler Slice**
-  The focused scheduler L1 rerun is now green for both live `Uni-M` date attention and the current reschedule-motion contract, focused Compose/device validation is green for the shared calendar attention surface, and drawer-level Compose/device proof is green for visible-day/off-page reschedule motion. The immediate next scheduler work is now `T4.8`: define the SIM adoption boundary for the legacy alarm/notification stack, then prove banner/deadline behavior against that narrowed contract.
+  T4.8 boundary/implementation is now in code with focused L1 proof and connected-device proof for CTA/native posting. The remaining scheduler closeout for this lane is manual/operator L3 for human-visible EARLY banner plus DEADLINE lock-screen/full-screen presentation without widening SIM into immediate create/conflict/completion notifications.
 
 ### Wave 5: Connectivity Hard Migration
 > Objective: Reuse the mature badge connectivity stack as a decoupled SIM support module.
@@ -672,32 +688,40 @@ The SIM mission follows this chain:
   - [ ] define SIM modules
   - [ ] prevent default boot through the smart singleton graph
   - [ ] isolate smart-only services unless deliberately reused behind explicit seams
-- [ ] **T6.2: Code / Audio Persistence Namespace**
-  - [ ] namespace metadata file
-  - [ ] namespace local audio blob naming
-  - [ ] namespace artifact file naming
-  - [ ] namespace audio/chat binding records if needed
-- [ ] **T6.3: Spec / Session-Chat Persistence Review**
-  - [ ] decide whether session storage is shared or namespaced
-  - [ ] document the reason
-  - [ ] enforce it in code plan
-- [ ] **T6.4: Validation**
-  - [ ] prove smart and SIM runtime roots are distinct enough
-  - [ ] prove persistence cross-contamination is controlled
-- [ ] **Done When**
-  - [ ] SIM and smart app do not silently share unsafe runtime state
-  - [ ] persistence cross-contamination risk is explicitly controlled
+  - [x] **2026-03-21 Spec Freeze**
+    `docs/cerb/sim-shell/spec.md` is now the owning T6.1 artifact. It freezes the SIM composition chain (`SimMainActivity -> SimShell -> Sim* runtime owners -> SIM-owned dependency assembler`), classifies current dependencies as direct reuse vs SIM-wrapped reuse vs forbidden, and explicitly forbids shared implementation edits in `SimMainActivity`, `SimShell`, and shared notification/alarm entry wiring while T4.8 remains active.
+- [x] **T6.2: Code / Audio Persistence Namespace**
+  - [x] namespace metadata file
+  - [x] namespace local audio blob naming
+  - [x] namespace artifact file naming
+  - [x] namespace audio/chat binding records if needed
+  - [x] **2026-03-21 Closeout Note**
+    `SimAudioRepository` is now treated as the owning T6.2 artifact. Focused repository evidence and tests now prove the accepted V1 namespace contract: metadata persists in `sim_audio_metadata.json`, stored audio blobs use `sim_<audioId>.<ext>`, artifacts use `sim_<audioId>_artifacts.json`, and `boundSessionId` persists inside SIM metadata rather than requiring a separate file. Focused verification is green with `:app-core:compileDebugKotlin`, `SimAudioRepositoryNamespaceTest`, and `SimAudioRepositoryRecoveryTest`.
+- [x] **T6.3: Spec / Session-Chat Persistence Review**
+  - [x] decide whether session storage is shared or namespaced
+  - [x] document the reason
+  - [x] enforce it in code plan
+  - [x] **2026-03-21 Closeout Note**
+    `SimSessionRepository` is now treated as the owning T6.3 artifact. SIM chat/session persistence is file-backed and namespaced to `sim_session_metadata.json` plus `sim_session_<sessionId>_messages.json`, durable history stores only user text / AI response / AI audio artifacts / AI error turns, transient UI state remains memory-only, normal runtime no longer seeds demo sessions, and cold start restores grouped history without auto-selecting an active session. Startup reconciliation also normalizes the audio/session binding edge by clearing dangling `boundSessionId`, restoring missing audio-side bindings for valid linked sessions, unlinking sessions whose audio no longer exists, and keeping only the newest session when duplicate persisted sessions claim the same audio. Focused verification is green with `:app-core:compileDebugKotlin`, `SimAgentViewModelTest`, `SimSessionRepositoryTest`, `SimAudioRepositoryNamespaceTest`, and `SimAudioRepositoryRecoveryTest`.
+- [x] **T6.4: Validation**
+  - [x] prove smart and SIM runtime roots are distinct enough
+  - [x] prove persistence cross-contamination is controlled
+  - [x] **2026-03-21 Closeout Note**
+    Focused L1 isolation validation is now recorded in `docs/reports/tests/L1-20260321-sim-wave6-isolation-validation.md`. Source-backed runtime-boundary proof now verifies that `SimMainActivity` mounts `SimShell` rather than the smart shell root, and that `SimShell` owns SIM runtime collaborators rather than routing through the smart chat root. Persistence isolation is now re-proven across audio and session storage: `SimAudioRepository` stays on `sim_audio_metadata.json` / `sim_<audioId>.<ext>` / `sim_<audioId>_artifacts.json`, while `SimSessionRepository` writes only `sim_session_metadata.json` plus `sim_session_<sessionId>_messages.json`. Focused verification is green with `:app-core:compileDebugKotlin`, `SimRuntimeIsolationTest`, `SimShellHandoffTest`, `SimAgentViewModelTest`, `SimSessionRepositoryTest`, `SimAudioRepositoryNamespaceTest`, and `SimAudioRepositoryRecoveryTest`.
+- [x] **Done When**
+  - [x] SIM and smart app do not silently share unsafe runtime state
+  - [x] persistence cross-contamination risk is explicitly controlled
 
 ### Wave 7: Verification and Acceptance
 > Objective: Prove the SIM app works while the smart app remains intact.
 > **Execution Law**: SIM acceptance must include isolation proof, not only feature proof.
 
-- [ ] **T7.1: Feature Acceptance**
-  - [ ] shell routing proof
-  - [ ] audio informational-mode proof
-  - [ ] `Ask AI` continuation proof
-  - [ ] scheduler Path A proof
-  - [ ] connectivity support-module proof
+- [x] **T7.1: Feature Acceptance**
+  - [x] shell routing proof
+  - [x] audio informational-mode proof
+  - [x] `Ask AI` continuation proof
+  - [x] scheduler Path A proof
+  - [x] connectivity support-module proof
 - [ ] **T7.2: Isolation Acceptance**
   - [ ] smart app boot/regression check
   - [ ] storage namespace isolation check

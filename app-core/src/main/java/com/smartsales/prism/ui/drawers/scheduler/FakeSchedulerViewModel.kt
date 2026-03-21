@@ -131,6 +131,9 @@ class FakeSchedulerViewModel : ISchedulerViewModel {
     private val _expandedConflictIds = MutableStateFlow(setOf(fakeTaskConflict1.id))
     override val expandedConflictIds: StateFlow<Set<String>> = _expandedConflictIds.asStateFlow()
 
+    private val _exitingTasks = MutableStateFlow<List<RescheduleExitMotion>>(emptyList())
+    override val exitingTasks: StateFlow<List<RescheduleExitMotion>> = _exitingTasks.asStateFlow()
+
     private val _timelineItems = MutableStateFlow(
         listOf(
             fakeInspiration,
@@ -247,5 +250,25 @@ class FakeSchedulerViewModel : ISchedulerViewModel {
                 _conflictWarning.value = null
             }
         }
+    }
+
+    fun debugSetActiveDayOffset(dayOffset: Int) {
+        _activeDayOffset.value = dayOffset
+    }
+
+    fun debugSetTimelineItems(items: List<SchedulerTimelineItem>) {
+        _timelineItems.value = items
+    }
+
+    fun debugSetExitingTasks(tasks: List<RescheduleExitMotion>) {
+        _exitingTasks.value = tasks
+    }
+
+    fun debugSetDateAttention(
+        unacknowledgedDates: Set<Int>,
+        rescheduledDates: Set<Int>
+    ) {
+        _unacknowledgedDates.value = unacknowledgedDates
+        _rescheduledDates.value = rescheduledDates
     }
 }

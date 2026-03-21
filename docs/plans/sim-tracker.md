@@ -1,9 +1,9 @@
 # SIM Mission Tracker
 
 > **Mission**: Standalone prototype app with two main feature lanes, Scheduler Path A and Tingwu transcription plus simple audio-grounded chat, plus a decoupled connectivity support module.
-> **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 T5.2 Accepted / Isolation Active
+> **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Accepted / Validation Active
 > **Started**: 2026-03-19
-> **Current Gate**: Wave 5 T5.2 is now frozen in docs. The connectivity/shell ownership split is explicit, scheduler is locked as connectivity-free, audio is locked to `ConnectivityBridge` only for badge-origin ingress/file operations, and the remaining `PairingService` / onboarding collaborator contamination points are explicit T5.3 debt. The next active gate is code isolation proof, while the manager UI containment follow-up stays deferred.
+> **Current Gate**: Wave 5 connectivity is now accepted on **2026-03-21**. The pairing domain contract no longer leaks `BlePeripheral`, the SIM setup path now depends on a pairing-only viewmodel seam instead of onboarding profile/account collaborators, and the disconnected T5.4 device rerun is now green: scheduler use, persisted artifact reuse, grounded `Ask AI`, and disconnected manual badge-sync failure all behaved as required while offline. The post-acceptance UX cleanup is now also implemented and L1-verified: the manager renders as a contained support panel instead of a heavy full-screen surface, and manual offline badge sync now shows human-readable failure copy instead of raw `oss_unknown null`. The next non-closed SIM shipping debt remains outside Wave 5.
 > **Primary Product Doc**: `docs/to-cerb/sim-standalone-prototype/concept.md`
 > **Mental Model Doc**: `docs/to-cerb/sim-standalone-prototype/mental-model.md`
 > **Implementation Brief**: `docs/plans/sim_implementation_brief.md`
@@ -18,6 +18,8 @@
 > **Wave 2 Negative-Branch Acceptance**: `docs/reports/tests/L3-20260320-sim-wave2-negative-branch-validation.md`
 > **Wave 4 Acceptance**: `docs/reports/tests/L3-20260320-sim-wave4-scheduler-validation.md`
 > **Wave 5 Acceptance**: `docs/reports/tests/L3-20260321-sim-wave5-connectivity-validation.md`
+> **Wave 5 Connectivity-Absent Acceptance**: `docs/reports/tests/L3-20260321-sim-wave5-connectivity-absent-validation.md`
+> **Wave 5 UX Cleanup Smoke**: `docs/reports/tests/L3-20260321-sim-wave5-ux-cleanup-smoke.md`
 > **Formal Cerb Shards**:
 > - `docs/cerb/sim-shell/spec.md`
 > - `docs/cerb/sim-shell/interface.md`
@@ -560,20 +562,30 @@ The SIM mission follows this chain:
   - [x] **2026-03-21 Audit Note**
     Shared scheduler UI already supports attention rendering through `unacknowledgedDates` and `rescheduledDates`, and date tap already acknowledges those sets. SIM currently uses that for reschedule destination marking, but create does not yet mark target dates and conflict create does not yet split normal vs warning attention treatment.
   - [x] **2026-03-21 Implementation Note**
-    SIM now reuses the existing two-channel calendar attention contract for create as well as reschedule. Off-page create marks `unacknowledgedDates`, off-page conflict-create reuses `rescheduledDates` as the warning-priority amber channel, same-page create emits no redundant calendar attention, and multi-task create aggregates attention per target date rather than per mutation.
+    SIM now reuses the existing two-channel calendar attention contract for create as well as reschedule. Off-page create marks `unacknowledgedDates`, off-page conflict-create reuses `rescheduledDates` as the warning-priority amber channel, and same-page create emits no redundant calendar attention. The runtime/viewmodel path now supports per-date aggregation for multi-task create, but the shipped SIM voice ingress is still single-task for Uni-A exact and Uni-B vague-upgrade extraction, so end-to-end multi-date create is not yet wired from the live input path.
   - [x] wire create target-date attention for off-page creates
   - [x] split normal create vs conflict create calendar attention semantics
   - [x] prove first user tap on the affected date acknowledges and clears the marker
   - [x] **2026-03-21 Focused L1**
-    `SimSchedulerViewModelTest` now proves off-page exact create, off-page vague create, off-page conflict-create, same-page no-attention, per-date multi-task aggregation, same-date amber escalation when any created task conflicts, and tap-to-acknowledge clearing.
-  - [ ] **2026-03-21 Focused L2 Status**
-    `SchedulerCalendarTest` was expanded for the new attention semantics seam, but the connected-device instrumentation run is currently blocked by dependency download timeouts from the configured Maven mirror before test execution starts. T4.6 remains acceptance-incomplete until focused Compose/device validation is rerun in a healthy dependency environment.
-- [ ] **T4.7: Reschedule Motion Semantics**
+    `SimSchedulerViewModelTest` now proves off-page exact create, off-page vague create, off-page conflict-create, same-page no-attention, per-date multi-task aggregation, same-date amber escalation when any created task conflicts, and tap-to-acknowledge clearing. The multi-task coverage currently relies on an internal fast-track seam because the shipped SIM extraction path does not yet emit multi-task create payloads.
+  - [x] **2026-03-21 Multi-Task Ingress Implementation**
+    SIM now fronts scheduler create with `Uni-M` ordered multi-task decomposition before the single-task Uni-A / Uni-B / Uni-C chain. The live path now resolves fragments left-to-right, executes them as independent creates, preserves per-date blue/amber attention semantics, keeps one aggregate batch status in `pipelineStatus`, and downgrades clock-relative fragments after a vague date-only predecessor into vague tasks when the lawful day anchor is still available.
+  - [x] **2026-03-21 Relative-Now Anchor Rule**
+    Standalone `N hours/minutes later` fragments are now treated as lawful exact create by anchoring to `nowIso`, and standalone `明天/后天/tomorrow + clock` fragments inside a multi-task batch now have an explicit deterministic now-day-offset route so the live path does not depend on model-computed absolute dates for those cases.
+  - [x] **2026-03-21 Focused L1 Re-Run Closeout**
+    The previously noisy focused scheduler unit rerun is now clean. `:app-core:compileDebugKotlin` is green, and `:app-core:testDebugUnitTest --tests "com.smartsales.prism.ui.sim.SimSchedulerViewModelTest"` now passes after fixing three stale reschedule-motion assertions that were still using `runCurrent()` even though the fake repository's `rescheduleTask(...)` path includes a `delay(200)`. This confirms the live `Uni-M` date-attention path and the current reschedule-motion L1 contract in the repo rather than only in tracker prose.
+  - [x] **2026-03-21 Focused L2 Closeout**
+    Focused Compose/device validation is now green on the connected device through `:app-core:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.smartsales.prism.ui.drawers.scheduler.SchedulerCalendarTest`. The original failures were stale test-harness issues inside `SchedulerCalendarTest` itself (non-deterministic day assumptions, duplicate broad text selectors, and an invalid second `setContent(...)` in the same test), not product failures in the shared calendar attention contract. With that harness repaired, the scheduler calendar now has honest device-level proof for normal/warning attention semantics and tap-to-acknowledge clearing.
+- [x] **T4.7: Reschedule Motion Semantics**
   - [x] **2026-03-21 Audit Note**
-    Shared scheduler card state already contains `isExiting` and `exitDirection`, but SIM reschedule currently marks only the destination date and does not yet drive visible source-card motion.
-  - [ ] define source-card exit animation contract for future-vs-past moves
-  - [ ] wire destination-date attention together with source-card exit
-  - [ ] prove the rescheduled move is visually legible in both visible-day and off-page cases
+    Shared scheduler card state already contains `isExiting` and `exitDirection`, and current SIM code now does drive source-card exit motion through the shell-reused timeline path. The remaining gap is not absence of motion wiring but acceptance closeout above L1.
+  - [x] define source-card exit animation contract for future-vs-past moves
+  - [x] wire destination-date attention together with source-card exit
+  - [x] **2026-03-21 Focused L1**
+    `SimSchedulerViewModelTest` now proves three motion branches directly: off-page reschedule arms rightward exit motion plus destination-date attention, same-day later reschedule arms rightward exit motion without redundant date attention, and same-day earlier reschedule arms leftward exit motion without redundant date attention. The earlier failures were stale timing assertions in the test harness rather than missing runtime wiring.
+  - [x] prove the rescheduled move is visually legible in both visible-day and off-page cases
+  - [x] **2026-03-21 Focused Compose/Device Proof**
+    `:app-core:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.smartsales.prism.ui.drawers.scheduler.SchedulerDrawerSimModeTest` is now green on the connected device. Focused drawer-level proof covers the two required presentation branches: a visible-day exiting source card renders and then clears through the live animation window, while an off-page reschedule does not leave a stray source card on the current day and instead preserves warning-priority destination-date attention in the shared calendar surface.
 - [ ] **T4.8: Native Banner / Alarm Integration**
   - [x] **2026-03-21 Audit Note**
     Legacy reminder infrastructure already exists in `RealAlarmScheduler`, `TaskReminderReceiver`, `AlarmActivity`, and `RealNotificationService`. Reminder cadence is domain-owned by `UrgencyLevel.buildCascade(...)`, and visual delivery tier is split by `CascadeTier` (`EARLY` banner, `DEADLINE` full-screen alarm).
@@ -581,7 +593,7 @@ The SIM mission follows this chain:
   - [ ] decide SIM adoption boundary for legacy alarm stack vs shared main-app behavior
   - [ ] prove exact-alarm permission, banner delivery, and full-screen deadline behavior against the chosen SIM contract
 - [ ] **2026-03-21 Next Scheduler Slice**
-  The highest-ROI scheduler follow-up after the T4.6 implementation pass is `T4.7`: add source-card reschedule motion semantics and keep destination-date attention aligned with the shipped calendar warning/normal split.
+  The focused scheduler L1 rerun is now green for both live `Uni-M` date attention and the current reschedule-motion contract, focused Compose/device validation is green for the shared calendar attention surface, and drawer-level Compose/device proof is green for visible-day/off-page reschedule motion. The immediate next scheduler work is now `T4.8`: define the SIM adoption boundary for the legacy alarm/notification stack, then prove banner/deadline behavior against that narrowed contract.
 
 ### Wave 5: Connectivity Hard Migration
 > Objective: Reuse the mature badge connectivity stack as a decoupled SIM support module.
@@ -615,20 +627,38 @@ The SIM mission follows this chain:
   - [x] **2026-03-21 Evidence Audit**
     Repo evidence is recorded in `docs/reports/20260321-sim-wave5-boundary-audit.md`. It proves scheduler currently has no connectivity imports, shell owns routing only, audio consumes `ConnectivityBridge` for badge-origin ingress/file operations, and the remaining contamination points are explicit rather than hidden.
 - [ ] **T5.3: Code / Connectivity Isolation**
-  - [ ] keep connection management isolated from scheduler and audio/chat business logic
-  - [ ] avoid smart-agent dependencies in connectivity entry path
-  - [ ] remove `PairingService -> BlePeripheral` leakage from the domain-facing pairing contract
-  - [ ] strip onboarding profile/account collaborator carry-over from the SIM setup path or isolate it behind a narrower pairing-only seam
+  - [x] keep connection management isolated from scheduler and audio/chat business logic
+  - [x] avoid smart-agent dependencies in connectivity entry path
+  - [x] remove `PairingService -> BlePeripheral` leakage from the domain-facing pairing contract
+  - [x] strip onboarding profile/account collaborator carry-over from the SIM setup path or isolate it behind a narrower pairing-only seam
+  - [x] **2026-03-21 Implementation Note**
+    `DiscoveredBadge` is now plain domain data, `RealPairingService` keeps discovered `BlePeripheral` state internal and snapshot-scoped, `PairingFlowViewModel` now owns the shared pairing seam, and `OnboardingViewModel` is narrowed to profile persistence only.
+  - [x] **2026-03-21 Focused L1**
+    Focused verification is green for `:app-core:compileDebugKotlin` and the Wave 5 unit pack covering `RealPairingServiceTest`, `PairingFlowViewModelTest`, `OnboardingViewModelTest`, `OnboardingFlowTransitionTest`, `SimConnectivityPairingFlowTest`, and `SimConnectivityRoutingTest`.
 - [ ] **T5.4: Validation**
   - [x] prove connectivity entry opens usable badge connection management
   - [ ] prove scheduler and audio/chat do not require connectivity to be meaningful
   - [x] **2026-03-20 Focused L1**
     Focused L1 coverage now proves the shell-owned route logic for modal vs setup connectivity surfaces and the SIM-only ready-state projection used for auto-return behavior.
+  - [x] **2026-03-21 Offline Telemetry Hardening**
+    T5.4 now has dedicated SIM-local telemetry/log markers for the connectivity-absent acceptance slice. Persisted artifact open emits `SIM audio persisted artifact opened` through `VALVE_PROTOCOL` plus `SimAudioOffline`, artifact-driven grounded chat emits `SIM audio grounded chat opened from artifact` through `VALVE_PROTOCOL` plus `SimAudioChatRoute`, and disconnected badge-sync failure emits `SIM audio sync failed while connectivity unavailable` through `VALVE_PROTOCOL` plus `SimAudioOffline`.
+  - [x] **2026-03-21 Focused L1 (Connectivity-Absent Slice)**
+    Focused JVM coverage is now green for the new offline evidence seams: `SimShellHandoffTest` proves persisted-artifact and grounded-chat telemetry, and `SimAudioDebugScenarioTest` proves the disconnected sync-failure telemetry helper. T5.4 still requires the focused L3 device pass before closure.
+  - [x] **2026-03-21 Audio Sync Ingress Implementation**
+    SIM audio now exposes a browse-mode manual `sync from badge` action plus one best-effort browse-open auto-sync path. The implementation keeps the shared `syncFromDevice(): Unit` contract unchanged, keeps readiness inside the SIM repository/connectivity seam rather than shell UI connection-state mapping, and preserves additive-only filename-based badge import so repeated `/list` checks never redownload the same local `SMARTBADGE` file. Focused JVM coverage is green for the new sync helpers and browse-only auto-sync gate in `SimAudioDrawerViewModelTest`, `SimAudioDebugScenarioTest`, and `SimShellHandoffTest`.
   - [x] **2026-03-21 Focused L3 Status**
     Wave 5 device validation is now green for the manager-backed routing contract. Real badge evidence proves manager direct-entry, onboarding-backed setup, successful provisioning, `SETUP -> MANAGER`, and configured re-entry. Report: `docs/reports/tests/L3-20260321-sim-wave5-connectivity-validation.md`.
+  - [x] **2026-03-21 Focused Rerun Prep**
+    The remaining T5.4 disconnected acceptance slice now has an explicit device rerun plan in `docs/reports/tests/L3-20260321-sim-wave5-connectivity-absent-rerun-plan.md`. That plan is preparation only, not closure evidence.
+  - [x] **2026-03-21 Focused T5.4 Device Note**
+    Focused disconnected device validation is now green and recorded in `docs/reports/tests/L3-20260321-sim-wave5-connectivity-absent-validation.md`. With airplane mode enabled, scheduler use, persisted artifact reuse, and grounded `Ask AI` remained usable while disconnected, and manual `sync from badge` failed explicitly with `oss_unknown null` without breaking the rest of the SIM flow. Treat the ugly literal as UX debt, not as an acceptance blocker.
+  - [x] **2026-03-21 Post-Acceptance UX Cleanup**
+    Wave 5 carry debt is now cleaned up in code. `ConnectivityManagerScreen` no longer occupies the shell as a heavy full-screen page; SIM now renders it as a contained support panel overlay. Manual offline badge sync also now preflights readiness and maps raw transport failures such as `oss_unknown null` to human-readable drawer feedback. Focused L1 verification is green with `:app-core:compileDebugKotlin`, `SimAudioDebugScenarioTest`, `SimAudioDrawerViewModelTest`, and `SimConnectivityRoutingTest`. No new L3 rerun is recorded for this UI copy/presentation cleanup yet.
+  - [x] **2026-03-21 UX Cleanup Device Smoke**
+    A short on-device smoke check is now recorded in `docs/reports/tests/L3-20260321-sim-wave5-ux-cleanup-smoke.md`. The contained manager presentation and the human-readable offline sync message both checked green on device.
 - [ ] **Done When**
   - [x] connectivity remains available in SIM
-  - [ ] connectivity remains decoupled from the two main feature lanes
+  - [x] connectivity remains decoupled from the two main feature lanes
 
 ### Wave 6: Storage and DI Isolation
 > Objective: Build the contamination firewall in runtime composition and persistence.

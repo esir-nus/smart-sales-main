@@ -12,7 +12,7 @@
 ## Planned Mission: SIM Standalone Prototype
 > **Context**: Direct user-requested standalone prototype mission. This work is intentionally separate from the current agent app and must not contaminate the live agent runtime by default.
 
-- **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 T5.2 Accepted / Isolation Active
+- **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Accepted / Validation Active
 - **Primary Product Doc**: [`docs/to-cerb/sim-standalone-prototype/concept.md`](../to-cerb/sim-standalone-prototype/concept.md)
 - **Mental Model Doc**: [`docs/to-cerb/sim-standalone-prototype/mental-model.md`](../to-cerb/sim-standalone-prototype/mental-model.md)
 - **Mission Tracker**: [`docs/plans/sim-tracker.md`](./sim-tracker.md)
@@ -24,6 +24,8 @@
 - **Wave 1 Acceptance**: [`docs/reports/tests/L3-20260319-sim-wave1-shell-acceptance.md`](../reports/tests/L3-20260319-sim-wave1-shell-acceptance.md)
 - **Wave 4 Acceptance**: [`docs/reports/tests/L3-20260320-sim-wave4-scheduler-validation.md`](../reports/tests/L3-20260320-sim-wave4-scheduler-validation.md)
 - **Wave 5 Acceptance**: [`docs/reports/tests/L3-20260321-sim-wave5-connectivity-validation.md`](../reports/tests/L3-20260321-sim-wave5-connectivity-validation.md)
+- **Wave 5 Connectivity-Absent Acceptance**: [`docs/reports/tests/L3-20260321-sim-wave5-connectivity-absent-validation.md`](../reports/tests/L3-20260321-sim-wave5-connectivity-absent-validation.md)
+- **Wave 5 UX Cleanup Smoke**: [`docs/reports/tests/L3-20260321-sim-wave5-ux-cleanup-smoke.md`](../reports/tests/L3-20260321-sim-wave5-ux-cleanup-smoke.md)
 - **Wave 5 Boundary Audit**: [`docs/reports/20260321-sim-wave5-boundary-audit.md`](../reports/20260321-sim-wave5-boundary-audit.md)
 - **Audit Output**: [`docs/reports/20260319-sim-standalone-code-audit.md`](../reports/20260319-sim-standalone-code-audit.md)
 - **Clarification Audit**: [`docs/reports/20260319-sim-clarification-evidence-audit.md`](../reports/20260319-sim-clarification-evidence-audit.md)
@@ -48,7 +50,7 @@
   - Source-led Tingwu artifacts with optional readability polishing
   - No agent memory or smart-agent system integration
 - **Current Carry Debt**:
-  - SIM now has a shell-owned badge scheduler follow-up continuity binding with real `BadgeAudioPipeline.Complete` ingress; hardware-specific L3 remains deferred until the physical badge is available, deeper scheduler follow-up intelligence beyond the metadata-only binding remains open, and scheduler shipping hardening still needs focused L2/L3 proof for date attention plus the larger reschedule-motion and alarm/notification lanes
+  - SIM now has a shell-owned badge scheduler follow-up continuity binding with real `BadgeAudioPipeline.Complete` ingress, live `Uni-M` multi-task scheduler create ingress is wired in code, and Wave 5 connectivity is accepted across manager-routing proof, the disconnected connectivity-absent rerun, and the later UX-cleanup smoke check. Remaining debt is now outside this Wave 5 UX slice: hardware-specific L3 remains deferred until the physical badge is available, deeper scheduler follow-up intelligence beyond the metadata-only binding remains open, focused scheduler L1 plus focused Compose/device validation are now green for date attention and reschedule motion, and scheduler shipping hardening now mainly needs the later alarm/notification lane
 
 ---
 

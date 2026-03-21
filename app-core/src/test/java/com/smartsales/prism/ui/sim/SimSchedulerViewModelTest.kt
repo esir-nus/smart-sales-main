@@ -1,0 +1,914 @@
+package com.smartsales.prism.ui.sim
+
+import com.smartsales.core.llm.ExecutorResult
+import com.smartsales.core.pipeline.PromptCompiler
+import com.smartsales.core.pipeline.RealUniAExtractionService
+import com.smartsales.core.pipeline.RealUniBExtractionService
+import com.smartsales.core.pipeline.RealUniCExtractionService
+import com.smartsales.core.pipeline.RealUniMExtractionService
+import com.smartsales.core.telemetry.PipelineValve
+import com.smartsales.core.test.fakes.FakeExecutor
+import com.smartsales.core.test.fakes.FakeInspirationRepository
+import com.smartsales.core.test.fakes.FakeScheduleBoard
+import com.smartsales.prism.domain.asr.AsrResult
+import com.smartsales.prism.domain.asr.AsrService
+import com.smartsales.prism.domain.memory.ConflictResult
+import com.smartsales.prism.domain.memory.ScheduleItem
+import com.smartsales.prism.domain.memory.ScheduleBoard
+import com.smartsales.prism.domain.scheduler.CreateTasksParams
+import com.smartsales.prism.domain.scheduler.FastTrackMutationEngine
+import com.smartsales.prism.domain.scheduler.FastTrackResult
+import com.smartsales.prism.domain.scheduler.FakeScheduledTaskRepository
+import com.smartsales.prism.domain.scheduler.ScheduledTask
+import com.smartsales.prism.domain.scheduler.SchedulerLinter
+import com.smartsales.prism.domain.scheduler.TaskDefinition
+import com.smartsales.prism.domain.scheduler.UrgencyEnum
+import com.smartsales.prism.domain.scheduler.UrgencyLevel
+import com.smartsales.prism.domain.scheduler.fakes.FakeTimeProvider
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import java.io.File
+import java.time.Instant
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class SimSchedulerViewModelTest {
+
+    private val testDispatcher = StandardTestDispatcher()
+
+    private lateinit var taskRepository: FakeScheduledTaskRepository
+    private lateinit var inspirationRepository: FakeInspirationRepository
+    private lateinit var scheduleBoard: FakeScheduleBoard
+    private lateinit var fakeExecutor: FakeExecutor
+    private lateinit var asrService: StubAsrService
+    private lateinit var timeProvider: FakeTimeProvider
+    private lateinit var viewModel: SimSchedulerViewModel
+    private val valveEvents = mutableListOf<Pair<PipelineValve.Checkpoint, String>>()
+
+    @Before
+    fun setup() {
+        Dispatchers.setMain(testDispatcher)
+        valveEvents.clear()
+        PipelineValve.testInterceptor = { checkpoint, _, summary ->
+            valveEvents += checkpoint to summary
+        }
+        taskRepository = FakeScheduledTaskRepository()
+        inspirationRepository = FakeInspirationRepository()
+        scheduleBoard = FakeScheduleBoard()
+        fakeExecutor = FakeExecutor()
+        asrService = StubAsrService()
+        timeProvider = FakeTimeProvider()
+        timeProvider.fixedInstant = Instant.parse("2026-03-20T09:00:00Z")
+
+        val schedulerLinter = SchedulerLinter(timeProvider)
+        val promptCompiler = PromptCompiler()
+
+        viewModel = buildViewModel(scheduleBoard, schedulerLinter, promptCompiler)
+    }
+
+    private fun buildViewModel(
+        scheduleBoard: ScheduleBoard,
+        schedulerLinter: SchedulerLinter = SchedulerLinter(timeProvider),
+        promptCompiler: PromptCompiler = PromptCompiler()
+    ): SimSchedulerViewModel {
+        return SimSchedulerViewModel(
+            taskRepository = taskRepository,
+            inspirationRepository = inspirationRepository,
+            scheduleBoard = scheduleBoard,
+            fastTrackMutationEngine = FastTrackMutationEngine(
+                taskRepository = taskRepository,
+                scheduleBoard = scheduleBoard,
+                inspirationRepository = inspirationRepository,
+                timeProvider = timeProvider
+            ),
+            asrService = asrService,
+            uniMExtractionService = RealUniMExtractionService(fakeExecutor, promptCompiler, schedulerLinter),
+            uniAExtractionService = RealUniAExtractionService(fakeExecutor, promptCompiler, schedulerLinter),
+            uniBExtractionService = RealUniBExtractionService(fakeExecutor, promptCompiler, schedulerLinter),
+            uniCExtractionService = RealUniCExtractionService(fakeExecutor, promptCompiler, schedulerLinter),
+            timeProvider = timeProvider
+        )
+    }
+
+    @After
+    fun tearDown() {
+        PipelineValve.testInterceptor = null
+        Dispatchers.resetMain()
+    }
+
+    @Test
+    fun `processAudio single task now day offset exact create emits telemetry`() = runTest {
+        asrService.nextResult = AsrResult.Success("明天下午三点开会")
+        enqueueExactCreateResponse(startTimeIso = "2026-03-21T07:00:00Z")
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        assertTrue(taskRepository.queryByDateRange(timeProvider.today, timeProvider.today.plusDays(2)).snapshot().any { it is ScheduledTask && it.title == "开会" })
+        assertTrue(
+            valveEvents.any {
+                it.first == PipelineValve.Checkpoint.TASK_EXTRACTED &&
+                    it.second == "SIM scheduler single-task NOW_DAY_OFFSET extracted"
+            }
+        )
+    }
+
+    @Test
+    fun `processAudio single task now offset exact create emits telemetry`() = runTest {
+        asrService.nextResult = AsrResult.Success("三小时后开会")
+        enqueueExactCreateResponse(startTimeIso = "2026-03-20T12:00:00Z")
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        assertTrue(taskRepository.queryByDateRange(timeProvider.today, timeProvider.today.plusDays(1)).snapshot().any { it is ScheduledTask && it.title == "开会" })
+        assertTrue(
+            valveEvents.any {
+                it.first == PipelineValve.Checkpoint.TASK_EXTRACTED &&
+                    it.second == "SIM scheduler single-task NOW_OFFSET extracted"
+            }
+        )
+    }
+
+    @Test
+    fun `processAudio vague create falls back to Uni-B`() = runTest {
+        asrService.nextResult = AsrResult.Success("明天提醒我开会")
+        enqueueNotMultiResponse()
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "NOT_EXACT",
+                  "reason": "缺少明确时间"
+                }
+                """.trimIndent()
+            )
+        )
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "VAGUE_CREATE",
+                  "task": {
+                    "title": "提醒我开会",
+                    "anchorDateIso": "2026-03-21",
+                    "timeHint": "下午",
+                    "urgency": "L3"
+                  }
+                }
+                """.trimIndent()
+            )
+        )
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        assertTrue(taskRepository.queryByDateRange(timeProvider.today, timeProvider.today.plusDays(2)).snapshot().any {
+            it is ScheduledTask && it.title == "提醒我开会" && it.isVague
+        })
+    }
+
+    @Test
+    fun `processAudio inspiration create keeps shelf alive`() = runTest {
+        asrService.nextResult = AsrResult.Success("记一下下周可以聊新的会员方案")
+        enqueueNotMultiResponse()
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "NOT_EXACT",
+                  "reason": "不是精确任务"
+                }
+                """.trimIndent()
+            )
+        )
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "NOT_VAGUE",
+                  "reason": "更像灵感"
+                }
+                """.trimIndent()
+            )
+        )
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "INSPIRATION_CREATE",
+                  "idea": {
+                    "content": "下周可以聊新的会员方案"
+                  }
+                }
+                """.trimIndent()
+            )
+        )
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        assertTrue(inspirationRepository.getAll().snapshot().isNotEmpty())
+    }
+
+    @Test
+    fun `onReschedule with explicit time updates existing task`() = runTest {
+        val taskId = taskRepository.insertTask(
+            ScheduledTask(
+                id = "task-1",
+                timeDisplay = "10:00",
+                title = "客户会议",
+                urgencyLevel = UrgencyLevel.L2_IMPORTANT,
+                startTime = Instant.parse("2026-03-20T02:00:00Z"),
+                durationMinutes = 60
+            )
+        )
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "EXACT_CREATE",
+                  "task": {
+                    "title": "客户会议",
+                    "startTimeIso": "2026-03-20T08:30:00Z",
+                    "durationMinutes": 45,
+                    "urgency": "L2"
+                  }
+                }
+                """.trimIndent()
+            )
+        )
+
+        viewModel.onReschedule(taskId, "改到今天下午四点半")
+        advanceUntilIdle()
+
+        val updated = taskRepository.getTask(taskId)
+        assertNotNull(updated)
+        assertEquals(Instant.parse("2026-03-20T08:30:00Z"), updated!!.startTime)
+        assertEquals(45, updated.durationMinutes)
+    }
+
+    @Test
+    fun `onReschedule off page move arms right exit motion and destination attention`() = runTest {
+        val taskId = taskRepository.insertTask(
+            ScheduledTask(
+                id = "task-1",
+                timeDisplay = "10:00",
+                title = "客户会议",
+                urgencyLevel = UrgencyLevel.L2_IMPORTANT,
+                startTime = Instant.parse("2026-03-20T02:00:00Z"),
+                durationMinutes = 60
+            )
+        )
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "EXACT_CREATE",
+                  "task": {
+                    "title": "客户会议",
+                    "startTimeIso": "2026-03-21T08:30:00Z",
+                    "durationMinutes": 45,
+                    "urgency": "L2"
+                  }
+                }
+                """.trimIndent()
+            )
+        )
+
+        viewModel.onReschedule(taskId, "改到明天下午四点半")
+        advanceTimeBy(250)
+        runCurrent()
+
+        assertEquals(1, viewModel.exitingTasks.value.size)
+        assertEquals(com.smartsales.prism.ui.drawers.scheduler.ExitDirection.RIGHT, viewModel.exitingTasks.value.single().exitDirection)
+        assertEquals(setOf(1), viewModel.unacknowledgedDates.value)
+        assertEquals(setOf(1), viewModel.rescheduledDates.value)
+        assertTrue(
+            valveEvents.any {
+                it.first == PipelineValve.Checkpoint.UI_STATE_EMITTED &&
+                    it.second == "SIM scheduler reschedule exit motion armed"
+            }
+        )
+
+        advanceTimeBy(500)
+        advanceUntilIdle()
+        assertTrue(viewModel.exitingTasks.value.isEmpty())
+    }
+
+    @Test
+    fun `onReschedule same day later time arms right exit motion without destination attention`() = runTest {
+        val taskId = taskRepository.insertTask(
+            ScheduledTask(
+                id = "task-1",
+                timeDisplay = "10:00",
+                title = "客户会议",
+                urgencyLevel = UrgencyLevel.L2_IMPORTANT,
+                startTime = Instant.parse("2026-03-20T02:00:00Z"),
+                durationMinutes = 60
+            )
+        )
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "EXACT_CREATE",
+                  "task": {
+                    "title": "客户会议",
+                    "startTimeIso": "2026-03-20T08:30:00Z",
+                    "durationMinutes": 45,
+                    "urgency": "L2"
+                  }
+                }
+                """.trimIndent()
+            )
+        )
+
+        viewModel.onReschedule(taskId, "改到今天下午四点半")
+        advanceTimeBy(250)
+        runCurrent()
+
+        assertEquals(1, viewModel.exitingTasks.value.size)
+        assertEquals(com.smartsales.prism.ui.drawers.scheduler.ExitDirection.RIGHT, viewModel.exitingTasks.value.single().exitDirection)
+        assertTrue(viewModel.unacknowledgedDates.value.isEmpty())
+        assertTrue(viewModel.rescheduledDates.value.isEmpty())
+    }
+
+    @Test
+    fun `onReschedule same day earlier time arms left exit motion without destination attention`() = runTest {
+        val taskId = taskRepository.insertTask(
+            ScheduledTask(
+                id = "task-1",
+                timeDisplay = "16:00",
+                title = "客户会议",
+                urgencyLevel = UrgencyLevel.L2_IMPORTANT,
+                startTime = Instant.parse("2026-03-20T08:00:00Z"),
+                durationMinutes = 60
+            )
+        )
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "EXACT_CREATE",
+                  "task": {
+                    "title": "客户会议",
+                    "startTimeIso": "2026-03-20T05:00:00Z",
+                    "durationMinutes": 45,
+                    "urgency": "L2"
+                  }
+                }
+                """.trimIndent()
+            )
+        )
+
+        viewModel.onReschedule(taskId, "改到今天下午一点")
+        advanceTimeBy(250)
+        runCurrent()
+
+        assertEquals(1, viewModel.exitingTasks.value.size)
+        assertEquals(com.smartsales.prism.ui.drawers.scheduler.ExitDirection.LEFT, viewModel.exitingTasks.value.single().exitDirection)
+        assertTrue(viewModel.unacknowledgedDates.value.isEmpty())
+        assertTrue(viewModel.rescheduledDates.value.isEmpty())
+    }
+
+    @Test
+    fun `onReschedule duration only change does not arm exit motion`() = runTest {
+        val taskId = taskRepository.insertTask(
+            ScheduledTask(
+                id = "task-1",
+                timeDisplay = "10:00",
+                title = "客户会议",
+                urgencyLevel = UrgencyLevel.L2_IMPORTANT,
+                startTime = Instant.parse("2026-03-20T02:00:00Z"),
+                durationMinutes = 60
+            )
+        )
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "EXACT_CREATE",
+                  "task": {
+                    "title": "客户会议",
+                    "startTimeIso": "2026-03-20T02:00:00Z",
+                    "durationMinutes": 90,
+                    "urgency": "L2"
+                  }
+                }
+                """.trimIndent()
+            )
+        )
+
+        viewModel.onReschedule(taskId, "延长到九十分钟")
+        advanceUntilIdle()
+
+        assertTrue(viewModel.exitingTasks.value.isEmpty())
+        assertTrue(viewModel.unacknowledgedDates.value.isEmpty())
+        assertTrue(viewModel.rescheduledDates.value.isEmpty())
+        assertFalse(
+            valveEvents.any {
+                it.first == PipelineValve.Checkpoint.UI_STATE_EMITTED &&
+                    it.second == "SIM scheduler reschedule exit motion armed"
+            }
+        )
+    }
+
+    @Test
+    fun `processAudio reschedule-like transcript safe fails with noted gap`() = runTest {
+        asrService.nextResult = AsrResult.Success("把那个会议改到晚上九点")
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        assertEquals("已记录缺口：全局跟进式改期仍待接入共享上下文 owner", viewModel.conflictWarning.value)
+        assertTrue(taskRepository.queryByDateRange(timeProvider.today, timeProvider.today.plusDays(2)).snapshot().isEmpty())
+    }
+
+    @Test
+    fun `processAudio exact create surfaces conflict state`() = runTest {
+        asrService.nextResult = AsrResult.Success("明天下午三点开会")
+        scheduleBoard.nextConflictResult = ConflictResult.Conflict(
+            overlaps = listOf(
+                ScheduleItem(
+                    entryId = "other-task",
+                    title = "已有会议",
+                    scheduledAt = Instant.parse("2026-03-21T07:00:00Z").toEpochMilli(),
+                    durationMinutes = 60,
+                    durationSource = com.smartsales.prism.domain.memory.DurationSource.DEFAULT,
+                    conflictPolicy = com.smartsales.prism.domain.memory.ConflictPolicy.EXCLUSIVE
+                )
+            )
+        )
+        enqueueExactCreateResponse(startTimeIso = "2026-03-21T07:00:00Z")
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        assertTrue(viewModel.conflictedTaskIds.value.contains("other-task"))
+    }
+
+    @Test
+    fun `processAudio off page exact create marks normal date attention`() = runTest {
+        asrService.nextResult = AsrResult.Success("明天下午三点开会")
+        enqueueExactCreateResponse(startTimeIso = "2026-03-21T07:00:00Z")
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        assertEquals(setOf(1), viewModel.unacknowledgedDates.value)
+        assertTrue(viewModel.rescheduledDates.value.isEmpty())
+    }
+
+    @Test
+    fun `processAudio off page vague create marks normal date attention`() = runTest {
+        asrService.nextResult = AsrResult.Success("明天提醒我开会")
+        enqueueNotMultiResponse()
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "NOT_EXACT",
+                  "reason": "缺少明确时间"
+                }
+                """.trimIndent()
+            )
+        )
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "VAGUE_CREATE",
+                  "task": {
+                    "title": "提醒我开会",
+                    "anchorDateIso": "2026-03-21",
+                    "timeHint": "下午",
+                    "urgency": "L3"
+                  }
+                }
+                """.trimIndent()
+            )
+        )
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        assertEquals(setOf(1), viewModel.unacknowledgedDates.value)
+        assertTrue(viewModel.rescheduledDates.value.isEmpty())
+    }
+
+    @Test
+    fun `processAudio off page conflict create marks warning date attention`() = runTest {
+        asrService.nextResult = AsrResult.Success("明天下午三点开会")
+        scheduleBoard.nextConflictResult = ConflictResult.Conflict(
+            overlaps = listOf(
+                ScheduleItem(
+                    entryId = "other-task",
+                    title = "已有会议",
+                    scheduledAt = Instant.parse("2026-03-21T07:00:00Z").toEpochMilli(),
+                    durationMinutes = 60,
+                    durationSource = com.smartsales.prism.domain.memory.DurationSource.DEFAULT,
+                    conflictPolicy = com.smartsales.prism.domain.memory.ConflictPolicy.EXCLUSIVE
+                )
+            )
+        )
+        enqueueExactCreateResponse(startTimeIso = "2026-03-21T07:00:00Z")
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        assertEquals(setOf(1), viewModel.unacknowledgedDates.value)
+        assertEquals(setOf(1), viewModel.rescheduledDates.value)
+    }
+
+    @Test
+    fun `processAudio same page create does not mark date attention`() = runTest {
+        viewModel.onDateSelected(1)
+        asrService.nextResult = AsrResult.Success("明天下午三点开会")
+        enqueueExactCreateResponse(startTimeIso = "2026-03-21T07:00:00Z")
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        assertTrue(viewModel.unacknowledgedDates.value.isEmpty())
+        assertTrue(viewModel.rescheduledDates.value.isEmpty())
+    }
+
+    @Test
+    fun `processAudio multi task create marks dates independently`() = runTest {
+        val sequenceBoard = SequenceScheduleBoard(
+            listOf(
+                ConflictResult.Clear,
+                ConflictResult.Conflict(
+                    overlaps = listOf(
+                        ScheduleItem(
+                            entryId = "other-task",
+                            title = "已有会议",
+                            scheduledAt = Instant.parse("2026-03-22T07:00:00Z").toEpochMilli(),
+                            durationMinutes = 60,
+                            durationSource = com.smartsales.prism.domain.memory.DurationSource.DEFAULT,
+                            conflictPolicy = com.smartsales.prism.domain.memory.ConflictPolicy.EXCLUSIVE
+                        )
+                    )
+                )
+            )
+        )
+        viewModel = buildViewModel(sequenceBoard)
+        viewModel.applyFastTrackResultForTesting(
+            FastTrackResult.CreateTasks(
+                CreateTasksParams(
+                    tasks = listOf(
+                        TaskDefinition(
+                            title = "客户会A",
+                            startTimeIso = "2026-03-21T07:00:00Z",
+                            durationMinutes = 60,
+                            urgency = UrgencyEnum.L2_IMPORTANT
+                        ),
+                        TaskDefinition(
+                            title = "客户会B",
+                            startTimeIso = "2026-03-22T07:00:00Z",
+                            durationMinutes = 60,
+                            urgency = UrgencyEnum.L2_IMPORTANT
+                        )
+                    )
+                )
+            )
+        )
+        advanceUntilIdle()
+
+        assertEquals(setOf(1, 2), viewModel.unacknowledgedDates.value)
+        assertEquals(setOf(2), viewModel.rescheduledDates.value)
+    }
+
+    @Test
+    fun `processAudio multi task same date becomes warning when any task conflicts`() = runTest {
+        val sequenceBoard = SequenceScheduleBoard(
+            listOf(
+                ConflictResult.Clear,
+                ConflictResult.Conflict(
+                    overlaps = listOf(
+                        ScheduleItem(
+                            entryId = "other-task",
+                            title = "已有会议",
+                            scheduledAt = Instant.parse("2026-03-21T08:00:00Z").toEpochMilli(),
+                            durationMinutes = 60,
+                            durationSource = com.smartsales.prism.domain.memory.DurationSource.DEFAULT,
+                            conflictPolicy = com.smartsales.prism.domain.memory.ConflictPolicy.EXCLUSIVE
+                        )
+                    )
+                )
+            )
+        )
+        viewModel = buildViewModel(sequenceBoard)
+        viewModel.applyFastTrackResultForTesting(
+            FastTrackResult.CreateTasks(
+                CreateTasksParams(
+                    tasks = listOf(
+                        TaskDefinition(
+                            title = "客户会A",
+                            startTimeIso = "2026-03-21T07:00:00Z",
+                            durationMinutes = 60,
+                            urgency = UrgencyEnum.L2_IMPORTANT
+                        ),
+                        TaskDefinition(
+                            title = "客户会B",
+                            startTimeIso = "2026-03-21T08:00:00Z",
+                            durationMinutes = 60,
+                            urgency = UrgencyEnum.L2_IMPORTANT
+                        )
+                    )
+                )
+            )
+        )
+        advanceUntilIdle()
+
+        assertEquals(setOf(1), viewModel.unacknowledgedDates.value)
+        assertEquals(setOf(1), viewModel.rescheduledDates.value)
+    }
+
+    @Test
+    fun `onDateSelected acknowledges create attention`() = runTest {
+        asrService.nextResult = AsrResult.Success("明天下午三点开会")
+        enqueueExactCreateResponse(startTimeIso = "2026-03-21T07:00:00Z")
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+        viewModel.onDateSelected(1)
+
+        assertTrue(viewModel.unacknowledgedDates.value.isEmpty())
+        assertTrue(viewModel.rescheduledDates.value.isEmpty())
+    }
+
+    @Test
+    fun `processAudio multi task create via Uni-M creates independent tasks and attention`() = runTest {
+        val sequenceBoard = SequenceScheduleBoard(
+            listOf(
+                ConflictResult.Clear,
+                ConflictResult.Conflict(
+                    overlaps = listOf(
+                        ScheduleItem(
+                            entryId = "other-task",
+                            title = "已有会议",
+                            scheduledAt = Instant.parse("2026-03-22T00:00:00Z").toEpochMilli(),
+                            durationMinutes = 60,
+                            durationSource = com.smartsales.prism.domain.memory.DurationSource.DEFAULT,
+                            conflictPolicy = com.smartsales.prism.domain.memory.ConflictPolicy.EXCLUSIVE
+                        )
+                    )
+                )
+            )
+        )
+        viewModel = buildViewModel(sequenceBoard)
+        asrService.nextResult = AsrResult.Success("今晚八点吃饭，明天凌晨三点起床，四小时后赶飞机")
+        enqueueMultiCreateResponse(
+            """
+            {
+              "decision": "MULTI_CREATE",
+              "fragments": [
+                {
+                  "title": "吃饭",
+                  "mode": "EXACT",
+                  "anchorKind": "ABSOLUTE",
+                  "startTimeIso": "2026-03-20T12:00:00Z",
+                  "durationMinutes": 60,
+                  "urgency": "L2"
+                },
+                {
+                  "title": "起床",
+                  "mode": "EXACT",
+                  "anchorKind": "PREVIOUS_DAY_OFFSET",
+                  "relativeDayOffset": 1,
+                  "clockTime": "03:00",
+                  "durationMinutes": 0,
+                  "urgency": "L1"
+                },
+                {
+                  "title": "赶飞机",
+                  "mode": "EXACT",
+                  "anchorKind": "PREVIOUS_EXACT_OFFSET",
+                  "relativeOffsetMinutes": 240,
+                  "durationMinutes": 0,
+                  "urgency": "L1"
+                }
+              ]
+            }
+            """.trimIndent()
+        )
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        val tasks = taskRepository.queryByDateRange(timeProvider.today, timeProvider.today.plusDays(3)).snapshot()
+            .filterIsInstance<ScheduledTask>()
+        assertEquals(3, tasks.size)
+        assertEquals(setOf(1), viewModel.unacknowledgedDates.value)
+        assertEquals(setOf(1), viewModel.rescheduledDates.value)
+        assertEquals("已创建 3 个日程", viewModel.pipelineStatus.value)
+    }
+
+    @Test
+    fun `processAudio multi task clock relative after vague predecessor downgrades to vague`() = runTest {
+        asrService.nextResult = AsrResult.Success("明天开会，三小时后赶飞机")
+        enqueueMultiCreateResponse(
+            """
+            {
+              "decision": "MULTI_CREATE",
+              "fragments": [
+                {
+                  "title": "开会",
+                  "mode": "VAGUE",
+                  "anchorKind": "ABSOLUTE",
+                  "anchorDateIso": "2026-03-21",
+                  "timeHint": "明天",
+                  "urgency": "L2"
+                },
+                {
+                  "title": "赶飞机",
+                  "mode": "EXACT",
+                  "anchorKind": "PREVIOUS_EXACT_OFFSET",
+                  "relativeOffsetMinutes": 180,
+                  "timeHint": "三小时后",
+                  "urgency": "L1"
+                }
+              ]
+            }
+            """.trimIndent()
+        )
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        val tasks = taskRepository.queryByDateRange(timeProvider.today, timeProvider.today.plusDays(2)).snapshot()
+            .filterIsInstance<ScheduledTask>()
+        assertEquals(2, tasks.size)
+        assertTrue(tasks.any { it.title == "赶飞机" && it.isVague })
+        assertEquals("已创建 2 个日程，1 个片段已按待定处理", viewModel.pipelineStatus.value)
+    }
+
+    @Test
+    fun `processAudio multi task now anchored fragments resolve from current moment and next day`() = runTest {
+        asrService.nextResult = AsrResult.Success("三小时后开会，明天下午三点汇报")
+        enqueueMultiCreateResponse(
+            """
+            {
+              "decision": "MULTI_CREATE",
+              "fragments": [
+                {
+                  "title": "开会",
+                  "mode": "EXACT",
+                  "anchorKind": "NOW_OFFSET",
+                  "relativeOffsetMinutes": 180,
+                  "durationMinutes": 60,
+                  "urgency": "L2"
+                },
+                {
+                  "title": "汇报",
+                  "mode": "EXACT",
+                  "anchorKind": "NOW_DAY_OFFSET",
+                  "relativeDayOffset": 1,
+                  "clockTime": "15:00",
+                  "durationMinutes": 60,
+                  "urgency": "L2"
+                }
+              ]
+            }
+            """.trimIndent()
+        )
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        val tasks = taskRepository.queryByDateRange(timeProvider.today, timeProvider.today.plusDays(2)).snapshot()
+            .filterIsInstance<ScheduledTask>()
+        assertEquals(2, tasks.size)
+        assertTrue(tasks.any { it.title == "开会" && it.startTime == Instant.parse("2026-03-20T12:00:00Z") })
+        assertTrue(tasks.any { it.title == "汇报" && it.startTime == Instant.parse("2026-03-21T07:00:00Z") })
+        assertEquals("已创建 2 个日程", viewModel.pipelineStatus.value)
+    }
+
+    @Test
+    fun `processAudio multi task partial success keeps later lawful tasks`() = runTest {
+        asrService.nextResult = AsrResult.Success("然后赶飞机，明天下午三点开会")
+        enqueueMultiCreateResponse(
+            """
+            {
+              "decision": "MULTI_CREATE",
+              "fragments": [
+                {
+                  "title": "赶飞机",
+                  "mode": "EXACT",
+                  "anchorKind": "PREVIOUS_EXACT_OFFSET",
+                  "relativeOffsetMinutes": 240,
+                  "urgency": "L1"
+                },
+                {
+                  "title": "开会",
+                  "mode": "EXACT",
+                  "anchorKind": "NOW_DAY_OFFSET",
+                  "relativeDayOffset": 1,
+                  "clockTime": "15:00",
+                  "durationMinutes": 60,
+                  "urgency": "L2"
+                }
+              ]
+            }
+            """.trimIndent()
+        )
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        val tasks = taskRepository.queryByDateRange(timeProvider.today, timeProvider.today.plusDays(2)).snapshot()
+            .filterIsInstance<ScheduledTask>()
+        assertEquals(1, tasks.size)
+        assertEquals("开会", tasks.single().title)
+        assertEquals(Instant.parse("2026-03-21T07:00:00Z"), tasks.single().startTime)
+        assertEquals("已创建 1 个日程，1 个片段未创建", viewModel.pipelineStatus.value)
+    }
+
+    private suspend fun <T> kotlinx.coroutines.flow.Flow<List<T>>.snapshot(): List<T> = first()
+
+    private fun enqueueNotMultiResponse(reason: String = "单任务") {
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "NOT_MULTI",
+                  "reason": "$reason"
+                }
+                """.trimIndent()
+            )
+        )
+    }
+
+    private fun enqueueMultiCreateResponse(payload: String) {
+        fakeExecutor.enqueueResponse(ExecutorResult.Success(payload))
+    }
+
+    private fun enqueueExactCreateResponse(
+        startTimeIso: String,
+        title: String = "开会",
+        durationMinutes: Int = 60,
+        urgency: String = "L2"
+    ) {
+        enqueueNotMultiResponse()
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "EXACT_CREATE",
+                  "task": {
+                    "title": "$title",
+                    "startTimeIso": "$startTimeIso",
+                    "durationMinutes": $durationMinutes,
+                    "urgency": "$urgency"
+                  }
+                }
+                """.trimIndent()
+            )
+        )
+    }
+
+    private class SequenceScheduleBoard(
+        results: List<ConflictResult>
+    ) : ScheduleBoard {
+        private val queue = ArrayDeque(results)
+        private val _upcomingItems = kotlinx.coroutines.flow.MutableStateFlow<List<ScheduleItem>>(emptyList())
+
+        override val upcomingItems: kotlinx.coroutines.flow.StateFlow<List<ScheduleItem>> = _upcomingItems
+
+        override suspend fun checkConflict(
+            proposedStart: Long,
+            durationMinutes: Int,
+            excludeId: String?
+        ): ConflictResult {
+            return queue.removeFirstOrNull() ?: ConflictResult.Clear
+        }
+
+        override suspend fun refresh() = Unit
+
+        override suspend fun findLexicalMatch(targetQuery: String): ScheduleItem? = null
+    }
+
+    private class StubAsrService : AsrService {
+        var nextResult: AsrResult = AsrResult.Success("")
+
+        override suspend fun transcribe(file: File): AsrResult = nextResult
+
+        override suspend fun isAvailable(): Boolean = true
+    }
+}

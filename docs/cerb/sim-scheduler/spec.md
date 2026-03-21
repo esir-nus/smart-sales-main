@@ -60,6 +60,7 @@ Explicitly excluded from SIM V1:
 - CRM memory
 - Path B enrichment
 - smart-agent session memory
+- connectivity state or badge management behavior
 
 ---
 
@@ -87,16 +88,84 @@ Expected replacement:
 
 - open scheduler drawer
 - view timeline
+- keep inspiration shelf visible in the reused scheduler surface
+- treat shelf-card `Ask AI` as a plain chat-session launcher that seeds the first user turn with the inspiration text and auto-submits it
 - create Path A tasks
 - reschedule and delete in the delivered Path A-compatible way
 - surface conflict-visible scheduler results
 
+### Shipping Hardening Carry Lane
+
+The baseline Path A slice is in place, but SIM scheduler is not yet shipping-complete.
+
+The remaining scheduler hardening requirements are:
+
+- **Date attention signaling**
+  - when create or reschedule lands on a date different from the currently viewed page, the target date must enter an attention state in the calendar
+  - conflict-visible create must use a warning/error attention treatment distinct from normal create
+  - first user tap on that date acknowledges the attention state and stops the blink/glow
+- **Reschedule motion semantics**
+  - reschedule must show that the source card moved rather than simply vanished
+  - source-card exit direction should reflect whether the task moved toward a future or past date
+  - destination date must also receive attention signaling
+- **Android-native banner and reminder integration**
+  - scheduler create / conflict feedback should deepen beyond short toast-level status
+  - task-time reminders should integrate with the existing Android notification and alarm stack rather than inventing a SIM-only duplicate
+- **Urgency-driven reminder cascade**
+  - reminder cadence must stay domain-owned by `UrgencyLevel.buildCascade(...)`
+  - delivery tier must stay split by `CascadeTier`: EARLY banner vs DEADLINE full-screen alarm
+
+Current repo evidence already covers part of this lane:
+
+- calendar attention rendering exists in shared UI via `unacknowledgedDates` / `rescheduledDates`
+- reschedule-ready card state already exists in shared UI models via `TimelineItem.Task.isExiting` and `exitDirection`
+- legacy reminder infrastructure already exists in `RealAlarmScheduler`, `TaskReminderReceiver`, `AlarmActivity`, and `RealNotificationService`
+
+Current SIM-specific gaps:
+
+- create and vague-create now mark off-page target dates into the reused calendar attention state
+- conflict-visible create now reuses the amber warning-priority calendar channel while normal create remains blue
+- multi-task create now aggregates attention per target date, so mixed batches may mark multiple dates independently
+- reschedule path marks the destination date but does not yet drive the source-card motion contract
+- SIM has not yet deliberately adopted the legacy reminder/notification stack as part of its shipped scheduler contract
+
 ### Deferred
 
-- inspiration shelf if it increases surface area without helping the standalone goal
+- inspiration timeline/multi-select AI behavior is deprecated in SIM V1; only the shelf-card `Ask AI` launcher remains valid
+- deeper inspiration shelf upgrades beyond the base shelf-card `Ask AI` chat-launch equivalence
 - tips generation
 - smart voice-to-scheduler badge flow as a required V1 dependency
 - completed-memory merge model if it forces SIM to inherit extra runtime data dependencies
+- deeper badge-origin scheduler follow-up intelligence beyond the shell continuity binding
+- physical-badge-specific L3 proof for the continuity lane while hardware remains unavailable
+
+### SIM Shell Continuity Boundary
+
+If SIM needs cross-surface continuity for a badge-origin scheduler follow-up thread, that continuity is owned by `SIM Shell`, not by `SIM Scheduler`.
+
+In the current implementation this continuity is metadata-only:
+
+- badge-origin thread id
+- bound SIM chat session id
+- last active shell surface
+
+It is not:
+
+- scheduler-owned session memory
+- proof that SIM chat already carries real scheduler follow-up semantics
+- a reason to widen `ISchedulerViewModel`
+
+The current SIM implementation starts or replaces this shell-owned binding from `BadgeAudioPipeline.events` only when `PipelineEvent.Complete` yields `TaskCreated` or non-empty `MultiTaskCreated`.
+
+### Date Attention Contract
+
+SIM reuses the shared scheduler calendar attention channels rather than widening the interface.
+
+- off-page exact create and off-page vague create add their target dates to `unacknowledgedDates`
+- off-page conflict-create adds its target date to both `unacknowledgedDates` and `rescheduledDates`, so the shared calendar renders the warning-priority amber treatment
+- same-page create emits no calendar attention because the created task is already visible in the active timeline
+- multi-task create aggregates attention per target date; any conflicting task on a date upgrades that date to the amber warning-priority channel
+- first user tap on the affected date must acknowledge and clear both attention sets for that date
 
 ---
 
@@ -135,6 +204,11 @@ It does not require:
 
 If keeping the current completed-memory merge forces SIM to depend on unrelated memory services, that is overbuild for this mission.
 
+Connectivity is also out of scheduler scope:
+
+- scheduler must not import `ConnectivityBridge`, `ConnectivityService`, or badge connection state as part of its baseline runtime
+- scheduler create/delete/reschedule behavior must remain meaningful when connectivity is absent or offline
+
 ### Failure Gravity
 
 The main failure is accidentally importing smart-only scheduler collaborators because the UI appears reusable.
@@ -163,4 +237,7 @@ SIM scheduler is ready only when:
 - task creation is Path A-backed
 - no Path B or smart-memory dependency is required for normal operation
 - conflict-visible behavior remains intact
+- create/reschedule attention states make the affected date obvious and user-acknowledgeable
+- reschedule motion makes the move visible rather than implicit
+- reminder and notification behavior is explicitly aligned with the existing alarm/cascade model
 - the smart app scheduler runtime has not been modified in place beyond safe shared UI reuse

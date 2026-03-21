@@ -23,6 +23,7 @@ It exists to preserve the current Prism family look while preventing contaminati
 - top-level drawer orchestration
 - simple navigation between discussion chat, scheduler, and audio
 - shell support surfaces such as history, new page/session, connectivity entry, and settings entry
+- shell-owned badge scheduler follow-up continuity binding metadata
 - prototype-only dependency composition boundary
 
 `SIM Shell` does not own:
@@ -131,8 +132,33 @@ Expected navigation:
 - opening scheduler does not require the smart shell
 - opening audio drawer does not require the smart shell
 - opening history does not require smart memory architecture
+- opening connectivity uses a SIM-owned state-aware route:
+  - `NeedsSetup` opens the bootstrap modal
+  - configured/non-setup states open the connectivity manager directly
+- choosing setup from the connectivity modal opens a full-screen SIM setup branch backed by onboarding pairing steps
+- successful connectivity setup enters the SIM connectivity manager
+- closing the connectivity manager returns the user to normal SIM chat
 - `Ask AI` from audio opens the simple chat surface
 - selecting audio from chat reopens the audio drawer instead of Android file picker
+
+### Connectivity Boundary Rule
+
+For Wave 5 boundary purposes, `SIM Shell` owns only:
+
+- connectivity entry sources
+- route selection between `MODAL`, `SETUP`, and `MANAGER`
+- overlay layering and dismiss semantics
+- close-back-to-chat behavior
+- SIM route telemetry/logging
+
+`SIM Shell` does not own:
+
+- badge connection truth
+- BLE scan or Wi-Fi provisioning behavior
+- reconnect/disconnect/unpair behavior
+- audio-ingress file operations
+
+Those remain owned by the existing connectivity and pairing contracts.
 
 Excluded shell surfaces:
 
@@ -158,6 +184,7 @@ enum class SimDrawerType {
 data class SimShellState(
     val activeDrawer: SimDrawerType? = null,
     val activeChatAudioId: String? = null,
+    val activeConnectivitySurface: SimConnectivitySurface? = null,
     val isChatReady: Boolean = true,
     val showHistory: Boolean = false
 )
@@ -166,7 +193,45 @@ data class SimShellState(
 Notes:
 
 - `activeChatAudioId` identifies the current audio-grounded session context
+- `activeConnectivitySurface` distinguishes the scrim-backed bootstrap modal from the full-screen setup and manager branches
 - no shell state should imply smart history/session browsing or smart-agent orchestration requirements
+
+### Badge Follow-Up Continuity Binding
+
+`SIM Shell` may keep one in-memory, shell-owned metadata record for a badge-origin scheduler follow-up thread.
+
+This continuity binding exists only to preserve ownership across shell surfaces.
+
+It may track:
+
+- badge-origin thread identity
+- the bound SIM chat session id
+- the last active shell surface
+- create/update timestamps
+
+It must not track:
+
+- follow-up transcript turns
+- private session-memory summaries
+- a second local memory lane separate from SIM chat history
+
+The bound SIM chat session remains the conversational source of truth, even though current SIM chat behavior is still placeholder-level and does not yet provide real scheduler follow-up intelligence.
+
+In Wave 5, this continuity binding now starts from the real badge pipeline ingress.
+
+- `SimShell` consumes `BadgeAudioPipeline.events`
+- only `PipelineEvent.Complete` with scheduler-real outcomes may start or replace the binding
+- accepted outcomes are `TaskCreated` and non-empty `MultiTaskCreated`
+- raw recording arrival, shelf-card `Ask AI`, and scheduler dev/test mic paths must not start or mutate this binding
+- each new accepted badge scheduler completion replaces the previous active binding until the pipeline exposes an explicit lineage id
+
+Lifecycle rules:
+
+- overlay navigation across chat, scheduler, history, connectivity, and settings may update the last active surface
+- explicit new session clears the binding
+- switching to an unrelated session clears the binding
+- deleting the bound session clears the binding
+- process death clears the binding because lifetime is in-memory only
 
 ---
 

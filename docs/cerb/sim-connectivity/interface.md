@@ -17,8 +17,27 @@ interface SimConnectivityEntry {
 
 Meaning:
 
-- SIM shell may open badge connection management from a shell-level entry/icon
-- closing returns to normal SIM shell use
+- `open()` routes to either the SIM bootstrap modal or the SIM connectivity manager based on current connectivity state
+- `close()` clears the SIM connectivity route and returns to normal shell use
+
+### Route Semantics
+
+```kotlin
+enum class SimConnectivitySurface {
+    MODAL,
+    SETUP,
+    MANAGER
+}
+```
+
+Meaning:
+
+- SIM shell owns the route state
+- `MODAL` is the bootstrap-only connectivity surface used for `NeedsSetup`
+- `SETUP` is a nested full-screen SIM overlay entered from the modal and backed by the onboarding pairing subset
+- `MANAGER` is the full-screen SIM connectivity surface for all configured/non-setup states, but remains connection-only in this slice
+- setup completion enters `MANAGER`
+- later connectivity entry opens `MANAGER` directly when a device/session already exists
 
 ---
 
@@ -50,11 +69,32 @@ Meaning:
 - SIM shell owns the entry
 - existing connectivity contracts own BLE/Wi-Fi behavior
 
+### Boundary Ownership Rule
+
+Meaning:
+
+- `SimShell` owns only route selection, overlay presentation, close behavior, and SIM route telemetry
+- `ConnectivityBridge`, `ConnectivityService`, and `PairingService` own the underlying connection and setup behavior unchanged
+- SIM must not introduce a second local meaning of "connected"
+- SIM must not let connectivity contracts reshape scheduler runtime behavior
+- SIM audio may consume `ConnectivityBridge` only for badge-origin recording ingress and badge file operations, not for chat/session ownership
+
+### Explicit Carry Debt
+
+Current migration debt that remains outside this interface freeze:
+
+- `PairingService` still leaks `legacy.BlePeripheral` through `DiscoveredBadge`
+- the onboarding viewmodel still carries profile/account collaborators that the SIM pairing subset does not need
+- manager presentation refinement is deferred UI work
+
 ---
 
 ## UI Flow Guarantees
 
 - connectivity is reachable from SIM shell as a support action
+- connectivity opens modal-first only for the `NeedsSetup` bootstrap branch
+- setup is reachable as a nested SIM branch instead of a new activity and reuses onboarding pairing flow ownership
+- configured re-entry opens the connectivity manager directly
 - connectivity state continues to come from the existing connectivity contracts
 - connectivity does not become a hidden dependency of SIM scheduler or SIM audio discussion flows
 

@@ -1,20 +1,23 @@
 # SIM Mission Tracker
 
 > **Mission**: Standalone prototype app with two main feature lanes, Scheduler Path A and Tingwu transcription plus simple audio-grounded chat, plus a decoupled connectivity support module.
-> **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Pending
+> **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 T5.2 Accepted / Isolation Active
 > **Started**: 2026-03-19
-> **Current Gate**: Wave 4 scheduler closeout is accepted with focused on-device telemetry proof recorded. The next active implementation lane is Wave 5 connectivity hard migration.
+> **Current Gate**: Wave 5 T5.2 is now frozen in docs. The connectivity/shell ownership split is explicit, scheduler is locked as connectivity-free, audio is locked to `ConnectivityBridge` only for badge-origin ingress/file operations, and the remaining `PairingService` / onboarding collaborator contamination points are explicit T5.3 debt. The next active gate is code isolation proof, while the manager UI containment follow-up stays deferred.
 > **Primary Product Doc**: `docs/to-cerb/sim-standalone-prototype/concept.md`
 > **Mental Model Doc**: `docs/to-cerb/sim-standalone-prototype/mental-model.md`
 > **Implementation Brief**: `docs/plans/sim_implementation_brief.md`
 > **Wave 1 Execution Brief**: `docs/plans/sim-wave1-execution-brief.md`
 > **Wave 2 Execution Brief**: `docs/plans/sim-wave2-execution-brief.md`
 > **Wave 4 Execution Brief**: `docs/plans/sim-wave4-execution-brief.md`
+> **Wave 5 Execution Brief**: `docs/plans/sim-wave5-execution-brief.md`
 > **Code Audit**: `docs/reports/20260319-sim-standalone-code-audit.md`
 > **Clarification Audit**: `docs/reports/20260319-sim-clarification-evidence-audit.md`
+> **Wave 5 Boundary Audit**: `docs/reports/20260321-sim-wave5-boundary-audit.md`
 > **Wave 1 Acceptance**: `docs/reports/tests/L3-20260319-sim-wave1-shell-acceptance.md`
 > **Wave 2 Negative-Branch Acceptance**: `docs/reports/tests/L3-20260320-sim-wave2-negative-branch-validation.md`
 > **Wave 4 Acceptance**: `docs/reports/tests/L3-20260320-sim-wave4-scheduler-validation.md`
+> **Wave 5 Acceptance**: `docs/reports/tests/L3-20260321-sim-wave5-connectivity-validation.md`
 > **Formal Cerb Shards**:
 > - `docs/cerb/sim-shell/spec.md`
 > - `docs/cerb/sim-shell/interface.md`
@@ -530,13 +533,55 @@ The SIM mission follows this chain:
     The shell-owned request checkpoint is now covered directly in `SimShellHandoffTest`, while `SimAgentViewModelTest` continues to prove the seeded session-start checkpoint. This closes the remaining code-level observability gap for the scheduler-to-chat handoff path without widening scheduler runtime ownership.
   - [x] **2026-03-20 Remaining L3 Note**
     The narrow observability confirmation rerun is complete. Device logs now prove both exact telemetry summaries, both matching `SimSchedulerShelf` lines, and absence of scheduler write evidence during the shelf-card handoff.
-  - [ ] **2026-03-20 Known Gap**
-    The real product follow-up path is physical-badge-origin and therefore global across interfaces. This Wave 4 slice may still stop short of a fully shared badge-thread follow-up context owner across chat, scheduler, settings, and shell entry points. If that global owner is not completed in code, log it as explicit carry debt instead of pretending the scheduler-drawer mic path fully solves the product requirement.
+  - [x] **2026-03-20 Continuity Binding Narrow Fix**
+    SIM now carries a shell-owned badge scheduler follow-up continuity binding as in-memory metadata only. The owner binds one badge-origin scheduler thread to one SIM chat session, tracks the last active shell surface, clears on explicit new session / unrelated session switch / bound-session delete, and stays outside both `ISchedulerViewModel` and SIM scheduler shelf `Ask AI`.
+  - [x] **2026-03-21 Real Badge Ingress Wiring**
+    SIM now starts badge scheduler follow-up continuity from the real badge pipeline ingress. `SimShell` consumes `BadgeAudioPipeline.events` and starts or replaces the metadata-only continuity binding only on `PipelineEvent.Complete` with scheduler-real outcomes (`TaskCreated` and non-empty `MultiTaskCreated`), while shelf-card `Ask AI`, scheduler dev/test mic, raw recording arrival, and non-scheduler completions remain excluded.
+  - [x] **2026-03-21 Surrogate On-Device Note**
+    `docs/reports/tests/L3-20260321-sim-badge-follow-up-continuity.md` is now explicitly framed as a surrogate on-device note, not a failed physical-badge L3. The run used the available in-app recording path before hardware delivery, so it does not block the shipped continuity wiring and must not be treated as negative evidence against the real badge-ingress seam.
+  - [ ] **2026-03-21 Remaining Carry Debt**
+    Physical-badge hardware L3 remains deferred until the badge is in hand, and current SIM chat remains placeholder-level rather than a true scheduler follow-up intelligence lane. The continuity owner is ingress-correct at code/L1 level, but it is still metadata only and does not upgrade SIM chat semantics by itself.
 - [x] **Done When**
   - [x] scheduler works in the standalone shell
   - [x] Path A laws remain intact
   - [x] shelf-card `Ask AI` behaves like a plain seeded new-chat launcher
   - [x] no hidden Path B dependency is required for normal scheduler use
+
+### Parallel Carry Lane: Scheduler Shipping Hardening
+> Objective: Close the remaining scheduler shipping gaps after baseline Wave 4 delivery.
+> **Owning Shard**: `docs/cerb/sim-scheduler/spec.md`
+> **Behavioral Authority**:
+> - `docs/core-flow/sim-scheduler-path-a-flow.md`
+> - `docs/core-flow/scheduler-fast-track-flow.md`
+> **Execution Law**: treat shipping polish as behavior, not decoration. Date attention, motion, and reminders must be user-truthful and legacy-aligned.
+> **Validation Requirement**: each shipping hardening slice must prove both the UI cue and the downstream state/notification consequence.
+
+- [ ] **T4.6: Date Attention Signaling**
+  - [x] **2026-03-21 Audit Note**
+    Shared scheduler UI already supports attention rendering through `unacknowledgedDates` and `rescheduledDates`, and date tap already acknowledges those sets. SIM currently uses that for reschedule destination marking, but create does not yet mark target dates and conflict create does not yet split normal vs warning attention treatment.
+  - [x] **2026-03-21 Implementation Note**
+    SIM now reuses the existing two-channel calendar attention contract for create as well as reschedule. Off-page create marks `unacknowledgedDates`, off-page conflict-create reuses `rescheduledDates` as the warning-priority amber channel, same-page create emits no redundant calendar attention, and multi-task create aggregates attention per target date rather than per mutation.
+  - [x] wire create target-date attention for off-page creates
+  - [x] split normal create vs conflict create calendar attention semantics
+  - [x] prove first user tap on the affected date acknowledges and clears the marker
+  - [x] **2026-03-21 Focused L1**
+    `SimSchedulerViewModelTest` now proves off-page exact create, off-page vague create, off-page conflict-create, same-page no-attention, per-date multi-task aggregation, same-date amber escalation when any created task conflicts, and tap-to-acknowledge clearing.
+  - [ ] **2026-03-21 Focused L2 Status**
+    `SchedulerCalendarTest` was expanded for the new attention semantics seam, but the connected-device instrumentation run is currently blocked by dependency download timeouts from the configured Maven mirror before test execution starts. T4.6 remains acceptance-incomplete until focused Compose/device validation is rerun in a healthy dependency environment.
+- [ ] **T4.7: Reschedule Motion Semantics**
+  - [x] **2026-03-21 Audit Note**
+    Shared scheduler card state already contains `isExiting` and `exitDirection`, but SIM reschedule currently marks only the destination date and does not yet drive visible source-card motion.
+  - [ ] define source-card exit animation contract for future-vs-past moves
+  - [ ] wire destination-date attention together with source-card exit
+  - [ ] prove the rescheduled move is visually legible in both visible-day and off-page cases
+- [ ] **T4.8: Native Banner / Alarm Integration**
+  - [x] **2026-03-21 Audit Note**
+    Legacy reminder infrastructure already exists in `RealAlarmScheduler`, `TaskReminderReceiver`, `AlarmActivity`, and `RealNotificationService`. Reminder cadence is domain-owned by `UrgencyLevel.buildCascade(...)`, and visual delivery tier is split by `CascadeTier` (`EARLY` banner, `DEADLINE` full-screen alarm).
+  - [ ] define which scheduler create/conflict/completion states upgrade from toast-level feedback to native banner/notification behavior in SIM
+  - [ ] decide SIM adoption boundary for legacy alarm stack vs shared main-app behavior
+  - [ ] prove exact-alarm permission, banner delivery, and full-screen deadline behavior against the chosen SIM contract
+- [ ] **2026-03-21 Next Scheduler Slice**
+  The highest-ROI scheduler follow-up after the T4.6 implementation pass is `T4.7`: add source-card reschedule motion semantics and keep destination-date attention aligned with the shipped calendar warning/normal split.
 
 ### Wave 5: Connectivity Hard Migration
 > Objective: Reuse the mature badge connectivity stack as a decoupled SIM support module.
@@ -548,21 +593,41 @@ The SIM mission follows this chain:
 > **Execution Law**: connectivity may be hard-migrated, but it must remain infrastructure/support behavior rather than reviving smart-agent coupling.
 > **Validation Requirement**: prove connectivity entry works in SIM without coupling scheduler and audio/chat flows together.
 
-- [ ] **T5.1: Flow / Shell Entry Contract**
-  - [ ] define shell-level connectivity entry/icon
-  - [ ] define return path back into normal SIM shell use
-- [ ] **T5.2: Spec / Hard Migration Boundary**
-  - [ ] keep BLE/Wi-Fi behavior under existing connectivity contracts
-  - [ ] define what SIM reuses unchanged
-  - [ ] define what SIM wraps at shell level only
+- [x] **T5.1: Flow / Shell Entry Contract**
+  - [x] define shell-level connectivity entry/icon
+  - [x] define return path back into normal SIM shell use
+  - [x] **2026-03-20 Execution Brief**
+    Wave 5 execution is now compressed in `docs/plans/sim-wave5-execution-brief.md`. T5.1 is now locked as the full SIM connectivity flow: `NeedsSetup` opens a bootstrap modal, setup reuses the onboarding pairing subset as a full-screen SIM overlay, setup success enters a full-screen SIM connectivity manager, and later configured entry reopens the manager directly.
+  - [x] **2026-03-20 Implementation Note**
+    T5.1 is now implemented in code. `SimShellState` owns an explicit connectivity route with `MODAL`, `SETUP`, and `MANAGER`; the global shell scrim only applies to the bootstrap modal route; `SETUP` now reuses onboarding pairing UI/business logic instead of the legacy setup screen; setup success enters a full-screen connection-only manager surface; and configured connectivity entry resolves directly to that manager instead of reopening the bootstrap modal.
+  - [x] **2026-03-21 Focused L3 Routing Proof**
+    Physical-badge L3 now closes the previously blocked branch. The run entered the manager directly from `DISCONNECTED`, fell into the onboarding-derived setup flow after reconnect returned `NeedsSetup`, completed real BLE/Wi-Fi provisioning, transitioned `SETUP -> MANAGER`, and then reopened the manager directly on later configured entry. Evidence is recorded in `docs/reports/tests/L3-20260321-sim-wave5-connectivity-validation.md`.
+  - [x] **2026-03-21 Acceptance Note**
+    T5.1 is now accepted for the implemented routing contract. The legacy placeholder setup screen is no longer the SIM setup surface, the onboarding pairing subset is proven on device, and success lands in the manager-backed steady-state surface.
+  - [ ] **2026-03-21 UX Carry Debt**
+    The manager surface is currently full-screen and feels too heavy for a SIM support-module action. Functional routing is accepted, but the next UI refinement slice should reduce the manager presentation so connectivity does not dominate the shell visually.
+- [x] **T5.2: Spec / Hard Migration Boundary**
+  - [x] keep BLE/Wi-Fi behavior under existing connectivity contracts
+  - [x] define what SIM reuses unchanged
+  - [x] define what SIM wraps at shell level only
+  - [x] **2026-03-21 Boundary Freeze**
+    The Wave 5 boundary is now explicit across `sim-connectivity`, `sim-shell`, `sim-scheduler`, and `sim-audio-chat`. Reused unchanged: `ConnectivityBridge`, `ConnectivityService`, `ConnectivityViewModel`, `PairingService`, and the onboarding pairing subset. Shell-owned wrappers only: entry sources, `MODAL/SETUP/MANAGER` route state, overlay semantics, close-back-to-chat behavior, and SIM route telemetry.
+  - [x] **2026-03-21 Evidence Audit**
+    Repo evidence is recorded in `docs/reports/20260321-sim-wave5-boundary-audit.md`. It proves scheduler currently has no connectivity imports, shell owns routing only, audio consumes `ConnectivityBridge` for badge-origin ingress/file operations, and the remaining contamination points are explicit rather than hidden.
 - [ ] **T5.3: Code / Connectivity Isolation**
   - [ ] keep connection management isolated from scheduler and audio/chat business logic
   - [ ] avoid smart-agent dependencies in connectivity entry path
+  - [ ] remove `PairingService -> BlePeripheral` leakage from the domain-facing pairing contract
+  - [ ] strip onboarding profile/account collaborator carry-over from the SIM setup path or isolate it behind a narrower pairing-only seam
 - [ ] **T5.4: Validation**
-  - [ ] prove connectivity entry opens usable badge connection management
+  - [x] prove connectivity entry opens usable badge connection management
   - [ ] prove scheduler and audio/chat do not require connectivity to be meaningful
+  - [x] **2026-03-20 Focused L1**
+    Focused L1 coverage now proves the shell-owned route logic for modal vs setup connectivity surfaces and the SIM-only ready-state projection used for auto-return behavior.
+  - [x] **2026-03-21 Focused L3 Status**
+    Wave 5 device validation is now green for the manager-backed routing contract. Real badge evidence proves manager direct-entry, onboarding-backed setup, successful provisioning, `SETUP -> MANAGER`, and configured re-entry. Report: `docs/reports/tests/L3-20260321-sim-wave5-connectivity-validation.md`.
 - [ ] **Done When**
-  - [ ] connectivity remains available in SIM
+  - [x] connectivity remains available in SIM
   - [ ] connectivity remains decoupled from the two main feature lanes
 
 ### Wave 6: Storage and DI Isolation

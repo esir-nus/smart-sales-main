@@ -24,6 +24,7 @@ import com.smartsales.prism.domain.model.SessionKind
 import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.domain.memory.ConflictResult
 import com.smartsales.prism.domain.memory.ScheduleBoard
+import com.smartsales.prism.domain.repository.UserProfileRepository
 import com.smartsales.prism.domain.scheduler.AlarmScheduler
 import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
@@ -82,6 +83,7 @@ class SimAgentViewModel @Inject constructor(
     private val alarmScheduler: AlarmScheduler,
     private val uniAExtractionService: RealUniAExtractionService,
     private val executor: Executor,
+    private val userProfileRepository: UserProfileRepository,
     private val timeProvider: TimeProvider
 ) : ViewModel(), IAgentViewModel {
 
@@ -137,9 +139,10 @@ class SimAgentViewModel @Inject constructor(
     private val _mascotState = MutableStateFlow(MascotState.Hidden)
     override val mascotState: StateFlow<MascotState> = _mascotState.asStateFlow()
 
-    override val currentDisplayName: String = "SIM 用户"
+    override val currentDisplayName: String
+        get() = userProfileRepository.profile.value.displayName
 
-    private val _heroGreeting = MutableStateFlow("欢迎进入 SIM")
+    private val _heroGreeting = MutableStateFlow("欢迎回来，${currentDisplayName}")
     override val heroGreeting: StateFlow<String> = _heroGreeting.asStateFlow()
 
     private val _groupedSessions = MutableStateFlow<Map<String, List<SessionPreview>>>(emptyMap())
@@ -322,6 +325,27 @@ class SimAgentViewModel @Inject constructor(
         summary: String?,
         summaryLabel: String = "当前预览"
     ): String {
+        val currentSessionId = _currentSessionId.value
+        val currentRecord = currentSessionId?.let { sessions[it] }
+        if (currentSessionId != null && currentRecord != null) {
+            if (currentRecord.preview.sessionKind != SessionKind.SCHEDULER_FOLLOW_UP) {
+                if (currentRecord.preview.linkedAudioId == audioId) {
+                    switchSession(currentSessionId)
+                    return currentSessionId
+                }
+                attachAudioToSession(
+                    sessionId = currentSessionId,
+                    audioId = audioId,
+                    title = title,
+                    summary = summary,
+                    summaryLabel = summaryLabel,
+                    retainExistingTitle = shouldRetainSessionTitleOnAudioAttach(currentRecord)
+                )
+                switchSession(currentSessionId)
+                return currentSessionId
+            }
+        }
+
         val existing = audioBindings[audioId]
         if (existing != null && sessions.containsKey(existing)) {
             switchSession(existing)
@@ -329,19 +353,7 @@ class SimAgentViewModel @Inject constructor(
         }
 
         val sessionId = UUID.randomUUID().toString()
-        val intro = buildString {
-            append("已进入《")
-            append(title)
-            append("》的讨论模式。")
-            if (!summary.isNullOrBlank()) {
-                append("\n\n")
-                append(summaryLabel)
-                append("：")
-                append(summary)
-            } else {
-                append("\n\n当前为 SIM 壳层接入，完整转写内容将在后续音频波次接入。")
-            }
-        }
+        val intro = buildAudioDiscussionIntro(title, summary, summaryLabel)
         val preview = SessionPreview(
             id = sessionId,
             clientName = title,
@@ -692,10 +704,41 @@ class SimAgentViewModel @Inject constructor(
     }
 
     private suspend fun handleGeneralSend(sessionId: String, content: String) {
+        val record = sessions[sessionId]
+        if (record == null) {
+            _isSending.value = false
+            _uiState.value = UiState.Idle
+            return
+        }
+
         delay(180)
-        appendAiMessage(sessionId, UiState.Response(buildGeneralGuidanceReply(content)))
-        _isSending.value = false
-        _uiState.value = UiState.Idle
+        val prompt = buildGeneralChatPrompt(record, content)
+        when (val result = executor.execute(ModelRegistry.COACH, prompt)) {
+            is ExecutorResult.Success -> {
+                appendAiMessage(
+                    sessionId,
+                    UiState.Response(
+                        result.content.ifBlank {
+                            "我在这里，刚刚没有组织出合适的回复。你可以换个说法继续聊。"
+                        }
+                    )
+                )
+                _isSending.value = false
+                _uiState.value = UiState.Idle
+            }
+
+            is ExecutorResult.Failure -> {
+                appendAiMessage(
+                    sessionId,
+                    UiState.Error(
+                        "当前无法继续这段聊天，请稍后重试。错误：${result.error}",
+                        retryable = result.retryable
+                    )
+                )
+                _isSending.value = false
+                _uiState.value = UiState.Error("聊天暂时不可用")
+            }
+        }
     }
 
     private suspend fun handleAudioGroundedSend(sessionId: String, latestUserInput: String) {
@@ -780,13 +823,120 @@ class SimAgentViewModel @Inject constructor(
         }.getOrNull()
     }
 
-    private fun buildGeneralGuidanceReply(content: String): String {
+    private fun buildAudioDiscussionIntro(
+        title: String,
+        summary: String?,
+        summaryLabel: String
+    ): String {
         return buildString {
-            append("SIM 目前只支持围绕已选录音继续讨论。\n\n")
-            append("你刚才说的是：")
-            append(content)
-            append("\n\n")
-            append("请先从录音抽屉打开已转写录音，并通过 Ask AI 进入讨论。")
+            append("已接入《")
+            append(title)
+            append("》的录音上下文。")
+            if (!summary.isNullOrBlank()) {
+                append("\n\n")
+                append(summaryLabel)
+                append("：")
+                append(summary)
+            } else {
+                append("\n\n当前为 SIM 壳层接入，完整转写内容将在后续音频波次接入。")
+            }
+        }
+    }
+
+    private fun attachAudioToSession(
+        sessionId: String,
+        audioId: String,
+        title: String,
+        summary: String?,
+        summaryLabel: String,
+        retainExistingTitle: Boolean
+    ) {
+        val currentRecord = sessions[sessionId] ?: return
+        currentRecord.preview.linkedAudioId
+            ?.takeIf { it != audioId }
+            ?.let { previousAudioId ->
+                audioBindings.remove(previousAudioId)
+                audioRepository.clearBoundSession(previousAudioId)
+            }
+
+        val previousBoundSessionId = audioBindings[audioId]
+        if (previousBoundSessionId != null && previousBoundSessionId != sessionId) {
+            updateSession(previousBoundSessionId) { record ->
+                record.copy(
+                    preview = record.preview.copy(
+                        linkedAudioId = null,
+                        sessionKind = SessionKind.GENERAL
+                    )
+                )
+            }
+        }
+
+        audioBindings[audioId] = sessionId
+        audioRepository.bindSession(audioId, sessionId)
+        updateSession(sessionId) { record ->
+            val currentTitle = if (retainExistingTitle) {
+                record.preview.clientName
+            } else {
+                title
+            }
+            val currentSummary = if (retainExistingTitle) {
+                record.preview.summary
+            } else {
+                (summary ?: "音频讨论").take(6)
+            }
+            record.copy(
+                preview = record.preview.copy(
+                    clientName = currentTitle,
+                    summary = currentSummary,
+                    linkedAudioId = audioId,
+                    sessionKind = SessionKind.AUDIO_GROUNDED,
+                    timestamp = System.currentTimeMillis()
+                )
+            )
+        }
+        appendAiMessage(
+            sessionId = sessionId,
+            uiState = UiState.Response(buildAudioDiscussionIntro(title, summary, summaryLabel))
+        )
+    }
+
+    private fun shouldRetainSessionTitleOnAudioAttach(record: SimSessionRecord): Boolean {
+        if (record.messages.isEmpty()) return false
+        return record.preview.clientName !in setOf("SIM", "新对话")
+    }
+
+    private fun buildGeneralChatPrompt(
+        record: SimSessionRecord,
+        latestUserInput: String
+    ): String {
+        val profile = userProfileRepository.profile.value
+        val conversationContext = buildAudioConversationContext(record.messages)
+        return buildString {
+            appendLine("你是 SIM，一位轻量、直接、可信的中文聊天助手。")
+            appendLine("你现在运行在独立的 SIM 壳层内，不是智能代理系统，不要假装自己能调工具、改数据库、执行任务或访问隐藏系统。")
+            appendLine("你的职责是基于用户资料和当前会话上下文，给用户自然、有帮助、不过度夸张的回复。")
+            appendLine("如果用户需要录音相关讨论，可以提醒他通过录音抽屉补充上下文；但在没有录音时，也要正常聊天。")
+            appendLine("回答使用简洁自然的中文。")
+            appendLine()
+            appendLine("用户资料：")
+            appendLine("姓名：${profile.displayName}")
+            appendLine("角色：${profile.role}")
+            appendLine("行业：${profile.industry}")
+            appendLine("经验等级：${profile.experienceLevel}")
+            profile.experienceYears.takeIf { it.isNotBlank() }?.let {
+                appendLine("从业时长：$it")
+            }
+            profile.communicationPlatform.takeIf { it.isNotBlank() }?.let {
+                appendLine("常用沟通平台：$it")
+            }
+            appendLine("偏好语言：${profile.preferredLanguage}")
+            appendLine()
+            appendLine("当前会话标题：${record.preview.clientName}")
+            appendLine("最近对话：")
+            appendLine(conversationContext.ifBlank { "无" })
+            appendLine()
+            appendLine("用户刚刚说：")
+            appendLine(latestUserInput)
         }
     }
 

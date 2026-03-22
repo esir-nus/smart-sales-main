@@ -30,7 +30,7 @@
 ## Planned Mission: SIM Standalone Prototype
 > **Context**: Direct user-requested standalone prototype mission. This work is intentionally separate from the current agent app and must not contaminate the live agent runtime by default.
 
-- **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Accepted / Wave 6 Isolation Accepted / Wave 7 Feature Acceptance Accepted / Wave 7 Isolation Acceptance Accepted / Wave 7 Closeout Synced / Wave 8 Task-Scoped Scheduler Follow-Up Accepted / Wave 9 Physical-Badge E2E Blocked / Wave 10 Badge Ingress Repair In Progress
+- **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Accepted / Wave 6 Isolation Accepted / Wave 7 Feature Acceptance Accepted / Wave 7 Isolation Acceptance Accepted / Wave 7 Closeout Synced / Wave 8 Task-Scoped Scheduler Follow-Up Accepted / Wave 9 Physical-Badge E2E Blocked / Wave 10 Badge Ingress Repair In Progress / Wave 11 General Chat Pivot L1 Accepted
 - **Primary Product Doc**: [`docs/to-cerb/sim-standalone-prototype/concept.md`](../to-cerb/sim-standalone-prototype/concept.md)
 - **Mental Model Doc**: [`docs/to-cerb/sim-standalone-prototype/mental-model.md`](../to-cerb/sim-standalone-prototype/mental-model.md)
 - **Mission Tracker**: [`docs/plans/sim-tracker.md`](./sim-tracker.md)
@@ -53,6 +53,7 @@
 - **Wave 7 Isolation Acceptance**: [`docs/reports/tests/L3-20260322-sim-wave7-isolation-acceptance.md`](../reports/tests/L3-20260322-sim-wave7-isolation-acceptance.md)
 - **Wave 8 Follow-Up Validation**: [`docs/reports/tests/L3-20260322-sim-wave8-follow-up-validation.md`](../reports/tests/L3-20260322-sim-wave8-follow-up-validation.md)
 - **Wave 9 Hardware Validation**: [`docs/reports/tests/L3-20260322-sim-wave9-hardware-validation.md`](../reports/tests/L3-20260322-sim-wave9-hardware-validation.md)
+- **Wave 11 L1 Validation**: [`docs/reports/tests/L1-20260322-sim-wave11-general-chat-pivot.md`](../reports/tests/L1-20260322-sim-wave11-general-chat-pivot.md)
 - **Wave 5 Boundary Audit**: [`docs/reports/20260321-sim-wave5-boundary-audit.md`](../reports/20260321-sim-wave5-boundary-audit.md)
 - **Audit Output**: [`docs/reports/20260319-sim-standalone-code-audit.md`](../reports/20260319-sim-standalone-code-audit.md)
 - **Clarification Audit**: [`docs/reports/20260319-sim-clarification-evidence-audit.md`](../reports/20260319-sim-clarification-evidence-audit.md)
@@ -71,16 +72,17 @@
   - [`docs/core-flow/sim-audio-artifact-chat-flow.md`](../core-flow/sim-audio-artifact-chat-flow.md)
 - **Scope**:
   - Scheduler using Path A only
-  - Tingwu transcription via Audio Drawer
-  - Simple audio-grounded chat as continuation of the audio discussion
+  - General SIM chat backed by persona plus user metadata plus local session history
+  - Tingwu transcription via Audio Drawer with optional audio context attachment into chat
   - Connectivity retained as a decoupled support module
   - Source-led Tingwu artifacts with optional readability polishing
-  - shell-owned edge/handle drawer gestures for scheduler/audio entry and dismiss parity
-  - No agent memory or smart-agent system integration
+  - shell-owned zone/handle drawer gestures for scheduler/audio entry and dismiss parity
+  - No smart-agent tooling or non-SIM memory architecture
 - **Current Carry Debt**:
   - SIM has now accepted `T8.0` on top of the Wave 7 closeout. `docs/reports/tests/L3-20260322-sim-wave8-follow-up-validation.md` proves prompt-first ingress, in-shell prompt opening, repository-backed single-task follow-up mutation, and multi-task no-selection safe-fail on device.
   - `docs/reports/tests/L3-20260322-sim-wave9-hardware-validation.md` records the first `Wave 9` execution attempt as blocked: device/build preflight succeeded, but no real badge-origin single-task or multi-task ingress was captured in-session, so the hardware-only L3 debt remains open. Earlier accepted debt status is unchanged for reminders, connectivity, and Wave 6 isolation.
   - `Wave 10` is the explicit repair mini-wave for that blocker. Code and L1 verification now harden BLE recording ingress plus connection truth; device-level ingress proof is still required before returning to `T9.0`.
+  - `Wave 11` now has docs, code, and focused L1 evidence aligned on the general-chat-first contract. Further on-device proof is optional follow-up, not a blocker against this current pivot slice.
 
 ---
 

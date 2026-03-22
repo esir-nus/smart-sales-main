@@ -1,6 +1,6 @@
 # SIM Audio Chat Spec
 
-> **Scope**: Audio drawer, Tingwu artifact display, readability polishing, transparent-state presentation, and simple audio-grounded chat for the standalone SIM prototype
+> **Scope**: Audio drawer, Tingwu artifact display, readability polishing, transparent-state presentation, and general SIM chat with optional audio context for the standalone SIM prototype
 > **Status**: SPEC_ONLY
 > **Behavioral Authority Above This Doc**:
 > - `docs/core-flow/sim-audio-artifact-chat-flow.md`
@@ -18,12 +18,13 @@
 
 `SIM Audio Chat` defines the second major feature lane of the standalone prototype:
 
+- provide normal SIM chat directly from the home/chat surface
 - browse audio in the Audio Drawer
 - transcribe through Tingwu-backed services
 - open a transcribed card and view artifacts in an informational conversation-style interface
-- enter a simple audio-grounded chat as continuation of that discussion
+- enter chat with audio already attached or attach audio mid-session
 
-This shard intentionally replaces the smart-agent interpretation of chat with a narrow audio-grounded product.
+This shard intentionally replaces the smart-agent interpretation of chat with a SIM-local persona-backed chat product that may optionally carry audio context.
 
 ---
 
@@ -57,9 +58,10 @@ This shard intentionally replaces the smart-agent interpretation of chat with a 
 
 ### Simple Chat
 
-- `Ask AI` starts a plain chat session for one selected audio
-- chat answers are grounded in the chosen audio's artifacts
-- real free-text replies belong only to audio-grounded sessions opened from `Ask AI`; blank/new SIM chat remains a shell surface that may guide the user into a supported audio discussion, but it must not silently widen into a general assistant
+- blank/new SIM chat supports real free-text replies
+- baseline chat uses SIM system persona plus user metadata plus local session history
+- `Ask AI` starts or reuses a chat session with one selected audio attached as context
+- chat answers may use the chosen audio's artifacts when audio is attached, but audio is not required for a normal SIM chat turn
 - audio re-selection from chat reopens the Audio Drawer
 - if an audio is already transcribed, SIM loads stored artifacts instead of rerunning Tingwu
 - if an audio is still pending when selected from the chat-side drawer route, SIM binds the discussion session immediately to that audio and the same SIM Tingwu pipeline continues inside chat rather than forcing the user back through the drawer-first transcription path
@@ -91,7 +93,7 @@ This shard intentionally replaces the smart-agent interpretation of chat with a 
 - the standalone audio drawer interaction contract
 - the informational-audio-view to discussion-chat relationship
 - the standalone audio-to-chat handoff
-- the simple chat context rule for one chosen audio
+- the simple chat context rule for persona-backed chat plus optional attached audio
 
 `SIM Audio Chat` may reuse:
 
@@ -165,15 +167,18 @@ This means:
 
 ## 6. Chat Context Rule
 
-The chat for SIM is narrow.
+The chat for SIM is general-chat-first but still SIM-scoped.
 
 It is allowed to:
 
+- start from a blank/new SIM chat session with no audio selected yet
+- use system persona plus user metadata plus local SIM session history as the baseline context
 - continue discussion that begins from the informational audio drawer
-- load one audio's transcript and structured artifacts as context
+- load one selected audio's transcript and structured artifacts as additional context
+- let the same session gain or switch active audio context later through chat-side upload/reselect
 - show transparent in-chat processing states when pending audio is selected from the chat-side upload/reselect route
 - bind pending chat-side audio immediately to the discussion session before Tingwu finishes
-- answer follow-up questions about that audio
+- answer follow-up questions about attached audio while preserving the same session's prior turns
 
 For drawer-side informational browsing specifically:
 
@@ -195,7 +200,7 @@ For chat-side audio reselection specifically:
 It is not allowed to:
 
 - behave like the current agent OS
-- accumulate broad session memory beyond the immediate audio-grounded conversation
+- accumulate smart-runtime memory beyond SIM-local session history
 - use the plugin/tool board as its primary interaction model
 
 ### Chat Surface Reuse Boundary
@@ -204,14 +209,16 @@ The SIM chat surface may now host more than one SIM session kind, but that does 
 
 Allowed session kinds on the reused chat shell:
 
+- general discussion
 - audio-grounded discussion
 - Wave 8 task-scoped scheduler follow-up created from badge-origin scheduler completion
 
 Rules:
 
-- audio-grounded context and scheduler-follow-up context must remain separate in persistence and runtime state
+- general discussion, audio context, and scheduler-follow-up context must remain separate in persistence and runtime state even when they reuse one shell
+- a general discussion session may become audio-enriched later without becoming a scheduler-follow-up session
 - scheduler follow-up must not inherit audio artifact assumptions
-- audio-grounded chat must not gain scheduler mutation rights unless the shell explicitly opened a scheduler-follow-up session
+- general or audio-enriched chat must not gain scheduler mutation rights unless the shell explicitly opened a scheduler-follow-up session
 
 ### Two Entry / One Pipeline Rule
 
@@ -324,6 +331,7 @@ Phone-local import may still exist for testing, but only under these rules:
 Users do not care whether the shell is using the same hidden runtime.
 They care that:
 
+- normal chatting is available immediately
 - the audio drawer feels familiar
 - opening a transcribed card is immediate and legible
 - `Ask AI` feels direct and focused
@@ -355,7 +363,7 @@ For chat-side durable artifact history specifically:
 
 ### Failure Gravity
 
-The worst failure is silently reintroducing the smart-agent chat runtime because `Ask AI` seems "close enough."
+The worst failure is silently reintroducing the smart-agent chat runtime because general chat or `Ask AI` seems "close enough."
 
 That would destroy the product boundary.
 
@@ -369,7 +377,7 @@ That would destroy the product boundary.
 | 2 | Storage namespace decision | PLANNED | prototype-safe repository behavior |
 | 3 | Audio drawer and artifact render | PLANNED | transcribed-card informational flow |
 | 4 | Polisher and transparent-state layer | PLANNED | readability + presentation behavior |
-| 5 | Simple chat and reselection | PLANNED | `Ask AI` and drawer-based audio reselection |
+| 5 | General chat plus audio reselection | PLANNED | persona-backed SIM chat, `Ask AI`, and drawer-based audio reselection |
 
 ---
 
@@ -380,7 +388,8 @@ SIM audio/chat is ready only when:
 - audio drawer works in the standalone app
 - transcribed audio cards open and show source-led, readability-polished artifacts
 - already-transcribed audio loads existing artifacts without rerunning Tingwu
-- `Ask AI` opens a simple audio-grounded chat continuation surface
+- blank/new SIM chat answers normally without requiring audio first
+- `Ask AI` opens chat with one audio already attached
 - selecting pending audio from chat continues the same SIM transcription pipeline inside chat with transparent waiting/progress states
 - artifacts produced from the chat-side route are reflected back in the audio drawer without duplicate processing
 - chat-side audio selection returns to the drawer rather than Android file manager

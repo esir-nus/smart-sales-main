@@ -11,7 +11,7 @@
 
 ## 1. One-Sentence Product Truth
 
-SIM is a standalone Prism-family app with two main lanes, scheduler and Tingwu-based transcription discussion, plus a decoupled connectivity support module.
+SIM is a standalone Prism-family app with two main lanes, scheduler and general SIM chat with optional Tingwu-based audio context, plus a decoupled connectivity support module.
 
 It is not a smaller smart-agent OS.
 
@@ -36,27 +36,28 @@ Do not think of SIM as:
 
 ## 3. Conversation Family Model
 
-The SIM conversation model has two states of the same family:
+The SIM conversation model has two surfaces in one family:
 
-1. `Audio Drawer`
+1. `Discussion Chat`
+   - directly available from the home surface
+   - conversational by default
+   - grounded in system persona, user metadata, and SIM-local session history
+   - may stay plain chat or become audio-enriched mid-session
+
+2. `Audio Drawer`
    - informational
-   - read-only from a chat perspective
-   - artifact browser for one selected audio
-
-2. `Discussion Chat`
-   - conversational
-   - continuation surface after `Ask AI`
-   - discussion about one selected audio
+   - read-only from a chat perspective while browsing
+   - artifact browser and context picker for one selected audio at a time
 
 Design rule:
 
-- audio drawer = browse and understand
-- chat = continue and discuss
+- chat = start, continue, and remember within one SIM session
+- audio drawer = browse, understand, and attach source context into chat
 
 Not:
 
 - audio drawer = separate smart workflow
-- chat = general-purpose agent cockpit
+- chat = general-purpose agent cockpit with tools or autonomous planning
 
 ---
 

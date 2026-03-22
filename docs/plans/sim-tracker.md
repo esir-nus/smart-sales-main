@@ -1,14 +1,15 @@
 # SIM Mission Tracker
 
-> **Mission**: Standalone prototype app with two main feature lanes, Scheduler Path A and Tingwu transcription plus simple audio-grounded chat, plus a decoupled connectivity support module.
-> **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Accepted / Wave 6 Isolation Accepted / Wave 7 Feature Acceptance Accepted / Wave 7 Isolation Acceptance Accepted / Wave 7 Closeout Synced / Wave 8 Task-Scoped Scheduler Follow-Up Accepted / Wave 9 Physical-Badge E2E Blocked / Wave 10 Badge Ingress Repair In Progress
+> **Mission**: Standalone prototype app with two main feature lanes, Scheduler Path A and default SIM chat with optional Tingwu audio context, plus a decoupled connectivity support module.
+> **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Accepted / Wave 6 Isolation Accepted / Wave 7 Feature Acceptance Accepted / Wave 7 Isolation Acceptance Accepted / Wave 7 Closeout Synced / Wave 8 Task-Scoped Scheduler Follow-Up Accepted / Wave 9 Physical-Badge E2E Blocked / Wave 10 Badge Ingress Repair In Progress / Wave 11 General Chat Pivot L1 Accepted
 > **Started**: 2026-03-19
-> **Current Gate**: Wave 7 closeout remains accepted on **2026-03-22**. Post-closeout `T8.0` task-scoped scheduler follow-up was accepted on **2026-03-22** as a narrow SIM-owned continuity upgrade. `Wave 9` is now blocked by missing real badge recording ingress, and `Wave 10` is the active ESP32/connectivity repair mini-wave. Device-level re-entry proof is still required before returning to physical-badge follow-up validation.
+> **Current Gate**: Wave 7 closeout remains accepted on **2026-03-22**. Post-closeout `T8.0` task-scoped scheduler follow-up was accepted on **2026-03-22** as a narrow SIM-owned continuity upgrade. `Wave 9` is now blocked by missing real badge recording ingress, `Wave 10` remains the active ESP32/connectivity repair mini-wave, and `Wave 11` now has docs/code/L1 verification aligned on **2026-03-22** so normal chatting is directly available with persona plus user metadata while audio stays optional mid-session context. Device-level re-entry proof is still required before returning to physical-badge follow-up validation.
 > **UI Scope Guard (2026-03-22)**: The SIM home/chat restore back to the sparse screenshot-aligned shell is UI-layer-only. Treat it as presentation rollback/polish inside the existing SIM shell contract, not as a reopening of Wave 7 or Wave 8 behavior, routing, persistence, isolation, acceptance, or boundary scope.
 > **UI Scope Guard (2026-03-22, Dynamic Island)**: A shell-owned top-bar dynamic island that surfaces scheduler reminders and opens the scheduler drawer is also presentation-layer SIM shell polish. The shared renderer stays one-line, sticky, truncation-based, and scheduler-first in copy. SIM may rotate up to the top 3 scheduler entries vertically inside the same header-center slot on a 5-second interval. Conflict-visible scheduler entries rank above normal reminders, use yellow hue, and normal most-immediate entries use red hue. Tapping any visible entry must open the scheduler drawer on that entry's corresponding date page. The SIM home header now keeps only hamburger + centered island + new-chat for visual balance, while connectivity entry moves into the audio drawer. It must stay shell-owned for chrome/routing and scheduler-owned for reminder truth; it does not widen mascot, follow-up, or smart-runtime scope by itself.
 > **UI Scope Guard (2026-03-22, Audio Drawer Mode Split)**: SIM audio drawer chrome is now explicitly split into two presentation modes without reopening Wave 7 behavior. Direct open remains the spec-aligned browse/gallery surface: swipe-right transcribe for pending items, tap-to-expand for transcribed items, and `Ask AI` only from the expanded informational artifact view. Chat attach/upload reopen uses a distinct select-mode picker: no dedicated per-card bottom CTA, no swipe/expand affordances, whole card as the selection target, pending/transcribing helper copy framed as continued chat-side processing, and already-transcribed cards showing truncated transcript preview for recognition. This is a docs-and-UI-language clarification inside the existing SIM audio/chat contract, not a new pipeline, routing, or acceptance wave.
-> **UI Scope Guard (2026-03-22, Composer Cleanup)**: SIM composer cleanup is shell-layer contract alignment only. The bottom-right fake mic affordance is removed, idle placeholder copy returns to a simple `输入消息...`, and the placeholder regains the shared scan-shine treatment on the placeholder text itself. This does not widen SIM into phone-mic capture, badge-mic capture, or a general assistant lane.
+> **UI Scope Guard (2026-03-22, Composer Cleanup)**: SIM composer cleanup keeps the bottom-right fake mic affordance removed, keeps idle placeholder copy at `输入消息...`, and restores the shared scan-shine treatment on the placeholder text itself. This aligns the shell with the general-chat-first SIM contract, but it still does not widen SIM into phone-mic capture, badge-mic capture, smart-runtime tooling, or autonomous agent behavior.
 > **Closeout Reading Rule**: Wave 7 closeout means the SIM mission is complete at the tracker level. Any remaining unchecked historical sub-items below should be read as archived execution residue unless they are explicitly restated under the post-closeout deferred-debt section.
+> **Product Pivot Note (2026-03-22, Wave 11)**: Accepted Wave 3 proved audio-grounded chat continuation, but Wave 11 now supersedes the old `audio-grounded only` interpretation. SIM chat must be directly available from the home surface using system persona + user metadata + local session history, while `Ask AI` and chat-side attach/reselect add audio artifacts into the same ongoing session instead of defining the only legal chat entry.
 > **Primary Product Doc**: `docs/to-cerb/sim-standalone-prototype/concept.md`
 > **Mental Model Doc**: `docs/to-cerb/sim-standalone-prototype/mental-model.md`
 > **Implementation Brief**: `docs/plans/sim_implementation_brief.md`
@@ -35,6 +36,7 @@
 > **Wave 7 Isolation Acceptance**: `docs/reports/tests/L3-20260322-sim-wave7-isolation-acceptance.md`
 > **Wave 7 Reminder Connected Validation**: `docs/reports/tests/L2-20260321-sim-wave7-reminder-connected-validation.md`
 > **Wave 7 Reminder Visual Validation**: `docs/reports/tests/L3-20260322-sim-wave7-reminder-visual-validation.md`
+> **Wave 11 L1 Validation**: `docs/reports/tests/L1-20260322-sim-wave11-general-chat-pivot.md`
 > **Formal Cerb Shards**:
 > - `docs/cerb/sim-shell/spec.md`
 > - `docs/cerb/sim-shell/interface.md`
@@ -56,6 +58,7 @@
 - Accepted history: Wave 7 closed the SIM mission on **2026-03-22**.
 - Accepted history: Wave 8 follow-up mini-wave was accepted on **2026-03-22**.
 - Active follow-up: Wave 9 is prepared to close the remaining physical-badge hardware L3 for the badge-origin follow-up lane.
+- Active follow-up: Wave 11 is reopening the SIM chat contract so general chat becomes first-class while preserving SIM boundaries.
 - Cleanup rule: historical wave checklists below are retained as project memory, but they should not be read as active open work unless a debt item is explicitly restated under `6.1 Post-Closeout Deferred Debt`.
 
 ---
@@ -70,13 +73,13 @@ The prototype must:
 - allow small UI tweaks when needed
 - keep only two main user-facing capabilities
 - retain connectivity as an isolated support module
-- avoid smart-agent behavior, memory systems, and hidden cross-pipeline coupling
+- avoid smart-agent behavior, hidden cross-pipeline coupling, and smart-runtime memory/tooling obligations
 - never interfere with the current agent app
 
 Two main allowed feature lanes:
 
 1. Scheduler via the documented Path A pipeline
-2. Tingwu transcription via the Audio Drawer, plus simple `Ask AI` chat grounded in selected audio
+2. Default SIM chat plus Tingwu transcription/context attachment through the Audio Drawer
 
 Supporting module:
 
@@ -84,10 +87,13 @@ Supporting module:
 
 Product mental model:
 
-- the audio drawer is the informational non-chat variant of the chat experience
+- discussion chat is directly available from the SIM home surface rather than gated on audio first
+- baseline chat uses system persona plus user metadata plus SIM-local session history
+- the audio drawer is both the informational artifact surface and the optional context source for chat
 - Tingwu is the source of transcription intelligence
 - final display may polish Tingwu returns for readability without inventing facts
-- `Ask AI` is the continuation surface for transcription-based discussion
+- `Ask AI` from audio is the fastest way to enter chat with one selected audio already attached
+- chat-side audio attach/reselect may add or switch audio context mid-session without discarding the same session's prior turns
 - transcript streaming and activity states are allowed as presentation layers
 - history, new page/session, connectivity entry, and settings remain valid SIM shell practices
 - screenshot-aligned shell restoration is allowed when it only adjusts layout, spacing, typography, or chrome and does not alter SIM routing/state contracts
@@ -205,10 +211,10 @@ Accepted invariants for the shipped SIM prototype:
 - Current agent app remains behaviorally untouched by default
 - Scheduler slice stays Path A only
 - Audio slice uses Tingwu/API-driven intelligence rather than new local reasoning logic
-- Audio drawer acts as an informational transcript/artifact surface, not as a general file-management product
+- Audio drawer acts as an informational transcript/artifact surface and optional chat-context picker, not as a general file-management product
 - Final artifact display may polish Tingwu returns, but it must remain source-led
 - Selecting already-transcribed audio never reruns Tingwu by default
-- Simple chat has no Oasis-style memory system
+- SIM chat uses system persona, user metadata, and local per-session history rather than Oasis-style memory architecture
 - Chat-side audio upload/select reopens Audio Drawer instead of Android file manager
 - Connectivity remains decoupled from scheduler and audio/chat business logic
 - Ordinary shell practices may survive only in simplified SIM form
@@ -309,6 +315,8 @@ Wave sections below are retained as project memory. Their checklist items have b
   - [x] prove smart-only shell surfaces are not part of normal SIM operation
   - [x] **2026-03-22 Gesture Parity Follow-Up**
     SIM shell gesture parity is now restored as a shell-owned edge/handle contract rather than broad chat overscroll behavior. The shipped path uses header-center pull-down to open Scheduler, bottom-edge pull-up to open Audio Drawer browse mode, IME gating for the bottom-edge opener, upward handle dismiss for Scheduler, and downward handle dismiss for SIM Audio. Focused verification is green with `:app-core:compileDebugKotlin`, `SimShellHandoffTest`, and `:app-core:compileDebugAndroidTestKotlin`.
+  - [x] **2026-03-22 Gesture Nimbility Upgrade**
+    The initial narrow edge-strip opener is now widened into a zone-based shell trigger model after device feedback showed it was too hard to activate. The current shipped SIM contract is top-third pull-down for Scheduler, middle-third safe scroll, bottom-third pull-up for Audio browse, plus vertical-intent lock and fling-velocity confirmation to separate deliberate drawer entry from ordinary chat-history scrolling.
 - [x] **Done When**
   - [x] SIM boots into a standalone shell
   - [x] shell visually feels like Prism
@@ -771,11 +779,12 @@ The mission should execute in this order:
 1. Wave 0: documents and boundary constitution
 2. Wave 1: standalone shell composition
 3. Wave 2: audio drawer informational mode
-4. Wave 3: simple audio-grounded discussion chat
+4. Wave 3: initial audio-grounded discussion chat
 5. Wave 4: scheduler Path A delivery
 6. Wave 5: connectivity hard migration
 7. Wave 6: storage and DI isolation
 8. Wave 7: verification and acceptance
+9. Wave 11: general-chat-first pivot with optional audio context
 
 No implementation should start before T0 boundary decisions are explicit enough to prevent contamination.
 
@@ -788,6 +797,7 @@ Wave 7 acceptance closed the SIM mission on **2026-03-22**. The remaining items 
 - [x] Physical-badge hardware L3 for the badge-origin scheduler follow-up continuity lane is now explicitly reopened as Wave 9 verification-only work. Final closeout still requires a real-badge device run; the current surrogate/device evidence must not be over-read as a hardware closeout.
 - [x] SIM scheduler follow-up no longer remains metadata-only continuity only; it is now reopened as Wave 8 task-scoped follow-up work instead of Wave 7 closeout debt.
 - [x] Wave 10 is now explicitly opened as the separate ingress-repair mini-wave required by the Wave 9 execution law after hardware transport failed upstream of SIM follow-up.
+- [x] Wave 11 is now explicitly opened as the docs-first SIM chat pivot that widens home chat back to a normal easy-available feature while keeping audio as optional mid-session context instead of the only legal chat entry.
 - [x] Dynamic island polish is now normalized onto the shared one-line shell contract. SIM no longer treats the old three-task reminder carousel as product truth; the shell now uses one sticky header-center summary line composed from session title plus scheduler-owned reminder ordering, while scheduler remains the owner of reminder truth.
 - [x] Audio drawer browse-vs-select mode split is now implemented as a focused SIM UI polish slice. Direct-open drawer remains the browse/gallery surface, while chat attach/upload now reopens a visually distinct select-mode picker with whole-card selection, no dedicated bottom CTA, no select-mode debug import entry, no swipe/expand affordances, and transcript-first truncated preview for already-transcribed cards. Browse mode now restores the spec-aligned swipe-right transcribe prompt while preserving the accepted SIM routing/persistence/pipeline contract. Focused L1 verification is green with `:app-core:compileDebugKotlin` plus `:app-core:testDebugUnitTest --tests com.smartsales.prism.ui.sim.SimAudioDrawerViewModelTest --tests com.smartsales.prism.ui.sim.SimShellHandoffTest`.
 - [ ] Deferred ESP32/connectivity contract cleanup remains a later docs-only or fake-semantics follow-up, not a Wave 10 blocker. Current active SOT is now aligned around legacy connectivity code plus `docs/cerb/connectivity-bridge/**` and `docs/specs/esp32-protocol.md`; remaining cleanup candidates are secondary only: stale `data/connectivity/ConnectivityBridge.kt` filename examples, stale `docs/specs/connectivity-spec.md` ready-state language, and any fake-manager semantics that still overstate BLE-only `Connected` as transport-ready.
@@ -859,20 +869,52 @@ Wave 7 acceptance closed the SIM mission on **2026-03-22**. The remaining items 
   - [ ] run device-level re-entry validation to prove real badge recording again reaches connectivity ingress logs and `AudioPipeline`
   - [ ] reopen `T9.0` only after the re-entry gate is satisfied
 
+## 6.5 Wave 11: General-Chat-First Pivot
+> Objective: widen SIM chat back to a normal easy-available feature while keeping the SIM boundary, with audio becoming optional context that can be attached mid-session.
+> **Entry Docs**:
+> - `docs/plans/sim-tracker.md`
+> - `docs/to-cerb/sim-standalone-prototype/concept.md`
+> - `docs/to-cerb/sim-standalone-prototype/mental-model.md`
+> - `docs/core-flow/sim-shell-routing-flow.md`
+> - `docs/core-flow/sim-audio-artifact-chat-flow.md`
+> - `docs/cerb/sim-shell/spec.md`
+> - `docs/cerb/sim-audio-chat/spec.md`
+> **Execution Law**: keep general chat easy and direct, but do not revive smart-agent tooling, autonomous planning, or non-SIM memory architecture.
+> **Validation Requirement**: prove blank/new SIM chat can answer normally from persona plus user metadata, prove audio can be attached into an existing session without losing prior turns, and prove the old audio-only guidance fallback no longer blocks normal chatting.
+
+- [x] **T11.0: Docs / Product Mental Model Pivot**
+  - [x] update tracker, concept, mental model, core-flow, and Cerb shards so SIM chat is general-chat-first
+  - [x] explicitly record that audio is optional context, not the only legal chat entry
+  - [x] keep scheduler follow-up, connectivity, and SIM isolation boundaries unchanged unless a lower-layer contract truly needs widening
+- [x] **T11.1: Code / Persona-Backed General Chat**
+  - [x] make blank/new SIM chat produce real replies from SIM system persona plus user metadata plus session history
+  - [x] remove the old audio-only guidance fallback for normal chatting
+  - [x] keep smart-agent tool board, autonomous execution, and non-SIM memory architecture out of scope
+- [x] **T11.2: Code / Mid-Session Audio Context Attachment**
+  - [x] let chat-side audio attach/reselect enrich the current session instead of forcing a separate audio-only mode
+  - [x] keep already-attached audio artifacts durable in chat history while allowing the active audio binding to switch
+  - [x] keep `Ask AI` from the audio drawer as a fast-path into chat with audio pre-attached
+- [x] **T11.3: Validation and Doc Sync**
+  - [x] run focused compile/unit coverage for SIM chat/session behavior
+  - [x] write focused verification evidence for general chat, mid-session audio attachment, and shell continuity
+  - [x] sync tracker plus lower-layer docs from the verified outcome
+
 ---
 
 ## 7. Success Definition
 
 The mission is complete only when:
 
-Closed by the accepted `T7.1` / `T7.2` / `T7.3` evidence on **2026-03-22**.
+Wave 7 closed the original SIM mission on **2026-03-22**, but Wave 11 now reopens the chat-contract items below before the tracker should be treated as current again.
 
 - [x] a standalone prototype app path exists in the repo
 - [x] the current agent app remains intact
 - [x] scheduler works through Path A in the prototype
 - [x] audio cards open and display source-led, readability-polished Tingwu artifacts
 - [x] already-transcribed audio loads existing artifacts without rerunning Tingwu
-- [x] `Ask AI` opens a simple chat session grounded in the chosen audio
+- [x] blank/new SIM chat is directly available and can answer from system persona plus user metadata plus local session history
+- [x] audio can be attached or reselected mid-session without discarding the current session
+- [x] `Ask AI` remains a fast path that opens chat with the chosen audio pre-attached
 - [x] audio selection from chat returns through the Audio Drawer
 - [x] connectivity remains available as a decoupled SIM support module
 
@@ -896,13 +938,13 @@ The team reuses too much of the current agent runtime and accidentally reimports
 Mitigation:
 Treat all agent-runtime reuse as opt-in and seam-checked.
 
-### R3: Overbuilding the Audio Chat
+### R3: General Chat Reimports the Smart Runtime
 
 Risk:
-The simple audio-grounded chat becomes another general AI assistant.
+The general-chat-first pivot accidentally drags back smart-agent tooling, autonomous planning, or non-SIM memory architecture.
 
 Mitigation:
-Keep one-context audio grounding and explicitly reject memory-system growth in this mission.
+Keep the baseline contract limited to system persona plus user metadata plus local SIM session history, treat audio as optional context rather than tool/runtime expansion, and reject smart-runtime seams unless a narrower SIM-owned seam is impossible.
 
 ### R4: Cosmetic Transparency Becoming Fake Truth
 

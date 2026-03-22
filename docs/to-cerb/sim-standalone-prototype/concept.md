@@ -19,7 +19,7 @@ This mission is:
 - remove the smart-agent identity and heavy agent orchestration
 - keep only two main user-facing capabilities:
   - scheduler
-  - Tingwu-based transcription plus simple AI chat
+  - general SIM chat plus Tingwu-based transcription/audio context
 - retain the connectivity module as a supporting, hard-migrated system module for badge connection management
 
 The product should feel like the same family of app, but operationally it is no longer an intelligent agent system.
@@ -33,7 +33,7 @@ It becomes a narrow, reusable, low-risk prototype focused on two straight pipeli
 Deliver a working prototype with minimum viable functionality for:
 
 1. scheduling through the documented Scheduler Path A pipeline
-2. long-form audio transcription and artifact display through the documented Tingwu/audio flow
+2. normal SIM chatting backed by persona, user metadata, and local session history, plus long-form audio transcription/artifact display through the documented Tingwu/audio flow
 3. standalone badge connectivity management through the existing decoupled connectivity contracts
 
 The prototype must prove the user journey end to end without depending on agent memory, agent tooling, or the current multi-lane smart runtime.
@@ -83,23 +83,26 @@ Behavioral authority:
 - `docs/cerb/audio-management/spec.md`
 - `docs/specs/modules/AudioDrawer.md`
 
-### 3.3 Feature B2: Ask AI Over Audio
+### 3.3 Feature B2: General Chat and Audio Context
 
-The audio detail flow may branch into a simple chat session.
+The SIM home/chat flow must work before any audio is selected, and audio may later enrich that same session.
 
 Required constraints:
 
-- `Ask AI` starts a plain AI chat session grounded in the chosen audio artifact
-- the chat session is the continuation surface for the transcription discussion started from the audio drawer
+- blank/new SIM chat is a real conversation surface rather than a guidance-only placeholder
+- baseline chat uses system persona plus user metadata plus local session history
+- `Ask AI` starts or reuses a plain AI chat session with the chosen audio artifact attached as context
+- the same chat session may receive audio attachment/reselection later without losing prior turns
 - this is not the current agent runtime
 - no Oasis-style memory system
 - no smart agent identity
 - no multi-tool agent planning layer
-- the selected audio's transcript/artifacts act as the chat context
+- the selected audio's transcript/artifacts act as additional chat context rather than the only legal chat basis
 
 Upload behavior constraint:
 
 - when the user taps audio upload inside chat, the app must reopen the Audio Drawer and ask the user to select one audio item
+- the selected audio should enrich the current session instead of forcing a separate audio-only thread
 - it must not jump into the native Android file manager from chat
 
 ### 3.4 Supporting Module: Connectivity
@@ -260,9 +263,9 @@ Decision rule:
 
 1. User opens a transcribed audio card.
 2. User taps `Ask AI`.
-3. The app opens a simple chat session bound to that audio.
+3. The app opens chat with that audio pre-attached as context.
 4. The user continues discussing the transcript, summary, chapters, highlights, or related returned artifacts.
-5. The session answers from the selected audio context only.
+5. The session answers from normal SIM chat context plus the selected audio context.
 
 ### Flow 3B: Select Already-Transcribed Audio
 
@@ -281,11 +284,11 @@ Decision rule:
 
 ### Flow 4: Add Audio From Chat
 
-1. User is inside the simple audio-grounded chat.
+1. User is inside a SIM chat session that may already contain normal chat turns.
 2. User taps the audio upload/select affordance.
 3. The app reopens the Audio Drawer.
 4. The user selects one audio item.
-5. The chat context switches or binds to the selected audio instead of launching the Android file manager.
+5. The current session keeps its prior turns and adds or switches the active audio context instead of launching the Android file manager.
 
 ### Flow 5: Manage Badge Connectivity
 
@@ -356,7 +359,8 @@ The mission is successful when all of the following are true:
 - Tingwu artifacts are visible from the audio detail flow
 - already-transcribed audio loads existing artifacts without rerunning Tingwu
 - final artifact display is source-led but readability-polished
-- `Ask AI` works as a simple audio-grounded chat continuation surface
+- blank/new SIM chat works without requiring audio first
+- `Ask AI` works as a fast path that enters chat with one audio already attached
 - chat-side audio selection reopens the Audio Drawer instead of the native Android picker
 - badge connectivity management remains available through the decoupled connectivity module
 
@@ -392,9 +396,10 @@ The mission is successful when all of the following are true:
 
 ### Phase 4: Simple Chat Slice
 
-- create audio-grounded chat without agent-memory features
-- support `Ask AI` from audio detail
-- support drawer-based audio re-selection from chat
+- create general SIM chat without agent-memory features
+- support persona + user metadata + local session history as the base context
+- support `Ask AI` from audio detail as a fast-path with audio pre-attached
+- support drawer-based audio re-selection from chat without breaking the current session
 
 ### Phase 4B: Connectivity Hard Migration
 

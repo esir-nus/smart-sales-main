@@ -7,6 +7,7 @@ import com.smartsales.core.telemetry.PipelineValve
 import com.smartsales.core.llm.ExecutorResult
 import com.smartsales.core.test.fakes.FakeExecutor
 import com.smartsales.core.test.fakes.FakeScheduleBoard
+import com.smartsales.core.test.fakes.FakeUserProfileRepository
 import com.smartsales.data.oss.OssUploader
 import com.smartsales.prism.data.audio.SIM_AUDIO_METADATA_FILENAME
 import com.smartsales.prism.data.audio.SimAudioRepository
@@ -64,6 +65,7 @@ class SimAgentViewModelTest {
     private lateinit var scheduleBoard: FakeScheduleBoard
     private lateinit var alarmScheduler: FakeAlarmScheduler
     private lateinit var fakeExecutor: FakeExecutor
+    private lateinit var userProfileRepository: FakeUserProfileRepository
     private lateinit var timeProvider: FakeTimeProvider
     private lateinit var uniAExtractionService: RealUniAExtractionService
 
@@ -75,6 +77,7 @@ class SimAgentViewModelTest {
         scheduleBoard = FakeScheduleBoard()
         alarmScheduler = FakeAlarmScheduler()
         fakeExecutor = FakeExecutor()
+        userProfileRepository = FakeUserProfileRepository()
         timeProvider = FakeTimeProvider().apply {
             fixedInstant = Instant.parse("2026-03-22T08:00:00Z")
         }
@@ -248,8 +251,9 @@ class SimAgentViewModelTest {
     }
 
     @Test
-    fun `general send returns supported audio guidance instead of shell placeholder`() = runTest {
+    fun `general send uses persona backed reply instead of audio only guidance`() = runTest {
         val viewModel = newViewModel()
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("你好，Default User。我会先按你的销售背景继续聊。"))
 
         viewModel.updateInput("你好")
         viewModel.send()
@@ -257,8 +261,47 @@ class SimAgentViewModelTest {
 
         val lastMessage = viewModel.history.value.last() as ChatMessage.Ai
         val response = lastMessage.uiState as UiState.Response
-        assertTrue(response.content.contains("只支持围绕已选录音继续讨论"))
-        assertFalse(response.content.contains("当前阶段只保留独立 Shell"))
+        assertTrue(response.content.contains("Default User"))
+        assertFalse(response.content.contains("只支持围绕已选录音继续讨论"))
+        assertTrue(fakeExecutor.executedPrompts.last().contains("姓名：Default User"))
+        assertTrue(fakeExecutor.executedPrompts.last().contains("角色：sales_rep"))
+        assertTrue(fakeExecutor.executedPrompts.last().contains("用户刚刚说："))
+    }
+
+    @Test
+    fun `selectAudioForChat reuses current general session and preserves prior turns`() = runTest {
+        writeAudioMetadata(
+            AudioFile(
+                id = "audio_attach_1",
+                filename = "Attach.wav",
+                timeDisplay = "Now",
+                source = AudioSource.PHONE,
+                status = TranscriptionStatus.TRANSCRIBED
+            )
+        )
+        val viewModel = newViewModel()
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("先继续普通聊天。"))
+
+        viewModel.updateInput("先聊聊今天怎么跟客户开场")
+        viewModel.send()
+        advanceUntilIdle()
+        val generalSessionId = viewModel.currentSessionId.value
+        val historyBeforeAttach = viewModel.history.value.size
+
+        viewModel.selectAudioForChat(
+            audioId = "audio_attach_1",
+            title = "Attach.wav",
+            summary = "客户录音摘要",
+            entersPendingFlow = false
+        )
+
+        assertEquals(generalSessionId, viewModel.currentSessionId.value)
+        assertEquals("audio_attach_1", viewModel.currentLinkedAudioId.value)
+        assertTrue(viewModel.history.value.size > historyBeforeAttach)
+        val lastMessage = viewModel.history.value.last() as ChatMessage.Ai
+        val response = lastMessage.uiState as UiState.Response
+        assertTrue(response.content.contains("已接入《Attach.wav》"))
+        assertTrue(response.content.contains("客户录音摘要"))
     }
 
     @Test
@@ -777,6 +820,7 @@ class SimAgentViewModelTest {
             alarmScheduler = alarmScheduler,
             uniAExtractionService = uniAExtractionService,
             executor = executor,
+            userProfileRepository = userProfileRepository,
             timeProvider = timeProvider
         )
     }

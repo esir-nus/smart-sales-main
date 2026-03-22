@@ -4,7 +4,7 @@
 > **Authority**: Behavioral North Star
 > **Status**: Ahead of Spec and Code
 > **Development Chain**: Core Flow -> Spec -> Code -> PU Test -> Fix Spec -> Fix Code
-> **Scope**: Audio drawer informational mode, Tingwu-backed transcription/artifact display, readability polishing, transparent-state presentation, and simple audio-grounded chat inside the SIM standalone app.
+> **Scope**: Audio drawer informational mode, Tingwu-backed transcription/artifact display, readability polishing, transparent-state presentation, and optional audio-context attachment inside the general SIM chat flow.
 > **Testing Directive**: Validate one audio/chat route or one safety branch per run. Do not mix unrelated audio and shell branches in a single PU run.
 
 ---
@@ -26,7 +26,7 @@ This file is allowed to be ahead of the codebase.
 | Layer | Responsibility | Must Eventually Reflect This Core Flow |
 |------|----------------|-----------------------------------------|
 | **Spec** | How the behavior is encoded | `docs/cerb/sim-audio-chat/spec.md`, `docs/cerb/sim-audio-chat/interface.md` |
-| **Code** | Delivered behavior | SIM audio drawer wiring, namespaced audio repository behavior, artifact display, simple audio-grounded chat |
+| **Code** | Delivered behavior | SIM audio drawer wiring, namespaced audio repository behavior, artifact display, and chat-side audio-context attachment |
 | **PU Test** | Behavioral validation | future SIM audio/chat tests, drawer-to-chat tests, storage-isolation tests |
 
 ---
@@ -40,15 +40,16 @@ This file is allowed to be ahead of the codebase.
 5. **Final display may be polished, but not rewritten into fiction**: SIM may use a readability-polisher prompt over Tingwu output, but it must not invent unsupported facts or sections.
 6. **Already-transcribed selection must reuse existing results**: selecting an already-transcribed audio loads stored artifacts instead of rerunning Tingwu.
 7. **There is one SIM-owned transcription/artifact pipeline with two entry surfaces**: drawer-origin transcription and chat-origin audio reselection are two ways to enter the same underlying Tingwu/artifact path rather than two separate processing systems.
-8. **`Ask AI` is audio-grounded**: the chat session is bound to one selected audio item and its artifacts or in-flight transcription job.
-9. **No smart-agent memory system is required**: SIM chat may keep immediate chat state, but it must not require the smart app's wider memory architecture.
-10. **Chat-side audio selection returns through the audio drawer**: this flow must not default to Android file picker for the real product path.
-11. **Pending audio selected from chat continues inside chat transparency**: if the user picks an untranscribed audio item from the chat-side drawer path, the same SIM transcription pipeline continues from chat and the waiting experience is owned by chat-side transparent processing states.
-12. **Pending chat-side selection binds immediately**: when the user selects pending audio from chat-side reselection, SIM binds that discussion session to the chosen audio immediately before Tingwu finishes so the waiting experience already belongs to the correct discussion thread.
-13. **Audio persistence must not contaminate the smart app**: if runtime/storage is shared, the audio/chat storage must be namespaced or otherwise isolated.
-14. **Badge sync is the real product ingress**: production SIM audio inventory comes from physical badge synchronization via BLE/Wi-Fi transfer rather than arbitrary phone-local uploads.
-15. **Phone-local import is test-only**: if a local file picker exists, it is only a testing convenience surface and must not be treated as the product-default audio ingress.
-16. **Completed chat-side audio must become durable chat history**: once a pending chat-side audio run completes, the finished artifact content must be appended as durable chat history rather than remaining only in transient thinking/progress state.
+8. **General SIM chat exists before audio**: blank/new SIM chat is a real conversation surface using system persona, user metadata, and local SIM session history even when no audio is attached yet.
+9. **`Ask AI` or chat-side attach binds audio into chat**: the selected audio item and its artifacts or in-flight transcription job become context for an existing or newly opened SIM chat session.
+10. **No smart-agent memory system is required**: SIM chat may keep immediate chat state, but it must not require the smart app's wider memory architecture.
+11. **Chat-side audio selection returns through the audio drawer**: this flow must not default to Android file picker for the real product path.
+12. **Pending audio selected from chat continues inside chat transparency**: if the user picks an untranscribed audio item from the chat-side drawer path, the same SIM transcription pipeline continues from chat and the waiting experience is owned by chat-side transparent processing states.
+13. **Pending chat-side selection binds immediately**: when the user selects pending audio from chat-side reselection, SIM binds that discussion session to the chosen audio immediately before Tingwu finishes so the waiting experience already belongs to the correct discussion thread.
+14. **Audio persistence must not contaminate the smart app**: if runtime/storage is shared, the audio/chat storage must be namespaced or otherwise isolated.
+15. **Badge sync is the real product ingress**: production SIM audio inventory comes from physical badge synchronization via BLE/Wi-Fi transfer rather than arbitrary phone-local uploads.
+16. **Phone-local import is test-only**: if a local file picker exists, it is only a testing convenience surface and must not be treated as the product-default audio ingress.
+17. **Completed chat-side audio must become durable chat history**: once a pending chat-side audio run completes, the finished artifact content must be appended as durable chat history rather than remaining only in transient thinking/progress state.
 
 ---
 
@@ -89,11 +90,13 @@ It must not:
 
 ## Chat Scope Rule
 
-SIM chat is intentionally narrow.
+SIM audio/chat remains SIM-scoped, but chat is no longer audio-entry-only.
 
 It is:
 
-- a continuation surface for the transcription discussion started from the audio drawer
+- a directly available SIM conversation surface even before audio is selected
+- grounded in system persona, user metadata, and local SIM session history
+- able to accept audio context later from `Ask AI` or chat-side attach/reselect
 - a question-answer surface over one selected audio
 - the transparent waiting surface when chat-side reselection chooses pending audio
 - allowed to load transcript and structured artifacts as context
@@ -252,7 +255,8 @@ The SIM audio/chat lane is behaviorally ready only when:
 - transcription runs through Tingwu-backed behavior
 - transcribed cards render source-led artifacts with readability polishing
 - already-transcribed audio loads existing artifacts without rerunning Tingwu
-- `Ask AI` opens a simple audio-grounded chat
+- blank/new SIM chat is available without audio first
+- `Ask AI` attaches one selected audio into chat as a fast path
 - chat-side durable artifact messages use one-time transcript reveal behavior and do not replay long transcript streaming on history reentry
 - audio re-selection from chat returns to the audio drawer
 - persistence stays isolated from the smart app

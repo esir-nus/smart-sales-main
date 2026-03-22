@@ -67,7 +67,7 @@ The user should not perceive:
 4. `SIM Shell` may reuse existing composables only through controlled seams.
 5. `SIM Shell` must expose the two main product lanes and only the SIM-approved support surfaces:
    scheduler,
-   audio/transcription plus simple audio-grounded chat,
+   general SIM chat plus audio/transcription context attachment,
    history/new page/connectivity/settings as simplified shell practices.
 
 ---
@@ -145,20 +145,23 @@ Expected navigation:
 - choosing setup from the connectivity modal opens a full-screen SIM setup branch backed by onboarding pairing steps
 - successful connectivity setup enters the SIM connectivity manager
 - closing the connectivity manager returns the user to normal SIM chat
-- `Ask AI` from audio opens the simple chat surface
+- blank/new chat is directly usable as normal SIM chat
+- `Ask AI` from audio opens chat with that audio pre-attached
 - selecting audio from chat reopens the audio drawer instead of Android file picker
 
 ### Drawer Gesture Contract
 
-SIM keeps the shell gesture model narrow and edge-scoped.
+SIM keeps the shell gesture model zone-scoped and velocity-aware.
 
-- when the normal SIM shell is visible and no support overlay is active, pulling down from the header-center zone opens the scheduler drawer
-- when the normal SIM shell is visible and no support overlay is active, pulling up from the bottom edge strip opens the audio drawer in browse mode
-- the bottom-edge audio-open gesture is disabled while the IME/keyboard is visible
+- when the normal SIM shell is visible and no support overlay is active, a downward pull that begins in the upper activation region opens the scheduler drawer
+- when the normal SIM shell is visible and no support overlay is active, an upward pull that begins in the lower activation region opens the audio drawer in browse mode
+- the current shipped activation split is top third for scheduler entry, middle third safe for chat/history scrolling, and bottom third for audio entry
+- shell entry gestures require vertical-intent locking; weak or horizontally-biased drags must stay with normal content behavior
+- shell entry gestures may trigger by either committed drag distance or deliberate fling velocity, so intentional pulls feel quicker than ordinary chat scrolling
+- the bottom-zone audio-open gesture is disabled while the IME/keyboard is visible
 - scheduler dismissal remains handle-first and upward
 - SIM audio dismissal is handle-first and downward
 - list scrolling or general chat overscroll must not act as an alternate drawer-open gesture
-- gesture zones must not widen so far that they steal menu, new-chat, or chat-input interactions
 
 ### Connectivity Boundary Rule
 
@@ -241,7 +244,7 @@ data class SimShellState(
 
 Notes:
 
-- `activeChatAudioId` identifies the current audio-grounded session context
+- `activeChatAudioId` identifies the current attached audio context, if any
 - `activeConnectivitySurface` distinguishes the scrim-backed bootstrap modal from the full-screen setup and manager branches
 - no shell state should imply smart history/session browsing or smart-agent orchestration requirements
 
@@ -264,7 +267,7 @@ It must not track:
 - private session-memory summaries
 - a second local memory lane separate from SIM chat history
 
-The bound SIM chat session remains the conversational source of truth, even though current SIM chat behavior is still placeholder-level and does not yet provide real scheduler follow-up intelligence.
+The bound SIM chat session remains the conversational source of truth, even though follow-up behavior must stay separate from normal chat and audio-context attachment.
 
 In Wave 5, this continuity binding now starts from the real badge pipeline ingress.
 

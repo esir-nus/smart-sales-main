@@ -39,7 +39,7 @@ This file is allowed to be ahead of the codebase.
 4. **Audio re-entry is drawer-based**: selecting audio from inside chat must reopen the audio drawer instead of launching Android file management.
 5. **Visual continuity does not justify runtime reuse**: the shell may look like Prism while still using a different composition root.
 6. **Ordinary shell practices may survive, but smart runtime meaning must not**: history, new page/session, connectivity entry, and settings are allowed when simplified for SIM; mascot overlay, debug HUD, plugin task board, and smart-only right drawers are not required SIM behavior.
-7. **Shell state must not require the smart app's orchestration model**: audio-grounded chat may track selected audio and local SIM history, but SIM must not depend on the smart app's broader memory architecture by default.
+7. **Shell state must not require the smart app's orchestration model**: general SIM chat may track user metadata, local SIM history, and optional attached audio, but SIM must not depend on the smart app's broader memory architecture by default.
 8. **Badge scheduler follow-up is prompt-first**: badge-origin scheduler success may create or rebind a task-scoped follow-up session, but SIM must surface it through an in-shell prompt/chip rather than force-switching chat immediately.
 
 ---
@@ -64,6 +64,7 @@ Support surfaces/actions:
 Permitted shell transitions:
 
 - app launch -> discussion chat
+- discussion chat -> normal message send/receive without any audio precondition
 - discussion chat -> scheduler drawer
 - discussion chat -> audio drawer
 - discussion chat -> history drawer
@@ -186,6 +187,7 @@ If a second drawer is triggered while one is already open:
 When the user requests new audio from chat:
 
 - the audio drawer must reopen
+- the current session must remain the same session while the active audio context is added or switched
 - Android native file manager must not become the default route for that chat flow
 
 ### Branch-S4: History Without Smart Memory
@@ -211,8 +213,9 @@ When badge-origin completion created a follow-up session with multiple bound tas
 The SIM shell is behaviorally ready only when:
 
 - SIM launch mounts a standalone shell
+- blank/new SIM chat is directly usable from the home surface
 - scheduler and audio drawers route correctly
-- `Ask AI` transitions into simple chat
+- `Ask AI` transitions into chat with audio pre-attached rather than defining the only legal chat entry
 - audio re-selection returns to the audio drawer
 - badge-origin scheduler follow-up stays prompt-first and task-scoped
 - ordinary SIM shell practices remain available without reviving the smart runtime

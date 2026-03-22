@@ -42,15 +42,21 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.smartsales.prism.domain.model.SchedulerFollowUpContext
 import com.smartsales.prism.domain.model.SchedulerFollowUpTaskSummary
+import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.core.telemetry.PipelineValve
 import com.smartsales.prism.BuildConfig
 import com.smartsales.prism.domain.audio.BadgeAudioPipeline
 import com.smartsales.prism.domain.audio.PipelineEvent
 import com.smartsales.prism.domain.audio.SchedulerResult
 import com.smartsales.prism.ui.AgentIntelligenceScreen
+import com.smartsales.prism.ui.AgentIntelligenceVisualMode
 import com.smartsales.prism.ui.PrismElevation
 import com.smartsales.prism.ui.components.ConnectivityModal
 import com.smartsales.prism.ui.components.ConnectivityManagerScreen
+import com.smartsales.prism.ui.components.DynamicIslandItem
+import com.smartsales.prism.ui.components.DynamicIslandSchedulerTarget
+import com.smartsales.prism.ui.components.DynamicIslandTapAction
+import com.smartsales.prism.ui.components.toDayOffset
 import com.smartsales.prism.ui.components.connectivity.ConnectionState
 import com.smartsales.prism.ui.components.connectivity.ConnectivityViewModel
 import com.smartsales.prism.ui.drawers.AudioStatus
@@ -71,6 +77,7 @@ import androidx.compose.material3.TextButton
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.util.UUID
+import java.time.ZoneId
 
 internal const val SIM_BADGE_SCHEDULER_CONTINUITY_INGRESS_ACCEPTED_SUMMARY =
     "SIM badge scheduler continuity ingress accepted"
@@ -459,6 +466,51 @@ internal fun shouldAttemptSimAudioDrawerAutoSync(
     mode: SimAudioDrawerMode
 ): Boolean = isDrawerOpen && mode == SimAudioDrawerMode.BROWSE
 
+internal fun buildSimDynamicIslandItems(
+    sessionTitle: String,
+    orderedTasks: List<ScheduledTask>
+): List<DynamicIslandItem> {
+    val normalizedTitle = sessionTitle.ifBlank { "SIM" }
+    val activeTasks = orderedTasks
+        .filterNot { it.isDone }
+        .take(3)
+    if (activeTasks.isEmpty()) {
+        return listOf(
+            DynamicIslandItem(
+                sessionTitle = normalizedTitle,
+                schedulerSummary = "暂无待办",
+                isIdleEntry = true,
+                tapAction = DynamicIslandTapAction.OpenSchedulerDrawer()
+            )
+        )
+    }
+    return activeTasks.map { task ->
+        DynamicIslandItem(
+            sessionTitle = normalizedTitle,
+            schedulerSummary = buildSimDynamicIslandSummary(task),
+            isConflict = task.hasConflict,
+            tapAction = DynamicIslandTapAction.OpenSchedulerDrawer(
+                target = DynamicIslandSchedulerTarget(
+                    date = task.startTime.atZone(ZoneId.systemDefault()).toLocalDate(),
+                    taskId = task.id,
+                    isConflict = task.hasConflict
+                )
+            )
+        )
+    }
+}
+
+private fun buildSimDynamicIslandSummary(task: ScheduledTask): String {
+    return when {
+        task.hasConflict && task.isVague -> "冲突：${task.title} · 待定提醒"
+        task.hasConflict && task.timeDisplay.isBlank() -> "冲突：${task.title}"
+        task.hasConflict -> "冲突：${task.title} · ${task.timeDisplay}"
+        task.isVague -> "即将：${task.title} · 待定提醒"
+        task.timeDisplay.isBlank() -> "即将：${task.title}"
+        else -> "即将：${task.title} · ${task.timeDisplay}"
+    }
+}
+
 @Composable
 private fun SimSchedulerFollowUpPrompt(
     onOpen: () -> Unit
@@ -585,6 +637,8 @@ internal fun SimShell(
     val connectivityState by connectivityViewModel.connectionState.collectAsStateWithLifecycle()
     val activeFollowUp by followUpOwner.activeFollowUp.collectAsStateWithLifecycle()
     val currentSessionId by chatViewModel.currentSessionId.collectAsStateWithLifecycle()
+    val sessionTitle by chatViewModel.sessionTitle.collectAsStateWithLifecycle()
+    val topUrgentTasks by schedulerViewModel.topUrgentTasks.collectAsStateWithLifecycle()
     val currentSchedulerFollowUpContext by chatViewModel.currentSchedulerFollowUpContext.collectAsStateWithLifecycle()
     val selectedSchedulerFollowUpTaskId by chatViewModel.selectedSchedulerFollowUpTaskId.collectAsStateWithLifecycle()
     val groupedSessions by chatViewModel.groupedSessions.collectAsStateWithLifecycle()
@@ -592,6 +646,12 @@ internal fun SimShell(
     val audioEntries by audioViewModel.entries.collectAsStateWithLifecycle()
     val trackedPendingAudioIds = remember { mutableStateMapOf<String, String>() }
     val isAudioDrawerOpen = shellState.activeDrawer == SimDrawerType.AUDIO
+    val dynamicIslandItems = remember(sessionTitle, topUrgentTasks) {
+        buildSimDynamicIslandItems(
+            sessionTitle = sessionTitle,
+            orderedTasks = topUrgentTasks
+        )
+    }
     val importTestAudioLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
@@ -698,7 +758,14 @@ internal fun SimShell(
         shellState = closeSimOverlays(shellState)
     }
 
-    fun openScheduler() {
+    fun openScheduler(action: DynamicIslandTapAction = DynamicIslandTapAction.OpenSchedulerDrawer()) {
+        when (action) {
+            is DynamicIslandTapAction.OpenSchedulerDrawer -> {
+                action.target
+                    ?.toDayOffset()
+                    ?.let(schedulerViewModel::onDateSelected)
+            }
+        }
         shellState = openSimScheduler(shellState)
     }
 
@@ -729,13 +796,8 @@ internal fun SimShell(
                 )
                 closeOverlays()
             },
-            onAudioBadgeClick = {
-                shellState = handleSimConnectivityEntryRequest(
-                    state = shellState,
-                    connectionState = connectivityState,
-                    source = "chat_badge"
-                )
-            },
+            onAudioBadgeClick = {},
+            onSchedulerClick = ::openScheduler,
             onAudioDrawerClick = { openAudioDrawer(SimAudioDrawerMode.BROWSE) },
             onAttachClick = { openAudioDrawer(SimAudioDrawerMode.CHAT_RESELECT) },
             onProfileClick = {
@@ -748,7 +810,9 @@ internal fun SimShell(
                 )
             },
             onDebugClick = {},
-            showDebugButton = false
+            showDebugButton = false,
+            visualMode = AgentIntelligenceVisualMode.SIM,
+            simDynamicIslandItems = dynamicIslandItems
         )
 
         val showScrim = shouldShowSimShellScrim(shellState)
@@ -835,6 +899,13 @@ internal fun SimShell(
                 showTestImportAction = BuildConfig.DEBUG,
                 showDebugScenarioActions = BuildConfig.DEBUG && shellState.audioDrawerMode == SimAudioDrawerMode.BROWSE,
                 viewModel = dependencies.audioViewModel,
+                onOpenConnectivity = {
+                    shellState = handleSimConnectivityEntryRequest(
+                        state = shellState.copy(activeDrawer = null),
+                        connectionState = connectivityState,
+                        source = "audio_drawer"
+                    )
+                },
                 onSyncFromBadge = { audioViewModel.syncFromBadgeManually() },
                 onImportTestAudio = { importTestAudioLauncher.launch("audio/*") },
                 onSeedDebugFailureScenario = { audioViewModel.seedDebugFailureScenario() },
@@ -1013,32 +1084,5 @@ internal fun SimShell(
             }
         }
 
-        if (!showScrim &&
-            !shellState.showSettings &&
-            shellState.activeConnectivitySurface == null
-        ) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    .height(84.dp)
-                    .zIndex(PrismElevation.Handles)
-                    .pointerInput(Unit) {
-                        var accumulatedDrag = 0f
-                        detectVerticalDragGestures(
-                            onDragEnd = { accumulatedDrag = 0f },
-                            onDragCancel = { accumulatedDrag = 0f }
-                        ) { _, dragAmount ->
-                            if (dragAmount > 0) {
-                                accumulatedDrag += dragAmount
-                                if (accumulatedDrag > 60f) {
-                                    openScheduler()
-                                    accumulatedDrag = 0f
-                                }
-                            }
-                        }
-                    }
-            )
-        }
     }
 }

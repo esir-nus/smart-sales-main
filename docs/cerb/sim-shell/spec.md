@@ -23,6 +23,7 @@ It exists to preserve the current Prism family look while preventing contaminati
 - top-level drawer orchestration
 - simple navigation between discussion chat, scheduler, and audio
 - shell support surfaces such as history, new page/session, connectivity entry, and settings entry
+- a persistent top-bar dynamic island surface that stays mounted above the SIM chat chrome
 - shell-owned badge scheduler follow-up continuity binding metadata
 - badge-origin scheduler follow-up prompt/chip routing
 - prototype-only dependency composition boundary
@@ -45,6 +46,7 @@ The user should perceive:
 - the same Prism shell language
 - the same drawer family and glass/light treatment
 - a smaller, more literal app focused on two main feature lanes
+- a sparse idle chat surface: balanced top controls with hamburger on the left, new chat on the right, a one-line dynamic island in the header center slot, greeting-first body, and a bottom message capsule instead of dashboard cards or analytics chrome
 - ordinary shell affordances that still feel normal, such as history, new page/session, connectivity entry, and settings
 
 The user should not perceive:
@@ -125,13 +127,15 @@ Do not rename only for style; rename when boundary truth improves.
 
 - history drawer
 - new page / new session action
-- connectivity entry for badge connection management
+- connectivity entry for badge connection management from the audio drawer rather than the chat home header
 - settings entry for profile/metadata controls
+- a persistent dynamic-island tap target that opens the scheduler drawer from chat
 
 Expected navigation:
 
 - opening scheduler does not require the smart shell
 - opening audio drawer does not require the smart shell
+- opening connectivity from the audio drawer does not require the smart shell
 - opening history does not require smart memory architecture
 - opening connectivity uses a SIM-owned state-aware route:
   - `NeedsSetup` opens the bootstrap modal
@@ -146,7 +150,7 @@ Expected navigation:
 
 For Wave 5 boundary purposes, `SIM Shell` owns only:
 
-- connectivity entry sources
+- connectivity entry sources, including the audio drawer entry
 - route selection between `MODAL`, `SETUP`, and `MANAGER`
 - overlay layering and dismiss semantics
 - close-back-to-chat behavior
@@ -167,6 +171,36 @@ Excluded shell surfaces:
 - debug HUD
 - right-side Tingwu/artifact stubs from the smart shell
 - plugin task-board shell behavior
+
+### Dynamic Island Overlay
+
+SIM now allows one shell-owned dynamic island surface in the top-header center slot.
+
+The island is:
+
+- always mounted while the normal SIM shell is visible
+- visually dynamic rather than a static label or plain handle
+- shell-owned as a presentation and routing surface
+- aligned with the shared one-line dynamic island contract
+
+Current delivered scope:
+
+- render one sticky one-line scheduler item at a time in the header center slot
+- use scheduler-first copy such as `冲突：...` or `即将：...`
+- keep overflow on one line through truncation rather than marquee
+- rotate vertically through up to the top 3 scheduler items when more than one eligible item exists
+- rotate every 5 seconds
+- keep conflict-visible scheduler items ahead of normal reminders
+- render conflict-visible items with yellow hue and most-immediate normal items with red hue
+- tap opens the scheduler drawer and lands on the visible item's corresponding date page
+- when there are no reminder tasks, stay mounted with a scheduler-entry idle summary instead of disappearing
+- do not show multi-line stacked reminder content or detached overlay chrome
+
+Boundary rule:
+
+- the shell owns island presentation, top-3 vertical rotation, and tap routing
+- scheduler still owns task truth, conflict priority, and reminder ordering
+- mascot behavior is not widened by this shell surface in the current slice
 
 ---
 

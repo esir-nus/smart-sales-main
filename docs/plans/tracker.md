@@ -9,10 +9,28 @@
 
 ---
 
+## Active UI Slice: Dynamic Island Header Decoupling
+> **Context**: Direct user-requested shell UI slice to formalize and deliver a Cerb-compliant Dynamic Island.
+
+- **Status**: Shipped
+- **Owning Shard**:
+  - [`docs/cerb-ui/dynamic-island/spec.md`](../cerb-ui/dynamic-island/spec.md)
+  - [`docs/cerb-ui/dynamic-island/interface.md`](../cerb-ui/dynamic-island/interface.md)
+- **Current Scope**:
+  - standard top-header center slot only
+  - sticky one-line scheduler summary
+  - scheduler-first copy using `冲突：...` / `即将：...`
+  - truncate overflow rather than horizontal scrolling
+  - single tap opens scheduler drawer and targets the corresponding scheduler date page
+  - SIM may layer a header-center top-3 vertical rotation on top of the shared renderer
+  - future ambient lanes deferred
+
+---
+
 ## Planned Mission: SIM Standalone Prototype
 > **Context**: Direct user-requested standalone prototype mission. This work is intentionally separate from the current agent app and must not contaminate the live agent runtime by default.
 
-- **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Accepted / Wave 6 Isolation Accepted / Wave 7 Feature Acceptance Accepted / Wave 7 Isolation Acceptance Accepted / Wave 7 Closeout Synced / Wave 8 Task-Scoped Scheduler Follow-Up In Progress
+- **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Accepted / Wave 6 Isolation Accepted / Wave 7 Feature Acceptance Accepted / Wave 7 Isolation Acceptance Accepted / Wave 7 Closeout Synced / Wave 8 Task-Scoped Scheduler Follow-Up Accepted / Wave 9 Physical-Badge E2E Blocked / Wave 10 Badge Ingress Repair In Progress
 - **Primary Product Doc**: [`docs/to-cerb/sim-standalone-prototype/concept.md`](../to-cerb/sim-standalone-prototype/concept.md)
 - **Mental Model Doc**: [`docs/to-cerb/sim-standalone-prototype/mental-model.md`](../to-cerb/sim-standalone-prototype/mental-model.md)
 - **Mission Tracker**: [`docs/plans/sim-tracker.md`](./sim-tracker.md)
@@ -22,6 +40,8 @@
 - **Wave 4 Execution Brief**: [`docs/plans/sim-wave4-execution-brief.md`](./sim-wave4-execution-brief.md)
 - **Wave 5 Execution Brief**: [`docs/plans/sim-wave5-execution-brief.md`](./sim-wave5-execution-brief.md)
 - **Wave 8 Execution Brief**: [`docs/plans/sim-wave8-execution-brief.md`](./sim-wave8-execution-brief.md)
+- **Wave 9 Execution Brief**: [`docs/plans/sim-wave9-execution-brief.md`](./sim-wave9-execution-brief.md)
+- **Wave 10 Execution Brief**: [`docs/plans/sim-wave10-execution-brief.md`](./sim-wave10-execution-brief.md)
 - **Wave 1 Acceptance**: [`docs/reports/tests/L3-20260319-sim-wave1-shell-acceptance.md`](../reports/tests/L3-20260319-sim-wave1-shell-acceptance.md)
 - **Wave 4 Acceptance**: [`docs/reports/tests/L3-20260320-sim-wave4-scheduler-validation.md`](../reports/tests/L3-20260320-sim-wave4-scheduler-validation.md)
 - **Wave 5 Acceptance**: [`docs/reports/tests/L3-20260321-sim-wave5-connectivity-validation.md`](../reports/tests/L3-20260321-sim-wave5-connectivity-validation.md)
@@ -31,6 +51,8 @@
 - **Wave 7 Audio Chat Validation**: [`docs/reports/tests/L3-20260322-sim-wave7-audio-chat-validation.md`](../reports/tests/L3-20260322-sim-wave7-audio-chat-validation.md)
 - **Wave 7 Feature Acceptance**: [`docs/reports/tests/L3-20260322-sim-wave7-feature-acceptance.md`](../reports/tests/L3-20260322-sim-wave7-feature-acceptance.md)
 - **Wave 7 Isolation Acceptance**: [`docs/reports/tests/L3-20260322-sim-wave7-isolation-acceptance.md`](../reports/tests/L3-20260322-sim-wave7-isolation-acceptance.md)
+- **Wave 8 Follow-Up Validation**: [`docs/reports/tests/L3-20260322-sim-wave8-follow-up-validation.md`](../reports/tests/L3-20260322-sim-wave8-follow-up-validation.md)
+- **Wave 9 Hardware Validation**: [`docs/reports/tests/L3-20260322-sim-wave9-hardware-validation.md`](../reports/tests/L3-20260322-sim-wave9-hardware-validation.md)
 - **Wave 5 Boundary Audit**: [`docs/reports/20260321-sim-wave5-boundary-audit.md`](../reports/20260321-sim-wave5-boundary-audit.md)
 - **Audit Output**: [`docs/reports/20260319-sim-standalone-code-audit.md`](../reports/20260319-sim-standalone-code-audit.md)
 - **Clarification Audit**: [`docs/reports/20260319-sim-clarification-evidence-audit.md`](../reports/20260319-sim-clarification-evidence-audit.md)
@@ -55,7 +77,9 @@
   - Source-led Tingwu artifacts with optional readability polishing
   - No agent memory or smart-agent system integration
 - **Current Carry Debt**:
-  - SIM now has an implemented `T8.0` follow-up mini-wave in progress on top of the accepted Wave 7 closeout. The old shell-only badge scheduler continuity binding is upgraded into a persisted task-scoped follow-up session plus in-shell prompt/chip and bound-task quick actions, but this slice still needs focused L3 evidence before closure. Hardware-specific physical-badge L3 remains deferred beyond that. Earlier accepted debt status is unchanged for reminders, connectivity, and Wave 6 isolation.
+  - SIM has now accepted `T8.0` on top of the Wave 7 closeout. `docs/reports/tests/L3-20260322-sim-wave8-follow-up-validation.md` proves prompt-first ingress, in-shell prompt opening, repository-backed single-task follow-up mutation, and multi-task no-selection safe-fail on device.
+  - `docs/reports/tests/L3-20260322-sim-wave9-hardware-validation.md` records the first `Wave 9` execution attempt as blocked: device/build preflight succeeded, but no real badge-origin single-task or multi-task ingress was captured in-session, so the hardware-only L3 debt remains open. Earlier accepted debt status is unchanged for reminders, connectivity, and Wave 6 isolation.
+  - `Wave 10` is the explicit repair mini-wave for that blocker. Code and L1 verification now harden BLE recording ingress plus connection truth; device-level ingress proof is still required before returning to `T9.0`.
 
 ---
 

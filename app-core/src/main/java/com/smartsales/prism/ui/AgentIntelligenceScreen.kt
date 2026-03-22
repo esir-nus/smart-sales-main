@@ -45,12 +45,25 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.clip
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import kotlinx.coroutines.delay
+
+enum class AgentIntelligenceVisualMode {
+    DEFAULT,
+    SIM
+}
 
 @Composable
 fun AgentIntelligenceScreen(
     viewModel: IAgentViewModel = hiltViewModel<AgentViewModel>(),
     onMenuClick: () -> Unit = {},
     onNewSessionClick: () -> Unit = {},
+    onSchedulerClick: (DynamicIslandTapAction) -> Unit = {},
     onAudioBadgeClick: () -> Unit = {},
     onAudioDrawerClick: () -> Unit = {},
     onAttachClick: () -> Unit = onAudioDrawerClick,
@@ -58,7 +71,9 @@ fun AgentIntelligenceScreen(
     onArtifactsClick: () -> Unit = {},
     onDebugClick: () -> Unit = {},
     onProfileClick: () -> Unit = {},
-    showDebugButton: Boolean = true
+    showDebugButton: Boolean = true,
+    visualMode: AgentIntelligenceVisualMode = AgentIntelligenceVisualMode.DEFAULT,
+    simDynamicIslandItems: List<DynamicIslandItem> = emptyList()
 ) {
     val history by viewModel.history.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
@@ -100,12 +115,14 @@ fun AgentIntelligenceScreen(
         heroUpcoming = heroUpcoming,
         heroAccomplished = heroAccomplished,
         heroGreeting = heroGreeting,
+        isSimShell = visualMode == AgentIntelligenceVisualMode.SIM,
         transcriptRevealState = transcriptRevealState,
         onArtifactTranscriptRevealConsumed = { messageId, isLongTranscript ->
             simViewModel?.markArtifactTranscriptRevealConsumed(messageId, isLongTranscript)
         },
         onMenuClick = onMenuClick,
         onNewSessionClick = onNewSessionClick,
+        onSchedulerClick = onSchedulerClick,
         onAudioBadgeClick = onAudioBadgeClick,
         onAudioDrawerClick = onAudioDrawerClick,
         onAttachClick = onAttachClick,
@@ -114,6 +131,7 @@ fun AgentIntelligenceScreen(
         onDebugClick = onDebugClick,
         onProfileClick = onProfileClick,
         showDebugButton = showDebugButton,
+        simDynamicIslandItems = simDynamicIslandItems,
         onUpdateInput = viewModel::updateInput,
         onSend = viewModel::send,
         onConfirmPlan = viewModel::confirmAnalystPlan,
@@ -135,10 +153,12 @@ internal fun AgentIntelligenceContent(
     heroUpcoming: List<ScheduledTask>,
     heroAccomplished: List<ScheduledTask>,
     heroGreeting: String,
+    isSimShell: Boolean,
     transcriptRevealState: Map<String, SimAgentViewModel.ArtifactTranscriptRevealState>,
     onArtifactTranscriptRevealConsumed: (messageId: String, isLongTranscript: Boolean) -> Unit,
     onMenuClick: () -> Unit,
     onNewSessionClick: () -> Unit,
+    onSchedulerClick: (DynamicIslandTapAction) -> Unit,
     onAudioBadgeClick: () -> Unit,
     onAudioDrawerClick: () -> Unit,
     onAttachClick: () -> Unit,
@@ -147,6 +167,7 @@ internal fun AgentIntelligenceContent(
     onDebugClick: () -> Unit,
     onProfileClick: () -> Unit,
     showDebugButton: Boolean,
+    simDynamicIslandItems: List<DynamicIslandItem>,
     onUpdateInput: (String) -> Unit,
     onSend: () -> Unit,
     onConfirmPlan: () -> Unit,
@@ -190,6 +211,10 @@ internal fun AgentIntelligenceContent(
     val ProMaxOnyx = Color(0xFF0B0C10)
     val ProMaxAccentGlow = Color(0xFF38BDF8).copy(alpha = 0.08f)
     val ProMaxTopWash = Color(0xFF111827)
+    val dynamicIslandState = DynamicIslandStateMapper.fromScheduler(
+        sessionTitle = sessionTitle,
+        upcoming = heroUpcoming
+    )
     // 使 glow 半径与屏幕宽度成正比，确保在不同 DPI 设备上视觉一致
     val screenWidthDp = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp
     val glowRadiusPx = with(LocalDensity.current) { (screenWidthDp * 2.5f).toPx() }
@@ -198,245 +223,463 @@ internal fun AgentIntelligenceContent(
         modifier = Modifier
             .fillMaxSize()
             .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(ProMaxTopWash, ProMaxOnyx, Color(0xFF06070A))
-                )
+                brush = if (isSimShell) {
+                    Brush.verticalGradient(
+                        colors = listOf(Color(0xFF121A24), Color(0xFF0E151D), Color(0xFF0B1219))
+                    )
+                } else {
+                    Brush.verticalGradient(
+                        colors = listOf(ProMaxTopWash, ProMaxOnyx, Color(0xFF06070A))
+                    )
+                }
             )
             .background(
                 brush = Brush.radialGradient(
-                    colors = listOf(ProMaxAccentGlow, Color.Transparent),
+                    colors = listOf(
+                        if (isSimShell) Color(0xFF29465F).copy(alpha = 0.12f) else ProMaxAccentGlow,
+                        Color.Transparent
+                    ),
                     radius = glowRadiusPx
                 )
             )
             .nestedScroll(nestedScrollConnection)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .padding(top = 80.dp) // Space for Floating Header
-                .navigationBarsPadding()
-                .padding(bottom = 140.dp) // Space for Dock
-        ) {
-            if (history.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .verticalScroll(rememberScrollState()),
-                    contentAlignment = Alignment.TopCenter
-                ) {
-                    HomeHeroDashboard(
-                        greeting = heroGreeting,
-                        upcoming = heroUpcoming,
-                        accomplished = heroAccomplished,
-                        onProfileClick = onProfileClick
-                    )
-                }
-            } else {
-                ActiveTaskHorizon(
-                    state = uiState.toActiveTaskHorizonState(),
-                    onCancelRequested = { /* Hook up to pipeline cancel */ }
+        if (isSimShell) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 14.dp, vertical = 12.dp)
+            ) {
+                SimShellHeader(
+                    sessionTitle = sessionTitle,
+                    dynamicIslandItems = simDynamicIslandItems,
+                    onMenuClick = onMenuClick,
+                    onNewSessionClick = onNewSessionClick,
+                    onSchedulerClick = onSchedulerClick
                 )
 
-                if (taskBoardItems.isNotEmpty()) {
-                    com.smartsales.prism.ui.analyst.TaskBoard(
-                        items = taskBoardItems,
-                        onItemClick = onSelectTaskBoardItem
+                Spacer(modifier = Modifier.height(18.dp))
+
+                if (history.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
+                        contentAlignment = Alignment.TopStart
+                    ) {
+                        SimIdleGreeting(greeting = heroGreeting)
+                    }
+                } else {
+                    SimConversationTimeline(
+                        modifier = Modifier.weight(1f),
+                        history = history,
+                        uiState = uiState,
+                        agentActivity = agentActivity,
+                        transcriptRevealState = transcriptRevealState,
+                        onArtifactTranscriptRevealConsumed = onArtifactTranscriptRevealConsumed,
+                        onConfirmPlan = onConfirmPlan,
+                        onAmendPlan = onAmendPlan
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                    reverseLayout = true
-                ) {
-                    agentActivity?.let { activity ->
-                        item {
-                            val maxLines = ThinkingPolicy.maxTraceLines(Mode.ANALYST)
-                            val autoCollapse = ThinkingPolicy.shouldAutoCollapse(Mode.ANALYST)
-                            AgentActivityBanner(activity, maxLines, autoCollapse)
-                        }
-                    }
+                Spacer(modifier = Modifier.height(12.dp))
 
-                    if (agentActivity == null && uiState !is UiState.Idle) {
-                        item {
-                            when (uiState) {
-                                is UiState.Thinking -> ThinkingCanvas(
-                                    state = uiState.toThinkingCanvasState(isCollapsed = isThinkingCollapsed),
-                                    onToggleExpanded = { isThinkingCollapsed = !isThinkingCollapsed }
-                                )
-                                is UiState.Streaming -> ThinkingCanvas(
-                                    state = uiState.toThinkingCanvasState(isCollapsed = isThinkingCollapsed),
-                                    onToggleExpanded = { isThinkingCollapsed = !isThinkingCollapsed }
-                                )
-                                is UiState.AwaitingClarification,
-                                is UiState.MarkdownStrategyState,
-                                is UiState.AudioArtifacts,
-                                is UiState.Response,
-                                is UiState.SchedulerTaskCreated,
-                                is UiState.SchedulerMultiTaskCreated,
-                                is UiState.Error -> ResponseBubble(
-                                    uiState = uiState,
+                SimInputBar(
+                    text = inputText,
+                    isSending = isSending,
+                    onTextChanged = onUpdateInput,
+                    onSend = onSend,
+                    onAttachClick = onAttachClick,
+                    onMicClick = onAudioDrawerClick
+                )
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .padding(top = 80.dp)
+                    .navigationBarsPadding()
+                    .padding(bottom = 140.dp)
+            ) {
+                if (history.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState()),
+                        contentAlignment = Alignment.TopCenter
+                    ) {
+                        HomeHeroDashboard(
+                            greeting = heroGreeting,
+                            upcoming = heroUpcoming,
+                            accomplished = heroAccomplished,
+                            onProfileClick = onProfileClick
+                        )
+                    }
+                } else {
+                    ChatTimeline(
+                        modifier = Modifier.weight(1f),
+                        history = history,
+                        uiState = uiState,
+                        agentActivity = agentActivity,
+                        taskBoardItems = taskBoardItems,
+                        isThinkingCollapsed = isThinkingCollapsed,
+                        transcriptRevealState = transcriptRevealState,
+                        onArtifactTranscriptRevealConsumed = onArtifactTranscriptRevealConsumed,
+                        onConfirmPlan = onConfirmPlan,
+                        onAmendPlan = onAmendPlan,
+                        onSelectTaskBoardItem = onSelectTaskBoardItem
+                    )
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .statusBarsPadding()
+                    .padding(top = 16.dp, start = 16.dp, end = 16.dp)
+                    .fillMaxWidth()
+            ) {
+                PrismSurface(
+                    shape = RoundedCornerShape(24.dp),
+                    backgroundColor = Color.White.copy(alpha = 0.06f),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(24.dp))
+                ) {
+                    ProMaxHeader(
+                        dynamicIslandState = dynamicIslandState,
+                        onMenuClick = onMenuClick,
+                        onNewSessionClick = onNewSessionClick,
+                        onSchedulerClick = onSchedulerClick,
+                        onDebugClick = onDebugClick,
+                        onDeviceClick = onAudioBadgeClick,
+                        showDebugButton = showDebugButton
+                    )
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .imePadding()
+                    .padding(horizontal = 16.dp, vertical = 16.dp)
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    GlassInputCapsule(
+                        text = inputText,
+                        onTextChanged = onUpdateInput,
+                        onSend = onSend,
+                        onAttachClick = onAttachClick
+                    )
+                }
+            }
+        }
+
+        errorMessage?.let { error ->
+            Snackbar(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = if (isSimShell) 20.dp else 80.dp),
+                containerColor = AccentDanger
+            ) { Text(error, color = Color.White) }
+        }
+    }
+}
+
+@Composable
+private fun ChatTimeline(
+    modifier: Modifier = Modifier,
+    history: List<ChatMessage>,
+    uiState: UiState,
+    agentActivity: AgentActivity?,
+    taskBoardItems: List<com.smartsales.prism.domain.analyst.TaskBoardItem>,
+    isThinkingCollapsed: Boolean,
+    transcriptRevealState: Map<String, SimAgentViewModel.ArtifactTranscriptRevealState>,
+    onArtifactTranscriptRevealConsumed: (messageId: String, isLongTranscript: Boolean) -> Unit,
+    onConfirmPlan: () -> Unit,
+    onAmendPlan: () -> Unit,
+    onSelectTaskBoardItem: (String) -> Unit
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        ActiveTaskHorizon(
+            state = uiState.toActiveTaskHorizonState(),
+            onCancelRequested = { }
+        )
+
+        if (taskBoardItems.isNotEmpty()) {
+            com.smartsales.prism.ui.analyst.TaskBoard(
+                items = taskBoardItems,
+                onItemClick = onSelectTaskBoardItem
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(horizontal = 2.dp, vertical = 8.dp),
+            reverseLayout = true
+        ) {
+            agentActivity?.let { activity ->
+                item {
+                    val maxLines = ThinkingPolicy.maxTraceLines(Mode.ANALYST)
+                    val autoCollapse = ThinkingPolicy.shouldAutoCollapse(Mode.ANALYST)
+                    AgentActivityBanner(activity, maxLines, autoCollapse)
+                }
+            }
+
+            if (agentActivity == null && uiState !is UiState.Idle) {
+                item {
+                    when (uiState) {
+                        is UiState.Thinking -> ThinkingCanvas(
+                            state = uiState.toThinkingCanvasState(isCollapsed = isThinkingCollapsed),
+                            onToggleExpanded = { }
+                        )
+                        is UiState.Streaming -> ThinkingCanvas(
+                            state = uiState.toThinkingCanvasState(isCollapsed = isThinkingCollapsed),
+                            onToggleExpanded = { }
+                        )
+                        is UiState.AwaitingClarification,
+                        is UiState.MarkdownStrategyState,
+                        is UiState.AudioArtifacts,
+                        is UiState.Response,
+                        is UiState.SchedulerTaskCreated,
+                        is UiState.SchedulerMultiTaskCreated,
+                        is UiState.Error -> ResponseBubble(
+                            uiState = uiState,
+                            onConfirmPlan = onConfirmPlan,
+                            onAmendPlan = onAmendPlan
+                        )
+                        is UiState.ExecutingTool -> {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(8.dp)) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp), color = AccentBlue, strokeWidth = 2.dp)
+                                Spacer(Modifier.width(8.dp))
+                                Text("正在执行: ${uiState.toolName}", color = TextSecondary, fontSize = 13.sp)
+                            }
+                        }
+                        is UiState.BadgeDelegationHint -> {
+                            InlineStatusNotice(
+                                icon = Icons.Default.Mic,
+                                iconTint = AccentYellow,
+                                containerColor = AccentYellow.copy(alpha = 0.1f),
+                                borderColor = AccentYellow.copy(alpha = 0.3f),
+                                text = "请长按您的智能工牌专属按键来录入此日程。"
+                            )
+                        }
+                        is UiState.Loading -> {
+                            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                CircularProgressIndicator(color = AccentBlue)
+                            }
+                        }
+                        else -> {}
+                    }
+                }
+            }
+
+            items(history.reversed()) { message ->
+                when (message) {
+                    is ChatMessage.User -> UserBubble(text = message.content)
+                    is ChatMessage.Ai -> {
+                        when (val state = message.uiState) {
+                            is UiState.Response,
+                            is UiState.AwaitingClarification,
+                            is UiState.SchedulerTaskCreated,
+                            is UiState.SchedulerMultiTaskCreated,
+                            is UiState.MarkdownStrategyState,
+                            is UiState.Error -> {
+                                ResponseBubble(
+                                    uiState = state,
                                     onConfirmPlan = onConfirmPlan,
                                     onAmendPlan = onAmendPlan
                                 )
-                                is UiState.ExecutingTool -> {
-                                    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(8.dp)) {
-                                        CircularProgressIndicator(modifier = Modifier.size(16.dp), color = AccentBlue, strokeWidth = 2.dp)
-                                        Spacer(Modifier.width(8.dp))
-                                        Text("正在执行: ${uiState.toolName}", color = TextSecondary, fontSize = 13.sp)
+                            }
+                            is UiState.AudioArtifacts -> {
+                                val revealState = transcriptRevealState[message.id]
+                                SimArtifactBubble(
+                                    title = state.title,
+                                    artifactsJson = state.artifactsJson,
+                                    transcriptPresentation = SimTranscriptPresentation(
+                                        enableInitialReveal = revealState?.consumed != true,
+                                        startCollapsed = revealState?.isLongTranscript == true,
+                                        minRevealMillis = if (revealState?.consumed == true) 0L else 1000L
+                                    ),
+                                    onTranscriptRevealConsumed = { isLongTranscript ->
+                                        onArtifactTranscriptRevealConsumed(message.id, isLongTranscript)
                                     }
-                                }
-                                is UiState.BadgeDelegationHint -> {
-                                    InlineStatusNotice(
-                                        icon = Icons.Default.Mic,
-                                        iconTint = AccentYellow,
-                                        containerColor = AccentYellow.copy(alpha = 0.1f),
-                                        borderColor = AccentYellow.copy(alpha = 0.3f),
-                                        text = "请长按您的智能工牌专属按键来录入此日程。"
+                                )
+                            }
+                            is UiState.Thinking -> {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.AutoAwesome,
+                                        contentDescription = null,
+                                        tint = ProMaxAccent,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        state.hint ?: "处理中...",
+                                        color = TextMuted,
+                                        fontSize = 12.sp
                                     )
                                 }
-                                is UiState.Loading -> {
-                                    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                                        CircularProgressIndicator(color = AccentBlue)
-                                    }
-                                }
-                                else -> {}
                             }
-                        }
-                    }
-
-                    items(history.reversed()) { message ->
-                        when (message) {
-                            is ChatMessage.User -> UserBubble(text = message.content)
-                            is ChatMessage.Ai -> {
-                                when (val state = message.uiState) {
-                                    is UiState.Response,
-                                    is UiState.AwaitingClarification,
-                                    is UiState.SchedulerTaskCreated,
-                                    is UiState.SchedulerMultiTaskCreated,
-                                    is UiState.MarkdownStrategyState,
-                                    is UiState.Error -> {
-                                        ResponseBubble(
-                                            uiState = state,
-                                            onConfirmPlan = onConfirmPlan,
-                                            onAmendPlan = onAmendPlan
-                                        )
-                                    }
-                                    is UiState.AudioArtifacts -> {
-                                        val revealState = transcriptRevealState[message.id]
-                                        SimArtifactBubble(
-                                            title = state.title,
-                                            artifactsJson = state.artifactsJson,
-                                            transcriptPresentation = SimTranscriptPresentation(
-                                                enableInitialReveal = revealState?.consumed != true,
-                                                startCollapsed = revealState?.isLongTranscript == true,
-                                                minRevealMillis = if (revealState?.consumed == true) 0L else 1000L
-                                            ),
-                                            onTranscriptRevealConsumed = { isLongTranscript ->
-                                                onArtifactTranscriptRevealConsumed(message.id, isLongTranscript)
-                                            }
-                                        )
-                                    }
-                                    is UiState.Thinking -> {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier.padding(8.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Outlined.AutoAwesome,
-                                                contentDescription = null,
-                                                tint = ProMaxAccent,
-                                                modifier = Modifier.size(14.dp)
-                                            )
-                                            Spacer(Modifier.width(8.dp))
-                                            Text(
-                                                state.hint ?: "处理中...",
-                                                color = TextMuted,
-                                                fontSize = 12.sp
-                                            )
-                                        }
-                                    }
-                                    is UiState.ExecutingTool -> {
-                                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(8.dp)) {
-                                            CircularProgressIndicator(modifier = Modifier.size(16.dp), color = AccentBlue, strokeWidth = 2.dp)
-                                            Spacer(Modifier.width(8.dp))
-                                            Text("正在执行: ${state.toolName}", color = TextSecondary, fontSize = 13.sp)
-                                        }
-                                    }
-                                    is UiState.BadgeDelegationHint -> {
-                                        InlineStatusNotice(
-                                            icon = Icons.Default.Mic,
-                                            iconTint = AccentYellow,
-                                            containerColor = AccentYellow.copy(alpha = 0.1f),
-                                            borderColor = AccentYellow.copy(alpha = 0.3f),
-                                            text = "请长按您的智能工牌专属按键来录入此日程。"
-                                        )
-                                    }
-                                    else -> {}
+                            is UiState.ExecutingTool -> {
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(8.dp)) {
+                                    CircularProgressIndicator(modifier = Modifier.size(16.dp), color = AccentBlue, strokeWidth = 2.dp)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("正在执行: ${state.toolName}", color = TextSecondary, fontSize = 13.sp)
                                 }
                             }
+                            is UiState.BadgeDelegationHint -> {
+                                InlineStatusNotice(
+                                    icon = Icons.Default.Mic,
+                                    iconTint = AccentYellow,
+                                    containerColor = AccentYellow.copy(alpha = 0.1f),
+                                    borderColor = AccentYellow.copy(alpha = 0.3f),
+                                    text = "请长按您的智能工牌专属按键来录入此日程。"
+                                )
+                            }
+                            else -> {}
                         }
                     }
                 }
             }
         }
-        
-        // --- Layer 2: Floating Header ---
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .statusBarsPadding()
-                .padding(top = 16.dp, start = 16.dp, end = 16.dp)
-                .fillMaxWidth()
-        ) {
-            PrismSurface(
-                shape = RoundedCornerShape(24.dp),
-                backgroundColor = Color.White.copy(alpha = 0.06f),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(24.dp))
-            ) {
-                ProMaxHeader(
-                    sessionTitle = sessionTitle,
-                    onMenuClick = onMenuClick,
-                    onNewSessionClick = onNewSessionClick,
-                    onDebugClick = onDebugClick,
-                    onDeviceClick = onAudioBadgeClick,
-                    showDebugButton = showDebugButton
+    }
+}
+
+@Composable
+private fun SimConversationTimeline(
+    modifier: Modifier = Modifier,
+    history: List<ChatMessage>,
+    uiState: UiState,
+    agentActivity: AgentActivity?,
+    transcriptRevealState: Map<String, SimAgentViewModel.ArtifactTranscriptRevealState>,
+    onArtifactTranscriptRevealConsumed: (messageId: String, isLongTranscript: Boolean) -> Unit,
+    onConfirmPlan: () -> Unit,
+    onAmendPlan: () -> Unit
+) {
+    LazyColumn(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(horizontal = 2.dp, vertical = 8.dp),
+        reverseLayout = true
+    ) {
+        agentActivity?.let { activity ->
+            item {
+                SimInlineState(
+                    icon = Icons.Outlined.AutoAwesome,
+                    text = activity.trace.lastOrNull()
+                        ?: activity.action?.name
+                        ?: activity.phase.name
                 )
             }
         }
 
-        // --- Layer 3: Floating Dock ---
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .navigationBarsPadding()
-                .imePadding()
-                .padding(horizontal = 16.dp, vertical = 16.dp)
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                GlassInputCapsule(
-                    text = inputText,
-                    onTextChanged = onUpdateInput,
-                    onSend = onSend,
-                    onAttachClick = onAttachClick
-                )
+        if (agentActivity == null && uiState !is UiState.Idle) {
+            item {
+                when (uiState) {
+                    is UiState.Thinking -> SimInlineState(
+                        icon = Icons.Outlined.AutoAwesome,
+                        text = uiState.hint ?: "SIM 正在处理当前对话"
+                    )
+                    is UiState.Streaming -> SimInlineState(
+                        icon = Icons.Outlined.AutoAwesome,
+                        text = uiState.partialContent.takeIf { it.isNotBlank() } ?: "SIM 正在生成回复"
+                    )
+                    is UiState.AwaitingClarification,
+                    is UiState.MarkdownStrategyState,
+                    is UiState.AudioArtifacts,
+                    is UiState.Response,
+                    is UiState.SchedulerTaskCreated,
+                    is UiState.SchedulerMultiTaskCreated,
+                    is UiState.Error -> ResponseBubble(
+                        uiState = uiState,
+                        onConfirmPlan = onConfirmPlan,
+                        onAmendPlan = onAmendPlan
+                    )
+                    is UiState.ExecutingTool -> SimInlineState(
+                        icon = Icons.Outlined.Build,
+                        text = "正在执行: ${uiState.toolName}"
+                    )
+                    is UiState.BadgeDelegationHint -> InlineStatusNotice(
+                        icon = Icons.Default.Mic,
+                        iconTint = AccentYellow,
+                        containerColor = AccentYellow.copy(alpha = 0.1f),
+                        borderColor = AccentYellow.copy(alpha = 0.3f),
+                        text = "请长按您的智能工牌专属按键来录入此日程。"
+                    )
+                    is UiState.Loading -> SimInlineLoading()
+                    else -> {}
+                }
             }
         }
-        
-        errorMessage?.let { error ->
-            Snackbar(
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = 80.dp),
-                containerColor = AccentDanger
-            ) { Text(error, color = Color.White) }
+
+        items(history.reversed()) { message ->
+            when (message) {
+                is ChatMessage.User -> UserBubble(text = message.content)
+                is ChatMessage.Ai -> {
+                    when (val state = message.uiState) {
+                        is UiState.Response,
+                        is UiState.AwaitingClarification,
+                        is UiState.SchedulerTaskCreated,
+                        is UiState.SchedulerMultiTaskCreated,
+                        is UiState.MarkdownStrategyState,
+                        is UiState.Error -> ResponseBubble(
+                            uiState = state,
+                            onConfirmPlan = onConfirmPlan,
+                            onAmendPlan = onAmendPlan
+                        )
+                        is UiState.AudioArtifacts -> {
+                            val revealState = transcriptRevealState[message.id]
+                            SimArtifactBubble(
+                                title = state.title,
+                                artifactsJson = state.artifactsJson,
+                                transcriptPresentation = SimTranscriptPresentation(
+                                    enableInitialReveal = revealState?.consumed != true,
+                                    startCollapsed = revealState?.isLongTranscript == true,
+                                    minRevealMillis = if (revealState?.consumed == true) 0L else 1000L
+                                ),
+                                onTranscriptRevealConsumed = { isLongTranscript ->
+                                    onArtifactTranscriptRevealConsumed(message.id, isLongTranscript)
+                                }
+                            )
+                        }
+                        is UiState.Thinking -> SimInlineState(
+                            icon = Icons.Outlined.AutoAwesome,
+                            text = state.hint ?: "SIM 正在处理当前对话"
+                        )
+                        is UiState.Streaming -> SimInlineState(
+                            icon = Icons.Outlined.AutoAwesome,
+                            text = state.partialContent.takeIf { it.isNotBlank() } ?: "SIM 正在生成回复"
+                        )
+                        is UiState.ExecutingTool -> SimInlineState(
+                            icon = Icons.Outlined.Build,
+                            text = "正在执行: ${state.toolName}"
+                        )
+                        is UiState.BadgeDelegationHint -> InlineStatusNotice(
+                            icon = Icons.Default.Mic,
+                            iconTint = AccentYellow,
+                            containerColor = AccentYellow.copy(alpha = 0.1f),
+                            borderColor = AccentYellow.copy(alpha = 0.3f),
+                            text = "请长按您的智能工牌专属按键来录入此日程。"
+                        )
+                        else -> {}
+                    }
+                }
+            }
         }
     }
 }
@@ -450,6 +693,278 @@ private val ProMaxDanger = Color(0xFFEF4444)
 private val ProMaxWarning = Color(0xFFF59E0B)
 private val ProMaxSuccess = Color(0xFF10B981)
 private val ProMaxAccent = Color(0xFF38BDF8)
+private val SimChrome = Color(0xFF202833)
+private val SimChromeMuted = Color(0xFF778291)
+
+@Composable
+private fun SimShellHeader(
+    sessionTitle: String,
+    dynamicIslandItems: List<DynamicIslandItem>,
+    onMenuClick: () -> Unit,
+    onNewSessionClick: () -> Unit,
+    onSchedulerClick: (DynamicIslandTapAction) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        SimHeaderButton(
+            icon = Icons.Filled.Menu,
+            tint = Color.White.copy(alpha = 0.82f),
+            onClick = onMenuClick
+        )
+        if (dynamicIslandItems.isNotEmpty()) {
+            SimRotatingDynamicIsland(
+                items = dynamicIslandItems,
+                modifier = Modifier.weight(1f),
+                onTap = onSchedulerClick
+            )
+        } else {
+            Box(
+                modifier = Modifier.weight(1f),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = sessionTitle.ifBlank { "SIM" },
+                    color = Color.White.copy(alpha = 0.84f),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+        SimHeaderButton(
+            icon = Icons.Filled.Add,
+            tint = Color.White.copy(alpha = 0.82f),
+            onClick = onNewSessionClick
+        )
+    }
+}
+
+@Composable
+private fun SimRotatingDynamicIsland(
+    items: List<DynamicIslandItem>,
+    modifier: Modifier = Modifier,
+    onTap: (DynamicIslandTapAction) -> Unit
+) {
+    if (items.isEmpty()) return
+
+    val itemKeys = remember(items) { items.map(DynamicIslandItem::stableKey) }
+    var currentItemKey by remember { mutableStateOf<String?>(null) }
+    val currentIndex = resolveSimDynamicIslandIndex(
+        items = items,
+        currentItemKey = currentItemKey
+    )
+    val currentItem = items[currentIndex]
+
+    LaunchedEffect(itemKeys) {
+        currentItemKey = items[currentIndex].stableKey
+    }
+
+    LaunchedEffect(itemKeys, currentItem.stableKey) {
+        if (items.size <= 1) return@LaunchedEffect
+        delay(5000L)
+        val nextIndex = (currentIndex + 1) % items.size
+        currentItemKey = items[nextIndex].stableKey
+    }
+
+    Box(modifier = modifier) {
+        AnimatedContent(
+            targetState = currentItem,
+            transitionSpec = {
+                (slideInVertically { fullHeight -> fullHeight } + fadeIn())
+                    .togetherWith(slideOutVertically { fullHeight -> -fullHeight / 2 } + fadeOut())
+            },
+            label = "sim_dynamic_island_rotation"
+        ) { item ->
+            DynamicIsland(
+                state = DynamicIslandUiState.Visible(item),
+                modifier = Modifier.fillMaxWidth(),
+                onTap = onTap
+            )
+        }
+    }
+}
+
+internal fun resolveSimDynamicIslandIndex(
+    items: List<DynamicIslandItem>,
+    currentItemKey: String?
+): Int {
+    if (items.isEmpty()) return 0
+    val matchedIndex = currentItemKey
+        ?.let { key -> items.indexOfFirst { it.stableKey == key } }
+        ?: -1
+    return if (matchedIndex >= 0) matchedIndex else 0
+}
+
+@Composable
+private fun SimHeaderButton(
+    icon: ImageVector,
+    tint: Color,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .size(42.dp)
+            .background(SimChrome.copy(alpha = 0.92f), CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(20.dp)
+        )
+    }
+}
+
+@Composable
+private fun SimIdleGreeting(greeting: String) {
+    Text(
+        text = greeting,
+        color = Color.White.copy(alpha = 0.96f),
+        fontSize = 24.sp,
+        fontWeight = FontWeight.Bold,
+        letterSpacing = (-0.4).sp,
+        modifier = Modifier.padding(start = 2.dp, top = 24.dp)
+    )
+}
+
+@Composable
+private fun SimInputBar(
+    text: String,
+    isSending: Boolean,
+    onTextChanged: (String) -> Unit,
+    onSend: () -> Unit,
+    onAttachClick: () -> Unit,
+    onMicClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(58.dp)
+            .background(Color(0xFF1C232D).copy(alpha = 0.96f), RoundedCornerShape(28.dp))
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clickable(onClick = onAttachClick),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Filled.AttachFile,
+                contentDescription = "Attach",
+                tint = SimChromeMuted,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 6.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            androidx.compose.foundation.text.BasicTextField(
+                value = text,
+                onValueChange = onTextChanged,
+                singleLine = true,
+                textStyle = androidx.compose.ui.text.TextStyle(
+                    color = Color.White.copy(alpha = 0.92f),
+                    fontSize = 15.sp
+                ),
+                cursorBrush = SolidColor(ProMaxAccent),
+                decorationBox = { innerTextField ->
+                    if (text.isBlank()) {
+                        Text(
+                            text = "输入消息，或长按工牌说话...",
+                            color = SimChromeMuted,
+                            fontSize = 15.sp
+                        )
+                    }
+                    innerTextField()
+                }
+            )
+        }
+
+        val actionIcon = if (text.isBlank()) Icons.Filled.Mic else Icons.AutoMirrored.Filled.Send
+        val actionEnabled = text.isNotBlank() && !isSending
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .background(Color.White, CircleShape)
+                .clickable {
+                    if (text.isBlank()) {
+                        onMicClick()
+                    } else if (actionEnabled) {
+                        onSend()
+                    }
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            if (isSending) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(18.dp),
+                    color = Color(0xFF11161D),
+                    strokeWidth = 2.dp
+                )
+            } else {
+                Icon(
+                    imageVector = actionIcon,
+                    contentDescription = "Submit",
+                    tint = Color(0xFF11161D),
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SimInlineState(
+    icon: ImageVector,
+    text: String
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = SimChromeMuted,
+            modifier = Modifier.size(14.dp)
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = text,
+            color = SimChromeMuted,
+            fontSize = 13.sp
+        )
+    }
+}
+
+@Composable
+private fun SimInlineLoading() {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
+    ) {
+        CircularProgressIndicator(
+            modifier = Modifier.size(14.dp),
+            color = SimChromeMuted,
+            strokeWidth = 2.dp
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = "SIM 正在加载",
+            color = SimChromeMuted,
+            fontSize = 13.sp
+        )
+    }
+}
 
 private fun Modifier.glassPanel(
     shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(16.dp)
@@ -469,9 +984,10 @@ private fun Modifier.glassPanel(
 
 @Composable
 private fun ProMaxHeader(
-    sessionTitle: String,
+    dynamicIslandState: DynamicIslandUiState,
     onMenuClick: () -> Unit,
     onNewSessionClick: () -> Unit,
+    onSchedulerClick: (DynamicIslandTapAction) -> Unit,
     onDebugClick: () -> Unit,
     onDeviceClick: () -> Unit,
     showDebugButton: Boolean
@@ -487,29 +1003,11 @@ private fun ProMaxHeader(
             GlassCircleButton(icon = Icons.Filled.Menu, onClick = onMenuClick)
             GlassCircleButton(icon = Icons.Filled.Bluetooth, onClick = onDeviceClick, tint = ProMaxAccent)
         }
-        PrismSurface(
+        DynamicIsland(
+            state = dynamicIslandState,
             modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(18.dp),
-            backgroundColor = Color.White.copy(alpha = 0.04f)
-        ) {
-            Column(
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "当前会话",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = ProMaxTextMuted,
-                    letterSpacing = 0.8.sp
-                )
-                Text(
-                    text = sessionTitle.ifEmpty { "新对话" },
-                    style = MaterialTheme.typography.labelLarge,
-                    color = ProMaxTextPrimary,
-                    maxLines = 1
-                )
-            }
-        }
+            onTap = onSchedulerClick
+        )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (showDebugButton) {
                 GlassCircleButton(icon = Icons.Filled.BugReport, onClick = onDebugClick, tint = ProMaxTextMuted)

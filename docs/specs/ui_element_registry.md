@@ -4,6 +4,12 @@
 > **Version:** 2.6 (Draft)
 > **Authority:** This document governs ALL app behaviors. Code must match these specs exactly.
 
+Standalone-mode note:
+
+- This registry governs shared interaction and layering invariants.
+- It does not own the exact shell chrome for standalone modes such as SIM.
+- When SIM narrows or simplifies the shell presentation, use `docs/cerb/sim-shell/spec.md` as the visual owner and keep this registry focused on reusable interaction rules.
+
 ---
 
 ## 0. The Z-Map (Lego Layers)
@@ -20,6 +26,11 @@
 | **Chrome** | `2.0` | Floating UI | FABs, Floating Headers, Badges |
 | **Content** | `1.0` | Standard UI | Chat Bubbles, Lists, Keep Content |
 | **Floor** | `0.0` | Background | App Background, Wallpapers |
+
+Rule for SIM:
+
+- SIM may simplify shell chrome and support-surface presentation while still obeying this Z-map.
+- SIM-specific prompt/chip or support-panel visuals must not change ownership, scrim, or drawer exclusivity rules defined here.
 
 ---
 
@@ -56,6 +67,14 @@ Every element definition follows this strict logic:
 
 ## 2. Home Screen (Base Layer)
 
+Home empty-state composition note:
+
+- The exact current `HomeShell` / `ChatWelcome` layout is owned by `docs/cerb-ui/home-shell/spec.md`.
+- The current center-header Dynamic Island behavior is owned by `docs/cerb-ui/dynamic-island/spec.md`.
+- This registry should only be used here for shared trigger, drawer, and layer invariants.
+- Historical shell affordances that are not present in the owning home-shell spec must not be reintroduced by inference.
+- Rows below may describe reusable or legacy home-surface triggers; the owning home-shell spec decides which controls are currently mounted on the empty-state shell.
+
 ### 1.5 Onboarding (V15 Full Spectrum)
 | Element | Visual | Interaction | Microcopy | Result | Status |
 |---------|--------|-------------|-----------|--------|--------|
@@ -86,7 +105,7 @@ Every element definition follows this strict logic:
 | **Device Status [📶]** | `Connected` | Tap | Ripple | Opens **Connectivity Modal**. | Fullscreen Overlay. | ✅ Verified |
 | **Connectivity Modal** | `Connected` | Auto | Pulse | Shows Battery/ID. | Mutex (Atomic). | ✅ Verified |
 | **Connectivity (WiFi)** | `Mismatch` | Auto | Alert | Manual SSID/Pwd. | Reconnect Edge Case. | ✅ Verified |
-| **Session Title** | `Read` | Tap | Ripple | Edit Mode. | Autosave. | ✅ Verified |
+| **Dynamic Island** | `One-Line Summary` | Tap | Ripple | Opens **Scheduler Drawer**. | Sticky top slot, single-line only, horizontal overflow only. | ✅ Verified |
 | **Debug Toggle [🐞]** | `Off` | Tap | Tint | **Legacy Debug**. | Beta only. | ✅ Verified |
 | **New Session [➕]** | `Idle` | Tap | Ripple | 1. Clear Context.<br>2. New UUID. | Reset Coach. | ✅ Verified |
 | **Tingwu Menu [≣]** | `Idle` | Tap | Slide In | Opens **Tingwu Drawer**. | Exclusive. | ❌ Pending |

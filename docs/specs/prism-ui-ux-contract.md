@@ -26,6 +26,7 @@ Rule:
 
 - use intuitive names in discussion
 - keep this path stable until the repo deliberately migrates references
+- when a standalone mode such as SIM has its own Cerb shard, treat that shard as the visual/source-of-truth layer for that mode's shell composition and support-surface presentation
 
 ---
 
@@ -55,21 +56,22 @@ Role: This document is strictly an index that maps UI modules, components, and f
 
 | Module | Status | Spec File |
 |--------|--------|-----------|
-| Home Screen | Shipped | [HomeScreen.md](../cerb-ui/agent-intelligence/spec.md) |
+| Home Screen | Shipped | [home-shell/spec.md](../cerb-ui/home-shell/spec.md) |
 | Chat Interface | Shipped | [ChatInterface.md](../cerb-ui/agent-intelligence/spec.md) |
+| SIM Shell | Shipped | [sim-shell/spec.md](../cerb/sim-shell/spec.md) |
 | Scheduler Drawer | Shipped | [SchedulerDrawer.md](../cerb-ui/scheduler/contract.md) |
 | History Drawer | Shipped | [HistoryDrawer.md](../cerb/session-history/spec.md) |
 | Audio Drawer | Shipped | [AudioDrawer.md](../cerb/audio-management/spec.md) |
 | Connectivity Modal | Shipped | [ConnectivityModal.md](../cerb/connectivity-bridge/spec.md) |
 | User Center | Shipped | [UserCenter.md](../cerb/user-habit/spec.md) |
 | Analyst Mode | In Progress | [AnalystMode.md](../cerb/model-routing/spec.md) |
-| Knot FAB | Deferred | [KnotFAB.md](../cerb-ui/agent-intelligence/spec.md) |
 
 ### Components
 
 | Component | Status | Spec File |
 |-----------|--------|-----------|
 | Agent Activity Banner | Shipped | [AgentActivityBanner.md](./components/AgentActivityBanner.md) |
+| Dynamic Island | Shipped | [dynamic-island/spec.md](../cerb-ui/dynamic-island/spec.md) |
 
 ### Flows
 
@@ -87,3 +89,9 @@ Role: This document is strictly an index that maps UI modules, components, and f
 |-----------|---------|-------|-------|
 | **↓ Top → Down** | Pull from top edge | Scheduler Drawer | Calendar + Timeline |
 | **↑ Bottom → Up** | Pull from bottom edge | Audio Drawer | Recordings |
+
+### Standalone Mode Note
+
+- SIM is a standalone shell mode with its own surface contract in `docs/cerb/sim-shell/spec.md`.
+- Global gestures and shared element rules still apply unless the SIM shard narrows the presentation for standalone use.
+- SIM-specific shell chrome, sparse idle layout, and support-surface composition should be documented in the SIM Cerb docs rather than expanded inline here.

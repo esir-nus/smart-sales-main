@@ -15,11 +15,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-
+import com.smartsales.prism.ui.components.DynamicIslandTapAction
+import com.smartsales.prism.ui.components.toDayOffset
 import com.smartsales.prism.ui.drawers.AudioDrawer
 import com.smartsales.prism.ui.drawers.HistoryDrawer
 import com.smartsales.prism.ui.drawers.HistoryViewModel
 import com.smartsales.prism.ui.drawers.SchedulerDrawer
+import com.smartsales.prism.ui.drawers.scheduler.SchedulerViewModel
 import com.smartsales.prism.ui.settings.UserCenterScreen
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -59,6 +61,7 @@ fun AgentShell(
     var showDebugHud by remember { mutableStateOf(false) }
     val agentViewModel: AgentViewModel = hiltViewModel()
     val historyViewModel: HistoryViewModel = hiltViewModel()
+    val schedulerViewModel: SchedulerViewModel = hiltViewModel()
     
     // 每次app回到前台时自动展示日程抽屉
     // drop-down动画暗示用户可以 dismiss 查看更多
@@ -81,6 +84,17 @@ fun AgentShell(
     // Wave 4: Mascot UI State
     val mascotState by agentViewModel.mascotState.collectAsStateWithLifecycle()
 
+    fun openSchedulerFromIsland(action: DynamicIslandTapAction) {
+        when (action) {
+            is DynamicIslandTapAction.OpenSchedulerDrawer -> {
+                action.target
+                    ?.toDayOffset()
+                    ?.let(schedulerViewModel::onDateSelected)
+            }
+        }
+        activeDrawer = DrawerType.SCHEDULER
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -92,12 +106,14 @@ fun AgentShell(
             AgentIntelligenceScreen(
                 onMenuClick = { activeDrawer = DrawerType.HISTORY },
                 onNewSessionClick = { agentViewModel.startNewSession() },
+                onSchedulerClick = ::openSchedulerFromIsland,
                 onAudioBadgeClick = { activeDrawer = DrawerType.CONNECTIVITY },
                 onAudioDrawerClick = { activeDrawer = DrawerType.AUDIO },
                 onTingwuClick = { activeDrawer = DrawerType.TINGWU },
                 onArtifactsClick = { activeDrawer = DrawerType.ARTIFACTS },
                 onDebugClick = { showDebugHud = !showDebugHud },
-                onProfileClick = { showUserCenter = true }
+                onProfileClick = { showUserCenter = true },
+                visualMode = AgentIntelligenceVisualMode.DEFAULT
             )
         }
 
@@ -156,7 +172,8 @@ fun AgentShell(
                 onDismiss = {
                     activeDrawer = null
                     agentViewModel.refreshHeroDashboard()
-                }
+                },
+                viewModel = schedulerViewModel
             )
         }
 

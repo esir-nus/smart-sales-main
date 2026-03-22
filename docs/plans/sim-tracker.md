@@ -1,9 +1,11 @@
 # SIM Mission Tracker
 
 > **Mission**: Standalone prototype app with two main feature lanes, Scheduler Path A and Tingwu transcription plus simple audio-grounded chat, plus a decoupled connectivity support module.
-> **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Accepted / Wave 6 Isolation Accepted / Wave 7 Feature Acceptance Accepted / Wave 7 Isolation Acceptance Accepted / Wave 7 Closeout Synced / Wave 8 Task-Scoped Scheduler Follow-Up In Progress
+> **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Accepted / Wave 6 Isolation Accepted / Wave 7 Feature Acceptance Accepted / Wave 7 Isolation Acceptance Accepted / Wave 7 Closeout Synced / Wave 8 Task-Scoped Scheduler Follow-Up Accepted / Wave 9 Physical-Badge E2E Blocked / Wave 10 Badge Ingress Repair In Progress
 > **Started**: 2026-03-19
-> **Current Gate**: Wave 7 closeout remains accepted on **2026-03-22**, but a new post-closeout `T8.0` mini-wave is now active for task-scoped scheduler follow-up. This slice upgrades the old metadata-only badge continuity binding into a real SIM follow-up session plus in-shell prompt/chip and bound-task quick actions, while still keeping SIM out of smart-agent memory and open-ended assistant behavior.
+> **Current Gate**: Wave 7 closeout remains accepted on **2026-03-22**. Post-closeout `T8.0` task-scoped scheduler follow-up was accepted on **2026-03-22** as a narrow SIM-owned continuity upgrade. `Wave 9` is now blocked by missing real badge recording ingress, and `Wave 10` is the active ESP32/connectivity repair mini-wave. Device-level re-entry proof is still required before returning to physical-badge follow-up validation.
+> **UI Scope Guard (2026-03-22)**: The SIM home/chat restore back to the sparse screenshot-aligned shell is UI-layer-only. Treat it as presentation rollback/polish inside the existing SIM shell contract, not as a reopening of Wave 7 or Wave 8 behavior, routing, persistence, isolation, acceptance, or boundary scope.
+> **UI Scope Guard (2026-03-22, Dynamic Island)**: A shell-owned top-bar dynamic island that surfaces scheduler reminders and opens the scheduler drawer is also presentation-layer SIM shell polish. The shared renderer stays one-line, sticky, truncation-based, and scheduler-first in copy. SIM may rotate up to the top 3 scheduler entries vertically inside the same header-center slot on a 5-second interval. Conflict-visible scheduler entries rank above normal reminders, use yellow hue, and normal most-immediate entries use red hue. Tapping any visible entry must open the scheduler drawer on that entry's corresponding date page. The SIM home header now keeps only hamburger + centered island + new-chat for visual balance, while connectivity entry moves into the audio drawer. It must stay shell-owned for chrome/routing and scheduler-owned for reminder truth; it does not widen mascot, follow-up, or smart-runtime scope by itself.
 > **Closeout Reading Rule**: Wave 7 closeout means the SIM mission is complete at the tracker level. Any remaining unchecked historical sub-items below should be read as archived execution residue unless they are explicitly restated under the post-closeout deferred-debt section.
 > **Primary Product Doc**: `docs/to-cerb/sim-standalone-prototype/concept.md`
 > **Mental Model Doc**: `docs/to-cerb/sim-standalone-prototype/mental-model.md`
@@ -13,6 +15,9 @@
 > **Wave 4 Execution Brief**: `docs/plans/sim-wave4-execution-brief.md`
 > **Wave 5 Execution Brief**: `docs/plans/sim-wave5-execution-brief.md`
 > **Wave 8 Execution Brief**: `docs/plans/sim-wave8-execution-brief.md`
+> **Wave 9 Execution Brief**: `docs/plans/sim-wave9-execution-brief.md`
+> **Wave 10 Execution Brief**: `docs/plans/sim-wave10-execution-brief.md`
+> **ESP32 Live Capture Report**: `docs/reports/20260322-esp32-live-capture-findings.md`
 > **Code Audit**: `docs/reports/20260319-sim-standalone-code-audit.md`
 > **Clarification Audit**: `docs/reports/20260319-sim-clarification-evidence-audit.md`
 > **Wave 5 Boundary Audit**: `docs/reports/20260321-sim-wave5-boundary-audit.md`
@@ -41,6 +46,15 @@
 > - `docs/core-flow/sim-shell-routing-flow.md`
 > - `docs/core-flow/sim-scheduler-path-a-flow.md`
 > - `docs/core-flow/sim-audio-artifact-chat-flow.md`
+
+---
+
+## Post-Closeout Summary
+
+- Accepted history: Wave 7 closed the SIM mission on **2026-03-22**.
+- Accepted history: Wave 8 follow-up mini-wave was accepted on **2026-03-22**.
+- Active follow-up: Wave 9 is prepared to close the remaining physical-badge hardware L3 for the badge-origin follow-up lane.
+- Cleanup rule: historical wave checklists below are retained as project memory, but they should not be read as active open work unless a debt item is explicitly restated under `6.1 Post-Closeout Deferred Debt`.
 
 ---
 
@@ -74,6 +88,7 @@ Product mental model:
 - `Ask AI` is the continuation surface for transcription-based discussion
 - transcript streaming and activity states are allowed as presentation layers
 - history, new page/session, connectivity entry, and settings remain valid SIM shell practices
+- screenshot-aligned shell restoration is allowed when it only adjusts layout, spacing, typography, or chrome and does not alter SIM routing/state contracts
 
 ---
 
@@ -182,23 +197,28 @@ The SIM mission follows this chain:
 
 ## 4. Non-Negotiable Constraints
 
-- [ ] Standalone package/app boundary is explicit before implementation starts
-- [ ] Current agent app remains behaviorally untouched by default
-- [ ] Scheduler slice stays Path A only
-- [ ] Audio slice uses Tingwu/API-driven intelligence rather than new local reasoning logic
-- [ ] Audio drawer acts as an informational transcript/artifact surface, not as a general file-management product
-- [ ] Final artifact display may polish Tingwu returns, but it must remain source-led
-- [ ] Selecting already-transcribed audio never reruns Tingwu by default
-- [ ] Simple chat has no Oasis-style memory system
-- [ ] Chat-side audio upload/select reopens Audio Drawer instead of Android file manager
-- [ ] Connectivity remains decoupled from scheduler and audio/chat business logic
-- [ ] Ordinary shell practices may survive only in simplified SIM form
-- [ ] Legacy names may be replaced when they hide boundary truth
-- [ ] Reuse is preferred, but not at the cost of cross-contamination
+Accepted invariants for the shipped SIM prototype:
+
+- Standalone package/app boundary is explicit before implementation starts
+- Current agent app remains behaviorally untouched by default
+- Scheduler slice stays Path A only
+- Audio slice uses Tingwu/API-driven intelligence rather than new local reasoning logic
+- Audio drawer acts as an informational transcript/artifact surface, not as a general file-management product
+- Final artifact display may polish Tingwu returns, but it must remain source-led
+- Selecting already-transcribed audio never reruns Tingwu by default
+- Simple chat has no Oasis-style memory system
+- Chat-side audio upload/select reopens Audio Drawer instead of Android file manager
+- Connectivity remains decoupled from scheduler and audio/chat business logic
+- Ordinary shell practices may survive only in simplified SIM form
+- Legacy names may be replaced when they hide boundary truth
+- Reuse is preferred, but not at the cost of cross-contamination
 
 ---
 
 ## 5. Work Plan
+
+Historical execution note:
+Wave sections below are retained as project memory. Their checklist items have been normalized to accepted history or archived planning residue after the Wave 7 closeout and Wave 8 acceptance, unless a debt item is explicitly reopened under `6.1 Post-Closeout Deferred Debt`.
 
 ### Wave 0: Documents and Boundary Constitution
 > Objective: Freeze the product truth, contamination boundaries, and docs hierarchy before any code wave starts.
@@ -303,58 +323,58 @@ The SIM mission follows this chain:
 > **Execution Law**: the UI may format and polish Tingwu output, but it must not invent local semantic substitutes.
 > **Validation Requirement**: prove that the UI displays source-led artifacts faithfully, does not rerun already-transcribed audio, and does not synthesize absent sections.
 
-- [ ] **T2.1: Boundary / Storage Namespace**
-  - [ ] namespace SIM metadata, artifact files, and local audio blobs before real inventory work
-  - [ ] define SIM-owned binding/storage rule for any persisted audio-to-chat edge
-  - [ ] prove Wave 2 does not reuse unsafe generic audio filenames
-- [ ] **T2.2: Flow / Inventory Baseline**
-  - [ ] freeze Wave 2 baseline as badge-sync product ingress plus SIM-safe seeded or persisted acceptance inventory
-  - [ ] allow acceptance backfill of missing SIM-safe seeded entries without clobbering persisted inventory state
-  - [ ] decide separately whether SmartBadge sync is included now or deferred as a Wave 2 extension
-  - [ ] record the decision in docs and implementation brief
-  - [ ] treat phone-local import as test-only convenience rather than production ingress
-- [ ] **T2.3: Code / Existing Artifact Reuse Path**
-  - [ ] detect already-transcribed audio
-  - [ ] load stored artifacts instead of rerunning Tingwu
-  - [ ] keep this branch explicit in UI state and validation
-- [ ] **T2.4: Spec / Artifact Surface Contract**
-  - [ ] render transcript
-  - [ ] render summary
-  - [ ] render chapters
-  - [ ] render highlights
-  - [ ] render speaker/talker-related sections when Tingwu returns them
-  - [ ] render provider-returned adjacent sections such as questions/answers when present
-  - [ ] leave absent artifact sections absent rather than locally inventing replacements
-- [ ] **T2.5: Code / Informational Drawer Behavior**
-  - [ ] make user-opened expanded transcribed card the primary informational view while keeping transcribed cards collapsed by default in inventory
-  - [ ] keep the drawer read-only from a conversation perspective
-  - [ ] ensure the view feels like a non-chat variant of the chat experience
-  - [ ] preserve manual expand/collapse state while the drawer remains open so scroll/recomposition does not reopen cards
+- [x] **T2.1: Boundary / Storage Namespace**
+  - [x] namespace SIM metadata, artifact files, and local audio blobs before real inventory work
+  - [x] define SIM-owned binding/storage rule for any persisted audio-to-chat edge
+  - [x] prove Wave 2 does not reuse unsafe generic audio filenames
+- [x] **T2.2: Flow / Inventory Baseline**
+  - [x] freeze Wave 2 baseline as badge-sync product ingress plus SIM-safe seeded or persisted acceptance inventory
+  - [x] allow acceptance backfill of missing SIM-safe seeded entries without clobbering persisted inventory state
+  - [x] decide separately whether SmartBadge sync is included now or deferred as a Wave 2 extension
+  - [x] record the decision in docs and implementation brief
+  - [x] treat phone-local import as test-only convenience rather than production ingress
+- [x] **T2.3: Code / Existing Artifact Reuse Path**
+  - [x] detect already-transcribed audio
+  - [x] load stored artifacts instead of rerunning Tingwu
+  - [x] keep this branch explicit in UI state and validation
+- [x] **T2.4: Spec / Artifact Surface Contract**
+  - [x] render transcript
+  - [x] render summary
+  - [x] render chapters
+  - [x] render highlights
+  - [x] render speaker/talker-related sections when Tingwu returns them
+  - [x] render provider-returned adjacent sections such as questions/answers when present
+  - [x] leave absent artifact sections absent rather than locally inventing replacements
+- [x] **T2.5: Code / Informational Drawer Behavior**
+  - [x] make user-opened expanded transcribed card the primary informational view while keeping transcribed cards collapsed by default in inventory
+  - [x] keep the drawer read-only from a conversation perspective
+  - [x] ensure the view feels like a non-chat variant of the chat experience
+  - [x] preserve manual expand/collapse state while the drawer remains open so scroll/recomposition does not reopen cards
   - [x] **2026-03-20 Drawer Collapse-State Fix**
     SIM drawer cards no longer own transcribed expansion state inside ephemeral composable memory. Expansion state is now owned by the SIM drawer viewmodel for the current drawer-open session, transcribed cards start collapsed by default, manual collapse/expand survives scroll and recomposition, and closing the drawer resets the next open back to the collapsed default. L1 verification is green with `:app-core:compileDebugKotlin`, `SimAudioDrawerViewModelTest`, and `UiSpecAlignmentTest`.
   - [x] **2026-03-20 On-Device Confirmation**
     Fresh device verification now confirms the first drawer-state bug is resolved: transcribed cards open in collapsed form by default. Keep the scroll/recomposition stability claim as a separate branch until that behavior is explicitly rechecked on device.
   - [x] **2026-03-20 On-Device Scroll Stability**
     Follow-up device verification confirms the second drawer-state branch is green too: manual expand/collapse now stays stable while scrolling the SIM audio drawer and does not reopen cards through list recomposition.
-- [ ] **T2.6: Code / Transcription Lifecycle**
-  - [ ] support pending -> transcribing -> transcribed flow
-  - [ ] surface failure explicitly
-  - [ ] support retry-ready behavior without faking artifact completion
-- [ ] **T2.7: Code / Polisher and Transparent-State Layer**
-  - [ ] add readability-polisher step over Tingwu output
-  - [ ] keep raw/lightly formatted Tingwu output as fallback if polisher fails
-  - [ ] define transcript native-streaming vs pseudo-streaming fallback
-  - [ ] define cosmetic activity states without pretending backend truth
-- [ ] **T2.8: Validation**
-  - [ ] prove SIM audio persistence is isolated from the smart app
-  - [ ] prove the baseline audio inventory works even before optional badge-sync expansion
-  - [ ] prove returned Tingwu artifacts remain source-led after polishing
-  - [ ] prove already-transcribed audio does not rerun Tingwu
+- [x] **T2.6: Code / Transcription Lifecycle**
+  - [x] support pending -> transcribing -> transcribed flow
+  - [x] surface failure explicitly
+  - [x] support retry-ready behavior without faking artifact completion
+- [x] **T2.7: Code / Polisher and Transparent-State Layer**
+  - [x] add readability-polisher step over Tingwu output
+  - [x] keep raw/lightly formatted Tingwu output as fallback if polisher fails
+  - [x] define transcript native-streaming vs pseudo-streaming fallback
+  - [x] define cosmetic activity states without pretending backend truth
+- [x] **T2.8: Validation**
+  - [x] prove SIM audio persistence is isolated from the smart app
+  - [x] prove the baseline audio inventory works even before optional badge-sync expansion
+  - [x] prove returned Tingwu artifacts remain source-led after polishing
+  - [x] prove already-transcribed audio does not rerun Tingwu
   - [x] prove missing Tingwu sections are not locally invented
   - [x] prove polisher failure falls back to provider-led output rather than blanking the view
   - [x] prove transcription failure remains explicit
-  - [ ] prove cold-start acceptance rather than warm-state-only behavior
-  - [ ] **2026-03-20 On-Device Note**
+  - [x] prove cold-start acceptance rather than warm-state-only behavior
+  - [x] **2026-03-20 On-Device Note**
     Cold-start L3 pass on phone currently shows `1` launch/audio drawer green, `2` inventory baseline green, `3` already-transcribed artifact reuse green after confirming the check means no rerun when opening an already-transcribed card, `4` transcription lifecycle functionally green but with a glitchy/non-smooth progress bar, `8` `Ask AI` handoff green, and `10` storage namespace isolation green.
     Branches `5` transcription failure and `7` polisher failure were not exercised in this run, and `6` absent-section behavior remains unproven because all returned sections were populated in the tested artifact.
   - [x] **2026-03-20 Progress UX Defer**
@@ -369,28 +389,21 @@ The SIM mission follows this chain:
     Wave 2 previously carried focused L3 debt for the three hard-to-trigger negative branches: `5` explicit transcription failure, `6` absent-section rendering, and `7` polisher fallback. That debt is now closed by the focused device validation recorded below.
   - [x] **2026-03-20 Focused Negative-Branch L3**
     Focused L3 device validation is now recorded in `docs/reports/tests/L3-20260320-sim-wave2-negative-branch-validation.md`. The SIM-local drawer browse-mode debug panel successfully exercised all three previously hard-to-trigger Wave 2 branches on device: explicit transcription failure, missing optional sections, and provider-led raw fallback. This also confirms the validation aid lives in the audio drawer rather than a global SIM debug HUD button.
-- [ ] **Done When**
-  - [ ] users can browse a real SIM audio inventory
-  - [ ] transcribed cards open and display Tingwu-returned artifacts in readable form
-  - [ ] already-transcribed audio reuses stored artifacts without rerun
-  - [ ] the drawer clearly reads as informational mode, not as a separate smart workflow
+- [x] **Done When**
+  - [x] users can browse a real SIM audio inventory
+  - [x] transcribed cards open and display Tingwu-returned artifacts in readable form
+  - [x] already-transcribed audio reuses stored artifacts without rerun
+  - [x] the drawer clearly reads as informational mode, not as a separate smart workflow
 
 ### Parallel Delivery Roadmap
 > **Execution Model**: develop by standalone feature lane, not by wave headline alone.
 > **Rule**: chatting/Tingwu and scheduler may proceed in parallel as long as ownership stays clean.
 
-- [ ] **Lane A: Chatting / Tingwu**
-  - [ ] owns Wave 2 residual audio debt and all Wave 3 audio-grounded chat work
-  - [ ] owns SIM audio inventory, Tingwu pipeline behavior, drawer artifact rendering, and chat completion rendering
-  - [ ] primary write scope: `SimAudioRepository`, `SimAudioDrawerViewModel`, `SimAudioDrawer`, `SimAgentViewModel`, audio-chat docs
-- [ ] **Lane B: Scheduler**
-  - [ ] owns Wave 4 as a standalone feature lane
-  - [ ] owns scheduler drawer behavior, Path A-only runtime, and scheduler docs/tests
-  - [ ] primary write scope: `SimSchedulerViewModel`, scheduler drawer/runtime files, scheduler docs
-- [ ] **Shared Boundary Coordination**
-  - [ ] `SimShell.kt` is the coordination boundary when either lane needs shell routing or overlay changes
-  - [ ] avoid parallel edits to shared SIM shell/state files without explicit ownership handoff
-  - [ ] if a task can stay inside one lane's write scope, do not widen it just because the other lane is active
+Archived planning note:
+
+- Lane A: Chatting / Tingwu owned the Wave 2 residual audio work and Wave 3 audio-grounded chat work.
+- Lane B: Scheduler owned the Wave 4 standalone scheduler lane and later Wave 8 follow-up mini-wave.
+- Shared boundary coordination: `SimShell.kt` remained the coordination boundary for cross-lane shell routing and overlay changes.
 
 ### Wave 3: Simple Audio-Grounded Discussion Chat
 > Objective: Deliver the continuation chat surface for discussing a selected transcription.
@@ -399,32 +412,32 @@ The SIM mission follows this chain:
 > **Execution Law**: chat is for continuing discussion about one transcription, not for reviving the smart-agent OS.
 > **Validation Requirement**: prove that the chat behaves as continuation of the selected transcription discussion and not as a generic agent session.
 
-- [ ] **T3.1: Flow / `Ask AI` Handoff**
-  - [ ] bind `Ask AI` from audio card into chat session creation
-  - [ ] make chat entry feel like continuation from the informational drawer
-- [ ] **T3.2: Spec / Audio-Grounded Context Injection**
-  - [ ] bind one selected audio to one discussion session
-  - [ ] inject transcript plus returned/polished artifacts as discussion context
-  - [ ] avoid broad session-memory behavior
-- [ ] **T3.3: Code / Discussion-Only Runtime**
-  - [ ] remove plugin task-board behavior from the SIM chat surface
-  - [ ] remove generalized agent-memory expectations
-  - [ ] preserve only the states needed for transcription discussion
-- [ ] **T3.4: Code / Audio Reselect From Chat**
-  - [ ] reopen audio drawer from chat
-  - [ ] allow user to pick one audio item
-  - [ ] keep chat-side upload/reselect and drawer-origin transcription as two entry surfaces over one shared SIM Tingwu/artifact pipeline
-  - [ ] if the selected chat-side audio is already transcribed, bind chat immediately to the stored artifacts without rerun
-  - [ ] if the selected chat-side audio is still pending, bind chat immediately to that audio, continue the same transcription pipeline inside chat transparency, and reflect the completed artifacts/status back into the drawer
-  - [ ] lock swipe/button transcribe actions for the same audio item while it is already pending/transcribing so the user cannot start a duplicate run from the drawer
-  - [ ] do not default to Android file manager for this branch
-  - [ ] **2026-03-20 Design Clarification**
+- [x] **T3.1: Flow / `Ask AI` Handoff**
+  - [x] bind `Ask AI` from audio card into chat session creation
+  - [x] make chat entry feel like continuation from the informational drawer
+- [x] **T3.2: Spec / Audio-Grounded Context Injection**
+  - [x] bind one selected audio to one discussion session
+  - [x] inject transcript plus returned/polished artifacts as discussion context
+  - [x] avoid broad session-memory behavior
+- [x] **T3.3: Code / Discussion-Only Runtime**
+  - [x] remove plugin task-board behavior from the SIM chat surface
+  - [x] remove generalized agent-memory expectations
+  - [x] preserve only the states needed for transcription discussion
+- [x] **T3.4: Code / Audio Reselect From Chat**
+  - [x] reopen audio drawer from chat
+  - [x] allow user to pick one audio item
+  - [x] keep chat-side upload/reselect and drawer-origin transcription as two entry surfaces over one shared SIM Tingwu/artifact pipeline
+  - [x] if the selected chat-side audio is already transcribed, bind chat immediately to the stored artifacts without rerun
+  - [x] if the selected chat-side audio is still pending, bind chat immediately to that audio, continue the same transcription pipeline inside chat transparency, and reflect the completed artifacts/status back into the drawer
+  - [x] lock swipe/button transcribe actions for the same audio item while it is already pending/transcribing so the user cannot start a duplicate run from the drawer
+  - [x] do not default to Android file manager for this branch
+  - [x] **2026-03-20 Design Clarification**
     The SIM audio lane now has one underlying transcription/artifact pipeline with two entry surfaces: drawer-origin transcription and chat-origin upload/reselect. The second route is not a separate pipeline. Its pending-audio branch binds chat immediately to the chosen audio, keeps the user inside chat while transparent processing states explain Tingwu progress, locks duplicate transcribe triggers for that same audio item, and updates the shared drawer inventory without a second run through the drawer-first path.
-  - [ ] **2026-03-20 Ingress Clarification**
+  - [x] **2026-03-20 Ingress Clarification**
     The real product inventory is badge-origin. If SIM exposes phone-local import in this prototype, that route is test-only convenience for QA/dev coverage and must remain an explicit secondary action instead of redefining chat attach or drawer inventory as a phone-upload product.
-  - [ ] **2026-03-20 Proposed Test-Support Slice**
+  - [x] **2026-03-20 Proposed Test-Support Slice**
     Add a debug/test-gated `Import Test Audio` action inside the SIM audio drawer rather than changing chat attach or product ingress. That explicit secondary action may open Android picker, ingest the chosen file through the existing SIM-owned repository seam, label the entry as test-origin in the drawer UI, and then reuse the same transcription/artifact/chat pipeline as any other SIM audio item.
-  - [ ] **2026-03-20 Execution Brief**
+  - [x] **2026-03-20 Execution Brief**
     - gate the action with `BuildConfig.DEBUG` rather than a new runtime config surface
     - keep `onAttachClick` unchanged so chat attach still reopens the SIM drawer first
     - own the picker launcher in `SimShell`, and invoke it through an explicit drawer callback rather than embedding picker routing inside the drawer composable
@@ -432,11 +445,11 @@ The SIM mission follows this chain:
     - after import completes, keep the drawer open and let the user explicitly select the new card instead of auto-binding chat
     - persist a test-origin flag on imported entries so the drawer label survives reload and does not rely on filename conventions
     - route imported files through the existing SIM repository and Tingwu/artifact path without introducing a separate upload pipeline
-  - [ ] **2026-03-20 Blocker Note**
+  - [x] **2026-03-20 Blocker Note**
     Current on-device behavior reopens the drawer from the chat upload/reselect entry, but the drawer is not selectable from that route. Treat this as the active blocker against the core-flow requirement that chat-side audio reselection must return through a selectable SIM audio drawer rather than dead-ending in a non-interactive state.
-  - [ ] **2026-03-20 Runtime Blocker Note**
+  - [x] **2026-03-20 Runtime Blocker Note**
     After the selectable-drawer fix landed, the pending chat-side branch proved a second blocker on device: selecting a pending audio item from chat now auto-starts the real OSS upload and Tingwu submission path, but the SIM surface can remain stuck in processing without later progress/completion reflection. Treat this as an active T3.4 happy-path failure against Branch-S4 in `docs/core-flow/sim-audio-artifact-chat-flow.md`, because the pending chat-side run is not yet reliably completing through chat transparency and back into the shared drawer state.
-  - [ ] **2026-03-20 Next Fix Slice**
+  - [x] **2026-03-20 Next Fix Slice**
     - move active pending-job ownership out of the composable launch path and into SIM-owned repository/runtime state
     - persist or otherwise durably recover the `audioId -> jobId` edge so the app can rebind after shell/activity interruption
     - resume observing in-flight Tingwu jobs on reopen instead of leaving the audio entry stranded in `TRANSCRIBING`
@@ -445,48 +458,48 @@ The SIM mission follows this chain:
     - clear the durable `audioId -> jobId` ownership edge on completion/failure so stale jobs cannot rebind into later chat sessions
     - treat same-audio reselection during an in-flight run as rebind/no-op rather than a fresh submission
     - validate background/resume and cold-reopen behavior for an in-flight pending chat-side job, not only the in-session happy path
-  - [ ] **2026-03-20 Recovery Fix Note**
+  - [x] **2026-03-20 Recovery Fix Note**
     Added orphaned-state recovery for legacy SIM entries that were persisted as `TRANSCRIBING` without a resumable `activeJobId`. On load, SIM now downgrades that impossible state to explicit retry-ready `PENDING` with recovery messaging instead of rebinding chat to a fake in-flight job forever.
-  - [ ] **2026-03-20 On-Device Note**
+  - [x] **2026-03-20 On-Device Note**
     Debug-gated `Import Test Audio` is now proven on device as a QA-only convenience path: the imported file appears in SIM inventory with a persistent test-origin label, can be selected from chat-side reselection, and completes through the same shared SIM transcription/artifact pipeline. The resulting completion also reflects back into the drawer inventory. The remaining gap is chat-surface parity after completion: SIM chat currently shows transparency plus a lightweight completion message, but does not yet render the finished transcript/artifact surface inline the way an already-transcribed drawer card does.
-  - [ ] **2026-03-20 Next Completion Slice**
+  - [x] **2026-03-20 Next Completion Slice**
     - treat completed chat-side audio artifacts as durable chat history rather than transient `uiState`
     - let `SimShell` own artifact loading on terminal completion and bridge render-ready artifacts into the SIM chat owner
     - extend the SIM chat history/state model with an artifact-capable AI turn instead of overloading plain text completion messages
     - extract the current drawer artifact renderer into a shared SIM component so drawer and chat stay source-led and aligned
     - verify both chat entry branches: already-transcribed reuse and pending-to-completion rendering
-  - [ ] **2026-03-20 Execution Brief**
+  - [x] **2026-03-20 Execution Brief**
     - keep pending transparency as transient `uiState`, but append completed artifact content as durable chat history
     - load persisted artifacts in `SimShell` on both transcribed reuse and pending terminal completion
     - pass render-ready artifact content into `SimAgentViewModel` as a dedicated artifact-capable AI turn
     - render that durable artifact turn through a shared SIM artifact component used by both drawer and chat
     - fall back to explicit completion/error text only when stored artifacts are unexpectedly unavailable
-  - [ ] **2026-03-20 Implementation Note**
+  - [x] **2026-03-20 Implementation Note**
     Durable chat-side artifact rendering is now implemented in code: `SimShell` bridges stored artifacts into `SimAgentViewModel`, chat history owns a dedicated artifact-capable AI turn, and drawer/chat now share the same SIM artifact renderer. L1 verification is green with `:app-core:compileDebugKotlin`, `SimAgentViewModelTest`, and `SimAudioRepositoryRecoveryTest`. The remaining acceptance step is L3 on-device proof that both chat entry branches render the durable artifact surface correctly after reuse/completion.
-  - [ ] **2026-03-20 Transcript Reveal Follow-Up**
+  - [x] **2026-03-20 Transcript Reveal Follow-Up**
     On-device validation proved the durable artifact surface is functionally correct, but the transcript presentation still needs tightening: chat-side transcript pseudo-streaming currently replays on history reentry, and long transcripts stay visibly expanded while streaming. Tightened rule for the next slice: every newly appended chat artifact message gets at most one transcript reveal, that one-time rule applies to both transcribed reuse and pending completion, and the transcript section collapses immediately once the rendered transcript exceeds 4 lines so history reentry never replays the long-body dump.
-  - [ ] **2026-03-20 Transcript Reveal Brief**
+  - [x] **2026-03-20 Transcript Reveal Brief**
     - keep durable artifact payloads unchanged; transcript reveal memory belongs to `SimAgentViewModel`
     - key reveal-consumed and long-transcript knowledge by `ChatMessage.Ai.id`, and clean that state when the owning session is deleted
     - pass explicit transcript presentation props from the host into the shared SIM artifact renderer so chat and drawer stay separated
     - use real rendered-line measurement, not newline or character heuristics
     - stop visible transcript streaming at the moment line 5 appears, collapse immediately, and mark the message as consumed/long so later history reentry starts collapsed with no replay
-  - [ ] **2026-03-20 Transcript Reveal Implementation Note**
+  - [x] **2026-03-20 Transcript Reveal Implementation Note**
     One-time chat transcript reveal is now implemented in code. `SimAgentViewModel` owns runtime-only reveal memory keyed by durable artifact message id, the shared SIM artifact renderer accepts host-provided transcript presentation props so drawer and chat remain separated, and chat-side transcript sections now collapse immediately once rendered content exceeds 4 lines. L1 verification is green with `:app-core:compileDebugKotlin` and `SimAgentViewModelTest`. The remaining acceptance step is L3 on-device proof that both transcribed reuse and pending completion consume the reveal once and do not replay it on history reentry.
-  - [ ] **2026-03-20 Timing Fix Follow-Up**
+  - [x] **2026-03-20 Timing Fix Follow-Up**
     L3 on-device testing proved the one-time reveal contract is functionally correct, but the long-transcript collapse still fires too fast to read. Tightened rule for the next fix: line 5 may classify the transcript as long immediately, but chat should hold the first reveal open for roughly 1 second before collapsing, while later history reentry remains non-streaming and collapsed by default.
   - [x] **2026-03-20 Timing Fix Implemented**
     The readable-dwell update is now in code. Chat-side transcript presentation keeps the one-time reveal rule, but long transcripts no longer collapse as soon as line 5 appears: the renderer now remembers that the transcript is long, holds the first reveal open for a short readable dwell (default about 1 second), and only then auto-collapses. Reentry stays non-streaming and collapsed for long transcripts, while drawer rendering remains static. L1 verification is green with `:app-core:compileDebugKotlin`, `SimAgentViewModelTest`, `SimArtifactContentTest`, and `UiSpecAlignmentTest`. The remaining acceptance step is the focused L3 device pass for readable dwell timing.
   - [x] **2026-03-20 Timing Fix L3**
     Focused device validation is now green. The first long-transcript reveal stays visible long enough to read before collapsing, and reopening the same history session does not replay transcript streaming; long transcripts remain collapsed by default on reentry.
-- [ ] **T3.5: Validation**
-  - [ ] prove `Ask AI` opens discussion continuation for the selected transcription
-  - [ ] prove the chat does not surface generic smart-agent behaviors
-  - [ ] prove audio reselection works through the drawer
-- [ ] **Done When**
-  - [ ] `Ask AI` opens a discussion chat for the selected audio
-  - [ ] the chat clearly behaves as transcription-discussion continuation
-  - [ ] audio reselection works through the drawer
+- [x] **T3.5: Validation**
+  - [x] prove `Ask AI` opens discussion continuation for the selected transcription
+  - [x] prove the chat does not surface generic smart-agent behaviors
+  - [x] prove audio reselection works through the drawer
+- [x] **Done When**
+  - [x] `Ask AI` opens a discussion chat for the selected audio
+  - [x] the chat clearly behaves as transcription-discussion continuation
+  - [x] audio reselection works through the drawer
 
 ### Wave 4: Scheduler Path A Delivery
 > Objective: Deliver the simplified scheduler lane without importing Path B or smart-memory obligations.
@@ -497,22 +510,22 @@ The SIM mission follows this chain:
 > **Execution Law**: reuse the scheduler feel, but keep only the approved Path A branch set.
 > **Validation Requirement**: prove scheduler success without Path B and prove safe-fail behavior for bad target branches.
 
-- [ ] **T4.1: Flow / Scheduler UI Reuse Boundary**
-  - [ ] reuse `SchedulerDrawer` and child visuals where safe
-  - [ ] replace runtime brains through prototype-only viewmodel seam
-- [ ] **T4.2: Spec / Approved Branch Set**
-  - [ ] exact create
-  - [ ] conflict-visible create
-  - [ ] delete
-  - [ ] reschedule
-  - [ ] keep inspiration shelf visible and make shelf-card `Ask AI` open a new chat session with the card text as the first auto-submitted user turn
-  - [ ] explicit safe-fail feedback
-- [ ] **T4.3: Code / Suppressed Branches**
-  - [ ] suppress Path B
-  - [ ] suppress CRM/entity enrichment
-  - [ ] suppress plugin-driven scheduler re-entry
-  - [ ] defer optional extras that force contamination
-  - [ ] defer only advanced inspiration follow-on behavior, not the base shelf-card `Ask AI` chat launcher
+- [x] **T4.1: Flow / Scheduler UI Reuse Boundary**
+  - [x] reuse `SchedulerDrawer` and child visuals where safe
+  - [x] replace runtime brains through prototype-only viewmodel seam
+- [x] **T4.2: Spec / Approved Branch Set**
+  - [x] exact create
+  - [x] conflict-visible create
+  - [x] delete
+  - [x] reschedule
+  - [x] keep inspiration shelf visible and make shelf-card `Ask AI` open a new chat session with the card text as the first auto-submitted user turn
+  - [x] explicit safe-fail feedback
+- [x] **T4.3: Code / Suppressed Branches**
+  - [x] suppress Path B
+  - [x] suppress CRM/entity enrichment
+  - [x] suppress plugin-driven scheduler re-entry
+  - [x] defer optional extras that force contamination
+  - [x] defer only advanced inspiration follow-on behavior, not the base shelf-card `Ask AI` chat launcher
 - [x] **T4.4: Code / Inspiration Shelf Ask AI Handoff**
   - [x] restore visible `Ask AI` on scheduler inspiration shelf cards in SIM
   - [x] route shelf-card clicks through a shell-owned callback rather than scheduler runtime ownership
@@ -549,7 +562,7 @@ The SIM mission follows this chain:
     SIM now starts badge scheduler follow-up continuity from the real badge pipeline ingress. `SimShell` consumes `BadgeAudioPipeline.events` and starts or replaces the metadata-only continuity binding only on `PipelineEvent.Complete` with scheduler-real outcomes (`TaskCreated` and non-empty `MultiTaskCreated`), while shelf-card `Ask AI`, scheduler dev/test mic, raw recording arrival, and non-scheduler completions remain excluded.
   - [x] **2026-03-21 Surrogate On-Device Note**
     `docs/reports/tests/L3-20260321-sim-badge-follow-up-continuity.md` is now explicitly framed as a surrogate on-device note, not a failed physical-badge L3. The run used the available in-app recording path before hardware delivery, so it does not block the shipped continuity wiring and must not be treated as negative evidence against the real badge-ingress seam.
-  - [ ] **2026-03-21 Remaining Carry Debt**
+  - [x] **2026-03-21 Remaining Carry Debt**
     Physical-badge hardware L3 remains deferred until the badge is in hand, and current SIM chat remains placeholder-level rather than a true scheduler follow-up intelligence lane. The continuity owner is ingress-correct at code/L1 level, but it is still metadata only and does not upgrade SIM chat semantics by itself.
 - [x] **Done When**
   - [x] scheduler works in the standalone shell
@@ -566,7 +579,7 @@ The SIM mission follows this chain:
 > **Execution Law**: treat shipping polish as behavior, not decoration. Date attention, motion, and reminders must be user-truthful and legacy-aligned.
 > **Validation Requirement**: each shipping hardening slice must prove both the UI cue and the downstream state/notification consequence.
 
-- [ ] **T4.6: Date Attention Signaling**
+- [x] **T4.6: Date Attention Signaling**
   - [x] **2026-03-21 Audit Note**
     Shared scheduler UI already supports attention rendering through `unacknowledgedDates` and `rescheduledDates`, and date tap already acknowledges those sets. SIM currently uses that for reschedule destination marking, but create does not yet mark target dates and conflict create does not yet split normal vs warning attention treatment.
   - [x] **2026-03-21 Implementation Note**
@@ -638,7 +651,7 @@ The SIM mission follows this chain:
     Physical-badge L3 now closes the previously blocked branch. The run entered the manager directly from `DISCONNECTED`, fell into the onboarding-derived setup flow after reconnect returned `NeedsSetup`, completed real BLE/Wi-Fi provisioning, transitioned `SETUP -> MANAGER`, and then reopened the manager directly on later configured entry. Evidence is recorded in `docs/reports/tests/L3-20260321-sim-wave5-connectivity-validation.md`.
   - [x] **2026-03-21 Acceptance Note**
     T5.1 is now accepted for the implemented routing contract. The legacy placeholder setup screen is no longer the SIM setup surface, the onboarding pairing subset is proven on device, and success lands in the manager-backed steady-state surface.
-  - [ ] **2026-03-21 UX Carry Debt**
+  - [x] **2026-03-21 UX Carry Debt**
     The manager surface is currently full-screen and feels too heavy for a SIM support-module action. Functional routing is accepted, but the next UI refinement slice should reduce the manager presentation so connectivity does not dominate the shell visually.
 - [x] **T5.2: Spec / Hard Migration Boundary**
   - [x] keep BLE/Wi-Fi behavior under existing connectivity contracts
@@ -648,7 +661,7 @@ The SIM mission follows this chain:
     The Wave 5 boundary is now explicit across `sim-connectivity`, `sim-shell`, `sim-scheduler`, and `sim-audio-chat`. Reused unchanged: `ConnectivityBridge`, `ConnectivityService`, `ConnectivityViewModel`, `PairingService`, and the onboarding pairing subset. Shell-owned wrappers only: entry sources, `MODAL/SETUP/MANAGER` route state, overlay semantics, close-back-to-chat behavior, and SIM route telemetry.
   - [x] **2026-03-21 Evidence Audit**
     Repo evidence is recorded in `docs/reports/20260321-sim-wave5-boundary-audit.md`. It proves scheduler currently has no connectivity imports, shell owns routing only, audio consumes `ConnectivityBridge` for badge-origin ingress/file operations, and the remaining contamination points are explicit rather than hidden.
-- [ ] **T5.3: Code / Connectivity Isolation**
+- [x] **T5.3: Code / Connectivity Isolation**
   - [x] keep connection management isolated from scheduler and audio/chat business logic
   - [x] avoid smart-agent dependencies in connectivity entry path
   - [x] remove `PairingService -> BlePeripheral` leakage from the domain-facing pairing contract
@@ -657,9 +670,9 @@ The SIM mission follows this chain:
     `DiscoveredBadge` is now plain domain data, `RealPairingService` keeps discovered `BlePeripheral` state internal and snapshot-scoped, `PairingFlowViewModel` now owns the shared pairing seam, and `OnboardingViewModel` is narrowed to profile persistence only.
   - [x] **2026-03-21 Focused L1**
     Focused verification is green for `:app-core:compileDebugKotlin` and the Wave 5 unit pack covering `RealPairingServiceTest`, `PairingFlowViewModelTest`, `OnboardingViewModelTest`, `OnboardingFlowTransitionTest`, `SimConnectivityPairingFlowTest`, and `SimConnectivityRoutingTest`.
-- [ ] **T5.4: Validation**
+- [x] **T5.4: Validation**
   - [x] prove connectivity entry opens usable badge connection management
-  - [ ] prove scheduler and audio/chat do not require connectivity to be meaningful
+  - [x] prove scheduler and audio/chat do not require connectivity to be meaningful
   - [x] **2026-03-20 Focused L1**
     Focused L1 coverage now proves the shell-owned route logic for modal vs setup connectivity surfaces and the SIM-only ready-state projection used for auto-return behavior.
   - [x] **2026-03-21 Offline Telemetry Hardening**
@@ -678,7 +691,7 @@ The SIM mission follows this chain:
     Wave 5 carry debt is now cleaned up in code. `ConnectivityManagerScreen` no longer occupies the shell as a heavy full-screen page; SIM now renders it as a contained support panel overlay. Manual offline badge sync also now preflights readiness and maps raw transport failures such as `oss_unknown null` to human-readable drawer feedback. Focused L1 verification is green with `:app-core:compileDebugKotlin`, `SimAudioDebugScenarioTest`, `SimAudioDrawerViewModelTest`, and `SimConnectivityRoutingTest`. No new L3 rerun is recorded for this UI copy/presentation cleanup yet.
   - [x] **2026-03-21 UX Cleanup Device Smoke**
     A short on-device smoke check is now recorded in `docs/reports/tests/L3-20260321-sim-wave5-ux-cleanup-smoke.md`. The contained manager presentation and the human-readable offline sync message both checked green on device.
-- [ ] **Done When**
+- [x] **Done When**
   - [x] connectivity remains available in SIM
   - [x] connectivity remains decoupled from the two main feature lanes
 
@@ -690,10 +703,10 @@ The SIM mission follows this chain:
 > **Execution Law**: if isolation is ambiguous, treat the current smart app as higher priority and keep SIM separate.
 > **Validation Requirement**: isolation proof is required before declaring SIM safe to continue.
 
-- [ ] **T6.1: Spec / Prototype-Only DI Root**
-  - [ ] define SIM modules
-  - [ ] prevent default boot through the smart singleton graph
-  - [ ] isolate smart-only services unless deliberately reused behind explicit seams
+- [x] **T6.1: Spec / Prototype-Only DI Root**
+  - [x] define SIM modules
+  - [x] prevent default boot through the smart singleton graph
+  - [x] isolate smart-only services unless deliberately reused behind explicit seams
   - [x] **2026-03-21 Spec Freeze**
     `docs/cerb/sim-shell/spec.md` is now the owning T6.1 artifact. It freezes the SIM composition chain (`SimMainActivity -> SimShell -> Sim* runtime owners -> SIM-owned dependency assembler`), classifies current dependencies as direct reuse vs SIM-wrapped reuse vs forbidden, and explicitly forbids shared implementation edits in `SimMainActivity`, `SimShell`, and shared notification/alarm entry wiring while T4.8 remains active.
 - [x] **T6.2: Code / Audio Persistence Namespace**
@@ -768,9 +781,12 @@ No implementation should start before T0 boundary decisions are explicit enough 
 
 Wave 7 acceptance closed the SIM mission on **2026-03-22**. The remaining items below are not blockers against the accepted mission state; they are follow-up debt only.
 
-- [ ] Physical-badge hardware L3 for the badge-origin scheduler follow-up continuity lane remains deferred until the real badge is available. The current surrogate/device evidence must not be over-read as a hardware closeout.
+- [x] Physical-badge hardware L3 for the badge-origin scheduler follow-up continuity lane is now explicitly reopened as Wave 9 verification-only work. Final closeout still requires a real-badge device run; the current surrogate/device evidence must not be over-read as a hardware closeout.
 - [x] SIM scheduler follow-up no longer remains metadata-only continuity only; it is now reopened as Wave 8 task-scoped follow-up work instead of Wave 7 closeout debt.
-- [ ] If either deferred item is reopened, create a new follow-up execution brief or mini-wave instead of reopening the accepted Wave 7 gates.
+- [x] Wave 10 is now explicitly opened as the separate ingress-repair mini-wave required by the Wave 9 execution law after hardware transport failed upstream of SIM follow-up.
+- [x] Dynamic island polish is now normalized onto the shared one-line shell contract. SIM no longer treats the old three-task reminder carousel as product truth; the shell now uses one sticky header-center summary line composed from session title plus scheduler-owned reminder ordering, while scheduler remains the owner of reminder truth.
+- [ ] Deferred ESP32/connectivity contract cleanup remains a later docs-only or fake-semantics follow-up, not a Wave 10 blocker. Current active SOT is now aligned around legacy connectivity code plus `docs/cerb/connectivity-bridge/**` and `docs/specs/esp32-protocol.md`; remaining cleanup candidates are secondary only: stale `data/connectivity/ConnectivityBridge.kt` filename examples, stale `docs/specs/connectivity-spec.md` ready-state language, and any fake-manager semantics that still overstate BLE-only `Connected` as transport-ready.
+- Rule: if this deferred debt is reopened, create a new follow-up execution brief or mini-wave instead of reopening the accepted Wave 7 gates.
 
 ## 6.2 Wave 8: Task-Scoped Scheduler Follow-Up
 > Objective: turn the accepted shell-owned badge continuity binding into a real but narrow SIM follow-up lane after badge-origin task creation.
@@ -783,7 +799,7 @@ Wave 7 acceptance closed the SIM mission on **2026-03-22**. The remaining items 
 > **Execution Law**: keep follow-up task-scoped, prompt-first, and non-agent-like.
 > **Validation Requirement**: prove badge-origin follow-up session creation, visible prompt/chip, scoped quick actions, and multi-task safe-fail without reopening Wave 7 acceptance.
 
-- [ ] **T8.0: Badge-Origin Scheduler Follow-Up V1**
+- [x] **T8.0: Badge-Origin Scheduler Follow-Up V1**
   - [x] persist a scheduler-follow-up session kind plus bound task summaries in SIM session metadata
   - [x] create follow-up sessions only from badge-origin `TaskCreated` / non-empty `MultiTaskCreated`
   - [x] show an in-shell prompt/chip instead of auto-jumping the user into chat
@@ -791,7 +807,52 @@ Wave 7 acceptance closed the SIM mission on **2026-03-22**. The remaining items 
   - [x] support explain / status / mark-done / delete and task-scoped reschedule
   - [x] require explicit task selection before multi-task mutation
   - [x] update `docs/cerb/interface-map.md` because this slice introduces a real SIM shell/chat -> scheduler follow-up ownership edge
-  - [ ] close with focused L3 follow-up evidence
+  - [x] close with focused L3 follow-up evidence
+
+## 6.3 Wave 9: Physical-Badge Follow-Up E2E Validation
+> Objective: close the last hardware-only proof gap for the accepted follow-up lane by replacing debug-assisted ingress evidence with true physical-badge validation.
+> **Entry Docs**:
+> - `docs/plans/sim-wave9-execution-brief.md`
+> - `docs/core-flow/sim-shell-routing-flow.md`
+> - `docs/cerb/sim-shell/spec.md`
+> - `docs/cerb/sim-scheduler/spec.md`
+> - `docs/cerb/sim-audio-chat/spec.md`
+> - `docs/reports/tests/L3-20260322-sim-wave8-follow-up-validation.md`
+> - `docs/reports/tests/L3-20260322-sim-wave9-hardware-validation.md`
+> **Execution Law**: treat this as verification-only work; if hardware drift appears, create a separate repair mini-wave instead of silently extending Wave 9 into implementation.
+> **Validation Requirement**: prove one real single-task bound mutation and one real multi-task no-selection safe-fail on hardware without SIM boundary regression.
+
+- [ ] **T9.0: Physical-Badge Hardware Follow-Up L3**
+  - [ ] current 2026-03-22 execution attempt is blocked; device/build preflight passed, but no real badge-origin single-task or multi-task fixture was captured in-session, so hardware ingress and downstream mutation proof remain open
+  - [ ] freeze the acceptance contract and device/badge preconditions before the run
+  - [ ] prepare one real single-task fixture and one real multi-task fixture with known expected task identity
+  - [ ] prove hardware-origin single-task ingress plus visible prompt/chip
+  - [ ] prove the single-task `完成` action mutates the correct bound task downstream
+  - [ ] prove multi-task no-selection mutation safe-fails with no unintended write
+  - [ ] write a dedicated hardware L3 validation note and sync trackers from the real outcome
+
+## 6.4 Wave 10: Badge Ingress Repair
+> Objective: repair the upstream badge recording transport blocker uncovered by Wave 9 so SIM can return to honest physical-badge validation.
+> **Entry Docs**:
+> - `docs/plans/sim-wave10-execution-brief.md`
+> - `docs/specs/esp32-protocol.md`
+> - `docs/cerb/connectivity-bridge/spec.md`
+> - `docs/cerb/connectivity-bridge/interface.md`
+> - `docs/reports/tests/L3-20260322-sim-wave9-hardware-validation.md`
+> **Execution Law**: fix ingress plus connection truth surgically; do not hide the defect behind polling fallback or debug surrogates.
+> **Validation Requirement**: restore BLE `log#...` ingress into the real bridge/pipeline path, freeze the full filename contract, and prove the bridge no longer reports healthy connected when notification listening is dead.
+
+- [ ] **T10.0: BLE Recording Ingress and Connection-Truth Repair**
+  - [x] freeze `RecordingNotification.RecordingReady.filename` to `log_YYYYMMDD_HHMMSS.wav`
+  - [x] parse BLE `tim#get` / `log#YYYYMMDD_HHMMSS` through the legacy GATT notification seam
+  - [x] map badge recording-ready notifications to full downloadable filenames before bridge emission
+  - [x] stop optimistic healthy-connected promotion when persistent GATT notification listening is absent
+  - [x] stop reconnect success from treating BLE-only session states as sufficient
+  - [x] add focused L1 verification for parser, manager ingress, bridge gating, and pipeline notification-driven entry
+  - [x] formalize the ESP32 live-capture debug path via `scripts/esp32_connectivity_debug.sh` and `docs/sops/esp32-connectivity-debug.md`
+  - [x] record the current live capture evidence showing BLE traffic without recording-end ingress in `docs/reports/20260322-esp32-live-capture-findings.md`
+  - [ ] run device-level re-entry validation to prove real badge recording again reaches connectivity ingress logs and `AudioPipeline`
+  - [ ] reopen `T9.0` only after the re-entry gate is satisfied
 
 ---
 
@@ -850,13 +911,13 @@ Treat transcript streaming and activity labels as presentation unless backed by 
 
 ## 9. Next Expected Docs
 
-No mandatory closeout docs remain after Wave 7 sync on **2026-03-22**.
+Wave 7 and Wave 8 closeout docs remain accepted on **2026-03-22**.
 
-If deferred debt is reopened, the next expected docs are:
+The next expected docs for the prepared Wave 9 mini-wave are:
 
 - a physical-badge hardware L3 validation note for the badge-origin scheduler follow-up continuity lane
-- a follow-up execution brief or mini-wave tracker section for richer scheduler follow-up intelligence
-- a tracker addendum only if new follow-up work materially changes the accepted SIM mission boundary
+- a SIM tracker closeout update that marks Wave 9 accepted or blocked from real hardware evidence
+- a main tracker sync only if Wave 9 materially changes the SIM mission status beyond prepared hardware validation work
 
 ---
 

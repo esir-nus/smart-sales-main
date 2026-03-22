@@ -30,7 +30,8 @@ Responsibilities:
 
 - coordinate scheduler and audio drawers
 - host the simple chat surface
-- host SIM support surfaces such as history and connectivity entry
+- host SIM support surfaces such as history and connectivity entry, with connectivity entering from the audio drawer rather than the home header
+- host a persistent top-header one-line dynamic island that can rotate up to 3 scheduler items every 5 seconds and open the scheduler drawer on the visible item's date page
 - route `Ask AI` and audio re-selection flows
 - own the badge scheduler follow-up continuity binding metadata
 - show the badge-origin scheduler follow-up prompt/chip when the bound session is not the active chat
@@ -92,6 +93,11 @@ Guarantees:
 - only one drawer may be open at a time
 - the shell may reopen the audio drawer from chat
 - the shell may expose history/new-page/connectivity/settings as SIM support surfaces
+- the SIM home header keeps only the hamburger button, centered island, and new-chat button so the chrome remains visually balanced
+- the shell may keep a persistent dynamic island visible in the top-header center slot while normal SIM shell surfaces are active
+- the shell may use that dynamic island as a scheduler-entry affordance
+- the shell dynamic island stays one-line and may rotate vertically through up to 3 scheduler entries
+- tapping any visible island entry must open the scheduler drawer on the corresponding scheduler date page
 - the shell owns connectivity route state and may distinguish bootstrap modal vs setup vs manager connectivity surfaces
 - the shell does not expose smart-only drawer types or smart-runtime-only shell meaning
 - the shell does not become the owner of connectivity backend truth just because it hosts connectivity surfaces

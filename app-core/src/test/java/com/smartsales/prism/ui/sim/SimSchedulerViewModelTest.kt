@@ -48,6 +48,7 @@ import org.junit.Before
 import org.junit.Test
 import java.io.File
 import java.time.Instant
+import java.time.temporal.ChronoUnit
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SimSchedulerViewModelTest {
@@ -233,6 +234,67 @@ class SimSchedulerViewModelTest {
         advanceUntilIdle()
 
         assertTrue(inspirationRepository.getAll().snapshot().isNotEmpty())
+    }
+
+    @Test
+    fun `topUrgentTasks returns top three active tasks with conflict first then urgency then time`() = runTest {
+        taskRepository.insertTask(
+            scheduledTask(
+                id = "l3_early",
+                title = "普通早任务",
+                startTime = timeProvider.now.plus(20, ChronoUnit.MINUTES),
+                urgencyLevel = UrgencyLevel.L3_NORMAL
+            )
+        )
+        taskRepository.insertTask(
+            scheduledTask(
+                id = "l1_late",
+                title = "关键晚任务",
+                startTime = timeProvider.now.plus(3, ChronoUnit.HOURS),
+                urgencyLevel = UrgencyLevel.L1_CRITICAL
+            )
+        )
+        taskRepository.insertTask(
+            scheduledTask(
+                id = "l2_early",
+                title = "重要早任务",
+                startTime = timeProvider.now.plus(30, ChronoUnit.MINUTES),
+                urgencyLevel = UrgencyLevel.L2_IMPORTANT
+            )
+        )
+        taskRepository.insertTask(
+            scheduledTask(
+                id = "l1_earlier",
+                title = "关键早任务",
+                startTime = timeProvider.now.plus(10, ChronoUnit.MINUTES),
+                urgencyLevel = UrgencyLevel.L1_CRITICAL
+            )
+        )
+        taskRepository.insertTask(
+            scheduledTask(
+                id = "conflict",
+                title = "冲突提醒",
+                startTime = timeProvider.now.plus(4, ChronoUnit.HOURS),
+                urgencyLevel = UrgencyLevel.L3_NORMAL,
+                hasConflict = true
+            )
+        )
+        taskRepository.insertTask(
+            scheduledTask(
+                id = "done_hidden",
+                title = "已完成任务",
+                startTime = timeProvider.now.plus(5, ChronoUnit.MINUTES),
+                urgencyLevel = UrgencyLevel.L1_CRITICAL,
+                isDone = true
+            )
+        )
+
+        advanceUntilIdle()
+
+        assertEquals(
+            listOf("冲突提醒", "关键早任务", "关键晚任务"),
+            viewModel.topUrgentTasks.value.map { it.title }
+        )
     }
 
     @Test
@@ -1114,6 +1176,26 @@ class SimSchedulerViewModelTest {
             UrgencyLevel.buildCascade(UrgencyLevel.L2_IMPORTANT).size +
                 UrgencyLevel.buildCascade(UrgencyLevel.L3_NORMAL).size,
             alarmScheduler.scheduledAlarms.size
+        )
+    }
+
+    private fun scheduledTask(
+        id: String,
+        title: String,
+        startTime: Instant,
+        urgencyLevel: UrgencyLevel,
+        isDone: Boolean = false,
+        hasConflict: Boolean = false
+    ): ScheduledTask {
+        return ScheduledTask(
+            id = id,
+            timeDisplay = "10:00",
+            title = title,
+            urgencyLevel = urgencyLevel,
+            startTime = startTime,
+            durationMinutes = 30,
+            isDone = isDone,
+            hasConflict = hasConflict
         )
     }
 

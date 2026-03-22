@@ -4,13 +4,105 @@ import com.smartsales.core.telemetry.PipelineValve
 import com.smartsales.prism.domain.audio.PipelineEvent
 import com.smartsales.prism.domain.audio.SchedulerResult
 import com.smartsales.prism.domain.model.SchedulerFollowUpTaskSummary
+import com.smartsales.prism.domain.memory.ConflictPolicy
+import com.smartsales.prism.domain.memory.DurationSource
+import com.smartsales.prism.domain.scheduler.ScheduledTask
+import com.smartsales.prism.domain.scheduler.UrgencyLevel
+import com.smartsales.prism.ui.components.DynamicIslandTapAction
+import com.smartsales.prism.ui.resolveSimDynamicIslandIndex
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.Instant
 
 class SimShellHandoffTest {
+
+    @Test
+    fun `buildSimDynamicIslandItems keeps idle fallback when no tasks exist`() {
+        val items = buildSimDynamicIslandItems(
+            sessionTitle = "",
+            orderedTasks = emptyList()
+        )
+
+        assertEquals(1, items.size)
+        assertEquals("SIM", items.single().sessionTitle)
+        assertEquals("暂无待办", items.single().schedulerSummary)
+        assertTrue(items.single().isIdleEntry)
+    }
+
+    @Test
+    fun `buildSimDynamicIslandItems keeps scheduler ordering and emits task target`() {
+        val items = buildSimDynamicIslandItems(
+            sessionTitle = "客户A",
+            orderedTasks = listOf(
+                task(id = "l1", title = "优先回访", timeDisplay = "15:00"),
+                task(id = "l2", title = "发送纪要", timeDisplay = "18:00")
+            )
+        )
+
+        assertEquals(2, items.size)
+        assertEquals("客户A", items.first().sessionTitle)
+        assertEquals("即将：优先回访 · 15:00", items.first().schedulerSummary)
+        val tapAction = items.first().tapAction as DynamicIslandTapAction.OpenSchedulerDrawer
+        assertEquals("l1", tapAction.target?.taskId)
+    }
+
+    @Test
+    fun `buildSimDynamicIslandItems caps entries at top three and keeps conflict first`() {
+        val items = buildSimDynamicIslandItems(
+            sessionTitle = "客户B",
+            orderedTasks = listOf(
+                task(id = "c1", title = "冲突日程", timeDisplay = "16:00", hasConflict = true),
+                task(id = "n1", title = "回访", timeDisplay = "10:00"),
+                task(id = "n2", title = "发报价", timeDisplay = "11:00"),
+                task(id = "n3", title = "内部同步", timeDisplay = "12:00")
+            )
+        )
+
+        assertEquals(listOf("c1", "n1", "n2"), items.map {
+            ((it.tapAction as DynamicIslandTapAction.OpenSchedulerDrawer).target?.taskId).orEmpty()
+        })
+        assertTrue(items.first().isConflict)
+        assertEquals("冲突：冲突日程 · 16:00", items.first().schedulerSummary)
+    }
+
+    @Test
+    fun `resolveSimDynamicIslandIndex keeps current item when still present`() {
+        val items = buildSimDynamicIslandItems(
+            sessionTitle = "客户C",
+            orderedTasks = listOf(
+                task(id = "a", title = "任务A", timeDisplay = "09:00"),
+                task(id = "b", title = "任务B", timeDisplay = "10:00")
+            )
+        )
+
+        val resolvedIndex = resolveSimDynamicIslandIndex(
+            items = items,
+            currentItemKey = items[1].stableKey
+        )
+
+        assertEquals(1, resolvedIndex)
+    }
+
+    @Test
+    fun `resolveSimDynamicIslandIndex resets to first item when current item disappears`() {
+        val items = buildSimDynamicIslandItems(
+            sessionTitle = "客户D",
+            orderedTasks = listOf(
+                task(id = "a", title = "任务A", timeDisplay = "09:00"),
+                task(id = "b", title = "任务B", timeDisplay = "10:00")
+            )
+        )
+
+        val resolvedIndex = resolveSimDynamicIslandIndex(
+            items = items.take(1),
+            currentItemKey = items[1].stableKey
+        )
+
+        assertEquals(0, resolvedIndex)
+    }
 
     @Test
     fun `emitSchedulerShelfHandoffTelemetry emits request summary and log`() {
@@ -76,6 +168,30 @@ class SimShellHandoffTest {
         assertFalse(started)
         assertFalse(closed)
     }
+
+    private fun task(
+        id: String,
+        title: String,
+        timeDisplay: String,
+        isDone: Boolean = false,
+        isVague: Boolean = false,
+        hasConflict: Boolean = false
+    ) = ScheduledTask(
+        id = id,
+        timeDisplay = timeDisplay,
+        title = title,
+        urgencyLevel = UrgencyLevel.L3_NORMAL,
+        isDone = isDone,
+        hasConflict = hasConflict,
+        hasAlarm = false,
+        isSmartAlarm = false,
+        startTime = Instant.parse("2026-03-22T00:00:00Z"),
+        endTime = null,
+        durationMinutes = 0,
+        durationSource = DurationSource.DEFAULT,
+        conflictPolicy = ConflictPolicy.EXCLUSIVE,
+        isVague = isVague
+    )
 
     @Test
     fun `handleBadgeSchedulerFollowUpStart creates owner binding from created session`() {

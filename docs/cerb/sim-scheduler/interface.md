@@ -39,12 +39,14 @@ Required meaning:
 - implements only the scheduler slice approved for SIM
 - does not require smart-agent runtime collaborators by default
 - does not require connectivity contracts or badge connection state
+- may expose a shell-safe ordered reminder projection without making the shell the owner of scheduler truth
 
 ---
 
 ## Required Behaviors
 
 - timeline observation
+- ordered active reminder observation for the shell dynamic island
 - day selection
 - date-attention acknowledgement via `onDateSelected(dayOffset)` / `acknowledgeDate(dayOffset)`
 - conflict state projection
@@ -74,6 +76,15 @@ Required meaning:
 - reminder-reliability prompt emission must be process-lifetime gated so one batch does not repeatedly re-prompt
 - the prompt content should adapt to current OEM risk rather than always showing a generic exact-alarm-only message
 - reminder scheduling failure must degrade safely without rolling back the task mutation result
+
+Reminder projection rule:
+
+- the reminder projection must be scheduler-owned
+- ordering should prefer conflict-visible items first, then urgency, then earlier scheduled time
+- completed tasks must not appear
+- the shell may rotate or collapse this projection for presentation, but it must not reorder task truth independently
+- the shell may cap SIM rendering to the top 3 entries as a presentation detail
+- each reminder entry used by the shell must remain targetable to its corresponding scheduler date page
 
 ---
 

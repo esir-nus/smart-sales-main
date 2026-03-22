@@ -60,6 +60,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.temporal.ChronoUnit
 
 /**
  * SIM 调度 ViewModel。
@@ -161,6 +162,26 @@ class SimSchedulerViewModel @Inject constructor(
 
     private val _exactAlarmPermissionNeeded = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     override val exactAlarmPermissionNeeded: SharedFlow<Unit> = _exactAlarmPermissionNeeded.asSharedFlow()
+
+    override val topUrgentTasks: StateFlow<List<ScheduledTask>> = taskRepository
+        .queryByDateRange(timeProvider.today, timeProvider.today.plusDays(30))
+        .combine(_pipelineStatus) { items, _ ->
+            items
+                .filterIsInstance<ScheduledTask>()
+                .filterNot { it.isDone }
+                .sortedWith(
+                    compareByDescending<ScheduledTask> { it.hasConflict }
+                        .thenBy { it.urgencyLevel.ordinal }
+                        .thenBy { it.isVague }
+                        .thenBy { it.startTime.truncatedTo(ChronoUnit.MINUTES) }
+                )
+                .take(3)
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = emptyList()
+        )
 
     override val timelineItems: StateFlow<List<SchedulerTimelineItem>> = _activeDayOffset
         .flatMapLatest { dayOffset ->

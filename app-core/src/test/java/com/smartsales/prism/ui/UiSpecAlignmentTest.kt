@@ -1,6 +1,7 @@
 package com.smartsales.prism.ui
 
 import com.smartsales.prism.domain.model.UiState
+import com.smartsales.prism.ui.components.DynamicIslandUiState
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.io.File
@@ -92,6 +93,42 @@ class UiSpecAlignmentTest {
 
         assertEquals(
             "SCHEDULER UI SPEC DRIFT DETECTED!\n$errorMessage\nSolution: Update contract.md or SchedulerUiState.kt to re-establish Bijection.",
+            documentedStates,
+            compiledStates
+        )
+    }
+
+    @Test
+    fun verifyDynamicIslandUiStateMatchesCerbSpec() {
+        val projectRoot = File("..")
+        val specFile = File(projectRoot, "docs/cerb-ui/dynamic-island/interface.md")
+
+        assert(specFile.exists()) { "Cerb Dynamic Island Interface missing at: ${specFile.absolutePath}" }
+
+        val specContent = specFile.readText()
+
+        val stateRegex = Regex("""-\s*`DynamicIslandUiState\.([A-Za-z0-9_]+)""")
+        val documentedStates = stateRegex.findAll(specContent)
+            .map { it.groupValues[1] }
+            .toSet()
+
+        val compiledClasses = DynamicIslandUiState::class.sealedSubclasses
+        val compiledStates = compiledClasses.mapNotNull { it.simpleName }.toSet()
+
+        val missingInCode = documentedStates - compiledStates
+        val missingInDocs = compiledStates - documentedStates
+
+        val errorMessage = buildString {
+            if (missingInCode.isNotEmpty()) {
+                append("❌ States documented in Markdown but missing in Kotlin code: $missingInCode\n")
+            }
+            if (missingInDocs.isNotEmpty()) {
+                append("❌ States existing in Kotlin code but missing in Markdown: $missingInDocs\n")
+            }
+        }
+
+        assertEquals(
+            "DYNAMIC ISLAND UI SPEC DRIFT DETECTED!\n$errorMessage\nSolution: Update interface.md or DynamicIsland.kt to re-establish Bijection.",
             documentedStates,
             compiledStates
         )

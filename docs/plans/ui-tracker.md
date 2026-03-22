@@ -61,6 +61,7 @@ Rule:
 | Area | Scope | Status | Notes |
 |------|-------|--------|-------|
 | UI Workflow Foundation | Dedicated UI tracker, SOP clarification, aesthetic-source rule | Shipped | Initial operating model synced on 2026-03-22 |
+| Dynamic Island Header | Cerb shard, header-center transplant, scheduler-only one-line island | Shipped | Shared top-header island delivered for the standard shell; future non-scheduler lanes deferred |
 
 ---
 

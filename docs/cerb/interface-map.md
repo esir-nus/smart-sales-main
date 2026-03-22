@@ -85,6 +85,7 @@ User-facing features. Each receives processed results from Orchestrator (Layer 3
 | Module | Track | Owns (Writes) | Reads From (directly) | Receives From (via Orchestrator) | OS Layer | Status |
 |--------|-------|--------------|----------------------|----------------------------------|----------|--------|
 | **[Mascot (System I)](./mascot-service/spec.md)** | System I & Ambient | Ephemeral interactions, greetings | EventBus (Idle, Error) | `StateFlow<MascotState>` | OS: App | ✅ |
+| **[DynamicIsland](../cerb-ui/dynamic-island/spec.md)** | Intelligent Scheduler | Sticky one-line shell summary presentation | Scheduler summary projection, session title projection | — | OS: App | ✅ |
 | **[SchedulerDrawer](./scheduler/spec.md)** | Intelligent Scheduler | Visual UI states | Scheduler, ScheduleBoard | `ISchedulerViewModel` | OS: App | ✅ |
 | **[ScheduleBoard](./scheduler/spec.md)** | Intelligent Scheduler | Conflict index (in-memory cache) | ScheduledTaskRepository (populates index) | — | OS: SSD | ✅ |
 | **[BadgeAudioPipeline](./badge-audio-pipeline/spec.md)** | Hardware & Audio | Audio recording lifecycle | ASR, OSS, ConnectivityBridge | Delegates transcript to `IntentOrchestrator`; consumes early `PathACommitted` completion while Path B continues in background | — | ✅ |
@@ -96,6 +97,8 @@ User-facing features. Each receives processed results from Orchestrator (Layer 3
 > **"Reads From" vs "Receives From"**: "Reads From" = the feature calls the interface directly. "Receives From" = UnifiedPipeline pushes results into the feature's ViewModel. This distinction prevents confusion about who initiates the call.
 
 > **Domain vs UI Decoupling Rule (Wave 13)**: Features in Layer 4 (e.g., Scheduler, CRM) MUST define their own internal UI State projections (e.g., `SchedulerUiState`). They MUST NOT leak `app-core` ViewModels or UI State flags directly into Layer 2 Domain contracts. The Domain contract (`ScheduledTask`) is the SSD truth; the UI translates it.
+
+> **Dynamic Island ownership rule**: the island owns only shell-level presentation and the tap-to-open entrypoint. Scheduler remains the owner of task truth, prioritization, and drawer behavior.
 
 ### SIM T8.0 follow-up ownership edge
 

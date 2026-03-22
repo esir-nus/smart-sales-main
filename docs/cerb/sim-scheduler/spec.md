@@ -49,6 +49,7 @@ Explicitly excluded from SIM V1:
 - scheduler drawer behavior in the standalone app
 - Path A task creation/update/delete/reschedule UI flow
 - prototype-local scheduler viewmodel boundary
+- the conflict-prioritized reminder ordering and date-target metadata used by the SIM shell dynamic island
 
 `SIM Scheduler` reads from:
 
@@ -133,6 +134,17 @@ Current SIM-specific state and remaining gaps:
 - SIM now reuses the shared reminder stack for persisted exact tasks only: create and conflict-create arm reminders, vague tasks do not, delete and mark-done cancel, reschedule cancels then rearms, and restore-from-done does not rearm in T4.8
 - reminder-reliability prompting stays on the viewmodel/UI boundary through a process-lifetime gate so one create batch does not spam repeated settings prompts; the same seam may carry exact-alarm and OEM-specific notification hardening guidance
 - SIM still defers immediate create/conflict/completion native notifications and still lacks device-level acceptance proof for full banner/deadline delivery
+
+### Dynamic Island Reminder Projection Contract
+
+The SIM scheduler remains the owner of dynamic-island reminder truth even though the shell owns the header presentation.
+
+- reminder ordering must prefer conflict-visible tasks before normal reminders
+- within the same priority tier, preserve scheduler ordering rather than letting the shell reshuffle tasks independently
+- completed tasks must not appear
+- each projected reminder must remain targetable to its corresponding scheduler date page
+- the SIM shell may present at most the first 3 projected entries and rotate them vertically one line at a time
+- the shared island renderer may still collapse one visible item at a time; the top-3 rotation is shell presentation, not scheduler-owned chrome
 
 ### Deferred
 
@@ -222,6 +234,7 @@ Minimum required projection:
 - timeline items suitable for `SchedulerDrawer`
 - conflict state
 - active day offset
+- ordered active reminder projection for shell dynamic island summary selection
 - exact alarm permission prompts only if reminders remain in SIM V1 scope
 
 If a current scheduler field only exists for smart-app integration, SIM should not depend on it by default.

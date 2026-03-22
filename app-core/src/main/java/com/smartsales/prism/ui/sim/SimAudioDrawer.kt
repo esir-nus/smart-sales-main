@@ -81,6 +81,7 @@ fun SimAudioDrawer(
     onAskAi: (SimAudioDiscussion) -> Unit,
     onSelectForChat: (SimChatAudioSelection) -> Unit,
     onSyncFromBadge: () -> Unit = {},
+    onOpenConnectivity: () -> Unit = {},
     onArtifactOpened: (String, String) -> Unit = { _, _ -> },
     onImportTestAudio: () -> Unit = {},
     onSeedDebugFailureScenario: () -> Unit = {},
@@ -186,6 +187,11 @@ fun SimAudioDrawer(
                         ) {
                             if (mode == SimAudioDrawerMode.BROWSE) {
                                 PrismButton(
+                                    text = "工牌连接",
+                                    onClick = onOpenConnectivity,
+                                    style = PrismButtonStyle.GHOST
+                                )
+                                PrismButton(
                                     text = if (isSyncing) "同步中..." else "同步徽章",
                                     onClick = onSyncFromBadge,
                                     style = PrismButtonStyle.GHOST,
@@ -208,7 +214,7 @@ fun SimAudioDrawer(
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
-                                        text = "SIM 本地录音",
+                                        text = "SIM 本地样本",
                                         color = AccentSecondary,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Medium

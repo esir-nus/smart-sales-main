@@ -47,6 +47,7 @@ The user should perceive:
 - the same drawer family and glass/light treatment
 - a smaller, more literal app focused on two main feature lanes
 - a sparse idle chat surface: balanced top controls with hamburger on the left, new chat on the right, a one-line dynamic island in the header center slot, greeting-first body, and a bottom message capsule instead of dashboard cards or analytics chrome
+- a bottom message capsule whose idle placeholder uses the shared scan-shine treatment on placeholder text only, with attach on the left and a send-only action on the right
 - ordinary shell affordances that still feel normal, such as history, new page/session, connectivity entry, and settings
 
 The user should not perceive:
@@ -54,6 +55,7 @@ The user should not perceive:
 - hidden smart-agent behavior
 - unrelated drawers and labs
 - runtime surfaces that imply the old agent OS still exists behind the prototype
+- a fake shell-owned mic affordance that really routes somewhere else
 
 ---
 
@@ -145,6 +147,18 @@ Expected navigation:
 - closing the connectivity manager returns the user to normal SIM chat
 - `Ask AI` from audio opens the simple chat surface
 - selecting audio from chat reopens the audio drawer instead of Android file picker
+
+### Drawer Gesture Contract
+
+SIM keeps the shell gesture model narrow and edge-scoped.
+
+- when the normal SIM shell is visible and no support overlay is active, pulling down from the header-center zone opens the scheduler drawer
+- when the normal SIM shell is visible and no support overlay is active, pulling up from the bottom edge strip opens the audio drawer in browse mode
+- the bottom-edge audio-open gesture is disabled while the IME/keyboard is visible
+- scheduler dismissal remains handle-first and upward
+- SIM audio dismissal is handle-first and downward
+- list scrolling or general chat overscroll must not act as an alternate drawer-open gesture
+- gesture zones must not widen so far that they steal menu, new-chat, or chat-input interactions
 
 ### Connectivity Boundary Rule
 

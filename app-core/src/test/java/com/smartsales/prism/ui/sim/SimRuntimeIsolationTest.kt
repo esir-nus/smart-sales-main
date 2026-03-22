@@ -14,7 +14,8 @@ class SimRuntimeIsolationTest {
         val source = readSource("app-core/src/main/java/com/smartsales/prism/SimMainActivity.kt")
 
         assertTrue(source.contains("class SimMainActivity"))
-        assertTrue(source.contains("SimShell(badgeAudioPipeline = badgeAudioPipeline)"))
+        assertTrue(source.contains("SimShell("))
+        assertTrue(source.contains("badgeAudioPipeline = badgeAudioPipeline"))
         assertFalse(source.contains("AgentShell("))
         assertFalse(source.contains("AgentMainActivity"))
     }

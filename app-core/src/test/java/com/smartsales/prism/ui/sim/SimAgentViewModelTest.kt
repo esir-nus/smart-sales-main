@@ -4,11 +4,13 @@ import android.content.Context
 import com.smartsales.core.pipeline.PromptCompiler
 import com.smartsales.core.pipeline.RealUniAExtractionService
 import com.smartsales.core.telemetry.PipelineValve
+import com.smartsales.core.llm.ExecutorResult
 import com.smartsales.core.test.fakes.FakeExecutor
 import com.smartsales.core.test.fakes.FakeScheduleBoard
 import com.smartsales.data.oss.OssUploader
 import com.smartsales.prism.data.audio.SIM_AUDIO_METADATA_FILENAME
 import com.smartsales.prism.data.audio.SimAudioRepository
+import com.smartsales.prism.data.audio.simArtifactFilename
 import com.smartsales.prism.data.session.SimSessionRepository
 import com.smartsales.prism.domain.audio.AudioFile
 import com.smartsales.prism.domain.audio.AudioSource
@@ -243,6 +245,130 @@ class SimAgentViewModelTest {
 
         assertEquals(2, viewModel.history.value.size)
         assertEquals(initialSessionCount + 2, viewModel.groupedSessions.value.values.flatten().size)
+    }
+
+    @Test
+    fun `general send returns supported audio guidance instead of shell placeholder`() = runTest {
+        val viewModel = newViewModel()
+
+        viewModel.updateInput("你好")
+        viewModel.send()
+        advanceUntilIdle()
+
+        val lastMessage = viewModel.history.value.last() as ChatMessage.Ai
+        val response = lastMessage.uiState as UiState.Response
+        assertTrue(response.content.contains("只支持围绕已选录音继续讨论"))
+        assertFalse(response.content.contains("当前阶段只保留独立 Shell"))
+    }
+
+    @Test
+    fun `audio grounded send uses persisted artifacts as grounding`() = runTest {
+        writeAudioMetadata(
+            AudioFile(
+                id = "audio_grounded_1",
+                filename = "Grounded.wav",
+                timeDisplay = "Now",
+                source = AudioSource.PHONE,
+                status = TranscriptionStatus.TRANSCRIBED
+            )
+        )
+        writeArtifacts(
+            audioId = "audio_grounded_1",
+            artifacts = TingwuJobArtifacts(
+                transcriptMarkdown = "客户说下周启动试点。",
+                smartSummary = TingwuSmartSummary(summary = "客户希望下周启动试点")
+            )
+        )
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("可以，录音里提到客户希望下周启动试点。"))
+        val viewModel = newViewModel()
+
+        viewModel.selectAudioForChat(
+            audioId = "audio_grounded_1",
+            title = "Grounded.wav",
+            summary = "已有摘要",
+            entersPendingFlow = false
+        )
+        viewModel.updateInput("客户什么时候启动？")
+        viewModel.send()
+        advanceUntilIdle()
+        Thread.sleep(150)
+        advanceUntilIdle()
+
+        val lastMessage = viewModel.history.value.last() as ChatMessage.Ai
+        val response = lastMessage.uiState as UiState.Response
+        assertTrue(response.content.contains("下周启动"))
+        assertTrue(fakeExecutor.executedPrompts.last().contains("客户希望下周启动试点"))
+        assertTrue(fakeExecutor.executedPrompts.last().contains("客户什么时候启动"))
+    }
+
+    @Test
+    fun `audio grounded send falls back to durable artifact history when repository copy is missing`() = runTest {
+        writeAudioMetadata(
+            AudioFile(
+                id = "audio_grounded_2",
+                filename = "Fallback.wav",
+                timeDisplay = "Now",
+                source = AudioSource.PHONE,
+                status = TranscriptionStatus.TRANSCRIBED
+            )
+        )
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("可以，我会基于当前录音历史继续回答。"))
+        val viewModel = newViewModel()
+
+        viewModel.selectAudioForChat(
+            audioId = "audio_grounded_2",
+            title = "Fallback.wav",
+            summary = "已有摘要",
+            entersPendingFlow = false
+        )
+        viewModel.appendCompletedAudioArtifacts(
+            "audio_grounded_2",
+            TingwuJobArtifacts(
+                transcriptMarkdown = "这是历史中的转写内容。",
+                smartSummary = TingwuSmartSummary(summary = "这是历史中的摘要")
+            )
+        )
+
+        viewModel.updateInput("继续说说重点")
+        viewModel.send()
+        advanceUntilIdle()
+        Thread.sleep(150)
+        advanceUntilIdle()
+
+        assertTrue(fakeExecutor.executedPrompts.last().contains("这是历史中的转写内容"))
+        val lastMessage = viewModel.history.value.last() as ChatMessage.Ai
+        assertTrue((lastMessage.uiState as UiState.Response).content.contains("继续回答"))
+    }
+
+    @Test
+    fun `audio grounded send without artifacts returns explicit guidance error`() = runTest {
+        writeAudioMetadata(
+            AudioFile(
+                id = "audio_grounded_3",
+                filename = "Missing.wav",
+                timeDisplay = "Now",
+                source = AudioSource.PHONE,
+                status = TranscriptionStatus.TRANSCRIBED
+            )
+        )
+        val viewModel = newViewModel()
+
+        viewModel.selectAudioForChat(
+            audioId = "audio_grounded_3",
+            title = "Missing.wav",
+            summary = "已有摘要",
+            entersPendingFlow = false
+        )
+        viewModel.updateInput("说一下这个录音")
+        viewModel.send()
+        advanceUntilIdle()
+        Thread.sleep(150)
+        advanceUntilIdle()
+
+        val lastMessage = viewModel.history.value.last() as ChatMessage.Ai
+        val error = lastMessage.uiState as UiState.Error
+        assertTrue(error.message.contains("尚未加载"))
+        assertTrue(fakeExecutor.executedPrompts.isEmpty())
     }
 
     @Test
@@ -568,6 +694,36 @@ class SimAgentViewModelTest {
     }
 
     @Test
+    fun `debug badge scheduler follow up seeding persists live task records for single task flow`() = runTest {
+        val viewModel = newViewModel()
+
+        val sessionId = viewModel.createDebugBadgeSchedulerFollowUpSession(
+            threadId = "thread_debug_1",
+            transcript = "提醒我一会儿回访客户",
+            tasks = listOf(
+                SchedulerFollowUpTaskSummary(
+                    taskId = "debug_follow_up_single",
+                    title = "客户回访",
+                    dayOffset = 0,
+                    scheduledAtMillis = Instant.parse("2026-03-22T08:01:00Z").toEpochMilli(),
+                    durationMinutes = 30
+                )
+            )
+        )
+
+        assertEquals(
+            "客户回访",
+            taskRepository.getTask("debug_follow_up_single")?.title
+        )
+
+        viewModel.switchSession(sessionId!!)
+        viewModel.performSchedulerFollowUpQuickAction(SimSchedulerFollowUpQuickAction.MARK_DONE)
+        advanceUntilIdle()
+
+        assertTrue(taskRepository.getTask("debug_follow_up_single")?.isDone == true)
+    }
+
+    @Test
     fun `scheduler follow up send safely blocks mutation when multi task selection is missing`() = runTest {
         taskRepository.insertTask(
             ScheduledTask(
@@ -610,7 +766,8 @@ class SimAgentViewModelTest {
     }
 
     private fun newViewModel(
-        audioRepository: SimAudioRepository = newAudioRepository()
+        audioRepository: SimAudioRepository = newAudioRepository(),
+        executor: FakeExecutor = fakeExecutor
     ): SimAgentViewModel {
         return SimAgentViewModel(
             sessionRepository = sessionRepository,
@@ -619,6 +776,7 @@ class SimAgentViewModelTest {
             scheduleBoard = scheduleBoard,
             alarmScheduler = alarmScheduler,
             uniAExtractionService = uniAExtractionService,
+            executor = executor,
             timeProvider = timeProvider
         )
     }
@@ -637,6 +795,12 @@ class SimAgentViewModelTest {
     private fun writeAudioMetadata(vararg entries: AudioFile) {
         File(tempFolder.root, SIM_AUDIO_METADATA_FILENAME).writeText(
             Json.encodeToString(entries.toList())
+        )
+    }
+
+    private fun writeArtifacts(audioId: String, artifacts: TingwuJobArtifacts) {
+        File(tempFolder.root, simArtifactFilename(audioId)).writeText(
+            Json.encodeToString(artifacts)
         )
     }
 }

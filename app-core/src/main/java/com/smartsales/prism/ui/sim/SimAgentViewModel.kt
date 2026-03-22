@@ -3,6 +3,9 @@ package com.smartsales.prism.ui.sim
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.smartsales.core.llm.Executor
+import com.smartsales.core.llm.ExecutorResult
+import com.smartsales.core.llm.ModelRegistry
 import com.smartsales.core.pipeline.RealUniAExtractionService
 import com.smartsales.core.pipeline.AgentActivity
 import com.smartsales.core.pipeline.MascotInteraction
@@ -40,6 +43,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
@@ -53,6 +57,7 @@ internal const val SIM_BADGE_SCHEDULER_FOLLOW_UP_ACTION_COMPLETED_SUMMARY =
     "SIM badge scheduler follow-up action completed"
 internal const val SIM_BADGE_SCHEDULER_FOLLOW_UP_ACTION_BLOCKED_SUMMARY =
     "SIM badge scheduler follow-up action blocked"
+private const val SIM_AUDIO_CHAT_LOG_TAG = "SimAudioChat"
 private const val SIM_SCHEDULER_SHELF_LOG_TAG = "SimSchedulerShelf"
 private const val SIM_BADGE_FOLLOW_UP_LOG_TAG = "SimBadgeFollowUpChat"
 
@@ -76,6 +81,7 @@ class SimAgentViewModel @Inject constructor(
     private val scheduleBoard: ScheduleBoard,
     private val alarmScheduler: AlarmScheduler,
     private val uniAExtractionService: RealUniAExtractionService,
+    private val executor: Executor,
     private val timeProvider: TimeProvider
 ) : ViewModel(), IAgentViewModel {
 
@@ -228,6 +234,23 @@ class SimAgentViewModel @Inject constructor(
             detail = "threadId=$threadId sessionId=$sessionId taskCount=${tasks.size}"
         )
         return sessionId
+    }
+
+    suspend fun createDebugBadgeSchedulerFollowUpSession(
+        threadId: String,
+        transcript: String,
+        tasks: List<SchedulerFollowUpTaskSummary>,
+        batchId: String? = null
+    ): String? {
+        tasks.forEach { summary ->
+            taskRepository.upsertTask(summary.toScheduledTask())
+        }
+        return createBadgeSchedulerFollowUpSession(
+            threadId = threadId,
+            transcript = transcript,
+            tasks = tasks,
+            batchId = batchId
+        )
     }
 
     fun startSchedulerShelfSession(initialUserInput: String) {
@@ -483,45 +506,35 @@ class SimAgentViewModel @Inject constructor(
         }
 
         val sessionId = _currentSessionId.value ?: createSession()
-        val userMessage = ChatMessage.User(
-            id = UUID.randomUUID().toString(),
-            timestamp = System.currentTimeMillis(),
-            content = content
-        )
-
-        val current = sessions.getValue(sessionId)
-        sessions[sessionId] = current.copy(
-            preview = current.preview.copy(
-                timestamp = System.currentTimeMillis(),
-                summary = content.take(6).ifBlank { current.preview.summary }
-            ),
-            messages = current.messages + userMessage
-        )
-
-        _history.value = sessions.getValue(sessionId).messages
+        appendUserMessageForSend(sessionId, content)
         _inputText.value = ""
         _isSending.value = true
-        _uiState.value = UiState.Thinking("SIM 正在整理当前对话")
-        persistSession(sessionId)
-        refreshGroupedSessions()
 
-        viewModelScope.launch {
-            delay(350)
-            val response = ChatMessage.Ai(
-                id = UUID.randomUUID().toString(),
-                timestamp = System.currentTimeMillis(),
-                uiState = UiState.Response(buildReply(content, sessions.getValue(sessionId).preview.linkedAudioId))
-            )
-            val updated = sessions.getValue(sessionId)
-            sessions[sessionId] = updated.copy(
-                preview = updated.preview.copy(timestamp = System.currentTimeMillis()),
-                messages = updated.messages + response
-            )
-            _history.value = sessions.getValue(sessionId).messages
-            _isSending.value = false
-            _uiState.value = UiState.Idle
-            persistSession(sessionId)
-            refreshGroupedSessions()
+        when (sessions.getValue(sessionId).preview.sessionKind) {
+            SessionKind.AUDIO_GROUNDED -> {
+                _uiState.value = UiState.Thinking("SIM 正在整理这段录音的上下文")
+                viewModelScope.launch {
+                    handleAudioGroundedSend(sessionId, content)
+                }
+            }
+
+            SessionKind.GENERAL -> {
+                _uiState.value = UiState.Thinking("SIM 正在确认当前支持的讨论范围")
+                viewModelScope.launch {
+                    handleGeneralSend(sessionId, content)
+                }
+            }
+
+            SessionKind.SCHEDULER_FOLLOW_UP -> {
+                _uiState.value = UiState.Thinking("SIM 正在处理当前日程跟进")
+                viewModelScope.launch {
+                    handleSchedulerFollowUpInput(content)
+                    _isSending.value = false
+                    if (_uiState.value !is UiState.Error) {
+                        _uiState.value = UiState.Idle
+                    }
+                }
+            }
         }
     }
 
@@ -678,11 +691,182 @@ class SimAgentViewModel @Inject constructor(
             }
     }
 
-    private fun buildReply(content: String, linkedAudioId: String?): String {
-        return if (linkedAudioId != null) {
-            "当前是音频讨论会话。\n\n你刚才说的是：$content\n\nSIM 当前仅保留音频讨论所需的本地会话历史。"
+    private suspend fun handleGeneralSend(sessionId: String, content: String) {
+        delay(180)
+        appendAiMessage(sessionId, UiState.Response(buildGeneralGuidanceReply(content)))
+        _isSending.value = false
+        _uiState.value = UiState.Idle
+    }
+
+    private suspend fun handleAudioGroundedSend(sessionId: String, latestUserInput: String) {
+        val record = sessions[sessionId]
+        if (record == null) {
+            _isSending.value = false
+            _uiState.value = UiState.Idle
+            return
+        }
+
+        val artifacts = loadGroundingArtifacts(record)
+        if (artifacts == null) {
+            appendAiMessage(
+                sessionId,
+                UiState.Error(
+                    "当前讨论尚未加载这段录音的转写结果。请先从录音抽屉打开已转写录音，或等待转写完成后再继续提问。",
+                    retryable = false
+                )
+            )
+            _isSending.value = false
+            _uiState.value = UiState.Error("缺少可用的录音上下文")
+            return
+        }
+
+        val prompt = buildAudioGroundedPrompt(
+            record = record,
+            artifacts = artifacts,
+            latestUserInput = latestUserInput
+        )
+        Log.d(
+            SIM_AUDIO_CHAT_LOG_TAG,
+            "audio-grounded chat prompt built for audioId=${record.preview.linkedAudioId}"
+        )
+
+        when (val result = executor.execute(ModelRegistry.COACH, prompt)) {
+            is ExecutorResult.Success -> {
+                appendAiMessage(
+                    sessionId,
+                    UiState.Response(
+                        result.content.ifBlank {
+                            "我暂时没能从这段录音里整理出可回答的内容，请换个问法试试。"
+                        }
+                    )
+                )
+                _isSending.value = false
+                _uiState.value = UiState.Idle
+            }
+
+            is ExecutorResult.Failure -> {
+                appendAiMessage(
+                    sessionId,
+                    UiState.Error(
+                        "当前无法继续这段录音的讨论，请稍后重试。错误：${result.error}",
+                        retryable = result.retryable
+                    )
+                )
+                _isSending.value = false
+                _uiState.value = UiState.Error("录音讨论暂时不可用")
+            }
+        }
+    }
+
+    private suspend fun loadGroundingArtifacts(record: SimSessionRecord): TingwuJobArtifacts? {
+        val audioId = record.preview.linkedAudioId ?: return null
+        return audioRepository.getArtifacts(audioId) ?: extractArtifactsFromHistory(
+            messages = record.messages,
+            audioId = audioId
+        )
+    }
+
+    private fun extractArtifactsFromHistory(
+        messages: List<ChatMessage>,
+        audioId: String
+    ): TingwuJobArtifacts? {
+        val state = messages
+            .asReversed()
+            .mapNotNull { (it as? ChatMessage.Ai)?.uiState as? UiState.AudioArtifacts }
+            .firstOrNull { it.audioId == audioId }
+            ?: return null
+        return runCatching {
+            json.decodeFromString(TingwuJobArtifacts.serializer(), state.artifactsJson)
+        }.getOrNull()
+    }
+
+    private fun buildGeneralGuidanceReply(content: String): String {
+        return buildString {
+            append("SIM 目前只支持围绕已选录音继续讨论。\n\n")
+            append("你刚才说的是：")
+            append(content)
+            append("\n\n")
+            append("请先从录音抽屉打开已转写录音，并通过 Ask AI 进入讨论。")
+        }
+    }
+
+    private fun buildAudioGroundedPrompt(
+        record: SimSessionRecord,
+        artifacts: TingwuJobArtifacts,
+        latestUserInput: String
+    ): String {
+        val title = record.preview.clientName
+        val transcript = truncateForPrompt(artifacts.transcriptMarkdown, 6_000)
+        val summary = truncateForPrompt(artifacts.smartSummary?.summary, 1_200)
+        val highlights = artifacts.smartSummary?.keyPoints
+            ?.take(8)
+            ?.joinToString("\n") { "- $it" }
+        val chapters = artifacts.chapters
+            ?.take(8)
+            ?.joinToString("\n") { chapter ->
+                buildString {
+                    append("- ")
+                    append(chapter.title)
+                    chapter.summary?.takeIf { it.isNotBlank() }?.let {
+                        append("：")
+                        append(it)
+                    }
+                }
+            }
+        val conversationContext = buildAudioConversationContext(record.messages)
+
+        return buildString {
+            appendLine("你是 SIM 的录音讨论助手。")
+            appendLine("你的职责仅限于围绕当前选中的录音内容回答。")
+            appendLine("不要把自己说成智能代理、任务执行器或通用系统助手。")
+            appendLine("如果录音内容里没有答案，必须明确说明“这段录音里没有提到”或“我无法从这段录音确认”。")
+            appendLine("回答使用简洁自然的中文。")
+            appendLine()
+            appendLine("当前录音标题：$title")
+            record.preview.linkedAudioId?.let { appendLine("当前录音 ID：$it") }
+            appendLine()
+            appendLine("摘要：")
+            appendLine(summary ?: "无")
+            appendLine()
+            appendLine("重点：")
+            appendLine(highlights ?: "无")
+            appendLine()
+            appendLine("章节：")
+            appendLine(chapters ?: "无")
+            appendLine()
+            appendLine("转写内容（节选）：")
+            appendLine(transcript ?: "无")
+            appendLine()
+            appendLine("最近对话：")
+            appendLine(conversationContext.ifBlank { "无" })
+            appendLine()
+            appendLine("用户刚刚的问题：")
+            appendLine(latestUserInput)
+        }
+    }
+
+    private fun buildAudioConversationContext(messages: List<ChatMessage>): String {
+        return messages
+            .takeLast(8)
+            .mapNotNull { message ->
+                when (message) {
+                    is ChatMessage.User -> "用户：${message.content}"
+                    is ChatMessage.Ai -> when (val state = message.uiState) {
+                        is UiState.Response -> "助手：${state.content}"
+                        is UiState.Error -> "助手：${state.message}"
+                        else -> null
+                    }
+                }
+            }
+            .joinToString("\n")
+    }
+
+    private fun truncateForPrompt(value: String?, maxChars: Int): String? {
+        val normalized = value?.trim()?.takeIf { it.isNotBlank() } ?: return null
+        return if (normalized.length <= maxChars) {
+            normalized
         } else {
-            "SIM 已接管聊天壳层。\n\n你刚才说的是：$content\n\n当前阶段只保留独立 Shell、历史、抽屉路由与 SIM 本地会话能力。"
+            normalized.take(maxChars) + "\n[已截断]"
         }
     }
 
@@ -983,6 +1167,17 @@ class SimAgentViewModel @Inject constructor(
         refreshGroupedSessions()
     }
 
+    private fun appendUserMessageForSend(sessionId: String, content: String) {
+        appendUserMessage(sessionId, content)
+        updateSession(sessionId) { record ->
+            record.copy(
+                preview = record.preview.copy(
+                    summary = content.take(6).ifBlank { record.preview.summary }
+                )
+            )
+        }
+    }
+
     private fun appendSchedulerFollowUpResponse(content: String) {
         val sessionId = _currentSessionId.value ?: return
         appendAiMessage(sessionId, UiState.Response(content))
@@ -1000,6 +1195,17 @@ class SimAgentViewModel @Inject constructor(
     private fun defaultSelectedFollowUpTaskId(context: SchedulerFollowUpContext?): String? {
         if (context == null) return null
         return context.boundTaskIds.singleOrNull()
+    }
+
+    private fun SchedulerFollowUpTaskSummary.toScheduledTask(): ScheduledTask {
+        return ScheduledTask(
+            id = taskId,
+            timeDisplay = formatTimeMillis(scheduledAtMillis),
+            title = title,
+            urgencyLevel = UrgencyLevel.L3_NORMAL,
+            startTime = Instant.ofEpochMilli(scheduledAtMillis),
+            durationMinutes = durationMinutes
+        )
     }
 
     private fun updateSchedulerFollowUpContext(

@@ -30,6 +30,16 @@ Meaning:
 - auto-sync readiness is owned by the SIM repository/connectivity seam rather than shell UI connection-state mapping
 - sync outcomes must not reroute the shell; success updates inventory in place, failure stays drawer-local
 
+Browse-vs-select interaction contract:
+
+- direct drawer open uses browse-mode gallery behavior
+- chat attach/upload reopen uses select-mode picker behavior
+- select mode is buttonless at the card level: the whole card is the action surface
+- select mode suppresses swipe gestures, expand/collapse, and `Ask AI`
+- select mode should present explicit selection framing such as `选择要讨论的录音`
+- select mode should present already-transcribed cards with truncated transcript preview so users can recognize content without opening the artifact view
+- select mode should present pending/transcribing cards with helper copy that makes continued processing inside chat clear
+
 ### Ask AI
 
 ```kotlin
@@ -90,6 +100,7 @@ Meaning:
 - a completed artifact produced through the chat-side path must already be visible when that same item is reopened from the drawer
 - chat-side selection must not require a follow-up drawer-origin rerun to make the artifact "real"
 - when one audio item is already pending/transcribing, duplicate transcribe triggers for that same item must be locked across entry surfaces
+- chat-side selection should read as a static picker rather than as an interactive gallery; users should not need a dedicated bottom CTA to confirm selection
 
 ### SIM Session Store
 
@@ -176,6 +187,11 @@ Meaning:
 - selecting an already-transcribed audio must load existing artifacts instead of rerunning Tingwu
 - `Ask AI` binds to a chosen audio
 - selecting audio from inside chat reopens the Audio Drawer
+- chat-side drawer reopening uses a distinct select mode rather than browse-mode gallery interaction language
+- select mode cards are self-explanatory action surfaces; no dedicated per-card bottom CTA is required
+- select mode suppresses swipe gestures, quick-action trays, expand/collapse, and `Ask AI`
+- select mode should render already-transcribed cards with truncated transcript preview for recognition
+- select mode should render pending/transcribing cards with helper copy explaining continued processing in chat
 - selecting pending audio from inside chat is allowed, binds chat immediately to that audio, and continues the same SIM transcription pipeline inside chat transparency
 - completed pending audio must render as durable artifact content in chat history
 - any newly appended chat artifact message may stream its transcript only once; if the rendered transcript exceeds 4 lines during that reveal, it must eventually auto-collapse, but only after any configured minimum readable-reveal dwell has elapsed

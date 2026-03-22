@@ -10,6 +10,40 @@
 
 Bottom-up drawer for managing audio recordings. Pull up from bottom edge to open.
 
+The drawer now has two distinct interaction modes:
+
+- **Browse Mode**: opened directly as an audio gallery and informational artifact surface
+- **Select Mode**: reopened from chat attach/upload as a static audio picker for the current chat session
+
+The same audio inventory is reused in both modes, but the interaction language must change clearly so users do not confuse gallery gestures with selection behavior.
+
+---
+
+## Mode Variants
+
+### Browse Mode
+
+Use Browse Mode when the user opens the drawer directly.
+
+- behaves like the spec-aligned audio gallery
+- pending items keep the swipe-right-to-transcribe interaction
+- transcribed items can be tapped to expand into the artifact surface
+- expanded cards may expose `问AI`
+- swipe and expansion affordances remain visible
+
+### Select Mode
+
+Use Select Mode when the drawer is opened from the chat input attach/upload affordance.
+
+- behaves like a focused picker, not a gallery
+- cards are the action surface; no dedicated bottom CTA button is required
+- swipe actions are suppressed
+- card expansion is suppressed
+- `问AI` is suppressed
+- helper copy must explain tap-to-select behavior
+- header copy should clearly frame selection, such as `选择要讨论的录音`
+- helper copy should clearly frame the rule, such as `点击录音卡片切换当前聊天`
+
 ---
 
 ## Layout Structure
@@ -84,7 +118,7 @@ Bottom-up drawer for managing audio recordings. Pull up from bottom edge to open
 
 ---
 
-## Gestures
+## Browse-Mode Gestures
 
 | Gesture | Action | Notes |
 |---------|--------|-------|
@@ -92,6 +126,25 @@ Bottom-up drawer for managing audio recordings. Pull up from bottom edge to open
 | **Swipe LEFT ←** | Reveal tray: `[Play]` `[Delete]` `[Rename]` | Quick actions |
 | **Tap Body** | Expand Card | Only if transcribed |
 | **Tap [问AI]** | Open Coach with transcript as context | Located in expanded card |
+
+Browse Mode should stay aligned with the existing gallery UX contract. Gesture hints are valid only in this mode.
+
+---
+
+## Select-Mode Interaction Contract
+
+Select Mode is intentionally simpler than Browse Mode.
+
+| Interaction | Result | Notes |
+|------------|--------|-------|
+| **Tap Card** | Select audio for current chat | Whole card is the tap target |
+| **Tap Current Audio Card** | No-op | Disabled style; marked as current discussion |
+| **Swipe RIGHT →** | Disabled | No transcribe swipe affordance in this mode |
+| **Swipe LEFT ←** | Disabled | No quick-action tray in this mode |
+| **Tap Body to Expand** | Disabled | Card stays collapsed; this is not the artifact-reading surface |
+| **Tap [问AI]** | Hidden | `问AI` belongs to Browse Mode expanded cards only |
+
+Select Mode cards must feel self-explanatory through state and copy rather than through button chrome.
 
 ---
 
@@ -104,12 +157,28 @@ Bottom-up drawer for managing audio recordings. Pull up from bottom edge to open
 | `transcribed` | Preview text (120 chars) | — |
 | `error` | Error badge | "转写失败，请重试" |
 
+These transcription-state microcopies apply to Browse Mode. Select Mode uses different, picker-oriented language.
+
 ---
 
-## Sync Flow (Auto on Open)
+## Select-Mode Card States
+
+| State | User Sees | Microcopy / Behavior |
+|-------|-----------|----------------------|
+| `current` | Disabled card with visible preview | `当前讨论中` |
+| `transcribed` | Tappable card with truncated transcript preview | `已转写`; transcript preview should be truncated to 1-2 lines with ellipsis |
+| `pending` | Tappable card with helper copy | `待处理`; helper copy should explain that chat can continue processing this audio |
+| `transcribing` | Tappable card with progress or in-flight label | `转写中`; helper copy should explain that chat will continue processing this audio |
+| `error` | Retry-capable or explicitly blocked card | `转写失败`; only promise chat-side retry if that route is truly supported |
+
+For already-transcribed cards in Select Mode, the preview should help the user recognize the audio content quickly without opening the full artifact surface.
+
+---
+
+## Sync Flow (Auto on Open, Browse Mode Only)
 
 ```
-Drawer Opens
+Browse-Mode Drawer Opens
     │
     ▼
 [↻ 同步中...] ──auto───▶ Check Badge for new recordings
@@ -125,8 +194,9 @@ Drawer Opens
 
 | Component | States |
 |-----------|--------|
+| **Audio Drawer** | `browse`, `select` |
 | **Pill Handle** | `idle`, `dragging` |
 | **Sync Indicator** | `idle`, `syncing`, `done`, `error` |
-| **Audio Card** | `collapsed`, `expanded`, `playing`, `transcribing` |
+| **Audio Card** | `collapsed`, `expanded`, `playing`, `transcribing`, `current_discussion`, `selectable` |
 | **Transcript Box** | `folded`, `unfolded`, `streaming` |
 | **Upload Button** | `idle`, `picking`, `uploading` |

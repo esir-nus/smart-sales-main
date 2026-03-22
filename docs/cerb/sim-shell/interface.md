@@ -29,7 +29,9 @@ fun SimShell()
 Responsibilities:
 
 - coordinate scheduler and audio drawers
+- own the SIM shell edge-gesture gates for scheduler/audio entry
 - host the simple chat surface
+- host a send-only bottom message capsule for SIM chat; left attach reopens the SIM audio drawer, the right action does not become a shell-owned mic route, and the idle placeholder keeps the scan-shine treatment on placeholder text only
 - host SIM support surfaces such as history and connectivity entry, with connectivity entering from the audio drawer rather than the home header
 - host a persistent top-header one-line dynamic island that can rotate up to 3 scheduler items every 5 seconds and open the scheduler drawer on the visible item's date page
 - route `Ask AI` and audio re-selection flows
@@ -93,6 +95,9 @@ Guarantees:
 - only one drawer may be open at a time
 - the shell may reopen the audio drawer from chat
 - the shell may expose history/new-page/connectivity/settings as SIM support surfaces
+- the shell may open scheduler from a downward pull in the header-center zone when the shell is otherwise clear
+- the shell may open audio browse from an upward pull in the bottom-edge strip when the shell is otherwise clear
+- the shell must disable that bottom-edge audio-open gesture while the IME is visible
 - the SIM home header keeps only the hamburger button, centered island, and new-chat button so the chrome remains visually balanced
 - the shell may keep a persistent dynamic island visible in the top-header center slot while normal SIM shell surfaces are active
 - the shell may use that dynamic island as a scheduler-entry affordance
@@ -101,6 +106,13 @@ Guarantees:
 - the shell owns connectivity route state and may distinguish bootstrap modal vs setup vs manager connectivity surfaces
 - the shell does not expose smart-only drawer types or smart-runtime-only shell meaning
 - the shell does not become the owner of connectivity backend truth just because it hosts connectivity surfaces
+
+Gesture notes:
+
+- edge gestures are shell-owned routing only; they do not make chat overscroll a drawer trigger
+- scheduler dismisses from its top handle upward
+- SIM audio dismisses from its handle downward
+- edge gestures must stay narrow enough to avoid stealing hamburger, new-chat, or chat-input taps
 
 ### Badge Follow-Up Continuity Binding
 

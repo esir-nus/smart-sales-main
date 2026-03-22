@@ -7,11 +7,17 @@ import androidx.compose.ui.draw.drawBehind
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -24,24 +30,27 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -53,6 +62,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -69,6 +79,7 @@ import com.smartsales.prism.ui.theme.BackdropScrim
 import com.smartsales.prism.ui.theme.BorderSubtle
 import com.smartsales.prism.ui.theme.TextPrimary
 import com.smartsales.prism.ui.theme.TextSecondary
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -151,19 +162,12 @@ fun SimAudioDrawer(
                 elevation = 16.dp
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 12.dp, bottom = 8.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .width(40.dp)
-                                .height(4.dp)
-                                .background(Color.Gray.copy(alpha = 0.3f), RoundedCornerShape(2.dp))
-                        )
-                    }
+                    SimDrawerHandle(
+                        dismissDirection = SimVerticalGestureDirection.DOWN,
+                        onDismiss = onDismiss,
+                        testTag = SIM_AUDIO_HANDLE_TEST_TAG,
+                        dismissOnTap = true
+                    )
 
                     Row(
                         modifier = Modifier
@@ -224,6 +228,17 @@ fun SimAudioDrawer(
                         }
                     }
 
+                    if (mode == SimAudioDrawerMode.CHAT_RESELECT) {
+                        Text(
+                            text = "点击录音卡片切换当前聊天",
+                            color = TextSecondary,
+                            fontSize = 12.sp,
+                            modifier = Modifier
+                                .padding(horizontal = 20.dp)
+                                .padding(bottom = 8.dp)
+                        )
+                    }
+
                     LazyColumn(
                         modifier = Modifier
                             .weight(1f)
@@ -257,12 +272,12 @@ fun SimAudioDrawer(
                                 }
                             )
                         }
-                        if (showTestImportAction) {
+                        if (showTestImportAction && mode == SimAudioDrawerMode.BROWSE) {
                             item {
                                 SimTestImportButton(onClick = onImportTestAudio)
                             }
                         }
-                        if (showDebugScenarioActions) {
+                        if (showDebugScenarioActions && mode == SimAudioDrawerMode.BROWSE) {
                             item {
                                 SimDebugScenarioPanel(
                                     onSeedFailureScenario = onSeedDebugFailureScenario,
@@ -279,6 +294,7 @@ fun SimAudioDrawer(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 private fun SimAudioCard(
     entry: SimAudioEntry,
@@ -296,14 +312,41 @@ private fun SimAudioCard(
     var artifacts by remember(entry.item.id) { mutableStateOf<TingwuJobArtifacts?>(null) }
     var isArtifactLoading by remember(entry.item.id) { mutableStateOf(false) }
     var hasReportedArtifactOpen by remember(entry.item.id, expanded) { mutableStateOf(false) }
+    var transcriptPreview by remember(entry.item.id) { mutableStateOf<String?>(null) }
     val isCurrentChatAudio = currentChatAudioId == entry.item.id
+    val isBrowseMode = mode == SimAudioDrawerMode.BROWSE
+    val canExpandInBrowseMode = isBrowseMode && entry.item.status == AudioStatus.TRANSCRIBED
+    val scope = remember { androidx.compose.animation.core.Animatable(0f) }
+    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
+    val dismissState = rememberSwipeToDismissBoxState(
+        positionalThreshold = { it * 0.25f },
+        confirmValueChange = { value ->
+            if (
+                value == SwipeToDismissBoxValue.StartToEnd &&
+                isBrowseMode &&
+                entry.item.status == AudioStatus.PENDING
+            ) {
+                onTranscribe()
+            }
+            false
+        }
+    )
 
     LaunchedEffect(entry.item.id, entry.item.status, expanded) {
-        if (expanded && entry.item.status == AudioStatus.TRANSCRIBED) {
+        if (expanded && entry.item.status == AudioStatus.TRANSCRIBED && isBrowseMode) {
             isArtifactLoading = true
             artifacts = viewModel.getArtifacts(entry.item.id)
             isArtifactLoading = false
         }
+    }
+
+    LaunchedEffect(entry.item.id, entry.item.status, mode) {
+        if (mode != SimAudioDrawerMode.CHAT_RESELECT || entry.item.status != AudioStatus.TRANSCRIBED) {
+            transcriptPreview = null
+            return@LaunchedEffect
+        }
+
+        transcriptPreview = buildSimAudioTranscriptPreview(viewModel.getArtifacts(entry.item.id))
     }
 
     LaunchedEffect(expanded, entry.item.status, artifacts) {
@@ -317,191 +360,255 @@ private fun SimAudioCard(
         }
     }
 
-    PrismSurface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onToggleExpanded() },
-        shape = RoundedCornerShape(20.dp),
-        backgroundColor = Color.White.copy(alpha = 0.92f),
-        elevation = 4.dp
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+    SwipeToDismissBox(
+        state = dismissState,
+        enableDismissFromStartToEnd = isBrowseMode && entry.item.status == AudioStatus.PENDING,
+        enableDismissFromEndToStart = false,
+        backgroundContent = {
+            val active = dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        if (active) AccentSecondary.copy(alpha = 0.12f) else Color.Transparent,
+                        RoundedCornerShape(20.dp)
+                    )
+                    .padding(horizontal = 20.dp),
+                contentAlignment = Alignment.CenterStart
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = entry.item.filename,
-                        color = TextPrimary,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 16.sp
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = buildString {
-                            append(entry.item.timeDisplay)
-                            append(" • ")
-                            append(
-                                when (entry.item.source) {
-                                    AudioSource.SMARTBADGE -> "SmartBadge"
-                                    AudioSource.PHONE -> "Phone"
-                                }
-                            )
-                        },
-                        color = TextSecondary,
-                        fontSize = 12.sp
-                    )
-                    if (entry.isTestImport) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Surface(
-                            color = AccentSecondary.copy(alpha = 0.1f),
-                            shape = RoundedCornerShape(999.dp)
-                        ) {
-                            Text(
-                                text = "测试导入",
-                                color = AccentSecondary,
-                                fontSize = 11.sp,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                            )
-                        }
-                    }
-                }
-
                 Icon(
                     imageVector = Icons.Filled.Star,
                     contentDescription = null,
-                    tint = if (entry.item.isStarred) Color(0xFFF59E0B) else Color(0xFFB0BEC5),
-                    modifier = Modifier.clickable(onClick = onToggleStar)
+                    tint = if (active) AccentSecondary else Color.Transparent
                 )
             }
+        }
+    ) {
+        PrismSurface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(
+                    enabled = if (mode == SimAudioDrawerMode.CHAT_RESELECT) !isCurrentChatAudio else true
+                ) {
+                    when (mode) {
+                        SimAudioDrawerMode.CHAT_RESELECT -> {
+                            if (!isCurrentChatAudio) onSelectForChat()
+                        }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            val statusLabel = when (entry.item.status) {
-                AudioStatus.TRANSCRIBED -> "已转写"
-                AudioStatus.TRANSCRIBING -> "转写中"
-                AudioStatus.PENDING -> "待处理"
-            }
-            Surface(
-                color = Color(0xFFF3F7FA),
-                shape = RoundedCornerShape(999.dp)
-            ) {
-                Text(
-                    text = statusLabel,
-                    color = TextSecondary,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                )
-            }
-
-            if (mode == SimAudioDrawerMode.CHAT_RESELECT) {
-                Spacer(modifier = Modifier.height(12.dp))
-                PrismButton(
-                    text = buildChatSelectLabel(
-                        status = entry.item.status,
-                        isCurrentChatAudio = isCurrentChatAudio
-                    ),
-                    onClick = onSelectForChat,
-                    enabled = !isCurrentChatAudio,
-                    style = if (entry.item.status == AudioStatus.TRANSCRIBED) {
-                        PrismButtonStyle.SOLID
-                    } else {
-                        PrismButtonStyle.GHOST
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-
-            if (expanded) {
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = entry.item.summary ?: entry.preview,
-                    color = TextSecondary,
-                    fontSize = 13.sp,
-                    lineHeight = 18.sp
-                )
-
-                when (entry.item.status) {
-                    AudioStatus.PENDING -> {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        if (mode == SimAudioDrawerMode.BROWSE) {
-                            PrismButton(
-                                text = "开始转写",
-                                onClick = onTranscribe,
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Filled.PlayArrow,
-                                        contentDescription = null,
-                                        tint = Color.White
+                        SimAudioDrawerMode.BROWSE -> {
+                            if (canExpandInBrowseMode) {
+                                onToggleExpanded()
+                            } else {
+                                coroutineScope.launch {
+                                    scope.snapTo(0f)
+                                    scope.animateTo(
+                                        targetValue = 0f,
+                                        animationSpec = androidx.compose.animation.core.keyframes {
+                                            durationMillis = 260
+                                            0f at 0
+                                            (-8f) at 40
+                                            8f at 80
+                                            (-6f) at 120
+                                            4f at 160
+                                            0f at 220
+                                        }
                                     )
                                 }
-                            )
-                        } else {
-                            Text(
-                                text = "从聊天入口选择后，SIM 会在当前讨论中继续处理这段音频。",
-                                color = TextSecondary,
-                                fontSize = 12.sp
-                            )
+                            }
                         }
                     }
-
-                    AudioStatus.TRANSCRIBING -> {
-                        val progress = entry.item.progress ?: 0f
-                        Spacer(modifier = Modifier.height(16.dp))
+                },
+            shape = RoundedCornerShape(20.dp),
+            backgroundColor = if (isCurrentChatAudio && mode == SimAudioDrawerMode.CHAT_RESELECT) {
+                Color(0xFFF7F9FB)
+            } else {
+                Color.White.copy(alpha = 0.92f)
+            },
+            elevation = 4.dp
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .offset(x = scope.value.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = buildTransparentStateLabel(progress),
+                            text = entry.item.filename,
+                            color = TextPrimary,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 16.sp
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = buildString {
+                                append(entry.item.timeDisplay)
+                                append(" • ")
+                                append(
+                                    when (entry.item.source) {
+                                        AudioSource.SMARTBADGE -> "SmartBadge"
+                                        AudioSource.PHONE -> "Phone"
+                                    }
+                                )
+                            },
                             color = TextSecondary,
                             fontSize = 12.sp
                         )
+                        if (entry.isTestImport) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Surface(
+                                color = AccentSecondary.copy(alpha = 0.1f),
+                                shape = RoundedCornerShape(999.dp)
+                            ) {
+                                Text(
+                                    text = "测试导入",
+                                    color = AccentSecondary,
+                                    fontSize = 11.sp,
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    Icon(
+                        imageVector = Icons.Filled.Star,
+                        contentDescription = null,
+                        tint = if (entry.item.isStarred) Color(0xFFF59E0B) else Color(0xFFB0BEC5),
+                        modifier = Modifier.clickable(onClick = onToggleStar)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Surface(
+                    color = Color(0xFFF3F7FA),
+                    shape = RoundedCornerShape(999.dp)
+                ) {
+                    Text(
+                        text = buildSimAudioStatusLabel(
+                            status = entry.item.status,
+                            mode = mode,
+                            isCurrentChatAudio = isCurrentChatAudio
+                        ),
+                        color = TextSecondary,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+
+                if (mode == SimAudioDrawerMode.CHAT_RESELECT) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = buildSimAudioSelectPreview(
+                            entry = entry,
+                            transcriptPreview = transcriptPreview
+                        ),
+                        color = TextSecondary,
+                        fontSize = 13.sp,
+                        lineHeight = 19.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    buildSimAudioSelectHelperText(
+                        status = entry.item.status,
+                        isCurrentChatAudio = isCurrentChatAudio
+                    )?.let { helperText ->
                         Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = helperText,
+                            color = TextSecondary,
+                            fontSize = 12.sp,
+                            lineHeight = 18.sp
+                        )
+                    }
+
+                    if (entry.item.status == AudioStatus.TRANSCRIBING) {
+                        Spacer(modifier = Modifier.height(12.dp))
                         LinearProgressIndicator(
-                            progress = { progress.coerceIn(0f, 1f) },
+                            progress = { (entry.item.progress ?: 0f).coerceIn(0f, 1f) },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(6.dp),
                             color = AccentSecondary
                         )
                     }
+                } else if (expanded && entry.item.status == AudioStatus.TRANSCRIBED) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = entry.item.summary ?: entry.preview,
+                        color = TextSecondary,
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                    AudioStatus.TRANSCRIBED -> {
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        when {
-                            isArtifactLoading -> {
-                                Text(
-                                    text = "正在读取转写结果...",
-                                    color = TextSecondary,
-                                    fontSize = 12.sp
-                                )
-                            }
-
-                            artifacts == null -> {
-                                Text(
-                                    text = "当前未读取到转写结果，请稍后重试。",
-                                    color = TextSecondary,
-                                    fontSize = 12.sp
-                                )
-                            }
-
-                            else -> {
-                                SimArtifactContent(artifacts = artifacts!!)
-                            }
+                    when {
+                        isArtifactLoading -> {
+                            Text(
+                                text = "正在读取转写结果...",
+                                color = TextSecondary,
+                                fontSize = 12.sp
+                            )
                         }
 
-                        Spacer(modifier = Modifier.height(16.dp))
-                        if (mode == SimAudioDrawerMode.BROWSE) {
-                            PrismButton(
-                                text = "Ask AI",
-                                onClick = onAskAi,
-                                leadingIcon = {
-                                    Icon(
-                                        imageVector = Icons.Filled.AutoAwesome,
-                                        contentDescription = null,
-                                        tint = Color.White
-                                    )
-                                }
+                        artifacts == null -> {
+                            Text(
+                                text = "当前未读取到转写结果，请稍后重试。",
+                                color = TextSecondary,
+                                fontSize = 12.sp
+                            )
+                        }
+
+                        else -> {
+                            SimArtifactContent(artifacts = artifacts!!)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                        PrismButton(
+                            text = "Ask AI",
+                            onClick = onAskAi,
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Filled.Star,
+                                    contentDescription = null,
+                                    tint = Color.White
+                                )
+                            }
+                        )
+                } else {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    when (entry.item.status) {
+                        AudioStatus.PENDING -> SimBrowseModeSwipePrompt()
+                        AudioStatus.TRANSCRIBING -> {
+                            val progress = entry.item.progress ?: 0f
+                            Text(
+                                text = buildTransparentStateLabel(progress),
+                                color = TextSecondary,
+                                fontSize = 12.sp
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            LinearProgressIndicator(
+                                progress = { progress.coerceIn(0f, 1f) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(6.dp),
+                                color = AccentSecondary
+                            )
+                        }
+
+                        AudioStatus.TRANSCRIBED -> {
+                            Text(
+                                text = entry.item.summary ?: entry.preview,
+                                color = TextSecondary,
+                                fontSize = 13.sp,
+                                lineHeight = 18.sp,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
                             )
                         }
                     }
@@ -509,6 +616,27 @@ private fun SimAudioCard(
             }
         }
     }
+}
+
+@Composable
+private fun SimBrowseModeSwipePrompt() {
+    val infiniteTransition = rememberInfiniteTransition(label = "sim_audio_swipe_prompt")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "sim_audio_swipe_prompt_alpha"
+    )
+
+    Text(
+        text = "右滑开始转写 >>>",
+        color = AccentSecondary.copy(alpha = alpha),
+        fontSize = 13.sp,
+        fontWeight = FontWeight.Medium
+    )
 }
 
 @Composable
@@ -594,23 +722,59 @@ private fun SimDebugScenarioPanel(
     }
 }
 
-private fun buildChatSelectLabel(
+internal fun buildSimAudioStatusLabel(
     status: AudioStatus,
+    mode: SimAudioDrawerMode,
     isCurrentChatAudio: Boolean
 ): String {
-    if (isCurrentChatAudio) {
-        return when (status) {
-            AudioStatus.TRANSCRIBING -> "当前处理中"
-            AudioStatus.TRANSCRIBED -> "当前讨论音频"
-            AudioStatus.PENDING -> "当前已选音频"
-        }
+    if (mode == SimAudioDrawerMode.CHAT_RESELECT && isCurrentChatAudio) {
+        return "当前讨论中"
     }
 
     return when (status) {
-        AudioStatus.TRANSCRIBED -> "用于当前聊天"
-        AudioStatus.TRANSCRIBING -> "接入当前聊天"
-        AudioStatus.PENDING -> "在聊天中处理"
+        AudioStatus.TRANSCRIBED -> "已转写"
+        AudioStatus.TRANSCRIBING -> "转写中"
+        AudioStatus.PENDING -> "待处理"
     }
+}
+
+internal fun buildSimAudioSelectHelperText(
+    status: AudioStatus,
+    isCurrentChatAudio: Boolean
+): String? {
+    if (isCurrentChatAudio) return null
+
+    return when (status) {
+        AudioStatus.TRANSCRIBED -> null
+        AudioStatus.TRANSCRIBING -> "将在聊天中继续处理"
+        AudioStatus.PENDING -> "可在当前聊天中继续处理"
+    }
+}
+
+internal fun buildSimAudioSelectPreview(
+    entry: SimAudioEntry,
+    transcriptPreview: String?
+): String {
+    return when (entry.item.status) {
+        AudioStatus.TRANSCRIBED -> {
+            transcriptPreview
+                ?.takeIf { it.isNotBlank() }
+                ?: entry.item.summary
+                ?: entry.preview
+        }
+
+        AudioStatus.TRANSCRIBING,
+        AudioStatus.PENDING -> entry.preview
+    }
+}
+
+internal fun buildSimAudioTranscriptPreview(artifacts: TingwuJobArtifacts?): String? {
+    val markdown = artifacts?.transcriptMarkdown?.takeIf { it.isNotBlank() } ?: return null
+    return markdown
+        .replace(Regex("""[#>*`_\-\[\]\(\)]"""), " ")
+        .replace(Regex("""\s+"""), " ")
+        .trim()
+        .takeIf { it.isNotBlank() }
 }
 
 data class SimChatAudioSelection(

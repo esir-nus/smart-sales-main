@@ -8,6 +8,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.*
@@ -23,6 +29,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -179,31 +186,35 @@ internal fun AgentIntelligenceContent(
     val density = LocalDensity.current
     val thresholdPx = remember(density) { with(density) { 60.dp.toPx() } }
 
-    val nestedScrollConnection = remember {
-        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
-            var unconsumedDrag = 0f
-            override fun onPostScroll(
-                consumed: androidx.compose.ui.geometry.Offset,
-                available: androidx.compose.ui.geometry.Offset,
-                source: androidx.compose.ui.input.nestedscroll.NestedScrollSource
-            ): androidx.compose.ui.geometry.Offset {
-                if (available.y < 0) {
-                    unconsumedDrag -= available.y
-                    if (unconsumedDrag > thresholdPx) {
-                        onAudioDrawerClick()
+    val nestedScrollConnection = remember(isSimShell, thresholdPx) {
+        if (isSimShell) {
+            null
+        } else {
+            object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+                var unconsumedDrag = 0f
+                override fun onPostScroll(
+                    consumed: androidx.compose.ui.geometry.Offset,
+                    available: androidx.compose.ui.geometry.Offset,
+                    source: androidx.compose.ui.input.nestedscroll.NestedScrollSource
+                ): androidx.compose.ui.geometry.Offset {
+                    if (available.y < 0) {
+                        unconsumedDrag -= available.y
+                        if (unconsumedDrag > thresholdPx) {
+                            onAudioDrawerClick()
+                            unconsumedDrag = 0f
+                        }
+                    } else if (available.y > 0) {
                         unconsumedDrag = 0f
                     }
-                } else if (available.y > 0) {
-                    unconsumedDrag = 0f
+                    return androidx.compose.ui.geometry.Offset.Zero
                 }
-                return androidx.compose.ui.geometry.Offset.Zero
-            }
-            override suspend fun onPostFling(
-                consumed: androidx.compose.ui.unit.Velocity,
-                available: androidx.compose.ui.unit.Velocity
-            ): androidx.compose.ui.unit.Velocity {
-                unconsumedDrag = 0f
-                return androidx.compose.ui.unit.Velocity.Zero
+                override suspend fun onPostFling(
+                    consumed: androidx.compose.ui.unit.Velocity,
+                    available: androidx.compose.ui.unit.Velocity
+                ): androidx.compose.ui.unit.Velocity {
+                    unconsumedDrag = 0f
+                    return androidx.compose.ui.unit.Velocity.Zero
+                }
             }
         }
     }
@@ -242,7 +253,13 @@ internal fun AgentIntelligenceContent(
                     radius = glowRadiusPx
                 )
             )
-            .nestedScroll(nestedScrollConnection)
+            .then(
+                if (nestedScrollConnection != null) {
+                    Modifier.nestedScroll(nestedScrollConnection)
+                } else {
+                    Modifier
+                }
+            )
     ) {
         if (isSimShell) {
             Column(
@@ -291,8 +308,7 @@ internal fun AgentIntelligenceContent(
                     isSending = isSending,
                     onTextChanged = onUpdateInput,
                     onSend = onSend,
-                    onAttachClick = onAttachClick,
-                    onMicClick = onAudioDrawerClick
+                    onAttachClick = onAttachClick
                 )
             }
         } else {
@@ -836,8 +852,7 @@ private fun SimInputBar(
     isSending: Boolean,
     onTextChanged: (String) -> Unit,
     onSend: () -> Unit,
-    onAttachClick: () -> Unit,
-    onMicClick: () -> Unit
+    onAttachClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -879,9 +894,11 @@ private fun SimInputBar(
                 decorationBox = { innerTextField ->
                     if (text.isBlank()) {
                         Text(
-                            text = "输入消息，或长按工牌说话...",
-                            color = SimChromeMuted,
-                            fontSize = 15.sp
+                            text = "输入消息...",
+                            style = TextStyle(
+                                brush = simPlaceholderBrush(),
+                                fontSize = 15.sp
+                            )
                         )
                     }
                     innerTextField()
@@ -889,19 +906,19 @@ private fun SimInputBar(
             )
         }
 
-        val actionIcon = if (text.isBlank()) Icons.Filled.Mic else Icons.AutoMirrored.Filled.Send
         val actionEnabled = text.isNotBlank() && !isSending
         Box(
             modifier = Modifier
                 .size(44.dp)
-                .background(Color.White, CircleShape)
-                .clickable {
-                    if (text.isBlank()) {
-                        onMicClick()
-                    } else if (actionEnabled) {
-                        onSend()
-                    }
-                },
+                .background(
+                    if (actionEnabled || isSending) {
+                        Color.White
+                    } else {
+                        Color.White.copy(alpha = 0.28f)
+                    },
+                    CircleShape
+                )
+                .clickable(enabled = actionEnabled) { onSend() },
             contentAlignment = Alignment.Center
         ) {
             if (isSending) {
@@ -912,14 +929,39 @@ private fun SimInputBar(
                 )
             } else {
                 Icon(
-                    imageVector = actionIcon,
-                    contentDescription = "Submit",
-                    tint = Color(0xFF11161D),
+                    imageVector = Icons.AutoMirrored.Filled.Send,
+                    contentDescription = "Send",
+                    tint = Color(0xFF11161D).copy(alpha = if (actionEnabled) 1f else 0.45f),
                     modifier = Modifier.size(20.dp)
                 )
             }
         }
     }
+}
+
+@Composable
+private fun simPlaceholderBrush(): Brush {
+    val transition = rememberInfiniteTransition(label = "sim_placeholder_shimmer")
+    val shimmerOffset = transition.animateFloat(
+        initialValue = -200f,
+        targetValue = 600f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+            initialStartOffset = androidx.compose.animation.core.StartOffset(500)
+        ),
+        label = "sim_placeholder_shimmer_offset"
+    )
+
+    return Brush.horizontalGradient(
+        colorStops = arrayOf(
+            0.0f to SimChromeMuted.copy(alpha = 0.4f),
+            0.5f to Color.White.copy(alpha = 0.95f),
+            1.0f to SimChromeMuted.copy(alpha = 0.4f)
+        ),
+        startX = shimmerOffset.value,
+        endX = shimmerOffset.value + 150f
+    )
 }
 
 @Composable

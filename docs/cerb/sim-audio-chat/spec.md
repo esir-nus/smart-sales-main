@@ -36,8 +36,12 @@ This shard intentionally replaces the smart-agent interpretation of chat with a 
 - expose a browse-mode manual sync action for badge-origin inventory refresh
 - allow a best-effort automatic badge sync when the browse drawer opens and connectivity is already ready
 - allow phone-local/manual audio import only as a testing convenience when explicitly enabled for QA/dev validation
-- support transcribe action
-- support opening transcribed cards
+- support a browse-mode transcribe action aligned to the Audio Drawer swipe UX
+- support opening transcribed cards in browse mode
+- support a chat-side select mode when the drawer is reopened from chat attach/upload
+- in chat-side select mode, cards themselves are the action surface; no dedicated per-card bottom CTA is required
+- in chat-side select mode, swipe and expansion affordances are suppressed so the surface reads as a picker rather than a gallery
+- in chat-side select mode, already-transcribed cards should expose a truncated transcript preview so users can recognize the audio content before selecting it
 - act as the informational, non-chat variant of the chat experience
 
 ### Artifact Display
@@ -55,6 +59,7 @@ This shard intentionally replaces the smart-agent interpretation of chat with a 
 
 - `Ask AI` starts a plain chat session for one selected audio
 - chat answers are grounded in the chosen audio's artifacts
+- real free-text replies belong only to audio-grounded sessions opened from `Ask AI`; blank/new SIM chat remains a shell surface that may guide the user into a supported audio discussion, but it must not silently widen into a general assistant
 - audio re-selection from chat reopens the Audio Drawer
 - if an audio is already transcribed, SIM loads stored artifacts instead of rerunning Tingwu
 - if an audio is still pending when selected from the chat-side drawer route, SIM binds the discussion session immediately to that audio and the same SIM Tingwu pipeline continues inside chat rather than forcing the user back through the drawer-first transcription path
@@ -177,6 +182,16 @@ For drawer-side informational browsing specifically:
 - user-toggled expand/collapse state must remain stable during scrolling and recomposition for the current drawer-open session
 - reopening the drawer may reset cards back to the collapsed default
 
+For chat-side audio reselection specifically:
+
+- the drawer should present as a static selector rather than as the full interactive gallery
+- the title/copy should make selection intent obvious rather than teaching swipe
+- the whole card is the selection target; no dedicated `在聊天中处理`-style button is required
+- swipe-to-transcribe, swipe-left quick actions, expansion, and `Ask AI` are suppressed in this mode
+- the currently bound audio item should render as disabled/current rather than as a selectable card
+- already-transcribed cards should show a truncated transcript preview so the user can recognize content quickly
+- pending and transcribing cards should explain that processing can continue inside the current chat once selected
+
 It is not allowed to:
 
 - behave like the current agent OS
@@ -215,6 +230,7 @@ They must:
 - append completed artifact content into durable chat history when that pending run finishes
 - lock duplicate transcribe triggers for the same in-flight audio item across drawer/chat entry surfaces
 - reflect completed artifacts/status back into the audio drawer inventory without requiring a second run through the drawer-origin path
+- keep chat-side reselection visually distinct from browse mode so users are not invited to use suppressed swipe gestures
 
 ### Completion Ownership Rule
 

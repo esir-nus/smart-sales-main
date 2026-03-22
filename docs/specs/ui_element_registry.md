@@ -120,12 +120,15 @@ Home empty-state composition note:
 |---------|--------------|---------|-----------|--------|-----------|--------|
 | **Mode Toggle** | `Coach` | Tap 'Analyst' | Slide + **Haptic** | Theme->Blue. `intent=ANALYST`. | **NO Nav**. | ✅ Verified |
 | **Input Bar** | `Idle` | Tap/Focus | Slide Up | Nav to **Chat Screen**. | Preserve Mode. | ✅ Verified |
-| **Attachment [📎]** | `Idle` | Tap | Ripple | System Picker. | **Max 11**. | ✅ Verified |
+| **Attachment [📎]** | `Idle` | Tap | Ripple | System Picker or SIM audio selector. | Generic chat may open picker; grounded SIM audio chat reopens Audio Drawer selector. | 🚧 In-Progress |
 | **Audio Upload** | `Picked` | Confirm | Progress | Sync to **Audio Drawer**. | `storage` folder. | ❌ Pending |
 | **Mic FAB** | `Idle` | Tap | Morph | **Phone Mic** Capture. | Not Badge. | ✅ Verified |
 | **Audio Card** | `Star` | Tap | `spring` | **Star Toggle** | Heart/Star flip, color change. | ✅ Verified |
 | **Audio Card** | `PENDING` | Swipe L→R | `Shimmer` | **Transcribe** | "右滑开始转写 >>>" prompt. | ✅ Verified |
 | **Audio Card** | `TRANSCRIBING` | System | `LinearProgress` | **Processing** | "正在转写..." + progress bar. | ✅ Verified |
+| **Audio Drawer (Select Mode)** | `Opened from Chat` | Tap attach/upload in grounded chat | Bottom sheet | Open audio selector | No swipe hints, no bottom CTA. | ❌ Pending |
+| **Audio Card (Select Mode)** | `TRANSCRIBED` | Tap card | Ripple | Bind current chat to selected audio | Show truncated transcript preview for recognition. | ❌ Pending |
+| **Audio Card (Select Mode)** | `PENDING/TRANSCRIBING` | Tap card | Ripple | Bind current chat and continue processing in chat | State copy explains continued chat-side processing. | ❌ Pending |
 
 ---
 
@@ -184,6 +187,10 @@ Home empty-state composition note:
 | **Audio Card** | `Non-Transcribed` | Tap | Shake | **Rejects Expansion**. | "Transcribe First". | ❌ Pending |
 | **Audio Card** | `Transcribed` | Tap | Expand | Opens Hub. | N/A | ❌ Pending |
 | **Audio Card** | `问AI` | Tap | Navigate | **Creates/Opens Analyst Session** | Session binding. | ✅ Verified |
+| **Audio Drawer** | `Select Mode` | Chat attach/upload | Slide Up | Opens `选择要讨论的录音`. | Static picker; no swipe or expand affordances. | ❌ Pending |
+| **Audio Card** | `Select / Current` | Visible in selector | Disabled | Remains current discussion audio. | Show `当前讨论中`. | ❌ Pending |
+| **Audio Card** | `Select / Transcribed` | Tap | Ripple | Switch chat to this audio immediately. | Show truncated transcript preview, no dedicated button. | ❌ Pending |
+| **Audio Card** | `Select / Pending` | Tap | Ripple | Switch chat and continue processing. | Helper copy explains continued processing in chat. | ❌ Pending |
 | **Source Badge** | `Static` | N/A | N/A | Local (Phone) vs Cloud (Badge). | **Below Star** (No Overlap). | ❌ Pending |
 
 ---

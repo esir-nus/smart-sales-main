@@ -7,6 +7,8 @@
 >
 > **Invocation Rule**: This is the primary SOP to invoke when building an interface UI.
 
+> **Default Modern Invocation**: User invokes this SOP and provides one or more screenshots. Unless the user explicitly says otherwise, treat those screenshots as structural wireframes and redesign the visual layer around them.
+
 ---
 
 ## Cardinal Rules
@@ -29,10 +31,14 @@
 - Aesthetic truth comes from approved prototypes, the style guide, and the UI element registry.
 
 ### 2. Explicit Checkpoints
-Every phase transition requires **user's explicit declaration**:
-- **"Brief Approved"** → Start Prototype
-- **"Prototype Passed"** → Start Transplant
+Every phase transition requires explicit human confirmation, but the agent should keep the ceremony light.
+
+Default checkpoint meanings:
+
+- **design confirmed** → Start production transplant
 - **"Ship It"** → Complete
+
+Legacy phrases such as **"Brief Approved"** and **"Prototype Passed"** are still valid, but the default working model should not force the user to speak in ritual language when normal confirmation already makes intent clear.
 
 ### 3. Registry Compliance
 Android implementation MUST reference `ui_element_registry.md` for:
@@ -40,67 +46,114 @@ Android implementation MUST reference `ui_element_registry.md` for:
 - Interaction triggers/animations
 - Invariants
 
+### 4. Contract and Registry Re-Binding Is Mandatory
+Screenshots and prototypes define visual direction, but they do not replace the real implementation boundaries.
+
+Before and during Kotlin/Compose transplant, the agent must re-bind the approved design back to:
+
+- `prism-ui-ux-contract.md` for state/intent boundaries and surface ownership
+- `ui_element_registry.md` for component behavior, layer rules, and invariants
+
+Simple law:
+
+- screenshot drives structure
+- prototype drives polish
+- contract and registry drive production boundaries
+
+Do not transplant visuals into Compose as freeform UI code detached from the contract and registry model.
+
 ---
 
 ## Phase 0: Intake
 
-**Trigger**: User demand + optional wireframe screenshot.
+**Trigger**: User demand + one or more screenshots, optionally with text annotations.
 
 **Agent Actions**:
 1. Identify target component(s) from demand.
+2. Treat provided screenshots as structural wireframes unless the user explicitly allows layout change.
+3. Extract:
+   - locked structure
+   - flexible styling areas
+   - required controls
+   - relative placement rules
+   - obvious product-role constraints
 2. Read relevant spec sections:
    - `docs/plans/ui-tracker.md` — UI-specific status, approval, and drift tracking
    - `prism-ui-ux-contract.md` — Surface contract and UI boundary
    - `style-guide.md` — Visual identity guide and tokens
    - `ui_element_registry.md` — Element registry and behavior contract
    - `ui-dev-mode.md` — workflow expectations and approval model
-3. Ask clarifying questions if scope is ambiguous.
+4. Ask clarifying questions only when the screenshot and user notes do not provide enough structural truth.
 
-**Output**: Confirmation of understanding.
+**Output**: Concise confirmation of understanding, including:
+
+- what is locked
+- what may be redesigned
+- which Surface Contract boundary the work belongs to
+- which registry elements or invariants are likely involved
+- what the next design step will be
 
 ---
 
-## Phase 1: Design Brief (`/12-ui-director`)
+## Phase 1: Structure Read and Design Framing
 
-**Purpose**: Define WHAT to build with explicit guardrails.
+**Purpose**: Define what is fixed and where visual discretion is allowed.
 
 **Agent Actions**:
-1. Create **Design Brief** artifact with:
+1. Produce a concise design framing with:
    - User Goal
+   - Locked Structure
+   - Flexible Styling Areas
+   - Surface Contract anchor
+   - Registry anchor
    - In-Scope / Out-of-Scope elements
-   - Visual Tokens to apply (from `style-guide.md`)
-   - Functional Invariants (from registry)
-   - Acceptance Criteria (visual)
-2. **STOP** and request approval.
+   - Visual Tokens or style direction to apply
+   - Functional Invariants
+   - Acceptance target for the next visual pass
+2. If the user's screenshots and notes are already sufficiently clear, do not force a heavyweight separate brief artifact. A compact framing is enough.
 
-**Checkpoint**: User must say **"Brief Approved"**.
+**Checkpoint**: The user confirms the direction or gives corrections.
 
----
+## Phase 2: Screenshot-Guided Design Pass
 
-## Phase 2: Web Prototype (`/13-web-prototype`)
-
-**Purpose**: Create a high-fidelity visual reference in browser.
+**Purpose**: Create a polished visual proposal from the supplied structural wireframe.
 
 **Agent Actions**:
-1. Build prototype in `prototypes/prism-web-v1/`.
-2. Follow `style-guide.md` tokens exactly.
-3. Apply Zero-Chrome rules (no scrollbars, no focus rings).
-4. Screenshot and present to user.
-5. **STOP** and request approval.
+1. Use the screenshots as structural source-of-truth unless told otherwise.
+2. Preserve:
+   - required elements
+   - semantic roles
+   - interaction meaning
+   - major placement contracts already expressed by the screenshots
+3. Freely redesign:
+   - spacing
+   - radius
+   - opacity
+   - shape language
+   - background treatment
+   - visual composition
+   - polish quality
+4. Build the design pass in the most useful medium for fast review, normally the web prototype in `prototypes/prism-web-v1/`.
+5. Screenshot the result and present it to the user.
+6. Revise from user screenshot feedback until the design direction is confirmed.
 
-**Checkpoint**: User must say **"Prototype Passed"**.
+**Checkpoint**: Once the user confirms the design direction, begin production transplant.
 
-**Iteration**: If user provides feedback, revise and re-present.
+**Iteration Rule**: User feedback through additional screenshots, markup, or short comments should be treated as the primary refinement loop.
 
 ---
 
 ## Phase 3: Android Transplant
 
-**Purpose**: Implement the approved prototype in Kotlin/Compose.
+**Purpose**: Implement the confirmed design in Kotlin/Compose and keep iterating visually until the user says it is ready to ship.
 
 ### 3A. Gap Analysis (Light)
 - Compare prototype CSS/JS with current Android code.
 - List visual discrepancies (NOT code prescriptions).
+- Map each major approved element back to:
+  - contract-owned state input
+  - contract-owned intent output
+  - registry-owned behavior and layer rules
 - Propose token/registry updates if needed.
 - For deep audits, use `/14-ui-transplant`.
 
@@ -108,14 +161,20 @@ Android implementation MUST reference `ui_element_registry.md` for:
 - Write Compose code in `app-core/`.
 - Use tokens from `Color.kt`, `Type.kt`, `Theme.kt`.
 - Respect registry Z-Map and invariants.
+- Keep UI state reading and intent emission aligned with `prism-ui-ux-contract.md`.
+- Prefer existing registry-aligned seams and interfaces instead of letting screenshot polish create new ownership leaks.
 - Verify build passes.
+- Preserve the screenshot-approved structure unless the user explicitly reopens layout decisions.
 
 ### 3C. Fidelity Check
 - Screenshot Android device.
-- Compare against prototype screenshot.
-- If gaps exist, iterate.
+- Compare against:
+  - confirmed prototype screenshots
+  - user-provided structural screenshots
+  - latest user correction screenshots, if any
+- If gaps exist, iterate in Kotlin and re-screenshot.
 
-**Checkpoint**: User must say **"Ship It"** or provide feedback for iteration.
+**Checkpoint**: Keep iterating until the user says **"Ship It"**.
 
 ---
 
@@ -127,16 +186,35 @@ Android implementation MUST reference `ui_element_registry.md` for:
 | Structural gap (layout wrong) | Return to 3A, re-analyze |
 | Spec conflict discovered | Escalate to `/01-senior-reviewr` |
 
+During UI iteration, default evidence order is:
+
+1. latest user screenshot correction
+2. latest confirmed design screenshot
+3. approved prototype
+4. style guide and registry
+
+If these conflict, do not guess silently. State the conflict and propose the narrowest correction.
+
+Implementation-boundary rule during iteration:
+
+- visual corrections may change polish freely
+- behavioral boundary changes must still be justified through the Surface Contract or UI Element Registry
+- do not let screenshot feedback silently introduce data-layer coupling, ownership drift, or ad-hoc interaction rules
+
 ---
 
 ## Workflow Diagram
 
 ```
-Phase 0: INTAKE -> Phase 1: BRIEF -> "Brief Approved"
-                                          |
-                 Phase 2: PROTOTYPE -> "Prototype Passed"
-                                          |
-                 Phase 3: TRANSPLANT -> Iterate -> "Ship It"
+Phase 0: INTAKE -> Phase 1: STRUCTURE READ
+                                 |
+                 Phase 2: DESIGN PASS + SCREENSHOT ITERATION
+                                 |
+                      user confirms design direction
+                                 |
+                 Phase 3: COMPOSE TRANSPLANT + DEVICE ITERATION
+                                 |
+                              "Ship It"
 ```
 
 ---
@@ -157,8 +235,8 @@ Phase 0: INTAKE -> Phase 1: BRIEF -> "Brief Approved"
 ## Completion Criteria
 
 A UI feature is **DONE** when:
-1. [ ] Design Brief approved
-2. [ ] Web Prototype passed
-3. [ ] Android implementation matches prototype
+1. [ ] Screenshot-driven structure and constraints are understood
+2. [ ] Design direction is confirmed by the user
+3. [ ] Android implementation matches the confirmed direction
 4. [ ] Gradle build passes
 5. [ ] User declares **"Ship It"**

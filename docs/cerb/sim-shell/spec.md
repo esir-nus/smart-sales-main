@@ -155,9 +155,14 @@ SIM keeps the shell gesture model zone-scoped and velocity-aware.
 
 - when the normal SIM shell is visible and no support overlay is active, a downward pull that begins in the upper activation region opens the scheduler drawer
 - when the normal SIM shell is visible and no support overlay is active, an upward pull that begins in the lower activation region opens the audio drawer in browse mode
-- the current shipped activation split is top third for scheduler entry, middle third safe for chat/history scrolling, and bottom third for audio entry
+- the current shipped activation model is band-based rather than full-screen thirds
+- the upper activation region should stay narrow and deliberate, typically the top header band or roughly the upper 72dp to 120dp of the shell
+- the lower activation region should stay narrow and deliberate, typically the composer / bottom-edge band or roughly the lower 96dp to 140dp of the shell
+- the center body remains a protected chat/history scroll zone rather than a drawer-entry surface
 - shell entry gestures require vertical-intent locking; weak or horizontally-biased drags must stay with normal content behavior
-- shell entry gestures may trigger by either committed drag distance or deliberate fling velocity, so intentional pulls feel quicker than ordinary chat scrolling
+- shell entry gestures should use both committed drag distance and deliberate fling velocity rather than velocity alone
+- velocity acts as an override for clearly intentional pulls, not as a replacement for directional and distance checks
+- opening and closing thresholds should use light hysteresis so drawers do not feel twitchy near the commit line
 - the bottom-zone audio-open gesture is disabled while the IME/keyboard is visible
 - scheduler dismissal remains handle-first and upward
 - SIM audio dismissal is handle-first and downward

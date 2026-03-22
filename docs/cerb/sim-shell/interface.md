@@ -97,8 +97,12 @@ Guarantees:
 - the shell may expose history/new-page/connectivity/settings as SIM support surfaces
 - the shell may open scheduler from a downward pull started inside the upper shell activation zone when the shell is otherwise clear
 - the shell may open audio browse from an upward pull started inside the lower shell activation zone when the shell is otherwise clear
-- the current shipped shell split is top third scheduler-open, middle third safe scroll, bottom third audio-open
+- the current shipped shell opener is activation-band based rather than top/middle/bottom full-screen thirds
+- the upper activation zone should stay close to the header/top-edge region and the lower activation zone should stay close to the composer/bottom-edge region
+- the center shell body stays protected for chat/history scrolling by default
 - the shell entry gestures must use vertical-intent lock plus drag-distance or fling-velocity confirmation rather than broad overscroll alone
+- velocity is an override for deliberate pulls, not the sole open rule
+- the open/close gesture contract should use light hysteresis so commit thresholds are stable
 - the shell must disable the lower-zone audio-open gesture while the IME is visible
 - the SIM home header keeps only the hamburger button, centered island, and new-chat button so the chrome remains visually balanced
 - the shell may keep a persistent dynamic island visible in the top-header center slot while normal SIM shell surfaces are active

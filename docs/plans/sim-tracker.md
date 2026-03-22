@@ -316,7 +316,7 @@ Wave sections below are retained as project memory. Their checklist items have b
   - [x] **2026-03-22 Gesture Parity Follow-Up**
     SIM shell gesture parity is now restored as a shell-owned edge/handle contract rather than broad chat overscroll behavior. The shipped path uses header-center pull-down to open Scheduler, bottom-edge pull-up to open Audio Drawer browse mode, IME gating for the bottom-edge opener, upward handle dismiss for Scheduler, and downward handle dismiss for SIM Audio. Focused verification is green with `:app-core:compileDebugKotlin`, `SimShellHandoffTest`, and `:app-core:compileDebugAndroidTestKotlin`.
   - [x] **2026-03-22 Gesture Nimbility Upgrade**
-    The initial narrow edge-strip opener is now widened into a zone-based shell trigger model after device feedback showed it was too hard to activate. The current shipped SIM contract is top-third pull-down for Scheduler, middle-third safe scroll, bottom-third pull-up for Audio browse, plus vertical-intent lock and fling-velocity confirmation to separate deliberate drawer entry from ordinary chat-history scrolling.
+    The initial narrow edge-strip opener is now widened into a zone-based shell trigger model after device feedback showed it was too hard to activate. The current SIM direction is narrow activation bands rather than full-screen thirds: a top header-edge band for Scheduler entry, a bottom composer-edge band for Audio browse, and a protected center zone for chat/history scrolling. Vertical-intent lock remains required, and drawer open should use committed drag distance plus deliberate fling-velocity override rather than generic overscroll alone.
 - [x] **Done When**
   - [x] SIM boots into a standalone shell
   - [x] shell visually feels like Prism

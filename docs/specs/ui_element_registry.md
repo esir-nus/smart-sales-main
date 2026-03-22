@@ -111,8 +111,8 @@ Home empty-state composition note:
 | **Tingwu Menu [≣]** | `Idle` | Tap | Slide In | Opens **Tingwu Drawer**. | Exclusive. | ❌ Pending |
 | **Tingwu Menu [≣]** | `Idle` | Tap | Slide In | Opens **Tingwu Drawer**. | Exclusive. | ❌ Pending |
 | **Artifacts [📦]** | `Has Items` | Tap | Slide In | Opens **Artifacts Drawer**. | Exclusive. | ❌ Pending |
-| **Scheduler Trigger** | `Any` | Drag Handle (Top) | Slide In | Opens **Scheduler**. | Visible Pill. | ✅ Verified |
-| **Audio Trigger** | `Any` | Drag Bottom Zone (120dp) | Slide In | Opens **Audio Sheet**. | Invisible target. | ✅ Verified |
+| **Scheduler Trigger** | `Any` | Drag from top activation band / top handle | Slide In | Opens **Scheduler**. | Narrow header-edge band, protected center scroll, vertical-intent lock, distance or fling confirmation. | ✅ Verified |
+| **Audio Trigger** | `Any` | Drag from bottom activation band / bottom affordance | Slide In | Opens **Audio Sheet**. | Narrow composer-edge band, protected center scroll, vertical-intent lock, distance or fling confirmation. | ✅ Verified |
 
 ### 2.2 Input & Modes
 

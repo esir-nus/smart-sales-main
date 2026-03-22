@@ -6,7 +6,7 @@
 >
 > Status: Active SOP
 >
-> Last Updated: 2026-03-22
+> Last Updated: 2026-03-23
 
 ---
 
@@ -238,6 +238,108 @@ Visual source-of-truth order:
 2. Visual Identity Guide
 3. UI Element Registry
 4. explicit approved visual references
+
+### 2b. Screenshot-First Structural Wireframe Rule
+
+When the user provides a screenshot for UI work, treat it as a structural wireframe unless the user explicitly says the layout itself should change.
+
+That means the screenshot is usually authoritative for:
+
+- what primary elements must exist
+- what each element's product role is
+- which controls are required
+- the rough layer hierarchy
+- the relative left / center / right placement of key controls
+
+That same screenshot is usually not authoritative for:
+
+- polish quality
+- color treatment
+- corner radius
+- opacity
+- spacing rhythm
+- size balance
+- proportions
+- chrome treatment
+- visual composition quality
+
+Default agent behavior:
+
+- preserve semantic structure first
+- redesign visual treatment second
+- do not reinvent layout when the user's screenshot already expresses the intended product structure
+
+Use this distinction in every screenshot-driven request:
+
+- locked structure = what must stay
+- flexible styling = what may be redesigned
+
+### 2c. Agent UI Specialist Discretion
+
+The agent may use UI specialist discretion only inside the flexible styling layer.
+
+This discretion is allowed for:
+
+- improving spacing
+- improving proportions
+- improving alignment
+- simplifying unnecessary containers
+- changing shape language
+- changing background blending
+- improving color hierarchy
+- polishing visual weight and composition
+
+This discretion is not allowed to silently change:
+
+- required controls
+- control count
+- control role
+- control placement when the user has already implied a layout contract
+- interaction meaning
+- feature hierarchy expressed by the screenshot or annotation
+
+Simple law:
+
+- agents may polish aggressively
+- agents may not restructure casually
+
+### 2d. Concrete Example: Header Top Bar
+
+If the user provides a top-bar screenshot and says:
+
+- keep hamburger on the left
+- keep dynamic island in the middle
+- keep new-chat button on the right
+
+then those are locked structural requirements.
+
+The agent must preserve:
+
+- hamburger entry on the left
+- dynamic island in the center
+- new action on the right
+
+The agent may still redesign:
+
+- whether the side icons sit inside circular pancakes or not
+- icon container size
+- icon container color
+- bar height
+- island shape
+- island border
+- island blending into the background
+- square vs rounded vs pill treatment
+- fade behavior at the edges
+- spacing and overall polish
+
+In that example, the screenshot is a good production wireframe with ugly styling, not a final visual design.
+
+The correct agent interpretation is:
+
+- keep the product skeleton
+- upgrade the visual skin
+
+Do not collapse this distinction.
 5. current UI code and screenshots for logic understanding only
 
 ### 3. No Silent New Design Language

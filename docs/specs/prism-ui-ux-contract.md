@@ -87,11 +87,12 @@ Role: This document is strictly an index that maps UI modules, components, and f
 
 | Direction | Gesture | Opens | Notes |
 |-----------|---------|-------|-------|
-| **↓ Top → Down** | Pull from top edge | Scheduler Drawer | Calendar + Timeline |
-| **↑ Bottom → Up** | Pull from bottom edge | Audio Drawer | Recordings |
+| **↓ Top → Down** | Pull from top activation band | Scheduler Drawer | Header / top-edge band only; center content stays scroll-safe |
+| **↑ Bottom → Up** | Pull from bottom activation band | Audio Drawer | Composer / bottom-edge band only; center content stays scroll-safe |
 
 ### Standalone Mode Note
 
 - SIM is a standalone shell mode with its own surface contract in `docs/cerb/sim-shell/spec.md`.
 - Global gestures and shared element rules still apply unless the SIM shard narrows the presentation for standalone use.
 - SIM-specific shell chrome, sparse idle layout, and support-surface composition should be documented in the SIM Cerb docs rather than expanded inline here.
+- For SIM, the industrial-practice default is narrow activation bands plus a protected center scroll zone, combined with vertical-intent lock and drag-distance / fling-velocity confirmation.

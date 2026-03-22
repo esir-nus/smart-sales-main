@@ -45,6 +45,7 @@ fun SchedulerTaskCard(
     state: TimelineItem.Task,
     isExpanded: Boolean = false,
     onClick: () -> Unit,
+    enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val indicatorState = when {
@@ -56,7 +57,7 @@ fun SchedulerTaskCard(
     GlassCard(
         modifier = modifier
             .fillMaxWidth()
-            .clickable { onClick() }
+            .clickable(enabled = enabled) { onClick() }
             .then(
                 if (state.isVague) {
                     Modifier.border(1.dp, com.smartsales.prism.ui.theme.AccentDanger.copy(alpha = 0.8f), RoundedCornerShape(16.dp))
@@ -84,7 +85,7 @@ fun SchedulerTaskCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = state.conflictSummary ?: "⚠️ 发现冲突",
+                            text = state.conflictSummary ?: "发现冲突",
                             color = AccentAmber,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold

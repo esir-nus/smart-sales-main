@@ -98,6 +98,9 @@ class SchedulerViewModel @Inject constructor(
     private val _expandedConflictIds = MutableStateFlow<Set<String>>(emptySet())
     override val expandedConflictIds: StateFlow<Set<String>> = _expandedConflictIds.asStateFlow()
 
+    private val _exitingTasks = MutableStateFlow<List<RescheduleExitMotion>>(emptyList())
+    override val exitingTasks: StateFlow<List<RescheduleExitMotion>> = _exitingTasks.asStateFlow()
+
     private val _exactAlarmPermissionNeeded = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     override val exactAlarmPermissionNeeded = _exactAlarmPermissionNeeded.asSharedFlow()
     private val exactAlarmPrompted = AtomicBoolean(false)
@@ -136,7 +139,7 @@ class SchedulerViewModel @Inject constructor(
         val crossedOffTasks = factualMemories.map { memory ->
             ScheduledTask(
                 id = memory.entryId,
-                timeDisplay = "✓", // Completed indicators
+                timeDisplay = "已完成", // Completed indicators
                 title = memory.title ?: memory.content,
                 startTime = Instant.ofEpochMilli(memory.scheduledAt ?: memory.createdAt),
                 endTime = null, 
@@ -272,7 +275,7 @@ class SchedulerViewModel @Inject constructor(
     override fun getCachedTips(taskId: String): List<String> = _tipsCache[taskId] ?: emptyList()
 
     override fun processAudio(file: java.io.File) {
-        _pipelineStatus.value = "🎙️ 语音转写中..."
+        _pipelineStatus.value = "语音转写中..."
         viewModelScope.launch {
             try {
                 val result = asrService.transcribe(file)
@@ -293,7 +296,7 @@ class SchedulerViewModel @Inject constructor(
                             is com.smartsales.core.pipeline.PipelineResult.PathACommitted -> {
                                 schedulerWriteProven = true
                                 if (res.task.hasConflict) {
-                                    _pipelineStatus.value = "⚠️ 已创建，发现冲突"
+                                    _pipelineStatus.value = "已创建，但发现冲突"
                                     PipelineValve.tag(
                                         checkpoint = PipelineValve.Checkpoint.UI_STATE_EMITTED,
                                         payloadSize = res.task.id.hashCode(),
@@ -308,13 +311,13 @@ class SchedulerViewModel @Inject constructor(
                                     )
                                     android.util.Log.d("SchedulerVM", "processAudio: caution status emitted after conflict PathACommitted")
                                 } else {
-                                    _pipelineStatus.value = "✅ 搞定"
+                                    _pipelineStatus.value = "已创建日程"
                                     android.util.Log.d("SchedulerVM", "processAudio: success status emitted after PathACommitted")
                                 }
                             }
                             is com.smartsales.core.pipeline.PipelineResult.InspirationCommitted -> {
                                 inspirationWriteProven = true
-                                _pipelineStatus.value = "💡 已保存灵感"
+                                _pipelineStatus.value = "已保存灵感"
                                 android.util.Log.d("SchedulerVM", "processAudio: inspiration status emitted after InspirationCommitted")
                             }
                             is com.smartsales.core.pipeline.PipelineResult.ConversationalReply -> {

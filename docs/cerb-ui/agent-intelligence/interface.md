@@ -30,6 +30,7 @@ Require user interaction to proceed.
 ### 3.3 Final Render States
 Asynchronous or immediate background notifications.
 - `UiState.Response`: Standard text response holding structural JSON.
+- `UiState.AudioArtifacts`: Durable structured artifact turn for SIM audio-grounded chat history.
 - `UiState.SchedulerTaskCreated`: Confirmation of a created task.
 - `UiState.SchedulerMultiTaskCreated`: Confirmation of batch task creation.
 - `UiState.Toast`: Fire-and-forget lightweight feedback.

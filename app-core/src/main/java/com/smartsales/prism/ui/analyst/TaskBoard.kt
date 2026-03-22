@@ -91,12 +91,21 @@ private fun TaskBoardRow(
             )
         }
         
-        // 图标
-        Text(
-            text = item.icon,
-            fontSize = 18.sp,
-            modifier = Modifier.padding(end = 10.dp)
-        )
+        // 专业短标签，避免使用 emoji 作为图标
+        Box(
+            modifier = Modifier
+                .padding(end = 10.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(Color.White.copy(alpha = if (isCustom) 0.04f else 0.08f))
+                .padding(horizontal = 8.dp, vertical = 5.dp)
+        ) {
+            Text(
+                text = taskBoardBadgeLabel(item),
+                color = if (isCustom) TextSecondary else TextPrimary,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
         
         // 标题 + 描述
         Column(modifier = Modifier.weight(1f)) {
@@ -118,15 +127,23 @@ private fun TaskBoardRow(
     }
 }
 
+private fun taskBoardBadgeLabel(item: TaskBoardItem): String = when (item.id) {
+    "1" -> "SA"
+    "2" -> "CB"
+    "3" -> "MN"
+    "custom" -> "AI"
+    else -> item.title.take(2).uppercase()
+}
+
 @Preview(showBackground = true, backgroundColor = 0xFF0D1117)
 @Composable
 private fun TaskBoardPreview() {
     TaskBoard(
         items = listOf(
-            TaskBoardItem("1", "📊", "周度销售分析", "汇总本周拜访数据，生成趋势报告"),
-            TaskBoardItem("2", "📈", "竞品对比分析", "对比主要竞品的价格、功能、市场策略"),
-            TaskBoardItem("3", "📝", "会议纪要整理", "从录音中提取要点、行动项、决策"),
-            TaskBoardItem("custom", "💡", "你也可以说出自己的需求...", "")
+            TaskBoardItem("1", "SA", "周度销售分析", "汇总本周拜访数据，生成趋势报告"),
+            TaskBoardItem("2", "CB", "竞品对比分析", "对比主要竞品的价格、功能、市场策略"),
+            TaskBoardItem("3", "MN", "会议纪要整理", "从录音中提取要点、行动项、决策"),
+            TaskBoardItem("custom", "AI", "你也可以说出自己的需求...", "")
         ),
         onItemClick = {}
     )

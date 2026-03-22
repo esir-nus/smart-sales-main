@@ -3,6 +3,9 @@ package com.smartsales.prism.ui.components
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -41,6 +44,9 @@ fun ResponseBubble(
         is UiState.Response -> {
             CompleteBubble(content = uiState.content, modifier = modifier)
         }
+        is UiState.AudioArtifacts -> {
+            CompleteBubble(content = "已生成音频结构化结果，请在对话历史中查看。", modifier = modifier)
+        }
         
         // V2: Markdown Strategy 展示
         is UiState.MarkdownStrategyState -> {
@@ -59,7 +65,7 @@ fun ResponseBubble(
         
         is UiState.SchedulerMultiTaskCreated -> {
             CompleteBubble(
-                content = "✅ 已创建 ${uiState.tasks.size} 个任务",
+                content = "已创建 ${uiState.tasks.size} 个任务",
                 modifier = modifier
             )
         }
@@ -124,8 +130,12 @@ private fun ThinkingIndicator(hint: String?, modifier: Modifier = Modifier) {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = "🧠", fontSize = 18.sp)
-            Spacer(modifier = Modifier.width(12.dp))
+            CircularProgressIndicator(
+                modifier = Modifier.size(18.dp),
+                color = Color(0xFF4FC3F7),
+                strokeWidth = 2.dp
+            )
+            Spacer(modifier = Modifier.width(14.dp))
             Text(
                 text = hint ?: "正在思考...",
                 color = Color(0xFFAAFFAA),
@@ -239,7 +249,12 @@ private fun ErrorBubble(message: String, modifier: Modifier = Modifier) {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = "❌", fontSize = 16.sp)
+            Icon(
+                imageVector = Icons.Filled.ErrorOutline,
+                contentDescription = null,
+                tint = Color(0xFFFF6B6B),
+                modifier = Modifier.size(18.dp)
+            )
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = message,
@@ -259,7 +274,12 @@ private fun ClarifyingBubble(question: String, modifier: Modifier = Modifier) {
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text = "❓", fontSize = 16.sp)
+                Icon(
+                    imageVector = Icons.Filled.HelpOutline,
+                    contentDescription = null,
+                    tint = Color(0xFF88CCFF),
+                    modifier = Modifier.size(18.dp)
+                )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "需要更多信息",

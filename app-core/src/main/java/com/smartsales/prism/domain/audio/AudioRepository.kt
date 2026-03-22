@@ -70,9 +70,12 @@ data class AudioFile(
     val source: AudioSource,
     val status: TranscriptionStatus,
     val isStarred: Boolean = false,
+    val isTestImport: Boolean = false,
     val summary: String? = null,
     val progress: Float = 0f,
-    val boundSessionId: String? = null // Links to Analysis chat session
+    val boundSessionId: String? = null, // Links to Analysis chat session
+    val activeJobId: String? = null,
+    val lastErrorMessage: String? = null
 )
 
 @Serializable

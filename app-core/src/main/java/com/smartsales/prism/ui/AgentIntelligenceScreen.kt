@@ -37,6 +37,9 @@ import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.ui.components.*
 import com.smartsales.prism.ui.components.agent.*
 import com.smartsales.prism.ui.fakes.FakeAgentViewModel
+import com.smartsales.prism.ui.sim.SimArtifactBubble
+import com.smartsales.prism.ui.sim.SimAgentViewModel
+import com.smartsales.prism.ui.sim.SimTranscriptPresentation
 import com.smartsales.prism.ui.theme.*
 import androidx.compose.foundation.border
 import androidx.compose.foundation.rememberScrollState
@@ -50,6 +53,7 @@ fun AgentIntelligenceScreen(
     onNewSessionClick: () -> Unit = {},
     onAudioBadgeClick: () -> Unit = {},
     onAudioDrawerClick: () -> Unit = {},
+    onAttachClick: () -> Unit = onAudioDrawerClick,
     onTingwuClick: () -> Unit = {},
     onArtifactsClick: () -> Unit = {},
     onDebugClick: () -> Unit = {},
@@ -68,6 +72,13 @@ fun AgentIntelligenceScreen(
     val heroUpcoming by viewModel.heroUpcoming.collectAsState()
     val heroAccomplished by viewModel.heroAccomplished.collectAsState()
     val heroGreeting by viewModel.heroGreeting.collectAsState()
+    val simViewModel = viewModel as? SimAgentViewModel
+    val transcriptRevealState by (simViewModel?.artifactTranscriptRevealState?.collectAsState()
+        ?: remember {
+            mutableStateOf(
+                emptyMap<String, SimAgentViewModel.ArtifactTranscriptRevealState>()
+            )
+        })
 
     val context = LocalContext.current
     LaunchedEffect(toastMessage) {
@@ -89,10 +100,15 @@ fun AgentIntelligenceScreen(
         heroUpcoming = heroUpcoming,
         heroAccomplished = heroAccomplished,
         heroGreeting = heroGreeting,
+        transcriptRevealState = transcriptRevealState,
+        onArtifactTranscriptRevealConsumed = { messageId, isLongTranscript ->
+            simViewModel?.markArtifactTranscriptRevealConsumed(messageId, isLongTranscript)
+        },
         onMenuClick = onMenuClick,
         onNewSessionClick = onNewSessionClick,
         onAudioBadgeClick = onAudioBadgeClick,
         onAudioDrawerClick = onAudioDrawerClick,
+        onAttachClick = onAttachClick,
         onTingwuClick = onTingwuClick,
         onArtifactsClick = onArtifactsClick,
         onDebugClick = onDebugClick,
@@ -119,10 +135,13 @@ internal fun AgentIntelligenceContent(
     heroUpcoming: List<ScheduledTask>,
     heroAccomplished: List<ScheduledTask>,
     heroGreeting: String,
+    transcriptRevealState: Map<String, SimAgentViewModel.ArtifactTranscriptRevealState>,
+    onArtifactTranscriptRevealConsumed: (messageId: String, isLongTranscript: Boolean) -> Unit,
     onMenuClick: () -> Unit,
     onNewSessionClick: () -> Unit,
     onAudioBadgeClick: () -> Unit,
     onAudioDrawerClick: () -> Unit,
+    onAttachClick: () -> Unit,
     onTingwuClick: () -> Unit,
     onArtifactsClick: () -> Unit,
     onDebugClick: () -> Unit,
@@ -170,6 +189,7 @@ internal fun AgentIntelligenceContent(
 
     val ProMaxOnyx = Color(0xFF0B0C10)
     val ProMaxAccentGlow = Color(0xFF38BDF8).copy(alpha = 0.08f)
+    val ProMaxTopWash = Color(0xFF111827)
     // 使 glow 半径与屏幕宽度成正比，确保在不同 DPI 设备上视觉一致
     val screenWidthDp = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp
     val glowRadiusPx = with(LocalDensity.current) { (screenWidthDp * 2.5f).toPx() }
@@ -177,7 +197,11 @@ internal fun AgentIntelligenceContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(ProMaxOnyx)
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(ProMaxTopWash, ProMaxOnyx, Color(0xFF06070A))
+                )
+            )
             .background(
                 brush = Brush.radialGradient(
                     colors = listOf(ProMaxAccentGlow, Color.Transparent),
@@ -250,6 +274,7 @@ internal fun AgentIntelligenceContent(
                                 )
                                 is UiState.AwaitingClarification,
                                 is UiState.MarkdownStrategyState,
+                                is UiState.AudioArtifacts,
                                 is UiState.Response,
                                 is UiState.SchedulerTaskCreated,
                                 is UiState.SchedulerMultiTaskCreated,
@@ -266,17 +291,13 @@ internal fun AgentIntelligenceContent(
                                     }
                                 }
                                 is UiState.BadgeDelegationHint -> {
-                                    PrismSurface(
-                                        shape = RoundedCornerShape(16.dp),
-                                        backgroundColor = AccentYellow.copy(alpha = 0.1f),
-                                        modifier = Modifier.padding(vertical = 4.dp).border(1.dp, AccentYellow.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
-                                    ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(12.dp)) {
-                                            Text("🎙️", fontSize = 16.sp)
-                                            Spacer(Modifier.width(8.dp))
-                                            Text("请长按您的智能工牌专属按键来录入此日程。", color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
-                                        }
-                                    }
+                                    InlineStatusNotice(
+                                        icon = Icons.Default.Mic,
+                                        iconTint = AccentYellow,
+                                        containerColor = AccentYellow.copy(alpha = 0.1f),
+                                        borderColor = AccentYellow.copy(alpha = 0.3f),
+                                        text = "请长按您的智能工牌专属按键来录入此日程。"
+                                    )
                                 }
                                 is UiState.Loading -> {
                                     Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -305,11 +326,38 @@ internal fun AgentIntelligenceContent(
                                             onAmendPlan = onAmendPlan
                                         )
                                     }
+                                    is UiState.AudioArtifacts -> {
+                                        val revealState = transcriptRevealState[message.id]
+                                        SimArtifactBubble(
+                                            title = state.title,
+                                            artifactsJson = state.artifactsJson,
+                                            transcriptPresentation = SimTranscriptPresentation(
+                                                enableInitialReveal = revealState?.consumed != true,
+                                                startCollapsed = revealState?.isLongTranscript == true,
+                                                minRevealMillis = if (revealState?.consumed == true) 0L else 1000L
+                                            ),
+                                            onTranscriptRevealConsumed = { isLongTranscript ->
+                                                onArtifactTranscriptRevealConsumed(message.id, isLongTranscript)
+                                            }
+                                        )
+                                    }
                                     is UiState.Thinking -> {
-                                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(8.dp)) {
-                                            Text("🧠", fontSize = 12.sp) 
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.padding(8.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.AutoAwesome,
+                                                contentDescription = null,
+                                                tint = ProMaxAccent,
+                                                modifier = Modifier.size(14.dp)
+                                            )
                                             Spacer(Modifier.width(8.dp))
-                                            Text(state.hint ?: "Thinking...", color = TextMuted, fontSize = 12.sp)
+                                            Text(
+                                                state.hint ?: "处理中...",
+                                                color = TextMuted,
+                                                fontSize = 12.sp
+                                            )
                                         }
                                     }
                                     is UiState.ExecutingTool -> {
@@ -320,17 +368,13 @@ internal fun AgentIntelligenceContent(
                                         }
                                     }
                                     is UiState.BadgeDelegationHint -> {
-                                        PrismSurface(
-                                            shape = RoundedCornerShape(16.dp),
-                                            backgroundColor = AccentYellow.copy(alpha = 0.1f),
-                                            modifier = Modifier.padding(vertical = 4.dp).border(1.dp, AccentYellow.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
-                                        ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(12.dp)) {
-                                                Text("🎙️", fontSize = 16.sp)
-                                                Spacer(Modifier.width(8.dp))
-                                                Text("请长按您的智能工牌专属按键来录入此日程。", color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
-                                            }
-                                        }
+                                        InlineStatusNotice(
+                                            icon = Icons.Default.Mic,
+                                            iconTint = AccentYellow,
+                                            containerColor = AccentYellow.copy(alpha = 0.1f),
+                                            borderColor = AccentYellow.copy(alpha = 0.3f),
+                                            text = "请长按您的智能工牌专属按键来录入此日程。"
+                                        )
                                     }
                                     else -> {}
                                 }
@@ -349,14 +393,22 @@ internal fun AgentIntelligenceContent(
                 .padding(top = 16.dp, start = 16.dp, end = 16.dp)
                 .fillMaxWidth()
         ) {
-            ProMaxHeader(
-                sessionTitle = sessionTitle,
-                onMenuClick = onMenuClick,
-                onNewSessionClick = onNewSessionClick,
-                onDebugClick = onDebugClick,
-                onDeviceClick = onAudioBadgeClick,
-                showDebugButton = showDebugButton
-            )
+            PrismSurface(
+                shape = RoundedCornerShape(24.dp),
+                backgroundColor = Color.White.copy(alpha = 0.06f),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(24.dp))
+            ) {
+                ProMaxHeader(
+                    sessionTitle = sessionTitle,
+                    onMenuClick = onMenuClick,
+                    onNewSessionClick = onNewSessionClick,
+                    onDebugClick = onDebugClick,
+                    onDeviceClick = onAudioBadgeClick,
+                    showDebugButton = showDebugButton
+                )
+            }
         }
 
         // --- Layer 3: Floating Dock ---
@@ -375,7 +427,7 @@ internal fun AgentIntelligenceContent(
                     text = inputText,
                     onTextChanged = onUpdateInput,
                     onSend = onSend,
-                    onAttachClick = onAudioDrawerClick
+                    onAttachClick = onAttachClick
                 )
             }
         }
@@ -425,21 +477,38 @@ private fun ProMaxHeader(
     showDebugButton: Boolean
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             GlassCircleButton(icon = Icons.Filled.Menu, onClick = onMenuClick)
             GlassCircleButton(icon = Icons.Filled.Bluetooth, onClick = onDeviceClick, tint = ProMaxAccent)
         }
-        Box(modifier = Modifier.height(40.dp), contentAlignment = Alignment.Center) {
-            Text(
-                text = sessionTitle.ifEmpty { "新对话" },
-                style = MaterialTheme.typography.labelLarge,
-                color = ProMaxTextSecondary,
-                letterSpacing = 0.5.sp
-            )
+        PrismSurface(
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(18.dp),
+            backgroundColor = Color.White.copy(alpha = 0.04f)
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "当前会话",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = ProMaxTextMuted,
+                    letterSpacing = 0.8.sp
+                )
+                Text(
+                    text = sessionTitle.ifEmpty { "新对话" },
+                    style = MaterialTheme.typography.labelLarge,
+                    color = ProMaxTextPrimary,
+                    maxLines = 1
+                )
+            }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (showDebugButton) {
@@ -459,6 +528,13 @@ private fun HomeHeroDashboard(
 ) {
     Column(modifier = Modifier.fillMaxWidth().padding(top = 24.dp, start = 20.dp, end = 20.dp)) {
         Text(
+            text = "TODAY OVERVIEW",
+            style = MaterialTheme.typography.labelSmall,
+            color = ProMaxTextMuted,
+            letterSpacing = 1.2.sp
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Text(
             text = greeting.replace(", ", ",\n").replace("，", "，\n"),
             fontSize = 32.sp,
             fontWeight = FontWeight.Bold,
@@ -467,6 +543,56 @@ private fun HomeHeroDashboard(
             letterSpacing = (-0.5).sp,
             modifier = Modifier.clickable { onProfileClick() }
         )
+        Spacer(modifier = Modifier.height(20.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            OverviewStatCard(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.Schedule,
+                label = "待办事项",
+                value = upcoming.size.toString()
+            )
+            OverviewStatCard(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Default.DoneAll,
+                label = "已完成",
+                value = accomplished.size.toString()
+            )
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        PrismSurface(
+            shape = RoundedCornerShape(20.dp),
+            backgroundColor = Color.White.copy(alpha = 0.05f),
+            modifier = Modifier
+                .fillMaxWidth()
+                .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(20.dp))
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(ProMaxAccent.copy(alpha = 0.14f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Mic,
+                        contentDescription = null,
+                        tint = ProMaxAccent,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text("更自然的输入方式", color = ProMaxTextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                    Text("可以直接输入，也可以按住工牌按键进行语音记录。", color = ProMaxTextSecondary, fontSize = 12.sp)
+                }
+            }
+        }
         if (upcoming.isNotEmpty()) {
             Spacer(modifier = Modifier.height(32.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -554,30 +680,82 @@ private fun HeroTaskRow(task: ScheduledTask, isDone: Boolean) {
 }
 
 @Composable
+private fun OverviewStatCard(
+    modifier: Modifier = Modifier,
+    icon: ImageVector,
+    label: String,
+    value: String
+) {
+    PrismSurface(
+        modifier = modifier,
+        shape = RoundedCornerShape(18.dp),
+        backgroundColor = Color.White.copy(alpha = 0.05f)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(34.dp)
+                    .background(Color.White.copy(alpha = 0.06f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = ProMaxAccent, modifier = Modifier.size(18.dp))
+            }
+            Spacer(modifier = Modifier.width(10.dp))
+            Column {
+                Text(value, color = ProMaxTextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text(label, color = ProMaxTextSecondary, fontSize = 12.sp)
+            }
+        }
+    }
+}
+
+@Composable
 private fun GlassInputCapsule(text: String, onTextChanged: (String) -> Unit, onSend: () -> Unit, onAttachClick: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(64.dp)
-            .glassPanel(CircleShape)
+            .height(72.dp)
+            .glassPanel(RoundedCornerShape(28.dp))
     ) {
-        Row(modifier = Modifier.fillMaxSize().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onAttachClick) {
-                Icon(Icons.Filled.AttachFile, "Attach", tint = ProMaxTextMuted)
+        Row(modifier = Modifier.fillMaxSize().padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(Color.White.copy(alpha = 0.06f), CircleShape)
+                    .clickable(onClick = onAttachClick),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Filled.AttachFile, "Attach", tint = ProMaxTextSecondary, modifier = Modifier.size(20.dp))
             }
-            Box(modifier = Modifier.weight(1f).padding(horizontal = 8.dp), contentAlignment = Alignment.CenterStart) {
-                if (text.isEmpty()) Text("输入消息，或长按工牌说话...", color = ProMaxTextMuted)
-                androidx.compose.foundation.text.BasicTextField(
-                    value = text,
-                    onValueChange = onTextChanged,
-                    textStyle = androidx.compose.ui.text.TextStyle(color = ProMaxTextPrimary, fontSize = 16.sp),
-                    cursorBrush = SolidColor(ProMaxAccent)
-                )
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 10.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Column(verticalArrangement = Arrangement.Center) {
+                    Text("Assistant input", color = ProMaxTextMuted, fontSize = 11.sp, letterSpacing = 0.8.sp)
+                    androidx.compose.foundation.text.BasicTextField(
+                        value = text,
+                        onValueChange = onTextChanged,
+                        textStyle = androidx.compose.ui.text.TextStyle(color = ProMaxTextPrimary, fontSize = 16.sp),
+                        cursorBrush = SolidColor(ProMaxAccent),
+                        decorationBox = { innerTextField ->
+                            if (text.isEmpty()) {
+                                Text("输入消息，或长按工牌按键说话...", color = ProMaxTextSecondary)
+                            }
+                            innerTextField()
+                        }
+                    )
+                }
             }
             Box(
                 modifier = Modifier
                     .size(48.dp)
-                    .background(ProMaxTextPrimary, CircleShape)
+                    .background(if (text.isBlank()) Color.White.copy(alpha = 0.92f) else ProMaxAccent, CircleShape)
                     .clickable { onSend() },
                 contentAlignment = Alignment.Center
             ) {
@@ -602,6 +780,39 @@ private fun GlassCircleButton(icon: ImageVector, onClick: () -> Unit, tint: Colo
         contentAlignment = Alignment.Center
     ) {
         Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+    }
+}
+
+@Composable
+private fun InlineStatusNotice(
+    icon: ImageVector,
+    iconTint: Color,
+    containerColor: Color,
+    borderColor: Color,
+    text: String
+) {
+    PrismSurface(
+        shape = RoundedCornerShape(16.dp),
+        backgroundColor = containerColor,
+        modifier = Modifier
+            .padding(vertical = 4.dp)
+            .border(1.dp, borderColor, RoundedCornerShape(16.dp))
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(12.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .background(iconTint.copy(alpha = 0.14f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(16.dp))
+            }
+            Spacer(Modifier.width(10.dp))
+            Text(text, color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
+        }
     }
 }
 

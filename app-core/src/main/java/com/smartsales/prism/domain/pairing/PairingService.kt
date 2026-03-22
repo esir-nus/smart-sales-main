@@ -1,13 +1,12 @@
 package com.smartsales.prism.domain.pairing
 
-import com.smartsales.prism.data.connectivity.legacy.BlePeripheral
 import kotlinx.coroutines.flow.StateFlow
 
 /**
  * 配对服务接口
  * 
  * 封装 BLE 扫描 + WiFi 配网 + 网络检查的完整配对流程
- * 消费者：OnboardingViewModel, ConnectivityModal
+ * 消费者：PairingFlowViewModel
  */
 interface PairingService {
     /**
@@ -72,8 +71,7 @@ sealed class PairingState {
 data class DiscoveredBadge(
     val id: String,              // BLE MAC 地址
     val name: String,            // 设备名称
-    val signalStrengthDbm: Int,  // 信号强度
-    val peripheral: BlePeripheral // 传递给底层（注：这是技术债务，暂不处理）
+    val signalStrengthDbm: Int   // 信号强度
 )
 
 /**

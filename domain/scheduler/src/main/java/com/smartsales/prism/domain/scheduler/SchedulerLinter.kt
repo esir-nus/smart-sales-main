@@ -359,6 +359,115 @@ class SchedulerLinter @Inject constructor() {
         }
     }
 
+    /**
+     * 解析 Uni-M 多任务拆解结果。
+     * 说明：只负责多任务 create 片段合法性校验，不直接持久化。
+     */
+    fun parseUniMExtraction(input: String): UniMExtractionResult {
+        return try {
+            val payload = jsonInterpreter.decodeFromString<UniMExtractionPayload>(cleanJson(input))
+            when (payload.decision.uppercase()) {
+                "MULTI_CREATE" -> {
+                    if (payload.fragments.isEmpty()) {
+                        return UniMExtractionResult.NotMulti("Uni-M multi-create result missing fragments")
+                    }
+                    if (payload.fragments.size > 4) {
+                        return UniMExtractionResult.NotMulti("Uni-M fragment count exceeds limit")
+                    }
+
+                    val fragments = payload.fragments.mapIndexed { index, fragment ->
+                        parseUniMFragment(index, fragment)
+                    }
+                    UniMExtractionResult.MultiCreate(fragments)
+                }
+                "NOT_MULTI" -> {
+                    UniMExtractionResult.NotMulti(payload.reason ?: "Uni-M decided input is not multi-create")
+                }
+                else -> UniMExtractionResult.NotMulti("Unknown Uni-M decision: ${payload.decision}")
+            }
+        } catch (e: SerializationException) {
+            UniMExtractionResult.NotMulti("Uni-M JSON 结构异常: ${e.message}")
+        } catch (e: IllegalArgumentException) {
+            UniMExtractionResult.NotMulti(e.message ?: "Uni-M 片段结构非法")
+        } catch (e: Exception) {
+            UniMExtractionResult.NotMulti("Uni-M 解析失败: ${e.message}")
+        }
+    }
+
+    private fun parseUniMFragment(index: Int, fragment: UniMTaskFragmentPayload): UniMTaskFragment {
+        val title = fragment.title.trim()
+        require(title.isNotBlank()) { "Uni-M fragment[$index] title is blank" }
+
+        val mode = try {
+            UniMTaskMode.valueOf(fragment.mode.uppercase())
+        } catch (_: Exception) {
+            throw IllegalArgumentException("Uni-M fragment[$index] mode is invalid")
+        }
+        val anchorKind = try {
+            UniMAnchorKind.valueOf(fragment.anchorKind.uppercase())
+        } catch (_: Exception) {
+            throw IllegalArgumentException("Uni-M fragment[$index] anchorKind is invalid")
+        }
+        val urgency = normalizeUrgency(fragment.urgency)
+        require(fragment.durationMinutes >= 0) { "Uni-M fragment[$index] durationMinutes must be >= 0" }
+
+        when (anchorKind) {
+            UniMAnchorKind.ABSOLUTE -> {
+                when (mode) {
+                    UniMTaskMode.EXACT -> {
+                        val startTimeIso = fragment.startTimeIso?.trim().orEmpty()
+                        require(startTimeIso.isNotBlank()) { "Uni-M fragment[$index] exact absolute time is blank" }
+                        require(parseStrictOffsetDateTime(startTimeIso) != null) {
+                            "Uni-M fragment[$index] exact absolute time must be strict ISO-8601"
+                        }
+                    }
+                    UniMTaskMode.VAGUE -> {
+                        val anchorDateIso = fragment.anchorDateIso?.trim().orEmpty()
+                        require(anchorDateIso.isNotBlank()) { "Uni-M fragment[$index] vague absolute anchor is blank" }
+                        require(runCatching { LocalDate.parse(anchorDateIso) }.isSuccess) {
+                            "Uni-M fragment[$index] vague absolute anchor must be yyyy-MM-dd"
+                        }
+                    }
+                }
+            }
+            UniMAnchorKind.NOW_OFFSET,
+            UniMAnchorKind.PREVIOUS_EXACT_OFFSET -> {
+                val offsetMinutes = fragment.relativeOffsetMinutes
+                require(offsetMinutes != null && offsetMinutes > 0) {
+                    "Uni-M fragment[$index] time offset must be positive minutes"
+                }
+            }
+            UniMAnchorKind.NOW_DAY_OFFSET,
+            UniMAnchorKind.PREVIOUS_DAY_OFFSET -> {
+                val relativeDayOffset = fragment.relativeDayOffset
+                require(relativeDayOffset != null && relativeDayOffset >= 0) {
+                    "Uni-M fragment[$index] day offset must be >= 0"
+                }
+                if (mode == UniMTaskMode.EXACT) {
+                    val clockTime = fragment.clockTime?.trim().orEmpty()
+                    require(clockTime.isNotBlank()) { "Uni-M fragment[$index] exact day-offset clockTime is blank" }
+                    require(parseClockTime(clockTime) != null) {
+                        "Uni-M fragment[$index] exact day-offset clockTime must be HH:mm"
+                    }
+                }
+            }
+        }
+
+        return UniMTaskFragment(
+            title = title,
+            mode = mode,
+            anchorKind = anchorKind,
+            urgency = urgency,
+            startTimeIso = fragment.startTimeIso?.trim()?.takeIf { it.isNotBlank() },
+            anchorDateIso = fragment.anchorDateIso?.trim()?.takeIf { it.isNotBlank() },
+            clockTime = fragment.clockTime?.trim()?.takeIf { it.isNotBlank() },
+            timeHint = fragment.timeHint?.trim()?.takeIf { it.isNotBlank() },
+            durationMinutes = fragment.durationMinutes,
+            relativeOffsetMinutes = fragment.relativeOffsetMinutes,
+            relativeDayOffset = fragment.relativeDayOffset
+        )
+    }
+
     private enum class RelativeDayFamily {
         REAL_PLUS_1,
         REAL_PLUS_2,
@@ -462,6 +571,10 @@ class SchedulerLinter @Inject constructor() {
         parseAmPmClock(normalized)?.let { return it }
         parseChineseClock(normalized)?.let { return it }
         return null
+    }
+
+    private fun parseClockTime(raw: String): LocalTime? {
+        return runCatching { LocalTime.parse(raw, DateTimeFormatter.ofPattern("HH:mm")) }.getOrNull()
     }
 
     private fun parseAmPmClock(normalized: String): LocalTime? {

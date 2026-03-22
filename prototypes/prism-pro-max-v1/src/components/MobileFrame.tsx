@@ -1,5 +1,4 @@
 import React from 'react';
-import { clsx } from 'clsx';
 
 interface MobileFrameProps {
   children: React.ReactNode;

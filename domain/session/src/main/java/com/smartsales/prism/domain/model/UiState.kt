@@ -15,6 +15,11 @@ sealed class UiState {
         val structuredJson: String? = null, 
         val suggestAnalyst: Boolean = false
     ) : UiState()
+    data class AudioArtifacts(
+        val audioId: String,
+        val title: String,
+        val artifactsJson: String
+    ) : UiState()
     data class SchedulerTaskCreated(
         val taskId: String,           // 用于冲突检测排除自身
         val title: String,
@@ -85,4 +90,3 @@ data class CandidateOption(
     val displayName: String,
     val description: String? = null
 )
-

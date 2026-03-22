@@ -8,6 +8,8 @@ import com.smartsales.prism.domain.scheduler.UniBExtractionPayload
 import com.smartsales.prism.domain.scheduler.UniBExtractionRequest
 import com.smartsales.prism.domain.scheduler.UniCExtractionPayload
 import com.smartsales.prism.domain.scheduler.UniCExtractionRequest
+import com.smartsales.prism.domain.scheduler.UniMExtractionPayload
+import com.smartsales.prism.domain.scheduler.UniMExtractionRequest
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -178,6 +180,7 @@ open class PromptCompiler @Inject constructor() {
 5. 只要日期锚点合法，且出现明确钟点，就属于 `Uni-A`，不能降级成 `Uni-B`。
    - 例如 `后天晚上九点去接张总`、`明天下午三点半开会`、`tomorrow 6:30 pm remind me to go off office`
    - 这些都必须输出 `EXACT_CREATE`
+   - `3小时后开会`、`45分钟后提醒我出门` 这类以 `now_iso` 为锚点的相对时长表达，也属于 `EXACT_CREATE`
 6. 只有“日期锚点”但没有明确钟点的输入，不属于 `Uni-A`。
    - 例如 `明天提醒我打电话`、`tomorrow remind me to go to the airport`、`后一天提醒我吃饭`、`后天提醒我打电话`
    - 这些都必须输出 `NOT_EXACT`，交给 `Uni-B`，不得擅自补成 `00:00`、当前时刻、午间或任何猜测时刻。
@@ -242,6 +245,76 @@ ${request.transcript}
 ${
     JsonSchemaGenerator.generateSchema(
         UniBExtractionPayload.serializer().descriptor,
+        "  "
+    )
+}
+
+用户输入：
+${request.transcript}
+""".trimIndent()
+
+    /**
+     * 构建 Uni-M 多任务拆解 Prompt。
+     * 说明：只负责把一句话拆成有序 create 片段，不做最终持久化。
+     */
+    open fun compileUniMExtractionPrompt(request: UniMExtractionRequest): String = """
+你是日程 Path A 的多任务拆解器。
+
+你的任务不是直接创建日程，而是只回答一个问题：
+这段话是否包含“一个用户一次说出多个 create 任务”的情况？如果是，请按顺序拆成片段。
+
+当前时间锚点：
+- now_iso: ${request.nowIso}
+- timezone: ${request.timezone}
+- displayed_date_iso: ${request.displayedDateIso ?: "null"}
+
+规则：
+1. 只有“一个 utterance 内包含 2-4 个 create 任务”时，输出 `MULTI_CREATE`。
+2. 如果是单任务、删除、改期、灵感、闲聊，或你没有把握，就输出 `NOT_MULTI`。
+3. 每个片段必须保持原始顺序，不能重排。
+4. 每个片段只允许一种 `mode`：
+   - `EXACT`
+   - `VAGUE`
+5. 每个片段只允许一种 `anchorKind`：
+   - `ABSOLUTE`
+   - `NOW_OFFSET`
+   - `NOW_DAY_OFFSET`
+   - `PREVIOUS_EXACT_OFFSET`
+   - `PREVIOUS_DAY_OFFSET`
+6. `ABSOLUTE` 规则：
+   - `EXACT` 时填写 `startTimeIso`
+   - `VAGUE` 时填写 `anchorDateIso`
+   - `EXACT` 片段可填写 `durationMinutes`；若无法判断，用 `0`
+7. `NOW_OFFSET` 规则：
+   - 只在用户表达“几小时后 / 几分钟后”且没有依赖更早片段时使用
+   - 必须填写 `relativeOffsetMinutes`
+   - 这类片段必须锚定 `now_iso`，不能硬编绝对时间
+8. `NOW_DAY_OFFSET` 规则：
+   - 只在用户表达“明天 / 后天 / tomorrow / next day”且该片段不依赖更早片段时使用
+   - 必须填写 `relativeDayOffset`
+   - 如果 `mode = EXACT`，还必须填写 `clockTime`（严格 `HH:mm`）
+   - 如果 `mode = VAGUE`，可填写 `timeHint`
+   - 这类片段必须锚定 `now_iso` 所在真实日期，不能改锚到页面日期，也不要硬编绝对时间
+9. `PREVIOUS_EXACT_OFFSET` 规则：
+   - 只在用户明确表达“几小时后 / 几分钟后”这类钟点相对关系时使用
+   - 必须填写 `relativeOffsetMinutes`
+   - 不要伪造绝对时间
+10. `PREVIOUS_DAY_OFFSET` 规则：
+   - 只在用户表达“第二天 / next day / same day later”这类按天链式关系时使用
+   - 必须填写 `relativeDayOffset`
+   - 如果 `mode = EXACT`，还必须填写 `clockTime`（严格 `HH:mm`）
+   - 如果 `mode = VAGUE`，可填写 `timeHint`
+11. 如果后一个片段只能依赖前一个片段才能理解，就必须使用相对锚点，而不是硬编绝对时间。
+12. 如果用户说的是单独一句“3小时后开会”，这是合法的 `NOW_OFFSET` 精确任务，不要误判成缺少时间。
+13. 如果用户说的是单独一句“明天下午三点开会”，在多任务拆解里优先用 `NOW_DAY_OFFSET + clockTime` 表达，而不是手算绝对日期。
+14. 片段必须是独立任务，不要把多个动作合并成一个标题。
+15. 最多输出 4 个片段；超过就输出 `NOT_MULTI`。
+16. 只能输出严格 JSON，禁止 Markdown 包裹。
+
+严格输出以下 Kotlin contract 对应的 JSON：
+${
+    JsonSchemaGenerator.generateSchema(
+        UniMExtractionPayload.serializer().descriptor,
         "  "
     )
 }

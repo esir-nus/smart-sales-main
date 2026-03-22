@@ -109,8 +109,9 @@ The remaining scheduler hardening requirements are:
   - source-card exit direction should reflect whether the task moved toward a future or past date
   - destination date must also receive attention signaling
 - **Android-native banner and reminder integration**
-  - scheduler create / conflict feedback should deepen beyond short toast-level status
-  - task-time reminders should integrate with the existing Android notification and alarm stack rather than inventing a SIM-only duplicate
+  - SIM now adopts the existing Android reminder/alarm stack only for persisted exact tasks
+  - scheduler create / conflict / completion still stay on in-drawer status text in T4.8; no immediate native banner is emitted at mutation time
+  - task-time reminders must reuse the shared alarm/notification stack rather than inventing a SIM-only duplicate
 - **Urgency-driven reminder cascade**
   - reminder cadence must stay domain-owned by `UrgencyLevel.buildCascade(...)`
   - delivery tier must stay split by `CascadeTier`: EARLY banner vs DEADLINE full-screen alarm
@@ -121,13 +122,17 @@ Current repo evidence already covers part of this lane:
 - reschedule-ready card state already exists in shared UI models via `TimelineItem.Task.isExiting` and `exitDirection`
 - legacy reminder infrastructure already exists in `RealAlarmScheduler`, `TaskReminderReceiver`, `AlarmActivity`, and `RealNotificationService`
 
-Current SIM-specific gaps:
+Current SIM-specific state and remaining gaps:
 
 - create and vague-create now mark off-page target dates into the reused calendar attention state
 - conflict-visible create now reuses the amber warning-priority calendar channel while normal create remains blue
 - multi-task create now aggregates attention per target date, so mixed batches may mark multiple dates independently
-- reschedule path marks the destination date but does not yet drive the source-card motion contract
-- SIM has not yet deliberately adopted the legacy reminder/notification stack as part of its shipped scheduler contract
+- the shipped SIM voice path now fronts create with `Uni-M` ordered multi-task decomposition before the single-task Uni-A / Uni-B / Uni-C chain
+- `Uni-M` resolves fragments left-to-right; standalone `N hours/minutes later` fragments may anchor to `nowIso`, standalone `明天/后天 + clock` fragments may anchor to `nowIso` via day offsets, exact clock-relative fragments otherwise require a prior exact anchor, and clock-relative fragments after a vague date-only predecessor downgrade to vague when the day anchor remains lawful
+- reschedule path now drives the shared source-card exit-motion contract together with destination attention
+- SIM now reuses the shared reminder stack for persisted exact tasks only: create and conflict-create arm reminders, vague tasks do not, delete and mark-done cancel, reschedule cancels then rearms, and restore-from-done does not rearm in T4.8
+- reminder-reliability prompting stays on the viewmodel/UI boundary through a process-lifetime gate so one create batch does not spam repeated settings prompts; the same seam may carry exact-alarm and OEM-specific notification hardening guidance
+- SIM still defers immediate create/conflict/completion native notifications and still lacks device-level acceptance proof for full banner/deadline delivery
 
 ### Deferred
 
@@ -143,19 +148,27 @@ Current SIM-specific gaps:
 
 If SIM needs cross-surface continuity for a badge-origin scheduler follow-up thread, that continuity is owned by `SIM Shell`, not by `SIM Scheduler`.
 
-In the current implementation this continuity is metadata-only:
+Wave 8 narrows this continuity into a task-scoped follow-up lane.
+
+The delivered V1 follow-up context is:
 
 - badge-origin thread id
 - bound SIM chat session id
-- last active shell surface
+- bound task id list plus task summary snapshot
+- last active shell surface through the shell-owned active binding
 
-It is not:
+It is still not:
 
 - scheduler-owned session memory
-- proof that SIM chat already carries real scheduler follow-up semantics
+- open-ended scheduler assistant behavior
 - a reason to widen `ISchedulerViewModel`
 
-The current SIM implementation starts or replaces this shell-owned binding from `BadgeAudioPipeline.events` only when `PipelineEvent.Complete` yields `TaskCreated` or non-empty `MultiTaskCreated`.
+The current SIM implementation still starts or replaces this lane from `BadgeAudioPipeline.events` only when `PipelineEvent.Complete` yields `TaskCreated` or non-empty `MultiTaskCreated`.
+
+Follow-up mutation ownership remains narrow:
+
+- shell/chat may host prompting, task selection, and follow-up input
+- scheduler-owned mutation truth still belongs to the scheduler task repository, conflict check, and reminder stack
 
 ### Date Attention Contract
 
@@ -166,6 +179,37 @@ SIM reuses the shared scheduler calendar attention channels rather than widening
 - same-page create emits no calendar attention because the created task is already visible in the active timeline
 - multi-task create aggregates attention per target date; any conflicting task on a date upgrades that date to the amber warning-priority channel
 - first user tap on the affected date must acknowledge and clear both attention sets for that date
+
+### Multi-Task Create Contract
+
+SIM treats one multi-task utterance as an ordered batch of independent create tasks.
+
+- `Uni-M` runs first and only for create decomposition; it must not widen delete/reschedule scope
+- each persisted task still gets its own `unifiedId`
+- one utterance-level batch id may be used for telemetry and residue reporting only
+- fragments resolve left-to-right rather than by naive comma-splitting
+- standalone `N hours/minutes later` is lawful exact create by anchoring to `nowIso`
+- standalone `明天/后天/tomorrow + clock` inside a multi-task batch should prefer deterministic `nowIso` day-offset anchoring rather than model-computed absolute dates
+- exact clock-relative fragments are lawful only when a prior exact fragment exists in the same chain
+- if a clock-relative fragment follows a vague date-only fragment, SIM must downgrade it to a vague task when the same lawful day anchor still exists rather than fabricating a clock time or silently dropping it
+- partial success is valid: lawful fragments create tasks, unlawful fragments remain explicit residue in the aggregate batch status
+
+### Native Reminder / Alarm Contract
+
+SIM adopts the shared scheduler reminder infrastructure with a narrowed boundary.
+
+- only persisted exact tasks schedule reminders
+- vague tasks never schedule reminders
+- conflict-persisted exact tasks still schedule reminders
+- reminder cadence remains domain-owned by `UrgencyLevel.buildCascade(...)`
+- scheduler create/conflict/completion do not emit immediate native notifications in T4.8; only task-time reminders use the native stack
+- delete cancels the task reminder
+- mark-done cancels the task reminder
+- restore-from-done does not rearm the reminder in T4.8
+- reschedule cancels the prior reminder and then arms the new exact-time reminder
+- reminder-reliability prompting stays at the `ISchedulerViewModel` boundary and is gated to one prompt emission per process lifetime
+- the delivered prompt must adapt to current OEM risk when possible: exact alarm, battery optimization, and OEM-specific lock-screen / floating / background-notification guidance should not be hardcoded as Xiaomi-only copy
+- reminder scheduling failure must not roll back task persistence or batch success
 
 ---
 

@@ -80,17 +80,17 @@ fun InputBar(
                     modifier = Modifier.background(BackgroundSurfaceActive)
                 ) {
                     DropdownMenuItem(
-                        text = { Text("📄 文件", color = TextPrimary) },
+                        text = { Text("文件", color = TextPrimary) },
                         onClick = { showAttachMenu = false; onUploadFile() },
                         leadingIcon = { Icon(Icons.Default.InsertDriveFile, null, tint = TextSecondary) }
                     )
                     DropdownMenuItem(
-                        text = { Text("🖼️ 图片", color = TextPrimary) },
+                        text = { Text("图片", color = TextPrimary) },
                         onClick = { showAttachMenu = false; onUploadImage() },
                         leadingIcon = { Icon(Icons.Default.Image, null, tint = TextSecondary) }
                     )
                     DropdownMenuItem(
-                        text = { Text("🎙️ 音频", color = TextPrimary) },
+                        text = { Text("音频", color = TextPrimary) },
                         onClick = { showAttachMenu = false; onUploadAudio() },
                         leadingIcon = { Icon(Icons.Default.AudioFile, null, tint = TextSecondary) }
                     )

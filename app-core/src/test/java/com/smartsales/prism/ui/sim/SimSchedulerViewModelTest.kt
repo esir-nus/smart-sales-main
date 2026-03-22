@@ -10,11 +10,14 @@ import com.smartsales.core.telemetry.PipelineValve
 import com.smartsales.core.test.fakes.FakeExecutor
 import com.smartsales.core.test.fakes.FakeInspirationRepository
 import com.smartsales.core.test.fakes.FakeScheduleBoard
+import com.smartsales.prism.data.notification.ExactAlarmPermissionGate
 import com.smartsales.prism.domain.asr.AsrResult
 import com.smartsales.prism.domain.asr.AsrService
 import com.smartsales.prism.domain.memory.ConflictResult
 import com.smartsales.prism.domain.memory.ScheduleItem
 import com.smartsales.prism.domain.memory.ScheduleBoard
+import com.smartsales.core.test.fakes.FakeAlarmScheduler
+import com.smartsales.prism.domain.scheduler.CreateVagueTaskParams
 import com.smartsales.prism.domain.scheduler.CreateTasksParams
 import com.smartsales.prism.domain.scheduler.FastTrackMutationEngine
 import com.smartsales.prism.domain.scheduler.FastTrackResult
@@ -28,6 +31,7 @@ import com.smartsales.prism.domain.scheduler.fakes.FakeTimeProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -56,6 +60,8 @@ class SimSchedulerViewModelTest {
     private lateinit var fakeExecutor: FakeExecutor
     private lateinit var asrService: StubAsrService
     private lateinit var timeProvider: FakeTimeProvider
+    private lateinit var alarmScheduler: FakeAlarmScheduler
+    private lateinit var exactAlarmPermissionGate: FakeExactAlarmPermissionGate
     private lateinit var viewModel: SimSchedulerViewModel
     private val valveEvents = mutableListOf<Pair<PipelineValve.Checkpoint, String>>()
 
@@ -72,6 +78,8 @@ class SimSchedulerViewModelTest {
         fakeExecutor = FakeExecutor()
         asrService = StubAsrService()
         timeProvider = FakeTimeProvider()
+        alarmScheduler = FakeAlarmScheduler()
+        exactAlarmPermissionGate = FakeExactAlarmPermissionGate()
         timeProvider.fixedInstant = Instant.parse("2026-03-20T09:00:00Z")
 
         val schedulerLinter = SchedulerLinter(timeProvider)
@@ -89,6 +97,8 @@ class SimSchedulerViewModelTest {
             taskRepository = taskRepository,
             inspirationRepository = inspirationRepository,
             scheduleBoard = scheduleBoard,
+            alarmScheduler = alarmScheduler,
+            exactAlarmPermissionGate = exactAlarmPermissionGate,
             fastTrackMutationEngine = FastTrackMutationEngine(
                 taskRepository = taskRepository,
                 scheduleBoard = scheduleBoard,
@@ -840,6 +850,273 @@ class SimSchedulerViewModelTest {
         assertEquals("已创建 1 个日程，1 个片段未创建", viewModel.pipelineStatus.value)
     }
 
+    @Test
+    fun `applyFastTrack exact create schedules native reminder cascade`() = runTest {
+        viewModel.applyFastTrackResultForTesting(
+            FastTrackResult.CreateTasks(
+                CreateTasksParams(
+                    unifiedId = "task-exact",
+                    tasks = listOf(
+                        TaskDefinition(
+                            title = "客户会议",
+                            startTimeIso = "2026-03-21T07:00:00Z",
+                            durationMinutes = 60,
+                            urgency = UrgencyEnum.L2_IMPORTANT
+                        )
+                    )
+                )
+            )
+        )
+        advanceUntilIdle()
+
+        val alarms = alarmScheduler.getAlarmsForTask("task-exact")
+        assertEquals(UrgencyLevel.buildCascade(UrgencyLevel.L2_IMPORTANT).size, alarms.size)
+        assertEquals(listOf(60, 15, 5, 0), alarms.map { it.offsetMinutes })
+    }
+
+    @Test
+    fun `applyFastTrack conflict exact create still schedules native reminder cascade`() = runTest {
+        val sequenceBoard = SequenceScheduleBoard(
+            listOf(
+                ConflictResult.Conflict(
+                    overlaps = listOf(
+                        ScheduleItem(
+                            entryId = "other-task",
+                            title = "已有会议",
+                            scheduledAt = Instant.parse("2026-03-21T07:00:00Z").toEpochMilli(),
+                            durationMinutes = 60,
+                            durationSource = com.smartsales.prism.domain.memory.DurationSource.DEFAULT,
+                            conflictPolicy = com.smartsales.prism.domain.memory.ConflictPolicy.EXCLUSIVE
+                        )
+                    )
+                )
+            )
+        )
+        viewModel = buildViewModel(sequenceBoard)
+
+        viewModel.applyFastTrackResultForTesting(
+            FastTrackResult.CreateTasks(
+                CreateTasksParams(
+                    unifiedId = "task-conflict",
+                    tasks = listOf(
+                        TaskDefinition(
+                            title = "客户会议",
+                            startTimeIso = "2026-03-21T07:00:00Z",
+                            durationMinutes = 60,
+                            urgency = UrgencyEnum.L2_IMPORTANT
+                        )
+                    )
+                )
+            )
+        )
+        advanceUntilIdle()
+
+        val task = taskRepository.getTask("task-conflict")
+        assertNotNull(task)
+        assertTrue(task!!.hasConflict)
+        assertEquals(UrgencyLevel.buildCascade(UrgencyLevel.L2_IMPORTANT).size, alarmScheduler.getAlarmsForTask("task-conflict").size)
+    }
+
+    @Test
+    fun `applyFastTrack vague create does not schedule native reminders`() = runTest {
+        viewModel.applyFastTrackResultForTesting(
+            FastTrackResult.CreateVagueTask(
+                CreateVagueTaskParams(
+                    unifiedId = "task-vague",
+                    title = "提醒客户",
+                    anchorDateIso = "2026-03-21",
+                    timeHint = "下午",
+                    urgency = UrgencyEnum.L3_NORMAL
+                )
+            )
+        )
+        advanceUntilIdle()
+
+        assertTrue(alarmScheduler.scheduledAlarms.isEmpty())
+    }
+
+    @Test
+    fun `processAudio Uni-M mixed exact and vague fragments schedule only exact reminders`() = runTest {
+        asrService.nextResult = AsrResult.Success("明天下午三点开会，明天提醒我回电话")
+        enqueueMultiCreateResponse(
+            """
+            {
+              "decision": "MULTI_CREATE",
+              "fragments": [
+                {
+                  "title": "开会",
+                  "mode": "EXACT",
+                  "anchorKind": "NOW_DAY_OFFSET",
+                  "relativeDayOffset": 1,
+                  "clockTime": "15:00",
+                  "durationMinutes": 60,
+                  "urgency": "L2"
+                },
+                {
+                  "title": "回电话",
+                  "mode": "VAGUE",
+                  "anchorKind": "ABSOLUTE",
+                  "anchorDateIso": "2026-03-21",
+                  "timeHint": "下午",
+                  "urgency": "L3"
+                }
+              ]
+            }
+            """.trimIndent()
+        )
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        val tasks = taskRepository.queryByDateRange(timeProvider.today, timeProvider.today.plusDays(2)).snapshot()
+            .filterIsInstance<ScheduledTask>()
+        val exactTask = tasks.single { !it.isVague }
+        val vagueTask = tasks.single { it.isVague }
+
+        assertEquals(2, tasks.size)
+        assertEquals(UrgencyLevel.buildCascade(UrgencyLevel.L2_IMPORTANT).size, alarmScheduler.getAlarmsForTask(exactTask.id).size)
+        assertTrue(alarmScheduler.getAlarmsForTask(vagueTask.id).isEmpty())
+    }
+
+    @Test
+    fun `deleteItem cancels exact task reminders`() = runTest {
+        viewModel.applyFastTrackResultForTesting(
+            FastTrackResult.CreateTasks(
+                CreateTasksParams(
+                    unifiedId = "task-delete",
+                    tasks = listOf(
+                        TaskDefinition(
+                            title = "客户会议",
+                            startTimeIso = "2026-03-21T07:00:00Z",
+                            durationMinutes = 60,
+                            urgency = UrgencyEnum.L2_IMPORTANT
+                        )
+                    )
+                )
+            )
+        )
+        advanceUntilIdle()
+
+        viewModel.deleteItem("task-delete")
+        advanceUntilIdle()
+
+        assertTrue(alarmScheduler.cancelledTaskIds.contains("task-delete"))
+        assertTrue(alarmScheduler.getAlarmsForTask("task-delete").isEmpty())
+    }
+
+    @Test
+    fun `toggleDone cancels exact reminders and restore does not reschedule`() = runTest {
+        viewModel.applyFastTrackResultForTesting(
+            FastTrackResult.CreateTasks(
+                CreateTasksParams(
+                    unifiedId = "task-toggle",
+                    tasks = listOf(
+                        TaskDefinition(
+                            title = "客户会议",
+                            startTimeIso = "2026-03-21T07:00:00Z",
+                            durationMinutes = 60,
+                            urgency = UrgencyEnum.L2_IMPORTANT
+                        )
+                    )
+                )
+            )
+        )
+        advanceUntilIdle()
+
+        viewModel.toggleDone("task-toggle")
+        advanceUntilIdle()
+        viewModel.toggleDone("task-toggle")
+        advanceUntilIdle()
+
+        assertEquals(1, alarmScheduler.cancelledTaskIds.count { it == "task-toggle" })
+        assertTrue(alarmScheduler.getAlarmsForTask("task-toggle").isEmpty())
+    }
+
+    @Test
+    fun `onReschedule cancels old reminder and schedules new cascade`() = runTest {
+        val taskId = taskRepository.insertTask(
+            ScheduledTask(
+                id = "task-reschedule",
+                timeDisplay = "10:00",
+                title = "客户会议",
+                urgencyLevel = UrgencyLevel.L2_IMPORTANT,
+                startTime = Instant.parse("2026-03-20T02:00:00Z"),
+                durationMinutes = 60
+            )
+        )
+        alarmScheduler.scheduleCascade(
+            taskId = taskId,
+            taskTitle = "客户会议",
+            eventTime = Instant.parse("2026-03-20T02:00:00Z"),
+            cascade = UrgencyLevel.buildCascade(UrgencyLevel.L2_IMPORTANT)
+        )
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "EXACT_CREATE",
+                  "task": {
+                    "title": "客户会议",
+                    "startTimeIso": "2026-03-20T08:30:00Z",
+                    "durationMinutes": 45,
+                    "urgency": "L2"
+                  }
+                }
+                """.trimIndent()
+            )
+        )
+
+        viewModel.onReschedule(taskId, "改到今天下午四点半")
+        advanceUntilIdle()
+
+        val updated = taskRepository.getTask(taskId)
+        assertNotNull(updated)
+        val updatedTask = updated!!
+        assertTrue(alarmScheduler.cancelledTaskIds.contains(taskId))
+        assertEquals(UrgencyLevel.buildCascade(UrgencyLevel.L2_IMPORTANT).size, alarmScheduler.getAlarmsForTask(taskId).size)
+        assertTrue(alarmScheduler.getAlarmsForTask(taskId).all { it.triggerAt <= updatedTask.startTime })
+        assertTrue(alarmScheduler.getAlarmsForTask(taskId).any { it.triggerAt == updatedTask.startTime })
+    }
+
+    @Test
+    fun `exact alarm permission prompt emits only once per process while scheduling continues`() = runTest {
+        exactAlarmPermissionGate.needsPrompt = true
+        val promptEvents = mutableListOf<Unit>()
+        val collector = launch {
+            viewModel.exactAlarmPermissionNeeded.collect { promptEvents += Unit }
+        }
+
+        viewModel.applyFastTrackResultForTesting(
+            FastTrackResult.CreateTasks(
+                CreateTasksParams(
+                    tasks = listOf(
+                        TaskDefinition(
+                            title = "客户会议",
+                            startTimeIso = "2026-03-21T07:00:00Z",
+                            durationMinutes = 60,
+                            urgency = UrgencyEnum.L2_IMPORTANT
+                        ),
+                        TaskDefinition(
+                            title = "客户回访",
+                            startTimeIso = "2026-03-21T09:00:00Z",
+                            durationMinutes = 30,
+                            urgency = UrgencyEnum.L3_NORMAL
+                        )
+                    )
+                )
+            )
+        )
+        advanceUntilIdle()
+        collector.cancel()
+
+        assertEquals(1, promptEvents.size)
+        assertEquals(
+            UrgencyLevel.buildCascade(UrgencyLevel.L2_IMPORTANT).size +
+                UrgencyLevel.buildCascade(UrgencyLevel.L3_NORMAL).size,
+            alarmScheduler.scheduledAlarms.size
+        )
+    }
+
     private suspend fun <T> kotlinx.coroutines.flow.Flow<List<T>>.snapshot(): List<T> = first()
 
     private fun enqueueNotMultiResponse(reason: String = "单任务") {
@@ -910,5 +1187,17 @@ class SimSchedulerViewModelTest {
         override suspend fun transcribe(file: File): AsrResult = nextResult
 
         override suspend fun isAvailable(): Boolean = true
+    }
+
+    private class FakeExactAlarmPermissionGate : ExactAlarmPermissionGate {
+        var needsPrompt: Boolean = false
+        private var prompted = false
+
+        override fun shouldPromptForExactAlarm(): Boolean {
+            if (!needsPrompt) return false
+            if (prompted) return false
+            prompted = true
+            return true
+        }
     }
 }

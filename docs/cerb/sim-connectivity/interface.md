@@ -35,7 +35,7 @@ Meaning:
 - SIM shell owns the route state
 - `MODAL` is the bootstrap-only connectivity surface used for `NeedsSetup`
 - `SETUP` is a nested full-screen SIM overlay entered from the modal and backed by the onboarding pairing subset
-- `MANAGER` is the full-screen SIM connectivity surface for all configured/non-setup states, but remains connection-only in this slice
+- `MANAGER` is the contained SIM connectivity surface for all configured/non-setup states, but remains connection-only in this slice
 - setup completion enters `MANAGER`
 - later connectivity entry opens `MANAGER` directly when a device/session already exists
 
@@ -79,13 +79,11 @@ Meaning:
 - SIM must not let connectivity contracts reshape scheduler runtime behavior
 - SIM audio may consume `ConnectivityBridge` only for badge-origin recording ingress and badge file operations, not for chat/session ownership
 
-### Explicit Carry Debt
+### Active Carry Debt
 
-Current migration debt that remains outside this interface freeze:
+Current migration debt that remains after T5.3:
 
-- `PairingService` still leaks `legacy.BlePeripheral` through `DiscoveredBadge`
-- the onboarding viewmodel still carries profile/account collaborators that the SIM pairing subset does not need
-- manager presentation refinement is deferred UI work
+- no Wave 5 interface-level carry debt is currently blocking SIM connectivity behavior
 
 ---
 

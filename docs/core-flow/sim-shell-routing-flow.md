@@ -40,6 +40,7 @@ This file is allowed to be ahead of the codebase.
 5. **Visual continuity does not justify runtime reuse**: the shell may look like Prism while still using a different composition root.
 6. **Ordinary shell practices may survive, but smart runtime meaning must not**: history, new page/session, connectivity entry, and settings are allowed when simplified for SIM; mascot overlay, debug HUD, plugin task board, and smart-only right drawers are not required SIM behavior.
 7. **Shell state must not require the smart app's orchestration model**: audio-grounded chat may track selected audio and local SIM history, but SIM must not depend on the smart app's broader memory architecture by default.
+8. **Badge scheduler follow-up is prompt-first**: badge-origin scheduler success may create or rebind a task-scoped follow-up session, but SIM must surface it through an in-shell prompt/chip rather than force-switching chat immediately.
 
 ---
 
@@ -71,6 +72,7 @@ Permitted shell transitions:
 - discussion chat -> settings
 - audio drawer -> simple chat via `Ask AI`
 - simple chat -> audio drawer for re-selection
+- badge-origin scheduler completion -> follow-up prompt/chip -> task-scoped follow-up session
 
 Forbidden shell assumptions:
 
@@ -142,6 +144,14 @@ This is the top-level routing model for the SIM shell.
           | Discussion Chat    |   | Discussion Chat    |
           | Visible            |   | Visible            |
           +--------------------+   +---------+----------+
+                                             ^
+                                             |
+                                 +-----------+-----------+
+                                 | Badge Follow-Up Prompt|
+                                 +-----------+-----------+
+                                             ^
+                                             |
+                                [Badge Scheduler Completion]
                                              |
                                              v
                                   +----------------------+
@@ -186,6 +196,14 @@ When the user opens history:
 - SIM may allow rename, delete, and pin
 - the surface must not depend on Oasis-style memory or smart-agent reasoning state
 
+### Branch-S5: Multi-Task Follow-Up Selection
+
+When badge-origin completion created a follow-up session with multiple bound tasks:
+
+- SIM may reuse the normal chat surface
+- mutation-capable follow-up must remain blocked until the user explicitly selects one task
+- no delete, mark-done, or reschedule mutation may silently guess a target task
+
 ---
 
 ## Done-When Definition
@@ -196,5 +214,6 @@ The SIM shell is behaviorally ready only when:
 - scheduler and audio drawers route correctly
 - `Ask AI` transitions into simple chat
 - audio re-selection returns to the audio drawer
+- badge-origin scheduler follow-up stays prompt-first and task-scoped
 - ordinary SIM shell practices remain available without reviving the smart runtime
 - smart-only shell surfaces are not required for normal SIM use

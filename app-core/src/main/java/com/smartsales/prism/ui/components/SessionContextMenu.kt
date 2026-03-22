@@ -51,7 +51,7 @@ fun SessionContextMenu(
                 // 置顶/取消置顶
                 ContextMenuItem(
                     icon = Icons.Filled.PushPin,
-                    text = if (isPinned) "取消置顶" else "📌 置顶",
+                    text = if (isPinned) "取消置顶" else "置顶",
                     tint = if (isPinned) Color.Gray else Color(0xFFFFB74D),
                     onClick = {
                         onPin()
@@ -64,7 +64,7 @@ fun SessionContextMenu(
                 // 重命名
                 ContextMenuItem(
                     icon = Icons.Filled.Edit,
-                    text = "✏️ 重命名",
+                    text = "重命名",
                     tint = Color(0xFF64B5F6),
                     onClick = {
                         onRename()
@@ -77,7 +77,7 @@ fun SessionContextMenu(
                 // 删除
                 ContextMenuItem(
                     icon = Icons.Filled.Delete,
-                    text = "🗑️ 删除",
+                    text = "删除",
                     tint = Color(0xFFFF5252),
                     onClick = {
                         onDelete()

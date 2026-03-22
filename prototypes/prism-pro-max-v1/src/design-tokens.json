@@ -1,25 +1,60 @@
 {
   "theme": {
-    "name": "Sleek Glass (Pro Max)",
-    "colors": {
-      "bg-app": "#F5F5F7",
-      "bg-surface": "rgba(255, 255, 255, 0.70)",
-      "color-accent": "#000000",
-      "color-text-primary": "#1D1D1F",
-      "color-text-secondary": "#86868B"
-    },
-    "borders": {
-      "base": "rgba(0, 0, 0, 0.04)",
-      "width": "0.5px"
-    },
-    "shadows": {
-      "glass": "0 20px 40px -10px rgba(0, 0, 0, 0.05)"
-    },
-    "radii": {
-      "card": "20px"
-    },
+    "name": "Prism Executive Aurora Glass",
+    "intent": "Modern mobile executive workspace with a glassmorphism homepage and a top-mounted scheduler drawer.",
     "typography": {
-      "font-spacing": "-0.02em"
-    }
+      "heading": "Poppins",
+      "body": "Open Sans",
+      "rules": [
+        "Headings use tighter tracking for executive density.",
+        "Body copy stays high-contrast and calm for long reading sessions.",
+        "Labels use uppercase eyebrow styling instead of decorative iconography."
+      ]
+    },
+    "colorSystem": {
+      "background": {
+        "base": "#050913",
+        "auroraBlue": "#4DA5FF",
+        "auroraViolet": "#A876FF",
+        "auroraGreen": "#4FD6A8"
+      },
+      "surface": {
+        "glassFillTop": "rgba(20, 30, 48, 0.68)",
+        "glassFillBottom": "rgba(12, 19, 32, 0.58)",
+        "borderStrong": "rgba(255, 255, 255, 0.12)",
+        "borderSoft": "rgba(255, 255, 255, 0.08)"
+      },
+      "semantic": {
+        "primaryAction": "#74D3FF",
+        "aiContext": "#A876FF",
+        "attention": "#FFB259",
+        "success": "#4FD6A8"
+      },
+      "text": {
+        "primary": "rgba(240, 245, 255, 0.96)",
+        "secondary": "rgba(195, 207, 226, 0.76)",
+        "tertiary": "rgba(170, 184, 205, 0.58)"
+      }
+    },
+    "surfaceRules": {
+      "radius": {
+        "frame": "38px",
+        "panel": "28px",
+        "micro": "16px"
+      },
+      "blur": "26px",
+      "shadow": "0 24px 60px rgba(0,0,0,0.28)"
+    },
+    "motionRules": {
+      "default": "240ms ease-out",
+      "drawer": "Pointer drag plus snap points at 18%, 24%, 42%, 78%",
+      "accessibility": "Reduced-motion mode disables decorative transitions"
+    },
+    "viRules": [
+      "No emoji in primary UI chrome or status communication.",
+      "Blue is reserved for forward action, violet for AI context, amber for conflicts, green for completion.",
+      "The scheduler keeps urgency, conflict, and completion as separate signals.",
+      "Glass surfaces always sit on dark aurora fields to preserve contrast."
+    ]
   }
 }

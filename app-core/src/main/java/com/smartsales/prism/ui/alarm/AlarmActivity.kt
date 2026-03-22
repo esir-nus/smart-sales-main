@@ -236,7 +236,7 @@ class AlarmActivity : ComponentActivity() {
             )
             entryPoint.notificationService().show(
                 id = "${item.taskId}-missed",
-                title = "🔔 未接提醒: ${item.title}",
+                title = "未接提醒: ${item.title}",
                 body = item.timeText,
                 channel = PrismNotificationChannel.TASK_REMINDER_EARLY,  // 静默通知用 EARLY 渠道
                 priority = NotificationPriority.LOW

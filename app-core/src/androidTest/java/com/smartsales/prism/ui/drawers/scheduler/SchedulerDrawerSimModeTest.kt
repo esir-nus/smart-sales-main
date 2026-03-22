@@ -2,6 +2,7 @@ package com.smartsales.prism.ui.drawers.scheduler
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
+import com.smartsales.prism.data.notification.ReminderReliabilityAdvisor
 import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.domain.scheduler.UrgencyLevel
 import com.smartsales.prism.ui.drawers.SchedulerDrawer
@@ -170,6 +171,47 @@ class SchedulerDrawerSimModeTest {
         composeTestRule.onNode(
             hasTextExactly(targetDay.toString()) and hasDateAttentionKind("warning")
         ).assertExists()
+    }
+
+    @Test
+    fun exactAlarmPromptShowsGuideAndRoutesPrimaryAction() {
+        val viewModel = FakeSchedulerViewModel()
+        val openedActions = mutableListOf<ReminderReliabilityAdvisor.Action>()
+        val guide = ReminderReliabilityAdvisor.ReminderReliabilityGuide(
+            title = "精确闹钟权限",
+            message = "未授予精确闹钟权限时，提醒可能延迟。",
+            checklist = listOf("开启闹钟和提醒权限"),
+            primaryAction = ReminderReliabilityAdvisor.Action.EXACT_ALARM,
+            primaryLabel = "闹钟权限",
+            secondaryAction = ReminderReliabilityAdvisor.Action.APP_NOTIFICATION_SETTINGS,
+            secondaryLabel = "通知设置"
+        )
+
+        composeTestRule.setContent {
+            SchedulerDrawer(
+                isOpen = true,
+                onDismiss = {},
+                viewModel = viewModel,
+                reminderGuideProvider = { guide },
+                reminderActionOpener = { _, action ->
+                    openedActions += action
+                    true
+                }
+            )
+        }
+
+        composeTestRule.runOnIdle {
+            viewModel.debugEmitExactAlarmPermissionNeeded()
+        }
+
+        composeTestRule.onNodeWithText("精确闹钟权限").assertExists()
+        composeTestRule.onNodeWithText("闹钟权限").performClick()
+
+        assertEquals(
+            listOf(ReminderReliabilityAdvisor.Action.EXACT_ALARM),
+            openedActions
+        )
+        composeTestRule.onNodeWithText("精确闹钟权限").assertDoesNotExist()
     }
 
     private fun hasDateAttentionKind(kind: String): SemanticsMatcher {

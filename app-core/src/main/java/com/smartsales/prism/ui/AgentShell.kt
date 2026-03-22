@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Construction
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,6 +22,7 @@ import com.smartsales.prism.ui.drawers.HistoryViewModel
 import com.smartsales.prism.ui.drawers.SchedulerDrawer
 import com.smartsales.prism.ui.settings.UserCenterScreen
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
@@ -304,7 +307,16 @@ private fun RightDrawerStub(
                 Column(Modifier.padding(16.dp)) {
                     Text(title, color = com.smartsales.prism.ui.theme.TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     Spacer(modifier = Modifier.height(20.dp))
-                    Text("🚧 功能开发中", color = com.smartsales.prism.ui.theme.TextSecondary)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Filled.Construction,
+                            contentDescription = null,
+                            tint = com.smartsales.prism.ui.theme.TextSecondary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("功能开发中", color = com.smartsales.prism.ui.theme.TextSecondary)
+                    }
                     Spacer(modifier = Modifier.weight(1f))
                     Button(onClick = onDismiss) {
                         Text("关闭")

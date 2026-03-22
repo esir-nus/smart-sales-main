@@ -1,45 +1,68 @@
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    /* Chapter 5: Sleek Glass (Pro Max) Tokens */
-    --bg-app: #F5F5F7; /* Pro Max Gray */
-    --bg-surface: rgba(255, 255, 255, 0.70); /* High-Translucency Glass */
-    --bg-surface-muted: rgba(0, 0, 0, 0.02);
-    
-    --color-text-primary: #1D1D1F; /* SF Black */
-    --color-text-secondary: #86868B; /* SF Gray */
-    --color-accent: #000000; /* Stark Black */
-    
-    --border-base: rgba(0, 0, 0, 0.04); /* Hairline 4% */
-    --shadow-glass: 0 20px 40px -10px rgba(0, 0, 0, 0.05); /* Pro Max Depth */
+    --font-heading: 'Poppins', 'Segoe UI', sans-serif;
+    --font-body: 'Open Sans', 'Segoe UI', sans-serif;
+
+    --bg-app:
+      radial-gradient(circle at top, rgba(89, 173, 255, 0.16), transparent 32%),
+      radial-gradient(circle at 85% 18%, rgba(152, 116, 255, 0.14), transparent 24%),
+      linear-gradient(180deg, #050913 0%, #060c17 42%, #04070d 100%);
+
+    --surface-glass: linear-gradient(180deg, rgba(20, 30, 48, 0.68), rgba(12, 19, 32, 0.58));
+    --surface-soft: rgba(255, 255, 255, 0.05);
+
+    --text-primary: rgba(240, 245, 255, 0.96);
+    --text-secondary: rgba(195, 207, 226, 0.76);
+    --text-tertiary: rgba(170, 184, 205, 0.58);
+
+    --accent-cyan: #74d3ff;
+    --accent-blue: #4da5ff;
+    --accent-violet: #a876ff;
+    --accent-amber: #ffb259;
+    --accent-green: #4fd6a8;
+
+    --border-strong: rgba(255, 255, 255, 0.12);
+    --border-soft: rgba(255, 255, 255, 0.08);
+
+    --shadow-glass:
+      0 24px 60px rgba(0, 0, 0, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    min-height: 100%;
   }
 
   body {
-    @apply bg-prism-bg text-prism-primary font-sans antialiased selection:bg-black/10;
-    /* Contamination Prevention */
+    margin: 0;
+    font-family: var(--font-body);
+    background: var(--bg-app);
+    color: var(--text-primary);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    user-select: none; /* App-like feel */
-    -webkit-tap-highlight-color: transparent;
-    letter-spacing: -0.02em; /* Global Tight Tracking */
+    selection: rgba(116, 211, 255, 0.22);
   }
 
-  /* Hide Scrollbar Global */
+  button,
+  input,
+  textarea {
+    font: inherit;
+  }
+
   ::-webkit-scrollbar {
-    width: 0px;
-    background: transparent;
-  }
-}
-
-@layer utilities {
-  .border-retina {
-    border-width: 0.5px;
-  }
-  
-  .glass-panel {
-    @apply bg-prism-surface backdrop-blur-xl border border-prism-border shadow-glass;
+    width: 0;
+    height: 0;
   }
 }

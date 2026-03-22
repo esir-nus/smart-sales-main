@@ -73,3 +73,12 @@ Collapsed scheduler cards must preserve separate glanceable signals for urgency,
 - Completion visibility is a separate card treatment from urgency.
 - A completed task may be visually de-emphasized, but completion must remain explicitly visible.
 - Completion state must not erase or redefine the underlying urgency classification.
+
+## Calendar Date Attention Contract
+
+The scheduler calendar may render temporary date-attention signaling separate from card urgency/conflict/completion.
+
+- `unacknowledgedDates` is the normal-attention channel
+- `rescheduledDates` is the warning-priority channel
+- if a date exists in both sets, the warning-priority channel wins visually
+- first user tap on that date must acknowledge and clear the attention state for that date

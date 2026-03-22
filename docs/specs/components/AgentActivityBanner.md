@@ -1,7 +1,7 @@
 # AgentActivityBanner Component
 
 > **Definitions**: Uses [GLOSSARY.md](../GLOSSARY.md)
-> **Status**: ✅ Shipped
+> **Status**: Shipped
 > **Source**: Extracted from prism-ui-ux-contract.md
 > **Code**: `AgentActivityBanner.kt`
 
@@ -17,8 +17,8 @@ The AgentActivityBanner uses a **two-tier structure** to showcase agent activity
 
 | Layer | Role | Example |
 |-------|------|---------|
-| **Phase** | High-level task (always visible) | "📝 规划分析步骤", "⚙️ 执行工具: PDF生成" |
-| **Action** | Specific operation (optional) | "🧠 思考中...", "📚 检索记忆..." |
+| **Phase** | High-level task (always visible) | "规划分析步骤", "执行工具: PDF生成" |
+| **Action** | Specific operation (optional) | "思考中...", "检索记忆..." |
 | **Trace** | Streaming content (optional) | Native CoT, transcript, memory hits |
 
 ---

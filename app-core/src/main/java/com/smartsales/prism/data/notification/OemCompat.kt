@@ -50,6 +50,23 @@ object OemCompat {
         }
     }
 
+    /**
+     * 打开电池优化豁免设置
+     */
+    fun openBatteryOptimizationSettings(context: Context): Boolean {
+        return try {
+            val intent = createBatteryOptimizationIntent(context).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+            Log.d(TAG, "已打开电池优化豁免设置")
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "无法打开电池优化设置: ${e.message}")
+            openAppInfo(context)
+        }
+    }
+
     // ---- Defense Layer 3: 精确闹钟权限 ----
 
     /**
@@ -108,6 +125,26 @@ object OemCompat {
             true
         } catch (e: Exception) {
             Log.w(TAG, "MIUI 权限编辑页不可用: ${e.message}")
+            openAppInfo(context)
+        }
+    }
+
+    /**
+     * 打开应用通知设置页
+     */
+    fun openNotificationSettings(context: Context): Boolean {
+        return try {
+            val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                putExtra("app_package", context.packageName)
+                putExtra("app_uid", context.applicationInfo.uid)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+            Log.d(TAG, "已打开应用通知设置")
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "无法打开应用通知设置: ${e.message}")
             openAppInfo(context)
         }
     }

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Menu, Plus, BarChart2, Bug } from 'lucide-react';
 
 interface HeaderProps {

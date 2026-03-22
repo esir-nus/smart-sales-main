@@ -25,8 +25,11 @@ fun SchedulerTimelineItem.toUiState(
         is ScheduledTask -> TimelineItem.Task(
             id = id,
             timeDisplay = timeDisplay,
+            renderKey = id,
             title = title,
             isDone = isDone,
+            isInteractive = true,
+            sortInstant = startTime,
             hasAlarm = hasAlarm,
             isSmartAlarm = isSmartAlarm,
             urgencyLevel = urgencyLevel,

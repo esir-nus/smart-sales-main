@@ -41,6 +41,7 @@ trigger: always_on
 
 ## 🎨 UI & Compose
 - **UI Element entirely missing** → Check upstream data pipeline logs first. (Ref: *UI Element Not Appearing*)
+- **Drawer looks broken after reinstall** → Verify cold-start seed data and explicit empty state before blaming layout. (Ref: *Cold-Start Empty State Masquerading as Layout Regression*)
 - **Drawer scrim issues** → Separate `AnimatedVisibility` for scrim and drawer. (Ref: *Compose Scrim Inside AnimatedVisibility*)
 - **Drawer click passthrough** → Modal content must explicitly `consume` pointer events. (Ref: *Modal Drawer Click Passthrough*)
 - **Swipe-to-dismiss background** → Use `targetValue != Settled`, not `dismissDirection`. (Ref: *SwipeToDismiss Background Visibility*)

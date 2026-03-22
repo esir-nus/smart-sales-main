@@ -49,6 +49,10 @@ class TaskReminderReceiver : BroadcastReceiver() {
         val offsetMinutes = intent.getIntExtra(RealAlarmScheduler.EXTRA_OFFSET_MINUTES, 15)
         val tier = CascadeTier.from(offsetMinutes)
 
+        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) {
+            Log.w(TAG, "系统已关闭应用通知: taskId=$taskId，Receiver 已触发但系统会拦截展示")
+        }
+
         Log.d(TAG, "收到任务提醒: taskId=$taskId, title=$taskTitle, offset=${offsetMinutes}min, tier=$tier")
 
         // DEADLINE 需要 WakeLock 确保 Activity 启动

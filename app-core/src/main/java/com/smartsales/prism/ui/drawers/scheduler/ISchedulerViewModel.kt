@@ -26,6 +26,7 @@ interface ISchedulerViewModel {
     val causingTaskId: StateFlow<String?>
     val isInspirationsExpanded: StateFlow<Boolean>
     val expandedConflictIds: StateFlow<Set<String>>
+    val exitingTasks: StateFlow<List<RescheduleExitMotion>>
     
     // The Active/Completed Combined Reactive Stream
     val timelineItems: StateFlow<List<SchedulerTimelineItem>>

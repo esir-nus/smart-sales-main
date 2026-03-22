@@ -3,6 +3,7 @@ package com.smartsales.prism.ui.components
 import androidx.compose.animation.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -34,10 +35,10 @@ fun ThinkingTicker(
             .padding(vertical = 4.dp, horizontal = 24.dp), // Indented more than chat bubbles
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Simple pulsing dot or gear icon could go here
-        Text(
-            text = "⚙️",
-            fontSize = 12.sp
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .background(Color(0xFF88CCFF), CircleShape)
         )
         Spacer(modifier = Modifier.width(8.dp))
         
@@ -62,7 +63,7 @@ fun ThinkingTicker(
 @Composable
 private fun TickerPreview() {
     ThinkingTicker(
-        text = "📄 Reading Q3_Report.pdf (Pg 5/12)...",
+        text = "Reading Q3_Report.pdf (Pg 5/12)...",
         progress = 0.4f
     )
 }

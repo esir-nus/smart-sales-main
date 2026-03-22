@@ -1,6 +1,8 @@
 package com.smartsales.prism.di
 
 import com.smartsales.prism.data.notification.RealNotificationService
+import com.smartsales.prism.data.notification.ExactAlarmPermissionGate
+import com.smartsales.prism.data.notification.RealExactAlarmPermissionGate
 import com.smartsales.prism.domain.notification.NotificationService
 import dagger.Binds
 import dagger.Module
@@ -20,4 +22,10 @@ abstract class NotificationModule {
     abstract fun bindNotificationService(
         impl: RealNotificationService
     ): NotificationService
+
+    @Binds
+    @Singleton
+    abstract fun bindExactAlarmPermissionGate(
+        impl: RealExactAlarmPermissionGate
+    ): ExactAlarmPermissionGate
 }

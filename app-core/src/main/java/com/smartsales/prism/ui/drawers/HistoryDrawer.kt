@@ -6,6 +6,8 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -75,6 +77,9 @@ fun HistoryDrawer(
         HistorySessionList(
             groupedSessions = groupedSessions,
             onSessionClick = onSessionClick,
+            onPinSession = onPinSession,
+            onRenameSession = onRenameSession,
+            onDeleteSession = onDeleteSession,
             contentPadding = PaddingValues(top = 100.dp, bottom = 120.dp) // Space for floating elements
         )
 
@@ -206,8 +211,46 @@ private fun FloatingGlassDock(
 private fun HistorySessionList(
     groupedSessions: Map<String, List<SessionPreview>>,
     onSessionClick: (String) -> Unit,
+    onPinSession: (String) -> Unit,
+    onRenameSession: (String, String, String) -> Unit,
+    onDeleteSession: (String) -> Unit,
     contentPadding: PaddingValues
 ) {
+    if (groupedSessions.isEmpty()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(contentPadding)
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = Color.White.copy(alpha = 0.92f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 18.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "暂无会话",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimary
+                    )
+                    Text(
+                        text = "创建新对话或从音频入口进入讨论后，会话会显示在这里。",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                }
+            }
+        }
+        return
+    }
+
     LazyColumn(
         contentPadding = contentPadding,
         modifier = Modifier.fillMaxSize(),
@@ -219,6 +262,9 @@ private fun HistorySessionList(
                     title = group,
                     sessions = sessions,
                     onSessionClick = onSessionClick,
+                    onPinSession = onPinSession,
+                    onRenameSession = onRenameSession,
+                    onDeleteSession = onDeleteSession,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
             }
@@ -231,6 +277,9 @@ private fun CollapsibleGroupCard(
     title: String,
     sessions: List<SessionPreview>,
     onSessionClick: (String) -> Unit,
+    onPinSession: (String) -> Unit,
+    onRenameSession: (String, String, String) -> Unit,
+    onDeleteSession: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(true) }
@@ -291,7 +340,13 @@ private fun CollapsibleGroupCard(
             ) {
                 Column {
                     sessions.forEachIndexed { index, session ->
-                        HistoryCardItem(session, onSessionClick)
+                        HistoryCardItem(
+                            session = session,
+                            onClick = onSessionClick,
+                            onPinSession = onPinSession,
+                            onRenameSession = onRenameSession,
+                            onDeleteSession = onDeleteSession
+                        )
                         if (index < sessions.lastIndex) {
                             Divider(color = BorderSubtle, modifier = Modifier.padding(start = 16.dp))
                         }
@@ -303,14 +358,26 @@ private fun CollapsibleGroupCard(
 }
 
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 private fun HistoryCardItem(
     session: SessionPreview,
-    onClick: (String) -> Unit
+    onClick: (String) -> Unit,
+    onPinSession: (String) -> Unit,
+    onRenameSession: (String, String, String) -> Unit,
+    onDeleteSession: (String) -> Unit
 ) {
+    var showMenu by remember { mutableStateOf(false) }
+    var showRenameDialog by remember { mutableStateOf(false) }
+    var renameClientName by remember(session.id) { mutableStateOf(session.clientName) }
+    var renameSummary by remember(session.id) { mutableStateOf(session.summary) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { onClick(session.id) }
+            .combinedClickable(
+                onClick = { onClick(session.id) },
+                onLongClick = { showMenu = true }
+            )
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -351,6 +418,79 @@ private fun HistoryCardItem(
                 )
             }
         }
+
+        Box {
+            Icon(
+                imageVector = Icons.Filled.MoreVert,
+                contentDescription = "Session actions",
+                tint = TextSecondary.copy(alpha = 0.7f),
+                modifier = Modifier.clickable { showMenu = true }
+            )
+
+            DropdownMenu(
+                expanded = showMenu,
+                onDismissRequest = { showMenu = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text(if (session.isPinned) "取消置顶" else "置顶") },
+                    onClick = {
+                        showMenu = false
+                        onPinSession(session.id)
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("重命名") },
+                    onClick = {
+                        showMenu = false
+                        showRenameDialog = true
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text("删除") },
+                    onClick = {
+                        showMenu = false
+                        onDeleteSession(session.id)
+                    }
+                )
+            }
+        }
+    }
+
+    if (showRenameDialog) {
+        AlertDialog(
+            onDismissRequest = { showRenameDialog = false },
+            title = { Text("重命名会话") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = renameClientName,
+                        onValueChange = { renameClientName = it },
+                        label = { Text("标题") },
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = renameSummary,
+                        onValueChange = { renameSummary = it },
+                        label = { Text("摘要") },
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onRenameSession(session.id, renameClientName, renameSummary)
+                        showRenameDialog = false
+                    }
+                ) {
+                    Text("确认")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRenameDialog = false }) {
+                    Text("取消")
+                }
+            }
+        )
     }
 }
-

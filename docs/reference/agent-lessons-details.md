@@ -24,6 +24,26 @@ When adding a new lesson (after USER confirms "problem fixed"):
 
 ## Lessons
 
+### Cold-Start Empty State Masquerading as Layout Regression — 2026-03-19
+
+**Symptom**: After fixing SIM history row actions, the on-device history drawer reopened as a white sheet with header/footer but no visible cards. It looked like the new row layout had broken the drawer.  
+**Root Cause**: The real failure was **cold-start state, not layout math**. A fresh reinstall reset SIM-local sessions, and `HistoryDrawer` had no explicit empty state. The shell therefore rendered a valid but visually misleading blank drawer.  
+**Wrong Approach**:  
+1. Treating the screenshot as proof that the new card layout had collapsed  
+2. Validating only on warm state, where old sessions still existed  
+3. Shipping a drawer with no empty-state contract, so "no data" looked identical to "broken UI"  
+**Correct Fix**:  
+1. Seed stable local sample sessions for SIM Wave 1 after cold start so history acceptance always has real cards to exercise  
+2. Add an explicit empty-state card to `HistoryDrawer` so empty data never masquerades as a rendering regression  
+3. Re-run on-device acceptance from a fresh install, not only from an already-populated runtime  
+**File(s)**:  
+- [SimAgentViewModel.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/ui/sim/SimAgentViewModel.kt)  
+- [HistoryDrawer.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/ui/drawers/HistoryDrawer.kt)  
+**Pattern**: If a drawer/screen suddenly "looks broken" after a reinstall, check whether the runtime lost its local seed data and whether the empty-state path is visually explicit before assuming the new layout code is wrong.  
+**Status**: ✅ CONFIRMED 2026-03-19
+
+---
+
 ### Compose Scrim Inside AnimatedVisibility — 2026-02-02
 
 **Symptom**: Grey screen covers drawer, clicking anywhere dismisses  

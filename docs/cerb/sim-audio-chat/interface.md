@@ -14,11 +14,21 @@ fun AudioDrawer(
     isOpen: Boolean,
     onDismiss: () -> Unit,
     onNavigateToChat: (sessionId: String, isNew: Boolean) -> Unit,
+    onSyncFromBadge: () -> Unit,
     modifier: Modifier = Modifier
 )
 ```
 
 SIM should reuse this UI surface.
+
+Meaning:
+
+- `onSyncFromBadge()` is exposed only in browse mode
+- manual sync is a drawer-local secondary action for badge-origin inventory refresh
+- chat-reselect mode suppresses the manual sync trigger so selection behavior stays stable
+- opening the browse drawer may also trigger one best-effort auto-sync attempt when connectivity is already ready
+- auto-sync readiness is owned by the SIM repository/connectivity seam rather than shell UI connection-state mapping
+- sync outcomes must not reroute the shell; success updates inventory in place, failure stays drawer-local
 
 ### Ask AI
 
@@ -51,6 +61,7 @@ interface AudioRepository {
     fun getAudio(audioId: String): AudioFile?
     fun getBoundSessionId(audioId: String): String?
     fun bindSession(audioId: String, sessionId: String)
+    fun clearBoundSession(audioId: String)
     suspend fun getArtifacts(audioId: String): TingwuJobArtifacts?
 }
 ```
@@ -60,9 +71,14 @@ SIM may reuse this contract.
 Notes:
 
 - `syncFromDevice()` is the product ingress for badge-origin recordings.
+- browse-mode manual sync and browse-open auto-sync must both call this same contract.
+- badge sync is additive-only for this slice: repeated `/list` checks are allowed, but a badge filename already present in local `SMARTBADGE` inventory must not be redownloaded into local storage.
 - `addLocalAudio(uriString)` is a test-only convenience seam for QA/dev validation; it must not become the default product upload path.
 - `ConnectivityBridge` is an allowed backend dependency only for badge-origin recording ingress and badge file operations.
 - connectivity must not become the owner of SIM audio/chat session flow, artifact persistence, or chat routing.
+- if `syncFromDevice()` fails because connectivity is absent or offline, the existing SIM inventory remains usable and the failure is surfaced as drawer-local feedback.
+- the shared `AudioRepository.syncFromDevice(): Unit` contract remains unchanged in this slice; any richer readiness or outcome reporting must stay SIM-local.
+- `clearBoundSession(audioId)` is the explicit SIM cleanup path when a linked session is deleted or startup reconciliation detects a dangling binding.
 
 ### Shared Pipeline Rule
 
@@ -74,6 +90,23 @@ Meaning:
 - a completed artifact produced through the chat-side path must already be visible when that same item is reopened from the drawer
 - chat-side selection must not require a follow-up drawer-origin rerun to make the artifact "real"
 - when one audio item is already pending/transcribing, duplicate transcribe triggers for that same item must be locked across entry surfaces
+
+### SIM Session Store
+
+```kotlin
+class SimSessionRepository {
+    fun loadSessions(): List<SimPersistedSession>
+    fun saveSession(preview: SessionPreview, messages: List<ChatMessage>)
+    fun deleteSession(sessionId: String)
+}
+```
+
+Meaning:
+
+- SIM session persistence is file-backed and SIM-namespaced rather than shared with the smart runtime
+- durable history persists only user text, AI response, AI audio artifacts, and AI error turns
+- cold start restores stored sessions without auto-selecting an active chat session
+- startup reconciliation may use persisted session links plus audio metadata to restore or clear bindings safely
 
 ---
 

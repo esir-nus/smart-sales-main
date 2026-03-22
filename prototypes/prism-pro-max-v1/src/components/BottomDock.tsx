@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Plus, Mic, Microscope, MessageSquare } from 'lucide-react';
 import { clsx } from 'clsx';
-import { motion } from 'framer-motion';
 
 export const BottomDock = () => {
   const [activeMode, setActiveMode] = useState<'coach' | 'analyst'>('analyst');

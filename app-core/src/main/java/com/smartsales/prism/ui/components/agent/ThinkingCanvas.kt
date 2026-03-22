@@ -54,7 +54,17 @@ fun ThinkingCanvas(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = "💡", fontSize = 12.sp)
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0x154FC3F7)
+                    ) {
+                        Text(
+                            text = "CTX",
+                            color = Color(0xFF88CCFF),
+                            fontSize = 10.sp,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                        )
+                    }
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "Agent Context",
@@ -83,7 +93,17 @@ fun ThinkingCanvas(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(text = "💡", fontSize = 14.sp)
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = Color(0x154FC3F7)
+                            ) {
+                                Text(
+                                    text = "CTX",
+                                    color = Color(0xFF88CCFF),
+                                    fontSize = 10.sp,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                                )
+                            }
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "Agent Internal Monologue",

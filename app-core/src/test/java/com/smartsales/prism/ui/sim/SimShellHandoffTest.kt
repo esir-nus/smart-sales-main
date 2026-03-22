@@ -1,8 +1,12 @@
 package com.smartsales.prism.ui.sim
 
 import com.smartsales.core.telemetry.PipelineValve
+import com.smartsales.prism.domain.audio.PipelineEvent
+import com.smartsales.prism.domain.audio.SchedulerResult
+import com.smartsales.prism.domain.model.SchedulerFollowUpTaskSummary
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -72,4 +76,445 @@ class SimShellHandoffTest {
         assertFalse(started)
         assertFalse(closed)
     }
+
+    @Test
+    fun `handleBadgeSchedulerFollowUpStart creates owner binding from created session`() {
+        val ownerBindings = mutableListOf<String>()
+
+        val sessionId = handleBadgeSchedulerFollowUpStart(
+            seed = SimBadgeSchedulerFollowUpSeed(
+                threadId = "thread_1",
+                transcript = "follow up after badge request",
+                tasks = listOf(
+                    SchedulerFollowUpTaskSummary(
+                        taskId = "task_1",
+                        title = "客户回访",
+                        dayOffset = 0,
+                        scheduledAtMillis = 123L,
+                        durationMinutes = 30
+                    )
+                )
+            ),
+            startSession = { seed ->
+                assertEquals("follow up after badge request", seed.transcript)
+                "session_123"
+            },
+            startOwner = { sessionId, threadId -> ownerBindings += "$sessionId:$threadId" }
+        )
+
+        assertEquals("session_123", sessionId)
+        assertEquals(listOf("session_123:thread_1"), ownerBindings)
+    }
+
+    @Test
+    fun `handleBadgeSchedulerFollowUpStart ignores blank prompt`() {
+        var started = false
+        var ownerStarted = false
+
+        val sessionId = handleBadgeSchedulerFollowUpStart(
+            seed = SimBadgeSchedulerFollowUpSeed(
+                threadId = "thread_1",
+                transcript = "   ",
+                tasks = emptyList()
+            ),
+            startSession = {
+                started = true
+                "session_123"
+            },
+            startOwner = { _, _ -> ownerStarted = true }
+        )
+
+        assertNull(sessionId)
+        assertFalse(started)
+        assertFalse(ownerStarted)
+    }
+
+    @Test
+    fun `emitBadgeSchedulerContinuityIngressTelemetry emits accepted summary and log`() {
+        val checkpoints = mutableListOf<Pair<PipelineValve.Checkpoint, String>>()
+        val logs = mutableListOf<String>()
+
+        PipelineValve.testInterceptor = { checkpoint, _, summary ->
+            checkpoints += checkpoint to summary
+        }
+
+        try {
+            emitBadgeSchedulerContinuityIngressTelemetry("follow up after client badge") { message ->
+                logs += message
+            }
+
+            assertTrue(
+                checkpoints.contains(
+                    PipelineValve.Checkpoint.UI_STATE_EMITTED to
+                        SIM_BADGE_SCHEDULER_CONTINUITY_INGRESS_ACCEPTED_SUMMARY
+                )
+            )
+            assertEquals(
+                listOf("badge scheduler continuity ingress accepted: follow up after client badge"),
+                logs
+            )
+        } finally {
+            PipelineValve.testInterceptor = null
+        }
+    }
+
+    @Test
+    fun `handleBadgeSchedulerContinuityIngress starts session for task created completion`() {
+        val ownerBindings = mutableListOf<String>()
+        val telemetryPrompts = mutableListOf<String>()
+
+        val sessionId = handleBadgeSchedulerContinuityIngress(
+            event = PipelineEvent.Complete(
+                result = SchedulerResult.TaskCreated(
+                    taskId = "task_1",
+                    title = "follow up",
+                    dayOffset = 0,
+                    scheduledAtMillis = 123L,
+                    durationMinutes = 30
+                ),
+                filename = "badge_1.wav",
+                transcript = "follow up after client badge"
+            ),
+            startSession = { seed ->
+                assertEquals("follow up after client badge", seed.transcript)
+                assertEquals(listOf("task_1"), seed.tasks.map { it.taskId })
+                "session_123"
+            },
+            startOwner = { sessionId, threadId -> ownerBindings += "$sessionId:$threadId" },
+            emitTelemetry = { telemetryPrompts += it }
+        )
+
+        assertEquals("session_123", sessionId)
+        assertEquals(listOf("follow up after client badge"), telemetryPrompts)
+        assertEquals(1, ownerBindings.size)
+        assertTrue(ownerBindings.single().startsWith("session_123:"))
+    }
+
+    @Test
+    fun `handleBadgeSchedulerContinuityIngress accepts non empty multi task completion`() {
+        val sessionCalls = mutableListOf<String>()
+        val ownerBindings = mutableListOf<String>()
+
+        val sessionId = handleBadgeSchedulerContinuityIngress(
+            event = PipelineEvent.Complete(
+                result = SchedulerResult.MultiTaskCreated(
+                    tasks = listOf(
+                        SchedulerResult.TaskCreated(
+                            taskId = "task_1",
+                            title = "follow up",
+                            dayOffset = 0,
+                            scheduledAtMillis = 123L,
+                            durationMinutes = 30
+                        )
+                    )
+                ),
+                filename = "badge_2.wav",
+                transcript = "schedule both customer follow ups"
+            ),
+            startSession = { seed ->
+                sessionCalls += seed.transcript
+                assertEquals(1, seed.tasks.size)
+                "session_multi"
+            },
+            startOwner = { sessionId, threadId -> ownerBindings += "$sessionId:$threadId" }
+        )
+
+        assertEquals("session_multi", sessionId)
+        assertEquals(listOf("schedule both customer follow ups"), sessionCalls)
+        assertEquals(1, ownerBindings.size)
+        assertTrue(ownerBindings.single().startsWith("session_multi:"))
+    }
+
+    @Test
+    fun `handleBadgeSchedulerContinuityIngress ignores non scheduler completions and blank transcript`() {
+        val startedPrompts = mutableListOf<String>()
+        val ownerBindings = mutableListOf<String>()
+        val emittedTelemetry = mutableListOf<String>()
+
+        val ignoredEvents = listOf(
+            PipelineEvent.RecordingStarted,
+            PipelineEvent.Processing("processing"),
+            PipelineEvent.Error(
+                stage = PipelineEvent.Stage.SCHEDULE,
+                message = "boom",
+                filename = "badge_3.wav"
+            ),
+            PipelineEvent.Complete(
+                result = SchedulerResult.InspirationSaved(id = "insp_1"),
+                filename = "badge_4.wav",
+                transcript = "save this inspiration"
+            ),
+            PipelineEvent.Complete(
+                result = SchedulerResult.AwaitingClarification(question = "when"),
+                filename = "badge_5.wav",
+                transcript = "maybe reschedule"
+            ),
+            PipelineEvent.Complete(
+                result = SchedulerResult.Ignored,
+                filename = "badge_6.wav",
+                transcript = "hello there"
+            ),
+            PipelineEvent.Complete(
+                result = SchedulerResult.MultiTaskCreated(tasks = emptyList()),
+                filename = "badge_7.wav",
+                transcript = "schedule several things"
+            ),
+            PipelineEvent.Complete(
+                result = SchedulerResult.TaskCreated(
+                    taskId = "task_2",
+                    title = "follow up",
+                    dayOffset = 0,
+                    scheduledAtMillis = 456L,
+                    durationMinutes = 30
+                ),
+                filename = "badge_8.wav",
+                transcript = "   "
+            )
+        )
+
+        ignoredEvents.forEach { event ->
+            val sessionId = handleBadgeSchedulerContinuityIngress(
+                event = event,
+                startSession = { seed ->
+                    startedPrompts += seed.transcript
+                    "session_should_not_start"
+                },
+                startOwner = { sessionId, threadId -> ownerBindings += "$sessionId:$threadId" },
+                emitTelemetry = { emittedTelemetry += it }
+            )
+
+            assertNull(sessionId)
+        }
+
+        assertTrue(startedPrompts.isEmpty())
+        assertTrue(ownerBindings.isEmpty())
+        assertTrue(emittedTelemetry.isEmpty())
+    }
+
+    @Test
+    fun `buildSimDebugFollowUpEvent single creates task created completion`() {
+        val event = buildSimDebugFollowUpEvent(
+            scenario = SimDebugFollowUpScenario.SINGLE,
+            nowMillis = 1_000L
+        )
+
+        val result = event.result as SchedulerResult.TaskCreated
+        assertEquals("debug_follow_up_single", result.taskId)
+        assertEquals("提醒我一会儿回访客户", event.transcript)
+    }
+
+    @Test
+    fun `buildSimDebugFollowUpEvent multi creates multi task completion`() {
+        val event = buildSimDebugFollowUpEvent(
+            scenario = SimDebugFollowUpScenario.MULTI,
+            nowMillis = 1_000L
+        )
+
+        val result = event.result as SchedulerResult.MultiTaskCreated
+        assertEquals(2, result.tasks.size)
+        assertEquals("安排两个客户回访", event.transcript)
+    }
+
+    @Test
+    fun `handleSimNewSessionAction clears follow up before starting new session`() {
+        val calls = mutableListOf<String>()
+
+        handleSimNewSessionAction(
+            activeFollowUp = followUpState(boundSessionId = "session_1"),
+            clearFollowUp = { reason -> calls += "clear:$reason" },
+            startNewSession = { calls += "start" }
+        )
+
+        assertEquals(
+            listOf("clear:${SimBadgeFollowUpClearReason.NEW_SESSION}", "start"),
+            calls
+        )
+    }
+
+    @Test
+    fun `handleSimSessionSwitchAction clears only when switching away from bound session`() {
+        val unrelatedCalls = mutableListOf<String>()
+        handleSimSessionSwitchAction(
+            targetSessionId = "session_2",
+            activeFollowUp = followUpState(boundSessionId = "session_1"),
+            clearFollowUp = { reason -> unrelatedCalls += "clear:$reason" },
+            switchSession = { unrelatedCalls += "switch:$it" }
+        )
+        assertEquals(
+            listOf("clear:${SimBadgeFollowUpClearReason.SESSION_SWITCHED}", "switch:session_2"),
+            unrelatedCalls
+        )
+
+        val sameSessionCalls = mutableListOf<String>()
+        handleSimSessionSwitchAction(
+            targetSessionId = "session_1",
+            activeFollowUp = followUpState(boundSessionId = "session_1"),
+            clearFollowUp = { reason -> sameSessionCalls += "clear:$reason" },
+            switchSession = { sameSessionCalls += "switch:$it" }
+        )
+        assertEquals(listOf("switch:session_1"), sameSessionCalls)
+    }
+
+    @Test
+    fun `handleSimSessionDeleteAction clears only when deleting bound session`() {
+        val boundCalls = mutableListOf<String>()
+        handleSimSessionDeleteAction(
+            targetSessionId = "session_1",
+            activeFollowUp = followUpState(boundSessionId = "session_1"),
+            clearFollowUp = { reason -> boundCalls += "clear:$reason" },
+            deleteSession = { boundCalls += "delete:$it" }
+        )
+        assertEquals(
+            listOf("clear:${SimBadgeFollowUpClearReason.SESSION_DELETED}", "delete:session_1"),
+            boundCalls
+        )
+
+        val unrelatedCalls = mutableListOf<String>()
+        handleSimSessionDeleteAction(
+            targetSessionId = "session_2",
+            activeFollowUp = followUpState(boundSessionId = "session_1"),
+            clearFollowUp = { reason -> unrelatedCalls += "clear:$reason" },
+            deleteSession = { unrelatedCalls += "delete:$it" }
+        )
+        assertEquals(listOf("delete:session_2"), unrelatedCalls)
+    }
+
+    @Test
+    fun `deriveSimFollowUpSurface follows shell surface priority`() {
+        assertEquals(
+            SimBadgeFollowUpSurface.CHAT,
+            deriveSimFollowUpSurface(SimShellState())
+        )
+        assertEquals(
+            SimBadgeFollowUpSurface.SCHEDULER,
+            deriveSimFollowUpSurface(SimShellState(activeDrawer = SimDrawerType.SCHEDULER))
+        )
+        assertEquals(
+            SimBadgeFollowUpSurface.CONNECTIVITY,
+            deriveSimFollowUpSurface(
+                SimShellState(
+                    activeDrawer = SimDrawerType.SCHEDULER,
+                    activeConnectivitySurface = SimConnectivitySurface.MODAL
+                )
+            )
+        )
+        assertEquals(
+            SimBadgeFollowUpSurface.HISTORY,
+            deriveSimFollowUpSurface(
+                SimShellState(
+                    activeDrawer = SimDrawerType.SCHEDULER,
+                    activeConnectivitySurface = SimConnectivitySurface.MODAL,
+                    showHistory = true
+                )
+            )
+        )
+        assertEquals(
+            SimBadgeFollowUpSurface.SETTINGS,
+            deriveSimFollowUpSurface(
+                SimShellState(
+                    showSettings = true
+                )
+            )
+        )
+    }
+
+    @Test
+    fun `emitSimAudioPersistedArtifactOpenedTelemetry emits summary and offline log`() {
+        val checkpoints = mutableListOf<Pair<PipelineValve.Checkpoint, String>>()
+        val logs = mutableListOf<Pair<String, String>>()
+
+        PipelineValve.testInterceptor = { checkpoint, _, summary ->
+            checkpoints += checkpoint to summary
+        }
+
+        try {
+            emitSimAudioPersistedArtifactOpenedTelemetry(
+                audioId = "audio_1",
+                title = "SIM_Debug_Fallback.mp3",
+                log = { tag, message -> logs += tag to message }
+            )
+
+            assertTrue(
+                checkpoints.contains(
+                    PipelineValve.Checkpoint.UI_STATE_EMITTED to
+                        SIM_AUDIO_PERSISTED_ARTIFACT_OPENED_SUMMARY
+                )
+            )
+            assertEquals(
+                listOf(
+                    "SimAudioOffline" to
+                        "SIM audio persisted artifact opened: audioId=audio_1 title=SIM_Debug_Fallback.mp3"
+                ),
+                logs
+            )
+        } finally {
+            PipelineValve.testInterceptor = null
+        }
+    }
+
+    @Test
+    fun `emitSimAudioGroundedChatOpenedFromArtifactTelemetry emits summary and chat route log`() {
+        val checkpoints = mutableListOf<Pair<PipelineValve.Checkpoint, String>>()
+        val logs = mutableListOf<Pair<String, String>>()
+
+        PipelineValve.testInterceptor = { checkpoint, _, summary ->
+            checkpoints += checkpoint to summary
+        }
+
+        try {
+            emitSimAudioGroundedChatOpenedFromArtifactTelemetry(
+                audioId = "audio_2",
+                title = "SIM_Debug_Missing_Sections.mp3",
+                log = { tag, message -> logs += tag to message }
+            )
+
+            assertTrue(
+                checkpoints.contains(
+                    PipelineValve.Checkpoint.UI_STATE_EMITTED to
+                        SIM_AUDIO_GROUNDED_CHAT_OPENED_FROM_ARTIFACT_SUMMARY
+                )
+            )
+            assertEquals(
+                listOf(
+                    "SimAudioChatRoute" to
+                        "SIM audio grounded chat opened from artifact: audioId=audio_2 title=SIM_Debug_Missing_Sections.mp3"
+                ),
+                logs
+            )
+        } finally {
+            PipelineValve.testInterceptor = null
+        }
+    }
+
+    @Test
+    fun `shouldAttemptSimAudioDrawerAutoSync only returns true for browse drawer`() {
+        assertTrue(
+            shouldAttemptSimAudioDrawerAutoSync(
+                isDrawerOpen = true,
+                mode = SimAudioDrawerMode.BROWSE
+            )
+        )
+        assertFalse(
+            shouldAttemptSimAudioDrawerAutoSync(
+                isDrawerOpen = true,
+                mode = SimAudioDrawerMode.CHAT_RESELECT
+            )
+        )
+        assertFalse(
+            shouldAttemptSimAudioDrawerAutoSync(
+                isDrawerOpen = false,
+                mode = SimAudioDrawerMode.BROWSE
+            )
+        )
+    }
+
+    private fun followUpState(boundSessionId: String) = SimBadgeFollowUpState(
+        threadId = "thread_1",
+        origin = SimBadgeFollowUpOrigin.BADGE,
+        lane = SimBadgeFollowUpLane.SCHEDULER,
+        boundSessionId = boundSessionId,
+        createdAt = 1L,
+        updatedAt = 1L,
+        lastActiveSurface = SimBadgeFollowUpSurface.SHELL
+    )
 }

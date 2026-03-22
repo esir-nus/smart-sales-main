@@ -33,6 +33,7 @@ Responsibilities:
 - host SIM support surfaces such as history and connectivity entry
 - route `Ask AI` and audio re-selection flows
 - own the badge scheduler follow-up continuity binding metadata
+- show the badge-origin scheduler follow-up prompt/chip when the bound session is not the active chat
 - own connectivity route state, overlay presentation, and SIM route telemetry only
 
 Connectivity-specific non-responsibilities:
@@ -58,6 +59,15 @@ Notes:
 - `IAgentViewModel` is reused as a UI seam, not as approval to use `AgentViewModel`
 - `ISchedulerViewModel` is reused as a UI seam, not as approval to use `SchedulerViewModel`
 - the current shared `AudioDrawer` does not yet expose an equivalent safe seam, so Wave 1 may use a SIM-owned drawer wrapper until that boundary is extracted
+
+### Session Persistence Behavior
+
+- SIM chat history loads from a SIM-only `SimSessionRepository`
+- cold start may restore grouped history entries, but does not auto-resume an active chat session
+- normal runtime does not seed demo sessions into SIM history
+- durable history is limited to user text, AI response, AI audio artifacts, and AI error turns
+- session metadata may also persist a SIM session kind plus optional scheduler-follow-up context snapshot
+- input text, sending/thinking state, toast/error presentation, and transcript-reveal UI state remain memory-only
 
 ---
 
@@ -104,6 +114,7 @@ class SimBadgeFollowUpOwner : ViewModel() {
 
     fun startBadgeSchedulerFollowUp(
         boundSessionId: String,
+        threadId: String,
         initialSurface: SimBadgeFollowUpSurface = SimBadgeFollowUpSurface.SHELL
     )
 
@@ -119,6 +130,7 @@ Notes:
 - the bound SIM chat session remains the conversational source of truth
 - `SimShell` starts this binding from `BadgeAudioPipeline.events`
 - only `PipelineEvent.Complete` with `TaskCreated` or non-empty `MultiTaskCreated` may start or replace the binding
+- accepted badge-origin completion creates or rebinds a persisted task-scoped follow-up session, but the shell should expose it through a prompt/chip rather than auto-opening chat
 - shelf-card `Ask AI` and scheduler dev/test mic flows must not start or mutate the binding
 - unrelated session switch, bound-session delete, and explicit new session must clear the binding
 

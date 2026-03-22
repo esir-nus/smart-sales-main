@@ -1,4 +1,3 @@
-import React from 'react';
 import { Star, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 

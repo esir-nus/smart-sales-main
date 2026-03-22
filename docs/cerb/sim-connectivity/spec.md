@@ -90,11 +90,12 @@ This shard does not turn connectivity into a third smart feature lane.
 - onboarding account/profile/notification behavior is not part of SIM connectivity
 - connectivity must not become a hidden prerequisite for the two main SIM lanes
 
-#### Explicit T5.3 Debt
+#### T5.3 Isolation Result
 
-- `domain/pairing/PairingService` still leaks `legacy.BlePeripheral` through `DiscoveredBadge`
-- `OnboardingViewModel` still carries `UserProfileRepository` even though SIM setup does not use onboarding profile/account behavior
-- manager presentation debt is deferred UI work and not part of this boundary freeze
+- `domain/pairing/DiscoveredBadge` is now plain domain data; `RealPairingService` keeps discovered `BlePeripheral` transport state internal
+- SIM setup and onboarding pairing now use a dedicated `PairingFlowViewModel`
+- `OnboardingViewModel` is narrowed to profile persistence only
+- manager presentation debt is now closed in code: SIM renders the configured-state manager as a contained support panel instead of a visually dominant full-screen page
 
 ---
 
@@ -124,7 +125,7 @@ Expectations:
 - entry is reachable from normal shell use
 - `ConnectivityModal` is the bootstrap-only entry for `NeedsSetup`
 - `开始配网` transitions into the onboarding connectivity subset (`HARDWARE_WAKE` -> `SCAN` -> `DEVICE_FOUND` -> `BLE_CONNECTING` -> `WIFI_CREDS` -> `FIRMWARE_CHECK`) as a nested SIM-owned full-screen overlay
-- setup success transitions into a full-screen SIM connectivity manager surface
+- setup success transitions into a contained SIM connectivity manager surface
 - once a device/session already exists, later connectivity entry opens the manager directly instead of reopening the bootstrap modal
 - closing the manager returns the user to SIM chat
 
@@ -134,11 +135,12 @@ This entry does not change the rule that SIM has only two main product lanes.
 
 - `AgentIntelligenceScreen` badge/device action and history drawer device action both open the same SIM-owned connectivity route
 - when connection state is `NeedsSetup`, connectivity entry opens the bootstrap modal
-- when a device/session already exists, connectivity entry opens the full-screen connectivity manager directly
+- when a device/session already exists, connectivity entry opens the contained connectivity manager directly
 - the setup branch reuses onboarding pairing UI/business logic rather than the legacy `DeviceSetupScreen`
 - setup success enters the SIM connectivity manager instead of returning directly to chat or continuing into onboarding naming/account/profile steps
 - the SIM manager remains a connection-only steady-state surface in this slice; it does not recover the historical full `DeviceManager` file-list/product scope
-- scrim dismissal applies to the modal route only; the full-screen setup and manager branches are owned by explicit actions/events
+- manager presentation is intentionally contained so connectivity reads as a support panel instead of taking over the shell
+- scrim dismissal applies to the modal route only; setup and manager branches are owned by explicit actions/events
 
 ---
 
@@ -177,4 +179,5 @@ SIM connectivity is ready only when:
 - a SIM shell entry/icon exists for badge connection management
 - existing connectivity contracts remain the behavioral source
 - connectivity use does not contaminate scheduler/audio/chat runtime behavior
-- the shell/connectivity ownership split is explicit enough for T5.3 isolation work to proceed without new product decisions
+- the shell/connectivity ownership split remains explicit after the T5.3 cleanup
+- the pairing domain seam and onboarding pairing seam no longer carry the previously recorded contamination debt

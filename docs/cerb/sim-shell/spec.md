@@ -24,6 +24,7 @@ It exists to preserve the current Prism family look while preventing contaminati
 - simple navigation between discussion chat, scheduler, and audio
 - shell support surfaces such as history, new page/session, connectivity entry, and settings entry
 - shell-owned badge scheduler follow-up continuity binding metadata
+- badge-origin scheduler follow-up prompt/chip routing
 - prototype-only dependency composition boundary
 
 `SIM Shell` does not own:
@@ -225,6 +226,23 @@ In Wave 5, this continuity binding now starts from the real badge pipeline ingre
 - raw recording arrival, shelf-card `Ask AI`, and scheduler dev/test mic paths must not start or mutate this binding
 - each new accepted badge scheduler completion replaces the previous active binding until the pipeline exposes an explicit lineage id
 
+### Wave 8 Task-Scoped Scheduler Follow-Up
+
+Wave 8 upgrades the old continuity seam from metadata-only handoff into a real but narrow SIM follow-up lane.
+
+Locked shell behavior:
+
+- accepted badge-origin completion creates or rebinds a persisted follow-up session
+- shell keeps the active binding in memory only
+- shell surfaces a visible follow-up prompt/chip instead of auto-switching chat
+- opening that prompt reuses the normal SIM chat surface rather than creating a new scheduler cockpit
+
+Locked shell limits:
+
+- shell must not auto-open the follow-up session while the user is on another SIM surface
+- shell must not invent a second local memory lane
+- multi-task follow-up mutation must stay blocked until the user explicitly selects one bound task
+
 Lifecycle rules:
 
 - overlay navigation across chat, scheduler, history, connectivity, and settings may update the last active surface
@@ -249,6 +267,91 @@ Minimum expected composition units:
 
 This boundary is the contamination firewall.
 
+### T6.1 Prototype-Only DI Root
+
+`T6.1` freezes the SIM composition-root contract before more isolation implementation begins.
+
+Required composition chain:
+
+1. `SimMainActivity`
+2. `SimShell`
+3. SIM-owned runtime owners such as `SimAgentViewModel`, `SimSchedulerViewModel`, and SIM audio/connectivity coordinators
+4. a SIM-owned dependency assembler / module set
+
+Meaning:
+
+- SIM may remain inside the same application process and APK
+- SIM must not inherit smart-app runtime ownership just because both product paths share the same binary
+- the SIM dependency assembler decides what is reused directly, what is wrapped, and what is excluded
+- the smart app's root graph may still exist in the process, but it must not become the default owner of SIM feature behavior
+
+Forbidden root paths:
+
+- `AgentMainActivity -> AgentShell -> AgentViewModel`
+- treating `PrismModule` as the effective SIM root
+- allowing smart-root singletons to define SIM shell/session behavior by accident
+
+### Dependency Classification Table
+
+`T6.1` is decision-complete only if SIM dependency policy is explicit.
+
+| Dependency / Service | SIM Policy | Reason |
+|------|------|------|
+| `AgentIntelligenceScreen`, `SchedulerDrawer`, `HistoryDrawer`, `ConnectivityModal`, `UserCenterScreen` | Direct reuse | Shared UI surfaces are allowed when SIM still owns state, routing, and runtime meaning. |
+| `IAgentViewModel`, `ISchedulerViewModel` seams | Direct reuse | Existing interface seams are already the preferred boundary for SIM-owned replacements. |
+| `ConnectivityBridge`, `ConnectivityService`, `PairingService`, `ConnectivityViewModel` | Direct reuse | These are leaf/support contracts already frozen as allowed Wave 5 reuse and do not own SIM shell/session semantics. |
+| `BadgeAudioPipeline` events feed | SIM-wrapped reuse | SIM may consume the event stream, but only through shell-owned continuity/routing logic rather than giving the pipeline shell ownership. |
+| SIM audio repository seam and artifact persistence | SIM-wrapped reuse | Audio storage and binding logic must stay SIM-namespaced and must not silently inherit smart-app persistence assumptions. |
+| session/history persistence seam | SIM-owned namespaced persistence | `T6.3` stores SIM session metadata and durable history in SIM-only files so smart sessions cannot leak into SIM through shared tables or filenames. |
+| notification/alarm stack | SIM-wrapped reuse | Reminder infrastructure is reusable, but only once T4.8/T6.x explicitly defines SIM ownership of entry, routing, and lifecycle consequences. |
+| `AudioDrawer` / shared audio UI state machinery | SIM-wrapped reuse | Shared UI can be reused, but only after SIM-owned repository/runtime behavior is clearly separated from smart-path assumptions. |
+| `AgentMainActivity`, `AgentShell`, `AgentViewModel` | Forbidden | These are smart-app runtime roots and would make SIM a fake standalone path. |
+| global `PrismModule` as SIM composition root | Forbidden | SIM needs a prototype-only dependency assembler instead of inheriting the smart app's full root graph. |
+| mascot/debug HUD/plugin-task-board owners | Forbidden | These carry smart-shell meaning that is outside the SIM product contract. |
+| smart-only session/memory ownership | Forbidden | SIM chat may keep local discussion state, but must not depend on the broader smart-agent memory architecture by default. |
+
+### T6.1 Parallel-Safe Rule
+
+While scheduler shipping work continues in `T4.8`, this `T6.1` slice stays docs-first and must avoid implementation changes in the shared collision zone:
+
+- `SimMainActivity`
+- `SimShell`
+- shared notification/alarm entry wiring
+
+Reason:
+
+- `T4.8` may still need reminder/banner/alarm behavior in scheduler-owned paths
+- `T6.1` is only freezing root-ownership truth, not executing the isolation refactor yet
+
+If later implementation requires changes in those files, that work must be scheduled as a dedicated follow-on slice after checking for collision with the active scheduler lane.
+
+### T6.1 Explicit Deferrals
+
+This slice does not implement:
+
+- `T6.2` audio persistence namespacing work
+- `T6.4` verification execution
+- `T4.8` reminder/banner/alarm behavior
+- any new connectivity behavior beyond the already accepted Wave 5 boundary
+
+### T6.3 Accepted SIM Session Persistence
+
+`T6.3` is now implemented as SIM-only durable session persistence.
+
+- session metadata persists in `sim_session_metadata.json`
+- durable history for each session persists in `sim_session_<sessionId>_messages.json`
+- SIM does not reuse the smart app's broader session-memory or history persistence path
+- cold start restores grouped SIM history, but does not auto-select an active session
+- normal runtime does not seed demo sessions into SIM history
+- durable turns are limited to user text, AI response, AI audio artifacts, and AI error
+- transient UI state such as input text, sending/thinking state, toast/error presentation, and transcript-reveal knowledge remains memory-only
+- Wave 8 extends this metadata with a session kind plus optional scheduler-follow-up context:
+  badge thread id,
+  bound task ids,
+  optional batch id,
+  task summary snapshot,
+  create/update timestamps
+
 ---
 
 ## 8. Human Reality
@@ -268,7 +371,7 @@ So the shell may simplify behavior as long as:
 
 The shell must not assume it can safely share all smart-app session state.
 
-Session identity, chat context, and audio bindings may need prototype-specific storage or namespacing.
+Session identity, chat context, and audio bindings now use prototype-specific storage or namespacing in the shipped SIM path.
 
 ### Failure Gravity
 
@@ -285,7 +388,7 @@ That failure is worse than minor UI drift.
 | 1 | Standalone entry and shell contract | IMPLEMENTED_PENDING_RUNTIME_VERIFICATION | `SimMainActivity`, `SimShell`, shell spec/interface |
 | 2 | Chat-shell reuse via interface seam | IMPLEMENTED | `SimAgentViewModel : IAgentViewModel` |
 | 3 | Drawer orchestration cleanup | IN_PROGRESS | scheduler/audio/history support behavior |
-| 4 | Isolation validation | PLANNED | proof that smart runtime is not the SIM root |
+| 4 | Isolation validation | IN_PROGRESS | T6.1 root-policy freeze and later proof that smart runtime is not the SIM root |
 
 ---
 
@@ -293,4 +396,4 @@ That failure is worse than minor UI drift.
 
 This shard defines planning truth for a future standalone topology.
 
-`docs/cerb/interface-map.md` should not be updated until the package/composition boundary is chosen and real implementation ownership exists.
+`docs/cerb/interface-map.md` should be updated only if T6.x later introduces a materially new cross-module ownership edge. The T6.1 policy freeze alone does not require interface-map registration.

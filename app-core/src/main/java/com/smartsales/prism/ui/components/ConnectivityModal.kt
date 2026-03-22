@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BatteryFull
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.BluetoothDisabled
 import androidx.compose.material.icons.filled.Close
@@ -19,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -72,42 +74,155 @@ fun ConnectivityModal(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // 根据状态动态渲染内容
-                AnimatedContent(targetState = state, label = "StateTransition") { currentState ->
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        when (currentState) {
-                            ConnectionState.CONNECTED -> ConnectedView(
-                                battery = batteryLevel,
-                                onUnbind = { viewModel.disconnect() },
-                                onCheckUpdate = { viewModel.checkForUpdate() }
-                            )
-                            ConnectionState.DISCONNECTED -> DisconnectedView(
-                                onReconnect = { viewModel.reconnect() }
-                            )
-                            ConnectionState.NEEDS_SETUP -> NeedsSetupView(
-                                onStartSetup = {
-                                    onDismiss()
-                                    onNavigateToSetup()
-                                }
-                            )
-                            ConnectionState.CHECKING_UPDATE -> CheckingUpdateView()
-                            ConnectionState.UPDATE_FOUND -> UpdateFoundView(
-                                onSync = { viewModel.startUpdate() },
-                                onLater = { viewModel.cancel() }
-                            )
-                            ConnectionState.UPDATING -> UpdatingView(
-                                onComplete = { viewModel.completeUpdate() }
-                            )
-                            ConnectionState.RECONNECTING -> ReconnectingView()
-                            ConnectionState.WIFI_MISMATCH -> WifiMismatchView(
-                                onUpdate = { ssid, password -> viewModel.updateWifiConfig(ssid, password) },
-                                onIgnore = { viewModel.cancel() }
-                            )
-                        }
-                    }
-                }
+                ConnectivityStateContent(
+                    state = state,
+                    batteryLevel = batteryLevel,
+                    onDisconnect = viewModel::disconnect,
+                    onCheckUpdate = viewModel::checkForUpdate,
+                    onReconnect = viewModel::reconnect,
+                    onStartSetup = {
+                        onDismiss()
+                        onNavigateToSetup()
+                    },
+                    onStartUpdate = viewModel::startUpdate,
+                    onCancel = viewModel::cancel,
+                    onCompleteUpdate = viewModel::completeUpdate,
+                    onUpdateWifi = viewModel::updateWifiConfig
+                )
                 
                 Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun ConnectivityManagerScreen(
+    onClose: () -> Unit,
+    onNavigateToSetup: () -> Unit = {},
+    viewModel: ConnectivityViewModel = hiltViewModel()
+) {
+    val state by viewModel.effectiveState.collectAsState()
+    val batteryLevel by viewModel.batteryLevel.collectAsState()
+
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.22f))
+                .clickable(enabled = false) {}
+        )
+
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = 460.dp)
+                .padding(horizontal = 20.dp, vertical = 28.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF171E2A)),
+            shape = RoundedCornerShape(28.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 18.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 22.dp, vertical = 18.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "设备连接",
+                            fontSize = 19.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "硬件支持面板，不会接管 SIM 主流程。",
+                            fontSize = 13.sp,
+                            color = Color(0xFF9AA4B2)
+                        )
+                    }
+                    IconButton(onClick = onClose) {
+                        Icon(Icons.Default.Close, "Close", tint = Color(0xFF9AA4B2))
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color(0xFF1E2634),
+                    shape = RoundedCornerShape(22.dp),
+                    tonalElevation = 0.dp
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 22.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        ConnectivityStateContent(
+                            state = state,
+                            batteryLevel = batteryLevel,
+                            onDisconnect = viewModel::disconnect,
+                            onCheckUpdate = viewModel::checkForUpdate,
+                            onReconnect = viewModel::reconnect,
+                            onStartSetup = onNavigateToSetup,
+                            onStartUpdate = viewModel::startUpdate,
+                            onCancel = viewModel::cancel,
+                            onCompleteUpdate = viewModel::completeUpdate,
+                            onUpdateWifi = viewModel::updateWifiConfig
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ConnectivityStateContent(
+    state: ConnectionState,
+    batteryLevel: Int,
+    onDisconnect: () -> Unit,
+    onCheckUpdate: () -> Unit,
+    onReconnect: () -> Unit,
+    onStartSetup: () -> Unit,
+    onStartUpdate: () -> Unit,
+    onCancel: () -> Unit,
+    onCompleteUpdate: () -> Unit,
+    onUpdateWifi: (String, String) -> Unit
+) {
+    AnimatedContent(targetState = state, label = "StateTransition") { currentState ->
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            when (currentState) {
+                ConnectionState.CONNECTED -> ConnectedView(
+                    battery = batteryLevel,
+                    onUnbind = onDisconnect,
+                    onCheckUpdate = onCheckUpdate
+                )
+                ConnectionState.DISCONNECTED -> DisconnectedView(
+                    onReconnect = onReconnect
+                )
+                ConnectionState.NEEDS_SETUP -> NeedsSetupView(
+                    onStartSetup = onStartSetup
+                )
+                ConnectionState.CHECKING_UPDATE -> CheckingUpdateView()
+                ConnectionState.UPDATE_FOUND -> UpdateFoundView(
+                    onSync = onStartUpdate,
+                    onLater = onCancel
+                )
+                ConnectionState.UPDATING -> UpdatingView(
+                    onComplete = onCompleteUpdate
+                )
+                ConnectionState.RECONNECTING -> ReconnectingView()
+                ConnectionState.WIFI_MISMATCH -> WifiMismatchView(
+                    onUpdate = onUpdateWifi,
+                    onIgnore = onCancel
+                )
             }
         }
     }
@@ -146,7 +261,18 @@ private fun ConnectedView(
     Spacer(modifier = Modifier.height(16.dp))
 
     Text("SmartBadge Pro", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
-    Text("ID: 8842 • 🔋 $battery%", fontSize = 14.sp, color = Color(0xFFAAAAAA))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text("ID: 8842", fontSize = 14.sp, color = Color(0xFFAAAAAA))
+        Spacer(modifier = Modifier.width(8.dp))
+        Icon(
+            imageVector = Icons.Default.BatteryFull,
+            contentDescription = null,
+            tint = Color(0xFFAAAAAA),
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text("$battery%", fontSize = 14.sp, color = Color(0xFFAAAAAA))
+    }
     Text("v1.2.0", fontSize = 12.sp, color = Color.Gray)
 
     Spacer(modifier = Modifier.height(32.dp))
@@ -156,14 +282,14 @@ private fun ConnectedView(
             onClick = onUnbind,
             colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF5252))
         ) {
-            Text("⚡ 断开连接")
+            Text("断开连接")
         }
 
         Button(
             onClick = onCheckUpdate,
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))
         ) {
-            Text("🔄 检查更新")
+            Text("检查更新")
         }
     }
 }
@@ -184,8 +310,13 @@ private fun DisconnectedView(
 
     Spacer(modifier = Modifier.height(16.dp))
 
-    Text("🔴 离线", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
-    Text("请确保设备在附近并已开机", fontSize = 14.sp, color = Color(0xFFAAAAAA))
+    Text("设备离线", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
+    Text(
+        "请确保设备在附近并已开机",
+        fontSize = 14.sp,
+        color = Color(0xFFAAAAAA),
+        textAlign = TextAlign.Center
+    )
 
     Spacer(modifier = Modifier.height(32.dp))
 
@@ -214,7 +345,7 @@ private fun NeedsSetupView(
 
     Spacer(modifier = Modifier.height(16.dp))
 
-    Text("⚙️ 设备未配网", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
+    Text("设备未配网", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
     Text("需要完成初始化设置才能连接", fontSize = 14.sp, color = Color(0xFFAAAAAA))
 
     Spacer(modifier = Modifier.height(32.dp))
@@ -224,7 +355,7 @@ private fun NeedsSetupView(
         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
         modifier = Modifier.fillMaxWidth(0.8f)
     ) {
-        Text("📱 开始配网")
+        Text("开始配网")
     }
 }
 

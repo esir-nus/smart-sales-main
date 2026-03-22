@@ -17,6 +17,13 @@ object ModelRegistry {
         modelId = "qwen-turbo",
         temperature = 0.0f
     )
+
+    /** 多任务提取器 (Multi Extractor) — 用于更复杂的有序结构拆解。 */
+    val MULTI_EXTRACTOR = LlmProfile(
+        modelId = "qwen3-max-2026-01-23",
+        temperature = 0.0f,
+        skillTags = setOf("structured_output")
+    )
     
     /** 执行器 (Executor) — 严格执行工具调用，输出稳定的结构化 JSON。 */
     val EXECUTOR = LlmProfile(

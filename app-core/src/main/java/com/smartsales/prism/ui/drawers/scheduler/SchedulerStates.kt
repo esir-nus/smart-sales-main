@@ -1,5 +1,7 @@
 package com.smartsales.prism.ui.drawers.scheduler
 
+import java.time.Instant
+
 /**
  * Scheduler Timeline State Models
  * @see prism-ui-ux-contract.md §1.3
@@ -21,8 +23,11 @@ sealed class TimelineItem {
     data class Task(
         override val id: String,
         override val timeDisplay: String, // "08:00"
+        val renderKey: String = id,
         val title: String,
         val isDone: Boolean = false,
+        val isInteractive: Boolean = true,
+        val sortInstant: Instant? = null,
         val hasAlarm: Boolean = false,
         val isSmartAlarm: Boolean = false, // "智能提醒" badge
         val urgencyLevel: com.smartsales.prism.domain.scheduler.UrgencyLevel = com.smartsales.prism.domain.scheduler.UrgencyLevel.L3_NORMAL,

@@ -145,7 +145,7 @@ class FakeSchedulerViewModel : ISchedulerViewModel {
     )
     override val timelineItems: StateFlow<List<SchedulerTimelineItem>> = _timelineItems.asStateFlow()
 
-    private val _exactAlarmPermissionNeeded = MutableSharedFlow<Unit>()
+    private val _exactAlarmPermissionNeeded = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     override val exactAlarmPermissionNeeded: SharedFlow<Unit> = _exactAlarmPermissionNeeded.asSharedFlow()
 
     // --- Actions (No-ops or local state manipulators) ---
@@ -270,5 +270,9 @@ class FakeSchedulerViewModel : ISchedulerViewModel {
     ) {
         _unacknowledgedDates.value = unacknowledgedDates
         _rescheduledDates.value = rescheduledDates
+    }
+
+    fun debugEmitExactAlarmPermissionNeeded() {
+        _exactAlarmPermissionNeeded.tryEmit(Unit)
     }
 }

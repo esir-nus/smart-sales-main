@@ -13,8 +13,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import com.smartsales.prism.domain.audio.BadgeAudioPipeline
+import com.smartsales.prism.ui.sim.SimDebugFollowUpScenario
 import com.smartsales.prism.ui.sim.SimShell
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 /**
  * SIM 入口 Activity。
@@ -22,6 +25,14 @@ import dagger.hilt.android.AndroidEntryPoint
  */
 @AndroidEntryPoint
 class SimMainActivity : ComponentActivity() {
+
+    companion object {
+        private const val EXTRA_DEBUG_FOLLOW_UP_SINGLE = "sim_debug_followup_single"
+        private const val EXTRA_DEBUG_FOLLOW_UP_MULTI = "sim_debug_followup_multi"
+    }
+
+    @Inject
+    lateinit var badgeAudioPipeline: BadgeAudioPipeline
 
     private val calendarPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -42,7 +53,10 @@ class SimMainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    SimShell()
+                    SimShell(
+                        badgeAudioPipeline = badgeAudioPipeline,
+                        debugFollowUpScenario = parseDebugFollowUpScenario()
+                    )
                 }
             }
         }
@@ -60,6 +74,17 @@ class SimMainActivity : ComponentActivity() {
 
         if (notGranted.isNotEmpty()) {
             calendarPermissionLauncher.launch(notGranted.toTypedArray())
+        }
+    }
+
+    private fun parseDebugFollowUpScenario(): SimDebugFollowUpScenario? {
+        if (!BuildConfig.DEBUG) return null
+        return when {
+            intent?.getBooleanExtra(EXTRA_DEBUG_FOLLOW_UP_MULTI, false) == true ->
+                SimDebugFollowUpScenario.MULTI
+            intent?.getBooleanExtra(EXTRA_DEBUG_FOLLOW_UP_SINGLE, false) == true ->
+                SimDebugFollowUpScenario.SINGLE
+            else -> null
         }
     }
 }

@@ -55,10 +55,18 @@ fun ActiveTaskHorizon(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = "⚡",
-                        fontSize = 14.sp
-                    )
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0x144FC3F7)
+                    ) {
+                        Text(
+                            text = "LIVE",
+                            color = Color(0xFF4FC3F7),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                        )
+                    }
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = state.overarchingGoal,

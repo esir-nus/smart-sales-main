@@ -1,8 +1,19 @@
 # Prism Web Prototype Design Brief & Persona Discussion
 
-**Status:** Draft / For Review
+**Status:** Active brief / Homepage + Scheduler demo refreshed in `prototypes/prism-pro-max-v1/`
 **Date:** 2026-01-26
 **Target:** Prism V1 Interaction Validation (Chat + Scheduler)
+
+## Current Codex Prototype Output
+
+- **Prototype Path**: `prototypes/prism-pro-max-v1/`
+- **Delivered Demo Scope**: Homepage + top-mounted Scheduler Drawer
+- **Visual Direction**: Aurora night background, dark frosted glass panels, blue/violet primary accents, executive-density cards, zero emoji chrome
+- **VI Rule Reminder**:
+  - No emoji-based primary UI icons
+  - Glass surfaces keep 1px bright borders and strong contrast
+  - Scheduler preserves separate urgency, conflict, and completion channels
+  - Motion stays restrained and supports reduced-motion users
 
 ---
 

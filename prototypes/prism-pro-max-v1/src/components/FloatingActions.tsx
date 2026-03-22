@@ -1,4 +1,3 @@
-import React from 'react';
 import { AlignJustify, Package } from 'lucide-react';
 
 export const FloatingActions = () => {

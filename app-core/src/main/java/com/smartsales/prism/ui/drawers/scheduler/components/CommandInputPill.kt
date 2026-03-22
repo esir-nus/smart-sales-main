@@ -48,7 +48,7 @@ fun CommandInputPill(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
         if (!granted) {
-            Toast.makeText(context, "❌ 需要录音权限", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "需要录音权限", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -91,7 +91,7 @@ fun CommandInputPill(
                 decorationBox = { innerTextField ->
                     if (inputText.isEmpty()) {
                         Text(
-                            text = if (isRecordingMic) "🔴 松开发送..." else "输入消息，或长按麦克风说话...",
+                            text = if (isRecordingMic) "松开发送..." else "输入消息，或长按麦克风说话...",
                             color = if (isRecordingMic) AccentDanger else TextMuted,
                             fontSize = 14.sp
                         )

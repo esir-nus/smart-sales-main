@@ -12,7 +12,7 @@
 ## Planned Mission: SIM Standalone Prototype
 > **Context**: Direct user-requested standalone prototype mission. This work is intentionally separate from the current agent app and must not contaminate the live agent runtime by default.
 
-- **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Accepted / Wave 6 Isolation Accepted / Wave 7 Feature Acceptance Accepted / Wave 7 Isolation Acceptance Accepted / Wave 7 Closeout Synced
+- **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Accepted / Wave 6 Isolation Accepted / Wave 7 Feature Acceptance Accepted / Wave 7 Isolation Acceptance Accepted / Wave 7 Closeout Synced / Wave 8 Task-Scoped Scheduler Follow-Up In Progress
 - **Primary Product Doc**: [`docs/to-cerb/sim-standalone-prototype/concept.md`](../to-cerb/sim-standalone-prototype/concept.md)
 - **Mental Model Doc**: [`docs/to-cerb/sim-standalone-prototype/mental-model.md`](../to-cerb/sim-standalone-prototype/mental-model.md)
 - **Mission Tracker**: [`docs/plans/sim-tracker.md`](./sim-tracker.md)
@@ -21,6 +21,7 @@
 - **Wave 2 Execution Brief**: [`docs/plans/sim-wave2-execution-brief.md`](./sim-wave2-execution-brief.md)
 - **Wave 4 Execution Brief**: [`docs/plans/sim-wave4-execution-brief.md`](./sim-wave4-execution-brief.md)
 - **Wave 5 Execution Brief**: [`docs/plans/sim-wave5-execution-brief.md`](./sim-wave5-execution-brief.md)
+- **Wave 8 Execution Brief**: [`docs/plans/sim-wave8-execution-brief.md`](./sim-wave8-execution-brief.md)
 - **Wave 1 Acceptance**: [`docs/reports/tests/L3-20260319-sim-wave1-shell-acceptance.md`](../reports/tests/L3-20260319-sim-wave1-shell-acceptance.md)
 - **Wave 4 Acceptance**: [`docs/reports/tests/L3-20260320-sim-wave4-scheduler-validation.md`](../reports/tests/L3-20260320-sim-wave4-scheduler-validation.md)
 - **Wave 5 Acceptance**: [`docs/reports/tests/L3-20260321-sim-wave5-connectivity-validation.md`](../reports/tests/L3-20260321-sim-wave5-connectivity-validation.md)
@@ -54,7 +55,7 @@
   - Source-led Tingwu artifacts with optional readability polishing
   - No agent memory or smart-agent system integration
 - **Current Carry Debt**:
-  - SIM now has a shell-owned badge scheduler follow-up continuity binding with real `BadgeAudioPipeline.Complete` ingress, live `Uni-M` multi-task scheduler create ingress is wired in code, and the T4.8 narrowed reminder-adoption slice is now implemented: persisted exact SIM tasks reuse the shared alarm stack with focused unit proof, while vague tasks do not and immediate create/conflict/completion native notifications stay deferred. Connected-device proof exists for the exact-alarm redirect CTA plus EARLY/DEADLINE native posting in `docs/reports/tests/L2-20260321-sim-wave7-reminder-connected-validation.md`, and the later visual/operator pass in `docs/reports/tests/L3-20260322-sim-wave7-reminder-visual-validation.md` now closes the reminder lane with EARLY human-visible lock-screen proof plus DEADLINE unlocked visible-surface and locked `AlarmActivity` proof. Wave 5 connectivity is accepted across manager-routing proof, the disconnected connectivity-absent rerun, and the later UX-cleanup smoke check. Wave 6 now has the `T6.1` root-policy freeze in `docs/cerb/sim-shell/spec.md`, the `T6.2` SIM audio storage-namespace closeout in `SimAudioRepository`, the `T6.3` SIM-only session persistence closeout in `SimSessionRepository`, and focused `T6.4` isolation validation in `docs/reports/tests/L1-20260321-sim-wave6-isolation-validation.md`. Remaining debt beyond that closeout is hardware-specific L3 and deeper scheduler follow-up intelligence beyond the metadata-only binding.
+  - SIM now has an implemented `T8.0` follow-up mini-wave in progress on top of the accepted Wave 7 closeout. The old shell-only badge scheduler continuity binding is upgraded into a persisted task-scoped follow-up session plus in-shell prompt/chip and bound-task quick actions, but this slice still needs focused L3 evidence before closure. Hardware-specific physical-badge L3 remains deferred beyond that. Earlier accepted debt status is unchanged for reminders, connectivity, and Wave 6 isolation.
 
 ---
 

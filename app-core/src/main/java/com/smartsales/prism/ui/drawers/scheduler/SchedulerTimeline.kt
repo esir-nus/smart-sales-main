@@ -55,7 +55,12 @@ fun SchedulerTimeline(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(vertical = 16.dp)
     ) {
-        items(items, key = { it.id }) { item ->
+        items(items, key = {
+            when (it) {
+                is TimelineItem.Task -> it.renderKey
+                else -> it.id
+            }
+        }) { item ->
             TimelineRow(
                 item = item,
                 conflictedTaskIds = conflictedTaskIds,
@@ -96,6 +101,20 @@ private fun TimelineRow(
 ) {
     // Local expansion state for this row item
     var isExpanded by remember { mutableStateOf(false) }
+    var isTaskVisible by remember(
+        when (item) {
+            is TimelineItem.Task -> item.renderKey
+            else -> item.id
+        }
+    ) { mutableStateOf(true) }
+
+    LaunchedEffect(item) {
+        isTaskVisible = true
+        if (item is TimelineItem.Task && item.isExiting) {
+            // 先渲染源卡片，再切换为退出动画
+            isTaskVisible = false
+        }
+    }
 
     Row(
         modifier = Modifier
@@ -157,7 +176,7 @@ private fun TimelineRow(
                     }
                     
                     AnimatedVisibility(
-                        visible = !item.isExiting,
+                        visible = isTaskVisible,
                         exit = slideOutHorizontally(
                             targetOffsetX = slideOffset,
                             animationSpec = tween(350, easing = FastOutSlowInEasing)
@@ -166,12 +185,14 @@ private fun TimelineRow(
                         SwipeableCardItem(
                             itemId = item.id,
                             onDelete = { onDelete(item.id) },
-                            enabled = !isExpanded
+                            enabled = !isExpanded && item.isInteractive
                         ) {
                             SchedulerTaskCard(
                                 state = taskWithVisual,
                                 isExpanded = isExpanded,
+                                enabled = item.isInteractive,
                                 onClick = {
+                                    if (!item.isInteractive) return@SchedulerTaskCard
                                     val wasExpanded = isExpanded
                                     isExpanded = !isExpanded
                                     if (!wasExpanded) {

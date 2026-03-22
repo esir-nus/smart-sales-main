@@ -1,9 +1,9 @@
 package com.smartsales.prism.ui.onboarding
 
 import android.content.Intent
-
 import androidx.compose.animation.*
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -21,6 +21,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.smartsales.prism.domain.pairing.DiscoveredBadge
+import com.smartsales.prism.domain.pairing.ErrorReason
+import com.smartsales.prism.domain.pairing.PairingState
+import com.smartsales.prism.domain.pairing.WifiCredentials
 import kotlinx.coroutines.delay
 import com.smartsales.prism.ui.components.PrismCard
 import com.smartsales.prism.ui.components.PrismButton
@@ -39,10 +43,13 @@ import com.smartsales.prism.ui.theme.*
 @Composable
 fun OnboardingScreen(
     onComplete: () -> Unit,
-    viewModel: OnboardingViewModel = hiltViewModel()
+    pairingViewModel: PairingFlowViewModel = hiltViewModel(),
+    profileViewModel: OnboardingViewModel = hiltViewModel()
 ) {
     var currentStep by remember { mutableStateOf(OnboardingStep.WELCOME) }
-    var discoveredBadge by remember { mutableStateOf<com.smartsales.prism.domain.pairing.DiscoveredBadge?>(null) }
+    var discoveredBadge by remember { mutableStateOf<DiscoveredBadge?>(null) }
+    var wifiSsid by remember { mutableStateOf("") }
+    var wifiPassword by remember { mutableStateOf("") }
 
     // Aurora Background (Shared) - Consistent with App
     Box(
@@ -83,54 +90,306 @@ fun OnboardingScreen(
                     OnboardingStep.VOICE_HANDSHAKE -> VoiceHandshakeStep(
                         onContinue = { currentStep = OnboardingStep.HARDWARE_WAKE }
                     )
-                    OnboardingStep.HARDWARE_WAKE -> HardwareWakeStep(
-                        onNext = { currentStep = OnboardingStep.SCAN }
-                    )
-                    OnboardingStep.SCAN -> ScanStep(
-                        viewModel = viewModel,
-                        onCancel = { 
-                            viewModel.cancelPairing()
-                            currentStep = OnboardingStep.HARDWARE_WAKE 
-                        },
-                        onFound = { badge -> 
-                            discoveredBadge = badge
-                            currentStep = OnboardingStep.DEVICE_FOUND 
+                    else -> {
+                        if (step.isConnectivityPairingStep()) {
+                            ConnectivityPairingStepSurface(
+                                currentStep = step,
+                                discoveredBadge = discoveredBadge,
+                                wifiSsid = wifiSsid,
+                                wifiPassword = wifiPassword,
+                                onWifiSsidChange = { wifiSsid = it },
+                                onWifiPasswordChange = { wifiPassword = it },
+                                viewModel = pairingViewModel,
+                                onDiscoveredBadge = { discoveredBadge = it },
+                                onStepChange = { currentStep = it },
+                                onCompleted = { currentStep = nextStepAfterPairingForFullOnboarding() }
+                            )
+                        } else {
+                            when (step) {
+                                OnboardingStep.DEVICE_NAMING -> DeviceNamingStep(
+                                    onConfirm = { currentStep = nextStepAfterDeviceNaming() }
+                                )
+                                OnboardingStep.ACCOUNT_GATE -> AccountGateStep(
+                                    onLogin = { currentStep = nextStepAfterAccountGate() }
+                                )
+                                OnboardingStep.PROFILE -> ProfileStep(
+                                    viewModel = profileViewModel,
+                                    onFinish = { currentStep = nextStepAfterProfile() }
+                                )
+                                OnboardingStep.NOTIFICATION_PERMISSION -> NotificationPermissionStep(
+                                    onNext = { currentStep = OnboardingStep.COMPLETE }
+                                )
+                                OnboardingStep.COMPLETE -> CompleteStep(
+                                    onGoHome = onComplete
+                                )
+                                else -> Unit
+                            }
                         }
-                    )
-                    OnboardingStep.DEVICE_FOUND -> DeviceFoundStep(
-                        badge = discoveredBadge!!,
-                        onConnect = { currentStep = OnboardingStep.BLE_CONNECTING }
-                    )
-                    OnboardingStep.BLE_CONNECTING -> BleConnectingStep(
-                        onReady = { currentStep = OnboardingStep.WIFI_CREDS }
-                    )
-                    OnboardingStep.WIFI_CREDS -> WifiCredsStep(
-                        viewModel = viewModel,
-                        badge = discoveredBadge!!,
-                        onConnect = { currentStep = OnboardingStep.FIRMWARE_CHECK }
-                    )
-                    OnboardingStep.FIRMWARE_CHECK -> PairingProgressStep(
-                        viewModel = viewModel,
-                        onComplete = { currentStep = OnboardingStep.DEVICE_NAMING }
-                    )
-                    OnboardingStep.DEVICE_NAMING -> DeviceNamingStep(
-                        onConfirm = { currentStep = OnboardingStep.ACCOUNT_GATE }
-                    )
-                    OnboardingStep.ACCOUNT_GATE -> AccountGateStep(
-                        onLogin = { currentStep = OnboardingStep.PROFILE }
-                    )
-                    OnboardingStep.PROFILE -> ProfileStep(
-                        viewModel = viewModel,
-                        onFinish = { currentStep = OnboardingStep.NOTIFICATION_PERMISSION }
-                    )
-                    OnboardingStep.NOTIFICATION_PERMISSION -> NotificationPermissionStep(
-                        onNext = { currentStep = OnboardingStep.COMPLETE }
-                    )
-                    OnboardingStep.COMPLETE -> CompleteStep(
-                        onGoHome = onComplete
-                    )
+                    }
                 }
             }
+        }
+    }
+}
+
+internal data class ConnectivityPairingErrorUiModel(
+    val title: String,
+    val description: String,
+    val primaryLabel: String,
+    val secondaryLabel: String,
+    val retryAction: ConnectivityPairingRetryAction
+)
+
+internal enum class ConnectivityPairingRetryAction {
+    RETRY_SCAN,
+    RETRY_PROVISIONING
+}
+
+internal fun nextStepAfterPairingForFullOnboarding(): OnboardingStep = OnboardingStep.DEVICE_NAMING
+
+internal fun nextStepAfterDeviceNaming(): OnboardingStep = OnboardingStep.ACCOUNT_GATE
+
+internal fun nextStepAfterAccountGate(): OnboardingStep = OnboardingStep.PROFILE
+
+internal fun nextStepAfterProfile(): OnboardingStep = OnboardingStep.NOTIFICATION_PERMISSION
+
+internal fun OnboardingStep.isConnectivityPairingStep(): Boolean = when (this) {
+    OnboardingStep.HARDWARE_WAKE,
+    OnboardingStep.SCAN,
+    OnboardingStep.DEVICE_FOUND,
+    OnboardingStep.BLE_CONNECTING,
+    OnboardingStep.WIFI_CREDS,
+    OnboardingStep.FIRMWARE_CHECK -> true
+    else -> false
+}
+
+internal fun resolveConnectivityPairingErrorUiModel(
+    step: OnboardingStep,
+    error: PairingState.Error
+): ConnectivityPairingErrorUiModel = when (step) {
+    OnboardingStep.SCAN -> {
+        val title = if (error.reason == ErrorReason.PERMISSION_DENIED) {
+            "需要蓝牙权限"
+        } else {
+            "未发现设备"
+        }
+        val primaryLabel = if (error.reason == ErrorReason.PERMISSION_DENIED) {
+            "授权并重试"
+        } else {
+            "重新扫描"
+        }
+        ConnectivityPairingErrorUiModel(
+            title = title,
+            description = error.message,
+            primaryLabel = primaryLabel,
+            secondaryLabel = "返回上一步",
+            retryAction = ConnectivityPairingRetryAction.RETRY_SCAN
+        )
+    }
+
+    OnboardingStep.FIRMWARE_CHECK -> {
+        val title = when (error.reason) {
+            ErrorReason.DEVICE_NOT_FOUND -> "设备已不可用"
+            ErrorReason.NETWORK_CHECK_FAILED -> "设备尚未上线"
+            ErrorReason.WIFI_PROVISIONING_FAILED -> "配网失败"
+            else -> "连接失败"
+        }
+        ConnectivityPairingErrorUiModel(
+            title = title,
+            description = error.message,
+            primaryLabel = if (error.reason == ErrorReason.DEVICE_NOT_FOUND) "重新扫描" else "重试配网",
+            secondaryLabel = "返回上一步",
+            retryAction = if (error.reason == ErrorReason.DEVICE_NOT_FOUND) {
+                ConnectivityPairingRetryAction.RETRY_SCAN
+            } else {
+                ConnectivityPairingRetryAction.RETRY_PROVISIONING
+            }
+        )
+    }
+
+    else -> ConnectivityPairingErrorUiModel(
+        title = "连接失败",
+        description = error.message,
+        primaryLabel = "重试",
+        secondaryLabel = "返回上一步",
+        retryAction = ConnectivityPairingRetryAction.RETRY_SCAN
+    )
+}
+
+@Composable
+internal fun SimConnectivityPairingFlow(
+    onExit: () -> Unit,
+    onCompleted: () -> Unit,
+    viewModel: PairingFlowViewModel = hiltViewModel()
+) {
+    var currentStep by remember { mutableStateOf(OnboardingStep.HARDWARE_WAKE) }
+    var discoveredBadge by remember { mutableStateOf<DiscoveredBadge?>(null) }
+    var wifiSsid by remember { mutableStateOf("") }
+    var wifiPassword by remember { mutableStateOf("") }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(BackgroundApp),
+        contentAlignment = Alignment.Center
+    ) {
+        TextButton(
+            onClick = {
+                viewModel.cancelPairing()
+                onExit()
+            },
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 48.dp, end = 16.dp)
+                .statusBarsPadding()
+        ) {
+            Text("跳过", color = TextMuted, fontSize = 14.sp)
+        }
+
+        AnimatedContent(
+            targetState = currentStep,
+            label = "SimConnectivityPairingNav",
+            transitionSpec = {
+                slideInHorizontally { it } togetherWith slideOutHorizontally { -it }
+            }
+        ) { step ->
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                ConnectivityPairingStepSurface(
+                    currentStep = step,
+                    discoveredBadge = discoveredBadge,
+                    wifiSsid = wifiSsid,
+                    wifiPassword = wifiPassword,
+                    onWifiSsidChange = { wifiSsid = it },
+                    onWifiPasswordChange = { wifiPassword = it },
+                    viewModel = viewModel,
+                    onDiscoveredBadge = { discoveredBadge = it },
+                    onStepChange = { currentStep = it },
+                    onCompleted = {
+                        viewModel.cancelPairing()
+                        onCompleted()
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ConnectivityPairingStepSurface(
+    currentStep: OnboardingStep,
+    discoveredBadge: DiscoveredBadge?,
+    wifiSsid: String,
+    wifiPassword: String,
+    onWifiSsidChange: (String) -> Unit,
+    onWifiPasswordChange: (String) -> Unit,
+    viewModel: PairingFlowViewModel,
+    onDiscoveredBadge: (DiscoveredBadge) -> Unit,
+    onStepChange: (OnboardingStep) -> Unit,
+    onCompleted: () -> Unit
+) {
+    when (currentStep) {
+        OnboardingStep.HARDWARE_WAKE -> HardwareWakeStep(
+            onNext = { onStepChange(OnboardingStep.SCAN) }
+        )
+
+        OnboardingStep.SCAN -> ScanStep(
+            viewModel = viewModel,
+            onCancel = {
+                viewModel.cancelPairing()
+                onStepChange(OnboardingStep.HARDWARE_WAKE)
+            },
+            onFound = { badge ->
+                onDiscoveredBadge(badge)
+                onStepChange(OnboardingStep.DEVICE_FOUND)
+            }
+        )
+
+        OnboardingStep.DEVICE_FOUND -> {
+            val badge = discoveredBadge
+            if (badge == null) {
+                HardwareWakeStep(onNext = { onStepChange(OnboardingStep.SCAN) })
+            } else {
+                DeviceFoundStep(
+                    badge = badge,
+                    onConnect = { onStepChange(OnboardingStep.BLE_CONNECTING) }
+                )
+            }
+        }
+
+        OnboardingStep.BLE_CONNECTING -> BleConnectingStep(
+            onReady = { onStepChange(OnboardingStep.WIFI_CREDS) }
+        )
+
+        OnboardingStep.WIFI_CREDS -> {
+            val badge = discoveredBadge
+            if (badge == null) {
+                HardwareWakeStep(onNext = { onStepChange(OnboardingStep.SCAN) })
+            } else {
+                WifiCredsStep(
+                    viewModel = viewModel,
+                    badge = badge,
+                    ssid = wifiSsid,
+                    password = wifiPassword,
+                    onSsidChange = onWifiSsidChange,
+                    onPasswordChange = onWifiPasswordChange,
+                    onConnect = { onStepChange(OnboardingStep.FIRMWARE_CHECK) }
+                )
+            }
+        }
+
+        OnboardingStep.FIRMWARE_CHECK -> PairingProgressStep(
+            viewModel = viewModel,
+            onRetryAction = { action ->
+                onStepChange(
+                    when (action) {
+                        ConnectivityPairingRetryAction.RETRY_SCAN -> OnboardingStep.SCAN
+                        ConnectivityPairingRetryAction.RETRY_PROVISIONING -> OnboardingStep.WIFI_CREDS
+                    }
+                )
+            },
+            onBack = {
+                viewModel.cancelPairing()
+                onStepChange(OnboardingStep.HARDWARE_WAKE)
+            },
+            onComplete = onCompleted
+        )
+
+        else -> Unit
+    }
+}
+
+@Composable
+private fun PairingErrorStep(
+    title: String,
+    description: String,
+    primaryLabel: String,
+    onPrimary: () -> Unit,
+    secondaryLabel: String,
+    onSecondary: () -> Unit
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(Icons.Default.Warning, null, tint = AccentBlue, modifier = Modifier.size(72.dp))
+        Spacer(Modifier.height(24.dp))
+        Text(title, fontSize = 24.sp, color = TextPrimary, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(12.dp))
+        Text(description, color = TextSecondary)
+        Spacer(Modifier.height(32.dp))
+        PrismButton(
+            text = primaryLabel,
+            onClick = onPrimary,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(Modifier.height(12.dp))
+        TextButton(
+            onClick = onSecondary,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(secondaryLabel, color = TextMuted)
         }
     }
 }
@@ -147,7 +406,7 @@ private fun WelcomeStep(onStart: () -> Unit) {
             backgroundColor = BackgroundSurface.copy(alpha = 0.5f)
         ) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text("🔮", fontSize = 48.sp)
+                Text("SS", fontSize = 34.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
             }
         }
         Spacer(Modifier.height(32.dp))
@@ -192,9 +451,9 @@ private fun HardwareWakeStep(onNext: () -> Unit) {
 
 @Composable
 private fun ScanStep(
-    viewModel: OnboardingViewModel,
+    viewModel: PairingFlowViewModel,
     onCancel: () -> Unit,
-    onFound: (com.smartsales.prism.domain.pairing.DiscoveredBadge) -> Unit
+    onFound: (DiscoveredBadge) -> Unit
 ) {
     val pairingState by viewModel.pairingState.collectAsState()
     
@@ -209,56 +468,94 @@ private fun ScanStep(
     }
     
     var permissionsGranted by remember { mutableStateOf(permissions.isEmpty()) }
+    var permissionDenied by remember { mutableStateOf(false) }
     
     val launcher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()
     ) { results ->
         permissionsGranted = results.values.all { it }
         if (permissionsGranted) {
+            permissionDenied = false
             viewModel.startScan()
+        } else {
+            permissionDenied = true
         }
     }
     
     // 启动扫描或请求权限
     LaunchedEffect(Unit) {
         if (permissions.isEmpty() || permissionsGranted) {
+            permissionDenied = false
             viewModel.startScan()
         } else {
             launcher.launch(permissions.toTypedArray())
         }
     }
-    
-    // 处理状态转换
-    when (val state = pairingState) {
-        is com.smartsales.prism.domain.pairing.PairingState.DeviceFound -> {
-            LaunchedEffect(state.badge) {
-                onFound(state.badge)
+
+    if (permissionDenied) {
+        PairingErrorStep(
+            title = "需要蓝牙权限",
+            description = "请开启蓝牙搜索和连接权限后重试。",
+            primaryLabel = "授权并重试",
+            onPrimary = {
+                permissionDenied = false
+                launcher.launch(permissions.toTypedArray())
+            },
+            secondaryLabel = "返回上一步",
+            onSecondary = onCancel
+        )
+    } else if (pairingState is PairingState.Error) {
+        val errorState = pairingState as PairingState.Error
+        val presentation = resolveConnectivityPairingErrorUiModel(OnboardingStep.SCAN, errorState)
+        PairingErrorStep(
+            title = presentation.title,
+            description = presentation.description,
+            primaryLabel = presentation.primaryLabel,
+            onPrimary = {
+                permissionDenied = false
+                viewModel.startScan()
+            },
+            secondaryLabel = presentation.secondaryLabel,
+            onSecondary = onCancel
+        )
+    } else {
+        when (val state = pairingState) {
+            is PairingState.DeviceFound -> {
+                LaunchedEffect(state.badge) {
+                    onFound(state.badge)
+                }
             }
+            else -> Unit
         }
-        is com.smartsales.prism.domain.pairing.PairingState.Error -> {
-            // 显示错误（TODO: 添加 toast）
+
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("正在搜索设备...", fontSize = 20.sp, color = TextPrimary)
+            Spacer(Modifier.height(32.dp))
+            CircularProgressIndicator(color = AccentBlue)
+            Spacer(Modifier.height(32.dp))
+            TextButton(onClick = onCancel) { Text("取消", color = TextMuted) }
         }
-        else -> {} // Scanning or Idle
-    }
-    
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("正在搜索设备...", fontSize = 20.sp, color = TextPrimary)
-        Spacer(Modifier.height(32.dp))
-        CircularProgressIndicator(color = AccentBlue)
-        Spacer(Modifier.height(32.dp))
-        TextButton(onClick = onCancel) { Text("取消", color = TextMuted) }
     }
 }
 
 @Composable
 private fun DeviceFoundStep(
-    badge: com.smartsales.prism.domain.pairing.DiscoveredBadge,
+    badge: DiscoveredBadge,
     onConnect: () -> Unit
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         PrismCard(onClick = {}, modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp)) {
-                Text("📱 ${badge.name}", color = TextPrimary, fontWeight = FontWeight.Bold)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Bluetooth,
+                        contentDescription = null,
+                        tint = AccentBlue,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Text(badge.name, color = TextPrimary, fontWeight = FontWeight.Bold)
+                }
                 Text("ID: ${badge.id} • ${badge.signalStrengthDbm}dBm", color = AccentSecondary, fontSize = 12.sp)
                 Spacer(Modifier.height(16.dp))
                 PrismButton(text = "连接", onClick = onConnect, modifier = Modifier.fillMaxWidth())
@@ -296,7 +593,12 @@ private fun BleConnectingStep(onReady: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("📡", fontSize = 64.sp)
+        Icon(
+            imageVector = Icons.Default.Bluetooth,
+            contentDescription = null,
+            tint = AccentBlue,
+            modifier = Modifier.size(64.dp)
+        )
         Spacer(Modifier.height(24.dp))
         Text("正在连接设备...", fontSize = 22.sp, color = TextPrimary, fontWeight = FontWeight.Medium)
         Spacer(Modifier.height(8.dp))
@@ -313,27 +615,28 @@ private fun BleConnectingStep(onReady: () -> Unit) {
 
 @Composable
 private fun WifiCredsStep(
-    viewModel: OnboardingViewModel,
-    badge: com.smartsales.prism.domain.pairing.DiscoveredBadge,
+    viewModel: PairingFlowViewModel,
+    badge: DiscoveredBadge,
+    ssid: String,
+    password: String,
+    onSsidChange: (String) -> Unit,
+    onPasswordChange: (String) -> Unit,
     onConnect: () -> Unit
 ) {
-    var ssid by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text("配置网络", fontSize = 24.sp, color = TextPrimary)
         Text("让徽章独立工作", color = TextSecondary)
         Spacer(Modifier.height(32.dp))
-        GlassTextField(value = ssid, onValueChange = { ssid = it }, label = "WiFi SSID")
+        GlassTextField(value = ssid, onValueChange = onSsidChange, label = "WiFi SSID")
         Spacer(Modifier.height(16.dp))
-        GlassTextField(value = password, onValueChange = { password = it }, label = "密码", isPassword = true)
+        GlassTextField(value = password, onValueChange = onPasswordChange, label = "密码", isPassword = true)
         Spacer(Modifier.height(32.dp))
         PrismButton(
             text = "连接网络", 
             onClick = {
                 viewModel.pairBadge(
                     badge = badge,
-                    wifiCreds = com.smartsales.prism.domain.pairing.WifiCredentials(ssid, password)
+                    wifiCreds = WifiCredentials(ssid, password)
                 )
                 onConnect()
             },
@@ -344,25 +647,38 @@ private fun WifiCredsStep(
 
 @Composable
 private fun PairingProgressStep(
-    viewModel: OnboardingViewModel,
+    viewModel: PairingFlowViewModel,
+    onRetryAction: (ConnectivityPairingRetryAction) -> Unit,
+    onBack: () -> Unit,
     onComplete: () -> Unit
 ) {
     val pairingState by viewModel.pairingState.collectAsState()
-    
-    // 监听配对完成
+
     when (val state = pairingState) {
-        is com.smartsales.prism.domain.pairing.PairingState.Success -> {
+        is PairingState.Success -> {
             LaunchedEffect(Unit) {
                 delay(500)
                 onComplete()
             }
         }
-        else -> {}
+        is PairingState.Error -> {
+            val presentation = resolveConnectivityPairingErrorUiModel(OnboardingStep.FIRMWARE_CHECK, state)
+            PairingErrorStep(
+                title = presentation.title,
+                description = presentation.description,
+                primaryLabel = presentation.primaryLabel,
+                onPrimary = { onRetryAction(presentation.retryAction) },
+                secondaryLabel = presentation.secondaryLabel,
+                onSecondary = onBack
+            )
+            return
+        }
+        else -> Unit
     }
     
     val currentProgress = when (val state = pairingState) {
-        is com.smartsales.prism.domain.pairing.PairingState.Pairing -> state.progress / 100f
-        is com.smartsales.prism.domain.pairing.PairingState.Success -> 1f
+        is PairingState.Pairing -> state.progress / 100f
+        is PairingState.Success -> 1f
         else -> 0f
     }
     
@@ -534,7 +850,7 @@ private fun NotificationPermissionStep(onNext: () -> Unit) {
                 Spacer(Modifier.height(16.dp))
                 val instructionText = when {
                     com.smartsales.prism.data.notification.OemCompat.isXiaomi -> "请确认以下选项已开启：\n锁屏通知 · 悬浮通知 · 振动 · 后台发送本地通知"
-                    com.smartsales.prism.data.notification.OemCompat.isHuawei -> "⚠️ 系统可能拦截闹钟\n请务必将【应用启动管理】改为手动管理"
+                    com.smartsales.prism.data.notification.OemCompat.isHuawei -> "系统可能拦截闹钟\n请务必将【应用启动管理】改为手动管理"
                     else -> "请确认已开启不再优化电池使用"
                 }
 

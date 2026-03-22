@@ -26,6 +26,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.semantics.SemanticsPropertyReceiver
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.text.font.FontWeight
@@ -34,6 +37,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.smartsales.prism.ui.theme.*
 import java.time.LocalDate
+
+val SchedulerDateAttentionKindKey = SemanticsPropertyKey<String>("SchedulerDateAttentionKind")
+var SemanticsPropertyReceiver.schedulerDateAttentionKind by SchedulerDateAttentionKindKey
 
 /**
  * Scheduler Calendar Component (Sleek Glass Version)
@@ -280,10 +286,18 @@ private fun CalendarRow(
             val isNewTaskGlow = dayOffset in unacknowledgedDates && !isRescheduleGlow
             val hasGlow = isRescheduleGlow || isNewTaskGlow
             val glowColor = if (isRescheduleGlow) AccentAmber else AccentBlue
+            val attentionKind = when {
+                isRescheduleGlow -> "warning"
+                isNewTaskGlow -> "normal"
+                else -> "none"
+            }
             
             Box(
                 modifier = Modifier
                     .size(36.dp)
+                    .semantics {
+                        schedulerDateAttentionKind = attentionKind
+                    }
                     // 发光效果 (优先显示，独立于其他状态)
                     .then(
                         if (hasGlow) {

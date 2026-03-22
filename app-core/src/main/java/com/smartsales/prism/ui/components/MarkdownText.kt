@@ -7,6 +7,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
@@ -28,7 +29,8 @@ fun MarkdownText(
     modifier: Modifier = Modifier,
     color: Color = Color.Unspecified,
     fontSize: TextUnit = 14.sp,
-    lineHeight: TextUnit = 20.sp
+    lineHeight: TextUnit = 20.sp,
+    onTextLayout: (TextLayoutResult) -> Unit = {}
 ) {
     val annotated = remember(text, color) { parseMarkdown(text, color) }
     Text(
@@ -36,7 +38,8 @@ fun MarkdownText(
         modifier = modifier,
         color = color,
         fontSize = fontSize,
-        lineHeight = lineHeight
+        lineHeight = lineHeight,
+        onTextLayout = onTextLayout
     )
 }
 

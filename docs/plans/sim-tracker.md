@@ -1,9 +1,10 @@
 # SIM Mission Tracker
 
 > **Mission**: Standalone prototype app with two main feature lanes, Scheduler Path A and Tingwu transcription plus simple audio-grounded chat, plus a decoupled connectivity support module.
-> **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Accepted / Wave 6 Isolation Accepted / Wave 7 Feature Acceptance Accepted / Wave 7 Isolation Acceptance Accepted / Wave 7 Closeout Synced
+> **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Accepted / Wave 6 Isolation Accepted / Wave 7 Feature Acceptance Accepted / Wave 7 Isolation Acceptance Accepted / Wave 7 Closeout Synced / Wave 8 Task-Scoped Scheduler Follow-Up In Progress
 > **Started**: 2026-03-19
-> **Current Gate**: `T7.3` doc sync and closeout is now completed on **2026-03-22** together with the accepted `T7.2` isolation slice. The tracker and main mission record are now synced to `docs/reports/tests/L3-20260322-sim-wave7-isolation-acceptance.md`, and this acceptance-only pass did not require lower-layer Cerb or `docs/cerb/interface-map.md` changes because it introduced no new module ownership edges. Wave 7 reminder acceptance separately now has both connected-device proof for the exact-alarm redirect CTA plus EARLY/DEADLINE native posting in `docs/reports/tests/L2-20260321-sim-wave7-reminder-connected-validation.md` and a later real-device visual/operator pass in `docs/reports/tests/L3-20260322-sim-wave7-reminder-visual-validation.md`. A follow-up wake/capture pass on **2026-03-22** now closes the last EARLY proof gap by showing `⏰ SIM EARLY Visual` with `15分钟后开始` on the secure lock screen while `dumpsys notification` still reported the matching active EARLY record.
+> **Current Gate**: Wave 7 closeout remains accepted on **2026-03-22**, but a new post-closeout `T8.0` mini-wave is now active for task-scoped scheduler follow-up. This slice upgrades the old metadata-only badge continuity binding into a real SIM follow-up session plus in-shell prompt/chip and bound-task quick actions, while still keeping SIM out of smart-agent memory and open-ended assistant behavior.
+> **Closeout Reading Rule**: Wave 7 closeout means the SIM mission is complete at the tracker level. Any remaining unchecked historical sub-items below should be read as archived execution residue unless they are explicitly restated under the post-closeout deferred-debt section.
 > **Primary Product Doc**: `docs/to-cerb/sim-standalone-prototype/concept.md`
 > **Mental Model Doc**: `docs/to-cerb/sim-standalone-prototype/mental-model.md`
 > **Implementation Brief**: `docs/plans/sim_implementation_brief.md`
@@ -11,6 +12,7 @@
 > **Wave 2 Execution Brief**: `docs/plans/sim-wave2-execution-brief.md`
 > **Wave 4 Execution Brief**: `docs/plans/sim-wave4-execution-brief.md`
 > **Wave 5 Execution Brief**: `docs/plans/sim-wave5-execution-brief.md`
+> **Wave 8 Execution Brief**: `docs/plans/sim-wave8-execution-brief.md`
 > **Code Audit**: `docs/reports/20260319-sim-standalone-code-audit.md`
 > **Clarification Audit**: `docs/reports/20260319-sim-clarification-evidence-audit.md`
 > **Wave 5 Boundary Audit**: `docs/reports/20260321-sim-wave5-boundary-audit.md`
@@ -762,18 +764,51 @@ No implementation should start before T0 boundary decisions are explicit enough 
 
 ---
 
+## 6.1 Post-Closeout Deferred Debt
+
+Wave 7 acceptance closed the SIM mission on **2026-03-22**. The remaining items below are not blockers against the accepted mission state; they are follow-up debt only.
+
+- [ ] Physical-badge hardware L3 for the badge-origin scheduler follow-up continuity lane remains deferred until the real badge is available. The current surrogate/device evidence must not be over-read as a hardware closeout.
+- [x] SIM scheduler follow-up no longer remains metadata-only continuity only; it is now reopened as Wave 8 task-scoped follow-up work instead of Wave 7 closeout debt.
+- [ ] If either deferred item is reopened, create a new follow-up execution brief or mini-wave instead of reopening the accepted Wave 7 gates.
+
+## 6.2 Wave 8: Task-Scoped Scheduler Follow-Up
+> Objective: turn the accepted shell-owned badge continuity binding into a real but narrow SIM follow-up lane after badge-origin task creation.
+> **Entry Docs**:
+> - `docs/plans/sim-wave8-execution-brief.md`
+> - `docs/core-flow/sim-shell-routing-flow.md`
+> - `docs/cerb/sim-shell/spec.md`
+> - `docs/cerb/sim-scheduler/spec.md`
+> - `docs/cerb/sim-audio-chat/spec.md`
+> **Execution Law**: keep follow-up task-scoped, prompt-first, and non-agent-like.
+> **Validation Requirement**: prove badge-origin follow-up session creation, visible prompt/chip, scoped quick actions, and multi-task safe-fail without reopening Wave 7 acceptance.
+
+- [ ] **T8.0: Badge-Origin Scheduler Follow-Up V1**
+  - [x] persist a scheduler-follow-up session kind plus bound task summaries in SIM session metadata
+  - [x] create follow-up sessions only from badge-origin `TaskCreated` / non-empty `MultiTaskCreated`
+  - [x] show an in-shell prompt/chip instead of auto-jumping the user into chat
+  - [x] reuse the SIM chat surface for task-scoped quick actions plus narrow free-text
+  - [x] support explain / status / mark-done / delete and task-scoped reschedule
+  - [x] require explicit task selection before multi-task mutation
+  - [x] update `docs/cerb/interface-map.md` because this slice introduces a real SIM shell/chat -> scheduler follow-up ownership edge
+  - [ ] close with focused L3 follow-up evidence
+
+---
+
 ## 7. Success Definition
 
 The mission is complete only when:
 
-- [ ] a standalone prototype app path exists in the repo
-- [ ] the current agent app remains intact
-- [ ] scheduler works through Path A in the prototype
-- [ ] audio cards open and display source-led, readability-polished Tingwu artifacts
-- [ ] already-transcribed audio loads existing artifacts without rerunning Tingwu
-- [ ] `Ask AI` opens a simple chat session grounded in the chosen audio
-- [ ] audio selection from chat returns through the Audio Drawer
-- [ ] connectivity remains available as a decoupled SIM support module
+Closed by the accepted `T7.1` / `T7.2` / `T7.3` evidence on **2026-03-22**.
+
+- [x] a standalone prototype app path exists in the repo
+- [x] the current agent app remains intact
+- [x] scheduler works through Path A in the prototype
+- [x] audio cards open and display source-led, readability-polished Tingwu artifacts
+- [x] already-transcribed audio loads existing artifacts without rerunning Tingwu
+- [x] `Ask AI` opens a simple chat session grounded in the chosen audio
+- [x] audio selection from chat returns through the Audio Drawer
+- [x] connectivity remains available as a decoupled SIM support module
 
 ---
 
@@ -815,10 +850,13 @@ Treat transcript streaming and activity labels as presentation unless backed by 
 
 ## 9. Next Expected Docs
 
-- Wave 1 verification note after manual or adb launch proof
-- verification brief once Wave 6 boundaries are implemented
-- Wave 2 execution brief if the audio/chat delivery wave needs a similarly compressed handoff
-- Wave 1 implementation notes if root ownership changes during coding
+No mandatory closeout docs remain after Wave 7 sync on **2026-03-22**.
+
+If deferred debt is reopened, the next expected docs are:
+
+- a physical-badge hardware L3 validation note for the badge-origin scheduler follow-up continuity lane
+- a follow-up execution brief or mini-wave tracker section for richer scheduler follow-up intelligence
+- a tracker addendum only if new follow-up work materially changes the accepted SIM mission boundary
 
 ---
 

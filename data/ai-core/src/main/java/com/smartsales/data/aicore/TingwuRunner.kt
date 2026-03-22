@@ -177,8 +177,17 @@ class TingwuRunner @Inject constructor(
             .first()
     }
 
-    override fun observeJob(jobId: String): Flow<TingwuJobState> =
-        getOrCreateJobFlow(jobId).asStateFlow()
+    override fun observeJob(jobId: String): Flow<TingwuJobState> {
+        val flow = getOrCreateJobFlow(jobId)
+        val currentState = flow.value
+        val pollingJob = pollingJobs[jobId]
+        if ((currentState is TingwuJobState.Idle || currentState is TingwuJobState.InProgress) &&
+            (pollingJob == null || !pollingJob.isActive)
+        ) {
+            startPolling(jobId)
+        }
+        return flow.asStateFlow()
+    }
 
     override suspend fun retryJob(jobId: String): Result<String> = withContext(dispatchers.io) {
         // Batch retry removed (multi-batch slicing deprecated 2026-01-18)

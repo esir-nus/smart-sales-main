@@ -1,6 +1,7 @@
 package com.smartsales.prism.data.pairing
 
 import com.smartsales.core.util.Result
+import com.smartsales.prism.data.connectivity.legacy.BlePeripheral
 import com.smartsales.prism.data.connectivity.legacy.ConnectionState
 import com.smartsales.prism.data.connectivity.legacy.DeviceConnectionManager
 import com.smartsales.prism.data.connectivity.legacy.WifiCredentials as LegacyWifiCredentials
@@ -30,6 +31,7 @@ class RealPairingService @Inject constructor(
     private var scanJob: Job? = null
     private var scanTimeoutJob: Job? = null
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val discoveredPeripherals = mutableMapOf<String, BlePeripheral>()
     
     companion object {
         private const val TAG = "PairingService"
@@ -43,6 +45,7 @@ class RealPairingService @Inject constructor(
         
         // 重置状态
         cancelPairing()
+        discoveredPeripherals.clear()
         _state.value = PairingState.Scanning
         Log.d(TAG, "State → Scanning")
         
@@ -82,6 +85,7 @@ class RealPairingService @Inject constructor(
         scanJob = scope.launch {
             Log.d(TAG, "Starting to collect bleScanner.devices flow")
             bleScanner.devices.collectLatest { devices ->
+                replaceDiscoveredPeripherals(devices)
                 Log.d(TAG, "devices flow emitted: ${devices.size} devices")
                 if (devices.isNotEmpty() && _state.value is PairingState.Scanning) {
                     val first = devices.first()
@@ -92,8 +96,7 @@ class RealPairingService @Inject constructor(
                         badge = DiscoveredBadge(
                             id = first.id,
                             name = first.name,
-                            signalStrengthDbm = first.signalStrengthDbm,
-                            peripheral = first
+                            signalStrengthDbm = first.signalStrengthDbm
                         )
                     )
                     Log.d(TAG, "State → DeviceFound")
@@ -107,17 +110,28 @@ class RealPairingService @Inject constructor(
         wifiCreds: WifiCredentials
     ): PairingResult {
         Log.d(TAG, "pairBadge() called for ${badge.name} with SSID=${wifiCreds.ssid}")
-        
+        val peripheral = discoveredPeripherals[badge.id]
+        if (peripheral == null) {
+            Log.w(TAG, "pairBadge() missing peripheral for badgeId=${badge.id}")
+            val error = PairingState.Error(
+                message = "设备已不可用，请重新扫描",
+                reason = ErrorReason.DEVICE_NOT_FOUND,
+                canRetry = true
+            )
+            _state.value = error
+            return PairingResult.Error(error.message, error.reason)
+        }
+
         // 阶段 1：选择设备 (10%)
         Log.d(TAG, "State → Pairing(10%) - Selecting peripheral")
         _state.value = PairingState.Pairing(progress = 10)
-        connectionManager.selectPeripheral(badge.peripheral)
-        
+        connectionManager.selectPeripheral(peripheral)
+
         // 阶段 2：发送 WiFi 配网 (40%)
         Log.d(TAG, "State → Pairing(40%) - Starting WiFi provisioning")
         _state.value = PairingState.Pairing(progress = 40)
         val pairingResult = connectionManager.startPairing(
-            peripheral = badge.peripheral,
+            peripheral = peripheral,
             credentials = LegacyWifiCredentials(
                 ssid = wifiCreds.ssid,
                 password = wifiCreds.password
@@ -240,7 +254,15 @@ class RealPairingService @Inject constructor(
         scanJob?.cancel()
         scanTimeoutJob?.cancel()
         bleScanner.stop()
+        discoveredPeripherals.clear()
         _state.value = PairingState.Idle
+    }
+
+    private fun replaceDiscoveredPeripherals(devices: List<BlePeripheral>) {
+        discoveredPeripherals.clear()
+        devices.forEach { peripheral ->
+            discoveredPeripherals[peripheral.id] = peripheral
+        }
     }
     
     /**

@@ -1,21 +1,40 @@
 package com.smartsales.prism.ui.sim
 
 import android.util.Log
-import com.smartsales.core.telemetry.PipelineValve
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.smartsales.core.pipeline.RealUniAExtractionService
 import com.smartsales.core.pipeline.AgentActivity
 import com.smartsales.core.pipeline.MascotInteraction
 import com.smartsales.core.pipeline.MascotState
-import com.smartsales.prism.domain.audio.TranscriptionStatus
+import com.smartsales.core.telemetry.PipelineValve
+import com.smartsales.prism.data.audio.SimAudioRepository
+import com.smartsales.prism.data.session.SimPersistedSession
+import com.smartsales.prism.data.session.SimSessionRepository
 import com.smartsales.prism.domain.analyst.TaskBoardItem
+import com.smartsales.prism.domain.audio.TranscriptionStatus
 import com.smartsales.prism.domain.model.ChatMessage
+import com.smartsales.prism.domain.model.SchedulerFollowUpContext
+import com.smartsales.prism.domain.model.SchedulerFollowUpTaskSummary
 import com.smartsales.prism.domain.model.SessionPreview
+import com.smartsales.prism.domain.model.SessionKind
 import com.smartsales.prism.domain.model.UiState
+import com.smartsales.prism.domain.memory.ConflictResult
+import com.smartsales.prism.domain.memory.ScheduleBoard
+import com.smartsales.prism.domain.scheduler.AlarmScheduler
 import com.smartsales.prism.domain.scheduler.ScheduledTask
+import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
+import com.smartsales.prism.domain.scheduler.UniAExtractionRequest
+import com.smartsales.prism.domain.scheduler.UrgencyLevel
 import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
+import com.smartsales.prism.domain.time.TimeProvider
 import com.smartsales.prism.ui.IAgentViewModel
+import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.Instant
+import java.time.LocalDate
+import java.time.OffsetDateTime
 import java.util.UUID
+import javax.inject.Inject
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,13 +47,37 @@ internal const val SIM_SCHEDULER_SHELF_HANDOFF_REQUEST_SUMMARY =
     "SIM scheduler shelf Ask AI handoff requested"
 internal const val SIM_SCHEDULER_SHELF_SESSION_STARTED_SUMMARY =
     "SIM scheduler shelf seeded chat session started"
+internal const val SIM_BADGE_SCHEDULER_FOLLOW_UP_SESSION_CREATED_SUMMARY =
+    "SIM badge scheduler follow-up session created"
+internal const val SIM_BADGE_SCHEDULER_FOLLOW_UP_ACTION_COMPLETED_SUMMARY =
+    "SIM badge scheduler follow-up action completed"
+internal const val SIM_BADGE_SCHEDULER_FOLLOW_UP_ACTION_BLOCKED_SUMMARY =
+    "SIM badge scheduler follow-up action blocked"
 private const val SIM_SCHEDULER_SHELF_LOG_TAG = "SimSchedulerShelf"
+private const val SIM_BADGE_FOLLOW_UP_LOG_TAG = "SimBadgeFollowUpChat"
+
+enum class SimSchedulerFollowUpQuickAction {
+    EXPLAIN,
+    STATUS,
+    PREFILL_RESCHEDULE,
+    MARK_DONE,
+    DELETE
+}
 
 /**
  * SIM 壳层专用聊天 ViewModel。
- * 仅维护本地会话/历史，不触碰智能版运行时。
+ * 仅维护 SIM 本地会话/历史，不触碰智能版运行时。
  */
-class SimAgentViewModel : ViewModel(), IAgentViewModel {
+@HiltViewModel
+class SimAgentViewModel @Inject constructor(
+    private val sessionRepository: SimSessionRepository,
+    private val audioRepository: SimAudioRepository,
+    private val taskRepository: ScheduledTaskRepository,
+    private val scheduleBoard: ScheduleBoard,
+    private val alarmScheduler: AlarmScheduler,
+    private val uniAExtractionService: RealUniAExtractionService,
+    private val timeProvider: TimeProvider
+) : ViewModel(), IAgentViewModel {
 
     private data class SimSessionRecord(
         val preview: SessionPreview,
@@ -48,8 +91,9 @@ class SimAgentViewModel : ViewModel(), IAgentViewModel {
 
     private val sessions = linkedMapOf<String, SimSessionRecord>()
     private val audioBindings = linkedMapOf<String, String>()
-    private var currentSessionId: String? = null
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+    private val _currentSessionId = MutableStateFlow<String?>(null)
+    val currentSessionId: StateFlow<String?> = _currentSessionId.asStateFlow()
 
     private val _agentActivity = MutableStateFlow<AgentActivity?>(null)
     override val agentActivity: StateFlow<AgentActivity?> = _agentActivity.asStateFlow()
@@ -84,7 +128,7 @@ class SimAgentViewModel : ViewModel(), IAgentViewModel {
     private val _heroAccomplished = MutableStateFlow<List<ScheduledTask>>(emptyList())
     override val heroAccomplished: StateFlow<List<ScheduledTask>> = _heroAccomplished.asStateFlow()
 
-    private val _mascotState = MutableStateFlow<MascotState>(MascotState.Hidden)
+    private val _mascotState = MutableStateFlow(MascotState.Hidden)
     override val mascotState: StateFlow<MascotState> = _mascotState.asStateFlow()
 
     override val currentDisplayName: String = "SIM 用户"
@@ -98,30 +142,92 @@ class SimAgentViewModel : ViewModel(), IAgentViewModel {
     private val _currentLinkedAudioId = MutableStateFlow<String?>(null)
     val currentLinkedAudioId: StateFlow<String?> = _currentLinkedAudioId.asStateFlow()
 
+    private val _currentSchedulerFollowUpContext = MutableStateFlow<SchedulerFollowUpContext?>(null)
+    val currentSchedulerFollowUpContext: StateFlow<SchedulerFollowUpContext?> =
+        _currentSchedulerFollowUpContext.asStateFlow()
+
+    private val _selectedSchedulerFollowUpTaskId = MutableStateFlow<String?>(null)
+    val selectedSchedulerFollowUpTaskId: StateFlow<String?> =
+        _selectedSchedulerFollowUpTaskId.asStateFlow()
+
     private val _artifactTranscriptRevealState =
         MutableStateFlow<Map<String, ArtifactTranscriptRevealState>>(emptyMap())
     val artifactTranscriptRevealState: StateFlow<Map<String, ArtifactTranscriptRevealState>> =
         _artifactTranscriptRevealState.asStateFlow()
 
     init {
-        seedWave1SampleSessions()
+        loadPersistedSessions()
+        reconcileAudioBindings()
     }
 
     fun startNewSession() {
-        currentSessionId = null
+        _currentSessionId.value = null
         _history.value = emptyList()
         _sessionTitle.value = "新对话"
         _inputText.value = ""
         _uiState.value = UiState.Idle
         _errorMessage.value = null
         _currentLinkedAudioId.value = null
+        _currentSchedulerFollowUpContext.value = null
+        _selectedSchedulerFollowUpTaskId.value = null
     }
 
     fun startSeededSession(initialUserInput: String) {
         if (initialUserInput.isBlank()) return
-        startNewSession()
-        updateInput(initialUserInput)
-        send()
+        startFreshSeededSession(initialUserInput)
+    }
+
+    fun createBadgeSchedulerFollowUpSession(
+        threadId: String,
+        transcript: String,
+        tasks: List<SchedulerFollowUpTaskSummary>,
+        batchId: String? = null
+    ): String? {
+        if (transcript.isBlank() || tasks.isEmpty()) return null
+
+        val now = System.currentTimeMillis()
+        val sessionId = UUID.randomUUID().toString()
+        val context = SchedulerFollowUpContext(
+            sourceBadgeThreadId = threadId,
+            boundTaskIds = tasks.map { it.taskId },
+            batchId = batchId,
+            taskSummaries = tasks,
+            createdAt = now,
+            updatedAt = now
+        )
+        val preview = SessionPreview(
+            id = sessionId,
+            clientName = if (tasks.size == 1) {
+                tasks.first().title
+            } else {
+                "工牌日程跟进"
+            },
+            summary = if (tasks.size == 1) "跟进" else "批量跟进",
+            timestamp = now,
+            sessionKind = SessionKind.SCHEDULER_FOLLOW_UP,
+            schedulerFollowUpContext = context
+        )
+        val firstMessage = ChatMessage.Ai(
+            id = UUID.randomUUID().toString(),
+            timestamp = now,
+            uiState = UiState.Response(
+                buildBadgeSchedulerFollowUpSummary(
+                    transcript = transcript,
+                    taskSummaries = tasks
+                )
+            )
+        )
+        sessions[sessionId] = SimSessionRecord(
+            preview = preview,
+            messages = listOf(firstMessage)
+        )
+        persistSession(sessionId)
+        refreshGroupedSessions()
+        emitSchedulerFollowUpTelemetry(
+            summary = SIM_BADGE_SCHEDULER_FOLLOW_UP_SESSION_CREATED_SUMMARY,
+            detail = "threadId=$threadId sessionId=$sessionId taskCount=${tasks.size}"
+        )
+        return sessionId
     }
 
     fun startSchedulerShelfSession(initialUserInput: String) {
@@ -141,12 +247,15 @@ class SimAgentViewModel : ViewModel(), IAgentViewModel {
 
     fun switchSession(sessionId: String) {
         val record = sessions[sessionId] ?: return
-        currentSessionId = sessionId
+        _currentSessionId.value = sessionId
         _history.value = record.messages
         _sessionTitle.value = record.preview.clientName
         _uiState.value = UiState.Idle
         _inputText.value = ""
         _currentLinkedAudioId.value = record.preview.linkedAudioId
+        _currentSchedulerFollowUpContext.value = record.preview.schedulerFollowUpContext
+        _selectedSchedulerFollowUpTaskId.value =
+            defaultSelectedFollowUpTaskId(record.preview.schedulerFollowUpContext)
     }
 
     fun togglePin(sessionId: String) {
@@ -167,11 +276,15 @@ class SimAgentViewModel : ViewModel(), IAgentViewModel {
     }
 
     fun deleteSession(sessionId: String) {
-        val removed = sessions.remove(sessionId)
-        audioBindings.entries.removeAll { it.value == sessionId }
-        removed?.messages?.let(::clearTranscriptRevealState)
-        if (currentSessionId == sessionId) {
-            currentSessionId = null
+        val removed = sessions.remove(sessionId) ?: return
+        removed.preview.linkedAudioId?.let { audioId ->
+            audioBindings.remove(audioId)
+            audioRepository.clearBoundSession(audioId)
+        }
+        clearTranscriptRevealState(removed.messages)
+        sessionRepository.deleteSession(sessionId)
+        if (_currentSessionId.value == sessionId) {
+            _currentSessionId.value = null
             _history.value = emptyList()
             _sessionTitle.value = "SIM"
             _uiState.value = UiState.Idle
@@ -203,7 +316,7 @@ class SimAgentViewModel : ViewModel(), IAgentViewModel {
                 append("：")
                 append(summary)
             } else {
-                append("\n\n当前为 Wave 1 壳层接入，完整转写内容将在后续音频波次接入。")
+                append("\n\n当前为 SIM 壳层接入，完整转写内容将在后续音频波次接入。")
             }
         }
         val preview = SessionPreview(
@@ -211,15 +324,19 @@ class SimAgentViewModel : ViewModel(), IAgentViewModel {
             clientName = title,
             summary = (summary ?: "音频讨论").take(6),
             timestamp = System.currentTimeMillis(),
-            linkedAudioId = audioId
+            linkedAudioId = audioId,
+            sessionKind = SessionKind.AUDIO_GROUNDED
         )
         val firstMessage = ChatMessage.Ai(
             id = UUID.randomUUID().toString(),
             timestamp = System.currentTimeMillis(),
             uiState = UiState.Response(intro)
         )
-        sessions[sessionId] = SimSessionRecord(preview = preview, messages = listOf(firstMessage))
+        val record = SimSessionRecord(preview = preview, messages = listOf(firstMessage))
+        sessions[sessionId] = record
         audioBindings[audioId] = sessionId
+        audioRepository.bindSession(audioId, sessionId)
+        persistSession(sessionId)
         switchSession(sessionId)
         refreshGroupedSessions()
         return sessionId
@@ -240,7 +357,7 @@ class SimAgentViewModel : ViewModel(), IAgentViewModel {
         val sessionId = openAudioDiscussion(audioId, title, effectiveSummary, summaryLabel)
         if (entersPendingFlow) {
             updatePendingAudioState(audioId, TranscriptionStatus.PENDING, 0f)
-        } else if (currentSessionId == sessionId) {
+        } else if (_currentSessionId.value == sessionId) {
             _uiState.value = UiState.Idle
         }
         return sessionId
@@ -248,7 +365,7 @@ class SimAgentViewModel : ViewModel(), IAgentViewModel {
 
     fun updatePendingAudioState(audioId: String, status: TranscriptionStatus, progress: Float) {
         val sessionId = audioBindings[audioId] ?: return
-        if (currentSessionId != sessionId) return
+        if (_currentSessionId.value != sessionId) return
 
         val sessionTitle = sessions[sessionId]?.preview?.clientName ?: "当前音频"
         _uiState.value = UiState.Thinking(
@@ -267,7 +384,7 @@ class SimAgentViewModel : ViewModel(), IAgentViewModel {
             sessionId = sessionId,
             uiState = UiState.Response("《$title》转写已完成，结果已同步回录音抽屉，现在可以继续围绕这段音频讨论。")
         )
-        if (currentSessionId == sessionId) {
+        if (_currentSessionId.value == sessionId) {
             _uiState.value = UiState.Idle
         }
     }
@@ -294,7 +411,7 @@ class SimAgentViewModel : ViewModel(), IAgentViewModel {
             state is UiState.AudioArtifacts && state.audioId == audioId
         }
         if (alreadyPresent) {
-            if (currentSessionId == sessionId) {
+            if (_currentSessionId.value == sessionId) {
                 _uiState.value = UiState.Idle
             }
             return
@@ -308,19 +425,32 @@ class SimAgentViewModel : ViewModel(), IAgentViewModel {
                 artifactsJson = json.encodeToString(artifacts)
             )
         )
-        if (currentSessionId == sessionId) {
+        if (_currentSessionId.value == sessionId) {
             _uiState.value = UiState.Idle
         }
     }
 
     fun failPendingAudio(audioId: String, message: String) {
-        val sessionId = audioBindings[audioId] ?: currentSessionId ?: return
+        val sessionId = audioBindings[audioId] ?: _currentSessionId.value ?: return
         appendAiMessage(
             sessionId = sessionId,
             uiState = UiState.Error(message)
         )
-        if (currentSessionId == sessionId) {
+        if (_currentSessionId.value == sessionId) {
             _uiState.value = UiState.Error(message)
+        }
+    }
+
+    fun selectSchedulerFollowUpTask(taskId: String) {
+        val context = _currentSchedulerFollowUpContext.value ?: return
+        if (context.boundTaskIds.contains(taskId)) {
+            _selectedSchedulerFollowUpTaskId.value = taskId
+        }
+    }
+
+    fun performSchedulerFollowUpQuickAction(action: SimSchedulerFollowUpQuickAction) {
+        viewModelScope.launch {
+            performSchedulerFollowUpQuickActionInternal(action)
         }
     }
 
@@ -344,7 +474,15 @@ class SimAgentViewModel : ViewModel(), IAgentViewModel {
         val content = _inputText.value.trim()
         if (content.isEmpty()) return
 
-        val sessionId = currentSessionId ?: createSession()
+        if (_currentSchedulerFollowUpContext.value != null) {
+            _inputText.value = ""
+            viewModelScope.launch {
+                handleSchedulerFollowUpInput(content)
+            }
+            return
+        }
+
+        val sessionId = _currentSessionId.value ?: createSession()
         val userMessage = ChatMessage.User(
             id = UUID.randomUUID().toString(),
             timestamp = System.currentTimeMillis(),
@@ -364,6 +502,7 @@ class SimAgentViewModel : ViewModel(), IAgentViewModel {
         _inputText.value = ""
         _isSending.value = true
         _uiState.value = UiState.Thinking("SIM 正在整理当前对话")
+        persistSession(sessionId)
         refreshGroupedSessions()
 
         viewModelScope.launch {
@@ -381,6 +520,7 @@ class SimAgentViewModel : ViewModel(), IAgentViewModel {
             _history.value = sessions.getValue(sessionId).messages
             _isSending.value = false
             _uiState.value = UiState.Idle
+            persistSession(sessionId)
             refreshGroupedSessions()
         }
     }
@@ -394,7 +534,7 @@ class SimAgentViewModel : ViewModel(), IAgentViewModel {
     }
 
     override fun updateSessionTitle(newTitle: String) {
-        val sessionId = currentSessionId ?: return
+        val sessionId = _currentSessionId.value ?: return
         updateSession(sessionId) { record ->
             record.copy(preview = record.preview.copy(clientName = newTitle.ifBlank { record.preview.clientName }))
         }
@@ -414,12 +554,16 @@ class SimAgentViewModel : ViewModel(), IAgentViewModel {
             id = sessionId,
             clientName = "新对话",
             summary = "新会话",
-            timestamp = System.currentTimeMillis()
+            timestamp = System.currentTimeMillis(),
+            sessionKind = SessionKind.GENERAL
         )
         sessions[sessionId] = SimSessionRecord(preview = preview, messages = emptyList())
-        currentSessionId = sessionId
+        persistSession(sessionId)
+        _currentSessionId.value = sessionId
         _sessionTitle.value = preview.clientName
         _currentLinkedAudioId.value = preview.linkedAudioId
+        _currentSchedulerFollowUpContext.value = null
+        _selectedSchedulerFollowUpTaskId.value = null
         refreshGroupedSessions()
         return sessionId
     }
@@ -428,10 +572,15 @@ class SimAgentViewModel : ViewModel(), IAgentViewModel {
         val current = sessions[sessionId] ?: return
         val updated = transform(current)
         sessions[sessionId] = updated
-        if (currentSessionId == sessionId) {
+        persistSession(sessionId)
+        if (_currentSessionId.value == sessionId) {
             _history.value = updated.messages
             _sessionTitle.value = updated.preview.clientName
             _currentLinkedAudioId.value = updated.preview.linkedAudioId
+            _currentSchedulerFollowUpContext.value = updated.preview.schedulerFollowUpContext
+            if (updated.preview.schedulerFollowUpContext == null) {
+                _selectedSchedulerFollowUpTaskId.value = null
+            }
         }
         refreshGroupedSessions()
     }
@@ -454,56 +603,495 @@ class SimAgentViewModel : ViewModel(), IAgentViewModel {
         _groupedSessions.value = grouped
     }
 
-    private fun seedWave1SampleSessions() {
-        if (sessions.isNotEmpty()) return
-
-        val now = System.currentTimeMillis()
-        val pinnedSessionId = UUID.randomUUID().toString()
-        val audioSessionId = UUID.randomUUID().toString()
-
-        sessions[pinnedSessionId] = SimSessionRecord(
-            preview = SessionPreview(
-                id = pinnedSessionId,
-                clientName = "SIM 演示会话",
-                summary = "可置顶改名",
-                timestamp = now - 60_000,
-                isPinned = true
-            ),
-            messages = listOf(
-                ChatMessage.Ai(
-                    id = UUID.randomUUID().toString(),
-                    timestamp = now - 60_000,
-                    uiState = UiState.Response("这是 Wave 1 的本地演示会话，用来验证历史抽屉的切换、置顶、改名和删除能力。")
-                )
+    private fun loadPersistedSessions() {
+        val loadedSessions = normalizeDuplicateAudioLinks(sessionRepository.loadSessions())
+        sessions.clear()
+        audioBindings.clear()
+        loadedSessions.forEach { session ->
+            sessions[session.preview.id] = SimSessionRecord(
+                preview = session.preview,
+                messages = session.messages
             )
-        )
-
-        sessions[audioSessionId] = SimSessionRecord(
-            preview = SessionPreview(
-                id = audioSessionId,
-                clientName = "录音讨论样例",
-                summary = "音频讨论",
-                timestamp = now - 30_000,
-                linkedAudioId = "sim_audio_seed"
-            ),
-            messages = listOf(
-                ChatMessage.Ai(
-                    id = UUID.randomUUID().toString(),
-                    timestamp = now - 30_000,
-                    uiState = UiState.Response("这是 SIM 的音频讨论样例。Wave 1 先验证壳层路由和会话边界。")
-                )
-            )
-        )
-
+            session.preview.linkedAudioId?.let { audioId ->
+                audioBindings[audioId] = session.preview.id
+            }
+        }
         refreshGroupedSessions()
+    }
+
+    private fun normalizeDuplicateAudioLinks(
+        loadedSessions: List<SimPersistedSession>
+    ): List<SimPersistedSession> {
+        val newestByAudioId = loadedSessions
+            .filter { !it.preview.linkedAudioId.isNullOrBlank() }
+            .groupBy { it.preview.linkedAudioId!! }
+            .mapValues { (_, sessionsForAudio) ->
+                sessionsForAudio.maxByOrNull { it.preview.timestamp }?.preview?.id
+            }
+
+        var changed = false
+        val normalized = loadedSessions.map { session ->
+            val linkedAudioId = session.preview.linkedAudioId
+            val shouldKeepLink = linkedAudioId != null && newestByAudioId[linkedAudioId] == session.preview.id
+            if (linkedAudioId != null && !shouldKeepLink) {
+                changed = true
+                session.copy(preview = session.preview.copy(linkedAudioId = null))
+            } else {
+                session
+            }
+        }
+
+        if (changed) {
+            normalized.forEach { session ->
+                sessionRepository.saveSession(session.preview, session.messages)
+            }
+        }
+        return normalized
+    }
+
+    private fun reconcileAudioBindings() {
+        val sessionIds = sessions.keys.toSet()
+        audioRepository.getAudioFilesSnapshot().forEach { audio ->
+            val boundSessionId = audio.boundSessionId ?: return@forEach
+            if (boundSessionId !in sessionIds) {
+                audioRepository.clearBoundSession(audio.id)
+            }
+        }
+
+        sessions.values
+            .sortedByDescending { it.preview.timestamp }
+            .forEach { record ->
+                val audioId = record.preview.linkedAudioId ?: return@forEach
+                val audio = audioRepository.getAudio(audioId)
+                if (audio == null) {
+                    updateSession(record.preview.id) { current ->
+                        current.copy(preview = current.preview.copy(linkedAudioId = null))
+                    }
+                    audioBindings.remove(audioId)
+                    return@forEach
+                }
+
+                if (audio.boundSessionId != record.preview.id) {
+                    audioRepository.bindSession(audioId, record.preview.id)
+                }
+                audioBindings[audioId] = record.preview.id
+            }
     }
 
     private fun buildReply(content: String, linkedAudioId: String?): String {
         return if (linkedAudioId != null) {
-            "当前是音频讨论会话。\n\n你刚才说的是：$content\n\nWave 1 先证明壳层和会话边界，完整的音频上下文注入会在后续波次接入。"
+            "当前是音频讨论会话。\n\n你刚才说的是：$content\n\nSIM 当前仅保留音频讨论所需的本地会话历史。"
         } else {
-            "SIM Wave 1 已接管聊天壳层。\n\n你刚才说的是：$content\n\n当前阶段只验证独立 Shell、历史、抽屉路由和无污染会话能力。"
+            "SIM 已接管聊天壳层。\n\n你刚才说的是：$content\n\n当前阶段只保留独立 Shell、历史、抽屉路由与 SIM 本地会话能力。"
         }
+    }
+
+    private suspend fun handleSchedulerFollowUpInput(content: String) {
+        val sessionId = _currentSessionId.value ?: return
+        appendUserMessage(sessionId, content)
+        _isSending.value = true
+        _uiState.value = UiState.Thinking("SIM 正在处理当前日程跟进")
+
+        val normalized = content.lowercase()
+        when {
+            normalized.contains("删除") ||
+                normalized.contains("取消") ||
+                normalized.contains("删掉") ||
+                normalized.contains("delete") ||
+                normalized.contains("remove") -> {
+                performSchedulerFollowUpQuickActionInternal(SimSchedulerFollowUpQuickAction.DELETE)
+            }
+            normalized.contains("完成") ||
+                normalized.contains("done") ||
+                normalized.contains("mark done") -> {
+                performSchedulerFollowUpQuickActionInternal(SimSchedulerFollowUpQuickAction.MARK_DONE)
+            }
+            normalized.contains("说明") ||
+                normalized.contains("explain") ||
+                normalized.contains("是什么") -> {
+                appendSchedulerFollowUpResponse(buildSchedulerFollowUpExplanation())
+            }
+            normalized.contains("状态") ||
+                normalized.contains("什么时候") ||
+                normalized.contains("提醒") ||
+                normalized.contains("status") -> {
+                appendSchedulerFollowUpResponse(buildSchedulerFollowUpStatus())
+            }
+            else -> {
+                handleSchedulerFollowUpReschedule(content)
+            }
+        }
+
+        _isSending.value = false
+        if (_uiState.value !is UiState.Error) {
+            _uiState.value = UiState.Idle
+        }
+    }
+
+    private suspend fun performSchedulerFollowUpQuickActionInternal(
+        action: SimSchedulerFollowUpQuickAction
+    ) {
+        when (action) {
+            SimSchedulerFollowUpQuickAction.EXPLAIN -> {
+                appendSchedulerFollowUpResponse(buildSchedulerFollowUpExplanation())
+            }
+            SimSchedulerFollowUpQuickAction.STATUS -> {
+                appendSchedulerFollowUpResponse(buildSchedulerFollowUpStatus())
+            }
+            SimSchedulerFollowUpQuickAction.PREFILL_RESCHEDULE -> {
+                val target = resolveSelectedSchedulerFollowUpTask()
+                if (target == null) {
+                    blockSchedulerFollowUpAction("请先选择要改期的日程")
+                } else {
+                    _inputText.value = "把“${target.title}”改到"
+                }
+            }
+            SimSchedulerFollowUpQuickAction.MARK_DONE -> {
+                runSchedulerFollowUpTaskMutation("mark_done") { task ->
+                    val updated = task.copy(isDone = !task.isDone)
+                    taskRepository.updateTask(updated)
+                    if (updated.isDone) {
+                        cancelReminderSafely(task.id)
+                    } else {
+                        scheduleReminderIfExact(updated)
+                    }
+                    val actionLabel = if (updated.isDone) "已标记完成" else "已恢复为待办"
+                    appendSchedulerFollowUpResponse(
+                        "$actionLabel：${updated.title}\n\n${formatSchedulerTaskSummary(updated)}"
+                    )
+                }
+            }
+            SimSchedulerFollowUpQuickAction.DELETE -> {
+                runSchedulerFollowUpTaskMutation("delete") { task ->
+                    taskRepository.deleteItem(task.id)
+                    cancelReminderSafely(task.id)
+                    updateSchedulerFollowUpContext { current ->
+                        current.removeTask(task.id)
+                    }
+                    appendSchedulerFollowUpResponse("已删除：${task.title}")
+                }
+            }
+        }
+    }
+
+    private suspend fun handleSchedulerFollowUpReschedule(content: String) {
+        val task = resolveSelectedSchedulerFollowUpTask()
+        if (task == null) {
+            blockSchedulerFollowUpAction("请先选择要改期的日程，再输入新的时间。")
+            return
+        }
+
+        val exactResult = uniAExtractionService.extract(
+            UniAExtractionRequest(
+                transcript = content,
+                nowIso = timeProvider.now.toString(),
+                timezone = timeProvider.zoneId.id,
+                unifiedId = task.id,
+                displayedDateIso = LocalDate.ofInstant(task.startTime, timeProvider.zoneId).toString()
+            )
+        )
+        val taskDefinition = (exactResult as? com.smartsales.prism.domain.scheduler.FastTrackResult.CreateTasks)
+            ?.params
+            ?.tasks
+            ?.singleOrNull()
+
+        if (taskDefinition == null) {
+            blockSchedulerFollowUpAction("当前跟进只支持明确时间改期，请直接输入新的具体时间。")
+            return
+        }
+
+        val newStart = parseExactInstant(taskDefinition.startTimeIso)
+        if (newStart == null) {
+            blockSchedulerFollowUpAction("改期时间格式无法解析，请换一种明确说法。")
+            return
+        }
+
+        val newDuration = taskDefinition.durationMinutes.takeIf { it > 0 } ?: task.durationMinutes
+        val conflict = scheduleBoard.checkConflict(
+            proposedStart = newStart.toEpochMilli(),
+            durationMinutes = newDuration,
+            excludeId = task.id
+        ) as? ConflictResult.Conflict
+
+        val updatedTask = task.copy(
+            startTime = newStart,
+            durationMinutes = newDuration,
+            hasConflict = conflict != null,
+            conflictWithTaskId = conflict?.overlaps?.firstOrNull()?.entryId,
+            conflictSummary = conflict?.overlaps?.firstOrNull()?.let { "与「${it.title}」时间冲突" },
+            isVague = false
+        )
+
+        taskRepository.rescheduleTask(task.id, updatedTask)
+        cancelReminderSafely(task.id)
+        scheduleReminderIfExact(updatedTask)
+        updateSchedulerFollowUpContext { current ->
+            current.updateTask(
+                taskId = task.id,
+                dayOffset = dayOffsetFor(updatedTask.startTime),
+                scheduledAtMillis = updatedTask.startTime.toEpochMilli(),
+                durationMinutes = updatedTask.durationMinutes
+            )
+        }
+        emitSchedulerFollowUpTelemetry(
+            summary = SIM_BADGE_SCHEDULER_FOLLOW_UP_ACTION_COMPLETED_SUMMARY,
+            detail = "action=reschedule taskId=${task.id}"
+        )
+        appendSchedulerFollowUpResponse(
+            buildString {
+                append("已改期：")
+                append(updatedTask.title)
+                append("\n\n")
+                append(formatSchedulerTaskSummary(updatedTask))
+                if (updatedTask.hasConflict) {
+                    append("\n\n注意：")
+                    append(updatedTask.conflictSummary ?: "当前存在时间冲突")
+                }
+            }
+        )
+    }
+
+    private suspend fun runSchedulerFollowUpTaskMutation(
+        action: String,
+        block: suspend (ScheduledTask) -> Unit
+    ) {
+        val task = resolveSelectedSchedulerFollowUpTask()
+        if (task == null) {
+            blockSchedulerFollowUpAction("请先选择要跟进的日程。")
+            return
+        }
+        block(task)
+        emitSchedulerFollowUpTelemetry(
+            summary = SIM_BADGE_SCHEDULER_FOLLOW_UP_ACTION_COMPLETED_SUMMARY,
+            detail = "action=$action taskId=${task.id}"
+        )
+    }
+
+    private suspend fun resolveSelectedSchedulerFollowUpTask(): ScheduledTask? {
+        val context = _currentSchedulerFollowUpContext.value ?: return null
+        val selectedTaskId = _selectedSchedulerFollowUpTaskId.value
+            ?: defaultSelectedFollowUpTaskId(context)
+            ?: return null
+        return taskRepository.getTask(selectedTaskId)
+            ?: context.taskSummaries.firstOrNull { it.taskId == selectedTaskId }?.let { stale ->
+                appendSchedulerFollowUpResponse("未找到「${stale.title}」的当前日程记录，请重新选择其他任务。")
+                _selectedSchedulerFollowUpTaskId.value = null
+                null
+            }
+    }
+
+    private fun buildSchedulerFollowUpExplanation(): String {
+        val context = _currentSchedulerFollowUpContext.value ?: return "当前没有工牌日程跟进上下文。"
+        if (context.taskSummaries.isEmpty()) {
+            return "当前跟进会话已没有可继续操作的绑定日程。"
+        }
+        return buildString {
+            append("这是工牌创建后的任务级跟进会话，仅作用于当前绑定日程。\n\n")
+            context.taskSummaries.forEachIndexed { index, task ->
+                append(index + 1)
+                append(". ")
+                append(formatSchedulerTaskSummary(task))
+                if (index != context.taskSummaries.lastIndex) append('\n')
+            }
+        }
+    }
+
+    private suspend fun buildSchedulerFollowUpStatus(): String {
+        val context = _currentSchedulerFollowUpContext.value ?: return "当前没有工牌日程跟进上下文。"
+        val selectedTaskId = _selectedSchedulerFollowUpTaskId.value
+        val selectedSummaries = if (selectedTaskId != null) {
+            context.taskSummaries.filter { it.taskId == selectedTaskId }
+        } else {
+            context.taskSummaries
+        }
+        if (selectedSummaries.isEmpty()) {
+            return "请先选择要查看状态的日程。"
+        }
+        return buildString {
+            selectedSummaries.forEachIndexed { index, summary ->
+                val liveTask = taskRepository.getTask(summary.taskId)
+                append(
+                    if (liveTask != null) {
+                        formatSchedulerTaskSummary(liveTask)
+                    } else {
+                        "「${summary.title}」当前已不在日程库中。"
+                    }
+                )
+                if (index != selectedSummaries.lastIndex) append("\n")
+            }
+        }
+    }
+
+    private fun buildBadgeSchedulerFollowUpSummary(
+        transcript: String,
+        taskSummaries: List<SchedulerFollowUpTaskSummary>
+    ): String {
+        return buildString {
+            append("工牌已完成日程创建，并生成了一个任务级跟进会话。\n\n")
+            append("原始指令：")
+            append(transcript)
+            append("\n\n")
+            taskSummaries.forEachIndexed { index, task ->
+                append(index + 1)
+                append(". ")
+                append(formatSchedulerTaskSummary(task))
+                if (index != taskSummaries.lastIndex) append('\n')
+            }
+            append("\n\n可继续执行：说明、状态、改期、完成、删除。多任务场景请先点选目标任务。")
+        }
+    }
+
+    private fun formatSchedulerTaskSummary(task: ScheduledTask): String {
+        val status = if (task.isDone) "已完成" else if (task.hasConflict) "有冲突" else "待办"
+        return "${task.title} · ${formatDayOffset(dayOffsetFor(task.startTime))} · ${task.timeDisplay} · ${status}"
+    }
+
+    private fun formatSchedulerTaskSummary(task: SchedulerFollowUpTaskSummary): String {
+        return "${task.title} · ${formatDayOffset(task.dayOffset)} · ${formatTimeMillis(task.scheduledAtMillis)}"
+    }
+
+    private fun formatDayOffset(dayOffset: Int): String {
+        return when (dayOffset) {
+            0 -> "今天"
+            1 -> "明天"
+            2 -> "后天"
+            else -> if (dayOffset > 0) "${dayOffset}天后" else "${-dayOffset}天前"
+        }
+    }
+
+    private fun formatTimeMillis(millis: Long): String {
+        return runCatching {
+            val local = Instant.ofEpochMilli(millis).atZone(timeProvider.zoneId).toLocalTime()
+            "%02d:%02d".format(local.hour, local.minute)
+        }.getOrDefault("--:--")
+    }
+
+    private fun appendUserMessage(sessionId: String, content: String) {
+        val record = sessions[sessionId] ?: return
+        val timestamp = System.currentTimeMillis()
+        val newMessage = ChatMessage.User(
+            id = UUID.randomUUID().toString(),
+            timestamp = timestamp,
+            content = content
+        )
+        sessions[sessionId] = record.copy(
+            preview = record.preview.copy(timestamp = timestamp),
+            messages = record.messages + newMessage
+        )
+        _history.value = sessions.getValue(sessionId).messages
+        persistSession(sessionId)
+        refreshGroupedSessions()
+    }
+
+    private fun appendSchedulerFollowUpResponse(content: String) {
+        val sessionId = _currentSessionId.value ?: return
+        appendAiMessage(sessionId, UiState.Response(content))
+    }
+
+    private fun blockSchedulerFollowUpAction(message: String) {
+        emitSchedulerFollowUpTelemetry(
+            summary = SIM_BADGE_SCHEDULER_FOLLOW_UP_ACTION_BLOCKED_SUMMARY,
+            detail = message
+        )
+        appendSchedulerFollowUpResponse(message)
+        _uiState.value = UiState.Error(message)
+    }
+
+    private fun defaultSelectedFollowUpTaskId(context: SchedulerFollowUpContext?): String? {
+        if (context == null) return null
+        return context.boundTaskIds.singleOrNull()
+    }
+
+    private fun updateSchedulerFollowUpContext(
+        transform: (SchedulerFollowUpContext) -> SchedulerFollowUpContext
+    ) {
+        val sessionId = _currentSessionId.value ?: return
+        updateSession(sessionId) { record ->
+            val currentContext = record.preview.schedulerFollowUpContext ?: return@updateSession record
+            val updatedContext = transform(currentContext).copy(updatedAt = System.currentTimeMillis())
+            val updatedPreview = record.preview.copy(schedulerFollowUpContext = updatedContext)
+            _currentSchedulerFollowUpContext.value = updatedContext
+            _selectedSchedulerFollowUpTaskId.value = when {
+                updatedContext.boundTaskIds.size == 1 -> updatedContext.boundTaskIds.single()
+                _selectedSchedulerFollowUpTaskId.value in updatedContext.boundTaskIds ->
+                    _selectedSchedulerFollowUpTaskId.value
+                else -> null
+            }
+            record.copy(preview = updatedPreview)
+        }
+    }
+
+    private fun SchedulerFollowUpContext.removeTask(taskId: String): SchedulerFollowUpContext {
+        return copy(
+            boundTaskIds = boundTaskIds.filterNot { it == taskId },
+            taskSummaries = taskSummaries.filterNot { it.taskId == taskId }
+        )
+    }
+
+    private fun SchedulerFollowUpContext.updateTask(
+        taskId: String,
+        dayOffset: Int,
+        scheduledAtMillis: Long,
+        durationMinutes: Int
+    ): SchedulerFollowUpContext {
+        return copy(
+            taskSummaries = taskSummaries.map { summary ->
+                if (summary.taskId == taskId) {
+                    summary.copy(
+                        dayOffset = dayOffset,
+                        scheduledAtMillis = scheduledAtMillis,
+                        durationMinutes = durationMinutes
+                    )
+                } else {
+                    summary
+                }
+            }
+        )
+    }
+
+    private fun dayOffsetFor(start: Instant): Int {
+        return LocalDate.ofInstant(start, timeProvider.zoneId)
+            .toEpochDay()
+            .minus(timeProvider.today.toEpochDay())
+            .toInt()
+    }
+
+    private suspend fun scheduleReminderIfExact(task: ScheduledTask) {
+        if (task.isVague || task.isDone) return
+        val cascade = task.alarmCascade.ifEmpty {
+            UrgencyLevel.buildCascade(task.urgencyLevel)
+        }
+        if (cascade.isEmpty()) return
+        runCatching {
+            alarmScheduler.scheduleCascade(
+                taskId = task.id,
+                taskTitle = task.title,
+                eventTime = task.startTime,
+                cascade = cascade
+            )
+        }
+    }
+
+    private suspend fun cancelReminderSafely(taskId: String) {
+        runCatching {
+            alarmScheduler.cancelReminder(taskId)
+        }
+    }
+
+    private fun parseExactInstant(raw: String): Instant? {
+        return runCatching { Instant.parse(raw) }
+            .recoverCatching { OffsetDateTime.parse(raw).toInstant() }
+            .getOrNull()
+    }
+
+    private fun emitSchedulerFollowUpTelemetry(summary: String, detail: String) {
+        PipelineValve.tag(
+            checkpoint = PipelineValve.Checkpoint.UI_STATE_EMITTED,
+            payloadSize = detail.length,
+            summary = summary,
+            rawDataDump = detail
+        )
+        Log.d(SIM_BADGE_FOLLOW_UP_LOG_TAG, "$summary: $detail")
     }
 
     private fun appendAiMessage(sessionId: String, uiState: UiState) {
@@ -518,10 +1106,28 @@ class SimAgentViewModel : ViewModel(), IAgentViewModel {
             preview = record.preview.copy(timestamp = timestamp),
             messages = record.messages + newMessage
         )
-        if (currentSessionId == sessionId) {
+        persistSession(sessionId)
+        if (_currentSessionId.value == sessionId) {
             _history.value = sessions.getValue(sessionId).messages
         }
         refreshGroupedSessions()
+    }
+
+    private fun persistSession(sessionId: String) {
+        val record = sessions[sessionId] ?: return
+        sessionRepository.saveSession(
+            preview = record.preview,
+            messages = record.messages
+        )
+    }
+
+    private fun startFreshSeededSession(initialUserInput: String): String? {
+        if (initialUserInput.isBlank()) return null
+        startNewSession()
+        val sessionId = createSession()
+        updateInput(initialUserInput)
+        send()
+        return sessionId
     }
 
     private fun clearTranscriptRevealState(messages: List<ChatMessage>) {

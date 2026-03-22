@@ -39,16 +39,28 @@ This file is allowed to be ahead of the codebase.
 4. **Tingwu artifacts remain source-led**: transcript, summary, chapters, highlights, speaker data, questions/answers, and similar structures come from Tingwu/API-backed artifacts, not locally invented replacements.
 5. **Final display may be polished, but not rewritten into fiction**: SIM may use a readability-polisher prompt over Tingwu output, but it must not invent unsupported facts or sections.
 6. **Already-transcribed selection must reuse existing results**: selecting an already-transcribed audio loads stored artifacts instead of rerunning Tingwu.
-7. **`Ask AI` is audio-grounded**: the chat session is bound to one selected audio item and its artifacts.
-8. **No smart-agent memory system is required**: SIM chat may keep immediate chat state, but it must not require the smart app's wider memory architecture.
-9. **Chat-side audio selection returns through the audio drawer**: this flow must not default to Android file picker.
-10. **Audio persistence must not contaminate the smart app**: if runtime/storage is shared, the audio/chat storage must be namespaced or otherwise isolated.
+7. **There is one SIM-owned transcription/artifact pipeline with two entry surfaces**: drawer-origin transcription and chat-origin audio reselection are two ways to enter the same underlying Tingwu/artifact path rather than two separate processing systems.
+8. **`Ask AI` is audio-grounded**: the chat session is bound to one selected audio item and its artifacts or in-flight transcription job.
+9. **No smart-agent memory system is required**: SIM chat may keep immediate chat state, but it must not require the smart app's wider memory architecture.
+10. **Chat-side audio selection returns through the audio drawer**: this flow must not default to Android file picker for the real product path.
+11. **Pending audio selected from chat continues inside chat transparency**: if the user picks an untranscribed audio item from the chat-side drawer path, the same SIM transcription pipeline continues from chat and the waiting experience is owned by chat-side transparent processing states.
+12. **Pending chat-side selection binds immediately**: when the user selects pending audio from chat-side reselection, SIM binds that discussion session to the chosen audio immediately before Tingwu finishes so the waiting experience already belongs to the correct discussion thread.
+13. **Audio persistence must not contaminate the smart app**: if runtime/storage is shared, the audio/chat storage must be namespaced or otherwise isolated.
+14. **Badge sync is the real product ingress**: production SIM audio inventory comes from physical badge synchronization via BLE/Wi-Fi transfer rather than arbitrary phone-local uploads.
+15. **Phone-local import is test-only**: if a local file picker exists, it is only a testing convenience surface and must not be treated as the product-default audio ingress.
+16. **Completed chat-side audio must become durable chat history**: once a pending chat-side audio run completes, the finished artifact content must be appended as durable chat history rather than remaining only in transient thinking/progress state.
 
 ---
 
 ## Artifact Surface Rule
 
 The expanded audio card is the artifact surface and the informational counterpart of the discussion chat UI.
+
+Drawer inventory behavior must stay stable:
+
+- transcribed cards should start collapsed by default in the drawer list
+- opening a card expands it into the artifact surface
+- manual expand/collapse state must remain stable while the drawer stays open and must not reset just because the list scrolls or recomposes
 
 It may display:
 
@@ -83,7 +95,9 @@ It is:
 
 - a continuation surface for the transcription discussion started from the audio drawer
 - a question-answer surface over one selected audio
+- the transparent waiting surface when chat-side reselection chooses pending audio
 - allowed to load transcript and structured artifacts as context
+- expected to preserve completed artifact content as part of the discussion history once the run finishes
 
 It is not:
 
@@ -200,7 +214,21 @@ When the user requests another audio inside chat:
 
 - the app must reopen the audio drawer
 - the user must be able to select one audio item
+- selecting an already-transcribed item must bind chat to stored artifacts without rerunning Tingwu
+- selecting a pending item must bind chat immediately to that audio and continue the same SIM Tingwu pipeline inside chat with transparent progress states
+- once that pending-item run completes, chat must append a durable artifact-backed discussion turn rather than leaving only a lightweight completion notice
+- while that audio is already pending/transcribing, the drawer must lock its transcribe trigger for that item so the user cannot start a duplicate run from swipe or button actions
+- when that pending-item run completes, the resulting artifact/state must already be reflected back in the audio drawer without requiring a separate drawer-origin rerun
 - Android file manager must not become the default path for this branch
+
+### Branch-S6: Test-Only Local Import
+
+If SIM exposes phone-local audio import for QA or developer testing:
+
+- it must remain explicitly secondary to the badge-sync product path
+- it may open Android file picker only as an intentional test/import action
+- imported files must enter the same SIM-owned transcription/artifact pipeline once ingested
+- specs and validation must not mistake this testing affordance for the production ingress model
 
 ### Branch-S5: Transparent-State Presentation
 
@@ -208,6 +236,11 @@ When native streaming or provider-native trace is unavailable:
 
 - SIM may use pseudo-streaming and cosmetic activity states
 - these states must remain presentational rather than fake backend truth
+- for chat-side durable artifact messages, transcript pseudo-streaming may play only once on the first reveal of that message
+- that one-time reveal rule applies to both already-transcribed reuse and pending-to-completion artifact turns in chat history
+- if the rendered transcript exceeds 4 lines during that first reveal, the UI may classify it as a long transcript immediately, but it must hold the first reveal open long enough to be readable before collapsing it
+- the default SIM timing rule for that readable first reveal is about 1 second before collapse is allowed
+- reopening the same history session later must not replay that reveal animation; long transcripts should reopen collapsed by default
 
 ---
 
@@ -220,5 +253,6 @@ The SIM audio/chat lane is behaviorally ready only when:
 - transcribed cards render source-led artifacts with readability polishing
 - already-transcribed audio loads existing artifacts without rerunning Tingwu
 - `Ask AI` opens a simple audio-grounded chat
+- chat-side durable artifact messages use one-time transcript reveal behavior and do not replay long transcript streaming on history reentry
 - audio re-selection from chat returns to the audio drawer
 - persistence stays isolated from the smart app

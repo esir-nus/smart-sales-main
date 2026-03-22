@@ -141,7 +141,7 @@ class AudioViewModel @Inject constructor(
         timeDisplay: String?, 
         artifacts: com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
     ): String = buildString {
-        appendLine("### 🎙️ 已加载音频：${title ?: "未命名"}")
+        appendLine("### 已加载音频：${title ?: "未命名"}")
         if (timeDisplay != null) {
             appendLine("**时长**: $timeDisplay")
         }

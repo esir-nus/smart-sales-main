@@ -11,6 +11,7 @@
 Centralizes all Android notification logic behind a single interface. Features call `NotificationService.show()` instead of building notifications directly. This ensures consistent channel management, permission handling, and notification styling.
 
 > See [interface.md](file:///home/cslh-frank/main_app/docs/cerb/notifications/interface.md) for the full interface contract and output types.
+> Live OEM operator checklist: `docs/sops/oem-alarm-notification-checklist.md`
 
 ---
 
@@ -218,6 +219,12 @@ App Launch
 
 **Architecture**: **Single APK, runtime detection** via `Build.MANUFACTURER`. No multi-APK flavors.
 
+For day-to-day debugging and manual validation, keep `docs/sops/oem-alarm-notification-checklist.md` synchronized with this section and `OemCompat.kt`.
+
+The shipped runtime guidance should also stay adaptive to the current OEM. If the app already knows it is on Xiaomi/HyperOS, Huawei/Honor, Oppo/Realme, or Vivo/iQOO, the user-facing hardening prompt must prefer OEM-specific checklist copy and the nearest reachable settings page over a generic one-size-fits-all alarm warning.
+
+The first branch in that adaptive prompt must be app-level notification blocking itself. If the system has already set the app to `importance=NONE`, `POST_NOTIFICATION: ignore`, or an equivalent “all notifications off” state, the runtime should guide the user back to app notification settings before suggesting deeper OEM hardening.
+
 ```kotlin
 // OemCompat.kt — utility for OEM detection + settings navigation
 object OemCompat {
@@ -357,4 +364,3 @@ fun cascadeTier(offsetMinutes: Int): CascadeTier = when (offsetMinutes) {
 - [ ] Battery optimization dialog shown on first alarm (Chinese OEM only)
 - [ ] OEM autostart Intent resolves (Xiaomi, Huawei, Oppo, Vivo)
 - [ ] Graceful fallback on unsupported/unknown OEM
-

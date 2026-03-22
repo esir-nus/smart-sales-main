@@ -4,6 +4,7 @@ import com.smartsales.core.context.ChatTurn
 import com.smartsales.core.telemetry.PipelineValve
 import com.smartsales.core.test.fakes.FakeContextBuilder
 import com.smartsales.prism.domain.model.UiState
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest

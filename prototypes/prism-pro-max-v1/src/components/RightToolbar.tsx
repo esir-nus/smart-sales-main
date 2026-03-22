@@ -1,4 +1,3 @@
-import React from 'react';
 import { FileText, Package } from 'lucide-react';
 
 export const RightToolbar = () => {

@@ -68,8 +68,10 @@ fun MascotOverlay(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = if (activeState.emotion == "happy") "✨" else "👀",
-                        fontSize = 16.sp
+                        text = if (activeState.emotion == "happy") "AI" else "SS",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
                     )
                 }
 

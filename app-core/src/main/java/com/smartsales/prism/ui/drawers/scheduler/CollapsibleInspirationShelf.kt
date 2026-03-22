@@ -28,7 +28,7 @@ import com.smartsales.prism.ui.theme.*
 /**
  * 灵感箱可折叠面板
  * 
- * - 折叠时：仅显示标题栏 "💡 灵感箱 (N) [▼]"
+ * - 折叠时：仅显示标题栏 "灵感箱 (N) [▼]"
  * - 展开时：显示所有灵感卡片
  * - 空时：完全隐藏
  */
@@ -61,7 +61,7 @@ fun CollapsibleInspirationShelf(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "💡 灵感箱 (${items.size})",
+                text = "灵感箱 (${items.size})",
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 color = TextPrimary
@@ -124,11 +124,15 @@ private fun InspirationShelfCard(
             modifier = Modifier.weight(1f),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "💡",
-                fontSize = 16.sp,
-                modifier = Modifier.padding(end = 8.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .padding(end = 8.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(AccentBlue.copy(alpha = 0.16f))
+                    .padding(horizontal = 6.dp, vertical = 4.dp)
+            ) {
+                Text("AI", fontSize = 10.sp, color = AccentBlue, fontWeight = FontWeight.SemiBold)
+            }
             Text(
                 text = title,
                 fontSize = 14.sp,

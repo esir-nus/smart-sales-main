@@ -33,6 +33,8 @@ This shard intentionally replaces the smart-agent interpretation of chat with a 
 
 - list audio cards
 - support SmartBadge-synced inventory as the real product audio source
+- expose a browse-mode manual sync action for badge-origin inventory refresh
+- allow a best-effort automatic badge sync when the browse drawer opens and connectivity is already ready
 - allow phone-local/manual audio import only as a testing convenience when explicitly enabled for QA/dev validation
 - support transcribe action
 - support opening transcribed cards
@@ -111,8 +113,48 @@ Minimum namespace targets:
 - local audio blob naming
 - artifact file naming
 - audio/chat binding records if persisted
+- session metadata and durable chat history if persisted
 
 If SIM receives a separate application ID and file space, this requirement may be satisfied by that app boundary instead.
+
+### T6.2 Accepted V1 Namespace
+
+The current accepted V1 storage contract is now explicit and matches the shipped SIM repository path:
+
+- metadata file: `sim_audio_metadata.json`
+- local audio blobs: `sim_<audioId>.<ext>`
+- artifact files: `sim_<audioId>_artifacts.json`
+- audio/chat binding record: persisted as `boundSessionId` inside `sim_audio_metadata.json`
+
+This means V1 does not require a separate binding file.
+
+Contrast against the smart/default path:
+
+- smart/default audio persistence still uses non-SIM names such as `audio_metadata.json`, plain `<audioId>.wav`, and plain `<audioId>_artifacts.json`
+- SIM therefore does not silently share the same audio persistence filenames by default
+
+### T6.3 Accepted V1 Session Persistence
+
+The current accepted V1 chat persistence contract is also SIM-only:
+
+- session metadata file: `sim_session_metadata.json`
+- per-session durable history file: `sim_session_<sessionId>_messages.json`
+- durable message types are limited to user text, AI response, AI audio artifacts, and AI error
+- transient UI state such as input text, sending/thinking state, toast/error presentation, and transcript reveal state is not persisted
+- normal runtime does not seed demo sessions
+- cold start restores stored sessions, but does not auto-select an active session
+
+### Binding Reconciliation Rule
+
+At startup, SIM must treat the session store as the source of truth for session existence and treat audio metadata as the source of truth only for the audio-side binding pointer.
+
+This means:
+
+- deleting a linked SIM session must clear the audio entry's `boundSessionId`
+- if audio metadata points to a missing SIM session, SIM clears that dangling audio binding
+- if a persisted SIM session still links an existing audio item, SIM restores the missing audio-side binding
+- if a persisted SIM session links an audio item that no longer exists, SIM unlinks that session from the missing audio
+- if duplicate persisted sessions claim the same audio item, SIM keeps only the newest linked session and normalizes older sessions to `linkedAudioId = null`
 
 ---
 
@@ -140,6 +182,21 @@ It is not allowed to:
 - behave like the current agent OS
 - accumulate broad session memory beyond the immediate audio-grounded conversation
 - use the plugin/tool board as its primary interaction model
+
+### Chat Surface Reuse Boundary
+
+The SIM chat surface may now host more than one SIM session kind, but that does not merge their contracts.
+
+Allowed session kinds on the reused chat shell:
+
+- audio-grounded discussion
+- Wave 8 task-scoped scheduler follow-up created from badge-origin scheduler completion
+
+Rules:
+
+- audio-grounded context and scheduler-follow-up context must remain separate in persistence and runtime state
+- scheduler follow-up must not inherit audio artifact assumptions
+- audio-grounded chat must not gain scheduler mutation rights unless the shell explicitly opened a scheduler-follow-up session
 
 ### Two Entry / One Pipeline Rule
 
@@ -177,6 +234,30 @@ For the real product, SIM audio enters from badge synchronization:
 - BLE/Wi-Fi badge connectivity remains the production source of recordings
 - chat attach/reselect must reopen the SIM drawer over that SIM-owned inventory
 - the product contract does not require arbitrary phone-local uploads
+
+### Badge Sync Trigger Rule
+
+SIM must expose badge-origin audio ingress through the audio drawer itself rather than forcing users through connectivity-only surfaces.
+
+- browse-mode drawer exposes a visible secondary action for manual badge sync
+- chat-reselect mode does not expose that manual sync action because selection should stay focused on the current inventory
+- manual sync reuses the existing SIM-owned repository path that lists badge WAV files and downloads unseen recordings
+- manual sync is additive-only: it must not clear existing inventory and must not duplicate or redownload already-imported badge files
+- the dedupe key for this slice is the exact badge filename already present in SIM local `SMARTBADGE` inventory
+- if connectivity is absent, offline, or not ready, manual sync fails explicitly in human-readable drawer-local feedback and leaves the current inventory usable
+
+### Automatic Sync Rule
+
+Automatic sync is allowed, but it must stay narrow and non-blocking.
+
+- auto-sync may run only when the browse drawer becomes visible
+- auto-sync runs at most once per drawer-open session, not on every recomposition
+- auto-sync must not run in chat-reselect mode
+- auto-sync should start only when connectivity is already ready; if readiness is absent, SIM skips the sync attempt instead of surfacing a blocking failure
+- auto-sync readiness must come from `ConnectivityBridge.isReady()` or a SIM-owned repository helper wrapping that preflight rather than from shell UI `ConnectionState`
+- if an auto-sync attempt begins and later fails, the failure may surface as non-blocking drawer feedback, but it must not hijack shell routing or clear existing inventory
+- auto-sync and manual sync share the same repository/import path so badge-origin files enter one SIM-owned inventory
+- repeated badge `/list` checks are allowed, but repeated local download/import of the same badge filename is not
 
 Connectivity boundary for this ingress:
 

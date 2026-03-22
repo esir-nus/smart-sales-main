@@ -97,6 +97,19 @@ User-facing features. Each receives processed results from Orchestrator (Layer 3
 
 > **Domain vs UI Decoupling Rule (Wave 13)**: Features in Layer 4 (e.g., Scheduler, CRM) MUST define their own internal UI State projections (e.g., `SchedulerUiState`). They MUST NOT leak `app-core` ViewModels or UI State flags directly into Layer 2 Domain contracts. The Domain contract (`ScheduledTask`) is the SSD truth; the UI translates it.
 
+### SIM T8.0 follow-up ownership edge
+
+The SIM post-closeout scheduler follow-up mini-wave introduces one explicit SIM-only cross-lane edge:
+
+- `BadgeAudioPipeline` scheduler completion may create a SIM shell-owned follow-up binding
+- `SimShell` / `SimAgentViewModel` may host the follow-up session and task selection UI
+- actual task mutation truth still routes through scheduler-owned collaborators (`ScheduledTaskRepository`, conflict check, reminder stack)
+
+Rule:
+
+- SIM chat may host the follow-up conversation surface
+- SIM chat must not become the owner of generic scheduler storage or a second memory lane
+
 ---
 
 ## Delivery Workflow Registry (The TaskBoard Vault)

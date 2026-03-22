@@ -359,7 +359,7 @@ private fun ExpandedAudioHub(
                 if (!actions.isNullOrEmpty()) {
                     sb.append("**待办事项 (Actions)**\n")
                     actions.forEach { actionText ->
-                        sb.append("- ✅ $actionText\n")
+                        sb.append("- $actionText\n")
                     }
                     sb.append("\n")
                 }
@@ -512,7 +512,7 @@ private fun ExpandedAudioHub(
             val transcriptContent = artifacts?.let { "transcript" } // Signal content is ready
             AudioCardAccordion(
                 title = "转写 (Transcription)",
-                icon = "🗣️",
+                icon = "TR",
                 markdownContent = artifacts?.transcriptMarkdown,
                 status = item.status,
                 initiallyExpanded = true
@@ -521,7 +521,7 @@ private fun ExpandedAudioHub(
             
             AudioCardAccordion(
                 title = "摘要 (Summary)",
-                icon = "📝",
+                icon = "SU",
                 textContent = artifacts?.smartSummary?.summary,
                 status = item.status,
                 initiallyExpanded = false
@@ -544,7 +544,7 @@ private fun ExpandedAudioHub(
             }
             AudioCardAccordion(
                 title = "章节 (Chapters)",
-                icon = "📑",
+                icon = "CH",
                 textContent = chaptersOutput ?: "无章节内容",
                 status = item.status,
                 initiallyExpanded = false,
@@ -554,7 +554,7 @@ private fun ExpandedAudioHub(
 
             AudioCardAccordion(
                 title = "AI 洞察 (AI Insights)",
-                icon = "💡",
+                icon = "AI",
                 markdownContent = aiInsightsMarkdown?.ifBlank { null } ?: "正在分析或无洞察内容...",
                 status = item.status,
                 initiallyExpanded = false,
@@ -595,7 +595,17 @@ private fun AudioCardAccordion(
                 .padding(vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = icon, fontSize = 14.sp)
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = AccentBlue.copy(alpha = 0.12f)
+            ) {
+                Text(
+                    text = icon,
+                    fontSize = 10.sp,
+                    color = AccentBlue,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp)
+                )
+            }
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = title,

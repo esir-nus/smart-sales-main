@@ -44,6 +44,8 @@ import com.smartsales.prism.ui.theme.*
 import androidx.compose.ui.tooling.preview.Preview
 import com.smartsales.prism.ui.drawers.scheduler.ISchedulerViewModel
 import com.smartsales.prism.ui.drawers.scheduler.FakeSchedulerViewModel
+import java.time.Instant
+import com.smartsales.prism.data.notification.ReminderReliabilityAdvisor
 
 /**
  * Scheduler Drawer — Top-Down Glass Sheet
@@ -58,7 +60,11 @@ fun SchedulerDrawer(
     modifier: Modifier = Modifier,
     onInspirationAskAi: ((String) -> Unit)? = null,
     enableInspirationMultiSelect: Boolean = true,
-    viewModel: ISchedulerViewModel = hiltViewModel<SchedulerViewModel>()
+    viewModel: ISchedulerViewModel = hiltViewModel<SchedulerViewModel>(),
+    reminderGuideProvider: (android.content.Context) -> ReminderReliabilityAdvisor.ReminderReliabilityGuide? =
+        ReminderReliabilityAdvisor::fromContext,
+    reminderActionOpener: (android.content.Context, ReminderReliabilityAdvisor.Action) -> Boolean =
+        ReminderReliabilityAdvisor::openAction
 ) {
     // Height: ~85% of screen
     val drawerFraction = 0.85f 
@@ -71,6 +77,7 @@ fun SchedulerDrawer(
     val isSelectionMode by viewModel.isSelectionMode.collectAsState()
     val selectedInspirationIds by viewModel.selectedInspirationIds.collectAsState()
     val timelineItems by viewModel.timelineItems.collectAsState()
+    val exitingTasks by viewModel.exitingTasks.collectAsState()
     val pipelineStatus by viewModel.pipelineStatus.collectAsState()
     val isInspirationsExpanded by viewModel.isInspirationsExpanded.collectAsState()
     val tipsLoadingSet by viewModel.tipsLoading.collectAsState()  // Wave 9: Tips loading state
@@ -99,25 +106,50 @@ fun SchedulerDrawer(
     }
 
     // 精确闹钟权限提示 — 一次性对话框
-    var showExactAlarmDialog by remember { mutableStateOf(false) }
+    var reminderGuide by remember { mutableStateOf<ReminderReliabilityAdvisor.ReminderReliabilityGuide?>(null) }
     LaunchedEffect(Unit) {
         viewModel.exactAlarmPermissionNeeded.collect {
-            showExactAlarmDialog = true
+            reminderGuide = reminderGuideProvider(context)
         }
     }
-    if (showExactAlarmDialog) {
+    if (reminderGuide != null) {
+        val guide = reminderGuide!!
         AlertDialog(
-            onDismissRequest = { showExactAlarmDialog = false },
-            title = { Text("精确闹钟权限") },
-            text = { Text("未授予精确闹钟权限，提醒可能延迟最多1小时。\n\n建议在设置中开启「闹钟和提醒」权限以确保准时提醒。") },
+            onDismissRequest = { reminderGuide = null },
+            title = { Text(guide.title) },
+            text = {
+                Text(
+                    buildString {
+                        append(guide.message)
+                        if (guide.checklist.isNotEmpty()) {
+                            append("\n\n")
+                            guide.checklist.forEach { item ->
+                                append("• ")
+                                append(item)
+                                append('\n')
+                            }
+                        }
+                    }.trim()
+                )
+            },
             confirmButton = {
-                TextButton(onClick = {
-                    showExactAlarmDialog = false
-                    com.smartsales.prism.data.notification.OemCompat.openExactAlarmSettings(context)
-                }) { Text("去设置") }
+                Row {
+                    guide.secondaryAction?.let { secondaryAction ->
+                        TextButton(onClick = {
+                            reminderActionOpener(context, secondaryAction)
+                            reminderGuide = null
+                        }) {
+                            Text(guide.secondaryLabel ?: "更多设置")
+                        }
+                    }
+                    TextButton(onClick = {
+                        reminderActionOpener(context, guide.primaryAction)
+                        reminderGuide = null
+                    }) { Text(guide.primaryLabel) }
+                }
             },
             dismissButton = {
-                TextButton(onClick = { showExactAlarmDialog = false }) { Text("稍后") }
+                TextButton(onClick = { reminderGuide = null }) { Text("稍后") }
             }
         )
     }
@@ -135,12 +167,14 @@ fun SchedulerDrawer(
     
     val uiItems = remember(
         timelineItems,
+        exitingTasks,
+        activeDayOffset,
         effectiveIsSelectionMode,
         effectiveSelectedInspirationIds,
         expandedConflictIds,
         tipsLoadingSet
     ) {
-        timelineItems.map { model: SchedulerTimelineItem ->
+        val mappedItems = timelineItems.map { model: SchedulerTimelineItem ->
             model.toUiState(
                 isSelectionMode = effectiveIsSelectionMode,
                 selectedInspirationIds = effectiveSelectedInspirationIds,
@@ -149,6 +183,27 @@ fun SchedulerDrawer(
                 cachedTips = if (model is ScheduledTask) viewModel.getCachedTips(model.id) else null
             )
         }
+
+        val exitingUiTasks = exitingTasks
+            .filter { it.sourceDayOffset == activeDayOffset }
+            .map { motion ->
+                val snapshot = motion.snapshot
+                val base = snapshot.toUiState(
+                    tipsLoadingSet = tipsLoadingSet,
+                    cachedTips = viewModel.getCachedTips(snapshot.id)
+                ) as TimelineItem.Task
+                base.copy(
+                    id = motion.sourceTaskId,
+                    renderKey = motion.renderKey,
+                    isInteractive = false,
+                    sortInstant = snapshot.startTime,
+                    processingStatus = null,
+                    isExiting = true,
+                    exitDirection = motion.exitDirection
+                )
+            }
+
+        mappedItems + exitingUiTasks
     }
     
     // 分离灵感和任务用于可折叠灵感架
@@ -156,7 +211,16 @@ fun SchedulerDrawer(
         uiItems.filterIsInstance<TimelineItem.Inspiration>()
     }
     val taskItems = remember(uiItems) {
-        uiItems.filter { item: TimelineItem -> item !is TimelineItem.Inspiration }
+        uiItems
+            .filter { item: TimelineItem -> item !is TimelineItem.Inspiration }
+            .sortedWith(
+                compareBy<TimelineItem> {
+                    when (it) {
+                        is TimelineItem.Task -> it.sortInstant ?: Instant.MAX
+                        else -> Instant.MAX
+                    }
+                }
+            )
     }
 
     // Drawer container — no internal scrim (AgentShell provides global scrim)
@@ -340,7 +404,7 @@ fun SchedulerDrawer(
                             androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
                         ) { granted ->
                             if (!granted) {
-                                Toast.makeText(devContext, "❌ 需要录音权限", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(devContext, "需要录音权限", Toast.LENGTH_SHORT).show()
                             }
                             // 权限获得后不自动录音 — 原始 press 手势已被权限对话框中断，
                             // 不存在对应的 tryAwaitRelease() 来停止录音。
@@ -406,7 +470,7 @@ fun SchedulerDrawer(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        text = if (isRecordingMic) "🔴 松开结束录音..." else "🎙️ 按住录音",
+                                        text = if (isRecordingMic) "松开结束录音..." else "按住录音",
                                         color = Color.White,
                                         fontSize = 14.sp,
                                         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold

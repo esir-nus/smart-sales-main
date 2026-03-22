@@ -624,6 +624,53 @@ class SimShellHandoffTest {
         )
     }
 
+    @Test
+    fun `canOpenSimSchedulerFromEdge only allows clean shell state`() {
+        assertTrue(canOpenSimSchedulerFromEdge(SimShellState()))
+        assertFalse(
+            canOpenSimSchedulerFromEdge(
+                SimShellState(activeDrawer = SimDrawerType.SCHEDULER)
+            )
+        )
+        assertFalse(
+            canOpenSimSchedulerFromEdge(
+                SimShellState(showHistory = true)
+            )
+        )
+        assertFalse(
+            canOpenSimSchedulerFromEdge(
+                SimShellState(activeConnectivitySurface = SimConnectivitySurface.MODAL)
+            )
+        )
+        assertFalse(
+            canOpenSimSchedulerFromEdge(
+                SimShellState(showSettings = true)
+            )
+        )
+    }
+
+    @Test
+    fun `canOpenSimAudioFromEdge also blocks when ime is visible`() {
+        assertTrue(
+            canOpenSimAudioFromEdge(
+                state = SimShellState(),
+                isImeVisible = false
+            )
+        )
+        assertFalse(
+            canOpenSimAudioFromEdge(
+                state = SimShellState(),
+                isImeVisible = true
+            )
+        )
+        assertFalse(
+            canOpenSimAudioFromEdge(
+                state = SimShellState(activeDrawer = SimDrawerType.AUDIO),
+                isImeVisible = false
+            )
+        )
+    }
+
     private fun followUpState(boundSessionId: String) = SimBadgeFollowUpState(
         threadId = "thread_1",
         origin = SimBadgeFollowUpOrigin.BADGE,

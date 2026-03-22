@@ -75,6 +75,7 @@
   - Simple audio-grounded chat as continuation of the audio discussion
   - Connectivity retained as a decoupled support module
   - Source-led Tingwu artifacts with optional readability polishing
+  - shell-owned edge/handle drawer gestures for scheduler/audio entry and dismiss parity
   - No agent memory or smart-agent system integration
 - **Current Carry Debt**:
   - SIM has now accepted `T8.0` on top of the Wave 7 closeout. `docs/reports/tests/L3-20260322-sim-wave8-follow-up-validation.md` proves prompt-first ingress, in-shell prompt opening, repository-backed single-task follow-up mutation, and multi-task no-selection safe-fail on device.

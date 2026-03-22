@@ -23,6 +23,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.widget.Toast
@@ -46,6 +48,8 @@ import com.smartsales.prism.ui.drawers.scheduler.ISchedulerViewModel
 import com.smartsales.prism.ui.drawers.scheduler.FakeSchedulerViewModel
 import java.time.Instant
 import com.smartsales.prism.data.notification.ReminderReliabilityAdvisor
+
+internal const val SCHEDULER_DRAWER_HANDLE_TEST_TAG = "scheduler_drawer_handle"
 
 /**
  * Scheduler Drawer — Top-Down Glass Sheet
@@ -490,11 +494,14 @@ fun SchedulerDrawer(
 @Composable
 private fun DragHandle(onDismiss: () -> Unit) {
     var accumulatedDrag by remember { mutableStateOf(0f) }
+    val density = LocalDensity.current
+    val dismissThresholdPx = remember(density) { with(density) { 56.dp.toPx() } }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 12.dp)
+            .testTag(SCHEDULER_DRAWER_HANDLE_TEST_TAG)
             .pointerInput(Unit) {
                 detectVerticalDragGestures(
                     onDragEnd = { accumulatedDrag = 0f },
@@ -502,8 +509,8 @@ private fun DragHandle(onDismiss: () -> Unit) {
                 ) { change, dragAmount ->
                     change.consume()
                     accumulatedDrag += dragAmount
-                    // Drag UP to close
-                    if (accumulatedDrag < -50) {
+                    // 向上拖动关闭顶部抽屉
+                    if (accumulatedDrag <= -dismissThresholdPx) {
                         onDismiss()
                         accumulatedDrag = 0f
                     }

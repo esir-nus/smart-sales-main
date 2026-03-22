@@ -57,13 +57,13 @@ Use Select Mode when the drawer is opened from the chat input attach/upload affo
 ├────────────────────────────────────────────────────────────┤
 │                                                            │
 │  ┌────────────────────────────────────────────────────────┐│
-│  │ [★] Q4_年度预算会议_Final.wav                   14:20  ││ ← Row 1: Star + Name + Time
-│  │ [☁] 财务部关于Q4预算的最终审核意见...                  ││ ← Row 2: Source + Preview
+│  │ Q4_年度预算会议_Final.wav              14:20   [★]    ││ ← Row 1: Name + Time + Star
+│  │ 财务部关于Q4预算的最终审核意见...                      ││ ← Row 2: Preview / state copy
 │  └────────────────────────────────────────────────────────┘│
 │                                                            │
 │  ┌────────────────────────────────────────────────────────┐│
-│  │ [☆] 客户拜访_张总_20260124.wav                  2 days ││
-│  │ [📱] ░░░░░░░░░ 右滑转写 >>> ░░░░░░░░░                  ││ ← Local source (Phone)
+│  │ 客户拜访_张总_20260124.wav                2 days  [☆]  ││
+│  │ ░░░░░░░░░ 右滑开始转写 >>> ░░░░░░░░░                    ││ ← Browse pending hint
 │  └────────────────────────────────────────────────────────┘│
 │                                                            │
 │  ┌────────────────────────────────────────────────────────┐│
@@ -92,8 +92,8 @@ Use Select Mode when the drawer is opened from the chat input attach/upload affo
 ┌───────────────────────────────────────────────────────────┐
 │  COLLAPSED (Default)                                      │
 ├───────────────────────────────────────────────────────────┤
-│  [★] Q4_年度预算会议.wav                           14:20  │
-│  [☁] 财务部关于Q4预算的最终审核意见...                    │
+│  Q4_年度预算会议.wav                           14:20  [★] │
+│  财务部关于Q4预算的最终审核意见...                        │
 └───────────────────────────────────────────────────────────┘
         │
         │ tap card body (ONLY if transcribed)
@@ -101,8 +101,8 @@ Use Select Mode when the drawer is opened from the chat input attach/upload affo
 ┌───────────────────────────────────────────────────────────┐
 │  EXPANDED                                                 │
 ├───────────────────────────────────────────────────────────┤
-│  [★] Q4_年度预算会议.wav                           14:20  │
-│  [☁] ───────────────────────────────────────────────────  │
+│  Q4_年度预算会议.wav                           14:20  [★] │
+│  ───────────────────────────────────────────────────────  │
 │      📅 2026-01-23 15:30                 ┌──────────────┐ │
 │                                          │    问AI      │ │
 │      ─────────────────────────────────── └──────────────┘ │
@@ -165,13 +165,13 @@ These transcription-state microcopies apply to Browse Mode. Select Mode uses dif
 
 | State | User Sees | Microcopy / Behavior |
 |-------|-----------|----------------------|
-| `current` | Disabled card with visible preview | `当前讨论中` |
-| `transcribed` | Tappable card with truncated transcript preview | `已转写`; transcript preview should be truncated to 1-2 lines with ellipsis |
-| `pending` | Tappable card with helper copy | `待处理`; helper copy should explain that chat can continue processing this audio |
-| `transcribing` | Tappable card with progress or in-flight label | `转写中`; helper copy should explain that chat will continue processing this audio |
+| `current` | Disabled card with visible preview | Inline current marker only, such as `当前讨论中 · ...`; no extra status pill |
+| `transcribed` | Tappable card with truncated transcript preview | Transcript-first preview should be truncated to 1-2 lines with ellipsis and be self-explanatory without `已转写` chrome |
+| `pending` | Tappable card with compact continuation copy | Use row-body copy such as `选择后在当前聊天中继续处理`; no separate `待处理` pill |
+| `transcribing` | Tappable card with progress or in-flight label | Use row-body copy plus progress bar, such as `转写中，选择后将在当前聊天继续处理`; no separate `转写中` pill |
 | `error` | Retry-capable or explicitly blocked card | `转写失败`; only promise chat-side retry if that route is truly supported |
 
-For already-transcribed cards in Select Mode, the preview should help the user recognize the audio content quickly without opening the full artifact surface.
+For already-transcribed cards in Select Mode, the preview should help the user recognize the audio content quickly without opening the full artifact surface. Compact cards should not differentiate badge/phone origin through extra icon or source-label chrome in this mode.
 
 ---
 

@@ -128,7 +128,7 @@ Home empty-state composition note:
 | **Audio Card** | `TRANSCRIBING` | System | `LinearProgress` | **Processing** | "正在转写..." + progress bar. | ✅ Verified |
 | **Audio Drawer (Select Mode)** | `Opened from Chat` | Tap attach/upload in grounded chat | Bottom sheet | Open audio selector | No swipe hints, no bottom CTA. | ❌ Pending |
 | **Audio Card (Select Mode)** | `TRANSCRIBED` | Tap card | Ripple | Bind current chat to selected audio | Show truncated transcript preview for recognition. | ❌ Pending |
-| **Audio Card (Select Mode)** | `PENDING/TRANSCRIBING` | Tap card | Ripple | Bind current chat and continue processing in chat | State copy explains continued chat-side processing. | ❌ Pending |
+| **Audio Card (Select Mode)** | `PENDING/TRANSCRIBING` | Tap card | Ripple | Bind current chat and continue processing in chat | Compact row-body copy plus progress communicates continued chat-side processing. | ❌ Pending |
 
 ---
 
@@ -189,9 +189,8 @@ Home empty-state composition note:
 | **Audio Card** | `问AI` | Tap | Navigate | **Creates/Opens Analyst Session** | Session binding. | ✅ Verified |
 | **Audio Drawer** | `Select Mode` | Chat attach/upload | Slide Up | Opens `选择要讨论的录音`. | Static picker; no swipe or expand affordances. | ❌ Pending |
 | **Audio Card** | `Select / Current` | Visible in selector | Disabled | Remains current discussion audio. | Show `当前讨论中`. | ❌ Pending |
-| **Audio Card** | `Select / Transcribed` | Tap | Ripple | Switch chat to this audio immediately. | Show truncated transcript preview, no dedicated button. | ❌ Pending |
-| **Audio Card** | `Select / Pending` | Tap | Ripple | Switch chat and continue processing. | Helper copy explains continued processing in chat. | ❌ Pending |
-| **Source Badge** | `Static` | N/A | N/A | Local (Phone) vs Cloud (Badge). | **Below Star** (No Overlap). | ❌ Pending |
+| **Audio Card** | `Select / Transcribed` | Tap | Ripple | Switch chat to this audio immediately. | Compact header plus truncated transcript preview; no dedicated button or status pill. | ❌ Pending |
+| **Audio Card** | `Select / Pending` | Tap | Ripple | Switch chat and continue processing. | Compact row-body copy explains continued processing in chat; no source badge chrome. | ❌ Pending |
 
 ---
 

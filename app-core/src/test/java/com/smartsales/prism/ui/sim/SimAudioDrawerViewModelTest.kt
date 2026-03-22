@@ -62,88 +62,93 @@ class SimAudioDrawerViewModelTest {
     }
 
     @Test
-    fun `buildSimAudioStatusLabel shows current-discussion label in chat reselect mode`() {
+    fun `buildSimAudioSelectBodyText prefixes current-discussion marker in chat reselect mode`() {
+        val entry = testEntry(
+            status = AudioStatus.TRANSCRIBED,
+            summary = "摘要预览",
+            preview = "通用预览"
+        )
+
         assertEquals(
-            "当前讨论中",
-            buildSimAudioStatusLabel(
-                status = AudioStatus.TRANSCRIBED,
-                mode = SimAudioDrawerMode.CHAT_RESELECT,
+            "当前讨论中 · 转写正文预览",
+            buildSimAudioSelectBodyText(
+                entry = entry,
+                transcriptPreview = "转写正文预览",
                 isCurrentChatAudio = true
             )
         )
     }
 
     @Test
-    fun `buildSimAudioStatusLabel keeps transcription status in browse mode`() {
+    fun `buildSimAudioSelectBodyText explains pending and transcribing chat continuation`() {
         assertEquals(
-            "转写中",
-            buildSimAudioStatusLabel(
-                status = AudioStatus.TRANSCRIBING,
-                mode = SimAudioDrawerMode.BROWSE,
+            "选择后在当前聊天中继续处理",
+            buildSimAudioSelectBodyText(
+                entry = testEntry(status = AudioStatus.PENDING, summary = null, preview = "通用预览"),
+                transcriptPreview = null,
+                isCurrentChatAudio = false
+            )
+        )
+        assertEquals(
+            "转写中，选择后将在当前聊天继续处理",
+            buildSimAudioSelectBodyText(
+                entry = testEntry(status = AudioStatus.TRANSCRIBING, summary = null, preview = "通用预览"),
+                transcriptPreview = null,
                 isCurrentChatAudio = false
             )
         )
     }
 
     @Test
-    fun `buildSimAudioSelectHelperText only explains pending and transcribing when selectable`() {
+    fun `buildSimAudioSelectBodyText keeps current pending and transcribing copy concise`() {
         assertEquals(
-            "可在当前聊天中继续处理",
-            buildSimAudioSelectHelperText(
-                status = AudioStatus.PENDING,
-                isCurrentChatAudio = false
+            "当前讨论中 · 可在当前聊天中继续处理",
+            buildSimAudioSelectBodyText(
+                entry = testEntry(status = AudioStatus.PENDING, summary = null, preview = "通用预览"),
+                transcriptPreview = null,
+                isCurrentChatAudio = true
             )
         )
         assertEquals(
-            "将在聊天中继续处理",
-            buildSimAudioSelectHelperText(
-                status = AudioStatus.TRANSCRIBING,
-                isCurrentChatAudio = false
-            )
-        )
-        assertEquals(
-            null,
-            buildSimAudioSelectHelperText(
-                status = AudioStatus.TRANSCRIBED,
-                isCurrentChatAudio = false
-            )
-        )
-        assertEquals(
-            null,
-            buildSimAudioSelectHelperText(
-                status = AudioStatus.PENDING,
+            "当前讨论中 · 转写中，当前聊天会继续处理",
+            buildSimAudioSelectBodyText(
+                entry = testEntry(status = AudioStatus.TRANSCRIBING, summary = null, preview = "通用预览"),
+                transcriptPreview = null,
                 isCurrentChatAudio = true
             )
         )
     }
 
     @Test
-    fun `buildSimAudioSelectPreview prefers transcript preview for transcribed audio`() {
+    fun `buildSimAudioSelectBodyText prefers transcript preview for transcribed audio`() {
         val entry = testEntry(status = AudioStatus.TRANSCRIBED, summary = "摘要预览", preview = "通用预览")
 
         assertEquals(
             "转写正文预览",
-            buildSimAudioSelectPreview(
+            buildSimAudioSelectBodyText(
                 entry = entry,
-                transcriptPreview = "转写正文预览"
+                transcriptPreview = "转写正文预览",
+                isCurrentChatAudio = false
             )
         )
     }
 
     @Test
-    fun `buildSimAudioSelectPreview falls back to summary and entry preview when transcript is unavailable`() {
+    fun `buildSimAudioSelectBodyText falls back to summary and entry preview when transcript is unavailable`() {
         assertEquals(
             "摘要预览",
-            buildSimAudioSelectPreview(
+            buildSimAudioSelectBodyText(
                 entry = testEntry(status = AudioStatus.TRANSCRIBED, summary = "摘要预览", preview = "通用预览"),
-                transcriptPreview = null
+                transcriptPreview = null,
+                isCurrentChatAudio = false
             )
         )
         assertEquals(
             "通用预览",
-            buildSimAudioSelectPreview(
+            buildSimAudioSelectBodyText(
                 entry = testEntry(status = AudioStatus.TRANSCRIBED, summary = null, preview = "通用预览"),
-                transcriptPreview = null
+                transcriptPreview = null,
+                isCurrentChatAudio = false
             )
         )
     }

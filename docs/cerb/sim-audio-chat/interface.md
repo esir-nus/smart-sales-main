@@ -38,7 +38,11 @@ Browse-vs-select interaction contract:
 - select mode suppresses swipe gestures, expand/collapse, and `Ask AI`
 - select mode should present explicit selection framing such as `选择要讨论的录音`
 - select mode should present already-transcribed cards with truncated transcript preview so users can recognize content without opening the artifact view
-- select mode should present pending/transcribing cards with helper copy that makes continued processing inside chat clear
+- select mode should present pending/transcribing cards with compact row-body copy that makes continued processing inside chat clear
+- select mode should keep card composition compact: filename plus timestamp plus star in one header row
+- select mode should avoid redundant status pills; state is primarily carried by the preview/body copy
+- only the current bound audio item should keep an explicit inline current marker such as `当前讨论中`
+- select mode should not add badge/phone source iconography just to explain card state
 
 ### Ask AI
 
@@ -191,7 +195,10 @@ Meaning:
 - select mode cards are self-explanatory action surfaces; no dedicated per-card bottom CTA is required
 - select mode suppresses swipe gestures, quick-action trays, expand/collapse, and `Ask AI`
 - select mode should render already-transcribed cards with truncated transcript preview for recognition
-- select mode should render pending/transcribing cards with helper copy explaining continued processing in chat
+- select mode should render pending/transcribing cards with compact continuation copy explaining continued processing in chat
+- select mode should keep a compact one-line header with filename, timestamp, and star
+- select mode should avoid redundant status-pill chrome; the preview/copy itself communicates state
+- only the current bound audio should render an explicit inline current marker
 - selecting pending audio from inside chat is allowed, binds chat immediately to that audio, and continues the same SIM transcription pipeline inside chat transparency
 - completed pending audio must render as durable artifact content in chat history
 - any newly appended chat artifact message may stream its transcript only once; if the rendered transcript exceeds 4 lines during that reveal, it must eventually auto-collapse, but only after any configured minimum readable-reveal dwell has elapsed

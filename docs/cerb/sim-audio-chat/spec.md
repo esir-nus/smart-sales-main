@@ -196,6 +196,10 @@ For chat-side audio reselection specifically:
 - the currently bound audio item should render as disabled/current rather than as a selectable card
 - already-transcribed cards should show a truncated transcript preview so the user can recognize content quickly
 - pending and transcribing cards should explain that processing can continue inside the current chat once selected
+- select-mode cards should use a compact one-line header layout: filename plus timestamp plus star
+- select-mode state should be conveyed mainly by the row-body preview/copy rather than by extra status pills
+- only the current bound item should keep an explicit inline marker such as `当前讨论中`
+- select-mode cards should not add badge-vs-phone source iconography or source-label chrome just to explain state
 
 It is not allowed to:
 

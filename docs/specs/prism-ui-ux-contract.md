@@ -1,9 +1,31 @@
-# Prism UI/UX Contract (The Skin)
+# UI Surface Contract (Legacy filename: `prism-ui-ux-contract.md`)
 
 > **Status:** Active Index & Policy Rule
-> **Last Updated:** 2026-03-18
+> **Last Updated:** 2026-03-22
 > **Architecture Companion:** [Architecture.md](./Architecture.md)
 > **Terminology:** [GLOSSARY.md](./GLOSSARY.md)
+
+---
+
+## Working Role In UI Dev Mode
+
+This file remains the compatibility path used across the repo, but its practical role is simple:
+
+- it is the UI surface contract
+- it defines the boundary between UI and lower layers
+- it points readers toward the feature-level UI source of truth
+
+For the overall UI workflow, also read:
+
+- [`../sops/ui-dev-mode.md`](../sops/ui-dev-mode.md) for the developer operating model
+- [`style-guide.md`](./style-guide.md) for visual identity rules
+- [`ui_element_registry.md`](./ui_element_registry.md) for shared element behavior and invariants
+- feature-specific `docs/cerb-ui/**` or `docs/cerb/**` docs for real screen/state ownership
+
+Rule:
+
+- use intuitive names in discussion
+- keep this path stable until the repo deliberately migrates references
 
 ---
 

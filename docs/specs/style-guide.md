@@ -11,6 +11,7 @@
 > 2. **UI Designer Authority**: The **UI Director (@[/12-ui-director])** owns this file.
 > 3. **Code Matches Design**: If code implements a pattern that looks *better* than the doc/screenshots (and is approved), update this doc.
 > 4. **Behavior vs. Visuals**: `ux-contract.md` owns *behavior*. This doc owns *pixels*.
+> 5. **Current UI Is Not Automatic Visual Truth**: Existing app UI may reflect testing convenience or incomplete polish. Unless a screen is explicitly approved as a visual reference, do not treat current implementation as the aesthetic source of truth.
 >
 > **Goal**: A living, authoritative definition of the "SmartSales" premium aesthetic.
 >

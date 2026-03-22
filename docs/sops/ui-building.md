@@ -2,6 +2,10 @@
 
 > **Purpose**: Build production UI from wireframe to shippable Android code.
 > **Trigger**: User provides a demand (e.g., "build home page", "history drawer").
+>
+> **Read First**: [`ui-dev-mode.md`](./ui-dev-mode.md) defines the overall working model and approval gates for prototype-first UI development.
+>
+> **Invocation Rule**: This is the primary SOP to invoke when building an interface UI.
 
 ---
 
@@ -17,6 +21,12 @@
 - Specs and SOPs must use plain professional prose with no emoji.
 - Real UI uses **icons from the design system** (e.g., Material Icons, custom SVGs), never emoji Unicode.
 - **Do NOT copy spec formatting** as UI styling. A textual "置顶" marker in spec becomes `PinIcon + "置顶"` in code.
+
+### 1b. Current UI Is Logic Reference Only
+- The current app UI may exist partly for testing convenience, state validation, and implementation coverage.
+- Use current UI to understand logic, state wiring, ownership, and interaction hooks.
+- Do **not** use current UI as the aesthetic source of truth unless it is explicitly marked as an approved visual reference.
+- Aesthetic truth comes from approved prototypes, the style guide, and the UI element registry.
 
 ### 2. Explicit Checkpoints
 Every phase transition requires **user's explicit declaration**:
@@ -39,9 +49,11 @@ Android implementation MUST reference `ui_element_registry.md` for:
 **Agent Actions**:
 1. Identify target component(s) from demand.
 2. Read relevant spec sections:
-   - `style-guide.md` — Visual tokens
-   - `ui_element_registry.md` — Behavior contract
-   - `prism-ui-ux-contract.md` — UX flows (if applicable)
+   - `docs/plans/ui-tracker.md` — UI-specific status, approval, and drift tracking
+   - `prism-ui-ux-contract.md` — Surface contract and UI boundary
+   - `style-guide.md` — Visual identity guide and tokens
+   - `ui_element_registry.md` — Element registry and behavior contract
+   - `ui-dev-mode.md` — workflow expectations and approval model
 3. Ask clarifying questions if scope is ambiguous.
 
 **Output**: Confirmation of understanding.
@@ -133,6 +145,9 @@ Phase 0: INTAKE -> Phase 1: BRIEF -> "Brief Approved"
 
 | Document | Purpose |
 |----------|---------|
+| [`docs/plans/ui-tracker.md`](file:///home/cslh-frank/main_app/docs/plans/ui-tracker.md) | Dedicated UI status tracker |
+| [`ui-dev-mode.md`](file:///home/cslh-frank/main_app/docs/sops/ui-dev-mode.md) | Instruction doc for the overall UI dev model |
+| [`prism-ui-ux-contract.md`](file:///home/cslh-frank/main_app/docs/specs/prism-ui-ux-contract.md) | Surface contract and UI index |
 | [`style-guide.md`](file:///home/cslh-frank/main_app/docs/specs/style-guide.md) | Visual tokens |
 | [`design-tokens.json`](file:///home/cslh-frank/main_app/docs/design/design-tokens.json) | Master tokens |
 | [`ui_element_registry.md`](file:///home/cslh-frank/main_app/docs/specs/ui_element_registry.md) | Behavior contracts |

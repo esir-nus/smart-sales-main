@@ -20,8 +20,9 @@
 |-------|------|---------|
 | 1 | `docs/specs/GLOSSARY.md` | Terms, no-synonyms rule (Rule #1) |
 | 2 | `docs/specs/prism-ui-ux-contract.md` | UI INDEX — find your module/flow |
-| 3 | Feature module spec (e.g., `HomeScreen.md`) | Component layout, gestures |
-| 4 | Feature flow spec (e.g., `SchedulerFlows.md`) | User journey, states |
+| 3 | `docs/sops/ui-dev-mode.md` | UI development model, prototype-first workflow, approval gates |
+| 4 | Feature module spec (e.g., `HomeScreen.md`) | Component layout, gestures |
+| 5 | Feature flow spec (e.g., `SchedulerFlows.md`) | User journey, states |
 
 **Checkpoint**: Can you explain the feature in one sentence?
 

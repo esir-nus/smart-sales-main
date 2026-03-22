@@ -671,6 +671,46 @@ class SimShellHandoffTest {
         )
     }
 
+    @Test
+    fun `shouldTriggerSimVerticalGesture accepts downward fling for scheduler zone`() {
+        assertTrue(
+            shouldTriggerSimVerticalGesture(
+                direction = SimVerticalGestureDirection.DOWN,
+                totalDy = 12f,
+                velocityY = 2_000f,
+                velocityThresholdPx = 1_400f
+            )
+        )
+        assertFalse(
+            shouldTriggerSimVerticalGesture(
+                direction = SimVerticalGestureDirection.DOWN,
+                totalDy = -12f,
+                velocityY = 2_000f,
+                velocityThresholdPx = 1_400f
+            )
+        )
+    }
+
+    @Test
+    fun `shouldTriggerSimVerticalGesture accepts upward fling for audio zone`() {
+        assertTrue(
+            shouldTriggerSimVerticalGesture(
+                direction = SimVerticalGestureDirection.UP,
+                totalDy = -12f,
+                velocityY = -2_000f,
+                velocityThresholdPx = 1_400f
+            )
+        )
+        assertFalse(
+            shouldTriggerSimVerticalGesture(
+                direction = SimVerticalGestureDirection.UP,
+                totalDy = 12f,
+                velocityY = -2_000f,
+                velocityThresholdPx = 1_400f
+            )
+        )
+    }
+
     private fun followUpState(boundSessionId: String) = SimBadgeFollowUpState(
         threadId = "thread_1",
         origin = SimBadgeFollowUpOrigin.BADGE,

@@ -95,9 +95,11 @@ Guarantees:
 - only one drawer may be open at a time
 - the shell may reopen the audio drawer from chat
 - the shell may expose history/new-page/connectivity/settings as SIM support surfaces
-- the shell may open scheduler from a downward pull in the header-center zone when the shell is otherwise clear
-- the shell may open audio browse from an upward pull in the bottom-edge strip when the shell is otherwise clear
-- the shell must disable that bottom-edge audio-open gesture while the IME is visible
+- the shell may open scheduler from a downward pull started inside the upper shell activation zone when the shell is otherwise clear
+- the shell may open audio browse from an upward pull started inside the lower shell activation zone when the shell is otherwise clear
+- the current shipped shell split is top third scheduler-open, middle third safe scroll, bottom third audio-open
+- the shell entry gestures must use vertical-intent lock plus drag-distance or fling-velocity confirmation rather than broad overscroll alone
+- the shell must disable the lower-zone audio-open gesture while the IME is visible
 - the SIM home header keeps only the hamburger button, centered island, and new-chat button so the chrome remains visually balanced
 - the shell may keep a persistent dynamic island visible in the top-header center slot while normal SIM shell surfaces are active
 - the shell may use that dynamic island as a scheduler-entry affordance
@@ -110,9 +112,10 @@ Guarantees:
 Gesture notes:
 
 - edge gestures are shell-owned routing only; they do not make chat overscroll a drawer trigger
+- middle-zone scrolling remains chat/history-safe by default
 - scheduler dismisses from its top handle upward
 - SIM audio dismisses from its handle downward
-- edge gestures must stay narrow enough to avoid stealing hamburger, new-chat, or chat-input taps
+- shell open gestures should prefer deliberate directional pulls over generic browsing scroll
 
 ### Badge Follow-Up Continuity Binding
 

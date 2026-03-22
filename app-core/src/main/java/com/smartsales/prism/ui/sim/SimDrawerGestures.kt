@@ -2,16 +2,17 @@ package com.smartsales.prism.ui.sim
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -20,7 +21,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.PointerId
+import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
@@ -29,10 +33,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.compose.foundation.layout.BoxScope
 import com.smartsales.prism.ui.PrismElevation
+import kotlin.math.abs
 
 internal const val SIM_SCHEDULER_EDGE_ZONE_TEST_TAG = "sim_scheduler_edge_zone"
 internal const val SIM_AUDIO_EDGE_ZONE_TEST_TAG = "sim_audio_edge_zone"
 internal const val SIM_AUDIO_HANDLE_TEST_TAG = "sim_audio_handle"
+
+private const val SIM_DRAWER_ZONE_FRACTION = 0.34f
+private const val SIM_DRAWER_VERTICAL_DOMINANCE_RATIO = 1.35f
 
 internal enum class SimVerticalGestureDirection {
     UP,
@@ -69,13 +77,12 @@ internal fun BoxScope.SimDrawerEdgeGestureLayer(
             modifier = modifier
                 .zIndex(PrismElevation.Handles)
                 .align(Alignment.TopCenter)
-                .statusBarsPadding()
-                .padding(top = 12.dp)
-                .width(220.dp)
-                .height(56.dp)
+                .fillMaxWidth()
+                .fillMaxHeight(SIM_DRAWER_ZONE_FRACTION)
                 .testTag(SIM_SCHEDULER_EDGE_ZONE_TEST_TAG),
             direction = SimVerticalGestureDirection.DOWN,
-            threshold = 64.dp,
+            threshold = 52.dp,
+            velocityThreshold = 1400.dp,
             onTriggered = onOpenScheduler
         )
     }
@@ -85,12 +92,13 @@ internal fun BoxScope.SimDrawerEdgeGestureLayer(
             modifier = modifier
                 .zIndex(PrismElevation.Handles)
                 .align(Alignment.BottomCenter)
-                .navigationBarsPadding()
                 .fillMaxWidth()
-                .height(32.dp)
+                .fillMaxHeight(SIM_DRAWER_ZONE_FRACTION)
+                .navigationBarsPadding()
                 .testTag(SIM_AUDIO_EDGE_ZONE_TEST_TAG),
             direction = SimVerticalGestureDirection.UP,
-            threshold = 64.dp,
+            threshold = 52.dp,
+            velocityThreshold = 1400.dp,
             onTriggered = onOpenAudioBrowse
         )
     }
@@ -133,6 +141,7 @@ internal fun SimDrawerHandle(
                 ),
             direction = dismissDirection,
             threshold = 56.dp,
+            velocityThreshold = 1200.dp,
             onTriggered = onDismiss
         ) {
             Box(
@@ -150,48 +159,80 @@ private fun SimVerticalDragTrigger(
     modifier: Modifier = Modifier,
     direction: SimVerticalGestureDirection,
     threshold: Dp,
+    velocityThreshold: Dp,
     onTriggered: () -> Unit,
     content: @Composable (() -> Unit)? = null
 ) {
     val density = LocalDensity.current
     val thresholdPx = remember(threshold, density) { with(density) { threshold.toPx() } }
+    val velocityThresholdPx = remember(velocityThreshold, density) {
+        with(density) { velocityThreshold.toPx() }
+    }
     val hapticFeedback = LocalHapticFeedback.current
 
     Box(
-        modifier = modifier.pointerInput(direction, thresholdPx) {
-            var accumulatedDrag = 0f
-            var hasTriggered = false
-
-            detectVerticalDragGestures(
-                onDragStart = {
-                    accumulatedDrag = 0f
-                    hasTriggered = false
-                },
-                onDragEnd = {
-                    accumulatedDrag = 0f
-                    hasTriggered = false
-                },
-                onDragCancel = {
-                    accumulatedDrag = 0f
-                    hasTriggered = false
+        modifier = modifier.pointerInput(direction, thresholdPx, velocityThresholdPx) {
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false)
+                var activePointerId: PointerId = down.id
+                val velocityTracker = VelocityTracker().apply {
+                    addPosition(down.uptimeMillis, down.position)
                 }
-            ) { change, dragAmount ->
-                if (hasTriggered) {
-                    change.consume()
-                    return@detectVerticalDragGestures
-                }
+                val startPosition = down.position
+                val touchSlop = viewConfiguration.touchSlop
+                var directionLocked = false
+                var rejected = false
+                var lastTotalDy = 0f
 
-                accumulatedDrag += dragAmount
-                val crossed = when (direction) {
-                    SimVerticalGestureDirection.UP -> accumulatedDrag <= -thresholdPx
-                    SimVerticalGestureDirection.DOWN -> accumulatedDrag >= thresholdPx
-                }
+                while (true) {
+                    val event = awaitPointerEvent()
+                    val change = event.changes.firstOrNull { it.id == activePointerId }
+                        ?: event.changes.firstOrNull()
+                        ?: break
 
-                if (crossed) {
-                    change.consume()
-                    hasTriggered = true
-                    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
-                    onTriggered()
+                    activePointerId = change.id
+                    velocityTracker.addPosition(change.uptimeMillis, change.position)
+
+                    if (change.changedToUpIgnoreConsumed() || !change.pressed) {
+                        if (!rejected) {
+                            val velocityY = velocityTracker.calculateVelocity().y
+                            if (shouldTriggerSimVerticalGesture(direction, lastTotalDy, velocityY, velocityThresholdPx)) {
+                                triggerSimVerticalGesture(hapticFeedback, onTriggered)
+                            }
+                        }
+                        break
+                    }
+
+                    val totalDx = change.position.x - startPosition.x
+                    val totalDy = change.position.y - startPosition.y
+                    lastTotalDy = totalDy
+                    val absDx = abs(totalDx)
+                    val absDy = abs(totalDy)
+
+                    if (!directionLocked && !rejected && (absDx > touchSlop || absDy > touchSlop)) {
+                        val matchesDirection = when (direction) {
+                            SimVerticalGestureDirection.UP -> totalDy < 0f
+                            SimVerticalGestureDirection.DOWN -> totalDy > 0f
+                        }
+                        val verticalDominant = absDy > absDx * SIM_DRAWER_VERTICAL_DOMINANCE_RATIO
+
+                        if (matchesDirection && verticalDominant) {
+                            directionLocked = true
+                        } else {
+                            rejected = true
+                        }
+                    }
+
+                    if (directionLocked) {
+                        change.consume()
+                        val velocityY = velocityTracker.calculateVelocity().y
+                        if (shouldTriggerSimVerticalGesture(direction, totalDy, velocityY, velocityThresholdPx) ||
+                            crossedSimVerticalGestureDistance(direction, totalDy, thresholdPx)
+                        ) {
+                            triggerSimVerticalGesture(hapticFeedback, onTriggered)
+                            break
+                        }
+                    }
                 }
             }
         },
@@ -199,4 +240,33 @@ private fun SimVerticalDragTrigger(
     ) {
         content?.invoke()
     }
+}
+
+private fun crossedSimVerticalGestureDistance(
+    direction: SimVerticalGestureDirection,
+    totalDy: Float,
+    thresholdPx: Float
+): Boolean = when (direction) {
+    SimVerticalGestureDirection.UP -> totalDy <= -thresholdPx
+    SimVerticalGestureDirection.DOWN -> totalDy >= thresholdPx
+}
+
+internal fun shouldTriggerSimVerticalGesture(
+    direction: SimVerticalGestureDirection,
+    totalDy: Float,
+    velocityY: Float,
+    velocityThresholdPx: Float
+): Boolean = when (direction) {
+    SimVerticalGestureDirection.UP ->
+        totalDy < 0f && velocityY <= -velocityThresholdPx
+    SimVerticalGestureDirection.DOWN ->
+        totalDy > 0f && velocityY >= velocityThresholdPx
+}
+
+private fun triggerSimVerticalGesture(
+    hapticFeedback: androidx.compose.ui.hapticfeedback.HapticFeedback,
+    onTriggered: () -> Unit
+) {
+    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+    onTriggered()
 }

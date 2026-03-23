@@ -6,7 +6,7 @@
 >
 > Status: Active
 >
-> Last Updated: 2026-03-22
+> Last Updated: 2026-03-23
 
 ---
 
@@ -62,6 +62,7 @@ Rule:
 |------|-------|--------|-------|
 | UI Workflow Foundation | Dedicated UI tracker, SOP clarification, aesthetic-source rule | Shipped | Initial operating model synced on 2026-03-22 |
 | Dynamic Island Header | Cerb shard, header-center transplant, scheduler-only one-line island | Shipped | Shared top-header island delivered for the standard shell; future non-scheduler lanes deferred |
+| SIM Shell High-Fidelity Migration | Prototype-faithful SIM shell chrome transplant | Shipped | Duplicated SIM shell ownership was confirmed and resolved: empty home and active chat now share one shell chrome. Crisp monolith seams are restored, and scheduler/audio open gestures now live on the unified top and bottom monoliths without a separate tap-blocking overlay. User accepted shipping this SIM shell slice for now on 2026-03-23. |
 
 ---
 

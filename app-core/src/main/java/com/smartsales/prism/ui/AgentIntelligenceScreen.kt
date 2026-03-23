@@ -50,6 +50,9 @@ import com.smartsales.prism.ui.components.agent.*
 import com.smartsales.prism.ui.fakes.FakeAgentViewModel
 import com.smartsales.prism.ui.sim.SimArtifactBubble
 import com.smartsales.prism.ui.sim.SimAgentViewModel
+import com.smartsales.prism.ui.sim.SimHomeHeroCenterStage
+import com.smartsales.prism.ui.sim.SimHomeHeroGreetingStage
+import com.smartsales.prism.ui.sim.SimHomeHeroShellFrame
 import com.smartsales.prism.ui.sim.SimTranscriptPresentation
 import com.smartsales.prism.ui.theme.*
 import androidx.compose.foundation.border
@@ -73,6 +76,7 @@ internal const val SIM_INPUT_BAR_TEST_TAG = "sim_input_bar"
 internal const val SIM_INPUT_FIELD_TEST_TAG = "sim_input_field"
 internal const val SIM_ATTACH_BUTTON_TEST_TAG = "sim_attach_button"
 internal const val SIM_SEND_BUTTON_TEST_TAG = "sim_send_button"
+private const val SIM_ENABLE_SHARED_HOME_HERO_SHELL = true
 
 @Composable
 fun AgentIntelligenceScreen(
@@ -90,8 +94,10 @@ fun AgentIntelligenceScreen(
     showDebugButton: Boolean = true,
     visualMode: AgentIntelligenceVisualMode = AgentIntelligenceVisualMode.DEFAULT,
     simDynamicIslandItems: List<DynamicIslandItem> = emptyList(),
-    onSimHeaderBoundsChanged: ((Rect) -> Unit)? = null,
-    onSimComposerBoundsChanged: ((Rect) -> Unit)? = null
+    enableSimSchedulerPullGesture: Boolean = false,
+    enableSimAudioPullGesture: Boolean = false,
+    onSimSchedulerPullOpen: () -> Unit = {},
+    onSimAudioPullOpen: () -> Unit = {}
 ) {
     val history by viewModel.history.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
@@ -150,8 +156,10 @@ fun AgentIntelligenceScreen(
         onProfileClick = onProfileClick,
         showDebugButton = showDebugButton,
         simDynamicIslandItems = simDynamicIslandItems,
-        onSimHeaderBoundsChanged = onSimHeaderBoundsChanged,
-        onSimComposerBoundsChanged = onSimComposerBoundsChanged,
+        enableSimSchedulerPullGesture = enableSimSchedulerPullGesture,
+        enableSimAudioPullGesture = enableSimAudioPullGesture,
+        onSimSchedulerPullOpen = onSimSchedulerPullOpen,
+        onSimAudioPullOpen = onSimAudioPullOpen,
         onUpdateInput = viewModel::updateInput,
         onSend = viewModel::send,
         onConfirmPlan = viewModel::confirmAnalystPlan,
@@ -188,8 +196,10 @@ internal fun AgentIntelligenceContent(
     onProfileClick: () -> Unit,
     showDebugButton: Boolean,
     simDynamicIslandItems: List<DynamicIslandItem>,
-    onSimHeaderBoundsChanged: ((Rect) -> Unit)?,
-    onSimComposerBoundsChanged: ((Rect) -> Unit)?,
+    enableSimSchedulerPullGesture: Boolean,
+    enableSimAudioPullGesture: Boolean,
+    onSimSchedulerPullOpen: () -> Unit,
+    onSimAudioPullOpen: () -> Unit,
     onUpdateInput: (String) -> Unit,
     onSend: () -> Unit,
     onConfirmPlan: () -> Unit,
@@ -244,6 +254,8 @@ internal fun AgentIntelligenceContent(
     // 使 glow 半径与屏幕宽度成正比，确保在不同 DPI 设备上视觉一致
     val screenWidthDp = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp.dp
     val glowRadiusPx = with(LocalDensity.current) { (screenWidthDp * 2.5f).toPx() }
+    val showSimSharedHomeHeroShell = isSimShell &&
+        SIM_ENABLE_SHARED_HOME_HERO_SHELL
 
     Box(
         modifier = Modifier
@@ -276,7 +288,46 @@ internal fun AgentIntelligenceContent(
                 }
             )
     ) {
-        if (isSimShell) {
+        if (showSimSharedHomeHeroShell) {
+            SimHomeHeroShellFrame(
+                inputText = inputText,
+                isSending = isSending,
+                dynamicIslandItems = simDynamicIslandItems,
+                onMenuClick = onMenuClick,
+                onNewSessionClick = onNewSessionClick,
+                onSchedulerClick = onSchedulerClick,
+                onTextChanged = onUpdateInput,
+                onSend = onSend,
+                onAttachClick = onAttachClick,
+                enableSchedulerPullGesture = enableSimSchedulerPullGesture,
+                enableAudioPullGesture = enableSimAudioPullGesture,
+                onSchedulerPullOpen = onSimSchedulerPullOpen,
+                onAudioPullOpen = onSimAudioPullOpen
+            ) { modifier ->
+                if (history.isEmpty()) {
+                    SimHomeHeroGreetingStage(
+                        modifier = modifier,
+                        greeting = heroGreeting
+                    )
+                } else {
+                    SimHomeHeroCenterStage(
+                        modifier = modifier,
+                        contentAlignment = Alignment.TopStart
+                    ) {
+                        SimConversationTimeline(
+                            modifier = Modifier.fillMaxSize(),
+                            history = history,
+                            uiState = uiState,
+                            agentActivity = agentActivity,
+                            transcriptRevealState = transcriptRevealState,
+                            onArtifactTranscriptRevealConsumed = onArtifactTranscriptRevealConsumed,
+                            onConfirmPlan = onConfirmPlan,
+                            onAmendPlan = onAmendPlan
+                        )
+                    }
+                }
+            }
+        } else if (isSimShell) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -290,7 +341,7 @@ internal fun AgentIntelligenceContent(
                     onMenuClick = onMenuClick,
                     onNewSessionClick = onNewSessionClick,
                     onSchedulerClick = onSchedulerClick,
-                    onBoundsChanged = onSimHeaderBoundsChanged
+                    onBoundsChanged = null
                 )
 
                 Spacer(modifier = Modifier.height(18.dp))
@@ -325,7 +376,7 @@ internal fun AgentIntelligenceContent(
                     onTextChanged = onUpdateInput,
                     onSend = onSend,
                     onAttachClick = onAttachClick,
-                    onBoundsChanged = onSimComposerBoundsChanged
+                    onBoundsChanged = null
                 )
             }
         } else {

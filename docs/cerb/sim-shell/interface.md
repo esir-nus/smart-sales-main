@@ -101,9 +101,10 @@ Guarantees:
 - the shell may open scheduler from a downward pull started inside the upper shell activation zone when the shell is otherwise clear
 - the shell may open audio browse from an upward pull started inside the lower shell activation zone when the shell is otherwise clear
 - the current shipped shell opener is layout-anchored rather than fixed top/middle/bottom thirds
-- the upper activation zone spans the full shell width from the top edge through the measured SIM header bottom, plus about 24dp of extra bleed below the header
-- the lower activation zone spans the full shell width from about 12dp above the measured SIM composer top through the bottom edge
-- shell gesture layers may sit above the live header/composer chrome for drag detection, but attach, text-entry, and send taps must remain directly tappable
+- the top monolith itself owns the scheduler-open downward drag observation
+- the bottom monolith itself owns the audio-open upward drag observation
+- shell open gestures must not depend on a separate high-z overlay sitting above the live header/composer chrome
+- interactive header/composer taps remain direct until a deliberate vertical drag has clearly direction-locked into a drawer-open gesture
 - the center shell body stays protected for chat/history scrolling by default
 - the shell entry gestures must use vertical-intent lock plus drag-distance or fling-velocity confirmation rather than broad overscroll alone
 - velocity is an override for deliberate pulls, not the sole open rule; the current opener is tuned around a 40dp drag threshold and a 1100dp/s directional fling override

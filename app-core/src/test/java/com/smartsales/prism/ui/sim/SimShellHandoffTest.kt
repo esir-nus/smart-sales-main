@@ -20,6 +20,25 @@ import java.time.Instant
 class SimShellHandoffTest {
 
     @Test
+    fun `sim shell chrome hosted scheduler gesture only opens when shell is clear`() {
+        assertTrue(canOpenSimSchedulerFromEdge(SimShellState()))
+        assertFalse(canOpenSimSchedulerFromEdge(SimShellState(activeDrawer = SimDrawerType.SCHEDULER)))
+        assertFalse(canOpenSimSchedulerFromEdge(SimShellState(showHistory = true)))
+        assertFalse(
+            canOpenSimSchedulerFromEdge(
+                SimShellState(activeConnectivitySurface = SimConnectivitySurface.MODAL)
+            )
+        )
+        assertFalse(canOpenSimSchedulerFromEdge(SimShellState(showSettings = true)))
+    }
+
+    @Test
+    fun `sim shell chrome hosted audio gesture yields to ime visibility`() {
+        assertTrue(canOpenSimAudioFromEdge(SimShellState(), isImeVisible = false))
+        assertFalse(canOpenSimAudioFromEdge(SimShellState(), isImeVisible = true))
+    }
+
+    @Test
     fun `buildSimDynamicIslandItems keeps idle fallback when no tasks exist`() {
         val items = buildSimDynamicIslandItems(
             sessionTitle = "",

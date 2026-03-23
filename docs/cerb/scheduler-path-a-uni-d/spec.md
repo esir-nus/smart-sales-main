@@ -160,9 +160,16 @@ Own:
 Conflict check is mandatory here.
 Reject-on-conflict is a behavioral violation for `Uni-D`.
 
-Exact tasks with `durationMinutes == 0` are still conflict-participating.
-They must be evaluated as point-in-time occupancy against exclusive slots rather than as silently non-conflicting empty intervals.
-This shard does not permit inventing a fake default duration just to make overlap math work.
+Exact tasks with `durationMinutes == 0` are still conflict-participating unless they are `FIRE_OFF`.
+Deterministic mutation must evaluate them with domain-owned conflict occupancy windows rather than as silently non-conflicting empty intervals.
+
+The shipped rule is:
+
+- `FIRE_OFF` bypasses collision logic entirely
+- explicit `durationMinutes > 0` wins when present
+- otherwise conflict occupancy is inferred from task semantics first
+- urgency fallback applies only when no semantic occupancy rule matches
+- the inferred occupancy window is for conflict evaluation only and must not be persisted back as fake visible duration
 
 In the shipped T4 slice, deterministic mutation derives the caution payload from the first overlapping board item:
 

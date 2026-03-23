@@ -647,6 +647,8 @@ Archived planning note:
   - [x] prove exact-alarm permission, banner delivery, and full-screen deadline behavior against the chosen SIM contract
 - [x] **2026-03-22 Reminder Lane Closed**
   T4.8 boundary/implementation is now in code with focused L1 proof, connected-device proof for CTA/native posting, and a later real-device visual/operator pass that now covers EARLY human-visible delivery plus DEADLINE unlocked/locked behavior without widening SIM into immediate create/conflict/completion notifications.
+- [x] **2026-03-23 Conflict Occupancy Hardening**
+  Exact non-`FIRE_OFF` tasks without explicit duration no longer behave like empty non-conflicting points in the SIM-visible scheduler path. The shipped domain rule now uses conflict-only occupancy windows: explicit duration wins, otherwise semantic transport/travel occupancy wins, then urgency fallback applies. This keeps persisted `durationMinutes` unchanged while making cases like `赶高铁` and `坐飞机` a few minutes apart surface as real conflicts. `FIRE_OFF` still bypasses collision logic entirely. Focused domain verification is green with `:domain:scheduler:test --tests com.smartsales.prism.domain.scheduler.FastTrackMutationEngineTest --tests com.smartsales.prism.domain.memory.ScheduleItemConflictTest`; the matching SIM unit rerun is currently blocked by unrelated `AgentIntelligenceScreen.kt` compile errors rather than scheduler-path regressions.
 
 ### Wave 5: Connectivity Hard Migration
 > Objective: Reuse the mature badge connectivity stack as a decoupled SIM support module.

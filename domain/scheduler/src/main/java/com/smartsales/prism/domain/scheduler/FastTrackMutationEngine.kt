@@ -1,6 +1,8 @@
 package com.smartsales.prism.domain.scheduler
 import com.smartsales.prism.domain.memory.ConflictResult
 import com.smartsales.prism.domain.memory.ScheduleBoard
+import com.smartsales.prism.domain.memory.TargetResolution
+import com.smartsales.prism.domain.memory.effectiveConflictOccupancyMinutes
 import kotlinx.coroutines.flow.first
 import java.time.Instant
 import java.time.LocalDate
@@ -51,12 +53,22 @@ class FastTrackMutationEngine @Inject constructor(
     private suspend fun handleCreateTasks(params: CreateTasksParams): MutationResult {
         val newTasks = params.tasks.map { def ->
             val startInst = parseExactStartInstant(def.startTimeIso)
+            val urgencyLevel = UrgencyLevel.valueOf(def.urgency.name)
+            val effectiveConflictDurationMinutes = effectiveConflictOccupancyMinutes(
+                title = def.title,
+                urgencyLevel = urgencyLevel,
+                explicitDurationMinutes = def.durationMinutes
+            )
             
             // 1. Evaluate temporal conflict
-            val conflictResult = scheduleBoard.checkConflict(
-                proposedStart = startInst.toEpochMilli(),
-                durationMinutes = def.durationMinutes
-            )
+            val conflictResult = if (urgencyLevel == UrgencyLevel.FIRE_OFF) {
+                ConflictResult.Clear
+            } else {
+                scheduleBoard.checkConflict(
+                    proposedStart = startInst.toEpochMilli(),
+                    durationMinutes = effectiveConflictDurationMinutes
+                )
+            }
             val hasConflict = conflictResult is ConflictResult.Conflict
             val conflictSummary = (conflictResult as? ConflictResult.Conflict)
                 ?.overlaps
@@ -75,7 +87,7 @@ class FastTrackMutationEngine @Inject constructor(
                 },
                 timeDisplay = "", // Rendered in UI layer
                 title = def.title,
-                urgencyLevel = UrgencyLevel.valueOf(def.urgency.name),
+                urgencyLevel = urgencyLevel,
                 startTime = startInst,
                 durationMinutes = def.durationMinutes,
                 hasConflict = hasConflict,
@@ -124,11 +136,32 @@ class FastTrackMutationEngine @Inject constructor(
     }
 
     private suspend fun handleRescheduleTask(params: RescheduleTaskParams): MutationResult {
-        val query = params.targetQuery ?: return MutationResult.NoMatch("<empty>", "Cannot reschedule without query")
-        
-        // 1. Lexical Fuzzy Match using ScheduleBoard
-        val match = scheduleBoard.findLexicalMatch(query) 
-            ?: return MutationResult.AmbiguousMatch(query) // findLexicalMatch returns null if 0 or 2+ matches
+        val resolvedTaskId = params.resolvedTaskId
+        val query = params.targetQuery ?: resolvedTaskId ?: "<empty>"
+
+        // 1. Resolve target using scheduler-owned confidence gating
+        val match = if (resolvedTaskId != null) {
+            val task = taskRepository.getTask(resolvedTaskId)
+                ?: return MutationResult.NoMatch(query, "Task resolved in UI but missing in DB")
+            com.smartsales.prism.domain.memory.ScheduleItem(
+                entryId = task.id,
+                title = task.title,
+                scheduledAt = task.startTime.toEpochMilli(),
+                durationMinutes = task.durationMinutes,
+                durationSource = task.durationSource,
+                urgencyLevel = task.urgencyLevel,
+                conflictPolicy = task.conflictPolicy,
+                participants = task.keyPerson?.let(::listOf) ?: emptyList(),
+                location = task.location,
+                isVague = task.isVague
+            )
+        } else {
+            when (val resolution = scheduleBoard.resolveTarget(query)) {
+                is TargetResolution.Resolved -> resolution.item
+                is TargetResolution.Ambiguous -> return MutationResult.AmbiguousMatch(query)
+                is TargetResolution.NoMatch -> return MutationResult.NoMatch(query, "未找到匹配的日程，请更具体一些。")
+            }
+        }
             
         // 2. Map old task entity id
         val oldTaskId = match.entryId
@@ -136,25 +169,34 @@ class FastTrackMutationEngine @Inject constructor(
         // 3. Construct new target time
         val newStartInst = Instant.parse(params.newStartTimeIso)
         val newDuration = params.newDurationMinutes ?: match.durationMinutes
+        val fullOldTask = taskRepository.getTask(oldTaskId)
+            ?: return MutationResult.NoMatch(query, "Task matched in board but missing in DB")
+        val effectiveConflictDurationMinutes = effectiveConflictOccupancyMinutes(
+            title = fullOldTask.title,
+            urgencyLevel = fullOldTask.urgencyLevel,
+            explicitDurationMinutes = newDuration
+        )
         
         // 4. Check conflict (ignoring the task we are rescheduling and vague tasks)
-        val conflictResult = scheduleBoard.checkConflict(
-            proposedStart = newStartInst.toEpochMilli(),
-            durationMinutes = newDuration,
-            excludeId = oldTaskId
-        )
-        val hasConflict = conflictResult is ConflictResult.Conflict
-        
-        // 5. Construct New Task (pulling old title, but we don't have the full ScheduledTask here, just ScheduleItem)
-        // Wait! findLexicalMatch returns ScheduleItem now, not ScheduledTask!
-        // I need to fetch the full ScheduledTask from repo!
-        val fullOldTask = taskRepository.getTask(oldTaskId) 
-            ?: return MutationResult.NoMatch(query, "Task matched in board but missing in DB")
+        val conflictResult = if (fullOldTask.urgencyLevel == UrgencyLevel.FIRE_OFF) {
+            ConflictResult.Clear
+        } else {
+            scheduleBoard.checkConflict(
+                proposedStart = newStartInst.toEpochMilli(),
+                durationMinutes = effectiveConflictDurationMinutes,
+                excludeId = oldTaskId
+            )
+        }
+        val conflict = conflictResult as? ConflictResult.Conflict
+        val hasConflict = conflict != null
 
+        // 5. Construct new task while keeping persisted visible duration semantics unchanged.
         val newTask = fullOldTask.copy(
             startTime = newStartInst,
             durationMinutes = newDuration,
             hasConflict = hasConflict,
+            conflictWithTaskId = conflict?.overlaps?.firstOrNull()?.entryId,
+            conflictSummary = conflict?.overlaps?.firstOrNull()?.let { "与「${it.title}」时间冲突" },
             isVague = false
         )
         

@@ -5,6 +5,7 @@ import com.smartsales.prism.domain.memory.ConflictPolicy
 import com.smartsales.prism.domain.memory.ConflictResult
 import com.smartsales.prism.domain.memory.DurationSource
 import com.smartsales.prism.domain.memory.ScheduleItem
+import com.smartsales.prism.domain.memory.TargetResolution
 import com.smartsales.prism.domain.scheduler.fakes.FakeTimeProvider
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -73,7 +74,7 @@ class FastTrackMutationEngineTest {
 
     @Test
     fun `Reschedule with multiple matches returns AmbiguousMatch`() = runTest {
-        scheduleBoard.nextLexicalMatch = null // Null means 0 or 2+ in findLexicalMatch contract
+        scheduleBoard.nextTargetResolution = TargetResolution.Ambiguous("Meeting")
         
         val intent = FastTrackResult.RescheduleTask(
             RescheduleTaskParams(
@@ -129,6 +130,87 @@ class FastTrackMutationEngineTest {
         assertEquals(Instant.parse("2026-03-20T14:00:00Z"), persisted?.startTime)
         assertFalse(persisted!!.isVague)
         assertFalse(persisted.hasConflict)
+    }
+
+    @Test
+    fun `CreateTasks transport exact task without explicit duration uses smart conflict occupancy`() = runTest {
+        val intent = FastTrackResult.CreateTasks(
+            CreateTasksParams(
+                tasks = listOf(
+                    TaskDefinition(
+                        title = "提醒我去赶高铁",
+                        startTimeIso = "2026-03-20T14:00:00Z",
+                        durationMinutes = 0,
+                        urgency = UrgencyEnum.L1_CRITICAL
+                    )
+                )
+            )
+        )
+
+        val result = engine.execute(intent)
+
+        assertTrue(result is MutationResult.Success)
+        assertEquals(120, scheduleBoard.lastDurationMinutes)
+        val persisted = taskRepository.getTask((result as MutationResult.Success).taskIds.single())
+        assertEquals(0, persisted?.durationMinutes)
+        assertFalse(persisted!!.hasConflict)
+    }
+
+    @Test
+    fun `CreateTasks explicit duration overrides semantic transport occupancy`() = runTest {
+        val intent = FastTrackResult.CreateTasks(
+            CreateTasksParams(
+                tasks = listOf(
+                    TaskDefinition(
+                        title = "提醒我去赶飞机",
+                        startTimeIso = "2026-03-20T14:00:00Z",
+                        durationMinutes = 15,
+                        urgency = UrgencyEnum.L1_CRITICAL
+                    )
+                )
+            )
+        )
+
+        val result = engine.execute(intent)
+
+        assertTrue(result is MutationResult.Success)
+        assertEquals(15, scheduleBoard.lastDurationMinutes)
+    }
+
+    @Test
+    fun `CreateTasks fire off bypasses conflict evaluation`() = runTest {
+        scheduleBoard.nextConflictResult = ConflictResult.Conflict(
+            overlaps = listOf(
+                ScheduleItem(
+                    entryId = "existing-1",
+                    title = "已有任务",
+                    scheduledAt = Instant.parse("2026-03-20T14:00:00Z").toEpochMilli(),
+                    durationMinutes = 30,
+                    durationSource = DurationSource.DEFAULT,
+                    conflictPolicy = ConflictPolicy.EXCLUSIVE
+                )
+            )
+        )
+
+        val intent = FastTrackResult.CreateTasks(
+            CreateTasksParams(
+                tasks = listOf(
+                    TaskDefinition(
+                        title = "提醒我喝水",
+                        startTimeIso = "2026-03-20T14:00:00Z",
+                        durationMinutes = 0,
+                        urgency = UrgencyEnum.FIRE_OFF
+                    )
+                )
+            )
+        )
+
+        val result = engine.execute(intent)
+
+        assertTrue(result is MutationResult.Success)
+        assertNull(scheduleBoard.lastDurationMinutes)
+        val persisted = taskRepository.getTask((result as MutationResult.Success).taskIds.single())
+        assertFalse(persisted!!.hasConflict)
     }
 
     @Test

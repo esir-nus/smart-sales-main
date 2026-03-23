@@ -48,8 +48,9 @@ These are behavioral laws. Lower layers may choose different types or DTO shapes
 11. **Expanded scheduler card is read-only enrichment**: Path B may feed relevant memory context into the expanded card window, but that surface must not mutate CRM/entity memory.
 12. **Shared pre-fork extraction is reusable**: GUID, urgency level, and first-pass candidate entity extraction should happen once and feed both paths.
 13. **Path B is value-gated**: Only high-value tasks should pay the Path B enrichment cost.
-14. **L1 fire-off tasks bypass collision logic**: One-time fire-off tasks do not collide with other tasks, even if the UI still reflects urgency visually.
-15. **Scheduler cards preserve separate glanceable signals**: Task level / urgency must stay glanceable on scheduler cards, while conflict state and completion state remain independently visible rather than collapsing into one merged signal.
+14. **FIRE_OFF tasks bypass collision logic**: One-time fire-off tasks do not collide with other tasks, even if the UI still reflects urgency visually.
+15. **Exact-task conflict occupancy is domain-owned**: For non-`FIRE_OFF` exact tasks, conflict evaluation must use explicit duration when present, otherwise a domain-owned conflict-only occupancy window derived from task semantics and then urgency fallback. This occupancy window is for collision evaluation only and must not silently overwrite the user-visible persisted duration.
+16. **Scheduler cards preserve separate glanceable signals**: Task level / urgency must stay glanceable on scheduler cards, while conflict state and completion state remain independently visible rather than collapsing into one merged signal.
 
 ---
 
@@ -122,30 +123,39 @@ Then:
 
 Path B should reuse this first-pass candidate instead of rediscovering the same first entity from scratch.
 
-### Task Level Semantics
+### Urgency / Task Classification Semantics
 
-Task level is a hard behavioral classification, not a soft hint.
+The shipped domain enum uses `UrgencyLevel` values rather than the older `L1/L2/L3/L4` task-level shorthand.
+This classification is a hard behavioral contract, not a soft hint.
 
-- `L1`: one-time fire-off chore
-- `L2`: normal scheduled task
-- `L3`: relationship-relevant task
-- `L4`: high-stakes business task
+- `FIRE_OFF`: one-time fire-off reminder or chore
+- `L3_NORMAL`: normal scheduled task
+- `L2_IMPORTANT`: externally impactful task such as meetings, calls, or reports
+- `L1_CRITICAL`: highest-risk task such as flights, interviews, or signing deadlines
 
 Meaning:
 
-- `L1` tasks are one-time fire-off actions. They may still look urgent in kanban, but they do not participate in collision logic and do not enter Path B.
-- `L2` tasks are normal schedulable work. They use normal Path A scheduling and collision behavior, but do not enter Path B.
-- `L3` tasks are important enough to justify memory enrichment around people, places, or events. They enter Path B.
-- `L4` tasks are the highest-value tasks and also enter Path B.
+- `FIRE_OFF` tasks are one-time fire-off actions. They may still look urgent in kanban, but they do not participate in collision logic and do not enter Path B.
+- `L3_NORMAL` tasks are normal schedulable work. They participate in normal Path A scheduling and collision behavior, but do not automatically enter Path B.
+- `L2_IMPORTANT` tasks are high-value scheduled work. They still participate in normal Path A collision behavior and may enter Path B when the value gate and candidate extraction justify enrichment.
+- `L1_CRITICAL` tasks are the highest-risk scheduled work. They still participate in normal Path A collision behavior and may enter Path B when the value gate and candidate extraction justify enrichment.
 
 Hard gate:
 
-- Path A may schedule `L1` to `L4`
-- Path B only runs for `L3` and `L4`
+- Path A may schedule `FIRE_OFF`, `L3_NORMAL`, `L2_IMPORTANT`, and `L1_CRITICAL`
+- Path B must never run for `FIRE_OFF`
+- Path B is value-gated for higher-value exact tasks rather than being implied by every scheduled item
+
+Conflict occupancy clarification:
+
+- `FIRE_OFF` bypasses conflict evaluation entirely
+- non-`FIRE_OFF` exact tasks use explicit duration when present
+- otherwise deterministic conflict occupancy falls back to task semantics first, then urgency defaults
+- these fallback occupancy windows exist only for conflict evaluation and must not mutate the persisted visible duration
 
 Clarification:
 
-- `L3` and `L4` are eligible for Path B, but Path B may still validly no-op when no usable candidate entity is produced
+- `L2_IMPORTANT` and `L1_CRITICAL` may still validly no-op in Path B when no usable candidate entity is produced
 - this is acceptable for impersonal high-value tasks such as flights or self-only tasks
 - no clarification loop is required by this Core Flow when candidate extraction is absent
 - future habit-based or suggestion-based enrichment may be added later as tech debt, but it is not required behavior here

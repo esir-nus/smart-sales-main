@@ -1,5 +1,7 @@
 package com.smartsales.prism.domain.memory
 
+import com.smartsales.prism.domain.scheduler.UrgencyLevel
+
 /**
  * 日程项目 — ScheduleBoard 专用模型
  * 
@@ -13,6 +15,7 @@ data class ScheduleItem(
     val scheduledAt: Long,              // epoch millis
     val durationMinutes: Int,           // 持续时间 (分钟)
     val durationSource: DurationSource, // 持续时间来源
+    val urgencyLevel: UrgencyLevel = UrgencyLevel.L3_NORMAL,
     val conflictPolicy: ConflictPolicy, // 冲突策略
     val participants: List<String> = emptyList(),  // 实体 ID 列表
     val location: String? = null,       // 位置实体 ID
@@ -22,6 +25,69 @@ data class ScheduleItem(
      * 计算结束时间 (epoch millis)
      */
     val endAt: Long get() = scheduledAt + (durationMinutes * 60_000L)
+
+    /**
+     * 冲突检测专用占用窗口。
+     *
+     * 与持久化 duration 分离，避免把“为了冲突判断而推断的时长”
+     * 直接污染为用户可见的真实任务时长。
+     */
+    val effectiveConflictDurationMinutes: Int
+        get() = effectiveConflictOccupancyMinutes(
+            title = title,
+            urgencyLevel = urgencyLevel,
+            explicitDurationMinutes = durationMinutes
+        )
+}
+
+private val TRANSPORT_CONFLICT_KEYWORDS = listOf(
+    "高铁", "火车", "列车", "动车", "航班", "飞机", "机场", "车站", "站台",
+    "登机", "起飞", "落地", "值机", "安检", "接机", "送机", "送站", "接站",
+    "乘机", "乘车", "train", "flight", "airport", "station", "boarding"
+)
+
+private val APPOINTMENT_CONFLICT_KEYWORDS = listOf(
+    "开会", "会议", "电话", "通话", "面试", "汇报", "复盘", "拜访", "见客户",
+    "会面", "约见", "接人", "接老板", "接张总", "review", "call", "meeting",
+    "interview", "pickup", "visit", "appointment"
+)
+
+/**
+ * 计算精确任务在冲突检测中的有效占用时长。
+ *
+ * 规则：
+ * 1. FIRE_OFF 永远不参与冲突，直接返回 0
+ * 2. 显式 duration > 0 时优先使用显式值
+ * 3. 否则尝试使用任务语义关键词推断占用窗口
+ * 4. 再退回到 urgency 默认窗口
+ */
+fun effectiveConflictOccupancyMinutes(
+    title: String,
+    urgencyLevel: UrgencyLevel,
+    explicitDurationMinutes: Int
+): Int {
+    if (urgencyLevel == UrgencyLevel.FIRE_OFF) return 0
+    if (explicitDurationMinutes > 0) return explicitDurationMinutes
+
+    inferSemanticConflictOccupancyMinutes(title)?.let { return it }
+
+    return when (urgencyLevel) {
+        UrgencyLevel.L1_CRITICAL -> 120
+        UrgencyLevel.L2_IMPORTANT -> 60
+        UrgencyLevel.L3_NORMAL -> 30
+        UrgencyLevel.FIRE_OFF -> 0
+    }
+}
+
+private fun inferSemanticConflictOccupancyMinutes(title: String): Int? {
+    val normalized = title.lowercase().trim()
+    if (normalized.isBlank()) return null
+
+    return when {
+        TRANSPORT_CONFLICT_KEYWORDS.any(normalized::contains) -> 120
+        APPOINTMENT_CONFLICT_KEYWORDS.any(normalized::contains) -> 60
+        else -> null
+    }
 }
 
 /**

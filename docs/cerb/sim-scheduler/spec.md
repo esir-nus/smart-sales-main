@@ -93,6 +93,7 @@ Expected replacement:
 - treat shelf-card `Ask AI` as a plain chat-session launcher that seeds the first user turn with the inspiration text and auto-submits it
 - create Path A tasks
 - reschedule and delete in the delivered Path A-compatible way
+- allow scheduler-drawer mic voice reschedule inside the scheduler-owned Path A lane
 - surface conflict-visible scheduler results
 
 ### Shipping Hardening Carry Lane
@@ -130,7 +131,10 @@ Current SIM-specific state and remaining gaps:
 - multi-task create now aggregates attention per target date, so mixed batches may mark multiple dates independently
 - the shipped SIM voice path now fronts create with `Uni-M` ordered multi-task decomposition before the single-task Uni-A / Uni-B / Uni-C chain
 - `Uni-M` resolves fragments left-to-right; standalone `N hours/minutes later` fragments may anchor to `nowIso`, standalone `明天/后天 + clock` fragments may anchor to `nowIso` via day offsets, exact clock-relative fragments otherwise require a prior exact anchor, and clock-relative fragments after a vague date-only predecessor downgrade to vague when the day anchor remains lawful
+- exact non-`FIRE_OFF` tasks without explicit duration now use domain-owned conflict occupancy windows for collision evaluation only; semantic transport/travel tasks may conflict even when persisted `durationMinutes = 0`
+- `FIRE_OFF` reminders still bypass collision logic and therefore do not block or get blocked by other scheduled items
 - reschedule path now drives the shared source-card exit-motion contract together with destination attention
+- scheduler-drawer voice reschedule is an approved SIM scheduler lane when the transcript clearly implies a reschedule target plus a new exact time
 - SIM now reuses the shared reminder stack for persisted exact tasks only: create and conflict-create arm reminders, vague tasks do not, delete and mark-done cancel, reschedule cancels then rearms, and restore-from-done does not rearm in T4.8
 - reminder-reliability prompting stays on the viewmodel/UI boundary through a process-lifetime gate so one create batch does not spam repeated settings prompts; the same seam may carry exact-alarm and OEM-specific notification hardening guidance
 - SIM still defers immediate create/conflict/completion native notifications and still lacks device-level acceptance proof for full banner/deadline delivery
@@ -181,6 +185,7 @@ Follow-up mutation ownership remains narrow:
 
 - shell/chat may host prompting, task selection, and follow-up input
 - scheduler-owned mutation truth still belongs to the scheduler task repository, conflict check, and reminder stack
+- general SIM chat, audio drawer, and unrelated sessions do not inherit scheduler-drawer mutation rights from the scheduler mic lane
 
 ### Date Attention Contract
 
@@ -222,6 +227,17 @@ SIM adopts the shared scheduler reminder infrastructure with a narrowed boundary
 - reminder-reliability prompting stays at the `ISchedulerViewModel` boundary and is gated to one prompt emission per process lifetime
 - the delivered prompt must adapt to current OEM risk when possible: exact alarm, battery optimization, and OEM-specific lock-screen / floating / background-notification guidance should not be hardcoded as Xiaomi-only copy
 - reminder scheduling failure must not roll back task persistence or batch success
+
+### Scheduler-Drawer Voice Reschedule Contract
+
+Scheduler-drawer voice reschedule is supported only within approved SIM scheduler scope.
+
+- the owning entry surface is the scheduler drawer mic (`按住录音` in `SchedulerDrawer`)
+- the runtime may resolve the target task through scheduler-owned confidence-gated matching rather than exact-title equality
+- matching may use normalized title plus participant/location clues and scheduler-local context such as the current visible date page
+- low-confidence or near-tie candidate resolution must safe-fail with explicit feedback and no mutation
+- after one task is resolved, the new time still follows the delivered exact-time reschedule rules
+- audio drawer, general SIM chat, and unrelated sessions must not reuse this lane as implicit scheduler authority
 
 ---
 

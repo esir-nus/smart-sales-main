@@ -16,6 +16,8 @@ import com.smartsales.prism.domain.asr.AsrService
 import com.smartsales.prism.domain.memory.ConflictResult
 import com.smartsales.prism.domain.memory.ScheduleItem
 import com.smartsales.prism.domain.memory.ScheduleBoard
+import com.smartsales.prism.domain.memory.TargetResolution
+import com.smartsales.prism.domain.memory.overlapsInScheduleBoard
 import com.smartsales.core.test.fakes.FakeAlarmScheduler
 import com.smartsales.prism.domain.scheduler.CreateVagueTaskParams
 import com.smartsales.prism.domain.scheduler.CreateTasksParams
@@ -363,7 +365,7 @@ class SimSchedulerViewModelTest {
         )
 
         viewModel.onReschedule(taskId, "改到明天下午四点半")
-        advanceTimeBy(250)
+        advanceTimeBy(300)
         runCurrent()
 
         assertEquals(1, viewModel.exitingTasks.value.size)
@@ -411,7 +413,7 @@ class SimSchedulerViewModelTest {
         )
 
         viewModel.onReschedule(taskId, "改到今天下午四点半")
-        advanceTimeBy(250)
+        advanceTimeBy(300)
         runCurrent()
 
         assertEquals(1, viewModel.exitingTasks.value.size)
@@ -449,7 +451,7 @@ class SimSchedulerViewModelTest {
         )
 
         viewModel.onReschedule(taskId, "改到今天下午一点")
-        advanceTimeBy(250)
+        advanceTimeBy(300)
         runCurrent()
 
         assertEquals(1, viewModel.exitingTasks.value.size)
@@ -501,14 +503,90 @@ class SimSchedulerViewModelTest {
     }
 
     @Test
-    fun `processAudio reschedule-like transcript safe fails with noted gap`() = runTest {
+    fun `processAudio scheduler drawer voice reschedule updates matched task`() = runTest {
+        val original = scheduledTask(
+            id = "task-1",
+            title = "跟张总吃饭",
+            startTime = Instant.parse("2026-03-20T09:00:00Z"),
+            urgencyLevel = UrgencyLevel.L2_IMPORTANT
+        )
+        taskRepository.insertTask(original)
+        scheduleBoard.nextTargetResolution = TargetResolution.Resolved(
+            ScheduleItem(
+                entryId = "task-1",
+                title = "跟张总吃饭",
+                scheduledAt = original.startTime.toEpochMilli(),
+                durationMinutes = original.durationMinutes,
+                durationSource = com.smartsales.prism.domain.memory.DurationSource.DEFAULT,
+                conflictPolicy = com.smartsales.prism.domain.memory.ConflictPolicy.EXCLUSIVE
+            )
+        )
+        asrService.nextResult = AsrResult.Success("把跟张总吃饭改到明天下午四点半")
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "EXACT_CREATE",
+                  "task": {
+                    "title": "改期占位",
+                    "startTimeIso": "2026-03-21T08:30:00Z",
+                    "durationMinutes": 60,
+                    "urgency": "L2"
+                  }
+                }
+                """.trimIndent()
+            )
+        )
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        val updated = taskRepository.getTask("task-1")
+        assertNotNull(updated)
+        assertEquals(Instant.parse("2026-03-21T08:30:00Z"), updated!!.startTime)
+        assertEquals(setOf(1), viewModel.rescheduledDates.value)
+        assertEquals(setOf(1), viewModel.unacknowledgedDates.value)
+    }
+
+    @Test
+    fun `processAudio scheduler drawer voice reschedule safe fails on no match`() = runTest {
+        val original = scheduledTask(
+            id = "task-1",
+            title = "客户复盘",
+            startTime = Instant.parse("2026-03-20T09:00:00Z"),
+            urgencyLevel = UrgencyLevel.L2_IMPORTANT
+        )
+        taskRepository.insertTask(original)
+        scheduleBoard.nextTargetResolution = TargetResolution.NoMatch("那个会议")
         asrService.nextResult = AsrResult.Success("把那个会议改到晚上九点")
 
         viewModel.processAudio(File("dummy.wav"))
         advanceUntilIdle()
 
-        assertEquals("已记录缺口：全局跟进式改期仍待接入共享上下文 owner", viewModel.conflictWarning.value)
-        assertTrue(taskRepository.queryByDateRange(timeProvider.today, timeProvider.today.plusDays(2)).snapshot().isEmpty())
+        assertEquals("未找到匹配的日程，请更具体一些。", viewModel.conflictWarning.value)
+        assertEquals(original.startTime, taskRepository.getTask("task-1")?.startTime)
+    }
+
+    @Test
+    fun `processAudio scheduler drawer voice reschedule safe fails on ambiguity`() = runTest {
+        val original = scheduledTask(
+            id = "task-1",
+            title = "客户复盘 A",
+            startTime = Instant.parse("2026-03-20T09:00:00Z"),
+            urgencyLevel = UrgencyLevel.L2_IMPORTANT
+        )
+        taskRepository.insertTask(original)
+        scheduleBoard.nextTargetResolution = TargetResolution.Ambiguous(
+            query = "客户复盘",
+            candidateIds = listOf("task-1", "task-2")
+        )
+        asrService.nextResult = AsrResult.Success("把客户复盘改到晚上九点")
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        assertEquals("目标不明确，未执行改动", viewModel.conflictWarning.value)
+        assertEquals(original.startTime, taskRepository.getTask("task-1")?.startTime)
     }
 
     @Test
@@ -532,6 +610,77 @@ class SimSchedulerViewModelTest {
         advanceUntilIdle()
 
         assertTrue(viewModel.conflictedTaskIds.value.contains("other-task"))
+    }
+
+    @Test
+    fun `processAudio transport tasks a few minutes apart still surface conflict`() = runTest {
+        val board = DerivedConflictScheduleBoard(
+            existingItems = listOf(
+                ScheduleItem(
+                    entryId = "train-task",
+                    title = "提醒我去赶高铁",
+                    scheduledAt = Instant.parse("2026-03-21T00:12:00Z").toEpochMilli(),
+                    durationMinutes = 0,
+                    durationSource = com.smartsales.prism.domain.memory.DurationSource.DEFAULT,
+                    urgencyLevel = UrgencyLevel.L1_CRITICAL,
+                    conflictPolicy = com.smartsales.prism.domain.memory.ConflictPolicy.EXCLUSIVE
+                )
+            )
+        )
+        viewModel = buildViewModel(board)
+        asrService.nextResult = AsrResult.Success("凌晨十二点十五提醒我去坐飞机")
+        enqueueExactCreateResponse(
+            startTimeIso = "2026-03-21T00:15:00Z",
+            title = "提醒我去坐飞机",
+            durationMinutes = 0,
+            urgency = "L1"
+        )
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        val persisted = taskRepository.queryByDateRange(timeProvider.today, timeProvider.today.plusDays(2))
+            .snapshot()
+            .filterIsInstance<ScheduledTask>()
+            .first { it.title == "提醒我去坐飞机" }
+        assertTrue(persisted.hasConflict)
+        assertEquals("train-task", persisted.conflictWithTaskId)
+        assertTrue(viewModel.conflictedTaskIds.value.contains("train-task"))
+    }
+
+    @Test
+    fun `processAudio fire off reminder remains non conflicting`() = runTest {
+        val board = DerivedConflictScheduleBoard(
+            existingItems = listOf(
+                ScheduleItem(
+                    entryId = "meeting-task",
+                    title = "客户会议",
+                    scheduledAt = Instant.parse("2026-03-21T00:12:00Z").toEpochMilli(),
+                    durationMinutes = 60,
+                    durationSource = com.smartsales.prism.domain.memory.DurationSource.DEFAULT,
+                    urgencyLevel = UrgencyLevel.L2_IMPORTANT,
+                    conflictPolicy = com.smartsales.prism.domain.memory.ConflictPolicy.EXCLUSIVE
+                )
+            )
+        )
+        viewModel = buildViewModel(board)
+        asrService.nextResult = AsrResult.Success("凌晨十二点十五提醒我喝水")
+        enqueueExactCreateResponse(
+            startTimeIso = "2026-03-21T00:15:00Z",
+            title = "提醒我喝水",
+            durationMinutes = 0,
+            urgency = "FIRE_OFF"
+        )
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        val persisted = taskRepository.queryByDateRange(timeProvider.today, timeProvider.today.plusDays(2))
+            .snapshot()
+            .filterIsInstance<ScheduledTask>()
+            .first { it.title == "提醒我喝水" }
+        assertFalse(persisted.hasConflict)
+        assertTrue(viewModel.conflictedTaskIds.value.isEmpty())
     }
 
     @Test
@@ -1256,6 +1405,36 @@ class SimSchedulerViewModelTest {
             excludeId: String?
         ): ConflictResult {
             return queue.removeFirstOrNull() ?: ConflictResult.Clear
+        }
+
+        override suspend fun refresh() = Unit
+
+        override suspend fun findLexicalMatch(targetQuery: String): ScheduleItem? = null
+    }
+
+    private class DerivedConflictScheduleBoard(
+        existingItems: List<ScheduleItem>
+    ) : ScheduleBoard {
+        private val _upcomingItems = kotlinx.coroutines.flow.MutableStateFlow(existingItems)
+        override val upcomingItems: kotlinx.coroutines.flow.StateFlow<List<ScheduleItem>> = _upcomingItems
+
+        override suspend fun checkConflict(
+            proposedStart: Long,
+            durationMinutes: Int,
+            excludeId: String?
+        ): ConflictResult {
+            val overlaps = _upcomingItems.value.filter { item ->
+                item.entryId != excludeId &&
+                    !item.isVague &&
+                    item.conflictPolicy == com.smartsales.prism.domain.memory.ConflictPolicy.EXCLUSIVE &&
+                    overlapsInScheduleBoard(
+                        proposedStart = proposedStart,
+                        proposedDurationMinutes = durationMinutes,
+                        existingStart = item.scheduledAt,
+                        existingDurationMinutes = item.effectiveConflictDurationMinutes
+                    )
+            }
+            return if (overlaps.isEmpty()) ConflictResult.Clear else ConflictResult.Conflict(overlaps)
         }
 
         override suspend fun refresh() = Unit

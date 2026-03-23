@@ -1,9 +1,9 @@
 # SIM Mission Tracker
 
 > **Mission**: Standalone prototype app with two main feature lanes, Scheduler Path A and default SIM chat with optional Tingwu audio context, plus a decoupled connectivity support module.
-> **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Accepted / Wave 6 Isolation Accepted / Wave 7 Feature Acceptance Accepted / Wave 7 Isolation Acceptance Accepted / Wave 7 Closeout Synced / Wave 8 Task-Scoped Scheduler Follow-Up Accepted / Wave 9 Physical-Badge E2E Blocked / Wave 10 Badge Ingress Repair In Progress / Wave 11 General Chat Pivot L1 Accepted
+> **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Accepted / Wave 6 Isolation Accepted / Wave 7 Feature Acceptance Accepted / Wave 7 Isolation Acceptance Accepted / Wave 7 Closeout Synced / Wave 8 Task-Scoped Scheduler Follow-Up Accepted / Wave 9 Physical-Badge E2E Blocked / Wave 10 Badge Ingress Repair In Progress / Wave 11 General Chat Pivot L1 Accepted / Wave 12 Scheduler-Drawer Voice Reschedule L1 Accepted
 > **Started**: 2026-03-19
-> **Current Gate**: Wave 7 closeout remains accepted on **2026-03-22**. Post-closeout `T8.0` task-scoped scheduler follow-up was accepted on **2026-03-22** as a narrow SIM-owned continuity upgrade. `Wave 9` is now blocked by missing real badge recording ingress, `Wave 10` remains the active ESP32/connectivity repair mini-wave, and `Wave 11` now has docs/code/L1 verification aligned on **2026-03-22** so normal chatting is directly available with persona plus user metadata while audio stays optional mid-session context. Device-level re-entry proof is still required before returning to physical-badge follow-up validation.
+> **Current Gate**: Wave 7 closeout remains accepted on **2026-03-22**. Post-closeout `T8.0` task-scoped scheduler follow-up was accepted on **2026-03-22** as a narrow SIM-owned continuity upgrade. `Wave 9` is now blocked by missing real badge recording ingress, `Wave 10` remains the active ESP32/connectivity repair mini-wave, `Wave 11` now has docs/code/L1 verification aligned on **2026-03-22** so normal chatting is directly available with persona plus user metadata while audio stays optional mid-session context, and `Wave 12` now has docs/code/L1 verification aligned on **2026-03-23** so the scheduler drawer mic can reschedule one clearly resolved task while ordinary SIM chat and audio-grounded chat remain non-mutating. Device-level re-entry proof is still required before returning to physical-badge follow-up validation.
 > **UI Scope Guard (2026-03-22)**: The SIM home/chat restore back to the sparse screenshot-aligned shell is UI-layer-only. Treat it as presentation rollback/polish inside the existing SIM shell contract, not as a reopening of Wave 7 or Wave 8 behavior, routing, persistence, isolation, acceptance, or boundary scope.
 > **UI Scope Guard (2026-03-22, Dynamic Island)**: A shell-owned top-bar dynamic island that surfaces scheduler reminders and opens the scheduler drawer is also presentation-layer SIM shell polish. The shared renderer stays one-line, sticky, truncation-based, and scheduler-first in copy. SIM may rotate up to the top 3 scheduler entries vertically inside the same header-center slot on a 5-second interval. Conflict-visible scheduler entries rank above normal reminders, use yellow hue, and normal most-immediate entries use red hue. Tapping any visible entry must open the scheduler drawer on that entry's corresponding date page. The SIM home header now keeps only hamburger + centered island + new-chat for visual balance, while connectivity entry moves into the audio drawer. It must stay shell-owned for chrome/routing and scheduler-owned for reminder truth; it does not widen mascot, follow-up, or smart-runtime scope by itself.
 > **UI Scope Guard (2026-03-22, Audio Drawer Mode Split)**: SIM audio drawer chrome is now explicitly split into two presentation modes without reopening Wave 7 behavior. Direct open remains the spec-aligned browse/gallery surface: swipe-right transcribe for pending items, tap-to-expand for transcribed items, and `Ask AI` only from the expanded informational artifact view. Chat attach/upload reopen uses a distinct select-mode picker: no dedicated per-card bottom CTA, no swipe/expand affordances, whole card as the selection target, pending/transcribing helper copy framed as continued chat-side processing, and already-transcribed cards showing truncated transcript preview for recognition. This is a docs-and-UI-language clarification inside the existing SIM audio/chat contract, not a new pipeline, routing, or acceptance wave.
@@ -18,6 +18,7 @@
 > **Wave 4 Execution Brief**: `docs/plans/sim-wave4-execution-brief.md`
 > **Wave 5 Execution Brief**: `docs/plans/sim-wave5-execution-brief.md`
 > **Wave 8 Execution Brief**: `docs/plans/sim-wave8-execution-brief.md`
+> **Wave 12 Execution Brief**: `docs/plans/sim-wave12-execution-brief.md`
 > **Wave 9 Execution Brief**: `docs/plans/sim-wave9-execution-brief.md`
 > **Wave 10 Execution Brief**: `docs/plans/sim-wave10-execution-brief.md`
 > **ESP32 Live Capture Report**: `docs/reports/20260322-esp32-live-capture-findings.md`
@@ -37,6 +38,7 @@
 > **Wave 7 Reminder Connected Validation**: `docs/reports/tests/L2-20260321-sim-wave7-reminder-connected-validation.md`
 > **Wave 7 Reminder Visual Validation**: `docs/reports/tests/L3-20260322-sim-wave7-reminder-visual-validation.md`
 > **Wave 11 L1 Validation**: `docs/reports/tests/L1-20260322-sim-wave11-general-chat-pivot.md`
+> **Wave 12 L1 Validation**: `docs/reports/tests/L1-20260323-sim-wave12-scheduler-drawer-reschedule.md`
 > **Formal Cerb Shards**:
 > - `docs/cerb/sim-shell/spec.md`
 > - `docs/cerb/sim-shell/interface.md`
@@ -317,6 +319,8 @@ Wave sections below are retained as project memory. Their checklist items have b
     SIM shell gesture parity is now restored as a shell-owned edge/handle contract rather than broad chat overscroll behavior. The shipped path uses header-center pull-down to open Scheduler, bottom-edge pull-up to open Audio Drawer browse mode, IME gating for the bottom-edge opener, upward handle dismiss for Scheduler, and downward handle dismiss for SIM Audio. Focused verification is green with `:app-core:compileDebugKotlin`, `SimShellHandoffTest`, and `:app-core:compileDebugAndroidTestKotlin`.
   - [x] **2026-03-22 Gesture Nimbility Upgrade**
     The initial narrow edge-strip opener is now widened into a zone-based shell trigger model after device feedback showed it was too hard to activate. The current SIM direction is narrow activation bands rather than full-screen thirds: a top header-edge band for Scheduler entry, a bottom composer-edge band for Audio browse, and a protected center zone for chat/history scrolling. Vertical-intent lock remains required, and drawer open should use committed drag distance plus deliberate fling-velocity override rather than generic overscroll alone.
+  - [x] **2026-03-23 Active-Chat Gesture Hardening**
+    Follow-up implementation now anchors the shell opener to the live SIM layout instead of fixed 88dp/28dp bands. Scheduler pull uses the measured header plus 24dp bleed, audio pull uses the measured composer top minus 12dp down to the bottom edge, the center body stays protected, IME still blocks only the audio opener, and the opener threshold is now tuned to about 40dp drag or 1100dp/s directional fling. Verification is green with `:app-core:compileDebugKotlin`, `:app-core:compileDebugAndroidTestKotlin`, `:app-core:testDebugUnitTest --tests com.smartsales.prism.ui.sim.SimShellHandoffTest --tests com.smartsales.prism.ui.sim.SimComposerContractTest`, and focused on-device `:app-core:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.smartsales.prism.ui.sim.SimDrawerGestureTest,com.smartsales.prism.ui.sim.SimComposerInteractionTest`.
 - [x] **Done When**
   - [x] SIM boots into a standalone shell
   - [x] shell visually feels like Prism
@@ -800,6 +804,7 @@ Wave 7 acceptance closed the SIM mission on **2026-03-22**. The remaining items 
 - [x] Wave 11 is now explicitly opened as the docs-first SIM chat pivot that widens home chat back to a normal easy-available feature while keeping audio as optional mid-session context instead of the only legal chat entry.
 - [x] Dynamic island polish is now normalized onto the shared one-line shell contract. SIM no longer treats the old three-task reminder carousel as product truth; the shell now uses one sticky header-center summary line composed from session title plus scheduler-owned reminder ordering, while scheduler remains the owner of reminder truth.
 - [x] Audio drawer browse-vs-select mode split is now implemented as a focused SIM UI polish slice. Direct-open drawer remains the browse/gallery surface, while chat attach/upload now reopens a visually distinct select-mode picker with whole-card selection, no dedicated bottom CTA, no select-mode debug import entry, no swipe/expand affordances, and transcript-first truncated preview for already-transcribed cards. The final compact-card pass also removes redundant source/status chrome in select mode, keeps only inline `当前讨论中` for the current item, and aligns filename plus timestamp plus star into one tighter header row. Browse mode now restores the spec-aligned swipe-right transcribe prompt while preserving the accepted SIM routing/persistence/pipeline contract. Focused L1 verification is green with `:app-core:compileDebugKotlin` plus `:app-core:testDebugUnitTest --tests com.smartsales.prism.ui.sim.SimAudioDrawerViewModelTest --tests com.smartsales.prism.ui.sim.SimShellHandoffTest`.
+- [x] Wave 12 is now explicitly opened as a scheduler-only mini-wave for the missing scheduler-drawer voice reschedule lane. The user-reported screenshot maps to `SchedulerDrawer`'s `按住录音` path rather than the audio drawer, so the fix must stay inside scheduler scope and must not silently widen ordinary chat or audio sessions into scheduler mutation surfaces.
 - [ ] Deferred ESP32/connectivity contract cleanup remains a later docs-only or fake-semantics follow-up, not a Wave 10 blocker. Current active SOT is now aligned around legacy connectivity code plus `docs/cerb/connectivity-bridge/**` and `docs/specs/esp32-protocol.md`; remaining cleanup candidates are secondary only: stale `data/connectivity/ConnectivityBridge.kt` filename examples, stale `docs/specs/connectivity-spec.md` ready-state language, and any fake-manager semantics that still overstate BLE-only `Connected` as transport-ready.
 - Rule: if this deferred debt is reopened, create a new follow-up execution brief or mini-wave instead of reopening the accepted Wave 7 gates.
 
@@ -898,6 +903,34 @@ Wave 7 acceptance closed the SIM mission on **2026-03-22**. The remaining items 
   - [x] run focused compile/unit coverage for SIM chat/session behavior
   - [x] write focused verification evidence for general chat, mid-session audio attachment, and shell continuity
   - [x] sync tracker plus lower-layer docs from the verified outcome
+
+## 6.6 Wave 12: Scheduler-Drawer Voice Reschedule
+> Objective: close the missing scheduler-drawer voice reschedule lane without widening scheduler mutation rights to audio drawer or ordinary SIM chat.
+> **Entry Docs**:
+> - `docs/plans/sim-wave12-execution-brief.md`
+> - `docs/core-flow/sim-scheduler-path-a-flow.md`
+> - `docs/cerb/sim-scheduler/spec.md`
+> - `docs/cerb/sim-scheduler/interface.md`
+> - `docs/cerb/interface-map.md`
+> **Execution Law**: treat this as scheduler-drawer-only work. The `SchedulerDrawer` mic may resolve and mutate a target task inside approved SIM scheduler scope, but general chat, audio drawer, and unrelated sessions must not inherit scheduler mutation rights from this slice.
+> **Validation Requirement**: prove one scheduler-drawer voice reschedule success, prove ambiguity/no-match safe-fail with no write, and keep existing chat/audio scope boundaries unchanged.
+
+- [x] **T12.0: Docs-First Scope Lock**
+  - [x] log the mini-wave in `docs/plans/sim-tracker.md`
+  - [x] register the mini-wave in `docs/plans/tracker.md`
+  - [x] create `docs/plans/sim-wave12-execution-brief.md`
+  - [x] sync lower-layer contracts after the delivered code path is verified
+- [x] **T12.1: Scheduler-Drawer Voice Reschedule Runtime**
+  - [x] remove the old scheduler-drawer voice reschedule hard safe-fail gap
+  - [x] keep the implementation inside `SimSchedulerViewModel` plus scheduler-owned seams rather than widening shell/chat ownership
+  - [x] resolve the target task through confidence-gated matching instead of raw SQL/exact-title assumptions
+  - [x] continue to safe-fail on no-match or ambiguity without mutating scheduler state
+  - [x] preserve existing reschedule replacement semantics, reminder cancel/rearm, conflict handling, and calendar/motion attention rules
+- [x] **T12.2: Focused Verification**
+  - [x] add L1 coverage for successful scheduler-drawer voice reschedule
+  - [x] add L1 coverage for no-match and ambiguity safe-fail
+  - [x] prove audio drawer and ordinary SIM chat still do not gain scheduler mutation authority from this wave
+  - [x] Focused L1 validation is green with `./gradlew :app-core:testDebugUnitTest --tests com.smartsales.prism.ui.sim.SimSchedulerViewModelTest`, `./gradlew :app-core:testDebugUnitTest --tests com.smartsales.prism.ui.sim.SimAgentViewModelTest`, `./gradlew :domain:scheduler:test --tests com.smartsales.prism.domain.scheduler.FastTrackMutationEngineTest`, and `./gradlew :app-core:compileDebugKotlin`.
 
 ---
 

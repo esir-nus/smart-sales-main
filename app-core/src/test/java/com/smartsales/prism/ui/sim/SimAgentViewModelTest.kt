@@ -269,6 +269,32 @@ class SimAgentViewModelTest {
     }
 
     @Test
+    fun `general send with reschedule wording does not mutate scheduler state`() = runTest {
+        taskRepository.insertTask(
+            ScheduledTask(
+                id = "task_general_boundary",
+                timeDisplay = "16:00",
+                title = "客户会议",
+                urgencyLevel = UrgencyLevel.L2_IMPORTANT,
+                startTime = Instant.parse("2026-03-22T08:00:00Z"),
+                durationMinutes = 30
+            )
+        )
+        val originalStartTime = taskRepository.getTask("task_general_boundary")!!.startTime
+        val viewModel = newViewModel()
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("我可以帮你分析怎么改期，但当前普通聊天不会直接改日程。"))
+
+        viewModel.updateInput("把客户会议改到今晚九点")
+        viewModel.send()
+        advanceUntilIdle()
+
+        assertEquals(originalStartTime, taskRepository.getTask("task_general_boundary")?.startTime)
+        assertTrue(fakeExecutor.executedPrompts.last().contains("把客户会议改到今晚九点"))
+        val lastMessage = viewModel.history.value.last() as ChatMessage.Ai
+        assertTrue((lastMessage.uiState as UiState.Response).content.contains("不会直接改日程"))
+    }
+
+    @Test
     fun `selectAudioForChat reuses current general session and preserves prior turns`() = runTest {
         writeAudioMetadata(
             AudioFile(
@@ -342,6 +368,56 @@ class SimAgentViewModelTest {
         assertTrue(response.content.contains("下周启动"))
         assertTrue(fakeExecutor.executedPrompts.last().contains("客户希望下周启动试点"))
         assertTrue(fakeExecutor.executedPrompts.last().contains("客户什么时候启动"))
+    }
+
+    @Test
+    fun `audio grounded send with reschedule wording does not mutate scheduler state`() = runTest {
+        taskRepository.insertTask(
+            ScheduledTask(
+                id = "task_audio_boundary",
+                timeDisplay = "16:00",
+                title = "客户会议",
+                urgencyLevel = UrgencyLevel.L2_IMPORTANT,
+                startTime = Instant.parse("2026-03-22T08:00:00Z"),
+                durationMinutes = 30
+            )
+        )
+        val originalStartTime = taskRepository.getTask("task_audio_boundary")!!.startTime
+        writeAudioMetadata(
+            AudioFile(
+                id = "audio_grounded_boundary",
+                filename = "Boundary.wav",
+                timeDisplay = "Now",
+                source = AudioSource.PHONE,
+                status = TranscriptionStatus.TRANSCRIBED
+            )
+        )
+        writeArtifacts(
+            audioId = "audio_grounded_boundary",
+            artifacts = TingwuJobArtifacts(
+                transcriptMarkdown = "客户提到今晚可能需要调整会议时间。",
+                smartSummary = TingwuSmartSummary(summary = "录音里提到会议可能改期")
+            )
+        )
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("我可以基于录音讨论改期建议，但当前录音聊天不会直接改日程。"))
+        val viewModel = newViewModel()
+
+        viewModel.selectAudioForChat(
+            audioId = "audio_grounded_boundary",
+            title = "Boundary.wav",
+            summary = "已有摘要",
+            entersPendingFlow = false
+        )
+        viewModel.updateInput("把客户会议改到今晚九点")
+        viewModel.send()
+        advanceUntilIdle()
+        Thread.sleep(150)
+        advanceUntilIdle()
+
+        assertEquals(originalStartTime, taskRepository.getTask("task_audio_boundary")?.startTime)
+        assertTrue(fakeExecutor.executedPrompts.last().contains("把客户会议改到今晚九点"))
+        val lastMessage = viewModel.history.value.last() as ChatMessage.Ai
+        assertTrue((lastMessage.uiState as UiState.Response).content.contains("不会直接改日程"))
     }
 
     @Test

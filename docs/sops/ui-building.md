@@ -13,6 +13,20 @@
 
 ## Cardinal Rules
 
+### 0. Use The Proven Role Split
+
+For major UI work, default to this battle-tested split:
+
+- use a UI design agent for prototype creation and visual exploration
+- use Codex for surgical Compose transplant, repo-safe iteration, and verification
+- use `prism-ui-ux-contract.md` and `ui_element_registry.md` as management guardrails during production
+
+Interpretation:
+
+- prototype quality should come from focused visual exploration
+- production quality should come from careful transplant and fidelity iteration
+- contract and registry should keep the result legal and maintainable, not act as substitutes for design quality
+
 ### 1. Zero-Contamination Principle
 - **Wireframe** shows WHAT elements exist, NOT how they look.
 - Sizes, gaps, radii, colors come from `style-guide.md` and `design-tokens.json`.
@@ -59,6 +73,11 @@ Simple law:
 - screenshot drives structure
 - prototype drives polish
 - contract and registry drive production boundaries
+
+Battle-tested clarification:
+
+- do not ask the contract or registry to invent the look
+- do ask them to prevent ownership drift, broken state wiring, and illegal interaction behavior
 
 Do not transplant visuals into Compose as freeform UI code detached from the contract and registry model.
 
@@ -137,6 +156,10 @@ Do not transplant visuals into Compose as freeform UI code detached from the con
 5. Screenshot the result and present it to the user.
 6. Revise from user screenshot feedback until the design direction is confirmed.
 
+Preferred owner:
+
+- this phase should usually be done by a UI-focused design agent rather than by starting in Compose
+
 **Checkpoint**: Once the user confirms the design direction, begin production transplant.
 
 **Iteration Rule**: User feedback through additional screenshots, markup, or short comments should be treated as the primary refinement loop.
@@ -165,6 +188,17 @@ Do not transplant visuals into Compose as freeform UI code detached from the con
 - Prefer existing registry-aligned seams and interfaces instead of letting screenshot polish create new ownership leaks.
 - Verify build passes.
 - Preserve the screenshot-approved structure unless the user explicitly reopens layout decisions.
+
+Preferred owner:
+
+- this phase should usually be done by Codex
+
+Surgical transplant rules:
+
+- do not reopen already-approved aesthetic direction in Kotlin unless the user asks
+- prefer local spacing, alpha, border, typography, and composition adjustments over large rewrites
+- keep non-owning paths untouched whenever possible
+- preserve approved state mapping while improving fidelity
 
 ### 3C. Fidelity Check
 - Screenshot Android device.
@@ -200,6 +234,13 @@ Implementation-boundary rule during iteration:
 - visual corrections may change polish freely
 - behavioral boundary changes must still be justified through the Surface Contract or UI Element Registry
 - do not let screenshot feedback silently introduce data-layer coupling, ownership drift, or ad-hoc interaction rules
+
+Battle-tested refinement loop:
+
+1. prototype gets the look right
+2. Compose gets the ownership and production details right
+3. device screenshots expose the remaining fidelity gaps
+4. Codex closes those gaps with the smallest viable patch
 
 ---
 
@@ -239,4 +280,19 @@ A UI feature is **DONE** when:
 2. [ ] Design direction is confirmed by the user
 3. [ ] Android implementation matches the confirmed direction
 4. [ ] Gradle build passes
-5. [ ] User declares **"Ship It"**
+5. [ ] Prototype-vs-device fidelity has been checked
+6. [ ] User declares **"Ship It"**
+
+---
+
+## Lessons Learned From Successful UI Transplants
+
+1. Prototype-first is not optional for major UI polish work; it is the main speed multiplier.
+2. Codex is best used to transplant and refine surgically inside the repo, not to improvise the full aesthetic from code reality alone.
+3. The Surface Contract and UI Element Registry are effective when treated as control systems:
+   - they manage ownership
+   - they constrain state and interaction legality
+   - they reduce production drift
+   - they do not replace prototype taste
+4. Small, repeated fidelity iterations beat one large Compose rewrite after approval.
+5. UI tracker status plus acceptance evidence is part of the delivery system, not documentation theater.

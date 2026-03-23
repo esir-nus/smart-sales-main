@@ -1,6 +1,7 @@
 package com.smartsales.prism.ui
 
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -50,9 +51,11 @@ import com.smartsales.prism.ui.components.agent.*
 import com.smartsales.prism.ui.fakes.FakeAgentViewModel
 import com.smartsales.prism.ui.sim.SimArtifactBubble
 import com.smartsales.prism.ui.sim.SimAgentViewModel
+import com.smartsales.prism.ui.sim.SimConversationSurfaceTokens
 import com.smartsales.prism.ui.sim.SimHomeHeroCenterStage
 import com.smartsales.prism.ui.sim.SimHomeHeroGreetingStage
 import com.smartsales.prism.ui.sim.SimHomeHeroShellFrame
+import com.smartsales.prism.ui.sim.SimHomeHeroTokens
 import com.smartsales.prism.ui.sim.SimTranscriptPresentation
 import com.smartsales.prism.ui.theme.*
 import androidx.compose.foundation.border
@@ -657,17 +660,27 @@ private fun SimConversationTimeline(
 ) {
     LazyColumn(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
         contentPadding = PaddingValues(horizontal = 2.dp, vertical = 8.dp),
         reverseLayout = true
     ) {
         agentActivity?.let { activity ->
             item {
-                SimInlineState(
-                    icon = Icons.Outlined.AutoAwesome,
-                    text = activity.trace.lastOrNull()
-                        ?: activity.action?.name
-                        ?: activity.phase.name
+                SimStatusSheet(
+                    title = activity.phase.toSimStatusTitle(),
+                    action = activity.action?.toSimStatusAction() ?: "处理中...",
+                    body = activity.trace.lastOrNull()
+                        ?: activity.action?.toSimStatusAction()
+                        ?: activity.phase.toSimStatusTitle(),
+                    icon = when (activity.phase) {
+                        com.smartsales.core.pipeline.ActivityPhase.EXECUTING -> Icons.Outlined.Build
+                        com.smartsales.core.pipeline.ActivityPhase.ERROR -> Icons.Outlined.ErrorOutline
+                        else -> Icons.Outlined.AutoAwesome
+                    },
+                    accent = when (activity.phase) {
+                        com.smartsales.core.pipeline.ActivityPhase.ERROR -> ProMaxDanger
+                        else -> ProMaxAccent
+                    }
                 )
             }
         }
@@ -675,35 +688,65 @@ private fun SimConversationTimeline(
         if (agentActivity == null && uiState !is UiState.Idle) {
             item {
                 when (uiState) {
-                    is UiState.Thinking -> SimInlineState(
+                    is UiState.Thinking -> SimStatusSheet(
+                        title = "当前对话分析",
+                        action = "处理中...",
+                        body = uiState.hint ?: "SIM 正在处理当前对话",
                         icon = Icons.Outlined.AutoAwesome,
-                        text = uiState.hint ?: "SIM 正在处理当前对话"
+                        accent = ProMaxAccent
                     )
-                    is UiState.Streaming -> SimInlineState(
+                    is UiState.Streaming -> SimStatusSheet(
+                        title = "回复生成中",
+                        action = "生成中...",
+                        body = uiState.partialContent.takeIf { it.isNotBlank() } ?: "SIM 正在生成回复",
                         icon = Icons.Outlined.AutoAwesome,
-                        text = uiState.partialContent.takeIf { it.isNotBlank() } ?: "SIM 正在生成回复"
+                        accent = ProMaxAccent
                     )
-                    is UiState.AwaitingClarification,
-                    is UiState.MarkdownStrategyState,
-                    is UiState.AudioArtifacts,
-                    is UiState.Response,
-                    is UiState.SchedulerTaskCreated,
-                    is UiState.SchedulerMultiTaskCreated,
-                    is UiState.Error -> ResponseBubble(
-                        uiState = uiState,
-                        onConfirmPlan = onConfirmPlan,
-                        onAmendPlan = onAmendPlan
+                    is UiState.AwaitingClarification -> SimAssistantBubble(
+                        content = uiState.question,
+                        headline = "需要更多信息"
                     )
-                    is UiState.ExecutingTool -> SimInlineState(
+                    is UiState.MarkdownStrategyState -> SimStrategySheet(
+                        title = uiState.title,
+                        content = uiState.markdownContent,
+                        onConfirm = onConfirmPlan,
+                        onAmend = onAmendPlan
+                    )
+                    is UiState.AudioArtifacts -> SimArtifactBubble(
+                        title = uiState.title,
+                        artifactsJson = uiState.artifactsJson
+                    )
+                    is UiState.Response -> SimAssistantBubble(content = uiState.content)
+                    is UiState.SchedulerTaskCreated -> SimSystemSheet(
+                        title = "日程已创建",
+                        description = uiState.title,
+                        icon = Icons.Default.Schedule,
+                        accent = ProMaxAccent
+                    )
+                    is UiState.SchedulerMultiTaskCreated -> SimSystemSheet(
+                        title = "批量日程已创建",
+                        description = "已创建 ${uiState.tasks.size} 个任务",
+                        icon = Icons.Default.Schedule,
+                        accent = ProMaxAccent
+                    )
+                    is UiState.Error -> SimAssistantBubble(
+                        content = uiState.message,
+                        headline = "发生错误",
+                        accent = ProMaxDanger,
+                        borderColor = ProMaxDanger.copy(alpha = 0.22f)
+                    )
+                    is UiState.ExecutingTool -> SimStatusSheet(
+                        title = "工具执行",
+                        action = "执行中...",
+                        body = "正在执行: ${uiState.toolName}",
                         icon = Icons.Outlined.Build,
-                        text = "正在执行: ${uiState.toolName}"
+                        accent = ProMaxAccent
                     )
-                    is UiState.BadgeDelegationHint -> InlineStatusNotice(
+                    is UiState.BadgeDelegationHint -> SimSystemSheet(
+                        title = "工牌录入提示",
+                        description = "请长按您的智能工牌专属按键来录入此日程。",
                         icon = Icons.Default.Mic,
-                        iconTint = AccentYellow,
-                        containerColor = AccentYellow.copy(alpha = 0.1f),
-                        borderColor = AccentYellow.copy(alpha = 0.3f),
-                        text = "请长按您的智能工牌专属按键来录入此日程。"
+                        accent = AccentYellow
                     )
                     is UiState.Loading -> SimInlineLoading()
                     else -> {}
@@ -713,18 +756,37 @@ private fun SimConversationTimeline(
 
         items(history.reversed()) { message ->
             when (message) {
-                is ChatMessage.User -> UserBubble(text = message.content)
+                is ChatMessage.User -> SimUserBubble(text = message.content)
                 is ChatMessage.Ai -> {
                     when (val state = message.uiState) {
-                        is UiState.Response,
-                        is UiState.AwaitingClarification,
-                        is UiState.SchedulerTaskCreated,
-                        is UiState.SchedulerMultiTaskCreated,
-                        is UiState.MarkdownStrategyState,
-                        is UiState.Error -> ResponseBubble(
-                            uiState = state,
-                            onConfirmPlan = onConfirmPlan,
-                            onAmendPlan = onAmendPlan
+                        is UiState.Response -> SimAssistantBubble(content = state.content)
+                        is UiState.AwaitingClarification -> SimAssistantBubble(
+                            content = state.question,
+                            headline = "需要更多信息"
+                        )
+                        is UiState.SchedulerTaskCreated -> SimSystemSheet(
+                            title = "日程已创建",
+                            description = state.title,
+                            icon = Icons.Default.Schedule,
+                            accent = ProMaxAccent
+                        )
+                        is UiState.SchedulerMultiTaskCreated -> SimSystemSheet(
+                            title = "批量日程已创建",
+                            description = "已创建 ${state.tasks.size} 个任务",
+                            icon = Icons.Default.Schedule,
+                            accent = ProMaxAccent
+                        )
+                        is UiState.MarkdownStrategyState -> SimStrategySheet(
+                            title = state.title,
+                            content = state.markdownContent,
+                            onConfirm = onConfirmPlan,
+                            onAmend = onAmendPlan
+                        )
+                        is UiState.Error -> SimAssistantBubble(
+                            content = state.message,
+                            headline = "发生错误",
+                            accent = ProMaxDanger,
+                            borderColor = ProMaxDanger.copy(alpha = 0.22f)
                         )
                         is UiState.AudioArtifacts -> {
                             val revealState = transcriptRevealState[message.id]
@@ -741,24 +803,32 @@ private fun SimConversationTimeline(
                                 }
                             )
                         }
-                        is UiState.Thinking -> SimInlineState(
+                        is UiState.Thinking -> SimStatusSheet(
+                            title = "当前对话分析",
+                            action = "处理中...",
+                            body = state.hint ?: "SIM 正在处理当前对话",
                             icon = Icons.Outlined.AutoAwesome,
-                            text = state.hint ?: "SIM 正在处理当前对话"
+                            accent = ProMaxAccent
                         )
-                        is UiState.Streaming -> SimInlineState(
+                        is UiState.Streaming -> SimStatusSheet(
+                            title = "回复生成中",
+                            action = "生成中...",
+                            body = state.partialContent.takeIf { it.isNotBlank() } ?: "SIM 正在生成回复",
                             icon = Icons.Outlined.AutoAwesome,
-                            text = state.partialContent.takeIf { it.isNotBlank() } ?: "SIM 正在生成回复"
+                            accent = ProMaxAccent
                         )
-                        is UiState.ExecutingTool -> SimInlineState(
+                        is UiState.ExecutingTool -> SimStatusSheet(
+                            title = "工具执行",
+                            action = "执行中...",
+                            body = "正在执行: ${state.toolName}",
                             icon = Icons.Outlined.Build,
-                            text = "正在执行: ${state.toolName}"
+                            accent = ProMaxAccent
                         )
-                        is UiState.BadgeDelegationHint -> InlineStatusNotice(
+                        is UiState.BadgeDelegationHint -> SimSystemSheet(
+                            title = "工牌录入提示",
+                            description = "请长按您的智能工牌专属按键来录入此日程。",
                             icon = Icons.Default.Mic,
-                            iconTint = AccentYellow,
-                            containerColor = AccentYellow.copy(alpha = 0.1f),
-                            borderColor = AccentYellow.copy(alpha = 0.3f),
-                            text = "请长按您的智能工牌专属按键来录入此日程。"
+                            accent = AccentYellow
                         )
                         else -> {}
                     }
@@ -1099,6 +1169,295 @@ private fun SimInlineLoading() {
             fontSize = 13.sp
         )
     }
+}
+
+@Composable
+private fun SimUserBubble(text: String) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 1.dp),
+        horizontalArrangement = Arrangement.End
+    ) {
+        Box(
+            modifier = Modifier
+                .widthIn(max = 280.dp)
+                .background(
+                    color = SimHomeHeroTokens.OutgoingBlue,
+                    shape = RoundedCornerShape(
+                        topStart = 20.dp,
+                        topEnd = 20.dp,
+                        bottomEnd = 4.dp,
+                        bottomStart = 20.dp
+                    )
+                )
+                .padding(horizontal = 16.dp, vertical = 11.dp)
+        ) {
+            Text(
+                text = text,
+                color = Color.White,
+                fontSize = 15.sp,
+                lineHeight = 20.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun SimAssistantBubble(
+    content: String,
+    headline: String? = null,
+    accent: Color = Color.White,
+    borderColor: Color = SimConversationSurfaceTokens.Border
+) {
+    val shape = RoundedCornerShape(
+        topStart = 20.dp,
+        topEnd = 20.dp,
+        bottomEnd = 20.dp,
+        bottomStart = 4.dp
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 1.dp),
+        horizontalArrangement = Arrangement.Start
+    ) {
+        Column(
+            modifier = Modifier
+                .widthIn(max = 300.dp)
+                .clip(shape)
+                .background(SimConversationSurfaceTokens.Surface)
+                .border(1.dp, borderColor, shape)
+                .padding(horizontal = 16.dp, vertical = 11.dp)
+        ) {
+            if (!headline.isNullOrBlank()) {
+                Text(
+                    text = headline,
+                    color = accent.copy(alpha = 0.88f),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(5.dp))
+            }
+            MarkdownText(
+                text = content,
+                color = SimConversationSurfaceTokens.Body,
+                fontSize = 15.sp,
+                lineHeight = 20.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun SimSystemSheet(
+    title: String,
+    description: String,
+    icon: ImageVector,
+    accent: Color
+) {
+    val shape = RoundedCornerShape(16.dp)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 1.dp)
+            .clip(shape)
+            .background(SimConversationSurfaceTokens.Surface)
+            .border(1.dp, SimConversationSurfaceTokens.Border, shape)
+            .padding(horizontal = 16.dp, vertical = 13.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .background(accent.copy(alpha = 0.12f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = accent,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column {
+            Text(
+                text = title,
+                color = SimConversationSurfaceTokens.Title,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(3.dp))
+            Text(
+                text = description,
+                color = SimConversationSurfaceTokens.BodyMuted,
+                fontSize = 13.sp,
+                lineHeight = 18.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun SimStatusSheet(
+    title: String,
+    action: String,
+    body: String,
+    icon: ImageVector,
+    accent: Color
+) {
+    val shape = RoundedCornerShape(16.dp)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 1.dp),
+        horizontalArrangement = Arrangement.Start
+    ) {
+        Column(
+            modifier = Modifier
+                .widthIn(min = 260.dp, max = 320.dp)
+                .clip(shape)
+                .background(SimConversationSurfaceTokens.Surface)
+                .border(1.dp, SimConversationSurfaceTokens.Border, shape)
+                .padding(horizontal = 16.dp, vertical = 11.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(22.dp)
+                            .background(accent.copy(alpha = 0.12f), CircleShape),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = accent.copy(alpha = 0.90f),
+                            modifier = Modifier.size(12.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = title,
+                        color = SimConversationSurfaceTokens.Title,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                Text(
+                    text = action,
+                    color = accent.copy(alpha = 0.82f),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+            HorizontalDivider(color = SimConversationSurfaceTokens.Divider, thickness = 1.dp)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = body,
+                color = SimConversationSurfaceTokens.BodyMuted,
+                fontSize = 13.sp,
+                lineHeight = 19.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun SimStrategySheet(
+    title: String,
+    content: String,
+    onConfirm: () -> Unit,
+    onAmend: () -> Unit
+) {
+    val shape = RoundedCornerShape(18.dp)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(SimConversationSurfaceTokens.Surface)
+            .border(1.dp, SimConversationSurfaceTokens.Border, shape)
+            .padding(horizontal = 16.dp, vertical = 15.dp)
+    ) {
+        if (title.isNotBlank()) {
+            Text(
+                text = title,
+                color = SimConversationSurfaceTokens.Title,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(modifier = Modifier.height(10.dp))
+        }
+
+        MarkdownText(
+            text = content,
+            color = SimConversationSurfaceTokens.Body,
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
+            TextButton(
+                onClick = onAmend,
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.textButtonColors(
+                    contentColor = SimConversationSurfaceTokens.BodyMuted,
+                    containerColor = SimConversationSurfaceTokens.QuietFill
+                ),
+                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
+            ) {
+                Text("修改计划")
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Button(
+                onClick = onConfirm,
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = SimHomeHeroTokens.OutgoingBlue.copy(alpha = 0.18f),
+                    contentColor = Color.White.copy(alpha = 0.96f)
+                ),
+                border = BorderStroke(1.dp, SimHomeHeroTokens.OutgoingBlue.copy(alpha = 0.24f)),
+                elevation = ButtonDefaults.buttonElevation(
+                    defaultElevation = 0.dp,
+                    pressedElevation = 0.dp
+                ),
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
+            ) {
+                Text("执行此计划")
+            }
+        }
+    }
+}
+
+private fun com.smartsales.core.pipeline.ActivityPhase.toSimStatusTitle(): String = when (this) {
+    com.smartsales.core.pipeline.ActivityPhase.PLANNING -> "规划分析步骤"
+    com.smartsales.core.pipeline.ActivityPhase.EXECUTING -> "工具执行"
+    com.smartsales.core.pipeline.ActivityPhase.RESPONDING -> "回复生成"
+    com.smartsales.core.pipeline.ActivityPhase.COMPLETED -> "处理完成"
+    com.smartsales.core.pipeline.ActivityPhase.ERROR -> "发生错误"
+}
+
+private fun com.smartsales.core.pipeline.ActivityAction.toSimStatusAction(): String = when (this) {
+    com.smartsales.core.pipeline.ActivityAction.THINKING -> "思考中..."
+    com.smartsales.core.pipeline.ActivityAction.PARSING -> "解析中..."
+    com.smartsales.core.pipeline.ActivityAction.TRANSCRIBING -> "转写中..."
+    com.smartsales.core.pipeline.ActivityAction.RETRIEVING -> "检索中..."
+    com.smartsales.core.pipeline.ActivityAction.ASSEMBLING -> "整理中..."
+    com.smartsales.core.pipeline.ActivityAction.STREAMING -> "生成中..."
 }
 
 private fun Modifier.glassPanel(

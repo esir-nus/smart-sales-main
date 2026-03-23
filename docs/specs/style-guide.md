@@ -7,11 +7,11 @@
 > This document defines the **visual language** for SmartSales mobile.
 >
 > **Ownership & Hierarchy Logic:**
-> 1. **Golden Master**: The **"Valid Design" App Prototype Screenshots** are the ultimate source of visual truth. If this text contradicts the *vibe* of the screenshots (blur softness, shadow tint, gradient blend), **the screenshots win**.
-> 2. **UI Designer Authority**: The **UI Director (@[/12-ui-director])** owns this file.
-> 3. **Code Matches Design**: If code implements a pattern that looks *better* than the doc/screenshots (and is approved), update this doc.
-> 4. **Behavior vs. Visuals**: `ux-contract.md` owns *behavior*. This doc owns *pixels*.
-> 5. **Current UI Is Not Automatic Visual Truth**: Existing app UI may reflect testing convenience or incomplete polish. Unless a screen is explicitly approved as a visual reference, do not treat current implementation as the aesthetic source of truth.
+> 1. **Approved Screenshots Are State-Scoped Reference**: Approved prototype screenshots are the visual reference only for the exact state they depict. They do not define the full state space of a feature by themselves.
+> 2. **Owning Feature Specs Control Composition**: Feature-level `docs/cerb-ui/**` or `docs/cerb/**` shards own which elements appear in each state. This style guide owns the shared visual language those states should use.
+> 3. **UI Designer Authority**: The **UI Director (@[/12-ui-director])** owns this file.
+> 4. **Behavior vs. Visuals**: `docs/specs/prism-ui-ux-contract.md` and the owning feature shards own behavior and state composition. This doc owns pixels, material treatment, and visual pattern families.
+> 5. **Code Is Not Automatic Visual Truth**: Existing app UI may reflect testing convenience or incomplete polish. Only approved visuals plus synced docs may redefine the aesthetic source of truth.
 >
 > **Goal**: A living, authoritative definition of the "SmartSales" premium aesthetic.
 >
@@ -75,11 +75,19 @@ All color, spacing, typography, and component values are defined in:
    - **Zero-Chrome**: ABSOLUTELY NO browser artifacts. No scrollbars, no focus rings, no selection highlights. The web prototype is an *emulator* of a native app.
    - **Glass Slabs**: Light mode UI must use "Frosted Ice" (High blur + White Border) to separate layers. Never use flat gray.
 
-8. **MANDATE: Zero-Spec-Contamination**
+8. **MANDATE: Zero-Spec-Contamination & Zero-Emoji**
    - Spec ASCII diagrams (e.g., `HistoryDrawer.md`) define **STRUCTURE** only, not styling.
    - Specs and style docs must use plain professional prose with no emoji.
-   - Real UI uses **design system icons** (Material Icons, custom SVGs). Never render emoji Unicode as UI.
+   - **NEVER USE EMOJI UNICODE IN UI. NEVER.** Real UI uses **design system icons** (Material Icons, custom SVGs) exclusively. This is a strictly enforced anti-pattern.
    - **Never copy spec formatting** literally. Example: textual "置顶" in spec -> Code: `Icon(PushPin) + Text("置顶")`
+
+9. **MANDATE: Monolith Edge-to-Edge Architecture & Vibes**
+   The primary structural philosophy for full-screen conversational interfaces is the **"Monolith Edge-to-Edge"** model, designed to convey the tension between strict architectural boundaries and fluid artificial intelligence.
+   - **Borderless Icons**: Action icons (Menu, New Chat, Attach, Send) MUST be fully borderless. Remove artificial circular bounding boxes. The icons float completely raw.
+   - **The Anchored Monoliths**: The Top Header and Bottom Input are not floating capsules. They are edge-to-edge architectural "blocks" (Monoliths) anchored to the absolute top and bottom of the screen. They utilize deep, dark backgrounds (`#020205` base + heavy shadow) to feel like physical, heavy glass hardware.
+   - **The Feathered Seams**: Monoliths may use a short neutral feathered seam at their boundary to soften the hard cut between slab and canvas. The monolith body remains solid and edge-to-edge; only the seam softens. Use neutral black/white haze only, never aurora-tinted glow. The accepted SIM shell treatment is now explicit: the top seam stays restrained while the bottom seam reads heavier to keep the composer grounded.
+   - **The Aurora Gap**: The space *between* the top and bottom monoliths (the chat canvas) is where the vibrant Aurora blobs glow aggressively. System cards (`SystemSheet`) stretch exactly edge-to-edge across this gap, acting as horizontal bands of frosted glass overlapping the aurora, rather than disconnected floating bubbles.
+   - **Vibe Philosophy**: Grounded, heavy, architectural borders containing ethereal, highly-saturated AI plasma.
 
 ---
 
@@ -96,7 +104,7 @@ The palette uses clean, neutral surfaces to let the **AI Intelligence** (Chroma 
 | ------------------- | ---------- | --------- | ----- |
 | **AppBackground**   | `#F5F5F7`  | `#0D0D12` | **Target UI**: "Sleek Glass" Pro Max Gray. |
 | **SurfaceCard**     | `FrostedIce` | `#1C1C1E` | Light Mode = High Saturation Blur + White Border. |
-| **FloatingCapsule** | `#FFFFFF`  | `#2C2C2E` | **Target UI**: High-elevation Input Bar. |
+| **FloatingCapsule** | `#FFFFFF`  | `#2C2C2E` | Legacy elevated capsule surface. SIM home/here shell now prefers the darker Bottom Monolith pattern. |
 | **BorderDefault**   | `#E5E5EA`  | `#38383A` | Subtle dividers. |
 | **AccentPrimary**   | `#000000`  | `#FFFFFF` | **Sleek Glass**: Stark Black keys. |
 | **AccentBlue**      | `#007AFF`  | `#0A84FF` | Functional links / Analyst Mode. |
@@ -105,58 +113,129 @@ The palette uses clean, neutral surfaces to let the **AI Intelligence** (Chroma 
 
 ## 3. Component Patterns
 
-### 3.1 Home Hero (`ChatWelcome`) (V12 Blueprint)
+### 3.1 Home / Here Surface Family
 
-**A. Top Bar Layout (Target UI):**
-*   **Left**: Hamburger button (Open History Drawer) + Device Status button (Device Status/Manager).
-*   **Center**: `New Session` (Placeholder Title) or Current Session Title.
-*   **Right**: `[+]` Icon (Create New Session).
-*   **Removed**: Avatar (moved to Drawer), Profile Pill.
+This section defines the visual family for the greeting-first home state and the SIM chat-first here state.
 
-**B. Hero Content (Center Canvas):**
-*   **Visibility**: Only active when session is empty.
-*   **Greeting**: "你好, [SmartSales 用户]" (Gradient Text).
-*   **Subtitle**: "我是您的销售助手" (Body, Secondary).
-*   **Hero Actions**: Row of 3 Large Translucent Pills (`Smart Analysis`, `PDF`, `CSV`).
+State ownership:
 
-### 3.2 Chat Input (Floating Capsule)
+- `docs/cerb-ui/home-shell/spec.md` owns the generic empty-state `HomeShell` / `ChatWelcome` composition
+- `docs/cerb/sim-shell/spec.md` owns the SIM home/here shell state family
+- approved prototype screenshots may act as the visual reference for one exact substate, but must not be mistaken for the whole feature contract
+
+#### 3.1.1 Current Home Empty State (`HomeShell` / `ChatWelcome`)
+
+Current empty-state guidance:
+
+* **Shell Owner**: `HomeShell` owns the persistent top bar, aurora floor, and bottom input treatment.
+* **Canvas Owner**: `ChatWelcome` owns only the empty-state greeting canvas.
+* **Greeting**: "你好, [SmartSales 用户]" (Gradient Text).
+* **Subtitle**: "我是您的销售助手" (Body, Secondary).
+* **Do Not Infer**: Do not add hero skill pills, dashboard cards, or external floating accents to the home empty state unless the owning feature spec explicitly restores them.
+
+#### 3.1.2 SIM Home / Here State Family
+
+The SIM shell uses one visual family across multiple states rather than separate screen designs.
+
+Required shared structure:
+
+* **Top Monolith**: left hamburger/history trigger, centered Dynamic Island host slot, right new-session `+`.
+* **Center Canvas**: the protected gap between top and bottom monoliths; this swaps content by state without changing the shell identity.
+* **Bottom Monolith**: persistent composer foundation with left attach, center input, and right send-only action.
+* **Shared Seam Rule**: empty home, active plain chat, and active audio-grounded chat should all keep the same monolith family and the same neutral feathered seam treatment rather than forking seam styling per state.
+
+Required state family:
+
+* **Empty Home**: greeting-first canvas with the normal shell chrome still visible.
+* **Active Plain Chat**: sparse chat-first conversation canvas under the same shell.
+* **Active Audio-Grounded Chat**: same chat shell with one attached audio context; do not redesign into a separate tool screen.
+* **Pending / Transcribing Audio Chat**: use in-chat status/system presentation rather than forcing a route away from chat.
+* **Support-Surface Entry State**: the same shell must remain the origin for History, Scheduler, Audio, Connectivity, and Settings support flows.
+
+Approved prototype interpretation rule:
+
+* The approved SIM prototype frame with the heavy dark top/bottom bars, centered island, and sparse conversation canvas is the visual baseline for the **active discussion** substate only.
+* Extend from that frame to the other shell states; do not treat that one frame as the entire home/here contract.
+
+### 3.2 Chat Input (Bottom Monolith)
 
 **Target UI Pattern**:
 
 *   **Container**:
-    *   Shape: **Stadium / Capsule** (Fully rounded sides).
-    *   **Shadow**: **Custom Blue-Tinted Shadow** (`spotColor = Color(0xFF007AFF)`) — Levitation effect.
-    *   Insets: Floats 16dp above bottom, 16dp from sides.
-    *   Content: `+` Button (Left) | Text Field (Center).
-    *   **NO Knot**: Knot is moved to external FAB.
-
+    *   Shape: **Edge-to-Edge Rectangular Block** (No rounded stadium/capsule).
+    *   **Background**: Deep solid base (`#020205`) with intense top shadow (`box-shadow: 0 -10px 40px rgba(0,0,0,0.8)`).
+    *   Insets: Anchored explicitly to `bottom: 0`, `left: 0`, `right: 0`. Padding accommodates safe areas.
+*   **Content**:
+    *   Left: Sleek Attachment/Media Plus `(+)` icon (borderless); in SIM chat this reopens the Audio Drawer / selector rather than launching a generic file manager path.
+    *   Center: Borderless text input field.
+    *   Right: Sleek Send `(➤)` icon (borderless, send-only).
 *   **Affordance**:
+    *   The heavy block grounds the UI, serving as a solid physical foundation against the ethereal aurora background above it.
     *   **Scan Shine**: Subtle sheen traversing the placeholder text "输入消息..." in idle state.
+    *   This same monolith pattern should persist across the empty home state and active SIM discussion states so the shell feels like one product family.
 
 
-### 3.3 Chat Messages (User & Assistant)
+### 3.3 Conversation Surfaces (User Bubble, Assistant Bubble, System Sheet)
 
-Visual only; conversational behavior in `ux-contract.md`.
+Visual only; conversational behavior lives in `docs/specs/prism-ui-ux-contract.md` plus the owning SIM shards.
+
+For the shipped SIM shell family, assistant bubbles, system sheets, status sheets, strategy sheets, and artifact sheets should read as one coordinated dark frosted material system rather than as unrelated cards.
+
+Shared SIM family rule:
+
+- background should stay dark, frosted, and restrained rather than bright glass or flat utility gray
+- borders should be present but quiet
+- dividers should be lower-contrast than the outer border
+- these surfaces should feel premium and calm, never louder than the outgoing human bubble or the shell accent family
 
 * **User bubbles:**
 
   * Alignment: right.
-  * Background: `AccentPrimary`.
+  * Background: a dedicated conversational accent on dark SIM shells. The current approved SIM discussion prototype uses a blue outgoing bubble rather than `AccentPrimary`.
   * Text: white, `Body`.
   * Radius: 16 dp top, 20 dp bottom.
+  * Role: compact human-authored turn, not a system status panel.
 
 * **Assistant bubbles:**
 
   * Alignment: left.
   * Background: `SurfaceCard`.
-  * Border: `BorderDefault` (optional, very subtle).
+  * Border: `BorderDefault` (optional, very subtle). In the shipped SIM shell this border should stay softer than a normal utility card border.
   * Text: `Body`, `TextPrimary`.
   * Inline code / emphasis: bold or monospace as needed.
+  * Role: plain conversational reply only.
+
+* **System sheets:**
+
+  * Layout: edge-to-edge or near-edge-to-edge horizontal frosted bands across the aurora gap.
+  * Background: glass/slab treatment rather than a compact chat bubble.
+  * Use for: guidance copy, progress/status, artifact insertion, scheduler follow-up prompt/chip presentation, or other shell/system-authored content.
+  * Role: distinguish system-owned output from simple assistant dialogue.
+
+* **Status sheets:**
+
+  * Layout: left-anchored medium-width frosted slab rather than full-width utility card.
+  * Header: compact phase/title on the left with a quieter action label on the right.
+  * Divider: subtle and lower-contrast than the outer sheet border.
+  * Role: in-chat processing/progress state, not a dashboard card.
+
+* **Strategy sheets:**
+
+  * Must stay inside the same dark frosted SIM family as assistant/system/status surfaces.
+  * Primary confirm action may use the SIM blue accent, but should remain more restrained than the shell send action.
+  * Secondary amend action should stay text-first and quiet, with at most a faint supporting fill.
+
+* **Artifact sheets:**
+
+  * Must stay in the same dark frosted family as strategy/system/status surfaces.
+  * Internal sections should read as one continuous sheet with restrained dividers, not as stacked nested utility cards.
+  * Transcript, summary, chapters, speakers, and adjacent result sections should preserve clear hierarchy without increasing chrome level per section.
 
 * **Spacing:**
 
   * Vertical gap between messages by same speaker: 4–8 dp.
   * Between different speakers: 8–12 dp.
+  * The approved SIM discussion prototype uses a tighter `10dp` chat-history rhythm as the default conversation target.
   * Timestamp / metadata: `Caption` + `TextMuted` under or between clusters.
 
 ### 3.4 Cards (Device Manager, Audio Library, Settings)
@@ -172,7 +251,8 @@ Visual only; conversational behavior in `ux-contract.md`.
   * Subtitle/helpers: `Body` + `TextMuted`.
   * Right side: icon or status label.
 
-The Home screenshot pattern (two stacked cards) is the baseline card style.
+Use this pattern for utility/support surfaces such as settings, device management, and non-conversational browse rows.
+Do not treat generic utility cards as the default visual language for the SIM discussion canvas when a `SystemSheet` is the intended pattern.
 
 ### 3.5 History Drawer ("Memory Stream")
 
@@ -211,16 +291,17 @@ Used in history, audio library, device files, etc.
 
 ### 3.7 Empty States
 
-* Use **SurfaceMuted** or naked `AppBackground` plus an icon or illustration.
+* Use **SurfaceMuted** or naked `AppBackground` plus an icon or illustration when the owning feature does not require a shell-specific empty state.
 * Include:
 
   * Title or short message (Body/SectionTitle).
   * Optional short tip in `Caption` + `TextMuted`.
+* For SIM home/here specifically, prefer the greeting-first canvas owned by the shell over generic empty-state iconography.
 * No heavy colors; keep it soft and informative.
 
 ### 3.8 Smart Badge (Header Status)
 
-**Concept**: Replaces the generic "Device Status" text with a specialized, localized badge that pulses to indicate life.
+**Concept**: A specialized connectivity/status badge that may appear on supporting or non-SIM shells.
 
 * **Container**:
   * Shape: Pill / Capsule (`RoundedCornerShape(14.dp)`).
@@ -232,7 +313,26 @@ Used in history, audio library, device files, etc.
   * **Pulse Indicator**: A 6dp Green Circle (`#4CD964`).
     * Animation: `alpha` oscillates 0.4 -> 1.0 (authentic pulse).
 
-### 3.9 Aurora Background (V16)
+Current SIM shell rule:
+
+* Do not assume this badge is part of the default active SIM top bar.
+* The SIM shell keeps the active home/here header visually balanced with hamburger, centered Dynamic Island, and new-session `+`, while connectivity entry belongs to support-surface routes.
+
+### 3.9 Dynamic Island (Premium Context Pill)
+
+**Concept**: A borderless, highly-integrated context indicator sitting centered in the heavy top monolith.
+
+* **Container**: Completely borderless and transparent container. No bounding pill box. Floats natively in the monolith background.
+* **Content**:
+  * **Indicator Dot**: A 6dp glossy/glowing circle.
+  * **Text / Chroma Font**: Text uses a hardware-like iridescent gradient fill (`linear-gradient` clipped to text).
+* **States**:
+  * **Upcoming**: Red chroma gradient (`#FF8A84` to `#FF453A`) with a glowing red dot.
+  * **Conflict**: Yellow chroma gradient (`#FFEB85` to `#FFD60A`) with a pulsing yellow dot.
+  * **Idle**: Silver chroma gradient (`#FFFFFF` to `#A0A0A5`) with a subtle white dot.
+* **Prohibition**: Never use emoji. The island must look like glass-integrated hardware without cheap visual backgrounds.
+
+### 3.10 Aurora Background (V16)
 
 **Concept**: The Aurora consists of three distinct, animated radial gradient blobs that create a subtle, living atmosphere. NOT a mesh gradient—each blob is a separate light source.
 
@@ -252,27 +352,17 @@ Used in history, audio library, device files, etc.
 
 * **Design Principle**: "Distinct Blobs"—intentionally reduce radius and spread positions to prevent muddy overlap. Each blob should be recognizable as a separate light source.
 
-### 3.10 Knot FAB & Tip Bubble (V18) — "Living Intelligence Avatar"
+### 3.11 Knot FAB & Tip Bubble (Historical / Deferred)
 
-**Concept**: The Knot is the UI's "soul"—an always-visible, breathing infinity symbol that represents the AI assistant. Tapping it reveals a contextual tip.
+This section is retained only as historical design reference.
 
-* **Knot FAB**:
-  *   **Type**: External Floating Action Button (FAB).
-  *   **Position**: Fixed, bottom-right, `160dp` from bottom, `24dp` from edge.
-  *   **Container**: `56dp` touch target, transparent background.
-  *   **Icon**: `50dp` KnotSymbol (leaves breathing room).
-  * **Stroke**: Core `1.5dp`, Glow `3dp` (atmosphere layer at `0.5f` alpha).
-  * **Animation**: "Breathing" scale (`1.0f` → `1.35f`, 2s cycle). Spins when `isThinking = true`.
-  * **Ripple**: Standard Material 3 ripple on tap.
+Rule:
 
-* **Tip Bubble**:
-  * **Position**: Floats above the Knot (`64dp` padding above FAB).
-  * **Shape**: Asymmetric rounded corners `(16, 16, 4, 16)` to imply speech.
-  * **Style**: Glassmorphism (`surface.copy(alpha = 0.9f)`, `8dp` shadow, subtle border).
-  * **Content**: Rotates through localized tips on open (e.g., "试试 '帮我分析财报'").
-  * **Animation**: `fadeIn + scaleIn` from bottom-right origin.
+- `Knot FAB` is not part of the current home empty-state contract.
+- Do not add it to the active home shell unless an owning feature spec explicitly restores it.
+- If reintroduced later, its owning feature shard must define where it lives and when it appears.
 
-### 3.11 Input Placeholder Shimmer (V17)
+### 3.12 Input Placeholder Shimmer (V17)
 
 **Concept**: A subtle "text scan" effect on the placeholder text ("输入消息...") that suggests the input is ready and attentive.
 
@@ -288,7 +378,7 @@ Used in history, audio library, device files, etc.
 
 ## 4. Motion & Interaction
 
-Visual guidance only; gesture behavior is in `ux-contract.md`.
+Visual guidance only; gesture behavior is in `docs/specs/prism-ui-ux-contract.md` and the owning shell specs.
 
 ### 4.1 Animation
 
@@ -329,15 +419,15 @@ Before shipping a screen, verify:
 
 1. **Doc precedence**
 
-   * Behavior / layout matches `docs/specs/ux-contract.md` and `docs/specs/Orchestrator-V1.md` (CURRENT). Archived versions are for historical reference only.
+   * Behavior / layout matches `docs/specs/prism-ui-ux-contract.md` plus the owning feature shard such as `docs/cerb-ui/home-shell/spec.md` or `docs/cerb/sim-shell/spec.md`.
    * This style guide has been used **only** for visuals.
-   * React `/ui` was used as reference, not as the behavioral source of truth.
+   * Approved state screenshots were applied only to the exact state they depict, then extended through the owning feature spec for the rest of the state family.
 
 2. **Colors**
 
    * Background = `AppBackground`.
    * Cards / bubbles / drawers = `SurfaceCard`.
-   * Primary actions & links = `AccentPrimary`.
+   * Primary keys/actions may use `AccentPrimary`, but conversational outgoing bubbles may use a dedicated SIM discussion accent.
    * Errors = `DangerText` on `DangerSurface`.
 
 3. **Typography**
@@ -347,19 +437,19 @@ Before shipping a screen, verify:
 
 4. **Spacing & layout**
 
-   * 16 dp base padding on the sides.
+   * 16 dp base padding on the sides unless a shell-owned monolith or system sheet intentionally spans edge-to-edge.
    * 4-pt grid respected for gaps.
    * Only one main scrollable column.
 
 5. **Shapes & elevation**
 
-   * Soft radii (12–20 dp) for cards, input, drawers.
-   * Shadows are subtle.
+   * Utility cards and drawers keep soft radii (12–20 dp).
+   * SIM top/bottom monoliths may stay rectangular/heavy with stronger shadow than utility cards.
 
 6. **Component patterns**
 
    * Home hero only appears in truly empty sessions, and never as a chat bubble.
-   * Quick skill row placement matches the empty vs active rules.
-   * Dialogs, drawers, lists, and buttons reuse the patterns from this guide.
+   * SIM home/here screen is treated as one shell family spanning empty home, active chat, audio-grounded chat, and support-surface entry.
+   * Dialogs, drawers, lists, system sheets, and buttons reuse the patterns from this guide.
 
-If any conflict is found between this file and `docs/specs/ux-contract.md`, **update this file and React** to match the UX contract, not the other way around.
+If any conflict is found between this file and `docs/specs/prism-ui-ux-contract.md` or an owning feature shard, sync this file to the approved feature/UI contract rather than inferring a new rule from implementation drift.

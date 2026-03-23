@@ -2,17 +2,18 @@ package com.smartsales.prism.ui.sim
 
 import android.os.SystemClock
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -24,15 +25,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
 import com.smartsales.prism.ui.components.MarkdownText
-import com.smartsales.prism.ui.theme.BorderSubtle
-import com.smartsales.prism.ui.theme.TextPrimary
-import com.smartsales.prism.ui.theme.TextSecondary
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -60,32 +59,34 @@ fun SimArtifactBubble(
         runCatching { simArtifactJson.decodeFromString<TingwuJobArtifacts>(artifactsJson) }.getOrNull()
     }
 
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.94f))
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(SimConversationSurfaceTokens.Surface)
+            .border(1.dp, SimConversationSurfaceTokens.Border, RoundedCornerShape(18.dp))
+            .padding(horizontal = 16.dp, vertical = 15.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Text(
+            text = "《$title》转写结果",
+            color = SimConversationSurfaceTokens.Title,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 15.sp
+        )
+        if (artifacts == null) {
             Text(
-                text = "《$title》转写结果",
-                color = TextPrimary,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 15.sp
+                text = "当前无法读取该音频的结构化结果，请稍后重试。",
+                color = SimConversationSurfaceTokens.BodyMuted,
+                fontSize = 13.sp,
+                modifier = Modifier.padding(top = 10.dp)
             )
-            if (artifacts == null) {
-                Text(
-                    text = "当前无法读取该音频的结构化结果，请稍后重试。",
-                    color = TextSecondary,
-                    fontSize = 13.sp,
-                    modifier = Modifier.padding(top = 12.dp)
-                )
-            } else {
-                SimArtifactContent(
-                    artifacts = artifacts,
-                    transcriptPresentation = transcriptPresentation,
-                    onTranscriptRevealConsumed = onTranscriptRevealConsumed,
-                    modifier = Modifier.padding(top = 12.dp)
-                )
-            }
+        } else {
+            SimArtifactContent(
+                artifacts = artifacts,
+                transcriptPresentation = transcriptPresentation,
+                onTranscriptRevealConsumed = onTranscriptRevealConsumed,
+                modifier = Modifier.padding(top = 10.dp)
+            )
         }
     }
 }
@@ -127,27 +128,27 @@ fun SimArtifactContent(
             )
         }
         summary?.let {
-            HorizontalDivider(color = BorderSubtle)
+            HorizontalDivider(color = SimConversationSurfaceTokens.Divider)
             SimArtifactSection(title = "摘要", text = it, useMarkdown = true)
         }
         highlights?.let {
-            HorizontalDivider(color = BorderSubtle)
+            HorizontalDivider(color = SimConversationSurfaceTokens.Divider)
             SimArtifactSection(title = "重点", text = it)
         }
         chapters?.let {
-            HorizontalDivider(color = BorderSubtle)
+            HorizontalDivider(color = SimConversationSurfaceTokens.Divider)
             SimArtifactSection(title = "章节", text = it)
         }
         speakers?.let {
-            HorizontalDivider(color = BorderSubtle)
+            HorizontalDivider(color = SimConversationSurfaceTokens.Divider)
             SimArtifactSection(title = "说话人", text = it)
         }
         providerAdjacent?.let {
-            HorizontalDivider(color = BorderSubtle)
+            HorizontalDivider(color = SimConversationSurfaceTokens.Divider)
             SimArtifactSection(title = "附加结果", text = it)
         }
         links?.let {
-            HorizontalDivider(color = BorderSubtle)
+            HorizontalDivider(color = SimConversationSurfaceTokens.Divider)
             SimArtifactSection(title = "结果链接", text = it)
         }
     }
@@ -280,38 +281,38 @@ private fun SimArtifactSection(
                     expanded = !expanded
                     onExpandedChange?.invoke(expanded)
                 }
-                .padding(vertical = 10.dp),
+                .padding(vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = title,
-                color = TextPrimary,
+                color = SimConversationSurfaceTokens.Title,
                 fontWeight = FontWeight.Medium,
-                fontSize = 14.sp,
+                fontSize = 13.sp,
                 modifier = Modifier.weight(1f)
             )
             Icon(
                 imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                tint = TextSecondary
+                tint = SimConversationSurfaceTokens.Icon
             )
         }
 
         AnimatedVisibility(visible = expanded) {
-            Box(modifier = Modifier.padding(bottom = 12.dp, start = 4.dp)) {
+            Box(modifier = Modifier.padding(bottom = 10.dp)) {
                 if (useMarkdown) {
                     MarkdownText(
                         text = text,
-                        color = TextSecondary,
-                        lineHeight = 21.sp,
+                        color = SimConversationSurfaceTokens.BodyMuted,
+                        lineHeight = 20.sp,
                         onTextLayout = { result -> onTextLayout?.invoke(result) }
                     )
                 } else {
                     Text(
                         text = text,
-                        color = TextSecondary,
+                        color = SimConversationSurfaceTokens.BodyMuted,
                         fontSize = 13.sp,
-                        lineHeight = 20.sp,
+                        lineHeight = 19.sp,
                         onTextLayout = { result -> onTextLayout?.invoke(result) }
                     )
                 }

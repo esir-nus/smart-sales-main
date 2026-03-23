@@ -32,6 +32,29 @@ Instead, UI work should follow a stable document chain:
 
 ---
 
+## Battle-Tested Conclusion
+
+The most successful UI delivery pattern in this repo is now explicit:
+
+1. use a strong UI design agent to explore and build the prototype quickly
+2. use Codex to do the surgical production transplant and controlled iteration
+3. use the Surface Contract and UI Element Registry to keep the production result governable
+
+Important interpretation:
+
+- the prototype is the primary engine for visual invention
+- Codex is the primary engine for repo-safe transplant, refinement, and verification
+- the contract and registry are not the main source of aesthetic creativity
+- the contract and registry are the control layer that keeps the shipped UI from drifting into ownership leaks, fake seams, or accidental behavior changes
+
+Simple law:
+
+- prototype decides what great should look like
+- Codex decides how to land it safely in production
+- contract and registry decide whether the landing remains structurally legal
+
+---
+
 ## Core Mental Model
 
 Use this model when discussing UI work:
@@ -48,6 +71,13 @@ That means:
 - UX invariants may not break
 - business logic may not leak into raw UI styling decisions
 - production implementation must still obey the real state and intent contracts
+
+Add one more practical lens:
+
+- prototype work is a creative search problem
+- production transplant is a precision engineering problem
+
+Treating both as the same kind of work caused avoidable confusion in older UI flows.
 
 ---
 
@@ -150,6 +180,12 @@ Rule:
 
 - do not treat prototype code as production code
 
+Battle-tested role split:
+
+- a UI-focused design agent should own this phase whenever possible
+- this phase should optimize for visual quality, speed of exploration, and screenshot reviewability
+- do not force the prototype phase to think like Compose implementation too early
+
 ### Phase 3: Screenshot Critique
 
 After the prototype is rendered, review it from screenshots.
@@ -186,6 +222,12 @@ Rule:
 
 - transplant approved design intent, not raw prototype hacks
 
+Battle-tested role split:
+
+- Codex should own this phase whenever possible
+- Codex should work surgically inside the existing repo boundaries rather than re-inventing the design in Kotlin
+- once the prototype is approved, the Kotlin phase should bias toward faithful transplant and micro-iteration, not renewed aesthetic exploration
+
 ### Phase 6: Verification
 
 Verify production UI against:
@@ -211,6 +253,12 @@ It must not directly depend on:
 - LLM internal structures
 - storage-layer implementation details
 
+Clarification:
+
+- "contract first" does not mean "invent the UI from the contract"
+- the contract defines legal boundaries, ownership, state inputs, and intent outputs
+- it is a production control surface, not a substitute for design taste
+
 ### 2. Prototype Before Major Android UI Work
 
 For meaningful screen or pattern work:
@@ -220,6 +268,11 @@ For meaningful screen or pattern work:
 - transplant second
 
 Do not jump straight into Compose unless the task is minor.
+
+Battle-tested refinement:
+
+- for medium or major UI work, jumping straight to Compose usually produces slower iteration and weaker polish
+- the prototype should absorb the expensive aesthetic trial-and-error before Kotlin starts
 
 ### 2a. Current UI Is Not The Aesthetic Teacher
 
@@ -258,6 +311,95 @@ That same screenshot is usually not authoritative for:
 - corner radius
 - opacity
 - spacing rhythm
+
+---
+
+## Role Split That Actually Works
+
+| Role | Best Owner | Main Job | Must Not Drift Into |
+|------|------------|----------|---------------------|
+| Visual exploration | UI design agent | generate and refine the prototype, tune mood, spacing, hierarchy, and material feel | production wiring decisions |
+| Structural approval | human reviewer | approve direction, reject weak visual interpretations, lock layout/tone decisions | low-level Kotlin implementation detail |
+| Surgical transplant | Codex | map approved prototype into Compose with minimal behavior drift | fresh visual reinvention without approval |
+| Contract control | Surface Contract | define legal state and intent boundaries | acting as a visual mood board |
+| Pattern control | UI Element Registry | define component invariants, behavior expectations, and layer discipline | acting as the first design sketch |
+| Shipment control | UI tracker + acceptance report | make approval, fidelity, drift, and ship state explicit | replacing the actual prototype comparison |
+
+---
+
+## Lessons Learned
+
+### 1. The prototype must lead the aesthetic
+
+The strongest UI outcomes came from letting the prototype become excellent first.
+
+If Kotlin implementation starts while the design is still aesthetically unresolved, the repo pays for that uncertainty multiple times.
+
+### 2. Codex is strongest at precision, not first-pass taste search
+
+Codex performs best when asked to:
+
+- transplant
+- tighten
+- align
+- remove drift
+- preserve behavior while improving fidelity
+
+This is different from asking it to invent the full visual language from repo code alone.
+
+### 3. Contract and registry are useful, but mainly as governance tools
+
+Their highest-value use is:
+
+- protecting behavior boundaries
+- preventing ownership drift
+- preserving interaction invariants
+- keeping shared component semantics stable
+
+Their lowest-value use is pretending they can replace prototype quality.
+
+So the practical conclusion is:
+
+- yes, they are effective
+- but mainly as guardrails, review criteria, and transplant management tools
+- not as the main spark for great visual design
+
+### 4. Surgical transplant beats rewrite energy
+
+Once the prototype is approved, the best Android phase is:
+
+- smallest viable write scope
+- local token and spacing changes first
+- preserve state mapping
+- preserve ownership
+- iterate from screenshots and device evidence
+
+Large Kotlin redesigns after prototype approval usually create avoidable drift.
+
+### 5. UI tracker plus explicit acceptance closes the loop
+
+The tracker is not ceremony. It prevents hidden state such as:
+
+- "prototype approved but transplant not started"
+- "transplant done but fidelity still drifting"
+- "looks close" without an acceptance decision
+
+The acceptance note converts taste discussion into documented evidence.
+
+---
+
+## Battle-Tested SOP Summary
+
+Use this operating sequence for future major UI work:
+
+1. frame the surface and read the docs
+2. build the prototype with a UI design agent
+3. review by screenshots until the direction is explicitly approved
+4. lock the structure and tone
+5. let Codex perform the Compose transplant surgically
+6. use contract and registry as production guardrails during transplant
+7. compare device output against the approved prototype
+8. record final acceptance in the UI tracker and, when needed, an audit report
 - size balance
 - proportions
 - chrome treatment

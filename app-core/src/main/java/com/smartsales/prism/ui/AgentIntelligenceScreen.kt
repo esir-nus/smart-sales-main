@@ -21,14 +21,18 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -65,6 +69,11 @@ enum class AgentIntelligenceVisualMode {
     SIM
 }
 
+internal const val SIM_INPUT_BAR_TEST_TAG = "sim_input_bar"
+internal const val SIM_INPUT_FIELD_TEST_TAG = "sim_input_field"
+internal const val SIM_ATTACH_BUTTON_TEST_TAG = "sim_attach_button"
+internal const val SIM_SEND_BUTTON_TEST_TAG = "sim_send_button"
+
 @Composable
 fun AgentIntelligenceScreen(
     viewModel: IAgentViewModel = hiltViewModel<AgentViewModel>(),
@@ -80,7 +89,9 @@ fun AgentIntelligenceScreen(
     onProfileClick: () -> Unit = {},
     showDebugButton: Boolean = true,
     visualMode: AgentIntelligenceVisualMode = AgentIntelligenceVisualMode.DEFAULT,
-    simDynamicIslandItems: List<DynamicIslandItem> = emptyList()
+    simDynamicIslandItems: List<DynamicIslandItem> = emptyList(),
+    onSimHeaderBoundsChanged: ((Rect) -> Unit)? = null,
+    onSimComposerBoundsChanged: ((Rect) -> Unit)? = null
 ) {
     val history by viewModel.history.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
@@ -139,6 +150,8 @@ fun AgentIntelligenceScreen(
         onProfileClick = onProfileClick,
         showDebugButton = showDebugButton,
         simDynamicIslandItems = simDynamicIslandItems,
+        onSimHeaderBoundsChanged = onSimHeaderBoundsChanged,
+        onSimComposerBoundsChanged = onSimComposerBoundsChanged,
         onUpdateInput = viewModel::updateInput,
         onSend = viewModel::send,
         onConfirmPlan = viewModel::confirmAnalystPlan,
@@ -175,6 +188,8 @@ internal fun AgentIntelligenceContent(
     onProfileClick: () -> Unit,
     showDebugButton: Boolean,
     simDynamicIslandItems: List<DynamicIslandItem>,
+    onSimHeaderBoundsChanged: ((Rect) -> Unit)?,
+    onSimComposerBoundsChanged: ((Rect) -> Unit)?,
     onUpdateInput: (String) -> Unit,
     onSend: () -> Unit,
     onConfirmPlan: () -> Unit,
@@ -274,7 +289,8 @@ internal fun AgentIntelligenceContent(
                     dynamicIslandItems = simDynamicIslandItems,
                     onMenuClick = onMenuClick,
                     onNewSessionClick = onNewSessionClick,
-                    onSchedulerClick = onSchedulerClick
+                    onSchedulerClick = onSchedulerClick,
+                    onBoundsChanged = onSimHeaderBoundsChanged
                 )
 
                 Spacer(modifier = Modifier.height(18.dp))
@@ -308,7 +324,8 @@ internal fun AgentIntelligenceContent(
                     isSending = isSending,
                     onTextChanged = onUpdateInput,
                     onSend = onSend,
-                    onAttachClick = onAttachClick
+                    onAttachClick = onAttachClick,
+                    onBoundsChanged = onSimComposerBoundsChanged
                 )
             }
         } else {
@@ -718,10 +735,21 @@ private fun SimShellHeader(
     dynamicIslandItems: List<DynamicIslandItem>,
     onMenuClick: () -> Unit,
     onNewSessionClick: () -> Unit,
-    onSchedulerClick: (DynamicIslandTapAction) -> Unit
+    onSchedulerClick: (DynamicIslandTapAction) -> Unit,
+    onBoundsChanged: ((Rect) -> Unit)? = null
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                if (onBoundsChanged != null) {
+                    Modifier.onGloballyPositioned { coordinates ->
+                        onBoundsChanged(coordinates.boundsInRoot())
+                    }
+                } else {
+                    Modifier
+                }
+            ),
         verticalAlignment = Alignment.CenterVertically
     ) {
         SimHeaderButton(
@@ -852,12 +880,23 @@ private fun SimInputBar(
     isSending: Boolean,
     onTextChanged: (String) -> Unit,
     onSend: () -> Unit,
-    onAttachClick: () -> Unit
+    onAttachClick: () -> Unit,
+    onBoundsChanged: ((Rect) -> Unit)? = null
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(58.dp)
+            .testTag(SIM_INPUT_BAR_TEST_TAG)
+            .then(
+                if (onBoundsChanged != null) {
+                    Modifier.onGloballyPositioned { coordinates ->
+                        onBoundsChanged(coordinates.boundsInRoot())
+                    }
+                } else {
+                    Modifier
+                }
+            )
             .background(Color(0xFF1C232D).copy(alpha = 0.96f), RoundedCornerShape(28.dp))
             .padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -865,6 +904,7 @@ private fun SimInputBar(
         Box(
             modifier = Modifier
                 .size(40.dp)
+                .testTag(SIM_ATTACH_BUTTON_TEST_TAG)
                 .clickable(onClick = onAttachClick),
             contentAlignment = Alignment.Center
         ) {
@@ -885,6 +925,7 @@ private fun SimInputBar(
             androidx.compose.foundation.text.BasicTextField(
                 value = text,
                 onValueChange = onTextChanged,
+                modifier = Modifier.testTag(SIM_INPUT_FIELD_TEST_TAG),
                 singleLine = true,
                 textStyle = androidx.compose.ui.text.TextStyle(
                     color = Color.White.copy(alpha = 0.92f),
@@ -910,6 +951,7 @@ private fun SimInputBar(
         Box(
             modifier = Modifier
                 .size(44.dp)
+                .testTag(SIM_SEND_BUTTON_TEST_TAG)
                 .background(
                     if (actionEnabled || isSending) {
                         Color.White

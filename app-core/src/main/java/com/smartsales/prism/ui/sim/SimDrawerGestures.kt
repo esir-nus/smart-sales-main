@@ -6,12 +6,10 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,8 +37,19 @@ internal const val SIM_SCHEDULER_EDGE_ZONE_TEST_TAG = "sim_scheduler_edge_zone"
 internal const val SIM_AUDIO_EDGE_ZONE_TEST_TAG = "sim_audio_edge_zone"
 internal const val SIM_AUDIO_HANDLE_TEST_TAG = "sim_audio_handle"
 
-private const val SIM_DRAWER_ZONE_FRACTION = 0.34f
+private val SIM_SCHEDULER_EDGE_BAND_FALLBACK_HEIGHT = 88.dp
+private val SIM_AUDIO_EDGE_BAND_FALLBACK_HEIGHT = 28.dp
+private val SIM_SCHEDULER_EDGE_BLEED = 24.dp
+private val SIM_AUDIO_EDGE_LEAD = 12.dp
+private val SIM_DRAWER_OPEN_DISTANCE_THRESHOLD = 40.dp
+private val SIM_DRAWER_OPEN_VELOCITY_THRESHOLD = 1100.dp
 private const val SIM_DRAWER_VERTICAL_DOMINANCE_RATIO = 1.35f
+
+internal data class SimGestureAnchors(
+    val headerBottomPx: Float,
+    val composerTopPx: Float,
+    val rootHeightPx: Float
+)
 
 internal enum class SimVerticalGestureDirection {
     UP,
@@ -58,6 +67,22 @@ internal fun canOpenSimAudioFromEdge(
     isImeVisible: Boolean
 ): Boolean = canOpenSimSchedulerFromEdge(state) && !isImeVisible
 
+internal fun buildSimGestureAnchors(
+    headerBottomPx: Float?,
+    composerTopPx: Float?,
+    rootHeightPx: Float
+): SimGestureAnchors? {
+    val headerBottom = headerBottomPx ?: return null
+    val composerTop = composerTopPx ?: return null
+    if (rootHeightPx <= 0f) return null
+
+    return SimGestureAnchors(
+        headerBottomPx = headerBottom.coerceIn(0f, rootHeightPx),
+        composerTopPx = composerTop.coerceIn(0f, rootHeightPx),
+        rootHeightPx = rootHeightPx
+    )
+}
+
 @Composable
 internal fun rememberSimImeVisibility(): Boolean {
     val density = LocalDensity.current
@@ -68,21 +93,54 @@ internal fun rememberSimImeVisibility(): Boolean {
 internal fun BoxScope.SimDrawerEdgeGestureLayer(
     state: SimShellState,
     isImeVisible: Boolean,
+    gestureAnchors: SimGestureAnchors? = null,
     onOpenScheduler: () -> Unit,
     onOpenAudioBrowse: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val density = LocalDensity.current
+    val fallbackSchedulerHeightDp = SIM_SCHEDULER_EDGE_BAND_FALLBACK_HEIGHT
+    val fallbackAudioHeightDp = SIM_AUDIO_EDGE_BAND_FALLBACK_HEIGHT
+    val schedulerBleedPx = with(density) { SIM_SCHEDULER_EDGE_BLEED.toPx() }
+    val audioLeadPx = with(density) { SIM_AUDIO_EDGE_LEAD.toPx() }
+    val schedulerHeightDp = remember(gestureAnchors, density) {
+        val zoneHeightPx = gestureAnchors
+            ?.let { anchors ->
+                (anchors.headerBottomPx + schedulerBleedPx)
+                    .coerceAtLeast(with(density) { fallbackSchedulerHeightDp.toPx() })
+                    .coerceAtMost(anchors.rootHeightPx)
+            }
+        zoneHeightPx?.let { with(density) { it.toDp() } } ?: fallbackSchedulerHeightDp
+    }
+    val audioZoneStartPx = remember(gestureAnchors, density) {
+        gestureAnchors?.let { anchors ->
+            val schedulerZoneBottomPx = (anchors.headerBottomPx + schedulerBleedPx)
+                .coerceIn(0f, anchors.rootHeightPx)
+            (anchors.composerTopPx - audioLeadPx)
+                .coerceAtLeast(schedulerZoneBottomPx)
+                .coerceIn(0f, anchors.rootHeightPx)
+        }
+    }
+    val audioHeightDp = remember(audioZoneStartPx, gestureAnchors, density) {
+        val zoneHeightPx = if (gestureAnchors != null && audioZoneStartPx != null) {
+            (gestureAnchors.rootHeightPx - audioZoneStartPx).coerceAtLeast(0f)
+        } else {
+            with(density) { fallbackAudioHeightDp.toPx() }
+        }
+        with(density) { zoneHeightPx.toDp() }
+    }
+
     if (canOpenSimSchedulerFromEdge(state)) {
         SimVerticalDragTrigger(
             modifier = modifier
                 .zIndex(PrismElevation.Handles)
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
-                .fillMaxHeight(SIM_DRAWER_ZONE_FRACTION)
+                .height(schedulerHeightDp)
                 .testTag(SIM_SCHEDULER_EDGE_ZONE_TEST_TAG),
             direction = SimVerticalGestureDirection.DOWN,
-            threshold = 52.dp,
-            velocityThreshold = 1400.dp,
+            threshold = SIM_DRAWER_OPEN_DISTANCE_THRESHOLD,
+            velocityThreshold = SIM_DRAWER_OPEN_VELOCITY_THRESHOLD,
             onTriggered = onOpenScheduler
         )
     }
@@ -93,12 +151,11 @@ internal fun BoxScope.SimDrawerEdgeGestureLayer(
                 .zIndex(PrismElevation.Handles)
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .fillMaxHeight(SIM_DRAWER_ZONE_FRACTION)
-                .navigationBarsPadding()
+                .height(audioHeightDp)
                 .testTag(SIM_AUDIO_EDGE_ZONE_TEST_TAG),
             direction = SimVerticalGestureDirection.UP,
-            threshold = 52.dp,
-            velocityThreshold = 1400.dp,
+            threshold = SIM_DRAWER_OPEN_DISTANCE_THRESHOLD,
+            velocityThreshold = SIM_DRAWER_OPEN_VELOCITY_THRESHOLD,
             onTriggered = onOpenAudioBrowse
         )
     }

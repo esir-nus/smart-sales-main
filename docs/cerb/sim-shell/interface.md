@@ -30,8 +30,11 @@ Responsibilities:
 
 - coordinate scheduler and audio drawers
 - own the SIM shell edge-gesture gates for scheduler/audio entry
+- host one SIM home/here shell family that covers empty home, active plain chat, active audio-grounded chat, and pending-audio chat presentation without changing top-level shell identity
 - host the simple chat surface
 - host a send-only bottom message capsule for SIM chat; left attach reopens the SIM audio drawer, the right action does not become a shell-owned mic route, and the idle placeholder keeps the scan-shine treatment on placeholder text only
+- keep the top header visually balanced with hamburger on the left, centered Dynamic Island, and new-session `+` on the right across normal shell states
+- keep the center canvas stateful: greeting-first when empty, conversation-first when active, and system-sheet capable for status/progress/artifact insertion
 - host SIM support surfaces such as history and connectivity entry, with connectivity entering from the audio drawer rather than the home header
 - host a persistent top-header one-line dynamic island that can rotate up to 3 scheduler items every 5 seconds and open the scheduler drawer on the visible item's date page
 - route `Ask AI` and audio re-selection flows
@@ -97,11 +100,13 @@ Guarantees:
 - the shell may expose history/new-page/connectivity/settings as SIM support surfaces
 - the shell may open scheduler from a downward pull started inside the upper shell activation zone when the shell is otherwise clear
 - the shell may open audio browse from an upward pull started inside the lower shell activation zone when the shell is otherwise clear
-- the current shipped shell opener is activation-band based rather than top/middle/bottom full-screen thirds
-- the upper activation zone should stay close to the header/top-edge region and the lower activation zone should stay close to the composer/bottom-edge region
+- the current shipped shell opener is layout-anchored rather than fixed top/middle/bottom thirds
+- the upper activation zone spans the full shell width from the top edge through the measured SIM header bottom, plus about 24dp of extra bleed below the header
+- the lower activation zone spans the full shell width from about 12dp above the measured SIM composer top through the bottom edge
+- shell gesture layers may sit above the live header/composer chrome for drag detection, but attach, text-entry, and send taps must remain directly tappable
 - the center shell body stays protected for chat/history scrolling by default
 - the shell entry gestures must use vertical-intent lock plus drag-distance or fling-velocity confirmation rather than broad overscroll alone
-- velocity is an override for deliberate pulls, not the sole open rule
+- velocity is an override for deliberate pulls, not the sole open rule; the current opener is tuned around a 40dp drag threshold and a 1100dp/s directional fling override
 - the open/close gesture contract should use light hysteresis so commit thresholds are stable
 - the shell must disable the lower-zone audio-open gesture while the IME is visible
 - the SIM home header keeps only the hamburger button, centered island, and new-chat button so the chrome remains visually balanced
@@ -109,6 +114,9 @@ Guarantees:
 - the shell may use that dynamic island as a scheduler-entry affordance
 - the shell dynamic island stays one-line and may rotate vertically through up to 3 scheduler entries
 - tapping any visible island entry must open the scheduler drawer on the corresponding scheduler date page
+- the shell keeps the same top/bottom monolith identity across empty-home and active-discussion states; only the center canvas swaps between greeting, conversation, and system/status content
+- the shell may show system-authored horizontal sheets in the discussion canvas for guidance, status/progress, artifact insertion, or follow-up prompts instead of forcing all non-user content into compact chat bubbles
+- approved prototype screenshots describe only the exact visible substate; the shell contract must still cover the rest of the state family
 - the shell owns connectivity route state and may distinguish bootstrap modal vs setup vs manager connectivity surfaces
 - the shell does not expose smart-only drawer types or smart-runtime-only shell meaning
 - the shell does not become the owner of connectivity backend truth just because it hosts connectivity surfaces

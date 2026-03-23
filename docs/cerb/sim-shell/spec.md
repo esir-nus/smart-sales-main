@@ -47,7 +47,9 @@ The user should perceive:
 - the same drawer family and glass/light treatment
 - a smaller, more literal app focused on two main feature lanes
 - a sparse idle chat surface: balanced top controls with hamburger on the left, new chat on the right, a one-line dynamic island in the header center slot, greeting-first body, and a bottom message capsule instead of dashboard cards or analytics chrome
+- the same shell identity continuing into active discussion, with the heavy top and bottom monoliths remaining stable while only the center canvas changes by state
 - a bottom message capsule whose idle placeholder uses the shared scan-shine treatment on placeholder text only, with attach on the left and a send-only action on the right
+- active discussion states that prefer sparse conversation plus horizontal system sheets over dashboard cards or smart-agent chrome
 - ordinary shell affordances that still feel normal, such as history, new page/session, connectivity entry, and settings
 
 The user should not perceive:
@@ -133,6 +135,39 @@ Do not rename only for style; rename when boundary truth improves.
 - settings entry for profile/metadata controls
 - a persistent dynamic-island tap target that opens the scheduler drawer from chat
 
+### Home / Here Surface State Family
+
+The SIM home/here screen is one shell family with multiple content states, not separate screen identities.
+
+Shared shell structure:
+
+- `Top Monolith`: hamburger on the left, one-line Dynamic Island in the center slot, new-session `+` on the right
+- `Center Canvas`: protected body between the top and bottom monoliths; this is the only zone that swaps major content by state
+- `Bottom Monolith`: send-only composer foundation with left attach, center text field, and right send action
+
+Required shell states:
+
+1. `Empty Home`
+   - greeting-first body
+   - directly usable composer
+   - no dashboard cards, hero skill pills, or old smart shell utility chrome
+2. `Active Plain Chat`
+   - normal SIM discussion under the same shell chrome
+   - sparse conversation-first canvas
+3. `Active Audio-Grounded Chat`
+   - one attached audio context enriches the same session
+   - the shell remains chat-first rather than switching into an audio tool layout
+4. `Pending / Transcribing Audio Chat`
+   - pending audio selected from chat continues inside the same discussion session
+   - progress/status appears as in-chat system presentation rather than a forced shell reroute
+5. `Support-Surface Origin`
+   - the same shell remains the origin point for history, scheduler, audio, connectivity, and settings routes
+
+Approved prototype rule:
+
+- the approved dark prototype frame with centered island, heavy top/bottom monoliths, and sparse discussion canvas is the visual baseline for the `Active Plain Chat` substate
+- downstream UI work must extend from that frame to the other shell states instead of treating that single frame as the whole contract
+
 Expected navigation:
 
 - opening scheduler does not require the smart shell
@@ -148,6 +183,7 @@ Expected navigation:
 - blank/new chat is directly usable as normal SIM chat
 - `Ask AI` from audio opens chat with that audio pre-attached
 - selecting audio from chat reopens the audio drawer instead of Android file picker
+- the same chat shell may move between empty, plain-chat, audio-grounded, and pending-audio presentation without changing top-level shell identity
 
 ### Drawer Gesture Contract
 
@@ -155,12 +191,13 @@ SIM keeps the shell gesture model zone-scoped and velocity-aware.
 
 - when the normal SIM shell is visible and no support overlay is active, a downward pull that begins in the upper activation region opens the scheduler drawer
 - when the normal SIM shell is visible and no support overlay is active, an upward pull that begins in the lower activation region opens the audio drawer in browse mode
-- the current shipped activation model is band-based rather than full-screen thirds
-- the upper activation region should stay narrow and deliberate, typically the top header band or roughly the upper 72dp to 120dp of the shell
-- the lower activation region should stay narrow and deliberate, typically the composer / bottom-edge band or roughly the lower 96dp to 140dp of the shell
+- the current shipped activation model is chrome-anchored rather than full-screen thirds
+- the upper activation region is the full shell width from the top edge through the measured SIM header bottom, plus a small 24dp bleed below the header so active-chat pulls still catch reliably
+- the lower activation region is the full shell width from about 12dp above the measured SIM composer top through the bottom edge so the audio opener remains reachable after chat grows
+- shell-owned gesture layers may cover the live header/composer chrome for drag detection, but they must not steal ordinary taps from the attach button, text field, or send button
 - the center body remains a protected chat/history scroll zone rather than a drawer-entry surface
 - shell entry gestures require vertical-intent locking; weak or horizontally-biased drags must stay with normal content behavior
-- shell entry gestures should use both committed drag distance and deliberate fling velocity rather than velocity alone
+- shell entry gestures should use both committed drag distance and deliberate fling velocity rather than velocity alone; the current open thresholds are about 40dp committed drag or a deliberate 1100dp/s fling in the matching direction
 - velocity acts as an override for clearly intentional pulls, not as a replacement for directional and distance checks
 - opening and closing thresholds should use light hysteresis so drawers do not feel twitchy near the commit line
 - the bottom-zone audio-open gesture is disabled while the IME/keyboard is visible
@@ -217,6 +254,7 @@ Current delivered scope:
 - tap opens the scheduler drawer and lands on the visible item's corresponding date page
 - when there are no reminder tasks, stay mounted with a scheduler-entry idle summary instead of disappearing
 - do not show multi-line stacked reminder content or detached overlay chrome
+- the island remains mounted across empty-home and active-discussion shell states as long as the normal SIM shell is visible
 
 Boundary rule:
 

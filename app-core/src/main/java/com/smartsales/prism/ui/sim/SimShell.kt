@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -643,8 +644,18 @@ internal fun SimShell(
     val currentChatAudioId by chatViewModel.currentLinkedAudioId.collectAsStateWithLifecycle()
     val audioEntries by audioViewModel.entries.collectAsStateWithLifecycle()
     val trackedPendingAudioIds = remember { mutableStateMapOf<String, String>() }
+    var simHeaderBottomPx by remember { mutableStateOf<Float?>(null) }
+    var simComposerTopPx by remember { mutableStateOf<Float?>(null) }
+    var shellRootHeightPx by remember { mutableStateOf(0f) }
     val isAudioDrawerOpen = shellState.activeDrawer == SimDrawerType.AUDIO
     val isImeVisible = rememberSimImeVisibility()
+    val gestureAnchors = remember(simHeaderBottomPx, simComposerTopPx, shellRootHeightPx) {
+        buildSimGestureAnchors(
+            headerBottomPx = simHeaderBottomPx,
+            composerTopPx = simComposerTopPx,
+            rootHeightPx = shellRootHeightPx
+        )
+    }
     val dynamicIslandItems = remember(sessionTitle, topUrgentTasks) {
         buildSimDynamicIslandItems(
             sessionTitle = sessionTitle,
@@ -775,11 +786,15 @@ internal fun SimShell(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .onGloballyPositioned { coordinates ->
+                shellRootHeightPx = coordinates.size.height.toFloat()
+            }
             .background(BackgroundApp)
     ) {
         SimDrawerEdgeGestureLayer(
             state = shellState,
             isImeVisible = isImeVisible,
+            gestureAnchors = gestureAnchors,
             onOpenScheduler = { openScheduler() },
             onOpenAudioBrowse = { openAudioDrawer(SimAudioDrawerMode.BROWSE) }
         )
@@ -818,7 +833,13 @@ internal fun SimShell(
             onDebugClick = {},
             showDebugButton = false,
             visualMode = AgentIntelligenceVisualMode.SIM,
-            simDynamicIslandItems = dynamicIslandItems
+            simDynamicIslandItems = dynamicIslandItems,
+            onSimHeaderBoundsChanged = { bounds ->
+                simHeaderBottomPx = bounds.bottom
+            },
+            onSimComposerBoundsChanged = { bounds ->
+                simComposerTopPx = bounds.top
+            }
         )
 
         val showScrim = shouldShowSimShellScrim(shellState)

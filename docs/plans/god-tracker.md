@@ -107,16 +107,22 @@ Reason:
 - **Wave 1C**: clean `SimShell.kt`
 - **Wave 1D**: clean `SimAgentViewModel.kt`
 - **Wave 1E**: clean `SimSchedulerViewModel.kt`
-- **Wave 2**: clean secondary business-logic god classes
+- **Wave 2**: clean secondary business-logic god classes without touching active UI trunks
+  - **Wave 2A**: clean `SchedulerLinter.kt`
+  - **Wave 2B**: clean `GattBleGateway.kt` and `DeviceConnectionManager.kt`
+  - **Wave 2C**: clean `SimAudioRepository.kt`
+- **Later UI Wave**: revisit `SimAudioDrawer.kt` and `OnboardingScreen.kt` after the current UI-development window
 
-### Immediate Focus
+### Wave 2 Focus
 
-The active trunk-cleanup wave targets:
+The next cleanup campaign is intentionally **business-logic only**.
 
-- `app-core/src/main/java/com/smartsales/prism/ui/AgentIntelligenceScreen.kt`
-- `app-core/src/main/java/com/smartsales/prism/ui/sim/SimShell.kt`
-- `app-core/src/main/java/com/smartsales/prism/ui/sim/SimAgentViewModel.kt`
-- `app-core/src/main/java/com/smartsales/prism/ui/sim/SimSchedulerViewModel.kt`
+Wave 2 targets:
+
+- `domain/scheduler/src/main/java/com/smartsales/prism/domain/scheduler/SchedulerLinter.kt`
+- `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/gateway/GattBleGateway.kt`
+- `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/DeviceConnectionManager.kt`
+- `app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepository.kt`
 
 Target outcome:
 
@@ -124,6 +130,12 @@ Target outcome:
 - clearer ownership seams
 - easier agent/human comprehension
 - less accidental landing into kitchen-sink files
+
+UI-safe deferral:
+
+- `SimAudioDrawer.kt` and `OnboardingScreen.kt` remain tracked debt
+- they are explicitly deferred while the repo is in an active UI-development window
+- Wave 2 must not widen into large UI-surface cleanup unless the user reopens that scope
 
 ### Wave 0 Preflight
 
@@ -247,12 +259,12 @@ Observed sizes below are the current audit snapshot used to seed the campaign on
 | `app-core/src/main/java/com/smartsales/prism/ui/sim/SimShell.kt` | UI Shell | 208 LOC | Wave 1C moved the large shell composition tree, reducers, telemetry, projections, shell actions, and follow-up sections out of the host entrypoint; the SIM shell now keeps runtime ownership and stays under budget | host + content + reducers + projections + telemetry + shell actions + sections | Codex | — | `GodStructureGuardrailTest`, `SimShellStructureTest`, `SimShellHandoffTest`, `SimConnectivityRoutingTest`, `SimRuntimeIsolationTest` | 1C | Accepted |
 | `app-core/src/main/java/com/smartsales/prism/ui/sim/SimAgentViewModel.kt` | UI VM | 1516 LOC | One ViewModel owns session lifecycle, general chat, audio-grounded chat, follow-up behavior, and reconciliation | public VM + session coordinator + chat/audio/follow-up coordinators + projection helpers | Codex | Wave 1D | `SimAgentViewModelTest` | 1D | Exception |
 | `app-core/src/main/java/com/smartsales/prism/ui/sim/SimSchedulerViewModel.kt` | UI VM | 1231 LOC | One ViewModel owns transcript ingress, mutation execution, reminder logic, attention projection, and warning paths | public VM + ingress + mutation + reminder + projection supports | Codex | Wave 1E | `SimSchedulerViewModelTest` | 1E | Exception |
-| `app-core/src/main/java/com/smartsales/prism/ui/sim/SimAudioDrawer.kt` | UI | 968 LOC | Large but still feature-local; should not expand further until trunk pattern is proven | drawer host + sections/components only if Wave 1 pattern proves reusable | — | — | — | 2 | Deferred |
-| `app-core/src/main/java/com/smartsales/prism/ui/onboarding/OnboardingScreen.kt` | UI | 896 LOC | Large screen with many steps; tracked but not immediate trunk blocker | step host + step sections + preview/support split if needed later | — | — | — | 2 | Deferred |
-| `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/gateway/GattBleGateway.kt` | Data/Transport | 1033 LOC | Transport, protocol parsing, gateway policy, and state edges are too concentrated | transport + parser + gateway policy split | — | — | — | 2 | Deferred |
-| `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/DeviceConnectionManager.kt` | Data/Transport | 547 LOC | Connection/session state machine and related policy are too concentrated | connection state machine + orchestration + policy split | — | — | — | 2 | Deferred |
-| `domain/scheduler/src/main/java/com/smartsales/prism/domain/scheduler/SchedulerLinter.kt` | Domain | 1004 LOC | Normalization, temporal parsing, DTO assembly, and validation policy are too concentrated | normalize + parse + assemble + validate split | — | — | — | 2 | Deferred |
-| `app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepository.kt` | Data | 841 LOC | Persistence, artifact IO, binding management, and pipeline coordination are mixed | persistence + artifact IO + binding support + coordination split | — | — | — | 2 | Deferred |
+| `app-core/src/main/java/com/smartsales/prism/ui/sim/SimAudioDrawer.kt` | UI | 968 LOC | Large but still feature-local; active UI development makes cleanup unsafe right now, so this stays tracked debt rather than Wave 2 scope | drawer host + sections/components only if the Wave 1 pattern later proves reusable | Codex | later UI-safe cleanup wave | `SimAudioDrawerViewModelTest` | Later UI | Deferred |
+| `app-core/src/main/java/com/smartsales/prism/ui/onboarding/OnboardingScreen.kt` | UI | 896 LOC | Large screen with many steps; active UI development and SIM setup reuse make cleanup unsafe right now, so this stays tracked debt rather than Wave 2 scope | step host + step sections + preview/support split if needed later | Codex | later UI-safe cleanup wave | `OnboardingFlowTransitionTest`, `SimConnectivityPairingFlowTest`, `PairingFlowViewModelTest`, `OnboardingViewModelTest` | Later UI | Deferred |
+| `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/gateway/GattBleGateway.kt` | Data/Transport | 1033 LOC | Transport, protocol parsing, gateway policy, and state edges are too concentrated | gateway seam + transport/session support + payload parser + gateway policy support | Codex | Wave 2B acceptance | `GattBleGatewayNotificationParsingTest`, `ConnectivityStructureTest`, `GodStructureGuardrailTest`, `:app-core:compileDebugUnitTestKotlin` | 2B | Proposed |
+| `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/DeviceConnectionManager.kt` | Data/Transport | 547 LOC | Under budget but still role-mixed; connection/session orchestration, reconnect/backoff policy, and notification ingress are too concentrated | manager seam + connection orchestration + reconnect/backoff policy + ingress/state support | Codex | Wave 2B acceptance | `DefaultDeviceConnectionManagerIngressTest`, `RealConnectivityBridgeTest`, `SimConnectivityRoutingTest`, `ConnectivityStructureTest`, `GodStructureGuardrailTest`, `:app-core:compileDebugUnitTestKotlin` | 2B | Proposed |
+| `domain/scheduler/src/main/java/com/smartsales/prism/domain/scheduler/SchedulerLinter.kt` | Domain | 100 LOC | Wave 2A moved normalization/time helpers, Uni parse lanes, and legacy compatibility out of the public seam; the host now keeps the source-compatible entrypoint and delegation only | public seam + normalize/time support + parse lane support + validation/legacy support | Codex | — | `SchedulerLinterTest`, `SchedulerLinterStructureTest`, `GodStructureGuardrailTest`, `:domain:scheduler:compileKotlin` | 2A | Accepted |
+| `app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepository.kt` | Data | 841 LOC | Persistence, artifact IO, binding management, and pipeline coordination are mixed | repository seam + persistence/store support + artifact IO support + session-binding support + sync/transcription coordinator | Codex | Wave 2C acceptance | `SimAudioRepositoryNamespaceTest`, `SimAudioRepositoryRecoveryTest`, `SimAudioRepositoryStructureTest`, `SimAudioDrawerViewModelTest`, `GodStructureGuardrailTest`, `:app-core:compileDebugUnitTestKotlin` | 2C | Proposed |
 
 ---
 
@@ -349,16 +361,49 @@ Validation record:
 
 ---
 
+## Wave 2A SchedulerLinter Cleanup
+
+Wave 2A now rewrites `SchedulerLinter.kt` into a public seam file and extracts the former mixed scheduler-linter responsibilities into stable domain-owned support files:
+
+- `domain/scheduler/src/main/java/com/smartsales/prism/domain/scheduler/SchedulerLinterSupport.kt`
+- `domain/scheduler/src/main/java/com/smartsales/prism/domain/scheduler/SchedulerLinterParsingSupport.kt`
+- `domain/scheduler/src/main/java/com/smartsales/prism/domain/scheduler/SchedulerLinterLegacySupport.kt`
+- `domain/scheduler/src/main/java/com/smartsales/prism/domain/scheduler/SchedulerLinterLegacyContracts.kt`
+
+Wave 2A also:
+
+- keeps `SchedulerLinter` source-compatible for existing callers
+- leaves the host file at `100 LOC`, below the transitional service/manager/linter/gateway budget
+- adds a focused structure regression test for the accepted linter split
+- repairs the tracker-owned Wave 2A row so the accepted file no longer remains a generic proposed debt item
+
+Wave 2A acceptance verification pack:
+
+- `./gradlew :domain:scheduler:test --tests com.smartsales.prism.domain.scheduler.SchedulerLinterTest --tests com.smartsales.prism.domain.scheduler.SchedulerLinterStructureTest`
+- `./gradlew :domain:scheduler:compileKotlin`
+- `./gradlew :app-core:testDebugUnitTest --tests com.smartsales.prism.ui.GodStructureGuardrailTest`
+
+Validation record:
+
+- `docs/reports/tests/L1-20260324-god-wave2a-scheduler-linter.md`
+
+---
+
 ## Related Documents
 
 - `docs/plans/god-wave0-execution-brief.md`
 - `docs/plans/god-wave1a-execution-brief.md`
 - `docs/plans/god-wave1b-execution-brief.md`
 - `docs/plans/god-wave1c-execution-brief.md`
+- `docs/plans/god-wave2-execution-brief.md`
+- `docs/plans/god-wave2a-execution-brief.md`
+- `docs/plans/god-wave2b-execution-brief.md`
+- `docs/plans/god-wave2c-execution-brief.md`
 - `docs/specs/code-structure-contract.md`
 - `docs/reports/tests/L1-20260324-god-wave1a-guardrails.md`
 - `docs/reports/tests/L1-20260324-god-wave1b-agent-intelligence.md`
 - `docs/reports/tests/L1-20260324-god-wave1c-sim-shell.md`
+- `docs/reports/tests/L1-20260324-god-wave2a-scheduler-linter.md`
 
 ## Wave 1 Acceptance Bar
 

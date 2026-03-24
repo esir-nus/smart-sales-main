@@ -66,7 +66,7 @@ Orchestrates LLM-powered processing. Reads from Layer 2 data services.
 | **ModelRegistry** | System II & Routing | Static LLM Profiles (models, temps, skills) | — | `ModelRegistry` | OS: App | ✅ |
 | **[Executor](./model-routing/spec.md)** | System II & Routing | Raw LLM output (stateless — no storage) | ModelRouter | `suspend execute(LlmProfile, String) -> ExecutorResult` | — | ✅ |
 | **[PluginRegistry](./plugin-registry/spec.md)** | System II & Routing | Executable pure-Kotlin workflows (Tools), semantic plugin entry-lane dispatch, runtime capability-gateway routing | SessionContext / Kernel (read-only via PluginGateway), future bounded OS capabilities | `executeTool(ToolId, PluginRequest, PluginGateway) -> Flow<UiState>` | OS: App | ✅ |
-| **[SchedulerLinter](./scheduler-linter/spec.md)** | Intelligent Scheduler | Intent parsing to DTOs | — | `suspend parseFastTrackIntent(String) -> FastTrackResult` | OS: App | ✅ |
+| **[SchedulerLinter](./scheduler-path-a-spine/spec.md)** | Intelligent Scheduler | Intent parsing to DTOs | — | `suspend parseFastTrackIntent(String) -> FastTrackResult` | OS: App | ✅ |
 | **[UnifiedPipeline](./unified-pipeline/spec.md)** | System II & Routing | System II context ETL, typed profile proposals, typed scheduler task-command proposals | ContextBuilder, InputParser, EntityDisambiguator | `suspend processInput(PipelineInput) -> Flow<PipelineResult>` | OS: App | ✅ |
 | **[IntentOrchestrator](./scheduler-path-a-spine/spec.md)** | System II & Routing | High-level intent routing (Phase 0) and shared Path A scheduler spine | AgentViewModel, LightningRouter, UnifiedPipeline, PluginRegistry | `suspend processInput(String, isVoice) -> Flow<PipelineResult>` | OS: App | ✅ |
 
@@ -75,6 +75,8 @@ Orchestrates LLM-powered processing. Reads from Layer 2 data services.
 > **ContextBuilder reads EntityRegistry for Entity Knowledge Context.** `ContextBuilder.buildEntityKnowledge()` calls `EntityRepository.getAll()` at session start to load the structured entity graph into the LLM prompt (RAM Section 1). This is a Kernel → SSD read.
 >
 > **PluginRegistry runtime boundary (Wave 21 / T4 direction)**: the outer loop routes by semantic plugin entry IDs such as `artifact.generate`, `audio.analyze`, `crm.sheet.generate`, and `simulation.talk`. Runtime plugins may currently read bounded session history and emit bounded progress through `PluginGateway`; richer capability bundles and plugin-caused writes remain owned by the later typed mutation / artifact re-entry contract.
+
+> **SchedulerLinter doc set**: structural cleanup and future audits should treat `scheduler-path-a-spine`, `scheduler-path-a-uni-a`, `scheduler-path-a-uni-b`, `scheduler-path-a-uni-c`, `scheduler-path-a-uni-d`, `sim-scheduler`, `scheduler-fast-track-flow`, and `sim-scheduler-path-a-flow` as the current governing doc family; the old standalone `scheduler-linter` shard no longer exists.
 
 ---
 

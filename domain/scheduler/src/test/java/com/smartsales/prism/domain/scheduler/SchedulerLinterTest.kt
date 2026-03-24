@@ -495,4 +495,109 @@ class SchedulerLinterTest {
         assertTrue(result is FastTrackResult.NoMatch)
         assertEquals("仍然属于 schedulable", (result as FastTrackResult.NoMatch).reason)
     }
+
+    @Test
+    fun `follow-up reschedule V2 delta extraction returns supported operand`() {
+        val json = """
+            {
+              "decision": "RESCHEDULE_EXACT",
+              "timeKind": "DELTA_FROM_TARGET",
+              "deltaFromTargetMinutes": 60
+            }
+        """.trimIndent()
+
+        val result = linter.parseFollowUpRescheduleExtraction(
+            input = json,
+            transcript = "推迟1个小时"
+        )
+
+        assertTrue(result is FollowUpRescheduleExtractionResult.Supported)
+        val supported = result as FollowUpRescheduleExtractionResult.Supported
+        assertEquals(FollowUpRescheduleTimeKind.DELTA_FROM_TARGET, supported.timeKind)
+        assertEquals(
+            FollowUpRescheduleOperand.DeltaFromTarget(60),
+            supported.operand
+        )
+    }
+
+    @Test
+    fun `follow-up reschedule V2 relative day clock rejects page relative phrasing in first experiment`() {
+        val json = """
+            {
+              "decision": "RESCHEDULE_EXACT",
+              "timeKind": "RELATIVE_DAY_CLOCK",
+              "relativeDayOffset": 1,
+              "clockTime": "08:00"
+            }
+        """.trimIndent()
+
+        val result = linter.parseFollowUpRescheduleExtraction(
+            input = json,
+            transcript = "改到后一天早上8点"
+        )
+
+        assertTrue(result is FollowUpRescheduleExtractionResult.Unsupported)
+        assertTrue(
+            (result as FollowUpRescheduleExtractionResult.Unsupported)
+                .reason.contains("page-relative")
+        )
+    }
+
+    @Test
+    fun `follow-up reschedule V2 absolute extraction rejects illegal extra fields`() {
+        val json = """
+            {
+              "decision": "RESCHEDULE_EXACT",
+              "timeKind": "ABSOLUTE",
+              "absoluteStartIso": "2026-03-23T08:00:00+08:00",
+              "clockTime": "08:00"
+            }
+        """.trimIndent()
+
+        val result = linter.parseFollowUpRescheduleExtraction(
+            input = json,
+            transcript = "改到2026-03-23 08:00"
+        )
+
+        assertTrue(result is FollowUpRescheduleExtractionResult.Invalid)
+        assertTrue(
+            (result as FollowUpRescheduleExtractionResult.Invalid)
+                .reason.contains("illegal extra fields")
+        )
+    }
+
+    @Test
+    fun `global reschedule extraction returns supported target and time instruction`() {
+        val json = """
+            {
+              "decision": "RESCHEDULE_TARGETED",
+              "targetQuery": "和张总吃饭",
+              "targetPerson": "张总",
+              "timeInstruction": "明天晚上八点"
+            }
+        """.trimIndent()
+
+        val result = linter.parseGlobalRescheduleExtraction(json)
+
+        assertTrue(result is GlobalRescheduleExtractionResult.Supported)
+        val supported = result as GlobalRescheduleExtractionResult.Supported
+        assertEquals("和张总吃饭", supported.target.targetQuery)
+        assertEquals("张总", supported.target.targetPerson)
+        assertEquals("明天晚上八点", supported.timeInstruction)
+    }
+
+    @Test
+    fun `global reschedule extraction rejects targeted payload without target clues`() {
+        val json = """
+            {
+              "decision": "RESCHEDULE_TARGETED",
+              "timeInstruction": "推迟一小时"
+            }
+        """.trimIndent()
+
+        val result = linter.parseGlobalRescheduleExtraction(json)
+
+        assertTrue(result is GlobalRescheduleExtractionResult.Invalid)
+        assertTrue((result as GlobalRescheduleExtractionResult.Invalid).reason.contains("target clues"))
+    }
 }

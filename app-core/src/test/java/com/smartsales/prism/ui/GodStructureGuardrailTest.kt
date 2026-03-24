@@ -9,24 +9,26 @@ class GodStructureGuardrailTest {
 
     private val workingDir = File(System.getProperty("user.dir") ?: ".")
 
-    private data class PilotExpectation(
+    private data class GuardrailExpectation(
         val budget: Int,
         val status: String
     )
 
-    private val pilotExpectations = linkedMapOf(
+    private val trackedExpectations = linkedMapOf(
         "app-core/src/main/java/com/smartsales/prism/ui/AgentIntelligenceScreen.kt" to
-            PilotExpectation(budget = 550, status = "Accepted"),
+            GuardrailExpectation(budget = 550, status = "Accepted"),
         "app-core/src/main/java/com/smartsales/prism/ui/sim/SimShell.kt" to
-            PilotExpectation(budget = 550, status = "Accepted"),
+            GuardrailExpectation(budget = 550, status = "Accepted"),
         "app-core/src/main/java/com/smartsales/prism/ui/sim/SimAgentViewModel.kt" to
-            PilotExpectation(budget = 650, status = "Exception"),
+            GuardrailExpectation(budget = 650, status = "Exception"),
         "app-core/src/main/java/com/smartsales/prism/ui/sim/SimSchedulerViewModel.kt" to
-            PilotExpectation(budget = 650, status = "Exception")
+            GuardrailExpectation(budget = 650, status = "Exception"),
+        "domain/scheduler/src/main/java/com/smartsales/prism/domain/scheduler/SchedulerLinter.kt" to
+            GuardrailExpectation(budget = 650, status = "Accepted")
     )
 
     @Test
-    fun `pilot tracker exceptions stay valid against structure contract`() {
+    fun `tracked guardrail rows stay valid against structure contract`() {
         val trackerFile = resolvePath("docs/plans/god-tracker.md")
         val contractFile = resolvePath("docs/specs/code-structure-contract.md")
 
@@ -35,20 +37,20 @@ class GodStructureGuardrailTest {
 
         val rowsByFile = parseTrackedFileRows(trackerFile)
 
-        pilotExpectations.forEach { (filePath, expectation) ->
+        trackedExpectations.forEach { (filePath, expectation) ->
             val row = rowsByFile[filePath]
-                ?: error("Missing pilot exception row for $filePath in ${trackerFile.path}")
+                ?: error("Missing guardrail row for $filePath in ${trackerFile.path}")
 
-            requireValidPilotField(filePath, row, "Target Decomposition")
-            requireValidPilotField(filePath, row, "Owner")
-            requireValidPilotField(filePath, row, "Required Tests")
-            requireValidPilotField(filePath, row, "Status")
+            requireValidField(filePath, row, "Target Decomposition")
+            requireValidField(filePath, row, "Owner")
+            requireValidField(filePath, row, "Required Tests")
+            requireValidField(filePath, row, "Status")
             if (expectation.status == "Exception") {
-                requireValidPilotField(filePath, row, "Sunset")
+                requireValidField(filePath, row, "Sunset")
             }
 
             assertEquals(
-                "Pilot file has unexpected structural status in docs/plans/god-tracker.md: $filePath",
+                "Tracked file has unexpected structural status in docs/plans/god-tracker.md: $filePath",
                 expectation.status,
                 row["Status"]
             )
@@ -56,21 +58,21 @@ class GodStructureGuardrailTest {
     }
 
     @Test
-    fun `pilot files above budget must keep valid tracker exceptions`() {
+    fun `tracked files above budget must keep valid tracker exceptions`() {
         val rowsByFile = parseTrackedFileRows(resolvePath("docs/plans/god-tracker.md"))
 
-        pilotExpectations.forEach { (filePath, expectation) ->
+        trackedExpectations.forEach { (filePath, expectation) ->
             val sourceFile = resolvePath(filePath)
-            assertTrue("Missing pilot source file: ${sourceFile.absolutePath}", sourceFile.exists())
+            assertTrue("Missing tracked source file: ${sourceFile.absolutePath}", sourceFile.exists())
 
             val loc = sourceFile.readLines().size
             val row = rowsByFile[filePath]
-            val validException = row != null && isValidPilotExceptionRow(row)
+            val validException = row != null && isValidExceptionRow(row)
             val status = row?.get("Status").orEmpty()
 
             assertTrue(
                 buildString {
-                    append("Pilot structural budget violation for ")
+                    append("Tracked structural budget violation for ")
                     append(filePath)
                     append(": measured LOC=")
                     append(loc)
@@ -94,19 +96,19 @@ class GodStructureGuardrailTest {
         }
     }
 
-    private fun requireValidPilotField(
+    private fun requireValidField(
         filePath: String,
         row: Map<String, String>,
         column: String
     ) {
         val value = row[column].orEmpty()
         assertTrue(
-            "Invalid pilot exception field for $filePath: column=$column, actual='${value.ifBlank { "<blank>" }}'",
+            "Invalid tracked exception field for $filePath: column=$column, actual='${value.ifBlank { "<blank>" }}'",
             isMeaningfulCell(value)
         )
     }
 
-    private fun isValidPilotExceptionRow(row: Map<String, String>): Boolean {
+    private fun isValidExceptionRow(row: Map<String, String>): Boolean {
         return listOf(
             "Target Decomposition",
             "Owner",

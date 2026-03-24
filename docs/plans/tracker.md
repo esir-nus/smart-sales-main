@@ -12,7 +12,7 @@
 ## Active Structural Cleanup Campaign: God-File Trunk Cleanup
 > **Context**: Direct user-requested refactor/rewrite campaign to clean the shared UI and ViewModel trunk before further major prototype transplants land into the current god files.
 
-- **Status**: Wave 1C L1 Accepted
+- **Status**: Wave 2A L1 Accepted / Wave 2B Planned
 - **Primary Tracker**:
   - [`docs/plans/god-tracker.md`](./god-tracker.md)
 - **Wave 0 Execution Brief**:
@@ -23,24 +23,35 @@
   - [`docs/plans/god-wave1b-execution-brief.md`](./god-wave1b-execution-brief.md)
 - **Wave 1C Execution Brief**:
   - [`docs/plans/god-wave1c-execution-brief.md`](./god-wave1c-execution-brief.md)
+- **Wave 2 Execution Brief**:
+  - [`docs/plans/god-wave2-execution-brief.md`](./god-wave2-execution-brief.md)
+- **Wave 2A Execution Brief**:
+  - [`docs/plans/god-wave2a-execution-brief.md`](./god-wave2a-execution-brief.md)
+- **Wave 2B Execution Brief**:
+  - [`docs/plans/god-wave2b-execution-brief.md`](./god-wave2b-execution-brief.md)
+- **Wave 2C Execution Brief**:
+  - [`docs/plans/god-wave2c-execution-brief.md`](./god-wave2c-execution-brief.md)
 - **Wave 1A L1 Validation**:
   - [`docs/reports/tests/L1-20260324-god-wave1a-guardrails.md`](../reports/tests/L1-20260324-god-wave1a-guardrails.md)
 - **Wave 1B L1 Validation**:
   - [`docs/reports/tests/L1-20260324-god-wave1b-agent-intelligence.md`](../reports/tests/L1-20260324-god-wave1b-agent-intelligence.md)
 - **Wave 1C L1 Validation**:
   - [`docs/reports/tests/L1-20260324-god-wave1c-sim-shell.md`](../reports/tests/L1-20260324-god-wave1c-sim-shell.md)
+- **Wave 2A L1 Validation**:
+  - [`docs/reports/tests/L1-20260324-god-wave2a-scheduler-linter.md`](../reports/tests/L1-20260324-god-wave2a-scheduler-linter.md)
 - **Governance Split**:
   - UI SOP stack remains the primary UI-building workflow
   - Cerb / cerb-ui remain the feature-local UI truth
   - [`docs/specs/code-structure-contract.md`](../specs/code-structure-contract.md) now owns the long-lived anti-god-file structure law, while `god-tracker.md` carries the active campaign memory
 - **Immediate Wave Scope**:
-  - `AgentIntelligenceScreen.kt`
-  - `SimShell.kt`
-  - `SimAgentViewModel.kt`
-  - `SimSchedulerViewModel.kt`
+  - `SchedulerLinter.kt`
+  - `GattBleGateway.kt`
+  - `DeviceConnectionManager.kt`
+  - `SimAudioRepository.kt`
 - **Current Objective**:
   - speed up prototype-to-Kotlin transplant by making the target structure easier for humans and agents to understand
-  - continue Wave 1 cleanup with `SimAgentViewModel.kt` and `SimSchedulerViewModel.kt` after `AgentIntelligenceScreen.kt` and `SimShell.kt` host cleanup landed
+  - lock Wave 2 to business-logic cleanup only while active UI development remains in progress
+  - continue Wave 2 with connectivity transport cleanup after `SchedulerLinter.kt` accepted
 
 ---
 

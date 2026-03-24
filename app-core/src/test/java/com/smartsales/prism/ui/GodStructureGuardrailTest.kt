@@ -18,7 +18,7 @@ class GodStructureGuardrailTest {
         "app-core/src/main/java/com/smartsales/prism/ui/AgentIntelligenceScreen.kt" to
             PilotExpectation(budget = 550, status = "Accepted"),
         "app-core/src/main/java/com/smartsales/prism/ui/sim/SimShell.kt" to
-            PilotExpectation(budget = 550, status = "Exception"),
+            PilotExpectation(budget = 550, status = "Accepted"),
         "app-core/src/main/java/com/smartsales/prism/ui/sim/SimAgentViewModel.kt" to
             PilotExpectation(budget = 650, status = "Exception"),
         "app-core/src/main/java/com/smartsales/prism/ui/sim/SimSchedulerViewModel.kt" to

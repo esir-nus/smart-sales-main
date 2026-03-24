@@ -12,7 +12,7 @@
 ## Active Structural Cleanup Campaign: God-File Trunk Cleanup
 > **Context**: Direct user-requested refactor/rewrite campaign to clean the shared UI and ViewModel trunk before further major prototype transplants land into the current god files.
 
-- **Status**: Wave 1B L1 Accepted
+- **Status**: Wave 1C L1 Accepted
 - **Primary Tracker**:
   - [`docs/plans/god-tracker.md`](./god-tracker.md)
 - **Wave 0 Execution Brief**:
@@ -21,10 +21,14 @@
   - [`docs/plans/god-wave1a-execution-brief.md`](./god-wave1a-execution-brief.md)
 - **Wave 1B Execution Brief**:
   - [`docs/plans/god-wave1b-execution-brief.md`](./god-wave1b-execution-brief.md)
+- **Wave 1C Execution Brief**:
+  - [`docs/plans/god-wave1c-execution-brief.md`](./god-wave1c-execution-brief.md)
 - **Wave 1A L1 Validation**:
   - [`docs/reports/tests/L1-20260324-god-wave1a-guardrails.md`](../reports/tests/L1-20260324-god-wave1a-guardrails.md)
 - **Wave 1B L1 Validation**:
   - [`docs/reports/tests/L1-20260324-god-wave1b-agent-intelligence.md`](../reports/tests/L1-20260324-god-wave1b-agent-intelligence.md)
+- **Wave 1C L1 Validation**:
+  - [`docs/reports/tests/L1-20260324-god-wave1c-sim-shell.md`](../reports/tests/L1-20260324-god-wave1c-sim-shell.md)
 - **Governance Split**:
   - UI SOP stack remains the primary UI-building workflow
   - Cerb / cerb-ui remain the feature-local UI truth
@@ -36,7 +40,7 @@
   - `SimSchedulerViewModel.kt`
 - **Current Objective**:
   - speed up prototype-to-Kotlin transplant by making the target structure easier for humans and agents to understand
-  - continue Wave 1 cleanup with `SimShell.kt`, `SimAgentViewModel.kt`, and `SimSchedulerViewModel.kt` after `AgentIntelligenceScreen.kt` host cleanup landed
+  - continue Wave 1 cleanup with `SimAgentViewModel.kt` and `SimSchedulerViewModel.kt` after `AgentIntelligenceScreen.kt` and `SimShell.kt` host cleanup landed
 
 ---
 
@@ -75,6 +79,7 @@
 - **Wave 10 Execution Brief**: [`docs/plans/sim-wave10-execution-brief.md`](./sim-wave10-execution-brief.md)
 - **Wave 12 Execution Brief**: [`docs/plans/sim-wave12-execution-brief.md`](./sim-wave12-execution-brief.md)
 - **Wave 12 L1 Validation**: [`docs/reports/tests/L1-20260323-sim-wave12-scheduler-drawer-reschedule.md`](../reports/tests/L1-20260323-sim-wave12-scheduler-drawer-reschedule.md)
+- **Current Experiment Note**: follow-up-selected reschedule now runs a write-disabled V2 shadow contract for time semantics only; live writes still stay on the accepted V1 path while parity/mismatch telemetry is gathered
 - **Wave 1 Acceptance**: [`docs/reports/tests/L3-20260319-sim-wave1-shell-acceptance.md`](../reports/tests/L3-20260319-sim-wave1-shell-acceptance.md)
 - **Wave 4 Acceptance**: [`docs/reports/tests/L3-20260320-sim-wave4-scheduler-validation.md`](../reports/tests/L3-20260320-sim-wave4-scheduler-validation.md)
 - **Wave 5 Acceptance**: [`docs/reports/tests/L3-20260321-sim-wave5-connectivity-validation.md`](../reports/tests/L3-20260321-sim-wave5-connectivity-validation.md)

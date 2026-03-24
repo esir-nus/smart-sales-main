@@ -244,7 +244,7 @@ Observed sizes below are the current audit snapshot used to seed the campaign on
 | File | Layer | Observed Size | Current Problem | Target Decomposition | Owner | Sunset | Required Tests | Wave | Status |
 |------|-------|---------------|-----------------|----------------------|-------|--------|----------------|------|--------|
 | `app-core/src/main/java/com/smartsales/prism/ui/AgentIntelligenceScreen.kt` | UI | 108 LOC | Wave 1B moved SIM subtree, non-SIM sections, timelines, and previews out of the host entrypoint; host is now source-compatible and under budget | host + content + sections + SIM subtree + preview split | Codex | — | `GodStructureGuardrailTest`, `AgentIntelligenceStructureTest`, `SimComposerContractTest`, `SimHomeHeroExperimentContractTest` | 1B | Accepted |
-| `app-core/src/main/java/com/smartsales/prism/ui/sim/SimShell.kt` | UI Shell | 1092 LOC | Shell host mixes reducers, telemetry, projections, routing, follow-up ownership, and drawer orchestration | host + reducers + projections + telemetry + shell actions | Codex | Wave 1C | `SimShellHandoffTest`, `SimConnectivityRoutingTest`, `SimRuntimeIsolationTest` | 1C | Exception |
+| `app-core/src/main/java/com/smartsales/prism/ui/sim/SimShell.kt` | UI Shell | 208 LOC | Wave 1C moved the large shell composition tree, reducers, telemetry, projections, shell actions, and follow-up sections out of the host entrypoint; the SIM shell now keeps runtime ownership and stays under budget | host + content + reducers + projections + telemetry + shell actions + sections | Codex | — | `GodStructureGuardrailTest`, `SimShellStructureTest`, `SimShellHandoffTest`, `SimConnectivityRoutingTest`, `SimRuntimeIsolationTest` | 1C | Accepted |
 | `app-core/src/main/java/com/smartsales/prism/ui/sim/SimAgentViewModel.kt` | UI VM | 1516 LOC | One ViewModel owns session lifecycle, general chat, audio-grounded chat, follow-up behavior, and reconciliation | public VM + session coordinator + chat/audio/follow-up coordinators + projection helpers | Codex | Wave 1D | `SimAgentViewModelTest` | 1D | Exception |
 | `app-core/src/main/java/com/smartsales/prism/ui/sim/SimSchedulerViewModel.kt` | UI VM | 1231 LOC | One ViewModel owns transcript ingress, mutation execution, reminder logic, attention projection, and warning paths | public VM + ingress + mutation + reminder + projection supports | Codex | Wave 1E | `SimSchedulerViewModelTest` | 1E | Exception |
 | `app-core/src/main/java/com/smartsales/prism/ui/sim/SimAudioDrawer.kt` | UI | 968 LOC | Large but still feature-local; should not expand further until trunk pattern is proven | drawer host + sections/components only if Wave 1 pattern proves reusable | — | — | — | 2 | Deferred |
@@ -316,14 +316,49 @@ Validation record:
 
 ---
 
+## Wave 1C SimShell Cleanup
+
+Wave 1C now rewrites `SimShell.kt` into a host-only file and extracts the former mixed shell responsibilities into stable SIM-owned support files:
+
+- `app-core/src/main/java/com/smartsales/prism/ui/sim/SimShellContent.kt`
+- `app-core/src/main/java/com/smartsales/prism/ui/sim/SimShellReducer.kt`
+- `app-core/src/main/java/com/smartsales/prism/ui/sim/SimShellActions.kt`
+- `app-core/src/main/java/com/smartsales/prism/ui/sim/SimShellTelemetry.kt`
+- `app-core/src/main/java/com/smartsales/prism/ui/sim/SimShellProjection.kt`
+- `app-core/src/main/java/com/smartsales/prism/ui/sim/SimShellSections.kt`
+
+Wave 1C also:
+
+- keeps `SimShell(...)` source-compatible as the SIM runtime host mounted from `SimMainActivity`
+- adds a focused structure regression test for the accepted shell split
+- updates the Wave 1A guardrail test so `SimShell.kt` now must stay under the shell budget as an `Accepted` row
+- keeps stale shell androidTest seams out of this acceptance bar so Wave 1C stays focused on source-owned structure
+
+Wave 1C acceptance verification pack:
+
+- `./gradlew :app-core:testDebugUnitTest --tests com.smartsales.prism.ui.GodStructureGuardrailTest`
+- `./gradlew :app-core:testDebugUnitTest --tests com.smartsales.prism.ui.sim.SimShellStructureTest`
+- `./gradlew :app-core:testDebugUnitTest --tests com.smartsales.prism.ui.sim.SimShellHandoffTest`
+- `./gradlew :app-core:testDebugUnitTest --tests com.smartsales.prism.ui.sim.SimConnectivityRoutingTest`
+- `./gradlew :app-core:testDebugUnitTest --tests com.smartsales.prism.ui.sim.SimRuntimeIsolationTest`
+- `./gradlew :app-core:compileDebugUnitTestKotlin`
+
+Validation record:
+
+- `docs/reports/tests/L1-20260324-god-wave1c-sim-shell.md`
+
+---
+
 ## Related Documents
 
 - `docs/plans/god-wave0-execution-brief.md`
 - `docs/plans/god-wave1a-execution-brief.md`
 - `docs/plans/god-wave1b-execution-brief.md`
+- `docs/plans/god-wave1c-execution-brief.md`
 - `docs/specs/code-structure-contract.md`
 - `docs/reports/tests/L1-20260324-god-wave1a-guardrails.md`
 - `docs/reports/tests/L1-20260324-god-wave1b-agent-intelligence.md`
+- `docs/reports/tests/L1-20260324-god-wave1c-sim-shell.md`
 
 ## Wave 1 Acceptance Bar
 

@@ -22,15 +22,18 @@ class SimRuntimeIsolationTest {
 
     @Test
     fun `sim shell owns sim runtime collaborators instead of smart chat root`() {
-        val source = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimShell.kt")
+        val host = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimShell.kt")
+        val content = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimShellContent.kt")
 
-        assertTrue(source.contains("val chatViewModel: SimAgentViewModel = hiltViewModel()"))
-        assertTrue(source.contains("val audioViewModel: SimAudioDrawerViewModel = hiltViewModel()"))
-        assertTrue(source.contains("AgentIntelligenceScreen("))
-        assertFalse(source.contains("AgentShell("))
-        assertFalse(source.contains("val chatViewModel: AgentViewModel"))
-        assertFalse(source.contains("hiltViewModel<AgentViewModel>"))
-        assertFalse(source.contains("PrismModule"))
+        assertTrue(host.contains("val chatViewModel: SimAgentViewModel = hiltViewModel()"))
+        assertTrue(host.contains("val audioViewModel: SimAudioDrawerViewModel = hiltViewModel()"))
+        assertTrue(host.contains("SimShellContent("))
+        assertTrue(content.contains("AgentIntelligenceScreen("))
+        assertFalse(host.contains("AgentShell("))
+        assertFalse(content.contains("AgentShell("))
+        assertFalse(host.contains("val chatViewModel: AgentViewModel"))
+        assertFalse(host.contains("hiltViewModel<AgentViewModel>"))
+        assertFalse(host.contains("PrismModule"))
     }
 
     private fun readSource(relativePath: String): String {

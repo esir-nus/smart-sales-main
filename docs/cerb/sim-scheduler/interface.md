@@ -51,6 +51,7 @@ Required meaning:
 - date-attention acknowledgement via `onDateSelected(dayOffset)` / `acknowledgeDate(dayOffset)`
 - conflict state projection
 - delete/reschedule handling within approved SIM scope
+- scheduler-drawer mic reschedule handling within approved SIM scope
 - Path A-triggered creation flow
 - multi-task create ingress may enter through `Uni-M` before the existing single-task Uni-A / Uni-B / Uni-C chain
 - off-page exact create and off-page vague create must be representable as normal date attention through `unacknowledgedDates`
@@ -73,6 +74,9 @@ Required meaning:
 - delete and mark-done must cancel any existing reminder for that task
 - restore-from-done must not reschedule reminders in T4.8
 - reschedule must cancel the old reminder before scheduling the new exact-time cascade
+- explicit day+clock reschedule phrasing such as `明天早上8点` must be interpreted through scheduler-owned deterministic parsing before any model-led exact-time fallback
+- explicit delta reschedule phrasing such as `推迟1小时` / `提前半小时` must be interpreted relative to the resolved or already-selected task start time rather than `nowIso`
+- scheduler-drawer voice reschedule target resolution must be confidence-gated; low-confidence and near-tie results must surface explicit failure and no write
 - reminder-reliability prompt emission must be process-lifetime gated so one batch does not repeatedly re-prompt
 - the prompt content should adapt to current OEM risk rather than always showing a generic exact-alarm-only message
 - reminder scheduling failure must degrade safely without rolling back the task mutation result
@@ -85,6 +89,16 @@ Reminder projection rule:
 - the shell may rotate or collapse this projection for presentation, but it must not reorder task truth independently
 - the shell may cap SIM rendering to the top 3 entries as a presentation detail
 - each reminder entry used by the shell must remain targetable to its corresponding scheduler date page
+
+Scheduler-drawer voice resolution rule:
+
+- the scheduler drawer mic may request reschedule within scheduler-owned scope
+- target resolution must not depend on SQL/exact-title equality alone
+- one clearly dominant task may be resolved and mutated
+- after target resolution, exact day+clock tails such as `改到明天早上8点` must remain valid even when the tail itself does not restate the task title
+- after target resolution, explicit delta phrasing must anchor to that resolved task's persisted start time
+- ambiguous or weak matches must not mutate state
+- this rule does not widen ordinary SIM chat or audio drawer routes into scheduler mutation ownership
 
 ---
 

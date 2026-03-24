@@ -28,7 +28,6 @@ import com.smartsales.prism.domain.repository.UserProfileRepository
 import com.smartsales.prism.domain.scheduler.AlarmScheduler
 import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
-import com.smartsales.prism.domain.scheduler.UniAExtractionRequest
 import com.smartsales.prism.domain.scheduler.UrgencyLevel
 import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
 import com.smartsales.prism.domain.time.TimeProvider
@@ -36,7 +35,6 @@ import com.smartsales.prism.ui.IAgentViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Instant
 import java.time.LocalDate
-import java.time.OffsetDateTime
 import java.util.UUID
 import javax.inject.Inject
 import kotlinx.coroutines.delay
@@ -1115,32 +1113,27 @@ class SimAgentViewModel @Inject constructor(
             return
         }
 
-        val exactResult = uniAExtractionService.extract(
-            UniAExtractionRequest(
-                transcript = content,
-                nowIso = timeProvider.now.toString(),
-                timezone = timeProvider.zoneId.id,
-                unifiedId = task.id,
-                displayedDateIso = LocalDate.ofInstant(task.startTime, timeProvider.zoneId).toString()
-            )
+        val resolvedTime = SimRescheduleTimeInterpreter.resolve(
+            originalTask = task,
+            transcript = content,
+            displayedDateIso = LocalDate.ofInstant(task.startTime, timeProvider.zoneId).toString(),
+            timeProvider = timeProvider,
+            uniAExtractionService = uniAExtractionService
         )
-        val taskDefinition = (exactResult as? com.smartsales.prism.domain.scheduler.FastTrackResult.CreateTasks)
-            ?.params
-            ?.tasks
-            ?.singleOrNull()
-
-        if (taskDefinition == null) {
-            blockSchedulerFollowUpAction("当前跟进只支持明确时间改期，请直接输入新的具体时间。")
-            return
+        val resolved = when (resolvedTime) {
+            is SimRescheduleTimeInterpreter.Result.Success -> resolvedTime
+            SimRescheduleTimeInterpreter.Result.Unsupported -> {
+                blockSchedulerFollowUpAction("当前跟进只支持明确时间改期，请直接输入新的具体时间。")
+                return
+            }
+            SimRescheduleTimeInterpreter.Result.InvalidExactTime -> {
+                blockSchedulerFollowUpAction("改期时间格式无法解析，请换一种明确说法。")
+                return
+            }
         }
 
-        val newStart = parseExactInstant(taskDefinition.startTimeIso)
-        if (newStart == null) {
-            blockSchedulerFollowUpAction("改期时间格式无法解析，请换一种明确说法。")
-            return
-        }
-
-        val newDuration = taskDefinition.durationMinutes.takeIf { it > 0 } ?: task.durationMinutes
+        val newStart = resolved.startTime
+        val newDuration = resolved.durationMinutes ?: task.durationMinutes
         val conflict = scheduleBoard.checkConflict(
             proposedStart = newStart.toEpochMilli(),
             durationMinutes = newDuration,
@@ -1432,12 +1425,6 @@ class SimAgentViewModel @Inject constructor(
         runCatching {
             alarmScheduler.cancelReminder(taskId)
         }
-    }
-
-    private fun parseExactInstant(raw: String): Instant? {
-        return runCatching { Instant.parse(raw) }
-            .recoverCatching { OffsetDateTime.parse(raw).toInstant() }
-            .getOrNull()
     }
 
     private fun emitSchedulerFollowUpTelemetry(summary: String, detail: String) {

@@ -40,7 +40,34 @@ interface ScheduleBoard {
      * Evaluates strictly for 1 exact match (anti-hallucination).
      * @return The exactly matched ScheduleItem, or null if 0 or 2+ matches.
      */
-    suspend fun findLexicalMatch(targetQuery: String): ScheduleItem?
+    suspend fun findLexicalMatch(targetQuery: String): ScheduleItem? =
+        when (val result = resolveTarget(targetQuery)) {
+            is TargetResolution.Resolved -> result.item
+            else -> null
+        }
+
+    /**
+     * Scheduler-owned target resolution.
+     *
+     * 用于改期/删除等需要定位既有任务的场景。
+     * 允许实现使用标题、参与人、地点以及当前日期上下文做置信度判定，
+     * 但低置信度或近似并列候选必须显式返回非 Resolved，避免误改错误任务。
+     */
+    suspend fun resolveTarget(
+        targetQuery: String,
+        preferredDayOffset: Int? = null
+    ): TargetResolution =
+        findLexicalMatch(targetQuery)?.let(TargetResolution::Resolved)
+            ?: TargetResolution.NoMatch(targetQuery)
+}
+
+sealed interface TargetResolution {
+    data class Resolved(val item: ScheduleItem) : TargetResolution
+    data class Ambiguous(
+        val query: String,
+        val candidateIds: List<String> = emptyList()
+    ) : TargetResolution
+    data class NoMatch(val query: String) : TargetResolution
 }
 
 /**

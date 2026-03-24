@@ -69,6 +69,7 @@ If the smart app implements those behaviors elsewhere, SIM is not required to ca
 4. **Reschedule safety remains valid**: no-match or ambiguous targeting must not mutate state.
 5. **UI reuse does not justify runtime overreach**: reusing the scheduler drawer UI does not authorize importing unrelated smart runtime collaborators.
 6. **SIM may defer non-core scheduler extras**: inspiration shelf, tips, completed-memory merge, and smart voice adjuncts may be deferred if they would reintroduce contamination or overbuild.
+7. **Scheduler-drawer voice reschedule remains scheduler-scoped**: if SIM accepts a voice reschedule from the scheduler drawer mic, that authority belongs only to the scheduler drawer Path A lane and must not silently widen ordinary chat or audio routes into scheduler mutation surfaces.
 
 ---
 
@@ -76,10 +77,12 @@ If the smart app implements those behaviors elsewhere, SIM is not required to ca
 
 ### Included Branches
 
+- single-task explicit relative-time exact create
 - exact create
 - conflict-visible create
 - delete
 - reschedule
+- scheduler-drawer voice reschedule
 - explicit fast-fail feedback
 
 ### Optional / Deferred Branches
@@ -157,6 +160,22 @@ This is the top-level routing model for the SIM scheduler slice.
 
 ## Safety Branches
 
+### Branch-C1: Single-Task Explicit Relative-Time Create
+
+If the scheduler drawer mic receives one clear create transcript with one lawful explicit relative-time phrase:
+
+- SIM should resolve the exact relative time locally against `nowIso`
+- if stripping that phrase leaves one non-empty task body, SIM should create one exact task through a scheduler-owned deterministic branch before `Uni-M` / `Uni-A` / `Uni-B` / `Uni-C`
+- this branch is limited to explicit duration phrasing and must not widen into fuzzy phrases such as `待会儿`
+
+### Branch-C2: Malformed Explicit Relative-Time Create
+
+If that explicit relative-time phrase resolves to an exact time but stripping it leaves no task body:
+
+- no scheduler mutation occurs
+- SIM must return scheduler-owned safe-fail feedback
+- it must not fall through into inspiration-style or generic chat-style failure copy
+
 ### Branch-S1: Path B Suppressed
 
 If a reused implementation attempts to route into Path B behavior:
@@ -170,6 +189,7 @@ If a delete or reschedule target is ambiguous:
 
 - no scheduler mutation occurs
 - explicit failure or clarification-visible feedback is required
+- if the request came from the scheduler drawer voice path, the failure must still remain inside scheduler scope rather than bouncing into unrelated chat/audio mutation paths
 
 ### Branch-S3: No Match
 
@@ -177,6 +197,17 @@ If a delete or reschedule target cannot be resolved:
 
 - no scheduler mutation occurs
 - explicit safe failure is required
+
+### Branch-S4: Scheduler-Drawer Voice Target Resolution
+
+If the scheduler drawer mic receives a reschedule-style transcript:
+
+- SIM may resolve the target against scheduler-owned task truth using confidence-gated matching
+- it may use scheduler-local context such as nearby visible dates or task metadata as supporting signals
+- it must not rely on plain exact-title or SQL-only equality as the product contract
+- once one target is resolved, explicit day+clock phrasing such as `明天早上8点` must be accepted through scheduler-owned deterministic parsing before any model-led exact-time fallback
+- once one target is resolved, explicit delta phrasing such as `推迟1小时` / `提前半小时` must anchor to that task's current persisted start time rather than `nowIso`
+- low-confidence resolution must degrade to explicit safe failure, not guessed mutation
 
 ---
 

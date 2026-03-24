@@ -41,6 +41,7 @@ enum class UrgencyEnum {
 data class RescheduleTaskParams(
     val unifiedId: String? = null,
     val targetTimeIso: String? = null,
+    val resolvedTaskId: String? = null,
     val targetQuery: String? = null,
     val newStartTimeIso: String,
     val newDurationMinutes: Int? = null 

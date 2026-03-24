@@ -29,6 +29,7 @@ import com.smartsales.prism.domain.scheduler.UrgencyLevel
 import com.smartsales.prism.domain.scheduler.UniAExtractionRequest
 import com.smartsales.prism.domain.scheduler.UniBExtractionRequest
 import com.smartsales.prism.domain.scheduler.UniCExtractionRequest
+import com.smartsales.prism.domain.scheduler.RelativeTimeResolver
 import com.smartsales.prism.domain.scheduler.UniMAnchorKind
 import com.smartsales.prism.domain.scheduler.UniMExtractionRequest
 import com.smartsales.prism.domain.scheduler.UniMExtractionResult
@@ -89,14 +90,34 @@ class SimSchedulerViewModel @Inject constructor(
     }
 
     private companion object {
-        private val NOW_OFFSET_REGEX = Regex(
-            pattern = "(\\d+|半|两|一|二|三|四|五|六|七|八|九|十)[个]?(小时|分钟|分)后"
-        )
         private val NOW_DAY_OFFSET_REGEX = Regex(
             pattern = "(明天|后天|tomorrow|day after tomorrow)"
         )
         private val CLOCK_HINT_REGEX = Regex(
             pattern = "(上午|下午|中午|晚上|凌晨|早上|\\d{1,2}:\\d{2}|\\d{1,2}点半?|\\d{1,2}時|\\d{1,2}时)"
+        )
+        private val RESCHEDULE_KEYWORDS = listOf(
+            "改期到",
+            "改到",
+            "改成",
+            "改期",
+            "挪到",
+            "推迟到",
+            "提前到",
+            "往后推",
+            "往前提",
+            "推迟",
+            "推后",
+            "延后到",
+            "延期到",
+            "延后",
+            "延期",
+            "提前",
+            "提早",
+            "reschedule to",
+            "reschedule",
+            "move to",
+            "move "
         )
     }
 
@@ -109,6 +130,13 @@ class SimSchedulerViewModel @Inject constructor(
         val createdTasks: List<ScheduledTask>,
         val unresolvedReasons: List<String>,
         val downgradedCount: Int
+    )
+
+    private data class DeterministicRelativeCreateCandidate(
+        val title: String,
+        val startTimeIso: String,
+        val matchedText: String,
+        val normalizedTranscript: String
     )
 
     private sealed interface ResolvedMultiTaskFragment {
@@ -274,60 +302,7 @@ class SimSchedulerViewModel @Inject constructor(
             clearFailureState()
             val original = taskRepository.getTask(taskId)
                 ?: return@launch emitFailure("找不到要改期的日程")
-
-            val exactResult = uniAExtractionService.extract(
-                UniAExtractionRequest(
-                    transcript = text,
-                    nowIso = timeProvider.now.toString(),
-                    timezone = timeProvider.zoneId.id,
-                    unifiedId = original.id,
-                    displayedDateIso = displayedDateIso()
-                )
-            )
-
-            val taskDefinition = (exactResult as? FastTrackResult.CreateTasks)
-                ?.params
-                ?.tasks
-                ?.singleOrNull()
-                ?: return@launch emitFailure("SIM 当前仅支持明确时间改期")
-
-            val newStart = parseExactInstant(taskDefinition.startTimeIso)
-                ?: return@launch emitFailure("改期时间格式无法解析")
-            val newDuration = taskDefinition.durationMinutes.takeIf { it > 0 } ?: original.durationMinutes
-            val sourceOffset = dayOffsetFor(original.startTime)
-            val destinationOffset = dayOffsetFor(newStart)
-
-            val conflict = scheduleBoard.checkConflict(
-                proposedStart = newStart.toEpochMilli(),
-                durationMinutes = newDuration,
-                excludeId = original.id
-            ) as? ConflictResult.Conflict
-
-            val updatedTask = original.copy(
-                startTime = newStart,
-                durationMinutes = newDuration,
-                hasConflict = conflict != null,
-                conflictWithTaskId = conflict?.overlaps?.firstOrNull()?.entryId,
-                conflictSummary = conflict?.overlaps?.firstOrNull()?.let { "与「${it.title}」时间冲突" },
-                isVague = false
-            )
-
-            taskRepository.rescheduleTask(original.id, updatedTask)
-            cancelReminderSafely(original.id)
-            scheduleReminderIfExact(updatedTask)
-            markConflict(updatedTask)
-            if (destinationOffset != activeDayOffset.value) {
-                markRescheduledDate(newStart)
-            }
-
-            buildRescheduleExitMotion(
-                original = original,
-                updatedTask = updatedTask,
-                sourceOffset = sourceOffset,
-                destinationOffset = destinationOffset
-            )?.let { armExitMotion(it, sourceOffset, destinationOffset) }
-
-            emitStatus(if (updatedTask.hasConflict) "已改期，存在冲突" else "已改期")
+            executeResolvedReschedule(original, text)
         }
     }
 
@@ -358,7 +333,50 @@ class SimSchedulerViewModel @Inject constructor(
             return
         }
         if (looksLikeRescheduleTranscript(transcript)) {
-            emitFailure("已记录缺口：全局跟进式改期仍待接入共享上下文 owner")
+            handleVoiceRescheduleTranscript(transcript)
+            return
+        }
+
+        val normalizedTranscript = RelativeTimeResolver.normalizeExplicitRelativeTimeTranscript(transcript)
+        val normalizedOverride = normalizedTranscript.takeIf { it != transcript }
+
+        buildDeterministicRelativeCreateCandidate(
+            transcript = transcript,
+            normalizedTranscript = normalizedTranscript
+        )?.let { candidate ->
+            Log.d(
+                "SimSchedulerRelative",
+                "single deterministic relative create matched=${candidate.matchedText} title=${candidate.title} start=${candidate.startTimeIso} transcript=$transcript normalized=${candidate.normalizedTranscript}"
+            )
+            val result = FastTrackResult.CreateTasks(
+                params = CreateTasksParams(
+                    unifiedId = UUID.randomUUID().toString(),
+                    tasks = listOf(
+                        TaskDefinition(
+                            title = candidate.title,
+                            startTimeIso = candidate.startTimeIso,
+                            durationMinutes = 0,
+                            urgency = com.smartsales.prism.domain.scheduler.UrgencyEnum.L3_NORMAL
+                        )
+                    )
+                )
+            )
+            emitSingleTaskExtractionTelemetry(transcript, result)
+            handleMutation(result)
+            return
+        }
+        if (
+            RelativeTimeResolver.resolveExact(
+                userText = transcript,
+                nowIso = timeProvider.now.toString(),
+                timezone = timeProvider.zoneId.id
+            ) != null && !looksLikeMultiTaskCreateTranscript(transcript)
+        ) {
+            Log.w(
+                "SimSchedulerRelative",
+                "single deterministic relative create rejected transcript=$transcript normalized=$normalizedTranscript"
+            )
+            emitFailure("已识别为相对时间日程，但任务内容不完整")
             return
         }
 
@@ -366,6 +384,7 @@ class SimSchedulerViewModel @Inject constructor(
         when (val multi = uniMExtractionService.extract(
             UniMExtractionRequest(
                 transcript = transcript,
+                normalizedTranscript = normalizedOverride,
                 nowIso = timeProvider.now.toString(),
                 timezone = timeProvider.zoneId.id,
                 batchId = batchId,
@@ -383,6 +402,7 @@ class SimSchedulerViewModel @Inject constructor(
         val exact = uniAExtractionService.extract(
             UniAExtractionRequest(
                 transcript = transcript,
+                normalizedTranscript = normalizedOverride,
                 nowIso = timeProvider.now.toString(),
                 timezone = timeProvider.zoneId.id,
                 unifiedId = unifiedId,
@@ -398,6 +418,7 @@ class SimSchedulerViewModel @Inject constructor(
         val vague = uniBExtractionService.extract(
             UniBExtractionRequest(
                 transcript = transcript,
+                normalizedTranscript = normalizedOverride,
                 nowIso = timeProvider.now.toString(),
                 timezone = timeProvider.zoneId.id,
                 unifiedId = unifiedId,
@@ -501,13 +522,76 @@ class SimSchedulerViewModel @Inject constructor(
 
     private fun classifySingleTaskTelemetryAnchor(transcript: String): SingleTaskTelemetryAnchor? {
         val normalized = transcript.lowercase().replace("：", ":")
-        if (NOW_OFFSET_REGEX.containsMatchIn(normalized)) {
+        if (
+            RelativeTimeResolver.resolveExact(
+                userText = normalized,
+                nowIso = timeProvider.now.toString(),
+                timezone = timeProvider.zoneId.id
+            ) != null
+        ) {
             return SingleTaskTelemetryAnchor.NOW_OFFSET
         }
         if (NOW_DAY_OFFSET_REGEX.containsMatchIn(normalized) && CLOCK_HINT_REGEX.containsMatchIn(normalized)) {
             return SingleTaskTelemetryAnchor.NOW_DAY_OFFSET
         }
         return null
+    }
+
+    private fun buildDeterministicRelativeCreateCandidate(
+        transcript: String,
+        normalizedTranscript: String
+    ): DeterministicRelativeCreateCandidate? {
+        if (looksLikeMultiTaskCreateTranscript(transcript)) return null
+
+        val resolution = RelativeTimeResolver.resolveExact(
+            userText = transcript,
+            nowIso = timeProvider.now.toString(),
+            timezone = timeProvider.zoneId.id
+        ) ?: return null
+
+        val strippedTitle = stripDeterministicRelativeTimePhrase(
+            transcript = normalizedTranscript,
+            matchedText = resolution.matchedText
+        ) ?: return null
+
+        return DeterministicRelativeCreateCandidate(
+            title = strippedTitle,
+            startTimeIso = resolution.startTimeIso,
+            matchedText = resolution.matchedText,
+            normalizedTranscript = normalizedTranscript
+        )
+    }
+
+    private fun stripDeterministicRelativeTimePhrase(
+        transcript: String,
+        matchedText: String
+    ): String? {
+        val removed = transcript.replaceFirst(matchedText, "")
+        val cleaned = removed
+            .replace("提醒我", "")
+            .replace("请提醒我", "")
+            .replace("帮我", "")
+            .replace("给我", "")
+            .replace("请", "")
+            .replace("记得", "")
+            .replace("一下", "")
+            .replace("去", "")
+            .replace("  ", " ")
+            .trim()
+            .trim('，', ',', '。', '；', ';', '、', ' ')
+
+        return cleaned.takeIf {
+            it.isNotBlank() &&
+                !it.contains("待会") &&
+                !it.contains("过会") &&
+                !it.contains("以后想") &&
+                !it.contains("之后想")
+        }
+    }
+
+    private fun looksLikeMultiTaskCreateTranscript(text: String): Boolean {
+        val normalized = text.lowercase()
+        return listOf("，", ",", "、", "然后", "再", "以及").any(normalized::contains)
     }
 
     private suspend fun executeCreateIntent(result: FastTrackResult): MultiTaskExecutionSummary {
@@ -1027,10 +1111,127 @@ class SimSchedulerViewModel @Inject constructor(
         _causingTaskId.value = null
     }
 
+    private suspend fun handleVoiceRescheduleTranscript(transcript: String) {
+        val targetCue = extractRescheduleTargetCue(transcript)
+        val timeInstruction = extractRescheduleTimeInstruction(transcript)
+            ?: return emitFailure("SIM 当前仅支持明确时间改期")
+
+        when (val resolution = scheduleBoard.resolveTarget(targetCue, activeDayOffset.value)) {
+            is com.smartsales.prism.domain.memory.TargetResolution.Resolved -> {
+                val original = taskRepository.getTask(resolution.item.entryId)
+                    ?: return emitFailure("找不到要改期的日程")
+                executeResolvedReschedule(original, timeInstruction)
+            }
+
+            is com.smartsales.prism.domain.memory.TargetResolution.Ambiguous -> {
+                emitFailure("目标不明确，未执行改动")
+            }
+
+            is com.smartsales.prism.domain.memory.TargetResolution.NoMatch -> {
+                emitFailure("未找到匹配的日程，请更具体一些。")
+            }
+        }
+    }
+
+    private suspend fun executeResolvedReschedule(original: ScheduledTask, timeInstruction: String) {
+        val resolvedTime = SimRescheduleTimeInterpreter.resolve(
+            originalTask = original,
+            transcript = timeInstruction,
+            displayedDateIso = displayedDateIso(),
+            timeProvider = timeProvider,
+            uniAExtractionService = uniAExtractionService
+        )
+        val resolved = when (resolvedTime) {
+            is SimRescheduleTimeInterpreter.Result.Success -> resolvedTime
+            SimRescheduleTimeInterpreter.Result.Unsupported -> {
+                emitFailure("SIM 当前仅支持明确时间改期")
+                return
+            }
+            SimRescheduleTimeInterpreter.Result.InvalidExactTime -> {
+                emitFailure("改期时间格式无法解析")
+                return
+            }
+        }
+
+        val newStart = resolved.startTime
+        val newDuration = resolved.durationMinutes ?: original.durationMinutes
+        val sourceOffset = dayOffsetFor(original.startTime)
+        val destinationOffset = dayOffsetFor(newStart)
+        val conflict = scheduleBoard.checkConflict(
+            proposedStart = newStart.toEpochMilli(),
+            durationMinutes = newDuration,
+            excludeId = original.id
+        ) as? ConflictResult.Conflict
+
+        val updatedTask = original.copy(
+            startTime = newStart,
+            durationMinutes = newDuration,
+            hasConflict = conflict != null,
+            conflictWithTaskId = conflict?.overlaps?.firstOrNull()?.entryId,
+            conflictSummary = conflict?.overlaps?.firstOrNull()?.let { "与「${it.title}」时间冲突" },
+            isVague = false
+        )
+
+        taskRepository.rescheduleTask(original.id, updatedTask)
+        cancelReminderSafely(original.id)
+        scheduleReminderIfExact(updatedTask)
+        markConflict(updatedTask)
+        if (destinationOffset != activeDayOffset.value) {
+            markRescheduledDate(newStart)
+        }
+        buildRescheduleExitMotion(
+            original = original,
+            updatedTask = updatedTask,
+            sourceOffset = sourceOffset,
+            destinationOffset = destinationOffset
+        )?.let { armExitMotion(it, sourceOffset, destinationOffset) }
+        emitStatus(if (updatedTask.hasConflict) "已改期，存在冲突" else "已改期")
+    }
+
+    private fun extractRescheduleTargetCue(text: String): String {
+        val trimmed = text.trim()
+        val quoted = Regex("[“\"]([^”\"]+)[”\"]").find(trimmed)?.groupValues?.getOrNull(1)
+        if (!quoted.isNullOrBlank()) return quoted
+
+        val keywordRange = findRescheduleKeywordRange(trimmed)
+        val prefix = keywordRange?.let { trimmed.substring(0, it.first) } ?: trimmed
+        return prefix
+            .replace("把", " ")
+            .replace("请把", " ")
+            .replace("帮我把", " ")
+            .replace("给我把", " ")
+            .replace("那个", " ")
+            .replace("这个", " ")
+            .replace("一下", " ")
+            .replace("  ", " ")
+            .trim()
+            .trim('“', '”', '"', '\'', '，', ',', '。', ' ')
+            .removeSuffix("的时间")
+            .removeSuffix("时间")
+            .trim()
+    }
+
+    private fun extractRescheduleTimeInstruction(text: String): String? {
+        val keywordRange = findRescheduleKeywordRange(text) ?: return null
+        return text.substring(keywordRange.first)
+            .trim()
+            .takeIf { it.length >= 2 }
+    }
+
+    private fun findRescheduleKeywordRange(text: String): IntRange? {
+        val normalized = text.lowercase()
+        return RESCHEDULE_KEYWORDS
+            .mapNotNull { keyword ->
+                normalized.indexOf(keyword)
+                    .takeIf { it >= 0 }
+                    ?.let { it until (it + keyword.length) }
+            }
+            .minByOrNull { it.first }
+    }
+
     private fun looksLikeRescheduleTranscript(text: String): Boolean {
         val normalized = text.lowercase()
-        return listOf("改到", "改成", "改期", "挪到", "延后", "延期", "move ", "reschedule", "actually")
-            .any { normalized.contains(it) }
+        return RESCHEDULE_KEYWORDS.any { normalized.contains(it) } || normalized.contains("actually")
     }
 
     private fun looksLikeDeletionTranscript(text: String): Boolean {

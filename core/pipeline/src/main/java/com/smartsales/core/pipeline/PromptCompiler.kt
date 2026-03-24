@@ -10,6 +10,7 @@ import com.smartsales.prism.domain.scheduler.UniCExtractionPayload
 import com.smartsales.prism.domain.scheduler.UniCExtractionRequest
 import com.smartsales.prism.domain.scheduler.UniMExtractionPayload
 import com.smartsales.prism.domain.scheduler.UniMExtractionRequest
+import com.smartsales.prism.domain.scheduler.RelativeTimeResolver
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -155,7 +156,19 @@ open class PromptCompiler @Inject constructor() {
      * 构建 Uni-A 轻量精确提取 Prompt。
      * 说明：机器路由 schema 必须直接来自 Kotlin contract，不能手写 JSON 模板。
      */
-    open fun compileUniAExtractionPrompt(request: UniAExtractionRequest): String = """
+    open fun compileUniAExtractionPrompt(request: UniAExtractionRequest): String {
+        val transcriptForExtraction = request.normalizedTranscript ?: request.transcript
+        val relativeTimeHint = RelativeTimeResolver.buildHint(
+            userText = transcriptForExtraction,
+            nowIso = request.nowIso,
+            timezone = request.timezone
+        )?.let { "$it\n" } ?: ""
+        val normalizedTranscriptNote = request.normalizedTranscript
+            ?.takeIf { it != request.transcript }
+            ?.let { "\n规范化输入：\n$it\n" }
+            ?: ""
+
+        return """
 你是日程 Path A 的轻量精确提取器。
 
 你的任务不是全面理解一切，而是只回答一个问题：
@@ -165,6 +178,7 @@ open class PromptCompiler @Inject constructor() {
 - now_iso: ${request.nowIso}
 - timezone: ${request.timezone}
 - displayed_date_iso: ${request.displayedDateIso ?: "null"}
+${relativeTimeHint}
 
 规则：
 1. 如果输入是单个、明确、可落库的精确日程，就输出 `decision = "EXACT_CREATE"`。
@@ -180,7 +194,7 @@ open class PromptCompiler @Inject constructor() {
 5. 只要日期锚点合法，且出现明确钟点，就属于 `Uni-A`，不能降级成 `Uni-B`。
    - 例如 `后天晚上九点去接张总`、`明天下午三点半开会`、`tomorrow 6:30 pm remind me to go off office`
    - 这些都必须输出 `EXACT_CREATE`
-   - `3小时后开会`、`45分钟后提醒我出门` 这类以 `now_iso` 为锚点的相对时长表达，也属于 `EXACT_CREATE`
+   - `3小时后开会`、`3小时以后开会`、`3小时之后开会`、`45分钟后提醒我出门` 这类以 `now_iso` 为锚点的相对时长表达，也属于 `EXACT_CREATE`
 6. 只有“日期锚点”但没有明确钟点的输入，不属于 `Uni-A`。
    - 例如 `明天提醒我打电话`、`tomorrow remind me to go to the airport`、`后一天提醒我吃饭`、`后天提醒我打电话`
    - 这些都必须输出 `NOT_EXACT`，交给 `Uni-B`，不得擅自补成 `00:00`、当前时刻、午间或任何猜测时刻。
@@ -199,14 +213,24 @@ ${
 }
 
 用户输入：
-${request.transcript}
+${request.transcript}${normalizedTranscriptNote}
+用于提取的输入：
+${transcriptForExtraction}
 """.trimIndent()
+    }
 
     /**
      * 构建 Uni-B 轻量模糊提取 Prompt。
      * 说明：机器路由 schema 必须直接来自 Kotlin contract，不能手写 JSON 模板。
      */
-    open fun compileUniBExtractionPrompt(request: UniBExtractionRequest): String = """
+    open fun compileUniBExtractionPrompt(request: UniBExtractionRequest): String {
+        val transcriptForExtraction = request.normalizedTranscript ?: request.transcript
+        val normalizedTranscriptNote = request.normalizedTranscript
+            ?.takeIf { it != request.transcript }
+            ?.let { "\n规范化输入：\n$it\n" }
+            ?: ""
+
+        return """
 你是日程 Path A 的轻量模糊提取器。
 
 你的任务不是判断“是否能大概安排”，而是只回答一个问题：
@@ -235,11 +259,14 @@ ${request.transcript}
 7. 只要日期锚点合法且出现明确钟点，就不属于 `Uni-B`。
    - 例如 `后天晚上九点去接张总`、`明天下午三点半开会`
    - 这些应输出 `NOT_VAGUE`，让系统保留给精确创建分支，而不是降级成模糊任务。
-8. 中文口语时间规则：
+8. 明确的相对时长表达也不属于 `Uni-B`。
+   - 例如 `3小时后开会`、`3小时以后开会`、`3小时之后开会`、`45分钟后提醒我出门`
+   - 这些应输出 `NOT_VAGUE`，保留给精确创建分支，不得降级成模糊任务。
+9. 中文口语时间规则：
    - 裸 `一点` / `1点` 默认解释为 `13:00`
    - 只有显式早晨前缀（如 `凌晨一点`）才可解释为 `01:00`
-9. 如果用户完全没有给出日期锚点，例如“安排 team standup”，不要编造今天或当前页日期；输出 `NOT_VAGUE`。
-10. 只能输出严格 JSON，禁止 Markdown 包裹。
+10. 如果用户完全没有给出日期锚点，例如“安排 team standup”，不要编造今天或当前页日期；输出 `NOT_VAGUE`。
+11. 只能输出严格 JSON，禁止 Markdown 包裹。
 
 严格输出以下 Kotlin contract 对应的 JSON：
 ${
@@ -250,14 +277,29 @@ ${
 }
 
 用户输入：
-${request.transcript}
+${request.transcript}${normalizedTranscriptNote}
+用于提取的输入：
+${transcriptForExtraction}
 """.trimIndent()
+    }
 
     /**
      * 构建 Uni-M 多任务拆解 Prompt。
      * 说明：只负责把一句话拆成有序 create 片段，不做最终持久化。
      */
-    open fun compileUniMExtractionPrompt(request: UniMExtractionRequest): String = """
+    open fun compileUniMExtractionPrompt(request: UniMExtractionRequest): String {
+        val transcriptForExtraction = request.normalizedTranscript ?: request.transcript
+        val relativeTimeHint = RelativeTimeResolver.buildHint(
+            userText = transcriptForExtraction,
+            nowIso = request.nowIso,
+            timezone = request.timezone
+        )?.let { "$it\n" } ?: ""
+        val normalizedTranscriptNote = request.normalizedTranscript
+            ?.takeIf { it != request.transcript }
+            ?.let { "\n规范化输入：\n$it\n" }
+            ?: ""
+
+        return """
 你是日程 Path A 的多任务拆解器。
 
 你的任务不是直接创建日程，而是只回答一个问题：
@@ -267,6 +309,7 @@ ${request.transcript}
 - now_iso: ${request.nowIso}
 - timezone: ${request.timezone}
 - displayed_date_iso: ${request.displayedDateIso ?: "null"}
+${relativeTimeHint}
 
 规则：
 1. 只有“一个 utterance 内包含 2-4 个 create 任务”时，输出 `MULTI_CREATE`。
@@ -286,7 +329,7 @@ ${request.transcript}
    - `VAGUE` 时填写 `anchorDateIso`
    - `EXACT` 片段可填写 `durationMinutes`；若无法判断，用 `0`
 7. `NOW_OFFSET` 规则：
-   - 只在用户表达“几小时后 / 几分钟后”且没有依赖更早片段时使用
+   - 只在用户表达“几小时后 / 几小时以后 / 几小时之后 / 几分钟后 / 几分钟以后 / 几分钟之后”且没有依赖更早片段时使用
    - 必须填写 `relativeOffsetMinutes`
    - 这类片段必须锚定 `now_iso`，不能硬编绝对时间
 8. `NOW_DAY_OFFSET` 规则：
@@ -296,7 +339,7 @@ ${request.transcript}
    - 如果 `mode = VAGUE`，可填写 `timeHint`
    - 这类片段必须锚定 `now_iso` 所在真实日期，不能改锚到页面日期，也不要硬编绝对时间
 9. `PREVIOUS_EXACT_OFFSET` 规则：
-   - 只在用户明确表达“几小时后 / 几分钟后”这类钟点相对关系时使用
+   - 只在用户明确表达“几小时后 / 几小时以后 / 几小时之后 / 几分钟后 / 几分钟以后 / 几分钟之后”这类钟点相对关系时使用
    - 必须填写 `relativeOffsetMinutes`
    - 不要伪造绝对时间
 10. `PREVIOUS_DAY_OFFSET` 规则：
@@ -305,7 +348,7 @@ ${request.transcript}
    - 如果 `mode = EXACT`，还必须填写 `clockTime`（严格 `HH:mm`）
    - 如果 `mode = VAGUE`，可填写 `timeHint`
 11. 如果后一个片段只能依赖前一个片段才能理解，就必须使用相对锚点，而不是硬编绝对时间。
-12. 如果用户说的是单独一句“3小时后开会”，这是合法的 `NOW_OFFSET` 精确任务，不要误判成缺少时间。
+12. 如果用户说的是单独一句“3小时后开会”、“3小时以后开会”或“3小时之后开会”，这是合法的 `NOW_OFFSET` 精确任务，不要误判成缺少时间。
 13. 如果用户说的是单独一句“明天下午三点开会”，在多任务拆解里优先用 `NOW_DAY_OFFSET + clockTime` 表达，而不是手算绝对日期。
 14. 片段必须是独立任务，不要把多个动作合并成一个标题。
 15. 最多输出 4 个片段；超过就输出 `NOT_MULTI`。
@@ -320,8 +363,11 @@ ${
 }
 
 用户输入：
-${request.transcript}
+${request.transcript}${normalizedTranscriptNote}
+用于提取的输入：
+${transcriptForExtraction}
 """.trimIndent()
+    }
 
     /**
      * 构建 Uni-C 轻量灵感提取 Prompt。

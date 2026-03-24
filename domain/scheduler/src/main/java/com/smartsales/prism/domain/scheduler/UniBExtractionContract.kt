@@ -8,6 +8,7 @@ import kotlinx.serialization.Serializable
  */
 data class UniBExtractionRequest(
     val transcript: String,
+    val normalizedTranscript: String? = null,
     val nowIso: String,
     val timezone: String,
     val unifiedId: String,

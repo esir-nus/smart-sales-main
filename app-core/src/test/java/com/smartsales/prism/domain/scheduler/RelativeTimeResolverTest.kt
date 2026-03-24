@@ -32,6 +32,13 @@ class RelativeTimeResolverTest {
     }
 
     @Test
+    fun `N分钟之后 resolves correctly`() {
+        val result = RelativeTimeResolver.resolve("五分钟之后开会", nowMillis, zoneId)
+        assertNotNull(result)
+        assertEquals("2026-02-11 21:05", result)
+    }
+
+    @Test
     fun `N小时后 resolves correctly`() {
         val result = RelativeTimeResolver.resolve("1小时后打电话", nowMillis, zoneId)
         assertNotNull(result)
@@ -43,6 +50,20 @@ class RelativeTimeResolverTest {
         val result = RelativeTimeResolver.resolve("2个小时后开会", nowMillis, zoneId)
         assertNotNull(result)
         assertEquals("2026-02-11 23:00", result)
+    }
+
+    @Test
+    fun `Chinese numeral hours after variants resolve correctly`() {
+        val result = RelativeTimeResolver.resolve("八个小时以后赶高铁", nowMillis, zoneId)
+        assertNotNull(result)
+        assertEquals("2026-02-12 05:00", result)
+    }
+
+    @Test
+    fun `Chinese numeral hours later resolves correctly`() {
+        val result = RelativeTimeResolver.resolve("三小时之后赶飞机", nowMillis, zoneId)
+        assertNotNull(result)
+        assertEquals("2026-02-12 00:00", result)
     }
 
     @Test
@@ -64,6 +85,12 @@ class RelativeTimeResolverTest {
         val result = RelativeTimeResolver.resolve("一刻钟后看手机", nowMillis, zoneId)
         assertNotNull(result)
         assertEquals("2026-02-11 21:15", result)
+    }
+
+    @Test
+    fun `normalize transcript canonicalizes explicit later suffixes`() {
+        val normalized = RelativeTimeResolver.normalizeExplicitRelativeTimeTranscript("八个小时以后赶高铁，三小时之后赶飞机")
+        assertEquals("八个小时后赶高铁，三小时后赶飞机", normalized)
     }
 
     @Test
@@ -96,6 +123,29 @@ class RelativeTimeResolverTest {
         assertNotNull(hint)
         assert(hint!!.contains("2026-02-11 21:02"))
         assert(hint.contains("2分钟后"))
+        assert(hint.contains("ISO-8601"))
+    }
+
+    @Test
+    fun `resolveExact returns ISO-8601 start time for explicit duration`() {
+        val resolution = RelativeTimeResolver.resolveExact("八个小时以后赶高铁", nowMillis, zoneId)
+        assertNotNull(resolution)
+        assertEquals("2026-02-12T05:00+08:00", resolution!!.startTimeIso)
+        assertEquals(480L, resolution.offsetMinutes)
+    }
+
+    @Test
+    fun `resolveSignedDeltaMinutes parses later reschedule phrases`() {
+        val resolution = RelativeTimeResolver.resolveSignedDeltaMinutes("赶高铁时间推迟1个小时")
+        assertNotNull(resolution)
+        assertEquals(60L, resolution!!.offsetMinutes)
+    }
+
+    @Test
+    fun `resolveSignedDeltaMinutes parses earlier reschedule phrases`() {
+        val resolution = RelativeTimeResolver.resolveSignedDeltaMinutes("提前半小时")
+        assertNotNull(resolution)
+        assertEquals(-30L, resolution!!.offsetMinutes)
     }
 
     @Test

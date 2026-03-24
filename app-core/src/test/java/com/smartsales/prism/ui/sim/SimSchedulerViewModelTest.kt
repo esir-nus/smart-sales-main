@@ -143,7 +143,6 @@ class SimSchedulerViewModelTest {
     @Test
     fun `processAudio single task now offset exact create emits telemetry`() = runTest {
         asrService.nextResult = AsrResult.Success("三小时后开会")
-        enqueueExactCreateResponse(startTimeIso = "2026-03-20T12:00:00Z")
 
         viewModel.processAudio(File("dummy.wav"))
         advanceUntilIdle()
@@ -152,9 +151,61 @@ class SimSchedulerViewModelTest {
         assertTrue(
             valveEvents.any {
                 it.first == PipelineValve.Checkpoint.TASK_EXTRACTED &&
-                    it.second == "SIM scheduler single-task NOW_OFFSET extracted"
+                it.second == "SIM scheduler single-task NOW_OFFSET extracted"
             }
         )
+        assertTrue(fakeExecutor.executedPrompts.isEmpty())
+    }
+
+    @Test
+    fun `processAudio single task explicit later variant stays exact and emits now offset telemetry`() = runTest {
+        asrService.nextResult = AsrResult.Success("八个小时以后赶高铁")
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        val tasks = taskRepository.queryByDateRange(timeProvider.today, timeProvider.today.plusDays(1)).snapshot()
+            .filterIsInstance<ScheduledTask>()
+        assertTrue(tasks.any { it.title == "赶高铁" && !it.isVague && it.startTime == Instant.parse("2026-03-20T17:00:00Z") })
+        assertTrue(
+            valveEvents.any {
+                it.first == PipelineValve.Checkpoint.TASK_EXTRACTED &&
+                it.second == "SIM scheduler single-task NOW_OFFSET extracted"
+            }
+        )
+        assertTrue(fakeExecutor.executedPrompts.isEmpty())
+    }
+
+    @Test
+    fun `processAudio single task explicit after variant stays exact and emits now offset telemetry`() = runTest {
+        asrService.nextResult = AsrResult.Success("三小时之后开会")
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        val tasks = taskRepository.queryByDateRange(timeProvider.today, timeProvider.today.plusDays(1)).snapshot()
+            .filterIsInstance<ScheduledTask>()
+        assertTrue(tasks.any { it.title == "开会" && !it.isVague && it.startTime == Instant.parse("2026-03-20T12:00:00Z") })
+        assertTrue(
+            valveEvents.any {
+                it.first == PipelineValve.Checkpoint.TASK_EXTRACTED &&
+                it.second == "SIM scheduler single-task NOW_OFFSET extracted"
+            }
+        )
+        assertTrue(fakeExecutor.executedPrompts.isEmpty())
+    }
+
+    @Test
+    fun `processAudio malformed explicit relative input fails with scheduler owned copy`() = runTest {
+        asrService.nextResult = AsrResult.Success("八个小时以后")
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        assertEquals("已识别为相对时间日程，但任务内容不完整", viewModel.pipelineStatus.value)
+        assertEquals("已识别为相对时间日程，但任务内容不完整", viewModel.conflictWarning.value)
+        assertTrue(fakeExecutor.executedPrompts.isEmpty())
+        assertTrue(taskRepository.queryByDateRange(timeProvider.today, timeProvider.today.plusDays(1)).snapshot().isEmpty())
     }
 
     @Test
@@ -311,21 +362,6 @@ class SimSchedulerViewModelTest {
                 durationMinutes = 60
             )
         )
-        fakeExecutor.enqueueResponse(
-            ExecutorResult.Success(
-                """
-                {
-                  "decision": "EXACT_CREATE",
-                  "task": {
-                    "title": "客户会议",
-                    "startTimeIso": "2026-03-20T08:30:00Z",
-                    "durationMinutes": 45,
-                    "urgency": "L2"
-                  }
-                }
-                """.trimIndent()
-            )
-        )
 
         viewModel.onReschedule(taskId, "改到今天下午四点半")
         advanceUntilIdle()
@@ -333,7 +369,8 @@ class SimSchedulerViewModelTest {
         val updated = taskRepository.getTask(taskId)
         assertNotNull(updated)
         assertEquals(Instant.parse("2026-03-20T08:30:00Z"), updated!!.startTime)
-        assertEquals(45, updated.durationMinutes)
+        assertEquals(60, updated.durationMinutes)
+        assertTrue(fakeExecutor.executedPrompts.isEmpty())
     }
 
     @Test
@@ -546,6 +583,112 @@ class SimSchedulerViewModelTest {
         assertEquals(Instant.parse("2026-03-21T08:30:00Z"), updated!!.startTime)
         assertEquals(setOf(1), viewModel.rescheduledDates.value)
         assertEquals(setOf(1), viewModel.unacknowledgedDates.value)
+    }
+
+    @Test
+    fun `processAudio scheduler drawer voice reschedule exact day clock phrase updates matched task without prompt`() = runTest {
+        val original = scheduledTask(
+            id = "task-1",
+            title = "赶高铁",
+            startTime = Instant.parse("2026-03-20T09:56:00Z"),
+            urgencyLevel = UrgencyLevel.L2_IMPORTANT
+        )
+        taskRepository.insertTask(original)
+        scheduleBoard.nextTargetResolution = TargetResolution.Resolved(
+            ScheduleItem(
+                entryId = "task-1",
+                title = "赶高铁",
+                scheduledAt = original.startTime.toEpochMilli(),
+                durationMinutes = original.durationMinutes,
+                durationSource = com.smartsales.prism.domain.memory.DurationSource.DEFAULT,
+                conflictPolicy = com.smartsales.prism.domain.memory.ConflictPolicy.EXCLUSIVE
+            )
+        )
+        asrService.nextResult = AsrResult.Success("把赶高铁的时间改到明天早上8点")
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        val updated = taskRepository.getTask("task-1")
+        assertNotNull(updated)
+        assertEquals(Instant.parse("2026-03-21T00:00:00Z"), updated!!.startTime)
+        assertTrue(fakeExecutor.executedPrompts.isEmpty())
+    }
+
+    @Test
+    fun `processAudio scheduler drawer voice reschedule delta phrase updates exact task without prompt`() = runTest {
+        val original = scheduledTask(
+            id = "task-1",
+            title = "赶高铁",
+            startTime = Instant.parse("2026-03-20T09:00:00Z"),
+            urgencyLevel = UrgencyLevel.L2_IMPORTANT
+        )
+        taskRepository.insertTask(original)
+        scheduleBoard.nextTargetResolution = TargetResolution.Resolved(
+            ScheduleItem(
+                entryId = "task-1",
+                title = "赶高铁",
+                scheduledAt = original.startTime.toEpochMilli(),
+                durationMinutes = original.durationMinutes,
+                durationSource = com.smartsales.prism.domain.memory.DurationSource.DEFAULT,
+                conflictPolicy = com.smartsales.prism.domain.memory.ConflictPolicy.EXCLUSIVE
+            )
+        )
+        asrService.nextResult = AsrResult.Success("赶高铁时间推迟1个小时")
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        val updated = taskRepository.getTask("task-1")
+        assertNotNull(updated)
+        assertEquals(Instant.parse("2026-03-20T10:00:00Z"), updated!!.startTime)
+        assertFalse(updated.hasConflict)
+        assertTrue(fakeExecutor.executedPrompts.isEmpty())
+    }
+
+    @Test
+    fun `processAudio scheduler drawer voice reschedule delta phrase recomputes conflict for conflicted target`() = runTest {
+        val original = scheduledTask(
+            id = "task-1",
+            title = "赶高铁",
+            startTime = Instant.parse("2026-03-20T09:00:00Z"),
+            urgencyLevel = UrgencyLevel.L2_IMPORTANT,
+            hasConflict = true
+        )
+        taskRepository.insertTask(original)
+        scheduleBoard.nextTargetResolution = TargetResolution.Resolved(
+            ScheduleItem(
+                entryId = "task-1",
+                title = "赶高铁",
+                scheduledAt = original.startTime.toEpochMilli(),
+                durationMinutes = original.durationMinutes,
+                durationSource = com.smartsales.prism.domain.memory.DurationSource.DEFAULT,
+                conflictPolicy = com.smartsales.prism.domain.memory.ConflictPolicy.EXCLUSIVE
+            )
+        )
+        scheduleBoard.nextConflictResult = ConflictResult.Conflict(
+            overlaps = listOf(
+                ScheduleItem(
+                    entryId = "task-2",
+                    title = "叫我吃饭",
+                    scheduledAt = Instant.parse("2026-03-20T10:00:00Z").toEpochMilli(),
+                    durationMinutes = 30,
+                    durationSource = com.smartsales.prism.domain.memory.DurationSource.DEFAULT,
+                    conflictPolicy = com.smartsales.prism.domain.memory.ConflictPolicy.EXCLUSIVE
+                )
+            )
+        )
+        asrService.nextResult = AsrResult.Success("赶高铁时间推迟1个小时")
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        val updated = taskRepository.getTask("task-1")
+        assertNotNull(updated)
+        assertEquals(Instant.parse("2026-03-20T10:00:00Z"), updated!!.startTime)
+        assertTrue(updated.hasConflict)
+        assertEquals("与「叫我吃饭」时间冲突", updated.conflictSummary)
+        assertTrue(fakeExecutor.executedPrompts.isEmpty())
     }
 
     @Test
@@ -977,6 +1120,46 @@ class SimSchedulerViewModelTest {
             .filterIsInstance<ScheduledTask>()
         assertEquals(2, tasks.size)
         assertTrue(tasks.any { it.title == "赶飞机" && it.isVague })
+        assertEquals("已创建 2 个日程，1 个片段已按待定处理", viewModel.pipelineStatus.value)
+    }
+
+    @Test
+    fun `processAudio multi task explicit after variant after vague predecessor still downgrades to vague`() = runTest {
+        asrService.nextResult = AsrResult.Success("明天开会，三小时之后赶飞机")
+        enqueueMultiCreateResponse(
+            """
+            {
+              "decision": "MULTI_CREATE",
+              "fragments": [
+                {
+                  "title": "开会",
+                  "mode": "VAGUE",
+                  "anchorKind": "ABSOLUTE",
+                  "anchorDateIso": "2026-03-21",
+                  "timeHint": "明天",
+                  "urgency": "L2"
+                },
+                {
+                  "title": "赶飞机",
+                  "mode": "EXACT",
+                  "anchorKind": "PREVIOUS_EXACT_OFFSET",
+                  "relativeOffsetMinutes": 180,
+                  "timeHint": "三小时之后",
+                  "urgency": "L1"
+                }
+              ]
+            }
+            """.trimIndent()
+        )
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        val tasks = taskRepository.queryByDateRange(timeProvider.today, timeProvider.today.plusDays(2)).snapshot()
+            .filterIsInstance<ScheduledTask>()
+        assertEquals(2, tasks.size)
+        assertTrue(tasks.any { it.title == "赶飞机" && it.isVague })
+        assertTrue(fakeExecutor.executedPrompts.any { it.contains("规范化输入") && it.contains("三小时后赶飞机") })
         assertEquals("已创建 2 个日程，1 个片段已按待定处理", viewModel.pipelineStatus.value)
     }
 

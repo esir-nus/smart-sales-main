@@ -129,12 +129,15 @@ Current SIM-specific state and remaining gaps:
 - create and vague-create now mark off-page target dates into the reused calendar attention state
 - conflict-visible create now reuses the amber warning-priority calendar channel while normal create remains blue
 - multi-task create now aggregates attention per target date, so mixed batches may mark multiple dates independently
-- the shipped SIM voice path now fronts create with `Uni-M` ordered multi-task decomposition before the single-task Uni-A / Uni-B / Uni-C chain
-- `Uni-M` resolves fragments left-to-right; standalone `N hours/minutes later` fragments may anchor to `nowIso`, standalone `明天/后天 + clock` fragments may anchor to `nowIso` via day offsets, exact clock-relative fragments otherwise require a prior exact anchor, and clock-relative fragments after a vague date-only predecessor downgrade to vague when the day anchor remains lawful
+- single-task explicit relative-duration create now takes a deterministic scheduler-owned exact-create branch before model-led extraction when the transcript contains one lawful relative-time phrase and one remaining task body
+- if that explicit relative-time phrase resolves to an exact time but stripping the phrase leaves no task body, SIM must safe-fail with scheduler-owned copy rather than falling through into Uni-C-style inspiration failure text
+- for the remaining model-led create path, SIM now fronts create with `Uni-M` ordered multi-task decomposition before the single-task Uni-A / Uni-B / Uni-C chain
+- `Uni-M` resolves fragments left-to-right; standalone explicit relative-duration fragments such as `N hours/minutes later`, `N小时后`, `N小时以后`, and `N小时之后` may anchor to `nowIso`, standalone `明天/后天 + clock` fragments may anchor to `nowIso` via day offsets, exact clock-relative fragments otherwise require a prior exact anchor, and clock-relative fragments after a vague date-only predecessor downgrade to vague when the day anchor remains lawful
 - exact non-`FIRE_OFF` tasks without explicit duration now use domain-owned conflict occupancy windows for collision evaluation only; semantic transport/travel tasks may conflict even when persisted `durationMinutes = 0`
 - `FIRE_OFF` reminders still bypass collision logic and therefore do not block or get blocked by other scheduled items
 - reschedule path now drives the shared source-card exit-motion contract together with destination attention
 - scheduler-drawer voice reschedule is an approved SIM scheduler lane when the transcript clearly implies a reschedule target plus a new exact time
+- after one target is resolved, explicit day+clock phrases such as `明天早上8点` must resolve through scheduler-owned deterministic parsing before falling back to model-led exact-time extraction; this same exact-time rule also applies to the task-scoped follow-up reschedule lane
 - SIM now reuses the shared reminder stack for persisted exact tasks only: create and conflict-create arm reminders, vague tasks do not, delete and mark-done cancel, reschedule cancels then rearms, and restore-from-done does not rearm in T4.8
 - reminder-reliability prompting stays on the viewmodel/UI boundary through a process-lifetime gate so one create batch does not spam repeated settings prompts; the same seam may carry exact-alarm and OEM-specific notification hardening guidance
 - SIM still defers immediate create/conflict/completion native notifications and still lacks device-level acceptance proof for full banner/deadline delivery
@@ -185,6 +188,7 @@ Follow-up mutation ownership remains narrow:
 
 - shell/chat may host prompting, task selection, and follow-up input
 - scheduler-owned mutation truth still belongs to the scheduler task repository, conflict check, and reminder stack
+- task-scoped follow-up reschedule may interpret explicit delta phrasing such as `推迟1小时` or `提前半小时`, but the offset must anchor to the selected task's current persisted start time rather than `nowIso`
 - general SIM chat, audio drawer, and unrelated sessions do not inherit scheduler-drawer mutation rights from the scheduler mic lane
 
 ### Date Attention Contract
@@ -205,7 +209,7 @@ SIM treats one multi-task utterance as an ordered batch of independent create ta
 - each persisted task still gets its own `unifiedId`
 - one utterance-level batch id may be used for telemetry and residue reporting only
 - fragments resolve left-to-right rather than by naive comma-splitting
-- standalone `N hours/minutes later` is lawful exact create by anchoring to `nowIso`
+- standalone explicit relative-duration phrases such as `N hours/minutes later`, `N小时后`, `N小时以后`, and `N小时之后` are lawful exact create by anchoring to `nowIso`
 - standalone `明天/后天/tomorrow + clock` inside a multi-task batch should prefer deterministic `nowIso` day-offset anchoring rather than model-computed absolute dates
 - exact clock-relative fragments are lawful only when a prior exact fragment exists in the same chain
 - if a clock-relative fragment follows a vague date-only fragment, SIM must downgrade it to a vague task when the same lawful day anchor still exists rather than fabricating a clock time or silently dropping it
@@ -236,7 +240,9 @@ Scheduler-drawer voice reschedule is supported only within approved SIM schedule
 - the runtime may resolve the target task through scheduler-owned confidence-gated matching rather than exact-title equality
 - matching may use normalized title plus participant/location clues and scheduler-local context such as the current visible date page
 - low-confidence or near-tie candidate resolution must safe-fail with explicit feedback and no mutation
-- after one task is resolved, the new time still follows the delivered exact-time reschedule rules
+- after one task is resolved, absolute exact-time phrasing should keep the delivered exact-time reschedule rules
+- explicit day+clock phrasing such as `明天早上8点` must remain valid even when the new-time tail does not restate the task title
+- explicit delta phrasing such as `推迟1小时` / `提前半小时` must anchor to the resolved task's current persisted start time rather than `nowIso`
 - audio drawer, general SIM chat, and unrelated sessions must not reuse this lane as implicit scheduler authority
 
 ---

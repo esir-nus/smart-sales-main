@@ -843,6 +843,136 @@ class SimAgentViewModelTest {
     }
 
     @Test
+    fun `scheduler follow up send reschedules selected exact task by explicit delta without prompt`() = runTest {
+        val taskId = taskRepository.insertTask(
+            ScheduledTask(
+                id = "task_follow_delta",
+                timeDisplay = "16:00",
+                title = "赶高铁",
+                urgencyLevel = UrgencyLevel.L2_IMPORTANT,
+                startTime = Instant.parse("2026-03-22T08:00:00Z"),
+                durationMinutes = 30
+            )
+        )
+        val viewModel = newViewModel()
+        val sessionId = viewModel.createBadgeSchedulerFollowUpSession(
+            threadId = "thread_follow_delta",
+            transcript = "安排赶高铁",
+            tasks = listOf(
+                SchedulerFollowUpTaskSummary(
+                    taskId = taskId,
+                    title = "赶高铁",
+                    dayOffset = 0,
+                    scheduledAtMillis = Instant.parse("2026-03-22T08:00:00Z").toEpochMilli(),
+                    durationMinutes = 30
+                )
+            )
+        )
+        viewModel.switchSession(sessionId!!)
+
+        viewModel.updateInput("推迟1个小时")
+        viewModel.send()
+        advanceUntilIdle()
+
+        val updated = taskRepository.getTask(taskId)
+        assertEquals(Instant.parse("2026-03-22T09:00:00Z"), updated?.startTime)
+        val lastMessage = viewModel.history.value.last() as ChatMessage.Ai
+        assertTrue((lastMessage.uiState as UiState.Response).content.contains("已改期：赶高铁"))
+        assertTrue(fakeExecutor.executedPrompts.isEmpty())
+    }
+
+    @Test
+    fun `scheduler follow up send still supports absolute exact reschedule`() = runTest {
+        val taskId = taskRepository.insertTask(
+            ScheduledTask(
+                id = "task_follow_absolute",
+                timeDisplay = "16:00",
+                title = "客户回访",
+                urgencyLevel = UrgencyLevel.L2_IMPORTANT,
+                startTime = Instant.parse("2026-03-22T08:00:00Z"),
+                durationMinutes = 30
+            )
+        )
+        val viewModel = newViewModel()
+        val sessionId = viewModel.createBadgeSchedulerFollowUpSession(
+            threadId = "thread_follow_absolute",
+            transcript = "安排客户回访",
+            tasks = listOf(
+                SchedulerFollowUpTaskSummary(
+                    taskId = taskId,
+                    title = "客户回访",
+                    dayOffset = 0,
+                    scheduledAtMillis = Instant.parse("2026-03-22T08:00:00Z").toEpochMilli(),
+                    durationMinutes = 30
+                )
+            )
+        )
+        viewModel.switchSession(sessionId!!)
+
+        viewModel.updateInput("改到明天早上8点")
+        viewModel.send()
+        advanceUntilIdle()
+
+        val updated = taskRepository.getTask(taskId)
+        assertEquals(Instant.parse("2026-03-23T00:00:00Z"), updated?.startTime)
+        assertEquals(30, updated?.durationMinutes)
+        assertTrue(fakeExecutor.executedPrompts.isEmpty())
+    }
+
+    @Test
+    fun `scheduler follow up send reschedules selected conflicted task by explicit delta and recomputes conflict`() = runTest {
+        val taskId = taskRepository.insertTask(
+            ScheduledTask(
+                id = "task_follow_conflict",
+                timeDisplay = "16:00",
+                title = "赶高铁",
+                urgencyLevel = UrgencyLevel.L2_IMPORTANT,
+                startTime = Instant.parse("2026-03-22T08:00:00Z"),
+                durationMinutes = 30,
+                hasConflict = true
+            )
+        )
+        scheduleBoard.nextConflictResult = com.smartsales.prism.domain.memory.ConflictResult.Conflict(
+            overlaps = listOf(
+                com.smartsales.prism.domain.memory.ScheduleItem(
+                    entryId = "task_other",
+                    title = "叫我吃饭",
+                    scheduledAt = Instant.parse("2026-03-22T09:00:00Z").toEpochMilli(),
+                    durationMinutes = 30,
+                    durationSource = com.smartsales.prism.domain.memory.DurationSource.DEFAULT,
+                    conflictPolicy = com.smartsales.prism.domain.memory.ConflictPolicy.EXCLUSIVE
+                )
+            )
+        )
+        val viewModel = newViewModel()
+        val sessionId = viewModel.createBadgeSchedulerFollowUpSession(
+            threadId = "thread_follow_conflict",
+            transcript = "安排赶高铁",
+            tasks = listOf(
+                SchedulerFollowUpTaskSummary(
+                    taskId = taskId,
+                    title = "赶高铁",
+                    dayOffset = 0,
+                    scheduledAtMillis = Instant.parse("2026-03-22T08:00:00Z").toEpochMilli(),
+                    durationMinutes = 30
+                )
+            )
+        )
+        viewModel.switchSession(sessionId!!)
+
+        viewModel.updateInput("推迟1个小时")
+        viewModel.send()
+        advanceUntilIdle()
+
+        val updated = taskRepository.getTask(taskId)
+        assertEquals(Instant.parse("2026-03-22T09:00:00Z"), updated?.startTime)
+        assertTrue(updated?.hasConflict == true)
+        val lastMessage = viewModel.history.value.last() as ChatMessage.Ai
+        assertTrue((lastMessage.uiState as UiState.Response).content.contains("注意：与「叫我吃饭」时间冲突"))
+        assertTrue(fakeExecutor.executedPrompts.isEmpty())
+    }
+
+    @Test
     fun `scheduler follow up send safely blocks mutation when multi task selection is missing`() = runTest {
         taskRepository.insertTask(
             ScheduledTask(

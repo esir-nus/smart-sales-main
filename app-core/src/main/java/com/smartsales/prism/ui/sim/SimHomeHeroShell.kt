@@ -40,17 +40,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.Icons
@@ -61,16 +64,12 @@ import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import com.smartsales.prism.ui.SIM_ATTACH_BUTTON_TEST_TAG
-import com.smartsales.prism.ui.SIM_INPUT_BAR_TEST_TAG
-import com.smartsales.prism.ui.SIM_INPUT_FIELD_TEST_TAG
-import com.smartsales.prism.ui.SIM_SEND_BUTTON_TEST_TAG
 import com.smartsales.prism.ui.components.DynamicIslandItem
 import com.smartsales.prism.ui.components.DynamicIslandTapAction
 import com.smartsales.prism.ui.sim.SimVerticalGestureDirection.DOWN
 import com.smartsales.prism.ui.sim.SimVerticalGestureDirection.UP
-import com.smartsales.prism.ui.resolveSimDynamicIslandIndex
 import kotlinx.coroutines.delay
+import kotlin.math.roundToInt
 
 @Composable
 internal fun SimEmptyHomeHeroShell(
@@ -128,10 +127,17 @@ internal fun SimHomeHeroShellFrame(
     onAudioPullOpen: () -> Unit = {},
     centerContent: @Composable (Modifier) -> Unit
 ) {
+    var rootTopInRoot by remember { mutableStateOf(0f) }
+    var topMonolithBottomInRoot by remember { mutableStateOf<Float?>(null) }
+    var bottomMonolithTopInRoot by remember { mutableStateOf<Float?>(null) }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(SimHomeHeroTokens.AppBackground)
+            .onGloballyPositioned { coordinates ->
+                rootTopInRoot = coordinates.boundsInRoot().top
+            }
     ) {
         SimHomeHeroAuroraFloor()
 
@@ -145,7 +151,10 @@ internal fun SimHomeHeroShellFrame(
                 onNewSessionClick = onNewSessionClick,
                 onSchedulerClick = onSchedulerClick,
                 enablePullGesture = enableSchedulerPullGesture,
-                onPullOpen = onSchedulerPullOpen
+                onPullOpen = onSchedulerPullOpen,
+                onBoundsChanged = { bounds ->
+                    topMonolithBottomInRoot = bounds.bottom
+                }
             )
 
             centerContent(
@@ -161,7 +170,34 @@ internal fun SimHomeHeroShellFrame(
                 onSend = onSend,
                 onAttachClick = onAttachClick,
                 enablePullGesture = enableAudioPullGesture,
-                onPullOpen = onAudioPullOpen
+                onPullOpen = onAudioPullOpen,
+                onBoundsChanged = { bounds ->
+                    bottomMonolithTopInRoot = bounds.top
+                }
+            )
+        }
+
+        val topMonolithBottom = topMonolithBottomInRoot?.minus(rootTopInRoot)
+        if (topMonolithBottom != null) {
+            SimMonolithSeamOverlay(
+                anchorY = topMonolithBottom,
+                direction = SimMonolithSeamDirection.TOP,
+                insideHeight = SimHomeHeroTokens.TopSeamInsideSofteningHeight,
+                outsideHeight = SimHomeHeroTokens.TopSeamOutsideFeatherHeight,
+                innerHighlightAlpha = SimHomeHeroTokens.TopSeamInnerHighlightAlpha,
+                outsideHazeAlpha = SimHomeHeroTokens.TopSeamOutsideHazeAlpha
+            )
+        }
+
+        val bottomMonolithTop = bottomMonolithTopInRoot?.minus(rootTopInRoot)
+        if (bottomMonolithTop != null) {
+            SimMonolithSeamOverlay(
+                anchorY = bottomMonolithTop,
+                direction = SimMonolithSeamDirection.BOTTOM,
+                insideHeight = SimHomeHeroTokens.BottomSeamInsideSofteningHeight,
+                outsideHeight = SimHomeHeroTokens.BottomSeamOutsideFeatherHeight,
+                innerHighlightAlpha = SimHomeHeroTokens.BottomSeamInnerHighlightAlpha,
+                outsideHazeAlpha = SimHomeHeroTokens.BottomSeamOutsideHazeAlpha
             )
         }
     }
@@ -275,46 +311,55 @@ private fun SimHomeHeroTopCap(
     onNewSessionClick: () -> Unit,
     onSchedulerClick: (DynamicIslandTapAction) -> Unit,
     enablePullGesture: Boolean,
-    onPullOpen: () -> Unit
+    onPullOpen: () -> Unit,
+    onBoundsChanged: (Rect) -> Unit
 ) {
     SimVerticalDragTrigger(
         modifier = Modifier
-            .fillMaxWidth()
-            .background(SimHomeHeroTokens.MonolithBackground),
+            .fillMaxWidth(),
         direction = DOWN,
         threshold = 40.dp,
         velocityThreshold = 1100.dp,
         enabled = enablePullGesture,
         onTriggered = onPullOpen
     ) {
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .statusBarsPadding()
-                .height(SimHomeHeroTokens.HeaderHeight)
-                .padding(horizontal = SimHomeHeroTokens.HeaderHorizontalPadding),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .background(SimHomeHeroTokens.MonolithBackground)
+                .onGloballyPositioned { coordinates ->
+                    onBoundsChanged(coordinates.boundsInRoot())
+                }
         ) {
-            SimHomeHeroIconButton(
-                icon = Icons.Filled.Menu,
-                contentDescription = "Open menu",
-                onClick = onMenuClick
-            )
-            Box(
-                modifier = Modifier.weight(1f),
-                contentAlignment = Alignment.Center
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .height(SimHomeHeroTokens.HeaderHeight)
+                    .padding(horizontal = SimHomeHeroTokens.HeaderHorizontalPadding),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                SimHomeHeroDynamicIsland(
-                    items = dynamicIslandItems,
-                    onTap = onSchedulerClick
+                SimHomeHeroIconButton(
+                    icon = Icons.Filled.Menu,
+                    contentDescription = "Open menu",
+                    onClick = onMenuClick
+                )
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.Center
+                ) {
+                    SimHomeHeroDynamicIsland(
+                        items = dynamicIslandItems,
+                        onTap = onSchedulerClick
+                    )
+                }
+                SimHomeHeroIconButton(
+                    icon = Icons.Filled.Add,
+                    contentDescription = "Start new chat",
+                    onClick = onNewSessionClick
                 )
             }
-            SimHomeHeroIconButton(
-                icon = Icons.Filled.Add,
-                contentDescription = "Start new chat",
-                onClick = onNewSessionClick
-            )
         }
     }
 }
@@ -486,14 +531,14 @@ private fun SimHomeHeroBottomMonolith(
     onSend: () -> Unit,
     onAttachClick: () -> Unit,
     enablePullGesture: Boolean,
-    onPullOpen: () -> Unit
+    onPullOpen: () -> Unit,
+    onBoundsChanged: (Rect) -> Unit
 ) {
     SimVerticalDragTrigger(
         modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
             .imePadding()
-            .background(SimHomeHeroTokens.MonolithBackground)
             .testTag(SIM_INPUT_BAR_TEST_TAG),
         direction = UP,
         threshold = 40.dp,
@@ -501,99 +546,204 @@ private fun SimHomeHeroBottomMonolith(
         enabled = enablePullGesture,
         onTriggered = onPullOpen
     ) {
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = SimHomeHeroTokens.BottomMonolithHeight)
-                .padding(
-                    start = SimHomeHeroTokens.BottomHorizontalPadding,
-                    top = SimHomeHeroTokens.BottomTopPadding,
-                    end = SimHomeHeroTokens.BottomHorizontalPadding,
-                    bottom = SimHomeHeroTokens.BottomBottomPadding
-                ),
-            verticalAlignment = Alignment.CenterVertically
+                .background(SimHomeHeroTokens.MonolithBackground)
+                .onGloballyPositioned { coordinates ->
+                    onBoundsChanged(coordinates.boundsInRoot())
+                }
         ) {
-            Box(
+            Row(
                 modifier = Modifier
-                    .size(SimHomeHeroTokens.BottomIconTouchSize)
-                    .testTag(SIM_ATTACH_BUTTON_TEST_TAG)
-                    .clickable(onClick = onAttachClick),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .heightIn(min = SimHomeHeroTokens.BottomMonolithHeight)
+                    .padding(
+                        start = SimHomeHeroTokens.BottomHorizontalPadding,
+                        top = SimHomeHeroTokens.BottomTopPadding,
+                        end = SimHomeHeroTokens.BottomHorizontalPadding,
+                        bottom = SimHomeHeroTokens.BottomBottomPadding
+                    ),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Filled.AttachFile,
-                    contentDescription = "Attach audio",
-                    tint = Color.White,
-                    modifier = Modifier.size(SimHomeHeroTokens.BottomIconSize)
-                )
-            }
-
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = SimHomeHeroTokens.BottomContentGap),
-                contentAlignment = Alignment.CenterStart
-            ) {
-                BasicTextField(
-                    value = text,
-                    onValueChange = onTextChanged,
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag(SIM_INPUT_FIELD_TEST_TAG),
-                    singleLine = true,
-                    textStyle = TextStyle(
-                        color = Color.White,
-                        fontSize = SimHomeHeroTokens.BottomInputTextSize,
-                        lineHeight = SimHomeHeroTokens.BottomInputLineHeight
-                    ),
-                    cursorBrush = SolidColor(SimHomeHeroTokens.OutgoingBlue),
-                    decorationBox = { innerTextField ->
-                        Box(
-                            modifier = Modifier.fillMaxWidth(),
-                            contentAlignment = Alignment.CenterStart
-                        ) {
-                            if (text.isBlank()) {
-                                Text(
-                                    text = "输入消息...",
-                                    style = TextStyle(
-                                        brush = simHomeHeroPlaceholderBrush(),
-                                        fontSize = SimHomeHeroTokens.BottomInputTextSize,
-                                        lineHeight = SimHomeHeroTokens.BottomInputLineHeight
-                                    )
-                                )
-                            }
-                            innerTextField()
-                        }
-                    }
-                )
-            }
-
-            Box(
-                modifier = Modifier
-                    .size(SimHomeHeroTokens.BottomIconTouchSize)
-                    .testTag(SIM_SEND_BUTTON_TEST_TAG)
-                    .clickable(
-                        enabled = text.isNotBlank() && !isSending,
-                        onClick = onSend
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                if (isSending) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(SimHomeHeroTokens.BottomProgressSize),
-                        color = Color.White,
-                        strokeWidth = 2.dp
-                    )
-                } else {
+                        .size(SimHomeHeroTokens.BottomIconTouchSize)
+                        .testTag(SIM_ATTACH_BUTTON_TEST_TAG)
+                        .clickable(onClick = onAttachClick),
+                    contentAlignment = Alignment.Center
+                ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Send,
-                        contentDescription = "Send",
-                        tint = if (text.isNotBlank()) Color.White else SimHomeHeroTokens.TextMuted,
-                        modifier = Modifier.size(SimHomeHeroTokens.BottomSendIconSize)
+                        imageVector = Icons.Filled.AttachFile,
+                        contentDescription = "Attach audio",
+                        tint = Color.White,
+                        modifier = Modifier.size(SimHomeHeroTokens.BottomIconSize)
                     )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = SimHomeHeroTokens.BottomContentGap),
+                    contentAlignment = Alignment.CenterStart
+                ) {
+                    BasicTextField(
+                        value = text,
+                        onValueChange = onTextChanged,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag(SIM_INPUT_FIELD_TEST_TAG),
+                        singleLine = true,
+                        textStyle = TextStyle(
+                            color = Color.White,
+                            fontSize = SimHomeHeroTokens.BottomInputTextSize,
+                            lineHeight = SimHomeHeroTokens.BottomInputLineHeight
+                        ),
+                        cursorBrush = SolidColor(SimHomeHeroTokens.OutgoingBlue),
+                        decorationBox = { innerTextField ->
+                            Box(
+                                modifier = Modifier.fillMaxWidth(),
+                                contentAlignment = Alignment.CenterStart
+                            ) {
+                                if (text.isBlank()) {
+                                    Text(
+                                        text = "输入消息...",
+                                        style = TextStyle(
+                                            brush = simHomeHeroPlaceholderBrush(),
+                                            fontSize = SimHomeHeroTokens.BottomInputTextSize,
+                                            lineHeight = SimHomeHeroTokens.BottomInputLineHeight
+                                        )
+                                    )
+                                }
+                                innerTextField()
+                            }
+                        }
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(SimHomeHeroTokens.BottomIconTouchSize)
+                        .testTag(SIM_SEND_BUTTON_TEST_TAG)
+                        .clickable(
+                            enabled = text.isNotBlank() && !isSending,
+                            onClick = onSend
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isSending) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(SimHomeHeroTokens.BottomProgressSize),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Send,
+                            contentDescription = "Send",
+                            tint = if (text.isNotBlank()) Color.White else SimHomeHeroTokens.TextMuted,
+                            modifier = Modifier.size(SimHomeHeroTokens.BottomSendIconSize)
+                        )
+                    }
                 }
             }
         }
+    }
+}
+
+private enum class SimMonolithSeamDirection {
+    TOP,
+    BOTTOM
+}
+
+@Composable
+private fun SimMonolithSeamOverlay(
+    anchorY: Float,
+    direction: SimMonolithSeamDirection,
+    insideHeight: androidx.compose.ui.unit.Dp,
+    outsideHeight: androidx.compose.ui.unit.Dp,
+    innerHighlightAlpha: Float,
+    outsideHazeAlpha: Float
+) {
+    val density = LocalDensity.current
+    val insideHeightPx = with(density) { insideHeight.roundToPx().toFloat() }
+    val outsideHeightPx = with(density) { outsideHeight.roundToPx().toFloat() }
+    val overlayOffsetY = when (direction) {
+        SimMonolithSeamDirection.TOP -> anchorY - insideHeightPx
+        SimMonolithSeamDirection.BOTTOM -> anchorY - outsideHeightPx
+    }
+
+    Canvas(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(insideHeight + outsideHeight)
+            .offset { IntOffset(x = 0, y = overlayOffsetY.roundToInt()) }
+    ) {
+        val boundaryY = when (direction) {
+            SimMonolithSeamDirection.TOP -> insideHeightPx
+            SimMonolithSeamDirection.BOTTOM -> outsideHeightPx
+        }
+
+        when (direction) {
+            SimMonolithSeamDirection.TOP -> {
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.White.copy(alpha = innerHighlightAlpha)
+                        ),
+                        startY = 0f,
+                        endY = boundaryY
+                    ),
+                    size = Size(width = size.width, height = boundaryY)
+                )
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Black.copy(alpha = outsideHazeAlpha),
+                            Color.Transparent
+                        ),
+                        startY = boundaryY,
+                        endY = size.height
+                    ),
+                    topLeft = Offset(0f, boundaryY),
+                    size = Size(width = size.width, height = size.height - boundaryY)
+                )
+            }
+
+            SimMonolithSeamDirection.BOTTOM -> {
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color.Black.copy(alpha = outsideHazeAlpha)
+                        ),
+                        startY = 0f,
+                        endY = boundaryY
+                    ),
+                    size = Size(width = size.width, height = boundaryY)
+                )
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = innerHighlightAlpha),
+                            Color.Transparent
+                        ),
+                        startY = boundaryY,
+                        endY = size.height
+                    ),
+                    topLeft = Offset(0f, boundaryY),
+                    size = Size(width = size.width, height = size.height - boundaryY)
+                )
+            }
+        }
+
+        drawLine(
+            color = Color.White.copy(alpha = innerHighlightAlpha * 0.85f),
+            start = Offset(0f, boundaryY),
+            end = Offset(size.width, boundaryY),
+            strokeWidth = 1.dp.toPx()
+        )
     }
 }
 

@@ -11,7 +11,7 @@ class SimComposerContractTest {
 
     @Test
     fun `sim composer no longer advertises long press mic placeholder copy`() {
-        val source = readSource("app-core/src/main/java/com/smartsales/prism/ui/AgentIntelligenceScreen.kt")
+        val source = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimAgentIntelligenceContent.kt")
 
         assertTrue(source.contains("text = \"输入消息...\""))
         assertFalse(source.contains("输入消息，或长按工牌说话"))
@@ -19,7 +19,7 @@ class SimComposerContractTest {
 
     @Test
     fun `sim composer uses send only action instead of mic route`() {
-        val source = readSource("app-core/src/main/java/com/smartsales/prism/ui/AgentIntelligenceScreen.kt")
+        val source = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimAgentIntelligenceContent.kt")
 
         assertTrue(source.contains("imageVector = Icons.AutoMirrored.Filled.Send"))
         assertFalse(source.contains("onMicClick = onAudioDrawerClick"))
@@ -27,7 +27,7 @@ class SimComposerContractTest {
 
     @Test
     fun `sim composer placeholder uses dedicated shimmer brush helper`() {
-        val source = readSource("app-core/src/main/java/com/smartsales/prism/ui/AgentIntelligenceScreen.kt")
+        val source = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimAgentIntelligenceContent.kt")
 
         assertTrue(source.contains("private fun simPlaceholderBrush(): Brush"))
         assertTrue(source.contains("Brush.horizontalGradient("))

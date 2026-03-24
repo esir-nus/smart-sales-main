@@ -61,7 +61,7 @@ Rule:
 | Area | Scope | Status | Notes |
 |------|-------|--------|-------|
 | UI Workflow Foundation | Dedicated UI tracker, SOP clarification, aesthetic-source rule | Shipped | Initial operating model synced on 2026-03-22 |
-| UI Trunk Structure Cleanup | Refactor-first cleanup of shared UI and ViewModel trunk files that are slowing approved prototype transplants | Active | Formalized in `docs/plans/god-tracker.md`; major new trunk transplants should pause while the targeted cleanup wave is active |
+| UI Trunk Structure Cleanup | Refactor-first cleanup of shared UI and ViewModel trunk files that are slowing approved prototype transplants | Active | Wave 1B is now accepted for `AgentIntelligenceScreen.kt`: host/content/timeline/home/preview ownership is split, SIM-specific subtree ownership moved into `ui/sim/SimAgentIntelligenceContent.kt`, and stale drawer-gesture androidTest seams are deferred to Wave 1C / `SimShell`. Remaining pilot cleanup continues in `docs/plans/god-tracker.md`. |
 | Dynamic Island Header | Cerb shard, header-center transplant, scheduler-only one-line island | Shipped | Shared top-header island delivered for the standard shell; future non-scheduler lanes deferred |
 | SIM Shell High-Fidelity Migration | Prototype-faithful SIM shell chrome transplant | Shipped | Duplicated SIM shell ownership was confirmed and resolved: empty home and active chat now share one shell chrome. Crisp monolith seams are restored, and scheduler/audio open gestures now live on the unified top and bottom monoliths without a separate tap-blocking overlay. User accepted shipping this SIM shell slice for now on 2026-03-23. |
 | SIM Conversation Surface Fidelity | Prototype-faithful SIM outgoing, incoming, system, processing, artifact, and strategy surfaces inside the shared shell | Shipped | Strict prototype alignment audit completed on 2026-03-23 in `docs/reports/20260323-sim-prototype-alignment-audit.md`. Shared SIM shell chrome remained unchanged, the SIM-local conversation lane already had same-day device validation, and the final subtle-premium polish now keeps assistant/system/status/artifact/strategy surfaces inside one dark frosted SIM family without touching the non-SIM chat path. |
@@ -88,3 +88,4 @@ Use this shape for new UI work:
 - `docs/specs/style-guide.md`
 - `docs/specs/ui_element_registry.md`
 - `docs/plans/god-tracker.md`
+- `docs/plans/god-wave0-execution-brief.md`

@@ -10,10 +10,10 @@ class SimHomeHeroExperimentContractTest {
 
     @Test
     fun `sim hero shell frame stays shared across idle and active sim chat`() {
-        val source = readSource("app-core/src/main/java/com/smartsales/prism/ui/AgentIntelligenceScreen.kt")
+        val source = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimAgentIntelligenceContent.kt")
 
         assertTrue(source.contains("SIM_ENABLE_SHARED_HOME_HERO_SHELL"))
-        assertTrue(source.contains("showSimSharedHomeHeroShell = isSimShell"))
+        assertTrue(source.contains("showSimSharedHomeHeroShell = SIM_ENABLE_SHARED_HOME_HERO_SHELL"))
         assertTrue(source.contains("SimHomeHeroShellFrame("))
         assertTrue(source.contains("if (history.isEmpty()) {"))
         assertTrue(source.contains("enableSimSchedulerPullGesture"))

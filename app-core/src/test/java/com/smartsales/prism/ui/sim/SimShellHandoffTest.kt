@@ -9,7 +9,6 @@ import com.smartsales.prism.domain.memory.DurationSource
 import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.domain.scheduler.UrgencyLevel
 import com.smartsales.prism.ui.components.DynamicIslandTapAction
-import com.smartsales.prism.ui.resolveSimDynamicIslandIndex
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -63,7 +62,7 @@ class SimShellHandoffTest {
 
         assertEquals(2, items.size)
         assertEquals("客户A", items.first().sessionTitle)
-        assertEquals("即将：优先回访 · 15:00", items.first().schedulerSummary)
+        assertEquals("最近：优先回访 · 15:00", items.first().schedulerSummary)
         val tapAction = items.first().tapAction as DynamicIslandTapAction.OpenSchedulerDrawer
         assertEquals("l1", tapAction.target?.taskId)
     }

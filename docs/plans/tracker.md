@@ -12,9 +12,19 @@
 ## Active Structural Cleanup Campaign: God-File Trunk Cleanup
 > **Context**: Direct user-requested refactor/rewrite campaign to clean the shared UI and ViewModel trunk before further major prototype transplants land into the current god files.
 
-- **Status**: Docs Formalized
+- **Status**: Wave 1B L1 Accepted
 - **Primary Tracker**:
   - [`docs/plans/god-tracker.md`](./god-tracker.md)
+- **Wave 0 Execution Brief**:
+  - [`docs/plans/god-wave0-execution-brief.md`](./god-wave0-execution-brief.md)
+- **Wave 1A Execution Brief**:
+  - [`docs/plans/god-wave1a-execution-brief.md`](./god-wave1a-execution-brief.md)
+- **Wave 1B Execution Brief**:
+  - [`docs/plans/god-wave1b-execution-brief.md`](./god-wave1b-execution-brief.md)
+- **Wave 1A L1 Validation**:
+  - [`docs/reports/tests/L1-20260324-god-wave1a-guardrails.md`](../reports/tests/L1-20260324-god-wave1a-guardrails.md)
+- **Wave 1B L1 Validation**:
+  - [`docs/reports/tests/L1-20260324-god-wave1b-agent-intelligence.md`](../reports/tests/L1-20260324-god-wave1b-agent-intelligence.md)
 - **Governance Split**:
   - UI SOP stack remains the primary UI-building workflow
   - Cerb / cerb-ui remain the feature-local UI truth
@@ -26,6 +36,7 @@
   - `SimSchedulerViewModel.kt`
 - **Current Objective**:
   - speed up prototype-to-Kotlin transplant by making the target structure easier for humans and agents to understand
+  - continue Wave 1 cleanup with `SimShell.kt`, `SimAgentViewModel.kt`, and `SimSchedulerViewModel.kt` after `AgentIntelligenceScreen.kt` host cleanup landed
 
 ---
 

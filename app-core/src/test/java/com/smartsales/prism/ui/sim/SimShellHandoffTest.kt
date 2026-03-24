@@ -587,6 +587,37 @@ class SimShellHandoffTest {
     }
 
     @Test
+    fun `emitSimHistoryRouteTelemetry emits summary and log`() {
+        val checkpoints = mutableListOf<Pair<PipelineValve.Checkpoint, String>>()
+        val logs = mutableListOf<String>()
+
+        PipelineValve.testInterceptor = { checkpoint, _, summary ->
+            checkpoints += checkpoint to summary
+        }
+
+        try {
+            emitSimHistoryRouteTelemetry(
+                summary = SIM_HISTORY_DRAWER_OPENED_SUMMARY,
+                detail = "source=hamburger",
+                log = { message -> logs += message }
+            )
+
+            assertTrue(
+                checkpoints.contains(
+                    PipelineValve.Checkpoint.UI_STATE_EMITTED to
+                        SIM_HISTORY_DRAWER_OPENED_SUMMARY
+                )
+            )
+            assertEquals(
+                listOf("SIM history drawer opened: source=hamburger"),
+                logs
+            )
+        } finally {
+            PipelineValve.testInterceptor = null
+        }
+    }
+
+    @Test
     fun `emitSimAudioGroundedChatOpenedFromArtifactTelemetry emits summary and chat route log`() {
         val checkpoints = mutableListOf<Pair<PipelineValve.Checkpoint, String>>()
         val logs = mutableListOf<Pair<String, String>>()

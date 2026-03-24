@@ -27,6 +27,25 @@ internal fun openSimScheduler(state: SimShellState): SimShellState = state.copy(
     showSettings = false
 )
 
+internal fun openSimHistory(state: SimShellState): SimShellState = state.copy(
+    activeDrawer = null,
+    audioDrawerMode = SimAudioDrawerMode.BROWSE,
+    activeConnectivitySurface = null,
+    showHistory = true,
+    showSettings = false
+)
+
+internal fun handleSimHistoryEntryRequest(
+    state: SimShellState,
+    source: String,
+    emitTelemetry: (String, String) -> Unit = { summary, detail ->
+        emitSimHistoryRouteTelemetry(summary, detail)
+    }
+): SimShellState {
+    emitTelemetry(SIM_HISTORY_DRAWER_OPENED_SUMMARY, "source=$source")
+    return openSimHistory(state)
+}
+
 internal fun openSimAudioDrawer(
     state: SimShellState,
     mode: SimAudioDrawerMode
@@ -130,7 +149,7 @@ internal fun handleSimConnectivitySetupCompleted(
 }
 
 internal fun shouldShowSimShellScrim(state: SimShellState): Boolean =
-    state.activeDrawer != null ||
+    state.activeDrawer == SimDrawerType.AUDIO ||
         state.showHistory ||
         state.activeConnectivitySurface == SimConnectivitySurface.MODAL
 

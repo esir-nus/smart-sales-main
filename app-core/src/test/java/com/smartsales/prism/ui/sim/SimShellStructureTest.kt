@@ -35,11 +35,14 @@ class SimShellStructureTest {
 
         assertTrue(content.contains("fun SimShellContent("))
         assertTrue(content.contains("AgentIntelligenceScreen("))
-        assertTrue(content.contains("HistoryDrawer("))
+        assertTrue(content.contains("SimHistoryDrawer("))
         assertTrue(content.contains("ConnectivityManagerScreen("))
+        assertFalse(content.contains("import com.smartsales.prism.ui.drawers.HistoryDrawer"))
 
         assertTrue(reducer.contains("fun openSimConnectivityModal("))
         assertTrue(reducer.contains("fun handleSimConnectivityEntryRequest("))
+        assertTrue(reducer.contains("fun openSimHistory("))
+        assertTrue(reducer.contains("fun handleSimHistoryEntryRequest("))
         assertTrue(reducer.contains("fun shouldShowSimShellScrim("))
 
         assertTrue(actions.contains("fun handleSchedulerShelfAskAiHandoff("))
@@ -47,6 +50,7 @@ class SimShellStructureTest {
         assertTrue(actions.contains("fun handleSimSessionDeleteAction("))
 
         assertTrue(telemetry.contains("fun emitSimConnectivityRouteTelemetry("))
+        assertTrue(telemetry.contains("fun emitSimHistoryRouteTelemetry("))
         assertTrue(telemetry.contains("fun emitSimAudioGroundedChatOpenedFromArtifactTelemetry("))
 
         assertTrue(projection.contains("fun buildSimDynamicIslandItems("))

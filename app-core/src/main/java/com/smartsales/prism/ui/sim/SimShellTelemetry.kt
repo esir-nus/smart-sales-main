@@ -7,6 +7,8 @@ internal const val SIM_BADGE_SCHEDULER_CONTINUITY_INGRESS_ACCEPTED_SUMMARY =
     "SIM badge scheduler continuity ingress accepted"
 internal const val SIM_CONNECTIVITY_ENTRY_OPENED_SUMMARY =
     "SIM connectivity entry opened"
+internal const val SIM_HISTORY_DRAWER_OPENED_SUMMARY =
+    "SIM history drawer opened"
 internal const val SIM_CONNECTIVITY_MANAGER_DIRECT_ENTRY_OPENED_SUMMARY =
     "SIM connectivity manager direct entry opened"
 internal const val SIM_CONNECTIVITY_SETUP_STARTED_SUMMARY =
@@ -51,6 +53,20 @@ internal fun emitSimConnectivityRouteTelemetry(
     summary: String,
     detail: String,
     log: (String) -> Unit = { message -> Log.d("SimConnectivityRoute", message) }
+) {
+    PipelineValve.tag(
+        checkpoint = PipelineValve.Checkpoint.UI_STATE_EMITTED,
+        payloadSize = detail.length,
+        summary = summary,
+        rawDataDump = detail
+    )
+    log("$summary: $detail")
+}
+
+internal fun emitSimHistoryRouteTelemetry(
+    summary: String,
+    detail: String,
+    log: (String) -> Unit = { message -> Log.d("SimHistoryRoute", message) }
 ) {
     PipelineValve.tag(
         checkpoint = PipelineValve.Checkpoint.UI_STATE_EMITTED,

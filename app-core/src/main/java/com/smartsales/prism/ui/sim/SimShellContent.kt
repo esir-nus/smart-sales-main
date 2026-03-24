@@ -3,16 +3,24 @@ package com.smartsales.prism.ui.sim
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.smartsales.prism.BuildConfig
@@ -28,8 +36,8 @@ import com.smartsales.prism.ui.components.DynamicIslandTapAction
 import com.smartsales.prism.ui.components.connectivity.ConnectionState
 import com.smartsales.prism.ui.components.connectivity.ConnectivityViewModel
 import com.smartsales.prism.ui.drawers.AudioStatus
-import com.smartsales.prism.ui.drawers.HistoryDrawer
 import com.smartsales.prism.ui.drawers.SchedulerDrawer
+import com.smartsales.prism.ui.drawers.scheduler.SchedulerDrawerVisualMode
 import com.smartsales.prism.ui.onboarding.SimConnectivityPairingFlow
 import com.smartsales.prism.ui.settings.UserCenterScreen
 import com.smartsales.prism.ui.theme.BackgroundApp
@@ -63,6 +71,8 @@ internal fun SimShellContent(
 ) {
     val isAudioDrawerOpen = shellState.activeDrawer == SimDrawerType.AUDIO
     val showScrim = shouldShowSimShellScrim(shellState)
+    val showSchedulerInteractionShield = shellState.activeDrawer == SimDrawerType.SCHEDULER
+    val schedulerGapDismissHeight = SimHomeHeroTokens.BottomMonolithHeight + 16.dp
 
     Box(
         modifier = Modifier
@@ -73,11 +83,9 @@ internal fun SimShellContent(
             viewModel = dependencies.chatViewModel,
             onMenuClick = {
                 mutateShellState { state ->
-                    state.copy(
-                        activeDrawer = null,
-                        showHistory = true,
-                        activeConnectivitySurface = null,
-                        showSettings = false
+                    handleSimHistoryEntryRequest(
+                        state = state,
+                        source = "hamburger"
                     )
                 }
             },
@@ -128,11 +136,72 @@ internal fun SimShellContent(
             )
         }
 
-        if (shellState.showHistory) {
+        AnimatedVisibility(
+            visible = showSchedulerInteractionShield,
+            enter = fadeIn(),
+            exit = fadeOut()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .zIndex(PrismElevation.Scrim)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = schedulerGapDismissHeight)
+                        .pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    awaitPointerEvent()
+                                }
+                            }
+                        }
+                )
+
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height(schedulerGapDismissHeight)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Black.copy(alpha = 0.10f),
+                                    Color.Black.copy(alpha = 0.18f),
+                                    Color.Black.copy(alpha = 0.26f),
+                                    Color.Black.copy(alpha = 0.34f)
+                                )
+                            )
+                        )
+                        .clickable {
+                            mutateShellState { state -> state.copy(activeDrawer = null) }
+                        }
+                )
+            }
+        }
+
+        AnimatedVisibility(
+            visible = shellState.showHistory,
+            enter = slideInHorizontally(
+                animationSpec = spring(
+                    stiffness = Spring.StiffnessLow,
+                    dampingRatio = Spring.DampingRatioNoBouncy
+                ),
+                initialOffsetX = { -it }
+            ),
+            exit = slideOutHorizontally(
+                animationSpec = spring(
+                    stiffness = Spring.StiffnessMediumLow,
+                    dampingRatio = Spring.DampingRatioNoBouncy
+                ),
+                targetOffsetX = { -it }
+            )
+        ) {
             Box(modifier = Modifier.zIndex(PrismElevation.Drawer)) {
-                HistoryDrawer(
+                SimHistoryDrawer(
                     groupedSessions = groupedSessions,
-                    displayName = chatViewModel.currentDisplayName,
+                    currentSessionId = currentSessionId,
                     onSessionClick = { sessionId ->
                         closeOverlays()
                         handleSimSessionSwitchAction(
@@ -141,23 +210,6 @@ internal fun SimShellContent(
                             clearFollowUp = clearFollowUp,
                             switchSession = chatViewModel::switchSession
                         )
-                    },
-                    onDeviceClick = {
-                        mutateShellState { state ->
-                            handleSimConnectivityEntryRequest(
-                                state = state.copy(showHistory = false),
-                                connectionState = connectivityState,
-                                source = "history_device"
-                            )
-                        }
-                    },
-                    onSettingsClick = {
-                        closeOverlays()
-                        mutateShellState { state -> state.copy(showSettings = true) }
-                    },
-                    onProfileClick = {
-                        closeOverlays()
-                        mutateShellState { state -> state.copy(showSettings = true) }
                     },
                     onPinSession = chatViewModel::togglePin,
                     onRenameSession = chatViewModel::renameSession,
@@ -168,7 +220,8 @@ internal fun SimShellContent(
                             clearFollowUp = clearFollowUp,
                             deleteSession = chatViewModel::deleteSession
                         )
-                    }
+                    },
+                    modifier = Modifier.align(Alignment.CenterStart)
                 )
             }
         }
@@ -177,6 +230,7 @@ internal fun SimShellContent(
             SchedulerDrawer(
                 isOpen = shellState.activeDrawer == SimDrawerType.SCHEDULER,
                 onDismiss = { mutateShellState { state -> state.copy(activeDrawer = null) } },
+                visualMode = SchedulerDrawerVisualMode.SIM,
                 onInspirationAskAi = { promptText ->
                     handleSchedulerShelfAskAiHandoff(
                         promptText = promptText,

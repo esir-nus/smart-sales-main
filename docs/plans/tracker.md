@@ -5,7 +5,27 @@
 > **Campaign Lifecycle**: Every major initiative (rewrite, refactor, UI polish, large fix) is an "Epic" or "Campaign". Every Campaign MUST be initialized using the `/campaign-planner` workflow to enforce the following checklist sequence:
 > 1. **Docs** (Ensure Specs exist) -> 2. **Interface Map** (Ensure Layer/Contract boundaries align) -> 3. **Plan** (Dev Planner) -> 4. **Execute** (Implementation) -> 5. **Test** (E2E/L2 Verification). 
 > **Master Guide Alignment**: The Master Guide acts as the overarching strategy doc for a campaign. Agents MUST NEVER auto-update the Master Guide without strict explicit human review (like a Review Conference) to prevent architectural hallucination drift. Instead, run `/04-doc-sync` at the *end* of a campaign.
-> **Last Updated**: 2026-03-22
+> **Last Updated**: 2026-03-24
+
+---
+
+## Active Structural Cleanup Campaign: God-File Trunk Cleanup
+> **Context**: Direct user-requested refactor/rewrite campaign to clean the shared UI and ViewModel trunk before further major prototype transplants land into the current god files.
+
+- **Status**: Docs Formalized
+- **Primary Tracker**:
+  - [`docs/plans/god-tracker.md`](./god-tracker.md)
+- **Governance Split**:
+  - UI SOP stack remains the primary UI-building workflow
+  - Cerb / cerb-ui remain the feature-local UI truth
+  - [`docs/specs/code-structure-contract.md`](../specs/code-structure-contract.md) now owns the long-lived anti-god-file structure law, while `god-tracker.md` carries the active campaign memory
+- **Immediate Wave Scope**:
+  - `AgentIntelligenceScreen.kt`
+  - `SimShell.kt`
+  - `SimAgentViewModel.kt`
+  - `SimSchedulerViewModel.kt`
+- **Current Objective**:
+  - speed up prototype-to-Kotlin transplant by making the target structure easier for humans and agents to understand
 
 ---
 
@@ -19,7 +39,7 @@
 - **Current Scope**:
   - standard top-header center slot only
   - sticky one-line scheduler summary
-  - scheduler-first copy using `冲突：...` / `即将：...`
+  - scheduler-first copy using `冲突：...` / `最近：...`
   - truncate overflow rather than horizontal scrolling
   - single tap opens scheduler drawer and targets the corresponding scheduler date page
   - SIM may layer a header-center top-3 vertical rotation on top of the shared renderer

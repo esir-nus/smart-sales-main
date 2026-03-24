@@ -1,7 +1,7 @@
 # UI Surface Contract (Legacy filename: `prism-ui-ux-contract.md`)
 
 > **Status:** Active Index & Policy Rule
-> **Last Updated:** 2026-03-22
+> **Last Updated:** 2026-03-23
 > **Architecture Companion:** [Architecture.md](./Architecture.md)
 > **Terminology:** [GLOSSARY.md](./GLOSSARY.md)
 
@@ -18,6 +18,7 @@ This file remains the compatibility path used across the repo, but its practical
 For the overall UI workflow, also read:
 
 - [`../sops/ui-dev-mode.md`](../sops/ui-dev-mode.md) for the developer operating model
+- [`code-structure-contract.md`](./code-structure-contract.md) for file-shape and anti-god-file rules
 - [`style-guide.md`](./style-guide.md) for visual identity rules
 - [`ui_element_registry.md`](./ui_element_registry.md) for shared element behavior and invariants
 - feature-specific `docs/cerb-ui/**` or `docs/cerb/**` docs for real screen/state ownership
@@ -45,6 +46,11 @@ To enable parallel UI development without being blocked by backend pipeline rest
    UI states represent what the user sees, not raw database rows or domain internals.
 
 Rule: Do not add raw feature state descriptions to this document. The source of truth for feature UI states belongs in the owning feature contract, typically under `docs/cerb-ui/**` for UI-facing contracts or `docs/cerb/**` for feature specs.
+
+Structure note:
+
+- this document owns the UI boundary and source-of-truth index
+- `code-structure-contract.md` owns file-shape legality and anti-god-file policy
 
 ---
 
@@ -87,8 +93,8 @@ Role: This document is strictly an index that maps UI modules, components, and f
 
 | Direction | Gesture | Opens | Notes |
 |-----------|---------|-------|-------|
-| **↓ Top → Down** | Pull from top activation band | Scheduler Drawer | Header / top-edge band only; center content stays scroll-safe |
-| **↑ Bottom → Up** | Pull from bottom activation band | Audio Drawer | Composer / bottom-edge band only; center content stays scroll-safe |
+| **↓ Top → Down** | Pull from top activation band | Scheduler Drawer | Header / top-edge band only; shipped SIM band is 88dp tall; center content stays scroll-safe |
+| **↑ Bottom → Up** | Pull from bottom activation band | Audio Drawer | Bottom-edge strip only; shipped SIM strip is 28dp tall and must not overlap the composer hit area |
 
 ### Standalone Mode Note
 
@@ -96,3 +102,4 @@ Role: This document is strictly an index that maps UI modules, components, and f
 - Global gestures and shared element rules still apply unless the SIM shard narrows the presentation for standalone use.
 - SIM-specific shell chrome, sparse idle layout, and support-surface composition should be documented in the SIM Cerb docs rather than expanded inline here.
 - For SIM, the industrial-practice default is narrow activation bands plus a protected center scroll zone, combined with vertical-intent lock and drag-distance / fling-velocity confirmation.
+- For shipped SIM behavior, the lower audio-open gesture must yield to direct composer interaction; shell gesture surfaces must never screen the attach button, text field, or send button.

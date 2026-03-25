@@ -75,17 +75,17 @@ Home empty-state composition note:
 - Historical shell affordances that are not present in the owning home-shell spec must not be reintroduced by inference.
 - Rows below may describe reusable or legacy home-surface triggers; the owning home-shell spec decides which controls are currently mounted on the empty-state shell.
 
-### 1.5 Onboarding (V15 Full Spectrum)
+### 1.5 Onboarding (5-Wave Host Split)
 | Element | Visual | Interaction | Microcopy | Result | Status |
 |---------|--------|-------------|-----------|--------|--------|
-| **Welcome** | Aurora | Tap `Start` | "您的 AI 销售教练" | Starts Permissions. | ✅ Verified |
-| **Permissions** | Glass Card | Tap `Allow` | "🎙️ 麦克风权限" | Sys Dialog -> Next. | ✅ Verified |
-| **Handshake** | Waveform | Voice | "帮我搞定这个客户" | AI Reply -> Next. | ✅ Verified |
-| **Hardware** | Anim | Long Press | "长按中间按钮" | User verifies LED. | ✅ Verified |
-| **Scan/Found** | Radar/Card | Tap `Connect` | "Found... -42dBm" | Pairs Device. | ✅ Verified |
-| **WiFi Setup** | Form | Input | "SSID / Password" | Device Clones WiFi. | ✅ Verified |
-| **FW Update** | Progress | Auto | "v1.0 -> v1.2" | Block until 100%. | ✅ Verified |
-| **Account** | Login Form | Input | "登录以绑定" | Context Saved. | ✅ Verified |
+| **Welcome** | Dark monolith intro | Tap primary CTA | `您的 AI 销售教练` | Advances to primer in `FULL_APP` only. | Verified |
+| **Permissions Primer** | Frosted cards | Tap `继续` | microphone / Bluetooth / exact alarm guidance | Explains needs without firing native prompts early. | Verified |
+| **Voice Handshake** | Abstract waveform | Wait ~1.5s then tap continue | operational listening confirmation | Advances to hardware wake in `FULL_APP` only. | Verified |
+| **Hardware Wake** | Frosted badge slate | Tap `蓝灯已经在闪了` | `长按中间按钮 3 秒` | Enters scan. | Verified |
+| **Scan** | Technical radar | Cancel or wait for result | `正在搜索设备` | Requests Bluetooth permission at point-of-use, then emits found/error. | Verified |
+| **Device Found** | High-fidelity device card | Tap `手动连接` | MAC + dBm | Manual connect only, never auto-connect. | Verified |
+| **Provisioning** | Glass form + linear progress | Submit Wi-Fi, retry, or back | `配置网络` | Runs pairing/write-through/network check inside one presentation seam. | Verified |
+| **Complete** | Shared success wrapper | Tap host CTA | `一切就绪！` | `FULL_APP` enters home; `SIM_CONNECTIVITY` enters manager first. | Verified |
 
 ### 1.6 User Center (Settings Blueprint)
 | Element | Visual | Interaction | Microcopy | Result | Status |
@@ -111,15 +111,15 @@ Home empty-state composition note:
 | **Tingwu Menu [≣]** | `Idle` | Tap | Slide In | Opens **Tingwu Drawer**. | Exclusive. | ❌ Pending |
 | **Tingwu Menu [≣]** | `Idle` | Tap | Slide In | Opens **Tingwu Drawer**. | Exclusive. | ❌ Pending |
 | **Artifacts [📦]** | `Has Items` | Tap | Slide In | Opens **Artifacts Drawer**. | Exclusive. | ❌ Pending |
-| **Scheduler Trigger** | `Any` | Drag from top activation band / top handle | Slide In | Opens **Scheduler**. | Narrow header-edge band, protected center scroll, vertical-intent lock, distance or fling confirmation. | ✅ Verified |
-| **Audio Trigger** | `Any` | Drag from bottom activation band / bottom affordance | Slide In | Opens **Audio Sheet**. | Narrow composer-edge band, protected center scroll, vertical-intent lock, distance or fling confirmation. | ✅ Verified |
+| **Scheduler Trigger** | `Any` | Drag from top activation band / top handle | Slide In | Opens **Scheduler**. | Narrow header-edge band, protected center scroll, vertical-intent lock, distance or fling confirmation; shipped SIM top band is 88dp tall. A first-launch-only teaser may auto-open the drawer once for discoverability, but it must not repeat on later launches. | ✅ Verified |
+| **Audio Trigger** | `Any` | Drag from bottom activation band / bottom affordance | Slide In | Opens **Audio Sheet**. | Narrow bottom-edge strip, protected center scroll, vertical-intent lock, distance or fling confirmation; shipped SIM strip is 28dp tall and must not overlap composer hit targets. | ✅ Verified |
 
 ### 2.2 Input & Modes
 
 | Element | Visual State | Trigger | Animation | Result | Invariant | Status |
 |---------|--------------|---------|-----------|--------|-----------|--------|
 | **Mode Toggle** | `Coach` | Tap 'Analyst' | Slide + **Haptic** | Theme->Blue. `intent=ANALYST`. | **NO Nav**. | ✅ Verified |
-| **Input Bar** | `Idle` | Tap/Focus | Slide Up | Nav to **Chat Screen**. | Preserve Mode. | ✅ Verified |
+| **Input Bar** | `Idle` | Tap/Focus | Slide Up | Nav to **Chat Screen**. | Preserve Mode. In SIM, the empty idle state uses one shimmering inline hint line at a time, rotating across `输入消息...`, audio-library swipe-up guidance, and attachment guidance; do not stack multiple hint rows. | ✅ Verified |
 | **Attachment [📎]** | `Idle` | Tap | Ripple | System Picker or SIM audio selector. | Generic chat may open picker; grounded SIM audio chat reopens Audio Drawer selector. | 🚧 In-Progress |
 | **Audio Upload** | `Picked` | Confirm | Progress | Sync to **Audio Drawer**. | `storage` folder. | ❌ Pending |
 | **Mic FAB** | `Idle` | Tap | Morph | **Phone Mic** Capture. | Not Badge. | ✅ Verified |

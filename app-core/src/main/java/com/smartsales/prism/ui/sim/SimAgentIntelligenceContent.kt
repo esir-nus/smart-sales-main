@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -93,6 +94,11 @@ internal const val SIM_INPUT_FIELD_TEST_TAG = "sim_input_field"
 internal const val SIM_ATTACH_BUTTON_TEST_TAG = "sim_attach_button"
 internal const val SIM_SEND_BUTTON_TEST_TAG = "sim_send_button"
 internal const val SIM_ENABLE_SHARED_HOME_HERO_SHELL = true
+internal val SIM_IDLE_COMPOSER_ROTATING_HINTS = listOf(
+    "输入消息...",
+    "也可以上滑这里，打开录音库",
+    "点击左侧附件，也能选择录音"
+)
 
 private val SimChrome = Color(0xFF202833)
 private val SimChromeMuted = Color(0xFF778291)
@@ -114,6 +120,7 @@ internal fun SimAgentIntelligenceContent(
     onAttachClick: () -> Unit,
     simDynamicIslandItems: List<DynamicIslandItem>,
     showBottomComposer: Boolean = true,
+    showIdleComposerHint: Boolean = false,
     enableSimSchedulerPullGesture: Boolean,
     enableSimAudioPullGesture: Boolean,
     onSimSchedulerPullOpen: () -> Unit,
@@ -136,6 +143,7 @@ internal fun SimAgentIntelligenceContent(
             onTextChanged = onUpdateInput,
             onSend = onSend,
             onAttachClick = onAttachClick,
+            showIdleComposerHint = showIdleComposerHint && history.isEmpty(),
             showBottomComposer = showBottomComposer,
             enableSchedulerPullGesture = enableSimSchedulerPullGesture,
             enableAudioPullGesture = enableSimAudioPullGesture,
@@ -214,6 +222,7 @@ internal fun SimAgentIntelligenceContent(
                 onTextChanged = onUpdateInput,
                 onSend = onSend,
                 onAttachClick = onAttachClick,
+                showIdleComposerHint = showIdleComposerHint && history.isEmpty(),
                 onBoundsChanged = null
             )
         }
@@ -563,12 +572,13 @@ private fun SimInputBar(
     onTextChanged: (String) -> Unit,
     onSend: () -> Unit,
     onAttachClick: () -> Unit,
+    showIdleComposerHint: Boolean,
     onBoundsChanged: ((Rect) -> Unit)? = null
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(58.dp)
+            .heightIn(min = 58.dp)
             .testTag(SIM_INPUT_BAR_TEST_TAG)
             .then(
                 if (onBoundsChanged != null) {
@@ -616,12 +626,10 @@ private fun SimInputBar(
                 cursorBrush = SolidColor(ProMaxAccent),
                 decorationBox = { innerTextField ->
                     if (text.isBlank()) {
-                        Text(
-                            text = "输入消息...",
-                            style = TextStyle(
-                                brush = simPlaceholderBrush(),
-                                fontSize = 15.sp
-                            )
+                        SimIdleComposerRotatingHint(
+                            visible = true,
+                            rotatingHints = SIM_IDLE_COMPOSER_ROTATING_HINTS,
+                            useFullRotation = showIdleComposerHint
                         )
                     }
                     innerTextField()
@@ -685,6 +693,38 @@ private fun simPlaceholderBrush(): Brush {
         ),
         startX = shimmerOffset.value,
         endX = shimmerOffset.value + 150f
+    )
+}
+
+@Composable
+private fun SimIdleComposerRotatingHint(
+    visible: Boolean,
+    rotatingHints: List<String>,
+    useFullRotation: Boolean
+) {
+    if (!visible || rotatingHints.isEmpty()) return
+
+    val displayedHints = if (useFullRotation) {
+        rotatingHints
+    } else {
+        rotatingHints.take(1)
+    }
+    var currentHintIndex by remember(visible, displayedHints) { mutableStateOf(0) }
+
+    LaunchedEffect(visible, displayedHints) {
+        currentHintIndex = 0
+        while (visible && displayedHints.size > 1) {
+            delay(2600L)
+            currentHintIndex = (currentHintIndex + 1) % displayedHints.size
+        }
+    }
+
+    Text(
+        text = displayedHints[currentHintIndex],
+        style = TextStyle(
+            brush = simPlaceholderBrush(),
+            fontSize = 15.sp
+        )
     )
 }
 

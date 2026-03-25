@@ -84,6 +84,7 @@ internal fun SimEmptyHomeHeroShell(
     onTextChanged: (String) -> Unit,
     onSend: () -> Unit,
     onAttachClick: () -> Unit,
+    showIdleComposerHint: Boolean = false,
     showBottomComposer: Boolean = true,
     enableSchedulerPullGesture: Boolean = false,
     enableAudioPullGesture: Boolean = false,
@@ -100,6 +101,7 @@ internal fun SimEmptyHomeHeroShell(
         onTextChanged = onTextChanged,
         onSend = onSend,
         onAttachClick = onAttachClick,
+        showIdleComposerHint = showIdleComposerHint,
         showBottomComposer = showBottomComposer,
         enableSchedulerPullGesture = enableSchedulerPullGesture,
         enableAudioPullGesture = enableAudioPullGesture,
@@ -124,6 +126,7 @@ internal fun SimHomeHeroShellFrame(
     onTextChanged: (String) -> Unit,
     onSend: () -> Unit,
     onAttachClick: () -> Unit,
+    showIdleComposerHint: Boolean = false,
     showBottomComposer: Boolean = true,
     enableSchedulerPullGesture: Boolean = false,
     enableAudioPullGesture: Boolean = false,
@@ -174,6 +177,7 @@ internal fun SimHomeHeroShellFrame(
                     onTextChanged = onTextChanged,
                     onSend = onSend,
                     onAttachClick = onAttachClick,
+                    showIdleComposerHint = showIdleComposerHint,
                     enablePullGesture = enableAudioPullGesture,
                     onPullOpen = onAudioPullOpen,
                     onBoundsChanged = { bounds ->
@@ -544,6 +548,7 @@ private fun SimHomeHeroBottomMonolith(
     onTextChanged: (String) -> Unit,
     onSend: () -> Unit,
     onAttachClick: () -> Unit,
+    showIdleComposerHint: Boolean,
     enablePullGesture: Boolean,
     onPullOpen: () -> Unit,
     onBoundsChanged: (Rect) -> Unit
@@ -620,13 +625,10 @@ private fun SimHomeHeroBottomMonolith(
                                 contentAlignment = Alignment.CenterStart
                             ) {
                                 if (text.isBlank()) {
-                                    Text(
-                                        text = "输入消息...",
-                                        style = TextStyle(
-                                            brush = simHomeHeroPlaceholderBrush(),
-                                            fontSize = SimHomeHeroTokens.BottomInputTextSize,
-                                            lineHeight = SimHomeHeroTokens.BottomInputLineHeight
-                                        )
+                                    SimHomeHeroComposerRotatingHint(
+                                        visible = true,
+                                        rotatingHints = SIM_IDLE_COMPOSER_ROTATING_HINTS,
+                                        useFullRotation = showIdleComposerHint
                                     )
                                 }
                                 innerTextField()
@@ -782,5 +784,38 @@ private fun simHomeHeroPlaceholderBrush(): Brush {
         ),
         startX = shimmerOffset.value,
         endX = shimmerOffset.value + 180f
+    )
+}
+
+@Composable
+private fun SimHomeHeroComposerRotatingHint(
+    visible: Boolean,
+    rotatingHints: List<String>,
+    useFullRotation: Boolean
+) {
+    if (!visible || rotatingHints.isEmpty()) return
+
+    val displayedHints = if (useFullRotation) {
+        rotatingHints
+    } else {
+        rotatingHints.take(1)
+    }
+    var currentHintIndex by remember(visible, displayedHints) { mutableStateOf(0) }
+
+    LaunchedEffect(visible, displayedHints) {
+        currentHintIndex = 0
+        while (visible && displayedHints.size > 1) {
+            delay(2600L)
+            currentHintIndex = (currentHintIndex + 1) % displayedHints.size
+        }
+    }
+
+    Text(
+        text = displayedHints[currentHintIndex],
+        style = TextStyle(
+            brush = simHomeHeroPlaceholderBrush(),
+            fontSize = SimHomeHeroTokens.BottomInputTextSize,
+            lineHeight = SimHomeHeroTokens.BottomInputLineHeight
+        )
     )
 }

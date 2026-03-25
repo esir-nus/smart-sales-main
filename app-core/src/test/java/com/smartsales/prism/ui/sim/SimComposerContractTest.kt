@@ -33,6 +33,19 @@ class SimComposerContractTest {
         assertTrue(source.contains("Brush.horizontalGradient("))
     }
 
+    @Test
+    fun `sim idle composer rotates one inline hint line across placeholder and audio entry guidance`() {
+        val source = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimHomeHeroShell.kt")
+        val contentSource = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimAgentIntelligenceContent.kt")
+
+        assertTrue(contentSource.contains("SIM_IDLE_COMPOSER_ROTATING_HINTS = listOf("))
+        assertTrue(contentSource.contains("\"输入消息...\""))
+        assertTrue(contentSource.contains("也可以上滑这里，打开录音库"))
+        assertTrue(contentSource.contains("点击左侧附件，也能选择录音"))
+        assertTrue(source.contains("SimHomeHeroComposerRotatingHint("))
+        assertFalse(source.contains("SimHomeHeroComposerHelperHint("))
+    }
+
     private fun readSource(relativePath: String): String {
         val candidates = listOf(
             File(workingDir, relativePath),

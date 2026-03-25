@@ -49,7 +49,7 @@ The user should perceive:
 - a sparse idle chat surface: balanced top controls with hamburger on the left, new chat on the right, a one-line dynamic island in the header center slot, greeting-first body, and a bottom message capsule instead of dashboard cards or analytics chrome
 - the same shell identity continuing into active discussion, with the heavy top and bottom monoliths remaining stable while only the center canvas changes by state
 - restored neutral fuzzy seams on those monoliths so the shell reads as premium hardware rather than a hard-cut black frame; keep the top seam subtle and the bottom seam heavier
-- a bottom message capsule whose idle placeholder uses the shared scan-shine treatment on placeholder text only, with attach on the left and a send-only action on the right
+- a bottom message capsule whose idle state keeps a single shimmering inline hint line, rotating across `输入消息...`, audio-library swipe-up guidance, and attachment guidance rather than stacking multiple hint rows
 - active discussion states that prefer sparse conversation plus horizontal system sheets over dashboard cards or smart-agent chrome
 - ordinary shell affordances that still feel normal, such as history, new page/session, connectivity entry, and settings
 
@@ -251,6 +251,7 @@ SIM keeps the shell gesture model zone-scoped and velocity-aware.
 - scheduler dismissal remains handle-first and upward
 - SIM audio dismissal is handle-first and downward
 - list scrolling or general chat overscroll must not act as an alternate drawer-open gesture
+- a first-launch-only scheduler teaser may auto-drop the drawer once to teach dismissal/opening, but it must not repeat on later launches
 
 ### Connectivity Boundary Rule
 
@@ -422,6 +423,7 @@ Required composition chain:
 Meaning:
 
 - SIM may remain inside the same application process and APK
+- the current Android Studio APK packaging mode may point the default launcher activity at `SimMainActivity` so standard install/run flows boot directly into the SIM shell
 - SIM must not inherit smart-app runtime ownership just because both product paths share the same binary
 - the SIM dependency assembler decides what is reused directly, what is wrapped, and what is excluded
 - the smart app's root graph may still exist in the process, but it must not become the default owner of SIM feature behavior

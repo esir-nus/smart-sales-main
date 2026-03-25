@@ -23,6 +23,8 @@ class GodStructureGuardrailTest {
             GuardrailExpectation(budget = 650, status = "Exception"),
         "app-core/src/main/java/com/smartsales/prism/ui/sim/SimSchedulerViewModel.kt" to
             GuardrailExpectation(budget = 650, status = "Exception"),
+        "app-core/src/main/java/com/smartsales/prism/ui/sim/SimAudioDrawer.kt" to
+            GuardrailExpectation(budget = 550, status = "Accepted"),
         "domain/scheduler/src/main/java/com/smartsales/prism/domain/scheduler/SchedulerLinter.kt" to
             GuardrailExpectation(budget = 650, status = "Accepted")
     )

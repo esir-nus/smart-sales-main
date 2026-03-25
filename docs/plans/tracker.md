@@ -12,7 +12,7 @@
 ## Active Structural Cleanup Campaign: God-File Trunk Cleanup
 > **Context**: Direct user-requested refactor/rewrite campaign to clean the shared UI and ViewModel trunk before further major prototype transplants land into the current god files.
 
-- **Status**: Wave 2A L1 Accepted / Wave 2B Planned
+- **Status**: Wave 3A L1 Accepted
 - **Primary Tracker**:
   - [`docs/plans/god-tracker.md`](./god-tracker.md)
 - **Wave 0 Execution Brief**:
@@ -31,6 +31,8 @@
   - [`docs/plans/god-wave2b-execution-brief.md`](./god-wave2b-execution-brief.md)
 - **Wave 2C Execution Brief**:
   - [`docs/plans/god-wave2c-execution-brief.md`](./god-wave2c-execution-brief.md)
+- **Wave 3A Execution Brief**:
+  - [`docs/plans/god-wave3a-execution-brief.md`](./god-wave3a-execution-brief.md)
 - **Wave 1A L1 Validation**:
   - [`docs/reports/tests/L1-20260324-god-wave1a-guardrails.md`](../reports/tests/L1-20260324-god-wave1a-guardrails.md)
 - **Wave 1B L1 Validation**:
@@ -39,19 +41,19 @@
   - [`docs/reports/tests/L1-20260324-god-wave1c-sim-shell.md`](../reports/tests/L1-20260324-god-wave1c-sim-shell.md)
 - **Wave 2A L1 Validation**:
   - [`docs/reports/tests/L1-20260324-god-wave2a-scheduler-linter.md`](../reports/tests/L1-20260324-god-wave2a-scheduler-linter.md)
+- **Wave 3A L1 Validation**:
+  - [`docs/reports/tests/L1-20260324-god-wave3a-sim-audio-drawer.md`](../reports/tests/L1-20260324-god-wave3a-sim-audio-drawer.md)
 - **Governance Split**:
   - UI SOP stack remains the primary UI-building workflow
   - Cerb / cerb-ui remain the feature-local UI truth
   - [`docs/specs/code-structure-contract.md`](../specs/code-structure-contract.md) now owns the long-lived anti-god-file structure law, while `god-tracker.md` carries the active campaign memory
 - **Immediate Wave Scope**:
-  - `SchedulerLinter.kt`
-  - `GattBleGateway.kt`
-  - `DeviceConnectionManager.kt`
-  - `SimAudioRepository.kt`
+  - `SimAudioDrawer.kt`
 - **Current Objective**:
   - speed up prototype-to-Kotlin transplant by making the target structure easier for humans and agents to understand
-  - lock Wave 2 to business-logic cleanup only while active UI development remains in progress
-  - continue Wave 2 with connectivity transport cleanup after `SchedulerLinter.kt` accepted
+  - keep accepted Wave 1 / Wave 2 trunk reductions enforced by guardrails
+  - reopen only stable UI trunks for focused host/content/component cleanup when the user explicitly approves that scope
+  - close Wave 3A with the accepted SIM audio drawer host split while leaving `OnboardingScreen.kt` as the remaining deferred UI debt
 
 ---
 

@@ -57,14 +57,6 @@ internal fun guessSimExtensionFromUri(uriString: String): String {
     }
 }
 
-internal fun guessSimExtensionFromFile(file: File): String {
-    return file.extension
-        .trim()
-        .lowercase()
-        .takeIf { it.isNotBlank() }
-        ?: "wav"
-}
-
 internal class SimAudioRepositoryStoreSupport(
     private val runtime: SimAudioRepositoryRuntime
 ) {
@@ -87,24 +79,6 @@ internal class SimAudioRepositoryStoreSupport(
                 } catch (e: Exception) {
                     throw Exception("无法读取本地音频文件", e)
                 }
-            }
-        )
-    }
-
-    suspend fun addRecordedTestAudio(recordedFile: File) = withContext(runtime.ioDispatcher) {
-        if (!recordedFile.exists()) {
-            throw Exception("测试录音文件不存在")
-        }
-
-        val newId = UUID.randomUUID().toString()
-        val extension = guessSimExtensionFromFile(recordedFile)
-        persistTestAudioEntry(
-            audioId = newId,
-            extension = extension,
-            displayFilename = "SIM_REC_${System.currentTimeMillis()}.$extension",
-            writeContent = { copiedTarget ->
-                recordedFile.copyTo(copiedTarget, overwrite = true)
-                recordedFile.delete()
             }
         )
     }

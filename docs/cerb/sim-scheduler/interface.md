@@ -14,6 +14,7 @@ fun SchedulerDrawer(
     isOpen: Boolean,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    visualMode: SchedulerDrawerVisualMode = SchedulerDrawerVisualMode.STANDARD,
     onInspirationAskAi: ((String) -> Unit)? = null,
     enableInspirationMultiSelect: Boolean = true,
     viewModel: ISchedulerViewModel
@@ -22,6 +23,8 @@ fun SchedulerDrawer(
 
 SIM should reuse this UI surface.
 For SIM wiring, `enableInspirationMultiSelect` must be passed as `false` so the deprecated bulk `问AI (N)` branch stays unreachable while the shelf-card launcher remains available.
+For the approved scheduler-drawer transplant, SIM should pass `visualMode = SchedulerDrawerVisualMode.SIM` so the visible debug `REC` aid is available inside the scheduler drawer during prototype testing.
+In debug builds, that visible `REC` control is only an alternate trigger for the existing scheduler `processAudio(...)` lane; it must not reroute through the audio drawer.
 
 ---
 
@@ -94,6 +97,7 @@ Scheduler-drawer voice resolution rule:
 
 - the scheduler drawer mic may request reschedule within scheduler-owned scope
 - target resolution must not depend on SQL/exact-title equality alone
+- SIM debug builds may expose a visible explicit `REC` control inside the scheduler drawer for easier on-device testing while the physical badge path is unavailable
 - one clearly dominant task may be resolved and mutated
 - after target resolution, exact day+clock tails such as `改到明天早上8点` must remain valid even when the tail itself does not restate the task title
 - after target resolution, explicit delta phrasing must anchor to that resolved task's persisted start time

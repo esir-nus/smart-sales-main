@@ -1,16 +1,10 @@
 package com.smartsales.prism.ui.sim
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,30 +18,17 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.content.ContextCompat
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.smartsales.prism.data.audio.PhoneAudioRecorder
 
 @Composable
 internal fun SimAudioDrawerContent(
-    isDrawerOpen: Boolean,
     entries: List<SimAudioEntry>,
     viewModel: SimAudioDrawerViewModel,
     mode: SimAudioDrawerMode,
@@ -66,55 +47,6 @@ internal fun SimAudioDrawerContent(
     showTestImportAction: Boolean,
     showDebugScenarioActions: Boolean
 ) {
-    val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-    val recorder = remember { PhoneAudioRecorder(context) }
-    var isRecordingTestAudio by remember { mutableStateOf(false) }
-
-    fun cancelRecordingIfNeeded() {
-        if (!isRecordingTestAudio) return
-        runCatching { recorder.cancel() }
-        isRecordingTestAudio = false
-    }
-
-    fun startRecording() {
-        runCatching {
-            recorder.startRecording()
-            isRecordingTestAudio = true
-        }.onFailure {
-            Toast.makeText(context, it.message ?: "启动测试录音失败", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        if (granted) {
-            startRecording()
-        } else {
-            Toast.makeText(context, "需要录音权限", Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    LaunchedEffect(isDrawerOpen, mode) {
-        if (!isDrawerOpen || mode != SimAudioDrawerMode.BROWSE) {
-            cancelRecordingIfNeeded()
-        }
-    }
-
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_PAUSE) {
-                cancelRecordingIfNeeded()
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-            cancelRecordingIfNeeded()
-        }
-    }
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -204,40 +136,7 @@ internal fun SimAudioDrawerContent(
 
         if (showTestImportAction && mode == SimAudioDrawerMode.BROWSE) {
             item {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    SimTestRecordButton(
-                        isRecording = isRecordingTestAudio,
-                        onClick = {
-                            if (isRecordingTestAudio) {
-                                val recordedFile = runCatching { recorder.stopRecording() }.getOrNull()
-                                isRecordingTestAudio = false
-                                if (recordedFile == null) {
-                                    Toast.makeText(
-                                        context,
-                                        "停止测试录音失败",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                } else {
-                                    viewModel.importRecordedTestAudio(recordedFile)
-                                }
-                            } else {
-                                val hasPermission = ContextCompat.checkSelfPermission(
-                                    context,
-                                    Manifest.permission.RECORD_AUDIO
-                                ) == PackageManager.PERMISSION_GRANTED
-                                if (hasPermission) {
-                                    startRecording()
-                                } else {
-                                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                                }
-                            }
-                        }
-                    )
-                    SimTestImportButton(onClick = onImportTestAudio)
-                }
+                SimTestImportButton(onClick = onImportTestAudio)
             }
         }
 
@@ -308,52 +207,6 @@ private fun SimTestImportButton(onClick: () -> Unit) {
     }
 }
 
-@Composable
-private fun SimTestRecordButton(
-    isRecording: Boolean,
-    onClick: () -> Unit
-) {
-    val borderColor = if (isRecording) {
-        Color(0xFFFF6B6B)
-    } else {
-        SimDrawerAccent.copy(alpha = 0.72f)
-    }
-    val backgroundColor = if (isRecording) {
-        Color(0x26FF453A)
-    } else {
-        Color.White.copy(alpha = 0.02f)
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(56.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(backgroundColor)
-            .border(1.dp, borderColor, RoundedCornerShape(14.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Row(
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = if (isRecording) "■" else "●",
-                fontSize = 15.sp,
-                color = borderColor
-            )
-            Spacer(modifier = Modifier.padding(horizontal = 4.dp))
-            Text(
-                text = if (isRecording) "停止测试录音" else "REC 测试录音",
-                fontSize = 13.sp,
-                color = SimDrawerTextPrimary,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
-    }
-}
 
 @Composable
 private fun SimDebugScenarioPanel(

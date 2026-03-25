@@ -111,7 +111,6 @@ fun SimAudioDrawer(
                     )
 
                     SimAudioDrawerContent(
-                        isDrawerOpen = isOpen,
                         entries = entries.value,
                         viewModel = viewModel,
                         mode = mode,

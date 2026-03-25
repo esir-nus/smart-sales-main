@@ -21,7 +21,6 @@ class SimAudioRepositoryStructureTest {
         assertTrue(host.contains("private val artifactSupport = SimAudioRepositoryArtifactSupport(runtime, storeSupport)"))
         assertTrue(host.contains("private val syncSupport = SimAudioRepositorySyncSupport(runtime, storeSupport)"))
         assertTrue(host.contains("private val transcriptionSupport = SimAudioRepositoryTranscriptionSupport("))
-        assertTrue(host.contains("suspend fun addRecordedTestAudio(recordedFile: File)"))
 
         assertFalse(host.contains("private fun backfillSeedInventory("))
         assertFalse(host.contains("private suspend fun performBadgeSyncLocked("))
@@ -55,7 +54,6 @@ class SimAudioRepositoryStructureTest {
 
         assertTrue(store.contains("internal class SimAudioRepositoryStoreSupport("))
         assertTrue(store.contains("suspend fun addLocalAudio("))
-        assertTrue(store.contains("suspend fun addRecordedTestAudio("))
         assertTrue(store.contains("fun bindSession(audioId: String, sessionId: String)"))
         assertTrue(store.contains("fun clearBoundSession(audioId: String)"))
         assertTrue(store.contains("fun loadFromDisk()"))

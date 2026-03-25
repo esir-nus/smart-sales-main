@@ -42,7 +42,6 @@ class SimAudioDrawerStructureTest {
 
         assertTrue(content.contains("internal fun SimAudioDrawerContent("))
         assertTrue(content.contains("private fun SimDrawerHeaderAction("))
-        assertTrue(content.contains("private fun SimTestRecordButton("))
         assertTrue(content.contains("private fun SimTestImportButton("))
         assertTrue(content.contains("private fun SimDebugScenarioPanel("))
 

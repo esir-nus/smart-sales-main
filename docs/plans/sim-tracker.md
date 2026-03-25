@@ -480,8 +480,6 @@ Archived planning note:
     Added orphaned-state recovery for legacy SIM entries that were persisted as `TRANSCRIBING` without a resumable `activeJobId`. On load, SIM now downgrades that impossible state to explicit retry-ready `PENDING` with recovery messaging instead of rebinding chat to a fake in-flight job forever.
   - [x] **2026-03-20 On-Device Note**
     Debug-gated `Import Test Audio` is now proven on device as a QA-only convenience path: the imported file appears in SIM inventory with a persistent test-origin label, can be selected from chat-side reselection, and completes through the same shared SIM transcription/artifact pipeline. The resulting completion also reflects back into the drawer inventory. The remaining gap is chat-surface parity after completion: SIM chat currently shows transparency plus a lightweight completion message, but does not yet render the finished transcript/artifact surface inline the way an already-transcribed drawer card does.
-  - [x] **2026-03-24 Debug REC Follow-Up**
-    Because the physical badge is still not reliably available for fast iteration, the SIM audio drawer now also exposes a debug-only browse-mode `REC` action for QA/dev. It reuses local phone capture only as a temporary test aid, persists the result as the same SIM-owned test-origin PHONE inventory type used by `Import Test Audio`, keeps the drawer open after stop, and does not widen the shell into a product mic route or change the badge-origin ingress story.
   - [x] **2026-03-20 Next Completion Slice**
     - treat completed chat-side audio artifacts as durable chat history rather than transient `uiState`
     - let `SimShell` own artifact loading on terminal completion and bridge render-ready artifacts into the SIM chat owner
@@ -941,6 +939,8 @@ Wave 7 acceptance closed the SIM mission on **2026-03-22**. The remaining items 
   - [x] add L1 coverage for no-match and ambiguity safe-fail
   - [x] prove audio drawer and ordinary SIM chat still do not gain scheduler mutation authority from this wave
   - [x] Focused L1 validation is green with `./gradlew :domain:scheduler:compileKotlin`, `./gradlew :domain:scheduler:test --tests com.smartsales.prism.domain.scheduler.ExactTimeCueResolverTest --tests com.smartsales.prism.domain.scheduler.RelativeTimeResolverRegressionTest`, `./gradlew :app-core:compileDebugKotlin`, and `./gradlew :app-core:testDebugUnitTest --tests com.smartsales.prism.ui.sim.SimSchedulerViewModelTest --tests com.smartsales.prism.ui.sim.SimAgentViewModelTest`.
+  - [x] **2026-03-25 Debug REC Placement Correction**
+    The temporary local phone-capture aid belongs in the scheduler drawer, not the audio drawer. SIM now restores a debug-friendly explicit `REC` control inside `SchedulerDrawer`'s SIM presentation so QA/dev can exercise the scheduler mic lane while physical badge work remains blocked. This stays scheduler-scoped, feeds the existing `processAudio(...)` path, and does not widen audio drawer or ordinary chat into scheduler mutation ownership.
 
 ---
 

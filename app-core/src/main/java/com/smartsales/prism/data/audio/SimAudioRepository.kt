@@ -6,7 +6,6 @@ import com.smartsales.prism.domain.audio.AudioFile
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
 import com.smartsales.prism.domain.tingwu.TingwuPipeline
-import java.io.File
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -60,10 +59,6 @@ class SimAudioRepository @Inject constructor(
 
     suspend fun addLocalAudio(uriString: String) {
         storeSupport.addLocalAudio(uriString)
-    }
-
-    suspend fun addRecordedTestAudio(recordedFile: File) {
-        storeSupport.addRecordedTestAudio(recordedFile)
     }
 
     suspend fun seedDebugFailureScenario() {

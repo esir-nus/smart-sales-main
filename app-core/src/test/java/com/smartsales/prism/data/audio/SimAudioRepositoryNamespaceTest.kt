@@ -8,7 +8,6 @@ import com.smartsales.prism.domain.audio.TranscriptionStatus
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.tingwu.TingwuPipeline
 import java.io.File
-import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -114,29 +113,5 @@ class SimAudioRepositoryNamespaceTest {
         )
 
         assertEquals("session-456", reloadedRepository.getBoundSessionId("audio-2"))
-    }
-
-    @Test
-    fun `recorded test audio is stored as pending test import inside sim namespace`() = runBlocking {
-        val recordedFile = tempFolder.newFile("debug_record.wav").apply {
-            writeBytes(byteArrayOf(1, 2, 3, 4))
-        }
-
-        val repository = SimAudioRepository(
-            context = context,
-            connectivityBridge = connectivityBridge,
-            ossUploader = ossUploader,
-            tingwuPipeline = tingwuPipeline
-        )
-
-        repository.addRecordedTestAudio(recordedFile)
-
-        val stored = repository.getAudioFilesSnapshot().last()
-        assertTrue(stored.filename.startsWith("SIM_REC_"))
-        assertEquals(AudioSource.PHONE, stored.source)
-        assertEquals(TranscriptionStatus.PENDING, stored.status)
-        assertTrue(stored.isTestImport)
-        assertTrue(!recordedFile.exists())
-        assertTrue(resolveSimStoredAudioFile(context, stored.id)?.exists() == true)
     }
 }

@@ -297,8 +297,6 @@ For debug-only acceptance support, SIM may expose local scenario-seeding control
 - these controls are debug-only and must not redefine product ingress
 - they may seed dedicated SIM test cards for failure, missing-sections, or provider-fallback validation
 - they must stay local to the SIM audio lane rather than re-enabling the global debug HUD
-- a debug-only local `REC` action may also exist in browse mode for QA/dev when the physical badge is unavailable
-- that `REC` action must create one test-origin PHONE entry in the same SIM-owned inventory and must not auto-open chat or redefine production ingress
 
 Phone-local import may still exist for testing, but only under these rules:
 

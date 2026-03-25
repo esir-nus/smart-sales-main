@@ -25,8 +25,6 @@ Meaning:
 
 - `onSyncFromBadge()` is exposed only in browse mode
 - manual sync is a drawer-local secondary action for badge-origin inventory refresh
-- debug-only local test actions such as `Import Test Audio` and browse-mode `REC` may exist, but only inside the drawer surface
-- the debug `REC` action must stay browse-only, create a test-origin local PHONE entry, and keep the drawer as the decision surface instead of auto-binding chat
 - chat-reselect mode suppresses the manual sync trigger so selection behavior stays stable
 - opening the browse drawer may also trigger one best-effort auto-sync attempt when connectivity is already ready
 - auto-sync readiness is owned by the SIM repository/connectivity seam rather than shell UI connection-state mapping
@@ -90,7 +88,6 @@ Notes:
 - browse-mode manual sync and browse-open auto-sync must both call this same contract.
 - badge sync is additive-only for this slice: repeated `/list` checks are allowed, but a badge filename already present in local `SMARTBADGE` inventory must not be redownloaded into local storage.
 - `addLocalAudio(uriString)` is a test-only convenience seam for QA/dev validation; it must not become the default product upload path.
-- drawer-local debug recording may use an internal recorded-file ingest seam beneath this interface, but it must still end as the same SIM-owned test-origin inventory entry type as other local test audio.
 - `ConnectivityBridge` is an allowed backend dependency only for badge-origin recording ingress and badge file operations.
 - connectivity must not become the owner of SIM audio/chat session flow, artifact persistence, or chat routing.
 - if `syncFromDevice()` fails because connectivity is absent or offline, the existing SIM inventory remains usable and the failure is surfaced as drawer-local feedback.

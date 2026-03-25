@@ -237,6 +237,8 @@ SIM adopts the shared scheduler reminder infrastructure with a narrowed boundary
 Scheduler-drawer voice reschedule is supported only within approved SIM scheduler scope.
 
 - the owning entry surface is the scheduler drawer mic (`按住录音` in `SchedulerDrawer`)
+- for debug/test assistance while physical-badge validation is blocked, SIM may expose a visible explicit `REC` control inside the scheduler drawer so the same lane is easier to trigger on device
+- that debug control is only an alternate trigger for the existing scheduler-drawer mic path; it must not reroute through the audio drawer or create a separate product ingestion story
 - the runtime may resolve the target task through scheduler-owned confidence-gated matching rather than exact-title equality
 - matching may use normalized title plus participant/location clues and scheduler-local context such as the current visible date page
 - low-confidence or near-tie candidate resolution must safe-fail with explicit feedback and no mutation

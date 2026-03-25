@@ -48,6 +48,7 @@ The user should perceive:
 - a smaller, more literal app focused on two main feature lanes
 - a sparse idle chat surface: balanced top controls with hamburger on the left, new chat on the right, a one-line dynamic island in the header center slot, greeting-first body, and a bottom message capsule instead of dashboard cards or analytics chrome
 - the same shell identity continuing into active discussion, with the heavy top and bottom monoliths remaining stable while only the center canvas changes by state
+- restored neutral fuzzy seams on those monoliths so the shell reads as premium hardware rather than a hard-cut black frame; keep the top seam subtle and the bottom seam heavier
 - a bottom message capsule whose idle placeholder uses the shared scan-shine treatment on placeholder text only, with attach on the left and a send-only action on the right
 - active discussion states that prefer sparse conversation plus horizontal system sheets over dashboard cards or smart-agent chrome
 - ordinary shell affordances that still feel normal, such as history, new page/session, connectivity entry, and settings
@@ -82,7 +83,7 @@ The user should not perceive:
 - `SchedulerDrawer`
 - `HistoryDrawer`
 - `ConnectivityModal`
-- `UserCenterScreen`
+- `UserCenterScreen` for legacy/shared smart-shell settings
 - shared tokens, surfaces, and shell styling
 
 ### Conditional UI Reuse
@@ -105,6 +106,7 @@ Current target seams:
 
 - `IAgentViewModel`
 - `ISchedulerViewModel`
+- `UserCenterViewModel`
 
 ### Naming Rule
 
@@ -132,8 +134,15 @@ Do not rename only for style; rename when boundary truth improves.
 - history drawer
 - new page / new session action
 - connectivity entry for badge connection management from the audio drawer rather than the chat home header
-- settings entry for profile/metadata controls
+- settings entry for profile/metadata controls, with the current SIM slice anchoring that affordance in the history drawer's fixed bottom user dock
 - a persistent dynamic-island tap target that opens the scheduler drawer from chat
+
+Current SIM settings presentation:
+
+- right-edge dark frosted drawer slab
+- same support-surface family as history rather than a full-screen smart-shell sheet
+- scrim-backed and dismissible
+- current edit-profile route remains the existing full-screen subflow entered from inside the drawer
 
 ### Home / Here Surface State Family
 
@@ -144,6 +153,7 @@ Shared shell structure:
 - `Top Monolith`: hamburger on the left, one-line Dynamic Island in the center slot, new-session `+` on the right
 - `Center Canvas`: protected body between the top and bottom monoliths; this is the only zone that swaps major content by state
 - `Bottom Monolith`: send-only composer foundation with left attach, center text field, and right send action
+- `Shared Seam Treatment`: keep one neutral feathered seam family across the shell states below; the seam may soften the boundary but must not reinterpret the monoliths as floating capsules or aurora-tinted glass
 
 Required shell states:
 
@@ -166,6 +176,7 @@ Required shell states:
 Approved prototype rule:
 
 - the approved dark prototype frame with centered island, heavy top/bottom monoliths, and sparse discussion canvas is the visual baseline for the `Active Plain Chat` substate
+- that baseline now includes restored neutral feathered seams at the monolith boundaries: restrained at the top, heavier at the bottom, and never aurora-colored
 - downstream UI work must extend from that frame to the other shell states instead of treating that single frame as the whole contract
 
 Expected navigation:
@@ -174,6 +185,7 @@ Expected navigation:
 - opening audio drawer does not require the smart shell
 - opening connectivity from the audio drawer does not require the smart shell
 - opening history does not require smart memory architecture
+- opening settings does not require the smart shell, and it must atomically close history, connectivity, and active drawers first
 - opening connectivity uses a SIM-owned state-aware route:
   - `NeedsSetup` opens the bootstrap modal
   - configured/non-setup states open the connectivity manager directly
@@ -184,6 +196,40 @@ Expected navigation:
 - `Ask AI` from audio opens chat with that audio pre-attached
 - selecting audio from chat reopens the audio drawer instead of Android file picker
 - the same chat shell may move between empty, plain-chat, audio-grounded, and pending-audio presentation without changing top-level shell identity
+
+### History Drawer Support Surface
+
+Current SIM history-drawer expectations stay intentionally narrow and support-surface-only.
+
+Required current slice:
+
+- a left-edge dark slab that reads as an archive overlay rather than a second dashboard
+- a single-title header using `历史记录`
+- grouped session rows using `置顶` / `今天` / `最近30天` / `YYYY-MM`
+- one-line title-only rows in the normal browse state
+- long-press actions for pin, rename, and delete
+- a stronger history-open scrim so the drawer visually owns the overlay
+- a fixed bottom user dock that remains visible below the session list
+
+Required user dock content:
+
+- avatar
+- display name
+- short membership / plan text
+- settings affordance on the trailing edge
+
+Required routing:
+
+- tapping the avatar/name zone opens the same SIM `UserCenterScreen` settings route
+- tapping the settings affordance opens that same route
+- the user dock is the expected SIM-local settings/profile entry for the current history drawer slice
+
+Still deferred in this slice:
+
+- live search
+- top header utility chrome such as device capsule or search
+- swipe-reveal actions
+- any widening into a broader smart-app utility drawer
 
 ### Drawer Gesture Contract
 
@@ -196,6 +242,7 @@ SIM keeps the shell gesture model zone-scoped and velocity-aware.
 - the lower activation region is the full shell width from about 12dp above the measured SIM composer top through the bottom edge so the audio opener remains reachable after chat grows
 - shell-owned gesture layers may cover the live header/composer chrome for drag detection, but they must not steal ordinary taps from the attach button, text field, or send button
 - the center body remains a protected chat/history scroll zone rather than a drawer-entry surface
+- the settings drawer must block shell pull gestures while visible
 - shell entry gestures require vertical-intent locking; weak or horizontally-biased drags must stay with normal content behavior
 - shell entry gestures should use both committed drag distance and deliberate fling velocity rather than velocity alone; the current open thresholds are about 40dp committed drag or a deliberate 1100dp/s fling in the matching direction
 - velocity acts as an override for clearly intentional pulls, not as a replacement for directional and distance checks

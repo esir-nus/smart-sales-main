@@ -69,7 +69,7 @@ Role: This document is strictly an index that maps UI modules, components, and f
 | History Drawer | Shipped | [HistoryDrawer.md](../cerb/session-history/spec.md) |
 | Audio Drawer | Shipped | [AudioDrawer.md](../cerb/audio-management/spec.md) |
 | Connectivity Modal | Shipped | [ConnectivityModal.md](../cerb/connectivity-bridge/spec.md) |
-| User Center | Shipped | [UserCenter.md](../cerb/user-habit/spec.md) |
+| User Center | Shipped | [UserCenter.md](./modules/UserCenter.md) |
 | Analyst Mode | In Progress | [AnalystMode.md](../cerb/model-routing/spec.md) |
 
 ### Components

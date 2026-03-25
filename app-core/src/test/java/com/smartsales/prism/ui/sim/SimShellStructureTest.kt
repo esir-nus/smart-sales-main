@@ -36,14 +36,18 @@ class SimShellStructureTest {
         assertTrue(content.contains("fun SimShellContent("))
         assertTrue(content.contains("AgentIntelligenceScreen("))
         assertTrue(content.contains("SimHistoryDrawer("))
+        assertTrue(content.contains("SimUserCenterDrawer("))
         assertTrue(content.contains("ConnectivityManagerScreen("))
         assertFalse(content.contains("import com.smartsales.prism.ui.drawers.HistoryDrawer"))
+        assertFalse(content.contains("import com.smartsales.prism.ui.settings.UserCenterScreen"))
 
         assertTrue(reducer.contains("fun openSimConnectivityModal("))
         assertTrue(reducer.contains("fun handleSimConnectivityEntryRequest("))
         assertTrue(reducer.contains("fun openSimHistory("))
+        assertTrue(reducer.contains("fun openSimSettings("))
         assertTrue(reducer.contains("fun handleSimHistoryEntryRequest("))
         assertTrue(reducer.contains("fun shouldShowSimShellScrim("))
+        assertTrue(reducer.contains("fun resolveSimShellScrimAlpha("))
 
         assertTrue(actions.contains("fun handleSchedulerShelfAskAiHandoff("))
         assertTrue(actions.contains("fun handleBadgeSchedulerContinuityIngress("))
@@ -56,6 +60,13 @@ class SimShellStructureTest {
         assertTrue(projection.contains("fun buildSimDynamicIslandItems("))
         assertTrue(sections.contains("fun SimSchedulerFollowUpPrompt("))
         assertTrue(sections.contains("fun SimSchedulerFollowUpActionStrip("))
+
+        val historyDrawer = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimHistoryDrawer.kt")
+        assertTrue(historyDrawer.contains("combinedClickable("))
+        assertFalse(historyDrawer.contains("MoreVert"))
+        assertFalse(historyDrawer.contains("ChatBubbleOutline"))
+        assertFalse(historyDrawer.contains("formatSimHistoryRecency("))
+        assertFalse(historyDrawer.contains("label = { Text(\"摘要\") }"))
     }
 
     @Test

@@ -35,6 +35,18 @@ internal fun openSimHistory(state: SimShellState): SimShellState = state.copy(
     showSettings = false
 )
 
+internal fun openSimSettings(state: SimShellState): SimShellState = state.copy(
+    activeDrawer = null,
+    audioDrawerMode = SimAudioDrawerMode.BROWSE,
+    activeConnectivitySurface = null,
+    showHistory = false,
+    showSettings = true
+)
+
+internal fun closeSimSettings(state: SimShellState): SimShellState = state.copy(
+    showSettings = false
+)
+
 internal fun handleSimHistoryEntryRequest(
     state: SimShellState,
     source: String,
@@ -151,7 +163,14 @@ internal fun handleSimConnectivitySetupCompleted(
 internal fun shouldShowSimShellScrim(state: SimShellState): Boolean =
     state.activeDrawer == SimDrawerType.AUDIO ||
         state.showHistory ||
+        state.showSettings ||
         state.activeConnectivitySurface == SimConnectivitySurface.MODAL
+
+internal fun resolveSimShellScrimAlpha(state: SimShellState): Float = when {
+    state.showHistory -> 0.56f
+    shouldShowSimShellScrim(state) -> 0.4f
+    else -> 0f
+}
 
 internal fun shouldAttemptSimAudioDrawerAutoSync(
     isDrawerOpen: Boolean,

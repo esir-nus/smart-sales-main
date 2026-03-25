@@ -120,7 +120,7 @@ App Launch
     → ensureChannels() — create all channels on Android 8+
     → hasPermission() checked before show()
     → If denied: Log warning, skip silently
-    → UserCenterScreen toggle → system settings redirect
+    → User Center notification toggle → system settings redirect
 ```
 
 ---
@@ -134,7 +134,7 @@ App Launch
 | `AlarmDismissReceiver.kt` | Unified dismiss handler (stop vibration + cancel notification) | Shipped |
 | `RealNotificationService.kt` | Channel creation, vibration, notification display | Shipped |
 | `RealAlarmScheduler.kt` | Alarm scheduling (WHEN) | Shipped |
-| `UserCenterScreen.kt` L202-220 | Permission toggle | Keep as-is |
+| `User Center` surfaces (`UserCenterScreen.kt`, SIM user-center drawer) | Permission toggle opens Android app notification settings and refreshes state on resume | Keep behavior aligned across hosts |
 
 ---
 

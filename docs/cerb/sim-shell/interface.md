@@ -36,6 +36,8 @@ Responsibilities:
 - keep the top header visually balanced with hamburger on the left, centered Dynamic Island, and new-session `+` on the right across normal shell states
 - keep the center canvas stateful: greeting-first when empty, conversation-first when active, and system-sheet capable for status/progress/artifact insertion
 - host SIM support surfaces such as history and connectivity entry, with connectivity entering from the audio drawer rather than the home header
+- keep the SIM history drawer narrow and archive-first, with a fixed bottom user dock that exposes the SIM profile/settings entry without widening the drawer into full utility chrome
+- host the SIM user center as a right-edge dark frosted drawer with scrim-backed dismissal and the existing full-screen edit subflow behind its edit action
 - host a persistent top-header one-line dynamic island that can rotate up to 3 scheduler items every 5 seconds and open the scheduler drawer on the visible item's date page
 - route `Ask AI` and audio re-selection flows
 - own the badge scheduler follow-up continuity binding metadata
@@ -85,11 +87,17 @@ enum class SimDrawerType {
     AUDIO
 }
 
+enum class SimAudioDrawerMode {
+    BROWSE,
+    CHAT_RESELECT
+}
+
 data class SimShellState(
     val activeDrawer: SimDrawerType? = null,
-    val activeChatAudioId: String? = null,
+    val audioDrawerMode: SimAudioDrawerMode = SimAudioDrawerMode.BROWSE,
     val activeConnectivitySurface: SimConnectivitySurface? = null,
-    val showHistory: Boolean = false
+    val showHistory: Boolean = false,
+    val showSettings: Boolean = false
 )
 ```
 
@@ -98,6 +106,10 @@ Guarantees:
 - only one drawer may be open at a time
 - the shell may reopen the audio drawer from chat
 - the shell may expose history/new-page/connectivity/settings as SIM support surfaces
+- the history drawer keeps a fixed bottom user dock for the profile/settings affordance in the current SIM slice
+- tapping the history-drawer avatar/name zone or trailing settings affordance opens the same SIM user-center drawer route
+- opening the SIM user-center drawer must close history, connectivity, and active drawers first
+- the settings drawer uses the same scrim-backed overlay law as other SIM support surfaces
 - the shell may open scheduler from a downward pull started inside the upper shell activation zone when the shell is otherwise clear
 - the shell may open audio browse from an upward pull started inside the lower shell activation zone when the shell is otherwise clear
 - the current shipped shell opener is layout-anchored rather than fixed top/middle/bottom thirds
@@ -106,6 +118,7 @@ Guarantees:
 - shell open gestures must not depend on a separate high-z overlay sitting above the live header/composer chrome
 - interactive header/composer taps remain direct until a deliberate vertical drag has clearly direction-locked into a drawer-open gesture
 - the center shell body stays protected for chat/history scrolling by default
+- the settings drawer must block shell pull gestures while visible
 - the shell entry gestures must use vertical-intent lock plus drag-distance or fling-velocity confirmation rather than broad overscroll alone
 - velocity is an override for deliberate pulls, not the sole open rule; the current opener is tuned around a 40dp drag threshold and a 1100dp/s directional fling override
 - the open/close gesture contract should use light hysteresis so commit thresholds are stable

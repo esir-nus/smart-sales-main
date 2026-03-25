@@ -39,7 +39,6 @@ import com.smartsales.prism.ui.drawers.AudioStatus
 import com.smartsales.prism.ui.drawers.SchedulerDrawer
 import com.smartsales.prism.ui.drawers.scheduler.SchedulerDrawerVisualMode
 import com.smartsales.prism.ui.onboarding.SimConnectivityPairingFlow
-import com.smartsales.prism.ui.settings.UserCenterScreen
 import com.smartsales.prism.ui.theme.BackgroundApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -71,6 +70,7 @@ internal fun SimShellContent(
 ) {
     val isAudioDrawerOpen = shellState.activeDrawer == SimDrawerType.AUDIO
     val showScrim = shouldShowSimShellScrim(shellState)
+    val scrimAlpha = resolveSimShellScrimAlpha(shellState)
     val showSchedulerInteractionShield = shellState.activeDrawer == SimDrawerType.SCHEDULER
     val showSimBottomComposer = shellState.activeDrawer != SimDrawerType.SCHEDULER
     val schedulerGapDismissHeight = SimHomeHeroTokens.BottomMonolithHeight + 16.dp
@@ -103,15 +103,7 @@ internal fun SimShellContent(
             onAudioDrawerClick = { openAudioDrawer(SimAudioDrawerMode.BROWSE) },
             onAttachClick = { openAudioDrawer(SimAudioDrawerMode.CHAT_RESELECT) },
             onProfileClick = {
-                mutateShellState { state ->
-                    state.copy(
-                        activeDrawer = null,
-                        audioDrawerMode = SimAudioDrawerMode.BROWSE,
-                        showHistory = false,
-                        activeConnectivitySurface = null,
-                        showSettings = true
-                    )
-                }
+                mutateShellState(::openSimSettings)
             },
             onDebugClick = {},
             showDebugButton = false,
@@ -133,7 +125,7 @@ internal fun SimShellContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .zIndex(PrismElevation.Scrim)
-                    .background(Color.Black.copy(alpha = 0.4f))
+                    .background(Color.Black.copy(alpha = scrimAlpha))
                     .clickable { closeOverlays() }
             )
         }
@@ -404,12 +396,24 @@ internal fun SimShellContent(
 
         AnimatedVisibility(
             visible = shellState.showSettings,
-            enter = fadeIn(),
-            exit = fadeOut(),
+            enter = slideInHorizontally(
+                animationSpec = spring(
+                    stiffness = Spring.StiffnessLow,
+                    dampingRatio = Spring.DampingRatioNoBouncy
+                ),
+                initialOffsetX = { it }
+            ) + fadeIn(),
+            exit = slideOutHorizontally(
+                animationSpec = spring(
+                    stiffness = Spring.StiffnessMediumLow,
+                    dampingRatio = Spring.DampingRatioNoBouncy
+                ),
+                targetOffsetX = { it }
+            ) + fadeOut(),
             modifier = Modifier.zIndex(PrismElevation.Drawer + 1f)
         ) {
-            UserCenterScreen(
-                onClose = { mutateShellState { state -> state.copy(showSettings = false) } }
+            SimUserCenterDrawer(
+                onClose = { mutateShellState(::closeSimSettings) }
             )
         }
 

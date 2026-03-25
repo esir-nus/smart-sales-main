@@ -7,7 +7,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,6 +19,7 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -58,6 +61,7 @@ fun SimArtifactBubble(
     val artifacts = remember(artifactsJson) {
         runCatching { simArtifactJson.decodeFromString<TingwuJobArtifacts>(artifactsJson) }.getOrNull()
     }
+    val keywords = remember(artifacts) { resolveSimArtifactKeywords(artifacts).take(4) }
 
     Column(
         modifier = modifier
@@ -73,6 +77,12 @@ fun SimArtifactBubble(
             fontWeight = FontWeight.SemiBold,
             fontSize = 15.sp
         )
+        if (keywords.isNotEmpty()) {
+            SimArtifactKeywordChips(
+                keywords = keywords,
+                modifier = Modifier.padding(top = 10.dp)
+            )
+        }
         if (artifacts == null) {
             Text(
                 text = "当前无法读取该音频的结构化结果，请稍后重试。",
@@ -321,6 +331,36 @@ private fun SimArtifactSection(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SimArtifactKeywordChips(
+    keywords: List<String>,
+    modifier: Modifier = Modifier
+) {
+    FlowRow(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        keywords.forEach { keyword ->
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(SimConversationSurfaceTokens.QuietFill)
+                    .border(1.dp, SimConversationSurfaceTokens.Border, RoundedCornerShape(10.dp))
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = keyword,
+                    color = SimConversationSurfaceTokens.Body,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+    }
+}
+
 private fun formatSimChapterTime(startMs: Long): String {
     val totalSeconds = (startMs / 1000).toInt()
     val hours = totalSeconds / 3600
@@ -412,3 +452,24 @@ private fun buildSimProviderAdjacentSection(artifacts: TingwuJobArtifacts): Stri
 
 private val JsonPrimitive.contentOrNull: String?
     get() = runCatching { content }.getOrNull()
+
+internal fun resolveSimArtifactKeywords(artifacts: TingwuJobArtifacts?): List<String> {
+    if (artifacts == null) return emptyList()
+    if (artifacts.keywords.isNotEmpty()) {
+        return artifacts.keywords
+            .map { it.trim() }
+            .filter { it.isNotBlank() }
+            .distinct()
+    }
+    val raw = artifacts.meetingAssistanceRaw ?: return emptyList()
+    return runCatching {
+        val root = Json.parseToJsonElement(raw) as? JsonObject ?: return emptyList()
+        val meetingAssistance = root["MeetingAssistance"] as? JsonObject ?: root
+        (meetingAssistance["Keywords"] as? JsonArray)
+            ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
+            ?.map { it.trim() }
+            ?.filter { it.isNotBlank() }
+            ?.distinct()
+            .orEmpty()
+    }.getOrDefault(emptyList())
+}

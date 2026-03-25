@@ -6,6 +6,8 @@ import com.smartsales.data.aicore.TingwuCredentialsProvider
 import com.smartsales.data.aicore.tingwu.api.TingwuApi
 import com.smartsales.data.aicore.tingwu.api.TingwuCreateTaskRequest
 import com.smartsales.data.aicore.tingwu.api.TingwuStatusResponse
+import com.smartsales.data.aicore.tingwu.api.TingwuIdentityContent
+import com.smartsales.data.aicore.tingwu.api.TingwuIdentityRecognitionParameters
 import com.smartsales.data.aicore.tingwu.api.TingwuTaskInput
 import com.smartsales.data.aicore.tingwu.api.TingwuTaskParameters
 import com.smartsales.data.aicore.tingwu.api.TingwuTranscriptionParameters
@@ -13,6 +15,7 @@ import com.smartsales.data.aicore.tingwu.api.TingwuDiarizationParameters
 import com.smartsales.data.aicore.tingwu.api.TingwuSummarizationParameters
 import com.smartsales.data.aicore.tingwu.api.TingwuMeetingAssistanceParameters
 import com.smartsales.data.aicore.tingwu.api.TingwuTranscodingParameters
+import com.smartsales.data.aicore.tingwu.identity.TingwuIdentityHintResolver
 import com.smartsales.prism.domain.tingwu.DiarizedSegment
 import com.smartsales.prism.domain.tingwu.TingwuChapter
 import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
@@ -41,6 +44,7 @@ import javax.inject.Singleton
 class RealTingwuPipeline @Inject constructor(
     private val api: TingwuApi,
     private val credentialsProvider: TingwuCredentialsProvider,
+    private val identityHintResolver: TingwuIdentityHintResolver,
     private val dispatchers: DispatcherProvider
 ) : TingwuPipeline {
 
@@ -52,6 +56,10 @@ class RealTingwuPipeline @Inject constructor(
         try {
             val credentials = credentialsProvider.obtain()
             val fileUrl = request.fileUrl ?: throw IllegalArgumentException("fileUrl must be provided for Tingwu submission")
+            val identityHint = identityHintResolver.resolveCurrentHint()
+            val identityRecognitionEnabled = identityHint.enabled &&
+                !identityHint.sceneIntroduction.isNullOrBlank() &&
+                identityHint.identityContents.isNotEmpty()
             
             val taskKey = "${request.audioAssetName}_${System.currentTimeMillis()}".replace(Regex("[^a-zA-Z0-9]"), "_")
 
@@ -69,6 +77,20 @@ class RealTingwuPipeline @Inject constructor(
                     ),
                     autoChaptersEnabled = true, // We always want chapters for Analyst
                     summarizationEnabled = true, // We always want summaries for Analyst
+                    identityRecognitionEnabled = identityRecognitionEnabled,
+                    identityRecognition = identityHint.sceneIntroduction
+                        ?.takeIf { identityRecognitionEnabled }
+                        ?.let { sceneIntroduction ->
+                            TingwuIdentityRecognitionParameters(
+                                sceneIntroduction = sceneIntroduction,
+                                identityContents = identityHint.identityContents.map { content ->
+                                    TingwuIdentityContent(
+                                        name = content.name,
+                                        description = content.description
+                                    )
+                                }
+                            )
+                        },
                     meetingAssistanceEnabled = true, // Extracts MeetingAssistance links
                     summarization = TingwuSummarizationParameters(types = listOf("Paragraph", "Conversational", "QuestionsAnswering")),
                     meetingAssistance = TingwuMeetingAssistanceParameters(types = listOf("Actions", "KeyInformation")),
@@ -189,6 +211,7 @@ class RealTingwuPipeline @Inject constructor(
             val summarizationUrl = statusResponse.data?.resultLinks?.get("Summarization")
             val autoChaptersUrl = statusResponse.data?.resultLinks?.get("AutoChapters")
             val meetingAssistanceUrl = statusResponse.data?.resultLinks?.get("MeetingAssistance")
+            val identityRecognitionUrl = statusResponse.data?.resultLinks?.get("IdentityRecognition")
 
             // Concurrently download artifacts
             val bodies = kotlinx.coroutines.coroutineScope {
@@ -196,18 +219,21 @@ class RealTingwuPipeline @Inject constructor(
                 val deferredSummary = async(dispatchers.io) { fetchJson(summarizationUrl) }
                 val deferredChapters = async(dispatchers.io) { fetchJson(autoChaptersUrl) }
                 val deferredMeetingAssistance = async(dispatchers.io) { fetchJson(meetingAssistanceUrl) }
+                val deferredIdentityRecognition = async(dispatchers.io) { fetchJson(identityRecognitionUrl) }
                 
                 listOf(
                     deferredTranscription.await(),
                     deferredSummary.await(),
                     deferredChapters.await(),
-                    deferredMeetingAssistance.await()
+                    deferredMeetingAssistance.await(),
+                    deferredIdentityRecognition.await()
                 )
             }
             val responseBody = bodies[0]
             val summaryBody = bodies[1]
             val chaptersBody = bodies[2]
             val meetingAssistanceBody = bodies[3]
+            val identityRecognitionBody = bodies[4]
 
             if (responseBody == null) throw Exception("Empty body when downloading transcription result.")
 
@@ -265,6 +291,18 @@ class RealTingwuPipeline @Inject constructor(
                     )
                 }
             }
+            val inlineIdentityLabels = parseIdentityRecognitionSpeakerLabels(responseBody)
+            val fetchedIdentityLabels = if (inlineIdentityLabels.isNotEmpty()) {
+                emptyMap()
+            } else {
+                parseIdentityRecognitionSpeakerLabels(identityRecognitionBody)
+            }
+            val speakerLabels = mergeTingwuSpeakerLabels(
+                baseSpeakerLabels = parseTranscriptionSpeakerLabels(activeRoot),
+                diarizedSegments = diarizedSegments,
+                identityRecognitionLabels = inlineIdentityLabels.ifEmpty { fetchedIdentityLabels }
+            )
+            val keywords = parseMeetingAssistanceKeywords(meetingAssistanceBody)
 
             // Parse Summarization
             val finalSmartSummary = if (summaryBody != null) {
@@ -359,8 +397,10 @@ class RealTingwuPipeline @Inject constructor(
                 chapters = finalChapters, 
                 diarizedSegments = diarizedSegments,
                 recordingOriginDiarizedSegments = diarizedSegments,
+                speakerLabels = speakerLabels,
                 smartSummary = finalSmartSummary,
                 meetingAssistanceRaw = meetingAssistanceBody,
+                keywords = keywords,
                 transcriptMarkdown = markdown // Important!
             )
 

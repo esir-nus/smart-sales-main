@@ -21,6 +21,9 @@ import com.smartsales.data.aicore.tingwu.api.TingwuCreateTaskRequest
 import com.smartsales.data.aicore.tingwu.api.TingwuCreateTaskResponse
 import com.smartsales.data.aicore.tingwu.api.TingwuResultResponse
 import com.smartsales.data.aicore.tingwu.api.TingwuStatusResponse
+import com.smartsales.data.aicore.tingwu.identity.TingwuIdentityContentHint
+import com.smartsales.data.aicore.tingwu.identity.TingwuIdentityHint
+import com.smartsales.data.aicore.tingwu.identity.TingwuIdentityHintResolver
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -111,18 +114,34 @@ class TingwuSubmissionServiceTest {
             createCalls.clear()
         }
     }
+
+    private class FakeIdentityHintResolver(
+        var hint: TingwuIdentityHint = TingwuIdentityHint(
+            enabled = true,
+            sceneIntroduction = "汽车销售沟通场景，围绕车型介绍、价格和成交推进展开。",
+            identityContents = listOf(
+                TingwuIdentityContentHint("销售顾问", "负责介绍方案和价格"),
+                TingwuIdentityContentHint("客户", "提出需求并做决策"),
+                TingwuIdentityContentHint("其他参会人", "陪同人员或同事")
+            )
+        )
+    ) : TingwuIdentityHintResolver {
+        override suspend fun resolveCurrentHint(): TingwuIdentityHint = hint
+    }
     
     // ==================== Factory ====================
     
     private fun createService(
         api: TingwuApi = FakeTingwuApiForSubmission(),
         credentialsProvider: TingwuCredentialsProvider = FakeCredentialsProvider(),
-        settingsProvider: AiParaSettingsProvider = FakeSettingsProvider()
+        settingsProvider: AiParaSettingsProvider = FakeSettingsProvider(),
+        identityHintResolver: TingwuIdentityHintResolver = FakeIdentityHintResolver()
     ): TingwuSubmissionService {
         return RealTingwuSubmissionService(
             api = api,
             credentialsProvider = credentialsProvider,
             aiParaSettingsProvider = settingsProvider,
+            identityHintResolver = identityHintResolver,
             tingwuTraceStore = traceStore,
             dispatchers = dispatchers,
             gson = gson
@@ -153,6 +172,9 @@ class TingwuSubmissionServiceTest {
         assertEquals("https://oss.example.com/audio.wav", request.input.fileUrl)
         assertEquals("test-task-123", request.input.taskKey)
         assertEquals("cn", request.input.sourceLanguage)
+        assertEquals(true, request.parameters.identityRecognitionEnabled)
+        assertEquals("汽车销售沟通场景，围绕车型介绍、价格和成交推进展开。", request.parameters.identityRecognition?.sceneIntroduction)
+        assertEquals(listOf("销售顾问", "客户", "其他参会人"), request.parameters.identityRecognition?.identityContents?.map { it.name })
     }
     
     @Test
@@ -272,5 +294,32 @@ class TingwuSubmissionServiceTest {
         assertEquals(1, api.createCalls.size)
         val params = api.createCalls[0].parameters
         assertEquals(false, params.transcription?.diarizationEnabled)
+    }
+
+    @Test
+    fun submit_whenIdentityHintDisabled_omitsIdentityRecognitionObject() = runTest(dispatcher) {
+        val api = FakeTingwuApiForSubmission()
+        val identityResolver = FakeIdentityHintResolver(
+            hint = TingwuIdentityHint(enabled = false)
+        )
+        val service = createService(
+            api = api,
+            identityHintResolver = identityResolver
+        )
+
+        service.submit(
+            SubmissionInput(
+                fileUrl = "https://oss.example.com/audio.wav",
+                taskKey = "key",
+                sourceLanguage = "cn"
+            )
+        )
+
+        val request = api.createCalls.single()
+        assertEquals(false, request.parameters.identityRecognitionEnabled)
+        assertEquals(null, request.parameters.identityRecognition)
+        val json = gson.toJson(request)
+        assertTrue(json.contains("\"IdentityRecognitionEnabled\":false"))
+        assertTrue(!json.contains("\"IdentityRecognition\":{\"SceneIntroduction\""))
     }
 }

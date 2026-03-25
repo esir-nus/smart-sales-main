@@ -54,6 +54,8 @@ This shard intentionally replaces the smart-agent interpretation of chat with a 
 - chapters
 - highlights
 - speaker/talker-related Tingwu sections when present
+- provider-resolved speaker identity labels when present
+- provider-returned keywords / `KeyInformation` when present
 - questions/answers or adjacent provider-returned sections when present
 - readability polishing over Tingwu output when needed
 - transcript streaming or pseudo-streaming presentation when needed
@@ -247,6 +249,16 @@ They must:
 - lock duplicate transcribe triggers for the same in-flight audio item across drawer/chat entry surfaces
 - reflect completed artifacts/status back into the audio drawer inventory without requiring a second run through the drawer-origin path
 - keep chat-side reselection visually distinct from browse mode so users are not invited to use suppressed swipe gestures
+
+### Provider Identity And Keyword Rule
+
+For this slice, SIM treats Tingwu as the source of truth for enriched speaker labeling and keyword extraction when that data is returned.
+
+- the client may send user-metadata-derived identity hints upstream to Tingwu, but SIM must not treat local metadata as a direct speaker-label override
+- speaker labels shown in the artifact surface should prefer provider-returned identity-recognition labels over plain diarization ids when available
+- if provider identity output is missing, the UI should fall back to diarization/raw speaker ids rather than inventing names locally
+- normalized provider keywords may be rendered as small chips on the note/summary-style artifact card
+- the expanded artifact body remains text-first; keyword chips are a supplement rather than a replacement for transcript/summary content
 
 ### Completion Ownership Rule
 

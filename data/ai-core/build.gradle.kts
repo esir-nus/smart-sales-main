@@ -132,6 +132,7 @@ configurations.all {
 
 dependencies {
     implementation(projects.core.util)
+    implementation(project(":domain:session"))
     implementation(libs.coroutines.core)
     implementation(libs.hilt.android)
     api(libs.dashscope.sdk)  // api() to expose to consumers (app-prism uses Recognition)
@@ -156,6 +157,7 @@ dependencies {
     kapt(libs.hilt.compiler)
 
     testImplementation(projects.core.test)
+    testImplementation(project(":domain:memory"))
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
     testImplementation(kotlin("test"))

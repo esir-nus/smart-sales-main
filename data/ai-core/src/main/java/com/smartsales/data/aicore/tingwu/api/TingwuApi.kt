@@ -77,6 +77,8 @@ data class TingwuTaskParameters(
     @SerializedName("TranslationEnabled") val translationEnabled: Boolean? = null,
     @SerializedName("SummarizationEnabled") val summarizationEnabled: Boolean? = null,
     @SerializedName("Summarization") val summarization: TingwuSummarizationParameters? = null,
+    @SerializedName("IdentityRecognitionEnabled") val identityRecognitionEnabled: Boolean? = null,
+    @SerializedName("IdentityRecognition") val identityRecognition: TingwuIdentityRecognitionParameters? = null,
     @SerializedName("CustomPromptEnabled") val customPromptEnabled: Boolean? = null,
     @SerializedName("CustomPrompt") val customPrompt: TingwuCustomPrompt? = null,
     // 是否启用自动章节生成
@@ -151,6 +153,16 @@ data class TingwuSummarizationParameters(
 
 data class TingwuMeetingAssistanceParameters(
     @SerializedName("Types") val types: List<String>
+)
+
+data class TingwuIdentityRecognitionParameters(
+    @SerializedName("SceneIntroduction") val sceneIntroduction: String,
+    @SerializedName("IdentityContents") val identityContents: List<TingwuIdentityContent>
+)
+
+data class TingwuIdentityContent(
+    @SerializedName("Name") val name: String,
+    @SerializedName("Description") val description: String
 )
 
 data class TingwuTranscodingParameters(

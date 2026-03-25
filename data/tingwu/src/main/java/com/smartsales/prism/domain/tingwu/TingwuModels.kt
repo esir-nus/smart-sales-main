@@ -62,6 +62,7 @@ data class TingwuJobArtifacts(
     val customPromptUrl: String? = null,
     val extraResultUrls: Map<String, String> = emptyMap(),
     val meetingAssistanceRaw: String? = null,
+    val keywords: List<String> = emptyList(),
     val transcriptMarkdown: String? = null,
     val chapters: List<TingwuChapter>? = null,
     val smartSummary: TingwuSmartSummary? = null,

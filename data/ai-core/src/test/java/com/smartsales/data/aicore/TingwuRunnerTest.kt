@@ -198,6 +198,24 @@ class TingwuRunnerTest {
                 api = api,
                 credentialsProvider = credentialsProvider,
                 aiParaSettingsProvider = settingsProvider,
+                identityHintResolver = object : com.smartsales.data.aicore.tingwu.identity.TingwuIdentityHintResolver {
+                    override suspend fun resolveCurrentHint(): com.smartsales.data.aicore.tingwu.identity.TingwuIdentityHint {
+                        return com.smartsales.data.aicore.tingwu.identity.TingwuIdentityHint(
+                            enabled = true,
+                            sceneIntroduction = "汽车销售沟通场景，围绕车型介绍、价格和成交推进展开。",
+                            identityContents = listOf(
+                                com.smartsales.data.aicore.tingwu.identity.TingwuIdentityContentHint(
+                                    name = "销售顾问",
+                                    description = "负责介绍方案和价格"
+                                ),
+                                com.smartsales.data.aicore.tingwu.identity.TingwuIdentityContentHint(
+                                    name = "客户",
+                                    description = "提出需求并做决策"
+                                )
+                            )
+                        )
+                    }
+                },
                 tingwuTraceStore = traceStore,
                 dispatchers = dispatchers,
                 gson = Gson()
@@ -294,6 +312,9 @@ class TingwuRunnerTest {
         assertTrue(json.contains("\"SummarizationEnabled\":true"))
         assertTrue(json.contains("\"Summarization\":{\"Types\":[\"Paragraph\",\"Conversational\",\"QuestionsAnswering\"]}"))
         assertTrue(json.contains("\"DiarizationEnabled\":true"))
+        assertTrue(json.contains("\"IdentityRecognitionEnabled\":true"))
+        assertTrue(json.contains("\"IdentityRecognition\":{\"SceneIntroduction\""))
+        assertTrue(json.contains("\"IdentityContents\""))
         assertTrue(json.contains("\"SpeakerCount\":0"))
         assertTrue(json.contains("\"OutputLevel\":1"))
         assertTrue(json.contains("\"AudioEventDetectionEnabled\":true"))

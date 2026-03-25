@@ -20,12 +20,15 @@ import com.smartsales.data.aicore.tingwu.api.TingwuCreateTaskRequest
 import com.smartsales.data.aicore.tingwu.api.TingwuCustomPrompt
 import com.smartsales.data.aicore.tingwu.api.TingwuCustomPromptContent
 import com.smartsales.data.aicore.tingwu.api.TingwuDiarizationParameters
+import com.smartsales.data.aicore.tingwu.api.TingwuIdentityContent
+import com.smartsales.data.aicore.tingwu.api.TingwuIdentityRecognitionParameters
 import com.smartsales.data.aicore.tingwu.api.TingwuSummarizationParameters
 import com.smartsales.data.aicore.tingwu.api.TingwuMeetingAssistanceParameters
 import com.smartsales.data.aicore.tingwu.api.TingwuTaskInput
 import com.smartsales.data.aicore.tingwu.api.TingwuTaskParameters
 import com.smartsales.data.aicore.tingwu.api.TingwuTranscodingParameters
 import com.smartsales.data.aicore.tingwu.api.TingwuTranscriptionParameters
+import com.smartsales.data.aicore.tingwu.identity.TingwuIdentityHintResolver
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -42,6 +45,7 @@ class RealTingwuSubmissionService @Inject constructor(
     private val api: TingwuApi,
     private val credentialsProvider: TingwuCredentialsProvider,
     private val aiParaSettingsProvider: AiParaSettingsProvider,
+    private val identityHintResolver: TingwuIdentityHintResolver,
     private val tingwuTraceStore: TingwuTraceStore,
     private val dispatchers: DispatcherProvider,
     private val gson: Gson
@@ -87,6 +91,20 @@ class RealTingwuSubmissionService @Inject constructor(
                 }
                 
                 val model = credentials.model
+                val identityHint = identityHintResolver.resolveCurrentHint()
+                val identityRecognition = identityHint.sceneIntroduction
+                    ?.takeIf { identityHint.enabled && identityHint.identityContents.isNotEmpty() }
+                    ?.let { sceneIntroduction ->
+                        TingwuIdentityRecognitionParameters(
+                            sceneIntroduction = sceneIntroduction,
+                            identityContents = identityHint.identityContents.map { content ->
+                                TingwuIdentityContent(
+                                    name = content.name,
+                                    description = content.description
+                                )
+                            }
+                        )
+                    }
                 
                 // Build and send API request
                 val request = TingwuCreateTaskRequest(
@@ -107,6 +125,8 @@ class RealTingwuSubmissionService @Inject constructor(
                         summarization = TingwuSummarizationParameters(
                             types = tingwuSettings.summarization.types
                         ),
+                        identityRecognitionEnabled = identityHint.enabled,
+                        identityRecognition = identityRecognition,
                         meetingAssistanceEnabled = tingwuSettings.meetingAssistance.enabled,
                         meetingAssistance = TingwuMeetingAssistanceParameters(
                             types = tingwuSettings.meetingAssistance.types

@@ -94,6 +94,7 @@ Notes:
 - if `syncFromDevice()` fails because connectivity is absent or offline, the existing SIM inventory remains usable and the failure is surfaced as drawer-local feedback.
 - the shared `AudioRepository.syncFromDevice(): Unit` contract remains unchanged in this slice; any richer readiness or outcome reporting must stay SIM-local.
 - `clearBoundSession(audioId)` is the explicit SIM cleanup path when a linked session is deleted or startup reconciliation detects a dangling binding.
+- `getArtifacts(audioId)` may return provider-enriched `TingwuJobArtifacts` that include normalized `keywords`, raw `meetingAssistanceRaw`, diarization segments, and merged `speakerLabels`.
 
 ### Shared Pipeline Rule
 
@@ -147,6 +148,15 @@ Meaning:
 - no wider smart-agent memory contract is implied
 - completed artifact content should survive session switch/reopen as durable chat history, not only transient UI state
 - transcript reveal presentation is host-owned UI state rather than part of the durable artifact payload
+
+### Provider Enrichment Contract
+
+For Tingwu-backed SIM artifacts:
+
+- `speakerLabels` may combine diarization speaker ids with provider-returned identity-recognition labels
+- upstream user metadata may be used only to hint the Tingwu request; it must not be treated as a client-side override of final speaker identity
+- `keywords` are normalized from provider meeting-assistance / `KeyInformation` output when available
+- summary-style artifact surfaces may render a compact keyword-chip row, while the expanded artifact view remains text-first
 
 ### Completion Bridge Contract
 

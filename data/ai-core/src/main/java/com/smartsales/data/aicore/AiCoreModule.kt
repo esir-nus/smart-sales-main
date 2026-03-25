@@ -140,6 +140,12 @@ abstract class AiCoreModule {
 
     @Binds
     @Singleton
+    abstract fun bindTingwuIdentityHintResolver(
+        impl: com.smartsales.data.aicore.tingwu.identity.RealTingwuIdentityHintResolver
+    ): com.smartsales.data.aicore.tingwu.identity.TingwuIdentityHintResolver
+
+    @Binds
+    @Singleton
     abstract fun bindAiParaSettingsRepository(
         impl: InMemoryAiParaSettingsRepository,
     ): AiParaSettingsRepository

@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -83,6 +84,7 @@ internal fun SimEmptyHomeHeroShell(
     onTextChanged: (String) -> Unit,
     onSend: () -> Unit,
     onAttachClick: () -> Unit,
+    showBottomComposer: Boolean = true,
     enableSchedulerPullGesture: Boolean = false,
     enableAudioPullGesture: Boolean = false,
     onSchedulerPullOpen: () -> Unit = {},
@@ -98,6 +100,7 @@ internal fun SimEmptyHomeHeroShell(
         onTextChanged = onTextChanged,
         onSend = onSend,
         onAttachClick = onAttachClick,
+        showBottomComposer = showBottomComposer,
         enableSchedulerPullGesture = enableSchedulerPullGesture,
         enableAudioPullGesture = enableAudioPullGesture,
         onSchedulerPullOpen = onSchedulerPullOpen,
@@ -121,6 +124,7 @@ internal fun SimHomeHeroShellFrame(
     onTextChanged: (String) -> Unit,
     onSend: () -> Unit,
     onAttachClick: () -> Unit,
+    showBottomComposer: Boolean = true,
     enableSchedulerPullGesture: Boolean = false,
     enableAudioPullGesture: Boolean = false,
     onSchedulerPullOpen: () -> Unit = {},
@@ -163,18 +167,28 @@ internal fun SimHomeHeroShellFrame(
                     .fillMaxWidth()
             )
 
-            SimHomeHeroBottomMonolith(
-                text = inputText,
-                isSending = isSending,
-                onTextChanged = onTextChanged,
-                onSend = onSend,
-                onAttachClick = onAttachClick,
-                enablePullGesture = enableAudioPullGesture,
-                onPullOpen = onAudioPullOpen,
-                onBoundsChanged = { bounds ->
-                    bottomMonolithTopInRoot = bounds.top
-                }
-            )
+            if (showBottomComposer) {
+                SimHomeHeroBottomMonolith(
+                    text = inputText,
+                    isSending = isSending,
+                    onTextChanged = onTextChanged,
+                    onSend = onSend,
+                    onAttachClick = onAttachClick,
+                    enablePullGesture = enableAudioPullGesture,
+                    onPullOpen = onAudioPullOpen,
+                    onBoundsChanged = { bounds ->
+                        bottomMonolithTopInRoot = bounds.top
+                    }
+                )
+            } else {
+                Spacer(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(SimHomeHeroTokens.BottomMonolithHeight)
+                        .navigationBarsPadding()
+                        .imePadding()
+                )
+            }
         }
 
         val topMonolithBottom = topMonolithBottomInRoot?.minus(rootTopInRoot)
@@ -190,7 +204,7 @@ internal fun SimHomeHeroShellFrame(
         }
 
         val bottomMonolithTop = bottomMonolithTopInRoot?.minus(rootTopInRoot)
-        if (bottomMonolithTop != null) {
+        if (showBottomComposer && bottomMonolithTop != null) {
             SimMonolithSeamOverlay(
                 anchorY = bottomMonolithTop,
                 direction = SimMonolithSeamDirection.BOTTOM,

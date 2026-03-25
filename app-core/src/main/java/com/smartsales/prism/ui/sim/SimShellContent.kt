@@ -72,6 +72,7 @@ internal fun SimShellContent(
     val isAudioDrawerOpen = shellState.activeDrawer == SimDrawerType.AUDIO
     val showScrim = shouldShowSimShellScrim(shellState)
     val showSchedulerInteractionShield = shellState.activeDrawer == SimDrawerType.SCHEDULER
+    val showSimBottomComposer = shellState.activeDrawer != SimDrawerType.SCHEDULER
     val schedulerGapDismissHeight = SimHomeHeroTokens.BottomMonolithHeight + 16.dp
 
     Box(
@@ -116,6 +117,7 @@ internal fun SimShellContent(
             showDebugButton = false,
             visualMode = AgentIntelligenceVisualMode.SIM,
             simDynamicIslandItems = dynamicIslandItems,
+            showSimBottomComposer = showSimBottomComposer,
             enableSimSchedulerPullGesture = canOpenSimSchedulerFromEdge(shellState),
             enableSimAudioPullGesture = canOpenSimAudioFromEdge(shellState, isImeVisible),
             onSimSchedulerPullOpen = { openScheduler(DynamicIslandTapAction.OpenSchedulerDrawer()) },

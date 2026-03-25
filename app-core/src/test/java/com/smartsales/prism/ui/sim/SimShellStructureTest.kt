@@ -58,6 +58,18 @@ class SimShellStructureTest {
         assertTrue(sections.contains("fun SimSchedulerFollowUpActionStrip("))
     }
 
+    @Test
+    fun `scheduler page mode hides the sim bottom composer`() {
+        val content = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimShellContent.kt")
+        val heroShell = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimHomeHeroShell.kt")
+
+        assertTrue(content.contains("val showSimBottomComposer = shellState.activeDrawer != SimDrawerType.SCHEDULER"))
+        assertTrue(content.contains("showSimBottomComposer = showSimBottomComposer"))
+        assertTrue(heroShell.contains("if (showBottomComposer) {"))
+        assertTrue(heroShell.contains("SimHomeHeroBottomMonolith("))
+        assertTrue(heroShell.contains("Spacer("))
+    }
+
     private fun readSource(relativePath: String): String {
         val candidates = listOf(
             File(workingDir, relativePath),

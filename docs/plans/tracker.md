@@ -41,6 +41,10 @@
   - [`docs/reports/tests/L1-20260324-god-wave1c-sim-shell.md`](../reports/tests/L1-20260324-god-wave1c-sim-shell.md)
 - **Wave 2A L1 Validation**:
   - [`docs/reports/tests/L1-20260324-god-wave2a-scheduler-linter.md`](../reports/tests/L1-20260324-god-wave2a-scheduler-linter.md)
+- **Wave 2B L1 Validation**:
+  - [`docs/reports/tests/L1-20260324-god-wave2b-connectivity.md`](../reports/tests/L1-20260324-god-wave2b-connectivity.md)
+- **Wave 2C L1 Validation**:
+  - [`docs/reports/tests/L1-20260324-god-wave2c-sim-audio-repository.md`](../reports/tests/L1-20260324-god-wave2c-sim-audio-repository.md)
 - **Wave 3A L1 Validation**:
   - [`docs/reports/tests/L1-20260324-god-wave3a-sim-audio-drawer.md`](../reports/tests/L1-20260324-god-wave3a-sim-audio-drawer.md)
 - **Governance Split**:
@@ -53,7 +57,7 @@
   - speed up prototype-to-Kotlin transplant by making the target structure easier for humans and agents to understand
   - keep accepted Wave 1 / Wave 2 trunk reductions enforced by guardrails
   - reopen only stable UI trunks for focused host/content/component cleanup when the user explicitly approves that scope
-  - close Wave 3A with the accepted SIM audio drawer host split while leaving `OnboardingScreen.kt` as the remaining deferred UI debt
+  - close Wave 3A with the accepted SIM audio drawer host split while the onboarding host-driven prototype transplant is now landing as the follow-up UI slice
 
 ---
 
@@ -92,7 +96,7 @@
 - **Wave 10 Execution Brief**: [`docs/plans/sim-wave10-execution-brief.md`](./sim-wave10-execution-brief.md)
 - **Wave 12 Execution Brief**: [`docs/plans/sim-wave12-execution-brief.md`](./sim-wave12-execution-brief.md)
 - **Wave 12 L1 Validation**: [`docs/reports/tests/L1-20260323-sim-wave12-scheduler-drawer-reschedule.md`](../reports/tests/L1-20260323-sim-wave12-scheduler-drawer-reschedule.md)
-- **Current Experiment Note**: follow-up-selected reschedule now runs a write-disabled V2 shadow contract for time semantics only; live writes still stay on the accepted V1 path while parity/mismatch telemetry is gathered
+- **Current Experiment Note**: follow-up reschedule now resolves targets through a global scheduler-owned contract before time execution; selected/opened task state and visible page/date no longer carry semantic authority, weak recent-task hints remain allowed, create-time `keyPerson` / `location` hints are now persisted for later matching, the extractor now receives a scheduler-owned active shortlist derived from all non-done tasks rather than a 7-day UI window, and the write-disabled V2 shadow contract still gathers time-semantics parity/mismatch telemetry only
 - **Wave 1 Acceptance**: [`docs/reports/tests/L3-20260319-sim-wave1-shell-acceptance.md`](../reports/tests/L3-20260319-sim-wave1-shell-acceptance.md)
 - **Wave 4 Acceptance**: [`docs/reports/tests/L3-20260320-sim-wave4-scheduler-validation.md`](../reports/tests/L3-20260320-sim-wave4-scheduler-validation.md)
 - **Wave 5 Acceptance**: [`docs/reports/tests/L3-20260321-sim-wave5-connectivity-validation.md`](../reports/tests/L3-20260321-sim-wave5-connectivity-validation.md)
@@ -135,6 +139,7 @@
   - `Wave 10` is the explicit repair mini-wave for that blocker. Code and L1 verification now harden BLE recording ingress plus connection truth; device-level ingress proof is still required before returning to `T9.0`.
   - `Wave 11` now has docs, code, and focused L1 evidence aligned on the general-chat-first contract. Further on-device proof is optional follow-up, not a blocker against this current pivot slice.
   - `Wave 12` now has docs, code, and focused L1 evidence aligned for the scheduler-drawer voice reschedule lane. Scope remains strictly the scheduler drawer mic path; audio drawer, general SIM chat, and random sessions remain out of scope.
+  - On **2026-03-24**, focused unit verification confirmed the current global-reschedule implementation path for `SimSchedulerViewModelTest` and `SimAgentViewModelTest`; retrieval-hint-heavy cases such as people/location-led follow-up phrasing still need on-device proof.
 
 ---
 

@@ -1,232 +1,100 @@
 # Onboarding Flow
 
-> **Definitions**: Uses [GLOSSARY.md](../GLOSSARY.md)
-> **Type**: Flow (multi-step user journey)
-> **Status**: ✅ Shipped
-> **Source**: Extracted from prism-ui-ux-contract.md L416-608
-
----
+> Type: Flow
+> Status: Active
+> Last Updated: 2026-03-25
 
 ## Overview
 
-High-fidelity "unboxing" journey. Priorities: Hardware reliability, account binding, and confidence building.
+The production onboarding flow now follows the approved 5-wave prototype family.
 
----
+This flow has two hosts:
 
-## The Golden Thread (12 Phases)
+1. `FULL_APP` for cold-start product onboarding
+2. `SIM_CONNECTIVITY` for SIM setup reuse inside the connectivity route
 
-| Phase | Name | Description |
-|-------|------|-------------|
-| 1 | **Welcome** | Brand hero screen ("Your AI Sales Coach") |
-| 2 | **Permissions** | Glass-card priming before native Mic/BLE dialogs |
-| 3 | **Voice Handshake** | "Getting to know you" via phone mic |
-| 4 | **Hardware Wake** | Manual: "Turn on device, hold button 3s until blue light" |
-| 5 | **Scan (Radar)** | High-fidelity pulse animation |
-| 6 | **Found (Manual Select)** | **NO Auto-Connect**. User MUST tap device card |
-| 7 | **WiFi Setup** | Prompt for SSID and Password via BLE |
-| 8 | **FW Check & Update** | Force-update if FW < Min version |
-| 9 | **Device Naming** | Personalized naming (e.g., "Frank's Badge") |
-| 10 | **Account Gate** | "Bind Device" to save setup to cloud |
-| 11 | **Profile Collection** | Name, Role, Industry, Notes |
-| 12 | **Complete** | Success checkmark, transition to Home |
+The same Compose coordinator owns both hosts. Host selection changes the visible sequence, not the pairing runtime owner.
 
----
+Behavior authority for the pairing runtime remains:
 
-## Phase Details
+- `docs/cerb/device-pairing/spec.md`
+- `docs/cerb/device-pairing/interface.md`
+- `docs/cerb/sim-connectivity/spec.md` for SIM routing
 
-### Phase 1: Welcome
+## Host Sequences
 
-```
-┌─────────────────────────────────────────────────┐
-│          ( Aurora Animation: Slow Pulse )       │
-│                                                 │
-│       [ LOGO ]                                  │
-│       SmartSales                                │
-│       您的 AI 销售教练                          │
-│                                                 │
-│       [ 开启旅程 ] (Solid White Button)         │
-└─────────────────────────────────────────────────┘
-```
-> No login/signup buttons. Clean entry.
+### FULL_APP
 
----
+1. `WELCOME`
+2. `PERMISSIONS_PRIMER`
+3. `VOICE_HANDSHAKE`
+4. `HARDWARE_WAKE`
+5. `SCAN`
+6. `DEVICE_FOUND`
+7. `PROVISIONING`
+8. `COMPLETE`
 
-### Phase 2: Permissions
+### SIM_CONNECTIVITY
 
-```
-┌─────────────────────────────────────────────────┐
-│  ┌───────────────────────────────────────────┐  │
-│  │ 麦克风权限                                  │  │
-│  │ 为了分析您的销售对话...                    │  │
-│  │ [ 允许访问 ]                               │  │
-│  └───────────────────────────────────────────┘  │
-│  ┌───────────────────────────────────────────┐  │
-│  │ 蓝牙权限                                    │  │
-│  │ 为了连接 SmartBadge...                     │  │
-│  │ [ 允许访问 ]                               │  │
-│  └───────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────┘
-```
+1. `PERMISSIONS_PRIMER`
+2. `HARDWARE_WAKE`
+3. `SCAN`
+4. `DEVICE_FOUND`
+5. `PROVISIONING`
+6. `COMPLETE`
 
----
+SIM must skip `WELCOME` and `VOICE_HANDSHAKE`.
 
-### Phase 3: Voice Handshake
+## Wave Intent
 
-```
-┌─────────────────────────────────────────────────┐
-│       让我们先认识一下                           │
-│       试着说："你好，帮我搞定这个客户"           │
-│                                                 │
-│       ||||||||||||||||||||||||                  │
-│       ( Waveform reacts to PHONE mic )          │
-│                                                 │
-│       ( Upon Voice Detect ) -> AI Response      │
-│       "好的，先告诉我客户的情况..."             │
-│       [ 继续 ]                                   │
-└─────────────────────────────────────────────────┘
-```
+### Wave 1: Tone Foundation
 
----
+- `WELCOME` presents the calm premium introduction with `您的 AI 销售教练`
+- `PERMISSIONS_PRIMER` explains microphone, Bluetooth, and exact-alarm needs before any native prompt appears
 
-### Phase 4: Hardware Wake
+Rule:
 
-```
-┌─────────────────────────────────────────────────┐
-│        [ DEVICE ANIMATION: Finger Press ]       │
-│        ( 3... 2... 1... Blink! )                │
-│                                                 │
-│        启动您的 SmartBadge                       │
-│        长按中间按钮 3 秒，直到蓝灯闪烁           │
-│                                                 │
-│        [ 灯已经在闪了 ]                          │
-└─────────────────────────────────────────────────┘
-```
+- the primer is informational first
+- Android permission prompts still happen at point-of-use
 
----
+### Wave 2: Embodied Trust
 
-### Phase 5: Scan
+- `VOICE_HANDSHAKE` is abstract, not fake-chat theater
+- `HARDWARE_WAKE` teaches the 3-second badge wake ritual
 
-```
-┌─────────────────────────────────────────────────┐
-│       ((      (      )      ))                  │
-│          正在搜索设备...                         │
-│       [ 取消 ]                                  │
-└─────────────────────────────────────────────────┘
-```
+### Wave 3: Operational Pairing
 
----
+- `SCAN` uses a technical search presentation
+- `DEVICE_FOUND` requires explicit manual tap to connect
+- `PROVISIONING` combines Wi-Fi entry plus visible pairing/progress states
 
-### Phase 6: Device Found (Manual Connect)
+### Wave 4: Recovery and Handoff
 
-```
-┌─────────────────────────────────────────────────┐
-│  ┌───────────────────────────────────────────┐  │
-│  │ 📱 SmartBadge (Frank's)           -42dBm  │  │
-│  │ ID: FF:23:44:A1                           │  │
-│  │ [ 连接 ]                                  │  │
-│  └───────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────┘
-```
-> **Critical**: NO Auto-Connect. User MUST tap to confirm intent.
+- scan and provisioning failures stay calm and recoverable
+- timeout/retry states should use muted amber recovery rather than panic-red treatment
+- `COMPLETE` is one shared success wrapper with host-specific action copy
 
----
+### Wave 5: Host Split Routing
 
-### Phase 7: WiFi Setup
+- `FULL_APP` completion enters the main app home and marks onboarding complete
+- `SIM_CONNECTIVITY` completion enters the SIM connectivity manager first, preserving accepted `SETUP -> MANAGER` routing
 
-```
-┌─────────────────────────────────────────────────┐
-│       配置网络 — 让徽章独立工作                  │
-│                                                 │
-│       [ WiFi 名称 (SSID)       ]                │
-│       [ 密码                   ]                │
-│                                                 │
-│       [ 连接网络 ]   [ 跳过 ]                    │
-│                                                 │
-│    ⚠️ 跳过后，徽章录音需通过蓝牙手动同步          │
-└─────────────────────────────────────────────────┘
-```
+## Locked Invariants
 
----
+- No generic Android setup wizard treatment
+- No mascot energy
+- No fake assistant chat bubbles in the voice handshake
+- No auto-connect from scan results
+- No onboarding-owned SIM shell navigation policy
+- No account/profile/notification tail inside the active production flow
 
-### Phase 8: FW Check & Update
+## Deferred Out of Scope
 
-```
-┌─────────────────────────────────────────────────┐
-│          正在检查固件版本...                     │
-│          v1.0.2 -> v1.2.0 (必需)                │
-│                                                 │
-│          [=====================>    ] 75%       │
-│          请勿关闭设备                            │
-└─────────────────────────────────────────────────┘
-```
+The following legacy steps are no longer part of the active production onboarding sequence:
 
----
+- device naming
+- account gate
+- profile collection
+- notification / OEM permission tail
 
-### Phase 9: Device Naming
-
-```
-┌─────────────────────────────────────────────────┐
-│       给它起个名字                               │
-│       [ Frank's Badge          ]                │
-│       [ 确定 ]                                  │
-└─────────────────────────────────────────────────┘
-```
-
----
-
-### Phase 10: Account Gate
-
-```
-┌─────────────────────────────────────────────────┐
-│  保存您的设置                                   │
-│  登录以绑定 "Frank's Badge"                     │
-│                                                 │
-│  [ 邮箱/手机号        ]                         │
-│  [ 密码               ]                         │
-│                                                 │
-│  [     登录并绑定     ]                         │
-│                                                 │
-│  没有账号？ [ 立即注册 ]                        │
-└─────────────────────────────────────────────────┘
-```
-
----
-
-### Phase 11: Profile Collection
-
-```
-┌─────────────────────────────────────────────────┐
-│       让我更好地帮助你                           │
-│       (可跳过，后续可完善)                        │
-│                                                 │
-│  🎙️ [ 按住说话介绍自己 ]                         │
-│            或者                                 │
-│  ┌───────────────────────────────────────────┐  │
-│  │ 我是 [李明]，负责 [政企大客户销售]...        │  │
-│  └───────────────────────────────────────────┘  │
-│                                                 │
-│  [ 完成 ]       [ 稍后完善 ]                     │
-└─────────────────────────────────────────────────┘
-```
-
----
-
-### Phase 12: Complete
-
-```
-┌─────────────────────────────────────────────────┐
-│          ( Success Checkmark Animation )        │
-│          一切就绪！                              │
-│          ( Auto-navigates to Home )             │
-└─────────────────────────────────────────────────┘
-```
-
----
-
-## Key Principles
-
-| Rule | Description |
-|------|-------------|
-| **Manual Gate** | "Device Detected" requires user tap to connect |
-| **Persistence** | Badge-to-Account binding on successful handshake |
-| **Dev-Doorway** | "Rocket" button resets `isOnboarding` and `pairedState` |
+If reintroduced later, they must be scoped as a new approved slice rather than silently appended to this flow.

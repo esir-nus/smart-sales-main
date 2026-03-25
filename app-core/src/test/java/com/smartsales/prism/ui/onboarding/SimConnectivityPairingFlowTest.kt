@@ -14,16 +14,11 @@ class SimConnectivityPairingFlowTest {
         assertTrue(OnboardingStep.HARDWARE_WAKE.isConnectivityPairingStep())
         assertTrue(OnboardingStep.SCAN.isConnectivityPairingStep())
         assertTrue(OnboardingStep.DEVICE_FOUND.isConnectivityPairingStep())
-        assertTrue(OnboardingStep.BLE_CONNECTING.isConnectivityPairingStep())
-        assertTrue(OnboardingStep.WIFI_CREDS.isConnectivityPairingStep())
-        assertTrue(OnboardingStep.FIRMWARE_CHECK.isConnectivityPairingStep())
+        assertTrue(OnboardingStep.PROVISIONING.isConnectivityPairingStep())
 
         assertFalse(OnboardingStep.WELCOME.isConnectivityPairingStep())
+        assertFalse(OnboardingStep.PERMISSIONS_PRIMER.isConnectivityPairingStep())
         assertFalse(OnboardingStep.VOICE_HANDSHAKE.isConnectivityPairingStep())
-        assertFalse(OnboardingStep.DEVICE_NAMING.isConnectivityPairingStep())
-        assertFalse(OnboardingStep.ACCOUNT_GATE.isConnectivityPairingStep())
-        assertFalse(OnboardingStep.PROFILE.isConnectivityPairingStep())
-        assertFalse(OnboardingStep.NOTIFICATION_PERMISSION.isConnectivityPairingStep())
         assertFalse(OnboardingStep.COMPLETE.isConnectivityPairingStep())
     }
 
@@ -51,7 +46,7 @@ class SimConnectivityPairingFlowTest {
             canRetry = true
         )
 
-        val uiModel = resolveConnectivityPairingErrorUiModel(OnboardingStep.FIRMWARE_CHECK, error)
+        val uiModel = resolveConnectivityPairingErrorUiModel(OnboardingStep.PROVISIONING, error)
 
         assertEquals("设备尚未上线", uiModel.title)
         assertEquals("重试配网", uiModel.primaryLabel)
@@ -67,7 +62,7 @@ class SimConnectivityPairingFlowTest {
             canRetry = true
         )
 
-        val uiModel = resolveConnectivityPairingErrorUiModel(OnboardingStep.FIRMWARE_CHECK, error)
+        val uiModel = resolveConnectivityPairingErrorUiModel(OnboardingStep.PROVISIONING, error)
 
         assertEquals("设备已不可用", uiModel.title)
         assertEquals("重新扫描", uiModel.primaryLabel)

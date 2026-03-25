@@ -112,7 +112,7 @@ Reason:
   - **Wave 2B**: clean `GattBleGateway.kt` and `DeviceConnectionManager.kt`
   - **Wave 2C**: clean `SimAudioRepository.kt`
 - **Wave 3A**: clean `SimAudioDrawer.kt` once the current SIM drawer UI contract is stable enough for a host/content/component split
-- **Later UI Wave**: revisit `OnboardingScreen.kt` after the current UI-development window
+- **Later UI Wave**: onboarding host-driven transplant is now active; structure cleanup can follow after the prototype lands
 
 ### Wave 2 Focus
 
@@ -134,7 +134,7 @@ Target outcome:
 
 UI-safe deferral:
 
-- `OnboardingScreen.kt` remains tracked debt
+- `OnboardingScreen.kt` is no longer frozen as deferred debt; the approved onboarding transplant is now the active UI slice
 - Wave 2 intentionally stayed business-logic-only while the repo was in an active UI-development window
 - Wave 3A later reopened `SimAudioDrawer.kt` as a focused user-approved host/content/component cleanup once the drawer behavior contract had already stabilized
 
@@ -258,14 +258,14 @@ Observed sizes below are the current audit snapshot used to seed the campaign on
 |------|-------|---------------|-----------------|----------------------|-------|--------|----------------|------|--------|
 | `app-core/src/main/java/com/smartsales/prism/ui/AgentIntelligenceScreen.kt` | UI | 108 LOC | Wave 1B moved SIM subtree, non-SIM sections, timelines, and previews out of the host entrypoint; host is now source-compatible and under budget | host + content + sections + SIM subtree + preview split | Codex | — | `GodStructureGuardrailTest`, `AgentIntelligenceStructureTest`, `SimComposerContractTest`, `SimHomeHeroExperimentContractTest` | 1B | Accepted |
 | `app-core/src/main/java/com/smartsales/prism/ui/sim/SimShell.kt` | UI Shell | 208 LOC | Wave 1C moved the large shell composition tree, reducers, telemetry, projections, shell actions, and follow-up sections out of the host entrypoint; the SIM shell now keeps runtime ownership and stays under budget | host + content + reducers + projections + telemetry + shell actions + sections | Codex | — | `GodStructureGuardrailTest`, `SimShellStructureTest`, `SimShellHandoffTest`, `SimConnectivityRoutingTest`, `SimRuntimeIsolationTest` | 1C | Accepted |
-| `app-core/src/main/java/com/smartsales/prism/ui/sim/SimAgentViewModel.kt` | UI VM | 1516 LOC | One ViewModel owns session lifecycle, general chat, audio-grounded chat, follow-up behavior, and reconciliation | public VM + session coordinator + chat/audio/follow-up coordinators + projection helpers | Codex | Wave 1D | `SimAgentViewModelTest` | 1D | Exception |
-| `app-core/src/main/java/com/smartsales/prism/ui/sim/SimSchedulerViewModel.kt` | UI VM | 1231 LOC | One ViewModel owns transcript ingress, mutation execution, reminder logic, attention projection, and warning paths | public VM + ingress + mutation + reminder + projection supports | Codex | Wave 1E | `SimSchedulerViewModelTest` | 1E | Exception |
+| `app-core/src/main/java/com/smartsales/prism/ui/sim/SimAgentViewModel.kt` | UI VM | 422 LOC | Wave 1D moved session ownership, SIM chat/audio orchestration, pending-audio completion handling, and follow-up coordination out of the public seam; the host now delegates only | public VM + session coordinator + chat coordinator + follow-up coordinator | Codex | — | `GodStructureGuardrailTest`, `SimAgentViewModelStructureTest`, `SimAgentViewModelTest`, `SimShellHandoffTest`, `:app-core:compileDebugUnitTestKotlin` | 1D | Accepted |
+| `app-core/src/main/java/com/smartsales/prism/ui/sim/SimSchedulerViewModel.kt` | UI VM | 251 LOC | Wave 1E moved ingress routing, mutation execution, reminder ownership, and projection/warning support out of the public seam; the host now delegates only | public VM + ingress coordinator + mutation coordinator + reminder support + projection support | Codex | — | `GodStructureGuardrailTest`, `SimSchedulerViewModelStructureTest`, `SimSchedulerViewModelTest`, `:app-core:compileDebugUnitTestKotlin` | 1E | Accepted |
 | `app-core/src/main/java/com/smartsales/prism/ui/sim/SimAudioDrawer.kt` | UI | 136 LOC | Wave 3A moved drawer composition, card rendering, and support helpers out of the host entrypoint; the public drawer now keeps overlay/runtime wiring and delegation only | host + content + card/components + support helpers | Codex | — | `GodStructureGuardrailTest`, `SimAudioDrawerStructureTest`, `SimAudioDrawerViewModelTest`, `SimShellHandoffTest`, `:app-core:compileDebugUnitTestKotlin` | 3A | Accepted |
-| `app-core/src/main/java/com/smartsales/prism/ui/onboarding/OnboardingScreen.kt` | UI | 896 LOC | Large screen with many steps; active UI development and SIM setup reuse make cleanup unsafe right now, so this stays tracked debt rather than Wave 2 scope | step host + step sections + preview/support split if needed later | Codex | later UI-safe cleanup wave | `OnboardingFlowTransitionTest`, `SimConnectivityPairingFlowTest`, `PairingFlowViewModelTest`, `OnboardingViewModelTest` | Later UI | Deferred |
-| `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/gateway/GattBleGateway.kt` | Data/Transport | 1033 LOC | Transport, protocol parsing, gateway policy, and state edges are too concentrated | gateway seam + transport/session support + payload parser + gateway policy support | Codex | Wave 2B acceptance | `GattBleGatewayNotificationParsingTest`, `ConnectivityStructureTest`, `GodStructureGuardrailTest`, `:app-core:compileDebugUnitTestKotlin` | 2B | Proposed |
-| `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/DeviceConnectionManager.kt` | Data/Transport | 547 LOC | Under budget but still role-mixed; connection/session orchestration, reconnect/backoff policy, and notification ingress are too concentrated | manager seam + connection orchestration + reconnect/backoff policy + ingress/state support | Codex | Wave 2B acceptance | `DefaultDeviceConnectionManagerIngressTest`, `RealConnectivityBridgeTest`, `SimConnectivityRoutingTest`, `ConnectivityStructureTest`, `GodStructureGuardrailTest`, `:app-core:compileDebugUnitTestKotlin` | 2B | Proposed |
+| `app-core/src/main/java/com/smartsales/prism/ui/onboarding/OnboardingScreen.kt` | UI | 1058 LOC | Host-driven onboarding transplant is now active. Full structure cleanup is still deferred, but the legacy multi-tail flow was removed and SIM/full-app now share one coordinator seam. | coordinator + step sections + support helpers split if a later cleanup wave is approved | Codex | later UI-safe cleanup wave | `OnboardingFlowTransitionTest`, `SimConnectivityPairingFlowTest`, `PairingFlowViewModelTest`, `SimConnectivityRoutingTest` | Later UI | Active |
+| `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/gateway/GattBleGateway.kt` | Data/Transport | 76 LOC | Wave 2B moved runtime state, transport/session lifecycle, Android GATT compat helpers, and protocol parsing out of the public gateway seam; the host now delegates only | public seam + runtime + transport/session support + protocol support | Codex | — | `GattBleGatewayNotificationParsingTest`, `ConnectivityStructureTest`, `GodStructureGuardrailTest`, `:app-core:compileDebugUnitTestKotlin` | 2B | Accepted |
+| `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/DeviceConnectionManager.kt` | Data/Transport | 137 LOC | Wave 2B moved runtime state, connection/provisioning orchestration, reconnect/backoff policy, and ingress handling out of the public manager seam; the host now delegates only | public seam + runtime + connection support + reconnect support + ingress support | Codex | — | `DefaultDeviceConnectionManagerIngressTest`, `RealConnectivityBridgeTest`, `SimConnectivityRoutingTest`, `ConnectivityStructureTest`, `GodStructureGuardrailTest`, `:app-core:compileDebugUnitTestKotlin` | 2B | Accepted |
 | `domain/scheduler/src/main/java/com/smartsales/prism/domain/scheduler/SchedulerLinter.kt` | Domain | 100 LOC | Wave 2A moved normalization/time helpers, Uni parse lanes, and legacy compatibility out of the public seam; the host now keeps the source-compatible entrypoint and delegation only | public seam + normalize/time support + parse lane support + validation/legacy support | Codex | — | `SchedulerLinterTest`, `SchedulerLinterStructureTest`, `GodStructureGuardrailTest`, `:domain:scheduler:compileKotlin` | 2A | Accepted |
-| `app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepository.kt` | Data | 841 LOC | Persistence, artifact IO, binding management, and pipeline coordination are mixed | repository seam + persistence/store support + artifact IO support + session-binding support + sync/transcription coordinator | Codex | Wave 2C acceptance | `SimAudioRepositoryNamespaceTest`, `SimAudioRepositoryRecoveryTest`, `SimAudioRepositoryStructureTest`, `SimAudioDrawerViewModelTest`, `GodStructureGuardrailTest`, `:app-core:compileDebugUnitTestKotlin` | 2C | Proposed |
+| `app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepository.kt` | Data | 105 LOC | Wave 2C moved runtime state, metadata persistence, namespace helpers, session binding, artifact IO, badge sync, and transcription coordination out of the public seam; the host now delegates only | repository seam + runtime + persistence/store support + artifact IO support + sync support + transcription support | Codex | — | `SimAudioRepositoryNamespaceTest`, `SimAudioRepositoryRecoveryTest`, `SimAudioDebugScenarioTest`, `SimAudioRepositoryStructureTest`, `SimAudioDrawerViewModelTest`, `GodStructureGuardrailTest`, `:app-core:compileDebugUnitTestKotlin` | 2C | Accepted |
 
 ---
 
@@ -390,6 +390,66 @@ Validation record:
 
 ---
 
+## Wave 2B Connectivity Transport Cleanup
+
+Wave 2B now rewrites the connectivity transport slice into thin public seam files and extracts the former mixed responsibilities into stable transport-owned support files:
+
+- `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/gateway/GattBleGatewayRuntime.kt`
+- `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/gateway/GattBleGatewaySessionSupport.kt`
+- `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/gateway/GattBleGatewayProtocolSupport.kt`
+- `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/DeviceConnectionManagerRuntime.kt`
+- `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/DeviceConnectionManagerConnectionSupport.kt`
+- `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/DeviceConnectionManagerReconnectSupport.kt`
+- `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/DeviceConnectionManagerIngressSupport.kt`
+
+Wave 2B also:
+
+- keeps `GattSessionLifecycle` and `DeviceConnectionManager` source-compatible for current callers
+- leaves `GattBleGateway.kt` at `76 LOC` and `DeviceConnectionManager.kt` at `137 LOC`, both below the transitional service/manager/linter/gateway budget
+- adds a focused connectivity structure regression test for the accepted support-object split
+- repairs the tracker-owned Wave 2B rows so the accepted files no longer remain generic proposed debt items
+
+Wave 2B acceptance verification pack:
+
+- `./gradlew :app-core:compileDebugUnitTestKotlin`
+- `./gradlew :app-core:testDebugUnitTest --tests com.smartsales.prism.data.connectivity.legacy.gateway.GattBleGatewayNotificationParsingTest --tests com.smartsales.prism.data.connectivity.legacy.DefaultDeviceConnectionManagerIngressTest --tests com.smartsales.prism.data.connectivity.RealConnectivityBridgeTest --tests com.smartsales.prism.ui.sim.SimConnectivityRoutingTest --tests com.smartsales.prism.data.connectivity.ConnectivityStructureTest --tests com.smartsales.prism.ui.GodStructureGuardrailTest`
+
+Validation record:
+
+- `docs/reports/tests/L1-20260324-god-wave2b-connectivity.md`
+
+---
+
+## Wave 2C SIM Audio Repository Cleanup
+
+Wave 2C now rewrites the SIM audio repository slice into a thin public seam file and extracts the former mixed responsibilities into stable SIM-owned support files:
+
+- `app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepositoryRuntime.kt`
+- `app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepositoryStoreSupport.kt`
+- `app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepositoryArtifactSupport.kt`
+- `app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepositorySyncSupport.kt`
+- `app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepositoryTranscriptionSupport.kt`
+
+Wave 2C also:
+
+- keeps `SimAudioRepository.kt` source-compatible for current SIM callers
+- leaves the host file at `105 LOC`, below the transitional service/manager/linter/gateway budget
+- keeps SIM namespace/storage filenames unchanged
+- folds session-binding persistence into the store support file instead of introducing a tiny extra shard
+- adds a focused structure regression test for the accepted SIM audio split
+- repairs the tracker-owned Wave 2C row so the accepted file no longer remains a generic proposed debt item
+
+Wave 2C acceptance verification pack:
+
+- `./gradlew :app-core:compileDebugUnitTestKotlin`
+- `./gradlew :app-core:testDebugUnitTest --tests com.smartsales.prism.data.audio.SimAudioRepositoryNamespaceTest --tests com.smartsales.prism.data.audio.SimAudioRepositoryRecoveryTest --tests com.smartsales.prism.data.audio.SimAudioDebugScenarioTest --tests com.smartsales.prism.data.audio.SimAudioRepositoryStructureTest --tests com.smartsales.prism.ui.sim.SimAudioDrawerViewModelTest --tests com.smartsales.prism.ui.GodStructureGuardrailTest`
+
+Validation record:
+
+- `docs/reports/tests/L1-20260324-god-wave2c-sim-audio-repository.md`
+
+---
+
 ## Wave 3A SIM Audio Drawer Cleanup
 
 Wave 3A now rewrites the SIM audio drawer slice into a thin public host file and extracts the former mixed responsibilities into stable SIM-owned UI support files:
@@ -414,6 +474,8 @@ Validation record:
 
 - `docs/reports/tests/L1-20260324-god-wave3a-sim-audio-drawer.md`
 
+---
+
 ## Related Documents
 
 - `docs/plans/god-wave0-execution-brief.md`
@@ -430,6 +492,8 @@ Validation record:
 - `docs/reports/tests/L1-20260324-god-wave1b-agent-intelligence.md`
 - `docs/reports/tests/L1-20260324-god-wave1c-sim-shell.md`
 - `docs/reports/tests/L1-20260324-god-wave2a-scheduler-linter.md`
+- `docs/reports/tests/L1-20260324-god-wave2b-connectivity.md`
+- `docs/reports/tests/L1-20260324-god-wave2c-sim-audio-repository.md`
 - `docs/reports/tests/L1-20260324-god-wave3a-sim-audio-drawer.md`
 
 ## Wave 1 Acceptance Bar

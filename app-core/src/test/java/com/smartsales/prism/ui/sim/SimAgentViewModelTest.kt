@@ -1,10 +1,13 @@
 package com.smartsales.prism.ui.sim
 
 import android.content.Context
+import com.smartsales.core.pipeline.RealFollowUpRescheduleExtractionService
+import com.smartsales.core.pipeline.RealGlobalRescheduleExtractionService
 import com.smartsales.core.pipeline.PromptCompiler
 import com.smartsales.core.pipeline.RealUniAExtractionService
 import com.smartsales.core.telemetry.PipelineValve
 import com.smartsales.core.llm.ExecutorResult
+import com.smartsales.core.test.fakes.FakeActiveTaskRetrievalIndex
 import com.smartsales.core.test.fakes.FakeExecutor
 import com.smartsales.core.test.fakes.FakeScheduleBoard
 import com.smartsales.core.test.fakes.FakeUserProfileRepository
@@ -19,8 +22,10 @@ import com.smartsales.prism.domain.audio.TranscriptionStatus
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.model.ChatMessage
 import com.smartsales.prism.domain.model.SchedulerFollowUpTaskSummary
+import com.smartsales.prism.domain.model.SessionKind
 import com.smartsales.prism.domain.model.SessionPreview
 import com.smartsales.prism.domain.model.UiState
+import com.smartsales.prism.domain.scheduler.ActiveTaskResolveResult
 import com.smartsales.prism.domain.scheduler.FakeScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.SchedulerLinter
 import com.smartsales.prism.domain.scheduler.ScheduledTask
@@ -63,11 +68,14 @@ class SimAgentViewModelTest {
     private lateinit var sessionRepository: SimSessionRepository
     private lateinit var taskRepository: FakeScheduledTaskRepository
     private lateinit var scheduleBoard: FakeScheduleBoard
+    private lateinit var activeTaskRetrievalIndex: FakeActiveTaskRetrievalIndex
     private lateinit var alarmScheduler: FakeAlarmScheduler
     private lateinit var fakeExecutor: FakeExecutor
     private lateinit var userProfileRepository: FakeUserProfileRepository
     private lateinit var timeProvider: FakeTimeProvider
     private lateinit var uniAExtractionService: RealUniAExtractionService
+    private lateinit var globalRescheduleExtractionService: RealGlobalRescheduleExtractionService
+    private lateinit var followUpRescheduleExtractionService: RealFollowUpRescheduleExtractionService
 
     @Before
     fun setup() {
@@ -75,22 +83,37 @@ class SimAgentViewModelTest {
         sessionRepository = SimSessionRepository(tempFolder.root)
         taskRepository = FakeScheduledTaskRepository()
         scheduleBoard = FakeScheduleBoard()
+        activeTaskRetrievalIndex = FakeActiveTaskRetrievalIndex()
         alarmScheduler = FakeAlarmScheduler()
         fakeExecutor = FakeExecutor()
         userProfileRepository = FakeUserProfileRepository()
         timeProvider = FakeTimeProvider().apply {
             fixedInstant = Instant.parse("2026-03-22T08:00:00Z")
         }
+        val schedulerLinter = SchedulerLinter(timeProvider)
         uniAExtractionService = RealUniAExtractionService(
             fakeExecutor,
             PromptCompiler(),
-            SchedulerLinter(timeProvider)
+            schedulerLinter
         )
+        globalRescheduleExtractionService = RealGlobalRescheduleExtractionService(
+            fakeExecutor,
+            PromptCompiler(),
+            schedulerLinter
+        )
+        followUpRescheduleExtractionService = RealFollowUpRescheduleExtractionService(
+            fakeExecutor,
+            PromptCompiler(),
+            schedulerLinter
+        )
+        SimFollowUpRescheduleShadowMetrics.resetForTest()
     }
 
     @After
     fun tearDown() {
         Dispatchers.resetMain()
+        PipelineValve.testInterceptor = null
+        SimFollowUpRescheduleShadowMetrics.resetForTest()
     }
 
     @Test
@@ -777,6 +800,45 @@ class SimAgentViewModelTest {
     }
 
     @Test
+    fun `deleting bound audio unlinks session and keeps session alive`() {
+        writeAudioMetadata(
+            AudioFile(
+                id = "audio_bound_delete_1",
+                filename = "BoundDelete.wav",
+                timeDisplay = "Now",
+                source = AudioSource.PHONE,
+                status = TranscriptionStatus.TRANSCRIBED
+            )
+        )
+
+        val audioRepository = newAudioRepository()
+        val viewModel = newViewModel(audioRepository = audioRepository)
+        val sessionId = viewModel.selectAudioForChat(
+            audioId = "audio_bound_delete_1",
+            title = "绑定录音",
+            summary = "摘要",
+            entersPendingFlow = false
+        )
+
+        assertEquals("audio_bound_delete_1", viewModel.currentLinkedAudioId.value)
+        assertEquals(sessionId, audioRepository.getBoundSessionId("audio_bound_delete_1"))
+
+        viewModel.handleDeletedAudio("audio_bound_delete_1")
+        audioRepository.deleteAudio("audio_bound_delete_1")
+
+        val preview = viewModel.groupedSessions.value.values
+            .flatten()
+            .first { it.id == sessionId }
+
+        assertNull(viewModel.currentLinkedAudioId.value)
+        assertEquals(UiState.Idle, viewModel.uiState.value)
+        assertNull(preview.linkedAudioId)
+        assertEquals(SessionKind.GENERAL, preview.sessionKind)
+        assertNull(audioRepository.getAudio("audio_bound_delete_1"))
+        assertNull(audioRepository.getBoundSessionId("audio_bound_delete_1"))
+    }
+
+    @Test
     fun `scheduler follow up quick action toggles done for selected bound task`() = runTest {
         val taskId = taskRepository.insertTask(
             ScheduledTask(
@@ -843,7 +905,11 @@ class SimAgentViewModelTest {
     }
 
     @Test
-    fun `scheduler follow up send reschedules selected exact task by explicit delta without prompt`() = runTest {
+    fun `scheduler follow up send resolves target globally by explicit delta and records V2 shadow parity`() = runTest {
+        val valveEvents = mutableListOf<Pair<PipelineValve.Checkpoint, String>>()
+        PipelineValve.testInterceptor = { checkpoint, _, summary ->
+            valveEvents += checkpoint to summary
+        }
         val taskId = taskRepository.insertTask(
             ScheduledTask(
                 id = "task_follow_delta",
@@ -869,7 +935,13 @@ class SimAgentViewModelTest {
             )
         )
         viewModel.switchSession(sessionId!!)
+        activeTaskRetrievalIndex.nextResolveResult = ActiveTaskResolveResult.Resolved(taskId)
 
+        enqueueGlobalRescheduleExtraction(
+            targetQuery = "赶高铁",
+            timeInstruction = "推迟1个小时"
+        )
+        enqueueFollowUpShadowDelta(minutes = 60)
         viewModel.updateInput("推迟1个小时")
         viewModel.send()
         advanceUntilIdle()
@@ -878,11 +950,75 @@ class SimAgentViewModelTest {
         assertEquals(Instant.parse("2026-03-22T09:00:00Z"), updated?.startTime)
         val lastMessage = viewModel.history.value.last() as ChatMessage.Ai
         assertTrue((lastMessage.uiState as UiState.Response).content.contains("已改期：赶高铁"))
-        assertTrue(fakeExecutor.executedPrompts.isEmpty())
+        assertTrue(fakeExecutor.executedPrompts.isNotEmpty())
+        assertTrue(
+            valveEvents.contains(
+                PipelineValve.Checkpoint.UI_STATE_EMITTED to
+                    SIM_BADGE_SCHEDULER_FOLLOW_UP_V2_SHADOW_STARTED_SUMMARY
+            )
+        )
+        assertTrue(
+            valveEvents.contains(
+                PipelineValve.Checkpoint.UI_STATE_EMITTED to
+                    SIM_BADGE_SCHEDULER_FOLLOW_UP_V2_SHADOW_PARITY_SUMMARY
+            )
+        )
     }
 
     @Test
-    fun `scheduler follow up send still supports absolute exact reschedule`() = runTest {
+    fun `scheduler follow up send keeps V1 write when V2 shadow reports unsupported and emits mismatch support`() = runTest {
+        val valveEvents = mutableListOf<Pair<PipelineValve.Checkpoint, String>>()
+        PipelineValve.testInterceptor = { checkpoint, _, summary ->
+            valveEvents += checkpoint to summary
+        }
+        val taskId = taskRepository.insertTask(
+            ScheduledTask(
+                id = "task_follow_shadow_mismatch",
+                timeDisplay = "16:00",
+                title = "赶高铁",
+                urgencyLevel = UrgencyLevel.L2_IMPORTANT,
+                startTime = Instant.parse("2026-03-22T08:00:00Z"),
+                durationMinutes = 30
+            )
+        )
+        val viewModel = newViewModel()
+        val sessionId = viewModel.createBadgeSchedulerFollowUpSession(
+            threadId = "thread_follow_shadow_mismatch",
+            transcript = "安排赶高铁",
+            tasks = listOf(
+                SchedulerFollowUpTaskSummary(
+                    taskId = taskId,
+                    title = "赶高铁",
+                    dayOffset = 0,
+                    scheduledAtMillis = Instant.parse("2026-03-22T08:00:00Z").toEpochMilli(),
+                    durationMinutes = 30
+                )
+            )
+        )
+        viewModel.switchSession(sessionId!!)
+        activeTaskRetrievalIndex.nextResolveResult = ActiveTaskResolveResult.Resolved(taskId)
+
+        enqueueGlobalRescheduleExtraction(
+            targetQuery = "赶高铁",
+            timeInstruction = "推迟1个小时"
+        )
+        enqueueFollowUpShadowUnsupported("shadow experiment does not support this")
+        viewModel.updateInput("推迟1个小时")
+        viewModel.send()
+        advanceUntilIdle()
+
+        val updated = taskRepository.getTask(taskId)
+        assertEquals(Instant.parse("2026-03-22T09:00:00Z"), updated?.startTime)
+        assertTrue(
+            valveEvents.contains(
+                PipelineValve.Checkpoint.UI_STATE_EMITTED to
+                    SIM_BADGE_SCHEDULER_FOLLOW_UP_V2_SHADOW_MISMATCH_SUPPORT_SUMMARY
+            )
+        )
+    }
+
+    @Test
+    fun `scheduler follow up send still supports absolute exact reschedule while V2 shadow runs`() = runTest {
         val taskId = taskRepository.insertTask(
             ScheduledTask(
                 id = "task_follow_absolute",
@@ -908,7 +1044,13 @@ class SimAgentViewModelTest {
             )
         )
         viewModel.switchSession(sessionId!!)
+        activeTaskRetrievalIndex.nextResolveResult = ActiveTaskResolveResult.Resolved(taskId)
 
+        enqueueGlobalRescheduleExtraction(
+            targetQuery = "客户回访",
+            timeInstruction = "明天早上8点"
+        )
+        enqueueFollowUpShadowRelativeDayClock(dayOffset = 1, clockTime = "08:00")
         viewModel.updateInput("改到明天早上8点")
         viewModel.send()
         advanceUntilIdle()
@@ -916,11 +1058,11 @@ class SimAgentViewModelTest {
         val updated = taskRepository.getTask(taskId)
         assertEquals(Instant.parse("2026-03-23T00:00:00Z"), updated?.startTime)
         assertEquals(30, updated?.durationMinutes)
-        assertTrue(fakeExecutor.executedPrompts.isEmpty())
+        assertTrue(fakeExecutor.executedPrompts.isNotEmpty())
     }
 
     @Test
-    fun `scheduler follow up send reschedules selected conflicted task by explicit delta and recomputes conflict`() = runTest {
+    fun `scheduler follow up send reschedules globally resolved conflicted task by explicit delta and recomputes conflict while V2 shadow runs`() = runTest {
         val taskId = taskRepository.insertTask(
             ScheduledTask(
                 id = "task_follow_conflict",
@@ -959,7 +1101,13 @@ class SimAgentViewModelTest {
             )
         )
         viewModel.switchSession(sessionId!!)
+        activeTaskRetrievalIndex.nextResolveResult = ActiveTaskResolveResult.Resolved(taskId)
 
+        enqueueGlobalRescheduleExtraction(
+            targetQuery = "赶高铁",
+            timeInstruction = "推迟1个小时"
+        )
+        enqueueFollowUpShadowDelta(minutes = 60)
         viewModel.updateInput("推迟1个小时")
         viewModel.send()
         advanceUntilIdle()
@@ -969,11 +1117,11 @@ class SimAgentViewModelTest {
         assertTrue(updated?.hasConflict == true)
         val lastMessage = viewModel.history.value.last() as ChatMessage.Ai
         assertTrue((lastMessage.uiState as UiState.Response).content.contains("注意：与「叫我吃饭」时间冲突"))
-        assertTrue(fakeExecutor.executedPrompts.isEmpty())
+        assertTrue(fakeExecutor.executedPrompts.isNotEmpty())
     }
 
     @Test
-    fun `scheduler follow up send safely blocks mutation when multi task selection is missing`() = runTest {
+    fun `scheduler follow up send safely blocks mutation when global target extraction stays unsupported`() = runTest {
         taskRepository.insertTask(
             ScheduledTask(
                 id = "task_follow_a",
@@ -1006,12 +1154,13 @@ class SimAgentViewModelTest {
         viewModel.switchSession(sessionId!!)
 
         assertNull(viewModel.selectedSchedulerFollowUpTaskId.value)
+        enqueueGlobalRescheduleExtractionUnsupported("target remains ambiguous")
         viewModel.updateInput("改到明天下午三点")
         viewModel.send()
         advanceUntilIdle()
 
         val lastMessage = viewModel.history.value.last() as ChatMessage.Ai
-        assertTrue((lastMessage.uiState as UiState.Response).content.contains("请先选择"))
+        assertTrue((lastMessage.uiState as UiState.Response).content.contains("明确目标"))
     }
 
     private fun newViewModel(
@@ -1023,11 +1172,90 @@ class SimAgentViewModelTest {
             audioRepository = audioRepository,
             taskRepository = taskRepository,
             scheduleBoard = scheduleBoard,
+            activeTaskRetrievalIndex = activeTaskRetrievalIndex,
             alarmScheduler = alarmScheduler,
             uniAExtractionService = uniAExtractionService,
+            globalRescheduleExtractionService = globalRescheduleExtractionService,
+            followUpRescheduleExtractionService = followUpRescheduleExtractionService,
             executor = executor,
             userProfileRepository = userProfileRepository,
             timeProvider = timeProvider
+        )
+    }
+
+    private fun enqueueFollowUpShadowDelta(minutes: Int) {
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "RESCHEDULE_EXACT",
+                  "timeKind": "DELTA_FROM_TARGET",
+                  "deltaFromTargetMinutes": $minutes
+                }
+                """.trimIndent()
+            )
+        )
+    }
+
+    private fun enqueueGlobalRescheduleExtraction(
+        targetQuery: String,
+        timeInstruction: String,
+        targetPerson: String? = null,
+        targetLocation: String? = null
+    ) {
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "RESCHEDULE_TARGETED",
+                  "targetQuery": "$targetQuery",
+                  "targetPerson": ${targetPerson?.let { "\"$it\"" } ?: "null"},
+                  "targetLocation": ${targetLocation?.let { "\"$it\"" } ?: "null"},
+                  "timeInstruction": "$timeInstruction"
+                }
+                """.trimIndent()
+            )
+        )
+    }
+
+    private fun enqueueGlobalRescheduleExtractionUnsupported(reason: String) {
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "NOT_SUPPORTED",
+                  "reason": "$reason"
+                }
+                """.trimIndent()
+            )
+        )
+    }
+
+    private fun enqueueFollowUpShadowRelativeDayClock(dayOffset: Int, clockTime: String) {
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "RESCHEDULE_EXACT",
+                  "timeKind": "RELATIVE_DAY_CLOCK",
+                  "relativeDayOffset": $dayOffset,
+                  "clockTime": "$clockTime"
+                }
+                """.trimIndent()
+            )
+        )
+    }
+
+    private fun enqueueFollowUpShadowUnsupported(reason: String) {
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "NOT_SUPPORTED",
+                  "reason": "$reason"
+                }
+                """.trimIndent()
+            )
         )
     }
 

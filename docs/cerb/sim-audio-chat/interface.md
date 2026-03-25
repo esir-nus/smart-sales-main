@@ -33,9 +33,10 @@ Meaning:
 Browse-vs-select interaction contract:
 
 - direct drawer open uses browse-mode gallery behavior
+- browse mode uses directional card actions with state gating: pending collapsed cards support right-swipe transcribe plus left-swipe delete; collapsed transcribed cards support left-swipe delete only
 - chat attach/upload reopen uses select-mode picker behavior
 - select mode is buttonless at the card level: the whole card is the action surface
-- select mode suppresses swipe gestures, expand/collapse, and `Ask AI`
+- select mode suppresses swipe gestures, delete/destructive actions, expand/collapse, and `Ask AI`
 - select mode should present explicit selection framing such as `选择要讨论的录音`
 - select mode should present already-transcribed cards with truncated transcript preview so users can recognize content without opening the artifact view
 - select mode should present pending/transcribing cards with compact row-body copy that makes continued processing inside chat clear
@@ -193,7 +194,9 @@ Meaning:
 - selecting audio from inside chat reopens the Audio Drawer
 - chat-side drawer reopening uses a distinct select mode rather than browse-mode gallery interaction language
 - select mode cards are self-explanatory action surfaces; no dedicated per-card bottom CTA is required
-- select mode suppresses swipe gestures, quick-action trays, expand/collapse, and `Ask AI`
+- browse mode owns the only swipe actions on cards: pending collapsed cards swipe right for transcription and left for delete; collapsed transcribed cards swipe left for delete only
+- expanded transcribed cards and transcribing cards do not expose delete swipe
+- select mode suppresses swipe gestures, delete/destructive actions, quick-action trays, expand/collapse, and `Ask AI`
 - select mode should render already-transcribed cards with truncated transcript preview for recognition
 - select mode should render pending/transcribing cards with compact continuation copy explaining continued processing in chat
 - select mode should keep a compact one-line header with filename, timestamp, and star

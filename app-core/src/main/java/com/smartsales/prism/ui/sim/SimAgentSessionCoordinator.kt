@@ -9,13 +9,15 @@ import com.smartsales.prism.domain.model.SessionKind
 import com.smartsales.prism.domain.model.SessionPreview
 import com.smartsales.prism.domain.model.UiState
 import java.time.Instant
+import java.time.format.DateTimeFormatter
 import java.time.ZoneId
+import java.util.Locale
 import java.util.UUID
 
 internal const val SIM_HISTORY_GROUP_PINNED = "置顶"
 internal const val SIM_HISTORY_GROUP_TODAY = "今天"
-internal const val SIM_HISTORY_GROUP_LAST_7_DAYS = "最近7天"
-internal const val SIM_HISTORY_GROUP_EARLIER = "更早"
+internal const val SIM_HISTORY_GROUP_LAST_30_DAYS = "最近30天"
+private val SimHistoryMonthFormatter = DateTimeFormatter.ofPattern("yyyy-MM", Locale.getDefault())
 
 internal data class SimSessionRecord(
     val preview: SessionPreview,
@@ -198,6 +200,37 @@ internal class SimAgentSessionCoordinator(
             bridge.setSelectedSchedulerFollowUpTaskId(null)
         }
         refreshGroupedSessions()
+    }
+
+    fun handleDeletedAudio(audioId: String) {
+        val affectedSessionIds = buildSet {
+            audioBindings[audioId]?.let(::add)
+            sessions.values
+                .filter { it.preview.linkedAudioId == audioId }
+                .mapTo(this) { it.preview.id }
+        }
+        if (affectedSessionIds.isEmpty()) return
+
+        audioBindings.remove(audioId)
+        audioRepository.clearBoundSession(audioId)
+
+        affectedSessionIds.forEach { sessionId ->
+            updateSession(sessionId) { record ->
+                record.copy(
+                    preview = record.preview.copy(
+                        linkedAudioId = null,
+                        sessionKind = when (record.preview.sessionKind) {
+                            SessionKind.AUDIO_GROUNDED -> SessionKind.GENERAL
+                            else -> record.preview.sessionKind
+                        }
+                    )
+                )
+            }
+        }
+
+        if (bridge.getCurrentSessionId() in affectedSessionIds) {
+            bridge.setUiState(UiState.Idle)
+        }
     }
 
     fun currentSessionId(): String? = bridge.getCurrentSessionId()
@@ -407,25 +440,31 @@ internal fun groupSimHistorySessions(
     val regular = sorted.filterNot { it.isPinned }
 
     val today = Instant.ofEpochMilli(nowMillis).atZone(zoneId).toLocalDate()
-    val last7Cutoff = today.minusDays(6)
+    val last30Cutoff = today.minusDays(30)
 
     val todaySessions = mutableListOf<SessionPreview>()
-    val last7Sessions = mutableListOf<SessionPreview>()
-    val earlierSessions = mutableListOf<SessionPreview>()
+    val last30Sessions = mutableListOf<SessionPreview>()
+    val monthlySessions = linkedMapOf<String, MutableList<SessionPreview>>()
 
     regular.forEach { preview ->
-        val sessionDate = Instant.ofEpochMilli(preview.timestamp).atZone(zoneId).toLocalDate()
+        val sessionDateTime = Instant.ofEpochMilli(preview.timestamp).atZone(zoneId)
+        val sessionDate = sessionDateTime.toLocalDate()
         when {
             !sessionDate.isBefore(today) -> todaySessions += preview
-            !sessionDate.isBefore(last7Cutoff) -> last7Sessions += preview
-            else -> earlierSessions += preview
+            !sessionDate.isBefore(last30Cutoff) -> last30Sessions += preview
+            else -> {
+                val monthLabel = sessionDateTime.format(SimHistoryMonthFormatter)
+                monthlySessions.getOrPut(monthLabel) { mutableListOf() } += preview
+            }
         }
     }
 
     return linkedMapOf<String, List<SessionPreview>>().apply {
         if (pinned.isNotEmpty()) put(SIM_HISTORY_GROUP_PINNED, pinned)
         if (todaySessions.isNotEmpty()) put(SIM_HISTORY_GROUP_TODAY, todaySessions)
-        if (last7Sessions.isNotEmpty()) put(SIM_HISTORY_GROUP_LAST_7_DAYS, last7Sessions)
-        if (earlierSessions.isNotEmpty()) put(SIM_HISTORY_GROUP_EARLIER, earlierSessions)
+        if (last30Sessions.isNotEmpty()) put(SIM_HISTORY_GROUP_LAST_30_DAYS, last30Sessions)
+        monthlySessions.forEach { (monthLabel, sessionsInMonth) ->
+            put(monthLabel, sessionsInMonth.sortedByDescending { it.timestamp })
+        }
     }
 }

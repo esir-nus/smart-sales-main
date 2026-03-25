@@ -16,6 +16,7 @@ internal val SimDrawerTextSecondary = Color(0xB8FFFFFF)
 internal val SimDrawerTextMuted = Color(0x80FFFFFF)
 internal val SimDrawerTextFaint = Color(0x66FFFFFF)
 internal val SimDrawerAccent = Color(0xFF0A84FF)
+internal val SimDrawerDeleteBackground = Color(0xFFFF453A)
 
 data class SimChatAudioSelection(
     val audioId: String,

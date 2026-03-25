@@ -58,6 +58,10 @@ class SimAudioDrawerViewModel @Inject constructor(
         repository.toggleStar(audioId)
     }
 
+    fun deleteAudio(audioId: String) {
+        repository.deleteAudio(audioId)
+    }
+
     fun startTranscription(audioId: String) {
         viewModelScope.launch {
             try {

@@ -1,7 +1,6 @@
 package com.smartsales.prism.ui.sim
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.ExperimentalTransitionApi
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -25,6 +24,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -67,6 +67,7 @@ internal fun SimAudioCard(
     onToggleExpanded: () -> Unit,
     onToggleStar: () -> Unit,
     onTranscribe: () -> Unit,
+    onDelete: () -> Unit,
     onArtifactOpened: (String, String) -> Unit,
     onAskAi: () -> Unit,
     onSelectForChat: () -> Unit
@@ -78,6 +79,16 @@ internal fun SimAudioCard(
     val isCurrentChatAudio = currentChatAudioId == entry.item.id
     val isBrowseMode = mode == SimAudioDrawerMode.BROWSE
     val canExpandInBrowseMode = isBrowseMode && entry.item.status == AudioStatus.TRANSCRIBED
+    val canSwipeToTranscribe = canSwipeRightToTranscribe(
+        mode = mode,
+        status = entry.item.status,
+        expanded = expanded
+    )
+    val canSwipeToDelete = canSwipeLeftToDelete(
+        mode = mode,
+        status = entry.item.status,
+        expanded = expanded
+    )
     val offsetX = remember { Animatable(0f) }
     val coroutineScope = rememberCoroutineScope()
     val dismissState = rememberSwipeToDismissBoxState(
@@ -85,10 +96,15 @@ internal fun SimAudioCard(
         confirmValueChange = { value ->
             if (
                 value == SwipeToDismissBoxValue.StartToEnd &&
-                isBrowseMode &&
-                entry.item.status == AudioStatus.PENDING
+                canSwipeToTranscribe
             ) {
                 onTranscribe()
+            }
+            if (
+                value == SwipeToDismissBoxValue.EndToStart &&
+                canSwipeToDelete
+            ) {
+                onDelete()
             }
             false
         }
@@ -257,7 +273,12 @@ internal fun SimAudioCard(
             when (entry.item.status) {
                 AudioStatus.PENDING -> {
                     SimAudioCompactPreviewRow(
-                        previewContent = { SimBrowseModeSwipePrompt() }
+                        previewContent = {
+                            SimBrowseModeSwipePrompt(
+                                transcribeActive = dismissState.dismissDirection ==
+                                    SwipeToDismissBoxValue.StartToEnd
+                            )
+                        }
                     )
                 }
 
@@ -290,25 +311,26 @@ internal fun SimAudioCard(
 
     SwipeToDismissBox(
         state = dismissState,
-        enableDismissFromStartToEnd = isBrowseMode && entry.item.status == AudioStatus.PENDING,
-        enableDismissFromEndToStart = false,
+        enableDismissFromStartToEnd = canSwipeToTranscribe,
+        enableDismissFromEndToStart = canSwipeToDelete,
         backgroundContent = {
-            val active = dismissState.dismissDirection == SwipeToDismissBoxValue.StartToEnd
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        if (active) SimDrawerAccent.copy(alpha = 0.16f) else Color.Transparent,
-                        RoundedCornerShape(20.dp)
+            if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            if (canSwipeToDelete) SimDrawerDeleteBackground else Color.Transparent,
+                            RoundedCornerShape(20.dp)
+                        )
+                        .padding(horizontal = 20.dp),
+                    contentAlignment = Alignment.CenterEnd
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Delete,
+                        contentDescription = null,
+                        tint = if (canSwipeToDelete) Color.White else Color.Transparent
                     )
-                    .padding(horizontal = 20.dp),
-                contentAlignment = Alignment.CenterStart
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.AutoAwesome,
-                    contentDescription = null,
-                    tint = if (active) SimDrawerAccent else Color.Transparent
-                )
+                }
             }
         }
     ) {
@@ -397,6 +419,26 @@ internal fun SimAudioCard(
     }
 }
 
+internal fun canSwipeRightToTranscribe(
+    mode: SimAudioDrawerMode,
+    status: AudioStatus,
+    expanded: Boolean
+): Boolean {
+    return mode == SimAudioDrawerMode.BROWSE &&
+        !expanded &&
+        status == AudioStatus.PENDING
+}
+
+internal fun canSwipeLeftToDelete(
+    mode: SimAudioDrawerMode,
+    status: AudioStatus,
+    expanded: Boolean
+): Boolean {
+    return mode == SimAudioDrawerMode.BROWSE &&
+        !expanded &&
+        (status == AudioStatus.PENDING || status == AudioStatus.TRANSCRIBED)
+}
+
 @Composable
 private fun SimAudioCompactPreviewRow(
     text: String? = null,
@@ -419,7 +461,7 @@ private fun SimAudioCompactPreviewRow(
 }
 
 @Composable
-private fun SimBrowseModeSwipePrompt() {
+private fun SimBrowseModeSwipePrompt(transcribeActive: Boolean) {
     val infiniteTransition = rememberInfiniteTransition(label = "sim_audio_swipe_prompt")
     val alpha by infiniteTransition.animateFloat(
         initialValue = 0.35f,
@@ -432,7 +474,7 @@ private fun SimBrowseModeSwipePrompt() {
     )
 
     Text(
-        text = "右滑开始转写 >>>",
+        text = if (transcribeActive) ">>> 释放以转写" else "右滑开始转写 >>>",
         color = SimDrawerAccent.copy(alpha = alpha),
         fontSize = 13.sp,
         fontWeight = FontWeight.Medium

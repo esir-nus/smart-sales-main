@@ -37,11 +37,13 @@ This shard intentionally replaces the smart-agent interpretation of chat with a 
 - expose a browse-mode manual sync action for badge-origin inventory refresh
 - allow a best-effort automatic badge sync when the browse drawer opens and connectivity is already ready
 - allow phone-local/manual audio import only as a testing convenience when explicitly enabled for QA/dev validation
-- support a browse-mode transcribe action aligned to the Audio Drawer swipe UX
+- support a browse-mode right-swipe transcribe action aligned to the Audio Drawer swipe UX
+- support a browse-mode left-swipe delete action for removing collapsed pending or collapsed transcribed audio items
 - support opening transcribed cards in browse mode
 - support a chat-side select mode when the drawer is reopened from chat attach/upload
 - in chat-side select mode, cards themselves are the action surface; no dedicated per-card bottom CTA is required
 - in chat-side select mode, swipe and expansion affordances are suppressed so the surface reads as a picker rather than a gallery
+- in chat-side select mode, delete and any other destructive behavior are suppressed
 - in chat-side select mode, already-transcribed cards should expose a truncated transcript preview so users can recognize the audio content before selecting it
 - act as the informational, non-chat variant of the chat experience
 
@@ -186,13 +188,16 @@ For drawer-side informational browsing specifically:
 - the expanded card is the informational artifact view once the user opens it
 - user-toggled expand/collapse state must remain stable during scrolling and recomposition for the current drawer-open session
 - reopening the drawer may reset cards back to the collapsed default
+- collapsed pending cards use browse-mode directional swipe actions: right swipe starts transcription and left swipe deletes the item
+- collapsed transcribed cards may also use browse-mode left swipe delete, but expanded artifact cards must not expose delete swipe
+- transcribing cards must not expose delete swipe
 
 For chat-side audio reselection specifically:
 
 - the drawer should present as a static selector rather than as the full interactive gallery
 - the title/copy should make selection intent obvious rather than teaching swipe
 - the whole card is the selection target; no dedicated `在聊天中处理`-style button is required
-- swipe-to-transcribe, swipe-left quick actions, expansion, and `Ask AI` are suppressed in this mode
+- browse-mode swipe actions, expansion, delete, and `Ask AI` are suppressed in this mode
 - the currently bound audio item should render as disabled/current rather than as a selectable card
 - already-transcribed cards should show a truncated transcript preview so the user can recognize content quickly
 - pending and transcribing cards should explain that processing can continue inside the current chat once selected

@@ -47,6 +47,8 @@ class SimAudioDrawerStructureTest {
 
         assertTrue(card.contains("internal fun SimAudioCard("))
         assertTrue(card.contains("SimArtifactContent(artifacts = artifacts!!)"))
+        assertTrue(card.contains("internal fun canSwipeRightToTranscribe("))
+        assertTrue(card.contains("internal fun canSwipeLeftToDelete("))
         assertTrue(card.contains("private fun SimAudioCompactPreviewRow("))
         assertTrue(card.contains("private fun SimBrowseModeSwipePrompt("))
         assertFalse(card.contains("private fun SimArtifactSections("))

@@ -345,6 +345,10 @@ internal fun SimShellContent(
                             }
                         }
                     }
+                },
+                onDeleteAudio = { audioId ->
+                    chatViewModel.handleDeletedAudio(audioId)
+                    audioViewModel.deleteAudio(audioId)
                 }
             )
         }

@@ -39,6 +39,7 @@ internal fun SimAudioDrawerContent(
     onOpenConnectivity: () -> Unit,
     onArtifactOpened: (String, String) -> Unit,
     onAskAi: (SimAudioDiscussion) -> Unit,
+    onDeleteAudio: (String) -> Unit,
     onSelectForChat: (SimChatAudioSelection) -> Unit,
     onImportTestAudio: () -> Unit,
     onSeedDebugFailureScenario: () -> Unit,
@@ -117,6 +118,7 @@ internal fun SimAudioDrawerContent(
                 onToggleExpanded = { viewModel.toggleExpanded(entry.item.id) },
                 onToggleStar = { viewModel.toggleStar(entry.item.id) },
                 onTranscribe = { viewModel.startTranscription(entry.item.id) },
+                onDelete = { onDeleteAudio(entry.item.id) },
                 onArtifactOpened = onArtifactOpened,
                 onAskAi = {
                     viewModel.createDiscussion(entry.item.id)?.let(onAskAi)

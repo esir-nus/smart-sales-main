@@ -13,6 +13,7 @@ import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
 import com.smartsales.prism.ui.drawers.AudioItemState
 import com.smartsales.prism.ui.drawers.AudioSource
 import com.smartsales.prism.ui.drawers.AudioStatus
+import java.io.File
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -75,6 +76,17 @@ class SimAudioDrawerViewModel @Inject constructor(
                 _uiEvents.emit("测试音频已导入")
             } catch (e: Exception) {
                 _uiEvents.emit(e.message ?: "导入测试音频失败")
+            }
+        }
+    }
+
+    fun importRecordedTestAudio(recordedFile: File) {
+        viewModelScope.launch {
+            try {
+                repository.addRecordedTestAudio(recordedFile)
+                _uiEvents.emit("测试录音已加入列表")
+            } catch (e: Exception) {
+                _uiEvents.emit(e.message ?: "保存测试录音失败")
             }
         }
     }

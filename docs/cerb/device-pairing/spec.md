@@ -27,7 +27,7 @@ graph TD
 | Wave | Focus | Status | Deliverables |
 |------|-------|--------|--------------|
 | **1** | Core Service | ✅ SHIPPED | `RealPairingService` implementation wrapping legacy components. Support Scan -> Pair -> Success happy path. |
-| **1.5** | Wiring | 🔧 IN PROGRESS | Wire `OnboardingViewModel` to `RealPairingService`. Replace fake service. |
+| **1.5** | Wiring | Shipped | `PairingFlowViewModel` now owns the shared pairing seam used by the host-driven onboarding coordinator. |
 | **2** | Robustness | 🔲 PLANNED | implementations for timeouts, retries, and error mapping from legacy 9-states. |
 | **3** | Polish | 🔲 PLANNED | UX refinements, progress granularity, cancellation handling. |
 
@@ -42,7 +42,7 @@ BLE scanning requires runtime permissions on Android 12+. Permissions are reques
 | `BLUETOOTH_SCAN` | 31+ | Discover nearby BLE devices |
 | `BLUETOOTH_CONNECT` | 31+ | Connect to discovered devices |
 
-**Implementation**: `ScanStep` uses `rememberLauncherForActivityResult(RequestMultiplePermissions())`. If permissions are not granted, the system dialog appears immediately when entering the scan page.
+**Implementation**: the onboarding `PERMISSIONS_PRIMER` explains the requirement first, but `ScanStep` still uses `rememberLauncherForActivityResult(RequestMultiplePermissions())` at point-of-use. If permissions are not granted, the system dialog appears when entering the scan page.
 
 ---
 
@@ -75,12 +75,19 @@ BLE scanning requires runtime permissions on Android 12+. Permissions are reques
 **Key Logic**:
 - **Scanning**: Call `bleScanner.start()`. Collect `bleScanner.devices`.
 - **Pairing**:
-  1. Call `connectionManager.selectPeripheral(badge.peripheral)`
-  2. Emit `Pairing(10%)`
-  3. Call `connectionManager.startPairing(...)`
-  4. Emit `Pairing(50%)`
-  5. Wait for result.
-  6. On Success -> Emit `Success`.
+  1. Resolve the latest matching `BlePeripheral` from the scanner-owned snapshot using the selected `DiscoveredBadge.id`
+  2. Call `connectionManager.selectPeripheral(...)`
+  3. Emit `Pairing(10%)`
+  4. Call `connectionManager.startPairing(...)`
+  5. Treat `startPairing(...)` success as credential-dispatch success only
+  6. Move into the later network-status phase and poll/query for the badge IP
+  7. On network success -> emit `Success`
+  8. On network failure/timeout -> emit `Error(NETWORK_CHECK_FAILED)`
+- **WiFi Connect Protocol**:
+  - send `SD#<ssid>`
+  - wait the command gap
+  - send `PD#<password>`
+  - do not require an immediate BLE provisioning ack before moving to network-status validation
 
 ### Wave 2: Error Handling
 

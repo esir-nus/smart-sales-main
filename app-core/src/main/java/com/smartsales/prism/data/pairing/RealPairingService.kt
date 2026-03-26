@@ -140,8 +140,9 @@ class RealPairingService @Inject constructor(
         
         if (pairingResult is Result.Error) {
             Log.e(TAG, "startPairing returned error: ${pairingResult.throwable}")
+            val reason = pairingResult.throwable.message?.takeIf { it.isNotBlank() } ?: "请检查网络和密码"
             val error = PairingState.Error(
-                message = "WiFi 配网失败，请检查网络和密码",
+                message = "WiFi 配网失败: $reason",
                 reason = ErrorReason.WIFI_PROVISIONING_FAILED,
                 canRetry = true
             )

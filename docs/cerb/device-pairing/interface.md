@@ -80,8 +80,7 @@ sealed class PairingState {
 data class DiscoveredBadge(
     val id: String,              // BLE MAC address
     val name: String,            // 设备名称
-    val signalStrengthDbm: Int,  // 信号强度
-    val peripheral: BlePeripheral // 内部使用，传递给底层
+    val signalStrengthDbm: Int   // 信号强度
 )
 ```
 
@@ -122,25 +121,21 @@ enum class ErrorReason {
 
 ```kotlin
 @HiltViewModel
-class OnboardingViewModel @Inject constructor(
+class PairingFlowViewModel @Inject constructor(
     private val pairingService: PairingService
 ) : ViewModel() {
-    
+
     val pairingState = pairingService.state
-    
+
     fun startScan() {
         viewModelScope.launch {
             pairingService.startScan()
         }
     }
-    
+
     fun pairBadge(badge: DiscoveredBadge, wifi: WifiCredentials) {
         viewModelScope.launch {
-            val result = pairingService.pairBadge(badge, wifi)
-            when (result) {
-                is PairingResult.Success -> /* navigate to next step */
-                is PairingResult.Error -> /* show error toast */
-            }
+            pairingService.pairBadge(badge, wifi)
         }
     }
 }
@@ -178,6 +173,9 @@ Success → [Done]
 4. **Error Recovery**  
    `canRetry` flag indicates if the error is retriable (e.g., scan timeout = YES, permission denied = NO).
 
+5. **Provisioning Completion Contract**
+   WiFi connect is a credential-dispatch step (`SD#<ssid>` then `PD#<password>`). Consumers must not assume an immediate BLE provisioning ack; later network-status validation decides online success or `NETWORK_CHECK_FAILED`.
+
 ---
 
 ## You Should NOT
@@ -186,4 +184,4 @@ Success → [Done]
 - ❌ Access `DeviceConnectionManager` or `BleScanner` — service encapsulates these
 - ❌ Assume scan completes instantly — observe `state` flow for results
 - ❌ Call `pairBadge()` without valid `DiscoveredBadge` from `DeviceFound` state
-- ❌ Manually manage BLE permissions — service handles pre-flight checks
+- ❌ Bypass the scan-step permission gate — UI still requests Bluetooth permission at point-of-use before entering service work

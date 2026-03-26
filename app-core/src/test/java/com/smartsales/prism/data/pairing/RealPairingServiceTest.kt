@@ -103,6 +103,31 @@ class RealPairingServiceTest {
         assertEquals(ErrorReason.DEVICE_NOT_FOUND, (result as PairingResult.Error).reason)
     }
 
+    @Test
+    fun `pairBadge preserves immediate transport failure reason in message`() = runTest {
+        val peripheral = BlePeripheral("badge-1", "SmartBadge Pro", -42, "bt311")
+        service.startScan()
+        bleScanner.setDevices(listOf(peripheral))
+        val badge = awaitDeviceFound().badge
+        connectionManager.stubPairingResult = Result.Error(
+            IllegalStateException("读取特征失败：6e400003-b5a3-f393-e0a9-e50e24dcca9e")
+        )
+
+        val result = service.pairBadge(badge, WifiCredentials("OfficeWifi", "secret"))
+
+        assertTrue(result is PairingResult.Error)
+        assertEquals(
+            "WiFi 配网失败: 读取特征失败：6e400003-b5a3-f393-e0a9-e50e24dcca9e",
+            (result as PairingResult.Error).message
+        )
+        val state = service.state.value as PairingState.Error
+        assertEquals(
+            "WiFi 配网失败: 读取特征失败：6e400003-b5a3-f393-e0a9-e50e24dcca9e",
+            state.message
+        )
+        assertEquals(ErrorReason.WIFI_PROVISIONING_FAILED, state.reason)
+    }
+
     private fun awaitDeviceFound(timeoutMs: Long = 2_000): PairingState.DeviceFound {
         val deadline = System.currentTimeMillis() + timeoutMs
         while (System.currentTimeMillis() < deadline) {

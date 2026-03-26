@@ -71,10 +71,12 @@ internal fun AgentIntelligenceContent(
     onTingwuClick: () -> Unit,
     onArtifactsClick: () -> Unit,
     onDebugClick: () -> Unit,
+    onOnboardingDesignClick: () -> Unit,
     onProfileClick: () -> Unit,
     showDebugButton: Boolean,
     simDynamicIslandItems: List<DynamicIslandItem>,
     showSimBottomComposer: Boolean,
+    showSimIdleComposerHint: Boolean,
     enableSimSchedulerPullGesture: Boolean,
     enableSimAudioPullGesture: Boolean,
     onSimSchedulerPullOpen: () -> Unit,
@@ -182,6 +184,7 @@ internal fun AgentIntelligenceContent(
                 onAttachClick = onAttachClick,
                 simDynamicIslandItems = simDynamicIslandItems,
                 showBottomComposer = showSimBottomComposer,
+                showIdleComposerHint = showSimIdleComposerHint,
                 enableSimSchedulerPullGesture = enableSimSchedulerPullGesture,
                 enableSimAudioPullGesture = enableSimAudioPullGesture,
                 onSimSchedulerPullOpen = onSimSchedulerPullOpen,
@@ -252,6 +255,7 @@ internal fun AgentIntelligenceContent(
                         onNewSessionClick = onNewSessionClick,
                         onSchedulerClick = onSchedulerClick,
                         onDebugClick = onDebugClick,
+                        onOnboardingDesignClick = onOnboardingDesignClick,
                         onDeviceClick = onAudioBadgeClick,
                         showDebugButton = showDebugButton
                     )

@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.ViewCarousel
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -77,6 +78,7 @@ internal fun ProMaxHeader(
     onNewSessionClick: () -> Unit,
     onSchedulerClick: (DynamicIslandTapAction) -> Unit,
     onDebugClick: () -> Unit,
+    onOnboardingDesignClick: () -> Unit,
     onDeviceClick: () -> Unit,
     showDebugButton: Boolean
 ) {
@@ -105,6 +107,11 @@ internal fun ProMaxHeader(
                 GlassCircleButton(
                     icon = Icons.Filled.BugReport,
                     onClick = onDebugClick,
+                    tint = ProMaxTextMuted
+                )
+                GlassCircleButton(
+                    icon = Icons.Filled.ViewCarousel,
+                    onClick = onOnboardingDesignClick,
                     tint = ProMaxTextMuted
                 )
             }

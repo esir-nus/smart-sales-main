@@ -1,5 +1,6 @@
 package com.smartsales.prism.ui
 
+import com.smartsales.prism.BuildConfig
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -28,6 +29,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.smartsales.prism.ui.onboarding.OnboardingDesignBrowser
 import com.smartsales.prism.ui.theme.BackgroundApp
 
 /**
@@ -59,6 +61,7 @@ fun AgentShell(
     var activeDrawer by remember { mutableStateOf<DrawerType?>(DrawerType.SCHEDULER) }
     var showUserCenter by remember { mutableStateOf(false) }
     var showDebugHud by remember { mutableStateOf(false) }
+    var showOnboardingDesignBrowser by remember { mutableStateOf(false) }
     val agentViewModel: AgentViewModel = hiltViewModel()
     val historyViewModel: HistoryViewModel = hiltViewModel()
     val schedulerViewModel: SchedulerViewModel = hiltViewModel()
@@ -95,6 +98,11 @@ fun AgentShell(
         activeDrawer = DrawerType.SCHEDULER
     }
 
+    fun openUserCenter() {
+        activeDrawer = null
+        showUserCenter = true
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -112,7 +120,9 @@ fun AgentShell(
                 onTingwuClick = { activeDrawer = DrawerType.TINGWU },
                 onArtifactsClick = { activeDrawer = DrawerType.ARTIFACTS },
                 onDebugClick = { showDebugHud = !showDebugHud },
-                onProfileClick = { showUserCenter = true },
+                onOnboardingDesignClick = { showOnboardingDesignBrowser = true },
+                onProfileClick = ::openUserCenter,
+                showDebugButton = BuildConfig.DEBUG,
                 visualMode = AgentIntelligenceVisualMode.DEFAULT
             )
         }
@@ -144,14 +154,8 @@ fun AgentShell(
                     onDeviceClick = {
                         activeDrawer = DrawerType.CONNECTIVITY
                     },
-                    onSettingsClick = {
-                        activeDrawer = null
-                        showUserCenter = true
-                    },
-                    onProfileClick = {
-                        activeDrawer = null
-                        showUserCenter = true
-                    },
+                    onSettingsClick = ::openUserCenter,
+                    onProfileClick = ::openUserCenter,
                     onPinSession = { sessionId ->
                         historyViewModel.togglePin(sessionId)
                     },
@@ -208,7 +212,23 @@ fun AgentShell(
         }
 
         // 5. User Center (Glass Sheet Overlay)
-        // 5. User Center (Glass Sheet Overlay)
+        androidx.compose.animation.AnimatedVisibility(
+            visible = showUserCenter,
+            enter = androidx.compose.animation.fadeIn(
+                animationSpec = androidx.compose.animation.core.tween(180)
+            ),
+            exit = androidx.compose.animation.fadeOut(
+                animationSpec = androidx.compose.animation.core.tween(180)
+            ),
+            modifier = Modifier.zIndex(PrismElevation.Scrim + 0.5f)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.10f))
+            )
+        }
+
         androidx.compose.animation.AnimatedVisibility(
             visible = showUserCenter,
             enter = androidx.compose.animation.slideInHorizontally(
@@ -262,6 +282,12 @@ fun AgentShell(
             onTestTaskCreatedBubble = { agentViewModel.debugRunScenario("TASK_CREATED_BUBBLE") },
             onTestMultiTaskBubble = { agentViewModel.debugRunScenario("MULTI_TASK_CREATED_BUBBLE") },
             modifier = Modifier.zIndex(PrismElevation.Drawer + 10f)
+        )
+
+        OnboardingDesignBrowser(
+            isVisible = showOnboardingDesignBrowser,
+            onDismiss = { showOnboardingDesignBrowser = false },
+            modifier = Modifier.zIndex(PrismElevation.Drawer + 11f)
         )
         
         // --- MASCOT OVERLAY (Wave 4) ---

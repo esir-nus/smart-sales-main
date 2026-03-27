@@ -57,6 +57,7 @@ private enum class OnboardingDesignPreset(
 ) {
     WELCOME("Welcome", fullAppOnly = true),
     PERMISSIONS("Permissions"),
+    HANDSHAKE_WAITING("Handshake Waiting", fullAppOnly = true),
     HANDSHAKE("Handshake", fullAppOnly = true),
     HARDWARE_WAKE("Wake"),
     SCAN("Scan"),
@@ -86,10 +87,18 @@ private enum class OnboardingDesignPreset(
             badge = null
         )
 
+        HANDSHAKE_WAITING -> OnboardingVisualCaptureState(
+            host = OnboardingHost.FULL_APP,
+            step = OnboardingStep.VOICE_HANDSHAKE,
+            badge = null,
+            voiceHandshakeState = VoiceHandshakeVisualState.WAITING
+        )
+
         HANDSHAKE -> OnboardingVisualCaptureState(
             host = OnboardingHost.FULL_APP,
             step = OnboardingStep.VOICE_HANDSHAKE,
-            badge = null
+            badge = null,
+            voiceHandshakeState = VoiceHandshakeVisualState.REVEALED
         )
 
         HARDWARE_WAKE -> OnboardingVisualCaptureState(

@@ -95,8 +95,14 @@ internal data class OnboardingVisualCaptureState(
     val ssid: String = "",
     val password: String = "",
     val permissionDenied: Boolean = false,
-    val showProvisioningForm: Boolean = true
+    val showProvisioningForm: Boolean = true,
+    val voiceHandshakeState: VoiceHandshakeVisualState = VoiceHandshakeVisualState.REVEALED
 )
+
+internal enum class VoiceHandshakeVisualState {
+    WAITING,
+    REVEALED
+}
 
 @Composable
 fun OnboardingScreen(
@@ -221,7 +227,10 @@ internal fun OnboardingStaticScreen(
         when (it) {
             OnboardingStep.WELCOME -> WelcomeStep(onStart = {})
             OnboardingStep.PERMISSIONS_PRIMER -> PermissionsPrimerStep(onContinue = {})
-            OnboardingStep.VOICE_HANDSHAKE -> VoiceHandshakeStep(onContinue = {})
+            OnboardingStep.VOICE_HANDSHAKE -> VoiceHandshakeStepContent(
+                visualState = state.voiceHandshakeState,
+                onContinue = {}
+            )
             OnboardingStep.HARDWARE_WAKE -> HardwareWakeStep(onContinue = {})
             OnboardingStep.SCAN -> ScanStepContent(
                 pairingState = state.pairingState,
@@ -581,7 +590,7 @@ private fun PermissionsPrimerStep(onContinue: () -> Unit) {
 
 @Composable
 private fun VoiceHandshakeStep(onContinue: () -> Unit) {
-    var replyVisible by remember { mutableStateOf(false) }
+    var visualState by remember { mutableStateOf(VoiceHandshakeVisualState.WAITING) }
     val transition = rememberInfiniteTransition(label = "voiceHandshake")
     val pulse by transition.animateFloat(
         initialValue = 0.45f,
@@ -595,23 +604,55 @@ private fun VoiceHandshakeStep(onContinue: () -> Unit) {
 
     LaunchedEffect(Unit) {
         delay(1500)
-        replyVisible = true
+        visualState = VoiceHandshakeVisualState.REVEALED
     }
 
+    VoiceHandshakeStepContent(
+        visualState = visualState,
+        onContinue = onContinue,
+        pulse = pulse
+    )
+}
+
+@Composable
+private fun VoiceHandshakeStepContent(
+    visualState: VoiceHandshakeVisualState,
+    onContinue: () -> Unit,
+    pulse: Float = 1f
+) {
+    val replyVisible = visualState == VoiceHandshakeVisualState.REVEALED
+
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        TitleBlock(
-            title = "语音握手",
-            subtitle = "抽象声波只表达“正在聆听”，不伪装聊天气泡。"
-        )
-        Spacer(Modifier.height(40.dp))
+        Spacer(Modifier.height(44.dp))
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "让我们先认识一下",
+                color = OnboardingText,
+                fontSize = 31.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = "试着说：\"你好，帮我搞定这个客户\"",
+                color = OnboardingMuted.copy(alpha = 0.92f),
+                fontSize = 16.sp,
+                lineHeight = 23.sp,
+                textAlign = TextAlign.Center
+            )
+        }
+        Spacer(Modifier.weight(0.92f))
         Row(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            val barHeights = listOf(20.dp, 40.dp, 60.dp, 80.dp, 60.dp, 40.dp, 20.dp)
+            val barHeights = listOf(26.dp, 46.dp, 70.dp, 92.dp, 70.dp, 46.dp, 26.dp)
             val barColors = listOf(
                 Color.White.copy(alpha = 0.45f),
                 Color.White.copy(alpha = 0.55f),
@@ -624,32 +665,60 @@ private fun VoiceHandshakeStep(onContinue: () -> Unit) {
             barHeights.forEachIndexed { index, height ->
                 Box(
                     modifier = Modifier
-                        .size(width = 8.dp, height = height)
+                        .size(width = 7.dp, height = height)
                         .scale(if (index % 2 == 0) pulse else 1.15f - (pulse * 0.2f))
                         .clip(RoundedCornerShape(999.dp))
                         .background(barColors[index])
                 )
             }
         }
-        Spacer(Modifier.height(36.dp))
+        Spacer(Modifier.height(40.dp))
         if (replyVisible) {
             FrostedCard(
-                modifier = Modifier.fillMaxWidth(),
-                borderColor = OnboardingBlue.copy(alpha = 0.20f)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 6.dp),
+                containerColor = Color(0x141A2337),
+                borderColor = OnboardingBlue.copy(alpha = 0.22f)
             ) {
-                Text(
-                    text = "语音通道已确认，接下来进入设备唤醒。",
-                    color = OnboardingText,
-                    lineHeight = 22.sp
-                )
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "语音通道",
+                        color = OnboardingBlue,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 0.2.sp,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = "已听到您的开场语音，接下来进入设备唤醒。",
+                        color = OnboardingText,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium,
+                        lineHeight = 25.sp,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
-            Spacer(Modifier.height(22.dp))
+        } else {
+            Spacer(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(112.dp)
+            )
         }
+        Spacer(Modifier.weight(1f))
         PrimaryPillButton(
-            text = if (replyVisible) "继续" else "等待识别…",
+            text = "继续",
             onClick = onContinue,
             enabled = replyVisible,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp)
         )
     }
 }

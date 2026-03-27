@@ -8,6 +8,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -39,11 +40,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.boundsInRoot
@@ -73,9 +77,13 @@ import com.smartsales.prism.ui.theme.PrismThemeDefaults
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
+internal const val SIM_EMPTY_HOME_GREETING = "你好, SmartSales 用户"
+
 private data class SimHomeHeroPalette(
     val appBackground: Color,
     val monolithBackground: Color,
+    val monolithStroke: Color,
+    val monolithShadow: Color,
     val iconTint: Color,
     val islandIdleDot: Color,
     val greetingGradient: List<Color>,
@@ -102,6 +110,8 @@ private fun rememberSimHomeHeroPalette(): SimHomeHeroPalette {
         SimHomeHeroPalette(
             appBackground = Color(0xFF0D0D12),
             monolithBackground = Color(0xFF020205),
+            monolithStroke = Color.White.copy(alpha = 0.04f),
+            monolithShadow = Color.Black.copy(alpha = 0.28f),
             iconTint = Color.White,
             islandIdleDot = Color.White.copy(alpha = 0.42f),
             greetingGradient = listOf(Color.White, Color(0xFFA0A0A5)),
@@ -123,11 +133,13 @@ private fun rememberSimHomeHeroPalette(): SimHomeHeroPalette {
     } else {
         SimHomeHeroPalette(
             appBackground = Color(0xFFF5F5F7),
-            monolithBackground = Color.White.copy(alpha = 0.68f),
+            monolithBackground = Color.White.copy(alpha = 0.74f),
+            monolithStroke = Color.Black.copy(alpha = 0.10f),
+            monolithShadow = Color.Black.copy(alpha = 0.08f),
             iconTint = prismColors.textPrimary,
             islandIdleDot = prismColors.textSecondary.copy(alpha = 0.42f),
-            greetingGradient = listOf(prismColors.textPrimary, prismColors.textSecondary),
-            greetingSubtitle = prismColors.textSecondary,
+            greetingGradient = listOf(Color(0xFF4F64D8), Color(0xFF7081FF)),
+            greetingSubtitle = prismColors.textSecondary.copy(alpha = 0.80f),
             inputText = prismColors.textPrimary,
             attachIcon = prismColors.textPrimary,
             sendIconActive = prismColors.accentBlue,
@@ -135,12 +147,12 @@ private fun rememberSimHomeHeroPalette(): SimHomeHeroPalette {
             progressIndicator = prismColors.accentBlue,
             placeholderStart = prismColors.textSecondary.copy(alpha = 0.32f),
             placeholderCenter = prismColors.textPrimary.copy(alpha = 0.88f),
-            auroraBlueCore = Color(0x405E62B6),
-            auroraBlueMid = Color(0x145E62B6),
-            auroraIndigoCore = Color(0x2664D2FF),
-            auroraIndigoMid = Color(0x0F64D2FF),
-            auroraCyanCore = Color(0x265E5CE6),
-            auroraCyanMid = Color(0x0F5E5CE6)
+            auroraBlueCore = Color(0x525E62B6),
+            auroraBlueMid = Color(0x1A5E62B6),
+            auroraIndigoCore = Color(0x3264D2FF),
+            auroraIndigoMid = Color(0x1264D2FF),
+            auroraCyanCore = Color(0x2E7AC1E4),
+            auroraCyanMid = Color(0x117AC1E4)
         )
     }
 }
@@ -434,7 +446,22 @@ private fun SimHomeHeroTopCap(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .shadow(
+                    elevation = if (PrismThemeDefaults.isDarkTheme) 0.dp else 10.dp,
+                    shape = RectangleShape,
+                    clip = false,
+                    ambientColor = palette.monolithShadow,
+                    spotColor = palette.monolithShadow
+                )
                 .background(palette.monolithBackground)
+                .drawBehind {
+                    drawLine(
+                        color = palette.monolithStroke,
+                        start = Offset(0f, size.height - 1f),
+                        end = Offset(size.width, size.height - 1f),
+                        strokeWidth = 1.dp.toPx()
+                    )
+                }
                 .onGloballyPositioned { coordinates ->
                     onBoundsChanged(coordinates.boundsInRoot())
                 }
@@ -480,6 +507,7 @@ private fun SimHomeHeroDynamicIsland(
     if (items.isEmpty()) return
 
     val palette = rememberSimHomeHeroPalette()
+    val isDarkTheme = PrismThemeDefaults.isDarkTheme
     val itemKeys = remember(items) { items.map(DynamicIslandItem::stableKey) }
     var currentItemKey by remember { mutableStateOf<String?>(null) }
     val currentIndex = resolveSimDynamicIslandIndex(
@@ -489,7 +517,8 @@ private fun SimHomeHeroDynamicIsland(
     val currentItem = items[currentIndex]
     val chroma = SimHomeHeroIslandChroma.from(
         item = currentItem,
-        palette = palette
+        palette = palette,
+        isDarkTheme = isDarkTheme
     )
     val pulse by rememberInfiniteTransition(label = "sim_home_hero_island_pulse").animateFloat(
         initialValue = 0.62f,
@@ -515,7 +544,16 @@ private fun SimHomeHeroDynamicIsland(
     Row(
         modifier = Modifier
             .widthIn(max = SimHomeHeroTokens.IslandMaxWidth)
-            .defaultMinSize(minHeight = 24.dp)
+            .shadow(
+                elevation = if (PrismThemeDefaults.isDarkTheme) 0.dp else 3.dp,
+                shape = CircleShape,
+                clip = false,
+                ambientColor = chroma.shadow,
+                spotColor = chroma.shadow
+            )
+            .background(chroma.surface, CircleShape)
+            .border(1.dp, chroma.border, CircleShape)
+            .defaultMinSize(minHeight = 28.dp)
             .clickable { onTap(currentItem.tapAction) }
             .padding(
                 horizontal = SimHomeHeroTokens.IslandHorizontalPadding,
@@ -551,25 +589,62 @@ private fun SimHomeHeroDynamicIsland(
 
 private data class SimHomeHeroIslandChroma(
     val dot: Color,
-    val textGradient: List<Color>
+    val textGradient: List<Color>,
+    val surface: Color,
+    val border: Color,
+    val shadow: Color
 ) {
     companion object {
         fun from(
             item: DynamicIslandItem,
-            palette: SimHomeHeroPalette
+            palette: SimHomeHeroPalette,
+            isDarkTheme: Boolean
         ): SimHomeHeroIslandChroma {
             return when {
                 item.isConflict -> SimHomeHeroIslandChroma(
                     dot = Color(0xFFFFD60A),
-                    textGradient = listOf(Color(0xFFFFEB85), Color(0xFFFFD60A))
+                    textGradient = listOf(Color(0xFFC93400), Color(0xFFFF9500)),
+                    surface = if (isDarkTheme) {
+                        Color(0x29FF9500)
+                    } else {
+                        Color(0x1AFF9500)
+                    },
+                    border = Color(0x33FF9500),
+                    shadow = Color(0x1FFF9500)
                 )
                 item.isIdleEntry -> SimHomeHeroIslandChroma(
                     dot = palette.islandIdleDot,
-                    textGradient = listOf(palette.iconTint, palette.greetingSubtitle)
+                    textGradient = listOf(palette.iconTint, palette.greetingSubtitle),
+                    surface = if (isDarkTheme) {
+                        Color.White.copy(alpha = 0.08f)
+                    } else {
+                        Color.Black.copy(alpha = 0.04f)
+                    },
+                    border = if (isDarkTheme) {
+                        Color.White.copy(alpha = 0.05f)
+                    } else {
+                        Color.Black.copy(alpha = 0.04f)
+                    },
+                    shadow = Color.Black.copy(alpha = if (isDarkTheme) 0f else 0.03f)
                 )
                 else -> SimHomeHeroIslandChroma(
-                    dot = Color(0xFFFF453A),
-                    textGradient = listOf(Color(0xFFFF8A84), Color(0xFFFF453A))
+                    dot = if (isDarkTheme) Color(0xFFFF453A) else Color(0xFFD70015),
+                    textGradient = if (isDarkTheme) {
+                        listOf(Color(0xFFFF8A84), Color(0xFFFF453A))
+                    } else {
+                        listOf(Color(0xFFD70015), Color(0xFFFF3B30))
+                    },
+                    surface = if (isDarkTheme) {
+                        Color(0x1AFF453A)
+                    } else {
+                        Color(0x14FF3B30)
+                    },
+                    border = if (isDarkTheme) {
+                        Color(0x26FF453A)
+                    } else {
+                        Color(0x26FF3B30)
+                    },
+                    shadow = Color(0x1FFF3B30)
                 )
             }
         }
@@ -628,7 +703,8 @@ private fun SimHomeHeroGreetingCanvas(
                     fontSize = SimHomeHeroTokens.GreetingTitleSize,
                     fontWeight = FontWeight.SemiBold
                 ),
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                letterSpacing = (-0.3).sp
             )
             Text(
                 text = "我是您的销售助手",
@@ -668,7 +744,22 @@ private fun SimHomeHeroBottomMonolith(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .shadow(
+                    elevation = if (PrismThemeDefaults.isDarkTheme) 0.dp else 14.dp,
+                    shape = RectangleShape,
+                    clip = false,
+                    ambientColor = palette.monolithShadow,
+                    spotColor = palette.monolithShadow
+                )
                 .background(palette.monolithBackground)
+                .drawBehind {
+                    drawLine(
+                        color = palette.monolithStroke,
+                        start = Offset(0f, 0f),
+                        end = Offset(size.width, 0f),
+                        strokeWidth = 1.dp.toPx()
+                    )
+                }
                 .onGloballyPositioned { coordinates ->
                     onBoundsChanged(coordinates.boundsInRoot())
                 }

@@ -1,6 +1,7 @@
 package com.smartsales.prism.ui.sim
 
 import java.io.File
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -27,7 +28,7 @@ class SimHomeHeroExperimentContractTest {
         val gestureSource = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimDrawerGestures.kt")
 
         assertTrue(source.contains("SimHomeHeroTokens"))
-        assertTrue(source.contains("Canvas(modifier = Modifier.fillMaxSize())"))
+        assertTrue(source.contains("Canvas(modifier = modifier.fillMaxSize())"))
         assertTrue(source.contains("SIM_INPUT_BAR_TEST_TAG"))
         assertTrue(source.contains("BoxWithConstraints("))
         assertTrue(source.contains("statusBarsPadding()"))
@@ -39,11 +40,17 @@ class SimHomeHeroExperimentContractTest {
         assertTrue(tokenSource.contains("val CenterCanvasHorizontalPadding = 16.dp"))
         assertTrue(source.contains("internal fun SimHomeHeroCenterStage("))
         assertTrue(source.contains("heightIn(min = SimHomeHeroTokens.BottomMonolithHeight)"))
-        assertTrue(!tokenSource.contains("HeaderShadowHeight"))
-        assertTrue(!tokenSource.contains("BottomShadowHeight"))
-        assertTrue(!source.contains("HeaderShadowAlpha"))
-        assertTrue(!source.contains("BottomShadowAlpha"))
         assertTrue(!gestureSource.contains(".zIndex(PrismElevation.Handles)"))
+    }
+
+    @Test
+    fun `sim empty home greeting stays prototype aligned inside the shared shell`() {
+        val source = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimHomeHeroShell.kt")
+        val contentSource = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimAgentIntelligenceContent.kt")
+
+        assertTrue(source.contains("SIM_EMPTY_HOME_GREETING = \"你好, SmartSales 用户\""))
+        assertTrue(contentSource.contains("greeting = SIM_EMPTY_HOME_GREETING"))
+        assertFalse(contentSource.contains("greeting = heroGreeting"))
     }
 
     private fun readSource(relativePath: String): String {

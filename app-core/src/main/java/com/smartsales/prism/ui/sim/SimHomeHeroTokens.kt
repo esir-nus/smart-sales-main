@@ -16,10 +16,14 @@ internal object SimHomeHeroTokens {
     val HeaderHorizontalPadding = 16.dp
     val HeaderIconTouchSize = 38.dp
     val HeaderIconSize = 21.dp
+    val TopSeamInsideSofteningHeight = 8.dp
+    val TopSeamOutsideFeatherHeight = 14.dp
+    const val TopSeamInnerHighlightAlpha = 0.04f
+    const val TopSeamOutsideHazeAlpha = 0.18f
 
     val IslandMaxWidth = 240.dp
-    val IslandVerticalPadding = 4.dp
-    val IslandHorizontalPadding = 2.dp
+    val IslandVerticalPadding = 6.dp
+    val IslandHorizontalPadding = 14.dp
     val IslandDotCanvasSize = 10.dp
     val IslandDotGap = 8.dp
     val IslandTextSize = 13.sp
@@ -29,9 +33,9 @@ internal object SimHomeHeroTokens {
     val GreetingVerticalPadding = 10.dp
     val CenterCanvasHorizontalPadding = 16.dp
     val CenterCanvasVerticalPadding = 10.dp
-    const val GreetingUpwardOffsetRatio = 0.10f
+    const val GreetingUpwardOffsetRatio = 0.14f
     val GreetingMaxUpwardOffset = 72.dp
-    val GreetingTitleSize = 26.sp
+    val GreetingTitleSize = 25.sp
     val GreetingSubtitleSize = 15.sp
     val GreetingSubtitleTopPadding = 8.dp
 
@@ -46,6 +50,10 @@ internal object SimHomeHeroTokens {
     val BottomInputTextSize = 16.sp
     val BottomInputLineHeight = 24.sp
     val BottomProgressSize = 18.dp
+    val BottomSeamInsideSofteningHeight = 10.dp
+    val BottomSeamOutsideFeatherHeight = 24.dp
+    const val BottomSeamInnerHighlightAlpha = 0.06f
+    const val BottomSeamOutsideHazeAlpha = 0.28f
 
     const val AuroraBlueCenterX = 0.18f
     const val AuroraBlueCenterY = 0.18f

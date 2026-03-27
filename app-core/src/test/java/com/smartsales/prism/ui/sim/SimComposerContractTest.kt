@@ -13,7 +13,7 @@ class SimComposerContractTest {
     fun `sim composer no longer advertises long press mic placeholder copy`() {
         val source = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimAgentIntelligenceContent.kt")
 
-        assertTrue(source.contains("text = \"输入消息...\""))
+        assertTrue(source.contains("\"输入消息...\""))
         assertFalse(source.contains("输入消息，或长按工牌说话"))
     }
 

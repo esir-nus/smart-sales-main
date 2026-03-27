@@ -153,7 +153,7 @@ internal fun SimAgentIntelligenceContent(
             if (history.isEmpty()) {
                 SimHomeHeroGreetingStage(
                     modifier = modifier,
-                    greeting = heroGreeting
+                    greeting = SIM_EMPTY_HOME_GREETING
                 )
             } else {
                 SimHomeHeroCenterStage(
@@ -199,7 +199,7 @@ internal fun SimAgentIntelligenceContent(
                         .fillMaxWidth(),
                     contentAlignment = Alignment.TopStart
                 ) {
-                    SimIdleGreeting(greeting = heroGreeting)
+                    SimIdleGreeting(greeting = SIM_EMPTY_HOME_GREETING)
                 }
             } else {
                 SimConversationTimeline(

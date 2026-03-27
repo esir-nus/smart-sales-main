@@ -73,6 +73,12 @@ object ConnectivityProvidesModule {
 
     @Provides
     @Singleton
+    fun providePhoneWifiProvider(
+        provider: AndroidPhoneWifiProvider
+    ): PhoneWifiProvider = provider
+
+    @Provides
+    @Singleton
     @ConnectivityScope
     fun provideConnectivityScope(): kotlinx.coroutines.CoroutineScope =
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob())

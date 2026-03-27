@@ -45,21 +45,21 @@ class RealConnectivityService @Inject constructor(
         val outcome = deviceManager.reconnectAndWait()
         
         val result = when (outcome) {
-            is com.smartsales.prism.data.connectivity.legacy.ConnectionState.Connected,
             is com.smartsales.prism.data.connectivity.legacy.ConnectionState.WifiProvisioned,
-            is com.smartsales.prism.data.connectivity.legacy.ConnectionState.Syncing -> {
-                // BLE 已连接 — 检查 WiFi 是否与配网时一致
-                if (isWifiMismatch()) ReconnectResult.WifiMismatch
-                else ReconnectResult.Connected
-            }
+            is com.smartsales.prism.data.connectivity.legacy.ConnectionState.Syncing ->
+                ReconnectResult.Connected
+            is com.smartsales.prism.data.connectivity.legacy.ConnectionState.Connected ->
+                ReconnectResult.Error("设备连接未完成")
             is com.smartsales.prism.data.connectivity.legacy.ConnectionState.NeedsSetup ->
                 ReconnectResult.DeviceNotFound
             is com.smartsales.prism.data.connectivity.legacy.ConnectionState.Error -> {
                 val error = outcome.error
-                if (error is com.smartsales.prism.data.connectivity.legacy.ConnectivityError.DeviceNotFound) {
-                    ReconnectResult.DeviceNotFound
-                } else {
-                    ReconnectResult.Error(error.toString())
+                when (error) {
+                    is com.smartsales.prism.data.connectivity.legacy.ConnectivityError.DeviceNotFound ->
+                        ReconnectResult.DeviceNotFound
+                    is com.smartsales.prism.data.connectivity.legacy.ConnectivityError.WifiDisconnected ->
+                        mapReconnectWifiError(error)
+                    else -> ReconnectResult.Error(error.toString())
                 }
             }
             else -> ReconnectResult.DeviceNotFound
@@ -86,29 +86,40 @@ class RealConnectivityService @Inject constructor(
             is com.smartsales.prism.data.connectivity.legacy.ConnectionState.Connected -> connectState.session
             is com.smartsales.prism.data.connectivity.legacy.ConnectionState.WifiProvisioned -> connectState.session
             is com.smartsales.prism.data.connectivity.legacy.ConnectionState.Syncing -> connectState.session
-            else -> return WifiConfigResult.Error("设备未连接")
-        }
+            else -> sessionStore.loadSession()
+        } ?: return WifiConfigResult.Error("设备未连接")
         
         val credentials = WifiCredentials(ssid, password)
         
         return when (val result = wifiProvisioner.provision(session, credentials)) {
-            is Result.Success -> WifiConfigResult.Success
+            is Result.Success -> {
+                sessionStore.saveSession(session)
+                sessionStore.upsertKnownNetwork(credentials)
+                when (val reconnect = reconnect()) {
+                    ReconnectResult.Connected -> WifiConfigResult.Success
+                    ReconnectResult.WifiMismatch -> WifiConfigResult.Error("设备与手机不在同一 Wi‑Fi，请重新检查配置")
+                    ReconnectResult.DeviceNotFound -> WifiConfigResult.Error("设备未连接")
+                    is ReconnectResult.Error -> WifiConfigResult.Error(reconnect.message)
+                }
+            }
             is Result.Error -> WifiConfigResult.Error(result.throwable.message ?: "WiFi 配置失败")
         }
     }
-    
-    /**
-     * 比较 Badge 当前 WiFi SSID 与配网时存储的 SSID。
-     * 不同则说明 Badge 连了别的网络，需要重新配网。
-     */
-    private suspend fun isWifiMismatch(): Boolean {
-        val storedSsid = sessionStore.load()?.second?.ssid ?: return false
-        val networkResult = deviceManager.queryNetworkStatus()
-        val badgeSsid = (networkResult as? Result.Success)?.data?.deviceWifiName ?: return false
-        val mismatch = badgeSsid.isNotBlank() && !badgeSsid.equals(storedSsid, ignoreCase = true)
-        if (mismatch) {
-            Log.d(TAG, "⚠️ WiFi mismatch: badge=$badgeSsid, stored=$storedSsid")
+
+    private fun mapReconnectWifiError(
+        error: com.smartsales.prism.data.connectivity.legacy.ConnectivityError.WifiDisconnected
+    ): ReconnectResult {
+        return when (error.reason) {
+            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.NO_KNOWN_CREDENTIAL_FOR_PHONE_WIFI,
+            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.PHONE_WIFI_SSID_UNREADABLE,
+            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.BADGE_PHONE_NETWORK_MISMATCH ->
+                ReconnectResult.WifiMismatch
+            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.PHONE_WIFI_UNAVAILABLE ->
+                ReconnectResult.Error("手机当前未连接可用 Wi‑Fi")
+            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.BADGE_WIFI_OFFLINE ->
+                ReconnectResult.Error("设备当前未接入可用 Wi‑Fi")
+            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.CREDENTIAL_REPLAY_FAILED ->
+                ReconnectResult.Error("已尝试恢复已保存 Wi‑Fi，但设备仍未接入网络")
         }
-        return mismatch
     }
 }

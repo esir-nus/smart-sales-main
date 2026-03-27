@@ -12,7 +12,10 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
     private val _state = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     override val state: StateFlow<ConnectionState> = _state
     
-    private val _recordingReadyEvents = kotlinx.coroutines.flow.MutableSharedFlow<String>()
+    private val _recordingReadyEvents = kotlinx.coroutines.flow.MutableSharedFlow<String>(
+        replay = 0,
+        extraBufferCapacity = 1
+    )
     override val recordingReadyEvents: kotlinx.coroutines.flow.SharedFlow<String> = 
         _recordingReadyEvents.asSharedFlow()
     
@@ -31,6 +34,7 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
     
     override fun selectPeripheral(peripheral: BlePeripheral) {
         selectCalls.add(peripheral)
+        // 仅模拟 BLE/session 已选中；不代表传输已达到可用态。
         _state.value = ConnectionState.Connected(BleSession.fromPeripheral(peripheral))
     }
     
@@ -66,8 +70,13 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
         forceReconnectCalls++
     }
 
-    var stubReconnectAndWaitResult: ConnectionState = ConnectionState.Connected(
-        BleSession.fromPeripheral(BlePeripheral("fake-id", "FakeDevice", -50))
+    var stubReconnectAndWaitResult: ConnectionState = ConnectionState.WifiProvisioned(
+        session = BleSession.fromPeripheral(BlePeripheral("fake-id", "FakeDevice", -50)),
+        status = ProvisioningStatus(
+            wifiSsid = "FakeWifi",
+            handshakeId = "fake-handshake",
+            credentialsHash = "fake-credentials"
+        )
     )
     var reconnectAndWaitCalls = 0
 
@@ -78,6 +87,10 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
     
     fun setState(newState: ConnectionState) {
         _state.value = newState
+    }
+
+    suspend fun emitRecordingReadyEvent(filename: String) {
+        _recordingReadyEvents.emit(filename)
     }
     
     fun reset() {

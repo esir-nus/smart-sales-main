@@ -15,12 +15,18 @@ interface ConnectivityBridge {
      * Emits on connection changes.
      */
     val connectionState: StateFlow<BadgeConnectionState>
+
+    /**
+     * Connectivity-manager-only richer state.
+     * Keeps BLE-held / Wi‑Fi-offline diagnostics out of shared shell routing.
+     */
+    val managerStatus: StateFlow<BadgeManagerStatus>
     
     /**
      * Download a WAV file from the badge SD card.
      * Rate-limited internally.
      *
-     * @param filename File name on badge (e.g., "20260205143000.wav")
+     * @param filename File name on badge (e.g., "log_20260205_143000.wav")
      * @return Downloaded file or error
      */
     suspend fun downloadRecording(filename: String): WavDownloadResult
@@ -34,11 +40,16 @@ interface ConnectivityBridge {
 
     /**
      * Stream of recording notifications from badge.
-     * 
-     * **Current**: HTTP polling on `/list` detects new WAV files.  
-     * **Future**: BLE `log#YYYYMMDD_HHMMSS` command triggers immediate notification.
-     * 
-     * @return Flow (hot, starts polling on collection)
+     *
+     * Current production path: BLE `log#YYYYMMDD_HHMMSS` notification on the
+     * persistent badge GATT session. Consumers receive the full downloadable
+     * filename `log_YYYYMMDD_HHMMSS.wav`.
+     *
+     * The bridge only emits when transport is truly ready: persistent GATT
+     * notification listening is alive and badge network reachability has been
+     * established.
+     *
+     * @return Flow (hot, buffered, no replay)
      * @see esp32-protocol.md §6
      */
     fun recordingNotifications(): Flow<RecordingNotification>
@@ -73,6 +84,21 @@ sealed class BadgeConnectionState {
 }
 ```
 
+### BadgeManagerStatus
+
+```kotlin
+sealed class BadgeManagerStatus {
+    object Unknown : BadgeManagerStatus()
+    object NeedsSetup : BadgeManagerStatus()
+    object Disconnected : BadgeManagerStatus()
+    object Connecting : BadgeManagerStatus()
+    object BlePairedNetworkUnknown : BadgeManagerStatus()
+    object BlePairedNetworkOffline : BadgeManagerStatus()
+    data class Ready(val badgeIp: String? = null, val ssid: String? = null) : BadgeManagerStatus()
+    data class Error(val message: String) : BadgeManagerStatus()
+}
+```
+
 ### RecordingNotification
 
 ```kotlin
@@ -80,6 +106,9 @@ sealed class RecordingNotification {
     data class RecordingReady(val filename: String) : RecordingNotification()
 }
 ```
+
+`RecordingReady.filename` uses the full downloadable badge filename:
+`log_YYYYMMDD_HHMMSS.wav`.
 
 ### WavDownloadResult
 
@@ -106,18 +135,21 @@ interface ConnectivityService {
 }
 
 sealed class UpdateResult {
+    data class Found(val version: String, val changelog: String = "") : UpdateResult()
     object None : UpdateResult()
-    data class Available(val version: String) : UpdateResult()
+    data class Error(val message: String) : UpdateResult()
 }
 
 sealed class ReconnectResult {
-    object Success : ReconnectResult()
-    data class Failed(val reason: String) : ReconnectResult()
+    object Connected : ReconnectResult()
+    object WifiMismatch : ReconnectResult()
+    object DeviceNotFound : ReconnectResult()
+    data class Error(val message: String) : ReconnectResult()
 }
 
 sealed class WifiConfigResult {
     object Success : WifiConfigResult()
-    data class Failed(val reason: String) : WifiConfigResult()
+    data class Error(val message: String) : WifiConfigResult()
 }
 ```
 
@@ -129,10 +161,27 @@ sealed class WifiConfigResult {
 | Operation | Guarantee |
 |-----------|-----------|
 | `connectionState` | Always emits current state immediately on collect |
+| `managerStatus` | Manager-only richer BLE/Wi‑Fi diagnostic state; no shell-routing authority |
 | `downloadRecording` | Rate-limited, max 1 concurrent download |
 | `recordingNotifications` | Hot flow, buffered (1), no replay |
 | `isReady()` | Pre-flight check with 3s timeout |
 | `deleteRecording` | Idempotent, returns true if file removed or didn't exist |
+
+`BadgeConnectionState.Connected` means the badge session is actually usable:
+persistent GATT notification listening is active and the badge has valid network reachability.
+
+`managerStatus` may refine a plain disconnected manager view into:
+
+- `BlePairedNetworkUnknown`: BLE is still held, but Wi‑Fi readiness is not yet confirmed
+- `BlePairedNetworkOffline`: BLE is still held, but the badge reported no usable IP / network
+
+`ConnectivityService.reconnect()` may return `WifiMismatch` in either of these deterministic reconnect cases:
+
+- the phone's current Wi‑Fi SSID has no exact remembered credential to replay
+- the phone is on Wi‑Fi but the app cannot read the SSID, so exact-match replay cannot be proven safely
+- credential replay completes, but the badge confirms it is on a different Wi‑Fi than the phone
+
+This richer state is for connectivity manager presentation only. Shared shell/history routing must continue to use `connectionState`.
 
 ---
 

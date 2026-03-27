@@ -1,0 +1,402 @@
+package com.smartsales.prism.data.connectivity.legacy
+
+import com.smartsales.core.util.DispatcherProvider
+import com.smartsales.core.util.Result
+import com.smartsales.prism.data.connectivity.legacy.badge.FakeBadgeStateMonitor
+import com.smartsales.prism.data.connectivity.legacy.badge.BadgeState
+import com.smartsales.prism.data.connectivity.legacy.gateway.BadgeNotification
+import com.smartsales.prism.data.connectivity.legacy.gateway.GattSessionLifecycle
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class DefaultDeviceConnectionManagerIngressTest {
+
+    @Test
+    fun `selectPeripheral does not report healthy connected when persistent gatt setup fails`() = runTest {
+        val gateway = FakeGattSessionLifecycle(
+            connectResult = Result.Error(IllegalStateException("boom"))
+        )
+        val manager = newManager(
+            gateway = gateway,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler)
+        )
+
+        manager.selectPeripheral(BlePeripheral("badge-1", "Badge", -40))
+        advanceUntilIdle()
+
+        assertFalse(manager.state.value is ConnectionState.Connected)
+        assertFalse(manager.state.value is ConnectionState.WifiProvisioned)
+        assertFalse(manager.state.value is ConnectionState.Syncing)
+    }
+
+    @Test
+    fun `reconnectAndWait returns wifi provisioned when gatt and network are both ready`() = runTest {
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val monitor = FakeBadgeStateMonitor()
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("MstRobot", "secret")
+            )
+        }
+        val manager = newManager(
+            gateway = gateway,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            monitor = monitor,
+            phoneWifiProvider = FakePhoneWifiProvider("MstRobot"),
+            networkResult = Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "192.168.0.9",
+                    deviceWifiName = "MstRobot",
+                    phoneWifiName = "MstRobot",
+                    rawResponse = "IP#192.168.0.9, SD#MstRobot"
+                )
+            )
+        )
+
+        val state = manager.reconnectAndWait()
+        advanceUntilIdle()
+
+        assertTrue(state is ConnectionState.WifiProvisioned)
+        assertTrue(manager.state.value is ConnectionState.WifiProvisioned)
+        assertEquals(listOf("badge-1"), monitor.connectedSessions)
+        assertEquals(BadgeState.CONNECTED, monitor.status.value.state)
+    }
+
+    @Test
+    fun `recording ready event emits full downloadable filename`() = runTest {
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("MstRobot", "secret")
+            )
+        }
+        val manager = newManager(
+            gateway = gateway,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            networkResult = Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "192.168.0.9",
+                    deviceWifiName = "MstRobot",
+                    phoneWifiName = "MstRobot",
+                    rawResponse = "IP#192.168.0.9, SD#MstRobot"
+                )
+            )
+        )
+        val recorded = backgroundScope.async {
+            manager.recordingReadyEvents.first()
+        }
+
+        manager.reconnectAndWait()
+        advanceUntilIdle()
+        gateway.emit(BadgeNotification.RecordingReady("20260322_170000"))
+        advanceUntilIdle()
+
+        assertEquals("log_20260322_170000.wav", recorded.await())
+    }
+
+    @Test
+    fun `reconnectAndWait keeps ble held offline diagnostic when network reports no ip`() = runTest {
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val monitor = FakeBadgeStateMonitor()
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("MstRobot", "secret")
+            )
+        }
+        val manager = newManager(
+            gateway = gateway,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            monitor = monitor,
+            phoneWifiProvider = FakePhoneWifiProvider("MstRobot"),
+            networkResult = Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "0.0.0.0",
+                    deviceWifiName = "MstRobot",
+                    phoneWifiName = "MstRobot",
+                    rawResponse = "IP#0.0.0.0, SD#MstRobot"
+                )
+            )
+        )
+
+        val state = manager.reconnectAndWait()
+        advanceUntilIdle()
+
+        assertTrue(state is ConnectionState.Error)
+        assertTrue(manager.state.value is ConnectionState.Disconnected)
+        assertEquals(listOf("badge-1"), monitor.connectedSessions)
+        assertEquals(BadgeState.OFFLINE, monitor.status.value.state)
+        assertTrue(monitor.status.value.bleConnected)
+    }
+
+    @Test
+    fun `reconnectAndWait replays known wifi credentials when badge is offline on exact phone ssid match`() = runTest {
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val monitor = FakeBadgeStateMonitor()
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("MstRobot", "secret")
+            )
+        }
+        val provisioner = FakeWifiProvisioner().apply {
+            stubNetworkResults += Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "0.0.0.0",
+                    deviceWifiName = "",
+                    phoneWifiName = "",
+                    rawResponse = "IP#0.0.0.0, SD#N/A"
+                )
+            )
+            stubNetworkResults += Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "192.168.0.9",
+                    deviceWifiName = "MstRobot",
+                    phoneWifiName = "",
+                    rawResponse = "IP#192.168.0.9, SD#MstRobot"
+                )
+            )
+        }
+        val manager = newManager(
+            gateway = gateway,
+            provisioner = provisioner,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            monitor = monitor,
+            phoneWifiProvider = FakePhoneWifiProvider("MstRobot")
+        )
+
+        val state = manager.reconnectAndWait()
+        advanceUntilIdle()
+
+        assertTrue(state is ConnectionState.WifiProvisioned)
+        assertTrue(manager.state.value is ConnectionState.WifiProvisioned)
+        assertEquals(1, provisioner.provisionCalls.size)
+        assertEquals("MstRobot", provisioner.provisionCalls.single().second.ssid)
+        assertEquals(BadgeState.CONNECTED, monitor.status.value.state)
+    }
+
+    @Test
+    fun `reconnectAndWait requests wifi repair when phone ssid has no known saved credentials`() = runTest {
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val monitor = FakeBadgeStateMonitor()
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("MstRobot", "secret")
+            )
+        }
+        val provisioner = FakeWifiProvisioner().apply {
+            stubNetworkResult = Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "0.0.0.0",
+                    deviceWifiName = "",
+                    phoneWifiName = "",
+                    rawResponse = "IP#0.0.0.0, SD#N/A"
+                )
+            )
+        }
+        val manager = newManager(
+            gateway = gateway,
+            provisioner = provisioner,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            monitor = monitor,
+            phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest")
+        )
+
+        val state = manager.reconnectAndWait()
+        advanceUntilIdle()
+
+        assertTrue(state is ConnectionState.Error)
+        val error = (state as ConnectionState.Error).error
+        assertTrue(error is ConnectivityError.WifiDisconnected)
+        assertEquals(
+            WifiDisconnectedReason.NO_KNOWN_CREDENTIAL_FOR_PHONE_WIFI,
+            (error as ConnectivityError.WifiDisconnected).reason
+        )
+        assertTrue(manager.state.value is ConnectionState.Disconnected)
+        assertEquals(0, provisioner.provisionCalls.size)
+        assertEquals(BadgeState.OFFLINE, monitor.status.value.state)
+    }
+
+    @Test
+    fun `reconnectAndWait requests wifi repair when phone wifi is connected but ssid is unreadable`() = runTest {
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("MstRobot", "secret")
+            )
+        }
+        val provisioner = FakeWifiProvisioner().apply {
+            stubNetworkResult = Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "0.0.0.0",
+                    deviceWifiName = "",
+                    phoneWifiName = "",
+                    rawResponse = "IP#0.0.0.0, SD#N/A"
+                )
+            )
+        }
+        val manager = newManager(
+            gateway = gateway,
+            provisioner = provisioner,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            phoneWifiProvider = FakePhoneWifiProvider(
+                snapshot = PhoneWifiSnapshot.Connected(
+                    normalizedSsid = null,
+                    rawSsid = "<unknown ssid>"
+                )
+            )
+        )
+
+        val state = manager.reconnectAndWait()
+        advanceUntilIdle()
+
+        assertTrue(state is ConnectionState.Error)
+        val error = (state as ConnectionState.Error).error as ConnectivityError.WifiDisconnected
+        assertEquals(WifiDisconnectedReason.PHONE_WIFI_SSID_UNREADABLE, error.reason)
+        assertEquals(0, provisioner.provisionCalls.size)
+    }
+
+    @Test
+    fun `reconnectAndWait retries once when first network query hits ble query floor timeout`() = runTest {
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("MstRobot", "secret")
+            )
+        }
+        val provisioner = FakeWifiProvisioner().apply {
+            stubNetworkResults += Result.Error(ProvisioningException.Timeout(2_000L))
+            stubNetworkResults += Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "192.168.0.9",
+                    deviceWifiName = "MstRobot",
+                    phoneWifiName = "",
+                    rawResponse = "IP#192.168.0.9, SD#MstRobot"
+                )
+            )
+        }
+        val manager = newManager(
+            gateway = gateway,
+            provisioner = provisioner,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            phoneWifiProvider = FakePhoneWifiProvider("MstRobot")
+        )
+
+        val state = manager.reconnectAndWait()
+        advanceUntilIdle()
+
+        assertTrue(state is ConnectionState.WifiProvisioned)
+        assertEquals(2, provisioner.networkCalls.size)
+    }
+
+    @Test
+    fun `reconnectAndWait keeps paired diagnostic when network query fails`() = runTest {
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val monitor = FakeBadgeStateMonitor()
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("MstRobot", "secret")
+            )
+        }
+        val manager = newManager(
+            gateway = gateway,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            monitor = monitor,
+            networkResult = Result.Error(IllegalStateException("query failed"))
+        )
+
+        val state = manager.reconnectAndWait()
+        advanceUntilIdle()
+
+        assertTrue(state is ConnectionState.Error)
+        assertTrue(manager.state.value is ConnectionState.Disconnected)
+        assertEquals(listOf("badge-1"), monitor.connectedSessions)
+        assertEquals(BadgeState.PAIRED, monitor.status.value.state)
+        assertTrue(monitor.status.value.bleConnected)
+        assertEquals(1, monitor.queryFailureCount)
+    }
+
+    private fun newManager(
+        gateway: FakeGattSessionLifecycle,
+        scope: CoroutineScope,
+        dispatcher: CoroutineDispatcher,
+        provisioner: FakeWifiProvisioner = FakeWifiProvisioner(),
+        sessionStore: SessionStore = InMemorySessionStore(),
+        monitor: FakeBadgeStateMonitor = FakeBadgeStateMonitor(),
+        phoneWifiProvider: PhoneWifiProvider = FakePhoneWifiProvider("MstRobot"),
+        networkResult: Result<DeviceNetworkStatus>? = null
+    ): DefaultDeviceConnectionManager {
+        val dispatchers = object : DispatcherProvider {
+            override val io: CoroutineDispatcher = dispatcher
+            override val main: CoroutineDispatcher = dispatcher
+            override val default: CoroutineDispatcher = dispatcher
+        }
+        if (networkResult != null) {
+            provisioner.stubNetworkResult = networkResult
+        }
+        return DefaultDeviceConnectionManager(
+            provisioner = provisioner,
+            bleGateway = gateway,
+            dispatchers = dispatchers,
+            badgeStateMonitor = monitor,
+            sessionStore = sessionStore,
+            phoneWifiProvider = phoneWifiProvider,
+            scope = scope
+        )
+    }
+
+    private class FakeGattSessionLifecycle(
+        private val connectResult: Result<Unit>
+    ) : GattSessionLifecycle {
+        private val notifications = MutableSharedFlow<BadgeNotification>(
+            replay = 1,
+            extraBufferCapacity = 4
+        )
+
+        override suspend fun connect(peripheralId: String): Result<Unit> = connectResult
+
+        override suspend fun disconnect() = Unit
+
+        override fun listenForBadgeNotifications(): Flow<BadgeNotification> = notifications
+
+        suspend fun emit(notification: BadgeNotification) {
+            notifications.emit(notification)
+        }
+    }
+}

@@ -537,6 +537,20 @@ class DeviceSetupViewModel @Inject constructor(
         is ConnectivityError.Transport -> error.reason
         is ConnectivityError.EndpointUnreachable -> error.reason.ifBlank { "设备服务不可达" }
         is ConnectivityError.DeviceNotFound -> "未找到设备 ${error.deviceId}"
+        is ConnectivityError.WifiDisconnected -> when (error.reason) {
+            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.BADGE_WIFI_OFFLINE ->
+                "设备当前未接入可用 Wi‑Fi，请重新配置网络"
+            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.PHONE_WIFI_UNAVAILABLE ->
+                "请先让手机连接 Wi‑Fi，再继续配网"
+            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.PHONE_WIFI_SSID_UNREADABLE ->
+                "手机已连接 Wi‑Fi，但无法读取网络名称，请重新输入 Wi‑Fi 配置"
+            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.NO_KNOWN_CREDENTIAL_FOR_PHONE_WIFI ->
+                "当前手机 Wi‑Fi 没有已保存配置，请重新输入 Wi‑Fi 密码"
+            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.BADGE_PHONE_NETWORK_MISMATCH ->
+                "设备与手机不在同一 Wi‑Fi，请重新配置网络"
+            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.CREDENTIAL_REPLAY_FAILED ->
+                "已尝试恢复已保存 Wi‑Fi，但设备仍未接入网络，请重新配置"
+        }
         ConnectivityError.MissingSession -> "尚未建立会话，请重新扫描设备"
         is ConnectivityError.PairingInProgress -> "配对冲突：${error.deviceName} 已在使用"
     }

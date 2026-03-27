@@ -59,7 +59,36 @@ Connectivity Bridge provides a **thin, Prism-compatible interface** to legacy `f
 | **Max consecutive failures** | 3 | Circuit breaker |
 | **Inter-command gap** | 300ms | BLE command spacing |
 
-**Offline detection**: `wifi#address#0.0.0.0#...` indicates badge has no WiFi.
+**Offline detection**: `wifi#address#0.0.0.0#...` indicates badge has no WiFi. This is a valid offline signal and must not be treated as a parser failure.
+
+## Formal On-Device Debug Path
+
+Use `scripts/esp32_connectivity_debug.sh` for live ESP32 capture and post-run summary.
+
+Authoritative workflow:
+
+1. run `scripts/esp32_connectivity_debug.sh capture`
+2. reproduce the badge-side action
+3. stop capture
+4. run `scripts/esp32_connectivity_debug.sh summary <captured_log>`
+
+Reference SOP:
+
+- `docs/sops/esp32-connectivity-debug.md`
+
+Active issue tracker:
+
+- `docs/plans/bug-tracker.md`
+
+Current known blocked hardware signature:
+
+- BLE traffic is present
+- network query fragments may still arrive
+- no `log#...`
+- no `Badge recording ready`
+- no `AudioPipeline` ingress
+
+That signature currently points upstream of the app pipeline rather than proving a bridge parsing failure.
 
 ---
 
@@ -80,6 +109,24 @@ sealed class BadgeConnectionState {
 }
 ```
 
+### BadgeManagerStatus
+
+```kotlin
+sealed class BadgeManagerStatus {
+    object Unknown : BadgeManagerStatus()
+    object NeedsSetup : BadgeManagerStatus()
+    object Disconnected : BadgeManagerStatus()
+    object Connecting : BadgeManagerStatus()
+    object BlePairedNetworkUnknown : BadgeManagerStatus()
+    object BlePairedNetworkOffline : BadgeManagerStatus()
+    data class Ready(val badgeIp: String? = null, val ssid: String? = null) : BadgeManagerStatus()
+    data class Error(val message: String) : BadgeManagerStatus()
+}
+```
+
+`BadgeConnectionState` remains the strict shared transport contract.
+`BadgeManagerStatus` is a manager-only refinement layer used for BLE/Wi‑Fi diagnostics in connectivity surfaces without changing shell/history routing.
+
 ### RecordingNotification
 
 ```kotlin
@@ -89,7 +136,7 @@ sealed class RecordingNotification {
      * Triggered by `log#YYYYMMDD_HHMMSS` BLE command from firmware.
      */
     data class RecordingReady(
-        val filename: String  // YYYYMMDD_HHMMSS.wav
+        val filename: String  // log_YYYYMMDD_HHMMSS.wav
     ) : RecordingNotification()
 }
 ```
@@ -136,7 +183,9 @@ sealed class WavDownloadResult {
 | State | Visual | Actions |
 |-------|--------|---------|
 | `CONNECTED` | ✅ Green pulsing BT icon<br>Badge name + ID + battery | **⚡ 断开连接**<br>**🔄 检查更新** |
-| `DISCONNECTED` | ⚫ Gray BT icon<br>"🔴 离线" | **连接设备** |
+| `DISCONNECTED` | ⚫ Gray BT icon<br>"🔴 离线" | **重试连接** |
+| `BLE_PAIRED_NETWORK_UNKNOWN` | 🔵 BT icon<br>"已连接设备"<br>"蓝牙已连接，正在确认设备网络状态" | **重试连接** |
+| `BLE_PAIRED_NETWORK_OFFLINE` | 🔵 BT icon<br>"已连接设备"<br>"蓝牙已连接，但设备当前未接入可用网络" | **重试连接** |
 | `NEEDS_SETUP` | ⚠️ Amber Warning icon<br>"⚙️ 设备未配网" | **📱 开始配网** → Onboarding |
 | `RECONNECTING` | Spinner | (Auto) |
 | `CHECKING_UPDATE` | Spinner |  (Auto) |
@@ -146,15 +195,45 @@ sealed class WavDownloadResult {
 
 > [!NOTE]
 > After user taps "断开连接", soft disconnect preserves session.
-> State naturally becomes `DISCONNECTED` (no UI override needed).
+> Shared shell routing still treats that as `DISCONNECTED`.
 > `NEEDS_SETUP` only shows on cold boot (no session ever existed).
-> Tapping "连接设备" from `DISCONNECTED` triggers auto-reconnect using persisted session.
+> Tapping "重试连接" from a disconnected manager state triggers auto-reconnect using persisted session.
+> The richer `BLE_PAIRED_NETWORK_*` states are manager-only refinements derived from `ConnectivityBridge.managerStatus`; they must not redefine global transport readiness.
+> Debug builds may additionally expose a temporary `断开连接` action in `BLE_PAIRED_NETWORK_*` states for hardware testing convenience; that control must not be treated as a release-surface contract.
 
 #### Data Flow
 
-```
+``` 
 User Action → ConnectivityViewModel → ConnectivityService → ConnectivityBridge → Legacy
 ```
+
+Manager-only refinement path:
+
+```
+BadgeStateMonitor.status + DeviceConnectionManager.state
+    → ConnectivityBridge.managerStatus
+    → ConnectivityViewModel.managerState
+    → ConnectivityModal / ConnectivityManagerScreen
+```
+
+Reconnect rule:
+
+- reconnect must feed `BadgeStateMonitor` immediately after persistent GATT reconnect succeeds
+- reconnect must publish the foreground network-query result into the monitor synchronously
+- manager-only BLE/Wi‑Fi diagnostics must not wait for the next background poll tick to become visible
+
+Reconnect credential rule:
+
+- target firmware does not persist Wi‑Fi credentials across power loss / reconnect
+- app-side `SessionStore` therefore owns the remembered Wi‑Fi list
+- app may store multiple known networks, keyed by exact normalized SSID
+- when BLE reconnect succeeds but the badge reports `IP#0.0.0.0`, the app must:
+  - read the phone's current Wi‑Fi SSID
+  - silently replay the exact-match remembered credential when one exists
+  - if phone Wi‑Fi transport is connected but SSID is unreadable, route to `WIFI_MISMATCH` rather than blind-replaying a credential
+  - otherwise route the manager UI to `WIFI_MISMATCH` so the user can re-enter credentials
+- reconnect foreground network query must tolerate the BLE 2s minimum query floor and retry after the guard delay instead of failing immediately on a throttle timeout
+- shared transport readiness stays strict: BLE-held + Wi‑Fi-offline is not `Connected`
 
 #### Implementation Status
 
@@ -321,14 +400,21 @@ User Action → ConnectivityViewModel → ConnectivityService → ConnectivityBr
 
 - **Exit Criteria**:
   - [x] BLE `log#YYYYMMDD_HHMMSS` notification listener on persistent GATT session
-  - [ ] `RecordingNotification.RecordingReady` emitted with correct filename
-  - [ ] Only fires when badge is connected
+  - [x] `RecordingNotification.RecordingReady` emitted with full downloadable filename `log_YYYYMMDD_HHMMSS.wav`
+  - [x] Only fires when transport is truly ready (`WifiProvisioned` / `Syncing`)
   - [x] HTTP polling removed (obsolete)
 
 - **Test Cases**:
+  - [x] L1: `GattBleGatewayNotificationParsingTest`
+  - [x] L1: `DefaultDeviceConnectionManagerIngressTest`
+  - [x] L1: `RealConnectivityBridgeTest`
+  - [x] L1/L2 seam: `RealBadgeAudioPipelineIngressTest`
   - [ ] L2: Record on badge → BLE notification arrives within 1s
   - [ ] L2: Notification triggers full pipeline (download → ASR → schedule)
   - [ ] L2: Disconnected state → recording notifications stop
+
+> [!NOTE]
+> 2026-03-22 Wave 10 repair hardened connection truth so optimistic BLE-only states no longer surface as healthy bridge connectivity. Device-level re-entry validation is still required before reopening SIM Wave 9 hardware follow-up proof.
 
 > [!NOTE]
 > Protocol SOT: ESP32 Firmware Protocol (handled via BLE GATT notifications)

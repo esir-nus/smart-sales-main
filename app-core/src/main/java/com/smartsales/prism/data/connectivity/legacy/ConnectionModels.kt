@@ -41,6 +41,12 @@ data class WifiCredentials(
     enum class Security { WPA2, WPA3 }
 }
 
+data class KnownWifiCredential(
+    val credentials: WifiCredentials,
+    val normalizedSsid: String,
+    val lastUsedAtMillis: Long
+)
+
 data class ProvisioningStatus(
     val wifiSsid: String,
     val handshakeId: String,
@@ -54,6 +60,15 @@ data class DeviceNetworkStatus(
     val rawResponse: String
 )
 
+enum class WifiDisconnectedReason {
+    BADGE_WIFI_OFFLINE,
+    PHONE_WIFI_UNAVAILABLE,
+    PHONE_WIFI_SSID_UNREADABLE,
+    NO_KNOWN_CREDENTIAL_FOR_PHONE_WIFI,
+    BADGE_PHONE_NETWORK_MISMATCH,
+    CREDENTIAL_REPLAY_FAILED
+}
+
 sealed interface ConnectivityError {
     data class PairingInProgress(val deviceName: String) : ConnectivityError
     data class ProvisioningFailed(val reason: String) : ConnectivityError
@@ -62,6 +77,11 @@ sealed interface ConnectivityError {
     data class Transport(val reason: String) : ConnectivityError
     data class DeviceNotFound(val deviceId: String) : ConnectivityError
     data class EndpointUnreachable(val reason: String) : ConnectivityError
+    data class WifiDisconnected(
+        val reason: WifiDisconnectedReason,
+        val phoneSsid: String? = null,
+        val badgeSsid: String? = null
+    ) : ConnectivityError
     data object MissingSession : ConnectivityError
 }
 
@@ -95,4 +115,19 @@ sealed interface ReconnectErrorReason {
     data object DeviceNotFound : ReconnectErrorReason
     data object Network : ReconnectErrorReason
     data object Backoff : ReconnectErrorReason
+}
+
+internal fun normalizeWifiSsid(rawSsid: String?): String? {
+    val normalized = rawSsid
+        ?.trim()
+        ?.removePrefix("\"")
+        ?.removeSuffix("\"")
+        ?.trim()
+        ?.takeIf { it.isNotBlank() }
+        ?: return null
+
+    return when (normalized.lowercase()) {
+        "<unknown ssid>", "unknown ssid", "n/a" -> null
+        else -> normalized
+    }
 }

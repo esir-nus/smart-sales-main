@@ -135,7 +135,7 @@ private fun rememberSimHomeHeroPalette(): SimHomeHeroPalette {
             appBackground = Color(0xFFF5F5F7),
             monolithBackground = Color.White.copy(alpha = 0.74f),
             monolithStroke = Color.Black.copy(alpha = 0.10f),
-            monolithShadow = Color.Black.copy(alpha = 0.08f),
+            monolithShadow = Color.Black.copy(alpha = 0.015f),
             iconTint = prismColors.textPrimary,
             islandIdleDot = prismColors.textSecondary.copy(alpha = 0.42f),
             greetingGradient = listOf(Color(0xFF4F64D8), Color(0xFF7081FF)),
@@ -220,6 +220,7 @@ internal fun SimHomeHeroShellFrame(
     centerContent: @Composable (Modifier) -> Unit
 ) {
     val palette = rememberSimHomeHeroPalette()
+    val isDarkTheme = PrismThemeDefaults.isDarkTheme
     var rootTopInRoot by remember { mutableStateOf(0f) }
     var topMonolithBottomInRoot by remember { mutableStateOf<Float?>(null) }
     var bottomMonolithTopInRoot by remember { mutableStateOf<Float?>(null) }
@@ -287,9 +288,18 @@ internal fun SimHomeHeroShellFrame(
                 anchorY = topMonolithBottom,
                 direction = SimMonolithSeamDirection.TOP,
                 insideHeight = SimHomeHeroTokens.TopSeamInsideSofteningHeight,
-                outsideHeight = SimHomeHeroTokens.TopSeamOutsideFeatherHeight,
+                outsideHeight = if (isDarkTheme) {
+                    SimHomeHeroTokens.TopSeamOutsideFeatherHeight
+                } else {
+                    5.dp
+                },
                 innerHighlightAlpha = SimHomeHeroTokens.TopSeamInnerHighlightAlpha,
-                outsideHazeAlpha = SimHomeHeroTokens.TopSeamOutsideHazeAlpha
+                outsideHazeAlpha = if (isDarkTheme) {
+                    SimHomeHeroTokens.TopSeamOutsideHazeAlpha
+                } else {
+                    0.015f
+                },
+                isDarkTheme = isDarkTheme
             )
         }
 
@@ -299,9 +309,18 @@ internal fun SimHomeHeroShellFrame(
                 anchorY = bottomMonolithTop,
                 direction = SimMonolithSeamDirection.BOTTOM,
                 insideHeight = SimHomeHeroTokens.BottomSeamInsideSofteningHeight,
-                outsideHeight = SimHomeHeroTokens.BottomSeamOutsideFeatherHeight,
+                outsideHeight = if (isDarkTheme) {
+                    SimHomeHeroTokens.BottomSeamOutsideFeatherHeight
+                } else {
+                    8.dp
+                },
                 innerHighlightAlpha = SimHomeHeroTokens.BottomSeamInnerHighlightAlpha,
-                outsideHazeAlpha = SimHomeHeroTokens.BottomSeamOutsideHazeAlpha
+                outsideHazeAlpha = if (isDarkTheme) {
+                    SimHomeHeroTokens.BottomSeamOutsideHazeAlpha
+                } else {
+                    0.028f
+                },
+                isDarkTheme = isDarkTheme
             )
         }
     }
@@ -447,7 +466,7 @@ private fun SimHomeHeroTopCap(
             modifier = Modifier
                 .fillMaxWidth()
                 .shadow(
-                    elevation = if (PrismThemeDefaults.isDarkTheme) 0.dp else 10.dp,
+                    elevation = if (PrismThemeDefaults.isDarkTheme) 0.dp else 1.dp,
                     shape = RectangleShape,
                     clip = false,
                     ambientColor = palette.monolithShadow,
@@ -745,7 +764,7 @@ private fun SimHomeHeroBottomMonolith(
             modifier = Modifier
                 .fillMaxWidth()
                 .shadow(
-                    elevation = if (PrismThemeDefaults.isDarkTheme) 0.dp else 14.dp,
+                    elevation = if (PrismThemeDefaults.isDarkTheme) 0.dp else 2.dp,
                     shape = RectangleShape,
                     clip = false,
                     ambientColor = palette.monolithShadow,
@@ -870,7 +889,8 @@ private fun SimMonolithSeamOverlay(
     insideHeight: androidx.compose.ui.unit.Dp,
     outsideHeight: androidx.compose.ui.unit.Dp,
     innerHighlightAlpha: Float,
-    outsideHazeAlpha: Float
+    outsideHazeAlpha: Float,
+    isDarkTheme: Boolean
 ) {
     val density = LocalDensity.current
     val insideHeightPx = with(density) { insideHeight.roundToPx().toFloat() }
@@ -890,6 +910,11 @@ private fun SimMonolithSeamOverlay(
             SimMonolithSeamDirection.TOP -> insideHeightPx
             SimMonolithSeamDirection.BOTTOM -> outsideHeightPx
         }
+        val outsideHazeColor = if (isDarkTheme) {
+            Color.Black.copy(alpha = outsideHazeAlpha)
+        } else {
+            Color(0xFF6A6A6A).copy(alpha = outsideHazeAlpha)
+        }
 
         when (direction) {
             SimMonolithSeamDirection.TOP -> {
@@ -907,7 +932,7 @@ private fun SimMonolithSeamOverlay(
                 drawRect(
                     brush = Brush.verticalGradient(
                         colors = listOf(
-                            Color.Black.copy(alpha = outsideHazeAlpha),
+                            outsideHazeColor,
                             Color.Transparent
                         ),
                         startY = boundaryY,
@@ -923,7 +948,7 @@ private fun SimMonolithSeamOverlay(
                     brush = Brush.verticalGradient(
                         colors = listOf(
                             Color.Transparent,
-                            Color.Black.copy(alpha = outsideHazeAlpha)
+                            outsideHazeColor
                         ),
                         startY = 0f,
                         endY = boundaryY

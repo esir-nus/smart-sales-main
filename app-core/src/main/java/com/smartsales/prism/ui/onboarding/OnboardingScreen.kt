@@ -69,11 +69,13 @@ import com.smartsales.prism.domain.pairing.DiscoveredBadge
 import com.smartsales.prism.domain.pairing.ErrorReason
 import com.smartsales.prism.domain.pairing.PairingState
 import com.smartsales.prism.domain.pairing.WifiCredentials
+import com.smartsales.prism.ui.sim.SimSharedAuroraBackground
 import kotlinx.coroutines.delay
 
 private val OnboardingBackground = Color(0xFF05060A)
 private val OnboardingCard = Color(0x14FFFFFF)
 private val OnboardingCardBorder = Color(0x26FFFFFF)
+private val OnboardingCardSoft = Color(0x12FFFFFF)
 private val OnboardingMuted = Color(0xFF9CA3AF)
 private val OnboardingText = Color(0xFFF3F7FF)
 private val OnboardingBlue = Color(0xFF38BDF8)
@@ -84,7 +86,17 @@ private val OnboardingField = Color(0x0DFFFFFF)
 private val OnboardingErrorSurface = Color(0x14F59E0B)
 private val OnboardingPrimarySurface = Color.White
 private val OnboardingPrimaryText = Color(0xFF05060A)
-private val OnboardingGhostSurface = Color(0x0DFFFFFF)
+
+internal data class OnboardingVisualCaptureState(
+    val host: OnboardingHost,
+    val step: OnboardingStep,
+    val pairingState: PairingState = PairingState.Idle,
+    val badge: DiscoveredBadge? = null,
+    val ssid: String = "",
+    val password: String = "",
+    val permissionDenied: Boolean = false,
+    val showProvisioningForm: Boolean = true
+)
 
 @Composable
 fun OnboardingScreen(
@@ -111,6 +123,147 @@ fun OnboardingCoordinator(
     var wifiSsid by remember(host) { mutableStateOf("") }
     var wifiPassword by remember(host) { mutableStateOf("") }
 
+    OnboardingFrame(
+        host = host,
+        currentStep = currentStep,
+        onExit = {
+            pairingViewModel.cancelPairing()
+            if (host == OnboardingHost.SIM_CONNECTIVITY) {
+                onExit()
+            } else {
+                onComplete()
+            }
+        }
+    ) {
+        when (it) {
+            OnboardingStep.WELCOME -> WelcomeStep(
+                onStart = { currentStep = nextOnboardingStep(it, host) }
+            )
+
+            OnboardingStep.PERMISSIONS_PRIMER -> PermissionsPrimerStep(
+                onContinue = { currentStep = nextOnboardingStep(it, host) }
+            )
+
+            OnboardingStep.VOICE_HANDSHAKE -> VoiceHandshakeStep(
+                onContinue = { currentStep = nextOnboardingStep(it, host) }
+            )
+
+            OnboardingStep.HARDWARE_WAKE -> HardwareWakeStep(
+                onContinue = { currentStep = nextOnboardingStep(it, host) }
+            )
+
+            OnboardingStep.SCAN -> ScanStep(
+                viewModel = pairingViewModel,
+                onCancel = {
+                    pairingViewModel.cancelPairing()
+                    currentStep = OnboardingStep.HARDWARE_WAKE
+                },
+                onFound = { badge ->
+                    discoveredBadge = badge
+                    currentStep = OnboardingStep.DEVICE_FOUND
+                }
+            )
+
+            OnboardingStep.DEVICE_FOUND -> DeviceFoundStep(
+                badge = discoveredBadge,
+                onRescan = {
+                    pairingViewModel.cancelPairing()
+                    discoveredBadge = null
+                    currentStep = OnboardingStep.SCAN
+                },
+                onConnect = {
+                    currentStep = nextOnboardingStep(it, host)
+                }
+            )
+
+            OnboardingStep.PROVISIONING -> ProvisioningStep(
+                viewModel = pairingViewModel,
+                badge = discoveredBadge,
+                ssid = wifiSsid,
+                password = wifiPassword,
+                onSsidChange = { wifiSsid = it },
+                onPasswordChange = { wifiPassword = it },
+                onBack = {
+                    currentStep = OnboardingStep.DEVICE_FOUND
+                },
+                onRetryScan = {
+                    pairingViewModel.cancelPairing()
+                    discoveredBadge = null
+                    currentStep = OnboardingStep.SCAN
+                },
+                onComplete = {
+                    currentStep = nextOnboardingStep(it, host)
+                }
+            )
+
+            OnboardingStep.COMPLETE -> CompleteStep(
+                host = host,
+                onAcknowledge = {
+                    pairingViewModel.cancelPairing()
+                    onComplete()
+                }
+            )
+        }
+    }
+}
+
+@Composable
+internal fun OnboardingStaticScreen(
+    state: OnboardingVisualCaptureState,
+    onExit: () -> Unit = {}
+) {
+    OnboardingFrame(
+        host = state.host,
+        currentStep = state.step,
+        animateStepContent = false,
+        onExit = onExit
+    ) {
+        when (it) {
+            OnboardingStep.WELCOME -> WelcomeStep(onStart = {})
+            OnboardingStep.PERMISSIONS_PRIMER -> PermissionsPrimerStep(onContinue = {})
+            OnboardingStep.VOICE_HANDSHAKE -> VoiceHandshakeStep(onContinue = {})
+            OnboardingStep.HARDWARE_WAKE -> HardwareWakeStep(onContinue = {})
+            OnboardingStep.SCAN -> ScanStepContent(
+                pairingState = state.pairingState,
+                permissionDenied = state.permissionDenied,
+                onRequestPermissions = {},
+                onRetryScan = {},
+                onCancel = {}
+            )
+            OnboardingStep.DEVICE_FOUND -> DeviceFoundStep(
+                badge = state.badge,
+                onRescan = {},
+                onConnect = {}
+            )
+            OnboardingStep.PROVISIONING -> ProvisioningStepContent(
+                pairingState = state.pairingState,
+                badge = state.badge,
+                ssid = state.ssid,
+                password = state.password,
+                showProvisioningForm = state.showProvisioningForm,
+                onSsidChange = {},
+                onPasswordChange = {},
+                onBack = {},
+                onRetryScan = {},
+                onSubmit = {},
+                onRetryProvisioning = {}
+            )
+            OnboardingStep.COMPLETE -> CompleteStep(
+                host = state.host,
+                onAcknowledge = {}
+            )
+        }
+    }
+}
+
+@Composable
+private fun OnboardingFrame(
+    host: OnboardingHost,
+    currentStep: OnboardingStep,
+    onExit: () -> Unit,
+    animateStepContent: Boolean = true,
+    content: @Composable (OnboardingStep) -> Unit
+) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -125,17 +278,14 @@ fun OnboardingCoordinator(
             )
             .padding(horizontal = 24.dp, vertical = 20.dp)
     ) {
-        OnboardingAuroraBackground()
+        if (currentStep == OnboardingStep.PERMISSIONS_PRIMER) {
+            SimSharedAuroraBackground()
+        } else {
+            OnboardingAuroraBackground(step = currentStep)
+        }
 
         TextButton(
-            onClick = {
-                pairingViewModel.cancelPairing()
-                if (host == OnboardingHost.SIM_CONNECTIVITY) {
-                    onExit()
-                } else {
-                    onComplete()
-                }
-            },
+            onClick = onExit,
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .statusBarsPadding()
@@ -146,91 +296,41 @@ fun OnboardingCoordinator(
             )
         }
 
-        AnimatedContent(
-            targetState = currentStep,
-            transitionSpec = {
-                (fadeIn(animationSpec = tween(280)) + slideInVertically(animationSpec = tween(280)) { it / 8 }) togetherWith
-                    (fadeOut(animationSpec = tween(220)) + slideOutVertically(animationSpec = tween(220)) { -it / 10 })
-            },
-            label = "OnboardingCoordinator"
-        ) { step ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = 32.dp, bottom = 12.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                when (step) {
-                    OnboardingStep.WELCOME -> WelcomeStep(
-                        onStart = { currentStep = nextOnboardingStep(step, host) }
-                    )
-
-                    OnboardingStep.PERMISSIONS_PRIMER -> PermissionsPrimerStep(
-                        onContinue = { currentStep = nextOnboardingStep(step, host) }
-                    )
-
-                    OnboardingStep.VOICE_HANDSHAKE -> VoiceHandshakeStep(
-                        onContinue = { currentStep = nextOnboardingStep(step, host) }
-                    )
-
-                    OnboardingStep.HARDWARE_WAKE -> HardwareWakeStep(
-                        onContinue = { currentStep = nextOnboardingStep(step, host) }
-                    )
-
-                    OnboardingStep.SCAN -> ScanStep(
-                        viewModel = pairingViewModel,
-                        onCancel = {
-                            pairingViewModel.cancelPairing()
-                            currentStep = OnboardingStep.HARDWARE_WAKE
-                        },
-                        onFound = { badge ->
-                            discoveredBadge = badge
-                            currentStep = OnboardingStep.DEVICE_FOUND
-                        }
-                    )
-
-                    OnboardingStep.DEVICE_FOUND -> DeviceFoundStep(
-                        badge = discoveredBadge,
-                        onRescan = {
-                            pairingViewModel.cancelPairing()
-                            discoveredBadge = null
-                            currentStep = OnboardingStep.SCAN
-                        },
-                        onConnect = {
-                            currentStep = nextOnboardingStep(step, host)
-                        }
-                    )
-
-                    OnboardingStep.PROVISIONING -> ProvisioningStep(
-                        viewModel = pairingViewModel,
-                        badge = discoveredBadge,
-                        ssid = wifiSsid,
-                        password = wifiPassword,
-                        onSsidChange = { wifiSsid = it },
-                        onPasswordChange = { wifiPassword = it },
-                        onBack = {
-                            currentStep = OnboardingStep.DEVICE_FOUND
-                        },
-                        onRetryScan = {
-                            pairingViewModel.cancelPairing()
-                            discoveredBadge = null
-                            currentStep = OnboardingStep.SCAN
-                        },
-                        onComplete = {
-                            currentStep = nextOnboardingStep(step, host)
-                        }
-                    )
-
-                    OnboardingStep.COMPLETE -> CompleteStep(
-                        host = host,
-                        onAcknowledge = {
-                            pairingViewModel.cancelPairing()
-                            onComplete()
-                        }
-                    )
-                }
+        if (animateStepContent) {
+            AnimatedContent(
+                targetState = currentStep,
+                transitionSpec = {
+                    (fadeIn(animationSpec = tween(280)) + slideInVertically(animationSpec = tween(280)) { it / 8 }) togetherWith
+                        (fadeOut(animationSpec = tween(220)) + slideOutVertically(animationSpec = tween(220)) { -it / 10 })
+                },
+                label = "OnboardingCoordinator"
+            ) { step ->
+                OnboardingStepContainer(
+                    step = step,
+                    content = content
+                )
             }
+        } else {
+            OnboardingStepContainer(
+                step = currentStep,
+                content = content
+            )
         }
+    }
+}
+
+@Composable
+private fun OnboardingStepContainer(
+    step: OnboardingStep,
+    content: @Composable (OnboardingStep) -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(top = 32.dp, bottom = 12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        content(step)
     }
 }
 
@@ -301,23 +401,48 @@ internal fun resolveConnectivityPairingErrorUiModel(
 }
 
 @Composable
-private fun OnboardingAuroraBackground() {
+private fun OnboardingAuroraBackground(step: OnboardingStep) {
+    val topSize = when (step) {
+        OnboardingStep.SCAN -> 320.dp
+        OnboardingStep.PERMISSIONS_PRIMER -> 260.dp
+        else -> 280.dp
+    }
+    val topAlpha = when (step) {
+        OnboardingStep.SCAN -> 0.78f
+        OnboardingStep.PERMISSIONS_PRIMER -> 0.70f
+        else -> 0.65f
+    }
+    val bottomSize = when (step) {
+        OnboardingStep.SCAN -> 330.dp
+        OnboardingStep.HARDWARE_WAKE -> 320.dp
+        else -> 300.dp
+    }
+    val bottomAlpha = when (step) {
+        OnboardingStep.SCAN -> 0.66f
+        OnboardingStep.HARDWARE_WAKE -> 0.60f
+        else -> 0.55f
+    }
     Box(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
-                .align(Alignment.TopStart)
-                .size(280.dp)
+                .align(
+                    when (step) {
+                        OnboardingStep.SCAN -> Alignment.TopCenter
+                        else -> Alignment.TopStart
+                    }
+                )
+                .size(topSize)
                 .clip(CircleShape)
-                .background(OnboardingBlue.copy(alpha = 0.10f))
-                .alpha(0.65f)
+                .background(OnboardingBlue.copy(alpha = if (step == OnboardingStep.SCAN) 0.13f else 0.10f))
+                .alpha(topAlpha)
         )
         Box(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .size(300.dp)
+                .size(bottomSize)
                 .clip(CircleShape)
-                .background(OnboardingIndigo.copy(alpha = 0.10f))
-                .alpha(0.55f)
+                .background(OnboardingIndigo.copy(alpha = if (step == OnboardingStep.SCAN) 0.12f else 0.10f))
+                .alpha(bottomAlpha)
         )
     }
 }
@@ -395,41 +520,61 @@ private fun WelcomeStep(onStart: () -> Unit) {
 @Composable
 private fun PermissionsPrimerStep(onContinue: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.Start
     ) {
-        TitleBlock(
-            title = "先确认这三项准备",
-            subtitle = "这里只做说明，不会立刻弹出系统授权。真正请求会在对应操作发生时再出现。"
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = "需要一些权限",
+            color = OnboardingText,
+            fontSize = 33.sp,
+            fontWeight = FontWeight.Bold
         )
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(12.dp))
+        Text(
+            text = "为了提供完整体验，我们需要以下基础访问权限。系统会在您即将使用相关功能时，再按需发起授权请求。",
+            color = OnboardingMuted,
+            fontSize = 15.sp,
+            lineHeight = 23.sp
+        )
+        Spacer(Modifier.height(30.dp))
         PermissionPrimerCard(
             icon = Icons.Default.Mic,
             title = "麦克风",
-            description = "后续语音互动会在真正使用手机麦克风时再请求权限。"
+            description = "开始语音互动时请求，用于收音、转写和持续语音体验。"
         )
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(16.dp))
         PermissionPrimerCard(
             icon = Icons.Default.Bluetooth,
             title = "蓝牙",
-            description = "扫描和连接徽章时才会触发系统授权，避免提前打断。"
+            description = "搜索并连接 SmartBadge 时请求，用于发现附近设备与建立连接。"
         )
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(16.dp))
         PermissionPrimerCard(
             icon = Icons.Default.Alarm,
             title = "闹钟与提醒",
-            description = "排程提醒依赖精确闹钟能力，本轮仅做能力说明。"
+            description = "创建提醒与日程通知时使用，确保关键节点能按时触达。"
         )
-        Spacer(Modifier.height(28.dp))
-        SecondaryNote(text = "权限仍然按需请求")
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.weight(1f))
+        FrostedCard(
+            modifier = Modifier.fillMaxWidth(),
+            containerColor = Color.White.copy(alpha = 0.05f),
+            borderColor = Color.White.copy(alpha = 0.10f)
+        ) {
+            Text(
+                text = "说明：这一页只做提前说明，不会立刻弹出系统授权。后续在您准备使用相关功能时，Android 才会按需询问。",
+                color = OnboardingMuted.copy(alpha = 0.96f),
+                fontSize = 13.sp,
+                lineHeight = 21.sp
+            )
+        }
+        Spacer(Modifier.height(18.dp))
         PrimaryPillButton(
             text = "继续",
             onClick = onContinue,
-            containerColor = OnboardingGhostSurface,
-            textColor = OnboardingText,
-            borderColor = OnboardingCardBorder,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp)
         )
     }
 }
@@ -526,41 +671,56 @@ private fun HardwareWakeStep(onContinue: () -> Unit) {
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        TitleBlock(
-            title = "唤醒您的 SmartBadge",
-            subtitle = "长按中间按钮 3 秒，直到中央蓝灯开始呼吸闪烁。"
-        )
-        Spacer(Modifier.height(32.dp))
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = "唤醒您的 SmartBadge",
+                color = OnboardingText,
+                fontSize = 30.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = "长按中间按钮 3 秒，直到中央蓝灯开始呼吸闪烁。",
+                color = OnboardingMuted,
+                fontSize = 16.sp,
+                lineHeight = 24.sp,
+                textAlign = TextAlign.Center
+            )
+        }
+        Spacer(Modifier.height(28.dp))
         FrostedCard(
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            containerColor = OnboardingCardSoft,
+            borderColor = Color.White.copy(alpha = 0.12f)
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(210.dp)
+                        .height(228.dp)
                         .clip(RoundedCornerShape(26.dp))
-                        .background(Color(0x12000000)),
+                        .background(Color(0x100D1118)),
                     contentAlignment = Alignment.Center
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(140.dp)
-                            .clip(RoundedCornerShape(36.dp))
+                            .size(156.dp)
+                            .clip(RoundedCornerShape(38.dp))
                             .background(
                                 Brush.linearGradient(
                                     colors = listOf(
-                                        Color.White.copy(alpha = 0.06f),
-                                        Color.White.copy(alpha = 0.02f)
+                                        Color.White.copy(alpha = 0.07f),
+                                        Color.White.copy(alpha = 0.025f)
                                     )
                                 )
                             )
-                            .border(1.dp, OnboardingCardBorder, RoundedCornerShape(36.dp)),
+                            .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(38.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(60.dp)
+                                .size(66.dp)
                                 .clip(CircleShape)
                                 .background(Color.Black.copy(alpha = 0.55f))
                                 .border(
@@ -581,10 +741,17 @@ private fun HardwareWakeStep(onContinue: () -> Unit) {
                     }
                 }
                 Spacer(Modifier.height(18.dp))
-                SecondaryNote(text = "3 秒中心长按")
+                HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+                Spacer(Modifier.height(14.dp))
+                Text(
+                    text = "3 秒中心长按",
+                    color = OnboardingMuted.copy(alpha = 0.88f),
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.Center
+                )
             }
         }
-        Spacer(Modifier.height(26.dp))
+        Spacer(Modifier.height(28.dp))
         PrimaryPillButton(
             text = "蓝灯已经在闪了",
             onClick = onContinue,
@@ -600,6 +767,7 @@ private fun ScanStep(
     onFound: (DiscoveredBadge) -> Unit
 ) {
     val pairingState by viewModel.pairingState.collectAsState()
+    val discoveredBadge = (pairingState as? PairingState.DeviceFound)?.badge
     val permissions = remember {
         buildList {
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
@@ -631,16 +799,42 @@ private fun ScanStep(
         }
     }
 
+    LaunchedEffect(discoveredBadge?.id) {
+        if (discoveredBadge != null) {
+            onFound(discoveredBadge)
+        }
+    }
+
+    ScanStepContent(
+        pairingState = pairingState,
+        permissionDenied = permissionDenied,
+        onRequestPermissions = {
+            permissionDenied = false
+            launcher.launch(permissions.toTypedArray())
+        },
+        onRetryScan = {
+            permissionDenied = false
+            viewModel.startScan()
+        },
+        onCancel = onCancel
+    )
+}
+
+@Composable
+private fun ScanStepContent(
+    pairingState: PairingState,
+    permissionDenied: Boolean,
+    onRequestPermissions: () -> Unit,
+    onRetryScan: () -> Unit,
+    onCancel: () -> Unit
+) {
     when {
         permissionDenied -> {
             PairingErrorStep(
                 title = "需要蓝牙权限",
                 description = "请授权蓝牙搜索与连接后继续扫描。",
                 primaryLabel = "授权并重试",
-                onPrimary = {
-                    permissionDenied = false
-                    launcher.launch(permissions.toTypedArray())
-                },
+                onPrimary = onRequestPermissions,
                 secondaryLabel = "返回上一步",
                 onSecondary = onCancel
             )
@@ -649,44 +843,34 @@ private fun ScanStep(
         pairingState is PairingState.Error -> {
             val presentation = resolveConnectivityPairingErrorUiModel(
                 OnboardingStep.SCAN,
-                pairingState as PairingState.Error
+                pairingState
             )
             PairingErrorStep(
                 title = presentation.title,
                 description = presentation.description,
                 primaryLabel = presentation.primaryLabel,
-                onPrimary = {
-                    permissionDenied = false
-                    viewModel.startScan()
-                },
+                onPrimary = onRetryScan,
                 secondaryLabel = presentation.secondaryLabel,
                 onSecondary = onCancel
             )
         }
 
         else -> {
-            if (pairingState is PairingState.DeviceFound) {
-                val badge = (pairingState as PairingState.DeviceFound).badge
-                LaunchedEffect(badge.id) {
-                    onFound(badge)
-                }
-            }
-
             val transition = rememberInfiniteTransition(label = "scanRadar")
             val pulse by transition.animateFloat(
-                initialValue = 0.8f,
-                targetValue = 2.5f,
+                initialValue = 0.92f,
+                targetValue = 2.8f,
                 animationSpec = infiniteRepeatable(
-                    animation = tween(2000),
+                    animation = tween(2200),
                     repeatMode = RepeatMode.Restart
                 ),
                 label = "scanPulse"
             )
             val pulseAlpha by transition.animateFloat(
-                initialValue = 0.8f,
+                initialValue = 0.75f,
                 targetValue = 0f,
                 animationSpec = infiniteRepeatable(
-                    animation = tween(2000),
+                    animation = tween(2200),
                     repeatMode = RepeatMode.Restart
                 ),
                 label = "scanPulseAlpha"
@@ -696,43 +880,61 @@ private fun ScanStep(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                TitleBlock(
-                    title = "正在搜索设备",
-                    subtitle = "保持徽章靠近手机，连接将始终要求您手动确认。"
+                Text(
+                    text = "正在搜索设备",
+                    color = OnboardingText,
+                    fontSize = 29.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
                 )
-                Spacer(Modifier.height(34.dp))
+                Spacer(Modifier.height(14.dp))
+                Text(
+                    text = "保持徽章靠近手机，连接将始终要求您手动确认。",
+                    color = OnboardingMuted,
+                    fontSize = 15.sp,
+                    lineHeight = 24.sp,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(42.dp))
                 Box(
                     modifier = Modifier
-                        .size(180.dp),
+                        .size(220.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(140.dp)
+                            .size(172.dp)
                             .clip(CircleShape)
                             .border(
                                 width = 1.dp,
-                                color = OnboardingBlue.copy(alpha = 0.20f),
+                                color = OnboardingBlue.copy(alpha = 0.18f),
                                 shape = CircleShape
                             )
                     )
                     Box(
                         modifier = Modifier
-                            .size(140.dp)
+                            .size(172.dp)
                             .scale(pulse)
                             .alpha(pulseAlpha)
                             .clip(CircleShape)
-                            .background(OnboardingBlue.copy(alpha = 0.10f))
+                            .background(OnboardingBlue.copy(alpha = 0.09f))
                     )
                     Box(
                         modifier = Modifier
-                            .size(12.dp)
+                            .size(56.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.015f))
+                            .border(1.dp, OnboardingBlue.copy(alpha = 0.08f), CircleShape)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(14.dp)
                             .clip(CircleShape)
                             .background(OnboardingBlue)
                     )
                 }
-                Spacer(Modifier.height(24.dp))
-                SecondaryPillButton(
+                Spacer(Modifier.height(46.dp))
+                QuietGhostButton(
                     text = "取消",
                     onClick = onCancel,
                     modifier = Modifier.fillMaxWidth()
@@ -860,7 +1062,56 @@ private fun ProvisioningStep(
         }
     }
 
-    when (val state = pairingState) {
+    ProvisioningStepContent(
+        pairingState = pairingState,
+        badge = badge,
+        ssid = ssid,
+        password = password,
+        showProvisioningForm = showProvisioningForm,
+        onSsidChange = onSsidChange,
+        onPasswordChange = onPasswordChange,
+        onBack = onBack,
+        onRetryScan = onRetryScan,
+        onSubmit = {
+            showProvisioningForm = false
+            viewModel.pairBadge(
+                badge = badge,
+                wifiCreds = WifiCredentials(ssid, password)
+            )
+        },
+        onRetryProvisioning = {
+            showProvisioningForm = true
+        }
+    )
+}
+
+@Composable
+private fun ProvisioningStepContent(
+    pairingState: PairingState,
+    badge: DiscoveredBadge?,
+    ssid: String,
+    password: String,
+    showProvisioningForm: Boolean,
+    onSsidChange: (String) -> Unit,
+    onPasswordChange: (String) -> Unit,
+    onBack: () -> Unit,
+    onRetryScan: () -> Unit,
+    onSubmit: () -> Unit,
+    onRetryProvisioning: () -> Unit
+) {
+    if (badge == null) {
+        PairingErrorStep(
+            title = "缺少目标设备",
+            description = "请回到扫描页重新选择设备。",
+            primaryLabel = "重新扫描",
+            onPrimary = onRetryScan,
+            secondaryLabel = "返回上一步",
+            onSecondary = onBack
+        )
+        return
+    }
+
+    when (pairingState) {
         is PairingState.Error -> {
             if (showProvisioningForm) {
                 ProvisioningForm(
@@ -869,16 +1120,13 @@ private fun ProvisioningStep(
                     onSsidChange = onSsidChange,
                     onPasswordChange = onPasswordChange,
                     onBack = onBack,
-                    onSubmit = {
-                        showProvisioningForm = false
-                        viewModel.pairBadge(
-                            badge = badge,
-                            wifiCreds = WifiCredentials(ssid, password)
-                        )
-                    }
+                    onSubmit = onSubmit
                 )
             } else {
-                val presentation = resolveConnectivityPairingErrorUiModel(OnboardingStep.PROVISIONING, state)
+                val presentation = resolveConnectivityPairingErrorUiModel(
+                    OnboardingStep.PROVISIONING,
+                    pairingState
+                )
                 PairingErrorStep(
                     title = presentation.title,
                     description = presentation.description,
@@ -886,7 +1134,7 @@ private fun ProvisioningStep(
                     onPrimary = {
                         when (presentation.retryAction) {
                             ConnectivityPairingRetryAction.RETRY_SCAN -> onRetryScan()
-                            ConnectivityPairingRetryAction.RETRY_PROVISIONING -> showProvisioningForm = true
+                            ConnectivityPairingRetryAction.RETRY_PROVISIONING -> onRetryProvisioning()
                         }
                     },
                     secondaryLabel = presentation.secondaryLabel,
@@ -897,9 +1145,8 @@ private fun ProvisioningStep(
 
         is PairingState.Pairing,
         is PairingState.Success -> {
-            showProvisioningForm = false
-            val progress = when (state) {
-                is PairingState.Pairing -> state.progress / 100f
+            val progress = when (pairingState) {
+                is PairingState.Pairing -> pairingState.progress / 100f
                 is PairingState.Success -> 1f
                 else -> 0f
             }
@@ -909,13 +1156,13 @@ private fun ProvisioningStep(
             ) {
                 StatusOrb(
                     icon = Icons.Default.Bluetooth,
-                    tint = if (state is PairingState.Success) OnboardingMint else OnboardingBlue,
+                    tint = if (pairingState is PairingState.Success) OnboardingMint else OnboardingBlue,
                     modifier = Modifier.size(72.dp),
                     iconSize = 24
                 )
                 Spacer(Modifier.height(24.dp))
                 TitleBlock(
-                    title = if (state is PairingState.Success) "配网完成" else "正在写入设备配置",
+                    title = if (pairingState is PairingState.Success) "配网完成" else "正在写入设备配置",
                     subtitle = "Wi‑Fi 信息与设备上线校验在这里汇合，过程保持可见。"
                 )
                 Spacer(Modifier.height(32.dp))
@@ -930,12 +1177,12 @@ private fun ProvisioningStep(
                         LinearProgressIndicator(
                             progress = { progress },
                             modifier = Modifier.fillMaxWidth(),
-                            color = if (state is PairingState.Success) OnboardingMint else OnboardingBlue,
+                            color = if (pairingState is PairingState.Success) OnboardingMint else OnboardingBlue,
                             trackColor = Color.White.copy(alpha = 0.12f)
                         )
                         Spacer(Modifier.height(16.dp))
                         Text(
-                            text = if (state is PairingState.Success) {
+                            text = if (pairingState is PairingState.Success) {
                                 "100%"
                             } else {
                                 "${(progress * 100).toInt()}%"
@@ -945,7 +1192,7 @@ private fun ProvisioningStep(
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            text = if (state is PairingState.Success) {
+                            text = if (pairingState is PairingState.Success) {
                                 "设备已完成上线校验。"
                             } else {
                                 "请保持设备通电，并保持手机与设备靠近。"
@@ -959,20 +1206,13 @@ private fun ProvisioningStep(
         }
 
         else -> {
-            showProvisioningForm = true
             ProvisioningForm(
                 ssid = ssid,
                 password = password,
                 onSsidChange = onSsidChange,
                 onPasswordChange = onPasswordChange,
                 onBack = onBack,
-                onSubmit = {
-                    showProvisioningForm = false
-                    viewModel.pairBadge(
-                        badge = badge,
-                        wifiCreds = WifiCredentials(ssid, password)
-                    )
-                }
+                onSubmit = onSubmit
             )
         }
     }
@@ -1157,55 +1397,48 @@ private fun PermissionPrimerCard(
     title: String,
     description: String
 ) {
-    FrostedCard(modifier = Modifier.fillMaxWidth()) {
-        Column {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = Color.White.copy(alpha = 0.045f),
+        shape = RoundedCornerShape(30.dp),
+        tonalElevation = 0.dp
+    ) {
+        Column(
+            modifier = Modifier
+                .border(1.dp, Color.White.copy(alpha = 0.11f), RoundedCornerShape(30.dp))
+                .padding(horizontal = 22.dp, vertical = 22.dp)
+        ) {
             Row(
                 verticalAlignment = Alignment.Top,
-                horizontalArrangement = Arrangement.spacedBy(14.dp)
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.06f)),
+                        .size(50.dp)
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(Color.White.copy(alpha = 0.08f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
                         tint = OnboardingText,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                 }
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = title,
                         color = OnboardingText,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Medium
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.SemiBold
                     )
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(8.dp))
                     Text(
                         text = description,
                         color = OnboardingMuted,
-                        lineHeight = 21.sp
-                    )
-                }
-            }
-            Spacer(Modifier.height(16.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                Surface(
-                    color = Color.White.copy(alpha = 0.06f),
-                    shape = RoundedCornerShape(999.dp)
-                ) {
-                    Text(
-                        text = "按需请求",
-                        color = OnboardingMuted,
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                        fontSize = 14.sp,
+                        lineHeight = 22.sp
                     )
                 }
             }
@@ -1317,6 +1550,34 @@ private fun SecondaryPillButton(
             Text(
                 text = text,
                 color = OnboardingText,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+@Composable
+private fun QuietGhostButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        color = Color.White.copy(alpha = 0.03f),
+        shape = RoundedCornerShape(999.dp),
+        onClick = onClick
+    ) {
+        Box(
+            modifier = Modifier
+                .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(999.dp))
+                .padding(horizontal = 20.dp, vertical = 15.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = text,
+                color = OnboardingText.copy(alpha = 0.88f),
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium
             )

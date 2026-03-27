@@ -301,7 +301,7 @@ Auto-update evidence law:
 
 | Page | Prototype ID | Production Scope | Stage | Source Lock | Notes |
 |------|--------------|------------------|-------|-------------|-------|
-| P1 | `welcome` | `FULL_APP` `WELCOME` | Pending | Prototype HTML | Full-app only intro surface. |
+| P1 | `welcome` | `FULL_APP` `WELCOME` | In Transplant | Prototype HTML + approved screenshot | Full-app only intro surface. Logged 2026-03-27: screenshot-driven transplant active to align the hero spacing, calmer frosted `SS` tile, and bottom-anchored `开启旅程` CTA while preserving the existing `FULL_APP`-only welcome step and `跳过` shell action. |
 | P2 | `permissions` | `PERMISSIONS_PRIMER` | Recheck | Prototype HTML + approved screenshots | Shared host surface; keep informational-first permission law. Logged 2026-03-27: permissions page polish reopened against the approved screenshot direction to tighten copy, remove per-card affordances, bottom-anchor and strengthen the `继续` CTA, and reuse the shipped SIM chat aurora for the SIM review surface. |
 | P3 | `handshake` | `FULL_APP` `VOICE_HANDSHAKE` | In Transplant | Prototype HTML + approved screenshot override | Logged 2026-03-27: full-app-only screenshot-driven handshake transplant is active. Source precedence for this page is screenshot-first for layout/material while flow and anti-theater law remain spec-locked. Abstract listening stays intact, no fake-assistant theater is reintroduced, and the review seam now needs explicit `waiting` plus `revealed` states with `revealed` as the default screenshot-comparison target. |
 | P4 | `wake` | `HARDWARE_WAKE` | Recheck | Prototype HTML + approved screenshots | Shared host surface. |

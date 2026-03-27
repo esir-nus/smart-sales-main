@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -86,6 +87,7 @@ private val OnboardingField = Color(0x0DFFFFFF)
 private val OnboardingErrorSurface = Color(0x14F59E0B)
 private val OnboardingPrimarySurface = Color.White
 private val OnboardingPrimaryText = Color(0xFF05060A)
+private val OnboardingLogoTile = Color(0xFF12161E)
 
 internal data class OnboardingVisualCaptureState(
     val host: OnboardingHost,
@@ -485,43 +487,36 @@ private fun StatusOrb(
 @Composable
 private fun WelcomeStep(onStart: () -> Unit) {
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.weight(1f))
         Box(
             modifier = Modifier
-                .size(104.dp)
-                .clip(RoundedCornerShape(32.dp))
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            Color(0x14FFFFFF),
-                            Color(0x1F38BDF8)
-                        )
-                    )
-                )
-                .border(1.dp, OnboardingCardBorder, RoundedCornerShape(32.dp)),
+                .size(80.dp)
+                .clip(RoundedCornerShape(20.dp))
+                .background(OnboardingLogoTile)
+                .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(20.dp)),
             contentAlignment = Alignment.Center
         ) {
-            Text("SS", color = OnboardingText, fontSize = 34.sp, fontWeight = FontWeight.Bold)
+            Text("SS", color = OnboardingText, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
         }
-        Spacer(Modifier.height(32.dp))
-        Text("SmartSales", color = OnboardingText, fontSize = 34.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(28.dp))
+        Text("SmartSales", color = OnboardingText, fontSize = 32.sp, fontWeight = FontWeight.SemiBold)
         Spacer(Modifier.height(8.dp))
-        Text("您的 AI 销售教练", color = OnboardingMuted, fontSize = 17.sp)
-        Spacer(Modifier.height(64.dp))
         Text(
-            text = "更安静的引导，更可靠的连接。",
+            "您的 AI 销售教练",
             color = OnboardingMuted,
-            fontSize = 14.sp,
+            fontSize = 15.sp,
             textAlign = TextAlign.Center
         )
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.weight(1f))
         PrimaryPillButton(
             text = "开启旅程",
             onClick = onStart,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
         )
     }
 }

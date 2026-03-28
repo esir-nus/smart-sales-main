@@ -24,7 +24,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.smartsales.prism.ui.components.connectivity.ConnectionState
+import com.smartsales.prism.BuildConfig
+import com.smartsales.prism.ui.components.connectivity.ConnectivityManagerState
 import com.smartsales.prism.ui.components.connectivity.ConnectivityViewModel
 import kotlinx.coroutines.delay
 
@@ -40,8 +41,8 @@ fun ConnectivityModal(
     onNavigateToSetup: () -> Unit = {},
     viewModel: ConnectivityViewModel = hiltViewModel()
 ) {
-    // 从 ViewModel 收集状态 — 使用 effectiveState（真实状态 + UI 覆盖）
-    val state by viewModel.effectiveState.collectAsState()
+    // Manager/modal 使用 richer managerState；shell 路由仍使用 shared connectionState
+    val state by viewModel.managerState.collectAsState()
     val batteryLevel by viewModel.batteryLevel.collectAsState()
 
     Box(
@@ -67,7 +68,12 @@ fun ConnectivityModal(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    IconButton(onClick = onDismiss) {
+                    IconButton(
+                        onClick = {
+                            viewModel.resetTransientState()
+                            onDismiss()
+                        }
+                    ) {
                         Icon(Icons.Default.Close, "Close", tint = Color.Gray)
                     }
                 }
@@ -81,6 +87,7 @@ fun ConnectivityModal(
                     onCheckUpdate = viewModel::checkForUpdate,
                     onReconnect = viewModel::reconnect,
                     onStartSetup = {
+                        viewModel.resetTransientState()
                         onDismiss()
                         onNavigateToSetup()
                     },
@@ -102,82 +109,58 @@ fun ConnectivityManagerScreen(
     onNavigateToSetup: () -> Unit = {},
     viewModel: ConnectivityViewModel = hiltViewModel()
 ) {
-    val state by viewModel.effectiveState.collectAsState()
+    val state by viewModel.managerState.collectAsState()
     val batteryLevel by viewModel.batteryLevel.collectAsState()
 
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black.copy(alpha = 0.22f))
-                .clickable(enabled = false) {}
-        )
-
         Card(
             modifier = Modifier
-                .fillMaxWidth()
-                .widthIn(max = 460.dp)
-                .padding(horizontal = 20.dp, vertical = 28.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF171E2A)),
-            shape = RoundedCornerShape(28.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 18.dp)
+                .padding(24.dp)
+                .fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E2C)),
+            shape = RoundedCornerShape(24.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
         ) {
             Column(
-                modifier = Modifier.padding(horizontal = 22.dp, vertical = 18.dp)
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    horizontalArrangement = Arrangement.End
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "设备连接",
-                            fontSize = 19.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "硬件支持面板，不会接管 SIM 主流程。",
-                            fontSize = 13.sp,
-                            color = Color(0xFF9AA4B2)
-                        )
-                    }
-                    IconButton(onClick = onClose) {
-                        Icon(Icons.Default.Close, "Close", tint = Color(0xFF9AA4B2))
+                    IconButton(
+                        onClick = {
+                            viewModel.resetTransientState()
+                            onClose()
+                        }
+                    ) {
+                        Icon(Icons.Default.Close, "Close", tint = Color.Gray)
                     }
                 }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                ConnectivityStateContent(
+                    state = state,
+                    batteryLevel = batteryLevel,
+                    onDisconnect = viewModel::disconnect,
+                    onCheckUpdate = viewModel::checkForUpdate,
+                    onReconnect = viewModel::reconnect,
+                    onStartSetup = {
+                        viewModel.resetTransientState()
+                        onNavigateToSetup()
+                    },
+                    onStartUpdate = viewModel::startUpdate,
+                    onCancel = viewModel::cancel,
+                    onCompleteUpdate = viewModel::completeUpdate,
+                    onUpdateWifi = viewModel::updateWifiConfig
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
-
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = Color(0xFF1E2634),
-                    shape = RoundedCornerShape(22.dp),
-                    tonalElevation = 0.dp
-                ) {
-                    Column(
-                        modifier = Modifier.padding(horizontal = 18.dp, vertical = 22.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        ConnectivityStateContent(
-                            state = state,
-                            batteryLevel = batteryLevel,
-                            onDisconnect = viewModel::disconnect,
-                            onCheckUpdate = viewModel::checkForUpdate,
-                            onReconnect = viewModel::reconnect,
-                            onStartSetup = onNavigateToSetup,
-                            onStartUpdate = viewModel::startUpdate,
-                            onCancel = viewModel::cancel,
-                            onCompleteUpdate = viewModel::completeUpdate,
-                            onUpdateWifi = viewModel::updateWifiConfig
-                        )
-                    }
-                }
             }
         }
     }
@@ -185,7 +168,7 @@ fun ConnectivityManagerScreen(
 
 @Composable
 private fun ConnectivityStateContent(
-    state: ConnectionState,
+    state: ConnectivityManagerState,
     batteryLevel: Int,
     onDisconnect: () -> Unit,
     onCheckUpdate: () -> Unit,
@@ -199,27 +182,37 @@ private fun ConnectivityStateContent(
     AnimatedContent(targetState = state, label = "StateTransition") { currentState ->
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             when (currentState) {
-                ConnectionState.CONNECTED -> ConnectedView(
+                ConnectivityManagerState.CONNECTED -> ConnectedView(
                     battery = batteryLevel,
                     onUnbind = onDisconnect,
                     onCheckUpdate = onCheckUpdate
                 )
-                ConnectionState.DISCONNECTED -> DisconnectedView(
+                ConnectivityManagerState.DISCONNECTED -> DisconnectedView(
                     onReconnect = onReconnect
                 )
-                ConnectionState.NEEDS_SETUP -> NeedsSetupView(
+                ConnectivityManagerState.BLE_PAIRED_NETWORK_UNKNOWN -> BlePairedPendingNetworkView(
+                    onReconnect = onReconnect,
+                    onDisconnect = onDisconnect,
+                    showDebugDisconnect = BuildConfig.DEBUG
+                )
+                ConnectivityManagerState.BLE_PAIRED_NETWORK_OFFLINE -> BlePairedOfflineView(
+                    onReconnect = onReconnect,
+                    onDisconnect = onDisconnect,
+                    showDebugDisconnect = BuildConfig.DEBUG
+                )
+                ConnectivityManagerState.NEEDS_SETUP -> NeedsSetupView(
                     onStartSetup = onStartSetup
                 )
-                ConnectionState.CHECKING_UPDATE -> CheckingUpdateView()
-                ConnectionState.UPDATE_FOUND -> UpdateFoundView(
+                ConnectivityManagerState.CHECKING_UPDATE -> CheckingUpdateView()
+                ConnectivityManagerState.UPDATE_FOUND -> UpdateFoundView(
                     onSync = onStartUpdate,
                     onLater = onCancel
                 )
-                ConnectionState.UPDATING -> UpdatingView(
+                ConnectivityManagerState.UPDATING -> UpdatingView(
                     onComplete = onCompleteUpdate
                 )
-                ConnectionState.RECONNECTING -> ReconnectingView()
-                ConnectionState.WIFI_MISMATCH -> WifiMismatchView(
+                ConnectivityManagerState.RECONNECTING -> ReconnectingView()
+                ConnectivityManagerState.WIFI_MISMATCH -> WifiMismatchView(
                     onUpdate = onUpdateWifi,
                     onIgnore = onCancel
                 )
@@ -325,7 +318,135 @@ private fun DisconnectedView(
         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
         modifier = Modifier.fillMaxWidth(0.8f)
     ) {
-        Text("连接设备")
+        Text("重试连接")
+    }
+}
+
+@Composable
+private fun BlePairedPendingNetworkView(
+    onReconnect: () -> Unit,
+    onDisconnect: () -> Unit,
+    showDebugDisconnect: Boolean
+) {
+    Icon(
+        imageVector = Icons.Default.Bluetooth,
+        contentDescription = "Ble paired",
+        tint = Color(0xFF4FC3F7),
+        modifier = Modifier
+            .size(64.dp)
+            .background(Color(0xFF4FC3F7).copy(alpha = 0.12f), CircleShape)
+            .padding(12.dp)
+    )
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    Text("已连接设备", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
+    Text(
+        "蓝牙已连接，正在确认设备网络状态",
+        fontSize = 14.sp,
+        color = Color(0xFFAAAAAA),
+        textAlign = TextAlign.Center
+    )
+    Spacer(modifier = Modifier.height(8.dp))
+    Text(
+        "如果长时间停留在此状态，请重试连接并检查徽章 Wi‑Fi 状态",
+        fontSize = 12.sp,
+        color = Color.Gray,
+        textAlign = TextAlign.Center
+    )
+
+    Spacer(modifier = Modifier.height(32.dp))
+
+    if (showDebugDisconnect) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            OutlinedButton(
+                onClick = onDisconnect,
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF5252))
+            ) {
+                Text("断开连接")
+            }
+
+            Button(
+                onClick = onReconnect,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))
+            ) {
+                Text("重试连接")
+            }
+        }
+    } else {
+        Button(
+            onClick = onReconnect,
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
+            modifier = Modifier.fillMaxWidth(0.8f)
+        ) {
+            Text("重试连接")
+        }
+    }
+}
+
+@Composable
+private fun BlePairedOfflineView(
+    onReconnect: () -> Unit,
+    onDisconnect: () -> Unit,
+    showDebugDisconnect: Boolean
+) {
+    Icon(
+        imageVector = Icons.Default.Bluetooth,
+        contentDescription = "Ble paired offline",
+        tint = Color(0xFF4FC3F7),
+        modifier = Modifier
+            .size(64.dp)
+            .background(Color(0xFF4FC3F7).copy(alpha = 0.12f), CircleShape)
+            .padding(12.dp)
+    )
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    Text("已连接设备", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
+    Text(
+        "蓝牙已连接，但设备当前未接入可用网络",
+        fontSize = 14.sp,
+        color = Color(0xFFAAAAAA),
+        textAlign = TextAlign.Center
+    )
+    Spacer(modifier = Modifier.height(8.dp))
+    Text(
+        "请确认设备附近已开机，并检查徽章 Wi‑Fi 状态",
+        fontSize = 12.sp,
+        color = Color.Gray,
+        textAlign = TextAlign.Center
+    )
+
+    Spacer(modifier = Modifier.height(32.dp))
+
+    if (showDebugDisconnect) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            OutlinedButton(
+                onClick = onDisconnect,
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF5252))
+            ) {
+                Text("断开连接")
+            }
+
+            Button(
+                onClick = onReconnect,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))
+            ) {
+                Text("重试连接")
+            }
+        }
+    } else {
+        Button(
+            onClick = onReconnect,
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
+            modifier = Modifier.fillMaxWidth(0.8f)
+        ) {
+            Text("重试连接")
+        }
     }
 }
 

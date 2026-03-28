@@ -154,6 +154,29 @@ internal class DeviceConnectionManagerConnectionSupport(
             }
         }
 
+    suspend fun confirmManualWifiProvision(
+        credentials: WifiCredentials
+    ): ConnectionState = withContext(dispatchers.io) {
+        val session = runtime.currentSession
+            ?: return@withContext ConnectionState.Error(ConnectivityError.MissingSession)
+        runtime.lastCredentials = credentials
+        runtime.autoRetryAttempts = 0
+        cancelAutoRetry()
+
+        val outcome = waitForManualProvisionOnline(session, credentials)
+        when (outcome) {
+            is ConnectionState.WifiProvisioned -> {
+                runtime.state.value = outcome
+                startHeartbeat(outcome.session, outcome.status)
+            }
+
+            else -> {
+                runtime.state.value = ConnectionState.Disconnected
+            }
+        }
+        outcome
+    }
+
     fun hasStoredSession(): Boolean = runtime.currentSession != null
 
     fun currentSessionOrNull(): BleSession? = runtime.currentSession
@@ -485,6 +508,73 @@ internal class DeviceConnectionManagerConnectionSupport(
         )
     }
 
+    private suspend fun waitForManualProvisionOnline(
+        session: BleSession,
+        credentials: WifiCredentials
+    ): ConnectionState {
+        val expectedSsid = normalizeWifiSsid(credentials.ssid)
+
+        repeat(MANUAL_PROVISION_QUERY_ATTEMPTS) { attempt ->
+            delay(MANUAL_PROVISION_QUERY_DELAY_MS)
+
+            when (val result = performForegroundNetworkQuery(session, promoteConnectedState = false)) {
+                is Result.Success -> {
+                    val status = result.data
+                    val ip = status.ipAddress
+                    if (ip.isBlank() || ip == "0.0.0.0" || ip.startsWith("0.")) {
+                        ConnectivityLogger.d(
+                            "🛜 manual repair confirm attempt=${attempt + 1}: badge still offline ip=$ip"
+                        )
+                        return@repeat
+                    }
+
+                    val badgeSsid = normalizeWifiSsid(status.deviceWifiName)
+                    if (expectedSsid != null && badgeSsid != null && badgeSsid != expectedSsid) {
+                        ConnectivityLogger.w(
+                            "🛜 manual repair mismatch: expected=$expectedSsid badge=$badgeSsid"
+                        )
+                        return ConnectionState.Error(
+                            ConnectivityError.WifiDisconnected(
+                                reason = WifiDisconnectedReason.BADGE_PHONE_NETWORK_MISMATCH,
+                                phoneSsid = expectedSsid,
+                                badgeSsid = badgeSsid
+                            )
+                        )
+                    }
+
+                    if (badgeSsid == null) {
+                        ConnectivityLogger.w(
+                            "🛜 manual repair confirm attempt=${attempt + 1}: ip=$ip but badge ssid unreadable raw=${status.rawResponse}"
+                        )
+                        return@repeat
+                    }
+
+                    persistSessionAndKnownNetwork(session, credentials)
+                    ConnectivityLogger.i(
+                        "🛜 manual repair confirmed online ip=$ip ssid=$badgeSsid"
+                    )
+                    return ConnectionState.WifiProvisioned(
+                        session,
+                        ingressSupport.syntheticProvisioningStatus(status)
+                    )
+                }
+
+                is Result.Error -> {
+                    ConnectivityLogger.w(
+                        "🛜 manual repair confirm query failed attempt=${attempt + 1}: ${result.throwable.message}"
+                    )
+                }
+            }
+        }
+
+        return ConnectionState.Error(
+            ConnectivityError.WifiDisconnected(
+                reason = WifiDisconnectedReason.BADGE_WIFI_OFFLINE,
+                badgeSsid = expectedSsid
+            )
+        )
+    }
+
     private fun resolveReadablePhoneSsid(): String? {
         return when (val snapshot = phoneWifiProvider.currentWifiSnapshot()) {
             PhoneWifiSnapshot.Unavailable -> null
@@ -534,6 +624,8 @@ internal class DeviceConnectionManagerConnectionSupport(
         const val RECONNECT_REPLAY_FIRST_QUERY_DELAY_MS = 2_200L
         const val RECONNECT_REPLAY_QUERY_DELAY_MS = 2_000L
         const val RECONNECT_REPLAY_QUERY_ATTEMPTS = 3
+        const val MANUAL_PROVISION_QUERY_DELAY_MS = 1_500L
+        const val MANUAL_PROVISION_QUERY_ATTEMPTS = 3
         const val QUERY_FLOOR_TIMEOUT_MS = RateLimitedBleGateway.MIN_QUERY_INTERVAL_MS
         const val QUERY_FLOOR_RETRY_DELAY_MS = RateLimitedBleGateway.MIN_QUERY_INTERVAL_MS + 100L
     }

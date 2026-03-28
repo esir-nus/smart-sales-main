@@ -28,6 +28,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
@@ -172,6 +173,21 @@ class SchedulerViewModel @Inject constructor(
         
         finalResult
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+
+    override val topUrgentTasks: StateFlow<List<ScheduledTask>> = taskRepository
+        .queryByDateRange(LocalDate.now(), LocalDate.now().plusDays(30))
+        .map { items ->
+            items
+                .filterIsInstance<ScheduledTask>()
+                .filterNot { it.isDone }
+                .sortedWith(
+                    compareBy<ScheduledTask> { it.urgencyLevel.ordinal }
+                        .thenBy { it.isVague }
+                        .thenBy { it.startTime }
+                )
+                .take(3)
+        }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     // --- Actions ---
 

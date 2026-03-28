@@ -94,7 +94,7 @@ Notes:
 - if `syncFromDevice()` fails because connectivity is absent or offline, the existing SIM inventory remains usable and the failure is surfaced as drawer-local feedback.
 - the shared `AudioRepository.syncFromDevice(): Unit` contract remains unchanged in this slice; any richer readiness or outcome reporting must stay SIM-local.
 - `clearBoundSession(audioId)` is the explicit SIM cleanup path when a linked session is deleted or startup reconciliation detects a dangling binding.
-- `getArtifacts(audioId)` may return provider-enriched `TingwuJobArtifacts` that include normalized `keywords`, raw `meetingAssistanceRaw`, diarization segments, and merged `speakerLabels`.
+- `getArtifacts(audioId)` may return provider-enriched `TingwuJobArtifacts` that include normalized `keywords`, raw `meetingAssistanceRaw`, diarization segments, merged `speakerLabels`, and structured summary-side speaker/Q&A recap fields.
 
 ### Shared Pipeline Rule
 
@@ -105,6 +105,7 @@ Meaning:
 - a pending item selected from chat continues through the same underlying transcription pipeline rather than creating a second pipeline
 - a completed artifact produced through the chat-side path must already be visible when that same item is reopened from the drawer
 - chat-side selection must not require a follow-up drawer-origin rerun to make the artifact "real"
+- already-transcribed chat-side selection may immediately append the shared artifact card from persisted storage after binding the session
 - when one audio item is already pending/transcribing, duplicate transcribe triggers for that same item must be locked across entry surfaces
 - chat-side selection should read as a static picker rather than as an interactive gallery; users should not need a dedicated bottom CTA to confirm selection
 
@@ -148,6 +149,9 @@ Meaning:
 - no wider smart-agent memory contract is implied
 - completed artifact content should survive session switch/reopen as durable chat history, not only transient UI state
 - transcript reveal presentation is host-owned UI state rather than part of the durable artifact payload
+- blank SIM chat may use device speech recognition to draft `inputText`, but the host must still require an explicit send action before the turn enters durable history
+- the trailing composer action shows mic only while the draft is blank and falls back to send as soon as editable text exists
+- recognizer failure, no-match, permission denial, or cancellation must not append a user turn
 
 ### Provider Enrichment Contract
 
@@ -156,7 +160,9 @@ For Tingwu-backed SIM artifacts:
 - `speakerLabels` may combine diarization speaker ids with provider-returned identity-recognition labels
 - upstream user metadata may be used only to hint the Tingwu request; it must not be treated as a client-side override of final speaker identity
 - `keywords` are normalized from provider meeting-assistance / `KeyInformation` output when available
-- summary-style artifact surfaces may render a compact keyword-chip row, while the expanded artifact view remains text-first
+- SIM detail surfaces may render a compact keyword-chip row, while the expanded artifact body remains text-first
+- provider summary-side `speakerSummaries` and `questionAnswers` should render as standalone sections rather than being merged back into `summary`
+- `resultLinks` remain persisted for debug/backend use, but SIM does not expose a `结果链接` section in the user UI
 
 ### Completion Bridge Contract
 
@@ -170,8 +176,9 @@ fun appendCompletedAudioArtifacts(
 Meaning:
 
 - `SimShell` may own artifact loading from the shared repository when a pending chat-bound audio reaches completion
+- the SIM chat owner may also load persisted artifacts immediately for already-transcribed audio attachment
 - the SIM chat owner receives render-ready artifact content and stores it as durable history
-- this avoids adding a second repository ownership edge into the SIM chat runtime
+- pending completion and already-transcribed attach therefore converge on the same `UiState.AudioArtifacts` durable history surface
 
 ### Transcript Presentation Contract
 
@@ -200,6 +207,7 @@ Meaning:
 - transcribed cards in the drawer should start collapsed by default and expand only when the user opens them
 - manual drawer expand/collapse state must remain stable through scrolling/recomposition for the current drawer-open session
 - selecting an already-transcribed audio must load existing artifacts instead of rerunning Tingwu
+- selecting an already-transcribed audio for chat should append the shared artifact card rather than leaving artifact presentation to a long plain-text intro
 - `Ask AI` binds to a chosen audio
 - selecting audio from inside chat reopens the Audio Drawer
 - chat-side drawer reopening uses a distinct select mode rather than browse-mode gallery interaction language
@@ -213,6 +221,7 @@ Meaning:
 - select mode should avoid redundant status-pill chrome; the preview/copy itself communicates state
 - only the current bound audio should render an explicit inline current marker
 - selecting pending audio from inside chat is allowed, binds chat immediately to that audio, and continues the same SIM transcription pipeline inside chat transparency
+- general and audio-grounded SIM chat may show a composer-local handshake animation while device-STT is recording or recognizing, but scheduler-follow-up voice mutation authority must remain outside this composer lane
 - completed pending audio must render as durable artifact content in chat history
 - any newly appended chat artifact message may stream its transcript only once; if the rendered transcript exceeds 4 lines during that reveal, it must eventually auto-collapse, but only after any configured minimum readable-reveal dwell has elapsed
 - later history reentry must stay non-streaming, and long transcripts must reopen collapsed

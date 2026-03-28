@@ -380,8 +380,19 @@ internal fun SimShellContent(
             OnboardingCoordinator(
                 host = OnboardingHost.SIM_CONNECTIVITY,
                 onExit = {
-                    if (!shellState.isForcedFirstLaunchOnboarding) {
-                        mutateShellState(::closeSimConnectivitySurface)
+                    val wasForcedFirstLaunch = shellState.isForcedFirstLaunchOnboarding
+                    mutateShellState { state ->
+                        handleSimConnectivitySetupSkipped(
+                            state = state,
+                            source = if (wasForcedFirstLaunch) {
+                                "first_launch_skip"
+                            } else {
+                                "manual_replay_skip"
+                            }
+                        )
+                    }
+                    if (wasForcedFirstLaunch) {
+                        onForcedFirstLaunchOnboardingCompleted()
                     }
                 },
                 onComplete = {
@@ -392,7 +403,7 @@ internal fun SimShellContent(
                     }
                 },
                 exitPolicy = if (shellState.isForcedFirstLaunchOnboarding) {
-                    OnboardingExitPolicy.BLOCK_EXIT
+                    OnboardingExitPolicy.EXPLICIT_ACTION_ONLY
                 } else {
                     OnboardingExitPolicy.ALLOW_EXIT
                 },

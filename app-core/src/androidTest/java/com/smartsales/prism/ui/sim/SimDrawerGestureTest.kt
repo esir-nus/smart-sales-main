@@ -35,7 +35,7 @@ class SimDrawerGestureTest {
             onOpenScheduler = { openCount += 1 }
         )
 
-        composeTestRule.onNodeWithTag(SIM_SCHEDULER_EDGE_ZONE_TEST_TAG)
+        composeTestRule.onNodeWithTag(SIM_HEADER_TEST_TAG)
             .assertExists()
             .performTouchInput {
                 down(center)
@@ -57,7 +57,7 @@ class SimDrawerGestureTest {
             onOpenAudioBrowse = { openCount += 1 }
         )
 
-        composeTestRule.onNodeWithTag(SIM_AUDIO_EDGE_ZONE_TEST_TAG)
+        composeTestRule.onNodeWithTag(SIM_INPUT_BAR_TEST_TAG)
             .assertExists()
             .performTouchInput {
                 down(center)
@@ -113,7 +113,7 @@ class SimDrawerGestureTest {
         }
         composeTestRule.waitForIdle()
 
-        composeTestRule.onNodeWithTag(SIM_SCHEDULER_EDGE_ZONE_TEST_TAG)
+        composeTestRule.onNodeWithTag(SIM_HEADER_TEST_TAG)
             .assertExists()
             .performTouchInput {
                 down(center)
@@ -121,7 +121,7 @@ class SimDrawerGestureTest {
                 up()
             }
 
-        composeTestRule.onNodeWithTag(SIM_AUDIO_EDGE_ZONE_TEST_TAG)
+        composeTestRule.onNodeWithTag(SIM_INPUT_BAR_TEST_TAG)
             .assertExists()
             .performTouchInput {
                 down(center)
@@ -145,10 +145,10 @@ class SimDrawerGestureTest {
             onOpenScheduler = { schedulerOpenCount += 1 }
         )
 
-        composeTestRule.onNodeWithTag(SIM_SCHEDULER_EDGE_ZONE_TEST_TAG).assertExists()
-        composeTestRule.onNodeWithTag(SIM_AUDIO_EDGE_ZONE_TEST_TAG).assertDoesNotExist()
+        composeTestRule.onNodeWithTag(SIM_HEADER_TEST_TAG).assertExists()
+        composeTestRule.onNodeWithTag(SIM_INPUT_BAR_TEST_TAG).assertDoesNotExist()
 
-        composeTestRule.onNodeWithTag(SIM_SCHEDULER_EDGE_ZONE_TEST_TAG)
+        composeTestRule.onNodeWithTag(SIM_HEADER_TEST_TAG)
             .performTouchInput {
                 down(center)
                 moveBy(Offset(0f, 300f))
@@ -170,8 +170,8 @@ class SimDrawerGestureTest {
             )
         )
 
-        composeTestRule.onNodeWithTag(SIM_SCHEDULER_EDGE_ZONE_TEST_TAG).assertDoesNotExist()
-        composeTestRule.onNodeWithTag(SIM_AUDIO_EDGE_ZONE_TEST_TAG).assertDoesNotExist()
+        composeTestRule.onNodeWithTag(SIM_HEADER_TEST_TAG).assertDoesNotExist()
+        composeTestRule.onNodeWithTag(SIM_INPUT_BAR_TEST_TAG).assertDoesNotExist()
     }
 
     @Test
@@ -238,45 +238,22 @@ class SimDrawerGestureTest {
     ) {
         composeTestRule.setContent {
             var activeViewModel by remember { mutableStateOf(viewModel) }
-            var headerBottomPx by remember { mutableStateOf<Float?>(null) }
-            var composerTopPx by remember { mutableStateOf<Float?>(null) }
-            var rootHeightPx by remember { mutableStateOf(0f) }
-            val gestureAnchors = remember(headerBottomPx, composerTopPx, rootHeightPx) {
-                buildSimGestureAnchors(
-                    headerBottomPx = headerBottomPx,
-                    composerTopPx = composerTopPx,
-                    rootHeightPx = rootHeightPx
-                )
-            }
 
             bindStartNewSession?.invoke {
                 activeViewModel = FakeAgentViewModel()
             }
 
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .onGloballyPositioned { coordinates ->
-                        rootHeightPx = coordinates.size.height.toFloat()
-                    }
+                modifier = Modifier.fillMaxSize()
             ) {
                 AgentIntelligenceScreen(
                     viewModel = activeViewModel,
                     visualMode = AgentIntelligenceVisualMode.SIM,
                     showDebugButton = false,
-                    onSimHeaderBoundsChanged = { bounds ->
-                        headerBottomPx = bounds.bottom
-                    },
-                    onSimComposerBoundsChanged = { bounds ->
-                        composerTopPx = bounds.top
-                    }
-                )
-                SimDrawerEdgeGestureLayer(
-                    state = shellState,
-                    isImeVisible = isImeVisible,
-                    gestureAnchors = gestureAnchors,
-                    onOpenScheduler = onOpenScheduler,
-                    onOpenAudioBrowse = onOpenAudioBrowse
+                    enableSimSchedulerPullGesture = canOpenSimSchedulerFromEdge(shellState),
+                    enableSimAudioPullGesture = canOpenSimAudioFromEdge(shellState, isImeVisible),
+                    onSimSchedulerPullOpen = onOpenScheduler,
+                    onSimAudioPullOpen = onOpenAudioBrowse
                 )
             }
         }

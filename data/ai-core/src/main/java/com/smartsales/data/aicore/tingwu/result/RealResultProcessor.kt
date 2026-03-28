@@ -120,64 +120,30 @@ class RealResultProcessor @Inject constructor(
             ?.takeIf { it.isNotBlank() }
             ?: return null
         val raw = artifactFetcher.fetchText(url) ?: return null
-        return runCatching {
-            val json = JsonParser.parseString(raw)
-            if (!json.isJsonObject) return@runCatching null
-            val obj = json.asJsonObject
-            val summaryObj = obj.getAsJsonObject("Summarization") ?: obj
-            val paragraphTitle = getPrimitiveString(summaryObj, "ParagraphTitle")
-            val paragraphSummary = getPrimitiveString(summaryObj, "ParagraphSummary")
-            val conversational = summaryObj.getAsJsonArray("ConversationalSummary")
-                ?.mapNotNull { element ->
-                    element.asJsonObjectOrNull()?.let { item ->
-                        val speaker = getPrimitiveString(item, "SpeakerName")
-                            ?: getPrimitiveString(item, "SpeakerId")
-                        val summary = getPrimitiveString(item, "Summary")
-                        if (summary.isNullOrBlank()) null else speaker to summary
-                    }
-                }.orEmpty()
-            val qa = summaryObj.getAsJsonArray("QuestionsAnsweringSummary")
-                ?.mapNotNull { element ->
-                    element.asJsonObjectOrNull()?.let { item ->
-                        val q = getPrimitiveString(item, "Question")?.takeIf { it.isNotBlank() }
-                        val a = getPrimitiveString(item, "Answer")?.takeIf { it.isNotBlank() }
-                        if (q == null && a == null) null else q to a
-                    }
-                }.orEmpty()
-            if (
-                paragraphTitle.isNullOrBlank() &&
-                paragraphSummary.isNullOrBlank() &&
-                conversational.isEmpty() &&
-                qa.isEmpty()
-            ) null
-            else {
-                buildString {
-                    if (!paragraphTitle.isNullOrBlank() || !paragraphSummary.isNullOrBlank()) {
-                        appendLine("### 段落摘要")
-                        paragraphTitle?.let { appendLine("**$it**") }
-                        // Skip paragraphSummary if it's too long (likely raw transcript, not a summary)
-                        paragraphSummary?.takeIf { it.length <= 500 }?.let { appendLine(it) }
-                        appendLine()
-                    }
-                    if (conversational.isNotEmpty()) {
-                        appendLine("### 发言人总结")
-                        conversational.forEach { (speaker, summary) ->
-                            val label = speaker ?: "说话人"
-                            appendLine("- **$label**：$summary")
-                        }
-                        appendLine()
-                    }
-                    if (qa.isNotEmpty()) {
-                        appendLine("### 问答回顾")
-                        qa.forEach { (q, a) ->
-                            q?.let { appendLine("- **Q：** $it") }
-                            a?.let { appendLine("  **A：** $it") }
-                        }
-                        appendLine()
-                    }
-                }.trim()
+        val summary = TingwuPayloadParser.parseSmartSummary(raw) ?: return null
+        return buildString {
+            summary.summary?.takeIf { it.isNotBlank() }?.let {
+                appendLine("### 段落摘要")
+                appendLine(it)
+                appendLine()
             }
-        }.getOrNull()
+            if (summary.speakerSummaries.isNotEmpty()) {
+                appendLine("### 发言人总结")
+                summary.speakerSummaries.forEach { item ->
+                    val label = item.name?.takeIf { it.isNotBlank() } ?: "说话人"
+                    appendLine("- **$label**：${item.summary}")
+                }
+                appendLine()
+            }
+            if (summary.questionAnswers.isNotEmpty()) {
+                appendLine("### 问答回顾")
+                summary.questionAnswers.forEach { item ->
+                    appendLine("- **Q：** ${item.question}")
+                    appendLine("  **A：** ${item.answer}")
+                }
+                appendLine()
+            }
+        }.trim().ifBlank { null }
     }
 
     override fun fetchAutoChapters(resultLinks: Map<String, String>?): List<ChapterDisplay>? {

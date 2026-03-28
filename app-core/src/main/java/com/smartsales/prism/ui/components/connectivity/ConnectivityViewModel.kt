@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.smartsales.prism.domain.connectivity.BadgeConnectionState
+import com.smartsales.prism.domain.connectivity.BadgeManagerStatus
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.connectivity.ConnectivityService
 import com.smartsales.prism.domain.connectivity.ReconnectResult
@@ -14,8 +15,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -37,7 +40,16 @@ class ConnectivityViewModel @Inject constructor(
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Eagerly,
-            initialValue = ConnectionState.DISCONNECTED
+            initialValue = mapToUiState(connectivityBridge.connectionState.value)
+        )
+
+    // 连接管理界面专用状态 — richer BLE / Wi‑Fi 诊断，但不影响 shell 路由
+    private val managerBaseState: StateFlow<ConnectivityManagerState> = connectivityBridge.managerStatus
+        .map { managerStatus -> mapToManagerUiState(managerStatus) }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = mapToManagerUiState(connectivityBridge.managerStatus.value)
         )
 
     // 电池电量 (Mock) — Wave 3: 从 Badge 查询真实电量
@@ -57,7 +69,22 @@ class ConnectivityViewModel @Inject constructor(
         _uiOverride
     ) { realState, override ->
         override ?: realState
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, ConnectionState.DISCONNECTED)
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        mapToUiState(connectivityBridge.connectionState.value)
+    )
+
+    val managerState: StateFlow<ConnectivityManagerState> = combine(
+        managerBaseState,
+        _uiOverride
+    ) { realState, override ->
+        override?.let(::mapOverrideToManagerUiState) ?: realState
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        mapToManagerUiState(connectivityBridge.managerStatus.value)
+    )
     
     /**
      * 映射 Badge 连接状态 → UI 状态
@@ -69,6 +96,34 @@ class ConnectivityViewModel @Inject constructor(
             is BadgeConnectionState.Connecting -> ConnectionState.RECONNECTING
             is BadgeConnectionState.Connected -> ConnectionState.CONNECTED
             is BadgeConnectionState.Error -> ConnectionState.DISCONNECTED
+        }
+    }
+
+    private fun mapToManagerUiState(managerStatus: BadgeManagerStatus): ConnectivityManagerState {
+        return when (managerStatus) {
+            is BadgeManagerStatus.Unknown -> ConnectivityManagerState.DISCONNECTED
+            is BadgeManagerStatus.NeedsSetup -> ConnectivityManagerState.NEEDS_SETUP
+            is BadgeManagerStatus.Disconnected -> ConnectivityManagerState.DISCONNECTED
+            is BadgeManagerStatus.Connecting -> ConnectivityManagerState.RECONNECTING
+            is BadgeManagerStatus.BlePairedNetworkUnknown ->
+                ConnectivityManagerState.BLE_PAIRED_NETWORK_UNKNOWN
+            is BadgeManagerStatus.BlePairedNetworkOffline ->
+                ConnectivityManagerState.BLE_PAIRED_NETWORK_OFFLINE
+            is BadgeManagerStatus.Ready -> ConnectivityManagerState.CONNECTED
+            is BadgeManagerStatus.Error -> ConnectivityManagerState.DISCONNECTED
+        }
+    }
+
+    private fun mapOverrideToManagerUiState(state: ConnectionState): ConnectivityManagerState {
+        return when (state) {
+            ConnectionState.CONNECTED -> ConnectivityManagerState.CONNECTED
+            ConnectionState.DISCONNECTED -> ConnectivityManagerState.DISCONNECTED
+            ConnectionState.NEEDS_SETUP -> ConnectivityManagerState.NEEDS_SETUP
+            ConnectionState.CHECKING_UPDATE -> ConnectivityManagerState.CHECKING_UPDATE
+            ConnectionState.UPDATE_FOUND -> ConnectivityManagerState.UPDATE_FOUND
+            ConnectionState.UPDATING -> ConnectivityManagerState.UPDATING
+            ConnectionState.RECONNECTING -> ConnectivityManagerState.RECONNECTING
+            ConnectionState.WIFI_MISMATCH -> ConnectivityManagerState.WIFI_MISMATCH
         }
     }
 
@@ -105,17 +160,12 @@ class ConnectivityViewModel @Inject constructor(
     /**
      * 重新连接 — 显示 RECONNECTING 状态并处理结果
      */
-    // 重连任务引用 — 防止重复发起
-    private var reconnectJob: kotlinx.coroutines.Job? = null
+    // 独占任务引用 — 防止重连/修复并发叠加
+    private var activeOperationJob: Job? = null
 
     fun reconnect() {
         Log.d("ConnectivityVM", "reconnect() called, current effectiveState=${effectiveState.value}")
-        // 已有重连任务在执行中 — 忽略重复点击
-        if (reconnectJob?.isActive == true) {
-            Log.d("ConnectivityVM", "reconnect() skipped — already in progress")
-            return
-        }
-        reconnectJob = viewModelScope.launch {
+        launchExclusiveOperation("reconnect") {
             _uiOverride.value = ConnectionState.RECONNECTING
             Log.d("ConnectivityVM", "Set override=RECONNECTING, calling service.reconnect()")
             val result = connectivityService.reconnect()
@@ -128,6 +178,26 @@ class ConnectivityViewModel @Inject constructor(
             }
             Log.d("ConnectivityVM", "After reconnect: override=${_uiOverride.value}, effective=${effectiveState.value}")
         }
+    }
+
+    private fun launchExclusiveOperation(
+        operationName: String,
+        block: suspend () -> Unit
+    ) {
+        if (activeOperationJob?.isActive == true) {
+            Log.d("ConnectivityVM", "$operationName skipped — another operation already in progress")
+            return
+        }
+        val job = viewModelScope.launch {
+            try {
+                block()
+            } finally {
+                if (activeOperationJob === coroutineContext[Job]) {
+                    activeOperationJob = null
+                }
+            }
+        }
+        activeOperationJob = job
     }
 
     /**
@@ -153,10 +223,20 @@ class ConnectivityViewModel @Inject constructor(
     }
 
     /**
+     * 重置瞬时连接 UI 状态
+     */
+    fun resetTransientState() {
+        activeOperationJob?.cancel()
+        activeOperationJob = null
+        _uiOverride.value = null
+    }
+
+    /**
      * 更新 WiFi 配置
      */
     fun updateWifiConfig(ssid: String, password: String) {
-        viewModelScope.launch {
+        launchExclusiveOperation("updateWifiConfig") {
+            _uiOverride.value = ConnectionState.RECONNECTING
             val result = connectivityService.updateWifiConfig(ssid, password)
             when (result) {
                 is WifiConfigResult.Success -> _uiOverride.value = null  // 恢复真实状态
@@ -173,6 +253,19 @@ enum class ConnectionState {
     CONNECTED,
     DISCONNECTED,
     NEEDS_SETUP,     // 需要初始化配网
+    CHECKING_UPDATE,
+    UPDATE_FOUND,
+    UPDATING,
+    RECONNECTING,
+    WIFI_MISMATCH
+}
+
+enum class ConnectivityManagerState {
+    CONNECTED,
+    DISCONNECTED,
+    BLE_PAIRED_NETWORK_UNKNOWN,
+    BLE_PAIRED_NETWORK_OFFLINE,
+    NEEDS_SETUP,
     CHECKING_UPDATE,
     UPDATE_FOUND,
     UPDATING,

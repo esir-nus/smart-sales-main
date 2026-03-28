@@ -22,6 +22,8 @@ data class CreateVagueTaskParams(
     val title: String,
     val anchorDateIso: String,
     val timeHint: String? = null,
+    val keyPerson: String? = null,
+    val location: String? = null,
     val urgency: UrgencyEnum = UrgencyEnum.L3_NORMAL
 )
 
@@ -29,7 +31,9 @@ data class CreateVagueTaskParams(
 data class TaskDefinition(
     val title: String,
     val startTimeIso: String,
-    val durationMinutes: Int, 
+    val durationMinutes: Int,
+    val keyPerson: String? = null,
+    val location: String? = null,
     val urgency: UrgencyEnum
 )
 

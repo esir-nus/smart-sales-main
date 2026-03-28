@@ -1,12 +1,12 @@
 # God Wave 2B Execution Brief
 
-**Status:** Planned  
+**Status:** L1 Accepted  
 **Date:** 2026-03-24  
 **Wave:** 2B  
 **Mission:** `GattBleGateway.kt` and `DeviceConnectionManager.kt` structural cleanup  
 **Primary Tracker:** `docs/plans/god-tracker.md`  
 **Structure Law:** `docs/specs/code-structure-contract.md`  
-**Validation Report:** pending until implementation
+**Validation Report:** `docs/reports/tests/L1-20260324-god-wave2b-connectivity.md`
 
 ---
 
@@ -59,30 +59,35 @@ Wave 2B must **not** do:
 
 ---
 
-## 4. Planned Structure
+## 4. Delivered Structure
 
 Wave 2B leaves both source files as public seams.
 
-Planned extraction map:
+Delivered extraction map:
 
 - `GattBleGateway.kt`
-  - gateway seam
-  - transport/session support
-  - payload parser / fragment merge support
-  - gateway policy/command helpers
+  - host seam only (`76 LOC`)
+  - `GattBleGatewayRuntime.kt`
+  - `GattBleGatewaySessionSupport.kt`
+  - `GattBleGatewayProtocolSupport.kt`
 - `DeviceConnectionManager.kt`
-  - manager seam
-  - connection orchestration support
-  - reconnect/backoff policy support
-  - ingress/state support
+  - host seam only (`137 LOC`)
+  - `DeviceConnectionManagerRuntime.kt`
+  - `DeviceConnectionManagerConnectionSupport.kt`
+  - `DeviceConnectionManagerReconnectSupport.kt`
+  - `DeviceConnectionManagerIngressSupport.kt`
 
-Exact filenames may follow the accepted ownership shape, but the split must remain discoverable and transport-owned.
+Delivered guardrail changes:
+
+- `ConnectivityStructureTest` now enforces the host-only seam shape and extracted ownership seams
+- `GodStructureGuardrailTest` now tracks both Wave 2B files as accepted rows under the service/manager/linter/gateway budget
+- both public seams remain source-compatible for current callers
 
 ---
 
-## 5. Verification Target
+## 5. Verification Status
 
-Wave 2B acceptance should use focused app-core verification:
+Wave 2B acceptance used focused app-core verification:
 
 - `GattBleGatewayNotificationParsingTest`
 - `DefaultDeviceConnectionManagerIngressTest`
@@ -91,6 +96,11 @@ Wave 2B acceptance should use focused app-core verification:
 - `ConnectivityStructureTest`
 - `GodStructureGuardrailTest`
 - `./gradlew :app-core:compileDebugUnitTestKotlin`
+
+Executed commands:
+
+- `./gradlew :app-core:compileDebugUnitTestKotlin`
+- `./gradlew :app-core:testDebugUnitTest --tests com.smartsales.prism.data.connectivity.legacy.gateway.GattBleGatewayNotificationParsingTest --tests com.smartsales.prism.data.connectivity.legacy.DefaultDeviceConnectionManagerIngressTest --tests com.smartsales.prism.data.connectivity.RealConnectivityBridgeTest --tests com.smartsales.prism.ui.sim.SimConnectivityRoutingTest --tests com.smartsales.prism.data.connectivity.ConnectivityStructureTest --tests com.smartsales.prism.ui.GodStructureGuardrailTest`
 
 ---
 
@@ -115,3 +125,4 @@ Wave 2B is complete only when:
 - `docs/specs/code-structure-contract.md`
 - `docs/cerb/connectivity-bridge/spec.md`
 - `docs/cerb/sim-connectivity/spec.md`
+- `docs/reports/tests/L1-20260324-god-wave2b-connectivity.md`

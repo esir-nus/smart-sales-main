@@ -95,11 +95,28 @@ class RealConnectivityService @Inject constructor(
             is Result.Success -> {
                 sessionStore.saveSession(session)
                 sessionStore.upsertKnownNetwork(credentials)
-                when (val reconnect = reconnect()) {
-                    ReconnectResult.Connected -> WifiConfigResult.Success
-                    ReconnectResult.WifiMismatch -> WifiConfigResult.Error("设备与手机不在同一 Wi‑Fi，请重新检查配置")
-                    ReconnectResult.DeviceNotFound -> WifiConfigResult.Error("设备未连接")
-                    is ReconnectResult.Error -> WifiConfigResult.Error(reconnect.message)
+                when (val confirmation = deviceManager.confirmManualWifiProvision(credentials)) {
+                    is com.smartsales.prism.data.connectivity.legacy.ConnectionState.WifiProvisioned,
+                    is com.smartsales.prism.data.connectivity.legacy.ConnectionState.Syncing ->
+                        WifiConfigResult.Success
+
+                    is com.smartsales.prism.data.connectivity.legacy.ConnectionState.Error -> {
+                        val error = confirmation.error
+                        if (
+                            error is com.smartsales.prism.data.connectivity.legacy.ConnectivityError.WifiDisconnected &&
+                            error.reason == com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.BADGE_PHONE_NETWORK_MISMATCH
+                        ) {
+                            WifiConfigResult.Error("设备与输入的 Wi‑Fi 不匹配，请重新检查配置")
+                        } else {
+                            Log.w(TAG, "manual wifi repair did not confirm online: $error")
+                            WifiConfigResult.Success
+                        }
+                    }
+
+                    else -> {
+                        Log.w(TAG, "manual wifi repair fell back to live manager state: $confirmation")
+                        WifiConfigResult.Success
+                    }
                 }
             }
             is Result.Error -> WifiConfigResult.Error(result.throwable.message ?: "WiFi 配置失败")

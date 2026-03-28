@@ -16,6 +16,11 @@ class SimRuntimeIsolationTest {
         assertTrue(source.contains("class SimMainActivity"))
         assertTrue(source.contains("SimShell("))
         assertTrue(source.contains("badgeAudioPipeline = badgeAudioPipeline"))
+        assertTrue(source.contains("ThemePreferenceStore"))
+        assertTrue(source.contains("themePreferenceStore.themeMode.collectAsStateWithLifecycle()"))
+        assertTrue(source.contains("resolvePrismDarkTheme("))
+        assertTrue(source.contains("PrismSystemBarsEffect("))
+        assertFalse(source.contains("PrismTheme(darkTheme = true)"))
         assertFalse(source.contains("AgentShell("))
         assertFalse(source.contains("AgentMainActivity"))
     }

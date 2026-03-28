@@ -37,6 +37,7 @@ class SimShellStructureTest {
         assertTrue(content.contains("AgentIntelligenceScreen("))
         assertTrue(content.contains("SimHistoryDrawer("))
         assertTrue(content.contains("SimUserCenterDrawer("))
+        assertTrue(content.contains("mutateShellState(::openSimSettings)"))
         assertTrue(content.contains("ConnectivityManagerScreen("))
         assertFalse(content.contains("import com.smartsales.prism.ui.drawers.HistoryDrawer"))
         assertFalse(content.contains("import com.smartsales.prism.ui.settings.UserCenterScreen"))
@@ -62,11 +63,15 @@ class SimShellStructureTest {
         assertTrue(sections.contains("fun SimSchedulerFollowUpActionStrip("))
 
         val historyDrawer = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimHistoryDrawer.kt")
+        val settingsDrawer = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimUserCenterDrawer.kt")
         assertTrue(historyDrawer.contains("combinedClickable("))
         assertFalse(historyDrawer.contains("MoreVert"))
         assertFalse(historyDrawer.contains("ChatBubbleOutline"))
         assertFalse(historyDrawer.contains("formatSimHistoryRecency("))
         assertFalse(historyDrawer.contains("label = { Text(\"摘要\") }"))
+        assertFalse(settingsDrawer.contains("Icons.Default.Close"))
+        assertFalse(settingsDrawer.contains("IconButton("))
+        assertFalse(settingsDrawer.contains("label = \"面容 ID\""))
     }
 
     @Test

@@ -138,16 +138,93 @@ class SimConnectivityRoutingTest {
     }
 
     @Test
+    fun `handleSimConnectivityOnboardingReplayRequest always reopens setup and clears overlays`() {
+        val telemetry = mutableListOf<Pair<String, String>>()
+
+        val updated = handleSimConnectivityOnboardingReplayRequest(
+            state = SimShellState(
+                activeDrawer = SimDrawerType.AUDIO,
+                audioDrawerMode = SimAudioDrawerMode.CHAT_RESELECT,
+                activeConnectivitySurface = SimConnectivitySurface.MANAGER,
+                showHistory = true,
+                showSettings = true
+            ),
+            source = "audio_drawer_replay",
+            emitTelemetry = { summary, detail -> telemetry += summary to detail }
+        )
+
+        assertEquals(SimConnectivitySurface.SETUP, updated.activeConnectivitySurface)
+        assertEquals(null, updated.activeDrawer)
+        assertEquals(SimAudioDrawerMode.BROWSE, updated.audioDrawerMode)
+        assertFalse(updated.showHistory)
+        assertFalse(updated.showSettings)
+        assertEquals(SIM_CONNECTIVITY_SETUP_STARTED_SUMMARY, telemetry.single().first)
+        assertTrue(telemetry.single().second.contains("source=audio_drawer_replay"))
+        assertTrue(telemetry.single().second.contains("replay=true"))
+    }
+
+    @Test
     fun `handleSimConnectivitySetupCompleted emits success telemetry`() {
         val telemetry = mutableListOf<Pair<String, String>>()
 
         val updated = handleSimConnectivitySetupCompleted(
-            state = SimShellState(activeConnectivitySurface = SimConnectivitySurface.SETUP),
+            state = SimShellState(
+                activeConnectivitySurface = SimConnectivitySurface.SETUP,
+                isForcedFirstLaunchOnboarding = true
+            ),
             emitTelemetry = { summary, detail -> telemetry += summary to detail }
         )
 
         assertEquals(SimConnectivitySurface.MANAGER, updated.activeConnectivitySurface)
+        assertFalse(updated.isForcedFirstLaunchOnboarding)
         assertEquals(SIM_CONNECTIVITY_SETUP_COMPLETED_SUMMARY, telemetry.single().first)
         assertTrue(telemetry.single().second.contains("source=pairing_success"))
+    }
+
+    @Test
+    fun `handleSimConnectivitySetupSkipped closes setup and clears forced first launch flag`() {
+        val telemetry = mutableListOf<Pair<String, String>>()
+
+        val updated = handleSimConnectivitySetupSkipped(
+            state = SimShellState(
+                activeConnectivitySurface = SimConnectivitySurface.SETUP,
+                isForcedFirstLaunchOnboarding = true
+            ),
+            source = "first_launch_skip",
+            emitTelemetry = { summary, detail -> telemetry += summary to detail }
+        )
+
+        assertEquals(null, updated.activeConnectivitySurface)
+        assertFalse(updated.isForcedFirstLaunchOnboarding)
+        assertEquals(SIM_CONNECTIVITY_SETUP_SKIPPED_SUMMARY, telemetry.single().first)
+        assertTrue(telemetry.single().second.contains("source=first_launch_skip"))
+        assertTrue(telemetry.single().second.contains("forced=true"))
+    }
+
+    @Test
+    fun `initialSimShellState routes forced first launch into setup`() {
+        val state = initialSimShellState(forceSetupOnLaunch = true)
+
+        assertEquals(SimConnectivitySurface.SETUP, state.activeConnectivitySurface)
+        assertTrue(state.isForcedFirstLaunchOnboarding)
+    }
+
+    @Test
+    fun `startSimForcedFirstLaunchOnboarding clears overlays and flags forced flow`() {
+        val updated = startSimForcedFirstLaunchOnboarding(
+            SimShellState(
+                activeDrawer = SimDrawerType.AUDIO,
+                audioDrawerMode = SimAudioDrawerMode.CHAT_RESELECT,
+                showHistory = true,
+                showSettings = true
+            )
+        )
+
+        assertEquals(SimConnectivitySurface.SETUP, updated.activeConnectivitySurface)
+        assertEquals(null, updated.activeDrawer)
+        assertEquals(SimAudioDrawerMode.BROWSE, updated.audioDrawerMode)
+        assertFalse(updated.showHistory)
+        assertFalse(updated.showSettings)
+        assertTrue(updated.isForcedFirstLaunchOnboarding)
     }
 }

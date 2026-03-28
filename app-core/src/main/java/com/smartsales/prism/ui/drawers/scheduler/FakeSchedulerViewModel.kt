@@ -134,6 +134,11 @@ class FakeSchedulerViewModel : ISchedulerViewModel {
     private val _exitingTasks = MutableStateFlow<List<RescheduleExitMotion>>(emptyList())
     override val exitingTasks: StateFlow<List<RescheduleExitMotion>> = _exitingTasks.asStateFlow()
 
+    private val _topUrgentTasks = MutableStateFlow(
+        listOf(fakeTaskActive, fakeTaskConflict1, fakeTaskConflict2)
+    )
+    override val topUrgentTasks: StateFlow<List<ScheduledTask>> = _topUrgentTasks.asStateFlow()
+
     private val _timelineItems = MutableStateFlow(
         listOf(
             fakeInspiration,
@@ -185,6 +190,11 @@ class FakeSchedulerViewModel : ISchedulerViewModel {
                 it
             }
         }
+        _topUrgentTasks.value = _timelineItems.value
+            .filterIsInstance<ScheduledTask>()
+            .filterNot { it.isDone }
+            .sortedWith(compareBy<ScheduledTask> { it.urgencyLevel.ordinal }.thenBy { it.startTime })
+            .take(3)
     }
 
     override fun toggleInspirations() {
@@ -258,6 +268,11 @@ class FakeSchedulerViewModel : ISchedulerViewModel {
 
     fun debugSetTimelineItems(items: List<SchedulerTimelineItem>) {
         _timelineItems.value = items
+        _topUrgentTasks.value = items
+            .filterIsInstance<ScheduledTask>()
+            .filterNot { it.isDone }
+            .sortedWith(compareBy<ScheduledTask> { it.urgencyLevel.ordinal }.thenBy { it.startTime })
+            .take(3)
     }
 
     fun debugSetExitingTasks(tasks: List<RescheduleExitMotion>) {

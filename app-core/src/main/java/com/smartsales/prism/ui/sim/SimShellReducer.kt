@@ -188,6 +188,20 @@ internal fun handleSimConnectivitySetupCompleted(
     return openSimConnectivityManager(state).copy(isForcedFirstLaunchOnboarding = false)
 }
 
+internal fun handleSimConnectivitySetupSkipped(
+    state: SimShellState,
+    source: String,
+    emitTelemetry: (String, String) -> Unit = { summary, detail ->
+        emitSimConnectivityRouteTelemetry(summary, detail)
+    }
+): SimShellState {
+    emitTelemetry(
+        SIM_CONNECTIVITY_SETUP_SKIPPED_SUMMARY,
+        "source=$source forced=${state.isForcedFirstLaunchOnboarding}"
+    )
+    return closeSimOverlays(state).copy(isForcedFirstLaunchOnboarding = false)
+}
+
 internal fun shouldShowSimShellScrim(state: SimShellState): Boolean =
     state.activeDrawer == SimDrawerType.AUDIO ||
         state.showHistory ||

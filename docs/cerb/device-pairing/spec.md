@@ -88,6 +88,7 @@ BLE scanning requires runtime permissions on Android 12+. Permissions are reques
   - wait the command gap
   - send `PD#<password>`
   - do not require an immediate BLE provisioning ack before moving to network-status validation
+  - firmware does not persist Wi‑Fi credentials after reconnect/power loss; the app must persist known credentials locally and replay them later when reconnect logic confirms an exact phone-SSID match
 
 ### Wave 2: Error Handling
 

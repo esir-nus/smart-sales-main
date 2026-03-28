@@ -67,11 +67,11 @@ class RealConnectivityServiceTest {
             BlePeripheral("badge-1", "Badge", -40)
         )
         val manager = FakeDeviceConnectionManager().apply {
-            stubReconnectAndWaitResult = ConnectionState.WifiProvisioned(
+            stubConfirmManualWifiProvisionResult = ConnectionState.WifiProvisioned(
                 session = session,
                 status = ProvisioningStatus(
                     wifiSsid = "OfficeGuest",
-                    handshakeId = "reconnect-ok",
+                    handshakeId = "manual-confirm-ok",
                     credentialsHash = "hash"
                 )
             )
@@ -100,6 +100,86 @@ class RealConnectivityServiceTest {
         assertEquals(1, provisioner.provisionCalls.size)
         assertEquals("OfficeGuest", provisioner.provisionCalls.single().second.ssid)
         assertTrue(sessionStore.findKnownNetworkBySsid("OfficeGuest") != null)
-        assertEquals(1, manager.reconnectAndWaitCalls)
+        assertEquals(1, manager.confirmManualWifiProvisionCalls.size)
+        assertEquals(0, manager.reconnectAndWaitCalls)
+    }
+
+    @Test
+    fun `updateWifiConfig returns wifi mismatch only when manual repair confirms badge on different ssid`() = runTest {
+        val session = BleSession.fromPeripheral(
+            BlePeripheral("badge-1", "Badge", -40)
+        )
+        val manager = FakeDeviceConnectionManager().apply {
+            stubConfirmManualWifiProvisionResult = ConnectionState.Error(
+                ConnectivityError.WifiDisconnected(
+                    reason = WifiDisconnectedReason.BADGE_PHONE_NETWORK_MISMATCH,
+                    phoneSsid = "OfficeGuest",
+                    badgeSsid = "OtherWifi"
+                )
+            )
+            setState(ConnectionState.Connected(session))
+        }
+        val provisioner = FakeWifiProvisioner().apply {
+            stubProvisionResult = Result.Success(
+                ProvisioningStatus(
+                    wifiSsid = "OfficeGuest",
+                    handshakeId = "manual-update",
+                    credentialsHash = "hash"
+                )
+            )
+        }
+        val sessionStore = InMemorySessionStore().apply {
+            saveSession(session)
+        }
+        val service = RealConnectivityService(
+            deviceManager = manager,
+            wifiProvisioner = provisioner,
+            sessionStore = sessionStore
+        )
+
+        val result = service.updateWifiConfig(ssid = "OfficeGuest", password = "secret-2")
+
+        assertTrue(result is WifiConfigResult.Error)
+        assertEquals(1, manager.confirmManualWifiProvisionCalls.size)
+        assertEquals(0, manager.reconnectAndWaitCalls)
+    }
+
+    @Test
+    fun `updateWifiConfig falls back to live manager state for non mismatch confirmation failure`() = runTest {
+        val session = BleSession.fromPeripheral(
+            BlePeripheral("badge-1", "Badge", -40)
+        )
+        val manager = FakeDeviceConnectionManager().apply {
+            stubConfirmManualWifiProvisionResult = ConnectionState.Error(
+                ConnectivityError.WifiDisconnected(
+                    reason = WifiDisconnectedReason.BADGE_WIFI_OFFLINE,
+                    badgeSsid = "OfficeGuest"
+                )
+            )
+            setState(ConnectionState.Connected(session))
+        }
+        val provisioner = FakeWifiProvisioner().apply {
+            stubProvisionResult = Result.Success(
+                ProvisioningStatus(
+                    wifiSsid = "OfficeGuest",
+                    handshakeId = "manual-update",
+                    credentialsHash = "hash"
+                )
+            )
+        }
+        val sessionStore = InMemorySessionStore().apply {
+            saveSession(session)
+        }
+        val service = RealConnectivityService(
+            deviceManager = manager,
+            wifiProvisioner = provisioner,
+            sessionStore = sessionStore
+        )
+
+        val result = service.updateWifiConfig(ssid = "OfficeGuest", password = "secret-2")
+
+        assertEquals(WifiConfigResult.Success, result)
+        assertEquals(1, manager.confirmManualWifiProvisionCalls.size)
+        assertEquals(0, manager.reconnectAndWaitCalls)
     }
 }

@@ -19,6 +19,10 @@ class FakeBadgeStateMonitor : BadgeStateMonitor {
     var disconnectCount = 0
         private set
 
+    /** Number of times foreground query failure was reported */
+    var queryFailureCount = 0
+        private set
+
     /** Whether startPolling was called */
     var pollingStarted = false
         private set
@@ -39,6 +43,28 @@ class FakeBadgeStateMonitor : BadgeStateMonitor {
     override fun onBleDisconnected() {
         disconnectCount++
         _status.value = BadgeStatus.UNKNOWN
+    }
+
+    override fun onNetworkStatusObserved(networkStatus: com.smartsales.prism.data.connectivity.legacy.DeviceNetworkStatus) {
+        val ip = networkStatus.ipAddress
+        val isOffline = ip.isBlank() || ip == "0.0.0.0" || ip.startsWith("0.")
+        _status.value = BadgeStatus(
+            state = if (isOffline) BadgeState.OFFLINE else BadgeState.CONNECTED,
+            ipAddress = if (isOffline) null else ip,
+            wifiName = networkStatus.deviceWifiName.takeIf { it.isNotBlank() },
+            bleConnected = true,
+            consecutiveFailures = 0,
+            lastCheckMs = System.currentTimeMillis()
+        )
+    }
+
+    override fun onNetworkStatusQueryFailed() {
+        queryFailureCount++
+        _status.value = _status.value.copy(
+            bleConnected = true,
+            consecutiveFailures = _status.value.consecutiveFailures + 1,
+            lastCheckMs = System.currentTimeMillis()
+        )
     }
 
     override fun startPolling() {
@@ -80,6 +106,7 @@ class FakeBadgeStateMonitor : BadgeStateMonitor {
     fun reset() {
         connectedSessions.clear()
         disconnectCount = 0
+        queryFailureCount = 0
         pollingStarted = false
         pollingStopped = false
         _status.value = BadgeStatus.UNKNOWN

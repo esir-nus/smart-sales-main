@@ -66,7 +66,7 @@ fun effectiveConflictOccupancyMinutes(
     urgencyLevel: UrgencyLevel,
     explicitDurationMinutes: Int
 ): Int {
-    if (urgencyLevel == UrgencyLevel.FIRE_OFF) return 0
+    if (bypassesConflictEvaluation(urgencyLevel)) return 0
     if (explicitDurationMinutes > 0) return explicitDurationMinutes
 
     inferSemanticConflictOccupancyMinutes(title)?.let { return it }
@@ -77,6 +77,10 @@ fun effectiveConflictOccupancyMinutes(
         UrgencyLevel.L3_NORMAL -> 30
         UrgencyLevel.FIRE_OFF -> 0
     }
+}
+
+fun bypassesConflictEvaluation(urgencyLevel: UrgencyLevel): Boolean {
+    return urgencyLevel == UrgencyLevel.FIRE_OFF
 }
 
 private fun inferSemanticConflictOccupancyMinutes(title: String): Int? {

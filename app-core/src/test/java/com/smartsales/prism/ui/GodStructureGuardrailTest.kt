@@ -20,11 +20,17 @@ class GodStructureGuardrailTest {
         "app-core/src/main/java/com/smartsales/prism/ui/sim/SimShell.kt" to
             GuardrailExpectation(budget = 550, status = "Accepted"),
         "app-core/src/main/java/com/smartsales/prism/ui/sim/SimAgentViewModel.kt" to
-            GuardrailExpectation(budget = 650, status = "Exception"),
+            GuardrailExpectation(budget = 650, status = "Accepted"),
         "app-core/src/main/java/com/smartsales/prism/ui/sim/SimSchedulerViewModel.kt" to
-            GuardrailExpectation(budget = 650, status = "Exception"),
+            GuardrailExpectation(budget = 650, status = "Accepted"),
         "app-core/src/main/java/com/smartsales/prism/ui/sim/SimAudioDrawer.kt" to
             GuardrailExpectation(budget = 550, status = "Accepted"),
+        "app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/gateway/GattBleGateway.kt" to
+            GuardrailExpectation(budget = 650, status = "Accepted"),
+        "app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/DeviceConnectionManager.kt" to
+            GuardrailExpectation(budget = 650, status = "Accepted"),
+        "app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepository.kt" to
+            GuardrailExpectation(budget = 650, status = "Accepted"),
         "domain/scheduler/src/main/java/com/smartsales/prism/domain/scheduler/SchedulerLinter.kt" to
             GuardrailExpectation(budget = 650, status = "Accepted")
     )

@@ -1,8 +1,10 @@
 # connectivity.md
 
 > **Scope:** BLE discovery, Wi-Fi provisioning, HTTP media server reachability, session persistence, and auto-reconnect for BT311 (and future devices).
+> **Status note (2026-03-22):** This document predates the ESP32 transport-truth hardening. It remains useful for legacy setup-flow background, but it is not the active source of truth for repaired ready-state semantics.
+> **Active SOT for current connectivity runtime:** `docs/cerb/connectivity-bridge/spec.md`, `docs/cerb/connectivity-bridge/interface.md`, and `app-core/.../connectivity/legacy/**`.
 
-This doc defines the **contract** for the connectivity layer and the UI flows that sit on top of it. New work on `app-core/.../connectivity/legacy`, `feature/media/devicemanager`, or DeviceSetup **must** follow this document.
+This doc defines the historical connectivity contract and the UI flows that sat on top of it before the repaired ready-state semantics landed. Do not use this document alone when implementing or reviewing current transport-ready behavior.
 
 ---
 
@@ -309,6 +311,12 @@ DeviceManager is the primary consumer of `ConnectionState` after setup.
   * Shows connection status card with summary message.
   * Shows **“重试连接”** button.
   * Tapping “重试连接” calls `forceReconnectNow()` on `DeviceConnectionManager`.
+  * Connectivity manager-only refinement is allowed when shared `ConnectionState = Disconnected`:
+
+    * BLE still held, network status pending
+    * BLE still held, badge network offline
+
+  * This refinement must not change global `Connected` semantics and must not override `NeedsSetup` or explicit `Error`.
 
 ### 5.3 AutoReconnecting / Connecting
 

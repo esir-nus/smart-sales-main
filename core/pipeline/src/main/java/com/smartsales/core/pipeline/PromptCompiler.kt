@@ -10,6 +10,10 @@ import com.smartsales.prism.domain.scheduler.UniCExtractionPayload
 import com.smartsales.prism.domain.scheduler.UniCExtractionRequest
 import com.smartsales.prism.domain.scheduler.UniMExtractionPayload
 import com.smartsales.prism.domain.scheduler.UniMExtractionRequest
+import com.smartsales.prism.domain.scheduler.FollowUpRescheduleExtractionPayload
+import com.smartsales.prism.domain.scheduler.FollowUpRescheduleExtractionRequest
+import com.smartsales.prism.domain.scheduler.GlobalRescheduleExtractionPayload
+import com.smartsales.prism.domain.scheduler.GlobalRescheduleExtractionRequest
 import com.smartsales.prism.domain.scheduler.RelativeTimeResolver
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -187,6 +191,7 @@ ${relativeTimeHint}
    - `title` 为非空自然语言标题
    - `startTimeIso` 必须是严格 ISO-8601，带时区偏移或 `Z`
    - `durationMinutes` 为整数分钟；即时提醒可为 `0`
+   - `keyPerson` / `location` 可选；只有用户明确提到商务关键人物或地点时才填写
    - `urgency` 只能是 `L1` / `L2` / `L3` / `FIRE_OFF`
 4. 相对日期锚点规则：
    - `明天` / `tomorrow` / `后天` 必须锚定 `now_iso` 所在真实日期，不得改锚到日历当前页。
@@ -249,6 +254,7 @@ ${transcriptForExtraction}
    - `title` 为非空自然语言标题
    - `anchorDateIso` 必须是严格 `yyyy-MM-dd`
    - `timeHint` 可为空；若存在，用于保留“下午/下班后”等模糊时间线索
+   - `keyPerson` / `location` 可选；只有用户明确提到商务关键人物或地点时才填写
    - `urgency` 只能是 `L1` / `L2` / `L3` / `FIRE_OFF`
 5. 相对日期锚点规则：
    - `明天` / `tomorrow` / `后天` 必须锚定 `now_iso` 所在真实日期
@@ -351,8 +357,9 @@ ${relativeTimeHint}
 12. 如果用户说的是单独一句“3小时后开会”、“3小时以后开会”或“3小时之后开会”，这是合法的 `NOW_OFFSET` 精确任务，不要误判成缺少时间。
 13. 如果用户说的是单独一句“明天下午三点开会”，在多任务拆解里优先用 `NOW_DAY_OFFSET + clockTime` 表达，而不是手算绝对日期。
 14. 片段必须是独立任务，不要把多个动作合并成一个标题。
-15. 最多输出 4 个片段；超过就输出 `NOT_MULTI`。
-16. 只能输出严格 JSON，禁止 Markdown 包裹。
+15. `keyPerson` / `location` 可选；只有片段里明确提到商务关键人物或地点时才填写。
+16. 最多输出 4 个片段；超过就输出 `NOT_MULTI`。
+17. 只能输出严格 JSON，禁止 Markdown 包裹。
 
 严格输出以下 Kotlin contract 对应的 JSON：
 ${
@@ -368,6 +375,143 @@ ${request.transcript}${normalizedTranscriptNote}
 ${transcriptForExtraction}
 """.trimIndent()
     }
+
+    /**
+     * 构建全局改期目标 + 时间提取 Prompt。
+     * 说明：只抽取目标线索和时间指令，最终命中仍由调度器看板负责。
+     */
+    open fun compileGlobalRescheduleExtractionPrompt(
+        request: GlobalRescheduleExtractionRequest
+    ): String {
+        val recentHints = if (request.recentTaskHints.isEmpty()) {
+            "- recent_task_hints: []"
+        } else {
+            buildString {
+                appendLine("- recent_task_hints:")
+                request.recentTaskHints.take(3).forEach { hint ->
+                    appendLine("  - title: ${hint.title}")
+                    appendLine("    key_person: ${hint.keyPerson ?: "null"}")
+                    appendLine("    location: ${hint.location ?: "null"}")
+                }
+            }.trimEnd()
+        }
+        val activeShortlist = if (request.activeTaskShortlist.isEmpty()) {
+            "- active_task_shortlist: []"
+        } else {
+            buildString {
+                appendLine("- active_task_shortlist:")
+                request.activeTaskShortlist.forEach { task ->
+                    appendLine("  - task_id: ${task.taskId}")
+                    appendLine("    title: ${task.title}")
+                    appendLine("    time_summary: ${task.timeSummary}")
+                    appendLine("    is_vague: ${task.isVague}")
+                    appendLine("    key_person: ${task.keyPerson ?: "null"}")
+                    appendLine("    location: ${task.location ?: "null"}")
+                    appendLine("    notes_digest: ${task.notesDigest ?: "null"}")
+                }
+            }.trimEnd()
+        }
+
+        return """
+你是 SIM 调度器的全局改期提取器。
+
+你的任务不是直接选择最终任务，而是只回答一个问题：
+这句输入能否被表达成“一个已有日程的目标线索 + 一个新的时间指令”？
+
+当前时间锚点：
+- now_iso: ${request.nowIso}
+- timezone: ${request.timezone}
+$recentHints
+$activeShortlist
+
+规则：
+1. 只有当用户明显在表达“改期/推迟/提前/挪动已有日程”时，才输出 `decision = "RESCHEDULE_TARGETED"`。
+2. 如果是创建、删除、闲聊、解释、或你没有把握，就输出 `decision = "NOT_SUPPORTED"`。
+3. `RESCHEDULE_TARGETED` 时：
+   - 如果 `active_task_shortlist` 中有一个明确主候选，请输出它的 `suggestedTaskId`
+   - `timeInstruction` 必须只保留新的时间指令
+   - `targetQuery` 应保留用户当前提到的目标线索
+   - 如果用户没有重说标题，但短名单或最近任务线索足以唯一补全，可用其中的标题/人物/地点生成简短检索短语
+   - `targetPerson` / `targetLocation` 只有在输入或最近任务线索中有明确依据时才填写
+4. 最近任务线索只是弱提示，不能因为 UI 选中态、点开卡片或当前页面日期去猜一个任务。
+5. `active_task_shortlist` 是当前活跃任务真相的边界；不要输出短名单之外的 `suggestedTaskId`。
+6. 如果你觉得目标仍然含糊或可能对应多个任务，就输出 `NOT_SUPPORTED`。
+7. `timeInstruction` 可以是 `明天早上8点`、`推迟1个小时`、`提前半小时`、`改到2026-03-25 18:00`，但不要把目标标题再塞回去。
+8. 只能输出严格 JSON，禁止 Markdown 包裹。
+
+严格输出以下 Kotlin contract 对应的 JSON：
+${
+    JsonSchemaGenerator.generateSchema(
+        GlobalRescheduleExtractionPayload.serializer().descriptor,
+        "  "
+    )
+}
+
+用户输入：
+${request.transcript}
+""".trimIndent()
+    }
+
+    /**
+     * 构建 follow-up 改期 V2 影子提取 Prompt。
+     * 说明：只抽取已选中任务的时间语义，不负责目标解析，也不直接执行改期。
+     */
+    open fun compileFollowUpRescheduleExtractionPrompt(
+        request: FollowUpRescheduleExtractionRequest
+    ): String = """
+你是 SIM 跟进改期的 V2 影子时间提取器。
+
+你的任务不是决定要不要真正改期，而是只回答一个问题：
+这句 follow-up 输入能否被表达成“已选中任务的精确改期时间语义”？
+
+当前时间锚点：
+- now_iso: ${request.nowIso}
+- timezone: ${request.timezone}
+
+已选中任务上下文：
+- selected_task_title: ${request.selectedTaskTitle}
+- selected_task_start_iso: ${request.selectedTaskStartIso}
+- selected_task_duration_minutes: ${request.selectedTaskDurationMinutes}
+- selected_task_location: ${request.selectedTaskLocation ?: "null"}
+- selected_task_person: ${request.selectedTaskPerson ?: "null"}
+
+规则：
+1. 你只处理已选中任务的时间语义，不输出目标任务，不重写标题，不决定时长。
+2. 如果能表达成明确改期，输出 `decision = "RESCHEDULE_EXACT"`。
+3. 如果是模糊说法、页面相对日期、闲聊、删除、创建、或你没有把握，输出 `decision = "NOT_SUPPORTED"`。
+4. `RESCHEDULE_EXACT` 时，`timeKind` 只能是：
+   - `DELTA_FROM_TARGET`
+   - `RELATIVE_DAY_CLOCK`
+   - `ABSOLUTE`
+5. `DELTA_FROM_TARGET`：
+   - 仅用于“推迟1小时 / 提前半小时 / 往后推20分钟”这类相对已选中任务开始时间的偏移
+   - 必须填写 `deltaFromTargetMinutes`
+   - 不要填写 `relativeDayOffset`、`clockTime`、`absoluteStartIso`
+6. `RELATIVE_DAY_CLOCK`：
+   - 仅用于“明天早上8点 / 后天晚上9点 / tomorrow 6:30 pm”这类真实日期 + 明确钟点
+   - 必须填写 `relativeDayOffset`
+   - 必须填写严格 `HH:mm` 的 `clockTime`
+   - 不要填写 `deltaFromTargetMinutes`、`absoluteStartIso`
+   - `今天/today/今晚` = 0，`明天/tomorrow` = 1，`后天/day after tomorrow` = 2
+7. 页面相对日期（如 `下一天` / `后一天` / `next day`）在这个实验里不支持，必须输出 `NOT_SUPPORTED`。
+8. `ABSOLUTE`：
+   - 仅用于用户直接给出明确绝对时刻
+   - 必须填写 `absoluteStartIso`
+   - 不要填写其他时间字段
+9. 不能同时填写多种时间分支字段。
+10. 只能输出严格 JSON，禁止 Markdown 包裹。
+
+严格输出以下 Kotlin contract 对应的 JSON：
+${
+    JsonSchemaGenerator.generateSchema(
+        FollowUpRescheduleExtractionPayload.serializer().descriptor,
+        "  "
+    )
+}
+
+用户输入：
+${request.transcript}
+""".trimIndent()
 
     /**
      * 构建 Uni-C 轻量灵感提取 Prompt。

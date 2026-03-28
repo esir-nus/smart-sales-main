@@ -176,7 +176,7 @@
 - Status: `Fix in progress`
 - Affected layer: reconnect state machine, session persistence, manager UI state mapping
 - First seen: 2026-03-26
-- Last updated: 2026-03-26
+- Last updated: 2026-03-27
 - Current hypothesis:
   - Reconnect is technically succeeding at the BLE layer, but the badge legitimately returns `IP#0.0.0.0` because firmware never stores Wi‑Fi credentials.
   - The app therefore needs deterministic credential replay rather than assuming badge-side Wi‑Fi memory.
@@ -187,12 +187,18 @@
   - Parser handling now accepts `IP#0.0.0.0` as valid offline status.
   - Reconnect now distinguishes `phone not on Wi‑Fi` from `phone Wi‑Fi connected but SSID unreadable`.
   - Reconnect foreground query now retries once after the BLE 2s query-floor timeout instead of failing immediately on throttle.
+  - Manual Wi‑Fi repair no longer falls back into generic reconnect after `SD#...` / `PD#...`; it now uses a setup-aligned bounded online-confirmation loop against the submitted SSID.
+  - Connected-vs-ready evidence diagnostics now log the manual-sync gate branch, `ConnectivityBridge.isReady()` preflight, badge network query result, resolved base URL, and HTTP reachability outcome under the existing `SmartSalesConn` / `AudioPipeline` capture tags.
 - Next action:
   - Revalidate on device with `adb logcat` capture that:
     1. BLE reconnect succeeds
     2. offline `IP#0.0.0.0` is classified as offline, not pending/parser-failed
     3. exact-match remembered Wi‑Fi is replayed automatically
     4. non-matching phone Wi‑Fi routes to the repair form
+    5. manual `更新配置` enters reconnect/progress immediately and does not require a second reconnect tap
+    6. closing and reopening badge connection no longer reopens on a stale `WIFI_MISMATCH` screen when live manager state has changed
+    7. manual repair does not loop back to `网络环境已变更` unless the badge explicitly reports a different SSID than the submitted one
+    8. one fresh failing manual-sync repro includes the manager gate decision, `isReady()` result, resolved base URL decision, and HTTP reachability result so app-vs-badge ownership can be assigned cleanly
 - Linked evidence:
   - `docs/cerb/connectivity-bridge/spec.md`
   - `docs/cerb/device-pairing/spec.md`
@@ -225,6 +231,31 @@
 - App interpretation:
   - The badge remained truly offline at the Wi‑Fi layer.
   - But reconnect also had an app-side gate bug: phone Wi‑Fi detection was too weak, and reconnect could false-fail on the BLE query floor before recovery logic settled.
+
+##### 2026-03-27: SIM manager retained stale Wi‑Fi mismatch override across close/reopen
+
+- Scenario:
+  - User entered manual Wi‑Fi credentials from the SIM connectivity repair form, then closed and reopened badge connection after the panel appeared stuck.
+- Observed evidence:
+  - `ConnectivityViewModel` kept `WIFI_MISMATCH` as a transient UI override independent of live `managerStatus`.
+  - SIM shell reused the same `ConnectivityViewModel` instance across connectivity-surface close/reopen.
+  - Closing the SIM connectivity surface previously cleared only the shell route and did not clear or cancel transient reconnect/repair state.
+- App interpretation:
+  - The stuck repair screen was a real app-side state-retention bug, not only a hardware/network failure.
+  - The fix now clears transient reconnect/mismatch override state on close and starts reconnect/progress immediately when the user submits manual Wi‑Fi repair credentials.
+
+##### 2026-03-27: Manual repair path had drifted from setup by reusing generic reconnect
+
+- Scenario:
+  - After the stale-override fix, manual Wi‑Fi repair still looped back to `网络环境已变更` even after the user submitted credentials.
+- Observed evidence:
+  - Protocol code still used the correct two-step `SD#<ssid>` then `PD#<password>` write path.
+  - But `RealConnectivityService.updateWifiConfig()` immediately reused generic `reconnect()`.
+  - Setup/onboarding does not validate post-provision success this way; it waits for the badge to come online through a bounded query loop.
+  - Generic reconnect also reintroduces phone-SSID-dependent mismatch logic that is inappropriate once the user has explicitly supplied the target SSID/password.
+- App interpretation:
+  - The remaining loop was likely service-flow drift rather than a fresh protocol-write bug.
+  - The repair path now confirms online state against the submitted SSID with setup-aligned bounded polling and only returns to `WIFI_MISMATCH` for a proven SSID mismatch.
 
 #### Evidence History
 

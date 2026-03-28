@@ -32,7 +32,7 @@ Responsibilities:
 - own the SIM shell edge-gesture gates for scheduler/audio entry
 - host one SIM home/here shell family that covers empty home, active plain chat, active audio-grounded chat, and pending-audio chat presentation without changing top-level shell identity
 - host the simple chat surface
-- host a send-only bottom message capsule for SIM chat; left attach reopens the SIM audio drawer, the right action does not become a shell-owned mic route, and the idle placeholder keeps the scan-shine treatment on placeholder text only
+- host a bottom message capsule for SIM chat where left attach reopens the SIM audio drawer, the trailing action shows mic only while the draft is blank, successful device-STT writes editable text back into the field, explicit send remains required, and the idle placeholder keeps the scan-shine treatment on placeholder text only
 - keep the top header visually balanced with hamburger on the left, centered Dynamic Island, and new-session `+` on the right across normal shell states
 - keep the center canvas stateful: greeting-first when empty, conversation-first when active, and system-sheet capable for status/progress/artifact insertion
 - host SIM support surfaces such as history and connectivity entry, with connectivity entering from the audio drawer rather than the home header

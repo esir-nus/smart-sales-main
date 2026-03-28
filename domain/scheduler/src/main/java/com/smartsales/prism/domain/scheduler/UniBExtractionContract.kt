@@ -41,6 +41,10 @@ data class UniBVagueTaskPayload(
     val anchorDateIso: String,
     /** 可选的时间线索，如“下午”“下班后”。 */
     val timeHint: String? = null,
+    /** 可选的商务关键人物提示。 */
+    val keyPerson: String? = null,
+    /** 可选的地点提示。 */
+    val location: String? = null,
     /** MUST BE one of: L1, L2, L3, FIRE_OFF */
     val urgency: String = "L3"
 )

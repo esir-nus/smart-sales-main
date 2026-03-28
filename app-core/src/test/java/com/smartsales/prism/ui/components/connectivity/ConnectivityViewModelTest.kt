@@ -1,0 +1,314 @@
+package com.smartsales.prism.ui.components.connectivity
+
+import com.smartsales.core.util.Result
+import com.smartsales.prism.domain.connectivity.BadgeConnectionState
+import com.smartsales.prism.domain.connectivity.BadgeManagerStatus
+import com.smartsales.prism.domain.connectivity.ConnectivityBridge
+import com.smartsales.prism.domain.connectivity.ConnectivityService
+import com.smartsales.prism.domain.connectivity.ReconnectResult
+import com.smartsales.prism.domain.connectivity.RecordingNotification
+import com.smartsales.prism.domain.connectivity.UpdateResult
+import com.smartsales.prism.domain.connectivity.WavDownloadResult
+import com.smartsales.prism.domain.connectivity.WifiConfigResult
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Before
+import org.junit.Test
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class ConnectivityViewModelTest {
+
+    private val dispatcher = UnconfinedTestDispatcher()
+
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(dispatcher)
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
+
+    @Test
+    fun `managerState shows ble paired offline while shared shell state stays disconnected`() = runTest {
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Disconnected,
+            manager = BadgeManagerStatus.BlePairedNetworkOffline
+        )
+        val viewModel = ConnectivityViewModel(
+            connectivityService = FakeConnectivityService(),
+            connectivityBridge = bridge
+        )
+        advanceUntilIdle()
+
+        assertEquals(ConnectionState.DISCONNECTED, viewModel.connectionState.value)
+        assertEquals(ConnectionState.DISCONNECTED, viewModel.effectiveState.value)
+        assertEquals(
+            ConnectivityManagerState.BLE_PAIRED_NETWORK_OFFLINE,
+            viewModel.managerState.value
+        )
+    }
+
+    @Test
+    fun `managerState keeps needs setup semantics when bridge says setup is required`() = runTest {
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.NeedsSetup,
+            manager = BadgeManagerStatus.NeedsSetup
+        )
+        val viewModel = ConnectivityViewModel(
+            connectivityService = FakeConnectivityService(),
+            connectivityBridge = bridge
+        )
+        advanceUntilIdle()
+
+        assertEquals(ConnectionState.NEEDS_SETUP, viewModel.connectionState.value)
+        assertEquals(ConnectivityManagerState.NEEDS_SETUP, viewModel.managerState.value)
+    }
+
+    @Test
+    fun `managerState lets active reconnect override paired offline diagnostic state`() = runTest {
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Disconnected,
+            manager = BadgeManagerStatus.BlePairedNetworkOffline
+        )
+        val reconnectGate = CompletableDeferred<ReconnectResult>()
+        val viewModel = ConnectivityViewModel(
+            connectivityService = FakeConnectivityService(reconnectResults = listOf(reconnectGate)),
+            connectivityBridge = bridge
+        )
+        advanceUntilIdle()
+
+        viewModel.reconnect()
+        advanceUntilIdle()
+        assertEquals(ConnectivityManagerState.RECONNECTING, viewModel.managerState.value)
+
+        reconnectGate.complete(ReconnectResult.DeviceNotFound)
+        advanceUntilIdle()
+        assertEquals(
+            ConnectivityManagerState.BLE_PAIRED_NETWORK_OFFLINE,
+            viewModel.managerState.value
+        )
+    }
+
+    @Test
+    fun `updateWifiConfig shows reconnecting while repair is in progress and clears on success`() = runTest {
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Disconnected,
+            manager = BadgeManagerStatus.BlePairedNetworkOffline
+        )
+        val updateGate = CompletableDeferred<WifiConfigResult>()
+        val service = FakeConnectivityService(updateWifiConfigResults = listOf(updateGate))
+        val viewModel = ConnectivityViewModel(
+            connectivityService = service,
+            connectivityBridge = bridge
+        )
+        advanceUntilIdle()
+
+        viewModel.updateWifiConfig(ssid = "OfficeGuest", password = "secret")
+        advanceUntilIdle()
+        assertEquals(ConnectivityManagerState.RECONNECTING, viewModel.managerState.value)
+
+        updateGate.complete(WifiConfigResult.Success)
+        advanceUntilIdle()
+        assertEquals(
+            ConnectivityManagerState.BLE_PAIRED_NETWORK_OFFLINE,
+            viewModel.managerState.value
+        )
+        assertEquals(1, service.updateWifiConfigCalls.size)
+    }
+
+    @Test
+    fun `updateWifiConfig returns to wifi mismatch on repair failure`() = runTest {
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Disconnected,
+            manager = BadgeManagerStatus.BlePairedNetworkOffline
+        )
+        val updateGate = CompletableDeferred<WifiConfigResult>()
+        val viewModel = ConnectivityViewModel(
+            connectivityService = FakeConnectivityService(updateWifiConfigResults = listOf(updateGate)),
+            connectivityBridge = bridge
+        )
+        advanceUntilIdle()
+
+        viewModel.updateWifiConfig(ssid = "OfficeGuest", password = "secret")
+        advanceUntilIdle()
+        assertEquals(ConnectivityManagerState.RECONNECTING, viewModel.managerState.value)
+
+        updateGate.complete(WifiConfigResult.Error("repair failed"))
+        advanceUntilIdle()
+        assertEquals(ConnectivityManagerState.WIFI_MISMATCH, viewModel.managerState.value)
+    }
+
+    @Test
+    fun `resetTransientState clears stale wifi mismatch override`() = runTest {
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Disconnected,
+            manager = BadgeManagerStatus.BlePairedNetworkOffline
+        )
+        val viewModel = ConnectivityViewModel(
+            connectivityService = FakeConnectivityService(
+                reconnectResults = listOf(
+                    CompletableDeferred<ReconnectResult>().apply {
+                        complete(ReconnectResult.WifiMismatch)
+                    }
+                )
+            ),
+            connectivityBridge = bridge
+        )
+        advanceUntilIdle()
+
+        viewModel.reconnect()
+        advanceUntilIdle()
+        assertEquals(ConnectivityManagerState.WIFI_MISMATCH, viewModel.managerState.value)
+
+        viewModel.resetTransientState()
+        advanceUntilIdle()
+        assertEquals(
+            ConnectivityManagerState.BLE_PAIRED_NETWORK_OFFLINE,
+            viewModel.managerState.value
+        )
+    }
+
+    @Test
+    fun `resetTransientState cancels reconnect and allows a fresh retry`() = runTest {
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Disconnected,
+            manager = BadgeManagerStatus.BlePairedNetworkOffline
+        )
+        val reconnectGate = CompletableDeferred<ReconnectResult>()
+        val service = FakeConnectivityService(
+            reconnectResults = listOf(
+                reconnectGate,
+                CompletableDeferred<ReconnectResult>().apply {
+                    complete(ReconnectResult.DeviceNotFound)
+                }
+            )
+        )
+        val viewModel = ConnectivityViewModel(
+            connectivityService = service,
+            connectivityBridge = bridge
+        )
+        advanceUntilIdle()
+
+        viewModel.reconnect()
+        advanceUntilIdle()
+        assertEquals(ConnectivityManagerState.RECONNECTING, viewModel.managerState.value)
+
+        viewModel.resetTransientState()
+        advanceUntilIdle()
+        assertEquals(
+            ConnectivityManagerState.BLE_PAIRED_NETWORK_OFFLINE,
+            viewModel.managerState.value
+        )
+
+        viewModel.reconnect()
+        advanceUntilIdle()
+        assertEquals(2, service.reconnectCalls)
+        assertEquals(
+            ConnectivityManagerState.BLE_PAIRED_NETWORK_OFFLINE,
+            viewModel.managerState.value
+        )
+    }
+
+    @Test
+    fun `duplicate wifi repair taps are ignored while repair is active`() = runTest {
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Disconnected,
+            manager = BadgeManagerStatus.BlePairedNetworkOffline
+        )
+        val updateGate = CompletableDeferred<WifiConfigResult>()
+        val service = FakeConnectivityService(updateWifiConfigResults = listOf(updateGate))
+        val viewModel = ConnectivityViewModel(
+            connectivityService = service,
+            connectivityBridge = bridge
+        )
+        advanceUntilIdle()
+
+        viewModel.updateWifiConfig(ssid = "OfficeGuest", password = "secret")
+        viewModel.updateWifiConfig(ssid = "OfficeGuest", password = "secret")
+        advanceUntilIdle()
+
+        assertEquals(1, service.updateWifiConfigCalls.size)
+        assertEquals(ConnectivityManagerState.RECONNECTING, viewModel.managerState.value)
+    }
+
+    private class FakeConnectivityBridge(
+        connection: BadgeConnectionState,
+        manager: BadgeManagerStatus
+    ) : ConnectivityBridge {
+        private val _connectionState = MutableStateFlow(connection)
+        private val _managerStatus = MutableStateFlow(manager)
+
+        override val connectionState: StateFlow<BadgeConnectionState> = _connectionState.asStateFlow()
+        override val managerStatus: StateFlow<BadgeManagerStatus> = _managerStatus.asStateFlow()
+
+        override suspend fun downloadRecording(filename: String): WavDownloadResult {
+            error("Not used in ConnectivityViewModelTest")
+        }
+
+        override suspend fun listRecordings(): Result<List<String>> = Result.Success(emptyList())
+
+        override fun recordingNotifications(): Flow<RecordingNotification> = emptyFlow()
+
+        override suspend fun isReady(): Boolean = false
+
+        override suspend fun deleteRecording(filename: String): Boolean = false
+    }
+
+    private class FakeConnectivityService(
+        reconnectResults: List<CompletableDeferred<ReconnectResult>> = listOf(
+            CompletableDeferred<ReconnectResult>().apply {
+                complete(ReconnectResult.DeviceNotFound)
+            }
+        ),
+        updateWifiConfigResults: List<CompletableDeferred<WifiConfigResult>> = listOf(
+            CompletableDeferred<WifiConfigResult>().apply {
+                complete(WifiConfigResult.Success)
+            }
+        )
+    ) : ConnectivityService {
+        private val reconnectQueue = ArrayDeque(reconnectResults)
+        private val updateWifiConfigQueue = ArrayDeque(updateWifiConfigResults)
+        var reconnectCalls = 0
+            private set
+        val updateWifiConfigCalls = mutableListOf<Pair<String, String>>()
+
+        override suspend fun checkForUpdate(): UpdateResult = UpdateResult.None
+
+        override suspend fun reconnect(): ReconnectResult {
+            reconnectCalls += 1
+            val gate = reconnectQueue.removeFirstOrNull()
+                ?: CompletableDeferred<ReconnectResult>().apply {
+                    complete(ReconnectResult.DeviceNotFound)
+                }
+            return gate.await()
+        }
+
+        override suspend fun disconnect() = Unit
+
+        override suspend fun unpair() = Unit
+
+        override suspend fun updateWifiConfig(ssid: String, password: String): WifiConfigResult {
+            updateWifiConfigCalls += ssid to password
+            val gate = updateWifiConfigQueue.removeFirstOrNull()
+                ?: CompletableDeferred<WifiConfigResult>().apply {
+                    complete(WifiConfigResult.Success)
+                }
+            return gate.await()
+        }
+    }
+}

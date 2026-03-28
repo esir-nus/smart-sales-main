@@ -15,6 +15,8 @@ internal const val SIM_CONNECTIVITY_SETUP_STARTED_SUMMARY =
     "SIM connectivity setup started"
 internal const val SIM_CONNECTIVITY_SETUP_COMPLETED_SUMMARY =
     "SIM connectivity setup completed to manager"
+internal const val SIM_CONNECTIVITY_SETUP_SKIPPED_SUMMARY =
+    "SIM connectivity setup skipped"
 internal const val SIM_AUDIO_PERSISTED_ARTIFACT_OPENED_SUMMARY =
     "SIM audio persisted artifact opened"
 internal const val SIM_AUDIO_GROUNDED_CHAT_OPENED_FROM_ARTIFACT_SUMMARY =

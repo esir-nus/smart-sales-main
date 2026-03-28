@@ -17,7 +17,7 @@ sealed class BadgeConnectionState {
     /** 连接中（配对或自动重连） */
     object Connecting : BadgeConnectionState()
     
-    /** 已连接，可通过 WiFi 访问 */
+    /** 已连接，可执行媒体操作；badgeIp 可能由 bridge 按需解析而不是在状态中实时携带 */
     data class Connected(
         val badgeIp: String,
         val ssid: String

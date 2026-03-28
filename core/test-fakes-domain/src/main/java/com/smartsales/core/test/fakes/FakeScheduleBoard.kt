@@ -4,6 +4,7 @@ import com.smartsales.prism.domain.memory.ConflictResult
 import com.smartsales.prism.domain.memory.ScheduleBoard
 import com.smartsales.prism.domain.memory.ScheduleItem
 import com.smartsales.prism.domain.memory.TargetResolution
+import com.smartsales.prism.domain.memory.TargetResolutionRequest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -33,17 +34,16 @@ class FakeScheduleBoard : ScheduleBoard {
 
     var nextLexicalMatch: ScheduleItem? = null
     var nextTargetResolution: TargetResolution? = null
+    var lastTargetRequest: TargetResolutionRequest? = null
 
     override suspend fun findLexicalMatch(targetQuery: String): ScheduleItem? {
         return nextLexicalMatch
     }
 
-    override suspend fun resolveTarget(
-        targetQuery: String,
-        preferredDayOffset: Int?
-    ): TargetResolution {
+    override suspend fun resolveTarget(request: TargetResolutionRequest): TargetResolution {
+        lastTargetRequest = request
         return nextTargetResolution
             ?: nextLexicalMatch?.let(TargetResolution::Resolved)
-            ?: TargetResolution.NoMatch(targetQuery)
+            ?: TargetResolution.NoMatch(request.describeForFailure())
     }
 }

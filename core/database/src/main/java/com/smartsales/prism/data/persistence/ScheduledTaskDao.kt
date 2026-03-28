@@ -27,6 +27,13 @@ interface ScheduledTaskDao {
     @Query("SELECT * FROM scheduled_tasks WHERE taskId = :id")
     suspend fun getById(id: String): ScheduledTaskEntity?
 
+    @Query("""
+        SELECT * FROM scheduled_tasks
+        WHERE isDone = 0
+        ORDER BY urgencyLevel ASC, startTimeMillis ASC
+    """)
+    suspend fun getActiveTasks(): List<ScheduledTaskEntity>
+
     @Query("DELETE FROM scheduled_tasks WHERE taskId = :id")
     suspend fun deleteById(id: String)
 

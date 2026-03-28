@@ -2,6 +2,8 @@ package com.smartsales.prism.domain.scheduler
 import com.smartsales.prism.domain.memory.ConflictResult
 import com.smartsales.prism.domain.memory.ScheduleBoard
 import com.smartsales.prism.domain.memory.TargetResolution
+import com.smartsales.prism.domain.memory.TargetResolutionRequest
+import com.smartsales.prism.domain.memory.bypassesConflictEvaluation
 import com.smartsales.prism.domain.memory.effectiveConflictOccupancyMinutes
 import kotlinx.coroutines.flow.first
 import java.time.Instant
@@ -61,7 +63,7 @@ class FastTrackMutationEngine @Inject constructor(
             )
             
             // 1. Evaluate temporal conflict
-            val conflictResult = if (urgencyLevel == UrgencyLevel.FIRE_OFF) {
+            val conflictResult = if (bypassesConflictEvaluation(urgencyLevel)) {
                 ConflictResult.Clear
             } else {
                 scheduleBoard.checkConflict(
@@ -90,6 +92,8 @@ class FastTrackMutationEngine @Inject constructor(
                 urgencyLevel = urgencyLevel,
                 startTime = startInst,
                 durationMinutes = def.durationMinutes,
+                location = def.location,
+                keyPerson = def.keyPerson,
                 hasConflict = hasConflict,
                 conflictWithTaskId = conflictWithTaskId,
                 conflictSummary = conflictSummary,
@@ -126,6 +130,8 @@ class FastTrackMutationEngine @Inject constructor(
             urgencyLevel = UrgencyLevel.valueOf(params.urgency.name),
             startTime = anchorInstant,
             durationMinutes = 0,
+            location = params.location,
+            keyPerson = params.keyPerson,
             hasConflict = false,
             isVague = true,
             notes = vagueNotes
@@ -156,7 +162,7 @@ class FastTrackMutationEngine @Inject constructor(
                 isVague = task.isVague
             )
         } else {
-            when (val resolution = scheduleBoard.resolveTarget(query)) {
+            when (val resolution = scheduleBoard.resolveTarget(TargetResolutionRequest(targetQuery = query))) {
                 is TargetResolution.Resolved -> resolution.item
                 is TargetResolution.Ambiguous -> return MutationResult.AmbiguousMatch(query)
                 is TargetResolution.NoMatch -> return MutationResult.NoMatch(query, "未找到匹配的日程，请更具体一些。")
@@ -178,7 +184,7 @@ class FastTrackMutationEngine @Inject constructor(
         )
         
         // 4. Check conflict (ignoring the task we are rescheduling and vague tasks)
-        val conflictResult = if (fullOldTask.urgencyLevel == UrgencyLevel.FIRE_OFF) {
+        val conflictResult = if (bypassesConflictEvaluation(fullOldTask.urgencyLevel)) {
             ConflictResult.Clear
         } else {
             scheduleBoard.checkConflict(

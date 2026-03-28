@@ -37,6 +37,12 @@ interface BadgeStateMonitor {
     /** Called when BLE connection is lost */
     fun onBleDisconnected()
 
+    /** Called when a foreground network query produced a concrete result */
+    fun onNetworkStatusObserved(networkStatus: DeviceNetworkStatus)
+
+    /** Called when a foreground network query failed while BLE remains connected */
+    fun onNetworkStatusQueryFailed()
+
     /** Start rate-limited polling loop */
     fun startPolling()
 
@@ -88,6 +94,14 @@ class RealBadgeStateMonitor @Inject constructor(
         stopPolling()
         _status.value = BadgeStatus.UNKNOWN
         ConnectivityLogger.i("📶 BLE disconnected")
+    }
+
+    override fun onNetworkStatusObserved(networkStatus: DeviceNetworkStatus) {
+        handleSuccess(networkStatus)
+    }
+
+    override fun onNetworkStatusQueryFailed() {
+        handleError()
     }
 
     override fun startPolling() {

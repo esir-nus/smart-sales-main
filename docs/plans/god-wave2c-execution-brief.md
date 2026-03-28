@@ -1,12 +1,12 @@
 # God Wave 2C Execution Brief
 
-**Status:** Planned  
+**Status:** L1 Accepted  
 **Date:** 2026-03-24  
 **Wave:** 2C  
 **Mission:** `SimAudioRepository.kt` structural cleanup  
 **Primary Tracker:** `docs/plans/god-tracker.md`  
 **Structure Law:** `docs/specs/code-structure-contract.md`  
-**Validation Report:** pending until implementation
+**Validation Report:** `docs/reports/tests/L1-20260324-god-wave2c-sim-audio-repository.md`
 
 ---
 
@@ -16,7 +16,7 @@ Wave 2C is the SIM audio data cleanup slice in Wave 2.
 
 It targets `SimAudioRepository.kt`, which currently mixes persistence, artifact IO, session binding, and sync/transcription coordination inside one large repository file.
 
-Wave 2C should reduce that file into stable SIM-owned support files while keeping the consumer-facing repository seam source-compatible.
+Wave 2C now reduces that file into stable SIM-owned support files while keeping the consumer-facing repository seam source-compatible.
 
 ---
 
@@ -58,32 +58,50 @@ Wave 2C must **not** do:
 
 ---
 
-## 4. Planned Structure
+## 4. Delivered Structure
 
 Wave 2C leaves `app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepository.kt` as the public seam file.
 
-Planned extraction map:
+Delivered extraction map:
 
-- repository seam
-- persistence/store support
-- artifact IO support
-- session-binding support
-- sync/transcription coordinator
+- `SimAudioRepository.kt`
+  - host seam only (`105 LOC`)
+- `SimAudioRepositoryRuntime.kt`
+  - runtime state, scope, mutexes, metadata handle, seed definitions
+- `SimAudioRepositoryStoreSupport.kt`
+  - metadata persistence, namespace helpers, local import, seed backfill, session binding
+- `SimAudioRepositoryArtifactSupport.kt`
+  - artifact file IO, debug artifact builders, debug scenario seeding
+- `SimAudioRepositorySyncSupport.kt`
+  - badge-sync preflight, telemetry/message helpers, duplicate filtering, download import loop
+- `SimAudioRepositoryTranscriptionSupport.kt`
+  - transcription start/resume flow, OSS/Tingwu coordination, progress/completion/failure handling
 
-Exact filenames may follow the accepted ownership shape, but the split must keep SIM-owned storage and audio/chat boundaries obvious.
+Wave 2C also:
+
+- keeps the `SimAudioRepository` constructor and callable method surface source-compatible for current SIM consumers
+- folds session-binding ownership into the store support file rather than creating an extra tiny support shard
+- adds a focused structure regression test for the accepted SIM audio split
+- keeps SIM namespace/storage filenames unchanged
 
 ---
 
-## 5. Verification Target
+## 5. Verification Status
 
-Wave 2C acceptance should use focused app-core verification:
+Wave 2C acceptance used focused app-core verification:
 
 - `SimAudioRepositoryNamespaceTest`
 - `SimAudioRepositoryRecoveryTest`
+- `SimAudioDebugScenarioTest`
 - `SimAudioDrawerViewModelTest`
 - `SimAudioRepositoryStructureTest`
 - `GodStructureGuardrailTest`
 - `./gradlew :app-core:compileDebugUnitTestKotlin`
+
+Executed commands:
+
+- `./gradlew :app-core:compileDebugUnitTestKotlin`
+- `./gradlew :app-core:testDebugUnitTest --tests com.smartsales.prism.data.audio.SimAudioRepositoryNamespaceTest --tests com.smartsales.prism.data.audio.SimAudioRepositoryRecoveryTest --tests com.smartsales.prism.data.audio.SimAudioDebugScenarioTest --tests com.smartsales.prism.data.audio.SimAudioRepositoryStructureTest --tests com.smartsales.prism.ui.sim.SimAudioDrawerViewModelTest --tests com.smartsales.prism.ui.GodStructureGuardrailTest`
 
 ---
 
@@ -107,3 +125,4 @@ Wave 2C is complete only when:
 - `docs/specs/code-structure-contract.md`
 - `docs/core-flow/sim-audio-artifact-chat-flow.md`
 - `docs/cerb/audio-management/spec.md`
+- `docs/reports/tests/L1-20260324-god-wave2c-sim-audio-repository.md`

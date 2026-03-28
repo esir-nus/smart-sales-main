@@ -47,4 +47,10 @@ class SimHistoryRoutingTest {
     fun `history drawer keeps scrim visible`() {
         assertTrue(shouldShowSimShellScrim(SimShellState(showHistory = true)))
     }
+
+    @Test
+    fun `history drawer uses stronger scrim than generic overlay routes`() {
+        assertEquals(0.56f, resolveSimShellScrimAlpha(SimShellState(showHistory = true)))
+        assertEquals(0.4f, resolveSimShellScrimAlpha(SimShellState(activeDrawer = SimDrawerType.AUDIO)))
+    }
 }

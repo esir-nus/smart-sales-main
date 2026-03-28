@@ -38,6 +38,46 @@ class SimShellHandoffTest {
     }
 
     @Test
+    fun `idle composer helper hint only shows when shell is clear and ime is hidden`() {
+        assertTrue(shouldShowSimIdleComposerHint(SimShellState(), isImeVisible = false))
+        assertFalse(shouldShowSimIdleComposerHint(SimShellState(activeDrawer = SimDrawerType.AUDIO), isImeVisible = false))
+        assertFalse(shouldShowSimIdleComposerHint(SimShellState(showHistory = true), isImeVisible = false))
+        assertFalse(shouldShowSimIdleComposerHint(SimShellState(showSettings = true), isImeVisible = false))
+        assertFalse(
+            shouldShowSimIdleComposerHint(
+                SimShellState(activeConnectivitySurface = SimConnectivitySurface.MODAL),
+                isImeVisible = false
+            )
+        )
+        assertFalse(shouldShowSimIdleComposerHint(SimShellState(), isImeVisible = true))
+    }
+
+    @Test
+    fun `startup scheduler teaser only auto opens once when shell is clear`() {
+        assertTrue(
+            shouldAutoOpenSimSchedulerStartupTeaser(
+                state = SimShellState(),
+                isImeVisible = false,
+                teaserPending = true
+            )
+        )
+        assertFalse(
+            shouldAutoOpenSimSchedulerStartupTeaser(
+                state = SimShellState(activeDrawer = SimDrawerType.AUDIO),
+                isImeVisible = false,
+                teaserPending = true
+            )
+        )
+        assertFalse(
+            shouldAutoOpenSimSchedulerStartupTeaser(
+                state = SimShellState(),
+                isImeVisible = false,
+                teaserPending = false
+            )
+        )
+    }
+
+    @Test
     fun `buildSimDynamicIslandItems keeps idle fallback when no tasks exist`() {
         val items = buildSimDynamicIslandItems(
             sessionTitle = "",

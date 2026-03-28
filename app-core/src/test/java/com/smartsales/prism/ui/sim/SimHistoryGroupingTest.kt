@@ -14,15 +14,17 @@ class SimHistoryGroupingTest {
     private val nowMillis: Long = today.atTime(12, 0).atZone(zoneId).toInstant().toEpochMilli()
 
     @Test
-    fun `groupSimHistorySessions separates pinned today last seven days and earlier`() {
+    fun `groupSimHistorySessions separates pinned today last thirty days and monthly archives`() {
         val grouped = groupSimHistorySessions(
             previews = listOf(
                 preview("pinned_old", 10, pinned = true),
                 preview("today_new", 0, hour = 11),
                 preview("today_old", 0, hour = 9),
-                preview("week_mid", 3),
-                preview("week_edge", 6),
-                preview("earlier", 8)
+                preview("month_mid", 3),
+                preview("month_edge", 30),
+                preview("feb_new", 40),
+                preview("feb_old", 45),
+                preview("sep_old", 180)
             ),
             nowMillis = nowMillis,
             zoneId = zoneId
@@ -32,8 +34,9 @@ class SimHistoryGroupingTest {
             listOf(
                 SIM_HISTORY_GROUP_PINNED,
                 SIM_HISTORY_GROUP_TODAY,
-                SIM_HISTORY_GROUP_LAST_7_DAYS,
-                SIM_HISTORY_GROUP_EARLIER
+                SIM_HISTORY_GROUP_LAST_30_DAYS,
+                "2026-02",
+                "2025-09"
             ),
             grouped.keys.toList()
         )
@@ -43,10 +46,11 @@ class SimHistoryGroupingTest {
             grouped.getValue(SIM_HISTORY_GROUP_TODAY).map { it.id }
         )
         assertEquals(
-            listOf("week_mid", "week_edge"),
-            grouped.getValue(SIM_HISTORY_GROUP_LAST_7_DAYS).map { it.id }
+            listOf("month_mid", "month_edge"),
+            grouped.getValue(SIM_HISTORY_GROUP_LAST_30_DAYS).map { it.id }
         )
-        assertEquals(listOf("earlier"), grouped.getValue(SIM_HISTORY_GROUP_EARLIER).map { it.id })
+        assertEquals(listOf("feb_new", "feb_old"), grouped.getValue("2026-02").map { it.id })
+        assertEquals(listOf("sep_old"), grouped.getValue("2025-09").map { it.id })
     }
 
     @Test
@@ -59,8 +63,7 @@ class SimHistoryGroupingTest {
 
         assertEquals(listOf(SIM_HISTORY_GROUP_TODAY), grouped.keys.toList())
         assertTrue(SIM_HISTORY_GROUP_PINNED !in grouped)
-        assertTrue(SIM_HISTORY_GROUP_LAST_7_DAYS !in grouped)
-        assertTrue(SIM_HISTORY_GROUP_EARLIER !in grouped)
+        assertTrue(SIM_HISTORY_GROUP_LAST_30_DAYS !in grouped)
     }
 
     private fun preview(

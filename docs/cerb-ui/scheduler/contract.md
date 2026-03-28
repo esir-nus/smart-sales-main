@@ -60,7 +60,12 @@ Collapsed scheduler cards must preserve separate glanceable signals for urgency,
 
 - The vertical urgency bar is owned by `ScheduledTask.urgencyLevel`.
 - The accepted urgency values are `L1_CRITICAL`, `L2_IMPORTANT`, `L3_NORMAL`, and `FIRE_OFF`.
-- Lower UI layers may choose the exact color tokens, but the bar must remain the scheduler card's urgency channel rather than being repurposed for conflict or done state.
+- The shared drawer currently maps them as:
+  - `L1_CRITICAL` -> red danger bar
+  - `L2_IMPORTANT` -> amber warning bar
+  - `L3_NORMAL` -> blue default bar
+  - `FIRE_OFF` -> muted neutral low-emphasis bar
+- Lower UI layers may restyle the exact tokens, but the bar must remain the scheduler card's urgency channel rather than being repurposed for conflict or done state.
 
 ### Conflict Channel
 
@@ -71,7 +76,7 @@ Collapsed scheduler cards must preserve separate glanceable signals for urgency,
 ### Completion Channel
 
 - Completion visibility is a separate card treatment from urgency.
-- A completed task may be visually de-emphasized, but completion must remain explicitly visible.
+- A completed task may visually de-emphasize the same urgency bar, but it must not replace it with a completion-only color.
 - Completion state must not erase or redefine the underlying urgency classification.
 
 ## Calendar Date Attention Contract

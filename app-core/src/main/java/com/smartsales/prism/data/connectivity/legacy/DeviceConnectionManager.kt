@@ -38,6 +38,7 @@ interface DeviceConnectionManager {
 
     suspend fun requestHotspotCredentials(): Result<WifiCredentials>
     suspend fun queryNetworkStatus(): Result<DeviceNetworkStatus>
+    suspend fun confirmManualWifiProvision(credentials: WifiCredentials): ConnectionState
 
     /** 若已有凭据且未连接，则根据退避策略尝试自动重连。 */
     fun scheduleAutoReconnectIfNeeded()
@@ -123,6 +124,10 @@ class DefaultDeviceConnectionManager @Inject constructor(
 
     override suspend fun queryNetworkStatus(): Result<DeviceNetworkStatus> {
         return connectionSupport.queryNetworkStatus()
+    }
+
+    override suspend fun confirmManualWifiProvision(credentials: WifiCredentials): ConnectionState {
+        return connectionSupport.confirmManualWifiProvision(credentials)
     }
 
     override fun scheduleAutoReconnectIfNeeded() {

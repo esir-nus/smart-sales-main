@@ -6,6 +6,7 @@ package com.smartsales.prism.data.connectivity.legacy
 // 规范：docs/specs/esp32-protocol.md
 // 作者：创建于 2026-01-09
 
+import android.util.Log
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.util.Result
 import kotlinx.coroutines.withContext
@@ -250,6 +251,7 @@ class DefaultBadgeHttpClient @Inject constructor(
     override suspend fun isReachable(baseUrl: String): Boolean =
         withContext(dispatchers.io) {
             runCatching {
+                Log.d("SmartSalesConn", "BadgeHttpClient.isReachable start url=$baseUrl/")
                 // Use GET / (health check endpoint) instead of HEAD /list
                 // ESP32 returns {"status":"ok","version":"1.1.0"} on GET /
                 val request = Request.Builder()
@@ -263,9 +265,20 @@ class DefaultBadgeHttpClient @Inject constructor(
                     .build()
 
                 reachableClient.newCall(request).execute().use { response ->
-                    response.code in 200..399
+                    val reachable = response.code in 200..399
+                    Log.d(
+                        "SmartSalesConn",
+                        "BadgeHttpClient.isReachable response url=$baseUrl/ code=${response.code} reachable=$reachable"
+                    )
+                    reachable
                 }
-            }.getOrElse { false }
+            }.getOrElse { error ->
+                Log.w(
+                    "SmartSalesConn",
+                    "BadgeHttpClient.isReachable failure url=$baseUrl/ error=${error::class.java.simpleName}:${error.message}"
+                )
+                false
+            }
         }
 
     companion object {

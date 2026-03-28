@@ -48,6 +48,7 @@ SIM should reuse the existing connectivity contracts as its behavioral backend:
 ```kotlin
 interface ConnectivityBridge {
     val connectionState: StateFlow<BadgeConnectionState>
+    val managerStatus: StateFlow<BadgeManagerStatus>
     suspend fun downloadRecording(filename: String): WavDownloadResult
     suspend fun listRecordings(): Result<List<String>>
     fun recordingNotifications(): Flow<RecordingNotification>
@@ -76,6 +77,7 @@ Meaning:
 - `SimShell` owns only route selection, overlay presentation, close behavior, and SIM route telemetry
 - `ConnectivityBridge`, `ConnectivityService`, and `PairingService` own the underlying connection and setup behavior unchanged
 - SIM must not introduce a second local meaning of "connected"
+- SIM routing must continue to read `connectionState`, not `managerStatus`
 - SIM must not let connectivity contracts reshape scheduler runtime behavior
 - SIM audio may consume `ConnectivityBridge` only for badge-origin recording ingress and badge file operations, not for chat/session ownership
 

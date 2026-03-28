@@ -73,18 +73,31 @@ class TingwuPayloadParserTest {
     fun parseSmartSummary_handlesAllFields() {
         val json = """
             {
-              "Summary": "会议概览",
-              "KeyPoints": ["要点1", "要点2"],
-              "ActionItems": ["行动A"]
+              "Summarization": {
+                "ParagraphTitle": "会议概览",
+                "ParagraphSummary": "客户希望下周启动试点",
+                "KeyPoints": ["要点1", "要点2"],
+                "ActionItems": ["行动A"],
+                "ConversationalSummary": [
+                  {"SpeakerName": "客户", "Summary": "希望尽快推进"}
+                ],
+                "QuestionsAnsweringSummary": [
+                  {"Question": "什么时候启动？", "Answer": "下周"}
+                ]
+              }
             }
         """.trimIndent()
         
         val summary = TingwuPayloadParser.parseSmartSummary(json)
         
         assertNotNull(summary)
-        assertEquals("会议概览", summary?.summary)
+        assertEquals("**会议概览**\n客户希望下周启动试点", summary?.summary)
         assertEquals(listOf("要点1", "要点2"), summary?.keyPoints)
         assertEquals(listOf("行动A"), summary?.actionItems)
+        assertEquals("客户", summary?.speakerSummaries?.single()?.name)
+        assertEquals("希望尽快推进", summary?.speakerSummaries?.single()?.summary)
+        assertEquals("什么时候启动？", summary?.questionAnswers?.single()?.question)
+        assertEquals("下周", summary?.questionAnswers?.single()?.answer)
     }
 
     @Test

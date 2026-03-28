@@ -19,13 +19,21 @@ interface ConnectivityBridge {
      * 监听连接变化
      */
     val connectionState: StateFlow<BadgeConnectionState>
+
+    /**
+     * 连接管理界面的细粒度状态。
+     *
+     * 仅供 connectivity manager / modal 展示 richer BLE + Wi‑Fi 诊断信息；
+     * 不改变 shared `connectionState` 的严格“可用传输”语义。
+     */
+    val managerStatus: StateFlow<BadgeManagerStatus>
     
     /**
      * 从 Badge SD 卡下载 WAV 文件
      * 
      * 内部自动限流
      * 
-     * @param filename Badge 上的文件名（例: "20260205143000.wav"）
+     * @param filename Badge 上的文件名（例: "log_20260205_143000.wav"）
      * @return 下载结果（本地文件或错误）
      */
     suspend fun downloadRecording(filename: String): WavDownloadResult

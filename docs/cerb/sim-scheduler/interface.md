@@ -23,8 +23,8 @@ fun SchedulerDrawer(
 
 SIM should reuse this UI surface.
 For SIM wiring, `enableInspirationMultiSelect` must be passed as `false` so the deprecated bulk `问AI (N)` branch stays unreachable while the shelf-card launcher remains available.
-For the approved scheduler-drawer transplant, SIM should pass `visualMode = SchedulerDrawerVisualMode.SIM` so the visible debug `REC` aid is available inside the scheduler drawer during prototype testing.
-In debug builds, that visible `REC` control is only an alternate trigger for the existing scheduler `processAudio(...)` lane; it must not reroute through the audio drawer.
+For the approved scheduler-drawer transplant, SIM should also pass `visualMode = SchedulerDrawerVisualMode.SIM` so the shared drawer can adopt the dark top-anchored SIM slab while `AgentShell` keeps the standard presentation.
+In debug builds, SIM may also surface a visible explicit `REC` control inside this drawer as a scheduler-local test aid, but that control must still route through the same scheduler `processAudio(...)` lane rather than audio-drawer ingestion.
 
 ---
 
@@ -77,9 +77,20 @@ Required meaning:
 - delete and mark-done must cancel any existing reminder for that task
 - restore-from-done must not reschedule reminders in T4.8
 - reschedule must cancel the old reminder before scheduling the new exact-time cascade
+- `FIRE_OFF` tasks must remain non-conflicting during SIM reschedule/follow-up execution; reschedule must not surface conflict state for them even if another exact task exists at the same instant
 - explicit day+clock reschedule phrasing such as `明天早上8点` must be interpreted through scheduler-owned deterministic parsing before any model-led exact-time fallback
 - explicit delta reschedule phrasing such as `推迟1小时` / `提前半小时` must be interpreted relative to the resolved or already-selected task start time rather than `nowIso`
+- reschedule target resolution must stay global across all non-done scheduler-owned task truth; current selected/opened task state and current visible page/date are not semantic authority
+- the runtime may use a scheduler-owned active retrieval index derived from `ScheduledTask` rows to build a bounded shortlist context pack for extraction
+- the delivered shortlist cap is top 8 candidates
+- a recent-task-set prior may be used only as a weak hint layer for reschedule matching
+- create ingress should persist optional `keyPerson` / `location` retrieval hints whenever Uni-A / Uni-B / Uni-M extraction supplies them
+- notes may enter the retrieval context pack only as weak evidence
+- selected-task follow-up reschedule may run a dedicated V2 shadow extractor for time semantics, but the shadow path must stay write-disabled and must not alter user-visible mutation results
+- the follow-up V2 shadow path must emit explicit parity / mismatch / invalid / failure observability without widening scheduler authority
+- task-scoped follow-up reschedule must resolve the target globally first; selected-task UI state may still support quick actions or prefill only
 - scheduler-drawer voice reschedule target resolution must be confidence-gated; low-confidence and near-tie results must surface explicit failure and no write
+- model-suggested task choice is advisory only and must be corroborated by scheduler-owned retrieval-index evidence before mutation
 - reminder-reliability prompt emission must be process-lifetime gated so one batch does not repeatedly re-prompt
 - the prompt content should adapt to current OEM risk rather than always showing a generic exact-alarm-only message
 - reminder scheduling failure must degrade safely without rolling back the task mutation result
@@ -97,8 +108,10 @@ Scheduler-drawer voice resolution rule:
 
 - the scheduler drawer mic may request reschedule within scheduler-owned scope
 - target resolution must not depend on SQL/exact-title equality alone
-- SIM debug builds may expose a visible explicit `REC` control inside the scheduler drawer for easier on-device testing while the physical badge path is unavailable
 - one clearly dominant task may be resolved and mutated
+- matching may use title plus persisted participant/location cues, weak notes digest context, and a weak recent-task-set prior
+- the extractor may only reason over a scheduler-owned bounded shortlist from the active retrieval index rather than the full task corpus
+- current visible page/date and selected/opened task state must not become semantic authority for target choice
 - after target resolution, exact day+clock tails such as `改到明天早上8点` must remain valid even when the tail itself does not restate the task title
 - after target resolution, explicit delta phrasing must anchor to that resolved task's persisted start time
 - ambiguous or weak matches must not mutate state

@@ -2,11 +2,13 @@ package com.smartsales.prism.ui.sim
 
 import com.smartsales.core.llm.ExecutorResult
 import com.smartsales.core.pipeline.PromptCompiler
+import com.smartsales.core.pipeline.RealGlobalRescheduleExtractionService
 import com.smartsales.core.pipeline.RealUniAExtractionService
 import com.smartsales.core.pipeline.RealUniBExtractionService
 import com.smartsales.core.pipeline.RealUniCExtractionService
 import com.smartsales.core.pipeline.RealUniMExtractionService
 import com.smartsales.core.telemetry.PipelineValve
+import com.smartsales.core.test.fakes.FakeActiveTaskRetrievalIndex
 import com.smartsales.core.test.fakes.FakeExecutor
 import com.smartsales.core.test.fakes.FakeInspirationRepository
 import com.smartsales.core.test.fakes.FakeScheduleBoard
@@ -17,8 +19,11 @@ import com.smartsales.prism.domain.memory.ConflictResult
 import com.smartsales.prism.domain.memory.ScheduleItem
 import com.smartsales.prism.domain.memory.ScheduleBoard
 import com.smartsales.prism.domain.memory.TargetResolution
+import com.smartsales.prism.domain.memory.TargetResolutionRequest
+import com.smartsales.prism.domain.memory.bypassesConflictEvaluation
 import com.smartsales.prism.domain.memory.overlapsInScheduleBoard
 import com.smartsales.core.test.fakes.FakeAlarmScheduler
+import com.smartsales.prism.domain.scheduler.ActiveTaskResolveResult
 import com.smartsales.prism.domain.scheduler.CreateVagueTaskParams
 import com.smartsales.prism.domain.scheduler.CreateTasksParams
 import com.smartsales.prism.domain.scheduler.FastTrackMutationEngine
@@ -45,6 +50,7 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -60,6 +66,7 @@ class SimSchedulerViewModelTest {
     private lateinit var taskRepository: FakeScheduledTaskRepository
     private lateinit var inspirationRepository: FakeInspirationRepository
     private lateinit var scheduleBoard: FakeScheduleBoard
+    private lateinit var activeTaskRetrievalIndex: FakeActiveTaskRetrievalIndex
     private lateinit var fakeExecutor: FakeExecutor
     private lateinit var asrService: StubAsrService
     private lateinit var timeProvider: FakeTimeProvider
@@ -78,6 +85,7 @@ class SimSchedulerViewModelTest {
         taskRepository = FakeScheduledTaskRepository()
         inspirationRepository = FakeInspirationRepository()
         scheduleBoard = FakeScheduleBoard()
+        activeTaskRetrievalIndex = FakeActiveTaskRetrievalIndex()
         fakeExecutor = FakeExecutor()
         asrService = StubAsrService()
         timeProvider = FakeTimeProvider()
@@ -100,6 +108,7 @@ class SimSchedulerViewModelTest {
             taskRepository = taskRepository,
             inspirationRepository = inspirationRepository,
             scheduleBoard = scheduleBoard,
+            activeTaskRetrievalIndex = activeTaskRetrievalIndex,
             alarmScheduler = alarmScheduler,
             exactAlarmPermissionGate = exactAlarmPermissionGate,
             fastTrackMutationEngine = FastTrackMutationEngine(
@@ -109,6 +118,7 @@ class SimSchedulerViewModelTest {
                 timeProvider = timeProvider
             ),
             asrService = asrService,
+            globalRescheduleExtractionService = RealGlobalRescheduleExtractionService(fakeExecutor, promptCompiler, schedulerLinter),
             uniMExtractionService = RealUniMExtractionService(fakeExecutor, promptCompiler, schedulerLinter),
             uniAExtractionService = RealUniAExtractionService(fakeExecutor, promptCompiler, schedulerLinter),
             uniBExtractionService = RealUniBExtractionService(fakeExecutor, promptCompiler, schedulerLinter),
@@ -548,17 +558,13 @@ class SimSchedulerViewModelTest {
             urgencyLevel = UrgencyLevel.L2_IMPORTANT
         )
         taskRepository.insertTask(original)
-        scheduleBoard.nextTargetResolution = TargetResolution.Resolved(
-            ScheduleItem(
-                entryId = "task-1",
-                title = "跟张总吃饭",
-                scheduledAt = original.startTime.toEpochMilli(),
-                durationMinutes = original.durationMinutes,
-                durationSource = com.smartsales.prism.domain.memory.DurationSource.DEFAULT,
-                conflictPolicy = com.smartsales.prism.domain.memory.ConflictPolicy.EXCLUSIVE
-            )
-        )
+        activeTaskRetrievalIndex.nextResolveResult = ActiveTaskResolveResult.Resolved("task-1")
         asrService.nextResult = AsrResult.Success("把跟张总吃饭改到明天下午四点半")
+        enqueueGlobalRescheduleExtraction(
+            targetQuery = "跟张总吃饭",
+            timeInstruction = "明天下午四点半",
+            targetPerson = "张总"
+        )
         fakeExecutor.enqueueResponse(
             ExecutorResult.Success(
                 """
@@ -594,17 +600,12 @@ class SimSchedulerViewModelTest {
             urgencyLevel = UrgencyLevel.L2_IMPORTANT
         )
         taskRepository.insertTask(original)
-        scheduleBoard.nextTargetResolution = TargetResolution.Resolved(
-            ScheduleItem(
-                entryId = "task-1",
-                title = "赶高铁",
-                scheduledAt = original.startTime.toEpochMilli(),
-                durationMinutes = original.durationMinutes,
-                durationSource = com.smartsales.prism.domain.memory.DurationSource.DEFAULT,
-                conflictPolicy = com.smartsales.prism.domain.memory.ConflictPolicy.EXCLUSIVE
-            )
-        )
+        activeTaskRetrievalIndex.nextResolveResult = ActiveTaskResolveResult.Resolved("task-1")
         asrService.nextResult = AsrResult.Success("把赶高铁的时间改到明天早上8点")
+        enqueueGlobalRescheduleExtraction(
+            targetQuery = "赶高铁",
+            timeInstruction = "明天早上8点"
+        )
 
         viewModel.processAudio(File("dummy.wav"))
         advanceUntilIdle()
@@ -612,7 +613,7 @@ class SimSchedulerViewModelTest {
         val updated = taskRepository.getTask("task-1")
         assertNotNull(updated)
         assertEquals(Instant.parse("2026-03-21T00:00:00Z"), updated!!.startTime)
-        assertTrue(fakeExecutor.executedPrompts.isEmpty())
+        assertTrue(fakeExecutor.executedPrompts.isNotEmpty())
     }
 
     @Test
@@ -624,17 +625,12 @@ class SimSchedulerViewModelTest {
             urgencyLevel = UrgencyLevel.L2_IMPORTANT
         )
         taskRepository.insertTask(original)
-        scheduleBoard.nextTargetResolution = TargetResolution.Resolved(
-            ScheduleItem(
-                entryId = "task-1",
-                title = "赶高铁",
-                scheduledAt = original.startTime.toEpochMilli(),
-                durationMinutes = original.durationMinutes,
-                durationSource = com.smartsales.prism.domain.memory.DurationSource.DEFAULT,
-                conflictPolicy = com.smartsales.prism.domain.memory.ConflictPolicy.EXCLUSIVE
-            )
-        )
+        activeTaskRetrievalIndex.nextResolveResult = ActiveTaskResolveResult.Resolved("task-1")
         asrService.nextResult = AsrResult.Success("赶高铁时间推迟1个小时")
+        enqueueGlobalRescheduleExtraction(
+            targetQuery = "赶高铁",
+            timeInstruction = "推迟1个小时"
+        )
 
         viewModel.processAudio(File("dummy.wav"))
         advanceUntilIdle()
@@ -643,7 +639,7 @@ class SimSchedulerViewModelTest {
         assertNotNull(updated)
         assertEquals(Instant.parse("2026-03-20T10:00:00Z"), updated!!.startTime)
         assertFalse(updated.hasConflict)
-        assertTrue(fakeExecutor.executedPrompts.isEmpty())
+        assertTrue(fakeExecutor.executedPrompts.isNotEmpty())
     }
 
     @Test
@@ -656,16 +652,7 @@ class SimSchedulerViewModelTest {
             hasConflict = true
         )
         taskRepository.insertTask(original)
-        scheduleBoard.nextTargetResolution = TargetResolution.Resolved(
-            ScheduleItem(
-                entryId = "task-1",
-                title = "赶高铁",
-                scheduledAt = original.startTime.toEpochMilli(),
-                durationMinutes = original.durationMinutes,
-                durationSource = com.smartsales.prism.domain.memory.DurationSource.DEFAULT,
-                conflictPolicy = com.smartsales.prism.domain.memory.ConflictPolicy.EXCLUSIVE
-            )
-        )
+        activeTaskRetrievalIndex.nextResolveResult = ActiveTaskResolveResult.Resolved("task-1")
         scheduleBoard.nextConflictResult = ConflictResult.Conflict(
             overlaps = listOf(
                 ScheduleItem(
@@ -679,6 +666,10 @@ class SimSchedulerViewModelTest {
             )
         )
         asrService.nextResult = AsrResult.Success("赶高铁时间推迟1个小时")
+        enqueueGlobalRescheduleExtraction(
+            targetQuery = "赶高铁",
+            timeInstruction = "推迟1个小时"
+        )
 
         viewModel.processAudio(File("dummy.wav"))
         advanceUntilIdle()
@@ -688,7 +679,45 @@ class SimSchedulerViewModelTest {
         assertEquals(Instant.parse("2026-03-20T10:00:00Z"), updated!!.startTime)
         assertTrue(updated.hasConflict)
         assertEquals("与「叫我吃饭」时间冲突", updated.conflictSummary)
-        assertTrue(fakeExecutor.executedPrompts.isEmpty())
+        assertTrue(fakeExecutor.executedPrompts.isNotEmpty())
+    }
+
+    @Test
+    fun `processAudio scheduler drawer voice reschedule keeps fire off task non conflicting`() = runTest {
+        val original = scheduledTask(
+            id = "task-fireoff",
+            title = "提醒我喝水",
+            startTime = Instant.parse("2026-03-20T09:00:00Z"),
+            urgencyLevel = UrgencyLevel.FIRE_OFF
+        )
+        taskRepository.insertTask(original)
+        activeTaskRetrievalIndex.nextResolveResult = ActiveTaskResolveResult.Resolved("task-fireoff")
+        scheduleBoard.nextConflictResult = ConflictResult.Conflict(
+            overlaps = listOf(
+                ScheduleItem(
+                    entryId = "task-2",
+                    title = "客户会议",
+                    scheduledAt = Instant.parse("2026-03-20T10:00:00Z").toEpochMilli(),
+                    durationMinutes = 60,
+                    durationSource = com.smartsales.prism.domain.memory.DurationSource.DEFAULT,
+                    conflictPolicy = com.smartsales.prism.domain.memory.ConflictPolicy.EXCLUSIVE
+                )
+            )
+        )
+        asrService.nextResult = AsrResult.Success("提醒我喝水推迟1个小时")
+        enqueueGlobalRescheduleExtraction(
+            targetQuery = "提醒我喝水",
+            timeInstruction = "推迟1个小时"
+        )
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        val updated = taskRepository.getTask("task-fireoff")
+        assertNotNull(updated)
+        assertEquals(Instant.parse("2026-03-20T10:00:00Z"), updated!!.startTime)
+        assertFalse(updated.hasConflict)
+        assertNull(scheduleBoard.lastDurationMinutes)
     }
 
     @Test
@@ -700,8 +729,12 @@ class SimSchedulerViewModelTest {
             urgencyLevel = UrgencyLevel.L2_IMPORTANT
         )
         taskRepository.insertTask(original)
-        scheduleBoard.nextTargetResolution = TargetResolution.NoMatch("那个会议")
+        activeTaskRetrievalIndex.nextResolveResult = ActiveTaskResolveResult.NoMatch("那个会议")
         asrService.nextResult = AsrResult.Success("把那个会议改到晚上九点")
+        enqueueGlobalRescheduleExtraction(
+            targetQuery = "那个会议",
+            timeInstruction = "晚上九点"
+        )
 
         viewModel.processAudio(File("dummy.wav"))
         advanceUntilIdle()
@@ -719,11 +752,15 @@ class SimSchedulerViewModelTest {
             urgencyLevel = UrgencyLevel.L2_IMPORTANT
         )
         taskRepository.insertTask(original)
-        scheduleBoard.nextTargetResolution = TargetResolution.Ambiguous(
+        activeTaskRetrievalIndex.nextResolveResult = ActiveTaskResolveResult.Ambiguous(
             query = "客户复盘",
             candidateIds = listOf("task-1", "task-2")
         )
         asrService.nextResult = AsrResult.Success("把客户复盘改到晚上九点")
+        enqueueGlobalRescheduleExtraction(
+            targetQuery = "客户复盘",
+            timeInstruction = "晚上九点"
+        )
 
         viewModel.processAudio(File("dummy.wav"))
         advanceUntilIdle()
@@ -1550,6 +1587,27 @@ class SimSchedulerViewModelTest {
         fakeExecutor.enqueueResponse(ExecutorResult.Success(payload))
     }
 
+    private fun enqueueGlobalRescheduleExtraction(
+        targetQuery: String,
+        timeInstruction: String,
+        targetPerson: String? = null,
+        targetLocation: String? = null
+    ) {
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "RESCHEDULE_TARGETED",
+                  "targetQuery": "$targetQuery",
+                  "targetPerson": ${targetPerson?.let { "\"$it\"" } ?: "null"},
+                  "targetLocation": ${targetLocation?.let { "\"$it\"" } ?: "null"},
+                  "timeInstruction": "$timeInstruction"
+                }
+                """.trimIndent()
+            )
+        )
+    }
+
     private fun enqueueExactCreateResponse(
         startTimeIso: String,
         title: String = "开会",
@@ -1593,6 +1651,10 @@ class SimSchedulerViewModelTest {
         override suspend fun refresh() = Unit
 
         override suspend fun findLexicalMatch(targetQuery: String): ScheduleItem? = null
+
+        override suspend fun resolveTarget(request: TargetResolutionRequest): TargetResolution {
+            return TargetResolution.NoMatch(request.describeForFailure())
+        }
     }
 
     private class DerivedConflictScheduleBoard(
@@ -1608,6 +1670,7 @@ class SimSchedulerViewModelTest {
         ): ConflictResult {
             val overlaps = _upcomingItems.value.filter { item ->
                 item.entryId != excludeId &&
+                    !bypassesConflictEvaluation(item.urgencyLevel) &&
                     !item.isVague &&
                     item.conflictPolicy == com.smartsales.prism.domain.memory.ConflictPolicy.EXCLUSIVE &&
                     overlapsInScheduleBoard(
@@ -1623,6 +1686,10 @@ class SimSchedulerViewModelTest {
         override suspend fun refresh() = Unit
 
         override suspend fun findLexicalMatch(targetQuery: String): ScheduleItem? = null
+
+        override suspend fun resolveTarget(request: TargetResolutionRequest): TargetResolution {
+            return TargetResolution.NoMatch(request.describeForFailure())
+        }
     }
 
     private class StubAsrService : AsrService {

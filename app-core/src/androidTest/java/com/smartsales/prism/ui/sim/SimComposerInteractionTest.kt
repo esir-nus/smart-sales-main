@@ -12,9 +12,6 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.smartsales.prism.ui.AgentIntelligenceScreen
 import com.smartsales.prism.ui.AgentIntelligenceVisualMode
-import com.smartsales.prism.ui.SIM_ATTACH_BUTTON_TEST_TAG
-import com.smartsales.prism.ui.SIM_INPUT_FIELD_TEST_TAG
-import com.smartsales.prism.ui.SIM_SEND_BUTTON_TEST_TAG
 import com.smartsales.prism.ui.fakes.FakeAgentViewModel
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -33,42 +30,19 @@ class SimComposerInteractionTest {
         var attachClickCount = 0
 
         composeTestRule.setContent {
-            var headerBottomPx by remember { mutableStateOf<Float?>(null) }
-            var composerTopPx by remember { mutableStateOf<Float?>(null) }
-            var rootHeightPx by remember { mutableStateOf(0f) }
-            val gestureAnchors = remember(headerBottomPx, composerTopPx, rootHeightPx) {
-                buildSimGestureAnchors(
-                    headerBottomPx = headerBottomPx,
-                    composerTopPx = composerTopPx,
-                    rootHeightPx = rootHeightPx
-                )
-            }
-
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .onGloballyPositioned { coordinates ->
-                        rootHeightPx = coordinates.size.height.toFloat()
-                    }
-            ) {
+            Box(modifier = Modifier.fillMaxSize()) {
                 AgentIntelligenceScreen(
                     viewModel = viewModel,
                     visualMode = AgentIntelligenceVisualMode.SIM,
                     showDebugButton = false,
                     onAttachClick = { attachClickCount += 1 },
-                    onSimHeaderBoundsChanged = { bounds ->
-                        headerBottomPx = bounds.bottom
-                    },
-                    onSimComposerBoundsChanged = { bounds ->
-                        composerTopPx = bounds.top
-                    }
-                )
-                SimDrawerEdgeGestureLayer(
-                    state = SimShellState(),
-                    isImeVisible = false,
-                    gestureAnchors = gestureAnchors,
-                    onOpenScheduler = { schedulerOpenCount += 1 },
-                    onOpenAudioBrowse = { audioOpenCount += 1 }
+                    enableSimSchedulerPullGesture = true,
+                    enableSimAudioPullGesture = true,
+                    onSimSchedulerPullOpen = { schedulerOpenCount += 1 },
+                    onSimAudioPullOpen = { audioOpenCount += 1 },
+                    simVoiceDraftStateOverride = SimVoiceDraftUiState(),
+                    simVoiceDraftEnabledOverride = true,
+                    onSimVoiceDraftStart = { false }
                 )
             }
         }
@@ -94,6 +68,61 @@ class SimComposerInteractionTest {
             assertEquals(0, schedulerOpenCount)
             assertEquals(0, audioOpenCount)
             assertEquals(1, attachClickCount)
+            assertEquals("", viewModel.inputText.value)
+            assertEquals(1, viewModel.history.value.size)
+        }
+    }
+
+    @Test
+    fun simComposer_voiceDraftFillsInputAndTurnsActionIntoSend() {
+        val viewModel = FakeAgentViewModel()
+        var startCount = 0
+        var finishCount = 0
+
+        composeTestRule.setContent {
+            var voiceDraftState by remember { mutableStateOf(SimVoiceDraftUiState()) }
+
+            Box(modifier = Modifier.fillMaxSize()) {
+                AgentIntelligenceScreen(
+                    viewModel = viewModel,
+                    visualMode = AgentIntelligenceVisualMode.SIM,
+                    showDebugButton = false,
+                    simVoiceDraftStateOverride = voiceDraftState,
+                    simVoiceDraftEnabledOverride = true,
+                    onSimVoiceDraftStart = {
+                        startCount += 1
+                        voiceDraftState = voiceDraftState.copy(isRecording = true)
+                        true
+                    },
+                    onSimVoiceDraftFinish = {
+                        finishCount += 1
+                        viewModel.updateInput("语音草稿内容")
+                        voiceDraftState = SimVoiceDraftUiState()
+                    },
+                    onSimVoiceDraftCancel = {
+                        voiceDraftState = SimVoiceDraftUiState()
+                    }
+                )
+            }
+        }
+
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag(SIM_SEND_BUTTON_TEST_TAG)
+            .assertExists()
+            .performTouchInput {
+                down(center)
+                up()
+            }
+
+        composeTestRule.onNodeWithText("语音草稿内容").assertExists()
+
+        composeTestRule.onNodeWithTag(SIM_SEND_BUTTON_TEST_TAG)
+            .performClick()
+
+        composeTestRule.runOnIdle {
+            assertEquals(1, startCount)
+            assertEquals(1, finishCount)
             assertEquals("", viewModel.inputText.value)
             assertEquals(1, viewModel.history.value.size)
         }

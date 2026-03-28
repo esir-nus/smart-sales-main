@@ -12,6 +12,9 @@ import com.smartsales.core.test.fakes.FakeExecutor
 import com.smartsales.core.test.fakes.FakeScheduleBoard
 import com.smartsales.core.test.fakes.FakeUserProfileRepository
 import com.smartsales.data.oss.OssUploader
+import com.smartsales.prism.data.audio.DeviceSpeechFailureReason
+import com.smartsales.prism.data.audio.DeviceSpeechRecognitionResult
+import com.smartsales.prism.data.audio.DeviceSpeechRecognizer
 import com.smartsales.prism.data.audio.SIM_AUDIO_METADATA_FILENAME
 import com.smartsales.prism.data.audio.SimAudioRepository
 import com.smartsales.prism.data.audio.simArtifactFilename
@@ -32,10 +35,13 @@ import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.domain.scheduler.UrgencyLevel
 import com.smartsales.prism.domain.scheduler.fakes.FakeTimeProvider
 import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
+import com.smartsales.prism.domain.tingwu.TingwuQuestionAnswer
+import com.smartsales.prism.domain.tingwu.TingwuSpeakerSummary
 import com.smartsales.prism.domain.tingwu.TingwuPipeline
 import com.smartsales.prism.domain.tingwu.TingwuSmartSummary
 import java.time.Instant
 import java.io.File
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -73,6 +79,7 @@ class SimAgentViewModelTest {
     private lateinit var fakeExecutor: FakeExecutor
     private lateinit var userProfileRepository: FakeUserProfileRepository
     private lateinit var timeProvider: FakeTimeProvider
+    private lateinit var speechRecognizer: FakeDeviceSpeechRecognizer
     private lateinit var uniAExtractionService: RealUniAExtractionService
     private lateinit var globalRescheduleExtractionService: RealGlobalRescheduleExtractionService
     private lateinit var followUpRescheduleExtractionService: RealFollowUpRescheduleExtractionService
@@ -87,6 +94,7 @@ class SimAgentViewModelTest {
         alarmScheduler = FakeAlarmScheduler()
         fakeExecutor = FakeExecutor()
         userProfileRepository = FakeUserProfileRepository()
+        speechRecognizer = FakeDeviceSpeechRecognizer()
         timeProvider = FakeTimeProvider().apply {
             fixedInstant = Instant.parse("2026-03-22T08:00:00Z")
         }
@@ -123,6 +131,97 @@ class SimAgentViewModelTest {
         assertTrue(viewModel.groupedSessions.value.isEmpty())
         assertNull(viewModel.currentSessionId.value)
         assertTrue(viewModel.history.value.isEmpty())
+    }
+
+    @Test
+    fun `hero greeting uses current profile display name`() = runTest {
+        val viewModel = newViewModel()
+
+        assertEquals("你好, Default User", viewModel.heroGreeting.value)
+    }
+
+    @Test
+    fun `hero greeting reacts to profile display name updates and falls back when blank`() = runTest {
+        val viewModel = newViewModel()
+
+        userProfileRepository.updateProfile(
+            userProfileRepository.profile.value.copy(displayName = "孙扬浩")
+        )
+        advanceUntilIdle()
+        assertEquals("你好, 孙扬浩", viewModel.heroGreeting.value)
+
+        userProfileRepository.updateProfile(
+            userProfileRepository.profile.value.copy(displayName = "   ")
+        )
+        advanceUntilIdle()
+        assertEquals("你好, SmartSales 用户", viewModel.heroGreeting.value)
+    }
+
+    @Test
+    fun `voice draft success populates input without auto send`() = runTest {
+        val viewModel = newViewModel()
+        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success("帮我约周四下午两点")
+
+        assertTrue(viewModel.startVoiceDraft())
+        viewModel.finishVoiceDraft()
+        advanceUntilIdle()
+
+        assertEquals("帮我约周四下午两点", viewModel.inputText.value)
+        assertFalse(viewModel.isSending.value)
+        assertTrue(viewModel.history.value.isEmpty())
+        assertFalse(viewModel.voiceDraftState.value.isRecording)
+        assertFalse(viewModel.voiceDraftState.value.isProcessing)
+    }
+
+    @Test
+    fun `voice draft permission grant auto starts tap to finish session`() {
+        val viewModel = newViewModel()
+
+        viewModel.onVoiceDraftPermissionRequested()
+        assertTrue(viewModel.voiceDraftState.value.awaitingMicPermission)
+
+        viewModel.onVoiceDraftPermissionResult(granted = true)
+
+        val state = viewModel.voiceDraftState.value
+        assertTrue(state.isRecording)
+        assertFalse(state.awaitingMicPermission)
+        assertEquals(SimVoiceDraftInteractionMode.TAP_TO_SEND, state.interactionMode)
+        assertTrue(speechRecognizer.isListening())
+    }
+
+    @Test
+    fun `voice draft no match resets without mutating history`() = runTest {
+        val viewModel = newViewModel()
+        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Failure(
+            reason = DeviceSpeechFailureReason.NO_MATCH,
+            message = "没有识别到清晰语音"
+        )
+
+        assertTrue(viewModel.startVoiceDraft())
+        viewModel.finishVoiceDraft()
+        advanceUntilIdle()
+
+        assertEquals("", viewModel.inputText.value)
+        assertTrue(viewModel.history.value.isEmpty())
+        assertFalse(viewModel.voiceDraftState.value.isRecording)
+        assertFalse(viewModel.voiceDraftState.value.isProcessing)
+        assertEquals("没有识别到清晰语音", viewModel.toastMessage.value)
+    }
+
+    @Test
+    fun `cancel voice draft blocks late recognizer result from writing input`() = runTest {
+        val viewModel = newViewModel()
+        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success("稍后到达")
+        speechRecognizer.finishDelayMillis = 500L
+
+        assertTrue(viewModel.startVoiceDraft())
+        viewModel.finishVoiceDraft()
+        viewModel.cancelVoiceDraft()
+        advanceUntilIdle()
+
+        assertEquals("", viewModel.inputText.value)
+        assertFalse(viewModel.voiceDraftState.value.isRecording)
+        assertFalse(viewModel.voiceDraftState.value.isProcessing)
     }
 
     @Test
@@ -328,6 +427,13 @@ class SimAgentViewModelTest {
                 status = TranscriptionStatus.TRANSCRIBED
             )
         )
+        writeArtifacts(
+            audioId = "audio_attach_1",
+            artifacts = TingwuJobArtifacts(
+                transcriptMarkdown = "客户问这周是否能完成报价。",
+                smartSummary = TingwuSmartSummary(summary = "客户希望本周完成报价")
+            )
+        )
         val viewModel = newViewModel()
         fakeExecutor.enqueueResponse(ExecutorResult.Success("先继续普通聊天。"))
 
@@ -343,14 +449,17 @@ class SimAgentViewModelTest {
             summary = "客户录音摘要",
             entersPendingFlow = false
         )
+        advanceUntilIdle()
 
         assertEquals(generalSessionId, viewModel.currentSessionId.value)
         assertEquals("audio_attach_1", viewModel.currentLinkedAudioId.value)
         assertTrue(viewModel.history.value.size > historyBeforeAttach)
+        val introMessage = viewModel.history.value[historyBeforeAttach] as ChatMessage.Ai
+        val intro = introMessage.uiState as UiState.Response
+        assertTrue(intro.content.contains("已接入《Attach.wav》"))
+        assertFalse(intro.content.contains("客户录音摘要"))
         val lastMessage = viewModel.history.value.last() as ChatMessage.Ai
-        val response = lastMessage.uiState as UiState.Response
-        assertTrue(response.content.contains("已接入《Attach.wav》"))
-        assertTrue(response.content.contains("客户录音摘要"))
+        assertTrue(lastMessage.uiState is UiState.AudioArtifacts)
     }
 
     @Test
@@ -368,7 +477,15 @@ class SimAgentViewModelTest {
             audioId = "audio_grounded_1",
             artifacts = TingwuJobArtifacts(
                 transcriptMarkdown = "客户说下周启动试点。",
-                smartSummary = TingwuSmartSummary(summary = "客户希望下周启动试点")
+                smartSummary = TingwuSmartSummary(
+                    summary = "客户希望下周启动试点",
+                    speakerSummaries = listOf(
+                        TingwuSpeakerSummary(name = "客户", summary = "确认下周推进试点")
+                    ),
+                    questionAnswers = listOf(
+                        TingwuQuestionAnswer(question = "什么时候启动？", answer = "下周")
+                    )
+                )
             )
         )
         fakeExecutor.enqueueResponse(ExecutorResult.Success("可以，录音里提到客户希望下周启动试点。"))
@@ -380,6 +497,7 @@ class SimAgentViewModelTest {
             summary = "已有摘要",
             entersPendingFlow = false
         )
+        advanceUntilIdle()
         viewModel.updateInput("客户什么时候启动？")
         viewModel.send()
         advanceUntilIdle()
@@ -390,6 +508,8 @@ class SimAgentViewModelTest {
         val response = lastMessage.uiState as UiState.Response
         assertTrue(response.content.contains("下周启动"))
         assertTrue(fakeExecutor.executedPrompts.last().contains("客户希望下周启动试点"))
+        assertTrue(fakeExecutor.executedPrompts.last().contains("发言人总结"))
+        assertTrue(fakeExecutor.executedPrompts.last().contains("问答回顾"))
         assertTrue(fakeExecutor.executedPrompts.last().contains("客户什么时候启动"))
     }
 
@@ -1121,6 +1241,64 @@ class SimAgentViewModelTest {
     }
 
     @Test
+    fun `scheduler follow up send keeps fire off task non conflicting on reschedule`() = runTest {
+        val taskId = taskRepository.insertTask(
+            ScheduledTask(
+                id = "task_follow_fireoff",
+                timeDisplay = "16:00",
+                title = "提醒我喝水",
+                urgencyLevel = UrgencyLevel.FIRE_OFF,
+                startTime = Instant.parse("2026-03-22T08:00:00Z"),
+                durationMinutes = 0
+            )
+        )
+        scheduleBoard.nextConflictResult = com.smartsales.prism.domain.memory.ConflictResult.Conflict(
+            overlaps = listOf(
+                com.smartsales.prism.domain.memory.ScheduleItem(
+                    entryId = "task_other",
+                    title = "客户会议",
+                    scheduledAt = Instant.parse("2026-03-22T09:00:00Z").toEpochMilli(),
+                    durationMinutes = 60,
+                    durationSource = com.smartsales.prism.domain.memory.DurationSource.DEFAULT,
+                    conflictPolicy = com.smartsales.prism.domain.memory.ConflictPolicy.EXCLUSIVE
+                )
+            )
+        )
+        val viewModel = newViewModel()
+        val sessionId = viewModel.createBadgeSchedulerFollowUpSession(
+            threadId = "thread_follow_fireoff",
+            transcript = "安排喝水提醒",
+            tasks = listOf(
+                SchedulerFollowUpTaskSummary(
+                    taskId = taskId,
+                    title = "提醒我喝水",
+                    dayOffset = 0,
+                    scheduledAtMillis = Instant.parse("2026-03-22T08:00:00Z").toEpochMilli(),
+                    durationMinutes = 0
+                )
+            )
+        )
+        viewModel.switchSession(sessionId!!)
+        activeTaskRetrievalIndex.nextResolveResult = ActiveTaskResolveResult.Resolved(taskId)
+
+        enqueueGlobalRescheduleExtraction(
+            targetQuery = "提醒我喝水",
+            timeInstruction = "推迟1个小时"
+        )
+        enqueueFollowUpShadowDelta(minutes = 60)
+        viewModel.updateInput("推迟1个小时")
+        viewModel.send()
+        advanceUntilIdle()
+
+        val updated = taskRepository.getTask(taskId)
+        assertEquals(Instant.parse("2026-03-22T09:00:00Z"), updated?.startTime)
+        assertTrue(updated?.hasConflict == false)
+        assertNull(scheduleBoard.lastDurationMinutes)
+        val lastMessage = viewModel.history.value.last() as ChatMessage.Ai
+        assertFalse((lastMessage.uiState as UiState.Response).content.contains("注意："))
+    }
+
+    @Test
     fun `scheduler follow up send safely blocks mutation when global target extraction stays unsupported`() = runTest {
         taskRepository.insertTask(
             ScheduledTask(
@@ -1170,6 +1348,7 @@ class SimAgentViewModelTest {
         return SimAgentViewModel(
             sessionRepository = sessionRepository,
             audioRepository = audioRepository,
+            speechRecognizer = speechRecognizer,
             taskRepository = taskRepository,
             scheduleBoard = scheduleBoard,
             activeTaskRetrievalIndex = activeTaskRetrievalIndex,
@@ -1181,6 +1360,33 @@ class SimAgentViewModelTest {
             userProfileRepository = userProfileRepository,
             timeProvider = timeProvider
         )
+    }
+
+    private class FakeDeviceSpeechRecognizer : DeviceSpeechRecognizer {
+        var nextResult: DeviceSpeechRecognitionResult =
+            DeviceSpeechRecognitionResult.Success("默认语音")
+        var finishDelayMillis: Long = 0L
+        var failStart = false
+        private var listening = false
+
+        override fun startListening() {
+            if (failStart) error("start failed")
+            listening = true
+        }
+
+        override suspend fun finishListening(): DeviceSpeechRecognitionResult {
+            if (finishDelayMillis > 0L) {
+                delay(finishDelayMillis)
+            }
+            listening = false
+            return nextResult
+        }
+
+        override fun cancelListening() {
+            listening = false
+        }
+
+        override fun isListening(): Boolean = listening
     }
 
     private fun enqueueFollowUpShadowDelta(minutes: Int) {

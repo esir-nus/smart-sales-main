@@ -157,6 +157,30 @@ class ScheduleBoardTest {
         // Then: 无冲突 (BACKGROUND 任务不冲突)
         assertEquals(ConflictResult.Clear, result)
     }
+
+    @Test
+    fun `existing fire off task does not block later exact task`() = runTest {
+        scheduleBoard.setItems(
+            listOf(
+                ScheduleItem(
+                    entryId = "fireoff",
+                    title = "提醒我喝水",
+                    scheduledAt = 15 * 60 * 60 * 1000L,
+                    durationMinutes = 0,
+                    durationSource = DurationSource.DEFAULT,
+                    urgencyLevel = com.smartsales.prism.domain.scheduler.UrgencyLevel.FIRE_OFF,
+                    conflictPolicy = ConflictPolicy.EXCLUSIVE
+                )
+            )
+        )
+
+        val result = scheduleBoard.checkConflict(
+            proposedStart = 15 * 60 * 60 * 1000L,
+            durationMinutes = 30
+        )
+
+        assertEquals(ConflictResult.Clear, result)
+    }
     
     // ===== Helper =====
     
@@ -195,6 +219,7 @@ class FakeScheduleBoard : ScheduleBoard {
     ): ConflictResult {
         val overlaps = _items.value.filter { slot ->
             slot.entryId != excludeId &&
+            !bypassesConflictEvaluation(slot.urgencyLevel) &&
             slot.conflictPolicy == ConflictPolicy.EXCLUSIVE &&
             overlapsInScheduleBoard(
                 proposedStart = proposedStart,
@@ -220,5 +245,10 @@ class FakeScheduleBoard : ScheduleBoard {
         if (query.isEmpty()) return null
         val exactMatches = _items.value.filter { it.title.lowercase().contains(query) }
         return if (exactMatches.size == 1) exactMatches.first() else null
+    }
+
+    override suspend fun resolveTarget(request: TargetResolutionRequest): TargetResolution {
+        return findLexicalMatch(request.targetQuery)?.let(TargetResolution::Resolved)
+            ?: TargetResolution.NoMatch(request.describeForFailure())
     }
 }

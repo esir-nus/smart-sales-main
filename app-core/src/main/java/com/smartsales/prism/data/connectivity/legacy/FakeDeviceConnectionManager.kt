@@ -23,9 +23,18 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
     var stubRetryResult: Result<Unit> = Result.Success(Unit)
     var stubHotspotResult: Result<WifiCredentials> = Result.Error(IllegalStateException("Not stubbed"))
     var stubNetworkResult: Result<DeviceNetworkStatus> = Result.Error(IllegalStateException("Not stubbed"))
+    var stubConfirmManualWifiProvisionResult: ConnectionState = ConnectionState.WifiProvisioned(
+        session = BleSession.fromPeripheral(BlePeripheral("fake-id", "FakeDevice", -50)),
+        status = ProvisioningStatus(
+            wifiSsid = "FakeWifi",
+            handshakeId = "fake-handshake",
+            credentialsHash = "fake-credentials"
+        )
+    )
     
     val selectCalls = mutableListOf<BlePeripheral>()
     val pairingCalls = mutableListOf<Pair<BlePeripheral, WifiCredentials>>()
+    val confirmManualWifiProvisionCalls = mutableListOf<WifiCredentials>()
     var retryCalls = 0
     var disconnectCalls = 0
     var forgetCalls = 0
@@ -61,6 +70,11 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
     override suspend fun requestHotspotCredentials(): Result<WifiCredentials> = stubHotspotResult
     
     override suspend fun queryNetworkStatus(): Result<DeviceNetworkStatus> = stubNetworkResult
+
+    override suspend fun confirmManualWifiProvision(credentials: WifiCredentials): ConnectionState {
+        confirmManualWifiProvisionCalls += credentials
+        return stubConfirmManualWifiProvisionResult
+    }
     
     override fun scheduleAutoReconnectIfNeeded() {
         autoReconnectCalls++
@@ -98,6 +112,7 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
         selectCalls.clear()
         pairingCalls.clear()
         retryCalls = 0
+        confirmManualWifiProvisionCalls.clear()
         disconnectCalls = 0
         forgetCalls = 0
         autoReconnectCalls = 0

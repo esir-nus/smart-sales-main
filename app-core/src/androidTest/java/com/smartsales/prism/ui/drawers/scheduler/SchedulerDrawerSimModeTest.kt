@@ -11,6 +11,8 @@ import org.junit.Rule
 import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.ZoneId
 
 class SchedulerDrawerSimModeTest {
 
@@ -212,6 +214,67 @@ class SchedulerDrawerSimModeTest {
             openedActions
         )
         composeTestRule.onNodeWithText("精确闹钟权限").assertDoesNotExist()
+    }
+
+    @Test
+    fun simModeStartOnlyTaskHidesTrailingEllipsisTime() {
+        val start = LocalDateTime.of(2026, 3, 26, 17, 0).atZone(ZoneId.systemDefault()).toInstant()
+        val viewModel = FakeSchedulerViewModel().apply {
+            debugSetTimelineItems(
+                listOf(
+                    ScheduledTask(
+                        id = "task_start_only_sim",
+                        timeDisplay = "17:00 - ...",
+                        title = "SIM start-only task",
+                        startTime = start,
+                        endTime = null,
+                        durationMinutes = 0
+                    )
+                )
+            )
+        }
+
+        composeTestRule.setContent {
+            SchedulerDrawer(
+                isOpen = true,
+                onDismiss = {},
+                visualMode = SchedulerDrawerVisualMode.SIM,
+                enableInspirationMultiSelect = false,
+                viewModel = viewModel
+            )
+        }
+
+        composeTestRule.onNodeWithText("17:00 - ...").assertDoesNotExist()
+        composeTestRule.onAllNodesWithText("17:00").assertCountEquals(2)
+    }
+
+    @Test
+    fun standardModePreservesStartOnlyEllipsisRailText() {
+        val start = LocalDateTime.of(2026, 3, 26, 17, 0).atZone(ZoneId.systemDefault()).toInstant()
+        val viewModel = FakeSchedulerViewModel().apply {
+            debugSetTimelineItems(
+                listOf(
+                    ScheduledTask(
+                        id = "task_start_only_standard",
+                        timeDisplay = "17:00 - ...",
+                        title = "Standard start-only task",
+                        startTime = start,
+                        endTime = null,
+                        durationMinutes = 0
+                    )
+                )
+            )
+        }
+
+        composeTestRule.setContent {
+            SchedulerDrawer(
+                isOpen = true,
+                onDismiss = {},
+                viewModel = viewModel
+            )
+        }
+
+        composeTestRule.onNodeWithText("17:00 - ...").assertExists()
     }
 
     private fun hasDateAttentionKind(kind: String): SemanticsMatcher {

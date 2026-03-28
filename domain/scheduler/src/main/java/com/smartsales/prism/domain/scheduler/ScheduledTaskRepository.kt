@@ -33,6 +33,12 @@ interface ScheduledTaskRepository {
     suspend fun getTask(id: String): ScheduledTask?
 
     /**
+     * 获取全部未完成任务。
+     * 用于全局 follow-up 检索候选构建。
+     */
+    suspend fun getActiveTasks(): List<ScheduledTask> = emptyList()
+
+    /**
      * 更新任务
      */
     suspend fun updateTask(task: ScheduledTask)
@@ -74,7 +80,5 @@ interface ScheduledTaskRepository {
      */
     fun observeByEntityId(entityId: String): Flow<List<ScheduledTask>>
 }
-
-
 
 

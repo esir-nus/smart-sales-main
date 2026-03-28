@@ -47,7 +47,7 @@ Current composition:
 
 ```text
 ┌──────────────────────────────────────────────┐
-│ [☰] [Badge]     即将：回访客户 · 15:00      [+] │
+│ [☰] [Badge]     最近：回访客户 · 15:00      [+] │
 └──────────────────────────────────────────────┘
 ```
 
@@ -58,7 +58,7 @@ The island renders one scheduler-backed summary line.
 Current copy pattern:
 
 - conflict item: `冲突：任务标题 · 时间`
-- normal upcoming item: `即将：任务标题 · 时间`
+- normal upcoming item: `最近：任务标题 · 时间`
 - idle fallback: `暂无待办`
 
 Current fallback rule:

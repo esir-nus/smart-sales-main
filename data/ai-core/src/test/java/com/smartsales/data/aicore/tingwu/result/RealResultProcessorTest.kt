@@ -11,6 +11,7 @@ import com.smartsales.data.aicore.tingwu.api.TingwuResultData
 import com.smartsales.data.aicore.tingwu.artifact.FakeTingwuArtifactFetcher
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -154,6 +155,36 @@ class RealResultProcessorTest {
         )
 
         assertNull(artifacts?.diarizedSegments)
+    }
+
+    @Test
+    fun `fetchSummarizationText preserves separate speaker and qa sections`() {
+        fakeArtifactFetcher.stubResponse(
+            "https://example.com/summary.json",
+            """
+                {
+                  "Summarization": {
+                    "ParagraphTitle": "会议概览",
+                    "ParagraphSummary": "客户希望下周启动试点",
+                    "ConversationalSummary": [
+                      {"SpeakerName": "客户", "Summary": "希望尽快推进"}
+                    ],
+                    "QuestionsAnsweringSummary": [
+                      {"Question": "什么时候启动？", "Answer": "下周"}
+                    ]
+                  }
+                }
+            """.trimIndent()
+        )
+
+        val rendered = processor.fetchSummarizationText(
+            mapOf("Summarization" to "https://example.com/summary.json")
+        )
+
+        assertTrue(rendered!!.contains("### 段落摘要"))
+        assertTrue(rendered.contains("### 发言人总结"))
+        assertTrue(rendered.contains("### 问答回顾"))
+        assertTrue(rendered.contains("客户希望下周启动试点"))
     }
 
     // =========================================================================

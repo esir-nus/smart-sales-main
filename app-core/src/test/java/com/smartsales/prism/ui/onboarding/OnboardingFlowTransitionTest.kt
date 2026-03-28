@@ -85,6 +85,26 @@ class OnboardingFlowTransitionTest {
     fun `allow exit policy keeps explicit exit affordance and back free`() {
         assertTrue(shouldShowOnboardingExitAction(OnboardingExitPolicy.ALLOW_EXIT))
         assertFalse(shouldBlockOnboardingSystemBack(OnboardingExitPolicy.ALLOW_EXIT))
+        assertEquals(
+            "关闭",
+            resolveOnboardingExitActionLabel(
+                OnboardingHost.SIM_CONNECTIVITY,
+                OnboardingExitPolicy.ALLOW_EXIT
+            )
+        )
+    }
+
+    @Test
+    fun `explicit action only keeps skip affordance while back stays blocked`() {
+        assertTrue(shouldShowOnboardingExitAction(OnboardingExitPolicy.EXPLICIT_ACTION_ONLY))
+        assertTrue(shouldBlockOnboardingSystemBack(OnboardingExitPolicy.EXPLICIT_ACTION_ONLY))
+        assertEquals(
+            "跳过",
+            resolveOnboardingExitActionLabel(
+                OnboardingHost.SIM_CONNECTIVITY,
+                OnboardingExitPolicy.EXPLICIT_ACTION_ONLY
+            )
+        )
     }
 
     @Test

@@ -40,6 +40,13 @@ class FakeScheduledTaskRepository @Inject constructor() : ScheduledTaskRepositor
         return _items.value.filterIsInstance<ScheduledTask>().find { it.id == id }
     }
 
+    override suspend fun getActiveTasks(): List<ScheduledTask> {
+        return _items.value
+            .filterIsInstance<ScheduledTask>()
+            .filter { !it.isDone }
+            .sortedWith(compareBy<ScheduledTask> { it.urgencyLevel.ordinal }.thenBy { it.startTime })
+    }
+
     override suspend fun updateTask(task: ScheduledTask) {
         delay(200) // Fake write
         val current = _items.value.toMutableList()

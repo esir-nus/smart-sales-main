@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -53,6 +54,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -97,7 +99,6 @@ import com.smartsales.prism.domain.pairing.ErrorReason
 import com.smartsales.prism.domain.pairing.PairingState
 import com.smartsales.prism.domain.pairing.WifiCredentials
 import com.smartsales.prism.ui.components.VoiceHandshakeBars
-import com.smartsales.prism.ui.components.prismTopSafeBandPadding
 import com.smartsales.prism.ui.components.rememberVoiceHandshakeWaveProgress
 import com.smartsales.prism.ui.components.prismTopSafeBandPadding
 import com.smartsales.prism.ui.sim.SimSharedAuroraBackground
@@ -144,15 +145,27 @@ internal data class OnboardingVisualCaptureState(
 
 enum class OnboardingExitPolicy {
     ALLOW_EXIT,
+    EXPLICIT_ACTION_ONLY,
     BLOCK_EXIT
 }
 
 internal fun shouldShowOnboardingExitAction(exitPolicy: OnboardingExitPolicy): Boolean {
-    return exitPolicy == OnboardingExitPolicy.ALLOW_EXIT
+    return exitPolicy != OnboardingExitPolicy.BLOCK_EXIT
 }
 
 internal fun shouldBlockOnboardingSystemBack(exitPolicy: OnboardingExitPolicy): Boolean {
-    return exitPolicy == OnboardingExitPolicy.BLOCK_EXIT
+    return exitPolicy != OnboardingExitPolicy.ALLOW_EXIT
+}
+
+internal fun resolveOnboardingExitActionLabel(
+    host: OnboardingHost,
+    exitPolicy: OnboardingExitPolicy
+): String {
+    return when {
+        host == OnboardingHost.SIM_CONNECTIVITY &&
+            exitPolicy == OnboardingExitPolicy.ALLOW_EXIT -> "关闭"
+        else -> "跳过"
+    }
 }
 
 @Composable
@@ -365,15 +378,24 @@ private fun OnboardingFrame(
                 .padding(horizontal = 24.dp, vertical = 20.dp)
         ) {
             if (shouldShowOnboardingExitAction(exitPolicy)) {
+                val compactSimSkipAction = host == OnboardingHost.SIM_CONNECTIVITY &&
+                    exitPolicy == OnboardingExitPolicy.EXPLICIT_ACTION_ONLY
                 TextButton(
                     onClick = onExit,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .prismTopSafeBandPadding()
+                        .padding(top = if (compactSimSkipAction) 2.dp else 0.dp),
+                    contentPadding = if (compactSimSkipAction) {
+                        PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                    } else {
+                        ButtonDefaults.TextButtonContentPadding
+                    }
                 ) {
                     Text(
-                        text = if (host == OnboardingHost.SIM_CONNECTIVITY) "关闭" else "跳过",
-                        color = OnboardingMuted
+                        text = resolveOnboardingExitActionLabel(host, exitPolicy),
+                        color = OnboardingMuted,
+                        fontSize = if (compactSimSkipAction) 12.sp else 14.sp
                     )
                 }
             }

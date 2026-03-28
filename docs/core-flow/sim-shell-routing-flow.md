@@ -63,7 +63,8 @@ Support surfaces/actions:
 
 Permitted shell transitions:
 
-- app launch -> discussion chat
+- app launch with completed SIM first-launch gate -> discussion chat
+- app launch after fresh install / reinstall -> forced SIM onboarding setup -> connectivity manager -> discussion chat
 - discussion chat -> normal message send/receive without any audio precondition
 - discussion chat -> scheduler drawer
 - discussion chat -> audio drawer
@@ -120,47 +121,49 @@ This is the top-level routing model for the SIM shell.
                     | Standalone SIM Entry |
                     +----------+-----------+
                                |
-                               v
-                    +----------------------+
-                    |   SIM Shell Mounted  |
-                    +----------+-----------+
-                               |
-                               v
-                    +----------------------+
-                    | Discussion Chat      |
-                    | Visible              |
-                    +---+----+-----+-----+-+
-                        |    |     |     |
-                        v    v     v     v
-              +-----------+  |  +------+ +----------------+
-              | Scheduler |  |  |Audio | | History / New |
-              | Drawer    |  |  |Drawer| | / Connectivity|
-              +-----+-----+  |  +--+---+ +--------+-------+
-                    |        |     |              |
-                    v        |     v              v
-             [Close Drawer]  | [Ask AI]   [Return to Chat]
-                    |        |     |
-                    v        |     v
-          +--------------------+   +--------------------+
-          | Discussion Chat    |   | Discussion Chat    |
-          | Visible            |   | Visible            |
-          +--------------------+   +---------+----------+
-                                             ^
-                                             |
-                                 +-----------+-----------+
-                                 | Badge Follow-Up Prompt|
-                                 +-----------+-----------+
-                                             ^
-                                             |
-                                [Badge Scheduler Completion]
-                                             |
-                                             v
-                                  +----------------------+
-                                  | Reselect Audio       |
-                                  +----------+-----------+
-                                             |
-                                             v
-                                  [Reopen Audio Drawer]
+                +--------------+--------------+
+                |                             |
+                v                             v
+   +-----------------------------+   +----------------------+
+   | SIM First-Launch Gate Open? |   |   SIM Shell Mounted  |
+   +-------------+---------------+   +----------+-----------+
+                 | yes                            |
+                 v                                v
+   +-----------------------------+      +----------------------+
+   | Forced SIM Onboarding Setup |      | Discussion Chat      |
+   | Visible                     |      | Visible              |
+   +-------------+---------------+      +---+----+-----+-----+-+
+                 |                             |    |     |     |
+                 v                             v    v     v     v
+   +-----------------------------+   +-----------+  |  +------+ +----------------+
+   | Connectivity Manager        |   | Scheduler |  |  |Audio | | History / New |
+   | Visible                     |   | Drawer    |  |  |Drawer| | / Connectivity|
+   +-------------+---------------+   +-----+-----+  |  +--+---+ +--------+-------+
+                 |                         |        |     |              |
+                 v                         v        |     v              v
+   +-----------------------------+  [Close Drawer]  | [Ask AI]   [Return to Chat]
+   | Discussion Chat             |         |        |     |
+   | Visible                     |         v        |     v
+   +-----------------------------+  +--------------------+   +--------------------+
+                                    | Discussion Chat    |   | Discussion Chat    |
+                                    | Visible            |   | Visible            |
+                                    +--------------------+   +---------+----------+
+                                                                     ^
+                                                                     |
+                                                         +-----------+-----------+
+                                                         | Badge Follow-Up Prompt|
+                                                         +-----------+-----------+
+                                                                     ^
+                                                                     |
+                                                        [Badge Scheduler Completion]
+                                                                     |
+                                                                     v
+                                                          +----------------------+
+                                                          | Reselect Audio       |
+                                                          +----------+-----------+
+                                                                     |
+                                                                     v
+                                                          [Reopen Audio Drawer]
 ```
 
 ---
@@ -212,6 +215,8 @@ When badge-origin completion created a follow-up session with multiple bound tas
 
 The SIM shell is behaviorally ready only when:
 
+- fresh SIM install / reinstall bootstraps the shell into forced onboarding before ordinary shell use
+- forced first-launch onboarding completion enters the contained connectivity manager first and only then allows ordinary shell use
 - SIM launch mounts a standalone shell
 - blank/new SIM chat is directly usable from the home surface
 - scheduler and audio drawers route correctly

@@ -1,6 +1,7 @@
 # ESP32 Communication Protocol (Colleague Notes)
 
-> **⚠️ This doc updated 2026-01-12 to match actual firmware behavior.**
+> **Historical notes only**: captured from colleague discussion on 2026-01-12 and may lag the shipped connectivity implementation.
+> **Do not implement from this file when it conflicts with current connectivity code or Cerb shards.**
 > **Authoritative source**: `docs/specs/esp32-protocol.md`
 
 ESP32 doesn't have a UI, it's only backend.
@@ -60,11 +61,11 @@ Frame naming: `1.jpg`, `2.jpg`, `3.jpg`...
 ## 5. Time sync (badge-initiated)
 
 ```
-Badge sends:  time#get
-App returns:  time#YYYYMMDDHHMMSS
+Badge sends:  tim#get
+App returns:  tim#YYYYMMDDHHMMSS
 ```
 
-Example: `time#20260112175600`
+Example: `tim#20260112175600`
 
 ## HTTP Server
 

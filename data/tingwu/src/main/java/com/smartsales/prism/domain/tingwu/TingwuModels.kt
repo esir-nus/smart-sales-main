@@ -72,6 +72,18 @@ data class TingwuJobArtifacts(
 )
 
 @Serializable
+data class TingwuSpeakerSummary(
+    val name: String? = null,
+    val summary: String
+)
+
+@Serializable
+data class TingwuQuestionAnswer(
+    val question: String,
+    val answer: String
+)
+
+@Serializable
 data class TingwuResultLink(
     val label: String,
     val url: String
@@ -107,6 +119,8 @@ data class TingwuChapter(
 
 @Serializable
 data class TingwuSmartSummary(
-    val summary: String,
-    val keyPoints: List<String> = emptyList()
+    val summary: String? = null,
+    val keyPoints: List<String> = emptyList(),
+    val speakerSummaries: List<TingwuSpeakerSummary> = emptyList(),
+    val questionAnswers: List<TingwuQuestionAnswer> = emptyList()
 )

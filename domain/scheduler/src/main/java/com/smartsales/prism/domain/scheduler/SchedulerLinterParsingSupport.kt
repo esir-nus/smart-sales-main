@@ -456,7 +456,8 @@ internal class SchedulerLinterParsingSupport(
                             targetPerson = targetPerson,
                             targetLocation = targetLocation
                         ),
-                        timeInstruction = timeInstruction
+                        timeInstruction = timeInstruction,
+                        suggestedTaskId = payload.suggestedTaskId?.trim()?.takeIf { it.isNotBlank() }
                     )
                 }
 

@@ -4,12 +4,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.test.assertExists
+import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.click
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -31,6 +27,7 @@ class OnboardingMicFooterGestureTest {
                 isRecording = isRecording,
                 isProcessing = false,
                 interactionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                handshakeHint = "试试说一句",
                 processingLabel = "正在思考...",
                 onPressStart = {
                     isRecording = true
@@ -73,6 +70,7 @@ class OnboardingMicFooterGestureTest {
                 isRecording = isRecording,
                 isProcessing = false,
                 interactionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
+                handshakeHint = "试试说一句",
                 processingLabel = "正在思考...",
                 onPressStart = { false },
                 onPressEnd = {

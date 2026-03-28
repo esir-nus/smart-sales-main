@@ -1,12 +1,12 @@
 # God Wave 2 Execution Brief
 
-**Status:** Wave 2A L1 Accepted / Wave 2B Planned  
+**Status:** Wave 2A L1 Accepted / Wave 2B L1 Accepted / Wave 2C L1 Accepted  
 **Date:** 2026-03-24  
 **Wave:** 2  
 **Mission:** secondary business-logic god-file cleanup  
 **Primary Tracker:** `docs/plans/god-tracker.md`  
 **Structure Law:** `docs/specs/code-structure-contract.md`  
-**Validation Report:** pending per subwave
+**Validation Report:** accepted per subwave
 
 ---
 
@@ -59,8 +59,10 @@ Execution order is strict:
 
 Current progress:
 
-- Wave 2A is now accepted
-- Wave 2B is the next planned slice
+- Wave 2A is accepted
+- Wave 2B is accepted
+- Wave 2C is accepted
+- Wave 2 is now complete as a business-logic-only cleanup wave
 
 ---
 
@@ -96,15 +98,14 @@ Planned local structure tests:
 
 ---
 
-## 6. Wave 2 Readiness Bar
+## 6. Wave 2 Closeout Bar
 
-Wave 2 is planning-complete only when:
+Wave 2 is complete only when:
 
-- `docs/plans/god-tracker.md` locks business-logic-only scope
-- `docs/plans/tracker.md` reflects Wave 1E accepted and Wave 2 planned
-- `docs/cerb/interface-map.md` no longer points `SchedulerLinter` to a dead spec path
-- this umbrella brief exists
-- Wave 2A / 2B / 2C briefs exist and define their own acceptance bars
+- `docs/plans/god-tracker.md` shows all three Wave 2 targets as accepted rows
+- `docs/plans/tracker.md` reflects Wave 2C L1 acceptance
+- this umbrella brief and the three subwave briefs remain synced to the delivered support-file shapes
+- each subwave keeps its focused structure test and tracker/contract guardrail coverage green
 
 ---
 

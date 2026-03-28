@@ -1,14 +1,18 @@
 package com.smartsales.prism.ui.sim
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.smartsales.prism.data.audio.SimAudioRepository
 import com.smartsales.prism.data.audio.SimBadgeSyncSkippedReason
 import com.smartsales.prism.data.audio.SimBadgeSyncTrigger
+import com.smartsales.prism.data.audio.SIM_BADGE_SYNC_CONNECTIVITY_UNAVAILABLE_MESSAGE
 import com.smartsales.prism.data.audio.simBadgeSyncSuccessMessage
 import com.smartsales.prism.domain.audio.AudioFile
 import com.smartsales.prism.domain.audio.AudioSource as DomainAudioSource
 import com.smartsales.prism.domain.audio.TranscriptionStatus
+import com.smartsales.prism.domain.connectivity.BadgeManagerStatus
+import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
 import com.smartsales.prism.ui.drawers.AudioItemState
 import com.smartsales.prism.ui.drawers.AudioSource
@@ -33,9 +37,12 @@ data class SimAudioEntry(
     val isTestImport: Boolean = false
 )
 
+private const val SIM_AUDIO_DRAWER_SYNC_LOG_TAG = "AudioPipeline"
+
 @HiltViewModel
 class SimAudioDrawerViewModel @Inject constructor(
-    private val repository: SimAudioRepository
+    private val repository: SimAudioRepository,
+    connectivityBridge: ConnectivityBridge
 ) : ViewModel() {
 
     private val _uiEvents = MutableSharedFlow<String>()
@@ -45,6 +52,14 @@ class SimAudioDrawerViewModel @Inject constructor(
     private val _isSyncing = MutableStateFlow(false)
     val isSyncing: StateFlow<Boolean> = _isSyncing
     private var hasAttemptedAutoSyncThisSession = false
+    private val badgeSyncAvailability: StateFlow<SimBadgeSyncAvailability> =
+        connectivityBridge.managerStatus
+            .map(::resolveSimBadgeSyncAvailability)
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = resolveSimBadgeSyncAvailability(connectivityBridge.managerStatus.value)
+            )
 
     val entries: StateFlow<List<SimAudioEntry>> = repository.getAudioFiles()
         .map { files -> files.map { it.toSimEntry() } }
@@ -122,6 +137,24 @@ class SimAudioDrawerViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            val availability = badgeSyncAvailability.value
+            Log.d(
+                SIM_AUDIO_DRAWER_SYNC_LOG_TAG,
+                "SIM manual badge sync tapped availability=${availability.name.lowercase()} isSyncing=${_isSyncing.value}"
+            )
+            val gateDecision = resolveSimBadgeManualSyncGateDecision(
+                availability = availability,
+                canSyncFromBadge = { repository.canSyncFromBadge() }
+            )
+            Log.d(
+                SIM_AUDIO_DRAWER_SYNC_LOG_TAG,
+                "SIM manual badge sync gate availability=${availability.name.lowercase()} branch=${gateDecision.branch.name.lowercase()} blocked=${gateDecision.blockedMessage != null}"
+            )
+            if (gateDecision.blockedMessage != null) {
+                _uiEvents.emit(gateDecision.blockedMessage)
+                return@launch
+            }
+
             _isSyncing.value = true
             try {
                 val outcome = repository.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
@@ -129,6 +162,10 @@ class SimAudioDrawerViewModel @Inject constructor(
                     _uiEvents.emit(simBadgeSyncSuccessMessage(outcome.importedCount))
                 }
             } catch (e: Exception) {
+                Log.w(
+                    SIM_AUDIO_DRAWER_SYNC_LOG_TAG,
+                    "SIM manual badge sync failed after gate branch=${gateDecision.branch.name.lowercase()} error=${e.message}"
+                )
                 _uiEvents.emit(e.message ?: "同步失败")
             } finally {
                 _isSyncing.value = false
@@ -258,6 +295,89 @@ internal fun canStartSimAudioSync(
 }
 
 internal fun shouldShowSimAudioAutoSyncMessage(importedCount: Int): Boolean = importedCount > 0
+
+internal enum class SimBadgeSyncAvailability {
+    READY,
+    BLE_CONNECTED_NETWORK_PENDING,
+    BLE_CONNECTED_NETWORK_OFFLINE,
+    UNAVAILABLE
+}
+
+internal enum class SimBadgeManualSyncGateBranch {
+    MANAGER_PENDING_BLOCK,
+    MANAGER_OFFLINE_BLOCK,
+    STRICT_PRECHECK_ALLOWED,
+    STRICT_PRECHECK_BLOCKED
+}
+
+internal data class SimBadgeManualSyncGateDecision(
+    val branch: SimBadgeManualSyncGateBranch,
+    val blockedMessage: String?
+)
+
+internal const val SIM_BADGE_SYNC_NETWORK_PENDING_MESSAGE =
+    "徽章蓝牙已连接，正在确认设备网络状态，暂时不能同步录音。请稍候后重试。"
+
+internal const val SIM_BADGE_SYNC_NETWORK_OFFLINE_MESSAGE =
+    "徽章蓝牙已连接，但设备当前未接入可用网络，暂时不能同步录音。请检查徽章 Wi‑Fi 后重试。"
+
+internal fun resolveSimBadgeSyncAvailability(
+    managerStatus: BadgeManagerStatus
+): SimBadgeSyncAvailability {
+    return when (managerStatus) {
+        is BadgeManagerStatus.Ready -> SimBadgeSyncAvailability.READY
+        is BadgeManagerStatus.BlePairedNetworkUnknown ->
+            SimBadgeSyncAvailability.BLE_CONNECTED_NETWORK_PENDING
+        is BadgeManagerStatus.BlePairedNetworkOffline ->
+            SimBadgeSyncAvailability.BLE_CONNECTED_NETWORK_OFFLINE
+        else -> SimBadgeSyncAvailability.UNAVAILABLE
+    }
+}
+
+internal suspend fun resolveSimBadgeManualSyncBlockedMessage(
+    availability: SimBadgeSyncAvailability,
+    canSyncFromBadge: suspend () -> Boolean
+): String? {
+    return resolveSimBadgeManualSyncGateDecision(
+        availability = availability,
+        canSyncFromBadge = canSyncFromBadge
+    ).blockedMessage
+}
+
+internal suspend fun resolveSimBadgeManualSyncGateDecision(
+    availability: SimBadgeSyncAvailability,
+    canSyncFromBadge: suspend () -> Boolean
+): SimBadgeManualSyncGateDecision {
+    return when (availability) {
+        SimBadgeSyncAvailability.READY -> SimBadgeManualSyncGateDecision(
+            branch = SimBadgeManualSyncGateBranch.STRICT_PRECHECK_ALLOWED,
+            blockedMessage = null
+        )
+        SimBadgeSyncAvailability.BLE_CONNECTED_NETWORK_PENDING ->
+            SimBadgeManualSyncGateDecision(
+                branch = SimBadgeManualSyncGateBranch.MANAGER_PENDING_BLOCK,
+                blockedMessage = SIM_BADGE_SYNC_NETWORK_PENDING_MESSAGE
+            )
+        SimBadgeSyncAvailability.BLE_CONNECTED_NETWORK_OFFLINE ->
+            SimBadgeManualSyncGateDecision(
+                branch = SimBadgeManualSyncGateBranch.MANAGER_OFFLINE_BLOCK,
+                blockedMessage = SIM_BADGE_SYNC_NETWORK_OFFLINE_MESSAGE
+            )
+        SimBadgeSyncAvailability.UNAVAILABLE -> {
+            if (canSyncFromBadge()) {
+                SimBadgeManualSyncGateDecision(
+                    branch = SimBadgeManualSyncGateBranch.STRICT_PRECHECK_ALLOWED,
+                    blockedMessage = null
+                )
+            } else {
+                SimBadgeManualSyncGateDecision(
+                    branch = SimBadgeManualSyncGateBranch.STRICT_PRECHECK_BLOCKED,
+                    blockedMessage = SIM_BADGE_SYNC_CONNECTIVITY_UNAVAILABLE_MESSAGE
+                )
+            }
+        }
+    }
+}
 
 data class SimAudioDiscussion(
     val audioId: String,

@@ -41,6 +41,7 @@ fun CollapsibleInspirationShelf(
     onAskAI: ((String) -> Unit)?,
     modifier: Modifier = Modifier
 ) {
+    val visuals = currentSchedulerDrawerVisuals
     // 空时隐藏
     if (items.isEmpty()) return
     
@@ -49,7 +50,7 @@ fun CollapsibleInspirationShelf(
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(BackgroundSurfaceMuted.copy(alpha = 0.5f))
+            .background(visuals.shelfBackground)
     ) {
         // Header Bar
         Row(
@@ -111,11 +112,12 @@ private fun InspirationShelfCard(
     title: String,
     onAskAI: (() -> Unit)?
 ) {
+    val visuals = currentSchedulerDrawerVisuals
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(GlassCardShape)
-            .background(BackgroundSurface.copy(alpha = 0.8f))
+            .background(visuals.shelfCardBackground)
             .padding(horizontal = 12.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -128,10 +130,10 @@ private fun InspirationShelfCard(
                 modifier = Modifier
                     .padding(end = 8.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(AccentBlue.copy(alpha = 0.16f))
+                    .background(visuals.shelfTagBackground)
                     .padding(horizontal = 6.dp, vertical = 4.dp)
             ) {
-                Text("AI", fontSize = 10.sp, color = AccentBlue, fontWeight = FontWeight.SemiBold)
+                Text("AI", fontSize = 10.sp, color = visuals.shelfTagText, fontWeight = FontWeight.SemiBold)
             }
             Text(
                 text = title,

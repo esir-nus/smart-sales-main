@@ -18,11 +18,15 @@ class SimComposerContractTest {
     }
 
     @Test
-    fun `sim composer uses send only action instead of mic route`() {
+    fun `sim composer switches between mic and send based on draft state`() {
         val source = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimAgentIntelligenceContent.kt")
+        val heroSource = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimHomeHeroShell.kt")
 
+        assertTrue(source.contains("val showVoiceMic = voiceDraftEnabled && text.isBlank()"))
+        assertTrue(source.contains("imageVector = Icons.Filled.Mic"))
         assertTrue(source.contains("imageVector = Icons.AutoMirrored.Filled.Send"))
-        assertFalse(source.contains("onMicClick = onAudioDrawerClick"))
+        assertTrue(heroSource.contains("val showVoiceMic = voiceDraftEnabled && text.isBlank()"))
+        assertTrue(heroSource.contains("imageVector = Icons.Filled.Mic"))
     }
 
     @Test

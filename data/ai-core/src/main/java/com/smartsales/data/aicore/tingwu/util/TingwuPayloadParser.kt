@@ -10,6 +10,8 @@ import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.smartsales.data.aicore.TingwuChapter
+import com.smartsales.data.aicore.TingwuQuestionAnswer
+import com.smartsales.data.aicore.TingwuSpeakerSummary
 import com.smartsales.data.aicore.TingwuSmartSummary
 import com.smartsales.data.aicore.tingwu.api.TingwuTranscription
 import com.smartsales.data.aicore.DiarizedSegment
@@ -79,22 +81,62 @@ internal object TingwuPayloadParser {
         val root = runCatching { JsonParser.parseString(json) }.getOrNull() ?: return null
         if (!root.isJsonObject) return null
         val obj = root.asJsonObject
+        val summaryObj = obj.getAsJsonObject("Summarization") ?: obj
         val summary = obj.getPrimitiveString("Summary")
             ?: obj.getPrimitiveString("Abstract")
             ?: obj.getPrimitiveString("Summarization")
-        val keyPoints = obj.getAsJsonArray("KeyPoints")
+            ?: buildOverviewSummary(summaryObj)
+        val keyPoints = summaryObj.getAsJsonArray("KeyPoints")
+            ?: summaryObj.getAsJsonArray("Highlights")
+            ?: summaryObj.getAsJsonArray("Keypoints")
+            ?: obj.getAsJsonArray("KeyPoints")
             ?: obj.getAsJsonArray("Highlights")
             ?: obj.getAsJsonArray("Keypoints")
-        val actionItems = obj.getAsJsonArray("ActionItems")
+        val actionItems = summaryObj.getAsJsonArray("ActionItems")
+            ?: summaryObj.getAsJsonArray("Todos")
+            ?: summaryObj.getAsJsonArray("Tasks")
+            ?: obj.getAsJsonArray("ActionItems")
             ?: obj.getAsJsonArray("Todos")
             ?: obj.getAsJsonArray("Tasks")
         val keys = keyPoints?.mapNotNull { it.asStringOrNull() } ?: emptyList()
         val actions = actionItems?.mapNotNull { it.asStringOrNull() } ?: emptyList()
-        if (summary.isNullOrBlank() && keys.isEmpty() && actions.isEmpty()) return null
+        val speakerSummaries = summaryObj.getAsJsonArray("ConversationalSummary")
+            ?.mapNotNull { element ->
+                element.asJsonObjectOrNull()?.let { item ->
+                    val speaker = item.getPrimitiveString("SpeakerName")
+                        ?: item.getPrimitiveString("SpeakerId")
+                    val recap = item.getPrimitiveString("Summary")?.takeIf { it.isNotBlank() }
+                        ?: return@let null
+                    TingwuSpeakerSummary(name = speaker, summary = recap)
+                }
+            }
+            .orEmpty()
+        val questionAnswers = summaryObj.getAsJsonArray("QuestionsAnsweringSummary")
+            ?.mapNotNull { element ->
+                element.asJsonObjectOrNull()?.let { item ->
+                    val question = item.getPrimitiveString("Question")?.takeIf { it.isNotBlank() }
+                    val answer = item.getPrimitiveString("Answer")?.takeIf { it.isNotBlank() }
+                    if (question == null || answer == null) {
+                        null
+                    } else {
+                        TingwuQuestionAnswer(question = question, answer = answer)
+                    }
+                }
+            }
+            .orEmpty()
+        if (
+            summary.isNullOrBlank() &&
+            keys.isEmpty() &&
+            actions.isEmpty() &&
+            speakerSummaries.isEmpty() &&
+            questionAnswers.isEmpty()
+        ) return null
         return TingwuSmartSummary(
             summary = summary,
             keyPoints = keys,
-            actionItems = actions
+            actionItems = actions,
+            speakerSummaries = speakerSummaries,
+            questionAnswers = questionAnswers
         )
     }
 
@@ -184,6 +226,19 @@ internal object TingwuPayloadParser {
                 else -> null
             }
         }.getOrNull()
+    }
+
+    private fun buildOverviewSummary(obj: JsonObject): String? {
+        val paragraphTitle = obj.getPrimitiveString("ParagraphTitle")?.takeIf { it.isNotBlank() }
+        val paragraphSummary = obj.getPrimitiveString("ParagraphSummary")?.takeIf { it.isNotBlank() }
+        val fallbackSummary = obj.getPrimitiveString("Summary")?.takeIf { it.isNotBlank() }
+        return buildString {
+            paragraphTitle?.let { append("**").append(it).append("**") }
+            if (!paragraphSummary.isNullOrBlank()) {
+                if (isNotBlank()) append('\n')
+                append(paragraphSummary)
+            }
+        }.trim().ifBlank { fallbackSummary }
     }
 
     private fun toMillis(number: Number): Long {

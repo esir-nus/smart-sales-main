@@ -323,6 +323,159 @@ class DefaultDeviceConnectionManagerIngressTest {
     }
 
     @Test
+    fun `confirmManualWifiProvision waits for badge to come online on submitted ssid`() = runTest {
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val monitor = FakeBadgeStateMonitor()
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("OldWifi", "secret")
+            )
+        }
+        val provisioner = FakeWifiProvisioner().apply {
+            stubNetworkResults += Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "0.0.0.0",
+                    deviceWifiName = "",
+                    phoneWifiName = "",
+                    rawResponse = "IP#0.0.0.0, SD#N/A"
+                )
+            )
+            stubNetworkResults += Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "192.168.0.9",
+                    deviceWifiName = "OfficeGuest",
+                    phoneWifiName = "",
+                    rawResponse = "IP#192.168.0.9, SD#OfficeGuest"
+                )
+            )
+        }
+        val manager = newManager(
+            gateway = gateway,
+            provisioner = provisioner,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            monitor = monitor,
+            phoneWifiProvider = FakePhoneWifiProvider(
+                snapshot = PhoneWifiSnapshot.Connected(
+                    normalizedSsid = null,
+                    rawSsid = "<unknown ssid>"
+                )
+            )
+        )
+
+        val state = manager.confirmManualWifiProvision(
+            WifiCredentials("OfficeGuest", "secret-2")
+        )
+        advanceUntilIdle()
+
+        assertTrue(state is ConnectionState.WifiProvisioned)
+        assertTrue(manager.state.value is ConnectionState.WifiProvisioned)
+        assertEquals(2, provisioner.networkCalls.size)
+        assertEquals(BadgeState.CONNECTED, monitor.status.value.state)
+    }
+
+    @Test
+    fun `confirmManualWifiProvision returns mismatch only when badge proves different ssid`() = runTest {
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val monitor = FakeBadgeStateMonitor()
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("OldWifi", "secret")
+            )
+        }
+        val provisioner = FakeWifiProvisioner().apply {
+            stubNetworkResult = Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "192.168.0.9",
+                    deviceWifiName = "OtherWifi",
+                    phoneWifiName = "",
+                    rawResponse = "IP#192.168.0.9, SD#OtherWifi"
+                )
+            )
+        }
+        val manager = newManager(
+            gateway = gateway,
+            provisioner = provisioner,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            monitor = monitor,
+            phoneWifiProvider = FakePhoneWifiProvider("WrongPhoneWifi")
+        )
+
+        val state = manager.confirmManualWifiProvision(
+            WifiCredentials("OfficeGuest", "secret-2")
+        )
+        advanceUntilIdle()
+
+        assertTrue(state is ConnectionState.Error)
+        val error = (state as ConnectionState.Error).error as ConnectivityError.WifiDisconnected
+        assertEquals(WifiDisconnectedReason.BADGE_PHONE_NETWORK_MISMATCH, error.reason)
+        assertEquals("OfficeGuest", error.phoneSsid)
+        assertEquals("OtherWifi", error.badgeSsid)
+        assertTrue(manager.state.value is ConnectionState.Disconnected)
+    }
+
+    @Test
+    fun `confirmManualWifiProvision keeps non mismatch offline failure out of wifi mismatch branch`() = runTest {
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("OldWifi", "secret")
+            )
+        }
+        val provisioner = FakeWifiProvisioner().apply {
+            stubNetworkResults += Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "192.168.0.9",
+                    deviceWifiName = "",
+                    phoneWifiName = "",
+                    rawResponse = "IP#192.168.0.9, SD#N/A"
+                )
+            )
+            stubNetworkResults += Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "192.168.0.9",
+                    deviceWifiName = "",
+                    phoneWifiName = "",
+                    rawResponse = "IP#192.168.0.9, SD#N/A"
+                )
+            )
+            stubNetworkResults += Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "192.168.0.9",
+                    deviceWifiName = "",
+                    phoneWifiName = "",
+                    rawResponse = "IP#192.168.0.9, SD#N/A"
+                )
+            )
+        }
+        val manager = newManager(
+            gateway = gateway,
+            provisioner = provisioner,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            phoneWifiProvider = FakePhoneWifiProvider("WrongPhoneWifi")
+        )
+
+        val state = manager.confirmManualWifiProvision(
+            WifiCredentials("OfficeGuest", "secret-2")
+        )
+        advanceUntilIdle()
+
+        assertTrue(state is ConnectionState.Error)
+        val error = (state as ConnectionState.Error).error as ConnectivityError.WifiDisconnected
+        assertEquals(WifiDisconnectedReason.BADGE_WIFI_OFFLINE, error.reason)
+        assertTrue(manager.state.value is ConnectionState.Disconnected)
+        assertEquals(3, provisioner.networkCalls.size)
+    }
+
+    @Test
     fun `reconnectAndWait keeps paired diagnostic when network query fails`() = runTest {
         val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
         val monitor = FakeBadgeStateMonitor()

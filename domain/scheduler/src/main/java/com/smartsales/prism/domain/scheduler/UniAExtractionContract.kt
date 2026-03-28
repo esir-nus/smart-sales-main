@@ -41,6 +41,10 @@ data class UniAExactTaskPayload(
     val startTimeIso: String,
     /** MUST BE integer minutes. FIRE_OFF 可为 0。 */
     val durationMinutes: Int = 0,
+    /** 可选的商务关键人物提示。 */
+    val keyPerson: String? = null,
+    /** 可选的地点提示。 */
+    val location: String? = null,
     /** MUST BE one of: L1, L2, L3, FIRE_OFF */
     val urgency: String = "L3"
 )

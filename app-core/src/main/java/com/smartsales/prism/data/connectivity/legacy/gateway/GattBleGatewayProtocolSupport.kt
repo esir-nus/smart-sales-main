@@ -114,16 +114,14 @@ internal fun mergeNetworkFragments(rawResponses: List<String>): DeviceNetworkSta
 
     val ip = fragments["IP"]
         ?: throw IllegalStateException("网络响应缺少 IP（收到: ${fragments.keys}）")
-    val ssid = fragments["SD"] ?: "未知Wi-Fi"
-
-    if (ip == "0.0.0.0" || ip.isBlank()) {
-        throw IllegalStateException("设备未连接WiFi：IP=$ip")
-    }
+    val ssid = fragments["SD"]
+        ?.takeUnless { it.equals("N/A", ignoreCase = true) }
+        .orEmpty()
 
     return DeviceNetworkStatus(
         ipAddress = ip,
         deviceWifiName = ssid,
-        phoneWifiName = ssid,
+        phoneWifiName = "",
         rawResponse = fragments.entries.joinToString(", ") { "${it.key}#${it.value}" }
     )
 }

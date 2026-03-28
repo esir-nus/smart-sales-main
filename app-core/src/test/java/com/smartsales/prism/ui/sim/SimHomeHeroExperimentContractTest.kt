@@ -31,7 +31,7 @@ class SimHomeHeroExperimentContractTest {
         assertTrue(source.contains("Canvas(modifier = modifier.fillMaxSize())"))
         assertTrue(source.contains("SIM_INPUT_BAR_TEST_TAG"))
         assertTrue(source.contains("BoxWithConstraints("))
-        assertTrue(source.contains("statusBarsPadding()"))
+        assertTrue(source.contains("prismStatusBarPadding()"))
         assertTrue(source.contains("SimHomeHeroTopCap("))
         assertTrue(source.contains("SimVerticalDragTrigger("))
         assertTrue(tokenSource.contains("val HeaderHeight = 64.dp"))
@@ -44,13 +44,16 @@ class SimHomeHeroExperimentContractTest {
     }
 
     @Test
-    fun `sim empty home greeting stays prototype aligned inside the shared shell`() {
+    fun `sim empty home greeting is profile backed while subtitle stays static`() {
         val source = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimHomeHeroShell.kt")
         val contentSource = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimAgentIntelligenceContent.kt")
+        val viewModelSource = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimAgentViewModel.kt")
 
-        assertTrue(source.contains("SIM_EMPTY_HOME_GREETING = \"你好, SmartSales 用户\""))
-        assertTrue(contentSource.contains("greeting = SIM_EMPTY_HOME_GREETING"))
-        assertFalse(contentSource.contains("greeting = heroGreeting"))
+        assertTrue(contentSource.contains("greeting = heroGreeting"))
+        assertFalse(contentSource.contains("greeting = SIM_EMPTY_HOME_GREETING"))
+        assertTrue(source.contains("text = \"我是您的销售助手\""))
+        assertTrue(viewModelSource.contains("return \"你好, \$resolvedName\""))
+        assertTrue(viewModelSource.contains("SIM_EMPTY_HOME_GREETING_FALLBACK_NAME = \"SmartSales 用户\""))
     }
 
     private fun readSource(relativePath: String): String {

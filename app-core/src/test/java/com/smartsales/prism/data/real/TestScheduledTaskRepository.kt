@@ -20,6 +20,7 @@ class TestScheduledTaskRepository : ScheduledTaskRepository {
     override suspend fun batchInsertTasks(tasks: List<ScheduledTask>): List<String> = emptyList()
     override suspend fun rescheduleTask(oldTaskId: String, newTask: ScheduledTask) {}
     override suspend fun getTask(id: String): ScheduledTask? = null
+    override suspend fun getActiveTasks(): List<ScheduledTask> = emptyList()
     override suspend fun updateTask(task: ScheduledTask) {}
     override suspend fun upsertTask(task: ScheduledTask): String = "id"
             override suspend fun deleteItem(id: String) {}

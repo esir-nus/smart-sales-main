@@ -2,7 +2,7 @@
 
 > **Purpose**: BLE + HTTP protocol between Android app and ESP32 badge  
 > **Source of Truth**: `reference-source/webserver-test.c` + `reference-source/bluetooch.py`  
-> **Last Updated**: 2026-01-12
+> **Last Updated**: 2026-03-22
 
 ---
 
@@ -24,7 +24,7 @@ Communication happens via:
 | 4 | WAV Download | ✅ Implemented | `WavDownloadCoordinator` + `BadgeHttpClient.downloadWav()` |
 | 5 | WAV Delete | ✅ Implemented | `BadgeHttpClient.deleteWav()` |
 | 6 | Time Sync | ✅ Implemented | `GattBleGateway.listenForTimeSync()` |
-| 7 | Recording End | 🔲 Planned | `ConnectivityBridge.recordingNotifications()` (Prism) |
+| 7 | Recording End | ✅ Implemented | BLE `log#...` -> `ConnectivityBridge.recordingNotifications()` -> `BadgeAudioPipeline` |
 
 ---
 
@@ -122,8 +122,8 @@ App:          (downloads /download?file=log_20260208_201345.wav)
 
 **Workflow**:
 1. User presses record button on badge
-2. Badge sends `tim#get` → App responds with timestamp following pattern `log#YYYYMMDDHHMMSS` (used for calibrating the ESP32 local time)
-3. User records audio on the badge → saved as `YYYYMMDD_HHMMSS.wav` (ESP32 local time; the timestamp sent by app is for clock calibration only, not prescriptive of the filename)
+2. Badge sends `tim#get` → App responds with timestamp following pattern `tim#YYYYMMDDHHMMSS` (used for calibrating the ESP32 local time)
+3. User records audio on the badge -> saved as `log_YYYYMMDD_HHMMSS.wav` (ESP32 local time; the timestamp sent by app is for clock calibration only, not prescriptive of the filename)
 4. User stops recording
 5. Badge sends `log#YYYYMMDD_HHMMSS` (ESP32 local time)
 6. App downloads WAV via HTTP `/download?file=log_YYYYMMDD_HHMMSS.wav` (app learns filename from `log#` command)
@@ -209,7 +209,7 @@ Body: filename=recording1.wav
 /sdcard/
 ├── recording1.wav     # Audio recording
 ├── rec_20260109.wav   # Audio recording
-└── YYYYMMDD_HHMMSS.wav  # Timestamped recording
+└── log_YYYYMMDD_HHMMSS.wav  # Timestamped recording
 ```
 
 ---

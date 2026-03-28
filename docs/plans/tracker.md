@@ -5,7 +5,7 @@
 > **Campaign Lifecycle**: Every major initiative (rewrite, refactor, UI polish, large fix) is an "Epic" or "Campaign". Every Campaign MUST be initialized using the `/campaign-planner` workflow to enforce the following checklist sequence:
 > 1. **Docs** (Ensure Specs exist) -> 2. **Interface Map** (Ensure Layer/Contract boundaries align) -> 3. **Plan** (Dev Planner) -> 4. **Execute** (Implementation) -> 5. **Test** (E2E/L2 Verification). 
 > **Master Guide Alignment**: The Master Guide acts as the overarching strategy doc for a campaign. Agents MUST NEVER auto-update the Master Guide without strict explicit human review (like a Review Conference) to prevent architectural hallucination drift. Instead, run `/04-doc-sync` at the *end* of a campaign.
-> **Last Updated**: 2026-03-24
+> **Last Updated**: 2026-03-26
 
 ---
 
@@ -82,10 +82,11 @@
 ## Planned Mission: SIM Standalone Prototype
 > **Context**: Direct user-requested standalone prototype mission. This work is intentionally separate from the current agent app and must not contaminate the live agent runtime by default.
 
-- **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Accepted / Wave 6 Isolation Accepted / Wave 7 Feature Acceptance Accepted / Wave 7 Isolation Acceptance Accepted / Wave 7 Closeout Synced / Wave 8 Task-Scoped Scheduler Follow-Up Accepted / Wave 9 Physical-Badge E2E Blocked / Wave 10 Badge Ingress Repair In Progress / Wave 11 General Chat Pivot L1 Accepted / Wave 12 Scheduler-Drawer Voice Reschedule L1 Accepted
+- **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Accepted / Wave 6 Isolation Accepted / Wave 7 Feature Acceptance Accepted / Wave 7 Isolation Acceptance Accepted / Wave 7 Closeout Synced / Wave 8 Task-Scoped Scheduler Follow-Up Accepted / Wave 9 Physical-Badge E2E Blocked / Wave 10 Badge Ingress Repair In Progress / Wave 11 General Chat Pivot L1 Accepted / Wave 12 Scheduler-Drawer Voice Reschedule L1 Accepted / Wave 13 Launcher-Core Theme Visibility L1 Accepted / Wave 14 Voice-Draft Composer L1 Verified
 - **Primary Product Doc**: [`docs/to-cerb/sim-standalone-prototype/concept.md`](../to-cerb/sim-standalone-prototype/concept.md)
 - **Mental Model Doc**: [`docs/to-cerb/sim-standalone-prototype/mental-model.md`](../to-cerb/sim-standalone-prototype/mental-model.md)
 - **Mission Tracker**: [`docs/plans/sim-tracker.md`](./sim-tracker.md)
+- **Connectivity Bug Tracker**: [`docs/plans/bug-tracker.md`](./bug-tracker.md)
 - **Implementation Brief**: [`docs/plans/sim_implementation_brief.md`](./sim_implementation_brief.md)
 - **Wave 1 Execution Brief**: [`docs/plans/sim-wave1-execution-brief.md`](./sim-wave1-execution-brief.md)
 - **Wave 2 Execution Brief**: [`docs/plans/sim-wave2-execution-brief.md`](./sim-wave2-execution-brief.md)
@@ -95,7 +96,11 @@
 - **Wave 9 Execution Brief**: [`docs/plans/sim-wave9-execution-brief.md`](./sim-wave9-execution-brief.md)
 - **Wave 10 Execution Brief**: [`docs/plans/sim-wave10-execution-brief.md`](./sim-wave10-execution-brief.md)
 - **Wave 12 Execution Brief**: [`docs/plans/sim-wave12-execution-brief.md`](./sim-wave12-execution-brief.md)
+- **Wave 13 Execution Brief**: [`docs/plans/sim-wave13-execution-brief.md`](./sim-wave13-execution-brief.md)
+- **Wave 14 Execution Brief**: [`docs/plans/sim-wave14-voice-draft-execution-brief.md`](./sim-wave14-voice-draft-execution-brief.md)
 - **Wave 12 L1 Validation**: [`docs/reports/tests/L1-20260323-sim-wave12-scheduler-drawer-reschedule.md`](../reports/tests/L1-20260323-sim-wave12-scheduler-drawer-reschedule.md)
+- **Wave 13 L1 Validation**: [`docs/reports/tests/L1-20260326-sim-wave13-launcher-core-theme-validation.md`](../reports/tests/L1-20260326-sim-wave13-launcher-core-theme-validation.md)
+- **Wave 14 L1 Validation**: [`docs/reports/tests/L1-20260328-sim-wave14-voice-draft.md`](../reports/tests/L1-20260328-sim-wave14-voice-draft.md)
 - **Current Experiment Note**: follow-up reschedule now resolves targets through a global scheduler-owned contract before time execution; selected/opened task state and visible page/date no longer carry semantic authority, weak recent-task hints remain allowed, create-time `keyPerson` / `location` hints are now persisted for later matching, the extractor now receives a scheduler-owned active shortlist derived from all non-done tasks rather than a 7-day UI window, and the write-disabled V2 shadow contract still gathers time-semantics parity/mismatch telemetry only
 - **Wave 1 Acceptance**: [`docs/reports/tests/L3-20260319-sim-wave1-shell-acceptance.md`](../reports/tests/L3-20260319-sim-wave1-shell-acceptance.md)
 - **Wave 4 Acceptance**: [`docs/reports/tests/L3-20260320-sim-wave4-scheduler-validation.md`](../reports/tests/L3-20260320-sim-wave4-scheduler-validation.md)
@@ -139,6 +144,7 @@
   - `Wave 10` is the explicit repair mini-wave for that blocker. Code and L1 verification now harden BLE recording ingress plus connection truth; device-level ingress proof is still required before returning to `T9.0`.
   - `Wave 11` now has docs, code, and focused L1 evidence aligned on the general-chat-first contract. Further on-device proof is optional follow-up, not a blocker against this current pivot slice.
   - `Wave 12` now has docs, code, and focused L1 evidence aligned for the scheduler-drawer voice reschedule lane. Scope remains strictly the scheduler drawer mic path; audio drawer, general SIM chat, and random sessions remain out of scope.
+  - `Wave 13` now has docs, code, and focused L1 evidence aligned for launcher-core theme visibility from the default SIM host. Scope remains limited to `SimMainActivity`, home/chat shell, header, history drawer, and settings drawer; scheduler/audio/connectivity/onboarding light-theme parity remains deferred.
   - On **2026-03-24**, focused unit verification confirmed the current global-reschedule implementation path for `SimSchedulerViewModelTest` and `SimAgentViewModelTest`; retrieval-hint-heavy cases such as people/location-led follow-up phrasing still need on-device proof.
 
 ---

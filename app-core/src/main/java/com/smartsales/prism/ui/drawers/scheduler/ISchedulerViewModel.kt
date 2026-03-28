@@ -3,6 +3,7 @@ package com.smartsales.prism.ui.drawers.scheduler
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import com.smartsales.prism.domain.scheduler.SchedulerTimelineItem
+import com.smartsales.prism.domain.scheduler.ScheduledTask
 
 /**
  * Pure Presentation Boundary for the Scheduler Tracker.
@@ -27,6 +28,7 @@ interface ISchedulerViewModel {
     val isInspirationsExpanded: StateFlow<Boolean>
     val expandedConflictIds: StateFlow<Set<String>>
     val exitingTasks: StateFlow<List<RescheduleExitMotion>>
+    val topUrgentTasks: StateFlow<List<ScheduledTask>>
     
     // The Active/Completed Combined Reactive Stream
     val timelineItems: StateFlow<List<SchedulerTimelineItem>>

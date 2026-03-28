@@ -41,7 +41,7 @@ interface ScheduleBoard {
      * @return The exactly matched ScheduleItem, or null if 0 or 2+ matches.
      */
     suspend fun findLexicalMatch(targetQuery: String): ScheduleItem? =
-        when (val result = resolveTarget(targetQuery)) {
+        when (val result = resolveTarget(TargetResolutionRequest(targetQuery = targetQuery))) {
             is TargetResolution.Resolved -> result.item
             else -> null
         }
@@ -53,12 +53,24 @@ interface ScheduleBoard {
      * 允许实现使用标题、参与人、地点以及当前日期上下文做置信度判定，
      * 但低置信度或近似并列候选必须显式返回非 Resolved，避免误改错误任务。
      */
-    suspend fun resolveTarget(
-        targetQuery: String,
-        preferredDayOffset: Int? = null
-    ): TargetResolution =
-        findLexicalMatch(targetQuery)?.let(TargetResolution::Resolved)
-            ?: TargetResolution.NoMatch(targetQuery)
+    suspend fun resolveTarget(request: TargetResolutionRequest): TargetResolution =
+        findLexicalMatch(request.targetQuery)?.let(TargetResolution::Resolved)
+            ?: TargetResolution.NoMatch(request.describeForFailure())
+}
+
+data class TargetResolutionRequest(
+    val targetQuery: String = "",
+    val targetPerson: String? = null,
+    val targetLocation: String? = null,
+    val preferredTaskIds: Set<String> = emptySet()
+) {
+    fun describeForFailure(): String {
+        return listOfNotNull(
+            targetQuery.takeIf { it.isNotBlank() },
+            targetPerson?.takeIf { it.isNotBlank() },
+            targetLocation?.takeIf { it.isNotBlank() }
+        ).joinToString(" ").ifBlank { "<empty>" }
+    }
 }
 
 sealed interface TargetResolution {

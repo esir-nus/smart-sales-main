@@ -39,8 +39,35 @@ Modal triggered by tapping the **[📶] Device State** icon in the header. Displ
 │       [⚪ Badge Visual (Grayscale) ]            │
 │            🔴 离线 (Offline)                    │
 │                                                 │
-│       [ 连接设备 (Reconnect) ]                   │
+│       [ 重试连接 (Reconnect) ]                   │
 │       (Primary/Blue)                            │
+└─────────────────────────────────────────────────┘
+```
+
+### State B2: BLE Paired, Network Pending
+
+```
+┌─────────────────────────────────────────────────┐
+│              [ ✕ ]                              │
+│       [🔵 Bluetooth Icon ]                      │
+│              已连接设备                          │
+│      蓝牙已连接，正在确认设备网络状态              │
+│                                                 │
+│       [ 重试连接 (Reconnect) ]                   │
+└─────────────────────────────────────────────────┘
+```
+
+### State B3: BLE Paired, Network Offline
+
+```
+┌─────────────────────────────────────────────────┐
+│              [ ✕ ]                              │
+│       [🔵 Bluetooth Icon ]                      │
+│              已连接设备                          │
+│     蓝牙已连接，但设备当前未接入可用网络           │
+│     请确认设备附近已开机，并检查徽章 Wi‑Fi 状态    │
+│                                                 │
+│       [ 重试连接 (Reconnect) ]                   │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -60,6 +87,10 @@ Modal triggered by tapping the **[📶] Device State** icon in the header. Displ
 ### State D: WiFi Mismatch
 
 > Triggered if Badge WiFi creds != Phone WiFi after BLE Reconnect.
+> Also used when firmware reconnect succeeds over BLE but the app has no exact remembered credential for the phone's current Wi‑Fi.
+> Submitting `更新配置` immediately enters reconnect/progress state and runs the Wi‑Fi repair flow automatically.
+> Manual repair returns to this screen only for a proven submitted-SSID mismatch, not for generic “badge still offline” confirmation failures.
+> Closing the panel clears the transient repair override so later reopen reflects live connection state rather than stale mismatch UI.
 
 ```
 ┌─────────────────────────────────────────────────┐
@@ -87,6 +118,19 @@ Modal triggered by tapping the **[📶] Device State** icon in the header. Displ
 | State | Badge Visual | Actions |
 |-------|--------------|---------|
 | `connected` | 🟢 Pulse animation | Disconnect, Check Updates |
-| `disconnected` | ⚪ Grayscale | Reconnect |
+| `disconnected` | ⚪ Grayscale | Retry Reconnect |
+| `ble_paired_network_unknown` | 🔵 Bluetooth icon | Retry Reconnect; Debug builds may also show Disconnect |
+| `ble_paired_network_offline` | 🔵 Bluetooth icon | Retry Reconnect; Debug builds may also show Disconnect |
 | `updating` | ⬇️ Download icon | Sync Now |
 | `wifi_mismatch` | ⚠️ Alert | Update Config, Ignore |
+
+## Manager-Only Richer State Rule
+
+- The connectivity manager/modal may show BLE-held but network-not-ready diagnostics.
+- Shared shell routing must continue to use the stricter transport-ready contract from `ConnectionState`.
+- `NeedsSetup` and explicit bridge errors must not be replaced by paired/offline manager hints.
+- Any temporary disconnect affordance inside BLE-held states is debug-only test tooling and must not be used as a release contract.
+- Deterministic reconnect rule: if reconnect finds `IP#0.0.0.0`, the app first tries silent credential replay using an exact remembered match for the phone's current SSID; only when no exact match exists, or replay proves the badge is still on another network, should the modal stay on `wifi_mismatch`.
+- Manual Wi‑Fi repair rule: once the user submits SSID/password from `wifi_mismatch`, the manager must switch to reconnect/progress immediately instead of waiting for a second explicit retry tap.
+- Submitted-credential rule: manual repair confirmation must validate against the submitted SSID rather than the phone's current SSID and must not return to `wifi_mismatch` unless the badge proves it came online on another SSID.
+- Close-reset rule: closing the connectivity modal/manager cancels any in-flight reconnect/repair attempt and clears only transient UI override state; the next reopen must use current manager truth from `ConnectivityBridge.managerStatus`.

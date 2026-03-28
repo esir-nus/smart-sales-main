@@ -21,8 +21,10 @@ import com.smartsales.prism.domain.tingwu.TingwuChapter
 import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
 import com.smartsales.prism.domain.tingwu.TingwuJobState
 import com.smartsales.prism.domain.tingwu.TingwuPipeline
+import com.smartsales.prism.domain.tingwu.TingwuQuestionAnswer
 import com.smartsales.prism.domain.tingwu.TingwuRequest
 import com.smartsales.prism.domain.tingwu.TingwuResultLink
+import com.smartsales.prism.domain.tingwu.TingwuSpeakerSummary
 import com.smartsales.prism.domain.tingwu.TingwuSmartSummary
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -311,37 +313,58 @@ class RealTingwuPipeline @Inject constructor(
                 
                 val sumJson = sumWrapper["Summarization"] as? kotlinx.serialization.json.JsonObject ?: sumWrapper
                 
-                val paragraphTitle = sumJson["ParagraphTitle"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
-                val paragraphSummary = sumJson["ParagraphSummary"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
-                val conversationalArr = sumJson["ConversationalSummary"] as? kotlinx.serialization.json.JsonArray
-                val conversational = conversationalArr?.mapNotNull { item -> 
-                    val obj = item as? kotlinx.serialization.json.JsonObject
-                    val name = obj?.get("SpeakerName")?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else "发言人" }
-                    val summary = obj?.get("Summary")?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
-                    if (summary != null) "**$name**: $summary" else null
-                }?.joinToString("\n")
-                
-                val qaArr = sumJson["QuestionsAnsweringSummary"] as? kotlinx.serialization.json.JsonArray
-                val qa = qaArr?.mapNotNull { item ->
-                    val obj = item as? kotlinx.serialization.json.JsonObject
-                    val q = obj?.get("Question")?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
-                    val a = obj?.get("Answer")?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
-                    if (q != null && a != null) "Q: $q\nA: $a" else null
-                }?.joinToString("\n\n")
+                val paragraphTitle = sumJson["ParagraphTitle"]?.let {
+                    if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null
+                }
+                val paragraphSummary = sumJson["ParagraphSummary"]?.let {
+                    if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null
+                }
+                val speakerSummaries = (sumJson["ConversationalSummary"] as? kotlinx.serialization.json.JsonArray)
+                    ?.mapNotNull { item ->
+                        val obj = item as? kotlinx.serialization.json.JsonObject
+                        val name = obj?.get("SpeakerName")?.let {
+                            if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null
+                        } ?: obj?.get("SpeakerId")?.let {
+                            if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null
+                        }
+                        val summary = obj?.get("Summary")?.let {
+                            if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null
+                        }?.takeIf { it.isNotBlank() }
+                        summary?.let { TingwuSpeakerSummary(name = name, summary = it) }
+                    }
+                    .orEmpty()
 
-                val text = buildString {
-                    if (!paragraphTitle.isNullOrBlank()) appendLine("**$paragraphTitle**")
-                    if (!paragraphSummary.isNullOrBlank()) appendLine(paragraphSummary)
-                    if (!conversational.isNullOrBlank()) {
-                        appendLine("\n**发言人总结**")
-                        appendLine(conversational)
+                val questionAnswers = (sumJson["QuestionsAnsweringSummary"] as? kotlinx.serialization.json.JsonArray)
+                    ?.mapNotNull { item ->
+                        val obj = item as? kotlinx.serialization.json.JsonObject
+                        val question = obj?.get("Question")?.let {
+                            if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null
+                        }?.takeIf { it.isNotBlank() }
+                        val answer = obj?.get("Answer")?.let {
+                            if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null
+                        }?.takeIf { it.isNotBlank() }
+                        if (question == null || answer == null) {
+                            null
+                        } else {
+                            TingwuQuestionAnswer(question = question, answer = answer)
+                        }
                     }
-                    if (!qa.isNullOrBlank()) {
-                        appendLine("\n**问答回顾**")
-                        appendLine(qa)
+                    .orEmpty()
+
+                val overview = buildString {
+                    if (!paragraphTitle.isNullOrBlank()) {
+                        append("**")
+                        append(paragraphTitle)
+                        append("**")
                     }
-                }.trim().ifBlank { 
-                    sumJson["Summary"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null } ?: "无摘要内容" 
+                    if (!paragraphSummary.isNullOrBlank()) {
+                        if (isNotBlank()) appendLine()
+                        append(paragraphSummary)
+                    }
+                }.trim().ifBlank {
+                    sumJson["Summary"]?.let {
+                        if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null
+                    } ?: "无摘要内容"
                 }
                 
                 val keyPointsArray = sumJson["KeyPoints"] as? kotlinx.serialization.json.JsonArray
@@ -354,9 +377,14 @@ class RealTingwuPipeline @Inject constructor(
                         (keyPointsArray[i] as? kotlinx.serialization.json.JsonPrimitive)?.content?.let { keyPointsList.add(it) }
                     }
                 }
-                TingwuSmartSummary(summary = text, keyPoints = keyPointsList)
+                TingwuSmartSummary(
+                    summary = overview,
+                    keyPoints = keyPointsList,
+                    speakerSummaries = speakerSummaries,
+                    questionAnswers = questionAnswers
+                )
             } else {
-                TingwuSmartSummary("智能摘要已生成，可通过结果链接下载。")
+                TingwuSmartSummary(summary = "智能摘要已生成。")
             }
 
             // Parse Chapters (by injecting a small parse function locally, or using TingwuPayloadParser through reflection/making it public if we had to)
@@ -404,7 +432,10 @@ class RealTingwuPipeline @Inject constructor(
                 transcriptMarkdown = markdown // Important!
             )
 
-            android.util.Log.d("RealTingwuPipeline", "Successfully parsed Tingwu artifacts for $jobId. Markdown length: ${markdown.length}, Summary length: ${finalSmartSummary.summary.length}")
+            android.util.Log.d(
+                "RealTingwuPipeline",
+                "Successfully parsed Tingwu artifacts for $jobId. Markdown length: ${markdown.length}, Summary length: ${finalSmartSummary.summary?.length ?: 0}"
+            )
 
             flow.value = TingwuJobState.Completed(
                 jobId = jobId,

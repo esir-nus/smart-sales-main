@@ -135,9 +135,17 @@ Current SIM-specific state and remaining gaps:
 - `Uni-M` resolves fragments left-to-right; standalone explicit relative-duration fragments such as `N hours/minutes later`, `N小时后`, `N小时以后`, and `N小时之后` may anchor to `nowIso`, standalone `明天/后天 + clock` fragments may anchor to `nowIso` via day offsets, exact clock-relative fragments otherwise require a prior exact anchor, and clock-relative fragments after a vague date-only predecessor downgrade to vague when the day anchor remains lawful
 - exact non-`FIRE_OFF` tasks without explicit duration now use domain-owned conflict occupancy windows for collision evaluation only; semantic transport/travel tasks may conflict even when persisted `durationMinutes = 0`
 - `FIRE_OFF` reminders still bypass collision logic and therefore do not block or get blocked by other scheduled items
+- that `FIRE_OFF` bypass law must also survive SIM-owned direct reschedule paths such as scheduler-drawer reschedule and badge follow-up reschedule; those paths must not reintroduce conflict-visible drift by calling raw conflict checks without the bypass
 - reschedule path now drives the shared source-card exit-motion contract together with destination attention
 - scheduler-drawer voice reschedule is an approved SIM scheduler lane when the transcript clearly implies a reschedule target plus a new exact time
+- scheduler-drawer voice reschedule and task-scoped follow-up reschedule now share a global target-resolution contract before time execution
+- global means the resolver considers all non-done scheduler-owned tasks through a scheduler-owned active retrieval index; current selected/opened task state and current visible page/date must not bias semantic target choice
+- the active retrieval index is a derived read-model from canonical `ScheduledTask` rows, not a new persistent cache table and not a SIM/session memory lane
+- the retrieval index may build a bounded shortlist context pack for the extractor; the delivered cap is top 8 candidates
+- a recent-task-set prior is allowed only as a weak hint layer, not as authority
 - after one target is resolved, explicit day+clock phrases such as `明天早上8点` must resolve through scheduler-owned deterministic parsing before falling back to model-led exact-time extraction; this same exact-time rule also applies to the task-scoped follow-up reschedule lane
+- create-time extracted `keyPerson` / `location` may be persisted as retrieval hints so later global reschedule matching can use participant/location cues without re-parsing the entire schedule set from scratch
+- notes may participate only as weak retrieval context; notes-only overlap must not overpower stronger title/person/location evidence
 - SIM now reuses the shared reminder stack for persisted exact tasks only: create and conflict-create arm reminders, vague tasks do not, delete and mark-done cancel, reschedule cancels then rearms, and restore-from-done does not rearm in T4.8
 - reminder-reliability prompting stays on the viewmodel/UI boundary through a process-lifetime gate so one create batch does not spam repeated settings prompts; the same seam may carry exact-alarm and OEM-specific notification hardening guidance
 - SIM still defers immediate create/conflict/completion native notifications and still lacks device-level acceptance proof for full banner/deadline delivery
@@ -188,7 +196,12 @@ Follow-up mutation ownership remains narrow:
 
 - shell/chat may host prompting, task selection, and follow-up input
 - scheduler-owned mutation truth still belongs to the scheduler task repository, conflict check, and reminder stack
-- task-scoped follow-up reschedule may interpret explicit delta phrasing such as `推迟1小时` or `提前半小时`, but the offset must anchor to the selected task's current persisted start time rather than `nowIso`
+- task-scoped follow-up reschedule target resolution is now global across scheduler-owned tasks rather than selected-task authority
+- the currently bound follow-up task set may be passed only as a weak recent-task prior
+- explicit delta phrasing such as `推迟1小时` or `提前半小时` still anchors to the finally resolved task's current persisted start time rather than `nowIso`
+- follow-up reschedule now also carries a narrow V2 shadow experiment: a dedicated reschedule-time extractor may run in parallel for observability after one task is globally resolved, but V1 remains the only execution/write path in this slice
+- the V2 shadow experiment is time-semantics-only: it must not resolve targets, change duration, or widen mutation authority outside the already-resolved task
+- selected-task UI state may still drive quick actions such as delete/done or prefill, but it must not override global reschedule resolution
 - general SIM chat, audio drawer, and unrelated sessions do not inherit scheduler-drawer mutation rights from the scheduler mic lane
 
 ### Date Attention Contract
@@ -240,8 +253,12 @@ Scheduler-drawer voice reschedule is supported only within approved SIM schedule
 - for debug/test assistance while physical-badge validation is blocked, SIM may expose a visible explicit `REC` control inside the scheduler drawer so the same lane is easier to trigger on device
 - that debug control is only an alternate trigger for the existing scheduler-drawer mic path; it must not reroute through the audio drawer or create a separate product ingestion story
 - the runtime may resolve the target task through scheduler-owned confidence-gated matching rather than exact-title equality
-- matching may use normalized title plus participant/location clues and scheduler-local context such as the current visible date page
+- matching must read candidate truth from a scheduler-owned active retrieval index derived from all non-done tasks
+- the extractor may see only a bounded top-8 shortlist from that index
+- matching may use normalized title plus participant/location clues, weak notes digest context, and a weak recent-task-set prior
+- current visible page/date and selected/opened task state must not become semantic authority for resolution
 - low-confidence or near-tie candidate resolution must safe-fail with explicit feedback and no mutation
+- model suggestion is advisory only; final mutation still requires scheduler-gate corroboration
 - after one task is resolved, absolute exact-time phrasing should keep the delivered exact-time reschedule rules
 - explicit day+clock phrasing such as `明天早上8点` must remain valid even when the new-time tail does not restate the task title
 - explicit delta phrasing such as `推迟1小时` / `提前半小时` must anchor to the resolved task's current persisted start time rather than `nowIso`
@@ -260,6 +277,7 @@ Minimum required projection:
 - active day offset
 - ordered active reminder projection for shell dynamic island summary selection
 - exact alarm permission prompts only if reminders remain in SIM V1 scope
+- persisted optional `keyPerson` / `location` retrieval hints for tasks created through Uni-A / Uni-B / Uni-M when extraction supplies them
 
 If a current scheduler field only exists for smart-app integration, SIM should not depend on it by default.
 

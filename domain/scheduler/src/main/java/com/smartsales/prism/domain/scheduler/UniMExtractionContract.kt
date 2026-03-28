@@ -47,6 +47,10 @@ data class UniMTaskFragmentPayload(
     val timeHint: String? = null,
     /** EXACT 片段建议时长；未给时默认 0。 */
     val durationMinutes: Int = 0,
+    /** 可选的商务关键人物提示。 */
+    val keyPerson: String? = null,
+    /** 可选的地点提示。 */
+    val location: String? = null,
     /** PREVIOUS_EXACT_OFFSET 时使用，单位分钟。 */
     val relativeOffsetMinutes: Int? = null,
     /** PREVIOUS_DAY_OFFSET 时使用，可为 0/1/2...。 */
@@ -70,6 +74,8 @@ data class UniMTaskFragment(
     val clockTime: String? = null,
     val timeHint: String? = null,
     val durationMinutes: Int = 0,
+    val keyPerson: String? = null,
+    val location: String? = null,
     val relativeOffsetMinutes: Int? = null,
     val relativeDayOffset: Int? = null
 )

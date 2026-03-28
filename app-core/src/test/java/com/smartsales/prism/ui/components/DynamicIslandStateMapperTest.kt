@@ -20,8 +20,8 @@ class DynamicIslandStateMapperTest {
 
         val visible = state as DynamicIslandUiState.Visible
         assertEquals("客户A", visible.item.sessionTitle)
-        assertEquals("即将：跟进报价 · 15:00", visible.item.schedulerSummary)
-        assertEquals("即将：跟进报价 · 15:00", visible.item.displayText)
+        assertEquals("最近：跟进报价 · 15:00", visible.item.schedulerSummary)
+        assertEquals("最近：跟进报价 · 15:00", visible.item.displayText)
     }
 
     @Test
@@ -48,7 +48,7 @@ class DynamicIslandStateMapperTest {
         )
 
         val visible = state as DynamicIslandUiState.Visible
-        assertEquals("即将：回电 · 09:30", visible.item.schedulerSummary)
+        assertEquals("最近：回电 · 09:30", visible.item.schedulerSummary)
         val tapAction = visible.item.tapAction as DynamicIslandTapAction.OpenSchedulerDrawer
         assertEquals("earlier", tapAction.target?.taskId)
         assertTrue(tapAction.target?.date != null)

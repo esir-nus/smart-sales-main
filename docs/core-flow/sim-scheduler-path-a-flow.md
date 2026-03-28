@@ -202,12 +202,21 @@ If a delete or reschedule target cannot be resolved:
 
 If the scheduler drawer mic receives a reschedule-style transcript:
 
-- SIM may resolve the target against scheduler-owned task truth using confidence-gated matching
-- it may use scheduler-local context such as nearby visible dates or task metadata as supporting signals
+- SIM must resolve the target against scheduler-owned global task truth using confidence-gated matching
+- the candidate space must come from a scheduler-owned active retrieval index derived from all non-done tasks, not a 7-day UI window and not a separate session-memory lane
+- that retrieval index may expose a bounded shortlist context pack to the extractor, but the extractor remains advisory only
+- it may use normalized title, persisted participant/location metadata, notes digest, and a weak recent-task-set prior as supporting signals
+- current selected/opened task state and current visible page/date must not become semantic authority for target choice
 - it must not rely on plain exact-title or SQL-only equality as the product contract
+- raw model output alone must not authorize a write; the scheduler-owned final gate must still accept `resolved / ambiguous / no-match`
 - once one target is resolved, explicit day+clock phrasing such as `明天早上8点` must be accepted through scheduler-owned deterministic parsing before any model-led exact-time fallback
 - once one target is resolved, explicit delta phrasing such as `推迟1小时` / `提前半小时` must anchor to that task's current persisted start time rather than `nowIso`
 - low-confidence resolution must degrade to explicit safe failure, not guessed mutation
+
+The same global target-resolution law also applies to the task-scoped follow-up reschedule lane:
+
+- follow-up reschedule may pass the currently bound task set only as a weak recent-task prior
+- selected-task UI state may still drive quick actions such as delete/done, but it must not override global reschedule resolution
 
 ---
 

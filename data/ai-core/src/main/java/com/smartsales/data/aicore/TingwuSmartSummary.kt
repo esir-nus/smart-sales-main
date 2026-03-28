@@ -7,5 +7,17 @@ package com.smartsales.data.aicore
 data class TingwuSmartSummary(
     val summary: String? = null,
     val keyPoints: List<String> = emptyList(),
-    val actionItems: List<String> = emptyList()
+    val actionItems: List<String> = emptyList(),
+    val speakerSummaries: List<TingwuSpeakerSummary> = emptyList(),
+    val questionAnswers: List<TingwuQuestionAnswer> = emptyList()
+)
+
+data class TingwuSpeakerSummary(
+    val name: String? = null,
+    val summary: String
+)
+
+data class TingwuQuestionAnswer(
+    val question: String,
+    val answer: String
 )

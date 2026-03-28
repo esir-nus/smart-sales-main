@@ -12,7 +12,7 @@ sealed class RecordingNotification {
      * 触发条件：Badge 通过 BLE 发送 `log#YYYYMMDD_HHMMSS` 命令
      */
     data class RecordingReady(
-        /** 文件名格式: YYYYMMDD_HHMMSS.wav */
+        /** 文件名格式: log_YYYYMMDD_HHMMSS.wav */
         val filename: String
     ) : RecordingNotification()
 }

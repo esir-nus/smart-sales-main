@@ -3,6 +3,8 @@ package com.smartsales.prism.data.memory
 import com.smartsales.prism.domain.memory.*
 import com.smartsales.prism.domain.scheduler.*
 import com.smartsales.prism.domain.time.TimeProvider
+import com.smartsales.prism.data.scheduler.TaskRetrievalCandidate
+import com.smartsales.prism.data.scheduler.TaskRetrievalScoring
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -61,6 +63,8 @@ class RealScheduleBoard @Inject constructor(
         val overlaps = _upcomingItems.value.filter { slot ->
             // 排除指定ID (避免新任务与自己冲突)
             slot.entryId != excludeId &&
+            // FIRE_OFF 永不参与冲突
+            !bypassesConflictEvaluation(slot.urgencyLevel) &&
             // 不检测模糊任务的冲突
             !slot.isVague &&
             // 只检查 EXCLUSIVE 策略的项目
@@ -90,43 +94,48 @@ class RealScheduleBoard @Inject constructor(
     }
     
     override suspend fun findLexicalMatch(targetQuery: String): ScheduleItem? =
-        when (val result = resolveTarget(targetQuery)) {
+        when (val result = resolveTarget(TargetResolutionRequest(targetQuery = targetQuery))) {
             is TargetResolution.Resolved -> result.item
             else -> null
         }
 
-    override suspend fun resolveTarget(
-        targetQuery: String,
-        preferredDayOffset: Int?
-    ): TargetResolution {
-        val normalizedQuery = normalizeTargetText(targetQuery)
-        if (normalizedQuery.length < 2) {
-            return TargetResolution.NoMatch(targetQuery)
+    override suspend fun resolveTarget(request: TargetResolutionRequest): TargetResolution {
+        val normalizedQuery = TaskRetrievalScoring.normalize(request.targetQuery)
+        val normalizedPerson = TaskRetrievalScoring.normalize(request.targetPerson)
+        val normalizedLocation = TaskRetrievalScoring.normalize(request.targetLocation)
+        if (
+            normalizedQuery.length < 2 &&
+            normalizedPerson.length < 2 &&
+            normalizedLocation.length < 2
+        ) {
+            return TargetResolution.NoMatch(request.describeForFailure())
         }
 
         val ranked = _upcomingItems.value
             .map { candidate ->
                 candidate to scoreCandidate(
                     query = normalizedQuery,
+                    person = normalizedPerson,
+                    location = normalizedLocation,
                     candidate = candidate,
-                    preferredDayOffset = preferredDayOffset
+                    preferredTaskIds = request.preferredTaskIds
                 )
             }
             .filter { (_, score) -> score > 0 }
             .sortedByDescending { (_, score) -> score }
 
-        val top = ranked.firstOrNull() ?: return TargetResolution.NoMatch(targetQuery)
+        val top = ranked.firstOrNull() ?: return TargetResolution.NoMatch(request.describeForFailure())
         val runnerUp = ranked.getOrNull(1)
         val topScore = top.second
         val runnerScore = runnerUp?.second ?: 0
 
-        if (topScore < 55) {
-            return TargetResolution.NoMatch(targetQuery)
+        if (topScore < TaskRetrievalScoring.MIN_RESOLUTION_SCORE) {
+            return TargetResolution.NoMatch(request.describeForFailure())
         }
 
-        if (runnerUp != null && topScore - runnerScore < 12) {
+        if (runnerUp != null && topScore - runnerScore < TaskRetrievalScoring.MIN_MARGIN_SCORE) {
             return TargetResolution.Ambiguous(
-                query = targetQuery,
+                query = request.describeForFailure(),
                 candidateIds = ranked.take(3).map { it.first.entryId }
             )
         }
@@ -154,124 +163,20 @@ class RealScheduleBoard @Inject constructor(
 
     private fun scoreCandidate(
         query: String,
+        person: String,
+        location: String,
         candidate: ScheduleItem,
-        preferredDayOffset: Int?
-    ): Int {
-        val normalizedTitle = normalizeTargetText(candidate.title)
-        if (normalizedTitle.isBlank()) return 0
-
-        var score = 0
-
-        if (normalizedTitle == query) score += 120
-        if (normalizedTitle.contains(query)) score += 80
-        if (query.contains(normalizedTitle)) score += 35
-
-        score += (diceCoefficient(query, normalizedTitle) * 45f).toInt()
-        score += (tokenOverlap(query, normalizedTitle) * 35f).toInt()
-
-        candidate.participants.orEmpty()
-            .map(::normalizeTargetText)
-            .filter { it.isNotBlank() }
-            .maxOfOrNull { participant ->
-                (tokenOverlap(query, participant) * 18f).toInt() +
-                    (diceCoefficient(query, participant) * 12f).toInt()
-            }
-            ?.let { score += it }
-
-        normalizeTargetText(candidate.location).takeIf { it.isNotBlank() }?.let { location ->
-            score += (tokenOverlap(query, location) * 12f).toInt()
-            score += (diceCoefficient(query, location) * 10f).toInt()
-        }
-
-        if (preferredDayOffset != null) {
-            val candidateDay = LocalDate.ofInstant(Instant.ofEpochMilli(candidate.scheduledAt), timeProvider.zoneId)
-            val offset = java.time.temporal.ChronoUnit.DAYS.between(timeProvider.today, candidateDay).toInt()
-            if (offset == preferredDayOffset) {
-                score += 10
-            } else if (kotlin.math.abs(offset - preferredDayOffset) == 1) {
-                score += 4
-            }
-        }
-
-        return score
-    }
-
-    private fun normalizeTargetText(raw: String?): String {
-        if (raw.isNullOrBlank()) return ""
-
-        val lowered = raw
-            .lowercase()
-            .replace("“", " ")
-            .replace("”", " ")
-            .replace("\"", " ")
-            .replace("'", " ")
-            .replace("，", " ")
-            .replace(",", " ")
-            .replace("。", " ")
-            .replace("：", " ")
-            .replace(":", " ")
-            .replace("？", " ")
-            .replace("?", " ")
-            .replace("！", " ")
-            .replace("!", " ")
-            .replace("跟", " ")
-            .replace("那个", " ")
-            .replace("这个", " ")
-            .replace("一下", " ")
-            .replace("帮我", " ")
-            .replace("把", " ")
-            .replace("给我", " ")
-            .replace("改到", " ")
-            .replace("改成", " ")
-            .replace("改期", " ")
-            .replace("挪到", " ")
-            .replace("延期", " ")
-            .replace("延后", " ")
-            .replace("reschedule", " ")
-            .replace("move", " ")
-            .replace("to", " ")
-
-        return lowered
-            .replace(Regex("\\s+"), " ")
-            .trim()
-    }
-
-    private fun tokenOverlap(left: String, right: String): Float {
-        val leftTokens = buildSearchTokens(left)
-        val rightTokens = buildSearchTokens(right)
-        if (leftTokens.isEmpty() || rightTokens.isEmpty()) return 0f
-        val shared = leftTokens.intersect(rightTokens).size.toFloat()
-        return shared / minOf(leftTokens.size, rightTokens.size).toFloat()
-    }
-
-    private fun diceCoefficient(left: String, right: String): Float {
-        val leftGrams = buildBigrams(left)
-        val rightGrams = buildBigrams(right)
-        if (leftGrams.isEmpty() || rightGrams.isEmpty()) return 0f
-        val shared = leftGrams.intersect(rightGrams).size.toFloat()
-        return (2f * shared) / (leftGrams.size + rightGrams.size).toFloat()
-    }
-
-    private fun buildSearchTokens(value: String): Set<String> {
-        val compact = value.replace(" ", "")
-        val tokens = mutableSetOf<String>()
-        value.split(" ")
-            .filter { it.isNotBlank() }
-            .forEach(tokens::add)
-        if (compact.length >= 2) {
-            buildBigrams(compact).forEach(tokens::add)
-        } else if (compact.isNotBlank()) {
-            tokens += compact
-        }
-        return tokens
-    }
-
-    private fun buildBigrams(value: String): Set<String> {
-        if (value.length < 2) return emptySet()
-        return buildSet {
-            for (index in 0 until value.length - 1) {
-                add(value.substring(index, index + 2))
-            }
-        }
-    }
+        preferredTaskIds: Set<String>
+    ): Int = TaskRetrievalScoring.scoreCandidate(
+        query = query,
+        person = person,
+        location = location,
+        candidate = TaskRetrievalCandidate(
+            id = candidate.entryId,
+            title = candidate.title,
+            participants = candidate.participants.orEmpty(),
+            location = candidate.location
+        ),
+        preferredTaskIds = preferredTaskIds
+    )
 }

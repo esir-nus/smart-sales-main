@@ -65,6 +65,10 @@ class RoomScheduledTaskRepository @Inject constructor(
         return dao.getById(id)?.toDomain()
     }
 
+    override suspend fun getActiveTasks(): List<ScheduledTask> {
+        return dao.getActiveTasks().map { it.toDomain() }
+    }
+
     override suspend fun updateTask(task: ScheduledTask) {
         dao.update(task.toEntity())
         PipelineValve.tag(PipelineValve.Checkpoint.DB_WRITE_EXECUTED, task.id.hashCode(), "Task Updated (Room)", task.id)

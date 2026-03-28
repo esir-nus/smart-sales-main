@@ -198,8 +198,10 @@ sealed class WavDownloadResult {
 > Shared shell routing still treats that as `DISCONNECTED`.
 > `NEEDS_SETUP` only shows on cold boot (no session ever existed).
 > Tapping "重试连接" from a disconnected manager state triggers auto-reconnect using persisted session.
+> Tapping "更新配置" from `WIFI_MISMATCH` immediately enters reconnect/progress and runs the repair flow without requiring a second manual retry.
 > The richer `BLE_PAIRED_NETWORK_*` states are manager-only refinements derived from `ConnectivityBridge.managerStatus`; they must not redefine global transport readiness.
 > Debug builds may additionally expose a temporary `断开连接` action in `BLE_PAIRED_NETWORK_*` states for hardware testing convenience; that control must not be treated as a release-surface contract.
+> Closing the connectivity modal/manager clears transient reconnect or mismatch override state so later reopen reflects live manager truth rather than a retained stale repair screen.
 
 #### Data Flow
 
@@ -221,6 +223,7 @@ Reconnect rule:
 - reconnect must feed `BadgeStateMonitor` immediately after persistent GATT reconnect succeeds
 - reconnect must publish the foreground network-query result into the monitor synchronously
 - manager-only BLE/Wi‑Fi diagnostics must not wait for the next background poll tick to become visible
+- connectivity UI must treat reconnect and manual Wi‑Fi repair as one exclusive foreground operation so duplicate taps do not stack concurrent repair attempts
 
 Reconnect credential rule:
 
@@ -232,6 +235,15 @@ Reconnect credential rule:
   - silently replay the exact-match remembered credential when one exists
   - if phone Wi‑Fi transport is connected but SSID is unreadable, route to `WIFI_MISMATCH` rather than blind-replaying a credential
   - otherwise route the manager UI to `WIFI_MISMATCH` so the user can re-enter credentials
+- when the user submits manual SSID/password from `WIFI_MISMATCH`, the UI must immediately show reconnect/progress while `updateWifiConfig()` runs its provision-plus-confirm repair path
+- manual repair must not fall back into the generic reconnect path after sending credentials
+- manual repair confirmation must:
+  - keep the current BLE session
+  - poll badge network status with the same bounded tolerance used by setup (`3` attempts, `1500ms` interval)
+  - validate against the user-submitted SSID rather than the phone's current SSID
+- manual repair may return to `WIFI_MISMATCH` only when the badge proves it came online on a different SSID than the submitted one
+- manual repair must not route back to `WIFI_MISMATCH` merely because phone Wi‑Fi is unreadable/unavailable or because the badge is still offline during the bounded confirmation window
+- if the user closes the connectivity surface mid-repair, only the transient override is cleared; underlying bridge/manager truth remains authoritative on next reopen
 - reconnect foreground network query must tolerate the BLE 2s minimum query floor and retry after the guard delay instead of failing immediately on a throttle timeout
 - shared transport readiness stays strict: BLE-held + Wi‑Fi-offline is not `Connected`
 

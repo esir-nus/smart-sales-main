@@ -94,6 +94,7 @@ Rule:
 - on fresh SIM install / reinstall, the SIM shell bootstraps directly into the `SIM_CONNECTIVITY` host before ordinary shell use
 - after the SIM-only first-launch gate is completed, later SIM connectivity replay still reuses the same host but remains manually entered from the shell
 - host split now applies to completion routing and connectivity ownership, not to whether the intro prefix is visible
+- forced first-launch `SIM_CONNECTIVITY` now exposes a compact top-right `跳过` action that marks the SIM onboarding gate complete and returns to the normal SIM shell without pairing; system back remains blocked for that forced path
 
 ## Locked Invariants
 
@@ -101,7 +102,7 @@ Rule:
 - No mascot energy
 - No auto-connect from scan results
 - No onboarding-owned SIM shell navigation policy
-- No dismissing forced first-launch SIM onboarding into the shell before completion
+- No system-back or gesture dismissing forced first-launch SIM onboarding into the shell; the only legal bypass is the explicit SIM top-right `跳过` action
 - No light-theme onboarding variant; onboarding stays dark-first on both hosts
 - Onboarding backgrounds reuse the shipped SIM aurora floor across all active steps; pages must not ship separate background systems
 - No badge-audio or Tingwu dependency inside the intro interaction

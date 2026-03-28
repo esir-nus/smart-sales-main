@@ -274,6 +274,9 @@ class L2DualEngineBridgeTest {
 
         val fakeConnectivity = object : com.smartsales.prism.domain.connectivity.ConnectivityBridge {
             override val connectionState = kotlinx.coroutines.flow.MutableStateFlow(com.smartsales.prism.domain.connectivity.BadgeConnectionState.Disconnected)
+            override val managerStatus = kotlinx.coroutines.flow.MutableStateFlow<com.smartsales.prism.domain.connectivity.BadgeManagerStatus>(
+                com.smartsales.prism.domain.connectivity.BadgeManagerStatus.Disconnected
+            )
             override suspend fun downloadRecording(filename: String) = com.smartsales.prism.domain.connectivity.WavDownloadResult.Success(java.io.File.createTempFile("test", ".wav").apply { deleteOnExit() }, "test.wav", 100L)
             override suspend fun listRecordings() = com.smartsales.core.util.Result.Success(emptyList<String>())
             override fun recordingNotifications() = kotlinx.coroutines.flow.emptyFlow<com.smartsales.prism.domain.connectivity.RecordingNotification>()

@@ -51,6 +51,8 @@ This shard intentionally replaces the smart-agent interpretation of chat with a 
 
 - transcript
 - summary
+- speaker-summary recap when present
+- question/answer recap when present
 - chapters
 - highlights
 - speaker/talker-related Tingwu sections when present
@@ -64,10 +66,15 @@ This shard intentionally replaces the smart-agent interpretation of chat with a 
 
 - blank/new SIM chat supports real free-text replies
 - baseline chat uses SIM system persona plus user metadata plus local session history
+- blank/new SIM chat may use device speech recognition from the composer to draft text locally, but it must still require explicit send
 - `Ask AI` starts or reuses a chat session with one selected audio attached as context
 - chat answers may use the chosen audio's artifacts when audio is attached, but audio is not required for a normal SIM chat turn
+- the SIM composer uses mic only while the draft is blank; once typed or recognized draft text exists, the same trailing action becomes send
+- speech-recognition success writes transcript into the existing input field instead of appending a user message directly
+- no-match, cancellation, permission denial, or recognizer failure must reset calmly back to editable chat without auto-send or history mutation
 - audio re-selection from chat reopens the Audio Drawer
 - if an audio is already transcribed, SIM loads stored artifacts instead of rerunning Tingwu
+- if an audio is already transcribed when attached into chat, SIM appends the shared artifact card into durable chat history rather than relying on a long plain-text preview dump
 - if an audio is still pending when selected from the chat-side drawer route, SIM binds the discussion session immediately to that audio and the same SIM Tingwu pipeline continues inside chat rather than forcing the user back through the drawer-first transcription path
 - when a chat-bound pending audio completes, SIM appends the finished artifact content as a durable chat history turn rather than leaving the result only in transient progress/completion UI
 - artifacts or status produced through that chat-side route must update the shared SIM audio inventory so the drawer reflects the same result without a second transcription run
@@ -87,6 +94,7 @@ This shard intentionally replaces the smart-agent interpretation of chat with a 
 - generalized autonomous tool execution
 - native file manager jump from chat-side audio selection
 - treating phone-local upload as the production ingress model
+- widening scheduler-follow-up voice mutation through the general SIM chat composer
 
 ---
 
@@ -257,17 +265,19 @@ For this slice, SIM treats Tingwu as the source of truth for enriched speaker la
 - the client may send user-metadata-derived identity hints upstream to Tingwu, but SIM must not treat local metadata as a direct speaker-label override
 - speaker labels shown in the artifact surface should prefer provider-returned identity-recognition labels over plain diarization ids when available
 - if provider identity output is missing, the UI should fall back to diarization/raw speaker ids rather than inventing names locally
-- normalized provider keywords may be rendered as small chips on the note/summary-style artifact card
+- normalized provider keywords may be rendered as small chips on SIM detail surfaces
 - the expanded artifact body remains text-first; keyword chips are a supplement rather than a replacement for transcript/summary content
+- provider result links remain available for debug/backend handling, but are not a SIM user-facing section
+- provider speaker recap and question/answer recap should render as standalone sections rather than being folded into `摘要`
 
 ### Completion Ownership Rule
 
-For the current SIM prototype, `SimShell` is the completion bridge between shared audio state and chat history:
+For the current SIM prototype, `SimShell` remains the completion bridge for pending-to-complete runs, while the chat owner handles already-transcribed attach:
 
 - `SimShell` observes the shared audio entry until terminal completion/failure
 - on completion, `SimShell` loads persisted artifacts from the shared SIM repository seam
 - `SimShell` passes render-ready artifact content into the SIM chat owner as a durable history turn
-- `SimAgentViewModel` remains the owner of chat/session history, but does not become the repository owner just to fetch artifacts
+- when the user attaches an already-transcribed audio item, the SIM chat owner may load persisted artifacts immediately and append the same durable artifact card without waiting for shell completion callbacks
 
 This keeps one artifact source of truth while avoiding an unnecessary second repository seam inside the SIM chat runtime.
 
@@ -289,6 +299,8 @@ SIM must expose badge-origin audio ingress through the audio drawer itself rathe
 - manual sync is additive-only: it must not clear existing inventory and must not duplicate or redownload already-imported badge files
 - the dedupe key for this slice is the exact badge filename already present in SIM local `SMARTBADGE` inventory
 - if connectivity is absent, offline, or not ready, manual sync fails explicitly in human-readable drawer-local feedback and leaves the current inventory usable
+- if connectivity manager diagnostics say BLE is held but network status is pending or offline, manual sync must stop before repository download work begins and surface a state-specific message instead of collapsing to the generic unavailable copy
+- those BLE-held manager diagnostics remain observational only; SIM manual sync still requires strict transport readiness from `ConnectivityBridge.isReady()`
 
 ### Automatic Sync Rule
 

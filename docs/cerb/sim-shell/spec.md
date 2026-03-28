@@ -50,6 +50,7 @@ The user should perceive:
 - the same shell identity continuing into active discussion, with the heavy top and bottom monoliths remaining stable while only the center canvas changes by state
 - restored neutral fuzzy seams on those monoliths so the shell reads as premium hardware rather than a hard-cut black frame; keep the top seam subtle and the bottom seam heavier
 - a bottom message capsule whose idle state keeps a single shimmering inline hint line, rotating across `输入消息...`, audio-library swipe-up guidance, and attachment guidance rather than stacking multiple hint rows
+- a shell-owned voice-draft affordance that shows mic only while the draft is blank, inserts device-STT text back into the field as an editable draft, and flips to send only after draft text exists
 - active discussion states that prefer sparse conversation plus horizontal system sheets over dashboard cards or smart-agent chrome
 - ordinary shell affordances that still feel normal, such as history, new page/session, connectivity entry, and settings
 
@@ -142,7 +143,24 @@ Current SIM settings presentation:
 - right-edge dark frosted drawer slab
 - same support-surface family as history rather than a full-screen smart-shell sheet
 - scrim-backed and dismissible
+- no visible top-left close button; dismissal remains scrim tap plus system back
+- keep a protected blank top band below the Android status area and place the hero/profile block as the first meaningful visible content beneath it
 - current edit-profile route remains the existing full-screen subflow entered from inside the drawer
+- current security section is `修改密码` only; `面容 ID` is not part of the shipped SIM drawer contract
+- the theme row edits the shared app theme preference and the normal launcher-path SIM host now applies it immediately
+- on a fresh SIM install or reinstall with no saved theme choice yet, the launcher-path SIM host defaults to dark instead of inheriting the shared app's unsaved `SYSTEM` fallback
+- once the user explicitly chooses `Dark`, `Light`, or `System`, that stored choice becomes authoritative immediately for the launcher-path SIM host
+- launcher-core theme-aware surfaces in the current slice are:
+  - home shell
+  - active chat / conversation shell
+  - top header / dynamic island chrome
+  - history drawer
+  - settings drawer
+- deferred dark-first surfaces in the current slice are:
+  - scheduler drawer
+  - audio drawer
+  - connectivity manager / modal
+  - onboarding / setup flows
 
 ### Home / Here Surface State Family
 
@@ -152,13 +170,15 @@ Shared shell structure:
 
 - `Top Monolith`: hamburger on the left, one-line Dynamic Island in the center slot, new-session `+` on the right
 - `Center Canvas`: protected body between the top and bottom monoliths; this is the only zone that swaps major content by state
-- `Bottom Monolith`: send-only composer foundation with left attach, center text field, and right send action
+- `Bottom Monolith`: composer foundation with left attach, center text field, and a trailing action that shows mic while the draft is blank and send once editable text exists
 - `Shared Seam Treatment`: keep one neutral feathered seam family across the shell states below; the seam may soften the boundary but must not reinterpret the monoliths as floating capsules or aurora-tinted glass
 
 Required shell states:
 
 1. `Empty Home`
    - greeting-first body
+   - the hero title uses the current user-profile display name in `你好, {displayName}` form, with `SmartSales 用户` as the blank-name fallback
+   - the subtitle remains the static assistant copy `我是您的销售助手`
    - directly usable composer
    - no dashboard cards, hero skill pills, or old smart shell utility chrome
 2. `Active Plain Chat`
@@ -203,13 +223,19 @@ Current SIM history-drawer expectations stay intentionally narrow and support-su
 
 Required current slice:
 
-- a left-edge dark slab that reads as an archive overlay rather than a second dashboard
-- a single-title header using `历史记录`
+- a left-edge theme-aware slab that reads as an archive overlay rather than a second dashboard
+- default top safe-area handling uses the global blank-band rule: native status inset, then a blank safe band, then drawer content
+- a compact `历史记录` title sits below that blank safe band as the current SIM-local composition anchor
 - grouped session rows using `置顶` / `今天` / `最近30天` / `YYYY-MM`
+- light-theme fidelity now follows the latest prototype for layout, type, grouped section rhythm, empty state, and anchored dock while intentionally staying in the repo's no-blur readability-first material lane
+- group labels use 13sp semi-bold muted text with spacing hierarchy only; visible divider lines are removed in the current light-theme slice
 - one-line title-only rows in the normal browse state
+- rows stay fixed-height at 48dp with 15sp single-line title treatment plus ellipsis
 - long-press actions for pin, rename, and delete
 - a stronger history-open scrim so the drawer visually owns the overlay
 - a fixed bottom user dock that remains visible below the session list
+- the drawer surface explicitly consumes pointer events so taps do not bleed through to the scrim/chat behind it
+- local L1 validation now lives in `SimHistoryDrawer.kt` as four preview states: populated, empty, truncation stress, and dense groups
 
 Required user dock content:
 

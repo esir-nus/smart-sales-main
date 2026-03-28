@@ -21,5 +21,6 @@ data class SimShellState(
     val audioDrawerMode: SimAudioDrawerMode = SimAudioDrawerMode.BROWSE,
     val activeConnectivitySurface: SimConnectivitySurface? = null,
     val showHistory: Boolean = false,
-    val showSettings: Boolean = false
+    val showSettings: Boolean = false,
+    val isForcedFirstLaunchOnboarding: Boolean = false
 )

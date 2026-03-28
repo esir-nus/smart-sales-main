@@ -10,24 +10,41 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.smartsales.prism.domain.scheduler.UrgencyLevel
 import com.smartsales.prism.ui.theme.AccentAmber
 import com.smartsales.prism.ui.theme.AccentBlue
+import com.smartsales.prism.ui.theme.AccentDanger
+import com.smartsales.prism.ui.theme.TextMuted
 
-enum class IndicatorState {
-    NORMAL, CONFLICT, DONE
+internal fun taskCardIndicatorColor(
+    urgencyLevel: UrgencyLevel,
+    isDone: Boolean
+): Color {
+    val baseColor = when (urgencyLevel) {
+        UrgencyLevel.L1_CRITICAL -> AccentDanger
+        UrgencyLevel.L2_IMPORTANT -> AccentAmber
+        UrgencyLevel.L3_NORMAL -> AccentBlue
+        UrgencyLevel.FIRE_OFF -> TextMuted
+    }
+
+    return if (isDone) {
+        baseColor.copy(alpha = 0.45f)
+    } else {
+        baseColor
+    }
 }
 
 @Composable
 fun TaskCardIndicator(
-    state: IndicatorState,
+    urgencyLevel: UrgencyLevel,
+    isDone: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val color = when (state) {
-        IndicatorState.NORMAL -> AccentBlue
-        IndicatorState.CONFLICT -> AccentAmber
-        IndicatorState.DONE -> Color(0xFF10B981) // Green
-    }
-    
+    val color = taskCardIndicatorColor(
+        urgencyLevel = urgencyLevel,
+        isDone = isDone
+    )
+
     Box(
         modifier = modifier
             .padding(vertical = 16.dp)

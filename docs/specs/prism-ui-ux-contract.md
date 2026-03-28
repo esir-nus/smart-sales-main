@@ -28,6 +28,7 @@ Rule:
 - use intuitive names in discussion
 - keep this path stable until the repo deliberately migrates references
 - when a standalone mode such as SIM has its own Cerb shard, treat that shard as the visual/source-of-truth layer for that mode's shell composition and support-surface presentation
+- the shared top safe-area law lives in `style-guide.md` and applies repo-wide unless an owning spec explicitly defines a top header/monolith exception
 
 ---
 
@@ -51,6 +52,47 @@ Structure note:
 
 - this document owns the UI boundary and source-of-truth index
 - `code-structure-contract.md` owns file-shape legality and anti-god-file policy
+
+---
+
+## Shell & Layout Constraints
+
+> **System Status Bar Presumption**: All prototype designs MUST presume a native system status bar (clock, signal, battery, notifications) exists above the app's top monolith. Prototypes reserve `44px` at the top of the emulator frame for this bar. In production Compose, use `WindowInsets.statusBars` for the actual dynamic inset.
+
+### Compose Transplant: Edge-to-Edge Insets
+
+The `44px` prototype value is a visual approximation only. Real Android status bar height varies by device (24dp–52dp, notches, punch-holes). Never hardcode it.
+
+**Activity setup (once):**
+```kotlin
+WindowCompat.setDecorFitsSystemWindows(window, false)
+enableEdgeToEdge()
+```
+
+**Per-surface inset consumption:**
+
+| Surface | Prototype Pattern | Compose Pattern |
+|---------|-------------------|-----------------|
+| Top monolith | `top: var(--status-bar-height)` | Monolith/header surface consumes `WindowInsets.statusBars` itself before laying out header content |
+| Side drawers (History, User Center) | Ad-hoc `padding-top: 48px` | Each drawer independently consumes `WindowInsets.statusBars` and keeps the blank top safe band when the owning spec requires it |
+| Bottom monolith | N/A | `Modifier.windowInsetsPadding(WindowInsets.navigationBars)` |
+| Audio drawer (bottom-up) | `bottom: 30px` | `Modifier.windowInsetsPadding(WindowInsets.navigationBars)` |
+| Scheduler drawer (top-down) | `top: 64px` | If the owning shell has a persistent top monolith, keep that shell-owned alignment and add real status-bar awareness there rather than replacing it with a raw top inset |
+
+**Legal top-edge patterns:**
+
+- Default top-safe-band surfaces: `status-bar inset -> 16dp blank band -> first visible content`
+- Monolith-aligned exception surfaces: real status-bar inset plus the owning shell's preserved top-monolith/header alignment
+
+**Anti-patterns:**
+
+| Do Not | Do Instead |
+|--------|------------|
+| `Modifier.padding(top = 44.dp)` | `Modifier.windowInsetsPadding(WindowInsets.statusBars)` |
+| Hide inset ownership at the shell root | Let each independent surface own its own status or navigation bar inset |
+| Apply root and child top insets blindly | Keep inset ownership local and avoid double-padding |
+| Assume no notch/cutout | Check `WindowInsets.displayCutout` where content reaches notch |
+| Add insets inside `Scaffold` that already handles them | Verify Scaffold's `contentWindowInsets` first |
 
 ---
 

@@ -19,10 +19,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.smartsales.prism.ui.theme.BackgroundSurface
-import com.smartsales.prism.ui.theme.BackgroundSurfaceHover
-import com.smartsales.prism.ui.theme.BorderSubtle
 import com.smartsales.prism.ui.theme.GlassCardShape
+import com.smartsales.prism.ui.theme.PrismThemeDefaults
 
 /**
  * PrismCard — Pro Max 交互玻璃卡片 (Feature Module Copy)
@@ -43,10 +41,11 @@ fun PrismCard(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
+    val colors = PrismThemeDefaults.colors
 
     // 按压时缩放和背景变化
     val scale = if (isPressed) 0.98f else 1f
-    val backgroundColor = if (isPressed) BackgroundSurfaceHover else BackgroundSurface
+    val backgroundColor = if (isPressed) colors.surfaceHover else colors.surface
 
     Box(
         modifier = modifier
@@ -59,10 +58,10 @@ fun PrismCard(
             )
             .clip(shape)
             .background(backgroundColor, shape)
-            .border(0.5.dp, BorderSubtle, shape)
+            .border(0.5.dp, colors.borderSubtle, shape)
             .clickable(
                 interactionSource = interactionSource,
-                indication = ripple(bounded = true, color = Color.Black.copy(alpha = 0.05f)),
+                indication = ripple(bounded = true, color = colors.accentPrimary.copy(alpha = 0.08f)),
                 enabled = enabled,
                 onClick = onClick
             ),
@@ -82,6 +81,7 @@ fun PrismCardStatic(
     elevation: Dp = 8.dp,
     content: @Composable BoxScope.() -> Unit
 ) {
+    val colors = PrismThemeDefaults.colors
     Box(
         modifier = modifier
             .shadow(
@@ -91,8 +91,8 @@ fun PrismCardStatic(
                 spotColor = Color.Black.copy(alpha = 0.05f)
             )
             .clip(shape)
-            .background(BackgroundSurface, shape)
-            .border(0.5.dp, BorderSubtle, shape),
+            .background(colors.surface, shape)
+            .border(0.5.dp, colors.borderSubtle, shape),
         content = content
     )
 }

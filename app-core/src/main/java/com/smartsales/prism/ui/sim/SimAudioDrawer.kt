@@ -24,6 +24,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.smartsales.prism.ui.components.PrismSurface
+import com.smartsales.prism.ui.components.prismNavigationBarPadding
 import com.smartsales.prism.ui.theme.BackdropScrim
 
 @Composable
@@ -39,6 +40,7 @@ fun SimAudioDrawer(
     onSeedDebugFailureScenario: () -> Unit = {},
     onSeedDebugMissingSectionsScenario: () -> Unit = {},
     onSeedDebugFallbackScenario: () -> Unit = {},
+    onReplayOnboarding: () -> Unit = {},
     onDeleteAudio: (String) -> Unit = {},
     mode: SimAudioDrawerMode = SimAudioDrawerMode.BROWSE,
     currentChatAudioId: String? = null,
@@ -103,7 +105,11 @@ fun SimAudioDrawer(
                 backgroundColor = SimDrawerSurface,
                 elevation = 18.dp
             ) {
-                Column(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .prismNavigationBarPadding()
+                ) {
                     SimDrawerHandle(
                         dismissDirection = SimVerticalGestureDirection.DOWN,
                         onDismiss = onDismiss,
@@ -128,6 +134,7 @@ fun SimAudioDrawer(
                         onSeedDebugFailureScenario = onSeedDebugFailureScenario,
                         onSeedDebugMissingSectionsScenario = onSeedDebugMissingSectionsScenario,
                         onSeedDebugFallbackScenario = onSeedDebugFallbackScenario,
+                        onReplayOnboarding = onReplayOnboarding,
                         showTestImportAction = showTestImportAction,
                         showDebugScenarioActions = showDebugScenarioActions
                     )

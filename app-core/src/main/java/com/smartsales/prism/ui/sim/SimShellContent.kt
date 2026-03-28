@@ -38,8 +38,11 @@ import com.smartsales.prism.ui.components.connectivity.ConnectivityViewModel
 import com.smartsales.prism.ui.drawers.AudioStatus
 import com.smartsales.prism.ui.drawers.SchedulerDrawer
 import com.smartsales.prism.ui.drawers.scheduler.SchedulerDrawerVisualMode
-import com.smartsales.prism.ui.onboarding.SimConnectivityPairingFlow
-import com.smartsales.prism.ui.theme.BackgroundApp
+import com.smartsales.prism.ui.onboarding.OnboardingCoordinator
+import com.smartsales.prism.ui.onboarding.OnboardingExitPolicy
+import com.smartsales.prism.ui.onboarding.OnboardingHost
+import com.smartsales.prism.ui.onboarding.PairingFlowViewModel
+import com.smartsales.prism.ui.theme.PrismThemeDefaults
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -48,6 +51,7 @@ internal fun SimShellContent(
     chatViewModel: SimAgentViewModel,
     dependencies: SimShellDependencies,
     audioViewModel: SimAudioDrawerViewModel,
+    pairingViewModel: PairingFlowViewModel,
     connectivityViewModel: ConnectivityViewModel,
     connectivityState: ConnectionState,
     shellState: SimShellState,
@@ -59,15 +63,19 @@ internal fun SimShellContent(
     selectedSchedulerFollowUpTaskId: String?,
     dynamicIslandItems: List<DynamicIslandItem>,
     isImeVisible: Boolean,
+    showSimIdleComposerHint: Boolean,
     trackedPendingAudioIds: SnapshotStateMap<String, String>,
     coroutineScope: CoroutineScope,
     onImportTestAudio: () -> Unit,
+    onForcedFirstLaunchOnboardingCompleted: () -> Unit,
+    onReplayOnboarding: () -> Unit,
     clearFollowUp: (SimBadgeFollowUpClearReason) -> Unit,
     closeOverlays: () -> Unit,
     openScheduler: (DynamicIslandTapAction) -> Unit,
     openAudioDrawer: (SimAudioDrawerMode) -> Unit,
     mutateShellState: ((SimShellState) -> SimShellState) -> Unit
 ) {
+    val prismColors = PrismThemeDefaults.colors
     val isAudioDrawerOpen = shellState.activeDrawer == SimDrawerType.AUDIO
     val showScrim = shouldShowSimShellScrim(shellState)
     val scrimAlpha = resolveSimShellScrimAlpha(shellState)
@@ -78,7 +86,7 @@ internal fun SimShellContent(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(BackgroundApp)
+            .background(prismColors.appBackground)
     ) {
         AgentIntelligenceScreen(
             viewModel = dependencies.chatViewModel,
@@ -110,6 +118,7 @@ internal fun SimShellContent(
             visualMode = AgentIntelligenceVisualMode.SIM,
             simDynamicIslandItems = dynamicIslandItems,
             showSimBottomComposer = showSimBottomComposer,
+            showSimIdleComposerHint = showSimIdleComposerHint,
             enableSimSchedulerPullGesture = canOpenSimSchedulerFromEdge(shellState),
             enableSimAudioPullGesture = canOpenSimAudioFromEdge(shellState, isImeVisible),
             onSimSchedulerPullOpen = { openScheduler(DynamicIslandTapAction.OpenSchedulerDrawer()) },
@@ -125,7 +134,7 @@ internal fun SimShellContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .zIndex(PrismElevation.Scrim)
-                    .background(Color.Black.copy(alpha = scrimAlpha))
+                    .background(prismColors.backdropScrim.copy(alpha = scrimAlpha))
                     .clickable { closeOverlays() }
             )
         }
@@ -161,10 +170,10 @@ internal fun SimShellContent(
                         .background(
                             Brush.verticalGradient(
                                 colors = listOf(
-                                    Color.Black.copy(alpha = 0.10f),
-                                    Color.Black.copy(alpha = 0.18f),
-                                    Color.Black.copy(alpha = 0.26f),
-                                    Color.Black.copy(alpha = 0.34f)
+                                    prismColors.backdropScrim.copy(alpha = 0.08f),
+                                    prismColors.backdropScrim.copy(alpha = 0.14f),
+                                    prismColors.backdropScrim.copy(alpha = 0.22f),
+                                    prismColors.backdropScrim.copy(alpha = 0.30f)
                                 )
                             )
                         )
@@ -196,6 +205,8 @@ internal fun SimShellContent(
                 SimHistoryDrawer(
                     groupedSessions = groupedSessions,
                     currentSessionId = currentSessionId,
+                    displayName = chatViewModel.currentDisplayName,
+                    subscriptionTier = chatViewModel.currentSubscriptionTier,
                     onSessionClick = { sessionId ->
                         closeOverlays()
                         handleSimSessionSwitchAction(
@@ -214,6 +225,9 @@ internal fun SimShellContent(
                             clearFollowUp = clearFollowUp,
                             deleteSession = chatViewModel::deleteSession
                         )
+                    },
+                    onOpenSettings = {
+                        mutateShellState(::openSimSettings)
                     },
                     modifier = Modifier.align(Alignment.CenterStart)
                 )
@@ -269,6 +283,7 @@ internal fun SimShellContent(
                 onSeedDebugFailureScenario = { audioViewModel.seedDebugFailureScenario() },
                 onSeedDebugMissingSectionsScenario = { audioViewModel.seedDebugMissingSectionsScenario() },
                 onSeedDebugFallbackScenario = { audioViewModel.seedDebugFallbackScenario() },
+                onReplayOnboarding = onReplayOnboarding,
                 onArtifactOpened = { audioId, title ->
                     emitSimAudioPersistedArtifactOpenedTelemetry(
                         audioId = audioId,
@@ -288,9 +303,6 @@ internal fun SimShellContent(
                             entersPendingFlow = false
                         )
                         audioViewModel.bindDiscussion(discussion.audioId, sessionId)
-                        audioViewModel.getArtifacts(discussion.audioId)?.let { artifacts ->
-                            chatViewModel.appendCompletedAudioArtifacts(discussion.audioId, artifacts)
-                        }
                         mutateShellState { state ->
                             state.copy(
                                 activeDrawer = null,
@@ -319,9 +331,6 @@ internal fun SimShellContent(
 
                         if (!entersPendingFlow) {
                             trackedPendingAudioIds.remove(selection.audioId)
-                            audioViewModel.getArtifacts(selection.audioId)?.let { artifacts ->
-                                chatViewModel.appendCompletedAudioArtifacts(selection.audioId, artifacts)
-                            }
                         } else {
                             trackedPendingAudioIds[selection.audioId] = sessionId
                             if (selection.status == AudioStatus.PENDING) {
@@ -368,9 +377,26 @@ internal fun SimShellContent(
             exit = fadeOut(),
             modifier = Modifier.zIndex(PrismElevation.Drawer + 1f)
         ) {
-            SimConnectivityPairingFlow(
-                onExit = { mutateShellState(::closeSimConnectivitySurface) },
-                onCompleted = { mutateShellState(::handleSimConnectivitySetupCompleted) }
+            OnboardingCoordinator(
+                host = OnboardingHost.SIM_CONNECTIVITY,
+                onExit = {
+                    if (!shellState.isForcedFirstLaunchOnboarding) {
+                        mutateShellState(::closeSimConnectivitySurface)
+                    }
+                },
+                onComplete = {
+                    val wasForcedFirstLaunch = shellState.isForcedFirstLaunchOnboarding
+                    mutateShellState(::handleSimConnectivitySetupCompleted)
+                    if (wasForcedFirstLaunch) {
+                        onForcedFirstLaunchOnboardingCompleted()
+                    }
+                },
+                exitPolicy = if (shellState.isForcedFirstLaunchOnboarding) {
+                    OnboardingExitPolicy.BLOCK_EXIT
+                } else {
+                    OnboardingExitPolicy.ALLOW_EXIT
+                },
+                pairingViewModel = pairingViewModel
             )
         }
 

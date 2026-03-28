@@ -30,6 +30,7 @@ import com.smartsales.prism.ui.theme.*
 import com.smartsales.prism.ui.drawers.scheduler.ConflictVisual
 import com.smartsales.prism.ui.drawers.scheduler.components.SchedulerTaskCard
 import com.smartsales.prism.ui.drawers.scheduler.components.InspirationCard
+import androidx.compose.ui.text.style.TextAlign
 
 /**
  * Scheduler Timeline Layout (Sleek Glass Version)
@@ -53,7 +54,7 @@ fun SchedulerTimeline(
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(vertical = 16.dp)
+        contentPadding = PaddingValues(vertical = 12.dp)
     ) {
         items(items, key = {
             when (it) {
@@ -99,6 +100,8 @@ private fun TimelineRow(
     onCardExpanded: (String, String?) -> Unit,  // Wave 9
     onToggleDone: (String) -> Unit  // Wave 12
 ) {
+    val visuals = currentSchedulerDrawerVisuals
+    val isSimVisualMode = currentSchedulerDrawerVisualMode == SchedulerDrawerVisualMode.SIM
     // Local expansion state for this row item
     var isExpanded by remember { mutableStateOf(false) }
     var isTaskVisible by remember(
@@ -124,41 +127,46 @@ private fun TimelineRow(
     ) {
         // Left: Time Label
         Text(
-            text = if (item is TimelineItem.Task && item.isVague) "待定" else item.timeDisplay,
+            text = when {
+                item is TimelineItem.Task && isSimVisualMode -> item.simTimelineRailLabel()
+                item is TimelineItem.Task && item.isVague -> "待定"
+                else -> item.timeDisplay
+            },
             fontSize = 12.sp,
-            color = TextMuted,
+            color = visuals.timeLabelColor,
             fontFamily = FontFamily.Monospace,
+            textAlign = TextAlign.End,
             modifier = Modifier
-                .width(48.dp)
-                .padding(top = 4.dp)
+                .width(visuals.timelineLabelWidth)
+                .padding(top = 2.dp)
         )
         
         // Middle: Timeline Axis (Dot + Line)
         Column(
             modifier = Modifier
-                .width(24.dp)
+                .width(visuals.timelineAxisWidth)
                 .fillMaxHeight(),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(visuals.timelineTopInset))
             Box(
                 modifier = Modifier
-                    .size(8.dp)
-                    .background(Color(0xFFD1D1D6), androidx.compose.foundation.shape.CircleShape)
+                    .size(visuals.timelineDotSize)
+                    .background(visuals.timelineDotColor, androidx.compose.foundation.shape.CircleShape)
             )
             Spacer(modifier = Modifier.height(4.dp))
             Box(
                 modifier = Modifier
-                    .width(2.dp)
+                    .width(visuals.timelineLineWidth)
                     .fillMaxHeight()
-                    .background(Color(0xFFE5E5EA))
+                    .background(visuals.timelineLineColor)
             )
         }
         
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(visuals.timelineRailGap))
         
         // Right: Card Content
-        Column(modifier = Modifier.weight(1f).padding(bottom = 16.dp)) {
+        Column(modifier = Modifier.weight(1f).padding(bottom = visuals.timelineCardBottomSpacing)) {
             when (item) {
                 is TimelineItem.Task -> {
                     // 映射冲突视觉状态

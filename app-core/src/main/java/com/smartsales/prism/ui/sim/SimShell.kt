@@ -18,18 +18,24 @@ import com.smartsales.prism.ui.components.DynamicIslandTapAction
 import com.smartsales.prism.ui.components.toDayOffset
 import com.smartsales.prism.ui.components.connectivity.ConnectivityViewModel
 import com.smartsales.prism.ui.drawers.AudioStatus
+import com.smartsales.prism.ui.onboarding.PairingFlowViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 @Composable
 internal fun SimShell(
     badgeAudioPipeline: BadgeAudioPipeline,
-    debugFollowUpScenario: SimDebugFollowUpScenario? = null
+    debugFollowUpScenario: SimDebugFollowUpScenario? = null,
+    forceSetupOnLaunch: Boolean = false,
+    onForcedSetupCompleted: () -> Unit = {},
+    shouldShowFirstLaunchSchedulerTeaser: Boolean = false,
+    onFirstLaunchSchedulerTeaserShown: () -> Unit = {}
 ) {
     val chatViewModel: SimAgentViewModel = hiltViewModel()
     val schedulerViewModel: SimSchedulerViewModel = viewModel()
     val followUpOwner: SimBadgeFollowUpOwner = viewModel()
     val audioViewModel: SimAudioDrawerViewModel = hiltViewModel()
     val connectivityViewModel: ConnectivityViewModel = hiltViewModel()
+    val pairingViewModel: PairingFlowViewModel = hiltViewModel()
     val coroutineScope = rememberCoroutineScope()
     val dependencies = remember(chatViewModel, schedulerViewModel, audioViewModel) {
         DefaultSimShellDependencies(
@@ -38,7 +44,7 @@ internal fun SimShell(
             audioViewModel = audioViewModel
         )
     }
-    var shellState by remember { mutableStateOf(SimShellState()) }
+    var shellState by remember { mutableStateOf(initialSimShellState(forceSetupOnLaunch)) }
     val connectivityState by connectivityViewModel.connectionState.collectAsStateWithLifecycle()
     val activeFollowUp by followUpOwner.activeFollowUp.collectAsStateWithLifecycle()
     val currentSessionId by chatViewModel.currentSessionId.collectAsStateWithLifecycle()
@@ -52,6 +58,9 @@ internal fun SimShell(
     val trackedPendingAudioIds = remember { mutableStateMapOf<String, String>() }
     val isAudioDrawerOpen = shellState.activeDrawer == SimDrawerType.AUDIO
     val isImeVisible = rememberSimImeVisibility()
+    var startupSchedulerTeaserPending by remember {
+        mutableStateOf(shouldShowFirstLaunchSchedulerTeaser)
+    }
     val dynamicIslandItems = remember(sessionTitle, topUrgentTasks) {
         buildSimDynamicIslandItems(
             sessionTitle = sessionTitle,
@@ -63,7 +72,6 @@ internal fun SimShell(
     ) { uri ->
         uri?.let { audioViewModel.importTestAudio(it.toString()) }
     }
-
     LaunchedEffect(audioEntries, trackedPendingAudioIds.keys.toSet()) {
         val completedAudioIds = mutableListOf<String>()
         trackedPendingAudioIds.forEach { (audioId, _) ->
@@ -153,6 +161,20 @@ internal fun SimShell(
         }
     }
 
+    LaunchedEffect(startupSchedulerTeaserPending, shellState, isImeVisible) {
+        if (shouldAutoOpenSimSchedulerStartupTeaser(shellState, isImeVisible, startupSchedulerTeaserPending)) {
+            startupSchedulerTeaserPending = false
+            onFirstLaunchSchedulerTeaserShown()
+            shellState = openSimScheduler(shellState)
+        }
+    }
+
+    LaunchedEffect(forceSetupOnLaunch) {
+        if (forceSetupOnLaunch && !shellState.isForcedFirstLaunchOnboarding) {
+            shellState = startSimForcedFirstLaunchOnboarding(shellState)
+        }
+    }
+
     val followUpSurface = deriveSimFollowUpSurface(shellState)
     LaunchedEffect(activeFollowUp?.threadId, followUpSurface) {
         if (activeFollowUp != null) {
@@ -179,10 +201,19 @@ internal fun SimShell(
         shellState = openSimAudioDrawer(shellState, mode)
     }
 
+    fun replayOnboarding() {
+        pairingViewModel.cancelPairing()
+        shellState = handleSimConnectivityOnboardingReplayRequest(
+            state = shellState,
+            source = "audio_drawer_replay"
+        )
+    }
+
     SimShellContent(
         chatViewModel = chatViewModel,
         dependencies = dependencies,
         audioViewModel = audioViewModel,
+        pairingViewModel = pairingViewModel,
         connectivityViewModel = connectivityViewModel,
         connectivityState = connectivityState,
         shellState = shellState,
@@ -194,9 +225,12 @@ internal fun SimShell(
         selectedSchedulerFollowUpTaskId = selectedSchedulerFollowUpTaskId,
         dynamicIslandItems = dynamicIslandItems,
         isImeVisible = isImeVisible,
+        showSimIdleComposerHint = shouldShowSimIdleComposerHint(shellState, isImeVisible),
         trackedPendingAudioIds = trackedPendingAudioIds,
         coroutineScope = coroutineScope,
         onImportTestAudio = { importTestAudioLauncher.launch("audio/*") },
+        onForcedFirstLaunchOnboardingCompleted = onForcedSetupCompleted,
+        onReplayOnboarding = ::replayOnboarding,
         clearFollowUp = followUpOwner::clear,
         closeOverlays = ::closeOverlays,
         openScheduler = ::openScheduler,

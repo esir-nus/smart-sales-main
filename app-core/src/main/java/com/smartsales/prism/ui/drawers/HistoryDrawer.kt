@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,8 +29,10 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.smartsales.prism.domain.model.SessionPreview
@@ -37,6 +40,7 @@ import com.smartsales.prism.ui.theme.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import com.smartsales.prism.ui.components.prismStatusBarPadding
 import com.smartsales.prism.ui.components.connectivity.ConnectivityViewModel
 import com.smartsales.prism.ui.components.connectivity.ConnectionState
 
@@ -63,16 +67,56 @@ fun HistoryDrawer(
     onDeleteSession: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val colors = PrismThemeDefaults.colors
+    val isDarkTheme = colors.appBackground.luminance() < 0.5f
     // Observe connectivity state
     val batteryLevel by connectivityViewModel.batteryLevel.collectAsState()
     val connectionState by connectivityViewModel.effectiveState.collectAsState()
-    // Main Container (Glass Sheet)
+
     Box(
         modifier = modifier
             .fillMaxHeight()
             .width(320.dp)
-            .background(BackgroundApp.copy(alpha = 0.98f)) // High opacity for legibility
+            .prismStatusBarPadding()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        colors.appBackground.copy(alpha = 0.98f),
+                        colors.appBackground.copy(alpha = 0.99f),
+                        colors.surfaceMuted.copy(alpha = if (isDarkTheme) 0.18f else 0.60f)
+                    )
+                )
+            )
     ) {
+        Box(
+            modifier = Modifier
+                .size(240.dp)
+                .align(Alignment.TopEnd)
+                .offset(x = 72.dp, y = (-40).dp)
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(
+                            colors.accentBlue.copy(alpha = if (isDarkTheme) 0.18f else 0.10f),
+                            Color.Transparent
+                        )
+                    )
+                )
+        )
+        Box(
+            modifier = Modifier
+                .size(210.dp)
+                .align(Alignment.BottomStart)
+                .offset(x = (-52).dp, y = 56.dp)
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(
+                            colors.accentSecondary.copy(alpha = if (isDarkTheme) 0.15f else 0.08f),
+                            Color.Transparent
+                        )
+                    )
+                )
+        )
+
         // 2. Content List (Collapsible Cards)
         HistorySessionList(
             groupedSessions = groupedSessions,
@@ -80,7 +124,7 @@ fun HistoryDrawer(
             onPinSession = onPinSession,
             onRenameSession = onRenameSession,
             onDeleteSession = onDeleteSession,
-            contentPadding = PaddingValues(top = 100.dp, bottom = 120.dp) // Space for floating elements
+            contentPadding = PaddingValues(top = 108.dp, bottom = 124.dp)
         )
 
         // 1. Header (Floating Capsule)
@@ -100,7 +144,7 @@ fun HistoryDrawer(
             onProfileClick = onProfileClick,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 32.dp, start = 16.dp, end = 16.dp)
+                .padding(bottom = 28.dp, start = 14.dp, end = 14.dp)
         )
     }
 }
@@ -112,39 +156,79 @@ private fun FloatingCapsuleHeader(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = PrismThemeDefaults.colors
+    val isDarkTheme = colors.appBackground.luminance() < 0.5f
     Surface(
         onClick = onClick,
         shape = CircleShape,
-        color = BackgroundSurface.copy(alpha = 0.8f),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.4f)),
-        shadowElevation = 4.dp, // Glass shadow
-        modifier = modifier.height(44.dp)
+        color = colors.surface.copy(alpha = if (isDarkTheme) 0.82f else 0.92f),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            colors.borderSubtle.copy(alpha = if (isDarkTheme) 0.90f else 0.65f)
+        ),
+        shadowElevation = 6.dp,
+        modifier = modifier.height(48.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.padding(horizontal = 20.dp)
         ) {
-            // Battery
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Icon(Icons.Filled.BatteryStd, contentDescription = null, tint = AccentGreen, modifier = Modifier.size(16.dp))
-                Text("$batteryLevel%", style = MaterialTheme.typography.labelMedium, color = AccentGreen, fontWeight = FontWeight.Bold)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    Icons.Filled.BatteryStd,
+                    contentDescription = null,
+                    tint = colors.accentSecondary,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    "$batteryLevel%",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = colors.accentSecondary,
+                    fontWeight = FontWeight.Bold
+                )
             }
-            
-            Divider(modifier = Modifier.height(12.dp).width(1.dp), color = Color.Black.copy(alpha = 0.1f))
-            
-            // Device
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Icon(Icons.Filled.Wifi, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(16.dp))
+
+            Box(
+                modifier = Modifier
+                    .height(12.dp)
+                    .width(1.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(colors.borderSubtle.copy(alpha = if (isDarkTheme) 0.80f else 1f))
+                )
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    Icons.Filled.Wifi,
+                    contentDescription = null,
+                    tint = colors.textPrimary,
+                    modifier = Modifier.size(16.dp)
+                )
                 val deviceName = when (connectionState) {
                     ConnectionState.CONNECTED -> "SmartBadge"
                     ConnectionState.DISCONNECTED -> "未连接"
                     ConnectionState.RECONNECTING -> "连接中..."
                     else -> "SmartBadge"
                 }
-                Text(deviceName, style = MaterialTheme.typography.labelMedium, color = TextPrimary, fontWeight = FontWeight.SemiBold)
+                Text(
+                    deviceName,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = colors.textPrimary,
+                    fontWeight = FontWeight.SemiBold
+                )
             }
-            
+
             val statusText = when (connectionState) {
                 ConnectionState.CONNECTED -> "• 正常"
                 ConnectionState.DISCONNECTED -> "• 离线"
@@ -152,7 +236,11 @@ private fun FloatingCapsuleHeader(
                 else -> ""
             }
             if (statusText.isNotEmpty()) {
-                Text(statusText, style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                Text(
+                    statusText,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = colors.textSecondary
+                )
             }
         }
     }
@@ -165,43 +253,75 @@ private fun FloatingGlassDock(
     onProfileClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = PrismThemeDefaults.colors
+    val isDarkTheme = colors.appBackground.luminance() < 0.5f
     Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = BackgroundSurface.copy(alpha = 0.85f),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.5f)),
+        shape = RoundedCornerShape(24.dp),
+        color = colors.surface.copy(alpha = if (isDarkTheme) 0.84f else 0.92f),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            colors.borderSubtle.copy(alpha = if (isDarkTheme) 0.90f else 0.65f)
+        ),
         shadowElevation = 8.dp,
         modifier = modifier.fillMaxWidth()
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // 点击头像/名字区域 → 打开个人中心
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 modifier = Modifier.clickable { onProfileClick() }
             ) {
-                // Avatar
                 Box(
                     modifier = Modifier
-                        .size(40.dp)
+                        .size(42.dp)
                         .clip(CircleShape)
-                        .background(Brush.linearGradient(listOf(Color(0xFFE0E0E0), Color(0xFFF5F5F5)))),
+                        .background(
+                            Brush.linearGradient(
+                                listOf(
+                                    colors.surface,
+                                    colors.surfaceHover
+                                )
+                            )
+                        )
+                        .border(1.dp, colors.borderSubtle, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Filled.Person, contentDescription = null, tint = TextSecondary)
+                    Icon(Icons.Filled.Person, contentDescription = null, tint = colors.textSecondary)
                 }
-                
+
                 Column {
-                    Text(displayName.ifBlank { "用户" }, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
-                    Text("高级会员", style = MaterialTheme.typography.labelSmall, color = TextSecondary)
+                    Text(
+                        displayName.ifBlank { "用户" },
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.textPrimary
+                    )
+                    Text(
+                        "高级会员",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = colors.textSecondary
+                    )
                 }
             }
-            
-            IconButton(onClick = onSettingsClick) {
-                Icon(Icons.Filled.Settings, contentDescription = "Settings", tint = TextSecondary)
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Surface(
+                    shape = CircleShape,
+                    color = colors.surfaceMuted.copy(alpha = if (isDarkTheme) 0.74f else 0.92f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.borderSubtle)
+                ) {
+                    IconButton(onClick = onSettingsClick, modifier = Modifier.size(36.dp)) {
+                        Icon(
+                            Icons.Filled.Settings,
+                            contentDescription = "Settings",
+                            tint = colors.textSecondary
+                        )
+                    }
+                }
             }
         }
     }
@@ -216,6 +336,8 @@ private fun HistorySessionList(
     onDeleteSession: (String) -> Unit,
     contentPadding: PaddingValues
 ) {
+    val colors = PrismThemeDefaults.colors
+    val isDarkTheme = colors.appBackground.luminance() < 0.5f
     if (groupedSessions.isEmpty()) {
         Box(
             modifier = Modifier
@@ -225,25 +347,25 @@ private fun HistorySessionList(
             contentAlignment = Alignment.TopCenter
         ) {
             Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = Color.White.copy(alpha = 0.92f),
-                border = androidx.compose.foundation.BorderStroke(1.dp, BorderSubtle),
+                shape = RoundedCornerShape(24.dp),
+                color = colors.surface.copy(alpha = if (isDarkTheme) 0.84f else 0.92f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, colors.borderSubtle),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 18.dp),
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 18.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
                         text = "暂无会话",
                         style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary
+                        color = colors.textPrimary
                     )
                     Text(
                         text = "创建新对话或从音频入口进入讨论后，会话会显示在这里。",
                         style = MaterialTheme.typography.bodySmall,
-                        color = TextSecondary
+                        color = colors.textSecondary
                     )
                 }
             }
@@ -254,7 +376,7 @@ private fun HistorySessionList(
     LazyColumn(
         contentPadding = contentPadding,
         modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         groupedSessions.forEach { (group, sessions) ->
             item(key = group) {
@@ -282,6 +404,8 @@ private fun CollapsibleGroupCard(
     onDeleteSession: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val colors = PrismThemeDefaults.colors
+    val isDarkTheme = colors.appBackground.luminance() < 0.5f
     var expanded by remember { mutableStateOf(true) }
     val rotateAngle by animateFloatAsState(targetValue = if (expanded) 0f else -90f)
     
@@ -294,45 +418,45 @@ private fun CollapsibleGroupCard(
     }
 
     Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = Color.White,
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.5f)),
-        shadowElevation = 1.dp,
+        shape = RoundedCornerShape(24.dp),
+        color = colors.surface.copy(alpha = if (isDarkTheme) 0.84f else 0.92f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, colors.borderSubtle),
+        shadowElevation = 2.dp,
         modifier = modifier.fillMaxWidth()
     ) {
         Column {
-            // Header
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { expanded = !expanded }
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
-                    .background(Color(0xFFFAFAFA)), // Subtle header bg
+                    .background(colors.surfaceMuted.copy(alpha = if (isDarkTheme) 0.68f else 0.78f))
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(16.dp))
                     Text(
-                        text = title.replace(Regex("[\\uD83C-\\uDBFF\\uDC00-\\uDFFF]+"), "").trim().uppercase(),
+                        text = title.replace(Regex("[\\uD83C-\\uDBFF\\uDC00-\\uDFFF]+"), "").trim(),
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
+                        color = colors.textPrimary,
                         letterSpacing = 1.sp
                     )
                 }
                 Icon(
                     Icons.Filled.ExpandMore,
                     contentDescription = null,
-                    tint = TextSecondary.copy(alpha = 0.5f),
+                    tint = colors.textSecondary.copy(alpha = 0.7f),
                     modifier = Modifier.size(16.dp).rotate(rotateAngle)
                 )
             }
 
-            // Divider
-            Divider(color = BorderSubtle)
+            HorizontalDivider(color = colors.borderSubtle.copy(alpha = if (isDarkTheme) 0.90f else 1f))
 
-            // Content
             AnimatedVisibility(
                 visible = expanded,
                 enter = expandVertically() + fadeIn(),
@@ -348,7 +472,10 @@ private fun CollapsibleGroupCard(
                             onDeleteSession = onDeleteSession
                         )
                         if (index < sessions.lastIndex) {
-                            Divider(color = BorderSubtle, modifier = Modifier.padding(start = 16.dp))
+                            HorizontalDivider(
+                                color = colors.borderSubtle.copy(alpha = if (isDarkTheme) 0.70f else 1f),
+                                modifier = Modifier.padding(start = 20.dp)
+                            )
                         }
                     }
                 }
@@ -366,6 +493,8 @@ private fun HistoryCardItem(
     onRenameSession: (String, String, String) -> Unit,
     onDeleteSession: (String) -> Unit
 ) {
+    val colors = PrismThemeDefaults.colors
+    val isDarkTheme = colors.appBackground.luminance() < 0.5f
     var showMenu by remember { mutableStateOf(false) }
     var showRenameDialog by remember { mutableStateOf(false) }
     var renameClientName by remember(session.id) { mutableStateOf(session.clientName) }
@@ -383,53 +512,73 @@ private fun HistoryCardItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Row(
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Hover indicator placeholder (invisible unless active)
             Box(
                 modifier = Modifier
-                    .width(4.dp)
-                    .height(32.dp)
+                    .width(5.dp)
+                    .height(34.dp)
                     .clip(CircleShape)
-                    .background(Brush.verticalGradient(listOf(KnotPrimary.copy(alpha=0.1f), Color.Transparent)))
-                    .alpha(0f) // Only visible on hover in desktop, mobile logic separate
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                colors.accentBlue.copy(alpha = if (isDarkTheme) 0.35f else 0.22f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+                    .alpha(0.9f)
             )
-            
-// Wave 4 UI Update: Horizontal Layout
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp), // Spacer between Name and Summary
-                modifier = Modifier.weight(1f, fill = false) // Allow name to take space but not push summary off if short
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f)
             ) {
                 Text(
                     text = session.clientName,
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary
-                )
-                
-                Text(
-                    text = session.summary, 
-                    style = MaterialTheme.typography.bodySmall, 
-                    color = TextSecondary,
+                    color = colors.textPrimary,
                     maxLines = 1,
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Text(
+                    text = session.summary,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.textSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
 
         Box {
-            Icon(
-                imageVector = Icons.Filled.MoreVert,
-                contentDescription = "Session actions",
-                tint = TextSecondary.copy(alpha = 0.7f),
-                modifier = Modifier.clickable { showMenu = true }
-            )
+            Surface(
+                shape = CircleShape,
+                color = colors.surfaceMuted.copy(alpha = if (isDarkTheme) 0.74f else 0.92f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, colors.borderSubtle)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.MoreVert,
+                    contentDescription = "Session actions",
+                    tint = colors.textSecondary.copy(alpha = 0.82f),
+                    modifier = Modifier
+                        .size(30.dp)
+                        .padding(6.dp)
+                        .clickable { showMenu = true }
+                )
+            }
 
             DropdownMenu(
                 expanded = showMenu,
-                onDismissRequest = { showMenu = false }
+                onDismissRequest = { showMenu = false },
+                shape = RoundedCornerShape(18.dp),
+                containerColor = colors.surface.copy(alpha = if (isDarkTheme) 0.96f else 0.98f),
+                tonalElevation = 0.dp,
+                shadowElevation = 8.dp
             ) {
                 DropdownMenuItem(
                     text = { Text(if (session.isPinned) "取消置顶" else "置顶") },
@@ -459,6 +608,8 @@ private fun HistoryCardItem(
     if (showRenameDialog) {
         AlertDialog(
             onDismissRequest = { showRenameDialog = false },
+            shape = RoundedCornerShape(28.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
             title = { Text("重命名会话") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {

@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SIM User Center - Wave 4 Prototype</title>
+    <style>
+        :root {
+            --status-bar-height: 44px;
+            --bg-app: #0D0D12;
+            --monolith-bg: #020205; 
+            --color-accent-blue: #0A84FF; 
+            --text-primary: #FFFFFF;
+            --text-secondary: #86868B;
+            --text-muted: #AEAEB2;
+            --color-delete: #FF453A;
+            --font-cn: "Inter", "PingFang SC", system-ui, sans-serif;
+            --surface-drawer: rgba(20, 20, 22, 0.85);
+            --surface-card: rgba(28, 28, 30, 0.65);
+            --border-subtle: rgba(255, 255, 255, 0.08); 
+            --border-glass: rgba(255, 255, 255, 0.15);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
+        ::-webkit-scrollbar { display: none; }
+        body { background: #000; color: var(--text-primary); font-family: var(--font-cn); display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+        
+        /* Toggles */
+        .review-controls { position: fixed; left: 20px; top: 20px; width: 240px; background: #111; border: 1px solid #333; padding: 16px; border-radius: 12px; z-index: 1000; }
+        .review-controls h3 { font-size: 14px; color: #888; margin-bottom: 8px; margin-top: 16px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .review-controls button { display: block; width: 100%; text-align: left; background: rgba(255,255,255,0.05); color: #FFF; border: none; padding: 10px 12px; margin-bottom: 4px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+        .review-controls button:hover, .review-controls button.active { background: rgba(10, 132, 255, 0.2); color: var(--color-accent-blue); }
+        
+        /* Emulation */
+        #emulator-container { width: 390px; height: 844px; background: var(--bg-app); border-radius: 40px; position: relative; border: 8px solid #222; box-shadow: 0 0 60px rgba(0,0,0,0.8); overflow: hidden; display: flex; flex-direction: column; }
+        
+        .layer-floor { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 0; background: #0D0D12; }
+        .blob { position: absolute; border-radius: 50%; filter: blur(80px); mix-blend-mode: screen; }
+        .blob-1 { width: 250px; height: 250px; background: rgba(10, 132, 255, 0.28); top: 10%; left: -10%; }
+        .blob-2 { width: 280px; height: 280px; background: rgba(94, 92, 230, 0.24); top: 40%; left: 40%; }
+        
+        /* Shell & Canvas */
+        .sim-shell { position: absolute; top: var(--status-bar-height); left: 0; right: 0; bottom: 0; z-index: 10; display: flex; flex-direction: column; }
+        .top-monolith { height: 64px; background: var(--monolith-bg); display: flex; align-items: center; justify-content: space-between; padding: 0 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); z-index: 20; position: relative; }
+        .icon-btn { background: none; border: none; color: var(--text-primary); cursor: pointer; display: flex; }
+        
+        .center-canvas-container { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; padding: 16px; }
+        .dummy-bubble { background: var(--color-accent-blue); color: white; padding: 10px 16px; border-radius: 20px; border-bottom-right-radius: 4px; max-width: 80%; align-self: flex-end; font-size: 15px; margin-bottom: 24px; }
+        
+        .bottom-monolith { background: var(--monolith-bg); min-height: 56px; padding: 10px 16px 16px 16px; box-shadow: 0 -10px 40px rgba(0,0,0,0.8); z-index: 20; display: flex; align-items: center; }
+        
+        /* Drawer Base */
+        .drawer-scrim { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(2px); z-index: 40; pointer-events: auto; }
+        .user-center-drawer { 
+            position: absolute; top: 0; bottom: 0; right: 0; width: 330px; 
+            background: var(--surface-drawer); backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px); 
+            border-left: 0.5px solid var(--border-subtle); border-top-left-radius: 36px; border-bottom-left-radius: 36px; 
+            box-shadow: -20px 0 60px rgba(0, 0, 0, 0.7); 
+            z-index: 50; display: flex; flex-direction: column; 
+        }
+
+        .drawer-header { padding: 16px 20px 16px 20px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; margin-top: 8px; }
+        
+        /* Drawer Content */
+        .drawer-content { flex: 1; overflow-y: auto; padding: 0 20px 40px 20px; display: flex; flex-direction: column; gap: 28px; }
+        
+        /* Profile Anchor */
+        .profile-hero { display: flex; flex-direction: column; align-items: center; gap: 16px; padding-top: 8px; }
+        .avatar-ring { position: relative; width: 80px; height: 80px; border-radius: 40px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-glass); display: flex; justify-content: center; align-items: center; color: var(--text-primary); }
+        .avatar-ring svg { width: 36px; height: 36px; opacity: 0.8; }
+        .profile-details { text-align: center; display: flex; flex-direction: column; gap: 4px; }
+        .profile-name { font-size: 20px; font-weight: 600; letter-spacing: 0.5px; }
+        .profile-role { font-size: 14px; color: var(--text-secondary); }
+        
+        .pills-container { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 240px; }
+        .pill { background: rgba(255,255,255,0.06); border: 0.5px solid var(--border-subtle); padding: 4px 10px; border-radius: 12px; font-size: 11px; color: var(--text-muted); }
+        .pill.accent { background: rgba(10, 132, 255, 0.15); color: var(--color-accent-blue); border-color: rgba(10, 132, 255, 0.3); font-weight: 600; }
+
+        /* Row System */
+        .section-stack { display: flex; flex-direction: column; gap: 24px; transition: opacity 0.3s; }
+        .section-block { display: flex; flex-direction: column; gap: 10px; }
+        .section-title { font-size: 13px; font-weight: 500; color: var(--text-secondary); padding-left: 12px; letter-spacing: 0.5px; }
+        
+        .settings-card { background: var(--surface-card); border-radius: 16px; border: 0.5px solid var(--border-subtle); overflow: hidden; }
+        .settings-row { height: 52px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; border-bottom: 0.5px solid rgba(255,255,255,0.05); cursor: pointer; }
+        .settings-row:hover { background: rgba(255,255,255,0.03); }
+        .settings-row:last-child { border-bottom: none; }
+        
+        .row-left { display: flex; align-items: center; gap: 14px; font-size: 15px; color: var(--text-primary); }
+        .row-icon { width: 22px; height: 22px; color: var(--text-secondary); display: flex; align-items: center; justify-content: center; }
+        .row-icon svg { width: 20px; height: 20px; }
+        
+        .row-right { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); }
+        .row-value { font-size: 15px; color: var(--text-muted); }
+        .chevron { width: 16px; height: 16px; color: rgba(255,255,255,0.2); }
+        
+        /* Toggles */
+        .toggle-switch { width: 44px; height: 24px; border-radius: 12px; background: rgba(255,255,255,0.1); position: relative; transition: all 0.3s; }
+        .toggle-switch.active { background: var(--color-accent-blue); }
+        .toggle-knob { width: 20px; height: 20px; background: white; border-radius: 10px; position: absolute; top: 2px; left: 2px; transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .toggle-switch.active .toggle-knob { transform: translateX(20px); }
+
+        /* Logout */
+        .logout-btn { height: 52px; border-radius: 16px; background: rgba(255, 69, 58, 0.08); color: var(--color-delete); display: flex; justify-content: center; align-items: center; font-size: 16px; font-weight: 500; cursor: pointer; transition: background 0.2s; border: none; outline: none; width: 100%; margin-top: 8px; }
+        .logout-btn:hover { background: rgba(255, 69, 58, 0.15); }
+
+    </style>
+</head>
+<body>
+    <div class="review-controls">
+        <h3>Wave 4: Stress & Polish</h3>
+        <button id="btn-default" class="active" onclick="setView('1-final-default', this)">1. Final Default</button>
+        <button id="btn-dense" onclick="setView('2-dense-grouping', this)">2. Dense Grouping Check</button>
+        <button id="btn-long" onclick="setView('3-long-scroll', this)">3. Long Scroll Stress</button>
+    </div>
+
+    <div id="emulator-container">
+        <!-- System Status Bar -->
+        <div class="system-status-bar" style="position: absolute; top: 0; left: 0; right: 0; height: var(--status-bar-height); z-index: 100; display: flex; justify-content: space-between; align-items: center; padding: 0 24px; font-size: 15px; font-weight: 600; color: var(--text-primary); pointer-events: none;">
+            <span>22:59</span>
+            <div style="display: flex; gap: 6px; align-items: center;">
+                <span style="font-size: 13px;">5G</span>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M17 4h-3V2h-4v2H7v18h10V4z"/></svg>
+            </div>
+        </div>
+
+        <!-- Background -->
+        <div class="layer-floor"><div class="blob blob-1"></div><div class="blob blob-2"></div></div>
+
+        <!-- Base Shell -->
+        <div id="sim-shell" class="sim-shell">
+            <header class="top-monolith">
+                <button class="icon-btn borderless"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
+                <div style="color:white; font-size: 15px; font-weight:600;">SIM Chat</div>
+                <button class="icon-btn borderless"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg></button>
+            </header>
+            <main class="center-canvas-container">
+                <div class="dummy-bubble">查看所有服务</div>
+            </main>
+            <footer class="bottom-monolith">
+                <input type="text" style="width:100%;background:transparent;border:none;color:white;" placeholder="输入消息..." disabled>
+            </footer>
+
+            <div class="drawer-scrim"></div>
+
+            <!-- SIM Drawer -->
+            <div class="user-center-drawer">
+                <div class="drawer-header">
+                    
+                </div>
+
+                <div class="drawer-content" id="drawer-content">
+                    <div class="profile-hero">
+                        <div class="avatar-ring">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        </div>
+                        <div class="profile-details">
+                            <div class="profile-name">SmartSales 用户</div>
+                            <div class="profile-role">大客户销售经理</div>
+                        </div>
+                        <div class="pills-container">
+                            <span class="pill">TMT 行业</span>
+                            <span class="pill">5年经验</span>
+                            <span class="pill">企业微信</span>
+                            <span class="pill accent">PRO</span>
+                        </div>
+                    </div>
+
+                    <!-- Row System -->
+                    <div class="section-stack">
+                        <div class="section-block">
+                            <div class="section-title">偏好设置</div>
+                            <div class="settings-card">
+                                <div class="settings-row">
+                                    <div class="row-left">
+                                        <div class="row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg></div>
+                                        <span>主题外观</span>
+                                    </div>
+                                    <div class="row-right">
+                                        <span class="row-value">跟随系统</span>
+                                        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                    </div>
+                                </div>
+                                <div class="settings-row">
+                                    <div class="row-left">
+                                        <div class="row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></div>
+                                        <span>AI 实验室</span>
+                                    </div>
+                                    <div class="row-right">
+                                        <span class="row-value">记忆与学习</span>
+                                        <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                                    </div>
+                                </div>
+                                <div class="settings-row">
+                                    <div class="row-left">
+                                        <div class="row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></div>
+                                        <span>消息通知</span>
+                                    </div>
+                                    <div class="row-right">
+                                        <div class="toggle-switch active"><div class="toggle-knob"></div></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Injection target for dense grouping test -->
+                        <div id="dense-target"></div>
+
+                        <div class="section-block">
+                            <div class="section-title">空间管理</div>
+                            <div class="settings-card">
+                                <div class="settings-row">
+                                    <div class="row-left">
+                                        <div class="row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg></div>
+                                        <span>已用空间</span>
+                                    </div>
+                                    <div class="row-right">
+                                        <span class="row-value">120 MB</span>
+                                    </div>
+                                </div>
+                                <div class="settings-row">
+                                    <div class="row-left">
+                                        <div class="row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></div>
+                                        <span style="color:var(--text-primary)">清除缓存</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section-block">
+                            <div class="section-title">安全与隐私</div>
+                            <div class="settings-card">
+                                <div class="settings-row">
+                                    <div class="row-left">
+                                        <div class="row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg></div>
+                                        <span>修改密码</span>
+                                    </div>
+                                    <div class="row-right"><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg></div>
+                                </div>
+                                <div class="settings-row">
+                                    <div class="row-left">
+                                        <div class="row-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg></div>
+                                        <span>退出所有设备</span>
+                                    </div>
+                                    <div class="row-right"><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 7. Logout -->
+                        <div class="section-block" style="padding-top: 8px;">
+                            <button class="logout-btn">退出登录</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const originalTargetHTML = "";
+        const rowTemplate = `
+            <div class="settings-row">
+                <div class="row-left"><div class="row-icon"></div><span>增量服务项</span></div>
+                <div class="row-right"><svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg></div>
+            </div>`;
+
+        function setView(viewName, btnElem) {
+            document.querySelectorAll('.review-controls button').forEach(b => b.classList.remove('active'));
+            if(btnElem) btnElem.classList.add('active');
+
+            const drawer = document.getElementById('drawer-content');
+            const target = document.getElementById('dense-target');
+
+            if(viewName === '1-final-default') {
+                target.innerHTML = "";
+                drawer.scrollTo({ top: 0, behavior: 'smooth' });
+            } 
+            else if(viewName === '2-dense-grouping') {
+                let html = '<div class="section-block"><div class="section-title">附加组件订阅</div><div class="settings-card">';
+                for(let i=0; i<8; i++) html += rowTemplate;
+                html += '</div></div>';
+                target.innerHTML = html;
+                drawer.scrollTo({ top: 0, behavior: 'smooth' });
+            } 
+            else if(viewName === '3-long-scroll') {
+                // Keep dense if not present, then scroll down
+                if(!target.innerHTML) {
+                    let html = '<div class="section-block"><div class="section-title">附加组件订阅</div><div class="settings-card">';
+                    for(let i=0; i<12; i++) html += rowTemplate;
+                    html += '</div></div>';
+                    target.innerHTML = html;
+                }
+                setTimeout(() => {
+                    drawer.scrollTo({ top: drawer.scrollHeight, behavior: 'smooth' });
+                }, 100);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -97,7 +97,7 @@ object DynamicIslandStateMapper {
         val schedulerSummary = when {
             leadingTask == null -> "暂无待办"
             leadingTask.hasConflict -> buildDynamicIslandSummary(prefix = "冲突", task = leadingTask)
-            else -> buildDynamicIslandSummary(prefix = "即将", task = leadingTask)
+            else -> buildDynamicIslandSummary(prefix = "最近", task = leadingTask)
         }
         return DynamicIslandUiState.Visible(
             DynamicIslandItem(

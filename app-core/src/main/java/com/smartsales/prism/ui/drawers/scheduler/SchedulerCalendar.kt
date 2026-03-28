@@ -54,6 +54,7 @@ fun SchedulerCalendar(
     unacknowledgedDates: Set<Int> = emptySet(),
     rescheduledDates: Set<Int> = emptySet()  // 改期目标日期
 ) {
+    val visuals = LocalSchedulerDrawerVisuals.current
     // 获取今天日期
     val today = remember { LocalDate.now() }
     val todayDayOfMonth = today.dayOfMonth
@@ -116,20 +117,21 @@ private fun CalendarHeader(
     selectedMonth: Int,
     onMonthSelected: (Int) -> Unit
 ) {
+    val visuals = LocalSchedulerDrawerVisuals.current
     Column(modifier = Modifier.padding(horizontal = 20.dp)) {
         // Year + Month Text
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = "${year}年",
                 fontSize = 16.sp,
-                color = TextSecondary,
+                color = visuals.calendarSecondaryText,
                 modifier = Modifier.padding(end = 8.dp)
             )
             Text(
                 text = "${selectedMonth}月",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary
+                color = visuals.calendarPrimaryText
             )
         }
         
@@ -149,7 +151,13 @@ private fun CalendarHeader(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(16.dp))
-                        .background(if (isSelected) TextPrimary else BackgroundSurfaceMuted)
+                        .background(
+                            if (isSelected) {
+                                visuals.calendarSelectedMonthContainer
+                            } else {
+                                visuals.calendarIdleMonthContainer
+                            }
+                        )
                         .clickable { 
                             onMonthSelected(monthNum)
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -159,7 +167,11 @@ private fun CalendarHeader(
                     Text(
                         text = "${monthNum}月",
                         fontSize = 14.sp,
-                        color = if (isSelected) Color.White else TextSecondary
+                        color = if (isSelected) {
+                            visuals.calendarSelectedMonthText
+                        } else {
+                            visuals.calendarIdleMonthText
+                        }
                     )
                 }
             }
@@ -179,6 +191,7 @@ private fun ExpandableCalendarGrid(
     unacknowledgedDates: Set<Int> = emptySet(),
     rescheduledDates: Set<Int> = emptySet()
 ) {
+    val visuals = LocalSchedulerDrawerVisuals.current
     val days = (1..35).toList()
     
     Box(
@@ -202,7 +215,7 @@ private fun ExpandableCalendarGrid(
                     Text(
                         text = it, 
                         fontSize = 12.sp, 
-                        color = TextMuted, 
+                        color = visuals.calendarMutedText,
                         modifier = Modifier.width(36.dp),
                         textAlign = TextAlign.Center
                     )
@@ -255,6 +268,7 @@ private fun CalendarRow(
     unacknowledgedDates: Set<Int> = emptySet(),
     rescheduledDates: Set<Int> = emptySet()
 ) {
+    val visuals = LocalSchedulerDrawerVisuals.current
     // 呼吸发光动画 (用于未确认日期)
     val infiniteTransition = rememberInfiniteTransition(label = "dateGlow")
     val glowAlpha by infiniteTransition.animateFloat(
@@ -285,7 +299,7 @@ private fun CalendarRow(
             val isRescheduleGlow = dayOffset in rescheduledDates
             val isNewTaskGlow = dayOffset in unacknowledgedDates && !isRescheduleGlow
             val hasGlow = isRescheduleGlow || isNewTaskGlow
-            val glowColor = if (isRescheduleGlow) AccentAmber else AccentBlue
+            val glowColor = if (isRescheduleGlow) visuals.attentionWarning else visuals.attentionNormal
             val attentionKind = when {
                 isRescheduleGlow -> "warning"
                 isNewTaskGlow -> "normal"
@@ -311,9 +325,9 @@ private fun CalendarRow(
                     )
                     .then(
                         when {
-                            isTodaySelected -> Modifier.background(TextPrimary, CircleShape)
-                            isToday -> Modifier.background(TextMuted, CircleShape) // Grey when not selected
-                            isSelected -> Modifier.border(2.dp, TextPrimary, CircleShape)
+                            isTodaySelected -> Modifier.background(visuals.calendarSelectedContainer, CircleShape)
+                            isToday -> Modifier.background(visuals.calendarTodayContainer, CircleShape)
+                            isSelected -> Modifier.border(2.dp, visuals.calendarSelectedContainer, CircleShape)
                             else -> Modifier
                         }
                     )
@@ -324,7 +338,12 @@ private fun CalendarRow(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
                         text = dayNum.toString(),
-                        color = if (isToday) Color.White else TextPrimary,
+                        color = when {
+                            isTodaySelected -> visuals.calendarSelectedText
+                            isToday -> visuals.calendarTodayText
+                            isSelected -> visuals.calendarPrimaryText
+                            else -> visuals.calendarPrimaryText
+                        },
                         fontSize = 14.sp,
                         fontWeight = if (isTodaySelected) FontWeight.Bold else FontWeight.Normal
                     )
@@ -333,7 +352,7 @@ private fun CalendarRow(
                         Box(
                             modifier = Modifier
                                 .size(4.dp)
-                                .background(AccentSecondary, CircleShape)
+                                .background(visuals.attentionNormal, CircleShape)
                         )
                     }
                 }
@@ -347,6 +366,7 @@ private fun ExpansionHandle(
     isExpanded: Boolean,
     onExpandChange: (Boolean) -> Unit
 ) {
+    val visuals = currentSchedulerDrawerVisuals
     var dragOffset by remember { mutableStateOf(0f) }
     
     Box(
@@ -373,7 +393,7 @@ private fun ExpansionHandle(
             modifier = Modifier
                 .width(32.dp)
                 .height(4.dp)
-                .background(BorderSubtle, RoundedCornerShape(2.dp))
+                .background(visuals.handleColor, RoundedCornerShape(2.dp))
         )
     }
 }

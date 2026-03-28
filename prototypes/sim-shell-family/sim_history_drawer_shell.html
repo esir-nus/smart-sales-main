@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SIM History Drawer Shell Prototype</title>
+    <style>
+        :root {
+            --status-bar-height: 44px;
+            --bg-app: #0D0D12;
+            --monolith-bg: #020205; 
+            --color-accent-blue: #0A84FF; 
+            --text-primary: #FFFFFF;
+            --text-secondary: #86868B;
+            --text-muted: #AEAEB2;
+            --font-cn: "Inter", "PingFang SC", system-ui, sans-serif;
+            --surface-drawer: rgba(20, 20, 22, 0.85); /* Dark frosted slab */
+            --border-subtle: rgba(255, 255, 255, 0.08); /* Razer-thin premium edge */
+            --border-glass: rgba(255, 255, 255, 0.15);
+            /* Group / Action Colors */
+            --color-pin: var(--text-primary); 
+            --color-delete: #FF453A;
+            --color-action-bg: rgba(255, 255, 255, 0.1);
+            --color-hover: rgba(255, 255, 255, 0.05);
+            --surface-dock: rgba(30, 30, 32, 0.6);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
+        ::-webkit-scrollbar { display: none; }
+        body { background: #000; color: var(--text-primary); font-family: var(--font-cn); display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }
+        /* Toggles */
+        .review-controls { position: fixed; left: 20px; top: 20px; width: 240px; background: #111; border: 1px solid #333; padding: 16px; border-radius: 12px; z-index: 1000; }
+        .review-controls h3 { font-size: 14px; color: #888; margin-bottom: 8px; margin-top: 16px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .review-controls h3:first-child { margin-top: 0; }
+        .review-controls button { display: block; width: 100%; text-align: left; background: rgba(255,255,255,0.05); color: #FFF; border: none; padding: 10px 12px; margin-bottom: 4px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+        .review-controls button:hover, .review-controls button.active { background: rgba(10, 132, 255, 0.2); color: var(--color-accent-blue); }
+        /* Emulation */
+        #emulator-container { width: 390px; height: 844px; background: var(--bg-app); border-radius: 40px; position: relative; border: 8px solid #222; box-shadow: 0 0 60px rgba(0,0,0,0.8); overflow: hidden; display: flex; flex-direction: column; }
+        .layer-floor { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 0; background: #0D0D12; overflow: hidden; }
+        .blob { position: absolute; border-radius: 50%; filter: blur(80px); mix-blend-mode: screen; }
+        .blob-1 { width: 250px; height: 250px; background: rgba(10, 132, 255, 0.28); top: 10%; left: -10%; animation: drift1 20s infinite alternate ease-in-out; }
+        .blob-2 { width: 280px; height: 280px; background: rgba(94, 92, 230, 0.24); top: 40%; left: 40%; animation: drift2 25s infinite alternate ease-in-out; }
+        .blob-3 { width: 220px; height: 220px; background: rgba(100, 210, 255, 0.20); bottom: 5%; left: 0%; animation: drift3 22s infinite alternate ease-in-out; }
+        @keyframes drift1 { 0% { transform: translate(0, 0); } 100% { transform: translate(40px, -20px); } }
+        @keyframes drift2 { 0% { transform: translate(0, 0); } 100% { transform: translate(-30px, 30px); } }
+        @keyframes drift3 { 0% { transform: translate(0, 0); } 100% { transform: translate(50px, -10px); } }
+        
+        .sim-shell { position: absolute; top: var(--status-bar-height); left: 0; right: 0; bottom: 0; z-index: 10; display: flex; flex-direction: column; }
+        .top-monolith { height: 64px; background: var(--monolith-bg); display: flex; align-items: center; justify-content: space-between; padding-left: 16px; padding-right: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.8); z-index: 20; position: relative; }
+        .icon-btn { background: none; border: none; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 4px; }
+        
+        .center-canvas-container { flex: 1; position: relative; z-index: 10; display: flex; flex-direction: column; justify-content: flex-end; padding: 16px; }
+        .dummy-bubble { background: var(--color-accent-blue); color: white; padding: 10px 16px; border-radius: 20px; border-bottom-right-radius: 4px; max-width: 80%; align-self: flex-end; font-size: 15px; margin-bottom: 12px; }
+        .dummy-bubble.assistant { align-self: flex-start; background: rgba(255,255,255,0.05); border: 0.5px solid var(--border-subtle); border-bottom-right-radius: 20px; border-bottom-left-radius: 4px; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); margin-bottom: 24px; }
+        .bottom-monolith { background: var(--monolith-bg); min-height: 56px; padding: 10px 16px 16px 16px; box-shadow: 0 -10px 40px rgba(0,0,0,0.8); z-index: 20; display: flex; align-items: center; gap: 12px; position: relative; }
+        .input-field-wrapper { flex: 1; display: flex; align-items: center; background: transparent; }
+        .chat-input { width: 100%; background: transparent; border: none; color: white; font-size: 16px; line-height: 24px; padding: 12px 0; z-index: 2;}
+
+        /* Scrim & Drawer - Premium Setup */
+        /* Increased scrim opacity to 0.6 for stronger possession of the overlay */
+        .drawer-scrim { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); z-index: 40; opacity: 0; pointer-events: none; transition: opacity 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        .history-drawer { position: absolute; top: 0; bottom: 0; left: 0; width: 320px; background: var(--surface-drawer); backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px); border-right: 0.5px solid var(--border-subtle); border-top-right-radius: 36px; border-bottom-right-radius: 36px; box-shadow: 20px 0 60px rgba(0, 0, 0, 0.7); z-index: 50; display: flex; flex-direction: column; transform: translateX(-100%); transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); overflow: hidden; }
+        
+        /* Shell State Control */
+        .sim-shell:not([data-view="1-closed"]) .drawer-scrim { opacity: 1; pointer-events: auto; }
+        .sim-shell:not([data-view="1-closed"]) .history-drawer { transform: translateX(0); }
+        
+        /* Drawer Internals */
+        /* Adjusted top padding to clear status area */
+        .drawer-header { padding: 16px 20px 16px 20px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
+        .drawer-title { font-size: 20px; font-weight: 600; color: var(--text-primary); letter-spacing: 0.5px; }
+        
+        .drawer-content { flex: 1; overflow-y: auto; overflow-x: hidden; padding: 0 0 20px 0; display: flex; flex-direction: column; gap: 24px; }
+        
+        .history-group { display: flex; flex-direction: column; gap: 4px; }
+        .group-header { padding: 0 20px 8px 20px; display: flex; align-items: center; gap: 8px; }
+        .group-label { font-size: 13px; font-weight: 600; color: var(--text-secondary); letter-spacing: 0.2px; }
+        
+        /* Hierarchy & Rows */
+        .history-card-container { position: relative; margin: 0 12px; }
+        /* Title-only rows */
+        .history-card { position: relative; display: flex; align-items: center; padding: 14px 12px; border-radius: 12px; background: transparent; transition: background 0.2s, transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); cursor: pointer; z-index: 2; height: 48px;}
+        .history-card:hover { background: var(--color-hover); }
+        .history-card.active-session { background: var(--color-hover); border: 0.5px solid var(--border-glass);}
+        
+        .card-text-area { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; padding-right: 8px; }
+        .card-title-row { display: flex; justify-content: flex-start; align-items: center; gap: 12px; }
+        .card-title { font-size: 15px; font-weight: 500; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        /* Actions: Long Press Concept (No Action Swipe in Prototype) */
+        /* Actions are triggered by long press, so no swipe underlays are visible by default in this slice. */
+        
+        /* Empty State */
+        .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; padding: 0 40px; text-align: center; gap: 16px; margin-top: -20px; }
+        .empty-icon { width: 64px; height: 64px; border-radius: 32px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-subtle); display: flex; justify-content: center; align-items: center; color: var(--text-muted); }
+        .empty-title { font-size: 16px; font-weight: 500; color: var(--text-primary); }
+        .empty-desc { font-size: 14px; color: var(--text-secondary); line-height: 1.5; }
+
+        /* User Dock */
+        .user-dock { 
+            padding: 16px 20px; 
+            border-top: 0.5px solid var(--border-subtle); 
+            background: var(--surface-dock); 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between;
+            flex-shrink: 0;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            margin-bottom: 24px; /* Home bar spacing */
+        }
+        .user-profile { display: flex; align-items: center; gap: 12px; cursor: pointer; flex: 1; min-width: 0;}
+        .user-avatar { width: 40px; height: 40px; border-radius: 20px; background: linear-gradient(135deg, #2C2C2E, #1C1C1E); border: 1px solid var(--border-glass); display: flex; align-items: center; justify-content: center; color: var(--text-secondary); flex-shrink: 0;}
+        .user-avatar svg { width: 24px; height: 24px; color: var(--text-primary); opacity: 0.8;}
+        .user-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .user-name { font-size: 15px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .user-mem { font-size: 12px; color: var(--color-accent-blue); font-weight: 500;}
+        .user-settings-btn { background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 8px; display: flex; align-items: center; justify-content: center; transition: color 0.2s; flex-shrink: 0;}
+        .user-settings-btn:hover { color: var(--text-primary); }
+
+        /* Conditional Group Overrides */
+        .sim-shell[data-view="4-empty"] .drawer-content > .history-group { display: none; }
+        .sim-shell[data-view="4-empty"] .group-empty { display: flex; flex: 1; min-height: 200px; }
+        .group-empty { display: none; }
+
+        /* Content Overrides */
+        .sim-shell[data-view="5-long"] .card-title.long-stress { content: "这是一个非常长的客户或者阶段名称..."; }
+        .sim-shell[data-view="7-dense"] .drawer-content { gap: 16px; }
+        .sim-shell[data-view="7-dense"] .history-card { padding: 10px 12px; margin-bottom: 2px;}
+    </style>
+</head>
+<body>
+<div class="review-controls" style="overflow-y: auto; max-height: 80vh;">
+        <h3>History Drawer</h3>
+        <button id="btn-1-closed" class="active" onclick="setView('1-closed', this)">1. Closed / Base Shell</button>
+        <button id="btn-2-normal" onclick="setView('2-normal', this)">2. Open / Populated</button>
+        <button id="btn-4-empty" onclick="setView('4-empty', this)">3. Open / Empty State</button>
+        <button id="btn-5-long" onclick="setView('5-long', this)">4. Open / Truncation Stress</button>
+        <button id="btn-7-dense" onclick="setView('7-dense', this)">5. Open / Dense Sessions</button>
+    </div>
+
+    <div id="emulator-container">
+        <!-- System Status Bar -->
+        <div class="system-status-bar" style="position: absolute; top: 0; left: 0; right: 0; height: var(--status-bar-height); z-index: 100; display: flex; justify-content: space-between; align-items: center; padding: 0 24px; font-size: 15px; font-weight: 600; color: var(--text-primary); pointer-events: none;">
+            <span>22:59</span>
+            <div style="display: flex; gap: 6px; align-items: center;">
+                <span style="font-size: 13px;">5G</span>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M17 4h-3V2h-4v2H7v18h10V4z"/></svg>
+            </div>
+        </div>
+
+        <!-- Aurora Bg -->
+        <div class="layer-floor"><div class="blob blob-1"></div><div class="blob blob-2"></div><div class="blob blob-3"></div></div>
+
+        <!-- Shell -->
+        <div id="sim-shell" class="sim-shell" data-view="1-closed">
+            <!-- Top Monolith -->
+            <header class="top-monolith">
+                <button class="icon-btn borderless"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button>
+                <div style="color:white; font-size: 15px; font-weight:600;">SIM Chat</div>
+                <button class="icon-btn borderless"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></button>
+            </header>
+
+            <main class="center-canvas-container">
+                <div class="dummy-bubble">这份合同的重点是什么？</div>
+                <div class="dummy-bubble assistant">合同的重点在于付款周期和违约条款。付款周期缩短至30天，违约金比例上调至5%。建议您在签约前再次确认这两项。</div>
+            </main>
+
+            <footer class="bottom-monolith">
+                <div class="input-field-wrapper"><input type="text" class="chat-input" placeholder="输入消息..." disabled></div>
+            </footer>
+
+            <div class="drawer-scrim" onclick="setView('1-closed', document.getElementById('btn-1-closed'))"></div>
+
+            <!-- HISTORY DRAWER overlay -->
+            <div class="history-drawer">
+                <div class="drawer-header">
+                    <span class="drawer-title">历史记录</span>
+                </div>
+
+                <div class="drawer-content">
+                    <div class="history-group group-empty">
+                        <div class="empty-state">
+                            <div class="empty-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></div>
+                            <span class="empty-title">暂无会话</span>
+                            <span class="empty-desc">您的历史沟通记录及录音挂载将在此处显示，按时间线归档方便查找。</span>
+                        </div>
+                    </div>
+
+                    <div class="history-group">
+                        <div class="group-header">
+                            <span class="group-label">置顶</span>
+                        </div>
+                        <div class="history-card-container">
+                            <div class="history-card">
+                                <div class="card-text-area">
+                                    <div class="card-title-row"><span class="card-title long-stress">华东大区 Q1 业务复盘</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="history-group">
+                        <div class="group-header"><span class="group-label">今天</span></div>
+                        <div class="history-card-container">
+                            <div class="history-card active-session">
+                                <div class="card-text-area">
+                                    <div class="card-title-row"><span class="card-title long-stress">产品需求评审会 V2.4</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="history-card-container">
+                            <div class="history-card">
+                                <div class="card-text-area">
+                                    <div class="card-title-row"><span class="card-title">拜访客户 A 录音分析</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="history-group">
+                        <div class="group-header"><span class="group-label">最近30天</span></div>
+                        <div class="history-card-container">
+                            <div class="history-card">
+                                <div class="card-text-area">
+                                    <div class="card-title-row"><span class="card-title">技术团队 OKR 讨论</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="history-card-container">
+                            <div class="history-card">
+                                <div class="card-text-area">
+                                    <div class="card-title-row"><span class="card-title">活动策划预演</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="history-group">
+                        <div class="group-header"><span class="group-label">2026-02</span></div>
+                        <div class="history-card-container">
+                            <div class="history-card">
+                                <div class="card-text-area">
+                                    <div class="card-title-row"><span class="card-title">年度全员大会筹备</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Fixed Bottom User Dock -->
+                <div class="user-dock">
+                    <div class="user-profile">
+                        <div class="user-avatar">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        </div>
+                        <div class="user-info">
+                            <span class="user-name">Frank</span>
+                            <span class="user-mem">Pro Plan</span>
+                        </div>
+                    </div>
+                    <button class="user-settings-btn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+function setView(viewName, btnElem) {
+            const shell = document.getElementById('sim-shell');
+            shell.setAttribute('data-view', viewName);
+            
+            if (viewName === '1-closed') {
+                shell.setAttribute('data-drawer-state', 'closed');
+            } else {
+                shell.setAttribute('data-drawer-state', 'open');
+            }
+
+            const longTargetsStr = document.querySelectorAll('.long-stress');
+            if(viewName === '5-long') {
+                longTargetsStr.forEach(el => {
+                    if (el.classList.contains('card-title')) {
+                        el.innerText = "超级长长长长长长长长长长长的项目名称用于测试溢出截断...";
+                    }
+                });
+            } else {
+                longTargetsStr[0].innerText = "华东大区 Q1 业务复盘";
+                longTargetsStr[1].innerText = "产品需求评审会 V2.4";
+            }
+
+            const buttons = document.querySelectorAll('.review-controls button');
+            buttons.forEach(b => b.classList.remove('active'));
+            if(btnElem) btnElem.classList.add('active');
+        }
+    </script>
+</body>
+</html>

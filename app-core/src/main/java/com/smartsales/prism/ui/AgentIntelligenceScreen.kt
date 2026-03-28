@@ -8,9 +8,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.smartsales.prism.domain.model.SchedulerFollowUpContext
 import com.smartsales.prism.ui.components.DynamicIslandItem
 import com.smartsales.prism.ui.components.DynamicIslandTapAction
 import com.smartsales.prism.ui.sim.SimAgentViewModel
+import com.smartsales.prism.ui.sim.SimVoiceDraftUiState
 
 enum class AgentIntelligenceVisualMode {
     DEFAULT,
@@ -39,7 +41,14 @@ fun AgentIntelligenceScreen(
     enableSimSchedulerPullGesture: Boolean = false,
     enableSimAudioPullGesture: Boolean = false,
     onSimSchedulerPullOpen: () -> Unit = {},
-    onSimAudioPullOpen: () -> Unit = {}
+    onSimAudioPullOpen: () -> Unit = {},
+    simVoiceDraftStateOverride: SimVoiceDraftUiState? = null,
+    simVoiceDraftEnabledOverride: Boolean? = null,
+    onSimVoiceDraftPermissionRequested: (() -> Unit)? = null,
+    onSimVoiceDraftPermissionResult: ((Boolean) -> Unit)? = null,
+    onSimVoiceDraftStart: (() -> Boolean)? = null,
+    onSimVoiceDraftFinish: (() -> Unit)? = null,
+    onSimVoiceDraftCancel: (() -> Unit)? = null
 ) {
     val history by viewModel.history.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
@@ -60,6 +69,13 @@ fun AgentIntelligenceScreen(
                 emptyMap<String, SimAgentViewModel.ArtifactTranscriptRevealState>()
             )
         })
+    val currentSchedulerFollowUpContext by (simViewModel?.currentSchedulerFollowUpContext?.collectAsState()
+        ?: remember { mutableStateOf<SchedulerFollowUpContext?>(null) })
+    val simVoiceDraftObservedState by (simViewModel?.voiceDraftState?.collectAsState()
+        ?: remember { mutableStateOf(SimVoiceDraftUiState()) })
+    val simVoiceDraftState = simVoiceDraftStateOverride ?: simVoiceDraftObservedState
+    val simVoiceDraftEnabled = simVoiceDraftEnabledOverride
+        ?: (visualMode == AgentIntelligenceVisualMode.SIM && currentSchedulerFollowUpContext == null)
 
     val context = LocalContext.current
     androidx.compose.runtime.LaunchedEffect(toastMessage) {
@@ -105,6 +121,23 @@ fun AgentIntelligenceScreen(
         enableSimAudioPullGesture = enableSimAudioPullGesture,
         onSimSchedulerPullOpen = onSimSchedulerPullOpen,
         onSimAudioPullOpen = onSimAudioPullOpen,
+        simVoiceDraftState = simVoiceDraftState,
+        simVoiceDraftEnabled = simVoiceDraftEnabled,
+        onSimVoiceDraftPermissionRequested = onSimVoiceDraftPermissionRequested
+            ?: simViewModel?.let { it::onVoiceDraftPermissionRequested }
+            ?: {},
+        onSimVoiceDraftPermissionResult = onSimVoiceDraftPermissionResult
+            ?: simViewModel?.let { it::onVoiceDraftPermissionResult }
+            ?: {},
+        onSimVoiceDraftStart = onSimVoiceDraftStart
+            ?: simViewModel?.let { it::startVoiceDraft }
+            ?: { false },
+        onSimVoiceDraftFinish = onSimVoiceDraftFinish
+            ?: simViewModel?.let { it::finishVoiceDraft }
+            ?: {},
+        onSimVoiceDraftCancel = onSimVoiceDraftCancel
+            ?: simViewModel?.let { it::cancelVoiceDraft }
+            ?: {},
         onUpdateInput = viewModel::updateInput,
         onSend = viewModel::send,
         onConfirmPlan = viewModel::confirmAnalystPlan,

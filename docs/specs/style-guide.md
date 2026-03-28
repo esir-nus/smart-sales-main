@@ -117,6 +117,18 @@ The palette uses clean, neutral surfaces to let the **AI Intelligence** (Chroma 
 
 This section defines the visual family for the greeting-first home state and the SIM chat-first here state.
 
+### 3.0 Top Safe-Area Law
+
+Global rule for any surface that visually reaches the top edge:
+
+* Default structure: `native status-bar inset -> 16dp blank safe band -> first visible content`.
+* The 16dp band must stay empty. Do not place titles, chips, buttons, or helper content there as a spacing workaround.
+* `statusBarsPadding()` alone is not sufficient to satisfy the rule.
+* Exception surfaces are only those whose owning spec explicitly defines a top monolith or header slot.
+* Exception surfaces may let the header itself occupy the post-inset zone, but the header's internal content must still clear the native status region.
+* For top-down overlays that live under a persistent top monolith, preserve the shell-owned top-monolith alignment and add real status-bar awareness there rather than flattening the surface back to the generic blank-band rule.
+* Do not invent per-screen top spacing rules when the surface fits the default pattern.
+
 State ownership:
 
 - `docs/cerb-ui/home-shell/spec.md` owns the generic empty-state `HomeShell` / `ChatWelcome` composition

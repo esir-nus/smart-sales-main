@@ -63,6 +63,13 @@ Every element definition follows this strict logic:
 | **Relevancy Found** | `Info` (Blue) | Library Hit | `✨ 发现关联: [Entity]` | Opens Entity Card. | ❌ Pending |
 | **Task Created** | `Success` (Green) | Voice Cmd | `✅ 日程已创建` | Opens Calendar. | ❌ Pending |
 
+### 1.2 Global Top Safe-Area Rule
+
+| Element | Visual State | Trigger | Animation | Result | Invariant | Status |
+|---------|--------------|---------|-----------|--------|-----------|--------|
+| **Default Top-Reaching Surface** | `Visible` | Auto layout | None | Content begins below top safe band | Must use `status inset + 16dp blank band + content`; the blank band stays empty. | ✅ Verified |
+| **Explicit Header / Monolith Surface** | `Visible` | Auto layout | None | Header occupies top slot | Header content must clear native status icons; no extra default blank band is implied. | ✅ Verified |
+
 ---
 
 ## 2. Home Screen (Base Layer)
@@ -90,9 +97,9 @@ Home empty-state composition note:
 ### 1.6 User Center (Settings Blueprint)
 | Element | Visual | Interaction | Microcopy | Result | Status |
 |---------|--------|-------------|-----------|--------|--------|
-| **Profile Card** | Avatar/Text | Tap `Edit` | "Name / Position" | Edit Screen. | ✅ Verified |
-| **Preferences** | List | Tap | "Theme / AI Lab" | Toggle Setting. | ✅ Verified |
-| **Storage** | Row | Tap `Clear` | "Used: 120MB" | Clears Cache. | ✅ Verified |
+| **Profile Card** | Centered hero | Tap `Edit` | "Name / Position / metadata chips" | Edit Screen. | ✅ Verified |
+| **Preferences** | List | Tap | "Theme / AI Lab / Message Notifications" | `Theme` opens a persisted `Dark / Light / System` selector; AI Lab remains a toggle setting. | ✅ Verified |
+| **Storage** | Two rows | Tap `Clear` | "Used Space / Clear Cache" | Clears Cache. | ✅ Verified |
 | **Security** | Row | Tap | "Change Password" | Nav Flow. | ✅ Verified |
 | **Footer** | Button | Tap | "Log Out" | Ends Session. | ✅ Verified |
 
@@ -136,9 +143,12 @@ Home empty-state composition note:
 
 | Element | Visual State | Trigger | Animation | Result | Invariant | Status |
 |---------|--------------|---------|-----------|--------|-----------|--------|
-| **Drawer Panel** | `Closed` | Trigger [☰] | Slide `spring(Low)` | Expands 85%. | Scrim covers Home. | 🚧 In-Progress |
-| **Session Item** | `Idle` | Tap | Ripple | Load Session. | Highlight Current. | ❌ Pending |
-| **Sessions** | `List` | Scroll | Kinetic | Visual List. | Grouped (Today). | ❌ Pending |
+| **Drawer Panel** | `Closed` | Trigger [☰] | Slide `spring(Low)` | Opens full-app history drawer. | Scrim covers Home; no edge-swipe open. | ✅ Verified |
+| **Device Capsule** | `Connected / Reconnecting / Offline` | Tap | Ripple | Opens Connectivity Modal. | Lives inside the drawer header seam. | ✅ Verified |
+| **Session Group Card** | `Expanded / Collapsed` | Tap header | Rotate chevron + expand/collapse | Shows grouped sessions. | Collapsible groups remain local to drawer. | ✅ Verified |
+| **Session Item** | `Idle` | Tap | Ripple | Load Session and close drawer. | Visible overflow remains the primary action entry. | ✅ Verified |
+| **Session Actions** | `Overflow Open` | Tap `⋮` | Menu open | Exposes `Pin / Rename / Delete`. | Long-press may remain as supplemental entry only. | ✅ Verified |
+| **Footer Profile / Settings** | `Idle` | Tap | Ripple | Opens User Center. | Both footer entries hand off to the same overlay seam. | ✅ Verified |
 
 ---
 

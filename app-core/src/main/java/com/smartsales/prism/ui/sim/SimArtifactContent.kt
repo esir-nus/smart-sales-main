@@ -5,11 +5,12 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,7 +20,6 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -29,7 +29,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -58,44 +57,42 @@ fun SimArtifactBubble(
     onTranscriptRevealConsumed: (isLongTranscript: Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val palette = rememberSimConversationSurfacePalette()
     val artifacts = remember(artifactsJson) {
         runCatching { simArtifactJson.decodeFromString<TingwuJobArtifacts>(artifactsJson) }.getOrNull()
     }
-    val keywords = remember(artifacts) { resolveSimArtifactKeywords(artifacts).take(4) }
 
     Column(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
-            .background(SimConversationSurfaceTokens.Surface)
-            .border(1.dp, SimConversationSurfaceTokens.Border, RoundedCornerShape(18.dp))
+            .background(palette.surface)
+            .border(1.dp, palette.border, RoundedCornerShape(18.dp))
             .padding(horizontal = 16.dp, vertical = 15.dp)
     ) {
         Text(
             text = "《$title》转写结果",
-            color = SimConversationSurfaceTokens.Title,
+            color = palette.title,
             fontWeight = FontWeight.SemiBold,
             fontSize = 15.sp
         )
-        if (keywords.isNotEmpty()) {
-            SimArtifactKeywordChips(
-                keywords = keywords,
-                modifier = Modifier.padding(top = 10.dp)
-            )
-        }
         if (artifacts == null) {
             Text(
                 text = "当前无法读取该音频的结构化结果，请稍后重试。",
-                color = SimConversationSurfaceTokens.BodyMuted,
+                color = palette.bodyMuted,
                 fontSize = 13.sp,
                 modifier = Modifier.padding(top = 10.dp)
             )
         } else {
+            SimArtifactOverviewHeader(
+                artifacts = artifacts,
+                modifier = Modifier.padding(top = 10.dp)
+            )
             SimArtifactContent(
                 artifacts = artifacts,
                 transcriptPresentation = transcriptPresentation,
                 onTranscriptRevealConsumed = onTranscriptRevealConsumed,
-                modifier = Modifier.padding(top = 10.dp)
+                modifier = Modifier.padding(top = 12.dp)
             )
         }
     }
@@ -108,10 +105,13 @@ fun SimArtifactContent(
     onTranscriptRevealConsumed: (isLongTranscript: Boolean) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val palette = rememberSimConversationSurfacePalette()
     val transcript = artifacts.transcriptMarkdown?.takeIf { it.isNotBlank() }
-    val summary = artifacts.smartSummary?.summary?.takeIf { it.isNotBlank() }
+    val summary = buildSimSummarySection(artifacts)
     val highlights = artifacts.smartSummary?.keyPoints?.takeIf { it.isNotEmpty() }
         ?.joinToString("\n") { "• $it" }
+    val speakerSummaries = buildSimSpeakerSummarySection(artifacts)
+    val questionAnswers = buildSimQuestionAnswerSection(artifacts)
     val chapters = artifacts.chapters?.takeIf { it.isNotEmpty() }
         ?.joinToString("\n\n") { chapter ->
             buildString {
@@ -126,8 +126,6 @@ fun SimArtifactContent(
         }
     val speakers = buildSimSpeakerSection(artifacts)
     val providerAdjacent = buildSimProviderAdjacentSection(artifacts)
-    val links = artifacts.resultLinks.takeIf { it.isNotEmpty() }
-        ?.joinToString("\n") { "- ${it.label}: ${it.url}" }
 
     Column(modifier = modifier.fillMaxWidth()) {
         transcript?.let {
@@ -138,28 +136,71 @@ fun SimArtifactContent(
             )
         }
         summary?.let {
-            HorizontalDivider(color = SimConversationSurfaceTokens.Divider)
+            HorizontalDivider(color = palette.divider)
             SimArtifactSection(title = "摘要", text = it, useMarkdown = true)
         }
         highlights?.let {
-            HorizontalDivider(color = SimConversationSurfaceTokens.Divider)
+            HorizontalDivider(color = palette.divider)
             SimArtifactSection(title = "重点", text = it)
         }
+        speakerSummaries?.let {
+            HorizontalDivider(color = palette.divider)
+            SimArtifactSection(title = "发言人总结", text = it)
+        }
+        questionAnswers?.let {
+            HorizontalDivider(color = palette.divider)
+            SimArtifactSection(title = "问答回顾", text = it)
+        }
         chapters?.let {
-            HorizontalDivider(color = SimConversationSurfaceTokens.Divider)
+            HorizontalDivider(color = palette.divider)
             SimArtifactSection(title = "章节", text = it)
         }
         speakers?.let {
-            HorizontalDivider(color = SimConversationSurfaceTokens.Divider)
+            HorizontalDivider(color = palette.divider)
             SimArtifactSection(title = "说话人", text = it)
         }
         providerAdjacent?.let {
-            HorizontalDivider(color = SimConversationSurfaceTokens.Divider)
+            HorizontalDivider(color = palette.divider)
             SimArtifactSection(title = "附加结果", text = it)
         }
-        links?.let {
-            HorizontalDivider(color = SimConversationSurfaceTokens.Divider)
-            SimArtifactSection(title = "结果链接", text = it)
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+internal fun SimArtifactOverviewHeader(
+    artifacts: TingwuJobArtifacts,
+    fallbackOverview: String? = null,
+    modifier: Modifier = Modifier
+) {
+    val palette = rememberSimConversationSurfacePalette()
+    val overview = remember(artifacts, fallbackOverview) {
+        resolveSimArtifactOverview(artifacts, fallbackOverview)
+    }
+    val keywords = remember(artifacts) { resolveSimArtifactKeywords(artifacts).take(4) }
+    if (overview == null && keywords.isEmpty()) return
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(palette.quietFill)
+            .border(1.dp, palette.border, RoundedCornerShape(14.dp))
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+    ) {
+        overview?.let {
+            Text(
+                text = it,
+                color = palette.bodyMuted,
+                fontSize = 13.sp,
+                lineHeight = 19.sp
+            )
+        }
+        if (keywords.isNotEmpty()) {
+            SimArtifactKeywordChips(
+                keywords = keywords,
+                modifier = if (overview != null) Modifier.padding(top = 10.dp) else Modifier
+            )
         }
     }
 }
@@ -277,6 +318,7 @@ private fun SimArtifactSection(
     onExpandedChange: ((Boolean) -> Unit)? = null,
     onTextLayout: ((androidx.compose.ui.text.TextLayoutResult) -> Unit)? = null
 ) {
+    val palette = rememberSimConversationSurfacePalette()
     var expanded by remember(title) { mutableStateOf(initiallyExpanded) }
 
     LaunchedEffect(initiallyExpanded) {
@@ -296,7 +338,7 @@ private fun SimArtifactSection(
         ) {
             Text(
                 text = title,
-                color = SimConversationSurfaceTokens.Title,
+                color = palette.title,
                 fontWeight = FontWeight.Medium,
                 fontSize = 13.sp,
                 modifier = Modifier.weight(1f)
@@ -304,7 +346,7 @@ private fun SimArtifactSection(
             Icon(
                 imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                tint = SimConversationSurfaceTokens.Icon
+                tint = palette.icon
             )
         }
 
@@ -313,14 +355,14 @@ private fun SimArtifactSection(
                 if (useMarkdown) {
                     MarkdownText(
                         text = text,
-                        color = SimConversationSurfaceTokens.BodyMuted,
+                        color = palette.bodyMuted,
                         lineHeight = 20.sp,
                         onTextLayout = { result -> onTextLayout?.invoke(result) }
                     )
                 } else {
                     Text(
                         text = text,
-                        color = SimConversationSurfaceTokens.BodyMuted,
+                        color = palette.bodyMuted,
                         fontSize = 13.sp,
                         lineHeight = 19.sp,
                         onTextLayout = { result -> onTextLayout?.invoke(result) }
@@ -337,6 +379,7 @@ private fun SimArtifactKeywordChips(
     keywords: List<String>,
     modifier: Modifier = Modifier
 ) {
+    val palette = rememberSimConversationSurfacePalette()
     FlowRow(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -346,13 +389,13 @@ private fun SimArtifactKeywordChips(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(10.dp))
-                    .background(SimConversationSurfaceTokens.QuietFill)
-                    .border(1.dp, SimConversationSurfaceTokens.Border, RoundedCornerShape(10.dp))
+                    .background(palette.quietFill)
+                    .border(1.dp, palette.border, RoundedCornerShape(10.dp))
                     .padding(horizontal = 10.dp, vertical = 6.dp)
             ) {
                 Text(
                     text = keyword,
-                    color = SimConversationSurfaceTokens.Body,
+                    color = palette.body,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium
                 )
@@ -373,6 +416,54 @@ private fun formatSimChapterTime(startMs: Long): String {
     }
 }
 
+internal fun buildSimSummarySection(artifacts: TingwuJobArtifacts): String? {
+    return artifacts.smartSummary?.summary?.trim()?.takeIf { it.isNotBlank() }
+}
+
+internal fun buildSimSpeakerSummarySection(artifacts: TingwuJobArtifacts): String? {
+    val speakerSummaries = artifacts.smartSummary?.speakerSummaries?.filter {
+        it.summary.isNotBlank()
+    }.orEmpty()
+    if (speakerSummaries.isEmpty()) return null
+    return speakerSummaries.joinToString("\n") { item ->
+        val label = item.name?.takeIf { it.isNotBlank() } ?: "发言人"
+        "- $label：${item.summary}"
+    }
+}
+
+internal fun buildSimQuestionAnswerSection(artifacts: TingwuJobArtifacts): String? {
+    val questionAnswers = artifacts.smartSummary?.questionAnswers?.filter {
+        it.question.isNotBlank() && it.answer.isNotBlank()
+    }.orEmpty()
+    if (questionAnswers.isEmpty()) return null
+    return questionAnswers.joinToString("\n\n") { item ->
+        "Q: ${item.question}\nA: ${item.answer}"
+    }
+}
+
+internal fun resolveSimArtifactOverview(
+    artifacts: TingwuJobArtifacts?,
+    fallbackOverview: String? = null
+): String? {
+    if (artifacts == null) return fallbackOverview?.trim()?.takeIf { it.isNotBlank() }
+    val summary = buildSimSummarySection(artifacts)
+    val keyPoint = artifacts.smartSummary?.keyPoints?.firstOrNull()?.takeIf { it.isNotBlank() }
+    val transcriptPreview = artifacts.transcriptMarkdown
+        ?.replace(Regex("[#*>`*_\\-]+"), " ")
+        ?.replace(Regex("\\s+"), " ")
+        ?.trim()
+        ?.takeIf { it.isNotBlank() }
+        ?.take(90)
+    return listOf(summary, keyPoint, transcriptPreview, fallbackOverview)
+        .firstNotNullOfOrNull { candidate ->
+            candidate
+                ?.replace(Regex("[*#`_]+"), "")
+                ?.replace(Regex("\\s+"), " ")
+                ?.trim()
+                ?.takeIf { it.isNotBlank() }
+        }
+}
+
 private fun buildSimSpeakerSection(artifacts: TingwuJobArtifacts): String? {
     if (artifacts.speakerLabels.isNotEmpty()) {
         return artifacts.speakerLabels.entries.joinToString("\n") { (speakerId, label) ->
@@ -389,16 +480,12 @@ private fun buildSimSpeakerSection(artifacts: TingwuJobArtifacts): String? {
         }
 }
 
-private fun buildSimProviderAdjacentSection(artifacts: TingwuJobArtifacts): String? {
+internal fun buildSimProviderAdjacentSection(artifacts: TingwuJobArtifacts): String? {
     val raw = artifacts.meetingAssistanceRaw ?: return null
 
     return runCatching {
         val root = Json.parseToJsonElement(raw) as? JsonObject ?: return null
         val meetingAssistance = root["MeetingAssistance"] as? JsonObject ?: root
-
-        val keywords = (meetingAssistance["Keywords"] as? JsonArray)
-            ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
-            ?.takeIf { it.isNotEmpty() }
 
         val actions = (meetingAssistance["Actions"] as? JsonArray)
             ?.mapNotNull { element ->
@@ -430,11 +517,6 @@ private fun buildSimProviderAdjacentSection(artifacts: TingwuJobArtifacts): Stri
             actions?.let {
                 appendLine("待办事项")
                 it.forEach { action -> appendLine("- $action") }
-                appendLine()
-            }
-            keywords?.let {
-                appendLine("关键词")
-                appendLine(it.joinToString(" • "))
                 appendLine()
             }
             keySentences?.let {

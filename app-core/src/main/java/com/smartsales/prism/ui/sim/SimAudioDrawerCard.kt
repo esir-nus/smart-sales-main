@@ -226,16 +226,16 @@ internal fun SimAudioCard(
             }
         } else if (expanded && entry.item.status == AudioStatus.TRANSCRIBED) {
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = entry.item.summary ?: entry.preview,
-                color = SimDrawerTextSecondary,
-                fontSize = 13.sp,
-                lineHeight = 19.sp
-            )
-            Spacer(modifier = Modifier.height(16.dp))
 
             when {
                 isArtifactLoading -> {
+                    Text(
+                        text = entry.item.summary ?: entry.preview,
+                        color = SimDrawerTextSecondary,
+                        fontSize = 13.sp,
+                        lineHeight = 19.sp
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = "正在读取转写结果...",
                         color = SimDrawerTextSecondary,
@@ -245,6 +245,13 @@ internal fun SimAudioCard(
 
                 artifacts == null -> {
                     Text(
+                        text = entry.item.summary ?: entry.preview,
+                        color = SimDrawerTextSecondary,
+                        fontSize = 13.sp,
+                        lineHeight = 19.sp
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
                         text = "当前未读取到转写结果，请稍后重试。",
                         color = SimDrawerTextSecondary,
                         fontSize = 12.sp
@@ -252,6 +259,11 @@ internal fun SimAudioCard(
                 }
 
                 else -> {
+                    SimArtifactOverviewHeader(
+                        artifacts = artifacts!!,
+                        fallbackOverview = entry.item.summary ?: entry.preview
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
                     SimArtifactContent(artifacts = artifacts!!)
                 }
             }

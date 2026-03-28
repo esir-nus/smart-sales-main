@@ -12,10 +12,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.smartsales.prism.ui.drawers.scheduler.SchedulerDrawerVisualMode
 import com.smartsales.prism.ui.drawers.scheduler.TimelineItem
+import com.smartsales.prism.ui.drawers.scheduler.currentSchedulerDrawerVisualMode
+import com.smartsales.prism.ui.drawers.scheduler.currentSchedulerDrawerVisuals
+import com.smartsales.prism.ui.drawers.scheduler.simCollapsedTimeLabel
 import com.smartsales.prism.ui.theme.AccentBlue
-import com.smartsales.prism.ui.theme.TextMuted
-import com.smartsales.prism.ui.theme.TextPrimary
 
 @Composable
 fun TaskCardHeader(
@@ -23,19 +25,26 @@ fun TaskCardHeader(
     isExpanded: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val visuals = currentSchedulerDrawerVisuals
+    val isSimVisualMode = currentSchedulerDrawerVisualMode == SchedulerDrawerVisualMode.SIM
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top
     ) {
         // Time
         Text(
-            text = state.timeDisplay.split(" - ").firstOrNull() ?: "",
+            text = if (isSimVisualMode) {
+                state.simCollapsedTimeLabel()
+            } else {
+                state.timeDisplay.split(" - ").firstOrNull() ?: ""
+            },
             fontSize = 13.sp,
-            color = TextMuted,
-            modifier = Modifier.width(50.dp).padding(top = 2.dp)
+            color = visuals.taskTimeColor,
+            fontWeight = if (isSimVisualMode) FontWeight.Medium else FontWeight.Normal,
+            modifier = Modifier.width(visuals.cardHeaderTimeWidth).padding(top = 2.dp)
         )
         
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(visuals.cardHeaderGap))
         
         // Titles & Metadata
         Column(modifier = Modifier.weight(1f)) {
@@ -43,7 +52,7 @@ fun TaskCardHeader(
                 text = state.title,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium,
-                color = if (state.isDone) TextMuted else TextPrimary,
+                color = if (state.isDone) visuals.taskDoneTitleColor else visuals.taskTitleColor,
                 textDecoration = if (state.isDone) TextDecoration.LineThrough else null,
                 lineHeight = 20.sp
             )
@@ -63,7 +72,7 @@ fun TaskCardHeader(
                         Text(
                             text = subtitleParts.joinToString(" • "),
                             fontSize = 12.sp,
-                            color = TextMuted,
+                            color = visuals.taskContextColor,
                             modifier = Modifier.padding(top = 4.dp)
                         )
                     }

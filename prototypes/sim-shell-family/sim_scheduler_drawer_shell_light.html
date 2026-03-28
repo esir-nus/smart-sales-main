@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SIM Scheduler Drawer Shell Prototype</title>
+    <style>
+        :root {
+            --status-bar-height: 44px;
+            --bg-app: #F5F5F7;
+            --monolith-bg: rgba(255, 255, 255, 0.75); 
+            --color-accent-blue: #007AFF; 
+            --text-primary: #1C1C1E;
+            --text-secondary: #86868B;
+            --text-muted: #AEAEB2;
+            --font-cn: "Inter", "PingFang SC", system-ui, sans-serif;
+            --surface-drawer: rgba(255, 255, 255, 0.6);
+            --surface-card: rgba(255, 255, 255, 0.85); 
+            --border-glass: rgba(0, 0, 0, 0.08);
+            --border-subtle: rgba(0, 0, 0, 0.05);
+            
+            /* Scheduler Urgency Channels */
+            --urgency-l1: #FF3B30; /* Critical */
+            --urgency-l2: #FF9500; /* Important */
+            --urgency-l3: #007AFF; /* Normal */
+            --attention-warning: #FF3B30;
+            --attention-normal: #86868B;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        ::-webkit-scrollbar { 
+            display: none; 
+        }
+
+        body {
+            background: #F5F5F7;
+            color: var(--text-primary);
+            font-family: var(--font-cn);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Review Toggles Overlay */
+        .review-controls {
+            position: fixed;
+            left: 20px;
+            top: 20px;
+            width: 240px;
+            background: #111;
+            border: 1px solid #333;
+            padding: 16px;
+            border-radius: 12px;
+            z-index: 1000;
+        }
+        .review-controls h3 {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 8px;
+            margin-top: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .review-controls h3:first-child {
+            margin-top: 0;
+        }
+        .review-controls button {
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: rgba(255,255,255,0.05);
+            color: #FFF;
+            border: none;
+            padding: 10px 12px;
+            margin-bottom: 4px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        .review-controls button:hover,
+        .review-controls button.active {
+            background: rgba(10, 132, 255, 0.2);
+            color: var(--color-accent-blue);
+        }
+
+        /* Emulator Frame */
+        #emulator-container {
+            width: 390px;
+            height: 844px; /* iPhone 14 Pro size */
+            background: var(--bg-app);
+            border-radius: 40px;
+            position: relative;
+            border: 8px solid #222;
+            box-shadow: 0 0 60px rgba(0,0,0,0.8);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Floor layer - Aurora */
+        .layer-floor {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 0;
+            background: #DAE0ED;
+            overflow: hidden;
+        }
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            mix-blend-mode: multiply;
+        }
+        .blob-1 { width: 350px; height: 350px; background: rgba(94, 92, 230, 0.25); top: -5%; left: -10%; animation: drift1 20s infinite alternate ease-in-out; }
+        .blob-2 { width: 400px; height: 400px; background: rgba(10, 132, 255, 0.20); top: 40%; left: 30%; animation: drift2 25s infinite alternate ease-in-out; }
+        .blob-3 { width: 300px; height: 300px; background: rgba(100, 210, 255, 0.20); bottom: -5%; left: -5%; animation: drift3 22s infinite alternate ease-in-out; }
+        @keyframes drift1 { 0% { transform: translate(0, 0); } 100% { transform: translate(40px, -20px); } }
+        @keyframes drift2 { 0% { transform: translate(0, 0); } 100% { transform: translate(-30px, 30px); } }
+        @keyframes drift3 { 0% { transform: translate(0, 0); } 100% { transform: translate(50px, -10px); } }
+
+        /* The Shell Structure */
+        .sim-shell {
+            position: absolute;
+            top: var(--status-bar-height); left: 0; right: 0; bottom: 0;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Monolith */
+        .top-monolith {
+            height: 64px; 
+            background: var(--monolith-bg);
+            backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+            border-bottom: 0.18px solid var(--border-subtle);
+            box-shadow: inset 0 -1px 0 rgba(255,255,255,0.4), 0 10px 40px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-left: 16px;
+            padding-right: 16px;
+            z-index: 30; /* Higher than drawer */
+            position: relative;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+        }
+
+        /* Dynamic Island */
+        .dynamic-island {
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            max-width: 240px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: transparent;
+            box-shadow: none;
+        }
+        .island-text {
+            background-image: linear-gradient(135deg, #1C1C1E 0%, #86868B 100%);
+            -webkit-background-clip: text; color: transparent; background-clip: text;
+        }
+        .island-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            background: #007AFF;
+            box-shadow: 0 0 6px rgba(0, 122, 255, 0.4);
+        }
+        .dynamic-island .island-text::before { content: "张三: '帮我约下周的...'"; }
+
+        /* Center Canvas Foundation (Mocked behind drawer) */
+        .center-canvas-container {
+            flex: 1;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Bottom Monolith */
+        .bottom-monolith {
+            background: var(--monolith-bg);
+            backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+            min-height: 56px;
+            padding: 10px 16px 16px 16px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), 0 -10px 40px rgba(0,0,0,0.05);
+            border-top: 0.18px solid var(--border-subtle);
+            z-index: 30;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: relative;
+        }
+        .chat-input { width: 100%; background: transparent; border: none; color: var(--text-primary); font-size: 16px; line-height: 24px; padding: 12px 0; z-index: 2;}
+
+        /* SCHEDULER DRAWER (Top-Anchored Slab) */
+        .scheduler-drawer {
+            position: absolute;
+            top: 64px; /* Drops directly below top monolith */
+            left: 0;
+            right: 0;
+            bottom: 64px; /* Leaves a gap at bottom, hovering over input/aurora */
+            background: var(--surface-drawer);
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border-bottom-left-radius: 24px;
+            border-bottom-right-radius: 24px;
+            border: 0.18px solid var(--border-subtle);
+            border-top: none; 
+            box-shadow: inset 0 -1px 0 rgba(255,255,255,0.4), 0 20px 50px rgba(0, 0, 0, 0.05);
+            z-index: 20; /* Between canvas and monoliths */
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        /* Drawer Grip */
+        .drawer-grip-area {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 20px;
+            flex-shrink: 0;
+        }
+        .drawer-grip {
+            width: 36px;
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(0, 0, 0, 0.15);
+        }
+
+        /* State Mapping for Drawer Transform */
+        .sim-shell[data-view="1-peek"] .scheduler-drawer {
+            transform: translateY(calc(-100% + 24px)); /* Exposes only grip */
+        }
+        .sim-shell:not([data-view="1-peek"]) .scheduler-drawer {
+            transform: translateY(0);
+        }
+
+        /* SCHEDULER INNER IA */
+        .drawer-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding: 16px 20px;
+            opacity: 1;
+            transition: opacity 0.3s;
+        }
+        .sim-shell[data-view="1-peek"] .drawer-content { opacity: 0; pointer-events: none; }
+        
+        /* Month Strip */
+        .month-strip {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .month-title { font-size: 15px; font-weight: 600; }
+        
+        /* Day Strip */
+        .day-strip {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+        .day-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            width: 36px;
+            cursor: pointer;
+        }
+        .day-label { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+        .day-date {
+            width: 32px; height: 32px;
+            display: flex; justify-content: center; align-items: center;
+            border-radius: 50%;
+            font-size: 14px; font-weight: 600;
+            color: var(--text-primary);
+        }
+        .day-item.selected .day-date {
+            background: var(--text-primary);
+            color: var(--monolith-bg);
+        }
+        .attention-dot {
+            width: 4px; height: 4px; border-radius: 50%;
+            background: transparent;
+        }
+        .attention-dot.normal { background: var(--attention-normal); }
+        .attention-dot.warning { background: var(--attention-warning); box-shadow: 0 0 4px var(--attention-warning); }
+
+        /* Timeline Container */
+        .timeline-container {
+            flex: 1;
+            overflow-y: auto;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding-bottom: 20px;
+        }
+
+        /* Banner Lane */
+        .fast-track-banner {
+            padding: 12px;
+            border-radius: 8px;
+            background: rgba(10, 132, 255, 0.1);
+            border: 1px solid rgba(10, 132, 255, 0.3);
+            font-size: 13px;
+            color: var(--color-accent-blue);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Task Cards */
+        .task-card {
+            background: var(--surface-card);
+            border: 0.18px solid var(--border-subtle);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+            border-radius: 12px;
+            padding: 16px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .urgency-bar {
+            position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+        }
+        .urgency-bar.l1 { background: var(--urgency-l1); box-shadow: 2px 0 8px rgba(255,69,58,0.4); }
+        .urgency-bar.l2 { background: var(--urgency-l2); box-shadow: 2px 0 8px rgba(255,159,10,0.4); }
+        .urgency-bar.l3 { background: var(--urgency-l3); }
+        
+        .task-header { display: flex; justify-content: space-between; align-items: center; }
+        .task-title { font-size: 15px; font-weight: 600; }
+        .task-time { font-size: 13px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+        .context-tag { background: rgba(0,0,0,0.03); padding: 2px 6px; border-radius: 4px; font-size: 11px; border: 0.18px solid var(--border-subtle);}
+
+        /* Conflict Styling */
+        .task-card.conflict {
+            border-color: rgba(255,214,10,0.5);
+            background: rgba(255,214,10,0.05);
+        }
+        .conflict-header {
+            color: #FFD60A; font-size: 12px; font-weight: 600; margin-bottom: 4px;
+            display: flex; align-items: center; gap: 4px;
+        }
+
+        /* Done Styling */
+        .task-card.done {
+            opacity: 0.5;
+        }
+        .task-card.done .task-title {
+            text-decoration: line-through;
+        }
+
+        /* Expanded Card Structural Elements */
+        .task-card.expanded {
+            padding: 20px 16px;
+            gap: 12px;
+        }
+        .task-details-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 4px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        .detail-row {
+            font-size: 13px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .svg-icon { stroke: currentColor; fill: none; stroke-width: 2; width: 14px; height: 14px; flex-shrink: 0; }
+        
+        /* Note Lane (Human Origin) */
+        .task-note-lane {
+            background: rgba(0,0,0,0.02);
+            border-left: 2px solid var(--text-muted);
+            padding: 10px 12px;
+            border-radius: 4px;
+            margin-top: 4px;
+            display: none; /* Controlled by state */
+            flex-direction: column;
+        }
+        .note-label {
+            font-size: 12px; color: var(--text-muted); font-weight: 500; margin-bottom: 6px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .note-content { font-size: 13px; color: var(--text-secondary); line-height: 1.5; font-style: italic;}
+
+        /* Tips Lane (LLM Origin) */
+        .task-tips-lane {
+            background: rgba(10, 132, 255, 0.05);
+            border: 1px solid rgba(10, 132, 255, 0.15);
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 4px;
+            display: none;
+            flex-direction: column;
+        }
+        .tips-label {
+            font-size: 12px; color: var(--color-accent-blue); font-weight: 600; margin-bottom: 8px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .tips-list {
+            margin: 0; padding-left: 16px; font-size: 12px; color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        /* Conflict Compare */
+        .conflict-compare-box {
+            background: rgba(255, 214, 10, 0.05);
+            border: 1px dashed rgba(255, 214, 10, 0.3);
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 4px;
+        }
+        .compare-title { font-size: 11px; color: #FFD60A; margin-bottom: 6px; font-weight: 600; }
+        .compare-item { display: flex; gap: 12px; font-size: 13px; color: var(--text-secondary); }
+        .c-time { font-variant-numeric: tabular-nums; color: var(--text-muted); }
+        .c-title { color: var(--text-primary); }
+        .conflict-resolution {
+            font-size: 12px; color: var(--text-primary); margin-top: 8px; line-height: 1.5;
+            background: rgba(0,0,0,0.02); padding: 8px 10px; border-radius: 6px;
+        }
+        
+        /* Calendar Unfolded View */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            row-gap: 16px;
+            margin-bottom: 24px;
+        }
+        .calendar-grid .day-item {
+            width: 100%;
+            justify-content: flex-end;
+        }
+        .calendar-grid .day-item.out-of-bounds .day-date {
+            color: rgba(0,0,0,0.2);
+        }
+
+        /* STATE TOGGLING LOGIC */
+        .state-viewable { display: none; }
+        .sim-shell[data-view*="2-open"] .show-open { display: flex; }
+        .sim-shell[data-view*="3-conflict"] .show-conflict { display: flex; }
+        .sim-shell[data-view*="4-offpage"] .show-offpage { display: flex; }
+        .sim-shell[data-view*="5-done"] .show-done { display: flex; }
+        .sim-shell[data-view*="6-calendar"] .show-calendar { display: grid; }
+        .sim-shell[data-view*="7-dense"] .show-dense { display: flex; }
+        
+        /* Expanded States Mapping */
+        .sim-shell[data-view="8-exp-basic"] .show-exp-basic,
+        .sim-shell[data-view="9-exp-note"] .show-exp-basic,
+        .sim-shell[data-view="10-exp-tips"] .show-exp-basic { display: flex; }
+
+        .sim-shell[data-view="9-exp-note"] .show-exp-note-lane { display: flex; }
+        
+        .sim-shell[data-view="10-exp-tips"] .show-exp-tips-lane { display: flex; }
+
+        .sim-shell[data-view="11-exp-conflict"] .show-exp-conflict { display: flex; }
+        
+        /* Mutually Exclusive Blocks */
+        .sim-shell[data-view*="6-calendar"] .day-strip { display: none; }
+
+        /* Unified normal visibility */
+        .sim-shell[data-view*="1-peek"] .show-normal,
+        .sim-shell[data-view*="2-open"] .show-normal,
+        .sim-shell[data-view*="6-calendar"] .show-normal,
+        .sim-shell[data-view*="7-dense"] .show-normal { 
+            display: flex; 
+        }
+    </style>
+</head>
+<body>
+    <div class="review-controls" style="overflow-y: auto; max-height: 80vh;">
+        <h3>Core View</h3>
+        <button id="btn-1-peek" class="active" onclick="setView('1-peek', this)">1. Peek</button>
+        <button id="btn-2-open" onclick="setView('2-open', this)">2. Open (Normal Collapsed)</button>
+        <button id="btn-6-calendar" onclick="setView('6-calendar', this)">3. Calendar Unfolded</button>
+        <button id="btn-7-dense" onclick="setView('7-dense', this)">4. Collapsed (Dense Day)</button>
+        <button id="btn-5-done" onclick="setView('5-done', this)">5. Collapsed (Done)</button>
+        <button id="btn-4-offpage" onclick="setView('4-offpage', this)">6. Off-page attention</button>
+        <button id="btn-3-conflict" onclick="setView('3-conflict', this)">7. Collapsed (Conflict)</button>
+        
+        <h3>Expanded Models</h3>
+        <button id="btn-8-exp-basic" onclick="setView('8-exp-basic', this)">8. Expanded: Details</button>
+        <button id="btn-9-exp-note" onclick="setView('9-exp-note', this)">9. Expanded: + User Note</button>
+        <button id="btn-10-exp-tips" onclick="setView('10-exp-tips', this)">10. Expanded: + AI Tips</button>
+        <button id="btn-11-exp-conflict" onclick="setView('11-exp-conflict', this)">11. Expanded: Conflict</button>
+    </div>
+
+    <div id="emulator-container">
+        <!-- System Status Bar -->
+        <div class="system-status-bar" style="position: absolute; top: 0; left: 0; right: 0; height: var(--status-bar-height); z-index: 100; display: flex; justify-content: space-between; align-items: center; padding: 0 24px; font-size: 15px; font-weight: 600; color: var(--text-primary); pointer-events: none;">
+            <span>22:59</span>
+            <div style="display: flex; gap: 6px; align-items: center;">
+                <span style="font-size: 13px;">5G</span>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M17 4h-3V2h-4v2H7v18h10V4z"/></svg>
+            </div>
+        </div>
+
+        <!-- Floor layer -->
+        <div class="layer-floor" id="aurora-bg">
+            <div class="blob blob-1"></div>
+            <div class="blob blob-2"></div>
+            <div class="blob blob-3"></div>
+        </div>
+
+        <!-- Shell -->
+        <div id="sim-shell" class="sim-shell" data-view="1-peek">
+            
+            <!-- Shared Top Monolith -->
+            <header class="top-monolith">
+                <div class="top-left">
+                    <button class="icon-btn borderless">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                    </button>
+                </div>
+                <div class="top-center">
+                    <div class="dynamic-island"><div class="island-dot"></div><span class="island-text"></span></div>
+                </div>
+                <div class="top-right">
+                    <button class="icon-btn borderless">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Base Canvas -->
+            <main class="center-canvas-container"></main>
+
+            <!-- SCHEDULER DRAWER OVERLAY -->
+            <div class="scheduler-drawer">
+                <div class="drawer-grip-area">
+                    <div class="drawer-grip"></div>
+                </div>
+                
+                <div class="drawer-content">
+                    
+                    <div class="month-strip">
+                        <button class="icon-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg></button>
+                        <span class="month-title">2026年 3月</span>
+                        <button class="icon-btn"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg></button>
+                    </div>
+
+                    <div class="day-strip">
+                        <div class="day-item"><span class="day-label">一</span><span class="day-date">16</span><div class="attention-dot"></div></div>
+                        <div class="day-item"><span class="day-label">二</span><span class="day-date">17</span><div class="attention-dot normal state-viewable show-offpage"></div></div>
+                        <div class="day-item"><span class="day-label">三</span><span class="day-date">18</span><div class="attention-dot warning state-viewable show-conflict show-offpage"></div></div>
+                        <div class="day-item selected"><span class="day-label">四</span><span class="day-date">19</span><div class="attention-dot"></div></div>
+                        <div class="day-item"><span class="day-label">五</span><span class="day-date">20</span><div class="attention-dot"></div></div>
+                        <div class="day-item"><span class="day-label">六</span><span class="day-date">21</span><div class="attention-dot"></div></div>
+                        <div class="day-item"><span class="day-label">日</span><span class="day-date">22</span><div class="attention-dot"></div></div>
+                    </div>
+
+                    <div class="calendar-grid state-viewable show-calendar">
+                        <!-- Week 1 - Contains trailing days of previous month -->
+                        <div class="day-item out-of-bounds"><span class="day-label">一</span><span class="day-date">23</span><div class="attention-dot"></div></div>
+                        <div class="day-item out-of-bounds"><span class="day-label">二</span><span class="day-date">24</span><div class="attention-dot"></div></div>
+                        <div class="day-item out-of-bounds"><span class="day-label">三</span><span class="day-date">25</span><div class="attention-dot"></div></div>
+                        <div class="day-item out-of-bounds"><span class="day-label">四</span><span class="day-date">26</span><div class="attention-dot"></div></div>
+                        <div class="day-item out-of-bounds"><span class="day-label">五</span><span class="day-date">27</span><div class="attention-dot"></div></div>
+                        <div class="day-item out-of-bounds"><span class="day-label">六</span><span class="day-date">28</span><div class="attention-dot"></div></div>
+                        <div class="day-item"><span class="day-label">日</span><span class="day-date">1</span><div class="attention-dot"></div></div>
+                        
+                        <!-- Week 2 -->
+                        <div class="day-item"><span class="day-date">2</span><div class="attention-dot"></div></div>
+                        <div class="day-item"><span class="day-date">3</span><div class="attention-dot"></div></div>
+                        <div class="day-item"><span class="day-date">4</span><div class="attention-dot"></div></div>
+                        <div class="day-item"><span class="day-date">5</span><div class="attention-dot"></div></div>
+                        <div class="day-item"><span class="day-date">6</span><div class="attention-dot"></div></div>
+                        <div class="day-item"><span class="day-date">7</span><div class="attention-dot"></div></div>
+                        <div class="day-item"><span class="day-date">8</span><div class="attention-dot"></div></div>
+
+                        <!-- Week 3 -->
+                        <div class="day-item"><span class="day-date">9</span><div class="attention-dot"></div></div>
+                        <div class="day-item"><span class="day-date">10</span><div class="attention-dot"></div></div>
+                        <div class="day-item"><span class="day-date">11</span><div class="attention-dot"></div></div>
+                        <div class="day-item"><span class="day-date">12</span><div class="attention-dot"></div></div>
+                        <div class="day-item"><span class="day-date">13</span><div class="attention-dot"></div></div>
+                        <div class="day-item"><span class="day-date">14</span><div class="attention-dot"></div></div>
+                        <div class="day-item"><span class="day-date">15</span><div class="attention-dot"></div></div>
+
+                        <!-- Week 4 Current -->
+                        <div class="day-item"><span class="day-date">16</span><div class="attention-dot"></div></div>
+                        <div class="day-item"><span class="day-date">17</span><div class="attention-dot normal"></div></div>
+                        <div class="day-item"><span class="day-date">18</span><div class="attention-dot warning"></div></div>
+                        <div class="day-item selected"><span class="day-date">19</span><div class="attention-dot"></div></div>
+                        <div class="day-item"><span class="day-date">20</span><div class="attention-dot"></div></div>
+                        <div class="day-item"><span class="day-date">21</span><div class="attention-dot"></div></div>
+                        <div class="day-item"><span class="day-date">22</span><div class="attention-dot"></div></div>
+                        
+                        <!-- Week 5 -->
+                        <div class="day-item"><span class="day-date">23</span><div class="attention-dot"></div></div>
+                        <div class="day-item"><span class="day-date">24</span><div class="attention-dot"></div></div>
+                        <div class="day-item"><span class="day-date">25</span><div class="attention-dot"></div></div>
+                        <div class="day-item"><span class="day-date">26</span><div class="attention-dot"></div></div>
+                        <div class="day-item"><span class="day-date">27</span><div class="attention-dot"></div></div>
+                        <div class="day-item"><span class="day-date">28</span><div class="attention-dot"></div></div>
+                        <div class="day-item"><span class="day-date">29</span><div class="attention-dot"></div></div>
+                    </div>
+
+                    <div class="timeline-container">
+                        
+                        <!-- Done Card -->
+                        <div class="task-card done state-viewable show-done show-dense">
+                            <div class="urgency-bar l3"></div>
+                            <div class="task-header">
+                                <span class="task-title">晨间对齐会议</span>
+                                <span class="task-time">09:00 - 09:30</span>
+                            </div>
+                            <div class="task-context">内部沟通</div>
+                        </div>
+
+                        <!-- Normal Subdued Card -->
+                        <div class="task-card state-viewable show-normal show-dense show-offpage">
+                            <div class="urgency-bar l3"></div>
+                            <div class="task-header">
+                                <span class="task-title">产品需求评审</span>
+                                <span class="task-time">10:00 - 11:30</span>
+                            </div>
+                            <div class="task-context"><span class="context-tag">V2.4</span></div>
+                        </div>
+
+                        <!-- Conflict Alternative -->
+                        <div class="task-card conflict state-viewable show-conflict">
+                            <div class="urgency-bar l2"></div>
+                            <div class="conflict-header">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                                冲突警示: 时间存在重叠
+                            </div>
+                            <div class="task-header">
+                                <span class="task-title">临时客户需求对接</span>
+                                <span class="task-time" style="color:#FFD60A;">14:00 - 15:30</span>
+                            </div>
+                            <div class="task-context">优先考虑改期至 16:00</div>
+                        </div>
+
+                        <!-- Important Card -->
+                        <div class="task-card state-viewable show-normal show-dense show-offpage">
+                            <div class="urgency-bar l2"></div>
+                            <div class="task-header">
+                                <span class="task-title">Q1 战略复盘会</span>
+                                <span class="task-time">14:00 - 16:00</span>
+                            </div>
+                            <div class="task-context"><span class="context-tag">高管闭门</span></div>
+                        </div>
+
+                        <!-- Critical Card (Dense state only) -->
+                        <div class="task-card state-viewable show-dense">
+                            <div class="urgency-bar l1"></div>
+                            <div class="task-header">
+                                <span class="task-title">核心系统升级演练</span>
+                                <span class="task-time">22:00 - 02:00</span>
+                            </div>
+                            <div class="task-context"><span class="context-tag">技术侧</span> <span class="context-tag">停机维护</span></div>
+                        </div>
+
+                        <!-- Expanded Standard Card -->
+                        <div class="task-card expanded state-viewable show-exp-basic">
+                            <div class="urgency-bar l3"></div>
+                            <div class="task-header">
+                                 <span class="task-title" style="font-size: 16px; margin-bottom: 4px;">产品需求评审</span>
+                                 <span class="task-time">10:00 - 11:30</span>
+                            </div>
+                            
+                            <div class="task-details-grid">
+                                 <div class="detail-row"><svg class="svg-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> 2026年3月19日 (周四)</div>
+                                 <div class="detail-row"><svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> 1小时30分钟</div>
+                                 <div class="detail-row"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> 深圳南山区科技园 A栋 302 会议室</div>
+                                 <div class="detail-row"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg> 相关人员: 张总, 李PM, 王设计</div>
+                            </div>
+                        
+                            <!-- Note Section (User Origin) -->
+                            <div class="task-note-lane state-viewable show-exp-note-lane">
+                                 <div class="note-label"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> 原始备注</div>
+                                 <div class="note-content">“记得带上昨晚更新过的 Figma 原型，张总对交互细节抠得很细，别拿旧版糊弄。”</div>
+                            </div>
+                        
+                            <!-- Tips Section (AI Origin) -->
+                            <div class="task-tips-lane state-viewable show-exp-tips-lane">
+                                 <div class="tips-label"><div class="island-dot" style="width: 4px; height: 4px; border-radius: 50%; background: var(--color-accent-blue); box-shadow: 0 0 6px var(--color-accent-blue);"></div> 智能提示</div>
+                                 <ul class="tips-list">
+                                     <li>建议提前 10 分钟到达会议室调试投屏设备。</li>
+                                     <li>注意确认现场网络环境，保证原型图片加载。</li>
+                                 </ul>
+                            </div>
+                        </div>
+
+                        <!-- Expanded Conflict Card -->
+                        <div class="task-card expanded conflict state-viewable show-exp-conflict">
+                            <div class="urgency-bar l2"></div>
+                            <div class="conflict-header" style="font-size: 14px; margin-bottom: 8px;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg> 
+                                冲突警示: 存在时间重叠
+                            </div>
+                            
+                            <div class="task-header">
+                                 <span class="task-title" style="font-size: 16px; margin-bottom: 4px;">临时客户需求对接</span>
+                                 <span class="task-time" style="color:#FFD60A;">14:00 - 15:30</span>
+                            </div>
+                            <div class="task-details-grid">
+                                 <div class="detail-row"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> 线上会议 (Tencent Meeting)</div>
+                                 <div class="detail-row"><svg class="svg-icon" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg> 相关人员: 华东大区-李志</div>
+                            </div>
+                        
+                            <div class="conflict-compare-box">
+                                 <div class="compare-title">重叠事项</div>
+                                 <div class="compare-item">
+                                     <div class="c-time">14:00 - 16:00</div>
+                                     <div class="c-title">Q1 战略复盘会</div>
+                                 </div>
+                            </div>
+                            <div class="conflict-resolution">
+                                 智能建议: 战略复盘会优先级较高且涉及高管闭门，建议将临时客户对接延后至 16:00。
+                            </div>
+                        </div>
+
+                    </div>
+                    
+                </div>
+
+            </div>
+
+            <!-- Shared Bottom Monolith -->
+            <footer class="bottom-monolith">
+                <!-- Text input removed; rescheduling relies strictly on voice interactions -->
+            </footer>
+        </div>
+    </div>
+
+    <script>
+        function setView(viewName, btnElem) {
+            document.getElementById('sim-shell').setAttribute('data-view', viewName);
+            const buttons = document.querySelectorAll('.review-controls button');
+            buttons.forEach(b => b.classList.remove('active'));
+            btnElem.classList.add('active');
+        }
+    </script>
+</body>
+</html>

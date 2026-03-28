@@ -1,44 +1,23 @@
 package com.smartsales.prism.ui.drawers.scheduler.components
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Event
-import androidx.compose.material.icons.outlined.LocationOn
-import androidx.compose.material.icons.outlined.NotificationsActive
-import androidx.compose.material.icons.outlined.Person
-import androidx.compose.material.icons.outlined.AutoAwesome
-import androidx.compose.material.icons.outlined.QueryBuilder
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.smartsales.prism.ui.drawers.scheduler.ConflictVisual
 import com.smartsales.prism.ui.drawers.scheduler.TimelineItem
+import com.smartsales.prism.ui.drawers.scheduler.currentSchedulerDrawerVisuals
 import com.smartsales.prism.ui.theme.AccentAmber
-import com.smartsales.prism.ui.theme.AccentBlue
-import com.smartsales.prism.ui.theme.BackgroundSurface
-import com.smartsales.prism.ui.theme.BorderSubtle
-import com.smartsales.prism.ui.theme.TextMuted
-import com.smartsales.prism.ui.theme.TextPrimary
-import com.smartsales.prism.ui.theme.TextSecondary
 
 @Composable
 fun SchedulerTaskCard(
@@ -48,12 +27,7 @@ fun SchedulerTaskCard(
     enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
-    val indicatorState = when {
-        state.isDone -> IndicatorState.DONE
-        state.conflictVisual == ConflictVisual.CAUSING -> IndicatorState.CONFLICT
-        else -> IndicatorState.NORMAL
-    }
-
+    val visuals = currentSchedulerDrawerVisuals
     GlassCard(
         modifier = modifier
             .fillMaxWidth()
@@ -67,12 +41,18 @@ fun SchedulerTaskCard(
             )
     ) {
         Row(modifier = Modifier.height(IntrinsicSize.Min).fillMaxWidth()) {
-            TaskCardIndicator(state = indicatorState)
+            TaskCardIndicator(
+                urgencyLevel = state.urgencyLevel,
+                isDone = state.isDone
+            )
             
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 16.dp, horizontal = 12.dp)
+                    .padding(
+                        vertical = visuals.cardContentVerticalPadding,
+                        horizontal = visuals.cardContentHorizontalPadding
+                    )
             ) {
                 // Wave 17: Caution Banner for Conflicts
                 if (state.hasConflict) {
@@ -80,13 +60,13 @@ fun SchedulerTaskCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 8.dp)
-                            .background(AccentAmber.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
+                            .background(visuals.conflictBannerBackground, RoundedCornerShape(4.dp))
                             .padding(horizontal = 8.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = state.conflictSummary ?: "发现冲突",
-                            color = AccentAmber,
+                            color = visuals.conflictBannerText,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold
                         )

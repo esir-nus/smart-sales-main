@@ -11,9 +11,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ViewCarousel
+import androidx.compose.material3.Icon
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -45,6 +49,7 @@ internal fun SimAudioDrawerContent(
     onSeedDebugFailureScenario: () -> Unit,
     onSeedDebugMissingSectionsScenario: () -> Unit,
     onSeedDebugFallbackScenario: () -> Unit,
+    onReplayOnboarding: () -> Unit,
     showTestImportAction: Boolean,
     showDebugScenarioActions: Boolean
 ) {
@@ -79,6 +84,12 @@ internal fun SimAudioDrawerContent(
                     text = "工牌连接",
                     onClick = onOpenConnectivity
                 )
+                if (showDebugScenarioActions) {
+                    SimDrawerHeaderIconAction(
+                        onClick = onReplayOnboarding,
+                        contentDescription = "重新开始设备引导"
+                    )
+                }
                 SimDrawerHeaderAction(
                     text = if (isSyncing) "同步中..." else "同步徽章",
                     onClick = onSyncFromBadge,
@@ -176,6 +187,29 @@ private fun SimDrawerHeaderAction(
             color = SimDrawerTextMuted,
             fontSize = 10.sp,
             fontWeight = FontWeight.Medium
+        )
+    }
+}
+
+@Composable
+private fun SimDrawerHeaderIconAction(
+    onClick: () -> Unit,
+    contentDescription: String
+) {
+    Box(
+        modifier = Modifier
+            .size(28.dp)
+            .clip(RoundedCornerShape(999.dp))
+            .background(Color.White.copy(alpha = 0.06f), RoundedCornerShape(999.dp))
+            .border(1.dp, SimDrawerDivider, RoundedCornerShape(999.dp))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = Icons.Filled.ViewCarousel,
+            contentDescription = contentDescription,
+            tint = SimDrawerTextMuted,
+            modifier = Modifier.size(15.dp)
         )
     }
 }

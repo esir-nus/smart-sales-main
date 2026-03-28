@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SIM Audio Drawer Prototype</title>
+    <style>
+        :root {
+            --status-bar-height: 44px;
+            --bg-app: #0D0D12;
+            --monolith-bg: #020205; 
+            --color-accent-blue: #0A84FF; 
+            --text-primary: #FFFFFF;
+            --text-secondary: #86868B;
+            --text-muted: #AEAEB2;
+            --font-cn: "Inter", "PingFang SC", system-ui, sans-serif;
+            --surface-drawer: rgba(20, 20, 22, 0.85);
+            --surface-card: rgba(255, 255, 255, 0.05); 
+            --border-glass: rgba(255, 255, 255, 0.15);
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            
+            --status-pending: #AEAEB2;
+            --status-transcribing: #0A84FF;
+            --status-done: #32D74B;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        ::-webkit-scrollbar { display: none; }
+
+        body {
+            background: #000; color: var(--text-primary);
+            font-family: var(--font-cn); display: flex;
+            justify-content: center; align-items: center;
+            min-height: 100vh; overflow: hidden;
+        }
+
+        /* Review Toggles Overlay */
+        .review-controls {
+            position: fixed; left: 20px; top: 20px; width: 260px;
+            background: #111; border: 1px solid #333; padding: 16px;
+            border-radius: 12px; z-index: 1000;
+            overflow-y: auto; max-height: 90vh;
+        }
+        .review-controls h3 {
+            font-size: 13px; color: #888; margin-bottom: 8px; margin-top: 16px;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .review-controls h3:first-child { margin-top: 0; }
+        .review-controls button {
+            display: block; width: 100%; text-align: left;
+            background: rgba(255,255,255,0.05); color: #FFF; border: none;
+            padding: 10px 12px; margin-bottom: 4px; border-radius: 6px;
+            cursor: pointer; font-size: 13px; transition: all 0.2s;
+        }
+        .review-controls button:hover, .review-controls button.active {
+            background: rgba(10, 132, 255, 0.2); color: var(--color-accent-blue);
+        }
+
+        /* Emulator Frame */
+        #emulator-container {
+            width: 390px; height: 844px; background: var(--bg-app);
+            border-radius: 40px; position: relative; border: 8px solid #222;
+            box-shadow: 0 0 60px rgba(0,0,0,0.8); overflow: hidden;
+            display: flex; flex-direction: column;
+        }
+
+        /* Floor layer - Aurora */
+        .layer-floor {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 0; background: #0D0D12; overflow: hidden;
+        }
+        .blob {
+            position: absolute; border-radius: 50%; filter: blur(80px); mix-blend-mode: screen;
+        }
+        .blob-1 { width: 250px; height: 250px; background: rgba(94, 92, 230, 0.18); top: 10%; left: -10%; animation: drift1 20s infinite alternate ease-in-out; }
+        .blob-2 { width: 280px; height: 280px; background: rgba(10, 132, 255, 0.15); top: 50%; left: 40%; animation: drift2 25s infinite alternate ease-in-out; }
+        @keyframes drift1 { 0% { transform: translate(0, 0); } 100% { transform: translate(40px, -20px); } }
+        @keyframes drift2 { 0% { transform: translate(0, 0); } 100% { transform: translate(-30px, 30px); } }
+
+        /* The Shell Structure */
+        .sim-shell {
+            position: absolute; top: var(--status-bar-height); left: 0; right: 0; bottom: 0;
+            z-index: 10; display: flex; flex-direction: column;
+        }
+
+        /* Top Monolith */
+        .top-monolith {
+            height: 64px; background: var(--monolith-bg);
+            display: flex; align-items: center; justify-content: space-between;
+            padding-left: 16px; padding-right: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8); z-index: 40; position: relative;
+        }
+        .icon-btn {
+            background: none; border: none; color: var(--text-primary); cursor: pointer;
+            display: flex; align-items: center; justify-content: center; padding: 4px;
+        }
+        .svg-icon { stroke: currentColor; fill: none; stroke-width: 2; width: 20px; height: 20px; }
+        
+        /* Dynamic Island */
+        .dynamic-island {
+            font-size: 13px; font-weight: 600; letter-spacing: 0.5px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .island-text {
+            background-image: linear-gradient(135deg, #FFFFFF 0%, #A0A0A5 100%);
+            -webkit-background-clip: text; color: transparent;
+        }
+        .dynamic-island .island-text::before { content: "录音库 (Audio Drawer)"; }
+        .island-dot {
+            width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+            background: rgba(255, 255, 255, 0.8); box-shadow: 0 0 6px rgba(255, 255, 255, 0.5);
+        }
+
+        /* Center Canvas Foundation */
+        .center-canvas-container {
+            flex: 1; position: relative; z-index: 10;
+        }
+
+        /* Bottom Monolith */
+        .bottom-monolith {
+            background: var(--monolith-bg); min-height: 56px;
+            padding: 10px 16px 16px 16px; box-shadow: 0 -10px 40px rgba(0,0,0,0.8);
+            z-index: 40; display: flex; align-items: center; position: relative;
+            justify-content: center;
+        }
+        
+        .mic-button {
+            width: 44px; height: 44px; border-radius: 22px;
+            background: rgba(255,255,255,0.05); border: 1px solid var(--border-subtle);
+            display: flex; align-items: center; justify-content: center; color: var(--text-primary);
+        }
+
+        /* AUDIO DRAWER (Bottom-Anchored Slab) */
+        .audio-drawer {
+            position: absolute;
+            top: 100px; /* leaves top monolith+ breathing room */
+            left: 0; right: 0;
+            bottom: 30px; /* Extends mostly behind bottom monolith for smooth overlap */
+            background: var(--surface-drawer);
+            backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
+            border-top-left-radius: 32px; border-top-right-radius: 32px;
+            border: 0.5px solid var(--border-subtle); border-bottom: none; 
+            box-shadow: 0 -20px 50px rgba(0, 0, 0, 0.7);
+            z-index: 30; /* Behind monoliths */
+            display: flex; flex-direction: column;
+            transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .drawer-grip-area {
+            display: flex; justify-content: center; align-items: center;
+            height: 24px; flex-shrink: 0; padding-top: 8px;
+        }
+        .drawer-grip {
+            width: 36px; height: 4px; border-radius: 2px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Mode & Header styling */
+        .drawer-header {
+            padding: 8px 20px 16px 20px;
+            display: flex; justify-content: space-between; align-items: flex-end;
+            border-bottom: 1px solid var(--border-subtle);
+            flex-shrink: 0;
+        }
+        .drawer-title { font-size: 20px; font-weight: 600; letter-spacing: -0.5px;}
+        .drawer-meta { font-size: 13px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+        
+        /* Select Mode Header Overrides */
+        .sim-shell.select-mode .drawer-title { font-size: 16px; color: var(--text-secondary); }
+        .sim-shell.select-mode .drawer-title::before { content: "选择附件"; color: var(--text-primary); margin-right: 8px; font-weight: 600;}
+
+        /* Content List */
+        .drawer-content {
+            flex: 1; overflow-y: auto; padding: 16px 20px 80px 20px; /* extra bottom padding */
+            display: flex; flex-direction: column; gap: 12px;
+        }
+
+        /* State Mapping */
+        .state-view { display: none; }
+        .sim-shell[data-view="1-empty"] .show-1-empty { display: flex; }
+        .sim-shell[data-view="2-mixed"] .show-2-mixed { display: flex; }
+        .sim-shell[data-view="3-pending"] .show-3-pending { display: flex; }
+        .sim-shell[data-view="4-transcribed"] .show-4-transcribed { display: flex; }
+        .sim-shell[data-view="5-expanded"] .show-5-expanded { display: flex; }
+        .sim-shell[data-view="6-select"] .show-6-select { display: flex; }
+        .sim-shell[data-view="7-select-bound"] .show-7-select-bound { display: flex; }
+        .sim-shell[data-view="8-longlist"] .show-8-longlist { display: flex; }
+
+        /* Audio Card Baseline */
+        .audio-card {
+            background: var(--surface-card);
+            border: 0.5px solid var(--border-subtle);
+            border-radius: 16px; padding: 14px 16px;
+            display: flex; flex-direction: column; gap: 6px;
+            position: relative; overflow: hidden;
+            transition: all 0.2s;
+        }
+        .card-header { display: flex; justify-content: space-between; align-items: center; }
+        .card-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+        .card-meta { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums;}
+        .card-preview { font-size: 13px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.5; }
+        .swipe-hint { font-size: 13px; letter-spacing: 0.5px; font-variant-numeric: tabular-nums; }
+        
+        .text-shimmer {
+            background-color: var(--text-muted);
+            background-image: linear-gradient(
+                110deg,
+                transparent 30%,
+                #FFFFFF 50%,
+                transparent 70%
+            );
+            background-size: 200% 100%;
+            background-repeat: no-repeat;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: textShimmerScan 2.5s infinite linear;
+        }
+        @keyframes textShimmerScan {
+            0% { background-position: 200% center; }
+            100% { background-position: -100% center; }
+        }
+        
+        .star-icon { width: 14px; height: 14px; }
+        .star-icon.solid { fill: var(--color-accent-blue); stroke: none; }
+        .star-icon.outline { fill: none; stroke: var(--text-muted); stroke-width: 2; }
+        
+        .play-btn-circle {
+            width: 32px; height: 32px; border-radius: 16px;
+            background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+
+        
+        
+        .audio-card.attention-shimmer {
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(10, 132, 255, 0.25);
+        }
+        .audio-card.attention-shimmer::after {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.06) 50%, transparent 70%);
+            background-size: 200% 100%;
+            animation: textShimmerScan 2.5s infinite linear;
+            pointer-events: none;
+            border-radius: inherit;
+        }
+        
+        /* Progress Bar */
+        .progress-bar-container { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; margin-top: 4px; }
+        .progress-bar-fill {
+            position: relative;
+            height: 100%; background: var(--color-accent-blue); border-radius: 2px; transition: width 0.3s ease;
+            overflow: hidden;
+        }
+        @keyframes progressSweep {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(200%); }
+        }
+        .progress-bar-fill::after {
+            content: '';
+            position: absolute; top: 0; left: 0; width: 50%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            animation: progressSweep 2s infinite linear;
+        }
+
+
+        /* Expanded Mode details */
+        .audio-card.expanded { padding: 20px; gap: 16px; }
+        .artifact-summary {
+            font-size: 13px; color: var(--text-secondary); line-height: 1.6;
+            background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px;
+            border-left: 2px solid var(--text-muted);
+        }
+        .artifact-tags { display: flex; gap: 8px; margin-top: 4px; }
+        .tag { font-size: 11px; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 4px; border: 0.5px solid var(--border-subtle); }
+
+        /* Select Mode Overrides */
+        .sim-shell.select-mode .audio-card {
+            background: transparent; border: none; border-radius: 0;
+            border-bottom: 0.5px solid var(--border-subtle);
+            padding: 16px 0;
+            cursor: pointer;
+        }
+        .sim-shell.select-mode .audio-card:last-child { border-bottom: none; }
+        .sim-shell.select-mode .audio-card.disabled { opacity: 0.4; pointer-events: none; cursor: default; }
+        
+        .empty-state {
+            flex-direction: column; align-items: center; justify-content: center;
+            height: 200px; color: var(--text-muted); gap: 12px; text-align: center;
+        }
+        .empty-icon { opacity: 0.6; width: 48px; height: 48px; }
+
+        /* Actions: Continuous Swipe Pattern */
+        .audio-card-container { position: relative; width: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 16px; margin-bottom: 2px; }
+        .swipe-bg-delete { position: absolute; top: 0; bottom: 0; left: 0; right: 0; background: #FF453A; border-radius: 16px; display: flex; align-items: center; justify-content: flex-end; padding-right: 20px; color: white; opacity: 0; z-index: 1; transition: opacity 0.3s; }
+        
+        .audio-card { z-index: 2; width: 100%; transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.5s; background: var(--surface-card); }
+        
+        /* State 9: Swipe Left to Delete (Card slides completely off to commit delete) */
+        .sim-shell[data-view="9-action-delete"] .audio-card.swipe-left { transform: translateX(-120%); opacity: 0; }
+        .sim-shell[data-view="9-action-delete"] .audio-card-container:has(.swipe-left) .swipe-bg-delete { opacity: 1; }
+
+        /* State 10: Swipe Right to Transcribe (Using existing hint directly on card) */
+        .sim-shell[data-view="10-action-transcribe"] .audio-card.swipe-right { transform: translateX(120px); background: rgba(10, 132, 255, 0.15); border-color: var(--color-accent-blue); }
+
+        /* Disable all swipes in select mode */
+        .sim-shell.select-mode .audio-card { transform: none !important; }
+        .sim-shell.select-mode .card-actions-underlay { display: none !important; }
+
+        .sim-shell[data-view="9-action-delete"] .show-9-action-delete { display: flex; }
+        .sim-shell[data-view="10-action-transcribe"] .show-10-action-transcribe { display: flex; }
+
+    </style>
+</head>
+<body>
+    <div class="review-controls">
+        <h3>Browse Mode (Drawer)</h3>
+        <button id="btn-1" class="active" onclick="setView('1-empty', 'browse', this)">1. Empty / Baseline</button>
+        <button id="btn-2" onclick="setView('2-mixed', 'browse', this)">2. Mixed Inventory</button>
+        <button id="btn-3" onclick="setView('3-pending', 'browse', this)">3. Pending/Transcribing</button>
+        <button id="btn-4" onclick="setView('4-transcribed', 'browse', this)">4. Transcribed Informational</button>
+        <button id="btn-5" onclick="setView('5-expanded', 'browse', this)">5. Expanded Artifact Card</button>
+        <button id="btn-8" onclick="setView('8-longlist', 'browse', this)">8. Long-list / Scroll Check</button>
+        <button id="btn-9" onclick="setView('9-action-delete', 'browse', this)">9. Action: Left Swipe (Delete)</button>
+        <button id="btn-10" onclick="setView('10-action-transcribe', 'browse', this)">10. Action: Right Swipe (Transcribe)</button>
+
+        <h3>Select Mode (Picker)</h3>
+        <button id="btn-6" onclick="setView('6-select', 'select', this)">6. Selectable Items</button>
+        <button id="btn-7" onclick="setView('7-select-bound', 'select', this)">7. With Disabled Bound Item</button>
+    </div>
+
+    <div id="emulator-container">
+        <!-- System Status Bar -->
+        <div class="system-status-bar" style="position: absolute; top: 0; left: 0; right: 0; height: var(--status-bar-height); z-index: 100; display: flex; justify-content: space-between; align-items: center; padding: 0 24px; font-size: 15px; font-weight: 600; color: var(--text-primary); pointer-events: none;">
+            <span>22:59</span>
+            <div style="display: flex; gap: 6px; align-items: center;">
+                <span style="font-size: 13px;">5G</span>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M17 4h-3V2h-4v2H7v18h10V4z"/></svg>
+            </div>
+        </div>
+
+        <!-- Floor layer -->
+        <div class="layer-floor"><div class="blob blob-1"></div><div class="blob blob-2"></div></div>
+
+        <!-- Shell -->
+        <div id="sim-shell" class="sim-shell" data-view="1-empty">
+            
+            <!-- Top Monolith -->
+            <header class="top-monolith">
+                <div class="top-left"><button class="icon-btn borderless"><svg class="svg-icon" viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg></button></div>
+                <div class="top-center"><div class="dynamic-island"><div class="island-dot"></div><span class="island-text"></span></div></div>
+                <div class="top-right"><button class="icon-btn borderless"><svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg></button></div>
+            </header>
+
+            <main class="center-canvas-container"></main>
+
+            <!-- AUDIO DRAWER OVERLAY -->
+            <div class="audio-drawer">
+                <div class="drawer-grip-area"><div class="drawer-grip"></div></div>
+                
+                <div class="drawer-header">
+                    <div class="drawer-title">录音笔记</div>
+                    <div class="drawer-meta">12 项</div>
+                </div>
+
+                <div class="drawer-content">
+                    
+                    <!-- State 1: Empty Baseline -->
+                    <div class="state-view show-1-empty empty-state" style="padding: 20px;">
+                        <div>
+                            <div style="font-size: 15px; font-weight: 500; color: var(--text-primary); margin-bottom: 4px;">暂无录音附件</div>
+                            <div style="font-size: 13px;">录音将通过工牌自动同步至此</div>
+                        </div>
+                    </div>
+
+                    <!-- State 2: Mixed Inventory -->
+                    <div class="state-view show-2-mixed" style="flex-direction: column; gap: 12px;">
+                        <div class="audio-card" style="border-color: rgba(10, 132, 255, 0.3);">
+                            <div class="card-header">
+                                <span class="card-title">新录音 004</span>
+                                <div class="card-meta">14:30 · 11分05秒 <svg class="svg-icon star-icon solid" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div>
+                            </div>
+                            <div class="card-preview">正在云端处理... (45%)</div>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar-fill" style="width: 45%;"></div>
+                            </div>
+                        </div>
+                        <div class="audio-card">
+                            <div class="card-header">
+                                <span class="card-title">新录音 003</span>
+                                <div class="card-meta">13:15 · 05分30秒 <svg class="svg-icon star-icon solid" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div>
+                            </div>
+                            <div class="swipe-hint text-shimmer">右滑开始转写 >>></div>
+                        </div>
+                        <div class="audio-card attention-shimmer">
+                            <div class="card-header">
+                                <span class="card-title">李总产品演示反馈</span>
+                                <div class="card-meta">3月12日 · 45分20秒 <svg class="svg-icon star-icon solid" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div>
+                            </div>
+                            <div class="card-preview">会议里先确认演示重点，再收敛到报价与交付节奏...</div>
+                        </div>
+                    </div>
+
+                    <!-- State 3: Pending/Transcribing -->
+                    <div class="state-view show-3-pending" style="flex-direction: column; gap: 12px;">
+                        <div class="audio-card" style="border-color: rgba(10, 132, 255, 0.3);">
+                            <div class="card-header">
+                                <span class="card-title">与核心供应商电话沟通</span>
+                                <div class="card-meta">14:30 · 22分10秒 <svg class="svg-icon star-icon solid" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div>
+                            </div>
+                            <div class="card-preview">正在云端处理... (45%)</div>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar-fill" style="width: 45%;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- State 4: Transcribed Informational -->
+                    <div class="state-view show-4-transcribed" style="flex-direction: column; gap: 12px;">
+                        <div class="audio-card">
+                            <div class="card-header">
+                                <span class="card-title">与核心供应商电话沟通</span>
+                                <div class="card-meta">刚刚 · 22分10秒 <svg class="svg-icon star-icon solid" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div>
+                            </div>
+                            <div class="card-preview">初步确认了下个月初的物料交付时间，对方表示价格还可以再谈...</div>
+                        </div>
+                    </div>
+
+                    <!-- State 5: Expanded Artifact Card -->
+                    <div class="state-view show-5-expanded" style="flex-direction: column; gap: 12px;">
+                        <div class="audio-card expanded">
+                            <div class="card-header">
+                                <span class="card-title" style="font-size: 16px;">李总产品演示反馈</span>
+                                <div class="card-meta">3月12日 · 45分20秒 <svg class="svg-icon star-icon solid" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div>
+                            </div>
+                            <div class="artifact-summary" style="margin-top: 4px;">
+                                客户对目前的交互原型基本满意，但在数据看板的下钻逻辑上提出了优化要求，必须在下周三前补充出三个维度的报表页。要求重点跟进数据源清洗情况。
+                            </div>
+                            <div class="artifact-tags">
+                                <span class="tag">需求变更</span>
+                                <span class="tag">交互设计</span>
+                                <span class="tag">高优</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- State 9: Action Left Swipe (Delete) -->
+                    <div class="state-view show-9-action-delete" style="flex-direction: column; gap: 12px;">
+                        <div class="audio-card-container">
+                            <div class="swipe-bg-delete">
+                                <svg class="svg-icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                            </div>
+                            <div class="audio-card swipe-left">
+                                <div class="card-header">
+                                    <span class="card-title">新录音 003</span>
+                                    <div class="card-meta">13:15 · 05分30秒 <svg class="svg-icon star-icon outline" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div>
+                                </div>
+                                <div class="swipe-hint text-shimmer">右滑开始转写 >>></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- State 10: Action Right Swipe (Transcribe) -->
+                    <div class="state-view show-10-action-transcribe" style="flex-direction: column; gap: 12px;">
+                        <div class="audio-card-container">
+                            <!-- No underlay, swipe acts purely on the card with existing shimmering hint -->
+                            <div class="audio-card swipe-right">
+                                <div class="card-header">
+                                    <span class="card-title">新录音 003</span>
+                                    <div class="card-meta">13:15 · 05分30秒 <svg class="svg-icon star-icon outline" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div>
+                                </div>
+                                <div class="swipe-hint text-shimmer">>>> 释放以转写</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- State 6/7: Select Mode -->
+                    <div class="state-view show-6-select show-7-select-bound" style="flex-direction: column;">
+                        
+                        <div class="audio-card disabled state-viewable show-7-select-bound">
+                            <div class="card-header">
+                                <span class="card-title">李总产品演示反馈</span>
+                                <div class="card-meta">3月12日 · 45分20秒</div>
+                            </div>
+                            <div class="card-preview">已关联至当前对话</div>
+                        </div>
+
+                        <div class="audio-card">
+                            <div class="card-header">
+                                <span class="card-title">客户回访记录</span>
+                                <div class="card-meta">昨天 16:00</div>
+                            </div>
+                            <div class="card-preview">当前讨论中</div>
+                        </div>
+
+                        <div class="audio-card">
+                            <div class="card-header">
+                                <span class="card-title">新录音 004</span>
+                                <div class="card-meta">14:30</div>
+                            </div>
+                            <div class="card-preview">选择后在当前聊天中继续处理</div>
+                        </div>
+                    </div>
+
+                    <!-- State 8: Long-list check -->
+                    <div class="state-view show-8-longlist" style="flex-direction: column; gap: 12px;">
+                        <div class="audio-card"><div class="card-header"><div class="card-title-block"><span class="card-title">会议记录 10</span><span class="card-meta">昨天 10:00 • 12分</span></div></div></div>
+                        <div class="audio-card"><div class="card-header"><div class="card-title-block"><span class="card-title">会议记录 09</span><span class="card-meta">昨天 14:00 • 20分</span></div></div></div>
+                        <div class="audio-card"><div class="card-header"><div class="card-title-block"><span class="card-title">会议记录 08</span><span class="card-meta">3月10日 • 15分</span></div></div></div>
+                        <div class="audio-card"><div class="card-header"><div class="card-title-block"><span class="card-title">会议记录 07</span><span class="card-meta">3月09日 • 08分</span></div></div></div>
+                        <div class="audio-card"><div class="card-header"><div class="card-title-block"><span class="card-title">会议记录 06</span><span class="card-meta">3月08日 • 45分</span></div></div></div>
+                        <div class="audio-card"><div class="card-header"><div class="card-title-block"><span class="card-title">会议记录 05</span><span class="card-meta">3月07日 • 10分</span></div></div></div>
+                        <div class="audio-card"><div class="card-header"><div class="card-title-block"><span class="card-title">会议记录 04</span><span class="card-meta">3月06日 • 30分</span></div></div></div>
+                        <div class="audio-card"><div class="card-header"><div class="card-title-block"><span class="card-title">会议记录 03</span><span class="card-meta">3月05日 • 13分</span></div></div></div>
+                        <div class="audio-card"><div class="card-header"><div class="card-title-block"><span class="card-title">会议记录 02</span><span class="card-meta">3月04日 • 05分</span></div></div></div>
+                    </div>
+            </div>
+
+            <!-- Bottom Monolith -->
+            <footer class="bottom-monolith">
+            </footer>
+        </div>
+    </div>
+
+    <script>
+        function setView(viewName, mode, btnElem) {
+            const shell = document.getElementById('sim-shell');
+            shell.setAttribute('data-view', viewName);
+            if (mode === 'select') {
+                shell.classList.add('select-mode');
+            } else {
+                shell.classList.remove('select-mode');
+            }
+            const buttons = document.querySelectorAll('.review-controls button');
+            buttons.forEach(b => b.classList.remove('active'));
+            btnElem.classList.add('active');
+        }
+    </script>
+</body>
+</html>

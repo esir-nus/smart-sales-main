@@ -9,10 +9,14 @@ import com.smartsales.core.pipeline.MascotState
 import com.smartsales.core.pipeline.RealFollowUpRescheduleExtractionService
 import com.smartsales.core.pipeline.RealGlobalRescheduleExtractionService
 import com.smartsales.core.pipeline.RealUniAExtractionService
+import com.smartsales.prism.data.audio.DeviceSpeechFailureReason
+import com.smartsales.prism.data.audio.DeviceSpeechRecognitionResult
+import com.smartsales.prism.data.audio.DeviceSpeechRecognizer
 import com.smartsales.prism.data.audio.SimAudioRepository
 import com.smartsales.prism.data.session.SimSessionRepository
 import com.smartsales.prism.domain.analyst.TaskBoardItem
 import com.smartsales.prism.domain.audio.TranscriptionStatus
+import com.smartsales.prism.domain.config.SubscriptionTier
 import com.smartsales.prism.domain.memory.ScheduleBoard
 import com.smartsales.prism.domain.model.ChatMessage
 import com.smartsales.prism.domain.model.SchedulerFollowUpContext
@@ -30,10 +34,17 @@ import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
 import com.smartsales.prism.ui.IAgentViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 
 internal const val SIM_SCHEDULER_SHELF_HANDOFF_REQUEST_SUMMARY =
     "SIM scheduler shelf Ask AI handoff requested"
@@ -64,6 +75,8 @@ internal const val SIM_SCHEDULER_GLOBAL_SUGGESTION_RECEIVED_SUMMARY =
 internal const val SIM_AUDIO_CHAT_LOG_TAG = "SimAudioChat"
 internal const val SIM_SCHEDULER_SHELF_LOG_TAG = "SimSchedulerShelf"
 internal const val SIM_BADGE_FOLLOW_UP_CHAT_LOG_TAG = "SimBadgeFollowUpChat"
+internal const val SIM_EMPTY_HOME_GREETING_FALLBACK_NAME = "SmartSales 用户"
+private const val SIM_VOICE_DRAFT_TIMEOUT_MILLIS = 1_200L
 
 enum class SimSchedulerFollowUpQuickAction {
     EXPLAIN,
@@ -80,7 +93,8 @@ enum class SimSchedulerFollowUpQuickAction {
 @HiltViewModel
 class SimAgentViewModel @Inject constructor(
     sessionRepository: SimSessionRepository,
-    audioRepository: SimAudioRepository,
+    private val audioRepository: SimAudioRepository,
+    private val speechRecognizer: DeviceSpeechRecognizer,
     taskRepository: ScheduledTaskRepository,
     scheduleBoard: ScheduleBoard,
     activeTaskRetrievalIndex: ActiveTaskRetrievalIndex,
@@ -98,6 +112,8 @@ class SimAgentViewModel @Inject constructor(
         val isLongTranscript: Boolean = false
     )
 
+    private var voiceDraftRequestId = 0L
+
     private val _currentSessionId = MutableStateFlow<String?>(null)
     val currentSessionId: StateFlow<String?> = _currentSessionId.asStateFlow()
 
@@ -112,6 +128,9 @@ class SimAgentViewModel @Inject constructor(
 
     private val _isSending = MutableStateFlow(false)
     override val isSending: StateFlow<Boolean> = _isSending.asStateFlow()
+
+    private val _voiceDraftState = MutableStateFlow(SimVoiceDraftUiState())
+    val voiceDraftState: StateFlow<SimVoiceDraftUiState> = _voiceDraftState.asStateFlow()
 
     private val _errorMessage = MutableStateFlow<String?>(null)
     override val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
@@ -140,8 +159,16 @@ class SimAgentViewModel @Inject constructor(
     override val currentDisplayName: String
         get() = userProfileRepository.profile.value.displayName
 
-    private val _heroGreeting = MutableStateFlow("欢迎回来，${currentDisplayName}")
-    override val heroGreeting: StateFlow<String> = _heroGreeting.asStateFlow()
+    val currentSubscriptionTier: SubscriptionTier
+        get() = userProfileRepository.profile.value.subscriptionTier
+
+    override val heroGreeting: StateFlow<String> = userProfileRepository.profile
+        .map { profile -> formatSimHeroGreeting(profile.displayName) }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = formatSimHeroGreeting(currentDisplayName)
+        )
 
     private val _groupedSessions = MutableStateFlow<Map<String, List<SessionPreview>>>(emptyMap())
     val groupedSessions: StateFlow<Map<String, List<SessionPreview>>> =
@@ -219,10 +246,12 @@ class SimAgentViewModel @Inject constructor(
     }
 
     fun startNewSession() {
+        cancelVoiceDraft()
         sessionCoordinator.startNewSession()
     }
 
     fun startSeededSession(initialUserInput: String) {
+        cancelVoiceDraft()
         chatCoordinator.startSeededSession(initialUserInput, ::send)
     }
 
@@ -255,10 +284,12 @@ class SimAgentViewModel @Inject constructor(
     }
 
     fun startSchedulerShelfSession(initialUserInput: String) {
+        cancelVoiceDraft()
         chatCoordinator.startSchedulerShelfSession(initialUserInput, ::startSeededSession)
     }
 
     fun switchSession(sessionId: String) {
+        cancelVoiceDraft()
         sessionCoordinator.switchSession(sessionId)
     }
 
@@ -271,6 +302,7 @@ class SimAgentViewModel @Inject constructor(
     }
 
     fun deleteSession(sessionId: String) {
+        cancelVoiceDraft()
         sessionCoordinator.deleteSession(sessionId)
     }
 
@@ -284,12 +316,17 @@ class SimAgentViewModel @Inject constructor(
         summary: String?,
         summaryLabel: String = "当前预览"
     ): String {
-        return chatCoordinator.openAudioDiscussion(
+        cancelVoiceDraft()
+        val sessionId = chatCoordinator.openAudioDiscussion(
             audioId = audioId,
             title = title,
             summary = summary,
             summaryLabel = summaryLabel
         )
+        if (summaryLabel != "当前状态") {
+            enqueueAttachedAudioArtifacts(audioId)
+        }
+        return sessionId
     }
 
     fun selectAudioForChat(
@@ -298,12 +335,85 @@ class SimAgentViewModel @Inject constructor(
         summary: String?,
         entersPendingFlow: Boolean
     ): String {
-        return chatCoordinator.selectAudioForChat(
+        cancelVoiceDraft()
+        val sessionId = chatCoordinator.selectAudioForChat(
             audioId = audioId,
             title = title,
             summary = summary,
             entersPendingFlow = entersPendingFlow
         )
+        if (!entersPendingFlow) {
+            enqueueAttachedAudioArtifacts(audioId)
+        }
+        return sessionId
+    }
+
+    fun startVoiceDraft(): Boolean {
+        return startVoiceDraft(SimVoiceDraftInteractionMode.HOLD_TO_SEND)
+    }
+
+    fun onVoiceDraftPermissionRequested() {
+        val state = _voiceDraftState.value
+        if (
+            state.isRecording ||
+            state.isProcessing ||
+            state.awaitingMicPermission ||
+            _isSending.value ||
+            _currentSchedulerFollowUpContext.value != null ||
+            speechRecognizer.isListening()
+        ) {
+            return
+        }
+        _voiceDraftState.value = state.copy(
+            awaitingMicPermission = true,
+            interactionMode = SimVoiceDraftInteractionMode.HOLD_TO_SEND,
+            errorMessage = null
+        )
+    }
+
+    fun onVoiceDraftPermissionResult(granted: Boolean) {
+        val state = _voiceDraftState.value
+        if (!granted) {
+            _voiceDraftState.value = state.copy(
+                awaitingMicPermission = false,
+                interactionMode = SimVoiceDraftInteractionMode.HOLD_TO_SEND,
+                errorMessage = "无法录音：未授予麦克风权限"
+            )
+            _toastMessage.value = "无法录音：未授予麦克风权限"
+            return
+        }
+        if (state.awaitingMicPermission) {
+            startVoiceDraft(SimVoiceDraftInteractionMode.TAP_TO_SEND)
+        }
+    }
+
+    fun finishVoiceDraft() {
+        val state = _voiceDraftState.value
+        if (!state.isRecording) return
+        val requestId = beginVoiceDraftProcessing(state)
+        viewModelScope.launch {
+            when (val result = resolveVoiceDraftResult(requestId)) {
+                is DeviceSpeechRecognitionResult.Success -> {
+                    if (!isActiveVoiceDraftRequest(requestId)) return@launch
+                    _inputText.value = result.text
+                    _voiceDraftState.value = SimVoiceDraftUiState()
+                }
+
+                is DeviceSpeechRecognitionResult.Failure -> {
+                    if (!isActiveVoiceDraftRequest(requestId)) return@launch
+                    _voiceDraftState.value = SimVoiceDraftUiState(errorMessage = result.message)
+                    if (result.reason != DeviceSpeechFailureReason.CANCELLED) {
+                        _toastMessage.value = result.message
+                    }
+                }
+            }
+        }
+    }
+
+    fun cancelVoiceDraft() {
+        invalidateVoiceDraftRequests()
+        runCatching { speechRecognizer.cancelListening() }
+        _voiceDraftState.value = SimVoiceDraftUiState()
     }
 
     fun updatePendingAudioState(audioId: String, status: TranscriptionStatus, progress: Float) {
@@ -331,6 +441,14 @@ class SimAgentViewModel @Inject constructor(
         chatCoordinator.appendCompletedAudioArtifacts(audioId, artifacts)
     }
 
+    private fun enqueueAttachedAudioArtifacts(audioId: String) {
+        runBlocking {
+            audioRepository.getArtifacts(audioId)?.let { artifacts ->
+                chatCoordinator.appendCompletedAudioArtifacts(audioId, artifacts)
+            }
+        }
+    }
+
     fun failPendingAudio(audioId: String, message: String) {
         chatCoordinator.failPendingAudio(audioId, message)
     }
@@ -351,6 +469,9 @@ class SimAgentViewModel @Inject constructor(
 
     override fun updateInput(text: String) {
         _inputText.value = text
+        if (_voiceDraftState.value.errorMessage != null) {
+            _voiceDraftState.value = _voiceDraftState.value.copy(errorMessage = null)
+        }
     }
 
     override fun clearError() {
@@ -362,6 +483,7 @@ class SimAgentViewModel @Inject constructor(
     }
 
     override fun send() {
+        cancelVoiceDraft()
         val content = _inputText.value.trim()
         if (content.isEmpty()) return
 
@@ -407,6 +529,93 @@ class SimAgentViewModel @Inject constructor(
         }
     }
 
+    private fun startVoiceDraft(
+        interactionMode: SimVoiceDraftInteractionMode
+    ): Boolean {
+        val state = _voiceDraftState.value
+        if (
+            state.isRecording ||
+            state.isProcessing ||
+            _isSending.value ||
+            _currentSchedulerFollowUpContext.value != null ||
+            speechRecognizer.isListening()
+        ) {
+            return false
+        }
+        return runCatching {
+            speechRecognizer.startListening()
+            _voiceDraftState.value = state.copy(
+                isRecording = true,
+                isProcessing = false,
+                awaitingMicPermission = false,
+                interactionMode = interactionMode,
+                errorMessage = null
+            )
+            true
+        }.getOrElse {
+            _voiceDraftState.value = SimVoiceDraftUiState(
+                errorMessage = "当前无法开始录音，请重试。"
+            )
+            _toastMessage.value = "当前无法开始录音，请重试。"
+            false
+        }
+    }
+
+    private fun beginVoiceDraftProcessing(
+        state: SimVoiceDraftUiState
+    ): Long {
+        val requestId = invalidateVoiceDraftRequests()
+        _voiceDraftState.value = state.copy(
+            isRecording = false,
+            isProcessing = true,
+            awaitingMicPermission = false,
+            errorMessage = null
+        )
+        return requestId
+    }
+
+    private suspend fun resolveVoiceDraftResult(
+        requestId: Long
+    ): DeviceSpeechRecognitionResult {
+        return try {
+            val result = withTimeout(SIM_VOICE_DRAFT_TIMEOUT_MILLIS) {
+                speechRecognizer.finishListening()
+            }
+            if (isActiveVoiceDraftRequest(requestId)) {
+                result
+            } else {
+                DeviceSpeechRecognitionResult.Failure(
+                    reason = DeviceSpeechFailureReason.CANCELLED,
+                    message = "语音识别已取消"
+                )
+            }
+        } catch (_: TimeoutCancellationException) {
+            DeviceSpeechRecognitionResult.Failure(
+                reason = DeviceSpeechFailureReason.NO_MATCH,
+                message = "语音识别超时"
+            )
+        } catch (_: CancellationException) {
+            DeviceSpeechRecognitionResult.Failure(
+                reason = DeviceSpeechFailureReason.CANCELLED,
+                message = "语音识别已取消"
+            )
+        } catch (_: IllegalStateException) {
+            DeviceSpeechRecognitionResult.Failure(
+                reason = DeviceSpeechFailureReason.ERROR,
+                message = "当前无法识别语音，请重试"
+            )
+        }
+    }
+
+    private fun invalidateVoiceDraftRequests(): Long {
+        voiceDraftRequestId += 1L
+        return voiceDraftRequestId
+    }
+
+    private fun isActiveVoiceDraftRequest(requestId: Long): Boolean {
+        return requestId == voiceDraftRequestId
+    }
+
     override fun amendAnalystPlan() {
         _uiState.value = UiState.Idle
     }
@@ -433,4 +642,14 @@ class SimAgentViewModel @Inject constructor(
     override fun debugRunScenario(scenario: String) {
         _toastMessage.value = "SIM 屏蔽调试 HUD"
     }
+
+    override fun onCleared() {
+        cancelVoiceDraft()
+        super.onCleared()
+    }
+}
+
+private fun formatSimHeroGreeting(displayName: String): String {
+    val resolvedName = displayName.trim().ifBlank { SIM_EMPTY_HOME_GREETING_FALLBACK_NAME }
+    return "你好, $resolvedName"
 }

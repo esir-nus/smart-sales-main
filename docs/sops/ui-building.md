@@ -17,7 +17,7 @@
 
 For major UI work, default to this battle-tested split:
 
-- use a UI design agent for prototype creation and visual exploration
+- use a UI design agent for prototype creation and visual exploration, with agent-browser / browser assistance during prototype work
 - use Codex for surgical Compose transplant, repo-safe iteration, and verification
 - use `prism-ui-ux-contract.md` and `ui_element_registry.md` as management guardrails during production
 
@@ -26,6 +26,7 @@ Interpretation:
 - prototype quality should come from focused visual exploration
 - production quality should come from careful transplant and fidelity iteration
 - contract and registry should keep the result legal and maintainable, not act as substitutes for design quality
+- Codex does not own first-pass prototype authorship by default unless the user explicitly overrides that rule
 
 ### 1. Zero-Contamination Principle
 - **Wireframe** shows WHAT elements exist, NOT how they look.
@@ -43,6 +44,12 @@ Interpretation:
 - Use current UI to understand logic, state wiring, ownership, and interaction hooks.
 - Do **not** use current UI as the aesthetic source of truth unless it is explicitly marked as an approved visual reference.
 - Aesthetic truth comes from approved prototypes, the style guide, and the UI element registry.
+
+### 1c. Real System Insets Override Prototype Placeholders
+- Prototype status bars and bottom safe areas are visual placeholders only.
+- In Compose, use real `WindowInsets.statusBars` / `WindowInsets.navigationBars` instead of transplanting numeric `44px` or similar offsets.
+- Put inset ownership on the real independent surface being transplanted.
+- If the owning spec requires a persistent top monolith or header slot, preserve that alignment while making the surface status-bar-aware; do not flatten it into a generic top padding rule.
 
 ### 2. Explicit Checkpoints
 Every phase transition requires explicit human confirmation, but the agent should keep the ceremony light.
@@ -153,12 +160,14 @@ Do not transplant visuals into Compose as freeform UI code detached from the con
    - visual composition
    - polish quality
 4. Build the design pass in the most useful medium for fast review, normally the web prototype in `prototypes/prism-web-v1/`.
+   - The UI design agent should use agent-browser / browser assistance for visual reference gathering, comparison against approved screenshots or parent prototypes, and screenshot-review support.
 5. Screenshot the result and present it to the user.
 6. Revise from user screenshot feedback until the design direction is confirmed.
 
 Preferred owner:
 
-- this phase should usually be done by a UI-focused design agent rather than by starting in Compose
+- this phase is owned by a UI-focused design agent by default
+- Codex should not silently take over first-pass prototype creation; if working in Codex before a prototype exists, stop at briefing, review criteria, or handoff preparation rather than inventing the prototype directly
 
 **Checkpoint**: Once the user confirms the design direction, begin production transplant.
 
@@ -188,6 +197,7 @@ Preferred owner:
 - Prefer existing registry-aligned seams and interfaces instead of letting screenshot polish create new ownership leaks.
 - Verify build passes.
 - Preserve the screenshot-approved structure unless the user explicitly reopens layout decisions.
+- When transplanting edge-reaching surfaces, verify that root and child are not both consuming the same system-bar inset.
 
 Preferred owner:
 
@@ -288,7 +298,7 @@ A UI feature is **DONE** when:
 ## Lessons Learned From Successful UI Transplants
 
 1. Prototype-first is not optional for major UI polish work; it is the main speed multiplier.
-2. Codex is best used to transplant and refine surgically inside the repo, not to improvise the full aesthetic from code reality alone.
+2. Codex is best used to transplant and refine surgically inside the repo, not to improvise the full aesthetic from code reality alone or to become the default prototype author.
 3. The Surface Contract and UI Element Registry are effective when treated as control systems:
    - they manage ownership
    - they constrain state and interaction legality

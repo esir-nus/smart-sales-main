@@ -12,24 +12,36 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.smartsales.prism.ui.drawers.scheduler.SchedulerDrawerVisualMode
 import com.smartsales.prism.ui.drawers.scheduler.TimelineItem
+import com.smartsales.prism.ui.drawers.scheduler.currentSchedulerDrawerVisualMode
+import com.smartsales.prism.ui.drawers.scheduler.currentSchedulerDrawerVisuals
+import com.smartsales.prism.ui.drawers.scheduler.simDetailDateLabel
 import com.smartsales.prism.ui.theme.AccentBlue
 import com.smartsales.prism.ui.theme.AccentAmber
 import com.smartsales.prism.ui.theme.BorderSubtle
-import com.smartsales.prism.ui.theme.TextMuted
-import com.smartsales.prism.ui.theme.TextSecondary
 
 @Composable
 fun TaskCardDetails(
     state: TimelineItem.Task,
     modifier: Modifier = Modifier
 ) {
+    val visuals = currentSchedulerDrawerVisuals
+    val isSimVisualMode = currentSchedulerDrawerVisualMode == SchedulerDrawerVisualMode.SIM
+    val detailStartPadding = if (isSimVisualMode) {
+        visuals.cardHeaderTimeWidth + visuals.cardHeaderGap + 4.dp
+    } else {
+        58.dp
+    }
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(start = 58.dp, top = 16.dp)
+            .padding(start = detailStartPadding, top = 16.dp)
     ) {
-        val metaStyle = androidx.compose.material3.MaterialTheme.typography.bodySmall.copy(color = TextSecondary, fontSize = 12.sp)
+        val metaStyle = androidx.compose.material3.MaterialTheme.typography.bodySmall.copy(
+            color = visuals.taskMetaColor,
+            fontSize = 12.sp
+        )
 
         state.conflictSummary?.let {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
@@ -41,14 +53,17 @@ fun TaskCardDetails(
 
         // Date Row
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
-            Icon(Icons.Outlined.Event, contentDescription = null, tint = TextMuted, modifier = Modifier.size(14.dp))
+            Icon(Icons.Outlined.Event, contentDescription = null, tint = visuals.taskTimeColor, modifier = Modifier.size(14.dp))
             Spacer(modifier = Modifier.width(8.dp))
-            Text(state.dateRange, style = metaStyle)
+            Text(
+                text = if (isSimVisualMode) state.simDetailDateLabel() else state.dateRange,
+                style = metaStyle
+            )
         }
         // Location Row
         state.location?.let {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
-                Icon(Icons.Outlined.LocationOn, contentDescription = null, tint = TextMuted, modifier = Modifier.size(14.dp))
+                Icon(Icons.Outlined.LocationOn, contentDescription = null, tint = visuals.taskTimeColor, modifier = Modifier.size(14.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(it, style = metaStyle)
             }
@@ -56,7 +71,7 @@ fun TaskCardDetails(
         // Notes Row
         state.notes?.let {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
-                Icon(Icons.Outlined.Notes, contentDescription = null, tint = TextMuted, modifier = Modifier.size(14.dp))
+                Icon(Icons.Outlined.Notes, contentDescription = null, tint = visuals.taskTimeColor, modifier = Modifier.size(14.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(it, style = metaStyle)
             }
@@ -64,7 +79,7 @@ fun TaskCardDetails(
         // Key Person
         state.keyPerson?.let {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
-                Icon(Icons.Outlined.Person, contentDescription = null, tint = TextMuted, modifier = Modifier.size(14.dp))
+                Icon(Icons.Outlined.Person, contentDescription = null, tint = visuals.taskTimeColor, modifier = Modifier.size(14.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(it, style = metaStyle)
             }
@@ -81,7 +96,7 @@ fun TaskCardDetails(
         state.alarmCascade?.let {
             if (it.isNotEmpty()) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
-                    Icon(Icons.Outlined.NotificationsActive, contentDescription = null, tint = TextMuted, modifier = Modifier.size(14.dp))
+                    Icon(Icons.Outlined.NotificationsActive, contentDescription = null, tint = visuals.taskTimeColor, modifier = Modifier.size(14.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(it.joinToString(", "), style = metaStyle)
                 }

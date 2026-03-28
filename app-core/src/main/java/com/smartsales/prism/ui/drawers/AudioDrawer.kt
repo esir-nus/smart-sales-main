@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.draw.drawBehind
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.smartsales.prism.ui.components.PrismSurface
+import com.smartsales.prism.ui.components.prismNavigationBarPadding
 import com.smartsales.prism.ui.drawers.audio.AudioViewModel
 import com.smartsales.prism.ui.theme.*
 import kotlinx.coroutines.launch
@@ -101,7 +102,11 @@ fun AudioDrawer(
                 backgroundColor = BackgroundSurface.copy(alpha = 0.95f), // Slightly more opaque for sheet
                 elevation = 16.dp
             ) {
-                Column(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .prismNavigationBarPadding()
+                ) {
                     // 1. Drag Handle Pill
                     var accumulatedDrag by remember { mutableStateOf(0f) }
                     

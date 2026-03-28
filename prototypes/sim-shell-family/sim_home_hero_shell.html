@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SIM Home/Hero Shell Prototype</title>
+    <style>
+        :root {
+            --status-bar-height: 44px;
+            --bg-app: #0D0D12;
+            --monolith-bg: #020205; 
+            --color-accent-blue: #0A84FF; 
+            --text-primary: #FFFFFF;
+            --text-secondary: #86868B;
+            --text-muted: #AEAEB2;
+            --font-cn: "Inter", "PingFang SC", system-ui, sans-serif;
+            --surface-card: rgba(28, 28, 30, 0.65); 
+            --surface-sheet: rgba(255, 255, 255, 0.05); 
+            --border-glass: rgba(255, 255, 255, 0.15);
+            --border-subtle: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        ::-webkit-scrollbar { 
+            display: none; 
+        }
+
+        body {
+            background: #000;
+            color: var(--text-primary);
+            font-family: var(--font-cn);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Review Toggles Overlay */
+        .review-controls {
+            position: fixed;
+            left: 20px;
+            top: 20px;
+            width: 220px;
+            background: #111;
+            border: 1px solid #333;
+            padding: 16px;
+            border-radius: 12px;
+            z-index: 1000;
+        }
+        .review-controls h3 {
+            font-size: 14px;
+            color: #888;
+            margin-bottom: 8px;
+            margin-top: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .review-controls h3:first-child {
+            margin-top: 0;
+        }
+        .review-controls button {
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: rgba(255,255,255,0.05);
+            color: #FFF;
+            border: none;
+            padding: 10px 12px;
+            margin-bottom: 4px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        .review-controls button:hover,
+        .review-controls button.active {
+            background: rgba(10, 132, 255, 0.2);
+            color: var(--color-accent-blue);
+        }
+
+        /* Emulator Frame */
+        #emulator-container {
+            width: 390px;
+            height: 844px; /* iPhone 14 Pro size */
+            background: var(--bg-app);
+            border-radius: 40px;
+            position: relative;
+            border: 8px solid #222;
+            box-shadow: 0 0 60px rgba(0,0,0,0.8);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Floor layer - Aurora */
+        .layer-floor {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 0;
+            background: #0D0D12;
+            overflow: hidden;
+        }
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            mix-blend-mode: screen;
+        }
+        .blob-1 {
+            width: 250px; height: 250px;
+            background: rgba(10, 132, 255, 0.28);
+            top: 10%; left: -10%;
+            animation: drift1 20s infinite alternate ease-in-out;
+        }
+        .blob-2 {
+            width: 280px; height: 280px;
+            background: rgba(94, 92, 230, 0.24);
+            top: 40%; left: 40%;
+            animation: drift2 25s infinite alternate ease-in-out;
+        }
+        .blob-3 {
+            width: 220px; height: 220px;
+            background: rgba(100, 210, 255, 0.20);
+            bottom: 5%; left: 0%;
+            animation: drift3 22s infinite alternate ease-in-out;
+        }
+        @keyframes drift1 { 0% { transform: translate(0, 0); } 100% { transform: translate(40px, -20px); } }
+        @keyframes drift2 { 0% { transform: translate(0, 0); } 100% { transform: translate(-30px, 30px); } }
+        @keyframes drift3 { 0% { transform: translate(0, 0); } 100% { transform: translate(50px, -10px); } }
+
+        /* The Shell Structure */
+        .sim-shell {
+            position: absolute;
+            top: var(--status-bar-height); left: 0; right: 0; bottom: 0;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Monolith */
+        .top-monolith {
+            height: 64px; /* Slimmer to match screenshot */
+            background: var(--monolith-bg);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-left: 16px;
+            padding-right: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+            z-index: 20;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+        }
+
+        /* Dynamic Island (Borderless Chroma Style) */
+        .dynamic-island {
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            max-width: 240px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: transparent;
+            box-shadow: none;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+            transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .island-text {
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            color: transparent;
+            transition: background-image 0.3s ease;
+        }
+
+        .island-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+        }
+
+        .sim-shell[data-island="upcoming"] .island-dot {
+            background: #FF453A;
+            box-shadow: 0 0 10px rgba(255, 69, 58, 0.8);
+        }
+        .sim-shell[data-island="upcoming"] .island-text {
+            background-image: linear-gradient(135deg, #FF8A84, #FF453A);
+        }
+        .sim-shell[data-island="upcoming"] .island-text::before { content: "即将：客户演示 · 15:00"; }
+
+        .sim-shell[data-island="conflict"] .island-dot {
+            background: #FFD60A;
+            box-shadow: 0 0 10px rgba(255, 214, 10, 0.8);
+            animation: pulse-warn 1.5s infinite;
+        }
+        .sim-shell[data-island="conflict"] .island-text {
+            background-image: linear-gradient(135deg, #FFEB85, #FFD60A);
+        }
+        .sim-shell[data-island="conflict"] .island-text::before { content: "冲突：内部会议 · 15:00"; }
+
+        .sim-shell[data-island="idle"] .island-dot {
+            background: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 0 6px rgba(255, 255, 255, 0.2);
+        }
+        .sim-shell[data-island="idle"] .island-text {
+            background-image: linear-gradient(135deg, #FFFFFF 0%, #A0A0A5 100%);
+        }
+        .sim-shell[data-island="idle"] .island-text::before { content: "暂无待办"; }
+        
+        @keyframes pulse-warn {
+            0% { opacity: 0.6; box-shadow: 0 0 4px rgba(255, 214, 10, 0.3); }
+            50% { opacity: 1; box-shadow: 0 0 14px rgba(255, 214, 10, 0.9); }
+            100% { opacity: 0.6; box-shadow: 0 0 4px rgba(255, 214, 10, 0.3); }
+        }
+
+        /* Center Canvas */
+        .center-canvas-container {
+            flex: 1;
+            position: relative;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 10px 16px; /* Tighter padding */
+            display: flex;
+            flex-direction: column;
+        }
+
+        .state-view {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+        }
+
+        .sim-shell[data-state="empty-home"] #view-empty-home,
+        .sim-shell[data-state="active-plain"] #view-active-plain,
+        .sim-shell[data-state="active-system-sheet"] #view-active-system-sheet,
+        .sim-shell[data-state="context-enriched"] #view-context-enriched,
+        .sim-shell[data-state="pending-processing"] #view-pending-processing,
+        .sim-shell[data-state="longer-session"] #view-longer-session {
+            display: flex;
+        }
+
+        /* Empty State */
+        .greeting-canvas {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            margin-top: -10%;
+        }
+        .greeting-text {
+            font-size: 26px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, #FFFFFF 0%, #A0A0A5 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .greeting-subtitle {
+            font-size: 15px;
+            color: var(--text-secondary);
+        }
+
+        /* Chat States */
+        .chat-view {
+            justify-content: flex-end; 
+            padding-bottom: 4px;
+        }
+        .chat-history {
+            display: flex;
+            flex-direction: column;
+            gap: 10px; /* Tighter flow */
+        }
+
+        /* Bubbles */
+        .user-bubble {
+            align-self: flex-end;
+            background: var(--color-accent-blue);
+            color: white;
+            padding: 10px 16px;
+            border-radius: 9999px; /* Pill-like radius */
+            border-bottom-right-radius: 4px;
+            max-width: 80%;
+            font-size: 15px;
+            line-height: 1.4;
+            box-shadow: none; /* Flatter/matte */
+        }
+        
+        .assistant-bubble {
+            align-self: flex-start;
+            background: var(--surface-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            color: white;
+            padding: 10px 16px;
+            border-radius: 20px;
+            border-bottom-left-radius: 4px;
+            max-width: 85%;
+            font-size: 15px;
+            line-height: 1.4;
+            border: 0.5px solid var(--border-subtle);
+            box-shadow: none; /* Flatter */
+        }
+
+        /* System Sheet / Cards */
+        .frosted-glass {
+            background: var(--surface-sheet);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border-radius: 16px;
+            border: 0.5px solid var(--border-glass);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .system-sheet {
+            align-self: stretch;
+            padding: 16px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin: 4px 0;
+        }
+        .system-sheet .sheet-icon {
+            display: flex;
+            align-items: center;
+            color: #FFF;
+        }
+        .system-sheet .sheet-content {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .system-sheet .sheet-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #FFF;
+        }
+        .system-sheet .sheet-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        /* Context Marker */
+        .context-marker {
+            align-self: flex-start;
+            padding: 8px 16px;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            border-radius: 12px;
+            margin-bottom: -4px;
+        }
+        .context-marker .marker-icon {
+            display: flex;
+            align-items: center;
+            color: var(--text-secondary);
+        }
+        .context-marker .marker-text {
+            font-size: 13px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        /* Processing/Status Sheet */
+        .status-sheet {
+            align-self: flex-start;
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-width: 260px;
+            margin: 4px 0 8px 0;
+        }
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 0.5px solid var(--border-subtle);
+            padding-bottom: 10px;
+        }
+        .status-phase {
+            font-size: 14px;
+            font-weight: 600;
+            color: #FFF;
+            display: flex;
+            align-items: center;
+        }
+        .status-action {
+            font-size: 13px;
+            color: var(--color-accent-blue);
+            animation: pulse 1.5s infinite;
+        }
+        .status-body {
+            font-size: 13px;
+            color: var(--text-muted);
+            line-height: 1.5;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+
+        /* Bottom Monolith */
+        .bottom-monolith {
+            background: var(--monolith-bg);
+            min-height: 56px; /* Slimmer input bar */
+            padding: 10px 16px 16px 16px; /* Less safe area, tighter fit */
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.8);
+            z-index: 20;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .input-field-wrapper {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+            background: transparent;
+            border-radius: 0; 
+        }
+        .chat-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 16px;
+            line-height: 24px;
+            padding: 12px 0;
+            z-index: 2;
+        }
+        .chat-input::placeholder {
+            color: transparent; /* Used for pure structural sizing */
+        }
+        
+        .placeholder-scan {
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+            z-index: 1;
+            pointer-events: none;
+            color: rgba(255,255,255,0.3);
+            background: linear-gradient(90deg, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0.9) 50%, rgba(255,255,255,0.3) 100%);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shimmer 3s infinite linear;
+        }
+        @keyframes shimmer {
+            0% { background-position: -150% center; }
+            100% { background-position: 250% center; }
+        }
+        
+        .chat-input:not(:placeholder-shown) + .placeholder-scan {
+            display: none;
+        }
+
+        .send-btn {
+            color: var(--text-muted);
+        }
+        .attach-btn {
+            color: var(--text-primary);
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Lightweight Review Controls -->
+    <div class="review-controls">
+        <h3>Shell States</h3>
+        <button id="btn-empty-home" class="active" onclick="setState('empty-home', this)">1. Empty Home</button>
+        <button id="btn-active-plain" onclick="setState('active-plain', this)">2. Active Chat (Sparse)</button>
+        <button id="btn-active-system-sheet" onclick="setState('active-system-sheet', this)">3. Active + System Sheet</button>
+        <button id="btn-context-enriched" onclick="setState('context-enriched', this)">4. Context-Enriched</button>
+        <button id="btn-pending-processing" onclick="setState('pending-processing', this)">5. In-Chat Pending</button>
+        <button id="btn-longer-session" onclick="setState('longer-session', this)">6. Longer Session</button>
+        
+        <h3>Dynamic Island</h3>
+        <button id="btn-island-upcoming" class="active" onclick="setIsland('upcoming', this)">1. Upcoming Task</button>
+        <button id="btn-island-conflict" onclick="setIsland('conflict', this)">2. Conflict Notice</button>
+        <button id="btn-island-idle" onclick="setIsland('idle', this)">3. Idle / Hidden</button>
+    </div>
+
+    <!-- Full Device Emulator -->
+    <div id="emulator-container">
+        <!-- System Status Bar -->
+        <div class="system-status-bar" style="position: absolute; top: 0; left: 0; right: 0; height: var(--status-bar-height); z-index: 100; display: flex; justify-content: space-between; align-items: center; padding: 0 24px; font-size: 15px; font-weight: 600; color: var(--text-primary); pointer-events: none;">
+            <span>22:59</span>
+            <div style="display: flex; gap: 6px; align-items: center;">
+                <span style="font-size: 13px;">5G</span>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M17 4h-3V2h-4v2H7v18h10V4z"/></svg>
+            </div>
+        </div>
+
+        
+        <!-- Background Aurora -->
+        <div class="layer-floor" id="aurora-bg">
+            <div class="blob blob-1"></div>
+            <div class="blob blob-2"></div>
+            <div class="blob blob-3"></div>
+        </div>
+
+        <!-- The Shared SIM Shell -->
+        <div id="sim-shell" class="sim-shell" data-state="empty-home" data-island="upcoming">
+            
+            <!-- Top Monolith -->
+            <header class="top-monolith">
+                <div class="top-left">
+                    <button class="icon-btn borderless">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+                    </button>
+                </div>
+                <div class="top-center">
+                    <div class="dynamic-island">
+                        <div class="island-dot"></div>
+                        <span class="island-text"></span>
+                    </div>
+                </div>
+                <div class="top-right">
+                    <button class="icon-btn borderless">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Center Canvas -->
+            <main class="center-canvas-container" id="chat-scroller">
+                
+                <!-- State 1: Empty Home -->
+                <div class="state-view" id="view-empty-home">
+                    <div class="greeting-canvas">
+                        <h1 class="greeting-text">你好, SmartSales 用户</h1>
+                        <p class="greeting-subtitle">我是您的销售助手</p>
+                    </div>
+                </div>
+
+                <!-- State 2: Active Plain Chat -->
+                <div class="state-view chat-view" id="view-active-plain">
+                    <div class="chat-history">
+                        <div class="user-bubble">这份合同的重点是什么？</div>
+                        <div class="assistant-bubble">合同的重点在于付款周期和违约条款。付款周期缩短至30天，违约金比例上调至5%。建议您在签约前再次确认这两项。</div>
+                    </div>
+                </div>
+
+                <!-- State 3: Active Chat with System Sheet -->
+                <div class="state-view chat-view" id="view-active-system-sheet">
+                    <div class="chat-history">
+                        <div class="user-bubble">分析一下第一季度的营收数据。</div>
+                        
+                        <div class="system-sheet frosted-glass">
+                            <div class="sheet-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+                            </div>
+                            <div class="sheet-content">
+                                <span class="sheet-title">数据分析报告已生成</span>
+                                <span class="sheet-desc">包含 Q1 各产品线营收趋势及渠道占比。大客户渠道增长显著。</span>
+                            </div>
+                        </div>
+
+                        <div class="assistant-bubble">根据系统生成的分析报告，第一季度整体营收同比增长15%，其中核心产品线A贡献了总营收的40%。详细数据已在上方卡片中列出，您对某个特定渠道的下降趋势有问题吗？</div>
+                    </div>
+                </div>
+
+                <!-- State 4: Context-Enriched Chat State -->
+                <div class="state-view chat-view" id="view-context-enriched">
+                    <div class="chat-history">
+                        <div class="context-marker frosted-glass">
+                            <div class="marker-icon">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                            </div>
+                            <span class="marker-text">当前讨论: 客户A拜访录音 (03-23)</span>
+                        </div>
+                        
+                        <div class="assistant-bubble">我已经加载了这份录音。您想了解客户在沟通中表现出的主要顾虑是什么吗？</div>
+                        <div class="user-bubble">对，他主要担心哪些方面？</div>
+                        <div class="assistant-bubble">他多次提到了实施周期和售后响应速度。针对这两个问题，建议参考以往案例中的交付承诺标准进行回复。</div>
+                    </div>
+                </div>
+
+                <!-- State 5: Pending / Processing Chat State -->
+                <div class="state-view chat-view" id="view-pending-processing">
+                    <div class="chat-history">
+                        <div class="user-bubble">提取会议纪要中的行动项，并分配给相关负责人。</div>
+                        
+                        <div class="status-sheet frosted-glass">
+                            <div class="status-header">
+                                <span class="status-phase">
+                                    <svg width="14" height="14" style="margin-right:4px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                                    会议纪要分析
+                                </span>
+                                <span class="status-action">处理中...</span>
+                            </div>
+                            <div class="status-body">
+                                正在分析上下文，提取主要决策点和待办事项...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- State 6: Longer Active Session -->
+                <div class="state-view chat-view" id="view-longer-session">
+                    <div class="chat-history">
+                        <div class="user-bubble">关于那个大客户跟进，有什么建议？</div>
+                        <div class="assistant-bubble">建议下周二之前安排一次高层互访，展示我们的实施能力。同时，可以提供一些同行业的成功案例作为参考。</div>
+                        <div class="user-bubble">帮我拟一封邀请邮件，要正式但不疏远。</div>
+                        <div class="assistant-bubble">草稿已为您准备妥当，重点强调了我们的技术优势和上次沟通中他们关心的安全性问题。您可以随时查看。</div>
+                        <div class="user-bubble">可以在里面再强调一下我们在国内市场的覆盖率吗？</div>
+                        <div class="assistant-bubble">当然可以。我已经将“我们的服务网络已覆盖国内一线及主要省会城市”这句话加入到了公司介绍部分，这样既自然又能体现我们的实力。</div>
+                        <div class="user-bubble">非常好，就这样。发之前帮我检查一遍。</div>
+                        <div class="assistant-bubble">语气已经调整为更加专业和期待合作的口吻。措辞上没有过度承诺，保留了后续谈判的空间。</div>
+                    </div>
+                </div>
+
+            </main>
+
+            <!-- Bottom Monolith -->
+            <footer class="bottom-monolith">
+                <button class="icon-btn borderless attach-btn">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                </button>
+                <div class="input-field-wrapper">
+                    <input type="text" class="chat-input" placeholder=" ">
+                    <div class="placeholder-scan">输入消息...</div>
+                </div>
+                <button class="icon-btn borderless send-btn">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
+            </footer>
+
+        </div>
+    </div>
+
+    <script>
+        function setState(stateName, btnElem) {
+            document.getElementById('sim-shell').setAttribute('data-state', stateName);
+            
+            // Highlight active button
+            const buttons = btnElem.parentElement.querySelectorAll('button[id^="btn-"]'); // Select all buttons
+            const stateButtons = Array.from(buttons).filter(b => b.id.includes('empty-home') || b.id.includes('active-plain') || b.id.includes('active-system-sheet') || b.id.includes('context-enriched') || b.id.includes('pending-processing') || b.id.includes('longer-session'));
+            stateButtons.forEach(btn => btn.classList.remove('active'));
+            btnElem.classList.add('active');
+
+            // Scroll chat to bottom
+            const scroller = document.getElementById('chat-scroller');
+            setTimeout(() => {
+                scroller.scrollTop = scroller.scrollHeight;
+            }, 50);
+        }
+
+        function setIsland(islandName, btnElem) {
+            document.getElementById('sim-shell').setAttribute('data-island', islandName);
+            
+            // Highlight active button
+            const buttons = btnElem.parentElement.querySelectorAll('button[id^="btn-island"]');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            btnElem.classList.add('active');
+        }
+    </script>
+</body>
+</html>

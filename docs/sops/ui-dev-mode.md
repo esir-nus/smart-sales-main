@@ -6,7 +6,7 @@
 >
 > Status: Active SOP
 >
-> Last Updated: 2026-03-23
+> Last Updated: 2026-03-28
 
 ---
 
@@ -36,7 +36,7 @@ Instead, UI work should follow a stable document chain:
 
 The most successful UI delivery pattern in this repo is now explicit:
 
-1. use a strong UI design agent to explore and build the prototype quickly
+1. use a strong UI design agent to explore and build the prototype quickly, using agent-browser / browser assistance for visual reference and comparison
 2. use Codex to do the surgical production transplant and controlled iteration
 3. use the Surface Contract and UI Element Registry to keep the production result governable
 
@@ -52,6 +52,23 @@ Simple law:
 - prototype decides what great should look like
 - Codex decides how to land it safely in production
 - contract and registry decide whether the landing remains structurally legal
+
+Authority split for active UI tracking:
+
+- prototype = alignment source and review checkpoint set
+- accepted implementation = current delivered reality
+- UI tracker = progress memory, drift memory, and implementation-ahead logging
+
+Rule:
+
+- the prototype remains highly prescriptive, but not perfectly final forever
+- after real implementation and polish, accepted code/design may lawfully move ahead of the prototype
+- when that happens, the tracker must record the new accepted state instead of pretending the prototype is still fully exhaustive
+
+Default runtime rule:
+
+- Codex does not do first-pass prototyping by default
+- Codex may prepare the brief, review criteria, or transplant plan, but the UI design agent owns prototype authorship unless the user explicitly overrides that rule
 
 ---
 
@@ -132,6 +149,45 @@ Developers normally should not need to invoke both separately.
 
 ---
 
+## `polishing ui` Invocation Contract
+
+When the user invokes `polishing ui`, use this default interpretation unless the user explicitly overrides it:
+
+1. the user is asking for **one page / surface at a time**
+2. the current deployed UI is the implementation baseline to inspect
+3. the user will provide the prototype counterpart against that deployed UI
+4. the prototype HTML is part of the visual source package and should be treated as sufficient alignment context for planning
+5. the task is a **surgical high-fidelity prototype alignment** pass, not an invitation to widen into a broad redesign
+
+Default planning posture for `polishing ui`:
+
+- compare current deployed UI against the provided prototype target
+- preserve the real product structure and behavior unless the user explicitly asks for structural change
+- identify the minimum production write scope needed to close the highest-value fidelity gaps
+- plan around transplant, tightening, and visual drift removal rather than fresh aesthetic invention
+- update `docs/plans/ui-tracker.md` for the owning page / surface so the active polish scope and gate stay explicit
+
+Simple law:
+
+- one `polishing ui` invocation = one page / surface polishing track
+- the provided deployed UI + prototype reference + prototype HTML is the normal working packet
+- default output = surgical polish plan for prototype-faithful landing
+
+---
+
+## Status-Bar-Aware Transplant Rule
+
+For prototype-to-Compose transplant, treat the prototype status bar as a visual placeholder only.
+
+- prototype may reserve `44px` at the top of the emulator frame
+- Compose must use real `WindowInsets.statusBars` / `WindowInsets.navigationBars`
+- do not hardcode safe-area heights in Compose
+- do not hide inset ownership at the host root when the actual surface is an independent drawer, sheet, or monolith
+- default top-reaching surfaces use the blank-band rule from the style guide
+- exception surfaces may preserve spec-owned top-monolith/header alignment, but they still must become status-bar-aware at the real Android layer
+
+---
+
 ## Required Reading Order
 
 Before doing major UI work, read in this order:
@@ -145,6 +201,31 @@ Before doing major UI work, read in this order:
 7. `docs/plans/tracker.md` when the UI task is part of a larger product/feature wave
 
 If a `docs/core-flow/**` doc exists for the feature, read it before treating lower docs as final.
+
+---
+
+## Tracking Model
+
+Use this tracking hierarchy in `docs/plans/ui-tracker.md`:
+
+1. **Family**
+   - the prototype/source container or campaign summary
+2. **Page / Surface**
+   - the default implementation-tracking unit
+3. **Core View when needed**
+   - add this layer only when the prototype page exposes meaningful review states that materially affect alignment, transplant, or polish
+
+Examples:
+
+- `sim-shell-family` = family
+- `scheduler_drawer` = page/surface
+- `Open (Normal Collapsed)` / `Calendar Unfolded` / `Expanded: Details` = core views
+
+Rule:
+
+- family rows summarize direction
+- page/surface rows log the main implementation track
+- core-view rows log state-specific polish, drift, or implementation-ahead changes when the prototype provides those checkpoints
 
 ---
 
@@ -179,11 +260,13 @@ The prototype should:
 Rule:
 
 - do not treat prototype code as production code
+- use agent-browser / browser assistance during prototype work for visual reference gathering, comparison against approved screenshots or parent prototypes, and screenshot-review support
 
 Battle-tested role split:
 
-- a UI-focused design agent should own this phase whenever possible
+- a UI-focused design agent owns this phase by default
 - this phase should optimize for visual quality, speed of exploration, and screenshot reviewability
+- Codex should not silently take over prototype authorship just because it can edit files in the repo
 - do not force the prototype phase to think like Compose implementation too early
 
 ### Phase 3: Screenshot Critique
@@ -318,9 +401,9 @@ That same screenshot is usually not authoritative for:
 
 | Role | Best Owner | Main Job | Must Not Drift Into |
 |------|------------|----------|---------------------|
-| Visual exploration | UI design agent | generate and refine the prototype, tune mood, spacing, hierarchy, and material feel | production wiring decisions |
+| Visual exploration | UI design agent | generate and refine the prototype, use browser assistance for visual reference/comparison, tune mood, spacing, hierarchy, and material feel | production wiring decisions |
 | Structural approval | human reviewer | approve direction, reject weak visual interpretations, lock layout/tone decisions | low-level Kotlin implementation detail |
-| Surgical transplant | Codex | map approved prototype into Compose with minimal behavior drift | fresh visual reinvention without approval |
+| Surgical transplant | Codex | map approved prototype into Compose with minimal behavior drift | fresh visual reinvention without approval or first-pass prototype authorship |
 | Contract control | Surface Contract | define legal state and intent boundaries | acting as a visual mood board |
 | Pattern control | UI Element Registry | define component invariants, behavior expectations, and layer discipline | acting as the first design sketch |
 | Shipment control | UI tracker + acceptance report | make approval, fidelity, drift, and ship state explicit | replacing the actual prototype comparison |
@@ -346,6 +429,11 @@ Codex performs best when asked to:
 - preserve behavior while improving fidelity
 
 This is different from asking it to invent the full visual language from repo code alone.
+
+Operational default:
+
+- Codex should not be the first-pass prototype author
+- if no prototype exists yet, Codex should help frame the brief and review criteria, then wait for the UI design agent's prototype pass
 
 ### 3. Contract and registry are useful, but mainly as governance tools
 
@@ -393,7 +481,7 @@ The acceptance note converts taste discussion into documented evidence.
 Use this operating sequence for future major UI work:
 
 1. frame the surface and read the docs
-2. build the prototype with a UI design agent
+2. build the prototype with a UI design agent using browser assistance
 3. review by screenshots until the direction is explicitly approved
 4. lock the structure and tone
 5. let Codex perform the Compose transplant surgically

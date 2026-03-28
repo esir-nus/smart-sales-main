@@ -107,7 +107,6 @@ fun AgentShell(
         modifier = Modifier
             .fillMaxSize()
             .background(BackgroundApp) // Global Aurora/Light Background
-            .statusBarsPadding()
     ) {
         // Main Content Layer
         Column(modifier = Modifier.fillMaxSize()) {
@@ -225,25 +224,36 @@ fun AgentShell(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.10f))
+                    .background(Color.Black.copy(alpha = 0.38f))
             )
         }
 
         androidx.compose.animation.AnimatedVisibility(
             visible = showUserCenter,
-            enter = androidx.compose.animation.slideInHorizontally(
-                initialOffsetX = { it },
-                animationSpec = androidx.compose.animation.core.tween(300)
-            ) + androidx.compose.animation.fadeIn(),
-            exit = androidx.compose.animation.slideOutHorizontally(
-                targetOffsetX = { it },
-                animationSpec = androidx.compose.animation.core.tween(300)
-            ) + androidx.compose.animation.fadeOut(),
+            enter = androidx.compose.animation.fadeIn(
+                animationSpec = androidx.compose.animation.core.tween(220)
+            ) + androidx.compose.animation.scaleIn(
+                initialScale = 0.96f,
+                animationSpec = androidx.compose.animation.core.tween(220)
+            ),
+            exit = androidx.compose.animation.fadeOut(
+                animationSpec = androidx.compose.animation.core.tween(180)
+            ) + androidx.compose.animation.scaleOut(
+                targetScale = 0.98f,
+                animationSpec = androidx.compose.animation.core.tween(180)
+            ),
             modifier = Modifier.zIndex(PrismElevation.Drawer + 1f)
         ) {
-            UserCenterScreen(
-                onClose = { showUserCenter = false }
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(top = 12.dp, bottom = 8.dp),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                UserCenterScreen(
+                    onClose = { showUserCenter = false }
+                )
+            }
         }
 
         // 6. Right Stubs

@@ -1,13 +1,78 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>prism-web-v1</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SmartSales - Home Hero Prototype</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="emulator-container">
+        <!-- Floor (Z: 0): Aurora Background -->
+        <div class="layer-floor" id="aurora-bg">
+            <div class="blob blob-1"></div>
+            <div class="blob blob-2"></div>
+            <div class="blob blob-3"></div>
+        </div>
+
+        <!-- Content (Z: 10): ChatWelcome Canvas -->
+        <div class="layer-content" id="chat-welcome">
+            <div class="greeting-container">
+                <h1 class="greeting-text">你好, SmartSales 用户</h1>
+                <p class="greeting-subtitle">我是您的销售助手</p>
+            </div>
+            <div class="hero-actions-row">
+                <button class="hero-pill">Smart Analysis</button>
+                <button class="hero-pill">PDF</button>
+                <button class="hero-pill">CSV</button>
+                <button class="hero-pill">Meeting Notes</button>
+            </div>
+        </div>
+
+        <!-- Chrome (Z: 20): HomeShell -->
+        <div class="layer-chrome" id="home-shell">
+            <div class="top-bar">
+                <div class="top-left">
+                    <button class="icon-btn" id="btn-hamburger">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+                    </button>
+                    <button class="status-badge disconnected" id="btn-device-badge">
+                        <span class="pulse-dot"></span> <span id="badge-text" class="status-name">智能工牌</span>
+                    </button>
+                </div>
+                <div class="top-center">
+                    <h2 id="session-title">New Session</h2>
+                </div>
+                <div class="top-right">
+                    <button class="icon-btn" id="btn-new-session">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14m-7-7h14"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="floating-input-capsule" id="chat-input-capsule">
+                <button class="icon-btn plus-btn" id="btn-input-plus">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2"><path d="M12 5v14m-7-7h14"/></svg>
+                </button>
+                <div class="input-field-wrapper">
+                    <input type="text" class="chat-input" id="chat-input-field" placeholder=" ">
+                    <div class="placeholder-scan" id="input-placeholder">输入消息...</div>
+                </div>
+            </div>
+
+            <button class="knot-fab" id="btn-knot-fab">
+                <!-- Infinity symbol representing knot -->
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 8a4 4 0 1 0 0 8 4 4 0 1 0 0-8zm8 0a4 4 0 1 1 0 8 4 4 0 1 1 0-8zm-4 4l-4 4m8-8l-4 4"/></svg>
+            </button>
+        </div>
+
+        <!-- Scrim (Z: 30) -->
+        <div class="layer-scrim" id="scrim"></div>
+    </div>
+
+    <!-- Logger for visual debugging outside emulator -->
+    <div id="debug-logger"></div>
+
+    <script src="app.js"></script>
+</body>
 </html>

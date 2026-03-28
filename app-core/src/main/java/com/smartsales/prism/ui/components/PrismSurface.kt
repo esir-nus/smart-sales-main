@@ -13,9 +13,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.smartsales.prism.ui.theme.BackgroundSurface
-import com.smartsales.prism.ui.theme.BorderSubtle
 import com.smartsales.prism.ui.theme.GlassCardShape
+import com.smartsales.prism.ui.theme.PrismThemeDefaults
 
 /**
  * PrismSurface — Pro Max 玻璃表面容器 (Feature Module Copy)
@@ -30,11 +29,13 @@ import com.smartsales.prism.ui.theme.GlassCardShape
 fun PrismSurface(
     modifier: Modifier = Modifier,
     shape: Shape = GlassCardShape,
-    backgroundColor: Color = BackgroundSurface,
+    backgroundColor: Color? = null,
     elevation: Dp = 8.dp,
     contentAlignment: Alignment = Alignment.TopStart,
     content: @Composable BoxScope.() -> Unit
 ) {
+    val colors = PrismThemeDefaults.colors
+    val resolvedBackground = backgroundColor ?: colors.surface
     Box(
         modifier = modifier
             .shadow(
@@ -44,8 +45,8 @@ fun PrismSurface(
                 spotColor = Color.Black.copy(alpha = 0.05f)
             )
             .clip(shape)
-            .background(backgroundColor, shape)
-            .border(0.5.dp, BorderSubtle, shape),
+            .background(resolvedBackground, shape)
+            .border(0.5.dp, colors.borderSubtle, shape),
         contentAlignment = contentAlignment,
         content = content
     )
@@ -60,15 +61,17 @@ fun PrismSurface(
 fun PrismSurfaceSubtle(
     modifier: Modifier = Modifier,
     shape: Shape = GlassCardShape,
-    backgroundColor: Color = BackgroundSurface,
+    backgroundColor: Color? = null,
     contentAlignment: Alignment = Alignment.TopStart,
     content: @Composable BoxScope.() -> Unit
 ) {
+    val colors = PrismThemeDefaults.colors
+    val resolvedBackground = backgroundColor ?: colors.surface
     Box(
         modifier = modifier
             .clip(shape)
-            .background(backgroundColor, shape)
-            .border(0.5.dp, BorderSubtle, shape),
+            .background(resolvedBackground, shape)
+            .border(0.5.dp, colors.borderSubtle, shape),
         contentAlignment = contentAlignment,
         content = content
     )

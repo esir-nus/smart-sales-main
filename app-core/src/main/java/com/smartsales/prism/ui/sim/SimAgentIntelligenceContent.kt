@@ -1,5 +1,9 @@
 package com.smartsales.prism.ui.sim
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -16,6 +20,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,10 +31,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -68,13 +71,16 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.smartsales.core.pipeline.ActivityAction
 import com.smartsales.core.pipeline.ActivityPhase
 import com.smartsales.core.pipeline.AgentActivity
@@ -82,6 +88,8 @@ import com.smartsales.prism.domain.model.ChatMessage
 import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.ui.ProMaxAccent
 import com.smartsales.prism.ui.ProMaxDanger
+import com.smartsales.prism.ui.components.prismNavigationBarPadding
+import com.smartsales.prism.ui.components.prismStatusBarPadding
 import com.smartsales.prism.ui.components.DynamicIsland
 import com.smartsales.prism.ui.components.DynamicIslandItem
 import com.smartsales.prism.ui.components.DynamicIslandTapAction
@@ -89,6 +97,7 @@ import com.smartsales.prism.ui.components.DynamicIslandUiState
 import com.smartsales.prism.ui.components.MarkdownText
 import kotlinx.coroutines.delay
 
+internal const val SIM_HEADER_TEST_TAG = "sim_header"
 internal const val SIM_INPUT_BAR_TEST_TAG = "sim_input_bar"
 internal const val SIM_INPUT_FIELD_TEST_TAG = "sim_input_field"
 internal const val SIM_ATTACH_BUTTON_TEST_TAG = "sim_attach_button"
@@ -125,12 +134,23 @@ internal fun SimAgentIntelligenceContent(
     enableSimAudioPullGesture: Boolean,
     onSimSchedulerPullOpen: () -> Unit,
     onSimAudioPullOpen: () -> Unit,
+    voiceDraftState: SimVoiceDraftUiState,
+    voiceDraftEnabled: Boolean,
+    onVoiceDraftPermissionRequested: () -> Unit,
+    onVoiceDraftPermissionResult: (Boolean) -> Unit,
+    onVoiceDraftStart: () -> Boolean,
+    onVoiceDraftFinish: () -> Unit,
+    onVoiceDraftCancel: () -> Unit,
     onUpdateInput: (String) -> Unit,
     onSend: () -> Unit,
     onConfirmPlan: () -> Unit,
     onAmendPlan: () -> Unit
 ) {
     val showSimSharedHomeHeroShell = SIM_ENABLE_SHARED_HOME_HERO_SHELL
+    ObserveSimVoiceDraftSession(
+        shouldCancel = voiceDraftState.isRecording || voiceDraftState.isProcessing || voiceDraftState.awaitingMicPermission,
+        onCancel = onVoiceDraftCancel
+    )
 
     if (showSimSharedHomeHeroShell) {
         SimHomeHeroShellFrame(
@@ -148,12 +168,19 @@ internal fun SimAgentIntelligenceContent(
             enableSchedulerPullGesture = enableSimSchedulerPullGesture,
             enableAudioPullGesture = enableSimAudioPullGesture,
             onSchedulerPullOpen = onSimSchedulerPullOpen,
-            onAudioPullOpen = onSimAudioPullOpen
+            onAudioPullOpen = onSimAudioPullOpen,
+            voiceDraftState = voiceDraftState,
+            voiceDraftEnabled = voiceDraftEnabled,
+            onVoiceDraftPermissionRequested = onVoiceDraftPermissionRequested,
+            onVoiceDraftPermissionResult = onVoiceDraftPermissionResult,
+            onVoiceDraftStart = onVoiceDraftStart,
+            onVoiceDraftFinish = onVoiceDraftFinish,
+            onVoiceDraftCancel = onVoiceDraftCancel
         ) { modifier ->
             if (history.isEmpty()) {
                 SimHomeHeroGreetingStage(
                     modifier = modifier,
-                    greeting = SIM_EMPTY_HOME_GREETING
+                    greeting = heroGreeting
                 )
             } else {
                 SimHomeHeroCenterStage(
@@ -177,8 +204,8 @@ internal fun SimAgentIntelligenceContent(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding()
-                .navigationBarsPadding()
+                .prismStatusBarPadding()
+                .prismNavigationBarPadding()
                 .padding(horizontal = 14.dp, vertical = 12.dp)
         ) {
             SimShellHeader(
@@ -199,7 +226,7 @@ internal fun SimAgentIntelligenceContent(
                         .fillMaxWidth(),
                     contentAlignment = Alignment.TopStart
                 ) {
-                    SimIdleGreeting(greeting = SIM_EMPTY_HOME_GREETING)
+                    SimIdleGreeting(greeting = heroGreeting)
                 }
             } else {
                 SimConversationTimeline(
@@ -223,6 +250,13 @@ internal fun SimAgentIntelligenceContent(
                 onSend = onSend,
                 onAttachClick = onAttachClick,
                 showIdleComposerHint = showIdleComposerHint && history.isEmpty(),
+                voiceDraftState = voiceDraftState,
+                voiceDraftEnabled = voiceDraftEnabled,
+                onVoiceDraftPermissionRequested = onVoiceDraftPermissionRequested,
+                onVoiceDraftPermissionResult = onVoiceDraftPermissionResult,
+                onVoiceDraftStart = onVoiceDraftStart,
+                onVoiceDraftFinish = onVoiceDraftFinish,
+                onVoiceDraftCancel = onVoiceDraftCancel,
                 onBoundsChanged = null
             )
         }
@@ -573,13 +607,28 @@ private fun SimInputBar(
     onSend: () -> Unit,
     onAttachClick: () -> Unit,
     showIdleComposerHint: Boolean,
+    voiceDraftState: SimVoiceDraftUiState,
+    voiceDraftEnabled: Boolean,
+    onVoiceDraftPermissionRequested: () -> Unit,
+    onVoiceDraftPermissionResult: (Boolean) -> Unit,
+    onVoiceDraftStart: () -> Boolean,
+    onVoiceDraftFinish: () -> Unit,
+    onVoiceDraftCancel: () -> Unit,
     onBoundsChanged: ((Rect) -> Unit)? = null
 ) {
-    Row(
+    val context = LocalContext.current
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        onVoiceDraftPermissionResult(granted)
+    }
+    val actionEnabled = text.isNotBlank() && !isSending
+    val showVoiceMic = voiceDraftEnabled && text.isBlank()
+    val accentColor = ProMaxAccent
+
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 58.dp)
-            .testTag(SIM_INPUT_BAR_TEST_TAG)
             .then(
                 if (onBoundsChanged != null) {
                     Modifier.onGloballyPositioned { coordinates ->
@@ -588,84 +637,160 @@ private fun SimInputBar(
                 } else {
                     Modifier
                 }
-            )
-            .background(Color(0xFF1C232D).copy(alpha = 0.96f), RoundedCornerShape(28.dp))
-            .padding(horizontal = 8.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
+            ),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .testTag(SIM_ATTACH_BUTTON_TEST_TAG)
-                .clickable(onClick = onAttachClick),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Filled.AttachFile,
-                contentDescription = "Attach",
-                tint = SimChromeMuted,
-                modifier = Modifier.size(20.dp)
+        if (voiceDraftState.isRecording || voiceDraftState.isProcessing) {
+            SimVoiceDraftHandshake(
+                state = voiceDraftState,
+                accentColor = accentColor,
+                hintColor = SimChromeMuted,
+                modifier = Modifier.padding(bottom = 12.dp)
             )
         }
 
-        Box(
+        Row(
             modifier = Modifier
-                .weight(1f)
-                .padding(horizontal = 6.dp),
-            contentAlignment = Alignment.CenterStart
+                .fillMaxWidth()
+                .heightIn(min = 58.dp)
+                .testTag(SIM_INPUT_BAR_TEST_TAG)
+                .background(Color(0xFF1C232D).copy(alpha = 0.96f), RoundedCornerShape(28.dp))
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            BasicTextField(
-                value = text,
-                onValueChange = onTextChanged,
-                modifier = Modifier.testTag(SIM_INPUT_FIELD_TEST_TAG),
-                singleLine = true,
-                textStyle = TextStyle(
-                    color = Color.White.copy(alpha = 0.92f),
-                    fontSize = 15.sp
-                ),
-                cursorBrush = SolidColor(ProMaxAccent),
-                decorationBox = { innerTextField ->
-                    if (text.isBlank()) {
-                        SimIdleComposerRotatingHint(
-                            visible = true,
-                            rotatingHints = SIM_IDLE_COMPOSER_ROTATING_HINTS,
-                            useFullRotation = showIdleComposerHint
-                        )
-                    }
-                    innerTextField()
-                }
-            )
-        }
-
-        val actionEnabled = text.isNotBlank() && !isSending
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .testTag(SIM_SEND_BUTTON_TEST_TAG)
-                .background(
-                    if (actionEnabled || isSending) {
-                        Color.White
-                    } else {
-                        Color.White.copy(alpha = 0.28f)
-                    },
-                    CircleShape
-                )
-                .clickable(enabled = actionEnabled) { onSend() },
-            contentAlignment = Alignment.Center
-        ) {
-            if (isSending) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(18.dp),
-                    color = Color(0xFF11161D),
-                    strokeWidth = 2.dp
-                )
-            } else {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .testTag(SIM_ATTACH_BUTTON_TEST_TAG)
+                    .clickable(onClick = onAttachClick),
+                contentAlignment = Alignment.Center
+            ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Send,
-                    contentDescription = "Send",
-                    tint = Color(0xFF11161D).copy(alpha = if (actionEnabled) 1f else 0.45f),
+                    imageVector = Icons.Filled.AttachFile,
+                    contentDescription = "Attach",
+                    tint = SimChromeMuted,
                     modifier = Modifier.size(20.dp)
                 )
+            }
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(horizontal = 6.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                BasicTextField(
+                    value = text,
+                    onValueChange = onTextChanged,
+                    modifier = Modifier.testTag(SIM_INPUT_FIELD_TEST_TAG),
+                    singleLine = true,
+                    textStyle = TextStyle(
+                        color = Color.White.copy(alpha = 0.92f),
+                        fontSize = 15.sp
+                    ),
+                    cursorBrush = SolidColor(ProMaxAccent),
+                    decorationBox = { innerTextField ->
+                        if (text.isBlank()) {
+                            SimIdleComposerRotatingHint(
+                                visible = !voiceDraftState.isRecording && !voiceDraftState.isProcessing,
+                                rotatingHints = SIM_IDLE_COMPOSER_ROTATING_HINTS,
+                                useFullRotation = showIdleComposerHint
+                            )
+                        }
+                        innerTextField()
+                    }
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .testTag(SIM_SEND_BUTTON_TEST_TAG)
+                    .background(
+                        if (actionEnabled || isSending || showVoiceMic) {
+                            Color.White
+                        } else {
+                            Color.White.copy(alpha = 0.28f)
+                        },
+                        CircleShape
+                    )
+                    .then(
+                        if (showVoiceMic) {
+                            Modifier.pointerInput(
+                                voiceDraftState.isRecording,
+                                voiceDraftState.isProcessing,
+                                voiceDraftState.interactionMode
+                            ) {
+                                detectTapGestures(
+                                    onPress = {
+                                        if (voiceDraftState.isProcessing) return@detectTapGestures
+                                        if (
+                                            voiceDraftState.isRecording &&
+                                            voiceDraftState.interactionMode == SimVoiceDraftInteractionMode.TAP_TO_SEND
+                                        ) {
+                                            val released = tryAwaitRelease()
+                                            if (released) {
+                                                onVoiceDraftFinish()
+                                            } else {
+                                                onVoiceDraftCancel()
+                                            }
+                                            return@detectTapGestures
+                                        }
+                                        val hasMicPermission = ContextCompat.checkSelfPermission(
+                                            context,
+                                            Manifest.permission.RECORD_AUDIO
+                                        ) == PackageManager.PERMISSION_GRANTED
+                                        if (!hasMicPermission) {
+                                            onVoiceDraftPermissionRequested()
+                                            permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                            return@detectTapGestures
+                                        }
+                                        val started = onVoiceDraftStart()
+                                        if (!started) return@detectTapGestures
+                                        val released = tryAwaitRelease()
+                                        if (released) {
+                                            onVoiceDraftFinish()
+                                        } else {
+                                            onVoiceDraftCancel()
+                                        }
+                                    }
+                                )
+                            }
+                        } else {
+                            Modifier.clickable(enabled = actionEnabled) { onSend() }
+                        }
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                when {
+                    isSending -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp),
+                            color = Color(0xFF11161D),
+                            strokeWidth = 2.dp
+                        )
+                    }
+
+                    showVoiceMic -> {
+                        Icon(
+                            imageVector = Icons.Filled.Mic,
+                            contentDescription = "Mic",
+                            tint = Color(0xFF11161D).copy(
+                                alpha = if (voiceDraftState.isRecording || voiceDraftState.isProcessing) 1f else 0.88f
+                            ),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    else -> {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Send,
+                            contentDescription = "Send",
+                            tint = Color(0xFF11161D).copy(alpha = if (actionEnabled) 1f else 0.45f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
             }
         }
     }
@@ -784,9 +909,12 @@ private fun SimUserBubble(text: String) {
 private fun SimAssistantBubble(
     content: String,
     headline: String? = null,
-    accent: Color = Color.White,
-    borderColor: Color = SimConversationSurfaceTokens.Border
+    accent: Color? = null,
+    borderColor: Color? = null
 ) {
+    val palette = rememberSimConversationSurfacePalette()
+    val resolvedAccent = accent ?: palette.title
+    val resolvedBorderColor = borderColor ?: palette.border
     val shape = RoundedCornerShape(
         topStart = 20.dp,
         topEnd = 20.dp,
@@ -802,14 +930,14 @@ private fun SimAssistantBubble(
         Column(
             modifier = Modifier
                 .widthIn(max = 300.dp)
-                .background(SimConversationSurfaceTokens.Surface, shape)
-                .border(1.dp, borderColor, shape)
+                .background(palette.surface, shape)
+                .border(1.dp, resolvedBorderColor, shape)
                 .padding(horizontal = 16.dp, vertical = 11.dp)
         ) {
             if (!headline.isNullOrBlank()) {
                 Text(
                     text = headline,
-                    color = accent.copy(alpha = 0.88f),
+                    color = resolvedAccent.copy(alpha = 0.88f),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -817,7 +945,7 @@ private fun SimAssistantBubble(
             }
             MarkdownText(
                 text = content,
-                color = SimConversationSurfaceTokens.Body,
+                color = palette.body,
                 fontSize = 15.sp,
                 lineHeight = 20.sp
             )
@@ -832,13 +960,14 @@ private fun SimSystemSheet(
     icon: ImageVector,
     accent: Color
 ) {
+    val palette = rememberSimConversationSurfacePalette()
     val shape = RoundedCornerShape(16.dp)
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 1.dp)
-            .background(SimConversationSurfaceTokens.Surface, shape)
-            .border(1.dp, SimConversationSurfaceTokens.Border, shape)
+            .background(palette.surface, shape)
+            .border(1.dp, palette.border, shape)
             .padding(horizontal = 16.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -859,14 +988,14 @@ private fun SimSystemSheet(
         Column {
             Text(
                 text = title,
-                color = SimConversationSurfaceTokens.Title,
+                color = palette.title,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(modifier = Modifier.height(3.dp))
             Text(
                 text = description,
-                color = SimConversationSurfaceTokens.BodyMuted,
+                color = palette.bodyMuted,
                 fontSize = 13.sp,
                 lineHeight = 18.sp
             )
@@ -882,6 +1011,7 @@ private fun SimStatusSheet(
     icon: ImageVector,
     accent: Color
 ) {
+    val palette = rememberSimConversationSurfacePalette()
     val shape = RoundedCornerShape(16.dp)
     Row(
         modifier = Modifier
@@ -892,8 +1022,8 @@ private fun SimStatusSheet(
         Column(
             modifier = Modifier
                 .widthIn(min = 260.dp, max = 320.dp)
-                .background(SimConversationSurfaceTokens.Surface, shape)
-                .border(1.dp, SimConversationSurfaceTokens.Border, shape)
+                .background(palette.surface, shape)
+                .border(1.dp, palette.border, shape)
                 .padding(horizontal = 16.dp, vertical = 11.dp)
         ) {
             Row(
@@ -922,7 +1052,7 @@ private fun SimStatusSheet(
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = title,
-                        color = SimConversationSurfaceTokens.Title,
+                        color = palette.title,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -934,11 +1064,11 @@ private fun SimStatusSheet(
                     fontWeight = FontWeight.Medium
                 )
             }
-            HorizontalDivider(color = SimConversationSurfaceTokens.Divider, thickness = 1.dp)
+            HorizontalDivider(color = palette.divider, thickness = 1.dp)
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = body,
-                color = SimConversationSurfaceTokens.BodyMuted,
+                color = palette.bodyMuted,
                 fontSize = 13.sp,
                 lineHeight = 19.sp
             )
@@ -953,18 +1083,19 @@ private fun SimStrategySheet(
     onConfirm: () -> Unit,
     onAmend: () -> Unit
 ) {
+    val palette = rememberSimConversationSurfacePalette()
     val shape = RoundedCornerShape(18.dp)
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(SimConversationSurfaceTokens.Surface, shape)
-            .border(1.dp, SimConversationSurfaceTokens.Border, shape)
+            .background(palette.surface, shape)
+            .border(1.dp, palette.border, shape)
             .padding(horizontal = 16.dp, vertical = 15.dp)
     ) {
         if (title.isNotBlank()) {
             Text(
                 text = title,
-                color = SimConversationSurfaceTokens.Title,
+                color = palette.title,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold
             )
@@ -973,7 +1104,7 @@ private fun SimStrategySheet(
 
         MarkdownText(
             text = content,
-            color = SimConversationSurfaceTokens.Body,
+            color = palette.body,
             fontSize = 14.sp,
             lineHeight = 20.sp,
             modifier = Modifier.fillMaxWidth()
@@ -988,8 +1119,8 @@ private fun SimStrategySheet(
                 onClick = onAmend,
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.textButtonColors(
-                    contentColor = SimConversationSurfaceTokens.BodyMuted,
-                    containerColor = SimConversationSurfaceTokens.QuietFill
+                    contentColor = palette.bodyMuted,
+                    containerColor = palette.quietFill
                 ),
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
             ) {

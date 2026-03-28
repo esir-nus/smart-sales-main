@@ -4,6 +4,7 @@
     <!-- 网络权限：LLM API 调用需要 -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
 
     <!-- 日历权限：Scheduler 任务同步需要 -->
     <uses-permission android:name="android.permission.READ_CALENDAR" />
@@ -54,18 +55,18 @@
             android:name=".AgentMainActivity"
             android:exported="true"
             android:windowSoftInputMode="adjustResize"
+            android:theme="@style/Theme.Prism" />
+
+        <activity
+            android:name=".SimMainActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.Prism">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <activity
-            android:name=".SimMainActivity"
-            android:exported="true"
-            android:windowSoftInputMode="adjustResize"
-            android:theme="@style/Theme.Prism" />
 
         <!-- 闹钟全屏 Activity — 半透明覆盖层 -->
         <activity

@@ -1,6 +1,18 @@
 // React unused
 import { motion } from 'framer-motion';
-import { Battery, Wifi, Pin, Settings, User, Plus, Calendar, CalendarDays, Archive } from 'lucide-react';
+import {
+    Battery,
+    Wifi,
+    Pin,
+    Settings,
+    User,
+    Calendar,
+    CalendarDays,
+    Archive,
+    MoreHorizontal,
+    ChevronDown,
+    ChevronRight,
+} from 'lucide-react';
 
 type Session = {
     id: string;
@@ -35,7 +47,7 @@ interface HistoryDrawerProps {
     onNewSession?: () => void;
 }
 
-export const HistoryDrawer = ({ isOpen, onClose, onSelectSession, onSettingsClick, onNewSession }: HistoryDrawerProps) => {
+export const HistoryDrawer = ({ isOpen, onClose, onSelectSession, onSettingsClick }: HistoryDrawerProps) => {
     return (
         <>
             {/* Scrim / Backdrop */}
@@ -45,7 +57,7 @@ export const HistoryDrawer = ({ isOpen, onClose, onSelectSession, onSettingsClic
                     animate={{ opacity: 0.5 }}
                     exit={{ opacity: 0 }}
                     onClick={onClose}
-                    className="absolute inset-0 bg-black z-40"
+                    className="absolute inset-0 bg-black/35 z-40"
                 />
             )}
 
@@ -54,88 +66,119 @@ export const HistoryDrawer = ({ isOpen, onClose, onSelectSession, onSettingsClic
                 initial={{ x: '-100%' }}
                 animate={{ x: isOpen ? 0 : '-100%' }}
                 transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                className="absolute top-0 bottom-0 left-0 w-[85%] max-w-[320px] bg-prism-surface backdrop-blur-3xl z-50 shadow-2xl flex flex-col border-r border-prism-border"
+                className="absolute top-0 bottom-0 left-0 w-[85%] max-w-[320px] bg-prism-bg z-50 shadow-2xl flex flex-col overflow-hidden border-r border-prism-border"
             >
-                {/* 1. Device Header */}
-                <div className="p-6 border-b border-prism-border">
-                    <div className="flex items-center justify-between mb-4">
-                        {/* Device State */}
-                        <div>
-                            <div className="flex items-center gap-3 text-sm font-medium text-prism-secondary mb-1">
-                                <span className="flex items-center gap-1.5 text-green-600">
-                                    <Battery size={16} /> 85%
+                <div className="absolute top-0 right-0 h-72 w-72 rounded-full bg-prism-accent/8 blur-3xl -translate-y-1/3 translate-x-1/3" />
+                <div className="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-prism-knot/10 blur-3xl translate-y-1/3 -translate-x-1/3" />
+
+                <div className="relative z-10 flex h-full flex-col">
+                    {/* 1. Device Header */}
+                    <div className="px-4 pt-12">
+                        <div className="w-full rounded-full border border-prism-border bg-prism-surface/90 px-4 py-3 shadow-[0_18px_36px_-20px_rgba(15,23,42,0.28)] backdrop-blur-2xl">
+                            <div className="flex items-center gap-3 text-sm">
+                                <span className="flex items-center gap-1.5 font-semibold text-green-600">
+                                    <Battery size={16} />
+                                    85%
                                 </span>
-                                <span className="flex items-center gap-1.5">
-                                    <Wifi size={16} /> SmartBadge
+                                <span className="h-3 w-px bg-black/10" />
+                                <span className="flex items-center gap-1.5 font-semibold text-prism-primary">
+                                    <Wifi size={16} />
+                                    SmartBadge
                                 </span>
-                            </div>
-                            <div className="text-xs font-semibold text-prism-secondary uppercase tracking-wider opacity-70">
-                                已连接 • 正常
+                                <span className="ml-auto text-xs font-medium text-prism-secondary">
+                                    • 正常
+                                </span>
                             </div>
                         </div>
-
-                        {/* Plus Action */}
-                        <button 
-                            onClick={onNewSession}
-                            className="p-2 -mr-2 text-prism-primary hover:bg-black/5 rounded-full transition-colors"
-                        >
-                            <Plus size={24} />
-                        </button>
                     </div>
-                </div>
 
-                {/* 2. Session List (Scrollable) */}
-                <div className="flex-1 overflow-y-auto py-4">
-                    {/* Helper to render Session Groups */}
-                    {(Object.entries(SESSIONS) as [string, Session[]][]).map(([key, group]) => (
-                        <div key={key} className="mb-6">
-                            <div className="px-6 mb-3 text-[10px] font-bold text-prism-secondary uppercase tracking-widest flex items-center gap-2 opacity-60">
-                                {key === 'pinned' && <Pin size={12} />}
-                                {key === 'today' && <Calendar size={12} />}
-                                {key === 'recent' && <CalendarDays size={12} />}
-                                {key === 'archive' && <Archive size={12} />}
-                                
-                                {key === 'pinned' ? '置顶' : 
-                                 key === 'today' ? '今天' : 
-                                 key === 'recent' ? '最近30天' : '2025-12'}
-                            </div>
-                            <div className="space-y-0.5">
-                                {group.map(session => (
-                                    <div 
-                                        key={session.id}
-                                        onClick={() => onSelectSession(session.id)}
-                                        className="px-6 py-3 cursor-pointer group hover:bg-black/5 transition-colors"
+                    {/* 2. Session List (Scrollable) */}
+                    <div className="flex-1 overflow-y-auto px-4 pb-28 pt-6">
+                        <div className="space-y-4">
+                            {(Object.entries(SESSIONS) as [string, Session[]][]).map(([key, group], index) => {
+                                const isCollapsed = key === 'today';
+                                const meta =
+                                    key === 'pinned'
+                                        ? { icon: <Pin size={14} />, label: '置顶', tint: 'text-amber-500' }
+                                        : key === 'today'
+                                          ? { icon: <Calendar size={14} />, label: '今天', tint: 'text-blue-500' }
+                                          : key === 'recent'
+                                            ? { icon: <CalendarDays size={14} />, label: '最近30天', tint: 'text-indigo-500' }
+                                            : { icon: <Archive size={14} />, label: '2025-12', tint: 'text-prism-secondary' };
+
+                                return (
+                                    <div
+                                        key={key}
+                                        className="overflow-hidden rounded-[24px] border border-prism-border bg-prism-surface/90 shadow-[0_20px_40px_-24px_rgba(15,23,42,0.25)] backdrop-blur-2xl"
                                     >
-                                        <div className="flex items-baseline gap-2 mb-0.5">
-                                            <span className="text-sm font-bold text-prism-primary">{session.title}</span>
-                                            <span className="text-xs text-prism-secondary font-medium">_{session.summary}</span>
+                                        <div className="flex items-center justify-between bg-prism-surface-muted/70 px-4 py-3">
+                                            <div className="flex items-center gap-2">
+                                                <span className={meta.tint}>{meta.icon}</span>
+                                                <span className="text-[11px] font-bold tracking-[0.22em] text-prism-primary">
+                                                    {meta.label}
+                                                </span>
+                                            </div>
+                                            {isCollapsed ? (
+                                                <ChevronRight size={16} className="text-prism-secondary/70" />
+                                            ) : (
+                                                <ChevronDown size={16} className="text-prism-secondary/70" />
+                                            )}
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    ))}
-                </div>
 
-                {/* 3. User Footer */}
-                <div className="p-4 border-t border-prism-border flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-black/5 flex items-center justify-center text-prism-secondary">
-                        <User size={20} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <div className="font-bold text-prism-primary truncate">Frank Chen</div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-black text-white font-bold tracking-wide">
-                                PRO
-                            </span>
+                                        {!isCollapsed && (
+                                            <div className="divide-y divide-prism-border/70">
+                                                {group.map((session, sessionIndex) => (
+                                                    <button
+                                                        key={session.id}
+                                                        onClick={() => onSelectSession(session.id)}
+                                                        className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-prism-surface-muted/70"
+                                                    >
+                                                        <span className={`h-9 w-1 rounded-full ${sessionIndex === 0 && index === 0 ? 'bg-prism-accent/30' : 'bg-prism-border/70'}`} />
+                                                        <div className="min-w-0 flex-1">
+                                                            <div className="truncate text-sm font-semibold text-prism-primary">
+                                                                {session.title}
+                                                            </div>
+                                                            <div className="truncate text-xs text-prism-secondary">
+                                                                {session.summary}
+                                                            </div>
+                                                        </div>
+                                                        <span className="rounded-full border border-prism-border/70 bg-prism-surface-muted/80 p-1.5 text-prism-secondary">
+                                                            <MoreHorizontal size={14} />
+                                                        </span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
-                    <button 
-                        onClick={onSettingsClick}
-                        className="p-2 text-prism-secondary hover:text-prism-primary rounded-full hover:bg-black/5 transition-colors"
-                    >
-                        <Settings size={20} />
-                    </button>
+
+                    {/* 3. User Footer */}
+                    <div className="pointer-events-none absolute bottom-0 left-0 right-0 px-4 pb-8">
+                        <div className="pointer-events-auto flex items-center gap-3 rounded-[24px] border border-prism-border bg-prism-surface/92 px-4 py-3 shadow-[0_22px_44px_-26px_rgba(15,23,42,0.28)] backdrop-blur-2xl">
+                            <button className="flex min-w-0 flex-1 items-center gap-3 text-left">
+                                <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-white to-zinc-100 text-prism-secondary ring-1 ring-black/5">
+                                    <User size={20} />
+                                </div>
+                                <div className="min-w-0">
+                                    <div className="truncate text-sm font-bold text-prism-primary">Frank Chen</div>
+                                    <div className="mt-0.5 flex items-center gap-2">
+                                        <span className="rounded-full border border-prism-accent/15 bg-prism-accent/8 px-2 py-0.5 text-[10px] font-bold tracking-[0.18em] text-prism-accent">
+                                            PRO
+                                        </span>
+                                    </div>
+                                </div>
+                            </button>
+                            <button
+                                onClick={onSettingsClick}
+                                className="rounded-full border border-prism-border/70 bg-prism-surface-muted/80 p-2 text-prism-secondary transition-colors hover:text-prism-primary"
+                            >
+                                <Settings size={16} />
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </motion.div>
         </>

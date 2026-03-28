@@ -6,6 +6,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.gestures.Orientation
@@ -20,6 +21,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -32,21 +34,26 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import com.smartsales.prism.ui.components.PrismSurface
 import com.smartsales.prism.ui.drawers.scheduler.SchedulerCalendar
 import com.smartsales.prism.ui.drawers.scheduler.SchedulerTimeline
 import com.smartsales.prism.ui.drawers.scheduler.SchedulerViewModel
 import com.smartsales.prism.ui.drawers.scheduler.TimelineItem
 import com.smartsales.prism.ui.drawers.scheduler.ExitDirection
 import com.smartsales.prism.ui.drawers.scheduler.CollapsibleInspirationShelf
+import com.smartsales.prism.ui.drawers.scheduler.LocalSchedulerDrawerVisuals
+import com.smartsales.prism.ui.drawers.scheduler.LocalSchedulerDrawerVisualMode
 import com.smartsales.prism.domain.scheduler.SchedulerTimelineItem
 import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.ui.scheduler.mapper.toUiState
 import com.smartsales.prism.ui.theme.*
 import androidx.compose.ui.tooling.preview.Preview
 import com.smartsales.prism.ui.drawers.scheduler.ISchedulerViewModel
-import com.smartsales.prism.ui.drawers.scheduler.SchedulerDrawerVisualMode
 import com.smartsales.prism.ui.drawers.scheduler.FakeSchedulerViewModel
+import com.smartsales.prism.ui.drawers.scheduler.SchedulerDrawerVisualMode
+import com.smartsales.prism.ui.drawers.scheduler.schedulerDrawerVisualsFor
+import com.smartsales.prism.ui.components.prismMonolithTopInsetPadding
+import com.smartsales.prism.ui.components.prismStatusBarPadding
+import com.smartsales.prism.ui.sim.SimHomeHeroTokens
 import java.time.Instant
 import com.smartsales.prism.data.notification.ReminderReliabilityAdvisor
 
@@ -72,9 +79,9 @@ fun SchedulerDrawer(
     reminderActionOpener: (android.content.Context, ReminderReliabilityAdvisor.Action) -> Boolean =
         ReminderReliabilityAdvisor::openAction
 ) {
-    // Height: ~85% of screen
-    val drawerFraction = 0.85f 
+    val visuals = remember(visualMode) { schedulerDrawerVisualsFor(visualMode) }
     val isSimVisualMode = visualMode == SchedulerDrawerVisualMode.SIM
+    val drawerShape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
     
     // UI State: View-specific (Animation/Layout)
     var isCalendarExpanded by remember { mutableStateOf(false) }
@@ -232,45 +239,67 @@ fun SchedulerDrawer(
 
     // Drawer container — no internal scrim (AgentShell provides global scrim)
     // Use AnimatedVisibility to slide content in from top
-    AnimatedVisibility(
-        visible = isOpen,
-        enter = slideInVertically(
-            initialOffsetY = { -it },
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioMediumBouncy,
-                stiffness = Spring.StiffnessMedium
-            )
-        ),
-        exit = slideOutVertically(
-            targetOffsetY = { -it },
-            animationSpec = spring(
-                dampingRatio = Spring.DampingRatioNoBouncy,
-                stiffness = Spring.StiffnessMedium
-            )
-        )
+    CompositionLocalProvider(
+        LocalSchedulerDrawerVisuals provides visuals,
+        LocalSchedulerDrawerVisualMode provides visualMode
     ) {
-        PrismSurface(
-            modifier = modifier
-                .fillMaxWidth()
-                .fillMaxHeight(drawerFraction),
-            shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp),
-            // Sleek Solid: Removing Glassmorphism opacity for better readability
-            backgroundColor = Color(0xFFF9F9F9),
-            elevation = 16.dp
+        AnimatedVisibility(
+            visible = isOpen,
+            enter = slideInVertically(
+                initialOffsetY = { -it },
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                    stiffness = Spring.StiffnessMedium
+                )
+            ),
+            exit = slideOutVertically(
+                targetOffsetY = { -it },
+                animationSpec = spring(
+                    dampingRatio = Spring.DampingRatioNoBouncy,
+                    stiffness = Spring.StiffnessMedium
+                )
+            )
         ) {
-            Column(
-                modifier = Modifier
+            val containerModifier = if (isSimVisualMode) {
+                modifier
                     .fillMaxSize()
-                    // Consume all pointer events so clicks don't pass through to scrim
-                    .pointerInput(Unit) {
-                        awaitPointerEventScope {
-                            while (true) {
-                                awaitPointerEvent()
-                                // Just consume, don't do anything
+                    .prismMonolithTopInsetPadding(SimHomeHeroTokens.HeaderHeight)
+                    .padding(
+                        bottom = SimHomeHeroTokens.BottomMonolithHeight + 16.dp
+                    )
+            } else {
+                modifier
+                    .fillMaxWidth()
+                    .fillMaxHeight(0.85f)
+                    .prismStatusBarPadding()
+            }
+
+            Surface(
+                modifier = containerModifier
+                    .shadow(
+                        elevation = if (isSimVisualMode) 24.dp else 16.dp,
+                        shape = drawerShape,
+                        ambientColor = Color.Black.copy(alpha = if (isSimVisualMode) 0.18f else 0.05f),
+                        spotColor = Color.Black.copy(alpha = if (isSimVisualMode) 0.18f else 0.05f)
+                    )
+                    .border(0.5.dp, visuals.containerBorder, drawerShape),
+                shape = drawerShape,
+                color = visuals.containerColor,
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        // Consume all pointer events so clicks don't pass through to scrim
+                        .pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    awaitPointerEvent()
+                                }
                             }
                         }
-                    }
-            ) {
+                ) {
                     // 1. Calendar Section (Expandable)
                     val unacknowledgedDates by viewModel.unacknowledgedDates.collectAsState()
                     val rescheduledDates by viewModel.rescheduledDates.collectAsState()
@@ -282,25 +311,26 @@ fun SchedulerDrawer(
                         unacknowledgedDates = unacknowledgedDates,
                         rescheduledDates = rescheduledDates
                     )
-                    
+
                     // 2. Conflict Warning (if any)
                     val conflictWarning by viewModel.conflictWarning.collectAsState()
                     AnimatedVisibility(visible = conflictWarning != null) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Color(0xFFFF9800).copy(alpha = 0.15f))
+                                .padding(horizontal = 16.dp)
+                                .background(visuals.conflictBannerBackground, RoundedCornerShape(10.dp))
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
                                 text = conflictWarning ?: "",
-                                color = Color(0xFFFFB74D),
+                                color = visuals.conflictBannerText,
                                 fontSize = 14.sp
                             )
                         }
                     }
-                    
+
                     // 3. 灵感箱可折叠面板 (Wave 5)
                     CollapsibleInspirationShelf(
                         items = inspirationItems,
@@ -310,12 +340,12 @@ fun SchedulerDrawer(
                         onAskAI = onInspirationAskAi,
                         modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
                     )
-                    
+
                     // 4. Timeline Section (只显示任务，不显示灵感)
                     Box(modifier = Modifier.weight(1f)) {
                         val conflictedIds by viewModel.conflictedTaskIds.collectAsState()
                         val causingId by viewModel.causingTaskId.collectAsState()
-                        
+
                         SchedulerTimeline(
                             items = taskItems,
                             conflictedTaskIds = conflictedIds,
@@ -336,11 +366,10 @@ fun SchedulerDrawer(
                             },
                             onConflictResolve = { action -> viewModel.handleConflictResolution(action) },
                             onConflictToggle = { id -> viewModel.toggleConflictExpansion(id) },
-                            onCardExpanded = { id, entityId -> /* no-op for now */ },  // Wave 9
-                            onToggleDone = { id -> viewModel.toggleDone(id) }  // Wave 12
+                            onCardExpanded = { id, entityId -> /* no-op for now */ },
+                            onToggleDone = { id -> viewModel.toggleDone(id) }
                         )
-                        
-                        // Swipe to exit multi-select
+
                         if (effectiveIsSelectionMode) {
                             Box(
                                 modifier = Modifier
@@ -357,17 +386,16 @@ fun SchedulerDrawer(
                         }
                     }
 
-                    // Multi-Select Action Bar
                     if (effectiveIsSelectionMode && effectiveSelectedInspirationIds.isNotEmpty()) {
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
-                            color = Color(0xFFAF52DE), // iOS Purple
+                            color = visuals.multiSelectBarColor,
                             shadowElevation = 8.dp
                         ) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clickable { 
+                                    .clickable {
                                         viewModel.toggleSelectionMode(false)
                                     }
                                     .padding(16.dp),
@@ -383,17 +411,11 @@ fun SchedulerDrawer(
                         }
                     }
 
-                    // 🧪 DEV ONLY: 录音 + 文本模拟 (bypasses hardware)
                     if (com.smartsales.prism.BuildConfig.DEBUG) {
-                        val scope = rememberCoroutineScope()
                         val devContext = LocalContext.current
-                        
-                        // 录音状态
                         var isRecordingMic by remember { mutableStateOf(false) }
                         val recorder = remember { com.smartsales.prism.data.audio.PhoneAudioRecorder(devContext) }
-                        
-                        // 安全网：Activity 暂停时自动取消录音
-                        // 权限对话框、来电、Home键等都会触发 ON_PAUSE
+
                         val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
                         DisposableEffect(lifecycleOwner) {
                             val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
@@ -410,35 +432,32 @@ fun SchedulerDrawer(
                                 }
                             }
                         }
-                        
-                        // 权限请求
+
                         val permissionLauncher = rememberLauncherForActivityResult(
                             androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
                         ) { granted ->
-                            if (!granted) {
+                            if (granted && isSimVisualMode) {
+                                recorder.startRecording()
+                                isRecordingMic = true
+                            } else if (!granted) {
                                 Toast.makeText(devContext, "需要录音权限", Toast.LENGTH_SHORT).show()
                             }
-                            // 权限获得后不自动录音 — 原始 press 手势已被权限对话框中断，
-                            // 不存在对应的 tryAwaitRelease() 来停止录音。
-                            // 用户下次按住即可正常录音。
                         }
-                        
+
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 16.dp, vertical = 8.dp),
-                            color = Color(0xFF2ECC71).copy(alpha = 0.9f),
-                            shape = RoundedCornerShape(8.dp)
+                            color = visuals.debugPanelColor,
+                            shape = RoundedCornerShape(10.dp)
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
-                                // 🎙️ Mic Record Button (hold-to-record)
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .background(
-                                            if (isRecordingMic) Color(0xFFE74C3C).copy(alpha = 0.8f)
-                                            else Color.White.copy(alpha = 0.2f),
-                                            RoundedCornerShape(4.dp)
+                                            if (isRecordingMic) visuals.debugPanelButtonActiveColor else visuals.debugPanelButtonColor,
+                                            RoundedCornerShape(6.dp)
                                         )
                                         .then(
                                             if (isSimVisualMode) {
@@ -470,7 +489,6 @@ fun SchedulerDrawer(
                                                 Modifier.pointerInput(Unit) {
                                                     detectTapGestures(
                                                         onPress = {
-                                                            // 检查权限
                                                             val hasPermission = androidx.core.content.ContextCompat
                                                                 .checkSelfPermission(
                                                                     devContext,
@@ -484,20 +502,15 @@ fun SchedulerDrawer(
                                                                 return@detectTapGestures
                                                             }
 
-                                                            // 开始录音
                                                             recorder.startRecording()
                                                             isRecordingMic = true
 
-                                                            // 等松手或取消
                                                             val released = tryAwaitRelease()
 
-                                                            // 停止录音 → 提交
                                                             isRecordingMic = false
                                                             if (released) {
                                                                 val wavFile = recorder.stopRecording()
-                                                                if (wavFile != null) {
-                                                                    viewModel.processAudio(wavFile)
-                                                                }
+                                                                viewModel.processAudio(wavFile)
                                                             } else {
                                                                 recorder.cancel()
                                                             }
@@ -526,21 +539,32 @@ fun SchedulerDrawer(
                         }
                     }
 
-                    // Drag Handle
-                    DragHandle(onDismiss = onDismiss)
+                    DragHandle(
+                        onDismiss = onDismiss,
+                        modifier = if (isSimVisualMode) {
+                            Modifier.padding(bottom = 8.dp)
+                        } else {
+                            Modifier
+                        }
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun DragHandle(onDismiss: () -> Unit) {
+private fun DragHandle(
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val visuals = LocalSchedulerDrawerVisuals.current
     var accumulatedDrag by remember { mutableStateOf(0f) }
     val density = LocalDensity.current
     val dismissThresholdPx = remember(density) { with(density) { 56.dp.toPx() } }
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 12.dp)
             .testTag(SCHEDULER_DRAWER_HANDLE_TEST_TAG)
@@ -562,9 +586,9 @@ private fun DragHandle(onDismiss: () -> Unit) {
     ) {
         Box(
             modifier = Modifier
-                .width(40.dp)
+                .width(36.dp)
                 .height(4.dp)
-                .background(BorderSubtle, RoundedCornerShape(2.dp))
+                .background(visuals.handleColor, RoundedCornerShape(2.dp))
         )
     }
 }
@@ -602,4 +626,47 @@ fun SchedulerDrawer_Inspirations_Preview() {
 fun SchedulerDrawer_Vague_Preview() {
     val fakeViewModel = FakeSchedulerViewModel().apply { debugRunScenario("VAGUE") }
     SchedulerDrawer(isOpen = true, onDismiss = {}, viewModel = fakeViewModel)
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF000000)
+@Composable
+fun SchedulerDrawer_Sim_Loaded_Preview() {
+    val fakeViewModel = FakeSchedulerViewModel().apply { debugRunScenario("LOADED") }
+    SchedulerDrawer(
+        isOpen = true,
+        onDismiss = {},
+        visualMode = SchedulerDrawerVisualMode.SIM,
+        enableInspirationMultiSelect = false,
+        viewModel = fakeViewModel
+    )
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF000000)
+@Composable
+fun SchedulerDrawer_Sim_StartOnlyTask_Preview() {
+    val start = java.time.LocalDate.now()
+        .atTime(17, 0)
+        .atZone(java.time.ZoneId.systemDefault())
+        .toInstant()
+    val fakeViewModel = FakeSchedulerViewModel().apply {
+        debugSetTimelineItems(
+            listOf(
+                ScheduledTask(
+                    id = "sim_start_only_preview",
+                    timeDisplay = "17:00 - ...",
+                    title = "约王总开会",
+                    startTime = start,
+                    endTime = null,
+                    durationMinutes = 0
+                )
+            )
+        )
+    }
+    SchedulerDrawer(
+        isOpen = true,
+        onDismiss = {},
+        visualMode = SchedulerDrawerVisualMode.SIM,
+        enableInspirationMultiSelect = false,
+        viewModel = fakeViewModel
+    )
 }

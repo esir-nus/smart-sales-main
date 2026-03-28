@@ -12,6 +12,20 @@ internal fun deriveSimFollowUpSurface(state: SimShellState): SimBadgeFollowUpSur
     }
 }
 
+internal fun initialSimShellState(
+    forceSetupOnLaunch: Boolean
+): SimShellState = if (forceSetupOnLaunch) {
+    SimShellState(
+        activeConnectivitySurface = SimConnectivitySurface.SETUP,
+        isForcedFirstLaunchOnboarding = true
+    )
+} else {
+    SimShellState()
+}
+
+internal fun startSimForcedFirstLaunchOnboarding(state: SimShellState): SimShellState =
+    openSimConnectivitySetup(state).copy(isForcedFirstLaunchOnboarding = true)
+
 internal fun closeSimOverlays(state: SimShellState): SimShellState = state.copy(
     activeDrawer = null,
     audioDrawerMode = SimAudioDrawerMode.BROWSE,
@@ -147,6 +161,20 @@ internal fun handleSimConnectivitySetupStart(
     return openSimConnectivitySetup(state)
 }
 
+internal fun handleSimConnectivityOnboardingReplayRequest(
+    state: SimShellState,
+    source: String,
+    emitTelemetry: (String, String) -> Unit = { summary, detail ->
+        emitSimConnectivityRouteTelemetry(summary, detail)
+    }
+): SimShellState {
+    emitTelemetry(
+        SIM_CONNECTIVITY_SETUP_STARTED_SUMMARY,
+        "source=$source target=${SimConnectivitySurface.SETUP} replay=true"
+    )
+    return openSimConnectivitySetup(state)
+}
+
 internal fun handleSimConnectivitySetupCompleted(
     state: SimShellState,
     emitTelemetry: (String, String) -> Unit = { summary, detail ->
@@ -157,7 +185,7 @@ internal fun handleSimConnectivitySetupCompleted(
         SIM_CONNECTIVITY_SETUP_COMPLETED_SUMMARY,
         "source=pairing_success target=${SimConnectivitySurface.MANAGER}"
     )
-    return openSimConnectivityManager(state)
+    return openSimConnectivityManager(state).copy(isForcedFirstLaunchOnboarding = false)
 }
 
 internal fun shouldShowSimShellScrim(state: SimShellState): Boolean =
@@ -167,10 +195,26 @@ internal fun shouldShowSimShellScrim(state: SimShellState): Boolean =
         state.activeConnectivitySurface == SimConnectivitySurface.MODAL
 
 internal fun resolveSimShellScrimAlpha(state: SimShellState): Float = when {
-    state.showHistory -> 0.56f
+    state.showHistory -> 0.68f
     shouldShowSimShellScrim(state) -> 0.4f
     else -> 0f
 }
+
+internal fun shouldShowSimIdleComposerHint(
+    state: SimShellState,
+    isImeVisible: Boolean
+): Boolean = state.activeDrawer == null &&
+    state.activeConnectivitySurface == null &&
+    !state.showHistory &&
+    !state.showSettings &&
+    !isImeVisible
+
+internal fun shouldAutoOpenSimSchedulerStartupTeaser(
+    state: SimShellState,
+    isImeVisible: Boolean,
+    teaserPending: Boolean
+): Boolean = teaserPending &&
+    shouldShowSimIdleComposerHint(state, isImeVisible)
 
 internal fun shouldAttemptSimAudioDrawerAutoSync(
     isDrawerOpen: Boolean,

@@ -1,57 +1,105 @@
 package com.smartsales.prism.ui.settings
 
+import android.content.Intent
+import android.provider.Settings
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Psychology
+import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.smartsales.prism.domain.memory.UserProfile
-import androidx.hilt.navigation.compose.hiltViewModel
-import com.smartsales.prism.ui.components.*
-import com.smartsales.prism.ui.theme.*
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.foundation.border
-import androidx.compose.foundation.BorderStroke
+import com.smartsales.prism.ui.components.prismNavigationBarPadding
+import com.smartsales.prism.ui.components.prismStatusBarTopSafeBandPadding
+import com.smartsales.prism.ui.theme.PrismThemeDefaults
+import com.smartsales.prism.ui.theme.toDisplayLabel
 
 /**
- * User Center (Sleek Glass Version)
- * @see prism-ui-ux-contract.md §1.7
- * 
- * Updates:
- * - Replaced Scaffold with Full-Screen Glass Sheet
- * - Uses PrismCard for settings clusters
- * - Pro Max Aesthetic
+ * Full-app User Center polished against the screenshot-first light overlay direction.
  */
 @Composable
 fun UserCenterScreen(
     onClose: () -> Unit,
     viewModel: UserCenterViewModel = hiltViewModel()
 ) {
-    val profile by viewModel.profile.collectAsState()
+    val colors = PrismThemeDefaults.colors
+    val isDarkTheme = PrismThemeDefaults.isDarkTheme
+    val profile by viewModel.profile.collectAsStateWithLifecycle()
+    val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     var isEditing by remember { mutableStateOf(false) }
+    var showThemeDialog by remember { mutableStateOf(false) }
 
-    // Handle system back gesture
-    androidx.activity.compose.BackHandler(onBack = {
-        if (isEditing) isEditing = false else onClose()
-    })
+    BackHandler {
+        if (isEditing) {
+            isEditing = false
+        } else {
+            onClose()
+        }
+    }
 
     if (isEditing && profile != null) {
         EditProfileScreen(
@@ -62,289 +110,357 @@ fun UserCenterScreen(
             },
             onBack = { isEditing = false }
         )
-    } else {
-        // Main Glass Sheet Container
-        // We use a high-alpha surface to mimic the sheet sliding in
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(BackgroundApp) // Base Background
-                .statusBarsPadding()
-        ) {
-             // --- Aurora Blobs (Decorative) ---
-            Box(
-                modifier = Modifier
-                    .size(300.dp)
-                    .align(Alignment.TopEnd)
-                    .offset(x = 100.dp, y = (-50).dp)
-                    .background(
-                        brush = Brush.radialGradient(
-                            colors = listOf(Color(0x228B5CF6), Color.Transparent) // Violet
-                        )
-                    )
-            )
-            Box(
-                modifier = Modifier
-                    .size(250.dp)
-                    .align(Alignment.CenterStart)
-                    .offset(x = (-50).dp)
-                    .background(
-                        brush = Brush.radialGradient(
-                            colors = listOf(Color(0x2214B8A6), Color.Transparent) // Teal
-                        )
-                    )
-            )
+        return
+    }
 
-            Column(Modifier.fillMaxSize()) {
-                // Glass Header (Tall & Scenic)
-                PrismSurface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp),
-                    backgroundColor = BackgroundSurface.copy(alpha = 0.5f), // increased transparency
-                    elevation = 0.dp // Flat glass
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .prismStatusBarTopSafeBandPadding()
+            .padding(start = 18.dp, end = 18.dp, bottom = 10.dp),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        val sheetShape = RoundedCornerShape(34.dp)
+        val sheetColor = if (isDarkTheme) {
+            colors.surface.copy(alpha = 0.992f)
+        } else {
+            Color(0xFFFAFBFE)
+        }
+        val sheetBorder = if (isDarkTheme) {
+            colors.borderSubtle.copy(alpha = 0.82f)
+        } else {
+            Color(0xFFE1E6EF)
+        }
+
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .widthIn(max = 356.dp)
+                .fillMaxHeight()
+                .shadow(
+                    elevation = if (isDarkTheme) 18.dp else 28.dp,
+                    shape = sheetShape,
+                    clip = false,
+                    ambientColor = Color.Black.copy(alpha = if (isDarkTheme) 0.24f else 0.12f),
+                    spotColor = Color.Black.copy(alpha = if (isDarkTheme) 0.30f else 0.10f)
+                ),
+            shape = sheetShape,
+            color = sheetColor,
+            border = BorderStroke(1.dp, sheetBorder)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = if (isDarkTheme) 0.03f else 0.10f),
+                                Color.Transparent,
+                                Color(0xFFF4F7FB).copy(alpha = if (isDarkTheme) 0.015f else 0.04f)
+                            )
+                        )
+                    )
+            ) {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .prismNavigationBarPadding(),
+                    contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 26.dp, bottom = 28.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp)
-                    ) {
-                        // Top Bar
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                             IconButton(onClick = onClose) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, "返回", tint = TextPrimary)
-                            }
-                            // Edit Button (Small)
-                            PrismButton(
-                                text = "编辑",
-                                onClick = { isEditing = true },
-                                style = PrismButtonStyle.GHOST
+                    item {
+                        profile?.let { user ->
+                            UserCenterHero(
+                                profile = user,
+                                onEdit = { isEditing = true }
                             )
                         }
-                        
-                        Spacer(Modifier.height(24.dp))
+                    }
 
-                        // Profile Row
-                        profile?.let { user ->
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                // Avatar
-                                Box(
-                                    modifier = Modifier
-                                        .size(64.dp)
-                                        .clip(CircleShape)
-                                        .background(BackgroundSurfaceActive)
-                                        .border(1.dp, BorderSubtle, CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = user.displayName.take(2).uppercase(),
-                                        style = MaterialTheme.typography.titleLarge,
-                                        fontWeight = FontWeight.Bold,
-                                        color = TextPrimary
-                                    )
-                                }
-                                
-                                Spacer(Modifier.width(16.dp))
-                                
-                                Column {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            text = user.displayName,
-                                            style = MaterialTheme.typography.headlineSmall,
-                                            fontWeight = FontWeight.Bold,
-                                            color = TextPrimary
-                                        )
-                                        Spacer(Modifier.width(8.dp))
-                                        // PRO Badge
-                                        Surface(
-                                            color = AccentPrimary.copy(alpha = 0.05f),
-                                            shape = RoundedCornerShape(4.dp),
-                                            border = androidx.compose.foundation.BorderStroke(0.5.dp, BorderSubtle)
-                                        ) {
-                                            Text(
-                                                text = "PRO",
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                                style = MaterialTheme.typography.labelSmall,
-                                                fontWeight = FontWeight.Bold,
-                                                color = AccentPrimary
-                                            )
-                                        }
-                                    }
-                                    Text(
-                                        text = "${user.role} • ${user.industry}",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = TextSecondary
-                                    )
-                                }
-                            }
+                    item {
+                        UserCenterSection(title = "偏好设置") {
+                            UserCenterSelectRow(
+                                label = "主题外观",
+                                value = themeMode.toDisplayLabel(),
+                                onClick = { showThemeDialog = true },
+                                showDivider = true
+                            )
+                            UserCenterToggleRow(
+                                label = "AI 实验室",
+                                checked = true,
+                                showDivider = true,
+                                onCheckedChange = {}
+                            )
+                            NotificationSettingsRow(
+                                viewModel = viewModel,
+                                showDivider = false
+                            )
                         }
+                    }
+
+                    item {
+                        UserCenterSection(title = "空间管理") {
+                            UserCenterInfoRow(
+                                label = "已用空间",
+                                value = "128 MB",
+                                leadingIcon = Icons.Default.Storage,
+                                showDivider = true
+                            )
+                            UserCenterActionRow(
+                                label = "清除缓存",
+                                actionLabel = "清理",
+                                showDivider = false,
+                                onClick = {}
+                            )
+                        }
+                    }
+
+                    item {
+                        UserCenterSection(title = "安全与隐私") {
+                            UserCenterNavRow(
+                                label = "修改密码",
+                                leadingIcon = Icons.Default.Lock,
+                                showDivider = false,
+                                onClick = {}
+                            )
+                        }
+                    }
+
+                    item {
+                        UserCenterSection(title = "关于") {
+                            UserCenterNavRow(
+                                label = "帮助中心",
+                                leadingIcon = Icons.AutoMirrored.Filled.HelpOutline,
+                                showDivider = true,
+                                onClick = {}
+                            )
+                            UserCenterInfoRow(
+                                label = "版本",
+                                value = "Prism v1.2 (Pro Max)",
+                                leadingIcon = Icons.Default.Info,
+                                showDivider = false
+                            )
+                        }
+                    }
+
+                    item {
+                        UserCenterLogoutButton(onClick = onClose)
                     }
                 }
 
-                // Settings Content
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(24.dp)
-                ) {
-                    // 1. Preferences
-                    item {
-                        SettingsSection("偏好设置") {
-                            SettingsRowSelect("主题", "跟随系统") {}
-                            SettingsRowToggle("AI 实验室", true) {}
-                            // 通知开关 — 读取真实系统状态，点击打开系统通知设置
-                            val context = androidx.compose.ui.platform.LocalContext.current
-                            val lifecycleOwner = LocalLifecycleOwner.current
-                            var notificationsEnabled by remember { mutableStateOf(false) }
-                            
-                            // 监听生命周期 ON_RESUME，从系统设置返回时刷新状态
-                            DisposableEffect(lifecycleOwner) {
-                                val observer = LifecycleEventObserver { _, event ->
-                                    if (event == Lifecycle.Event.ON_RESUME) {
-                                        notificationsEnabled = viewModel.hasNotificationPermission()
-                                    }
-                                }
-                                lifecycleOwner.lifecycle.addObserver(observer)
-                                onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-                            }
-
-                            // Initial check
-                            LaunchedEffect(Unit) {
-                                notificationsEnabled = viewModel.hasNotificationPermission()
-                            }
-                            
-                            SettingsRowToggle("通知", notificationsEnabled) {
-                                // 打开系统通知设置页
-                                val intent = android.content.Intent().apply {
-                                    action = android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS
-                                    putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)
-                                }
-                                context.startActivity(intent)
-                            }
-                        }
-                    }
-
-                    // 2. Storage
-                    item {
-                        SettingsSection("存储") {
-                            SettingsRowAction("本地缓存", "清除 (128MB)") {}
-                        }
-                    }
-                    
-                    // 3. Security
-                    item {
-                        SettingsSection("安全") {
-                            SettingsRowNav("修改密码") {}
-                            SettingsRowNav("面容 ID") {}
-                        }
-                    }
-
-                    // 4. About
-                    item {
-                        SettingsSection("关于") {
-                            SettingsRowInfo("版本", "Prism v1.2 (Pro Max)")
-                            SettingsRowNav("帮助中心") {}
-                        }
-                    }
-
-                    // 5. Logout
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onClose() } // Mock Logout
-                                .background(SurfaceDanger, RoundedCornerShape(16.dp))
-                                .border(1.dp, AccentDanger.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
-                                .padding(16.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.AutoMirrored.Filled.Logout, null, tint = AccentDanger, modifier = Modifier.size(20.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text("退出登录", color = AccentDanger, fontWeight = FontWeight.SemiBold)
-                            }
-                        }
-                        Spacer(Modifier.height(48.dp))
-                    }
+                if (showThemeDialog) {
+                    ThemeModeDialog(
+                        currentMode = themeMode,
+                        onDismiss = { showThemeDialog = false },
+                        onSelectMode = viewModel::setThemeMode
+                    )
                 }
             }
         }
     }
 }
 
-// ... (Helper Components: ProfileCard, SettingsSection/Rows kept same as previous, just overwritten to ensure consistency)
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ProfileCard(
+private fun UserCenterHero(
     profile: UserProfile,
     onEdit: () -> Unit
 ) {
-    PrismCard(
+    val colors = PrismThemeDefaults.colors
+    val isDarkTheme = PrismThemeDefaults.isDarkTheme
+    val chips = remember(profile) {
+        listOf(
+            profile.industry,
+            profile.experienceYears,
+            profile.communicationPlatform
+        ).filter { it.isNotBlank() }
+    }
+
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        onClick = onEdit // Make whole card clickable or just button? Let's make whole card for fluid UX
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(9.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Box(
+            modifier = Modifier
+                .size(84.dp)
+                .clip(CircleShape)
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            if (isDarkTheme) colors.surfaceHover.copy(alpha = 0.76f) else Color.White.copy(alpha = 0.98f),
+                            if (isDarkTheme) colors.surface.copy(alpha = 0.96f) else Color(0xFFF1F4F9)
+                        )
+                    )
+                )
+                .border(1.dp, colors.borderSubtle.copy(alpha = if (isDarkTheme) 0.80f else 0.96f), CircleShape),
+            contentAlignment = Alignment.Center
         ) {
-            // Avatar
-            Box(
-                modifier = Modifier
-                    .size(72.dp)
-                    .clip(CircleShape)
-                    .background(BackgroundSurfaceActive),
-                contentAlignment = Alignment.Center
-            ) {
+            val initials = profile.displayName
+                .split(" ", "-", "_")
+                .filter { it.isNotBlank() }
+                .map { it.first().uppercase() }
+                .joinToString("")
+                .take(2)
+                .ifBlank { profile.displayName.take(2).uppercase() }
+
+            if (initials.isNotBlank()) {
+                Text(
+                    text = initials,
+                    color = colors.textPrimary,
+                    fontSize = 25.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+            } else {
                 Icon(
                     imageVector = Icons.Default.Person,
                     contentDescription = null,
-                    tint = TextPrimary,
-                    modifier = Modifier.size(32.dp)
+                    tint = colors.textPrimary.copy(alpha = 0.82f),
+                    modifier = Modifier.size(31.dp)
                 )
             }
-            Spacer(Modifier.width(20.dp))
-            // Info
-            Column(modifier = Modifier.weight(1f)) {
-                Text(profile.displayName, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 22.sp)
-                Text(profile.role, color = TextSecondary, fontSize = 14.sp)
-                Spacer(Modifier.height(8.dp))
-                // Glass Tag
-                Surface(
-                    color = AccentGreen.copy(alpha = 0.15f),
-                    shape = RoundedCornerShape(6.dp)
-                ) {
-                    Text(
-                        text = profile.industry,
-                        color = AccentGreen,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
+        }
+
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = profile.displayName,
+                color = colors.textPrimary,
+                fontSize = 21.sp,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = profile.role,
+                color = colors.textSecondary.copy(alpha = if (isDarkTheme) 0.88f else 0.74f),
+                fontSize = 13.sp,
+                textAlign = TextAlign.Center
+            )
+        }
+
+        if (chips.isNotEmpty()) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                chips.forEach { chip ->
+                    UserCenterMetadataChip(text = chip)
                 }
+                UserCenterMetadataChip(text = "PRO", accent = true)
             }
-            // Edit Chevron
-            Icon(Icons.Default.ChevronRight, null, tint = TextTertiary)
+        } else {
+            UserCenterMetadataChip(text = "PRO", accent = true)
+        }
+
+        Surface(
+            modifier = Modifier.clickable(onClick = onEdit),
+            color = if (isDarkTheme) colors.surface.copy(alpha = 0.22f) else Color.White.copy(alpha = 0.96f),
+            shape = RoundedCornerShape(17.dp),
+            border = BorderStroke(
+                0.75.dp,
+                if (isDarkTheme) colors.borderSubtle.copy(alpha = 0.70f) else Color(0xFFE2E7F0)
+            )
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = null,
+                    tint = colors.textPrimary,
+                    modifier = Modifier.size(14.dp)
+                )
+                Text(
+                    text = "编辑资料",
+                    color = colors.textPrimary,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Column(Modifier.fillMaxWidth()) {
+private fun UserCenterMetadataChip(
+    text: String,
+    accent: Boolean = false
+) {
+    val colors = PrismThemeDefaults.colors
+    val isDarkTheme = PrismThemeDefaults.isDarkTheme
+    val background = if (accent) {
+        colors.accentBlue.copy(alpha = if (isDarkTheme) 0.18f else 0.11f)
+    } else {
+        if (isDarkTheme) colors.surface.copy(alpha = 0.22f) else Color.White.copy(alpha = 0.88f)
+    }
+    val border = if (accent) {
+        colors.accentBlue.copy(alpha = if (isDarkTheme) 0.32f else 0.22f)
+    } else {
+        colors.borderSubtle.copy(alpha = if (isDarkTheme) 0.76f else 0.86f)
+    }
+
+    Surface(
+        color = background,
+        shape = RoundedCornerShape(11.dp),
+        border = BorderStroke(0.75.dp, border)
+    ) {
         Text(
-            text = title, 
-            color = TextTertiary, 
-            fontSize = 13.sp, 
-            fontWeight = FontWeight.SemiBold, 
-            modifier = Modifier.padding(start = 8.dp, bottom = 8.dp)
+            text = text,
+            modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+            color = if (accent) {
+                colors.accentBlue
+            } else {
+                colors.textSecondary.copy(alpha = if (isDarkTheme) 0.88f else 0.74f)
+            },
+            fontSize = 10.sp,
+            fontWeight = if (accent) FontWeight.SemiBold else FontWeight.Normal
         )
-        PrismCard(
-            modifier = Modifier.fillMaxWidth(),
-            onClick = {} // Container only
+    }
+}
+
+@Composable
+private fun UserCenterSection(
+    title: String,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    val colors = PrismThemeDefaults.colors
+    val isDarkTheme = PrismThemeDefaults.isDarkTheme
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = title,
+            color = colors.textSecondary.copy(alpha = if (isDarkTheme) 0.80f else 0.64f),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(start = 8.dp)
+        )
+        Surface(
+            color = if (isDarkTheme) colors.surfaceHover.copy(alpha = 0.60f) else Color.White.copy(alpha = 0.985f),
+            shape = RoundedCornerShape(18.dp),
+            border = BorderStroke(
+                0.8.dp,
+                if (isDarkTheme) colors.borderSubtle.copy(alpha = 0.82f) else Color(0xFFE3E8F1)
+            )
         ) {
-            Column(Modifier.padding(vertical = 4.dp)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.White.copy(alpha = if (isDarkTheme) 0.03f else 0.08f),
+                                Color.Transparent,
+                                Color(0xFFF5F8FC).copy(alpha = if (isDarkTheme) 0.015f else 0.03f)
+                            )
+                        )
+                    )
+            ) {
                 content()
             }
         }
@@ -352,88 +468,257 @@ private fun SettingsSection(title: String, content: @Composable ColumnScope.() -
 }
 
 @Composable
-private fun SettingsRowSelect(label: String, value: String, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(label, color = TextPrimary, style = MaterialTheme.typography.bodyMedium)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(value, color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
-            Icon(Icons.Default.ChevronRight, null, tint = TextTertiary, modifier = Modifier.size(20.dp))
-        }
-    }
-    Divider(color = BorderSubtle, thickness = 0.5.dp, modifier = Modifier.padding(horizontal = 16.dp))
+private fun UserCenterSelectRow(
+    label: String,
+    value: String,
+    onClick: () -> Unit,
+    showDivider: Boolean
+) {
+    UserCenterRow(
+        label = label,
+        leadingIcon = Icons.Default.Public,
+        value = value,
+        showChevron = true,
+        onClick = onClick,
+        showDivider = showDivider
+    )
 }
 
 @Composable
-private fun SettingsRowToggle(label: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(label, color = TextPrimary, style = MaterialTheme.typography.bodyMedium)
-        Switch(
-            checked = checked, 
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = AccentBlue,
-                uncheckedThumbColor = TextSecondary,
-                uncheckedTrackColor = BackgroundSurfaceActive,
-                uncheckedBorderColor = BorderSubtle
+private fun UserCenterToggleRow(
+    label: String,
+    checked: Boolean,
+    showDivider: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    val colors = PrismThemeDefaults.colors
+    UserCenterRow(
+        label = label,
+        leadingIcon = when (label) {
+            "AI 实验室" -> Icons.Default.Psychology
+            "消息通知" -> Icons.Default.NotificationsNone
+            else -> Icons.Default.Person
+        },
+        onClick = null,
+        showDivider = showDivider,
+        rightContent = {
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                colors = SwitchDefaults.colors(
+                    checkedThumbColor = Color.White,
+                    checkedTrackColor = colors.accentBlue,
+                    uncheckedThumbColor = Color.White,
+                    uncheckedTrackColor = Color(0xFFD8DDEA),
+                    uncheckedBorderColor = Color.Transparent
+                )
             )
+        }
+    )
+}
+
+@Composable
+private fun NotificationSettingsRow(
+    viewModel: UserCenterViewModel,
+    showDivider: Boolean
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var notificationsEnabled by remember { mutableStateOf(false) }
+
+    DisposableEffect(lifecycleOwner, viewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                notificationsEnabled = viewModel.hasNotificationPermission()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    LaunchedEffect(viewModel) {
+        notificationsEnabled = viewModel.hasNotificationPermission()
+    }
+
+    UserCenterToggleRow(
+        label = "消息通知",
+        checked = notificationsEnabled,
+        showDivider = showDivider,
+        onCheckedChange = {
+            val intent = Intent().apply {
+                action = Settings.ACTION_APP_NOTIFICATION_SETTINGS
+                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+            }
+            context.startActivity(intent)
+        }
+    )
+}
+
+@Composable
+private fun UserCenterNavRow(
+    label: String,
+    leadingIcon: ImageVector,
+    showDivider: Boolean,
+    onClick: () -> Unit
+) {
+    UserCenterRow(
+        label = label,
+        leadingIcon = leadingIcon,
+        showChevron = true,
+        onClick = onClick,
+        showDivider = showDivider
+    )
+}
+
+@Composable
+private fun UserCenterInfoRow(
+    label: String,
+    value: String,
+    leadingIcon: ImageVector,
+    showDivider: Boolean
+) {
+    UserCenterRow(
+        label = label,
+        leadingIcon = leadingIcon,
+        value = value,
+        onClick = null,
+        showDivider = showDivider
+    )
+}
+
+@Composable
+private fun UserCenterActionRow(
+    label: String,
+    actionLabel: String,
+    showDivider: Boolean,
+    onClick: () -> Unit
+) {
+    val colors = PrismThemeDefaults.colors
+    UserCenterRow(
+        label = label,
+        leadingIcon = Icons.Default.Delete,
+        value = actionLabel,
+        valueColor = colors.accentBlue,
+        valueFontWeight = FontWeight.Medium,
+        onClick = onClick,
+        showDivider = showDivider
+    )
+}
+
+@Composable
+private fun UserCenterRow(
+    label: String,
+    leadingIcon: ImageVector,
+    value: String? = null,
+    valueColor: Color? = null,
+    valueFontWeight: FontWeight = FontWeight.Normal,
+    showChevron: Boolean = false,
+    rightContent: (@Composable RowScope.() -> Unit)? = null,
+    onClick: (() -> Unit)?,
+    showDivider: Boolean
+) {
+    val colors = PrismThemeDefaults.colors
+    val rowModifier = Modifier
+        .fillMaxWidth()
+        .heightIn(min = 48.dp)
+        .then(
+            if (onClick != null) {
+                Modifier.clickable(onClick = onClick)
+            } else {
+                Modifier
+            }
         )
-    }
-    Divider(color = BorderSubtle, thickness = 0.5.dp, modifier = Modifier.padding(horizontal = 16.dp))
-}
+        .padding(horizontal = 14.dp, vertical = 11.dp)
 
-@Composable
-private fun SettingsRowNav(label: String, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(label, color = TextPrimary, style = MaterialTheme.typography.bodyMedium)
-        Icon(Icons.Default.ChevronRight, null, tint = TextTertiary, modifier = Modifier.size(20.dp))
-    }
-    Divider(color = BorderSubtle, thickness = 0.5.dp, modifier = Modifier.padding(horizontal = 16.dp))
-}
+    Column {
+        Row(
+            modifier = rowModifier,
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(11.dp)
+            ) {
+                Icon(
+                    imageVector = leadingIcon,
+                    contentDescription = null,
+                    tint = colors.textSecondary.copy(alpha = 0.82f),
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = label,
+                    color = colors.textPrimary,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
 
-@Composable
-private fun SettingsRowAction(label: String, actionLabel: String, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(label, color = TextPrimary, style = MaterialTheme.typography.bodyMedium)
-        TextButton(onClick = onClick, modifier = Modifier.height(32.dp)) {
-            Text(actionLabel, color = AccentBlue)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(5.dp)
+            ) {
+                if (value != null) {
+                    Text(
+                        text = value,
+                        color = (valueColor ?: colors.textSecondary).copy(
+                            alpha = if (valueColor == null) 0.72f else 1f
+                        ),
+                        fontSize = 12.sp,
+                        fontWeight = valueFontWeight
+                    )
+                }
+                rightContent?.invoke(this)
+                if (showChevron) {
+                    Icon(
+                        imageVector = Icons.Default.ChevronRight,
+                        contentDescription = null,
+                        tint = colors.textTertiary.copy(alpha = 0.72f),
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
+        }
+        if (showDivider) {
+            HorizontalDivider(
+                modifier = Modifier.padding(start = 41.dp, end = 14.dp),
+                thickness = 0.5.dp,
+                color = colors.borderSubtle.copy(alpha = 0.84f)
+            )
         }
     }
-    Divider(color = BorderSubtle, thickness = 0.5.dp, modifier = Modifier.padding(horizontal = 16.dp))
 }
 
 @Composable
-private fun SettingsRowButton(label: String, onClick: () -> Unit) {
-    Box(Modifier.clickable(onClick = onClick).fillMaxWidth().padding(16.dp)) {
-        Text(label, color = AccentBlue, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
-    }
-}
-
-@Composable
-private fun SettingsRowInfo(label: String, value: String) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+private fun UserCenterLogoutButton(onClick: () -> Unit) {
+    val colors = PrismThemeDefaults.colors
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        color = colors.surfaceDanger.copy(alpha = 0.72f),
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(0.75.dp, colors.accentDanger.copy(alpha = 0.16f))
     ) {
-        Text(label, color = TextPrimary, style = MaterialTheme.typography.bodyMedium)
-        Text(value, color = TextSecondary, style = MaterialTheme.typography.bodyMedium)
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 13.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.Logout,
+                contentDescription = null,
+                tint = colors.accentDanger,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = "退出登录",
+                color = colors.accentDanger,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
     }
-    Divider(color = BorderSubtle, thickness = 0.5.dp, modifier = Modifier.padding(horizontal = 16.dp))
 }

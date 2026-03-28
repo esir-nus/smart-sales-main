@@ -29,22 +29,23 @@ data class OnboardingProfileDraft(
 )
 ```
 
-## Audio Capture
+## Device Speech Recognition
 
 ```kotlin
-interface OnboardingAudioCapture {
-    fun startRecording()
-    fun stopRecording(): File
-    fun cancelRecording()
-    fun isRecording(): Boolean
+interface DeviceSpeechRecognizer {
+    fun startListening()
+    suspend fun finishListening(): DeviceSpeechRecognitionResult
+    fun cancelListening()
+    fun isListening(): Boolean
 }
 ```
 
 Rules:
 
-- WAV output must remain compatible with `AsrService`
-- onboarding UI owns permission prompts; capture impl assumes permission already granted
-- cancel must discard incomplete output
+- onboarding UI owns permission prompts; recognizer impl assumes permission already granted
+- the active onboarding happy path uses device speech recognition rather than `AsrService`
+- cancellation must end the active recognition session cleanly
+- this seam should remain reusable for future chat fast-recognition work
 
 ## Consultation / Extraction Service
 
@@ -82,5 +83,6 @@ sealed interface OnboardingProfileExtractionServiceResult {
 Rules:
 
 - consultation may return natural-language text
-- extraction must return typed data from validated JSON, not from prose parsing
+- extraction must return typed data as `OnboardingProfileDraft`
+- the active onboarding implementation may build deterministic local outputs instead of calling the main business LLM stack
 - failures must stay in the onboarding lane and must not mutate profile state

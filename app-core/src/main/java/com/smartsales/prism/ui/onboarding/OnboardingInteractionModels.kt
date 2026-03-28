@@ -36,6 +36,33 @@ data class OnboardingProfileDraft(
 }
 
 /**
+ * onboarding 麦克风交互模式。
+ */
+enum class OnboardingMicInteractionMode {
+    HOLD_TO_SEND,
+    TAP_TO_SEND
+}
+
+/**
+ * onboarding 处理阶段。
+ */
+enum class OnboardingProcessingPhase {
+    NONE,
+    RECOGNIZING,
+    BUILDING_CONSULTATION_REPLY,
+    BUILDING_PROFILE_RESULT,
+    DETERMINISTIC_FALLBACK
+}
+
+/**
+ * onboarding 结果来源。
+ */
+enum class OnboardingResultOrigin {
+    DEVICE_SPEECH,
+    DETERMINISTIC_FALLBACK
+}
+
+/**
  * 咨询阶段状态。
  */
 data class OnboardingConsultationUiState(
@@ -44,7 +71,11 @@ data class OnboardingConsultationUiState(
     val isProcessing: Boolean = false,
     val messages: List<OnboardingInteractionMessage> = emptyList(),
     val completedRounds: Int = 0,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val awaitingMicPermission: Boolean = false,
+    val micInteractionMode: OnboardingMicInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+    val processingPhase: OnboardingProcessingPhase = OnboardingProcessingPhase.NONE,
+    val lastResultOrigin: OnboardingResultOrigin? = null
 ) {
     val isCompleted: Boolean get() = completedRounds >= 2
 }
@@ -60,7 +91,11 @@ data class OnboardingProfileUiState(
     val transcript: String = "",
     val acknowledgement: String = "",
     val draft: OnboardingProfileDraft? = null,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val awaitingMicPermission: Boolean = false,
+    val micInteractionMode: OnboardingMicInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+    val processingPhase: OnboardingProcessingPhase = OnboardingProcessingPhase.NONE,
+    val draftOrigin: OnboardingResultOrigin? = null
 ) {
     val hasExtractionResult: Boolean get() = draft != null && acknowledgement.isNotBlank()
     val canSkipAfterFailure: Boolean get() = errorMessage != null
@@ -68,6 +103,8 @@ data class OnboardingProfileUiState(
 
 enum class OnboardingConsultationCaptureState {
     IDLE,
+    RECORDING,
+    PROCESSING,
     ONE_TURN_REVEALED,
     COMPLETE,
     ERROR
@@ -75,6 +112,8 @@ enum class OnboardingConsultationCaptureState {
 
 enum class OnboardingProfileCaptureState {
     IDLE,
+    RECORDING,
+    PROCESSING,
     EXTRACTED,
     ERROR
 }

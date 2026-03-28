@@ -75,6 +75,32 @@ fun PreviewOnboardingFullAppConsultationIdle() {
     )
 }
 
+@Preview(showBackground = true, backgroundColor = 0xFF05060A, name = "Full App 3A. Consultation Recording")
+@Composable
+fun PreviewOnboardingFullAppConsultationRecording() {
+    OnboardingStaticScreen(
+        state = previewState(
+            host = OnboardingHost.FULL_APP,
+            step = OnboardingStep.VOICE_HANDSHAKE_CONSULTATION,
+            badge = null,
+            consultationCaptureState = OnboardingConsultationCaptureState.RECORDING
+        )
+    )
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF05060A, name = "Full App 3A. Consultation Processing")
+@Composable
+fun PreviewOnboardingFullAppConsultationProcessing() {
+    OnboardingStaticScreen(
+        state = previewState(
+            host = OnboardingHost.FULL_APP,
+            step = OnboardingStep.VOICE_HANDSHAKE_CONSULTATION,
+            badge = null,
+            consultationCaptureState = OnboardingConsultationCaptureState.PROCESSING
+        )
+    )
+}
+
 @Preview(showBackground = true, backgroundColor = 0xFF05060A, name = "Full App 3A. Consultation Complete")
 @Composable
 fun PreviewOnboardingFullAppConsultationComplete() {
@@ -84,6 +110,45 @@ fun PreviewOnboardingFullAppConsultationComplete() {
             step = OnboardingStep.VOICE_HANDSHAKE_CONSULTATION,
             badge = null,
             consultationCaptureState = OnboardingConsultationCaptureState.COMPLETE
+        )
+    )
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF05060A, name = "Full App 3B. Profile Recording")
+@Composable
+fun PreviewOnboardingFullAppProfileRecording() {
+    OnboardingStaticScreen(
+        state = previewState(
+            host = OnboardingHost.FULL_APP,
+            step = OnboardingStep.VOICE_HANDSHAKE_PROFILE,
+            badge = null,
+            profileCaptureState = OnboardingProfileCaptureState.RECORDING
+        )
+    )
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF05060A, name = "Full App 3B. Profile Idle")
+@Composable
+fun PreviewOnboardingFullAppProfileIdle() {
+    OnboardingStaticScreen(
+        state = previewState(
+            host = OnboardingHost.FULL_APP,
+            step = OnboardingStep.VOICE_HANDSHAKE_PROFILE,
+            badge = null,
+            profileCaptureState = OnboardingProfileCaptureState.IDLE
+        )
+    )
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF05060A, name = "Full App 3B. Profile Processing")
+@Composable
+fun PreviewOnboardingFullAppProfileProcessing() {
+    OnboardingStaticScreen(
+        state = previewState(
+            host = OnboardingHost.FULL_APP,
+            step = OnboardingStep.VOICE_HANDSHAKE_PROFILE,
+            badge = null,
+            profileCaptureState = OnboardingProfileCaptureState.PROCESSING
         )
     )
 }
@@ -195,6 +260,32 @@ fun PreviewOnboardingSimConsultationIdle() {
     )
 }
 
+@Preview(showBackground = true, backgroundColor = 0xFF05060A, name = "SIM 3A. Consultation Recording")
+@Composable
+fun PreviewOnboardingSimConsultationRecording() {
+    OnboardingStaticScreen(
+        state = previewState(
+            host = OnboardingHost.SIM_CONNECTIVITY,
+            step = OnboardingStep.VOICE_HANDSHAKE_CONSULTATION,
+            badge = null,
+            consultationCaptureState = OnboardingConsultationCaptureState.RECORDING
+        )
+    )
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF05060A, name = "SIM 3A. Consultation Processing")
+@Composable
+fun PreviewOnboardingSimConsultationProcessing() {
+    OnboardingStaticScreen(
+        state = previewState(
+            host = OnboardingHost.SIM_CONNECTIVITY,
+            step = OnboardingStep.VOICE_HANDSHAKE_CONSULTATION,
+            badge = null,
+            consultationCaptureState = OnboardingConsultationCaptureState.PROCESSING
+        )
+    )
+}
+
 @Preview(showBackground = true, backgroundColor = 0xFF05060A, name = "SIM 3A. Consultation Complete")
 @Composable
 fun PreviewOnboardingSimConsultationComplete() {
@@ -204,6 +295,45 @@ fun PreviewOnboardingSimConsultationComplete() {
             step = OnboardingStep.VOICE_HANDSHAKE_CONSULTATION,
             badge = null,
             consultationCaptureState = OnboardingConsultationCaptureState.COMPLETE
+        )
+    )
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF05060A, name = "SIM 3B. Profile Recording")
+@Composable
+fun PreviewOnboardingSimProfileRecording() {
+    OnboardingStaticScreen(
+        state = previewState(
+            host = OnboardingHost.SIM_CONNECTIVITY,
+            step = OnboardingStep.VOICE_HANDSHAKE_PROFILE,
+            badge = null,
+            profileCaptureState = OnboardingProfileCaptureState.RECORDING
+        )
+    )
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF05060A, name = "SIM 3B. Profile Idle")
+@Composable
+fun PreviewOnboardingSimProfileIdle() {
+    OnboardingStaticScreen(
+        state = previewState(
+            host = OnboardingHost.SIM_CONNECTIVITY,
+            step = OnboardingStep.VOICE_HANDSHAKE_PROFILE,
+            badge = null,
+            profileCaptureState = OnboardingProfileCaptureState.IDLE
+        )
+    )
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF05060A, name = "SIM 3B. Profile Processing")
+@Composable
+fun PreviewOnboardingSimProfileProcessing() {
+    OnboardingStaticScreen(
+        state = previewState(
+            host = OnboardingHost.SIM_CONNECTIVITY,
+            step = OnboardingStep.VOICE_HANDSHAKE_PROFILE,
+            badge = null,
+            profileCaptureState = OnboardingProfileCaptureState.PROCESSING
         )
     )
 }

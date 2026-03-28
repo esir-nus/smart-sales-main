@@ -61,7 +61,12 @@ private enum class OnboardingDesignPreset(
     WELCOME("Welcome"),
     PERMISSIONS("Permissions"),
     CONSULTATION_IDLE("Consultation Idle"),
+    CONSULTATION_RECORDING("Consultation Recording"),
+    CONSULTATION_PROCESSING("Consultation Processing"),
     CONSULTATION_COMPLETE("Consultation Complete"),
+    PROFILE_IDLE("Profile Idle"),
+    PROFILE_RECORDING("Profile Recording"),
+    PROFILE_PROCESSING("Profile Processing"),
     PROFILE("Profile"),
     HARDWARE_WAKE("Wake"),
     SCAN("Scan"),
@@ -98,11 +103,46 @@ private enum class OnboardingDesignPreset(
             consultationCaptureState = OnboardingConsultationCaptureState.IDLE
         )
 
+        CONSULTATION_RECORDING -> OnboardingVisualCaptureState(
+            host = host,
+            step = OnboardingStep.VOICE_HANDSHAKE_CONSULTATION,
+            badge = null,
+            consultationCaptureState = OnboardingConsultationCaptureState.RECORDING
+        )
+
+        CONSULTATION_PROCESSING -> OnboardingVisualCaptureState(
+            host = host,
+            step = OnboardingStep.VOICE_HANDSHAKE_CONSULTATION,
+            badge = null,
+            consultationCaptureState = OnboardingConsultationCaptureState.PROCESSING
+        )
+
         CONSULTATION_COMPLETE -> OnboardingVisualCaptureState(
             host = host,
             step = OnboardingStep.VOICE_HANDSHAKE_CONSULTATION,
             badge = null,
             consultationCaptureState = OnboardingConsultationCaptureState.COMPLETE
+        )
+
+        PROFILE_IDLE -> OnboardingVisualCaptureState(
+            host = host,
+            step = OnboardingStep.VOICE_HANDSHAKE_PROFILE,
+            badge = null,
+            profileCaptureState = OnboardingProfileCaptureState.IDLE
+        )
+
+        PROFILE_RECORDING -> OnboardingVisualCaptureState(
+            host = host,
+            step = OnboardingStep.VOICE_HANDSHAKE_PROFILE,
+            badge = null,
+            profileCaptureState = OnboardingProfileCaptureState.RECORDING
+        )
+
+        PROFILE_PROCESSING -> OnboardingVisualCaptureState(
+            host = host,
+            step = OnboardingStep.VOICE_HANDSHAKE_PROFILE,
+            badge = null,
+            profileCaptureState = OnboardingProfileCaptureState.PROCESSING
         )
 
         PROFILE -> OnboardingVisualCaptureState(

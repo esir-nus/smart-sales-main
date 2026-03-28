@@ -2,12 +2,15 @@ package com.smartsales.prism.ui.onboarding
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.smartsales.prism.domain.asr.AsrResult
-import com.smartsales.prism.domain.asr.AsrService
+import com.smartsales.prism.data.audio.DeviceSpeechFailureReason
+import com.smartsales.prism.data.audio.DeviceSpeechRecognitionResult
+import com.smartsales.prism.data.audio.DeviceSpeechRecognizer
 import com.smartsales.prism.domain.repository.UserProfileRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import java.io.File
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -15,17 +18,20 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 
 /**
  * onboarding 互动状态管理器。
  */
 @HiltViewModel
 class OnboardingInteractionViewModel @Inject constructor(
-    private val audioCapture: OnboardingAudioCapture,
-    private val asrService: AsrService,
+    private val speechRecognizer: DeviceSpeechRecognizer,
     private val interactionService: OnboardingInteractionService,
     private val userProfileRepository: UserProfileRepository
 ) : ViewModel() {
+
+    private var consultationRequestId = 0L
+    private var profileRequestId = 0L
 
     private val _consultationState = MutableStateFlow(OnboardingConsultationUiState())
     val consultationState: StateFlow<OnboardingConsultationUiState> = _consultationState.asStateFlow()
@@ -43,19 +49,56 @@ class OnboardingInteractionViewModel @Inject constructor(
     }
 
     fun startConsultationRecording(): Boolean {
+        return startConsultationRecording(OnboardingMicInteractionMode.HOLD_TO_SEND)
+    }
+
+    fun onConsultationMicPermissionRequested() {
         val state = _consultationState.value
-        if (state.isProcessing || state.isCompleted || audioCapture.isRecording()) return false
+        if (state.isProcessing || state.isCompleted || state.isRecording || speechRecognizer.isListening()) return
+        _consultationState.value = state.copy(
+            awaitingMicPermission = true,
+            micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+            errorMessage = null
+        )
+    }
+
+    fun onConsultationMicPermissionResult(granted: Boolean) {
+        val state = _consultationState.value
+        if (!granted) {
+            _consultationState.value = state.copy(
+                awaitingMicPermission = false,
+                micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                errorMessage = "无法录音：未授予麦克风权限"
+            )
+            return
+        }
+        if (state.awaitingMicPermission) {
+            startConsultationRecording(OnboardingMicInteractionMode.TAP_TO_SEND)
+        }
+    }
+
+    private fun startConsultationRecording(
+        interactionMode: OnboardingMicInteractionMode
+    ): Boolean {
+        val state = _consultationState.value
+        if (state.isProcessing || state.isCompleted || speechRecognizer.isListening()) return false
         return runCatching {
-            audioCapture.startRecording()
+            speechRecognizer.startListening()
             _consultationState.value = state.copy(
                 hasStartedInteracting = true,
                 isRecording = true,
-                errorMessage = null
+                errorMessage = null,
+                awaitingMicPermission = false,
+                micInteractionMode = interactionMode,
+                processingPhase = OnboardingProcessingPhase.NONE
             )
             true
         }.getOrElse {
             _consultationState.value = state.copy(
-                errorMessage = "当前无法开始录音，请重试。"
+                errorMessage = "当前无法开始录音，请重试。",
+                awaitingMicPermission = false,
+                micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                processingPhase = OnboardingProcessingPhase.NONE
             )
             false
         }
@@ -64,43 +107,77 @@ class OnboardingInteractionViewModel @Inject constructor(
     fun finishConsultationRecording() {
         val state = _consultationState.value
         if (!state.isRecording) return
-        _consultationState.value = state.copy(
-            isRecording = false,
-            isProcessing = true,
-            errorMessage = null
-        )
+        val requestId = beginConsultationProcessing(state)
         viewModelScope.launch {
-            val file = runCatching { audioCapture.stopRecording() }.getOrElse {
-                _consultationState.value = _consultationState.value.copy(
-                    isProcessing = false,
-                    errorMessage = "当前无法完成录音，请重试。"
-                )
-                return@launch
+            when (val resolution = resolveTranscript(requestId, ProcessingLane.CONSULTATION)) {
+                is TranscriptResolution.Transcript -> {
+                    processConsultationTranscript(
+                        requestId = requestId,
+                        transcript = resolution.text,
+                        origin = resolution.origin
+                    )
+                }
+
+                is TranscriptResolution.Fallback -> {
+                    runConsultationFallback(requestId, resolution.delayMillis)
+                }
+
+                null -> Unit
             }
-            processConsultationRecording(file)
         }
     }
 
-    fun onConsultationMicPermissionDenied() {
-        _consultationState.value = _consultationState.value.copy(
-            errorMessage = "无法录音：未授予麦克风权限"
+    fun startProfileRecording(): Boolean {
+        return startProfileRecording(OnboardingMicInteractionMode.HOLD_TO_SEND)
+    }
+
+    fun onProfileMicPermissionRequested() {
+        val state = _profileState.value
+        if (state.isProcessing || state.hasExtractionResult || state.isRecording || speechRecognizer.isListening()) return
+        _profileState.value = state.copy(
+            awaitingMicPermission = true,
+            micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+            errorMessage = null
         )
     }
 
-    fun startProfileRecording(): Boolean {
+    fun onProfileMicPermissionResult(granted: Boolean) {
         val state = _profileState.value
-        if (state.isProcessing || state.hasExtractionResult || audioCapture.isRecording()) return false
+        if (!granted) {
+            _profileState.value = state.copy(
+                awaitingMicPermission = false,
+                micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                errorMessage = "无法录音：未授予麦克风权限"
+            )
+            return
+        }
+        if (state.awaitingMicPermission) {
+            startProfileRecording(OnboardingMicInteractionMode.TAP_TO_SEND)
+        }
+    }
+
+    private fun startProfileRecording(
+        interactionMode: OnboardingMicInteractionMode
+    ): Boolean {
+        val state = _profileState.value
+        if (state.isProcessing || state.hasExtractionResult || speechRecognizer.isListening()) return false
         return runCatching {
-            audioCapture.startRecording()
+            speechRecognizer.startListening()
             _profileState.value = state.copy(
                 hasStartedInteracting = true,
                 isRecording = true,
-                errorMessage = null
+                errorMessage = null,
+                awaitingMicPermission = false,
+                micInteractionMode = interactionMode,
+                processingPhase = OnboardingProcessingPhase.NONE
             )
             true
         }.getOrElse {
             _profileState.value = state.copy(
-                errorMessage = "当前无法开始录音，请重试。"
+                errorMessage = "当前无法开始录音，请重试。",
+                awaitingMicPermission = false,
+                micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                processingPhase = OnboardingProcessingPhase.NONE
             )
             false
         }
@@ -109,27 +186,24 @@ class OnboardingInteractionViewModel @Inject constructor(
     fun finishProfileRecording() {
         val state = _profileState.value
         if (!state.isRecording) return
-        _profileState.value = state.copy(
-            isRecording = false,
-            isProcessing = true,
-            errorMessage = null
-        )
+        val requestId = beginProfileProcessing(state)
         viewModelScope.launch {
-            val file = runCatching { audioCapture.stopRecording() }.getOrElse {
-                _profileState.value = _profileState.value.copy(
-                    isProcessing = false,
-                    errorMessage = "当前无法完成录音，请重试。"
-                )
-                return@launch
-            }
-            processProfileRecording(file)
-        }
-    }
+            when (val resolution = resolveTranscript(requestId, ProcessingLane.PROFILE)) {
+                is TranscriptResolution.Transcript -> {
+                    processProfileTranscript(
+                        requestId = requestId,
+                        transcript = resolution.text,
+                        origin = resolution.origin
+                    )
+                }
 
-    fun onProfileMicPermissionDenied() {
-        _profileState.value = _profileState.value.copy(
-            errorMessage = "无法录音：未授予麦克风权限"
-        )
+                is TranscriptResolution.Fallback -> {
+                    runProfileFallback(requestId, resolution.delayMillis)
+                }
+
+                null -> Unit
+            }
+        }
     }
 
     fun saveProfileDraft() {
@@ -176,120 +250,321 @@ class OnboardingInteractionViewModel @Inject constructor(
     }
 
     fun cancelActiveRecording() {
-        if (audioCapture.isRecording()) {
-            runCatching { audioCapture.cancelRecording() }
-        }
-        _consultationState.value = _consultationState.value.copy(isRecording = false, isProcessing = false)
-        _profileState.value = _profileState.value.copy(isRecording = false, isProcessing = false)
+        invalidateProcessingRequests()
+        runCatching { speechRecognizer.cancelListening() }
+        _consultationState.value = _consultationState.value.copy(
+            isRecording = false,
+            isProcessing = false,
+            awaitingMicPermission = false,
+            micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+            processingPhase = OnboardingProcessingPhase.NONE
+        )
+        _profileState.value = _profileState.value.copy(
+            isRecording = false,
+            isProcessing = false,
+            awaitingMicPermission = false,
+            micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+            processingPhase = OnboardingProcessingPhase.NONE
+        )
     }
 
-    private suspend fun processConsultationRecording(file: File) {
-        val transcript = transcribe(file) ?: return
-        if (transcript.length < MIN_TRANSCRIPT_LENGTH) {
-            _consultationState.value = _consultationState.value.copy(
-                isProcessing = false,
-                errorMessage = "录音太短，请多说一点"
-            )
+    override fun onCleared() {
+        cancelActiveRecording()
+        super.onCleared()
+    }
+
+    private suspend fun processConsultationTranscript(
+        requestId: Long,
+        transcript: String,
+        origin: OnboardingResultOrigin
+    ) {
+        val normalized = transcript.trim()
+        if (normalized.length < MIN_TRANSCRIPT_LENGTH) {
+            runConsultationFallback(requestId, FALLBACK_DWELL_MS)
             return
         }
+        updateConsultationStateIfCurrent(requestId) {
+            it.copy(processingPhase = OnboardingProcessingPhase.BUILDING_CONSULTATION_REPLY)
+        }
         val round = _consultationState.value.completedRounds + 1
-        when (val result = interactionService.generateConsultationReply(transcript, round)) {
+        when (val result = interactionService.generateConsultationReply(normalized, round)) {
             is OnboardingConsultationServiceResult.Success -> {
-                val nextMessages = _consultationState.value.messages + listOf(
-                    OnboardingInteractionMessage(OnboardingMessageRole.USER, transcript),
-                    OnboardingInteractionMessage(OnboardingMessageRole.AI, result.reply)
-                )
-                _consultationState.value = _consultationState.value.copy(
-                    isProcessing = false,
-                    messages = nextMessages,
-                    completedRounds = round,
-                    errorMessage = null
-                )
+                updateConsultationStateIfCurrent(requestId) { current ->
+                    current.copy(
+                        isProcessing = false,
+                        messages = current.messages + listOf(
+                            OnboardingInteractionMessage(OnboardingMessageRole.USER, normalized),
+                            OnboardingInteractionMessage(OnboardingMessageRole.AI, result.reply)
+                        ),
+                        completedRounds = round,
+                        errorMessage = null,
+                        micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                        processingPhase = OnboardingProcessingPhase.NONE,
+                        lastResultOrigin = origin
+                    )
+                }
             }
 
             is OnboardingConsultationServiceResult.Failure -> {
-                _consultationState.value = _consultationState.value.copy(
-                    isProcessing = false,
-                    errorMessage = result.message
-                )
+                runConsultationFallback(requestId, 0L)
             }
         }
     }
 
-    private suspend fun processProfileRecording(file: File) {
-        val transcript = transcribe(file) ?: return
-        if (transcript.length < MIN_TRANSCRIPT_LENGTH) {
-            _profileState.value = _profileState.value.copy(
-                isProcessing = false,
-                errorMessage = "录音太短，请多说一点"
-            )
+    private suspend fun processProfileTranscript(
+        requestId: Long,
+        transcript: String,
+        origin: OnboardingResultOrigin
+    ) {
+        val normalized = transcript.trim()
+        if (normalized.length < MIN_TRANSCRIPT_LENGTH) {
+            runProfileFallback(requestId, FALLBACK_DWELL_MS)
             return
         }
-        when (val result = interactionService.extractProfile(transcript)) {
+        updateProfileStateIfCurrent(requestId) {
+            it.copy(processingPhase = OnboardingProcessingPhase.BUILDING_PROFILE_RESULT)
+        }
+        when (val result = interactionService.extractProfile(normalized)) {
             is OnboardingProfileExtractionServiceResult.Success -> {
-                _profileState.value = _profileState.value.copy(
-                    isProcessing = false,
-                    transcript = transcript,
-                    acknowledgement = result.acknowledgement,
-                    draft = result.draft,
-                    errorMessage = null
-                )
+                updateProfileStateIfCurrent(requestId) {
+                    it.copy(
+                        isProcessing = false,
+                        transcript = normalized,
+                        acknowledgement = result.acknowledgement,
+                        draft = result.draft,
+                        errorMessage = null,
+                        micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                        processingPhase = OnboardingProcessingPhase.NONE,
+                        draftOrigin = origin
+                    )
+                }
             }
 
             is OnboardingProfileExtractionServiceResult.Failure -> {
-                _profileState.value = _profileState.value.copy(
-                    isProcessing = false,
-                    errorMessage = result.message
-                )
+                runProfileFallback(requestId, 0L)
             }
         }
     }
 
-    private suspend fun transcribe(file: File): String? {
-        return try {
-            when (val result = asrService.transcribe(file)) {
-                is AsrResult.Success -> result.text.trim().also { file.delete() }
-                is AsrResult.Error -> {
-                    file.delete()
-                    val message = when (result.code) {
-                        AsrResult.ErrorCode.NETWORK_ERROR -> "网络连接波动，请重试"
-                        else -> "当前无法完成语音识别，请重试"
-                    }
-                    if (_consultationState.value.isProcessing) {
-                        _consultationState.value = _consultationState.value.copy(
-                            isProcessing = false,
-                            errorMessage = message
+    private suspend fun runConsultationFallback(requestId: Long, delayMillis: Long) {
+        updateConsultationStateIfCurrent(requestId) {
+            it.copy(
+                isProcessing = true,
+                processingPhase = OnboardingProcessingPhase.DETERMINISTIC_FALLBACK,
+                errorMessage = null
+            )
+        }
+        if (delayMillis > 0L) {
+            delay(delayMillis)
+        }
+        if (!isCurrentConsultationRequest(requestId)) return
+        val round = _consultationState.value.completedRounds + 1
+        val transcript = consultationFallbackTranscript(round)
+        val reply = when (val result = interactionService.generateConsultationReply(transcript, round)) {
+            is OnboardingConsultationServiceResult.Success -> result.reply
+            is OnboardingConsultationServiceResult.Failure -> consultationFallbackReply(round)
+        }
+        updateConsultationStateIfCurrent(requestId) { current ->
+            current.copy(
+                isProcessing = false,
+                messages = current.messages + listOf(
+                    OnboardingInteractionMessage(OnboardingMessageRole.USER, transcript),
+                    OnboardingInteractionMessage(OnboardingMessageRole.AI, reply)
+                ),
+                completedRounds = round,
+                errorMessage = null,
+                micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                processingPhase = OnboardingProcessingPhase.NONE,
+                lastResultOrigin = OnboardingResultOrigin.DETERMINISTIC_FALLBACK
+            )
+        }
+    }
+
+    private suspend fun runProfileFallback(requestId: Long, delayMillis: Long) {
+        updateProfileStateIfCurrent(requestId) {
+            it.copy(
+                isProcessing = true,
+                processingPhase = OnboardingProcessingPhase.DETERMINISTIC_FALLBACK,
+                errorMessage = null
+            )
+        }
+        if (delayMillis > 0L) {
+            delay(delayMillis)
+        }
+        if (!isCurrentProfileRequest(requestId)) return
+        val transcript = PROFILE_FALLBACK_TRANSCRIPT
+        updateProfileStateIfCurrent(requestId) {
+            it.copy(
+                isProcessing = false,
+                transcript = transcript,
+                acknowledgement = PROFILE_FALLBACK_ACKNOWLEDGEMENT,
+                draft = PROFILE_FALLBACK_DRAFT,
+                errorMessage = null,
+                micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                processingPhase = OnboardingProcessingPhase.NONE,
+                draftOrigin = OnboardingResultOrigin.DETERMINISTIC_FALLBACK
+            )
+        }
+    }
+
+    private suspend fun resolveTranscript(
+        requestId: Long,
+        lane: ProcessingLane
+    ): TranscriptResolution? {
+        val result = try {
+            withTimeout(DEVICE_RECOGNITION_TIMEOUT_MS) {
+                speechRecognizer.finishListening()
+            }
+        } catch (_: TimeoutCancellationException) {
+            return currentResolutionOrNull(requestId, lane, TranscriptResolution.Fallback(delayMillis = 0L))
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            return currentResolutionOrNull(requestId, lane, TranscriptResolution.Fallback(delayMillis = FALLBACK_DWELL_MS))
+        }
+
+        return when (result) {
+            is DeviceSpeechRecognitionResult.Success -> {
+                val normalized = result.text.trim()
+                if (normalized.length < MIN_TRANSCRIPT_LENGTH) {
+                    currentResolutionOrNull(requestId, lane, TranscriptResolution.Fallback(delayMillis = FALLBACK_DWELL_MS))
+                } else {
+                    currentResolutionOrNull(
+                        requestId = requestId,
+                        lane = lane,
+                        resolution = TranscriptResolution.Transcript(
+                            text = normalized,
+                            origin = OnboardingResultOrigin.DEVICE_SPEECH
                         )
-                    }
-                    if (_profileState.value.isProcessing) {
-                        _profileState.value = _profileState.value.copy(
-                            isProcessing = false,
-                            errorMessage = message
-                        )
-                    }
-                    null
+                    )
                 }
             }
-        } catch (_: Exception) {
-            file.delete()
-            val message = "当前无法完成语音识别，请重试"
-            if (_consultationState.value.isProcessing) {
-                _consultationState.value = _consultationState.value.copy(
-                    isProcessing = false,
-                    errorMessage = message
-                )
+
+            is DeviceSpeechRecognitionResult.Failure -> {
+                if (result.reason == DeviceSpeechFailureReason.CANCELLED) {
+                    null
+                } else {
+                    currentResolutionOrNull(
+                        requestId = requestId,
+                        lane = lane,
+                        resolution = TranscriptResolution.Fallback(delayMillis = FALLBACK_DWELL_MS)
+                    )
+                }
             }
-            if (_profileState.value.isProcessing) {
-                _profileState.value = _profileState.value.copy(
-                    isProcessing = false,
-                    errorMessage = message
-                )
-            }
-            null
         }
+    }
+
+    private fun currentResolutionOrNull(
+        requestId: Long,
+        lane: ProcessingLane,
+        resolution: TranscriptResolution
+    ): TranscriptResolution? {
+        return when (lane) {
+            ProcessingLane.CONSULTATION -> if (isCurrentConsultationRequest(requestId)) resolution else null
+            ProcessingLane.PROFILE -> if (isCurrentProfileRequest(requestId)) resolution else null
+        }
+    }
+
+    private fun beginConsultationProcessing(
+        state: OnboardingConsultationUiState
+    ): Long {
+        consultationRequestId += 1
+        _consultationState.value = state.copy(
+            isRecording = false,
+            isProcessing = true,
+            errorMessage = null,
+            awaitingMicPermission = false,
+            micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+            processingPhase = OnboardingProcessingPhase.RECOGNIZING
+        )
+        return consultationRequestId
+    }
+
+    private fun beginProfileProcessing(
+        state: OnboardingProfileUiState
+    ): Long {
+        profileRequestId += 1
+        _profileState.value = state.copy(
+            isRecording = false,
+            isProcessing = true,
+            errorMessage = null,
+            awaitingMicPermission = false,
+            micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+            processingPhase = OnboardingProcessingPhase.RECOGNIZING
+        )
+        return profileRequestId
+    }
+
+    private fun invalidateProcessingRequests() {
+        consultationRequestId += 1
+        profileRequestId += 1
+    }
+
+    private fun isCurrentConsultationRequest(requestId: Long): Boolean = consultationRequestId == requestId
+
+    private fun isCurrentProfileRequest(requestId: Long): Boolean = profileRequestId == requestId
+
+    private inline fun updateConsultationStateIfCurrent(
+        requestId: Long,
+        transform: (OnboardingConsultationUiState) -> OnboardingConsultationUiState
+    ) {
+        if (!isCurrentConsultationRequest(requestId)) return
+        _consultationState.value = transform(_consultationState.value)
+    }
+
+    private inline fun updateProfileStateIfCurrent(
+        requestId: Long,
+        transform: (OnboardingProfileUiState) -> OnboardingProfileUiState
+    ) {
+        if (!isCurrentProfileRequest(requestId)) return
+        _profileState.value = transform(_profileState.value)
+    }
+
+    private sealed interface TranscriptResolution {
+        data class Transcript(
+            val text: String,
+            val origin: OnboardingResultOrigin
+        ) : TranscriptResolution
+
+        data class Fallback(
+            val delayMillis: Long
+        ) : TranscriptResolution
+    }
+
+    private enum class ProcessingLane {
+        CONSULTATION,
+        PROFILE
     }
 
     private companion object {
         private const val MIN_TRANSCRIPT_LENGTH = 4
+        private const val DEVICE_RECOGNITION_TIMEOUT_MS = 1_200L
+        private const val FALLBACK_DWELL_MS = 1_200L
+
+        private const val PROFILE_FALLBACK_TRANSCRIPT =
+            "我是李经理，在科技行业做销售经理三年了，平时主要用微信和电话跟客户沟通。"
+        private const val PROFILE_FALLBACK_ACKNOWLEDGEMENT =
+            "谢谢您的分享，我先为您整理了一份基础档案。"
+        private val PROFILE_FALLBACK_DRAFT = OnboardingProfileDraft(
+            displayName = "李经理",
+            role = "销售经理",
+            industry = "科技",
+            experienceYears = "3年",
+            communicationPlatform = "微信"
+        )
+
+        private fun consultationFallbackTranscript(round: Int): String {
+            return when (round) {
+                1 -> "我想试试怎么更自然地开始和客户沟通。"
+                else -> "如果客户一直比较冷淡，我接下来该怎么推进？"
+            }
+        }
+
+        private fun consultationFallbackReply(round: Int): String {
+            return when (round) {
+                1 -> "先别急着讲方案，先用一个开放问题把客户最在意的事情聊出来。"
+                else -> "先确认对方当前优先级，再给一个很小的下一步，让对话继续往前走。"
+            }
+        }
     }
 }

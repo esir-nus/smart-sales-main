@@ -60,11 +60,19 @@ Rule:
 
 - the primer is informational first
 - Android permission prompts still happen at point-of-use
+- if the first consultation/profile mic press triggers `RECORD_AUDIO`, granting permission should immediately enter listening for that interrupted session rather than forcing a second press
+- the permission-resumed session may use tap-to-send instead of hold-release because the Android permission dialog breaks the original hold gesture
 
 ### Wave 2: Interactive Handshake
 
 - `VOICE_HANDSHAKE_CONSULTATION` is a real two-turn phone-mic consultation, not a fake static placeholder
 - `VOICE_HANDSHAKE_PROFILE` is a real phone-mic profile capture step with typed extraction and explicit CTA save
+- interrupted or backgrounded onboarding recording must cancel cleanly and return the mic footer to a non-listening state
+- onboarding uses a device speech-recognition fast lane rather than the main batch `AsrService` path
+- onboarding builds consultation replies and profile drafts locally, without using the main business LLM path on the happy path
+- if the fast lane is unavailable or fails, onboarding may invisibly switch to a deterministic fallback lane with a short believable dwell
+- onboarding owns a local processing watchdog so the intro voice lane cannot sit indefinitely in a generic processing state
+- late results from timed-out or reset intro attempts must be ignored instead of mutating the current onboarding state
 - `HARDWARE_WAKE` still teaches the 3-second badge wake ritual
 
 ### Wave 3: Operational Pairing

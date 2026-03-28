@@ -1,8 +1,8 @@
 package com.smartsales.prism.di
 
-import com.smartsales.prism.ui.onboarding.OnboardingAudioCapture
+import com.smartsales.prism.data.audio.DeviceSpeechRecognizer
+import com.smartsales.prism.data.audio.RealDeviceSpeechRecognizer
 import com.smartsales.prism.ui.onboarding.OnboardingInteractionService
-import com.smartsales.prism.ui.onboarding.RealOnboardingAudioCapture
 import com.smartsales.prism.ui.onboarding.RealOnboardingInteractionService
 import dagger.Binds
 import dagger.Module
@@ -16,9 +16,9 @@ abstract class OnboardingInteractionModule {
 
     @Binds
     @Singleton
-    abstract fun bindOnboardingAudioCapture(
-        impl: RealOnboardingAudioCapture
-    ): OnboardingAudioCapture
+    abstract fun bindDeviceSpeechRecognizer(
+        impl: RealDeviceSpeechRecognizer
+    ): DeviceSpeechRecognizer
 
     @Binds
     @Singleton

@@ -1,13 +1,15 @@
 package com.smartsales.prism.ui.onboarding
 
-import com.smartsales.prism.domain.asr.AsrResult
-import com.smartsales.prism.domain.asr.AsrService
+import com.smartsales.prism.data.audio.DeviceSpeechFailureReason
+import com.smartsales.prism.data.audio.DeviceSpeechRecognitionResult
+import com.smartsales.prism.data.audio.DeviceSpeechRecognizer
 import com.smartsales.prism.domain.config.SubscriptionTier
 import com.smartsales.prism.domain.memory.UserProfile
 import com.smartsales.prism.domain.repository.UserProfileRepository
-import java.io.File
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -18,6 +20,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -26,8 +29,7 @@ import org.junit.Test
 class OnboardingInteractionViewModelTest {
 
     private val dispatcher = StandardTestDispatcher()
-    private lateinit var audioCapture: FakeOnboardingAudioCapture
-    private lateinit var asrService: FakeAsrService
+    private lateinit var speechRecognizer: FakeDeviceSpeechRecognizer
     private lateinit var interactionService: FakeOnboardingInteractionService
     private lateinit var repository: FakeUserProfileRepository
     private lateinit var viewModel: OnboardingInteractionViewModel
@@ -35,13 +37,11 @@ class OnboardingInteractionViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(dispatcher)
-        audioCapture = FakeOnboardingAudioCapture()
-        asrService = FakeAsrService()
+        speechRecognizer = FakeDeviceSpeechRecognizer()
         interactionService = FakeOnboardingInteractionService()
         repository = FakeUserProfileRepository()
         viewModel = OnboardingInteractionViewModel(
-            audioCapture = audioCapture,
-            asrService = asrService,
+            speechRecognizer = speechRecognizer,
             interactionService = interactionService,
             userProfileRepository = repository
         )
@@ -54,9 +54,9 @@ class OnboardingInteractionViewModelTest {
 
     @Test
     fun `consultation success appends transcript and ai reply`() = runTest {
-        asrService.nextResult = AsrResult.Success("客户预算批不下来")
+        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success("客户预算批不下来")
         interactionService.consultationResult =
-            OnboardingConsultationServiceResult.Success("可以先从同行成功案例切入。")
+            OnboardingConsultationServiceResult.Success("先别急着压价格，先确认客户卡点。")
 
         assertTrue(viewModel.startConsultationRecording())
         viewModel.finishConsultationRecording()
@@ -66,25 +66,118 @@ class OnboardingInteractionViewModelTest {
         assertEquals(1, state.completedRounds)
         assertEquals(2, state.messages.size)
         assertEquals("客户预算批不下来", state.messages[0].text)
-        assertEquals("可以先从同行成功案例切入。", state.messages[1].text)
+        assertEquals("先别急着压价格，先确认客户卡点。", state.messages[1].text)
+        assertEquals(OnboardingResultOrigin.DEVICE_SPEECH, state.lastResultOrigin)
         assertFalse(state.isProcessing)
     }
 
     @Test
-    fun `short consultation transcript surfaces retryable error`() = runTest {
-        asrService.nextResult = AsrResult.Success("嗯")
+    fun `consultation moves from recognizing to local reply phase before result`() = runTest {
+        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success("客户预算批不下来")
+        interactionService.consultationDelayMillis = 1_000L
+        interactionService.consultationResult =
+            OnboardingConsultationServiceResult.Success("先别急着压价格，先确认客户卡点。")
 
         assertTrue(viewModel.startConsultationRecording())
         viewModel.finishConsultationRecording()
+        dispatcher.scheduler.runCurrent()
+
+        val state = viewModel.consultationState.value
+        assertTrue(state.isProcessing)
+        assertEquals(OnboardingProcessingPhase.BUILDING_CONSULTATION_REPLY, state.processingPhase)
+        assertTrue(state.messages.isEmpty())
+
         advanceUntilIdle()
 
-        assertEquals("录音太短，请多说一点", viewModel.consultationState.value.errorMessage)
-        assertEquals(0, viewModel.consultationState.value.completedRounds)
+        assertFalse(viewModel.consultationState.value.isProcessing)
+        assertEquals(2, viewModel.consultationState.value.messages.size)
+    }
+
+    @Test
+    fun `consultation recognizer timeout falls back without extra dwell`() = runTest {
+        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success("客户预算批不下来")
+        speechRecognizer.finishDelayMillis = 1_500L
+
+        assertTrue(viewModel.startConsultationRecording())
+        viewModel.finishConsultationRecording()
+
+        dispatcher.scheduler.advanceTimeBy(1_199L)
+        dispatcher.scheduler.runCurrent()
+        assertTrue(viewModel.consultationState.value.isProcessing)
+        assertEquals(OnboardingProcessingPhase.RECOGNIZING, viewModel.consultationState.value.processingPhase)
+
+        dispatcher.scheduler.advanceTimeBy(1L)
+        dispatcher.scheduler.runCurrent()
+
+        val state = viewModel.consultationState.value
+        assertFalse(state.isProcessing)
+        assertEquals(OnboardingResultOrigin.DETERMINISTIC_FALLBACK, state.lastResultOrigin)
+        assertEquals("我想试试怎么更自然地开始和客户沟通。", state.messages.first().text)
+    }
+
+    @Test
+    fun `consultation unavailable recognizer uses deterministic dwell fallback`() = runTest {
+        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Failure(
+            reason = DeviceSpeechFailureReason.UNAVAILABLE,
+            message = "当前设备不支持语音识别"
+        )
+
+        assertTrue(viewModel.startConsultationRecording())
+        viewModel.finishConsultationRecording()
+        dispatcher.scheduler.runCurrent()
+
+        assertTrue(viewModel.consultationState.value.isProcessing)
+        assertEquals(
+            OnboardingProcessingPhase.DETERMINISTIC_FALLBACK,
+            viewModel.consultationState.value.processingPhase
+        )
+
+        dispatcher.scheduler.advanceTimeBy(1_199L)
+        dispatcher.scheduler.runCurrent()
+        assertTrue(viewModel.consultationState.value.messages.isEmpty())
+
+        dispatcher.scheduler.advanceTimeBy(1L)
+        dispatcher.scheduler.runCurrent()
+
+        val state = viewModel.consultationState.value
+        assertFalse(state.isProcessing)
+        assertEquals(OnboardingResultOrigin.DETERMINISTIC_FALLBACK, state.lastResultOrigin)
+        assertEquals(2, state.messages.size)
+    }
+
+    @Test
+    fun `consultation permission grant auto starts tap to send recording`() {
+        viewModel.onConsultationMicPermissionRequested()
+        assertTrue(viewModel.consultationState.value.awaitingMicPermission)
+
+        viewModel.onConsultationMicPermissionResult(granted = true)
+
+        val state = viewModel.consultationState.value
+        assertTrue(state.isRecording)
+        assertFalse(state.awaitingMicPermission)
+        assertEquals(OnboardingMicInteractionMode.TAP_TO_SEND, state.micInteractionMode)
+        assertTrue(speechRecognizer.isListening())
+    }
+
+    @Test
+    fun `profile permission denial clears pending state and shows error`() {
+        viewModel.onProfileMicPermissionRequested()
+        assertTrue(viewModel.profileState.value.awaitingMicPermission)
+
+        viewModel.onProfileMicPermissionResult(granted = false)
+
+        val state = viewModel.profileState.value
+        assertFalse(state.awaitingMicPermission)
+        assertFalse(state.isRecording)
+        assertEquals(OnboardingMicInteractionMode.HOLD_TO_SEND, state.micInteractionMode)
+        assertEquals("无法录音：未授予麦克风权限", state.errorMessage)
     }
 
     @Test
     fun `profile extraction success exposes draft and acknowledgement`() = runTest {
-        asrService.nextResult = AsrResult.Success("我是王经理，做 SaaS 销售总监 8 年了，平时用微信。")
+        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success(
+            "我是王经理，做 SaaS 销售总监 8 年了，平时用微信。"
+        )
         interactionService.profileResult = OnboardingProfileExtractionServiceResult.Success(
             acknowledgement = "谢谢您的分享，我已经为您建立好了专属档案。",
             draft = OnboardingProfileDraft(
@@ -104,14 +197,18 @@ class OnboardingInteractionViewModelTest {
         assertEquals("我是王经理，做 SaaS 销售总监 8 年了，平时用微信。", state.transcript)
         assertEquals("谢谢您的分享，我已经为您建立好了专属档案。", state.acknowledgement)
         assertEquals("王经理", state.draft?.displayName)
+        assertEquals(OnboardingResultOrigin.DEVICE_SPEECH, state.draftOrigin)
         assertTrue(state.hasExtractionResult)
     }
 
     @Test
-    fun `save profile derives experience level from years`() = runTest {
-        asrService.nextResult = AsrResult.Success("我是王经理，做 SaaS 销售总监 8 年了，平时用微信。")
+    fun `profile moves from recognizing to local extraction phase before result`() = runTest {
+        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success(
+            "我是王经理，做 SaaS 销售总监 8 年了，平时用微信。"
+        )
+        interactionService.profileDelayMillis = 1_000L
         interactionService.profileResult = OnboardingProfileExtractionServiceResult.Success(
-            acknowledgement = "已完成识别。",
+            acknowledgement = "谢谢您的分享，我已经为您建立好了专属档案。",
             draft = OnboardingProfileDraft(
                 displayName = "王经理",
                 role = "销售总监",
@@ -123,19 +220,86 @@ class OnboardingInteractionViewModelTest {
 
         assertTrue(viewModel.startProfileRecording())
         viewModel.finishProfileRecording()
+        dispatcher.scheduler.runCurrent()
+
+        val state = viewModel.profileState.value
+        assertTrue(state.isProcessing)
+        assertEquals(OnboardingProcessingPhase.BUILDING_PROFILE_RESULT, state.processingPhase)
+        assertFalse(state.hasExtractionResult)
+
         advanceUntilIdle()
+
+        assertFalse(viewModel.profileState.value.isProcessing)
+        assertTrue(viewModel.profileState.value.hasExtractionResult)
+    }
+
+    @Test
+    fun `profile fallback save writes deterministic onboarding safe values`() = runTest {
+        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Failure(
+            reason = DeviceSpeechFailureReason.NO_MATCH,
+            message = "没有识别到清晰语音"
+        )
+        val realService = RealOnboardingInteractionService()
+        viewModel = OnboardingInteractionViewModel(
+            speechRecognizer = speechRecognizer,
+            interactionService = realService,
+            userProfileRepository = repository
+        )
+
+        assertTrue(viewModel.startProfileRecording())
+        viewModel.finishProfileRecording()
+        dispatcher.scheduler.runCurrent()
+
+        assertEquals(
+            OnboardingProcessingPhase.DETERMINISTIC_FALLBACK,
+            viewModel.profileState.value.processingPhase
+        )
+
+        dispatcher.scheduler.advanceTimeBy(1_200L)
+        dispatcher.scheduler.runCurrent()
+
+        val extracted = viewModel.profileState.value
+        assertEquals(OnboardingResultOrigin.DETERMINISTIC_FALLBACK, extracted.draftOrigin)
+        assertEquals("李经理", extracted.draft?.displayName)
+        assertEquals("科技", extracted.draft?.industry)
+
         viewModel.saveProfileDraft()
         advanceUntilIdle()
 
         val profile = repository.profile.value
-        assertEquals("王经理", profile.displayName)
-        assertEquals("expert", profile.experienceLevel)
-        assertEquals("8年", profile.experienceYears)
+        assertEquals("李经理", profile.displayName)
+        assertEquals("销售经理", profile.role)
+        assertEquals("科技", profile.industry)
+        assertEquals("3年", profile.experienceYears)
+        assertEquals("微信", profile.communicationPlatform)
+    }
+
+    @Test
+    fun `reset invalidates stale consultation result`() = runTest {
+        val delayedReply = CompletableDeferred<OnboardingConsultationServiceResult>()
+        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success("客户预算批不下来")
+        interactionService.consultationGate = delayedReply
+
+        assertTrue(viewModel.startConsultationRecording())
+        viewModel.finishConsultationRecording()
+        dispatcher.scheduler.runCurrent()
+
+        assertTrue(viewModel.consultationState.value.isProcessing)
+
+        viewModel.resetInteractionState()
+        delayedReply.complete(OnboardingConsultationServiceResult.Success("这条旧结果不该落地。"))
+        dispatcher.scheduler.runCurrent()
+
+        val state = viewModel.consultationState.value
+        assertFalse(state.isProcessing)
+        assertTrue(state.messages.isEmpty())
+        assertEquals(0, state.completedRounds)
+        assertNull(state.errorMessage)
     }
 
     @Test
     fun `save profile preserves current experience level when years are not parseable`() = runTest {
-        asrService.nextResult = AsrResult.Success("我做销售很多年了，平时用电话。")
+        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success("我做销售很多年了，平时用电话。")
         interactionService.profileResult = OnboardingProfileExtractionServiceResult.Success(
             acknowledgement = "已完成识别。",
             draft = OnboardingProfileDraft(
@@ -157,20 +321,22 @@ class OnboardingInteractionViewModelTest {
     }
 
     @Test
-    fun `skip after profile failure leaves repository unchanged`() = runTest {
-        asrService.nextResult = AsrResult.Success("我是王经理")
-        interactionService.profileResult =
-            OnboardingProfileExtractionServiceResult.Failure("资料提取结果暂时不可用，请重试。")
+    fun `cancel active recording clears pending permission and interaction mode`() {
+        viewModel.onConsultationMicPermissionRequested()
+        viewModel.onConsultationMicPermissionResult(granted = true)
+        assertTrue(viewModel.consultationState.value.isRecording)
 
-        assertTrue(viewModel.startProfileRecording())
-        viewModel.finishProfileRecording()
-        advanceUntilIdle()
-        viewModel.skipProfileSave()
-        advanceUntilIdle()
+        viewModel.cancelActiveRecording()
 
-        val profile = repository.profile.value
-        assertEquals("Initial", profile.displayName)
-        assertEquals("intermediate", profile.experienceLevel)
+        val consultation = viewModel.consultationState.value
+        val profile = viewModel.profileState.value
+        assertFalse(consultation.isRecording)
+        assertFalse(consultation.awaitingMicPermission)
+        assertEquals(OnboardingMicInteractionMode.HOLD_TO_SEND, consultation.micInteractionMode)
+        assertEquals(OnboardingProcessingPhase.NONE, consultation.processingPhase)
+        assertFalse(profile.awaitingMicPermission)
+        assertEquals(OnboardingMicInteractionMode.HOLD_TO_SEND, profile.micInteractionMode)
+        assertFalse(speechRecognizer.isListening())
     }
 
     @Test
@@ -181,39 +347,46 @@ class OnboardingInteractionViewModelTest {
         assertEquals("expert", deriveExperienceLevel("expert", "很多年"))
     }
 
-    private class FakeOnboardingAudioCapture : OnboardingAudioCapture {
-        private var recording = false
-        private var fileCounter = 0
+    private class FakeDeviceSpeechRecognizer : DeviceSpeechRecognizer {
+        var startFailure: Exception? = null
+        var nextResult: DeviceSpeechRecognitionResult = DeviceSpeechRecognitionResult.Success("")
+        var finishDelayMillis: Long = 0L
+        var finishGate: CompletableDeferred<DeviceSpeechRecognitionResult>? = null
+        private var listening = false
 
-        override fun startRecording() {
-            recording = true
+        override fun startListening() {
+            startFailure?.let { throw it }
+            listening = true
         }
 
-        override fun stopRecording(): File {
-            recording = false
-            val file = kotlin.io.path.createTempFile("onboarding-test-${fileCounter++}", ".wav").toFile()
-            file.writeText("wav")
-            return file
+        override suspend fun finishListening(): DeviceSpeechRecognitionResult {
+            listening = false
+            finishGate?.let { return it.await() }
+            if (finishDelayMillis > 0L) {
+                delay(finishDelayMillis)
+            }
+            return nextResult
         }
 
-        override fun cancelRecording() {
-            recording = false
+        override fun cancelListening() {
+            listening = false
+            finishGate?.takeIf { !it.isCompleted }?.complete(
+                DeviceSpeechRecognitionResult.Failure(
+                    reason = DeviceSpeechFailureReason.CANCELLED,
+                    message = "语音识别已取消"
+                )
+            )
         }
 
-        override fun isRecording(): Boolean = recording
-    }
-
-    private class FakeAsrService : AsrService {
-        var nextResult: AsrResult = AsrResult.Success("")
-
-        override suspend fun transcribe(file: File): AsrResult = nextResult
-
-        override suspend fun isAvailable(): Boolean = true
+        override fun isListening(): Boolean = listening
     }
 
     private class FakeOnboardingInteractionService : OnboardingInteractionService {
         var consultationResult: OnboardingConsultationServiceResult =
             OnboardingConsultationServiceResult.Success("继续说说你当前遇到的卡点。")
+        var consultationDelayMillis: Long = 0L
+        var consultationGate: CompletableDeferred<OnboardingConsultationServiceResult>? = null
+
         var profileResult: OnboardingProfileExtractionServiceResult =
             OnboardingProfileExtractionServiceResult.Success(
                 acknowledgement = "已完成识别。",
@@ -225,15 +398,27 @@ class OnboardingInteractionViewModelTest {
                     communicationPlatform = "微信"
                 )
             )
+        var profileDelayMillis: Long = 0L
 
         override suspend fun generateConsultationReply(
             transcript: String,
             round: Int
-        ): OnboardingConsultationServiceResult = consultationResult
+        ): OnboardingConsultationServiceResult {
+            consultationGate?.let { return it.await() }
+            if (consultationDelayMillis > 0L) {
+                delay(consultationDelayMillis)
+            }
+            return consultationResult
+        }
 
         override suspend fun extractProfile(
             transcript: String
-        ): OnboardingProfileExtractionServiceResult = profileResult
+        ): OnboardingProfileExtractionServiceResult {
+            if (profileDelayMillis > 0L) {
+                delay(profileDelayMillis)
+            }
+            return profileResult
+        }
     }
 
     private class FakeUserProfileRepository : UserProfileRepository {

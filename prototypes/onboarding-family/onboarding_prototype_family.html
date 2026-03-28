@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SmartSales Onboarding Family</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Typography Tone */
+            --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            
+            /* Color System - Dark Premium */
+            --bg-base: #05060A; /* Extremely dark, almost black blue */
+            --text-primary: #FFFFFF;
+            --text-secondary: rgba(255, 255, 255, 0.6);
+            --text-muted: rgba(255, 255, 255, 0.4);
+            
+            /* Aurora Accents */
+            --aurora-1: rgba(56, 189, 248, 0.15); /* Light Blue */
+            --aurora-2: rgba(129, 140, 248, 0.15); /* Indigo */
+            
+            /* Slab / Card Language - Frosted Glass */
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            --glass-blur: blur(20px);
+            
+            /* Button Style */
+            --btn-primary-bg: #FFFFFF;
+            --btn-primary-text: #05060A;
+            --btn-radius: 100px; /* Pill shape */
+            --card-radius: 24px;
+            
+            /* Spacing Rhythm */
+            --space-xs: 8px;
+            --space-sm: 16px;
+            --space-md: 24px;
+            --space-lg: 32px;
+            --space-xl: 48px;
+            --space-2xl: 64px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: #111;
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Phone Frame */
+        .device-frame {
+            width: 390px;
+            height: 844px;
+            background-color: var(--bg-base);
+            border-radius: 40px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 0 10px #222, 0 30px 60px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Ambient Background */
+        .ambient-bg {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .aurora-blob {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            border-radius: 50%;
+            filter: blur(80px);
+            animation: pulse 10s ease-in-out infinite alternate;
+        }
+
+        .aurora-1 {
+            top: -50px;
+            left: -50px;
+            background: var(--aurora-1);
+        }
+
+        .aurora-2 {
+            bottom: 100px;
+            right: -50px;
+            background: var(--aurora-2);
+            animation-delay: -5s;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1) translate(0, 0); opacity: 0.8; }
+            100% { transform: scale(1.2) translate(10px, 10px); opacity: 1; }
+        }
+
+        /* Container & Navigation */
+        .screen-container {
+            position: relative;
+            z-index: 1;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            height: 60px;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 0 var(--space-md);
+        }
+
+        .btn-skip {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            padding: var(--space-xs);
+            transition: color 0.2s;
+        }
+
+        .btn-skip:hover {
+            color: var(--text-secondary);
+        }
+
+        /* Screens */
+        .screen {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: var(--space-md);
+            opacity: 0;
+            pointer-events: none;
+            position: absolute;
+            top: 60px; /* Below header */
+            left: 0; right: 0; bottom: 0;
+            transition: opacity 0.4s ease-in-out, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            transform: translateY(10px);
+        }
+
+        .screen.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+
+        /* Typography */
+        h1 {
+            font-size: 28px;
+            font-weight: 500;
+            letter-spacing: -0.5px;
+            margin-bottom: var(--space-xs);
+        }
+
+        p.subtitle {
+            font-size: 15px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            font-weight: 300;
+        }
+
+        /* Cards/Slabs */
+        .glass-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--card-radius);
+            padding: var(--space-md);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            box-shadow: var(--glass-shadow);
+        }
+
+        /* Primary Button */
+        .btn-primary {
+            background: var(--btn-primary-bg);
+            color: var(--btn-primary-text);
+            border: none;
+            border-radius: var(--btn-radius);
+            padding: 16px var(--space-xl);
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s, background 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+            background: #F0F0F0;
+        }
+        
+        /* Secondary Button */
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #FFF;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: var(--btn-radius);
+            padding: 10px 18px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            align-self: flex-start;
+            transition: background 0.2s;
+        }
+        
+        .btn-secondary:active, .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Specific Screens */
+        /* Welcome */
+        .welcome-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            margin-bottom: var(--space-xl);
+        }
+
+        .logo-placeholder {
+            width: 80px;
+            height: 80px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: var(--space-lg);
+            backdrop-filter: var(--glass-blur);
+            color: #FFF;
+        }
+        
+        .welcome-content h1 {
+            font-size: 32px;
+            font-weight: 600;
+        }
+
+        /* Permissions */
+        .permission-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-sm);
+            margin-top: var(--space-xl);
+            flex: 1;
+        }
+
+        .perm-card {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .perm-header {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+        }
+
+        .perm-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.06);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-primary);
+            flex-shrink: 0;
+        }
+        
+        .perm-content h3 {
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        
+        .perm-content p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 300;
+            line-height: 1.4;
+        }
+
+        .actions-bottom {
+            margin-top: auto;
+            margin-bottom: var(--space-lg);
+        }
+
+        /* Wave Controls for Review */
+        .controls {
+            display: flex;
+            gap: 10px;
+            background: #222;
+            padding: 10px 20px;
+            border-radius: 20px;
+        }
+        .controls button {
+            background: #333;
+            color: #FFF;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .controls button.active-ctrl {
+            background: #FFF;
+            color: #000;
+        }
+
+        /* ----- Wave 2 CSS ----- */
+
+        /* Waveform */
+        .waveform {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            height: 100px;
+            margin: var(--space-xl) 0;
+        }
+        .bar {
+            width: 6px;
+            background: var(--text-secondary);
+            border-radius: 3px;
+            animation: bounce 1.2s ease-in-out infinite alternate;
+        }
+        .bar:nth-child(1) { height: 20px; animation-delay: 0.0s; }
+        .bar:nth-child(2) { height: 40px; animation-delay: 0.1s; }
+        .bar:nth-child(3) { height: 60px; animation-delay: 0.2s; }
+        .bar:nth-child(4) { height: 80px; animation-delay: 0.3s; background: #38bdf8; }
+        .bar:nth-child(5) { height: 60px; animation-delay: 0.4s; background: #818cf8; }
+        .bar:nth-child(6) { height: 40px; animation-delay: 0.5s; }
+        .bar:nth-child(7) { height: 20px; animation-delay: 0.6s; }
+
+        @keyframes bounce {
+            0% { transform: scaleY(0.3); opacity: 0.3; }
+            100% { transform: scaleY(1); opacity: 1; }
+        }
+
+        .ai-response {
+            background: rgba(255, 255, 255, 0.03);
+            padding: var(--space-md);
+            border-radius: var(--card-radius);
+            margin-bottom: var(--space-xl);
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.6s, transform 0.6s;
+            border: 1px solid var(--glass-border);
+        }
+        .ai-response.detected {
+            opacity: 1;
+            transform: translateY(0);
+            box-shadow: 0 0 30px rgba(56, 189, 248, 0.1);
+            border-color: rgba(56, 189, 248, 0.2);
+        }
+
+        /* Abstract Badge */
+        .abstract-badge {
+            width: 140px;
+            height: 140px;
+            background: linear-gradient(145deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01));
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 36px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: var(--space-2xl) auto;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5), inset 0 2px 10px rgba(255,255,255,0.05);
+            position: relative;
+        }
+        .badge-button {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #000;
+            border: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: inset 0 8px 16px rgba(0,0,0,0.8);
+        }
+        .badge-light {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #38bdf8;
+            box-shadow: 0 0 20px 4px rgba(56, 189, 248, 0.8);
+            animation: blink 2s ease-in-out infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 0.1; box-shadow: 0 0 5px 1px rgba(56, 189, 248, 0.3); }
+            50% { opacity: 1; box-shadow: 0 0 20px 4px rgba(56, 189, 248, 0.8); }
+        }
+
+        /* ----- Wave 3 CSS ----- */
+        /* Radar / Scan */
+        .radar {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: var(--space-2xl) auto;
+            position: relative;
+        }
+        .radar-pulse {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: rgba(56, 189, 248, 0.1);
+            animation: radar-ping 2s cubic-bezier(0, 0.1, 0.2, 1) infinite;
+        }
+        .radar-core {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #38bdf8;
+            box-shadow: 0 0 15px 4px rgba(56, 189, 248, 0.8);
+        }
+        @keyframes radar-ping {
+            0% { transform: scale(0.8); opacity: 1; }
+            100% { transform: scale(2.5); opacity: 0; }
+        }
+
+        /* Device Card */
+        .device-card {
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            background: rgba(56, 189, 248, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--space-md);
+            border-radius: 20px;
+            margin-top: var(--space-xl);
+            transition: transform 0.2s, background 0.2s;
+            cursor: pointer;
+        }
+        .device-card:active {
+            transform: scale(0.98);
+            background: rgba(56, 189, 248, 0.1);
+        }
+        .device-info h4 {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        .device-info p {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        /* Glass Input */
+        .glass-input-group {
+            margin-top: var(--space-xl);
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .glass-input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 16px;
+            color: var(--text-primary);
+            font-size: 16px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .glass-input::placeholder {
+            color: var(--text-muted);
+        }
+        .glass-input:focus {
+            border-color: #38bdf8;
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        /* Provisioning Overlay / Progress */
+        .provisioning-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+        }
+        .progress-bar-bg {
+            width: 70%;
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 32px;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            width: 40%; 
+            background: #38bdf8;
+            border-radius: 2px;
+            animation: load 2s infinite ease-in-out alternate;
+            transform-origin: 0% 50%;
+        }
+        @keyframes load {
+            0% { transform: scaleX(0); opacity: 1; }
+            50% { transform: scaleX(1); opacity: 1; }
+            100% { transform: scaleX(2.5); opacity: 0.5; }
+        }
+
+        /* ----- Wave 4 CSS ----- */
+        .status-icon-l {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto var(--space-xl) auto;
+        }
+        .status-error {
+            background: rgba(245, 158, 11, 0.08);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+        .status-success {
+            background: rgba(52, 211, 153, 0.08);
+            color: #34d399;
+            border: 1px solid rgba(52, 211, 153, 0.2);
+        }
+        
+        /* Handoff Variant Annotations */
+        .handoff-variant {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px dashed rgba(255, 255, 255, 0.15);
+            border-radius: var(--card-radius);
+            padding: var(--space-md);
+            margin-top: var(--space-md);
+            text-align: left;
+        }
+        .handoff-variant.primary {
+            border-color: rgba(56, 189, 248, 0.3);
+            background: rgba(56, 189, 248, 0.05);
+        }
+        .handoff-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+
+        /* ----- Wave 5 CSS ----- */
+        .host-toggle {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            background: rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 8px 16px;
+            border-radius: 20px;
+            display: flex;
+            gap: 16px;
+            z-index: 1000;
+            color: var(--text-secondary);
+            font-size: 13px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .host-toggle label {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: color 0.2s;
+        }
+        .host-toggle input[type="radio"] {
+            accent-color: #38bdf8;
+        }
+        .controls button.hidden-host {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="host-toggle">
+        <label>
+            <input type="radio" name="host" value="full" checked onchange="setHost('full')"> <span>Full Onboarding</span>
+        </label>
+        <label>
+            <input type="radio" name="host" value="sim" onchange="setHost('sim')"> <span>SIM Pairing</span>
+        </label>
+    </div>
+
+    <div class="controls">
+        <button class="active-ctrl" onclick="navTo('welcome', this)">1</button>
+        <button onclick="navTo('permissions', this)">2</button>
+        <button onclick="navTo('handshake', this)">3</button>
+        <button onclick="navTo('wake', this)">4</button>
+        <button onclick="navTo('scan', this)">5</button>
+        <button onclick="navTo('found', this)">6</button>
+        <button onclick="navTo('wifi', this)">7</button>
+        <button onclick="navTo('timeout', this)">8. Timeout</button>
+        <button onclick="navTo('complete', this)">9. Complete</button>
+    </div>
+
+    <div class="device-frame">
+        <div class="ambient-bg">
+            <div class="aurora-blob aurora-1"></div>
+            <div class="aurora-blob aurora-2"></div>
+        </div>
+
+        <div class="screen-container">
+            <div class="header">
+                <button class="btn-skip">跳过</button>
+            </div>
+
+            <!-- Wave 1: Welcome -->
+            <div id="welcome" class="screen active">
+                <div class="welcome-content">
+                    <div class="logo-placeholder">SS</div>
+                    <h1>SmartSales</h1>
+                    <p class="subtitle">您的 AI 销售教练</p>
+                </div>
+                <div class="actions-bottom">
+                    <button class="btn-primary" onclick="navTo('permissions', document.querySelectorAll('.controls button')[1])">开启旅程</button>
+                </div>
+            </div>
+
+            <!-- Wave 1: Permissions Primer -->
+            <div id="permissions" class="screen">
+                <div style="margin-top: var(--space-sm);">
+                    <h1>需要一些权限</h1>
+                    <p class="subtitle">为了提供完整体验，我们需要以下基础访问权限。</p>
+                </div>
+                
+                <div class="permission-list">
+                    <div class="glass-card perm-card">
+                        <div class="perm-header">
+                            <div class="perm-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2A3 3 0 0 0 9 5v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
+                            </div>
+                            <div class="perm-content">
+                                <h3>麦克风权限</h3>
+                                <p>为了分析您的销售对话和提供实时指导</p>
+                            </div>
+                        </div>
+                        <button class="btn-secondary">允许访问</button>
+                    </div>
+
+                    <div class="glass-card perm-card">
+                        <div class="perm-header">
+                            <div class="perm-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 7 10 10-5 5V2l5 5L7 17"></path></svg>
+                            </div>
+                            <div class="perm-content">
+                                <h3>蓝牙权限</h3>
+                                <p>为了发现和连接您的 SmartBadge 硬件</p>
+                            </div>
+                        </div>
+                        <button class="btn-secondary">允许访问</button>
+                    </div>
+
+                    <div class="glass-card perm-card">
+                        <div class="perm-header">
+                            <div class="perm-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                            </div>
+                            <div class="perm-content">
+                                <h3>闹钟和提醒权限</h3>
+                                <p>为了确保您的日程和任务提醒能够准时送达</p>
+                            </div>
+                        </div>
+                        <button class="btn-secondary">允许访问</button>
+                    </div>
+                </div>
+
+                <div class="actions-bottom">
+                    <button class="btn-primary" style="background: rgba(255,255,255,0.05); color: #FFF; border: 1px solid rgba(255,255,255,0.1);" onclick="navTo('handshake', document.querySelectorAll('.controls button')[2])">继续</button>
+                </div>
+            </div>
+
+            <!-- Wave 2: Voice Handshake -->
+            <div id="handshake" class="screen">
+                <div style="margin-top: var(--space-md); text-align: center;">
+                    <h1>让我们先认识一下</h1>
+                    <p class="subtitle" style="margin-top: 8px;">试着说："你好，帮我搞定这个客户"</p>
+                </div>
+                
+                <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                    <div class="waveform">
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                        <div class="bar"></div>
+                    </div>
+
+                    <div id="ai-response" class="ai-response" style="width: 100%; text-align: center;">
+                        <p style="color: #38bdf8; font-weight: 500; margin-bottom: 8px; font-size: 14px; letter-spacing: 0.5px;">AI 助手</p>
+                        <p style="font-size: 16px; color: var(--text-primary); font-weight: 300;">"好的，先告诉我客户的情况..."</p>
+                    </div>
+                </div>
+
+                <div class="actions-bottom">
+                    <button class="btn-primary" onclick="navTo('wake', document.querySelectorAll('.controls button')[3])">继续</button>
+                </div>
+            </div>
+
+            <!-- Wave 2: Hardware Wake -->
+            <div id="wake" class="screen">
+                <div style="margin-top: var(--space-md); text-align: center;">
+                    <h1>启动您的 SmartBadge</h1>
+                    <p class="subtitle" style="margin-top: 8px;">长按中间按钮 3 秒，直到蓝灯闪烁</p>
+                </div>
+
+                <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
+                    <div class="abstract-badge">
+                        <div class="badge-button">
+                            <div class="badge-light"></div>
+                        </div>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 16px;">
+                        <p style="color: var(--text-muted); font-size: 14px; letter-spacing: 0.5px; opacity: 0.8;">正在等候设备响应...</p>
+                    </div>
+                </div>
+
+                <div class="actions-bottom">
+                    <button class="btn-primary" onclick="navTo('scan', document.querySelectorAll('.controls button')[4])">灯已经在闪了</button>
+                </div>
+            </div>
+
+            <!-- Wave 3: Scan Searching -->
+            <div id="scan" class="screen">
+                <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                    <div class="radar">
+                        <div class="radar-pulse"></div>
+                        <div class="radar-core"></div>
+                    </div>
+                    <h1 style="font-size: 20px; font-weight: 500; margin-top: 24px;">正在搜索设备...</h1>
+                </div>
+
+                <div class="actions-bottom">
+                    <button class="btn-secondary" style="width: 100%; text-align: center; justify-content: center; background: transparent; border: 1px solid transparent; color: var(--text-muted);" onclick="navTo('wake', document.querySelectorAll('.controls button')[3])">取消</button>
+                </div>
+            </div>
+
+            <!-- Wave 3: Device Found -->
+            <div id="found" class="screen">
+                <div style="margin-top: var(--space-md);">
+                    <h1>发现设备</h1>
+                    <p class="subtitle" style="margin-top: 8px;">请确认并连接您的 SmartBadge</p>
+                </div>
+                
+                <div class="device-card" onclick="navTo('wifi', document.querySelectorAll('.controls button')[6])">
+                    <div style="display: flex; align-items: center; gap: 16px;">
+                        <div style="width: 40px; height: 40px; border-radius: 50%; background: rgba(56, 189, 248, 0.1); display: flex; justify-content: center; align-items: center; color: #38bdf8;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 7 10 10-5 5V2l5 5L7 17"></path></svg>
+                        </div>
+                        <div class="device-info">
+                            <h4>SmartBadge (Frank's)</h4>
+                            <p>ID: FF:23:44:A1 <span style="margin-left:8px; color:rgba(56,189,248,0.8);">-42dBm</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="actions-bottom">
+                    <button class="btn-primary" onclick="navTo('wifi', document.querySelectorAll('.controls button')[6])">连接</button>
+                </div>
+            </div>
+
+            <!-- Wave 3: Wi-Fi Setup -->
+            <div id="wifi" class="screen">
+                <div id="wifi-form" style="display: flex; flex-direction: column; height: 100%;">
+                    <div style="margin-top: var(--space-md);">
+                        <h1>配置网络</h1>
+                        <p class="subtitle" style="margin-top: 8px;">让徽章独立工作，实时同步音频</p>
+                    </div>
+
+                    <div class="glass-input-group">
+                        <input type="text" class="glass-input" placeholder="WiFi 名称 (SSID)" value="Office_5G">
+                        <input type="password" class="glass-input" placeholder="密码">
+                    </div>
+
+                    <div style="margin-top: 24px;">
+                        <p style="font-size: 13px; color: var(--text-muted); display: flex; gap: 8px;">
+                            <span style="color: #f59e0b;">⚠️</span> 跳过后，徽章录音需通过蓝牙手动同步
+                        </p>
+                    </div>
+
+                    <div class="actions-bottom" style="display: flex; flex-direction: column; gap: 16px;">
+                        <button class="btn-primary" onclick="document.getElementById('wifi-form').style.display='none'; document.getElementById('wifi-provision').style.display='flex';">连接网络</button>
+                        <button class="btn-secondary" style="width: 100%; text-align: center; justify-content: center; background: transparent; border: 1px solid transparent; color: var(--text-muted);" onclick="alert('Proceed to complete')">跳过网络配置</button>
+                    </div>
+                </div>
+
+                <div id="wifi-provision" class="provisioning-container">
+                    <div style="width: 56px; height: 56px; border-radius: 50%; background: rgba(56, 189, 248, 0.1); display: flex; justify-content: center; align-items: center; color: #38bdf8; margin-bottom: 24px;">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.55a11 11 0 0 1 14.08 0"></path><path d="M1.42 9a16 16 0 0 1 21.16 0"></path><path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path><line x1="12" y1="20" x2="12.01" y2="20"></line></svg>
+                    </div>
+                    <h2 style="font-size: 20px; font-weight: 500; margin-bottom: 12px; color: var(--text-primary);">正在配网与连接...</h2>
+                    <p style="font-size: 14px; color: var(--text-secondary); text-align: center;">正在向设备下发凭证并验证连接</p>
+                    
+                    <div class="progress-bar-bg">
+                        <div class="progress-bar-fill"></div>
+                    </div>
+                    
+                    <div style="margin-top: var(--space-2xl);">
+                        <button class="btn-secondary" style="background: transparent; color: var(--text-muted); border: none;" onclick="document.getElementById('wifi-form').style.display='flex'; document.getElementById('wifi-provision').style.display='none';">取消</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wave 4: Timeout -->
+            <div id="timeout" class="screen">
+                <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
+                    <div class="status-icon-l status-error">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                    </div>
+                    <h1>未找到设备</h1>
+                    <p class="subtitle" style="margin-top: 8px; max-width: 250px;">请确保 SmartBadge 已开启且离手机足够近。</p>
+                </div>
+
+                <div class="actions-bottom" style="display: flex; flex-direction: column; gap: 16px;">
+                    <button class="btn-primary" onclick="navTo('scan', document.querySelectorAll('.controls button')[4])">重新扫描</button>
+                    <button class="btn-secondary" style="width: 100%; text-align: center; justify-content: center; background: transparent; border: 1px solid transparent; color: var(--text-muted);" onclick="alert('Proceed back to shell')">稍后设置</button>
+                </div>
+            </div>
+
+            <!-- Wave 4: Complete -->
+            <div id="complete" class="screen">
+                <div style="margin-top: var(--space-2xl); text-align: center;">
+                    <div class="status-icon-l status-success">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                    </div>
+                    <h1>一切就绪！</h1>
+                    <p class="subtitle" style="margin-top: 8px;">设备配对与连接已完成</p>
+                </div>
+
+                <div style="flex: 1; margin-top: var(--space-xl); display: flex; flex-direction: column; justify-content: flex-end; padding-bottom: var(--space-lg);">
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px; text-align: center;">[ Prototype Handoff Variants ]</p>
+                    
+                    <div class="handoff-variant primary">
+                        <div class="handoff-label">Full Onboarding Host</div>
+                        <button class="btn-primary" style="margin-top: 4px;" onclick="alert('Transition to Main Prism Home')">进入首页</button>
+                    </div>
+
+                    <div class="handoff-variant">
+                        <div class="handoff-label">SIM Pairing Host</div>
+                        <button class="btn-secondary" style="width: 100%; margin-top: 4px; background: rgba(255,255,255,0.08); text-align: center; justify-content: center; border-color: rgba(255,255,255,0.1);" onclick="alert('Close overlay -> Return to Chat')">完成并返回对话</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        function navTo(id, btn) {
+            document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            
+            document.querySelectorAll('.controls button').forEach(el => el.classList.remove('active-ctrl'));
+            if(btn) btn.classList.add('active-ctrl');
+
+            // Trigger AI response detect animation in handshake
+            if(id === 'handshake') {
+                const response = document.getElementById('ai-response');
+                response.classList.remove('detected');
+                setTimeout(() => {
+                    response.classList.add('detected');
+                }, 1500);
+            }
+            // Reset wifi view
+            if(id === 'wifi') {
+                document.getElementById('wifi-form').style.display='flex';
+                document.getElementById('wifi-provision').style.display='none';
+            }
+        }
+
+        /* ----- Wave 5 Javascript Logic ----- */
+        let currentHost = 'full';
+
+        function setHost(type) {
+            currentHost = type;
+            const buttons = document.querySelectorAll('.controls button');
+            
+            if (type === 'sim') {
+                buttons[0].classList.add('hidden-host'); // Welcome
+                buttons[2].classList.add('hidden-host'); // Handshake
+                
+                // Adjust handoff variants
+                document.querySelectorAll('.handoff-variant')[0].style.display = 'none';
+                document.querySelectorAll('.handoff-variant')[1].classList.add('primary');
+
+                // Auto-route if currently on a hidden screen
+                const currentActive = document.querySelector('.screen.active').id;
+                if (currentActive === 'welcome' || currentActive === 'handshake') {
+                    navTo('permissions', buttons[1]);
+                }
+            } else {
+                buttons[0].classList.remove('hidden-host');
+                buttons[2].classList.remove('hidden-host');
+
+                document.querySelectorAll('.handoff-variant')[0].style.display = 'block';
+                document.querySelectorAll('.handoff-variant')[1].classList.remove('primary');
+            }
+        }
+    </script>
+</body>
+</html>

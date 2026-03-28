@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SmartSales Interactive Onboarding</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            --bg-base: #05060A;
+            --text-primary: #FFFFFF;
+            --text-secondary: rgba(255, 255, 255, 0.6);
+            --text-muted: rgba(255, 255, 255, 0.4);
+            --aurora-1: rgba(56, 189, 248, 0.15);
+            --aurora-2: rgba(129, 140, 248, 0.15);
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            --glass-blur: blur(20px);
+            --btn-primary-bg: #FFFFFF;
+            --btn-primary-text: #05060A;
+            --btn-radius: 100px;
+            --card-radius: 24px;
+            --space-xs: 8px;
+            --space-sm: 16px;
+            --space-md: 24px;
+            --space-lg: 32px;
+            --space-xl: 48px;
+            --space-2xl: 64px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: var(--font-family); background-color: #111; color: var(--text-primary);
+            display: flex; justify-content: center; align-items: center; min-height: 100vh;
+            overflow: hidden; flex-direction: column; gap: 20px;
+        }
+
+        .device-frame {
+            width: 390px; height: 844px; background-color: var(--bg-base); border-radius: 40px;
+            position: relative; overflow: hidden; box-shadow: 0 0 0 10px #222, 0 30px 60px rgba(0,0,0,0.5);
+            display: flex; flex-direction: column;
+        }
+
+        .ambient-bg { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+        .aurora-blob { position: absolute; width: 300px; height: 300px; border-radius: 50%; filter: blur(80px); animation: pulse 10s ease-in-out infinite alternate; }
+        .aurora-1 { top: -50px; left: -50px; background: var(--aurora-1); }
+        .aurora-2 { bottom: 100px; right: -50px; background: var(--aurora-2); animation-delay: -5s; }
+        @keyframes pulse { 0% { transform: scale(1) translate(0, 0); opacity: 0.8; } 100% { transform: scale(1.2) translate(10px, 10px); opacity: 1; } }
+
+        .screen-container { position: relative; z-index: 1; flex: 1; display: flex; flex-direction: column; }
+        .header { height: 60px; display: flex; justify-content: flex-end; align-items: center; padding: 0 var(--space-md); }
+        .btn-skip { background: none; border: none; color: var(--text-muted); font-size: 14px; font-weight: 500; cursor: pointer; padding: var(--space-xs); transition: color 0.2s; }
+        .btn-skip:hover { color: var(--text-secondary); }
+
+        .screen {
+            flex: 1; display: flex; flex-direction: column; padding: var(--space-md);
+            opacity: 0; pointer-events: none; position: absolute; top: 60px; left: 0; right: 0; bottom: 0;
+            transition: opacity 0.4s ease-in-out, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            transform: translateY(10px);
+        }
+        .screen.active { opacity: 1; pointer-events: auto; transform: translateY(0); }
+
+        h1 { font-size: 28px; font-weight: 500; letter-spacing: -0.5px; margin-bottom: var(--space-xs); }
+        p.subtitle { font-size: 15px; color: var(--text-secondary); line-height: 1.5; font-weight: 300; }
+
+        .glass-card { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--card-radius); padding: var(--space-md); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); box-shadow: var(--glass-shadow); }
+        .btn-primary { background: var(--btn-primary-bg); color: var(--btn-primary-text); border: none; border-radius: var(--btn-radius); padding: 16px var(--space-xl); font-size: 16px; font-weight: 500; cursor: pointer; width: 100%; transition: transform 0.2s, background 0.2s; display: flex; justify-content: center; align-items: center; }
+        .btn-primary:active { transform: scale(0.98); background: #F0F0F0; }
+
+        .controls { display: flex; flex-direction: column; gap: 10px; background: #222; padding: 16px 20px; border-radius: 20px; max-width: 400px; text-align: center; }
+        .controls h3 { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+        .control-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+        .controls button { background: #333; color: #FFF; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+        .controls button.active-ctrl { background: #FFF; color: #000; }
+        .controls select { background: #333; color: #FFF; border: 1px solid #444; border-radius: 8px; padding: 8px 12px; font-size: 13px; outline: none; }
+
+        .voice-section { flex: 1; display: flex; flex-direction: column; position: relative; min-height: 0; }
+        
+        .chat-container {
+            flex: 1; overflow-y: auto; display: flex; flex-direction: column; min-height: 0;
+            padding-bottom: 200px; scroll-behavior: smooth;
+            -ms-overflow-style: none; scrollbar-width: none;
+            /* smooth scroll fix for iOS */
+            -webkit-overflow-scrolling: touch;
+        }
+        .chat-container::-webkit-scrollbar { display: none; }
+
+        .ai-bubble-container { margin-top: var(--space-md); display: flex; flex-direction: column; gap: 16px; min-height: 60px; }
+        .ai-bubble {
+            background: rgba(56, 189, 248, 0.1); border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 20px; border-bottom-left-radius: 4px; padding: 16px; width: 85%;
+            opacity: 0; transform: translateY(10px); transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .ai-bubble.show { opacity: 1; transform: translateY(0); }
+        .bubble-label { font-size: 12px; color: #38bdf8; font-weight: 500; margin-bottom: 6px; }
+        .bubble-text { font-size: 15px; color: var(--text-primary); font-weight: 300; line-height: 1.4; }
+
+        .user-bubble {
+            background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px; border-bottom-right-radius: 4px; padding: 14px 18px; width: fit-content; max-width: 85%;
+            align-self: flex-end; 
+            opacity: 0; transform: translateY(10px); transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .user-bubble.show { opacity: 1; transform: translateY(0); }
+        .user-bubble .bubble-text { font-size: 15px; color: var(--text-primary); font-weight: 400; line-height: 1.4; }
+
+        .success-note { opacity: 0; transform: translateY(10px); transition: all 0.5s 0.2s; margin-top: var(--space-lg); text-align: center; pointer-events: none; }
+        .success-note.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
+        .success-icon { width: 48px; height: 48px; border-radius: 50%; background: rgba(52, 211, 153, 0.1); color: #34d399; display: inline-flex; justify-content: center; align-items: center; margin-bottom: 12px; border: 1px solid rgba(52, 211, 153, 0.2); }
+        
+        .extraction-card { margin-top: var(--space-xl); opacity: 0; transform: translateY(10px); transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+        .extraction-card.show { opacity: 1; transform: translateY(0); }
+        .extract-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        .extract-row:last-child { border-bottom: none; }
+        .extract-label { font-size: 14px; color: var(--text-muted); }
+        .extract-value { font-size: 14px; color: var(--text-primary); font-weight: 500; text-align: right; }
+
+        
+        .voice-handshake {
+            position: absolute; bottom: 180px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+            opacity: 0; transform: translateY(10px); transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1); pointer-events: none; z-index: 5;
+        }
+        .voice-handshake.show { opacity: 1; transform: translateY(0); }
+        .waves { display: flex; align-items: center; justify-content: center; gap: 6px; height: 50px; margin-bottom: 16px; }
+        .wave { width: 6px; background: rgba(56, 189, 248, 0.4); border-radius: 3px; transition: all 0.3s; }
+        /* Idle: gentle breathing pulse visible on page load */
+        .voice-handshake.show .wave { height: 8px; animation: wave-idle 3s ease-in-out infinite; }
+        .voice-handshake.show .wave:nth-child(2) { animation-delay: 0.4s; }
+        .voice-handshake.show .wave:nth-child(3) { animation-delay: 0.8s; }
+        .voice-handshake.show .wave:nth-child(4) { animation-delay: 0.2s; }
+        .voice-handshake.show .wave:nth-child(5) { animation-delay: 0.6s; }
+        .voice-handshake.show .wave:nth-child(6) { animation-delay: 1.0s; }
+        @keyframes wave-idle { 0%, 100% { height: 8px; opacity: 0.4; } 50% { height: 20px; opacity: 0.7; } }
+        /* Active: full intensity during recording */
+        .voice-handshake.show.active .wave { animation: wave-active 0.6s ease-in-out infinite; background: rgba(56, 189, 248, 1); }
+        .voice-handshake.show.active .wave:nth-child(2) { animation-delay: 0.1s; }
+        .voice-handshake.show.active .wave:nth-child(3) { animation-delay: 0.2s; }
+        .voice-handshake.show.active .wave:nth-child(4) { animation-delay: 0.05s; }
+        .voice-handshake.show.active .wave:nth-child(5) { animation-delay: 0.25s; }
+        .voice-handshake.show.active .wave:nth-child(6) { animation-delay: 0.15s; }
+        @keyframes wave-active { 0%, 100% { height: 10px; } 50% { height: 40px; } }
+        .handshake-hint { color: rgba(255,255,255,0.6); font-size: 14px; font-weight: 500; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; letter-spacing: 0.3px; transition: opacity 0.3s; }
+        .voice-handshake.active .handshake-hint { color: rgba(56, 189, 248, 0.9); }
+
+        .mic-area { position: absolute; bottom: 40px; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 160px; }
+
+        .status-toast {
+            position: absolute; top: -40px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); color: #f59e0b;
+            padding: 8px 16px; border-radius: 20px; font-size: 13px; opacity: 0; transition: opacity 0.3s, transform 0.3s;
+            transform: translateY(10px); pointer-events: none; white-space: nowrap; font-weight: 500;
+        }
+        .status-toast.show { opacity: 1; transform: translateY(0); }
+
+        .header-transition {
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            max-height: 200px; opacity: 1; overflow: hidden; transform: translateY(0); margin-bottom: 24px;
+        }
+        .header-transition.collapsed {
+            max-height: 0; opacity: 0; transform: translateY(-20px); margin-bottom: 0;
+        }
+
+        .mic-wrapper { position: relative; width: 80px; height: 80px; display: flex; justify-content: center; align-items: center; }
+        
+        .mic-btn {
+            width: 72px; height: 72px; border-radius: 50%; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+            display: flex; justify-content: center; align-items: center; cursor: pointer; color: #FFF;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); z-index: 10; user-select: none;
+            -webkit-user-select: none; -webkit-touch-callout: none;
+        }
+        .mic-btn svg { transition: transform 0.2s; pointer-events: none; }
+        
+        .mic-btn.recording { transform: scale(0.85); background: rgba(56, 189, 248, 0.2); border-color: rgba(56, 189, 248, 0.5); color: #38bdf8; }
+        .mic-btn.recording svg { transform: scale(1.1); }
+        
+        .mic-btn.processing { opacity: 0.4; pointer-events: none; }
+        .mic-btn.success-hidden { opacity: 0; pointer-events: none; transform: scale(0.5); }
+
+        .ripple {
+            position: absolute; width: 72px; height: 72px; border-radius: 50%; background: rgba(56, 189, 248, 0.4);
+            opacity: 0; pointer-events: none; z-index: 5;
+        }
+        .mic-wrapper.recording .ripple { animation: pull-ripple 1.5s infinite ease-out; }
+        @keyframes pull-ripple { 0% { width: 72px; height: 72px; opacity: 0.8; } 100% { width: 150px; height: 150px; opacity: 0; } }
+
+        .spinner {
+            position: absolute; width: 44px; height: 44px; border: 3px solid rgba(255,255,255,0.1);
+            border-top-color: #38bdf8; border-radius: 50%; opacity: 0; pointer-events: none; transition: opacity 0.3s;
+            transform: scale(0.8); z-index: 1;
+        }
+        .mic-wrapper.processing .spinner { opacity: 1; transform: scale(1); animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .mic-hint { position: absolute; bottom: -30px; font-size: 13px; color: var(--text-muted); transition: opacity 0.2s; width: 220px; text-align: center; }
+        .mic-wrapper.recording .mic-hint, .mic-wrapper.processing .mic-hint { opacity: 0; }
+        
+        .mic-status { position: absolute; bottom: -30px; font-size: 13px; font-weight: 500; color: #38bdf8; opacity: 0; transition: opacity 0.2s; width: 200px; text-align: center; }
+        .mic-wrapper.recording .mic-status { opacity: 1; }
+        
+        .mic-processing { position: absolute; bottom: -30px; font-size: 13px; font-weight: 500; color: var(--text-secondary); opacity: 0; transition: opacity 0.2s; width: 200px; text-align: center; }
+        .mic-wrapper.processing .mic-processing { opacity: 1; }
+
+        .next-btn-container {
+            position: absolute; bottom: 40px; left: 0; right: 0; padding: 0 var(--space-md);
+            opacity: 0; pointer-events: none; transform: translateY(20px); transition: all 0.4s 0.3s;
+        }
+        .next-btn-container.show { opacity: 1; pointer-events: auto; transform: translateY(0); }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <h3>Page Navigation</h3>
+        <div class="control-row">
+            <button class="active-ctrl" onclick="navTo('page1', this)">1. First Consultation</button>
+            <button onclick="navTo('page2', this)">2. Talk about yourself</button>
+        </div>
+        <h3 style="margin-top: 8px;">Simulate Error Scenario</h3>
+        <div class="control-row">
+            <select id="error-scenario" onchange="resetCurrentPage()">
+                <option value="none">None (Success Path)</option>
+                <option value="mic_denied">Mic Denied</option>
+                <option value="empty_speech">Empty / Too Short</option>
+                <option value="processing_fail">Processing Failure</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="device-frame">
+        <div class="ambient-bg">
+            <div class="aurora-blob aurora-1"></div>
+            <div class="aurora-blob aurora-2"></div>
+        </div>
+
+        <div class="screen-container">
+            <div class="header">
+                <button class="btn-skip">跳过</button>
+            </div>
+
+            <!-- Page 1: First Sales Consultation -->
+            <div id="page1" class="screen active">
+                <div id="p1-header" class="header-transition">
+                    <h1>初次沟通体验</h1>
+                    <p class="subtitle">您的 AI 教练已准备就绪，让我们试着开始第一次对话。</p>
+                </div>
+
+                <div class="voice-section">
+                    <div class="chat-container">
+                        <div class="ai-bubble-container" id="p1-bubble-container">
+                            <div class="user-bubble" id="p1-user-1" style="display: none;">
+                                <div class="bubble-text">"帮我搞定这个客户"</div>
+                            </div>
+                            <div class="ai-bubble" id="p1-bubble" style="display: none;">
+                                <div class="bubble-label">AI 助手</div>
+                                <div class="bubble-text">"好的，先告诉我这位客户的情况，遇到了什么卡点？"</div>
+                            </div>
+                            <div class="user-bubble" id="p1-user-2" style="display: none;">
+                                <div class="bubble-text">"客户觉得我们的价格比竞品高，预算一直批不下来"</div>
+                            </div>
+                            <div class="ai-bubble" id="p1-bubble-2" style="display: none;">
+                                <div class="bubble-label">AI 助手</div>
+                                <div class="bubble-text">"这个阶段可以尝试分享一些同行的成功案例作为切入点，证明长期 ROI。您做得很好！"</div>
+                            </div>
+                        </div>
+
+                        <div class="success-note" id="p1-success">
+                            <div class="success-icon">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                            </div>
+                            <h3 style="font-size: 18px; font-weight: 500;">体验完成</h3>
+                            <p style="font-size: 14px; color: var(--text-secondary); margin-top: 4px;">完美！这就是与 AI 沟通的方式。</p>
+                        </div>
+                    </div>
+
+                    
+                    <div class="voice-handshake" id="p1-handshake">
+                        <div class="waves"><div class="wave"></div><div class="wave"></div><div class="wave"></div><div class="wave"></div><div class="wave"></div><div class="wave"></div></div>
+                        <div class="handshake-hint">试试说："帮我搞定这个客户"</div>
+                    </div>
+                    <div class="mic-area" id="p1-mic-area">
+                        <div class="status-toast" id="p1-toast">模拟错误信息</div>
+                        
+                        <div class="mic-wrapper" id="p1-mic-wrapper">
+                            <div class="ripple"></div>
+                            <div class="spinner"></div>
+                            <div class="mic-btn" id="p1-mic" oncontextmenu="return false;">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
+                            </div>
+                            <div class="mic-status">正在聆听...松开发送</div>
+                            <div class="mic-processing">正在思考...</div>
+                        </div>
+                    </div>
+
+                    <div class="next-btn-container" id="p1-next">
+                        <button class="btn-primary" onclick="navTo('page2', document.querySelectorAll('.controls button')[1])">继续下一步</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Page 2: Talk About Yourself -->
+            <div id="page2" class="screen">
+                <div id="p2-header" class="header-transition">
+                    <h1>认识一下您</h1>
+                    <p class="subtitle">为了更好地配合您，请简单聊聊您自己，比如您的行业、角色或经验。</p>
+                </div>
+
+                <div class="voice-section">
+                    <div class="chat-container">
+                        <div class="ai-bubble-container" id="p2-bubble-container" style="display: flex; min-height: auto;">
+                            <div class="user-bubble" id="p2-user" style="display: none;">
+                                <div class="bubble-text">"我是王经理，做SaaS软件销售总监已经8年了。平时主要用微信和电话联系客户。"</div>
+                            </div>
+                            <div class="ai-bubble" id="p2-bubble" style="display: none;">
+                                <div class="bubble-label">AI 助手</div>
+                                <div class="bubble-text">"谢谢您的分享，我已经为您建立好了专属档案。"</div>
+                            </div>
+                        </div>
+
+                        <div class="glass-card extraction-card" id="p2-extraction">
+                            <div style="margin-bottom: 16px; display: flex; align-items: center; gap: 8px;">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                                <span style="font-size: 14px; font-weight: 500; color: #38bdf8;">信息已提取</span>
+                            </div>
+                            <div class="extract-row">
+                                <span class="extract-label">称呼</span>
+                                <span class="extract-value">王经理</span>
+                            </div>
+                            <div class="extract-row">
+                                <span class="extract-label">角色</span>
+                                <span class="extract-value">销售总监</span>
+                            </div>
+                            <div class="extract-row">
+                                <span class="extract-label">行业领域</span>
+                                <span class="extract-value">SaaS 软件服务</span>
+                            </div>
+                            <div class="extract-row">
+                                <span class="extract-label">从业经验</span>
+                                <span class="extract-value">8年</span>
+                            </div>
+                            <div class="extract-row">
+                                <span class="extract-label">偏好联系</span>
+                                <span class="extract-value">微信 / 电话</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    
+                    <div class="voice-handshake" id="p2-handshake">
+                        <div class="waves"><div class="wave"></div><div class="wave"></div><div class="wave"></div><div class="wave"></div><div class="wave"></div><div class="wave"></div></div>
+                        <div class="handshake-hint">试试说："我是王经理..."</div>
+                    </div>
+                    <div class="mic-area" id="p2-mic-area">
+                        <div class="status-toast" id="p2-toast">模拟错误信息</div>
+                        
+                        <div class="mic-wrapper" id="p2-mic-wrapper">
+                            <div class="ripple"></div>
+                            <div class="spinner"></div>
+                            <div class="mic-btn" id="p2-mic" oncontextmenu="return false;">
+                                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg>
+                            </div>
+                            <div class="mic-status">正在聆听...松开发送</div>
+                            <div class="mic-processing">正在提取信息...</div>
+                        </div>
+                    </div>
+
+                    <div class="next-btn-container" id="p2-next">
+                        <button class="btn-primary" onclick="alert('Proceed to Dashboard (Full Onboarding Complete)')">进入应用</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        function navTo(id, btn) {
+            document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            
+            document.querySelectorAll('.controls button').forEach(el => el.classList.remove('active-ctrl'));
+            if(btn) btn.classList.add('active-ctrl');
+
+            resetCurrentPage();
+        }
+
+        let p1Round = 1;
+
+        function resetCurrentPage() {
+            p1Round = 1;
+            const p1w = document.getElementById('p1-mic-wrapper');
+            p1w.classList.remove('recording', 'processing');
+            document.getElementById('p1-mic').classList.remove('recording', 'processing', 'success-hidden');
+            
+            ['p1-user-1', 'p1-bubble', 'p1-user-2', 'p1-bubble-2'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) { el.classList.remove('show'); el.style.display = 'none'; }
+            });
+
+            document.getElementById('p1-success').classList.remove('show');
+            document.getElementById('p1-next').classList.remove('show');
+            
+            const p2w = document.getElementById('p2-mic-wrapper');
+            p2w.classList.remove('recording', 'processing');
+            document.getElementById('p2-mic').classList.remove('recording', 'processing', 'success-hidden');
+            
+            ['p2-user', 'p2-bubble'].forEach(id => {
+                const el = document.getElementById(id);
+                if(el) { el.classList.remove('show'); el.style.display = 'none'; }
+            });
+            
+            document.getElementById('p2-extraction').classList.remove('show');
+            document.getElementById('p2-next').classList.remove('show');
+            
+            // Reset handshakes to idle-visible state (show hint, no active waves)
+            const hs1 = document.getElementById('p1-handshake');
+            if(hs1) { hs1.classList.remove('active'); hs1.classList.add('show'); }
+            const hs2 = document.getElementById('p2-handshake');
+            if(hs2) { hs2.classList.remove('active'); hs2.classList.add('show'); }
+
+            document.getElementById('p1-header').classList.remove('collapsed');
+            document.getElementById('p2-header').classList.remove('collapsed');
+        }
+
+        function showToast(toastId, message) {
+            const toast = document.getElementById(toastId);
+            toast.innerText = message;
+            toast.classList.add('show');
+            setTimeout(() => { toast.classList.remove('show'); }, 3000);
+        }
+
+        function setupMicInteraction(pagePrefix) {
+            const micBtn = document.getElementById(`${pagePrefix}-mic`);
+            const wrapper = document.getElementById(`${pagePrefix}-mic-wrapper`);
+            const toastId = `${pagePrefix}-toast`;
+            
+            let isRecording = false;
+
+            const startRecording = (e) => {
+                e.preventDefault();
+                if(micBtn.classList.contains('success-hidden') || wrapper.classList.contains('processing')) return;
+                
+                if(document.getElementById('error-scenario').value === 'mic_denied') {
+                    showToast(toastId, "无法录音：未授予麦克风权限");
+                    return;
+                }
+                
+                isRecording = true;
+                wrapper.classList.add('recording');
+                micBtn.classList.add('recording');
+
+                const header = document.getElementById(`${pagePrefix}-header`);
+                if (header) header.classList.add('collapsed');
+
+                // Intensify handshake to active wave animation
+                const handshake = document.getElementById(`${pagePrefix}-handshake`);
+                if(handshake) {
+                    handshake.classList.add('show', 'active');
+                }
+            };
+
+            const stopRecording = (e) => {
+                e.preventDefault();
+                if(!isRecording) return;
+                isRecording = false;
+                
+                wrapper.classList.remove('recording');
+                micBtn.classList.remove('recording');
+                
+                // Downgrade handshake from active back to idle (keep visible)
+                const handshake = document.getElementById(`${pagePrefix}-handshake`);
+                if(handshake) handshake.classList.remove('active');
+                
+                const scenario = document.getElementById('error-scenario').value;
+                
+                if(scenario === 'empty_speech') {
+                    showToast(toastId, "录音太短，请多说一点");
+                    return;
+                }
+
+                wrapper.classList.add('processing');
+
+                if (scenario === 'none' || scenario === 'processing_fail') {
+                    showUserBubble(pagePrefix);
+                }
+
+                setTimeout(() => {
+                    if(scenario === 'processing_fail') {
+                        wrapper.classList.remove('processing');
+                        micBtn.classList.remove('processing');
+                        showToast(toastId, "网络连接波动，请重试");
+                    } else {
+                        showSuccess(pagePrefix);
+                    }
+                }, 1500); 
+            };
+
+            micBtn.addEventListener('mousedown', startRecording);
+            micBtn.addEventListener('touchstart', startRecording, {passive: false});
+            
+            window.addEventListener('mouseup', stopRecording);
+            window.addEventListener('touchend', stopRecording);
+        }
+
+        function showUserBubble(pagePrefix) {
+            let uId = null;
+            if (pagePrefix === 'p1') {
+                uId = p1Round === 1 ? 'p1-user-1' : 'p1-user-2';
+            } else if (pagePrefix === 'p2') {
+                uId = 'p2-user';
+            }
+            if (uId) {
+                const el = document.getElementById(uId);
+                el.style.display = 'block';
+                void el.offsetWidth;
+                el.classList.add('show');
+                
+                const sa = el.closest('.chat-container');
+                if(sa) setTimeout(() => sa.scrollTop = sa.scrollHeight, 100);
+            }
+        }
+
+        function showSuccess(pagePrefix) {
+            const micBtn = document.getElementById(`${pagePrefix}-mic`);
+            const wrapper = document.getElementById(`${pagePrefix}-mic-wrapper`);
+            
+            wrapper.classList.remove('processing');
+            micBtn.classList.remove('processing');
+
+            if(pagePrefix === 'p1') {
+                if (p1Round === 1) {
+                    const b1 = document.getElementById('p1-bubble');
+                    b1.style.display = 'block';
+                    void b1.offsetWidth;
+                    b1.classList.add('show');
+                    
+                    const sa = b1.closest('.chat-container');
+                    if(sa) setTimeout(() => sa.scrollTop = sa.scrollHeight, 100);
+
+                    p1Round = 2;
+                    // Update hint text for round 2
+                    const hs = document.getElementById('p1-handshake');
+                    if(hs) {
+                        const hintEl = hs.querySelector('.handshake-hint');
+                        if(hintEl) hintEl.innerText = '试试说："客户觉得我们价格比竞品高..."';
+                    }
+                } else {
+                    // Hide handshake — conversation complete
+                    const hs = document.getElementById('p1-handshake');
+                    if(hs) hs.classList.remove('show', 'active');
+                    micBtn.classList.add('success-hidden'); 
+                    const b2 = document.getElementById('p1-bubble-2');
+                    b2.style.display = 'block';
+                    setTimeout(() => {
+                        b2.classList.add('show');
+                        const sa = b2.closest('.chat-container');
+                        if(sa) setTimeout(() => sa.scrollTop = sa.scrollHeight, 100);
+                    }, 50);
+                    
+                    setTimeout(() => {
+                        const s = document.getElementById('p1-success');
+                        s.classList.add('show');
+                        const sa = s.closest('.chat-container');
+                        if(sa) setTimeout(() => sa.scrollTop = sa.scrollHeight, 100);
+                        
+                        document.getElementById('p1-next').classList.add('show');
+                    }, 1000);
+                }
+            } else if (pagePrefix === 'p2') {
+                // Hide handshake — conversation complete
+                const hs = document.getElementById('p2-handshake');
+                if(hs) hs.classList.remove('show', 'active');
+                micBtn.classList.add('success-hidden'); 
+                
+                const p2b = document.getElementById('p2-bubble');
+                if (p2b) {
+                    p2b.style.display = 'block';
+                    void p2b.offsetWidth;
+                    p2b.classList.add('show');
+                    const sa = p2b.closest('.chat-container');
+                    if(sa) setTimeout(() => sa.scrollTop = sa.scrollHeight, 100);
+                }
+                
+                setTimeout(() => {
+                    const ext = document.getElementById('p2-extraction');
+                    ext.classList.add('show');
+                    const sa = ext.closest('.chat-container');
+                    if(sa) setTimeout(() => sa.scrollTop = sa.scrollHeight, 100);
+                }, 1200);
+                
+                setTimeout(() => {
+                    document.getElementById('p2-next').classList.add('show');
+                }, 2000);
+            }
+        }
+
+        setupMicInteraction('p1');
+        setupMicInteraction('p2');
+
+        // Auto-show handshake hints on page load after a gentle delay
+        setTimeout(() => {
+            const hs1 = document.getElementById('p1-handshake');
+            if(hs1) hs1.classList.add('show');
+        }, 600);
+    </script>
+</body>
+</html>

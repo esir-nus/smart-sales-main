@@ -15,6 +15,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -35,7 +36,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -47,7 +48,6 @@ import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -57,12 +57,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,6 +77,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -86,10 +89,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.smartsales.prism.domain.pairing.DiscoveredBadge
 import com.smartsales.prism.domain.pairing.ErrorReason
 import com.smartsales.prism.domain.pairing.PairingState
 import com.smartsales.prism.domain.pairing.WifiCredentials
+import com.smartsales.prism.ui.components.VoiceHandshakeBars
+import com.smartsales.prism.ui.components.prismTopSafeBandPadding
+import com.smartsales.prism.ui.components.rememberVoiceHandshakeWaveProgress
 import com.smartsales.prism.ui.components.prismTopSafeBandPadding
 import com.smartsales.prism.ui.sim.SimSharedAuroraBackground
 import kotlinx.coroutines.delay
@@ -109,6 +118,8 @@ private val OnboardingErrorSurface = Color(0x14F59E0B)
 private val OnboardingPrimarySurface = Color.White
 private val OnboardingPrimaryText = Color(0xFF05060A)
 private val OnboardingLogoTile = Color(0xFF12161E)
+
+internal const val ONBOARDING_MIC_BUTTON_TEST_TAG = "onboarding_mic_button"
 
 private tailrec fun Context.findComponentActivity(): ComponentActivity? = when (this) {
     is ComponentActivity -> this
@@ -339,54 +350,54 @@ private fun OnboardingFrame(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        OnboardingBackground,
-                        Color(0xFF07111A),
-                        OnboardingBackground
-                    )
-                )
-            )
-            .padding(horizontal = 24.dp, vertical = 20.dp)
+            .background(OnboardingBackground)
     ) {
         OnboardingDarkSystemBarsEffect()
 
-        SimSharedAuroraBackground(forceDarkPalette = true)
+        SimSharedAuroraBackground(
+            modifier = Modifier.fillMaxSize(),
+            forceDarkPalette = true
+        )
 
-        if (shouldShowOnboardingExitAction(exitPolicy)) {
-            TextButton(
-                onClick = onExit,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .prismTopSafeBandPadding()
-            ) {
-                Text(
-                    text = if (host == OnboardingHost.SIM_CONNECTIVITY) "关闭" else "跳过",
-                    color = OnboardingMuted
-                )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp, vertical = 20.dp)
+        ) {
+            if (shouldShowOnboardingExitAction(exitPolicy)) {
+                TextButton(
+                    onClick = onExit,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .prismTopSafeBandPadding()
+                ) {
+                    Text(
+                        text = if (host == OnboardingHost.SIM_CONNECTIVITY) "关闭" else "跳过",
+                        color = OnboardingMuted
+                    )
+                }
             }
-        }
 
-        if (animateStepContent) {
-            AnimatedContent(
-                targetState = currentStep,
-                transitionSpec = {
-                    (fadeIn(animationSpec = tween(280)) + slideInVertically(animationSpec = tween(280)) { it / 8 }) togetherWith
-                        (fadeOut(animationSpec = tween(220)) + slideOutVertically(animationSpec = tween(220)) { -it / 10 })
-                },
-                label = "OnboardingCoordinator"
-            ) { step ->
+            if (animateStepContent) {
+                AnimatedContent(
+                    targetState = currentStep,
+                    transitionSpec = {
+                        (fadeIn(animationSpec = tween(280)) + slideInVertically(animationSpec = tween(280)) { it / 8 }) togetherWith
+                            (fadeOut(animationSpec = tween(220)) + slideOutVertically(animationSpec = tween(220)) { -it / 10 })
+                    },
+                    label = "OnboardingCoordinator"
+                ) { step ->
+                    OnboardingStepContainer(
+                        step = step,
+                        content = content
+                    )
+                }
+            } else {
                 OnboardingStepContainer(
-                    step = step,
+                    step = currentStep,
                     content = content
                 )
             }
-        } else {
-            OnboardingStepContainer(
-                step = currentStep,
-                content = content
-            )
         }
     }
 }
@@ -616,35 +627,34 @@ private fun VoiceHandshakeConsultationStep(
 ) {
     val context = LocalContext.current
     val state by viewModel.consultationState.collectAsState()
-    var hasMicPermission by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
-                PackageManager.PERMISSION_GRANTED
-        )
-    }
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
-        hasMicPermission = granted
-        if (!granted) viewModel.onConsultationMicPermissionDenied()
+        viewModel.onConsultationMicPermissionResult(granted)
     }
+    ObserveOnboardingMicSession(
+        viewModel = viewModel,
+        shouldCancel = state.isRecording || state.awaitingMicPermission
+    )
 
     VoiceHandshakeConsultationContent(
         state = state,
         onContinue = onContinue,
         onPressStart = {
-            hasMicPermission = ContextCompat.checkSelfPermission(
+            val hasMicPermission = ContextCompat.checkSelfPermission(
                 context,
                 Manifest.permission.RECORD_AUDIO
             ) == PackageManager.PERMISSION_GRANTED
             if (!hasMicPermission) {
+                viewModel.onConsultationMicPermissionRequested()
                 permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                 false
             } else {
                 viewModel.startConsultationRecording()
             }
         },
-        onPressEnd = { viewModel.finishConsultationRecording() }
+        onPressEnd = { viewModel.finishConsultationRecording() },
+        onPressCancel = { viewModel.cancelActiveRecording() }
     )
 }
 
@@ -656,7 +666,8 @@ private fun VoiceHandshakeConsultationStaticStep(
         state = consultationStateForCapture(captureState),
         onContinue = {},
         onPressStart = { false },
-        onPressEnd = {}
+        onPressEnd = {},
+        onPressCancel = {}
     )
 }
 
@@ -665,7 +676,8 @@ private fun VoiceHandshakeConsultationContent(
     state: OnboardingConsultationUiState,
     onContinue: () -> Unit,
     onPressStart: () -> Boolean,
-    onPressEnd: () -> Unit
+    onPressEnd: () -> Unit,
+    onPressCancel: () -> Unit
 ) {
     val listState = rememberLazyListState()
     val itemCount = state.messages.size + if (state.isCompleted) 1 else 0
@@ -732,9 +744,12 @@ private fun VoiceHandshakeConsultationContent(
                 OnboardingMicFooter(
                     isRecording = state.isRecording,
                     isProcessing = state.isProcessing,
-                    processingLabel = "正在思考...",
+                    interactionMode = state.micInteractionMode,
+                    handshakeHint = "试试说：“帮我搞定这个客户”",
+                    processingLabel = consultationProcessingLabel(state.processingPhase),
                     onPressStart = onPressStart,
-                    onPressEnd = onPressEnd
+                    onPressEnd = onPressEnd,
+                    onPressCancel = onPressCancel
                 )
             }
         }
@@ -748,18 +763,15 @@ private fun VoiceHandshakeProfileStep(
 ) {
     val context = LocalContext.current
     val state by viewModel.profileState.collectAsState()
-    var hasMicPermission by remember {
-        mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
-                PackageManager.PERMISSION_GRANTED
-        )
-    }
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
     ) { granted ->
-        hasMicPermission = granted
-        if (!granted) viewModel.onProfileMicPermissionDenied()
+        viewModel.onProfileMicPermissionResult(granted)
     }
+    ObserveOnboardingMicSession(
+        viewModel = viewModel,
+        shouldCancel = state.isRecording || state.awaitingMicPermission
+    )
 
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
@@ -774,18 +786,20 @@ private fun VoiceHandshakeProfileStep(
         onSave = { viewModel.saveProfileDraft() },
         onSkip = { viewModel.skipProfileSave() },
         onPressStart = {
-            hasMicPermission = ContextCompat.checkSelfPermission(
+            val hasMicPermission = ContextCompat.checkSelfPermission(
                 context,
                 Manifest.permission.RECORD_AUDIO
             ) == PackageManager.PERMISSION_GRANTED
             if (!hasMicPermission) {
+                viewModel.onProfileMicPermissionRequested()
                 permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                 false
             } else {
                 viewModel.startProfileRecording()
             }
         },
-        onPressEnd = { viewModel.finishProfileRecording() }
+        onPressEnd = { viewModel.finishProfileRecording() },
+        onPressCancel = { viewModel.cancelActiveRecording() }
     )
 }
 
@@ -798,7 +812,8 @@ private fun VoiceHandshakeProfileStaticStep(
         onSave = {},
         onSkip = {},
         onPressStart = { false },
-        onPressEnd = {}
+        onPressEnd = {},
+        onPressCancel = {}
     )
 }
 
@@ -808,7 +823,8 @@ private fun VoiceHandshakeProfileContent(
     onSave: () -> Unit,
     onSkip: () -> Unit,
     onPressStart: () -> Boolean,
-    onPressEnd: () -> Unit
+    onPressEnd: () -> Unit,
+    onPressCancel: () -> Unit
 ) {
     val listState = rememberLazyListState()
     val itemCount = listOfNotNull(
@@ -905,9 +921,12 @@ private fun VoiceHandshakeProfileContent(
                     OnboardingMicFooter(
                         isRecording = state.isRecording,
                         isProcessing = state.isProcessing,
-                        processingLabel = "正在提取信息...",
+                        interactionMode = state.micInteractionMode,
+                        handshakeHint = "试试说：“我是王经理...”",
+                        processingLabel = profileProcessingLabel(state.processingPhase),
                         onPressStart = onPressStart,
-                        onPressEnd = onPressEnd
+                        onPressEnd = onPressEnd,
+                        onPressCancel = onPressCancel
                     )
                     if (state.canSkipAfterFailure) {
                         Spacer(Modifier.height(10.dp))
@@ -1077,45 +1096,77 @@ private fun OnboardingInlineNotice(text: String) {
 }
 
 @Composable
-private fun OnboardingMicFooter(
+internal fun OnboardingMicFooter(
     isRecording: Boolean,
     isProcessing: Boolean,
+    interactionMode: OnboardingMicInteractionMode,
+    handshakeHint: String,
     processingLabel: String,
     onPressStart: () -> Boolean,
-    onPressEnd: () -> Unit
+    onPressEnd: () -> Unit,
+    onPressCancel: () -> Unit
 ) {
+    val currentIsRecording by rememberUpdatedState(isRecording)
+    val currentIsProcessing by rememberUpdatedState(isProcessing)
+    val currentInteractionMode by rememberUpdatedState(interactionMode)
+    val currentOnPressStart by rememberUpdatedState(onPressStart)
+    val currentOnPressEnd by rememberUpdatedState(onPressEnd)
+    val currentOnPressCancel by rememberUpdatedState(onPressCancel)
+    var handshakeVisible by remember { mutableStateOf(false) }
+    val motion = rememberInfiniteTransition(label = "onboardingMicMotion")
+    val waveProgress = rememberVoiceHandshakeWaveProgress(
+        isRecording = isRecording,
+        labelPrefix = "onboarding"
+    )
+    val rippleProgress by motion.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1500, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "onboardingMicRippleProgress"
+    )
+    val showHandshake = handshakeVisible || isRecording || isProcessing
+
+    LaunchedEffect(Unit) {
+        delay(600)
+        handshakeVisible = true
+    }
+
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        AnimatedVisibility(
+            visible = showHandshake,
+            enter = fadeIn() + slideInVertically(initialOffsetY = { it / 4 }),
+            exit = fadeOut()
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                OnboardingVoiceHandshake(
+                    isRecording = isRecording,
+                    waveProgress = waveProgress
+                )
+                Spacer(Modifier.height(14.dp))
+                Text(
+                    text = handshakeHint,
+                    color = if (isRecording) OnboardingBlue.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.6f),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+        }
+        Spacer(Modifier.height(if (showHandshake) 18.dp else 0.dp))
         Box(
             modifier = Modifier.size(86.dp),
             contentAlignment = Alignment.Center
         ) {
-            val transition = rememberInfiniteTransition(label = "onboardingMicPulse")
-            val pulse by transition.animateFloat(
-                initialValue = 1f,
-                targetValue = 1.8f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(1200),
-                    repeatMode = RepeatMode.Restart
-                ),
-                label = "micPulse"
-            )
-            val pulseAlpha by transition.animateFloat(
-                initialValue = 0.32f,
-                targetValue = 0f,
-                animationSpec = infiniteRepeatable(
-                    animation = tween(1200),
-                    repeatMode = RepeatMode.Restart
-                ),
-                label = "micPulseAlpha"
-            )
             if (isRecording) {
                 Box(
                     modifier = Modifier
                         .size(72.dp)
-                        .scale(pulse)
-                        .alpha(pulseAlpha)
+                        .scale(1f + (1.08f * rippleProgress))
+                        .alpha(0.8f - (0.8f * rippleProgress))
                         .clip(CircleShape)
-                        .background(OnboardingBlue.copy(alpha = 0.22f))
+                        .background(OnboardingBlue.copy(alpha = 0.4f))
                 )
             }
             Box(
@@ -1125,55 +1176,104 @@ private fun OnboardingMicFooter(
                     .background(
                         when {
                             isRecording -> OnboardingBlue.copy(alpha = 0.18f)
+                            isProcessing -> OnboardingBlue.copy(alpha = 0.12f)
                             else -> Color.White.copy(alpha = 0.08f)
                         }
                     )
                     .border(
                         width = 1.dp,
-                        color = if (isRecording) OnboardingBlue.copy(alpha = 0.48f) else Color.White.copy(alpha = 0.15f),
+                        color = when {
+                            isRecording -> OnboardingBlue.copy(alpha = 0.48f)
+                            isProcessing -> OnboardingBlue.copy(alpha = 0.28f)
+                            else -> Color.White.copy(alpha = 0.15f)
+                        },
                         shape = CircleShape
                     )
-                    .pointerInput(isRecording, isProcessing) {
+                    .testTag(ONBOARDING_MIC_BUTTON_TEST_TAG)
+                    .pointerInput(Unit) {
                         detectTapGestures(
                             onPress = {
-                                if (isProcessing) return@detectTapGestures
-                                val started = onPressStart()
+                                if (currentIsProcessing) return@detectTapGestures
+                                if (
+                                    currentIsRecording &&
+                                    currentInteractionMode == OnboardingMicInteractionMode.TAP_TO_SEND
+                                ) {
+                                    val released = tryAwaitRelease()
+                                    if (released) {
+                                        currentOnPressEnd()
+                                    } else {
+                                        currentOnPressCancel()
+                                    }
+                                    return@detectTapGestures
+                                }
+                                val started = currentOnPressStart()
                                 if (!started) return@detectTapGestures
-                                tryAwaitRelease()
-                                onPressEnd()
+                                val released = tryAwaitRelease()
+                                if (released) {
+                                    currentOnPressEnd()
+                                } else {
+                                    currentOnPressCancel()
+                                }
                             }
                         )
                     },
                 contentAlignment = Alignment.Center
             ) {
-                if (isProcessing) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(28.dp),
-                        color = OnboardingBlue,
-                        strokeWidth = 2.5.dp,
-                        trackColor = Color.White.copy(alpha = 0.12f)
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.Mic,
-                        contentDescription = null,
-                        tint = if (isRecording) OnboardingBlue else OnboardingText,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
+                Icon(
+                    imageVector = Icons.Default.Mic,
+                    contentDescription = null,
+                    tint = if (isRecording || isProcessing) OnboardingBlue else OnboardingText,
+                    modifier = Modifier.size(if (isRecording) 30.dp else 28.dp)
+                )
             }
         }
         Spacer(Modifier.height(12.dp))
         Text(
             text = when {
+                isRecording && interactionMode == OnboardingMicInteractionMode.TAP_TO_SEND -> "正在聆听...点击发送"
                 isRecording -> "正在聆听...松开发送"
                 isProcessing -> processingLabel
                 else -> "按住说话"
             },
-            color = if (isRecording) OnboardingBlue else OnboardingMuted,
+            color = if (isRecording || isProcessing) OnboardingBlue else OnboardingMuted,
             fontSize = 13.sp,
             fontWeight = if (isRecording || isProcessing) FontWeight.Medium else FontWeight.Normal
         )
+    }
+}
+
+@Composable
+private fun OnboardingVoiceHandshake(
+    isRecording: Boolean,
+    waveProgress: Float
+) {
+    VoiceHandshakeBars(
+        isRecording = isRecording,
+        waveProgress = waveProgress,
+        barColor = OnboardingBlue
+    )
+}
+
+@Composable
+private fun ObserveOnboardingMicSession(
+    viewModel: OnboardingInteractionViewModel,
+    shouldCancel: Boolean
+) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val currentShouldCancel by rememberUpdatedState(shouldCancel)
+    DisposableEffect(lifecycleOwner, viewModel) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP && currentShouldCancel) {
+                viewModel.cancelActiveRecording()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            if (currentShouldCancel) {
+                viewModel.cancelActiveRecording()
+            }
+        }
     }
 }
 
@@ -1181,6 +1281,15 @@ private fun consultationStateForCapture(
     captureState: OnboardingConsultationCaptureState
 ): OnboardingConsultationUiState = when (captureState) {
     OnboardingConsultationCaptureState.IDLE -> OnboardingConsultationUiState()
+    OnboardingConsultationCaptureState.RECORDING -> OnboardingConsultationUiState(
+        hasStartedInteracting = true,
+        isRecording = true
+    )
+    OnboardingConsultationCaptureState.PROCESSING -> OnboardingConsultationUiState(
+        hasStartedInteracting = true,
+        isProcessing = true,
+        processingPhase = OnboardingProcessingPhase.RECOGNIZING
+    )
     OnboardingConsultationCaptureState.ONE_TURN_REVEALED -> OnboardingConsultationUiState(
         hasStartedInteracting = true,
         messages = listOf(
@@ -1209,6 +1318,15 @@ private fun profileStateForCapture(
     captureState: OnboardingProfileCaptureState
 ): OnboardingProfileUiState = when (captureState) {
     OnboardingProfileCaptureState.IDLE -> OnboardingProfileUiState()
+    OnboardingProfileCaptureState.RECORDING -> OnboardingProfileUiState(
+        hasStartedInteracting = true,
+        isRecording = true
+    )
+    OnboardingProfileCaptureState.PROCESSING -> OnboardingProfileUiState(
+        hasStartedInteracting = true,
+        isProcessing = true,
+        processingPhase = OnboardingProcessingPhase.RECOGNIZING
+    )
     OnboardingProfileCaptureState.EXTRACTED -> OnboardingProfileUiState(
         hasStartedInteracting = true,
         transcript = "我是王经理，做 SaaS 软件销售总监已经 8 年了。平时主要用微信和电话联系客户。",
@@ -1225,6 +1343,24 @@ private fun profileStateForCapture(
         hasStartedInteracting = true,
         errorMessage = "资料提取结果暂时不可用，请重试。"
     )
+}
+
+private fun consultationProcessingLabel(phase: OnboardingProcessingPhase): String {
+    return when (phase) {
+        OnboardingProcessingPhase.RECOGNIZING -> "正在识别语音..."
+        OnboardingProcessingPhase.BUILDING_CONSULTATION_REPLY -> "正在整理建议..."
+        OnboardingProcessingPhase.DETERMINISTIC_FALLBACK -> "正在准备体验..."
+        else -> "正在整理建议..."
+    }
+}
+
+private fun profileProcessingLabel(phase: OnboardingProcessingPhase): String {
+    return when (phase) {
+        OnboardingProcessingPhase.RECOGNIZING -> "正在识别语音..."
+        OnboardingProcessingPhase.BUILDING_PROFILE_RESULT -> "正在整理资料..."
+        OnboardingProcessingPhase.DETERMINISTIC_FALLBACK -> "正在准备资料..."
+        else -> "正在整理资料..."
+    }
 }
 
 @Composable

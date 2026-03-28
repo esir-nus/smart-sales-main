@@ -1,6 +1,7 @@
 package com.smartsales.prism.ui.onboarding
 
 import com.smartsales.prism.data.audio.DeviceSpeechFailureReason
+import com.smartsales.prism.data.audio.DeviceSpeechMode
 import com.smartsales.prism.data.audio.DeviceSpeechRecognitionResult
 import com.smartsales.prism.data.audio.DeviceSpeechRecognizer
 import com.smartsales.prism.domain.config.SubscriptionTier
@@ -354,7 +355,7 @@ class OnboardingInteractionViewModelTest {
         var finishGate: CompletableDeferred<DeviceSpeechRecognitionResult>? = null
         private var listening = false
 
-        override fun startListening() {
+        override fun startListening(mode: DeviceSpeechMode) {
             startFailure?.let { throw it }
             listening = true
         }

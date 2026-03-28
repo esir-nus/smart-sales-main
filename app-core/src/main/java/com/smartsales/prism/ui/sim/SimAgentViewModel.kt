@@ -10,6 +10,7 @@ import com.smartsales.core.pipeline.RealFollowUpRescheduleExtractionService
 import com.smartsales.core.pipeline.RealGlobalRescheduleExtractionService
 import com.smartsales.core.pipeline.RealUniAExtractionService
 import com.smartsales.prism.data.audio.DeviceSpeechFailureReason
+import com.smartsales.prism.data.audio.DeviceSpeechMode
 import com.smartsales.prism.data.audio.DeviceSpeechRecognitionResult
 import com.smartsales.prism.data.audio.DeviceSpeechRecognizer
 import com.smartsales.prism.data.audio.SimAudioRepository
@@ -35,7 +36,6 @@ import com.smartsales.prism.ui.IAgentViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -44,7 +44,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeout
 
 internal const val SIM_SCHEDULER_SHELF_HANDOFF_REQUEST_SUMMARY =
     "SIM scheduler shelf Ask AI handoff requested"
@@ -76,8 +75,6 @@ internal const val SIM_AUDIO_CHAT_LOG_TAG = "SimAudioChat"
 internal const val SIM_SCHEDULER_SHELF_LOG_TAG = "SimSchedulerShelf"
 internal const val SIM_BADGE_FOLLOW_UP_CHAT_LOG_TAG = "SimBadgeFollowUpChat"
 internal const val SIM_EMPTY_HOME_GREETING_FALLBACK_NAME = "SmartSales 用户"
-private const val SIM_VOICE_DRAFT_TIMEOUT_MILLIS = 1_200L
-
 enum class SimSchedulerFollowUpQuickAction {
     EXPLAIN,
     STATUS,
@@ -543,7 +540,7 @@ class SimAgentViewModel @Inject constructor(
             return false
         }
         return runCatching {
-            speechRecognizer.startListening()
+            speechRecognizer.startListening(DeviceSpeechMode.DEVICE_WITH_LOCAL_ASR_FALLBACK)
             _voiceDraftState.value = state.copy(
                 isRecording = true,
                 isProcessing = false,
@@ -578,9 +575,7 @@ class SimAgentViewModel @Inject constructor(
         requestId: Long
     ): DeviceSpeechRecognitionResult {
         return try {
-            val result = withTimeout(SIM_VOICE_DRAFT_TIMEOUT_MILLIS) {
-                speechRecognizer.finishListening()
-            }
+            val result = speechRecognizer.finishListening()
             if (isActiveVoiceDraftRequest(requestId)) {
                 result
             } else {
@@ -589,11 +584,6 @@ class SimAgentViewModel @Inject constructor(
                     message = "语音识别已取消"
                 )
             }
-        } catch (_: TimeoutCancellationException) {
-            DeviceSpeechRecognitionResult.Failure(
-                reason = DeviceSpeechFailureReason.NO_MATCH,
-                message = "语音识别超时"
-            )
         } catch (_: CancellationException) {
             DeviceSpeechRecognitionResult.Failure(
                 reason = DeviceSpeechFailureReason.CANCELLED,

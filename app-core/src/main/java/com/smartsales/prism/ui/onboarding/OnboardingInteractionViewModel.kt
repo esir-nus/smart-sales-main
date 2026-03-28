@@ -3,6 +3,7 @@ package com.smartsales.prism.ui.onboarding
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.smartsales.prism.data.audio.DeviceSpeechFailureReason
+import com.smartsales.prism.data.audio.DeviceSpeechMode
 import com.smartsales.prism.data.audio.DeviceSpeechRecognitionResult
 import com.smartsales.prism.data.audio.DeviceSpeechRecognizer
 import com.smartsales.prism.domain.repository.UserProfileRepository
@@ -83,7 +84,7 @@ class OnboardingInteractionViewModel @Inject constructor(
         val state = _consultationState.value
         if (state.isProcessing || state.isCompleted || speechRecognizer.isListening()) return false
         return runCatching {
-            speechRecognizer.startListening()
+            speechRecognizer.startListening(DeviceSpeechMode.DEVICE_ONLY)
             _consultationState.value = state.copy(
                 hasStartedInteracting = true,
                 isRecording = true,
@@ -162,7 +163,7 @@ class OnboardingInteractionViewModel @Inject constructor(
         val state = _profileState.value
         if (state.isProcessing || state.hasExtractionResult || speechRecognizer.isListening()) return false
         return runCatching {
-            speechRecognizer.startListening()
+            speechRecognizer.startListening(DeviceSpeechMode.DEVICE_ONLY)
             _profileState.value = state.copy(
                 hasStartedInteracting = true,
                 isRecording = true,

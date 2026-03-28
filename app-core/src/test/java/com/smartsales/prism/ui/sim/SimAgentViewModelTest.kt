@@ -13,6 +13,7 @@ import com.smartsales.core.test.fakes.FakeScheduleBoard
 import com.smartsales.core.test.fakes.FakeUserProfileRepository
 import com.smartsales.data.oss.OssUploader
 import com.smartsales.prism.data.audio.DeviceSpeechFailureReason
+import com.smartsales.prism.data.audio.DeviceSpeechMode
 import com.smartsales.prism.data.audio.DeviceSpeechRecognitionResult
 import com.smartsales.prism.data.audio.DeviceSpeechRecognizer
 import com.smartsales.prism.data.audio.SIM_AUDIO_METADATA_FILENAME
@@ -187,6 +188,18 @@ class SimAgentViewModelTest {
         assertFalse(state.awaitingMicPermission)
         assertEquals(SimVoiceDraftInteractionMode.TAP_TO_SEND, state.interactionMode)
         assertTrue(speechRecognizer.isListening())
+    }
+
+    @Test
+    fun `voice draft starts recognizer in local asr fallback mode`() {
+        val viewModel = newViewModel()
+
+        assertTrue(viewModel.startVoiceDraft())
+
+        assertEquals(
+            DeviceSpeechMode.DEVICE_WITH_LOCAL_ASR_FALLBACK,
+            speechRecognizer.lastMode
+        )
     }
 
     @Test
@@ -1367,10 +1380,12 @@ class SimAgentViewModelTest {
             DeviceSpeechRecognitionResult.Success("默认语音")
         var finishDelayMillis: Long = 0L
         var failStart = false
+        var lastMode: DeviceSpeechMode? = null
         private var listening = false
 
-        override fun startListening() {
+        override fun startListening(mode: DeviceSpeechMode) {
             if (failStart) error("start failed")
+            lastMode = mode
             listening = true
         }
 

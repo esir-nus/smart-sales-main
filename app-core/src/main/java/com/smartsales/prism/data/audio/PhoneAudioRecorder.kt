@@ -12,7 +12,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
 /**
- * 手机端 PCM WAV 录音工具 — DEBUG 专用 L2 测试
+ * 手机端 PCM WAV 录音工具
  *
  * 使用 AudioRecord (非 MediaRecorder) 直接录制 16kHz mono PCM，
  * 手动写 WAV 文件头，确保与 AsrService 输入规格完全兼容。

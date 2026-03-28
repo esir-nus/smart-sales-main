@@ -13,12 +13,15 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.FilterChip
@@ -55,10 +58,11 @@ private enum class OnboardingDesignPreset(
     val label: String,
     val fullAppOnly: Boolean = false
 ) {
-    WELCOME("Welcome", fullAppOnly = true),
+    WELCOME("Welcome"),
     PERMISSIONS("Permissions"),
-    HANDSHAKE_WAITING("Handshake Waiting", fullAppOnly = true),
-    HANDSHAKE("Handshake", fullAppOnly = true),
+    CONSULTATION_IDLE("Consultation Idle"),
+    CONSULTATION_COMPLETE("Consultation Complete"),
+    PROFILE("Profile"),
     HARDWARE_WAKE("Wake"),
     SCAN("Scan"),
     SCAN_TIMEOUT("Timeout"),
@@ -76,7 +80,7 @@ private enum class OnboardingDesignPreset(
 
     fun toState(host: OnboardingHost): OnboardingVisualCaptureState = when (this) {
         WELCOME -> OnboardingVisualCaptureState(
-            host = OnboardingHost.FULL_APP,
+            host = host,
             step = OnboardingStep.WELCOME,
             badge = null
         )
@@ -87,18 +91,25 @@ private enum class OnboardingDesignPreset(
             badge = null
         )
 
-        HANDSHAKE_WAITING -> OnboardingVisualCaptureState(
-            host = OnboardingHost.FULL_APP,
-            step = OnboardingStep.VOICE_HANDSHAKE,
+        CONSULTATION_IDLE -> OnboardingVisualCaptureState(
+            host = host,
+            step = OnboardingStep.VOICE_HANDSHAKE_CONSULTATION,
             badge = null,
-            voiceHandshakeState = VoiceHandshakeVisualState.WAITING
+            consultationCaptureState = OnboardingConsultationCaptureState.IDLE
         )
 
-        HANDSHAKE -> OnboardingVisualCaptureState(
-            host = OnboardingHost.FULL_APP,
-            step = OnboardingStep.VOICE_HANDSHAKE,
+        CONSULTATION_COMPLETE -> OnboardingVisualCaptureState(
+            host = host,
+            step = OnboardingStep.VOICE_HANDSHAKE_CONSULTATION,
             badge = null,
-            voiceHandshakeState = VoiceHandshakeVisualState.REVEALED
+            consultationCaptureState = OnboardingConsultationCaptureState.COMPLETE
+        )
+
+        PROFILE -> OnboardingVisualCaptureState(
+            host = host,
+            step = OnboardingStep.VOICE_HANDSHAKE_PROFILE,
+            badge = null,
+            profileCaptureState = OnboardingProfileCaptureState.EXTRACTED
         )
 
         HARDWARE_WAKE -> OnboardingVisualCaptureState(
@@ -291,6 +302,74 @@ fun OnboardingDesignBrowser(
                 ) {
                     OnboardingStaticScreen(state = previewState)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+internal fun OnboardingStaticPreviewOverlay(
+    isVisible: Boolean,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (!isVisible) return
+
+    val reviewPages = remember {
+        listOf(
+            OnboardingDesignPreset.PERMISSIONS.toState(OnboardingHost.SIM_CONNECTIVITY),
+            OnboardingDesignPreset.CONSULTATION_COMPLETE.toState(OnboardingHost.SIM_CONNECTIVITY),
+            OnboardingDesignPreset.PROFILE.toState(OnboardingHost.SIM_CONNECTIVITY),
+            OnboardingDesignPreset.HARDWARE_WAKE.toState(OnboardingHost.SIM_CONNECTIVITY),
+            OnboardingDesignPreset.SCAN.toState(OnboardingHost.SIM_CONNECTIVITY),
+            OnboardingDesignPreset.DEVICE_FOUND.toState(OnboardingHost.SIM_CONNECTIVITY),
+            OnboardingDesignPreset.WIFI_FORM.toState(OnboardingHost.SIM_CONNECTIVITY),
+            OnboardingDesignPreset.COMPLETE.toState(OnboardingHost.SIM_CONNECTIVITY),
+            OnboardingDesignPreset.SCAN_TIMEOUT.toState(OnboardingHost.SIM_CONNECTIVITY),
+            OnboardingDesignPreset.SCAN_PERMISSION.toState(OnboardingHost.SIM_CONNECTIVITY),
+            OnboardingDesignPreset.WIFI_PROGRESS.toState(OnboardingHost.SIM_CONNECTIVITY),
+            OnboardingDesignPreset.WIFI_FAILURE.toState(OnboardingHost.SIM_CONNECTIVITY)
+        )
+    }
+    val pagerState = rememberPagerState(pageCount = { reviewPages.size })
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.Black)
+    ) {
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize()
+        ) { page ->
+            OnboardingStaticScreen(
+                state = reviewPages[page],
+                onExit = onDismiss
+            )
+        }
+
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(bottom = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            repeat(reviewPages.size) { pageIndex ->
+                val isSelected = pageIndex == pagerState.currentPage
+                Box(
+                    modifier = Modifier
+                        .size(if (isSelected) 8.dp else 6.dp)
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(
+                            if (isSelected) {
+                                Color.White.copy(alpha = 0.86f)
+                            } else {
+                                Color.White.copy(alpha = 0.24f)
+                            }
+                        )
+                )
             }
         }
     }

@@ -14,7 +14,8 @@ enum class OnboardingHost {
 enum class OnboardingStep {
     WELCOME,
     PERMISSIONS_PRIMER,
-    VOICE_HANDSHAKE,
+    VOICE_HANDSHAKE_CONSULTATION,
+    VOICE_HANDSHAKE_PROFILE,
     HARDWARE_WAKE,
     SCAN,
     DEVICE_FOUND,
@@ -24,7 +25,7 @@ enum class OnboardingStep {
 
 internal fun initialOnboardingStep(host: OnboardingHost): OnboardingStep = when (host) {
     OnboardingHost.FULL_APP -> OnboardingStep.WELCOME
-    OnboardingHost.SIM_CONNECTIVITY -> OnboardingStep.PERMISSIONS_PRIMER
+    OnboardingHost.SIM_CONNECTIVITY -> OnboardingStep.WELCOME
 }
 
 internal fun nextOnboardingStep(
@@ -32,11 +33,9 @@ internal fun nextOnboardingStep(
     host: OnboardingHost
 ): OnboardingStep = when (currentStep) {
     OnboardingStep.WELCOME -> OnboardingStep.PERMISSIONS_PRIMER
-    OnboardingStep.PERMISSIONS_PRIMER -> when (host) {
-        OnboardingHost.FULL_APP -> OnboardingStep.VOICE_HANDSHAKE
-        OnboardingHost.SIM_CONNECTIVITY -> OnboardingStep.HARDWARE_WAKE
-    }
-    OnboardingStep.VOICE_HANDSHAKE -> OnboardingStep.HARDWARE_WAKE
+    OnboardingStep.PERMISSIONS_PRIMER -> OnboardingStep.VOICE_HANDSHAKE_CONSULTATION
+    OnboardingStep.VOICE_HANDSHAKE_CONSULTATION -> OnboardingStep.VOICE_HANDSHAKE_PROFILE
+    OnboardingStep.VOICE_HANDSHAKE_PROFILE -> OnboardingStep.HARDWARE_WAKE
     OnboardingStep.HARDWARE_WAKE -> OnboardingStep.SCAN
     OnboardingStep.SCAN -> OnboardingStep.DEVICE_FOUND
     OnboardingStep.DEVICE_FOUND -> OnboardingStep.PROVISIONING

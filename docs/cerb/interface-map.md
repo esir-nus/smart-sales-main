@@ -17,7 +17,7 @@ Leaf services with no upstream dependencies. They don't call other modules.
 
 | Module | Track | Owns (Writes) | Reads From | Key Interface | OS Layer | Status |
 |--------|-------|--------------|------------|---------------|----------|--------|
-| **[ConnectivityBridge](./connectivity-bridge/spec.md)** | Hardware & Audio | BLE + HTTP device state | — | `connectionState: StateFlow`, `isReady()` | — | ✅ |
+| **[ConnectivityBridge](./connectivity-bridge/spec.md)** | Hardware & Audio | BLE + HTTP device state, manager-only BLE/Wi‑Fi diagnostic state | — | `connectionState: StateFlow`, `managerStatus: StateFlow`, `isReady()` | — | ✅ |
 | **[NotificationService](./notifications/spec.md)** | System I & Ambient | System notification display | — | `show(id, title, body, channel...) -> Unit` | — | ✅ |
 | **[OSS](./oss-service/spec.md)** | Hardware & Audio | File upload/download | — | `upload(File, objectKey) -> OssUploadResult` | — | ✅ |
 | **[ASR](./asr-service/spec.md)** | Hardware & Audio | Transcription results | OSS (downloads audio files to transcribe) | `transcribe(File) -> AsrResult` | — | ✅ |
@@ -90,8 +90,10 @@ User-facing features. Each receives processed results from Orchestrator (Layer 3
 | **[DynamicIsland](../cerb-ui/dynamic-island/spec.md)** | Intelligent Scheduler | Sticky one-line shell summary presentation | Scheduler summary projection, session title projection | — | OS: App | ✅ |
 | **[SchedulerDrawer](./scheduler/spec.md)** | Intelligent Scheduler | Visual UI states | Scheduler, ScheduleBoard | `ISchedulerViewModel` | OS: App | ✅ |
 | **[ScheduleBoard](./scheduler/spec.md)** | Intelligent Scheduler | Conflict index (in-memory cache) | ScheduledTaskRepository (populates index) | — | OS: SSD | ✅ |
+| **ActiveTaskRetrievalIndex** | Intelligent Scheduler | Global follow-up active-task shortlist + final target gate | ScheduledTaskRepository (all non-done tasks) | `buildShortlist(...)`, `resolveTarget(...)` | OS: App | ✅ |
 | **[BadgeAudioPipeline](./badge-audio-pipeline/spec.md)** | Hardware & Audio | Audio recording lifecycle | ASR, OSS, ConnectivityBridge | Delegates transcript to `IntentOrchestrator`; consumes early `PathACommitted` completion while Path B continues in background | — | ✅ |
 | **[AudioManagement](./audio-management/spec.md)** | Hardware & Audio | Manual sync/transcribe states | ConnectivityBridge, TingwuPipeline | *Observes DB State* | OS: App | 🚧 |
+| **[OnboardingInteraction](./onboarding-interaction/spec.md)** | Hardware & Audio | Pre-pairing phone-mic onboarding interaction state, consultation reply, typed profile draft, CTA-gated profile save | AsrService, Executor, UserProfileRepository | `OnboardingInteractionService`, `OnboardingAudioCapture`, `OnboardingInteractionViewModel` | OS: App | 🚧 |
 | **[ConflictResolver](./conflict-resolver/spec.md)** | Intelligent Scheduler | Conflict resolution actions | ScheduleBoard | `resolve(...) -> ConflictResolution` | OS: App | ✅ |
 | **[AgentIntelligenceUI](../cerb-ui/agent-intelligence/spec.md)** | System II & Routing | Wait-state UI components | — | `StateFlow<UiState>` | OS: App | 📐 |
 | **[DevicePairing](./device-pairing/spec.md)** | Hardware & Audio | BLE pairing session states | Legacy BLE stack | `StateFlow<PairingState>` | OS: App | ✅ |
@@ -109,6 +111,7 @@ The SIM post-closeout scheduler follow-up mini-wave introduces one explicit SIM-
 - `BadgeAudioPipeline` scheduler completion may create a SIM shell-owned follow-up binding
 - `SimShell` / `SimAgentViewModel` may host the follow-up session and task selection UI
 - actual task mutation truth still routes through scheduler-owned collaborators (`ScheduledTaskRepository`, conflict check, reminder stack)
+- global follow-up candidate-space truth may route through `ActiveTaskRetrievalIndex`, which remains scheduler-owned and derived from canonical tasks rather than chat/session memory
 
 Rule:
 

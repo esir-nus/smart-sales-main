@@ -1,6 +1,8 @@
 package com.smartsales.prism.ui.onboarding
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class OnboardingFlowTransitionTest {
@@ -13,12 +15,16 @@ class OnboardingFlowTransitionTest {
             nextOnboardingStep(OnboardingStep.WELCOME, OnboardingHost.FULL_APP)
         )
         assertEquals(
-            OnboardingStep.VOICE_HANDSHAKE,
+            OnboardingStep.VOICE_HANDSHAKE_CONSULTATION,
             nextOnboardingStep(OnboardingStep.PERMISSIONS_PRIMER, OnboardingHost.FULL_APP)
         )
         assertEquals(
+            OnboardingStep.VOICE_HANDSHAKE_PROFILE,
+            nextOnboardingStep(OnboardingStep.VOICE_HANDSHAKE_CONSULTATION, OnboardingHost.FULL_APP)
+        )
+        assertEquals(
             OnboardingStep.HARDWARE_WAKE,
-            nextOnboardingStep(OnboardingStep.VOICE_HANDSHAKE, OnboardingHost.FULL_APP)
+            nextOnboardingStep(OnboardingStep.VOICE_HANDSHAKE_PROFILE, OnboardingHost.FULL_APP)
         )
         assertEquals(
             OnboardingStep.SCAN,
@@ -39,11 +45,23 @@ class OnboardingFlowTransitionTest {
     }
 
     @Test
-    fun `sim host starts at permissions and skips welcome plus voice handshake`() {
-        assertEquals(OnboardingStep.PERMISSIONS_PRIMER, initialOnboardingStep(OnboardingHost.SIM_CONNECTIVITY))
+    fun `sim host starts at welcome and walks the shared intro plus pairing path`() {
+        assertEquals(OnboardingStep.WELCOME, initialOnboardingStep(OnboardingHost.SIM_CONNECTIVITY))
+        assertEquals(
+            OnboardingStep.PERMISSIONS_PRIMER,
+            nextOnboardingStep(OnboardingStep.WELCOME, OnboardingHost.SIM_CONNECTIVITY)
+        )
+        assertEquals(
+            OnboardingStep.VOICE_HANDSHAKE_CONSULTATION,
+            nextOnboardingStep(OnboardingStep.PERMISSIONS_PRIMER, OnboardingHost.SIM_CONNECTIVITY)
+        )
+        assertEquals(
+            OnboardingStep.VOICE_HANDSHAKE_PROFILE,
+            nextOnboardingStep(OnboardingStep.VOICE_HANDSHAKE_CONSULTATION, OnboardingHost.SIM_CONNECTIVITY)
+        )
         assertEquals(
             OnboardingStep.HARDWARE_WAKE,
-            nextOnboardingStep(OnboardingStep.PERMISSIONS_PRIMER, OnboardingHost.SIM_CONNECTIVITY)
+            nextOnboardingStep(OnboardingStep.VOICE_HANDSHAKE_PROFILE, OnboardingHost.SIM_CONNECTIVITY)
         )
         assertEquals(
             OnboardingStep.SCAN,
@@ -61,5 +79,17 @@ class OnboardingFlowTransitionTest {
             OnboardingStep.COMPLETE,
             nextOnboardingStep(OnboardingStep.PROVISIONING, OnboardingHost.SIM_CONNECTIVITY)
         )
+    }
+
+    @Test
+    fun `allow exit policy keeps explicit exit affordance and back free`() {
+        assertTrue(shouldShowOnboardingExitAction(OnboardingExitPolicy.ALLOW_EXIT))
+        assertFalse(shouldBlockOnboardingSystemBack(OnboardingExitPolicy.ALLOW_EXIT))
+    }
+
+    @Test
+    fun `block exit policy hides explicit exit affordance and consumes back`() {
+        assertFalse(shouldShowOnboardingExitAction(OnboardingExitPolicy.BLOCK_EXIT))
+        assertTrue(shouldBlockOnboardingSystemBack(OnboardingExitPolicy.BLOCK_EXIT))
     }
 }

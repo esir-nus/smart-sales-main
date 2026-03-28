@@ -2,7 +2,7 @@
 
 > Type: Flow
 > Status: Active
-> Last Updated: 2026-03-25
+> Last Updated: 2026-03-27
 
 ## Overview
 
@@ -11,7 +11,7 @@ The production onboarding flow now follows the approved 5-wave prototype family.
 This flow has two hosts:
 
 1. `FULL_APP` for cold-start product onboarding
-2. `SIM_CONNECTIVITY` for SIM setup reuse inside the connectivity route
+2. `SIM_CONNECTIVITY` for SIM setup reuse inside the connectivity route and SIM first-launch bootstrap after fresh install / reinstall
 
 The same Compose coordinator owns both hosts. Host selection changes the visible sequence, not the pairing runtime owner.
 
@@ -27,23 +27,27 @@ Behavior authority for the pairing runtime remains:
 
 1. `WELCOME`
 2. `PERMISSIONS_PRIMER`
-3. `VOICE_HANDSHAKE`
-4. `HARDWARE_WAKE`
-5. `SCAN`
-6. `DEVICE_FOUND`
-7. `PROVISIONING`
-8. `COMPLETE`
+3. `VOICE_HANDSHAKE_CONSULTATION`
+4. `VOICE_HANDSHAKE_PROFILE`
+5. `HARDWARE_WAKE`
+6. `SCAN`
+7. `DEVICE_FOUND`
+8. `PROVISIONING`
+9. `COMPLETE`
 
 ### SIM_CONNECTIVITY
 
-1. `PERMISSIONS_PRIMER`
-2. `HARDWARE_WAKE`
-3. `SCAN`
-4. `DEVICE_FOUND`
-5. `PROVISIONING`
-6. `COMPLETE`
+1. `WELCOME`
+2. `PERMISSIONS_PRIMER`
+3. `VOICE_HANDSHAKE_CONSULTATION`
+4. `VOICE_HANDSHAKE_PROFILE`
+5. `HARDWARE_WAKE`
+6. `SCAN`
+7. `DEVICE_FOUND`
+8. `PROVISIONING`
+9. `COMPLETE`
 
-SIM must skip `WELCOME` and `VOICE_HANDSHAKE`.
+SIM now reuses the same calm intro prefix as the full-app host before entering the pairing-owned setup steps.
 
 ## Wave Intent
 
@@ -57,10 +61,11 @@ Rule:
 - the primer is informational first
 - Android permission prompts still happen at point-of-use
 
-### Wave 2: Embodied Trust
+### Wave 2: Interactive Handshake
 
-- `VOICE_HANDSHAKE` is abstract, not fake-chat theater
-- `HARDWARE_WAKE` teaches the 3-second badge wake ritual
+- `VOICE_HANDSHAKE_CONSULTATION` is a real two-turn phone-mic consultation, not a fake static placeholder
+- `VOICE_HANDSHAKE_PROFILE` is a real phone-mic profile capture step with typed extraction and explicit CTA save
+- `HARDWARE_WAKE` still teaches the 3-second badge wake ritual
 
 ### Wave 3: Operational Pairing
 
@@ -78,23 +83,31 @@ Rule:
 
 - `FULL_APP` completion enters the main app home and marks onboarding complete
 - `SIM_CONNECTIVITY` completion enters the SIM connectivity manager first, preserving accepted `SETUP -> MANAGER` routing
+- on fresh SIM install / reinstall, the SIM shell bootstraps directly into the `SIM_CONNECTIVITY` host before ordinary shell use
+- after the SIM-only first-launch gate is completed, later SIM connectivity replay still reuses the same host but remains manually entered from the shell
+- host split now applies to completion routing and connectivity ownership, not to whether the intro prefix is visible
 
 ## Locked Invariants
 
 - No generic Android setup wizard treatment
 - No mascot energy
-- No fake assistant chat bubbles in the voice handshake
 - No auto-connect from scan results
 - No onboarding-owned SIM shell navigation policy
-- No account/profile/notification tail inside the active production flow
+- No dismissing forced first-launch SIM onboarding into the shell before completion
+- No light-theme onboarding variant; onboarding stays dark-first on both hosts
+- Onboarding backgrounds reuse the shipped SIM aurora floor across all active steps; pages must not ship separate background systems
+- No badge-audio or Tingwu dependency inside the intro interaction
+- No profile persistence without explicit CTA save
+- No account/profile/notification tail after pairing inside the active production flow
 
 ## Deferred Out of Scope
 
-The following legacy steps are no longer part of the active production onboarding sequence:
+The following legacy steps are still not part of the active production onboarding sequence:
 
 - device naming
 - account gate
-- profile collection
 - notification / OEM permission tail
 
-If reintroduced later, they must be scoped as a new approved slice rather than silently appended to this flow.
+Note:
+
+- the new `VOICE_HANDSHAKE_PROFILE` step is a pre-pairing intro interaction, not a revival of the old post-pairing profile tail

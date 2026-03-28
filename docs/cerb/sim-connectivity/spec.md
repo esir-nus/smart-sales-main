@@ -123,8 +123,10 @@ The SIM shell should expose a connectivity entry/icon as a support action.
 Expectations:
 
 - entry is reachable from normal shell use
+- after fresh SIM install / reinstall, the shell may bootstrap directly into the shared onboarding coordinator before ordinary shell use
 - `ConnectivityModal` is the bootstrap-only entry for `NeedsSetup`
-- `开始配网` transitions into the onboarding connectivity subset (`HARDWARE_WAKE` -> `SCAN` -> `DEVICE_FOUND` -> `BLE_CONNECTING` -> `WIFI_CREDS` -> `FIRMWARE_CHECK`) as a nested SIM-owned full-screen overlay
+- `开始配网` transitions into the shared onboarding coordinator with `host = SIM_CONNECTIVITY`
+- the SIM-visible onboarding sequence is `WELCOME -> PERMISSIONS_PRIMER -> VOICE_HANDSHAKE_CONSULTATION -> VOICE_HANDSHAKE_PROFILE -> HARDWARE_WAKE -> SCAN -> DEVICE_FOUND -> PROVISIONING -> COMPLETE`
 - setup success transitions into a contained SIM connectivity manager surface
 - once a device/session already exists, later connectivity entry opens the manager directly instead of reopening the bootstrap modal
 - closing the manager returns the user to SIM chat
@@ -137,7 +139,9 @@ This entry does not change the rule that SIM has only two main product lanes.
 - when connection state is `NeedsSetup`, connectivity entry opens the bootstrap modal
 - when a device/session already exists, connectivity entry opens the contained connectivity manager directly
 - the setup branch reuses onboarding pairing UI/business logic rather than the legacy `DeviceSetupScreen`
-- setup success enters the SIM connectivity manager instead of returning directly to chat or continuing into onboarding naming/account/profile steps
+- the setup branch now reuses the shared onboarding intro prefix before entering pairing-owned steps
+- fresh install / reinstall may force the setup branch on shell boot through a SIM-only first-launch gate, but this still reuses the same SIM-owned setup surface rather than a separate activity route
+- setup success enters the SIM connectivity manager instead of returning directly to chat or continuing into any legacy full-onboarding tail steps
 - the SIM manager remains a connection-only steady-state surface in this slice; it does not recover the historical full `DeviceManager` file-list/product scope
 - manager presentation is intentionally contained so connectivity reads as a support panel instead of taking over the shell
 - scrim dismissal applies to the modal route only; setup and manager branches are owned by explicit actions/events

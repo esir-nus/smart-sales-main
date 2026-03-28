@@ -1,10 +1,17 @@
 package com.smartsales.prism.ui.onboarding
 
+import android.content.Context
+import android.content.ContextWrapper
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.ComponentActivity
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
@@ -15,6 +22,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +36,9 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -36,6 +47,7 @@ import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -46,6 +58,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -59,17 +72,25 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.core.content.ContextCompat
+import android.Manifest
+import android.content.pm.PackageManager
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.smartsales.prism.domain.pairing.DiscoveredBadge
 import com.smartsales.prism.domain.pairing.ErrorReason
 import com.smartsales.prism.domain.pairing.PairingState
 import com.smartsales.prism.domain.pairing.WifiCredentials
+import com.smartsales.prism.ui.components.prismTopSafeBandPadding
 import com.smartsales.prism.ui.sim.SimSharedAuroraBackground
 import kotlinx.coroutines.delay
 
@@ -89,6 +110,12 @@ private val OnboardingPrimarySurface = Color.White
 private val OnboardingPrimaryText = Color(0xFF05060A)
 private val OnboardingLogoTile = Color(0xFF12161E)
 
+private tailrec fun Context.findComponentActivity(): ComponentActivity? = when (this) {
+    is ComponentActivity -> this
+    is ContextWrapper -> baseContext.findComponentActivity()
+    else -> null
+}
+
 internal data class OnboardingVisualCaptureState(
     val host: OnboardingHost,
     val step: OnboardingStep,
@@ -98,24 +125,38 @@ internal data class OnboardingVisualCaptureState(
     val password: String = "",
     val permissionDenied: Boolean = false,
     val showProvisioningForm: Boolean = true,
-    val voiceHandshakeState: VoiceHandshakeVisualState = VoiceHandshakeVisualState.REVEALED
+    val consultationCaptureState: OnboardingConsultationCaptureState =
+        OnboardingConsultationCaptureState.COMPLETE,
+    val profileCaptureState: OnboardingProfileCaptureState =
+        OnboardingProfileCaptureState.EXTRACTED
 )
 
-internal enum class VoiceHandshakeVisualState {
-    WAITING,
-    REVEALED
+enum class OnboardingExitPolicy {
+    ALLOW_EXIT,
+    BLOCK_EXIT
+}
+
+internal fun shouldShowOnboardingExitAction(exitPolicy: OnboardingExitPolicy): Boolean {
+    return exitPolicy == OnboardingExitPolicy.ALLOW_EXIT
+}
+
+internal fun shouldBlockOnboardingSystemBack(exitPolicy: OnboardingExitPolicy): Boolean {
+    return exitPolicy == OnboardingExitPolicy.BLOCK_EXIT
 }
 
 @Composable
 fun OnboardingScreen(
     onComplete: () -> Unit,
-    pairingViewModel: PairingFlowViewModel = hiltViewModel()
+    pairingViewModel: PairingFlowViewModel = hiltViewModel(),
+    interactionViewModel: OnboardingInteractionViewModel = hiltViewModel()
 ) {
     OnboardingCoordinator(
         host = OnboardingHost.FULL_APP,
         onComplete = onComplete,
         onExit = onComplete,
-        pairingViewModel = pairingViewModel
+        exitPolicy = OnboardingExitPolicy.ALLOW_EXIT,
+        pairingViewModel = pairingViewModel,
+        interactionViewModel = interactionViewModel
     )
 }
 
@@ -124,17 +165,25 @@ fun OnboardingCoordinator(
     host: OnboardingHost,
     onComplete: () -> Unit,
     onExit: () -> Unit,
-    pairingViewModel: PairingFlowViewModel = hiltViewModel()
+    exitPolicy: OnboardingExitPolicy = OnboardingExitPolicy.ALLOW_EXIT,
+    pairingViewModel: PairingFlowViewModel = hiltViewModel(),
+    interactionViewModel: OnboardingInteractionViewModel = hiltViewModel()
 ) {
     var currentStep by remember(host) { mutableStateOf(initialOnboardingStep(host)) }
     var discoveredBadge by remember(host) { mutableStateOf<DiscoveredBadge?>(null) }
     var wifiSsid by remember(host) { mutableStateOf("") }
     var wifiPassword by remember(host) { mutableStateOf("") }
 
+    LaunchedEffect(host) {
+        interactionViewModel.resetInteractionState()
+    }
+
     OnboardingFrame(
         host = host,
         currentStep = currentStep,
+        exitPolicy = exitPolicy,
         onExit = {
+            interactionViewModel.cancelActiveRecording()
             pairingViewModel.cancelPairing()
             if (host == OnboardingHost.SIM_CONNECTIVITY) {
                 onExit()
@@ -152,7 +201,13 @@ fun OnboardingCoordinator(
                 onContinue = { currentStep = nextOnboardingStep(it, host) }
             )
 
-            OnboardingStep.VOICE_HANDSHAKE -> VoiceHandshakeStep(
+            OnboardingStep.VOICE_HANDSHAKE_CONSULTATION -> VoiceHandshakeConsultationStep(
+                viewModel = interactionViewModel,
+                onContinue = { currentStep = nextOnboardingStep(it, host) }
+            )
+
+            OnboardingStep.VOICE_HANDSHAKE_PROFILE -> VoiceHandshakeProfileStep(
+                viewModel = interactionViewModel,
                 onContinue = { currentStep = nextOnboardingStep(it, host) }
             )
 
@@ -223,15 +278,18 @@ internal fun OnboardingStaticScreen(
     OnboardingFrame(
         host = state.host,
         currentStep = state.step,
+        exitPolicy = OnboardingExitPolicy.ALLOW_EXIT,
         animateStepContent = false,
         onExit = onExit
     ) {
         when (it) {
             OnboardingStep.WELCOME -> WelcomeStep(onStart = {})
             OnboardingStep.PERMISSIONS_PRIMER -> PermissionsPrimerStep(onContinue = {})
-            OnboardingStep.VOICE_HANDSHAKE -> VoiceHandshakeStepContent(
-                visualState = state.voiceHandshakeState,
-                onContinue = {}
+            OnboardingStep.VOICE_HANDSHAKE_CONSULTATION -> VoiceHandshakeConsultationStaticStep(
+                captureState = state.consultationCaptureState
+            )
+            OnboardingStep.VOICE_HANDSHAKE_PROFILE -> VoiceHandshakeProfileStaticStep(
+                captureState = state.profileCaptureState
             )
             OnboardingStep.HARDWARE_WAKE -> HardwareWakeStep(onContinue = {})
             OnboardingStep.SCAN -> ScanStepContent(
@@ -271,10 +329,13 @@ internal fun OnboardingStaticScreen(
 private fun OnboardingFrame(
     host: OnboardingHost,
     currentStep: OnboardingStep,
+    exitPolicy: OnboardingExitPolicy,
     onExit: () -> Unit,
     animateStepContent: Boolean = true,
     content: @Composable (OnboardingStep) -> Unit
 ) {
+    BackHandler(enabled = shouldBlockOnboardingSystemBack(exitPolicy)) {}
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -289,22 +350,22 @@ private fun OnboardingFrame(
             )
             .padding(horizontal = 24.dp, vertical = 20.dp)
     ) {
-        if (currentStep == OnboardingStep.PERMISSIONS_PRIMER) {
-            SimSharedAuroraBackground()
-        } else {
-            OnboardingAuroraBackground(step = currentStep)
-        }
+        OnboardingDarkSystemBarsEffect()
 
-        TextButton(
-            onClick = onExit,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .statusBarsPadding()
-        ) {
-            Text(
-                text = if (host == OnboardingHost.SIM_CONNECTIVITY) "关闭" else "跳过",
-                color = OnboardingMuted
-            )
+        SimSharedAuroraBackground(forceDarkPalette = true)
+
+        if (shouldShowOnboardingExitAction(exitPolicy)) {
+            TextButton(
+                onClick = onExit,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .prismTopSafeBandPadding()
+            ) {
+                Text(
+                    text = if (host == OnboardingHost.SIM_CONNECTIVITY) "关闭" else "跳过",
+                    color = OnboardingMuted
+                )
+            }
         }
 
         if (animateStepContent) {
@@ -327,6 +388,18 @@ private fun OnboardingFrame(
                 content = content
             )
         }
+    }
+}
+
+@Composable
+private fun OnboardingDarkSystemBarsEffect() {
+    val view = LocalView.current
+    val activity = view.context.findComponentActivity() ?: return
+
+    SideEffect {
+        val controller = WindowCompat.getInsetsController(activity.window, view)
+        controller.isAppearanceLightStatusBars = false
+        controller.isAppearanceLightNavigationBars = false
     }
 }
 
@@ -409,53 +482,6 @@ internal fun resolveConnectivityPairingErrorUiModel(
         secondaryLabel = "返回上一步",
         retryAction = ConnectivityPairingRetryAction.RETRY_SCAN
     )
-}
-
-@Composable
-private fun OnboardingAuroraBackground(step: OnboardingStep) {
-    val topSize = when (step) {
-        OnboardingStep.SCAN -> 320.dp
-        OnboardingStep.PERMISSIONS_PRIMER -> 260.dp
-        else -> 280.dp
-    }
-    val topAlpha = when (step) {
-        OnboardingStep.SCAN -> 0.78f
-        OnboardingStep.PERMISSIONS_PRIMER -> 0.70f
-        else -> 0.65f
-    }
-    val bottomSize = when (step) {
-        OnboardingStep.SCAN -> 330.dp
-        OnboardingStep.HARDWARE_WAKE -> 320.dp
-        else -> 300.dp
-    }
-    val bottomAlpha = when (step) {
-        OnboardingStep.SCAN -> 0.66f
-        OnboardingStep.HARDWARE_WAKE -> 0.60f
-        else -> 0.55f
-    }
-    Box(modifier = Modifier.fillMaxSize()) {
-        Box(
-            modifier = Modifier
-                .align(
-                    when (step) {
-                        OnboardingStep.SCAN -> Alignment.TopCenter
-                        else -> Alignment.TopStart
-                    }
-                )
-                .size(topSize)
-                .clip(CircleShape)
-                .background(OnboardingBlue.copy(alpha = if (step == OnboardingStep.SCAN) 0.13f else 0.10f))
-                .alpha(topAlpha)
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .size(bottomSize)
-                .clip(CircleShape)
-                .background(OnboardingIndigo.copy(alpha = if (step == OnboardingStep.SCAN) 0.12f else 0.10f))
-                .alpha(bottomAlpha)
-        )
-    }
 }
 
 @Composable
@@ -584,138 +610,621 @@ private fun PermissionsPrimerStep(onContinue: () -> Unit) {
 }
 
 @Composable
-private fun VoiceHandshakeStep(onContinue: () -> Unit) {
-    var visualState by remember { mutableStateOf(VoiceHandshakeVisualState.WAITING) }
-    val transition = rememberInfiniteTransition(label = "voiceHandshake")
-    val pulse by transition.animateFloat(
-        initialValue = 0.45f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(800),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulse"
-    )
-
-    LaunchedEffect(Unit) {
-        delay(1500)
-        visualState = VoiceHandshakeVisualState.REVEALED
+private fun VoiceHandshakeConsultationStep(
+    viewModel: OnboardingInteractionViewModel,
+    onContinue: () -> Unit
+) {
+    val context = LocalContext.current
+    val state by viewModel.consultationState.collectAsState()
+    var hasMicPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                PackageManager.PERMISSION_GRANTED
+        )
+    }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasMicPermission = granted
+        if (!granted) viewModel.onConsultationMicPermissionDenied()
     }
 
-    VoiceHandshakeStepContent(
-        visualState = visualState,
+    VoiceHandshakeConsultationContent(
+        state = state,
         onContinue = onContinue,
-        pulse = pulse
+        onPressStart = {
+            hasMicPermission = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.RECORD_AUDIO
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!hasMicPermission) {
+                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                false
+            } else {
+                viewModel.startConsultationRecording()
+            }
+        },
+        onPressEnd = { viewModel.finishConsultationRecording() }
     )
 }
 
 @Composable
-private fun VoiceHandshakeStepContent(
-    visualState: VoiceHandshakeVisualState,
-    onContinue: () -> Unit,
-    pulse: Float = 1f
+private fun VoiceHandshakeConsultationStaticStep(
+    captureState: OnboardingConsultationCaptureState
 ) {
-    val replyVisible = visualState == VoiceHandshakeVisualState.REVEALED
+    VoiceHandshakeConsultationContent(
+        state = consultationStateForCapture(captureState),
+        onContinue = {},
+        onPressStart = { false },
+        onPressEnd = {}
+    )
+}
 
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(Modifier.height(44.dp))
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "让我们先认识一下",
-                color = OnboardingText,
-                fontSize = 31.sp,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.height(10.dp))
-            Text(
-                text = "试着说：\"你好，帮我搞定这个客户\"",
-                color = OnboardingMuted.copy(alpha = 0.92f),
-                fontSize = 16.sp,
-                lineHeight = 23.sp,
-                textAlign = TextAlign.Center
-            )
+@Composable
+private fun VoiceHandshakeConsultationContent(
+    state: OnboardingConsultationUiState,
+    onContinue: () -> Unit,
+    onPressStart: () -> Boolean,
+    onPressEnd: () -> Unit
+) {
+    val listState = rememberLazyListState()
+    val itemCount = state.messages.size + if (state.isCompleted) 1 else 0
+    LaunchedEffect(itemCount) {
+        if (itemCount > 0) {
+            listState.animateScrollToItem(itemCount - 1)
         }
-        Spacer(Modifier.weight(0.92f))
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val barHeights = listOf(26.dp, 46.dp, 70.dp, 92.dp, 70.dp, 46.dp, 26.dp)
-            val barColors = listOf(
-                Color.White.copy(alpha = 0.45f),
-                Color.White.copy(alpha = 0.55f),
-                Color.White.copy(alpha = 0.68f),
-                OnboardingBlue,
-                OnboardingIndigo,
-                Color.White.copy(alpha = 0.55f),
-                Color.White.copy(alpha = 0.45f)
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                top = 18.dp,
+                bottom = 200.dp
             )
-            barHeights.forEachIndexed { index, height ->
-                Box(
-                    modifier = Modifier
-                        .size(width = 7.dp, height = height)
-                        .scale(if (index % 2 == 0) pulse else 1.15f - (pulse * 0.2f))
-                        .clip(RoundedCornerShape(999.dp))
-                        .background(barColors[index])
-                )
-            }
-        }
-        Spacer(Modifier.height(40.dp))
-        if (replyVisible) {
-            FrostedCard(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 6.dp),
-                containerColor = Color(0x141A2337),
-                borderColor = OnboardingBlue.copy(alpha = 0.22f)
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            item {
+                AnimatedVisibility(
+                    visible = !state.hasStartedInteracting,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
                 ) {
-                    Text(
-                        text = "语音通道",
-                        color = OnboardingBlue,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        letterSpacing = 0.2.sp,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(Modifier.height(10.dp))
-                    Text(
-                        text = "已听到您的开场语音，接下来进入设备唤醒。",
-                        color = OnboardingText,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Medium,
-                        lineHeight = 25.sp,
-                        textAlign = TextAlign.Center
+                    TitleBlock(
+                        title = "初次沟通体验",
+                        subtitle = "按住下方麦克风，用真实语音试着开启一次销售咨询。"
                     )
                 }
             }
-        } else {
-            Spacer(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(112.dp)
-            )
+            items(state.messages) { message ->
+                OnboardingMessageBubble(message = message)
+            }
+            if (state.isCompleted) {
+                item {
+                    OnboardingSuccessNote(
+                        title = "体验完成",
+                        subtitle = "完美！这就是与 AI 沟通的方式。"
+                    )
+                }
+            }
         }
-        Spacer(Modifier.weight(1f))
-        PrimaryPillButton(
-            text = "继续",
-            onClick = onContinue,
-            enabled = replyVisible,
+
+        Column(
             modifier = Modifier
+                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .padding(bottom = 8.dp)
+                .navigationBarsPadding()
+                .padding(horizontal = 4.dp, vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            state.errorMessage?.let {
+                OnboardingInlineNotice(text = it)
+                Spacer(Modifier.height(12.dp))
+            }
+            if (state.isCompleted) {
+                PrimaryPillButton(
+                    text = "继续下一步",
+                    onClick = onContinue,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            } else {
+                OnboardingMicFooter(
+                    isRecording = state.isRecording,
+                    isProcessing = state.isProcessing,
+                    processingLabel = "正在思考...",
+                    onPressStart = onPressStart,
+                    onPressEnd = onPressEnd
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun VoiceHandshakeProfileStep(
+    viewModel: OnboardingInteractionViewModel,
+    onContinue: () -> Unit
+) {
+    val context = LocalContext.current
+    val state by viewModel.profileState.collectAsState()
+    var hasMicPermission by remember {
+        mutableStateOf(
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                PackageManager.PERMISSION_GRANTED
         )
     }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        hasMicPermission = granted
+        if (!granted) viewModel.onProfileMicPermissionDenied()
+    }
+
+    LaunchedEffect(viewModel) {
+        viewModel.effects.collect { effect ->
+            if (effect is OnboardingInteractionEffect.AdvanceProfileStep) {
+                onContinue()
+            }
+        }
+    }
+
+    VoiceHandshakeProfileContent(
+        state = state,
+        onSave = { viewModel.saveProfileDraft() },
+        onSkip = { viewModel.skipProfileSave() },
+        onPressStart = {
+            hasMicPermission = ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.RECORD_AUDIO
+            ) == PackageManager.PERMISSION_GRANTED
+            if (!hasMicPermission) {
+                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                false
+            } else {
+                viewModel.startProfileRecording()
+            }
+        },
+        onPressEnd = { viewModel.finishProfileRecording() }
+    )
+}
+
+@Composable
+private fun VoiceHandshakeProfileStaticStep(
+    captureState: OnboardingProfileCaptureState
+) {
+    VoiceHandshakeProfileContent(
+        state = profileStateForCapture(captureState),
+        onSave = {},
+        onSkip = {},
+        onPressStart = { false },
+        onPressEnd = {}
+    )
+}
+
+@Composable
+private fun VoiceHandshakeProfileContent(
+    state: OnboardingProfileUiState,
+    onSave: () -> Unit,
+    onSkip: () -> Unit,
+    onPressStart: () -> Boolean,
+    onPressEnd: () -> Unit
+) {
+    val listState = rememberLazyListState()
+    val itemCount = listOfNotNull(
+        if (state.transcript.isNotBlank()) state.transcript else null,
+        if (state.acknowledgement.isNotBlank()) state.acknowledgement else null,
+        if (state.draft != null) "card" else null
+    ).size + 1
+    LaunchedEffect(itemCount) {
+        if (itemCount > 0) {
+            listState.animateScrollToItem(itemCount - 1)
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(
+                top = 18.dp,
+                bottom = 200.dp
+            )
+        ) {
+            item {
+                AnimatedVisibility(
+                    visible = !state.hasStartedInteracting,
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    TitleBlock(
+                        title = "认识一下您",
+                        subtitle = "为了更好地配合您，请简单聊聊您的角色、行业或经验。"
+                    )
+                }
+            }
+            if (state.transcript.isNotBlank()) {
+                item {
+                    OnboardingMessageBubble(
+                        message = OnboardingInteractionMessage(
+                            role = OnboardingMessageRole.USER,
+                            text = state.transcript
+                        )
+                    )
+                }
+            }
+            if (state.acknowledgement.isNotBlank()) {
+                item {
+                    OnboardingMessageBubble(
+                        message = OnboardingInteractionMessage(
+                            role = OnboardingMessageRole.AI,
+                            text = state.acknowledgement
+                        )
+                    )
+                }
+            }
+            state.draft?.let { draft ->
+                item {
+                    OnboardingProfileExtractionCard(draft = draft)
+                }
+            }
+        }
+
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(horizontal = 4.dp, vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            state.errorMessage?.let {
+                OnboardingInlineNotice(text = it)
+                Spacer(Modifier.height(12.dp))
+            }
+            when {
+                state.hasExtractionResult -> {
+                    PrimaryPillButton(
+                        text = if (state.isSaving) "正在保存..." else "继续下一步",
+                        onClick = onSave,
+                        enabled = !state.isSaving,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (state.canSkipAfterFailure) {
+                        Spacer(Modifier.height(10.dp))
+                        QuietGhostButton(
+                            text = "跳过保存，继续下一步",
+                            onClick = onSkip,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+
+                else -> {
+                    OnboardingMicFooter(
+                        isRecording = state.isRecording,
+                        isProcessing = state.isProcessing,
+                        processingLabel = "正在提取信息...",
+                        onPressStart = onPressStart,
+                        onPressEnd = onPressEnd
+                    )
+                    if (state.canSkipAfterFailure) {
+                        Spacer(Modifier.height(10.dp))
+                        QuietGhostButton(
+                            text = "跳过保存，继续下一步",
+                            onClick = onSkip,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun OnboardingMessageBubble(message: OnboardingInteractionMessage) {
+    val isUser = message.role == OnboardingMessageRole.USER
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start
+    ) {
+        FrostedCard(
+            modifier = Modifier.fillMaxWidth(0.86f),
+            containerColor = if (isUser) {
+                Color.White.copy(alpha = 0.08f)
+            } else {
+                Color(0x141A2337)
+            },
+            borderColor = if (isUser) {
+                Color.White.copy(alpha = 0.15f)
+            } else {
+                OnboardingBlue.copy(alpha = 0.24f)
+            }
+        ) {
+            Column {
+                if (!isUser) {
+                    Text(
+                        text = "AI 助手",
+                        color = OnboardingBlue,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(Modifier.height(6.dp))
+                }
+                Text(
+                    text = message.text,
+                    color = OnboardingText,
+                    fontSize = 15.sp,
+                    lineHeight = 22.sp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun OnboardingProfileExtractionCard(draft: OnboardingProfileDraft) {
+    FrostedCard(
+        modifier = Modifier.fillMaxWidth(),
+        containerColor = OnboardingCard,
+        borderColor = OnboardingCardBorder
+    ) {
+        Column {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = OnboardingBlue,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.size(8.dp))
+                Text(
+                    text = "信息已提取",
+                    color = OnboardingBlue,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+            OnboardingExtractionRow("称呼", draft.displayName.ifBlank { "未识别" })
+            OnboardingExtractionRow("角色", draft.role.ifBlank { "未识别" })
+            OnboardingExtractionRow("行业领域", draft.industry.ifBlank { "未识别" })
+            OnboardingExtractionRow("从业经验", draft.experienceYears.ifBlank { "未识别" })
+            OnboardingExtractionRow("偏好联系", draft.communicationPlatform.ifBlank { "未识别" }, isLast = true)
+        }
+    }
+}
+
+@Composable
+private fun OnboardingExtractionRow(
+    label: String,
+    value: String,
+    isLast: Boolean = false
+) {
+    Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = label,
+                color = OnboardingMuted,
+                fontSize = 14.sp
+            )
+            Text(
+                text = value,
+                color = OnboardingText,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium
+            )
+        }
+        if (!isLast) {
+            Spacer(Modifier.height(12.dp))
+            HorizontalDivider(color = Color.White.copy(alpha = 0.05f))
+            Spacer(Modifier.height(12.dp))
+        }
+    }
+}
+
+@Composable
+private fun OnboardingSuccessNote(
+    title: String,
+    subtitle: String
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        StatusOrb(
+            icon = Icons.Default.CheckCircle,
+            tint = OnboardingMint,
+            modifier = Modifier.size(64.dp),
+            iconSize = 28
+        )
+        Spacer(Modifier.height(12.dp))
+        Text(
+            text = title,
+            color = OnboardingText,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+        Spacer(Modifier.height(6.dp))
+        Text(
+            text = subtitle,
+            color = OnboardingMuted,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun OnboardingInlineNotice(text: String) {
+    FrostedCard(
+        modifier = Modifier.fillMaxWidth(),
+        containerColor = OnboardingErrorSurface,
+        borderColor = OnboardingAmber.copy(alpha = 0.28f)
+    ) {
+        Text(
+            text = text,
+            color = OnboardingAmber,
+            fontSize = 13.sp,
+            lineHeight = 20.sp,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun OnboardingMicFooter(
+    isRecording: Boolean,
+    isProcessing: Boolean,
+    processingLabel: String,
+    onPressStart: () -> Boolean,
+    onPressEnd: () -> Unit
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier.size(86.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            val transition = rememberInfiniteTransition(label = "onboardingMicPulse")
+            val pulse by transition.animateFloat(
+                initialValue = 1f,
+                targetValue = 1.8f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(1200),
+                    repeatMode = RepeatMode.Restart
+                ),
+                label = "micPulse"
+            )
+            val pulseAlpha by transition.animateFloat(
+                initialValue = 0.32f,
+                targetValue = 0f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(1200),
+                    repeatMode = RepeatMode.Restart
+                ),
+                label = "micPulseAlpha"
+            )
+            if (isRecording) {
+                Box(
+                    modifier = Modifier
+                        .size(72.dp)
+                        .scale(pulse)
+                        .alpha(pulseAlpha)
+                        .clip(CircleShape)
+                        .background(OnboardingBlue.copy(alpha = 0.22f))
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(CircleShape)
+                    .background(
+                        when {
+                            isRecording -> OnboardingBlue.copy(alpha = 0.18f)
+                            else -> Color.White.copy(alpha = 0.08f)
+                        }
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = if (isRecording) OnboardingBlue.copy(alpha = 0.48f) else Color.White.copy(alpha = 0.15f),
+                        shape = CircleShape
+                    )
+                    .pointerInput(isRecording, isProcessing) {
+                        detectTapGestures(
+                            onPress = {
+                                if (isProcessing) return@detectTapGestures
+                                val started = onPressStart()
+                                if (!started) return@detectTapGestures
+                                tryAwaitRelease()
+                                onPressEnd()
+                            }
+                        )
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                if (isProcessing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(28.dp),
+                        color = OnboardingBlue,
+                        strokeWidth = 2.5.dp,
+                        trackColor = Color.White.copy(alpha = 0.12f)
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Mic,
+                        contentDescription = null,
+                        tint = if (isRecording) OnboardingBlue else OnboardingText,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Text(
+            text = when {
+                isRecording -> "正在聆听...松开发送"
+                isProcessing -> processingLabel
+                else -> "按住说话"
+            },
+            color = if (isRecording) OnboardingBlue else OnboardingMuted,
+            fontSize = 13.sp,
+            fontWeight = if (isRecording || isProcessing) FontWeight.Medium else FontWeight.Normal
+        )
+    }
+}
+
+private fun consultationStateForCapture(
+    captureState: OnboardingConsultationCaptureState
+): OnboardingConsultationUiState = when (captureState) {
+    OnboardingConsultationCaptureState.IDLE -> OnboardingConsultationUiState()
+    OnboardingConsultationCaptureState.ONE_TURN_REVEALED -> OnboardingConsultationUiState(
+        hasStartedInteracting = true,
+        messages = listOf(
+            OnboardingInteractionMessage(OnboardingMessageRole.USER, "帮我搞定这个客户"),
+            OnboardingInteractionMessage(OnboardingMessageRole.AI, "好的，先告诉我这位客户的情况，遇到了什么卡点？")
+        ),
+        completedRounds = 1
+    )
+    OnboardingConsultationCaptureState.COMPLETE -> OnboardingConsultationUiState(
+        hasStartedInteracting = true,
+        messages = listOf(
+            OnboardingInteractionMessage(OnboardingMessageRole.USER, "帮我搞定这个客户"),
+            OnboardingInteractionMessage(OnboardingMessageRole.AI, "好的，先告诉我这位客户的情况，遇到了什么卡点？"),
+            OnboardingInteractionMessage(OnboardingMessageRole.USER, "客户觉得我们的价格比竞品高，预算一直批不下来"),
+            OnboardingInteractionMessage(OnboardingMessageRole.AI, "这个阶段可以尝试分享一些同行的成功案例作为切入点，证明长期 ROI。您做得很好！")
+        ),
+        completedRounds = 2
+    )
+    OnboardingConsultationCaptureState.ERROR -> OnboardingConsultationUiState(
+        hasStartedInteracting = true,
+        errorMessage = "网络连接波动，请重试"
+    )
+}
+
+private fun profileStateForCapture(
+    captureState: OnboardingProfileCaptureState
+): OnboardingProfileUiState = when (captureState) {
+    OnboardingProfileCaptureState.IDLE -> OnboardingProfileUiState()
+    OnboardingProfileCaptureState.EXTRACTED -> OnboardingProfileUiState(
+        hasStartedInteracting = true,
+        transcript = "我是王经理，做 SaaS 软件销售总监已经 8 年了。平时主要用微信和电话联系客户。",
+        acknowledgement = "谢谢您的分享，我已经为您建立好了专属档案。",
+        draft = OnboardingProfileDraft(
+            displayName = "王经理",
+            role = "销售总监",
+            industry = "SaaS 软件服务",
+            experienceYears = "8年",
+            communicationPlatform = "微信 / 电话"
+        )
+    )
+    OnboardingProfileCaptureState.ERROR -> OnboardingProfileUiState(
+        hasStartedInteracting = true,
+        errorMessage = "资料提取结果暂时不可用，请重试。"
+    )
 }
 
 @Composable

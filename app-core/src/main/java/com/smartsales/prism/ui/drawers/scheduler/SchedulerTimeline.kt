@@ -1,36 +1,63 @@
 package com.smartsales.prism.ui.drawers.scheduler
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Text
-import androidx.compose.runtime.*
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
-import androidx.compose.material3.rememberSwipeToDismissBoxState
-import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material3.Icon
-import androidx.compose.ui.Alignment
 import androidx.compose.material3.ExperimentalMaterial3Api
-import com.smartsales.prism.ui.theme.*
-import com.smartsales.prism.ui.drawers.scheduler.ConflictVisual
-import com.smartsales.prism.ui.drawers.scheduler.components.SchedulerTaskCard
-import com.smartsales.prism.ui.drawers.scheduler.components.InspirationCard
+import androidx.compose.material3.Icon
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.smartsales.prism.domain.scheduler.UrgencyLevel
+import com.smartsales.prism.ui.drawers.scheduler.components.InspirationCard
+import com.smartsales.prism.ui.drawers.scheduler.components.SchedulerTaskCard
+import com.smartsales.prism.ui.drawers.scheduler.components.taskCardIndicatorColor
+import com.smartsales.prism.ui.theme.AccentAmber
+import com.smartsales.prism.ui.theme.AccentDanger
+import com.smartsales.prism.ui.theme.GlassCardShape
 
 /**
  * Scheduler Timeline Layout (Sleek Glass Version)
@@ -43,44 +70,87 @@ fun SchedulerTimeline(
     causingTaskId: String? = null,
     onItemClick: (String) -> Unit,
     onDelete: (String) -> Unit,
-    onReschedule: (String, String) -> Unit, // id, userText
+    onReschedule: (String, String) -> Unit,
     onMicRecord: (java.io.File) -> Unit = {},
     onMultiSelectToggle: (String) -> Unit,
     onEnterMultiSelect: () -> Unit,
     onConflictResolve: (com.smartsales.prism.domain.scheduler.ConflictResolution) -> Unit,
     onConflictToggle: (String) -> Unit,
-    onCardExpanded: (String, String?) -> Unit,  // Wave 9: (taskId, keyPersonEntityId)
-    onToggleDone: (String) -> Unit  // Wave 12: Task Completion
+    onCardExpanded: (String, String?) -> Unit,
+    onToggleDone: (String) -> Unit
 ) {
-    LazyColumn(
-        modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(vertical = 12.dp)
+    val visuals = currentSchedulerDrawerVisuals
+    val isSimVisualMode = currentSchedulerDrawerVisualMode == SchedulerDrawerVisualMode.SIM
+    val horizontalPadding = if (isSimVisualMode) visuals.drawerContentHorizontalPadding else 16.dp
+
+    Box(
+        modifier = Modifier.fillMaxWidth()
     ) {
-        items(items, key = {
-            when (it) {
-                is TimelineItem.Task -> it.renderKey
-                else -> it.id
-            }
-        }) { item ->
-            TimelineRow(
-                item = item,
-                conflictedTaskIds = conflictedTaskIds,
-                causingTaskId = causingTaskId,
-                onItemClick = onItemClick,
-                onDelete = onDelete,
-                onReschedule = onReschedule,
-                onMicRecord = onMicRecord,
-                onMultiSelectToggle = onMultiSelectToggle,
-                onEnterMultiSelect = onEnterMultiSelect,
-                onConflictResolve = onConflictResolve,
-                onConflictToggle = onConflictToggle,
-                onCardExpanded = onCardExpanded,  // Wave 9
-                onToggleDone = onToggleDone  // Wave 12
+        if (isSimVisualMode) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(start = horizontalPadding)
+                    .drawBehind {
+                        val axisX = visuals.timelineLabelWidth.toPx() + (visuals.timelineAxisWidth.toPx() / 2f)
+                        drawLine(
+                            color = visuals.timelineLineColor,
+                            start = Offset(axisX, visuals.timelineTopInset.toPx()),
+                            end = Offset(axisX, size.height - visuals.timelineBottomFadeHeight.toPx()),
+                            strokeWidth = visuals.timelineLineWidth.toPx()
+                        )
+                    }
             )
         }
-        
-        // Bottom spacer for overscroll
-        item { Spacer(modifier = Modifier.height(40.dp)) }
+
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(
+                start = horizontalPadding,
+                end = horizontalPadding,
+                top = 12.dp,
+                bottom = visuals.timelineBottomFadeHeight
+            )
+        ) {
+            items(items, key = {
+                when (it) {
+                    is TimelineItem.Task -> it.renderKey
+                    else -> it.id
+                }
+            }) { item ->
+                TimelineRow(
+                    item = item,
+                    conflictedTaskIds = conflictedTaskIds,
+                    causingTaskId = causingTaskId,
+                    onItemClick = onItemClick,
+                    onDelete = onDelete,
+                    onMultiSelectToggle = onMultiSelectToggle,
+                    onEnterMultiSelect = onEnterMultiSelect,
+                    onConflictResolve = onConflictResolve,
+                    onConflictToggle = onConflictToggle,
+                    onCardExpanded = onCardExpanded
+                )
+            }
+
+            item { Spacer(modifier = Modifier.height(8.dp)) }
+        }
+
+        if (isSimVisualMode) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(visuals.timelineBottomFadeHeight)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                visuals.containerColor
+                            )
+                        )
+                    )
+            )
+        }
     }
 }
 
@@ -91,18 +161,14 @@ private fun TimelineRow(
     causingTaskId: String?,
     onItemClick: (String) -> Unit,
     onDelete: (String) -> Unit,
-    onReschedule: (String, String) -> Unit,
-    onMicRecord: (java.io.File) -> Unit,
     onMultiSelectToggle: (String) -> Unit,
     onEnterMultiSelect: () -> Unit,
     onConflictResolve: (com.smartsales.prism.domain.scheduler.ConflictResolution) -> Unit,
     onConflictToggle: (String) -> Unit,
-    onCardExpanded: (String, String?) -> Unit,  // Wave 9
-    onToggleDone: (String) -> Unit  // Wave 12
+    onCardExpanded: (String, String?) -> Unit
 ) {
     val visuals = currentSchedulerDrawerVisuals
     val isSimVisualMode = currentSchedulerDrawerVisualMode == SchedulerDrawerVisualMode.SIM
-    // Local expansion state for this row item
     var isExpanded by remember { mutableStateOf(false) }
     var isTaskVisible by remember(
         when (item) {
@@ -114,7 +180,6 @@ private fun TimelineRow(
     LaunchedEffect(item) {
         isTaskVisible = true
         if (item is TimelineItem.Task && item.isExiting) {
-            // 先渲染源卡片，再切换为退出动画
             isTaskVisible = false
         }
     }
@@ -123,66 +188,50 @@ private fun TimelineRow(
         modifier = Modifier
             .fillMaxWidth()
             .height(IntrinsicSize.Min)
-            .padding(horizontal = 16.dp)
+            .padding(bottom = visuals.timelineCardBottomSpacing),
+        verticalAlignment = Alignment.Top
     ) {
-        // Left: Time Label
         Text(
             text = when {
                 item is TimelineItem.Task && isSimVisualMode -> item.simTimelineRailLabel()
                 item is TimelineItem.Task && item.isVague -> "待定"
                 else -> item.timeDisplay
             },
-            fontSize = 12.sp,
+            fontSize = if (isSimVisualMode) 13.sp else 12.sp,
             color = visuals.timeLabelColor,
             fontFamily = FontFamily.Monospace,
+            fontWeight = if (isSimVisualMode) FontWeight.Medium else FontWeight.Normal,
             textAlign = TextAlign.End,
             modifier = Modifier
                 .width(visuals.timelineLabelWidth)
-                .padding(top = 2.dp)
+                .padding(top = visuals.timelineTopInset - 2.dp, end = 8.dp)
         )
-        
-        // Middle: Timeline Axis (Dot + Line)
-        Column(
+
+        Box(
             modifier = Modifier
                 .width(visuals.timelineAxisWidth)
-                .fillMaxHeight(),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(top = visuals.timelineTopInset)
         ) {
-            Spacer(modifier = Modifier.height(visuals.timelineTopInset))
-            Box(
-                modifier = Modifier
-                    .size(visuals.timelineDotSize)
-                    .background(visuals.timelineDotColor, androidx.compose.foundation.shape.CircleShape)
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Box(
-                modifier = Modifier
-                    .width(visuals.timelineLineWidth)
-                    .fillMaxHeight()
-                    .background(visuals.timelineLineColor)
-            )
+            TimelineDot(item = item)
         }
-        
+
         Spacer(modifier = Modifier.width(visuals.timelineRailGap))
-        
-        // Right: Card Content
-        Column(modifier = Modifier.weight(1f).padding(bottom = visuals.timelineCardBottomSpacing)) {
+
+        Column(modifier = Modifier.weight(1f)) {
             when (item) {
                 is TimelineItem.Task -> {
-                    // 映射冲突视觉状态
                     val conflictVisual = when {
                         item.id == causingTaskId -> ConflictVisual.CAUSING
                         item.id in conflictedTaskIds -> ConflictVisual.IN_GROUP
                         else -> ConflictVisual.NONE
                     }
                     val taskWithVisual = item.copy(conflictVisual = conflictVisual)
-                    
                     val slideOffset: (Int) -> Int = if (item.exitDirection == ExitDirection.LEFT) {
                         { -it }
                     } else {
                         { it }
                     }
-                    
+
                     AnimatedVisibility(
                         visible = isTaskVisible,
                         exit = slideOutHorizontally(
@@ -212,6 +261,7 @@ private fun TimelineRow(
                         }
                     }
                 }
+
                 is TimelineItem.Inspiration -> {
                     SwipeableCardItem(
                         itemId = item.id,
@@ -221,14 +271,15 @@ private fun TimelineRow(
                             state = item,
                             onAskAI = {
                                 onEnterMultiSelect()
-                                onMultiSelectToggle(item.id) // Select this one
+                                onMultiSelectToggle(item.id)
                             },
                             onToggleSelection = { onMultiSelectToggle(item.id) }
                         )
                     }
                 }
+
                 is TimelineItem.Conflict -> {
-                    com.smartsales.prism.ui.drawers.scheduler.ConflictCard(
+                    ConflictCard(
                         taskA = item.taskA,
                         taskB = item.taskB,
                         isExpanded = item.isExpanded,
@@ -241,10 +292,52 @@ private fun TimelineRow(
     }
 }
 
+@Composable
+private fun TimelineDot(item: TimelineItem) {
+    val visuals = currentSchedulerDrawerVisuals
+    val pulse = rememberInfiniteTransition(label = "timelineDotPulse")
+    val pulseAlpha by pulse.animateFloat(
+        initialValue = 0.25f,
+        targetValue = 0.8f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = LinearEasing)
+        ),
+        label = "timelineDotPulseAlpha"
+    )
+    val dotColor = when (item) {
+        is TimelineItem.Task -> taskCardIndicatorColor(item.urgencyLevel, item.isDone)
+        is TimelineItem.Conflict -> AccentAmber
+        is TimelineItem.Inspiration -> visuals.timelineDotColor
+    }
+    val showPulse = item is TimelineItem.Task &&
+        !item.isDone &&
+        item.urgencyLevel == UrgencyLevel.L1_CRITICAL
 
-// Keeping SwipeableCardItem and TaskCard as they were in the original document,
-// assuming SchedulerTaskCard is a new composable that replaces their combined functionality for tasks.
-// The InspirationCard still uses SwipeableCardItem.
+    Box(
+        modifier = Modifier.size(visuals.timelineDotSize + 6.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        if (showPulse) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(dotColor.copy(alpha = pulseAlpha * 0.18f), CircleShape)
+            )
+        }
+        Box(
+            modifier = Modifier
+                .size(visuals.timelineDotSize + 4.dp)
+                .background(visuals.containerColor, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(visuals.timelineDotSize)
+                    .background(dotColor, CircleShape)
+            )
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -255,7 +348,7 @@ private fun SwipeableCardItem(
     content: @Composable () -> Unit
 ) {
     val currentOnDelete by rememberUpdatedState(onDelete)
-    
+
     val dismissState = rememberSwipeToDismissBoxState(
         positionalThreshold = { totalDistance -> totalDistance * 0.25f },
         confirmValueChange = { value ->
@@ -267,8 +360,7 @@ private fun SwipeableCardItem(
             }
         }
     )
-    
-    // Reset dismiss state when item changes
+
     LaunchedEffect(itemId) {
         dismissState.snapTo(SwipeToDismissBoxValue.Settled)
     }
@@ -278,9 +370,8 @@ private fun SwipeableCardItem(
         enableDismissFromStartToEnd = enabled,
         enableDismissFromEndToStart = false,
         backgroundContent = {
-            // Only show background when actively swiping (not settled)
             val isSwiping = dismissState.targetValue != SwipeToDismissBoxValue.Settled
-            
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()

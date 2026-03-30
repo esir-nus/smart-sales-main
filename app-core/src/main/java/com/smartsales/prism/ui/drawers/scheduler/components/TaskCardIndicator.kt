@@ -3,7 +3,6 @@ package com.smartsales.prism.ui.drawers.scheduler.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -11,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.smartsales.prism.domain.scheduler.UrgencyLevel
+import com.smartsales.prism.ui.drawers.scheduler.currentSchedulerDrawerVisuals
 import com.smartsales.prism.ui.theme.AccentAmber
 import com.smartsales.prism.ui.theme.AccentBlue
 import com.smartsales.prism.ui.theme.AccentDanger
@@ -40,6 +40,7 @@ fun TaskCardIndicator(
     isDone: Boolean,
     modifier: Modifier = Modifier
 ) {
+    val visuals = currentSchedulerDrawerVisuals
     val color = taskCardIndicatorColor(
         urgencyLevel = urgencyLevel,
         isDone = isDone
@@ -47,10 +48,8 @@ fun TaskCardIndicator(
 
     Box(
         modifier = modifier
-            .padding(vertical = 16.dp)
-            .padding(start = 16.dp)
-            .width(2.dp)
+            .width(visuals.cardIndicatorWidth)
             .fillMaxHeight()
-            .background(color, RoundedCornerShape(1.dp))
+            .background(color, RoundedCornerShape(topEnd = 2.dp, bottomEnd = 2.dp))
     )
 }

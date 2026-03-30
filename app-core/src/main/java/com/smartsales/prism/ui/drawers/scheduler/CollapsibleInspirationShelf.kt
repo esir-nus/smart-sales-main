@@ -48,31 +48,29 @@ fun CollapsibleInspirationShelf(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .background(visuals.shelfBackground)
+            .padding(horizontal = visuals.drawerContentHorizontalPadding)
     ) {
         // Header Bar
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable { onToggle() }
-                .padding(horizontal = 16.dp, vertical = 12.dp),
+                .padding(horizontal = 8.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = "灵感箱 (${items.size})",
-                fontSize = 14.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
-                color = TextPrimary
+                color = visuals.shelfHeaderText
             )
             
             Icon(
                 imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
                 contentDescription = if (isExpanded) "收起" else "展开",
-                tint = TextMuted,
-                modifier = Modifier.size(20.dp)
+                tint = visuals.shelfHeaderIcon,
+                modifier = Modifier.size(18.dp)
             )
         }
         
@@ -85,7 +83,7 @@ fun CollapsibleInspirationShelf(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                    .padding(top = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items.forEach { item ->
@@ -137,7 +135,7 @@ private fun InspirationShelfCard(
             }
             Text(
                 text = title,
-                fontSize = 14.sp,
+                fontSize = 13.sp,
                 color = TextPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis

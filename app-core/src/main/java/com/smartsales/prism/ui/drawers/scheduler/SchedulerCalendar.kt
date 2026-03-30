@@ -1,45 +1,63 @@
 package com.smartsales.prism.ui.drawers.scheduler
 
 import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.smartsales.prism.ui.theme.*
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
 val SchedulerDateAttentionKindKey = SemanticsPropertyKey<String>("SchedulerDateAttentionKind")
 var SemanticsPropertyReceiver.schedulerDateAttentionKind by SchedulerDateAttentionKindKey
+
+private val SchedulerMonthTitleFormatter = DateTimeFormatter.ofPattern("yyyy年 M月")
+private val SchedulerWeekdayLabels = listOf("一", "二", "三", "四", "五", "六", "日")
 
 /**
  * Scheduler Calendar Component (Sleek Glass Version)
@@ -52,58 +70,82 @@ fun SchedulerCalendar(
     activeDay: Int,
     onDateSelected: (Int) -> Unit,
     unacknowledgedDates: Set<Int> = emptySet(),
-    rescheduledDates: Set<Int> = emptySet()  // 改期目标日期
+    rescheduledDates: Set<Int> = emptySet()
 ) {
     val visuals = LocalSchedulerDrawerVisuals.current
-    // 获取今天日期
     val today = remember { LocalDate.now() }
-    val todayDayOfMonth = today.dayOfMonth
-    val todayMonth = today.monthValue
-    val todayYear = today.year
-    
-    // State: Selected Month (1-12) — 默认当前月
-    var selectedMonth by remember { mutableStateOf(todayMonth) }
-    
-    // TODO: Event dots should come from real calendar data via repository
-    // For now, empty until we wire up CalendarRepository query
-    val eventDots = remember { emptyMap<Int, Boolean>() }
-    
-    // Transparent container to let glass sheet show through
+    val selectedDate = remember(activeDay, today) { today.plusDays(activeDay.toLong()) }
+    val firstOfMonth = remember(selectedDate) { selectedDate.withDayOfMonth(1) }
+    val lastOfMonth = remember(selectedDate) { selectedDate.withDayOfMonth(selectedDate.lengthOfMonth()) }
+    val gridStart = remember(firstOfMonth) {
+        firstOfMonth.minusDays((firstOfMonth.dayOfWeek.value - 1).toLong())
+    }
+    val gridEnd = remember(lastOfMonth) {
+        lastOfMonth.plusDays((7 - lastOfMonth.dayOfWeek.value).toLong() % 7L)
+    }
+    val monthGrid = remember(gridStart, gridEnd) {
+        buildList {
+            var cursor = gridStart
+            while (!cursor.isAfter(gridEnd)) {
+                add(cursor)
+                cursor = cursor.plusDays(1)
+            }
+        }
+    }
+    val collapsedWeekStart = remember(selectedDate) {
+        selectedDate.minusDays((selectedDate.dayOfWeek.value - 1).toLong())
+    }
+    val collapsedWeek = remember(collapsedWeekStart) {
+        List(7) { index -> collapsedWeekStart.plusDays(index.toLong()) }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 8.dp)
+            .animateContentSize()
     ) {
-        // 1. Header (Month Carousel)
         CalendarHeader(
-            year = todayYear,
-            selectedMonth = selectedMonth,
-            onMonthSelected = { selectedMonth = it }
+            monthTitle = selectedDate.format(SchedulerMonthTitleFormatter),
+            visuals = visuals
         )
-        
-        Spacer(modifier = Modifier.height(16.dp))
-        
-        // 2. Expandable Grid
-        // Calculate selected day of month from offset
-        val selectedDayOfMonth = if (selectedMonth == todayMonth) todayDayOfMonth + activeDay else -1
-        
-        ExpandableCalendarGrid(
-            isExpanded = isExpanded, 
-            activeDay = activeDay,
-            todayDayOfMonth = if (selectedMonth == todayMonth) todayDayOfMonth else -1,
-            selectedDayOfMonth = selectedDayOfMonth,
-            selectedMonth = selectedMonth,
-            onDateSelected = { dayNum ->
-                // 计算 offset: dayNum - todayDayOfMonth (同月)
-                val offset = if (selectedMonth == todayMonth) dayNum - todayDayOfMonth else 0
-                onDateSelected(offset)
-            },
-            eventDots = eventDots,
-            unacknowledgedDates = unacknowledgedDates,
-            rescheduledDates = rescheduledDates
-        )
-        
-        // 3. Expansion Handle
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        WeekdayRow()
+        Spacer(modifier = Modifier.height(8.dp))
+
+        if (isExpanded) {
+            monthGrid.chunked(7).forEach { week ->
+                CalendarDateRow(
+                    dates = week,
+                    selectedDate = selectedDate,
+                    visibleMonth = selectedDate.monthValue,
+                    today = today,
+                    unacknowledgedDates = unacknowledgedDates,
+                    rescheduledDates = rescheduledDates,
+                    onDateSelected = { clickedDate ->
+                        onDateSelected(ChronoUnit.DAYS.between(today, clickedDate).toInt())
+                    }
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+        } else {
+            CalendarDateRow(
+                dates = collapsedWeek,
+                selectedDate = selectedDate,
+                visibleMonth = selectedDate.monthValue,
+                today = today,
+                unacknowledgedDates = unacknowledgedDates,
+                rescheduledDates = rescheduledDates,
+                onDateSelected = { clickedDate ->
+                    onDateSelected(ChronoUnit.DAYS.between(today, clickedDate).toInt())
+                }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
         ExpansionHandle(
             isExpanded = isExpanded,
             onExpandChange = onExpandChange
@@ -113,251 +155,186 @@ fun SchedulerCalendar(
 
 @Composable
 private fun CalendarHeader(
-    year: Int,
-    selectedMonth: Int,
-    onMonthSelected: (Int) -> Unit
+    monthTitle: String,
+    visuals: SchedulerDrawerVisuals
 ) {
-    val visuals = LocalSchedulerDrawerVisuals.current
-    Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-        // Year + Month Text
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = "${year}年",
-                fontSize = 16.sp,
-                color = visuals.calendarSecondaryText,
-                modifier = Modifier.padding(end = 8.dp)
-            )
-            Text(
-                text = "${selectedMonth}月",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = visuals.calendarPrimaryText
-            )
-        }
-        
-        Spacer(modifier = Modifier.height(12.dp))
-        
-        // Month Carousel
-        LazyRow(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(end = 16.dp)
-        ) {
-            items(12) { index ->
-                val monthNum = index + 1
-                val isSelected = monthNum == selectedMonth
-                val haptic = LocalHapticFeedback.current
-                
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(
-                            if (isSelected) {
-                                visuals.calendarSelectedMonthContainer
-                            } else {
-                                visuals.calendarIdleMonthContainer
-                            }
-                        )
-                        .clickable { 
-                            onMonthSelected(monthNum)
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        }
-                        .padding(horizontal = 16.dp, vertical = 6.dp)
-                ) {
-                    Text(
-                        text = "${monthNum}月",
-                        fontSize = 14.sp,
-                        color = if (isSelected) {
-                            visuals.calendarSelectedMonthText
-                        } else {
-                            visuals.calendarIdleMonthText
-                        }
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ExpandableCalendarGrid(
-    isExpanded: Boolean, 
-    activeDay: Int,
-    todayDayOfMonth: Int,
-    selectedDayOfMonth: Int,
-    selectedMonth: Int,
-    onDateSelected: (Int) -> Unit,
-    eventDots: Map<Int, Boolean>,
-    unacknowledgedDates: Set<Int> = emptySet(),
-    rescheduledDates: Set<Int> = emptySet()
-) {
-    val visuals = LocalSchedulerDrawerVisuals.current
-    val days = (1..35).toList()
-    
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .animateContentSize(
-                animationSpec = spring(
-                    dampingRatio = Spring.DampingRatioNoBouncy,
-                    stiffness = Spring.StiffnessMedium
-                )
-            )
-    ) {
-        Column {
-            // Week Headers
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                listOf("一", "二", "三", "四", "五", "六", "日").forEach { 
-                    Text(
-                        text = it, 
-                        fontSize = 12.sp, 
-                        color = visuals.calendarMutedText,
-                        modifier = Modifier.width(36.dp),
-                        textAlign = TextAlign.Center
-                    )
-                }
-            }
-            
-            // Grid Rows
-            if (isExpanded) {
-                (0 until 5).forEach { rowIndex ->
-                    CalendarRow(
-                        days = days.subList(rowIndex * 7, (rowIndex + 1) * 7),
-                        todayDayOfMonth = todayDayOfMonth,
-                        selectedDayOfMonth = selectedDayOfMonth,
-                        onDateSelected = onDateSelected,
-                        eventDots = eventDots,
-                        unacknowledgedDates = unacknowledgedDates,
-                        rescheduledDates = rescheduledDates
-                    )
-                }
-            } else {
-                // Collapsed: Show only the week containing today (or first week if different month)
-                val weekStartIndex = if (todayDayOfMonth > 0) {
-                    // 计算今天所在的周 (0-indexed): (day-1) / 7 * 7
-                    ((todayDayOfMonth - 1) / 7) * 7
-                } else {
-                    0 // 非当前月显示第一周
-                }
-                val weekDays = days.subList(weekStartIndex, minOf(weekStartIndex + 7, days.size))
-                CalendarRow(
-                    days = weekDays,
-                    todayDayOfMonth = todayDayOfMonth,
-                    selectedDayOfMonth = selectedDayOfMonth,
-                    onDateSelected = onDateSelected,
-                    eventDots = eventDots,
-                    unacknowledgedDates = unacknowledgedDates,
-                    rescheduledDates = rescheduledDates
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun CalendarRow(
-    days: List<Int>, 
-    todayDayOfMonth: Int,
-    selectedDayOfMonth: Int,
-    onDateSelected: (Int) -> Unit,
-    eventDots: Map<Int, Boolean>,
-    unacknowledgedDates: Set<Int> = emptySet(),
-    rescheduledDates: Set<Int> = emptySet()
-) {
-    val visuals = LocalSchedulerDrawerVisuals.current
-    // 呼吸发光动画 (用于未确认日期)
-    val infiniteTransition = rememberInfiniteTransition(label = "dateGlow")
-    val glowAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.3f,
-        targetValue = 0.8f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "glowAlpha"
-    )
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(48.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly,
+            .padding(horizontal = visuals.drawerContentHorizontalPadding),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        days.forEach { dayVal ->
-            val dayNum = if (dayVal > 31) dayVal - 31 else dayVal
-            val isToday = dayNum == todayDayOfMonth
-            val isTodaySelected = isToday && dayNum == selectedDayOfMonth
-            val isSelected = dayNum == selectedDayOfMonth && !isToday // Don't double highlight today if selected
-            val hasEvent = eventDots[dayNum] == true
-            // 计算 dayOffset 从 todayDayOfMonth
-            val dayOffset = dayNum - todayDayOfMonth
-            val isRescheduleGlow = dayOffset in rescheduledDates
-            val isNewTaskGlow = dayOffset in unacknowledgedDates && !isRescheduleGlow
-            val hasGlow = isRescheduleGlow || isNewTaskGlow
-            val glowColor = if (isRescheduleGlow) visuals.attentionWarning else visuals.attentionNormal
-            val attentionKind = when {
-                isRescheduleGlow -> "warning"
-                isNewTaskGlow -> "normal"
-                else -> "none"
-            }
-            
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .semantics {
-                        schedulerDateAttentionKind = attentionKind
-                    }
-                    // 发光效果 (优先显示，独立于其他状态)
-                    .then(
-                        if (hasGlow) {
-                            Modifier.drawBehind {
-                                drawCircle(
-                                    color = glowColor.copy(alpha = glowAlpha),
-                                    radius = size.minDimension / 2 + 4.dp.toPx()
-                                )
-                            }
-                        } else Modifier
-                    )
-                    .then(
-                        when {
-                            isTodaySelected -> Modifier.background(visuals.calendarSelectedContainer, CircleShape)
-                            isToday -> Modifier.background(visuals.calendarTodayContainer, CircleShape)
-                            isSelected -> Modifier.border(2.dp, visuals.calendarSelectedContainer, CircleShape)
-                            else -> Modifier
-                        }
-                    )
-                    .clip(CircleShape)
-                    .clickable { onDateSelected(dayNum) },
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = dayNum.toString(),
-                        color = when {
-                            isTodaySelected -> visuals.calendarSelectedText
-                            isToday -> visuals.calendarTodayText
-                            isSelected -> visuals.calendarPrimaryText
-                            else -> visuals.calendarPrimaryText
-                        },
-                        fontSize = 14.sp,
-                        fontWeight = if (isTodaySelected) FontWeight.Bold else FontWeight.Normal
-                    )
-                    if (!isToday && hasEvent) { 
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Box(
-                            modifier = Modifier
-                                .size(4.dp)
-                                .background(visuals.attentionNormal, CircleShape)
-                        )
-                    }
-                }
-            }
+        IconButton(onClick = {}, enabled = false) {
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowLeft,
+                contentDescription = null,
+                tint = visuals.calendarChevronColor
+            )
         }
+
+        Text(
+            text = monthTitle,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = visuals.calendarPrimaryText,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.weight(1f)
+        )
+
+        IconButton(onClick = {}, enabled = false) {
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowRight,
+                contentDescription = null,
+                tint = visuals.calendarChevronColor
+            )
+        }
+    }
+}
+
+@Composable
+private fun WeekdayRow() {
+    val visuals = currentSchedulerDrawerVisuals
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = visuals.drawerContentHorizontalPadding),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        SchedulerWeekdayLabels.forEach { label ->
+            Text(
+                text = label,
+                fontSize = 12.sp,
+                color = visuals.calendarWeekdayText,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.width(32.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun CalendarDateRow(
+    dates: List<LocalDate>,
+    selectedDate: LocalDate,
+    visibleMonth: Int,
+    today: LocalDate,
+    unacknowledgedDates: Set<Int>,
+    rescheduledDates: Set<Int>,
+    onDateSelected: (LocalDate) -> Unit
+) {
+    val visuals = currentSchedulerDrawerVisuals
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = visuals.drawerContentHorizontalPadding),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        dates.forEach { date ->
+            CalendarDateCell(
+                date = date,
+                isSelected = date == selectedDate,
+                isToday = date == today,
+                isOutOfBounds = date.monthValue != visibleMonth,
+                attentionOffset = ChronoUnit.DAYS.between(today, date).toInt(),
+                unacknowledgedDates = unacknowledgedDates,
+                rescheduledDates = rescheduledDates,
+                onClick = { onDateSelected(date) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun CalendarDateCell(
+    date: LocalDate,
+    isSelected: Boolean,
+    isToday: Boolean,
+    isOutOfBounds: Boolean,
+    attentionOffset: Int,
+    unacknowledgedDates: Set<Int>,
+    rescheduledDates: Set<Int>,
+    onClick: () -> Unit
+) {
+    val visuals = currentSchedulerDrawerVisuals
+    val glow = rememberInfiniteTransition(label = "dateAttentionGlow")
+    val glowAlpha by glow.animateFloat(
+        initialValue = 0.25f,
+        targetValue = 0.7f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500, easing = LinearEasing)
+        ),
+        label = "dateAttentionGlowAlpha"
+    )
+    val attentionKind = when {
+        attentionOffset in rescheduledDates -> "warning"
+        attentionOffset in unacknowledgedDates -> "normal"
+        else -> "none"
+    }
+    val glowColor = when (attentionKind) {
+        "warning" -> visuals.attentionWarning
+        "normal" -> visuals.attentionNormal
+        else -> Color.Transparent
+    }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.width(32.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .semantics(mergeDescendants = true) {
+                    schedulerDateAttentionKind = attentionKind
+                }
+                .then(
+                    if (attentionKind != "none") {
+                        Modifier.drawBehind {
+                            drawCircle(
+                                color = glowColor.copy(alpha = glowAlpha * 0.35f),
+                                radius = size.minDimension / 2f + 5.dp.toPx()
+                            )
+                        }
+                    } else {
+                        Modifier
+                    }
+                )
+                .then(
+                    when {
+                        isSelected -> Modifier.background(visuals.calendarSelectedContainer, CircleShape)
+                        isToday -> Modifier.background(visuals.calendarTodayContainer, CircleShape)
+                        else -> Modifier
+                    }
+                )
+                .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = date.dayOfMonth.toString(),
+                fontSize = 14.sp,
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                color = when {
+                    isSelected -> visuals.calendarSelectedText
+                    isToday -> visuals.calendarTodayText
+                    isOutOfBounds -> visuals.calendarOutOfBoundsText
+                    else -> visuals.calendarPrimaryText
+                }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        Box(
+            modifier = Modifier
+                .size(4.dp)
+                .background(
+                    color = when (attentionKind) {
+                        "warning" -> visuals.attentionWarning
+                        "normal" -> visuals.attentionNormal
+                        else -> Color.Transparent
+                    },
+                    shape = CircleShape
+                )
+        )
     }
 }
 
@@ -368,32 +345,44 @@ private fun ExpansionHandle(
 ) {
     val visuals = currentSchedulerDrawerVisuals
     var dragOffset by remember { mutableStateOf(0f) }
-    
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(24.dp)
+            .height(28.dp)
             .draggable(
                 orientation = Orientation.Vertical,
                 state = rememberDraggableState { delta ->
                     dragOffset += delta
                 },
-                onDragStopped = { 
-                    if (isExpanded && dragOffset < -30) {
-                        onExpandChange(false)
-                    } else if (!isExpanded && dragOffset > 30) {
+                onDragStopped = {
+                    if (!isExpanded && dragOffset > 30f) {
                         onExpandChange(true)
+                    } else if (isExpanded && dragOffset < -30f) {
+                        onExpandChange(false)
                     }
                     dragOffset = 0f
                 }
-            ),
+            )
+            .clickable { onExpandChange(!isExpanded) },
         contentAlignment = Alignment.Center
     ) {
-        Box(
+        Row(
             modifier = Modifier
-                .width(32.dp)
-                .height(4.dp)
-                .background(visuals.handleColor, RoundedCornerShape(2.dp))
-        )
+                .background(visuals.calendarPillColor, RoundedCornerShape(20.dp))
+                .border(0.5.dp, visuals.calendarPillBorder, RoundedCornerShape(20.dp))
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.KeyboardArrowDown,
+                contentDescription = null,
+                tint = visuals.calendarChevronColor,
+                modifier = Modifier.graphicsLayer {
+                    rotationZ = if (isExpanded) 180f else 0f
+                }
+            )
+        }
     }
 }

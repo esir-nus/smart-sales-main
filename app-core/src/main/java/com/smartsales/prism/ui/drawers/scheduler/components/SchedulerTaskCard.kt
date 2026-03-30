@@ -4,18 +4,26 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.smartsales.prism.ui.drawers.scheduler.ConflictVisual
+import com.smartsales.prism.ui.drawers.scheduler.SchedulerDrawerVisualMode
 import com.smartsales.prism.ui.drawers.scheduler.TimelineItem
+import com.smartsales.prism.ui.drawers.scheduler.currentSchedulerDrawerVisualMode
 import com.smartsales.prism.ui.drawers.scheduler.currentSchedulerDrawerVisuals
 import com.smartsales.prism.ui.theme.AccentAmber
 
@@ -28,17 +36,36 @@ fun SchedulerTaskCard(
     modifier: Modifier = Modifier
 ) {
     val visuals = currentSchedulerDrawerVisuals
+    val isSimVisualMode = currentSchedulerDrawerVisualMode == SchedulerDrawerVisualMode.SIM
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val shape = RoundedCornerShape(visuals.cardCornerRadius)
+    val cardModifier = modifier
+        .fillMaxWidth()
+        .shadow(
+            elevation = if (isSimVisualMode && isPressed) 10.dp else 0.dp,
+            shape = shape,
+            ambientColor = visuals.cardHighlight,
+            spotColor = visuals.cardHighlight
+        )
+        .clickable(
+            enabled = enabled,
+            interactionSource = interactionSource,
+            indication = null
+        ) { onClick() }
+        .then(
+            when {
+                state.isVague -> Modifier.border(1.dp, com.smartsales.prism.ui.theme.AccentDanger.copy(alpha = 0.8f), shape)
+                state.hasConflict || state.conflictVisual != ConflictVisual.NONE ->
+                    Modifier
+                        .background(visuals.cardConflictBackground, shape)
+                        .border(0.75.dp, visuals.cardConflictBorder, shape)
+                else -> Modifier
+            }
+        )
+
     GlassCard(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(enabled = enabled) { onClick() }
-            .then(
-                if (state.isVague) {
-                    Modifier.border(1.dp, com.smartsales.prism.ui.theme.AccentDanger.copy(alpha = 0.8f), RoundedCornerShape(16.dp))
-                } else if (state.conflictVisual == ConflictVisual.CAUSING && isExpanded) {
-                    Modifier.border(1.dp, AccentAmber.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
-                } else Modifier
-            )
+        modifier = cardModifier
     ) {
         Row(modifier = Modifier.height(IntrinsicSize.Min).fillMaxWidth()) {
             TaskCardIndicator(
@@ -78,6 +105,10 @@ fun SchedulerTaskCard(
                 
                 // Expanded Area Component
                 AnimatedVisibility(visible = isExpanded && !state.isDone) {
+                    HorizontalDivider(
+                        color = visuals.cardBorder,
+                        modifier = Modifier.padding(top = 12.dp, bottom = 10.dp)
+                    )
                     if (state.clarificationState != null) {
                         TaskCardClarification(clarificationState = state.clarificationState)
                     } else {

@@ -2,6 +2,7 @@ package com.smartsales.prism.ui.drawers.scheduler.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.outlined.QueryBuilder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -14,9 +15,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.smartsales.prism.ui.drawers.scheduler.SchedulerDrawerVisualMode
 import com.smartsales.prism.ui.drawers.scheduler.TimelineItem
+import com.smartsales.prism.ui.drawers.scheduler.simCardTimeSummary
+import com.smartsales.prism.ui.drawers.scheduler.simCollapsedTimeLabel
 import com.smartsales.prism.ui.drawers.scheduler.currentSchedulerDrawerVisualMode
 import com.smartsales.prism.ui.drawers.scheduler.currentSchedulerDrawerVisuals
-import com.smartsales.prism.ui.drawers.scheduler.simCollapsedTimeLabel
+import com.smartsales.prism.ui.theme.AccentGreen
 import com.smartsales.prism.ui.theme.AccentBlue
 
 @Composable
@@ -27,6 +30,15 @@ fun TaskCardHeader(
 ) {
     val visuals = currentSchedulerDrawerVisuals
     val isSimVisualMode = currentSchedulerDrawerVisualMode == SchedulerDrawerVisualMode.SIM
+    if (isSimVisualMode) {
+        SimTaskCardHeader(
+            state = state,
+            isExpanded = isExpanded,
+            modifier = modifier
+        )
+        return
+    }
+
     Row(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top
@@ -81,13 +93,92 @@ fun TaskCardHeader(
         }
 
         // Smart Badge Icon
-        if (state.hasAlarm && state.isSmartAlarm && !state.isDone) {
+        if (state.hasAlarm && !state.isDone) {
             Icon(
                 imageVector = Icons.Outlined.QueryBuilder,
-                contentDescription = "Smart Alarm",
+                contentDescription = "Reminder Scheduled",
                 tint = AccentBlue,
                 modifier = Modifier.size(16.dp).padding(top = 4.dp)
             )
+        }
+    }
+}
+
+@Composable
+private fun SimTaskCardHeader(
+    state: TimelineItem.Task,
+    isExpanded: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val visuals = currentSchedulerDrawerVisuals
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top
+    ) {
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
+            Row(
+                verticalAlignment = Alignment.Top
+            ) {
+                if (state.isDone) {
+                    Icon(
+                        imageVector = Icons.Rounded.Check,
+                        contentDescription = null,
+                        tint = AccentGreen.copy(alpha = 0.9f),
+                        modifier = Modifier
+                            .padding(top = 2.dp, end = 6.dp)
+                            .size(14.dp)
+                    )
+                }
+
+                Text(
+                    text = state.title,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (state.isDone) visuals.taskDoneTitleColor else visuals.taskTitleColor,
+                    textDecoration = if (state.isDone) TextDecoration.LineThrough else null,
+                    lineHeight = 20.sp,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
+            }
+
+            val subtitle = when {
+                state.clarificationState != null && !isExpanded -> "需确认以完善日程"
+                !isExpanded -> listOfNotNull(state.keyPerson, state.location).joinToString(" · ")
+                else -> ""
+            }
+            if (subtitle.isNotBlank()) {
+                Text(
+                    text = subtitle,
+                    fontSize = 12.sp,
+                    color = if (state.clarificationState != null && !isExpanded) AccentBlue else visuals.taskContextColor,
+                    modifier = Modifier.padding(top = 6.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Column(
+            horizontalAlignment = Alignment.End
+        ) {
+            Text(
+                text = state.simCardTimeSummary(),
+                fontSize = 12.sp,
+                color = visuals.taskTimeColor,
+                fontWeight = FontWeight.Medium
+            )
+            if (state.hasAlarm && !state.isDone) {
+                Icon(
+                    imageVector = Icons.Outlined.QueryBuilder,
+                    contentDescription = "Reminder Scheduled",
+                    tint = AccentBlue,
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .size(16.dp)
+                )
+            }
         }
     }
 }

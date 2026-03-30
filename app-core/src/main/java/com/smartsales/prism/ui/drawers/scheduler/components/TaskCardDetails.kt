@@ -1,6 +1,8 @@
 package com.smartsales.prism.ui.drawers.scheduler.components
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.HorizontalDivider
@@ -29,7 +31,7 @@ fun TaskCardDetails(
     val visuals = currentSchedulerDrawerVisuals
     val isSimVisualMode = currentSchedulerDrawerVisualMode == SchedulerDrawerVisualMode.SIM
     val detailStartPadding = if (isSimVisualMode) {
-        visuals.cardHeaderTimeWidth + visuals.cardHeaderGap + 4.dp
+        0.dp
     } else {
         58.dp
     }
@@ -68,14 +70,6 @@ fun TaskCardDetails(
                 Text(it, style = metaStyle)
             }
         }
-        // Notes Row
-        state.notes?.let {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
-                Icon(Icons.Outlined.Notes, contentDescription = null, tint = visuals.taskTimeColor, modifier = Modifier.size(14.dp))
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(it, style = metaStyle)
-            }
-        }
         // Key Person
         state.keyPerson?.let {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 8.dp)) {
@@ -103,16 +97,55 @@ fun TaskCardDetails(
             }
         }
 
-        // Smart Tips
+        if (state.notes != null || state.tipsLoading || state.tips.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(4.dp))
+            HorizontalDivider(color = BorderSubtle, modifier = Modifier.padding(vertical = 8.dp))
+        }
+
+        state.notes?.let {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        color = visuals.cardBackground.copy(alpha = 0.55f),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Outlined.Notes,
+                        contentDescription = null,
+                        tint = visuals.taskTimeColor,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "用户备注",
+                        style = metaStyle.copy(fontWeight = FontWeight.Medium)
+                    )
+                }
+                Text(
+                    text = it,
+                    style = metaStyle,
+                    modifier = Modifier.padding(top = 8.dp),
+                    lineHeight = 18.sp
+                )
+            }
+        }
+
         if (state.tipsLoading) {
-            Spacer(modifier = Modifier.height(8.dp))
-            HorizontalDivider(color = BorderSubtle, modifier = Modifier.padding(vertical = 4.dp))
+            Spacer(modifier = Modifier.height(10.dp))
             repeat(3) {
                 ShimmerLine(modifier = Modifier.padding(vertical = 3.dp))
             }
         } else if (state.tips.isNotEmpty()) {
             Spacer(modifier = Modifier.height(8.dp))
-            HorizontalDivider(color = BorderSubtle, modifier = Modifier.padding(vertical = 4.dp))
+            Text(
+                text = "AI 提示",
+                style = metaStyle.copy(color = AccentBlue, fontWeight = FontWeight.SemiBold),
+                modifier = Modifier.padding(bottom = 4.dp)
+            )
             state.tips.forEach { tip ->
                 TipBubble(text = tip, modifier = Modifier.padding(vertical = 3.dp))
             }

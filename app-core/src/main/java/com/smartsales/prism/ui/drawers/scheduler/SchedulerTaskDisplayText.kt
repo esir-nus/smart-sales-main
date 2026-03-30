@@ -17,11 +17,20 @@ internal fun TimelineItem.Task.simTimelineRailLabel(): String {
 
 internal fun TimelineItem.Task.simCollapsedTimeLabel(): String = simTimelineRailLabel()
 
+internal fun TimelineItem.Task.simCardTimeSummary(): String {
+    val cleaned = timeDisplay.replace(" - ...", "").trim()
+    return when {
+        isVague -> "时间待定"
+        cleaned.isNotBlank() -> cleaned
+        else -> simCollapsedTimeLabel()
+    }
+}
+
 internal fun TimelineItem.Task.simDetailDateLabel(): String {
     val zonedStart = sortInstant?.atZone(ZoneId.systemDefault())
     return when {
         isVague && zonedStart != null -> "${zonedStart.format(SimSchedulerDateFormatter)} · 时间待定"
-        isVague -> dateRange.ifBlank { "时间待定" }
+        isVague -> "时间待定"
         zonedStart != null -> "${zonedStart.format(SimSchedulerDateFormatter)} · ${zonedStart.format(SimSchedulerRailTimeFormatter)}"
         else -> dateRange.ifBlank { simCollapsedTimeLabel() }
     }

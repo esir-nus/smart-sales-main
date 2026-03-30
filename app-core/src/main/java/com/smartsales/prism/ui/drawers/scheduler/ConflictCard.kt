@@ -34,6 +34,7 @@ import com.smartsales.prism.data.scheduler.RealConflictResolver
 import com.smartsales.prism.domain.scheduler.ConflictResolution
 import androidx.compose.ui.platform.LocalContext
 import dagger.hilt.android.EntryPointAccessors
+import com.smartsales.prism.ui.drawers.scheduler.components.GlassCard
 
 // ==========================================
 // State Models
@@ -62,6 +63,8 @@ fun ConflictCard(
     onExpandToggle: () -> Unit,
     onResolve: (ConflictResolution) -> Unit
 ) {
+    val visuals = currentSchedulerDrawerVisuals
+    val isSimVisualMode = currentSchedulerDrawerVisualMode == SchedulerDrawerVisualMode.SIM
     // Access RealConflictResolver via Hilt
     val context = LocalContext.current
     val resolver = remember {
@@ -100,25 +103,30 @@ fun ConflictCard(
             repeatMode = RepeatMode.Reverse
         )
     )
-    val borderColor = if (isExpanded) AccentDanger.copy(alpha = breathingAlpha) else AccentDanger
+    val borderColor = if (isExpanded) {
+        visuals.cardConflictBorder.copy(alpha = breathingAlpha)
+    } else {
+        visuals.cardConflictBorder
+    }
 
-    PrismCard(
-        onClick = onExpandToggle,
-        modifier = Modifier.fillMaxWidth(),
-        shape = GlassCardShape // 20.dp
+    GlassCard(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onExpandToggle() }
+            .border(0.75.dp, borderColor, RoundedCornerShape(visuals.cardCornerRadius))
+            .background(visuals.cardConflictBackground, RoundedCornerShape(visuals.cardCornerRadius))
     ) {
         // Red/Orange Tint Background
         Box(
             modifier = Modifier
                 .matchParentSize()
-                .background(AccentDanger.copy(alpha = 0.08f)) // Subtle tint
-        )
-
-        // Red Border Overlay
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .border(1.dp, borderColor, GlassCardShape)
+                .background(
+                    if (isSimVisualMode) {
+                        visuals.cardConflictBackground
+                    } else {
+                        AccentDanger.copy(alpha = 0.08f)
+                    }
+                )
         )
 
         Column {
@@ -126,7 +134,7 @@ fun ConflictCard(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(12.dp)
+                    .padding(horizontal = 16.dp, vertical = 14.dp)
             ) {
                 // Row 1: Warning Icon + Label + Expand Icon
                 Row(
@@ -144,7 +152,7 @@ fun ConflictCard(
                     Text(
                         text = "时间重叠",
                         fontSize = 12.sp,
-                        color = AccentDanger,
+                        color = visuals.conflictBannerText,
                         fontWeight = FontWeight.Bold
                     )
                     
@@ -153,7 +161,7 @@ fun ConflictCard(
                     Icon(
                         imageVector = if (isExpanded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore,
                         contentDescription = if (isExpanded) "Collapse" else "Expand",
-                        tint = AccentDanger.copy(alpha = 0.8f),
+                        tint = visuals.conflictBannerText.copy(alpha = 0.85f),
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -166,13 +174,13 @@ fun ConflictCard(
                         text = taskA.title,
                         fontSize = 15.sp, // Slightly larger
                         fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = visuals.taskTitleColor
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "${formatTime(taskA.scheduledAt)} (${taskA.durationMinutes}m)",
                         fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        color = visuals.taskContextColor
                     )
                 }
                 
@@ -184,13 +192,13 @@ fun ConflictCard(
                         text = taskB.title,
                         fontSize = 15.sp, // Slightly larger
                         fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = visuals.taskTitleColor
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "${formatTime(taskB.scheduledAt)} (${taskB.durationMinutes}m)",
                         fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        color = visuals.taskContextColor
                     )
                 }
                 
@@ -209,7 +217,7 @@ fun ConflictCard(
                     Text(
                         text = "重叠 $overlapMinutes 分钟",
                         fontSize = 12.sp,
-                        color = AccentDanger,
+                        color = visuals.conflictBannerText,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -217,7 +225,7 @@ fun ConflictCard(
             
             // Expanded Content: Mini Chat
             if (isExpanded) {
-                 HorizontalDivider(color = AccentDanger.copy(alpha = 0.2f))
+                 HorizontalDivider(color = visuals.cardBorder)
                 
                 Column(
                     modifier = Modifier
@@ -233,7 +241,7 @@ fun ConflictCard(
                          Text(
                             text = "处理中...",
                             fontSize = 12.sp,
-                            color = AccentDanger.copy(alpha = 0.6f),
+                            color = visuals.conflictBannerText.copy(alpha = 0.7f),
                             modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
                         )
                     }
@@ -244,8 +252,8 @@ fun ConflictCard(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color.White.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
-                            .border(1.dp, AccentDanger.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
+                            .background(visuals.cardBackground.copy(alpha = 0.92f), RoundedCornerShape(20.dp))
+                            .border(0.75.dp, visuals.cardConflictBorder, RoundedCornerShape(20.dp))
                             .padding(horizontal = 12.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -268,7 +276,7 @@ fun ConflictCard(
                         Icon(
                             imageVector = if (inputText.isEmpty()) Icons.Default.Mic else Icons.Default.Send,
                             contentDescription = "Send",
-                            tint = AccentDanger,
+                            tint = visuals.conflictBannerText,
                             modifier = Modifier
                                 .size(20.dp)
                                 .clickable {

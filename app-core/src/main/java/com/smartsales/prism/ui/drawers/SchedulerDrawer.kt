@@ -300,6 +300,13 @@ fun SchedulerDrawer(
                             }
                         }
                 ) {
+                    if (isSimVisualMode) {
+                        DragHandle(
+                            onDismiss = onDismiss,
+                            topEdge = true
+                        )
+                    }
+
                     // 1. Calendar Section (Expandable)
                     val unacknowledgedDates by viewModel.unacknowledgedDates.collectAsState()
                     val rescheduledDates by viewModel.rescheduledDates.collectAsState()
@@ -318,7 +325,7 @@ fun SchedulerDrawer(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 16.dp)
+                                .padding(horizontal = visuals.drawerContentHorizontalPadding)
                                 .background(visuals.conflictBannerBackground, RoundedCornerShape(10.dp))
                                 .padding(horizontal = 16.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -539,14 +546,9 @@ fun SchedulerDrawer(
                         }
                     }
 
-                    DragHandle(
-                        onDismiss = onDismiss,
-                        modifier = if (isSimVisualMode) {
-                            Modifier.padding(bottom = 8.dp)
-                        } else {
-                            Modifier
-                        }
-                    )
+                    if (!isSimVisualMode) {
+                        DragHandle(onDismiss = onDismiss)
+                    }
                 }
             }
         }
@@ -556,6 +558,7 @@ fun SchedulerDrawer(
 @Composable
 private fun DragHandle(
     onDismiss: () -> Unit,
+    topEdge: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val visuals = LocalSchedulerDrawerVisuals.current
@@ -566,7 +569,10 @@ private fun DragHandle(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(vertical = 12.dp)
+            .padding(
+                top = if (topEdge) 8.dp else 12.dp,
+                bottom = if (topEdge) 6.dp else 12.dp
+            )
             .testTag(SCHEDULER_DRAWER_HANDLE_TEST_TAG)
             .pointerInput(Unit) {
                 detectVerticalDragGestures(
@@ -584,12 +590,29 @@ private fun DragHandle(
             },
         contentAlignment = Alignment.Center
     ) {
-        Box(
-            modifier = Modifier
-                .width(36.dp)
-                .height(4.dp)
-                .background(visuals.handleColor, RoundedCornerShape(2.dp))
-        )
+        if (topEdge) {
+            Box(
+                modifier = Modifier
+                    .width(32.dp)
+                    .height(3.dp)
+                    .background(visuals.handleTrackColor, RoundedCornerShape(2.dp))
+            ) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .width(20.dp)
+                        .height(3.dp)
+                        .background(visuals.handleColor, RoundedCornerShape(2.dp))
+                )
+            }
+        } else {
+            Box(
+                modifier = Modifier
+                    .width(36.dp)
+                    .height(4.dp)
+                    .background(visuals.handleColor, RoundedCornerShape(2.dp))
+            )
+        }
     }
 }
 

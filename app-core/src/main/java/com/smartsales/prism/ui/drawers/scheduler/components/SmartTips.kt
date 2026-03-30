@@ -4,6 +4,9 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AutoAwesome
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -60,12 +63,18 @@ fun TipBubble(text: String, modifier: Modifier = Modifier) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(AccentBlue.copy(alpha = 0.12f), RoundedCornerShape(8.dp))
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .background(AccentBlue.copy(alpha = 0.08f), RoundedCornerShape(8.dp))
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.Top
     ) {
-        // Simple plain text icon instead of emoji
-        Text(text = "!", fontSize = 12.sp, color = AccentBlue, modifier = Modifier.padding(end = 6.dp))
-        Text(text = text, fontSize = 12.sp, color = TextSecondary, lineHeight = 16.sp)
+        Icon(
+            imageVector = Icons.Outlined.AutoAwesome,
+            contentDescription = null,
+            tint = AccentBlue,
+            modifier = Modifier
+                .padding(top = 1.dp, end = 8.dp)
+                .size(14.dp)
+        )
+        Text(text = text, fontSize = 12.sp, color = TextSecondary, lineHeight = 18.sp)
     }
 }

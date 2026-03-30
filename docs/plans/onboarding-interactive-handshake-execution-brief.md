@@ -30,7 +30,7 @@ This slice is not a retroactive reinterpretation of Wave A or the SIM intro-dark
 
 - add the two new onboarding intro steps on both hosts
 - implement phone-mic hold-to-speak interaction before pairing begins
-- transcribe onboarding audio through an onboarding-owned device speech recognizer fast lane
+- transcribe onboarding audio through an onboarding-owned FunASR realtime fast lane exposed through `DeviceSpeechRecognizer`
 - generate a short consultation reply through onboarding-owned deterministic local logic
 - generate typed profile extraction data through onboarding-owned deterministic local logic
 - persist extracted profile data into `UserProfileRepository` only after explicit CTA on the profile step
@@ -44,14 +44,18 @@ This slice is not a retroactive reinterpretation of Wave A or the SIM intro-dark
 The shared onboarding mic footer for `VOICE_HANDSHAKE_CONSULTATION` and `VOICE_HANDSHAKE_PROFILE` must follow this transplant contract:
 
 - render a 6-bar handshake above the mic button with `6.dp` bar width and `6.dp` gap inside a vertical slot that can visibly grow up to `40.dp`
-- keep the sample-prompt hint line visible between the bars and the mic button while the footer is present
+- keep the hint line between the bars and the mic button while the footer is present
+- show the prototype sample prompt in idle
+- replace that hint line with live partial transcript while realtime capture is active when transcript text is available
+- preserve the latest captured transcript through processing when transcript text is available; otherwise the hint line may remain empty
 - idle handshake auto-starts after `600ms` and loops on a `3000ms` breathing cycle between `8.dp` and `20.dp` height with staggered per-bar phase offsets and subdued opacity
 - recording switches on pointer-down to a `600ms` faster cycle between `10.dp` and `40.dp` height with full cyan intensity
 - release must not hide the handshake or mic button immediately; processing returns to the idle-breathing handshake while the processing label is shown
 - the footer disappears only when the next visible result state takes over:
-  - consultation: transcript / AI reply / completion reveal
-  - profile: transcript / acknowledgement / extraction card / CTA state
+- consultation: transcript / AI reply / completion reveal
+- profile: transcript / acknowledgement / extraction card / CTA state
 - prefer one `rememberInfiniteTransition` with math phase offsets over per-bar coroutine animators
+- if first-use mic permission interrupts the initial hold gesture, granting permission must return onboarding to idle, show a calm ready hint, and require a fresh hold-to-speak press
 
 ## Forbidden Work
 

@@ -32,8 +32,32 @@ data class OnboardingProfileDraft(
 ## Device Speech Recognition
 
 ```kotlin
+enum class DeviceSpeechMode {
+    DEVICE_ONLY,
+    DEVICE_WITH_LOCAL_ASR_FALLBACK,
+    FUN_ASR_REALTIME
+}
+```
+
+```kotlin
+sealed interface DeviceSpeechRecognitionEvent {
+    data object ListeningStarted : DeviceSpeechRecognitionEvent
+    data object CaptureLimitReached : DeviceSpeechRecognitionEvent
+    data class PartialTranscript(val text: String, val backend: DeviceSpeechBackend) : DeviceSpeechRecognitionEvent
+    data class FinalTranscript(val text: String, val backend: DeviceSpeechBackend) : DeviceSpeechRecognitionEvent
+    data class Failure(
+        val reason: DeviceSpeechFailureReason,
+        val message: String,
+        val backend: DeviceSpeechBackend
+    ) : DeviceSpeechRecognitionEvent
+    data object Cancelled : DeviceSpeechRecognitionEvent
+}
+```
+
+```kotlin
 interface DeviceSpeechRecognizer {
-    fun startListening()
+    val events: Flow<DeviceSpeechRecognitionEvent>
+    fun startListening(mode: DeviceSpeechMode = DeviceSpeechMode.DEVICE_ONLY)
     suspend fun finishListening(): DeviceSpeechRecognitionResult
     fun cancelListening()
     fun isListening(): Boolean
@@ -43,7 +67,10 @@ interface DeviceSpeechRecognizer {
 Rules:
 
 - onboarding UI owns permission prompts; recognizer impl assumes permission already granted
-- the active onboarding happy path uses device speech recognition rather than `AsrService`
+- the active onboarding happy path starts `DeviceSpeechMode.FUN_ASR_REALTIME` rather than calling `AsrService`
+- the recognizer event stream is the source for live transcript updates and `60s` capture-limit auto-stop handling
+- onboarding replaces the footer sample hint with live transcript while recording or processing when transcript text is available, but still writes only the final resolved transcript into chat / extraction state
+- after first-use permission grant, onboarding returns to idle and requires a fresh press instead of auto-resuming a recording session
 - cancellation must end the active recognition session cleanly
 - this seam should remain reusable for future chat fast-recognition work
 

@@ -59,39 +59,23 @@ class OnboardingMicFooterGestureTest {
     }
 
     @Test
-    fun tapToSend_clickStopsListening() {
-        var releaseCount = 0
-        var cancelCount = 0
+    fun processingTranscript_remainsVisibleWithoutRecordingState() {
+        val transcript = "帮我搞定这个客户"
 
         composeTestRule.setContent {
-            var isRecording by remember { mutableStateOf(true) }
-
             OnboardingMicFooter(
-                isRecording = isRecording,
-                isProcessing = false,
-                interactionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
-                handshakeHint = "试试说一句",
+                isRecording = false,
+                isProcessing = true,
+                interactionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                handshakeHint = transcript,
                 processingLabel = "正在思考...",
                 onPressStart = { false },
-                onPressEnd = {
-                    isRecording = false
-                    releaseCount += 1
-                },
-                onPressCancel = {
-                    isRecording = false
-                    cancelCount += 1
-                }
+                onPressEnd = {},
+                onPressCancel = {}
             )
         }
 
-        composeTestRule.onNodeWithTag(ONBOARDING_MIC_BUTTON_TEST_TAG)
-            .assertExists()
-            .performTouchInput { click(center) }
-
-        composeTestRule.runOnIdle {
-            assertEquals(1, releaseCount)
-            assertEquals(0, cancelCount)
-        }
-        composeTestRule.onNodeWithText("按住说话").assertExists()
+        composeTestRule.onNodeWithText(transcript).assertExists()
+        composeTestRule.onNodeWithText("正在思考...").assertExists()
     }
 }

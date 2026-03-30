@@ -3,6 +3,7 @@ package com.smartsales.prism.ui.onboarding
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.smartsales.prism.data.audio.DeviceSpeechFailureReason
+import com.smartsales.prism.data.audio.DeviceSpeechRecognitionEvent
 import com.smartsales.prism.data.audio.DeviceSpeechMode
 import com.smartsales.prism.data.audio.DeviceSpeechRecognitionResult
 import com.smartsales.prism.data.audio.DeviceSpeechRecognizer
@@ -33,6 +34,7 @@ class OnboardingInteractionViewModel @Inject constructor(
 
     private var consultationRequestId = 0L
     private var profileRequestId = 0L
+    private var activeSpeechLane: ProcessingLane? = null
 
     private val _consultationState = MutableStateFlow(OnboardingConsultationUiState())
     val consultationState: StateFlow<OnboardingConsultationUiState> = _consultationState.asStateFlow()
@@ -42,6 +44,12 @@ class OnboardingInteractionViewModel @Inject constructor(
 
     private val _effects = MutableSharedFlow<OnboardingInteractionEffect>(extraBufferCapacity = 1)
     val effects: SharedFlow<OnboardingInteractionEffect> = _effects.asSharedFlow()
+
+    init {
+        viewModelScope.launch {
+            speechRecognizer.events.collect(::handleSpeechEvent)
+        }
+    }
 
     fun resetInteractionState() {
         cancelActiveRecording()
@@ -59,6 +67,7 @@ class OnboardingInteractionViewModel @Inject constructor(
         _consultationState.value = state.copy(
             awaitingMicPermission = true,
             micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+            guidanceMessage = null,
             errorMessage = null
         )
     }
@@ -69,12 +78,18 @@ class OnboardingInteractionViewModel @Inject constructor(
             _consultationState.value = state.copy(
                 awaitingMicPermission = false,
                 micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                guidanceMessage = null,
                 errorMessage = "无法录音：未授予麦克风权限"
             )
             return
         }
         if (state.awaitingMicPermission) {
-            startConsultationRecording(OnboardingMicInteractionMode.TAP_TO_SEND)
+            _consultationState.value = state.copy(
+                awaitingMicPermission = false,
+                micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                guidanceMessage = MIC_PERMISSION_GRANTED_GUIDANCE,
+                errorMessage = null
+            )
         }
     }
 
@@ -84,19 +99,24 @@ class OnboardingInteractionViewModel @Inject constructor(
         val state = _consultationState.value
         if (state.isProcessing || state.isCompleted || speechRecognizer.isListening()) return false
         return runCatching {
-            speechRecognizer.startListening(DeviceSpeechMode.DEVICE_ONLY)
+            speechRecognizer.startListening(DeviceSpeechMode.FUN_ASR_REALTIME)
+            activeSpeechLane = ProcessingLane.CONSULTATION
             _consultationState.value = state.copy(
                 hasStartedInteracting = true,
                 isRecording = true,
+                liveTranscript = "",
                 errorMessage = null,
+                guidanceMessage = null,
                 awaitingMicPermission = false,
                 micInteractionMode = interactionMode,
                 processingPhase = OnboardingProcessingPhase.NONE
             )
             true
         }.getOrElse {
+            activeSpeechLane = null
             _consultationState.value = state.copy(
                 errorMessage = "当前无法开始录音，请重试。",
+                guidanceMessage = null,
                 awaitingMicPermission = false,
                 micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
                 processingPhase = OnboardingProcessingPhase.NONE
@@ -138,6 +158,7 @@ class OnboardingInteractionViewModel @Inject constructor(
         _profileState.value = state.copy(
             awaitingMicPermission = true,
             micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+            guidanceMessage = null,
             errorMessage = null
         )
     }
@@ -148,12 +169,18 @@ class OnboardingInteractionViewModel @Inject constructor(
             _profileState.value = state.copy(
                 awaitingMicPermission = false,
                 micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                guidanceMessage = null,
                 errorMessage = "无法录音：未授予麦克风权限"
             )
             return
         }
         if (state.awaitingMicPermission) {
-            startProfileRecording(OnboardingMicInteractionMode.TAP_TO_SEND)
+            _profileState.value = state.copy(
+                awaitingMicPermission = false,
+                micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                guidanceMessage = MIC_PERMISSION_GRANTED_GUIDANCE,
+                errorMessage = null
+            )
         }
     }
 
@@ -163,19 +190,24 @@ class OnboardingInteractionViewModel @Inject constructor(
         val state = _profileState.value
         if (state.isProcessing || state.hasExtractionResult || speechRecognizer.isListening()) return false
         return runCatching {
-            speechRecognizer.startListening(DeviceSpeechMode.DEVICE_ONLY)
+            speechRecognizer.startListening(DeviceSpeechMode.FUN_ASR_REALTIME)
+            activeSpeechLane = ProcessingLane.PROFILE
             _profileState.value = state.copy(
                 hasStartedInteracting = true,
                 isRecording = true,
+                liveTranscript = "",
                 errorMessage = null,
+                guidanceMessage = null,
                 awaitingMicPermission = false,
                 micInteractionMode = interactionMode,
                 processingPhase = OnboardingProcessingPhase.NONE
             )
             true
         }.getOrElse {
+            activeSpeechLane = null
             _profileState.value = state.copy(
                 errorMessage = "当前无法开始录音，请重试。",
+                guidanceMessage = null,
                 awaitingMicPermission = false,
                 micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
                 processingPhase = OnboardingProcessingPhase.NONE
@@ -252,18 +284,23 @@ class OnboardingInteractionViewModel @Inject constructor(
 
     fun cancelActiveRecording() {
         invalidateProcessingRequests()
+        activeSpeechLane = null
         runCatching { speechRecognizer.cancelListening() }
         _consultationState.value = _consultationState.value.copy(
             isRecording = false,
             isProcessing = false,
+            liveTranscript = "",
             awaitingMicPermission = false,
+            guidanceMessage = null,
             micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
             processingPhase = OnboardingProcessingPhase.NONE
         )
         _profileState.value = _profileState.value.copy(
             isRecording = false,
             isProcessing = false,
+            liveTranscript = "",
             awaitingMicPermission = false,
+            guidanceMessage = null,
             micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
             processingPhase = OnboardingProcessingPhase.NONE
         )
@@ -290,15 +327,18 @@ class OnboardingInteractionViewModel @Inject constructor(
         val round = _consultationState.value.completedRounds + 1
         when (val result = interactionService.generateConsultationReply(normalized, round)) {
             is OnboardingConsultationServiceResult.Success -> {
+                activeSpeechLane = null
                 updateConsultationStateIfCurrent(requestId) { current ->
                     current.copy(
                         isProcessing = false,
+                        liveTranscript = "",
                         messages = current.messages + listOf(
                             OnboardingInteractionMessage(OnboardingMessageRole.USER, normalized),
                             OnboardingInteractionMessage(OnboardingMessageRole.AI, result.reply)
                         ),
                         completedRounds = round,
                         errorMessage = null,
+                        guidanceMessage = null,
                         micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
                         processingPhase = OnboardingProcessingPhase.NONE,
                         lastResultOrigin = origin
@@ -327,13 +367,16 @@ class OnboardingInteractionViewModel @Inject constructor(
         }
         when (val result = interactionService.extractProfile(normalized)) {
             is OnboardingProfileExtractionServiceResult.Success -> {
+                activeSpeechLane = null
                 updateProfileStateIfCurrent(requestId) {
                     it.copy(
                         isProcessing = false,
+                        liveTranscript = "",
                         transcript = normalized,
                         acknowledgement = result.acknowledgement,
                         draft = result.draft,
                         errorMessage = null,
+                        guidanceMessage = null,
                         micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
                         processingPhase = OnboardingProcessingPhase.NONE,
                         draftOrigin = origin
@@ -348,10 +391,13 @@ class OnboardingInteractionViewModel @Inject constructor(
     }
 
     private suspend fun runConsultationFallback(requestId: Long, delayMillis: Long) {
+        activeSpeechLane = null
         updateConsultationStateIfCurrent(requestId) {
             it.copy(
                 isProcessing = true,
+                liveTranscript = "",
                 processingPhase = OnboardingProcessingPhase.DETERMINISTIC_FALLBACK,
+                guidanceMessage = null,
                 errorMessage = null
             )
         }
@@ -368,12 +414,14 @@ class OnboardingInteractionViewModel @Inject constructor(
         updateConsultationStateIfCurrent(requestId) { current ->
             current.copy(
                 isProcessing = false,
+                liveTranscript = "",
                 messages = current.messages + listOf(
                     OnboardingInteractionMessage(OnboardingMessageRole.USER, transcript),
                     OnboardingInteractionMessage(OnboardingMessageRole.AI, reply)
                 ),
                 completedRounds = round,
                 errorMessage = null,
+                guidanceMessage = null,
                 micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
                 processingPhase = OnboardingProcessingPhase.NONE,
                 lastResultOrigin = OnboardingResultOrigin.DETERMINISTIC_FALLBACK
@@ -382,10 +430,13 @@ class OnboardingInteractionViewModel @Inject constructor(
     }
 
     private suspend fun runProfileFallback(requestId: Long, delayMillis: Long) {
+        activeSpeechLane = null
         updateProfileStateIfCurrent(requestId) {
             it.copy(
                 isProcessing = true,
+                liveTranscript = "",
                 processingPhase = OnboardingProcessingPhase.DETERMINISTIC_FALLBACK,
+                guidanceMessage = null,
                 errorMessage = null
             )
         }
@@ -397,6 +448,7 @@ class OnboardingInteractionViewModel @Inject constructor(
         updateProfileStateIfCurrent(requestId) {
             it.copy(
                 isProcessing = false,
+                liveTranscript = "",
                 transcript = transcript,
                 acknowledgement = PROFILE_FALLBACK_ACKNOWLEDGEMENT,
                 draft = PROFILE_FALLBACK_DRAFT,
@@ -474,6 +526,7 @@ class OnboardingInteractionViewModel @Inject constructor(
             isRecording = false,
             isProcessing = true,
             errorMessage = null,
+            guidanceMessage = null,
             awaitingMicPermission = false,
             micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
             processingPhase = OnboardingProcessingPhase.RECOGNIZING
@@ -489,6 +542,7 @@ class OnboardingInteractionViewModel @Inject constructor(
             isRecording = false,
             isProcessing = true,
             errorMessage = null,
+            guidanceMessage = null,
             awaitingMicPermission = false,
             micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
             processingPhase = OnboardingProcessingPhase.RECOGNIZING
@@ -537,10 +591,66 @@ class OnboardingInteractionViewModel @Inject constructor(
         PROFILE
     }
 
+    private fun handleSpeechEvent(event: DeviceSpeechRecognitionEvent) {
+        when (event) {
+            DeviceSpeechRecognitionEvent.ListeningStarted -> Unit
+            DeviceSpeechRecognitionEvent.CaptureLimitReached -> handleCaptureLimitReached()
+            is DeviceSpeechRecognitionEvent.PartialTranscript -> updateLiveTranscript(event.text)
+            is DeviceSpeechRecognitionEvent.FinalTranscript -> updateLiveTranscript(event.text)
+            is DeviceSpeechRecognitionEvent.Failure -> Unit
+            DeviceSpeechRecognitionEvent.Cancelled -> {
+                activeSpeechLane = null
+                clearLiveTranscript()
+            }
+        }
+    }
+
+    private fun handleCaptureLimitReached() {
+        when (activeSpeechLane) {
+            ProcessingLane.CONSULTATION -> {
+                if (_consultationState.value.isRecording) {
+                    finishConsultationRecording()
+                }
+            }
+
+            ProcessingLane.PROFILE -> {
+                if (_profileState.value.isRecording) {
+                    finishProfileRecording()
+                }
+            }
+
+            null -> Unit
+        }
+    }
+
+    private fun updateLiveTranscript(text: String) {
+        when (activeSpeechLane) {
+            ProcessingLane.CONSULTATION -> {
+                val state = _consultationState.value
+                if (!state.isRecording && !state.isProcessing) return
+                _consultationState.value = state.copy(liveTranscript = text)
+            }
+
+            ProcessingLane.PROFILE -> {
+                val state = _profileState.value
+                if (!state.isRecording && !state.isProcessing) return
+                _profileState.value = state.copy(liveTranscript = text)
+            }
+
+            null -> Unit
+        }
+    }
+
+    private fun clearLiveTranscript() {
+        _consultationState.value = _consultationState.value.copy(liveTranscript = "")
+        _profileState.value = _profileState.value.copy(liveTranscript = "")
+    }
+
     private companion object {
         private const val MIN_TRANSCRIPT_LENGTH = 4
         private const val DEVICE_RECOGNITION_TIMEOUT_MS = 1_200L
         private const val FALLBACK_DWELL_MS = 1_200L
+        private const val MIC_PERMISSION_GRANTED_GUIDANCE = "麦克风已开启，请重新按住说话"
 
         private const val PROFILE_FALLBACK_TRANSCRIPT =
             "我是李经理，在科技行业做销售经理三年了，平时主要用微信和电话跟客户沟通。"

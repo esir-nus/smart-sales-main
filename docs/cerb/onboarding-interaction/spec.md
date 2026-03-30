@@ -39,7 +39,8 @@ Pairing-owned steps still begin at `HARDWARE_WAKE`.
 ### Consultation
 
 - user holds to speak on phone mic
-- onboarding uses device speech recognition for the short utterance
+- onboarding uses FunASR realtime recognition through the `DeviceSpeechRecognizer` seam for the intro utterance
+- one hold-to-speak capture session may remain active for up to `60s`
 - transcript becomes the user bubble
 - onboarding builds a short deterministic coaching reply locally
 - after two successful turns, the page reveals completion status and allows advance
@@ -47,7 +48,8 @@ Pairing-owned steps still begin at `HARDWARE_WAKE`.
 ### Profile
 
 - user holds to speak on phone mic
-- onboarding uses device speech recognition for the short utterance
+- onboarding uses FunASR realtime recognition through the `DeviceSpeechRecognizer` seam for the intro utterance
+- one hold-to-speak capture session may remain active for up to `60s`
 - transcript becomes the user bubble
 - onboarding extraction service builds a deterministic local draft
 - parsed result becomes:
@@ -61,9 +63,10 @@ Onboarding owns a stricter UX watchdog than the main batch ASR / business LLM bu
 
 Policy:
 
-- consultation/profile device recognition must resolve or fall back locally within about `1.2s`
+- consultation/profile may keep active capture open for up to `60s`, but once capture ends recognition must resolve or fall back locally within about `1.2s`
 - the fast lane uses explicit UI phases: recognizing, building consultation reply, building profile result, deterministic fallback
 - timed-out, cancelled, reset, or otherwise stale attempts must not write late transcript / reply / extraction results back into the current UI state
+- raw FunASR SDK payloads must be sanitized before they reach onboarding transcript, hint, or error surfaces
 - onboarding happy path must not call `AsrService`, OSS upload, or business LLM services
 
 ## Shared Mic Footer Contract
@@ -73,9 +76,16 @@ The consultation and profile pages share one onboarding-local voice footer.
 Visual/runtime states:
 
 - `idle`: breathing handshake bars plus sample-prompt hint above the mic button
-- `recording`: faster cyan handshake motion and listening status
-- `processing`: footer stays mounted, returns to the idle-breathing handshake, and shows the processing label
+- `recording`: faster cyan handshake motion, listening status, and live partial transcript replacing the sample-prompt hint slot when available
+- `processing`: footer stays mounted, returns to the idle-breathing handshake, and shows the processing label while preserving any already-captured transcript text
 - `revealed result`: the footer may disappear only after the next transcript / reply / extraction result state is rendered
+- if the `60s` capture limit is reached while the user is still pressing, the session must auto-stop, switch immediately into `processing`, and treat the later finger-up event as a no-op
+
+Hint-slot law:
+
+- idle shows the prototype sample prompt
+- recording shows the latest live transcript when the realtime lane has emitted one; otherwise the hint slot may remain empty
+- processing keeps the latest transcript visible when one has already been captured; otherwise the hint slot may remain empty
 
 Layout law:
 
@@ -135,9 +145,9 @@ Supported failure classes:
 
 - microphone permission denied
 - recording too short
-- device speech recognition unavailable
-- device speech recognition failure
-- device speech recognition timeout
+- onboarding realtime recognition unavailable
+- onboarding realtime recognition failure
+- onboarding realtime recognition timeout
 - save failure
 
 Policy:
@@ -153,8 +163,9 @@ Policy:
 Policy:
 
 - onboarding keeps microphone permission at point-of-use rather than requesting it from `PERMISSIONS_PRIMER`
-- if the user grants microphone permission from the first consultation/profile press, onboarding should auto-start that interrupted recording session immediately
-- the permission-resumed session may switch to tap-to-send because the original hold gesture is interrupted by the Android permission dialog
+- if the user grants microphone permission from the first consultation/profile press, onboarding returns to idle and asks for a fresh press rather than auto-starting a resumed recording session
+- the permission wait itself must not cancel the pending onboarding session
+- onboarding may show a calm guidance hint that the microphone is now available and the user should press again
 - if the active onboarding listening session is interrupted by gesture cancellation, disposal, or app backgrounding, onboarding must cancel the session and clear the listening state
 - processing-state footer persistence does not override this cancellation rule; interrupted sessions still clear back to non-listening state
 
@@ -162,10 +173,10 @@ Policy:
 
 Policy:
 
-- onboarding owns a separate device-STT experience lane for first-run speed
+- onboarding owns a separate FunASR realtime experience lane for first-run speed, exposed through `DeviceSpeechRecognizer`
 - the main `AsrService` batch pipeline remains the source of truth for broader business audio flows
 - the main business executor/model registry path remains untouched by this onboarding slice
-- if the device-STT lane fails, onboarding may use an invisible deterministic fallback with a short artificial dwell to preserve the experience rhythm
+- if the onboarding realtime lane fails, onboarding may use an invisible deterministic fallback with a short artificial dwell to preserve the experience rhythm
 
 ## Ownership Boundary
 

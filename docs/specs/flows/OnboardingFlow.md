@@ -2,7 +2,7 @@
 
 > Type: Flow
 > Status: Active
-> Last Updated: 2026-03-27
+> Last Updated: 2026-03-30
 
 ## Overview
 
@@ -60,19 +60,22 @@ Rule:
 
 - the primer is informational first
 - Android permission prompts still happen at point-of-use
-- if the first consultation/profile mic press triggers `RECORD_AUDIO`, granting permission should immediately enter listening for that interrupted session rather than forcing a second press
-- the permission-resumed session may use tap-to-send instead of hold-release because the Android permission dialog breaks the original hold gesture
+- if the first consultation/profile mic press triggers `RECORD_AUDIO`, granting permission should return onboarding to idle with a calm guidance hint and require a fresh press
 
 ### Wave 2: Interactive Handshake
 
 - `VOICE_HANDSHAKE_CONSULTATION` is a real two-turn phone-mic consultation, not a fake static placeholder
 - `VOICE_HANDSHAKE_PROFILE` is a real phone-mic profile capture step with typed extraction and explicit CTA save
+- each hold-to-speak intro capture may remain active for up to `60s`
 - interrupted or backgrounded onboarding recording must cancel cleanly and return the mic footer to a non-listening state
-- onboarding uses a device speech-recognition fast lane rather than the main batch `AsrService` path
+- onboarding uses a FunASR realtime fast lane through the existing `DeviceSpeechRecognizer` seam rather than the main batch `AsrService` path
+- while listening, the footer hint slot may show live partial transcript instead of the idle sample prompt
+- once recording ends, the footer keeps any already-captured transcript visible during processing; if no transcript was captured yet, the hint slot may remain empty until the next result state is revealed
 - onboarding builds consultation replies and profile drafts locally, without using the main business LLM path on the happy path
 - if the fast lane is unavailable or fails, onboarding may invisibly switch to a deterministic fallback lane with a short believable dwell
-- onboarding owns a local processing watchdog so the intro voice lane cannot sit indefinitely in a generic processing state
+- onboarding owns a local post-capture processing watchdog so the intro voice lane cannot sit indefinitely in a generic processing state once capture ends
 - late results from timed-out or reset intro attempts must be ignored instead of mutating the current onboarding state
+- raw realtime ASR payloads must be sanitized before reaching onboarding transcript or error UI
 - `HARDWARE_WAKE` still teaches the 3-second badge wake ritual
 
 ### Wave 3: Operational Pairing

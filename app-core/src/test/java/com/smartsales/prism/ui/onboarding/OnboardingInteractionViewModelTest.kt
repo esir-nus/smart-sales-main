@@ -1,6 +1,7 @@
 package com.smartsales.prism.ui.onboarding
 
 import com.smartsales.prism.data.audio.DeviceSpeechFailureReason
+import com.smartsales.prism.data.audio.DeviceSpeechRecognitionEvent
 import com.smartsales.prism.data.audio.DeviceSpeechMode
 import com.smartsales.prism.data.audio.DeviceSpeechRecognitionResult
 import com.smartsales.prism.data.audio.DeviceSpeechRecognizer
@@ -11,6 +12,8 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -70,6 +73,7 @@ class OnboardingInteractionViewModelTest {
         assertEquals("先别急着压价格，先确认客户卡点。", state.messages[1].text)
         assertEquals(OnboardingResultOrigin.DEVICE_SPEECH, state.lastResultOrigin)
         assertFalse(state.isProcessing)
+        assertEquals(DeviceSpeechMode.FUN_ASR_REALTIME, speechRecognizer.lastMode)
     }
 
     @Test
@@ -147,17 +151,90 @@ class OnboardingInteractionViewModelTest {
     }
 
     @Test
-    fun `consultation permission grant auto starts tap to send recording`() {
+    fun `consultation permission grant returns to idle and asks for fresh press`() {
         viewModel.onConsultationMicPermissionRequested()
         assertTrue(viewModel.consultationState.value.awaitingMicPermission)
 
         viewModel.onConsultationMicPermissionResult(granted = true)
 
         val state = viewModel.consultationState.value
-        assertTrue(state.isRecording)
+        assertFalse(state.isRecording)
         assertFalse(state.awaitingMicPermission)
-        assertEquals(OnboardingMicInteractionMode.TAP_TO_SEND, state.micInteractionMode)
-        assertTrue(speechRecognizer.isListening())
+        assertEquals(OnboardingMicInteractionMode.HOLD_TO_SEND, state.micInteractionMode)
+        assertFalse(speechRecognizer.isListening())
+        assertEquals("麦克风已开启，请重新按住说话", state.guidanceMessage)
+        assertEquals(null, speechRecognizer.lastMode)
+    }
+
+    @Test
+    fun `consultation realtime partial transcript updates live state before send`() = runTest {
+        assertTrue(viewModel.startConsultationRecording())
+
+        speechRecognizer.emitEvent(
+            DeviceSpeechRecognitionEvent.PartialTranscript(
+                text = "帮我搞定这个客户",
+                backend = com.smartsales.prism.data.audio.DeviceSpeechBackend.FUN_ASR_REALTIME
+            )
+        )
+        advanceUntilIdle()
+
+        val state = viewModel.consultationState.value
+        assertTrue(state.isRecording)
+        assertEquals("帮我搞定这个客户", state.liveTranscript)
+        assertTrue(state.messages.isEmpty())
+    }
+
+    @Test
+    fun `consultation final transcript remains visible through processing until result renders`() = runTest {
+        val transcript = "帮我搞定这个客户"
+        speechRecognizer.finishGate = CompletableDeferred()
+        interactionService.consultationDelayMillis = 1_000L
+        interactionService.consultationResult =
+            OnboardingConsultationServiceResult.Success("先别急着压价格，先确认客户卡点。")
+
+        assertTrue(viewModel.startConsultationRecording())
+        viewModel.finishConsultationRecording()
+        dispatcher.scheduler.runCurrent()
+
+        speechRecognizer.emitEvent(
+            DeviceSpeechRecognitionEvent.FinalTranscript(
+                text = transcript,
+                backend = com.smartsales.prism.data.audio.DeviceSpeechBackend.FUN_ASR_REALTIME
+            )
+        )
+        speechRecognizer.finishGate?.complete(DeviceSpeechRecognitionResult.Success(transcript))
+        dispatcher.scheduler.runCurrent()
+
+        val processingState = viewModel.consultationState.value
+        assertTrue(processingState.isProcessing)
+        assertEquals(OnboardingProcessingPhase.BUILDING_CONSULTATION_REPLY, processingState.processingPhase)
+        assertEquals(transcript, processingState.liveTranscript)
+
+        advanceUntilIdle()
+
+        val finalState = viewModel.consultationState.value
+        assertEquals("", finalState.liveTranscript)
+        assertEquals(transcript, finalState.messages.first().text)
+    }
+
+    @Test
+    fun `consultation capture limit moves state into processing and later release is no op`() = runTest {
+        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success("客户预算批不下来")
+        speechRecognizer.finishDelayMillis = 1_000L
+
+        assertTrue(viewModel.startConsultationRecording())
+        speechRecognizer.emitEvent(DeviceSpeechRecognitionEvent.CaptureLimitReached)
+        dispatcher.scheduler.runCurrent()
+
+        assertTrue(viewModel.consultationState.value.isProcessing)
+        assertFalse(viewModel.consultationState.value.isRecording)
+
+        viewModel.finishConsultationRecording()
+        advanceUntilIdle()
+
+        val state = viewModel.consultationState.value
+        assertEquals(1, state.completedRounds)
+        assertEquals("客户预算批不下来", state.messages.first().text)
     }
 
     @Test
@@ -172,6 +249,21 @@ class OnboardingInteractionViewModelTest {
         assertFalse(state.isRecording)
         assertEquals(OnboardingMicInteractionMode.HOLD_TO_SEND, state.micInteractionMode)
         assertEquals("无法录音：未授予麦克风权限", state.errorMessage)
+    }
+
+    @Test
+    fun `profile permission grant returns to idle and asks for fresh press`() {
+        viewModel.onProfileMicPermissionRequested()
+        assertTrue(viewModel.profileState.value.awaitingMicPermission)
+
+        viewModel.onProfileMicPermissionResult(granted = true)
+
+        val state = viewModel.profileState.value
+        assertFalse(state.isRecording)
+        assertFalse(state.awaitingMicPermission)
+        assertEquals(OnboardingMicInteractionMode.HOLD_TO_SEND, state.micInteractionMode)
+        assertFalse(speechRecognizer.isListening())
+        assertEquals("麦克风已开启，请重新按住说话", state.guidanceMessage)
     }
 
     @Test
@@ -325,7 +417,7 @@ class OnboardingInteractionViewModelTest {
     fun `cancel active recording clears pending permission and interaction mode`() {
         viewModel.onConsultationMicPermissionRequested()
         viewModel.onConsultationMicPermissionResult(granted = true)
-        assertTrue(viewModel.consultationState.value.isRecording)
+        assertFalse(viewModel.consultationState.value.isRecording)
 
         viewModel.cancelActiveRecording()
 
@@ -333,9 +425,11 @@ class OnboardingInteractionViewModelTest {
         val profile = viewModel.profileState.value
         assertFalse(consultation.isRecording)
         assertFalse(consultation.awaitingMicPermission)
+        assertNull(consultation.guidanceMessage)
         assertEquals(OnboardingMicInteractionMode.HOLD_TO_SEND, consultation.micInteractionMode)
         assertEquals(OnboardingProcessingPhase.NONE, consultation.processingPhase)
         assertFalse(profile.awaitingMicPermission)
+        assertNull(profile.guidanceMessage)
         assertEquals(OnboardingMicInteractionMode.HOLD_TO_SEND, profile.micInteractionMode)
         assertFalse(speechRecognizer.isListening())
     }
@@ -353,10 +447,15 @@ class OnboardingInteractionViewModelTest {
         var nextResult: DeviceSpeechRecognitionResult = DeviceSpeechRecognitionResult.Success("")
         var finishDelayMillis: Long = 0L
         var finishGate: CompletableDeferred<DeviceSpeechRecognitionResult>? = null
+        var lastMode: DeviceSpeechMode? = null
         private var listening = false
+        private val mutableEvents = MutableSharedFlow<DeviceSpeechRecognitionEvent>(extraBufferCapacity = 8)
+
+        override val events: Flow<DeviceSpeechRecognitionEvent> = mutableEvents
 
         override fun startListening(mode: DeviceSpeechMode) {
             startFailure?.let { throw it }
+            lastMode = mode
             listening = true
         }
 
@@ -380,6 +479,10 @@ class OnboardingInteractionViewModelTest {
         }
 
         override fun isListening(): Boolean = listening
+
+        fun emitEvent(event: DeviceSpeechRecognitionEvent) {
+            mutableEvents.tryEmit(event)
+        }
     }
 
     private class FakeOnboardingInteractionService : OnboardingInteractionService {

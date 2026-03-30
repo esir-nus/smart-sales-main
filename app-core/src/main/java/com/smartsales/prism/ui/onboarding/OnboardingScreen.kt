@@ -656,7 +656,7 @@ private fun VoiceHandshakeConsultationStep(
     }
     ObserveOnboardingMicSession(
         viewModel = viewModel,
-        shouldCancel = state.isRecording || state.awaitingMicPermission
+        shouldCancel = state.isRecording
     )
 
     VoiceHandshakeConsultationContent(
@@ -755,6 +755,9 @@ private fun VoiceHandshakeConsultationContent(
             state.errorMessage?.let {
                 OnboardingInlineNotice(text = it)
                 Spacer(Modifier.height(12.dp))
+            } ?: state.guidanceMessage?.let {
+                OnboardingInlineGuidance(text = it)
+                Spacer(Modifier.height(12.dp))
             }
             if (state.isCompleted) {
                 PrimaryPillButton(
@@ -767,7 +770,12 @@ private fun VoiceHandshakeConsultationContent(
                     isRecording = state.isRecording,
                     isProcessing = state.isProcessing,
                     interactionMode = state.micInteractionMode,
-                    handshakeHint = "试试说：“帮我搞定这个客户”",
+                    handshakeHint = when {
+                        (state.isRecording || state.isProcessing) && state.liveTranscript.isNotBlank() ->
+                            state.liveTranscript
+                        state.isProcessing -> ""
+                        else -> "试试说：“帮我搞定这个客户”"
+                    },
                     processingLabel = consultationProcessingLabel(state.processingPhase),
                     onPressStart = onPressStart,
                     onPressEnd = onPressEnd,
@@ -792,7 +800,7 @@ private fun VoiceHandshakeProfileStep(
     }
     ObserveOnboardingMicSession(
         viewModel = viewModel,
-        shouldCancel = state.isRecording || state.awaitingMicPermission
+        shouldCancel = state.isRecording
     )
 
     LaunchedEffect(viewModel) {
@@ -920,6 +928,9 @@ private fun VoiceHandshakeProfileContent(
             state.errorMessage?.let {
                 OnboardingInlineNotice(text = it)
                 Spacer(Modifier.height(12.dp))
+            } ?: state.guidanceMessage?.let {
+                OnboardingInlineGuidance(text = it)
+                Spacer(Modifier.height(12.dp))
             }
             when {
                 state.hasExtractionResult -> {
@@ -944,7 +955,12 @@ private fun VoiceHandshakeProfileContent(
                         isRecording = state.isRecording,
                         isProcessing = state.isProcessing,
                         interactionMode = state.micInteractionMode,
-                        handshakeHint = "试试说：“我是王经理...”",
+                        handshakeHint = when {
+                            (state.isRecording || state.isProcessing) && state.liveTranscript.isNotBlank() ->
+                                state.liveTranscript
+                            state.isProcessing -> ""
+                            else -> "试试说：“我是王经理...”"
+                        },
                         processingLabel = profileProcessingLabel(state.processingPhase),
                         onPressStart = onPressStart,
                         onPressEnd = onPressEnd,
@@ -1118,6 +1134,23 @@ private fun OnboardingInlineNotice(text: String) {
 }
 
 @Composable
+private fun OnboardingInlineGuidance(text: String) {
+    FrostedCard(
+        modifier = Modifier.fillMaxWidth(),
+        containerColor = OnboardingBlue.copy(alpha = 0.10f),
+        borderColor = OnboardingBlue.copy(alpha = 0.22f)
+    ) {
+        Text(
+            text = text,
+            color = OnboardingBlue.copy(alpha = 0.96f),
+            fontSize = 13.sp,
+            lineHeight = 20.sp,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
 internal fun OnboardingMicFooter(
     isRecording: Boolean,
     isProcessing: Boolean,
@@ -1167,13 +1200,15 @@ internal fun OnboardingMicFooter(
                     isRecording = isRecording,
                     waveProgress = waveProgress
                 )
-                Spacer(Modifier.height(14.dp))
-                Text(
-                    text = handshakeHint,
-                    color = if (isRecording) OnboardingBlue.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.6f),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
-                )
+                if (handshakeHint.isNotBlank()) {
+                    Spacer(Modifier.height(14.dp))
+                    Text(
+                        text = handshakeHint,
+                        color = if (isRecording) OnboardingBlue.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.6f),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
         }
         Spacer(Modifier.height(if (showHandshake) 18.dp else 0.dp))

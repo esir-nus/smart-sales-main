@@ -80,6 +80,8 @@ import com.smartsales.prism.ui.components.DynamicIslandItem
 import com.smartsales.prism.ui.components.DynamicIslandTapAction
 import com.smartsales.prism.ui.components.prismNavigationBarPadding
 import com.smartsales.prism.ui.components.prismStatusBarPadding
+import com.smartsales.prism.ui.components.resolveShellLayoutMode
+import com.smartsales.prism.ui.components.ShellLayoutMode
 import com.smartsales.prism.ui.sim.SimVerticalGestureDirection.DOWN
 import com.smartsales.prism.ui.sim.SimVerticalGestureDirection.UP
 import com.smartsales.prism.ui.theme.PrismThemeDefaults
@@ -372,16 +374,26 @@ internal fun SimHomeHeroCenterStage(
     contentAlignment: Alignment = Alignment.Center,
     content: @Composable BoxScope.() -> Unit
 ) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(
-                horizontal = SimHomeHeroTokens.CenterCanvasHorizontalPadding,
-                vertical = SimHomeHeroTokens.CenterCanvasVerticalPadding
-            ),
-        contentAlignment = contentAlignment,
-        content = content
-    )
+    BoxWithConstraints(
+        modifier = modifier.fillMaxWidth()
+    ) {
+        val layoutMode = resolveShellLayoutMode(
+            availableWidth = maxWidth,
+            availableHeight = maxHeight
+        )
+        val metrics = SimHomeHeroTokens.layoutMetrics(layoutMode)
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(
+                    horizontal = SimHomeHeroTokens.CenterCanvasHorizontalPadding,
+                    vertical = metrics.centerCanvasVerticalPadding
+                ),
+            contentAlignment = contentAlignment,
+            content = content
+        )
+    }
 }
 
 @Composable
@@ -740,18 +752,30 @@ private fun SimHomeHeroGreetingCanvas(
 ) {
     val palette = rememberSimHomeHeroPalette()
     BoxWithConstraints(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(
-                horizontal = SimHomeHeroTokens.GreetingHorizontalPadding,
-                vertical = SimHomeHeroTokens.GreetingVerticalPadding
-            ),
+        modifier = modifier.fillMaxWidth(),
         contentAlignment = Alignment.Center
     ) {
-        val upwardOffset = (maxHeight * SimHomeHeroTokens.GreetingUpwardOffsetRatio)
-            .coerceAtMost(SimHomeHeroTokens.GreetingMaxUpwardOffset)
+        val layoutMode = resolveShellLayoutMode(
+            availableWidth = maxWidth,
+            availableHeight = maxHeight
+        )
+        val metrics = SimHomeHeroTokens.layoutMetrics(layoutMode)
+        val upwardOffset = (maxHeight * metrics.greetingUpwardOffsetRatio)
+            .coerceAtMost(metrics.greetingMaxUpwardOffset)
+        val greetingAlignment = if (layoutMode == ShellLayoutMode.TIGHT) {
+            Alignment.TopCenter
+        } else {
+            Alignment.Center
+        }
         Column(
-            modifier = Modifier.offset(y = -upwardOffset),
+            modifier = Modifier
+                .align(greetingAlignment)
+                .padding(
+                    horizontal = metrics.greetingHorizontalPadding,
+                    vertical = metrics.greetingVerticalPadding
+                )
+                .padding(top = metrics.greetingTopBiasPadding)
+                .offset(y = -upwardOffset),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
@@ -760,7 +784,7 @@ private fun SimHomeHeroGreetingCanvas(
                     brush = Brush.linearGradient(
                         colors = palette.greetingGradient
                     ),
-                    fontSize = SimHomeHeroTokens.GreetingTitleSize,
+                    fontSize = metrics.greetingTitleSize,
                     fontWeight = FontWeight.SemiBold
                 ),
                 textAlign = TextAlign.Center,
@@ -769,8 +793,8 @@ private fun SimHomeHeroGreetingCanvas(
             Text(
                 text = "我是您的销售助手",
                 color = palette.greetingSubtitle,
-                fontSize = SimHomeHeroTokens.GreetingSubtitleSize,
-                modifier = Modifier.padding(top = SimHomeHeroTokens.GreetingSubtitleTopPadding)
+                fontSize = metrics.greetingSubtitleSize,
+                modifier = Modifier.padding(top = metrics.greetingSubtitleTopPadding)
             )
         }
     }
@@ -804,6 +828,11 @@ private fun SimHomeHeroBottomMonolith(
     }
     val actionEnabled = text.isNotBlank() && !isSending
     val showVoiceMic = voiceDraftEnabled && text.isBlank()
+    val displayText = if (text.isBlank() && voiceDraftState.liveTranscript.isNotBlank()) {
+        voiceDraftState.liveTranscript
+    } else {
+        text
+    }
     SimVerticalDragTrigger(
         modifier = Modifier
             .fillMaxWidth()
@@ -816,192 +845,201 @@ private fun SimHomeHeroBottomMonolith(
         enabled = enablePullGesture,
         onTriggered = onPullOpen
     ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .shadow(
-                    elevation = if (PrismThemeDefaults.isDarkTheme) 0.dp else 2.dp,
-                    shape = RectangleShape,
-                    clip = false,
-                    ambientColor = palette.monolithShadow,
-                    spotColor = palette.monolithShadow
-                )
-                .background(palette.monolithBackground)
-                .drawBehind {
-                    drawLine(
-                        color = palette.monolithStroke,
-                        start = Offset(0f, 0f),
-                        end = Offset(size.width, 0f),
-                        strokeWidth = 1.dp.toPx()
-                    )
-                }
-                .onGloballyPositioned { coordinates ->
-                    onBoundsChanged(coordinates.boundsInRoot())
-                }
-        ) {
-            Column(
+        BoxWithConstraints {
+            val layoutMode = resolveShellLayoutMode(
+                availableWidth = maxWidth,
+                availableHeight = maxHeight
+            )
+            val layoutMetrics = SimHomeHeroTokens.layoutMetrics(layoutMode)
+
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(
-                        start = SimHomeHeroTokens.BottomHorizontalPadding,
-                        top = SimHomeHeroTokens.BottomTopPadding,
-                        end = SimHomeHeroTokens.BottomHorizontalPadding,
-                        bottom = SimHomeHeroTokens.BottomBottomPadding
+                    .shadow(
+                        elevation = if (PrismThemeDefaults.isDarkTheme) 0.dp else 2.dp,
+                        shape = RectangleShape,
+                        clip = false,
+                        ambientColor = palette.monolithShadow,
+                        spotColor = palette.monolithShadow
                     )
+                    .background(palette.monolithBackground)
+                    .drawBehind {
+                        drawLine(
+                            color = palette.monolithStroke,
+                            start = Offset(0f, 0f),
+                            end = Offset(size.width, 0f),
+                            strokeWidth = 1.dp.toPx()
+                        )
+                    }
+                    .onGloballyPositioned { coordinates ->
+                        onBoundsChanged(coordinates.boundsInRoot())
+                    }
             ) {
-                if (voiceDraftState.isRecording || voiceDraftState.isProcessing) {
-                    SimVoiceDraftHandshake(
-                        state = voiceDraftState,
-                        accentColor = palette.sendIconActive,
-                        hintColor = palette.attachIcon,
-                        modifier = Modifier
-                            .align(Alignment.CenterHorizontally)
-                            .padding(bottom = 12.dp)
-                    )
-                }
-
-                Row(
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = SimHomeHeroTokens.BottomMonolithHeight),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(
+                            start = SimHomeHeroTokens.BottomHorizontalPadding,
+                            top = layoutMetrics.bottomTopPadding,
+                            end = SimHomeHeroTokens.BottomHorizontalPadding,
+                            bottom = layoutMetrics.bottomBottomPadding
+                        )
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(SimHomeHeroTokens.BottomIconTouchSize)
-                            .testTag(SIM_ATTACH_BUTTON_TEST_TAG)
-                            .clickable(onClick = onAttachClick),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.AttachFile,
-                            contentDescription = "Attach audio",
-                            tint = palette.attachIcon,
-                            modifier = Modifier.size(SimHomeHeroTokens.BottomIconSize)
-                        )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(horizontal = SimHomeHeroTokens.BottomContentGap),
-                        contentAlignment = Alignment.CenterStart
-                    ) {
-                        BasicTextField(
-                            value = text,
-                            onValueChange = onTextChanged,
+                    if (voiceDraftState.isRecording) {
+                        SimVoiceDraftHandshake(
+                            state = voiceDraftState,
+                            accentColor = palette.sendIconActive,
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag(SIM_INPUT_FIELD_TEST_TAG),
-                            singleLine = true,
-                            textStyle = TextStyle(
-                                color = palette.inputText,
-                                fontSize = SimHomeHeroTokens.BottomInputTextSize,
-                                lineHeight = SimHomeHeroTokens.BottomInputLineHeight
-                            ),
-                            cursorBrush = SolidColor(SimHomeHeroTokens.OutgoingBlue),
-                            decorationBox = { innerTextField ->
-                                Box(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    contentAlignment = Alignment.CenterStart
-                                ) {
-                                    if (text.isBlank()) {
-                                        SimHomeHeroComposerRotatingHint(
-                                            visible = !voiceDraftState.isRecording && !voiceDraftState.isProcessing,
-                                            rotatingHints = SIM_IDLE_COMPOSER_ROTATING_HINTS,
-                                            useFullRotation = showIdleComposerHint
-                                        )
-                                    }
-                                    innerTextField()
-                                }
-                            }
+                                .align(Alignment.CenterHorizontally)
+                                .padding(bottom = 12.dp)
                         )
                     }
 
-                    Box(
+                    Row(
                         modifier = Modifier
-                            .size(SimHomeHeroTokens.BottomIconTouchSize)
-                            .testTag(SIM_SEND_BUTTON_TEST_TAG)
-                            .then(
-                                if (showVoiceMic) {
-                                    Modifier.pointerInput(
-                                        voiceDraftState.isRecording,
-                                        voiceDraftState.isProcessing,
-                                        voiceDraftState.interactionMode
+                            .fillMaxWidth()
+                            .heightIn(min = SimHomeHeroTokens.BottomMonolithHeight),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(SimHomeHeroTokens.BottomIconTouchSize)
+                                .testTag(SIM_ATTACH_BUTTON_TEST_TAG)
+                                .clickable(onClick = onAttachClick),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.AttachFile,
+                                contentDescription = "Attach audio",
+                                tint = palette.attachIcon,
+                                modifier = Modifier.size(SimHomeHeroTokens.BottomIconSize)
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = SimHomeHeroTokens.BottomContentGap),
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            BasicTextField(
+                                value = displayText,
+                                onValueChange = { updatedText ->
+                                    if (!voiceDraftState.isRecording) {
+                                        onTextChanged(updatedText)
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag(SIM_INPUT_FIELD_TEST_TAG),
+                                singleLine = true,
+                                textStyle = TextStyle(
+                                    color = palette.inputText,
+                                    fontSize = SimHomeHeroTokens.BottomInputTextSize,
+                                    lineHeight = SimHomeHeroTokens.BottomInputLineHeight
+                                ),
+                                cursorBrush = SolidColor(SimHomeHeroTokens.OutgoingBlue),
+                                decorationBox = { innerTextField ->
+                                    Box(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        contentAlignment = Alignment.CenterStart
                                     ) {
-                                        detectTapGestures(
-                                            onPress = {
-                                                if (voiceDraftState.isProcessing) return@detectTapGestures
-                                                if (
-                                                    voiceDraftState.isRecording &&
-                                                    voiceDraftState.interactionMode == SimVoiceDraftInteractionMode.TAP_TO_SEND
-                                                ) {
+                                        if (displayText.isBlank()) {
+                                            SimHomeHeroComposerRotatingHint(
+                                                visible = !voiceDraftState.isRecording && !voiceDraftState.isProcessing,
+                                                rotatingHints = SIM_IDLE_COMPOSER_ROTATING_HINTS,
+                                                useFullRotation = showIdleComposerHint
+                                            )
+                                        }
+                                        innerTextField()
+                                    }
+                                }
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(SimHomeHeroTokens.BottomIconTouchSize)
+                                .testTag(SIM_SEND_BUTTON_TEST_TAG)
+                                .then(
+                                    if (showVoiceMic) {
+                                        // 使用 Unit 作为 key，避免 isRecording 变化时
+                                        // 取消 pointerInput 协程导致 tryAwaitRelease 丢失。
+                                        Modifier.pointerInput(Unit) {
+                                            detectTapGestures(
+                                                onPress = {
+                                                    if (voiceDraftState.isProcessing) return@detectTapGestures
+                                                    if (
+                                                        voiceDraftState.isRecording &&
+                                                        voiceDraftState.interactionMode == SimVoiceDraftInteractionMode.TAP_TO_SEND
+                                                    ) {
+                                                        val released = tryAwaitRelease()
+                                                        if (released) {
+                                                            onVoiceDraftFinish()
+                                                        } else {
+                                                            onVoiceDraftCancel()
+                                                        }
+                                                        return@detectTapGestures
+                                                    }
+                                                    val hasMicPermission = ContextCompat.checkSelfPermission(
+                                                        context,
+                                                        Manifest.permission.RECORD_AUDIO
+                                                    ) == PackageManager.PERMISSION_GRANTED
+                                                    if (!hasMicPermission) {
+                                                        onVoiceDraftPermissionRequested()
+                                                        permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                                        return@detectTapGestures
+                                                    }
+                                                    val started = onVoiceDraftStart()
+                                                    if (!started) return@detectTapGestures
                                                     val released = tryAwaitRelease()
                                                     if (released) {
                                                         onVoiceDraftFinish()
                                                     } else {
                                                         onVoiceDraftCancel()
                                                     }
-                                                    return@detectTapGestures
                                                 }
-                                                val hasMicPermission = ContextCompat.checkSelfPermission(
-                                                    context,
-                                                    Manifest.permission.RECORD_AUDIO
-                                                ) == PackageManager.PERMISSION_GRANTED
-                                                if (!hasMicPermission) {
-                                                    onVoiceDraftPermissionRequested()
-                                                    permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
-                                                    return@detectTapGestures
-                                                }
-                                                val started = onVoiceDraftStart()
-                                                if (!started) return@detectTapGestures
-                                                val released = tryAwaitRelease()
-                                                if (released) {
-                                                    onVoiceDraftFinish()
-                                                } else {
-                                                    onVoiceDraftCancel()
-                                                }
-                                            }
+                                            )
+                                        }
+                                    } else {
+                                        Modifier.clickable(
+                                            enabled = actionEnabled,
+                                            onClick = onSend
                                         )
                                     }
-                                } else {
-                                    Modifier.clickable(
-                                        enabled = actionEnabled,
-                                        onClick = onSend
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            when {
+                                isSending -> {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(SimHomeHeroTokens.BottomProgressSize),
+                                        color = palette.progressIndicator,
+                                        strokeWidth = 2.dp
                                     )
                                 }
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        when {
-                            isSending -> {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(SimHomeHeroTokens.BottomProgressSize),
-                                    color = palette.progressIndicator,
-                                    strokeWidth = 2.dp
-                                )
-                            }
 
-                            showVoiceMic -> {
-                                Icon(
-                                    imageVector = Icons.Filled.Mic,
-                                    contentDescription = "Mic",
-                                    tint = if (voiceDraftState.isRecording || voiceDraftState.isProcessing) {
-                                        palette.sendIconActive
-                                    } else {
-                                        palette.iconTint
-                                    },
-                                    modifier = Modifier.size(SimHomeHeroTokens.BottomSendIconSize)
-                                )
-                            }
+                                showVoiceMic -> {
+                                    Icon(
+                                        imageVector = Icons.Filled.Mic,
+                                        contentDescription = "Mic",
+                                        tint = if (voiceDraftState.isRecording || voiceDraftState.isProcessing) {
+                                            palette.sendIconActive
+                                        } else {
+                                            palette.iconTint
+                                        },
+                                        modifier = Modifier.size(SimHomeHeroTokens.BottomSendIconSize)
+                                    )
+                                }
 
-                            else -> {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.Send,
-                                    contentDescription = "Send",
-                                    tint = if (actionEnabled) palette.sendIconActive else palette.sendIconInactive,
-                                    modifier = Modifier.size(SimHomeHeroTokens.BottomSendIconSize)
-                                )
+                                else -> {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.Send,
+                                        contentDescription = "Send",
+                                        tint = if (actionEnabled) palette.sendIconActive else palette.sendIconInactive,
+                                        modifier = Modifier.size(SimHomeHeroTokens.BottomSendIconSize)
+                                    )
+                                }
                             }
                         }
                     }

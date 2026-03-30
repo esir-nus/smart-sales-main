@@ -49,6 +49,9 @@ Rule:
 
 - `ChatWelcome` mounts only when the session is empty.
 - Leaving the empty state removes the greeting canvas and transitions to the owning chat surface.
+- On compact Android heights, the shell must preserve hierarchy by compressing decorative spacing before changing chrome.
+- When the center gap becomes tight, the greeting stage shifts to an upper-center composition instead of colliding with the bottom composer.
+- Runtime adaptation must be driven by actual Compose constraints and insets, not by whitelisting specific resolutions.
 
 ## 3. Current Exclusions
 

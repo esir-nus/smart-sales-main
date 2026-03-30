@@ -34,6 +34,13 @@ Both hosts use the same sequence.
 
 Pairing-owned steps still begin at `HARDWARE_WAKE`.
 
+### Permissions Primer Layout
+
+- `PERMISSIONS_PRIMER` remains an explanation-only page and must not request Android permissions directly.
+- On compact heights, the primer content may scroll.
+- The primary continue CTA stays pinned above the navigation area and remains continuously reachable while the explanatory content scrolls behind it.
+- Responsive adaptation should compress decorative spacing and card padding before sacrificing content order or CTA reachability.
+
 ## Runtime Law
 
 ### Consultation
@@ -65,6 +72,7 @@ Policy:
 
 - consultation/profile may keep active capture open for up to `60s`, but once capture ends recognition must resolve or fall back locally within about `1.2s`
 - the fast lane uses explicit UI phases: recognizing, building consultation reply, building profile result, deterministic fallback
+- recognizer-side `CANCELLED` results that arrive after onboarding has already switched into `recognizing` must be treated as fast-lane failure and terminated through the local deterministic fallback path instead of leaving the footer stuck in processing
 - timed-out, cancelled, reset, or otherwise stale attempts must not write late transcript / reply / extraction results back into the current UI state
 - raw FunASR SDK payloads must be sanitized before they reach onboarding transcript, hint, or error surfaces
 - onboarding happy path must not call `AsrService`, OSS upload, or business LLM services
@@ -153,6 +161,7 @@ Supported failure classes:
 Policy:
 
 - consultation/profile should prefer invisible deterministic fallback instead of surfacing a hard failure when the fast lane fails
+- post-release recognizer cancellation is part of this failure bucket and should fast-fallback locally rather than surfacing a stuck intermediate state
 - consultation: retry until success if even the deterministic lane cannot complete
 - profile: retry or skip save if even the deterministic lane cannot complete
 - skip save advances onboarding without mutating the profile
@@ -167,6 +176,7 @@ Policy:
 - the permission wait itself must not cancel the pending onboarding session
 - onboarding may show a calm guidance hint that the microphone is now available and the user should press again
 - if the active onboarding listening session is interrupted by gesture cancellation, disposal, or app backgrounding, onboarding must cancel the session and clear the listening state
+- this explicit user/reset/dispose cancellation path must invalidate the pending request so no deterministic fallback lands after the user has intentionally left the session
 - processing-state footer persistence does not override this cancellation rule; interrupted sessions still clear back to non-listening state
 
 ## Fast Lane Boundary

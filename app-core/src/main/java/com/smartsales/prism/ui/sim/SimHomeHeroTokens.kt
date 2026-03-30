@@ -1,8 +1,25 @@
 package com.smartsales.prism.ui.sim
 
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.TextUnit
+import com.smartsales.prism.ui.components.ShellLayoutMode
+
+internal data class SimHomeHeroLayoutMetrics(
+    val centerCanvasVerticalPadding: Dp,
+    val greetingHorizontalPadding: Dp,
+    val greetingVerticalPadding: Dp,
+    val greetingUpwardOffsetRatio: Float,
+    val greetingMaxUpwardOffset: Dp,
+    val greetingTitleSize: TextUnit,
+    val greetingSubtitleSize: TextUnit,
+    val greetingSubtitleTopPadding: Dp,
+    val greetingTopBiasPadding: Dp,
+    val bottomTopPadding: Dp,
+    val bottomBottomPadding: Dp
+)
 
 internal object SimHomeHeroTokens {
     val AppBackground = Color(0xFF0D0D12)
@@ -70,4 +87,46 @@ internal object SimHomeHeroTokens {
     val AuroraIndigoMid = Color(0x185E5CE6)
     val AuroraCyanCore = Color(0x3364D2FF)
     val AuroraCyanMid = Color(0x1264D2FF)
+
+    fun layoutMetrics(layoutMode: ShellLayoutMode): SimHomeHeroLayoutMetrics = when (layoutMode) {
+        ShellLayoutMode.TALL -> SimHomeHeroLayoutMetrics(
+            centerCanvasVerticalPadding = CenterCanvasVerticalPadding,
+            greetingHorizontalPadding = GreetingHorizontalPadding,
+            greetingVerticalPadding = GreetingVerticalPadding,
+            greetingUpwardOffsetRatio = GreetingUpwardOffsetRatio,
+            greetingMaxUpwardOffset = GreetingMaxUpwardOffset,
+            greetingTitleSize = GreetingTitleSize,
+            greetingSubtitleSize = GreetingSubtitleSize,
+            greetingSubtitleTopPadding = GreetingSubtitleTopPadding,
+            greetingTopBiasPadding = 0.dp,
+            bottomTopPadding = BottomTopPadding,
+            bottomBottomPadding = BottomBottomPadding
+        )
+        ShellLayoutMode.COMPACT -> SimHomeHeroLayoutMetrics(
+            centerCanvasVerticalPadding = 8.dp,
+            greetingHorizontalPadding = 14.dp,
+            greetingVerticalPadding = 8.dp,
+            greetingUpwardOffsetRatio = 0.08f,
+            greetingMaxUpwardOffset = 36.dp,
+            greetingTitleSize = 22.sp,
+            greetingSubtitleSize = 14.sp,
+            greetingSubtitleTopPadding = 6.dp,
+            greetingTopBiasPadding = 0.dp,
+            bottomTopPadding = 8.dp,
+            bottomBottomPadding = 12.dp
+        )
+        ShellLayoutMode.TIGHT -> SimHomeHeroLayoutMetrics(
+            centerCanvasVerticalPadding = 6.dp,
+            greetingHorizontalPadding = 12.dp,
+            greetingVerticalPadding = 6.dp,
+            greetingUpwardOffsetRatio = 0f,
+            greetingMaxUpwardOffset = 0.dp,
+            greetingTitleSize = 20.sp,
+            greetingSubtitleSize = 13.sp,
+            greetingSubtitleTopPadding = 5.dp,
+            greetingTopBiasPadding = 52.dp,
+            bottomTopPadding = 8.dp,
+            bottomBottomPadding = 12.dp
+        )
+    }
 }

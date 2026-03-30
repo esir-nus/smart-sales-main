@@ -26,6 +26,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -38,6 +39,8 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -101,6 +104,8 @@ import com.smartsales.prism.domain.pairing.WifiCredentials
 import com.smartsales.prism.ui.components.VoiceHandshakeBars
 import com.smartsales.prism.ui.components.rememberVoiceHandshakeWaveProgress
 import com.smartsales.prism.ui.components.prismTopSafeBandPadding
+import com.smartsales.prism.ui.components.resolveShellLayoutMode
+import com.smartsales.prism.ui.components.ShellLayoutMode
 import com.smartsales.prism.ui.sim.SimSharedAuroraBackground
 import kotlinx.coroutines.delay
 
@@ -121,6 +126,92 @@ private val OnboardingPrimaryText = Color(0xFF05060A)
 private val OnboardingLogoTile = Color(0xFF12161E)
 
 internal const val ONBOARDING_MIC_BUTTON_TEST_TAG = "onboarding_mic_button"
+internal const val ONBOARDING_PERMISSIONS_CONTINUE_TEST_TAG = "onboarding_permissions_continue"
+
+private data class PermissionsPrimerMetrics(
+    val titleSize: androidx.compose.ui.unit.TextUnit,
+    val bodySize: androidx.compose.ui.unit.TextUnit,
+    val bodyLineHeight: androidx.compose.ui.unit.TextUnit,
+    val topSpacing: androidx.compose.ui.unit.Dp,
+    val introSpacing: androidx.compose.ui.unit.Dp,
+    val sectionSpacing: androidx.compose.ui.unit.Dp,
+    val cardGap: androidx.compose.ui.unit.Dp,
+    val noteSpacing: androidx.compose.ui.unit.Dp,
+    val ctaBottomPadding: androidx.compose.ui.unit.Dp,
+    val scrollBottomClearance: androidx.compose.ui.unit.Dp,
+    val cardHorizontalPadding: androidx.compose.ui.unit.Dp,
+    val cardVerticalPadding: androidx.compose.ui.unit.Dp,
+    val cardCornerRadius: androidx.compose.ui.unit.Dp,
+    val iconTileSize: androidx.compose.ui.unit.Dp,
+    val iconSize: androidx.compose.ui.unit.Dp,
+    val cardTitleSize: androidx.compose.ui.unit.TextUnit,
+    val cardBodySize: androidx.compose.ui.unit.TextUnit,
+    val cardBodyLineHeight: androidx.compose.ui.unit.TextUnit
+)
+
+private fun permissionsPrimerMetrics(layoutMode: ShellLayoutMode): PermissionsPrimerMetrics =
+    when (layoutMode) {
+        ShellLayoutMode.TALL -> PermissionsPrimerMetrics(
+            titleSize = 33.sp,
+            bodySize = 15.sp,
+            bodyLineHeight = 23.sp,
+            topSpacing = 6.dp,
+            introSpacing = 12.dp,
+            sectionSpacing = 30.dp,
+            cardGap = 16.dp,
+            noteSpacing = 18.dp,
+            ctaBottomPadding = 8.dp,
+            scrollBottomClearance = 116.dp,
+            cardHorizontalPadding = 22.dp,
+            cardVerticalPadding = 22.dp,
+            cardCornerRadius = 30.dp,
+            iconTileSize = 50.dp,
+            iconSize = 22.dp,
+            cardTitleSize = 18.sp,
+            cardBodySize = 14.sp,
+            cardBodyLineHeight = 22.sp
+        )
+        ShellLayoutMode.COMPACT -> PermissionsPrimerMetrics(
+            titleSize = 30.sp,
+            bodySize = 14.sp,
+            bodyLineHeight = 22.sp,
+            topSpacing = 2.dp,
+            introSpacing = 10.dp,
+            sectionSpacing = 22.dp,
+            cardGap = 12.dp,
+            noteSpacing = 14.dp,
+            ctaBottomPadding = 8.dp,
+            scrollBottomClearance = 108.dp,
+            cardHorizontalPadding = 20.dp,
+            cardVerticalPadding = 18.dp,
+            cardCornerRadius = 28.dp,
+            iconTileSize = 46.dp,
+            iconSize = 20.dp,
+            cardTitleSize = 17.sp,
+            cardBodySize = 13.sp,
+            cardBodyLineHeight = 20.sp
+        )
+        ShellLayoutMode.TIGHT -> PermissionsPrimerMetrics(
+            titleSize = 28.sp,
+            bodySize = 14.sp,
+            bodyLineHeight = 21.sp,
+            topSpacing = 0.dp,
+            introSpacing = 8.dp,
+            sectionSpacing = 18.dp,
+            cardGap = 10.dp,
+            noteSpacing = 12.dp,
+            ctaBottomPadding = 6.dp,
+            scrollBottomClearance = 104.dp,
+            cardHorizontalPadding = 18.dp,
+            cardVerticalPadding = 16.dp,
+            cardCornerRadius = 26.dp,
+            iconTileSize = 42.dp,
+            iconSize = 18.dp,
+            cardTitleSize = 16.sp,
+            cardBodySize = 13.sp,
+            cardBodyLineHeight = 19.sp
+        )
+    }
 
 private tailrec fun Context.findComponentActivity(): ComponentActivity? = when (this) {
     is ComponentActivity -> this
@@ -582,63 +673,83 @@ private fun WelcomeStep(onStart: () -> Unit) {
 
 @Composable
 private fun PermissionsPrimerStep(onContinue: () -> Unit) {
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.Start
-    ) {
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = "需要一些权限",
-            color = OnboardingText,
-            fontSize = 33.sp,
-            fontWeight = FontWeight.Bold
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val layoutMode = resolveShellLayoutMode(
+            availableWidth = maxWidth,
+            availableHeight = maxHeight
         )
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = "为了提供完整体验，我们需要以下基础访问权限。系统会在您即将使用相关功能时，再按需发起授权请求。",
-            color = OnboardingMuted,
-            fontSize = 15.sp,
-            lineHeight = 23.sp
-        )
-        Spacer(Modifier.height(30.dp))
-        PermissionPrimerCard(
-            icon = Icons.Default.Mic,
-            title = "麦克风",
-            description = "开始语音互动时请求，用于收音、转写和持续语音体验。"
-        )
-        Spacer(Modifier.height(16.dp))
-        PermissionPrimerCard(
-            icon = Icons.Default.Bluetooth,
-            title = "蓝牙",
-            description = "搜索并连接 SmartBadge 时请求，用于发现附近设备与建立连接。"
-        )
-        Spacer(Modifier.height(16.dp))
-        PermissionPrimerCard(
-            icon = Icons.Default.Alarm,
-            title = "闹钟与提醒",
-            description = "创建提醒与日程通知时使用，确保关键节点能按时触达。"
-        )
-        Spacer(Modifier.weight(1f))
-        FrostedCard(
-            modifier = Modifier.fillMaxWidth(),
-            containerColor = Color.White.copy(alpha = 0.05f),
-            borderColor = Color.White.copy(alpha = 0.10f)
-        ) {
-            Text(
-                text = "说明：这一页只做提前说明，不会立刻弹出系统授权。后续在您准备使用相关功能时，Android 才会按需询问。",
-                color = OnboardingMuted.copy(alpha = 0.96f),
-                fontSize = 13.sp,
-                lineHeight = 21.sp
+        val metrics = permissionsPrimerMetrics(layoutMode)
+        val scrollState = rememberScrollState()
+
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+                    .padding(bottom = metrics.scrollBottomClearance),
+                horizontalAlignment = Alignment.Start
+            ) {
+                Spacer(Modifier.height(metrics.topSpacing))
+                Text(
+                    text = "需要一些权限",
+                    color = OnboardingText,
+                    fontSize = metrics.titleSize,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(metrics.introSpacing))
+                Text(
+                    text = "为了提供完整体验，我们需要以下基础访问权限。系统会在您即将使用相关功能时，再按需发起授权请求。",
+                    color = OnboardingMuted,
+                    fontSize = metrics.bodySize,
+                    lineHeight = metrics.bodyLineHeight
+                )
+                Spacer(Modifier.height(metrics.sectionSpacing))
+                PermissionPrimerCard(
+                    icon = Icons.Default.Mic,
+                    title = "麦克风",
+                    description = "开始语音互动时请求，用于收音、转写和持续语音体验。",
+                    metrics = metrics
+                )
+                Spacer(Modifier.height(metrics.cardGap))
+                PermissionPrimerCard(
+                    icon = Icons.Default.Bluetooth,
+                    title = "蓝牙",
+                    description = "搜索并连接 SmartBadge 时请求，用于发现附近设备与建立连接。",
+                    metrics = metrics
+                )
+                Spacer(Modifier.height(metrics.cardGap))
+                PermissionPrimerCard(
+                    icon = Icons.Default.Alarm,
+                    title = "闹钟与提醒",
+                    description = "创建提醒与日程通知时使用，确保关键节点能按时触达。",
+                    metrics = metrics
+                )
+                Spacer(Modifier.height(metrics.noteSpacing))
+                FrostedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    containerColor = Color.White.copy(alpha = 0.05f),
+                    borderColor = Color.White.copy(alpha = 0.10f)
+                ) {
+                    Text(
+                        text = "说明：这一页只做提前说明，不会立刻弹出系统授权。后续在您准备使用相关功能时，Android 才会按需询问。",
+                        color = OnboardingMuted.copy(alpha = 0.96f),
+                        fontSize = 13.sp,
+                        lineHeight = 21.sp
+                    )
+                }
+            }
+
+            PrimaryPillButton(
+                text = "继续",
+                onClick = onContinue,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .testTag(ONBOARDING_PERMISSIONS_CONTINUE_TEST_TAG)
+                    .navigationBarsPadding()
+                    .padding(bottom = metrics.ctaBottomPadding)
             )
         }
-        Spacer(Modifier.height(18.dp))
-        PrimaryPillButton(
-            text = "继续",
-            onClick = onContinue,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 8.dp)
-        )
     }
 }
 
@@ -2161,18 +2272,26 @@ private fun PairingErrorStep(
 private fun PermissionPrimerCard(
     icon: ImageVector,
     title: String,
-    description: String
+    description: String,
+    metrics: PermissionsPrimerMetrics
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         color = Color.White.copy(alpha = 0.045f),
-        shape = RoundedCornerShape(30.dp),
+        shape = RoundedCornerShape(metrics.cardCornerRadius),
         tonalElevation = 0.dp
     ) {
         Column(
             modifier = Modifier
-                .border(1.dp, Color.White.copy(alpha = 0.11f), RoundedCornerShape(30.dp))
-                .padding(horizontal = 22.dp, vertical = 22.dp)
+                .border(
+                    1.dp,
+                    Color.White.copy(alpha = 0.11f),
+                    RoundedCornerShape(metrics.cardCornerRadius)
+                )
+                .padding(
+                    horizontal = metrics.cardHorizontalPadding,
+                    vertical = metrics.cardVerticalPadding
+                )
         ) {
             Row(
                 verticalAlignment = Alignment.Top,
@@ -2180,7 +2299,7 @@ private fun PermissionPrimerCard(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(50.dp)
+                        .size(metrics.iconTileSize)
                         .clip(RoundedCornerShape(18.dp))
                         .background(Color.White.copy(alpha = 0.08f)),
                     contentAlignment = Alignment.Center
@@ -2189,22 +2308,22 @@ private fun PermissionPrimerCard(
                         imageVector = icon,
                         contentDescription = null,
                         tint = OnboardingText,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(metrics.iconSize)
                     )
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = title,
                         color = OnboardingText,
-                        fontSize = 18.sp,
+                        fontSize = metrics.cardTitleSize,
                         fontWeight = FontWeight.SemiBold
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
                         text = description,
                         color = OnboardingMuted,
-                        fontSize = 14.sp,
-                        lineHeight = 22.sp
+                        fontSize = metrics.cardBodySize,
+                        lineHeight = metrics.cardBodyLineHeight
                     )
                 }
             }

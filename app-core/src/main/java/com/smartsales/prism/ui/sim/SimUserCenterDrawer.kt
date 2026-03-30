@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,11 +26,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.CleaningServices
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.NotificationsNone
@@ -70,9 +69,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.smartsales.prism.BuildConfig
 import com.smartsales.prism.domain.memory.UserProfile
+import com.smartsales.prism.ui.components.PrismStatusBarTopSafeArea
 import com.smartsales.prism.ui.components.prismNavigationBarPadding
-import com.smartsales.prism.ui.components.prismStatusBarTopSafeBandPadding
 import com.smartsales.prism.ui.settings.EditProfileScreen
 import com.smartsales.prism.ui.settings.ThemeModeDialog
 import com.smartsales.prism.ui.settings.UserCenterViewModel
@@ -80,6 +80,14 @@ import com.smartsales.prism.ui.theme.PrismThemeDefaults
 import com.smartsales.prism.ui.theme.toDisplayLabel
 
 private val SimUserCenterDrawerShape = RoundedCornerShape(topStart = 36.dp, bottomStart = 36.dp)
+
+private const val SimDeferredSettingValue = "后续开放"
+
+private enum class SimUserCenterRowPresentation {
+    Interactive,
+    Informational,
+    DeferredDisabled
+}
 
 private data class SimUserCenterPalette(
     val drawerSurface: Color,
@@ -89,8 +97,6 @@ private data class SimUserCenterPalette(
     val secondary: Color,
     val muted: Color,
     val accent: Color,
-    val danger: Color,
-    val logoutSurface: Color,
     val avatarSurface: Color,
     val avatarBorder: Color,
     val heroGlow: Color,
@@ -102,7 +108,11 @@ private data class SimUserCenterPalette(
     val editButtonBorder: Color,
     val rowIconTint: Color,
     val switchUncheckedTrack: Color,
-    val drawerShadow: Color
+    val drawerShadow: Color,
+    val deferredText: Color,
+    val deferredButtonSurface: Color,
+    val deferredButtonBorder: Color,
+    val destructiveMuted: Color
 )
 
 @Composable
@@ -110,27 +120,29 @@ private fun rememberSimUserCenterPalette(): SimUserCenterPalette {
     val prismColors = PrismThemeDefaults.colors
     return if (PrismThemeDefaults.isDarkTheme) {
         SimUserCenterPalette(
-            drawerSurface = Color(0xED141416),
-            cardSurface = Color(0xA61C1C1E),
-            border = Color.White.copy(alpha = 0.08f),
-            divider = Color.White.copy(alpha = 0.05f),
-            secondary = Color(0xFF8D8D93),
+            drawerSurface = Color(0xF2141416),
+            cardSurface = Color(0xD91B1B1D),
+            border = Color.White.copy(alpha = 0.10f),
+            divider = Color.White.copy(alpha = 0.06f),
+            secondary = Color(0xFF8B8B91),
             muted = Color(0xFFAEAEB2),
             accent = Color(0xFF0A84FF),
-            danger = Color(0xFFFF453A),
-            logoutSurface = Color(0x14FF453A),
-            avatarSurface = Color.White.copy(alpha = 0.05f),
-            avatarBorder = Color.White.copy(alpha = 0.14f),
-            heroGlow = Color.White.copy(alpha = 0.04f),
-            cardHighlight = Color.White.copy(alpha = 0.03f),
+            avatarSurface = Color.White.copy(alpha = 0.045f),
+            avatarBorder = Color.White.copy(alpha = 0.16f),
+            heroGlow = Color(0x330A84FF),
+            cardHighlight = Color.White.copy(alpha = 0.022f),
             textPrimary = Color.White,
             textStrong = Color.White,
-            chevron = Color.White.copy(alpha = 0.18f),
-            editButtonSurface = Color.White.copy(alpha = 0.06f),
-            editButtonBorder = Color.White.copy(alpha = 0.10f),
-            rowIconTint = Color(0xFF9A9AA2),
-            switchUncheckedTrack = Color.White.copy(alpha = 0.12f),
-            drawerShadow = Color.Black.copy(alpha = 0.32f)
+            chevron = Color.White.copy(alpha = 0.22f),
+            editButtonSurface = Color.White.copy(alpha = 0.055f),
+            editButtonBorder = Color.White.copy(alpha = 0.12f),
+            rowIconTint = Color(0xFF9999A1),
+            switchUncheckedTrack = Color.White.copy(alpha = 0.13f),
+            drawerShadow = Color.Black.copy(alpha = 0.38f),
+            deferredText = Color(0xFF72727A),
+            deferredButtonSurface = Color(0x1CFF453A),
+            deferredButtonBorder = Color(0x33FF453A),
+            destructiveMuted = Color(0x66FF453A)
         )
     } else {
         SimUserCenterPalette(
@@ -141,8 +153,6 @@ private fun rememberSimUserCenterPalette(): SimUserCenterPalette {
             secondary = Color(0xFF8B909B),
             muted = Color(0xFFA9ADB7),
             accent = Color(0xFF007AFF),
-            danger = Color(0xFFFF3B30),
-            logoutSurface = Color(0x12FF3B30),
             avatarSurface = Color.White.copy(alpha = 0.86f),
             avatarBorder = Color.Black.copy(alpha = 0.06f),
             heroGlow = Color.White.copy(alpha = 0.52f),
@@ -154,7 +164,11 @@ private fun rememberSimUserCenterPalette(): SimUserCenterPalette {
             editButtonBorder = Color.Black.copy(alpha = 0.05f),
             rowIconTint = Color(0xFF8E8E93),
             switchUncheckedTrack = Color.Black.copy(alpha = 0.08f),
-            drawerShadow = Color(0x2B1D2433)
+            drawerShadow = Color(0x2B1D2433),
+            deferredText = Color(0xFFB0B4BE),
+            deferredButtonSurface = Color(0x10D94A38),
+            deferredButtonBorder = Color(0x19D94A38),
+            destructiveMuted = Color(0x66D94A38)
         )
     }
 }
@@ -169,6 +183,11 @@ internal fun SimUserCenterDrawer(
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     var isEditing by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
+    val versionLabel = remember {
+        BuildConfig.VERSION_NAME
+            .takeIf { it.isNotBlank() }
+            ?.let { "v$it" }
+    }
 
     BackHandler {
         if (isEditing) {
@@ -199,7 +218,7 @@ internal fun SimUserCenterDrawer(
                 .fillMaxHeight()
                 .width(330.dp)
                 .shadow(
-                    elevation = if (PrismThemeDefaults.isDarkTheme) 18.dp else 28.dp,
+                    elevation = if (PrismThemeDefaults.isDarkTheme) 24.dp else 28.dp,
                     shape = SimUserCenterDrawerShape,
                     ambientColor = palette.drawerShadow,
                     spotColor = palette.drawerShadow
@@ -222,10 +241,10 @@ internal fun SimUserCenterDrawer(
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(
-                                palette.heroGlow,
+                                palette.heroGlow.copy(alpha = 0.44f),
                                 Color.Transparent,
                                 if (PrismThemeDefaults.isDarkTheme) {
-                                    Color.Black.copy(alpha = 0.14f)
+                                    Color.Black.copy(alpha = 0.22f)
                                 } else {
                                     Color(0xFFE9EEF7).copy(alpha = 0.82f)
                                 }
@@ -237,12 +256,13 @@ internal fun SimUserCenterDrawer(
                     modifier = Modifier
                         .fillMaxSize()
                         .prismNavigationBarPadding()
-                        .prismStatusBarTopSafeBandPadding()
                 ) {
+                    PrismStatusBarTopSafeArea()
+
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 10.dp, bottom = 28.dp),
-                        verticalArrangement = Arrangement.spacedBy(18.dp)
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 24.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         item {
                             profile?.let { user ->
@@ -262,11 +282,11 @@ internal fun SimUserCenterDrawer(
                                     onClick = { showThemeDialog = true },
                                     showDivider = true
                                 )
-                                SimUserCenterToggleRow(
+                                SimUserCenterDeferredRow(
                                     label = "AI 实验室",
-                                    checked = true,
+                                    leadingIcon = Icons.Default.Psychology,
                                     showDivider = true
-                                ) {}
+                                )
                                 SimNotificationSettingsRow(
                                     viewModel = viewModel,
                                     showDivider = false
@@ -276,45 +296,48 @@ internal fun SimUserCenterDrawer(
 
                         item {
                             SimUserCenterSection(title = "空间管理") {
-                                SimUserCenterInfoRow(
+                                SimUserCenterDeferredRow(
                                     label = "已用空间",
-                                    value = "120 MB",
                                     leadingIcon = Icons.Default.Storage,
                                     showDivider = true
                                 )
-                                SimUserCenterActionRow(
+                                SimUserCenterDeferredRow(
                                     label = "清除缓存",
-                                    leadingIcon = Icons.Default.CleaningServices,
+                                    leadingIcon = Icons.Default.Delete,
                                     showDivider = false
-                                ) {}
+                                )
                             }
                         }
 
                         item {
                             SimUserCenterSection(title = "安全与隐私") {
-                                SimUserCenterNavRow(
+                                SimUserCenterDeferredRow(
                                     label = "修改密码",
+                                    leadingIcon = Icons.Default.Lock,
                                     showDivider = false
-                                ) {}
+                                )
                             }
                         }
 
                         item {
                             SimUserCenterSection(title = "关于") {
-                                SimUserCenterInfoRow(
-                                    label = "版本",
-                                    value = "Prism v1.2 (Pro Max)",
-                                    showDivider = true
-                                )
-                                SimUserCenterNavRow(
+                                SimUserCenterDeferredRow(
                                     label = "帮助中心",
-                                    showDivider = false
-                                ) {}
+                                    leadingIcon = Icons.AutoMirrored.Filled.HelpOutline,
+                                    showDivider = versionLabel != null
+                                )
+                                if (versionLabel != null) {
+                                    SimUserCenterInfoRow(
+                                        label = "版本",
+                                        value = versionLabel,
+                                        showDivider = false
+                                    )
+                                }
                             }
                         }
 
                         item {
-                            SimUserCenterLogoutButton(onClick = onClose)
+                            SimUserCenterDeferredLogoutButton()
                         }
                     }
                 }
@@ -354,7 +377,7 @@ private fun SimUserCenterProfileHero(
     ) {
         Box(
             modifier = Modifier
-                .size(78.dp)
+                .size(80.dp)
                 .background(
                     brush = Brush.radialGradient(
                         colors = listOf(
@@ -420,11 +443,11 @@ private fun SimUserCenterProfileHero(
         Surface(
             modifier = Modifier.clickable(onClick = onEdit),
             color = palette.editButtonSurface,
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(15.dp),
             border = androidx.compose.foundation.BorderStroke(0.5.dp, palette.editButtonBorder)
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                modifier = Modifier.padding(horizontal = 13.dp, vertical = 7.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
@@ -437,7 +460,7 @@ private fun SimUserCenterProfileHero(
                 Text(
                     text = "编辑资料",
                     color = palette.secondary,
-                    style = MaterialTheme.typography.labelMedium,
+                    style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Medium
                 )
             }
@@ -465,12 +488,12 @@ private fun SimUserCenterMetadataChip(
 
     Surface(
         color = background,
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(9.dp),
         border = androidx.compose.foundation.BorderStroke(0.5.dp, border)
     ) {
         Text(
             text = text,
-            modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
             color = textColor,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = if (accent) FontWeight.SemiBold else FontWeight.Normal
@@ -488,7 +511,7 @@ private fun SimUserCenterSection(
         Text(
             text = title,
             color = palette.secondary,
-            fontSize = 12.sp,
+            fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
             letterSpacing = 0.5.sp,
             modifier = Modifier.padding(start = 10.dp)
@@ -525,46 +548,13 @@ private fun SimUserCenterSelectRow(
     showDivider: Boolean
 ) {
     SimUserCenterRow(
+        presentation = SimUserCenterRowPresentation.Interactive,
         label = label,
         leadingIcon = Icons.Default.Public,
         value = value,
         showChevron = true,
         onClick = onClick,
         showDivider = showDivider
-    )
-}
-
-@Composable
-private fun SimUserCenterNavRow(
-    label: String,
-    showDivider: Boolean,
-    onClick: () -> Unit
-) {
-    SimUserCenterRow(
-        label = label,
-        leadingIcon = when (label) {
-            "修改密码" -> Icons.Default.Lock
-            "帮助中心" -> Icons.Default.HelpOutline
-            else -> Icons.Default.ChevronRight
-        },
-        showChevron = true,
-        onClick = onClick,
-        showDivider = showDivider
-    )
-}
-
-@Composable
-private fun SimUserCenterActionRow(
-    label: String,
-    leadingIcon: ImageVector,
-    showDivider: Boolean,
-    onClick: () -> Unit
-) {
-    SimUserCenterRow(
-        label = label,
-        leadingIcon = leadingIcon,
-        showDivider = showDivider,
-        onClick = onClick
     )
 }
 
@@ -576,6 +566,7 @@ private fun SimUserCenterInfoRow(
     showDivider: Boolean
 ) {
     SimUserCenterRow(
+        presentation = SimUserCenterRowPresentation.Informational,
         label = label,
         leadingIcon = leadingIcon,
         value = value,
@@ -592,12 +583,9 @@ private fun SimUserCenterToggleRow(
     onCheckedChange: (Boolean) -> Unit
 ) {
     SimUserCenterRow(
+        presentation = SimUserCenterRowPresentation.Interactive,
         label = label,
-        leadingIcon = when (label) {
-            "AI 实验室" -> Icons.Default.Psychology
-            "消息通知" -> Icons.Default.NotificationsNone
-            else -> Icons.Default.Person
-        },
+        leadingIcon = if (label == "消息通知") Icons.Default.NotificationsNone else Icons.Default.Person,
         onClick = null,
         showDivider = showDivider,
         rightContent = {
@@ -614,6 +602,22 @@ private fun SimUserCenterToggleRow(
                 )
             )
         }
+    )
+}
+
+@Composable
+private fun SimUserCenterDeferredRow(
+    label: String,
+    leadingIcon: ImageVector,
+    showDivider: Boolean
+) {
+    SimUserCenterRow(
+        presentation = SimUserCenterRowPresentation.DeferredDisabled,
+        label = label,
+        leadingIcon = leadingIcon,
+        value = SimDeferredSettingValue,
+        onClick = null,
+        showDivider = showDivider
     )
 }
 
@@ -656,6 +660,7 @@ private fun SimNotificationSettingsRow(
 
 @Composable
 private fun SimUserCenterRow(
+    presentation: SimUserCenterRowPresentation,
     label: String,
     leadingIcon: ImageVector,
     value: String? = null,
@@ -667,12 +672,28 @@ private fun SimUserCenterRow(
     showDivider: Boolean
 ) {
     val palette = rememberSimUserCenterPalette()
+    val isInteractive = presentation == SimUserCenterRowPresentation.Interactive && onClick != null
+    val labelColor = if (presentation == SimUserCenterRowPresentation.DeferredDisabled) {
+        palette.secondary
+    } else {
+        palette.textPrimary
+    }
+    val iconTint = if (presentation == SimUserCenterRowPresentation.DeferredDisabled) {
+        palette.secondary.copy(alpha = 0.88f)
+    } else {
+        palette.rowIconTint
+    }
+    val resolvedValueColor = valueColor ?: if (presentation == SimUserCenterRowPresentation.DeferredDisabled) {
+        palette.deferredText
+    } else {
+        palette.muted
+    }
     val rowModifier = Modifier
         .fillMaxWidth()
-        .heightIn(min = 50.dp)
+        .heightIn(min = 52.dp)
         .then(
-            if (onClick != null) {
-                Modifier.clickable(onClick = onClick)
+            if (isInteractive) {
+                Modifier.clickable(onClick = onClick!!)
             } else {
                 Modifier
             }
@@ -693,13 +714,14 @@ private fun SimUserCenterRow(
                 Icon(
                     imageVector = leadingIcon,
                     contentDescription = null,
-                    tint = palette.rowIconTint,
+                    tint = iconTint,
                     modifier = Modifier.size(17.dp)
                 )
                 Text(
                     text = label,
-                    color = palette.textPrimary,
-                    style = MaterialTheme.typography.bodyLarge
+                    color = labelColor,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontSize = 15.sp
                 )
             }
 
@@ -710,13 +732,14 @@ private fun SimUserCenterRow(
                 if (value != null) {
                     Text(
                         text = value,
-                        color = valueColor ?: palette.muted,
+                        color = resolvedValueColor,
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = valueFontWeight
+                        fontWeight = valueFontWeight,
+                        fontSize = 15.sp
                     )
                 }
                 rightContent?.invoke(this)
-                if (showChevron) {
+                if (showChevron && presentation == SimUserCenterRowPresentation.Interactive) {
                     Icon(
                         imageVector = Icons.Default.ChevronRight,
                         contentDescription = null,
@@ -737,33 +760,32 @@ private fun SimUserCenterRow(
 }
 
 @Composable
-private fun SimUserCenterLogoutButton(onClick: () -> Unit) {
+private fun SimUserCenterDeferredLogoutButton() {
     val palette = rememberSimUserCenterPalette()
+
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = palette.logoutSurface,
-        shape = RoundedCornerShape(18.dp),
-        border = androidx.compose.foundation.BorderStroke(0.5.dp, palette.danger.copy(alpha = 0.24f))
+        color = palette.deferredButtonSurface,
+        shape = RoundedCornerShape(16.dp),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, palette.deferredButtonBorder)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(vertical = 16.dp),
+                .padding(horizontal = 16.dp, vertical = 15.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.Logout,
                 contentDescription = null,
-                tint = palette.danger,
-                modifier = Modifier.size(18.dp)
+                tint = palette.destructiveMuted,
+                modifier = Modifier.size(16.dp)
             )
-            Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = "退出登录",
-                color = palette.danger,
-                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(start = 8.dp),
+                color = palette.destructiveMuted,
+                style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Medium
             )
         }

@@ -62,21 +62,27 @@ class SimSettingsRoutingTest {
         assertFalse(source.contains("Icons.Default.Close"))
         assertFalse(source.contains("IconButton("))
         assertFalse(source.contains("label = \"面容 ID\""))
-        assertTrue(source.contains(".prismStatusBarTopSafeBandPadding()"))
+        assertTrue(source.contains("PrismStatusBarTopSafeArea()"))
         assertTrue(source.contains(".pointerInput(Unit)"))
     }
 
     @Test
-    fun `sim settings drawer keeps approved storage split and about order`() {
+    fun `sim settings drawer restores approved ia with explicit deferred rows`() {
         val source = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimUserCenterDrawer.kt")
 
+        assertTrue(source.contains("label = \"主题外观\""))
+        assertTrue(source.contains("label = \"AI 实验室\""))
+        assertTrue(source.contains("label = \"消息通知\""))
         assertTrue(source.contains("label = \"已用空间\""))
         assertTrue(source.contains("label = \"清除缓存\""))
-        assertFalse(source.contains("label = \"本地缓存\""))
-        assertFalse(source.contains("清除 (128MB)"))
-        assertTrue(source.contains("label = \"版本\""))
+        assertTrue(source.contains("label = \"修改密码\""))
         assertTrue(source.contains("label = \"帮助中心\""))
-        assertTrue(source.indexOf("label = \"版本\"") < source.indexOf("label = \"帮助中心\""))
+        assertTrue(source.contains("label = \"版本\""))
+        assertTrue(source.contains("text = \"退出登录\""))
+        assertTrue(source.contains("BuildConfig.VERSION_NAME"))
+        assertTrue(source.contains("SimUserCenterRowPresentation.DeferredDisabled"))
+        assertTrue(source.contains("value = SimDeferredSettingValue"))
+        assertTrue(source.contains("showChevron && presentation == SimUserCenterRowPresentation.Interactive"))
     }
 
     private fun readSource(relativePath: String): String {

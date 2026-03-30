@@ -146,7 +146,15 @@ Current SIM settings presentation:
 - no visible top-left close button; dismissal remains scrim tap plus system back
 - keep a protected blank top band below the Android status area and place the hero/profile block as the first meaningful visible content beneath it
 - current edit-profile route remains the existing full-screen subflow entered from inside the drawer
-- current security section is `修改密码` only; `面容 ID` is not part of the shipped SIM drawer contract
+- the current approved SIM drawer IA restores the prototype section order `偏好设置 / 空间管理 / 安全与隐私 / 关于 / 退出登录`
+- row behavior is fixed in the current SIM slice:
+  - real interactive: `编辑资料`, theme, notification settings
+  - real informational: build-sourced version row
+  - deferred-disabled: `AI 实验室`, `已用空间`, `清除缓存`, `修改密码`, `帮助中心`, `退出登录`
+- deferred-disabled rows are visual IA only in this slice:
+  - they stay visible to preserve the approved drawer structure
+  - they must be muted and non-clickable
+  - they must not show chevrons, toggles, or destructive affordances that imply shipped behavior
 - the theme row edits the shared app theme preference and the normal launcher-path SIM host now applies it immediately
 - on a fresh SIM install or reinstall with no saved theme choice yet, the launcher-path SIM host defaults to dark instead of inheriting the shared app's unsaved `SYSTEM` fallback
 - once the user explicitly chooses `Dark`, `Light`, or `System`, that stored choice becomes authoritative immediately for the launcher-path SIM host

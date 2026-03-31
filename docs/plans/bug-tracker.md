@@ -2,7 +2,7 @@
 
 > Purpose: active working board and evidence ledger for connectivity-module bugs, hypotheses, fix status, and next actions.
 > Scope: connectivity-specific for now; this is not a repo-wide generic bug tracker.
-> Last Updated: 2026-03-27
+> Last Updated: 2026-03-31
 
 ## Operating Rules
 
@@ -43,6 +43,23 @@
 - Firmware team confirmed the badge never stores Wi‑Fi credentials; deterministic reconnect must therefore replay app-stored credentials when possible.
 
 ## Current Active Bugs
+
+### OI-04: Onboarding scan surfaced unrelated BLE devices that shared generic UART service signatures
+
+- Status: `Resolved`
+- Affected layer: BLE discovery admission, onboarding pairing scan UI
+- First seen: 2026-03-31
+- Last updated: 2026-03-31
+- Current hypothesis:
+  - The scan matcher admitted devices when either the advertised name matched or a generic UART/NUS service UUID matched, which let non-badge peripherals appear in the onboarding `发现设备` card.
+- Delivered fix:
+  - The current production profile now runs onboarding scan admission in trusted-name mode.
+  - Only the CHLE badge-name family (`CHLE_Intelligent` plus spacing/case variants) is allowed to surface as a discovered badge.
+  - Generic UART/NUS service UUID presence alone no longer makes a device pairable in onboarding.
+- Verification target:
+  - Focused unit coverage proves a foreign device name is rejected even when it advertises the same UART UUID, while `CHLE Intelligent` still matches.
+- Resolution note:
+  - Resolved in code and docs on 2026-03-31; hardware revalidation can be captured later if needed, but the regression source was app-side scan filtering logic rather than badge transport.
 
 ### OI-01: Real badge recording-end ingress still unproven on device
 

@@ -99,7 +99,8 @@ object ConnectivityProvidesModule {
             id = "chle",
             displayName = "CHLE Intelligent",
             nameKeywords = listOf("CHLE_Intelligent"),
-            scanServiceUuids = listOf(defaultService, altUartService)
+            scanServiceUuids = listOf(defaultService, altUartService),
+            scanMatchMode = BleScanMatchMode.NAME_ONLY
         )
         return listOf(defaultProfile)
     }

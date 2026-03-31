@@ -11,7 +11,8 @@ data class BleProfileConfig(
     val id: String,
     val displayName: String,
     val nameKeywords: List<String>,
-    val scanServiceUuids: List<UUID> = emptyList()
+    val scanServiceUuids: List<UUID> = emptyList(),
+    val scanMatchMode: BleScanMatchMode = BleScanMatchMode.NAME_OR_SERVICE
 ) {
     fun matches(deviceName: String?, advertisedUuids: Collection<UUID>): Boolean {
         val normalizedName = deviceName.orEmpty().lowercase(Locale.US)
@@ -32,7 +33,15 @@ data class BleProfileConfig(
         return if (!hasFilters) {
             true
         } else {
-            keywordHit || serviceHit
+            when (scanMatchMode) {
+                BleScanMatchMode.NAME_ONLY -> keywordHit
+                BleScanMatchMode.NAME_OR_SERVICE -> keywordHit || serviceHit
+            }
         }
     }
+}
+
+enum class BleScanMatchMode {
+    NAME_ONLY,
+    NAME_OR_SERVICE
 }

@@ -1,8 +1,10 @@
-# SIM Standalone Prototype Mental Model
+# SIM Standalone Prototype Mental Model (Historical Origin)
 
-> **Purpose**: Lock the product mindset for SIM so future docs and code changes do not drift back toward the smart app.
-> **Status**: Active planning companion
-> **Primary Product Doc**: `docs/to-cerb/sim-standalone-prototype/concept.md`
+> **Purpose**: Preserve the original SIM product mindset as historical rationale for the later shared base-runtime direction.
+> **Status**: Historical origin mindset
+> **Current Reading Priority**: Historical origin context only; not current source of truth.
+> **Current Active Truth**: `docs/specs/base-runtime-unification.md`, `docs/plans/tracker.md`, `docs/core-flow/sim-shell-routing-flow.md`, `docs/core-flow/sim-scheduler-path-a-flow.md`, `docs/core-flow/sim-audio-artifact-chat-flow.md`, `docs/cerb/interface-map.md`
+> **Historical Companion Doc**: `docs/to-cerb/sim-standalone-prototype/concept.md`
 > **Unification Authority**: `docs/specs/base-runtime-unification.md`
 > **Related Audits**:
 > - `docs/reports/20260319-sim-standalone-code-audit.md`
@@ -11,7 +13,7 @@
 
 ---
 
-## 1. One-Sentence Product Truth
+## 1. One-Sentence Historical Product Truth
 
 SIM is a standalone Prism-family app with two main lanes, scheduler and general SIM chat with optional Tingwu-based audio context, plus a decoupled connectivity support module.
 
@@ -175,7 +177,7 @@ When tradeoffs appear:
 
 ---
 
-## 10. Build Posture
+## 10. Historical Build Posture At The Time
 
 Build SIM with this order:
 

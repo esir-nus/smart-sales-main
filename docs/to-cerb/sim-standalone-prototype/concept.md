@@ -1,15 +1,17 @@
-# SIM Standalone Prototype PRD
+# SIM Standalone Prototype PRD (Historical Origin)
 
-> **Status**: Draft
+> **Status**: Historical origin PRD
 > **Date**: 2026-03-19
-> **Type**: Product PRD at concept stage
-> **Purpose**: Define a standalone prototype app inside this repo that keeps the existing Prism shell feel while stripping the smart-agent system down to two main feature lanes plus a decoupled connectivity support module.
-> **Mental Model Companion**: `docs/to-cerb/sim-standalone-prototype/mental-model.md`
+> **Type**: Historical product PRD at concept stage
+> **Purpose**: Preserve the original product-shape rationale for the standalone SIM mission that later informed the shared base-runtime direction.
+> **Current Reading Priority**: Historical origin context only; not current source of truth.
+> **Current Active Truth**: `docs/specs/base-runtime-unification.md`, `docs/plans/tracker.md`, `docs/core-flow/sim-shell-routing-flow.md`, `docs/core-flow/sim-scheduler-path-a-flow.md`, `docs/core-flow/sim-audio-artifact-chat-flow.md`, `docs/cerb/interface-map.md`
+> **Historical Companion**: `docs/to-cerb/sim-standalone-prototype/mental-model.md`
 > **Unification Authority**: `docs/specs/base-runtime-unification.md`
 
 ---
 
-## 1. Mental Model Recap
+## 1. Historical Mission Recap
 
 This mission is not "make the current agent app simpler."
 
@@ -61,9 +63,9 @@ Required constraints:
 - keep scheduler isolated from unrelated pipelines
 - do not depend on CRM, Path B enrichment, plugin writeback, or agent-memory behavior
 
-Behavioral authority:
+Current active truth:
 
-- `docs/core-flow/scheduler-fast-track-flow.md`
+- `docs/core-flow/sim-scheduler-path-a-flow.md`
 - `docs/cerb/scheduler-path-a-spine/spec.md`
 - `docs/cerb/scheduler-path-a-uni-a/spec.md`
 - `docs/cerb-ui/scheduler/contract.md`
@@ -85,8 +87,9 @@ Required constraints:
 - the final display may pass Tingwu output through a readability-polisher prompt, but it must not invent facts absent from Tingwu output
 - transcript reveal may use native streaming if available, with pseudo-streaming fallback if native streaming is not viable
 
-Behavioral authority:
+Current active truth:
 
+- `docs/core-flow/sim-audio-artifact-chat-flow.md`
 - `docs/cerb/tingwu-pipeline/spec.md`
 - `docs/cerb/audio-management/spec.md`
 - `docs/specs/modules/AudioDrawer.md`
@@ -124,9 +127,9 @@ Required constraints:
 - the module exists to connect the badge and the app, not to revive smart-agent behavior
 - SIM should expose a shell-level entry/icon for badge connection management
 
-Behavioral authority:
+Current active truth:
 
-- `docs/specs/connectivity-spec.md`
+- `docs/specs/flows/OnboardingFlow.md`
 - `docs/cerb/connectivity-bridge/spec.md`
 - `docs/cerb/connectivity-bridge/interface.md`
 
@@ -374,7 +377,7 @@ The mission is successful when all of the following are true:
 
 ---
 
-## 9. Implementation Strategy
+## 9. Historical Implementation Strategy Snapshot
 
 ### Phase 0: Product and Boundary Lock
 
@@ -423,9 +426,9 @@ The mission is successful when all of the following are true:
 
 ---
 
-## 10. Open Questions
+## 10. Historical Open Questions At The Time
 
-These do not block PRD creation, but they must be resolved before implementation planning is frozen.
+These did not block the original PRD creation, but they were expected to be resolved before implementation planning was frozen.
 
 1. Should the standalone chat use an existing executor/model path with a prototype-only adapter, or a narrower provider-specific chat client?
 2. Should the prototype share any persistence tables with the current app, or should all prototype data be namespaced?
@@ -435,7 +438,7 @@ These do not block PRD creation, but they must be resolved before implementation
 
 ---
 
-## 11. Initial Reuse Targets
+## 11. Initial Reuse Targets Considered At The Time
 
 Likely code anchors for later planning:
 
@@ -451,9 +454,9 @@ These are reuse candidates, not automatic approvals for in-place modification.
 
 ---
 
-## 12. Next Documents
+## 12. Next Documents At The Time
 
-This PRD should feed the next layer:
+At the time, this PRD was expected to feed the next layer:
 
 - `docs/plans/sim-tracker.md`
 - prototype-specific Cerb shards for shell, scheduler, audio, simple chat, and connectivity

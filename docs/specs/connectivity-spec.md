@@ -339,17 +339,19 @@ DeviceManager is the primary consumer of `ConnectionState` after setup.
 
 ## 6. BLE profile & scan contract
 
-### 6.1 BT311 profile
+### 6.1 Current production badge profile
 
-* **Name keywords:** `"BT311"`, `"BT-311"`, `"BT 311"` (update if hardware names differ).
+* **Trusted scan-name family:** `CHLE_Intelligent` plus spacing/case variants such as `CHLE Intelligent`.
 * **Service UUIDs:** Nordic UART service + vendor service (see constants in `BleProfileConfig`).
 
 ### 6.2 Matching rule
 
 * `BleProfileConfig.matches(scanResult)` returns true when:
 
-  * `deviceName` contains any `nameKeyword` **OR**
-  * `advertisedServiceUuids` intersects with profile’s UUID list.
+  * the scan runs in production pairing mode and `deviceName` matches the trusted badge-name family, **OR**
+  * a non-production/legacy profile explicitly opts into broader UUID fallback behavior.
+
+Production onboarding pairing must **not** surface a device on advertised UART service UUID alone. This prevents unrelated BLE peripherals from appearing as pairable badges just because they share a generic UART-style service.
 
 ### 6.3 Logging and diagnostics
 

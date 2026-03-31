@@ -6,6 +6,9 @@
 **Mission:** `GattBleGateway.kt` and `DeviceConnectionManager.kt` structural cleanup  
 **Primary Tracker:** `docs/plans/god-tracker.md`  
 **Structure Law:** `docs/specs/code-structure-contract.md`  
+**Current Reading Priority:** Historical execution reference only; not current source of truth.  
+**Current Active Truth:** `docs/plans/god-tracker.md`, `docs/plans/tracker.md`, `docs/specs/code-structure-contract.md`, `docs/cerb/connectivity-bridge/spec.md`, `docs/cerb/connectivity-bridge/interface.md`, `docs/specs/flows/OnboardingFlow.md`  
+**Historical Deprecated Context:** `docs/cerb/sim-connectivity/spec.md`, `docs/cerb/sim-connectivity/interface.md`  
 **Validation Report:** `docs/reports/tests/L1-20260324-god-wave2b-connectivity.md`
 
 ---
@@ -25,17 +28,20 @@ These files are coupled enough in ownership that they should be cleaned as one c
 
 ---
 
-## 2. Governing Docs
+## 2. Current Active Truth
 
-Wave 2B remains bounded by current connectivity ownership and SIM setup rules:
+Wave 2B should now be read against the shared connectivity and onboarding docs:
 
 - `docs/cerb/connectivity-bridge/spec.md`
 - `docs/cerb/connectivity-bridge/interface.md`
-- `docs/cerb/sim-connectivity/spec.md`
-- `docs/cerb/sim-connectivity/interface.md`
 - `docs/specs/flows/OnboardingFlow.md`
 
-Wave 2B must preserve current onboarding and SIM setup reuse boundaries.
+Historical deprecated context at the time:
+
+- `docs/cerb/sim-connectivity/spec.md`
+- `docs/cerb/sim-connectivity/interface.md`
+
+Wave 2B must preserve current onboarding and connectivity reuse boundaries.
 
 ---
 
@@ -124,5 +130,5 @@ Wave 2B is complete only when:
 - `docs/plans/god-wave2-execution-brief.md`
 - `docs/specs/code-structure-contract.md`
 - `docs/cerb/connectivity-bridge/spec.md`
-- `docs/cerb/sim-connectivity/spec.md`
+- `docs/specs/flows/OnboardingFlow.md`
 - `docs/reports/tests/L1-20260324-god-wave2b-connectivity.md`

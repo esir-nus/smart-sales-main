@@ -74,13 +74,21 @@ sealed class TingwuJobState {
 
 ## Artifact Shape
 
-The full artifact model is defined in the domain code. High-value fields include:
+The full artifact model is defined in the domain code. Current high-value fields include:
 
 ```kotlin
 @Serializable
 data class TingwuJobArtifacts(
+    val outputMp3Path: String? = null,
+    val outputMp4Path: String? = null,
+    val outputThumbnailPath: String? = null,
     val outputSpectrumPath: String? = null,
     val resultLinks: List<TingwuResultLink> = emptyList(),
+    val transcriptionUrl: String? = null,
+    val autoChaptersUrl: String? = null,
+    val customPromptUrl: String? = null,
+    val extraResultUrls: Map<String, String> = emptyMap(),
+    val meetingAssistanceRaw: String? = null,
     val keywords: List<String> = emptyList(),
     val transcriptMarkdown: String? = null,
     val chapters: List<TingwuChapter>? = null,
@@ -94,8 +102,30 @@ data class TingwuJobArtifacts(
 Interpretation:
 
 - transcript, chapters, summary, keywords, diarization, and speaker labels are source-led provider artifacts
+- output paths and result URLs are provider-returned adjunct artifacts and may be absent independently
+- `meetingAssistanceRaw` is provider-returned raw structured output used by current consumers when present
 - optional fields may be absent without failing the whole job
 - consumers must degrade to the available artifacts instead of inventing substitutes
+
+### Smart Summary Shape
+
+Current artifact consumers also rely on the nested smart-summary contract:
+
+```kotlin
+@Serializable
+data class TingwuSmartSummary(
+    val summary: String? = null,
+    val keyPoints: List<String> = emptyList(),
+    val speakerSummaries: List<TingwuSpeakerSummary> = emptyList(),
+    val questionAnswers: List<TingwuQuestionAnswer> = emptyList()
+)
+```
+
+Interpretation:
+
+- speaker summaries and question/answer sections are optional source-led fields
+- consumers such as SIM artifact rendering may show them directly when present
+- absence of these sections must degrade back to transcript/chapters/summary rather than fail the whole consumer flow
 
 ## You Should NOT
 

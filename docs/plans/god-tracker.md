@@ -69,6 +69,7 @@ Rule:
 3. Every tracked god file must have an owner, a target decomposition, and a wave/status.
 4. Every temporary exception must include a sunset wave/date and verification surface.
 5. This tracker records structural cleanup only. Feature behavior still belongs in `docs/cerb-ui/**`, `docs/cerb/**`, and `docs/core-flow/**`.
+6. Acceptance packs and validation records are evidence of wave completion only; structural source-of-truth remains this tracker, `docs/specs/code-structure-contract.md`, and the owning execution briefs.
 
 ---
 
@@ -116,7 +117,7 @@ Reason:
 - **Wave 3C**: clean `AgentViewModel.kt` as the next legacy full-side base-runtime wrapper split
 - **Wave 3D**: clean `SchedulerViewModel.kt` as the parallel guarded legacy scheduler-host split
 - **Wave 3E**: clean the re-grown `SimAgentViewModel.kt` voice-draft lane as the remaining ViewModel exception follow-up
-- **Later UI Wave**: onboarding host-driven transplant is now active; structure cleanup can follow after the prototype lands
+- **Wave E1**: clean `OnboardingScreen.kt` into a thin host/static seam plus onboarding-owned frame, intro, pairing, and support files
 
 ### Wave 2 Focus
 
@@ -272,7 +273,7 @@ Observed sizes below are the current audit snapshot used to seed the campaign on
 | `app-core/src/main/java/com/smartsales/prism/ui/sim/SimAgentViewModel.kt` | UI VM | 522 LOC | Wave 3E moved the SIM voice-draft lane out of the re-grown host, so the public seam is back under budget while preserving the accepted SIM session/chat/follow-up and Wave 14 voice-draft behavior | public VM + session coordinator + chat coordinator + follow-up coordinator + voice-draft coordinator | Codex | — | `GodStructureGuardrailTest`, `SimAgentViewModelStructureTest`, `SimAgentViewModelTest`, `SimShellHandoffTest`, `:app-core:compileDebugUnitTestKotlin` | 3E | Accepted |
 | `app-core/src/main/java/com/smartsales/prism/ui/sim/SimSchedulerViewModel.kt` | UI VM | 251 LOC | Wave 1E moved ingress routing, mutation execution, reminder ownership, and projection/warning support out of the public seam; the host now delegates only | public VM + ingress coordinator + mutation coordinator + reminder support + projection support | Codex | — | `GodStructureGuardrailTest`, `SimSchedulerViewModelStructureTest`, `SimSchedulerViewModelTest`, `:app-core:compileDebugUnitTestKotlin` | 1E | Accepted |
 | `app-core/src/main/java/com/smartsales/prism/ui/sim/SimAudioDrawer.kt` | UI | 136 LOC | Wave 3A moved drawer composition, card rendering, and support helpers out of the host entrypoint; the public drawer now keeps overlay/runtime wiring and delegation only | host + content + card/components + support helpers | Codex | — | `GodStructureGuardrailTest`, `SimAudioDrawerStructureTest`, `SimAudioDrawerViewModelTest`, `SimShellHandoffTest`, `:app-core:compileDebugUnitTestKotlin` | 3A | Accepted |
-| `app-core/src/main/java/com/smartsales/prism/ui/onboarding/OnboardingScreen.kt` | UI | 1058 LOC | Host-driven onboarding transplant is now active. Full structure cleanup is still deferred, but the legacy multi-tail flow was removed and SIM/full-app now share one coordinator seam. | coordinator + step sections + support helpers split if a later cleanup wave is approved | Codex | later UI-safe cleanup wave | `OnboardingFlowTransitionTest`, `SimConnectivityPairingFlowTest`, `PairingFlowViewModelTest`, `SimConnectivityRoutingTest` | Later UI | Active |
+| `app-core/src/main/java/com/smartsales/prism/ui/onboarding/OnboardingScreen.kt` | UI | 192 LOC | Wave E1 moved onboarding frame/chrome, intro voice steps, pairing steps, and capture support out of the host entrypoint; the host now keeps public entrypoints, step routing, and static-screen delegation only. | host + frame + theme/primitives + welcome/permissions + consultation/profile + mic footer + capture support + hardware/scan/provisioning support | Codex | — | `GodStructureGuardrailTest`, `OnboardingStructureTest`, `OnboardingPermissionsPrimerResponsiveContractTest`, `OnboardingFlowTransitionTest`, `SimConnectivityPairingFlowTest`, `PairingFlowViewModelTest`, `SimConnectivityRoutingTest`, `:app-core:compileDebugUnitTestKotlin` | E1 | Accepted |
 | `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/gateway/GattBleGateway.kt` | Data/Transport | 76 LOC | Wave 2B moved runtime state, transport/session lifecycle, Android GATT compat helpers, and protocol parsing out of the public gateway seam; the host now delegates only | public seam + runtime + transport/session support + protocol support | Codex | — | `GattBleGatewayNotificationParsingTest`, `ConnectivityStructureTest`, `GodStructureGuardrailTest`, `:app-core:compileDebugUnitTestKotlin` | 2B | Accepted |
 | `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/DeviceConnectionManager.kt` | Data/Transport | 137 LOC | Wave 2B moved runtime state, connection/provisioning orchestration, reconnect/backoff policy, and ingress handling out of the public manager seam; the host now delegates only | public seam + runtime + connection support + reconnect support + ingress support | Codex | — | `DefaultDeviceConnectionManagerIngressTest`, `RealConnectivityBridgeTest`, `SimConnectivityRoutingTest`, `ConnectivityStructureTest`, `GodStructureGuardrailTest`, `:app-core:compileDebugUnitTestKotlin` | 2B | Accepted |
 | `domain/scheduler/src/main/java/com/smartsales/prism/domain/scheduler/SchedulerLinter.kt` | Domain | 100 LOC | Wave 2A moved normalization/time helpers, Uni parse lanes, and legacy compatibility out of the public seam; the host now keeps the source-compatible entrypoint and delegation only | public seam + normalize/time support + parse lane support + validation/legacy support | Codex | — | `SchedulerLinterTest`, `SchedulerLinterStructureTest`, `GodStructureGuardrailTest`, `:domain:scheduler:compileKotlin` | 2A | Accepted |
@@ -632,6 +633,9 @@ Validation record:
 - `docs/plans/god-wave3d-execution-brief.md`
 - `docs/plans/god-wave3e-execution-brief.md`
 - `docs/specs/code-structure-contract.md`
+
+## Validation Evidence
+
 - `docs/reports/tests/L1-20260324-god-wave1a-guardrails.md`
 - `docs/reports/tests/L1-20260324-god-wave1b-agent-intelligence.md`
 - `docs/reports/tests/L1-20260324-god-wave1c-sim-shell.md`

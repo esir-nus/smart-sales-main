@@ -18,6 +18,12 @@ Completed badge-pipeline recordings must also appear in the same drawer inventor
 
 **Key Distinction**: drawer sync remains **UI-driven and manual**. Automatic badge recording handling belongs to [Badge Audio Pipeline](../badge-audio-pipeline/interface.md), but its completed recordings flow back into the same audio-management inventory.
 
+Deprecated-shard rule:
+
+- the retired SIM audio/chat shard is now historical redirect material only
+- active non-Mono audio truth lives in this spec, this interface, `docs/core-flow/sim-audio-artifact-chat-flow.md`, and `docs/cerb/tingwu-pipeline/*`
+- opening the drawer must **not** trigger browse-open auto-sync as active product behavior
+
 ---
 
 ## Related Cerb Specs
@@ -64,6 +70,15 @@ graph TB
 - drawer-side `sync from badge` remains user-triggered
 - pipeline-complete recordings are auto-ingested into the same drawer store
 - badge-side delete happens only after drawer ingest succeeds so failed ingest does not lose recovery path
+
+## Active Inventory Sync Rule
+
+There is one active inventory rule for current non-Mono work:
+
+- drawer-visible badge sync is an explicit UI/manual action
+- successful badge-pipeline completions may appear in the drawer automatically because they are ingested into the same repository namespace after pipeline completion
+- automatic pipeline ingest does **not** redefine the drawer-side sync contract
+- browse-open auto-sync is retired migration history, not current truth
 
 ---
 

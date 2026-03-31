@@ -1,6 +1,18 @@
-# SIM Connectivity Interface
+# SIM Connectivity Interface (Historical Redirect)
 
-> **Blackbox contract** - For the standalone SIM shell and adjacent callers.
+> **Blackbox contract** - Historical SIM connectivity contract retained in place for campaign memory.
+> **Status**: Historical redirect
+> **Current Reading Priority**: Historical context only; not current source of truth.
+> **Current Active Truth**:
+> - `docs/cerb/connectivity-bridge/interface.md`
+> - `docs/cerb/connectivity-bridge/spec.md`
+> - `docs/specs/flows/OnboardingFlow.md`
+> - `docs/core-flow/sim-shell-routing-flow.md`
+
+Historical note:
+
+- the remainder of this file is a frozen snapshot of the older SIM connectivity interface framing
+- it must not be used as active connectivity fallback ownership
 
 ---
 

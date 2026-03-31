@@ -71,8 +71,8 @@ Rules:
 - the recognizer event stream is the source for live transcript updates and `60s` capture-limit auto-stop handling
 - onboarding replaces the footer sample hint with live transcript while recording or processing when transcript text is available, but still writes only the final resolved transcript into chat / extraction state
 - after first-use permission grant, onboarding returns to idle and requires a fresh press instead of auto-resuming a recording session
-- explicit user/reset/dispose cancellation must end the active recognition session cleanly and invalidate the pending onboarding request so no fallback lands afterward
-- recognizer-side `DeviceSpeechFailureReason.CANCELLED` that arrives after onboarding has already entered processing is treated as onboarding-local fast-lane failure and must terminate through local fallback instead of leaving the footer stuck
+- explicit user/reset/dispose cancellation must end the active recognition session cleanly and invalidate the pending onboarding request so no late processing result lands afterward
+- recognizer-side `DeviceSpeechFailureReason.CANCELLED` that arrives after onboarding has already entered processing is treated as onboarding-local fast-lane failure and must clear to calm retry UI instead of leaving the footer stuck
 - this seam should remain reusable for future chat fast-recognition work
 
 ## Consultation / Extraction Service
@@ -118,6 +118,6 @@ Rules:
   - consultation about `2.5s`
   - profile extraction about `3.5s`
 - the service layer must not stack a second onboarding-specific timeout underneath that UI-owned watchdog
-- deterministic local generation remains backup only; if a real transcript exists, fallback must stay grounded in that transcript rather than injecting fake user content
-- debug investigation builds may disable deterministic fallback so the UI surfaces calm retry/error state and preserves any real transcript without synthesizing a reply or extraction draft
+- realtime auth/token failures must preserve typed diagnostic evidence in logs, including safe category plus HTTP status when the backend token endpoint returns one
+- if a real transcript exists and reply/extraction generation fails, the UI preserves that transcript and surfaces retry state without synthesizing a reply or extraction draft
 - failures must stay in the onboarding lane and must not mutate profile state

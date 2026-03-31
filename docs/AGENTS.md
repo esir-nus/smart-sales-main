@@ -41,17 +41,20 @@ This file is not intended to replace either runtime-specific layer.
 
 **Docs > Code > Guessing**
 
-1. Architecture SOT: `docs/specs/Architecture.md`
-2. UX SOT: `docs/specs/prism-ui-ux-contract.md`
-3. Tracker: `docs/plans/tracker.md`
-4. Archived docs (`docs/archived/**`) are historical only
+1. `docs/README.md` is the human homepage
+2. `docs/plans/doc-tracker.md` is the authority ledger when ownership or replacement is unclear
+3. `docs/core-flow/**` is the behavioral north-star layer when it exists
+4. owning `docs/cerb/**`, `docs/cerb-ui/**`, and shared specs define the implementation contract
+5. `docs/plans/tracker.md` records campaign state and debt, not product behavior
+6. historical docs remain project memory only unless explicitly reactivated
 
 ### Spec-Code Alignment
 
-When code diverges from spec:
-- **Favor CODE** if it's battle-tested and intentional
-- **Favor SPEC** if code is a quick hack that shipped
-- Document the decision and update the appropriate source
+When code diverges from docs:
+- read the active Core Flow and owning spec first
+- treat lower layers as drift candidates before assuming the north-star doc is wrong
+- if code intentionally moved ahead, sync the owning docs in the same session
+- if the docs are intentionally ahead, mark the code as follow-up drift rather than silently redefining the docs
 
 ### Core Flow Rule
 
@@ -93,6 +96,14 @@ The `.agent/workflows/**` files are important and often transferable.
 1. Read the relevant tracker for architecture status
 2. Read the relevant spec for module contracts
 3. `grep` to verify assumptions — never guess
+
+### Runtime Debugging Evidence
+
+- For Android runtime bugs, `adb logcat` is mandatory evidence.
+- Screenshots, user recollection, and visible UI text are supporting evidence only.
+- If the issue involves UI behavior, lifecycle, BLE/connectivity, notifications, alarms, networking, services, or device/emulator integration, start with relevant `adb logcat` capture before claiming root cause.
+- If current logs are insufficient, add targeted tags/logging and rerun instead of guessing.
+- Compiler/build failures should use compiler output first; pure test failures should use test output first.
 
 ### Rewrite > Extract
 - **Rewrite**: When code is misaligned or tightly coupled

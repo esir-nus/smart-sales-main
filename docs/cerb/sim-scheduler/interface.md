@@ -1,8 +1,22 @@
-# SIM Scheduler Interface
+# SIM Scheduler Interface (Historical Redirect)
 
-> **Blackbox contract** — For the standalone SIM scheduler surface.
->
-> **Unification Note (2026-03-31)**: despite the legacy `SIM` name, this interface should now be read as the current best available base-runtime scheduler contract for non-Mono work. Mono may later deepen runtime capabilities behind this surface without creating separate scheduler truth.
+> **Blackbox contract** — Historical SIM scheduler contract retained in place for campaign memory.
+> **Status**: Historical redirect
+> **Current Reading Priority**: Historical context only; not current source of truth.
+> **Current Active Truth**:
+> - `docs/cerb/scheduler-path-a-spine/interface.md`
+> - `docs/cerb/scheduler-path-a-uni-a/interface.md`
+> - `docs/cerb/scheduler-path-a-uni-b/interface.md`
+> - `docs/cerb/scheduler-path-a-uni-c/interface.md`
+> - `docs/cerb/scheduler-path-a-uni-d/interface.md`
+> - `docs/cerb-ui/scheduler/contract.md`
+> - `docs/cerb/interface-map.md`
+> - `docs/core-flow/sim-scheduler-path-a-flow.md`
+
+Historical note:
+
+- the remainder of this file is a frozen snapshot of the older SIM-scheduler interface framing
+- it must not be used as active scheduler fallback ownership
 
 ---
 

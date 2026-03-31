@@ -6,6 +6,9 @@
 **Mission:** `SimAudioRepository.kt` structural cleanup  
 **Primary Tracker:** `docs/plans/god-tracker.md`  
 **Structure Law:** `docs/specs/code-structure-contract.md`  
+**Current Reading Priority:** Historical execution reference only; not current source of truth.  
+**Current Active Truth:** `docs/plans/god-tracker.md`, `docs/plans/tracker.md`, `docs/specs/code-structure-contract.md`, `docs/core-flow/sim-audio-artifact-chat-flow.md`, `docs/cerb/audio-management/spec.md`, `docs/cerb/audio-management/interface.md`, `docs/cerb/tingwu-pipeline/spec.md`, `docs/cerb/tingwu-pipeline/interface.md`, `docs/cerb/badge-audio-pipeline/spec.md`, `docs/cerb/badge-audio-pipeline/interface.md`, `docs/cerb/connectivity-bridge/spec.md`  
+**Historical Deprecated Context:** `docs/cerb/sim-audio-chat/spec.md`, `docs/cerb/sim-audio-chat/interface.md`  
 **Validation Report:** `docs/reports/tests/L1-20260324-god-wave2c-sim-audio-repository.md`
 
 ---
@@ -20,18 +23,23 @@ Wave 2C now reduces that file into stable SIM-owned support files while keeping 
 
 ---
 
-## 2. Governing Docs
+## 2. Current Active Truth
 
-Wave 2C remains bounded by current SIM audio and connectivity ownership:
+Wave 2C should now be read against the shared audio, Tingwu, badge-ingest, and connectivity docs:
 
 - `docs/core-flow/sim-audio-artifact-chat-flow.md`
 - `docs/cerb/audio-management/spec.md`
 - `docs/cerb/audio-management/interface.md`
+- `docs/cerb/tingwu-pipeline/spec.md`
+- `docs/cerb/tingwu-pipeline/interface.md`
 - `docs/cerb/badge-audio-pipeline/spec.md`
 - `docs/cerb/badge-audio-pipeline/interface.md`
+- `docs/cerb/connectivity-bridge/spec.md`
+
+Historical deprecated context at the time:
+
 - `docs/cerb/sim-audio-chat/spec.md`
 - `docs/cerb/sim-audio-chat/interface.md`
-- `docs/cerb/connectivity-bridge/spec.md`
 
 Wave 2C must preserve SIM namespace isolation and current badge-sync behavior.
 

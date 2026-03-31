@@ -2,11 +2,11 @@
 
 > **Context Boundary**: `docs/cerb-ui/home-shell/`
 > **Status**: Active
-> **Visual Source of Truth**: Current home empty-state shell
+> **Visual Source of Truth**: Current home empty-state shell plus the shared shell chrome that persists into active discussion states
 
 ## 1. Ownership
 
-This shard owns the current home empty-state presentation contract for `HomeShell` and `ChatWelcome`.
+This shard owns the current home-shell presentation contract for `HomeShell` and `ChatWelcome`, plus the shared chrome that persists after the empty state ends.
 
 It is the visual source of truth for:
 
@@ -14,6 +14,8 @@ It is the visual source of truth for:
 - empty-state canvas composition
 - current empty-state inclusion/exclusion rules
 - the Dynamic Island host slot inside the home header
+- the shared top/bottom monolith identity that remains stable as the center canvas moves from empty home into active discussion
+- the current shell-chrome inclusion/exclusion rule for normal non-Mono work
 
 It does not own:
 
@@ -24,6 +26,7 @@ It does not own:
 - Dynamic Island internal behavior, which is owned by `docs/cerb-ui/dynamic-island/spec.md`
 - token definitions that remain global in `docs/specs/style-guide.md`
 - shared trigger/layer invariants that remain global in `docs/specs/ui_element_registry.md`
+- legacy compatibility hosts such as `AgentShell.kt`, which are implementation debt and not visual truth owners
 
 ## 2. Current Empty-State Contract
 
@@ -53,6 +56,18 @@ Rule:
 - When the center gap becomes tight, the greeting stage shifts to an upper-center composition instead of colliding with the bottom composer.
 - Runtime adaptation must be driven by actual Compose constraints and insets, not by whitelisting specific resolutions.
 
+### Shared Shell Continuity After Empty State
+
+When the session leaves the empty state, this shard still owns the shared shell chrome rules:
+
+- top monolith remains the shell header family
+- bottom monolith remains the composer foundation family
+- the center canvas is the part that swaps between greeting, discussion, and system-sheet content
+- the Dynamic Island host slot stays centered in the header family
+- scheduler-open chrome may temporarily suppress side utility actions while keeping the island mounted
+
+This shard does **not** replace `docs/core-flow/sim-shell-routing-flow.md` for routing behavior; it owns the shell chrome and continuity contract that routing flows sit inside.
+
 ## 3. Current Exclusions
 
 The following ideas are not part of the current home empty-state contract:
@@ -70,6 +85,8 @@ If any of these return in the future, they must be reintroduced by an owning fea
 - Use `docs/specs/style-guide.md` for tokens, material treatment, and motion primitives.
 - Use `docs/specs/ui_element_registry.md` for shared interaction and Z-layer invariants.
 - Use `docs/cerb-ui/dynamic-island/spec.md` for the center header surface behavior.
+- Use `docs/core-flow/sim-shell-routing-flow.md` for shell routing behavior and support-surface transitions.
+- Use `docs/specs/base-runtime-unification.md` and `docs/cerb/interface-map.md` for the wrapper-debt rule on legacy full-side hosts.
 - Do not treat those global docs as the owner of the home empty-state composition.
 
 ## 5. Doc Alignment Rules

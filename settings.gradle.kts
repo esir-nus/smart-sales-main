@@ -32,6 +32,7 @@ fun includeModule(path: String) {
 
 includeModule(":app")
 includeModule(":app-core")  // Core Application Shell (Orchestrator, Features, UI)
+includeModule(":connectivity-debug-app")
 includeModule(":tingwuTestApp")
 includeModule(":data:ai-core")
 includeModule(":data:oss")

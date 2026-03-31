@@ -1,20 +1,32 @@
-# SIM Connectivity Spec
+# SIM Connectivity Spec (Historical Redirect)
 
-> **Scope**: Badge BLE/Wi-Fi connection management as a decoupled support module inside the standalone SIM prototype
-> **Status**: SPEC_ONLY
-> **Behavioral Authority Above This Doc**:
-> - `docs/to-cerb/sim-standalone-prototype/concept.md`
+> **Scope**: Historical SIM connectivity shard retained in place for campaign memory.
+> **Status**: Historical redirect
+> **Current Reading Priority**: Historical context only; not current source of truth.
+> **Current Active Truth**:
 > - `docs/core-flow/sim-shell-routing-flow.md`
-> - `docs/specs/connectivity-spec.md`
+> - `docs/specs/flows/OnboardingFlow.md`
 > - `docs/cerb/connectivity-bridge/spec.md`
 > - `docs/cerb/connectivity-bridge/interface.md`
-> **Audit Evidence**:
+> - `docs/cerb/interface-map.md`
+> **Historical Origin Context**:
+> - `docs/to-cerb/sim-standalone-prototype/concept.md`
+> - `docs/specs/connectivity-spec.md`
 > - `docs/reports/20260319-sim-standalone-code-audit.md`
 > - `docs/reports/20260321-sim-wave5-boundary-audit.md`
 
 ---
 
-## 1. Purpose
+## Historical Redirect Note
+
+This shard is no longer allowed to own active connectivity truth.
+
+Use the current active docs above for implementation and review.
+The remainder of this file is retained only as a historical snapshot of the older SIM-connectivity framing.
+
+---
+
+## 1. Historical Purpose At The Time
 
 `SIM Connectivity` defines how the standalone SIM prototype reuses the mature connectivity module without coupling it back into the smart-agent runtime.
 

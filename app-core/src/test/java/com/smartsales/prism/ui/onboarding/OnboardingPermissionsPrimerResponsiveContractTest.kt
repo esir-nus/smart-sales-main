@@ -10,7 +10,7 @@ class OnboardingPermissionsPrimerResponsiveContractTest {
 
     @Test
     fun `permission primer keeps scrollable content and pinned continue action`() {
-        val source = readSource("app-core/src/main/java/com/smartsales/prism/ui/onboarding/OnboardingScreen.kt")
+        val source = readSource("app-core/src/main/java/com/smartsales/prism/ui/onboarding/OnboardingWelcomePermissions.kt")
 
         assertTrue(source.contains("rememberScrollState()"))
         assertTrue(source.contains(".verticalScroll(scrollState)"))

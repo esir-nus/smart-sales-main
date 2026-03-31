@@ -5,6 +5,8 @@
 **Owner:** UI transplant slice  
 **Primary Tracker:** `docs/plans/ui-tracker.md`  
 **Prototype Source:** `prototypes/sim-shell-family/sim_scheduler_drawer_shell.html`
+**Behavioral Authority:** `docs/core-flow/sim-scheduler-path-a-flow.md`
+**Current Active Truth:** `docs/plans/ui-tracker.md`, `docs/plans/tracker.md`, `docs/core-flow/sim-scheduler-path-a-flow.md`, `docs/core-flow/scheduler-fast-track-flow.md`, `docs/cerb/scheduler-path-a-spine/spec.md`, `docs/cerb/scheduler-path-a-spine/interface.md`, `docs/cerb-ui/scheduler/contract.md`, `docs/cerb/interface-map.md`
 
 ---
 
@@ -14,7 +16,7 @@ Deliver the first approved SIM scheduler drawer transplant as a **SIM-only visua
 
 This slice does not change scheduler ownership or scheduler behavior.
 
-Any simultaneous scheduler create/reschedule hardening belongs to the SIM scheduler behavior lane (`docs/cerb/sim-scheduler/spec.md` plus `docs/plans/sim-tracker.md`), not to this UI transplant brief.
+Any simultaneous scheduler create/reschedule hardening belongs to the shared scheduler behavior lane (`docs/core-flow/sim-scheduler-path-a-flow.md`, `docs/core-flow/scheduler-fast-track-flow.md`, `docs/cerb/scheduler-path-a-spine/spec.md`, `docs/cerb/scheduler-path-a-spine/interface.md`, and `docs/plans/tracker.md`), not to this UI transplant brief.
 
 ---
 

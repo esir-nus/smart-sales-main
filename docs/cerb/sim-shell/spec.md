@@ -1,38 +1,39 @@
-# SIM Shell Spec
+# SIM Shell Spec (Historical Redirect)
 
-> **Scope**: Standalone SIM prototype shell inside this repository
-> **Status**: SPEC_ONLY
-> **Behavioral Authority Above This Doc**:
+> **Scope**: Historical SIM shell shard retained in place for campaign memory.
+> **Status**: Historical redirect
+> **Current Reading Priority**: Historical context only; not current source of truth.
+> **Current Active Truth**:
 > - `docs/core-flow/sim-shell-routing-flow.md`
-> - `docs/to-cerb/sim-standalone-prototype/concept.md`
+> - `docs/specs/prism-ui-ux-contract.md`
+> - `docs/cerb-ui/home-shell/spec.md`
+> - `docs/cerb-ui/dynamic-island/spec.md`
+> - `docs/cerb/interface-map.md`
 > - `docs/specs/base-runtime-unification.md`
-> **Audit Evidence**:
+> **Historical Origin Context**:
+> - `docs/to-cerb/sim-standalone-prototype/concept.md`
 > - `docs/reports/20260319-sim-standalone-code-audit.md`
 > - `docs/reports/20260319-sim-clarification-evidence-audit.md`
 > - `docs/reports/20260331-base-runtime-unification-drift-audit.md`
 
 ---
 
-## Unification Note (2026-03-31)
+## Historical Redirect Note
 
-Despite the legacy `SIM` name, this doc should now be read as the current best available **base-runtime shell baseline** for non-Mono work.
+This shard is no longer allowed to own active shell truth.
 
-Interpretation rule:
-
-- keep using this doc for shared shell/UI/UX direction while the old full-side host catches up
-- do not treat the `SIM` label as permission to fork shell truth for non-Mono work
-- Mono may later augment this shell with deeper memory architecture, but it must not create a second shell truth
-- keep the real standalone SIM entry/composition boundary, but do not read that boundary as a second non-Mono shell truth
+Use the current active docs above for implementation and review.
+The remainder of this file is retained only as a historical snapshot of the older SIM-shell framing.
 
 ---
 
-## 1. Purpose
+## 1. Historical Purpose At The Time
 
 `SIM Shell` is the standalone application shell for the simplified Prism prototype.
 
 It exists to preserve the current Prism family look while preventing contamination from the smart-agent runtime.
 
-For non-Mono shell planning truth, this shard now acts as the current base-runtime shell baseline while the old full-side hosts remain compatibility debt.
+This historical snapshot comes from the period when the shard was still being used as an interim shell baseline before active truth moved into shared shell docs.
 
 `SIM Shell` owns:
 

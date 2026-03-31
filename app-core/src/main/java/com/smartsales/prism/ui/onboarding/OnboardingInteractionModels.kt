@@ -50,24 +50,21 @@ enum class OnboardingProcessingPhase {
     NONE,
     RECOGNIZING,
     BUILDING_CONSULTATION_REPLY,
-    BUILDING_PROFILE_RESULT,
-    DETERMINISTIC_FALLBACK
+    BUILDING_PROFILE_RESULT
 }
 
 /**
  * onboarding 转写来源。
  */
 enum class OnboardingTranscriptOrigin {
-    DEVICE_SPEECH,
-    DETERMINISTIC_FALLBACK
+    DEVICE_SPEECH
 }
 
 /**
  * onboarding 生成来源。
  */
 enum class OnboardingGenerationOrigin {
-    LLM,
-    DETERMINISTIC_FALLBACK
+    LLM
 }
 
 /**

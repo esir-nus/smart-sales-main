@@ -1,6 +1,41 @@
 # Debugging SOP
 
-> **Purpose**: A rigorous, repeatable process for debugging issues based on user-provided evidence (screenshots, descriptions, STR).
+> **Purpose**: A rigorous, repeatable process for debugging issues based on user-provided evidence and literal runtime proof.
+> **Status**: Active SOP
+> **Last Updated**: 2026-03-31
+> **Homepage**: [`docs/README.md`](../README.md)
+> **Control Plane**: [`docs/plans/doc-tracker.md`](../plans/doc-tracker.md)
+
+---
+
+## Evidence Hierarchy
+
+Use this evidence order during debugging:
+
+1. literal runtime proof (`adb logcat`, system output, test output, compiler output)
+2. code/spec inspection
+3. screenshots, screen recordings, STR, and user reports
+
+Rule:
+
+- for Android runtime bugs, `adb logcat` is mandatory
+- screenshots and recollection are supporting evidence only
+- do not claim root cause, fix confidence, or non-repro without relevant logcat evidence unless adb is genuinely unavailable
+- if adb is unavailable, state that limitation explicitly and lower confidence instead of guessing
+- if current logs are too weak, add targeted tags/logging and rerun the repro
+
+## Exception Boundary
+
+- compile/build failures: compiler output is primary
+- pure unit-test failures: test output is primary
+- Android runtime/UI/device/lifecycle/service/BLE/network/notification/alarm/integration bugs: `adb logcat` is mandatory
+- if a test failure is only the surface symptom of an Android runtime issue, capture `adb logcat` for the runtime repro as well
+
+## Small Feature Reality Rule
+
+- if the feature is a small bounded interaction slice, start from the smallest state machine that satisfies the approved flow
+- do not add speculative fallback branches, build-type splits, or hidden success masking unless the spec or reproduced runtime evidence requires them
+- for Android runtime bugs, use logcat to prove whether failure happened during hold, release, processing, or result delivery before editing code
 
 ---
 
@@ -43,6 +78,12 @@
 3. Classify severity: `P[0-3]`
 4. Summarize: `"P[X]: Expected: [A]. Actual: [B]."`
 5. Identify **affected module** from spec index
+6. Decide whether this is a compiler/test-only failure or an Android runtime bug
+
+If it is an Android runtime bug:
+
+7. identify the relevant log tags before entering diagnosis
+8. prepare an `adb logcat` capture plan for the repro
 
 **Checkpoint**: Can summarize bug in one sentence with severity.
 
@@ -64,8 +105,10 @@
 ### Agent Actions
 1. Run `/06-audit` on affected files
 2. Trace data flow: `User Input → Pipeline → UI`
-3. Add logcat if needed: `adb logcat -s [Tag]:D`
-4. Compare screenshot to spec (Literal Alignment)
+3. For Android runtime bugs, clear/capture logcat with the relevant tags before reproducing
+4. Reproduce the issue while collecting `adb logcat`
+5. Quote the literal logcat evidence that proves the failing branch or missing event
+6. Compare screenshot to spec (Literal Alignment)
 
 ### Key Question
 > "At which layer does reality diverge from spec?"
@@ -86,7 +129,7 @@
 **Root Cause**: [Technical reason it happens]
 **Evidence**: 
 - `grep` output: [...]
-- `logcat` output: [...]
+- `logcat` output: [...]  // mandatory for Android runtime bugs
 - Spec says: [...] vs Code does: [...]
 ```
 
@@ -113,6 +156,7 @@ Before touching code, you **MUST** present the following report to the user:
 
 **1. Evidence-Based Root Cause**:
 - [Literal logcat/grep proof]
+- If this is a runtime bug, include the exact `adb logcat` lines or state explicitly why adb was unavailable
 
 **2. Spec Alignment Gate (from 01-senior-reviewr)**:
 - [What the spec says] vs [What the code currently does]
@@ -213,7 +257,9 @@ adb logcat -s SchedulerVM:D IntentOrchestrator:D DashscopeExecutor:D
 
 | ❌ Don't | ✅ Do |
 |----------|------|
-| Guess without evidence | Run `/06-audit`, add logcat |
+| Guess from screenshot alone | Capture `adb logcat` for runtime bugs first |
+| Treat logcat as optional for runtime issues | Make logcat part of the first diagnostic pass |
+| Guess without evidence | Run `/06-audit`, capture logcat, quote literal proof |
 | Fix + refactor together | Separate commits |
 | Log lessons on build success | Only on "problem fixed" confirmation |
 | Change multiple layers at once | One layer per hypothesis |

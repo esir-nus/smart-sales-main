@@ -1,39 +1,39 @@
-# SIM Audio Chat Spec
+# SIM Audio Chat Spec (Historical Redirect)
 
-> **Scope**: Audio drawer, Tingwu artifact display, readability polishing, transparent-state presentation, and general SIM chat with optional audio context for the standalone SIM prototype
-> **Status**: SPEC_ONLY
-> **Behavioral Authority Above This Doc**:
+> **Scope**: Historical SIM audio/chat shard retained in place for campaign memory.
+> **Status**: Historical redirect
+> **Current Reading Priority**: Historical context only; not current source of truth.
+> **Current Active Truth**:
 > - `docs/core-flow/sim-audio-artifact-chat-flow.md`
-> - `docs/to-cerb/sim-standalone-prototype/concept.md`
-> - `docs/specs/base-runtime-unification.md`
 > - `docs/cerb/audio-management/spec.md`
+> - `docs/cerb/audio-management/interface.md`
 > - `docs/cerb/tingwu-pipeline/spec.md`
+> - `docs/cerb/tingwu-pipeline/interface.md`
 > - `docs/specs/modules/AudioDrawer.md`
-> **Audit Evidence**:
+> - `docs/cerb/interface-map.md`
+> - `docs/specs/base-runtime-unification.md`
+> **Historical Origin Context**:
+> - `docs/to-cerb/sim-standalone-prototype/concept.md`
 > - `docs/reports/20260319-sim-standalone-code-audit.md`
 > - `docs/reports/20260319-sim-clarification-evidence-audit.md`
 > - `docs/reports/20260331-base-runtime-unification-drift-audit.md`
 
 ---
 
-## Unification Note (2026-03-31)
+## Historical Redirect Note
 
-Despite the legacy `SIM` name, this doc should now be read as the current best available **base-runtime audio/chat baseline** for non-Mono work.
+This shard is no longer allowed to own active audio/chat truth.
 
-Interpretation rule:
-
-- keep using this doc for shared Tingwu/audio/chat direction while legacy full-side runtime owners catch up
-- do not treat the `SIM` label as permission to fork non-Mono audio/chat truth
-- Mono may later add deeper memory/entity/plugin augmentation around chat, but it must not create a second base audio/chat truth
-- keep the real SIM-owned audio/chat runtime boundary where it still exists, but do not read that boundary as a second non-Mono product truth
+Use the current active docs above for implementation and review.
+The remainder of this file is retained only as a historical snapshot of the older SIM audio/chat framing, including the retired browse-open auto-sync experiment.
 
 ---
 
-## 1. Purpose
+## 1. Historical Purpose At The Time
 
 `SIM Audio Chat` defines the second major feature lane of the standalone prototype:
 
-For non-Mono Tingwu/audio/chat planning truth, this shard now acts as the current base-runtime audio/chat baseline while legacy full-side runtime owners catch up.
+This historical snapshot comes from the period when the shard was still being used as an interim audio/chat baseline before active truth moved into shared audio and Tingwu docs.
 
 - provide normal SIM chat directly from the home/chat surface
 - browse audio in the Audio Drawer

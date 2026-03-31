@@ -9,6 +9,7 @@ import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
+import android.util.Log
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.smartsales.prism.domain.asr.AsrResult
 import com.smartsales.prism.domain.asr.AsrService
@@ -132,12 +133,14 @@ class RealDeviceSpeechRecognizer @Inject constructor(
         scope.launch {
             realtimeSpeechRecognizer.events.collect { event ->
                 if (session?.strategy != DeviceSpeechStrategy.REALTIME_FUN_ASR) return@collect
+                Log.d(TAG, "realtime_event type=${event.logName}")
                 _events.tryEmit(event.toDeviceEvent())
             }
         }
     }
 
     override fun startListening(mode: DeviceSpeechMode) {
+        Log.d(TAG, "start_listening mode=$mode")
         clearFinishedSession()
         val nextSession = RecognitionSession(
             mode = mode,
@@ -147,6 +150,7 @@ class RealDeviceSpeechRecognizer @Inject constructor(
         session = nextSession
 
         if (nextSession.strategy == DeviceSpeechStrategy.REALTIME_FUN_ASR) {
+            Log.d(TAG, "start_realtime_session")
             realtimeSpeechRecognizer.startListening()
             return
         }
@@ -199,6 +203,7 @@ class RealDeviceSpeechRecognizer @Inject constructor(
             reason = DeviceSpeechFailureReason.CANCELLED,
             message = "当前没有活动的语音识别"
         )
+        Log.d(TAG, "finish_listening strategy=${activeSession.strategy}")
         return try {
             when (activeSession.strategy) {
                 DeviceSpeechStrategy.PLATFORM_DEVICE -> finishPlatformSession(activeSession)
@@ -214,6 +219,7 @@ class RealDeviceSpeechRecognizer @Inject constructor(
 
     override fun cancelListening() {
         val activeSession = session ?: return
+        Log.d(TAG, "cancel_listening strategy=${activeSession.strategy}")
         isActivelyListening = false
         if (activeSession.strategy == DeviceSpeechStrategy.REALTIME_FUN_ASR) {
             realtimeSpeechRecognizer.cancelListening()
@@ -505,7 +511,18 @@ class RealDeviceSpeechRecognizer @Inject constructor(
     }
 
     private suspend fun finishRealtimeSession(): DeviceSpeechRecognitionResult {
-        return when (val result = realtimeSpeechRecognizer.finishListening()) {
+        val result = realtimeSpeechRecognizer.finishListening()
+        Log.d(
+            TAG,
+            when (result) {
+                is SimRealtimeSpeechRecognitionResult.Success ->
+                    "finish_realtime_session outcome=success length=${result.text.length}"
+
+                is SimRealtimeSpeechRecognitionResult.Failure ->
+                    "finish_realtime_session outcome=failure reason=${result.reason} authCategory=${result.diagnostic.logName} httpStatus=${result.diagnostic?.httpStatus.logValue} vendorCode=${result.diagnostic?.vendorCode.logValue} message=${result.message}"
+            }
+        )
+        return when (result) {
             is SimRealtimeSpeechRecognitionResult.Success -> DeviceSpeechRecognitionResult.Success(
                 text = result.text,
                 backend = DeviceSpeechBackend.FUN_ASR_REALTIME
@@ -557,6 +574,23 @@ private fun SimRealtimeSpeechEvent.toDeviceEvent(): DeviceSpeechRecognitionEvent
         SimRealtimeSpeechEvent.Cancelled -> DeviceSpeechRecognitionEvent.Cancelled
     }
 }
+
+private val SimRealtimeSpeechEvent.logName: String
+    get() = when (this) {
+        SimRealtimeSpeechEvent.ListeningStarted -> "listening_started"
+        SimRealtimeSpeechEvent.CaptureLimitReached -> "capture_limit_reached"
+        is SimRealtimeSpeechEvent.PartialTranscript -> "partial_transcript"
+        is SimRealtimeSpeechEvent.FinalTranscript -> "final_transcript"
+        is SimRealtimeSpeechEvent.Failure ->
+            "failure:${reason.name}:auth=${diagnostic.logName}:httpStatus=${diagnostic?.httpStatus.logValue}:vendorCode=${diagnostic?.vendorCode.logValue}"
+        SimRealtimeSpeechEvent.Cancelled -> "cancelled"
+    }
+
+private val com.smartsales.data.aicore.DashscopeRealtimeAuthDiagnostic?.logName: String
+    get() = this?.category?.name?.lowercase() ?: "none"
+
+private val Int?.logValue: String
+    get() = this?.toString() ?: "none"
 
 private fun SimRealtimeSpeechFailureReason.toDeviceFailureReason(): DeviceSpeechFailureReason {
     return when (this) {

@@ -6,6 +6,9 @@
 **Mission:** `SimAudioDrawer.kt` structural cleanup  
 **Primary Tracker:** `docs/plans/god-tracker.md`  
 **Structure Law:** `docs/specs/code-structure-contract.md`  
+**Current Reading Priority:** Historical execution reference only; not current source of truth.  
+**Current Active Truth:** `docs/plans/god-tracker.md`, `docs/plans/tracker.md`, `docs/specs/code-structure-contract.md`, `docs/core-flow/sim-audio-artifact-chat-flow.md`, `docs/cerb/audio-management/spec.md`, `docs/cerb/audio-management/interface.md`, `docs/cerb/tingwu-pipeline/spec.md`, `docs/cerb/tingwu-pipeline/interface.md`  
+**Historical Deprecated Context:** `docs/cerb/sim-audio-chat/spec.md`, `docs/cerb/sim-audio-chat/interface.md`  
 **Validation Report:** `docs/reports/tests/L1-20260324-god-wave3a-sim-audio-drawer.md`
 
 ---
@@ -20,16 +23,23 @@ Wave 3A reduces that drawer into a thin public host file without changing the ac
 
 ---
 
-## 2. Governing Docs
+## 2. Current Active Truth
 
-Wave 3A remains bounded by the current SIM audio/chat contract:
+Wave 3A should now be read against the shared audio and Tingwu docs:
 
 - `docs/core-flow/sim-audio-artifact-chat-flow.md`
-- `docs/cerb/sim-audio-chat/spec.md`
-- `docs/cerb/sim-audio-chat/interface.md`
+- `docs/cerb/audio-management/spec.md`
+- `docs/cerb/audio-management/interface.md`
+- `docs/cerb/tingwu-pipeline/spec.md`
+- `docs/cerb/tingwu-pipeline/interface.md`
 - `docs/plans/tracker.md`
 - `docs/plans/god-tracker.md`
 - `docs/specs/code-structure-contract.md`
+
+Historical deprecated context at the time:
+
+- `docs/cerb/sim-audio-chat/spec.md`
+- `docs/cerb/sim-audio-chat/interface.md`
 
 Wave 3A must preserve the accepted browse-vs-select mode split, artifact display flow, and current drawer-to-chat handoff behavior.
 
@@ -113,6 +123,6 @@ Wave 3A is complete only when:
 - `docs/plans/tracker.md`
 - `docs/specs/code-structure-contract.md`
 - `docs/core-flow/sim-audio-artifact-chat-flow.md`
-- `docs/cerb/sim-audio-chat/spec.md`
-- `docs/cerb/sim-audio-chat/interface.md`
+- `docs/cerb/audio-management/spec.md`
+- `docs/cerb/audio-management/interface.md`
 - `docs/reports/tests/L1-20260324-god-wave3a-sim-audio-drawer.md`

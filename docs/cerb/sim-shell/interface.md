@@ -1,8 +1,20 @@
-# SIM Shell Interface
+# SIM Shell Interface (Historical Redirect)
 
-> **Blackbox contract** - For the standalone SIM app entry and adjacent prototype-only callers.
->
-> **Unification Note (2026-03-31)**: despite the legacy `SIM` name, this interface should now be read as the current best available base-runtime shell contract for non-Mono work. Mono may later add deeper capabilities behind this shell without creating a second shell truth.
+> **Blackbox contract** - Historical SIM shell contract retained in place for campaign memory.
+> **Status**: Historical redirect
+> **Current Reading Priority**: Historical context only; not current source of truth.
+> **Current Active Truth**:
+> - `docs/specs/prism-ui-ux-contract.md`
+> - `docs/cerb-ui/home-shell/spec.md`
+> - `docs/cerb-ui/dynamic-island/spec.md`
+> - `docs/cerb/interface-map.md`
+> - `docs/specs/base-runtime-unification.md`
+> - `docs/core-flow/sim-shell-routing-flow.md`
+
+Historical note:
+
+- the remainder of this file is a frozen snapshot of the older SIM-shell interface framing
+- it must not be used as active shell fallback ownership
 
 ---
 

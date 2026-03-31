@@ -30,7 +30,7 @@ This file is allowed to be ahead of the codebase.
 
 | Layer | Responsibility | Must Eventually Reflect This Core Flow |
 |------|----------------|-----------------------------------------|
-| **Spec** | How the behavior is encoded | `docs/specs/prism-ui-ux-contract.md`, `docs/specs/base-runtime-unification.md`, `docs/specs/flows/OnboardingFlow.md`, `docs/cerb/interface-map.md`, and `docs/cerb-ui/dynamic-island/spec.md` |
+| **Spec** | How the behavior is encoded | `docs/specs/prism-ui-ux-contract.md`, `docs/specs/base-runtime-unification.md`, `docs/cerb-ui/home-shell/spec.md`, `docs/specs/flows/OnboardingFlow.md`, `docs/cerb/interface-map.md`, and `docs/cerb-ui/dynamic-island/spec.md` |
 | **Code** | Delivered behavior | `SimMainActivity`, `SimShell`, prototype-only shell/viewmodel/DI composition |
 | **PU Test** | Behavioral validation | future SIM shell routing tests, drawer transition tests, isolation tests |
 

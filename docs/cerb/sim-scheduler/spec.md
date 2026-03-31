@@ -1,35 +1,40 @@
-# SIM Scheduler Spec
+# SIM Scheduler Spec (Historical Redirect)
 
-> **Scope**: Scheduler slice for the SIM standalone prototype
-> **Status**: SPEC_ONLY
-> **Behavioral Authority Above This Doc**:
+> **Scope**: Historical SIM scheduler shard retained in place for campaign memory.
+> **Status**: Historical redirect
+> **Current Reading Priority**: Historical context only; not current source of truth.
+> **Current Active Truth**:
 > - `docs/core-flow/sim-scheduler-path-a-flow.md`
 > - `docs/core-flow/scheduler-fast-track-flow.md`
+> - `docs/cerb/scheduler-path-a-spine/spec.md`
+> - `docs/cerb/scheduler-path-a-uni-a/spec.md`
+> - `docs/cerb/scheduler-path-a-uni-b/spec.md`
+> - `docs/cerb/scheduler-path-a-uni-c/spec.md`
+> - `docs/cerb/scheduler-path-a-uni-d/spec.md`
+> - `docs/cerb-ui/scheduler/contract.md`
+> - `docs/cerb/interface-map.md`
 > - `docs/specs/base-runtime-unification.md`
-> **Related Product Doc**: `docs/to-cerb/sim-standalone-prototype/concept.md`
-> **Audit Evidence**: `docs/reports/20260319-sim-standalone-code-audit.md`
-> **Related Audit**: `docs/reports/20260331-base-runtime-unification-drift-audit.md`
+> **Historical Origin Context**:
+> - `docs/to-cerb/sim-standalone-prototype/concept.md`
+> - `docs/reports/20260319-sim-standalone-code-audit.md`
+> - `docs/reports/20260331-base-runtime-unification-drift-audit.md`
 
 ---
 
-## Unification Note (2026-03-31)
+## Historical Redirect Note
 
-Despite the legacy `SIM` name, this doc should now be read as the current best available **base-runtime scheduler baseline** for non-Mono work.
+This shard is no longer allowed to own active scheduler truth.
 
-Interpretation rule:
-
-- keep using this doc for shared Path A scheduler direction while legacy full-side runtime owners catch up
-- do not treat the `SIM` label as permission to fork non-Mono scheduler truth
-- Mono begins at the deeper memory/entity/Path-B/plugin architecture layer, not at every short-lived follow-up context behavior
-- keep the real SIM-local scheduler/runtime boundary where it still exists, but do not read that boundary as a second non-Mono scheduler truth
+Use the current active docs above for implementation and review.
+The remainder of this file is retained only as a historical snapshot of the older SIM-scheduler framing.
 
 ---
 
-## 1. Purpose
+## 1. Historical Purpose At The Time
 
 `SIM Scheduler` is the scheduler implementation contract for the standalone simplified app.
 
-For non-Mono scheduler planning truth, this shard now acts as the current base-runtime scheduler baseline while legacy full-side runtime owners catch up.
+This historical snapshot comes from the period when the shard was still being used as an interim scheduler baseline before active truth moved into shared Path A docs.
 
 Its job is to preserve the delivered Prism scheduler feel while narrowing execution to the requested minimum:
 

@@ -85,6 +85,11 @@ Interpret this hierarchy strictly:
 - Search before assuming a class, flow, state, or interface exists.
 - Read files before editing them.
 - Prefer concrete verification over “looks right”.
+- For Android runtime debugging, `adb logcat` is mandatory evidence, not an optional extra.
+- Treat screenshots, user recollection, and transient UI text as supporting evidence only; they are not root-cause proof by themselves.
+- If the bug involves UI behavior, lifecycle, background work, BLE/connectivity, notifications, alarms, networking, or device/emulator integration, start by capturing the relevant `adb logcat` output before claiming a diagnosis.
+- If current logs are insufficient, add targeted tags/logging and rerun the repro instead of guessing.
+- If adb is genuinely unavailable, say so explicitly and lower confidence rather than pretending the diagnosis is proven.
 
 ### Verification Standard
 
@@ -92,6 +97,9 @@ Interpret this hierarchy strictly:
 - Prefer full affected-module verification over a single narrow happy-path test.
 - Include negative-path thinking: empty input, invalid state, missing data, offline/failure paths where relevant.
 - If you cannot run verification, say so explicitly.
+- For compiler/build failures, compiler output is the primary evidence.
+- For pure unit/instrumentation test failures, test output is the primary evidence.
+- For Android runtime behavior, `adb logcat` remains mandatory even when screenshots or test failures also exist.
 
 ### Simplicity Standard
 

@@ -14,7 +14,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -31,8 +30,7 @@ import kotlinx.coroutines.withTimeout
 class OnboardingInteractionViewModel @Inject constructor(
     private val speechRecognizer: DeviceSpeechRecognizer,
     private val interactionService: OnboardingInteractionService,
-    private val userProfileRepository: UserProfileRepository,
-    private val runtimePolicy: OnboardingInteractionRuntimePolicy
+    private val userProfileRepository: UserProfileRepository
 ) : ViewModel() {
 
     private var consultationRequestId = 0L
@@ -147,10 +145,9 @@ class OnboardingInteractionViewModel @Inject constructor(
                     )
                 }
 
-                is TranscriptResolution.Fallback -> {
+                is TranscriptResolution.Failure -> {
                     handleConsultationFailure(
                         requestId = requestId,
-                        delayMillis = resolution.delayMillis,
                         cause = resolution.cause
                     )
                 }
@@ -242,10 +239,9 @@ class OnboardingInteractionViewModel @Inject constructor(
                     )
                 }
 
-                is TranscriptResolution.Fallback -> {
+                is TranscriptResolution.Failure -> {
                     handleProfileFailure(
                         requestId = requestId,
-                        delayMillis = resolution.delayMillis,
                         cause = resolution.cause
                     )
                 }
@@ -336,8 +332,9 @@ class OnboardingInteractionViewModel @Inject constructor(
         if (normalized.length < MIN_TRANSCRIPT_LENGTH) {
             handleConsultationFailure(
                 requestId = requestId,
-                delayMillis = FALLBACK_DWELL_MS,
-                cause = FallbackCause.TRANSCRIPT_TOO_SHORT
+                transcript = normalized,
+                transcriptOrigin = transcriptOrigin,
+                cause = FailureCause.TRANSCRIPT_TOO_SHORT
             )
             return
         }
@@ -345,18 +342,18 @@ class OnboardingInteractionViewModel @Inject constructor(
             it.copy(processingPhase = OnboardingProcessingPhase.BUILDING_CONSULTATION_REPLY)
         }
         val round = _consultationState.value.completedRounds + 1
-        var fallbackCause = FallbackCause.LLM_FAILURE
+        var failureCause = FailureCause.LLM_FAILURE
         val result = try {
             withTimeout(CONSULTATION_LLM_DEADLINE_MS) {
                 interactionService.generateConsultationReply(normalized, round)
             }
         } catch (_: TimeoutCancellationException) {
-            fallbackCause = FallbackCause.LLM_TIMEOUT
+            failureCause = FailureCause.LLM_TIMEOUT
             OnboardingConsultationServiceResult.Failure("当前无法继续这段咨询，请稍后重试。")
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
-            fallbackCause = FallbackCause.LLM_EXCEPTION
+            failureCause = FailureCause.LLM_EXCEPTION
             OnboardingConsultationServiceResult.Failure("当前无法继续这段咨询，请稍后重试。")
         }
         when (result) {
@@ -391,10 +388,9 @@ class OnboardingInteractionViewModel @Inject constructor(
             is OnboardingConsultationServiceResult.Failure -> {
                 handleConsultationFailure(
                     requestId = requestId,
-                    delayMillis = 0L,
                     transcript = normalized,
                     transcriptOrigin = transcriptOrigin,
-                    cause = fallbackCause
+                    cause = failureCause
                 )
             }
         }
@@ -409,26 +405,27 @@ class OnboardingInteractionViewModel @Inject constructor(
         if (normalized.length < MIN_TRANSCRIPT_LENGTH) {
             handleProfileFailure(
                 requestId = requestId,
-                delayMillis = FALLBACK_DWELL_MS,
-                cause = FallbackCause.TRANSCRIPT_TOO_SHORT
+                transcript = normalized,
+                transcriptOrigin = transcriptOrigin,
+                cause = FailureCause.TRANSCRIPT_TOO_SHORT
             )
             return
         }
         updateProfileStateIfCurrent(requestId) {
             it.copy(processingPhase = OnboardingProcessingPhase.BUILDING_PROFILE_RESULT)
         }
-        var fallbackCause = FallbackCause.LLM_FAILURE
+        var failureCause = FailureCause.LLM_FAILURE
         val result = try {
             withTimeout(PROFILE_LLM_DEADLINE_MS) {
                 interactionService.extractProfile(normalized)
             }
         } catch (_: TimeoutCancellationException) {
-            fallbackCause = FallbackCause.LLM_TIMEOUT
+            failureCause = FailureCause.LLM_TIMEOUT
             OnboardingProfileExtractionServiceResult.Failure("当前无法提取资料，请稍后重试。")
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
-            fallbackCause = FallbackCause.LLM_EXCEPTION
+            failureCause = FailureCause.LLM_EXCEPTION
             OnboardingProfileExtractionServiceResult.Failure("当前无法提取资料，请稍后重试。")
         }
         when (result) {
@@ -461,124 +458,39 @@ class OnboardingInteractionViewModel @Inject constructor(
             is OnboardingProfileExtractionServiceResult.Failure -> {
                 handleProfileFailure(
                     requestId = requestId,
-                    delayMillis = 0L,
                     transcript = normalized,
                     transcriptOrigin = transcriptOrigin,
-                    cause = fallbackCause
+                    cause = failureCause
                 )
             }
         }
     }
 
-    private suspend fun handleConsultationFailure(
+    private fun handleConsultationFailure(
         requestId: Long,
-        delayMillis: Long,
         transcript: String? = null,
-        transcriptOrigin: OnboardingTranscriptOrigin = OnboardingTranscriptOrigin.DETERMINISTIC_FALLBACK,
-        cause: FallbackCause
+        transcriptOrigin: OnboardingTranscriptOrigin? = null,
+        cause: FailureCause
     ) {
-        if (runtimePolicy.allowDeterministicFallback) {
-            runConsultationFallback(
-                requestId = requestId,
-                delayMillis = delayMillis,
-                transcript = transcript,
-                transcriptOrigin = transcriptOrigin,
-                cause = cause
-            )
-        } else {
-            surfaceConsultationFailure(
-                requestId = requestId,
-                transcript = transcript,
-                transcriptOrigin = transcript.takeIf { !it.isNullOrBlank() }?.let { transcriptOrigin },
-                cause = cause
-            )
-        }
-    }
-
-    private suspend fun handleProfileFailure(
-        requestId: Long,
-        delayMillis: Long,
-        transcript: String? = null,
-        transcriptOrigin: OnboardingTranscriptOrigin = OnboardingTranscriptOrigin.DETERMINISTIC_FALLBACK,
-        cause: FallbackCause
-    ) {
-        if (runtimePolicy.allowDeterministicFallback) {
-            runProfileFallback(
-                requestId = requestId,
-                delayMillis = delayMillis,
-                transcript = transcript,
-                transcriptOrigin = transcriptOrigin,
-                cause = cause
-            )
-        } else {
-            surfaceProfileFailure(
-                requestId = requestId,
-                transcript = transcript,
-                transcriptOrigin = transcript.takeIf { !it.isNullOrBlank() }?.let { transcriptOrigin },
-                cause = cause
-            )
-        }
-    }
-
-    private suspend fun runConsultationFallback(
-        requestId: Long,
-        delayMillis: Long,
-        transcript: String? = null,
-        transcriptOrigin: OnboardingTranscriptOrigin = OnboardingTranscriptOrigin.DETERMINISTIC_FALLBACK,
-        cause: FallbackCause
-    ) {
-        activeSpeechLane = null
-        logFallbackEntered(
-            lane = ProcessingLane.CONSULTATION,
+        surfaceConsultationFailure(
             requestId = requestId,
-            delayMillis = delayMillis,
+            transcript = transcript,
+            transcriptOrigin = transcriptOrigin,
             cause = cause
         )
-        updateConsultationStateIfCurrent(requestId) {
-            it.copy(
-                isProcessing = true,
-                liveTranscript = "",
-                processingPhase = OnboardingProcessingPhase.DETERMINISTIC_FALLBACK,
-                guidanceMessage = null,
-                errorMessage = null
-            )
-        }
-        if (delayMillis > 0L) {
-            delay(delayMillis)
-        }
-        if (!isCurrentConsultationRequest(requestId)) return
-        val round = _consultationState.value.completedRounds + 1
-        val resolvedTranscript = transcript?.trim()?.takeIf { it.isNotBlank() } ?: consultationFallbackTranscript(round)
-        val resolvedTranscriptOrigin = if (transcript.isNullOrBlank()) {
-            OnboardingTranscriptOrigin.DETERMINISTIC_FALLBACK
-        } else {
-            transcriptOrigin
-        }
-        val reply = buildDeterministicConsultationReply(resolvedTranscript, round)
-            ?: consultationFallbackReply(round)
-        updateConsultationStateIfCurrent(requestId) { current ->
-            current.copy(
-                isProcessing = false,
-                liveTranscript = "",
-                messages = current.messages + listOf(
-                    OnboardingInteractionMessage(OnboardingMessageRole.USER, resolvedTranscript),
-                    OnboardingInteractionMessage(OnboardingMessageRole.AI, reply)
-                ),
-                completedRounds = round,
-                errorMessage = null,
-                guidanceMessage = null,
-                micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
-                processingPhase = OnboardingProcessingPhase.NONE,
-                lastTranscriptOrigin = resolvedTranscriptOrigin,
-                lastGenerationOrigin = OnboardingGenerationOrigin.DETERMINISTIC_FALLBACK
-            )
-        }
-        logProcessingCleared(
-            lane = ProcessingLane.CONSULTATION,
+    }
+
+    private fun handleProfileFailure(
+        requestId: Long,
+        transcript: String? = null,
+        transcriptOrigin: OnboardingTranscriptOrigin? = null,
+        cause: FailureCause
+    ) {
+        surfaceProfileFailure(
             requestId = requestId,
-            outcome = "deterministic_fallback",
-            transcriptOrigin = resolvedTranscriptOrigin,
-            generationOrigin = OnboardingGenerationOrigin.DETERMINISTIC_FALLBACK
+            transcript = transcript,
+            transcriptOrigin = transcriptOrigin,
+            cause = cause
         )
     }
 
@@ -586,15 +498,9 @@ class OnboardingInteractionViewModel @Inject constructor(
         requestId: Long,
         transcript: String?,
         transcriptOrigin: OnboardingTranscriptOrigin?,
-        cause: FallbackCause
+        cause: FailureCause
     ) {
         activeSpeechLane = null
-        logFallbackSuppressed(
-            lane = ProcessingLane.CONSULTATION,
-            requestId = requestId,
-            cause = cause,
-            transcriptAvailable = !transcript.isNullOrBlank()
-        )
         val resolvedTranscript = transcript?.trim()?.takeIf { it.isNotBlank() }
         updateConsultationStateIfCurrent(requestId) { current ->
             current.copy(
@@ -624,76 +530,13 @@ class OnboardingInteractionViewModel @Inject constructor(
         )
     }
 
-    private suspend fun runProfileFallback(
-        requestId: Long,
-        delayMillis: Long,
-        transcript: String? = null,
-        transcriptOrigin: OnboardingTranscriptOrigin = OnboardingTranscriptOrigin.DETERMINISTIC_FALLBACK,
-        cause: FallbackCause
-    ) {
-        activeSpeechLane = null
-        logFallbackEntered(
-            lane = ProcessingLane.PROFILE,
-            requestId = requestId,
-            delayMillis = delayMillis,
-            cause = cause
-        )
-        updateProfileStateIfCurrent(requestId) {
-            it.copy(
-                isProcessing = true,
-                liveTranscript = "",
-                processingPhase = OnboardingProcessingPhase.DETERMINISTIC_FALLBACK,
-                guidanceMessage = null,
-                errorMessage = null
-            )
-        }
-        if (delayMillis > 0L) {
-            delay(delayMillis)
-        }
-        if (!isCurrentProfileRequest(requestId)) return
-        val resolvedTranscript = transcript?.trim()?.takeIf { it.isNotBlank() } ?: PROFILE_FALLBACK_TRANSCRIPT
-        val resolvedTranscriptOrigin = if (transcript.isNullOrBlank()) {
-            OnboardingTranscriptOrigin.DETERMINISTIC_FALLBACK
-        } else {
-            transcriptOrigin
-        }
-        val deterministic = buildDeterministicProfileResult(resolvedTranscript)
-        updateProfileStateIfCurrent(requestId) {
-            it.copy(
-                isProcessing = false,
-                liveTranscript = "",
-                transcript = resolvedTranscript,
-                acknowledgement = deterministic?.acknowledgement ?: PROFILE_FALLBACK_ACKNOWLEDGEMENT,
-                draft = deterministic?.draft ?: PROFILE_FALLBACK_DRAFT,
-                errorMessage = null,
-                micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
-                processingPhase = OnboardingProcessingPhase.NONE,
-                transcriptOrigin = resolvedTranscriptOrigin,
-                generationOrigin = OnboardingGenerationOrigin.DETERMINISTIC_FALLBACK
-            )
-        }
-        logProcessingCleared(
-            lane = ProcessingLane.PROFILE,
-            requestId = requestId,
-            outcome = "deterministic_fallback",
-            transcriptOrigin = resolvedTranscriptOrigin,
-            generationOrigin = OnboardingGenerationOrigin.DETERMINISTIC_FALLBACK
-        )
-    }
-
     private fun surfaceProfileFailure(
         requestId: Long,
         transcript: String?,
         transcriptOrigin: OnboardingTranscriptOrigin?,
-        cause: FallbackCause
+        cause: FailureCause
     ) {
         activeSpeechLane = null
-        logFallbackSuppressed(
-            lane = ProcessingLane.PROFILE,
-            requestId = requestId,
-            cause = cause,
-            transcriptAvailable = !transcript.isNullOrBlank()
-        )
         updateProfileStateIfCurrent(requestId) {
             it.copy(
                 isProcessing = false,
@@ -735,10 +578,7 @@ class OnboardingInteractionViewModel @Inject constructor(
             return currentResolutionOrNull(
                 requestId,
                 lane,
-                TranscriptResolution.Fallback(
-                    delayMillis = 0L,
-                    cause = FallbackCause.RECOGNIZER_TIMEOUT
-                )
+                TranscriptResolution.Failure(cause = FailureCause.RECOGNIZER_TIMEOUT)
             )
         } catch (cancelled: CancellationException) {
             throw cancelled
@@ -752,10 +592,7 @@ class OnboardingInteractionViewModel @Inject constructor(
             return currentResolutionOrNull(
                 requestId,
                 lane,
-                TranscriptResolution.Fallback(
-                    delayMillis = FALLBACK_DWELL_MS,
-                    cause = FallbackCause.RECOGNIZER_EXCEPTION
-                )
+                TranscriptResolution.Failure(cause = FailureCause.RECOGNIZER_EXCEPTION)
             )
         }
 
@@ -776,10 +613,7 @@ class OnboardingInteractionViewModel @Inject constructor(
                     currentResolutionOrNull(
                         requestId,
                         lane,
-                        TranscriptResolution.Fallback(
-                            delayMillis = FALLBACK_DWELL_MS,
-                            cause = FallbackCause.TRANSCRIPT_TOO_SHORT
-                        )
+                        TranscriptResolution.Failure(cause = FailureCause.TRANSCRIPT_TOO_SHORT)
                     )
                 } else {
                     currentResolutionOrNull(
@@ -798,19 +632,13 @@ class OnboardingInteractionViewModel @Inject constructor(
                     currentResolutionOrNull(
                         requestId = requestId,
                         lane = lane,
-                        resolution = TranscriptResolution.Fallback(
-                            delayMillis = 0L,
-                            cause = FallbackCause.RECOGNIZER_CANCELLED
-                        )
+                        resolution = TranscriptResolution.Failure(cause = FailureCause.RECOGNIZER_CANCELLED)
                     )
                 } else {
                     currentResolutionOrNull(
                         requestId = requestId,
                         lane = lane,
-                        resolution = TranscriptResolution.Fallback(
-                            delayMillis = FALLBACK_DWELL_MS,
-                            cause = FallbackCause.RECOGNIZER_FAILURE
-                        )
+                        resolution = TranscriptResolution.Failure(cause = FailureCause.RECOGNIZER_FAILURE)
                     )
                 }
             }
@@ -906,10 +734,7 @@ class OnboardingInteractionViewModel @Inject constructor(
             val origin: OnboardingTranscriptOrigin
         ) : TranscriptResolution
 
-        data class Fallback(
-            val delayMillis: Long,
-            val cause: FallbackCause
-        ) : TranscriptResolution
+        data class Failure(val cause: FailureCause) : TranscriptResolution
     }
 
     private enum class ProcessingLane {
@@ -917,7 +742,7 @@ class OnboardingInteractionViewModel @Inject constructor(
         PROFILE
     }
 
-    private enum class FallbackCause {
+    private enum class FailureCause {
         RECOGNIZER_TIMEOUT,
         RECOGNIZER_EXCEPTION,
         RECOGNIZER_FAILURE,
@@ -934,8 +759,112 @@ class OnboardingInteractionViewModel @Inject constructor(
             DeviceSpeechRecognitionEvent.CaptureLimitReached -> handleCaptureLimitReached()
             is DeviceSpeechRecognitionEvent.PartialTranscript -> updateLiveTranscript(event.text)
             is DeviceSpeechRecognitionEvent.FinalTranscript -> updateLiveTranscript(event.text)
-            is DeviceSpeechRecognitionEvent.Failure -> Unit
+            is DeviceSpeechRecognitionEvent.Failure -> handleRealtimeFailure(event)
             DeviceSpeechRecognitionEvent.Cancelled -> {
+                handleRealtimeCancelled()
+            }
+        }
+    }
+
+    private fun handleRealtimeFailure(event: DeviceSpeechRecognitionEvent.Failure) {
+        when (activeSpeechLane) {
+            ProcessingLane.CONSULTATION -> {
+                val state = _consultationState.value
+                if (state.isRecording && !state.isProcessing) {
+                    activeSpeechLane = null
+                    _consultationState.value = state.copy(
+                        isRecording = false,
+                        isProcessing = false,
+                        liveTranscript = "",
+                        errorMessage = consultationFailureMessage(event.reason),
+                        guidanceMessage = null,
+                        micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                        processingPhase = OnboardingProcessingPhase.NONE
+                    )
+                    logRealtimeFailureWhileRecording(
+                        lane = ProcessingLane.CONSULTATION,
+                        reason = event.reason,
+                        message = event.message
+                    )
+                }
+            }
+
+            ProcessingLane.PROFILE -> {
+                val state = _profileState.value
+                if (state.isRecording && !state.isProcessing) {
+                    activeSpeechLane = null
+                    _profileState.value = state.copy(
+                        isRecording = false,
+                        isProcessing = false,
+                        liveTranscript = "",
+                        errorMessage = profileFailureMessage(event.reason),
+                        guidanceMessage = null,
+                        micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                        processingPhase = OnboardingProcessingPhase.NONE
+                    )
+                    logRealtimeFailureWhileRecording(
+                        lane = ProcessingLane.PROFILE,
+                        reason = event.reason,
+                        message = event.message
+                    )
+                }
+            }
+
+            null -> Unit
+        }
+    }
+
+    private fun handleRealtimeCancelled() {
+        when (activeSpeechLane) {
+            ProcessingLane.CONSULTATION -> {
+                val state = _consultationState.value
+                if (state.isRecording && !state.isProcessing) {
+                    activeSpeechLane = null
+                    _consultationState.value = state.copy(
+                        isRecording = false,
+                        isProcessing = false,
+                        liveTranscript = "",
+                        errorMessage = consultationFailureMessage(DeviceSpeechFailureReason.CANCELLED),
+                        guidanceMessage = null,
+                        micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                        processingPhase = OnboardingProcessingPhase.NONE
+                    )
+                    logRealtimeFailureWhileRecording(
+                        lane = ProcessingLane.CONSULTATION,
+                        reason = DeviceSpeechFailureReason.CANCELLED,
+                        message = "realtime_cancelled_while_recording"
+                    )
+                } else {
+                    activeSpeechLane = null
+                    clearLiveTranscript()
+                }
+            }
+
+            ProcessingLane.PROFILE -> {
+                val state = _profileState.value
+                if (state.isRecording && !state.isProcessing) {
+                    activeSpeechLane = null
+                    _profileState.value = state.copy(
+                        isRecording = false,
+                        isProcessing = false,
+                        liveTranscript = "",
+                        errorMessage = profileFailureMessage(DeviceSpeechFailureReason.CANCELLED),
+                        guidanceMessage = null,
+                        micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                        processingPhase = OnboardingProcessingPhase.NONE
+                    )
+                    logRealtimeFailureWhileRecording(
+                        lane = ProcessingLane.PROFILE,
+                        reason = DeviceSpeechFailureReason.CANCELLED,
+                        message = "realtime_cancelled_while_recording"
+                    )
+                } else {
+                    activeSpeechLane = null
+                    clearLiveTranscript()
+                }
+            }
+
+            null -> {
                 activeSpeechLane = null
                 clearLiveTranscript()
             }
@@ -1005,27 +934,14 @@ class OnboardingInteractionViewModel @Inject constructor(
         )
     }
 
-    private fun logFallbackEntered(
+    private fun logRealtimeFailureWhileRecording(
         lane: ProcessingLane,
-        requestId: Long,
-        delayMillis: Long,
-        cause: FallbackCause
-    ) {
-        Log.d(
-            TAG,
-            "fallback_entered host=${currentHost.logName} lane=${lane.logName} requestId=$requestId cause=${cause.logName} delayMs=$delayMillis profile=${lane.profileName} model=${lane.modelId}"
-        )
-    }
-
-    private fun logFallbackSuppressed(
-        lane: ProcessingLane,
-        requestId: Long,
-        cause: FallbackCause,
-        transcriptAvailable: Boolean
+        reason: DeviceSpeechFailureReason,
+        message: String
     ) {
         Log.w(
             TAG,
-            "fallback_suppressed host=${currentHost.logName} lane=${lane.logName} requestId=$requestId cause=${cause.logName} transcriptAvailable=$transcriptAvailable profile=${lane.profileName} model=${lane.modelId}"
+            "recording_failed host=${currentHost.logName} lane=${lane.logName} reason=${reason.name} message=$message profile=${lane.profileName} model=${lane.modelId}"
         )
     }
 
@@ -1045,7 +961,7 @@ class OnboardingInteractionViewModel @Inject constructor(
     private fun logProcessingFailed(
         lane: ProcessingLane,
         requestId: Long,
-        cause: FallbackCause,
+        cause: FailureCause,
         transcriptOrigin: OnboardingTranscriptOrigin?
     ) {
         Log.w(
@@ -1057,70 +973,71 @@ class OnboardingInteractionViewModel @Inject constructor(
     private companion object {
         private const val TAG = "OnboardingInteraction"
         private const val MIN_TRANSCRIPT_LENGTH = 4
-        private const val DEVICE_RECOGNITION_TIMEOUT_MS = 1_200L
+        private const val DEVICE_RECOGNITION_TIMEOUT_MS = 5_000L
         private const val CONSULTATION_LLM_DEADLINE_MS = 2_500L
         private const val PROFILE_LLM_DEADLINE_MS = 3_500L
-        private const val FALLBACK_DWELL_MS = 1_200L
         private const val MIC_PERMISSION_GRANTED_GUIDANCE = "麦克风已开启，请重新按住说话"
 
-        private const val PROFILE_FALLBACK_TRANSCRIPT =
-            "我是李经理，在科技行业做销售经理三年了，平时主要用微信和电话跟客户沟通。"
-        private const val PROFILE_FALLBACK_ACKNOWLEDGEMENT =
-            "谢谢您的分享，我先为您整理了一份基础档案。"
-        private val PROFILE_FALLBACK_DRAFT = OnboardingProfileDraft(
-            displayName = "李经理",
-            role = "销售经理",
-            industry = "科技",
-            experienceYears = "3年",
-            communicationPlatform = "微信"
-        )
-
-        private fun consultationFallbackTranscript(round: Int): String {
-            return when (round) {
-                1 -> "我想试试怎么更自然地开始和客户沟通。"
-                else -> "如果客户一直比较冷淡，我接下来该怎么推进？"
-            }
-        }
-
-        private fun consultationFallbackReply(round: Int): String {
-            return when (round) {
-                1 -> "先别急着讲方案，先用一个开放问题把客户最在意的事情聊出来。"
-                else -> "先确认对方当前优先级，再给一个很小的下一步，让对话继续往前走。"
-            }
-        }
-
-        private fun consultationFailureMessage(cause: FallbackCause): String {
+        private fun consultationFailureMessage(cause: FailureCause): String {
             return when (cause) {
-                FallbackCause.LLM_TIMEOUT,
-                FallbackCause.LLM_FAILURE,
-                FallbackCause.LLM_EXCEPTION ->
+                FailureCause.LLM_TIMEOUT,
+                FailureCause.LLM_FAILURE,
+                FailureCause.LLM_EXCEPTION ->
                     "当前 AI 咨询暂时没有返回，请再试一次。"
 
-                FallbackCause.TRANSCRIPT_TOO_SHORT ->
+                FailureCause.TRANSCRIPT_TOO_SHORT ->
                     "这次语音太短了，请再按住多说一点。"
 
-                FallbackCause.RECOGNIZER_TIMEOUT,
-                FallbackCause.RECOGNIZER_EXCEPTION,
-                FallbackCause.RECOGNIZER_FAILURE,
-                FallbackCause.RECOGNIZER_CANCELLED ->
+                FailureCause.RECOGNIZER_TIMEOUT,
+                FailureCause.RECOGNIZER_EXCEPTION,
+                FailureCause.RECOGNIZER_FAILURE,
+                FailureCause.RECOGNIZER_CANCELLED ->
                     "这次语音识别没有完成，请再试一次。"
             }
         }
 
-        private fun profileFailureMessage(cause: FallbackCause): String {
-            return when (cause) {
-                FallbackCause.LLM_TIMEOUT,
-                FallbackCause.LLM_FAILURE,
-                FallbackCause.LLM_EXCEPTION ->
-                    "当前 AI 资料提取暂时没有返回，请再试一次。"
-
-                FallbackCause.TRANSCRIPT_TOO_SHORT ->
+        private fun consultationFailureMessage(reason: DeviceSpeechFailureReason): String {
+            return when (reason) {
+                DeviceSpeechFailureReason.NO_MATCH ->
                     "这次语音太短了，请再按住多说一点。"
 
-                FallbackCause.RECOGNIZER_TIMEOUT,
-                FallbackCause.RECOGNIZER_EXCEPTION,
-                FallbackCause.RECOGNIZER_FAILURE,
-                FallbackCause.RECOGNIZER_CANCELLED ->
+                DeviceSpeechFailureReason.UNAVAILABLE ->
+                    "当前语音识别暂不可用，请稍后重试。"
+
+                DeviceSpeechFailureReason.ERROR,
+                DeviceSpeechFailureReason.CANCELLED ->
+                    "这次语音识别没有完成，请再试一次。"
+            }
+        }
+
+        private fun profileFailureMessage(cause: FailureCause): String {
+            return when (cause) {
+                FailureCause.LLM_TIMEOUT,
+                FailureCause.LLM_FAILURE,
+                FailureCause.LLM_EXCEPTION ->
+                    "当前 AI 资料提取暂时没有返回，请再试一次。"
+
+                FailureCause.TRANSCRIPT_TOO_SHORT ->
+                    "这次语音太短了，请再按住多说一点。"
+
+                FailureCause.RECOGNIZER_TIMEOUT,
+                FailureCause.RECOGNIZER_EXCEPTION,
+                FailureCause.RECOGNIZER_FAILURE,
+                FailureCause.RECOGNIZER_CANCELLED ->
+                    "这次语音识别没有完成，请再试一次。"
+            }
+        }
+
+        private fun profileFailureMessage(reason: DeviceSpeechFailureReason): String {
+            return when (reason) {
+                DeviceSpeechFailureReason.NO_MATCH ->
+                    "这次语音太短了，请再按住多说一点。"
+
+                DeviceSpeechFailureReason.UNAVAILABLE ->
+                    "当前语音识别暂不可用，请稍后重试。"
+
+                DeviceSpeechFailureReason.ERROR,
+                DeviceSpeechFailureReason.CANCELLED ->
                     "这次语音识别没有完成，请再试一次。"
             }
         }
@@ -1147,7 +1064,6 @@ class OnboardingInteractionViewModel @Inject constructor(
     private val OnboardingTranscriptOrigin.logName: String
         get() = when (this) {
             OnboardingTranscriptOrigin.DEVICE_SPEECH -> "device_speech"
-            OnboardingTranscriptOrigin.DETERMINISTIC_FALLBACK -> "deterministic_fallback"
         }
 
     private val OnboardingTranscriptOrigin?.logNameOrNone: String
@@ -1156,19 +1072,18 @@ class OnboardingInteractionViewModel @Inject constructor(
     private val OnboardingGenerationOrigin.logName: String
         get() = when (this) {
             OnboardingGenerationOrigin.LLM -> "llm"
-            OnboardingGenerationOrigin.DETERMINISTIC_FALLBACK -> "deterministic_fallback"
         }
 
-    private val FallbackCause.logName: String
+    private val FailureCause.logName: String
         get() = when (this) {
-            FallbackCause.RECOGNIZER_TIMEOUT -> "recognizer_timeout"
-            FallbackCause.RECOGNIZER_EXCEPTION -> "recognizer_exception"
-            FallbackCause.RECOGNIZER_FAILURE -> "recognizer_failure"
-            FallbackCause.RECOGNIZER_CANCELLED -> "recognizer_cancelled"
-            FallbackCause.TRANSCRIPT_TOO_SHORT -> "transcript_too_short"
-            FallbackCause.LLM_TIMEOUT -> "llm_timeout"
-            FallbackCause.LLM_FAILURE -> "llm_failure"
-            FallbackCause.LLM_EXCEPTION -> "llm_exception"
+            FailureCause.RECOGNIZER_TIMEOUT -> "recognizer_timeout"
+            FailureCause.RECOGNIZER_EXCEPTION -> "recognizer_exception"
+            FailureCause.RECOGNIZER_FAILURE -> "recognizer_failure"
+            FailureCause.RECOGNIZER_CANCELLED -> "recognizer_cancelled"
+            FailureCause.TRANSCRIPT_TOO_SHORT -> "transcript_too_short"
+            FailureCause.LLM_TIMEOUT -> "llm_timeout"
+            FailureCause.LLM_FAILURE -> "llm_failure"
+            FailureCause.LLM_EXCEPTION -> "llm_exception"
         }
 
     private val OnboardingHost?.logName: String

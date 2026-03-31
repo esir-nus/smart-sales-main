@@ -53,6 +53,12 @@ User taps → [Component] → [State change] → [UI update] → User sees
 If spec is unclear → **ASK** before assuming.
 If spec seems wrong → **FLAG** and propose change.
 
+### 2.4 Small Slice Simplicity Law
+
+- for small bounded features, implement the smallest state machine that fulfills the core flow
+- do not add speculative fallback branches, extra host/runtime splits, or hidden “safety” behavior unless the spec or reproduced evidence requires them
+- every added safeguard should point to either a literal spec rule or a reproduced failure path
+
 **Checkpoint**: E2E flow mapped, Trinity layers identified.
 
 ---
@@ -162,4 +168,5 @@ view_file docs/plans/tracker.md
 | Skip E2E flow mapping | Sketch flow before coding |
 | Import legacy code | Rewrite from Prism spec |
 | Skip audits "to save time" | Run all 3 audit gates |
+| Invent speculative fallback/safety branches | Prove the need first, then add the smallest guard |
 | Forget to update tracker | Update tracker as final step |

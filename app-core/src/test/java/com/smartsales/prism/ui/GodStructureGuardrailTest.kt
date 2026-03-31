@@ -31,6 +31,8 @@ class GodStructureGuardrailTest {
             GuardrailExpectation(budget = 650, status = "Accepted"),
         "app-core/src/main/java/com/smartsales/prism/ui/sim/SimAudioDrawer.kt" to
             GuardrailExpectation(budget = 550, status = "Accepted"),
+        "app-core/src/main/java/com/smartsales/prism/ui/onboarding/OnboardingScreen.kt" to
+            GuardrailExpectation(budget = 550, status = "Accepted"),
         "app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/gateway/GattBleGateway.kt" to
             GuardrailExpectation(budget = 650, status = "Accepted"),
         "app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/DeviceConnectionManager.kt" to

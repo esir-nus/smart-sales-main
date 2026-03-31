@@ -75,14 +75,13 @@ Rule:
 - onboarding uses dedicated onboarding fast profiles for the happy path:
   - `ModelRegistry.ONBOARDING_CONSULTATION` for consultation reply generation
   - `ModelRegistry.ONBOARDING_PROFILE_EXTRACTION` for strict profile JSON extraction
-- if the fast lane is unavailable or fails, onboarding may invisibly switch to a deterministic fallback lane with a short believable dwell
-- if model generation fails after a real transcript has already been resolved, deterministic fallback must stay grounded in that real transcript rather than replacing it with canned user content
-- debug investigation builds may suppress deterministic fallback so the flow exposes calm retry/error UI while preserving any real transcript already captured
-- onboarding owns one visible watchdog per generation lane rather than nested service + UI timeouts:
+- if realtime recognition fails while the user is still holding, onboarding surfaces retry immediately and the later release becomes a no-op
+- if recognition or generation fails after release, onboarding clears to calm retry UI; when a real transcript already exists, it stays visible instead of being replaced with synthetic content
+- onboarding owns one visible watchdog per lane rather than nested service + UI timeouts:
+  - post-capture recognition target about `5s`
   - consultation target about `2.5s`
   - profile target about `3.5s`
-- onboarding owns a local post-capture processing watchdog so the intro voice lane cannot sit indefinitely in a generic processing state once capture ends
-- recognizer-side cancellation that arrives only after release counts as fast-lane failure in this watchdog and must terminate through onboarding-local fallback, while explicit user/reset/background cancellation still clears directly back to idle
+- recognizer-side cancellation that arrives only after release counts as fast-lane failure in this watchdog and must clear to retry UI, while explicit user/reset/background cancellation still clears directly back to idle
 - late results from timed-out or reset intro attempts must be ignored instead of mutating the current onboarding state
 - raw realtime ASR payloads must be sanitized before reaching onboarding transcript or error UI
 - `HARDWARE_WAKE` still teaches the 3-second badge wake ritual

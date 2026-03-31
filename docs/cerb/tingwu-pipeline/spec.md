@@ -57,6 +57,23 @@ Current expectations:
 - shared audio-management consumers may reuse the stored artifacts later
 - deeper memory/entity/plugin consumers are optional later augmentation, not the default explanation of this lane
 
+## Current Consumer Boundary
+
+Current active consumers for this lane are:
+
+- audio drawer artifact rendering
+- SIM namespaced audio repositories and persisted artifact reopen
+- optional chat-context attachment that reuses the same stored Tingwu artifacts
+
+This spec does **not** require:
+
+- MemoryCenter-style persistence as the default explanation
+- entity/plugin orchestration as the default consumer model
+- smart-agent runtime ownership of Tingwu jobs
+- Mono-only augmentation to explain normal non-Mono audio behavior
+
+Mono may later augment this lane, but the augmentation must remain downstream of the source-led Tingwu contract defined here.
+
 ## Wave Summary
 
 | Wave | Focus | Status | Deliverables |

@@ -56,6 +56,18 @@ This file is allowed to be ahead of the codebase.
 16. **Phone-local import is test-only**: if a local file picker exists, it is only a testing convenience surface and must not be treated as the product-default audio ingress.
 17. **Completed chat-side audio must become durable chat history**: once a pending chat-side audio run completes, the finished artifact content must be appended as durable chat history rather than remaining only in transient thinking/progress state.
 
+## Badge Inventory Sync Rule
+
+Active rule:
+
+- drawer-side badge sync is manual and UI-owned
+- opening the drawer must not auto-run badge sync as current product truth
+- successful badge-pipeline completions may still appear in the drawer automatically because pipeline completion ingests them into the same SIM audio inventory
+
+Historical rule:
+
+- any older browse-open auto-sync wording belongs to deprecated SIM audio/chat migration memory only and must not override the manual drawer-sync contract
+
 ---
 
 ## Artifact Surface Rule

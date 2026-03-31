@@ -36,11 +36,13 @@ This slice is not a retroactive reinterpretation of Wave A or the SIM intro-dark
 - generate typed profile extraction data through `ModelRegistry.ONBOARDING_PROFILE_EXTRACTION` strict JSON on the happy path
 - persist extracted profile data into `UserProfileRepository` only after explicit CTA on the profile step
 - allow calm retry and profile-save skip behavior without mutating pairing ownership
-- allow invisible deterministic fallback with a short artificial dwell when device STT is unavailable or fails
-- allow transcript-grounded deterministic generation fallback when a real transcript exists but LLM generation fails
-- keep one onboarding-owned visible deadline per generation lane instead of nested service + UI timeout caps
-- ensure the post-release recognition phase always terminates; recognizer-side cancellation after release must route through onboarding-local fallback, while explicit user/reset/dispose cancellation still clears silently
-- allow debug investigation builds to disable deterministic fallback entirely so failed STT / LLM attempts surface truthfully as calm retry state rather than synthetic content
+- preserve the real transcript when recognition succeeded but consultation/profile generation failed; do not synthesize fallback content
+- keep one onboarding-owned visible deadline per lane instead of nested service + UI timeout caps:
+  - post-capture recognition about `5s`
+  - consultation generation about `2.5s`
+  - profile extraction about `3.5s`
+- ensure the post-release recognition phase always terminates; recognizer-side cancellation after release must clear through onboarding-local retry UI, while explicit user/reset/dispose cancellation still clears silently
+- if realtime recognition fails during the active hold, surface the retry state immediately and treat the later finger-up event as a no-op
 - update static review, previews, and design-browser presets for the new states
 - sync docs, tests, and tracker rows for the new step contract
 

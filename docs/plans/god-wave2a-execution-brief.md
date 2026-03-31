@@ -6,6 +6,9 @@
 **Mission:** `SchedulerLinter.kt` structural cleanup  
 **Primary Tracker:** `docs/plans/god-tracker.md`  
 **Structure Law:** `docs/specs/code-structure-contract.md`  
+**Current Reading Priority:** Historical execution reference only; not current source of truth.  
+**Current Active Truth:** `docs/plans/god-tracker.md`, `docs/plans/tracker.md`, `docs/specs/code-structure-contract.md`, `docs/core-flow/scheduler-fast-track-flow.md`, `docs/core-flow/sim-scheduler-path-a-flow.md`, `docs/cerb/scheduler-path-a-spine/spec.md`, `docs/cerb/scheduler-path-a-uni-a/spec.md`, `docs/cerb/scheduler-path-a-uni-b/spec.md`, `docs/cerb/scheduler-path-a-uni-c/spec.md`, `docs/cerb/scheduler-path-a-uni-d/spec.md`, `docs/cerb-ui/scheduler/contract.md`, `docs/cerb/interface-map.md`  
+**Historical Deprecated Context:** `docs/cerb/sim-scheduler/spec.md`  
 **Validation Report:** `docs/reports/tests/L1-20260324-god-wave2a-scheduler-linter.md`
 
 ---
@@ -20,11 +23,11 @@ Wave 2A should reduce that file into stable role-based support files while keepi
 
 ---
 
-## 2. Governing Docs
+## 2. Current Active Truth
 
-Wave 2A behavior remains governed by the existing scheduler doc set, not by the tracker label alone.
+Wave 2A should now be read against the shared scheduler doc set, not the deprecated SIM scheduler shard.
 
-Primary governing docs:
+Current active truth:
 
 - `docs/core-flow/scheduler-fast-track-flow.md`
 - `docs/core-flow/sim-scheduler-path-a-flow.md`
@@ -33,9 +36,11 @@ Primary governing docs:
 - `docs/cerb/scheduler-path-a-uni-b/spec.md`
 - `docs/cerb/scheduler-path-a-uni-c/spec.md`
 - `docs/cerb/scheduler-path-a-uni-d/spec.md`
+Wave 2A historical context at the time:
+
 - `docs/cerb/sim-scheduler/spec.md`
 
-Wave 2A must also repair the stale `docs/cerb/interface-map.md` reference that currently points `SchedulerLinter` to a nonexistent shard.
+Wave 2A also repaired the stale `docs/cerb/interface-map.md` reference that had pointed `SchedulerLinter` to a nonexistent shard.
 
 ---
 

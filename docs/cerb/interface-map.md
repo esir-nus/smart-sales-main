@@ -4,7 +4,7 @@
 >
 > **Purpose**: Module ownership + data flow. Read this BEFORE any cross-module change.
 > **Rule**: If data belongs to Module B, query B's interface at runtime. Don't store B's data on A's model.
-> **Last Updated**: 2026-03-31 (Audio drawer / badge pipeline sync correction)
+> **Last Updated**: 2026-03-31 (Audio drawer / badge pipeline sync correction; connectivity debug APK host)
 >
 > **Status Legend**: ✅ = Shipped (Real impl) · 📐 = Interface only (Fake impl) · 🔲 = Not yet coded
 
@@ -129,6 +129,24 @@ Interpretation:
 - Kernel-owned session memory, CRM/entity loading, Path B scheduler enrichment, and plugin/tool runtime remain Mono-only
 - legacy full-side hosts may remain temporarily, but they are wrapper debt rather than product-truth owners
 - SIM-owned entry roots, namespaced persistence, or isolated runtime assembly may remain real implementation boundaries, but they do not create a second non-Mono product truth
+
+Current wrapper-debt hosts tracked in code/docs:
+
+- `AgentShell.kt`
+- `AgentViewModel.kt`
+- `SchedulerViewModel.kt`
+
+These may remain as compatibility hosts, but current shell/scheduler/audio truth routes through shared docs rather than through those host files.
+
+### Connectivity debug host rule (2026-03-31)
+
+A separate debug-only APK now exists for the active connectivity lane:
+
+- `:connectivity-debug-app` is a wrapper host, not a second product-truth owner
+- it reuses shared `app-core` source/res/assets so connectivity, onboarding, and badge sync/delete behavior stay single-source
+- it may host the real connectivity modal, connectivity manager, `SIM_CONNECTIVITY` onboarding, and SIM audio drawer sync/delete UX for fast debug iteration
+- the main app is the frozen consumer for this lane until shared fixes are proven in the debug host
+- wrapper-local code may add operator controls or logcat helpers, but must not fork connectivity business logic
 
 ---
 

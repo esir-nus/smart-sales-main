@@ -1,8 +1,19 @@
-# SIM Audio Chat Interface
+# SIM Audio Chat Interface (Historical Redirect)
 
-> **Blackbox contract** - For the standalone SIM audio and simple-chat slice.
->
-> **Unification Note (2026-03-31)**: despite the legacy `SIM` name, this interface should now be read as the current best available base-runtime audio/chat contract for non-Mono work. Mono may later deepen chat intelligence behind this surface without creating a second audio/chat truth.
+> **Blackbox contract** - Historical SIM audio/chat contract retained in place for campaign memory.
+> **Status**: Historical redirect
+> **Current Reading Priority**: Historical context only; not current source of truth.
+> **Current Active Truth**:
+> - `docs/cerb/audio-management/interface.md`
+> - `docs/cerb/audio-management/spec.md`
+> - `docs/cerb/tingwu-pipeline/interface.md`
+> - `docs/cerb/tingwu-pipeline/spec.md`
+> - `docs/core-flow/sim-audio-artifact-chat-flow.md`
+
+Historical note:
+
+- the remainder of this file is a frozen snapshot of the older SIM audio/chat interface framing
+- it must not be used as active audio/chat fallback ownership
 
 ---
 

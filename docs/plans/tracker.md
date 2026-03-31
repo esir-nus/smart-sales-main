@@ -12,7 +12,7 @@
 ## Active Structural Cleanup Campaign: God-File Trunk Cleanup
 > **Context**: Direct user-requested refactor/rewrite campaign to clean the shared UI and ViewModel trunk before further major prototype transplants land into the current god files.
 
-- **Status**: Wave 3C accepted; Wave 3D accepted; Wave 3E accepted
+- **Status**: Wave 3C accepted; Wave 3D accepted; Wave 3E accepted; Wave E1 landed on 2026-03-31 with focused verification blocked by an unrelated `SimRealtimeSpeechRecognizer.kt` compile error
 - **Primary Tracker**:
   - [`docs/plans/god-tracker.md`](./god-tracker.md)
 - **Wave 0 Execution Brief**:
@@ -41,6 +41,8 @@
   - [`docs/plans/god-wave3d-execution-brief.md`](./god-wave3d-execution-brief.md)
 - **Wave 3E Execution Brief**:
   - [`docs/plans/god-wave3e-execution-brief.md`](./god-wave3e-execution-brief.md)
+- **Wave E1 Execution Brief**:
+  - [`docs/plans/god-wavee1-onboarding-structure-execution-brief.md`](./god-wavee1-onboarding-structure-execution-brief.md)
 - **Wave 1A L1 Validation**:
   - [`docs/reports/tests/L1-20260324-god-wave1a-guardrails.md`](../reports/tests/L1-20260324-god-wave1a-guardrails.md)
 - **Wave 1B L1 Validation**:
@@ -63,12 +65,14 @@
   - [`docs/reports/tests/L1-20260331-god-wave3d-scheduler-viewmodel.md`](../reports/tests/L1-20260331-god-wave3d-scheduler-viewmodel.md)
 - **Wave 3E L1 Validation**:
   - [`docs/reports/tests/L1-20260331-god-wave3e-sim-agent-vm-voice-draft.md`](../reports/tests/L1-20260331-god-wave3e-sim-agent-vm-voice-draft.md)
+- **Wave E1 L1 Validation**:
+  - [`docs/reports/tests/L1-20260331-god-wavee1-onboarding-structure.md`](../reports/tests/L1-20260331-god-wavee1-onboarding-structure.md)
 - **Governance Split**:
   - UI SOP stack remains the primary UI-building workflow
   - Cerb / cerb-ui remain the feature-local UI truth
   - [`docs/specs/code-structure-contract.md`](../specs/code-structure-contract.md) now owns the long-lived anti-god-file structure law, while `god-tracker.md` carries the active campaign memory
 - **Immediate Wave Scope**:
-  - `SimAgentViewModel.kt`
+  - `OnboardingScreen.kt`
 - **Current Objective**:
   - speed up prototype-to-Kotlin transplant by making the target structure easier for humans and agents to understand
   - keep accepted Wave 1 / Wave 2 trunk reductions enforced by guardrails
@@ -76,6 +80,7 @@
   - keep Wave 3C accepted with `AgentViewModel.kt` reduced to a thin compatibility host plus stable support owners
   - keep Wave 3D accepted with `SchedulerViewModel.kt` reduced to a thin compatibility host plus stable projection, legacy-action, and audio-ingress owners
   - keep Wave 3E accepted with `SimAgentViewModel.kt` reduced to a thin compatibility host plus stable session/chat/follow-up/voice-draft owners
+  - keep Wave E1 landed with `OnboardingScreen.kt` reduced to a thin host/static-screen seam plus stable onboarding-owned frame, intro, pairing, and support files
 
 ---
 
@@ -126,8 +131,9 @@
   - Slice 3 now keeps `AgentViewModel.kt` as a thin compatibility host and moves UI bridge, session lifecycle, pipeline dispatch, tool dispatch, runtime/dashboard support, and debug scenario ownership into `AgentUiBridge.kt`, `AgentSessionCoordinator.kt`, `AgentPipelineCoordinator.kt`, `AgentToolCoordinator.kt`, `AgentRuntimeSupport.kt`, and `AgentDebugSupport.kt`
   - Slice 4 now keeps `SimAgentViewModel.kt` as a thin compatibility host and moves the SIM voice-draft lane into `SimAgentVoiceDraftCoordinator.kt`, while extending the existing `SimAgentUiBridge` just enough to let the host-owned state remain source-compatible
   - Slice 5 now locks the repo's non-Mono planning truth in docs: current SIM-led shell/scheduler/audio docs stay the best available base-runtime baseline, separate SIM runtime boundaries remain lawful implementation seams, and Mono stays the only lawful deeper divergence layer
-  - On **2026-03-31**, shared onboarding handshake follow-up now hardens the base-runtime fast lane so both hosts keep one interaction engine, dedicated onboarding model profiles, one visible generation watchdog per lane, and deterministic fallback as backup only rather than the expected user-visible result
-  - On **2026-03-31**, debug investigation builds now suppress onboarding deterministic fallback entirely, so failed STT / LLM attempts expose calm retry state plus `fallback_suppressed` / `processing_failed` telemetry instead of synthetic consultation/profile content
+  - On **2026-03-31**, live onboarding logcat proved the failing branch was realtime `recognizer_cancelled` before finger release rather than a slow timeout; the shared handshake now surfaces active-hold failures immediately, treats the later release as a no-op, and clears post-release failures through calm retry UI instead of synthetic content
+  - On **2026-03-31**, both hosts now share one simplified onboarding interaction engine with dedicated onboarding model profiles, a `5s` post-capture recognition watchdog plus `2.5s` / `3.5s` generation watchdogs, stale-result invalidation, and no debug-vs-release fallback split
+  - On **2026-03-31**, follow-up device proof showed the remaining onboarding blocker was immediate FunASR auth unavailability, not the mic hold state machine; the client now preserves typed realtime-auth diagnosis across token fetch, dialog start, and session failure logs so quota/config/network/auth rejection can be distinguished without reintroducing fallback branches
   - focused Wave 3D reruns now pass after restoring the extracted scheduler audio-status strings to the evidence-owned legacy full-side values
   - focused Wave 3E reruns now pass with `SimAgentViewModel.kt` back under the transitional ViewModel budget and with the accepted Wave 14 SIM voice-draft behavior preserved
 
@@ -136,7 +142,7 @@
 ## Active Audit: Doc Control Plane and Drift Cleanup
 > **Context**: Direct user-approved docs-first audit to reduce doc-reading overhead, replace deprecated SIM Cerb ownership, and classify current doc/code drift against the latest base-runtime direction.
 
-- **Status**: Audit package delivered on 2026-03-31; Wave A clean-docs foundation landed on 2026-03-31; broader remediation backlog pending execution
+- **Status**: Audit package delivered on 2026-03-31; Wave A clean-docs foundation landed on 2026-03-31; Wave D4 architecture posture cleanup landed on 2026-03-31; Wave E1 onboarding structure cleanup landed on 2026-03-31; Wave F1 historical-report wording cleanup landed on 2026-03-31; one-off follow-up backlog is closed and ongoing governance remains under `DOC-001`
 - **Primary Ledger**:
   - [`docs/plans/doc-tracker.md`](./doc-tracker.md)
 - **Audit Report**:
@@ -166,6 +172,7 @@
   - [`docs/core-flow/sim-scheduler-path-a-flow.md`](../core-flow/sim-scheduler-path-a-flow.md)
   - [`docs/core-flow/sim-audio-artifact-chat-flow.md`](../core-flow/sim-audio-artifact-chat-flow.md)
   - [`docs/cerb/interface-map.md`](../cerb/interface-map.md)
+- **Evidence Rule**: acceptance/audit links below are historical evidence only; current product truth for this mission remains the `Current Active Truth` docs above.
 - **Connectivity Bug Tracker**: [`docs/plans/bug-tracker.md`](./bug-tracker.md)
 - **Implementation Brief**: [`docs/plans/sim_implementation_brief.md`](./sim_implementation_brief.md)
 - **Wave 1 Execution Brief**: [`docs/plans/sim-wave1-execution-brief.md`](./sim-wave1-execution-brief.md)
@@ -232,6 +239,24 @@
   - `Wave 12` now has docs, code, and focused L1 evidence aligned for the scheduler-drawer voice reschedule lane. Scope remains strictly the scheduler drawer mic path; audio drawer, general SIM chat, and random sessions remain out of scope.
   - `Wave 13` now has docs, code, and focused L1 evidence aligned for launcher-core theme visibility from the default SIM host. Scope remains limited to `SimMainActivity`, home/chat shell, header, history drawer, and settings drawer; scheduler/audio/connectivity/onboarding light-theme parity remains deferred.
   - On **2026-03-24**, focused unit verification confirmed the current global-reschedule implementation path for `SimSchedulerViewModelTest` and `SimAgentViewModelTest`; retrieval-hint-heavy cases such as people/location-led follow-up phrasing still need on-device proof.
+
+---
+
+## Active Tooling Slice: Connectivity Debug APK
+> **Context**: Direct user-approved thin wrapper APK for the connectivity lane so BLE / Wi‑Fi / pairing / sync / delete work can move independently while the main app stays a frozen consumer.
+
+- **Status**: Implementation landed on 2026-03-31; focused Kotlin compilation passed; install/on-device acceptance still requires `adb logcat`
+- **Owning Shard**:
+  - [`docs/cerb/connectivity-debug-app/spec.md`](../cerb/connectivity-debug-app/spec.md)
+  - [`docs/cerb/connectivity-debug-app/interface.md`](../cerb/connectivity-debug-app/interface.md)
+- **Delivered Direction**:
+  - `:connectivity-debug-app` is now a separate APK with `applicationId = com.smartsales.prism.connectivitydebug`
+  - the debug APK reuses `app-core` source/res/assets through source-set wiring so connectivity logic and UX remain shared truth
+  - the host mounts the real connectivity modal, connectivity manager, `SIM_CONNECTIVITY` onboarding, and SIM audio drawer sync/delete lane
+  - wrapper-only controls now expose soft disconnect, hard unpair, and copyable install / launch / `adb logcat` commands
+  - the main app is now documented as the frozen consumer for this lane; new connectivity fixes should land in shared sources first and ship back after debug-host validation
+- **Required Debug Practice**:
+  - Android runtime diagnosis for this slice must use `adb logcat`; screenshots remain supporting evidence only
 
 ---
 

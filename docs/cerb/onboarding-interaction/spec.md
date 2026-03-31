@@ -70,18 +70,17 @@ Onboarding owns a stricter UX watchdog than the main batch ASR / business LLM bu
 
 Policy:
 
-- consultation/profile may keep active capture open for up to `60s`, but once capture ends recognition must resolve or fall back locally within about `1.2s`
-- the fast lane uses explicit UI phases: recognizing, building consultation reply, building profile result, deterministic fallback
+- consultation/profile may keep active capture open for up to `60s`, but once capture ends recognition must resolve through an onboarding-local watchdog within about `5s`
+- the fast lane uses explicit UI phases: recognizing, building consultation reply, building profile result
 - after a usable transcript exists, onboarding owns one user-facing generation watchdog instead of nested timeouts:
   - consultation reply should resolve within about `2.5s`
   - profile extraction should resolve within about `3.5s`
-- late or stuck model work must terminate into onboarding-local deterministic generation instead of leaving the footer pending
-- recognizer-side `CANCELLED` results that arrive after onboarding has already switched into `recognizing` must be treated as fast-lane failure and terminated through the local deterministic fallback path instead of leaving the footer stuck in processing
+- late or stuck model work must clear processing into calm retry UI instead of synthesizing onboarding content
+- recognizer-side `CANCELLED` results that arrive after onboarding has already switched into `recognizing` must be treated as fast-lane failure and must clear through onboarding-local retry handling instead of leaving the footer stuck in processing
+- realtime `Failure` / `Cancelled` events that arrive during the active hold must surface immediately, and the later finger-up event becomes a no-op
 - timed-out, cancelled, reset, or otherwise stale attempts must not write late transcript / reply / extraction results back into the current UI state
 - raw FunASR SDK payloads must be sanitized before they reach onboarding transcript, hint, or error surfaces
 - onboarding happy path must not call `AsrService` or OSS upload
-- deterministic fallback is backup-only; it must not become the normal visible result when the LLM path is healthy
-- debug investigation builds may disable deterministic fallback entirely so runtime failures surface as calm retry/error UI instead of synthetic content
 
 ## Shared Mic Footer Contract
 
@@ -93,6 +92,7 @@ Visual/runtime states:
 - `recording`: faster cyan handshake motion, listening status, and live partial transcript replacing the sample-prompt hint slot when available
 - `processing`: footer stays mounted, returns to the idle-breathing handshake, and shows the processing label while preserving any already-captured transcript text
 - `revealed result`: the footer may disappear only after the next transcript / reply / extraction result state is rendered
+- if realtime recognition fails while the user is still pressing, the footer must stop recording immediately, surface calm retry copy, and treat the later finger-up event as a no-op
 - if the `60s` capture limit is reached while the user is still pressing, the session must auto-stop, switch immediately into `processing`, and treat the later finger-up event as a no-op
 
 Hint-slot law:
@@ -131,8 +131,8 @@ If JSON is malformed, required fields are missing, or all extracted values are b
 Note:
 
 - the happy path uses LLM-emitted strict JSON
-- the deterministic fallback path may still build the typed draft locally from the resolved transcript when model generation fails
-- the draft must still land as the same typed `OnboardingProfileDraft` contract
+- if model generation fails after a real transcript already exists, onboarding preserves that transcript, clears processing, and asks the user to retry or skip save
+- successful extraction still lands as the same typed `OnboardingProfileDraft` contract
 
 ## Profile Save Law
 
@@ -162,18 +162,19 @@ Supported failure classes:
 - recording too short
 - onboarding realtime recognition unavailable
 - onboarding realtime recognition failure
-- onboarding realtime recognition timeout
+- onboarding realtime recognition timeout or post-release cancellation
+- consultation/profile generation timeout or failure
 - save failure
 
 Policy:
 
-- consultation/profile should prefer invisible deterministic fallback instead of surfacing a hard failure when the fast lane fails
-- post-release recognizer cancellation is part of this failure bucket and should fast-fallback locally rather than surfacing a stuck intermediate state
-- if a real transcript already exists, deterministic fallback must reuse that transcript rather than injecting fake user content
-- normal network latency alone must not be treated as proof that fallback should win; the fallback lane is for explicit failure or watchdog expiry
-- when the debug investigation policy disables deterministic fallback, the same failure classes must clear processing, preserve any real transcript already captured, and surface calm retry/skip-save affordances instead of landing synthetic consultation/profile content
-- consultation: retry until success if even the deterministic lane cannot complete
-- profile: retry or skip save if even the deterministic lane cannot complete
+- consultation/profile surface calm retry state instead of synthetic content when the fast lane fails
+- if a real transcript already exists, preserve that transcript and show retry rather than inventing user or AI content
+- post-release recognizer cancellation is part of this failure bucket and must clear the stuck processing state
+- realtime failure while the user is still holding must surface immediately so the later release is a no-op
+- explicit user/reset/background cancellation must invalidate the pending request and clear back to idle
+- consultation: retry until success
+- profile: retry or skip save
 - skip save advances onboarding without mutating the profile
 - failure UI stays calm and non-panic red
 
@@ -186,7 +187,7 @@ Policy:
 - the permission wait itself must not cancel the pending onboarding session
 - onboarding may show a calm guidance hint that the microphone is now available and the user should press again
 - if the active onboarding listening session is interrupted by gesture cancellation, disposal, or app backgrounding, onboarding must cancel the session and clear the listening state
-- this explicit user/reset/dispose cancellation path must invalidate the pending request so no deterministic fallback lands after the user has intentionally left the session
+- this explicit user/reset/dispose cancellation path must invalidate the pending request so no late processing result lands after the user has intentionally left the session
 - processing-state footer persistence does not override this cancellation rule; interrupted sessions still clear back to non-listening state
 
 ## Fast Lane Boundary
@@ -198,9 +199,14 @@ Policy:
 - dedicated onboarding-specific model profiles are the happy-path generation seam for onboarding consultation and profile extraction:
   - `ModelRegistry.ONBOARDING_CONSULTATION`
   - `ModelRegistry.ONBOARDING_PROFILE_EXTRACTION`
-- onboarding owns one fast-lane user-facing deadline per generation lane rather than stacking a second service-level timeout underneath
-- if the onboarding realtime lane fails, or if LLM generation fails after a real transcript exists, onboarding may use an invisible deterministic fallback with a short artificial dwell to preserve the experience rhythm
-- debug investigation builds may flip this lane into truth-exposure mode, which suppresses deterministic fallback and emits failure-state telemetry instead of synthetic content
+- onboarding owns one onboarding-local deadline per fast lane instead of stacked speculative backup branches:
+  - post-capture recognition about `5s`
+  - consultation generation about `2.5s`
+  - profile extraction about `3.5s`
+- onboarding keeps only the guards proved necessary for this slice: stale request invalidation, explicit user/dispose cancellation, and bounded deadlines
+- realtime auth/token failures must preserve typed diagnosis in logs across token fetch, dialog start, and session failure; the client must not flatten quota/config/network/auth causes into one opaque internal branch before evidence is recorded
+- the external `POST /api/ai/dashscope/realtime-token` contract must preserve enough safe evidence for diagnosis, at minimum meaningful HTTP status for 401/403, 429, and 5xx classes
+- if realtime or generation fails, onboarding stays in retry UI; when a transcript already exists, keep it visible and do not synthesize a reply or draft
 
 ## Ownership Boundary
 

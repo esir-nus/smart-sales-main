@@ -1,6 +1,8 @@
 # SIM Shell Interface
 
 > **Blackbox contract** - For the standalone SIM app entry and adjacent prototype-only callers.
+>
+> **Unification Note (2026-03-31)**: despite the legacy `SIM` name, this interface should now be read as the current best available base-runtime shell contract for non-Mono work. Mono may later add deeper capabilities behind this shell without creating a second shell truth.
 
 ---
 
@@ -32,7 +34,7 @@ Responsibilities:
 - own the SIM shell edge-gesture gates for scheduler/audio entry
 - host one SIM home/here shell family that covers empty home, active plain chat, active audio-grounded chat, and pending-audio chat presentation without changing top-level shell identity
 - host the simple chat surface
-- host a bottom message capsule for SIM chat where left attach reopens the SIM audio drawer, the trailing action shows mic only while the draft is blank, successful device-STT writes editable text back into the field, explicit send remains required, and the idle placeholder keeps the scan-shine treatment on placeholder text only
+- host a bottom message capsule for SIM chat where left attach reopens the SIM audio drawer, the trailing action shows mic only while the draft is blank, successful SIM-owned FunASR realtime recognition writes editable text back into the field, explicit send remains required, backend-issued short-lived DashScope auth is used for realtime capture, and the idle placeholder keeps the scan-shine treatment on placeholder text only
 - keep the top header visually balanced with hamburger on the left, centered Dynamic Island, and new-session `+` on the right across normal shell states
 - keep the center canvas stateful: greeting-first when empty, conversation-first when active, and system-sheet capable for status/progress/artifact insertion
 - host SIM support surfaces such as history and connectivity entry, with connectivity entering from the audio drawer rather than the home header
@@ -139,7 +141,7 @@ Gesture notes:
 
 - edge gestures are shell-owned routing only; they do not make chat overscroll a drawer trigger
 - middle-zone scrolling remains chat/history-safe by default
-- scheduler dismisses from its top handle upward
+- scheduler dismisses from its bottom handle by tap or downward swipe
 - SIM audio dismisses from its handle downward
 - shell open gestures should prefer deliberate directional pulls over generic browsing scroll
 

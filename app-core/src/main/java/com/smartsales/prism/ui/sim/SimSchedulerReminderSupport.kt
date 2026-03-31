@@ -4,7 +4,7 @@ import android.util.Log
 import com.smartsales.prism.data.notification.ExactAlarmPermissionGate
 import com.smartsales.prism.domain.scheduler.AlarmScheduler
 import com.smartsales.prism.domain.scheduler.ScheduledTask
-import com.smartsales.prism.domain.scheduler.UrgencyLevel
+import com.smartsales.prism.domain.scheduler.normalizedReminderCascade
 
 internal class SimSchedulerReminderSupport(
     private val alarmScheduler: AlarmScheduler,
@@ -15,9 +15,7 @@ internal class SimSchedulerReminderSupport(
     suspend fun scheduleReminderIfExact(task: ScheduledTask) {
         if (task.isVague || task.isDone) return
 
-        val cascade = task.alarmCascade.ifEmpty {
-            UrgencyLevel.buildCascade(task.urgencyLevel)
-        }
+        val cascade = task.normalizedReminderCascade()
         if (cascade.isEmpty()) return
 
         if (exactAlarmPermissionGate.shouldPromptForExactAlarm()) {

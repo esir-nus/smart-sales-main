@@ -130,7 +130,7 @@ class RealConnectivityService @Inject constructor(
             com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.NO_KNOWN_CREDENTIAL_FOR_PHONE_WIFI,
             com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.PHONE_WIFI_SSID_UNREADABLE,
             com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.BADGE_PHONE_NETWORK_MISMATCH ->
-                ReconnectResult.WifiMismatch
+                ReconnectResult.WifiMismatch(currentPhoneSsid = error.phoneSsid)
             com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.PHONE_WIFI_UNAVAILABLE ->
                 ReconnectResult.Error("手机当前未连接可用 Wi‑Fi")
             com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.BADGE_WIFI_OFFLINE ->

@@ -180,6 +180,8 @@ internal fun SimEmptyHomeHeroShell(
     onMenuClick: () -> Unit,
     onNewSessionClick: () -> Unit,
     onSchedulerClick: (DynamicIslandTapAction) -> Unit,
+    showMenuButton: Boolean = true,
+    showNewSessionButton: Boolean = true,
     onTextChanged: (String) -> Unit,
     onSend: () -> Unit,
     onAttachClick: () -> Unit,
@@ -204,6 +206,8 @@ internal fun SimEmptyHomeHeroShell(
         onMenuClick = onMenuClick,
         onNewSessionClick = onNewSessionClick,
         onSchedulerClick = onSchedulerClick,
+        showMenuButton = showMenuButton,
+        showNewSessionButton = showNewSessionButton,
         onTextChanged = onTextChanged,
         onSend = onSend,
         onAttachClick = onAttachClick,
@@ -236,6 +240,8 @@ internal fun SimHomeHeroShellFrame(
     onMenuClick: () -> Unit,
     onNewSessionClick: () -> Unit,
     onSchedulerClick: (DynamicIslandTapAction) -> Unit,
+    showMenuButton: Boolean = true,
+    showNewSessionButton: Boolean = true,
     onTextChanged: (String) -> Unit,
     onSend: () -> Unit,
     onAttachClick: () -> Unit,
@@ -279,6 +285,8 @@ internal fun SimHomeHeroShellFrame(
                 onMenuClick = onMenuClick,
                 onNewSessionClick = onNewSessionClick,
                 onSchedulerClick = onSchedulerClick,
+                showMenuButton = showMenuButton,
+                showNewSessionButton = showNewSessionButton,
                 enablePullGesture = enableSchedulerPullGesture,
                 onPullOpen = onSchedulerPullOpen,
                 onBoundsChanged = { bounds ->
@@ -500,6 +508,8 @@ private fun SimHomeHeroTopCap(
     onMenuClick: () -> Unit,
     onNewSessionClick: () -> Unit,
     onSchedulerClick: (DynamicIslandTapAction) -> Unit,
+    showMenuButton: Boolean,
+    showNewSessionButton: Boolean,
     enablePullGesture: Boolean,
     onPullOpen: () -> Unit,
     onBoundsChanged: (Rect) -> Unit
@@ -508,7 +518,13 @@ private fun SimHomeHeroTopCap(
     SimVerticalDragTrigger(
         modifier = Modifier
             .fillMaxWidth()
-            .testTag(SIM_HEADER_TEST_TAG),
+            .then(
+                if (enablePullGesture) {
+                    Modifier.testTag(SIM_HEADER_TEST_TAG)
+                } else {
+                    Modifier
+                }
+            ),
         direction = DOWN,
         threshold = 40.dp,
         velocityThreshold = 1100.dp,
@@ -547,11 +563,16 @@ private fun SimHomeHeroTopCap(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                SimHomeHeroIconButton(
-                    icon = Icons.Filled.Menu,
-                    contentDescription = "Open menu",
-                    onClick = onMenuClick
-                )
+                SimHomeHeroHeaderSlot {
+                    if (showMenuButton) {
+                        SimHomeHeroIconButton(
+                            icon = Icons.Filled.Menu,
+                            contentDescription = "Open menu",
+                            onClick = onMenuClick,
+                            modifier = Modifier.testTag(SIM_HEADER_MENU_BUTTON_TEST_TAG)
+                        )
+                    }
+                }
                 Box(
                     modifier = Modifier.weight(1f),
                     contentAlignment = Alignment.Center
@@ -561,11 +582,16 @@ private fun SimHomeHeroTopCap(
                         onTap = onSchedulerClick
                     )
                 }
-                SimHomeHeroIconButton(
-                    icon = Icons.Filled.Add,
-                    contentDescription = "Start new chat",
-                    onClick = onNewSessionClick
-                )
+                SimHomeHeroHeaderSlot {
+                    if (showNewSessionButton) {
+                        SimHomeHeroIconButton(
+                            icon = Icons.Filled.Add,
+                            contentDescription = "Start new chat",
+                            onClick = onNewSessionClick,
+                            modifier = Modifier.testTag(SIM_HEADER_NEW_CHAT_BUTTON_TEST_TAG)
+                        )
+                    }
+                }
             }
         }
     }
@@ -616,6 +642,7 @@ private fun SimHomeHeroDynamicIsland(
     Row(
         modifier = Modifier
             .widthIn(max = SimHomeHeroTokens.IslandMaxWidth)
+            .testTag(SIM_DYNAMIC_ISLAND_TEST_TAG)
             .shadow(
                 elevation = if (PrismThemeDefaults.isDarkTheme) 0.dp else 3.dp,
                 shape = CircleShape,
@@ -727,11 +754,12 @@ private data class SimHomeHeroIslandChroma(
 private fun SimHomeHeroIconButton(
     icon: ImageVector,
     contentDescription: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val palette = rememberSimHomeHeroPalette()
     Box(
-        modifier = Modifier
+        modifier = modifier
             .size(SimHomeHeroTokens.HeaderIconTouchSize)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
@@ -743,6 +771,17 @@ private fun SimHomeHeroIconButton(
             modifier = Modifier.size(SimHomeHeroTokens.HeaderIconSize)
         )
     }
+}
+
+@Composable
+private fun SimHomeHeroHeaderSlot(
+    content: @Composable BoxScope.() -> Unit
+) {
+    Box(
+        modifier = Modifier.size(SimHomeHeroTokens.HeaderIconTouchSize),
+        contentAlignment = Alignment.Center,
+        content = content
+    )
 }
 
 @Composable
@@ -838,7 +877,13 @@ private fun SimHomeHeroBottomMonolith(
             .fillMaxWidth()
             .prismNavigationBarPadding()
             .imePadding()
-            .testTag(SIM_INPUT_BAR_TEST_TAG),
+            .then(
+                if (enablePullGesture) {
+                    Modifier.testTag(SIM_INPUT_BAR_TEST_TAG)
+                } else {
+                    Modifier
+                }
+            ),
         direction = UP,
         threshold = 40.dp,
         velocityThreshold = 1100.dp,

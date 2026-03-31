@@ -1,12 +1,7 @@
 package com.smartsales.prism.data.audio
 
-import android.content.Context
-import com.smartsales.data.oss.OssUploader
 import com.smartsales.prism.domain.audio.AudioFile
-import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
-import com.smartsales.prism.domain.tingwu.TingwuPipeline
-import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
@@ -18,18 +13,9 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 @Singleton
 class SimAudioRepository @Inject constructor(
-    @ApplicationContext private val context: Context,
-    private val connectivityBridge: ConnectivityBridge,
-    private val ossUploader: OssUploader,
-    private val tingwuPipeline: TingwuPipeline
+    private val runtime: SimAudioRepositoryRuntime
 ) {
 
-    private val runtime = SimAudioRepositoryRuntime(
-        context = context,
-        connectivityBridge = connectivityBridge,
-        ossUploader = ossUploader,
-        tingwuPipeline = tingwuPipeline
-    )
     private val storeSupport = SimAudioRepositoryStoreSupport(runtime)
     private val artifactSupport = SimAudioRepositoryArtifactSupport(runtime, storeSupport)
     private val syncSupport = SimAudioRepositorySyncSupport(runtime, storeSupport)
@@ -41,6 +27,7 @@ class SimAudioRepository @Inject constructor(
 
     init {
         storeSupport.loadFromDisk()
+        storeSupport.loadPendingBadgeDeletes()
         storeSupport.backfillSeedInventory()
         transcriptionSupport.resumeTrackedJobs()
     }
@@ -77,9 +64,7 @@ class SimAudioRepository @Inject constructor(
         transcriptionSupport.startTranscription(audioId)
     }
 
-    fun deleteAudio(audioId: String) {
-        storeSupport.deleteAudio(audioId)
-    }
+    internal suspend fun deleteAudio(audioId: String): SimAudioDeleteResult = storeSupport.deleteAudio(audioId)
 
     fun toggleStar(audioId: String) {
         storeSupport.toggleStar(audioId)

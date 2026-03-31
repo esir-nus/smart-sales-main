@@ -200,6 +200,54 @@ class DefaultDeviceConnectionManagerIngressTest {
     }
 
     @Test
+    fun `reconnectAndWait replays known wifi credentials when badge is online on a different ssid than phone`() = runTest {
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val monitor = FakeBadgeStateMonitor()
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("OfficeGuest", "secret-2")
+            )
+        }
+        val provisioner = FakeWifiProvisioner().apply {
+            stubNetworkResults += Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "192.168.0.8",
+                    deviceWifiName = "OldWifi",
+                    phoneWifiName = "",
+                    rawResponse = "IP#192.168.0.8, SD#OldWifi"
+                )
+            )
+            stubNetworkResults += Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "192.168.0.9",
+                    deviceWifiName = "OfficeGuest",
+                    phoneWifiName = "",
+                    rawResponse = "IP#192.168.0.9, SD#OfficeGuest"
+                )
+            )
+        }
+        val manager = newManager(
+            gateway = gateway,
+            provisioner = provisioner,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            monitor = monitor,
+            phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest")
+        )
+
+        val state = manager.reconnectAndWait()
+        advanceUntilIdle()
+
+        assertTrue(state is ConnectionState.WifiProvisioned)
+        assertTrue(manager.state.value is ConnectionState.WifiProvisioned)
+        assertEquals(1, provisioner.provisionCalls.size)
+        assertEquals("OfficeGuest", provisioner.provisionCalls.single().second.ssid)
+        assertEquals(BadgeState.CONNECTED, monitor.status.value.state)
+    }
+
+    @Test
     fun `reconnectAndWait requests wifi repair when phone ssid has no known saved credentials`() = runTest {
         val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
         val monitor = FakeBadgeStateMonitor()

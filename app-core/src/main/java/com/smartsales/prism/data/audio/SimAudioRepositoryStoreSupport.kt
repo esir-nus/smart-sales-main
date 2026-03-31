@@ -17,6 +17,17 @@ import kotlinx.serialization.encodeToString
 internal const val ORPHANED_SIM_TRANSCRIPTION_MESSAGE =
     "检测到未完成的旧转写状态，请重新开始转写。"
 internal const val SIM_AUDIO_METADATA_FILENAME = "sim_audio_metadata.json"
+internal const val SIM_AUDIO_PENDING_BADGE_DELETE_FILENAME =
+    "sim_audio_pending_badge_deletes.json"
+
+internal sealed interface SimAudioDeleteResult {
+    data object NotFound : SimAudioDeleteResult
+    data class LocalOnly(val filename: String) : SimAudioDeleteResult
+    data class Badge(
+        val filename: String,
+        val remoteDeleteSucceeded: Boolean
+    ) : SimAudioDeleteResult
+}
 
 internal fun recoverOrphanedSimTranscriptions(entries: List<AudioFile>): List<AudioFile> {
     return entries.map { audio ->
@@ -39,6 +50,8 @@ internal fun simStoredAudioFilename(audioId: String, extension: String): String 
 internal fun simStoredAudioFile(context: Context, audioId: String, extension: String): File {
     return File(context.filesDir, simStoredAudioFilename(audioId, extension))
 }
+
+internal fun simPendingBadgeDeleteFilename(filename: String): String = filename.trim()
 
 internal fun resolveSimStoredAudioFile(context: Context, audioId: String): File? {
     val candidates = listOf("wav", "mp3", "m4a", "aac", "ogg")
@@ -83,20 +96,38 @@ internal class SimAudioRepositoryStoreSupport(
         )
     }
 
-    fun deleteAudio(audioId: String) {
-        val target = runtime.audioFiles.value.find { it.id == audioId } ?: return
+    suspend fun deleteAudio(audioId: String): SimAudioDeleteResult = withContext(runtime.ioDispatcher) {
+        val target = runtime.audioFiles.value.find { it.id == audioId }
+            ?: return@withContext SimAudioDeleteResult.NotFound
         runtime.observationJobs.remove(audioId)?.cancel()
-        runtime.audioFiles.update { current -> current.filterNot { it.id == audioId } }
-        saveToDiskAsync()
+        val pendingDeleteFilename = target.filename.takeIf { isBadgeOriginAudio(target) }
+            ?.let(::simPendingBadgeDeleteFilename)
+
+        runtime.fileMutex.withLock {
+            runtime.audioFiles.value = runtime.audioFiles.value.filterNot { it.id == audioId }
+            if (pendingDeleteFilename != null) {
+                runtime.pendingBadgeDeletes.value = runtime.pendingBadgeDeletes.value + pendingDeleteFilename
+            }
+            writeMetadataLocked(runtime.audioFiles.value)
+            writePendingBadgeDeletesLocked(runtime.pendingBadgeDeletes.value)
+        }
 
         resolveSimStoredAudioFile(runtime.context, audioId)?.delete()
         simArtifactFile(runtime.context, audioId).delete()
 
-        if (target.source == AudioSource.SMARTBADGE) {
-            runtime.repositoryScope.launch {
-                runCatching { runtime.connectivityBridge.deleteRecording(target.filename) }
+        if (pendingDeleteFilename != null) {
+            val remoteDeleteSucceeded = runCatching {
+                runtime.connectivityBridge.deleteRecording(target.filename)
+            }.getOrDefault(false)
+            if (remoteDeleteSucceeded) {
+                clearPendingBadgeDeletes(setOf(pendingDeleteFilename))
             }
+            return@withContext SimAudioDeleteResult.Badge(
+                filename = target.filename,
+                remoteDeleteSucceeded = remoteDeleteSucceeded
+            )
         }
+        SimAudioDeleteResult.LocalOnly(filename = target.filename)
     }
 
     fun toggleStar(audioId: String) {
@@ -126,17 +157,43 @@ internal class SimAudioRepositoryStoreSupport(
 
     fun getAudioFilesSnapshot(): List<AudioFile> = runtime.audioFiles.value
 
+    fun getPendingBadgeDeletesSnapshot(): Set<String> = runtime.pendingBadgeDeletes.value
+
     fun loadFromDisk() {
         if (!runtime.metadataFile.exists()) return
         runCatching {
             val contents = runtime.metadataFile.readText()
             if (contents.isNotBlank()) {
+                val parsed = runtime.json.decodeFromString<List<AudioFile>>(contents)
+                val normalization = normalizeBadgeOriginEntries(parsed)
                 runtime.audioFiles.value = recoverOrphanedSimTranscriptions(
-                    runtime.json.decodeFromString(contents)
+                    normalization.entries
                 )
+                if (normalization.normalizedCount > 0) {
+                    android.util.Log.w(
+                        "SimAudioRepository",
+                        "loadFromDisk: normalized ${normalization.normalizedCount} legacy badge entries by filename"
+                    )
+                    runtime.metadataFile.writeText(runtime.json.encodeToString(runtime.audioFiles.value))
+                }
             }
         }.onFailure {
             android.util.Log.e("SimAudioRepository", "load metadata failed", it)
+        }
+    }
+
+    fun loadPendingBadgeDeletes() {
+        if (!runtime.pendingBadgeDeleteFile.exists()) return
+        runCatching {
+            val contents = runtime.pendingBadgeDeleteFile.readText()
+            if (contents.isNotBlank()) {
+                runtime.pendingBadgeDeletes.value = runtime.json.decodeFromString<List<String>>(contents)
+                    .map(::simPendingBadgeDeleteFilename)
+                    .filter(String::isNotBlank)
+                    .toSet()
+            }
+        }.onFailure {
+            android.util.Log.e("SimAudioRepository", "load pending badge deletes failed", it)
         }
     }
 
@@ -195,16 +252,23 @@ internal class SimAudioRepositoryStoreSupport(
         mutateAndSave { current -> current + newFile }
     }
 
+    suspend fun clearPendingBadgeDeletes(filenames: Set<String>) {
+        if (filenames.isEmpty()) return
+        runtime.fileMutex.withLock {
+            val updated = runtime.pendingBadgeDeletes.value - filenames
+            if (updated == runtime.pendingBadgeDeletes.value) return@withLock
+            runtime.pendingBadgeDeletes.value = updated
+            writePendingBadgeDeletesLocked(updated)
+        }
+    }
+
     internal suspend fun mutateAndSave(
         mutate: (List<AudioFile>) -> List<AudioFile>
     ) {
         runtime.fileMutex.withLock {
             val newList = mutate(runtime.audioFiles.value)
             runtime.audioFiles.value = newList
-            withContext(runtime.ioDispatcher) {
-                runtime.metadataFile.parentFile?.mkdirs()
-                runtime.metadataFile.writeText(runtime.json.encodeToString(newList))
-            }
+            writeMetadataLocked(newList)
         }
     }
 
@@ -238,12 +302,27 @@ internal class SimAudioRepositoryStoreSupport(
         runtime.repositoryScope.launch {
             runCatching {
                 runtime.fileMutex.withLock {
-                    runtime.metadataFile.parentFile?.mkdirs()
-                    runtime.metadataFile.writeText(runtime.json.encodeToString(runtime.audioFiles.value))
+                    writeMetadataLocked(runtime.audioFiles.value)
                 }
             }.onFailure {
                 android.util.Log.e("SimAudioRepository", "save metadata failed", it)
             }
+        }
+    }
+
+    private suspend fun writeMetadataLocked(entries: List<AudioFile>) {
+        withContext(runtime.ioDispatcher) {
+            runtime.metadataFile.parentFile?.mkdirs()
+            runtime.metadataFile.writeText(runtime.json.encodeToString(entries))
+        }
+    }
+
+    private suspend fun writePendingBadgeDeletesLocked(filenames: Set<String>) {
+        withContext(runtime.ioDispatcher) {
+            runtime.pendingBadgeDeleteFile.parentFile?.mkdirs()
+            runtime.pendingBadgeDeleteFile.writeText(
+                runtime.json.encodeToString(filenames.toList().sorted())
+            )
         }
     }
 }

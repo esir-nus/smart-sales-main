@@ -98,7 +98,7 @@ class FastTrackMutationEngine @Inject constructor(
                 conflictWithTaskId = conflictWithTaskId,
                 conflictSummary = conflictSummary,
                 isVague = false // Or derive from NLP payload
-            )
+            ).withNormalizedReminderMetadata()
         }
         
         if (newTasks.size == 1 && !params.unifiedId.isNullOrBlank()) {
@@ -135,7 +135,7 @@ class FastTrackMutationEngine @Inject constructor(
             hasConflict = false,
             isVague = true,
             notes = vagueNotes
-        )
+        ).withNormalizedReminderMetadata()
 
         val id = taskRepository.upsertTask(task)
         return MutationResult.Success(listOf(id))
@@ -204,7 +204,7 @@ class FastTrackMutationEngine @Inject constructor(
             conflictWithTaskId = conflict?.overlaps?.firstOrNull()?.entryId,
             conflictSummary = conflict?.overlaps?.firstOrNull()?.let { "与「${it.title}」时间冲突" },
             isVague = false
-        )
+        ).withNormalizedReminderMetadata()
         
         // 6. Execute atomic Delete -> Insert
         taskRepository.rescheduleTask(oldTaskId, newTask)

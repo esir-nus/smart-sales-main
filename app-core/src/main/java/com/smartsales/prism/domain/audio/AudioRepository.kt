@@ -31,7 +31,7 @@ interface AudioRepository {
     /**
      * 删除音频
      */
-    fun deleteAudio(audioId: String)
+    suspend fun deleteAudio(audioId: String): AudioDeleteResult
     
     /**
      * 切换收藏状态
@@ -57,6 +57,15 @@ interface AudioRepository {
      * 获取完整转写智能结果（用于展开态）
      */
     suspend fun getArtifacts(audioId: String): com.smartsales.prism.domain.tingwu.TingwuJobArtifacts?
+}
+
+sealed interface AudioDeleteResult {
+    data object NotFound : AudioDeleteResult
+    data class LocalOnly(val filename: String) : AudioDeleteResult
+    data class Badge(
+        val filename: String,
+        val remoteDeleteSucceeded: Boolean
+    ) : AudioDeleteResult
 }
 
 /**

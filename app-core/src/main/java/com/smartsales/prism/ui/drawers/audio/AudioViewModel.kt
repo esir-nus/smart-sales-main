@@ -1,8 +1,13 @@
 package com.smartsales.prism.ui.drawers.audio
 
+import android.net.Uri
+import android.util.Log
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.smartsales.prism.data.audio.isBadgeOriginAudio
 import com.smartsales.prism.domain.audio.AudioFile
+import com.smartsales.prism.domain.audio.AudioDeleteResult
 import com.smartsales.prism.domain.audio.AudioRepository
 import com.smartsales.prism.domain.audio.AudioSource as DomainSource
 import com.smartsales.prism.domain.audio.TranscriptionStatus
@@ -11,18 +16,21 @@ import com.smartsales.prism.ui.drawers.AudioItemState
 import com.smartsales.prism.ui.drawers.AudioSource
 import com.smartsales.prism.ui.drawers.AudioStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import javax.inject.Inject
-import android.net.Uri
+
+private const val AUDIO_BADGE_DELETE_LOG_TAG = "AudioDeleteGate"
 
 /**
  * 音频抽屉 ViewModel — 将领域模型映射为 UI 状态
@@ -35,6 +43,10 @@ class AudioViewModel @Inject constructor(
     
     private val _uiEvents = MutableSharedFlow<String>()
     val uiEvents: SharedFlow<String> = _uiEvents.asSharedFlow()
+    private val _pendingBadgeDeleteConfirmation =
+        MutableStateFlow<AudioBadgeDeleteConfirmationRequest?>(null)
+    internal val pendingBadgeDeleteConfirmation = _pendingBadgeDeleteConfirmation.asStateFlow()
+    private var hasConfirmedBadgeDeleteThisSession = false
     
     val audioItems: StateFlow<List<AudioItemState>> = audioRepository.getAudioFiles()
         .map { files -> files.map { it.toUiState() } }
@@ -75,7 +87,36 @@ class AudioViewModel @Inject constructor(
     }
     
     fun deleteAudio(audioId: String) {
-        audioRepository.deleteAudio(audioId)
+        val audio = audioRepository.getAudio(audioId) ?: return
+        val confirmationRequest = resolveAudioBadgeDeleteConfirmationRequest(
+            audio = audio,
+            hasConfirmedBadgeDeleteThisSession = hasConfirmedBadgeDeleteThisSession
+        )
+        Log.d(
+            AUDIO_BADGE_DELETE_LOG_TAG,
+            "shared delete gate audioId=${audio.id} filename=${audio.filename} source=${audio.source.name} badgeOrigin=${isBadgeOriginAudio(audio)} sessionConfirmed=$hasConfirmedBadgeDeleteThisSession showDialog=${confirmationRequest != null}"
+        )
+        if (confirmationRequest != null) {
+            _pendingBadgeDeleteConfirmation.value = confirmationRequest
+            return
+        }
+        deleteAudioConfirmed(audioId)
+    }
+
+    fun confirmBadgeDelete() {
+        val pending = _pendingBadgeDeleteConfirmation.value ?: return
+        hasConfirmedBadgeDeleteThisSession = true
+        _pendingBadgeDeleteConfirmation.value = null
+        deleteAudioConfirmed(pending.audioId)
+    }
+
+    fun dismissBadgeDeleteConfirmation() {
+        _pendingBadgeDeleteConfirmation.value = null
+    }
+
+    fun resetDeleteConfirmationSession() {
+        hasConfirmedBadgeDeleteThisSession = false
+        _pendingBadgeDeleteConfirmation.value = null
     }
     
     fun toggleStar(audioId: String) {
@@ -199,5 +240,46 @@ class AudioViewModel @Inject constructor(
         isStarred = isStarred,
         summary = summary,
         progress = if (status == TranscriptionStatus.TRANSCRIBING) progress else null
+    )
+
+    private fun deleteAudioConfirmed(audioId: String) {
+        viewModelScope.launch {
+            when (val result = audioRepository.deleteAudio(audioId)) {
+                is AudioDeleteResult.Badge -> {
+                    _uiEvents.emit(
+                        if (result.remoteDeleteSucceeded) {
+                            "已删除录音，徽章源文件已清理。"
+                        } else {
+                            "已删除本地录音；徽章端删除待重试，同步前不会重新导入。"
+                        }
+                    )
+                }
+
+                is AudioDeleteResult.LocalOnly -> {
+                    _uiEvents.emit("已删除录音")
+                }
+
+                AudioDeleteResult.NotFound -> Unit
+            }
+        }
+    }
+}
+
+@Immutable
+internal data class AudioBadgeDeleteConfirmationRequest(
+    val audioId: String,
+    val filename: String
+)
+
+internal fun resolveAudioBadgeDeleteConfirmationRequest(
+    audio: AudioFile?,
+    hasConfirmedBadgeDeleteThisSession: Boolean
+): AudioBadgeDeleteConfirmationRequest? {
+    if (audio == null) return null
+    if (!isBadgeOriginAudio(audio)) return null
+    if (hasConfirmedBadgeDeleteThisSession) return null
+    return AudioBadgeDeleteConfirmationRequest(
+        audioId = audio.id,
+        filename = audio.filename
     )
 }

@@ -25,6 +25,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 
@@ -163,7 +164,7 @@ class ConnectivityViewModelTest {
             connectivityService = FakeConnectivityService(
                 reconnectResults = listOf(
                     CompletableDeferred<ReconnectResult>().apply {
-                        complete(ReconnectResult.WifiMismatch)
+                        complete(ReconnectResult.WifiMismatch(currentPhoneSsid = "OfficeGuest"))
                     }
                 )
             ),
@@ -174,6 +175,7 @@ class ConnectivityViewModelTest {
         viewModel.reconnect()
         advanceUntilIdle()
         assertEquals(ConnectivityManagerState.WIFI_MISMATCH, viewModel.managerState.value)
+        assertEquals("OfficeGuest", viewModel.wifiMismatchSuggestedSsid.value)
 
         viewModel.resetTransientState()
         advanceUntilIdle()
@@ -181,6 +183,7 @@ class ConnectivityViewModelTest {
             ConnectivityManagerState.BLE_PAIRED_NETWORK_OFFLINE,
             viewModel.managerState.value
         )
+        assertNull(viewModel.wifiMismatchSuggestedSsid.value)
     }
 
     @Test
@@ -244,6 +247,53 @@ class ConnectivityViewModelTest {
 
         assertEquals(1, service.updateWifiConfigCalls.size)
         assertEquals(ConnectivityManagerState.RECONNECTING, viewModel.managerState.value)
+    }
+
+    @Test
+    fun `reconnect wifi mismatch exposes suggested phone ssid for repair form`() = runTest {
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Disconnected,
+            manager = BadgeManagerStatus.BlePairedNetworkOffline
+        )
+        val viewModel = ConnectivityViewModel(
+            connectivityService = FakeConnectivityService(
+                reconnectResults = listOf(
+                    CompletableDeferred<ReconnectResult>().apply {
+                        complete(ReconnectResult.WifiMismatch(currentPhoneSsid = "OfficeGuest"))
+                    }
+                )
+            ),
+            connectivityBridge = bridge
+        )
+        advanceUntilIdle()
+
+        viewModel.reconnect()
+        advanceUntilIdle()
+
+        assertEquals(ConnectivityManagerState.WIFI_MISMATCH, viewModel.managerState.value)
+        assertEquals("OfficeGuest", viewModel.wifiMismatchSuggestedSsid.value)
+    }
+
+    @Test
+    fun `wifi repair failure keeps submitted ssid as next mismatch suggestion`() = runTest {
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Disconnected,
+            manager = BadgeManagerStatus.BlePairedNetworkOffline
+        )
+        val updateGate = CompletableDeferred<WifiConfigResult>()
+        val viewModel = ConnectivityViewModel(
+            connectivityService = FakeConnectivityService(updateWifiConfigResults = listOf(updateGate)),
+            connectivityBridge = bridge
+        )
+        advanceUntilIdle()
+
+        viewModel.updateWifiConfig(ssid = "OfficeGuest", password = "secret")
+        advanceUntilIdle()
+        updateGate.complete(WifiConfigResult.Error("repair failed"))
+        advanceUntilIdle()
+
+        assertEquals(ConnectivityManagerState.WIFI_MISMATCH, viewModel.managerState.value)
+        assertEquals("OfficeGuest", viewModel.wifiMismatchSuggestedSsid.value)
     }
 
     private class FakeConnectivityBridge(

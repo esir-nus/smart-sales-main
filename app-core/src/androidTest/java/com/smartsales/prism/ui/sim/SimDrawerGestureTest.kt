@@ -13,9 +13,12 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.smartsales.prism.ui.AgentIntelligenceScreen
 import com.smartsales.prism.ui.AgentIntelligenceVisualMode
+import com.smartsales.prism.ui.components.DynamicIslandItem
+import com.smartsales.prism.ui.components.DynamicIslandTapAction
 import com.smartsales.prism.ui.drawers.SCHEDULER_DRAWER_HANDLE_TEST_TAG
 import com.smartsales.prism.ui.drawers.SchedulerDrawer
 import com.smartsales.prism.ui.drawers.scheduler.FakeSchedulerViewModel
+import com.smartsales.prism.ui.drawers.scheduler.SchedulerDrawerVisualMode
 import com.smartsales.prism.ui.fakes.FakeAgentViewModel
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -225,6 +228,146 @@ class SimDrawerGestureTest {
 
         composeTestRule.runOnIdle {
             assertEquals(1, dismissCount)
+        }
+    }
+
+    @Test
+    fun simSchedulerHeader_hidesSideButtonsButKeepsDynamicIsland() {
+        composeTestRule.setContent {
+            SimHomeHeroShellFrame(
+                inputText = "",
+                isSending = false,
+                dynamicIslandItems = listOf(
+                    DynamicIslandItem(
+                        sessionTitle = "SIM",
+                        schedulerSummary = "最近：客户回访 · 15:00",
+                        tapAction = DynamicIslandTapAction.OpenSchedulerDrawer()
+                    )
+                ),
+                onMenuClick = {},
+                onNewSessionClick = {},
+                onSchedulerClick = {},
+                showMenuButton = false,
+                showNewSessionButton = false,
+                onTextChanged = {},
+                onSend = {},
+                onAttachClick = {},
+                showBottomComposer = false,
+                enableSchedulerPullGesture = true
+            ) { modifier ->
+                Box(modifier = modifier.fillMaxSize())
+            }
+        }
+
+        composeTestRule.onNodeWithTag(SIM_HEADER_TEST_TAG).assertExists()
+        composeTestRule.onNodeWithTag(SIM_DYNAMIC_ISLAND_TEST_TAG).assertExists()
+        composeTestRule.onNodeWithTag(SIM_HEADER_MENU_BUTTON_TEST_TAG).assertDoesNotExist()
+        composeTestRule.onNodeWithTag(SIM_HEADER_NEW_CHAT_BUTTON_TEST_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun simSchedulerHandle_dragDown_dismissesDrawer() {
+        var dismissCount = 0
+
+        composeTestRule.setContent {
+            SchedulerDrawer(
+                isOpen = true,
+                onDismiss = { dismissCount += 1 },
+                visualMode = SchedulerDrawerVisualMode.SIM,
+                enableInspirationMultiSelect = false,
+                viewModel = FakeSchedulerViewModel()
+            )
+        }
+
+        composeTestRule.onNodeWithTag(SCHEDULER_DRAWER_HANDLE_TEST_TAG)
+            .assertExists()
+            .performTouchInput {
+                down(center)
+                moveBy(Offset(0f, 120f))
+                up()
+            }
+
+        composeTestRule.runOnIdle {
+            assertEquals(1, dismissCount)
+        }
+    }
+
+    @Test
+    fun simSchedulerHandle_tapDismissesDrawer() {
+        var dismissCount = 0
+
+        composeTestRule.setContent {
+            SchedulerDrawer(
+                isOpen = true,
+                onDismiss = { dismissCount += 1 },
+                visualMode = SchedulerDrawerVisualMode.SIM,
+                enableInspirationMultiSelect = false,
+                viewModel = FakeSchedulerViewModel()
+            )
+        }
+
+        composeTestRule.onNodeWithTag(SCHEDULER_DRAWER_HANDLE_TEST_TAG)
+            .assertExists()
+            .performTouchInput {
+                click(center)
+            }
+
+        composeTestRule.runOnIdle {
+            assertEquals(1, dismissCount)
+        }
+    }
+
+    @Test
+    fun simSchedulerHandle_dragUp_doesNotDismissDrawer() {
+        var dismissCount = 0
+
+        composeTestRule.setContent {
+            SchedulerDrawer(
+                isOpen = true,
+                onDismiss = { dismissCount += 1 },
+                visualMode = SchedulerDrawerVisualMode.SIM,
+                enableInspirationMultiSelect = false,
+                viewModel = FakeSchedulerViewModel()
+            )
+        }
+
+        composeTestRule.onNodeWithTag(SCHEDULER_DRAWER_HANDLE_TEST_TAG)
+            .assertExists()
+            .performTouchInput {
+                down(center)
+                moveBy(Offset(0f, -120f))
+                up()
+            }
+
+        composeTestRule.runOnIdle {
+            assertEquals(0, dismissCount)
+        }
+    }
+
+    @Test
+    fun simSchedulerHandle_smallDragDown_doesNotDismissDrawer() {
+        var dismissCount = 0
+
+        composeTestRule.setContent {
+            SchedulerDrawer(
+                isOpen = true,
+                onDismiss = { dismissCount += 1 },
+                visualMode = SchedulerDrawerVisualMode.SIM,
+                enableInspirationMultiSelect = false,
+                viewModel = FakeSchedulerViewModel()
+            )
+        }
+
+        composeTestRule.onNodeWithTag(SCHEDULER_DRAWER_HANDLE_TEST_TAG)
+            .assertExists()
+            .performTouchInput {
+                down(center)
+                moveBy(Offset(0f, 12f))
+                up()
+            }
+
+        composeTestRule.runOnIdle {
+            assertEquals(0, dismissCount)
         }
     }
 

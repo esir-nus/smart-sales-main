@@ -5,14 +5,14 @@
 > **Campaign Lifecycle**: Every major initiative (rewrite, refactor, UI polish, large fix) is an "Epic" or "Campaign". Every Campaign MUST be initialized using the `/campaign-planner` workflow to enforce the following checklist sequence:
 > 1. **Docs** (Ensure Specs exist) -> 2. **Interface Map** (Ensure Layer/Contract boundaries align) -> 3. **Plan** (Dev Planner) -> 4. **Execute** (Implementation) -> 5. **Test** (E2E/L2 Verification). 
 > **Master Guide Alignment**: The Master Guide acts as the overarching strategy doc for a campaign. Agents MUST NEVER auto-update the Master Guide without strict explicit human review (like a Review Conference) to prevent architectural hallucination drift. Instead, run `/04-doc-sync` at the *end* of a campaign.
-> **Last Updated**: 2026-03-26
+> **Last Updated**: 2026-03-31
 
 ---
 
 ## Active Structural Cleanup Campaign: God-File Trunk Cleanup
 > **Context**: Direct user-requested refactor/rewrite campaign to clean the shared UI and ViewModel trunk before further major prototype transplants land into the current god files.
 
-- **Status**: Wave 3A L1 Accepted
+- **Status**: Wave 3C accepted; Wave 3D accepted; Wave 3E accepted
 - **Primary Tracker**:
   - [`docs/plans/god-tracker.md`](./god-tracker.md)
 - **Wave 0 Execution Brief**:
@@ -33,6 +33,14 @@
   - [`docs/plans/god-wave2c-execution-brief.md`](./god-wave2c-execution-brief.md)
 - **Wave 3A Execution Brief**:
   - [`docs/plans/god-wave3a-execution-brief.md`](./god-wave3a-execution-brief.md)
+- **Wave 3B Execution Brief**:
+  - [`docs/plans/god-wave3b-execution-brief.md`](./god-wave3b-execution-brief.md)
+- **Wave 3C Execution Brief**:
+  - [`docs/plans/god-wave3c-execution-brief.md`](./god-wave3c-execution-brief.md)
+- **Wave 3D Execution Brief**:
+  - [`docs/plans/god-wave3d-execution-brief.md`](./god-wave3d-execution-brief.md)
+- **Wave 3E Execution Brief**:
+  - [`docs/plans/god-wave3e-execution-brief.md`](./god-wave3e-execution-brief.md)
 - **Wave 1A L1 Validation**:
   - [`docs/reports/tests/L1-20260324-god-wave1a-guardrails.md`](../reports/tests/L1-20260324-god-wave1a-guardrails.md)
 - **Wave 1B L1 Validation**:
@@ -47,17 +55,27 @@
   - [`docs/reports/tests/L1-20260324-god-wave2c-sim-audio-repository.md`](../reports/tests/L1-20260324-god-wave2c-sim-audio-repository.md)
 - **Wave 3A L1 Validation**:
   - [`docs/reports/tests/L1-20260324-god-wave3a-sim-audio-drawer.md`](../reports/tests/L1-20260324-god-wave3a-sim-audio-drawer.md)
+- **Wave 3B L1 Validation**:
+  - [`docs/reports/tests/L1-20260331-god-wave3b-agent-shell.md`](../reports/tests/L1-20260331-god-wave3b-agent-shell.md)
+- **Wave 3C L1 Validation**:
+  - [`docs/reports/tests/L1-20260331-god-wave3c-agent-vm.md`](../reports/tests/L1-20260331-god-wave3c-agent-vm.md)
+- **Wave 3D L1 Validation**:
+  - [`docs/reports/tests/L1-20260331-god-wave3d-scheduler-viewmodel.md`](../reports/tests/L1-20260331-god-wave3d-scheduler-viewmodel.md)
+- **Wave 3E L1 Validation**:
+  - [`docs/reports/tests/L1-20260331-god-wave3e-sim-agent-vm-voice-draft.md`](../reports/tests/L1-20260331-god-wave3e-sim-agent-vm-voice-draft.md)
 - **Governance Split**:
   - UI SOP stack remains the primary UI-building workflow
   - Cerb / cerb-ui remain the feature-local UI truth
   - [`docs/specs/code-structure-contract.md`](../specs/code-structure-contract.md) now owns the long-lived anti-god-file structure law, while `god-tracker.md` carries the active campaign memory
 - **Immediate Wave Scope**:
-  - `SimAudioDrawer.kt`
+  - `SimAgentViewModel.kt`
 - **Current Objective**:
   - speed up prototype-to-Kotlin transplant by making the target structure easier for humans and agents to understand
   - keep accepted Wave 1 / Wave 2 trunk reductions enforced by guardrails
   - reopen only stable UI trunks for focused host/content/component cleanup when the user explicitly approves that scope
-  - close Wave 3A with the accepted SIM audio drawer host split while the onboarding host-driven prototype transplant is now landing as the follow-up UI slice
+  - keep Wave 3C accepted with `AgentViewModel.kt` reduced to a thin compatibility host plus stable support owners
+  - keep Wave 3D accepted with `SchedulerViewModel.kt` reduced to a thin compatibility host plus stable projection, legacy-action, and audio-ingress owners
+  - keep Wave 3E accepted with `SimAgentViewModel.kt` reduced to a thin compatibility host plus stable session/chat/follow-up/voice-draft owners
 
 ---
 
@@ -78,6 +96,62 @@
   - future ambient lanes deferred
 
 ---
+
+## Active Investigation: Base Runtime Unification
+> **Context**: Direct user-requested investigation to eliminate SIM/full implementation drift by defining one canonical base runtime and treating Mono as the later architecture augmentation layer.
+
+- **Status**: Investigation package delivered on 2026-03-31; Slice 1 wrapper cleanup accepted on 2026-03-31; Slice 2 wrapper cleanup accepted on 2026-03-31; Slice 3 wrapper cleanup accepted on 2026-03-31; Slice 4 wrapper cleanup accepted on 2026-03-31; Slice 5 truth lock accepted on 2026-03-31
+- **North Star**:
+  - [`docs/specs/base-runtime-unification.md`](../specs/base-runtime-unification.md)
+- **Audit**:
+  - [`docs/reports/20260331-base-runtime-unification-drift-audit.md`](../reports/20260331-base-runtime-unification-drift-audit.md)
+- **Campaign Plan**:
+  - [`docs/plans/base-runtime-unification-campaign.md`](./base-runtime-unification-campaign.md)
+- **Truth-Lock Brief**:
+  - [`docs/plans/base-runtime-truth-lock-execution-brief.md`](./base-runtime-truth-lock-execution-brief.md)
+- **Truth-Lock Validation**:
+  - [`docs/reports/tests/L1-20260331-base-runtime-truth-lock.md`](../reports/tests/L1-20260331-base-runtime-truth-lock.md)
+- **Canonical Direction**:
+  - one shared base runtime for shell/UI/UX, Tingwu/audio, Path A scheduler, and bounded local/session continuity
+  - Mono later adds Kernel/session-memory, CRM/entity loading, Path B enrichment, plugin/tool runtime, and related deeper intelligence
+  - non-Mono work must no longer fork into SIM truth vs full truth
+- **Organic Structural Cleanup Rule**:
+  - this campaign may trigger targeted god-file teardown only when a legacy seam mixes shared UI truth, base-runtime logic, Mono-only logic, or wrapper glue
+  - current audit candidates were `AgentShell.kt`, `AgentViewModel.kt`, and `SchedulerViewModel.kt`; Slice 4 later also reopened the former SIM-side exception path in `SimAgentViewModel.kt`
+  - `OnboardingScreen.kt` remains deferred unless later implementation proves it is a direct blocker
+- **Current Implementation Landing**:
+  - Slice 1 now keeps `AgentShell.kt` as a thin compatibility host and moves rendering/state/reducer/support ownership into `AgentShellContent.kt`, `AgentShellState.kt`, `AgentShellReducer.kt`, and `AgentShellSupport.kt`
+  - this slice is intentionally wrapper-only and does not yet decide any full-vs-SIM behavior-by-behavior convergence
+  - Slice 2 now keeps `SchedulerViewModel.kt` as a thin compatibility host and moves timeline projection, legacy action helpers, and scheduler-drawer audio ingress ownership into `SchedulerViewModelProjectionSupport.kt`, `SchedulerViewModelLegacyActions.kt`, and `SchedulerViewModelAudioIngressCoordinator.kt`
+  - Slice 3 now keeps `AgentViewModel.kt` as a thin compatibility host and moves UI bridge, session lifecycle, pipeline dispatch, tool dispatch, runtime/dashboard support, and debug scenario ownership into `AgentUiBridge.kt`, `AgentSessionCoordinator.kt`, `AgentPipelineCoordinator.kt`, `AgentToolCoordinator.kt`, `AgentRuntimeSupport.kt`, and `AgentDebugSupport.kt`
+  - Slice 4 now keeps `SimAgentViewModel.kt` as a thin compatibility host and moves the SIM voice-draft lane into `SimAgentVoiceDraftCoordinator.kt`, while extending the existing `SimAgentUiBridge` just enough to let the host-owned state remain source-compatible
+  - Slice 5 now locks the repo's non-Mono planning truth in docs: current SIM-led shell/scheduler/audio docs stay the best available base-runtime baseline, separate SIM runtime boundaries remain lawful implementation seams, and Mono stays the only lawful deeper divergence layer
+  - On **2026-03-31**, shared onboarding handshake follow-up now hardens the base-runtime fast lane so both hosts keep one interaction engine, dedicated onboarding model profiles, one visible generation watchdog per lane, and deterministic fallback as backup only rather than the expected user-visible result
+  - focused Wave 3D reruns now pass after restoring the extracted scheduler audio-status strings to the evidence-owned legacy full-side values
+  - focused Wave 3E reruns now pass with `SimAgentViewModel.kt` back under the transitional ViewModel budget and with the accepted Wave 14 SIM voice-draft behavior preserved
+
+---
+
+## Active Audit: Doc Control Plane and Drift Cleanup
+> **Context**: Direct user-approved docs-first audit to reduce doc-reading overhead, replace deprecated SIM Cerb ownership, and classify current doc/code drift against the latest base-runtime direction.
+
+- **Status**: Audit package delivered on 2026-03-31; Wave A clean-docs foundation landed on 2026-03-31; broader remediation backlog pending execution
+- **Primary Ledger**:
+  - [`docs/plans/doc-tracker.md`](./doc-tracker.md)
+- **Audit Report**:
+  - [`docs/reports/20260331-doc-code-drift-audit.md`](../reports/20260331-doc-code-drift-audit.md)
+- **Replacement Map**:
+  - [`docs/reports/20260331-sim-cerb-replacement-map.md`](../reports/20260331-sim-cerb-replacement-map.md)
+- **Backlog**:
+  - [`docs/plans/doc-code-drift-backlog.md`](./doc-code-drift-backlog.md)
+- **Current Objective**:
+  - make one lightweight doc control plane the first-stop read for humans and agents
+  - stop deprecated `docs/cerb/sim-*` shards from acting as active non-Mono truth
+  - repair active doc-vs-doc and doc-vs-code conflicts around shell, Tingwu/audio, onboarding, and Mono posture
+  - stage code cleanup only after authority docs stop conflicting
+
+---
+
 
 ## Planned Mission: SIM Standalone Prototype
 > **Context**: Direct user-requested standalone prototype mission. This work is intentionally separate from the current agent app and must not contaminate the live agent runtime by default.
@@ -102,6 +176,7 @@
 - **Wave 13 L1 Validation**: [`docs/reports/tests/L1-20260326-sim-wave13-launcher-core-theme-validation.md`](../reports/tests/L1-20260326-sim-wave13-launcher-core-theme-validation.md)
 - **Wave 14 L1 Validation**: [`docs/reports/tests/L1-20260328-sim-wave14-voice-draft.md`](../reports/tests/L1-20260328-sim-wave14-voice-draft.md)
 - **Current Experiment Note**: follow-up reschedule now resolves targets through a global scheduler-owned contract before time execution; selected/opened task state and visible page/date no longer carry semantic authority, weak recent-task hints remain allowed, create-time `keyPerson` / `location` hints are now persisted for later matching, the extractor now receives a scheduler-owned active shortlist derived from all non-done tasks rather than a 7-day UI window, and the write-disabled V2 shadow contract still gathers time-semantics parity/mismatch telemetry only
+- **2026-03-31 Audio Drawer Sync Correction**: approved doc+code alignment now restores spec-owned manual drawer sync in SIM audio drawer, removes the earlier browse-open auto-sync experiment, and ships badge-pipeline completion ingest into the SIM drawer namespace. Successful ingest now gates badge remote delete so failed ingest preserves manual-recovery path. Focused verification: `:app-core:compileDebugUnitTestKotlin`; targeted audio/SIM suites passed, while unrelated `L2DualEngineBridgeTest` still fails on a stale Uni-A timestamp expectation outside this slice.
 - **Wave 1 Acceptance**: [`docs/reports/tests/L3-20260319-sim-wave1-shell-acceptance.md`](../reports/tests/L3-20260319-sim-wave1-shell-acceptance.md)
 - **Wave 4 Acceptance**: [`docs/reports/tests/L3-20260320-sim-wave4-scheduler-validation.md`](../reports/tests/L3-20260320-sim-wave4-scheduler-validation.md)
 - **Wave 5 Acceptance**: [`docs/reports/tests/L3-20260321-sim-wave5-connectivity-validation.md`](../reports/tests/L3-20260321-sim-wave5-connectivity-validation.md)
@@ -117,15 +192,14 @@
 - **Wave 5 Boundary Audit**: [`docs/reports/20260321-sim-wave5-boundary-audit.md`](../reports/20260321-sim-wave5-boundary-audit.md)
 - **Audit Output**: [`docs/reports/20260319-sim-standalone-code-audit.md`](../reports/20260319-sim-standalone-code-audit.md)
 - **Clarification Audit**: [`docs/reports/20260319-sim-clarification-evidence-audit.md`](../reports/20260319-sim-clarification-evidence-audit.md)
-- **Cerb Shards**:
-  - [`docs/cerb/sim-shell/spec.md`](../cerb/sim-shell/spec.md)
-  - [`docs/cerb/sim-shell/interface.md`](../cerb/sim-shell/interface.md)
-  - [`docs/cerb/sim-scheduler/spec.md`](../cerb/sim-scheduler/spec.md)
-  - [`docs/cerb/sim-scheduler/interface.md`](../cerb/sim-scheduler/interface.md)
-  - [`docs/cerb/sim-audio-chat/spec.md`](../cerb/sim-audio-chat/spec.md)
-  - [`docs/cerb/sim-audio-chat/interface.md`](../cerb/sim-audio-chat/interface.md)
-  - [`docs/cerb/sim-connectivity/spec.md`](../cerb/sim-connectivity/spec.md)
-  - [`docs/cerb/sim-connectivity/interface.md`](../cerb/sim-connectivity/interface.md)
+- **Historical SIM Shards**:
+  - Deprecated SIM Cerb shards remain useful as migration memory only and must not be read as active non-Mono product truth.
+  - Current authority for this mission now routes through:
+    - [`docs/specs/base-runtime-unification.md`](../specs/base-runtime-unification.md)
+    - [`docs/cerb/interface-map.md`](../cerb/interface-map.md)
+    - [`docs/core-flow/sim-shell-routing-flow.md`](../core-flow/sim-shell-routing-flow.md)
+    - [`docs/core-flow/sim-scheduler-path-a-flow.md`](../core-flow/sim-scheduler-path-a-flow.md)
+    - [`docs/core-flow/sim-audio-artifact-chat-flow.md`](../core-flow/sim-audio-artifact-chat-flow.md)
 - **Core Flows**:
   - [`docs/core-flow/sim-shell-routing-flow.md`](../core-flow/sim-shell-routing-flow.md)
   - [`docs/core-flow/sim-scheduler-path-a-flow.md`](../core-flow/sim-scheduler-path-a-flow.md)
@@ -139,9 +213,15 @@
   - shell-owned zone/handle drawer gestures for scheduler/audio entry and dismiss parity
   - No smart-agent tooling or non-SIM memory architecture
 - **Current Carry Debt**:
+  - On **2026-03-31**, the repo locked a new unification direction in [`docs/specs/base-runtime-unification.md`](../specs/base-runtime-unification.md): current SIM-led shell/scheduler/audio behavior should now be read as the best available base-runtime baseline for non-Mono work, while deeper memory/entity/plugin architecture remains Mono-only. Future non-Mono work must not reintroduce separate SIM-vs-full product truth.
+  - This mission tracker remains campaign memory and evidence routing. It no longer acts as the active owner for shell, scheduler, audio/chat, or connectivity behavior.
   - SIM has now accepted `T8.0` on top of the Wave 7 closeout. `docs/reports/tests/L3-20260322-sim-wave8-follow-up-validation.md` proves prompt-first ingress, in-shell prompt opening, repository-backed single-task follow-up mutation, and multi-task no-selection safe-fail on device.
   - `docs/reports/tests/L3-20260322-sim-wave9-hardware-validation.md` records the first `Wave 9` execution attempt as blocked: device/build preflight succeeded, but no real badge-origin single-task or multi-task ingress was captured in-session, so the hardware-only L3 debt remains open. Earlier accepted debt status is unchanged for reminders, connectivity, and Wave 6 isolation.
   - `Wave 10` is the explicit repair mini-wave for that blocker. Code and L1 verification now harden BLE recording ingress plus connection truth; device-level ingress proof is still required before returning to `T9.0`.
+  - On **2026-03-30**, the shared app `AudioManagement` path was brought to SmartBadge delete parity with SIM for the main drawer: the first SmartBadge delete per drawer-open session now requires confirmation, and pending-delete tombstones now suppress shared-path re-import when HTTP badge cleanup has not finished yet.
+  - On **2026-03-30**, SIM badge-audio delete semantics were tightened: the first SmartBadge delete per drawer-open session now requires confirmation, and pending-delete tombstones now suppress re-import when HTTP badge cleanup has not finished yet.
+  - On **2026-03-31**, shared and SIM badge delete handling were hardened against legacy persisted source drift: badge-like `log_YYYYMMDD_HHMMSS.wav` entries now normalize back to `SMARTBADGE` on load, the first-delete confirmation/delete-cleanup fallback still treats them as badge-origin before rewrite completes, and focused Compose AndroidTests now cover first-delete confirm, same-session skip, and drawer-reopen reset. Manual physical-device proof is still pending.
+  - On **2026-03-30**, the reconnect-path connectivity contract was tightened so badge reconnect now always tries to align the badge onto the phone's current Wi‑Fi using the remembered multi-network credential store before surfacing manual repair; the mismatch form now prefills the readable phone SSID while keeping manual entry editable.
   - `Wave 11` now has docs, code, and focused L1 evidence aligned on the general-chat-first contract. Further on-device proof is optional follow-up, not a blocker against this current pivot slice.
   - `Wave 12` now has docs, code, and focused L1 evidence aligned for the scheduler-drawer voice reschedule lane. Scope remains strictly the scheduler drawer mic path; audio drawer, general SIM chat, and random sessions remain out of scope.
   - `Wave 13` now has docs, code, and focused L1 evidence aligned for launcher-core theme visibility from the default SIM host. Scope remains limited to `SimMainActivity`, home/chat shell, header, history drawer, and settings drawer; scheduler/audio/connectivity/onboarding light-theme parity remains deferred.

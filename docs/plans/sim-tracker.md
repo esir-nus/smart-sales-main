@@ -12,6 +12,7 @@
 > **UI Freeze-Gate Note (2026-03-23, Empty Home Hero)**: Continue the SIM shell migration surgically. Empty-home screenshot acceptance now freezes the shell chrome through the first active-chat shell-unification slice; later work should migrate center-canvas conversation states and gesture recovery one micro-slice at a time, with only regression fixes reopening the frozen chrome.
 > **Closeout Reading Rule**: Wave 7 closeout means the SIM mission is complete at the tracker level. Any remaining unchecked historical sub-items below should be read as archived execution residue unless they are explicitly restated under the post-closeout deferred-debt section.
 > **Product Pivot Note (2026-03-22, Wave 11)**: Accepted Wave 3 proved audio-grounded chat continuation, but Wave 11 now supersedes the old `audio-grounded only` interpretation. SIM chat must be directly available from the home surface using system persona + user metadata + local session history, while `Ask AI` and chat-side attach/reselect add audio artifacts into the same ongoing session instead of defining the only legal chat entry.
+> **Unification Note (2026-03-31)**: This tracker still records the real SIM-owned standalone/runtime boundary, but for future non-Mono product truth the current SIM-led shell/scheduler/audio docs must now be read as the best available **base-runtime baseline**. Mono remains the only lawful deeper divergence layer, and future non-Mono work must not reintroduce separate SIM-vs-full product truth.
 > **Primary Product Doc**: `docs/to-cerb/sim-standalone-prototype/concept.md`
 > **Mental Model Doc**: `docs/to-cerb/sim-standalone-prototype/mental-model.md`
 > **Implementation Brief**: `docs/plans/sim_implementation_brief.md`
@@ -709,7 +710,9 @@ Archived planning note:
   - [x] **2026-03-21 Focused L1 (Connectivity-Absent Slice)**
     Focused JVM coverage is now green for the new offline evidence seams: `SimShellHandoffTest` proves persisted-artifact and grounded-chat telemetry, and `SimAudioDebugScenarioTest` proves the disconnected sync-failure telemetry helper. T5.4 still requires the focused L3 device pass before closure.
   - [x] **2026-03-21 Audio Sync Ingress Implementation**
-    SIM audio now exposes a browse-mode manual `sync from badge` action plus one best-effort browse-open auto-sync path. The implementation keeps the shared `syncFromDevice(): Unit` contract unchanged, keeps readiness inside the SIM repository/connectivity seam rather than shell UI connection-state mapping, and preserves additive-only filename-based badge import so repeated `/list` checks never redownload the same local `SMARTBADGE` file. Focused JVM coverage is green for the new sync helpers and browse-only auto-sync gate in `SimAudioDrawerViewModelTest`, `SimAudioDebugScenarioTest`, and `SimShellHandoffTest`.
+    Historical note: this slice originally introduced a browse-mode manual `sync from badge` action plus one best-effort browse-open auto-sync path. The shared `syncFromDevice(): Unit` contract stayed unchanged, readiness stayed inside the SIM repository/connectivity seam, and repeated `/list` checks remained additive-only by exact badge filename. This browse-open auto-sync experiment is later superseded by the 2026-03-31 contract correction below.
+  - [x] **2026-03-31 Audio Drawer Contract Correction**
+    Approved doc + code alignment removes the earlier browse-open auto-sync experiment because the audio-management spec remains the source of truth for drawer-visible sync, download, and delete behavior. SIM drawer sync is manual-only again. To keep completed badge recordings visible without reopening the drawer, `RealBadgeAudioPipeline` now ingests successful completions directly into the SIM audio namespace through `SimBadgeAudioPipelineIngestSupport`, and badge-side delete runs only after ingest succeeds so failed ingest preserves recovery/manual-sync path. Focused JVM evidence: `:app-core:compileDebugUnitTestKotlin`, `SimBadgeAudioPipelineIngestSupportTest`, `SimAudioRepositorySyncSupportTest`, `SimAudioRepositoryNamespaceTest`, `SimAudioRepositoryStructureTest`, `RealBadgeAudioPipelineIngressTest`, `SimAudioDrawerViewModelTest`, `SimShellHandoffTest`, and `SimAgentViewModelTest`. The only remaining red test in the broader targeted pack is unrelated `L2DualEngineBridgeTest`, which still asserts a stale Uni-A timestamp expectation outside this slice.
   - [x] **2026-03-21 Focused L3 Status**
     Wave 5 device validation is now green for the manager-backed routing contract. Real badge evidence proves manager direct-entry, onboarding-backed setup, successful provisioning, `SETUP -> MANAGER`, and configured re-entry. Report: `docs/reports/tests/L3-20260321-sim-wave5-connectivity-validation.md`.
   - [x] **2026-03-21 Focused Rerun Prep**
@@ -999,7 +1002,7 @@ Wave 7 acceptance closed the SIM mission on **2026-03-22**. The remaining items 
 > - `docs/cerb/sim-audio-chat/spec.md`
 > - `docs/cerb/sim-audio-chat/interface.md`
 > - `docs/plans/ui-tracker.md`
-> **Execution Law**: keep this slice local to SIM home/chat composer state. Device-STT may draft text into the field, but explicit send remains required and scheduler-follow-up voice mutation authority must not widen through this lane.
+> **Execution Law**: keep this slice local to SIM home/chat composer state. SIM-owned FunASR realtime recognition may draft text into the field, must authenticate through backend-issued short-lived DashScope auth rather than a long-lived client key, but explicit send remains required and scheduler-follow-up voice mutation authority must not widen through this lane.
 > **Validation Requirement**: prove successful recognition drafts text without auto-send, prove failure/cancel paths do not mutate history, and prove updated Android-test/UI seams compile.
 
 - [x] **T14.0: Docs-First Scope Lock**
@@ -1008,7 +1011,7 @@ Wave 7 acceptance closed the SIM mission on **2026-03-22**. The remaining items 
   - [x] sync `docs/cerb/sim-shell/spec.md`, `docs/cerb/sim-audio-chat/spec.md`, `docs/cerb/sim-audio-chat/interface.md`, and `docs/plans/ui-tracker.md`
 - [x] **T14.1: SIM Voice-Draft Runtime**
   - [x] keep voice-draft state SIM-owned in `SimAgentViewModel`
-  - [x] reuse `DeviceSpeechRecognizer` without widening main smart-agent chat
+  - [x] replace the SIM composer draft lane with a SIM-owned FunASR realtime recognizer without widening main smart-agent chat or onboarding
   - [x] insert successful transcript back into `inputText` instead of auto-sending
   - [x] keep attach-left behavior intact and switch the trailing action between mic and send based on draft presence
   - [x] reuse onboarding-style handshake motion with SIM styling while recording/recognizing

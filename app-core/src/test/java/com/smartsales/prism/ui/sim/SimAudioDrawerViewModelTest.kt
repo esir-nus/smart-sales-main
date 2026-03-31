@@ -1,5 +1,8 @@
 package com.smartsales.prism.ui.sim
 
+import com.smartsales.prism.domain.audio.AudioFile
+import com.smartsales.prism.domain.audio.AudioSource as DomainAudioSource
+import com.smartsales.prism.domain.audio.TranscriptionStatus
 import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
 import com.smartsales.prism.ui.drawers.AudioItemState
 import com.smartsales.prism.ui.drawers.AudioSource
@@ -26,39 +29,77 @@ class SimAudioDrawerViewModelTest {
     }
 
     @Test
-    fun `canStartSimAudioSync blocks when auto sync already attempted`() {
-        assertFalse(
-            canStartSimAudioSync(
-                hasAttemptedAutoSync = true,
-                isSyncing = false
-            )
+    fun `resolveSimBadgeDeleteConfirmationRequest requires confirmation for first smartbadge delete`() {
+        val request = resolveSimBadgeDeleteConfirmationRequest(
+            audio = AudioFile(
+                id = "badge-1",
+                filename = "log_20260331_101500.wav",
+                timeDisplay = "Now",
+                source = DomainAudioSource.SMARTBADGE,
+                status = TranscriptionStatus.PENDING
+            ),
+            hasConfirmedBadgeDeleteThisSession = false
+        )
+
+        assertEquals(
+            SimBadgeDeleteConfirmationRequest(
+                audioId = "badge-1",
+                filename = "log_20260331_101500.wav"
+            ),
+            request
         )
     }
 
     @Test
-    fun `canStartSimAudioSync blocks when sync is already running`() {
-        assertFalse(
-            canStartSimAudioSync(
-                hasAttemptedAutoSync = false,
-                isSyncing = true
-            )
+    fun `resolveSimBadgeDeleteConfirmationRequest requires confirmation for legacy badge-like filename`() {
+        val request = resolveSimBadgeDeleteConfirmationRequest(
+            audio = AudioFile(
+                id = "badge-legacy",
+                filename = "log_20260331_101500.wav",
+                timeDisplay = "Now",
+                source = DomainAudioSource.PHONE,
+                status = TranscriptionStatus.PENDING
+            ),
+            hasConfirmedBadgeDeleteThisSession = false
+        )
+
+        assertEquals(
+            SimBadgeDeleteConfirmationRequest(
+                audioId = "badge-legacy",
+                filename = "log_20260331_101500.wav"
+            ),
+            request
         )
     }
 
     @Test
-    fun `canStartSimAudioSync allows first idle sync attempt`() {
-        assertTrue(
-            canStartSimAudioSync(
-                hasAttemptedAutoSync = false,
-                isSyncing = false
+    fun `resolveSimBadgeDeleteConfirmationRequest skips confirmation after session approval or for plain phone audio`() {
+        assertEquals(
+            null,
+            resolveSimBadgeDeleteConfirmationRequest(
+                audio = AudioFile(
+                    id = "badge-1",
+                    filename = "log_20260331_101500.wav",
+                    timeDisplay = "Now",
+                    source = DomainAudioSource.SMARTBADGE,
+                    status = TranscriptionStatus.PENDING
+                ),
+                hasConfirmedBadgeDeleteThisSession = true
             )
         )
-    }
-
-    @Test
-    fun `shouldShowSimAudioAutoSyncMessage only returns true when imports were added`() {
-        assertFalse(shouldShowSimAudioAutoSyncMessage(0))
-        assertTrue(shouldShowSimAudioAutoSyncMessage(2))
+        assertEquals(
+            null,
+            resolveSimBadgeDeleteConfirmationRequest(
+                audio = AudioFile(
+                    id = "phone-1",
+                    filename = "memo.mp3",
+                    timeDisplay = "Now",
+                    source = DomainAudioSource.PHONE,
+                    status = TranscriptionStatus.PENDING
+                ),
+                hasConfirmedBadgeDeleteThisSession = false
+            )
+        )
     }
 
     @Test

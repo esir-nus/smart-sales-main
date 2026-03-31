@@ -55,10 +55,18 @@ enum class OnboardingProcessingPhase {
 }
 
 /**
- * onboarding 结果来源。
+ * onboarding 转写来源。
  */
-enum class OnboardingResultOrigin {
+enum class OnboardingTranscriptOrigin {
     DEVICE_SPEECH,
+    DETERMINISTIC_FALLBACK
+}
+
+/**
+ * onboarding 生成来源。
+ */
+enum class OnboardingGenerationOrigin {
+    LLM,
     DETERMINISTIC_FALLBACK
 }
 
@@ -77,7 +85,8 @@ data class OnboardingConsultationUiState(
     val awaitingMicPermission: Boolean = false,
     val micInteractionMode: OnboardingMicInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
     val processingPhase: OnboardingProcessingPhase = OnboardingProcessingPhase.NONE,
-    val lastResultOrigin: OnboardingResultOrigin? = null
+    val lastTranscriptOrigin: OnboardingTranscriptOrigin? = null,
+    val lastGenerationOrigin: OnboardingGenerationOrigin? = null
 ) {
     val isCompleted: Boolean get() = completedRounds >= 2
 }
@@ -99,7 +108,8 @@ data class OnboardingProfileUiState(
     val awaitingMicPermission: Boolean = false,
     val micInteractionMode: OnboardingMicInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
     val processingPhase: OnboardingProcessingPhase = OnboardingProcessingPhase.NONE,
-    val draftOrigin: OnboardingResultOrigin? = null
+    val transcriptOrigin: OnboardingTranscriptOrigin? = null,
+    val generationOrigin: OnboardingGenerationOrigin? = null
 ) {
     val hasExtractionResult: Boolean get() = draft != null && acknowledgement.isNotBlank()
     val canSkipAfterFailure: Boolean get() = errorMessage != null

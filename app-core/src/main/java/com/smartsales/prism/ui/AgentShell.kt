@@ -1,90 +1,44 @@
 package com.smartsales.prism.ui
 
-import com.smartsales.prism.BuildConfig
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Construction
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.smartsales.prism.ui.components.DynamicIslandTapAction
 import com.smartsales.prism.ui.components.toDayOffset
-import com.smartsales.prism.ui.drawers.AudioDrawer
-import com.smartsales.prism.ui.drawers.HistoryDrawer
 import com.smartsales.prism.ui.drawers.HistoryViewModel
-import com.smartsales.prism.ui.drawers.SchedulerDrawer
 import com.smartsales.prism.ui.drawers.scheduler.SchedulerViewModel
-import com.smartsales.prism.ui.settings.UserCenterScreen
-import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
-import com.smartsales.prism.ui.onboarding.OnboardingDesignBrowser
-import com.smartsales.prism.ui.theme.BackgroundApp
-
-/**
- * Drawer Types for Atomic Exclusion
- */
-enum class DrawerType {
-    HISTORY,
-    SCHEDULER,
-    AUDIO,
-    CONNECTIVITY, // v2.5
-    TINGWU,    // v2.6.5 Stub
-    ARTIFACTS  // v2.6.5 Stub
-}
 
 /**
  * Prism Shell — The Core Container (Sleek Glass Version)
  *
- * Updates:
- * - Uses `BackgroundApp` (Light/Aurora) as the root canvas.
- * - Manages atomic drawers and glass interop.
+ * 仅保留宿主职责：依赖获取、生命周期观察、顶层状态与回调装配。
  * @see prism-ui-ux-contract.md §1.1
  */
 @Composable
 fun AgentShell(
     onNavigateToSetup: () -> Unit = {}
 ) {
-    // Atomic Drawer State (Mutex)
-    // 初始状态: SCHEDULER — 每次进入app自动展示日程抽屉
-    var activeDrawer by remember { mutableStateOf<DrawerType?>(DrawerType.SCHEDULER) }
-    var showUserCenter by remember { mutableStateOf(false) }
-    var showDebugHud by remember { mutableStateOf(false) }
-    var showOnboardingDesignBrowser by remember { mutableStateOf(false) }
+    var shellState by remember { mutableStateOf(AgentShellState()) }
     val agentViewModel: AgentViewModel = hiltViewModel()
     val historyViewModel: HistoryViewModel = hiltViewModel()
     val schedulerViewModel: SchedulerViewModel = hiltViewModel()
-    
-    // 每次app回到前台时自动展示日程抽屉
-    // drop-down动画暗示用户可以 dismiss 查看更多
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_START) {
-                activeDrawer = DrawerType.SCHEDULER
+                shellState = handleAgentShellForegroundStart(shellState)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    
-    // HistoryViewModel 提供分组数据
     val groupedSessions by historyViewModel.groupedSessions.collectAsState()
-    // 用户显示名 — 从 AgentViewModel 的 heroGreeting 间接获取
-    val heroGreeting by agentViewModel.heroGreeting.collectAsState()
-    
-    // Wave 4: Mascot UI State
     val mascotState by agentViewModel.mascotState.collectAsStateWithLifecycle()
 
     fun openSchedulerFromIsland(action: DynamicIslandTapAction) {
@@ -95,287 +49,20 @@ fun AgentShell(
                     ?.let(schedulerViewModel::onDateSelected)
             }
         }
-        activeDrawer = DrawerType.SCHEDULER
+        shellState = openAgentShellScheduler(shellState)
     }
 
-    fun openUserCenter() {
-        activeDrawer = null
-        showUserCenter = true
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(BackgroundApp) // Global Aurora/Light Background
-    ) {
-        // Main Content Layer
-        Column(modifier = Modifier.fillMaxSize()) {
-            AgentIntelligenceScreen(
-                onMenuClick = { activeDrawer = DrawerType.HISTORY },
-                onNewSessionClick = { agentViewModel.startNewSession() },
-                onSchedulerClick = ::openSchedulerFromIsland,
-                onAudioBadgeClick = { activeDrawer = DrawerType.CONNECTIVITY },
-                onAudioDrawerClick = { activeDrawer = DrawerType.AUDIO },
-                onTingwuClick = { activeDrawer = DrawerType.TINGWU },
-                onArtifactsClick = { activeDrawer = DrawerType.ARTIFACTS },
-                onDebugClick = { showDebugHud = !showDebugHud },
-                onOnboardingDesignClick = { showOnboardingDesignBrowser = true },
-                onProfileClick = ::openUserCenter,
-                showDebugButton = BuildConfig.DEBUG,
-                visualMode = AgentIntelligenceVisualMode.DEFAULT
-            )
+    AgentShellContent(
+        shellState = shellState,
+        agentViewModel = agentViewModel,
+        historyViewModel = historyViewModel,
+        schedulerViewModel = schedulerViewModel,
+        groupedSessions = groupedSessions,
+        mascotState = mascotState,
+        onNavigateToSetup = onNavigateToSetup,
+        onSchedulerClick = ::openSchedulerFromIsland,
+        mutateShellState = { transform ->
+            shellState = transform(shellState)
         }
-
-        // --- SCRIM LAYER ---
-        // Atomic Scrim: Visible if ANY drawer is open
-        if (activeDrawer != null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .zIndex(PrismElevation.Scrim)
-                    .background(Color.Black.copy(alpha = 0.4f)) // Spec: 0.4 Black Dim
-                    .clickable { activeDrawer = null }
-            )
-        }
-
-        // --- DRAWERS ---
-
-        // 1. History Drawer (Left)
-        if (activeDrawer == DrawerType.HISTORY) {
-            Box(modifier = Modifier.zIndex(PrismElevation.Drawer)) {
-                HistoryDrawer(
-                    groupedSessions = groupedSessions,
-                    displayName = agentViewModel.currentDisplayName,
-                    onSessionClick = { sessionId ->
-                        activeDrawer = null
-                        agentViewModel.switchSession(sessionId)
-                    },
-                    onDeviceClick = {
-                        activeDrawer = DrawerType.CONNECTIVITY
-                    },
-                    onSettingsClick = ::openUserCenter,
-                    onProfileClick = ::openUserCenter,
-                    onPinSession = { sessionId ->
-                        historyViewModel.togglePin(sessionId)
-                    },
-                    onRenameSession = { sessionId, clientName, summary ->
-                        historyViewModel.renameSession(sessionId, clientName, summary)
-                    },
-                    onDeleteSession = { sessionId ->
-                        historyViewModel.deleteSession(sessionId)
-                    }
-                )
-            }
-        }
-
-        // 2. Scheduler Drawer (Top)
-        Box(modifier = Modifier.zIndex(PrismElevation.Drawer)) {
-            SchedulerDrawer(
-                isOpen = activeDrawer == DrawerType.SCHEDULER,
-                onDismiss = {
-                    activeDrawer = null
-                    agentViewModel.refreshHeroDashboard()
-                },
-                viewModel = schedulerViewModel
-            )
-        }
-
-        // 3. Audio Drawer (Bottom)
-        Box(modifier = Modifier.zIndex(PrismElevation.Drawer)) {
-            AudioDrawer(
-                isOpen = activeDrawer == DrawerType.AUDIO,
-                onDismiss = { activeDrawer = null },
-                onNavigateToChat = { sessionId, isNew ->
-                    activeDrawer = null
-                    println("AgentShell: Navigate to chat session: $sessionId")
-                    if (isNew) {
-                        agentViewModel.switchSession(sessionId, triggerAutoRename = true)
-                    } else {
-                        agentViewModel.switchSession(sessionId)
-                    }
-                }
-            )
-        }
-
-        // 4. Connectivity Modal (Global Overlay)
-        if (activeDrawer == DrawerType.CONNECTIVITY) {
-            Box(modifier = Modifier.zIndex(PrismElevation.Drawer)) {
-                com.smartsales.prism.ui.components.ConnectivityModal(
-                    onDismiss = { activeDrawer = null },
-                    onNavigateToSetup = {
-                        activeDrawer = null
-                        onNavigateToSetup()
-                    }
-                )
-            }
-        }
-
-        // 5. User Center (Glass Sheet Overlay)
-        androidx.compose.animation.AnimatedVisibility(
-            visible = showUserCenter,
-            enter = androidx.compose.animation.fadeIn(
-                animationSpec = androidx.compose.animation.core.tween(180)
-            ),
-            exit = androidx.compose.animation.fadeOut(
-                animationSpec = androidx.compose.animation.core.tween(180)
-            ),
-            modifier = Modifier.zIndex(PrismElevation.Scrim + 0.5f)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.38f))
-            )
-        }
-
-        androidx.compose.animation.AnimatedVisibility(
-            visible = showUserCenter,
-            enter = androidx.compose.animation.fadeIn(
-                animationSpec = androidx.compose.animation.core.tween(220)
-            ) + androidx.compose.animation.scaleIn(
-                initialScale = 0.96f,
-                animationSpec = androidx.compose.animation.core.tween(220)
-            ),
-            exit = androidx.compose.animation.fadeOut(
-                animationSpec = androidx.compose.animation.core.tween(180)
-            ) + androidx.compose.animation.scaleOut(
-                targetScale = 0.98f,
-                animationSpec = androidx.compose.animation.core.tween(180)
-            ),
-            modifier = Modifier.zIndex(PrismElevation.Drawer + 1f)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = 12.dp, bottom = 8.dp),
-                contentAlignment = Alignment.TopCenter
-            ) {
-                UserCenterScreen(
-                    onClose = { showUserCenter = false }
-                )
-            }
-        }
-
-        // 6. Right Stubs
-        RightDrawerStub(
-            isOpen = activeDrawer == DrawerType.TINGWU,
-            title = "听悟助手",
-            onDismiss = { activeDrawer = null }
-        )
-
-        RightDrawerStub(
-            isOpen = activeDrawer == DrawerType.ARTIFACTS,
-            title = "工件箱",
-            onDismiss = { activeDrawer = null }
-        )
-
-        // --- GHOST HANDLES ---
-        if (activeDrawer == null && !showUserCenter) {
-            // Scheduler (Top Pull) - 保持较大区域但控制在合理范围
-            GhostHandle(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    .padding(top = 60.dp) // Clear the header zone
-                    .height(80.dp),
-                threshold = 80f,
-                onTrigger = { activeDrawer = DrawerType.SCHEDULER }
-            )
-        }
-        
-        // --- L2 DEBUG HUD (DEBUG BUILDS ONLY) ---
-        com.smartsales.prism.ui.debug.L2DebugHud(
-            isVisible = showDebugHud,
-            onDismiss = { showDebugHud = false },
-            onTestMarkdownBubble = { agentViewModel.debugRunScenario("MARKDOWN_BUBBLE") },
-            onTestClarificationBubble = { agentViewModel.debugRunScenario("CLARIFICATION_BUBBLE") },
-            onTestTaskCreatedBubble = { agentViewModel.debugRunScenario("TASK_CREATED_BUBBLE") },
-            onTestMultiTaskBubble = { agentViewModel.debugRunScenario("MULTI_TASK_CREATED_BUBBLE") },
-            modifier = Modifier.zIndex(PrismElevation.Drawer + 10f)
-        )
-
-        OnboardingDesignBrowser(
-            isVisible = showOnboardingDesignBrowser,
-            onDismiss = { showOnboardingDesignBrowser = false },
-            modifier = Modifier.zIndex(PrismElevation.Drawer + 11f)
-        )
-        
-        // --- MASCOT OVERLAY (Wave 4) ---
-        // Floating slightly down from the top (120dp) to cleanly avoid the Scheduler GhostHandle
-        com.smartsales.prism.ui.components.MascotOverlay(
-            state = mascotState,
-            onInteract = { interaction -> agentViewModel.interactWithMascot(interaction) },
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 120.dp)
-                .zIndex(PrismElevation.Drawer + 5f) // Above content, below high-priority modals
-        )
-    }
-}
-
-@Composable
-private fun GhostHandle(
-    modifier: Modifier = Modifier,
-    threshold: Float,
-    onTrigger: () -> Unit
-) {
-    Box(
-        modifier = modifier
-            .zIndex(PrismElevation.Handles)
-            .pointerInput(Unit) {
-                var totalDrag = 0f
-                detectVerticalDragGestures(
-                    onDragStart = { totalDrag = 0f },
-                    onDragEnd = { totalDrag = 0f }
-                ) { _, dragAmount ->
-                    totalDrag += dragAmount
-                    if ((threshold > 0 && totalDrag > threshold) || 
-                        (threshold < 0 && totalDrag < threshold)) {
-                        onTrigger()
-                        totalDrag = 0f
-                    }
-                }
-            }
     )
-}
-
-@Composable
-private fun RightDrawerStub(
-    isOpen: Boolean,
-    title: String,
-    onDismiss: () -> Unit
-) {
-    if (isOpen) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.CenterEnd
-        ) {
-            com.smartsales.prism.ui.components.PrismSurface(
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .width(300.dp),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(topStart = 20.dp, bottomStart = 20.dp),
-                backgroundColor = com.smartsales.prism.ui.theme.BackgroundSurface.copy(alpha=0.95f)
-            ) {
-                Column(Modifier.padding(16.dp)) {
-                    Text(title, color = com.smartsales.prism.ui.theme.TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Filled.Construction,
-                            contentDescription = null,
-                            tint = com.smartsales.prism.ui.theme.TextSecondary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("功能开发中", color = com.smartsales.prism.ui.theme.TextSecondary)
-                    }
-                    Spacer(modifier = Modifier.weight(1f))
-                    Button(onClick = onDismiss) {
-                        Text("关闭")
-                    }
-                }
-            }
-        }
-    }
 }

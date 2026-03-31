@@ -229,8 +229,3 @@ internal fun shouldAutoOpenSimSchedulerStartupTeaser(
     teaserPending: Boolean
 ): Boolean = teaserPending &&
     shouldShowSimIdleComposerHint(state, isImeVisible)
-
-internal fun shouldAttemptSimAudioDrawerAutoSync(
-    isDrawerOpen: Boolean,
-    mode: SimAudioDrawerMode
-): Boolean = isDrawerOpen && mode == SimAudioDrawerMode.BROWSE

@@ -28,7 +28,8 @@ class RealBadgeAudioPipelineIngressTest {
         val pipeline = RealBadgeAudioPipeline(
             connectivityBridge = bridge,
             asrService = mock<AsrService>(),
-            intentOrchestrator = mock<IntentOrchestrator>()
+            intentOrchestrator = mock<IntentOrchestrator>(),
+            simBadgeAudioPipelineIngestSupport = mock<SimBadgeAudioPipelineIngestSupport>()
         )
 
         bridge.emit(RecordingNotification.RecordingReady("log_20260322_170000.wav"))

@@ -1,6 +1,8 @@
 # Connectivity Bridge Interface
 
 > **Blackbox contract** — For consumers (Scheduler, Badge Audio Pipeline). Don't read implementation.
+> **Status**: Active supporting interface
+> **Last Updated**: 2026-03-31
 
 ---
 
@@ -142,7 +144,7 @@ sealed class UpdateResult {
 
 sealed class ReconnectResult {
     object Connected : ReconnectResult()
-    object WifiMismatch : ReconnectResult()
+    data class WifiMismatch(val currentPhoneSsid: String? = null) : ReconnectResult()
     object DeviceNotFound : ReconnectResult()
     data class Error(val message: String) : ReconnectResult()
 }
@@ -180,6 +182,9 @@ persistent GATT notification listening is active and the badge has valid network
 - the phone's current Wi‑Fi SSID has no exact remembered credential to replay
 - the phone is on Wi‑Fi but the app cannot read the SSID, so exact-match replay cannot be proven safely
 - credential replay completes, but the badge confirms it is on a different Wi‑Fi than the phone
+
+When reconnect can read the phone's current Wi‑Fi SSID, `ReconnectResult.WifiMismatch.currentPhoneSsid`
+must carry that suggestion so the repair form can prefill it while keeping the SSID editable.
 
 This richer state is for connectivity manager presentation only. Shared shell/history routing must continue to use `connectionState`.
 

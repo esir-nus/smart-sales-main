@@ -130,7 +130,8 @@ Modal triggered by tapping the **[📶] Device State** icon in the header. Displ
 - Shared shell routing must continue to use the stricter transport-ready contract from `ConnectionState`.
 - `NeedsSetup` and explicit bridge errors must not be replaced by paired/offline manager hints.
 - Any temporary disconnect affordance inside BLE-held states is debug-only test tooling and must not be used as a release contract.
-- Deterministic reconnect rule: if reconnect finds `IP#0.0.0.0`, the app first tries silent credential replay using an exact remembered match for the phone's current SSID; only when no exact match exists, or replay proves the badge is still on another network, should the modal stay on `wifi_mismatch`.
+- Deterministic reconnect rule: if reconnect finds `IP#0.0.0.0`, or finds the badge online on a different SSID than the phone, the app first tries silent credential replay using an exact remembered match for the phone's current SSID; only when no exact match exists, or replay proves the badge is still on another network, should the modal stay on `wifi_mismatch`.
+- Wi‑Fi mismatch form rule: `wifi_mismatch` should prefill the current phone SSID when reconnect can read it, but keep the SSID editable and never prefill the password.
 - Manual Wi‑Fi repair rule: once the user submits SSID/password from `wifi_mismatch`, the manager must switch to reconnect/progress immediately instead of waiting for a second explicit retry tap.
 - Submitted-credential rule: manual repair confirmation must validate against the submitted SSID rather than the phone's current SSID and must not return to `wifi_mismatch` unless the badge proves it came online on another SSID.
 - Close-reset rule: closing the connectivity modal/manager cancels any in-flight reconnect/repair attempt and clears only transient UI override state; the next reopen must use current manager truth from `ConnectivityBridge.managerStatus`.

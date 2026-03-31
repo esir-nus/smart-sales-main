@@ -6,7 +6,7 @@
 >
 > **Status**: Active
 >
-> **Last Updated**: 2026-03-24
+> **Last Updated**: 2026-03-31
 
 ---
 
@@ -112,6 +112,10 @@ Reason:
   - **Wave 2B**: clean `GattBleGateway.kt` and `DeviceConnectionManager.kt`
   - **Wave 2C**: clean `SimAudioRepository.kt`
 - **Wave 3A**: clean `SimAudioDrawer.kt` once the current SIM drawer UI contract is stable enough for a host/content/component split
+- **Wave 3B**: clean `AgentShell.kt` as a wrapper-only legacy full-host reduction for base-runtime unification
+- **Wave 3C**: clean `AgentViewModel.kt` as the next legacy full-side base-runtime wrapper split
+- **Wave 3D**: clean `SchedulerViewModel.kt` as the parallel guarded legacy scheduler-host split
+- **Wave 3E**: clean the re-grown `SimAgentViewModel.kt` voice-draft lane as the remaining ViewModel exception follow-up
 - **Later UI Wave**: onboarding host-driven transplant is now active; structure cleanup can follow after the prototype lands
 
 ### Wave 2 Focus
@@ -137,6 +141,10 @@ UI-safe deferral:
 - `OnboardingScreen.kt` is no longer frozen as deferred debt; the approved onboarding transplant is now the active UI slice
 - Wave 2 intentionally stayed business-logic-only while the repo was in an active UI-development window
 - Wave 3A later reopened `SimAudioDrawer.kt` as a focused user-approved host/content/component cleanup once the drawer behavior contract had already stabilized
+- Wave 3B later reopened `AgentShell.kt` as a wrapper-only legacy full-host cleanup so the base-runtime unification campaign can demote the full shell into compatibility ownership without changing current behavior
+- Wave 3C later reopened `AgentViewModel.kt` as a wrapper-only legacy full-side agent-host cleanup so the base-runtime unification campaign can demote the full agent seam into compatibility ownership without changing current behavior
+- Wave 3D now reopens `SchedulerViewModel.kt` as a wrapper-only legacy scheduler-host cleanup so base-runtime unification can demote the full-side scheduler host into compatibility ownership without changing the current full-side behavior
+- Wave 3E now reopens the remaining `SimAgentViewModel.kt` exception path so the accepted SIM host can shed its voice-draft lane again without changing SIM chat, follow-up, or Wave 14 voice-draft behavior
 
 ### Wave 0 Preflight
 
@@ -257,8 +265,11 @@ Observed sizes below are the current audit snapshot used to seed the campaign on
 | File | Layer | Observed Size | Current Problem | Target Decomposition | Owner | Sunset | Required Tests | Wave | Status |
 |------|-------|---------------|-----------------|----------------------|-------|--------|----------------|------|--------|
 | `app-core/src/main/java/com/smartsales/prism/ui/AgentIntelligenceScreen.kt` | UI | 108 LOC | Wave 1B moved SIM subtree, non-SIM sections, timelines, and previews out of the host entrypoint; host is now source-compatible and under budget | host + content + sections + SIM subtree + preview split | Codex | — | `GodStructureGuardrailTest`, `AgentIntelligenceStructureTest`, `SimComposerContractTest`, `SimHomeHeroExperimentContractTest` | 1B | Accepted |
+| `app-core/src/main/java/com/smartsales/prism/ui/AgentShell.kt` | UI Shell | 68 LOC | Wave 3B moved full-shell composition, overlay/drawer rendering, shell state/reducer helpers, and right-stub/ghost-handle support out of the legacy host entrypoint; the host now keeps Hilt acquisition, lifecycle observation, and top-level callback wiring only | host + content + state + reducer + support | Codex | — | `GodStructureGuardrailTest`, `AgentShellStructureTest`, `HistoryDrawerStructureTest`, `InsetOwnershipContractTest`, `UserCenterStructureTest`, `:app-core:compileDebugUnitTestKotlin` | 3B | Accepted |
+| `app-core/src/main/java/com/smartsales/prism/ui/AgentViewModel.kt` | UI VM | 225 LOC | Wave 3C moved session lifecycle, pipeline/result reduction, tool execution, runtime/dashboard support, and debug scenario handling out of the legacy full-side host; the public seam now delegates while preserving current full-side behavior | public VM + ui bridge + session coordinator + pipeline coordinator + tool coordinator + runtime support + debug support | Codex | — | `GodStructureGuardrailTest`, `AgentViewModelStructureTest`, `AgentViewModelTest`, `:app-core:compileDebugUnitTestKotlin` | 3C | Accepted |
+| `app-core/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerViewModel.kt` | UI VM | 210 LOC | Wave 3D moved timeline/crossed-off projection, legacy cross-off/delete/conflict helpers, and scheduler-drawer audio ingress out of the legacy full-side host; the public seam now delegates while preserving current full-side behavior | public VM + projection support + legacy actions + audio ingress coordinator | Codex | — | `GodStructureGuardrailTest`, `SchedulerViewModelStructureTest`, `SchedulerViewModelAudioStatusTest`, `L2CrossOffLifecycleTest`, `:app-core:compileDebugUnitTestKotlin` | 3D | Accepted |
 | `app-core/src/main/java/com/smartsales/prism/ui/sim/SimShell.kt` | UI Shell | 208 LOC | Wave 1C moved the large shell composition tree, reducers, telemetry, projections, shell actions, and follow-up sections out of the host entrypoint; the SIM shell now keeps runtime ownership and stays under budget | host + content + reducers + projections + telemetry + shell actions + sections | Codex | — | `GodStructureGuardrailTest`, `SimShellStructureTest`, `SimShellHandoffTest`, `SimConnectivityRoutingTest`, `SimRuntimeIsolationTest` | 1C | Accepted |
-| `app-core/src/main/java/com/smartsales/prism/ui/sim/SimAgentViewModel.kt` | UI VM | 422 LOC | Wave 1D moved session ownership, SIM chat/audio orchestration, pending-audio completion handling, and follow-up coordination out of the public seam; the host now delegates only | public VM + session coordinator + chat coordinator + follow-up coordinator | Codex | — | `GodStructureGuardrailTest`, `SimAgentViewModelStructureTest`, `SimAgentViewModelTest`, `SimShellHandoffTest`, `:app-core:compileDebugUnitTestKotlin` | 1D | Accepted |
+| `app-core/src/main/java/com/smartsales/prism/ui/sim/SimAgentViewModel.kt` | UI VM | 522 LOC | Wave 3E moved the SIM voice-draft lane out of the re-grown host, so the public seam is back under budget while preserving the accepted SIM session/chat/follow-up and Wave 14 voice-draft behavior | public VM + session coordinator + chat coordinator + follow-up coordinator + voice-draft coordinator | Codex | — | `GodStructureGuardrailTest`, `SimAgentViewModelStructureTest`, `SimAgentViewModelTest`, `SimShellHandoffTest`, `:app-core:compileDebugUnitTestKotlin` | 3E | Accepted |
 | `app-core/src/main/java/com/smartsales/prism/ui/sim/SimSchedulerViewModel.kt` | UI VM | 251 LOC | Wave 1E moved ingress routing, mutation execution, reminder ownership, and projection/warning support out of the public seam; the host now delegates only | public VM + ingress coordinator + mutation coordinator + reminder support + projection support | Codex | — | `GodStructureGuardrailTest`, `SimSchedulerViewModelStructureTest`, `SimSchedulerViewModelTest`, `:app-core:compileDebugUnitTestKotlin` | 1E | Accepted |
 | `app-core/src/main/java/com/smartsales/prism/ui/sim/SimAudioDrawer.kt` | UI | 136 LOC | Wave 3A moved drawer composition, card rendering, and support helpers out of the host entrypoint; the public drawer now keeps overlay/runtime wiring and delegation only | host + content + card/components + support helpers | Codex | — | `GodStructureGuardrailTest`, `SimAudioDrawerStructureTest`, `SimAudioDrawerViewModelTest`, `SimShellHandoffTest`, `:app-core:compileDebugUnitTestKotlin` | 3A | Accepted |
 | `app-core/src/main/java/com/smartsales/prism/ui/onboarding/OnboardingScreen.kt` | UI | 1058 LOC | Host-driven onboarding transplant is now active. Full structure cleanup is still deferred, but the legacy multi-tail flow was removed and SIM/full-app now share one coordinator seam. | coordinator + step sections + support helpers split if a later cleanup wave is approved | Codex | later UI-safe cleanup wave | `OnboardingFlowTransitionTest`, `SimConnectivityPairingFlowTest`, `PairingFlowViewModelTest`, `SimConnectivityRoutingTest` | Later UI | Active |
@@ -476,6 +487,135 @@ Validation record:
 
 ---
 
+## Wave 3B AgentShell Wrapper Cleanup
+
+Wave 3B now rewrites the legacy full-app `AgentShell.kt` slice into a thin public host file and extracts the former mixed shell responsibilities into stable support files:
+
+- `app-core/src/main/java/com/smartsales/prism/ui/AgentShellContent.kt`
+- `app-core/src/main/java/com/smartsales/prism/ui/AgentShellState.kt`
+- `app-core/src/main/java/com/smartsales/prism/ui/AgentShellReducer.kt`
+- `app-core/src/main/java/com/smartsales/prism/ui/AgentShellSupport.kt`
+
+Wave 3B also:
+
+- keeps `AgentShell(...)` source-compatible for `AgentMainActivity`
+- leaves the host file at `68 LOC`, below the transitional UI host budget
+- preserves the current full-app behavior and treats the slice as wrapper-only cleanup, not shell convergence
+- adds a focused structure regression test for the accepted host/content/state/reducer/support split
+- upgrades the tracker row so `AgentShell.kt` is now an accepted guardrail target instead of an unowned legacy host seam
+
+Wave 3B acceptance verification pack:
+
+- `./gradlew :app-core:testDebugUnitTest --tests com.smartsales.prism.ui.GodStructureGuardrailTest`
+- `./gradlew :app-core:testDebugUnitTest --tests com.smartsales.prism.ui.AgentShellStructureTest`
+- `./gradlew :app-core:testDebugUnitTest --tests com.smartsales.prism.ui.HistoryDrawerStructureTest`
+- `./gradlew :app-core:testDebugUnitTest --tests com.smartsales.prism.ui.InsetOwnershipContractTest`
+- `./gradlew :app-core:testDebugUnitTest --tests com.smartsales.prism.ui.settings.UserCenterStructureTest`
+- `./gradlew :app-core:compileDebugUnitTestKotlin`
+
+Validation record:
+
+- `docs/reports/tests/L1-20260331-god-wave3b-agent-shell.md`
+
+---
+
+## Wave 3C AgentViewModel Wrapper Cleanup
+
+Wave 3C now rewrites the legacy full-app `AgentViewModel.kt` slice into a thin public host file and extracts the former mixed agent responsibilities into stable support files:
+
+- `app-core/src/main/java/com/smartsales/prism/ui/AgentUiBridge.kt`
+- `app-core/src/main/java/com/smartsales/prism/ui/AgentSessionCoordinator.kt`
+- `app-core/src/main/java/com/smartsales/prism/ui/AgentPipelineCoordinator.kt`
+- `app-core/src/main/java/com/smartsales/prism/ui/AgentToolCoordinator.kt`
+- `app-core/src/main/java/com/smartsales/prism/ui/AgentRuntimeSupport.kt`
+- `app-core/src/main/java/com/smartsales/prism/ui/AgentDebugSupport.kt`
+
+Wave 3C also:
+
+- keeps `IAgentViewModel` unchanged
+- keeps the public host file at `225 LOC`, below the transitional ViewModel budget
+- preserves the current full-side agent behavior and treats the slice as wrapper-only cleanup, not SIM/full convergence
+- adds `AgentViewModelStructureTest` as the focused structure regression seam
+- updates `GodStructureGuardrailTest` so `AgentViewModel.kt` is now an accepted guardrail target
+
+Wave 3C acceptance verification pack:
+
+- `./gradlew :app-core:testDebugUnitTest --tests com.smartsales.prism.ui.AgentViewModelStructureTest --tests com.smartsales.prism.ui.AgentViewModelTest --tests com.smartsales.prism.ui.GodStructureGuardrailTest`
+- `./gradlew :app-core:compileDebugUnitTestKotlin`
+
+Validation record:
+
+- `docs/reports/tests/L1-20260331-god-wave3c-agent-vm.md`
+
+---
+
+## Wave 3D SchedulerViewModel Wrapper Cleanup
+
+Wave 3D now rewrites the legacy full-app `SchedulerViewModel.kt` slice into a thin public host file and extracts the former mixed scheduler responsibilities into stable support files:
+
+- `app-core/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerViewModelProjectionSupport.kt`
+- `app-core/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerViewModelLegacyActions.kt`
+- `app-core/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerViewModelAudioIngressCoordinator.kt`
+
+Wave 3D also:
+
+- keeps `ISchedulerViewModel` unchanged
+- keeps `SchedulerDrawer` source-compatible
+- preserves the full-side crossed-off memory merge and current audio/status behavior
+- leaves the host file at `210 LOC`, below the transitional ViewModel budget
+- adds a focused structure regression test for the new host/support split
+
+Wave 3D acceptance verification pack:
+
+- `./gradlew --no-build-cache :app-core:testDebugUnitTest --tests com.smartsales.prism.ui.drawers.scheduler.SchedulerViewModelStructureTest`
+- `./gradlew :app-core:testDebugUnitTest --tests com.smartsales.prism.ui.drawers.scheduler.SchedulerViewModelAudioStatusTest`
+- `./gradlew :app-core:testDebugUnitTest --tests com.smartsales.prism.data.real.L2CrossOffLifecycleTest`
+- `./gradlew --no-build-cache :app-core:testDebugUnitTest --tests com.smartsales.prism.ui.GodStructureGuardrailTest`
+- `./gradlew --no-build-cache :app-core:compileDebugUnitTestKotlin`
+
+Current verification note:
+
+- Wave 3D is now L1 accepted; focused reruns prove the wrapper split, crossed-off lifecycle, and scheduler audio-status surface after restoring the extracted audio ingress coordinator to the evidence-owned legacy foreground statuses
+
+Validation record:
+
+- `docs/reports/tests/L1-20260331-god-wave3d-scheduler-viewmodel.md`
+
+---
+
+## Wave 3E SimAgentViewModel Voice-Draft Wrapper Cleanup
+
+Wave 3E now rewrites the remaining `SimAgentViewModel.kt` exception slice into a thin public host file again by extracting the SIM voice-draft lane into a stable support file:
+
+- `app-core/src/main/java/com/smartsales/prism/ui/sim/SimAgentVoiceDraftCoordinator.kt`
+
+Wave 3E also:
+
+- keeps `SimAgentViewModel.kt` as the public seam file and leaves `IAgentViewModel` unchanged
+- extends the existing `SimAgentUiBridge` minimally instead of introducing a second SIM bridge seam
+- preserves the accepted SIM chat, follow-up, and Wave 14 voice-draft behavior
+- leaves the host file at `522 LOC`, below the transitional ViewModel budget
+- retires the temporary `SimAgentViewModel.kt` exception row back to `Accepted`
+- expands `SimAgentViewModelStructureTest` so the host/support split is regression-guarded
+
+Wave 3E acceptance verification pack:
+
+- `./gradlew --no-build-cache :app-core:testDebugUnitTest --tests com.smartsales.prism.ui.sim.SimAgentViewModelStructureTest`
+- `./gradlew --no-build-cache :app-core:testDebugUnitTest --tests com.smartsales.prism.ui.sim.SimAgentViewModelTest`
+- `./gradlew --no-build-cache :app-core:testDebugUnitTest --tests com.smartsales.prism.ui.GodStructureGuardrailTest`
+- `./gradlew --no-build-cache :app-core:testDebugUnitTest --tests com.smartsales.prism.ui.sim.SimShellHandoffTest`
+- `./gradlew --no-build-cache :app-core:compileDebugUnitTestKotlin`
+
+Current verification note:
+
+- Wave 3E is now L1 accepted; focused reruns prove the wrapper split, SIM voice-draft behavior, guardrail status, and shell handoff compatibility without reopening SIM/full convergence work
+
+Validation record:
+
+- `docs/reports/tests/L1-20260331-god-wave3e-sim-agent-vm-voice-draft.md`
+
+---
+
 ## Related Documents
 
 - `docs/plans/god-wave0-execution-brief.md`
@@ -487,6 +627,10 @@ Validation record:
 - `docs/plans/god-wave2b-execution-brief.md`
 - `docs/plans/god-wave2c-execution-brief.md`
 - `docs/plans/god-wave3a-execution-brief.md`
+- `docs/plans/god-wave3b-execution-brief.md`
+- `docs/plans/god-wave3c-execution-brief.md`
+- `docs/plans/god-wave3d-execution-brief.md`
+- `docs/plans/god-wave3e-execution-brief.md`
 - `docs/specs/code-structure-contract.md`
 - `docs/reports/tests/L1-20260324-god-wave1a-guardrails.md`
 - `docs/reports/tests/L1-20260324-god-wave1b-agent-intelligence.md`
@@ -495,6 +639,10 @@ Validation record:
 - `docs/reports/tests/L1-20260324-god-wave2b-connectivity.md`
 - `docs/reports/tests/L1-20260324-god-wave2c-sim-audio-repository.md`
 - `docs/reports/tests/L1-20260324-god-wave3a-sim-audio-drawer.md`
+- `docs/reports/tests/L1-20260331-god-wave3b-agent-shell.md`
+- `docs/reports/tests/L1-20260331-god-wave3c-agent-vm.md`
+- `docs/reports/tests/L1-20260331-god-wave3d-scheduler-viewmodel.md`
+- `docs/reports/tests/L1-20260331-god-wave3e-sim-agent-vm-voice-draft.md`
 
 ## Wave 1 Acceptance Bar
 

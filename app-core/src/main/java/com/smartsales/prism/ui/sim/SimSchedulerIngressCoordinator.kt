@@ -14,6 +14,7 @@ import com.smartsales.prism.domain.scheduler.GlobalRescheduleExtractionRequest
 import com.smartsales.prism.domain.scheduler.GlobalRescheduleExtractionResult
 import com.smartsales.prism.domain.scheduler.CreateTasksParams
 import com.smartsales.prism.domain.scheduler.CreateVagueTaskParams
+import com.smartsales.prism.domain.scheduler.ExactTimeCueResolver
 import com.smartsales.prism.domain.scheduler.FastTrackResult
 import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
@@ -63,6 +64,11 @@ internal class SimSchedulerIngressCoordinator(
         val startTimeIso: String,
         val matchedText: String,
         val normalizedTranscript: String
+    )
+
+    private data class DeterministicWakeCreateCandidate(
+        val title: String,
+        val startTimeIso: String
     )
 
     private sealed interface ResolvedMultiTaskFragment {
@@ -164,6 +170,38 @@ internal class SimSchedulerIngressCoordinator(
             return
         }
 
+        buildDeterministicWakeCreateCandidate(transcript)?.let { candidate ->
+            val result = FastTrackResult.CreateTasks(
+                params = CreateTasksParams(
+                    unifiedId = UUID.randomUUID().toString(),
+                    tasks = listOf(
+                        TaskDefinition(
+                            title = candidate.title,
+                            startTimeIso = candidate.startTimeIso,
+                            durationMinutes = 0,
+                            urgency = com.smartsales.prism.domain.scheduler.UrgencyEnum.FIRE_OFF
+                        )
+                    )
+                )
+            )
+            emitSingleTaskExtractionTelemetry(transcript, result)
+            mutationCoordinator.handleMutation(result)
+            return
+        }
+        if (
+            looksLikeWakeReminderTranscript(transcript) &&
+            ExactTimeCueResolver.resolveExactDayClockStartTime(
+                transcript = transcript,
+                nowIso = timeProvider.now.toString(),
+                timezone = timeProvider.zoneId.id,
+                displayedDateIso = projectionSupport.displayedDateIso()
+            ) != null &&
+            !looksLikeMultiTaskCreateTranscript(transcript)
+        ) {
+            projectionSupport.emitFailure("已识别为明确时间日程，但任务内容不完整")
+            return
+        }
+
         val batchId = UUID.randomUUID().toString()
         when (val multi = uniMExtractionService.extract(
             UniMExtractionRequest(
@@ -227,7 +265,7 @@ internal class SimSchedulerIngressCoordinator(
             return
         }
 
-        projectionSupport.emitFailure(inspiration.reason)
+        projectionSupport.emitFailure(sanitizeTerminalCreateFailure(inspiration.reason))
     }
 
     private suspend fun handleMultiTaskCreate(batchId: String, fragments: List<UniMTaskFragment>) {
@@ -346,6 +384,26 @@ internal class SimSchedulerIngressCoordinator(
         )
     }
 
+    private fun buildDeterministicWakeCreateCandidate(transcript: String): DeterministicWakeCreateCandidate? {
+        if (looksLikeMultiTaskCreateTranscript(transcript)) return null
+
+        val startTimeIso = ExactTimeCueResolver.resolveExactDayClockStartTime(
+            transcript = transcript,
+            nowIso = timeProvider.now.toString(),
+            timezone = timeProvider.zoneId.id,
+            displayedDateIso = projectionSupport.displayedDateIso()
+        ) ?: return null
+
+        val strippedTitle = stripDeterministicDayClockPhrase(transcript)
+            ?.takeIf(::looksLikeWakeReminderBody)
+            ?: return null
+
+        return DeterministicWakeCreateCandidate(
+            title = strippedTitle,
+            startTimeIso = startTimeIso
+        )
+    }
+
     private fun stripDeterministicRelativeTimePhrase(
         transcript: String,
         matchedText: String
@@ -370,6 +428,53 @@ internal class SimSchedulerIngressCoordinator(
                 !it.contains("过会") &&
                 !it.contains("以后想") &&
                 !it.contains("之后想")
+        }
+    }
+
+    private fun stripDeterministicDayClockPhrase(transcript: String): String? {
+        val removedDay = transcript
+            .replace(Regex("(明天|后天|tomorrow|day after tomorrow)", RegexOption.IGNORE_CASE), "")
+            .replace(
+                Regex("(凌晨|早上|上午|中午|下午|晚上|今晚|午夜|半夜)?\\s*[零一二两三四五六七八九十百\\d]{1,3}点半?"),
+                ""
+            )
+            .replace(Regex("\\b\\d{1,2}:\\d{2}\\b"), "")
+
+        val cleaned = removedDay
+            .replace("请提醒我", "")
+            .replace("提醒我", "")
+            .replace("请", "")
+            .replace("一下", "")
+            .replace("  ", " ")
+            .trim()
+            .trim('，', ',', '。', '；', ';', '、', ' ')
+
+        return cleaned.takeIf { it.isNotBlank() }
+    }
+
+    private fun looksLikeWakeReminderTranscript(text: String): Boolean {
+        val normalized = text.lowercase()
+        return listOf("喊我起来", "叫我起来", "提醒我起床", "叫醒我", "起床").any(normalized::contains)
+    }
+
+    private fun looksLikeWakeReminderBody(text: String): Boolean {
+        val normalized = text.lowercase()
+        return listOf("喊我起来", "叫我起来", "起床", "叫醒我", "起来").any(normalized::contains)
+    }
+
+    private fun sanitizeTerminalCreateFailure(reason: String): String {
+        val normalized = reason.lowercase()
+        return if (
+            normalized.contains("安排日程") ||
+            normalized.contains("时间信息") ||
+            normalized.contains("schedulable") ||
+            normalized.startsWith("uni-") ||
+            normalized.contains("json") ||
+            normalized.contains("not_inspiration")
+        ) {
+            "未能解析为可创建日程，请换一种更明确的说法"
+        } else {
+            reason
         }
     }
 

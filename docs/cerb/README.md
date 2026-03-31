@@ -1,6 +1,8 @@
 # Cerb Specifications Hub
 
 > **System**: Smart Sales B2B CRM Assistant
+> **Status**: Active supporting index
+> **Last Updated**: 2026-03-31
 > **Structure Rule**: DO NOT physically nest sub-directories under `docs/cerb/`. Keep all feature specs flat to preserve cross-references (`docs/cerb/[feature]/spec.md`). Use this README as the conceptual human-readable map.
 
 This hub maps the physical feature folders to the conceptual architecture outlined in the Product Requirements Document (PRD).

@@ -2,10 +2,14 @@ package com.smartsales.prism.ui.components
 
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -22,6 +26,21 @@ fun Modifier.prismStatusBarPadding(): Modifier = this
 fun Modifier.prismStatusBarTopSafeBandPadding(): Modifier = this
     .prismStatusBarPadding()
     .padding(top = PrismTopSafeBand)
+
+@Composable
+fun PrismStatusBarTopSafeArea(
+    modifier: Modifier = Modifier,
+    safeBandHeight: Dp = PrismTopSafeBand
+) {
+    Column(modifier = modifier) {
+        Spacer(
+            modifier = Modifier.windowInsetsTopHeight(
+                WindowInsets.statusBars.only(WindowInsetsSides.Top)
+            )
+        )
+        Spacer(modifier = Modifier.height(safeBandHeight))
+    }
+}
 
 @Composable
 fun Modifier.prismNavigationBarPadding(): Modifier = this

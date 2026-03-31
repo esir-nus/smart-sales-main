@@ -2,7 +2,7 @@
 
 > Type: Flow
 > Status: Active
-> Last Updated: 2026-03-30
+> Last Updated: 2026-03-31
 
 ## Overview
 
@@ -19,7 +19,8 @@ Behavior authority for the pairing runtime remains:
 
 - `docs/cerb/device-pairing/spec.md`
 - `docs/cerb/device-pairing/interface.md`
-- `docs/cerb/sim-connectivity/spec.md` for SIM routing
+- this flow document for `SIM_CONNECTIVITY` host routing
+- `docs/cerb/connectivity-bridge/spec.md` and `interface.md` for shared connectivity runtime behavior
 
 ## Host Sequences
 
@@ -71,9 +72,16 @@ Rule:
 - onboarding uses a FunASR realtime fast lane through the existing `DeviceSpeechRecognizer` seam rather than the main batch `AsrService` path
 - while listening, the footer hint slot may show live partial transcript instead of the idle sample prompt
 - once recording ends, the footer keeps any already-captured transcript visible during processing; if no transcript was captured yet, the hint slot may remain empty until the next result state is revealed
-- onboarding builds consultation replies and profile drafts locally, without using the main business LLM path on the happy path
+- onboarding uses dedicated onboarding fast profiles for the happy path:
+  - `ModelRegistry.ONBOARDING_CONSULTATION` for consultation reply generation
+  - `ModelRegistry.ONBOARDING_PROFILE_EXTRACTION` for strict profile JSON extraction
 - if the fast lane is unavailable or fails, onboarding may invisibly switch to a deterministic fallback lane with a short believable dwell
+- if model generation fails after a real transcript has already been resolved, deterministic fallback must stay grounded in that real transcript rather than replacing it with canned user content
+- onboarding owns one visible watchdog per generation lane rather than nested service + UI timeouts:
+  - consultation target about `2.5s`
+  - profile target about `3.5s`
 - onboarding owns a local post-capture processing watchdog so the intro voice lane cannot sit indefinitely in a generic processing state once capture ends
+- recognizer-side cancellation that arrives only after release counts as fast-lane failure in this watchdog and must terminate through onboarding-local fallback, while explicit user/reset/background cancellation still clears directly back to idle
 - late results from timed-out or reset intro attempts must be ignored instead of mutating the current onboarding state
 - raw realtime ASR payloads must be sanitized before reaching onboarding transcript or error UI
 - `HARDWARE_WAKE` still teaches the 3-second badge wake ritual

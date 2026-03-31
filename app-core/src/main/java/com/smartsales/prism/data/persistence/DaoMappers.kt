@@ -5,6 +5,7 @@ import com.smartsales.prism.domain.memory.ConflictPolicy
 import com.smartsales.prism.domain.memory.DurationSource
 import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.domain.scheduler.UrgencyLevel
+import com.smartsales.prism.domain.scheduler.withNormalizedReminderMetadata
 import com.smartsales.prism.domain.memory.EntityEntry
 import com.smartsales.prism.domain.memory.EntityType
 import com.smartsales.prism.domain.memory.MemoryEntry
@@ -16,29 +17,32 @@ import java.time.Instant
 
 // === ScheduledTaskEntity Mappers ===
 
-fun ScheduledTask.toEntity(): ScheduledTaskEntity = ScheduledTaskEntity(
-    taskId = id,
-    title = title,
-    startTimeMillis = startTime.toEpochMilli(),
-    endTimeMillis = endTime?.toEpochMilli(),
-    durationMinutes = durationMinutes,
-    durationSource = durationSource.name,
-    conflictPolicy = conflictPolicy.name,
-    location = location,
-    notes = notes,
-    keyPerson = keyPerson,
-    keyPersonEntityId = keyPersonEntityId,
-    highlights = highlights,
-    isDone = isDone,
-    hasAlarm = hasAlarm,
-    isSmartAlarm = isSmartAlarm,
-    alarmCascadeJson = if (alarmCascade.isEmpty()) null else JSONArray(alarmCascade).toString(),
-    urgencyLevel = urgencyLevel.name,
-    hasConflict = hasConflict,
-    conflictWithTaskId = conflictWithTaskId,
-    conflictSummary = conflictSummary,
-    isVague = isVague
-)
+fun ScheduledTask.toEntity(): ScheduledTaskEntity {
+    val normalizedTask = withNormalizedReminderMetadata()
+    return ScheduledTaskEntity(
+        taskId = normalizedTask.id,
+        title = normalizedTask.title,
+        startTimeMillis = normalizedTask.startTime.toEpochMilli(),
+        endTimeMillis = normalizedTask.endTime?.toEpochMilli(),
+        durationMinutes = normalizedTask.durationMinutes,
+        durationSource = normalizedTask.durationSource.name,
+        conflictPolicy = normalizedTask.conflictPolicy.name,
+        location = normalizedTask.location,
+        notes = normalizedTask.notes,
+        keyPerson = normalizedTask.keyPerson,
+        keyPersonEntityId = normalizedTask.keyPersonEntityId,
+        highlights = normalizedTask.highlights,
+        isDone = normalizedTask.isDone,
+        hasAlarm = normalizedTask.hasAlarm,
+        isSmartAlarm = normalizedTask.isSmartAlarm,
+        alarmCascadeJson = if (normalizedTask.alarmCascade.isEmpty()) null else JSONArray(normalizedTask.alarmCascade).toString(),
+        urgencyLevel = normalizedTask.urgencyLevel.name,
+        hasConflict = normalizedTask.hasConflict,
+        conflictWithTaskId = normalizedTask.conflictWithTaskId,
+        conflictSummary = normalizedTask.conflictSummary,
+        isVague = normalizedTask.isVague
+    )
+}
 
 fun ScheduledTaskEntity.toDomain(): ScheduledTask {
     val startInstant = Instant.ofEpochMilli(startTimeMillis)
@@ -101,5 +105,5 @@ fun ScheduledTaskEntity.toDomain(): ScheduledTask {
         conflictWithTaskId = conflictWithTaskId,
         conflictSummary = conflictSummary,
         isVague = isVague
-    )
+    ).withNormalizedReminderMetadata()
 }

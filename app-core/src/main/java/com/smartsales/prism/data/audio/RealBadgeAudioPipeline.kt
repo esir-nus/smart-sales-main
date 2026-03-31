@@ -35,7 +35,8 @@ import javax.inject.Singleton
 class RealBadgeAudioPipeline @Inject constructor(
     private val connectivityBridge: ConnectivityBridge,
     private val asrService: AsrService,
-    private val intentOrchestrator: IntentOrchestrator
+    private val intentOrchestrator: IntentOrchestrator,
+    private val simBadgeAudioPipelineIngestSupport: SimBadgeAudioPipelineIngestSupport
 ) : BadgeAudioPipeline {
     
     companion object {
@@ -172,16 +173,37 @@ class RealBadgeAudioPipeline @Inject constructor(
             }
 
             val schedulerResult = pathACompletion.await()
-            android.util.Log.d(TAG, "Path A committed via IntentOrchestrator: \$schedulerResult")
+            android.util.Log.d(TAG, "Path A committed via IntentOrchestrator: $schedulerResult")
             
             // 4. Cleanup (Emit Completion for Path A to close Drawer)
             currentStage = PipelineEvent.Stage.CLEANUP
+            val drawerIngested = simBadgeAudioPipelineIngestSupport.ingestCompletedRecording(
+                filename = filename,
+                localFile = localFile,
+                transcript = transcript
+            )
+            if (!drawerIngested) {
+                android.util.Log.w(
+                    TAG,
+                    "SIM drawer ingest failed; preserving badge file for potential manual recovery: $filename"
+                )
+            }
+
             _currentState.value = PipelineState.IDLE
             _events.emit(PipelineEvent.Complete(schedulerResult, filename, transcript))
-            
-            val deleted = connectivityBridge.deleteRecording(filename)
-            localFile.delete()
-            android.util.Log.d(TAG, "Path A Cleanup: badge=\${if (deleted) \"✓\" else \"✗\"}, local=✓")
+
+            val deleted = if (drawerIngested) {
+                connectivityBridge.deleteRecording(filename)
+            } else {
+                false
+            }
+            if (localFile.exists()) {
+                localFile.delete()
+            }
+            android.util.Log.d(
+                TAG,
+                "Path A Cleanup: drawerIngested=$drawerIngested badge=${if (deleted) "deleted" else "preserved"} local=${if (localFile.exists()) "preserved" else "deleted"}"
+            )
             
         } catch (e: Exception) {
             _currentState.value = PipelineState.IDLE
@@ -190,7 +212,7 @@ class RealBadgeAudioPipeline @Inject constructor(
                 message = e.message ?: "未知错误",
                 filename = filename
             ))
-            android.util.Log.e(TAG, "Pipeline error at stage \$currentStage", e)
+            android.util.Log.e(TAG, "Pipeline error at stage $currentStage", e)
         }
     }
     

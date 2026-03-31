@@ -1,41 +1,62 @@
 package com.smartsales.prism.data.audio
 
+import android.net.Uri
 import android.content.Context
+import com.smartsales.core.util.Result
 import com.smartsales.prism.domain.audio.AudioFile
+import com.smartsales.prism.domain.audio.AudioDeleteResult
 import com.smartsales.prism.domain.audio.AudioRepository
 import com.smartsales.prism.domain.audio.AudioSource
 import com.smartsales.prism.domain.audio.TranscriptionStatus
+import com.smartsales.data.oss.OssUploadResult
+import com.smartsales.data.oss.OssUploader
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.connectivity.WavDownloadResult
-import com.smartsales.data.oss.OssUploader
-import com.smartsales.data.oss.OssErrorCode
-import com.smartsales.data.oss.OssUploadResult
-import kotlinx.coroutines.sync.withLock
+import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
+import com.smartsales.prism.domain.tingwu.TingwuJobState
 import com.smartsales.prism.domain.tingwu.TingwuPipeline
 import com.smartsales.prism.domain.tingwu.TingwuRequest
-import com.smartsales.prism.domain.tingwu.TingwuJobState
-import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
-import com.smartsales.core.util.Result
-import com.smartsales.prism.domain.repository.HistoryRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.decodeFromString
 import java.io.File
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.Dispatchers
-import android.net.Uri
+
+internal const val AUDIO_METADATA_FILENAME = "audio_metadata.json"
+internal const val AUDIO_PENDING_BADGE_DELETE_FILENAME = "audio_pending_badge_deletes.json"
+
+internal fun normalizeAudioPendingBadgeDeleteFilename(filename: String): String = filename.trim()
+
+internal fun existingAudioBadgeFilenames(entries: List<AudioFile>): Set<String> {
+    return entries
+        .filter(::isBadgeOriginAudio)
+        .map { it.filename }
+        .toSet()
+}
+
+internal fun selectNewAudioBadgeFilenames(
+    badgeFilenames: List<String>,
+    existingBadgeFilenames: Set<String>,
+    pendingBadgeDeleteFilenames: Set<String> = emptySet()
+): List<String> {
+    return badgeFilenames
+        .distinct()
+        .filter { it !in existingBadgeFilenames }
+        .filter { it !in pendingBadgeDeleteFilenames }
+}
 
 /**
  * 真实音频仓库 — Wave 2 (JSON file backed)
@@ -51,17 +72,18 @@ class RealAudioRepository @Inject constructor(
     
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 
-    private val audioFilesFile = File(context.filesDir, "audio_metadata.json")
+    private val audioFilesFile = File(context.filesDir, AUDIO_METADATA_FILENAME)
+    private val pendingBadgeDeleteFile = File(context.filesDir, AUDIO_PENDING_BADGE_DELETE_FILENAME)
     private val fileMutex = Mutex()
+    private val syncMutex = Mutex()
     private val _audioFiles = MutableStateFlow<List<AudioFile>>(emptyList())
+    private val pendingBadgeDeletes = MutableStateFlow<Set<String>>(emptySet())
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
     init {
-        // Load initial state
         loadFromDisk()
+        loadPendingBadgeDeletes()
     }
-
-    private val syncMutex = kotlinx.coroutines.sync.Mutex()
 
     override fun getAudioFiles(): Flow<List<AudioFile>> = _audioFiles.asStateFlow()
 
@@ -73,48 +95,56 @@ class RealAudioRepository @Inject constructor(
                 is Result.Success -> listResult.data
                 is Result.Error -> throw Exception("无法获取徽章文件列表: ${listResult.throwable.message}")
             }
-        
-        val existingBadgeFilenames = _audioFiles.value
-            .filter { it.source == AudioSource.SMARTBADGE }
-            .map { it.filename }
-            .toSet()
-            
-        val newFilesToDownload = badgeFiles.filter { it !in existingBadgeFilenames }
-        
-        android.util.Log.d("RealAudioRepository", "syncFromDevice: Found ${newFilesToDownload.size} new files to download")
-        
-        var downloadedCount = 0
-        for (filename in newFilesToDownload) {
-            android.util.Log.d("RealAudioRepository", "syncFromDevice: Downloading $filename")
-            when (val downloadResult = connectivityBridge.downloadRecording(filename)) {
-                is WavDownloadResult.Success -> {
-                    val newId = UUID.randomUUID().toString()
-                    val destFile = java.io.File(context.filesDir, "$newId.wav")
-                    downloadResult.localFile.copyTo(destFile, overwrite = true)
-                    downloadResult.localFile.delete() // cleanup temp
 
-                    val newFile = AudioFile(
-                        id = newId,
-                        filename = filename,
-                        timeDisplay = "Just now",
-                        source = AudioSource.SMARTBADGE,
-                        status = TranscriptionStatus.PENDING,
-                        isStarred = false
-                    )
-                    mutateAndSave { currentList ->
-                        currentList + newFile
+            val suppressedPendingDeletes = reconcilePendingBadgeDeletes(badgeFiles)
+
+            val newFilesToDownload = selectNewAudioBadgeFilenames(
+                badgeFilenames = badgeFiles,
+                existingBadgeFilenames = existingAudioBadgeFilenames(_audioFiles.value),
+                pendingBadgeDeleteFilenames = suppressedPendingDeletes + pendingBadgeDeletes.value
+            )
+
+            android.util.Log.d(
+                "RealAudioRepository",
+                "syncFromDevice: Found ${newFilesToDownload.size} new files to download"
+            )
+
+            var downloadedCount = 0
+            for (filename in newFilesToDownload) {
+                android.util.Log.d("RealAudioRepository", "syncFromDevice: Downloading $filename")
+                when (val downloadResult = connectivityBridge.downloadRecording(filename)) {
+                    is WavDownloadResult.Success -> {
+                        val newId = UUID.randomUUID().toString()
+                        val destFile = File(context.filesDir, "$newId.wav")
+                        downloadResult.localFile.copyTo(destFile, overwrite = true)
+                        downloadResult.localFile.delete()
+
+                        val newFile = AudioFile(
+                            id = newId,
+                            filename = filename,
+                            timeDisplay = "Just now",
+                            source = AudioSource.SMARTBADGE,
+                            status = TranscriptionStatus.PENDING,
+                            isStarred = false
+                        )
+                        mutateAndSave { currentList ->
+                            currentList + newFile
+                        }
+                        downloadedCount++
                     }
-                    downloadedCount++
-                }
-                is WavDownloadResult.Error -> {
-                    android.util.Log.e("RealAudioRepository", "syncFromDevice: Failed to download $filename: ${downloadResult.message}")
+
+                    is WavDownloadResult.Error -> {
+                        android.util.Log.e(
+                            "RealAudioRepository",
+                            "syncFromDevice: Failed to download $filename: ${downloadResult.message}"
+                        )
+                    }
                 }
             }
-        }
-        
-        if (newFilesToDownload.isNotEmpty() && downloadedCount == 0) {
-            throw Exception("发现新录音，但全部下载失败")
-        }
+
+            if (newFilesToDownload.isNotEmpty() && downloadedCount == 0) {
+                throw Exception("发现新录音，但全部下载失败")
+            }
         }
     }
 
@@ -275,12 +305,22 @@ class RealAudioRepository @Inject constructor(
         }
     }
 
-    override fun deleteAudio(audioId: String) {
-        val fileToDelete = _audioFiles.value.find { it.id == audioId } ?: return
-        
-        _audioFiles.update { files -> files.filter { it.id != audioId } }
-        saveToDiskAsync()
-        
+    override suspend fun deleteAudio(audioId: String): AudioDeleteResult = withContext(ioDispatcher) {
+        val fileToDelete = _audioFiles.value.find { it.id == audioId }
+            ?: return@withContext AudioDeleteResult.NotFound
+        val pendingDeleteFilename = fileToDelete.filename
+            .takeIf { isBadgeOriginAudio(fileToDelete) }
+            ?.let(::normalizeAudioPendingBadgeDeleteFilename)
+
+        fileMutex.withLock {
+            _audioFiles.value = _audioFiles.value.filterNot { it.id == audioId }
+            if (pendingDeleteFilename != null) {
+                pendingBadgeDeletes.value = pendingBadgeDeletes.value + pendingDeleteFilename
+            }
+            writeMetadataLocked(_audioFiles.value)
+            writePendingBadgeDeletesLocked(pendingBadgeDeletes.value)
+        }
+
         val localFile = File(context.filesDir, "$audioId.wav")
         if (localFile.exists()) {
             localFile.delete()
@@ -289,21 +329,21 @@ class RealAudioRepository @Inject constructor(
         if (artifactFile.exists()) {
             artifactFile.delete()
         }
-        
-        if (fileToDelete.source == AudioSource.SMARTBADGE) {
-            kotlinx.coroutines.GlobalScope.launch(ioDispatcher) {
-                try {
-                    val success = connectivityBridge.deleteRecording(fileToDelete.filename)
-                    if (success) {
-                        android.util.Log.d("RealAudioRepository", "deleteAudio: Deleted ${fileToDelete.filename} from badge")
-                    } else {
-                        android.util.Log.e("RealAudioRepository", "deleteAudio: Failed to delete ${fileToDelete.filename} from badge")
-                    }
-                } catch (e: Exception) {
-                    android.util.Log.e("RealAudioRepository", "deleteAudio: Exception deleting ${fileToDelete.filename} from badge", e)
-                }
+
+        if (pendingDeleteFilename != null) {
+            val success = runCatching {
+                connectivityBridge.deleteRecording(fileToDelete.filename)
+            }.getOrDefault(false)
+            if (success) {
+                clearPendingBadgeDeletes(setOf(pendingDeleteFilename))
             }
+            return@withContext AudioDeleteResult.Badge(
+                filename = fileToDelete.filename,
+                remoteDeleteSucceeded = success
+            )
         }
+
+        AudioDeleteResult.LocalOnly(filename = fileToDelete.filename)
     }
 
     override fun toggleStar(audioId: String) {
@@ -345,9 +385,7 @@ class RealAudioRepository @Inject constructor(
         fileMutex.withLock {
             val newList = mutateBlock(_audioFiles.value)
             _audioFiles.value = newList
-            withContext(ioDispatcher) {
-                audioFilesFile.writeText(json.encodeToString(newList))
-            }
+            writeMetadataLocked(newList)
         }
     }
 
@@ -355,7 +393,7 @@ class RealAudioRepository @Inject constructor(
     private fun saveToDiskAsync() {
         kotlinx.coroutines.GlobalScope.launch(ioDispatcher) {
             fileMutex.withLock {
-                audioFilesFile.writeText(json.encodeToString(_audioFiles.value))
+                writeMetadataLocked(_audioFiles.value)
             }
         }
     }
@@ -366,11 +404,86 @@ class RealAudioRepository @Inject constructor(
             val contents = audioFilesFile.readText()
             if (contents.isNotBlank()) {
                 val parsed = json.decodeFromString<List<AudioFile>>(contents)
-                _audioFiles.value = parsed
+                val normalization = normalizeBadgeOriginEntries(parsed)
+                _audioFiles.value = normalization.entries
+                if (normalization.normalizedCount > 0) {
+                    android.util.Log.w(
+                        "RealAudioRepository",
+                        "loadFromDisk: normalized ${normalization.normalizedCount} legacy badge entries by filename"
+                    )
+                    audioFilesFile.writeText(json.encodeToString(normalization.entries))
+                }
             }
         } catch (e: Exception) {
             e.printStackTrace()
             // On parse error, just start fresh. File might be corrupted.
+        }
+    }
+
+    private fun loadPendingBadgeDeletes() {
+        if (!pendingBadgeDeleteFile.exists()) return
+        try {
+            val contents = pendingBadgeDeleteFile.readText()
+            if (contents.isNotBlank()) {
+                pendingBadgeDeletes.value = json.decodeFromString<List<String>>(contents)
+                    .map(::normalizeAudioPendingBadgeDeleteFilename)
+                    .filter(String::isNotBlank)
+                    .toSet()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private suspend fun clearPendingBadgeDeletes(filenames: Set<String>) {
+        if (filenames.isEmpty()) return
+        fileMutex.withLock {
+            val updated = pendingBadgeDeletes.value - filenames
+            if (updated == pendingBadgeDeletes.value) return@withLock
+            pendingBadgeDeletes.value = updated
+            writePendingBadgeDeletesLocked(updated)
+        }
+    }
+
+    private suspend fun reconcilePendingBadgeDeletes(badgeFiles: List<String>): Set<String> {
+        val currentPendingDeletes = pendingBadgeDeletes.value
+        if (currentPendingDeletes.isEmpty()) return emptySet()
+
+        val badgeFilenameSet = badgeFiles.map(::normalizeAudioPendingBadgeDeleteFilename).toSet()
+        val missingOnBadge = currentPendingDeletes - badgeFilenameSet
+        if (missingOnBadge.isNotEmpty()) {
+            clearPendingBadgeDeletes(missingOnBadge)
+        }
+
+        val stillPresentOnBadge = pendingBadgeDeletes.value.intersect(badgeFilenameSet)
+        stillPresentOnBadge.forEach { filename ->
+            val deleted = runCatching {
+                connectivityBridge.deleteRecording(filename)
+            }.getOrDefault(false)
+            if (deleted) {
+                clearPendingBadgeDeletes(setOf(filename))
+            } else {
+                android.util.Log.w(
+                    "RealAudioRepository",
+                    "pending badge delete still blocked filename=$filename"
+                )
+            }
+        }
+
+        return currentPendingDeletes.intersect(badgeFilenameSet)
+    }
+
+    private suspend fun writeMetadataLocked(entries: List<AudioFile>) {
+        withContext(ioDispatcher) {
+            audioFilesFile.parentFile?.mkdirs()
+            audioFilesFile.writeText(json.encodeToString(entries))
+        }
+    }
+
+    private suspend fun writePendingBadgeDeletesLocked(filenames: Set<String>) {
+        withContext(ioDispatcher) {
+            pendingBadgeDeleteFile.parentFile?.mkdirs()
+            pendingBadgeDeleteFile.writeText(json.encodeToString(filenames.toList().sorted()))
         }
     }
 }

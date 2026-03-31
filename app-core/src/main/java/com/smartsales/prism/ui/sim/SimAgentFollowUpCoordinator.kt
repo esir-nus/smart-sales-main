@@ -23,6 +23,7 @@ import com.smartsales.prism.domain.scheduler.RecentTaskHint
 import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.UrgencyLevel
+import com.smartsales.prism.domain.scheduler.normalizedReminderCascade
 import com.smartsales.prism.domain.time.TimeProvider
 import java.time.Instant
 import java.time.LocalDate
@@ -573,9 +574,7 @@ internal class SimAgentFollowUpCoordinator(
 
     private suspend fun scheduleReminderIfExact(task: ScheduledTask) {
         if (task.isVague || task.isDone) return
-        val cascade = task.alarmCascade.ifEmpty {
-            UrgencyLevel.buildCascade(task.urgencyLevel)
-        }
+        val cascade = task.normalizedReminderCascade()
         if (cascade.isEmpty()) return
         runCatching {
             alarmScheduler.scheduleCascade(

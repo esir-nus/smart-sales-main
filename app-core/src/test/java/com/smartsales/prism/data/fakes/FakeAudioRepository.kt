@@ -1,6 +1,7 @@
 package com.smartsales.prism.data.fakes
 
 import com.smartsales.prism.domain.audio.AudioFile
+import com.smartsales.prism.domain.audio.AudioDeleteResult
 import com.smartsales.prism.domain.audio.AudioRepository
 import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
 import kotlinx.coroutines.flow.Flow
@@ -18,8 +19,21 @@ class FakeAudioRepository : AudioRepository {
 
     override suspend fun startTranscription(audioId: String) {}
 
-    override fun deleteAudio(audioId: String) {
+    override suspend fun deleteAudio(audioId: String): AudioDeleteResult {
+        val target = _audioFiles.value.find { it.id == audioId } ?: return AudioDeleteResult.NotFound
         _audioFiles.value = _audioFiles.value.filter { it.id != audioId }
+        return when (target.source) {
+            com.smartsales.prism.domain.audio.AudioSource.SMARTBADGE -> {
+                AudioDeleteResult.Badge(
+                    filename = target.filename,
+                    remoteDeleteSucceeded = true
+                )
+            }
+
+            com.smartsales.prism.domain.audio.AudioSource.PHONE -> {
+                AudioDeleteResult.LocalOnly(filename = target.filename)
+            }
+        }
     }
 
     override fun toggleStar(audioId: String) {

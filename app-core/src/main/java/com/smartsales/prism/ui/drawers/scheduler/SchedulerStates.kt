@@ -29,7 +29,7 @@ sealed class TimelineItem {
         val isInteractive: Boolean = true,
         val sortInstant: Instant? = null,
         val hasAlarm: Boolean = false,
-        val isSmartAlarm: Boolean = false, // "智能提醒" badge
+        val isSmartAlarm: Boolean = false, // 旧提醒提示字段，产品 UI 不应只依赖它
         val urgencyLevel: com.smartsales.prism.domain.scheduler.UrgencyLevel = com.smartsales.prism.domain.scheduler.UrgencyLevel.L3_NORMAL,
         // Expanded Fields
         val dateRange: String = "08:00 - 09:00",
@@ -37,7 +37,7 @@ sealed class TimelineItem {
         val notes: String? = null,
         val keyPerson: String? = null,
         val highlights: String? = null,
-        val alarmCascade: List<String>? = null, // e.g. ["-1h", "-15m", "-5m"]
+        val alarmCascade: List<String>? = null, // e.g. ["-30m", "0m"]
         val processingStatus: String? = null, // For Fake I/O Overlay
         val isExiting: Boolean = false, // For Reschedule Animation
         val exitDirection: ExitDirection = ExitDirection.RIGHT, // Default: slide right (to future)

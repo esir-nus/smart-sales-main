@@ -24,10 +24,12 @@ Transcribe via FunASR
        ↓
 Feed transcript to Scheduler pipeline
        ↓
-Delete WAV from badge (cleanup)
+Persist completed recording into SIM audio drawer namespace
+       ↓
+Delete WAV from badge (cleanup after drawer ingest succeeds)
 ```
 
-**Key Principle**: This is the **only** entry point for badge audio. Scheduler does NOT know about badge connectivity.
+**Key Principle**: This is the only automatic scheduler-ingress path for badge audio. Scheduler does NOT know about badge connectivity, and drawer visibility is repaired through the pipeline rather than by teaching scheduler or shell UI about badge transport.
 
 ---
 
@@ -147,13 +149,16 @@ sealed class SchedulerResult {
   - [ ] `RealBadgeAudioPipeline` orchestrates flow
   - [ ] Listens to `recordingNotifications()` from ConnectivityBridge
   - [ ] Downloads, transcribes, schedules in sequence
-  - [ ] Cleans up WAV on success
+  - [x] Persists successful badge recordings into SIM drawer storage before cleanup
+  - [x] Deletes badge WAV only after drawer ingest succeeds
 
 - **Test Cases**:
   - [ ] L2: Record on badge → task appears in timeline
   - [ ] L2: Vietnamese input → AwaitingClarification returned
   - [ ] L2: "明天开会" → Meeting task created
   - [ ] L2: "以后想学吉他" → InspirationSaved
+  - [x] Successful pipeline completion produces a SIM drawer item without manual sync
+  - [x] Drawer-ingest failure preserves the badge WAV for recovery/manual sync
 
 ---
 

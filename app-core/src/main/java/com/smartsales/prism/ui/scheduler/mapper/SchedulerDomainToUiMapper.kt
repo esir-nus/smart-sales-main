@@ -3,6 +3,7 @@ package com.smartsales.prism.ui.scheduler.mapper
 import android.util.Log
 import com.smartsales.prism.domain.scheduler.SchedulerTimelineItem
 import com.smartsales.prism.domain.scheduler.ScheduledTask
+import com.smartsales.prism.domain.scheduler.withNormalizedReminderMetadata
 import com.smartsales.prism.ui.drawers.scheduler.ExitDirection
 import com.smartsales.prism.ui.drawers.scheduler.TimelineItem
 import com.smartsales.prism.ui.drawers.scheduler.ConflictVisual
@@ -22,35 +23,38 @@ fun SchedulerTimelineItem.toUiState(
     Log.d("SchedulerMapper", "toUiState: id=${this.id}")
 
     return when (this) {
-        is ScheduledTask -> TimelineItem.Task(
-            id = id,
-            timeDisplay = timeDisplay,
-            renderKey = id,
-            title = title,
-            isDone = isDone,
-            isInteractive = true,
-            sortInstant = startTime,
-            hasAlarm = hasAlarm,
-            isSmartAlarm = isSmartAlarm,
-            urgencyLevel = urgencyLevel,
-            dateRange = dateRange,
-            location = location,
-            notes = notes,
-            keyPerson = keyPerson,
-            highlights = highlights,
-            alarmCascade = alarmCascade,
-            processingStatus = null,
-            isExiting = false,
-            exitDirection = ExitDirection.RIGHT,
-            conflictVisual = ConflictVisual.NONE,
-            keyPersonEntityId = keyPersonEntityId,
-            tips = cachedTips ?: emptyList(),
-            tipsLoading = id in tipsLoadingSet,
-            clarificationState = clarificationState,
-            isVague = isVague,
-            hasConflict = hasConflict,
-            conflictSummary = conflictSummary
-        )
+        is ScheduledTask -> {
+            val normalizedTask = withNormalizedReminderMetadata()
+            TimelineItem.Task(
+                id = normalizedTask.id,
+                timeDisplay = normalizedTask.timeDisplay,
+                renderKey = normalizedTask.id,
+                title = normalizedTask.title,
+                isDone = normalizedTask.isDone,
+                isInteractive = true,
+                sortInstant = normalizedTask.startTime,
+                hasAlarm = normalizedTask.hasAlarm,
+                isSmartAlarm = normalizedTask.isSmartAlarm,
+                urgencyLevel = normalizedTask.urgencyLevel,
+                dateRange = normalizedTask.dateRange,
+                location = normalizedTask.location,
+                notes = normalizedTask.notes,
+                keyPerson = normalizedTask.keyPerson,
+                highlights = normalizedTask.highlights,
+                alarmCascade = normalizedTask.alarmCascade,
+                processingStatus = null,
+                isExiting = false,
+                exitDirection = ExitDirection.RIGHT,
+                conflictVisual = ConflictVisual.NONE,
+                keyPersonEntityId = normalizedTask.keyPersonEntityId,
+                tips = cachedTips ?: emptyList(),
+                tipsLoading = normalizedTask.id in tipsLoadingSet,
+                clarificationState = normalizedTask.clarificationState,
+                isVague = normalizedTask.isVague,
+                hasConflict = normalizedTask.hasConflict,
+                conflictSummary = normalizedTask.conflictSummary
+            )
+        }
         is SchedulerTimelineItem.Inspiration -> TimelineItem.Inspiration(
             id = id,
             timeDisplay = timeDisplay,

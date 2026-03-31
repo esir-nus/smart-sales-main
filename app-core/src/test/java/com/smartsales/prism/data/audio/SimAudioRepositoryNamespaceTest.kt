@@ -41,6 +41,7 @@ class SimAudioRepositoryNamespaceTest {
     @Test
     fun `sim namespace helpers return expected filenames`() {
         assertEquals("sim_audio_metadata.json", SIM_AUDIO_METADATA_FILENAME)
+        assertEquals("sim_audio_pending_badge_deletes.json", SIM_AUDIO_PENDING_BADGE_DELETE_FILENAME)
         assertEquals("sim_audio-1.wav", simStoredAudioFilename("audio-1", "wav"))
         assertEquals("sim_audio-1_artifacts.json", simArtifactFilename("audio-1"))
     }
@@ -59,10 +60,12 @@ class SimAudioRepositoryNamespaceTest {
         metadataFile.writeText(Json.encodeToString(listOf(originalEntry)))
 
         val repository = SimAudioRepository(
-            context = context,
-            connectivityBridge = connectivityBridge,
-            ossUploader = ossUploader,
-            tingwuPipeline = tingwuPipeline
+            runtime = SimAudioRepositoryRuntime(
+                context = context,
+                connectivityBridge = connectivityBridge,
+                ossUploader = ossUploader,
+                tingwuPipeline = tingwuPipeline
+            )
         )
 
         assertEquals("session-123", repository.getBoundSessionId("audio-1"))
@@ -86,10 +89,12 @@ class SimAudioRepositoryNamespaceTest {
         )
 
         val repository = SimAudioRepository(
-            context = context,
-            connectivityBridge = connectivityBridge,
-            ossUploader = ossUploader,
-            tingwuPipeline = tingwuPipeline
+            runtime = SimAudioRepositoryRuntime(
+                context = context,
+                connectivityBridge = connectivityBridge,
+                ossUploader = ossUploader,
+                tingwuPipeline = tingwuPipeline
+            )
         )
 
         repository.bindSession("audio-2", "session-456")
@@ -106,10 +111,12 @@ class SimAudioRepositoryNamespaceTest {
         assertTrue(!File(tempFolder.root, "audio_metadata.json").exists())
 
         val reloadedRepository = SimAudioRepository(
-            context = context,
-            connectivityBridge = connectivityBridge,
-            ossUploader = ossUploader,
-            tingwuPipeline = tingwuPipeline
+            runtime = SimAudioRepositoryRuntime(
+                context = context,
+                connectivityBridge = connectivityBridge,
+                ossUploader = ossUploader,
+                tingwuPipeline = tingwuPipeline
+            )
         )
 
         assertEquals("session-456", reloadedRepository.getBoundSessionId("audio-2"))

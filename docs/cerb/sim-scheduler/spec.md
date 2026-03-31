@@ -5,14 +5,31 @@
 > **Behavioral Authority Above This Doc**:
 > - `docs/core-flow/sim-scheduler-path-a-flow.md`
 > - `docs/core-flow/scheduler-fast-track-flow.md`
+> - `docs/specs/base-runtime-unification.md`
 > **Related Product Doc**: `docs/to-cerb/sim-standalone-prototype/concept.md`
 > **Audit Evidence**: `docs/reports/20260319-sim-standalone-code-audit.md`
+> **Related Audit**: `docs/reports/20260331-base-runtime-unification-drift-audit.md`
+
+---
+
+## Unification Note (2026-03-31)
+
+Despite the legacy `SIM` name, this doc should now be read as the current best available **base-runtime scheduler baseline** for non-Mono work.
+
+Interpretation rule:
+
+- keep using this doc for shared Path A scheduler direction while legacy full-side runtime owners catch up
+- do not treat the `SIM` label as permission to fork non-Mono scheduler truth
+- Mono begins at the deeper memory/entity/Path-B/plugin architecture layer, not at every short-lived follow-up context behavior
+- keep the real SIM-local scheduler/runtime boundary where it still exists, but do not read that boundary as a second non-Mono scheduler truth
 
 ---
 
 ## 1. Purpose
 
 `SIM Scheduler` is the scheduler implementation contract for the standalone simplified app.
+
+For non-Mono scheduler planning truth, this shard now acts as the current base-runtime scheduler baseline while legacy full-side runtime owners catch up.
 
 Its job is to preserve the delivered Prism scheduler feel while narrowing execution to the requested minimum:
 
@@ -116,6 +133,9 @@ The remaining scheduler hardening requirements are:
   - task-time reminders must reuse the shared alarm/notification stack rather than inventing a SIM-only duplicate
 - **Urgency-driven reminder cascade**
   - reminder cadence must stay domain-owned by `UrgencyLevel.buildCascade(...)`
+  - the current reminder-count contract is fixed to `L1_CRITICAL -> [-60m, -10m, 0m]`, `L2_IMPORTANT -> [-30m, 0m]`, `L3_NORMAL -> [0m]`, and `FIRE_OFF -> [0m]`
+  - `L3_NORMAL` and `FIRE_OFF` may share one reminder, but `FIRE_OFF` still means one-shot conflict-bypass work and must not be merged semantically with normal scheduled tasks
+  - exact-task reminder metadata must be normalized from urgency at mutation, persistence, projection, and reminder-restore boundaries; vague tasks must stay reminder-free even if stale reminder flags exist
   - delivery tier must stay split by `CascadeTier`: EARLY banner vs DEADLINE full-screen alarm
 
 Current repo evidence already covers part of this lane:
@@ -131,6 +151,8 @@ Current SIM-specific state and remaining gaps:
 - multi-task create now aggregates attention per target date, so mixed batches may mark multiple dates independently
 - single-task explicit relative-duration create now takes a deterministic scheduler-owned exact-create branch before model-led extraction when the transcript contains one lawful relative-time phrase and one remaining task body
 - if that explicit relative-time phrase resolves to an exact time but stripping the phrase leaves no task body, SIM must safe-fail with scheduler-owned copy rather than falling through into Uni-C-style inspiration failure text
+- single-task `明天/后天 + clock + wake/reminder body` phrasing such as `明天早上九点喊我起来` now also takes a deterministic scheduler-owned exact-create branch before `Uni-A / Uni-B / Uni-C`, lands as one exact `FIRE_OFF` task, and must not be rejected as inspiration
+- if that lawful day+clock wake/reminder phrasing resolves to an exact time but stripping the day/clock leaves no task body, SIM must safe-fail with scheduler-owned copy rather than leaking classifier or `Uni-C` internals
 - for the remaining model-led create path, SIM now fronts create with `Uni-M` ordered multi-task decomposition before the single-task Uni-A / Uni-B / Uni-C chain
 - `Uni-M` resolves fragments left-to-right; standalone explicit relative-duration fragments such as `N hours/minutes later`, `N小时后`, `N小时以后`, and `N小时之后` may anchor to `nowIso`, standalone `明天/后天 + clock` fragments may anchor to `nowIso` via day offsets, exact clock-relative fragments otherwise require a prior exact anchor, and clock-relative fragments after a vague date-only predecessor downgrade to vague when the day anchor remains lawful
 - exact non-`FIRE_OFF` tasks without explicit duration now use domain-owned conflict occupancy windows for collision evaluation only; semantic transport/travel tasks may conflict even when persisted `durationMinutes = 0`
@@ -147,6 +169,8 @@ Current SIM-specific state and remaining gaps:
 - create-time extracted `keyPerson` / `location` may be persisted as retrieval hints so later global reschedule matching can use participant/location cues without re-parsing the entire schedule set from scratch
 - notes may participate only as weak retrieval context; notes-only overlap must not overpower stronger title/person/location evidence
 - SIM now reuses the shared reminder stack for persisted exact tasks only: create and conflict-create arm reminders, vague tasks do not, delete and mark-done cancel, reschedule cancels then rearms, and restore-from-done does not rearm in T4.8
+- reminder restore must rebuild exact-task reminder truth from persisted urgency rather than trusting stale stored cascade JSON or stale `hasAlarm` flags
+- collapsed reminder visibility is product-facing reminder truth, not a legacy `isSmartAlarm` presentation rule
 - reminder-reliability prompting stays on the viewmodel/UI boundary through a process-lifetime gate so one create batch does not spam repeated settings prompts; the same seam may carry exact-alarm and OEM-specific notification hardening guidance
 - SIM still defers immediate create/conflict/completion native notifications and still lacks device-level acceptance proof for full banner/deadline delivery
 
@@ -236,6 +260,8 @@ SIM adopts the shared scheduler reminder infrastructure with a narrowed boundary
 - vague tasks never schedule reminders
 - conflict-persisted exact tasks still schedule reminders
 - reminder cadence remains domain-owned by `UrgencyLevel.buildCascade(...)`
+- the delivered cascade is `L1_CRITICAL -> [-60m, -10m, 0m]`, `L2_IMPORTANT -> [-30m, 0m]`, `L3_NORMAL -> [0m]`, `FIRE_OFF -> [0m]`
+- exact-task reminder metadata is normalized from urgency before persistence/read/projection/use, and boot restore recomputes the exact cascade from urgency instead of replaying stale stored reminder metadata
 - scheduler create/conflict/completion do not emit immediate native notifications in T4.8; only task-time reminders use the native stack
 - delete cancels the task reminder
 - mark-done cancels the task reminder

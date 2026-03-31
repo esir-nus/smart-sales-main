@@ -3,9 +3,11 @@
 > **Purpose**: Lock the product mindset for SIM so future docs and code changes do not drift back toward the smart app.
 > **Status**: Active planning companion
 > **Primary Product Doc**: `docs/to-cerb/sim-standalone-prototype/concept.md`
+> **Unification Authority**: `docs/specs/base-runtime-unification.md`
 > **Related Audits**:
 > - `docs/reports/20260319-sim-standalone-code-audit.md`
 > - `docs/reports/20260319-sim-clarification-evidence-audit.md`
+> - `docs/reports/20260331-base-runtime-unification-drift-audit.md`
 
 ---
 
@@ -14,6 +16,13 @@
 SIM is a standalone Prism-family app with two main lanes, scheduler and general SIM chat with optional Tingwu-based audio context, plus a decoupled connectivity support module.
 
 It is not a smaller smart-agent OS.
+
+Unification note on **2026-03-31**:
+
+- current `SIM` naming should now be read as the best available **base-runtime baseline**, not as permanent permission for a second non-Mono product truth
+- future non-Mono work should target the shared base runtime defined in `docs/specs/base-runtime-unification.md`
+- deeper memory/entity/plugin architecture remains Mono-only
+- the SIM-owned entry/runtime boundary remains real implementation isolation, but it must not be treated as a second non-Mono product truth
 
 ---
 

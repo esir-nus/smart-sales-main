@@ -16,16 +16,26 @@ import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 enum class DeviceSpeechMode {
     DEVICE_ONLY,
-    DEVICE_WITH_LOCAL_ASR_FALLBACK
+    DEVICE_WITH_LOCAL_ASR_FALLBACK,
+    FUN_ASR_REALTIME
 }
 
 enum class DeviceSpeechBackend {
     PLATFORM_DEVICE,
-    LOCAL_ASR_FALLBACK
+    LOCAL_ASR_FALLBACK,
+    FUN_ASR_REALTIME
 }
 
 /**
@@ -44,6 +54,28 @@ sealed interface DeviceSpeechRecognitionResult {
     ) : DeviceSpeechRecognitionResult
 }
 
+sealed interface DeviceSpeechRecognitionEvent {
+    data object ListeningStarted : DeviceSpeechRecognitionEvent
+    data object CaptureLimitReached : DeviceSpeechRecognitionEvent
+    data class PartialTranscript(
+        val text: String,
+        val backend: DeviceSpeechBackend
+    ) : DeviceSpeechRecognitionEvent
+
+    data class FinalTranscript(
+        val text: String,
+        val backend: DeviceSpeechBackend
+    ) : DeviceSpeechRecognitionEvent
+
+    data class Failure(
+        val reason: DeviceSpeechFailureReason,
+        val message: String,
+        val backend: DeviceSpeechBackend
+    ) : DeviceSpeechRecognitionEvent
+
+    data object Cancelled : DeviceSpeechRecognitionEvent
+}
+
 /**
  * 设备端短语音识别失败原因。
  */
@@ -58,6 +90,9 @@ enum class DeviceSpeechFailureReason {
  * 设备端短语音识别接口。
  */
 interface DeviceSpeechRecognizer {
+    val events: Flow<DeviceSpeechRecognitionEvent>
+        get() = emptyFlow()
+
     fun startListening(mode: DeviceSpeechMode = DeviceSpeechMode.DEVICE_ONLY)
     suspend fun finishListening(): DeviceSpeechRecognitionResult
     fun cancelListening()
@@ -70,7 +105,8 @@ interface DeviceSpeechRecognizer {
 @Singleton
 class RealDeviceSpeechRecognizer @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val asrService: AsrService
+    private val asrService: AsrService,
+    private val realtimeSpeechRecognizer: SimRealtimeSpeechRecognizer
 ) : DeviceSpeechRecognizer {
 
     companion object {
@@ -81,12 +117,25 @@ class RealDeviceSpeechRecognizer @Inject constructor(
     }
 
     private val mainHandler = Handler(Looper.getMainLooper())
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val _events = MutableSharedFlow<DeviceSpeechRecognitionEvent>(extraBufferCapacity = 16)
 
     @Volatile
     private var isActivelyListening = false
 
     private var speechRecognizer: SpeechRecognizer? = null
     private var session: RecognitionSession? = null
+
+    override val events: Flow<DeviceSpeechRecognitionEvent> = _events.asSharedFlow()
+
+    init {
+        scope.launch {
+            realtimeSpeechRecognizer.events.collect { event ->
+                if (session?.strategy != DeviceSpeechStrategy.REALTIME_FUN_ASR) return@collect
+                _events.tryEmit(event.toDeviceEvent())
+            }
+        }
+    }
 
     override fun startListening(mode: DeviceSpeechMode) {
         clearFinishedSession()
@@ -96,6 +145,11 @@ class RealDeviceSpeechRecognizer @Inject constructor(
             deferred = CompletableDeferred()
         )
         session = nextSession
+
+        if (nextSession.strategy == DeviceSpeechStrategy.REALTIME_FUN_ASR) {
+            realtimeSpeechRecognizer.startListening()
+            return
+        }
 
         if (nextSession.strategy == DeviceSpeechStrategy.LOCAL_ASR_FALLBACK) {
             startLocalFallbackCapture(nextSession)
@@ -149,6 +203,7 @@ class RealDeviceSpeechRecognizer @Inject constructor(
             when (activeSession.strategy) {
                 DeviceSpeechStrategy.PLATFORM_DEVICE -> finishPlatformSession(activeSession)
                 DeviceSpeechStrategy.LOCAL_ASR_FALLBACK -> finishLocalFallbackSession(activeSession)
+                DeviceSpeechStrategy.REALTIME_FUN_ASR -> finishRealtimeSession()
             }
         } finally {
             if (session === activeSession) {
@@ -160,6 +215,13 @@ class RealDeviceSpeechRecognizer @Inject constructor(
     override fun cancelListening() {
         val activeSession = session ?: return
         isActivelyListening = false
+        if (activeSession.strategy == DeviceSpeechStrategy.REALTIME_FUN_ASR) {
+            realtimeSpeechRecognizer.cancelListening()
+            if (session === activeSession) {
+                session = null
+            }
+            return
+        }
         activeSession.recorder?.cancel()
         mainHandler.post {
             speechRecognizer?.cancel()
@@ -178,7 +240,9 @@ class RealDeviceSpeechRecognizer @Inject constructor(
     }
 
     override fun isListening(): Boolean {
-        return isActivelyListening || session?.recorder?.isRecording() == true
+        return isActivelyListening ||
+            session?.recorder?.isRecording() == true ||
+            realtimeSpeechRecognizer.isListening()
     }
 
     private fun ensureRecognizer(): SpeechRecognizer {
@@ -291,6 +355,9 @@ class RealDeviceSpeechRecognizer @Inject constructor(
     private fun resolveInitialStrategy(
         mode: DeviceSpeechMode
     ): DeviceSpeechStrategy {
+        if (mode == DeviceSpeechMode.FUN_ASR_REALTIME) {
+            return DeviceSpeechStrategy.REALTIME_FUN_ASR
+        }
         return if (
             mode == DeviceSpeechMode.DEVICE_WITH_LOCAL_ASR_FALLBACK &&
             shouldPreferLocalAsrFallback(Build.MANUFACTURER, Build.BRAND)
@@ -437,9 +504,25 @@ class RealDeviceSpeechRecognizer @Inject constructor(
         }
     }
 
+    private suspend fun finishRealtimeSession(): DeviceSpeechRecognitionResult {
+        return when (val result = realtimeSpeechRecognizer.finishListening()) {
+            is SimRealtimeSpeechRecognitionResult.Success -> DeviceSpeechRecognitionResult.Success(
+                text = result.text,
+                backend = DeviceSpeechBackend.FUN_ASR_REALTIME
+            )
+
+            is SimRealtimeSpeechRecognitionResult.Failure -> DeviceSpeechRecognitionResult.Failure(
+                reason = result.reason.toDeviceFailureReason(),
+                message = result.message,
+                backend = DeviceSpeechBackend.FUN_ASR_REALTIME
+            )
+        }
+    }
+
     private enum class DeviceSpeechStrategy(val backend: DeviceSpeechBackend) {
         PLATFORM_DEVICE(DeviceSpeechBackend.PLATFORM_DEVICE),
-        LOCAL_ASR_FALLBACK(DeviceSpeechBackend.LOCAL_ASR_FALLBACK)
+        LOCAL_ASR_FALLBACK(DeviceSpeechBackend.LOCAL_ASR_FALLBACK),
+        REALTIME_FUN_ASR(DeviceSpeechBackend.FUN_ASR_REALTIME)
     }
 
     private class RecognitionSession(
@@ -449,6 +532,39 @@ class RealDeviceSpeechRecognizer @Inject constructor(
         var recorder: PhoneAudioRecorder? = null,
         var recordingFile: File? = null
     )
+}
+
+private fun SimRealtimeSpeechEvent.toDeviceEvent(): DeviceSpeechRecognitionEvent {
+    return when (this) {
+        SimRealtimeSpeechEvent.ListeningStarted -> DeviceSpeechRecognitionEvent.ListeningStarted
+        SimRealtimeSpeechEvent.CaptureLimitReached -> DeviceSpeechRecognitionEvent.CaptureLimitReached
+        is SimRealtimeSpeechEvent.PartialTranscript -> DeviceSpeechRecognitionEvent.PartialTranscript(
+            text = text,
+            backend = DeviceSpeechBackend.FUN_ASR_REALTIME
+        )
+
+        is SimRealtimeSpeechEvent.FinalTranscript -> DeviceSpeechRecognitionEvent.FinalTranscript(
+            text = text,
+            backend = DeviceSpeechBackend.FUN_ASR_REALTIME
+        )
+
+        is SimRealtimeSpeechEvent.Failure -> DeviceSpeechRecognitionEvent.Failure(
+            reason = reason.toDeviceFailureReason(),
+            message = message,
+            backend = DeviceSpeechBackend.FUN_ASR_REALTIME
+        )
+
+        SimRealtimeSpeechEvent.Cancelled -> DeviceSpeechRecognitionEvent.Cancelled
+    }
+}
+
+private fun SimRealtimeSpeechFailureReason.toDeviceFailureReason(): DeviceSpeechFailureReason {
+    return when (this) {
+        SimRealtimeSpeechFailureReason.UNAVAILABLE -> DeviceSpeechFailureReason.UNAVAILABLE
+        SimRealtimeSpeechFailureReason.NO_MATCH -> DeviceSpeechFailureReason.NO_MATCH
+        SimRealtimeSpeechFailureReason.ERROR -> DeviceSpeechFailureReason.ERROR
+        SimRealtimeSpeechFailureReason.CANCELLED -> DeviceSpeechFailureReason.CANCELLED
+    }
 }
 
 internal fun shouldPreferLocalAsrFallback(

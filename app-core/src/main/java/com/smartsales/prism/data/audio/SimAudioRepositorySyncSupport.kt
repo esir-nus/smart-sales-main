@@ -48,11 +48,13 @@ internal fun existingSimBadgeFilenames(entries: List<AudioFile>): Set<String> {
 
 internal fun selectNewSimBadgeFilenames(
     badgeFilenames: List<String>,
-    existingBadgeFilenames: Set<String>
+    existingBadgeFilenames: Set<String>,
+    pendingBadgeDeleteFilenames: Set<String> = emptySet()
 ): List<String> {
     return badgeFilenames
         .distinct()
         .filter { it !in existingBadgeFilenames }
+        .filter { it !in pendingBadgeDeleteFilenames }
 }
 
 internal fun simBadgeSyncSuccessMessage(importedCount: Int): String {
@@ -230,9 +232,12 @@ internal class SimAudioRepositorySyncSupport(
             }
         }
 
+        val suppressedPendingDeletes = reconcilePendingBadgeDeletes(badgeFiles)
+
         val newFilesToDownload = selectNewSimBadgeFilenames(
             badgeFilenames = badgeFiles,
-            existingBadgeFilenames = existingSimBadgeFilenames(runtime.audioFiles.value)
+            existingBadgeFilenames = existingSimBadgeFilenames(runtime.audioFiles.value),
+            pendingBadgeDeleteFilenames = suppressedPendingDeletes + storeSupport.getPendingBadgeDeletesSnapshot()
         )
 
         var importedCount = 0
@@ -270,5 +275,32 @@ internal class SimAudioRepositorySyncSupport(
         }
 
         return importedCount
+    }
+
+    private suspend fun reconcilePendingBadgeDeletes(badgeFiles: List<String>): Set<String> {
+        val currentPendingDeletes = storeSupport.getPendingBadgeDeletesSnapshot()
+        if (currentPendingDeletes.isEmpty()) return emptySet()
+
+        val badgeFilenameSet = badgeFiles.map(::simPendingBadgeDeleteFilename).toSet()
+        val missingOnBadge = currentPendingDeletes - badgeFilenameSet
+        if (missingOnBadge.isNotEmpty()) {
+            storeSupport.clearPendingBadgeDeletes(missingOnBadge)
+        }
+
+        val stillPresentOnBadge = storeSupport.getPendingBadgeDeletesSnapshot().intersect(badgeFilenameSet)
+        stillPresentOnBadge.forEach { filename ->
+            val deleted = runCatching {
+                runtime.connectivityBridge.deleteRecording(filename)
+            }.getOrDefault(false)
+            if (deleted) {
+                storeSupport.clearPendingBadgeDeletes(setOf(filename))
+            } else {
+                Log.w(
+                    SIM_AUDIO_SYNC_LOG_TAG,
+                    "SIM badge pending delete still blocked filename=$filename"
+                )
+            }
+        }
+        return currentPendingDeletes.intersect(badgeFilenameSet)
     }
 }

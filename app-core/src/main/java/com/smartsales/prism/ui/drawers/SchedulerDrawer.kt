@@ -8,11 +8,11 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.zIndex
 import androidx.compose.foundation.layout.*
@@ -23,10 +23,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.PointerId
+import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.widget.Toast
@@ -56,8 +63,14 @@ import com.smartsales.prism.ui.components.prismStatusBarPadding
 import com.smartsales.prism.ui.sim.SimHomeHeroTokens
 import java.time.Instant
 import com.smartsales.prism.data.notification.ReminderReliabilityAdvisor
+import kotlin.math.abs
 
 internal const val SCHEDULER_DRAWER_HANDLE_TEST_TAG = "scheduler_drawer_handle"
+
+private val SCHEDULER_HANDLE_DISMISS_DISTANCE = 32.dp
+private val SCHEDULER_HANDLE_DISMISS_VELOCITY = 900.dp
+private val SCHEDULER_HANDLE_TAP_SLOP = 3.dp
+private const val SCHEDULER_HANDLE_VERTICAL_DOMINANCE_RATIO = 1.15f
 
 /**
  * Scheduler Drawer — Top-Down Glass Sheet
@@ -300,13 +313,6 @@ fun SchedulerDrawer(
                             }
                         }
                 ) {
-                    if (isSimVisualMode) {
-                        DragHandle(
-                            onDismiss = onDismiss,
-                            topEdge = true
-                        )
-                    }
-
                     // 1. Calendar Section (Expandable)
                     val unacknowledgedDates by viewModel.unacknowledgedDates.collectAsState()
                     val rescheduledDates by viewModel.rescheduledDates.collectAsState()
@@ -546,66 +552,152 @@ fun SchedulerDrawer(
                         }
                     }
 
-                    if (!isSimVisualMode) {
-                        DragHandle(onDismiss = onDismiss)
-                    }
+                    DragHandle(
+                        onDismiss = onDismiss,
+                        dismissDirection = if (isSimVisualMode) {
+                            DragHandleDismissDirection.DOWN
+                        } else {
+                            DragHandleDismissDirection.UP
+                        }
+                    )
                 }
             }
         }
     }
 }
 
+private enum class DragHandleDismissDirection {
+    UP,
+    DOWN
+}
+
 @Composable
 private fun DragHandle(
     onDismiss: () -> Unit,
-    topEdge: Boolean = false,
+    dismissDirection: DragHandleDismissDirection = DragHandleDismissDirection.UP,
     modifier: Modifier = Modifier
 ) {
     val visuals = LocalSchedulerDrawerVisuals.current
-    var accumulatedDrag by remember { mutableStateOf(0f) }
     val density = LocalDensity.current
-    val dismissThresholdPx = remember(density) { with(density) { 56.dp.toPx() } }
+    val dismissThresholdPx = remember(density) {
+        with(density) { SCHEDULER_HANDLE_DISMISS_DISTANCE.toPx() }
+    }
+    val velocityThresholdPx = remember(density) {
+        with(density) { SCHEDULER_HANDLE_DISMISS_VELOCITY.toPx() }
+    }
+    val tapSlopPx = remember(density) {
+        with(density) { SCHEDULER_HANDLE_TAP_SLOP.toPx() }
+    }
+    val hapticFeedback = LocalHapticFeedback.current
 
     Box(
         modifier = modifier
             .fillMaxWidth()
             .padding(
-                top = if (topEdge) 8.dp else 12.dp,
-                bottom = if (topEdge) 6.dp else 12.dp
-            )
-            .testTag(SCHEDULER_DRAWER_HANDLE_TEST_TAG)
-            .pointerInput(Unit) {
-                detectVerticalDragGestures(
-                    onDragEnd = { accumulatedDrag = 0f },
-                    onDragCancel = { accumulatedDrag = 0f }
-                ) { change, dragAmount ->
-                    change.consume()
-                    accumulatedDrag += dragAmount
-                    // 向上拖动关闭顶部抽屉
-                    if (accumulatedDrag <= -dismissThresholdPx) {
-                        onDismiss()
-                        accumulatedDrag = 0f
-                    }
-                }
-            },
+                top = 12.dp,
+                bottom = 12.dp
+            ),
         contentAlignment = Alignment.Center
     ) {
-        if (topEdge) {
-            Box(
-                modifier = Modifier
-                    .width(32.dp)
-                    .height(3.dp)
-                    .background(visuals.handleTrackColor, RoundedCornerShape(2.dp))
-            ) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .width(20.dp)
-                        .height(3.dp)
-                        .background(visuals.handleColor, RoundedCornerShape(2.dp))
-                )
-            }
-        } else {
+        Box(
+            modifier = Modifier
+                .width(72.dp)
+                .height(28.dp)
+                .testTag(SCHEDULER_DRAWER_HANDLE_TEST_TAG)
+                .semantics {
+                    onClick {
+                        onDismiss()
+                        true
+                    }
+                }
+                .pointerInput(dismissDirection, dismissThresholdPx, velocityThresholdPx) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        var activePointerId: PointerId = down.id
+                        val startPosition = down.position
+                        val velocityTracker = VelocityTracker().apply {
+                            addPosition(down.uptimeMillis, down.position)
+                        }
+                        val touchSlop = viewConfiguration.touchSlop
+                        var directionLocked = false
+                        var rejected = false
+                        var maxAbsDx = 0f
+                        var maxAbsDy = 0f
+
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull { it.id == activePointerId }
+                                ?: event.changes.firstOrNull()
+                                ?: break
+
+                            activePointerId = change.id
+                            velocityTracker.addPosition(change.uptimeMillis, change.position)
+
+                            val totalDx = change.position.x - startPosition.x
+                            val totalDy = change.position.y - startPosition.y
+                            maxAbsDx = maxOf(maxAbsDx, abs(totalDx))
+                            maxAbsDy = maxOf(maxAbsDy, abs(totalDy))
+
+                            if (change.changedToUpIgnoreConsumed() || !change.pressed) {
+                                if (!rejected) {
+                                    val velocityY = velocityTracker.calculateVelocity().y
+                                    if (directionLocked) {
+                                        if (
+                                            crossedSchedulerHandleDismissDistance(
+                                                dismissDirection = dismissDirection,
+                                                totalDy = totalDy,
+                                                thresholdPx = dismissThresholdPx
+                                            ) || shouldDismissSchedulerHandleOnVelocity(
+                                                dismissDirection = dismissDirection,
+                                                totalDy = totalDy,
+                                                velocityY = velocityY,
+                                                velocityThresholdPx = velocityThresholdPx
+                                            )
+                                        ) {
+                                            triggerSchedulerHandleDismiss(hapticFeedback, onDismiss)
+                                        }
+                                    } else if (maxAbsDx <= tapSlopPx && maxAbsDy <= tapSlopPx) {
+                                        triggerSchedulerHandleDismiss(hapticFeedback, onDismiss)
+                                    }
+                                }
+                                break
+                            }
+
+                            val absDx = abs(totalDx)
+                            val absDy = abs(totalDy)
+                            if (!directionLocked && !rejected && (absDx > touchSlop || absDy > touchSlop)) {
+                                val matchesDirection = when (dismissDirection) {
+                                    DragHandleDismissDirection.UP -> totalDy < 0f
+                                    DragHandleDismissDirection.DOWN -> totalDy > 0f
+                                }
+                                val verticalDominant =
+                                    absDy >= absDx * SCHEDULER_HANDLE_VERTICAL_DOMINANCE_RATIO
+
+                                if (matchesDirection && verticalDominant) {
+                                    directionLocked = true
+                                } else {
+                                    rejected = true
+                                }
+                            }
+
+                            if (directionLocked) {
+                                change.consume()
+                                if (
+                                    crossedSchedulerHandleDismissDistance(
+                                        dismissDirection = dismissDirection,
+                                        totalDy = totalDy,
+                                        thresholdPx = dismissThresholdPx
+                                    )
+                                ) {
+                                    triggerSchedulerHandleDismiss(hapticFeedback, onDismiss)
+                                    break
+                                }
+                            }
+                        }
+                    }
+                },
+            contentAlignment = Alignment.Center
+        ) {
             Box(
                 modifier = Modifier
                     .width(36.dp)
@@ -614,6 +706,35 @@ private fun DragHandle(
             )
         }
     }
+}
+
+private fun crossedSchedulerHandleDismissDistance(
+    dismissDirection: DragHandleDismissDirection,
+    totalDy: Float,
+    thresholdPx: Float
+): Boolean = when (dismissDirection) {
+    DragHandleDismissDirection.UP -> totalDy <= -thresholdPx
+    DragHandleDismissDirection.DOWN -> totalDy >= thresholdPx
+}
+
+private fun shouldDismissSchedulerHandleOnVelocity(
+    dismissDirection: DragHandleDismissDirection,
+    totalDy: Float,
+    velocityY: Float,
+    velocityThresholdPx: Float
+): Boolean = when (dismissDirection) {
+    DragHandleDismissDirection.UP ->
+        totalDy < 0f && velocityY <= -velocityThresholdPx
+    DragHandleDismissDirection.DOWN ->
+        totalDy > 0f && velocityY >= velocityThresholdPx
+}
+
+private fun triggerSchedulerHandleDismiss(
+    hapticFeedback: androidx.compose.ui.hapticfeedback.HapticFeedback,
+    onDismiss: () -> Unit
+) {
+    hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
+    onDismiss()
 }
 
 @Preview(showBackground = true, backgroundColor = 0xFF000000)

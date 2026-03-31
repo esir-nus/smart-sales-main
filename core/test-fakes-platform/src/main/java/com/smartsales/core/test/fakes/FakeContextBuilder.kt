@@ -22,6 +22,7 @@ class FakeContextBuilder : ContextBuilder {
     private val history = mutableListOf<ChatTurn>()
     private var activeSessionId = "fake-session"
     var buildCalls = mutableListOf<EnhancedContext>()
+    var lastDocumentContextPayload: String? = null
 
     override suspend fun build(
         userText: String,
@@ -63,7 +64,7 @@ class FakeContextBuilder : ContextBuilder {
     }
 
     override fun loadDocumentContext(payload: String) {
-        // No-op for now unless explicitly needed in tests
+        lastDocumentContextPayload = payload
     }
 
     override suspend fun applyHabitUpdates(observations: List<com.smartsales.prism.domain.rl.RlObservation>) {

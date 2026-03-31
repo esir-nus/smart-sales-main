@@ -373,25 +373,36 @@ internal class DeviceConnectionManagerConnectionSupport(
         networkStatus: DeviceNetworkStatus
     ): ConnectionState {
         val ip = networkStatus.ipAddress
-        if (ip.isBlank() || ip == "0.0.0.0" || ip.startsWith("0.")) {
-            ConnectivityLogger.d("🔌 connectUsingSession: badge offline, ip=$ip")
-            return attemptDeterministicWifiReplay(session, networkStatus)
-        }
-
         val badgeSsid = normalizeWifiSsid(networkStatus.deviceWifiName)
         val phoneSsid = resolveReadablePhoneSsid()
             ?: return resolvePhoneWifiUnavailableState(
-                context = "reconnect blocked while badge has ip=$ip",
+                context = if (ip.isBlank() || ip == "0.0.0.0" || ip.startsWith("0.")) {
+                    "replay skipped"
+                } else {
+                    "reconnect blocked while badge has ip=$ip"
+                },
                 badgeSsid = badgeSsid
             )
+
+        if (ip.isBlank() || ip == "0.0.0.0" || ip.startsWith("0.")) {
+            ConnectivityLogger.d("🔌 connectUsingSession: badge offline, ip=$ip")
+            return attemptDeterministicWifiReplay(
+                session = session,
+                badgeSsid = badgeSsid,
+                phoneSsid = phoneSsid,
+                reason = "badge offline"
+            )
+        }
+
         if (badgeSsid != phoneSsid) {
-            ConnectivityLogger.w("🔌 reconnect mismatch: badge=$badgeSsid phone=$phoneSsid")
-            return ConnectionState.Error(
-                ConnectivityError.WifiDisconnected(
-                    reason = WifiDisconnectedReason.BADGE_PHONE_NETWORK_MISMATCH,
-                    phoneSsid = phoneSsid,
-                    badgeSsid = badgeSsid
-                )
+            ConnectivityLogger.w(
+                "🔌 reconnect mismatch: badge=$badgeSsid phone=$phoneSsid, attempting alignment replay"
+            )
+            return attemptDeterministicWifiReplay(
+                session = session,
+                badgeSsid = badgeSsid,
+                phoneSsid = phoneSsid,
+                reason = "badge online on different network"
             )
         }
 
@@ -404,18 +415,15 @@ internal class DeviceConnectionManagerConnectionSupport(
 
     private suspend fun attemptDeterministicWifiReplay(
         session: BleSession,
-        networkStatus: DeviceNetworkStatus
+        badgeSsid: String?,
+        phoneSsid: String,
+        reason: String
     ): ConnectionState {
-        val badgeSsid = normalizeWifiSsid(networkStatus.deviceWifiName)
-        val phoneSsid = resolveReadablePhoneSsid()
-            ?: return resolvePhoneWifiUnavailableState(
-                context = "replay skipped",
-                badgeSsid = badgeSsid
-            )
-
         val knownNetwork = sessionStore.findKnownNetworkBySsid(phoneSsid)
         if (knownNetwork == null) {
-            ConnectivityLogger.w("🔁 replay skipped: no known network for phoneSsid=$phoneSsid")
+            ConnectivityLogger.w(
+                "🔁 replay skipped ($reason): no known network for phoneSsid=$phoneSsid"
+            )
             return ConnectionState.Error(
                 ConnectivityError.WifiDisconnected(
                     reason = WifiDisconnectedReason.NO_KNOWN_CREDENTIAL_FOR_PHONE_WIFI,
@@ -427,7 +435,9 @@ internal class DeviceConnectionManagerConnectionSupport(
 
         val replayCredentials = knownNetwork.credentials
         runtime.lastCredentials = replayCredentials
-        ConnectivityLogger.i("🔁 replaying saved Wi‑Fi credentials ssid=${replayCredentials.ssid}")
+        ConnectivityLogger.i(
+            "🔁 replaying saved Wi‑Fi credentials ssid=${replayCredentials.ssid} because $reason"
+        )
         when (val provisionResult = provisioner.provision(session, replayCredentials)) {
             is Result.Success -> {
                 return waitForReconnectReplayOnline(session, replayCredentials, phoneSsid)

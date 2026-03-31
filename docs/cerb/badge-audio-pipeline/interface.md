@@ -75,7 +75,8 @@ sealed class SchedulerResult {
 | `events` | Hot flow, buffered (3), starts on injection |
 | `currentState` | Always reflects latest state |
 | `processFile` | Returns after processing complete (success or error) |
-| WAV cleanup | Deleted from badge and local after success |
+| Drawer visibility | Successful completions may already exist in SIM audio inventory before any manual drawer sync |
+| WAV cleanup | Local temp is cleaned after processing; badge-side delete happens only after successful drawer ingest |
 
 ---
 

@@ -5,8 +5,10 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -21,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.smartsales.prism.BuildConfig
@@ -79,7 +82,17 @@ internal fun SimShellContent(
     val isAudioDrawerOpen = shellState.activeDrawer == SimDrawerType.AUDIO
     val showScrim = shouldShowSimShellScrim(shellState)
     val scrimAlpha = resolveSimShellScrimAlpha(shellState)
+    val settingsDrawerSlideSpec = tween<IntOffset>(
+        durationMillis = 400,
+        easing = FastOutSlowInEasing
+    )
+    val settingsDrawerFadeSpec = tween<Float>(
+        durationMillis = 300,
+        easing = FastOutSlowInEasing
+    )
     val showSchedulerInteractionShield = shellState.activeDrawer == SimDrawerType.SCHEDULER
+    val showSimHeaderMenuButton = shellState.activeDrawer != SimDrawerType.SCHEDULER
+    val showSimHeaderNewSessionButton = shellState.activeDrawer != SimDrawerType.SCHEDULER
     val showSimBottomComposer = shellState.activeDrawer != SimDrawerType.SCHEDULER
     val schedulerGapDismissHeight = SimHomeHeroTokens.BottomMonolithHeight + 16.dp
 
@@ -117,6 +130,8 @@ internal fun SimShellContent(
             showDebugButton = false,
             visualMode = AgentIntelligenceVisualMode.SIM,
             simDynamicIslandItems = dynamicIslandItems,
+            showSimHeaderMenuButton = showSimHeaderMenuButton,
+            showSimHeaderNewSessionButton = showSimHeaderNewSessionButton,
             showSimBottomComposer = showSimBottomComposer,
             showSimIdleComposerHint = showSimIdleComposerHint,
             enableSimSchedulerPullGesture = canOpenSimSchedulerFromEdge(shellState),
@@ -348,7 +363,6 @@ internal fun SimShellContent(
                     }
                 },
                 onDeleteAudio = { audioId ->
-                    chatViewModel.handleDeletedAudio(audioId)
                     audioViewModel.deleteAudio(audioId)
                 }
             )
@@ -434,19 +448,13 @@ internal fun SimShellContent(
         AnimatedVisibility(
             visible = shellState.showSettings,
             enter = slideInHorizontally(
-                animationSpec = spring(
-                    stiffness = Spring.StiffnessLow,
-                    dampingRatio = Spring.DampingRatioNoBouncy
-                ),
+                animationSpec = settingsDrawerSlideSpec,
                 initialOffsetX = { it }
-            ) + fadeIn(),
+            ) + fadeIn(animationSpec = settingsDrawerFadeSpec),
             exit = slideOutHorizontally(
-                animationSpec = spring(
-                    stiffness = Spring.StiffnessMediumLow,
-                    dampingRatio = Spring.DampingRatioNoBouncy
-                ),
+                animationSpec = settingsDrawerSlideSpec,
                 targetOffsetX = { it }
-            ) + fadeOut(),
+            ) + fadeOut(animationSpec = settingsDrawerFadeSpec),
             modifier = Modifier.zIndex(PrismElevation.Drawer + 1f)
         ) {
             SimUserCenterDrawer(

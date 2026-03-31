@@ -31,11 +31,14 @@ This slice is not a retroactive reinterpretation of Wave A or the SIM intro-dark
 - add the two new onboarding intro steps on both hosts
 - implement phone-mic hold-to-speak interaction before pairing begins
 - transcribe onboarding audio through an onboarding-owned FunASR realtime fast lane exposed through `DeviceSpeechRecognizer`
-- generate a short consultation reply through onboarding-owned deterministic local logic
-- generate typed profile extraction data through onboarding-owned deterministic local logic
+- generate a short consultation reply through `ModelRegistry.ONBOARDING_CONSULTATION` on the happy path
+- generate typed profile extraction data through `ModelRegistry.ONBOARDING_PROFILE_EXTRACTION` strict JSON on the happy path
 - persist extracted profile data into `UserProfileRepository` only after explicit CTA on the profile step
 - allow calm retry and profile-save skip behavior without mutating pairing ownership
 - allow invisible deterministic fallback with a short artificial dwell when device STT is unavailable or fails
+- allow transcript-grounded deterministic generation fallback when a real transcript exists but LLM generation fails
+- keep one onboarding-owned visible deadline per generation lane instead of nested service + UI timeout caps
+- ensure the post-release recognition phase always terminates; recognizer-side cancellation after release must route through onboarding-local fallback, while explicit user/reset/dispose cancellation still clears silently
 - update static review, previews, and design-browser presets for the new states
 - sync docs, tests, and tracker rows for the new step contract
 
@@ -63,7 +66,7 @@ The shared onboarding mic footer for `VOICE_HANDSHAKE_CONSULTATION` and `VOICE_H
 - changing `HARDWARE_WAKE`, `SCAN`, `DEVICE_FOUND`, `PROVISIONING`, or completion routing semantics
 - adding badge-audio or Tingwu dependencies to onboarding intro steps
 - routing onboarding happy-path voice through the main batch `AsrService`
-- routing onboarding happy-path reply/extraction through the main business executor/model registry path
+- reverting onboarding back to the old WAV capture / upload path
 - introducing a second profile schema outside `UserProfileRepository`
 - silently parsing freeform LLM prose into saved profile data
 - broad `OnboardingScreen.kt` cleanup beyond the minimal seam extraction needed for this slice

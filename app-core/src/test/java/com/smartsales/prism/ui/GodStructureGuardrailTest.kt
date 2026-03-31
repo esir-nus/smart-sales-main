@@ -17,6 +17,12 @@ class GodStructureGuardrailTest {
     private val trackedExpectations = linkedMapOf(
         "app-core/src/main/java/com/smartsales/prism/ui/AgentIntelligenceScreen.kt" to
             GuardrailExpectation(budget = 550, status = "Accepted"),
+        "app-core/src/main/java/com/smartsales/prism/ui/AgentShell.kt" to
+            GuardrailExpectation(budget = 550, status = "Accepted"),
+        "app-core/src/main/java/com/smartsales/prism/ui/AgentViewModel.kt" to
+            GuardrailExpectation(budget = 650, status = "Accepted"),
+        "app-core/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerViewModel.kt" to
+            GuardrailExpectation(budget = 650, status = "Accepted"),
         "app-core/src/main/java/com/smartsales/prism/ui/sim/SimShell.kt" to
             GuardrailExpectation(budget = 550, status = "Accepted"),
         "app-core/src/main/java/com/smartsales/prism/ui/sim/SimAgentViewModel.kt" to

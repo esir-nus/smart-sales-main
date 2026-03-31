@@ -38,7 +38,7 @@ class RealConnectivityServiceTest {
 
         val result = service.reconnect()
 
-        assertEquals(ReconnectResult.WifiMismatch, result)
+        assertEquals(ReconnectResult.WifiMismatch(currentPhoneSsid = "OfficeGuest"), result)
     }
 
     @Test
@@ -58,7 +58,7 @@ class RealConnectivityServiceTest {
 
         val result = service.reconnect()
 
-        assertEquals(ReconnectResult.WifiMismatch, result)
+        assertEquals(ReconnectResult.WifiMismatch(currentPhoneSsid = null), result)
     }
 
     @Test

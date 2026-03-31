@@ -1,6 +1,8 @@
 # SIM Audio Chat Interface
 
 > **Blackbox contract** - For the standalone SIM audio and simple-chat slice.
+>
+> **Unification Note (2026-03-31)**: despite the legacy `SIM` name, this interface should now be read as the current best available base-runtime audio/chat contract for non-Mono work. Mono may later deepen chat intelligence behind this surface without creating a second audio/chat truth.
 
 ---
 
@@ -34,6 +36,8 @@ Browse-vs-select interaction contract:
 
 - direct drawer open uses browse-mode gallery behavior
 - browse mode uses directional card actions with state gating: pending collapsed cards support right-swipe transcribe plus left-swipe delete; collapsed transcribed cards support left-swipe delete only
+- for `SMARTBADGE` items, the first delete after each drawer-open session must show confirmation that the local card and badge-side WAV will both be removed
+- legacy persisted entries whose filename still matches badge-origin `log_YYYYMMDD_HHMMSS.wav` must also use that same confirmation/delete-cleanup path even if stale metadata still says `PHONE`
 - chat attach/upload reopen uses select-mode picker behavior
 - select mode is buttonless at the card level: the whole card is the action surface
 - select mode suppresses swipe gestures, delete/destructive actions, expand/collapse, and `Ask AI`
@@ -88,6 +92,8 @@ Notes:
 - `syncFromDevice()` is the product ingress for badge-origin recordings.
 - browse-mode manual sync and browse-open auto-sync must both call this same contract.
 - badge sync is additive-only for this slice: repeated `/list` checks are allowed, but a badge filename already present in local `SMARTBADGE` inventory must not be redownloaded into local storage.
+- SmartBadge delete persists a pending-delete tombstone keyed by exact badge filename so failed HTTP badge cleanup does not let the same WAV reappear as a “new” recording on later sync.
+- load-time repository recovery must normalize legacy badge-like `log_YYYYMMDD_HHMMSS.wav` entries back to `SMARTBADGE` and rewrite the persisted metadata so later delete/sync behavior stays aligned.
 - `addLocalAudio(uriString)` is a test-only convenience seam for QA/dev validation; it must not become the default product upload path.
 - `ConnectivityBridge` is an allowed backend dependency only for badge-origin recording ingress and badge file operations.
 - connectivity must not become the owner of SIM audio/chat session flow, artifact persistence, or chat routing.
@@ -149,9 +155,30 @@ Meaning:
 - no wider smart-agent memory contract is implied
 - completed artifact content should survive session switch/reopen as durable chat history, not only transient UI state
 - transcript reveal presentation is host-owned UI state rather than part of the durable artifact payload
-- blank SIM chat may use device speech recognition to draft `inputText`, but the host must still require an explicit send action before the turn enters durable history
+- blank SIM chat may use SIM-owned realtime speech recognition to draft `inputText`, but the host must still require an explicit send action before the turn enters durable history
+- the current SIM draft lane is owned by `SimRealtimeSpeechRecognizer`, backed by FunASR realtime SDK rather than Android `SpeechRecognizer`
+- SIM realtime auth is obtained from a backend-issued short-lived DashScope token rather than a long-lived app-side API key
 - the trailing composer action shows mic only while the draft is blank and falls back to send as soon as editable text exists
 - recognizer failure, no-match, permission denial, or cancellation must not append a user turn
+
+### SIM Realtime Speech Contract
+
+```kotlin
+interface SimRealtimeSpeechRecognizer {
+    fun startListening()
+    suspend fun finishListening(): SimRealtimeSpeechRecognitionResult
+    fun cancelListening()
+    fun isListening(): Boolean
+}
+```
+
+Meaning:
+
+- this seam is SIM-only and does not widen into the shared onboarding fast lane
+- the implementation uses FunASR realtime Android SDK plus SIM-owned mic capture
+- the implementation must fetch backend-issued short-lived DashScope auth before starting a realtime session
+- successful completion returns one editable draft string for the composer rather than a durable chat turn
+- cancel, no-match, timeout, or backend failure must leave durable chat history untouched
 
 ### Provider Enrichment Contract
 

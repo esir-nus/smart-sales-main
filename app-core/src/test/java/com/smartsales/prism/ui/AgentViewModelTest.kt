@@ -7,6 +7,8 @@ import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.domain.scheduler.FastTrackMutationEngine
 import com.smartsales.prism.domain.scheduler.FakeScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.SchedulerLinter
+import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
+import com.smartsales.prism.domain.tingwu.TingwuSmartSummary
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -445,5 +447,115 @@ class AgentViewModelTest {
 
         val history = gateway.getSessionHistory(2)
         assertTrue(history.contains("跟 Tom 跟进报价"))
+    }
+
+    @Test
+    fun `startNewSession resets transient ui state and activity`() = runTest {
+        viewModel.updateInput("待清空输入")
+        activityController.startPhase(ActivityPhase.PLANNING)
+        viewModel.debugRunScenario("MARKDOWN_BUBBLE")
+
+        val taskBoardField = AgentViewModel::class.java.getDeclaredField("_taskBoardItems")
+        taskBoardField.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        val taskBoardState =
+            taskBoardField.get(viewModel) as MutableStateFlow<List<com.smartsales.prism.domain.analyst.TaskBoardItem>>
+        taskBoardState.value = listOf(
+            com.smartsales.prism.domain.analyst.TaskBoardItem(
+                id = "tool-1",
+                icon = "icon",
+                title = "Tool",
+                description = "Desc"
+            )
+        )
+
+        val errorField = AgentViewModel::class.java.getDeclaredField("_errorMessage")
+        errorField.isAccessible = true
+        @Suppress("UNCHECKED_CAST")
+        val errorState = errorField.get(viewModel) as MutableStateFlow<String?>
+        errorState.value = "旧错误"
+
+        viewModel.startNewSession()
+        advanceUntilIdle()
+
+        assertEquals("", viewModel.inputText.value)
+        assertEquals(UiState.Idle, viewModel.uiState.value)
+        assertEquals("新对话", viewModel.sessionTitle.value)
+        assertTrue(viewModel.history.value.isEmpty())
+        assertTrue(viewModel.taskBoardItems.value.isEmpty())
+        assertNull(viewModel.errorMessage.value)
+        assertNull(viewModel.agentActivity.value)
+        assertTrue(fakeContextBuilder.getSessionHistory().isEmpty())
+    }
+
+    @Test
+    fun `switchSession rehydrates history and linked audio document context`() = runTest {
+        val sessionId = fakeHistoryRepo.createSession("Acme", "摘要", linkedAudioId = "audio-1")
+        fakeHistoryRepo.saveMessage(sessionId, isUser = true, content = "你好", orderIndex = 0)
+        fakeHistoryRepo.saveMessage(sessionId, isUser = false, content = "您好", orderIndex = 1)
+        fakeAudioRepo.artifacts = TingwuJobArtifacts(
+            transcriptMarkdown = "逐字稿内容",
+            smartSummary = TingwuSmartSummary(summary = "总结内容")
+        )
+        activityController.startPhase(ActivityPhase.PLANNING)
+
+        viewModel.switchSession(sessionId)
+        advanceUntilIdle()
+
+        assertEquals("Acme", viewModel.sessionTitle.value)
+        assertEquals("", viewModel.inputText.value)
+        assertEquals(UiState.Idle, viewModel.uiState.value)
+        assertNull(viewModel.agentActivity.value)
+        assertEquals(2, viewModel.history.value.size)
+        assertEquals(
+            listOf(
+                com.smartsales.core.context.ChatTurn("user", "你好"),
+                com.smartsales.core.context.ChatTurn("assistant", "您好")
+            ),
+            fakeContextBuilder.getSessionHistory()
+        )
+        assertTrue(fakeContextBuilder.lastDocumentContextPayload?.contains("总结内容") == true)
+        assertTrue(fakeContextBuilder.lastDocumentContextPayload?.contains("逐字稿内容") == true)
+    }
+
+    @Test
+    fun `updateSessionTitle persists rename to active session`() = runTest {
+        advanceUntilIdle()
+
+        viewModel.updateSessionTitle("新标题")
+        advanceUntilIdle()
+
+        assertEquals("新标题", viewModel.sessionTitle.value)
+        assertEquals("新标题", fakeHistoryRepo.getSession("session-1")?.clientName)
+    }
+
+    @Test
+    fun `auto rename only updates default untitled sessions`() = runTest {
+        fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.DEEP_ANALYSIS, false, ""))
+        fakeUnifiedPipeline.nextResultFlow = flowOf(
+            PipelineResult.AutoRenameTriggered("自动标题"),
+            PipelineResult.ConversationalReply("分析已完成")
+        )
+
+        viewModel.updateInput("第一次请求")
+        viewModel.send()
+        advanceUntilIdle()
+
+        assertEquals("自动标题", viewModel.sessionTitle.value)
+
+        viewModel.updateSessionTitle("手动标题")
+        advanceUntilIdle()
+
+        fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.DEEP_ANALYSIS, false, ""))
+        fakeUnifiedPipeline.nextResultFlow = flowOf(
+            PipelineResult.AutoRenameTriggered("不应覆盖"),
+            PipelineResult.ConversationalReply("再次完成")
+        )
+
+        viewModel.updateInput("第二次请求")
+        viewModel.send()
+        advanceUntilIdle()
+
+        assertEquals("手动标题", viewModel.sessionTitle.value)
     }
 }

@@ -5,6 +5,7 @@
 > **Type**: Product PRD at concept stage
 > **Purpose**: Define a standalone prototype app inside this repo that keeps the existing Prism shell feel while stripping the smart-agent system down to two main feature lanes plus a decoupled connectivity support module.
 > **Mental Model Companion**: `docs/to-cerb/sim-standalone-prototype/mental-model.md`
+> **Unification Authority**: `docs/specs/base-runtime-unification.md`
 
 ---
 
@@ -25,6 +26,13 @@ This mission is:
 The product should feel like the same family of app, but operationally it is no longer an intelligent agent system.
 
 It becomes a narrow, reusable, low-risk prototype focused on two straight pipelines, with connectivity retained as infrastructure rather than as a smart lane.
+
+Unification note on **2026-03-31**:
+
+- this concept still explains why the SIM path was created
+- for future non-Mono delivery, the repo should now treat the current SIM-led shell/scheduler/audio direction as the best available **base-runtime baseline**
+- Mono remains the later deeper architecture layer rather than a second shell/product truth
+- the separate SIM entry/runtime boundary remains real implementation scaffolding, but it must not be read as a second non-Mono product line
 
 ---
 

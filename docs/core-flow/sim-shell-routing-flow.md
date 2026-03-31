@@ -13,6 +13,11 @@
 
 This document defines **what the SIM shell must do**, not the final class names or DI layout.
 
+Authority note:
+
+- treat this flow as the behavioral north star for the current shared base-runtime shell lane
+- deprecated SIM shell/connectivity Cerb shards are migration memory only and must not be used as the active spec layer
+
 - If this document conflicts with lower specs, treat the lower specs as drift candidates first.
 - If this document conflicts with code, treat the code as behind or off-contract first.
 - If a PU test does not cover a branch defined here, the validation surface is incomplete.
@@ -25,7 +30,7 @@ This file is allowed to be ahead of the codebase.
 
 | Layer | Responsibility | Must Eventually Reflect This Core Flow |
 |------|----------------|-----------------------------------------|
-| **Spec** | How the behavior is encoded | `docs/cerb/sim-shell/spec.md`, `docs/cerb/sim-shell/interface.md`, `docs/cerb/sim-connectivity/spec.md` |
+| **Spec** | How the behavior is encoded | `docs/specs/prism-ui-ux-contract.md`, `docs/specs/base-runtime-unification.md`, `docs/specs/flows/OnboardingFlow.md`, `docs/cerb/interface-map.md`, and `docs/cerb-ui/dynamic-island/spec.md` |
 | **Code** | Delivered behavior | `SimMainActivity`, `SimShell`, prototype-only shell/viewmodel/DI composition |
 | **PU Test** | Behavioral validation | future SIM shell routing tests, drawer transition tests, isolation tests |
 

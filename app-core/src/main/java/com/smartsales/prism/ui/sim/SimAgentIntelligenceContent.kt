@@ -98,6 +98,9 @@ import com.smartsales.prism.ui.components.MarkdownText
 import kotlinx.coroutines.delay
 
 internal const val SIM_HEADER_TEST_TAG = "sim_header"
+internal const val SIM_DYNAMIC_ISLAND_TEST_TAG = "sim_dynamic_island"
+internal const val SIM_HEADER_MENU_BUTTON_TEST_TAG = "sim_header_menu_button"
+internal const val SIM_HEADER_NEW_CHAT_BUTTON_TEST_TAG = "sim_header_new_chat_button"
 internal const val SIM_INPUT_BAR_TEST_TAG = "sim_input_bar"
 internal const val SIM_INPUT_FIELD_TEST_TAG = "sim_input_field"
 internal const val SIM_ATTACH_BUTTON_TEST_TAG = "sim_attach_button"
@@ -128,6 +131,8 @@ internal fun SimAgentIntelligenceContent(
     onSchedulerClick: (DynamicIslandTapAction) -> Unit,
     onAttachClick: () -> Unit,
     simDynamicIslandItems: List<DynamicIslandItem>,
+    showHeaderMenuButton: Boolean = true,
+    showHeaderNewSessionButton: Boolean = true,
     showBottomComposer: Boolean = true,
     showIdleComposerHint: Boolean = false,
     enableSimSchedulerPullGesture: Boolean,
@@ -160,6 +165,8 @@ internal fun SimAgentIntelligenceContent(
             onMenuClick = onMenuClick,
             onNewSessionClick = onNewSessionClick,
             onSchedulerClick = onSchedulerClick,
+            showMenuButton = showHeaderMenuButton,
+            showNewSessionButton = showHeaderNewSessionButton,
             onTextChanged = onUpdateInput,
             onSend = onSend,
             onAttachClick = onAttachClick,
@@ -214,6 +221,8 @@ internal fun SimAgentIntelligenceContent(
                 onMenuClick = onMenuClick,
                 onNewSessionClick = onNewSessionClick,
                 onSchedulerClick = onSchedulerClick,
+                showMenuButton = showHeaderMenuButton,
+                showNewSessionButton = showHeaderNewSessionButton,
                 onBoundsChanged = null
             )
 
@@ -461,6 +470,8 @@ private fun SimShellHeader(
     onMenuClick: () -> Unit,
     onNewSessionClick: () -> Unit,
     onSchedulerClick: (DynamicIslandTapAction) -> Unit,
+    showMenuButton: Boolean,
+    showNewSessionButton: Boolean,
     onBoundsChanged: ((Rect) -> Unit)? = null
 ) {
     Row(
@@ -477,11 +488,16 @@ private fun SimShellHeader(
             ),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        SimHeaderButton(
-            icon = Icons.Filled.Menu,
-            tint = Color.White.copy(alpha = 0.82f),
-            onClick = onMenuClick
-        )
+        if (showMenuButton) {
+            SimHeaderButton(
+                icon = Icons.Filled.Menu,
+                tint = Color.White.copy(alpha = 0.82f),
+                onClick = onMenuClick,
+                modifier = Modifier.testTag(SIM_HEADER_MENU_BUTTON_TEST_TAG)
+            )
+        } else {
+            Spacer(modifier = Modifier.size(42.dp))
+        }
         if (dynamicIslandItems.isNotEmpty()) {
             SimRotatingDynamicIsland(
                 items = dynamicIslandItems,
@@ -501,11 +517,16 @@ private fun SimShellHeader(
                 )
             }
         }
-        SimHeaderButton(
-            icon = Icons.Filled.Add,
-            tint = Color.White.copy(alpha = 0.82f),
-            onClick = onNewSessionClick
-        )
+        if (showNewSessionButton) {
+            SimHeaderButton(
+                icon = Icons.Filled.Add,
+                tint = Color.White.copy(alpha = 0.82f),
+                onClick = onNewSessionClick,
+                modifier = Modifier.testTag(SIM_HEADER_NEW_CHAT_BUTTON_TEST_TAG)
+            )
+        } else {
+            Spacer(modifier = Modifier.size(42.dp))
+        }
     }
 }
 
@@ -547,7 +568,9 @@ private fun SimRotatingDynamicIsland(
         ) { item ->
             DynamicIsland(
                 state = DynamicIslandUiState.Visible(item),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(SIM_DYNAMIC_ISLAND_TEST_TAG),
                 onTap = onTap
             )
         }
@@ -569,10 +592,11 @@ internal fun resolveSimDynamicIslandIndex(
 private fun SimHeaderButton(
     icon: ImageVector,
     tint: Color,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Box(
-        modifier = Modifier
+        modifier = modifier
             .size(42.dp)
             .background(SimChrome.copy(alpha = 0.92f), CircleShape)
             .clickable(onClick = onClick),
@@ -625,6 +649,11 @@ private fun SimInputBar(
     val actionEnabled = text.isNotBlank() && !isSending
     val showVoiceMic = voiceDraftEnabled && text.isBlank()
     val accentColor = ProMaxAccent
+    val displayText = if (text.isBlank() && voiceDraftState.liveTranscript.isNotBlank()) {
+        voiceDraftState.liveTranscript
+    } else {
+        text
+    }
 
     Column(
         modifier = Modifier
@@ -640,11 +669,10 @@ private fun SimInputBar(
             ),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        if (voiceDraftState.isRecording || voiceDraftState.isProcessing) {
+        if (voiceDraftState.isRecording) {
             SimVoiceDraftHandshake(
                 state = voiceDraftState,
                 accentColor = accentColor,
-                hintColor = SimChromeMuted,
                 modifier = Modifier.padding(bottom = 12.dp)
             )
         }
@@ -680,8 +708,12 @@ private fun SimInputBar(
                 contentAlignment = Alignment.CenterStart
             ) {
                 BasicTextField(
-                    value = text,
-                    onValueChange = onTextChanged,
+                    value = displayText,
+                    onValueChange = { updatedText ->
+                        if (!voiceDraftState.isRecording) {
+                            onTextChanged(updatedText)
+                        }
+                    },
                     modifier = Modifier.testTag(SIM_INPUT_FIELD_TEST_TAG),
                     singleLine = true,
                     textStyle = TextStyle(
@@ -690,7 +722,7 @@ private fun SimInputBar(
                     ),
                     cursorBrush = SolidColor(ProMaxAccent),
                     decorationBox = { innerTextField ->
-                        if (text.isBlank()) {
+                        if (displayText.isBlank()) {
                             SimIdleComposerRotatingHint(
                                 visible = !voiceDraftState.isRecording && !voiceDraftState.isProcessing,
                                 rotatingHints = SIM_IDLE_COMPOSER_ROTATING_HINTS,
@@ -716,11 +748,9 @@ private fun SimInputBar(
                     )
                     .then(
                         if (showVoiceMic) {
-                            Modifier.pointerInput(
-                                voiceDraftState.isRecording,
-                                voiceDraftState.isProcessing,
-                                voiceDraftState.interactionMode
-                            ) {
+                            // 使用 Unit 作为 key，避免 isRecording 变化时
+                            // 取消 pointerInput 协程导致 tryAwaitRelease 丢失。
+                            Modifier.pointerInput(Unit) {
                                 detectTapGestures(
                                     onPress = {
                                         if (voiceDraftState.isProcessing) return@detectTapGestures

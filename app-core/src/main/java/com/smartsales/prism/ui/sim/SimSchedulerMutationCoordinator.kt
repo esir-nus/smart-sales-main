@@ -9,6 +9,7 @@ import com.smartsales.prism.domain.scheduler.FastTrackResult
 import com.smartsales.prism.domain.scheduler.MutationResult
 import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
+import com.smartsales.prism.domain.scheduler.withNormalizedReminderMetadata
 import com.smartsales.prism.domain.time.TimeProvider
 
 internal data class SimSchedulerCreateExecutionSummary(
@@ -160,7 +161,7 @@ internal class SimSchedulerMutationCoordinator(
             conflictWithTaskId = conflict?.overlaps?.firstOrNull()?.entryId,
             conflictSummary = conflict?.overlaps?.firstOrNull()?.let { "与「${it.title}」时间冲突" },
             isVague = false
-        )
+        ).withNormalizedReminderMetadata()
 
         taskRepository.rescheduleTask(original.id, updatedTask)
         reminderSupport.cancelReminderSafely(original.id)

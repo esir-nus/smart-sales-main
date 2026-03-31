@@ -3,6 +3,7 @@
 > **Scope & Ownership**
 >
 > **Status**: LIVING DOCUMENT (Owned by UI Designer Persona)
+> **Last Updated:** 2026-03-31
 >
 > This document defines the **visual language** for SmartSales mobile.
 >
@@ -132,7 +133,7 @@ Global rule for any surface that visually reaches the top edge:
 State ownership:
 
 - `docs/cerb-ui/home-shell/spec.md` owns the generic empty-state `HomeShell` / `ChatWelcome` composition
-- `docs/cerb/sim-shell/spec.md` owns the SIM home/here shell state family
+- `docs/specs/prism-ui-ux-contract.md` plus current shared shell/core-flow docs own the base-runtime shell state family; legacy SIM shell docs are migration residue only
 - approved prototype screenshots may act as the visual reference for one exact substate, but must not be mistaken for the whole feature contract
 
 #### 3.1.1 Current Home Empty State (`HomeShell` / `ChatWelcome`)
@@ -431,7 +432,7 @@ Before shipping a screen, verify:
 
 1. **Doc precedence**
 
-   * Behavior / layout matches `docs/specs/prism-ui-ux-contract.md` plus the owning feature shard such as `docs/cerb-ui/home-shell/spec.md` or `docs/cerb/sim-shell/spec.md`.
+   * Behavior / layout matches `docs/specs/prism-ui-ux-contract.md` plus the owning shared feature doc such as `docs/cerb-ui/home-shell/spec.md`, `docs/cerb-ui/dynamic-island/spec.md`, or the relevant `docs/core-flow/**` doc.
    * This style guide has been used **only** for visuals.
    * Approved state screenshots were applied only to the exact state they depict, then extended through the owning feature spec for the rest of the state family.
 

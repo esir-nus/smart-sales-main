@@ -1,8 +1,11 @@
 package com.smartsales.prism.ui.sim
 
 import android.util.Log
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.smartsales.prism.data.audio.isBadgeOriginAudio
+import com.smartsales.prism.data.audio.SimAudioDeleteResult
 import com.smartsales.prism.data.audio.SimAudioRepository
 import com.smartsales.prism.data.audio.SimBadgeSyncSkippedReason
 import com.smartsales.prism.data.audio.SimBadgeSyncTrigger
@@ -47,11 +50,17 @@ class SimAudioDrawerViewModel @Inject constructor(
 
     private val _uiEvents = MutableSharedFlow<String>()
     val uiEvents: SharedFlow<String> = _uiEvents.asSharedFlow()
+    private val _deletedAudioIds = MutableSharedFlow<String>()
+    val deletedAudioIds: SharedFlow<String> = _deletedAudioIds.asSharedFlow()
     private val _expandedAudioIds = MutableStateFlow<Set<String>>(emptySet())
     val expandedAudioIds: StateFlow<Set<String>> = _expandedAudioIds
     private val _isSyncing = MutableStateFlow(false)
     val isSyncing: StateFlow<Boolean> = _isSyncing
-    private var hasAttemptedAutoSyncThisSession = false
+    private val _pendingBadgeDeleteConfirmation =
+        MutableStateFlow<SimBadgeDeleteConfirmationRequest?>(null)
+    internal val pendingBadgeDeleteConfirmation: StateFlow<SimBadgeDeleteConfirmationRequest?> =
+        _pendingBadgeDeleteConfirmation
+    private var hasConfirmedBadgeDeleteThisSession = false
     private val badgeSyncAvailability: StateFlow<SimBadgeSyncAvailability> =
         connectivityBridge.managerStatus
             .map(::resolveSimBadgeSyncAvailability)
@@ -74,7 +83,36 @@ class SimAudioDrawerViewModel @Inject constructor(
     }
 
     fun deleteAudio(audioId: String) {
-        repository.deleteAudio(audioId)
+        val audio = repository.getAudio(audioId) ?: return
+        val confirmationRequest = resolveSimBadgeDeleteConfirmationRequest(
+            audio = audio,
+            hasConfirmedBadgeDeleteThisSession = hasConfirmedBadgeDeleteThisSession
+        )
+        Log.d(
+            SIM_AUDIO_DRAWER_SYNC_LOG_TAG,
+            "SIM badge delete gate audioId=${audio.id} filename=${audio.filename} source=${audio.source.name} badgeOrigin=${isBadgeOriginAudio(audio)} sessionConfirmed=$hasConfirmedBadgeDeleteThisSession showDialog=${confirmationRequest != null}"
+        )
+        if (confirmationRequest != null) {
+            _pendingBadgeDeleteConfirmation.value = confirmationRequest
+            return
+        }
+        deleteAudioConfirmed(audioId)
+    }
+
+    fun confirmBadgeDelete() {
+        val pending = _pendingBadgeDeleteConfirmation.value ?: return
+        hasConfirmedBadgeDeleteThisSession = true
+        _pendingBadgeDeleteConfirmation.value = null
+        deleteAudioConfirmed(pending.audioId)
+    }
+
+    fun dismissBadgeDeleteConfirmation() {
+        _pendingBadgeDeleteConfirmation.value = null
+    }
+
+    fun resetDeleteConfirmationSession() {
+        hasConfirmedBadgeDeleteThisSession = false
+        _pendingBadgeDeleteConfirmation.value = null
     }
 
     fun startTranscription(audioId: String) {
@@ -132,7 +170,7 @@ class SimAudioDrawerViewModel @Inject constructor(
     }
 
     fun syncFromBadgeManually() {
-        if (!canStartSimAudioSync(hasAttemptedAutoSync = false, isSyncing = _isSyncing.value)) {
+        if (_isSyncing.value) {
             return
         }
 
@@ -171,35 +209,6 @@ class SimAudioDrawerViewModel @Inject constructor(
                 _isSyncing.value = false
             }
         }
-    }
-
-    fun maybeAutoSyncFromBadge() {
-        if (!canStartSimAudioSync(hasAttemptedAutoSyncThisSession, _isSyncing.value)) {
-            return
-        }
-        hasAttemptedAutoSyncThisSession = true
-
-        viewModelScope.launch {
-            if (!repository.canSyncFromBadge()) {
-                return@launch
-            }
-
-            _isSyncing.value = true
-            try {
-                val outcome = repository.syncFromBadge(SimBadgeSyncTrigger.AUTO)
-                if (shouldShowSimAudioAutoSyncMessage(outcome.importedCount)) {
-                    _uiEvents.emit(simBadgeSyncSuccessMessage(outcome.importedCount))
-                }
-            } catch (e: Exception) {
-                _uiEvents.emit(e.message ?: "同步失败")
-            } finally {
-                _isSyncing.value = false
-            }
-        }
-    }
-
-    fun resetSyncSession() {
-        hasAttemptedAutoSyncThisSession = false
     }
 
     suspend fun startTranscriptionForChat(audioId: String) {
@@ -246,6 +255,29 @@ class SimAudioDrawerViewModel @Inject constructor(
         return repository.getAudio(audioId)
     }
 
+    private fun deleteAudioConfirmed(audioId: String) {
+        viewModelScope.launch {
+            when (val result = repository.deleteAudio(audioId)) {
+                is SimAudioDeleteResult.Badge -> {
+                    _deletedAudioIds.emit(audioId)
+                    _uiEvents.emit(
+                        if (result.remoteDeleteSucceeded) {
+                            "已删除录音，徽章源文件已清理。"
+                        } else {
+                            "已删除本地录音；徽章端删除待重试，同步前不会重新导入。"
+                        }
+                    )
+                }
+
+                is SimAudioDeleteResult.LocalOnly -> {
+                    _deletedAudioIds.emit(audioId)
+                    _uiEvents.emit("已删除录音")
+                }
+                SimAudioDeleteResult.NotFound -> Unit
+            }
+        }
+    }
+
     private fun AudioFile.toSimEntry(): SimAudioEntry {
         return SimAudioEntry(
             item = AudioItemState(
@@ -276,6 +308,25 @@ class SimAudioDrawerViewModel @Inject constructor(
     }
 }
 
+@Immutable
+internal data class SimBadgeDeleteConfirmationRequest(
+    val audioId: String,
+    val filename: String
+)
+
+internal fun resolveSimBadgeDeleteConfirmationRequest(
+    audio: AudioFile?,
+    hasConfirmedBadgeDeleteThisSession: Boolean
+): SimBadgeDeleteConfirmationRequest? {
+    if (audio == null) return null
+    if (!isBadgeOriginAudio(audio)) return null
+    if (hasConfirmedBadgeDeleteThisSession) return null
+    return SimBadgeDeleteConfirmationRequest(
+        audioId = audio.id,
+        filename = audio.filename
+    )
+}
+
 internal fun toggleExpandedAudioIds(
     expandedIds: Set<String>,
     audioId: String
@@ -286,15 +337,6 @@ internal fun toggleExpandedAudioIds(
         expandedIds + audioId
     }
 }
-
-internal fun canStartSimAudioSync(
-    hasAttemptedAutoSync: Boolean,
-    isSyncing: Boolean
-): Boolean {
-    return !hasAttemptedAutoSync && !isSyncing
-}
-
-internal fun shouldShowSimAudioAutoSyncMessage(importedCount: Int): Boolean = importedCount > 0
 
 internal enum class SimBadgeSyncAvailability {
     READY,

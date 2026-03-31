@@ -46,7 +46,7 @@ sealed class UpdateResult {
  */
 sealed class ReconnectResult {
     object Connected : ReconnectResult()
-    object WifiMismatch : ReconnectResult()
+    data class WifiMismatch(val currentPhoneSsid: String? = null) : ReconnectResult()
     object DeviceNotFound : ReconnectResult()
     data class Error(val message: String) : ReconnectResult()
 }

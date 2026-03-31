@@ -73,8 +73,8 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.smartsales.prism.domain.memory.UserProfile
+import com.smartsales.prism.ui.components.PrismStatusBarTopSafeArea
 import com.smartsales.prism.ui.components.prismNavigationBarPadding
-import com.smartsales.prism.ui.components.prismStatusBarTopSafeBandPadding
 import com.smartsales.prism.ui.theme.PrismThemeDefaults
 import com.smartsales.prism.ui.theme.toDisplayLabel
 
@@ -116,9 +116,7 @@ fun UserCenterScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .prismStatusBarTopSafeBandPadding()
-            .padding(start = 18.dp, end = 18.dp, bottom = 10.dp),
-        contentAlignment = Alignment.TopCenter
+            .padding(start = 18.dp, end = 18.dp, bottom = 10.dp)
     ) {
         val sheetShape = RoundedCornerShape(34.dp)
         val sheetColor = if (isDarkTheme) {
@@ -132,128 +130,135 @@ fun UserCenterScreen(
             Color(0xFFE1E6EF)
         }
 
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .widthIn(max = 356.dp)
-                .fillMaxHeight()
-                .shadow(
-                    elevation = if (isDarkTheme) 18.dp else 28.dp,
-                    shape = sheetShape,
-                    clip = false,
-                    ambientColor = Color.Black.copy(alpha = if (isDarkTheme) 0.24f else 0.12f),
-                    spotColor = Color.Black.copy(alpha = if (isDarkTheme) 0.30f else 0.10f)
-                ),
-            shape = sheetShape,
-            color = sheetColor,
-            border = BorderStroke(1.dp, sheetBorder)
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Box(
+            PrismStatusBarTopSafeArea()
+
+            Surface(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                Color.White.copy(alpha = if (isDarkTheme) 0.03f else 0.10f),
-                                Color.Transparent,
-                                Color(0xFFF4F7FB).copy(alpha = if (isDarkTheme) 0.015f else 0.04f)
-                            )
-                        )
-                    )
+                    .fillMaxWidth()
+                    .widthIn(max = 356.dp)
+                    .weight(1f)
+                    .shadow(
+                        elevation = if (isDarkTheme) 18.dp else 28.dp,
+                        shape = sheetShape,
+                        clip = false,
+                        ambientColor = Color.Black.copy(alpha = if (isDarkTheme) 0.24f else 0.12f),
+                        spotColor = Color.Black.copy(alpha = if (isDarkTheme) 0.30f else 0.10f)
+                    ),
+                shape = sheetShape,
+                color = sheetColor,
+                border = BorderStroke(1.dp, sheetBorder)
             ) {
-                LazyColumn(
+                Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .prismNavigationBarPadding(),
-                    contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 26.dp, bottom = 28.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.White.copy(alpha = if (isDarkTheme) 0.03f else 0.10f),
+                                    Color.Transparent,
+                                    Color(0xFFF4F7FB).copy(alpha = if (isDarkTheme) 0.015f else 0.04f)
+                                )
+                            )
+                        )
                 ) {
-                    item {
-                        profile?.let { user ->
-                            UserCenterHero(
-                                profile = user,
-                                onEdit = { isEditing = true }
-                            )
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .prismNavigationBarPadding(),
+                        contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 26.dp, bottom = 28.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        item {
+                            profile?.let { user ->
+                                UserCenterHero(
+                                    profile = user,
+                                    onEdit = { isEditing = true }
+                                )
+                            }
+                        }
+
+                        item {
+                            UserCenterSection(title = "偏好设置") {
+                                UserCenterSelectRow(
+                                    label = "主题外观",
+                                    value = themeMode.toDisplayLabel(),
+                                    onClick = { showThemeDialog = true },
+                                    showDivider = true
+                                )
+                                UserCenterToggleRow(
+                                    label = "AI 实验室",
+                                    checked = true,
+                                    showDivider = true,
+                                    onCheckedChange = {}
+                                )
+                                NotificationSettingsRow(
+                                    viewModel = viewModel,
+                                    showDivider = false
+                                )
+                            }
+                        }
+
+                        item {
+                            UserCenterSection(title = "空间管理") {
+                                UserCenterInfoRow(
+                                    label = "已用空间",
+                                    value = "128 MB",
+                                    leadingIcon = Icons.Default.Storage,
+                                    showDivider = true
+                                )
+                                UserCenterActionRow(
+                                    label = "清除缓存",
+                                    actionLabel = "清理",
+                                    showDivider = false,
+                                    onClick = {}
+                                )
+                            }
+                        }
+
+                        item {
+                            UserCenterSection(title = "安全与隐私") {
+                                UserCenterNavRow(
+                                    label = "修改密码",
+                                    leadingIcon = Icons.Default.Lock,
+                                    showDivider = false,
+                                    onClick = {}
+                                )
+                            }
+                        }
+
+                        item {
+                            UserCenterSection(title = "关于") {
+                                UserCenterNavRow(
+                                    label = "帮助中心",
+                                    leadingIcon = Icons.AutoMirrored.Filled.HelpOutline,
+                                    showDivider = true,
+                                    onClick = {}
+                                )
+                                UserCenterInfoRow(
+                                    label = "版本",
+                                    value = "Prism v1.2 (Pro Max)",
+                                    leadingIcon = Icons.Default.Info,
+                                    showDivider = false
+                                )
+                            }
+                        }
+
+                        item {
+                            UserCenterLogoutButton(onClick = onClose)
                         }
                     }
 
-                    item {
-                        UserCenterSection(title = "偏好设置") {
-                            UserCenterSelectRow(
-                                label = "主题外观",
-                                value = themeMode.toDisplayLabel(),
-                                onClick = { showThemeDialog = true },
-                                showDivider = true
-                            )
-                            UserCenterToggleRow(
-                                label = "AI 实验室",
-                                checked = true,
-                                showDivider = true,
-                                onCheckedChange = {}
-                            )
-                            NotificationSettingsRow(
-                                viewModel = viewModel,
-                                showDivider = false
-                            )
-                        }
+                    if (showThemeDialog) {
+                        ThemeModeDialog(
+                            currentMode = themeMode,
+                            onDismiss = { showThemeDialog = false },
+                            onSelectMode = viewModel::setThemeMode
+                        )
                     }
-
-                    item {
-                        UserCenterSection(title = "空间管理") {
-                            UserCenterInfoRow(
-                                label = "已用空间",
-                                value = "128 MB",
-                                leadingIcon = Icons.Default.Storage,
-                                showDivider = true
-                            )
-                            UserCenterActionRow(
-                                label = "清除缓存",
-                                actionLabel = "清理",
-                                showDivider = false,
-                                onClick = {}
-                            )
-                        }
-                    }
-
-                    item {
-                        UserCenterSection(title = "安全与隐私") {
-                            UserCenterNavRow(
-                                label = "修改密码",
-                                leadingIcon = Icons.Default.Lock,
-                                showDivider = false,
-                                onClick = {}
-                            )
-                        }
-                    }
-
-                    item {
-                        UserCenterSection(title = "关于") {
-                            UserCenterNavRow(
-                                label = "帮助中心",
-                                leadingIcon = Icons.AutoMirrored.Filled.HelpOutline,
-                                showDivider = true,
-                                onClick = {}
-                            )
-                            UserCenterInfoRow(
-                                label = "版本",
-                                value = "Prism v1.2 (Pro Max)",
-                                leadingIcon = Icons.Default.Info,
-                                showDivider = false
-                            )
-                        }
-                    }
-
-                    item {
-                        UserCenterLogoutButton(onClick = onClose)
-                    }
-                }
-
-                if (showThemeDialog) {
-                    ThemeModeDialog(
-                        currentMode = themeMode,
-                        onDismiss = { showThemeDialog = false },
-                        onSelectMode = viewModel::setThemeMode
-                    )
                 }
             }
         }

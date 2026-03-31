@@ -1,7 +1,7 @@
 # UI Surface Contract (Legacy filename: `prism-ui-ux-contract.md`)
 
 > **Status:** Active Index & Policy Rule
-> **Last Updated:** 2026-03-23
+> **Last Updated:** 2026-03-31
 > **Architecture Companion:** [Architecture.md](./Architecture.md)
 > **Terminology:** [GLOSSARY.md](./GLOSSARY.md)
 
@@ -27,7 +27,8 @@ Rule:
 
 - use intuitive names in discussion
 - keep this path stable until the repo deliberately migrates references
-- when a standalone mode such as SIM has its own Cerb shard, treat that shard as the visual/source-of-truth layer for that mode's shell composition and support-surface presentation
+- treat this document plus current shared feature docs as the active shell/UI source-of-truth index for non-Mono work
+- legacy SIM shell docs may still be consulted as migration evidence, but they must not act as the active shell owner
 - the shared top safe-area law lives in `style-guide.md` and applies repo-wide unless an owning spec explicitly defines a top header/monolith exception
 
 ---
@@ -106,7 +107,7 @@ Role: This document is strictly an index that maps UI modules, components, and f
 |--------|--------|-----------|
 | Home Screen | Shipped | [home-shell/spec.md](../cerb-ui/home-shell/spec.md) |
 | Chat Interface | Shipped | [ChatInterface.md](../cerb-ui/agent-intelligence/spec.md) |
-| SIM Shell | Shipped | [sim-shell/spec.md](../cerb/sim-shell/spec.md) |
+| Shared Shell / Base Runtime Shell | Shipped | [base-runtime-unification.md](./base-runtime-unification.md) plus this document |
 | Scheduler Drawer | Shipped | [SchedulerDrawer.md](../cerb-ui/scheduler/contract.md) |
 | History Drawer | Shipped | [HistoryDrawer.md](../cerb/session-history/spec.md) |
 | Audio Drawer | Shipped | [AudioDrawer.md](../cerb/audio-management/spec.md) |
@@ -140,8 +141,8 @@ Role: This document is strictly an index that maps UI modules, components, and f
 
 ### Standalone Mode Note
 
-- SIM is a standalone shell mode with its own surface contract in `docs/cerb/sim-shell/spec.md`.
-- Global gestures and shared element rules still apply unless the SIM shard narrows the presentation for standalone use.
-- SIM-specific shell chrome, sparse idle layout, and support-surface composition should be documented in the SIM Cerb docs rather than expanded inline here.
-- For SIM, the industrial-practice default is narrow activation bands plus a protected center scroll zone, combined with vertical-intent lock and drag-distance / fling-velocity confirmation.
-- For shipped SIM behavior, the lower audio-open gesture must yield to direct composer interaction; shell gesture surfaces must never screen the attach button, text field, or send button.
+- SIM remains a real standalone implementation boundary, but it is no longer a second non-Mono UI truth separate from the shared base runtime.
+- Shared shell/UI truth now routes through this document, `docs/specs/base-runtime-unification.md`, relevant core-flow docs, and shared feature docs.
+- Global gestures and shared element rules still apply unless a current shared spec explicitly narrows the presentation.
+- Legacy SIM shell docs may still hold migration residue, but new shell truth should be absorbed into shared docs rather than extended there.
+- For shipped shell behavior, the lower audio-open gesture must yield to direct composer interaction; shell gesture surfaces must never screen the attach button, text field, or send button.

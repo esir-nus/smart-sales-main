@@ -16,7 +16,7 @@ data class ScheduledTask(
     val urgencyLevel: UrgencyLevel = UrgencyLevel.L3_NORMAL,
     val isDone: Boolean = false,
     val hasAlarm: Boolean = false,
-    val isSmartAlarm: Boolean = false, // "智能提醒"
+    val isSmartAlarm: Boolean = false, // 旧提醒提示字段，产品 UI 不应只依赖它
     val startTime: Instant, // Raw data for persistence
     val endTime: Instant? = null, // Raw data for persistence
     val durationMinutes: Int = 0, // 持续时间 (fire-off 无时长)
@@ -28,7 +28,7 @@ data class ScheduledTask(
     val keyPerson: String? = null,
     val keyPersonEntityId: String? = null,  // Wave 9: Entity ID for tip generation
     val highlights: String? = null,
-    val alarmCascade: List<String> = emptyList(), // e.g. ["-1h", "-15m", "-5m"]
+    val alarmCascade: List<String> = emptyList(), // e.g. ["-30m", "0m"]
     val hasConflict: Boolean = false, // Wave 17 Path A
     val conflictWithTaskId: String? = null, // Wave 19 T4: 冲突对端任务 ID
     val conflictSummary: String? = null,    // Wave 19 T4: 用户可见的冲突说明

@@ -21,6 +21,8 @@ The registry provides static `LlmProfile` objects (not strings) acting as a "Kot
 | **EXTRACTOR** | Fast parsing, Named Entity Recognition, Intent extraction | `qwen-turbo` | 100K | `0.0f` |
 | **PLANNER** | Retrieving memory, reading large context, strategy formulation | `qwen-plus` | 1M | `0.5f` |
 | **EXECUTOR** | Generating tool execution, strict JSON structure | `qwen3-max-2026-01-23` | 32k | `0.0f` |
+| **ONBOARDING_CONSULTATION** | First-run consultation reply with fast natural language | `qwen-turbo` | 100K | `0.4f` |
+| **ONBOARDING_PROFILE_EXTRACTION** | First-run structured profile extraction JSON | `qwen-turbo` | 100K | `0.0f` |
 
 ## Wave Plan
 

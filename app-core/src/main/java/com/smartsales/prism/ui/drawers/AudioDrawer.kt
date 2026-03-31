@@ -19,6 +19,7 @@ import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import android.widget.Toast
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,6 +38,10 @@ import com.smartsales.prism.ui.drawers.audio.AudioViewModel
 import com.smartsales.prism.ui.theme.*
 import kotlinx.coroutines.launch
 
+internal const val AUDIO_BADGE_DELETE_DIALOG_TEST_TAG = "audio_badge_delete_dialog"
+internal const val AUDIO_BADGE_DELETE_CONFIRM_TEST_TAG = "audio_badge_delete_confirm"
+internal const val AUDIO_BADGE_DELETE_DISMISS_TEST_TAG = "audio_badge_delete_dismiss"
+
 /**
  * Audio Drawer — Bottom-Up Sheet (Sleek Glass Version)
  * @see prism-ui-ux-contract.md §1.8
@@ -50,11 +55,18 @@ fun AudioDrawer(
     viewModel: AudioViewModel = hiltViewModel()
 ) {
     val audioItems by viewModel.audioItems.collectAsState()
+    val pendingBadgeDeleteConfirmation by viewModel.pendingBadgeDeleteConfirmation.collectAsState()
     val context = LocalContext.current
 
     LaunchedEffect(viewModel) {
         viewModel.uiEvents.collect { message ->
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    LaunchedEffect(isOpen) {
+        if (!isOpen) {
+            viewModel.resetDeleteConfirmationSession()
         }
     }
 
@@ -253,6 +265,38 @@ fun AudioDrawer(
                             },
                             dismissButton = {
                                 TextButton(onClick = { showRenameDialog = null }) { Text("取消") }
+                            },
+                            containerColor = BackgroundSurface,
+                            titleContentColor = TextPrimary,
+                            textContentColor = TextSecondary
+                        )
+                    }
+
+                    pendingBadgeDeleteConfirmation?.let { pendingDelete ->
+                        AlertDialog(
+                            modifier = Modifier.testTag(AUDIO_BADGE_DELETE_DIALOG_TEST_TAG),
+                            onDismissRequest = viewModel::dismissBadgeDeleteConfirmation,
+                            title = { Text("删除徽章录音") },
+                            text = {
+                                Text(
+                                    "“${pendingDelete.filename}”会从当前抽屉中删除，并同步删除徽章上的原始录音。删除后，同步不会再把它带回当前列表。"
+                                )
+                            },
+                            confirmButton = {
+                                TextButton(
+                                    modifier = Modifier.testTag(AUDIO_BADGE_DELETE_CONFIRM_TEST_TAG),
+                                    onClick = viewModel::confirmBadgeDelete
+                                ) {
+                                    Text("确认删除")
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(
+                                    modifier = Modifier.testTag(AUDIO_BADGE_DELETE_DISMISS_TEST_TAG),
+                                    onClick = viewModel::dismissBadgeDeleteConfirmation
+                                ) {
+                                    Text("取消")
+                                }
                             },
                             containerColor = BackgroundSurface,
                             titleContentColor = TextPrimary,

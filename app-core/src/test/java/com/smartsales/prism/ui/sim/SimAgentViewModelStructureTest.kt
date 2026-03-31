@@ -17,6 +17,7 @@ class SimAgentViewModelStructureTest {
         assertTrue(source.contains("private val sessionCoordinator = SimAgentSessionCoordinator("))
         assertTrue(source.contains("private val chatCoordinator = SimAgentChatCoordinator("))
         assertTrue(source.contains("private val followUpCoordinator = SimAgentFollowUpCoordinator("))
+        assertTrue(source.contains("private val voiceDraftCoordinator = SimAgentVoiceDraftCoordinator("))
 
         assertFalse(source.contains("private suspend fun handleGeneralSend("))
         assertFalse(source.contains("private suspend fun handleAudioGroundedSend("))
@@ -25,13 +26,18 @@ class SimAgentViewModelStructureTest {
         assertFalse(source.contains("private fun buildAudioGroundedPrompt("))
         assertFalse(source.contains("private fun emitSchedulerFollowUpTelemetry("))
         assertFalse(source.contains("private fun normalizeDuplicateAudioLinks("))
+        assertFalse(source.contains("private fun startVoiceDraft("))
+        assertFalse(source.contains("private fun beginVoiceDraftProcessing("))
+        assertFalse(source.contains("private suspend fun resolveVoiceDraftResult("))
+        assertFalse(source.contains("private fun handleVoiceDraftEvent("))
     }
 
     @Test
-    fun `wave1d extracted files own moved session chat and follow up responsibilities`() {
+    fun `wave1d and follow-up files own moved session chat follow-up and voice draft responsibilities`() {
         val session = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimAgentSessionCoordinator.kt")
         val chat = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimAgentChatCoordinator.kt")
         val followUp = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimAgentFollowUpCoordinator.kt")
+        val voiceDraft = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimAgentVoiceDraftCoordinator.kt")
 
         assertTrue(session.contains("internal class SimAgentSessionCoordinator("))
         assertTrue(session.contains("fun loadPersistedSessions()"))
@@ -49,6 +55,12 @@ class SimAgentViewModelStructureTest {
         assertTrue(followUp.contains("suspend fun handleSchedulerFollowUpInput("))
         assertTrue(followUp.contains("private suspend fun handleSchedulerFollowUpReschedule("))
         assertTrue(followUp.contains("private fun emitSchedulerFollowUpTelemetry("))
+
+        assertTrue(voiceDraft.contains("internal class SimAgentVoiceDraftCoordinator("))
+        assertTrue(voiceDraft.contains("fun startVoiceDraft()"))
+        assertTrue(voiceDraft.contains("fun finishVoiceDraft()"))
+        assertTrue(voiceDraft.contains("fun cancelVoiceDraft()"))
+        assertTrue(voiceDraft.contains("fun handleVoiceDraftEvent("))
     }
 
     private fun readSource(relativePath: String): String {

@@ -31,6 +31,20 @@ object ModelRegistry {
         temperature = 0.0f,
         skillTags = setOf("structured_output")
     )
+
+    /** onboarding 咨询 — 首次体验场景的快速自然回复。 */
+    val ONBOARDING_CONSULTATION = LlmProfile(
+        modelId = "qwen-turbo",
+        temperature = 0.4f,
+        skillTags = setOf("sales_coach", "conversational", "onboarding_fast")
+    )
+
+    /** onboarding 资料提取 — 首次体验场景的快速结构化 JSON。 */
+    val ONBOARDING_PROFILE_EXTRACTION = LlmProfile(
+        modelId = "qwen-turbo",
+        temperature = 0.0f,
+        skillTags = setOf("structured_output", "onboarding_fast")
+    )
     
     // === Generative & Reasoning Pipelines ===
     

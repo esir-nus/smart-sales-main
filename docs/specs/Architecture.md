@@ -1,9 +1,11 @@
-# Project Mono: Master Architectural Guide
+# Architecture Guide (Mono Augmentation and System Laws)
 
-**Status:** Active SOT  
+**Status:** Active Supporting Architecture Reference  
+**Last Updated:** 2026-03-31  
 **Successor to:** Prism-V1.md, Lattice Architecture  
+**Base-Runtime Authority:** `docs/specs/base-runtime-unification.md` governs non-Mono product truth first.  
 
-> **Preamble**: This is the authoritative framework for the "Project Mono" (Data-Oriented OS) architecture migration. Any agent executing tasks, writing specs, or generating code *must* read this document first.
+> **Preamble**: This document defines the deeper architectural laws of the repo and the Project Mono augmentation layer. For non-Mono work, read `docs/specs/base-runtime-unification.md` first; use this document when the task depends on Kernel/session-memory, plugin/tool runtime, typed mutation architecture, or other deeper system laws.
 
 ---
 
@@ -26,11 +28,12 @@ That belongs to `docs/core-flow/**`.
 
 For active development, use this chain:
 
-1. **Architecture (`docs/specs/Architecture.md`)**: what kind of system this repo is
-2. **Core Flow (`docs/core-flow/**`)**: what a feature must do inside that architecture
-3. **Feature Spec (`docs/specs/**`, `docs/cerb/**`)**: how to build it
-4. **Code**: delivered implementation
-5. **PU / Acceptance**: validation against the Core Flow and architecture
+1. **Base Runtime Unification (`docs/specs/base-runtime-unification.md`)**: current non-Mono product truth and Mono boundary
+2. **Architecture (`docs/specs/Architecture.md`)**: deeper system laws and Mono augmentation architecture
+3. **Core Flow (`docs/core-flow/**`)**: what a feature must do inside that architecture
+4. **Feature Spec (`docs/specs/**`, `docs/cerb/**`)**: how to build it
+5. **Code**: delivered implementation
+6. **PU / Acceptance**: validation against the Core Flow and architecture
 
 ### What Belongs Here
 

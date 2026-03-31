@@ -25,15 +25,15 @@ enum class UrgencyLevel {
          * LLM 分类 → Kotlin 决定偏移量（纯函数，无 LLM 参与）
          */
         fun buildCascade(level: UrgencyLevel): List<String> = when (level) {
-            L1_CRITICAL  -> listOf("-2h", "-1h", "-30m", "-15m", "-5m", "0m")
-            L2_IMPORTANT -> listOf("-1h", "-15m", "-5m", "0m")
-            L3_NORMAL    -> listOf("-15m", "-5m", "0m")
+            L1_CRITICAL  -> listOf("-1h", "-10m", "0m")
+            L2_IMPORTANT -> listOf("-30m", "0m")
+            L3_NORMAL    -> listOf("0m")
             FIRE_OFF     -> listOf("0m")
         }
 
         /**
          * 将级联偏移字符串解析为毫秒值
-         * e.g. "-2h" → 7200000, "-15m" → 900000
+         * e.g. "-1h" → 3600000, "-30m" → 1800000
          */
         fun parseCascadeOffset(offset: String): Long {
             // "0m" = 到点提醒，偏移量为0

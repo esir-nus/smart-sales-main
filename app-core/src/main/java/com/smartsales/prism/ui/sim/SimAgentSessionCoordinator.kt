@@ -26,13 +26,16 @@ internal data class SimSessionRecord(
 
 internal data class SimAgentUiBridge(
     val getCurrentSessionId: () -> String?,
+    val getIsSending: () -> Boolean,
     val getCurrentSchedulerFollowUpContext: () -> SchedulerFollowUpContext?,
     val getSelectedSchedulerFollowUpTaskId: () -> String?,
     val getUiState: () -> UiState,
+    val getVoiceDraftState: () -> SimVoiceDraftUiState,
     val setCurrentSessionId: (String?) -> Unit,
     val setUiState: (UiState) -> Unit,
     val setInputText: (String) -> Unit,
     val setIsSending: (Boolean) -> Unit,
+    val setVoiceDraftState: (SimVoiceDraftUiState) -> Unit,
     val setErrorMessage: (String?) -> Unit,
     val setToastMessage: (String?) -> Unit,
     val setHistory: (List<ChatMessage>) -> Unit,

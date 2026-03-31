@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -30,6 +31,8 @@ class SimAudioRepositorySyncSupportTest {
 
     private lateinit var context: Context
     private lateinit var connectivityBridge: FakeConnectivityBridge
+    private lateinit var runtime: SimAudioRepositoryRuntime
+    private lateinit var storeSupport: SimAudioRepositoryStoreSupport
     private lateinit var syncSupport: SimAudioRepositorySyncSupport
 
     @Before
@@ -38,15 +41,16 @@ class SimAudioRepositorySyncSupportTest {
         whenever(context.filesDir).thenReturn(tempFolder.root)
 
         connectivityBridge = FakeConnectivityBridge()
-        val runtime = SimAudioRepositoryRuntime(
+        runtime = SimAudioRepositoryRuntime(
             context = context,
             connectivityBridge = connectivityBridge,
             ossUploader = mock<OssUploader>(),
             tingwuPipeline = mock<TingwuPipeline>()
         )
+        storeSupport = SimAudioRepositoryStoreSupport(runtime)
         syncSupport = SimAudioRepositorySyncSupport(
             runtime = runtime,
-            storeSupport = SimAudioRepositoryStoreSupport(runtime)
+            storeSupport = storeSupport
         )
     }
 
@@ -110,6 +114,48 @@ class SimAudioRepositorySyncSupportTest {
         )
     }
 
+    @Test
+    fun `manual sync suppresses tombstoned badge filenames instead of reimporting them`() = runTest {
+        connectivityBridge.isReadyResult = true
+        connectivityBridge.listResult = Result.Success(listOf("log_20260327_135948.wav"))
+        connectivityBridge.deleteRecordingResults["log_20260327_135948.wav"] = false
+        runtime.pendingBadgeDeletes.value = setOf("log_20260327_135948.wav")
+
+        val outcome = syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+
+        assertEquals(0, outcome.importedCount)
+        assertEquals(setOf("log_20260327_135948.wav"), storeSupport.getPendingBadgeDeletesSnapshot())
+        assertTrue(connectivityBridge.calls.contains("deleteRecording:log_20260327_135948.wav"))
+        assertFalse(connectivityBridge.calls.any { it.startsWith("downloadRecording:") })
+    }
+
+    @Test
+    fun `manual sync clears tombstone when badge delete retry succeeds`() = runTest {
+        connectivityBridge.isReadyResult = true
+        connectivityBridge.listResult = Result.Success(listOf("log_20260327_135948.wav"))
+        connectivityBridge.deleteRecordingResults["log_20260327_135948.wav"] = true
+        runtime.pendingBadgeDeletes.value = setOf("log_20260327_135948.wav")
+
+        val outcome = syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+
+        assertEquals(0, outcome.importedCount)
+        assertTrue(storeSupport.getPendingBadgeDeletesSnapshot().isEmpty())
+        assertTrue(connectivityBridge.calls.contains("deleteRecording:log_20260327_135948.wav"))
+        assertFalse(connectivityBridge.calls.any { it.startsWith("downloadRecording:") })
+    }
+
+    @Test
+    fun `selectNewSimBadgeFilenames excludes pending badge deletes`() {
+        assertEquals(
+            listOf("b.wav"),
+            selectNewSimBadgeFilenames(
+                badgeFilenames = listOf("a.wav", "b.wav"),
+                existingBadgeFilenames = emptySet(),
+                pendingBadgeDeleteFilenames = setOf("a.wav")
+            )
+        )
+    }
+
     private class FakeConnectivityBridge : ConnectivityBridge {
         override val connectionState = MutableStateFlow<BadgeConnectionState>(
             BadgeConnectionState.Disconnected
@@ -121,6 +167,7 @@ class SimAudioRepositorySyncSupportTest {
         var isReadyResult: Boolean = false
         var listResult: Result<List<String>> = Result.Success(emptyList())
         var downloadResults: MutableMap<String, WavDownloadResult> = mutableMapOf()
+        var deleteRecordingResults: MutableMap<String, Boolean> = mutableMapOf()
         val calls = mutableListOf<String>()
 
         override suspend fun downloadRecording(filename: String): WavDownloadResult {
@@ -144,6 +191,9 @@ class SimAudioRepositorySyncSupportTest {
             return isReadyResult
         }
 
-        override suspend fun deleteRecording(filename: String): Boolean = true
+        override suspend fun deleteRecording(filename: String): Boolean {
+            calls += "deleteRecording:$filename"
+            return deleteRecordingResults[filename] ?: true
+        }
     }
 }

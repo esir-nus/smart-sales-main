@@ -57,8 +57,8 @@ import androidx.compose.ui.unit.sp
 import com.smartsales.prism.domain.config.SubscriptionTier
 import com.smartsales.prism.domain.model.SessionPreview
 import com.smartsales.prism.domain.model.SessionKind
+import com.smartsales.prism.ui.components.PrismStatusBarTopSafeArea
 import com.smartsales.prism.ui.components.prismNavigationBarPadding
-import com.smartsales.prism.ui.components.prismStatusBarTopSafeBandPadding
 import com.smartsales.prism.ui.theme.PrismTheme
 import com.smartsales.prism.ui.theme.PrismThemeDefaults
 
@@ -202,8 +202,9 @@ internal fun SimHistoryDrawer(
                 modifier = Modifier
                     .fillMaxSize()
                     .prismNavigationBarPadding()
-                    .prismStatusBarTopSafeBandPadding()
             ) {
+                PrismStatusBarTopSafeArea()
+
                 Text(
                     text = "历史记录",
                     modifier = Modifier.padding(horizontal = 20.dp),

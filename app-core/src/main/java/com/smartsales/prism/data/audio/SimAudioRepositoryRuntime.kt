@@ -5,7 +5,10 @@ import com.smartsales.data.oss.OssUploader
 import com.smartsales.prism.domain.audio.AudioFile
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.tingwu.TingwuPipeline
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -15,8 +18,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.serialization.json.Json
 
-internal class SimAudioRepositoryRuntime(
-    val context: Context,
+@Singleton
+class SimAudioRepositoryRuntime @Inject constructor(
+    @ApplicationContext val context: Context,
     val connectivityBridge: ConnectivityBridge,
     val ossUploader: OssUploader,
     val tingwuPipeline: TingwuPipeline
@@ -24,12 +28,14 @@ internal class SimAudioRepositoryRuntime(
     val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
     val repositoryScope = CoroutineScope(SupervisorJob() + ioDispatcher)
     val metadataFile = File(context.filesDir, SIM_AUDIO_METADATA_FILENAME)
+    val pendingBadgeDeleteFile = File(context.filesDir, SIM_AUDIO_PENDING_BADGE_DELETE_FILENAME)
     val fileMutex = Mutex()
     val syncMutex = Mutex()
     val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     val audioFiles = MutableStateFlow<List<AudioFile>>(emptyList())
+    val pendingBadgeDeletes = MutableStateFlow<Set<String>>(emptySet())
     val observationJobs = mutableMapOf<String, Job>()
-    val seedDefinitions = listOf(
+    internal val seedDefinitions = listOf(
         SimSeedDefinition(
             id = "sim_wave2_seed",
             assetName = "sim_wave2_seed.mp3",

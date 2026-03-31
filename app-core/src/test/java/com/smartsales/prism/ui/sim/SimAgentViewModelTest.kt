@@ -12,12 +12,13 @@ import com.smartsales.core.test.fakes.FakeExecutor
 import com.smartsales.core.test.fakes.FakeScheduleBoard
 import com.smartsales.core.test.fakes.FakeUserProfileRepository
 import com.smartsales.data.oss.OssUploader
-import com.smartsales.prism.data.audio.DeviceSpeechFailureReason
-import com.smartsales.prism.data.audio.DeviceSpeechMode
-import com.smartsales.prism.data.audio.DeviceSpeechRecognitionResult
-import com.smartsales.prism.data.audio.DeviceSpeechRecognizer
 import com.smartsales.prism.data.audio.SIM_AUDIO_METADATA_FILENAME
 import com.smartsales.prism.data.audio.SimAudioRepository
+import com.smartsales.prism.data.audio.SimAudioRepositoryRuntime
+import com.smartsales.prism.data.audio.SimRealtimeSpeechEvent
+import com.smartsales.prism.data.audio.SimRealtimeSpeechFailureReason
+import com.smartsales.prism.data.audio.SimRealtimeSpeechRecognitionResult
+import com.smartsales.prism.data.audio.SimRealtimeSpeechRecognizer
 import com.smartsales.prism.data.audio.simArtifactFilename
 import com.smartsales.prism.data.session.SimSessionRepository
 import com.smartsales.prism.domain.audio.AudioFile
@@ -45,6 +46,9 @@ import java.io.File
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -80,7 +84,7 @@ class SimAgentViewModelTest {
     private lateinit var fakeExecutor: FakeExecutor
     private lateinit var userProfileRepository: FakeUserProfileRepository
     private lateinit var timeProvider: FakeTimeProvider
-    private lateinit var speechRecognizer: FakeDeviceSpeechRecognizer
+    private lateinit var speechRecognizer: FakeSimRealtimeSpeechRecognizer
     private lateinit var uniAExtractionService: RealUniAExtractionService
     private lateinit var globalRescheduleExtractionService: RealGlobalRescheduleExtractionService
     private lateinit var followUpRescheduleExtractionService: RealFollowUpRescheduleExtractionService
@@ -95,7 +99,7 @@ class SimAgentViewModelTest {
         alarmScheduler = FakeAlarmScheduler()
         fakeExecutor = FakeExecutor()
         userProfileRepository = FakeUserProfileRepository()
-        speechRecognizer = FakeDeviceSpeechRecognizer()
+        speechRecognizer = FakeSimRealtimeSpeechRecognizer()
         timeProvider = FakeTimeProvider().apply {
             fixedInstant = Instant.parse("2026-03-22T08:00:00Z")
         }
@@ -161,7 +165,7 @@ class SimAgentViewModelTest {
     @Test
     fun `voice draft success populates input without auto send`() = runTest {
         val viewModel = newViewModel()
-        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success("帮我约周四下午两点")
+        speechRecognizer.nextResult = SimRealtimeSpeechRecognitionResult.Success("帮我约周四下午两点")
 
         assertTrue(viewModel.startVoiceDraft())
         viewModel.finishVoiceDraft()
@@ -171,6 +175,31 @@ class SimAgentViewModelTest {
         assertFalse(viewModel.isSending.value)
         assertTrue(viewModel.history.value.isEmpty())
         assertFalse(viewModel.voiceDraftState.value.isRecording)
+        assertFalse(viewModel.voiceDraftState.value.isProcessing)
+    }
+
+    @Test
+    fun `voice draft partial transcript shows during recording and commits on release`() = runTest {
+        val viewModel = newViewModel()
+        speechRecognizer.nextResult = SimRealtimeSpeechRecognitionResult.Success("帮我约周四下午两点")
+
+        assertTrue(viewModel.startVoiceDraft())
+        speechRecognizer.emitEvent(SimRealtimeSpeechEvent.PartialTranscript("帮我约周四"))
+        advanceUntilIdle()
+
+        assertEquals("", viewModel.inputText.value)
+        assertEquals("帮我约周四", viewModel.voiceDraftState.value.liveTranscript)
+
+        viewModel.finishVoiceDraft()
+
+        assertEquals("帮我约周四", viewModel.inputText.value)
+        assertTrue(viewModel.voiceDraftState.value.isProcessing)
+        assertFalse(viewModel.voiceDraftState.value.isRecording)
+
+        advanceUntilIdle()
+
+        assertEquals("帮我约周四下午两点", viewModel.inputText.value)
+        assertEquals("", viewModel.voiceDraftState.value.liveTranscript)
         assertFalse(viewModel.voiceDraftState.value.isProcessing)
     }
 
@@ -191,22 +220,37 @@ class SimAgentViewModelTest {
     }
 
     @Test
-    fun `voice draft starts recognizer in local asr fallback mode`() {
+    fun `voice draft starts SIM realtime recognizer`() {
         val viewModel = newViewModel()
 
         assertTrue(viewModel.startVoiceDraft())
 
         assertEquals(
-            DeviceSpeechMode.DEVICE_WITH_LOCAL_ASR_FALLBACK,
-            speechRecognizer.lastMode
+            1,
+            speechRecognizer.startCount
         )
+    }
+
+    @Test
+    fun `voice draft capture limit auto finishes current session`() = runTest {
+        val viewModel = newViewModel()
+        speechRecognizer.nextResult = SimRealtimeSpeechRecognitionResult.Success("完整语音草稿")
+
+        assertTrue(viewModel.startVoiceDraft())
+        speechRecognizer.emitEvent(SimRealtimeSpeechEvent.PartialTranscript("完整"))
+        speechRecognizer.emitEvent(SimRealtimeSpeechEvent.CaptureLimitReached)
+        advanceUntilIdle()
+
+        assertEquals("完整语音草稿", viewModel.inputText.value)
+        assertFalse(viewModel.voiceDraftState.value.isRecording)
+        assertFalse(viewModel.voiceDraftState.value.isProcessing)
     }
 
     @Test
     fun `voice draft no match resets without mutating history`() = runTest {
         val viewModel = newViewModel()
-        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Failure(
-            reason = DeviceSpeechFailureReason.NO_MATCH,
+        speechRecognizer.nextResult = SimRealtimeSpeechRecognitionResult.Failure(
+            reason = SimRealtimeSpeechFailureReason.NO_MATCH,
             message = "没有识别到清晰语音"
         )
 
@@ -224,7 +268,7 @@ class SimAgentViewModelTest {
     @Test
     fun `cancel voice draft blocks late recognizer result from writing input`() = runTest {
         val viewModel = newViewModel()
-        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success("稍后到达")
+        speechRecognizer.nextResult = SimRealtimeSpeechRecognitionResult.Success("稍后到达")
         speechRecognizer.finishDelayMillis = 500L
 
         assertTrue(viewModel.startVoiceDraft())
@@ -235,6 +279,24 @@ class SimAgentViewModelTest {
         assertEquals("", viewModel.inputText.value)
         assertFalse(viewModel.voiceDraftState.value.isRecording)
         assertFalse(viewModel.voiceDraftState.value.isProcessing)
+    }
+
+    @Test
+    fun `cancel voice draft clears live transcript and ignores late partial events`() = runTest {
+        val viewModel = newViewModel()
+
+        assertTrue(viewModel.startVoiceDraft())
+        speechRecognizer.emitEvent(SimRealtimeSpeechEvent.PartialTranscript("正在输入"))
+        advanceUntilIdle()
+        assertEquals("正在输入", viewModel.voiceDraftState.value.liveTranscript)
+
+        viewModel.cancelVoiceDraft()
+        speechRecognizer.emitEvent(SimRealtimeSpeechEvent.PartialTranscript("晚到文本"))
+        advanceUntilIdle()
+
+        assertEquals("", viewModel.inputText.value)
+        assertEquals("", viewModel.voiceDraftState.value.liveTranscript)
+        assertFalse(viewModel.voiceDraftState.value.isRecording)
     }
 
     @Test
@@ -933,7 +995,7 @@ class SimAgentViewModelTest {
     }
 
     @Test
-    fun `deleting bound audio unlinks session and keeps session alive`() {
+    fun `deleting bound audio unlinks session and keeps session alive`() = runTest {
         writeAudioMetadata(
             AudioFile(
                 id = "audio_bound_delete_1",
@@ -1361,7 +1423,7 @@ class SimAgentViewModelTest {
         return SimAgentViewModel(
             sessionRepository = sessionRepository,
             audioRepository = audioRepository,
-            speechRecognizer = speechRecognizer,
+            realtimeSpeechRecognizer = speechRecognizer,
             taskRepository = taskRepository,
             scheduleBoard = scheduleBoard,
             activeTaskRetrievalIndex = activeTaskRetrievalIndex,
@@ -1375,21 +1437,24 @@ class SimAgentViewModelTest {
         )
     }
 
-    private class FakeDeviceSpeechRecognizer : DeviceSpeechRecognizer {
-        var nextResult: DeviceSpeechRecognitionResult =
-            DeviceSpeechRecognitionResult.Success("默认语音")
+    private class FakeSimRealtimeSpeechRecognizer : SimRealtimeSpeechRecognizer {
+        var nextResult: SimRealtimeSpeechRecognitionResult =
+            SimRealtimeSpeechRecognitionResult.Success("默认语音")
         var finishDelayMillis: Long = 0L
         var failStart = false
-        var lastMode: DeviceSpeechMode? = null
+        var startCount: Int = 0
+        private val eventFlow = MutableSharedFlow<SimRealtimeSpeechEvent>(extraBufferCapacity = 16)
         private var listening = false
 
-        override fun startListening(mode: DeviceSpeechMode) {
+        override val events: Flow<SimRealtimeSpeechEvent> = eventFlow.asSharedFlow()
+
+        override fun startListening() {
             if (failStart) error("start failed")
-            lastMode = mode
+            startCount += 1
             listening = true
         }
 
-        override suspend fun finishListening(): DeviceSpeechRecognitionResult {
+        override suspend fun finishListening(): SimRealtimeSpeechRecognitionResult {
             if (finishDelayMillis > 0L) {
                 delay(finishDelayMillis)
             }
@@ -1402,6 +1467,10 @@ class SimAgentViewModelTest {
         }
 
         override fun isListening(): Boolean = listening
+
+        fun emitEvent(event: SimRealtimeSpeechEvent) {
+            eventFlow.tryEmit(event)
+        }
     }
 
     private fun enqueueFollowUpShadowDelta(minutes: Int) {
@@ -1484,10 +1553,12 @@ class SimAgentViewModelTest {
         val context: Context = mock()
         whenever(context.filesDir).thenReturn(tempFolder.root)
         return SimAudioRepository(
-            context = context,
-            connectivityBridge = mock<ConnectivityBridge>(),
-            ossUploader = mock<OssUploader>(),
-            tingwuPipeline = mock<TingwuPipeline>()
+            runtime = SimAudioRepositoryRuntime(
+                context = context,
+                connectivityBridge = mock<ConnectivityBridge>(),
+                ossUploader = mock<OssUploader>(),
+                tingwuPipeline = mock<TingwuPipeline>()
+            )
         )
     }
 

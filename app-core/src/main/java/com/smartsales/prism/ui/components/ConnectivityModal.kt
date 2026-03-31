@@ -19,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -44,6 +45,7 @@ fun ConnectivityModal(
     // Manager/modal 使用 richer managerState；shell 路由仍使用 shared connectionState
     val state by viewModel.managerState.collectAsState()
     val batteryLevel by viewModel.batteryLevel.collectAsState()
+    val wifiMismatchSuggestedSsid by viewModel.wifiMismatchSuggestedSsid.collectAsState()
 
     Box(
         modifier = Modifier
@@ -94,7 +96,8 @@ fun ConnectivityModal(
                     onStartUpdate = viewModel::startUpdate,
                     onCancel = viewModel::cancel,
                     onCompleteUpdate = viewModel::completeUpdate,
-                    onUpdateWifi = viewModel::updateWifiConfig
+                    onUpdateWifi = viewModel::updateWifiConfig,
+                    wifiMismatchSuggestedSsid = wifiMismatchSuggestedSsid
                 )
                 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -111,6 +114,7 @@ fun ConnectivityManagerScreen(
 ) {
     val state by viewModel.managerState.collectAsState()
     val batteryLevel by viewModel.batteryLevel.collectAsState()
+    val wifiMismatchSuggestedSsid by viewModel.wifiMismatchSuggestedSsid.collectAsState()
 
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -157,7 +161,8 @@ fun ConnectivityManagerScreen(
                     onStartUpdate = viewModel::startUpdate,
                     onCancel = viewModel::cancel,
                     onCompleteUpdate = viewModel::completeUpdate,
-                    onUpdateWifi = viewModel::updateWifiConfig
+                    onUpdateWifi = viewModel::updateWifiConfig,
+                    wifiMismatchSuggestedSsid = wifiMismatchSuggestedSsid
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -177,7 +182,8 @@ private fun ConnectivityStateContent(
     onStartUpdate: () -> Unit,
     onCancel: () -> Unit,
     onCompleteUpdate: () -> Unit,
-    onUpdateWifi: (String, String) -> Unit
+    onUpdateWifi: (String, String) -> Unit,
+    wifiMismatchSuggestedSsid: String?
 ) {
     AnimatedContent(targetState = state, label = "StateTransition") { currentState ->
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -213,6 +219,7 @@ private fun ConnectivityStateContent(
                 )
                 ConnectivityManagerState.RECONNECTING -> ReconnectingView()
                 ConnectivityManagerState.WIFI_MISMATCH -> WifiMismatchView(
+                    suggestedSsid = wifiMismatchSuggestedSsid,
                     onUpdate = onUpdateWifi,
                     onIgnore = onCancel
                 )
@@ -572,6 +579,7 @@ private fun ReconnectingView() {
 
 @Composable
 private fun WifiMismatchView(
+    suggestedSsid: String?,
     onUpdate: (String, String) -> Unit,
     onIgnore: () -> Unit
 ) {
@@ -593,7 +601,7 @@ private fun WifiMismatchView(
     Spacer(modifier = Modifier.height(24.dp))
 
     // 输入状态
-    var ssid by remember { mutableStateOf("Office_5G") }
+    var ssid by remember(suggestedSsid) { mutableStateOf(resolveWifiMismatchInitialSsid(suggestedSsid)) }
     var password by remember { mutableStateOf("") }
 
     // WiFi 输入框
@@ -611,8 +619,11 @@ private fun WifiMismatchView(
             OutlinedTextField(
                 value = ssid,
                 onValueChange = { ssid = it },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(WIFI_MISMATCH_SSID_INPUT_TEST_TAG),
                 singleLine = true,
+                placeholder = { Text("请输入当前 WiFi 名称", color = Color.Gray) },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = Color.White,
                     unfocusedTextColor = Color.White,
@@ -629,7 +640,9 @@ private fun WifiMismatchView(
             OutlinedTextField(
                 value = password,
                 onValueChange = { password = it },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag(WIFI_MISMATCH_PASSWORD_INPUT_TEST_TAG),
                 singleLine = true,
                 visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
                 placeholder = { Text("请输入密码", color = Color.Gray) },
@@ -662,3 +675,8 @@ private fun WifiMismatchView(
         }
     }
 }
+
+internal fun resolveWifiMismatchInitialSsid(suggestedSsid: String?): String = suggestedSsid.orEmpty()
+
+internal const val WIFI_MISMATCH_SSID_INPUT_TEST_TAG = "wifi_mismatch_ssid_input"
+internal const val WIFI_MISMATCH_PASSWORD_INPUT_TEST_TAG = "wifi_mismatch_password_input"

@@ -1,6 +1,7 @@
 package com.smartsales.prism.data.persistence
 
 import com.smartsales.prism.domain.scheduler.ScheduledTask
+import com.smartsales.prism.domain.scheduler.UrgencyLevel
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -53,5 +54,57 @@ class DaoMappersTest {
         assertTrue(domain.hasConflict)
         assertEquals("existing-1", domain.conflictWithTaskId)
         assertEquals("与「牙医预约」时间冲突", domain.conflictSummary)
+    }
+
+    @Test
+    fun `scheduled task mapper normalizes stale exact reminder metadata from urgency`() {
+        val entity = ScheduledTaskEntity(
+            taskId = "exact-reminder-001",
+            title = "客户会议",
+            startTimeMillis = Instant.parse("2026-03-21T07:00:00Z").toEpochMilli(),
+            endTimeMillis = null,
+            durationMinutes = 60,
+            durationSource = "DEFAULT",
+            conflictPolicy = "EXCLUSIVE",
+            location = null,
+            notes = null,
+            keyPerson = null,
+            keyPersonEntityId = null,
+            highlights = null,
+            isDone = false,
+            hasAlarm = false,
+            isSmartAlarm = false,
+            alarmCascadeJson = """["-1h","-15m","-5m","0m"]""",
+            urgencyLevel = "L2_IMPORTANT",
+            hasConflict = false,
+            conflictWithTaskId = null,
+            conflictSummary = null,
+            isVague = false
+        )
+
+        val domain = entity.toDomain()
+
+        assertTrue(domain.hasAlarm)
+        assertEquals(UrgencyLevel.L2_IMPORTANT, domain.urgencyLevel)
+        assertEquals(listOf("-30m", "0m"), domain.alarmCascade)
+    }
+
+    @Test
+    fun `scheduled task mapper keeps vague tasks reminder free`() {
+        val task = ScheduledTask(
+            id = "uni-b-002",
+            timeDisplay = "待定",
+            title = "提醒我回电话",
+            startTime = Instant.parse("2026-03-21T00:00:00Z"),
+            urgencyLevel = UrgencyLevel.L1_CRITICAL,
+            isVague = true,
+            hasAlarm = true,
+            alarmCascade = listOf("-1h", "0m")
+        )
+
+        val domain = task.toEntity().toDomain()
+
+        assertFalse(domain.hasAlarm)
+        assertTrue(domain.alarmCascade.isEmpty())
     }
 }

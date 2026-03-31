@@ -11,10 +11,12 @@ class InsetOwnershipContractTest {
 
     @Test
     fun `agent shell no longer owns the global top status bar inset`() {
-        val source = readSource("app-core/src/main/java/com/smartsales/prism/ui/AgentShell.kt")
+        val host = readSource("app-core/src/main/java/com/smartsales/prism/ui/AgentShell.kt")
+        val content = readSource("app-core/src/main/java/com/smartsales/prism/ui/AgentShellContent.kt")
 
-        assertFalse(source.contains(".statusBarsPadding()"))
-        assertTrue(source.contains("AgentIntelligenceScreen("))
+        assertFalse(host.contains(".statusBarsPadding()"))
+        assertFalse(content.contains(".statusBarsPadding()"))
+        assertTrue(content.contains("AgentIntelligenceScreen("))
     }
 
     @Test
@@ -30,10 +32,12 @@ class InsetOwnershipContractTest {
         val simHistory = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimHistoryDrawer.kt")
         val simSettings = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimUserCenterDrawer.kt")
         val userCenter = readSource("app-core/src/main/java/com/smartsales/prism/ui/settings/UserCenterScreen.kt")
+        val topSafeArea = readSource("app-core/src/main/java/com/smartsales/prism/ui/components/PrismTopSafeArea.kt")
 
-        assertTrue(simHistory.contains(".prismStatusBarTopSafeBandPadding()"))
-        assertTrue(simSettings.contains(".prismStatusBarTopSafeBandPadding()"))
-        assertTrue(userCenter.contains(".prismStatusBarTopSafeBandPadding()"))
+        assertTrue(topSafeArea.contains("fun PrismStatusBarTopSafeArea("))
+        assertTrue(simHistory.contains("PrismStatusBarTopSafeArea()"))
+        assertTrue(simSettings.contains("PrismStatusBarTopSafeArea()"))
+        assertTrue(userCenter.contains("PrismStatusBarTopSafeArea()"))
     }
 
     @Test

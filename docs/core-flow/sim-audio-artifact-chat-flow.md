@@ -13,6 +13,11 @@
 
 This document defines **what the SIM audio/chat lane must do**, not the final repository class names or DTO details.
 
+Authority note:
+
+- treat this flow plus shared audio-management and Tingwu docs as the active non-Mono audio/chat truth
+- deprecated SIM audio/chat shards are migration memory only and must not be used as the active spec layer
+
 - If this document conflicts with lower specs, treat the lower specs as drift candidates first.
 - If this document conflicts with code, treat the code as behind or off-contract first.
 - If a PU test does not cover a branch defined here, the validation surface is incomplete.
@@ -25,7 +30,7 @@ This file is allowed to be ahead of the codebase.
 
 | Layer | Responsibility | Must Eventually Reflect This Core Flow |
 |------|----------------|-----------------------------------------|
-| **Spec** | How the behavior is encoded | `docs/cerb/sim-audio-chat/spec.md`, `docs/cerb/sim-audio-chat/interface.md` |
+| **Spec** | How the behavior is encoded | `docs/cerb/audio-management/spec.md`, `docs/cerb/audio-management/interface.md`, `docs/cerb/tingwu-pipeline/spec.md`, and `docs/cerb/tingwu-pipeline/interface.md` |
 | **Code** | Delivered behavior | SIM audio drawer wiring, namespaced audio repository behavior, artifact display, and chat-side audio-context attachment |
 | **PU Test** | Behavioral validation | future SIM audio/chat tests, drawer-to-chat tests, storage-isolation tests |
 

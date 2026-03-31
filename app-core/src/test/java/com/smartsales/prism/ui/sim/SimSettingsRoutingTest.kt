@@ -85,6 +85,27 @@ class SimSettingsRoutingTest {
         assertTrue(source.contains("showChevron && presentation == SimUserCenterRowPresentation.Interactive"))
     }
 
+    @Test
+    fun `sim settings overlay uses deterministic handoff aligned animation instead of spring`() {
+        val source = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimShellContent.kt")
+
+        assertTrue(source.contains("val settingsDrawerSlideSpec = tween<Int>("))
+        assertTrue(source.contains("durationMillis = 400"))
+        assertTrue(source.contains("val settingsDrawerFadeSpec = tween<Float>("))
+        assertTrue(source.contains("durationMillis = 300"))
+        assertTrue(source.contains("FastOutSlowInEasing"))
+        assertFalse(source.contains("visible = shellState.showSettings,\n            enter = slideInHorizontally(\n                animationSpec = spring("))
+    }
+
+    @Test
+    fun `sim settings drawer keeps lazy scroll container and local inset ownership`() {
+        val source = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimUserCenterDrawer.kt")
+
+        assertTrue(source.contains("LazyColumn("))
+        assertTrue(source.contains("PrismStatusBarTopSafeArea()"))
+        assertTrue(source.contains(".prismNavigationBarPadding()"))
+    }
+
     private fun readSource(relativePath: String): String {
         val candidates = listOf(
             File(workingDir, relativePath),

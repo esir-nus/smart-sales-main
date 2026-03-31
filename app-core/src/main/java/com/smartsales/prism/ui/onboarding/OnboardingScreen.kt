@@ -290,6 +290,7 @@ fun OnboardingCoordinator(
     var wifiPassword by remember(host) { mutableStateOf("") }
 
     LaunchedEffect(host) {
+        interactionViewModel.bindHost(host)
         interactionViewModel.resetInteractionState()
     }
 

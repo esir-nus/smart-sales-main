@@ -1,6 +1,8 @@
 # Audio Management Interface
 
 > **Blackbox contract** — For consumers (AudioDrawer, UI). Don't read implementation.
+> **Status**: Active supporting interface
+> **Last Updated**: 2026-03-31
 
 ---
 
@@ -17,8 +19,8 @@ interface AudioRepository {
     fun getAudioFiles(): Flow<List<AudioFile>>
     
     /**
-     * Sync audio files from SmartBadge.
-     * Downloads metadata, queues file transfers.
+     * Manual drawer-side sync from SmartBadge.
+     * Consumers call this from explicit UI actions; opening the drawer must not auto-call it.
      */
     suspend fun syncFromDevice()
     
@@ -31,7 +33,7 @@ interface AudioRepository {
     /**
      * Delete audio file (local + badge if source is SMARTBADGE).
      */
-    fun deleteAudio(audioId: String)
+    suspend fun deleteAudio(audioId: String): AudioDeleteResult
     
     /**
      * Toggle star status for audio file.
@@ -47,11 +49,16 @@ interface AudioRepository {
      * Bind audio to a conversation session (for Ask AI).
      */
     fun bindSession(audioId: String, sessionId: String)
-    
+
     /**
      * Get bound session ID for audio (if any).
      */
     fun getBoundSessionId(audioId: String): String?
+
+    /**
+     * Load persisted transcript/artifact payload for expanded drawer rendering.
+     */
+    suspend fun getArtifacts(audioId: String): TingwuJobArtifacts?
 }
 ```
 
@@ -69,9 +76,12 @@ data class AudioFile(
     val source: AudioSource,
     val status: TranscriptionStatus,
     val isStarred: Boolean = false,
+    val isTestImport: Boolean = false,
     val summary: String? = null,
     val progress: Float = 0f,  // 0.0 to 1.0
-    val boundSessionId: String? = null
+    val boundSessionId: String? = null,
+    val activeJobId: String? = null,
+    val lastErrorMessage: String? = null
 )
 ```
 
@@ -84,14 +94,26 @@ enum class AudioSource {
 }
 ```
 
+### AudioDeleteResult
+
+```kotlin
+sealed interface AudioDeleteResult {
+    data object NotFound : AudioDeleteResult
+    data class LocalOnly(val filename: String) : AudioDeleteResult
+    data class Badge(
+        val filename: String,
+        val remoteDeleteSucceeded: Boolean
+    ) : AudioDeleteResult
+}
+```
+
 ### TranscriptionStatus
 
 ```kotlin
 enum class TranscriptionStatus {
     PENDING,      // Not yet transcribed
     TRANSCRIBING, // In progress
-    TRANSCRIBED,  // Complete with summary
-    ERROR         // Failed
+    TRANSCRIBED   // Complete with persisted artifacts/summary
 }
 ```
 
@@ -102,9 +124,22 @@ enum class TranscriptionStatus {
 | Operation | Guarantee |
 |-----------|-----------|
 | `getAudioFiles` | Hot flow, emits current list immediately on collection |
-| `syncFromDevice` | Idempotent, safe to call multiple times |
+| `syncFromDevice` | Manual/UI-driven sync entry, idempotent, safe to call multiple times |
 | `startTranscription` | Updates `status` → `TRANSCRIBING`, emits progress via flow |
-| `deleteAudio` | Idempotent, no-op if file not found |
+| `deleteAudio` | Idempotent, returns `NotFound` if file is absent |
+
+Additional inventory guarantee:
+
+- successful badge-pipeline completions may appear in the drawer inventory without calling `syncFromDevice`, because pipeline completion ingests the recording into the same repository namespace
+- this does **not** change the drawer-side sync contract: consumers must still treat `syncFromDevice` as manual-only
+
+SmartBadge delete guarantees:
+
+- the first SmartBadge delete after each drawer-open session requires explicit confirmation in the shared Audio Drawer UI
+- legacy persisted entries whose filename still matches badge-origin `log_YYYYMMDD_HHMMSS.wav` must be normalized back to `SMARTBADGE` on load, and confirmation/delete cleanup must still treat them as badge-origin even before that rewrite completes
+- a failed badge-side HTTP delete writes a persistent tombstone keyed by exact badge filename
+- later sync suppresses tombstoned filenames so deleted badge WAVs do not reappear as “new” items
+- sync retries badge cleanup and clears the tombstone once the badge no longer reports the file or remote delete succeeds
 
 ---
 

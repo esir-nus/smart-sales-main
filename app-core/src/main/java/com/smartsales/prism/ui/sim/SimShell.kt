@@ -56,7 +56,6 @@ internal fun SimShell(
     val currentChatAudioId by chatViewModel.currentLinkedAudioId.collectAsStateWithLifecycle()
     val audioEntries by audioViewModel.entries.collectAsStateWithLifecycle()
     val trackedPendingAudioIds = remember { mutableStateMapOf<String, String>() }
-    val isAudioDrawerOpen = shellState.activeDrawer == SimDrawerType.AUDIO
     val isImeVisible = rememberSimImeVisibility()
     var startupSchedulerTeaserPending by remember {
         mutableStateOf(shouldShowFirstLaunchSchedulerTeaser)
@@ -110,6 +109,12 @@ internal fun SimShell(
         completedAudioIds.forEach(trackedPendingAudioIds::remove)
     }
 
+    LaunchedEffect(audioViewModel) {
+        audioViewModel.deletedAudioIds.collectLatest { audioId ->
+            chatViewModel.handleDeletedAudio(audioId)
+        }
+    }
+
     LaunchedEffect(badgeAudioPipeline) {
         badgeAudioPipeline.events.collectLatest { event ->
             handleBadgeSchedulerContinuityIngress(
@@ -151,14 +156,6 @@ internal fun SimShell(
                 )
             }
         )
-    }
-
-    LaunchedEffect(isAudioDrawerOpen, shellState.audioDrawerMode) {
-        if (shouldAttemptSimAudioDrawerAutoSync(isAudioDrawerOpen, shellState.audioDrawerMode)) {
-            audioViewModel.maybeAutoSyncFromBadge()
-        } else if (!isAudioDrawerOpen) {
-            audioViewModel.resetSyncSession()
-        }
     }
 
     LaunchedEffect(startupSchedulerTeaserPending, shellState, isImeVisible) {

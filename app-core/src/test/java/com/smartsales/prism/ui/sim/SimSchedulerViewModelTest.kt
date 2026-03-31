@@ -219,6 +219,110 @@ class SimSchedulerViewModelTest {
     }
 
     @Test
+    fun `processAudio wake reminder day clock create uses deterministic exact branch`() = runTest {
+        asrService.nextResult = AsrResult.Success("明天早上九点喊我起来")
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        val expectedStart = timeProvider.today.plusDays(1)
+            .atTime(9, 0)
+            .atZone(timeProvider.zoneId)
+            .toInstant()
+        val tasks = taskRepository.queryByDateRange(timeProvider.today, timeProvider.today.plusDays(2)).snapshot()
+            .filterIsInstance<ScheduledTask>()
+        val createdTask = tasks.single()
+
+        assertEquals("喊我起来", createdTask.title)
+        assertEquals(expectedStart, createdTask.startTime)
+        assertEquals(UrgencyLevel.FIRE_OFF, createdTask.urgencyLevel)
+        assertEquals(listOf("0m"), createdTask.alarmCascade)
+        assertTrue(createdTask.hasAlarm)
+        assertEquals(null, viewModel.conflictWarning.value)
+        assertTrue(fakeExecutor.executedPrompts.isEmpty())
+    }
+
+    @Test
+    fun `processAudio date only wake reminder does not fabricate exact time`() = runTest {
+        asrService.nextResult = AsrResult.Success("明天叫我起来")
+        enqueueNotMultiResponse()
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "NOT_EXACT",
+                  "reason": "缺少明确时间"
+                }
+                """.trimIndent()
+            )
+        )
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "VAGUE_CREATE",
+                  "task": {
+                    "title": "叫我起来",
+                    "anchorDateIso": "2026-03-21",
+                    "urgency": "FIRE_OFF"
+                  }
+                }
+                """.trimIndent()
+            )
+        )
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        val tasks = taskRepository.queryByDateRange(timeProvider.today, timeProvider.today.plusDays(2)).snapshot()
+            .filterIsInstance<ScheduledTask>()
+        val createdTask = tasks.single()
+        assertTrue(createdTask.isVague)
+        assertTrue(alarmScheduler.getAlarmsForTask(createdTask.id).isEmpty())
+    }
+
+    @Test
+    fun `processAudio final classifier reason is replaced with scheduler owned copy`() = runTest {
+        asrService.nextResult = AsrResult.Success("明天下午三点开会")
+        enqueueNotMultiResponse()
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "NOT_EXACT",
+                  "reason": "缺少明确时间"
+                }
+                """.trimIndent()
+            )
+        )
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "NOT_VAGUE",
+                  "reason": "该输入明确是安排日程，包含时间信息"
+                }
+                """.trimIndent()
+            )
+        )
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "NOT_INSPIRATION",
+                  "reason": "该输入明确是安排日程，包含时间信息"
+                }
+                """.trimIndent()
+            )
+        )
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        assertEquals("未能解析为可创建日程，请换一种更明确的说法", viewModel.pipelineStatus.value)
+        assertEquals("未能解析为可创建日程，请换一种更明确的说法", viewModel.conflictWarning.value)
+    }
+
+    @Test
     fun `processAudio vague create falls back to Uni-B`() = runTest {
         asrService.nextResult = AsrResult.Success("明天提醒我开会")
         enqueueNotMultiResponse()
@@ -1301,8 +1405,12 @@ class SimSchedulerViewModelTest {
         advanceUntilIdle()
 
         val alarms = alarmScheduler.getAlarmsForTask("task-exact")
+        val persisted = taskRepository.getTask("task-exact")
+        assertNotNull(persisted)
+        assertTrue(persisted!!.hasAlarm)
+        assertEquals(listOf("-30m", "0m"), persisted.alarmCascade)
         assertEquals(UrgencyLevel.buildCascade(UrgencyLevel.L2_IMPORTANT).size, alarms.size)
-        assertEquals(listOf(60, 15, 5, 0), alarms.map { it.offsetMinutes })
+        assertEquals(listOf(30, 0), alarms.map { it.offsetMinutes })
     }
 
     @Test
@@ -1345,6 +1453,7 @@ class SimSchedulerViewModelTest {
         val task = taskRepository.getTask("task-conflict")
         assertNotNull(task)
         assertTrue(task!!.hasConflict)
+        assertEquals(listOf("-30m", "0m"), task.alarmCascade)
         assertEquals(UrgencyLevel.buildCascade(UrgencyLevel.L2_IMPORTANT).size, alarmScheduler.getAlarmsForTask("task-conflict").size)
     }
 
@@ -1504,6 +1613,8 @@ class SimSchedulerViewModelTest {
         assertNotNull(updated)
         val updatedTask = updated!!
         assertTrue(alarmScheduler.cancelledTaskIds.contains(taskId))
+        assertTrue(updatedTask.hasAlarm)
+        assertEquals(listOf("-30m", "0m"), updatedTask.alarmCascade)
         assertEquals(UrgencyLevel.buildCascade(UrgencyLevel.L2_IMPORTANT).size, alarmScheduler.getAlarmsForTask(taskId).size)
         assertTrue(alarmScheduler.getAlarmsForTask(taskId).all { it.triggerAt <= updatedTask.startTime })
         assertTrue(alarmScheduler.getAlarmsForTask(taskId).any { it.triggerAt == updatedTask.startTime })

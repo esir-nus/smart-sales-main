@@ -1,6 +1,8 @@
 # SIM Scheduler Interface
 
 > **Blackbox contract** — For the standalone SIM scheduler surface.
+>
+> **Unification Note (2026-03-31)**: despite the legacy `SIM` name, this interface should now be read as the current best available base-runtime scheduler contract for non-Mono work. Mono may later deepen runtime capabilities behind this surface without creating separate scheduler truth.
 
 ---
 

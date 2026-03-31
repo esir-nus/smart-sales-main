@@ -5,9 +5,24 @@
 > **Behavioral Authority Above This Doc**:
 > - `docs/core-flow/sim-shell-routing-flow.md`
 > - `docs/to-cerb/sim-standalone-prototype/concept.md`
+> - `docs/specs/base-runtime-unification.md`
 > **Audit Evidence**:
 > - `docs/reports/20260319-sim-standalone-code-audit.md`
 > - `docs/reports/20260319-sim-clarification-evidence-audit.md`
+> - `docs/reports/20260331-base-runtime-unification-drift-audit.md`
+
+---
+
+## Unification Note (2026-03-31)
+
+Despite the legacy `SIM` name, this doc should now be read as the current best available **base-runtime shell baseline** for non-Mono work.
+
+Interpretation rule:
+
+- keep using this doc for shared shell/UI/UX direction while the old full-side host catches up
+- do not treat the `SIM` label as permission to fork shell truth for non-Mono work
+- Mono may later augment this shell with deeper memory architecture, but it must not create a second shell truth
+- keep the real standalone SIM entry/composition boundary, but do not read that boundary as a second non-Mono shell truth
 
 ---
 
@@ -16,6 +31,8 @@
 `SIM Shell` is the standalone application shell for the simplified Prism prototype.
 
 It exists to preserve the current Prism family look while preventing contamination from the smart-agent runtime.
+
+For non-Mono shell planning truth, this shard now acts as the current base-runtime shell baseline while the old full-side hosts remain compatibility debt.
 
 `SIM Shell` owns:
 
@@ -50,9 +67,10 @@ The user should perceive:
 - the same shell identity continuing into active discussion, with the heavy top and bottom monoliths remaining stable while only the center canvas changes by state
 - restored neutral fuzzy seams on those monoliths so the shell reads as premium hardware rather than a hard-cut black frame; keep the top seam subtle and the bottom seam heavier
 - a bottom message capsule whose idle state keeps a single shimmering inline hint line, rotating across `输入消息...`, audio-library swipe-up guidance, and attachment guidance rather than stacking multiple hint rows
-- a shell-owned voice-draft affordance that shows mic only while the draft is blank, inserts device-STT text back into the field as an editable draft, and flips to send only after draft text exists
+- a shell-owned voice-draft affordance that shows mic only while the draft is blank, renders SIM-owned FunASR realtime partial text inside the field during capture, commits the current draft into the field on release, flips to send only after draft text exists, and authenticates realtime capture through backend-issued short-lived DashScope auth while the handshake animation ends with capture rather than lingering through post-release processing
 - active discussion states that prefer sparse conversation plus horizontal system sheets over dashboard cards or smart-agent chrome
 - ordinary shell affordances that still feel normal, such as history, new page/session, connectivity entry, and settings
+- a scheduler-open override that keeps the center dynamic island visible but suppresses the left/right header utility buttons while the scheduler slab owns the page
 
 The user should not perceive:
 
@@ -181,6 +199,12 @@ Shared shell structure:
 - `Bottom Monolith`: composer foundation with left attach, center text field, and a trailing action that shows mic while the draft is blank and send once editable text exists
 - `Shared Seam Treatment`: keep one neutral feathered seam family across the shell states below; the seam may soften the boundary but must not reinterpret the monoliths as floating capsules or aurora-tinted glass
 
+Scheduler-open chrome override:
+
+- while the scheduler drawer is open, hide the top-monolith hamburger and new-session actions
+- keep the dynamic island mounted in the center slot as the only visible top-monolith affordance
+- restoring the normal shell state restores the ordinary hamburger / new-session chrome
+
 Required shell states:
 
 1. `Empty Home`
@@ -282,8 +306,9 @@ SIM keeps the shell gesture model zone-scoped and velocity-aware.
 - velocity acts as an override for clearly intentional pulls, not as a replacement for directional and distance checks
 - opening and closing thresholds should use light hysteresis so drawers do not feel twitchy near the commit line
 - the bottom-zone audio-open gesture is disabled while the IME/keyboard is visible
-- scheduler dismissal remains handle-first and upward
+- scheduler dismissal remains handle-first, bottom-anchored, and tap-or-downward-drag
 - SIM audio dismissal is handle-first and downward
+- scheduler month chevrons may page visible month locally, but they must not acknowledge date attention; only explicit day tap may acknowledge and clear attention state
 - list scrolling or general chat overscroll must not act as an alternate drawer-open gesture
 - a first-launch-only scheduler teaser may auto-drop the drawer once to teach dismissal/opening, but it must not repeat on later launches
 

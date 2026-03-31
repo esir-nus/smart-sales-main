@@ -692,28 +692,6 @@ class SimShellHandoffTest {
     }
 
     @Test
-    fun `shouldAttemptSimAudioDrawerAutoSync only returns true for browse drawer`() {
-        assertTrue(
-            shouldAttemptSimAudioDrawerAutoSync(
-                isDrawerOpen = true,
-                mode = SimAudioDrawerMode.BROWSE
-            )
-        )
-        assertFalse(
-            shouldAttemptSimAudioDrawerAutoSync(
-                isDrawerOpen = true,
-                mode = SimAudioDrawerMode.CHAT_RESELECT
-            )
-        )
-        assertFalse(
-            shouldAttemptSimAudioDrawerAutoSync(
-                isDrawerOpen = false,
-                mode = SimAudioDrawerMode.BROWSE
-            )
-        )
-    }
-
-    @Test
     fun `canOpenSimSchedulerFromEdge only allows clean shell state`() {
         assertTrue(canOpenSimSchedulerFromEdge(SimShellState()))
         assertFalse(

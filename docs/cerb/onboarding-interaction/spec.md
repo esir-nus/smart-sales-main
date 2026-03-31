@@ -49,7 +49,7 @@ Pairing-owned steps still begin at `HARDWARE_WAKE`.
 - onboarding uses FunASR realtime recognition through the `DeviceSpeechRecognizer` seam for the intro utterance
 - one hold-to-speak capture session may remain active for up to `60s`
 - transcript becomes the user bubble
-- onboarding builds a short deterministic coaching reply locally
+- onboarding uses `Executor` + `ModelRegistry.ONBOARDING_CONSULTATION` to build a short coaching reply on the happy path
 - after two successful turns, the page reveals completion status and allows advance
 
 ### Profile
@@ -58,7 +58,7 @@ Pairing-owned steps still begin at `HARDWARE_WAKE`.
 - onboarding uses FunASR realtime recognition through the `DeviceSpeechRecognizer` seam for the intro utterance
 - one hold-to-speak capture session may remain active for up to `60s`
 - transcript becomes the user bubble
-- onboarding extraction service builds a deterministic local draft
+- onboarding extraction service uses `Executor` + `ModelRegistry.ONBOARDING_PROFILE_EXTRACTION` to produce strict typed extraction JSON on the happy path
 - parsed result becomes:
   - acknowledgement bubble
   - extraction card
@@ -72,10 +72,15 @@ Policy:
 
 - consultation/profile may keep active capture open for up to `60s`, but once capture ends recognition must resolve or fall back locally within about `1.2s`
 - the fast lane uses explicit UI phases: recognizing, building consultation reply, building profile result, deterministic fallback
+- after a usable transcript exists, onboarding owns one user-facing generation watchdog instead of nested timeouts:
+  - consultation reply should resolve within about `2.5s`
+  - profile extraction should resolve within about `3.5s`
+- late or stuck model work must terminate into onboarding-local deterministic generation instead of leaving the footer pending
 - recognizer-side `CANCELLED` results that arrive after onboarding has already switched into `recognizing` must be treated as fast-lane failure and terminated through the local deterministic fallback path instead of leaving the footer stuck in processing
 - timed-out, cancelled, reset, or otherwise stale attempts must not write late transcript / reply / extraction results back into the current UI state
 - raw FunASR SDK payloads must be sanitized before they reach onboarding transcript, hint, or error surfaces
-- onboarding happy path must not call `AsrService`, OSS upload, or business LLM services
+- onboarding happy path must not call `AsrService` or OSS upload
+- deterministic fallback is backup-only; it must not become the normal visible result when the LLM path is healthy
 
 ## Shared Mic Footer Contract
 
@@ -124,7 +129,8 @@ If JSON is malformed, required fields are missing, or all extracted values are b
 
 Note:
 
-- the active implementation may build the typed draft through deterministic local parsing rather than LLM-emitted JSON
+- the happy path uses LLM-emitted strict JSON
+- the deterministic fallback path may still build the typed draft locally from the resolved transcript when model generation fails
 - the draft must still land as the same typed `OnboardingProfileDraft` contract
 
 ## Profile Save Law
@@ -162,6 +168,8 @@ Policy:
 
 - consultation/profile should prefer invisible deterministic fallback instead of surfacing a hard failure when the fast lane fails
 - post-release recognizer cancellation is part of this failure bucket and should fast-fallback locally rather than surfacing a stuck intermediate state
+- if a real transcript already exists, deterministic fallback must reuse that transcript rather than injecting fake user content
+- normal network latency alone must not be treated as proof that fallback should win; the fallback lane is for explicit failure or watchdog expiry
 - consultation: retry until success if even the deterministic lane cannot complete
 - profile: retry or skip save if even the deterministic lane cannot complete
 - skip save advances onboarding without mutating the profile
@@ -185,8 +193,11 @@ Policy:
 
 - onboarding owns a separate FunASR realtime experience lane for first-run speed, exposed through `DeviceSpeechRecognizer`
 - the main `AsrService` batch pipeline remains the source of truth for broader business audio flows
-- the main business executor/model registry path remains untouched by this onboarding slice
-- if the onboarding realtime lane fails, onboarding may use an invisible deterministic fallback with a short artificial dwell to preserve the experience rhythm
+- dedicated onboarding-specific model profiles are the happy-path generation seam for onboarding consultation and profile extraction:
+  - `ModelRegistry.ONBOARDING_CONSULTATION`
+  - `ModelRegistry.ONBOARDING_PROFILE_EXTRACTION`
+- onboarding owns one fast-lane user-facing deadline per generation lane rather than stacking a second service-level timeout underneath
+- if the onboarding realtime lane fails, or if LLM generation fails after a real transcript exists, onboarding may use an invisible deterministic fallback with a short artificial dwell to preserve the experience rhythm
 
 ## Ownership Boundary
 

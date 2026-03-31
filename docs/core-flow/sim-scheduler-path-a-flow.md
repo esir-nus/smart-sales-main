@@ -18,6 +18,7 @@ Interpretation rule:
 
 - use `docs/core-flow/scheduler-fast-track-flow.md` for baseline Path A behavioral laws
 - use this file to understand what SIM keeps, narrows, or explicitly excludes
+- treat deprecated SIM scheduler Cerb shards as migration memory only, not as the active spec layer
 
 If this file conflicts with lower specs or code, treat the lower layers as drift candidates first.
 
@@ -27,7 +28,7 @@ If this file conflicts with lower specs or code, treat the lower layers as drift
 
 | Layer | Responsibility | Must Eventually Reflect This Core Flow |
 |------|----------------|-----------------------------------------|
-| **Spec** | How the behavior is encoded | `docs/cerb/sim-scheduler/spec.md`, `docs/cerb/sim-scheduler/interface.md` |
+| **Spec** | How the behavior is encoded | `docs/cerb/scheduler-path-a-spine/spec.md`, `docs/cerb/scheduler-path-a-spine/interface.md`, related `scheduler-path-a-uni-*` docs, and `docs/cerb-ui/scheduler/contract.md` |
 | **Code** | Delivered behavior | `SimSchedulerViewModel`, SIM scheduler wiring, Path A-only scheduler integration |
 | **PU Test** | Behavioral validation | future SIM Path A scheduler tests and isolation checks |
 

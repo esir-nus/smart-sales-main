@@ -364,7 +364,8 @@ class L2DualEngineBridgeTest {
         val audioPipeline = com.smartsales.prism.data.audio.RealBadgeAudioPipeline(
             connectivityBridge = fakeConnectivity,
             asrService = fakeAsr,
-            intentOrchestrator = orchestrator
+            intentOrchestrator = orchestrator,
+            simBadgeAudioPipelineIngestSupport = org.mockito.kotlin.mock()
         )
 
         // 1. Trigger the transaction. By the time this suspend function returns, Path A is fully complete, and Path B is launched.

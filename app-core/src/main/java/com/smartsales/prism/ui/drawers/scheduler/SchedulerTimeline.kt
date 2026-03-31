@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -23,7 +24,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
@@ -86,40 +87,28 @@ fun SchedulerTimeline(
     Box(
         modifier = Modifier.fillMaxWidth()
     ) {
-        if (isSimVisualMode) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(start = horizontalPadding)
-                    .drawBehind {
-                        val axisX = visuals.timelineLabelWidth.toPx() + (visuals.timelineAxisWidth.toPx() / 2f)
-                        drawLine(
-                            color = visuals.timelineLineColor,
-                            start = Offset(axisX, visuals.timelineTopInset.toPx()),
-                            end = Offset(axisX, size.height - visuals.timelineBottomFadeHeight.toPx()),
-                            strokeWidth = visuals.timelineLineWidth.toPx()
-                        )
-                    }
-            )
-        }
-
         LazyColumn(
             modifier = Modifier.fillMaxWidth(),
             contentPadding = PaddingValues(
                 start = horizontalPadding,
                 end = horizontalPadding,
-                top = 12.dp,
+                top = 8.dp,
                 bottom = visuals.timelineBottomFadeHeight
             )
         ) {
-            items(items, key = {
-                when (it) {
-                    is TimelineItem.Task -> it.renderKey
-                    else -> it.id
+            itemsIndexed(
+                items = items,
+                key = { _, item ->
+                    when (item) {
+                        is TimelineItem.Task -> item.renderKey
+                        else -> item.id
+                    }
                 }
-            }) { item ->
+            ) { index, item ->
                 TimelineRow(
                     item = item,
+                    showTopConnector = isSimVisualMode && index > 0,
+                    showBottomConnector = isSimVisualMode && index < items.lastIndex,
                     conflictedTaskIds = conflictedTaskIds,
                     causingTaskId = causingTaskId,
                     onItemClick = onItemClick,
@@ -157,6 +146,8 @@ fun SchedulerTimeline(
 @Composable
 private fun TimelineRow(
     item: TimelineItem,
+    showTopConnector: Boolean,
+    showBottomConnector: Boolean,
     conflictedTaskIds: Set<String>,
     causingTaskId: String?,
     onItemClick: (String) -> Unit,
@@ -202,6 +193,7 @@ private fun TimelineRow(
             fontFamily = FontFamily.Monospace,
             fontWeight = if (isSimVisualMode) FontWeight.Medium else FontWeight.Normal,
             textAlign = TextAlign.End,
+            maxLines = 1,
             modifier = Modifier
                 .width(visuals.timelineLabelWidth)
                 .padding(top = visuals.timelineTopInset - 2.dp, end = 8.dp)
@@ -210,9 +202,29 @@ private fun TimelineRow(
         Box(
             modifier = Modifier
                 .width(visuals.timelineAxisWidth)
-                .padding(top = visuals.timelineTopInset)
+                .fillMaxHeight()
+                .drawBehind {
+                    if (!isSimVisualMode) return@drawBehind
+                    val axisX = size.width / 2f
+                    val dotCenterY = visuals.timelineTopInset.toPx() +
+                        ((visuals.timelineDotSize + 6.dp).toPx() / 2f)
+                    val startY = if (showTopConnector) 0f else dotCenterY
+                    val endY = if (showBottomConnector) size.height else dotCenterY
+                    if (endY > startY) {
+                        drawLine(
+                            color = visuals.timelineLineColor,
+                            start = Offset(axisX, startY),
+                            end = Offset(axisX, endY),
+                            strokeWidth = visuals.timelineLineWidth.toPx()
+                        )
+                    }
+                }
         ) {
-            TimelineDot(item = item)
+            Box(
+                modifier = Modifier.padding(top = visuals.timelineTopInset)
+            ) {
+                TimelineDot(item = item)
+            }
         }
 
         Spacer(modifier = Modifier.width(visuals.timelineRailGap))

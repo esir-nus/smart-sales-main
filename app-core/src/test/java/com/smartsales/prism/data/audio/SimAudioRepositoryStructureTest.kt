@@ -16,7 +16,7 @@ class SimAudioRepositoryStructureTest {
         )
 
         assertTrue(host.contains("class SimAudioRepository @Inject constructor("))
-        assertTrue(host.contains("private val runtime = SimAudioRepositoryRuntime("))
+        assertTrue(host.contains("private val runtime: SimAudioRepositoryRuntime"))
         assertTrue(host.contains("private val storeSupport = SimAudioRepositoryStoreSupport(runtime)"))
         assertTrue(host.contains("private val artifactSupport = SimAudioRepositoryArtifactSupport(runtime, storeSupport)"))
         assertTrue(host.contains("private val syncSupport = SimAudioRepositorySyncSupport(runtime, storeSupport)"))
@@ -47,8 +47,11 @@ class SimAudioRepositoryStructureTest {
             "app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepositoryTranscriptionSupport.kt"
         )
 
-        assertTrue(runtime.contains("internal class SimAudioRepositoryRuntime("))
+        assertTrue(runtime.contains("@Singleton"))
+        assertTrue(runtime.contains("class SimAudioRepositoryRuntime @Inject constructor("))
         assertTrue(runtime.contains("val metadataFile = File(context.filesDir, SIM_AUDIO_METADATA_FILENAME)"))
+        assertTrue(runtime.contains("val pendingBadgeDeleteFile = File(context.filesDir, SIM_AUDIO_PENDING_BADGE_DELETE_FILENAME)"))
+        assertTrue(runtime.contains("val pendingBadgeDeletes = MutableStateFlow<Set<String>>(emptySet())"))
         assertTrue(runtime.contains("val observationJobs = mutableMapOf<String, Job>()"))
         assertTrue(runtime.contains("val seedDefinitions = listOf("))
 
@@ -57,9 +60,13 @@ class SimAudioRepositoryStructureTest {
         assertTrue(store.contains("fun bindSession(audioId: String, sessionId: String)"))
         assertTrue(store.contains("fun clearBoundSession(audioId: String)"))
         assertTrue(store.contains("fun loadFromDisk()"))
+        assertTrue(store.contains("fun loadPendingBadgeDeletes()"))
+        assertTrue(store.contains("suspend fun deleteAudio(audioId: String): SimAudioDeleteResult"))
+        assertTrue(store.contains("fun getPendingBadgeDeletesSnapshot(): Set<String>"))
         assertTrue(store.contains("fun backfillSeedInventory()"))
         assertTrue(store.contains("internal fun recoverOrphanedSimTranscriptions("))
         assertTrue(store.contains("internal fun simStoredAudioFilename("))
+        assertTrue(store.contains("internal const val SIM_AUDIO_PENDING_BADGE_DELETE_FILENAME"))
 
         assertTrue(artifact.contains("internal class SimAudioRepositoryArtifactSupport("))
         assertTrue(artifact.contains("suspend fun getArtifacts(audioId: String)"))
@@ -74,6 +81,7 @@ class SimAudioRepositoryStructureTest {
         assertTrue(sync.contains("internal fun simBadgeSyncSuccessMessage(importedCount: Int)"))
         assertTrue(sync.contains("internal fun emitSimAudioBadgeSyncRequestedTelemetry("))
         assertTrue(sync.contains("internal fun emitSimAudioSyncFailureWhileConnectivityUnavailableTelemetry("))
+        assertTrue(sync.contains("private suspend fun reconcilePendingBadgeDeletes("))
 
         assertTrue(transcription.contains("internal class SimAudioRepositoryTranscriptionSupport("))
         assertTrue(transcription.contains("fun resumeTrackedJobs()"))

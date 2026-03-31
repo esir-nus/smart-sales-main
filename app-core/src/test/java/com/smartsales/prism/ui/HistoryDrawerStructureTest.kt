@@ -23,13 +23,14 @@ class HistoryDrawerStructureTest {
 
     @Test
     fun `agent shell keeps full app history drawer handoffs on the current ownership seams`() {
-        val source = readSource("app-core/src/main/java/com/smartsales/prism/ui/AgentShell.kt")
+        val content = readSource("app-core/src/main/java/com/smartsales/prism/ui/AgentShellContent.kt")
+        val reducer = readSource("app-core/src/main/java/com/smartsales/prism/ui/AgentShellReducer.kt")
 
-        assertTrue(source.contains("HistoryDrawer("))
-        assertTrue(source.contains("onDeviceClick = {"))
-        assertTrue(source.contains("activeDrawer = DrawerType.CONNECTIVITY"))
-        assertTrue(source.contains("onSettingsClick = ::openUserCenter"))
-        assertTrue(source.contains("onProfileClick = ::openUserCenter"))
+        assertTrue(content.contains("HistoryDrawer("))
+        assertTrue(content.contains("onDeviceClick = {"))
+        assertTrue(reducer.contains("activeDrawer = DrawerType.CONNECTIVITY"))
+        assertTrue(content.contains("onSettingsClick = openUserCenter"))
+        assertTrue(content.contains("onProfileClick = openUserCenter"))
     }
 
     private fun readSource(relativePath: String): String {

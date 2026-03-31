@@ -1,7 +1,8 @@
 # Audio Management
 
 > **Cerb-compliant spec** — Audio file management: sync, transcription, UI interaction.
-> **State**: SPEC_ONLY
+> **Status**: SHIPPED
+> **Last Updated**: 2026-03-31
 
 ---
 
@@ -9,9 +10,13 @@
 
 ## Overview
 
-Audio Management provides interactive file management for badge recordings and phone audio. Users manually trigger sync, transcription, and organization through the Audio Drawer UI.
+Audio Management owns the drawer-visible audio inventory, manual sync/download/delete/transcription behavior, and persisted artifact access for badge recordings and phone/test audio.
 
-**Key Distinction**: This is **UI-driven, interactive** management. For automatic pipeline (badge records → auto-download → auto-transcribe → scheduler), see [Badge Audio Pipeline](../badge-audio-pipeline/interface.md).
+Users manually trigger drawer-side sync and deletion through the Audio Drawer UI.
+
+Completed badge-pipeline recordings must also appear in the same drawer inventory without requiring the user to reopen the drawer or run manual sync. The delivered implementation does this by ingesting successful `BadgeAudioPipeline` completions directly into the SIM audio namespace before badge cleanup.
+
+**Key Distinction**: drawer sync remains **UI-driven and manual**. Automatic badge recording handling belongs to [Badge Audio Pipeline](../badge-audio-pipeline/interface.md), but its completed recordings flow back into the same audio-management inventory.
 
 ---
 
@@ -21,7 +26,7 @@ Audio Management provides interactive file management for badge recordings and p
 |------|----------------|
 | [Connectivity Bridge](../connectivity-bridge/interface.md) | Downloads WAV files from badge |
 | [Tingwu Pipeline](../tingwu-pipeline/interface.md) | Long-form audio processing via Aliyun |
-| [Badge Audio Pipeline](../badge-audio-pipeline/interface.md) | Auto-pipeline (independent use case) |
+| [Badge Audio Pipeline](../badge-audio-pipeline/interface.md) | Automatic badge → scheduler pipeline that now feeds completed items back into drawer storage |
 
 ---
 
@@ -44,9 +49,8 @@ graph TB
     Repo -->|Manual sync| ConnBridge[ConnectivityBridge]
     Repo -->|OSS + Submit| Tingwu[TingwuPipeline]
     Pipeline -->|Auto flow| ConnBridge
-    Pipeline -->|OSS + Submit| Tingwu
-    
-    Pipeline -.->|Future: Auto-ingest| Repo
+
+    Pipeline -->|On successful completion ingest into drawer store| Repo
     
     style Repo fill:#e1f5ff
     style Pipeline fill:#fff4e1
@@ -56,7 +60,10 @@ graph TB
 - **AudioRepository** — UI-driven (user taps "Sync", "Transcribe", "Delete")
 - **BadgeAudioPipeline** — Event-driven (badge sends `log#YYYYMMDD_HHMMSS` → auto-process)
 
-**Future Integration** (Wave 3): Pipeline emits `PipelineEvent.Completed` → Repository auto-ingests the file.
+**Delivered Integration**:
+- drawer-side `sync from badge` remains user-triggered
+- pipeline-complete recordings are auto-ingested into the same drawer store
+- badge-side delete happens only after drawer ingest succeeds so failed ingest does not lose recovery path
 
 ---
 
@@ -65,7 +72,7 @@ graph TB
 See [interface.md](./interface.md) for:
 - `AudioFile` — Core audio metadata + status
 - `AudioSource` — SMARTBADGE vs PHONE
-- `TranscriptionStatus` — PENDING, TRANSCRIBING, TRANSCRIBED, ERROR
+- `TranscriptionStatus` — PENDING, TRANSCRIBING, TRANSCRIBED
 
 ---
 
@@ -74,8 +81,8 @@ See [interface.md](./interface.md) for:
 | Wave | Focus | Status | Deliverables |
 |------|-------|--------|--------------|
 | **1** | Interface + Fake | ✅ SHIPPED | `AudioRepository` interface, `FakeAudioRepository`, domain models |
-| **2** | Real Repository | 🔲 | `RealAudioRepository` with persistence |
-| **3** | Pipeline Integration | 🔲 | Auto-ingest from `BadgeAudioPipeline` events |
+| **2** | Real Repository | ✅ SHIPPED | storage-backed repositories, manual sync, delete tombstones |
+| **3** | Pipeline Integration | ✅ SHIPPED | completed badge pipeline recordings auto-ingest into drawer inventory |
 | **4** | Ask AI Flow | ✅ SHIPPED | Session binding, Context injection, zero-latency rendering |
 
 ---
@@ -99,42 +106,43 @@ See [interface.md](./interface.md) for:
 
 ## Wave 2 Ship Criteria
 
-**Goal**: Real storage-backed repository.
+**Goal**: Real storage-backed repository with spec-owned manual sync/delete behavior.
 
 > [!IMPORTANT]
-> **Storage Decision**: Room is NOT currently in `app-core/build.gradle.kts`. Wave 2 implementation must either add Room dependency or use simpler file-based/SharedPreferences storage.
-> **Wave 2 Actual**: Use file-backed JSON storage (`StateFlow` + atomic active write) to satisfy persistence without introducing Room dependencies.
+> **Wave 2 Actual**: the shipped path uses file-backed JSON storage (`StateFlow` + guarded writes) instead of Room.
 
 **Implementation**:
-- [x] `RealAudioRepository` in `app-core/src/main/java/com/smartsales/prism/data/audio/` with JSON file storage
-- [x] Calls `ConnectivityBridge.downloadRecording()` for SMARTBADGE files
-- [x] Calls `TingwuPipeline.submit()` and `observeJob()` for transcription and intelligence extraction
-- [x] Progress tracking via StateFlow mapped from `TingwuJobState`, `AudioViewModel` intercepts Tingwu failures and surfaces via one-shot Toast (leaving domain state as PENDING)
-- [x] Update `AudioModule.kt` DI binding for real implementation
+- [x] storage-backed audio repositories ship in `app-core/src/main/java/com/smartsales/prism/data/audio/`
+- [x] manual drawer sync downloads badge WAVs through `ConnectivityBridge`
+- [x] transcription uses `TingwuPipeline.submit()` plus job observation
+- [x] drawer delete requires one-time per drawer-open confirmation before the first `SMARTBADGE` delete
+- [x] persisted legacy badge-like filenames (`log_YYYYMMDD_HHMMSS.wav`) are normalized back to `SMARTBADGE` on load, and delete-confirm/delete-sync fallback also treats them as badge-origin before reload normalization finishes
+- [x] SmartBadge delete persists tombstones keyed by exact badge filename before remote cleanup finishes
+- [x] later manual sync suppresses tombstoned badge filenames until remote cleanup succeeds or the badge no longer reports them
+- [x] SIM keeps its own namespaced storage (`sim_audio_metadata.json`, `sim_<audioId>.*`, `sim_<audioId>_artifacts.json`)
 
 **Testing**:
-- [ ] Add file → syncs from badge
-- [ ] Start transcription → progress updates → summary appears
-- [ ] Delete file → local + badge cleanup
-- [ ] Toggle star → persists
+- [x] manual badge sync imports new files into drawer inventory
+- [x] transcription progress and artifact persistence update drawer state
+- [x] SmartBadge delete confirms once per drawer-open session, removes local data, and suppresses reimport on remote-delete failure
+- [x] legacy persisted badge-like entries with drifted `PHONE` source still trigger the same delete-confirm/delete-sync contract
+- [x] star / session-binding persistence survives reload
 
 ---
 
 ## Wave 3 Ship Criteria
 
-**Goal**: Auto-ingest from Badge Audio Pipeline.
-
-**Dependencies**: Badge Audio Pipeline Wave 3 must ship first.
+**Goal**: keep drawer-visible inventory aligned with successful badge pipeline completions.
 
 **Implementation**:
-- [ ] Listen to `BadgeAudioPipeline.events`
-- [ ] On `PipelineEvent.Completed` → auto-add to repository
-- [ ] Mark as transcribed, populate summary
-- [ ] Avoid duplicates (check by filename)
+- [x] `RealBadgeAudioPipeline` writes successful badge recordings into the SIM drawer namespace through `SimBadgeAudioPipelineIngestSupport`
+- [x] auto-ingested entries are marked `SMARTBADGE` + `TRANSCRIBED` and write minimal persisted artifacts from the completed transcript
+- [x] exact badge filenames dedupe repeated ingest
+- [x] badge remote delete runs only after ingest succeeds; failed ingest preserves the badge file for recovery/manual sync
 
 **Testing**:
-- [ ] Badge records → pipeline processes → file appears in Audio Drawer
-- [ ] No user action required
+- [x] badge pipeline success produces a drawer-visible transcribed item without drawer-open auto-sync
+- [x] duplicate filename ingest updates the existing drawer item instead of creating a second one
 
 ---
 
@@ -166,9 +174,13 @@ See [interface.md](./interface.md) for:
 | **Domain** | `AudioRepository.kt` | Interface contract |
 | **Domain** | `AudioFile.kt`, `AudioSource.kt`, `TranscriptionStatus.kt` | Domain models |
 | **Data/Fakes** | `FakeAudioRepository.kt` | Wave 1 (shipped) |
-| **Data/Real** | `RealAudioRepository.kt` | Wave 2 (planned) |
+| **Data/Real** | `RealAudioRepository.kt` | Shared audio repository |
+| **Data/Real** | `SimAudioRepository.kt`, `SimAudioRepositoryRuntime.kt` | SIM namespaced drawer repository |
+| **Data/Real** | `SimAudioRepositoryStoreSupport.kt`, `SimAudioRepositorySyncSupport.kt`, `SimAudioRepositoryArtifactSupport.kt`, `SimAudioRepositoryTranscriptionSupport.kt` | SIM storage / sync / artifact / transcription seams |
+| **Data/Real** | `SimBadgeAudioPipelineIngestSupport.kt` | Pipeline-complete ingest into SIM drawer namespace |
+| **Pipeline** | `RealBadgeAudioPipeline.kt` | Badge completion triggers drawer ingest before remote cleanup |
 | **UI** | `AudioDrawer.kt`, `AudioViewModel.kt` | UI layer |
-| **DI** | `AudioModule.kt` | Dependency injection |
+| **App** | `PrismApplication.kt` | Prewarms badge pipeline and SIM audio repository on app start |
 
 ---
 

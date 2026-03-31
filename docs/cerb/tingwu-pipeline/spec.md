@@ -1,60 +1,75 @@
 # Tingwu Pipeline Spec
 
-> **OS Layer**: SSD Storage (Writes directly to MetaHub/SessionMetadata)
+> **Role**: Long-form audio artifact processing
+> **Status**: Active supporting spec
+> **Last Updated**: 2026-03-31
+> **Purpose**: Define the source-led Tingwu processing lane used by audio management and optional audio-grounded chat context.
+> **Base-Runtime Rule**: Tingwu belongs to the shared non-Mono audio lane. Deeper memory/entity/plugin augmentation remains Mono-only and must not redefine the source-led Tingwu contract.
 
 ## Overview
 
-The Tingwu Pipeline is an intelligent audio processing agent. It is fundamentally different from the `asr-service`. While `asr-service` provides simple, quick Speech-to-Text (e.g., for Scheduler Voice inputs), the `tingwu-pipeline` handles comprehensive, long-form audio processing.
+The Tingwu Pipeline is the long-form audio artifact engine.
+It is separate from `asr-service`.
 
-It leverages Aliyun Tingwu's native capabilities to perform:
-1. **Diarization**: Speaker separation (e.g., Sales vs. Client).
-2. **Identity Recognition**: Optional provider-side speaker-role recognition. The client may send user-metadata-derived `SceneIntroduction` and `IdentityContents` hints, but Tingwu still performs the final role judgment from the audio/result model rather than from a local hard-coded label map.
-3. **Meeting Assistance / Key Information**: Optional provider-returned assistance payloads such as `Actions` and `KeyInformation`, which can be normalized into downstream keyword displays.
-4. **Custom Prompts**: LLM extraction injected directly into the ASR phase.
-5. **Auto-Chapters & Summarization**: Native structuring of long meetings.
-6. **Text Polish**: Stutter removal and cleanup.
+- `asr-service` is the short, fast speech-to-text lane used by flows such as scheduler voice ingress
+- `tingwu-pipeline` is the long-form artifact lane used for transcript, chapters, summaries, speaker separation, keywords, and adjacent provider-returned structure
 
-## CreateTask Request Contract
+Current product posture:
 
-For the current SIM/live path, the Tingwu create-task request may include these capability switches:
+- Tingwu is the source of truth for long-form audio intelligence
+- local/UI layers may reorganize or readability-polish the returned artifacts
+- local/UI layers must not invent unsupported facts or sections
+- Tingwu output may later enrich chat context, but the pipeline itself is not a smart-agent orchestration lane
 
-- `Parameters.Transcription.DiarizationEnabled`
-- `Parameters.Transcription.Diarization`
-- `Parameters.IdentityRecognitionEnabled`
-- `Parameters.IdentityRecognition.SceneIntroduction`
-- `Parameters.IdentityRecognition.IdentityContents[]`
-- `Parameters.MeetingAssistanceEnabled`
-- `Parameters.MeetingAssistance.Types = ["Actions", "KeyInformation"]`
+## Current Capability Contract
+
+The current live request path may enable provider features such as:
+
+- diarization
+- provider identity recognition hints
+- meeting-assistance / key-information style payloads
+- custom prompt support when the request explicitly needs provider-side shaping
+- chapters, summaries, and other native structuring features
 
 Contract notes:
 
-- diarization and identity recognition are complementary rather than mutually exclusive
-- user metadata may shape `SceneIntroduction` and `IdentityContents`, but this is advisory request context only
-- provider-returned identity labels are the authoritative upstream speaker-role output when present
-- missing optional identity/meeting-assistance payloads must degrade back to plain diarization/transcript behavior instead of failing the whole job
+- metadata-derived scene/identity hints are advisory request context only
+- provider-returned identity labels remain the upstream truth when present
+- missing optional payloads must degrade back to transcript/diarization behavior instead of failing the whole job
 
 ## Logical Flow
 
-1. **Pre-requisite (External)**: Audio file is captured locally.
-2. **OSS Upload (External)**: Audio is uploaded to OSS via the dedicated `oss` cerb feature. An `ossFileUrl` is obtained.
-3. **Submission**: `TingwuPipeline.submit()` is called with the `ossFileUrl`. A task is created on Aliyun. The request may enable diarization, meeting assistance, and provider identity recognition, including metadata-derived scene/role hints for the current user context.
-4. **Polling**: `TingwuPipeline.observeJob()` polls the API until completion.
-5. **Artifact Fetching (Synchronous Batch)**: Upon completion, the pipeline downloads the available result JSONs/assets **concurrently but waits for all to finish** (`awaitAll`). Depending on the enabled request fields and returned links, this may include Summarization, AutoChapters, TextRewrite, Spectrum, MeetingAssistance, and IdentityRecognition.
-6. **SSD Write**: The pipeline writes these intelligence artifacts directly into the database (MetaHub/SessionMetadata) so they are available for downstream tools (like Analyst Orchestrator). Normalized speaker labels and provider keywords may also be persisted alongside the source-led raw payloads.
-7. **Emit Result**: A single, complete `TingwuJobState.Completed` is emitted to the UI via Flow. **(Dumb Data, Smart UI: The UI will handle "fake streaming" cosmetics, the pipeline provides the complete data instantly).**
+1. Audio is captured or selected in a consumer flow outside Tingwu.
+2. The consumer uploads the audio to OSS or otherwise obtains the provider-facing file URL.
+3. `TingwuPipeline.submit()` creates the provider job.
+4. `TingwuPipeline.observeJob()` tracks job progress until completion or failure.
+5. When the provider job completes, the implementation fetches the available result artifacts.
+6. The implementation persists source-led artifacts into the appropriate audio storage path for later drawer/chat use.
+7. The consumer receives one completed artifact bundle and may render it directly, readability-polish it, or bind it into chat context.
 
-## Wave Plan
+## Persistence Rule
+
+Tingwu persistence should be described in terms of audio artifact storage and consumer-visible reuse.
+
+Current expectations:
+
+- completed artifacts are stored so already-processed audio can be reopened without rerunning Tingwu by default
+- shared audio-management consumers may reuse the stored artifacts later
+- deeper memory/entity/plugin consumers are optional later augmentation, not the default explanation of this lane
+
+## Wave Summary
 
 | Wave | Focus | Status | Deliverables |
 |------|-------|--------|--------------|
-| **1** | **Interface & Fakes** | ✅ SHIPPED | `TingwuPipeline` interface, Models, and `FakeTingwuPipeline` for UI testing. |
-| **2** | **OSS Integration** | ✅ SHIPPED | Wire the pipeline to rely firmly on the new `oss` feature for upstream URLs. |
-| **3** | **Legacy Porting** | ✅ SHIPPED | Port the `TingwuRunner`, `TingwuSubmissionService`, and `TingwuApi` from `data/ai-core` into the new Prism structure. |
-| **4** | **Artifact Wiring** | ✅ SHIPPED | Ensure `TingwuArtifactBundle` is correctly written to `SessionContext` / `MemoryCenter` for downstream Analyst consumption. |
+| **1** | Interface and fakes | ✅ Shipped | `TingwuPipeline` interface, models, and fake pipeline |
+| **2** | OSS-backed submission | ✅ Shipped | Provider jobs rely on upstream OSS/public URL context |
+| **3** | Provider integration port | ✅ Shipped | Current implementation ported from older ai-core assets into the Prism structure |
+| **4** | Artifact persistence and reuse | ✅ Shipped | Source-led artifacts persist for later audio drawer and optional chat-context reuse |
 
 ## Open Loop Considerations
 
-- The pipeline must handle network interruptions gracefully during the long polling phase.
-- Custom Prompts must be strictly defined to ensure we don't ask Tingwu to do something the Analyst LLM should be doing later. Tingwu should extract *structure*, while Analyst should perform *reasoning*.
-- **Graceful Degradation**: If one optional artifact download fails (e.g., Aliyun networking blip), it must be caught and logged, allowing the rest of the artifacts (and the main transcript) to still be emitted instead of crashing the flow.
-- **Identity Fallback**: If provider identity-recognition output is absent or incomplete, the pipeline should keep diarization/raw speaker ids usable instead of inventing local speaker roles.
+- handle polling/network interruptions gracefully during long-running jobs
+- optional artifact download failures should be caught so transcript and other available artifacts still survive
+- if identity output is absent or partial, keep diarization/raw speaker ids usable instead of inventing speaker roles
+- custom prompt usage must stay narrow and must not smuggle smart-agent reasoning requirements into the provider request
+- readability polishing belongs to downstream consumers and must preserve source-led truth

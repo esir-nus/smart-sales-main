@@ -49,11 +49,9 @@ internal fun ObserveSimVoiceDraftSession(
 internal fun SimVoiceDraftHandshake(
     state: SimVoiceDraftUiState,
     accentColor: Color,
-    hintColor: Color,
-    modifier: Modifier = Modifier,
-    processingLabel: String = "正在识别..."
+    modifier: Modifier = Modifier
 ) {
-    if (!state.isRecording && !state.isProcessing) return
+    if (!state.isRecording) return
 
     val waveProgress = rememberVoiceHandshakeWaveProgress(
         isRecording = state.isRecording,
@@ -72,12 +70,12 @@ internal fun SimVoiceDraftHandshake(
         )
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = when {
-                state.isRecording && state.interactionMode == SimVoiceDraftInteractionMode.TAP_TO_SEND -> "正在聆听...点击完成"
-                state.isRecording -> "正在聆听...松开完成"
-                else -> processingLabel
+            text = if (state.interactionMode == SimVoiceDraftInteractionMode.TAP_TO_SEND) {
+                "正在聆听...点击完成"
+            } else {
+                "正在聆听...松开完成"
             },
-            color = if (state.isRecording || state.isProcessing) accentColor else hintColor,
+            color = accentColor,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium
         )

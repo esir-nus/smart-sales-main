@@ -154,10 +154,11 @@ Retry:
     * `step = WifiForm` (ask for credentials).
   * If “Wi-Fi configured but offline”:
 
-    * `step = Error` (with a dedicated reason like `WifiOffline`).
+    * first try an exact remembered credential match for the phone's current SSID; only when no exact match exists should the reconnect flow surface manual Wi‑Fi repair.
   * If “Wi-Fi configured & online”:
 
-    * Move directly to `ConnectingHttp`.
+    * if the badge SSID matches the phone's current SSID, move directly to `ConnectingHttp`.
+    * if the badge SSID differs from the phone's current SSID, first try an exact remembered credential match for the phone's current SSID; only when no exact match exists should the reconnect flow surface manual Wi‑Fi repair.
 
 Errors:
 
@@ -167,6 +168,7 @@ Errors:
 #### Step 3 – Configure Wi-Fi
 
 * `step = WifiForm` shows SSID/password form.
+* When reconnect routed here from mismatch repair, the form should prefill the current phone SSID when readable but keep the SSID editable.
 * On submit:
 
   * `step = ProvisioningWifi`

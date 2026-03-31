@@ -41,6 +41,9 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.Flow
 import com.smartsales.core.test.fakes.FakeToolRegistry
 import com.smartsales.core.llm.ExecutorResult
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
 
 /**
  * L1 Logic Verification Test - Intent Orchestrator
@@ -51,6 +54,11 @@ import com.smartsales.core.llm.ExecutorResult
  * Anti-Illusion Protocol Compliant (No Mockito).
  */
 class IntentOrchestratorTest {
+
+    private val fixedZoneId: ZoneId = ZoneId.of("Asia/Shanghai")
+    private val fixedNow: Instant = Instant.parse("2026-03-18T00:00:00Z")
+    private val fixedToday: LocalDate = LocalDate.of(2026, 3, 18)
+    private val fixedCurrentTime: LocalTime = LocalTime.of(8, 0)
 
     private lateinit var fakeContextBuilder: FakeContextBuilder
     private lateinit var fakeLightningRouter: FakeLightningRouter
@@ -114,10 +122,10 @@ class IntentOrchestratorTest {
         }
         
         val testTimeProvider = object : TimeProvider {
-            override val now: Instant = Instant.now()
-            override val currentTime: java.time.LocalTime = java.time.LocalTime.now()
-            override val today: java.time.LocalDate = java.time.LocalDate.now()
-            override val zoneId: java.time.ZoneId = java.time.ZoneId.systemDefault()
+            override val now: Instant = fixedNow
+            override val currentTime: LocalTime = fixedCurrentTime
+            override val today: LocalDate = fixedToday
+            override val zoneId: ZoneId = fixedZoneId
             override fun formatForLlm(): String = ""
         }
 

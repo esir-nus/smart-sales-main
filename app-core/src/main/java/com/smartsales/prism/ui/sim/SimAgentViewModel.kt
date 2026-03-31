@@ -9,11 +9,8 @@ import com.smartsales.core.pipeline.MascotState
 import com.smartsales.core.pipeline.RealFollowUpRescheduleExtractionService
 import com.smartsales.core.pipeline.RealGlobalRescheduleExtractionService
 import com.smartsales.core.pipeline.RealUniAExtractionService
-import com.smartsales.prism.data.audio.DeviceSpeechFailureReason
-import com.smartsales.prism.data.audio.DeviceSpeechMode
-import com.smartsales.prism.data.audio.DeviceSpeechRecognitionResult
-import com.smartsales.prism.data.audio.DeviceSpeechRecognizer
 import com.smartsales.prism.data.audio.SimAudioRepository
+import com.smartsales.prism.data.audio.SimRealtimeSpeechRecognizer
 import com.smartsales.prism.data.session.SimSessionRepository
 import com.smartsales.prism.domain.analyst.TaskBoardItem
 import com.smartsales.prism.domain.audio.TranscriptionStatus
@@ -35,7 +32,7 @@ import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
 import com.smartsales.prism.ui.IAgentViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -91,7 +88,7 @@ enum class SimSchedulerFollowUpQuickAction {
 class SimAgentViewModel @Inject constructor(
     sessionRepository: SimSessionRepository,
     private val audioRepository: SimAudioRepository,
-    private val speechRecognizer: DeviceSpeechRecognizer,
+    private val realtimeSpeechRecognizer: SimRealtimeSpeechRecognizer,
     taskRepository: ScheduledTaskRepository,
     scheduleBoard: ScheduleBoard,
     activeTaskRetrievalIndex: ActiveTaskRetrievalIndex,
@@ -108,8 +105,6 @@ class SimAgentViewModel @Inject constructor(
         val consumed: Boolean = false,
         val isLongTranscript: Boolean = false
     )
-
-    private var voiceDraftRequestId = 0L
 
     private val _currentSessionId = MutableStateFlow<String?>(null)
     val currentSessionId: StateFlow<String?> = _currentSessionId.asStateFlow()
@@ -189,13 +184,16 @@ class SimAgentViewModel @Inject constructor(
 
     private val bridge = SimAgentUiBridge(
         getCurrentSessionId = { _currentSessionId.value },
+        getIsSending = { _isSending.value },
         getCurrentSchedulerFollowUpContext = { _currentSchedulerFollowUpContext.value },
         getSelectedSchedulerFollowUpTaskId = { _selectedSchedulerFollowUpTaskId.value },
         getUiState = { _uiState.value },
+        getVoiceDraftState = { _voiceDraftState.value },
         setCurrentSessionId = { _currentSessionId.value = it },
         setUiState = { _uiState.value = it },
         setInputText = { _inputText.value = it },
         setIsSending = { _isSending.value = it },
+        setVoiceDraftState = { _voiceDraftState.value = it },
         setErrorMessage = { _errorMessage.value = it },
         setToastMessage = { _toastMessage.value = it },
         setHistory = { _history.value = it },
@@ -237,9 +235,18 @@ class SimAgentViewModel @Inject constructor(
         bridge = bridge
     )
 
+    private val voiceDraftCoordinator = SimAgentVoiceDraftCoordinator(
+        realtimeSpeechRecognizer = realtimeSpeechRecognizer,
+        scope = viewModelScope,
+        bridge = bridge
+    )
+
     init {
         sessionCoordinator.loadPersistedSessions()
         sessionCoordinator.reconcileAudioBindings()
+        viewModelScope.launch(start = CoroutineStart.UNDISPATCHED) {
+            realtimeSpeechRecognizer.events.collect(voiceDraftCoordinator::handleVoiceDraftEvent)
+        }
     }
 
     fun startNewSession() {
@@ -346,71 +353,23 @@ class SimAgentViewModel @Inject constructor(
     }
 
     fun startVoiceDraft(): Boolean {
-        return startVoiceDraft(SimVoiceDraftInteractionMode.HOLD_TO_SEND)
+        return voiceDraftCoordinator.startVoiceDraft()
     }
 
     fun onVoiceDraftPermissionRequested() {
-        val state = _voiceDraftState.value
-        if (
-            state.isRecording ||
-            state.isProcessing ||
-            state.awaitingMicPermission ||
-            _isSending.value ||
-            _currentSchedulerFollowUpContext.value != null ||
-            speechRecognizer.isListening()
-        ) {
-            return
-        }
-        _voiceDraftState.value = state.copy(
-            awaitingMicPermission = true,
-            interactionMode = SimVoiceDraftInteractionMode.HOLD_TO_SEND,
-            errorMessage = null
-        )
+        voiceDraftCoordinator.onVoiceDraftPermissionRequested()
     }
 
     fun onVoiceDraftPermissionResult(granted: Boolean) {
-        val state = _voiceDraftState.value
-        if (!granted) {
-            _voiceDraftState.value = state.copy(
-                awaitingMicPermission = false,
-                interactionMode = SimVoiceDraftInteractionMode.HOLD_TO_SEND,
-                errorMessage = "无法录音：未授予麦克风权限"
-            )
-            _toastMessage.value = "无法录音：未授予麦克风权限"
-            return
-        }
-        if (state.awaitingMicPermission) {
-            startVoiceDraft(SimVoiceDraftInteractionMode.TAP_TO_SEND)
-        }
+        voiceDraftCoordinator.onVoiceDraftPermissionResult(granted)
     }
 
     fun finishVoiceDraft() {
-        val state = _voiceDraftState.value
-        if (!state.isRecording) return
-        val requestId = beginVoiceDraftProcessing(state)
-        viewModelScope.launch {
-            when (val result = resolveVoiceDraftResult(requestId)) {
-                is DeviceSpeechRecognitionResult.Success -> {
-                    if (!isActiveVoiceDraftRequest(requestId)) return@launch
-                    _inputText.value = result.text
-                    _voiceDraftState.value = SimVoiceDraftUiState()
-                }
-
-                is DeviceSpeechRecognitionResult.Failure -> {
-                    if (!isActiveVoiceDraftRequest(requestId)) return@launch
-                    _voiceDraftState.value = SimVoiceDraftUiState(errorMessage = result.message)
-                    if (result.reason != DeviceSpeechFailureReason.CANCELLED) {
-                        _toastMessage.value = result.message
-                    }
-                }
-            }
-        }
+        voiceDraftCoordinator.finishVoiceDraft()
     }
 
     fun cancelVoiceDraft() {
-        invalidateVoiceDraftRequests()
-        runCatching { speechRecognizer.cancelListening() }
-        _voiceDraftState.value = SimVoiceDraftUiState()
+        voiceDraftCoordinator.cancelVoiceDraft()
     }
 
     fun updatePendingAudioState(audioId: String, status: TranscriptionStatus, progress: Float) {
@@ -466,9 +425,7 @@ class SimAgentViewModel @Inject constructor(
 
     override fun updateInput(text: String) {
         _inputText.value = text
-        if (_voiceDraftState.value.errorMessage != null) {
-            _voiceDraftState.value = _voiceDraftState.value.copy(errorMessage = null)
-        }
+        voiceDraftCoordinator.clearVoiceDraftErrorOnManualInput()
     }
 
     override fun clearError() {
@@ -524,86 +481,6 @@ class SimAgentViewModel @Inject constructor(
                 _uiState.value = UiState.Idle
             }
         }
-    }
-
-    private fun startVoiceDraft(
-        interactionMode: SimVoiceDraftInteractionMode
-    ): Boolean {
-        val state = _voiceDraftState.value
-        if (
-            state.isRecording ||
-            state.isProcessing ||
-            _isSending.value ||
-            _currentSchedulerFollowUpContext.value != null ||
-            speechRecognizer.isListening()
-        ) {
-            return false
-        }
-        return runCatching {
-            speechRecognizer.startListening(DeviceSpeechMode.DEVICE_WITH_LOCAL_ASR_FALLBACK)
-            _voiceDraftState.value = state.copy(
-                isRecording = true,
-                isProcessing = false,
-                awaitingMicPermission = false,
-                interactionMode = interactionMode,
-                errorMessage = null
-            )
-            true
-        }.getOrElse {
-            _voiceDraftState.value = SimVoiceDraftUiState(
-                errorMessage = "当前无法开始录音，请重试。"
-            )
-            _toastMessage.value = "当前无法开始录音，请重试。"
-            false
-        }
-    }
-
-    private fun beginVoiceDraftProcessing(
-        state: SimVoiceDraftUiState
-    ): Long {
-        val requestId = invalidateVoiceDraftRequests()
-        _voiceDraftState.value = state.copy(
-            isRecording = false,
-            isProcessing = true,
-            awaitingMicPermission = false,
-            errorMessage = null
-        )
-        return requestId
-    }
-
-    private suspend fun resolveVoiceDraftResult(
-        requestId: Long
-    ): DeviceSpeechRecognitionResult {
-        return try {
-            val result = speechRecognizer.finishListening()
-            if (isActiveVoiceDraftRequest(requestId)) {
-                result
-            } else {
-                DeviceSpeechRecognitionResult.Failure(
-                    reason = DeviceSpeechFailureReason.CANCELLED,
-                    message = "语音识别已取消"
-                )
-            }
-        } catch (_: CancellationException) {
-            DeviceSpeechRecognitionResult.Failure(
-                reason = DeviceSpeechFailureReason.CANCELLED,
-                message = "语音识别已取消"
-            )
-        } catch (_: IllegalStateException) {
-            DeviceSpeechRecognitionResult.Failure(
-                reason = DeviceSpeechFailureReason.ERROR,
-                message = "当前无法识别语音，请重试"
-            )
-        }
-    }
-
-    private fun invalidateVoiceDraftRequests(): Long {
-        voiceDraftRequestId += 1L
-        return voiceDraftRequestId
-    }
-
-    private fun isActiveVoiceDraftRequest(requestId: Long): Boolean {
-        return requestId == voiceDraftRequestId
     }
 
     override fun amendAnalystPlan() {

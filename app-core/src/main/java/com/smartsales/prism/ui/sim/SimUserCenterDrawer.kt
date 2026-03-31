@@ -373,7 +373,7 @@ private fun SimUserCenterProfileHero(
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Box(
             modifier = Modifier
@@ -409,7 +409,7 @@ private fun SimUserCenterProfileHero(
 
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(3.dp)
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Text(
                 text = profile.displayName,
@@ -428,8 +428,8 @@ private fun SimUserCenterProfileHero(
 
         if (chips.isNotEmpty()) {
             FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                verticalArrangement = Arrangement.spacedBy(5.dp)
             ) {
                 chips.forEach { chip ->
                     SimUserCenterMetadataChip(text = chip)
@@ -447,7 +447,7 @@ private fun SimUserCenterProfileHero(
             border = androidx.compose.foundation.BorderStroke(0.5.dp, palette.editButtonBorder)
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 13.dp, vertical = 7.dp),
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
@@ -455,7 +455,7 @@ private fun SimUserCenterProfileHero(
                     imageVector = Icons.Default.Edit,
                     contentDescription = null,
                     tint = palette.secondary,
-                    modifier = Modifier.size(14.dp)
+                    modifier = Modifier.size(13.dp)
                 )
                 Text(
                     text = "编辑资料",
@@ -493,7 +493,7 @@ private fun SimUserCenterMetadataChip(
     ) {
         Text(
             text = text,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.5.dp),
             color = textColor,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = if (accent) FontWeight.SemiBold else FontWeight.Normal
@@ -507,14 +507,14 @@ private fun SimUserCenterSection(
     content: @Composable ColumnScope.() -> Unit
 ) {
     val palette = rememberSimUserCenterPalette()
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
             text = title,
             color = palette.secondary,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
             letterSpacing = 0.5.sp,
-            modifier = Modifier.padding(start = 10.dp)
+            modifier = Modifier.padding(start = 8.dp)
         )
         Surface(
             color = palette.cardSurface,
@@ -529,7 +529,7 @@ private fun SimUserCenterSection(
                             colors = listOf(
                                 palette.cardHighlight,
                                 Color.Transparent,
-                                palette.cardHighlight.copy(alpha = 0.15f)
+                                palette.cardHighlight.copy(alpha = 0.08f)
                             )
                         )
                     )
@@ -698,7 +698,7 @@ private fun SimUserCenterRow(
                 Modifier
             }
         )
-        .padding(horizontal = 15.dp, vertical = 12.dp)
+        .padding(horizontal = 14.dp, vertical = 11.dp)
 
     Column {
         Row(
@@ -709,13 +709,13 @@ private fun SimUserCenterRow(
             Row(
                 modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(11.dp)
             ) {
                 Icon(
                     imageVector = leadingIcon,
                     contentDescription = null,
                     tint = iconTint,
-                    modifier = Modifier.size(17.dp)
+                    modifier = Modifier.size(16.dp)
                 )
                 Text(
                     text = label,
@@ -751,7 +751,7 @@ private fun SimUserCenterRow(
         }
         if (showDivider) {
             HorizontalDivider(
-                modifier = Modifier.padding(horizontal = 16.dp),
+                modifier = Modifier.padding(horizontal = 14.dp),
                 thickness = 0.5.dp,
                 color = palette.divider
             )
@@ -771,7 +771,7 @@ private fun SimUserCenterDeferredLogoutButton() {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 15.dp),
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {

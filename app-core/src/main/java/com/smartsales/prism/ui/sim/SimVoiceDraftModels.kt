@@ -16,5 +16,6 @@ data class SimVoiceDraftUiState(
     val isProcessing: Boolean = false,
     val awaitingMicPermission: Boolean = false,
     val interactionMode: SimVoiceDraftInteractionMode = SimVoiceDraftInteractionMode.HOLD_TO_SEND,
+    val liveTranscript: String = "",
     val errorMessage: String? = null
 )

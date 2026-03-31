@@ -5,18 +5,35 @@
 > **Behavioral Authority Above This Doc**:
 > - `docs/core-flow/sim-audio-artifact-chat-flow.md`
 > - `docs/to-cerb/sim-standalone-prototype/concept.md`
+> - `docs/specs/base-runtime-unification.md`
 > - `docs/cerb/audio-management/spec.md`
 > - `docs/cerb/tingwu-pipeline/spec.md`
 > - `docs/specs/modules/AudioDrawer.md`
 > **Audit Evidence**:
 > - `docs/reports/20260319-sim-standalone-code-audit.md`
 > - `docs/reports/20260319-sim-clarification-evidence-audit.md`
+> - `docs/reports/20260331-base-runtime-unification-drift-audit.md`
+
+---
+
+## Unification Note (2026-03-31)
+
+Despite the legacy `SIM` name, this doc should now be read as the current best available **base-runtime audio/chat baseline** for non-Mono work.
+
+Interpretation rule:
+
+- keep using this doc for shared Tingwu/audio/chat direction while legacy full-side runtime owners catch up
+- do not treat the `SIM` label as permission to fork non-Mono audio/chat truth
+- Mono may later add deeper memory/entity/plugin augmentation around chat, but it must not create a second base audio/chat truth
+- keep the real SIM-owned audio/chat runtime boundary where it still exists, but do not read that boundary as a second non-Mono product truth
 
 ---
 
 ## 1. Purpose
 
 `SIM Audio Chat` defines the second major feature lane of the standalone prototype:
+
+For non-Mono Tingwu/audio/chat planning truth, this shard now acts as the current base-runtime audio/chat baseline while legacy full-side runtime owners catch up.
 
 - provide normal SIM chat directly from the home/chat surface
 - browse audio in the Audio Drawer
@@ -66,7 +83,8 @@ This shard intentionally replaces the smart-agent interpretation of chat with a 
 
 - blank/new SIM chat supports real free-text replies
 - baseline chat uses SIM system persona plus user metadata plus local session history
-- blank/new SIM chat may use device speech recognition from the composer to draft text locally, but it must still require explicit send
+- blank/new SIM chat may use a SIM-owned FunASR realtime recognizer from the composer to draft text locally, but it must still require explicit send
+- SIM realtime auth must use backend-issued short-lived DashScope credentials rather than a long-lived client-side API key
 - `Ask AI` starts or reuses a chat session with one selected audio attached as context
 - chat answers may use the chosen audio's artifacts when audio is attached, but audio is not required for a normal SIM chat turn
 - the SIM composer uses mic only while the draft is blank; once typed or recognized draft text exists, the same trailing action becomes send
@@ -201,6 +219,9 @@ For drawer-side informational browsing specifically:
 - collapsed pending cards use browse-mode directional swipe actions: right swipe starts transcription and left swipe deletes the item
 - collapsed transcribed cards may also use browse-mode left swipe delete, but expanded artifact cards must not expose delete swipe
 - transcribing cards must not expose delete swipe
+- for `SMARTBADGE` items, the first delete after each drawer-open session must require confirmation that deleting the card also deletes the badge-side source WAV
+- persisted legacy badge-like filenames (`log_YYYYMMDD_HHMMSS.wav`) must be normalized back to `SMARTBADGE` on load, and the same confirmation/delete cleanup must still apply even if old metadata still says `PHONE`
+- once confirmed in that drawer-open session, later SmartBadge deletes may proceed without repeating the dialog until the drawer is closed and reopened
 
 For chat-side audio reselection specifically:
 
@@ -298,6 +319,9 @@ SIM must expose badge-origin audio ingress through the audio drawer itself rathe
 - manual sync reuses the existing SIM-owned repository path that lists badge WAV files and downloads unseen recordings
 - manual sync is additive-only: it must not clear existing inventory and must not duplicate or redownload already-imported badge files
 - the dedupe key for this slice is the exact badge filename already present in SIM local `SMARTBADGE` inventory
+- SmartBadge delete writes a persistent pending-delete tombstone keyed by exact badge filename before the HTTP badge delete completes
+- sync must suppress re-import of tombstoned filenames until badge cleanup succeeds or the badge no longer reports that filename
+- Android/Compose drawer verification must cover first-delete confirmation, same-session skip, and close/reopen reset for both canonical `SMARTBADGE` items and legacy badge-like persisted entries
 - if connectivity is absent, offline, or not ready, manual sync fails explicitly in human-readable drawer-local feedback and leaves the current inventory usable
 - if connectivity manager diagnostics say BLE is held but network status is pending or offline, manual sync must stop before repository download work begins and surface a state-specific message instead of collapsing to the generic unavailable copy
 - those BLE-held manager diagnostics remain observational only; SIM manual sync still requires strict transport readiness from `ConnectivityBridge.isReady()`

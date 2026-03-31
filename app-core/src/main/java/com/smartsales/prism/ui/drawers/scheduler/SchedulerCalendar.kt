@@ -75,8 +75,18 @@ fun SchedulerCalendar(
     val visuals = LocalSchedulerDrawerVisuals.current
     val today = remember { LocalDate.now() }
     val selectedDate = remember(activeDay, today) { today.plusDays(activeDay.toLong()) }
-    val firstOfMonth = remember(selectedDate) { selectedDate.withDayOfMonth(1) }
-    val lastOfMonth = remember(selectedDate) { selectedDate.withDayOfMonth(selectedDate.lengthOfMonth()) }
+    var visibleMonthAnchor by remember(selectedDate) {
+        mutableStateOf(selectedDate.withDayOfMonth(1))
+    }
+    val visibleMonthDate = remember(visibleMonthAnchor, selectedDate) {
+        visibleMonthAnchor.withDayOfMonth(
+            minOf(selectedDate.dayOfMonth, visibleMonthAnchor.lengthOfMonth())
+        )
+    }
+    val firstOfMonth = remember(visibleMonthAnchor) { visibleMonthAnchor }
+    val lastOfMonth = remember(visibleMonthAnchor) {
+        visibleMonthAnchor.withDayOfMonth(visibleMonthAnchor.lengthOfMonth())
+    }
     val gridStart = remember(firstOfMonth) {
         firstOfMonth.minusDays((firstOfMonth.dayOfWeek.value - 1).toLong())
     }
@@ -92,8 +102,8 @@ fun SchedulerCalendar(
             }
         }
     }
-    val collapsedWeekStart = remember(selectedDate) {
-        selectedDate.minusDays((selectedDate.dayOfWeek.value - 1).toLong())
+    val collapsedWeekStart = remember(visibleMonthDate) {
+        visibleMonthDate.minusDays((visibleMonthDate.dayOfWeek.value - 1).toLong())
     }
     val collapsedWeek = remember(collapsedWeekStart) {
         List(7) { index -> collapsedWeekStart.plusDays(index.toLong()) }
@@ -106,8 +116,14 @@ fun SchedulerCalendar(
             .animateContentSize()
     ) {
         CalendarHeader(
-            monthTitle = selectedDate.format(SchedulerMonthTitleFormatter),
-            visuals = visuals
+            monthTitle = visibleMonthAnchor.format(SchedulerMonthTitleFormatter),
+            visuals = visuals,
+            onPreviousMonth = {
+                visibleMonthAnchor = visibleMonthAnchor.minusMonths(1).withDayOfMonth(1)
+            },
+            onNextMonth = {
+                visibleMonthAnchor = visibleMonthAnchor.plusMonths(1).withDayOfMonth(1)
+            }
         )
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -120,7 +136,7 @@ fun SchedulerCalendar(
                 CalendarDateRow(
                     dates = week,
                     selectedDate = selectedDate,
-                    visibleMonth = selectedDate.monthValue,
+                    visibleMonth = visibleMonthAnchor.monthValue,
                     today = today,
                     unacknowledgedDates = unacknowledgedDates,
                     rescheduledDates = rescheduledDates,
@@ -134,7 +150,7 @@ fun SchedulerCalendar(
             CalendarDateRow(
                 dates = collapsedWeek,
                 selectedDate = selectedDate,
-                visibleMonth = selectedDate.monthValue,
+                visibleMonth = visibleMonthAnchor.monthValue,
                 today = today,
                 unacknowledgedDates = unacknowledgedDates,
                 rescheduledDates = rescheduledDates,
@@ -156,7 +172,9 @@ fun SchedulerCalendar(
 @Composable
 private fun CalendarHeader(
     monthTitle: String,
-    visuals: SchedulerDrawerVisuals
+    visuals: SchedulerDrawerVisuals,
+    onPreviousMonth: () -> Unit,
+    onNextMonth: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -164,10 +182,12 @@ private fun CalendarHeader(
             .padding(horizontal = visuals.drawerContentHorizontalPadding),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconButton(onClick = {}, enabled = false) {
+        IconButton(
+            onClick = onPreviousMonth
+        ) {
             Icon(
                 imageVector = Icons.Default.KeyboardArrowLeft,
-                contentDescription = null,
+                contentDescription = "Previous month",
                 tint = visuals.calendarChevronColor
             )
         }
@@ -181,10 +201,12 @@ private fun CalendarHeader(
             modifier = Modifier.weight(1f)
         )
 
-        IconButton(onClick = {}, enabled = false) {
+        IconButton(
+            onClick = onNextMonth
+        ) {
             Icon(
                 imageVector = Icons.Default.KeyboardArrowRight,
-                contentDescription = null,
+                contentDescription = "Next month",
                 tint = visuals.calendarChevronColor
             )
         }

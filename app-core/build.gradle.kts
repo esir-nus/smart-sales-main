@@ -118,6 +118,7 @@ dependencies {
     implementation(projects.data.session)
     implementation(projects.core.telemetry) // Pipeline Telemetry Logging
     implementation(projects.core.notifications) // Centralized Android Notifications
+    implementation(files("libs/nuisdk-release.aar"))
     // Legacy BLE removed: implementation(projects.feature.connectivity)
     implementation(platform(libs.compose.bom))
     implementation(libs.bundles.compose.ui)

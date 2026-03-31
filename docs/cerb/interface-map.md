@@ -4,7 +4,7 @@
 >
 > **Purpose**: Module ownership + data flow. Read this BEFORE any cross-module change.
 > **Rule**: If data belongs to Module B, query B's interface at runtime. Don't store B's data on A's model.
-> **Last Updated**: 2026-03-18 (Test infrastructure sync)
+> **Last Updated**: 2026-03-31 (Audio drawer / badge pipeline sync correction)
 >
 > **Status Legend**: ✅ = Shipped (Real impl) · 📐 = Interface only (Fake impl) · 🔲 = Not yet coded
 
@@ -76,7 +76,7 @@ Orchestrates LLM-powered processing. Reads from Layer 2 data services.
 >
 > **PluginRegistry runtime boundary (Wave 21 / T4 direction)**: the outer loop routes by semantic plugin entry IDs such as `artifact.generate`, `audio.analyze`, `crm.sheet.generate`, and `simulation.talk`. Runtime plugins may currently read bounded session history and emit bounded progress through `PluginGateway`; richer capability bundles and plugin-caused writes remain owned by the later typed mutation / artifact re-entry contract.
 
-> **SchedulerLinter doc set**: structural cleanup and future audits should treat `scheduler-path-a-spine`, `scheduler-path-a-uni-a`, `scheduler-path-a-uni-b`, `scheduler-path-a-uni-c`, `scheduler-path-a-uni-d`, `sim-scheduler`, `scheduler-fast-track-flow`, and `sim-scheduler-path-a-flow` as the current governing doc family; the old standalone `scheduler-linter` shard no longer exists.
+> **SchedulerLinter doc set**: structural cleanup and future audits should treat `scheduler-path-a-spine`, `scheduler-path-a-uni-a`, `scheduler-path-a-uni-b`, `scheduler-path-a-uni-c`, `scheduler-path-a-uni-d`, `scheduler-fast-track-flow`, and `sim-scheduler-path-a-flow` as the current governing doc family. Deprecated SIM scheduler shards remain migration memory only.
 
 ---
 
@@ -91,9 +91,9 @@ User-facing features. Each receives processed results from Orchestrator (Layer 3
 | **[SchedulerDrawer](./scheduler/spec.md)** | Intelligent Scheduler | Visual UI states | Scheduler, ScheduleBoard | `ISchedulerViewModel` | OS: App | ✅ |
 | **[ScheduleBoard](./scheduler/spec.md)** | Intelligent Scheduler | Conflict index (in-memory cache) | ScheduledTaskRepository (populates index) | — | OS: SSD | ✅ |
 | **ActiveTaskRetrievalIndex** | Intelligent Scheduler | Global follow-up active-task shortlist + final target gate | ScheduledTaskRepository (all non-done tasks) | `buildShortlist(...)`, `resolveTarget(...)` | OS: App | ✅ |
-| **[BadgeAudioPipeline](./badge-audio-pipeline/spec.md)** | Hardware & Audio | Audio recording lifecycle | ASR, OSS, ConnectivityBridge | Delegates transcript to `IntentOrchestrator`; consumes early `PathACommitted` completion while Path B continues in background | — | ✅ |
-| **[AudioManagement](./audio-management/spec.md)** | Hardware & Audio | Manual sync/transcribe states | ConnectivityBridge, TingwuPipeline | *Observes DB State* | OS: App | 🚧 |
-| **[SIMAudioChat](./sim-audio-chat/spec.md)** | Hardware & Audio | SIM-local chat composer draft state, audio-grounded discussion continuity, device-STT draft bridge | SimAudioRepository, SimSessionRepository, DeviceSpeechRecognizer, UserProfileRepository | `SimAgentViewModel`, durable chat/session projections | OS: App | 🚧 |
+| **[BadgeAudioPipeline](./badge-audio-pipeline/spec.md)** | Hardware & Audio | Audio recording lifecycle | ASR, OSS, ConnectivityBridge | Uses `AsrService` for the scheduler fast path; on successful completion also ingests the recording into SIM audio storage before badge cleanup | — | ✅ |
+| **[AudioManagement](./audio-management/spec.md)** | Hardware & Audio | Drawer-visible audio inventory, manual sync/transcribe/delete states, persisted artifacts | ConnectivityBridge, TingwuPipeline | Receives completed badge recordings through the shared SIM audio namespace owned by `SimAudioRepository` | OS: App | ✅ |
+| **[SIM Audio Chat Lane](../core-flow/sim-audio-artifact-chat-flow.md)** | Hardware & Audio | SIM-local chat composer draft state, audio-grounded discussion continuity, FunASR realtime draft bridge | SimAudioRepository, SimSessionRepository, SimRealtimeSpeechRecognizer, UserProfileRepository | `SimAgentViewModel`, durable chat/session projections; active behavior authority routes through shared audio-management, Tingwu, and core-flow docs | OS: App | 🚧 |
 | **[OnboardingInteraction](./onboarding-interaction/spec.md)** | Hardware & Audio | Pre-pairing phone-mic onboarding interaction state, consultation reply, typed profile draft, CTA-gated profile save | DeviceSpeechRecognizer, UserProfileRepository | `OnboardingInteractionService`, `DeviceSpeechRecognizer`, `OnboardingInteractionViewModel` | OS: App | 🚧 |
 | **[ConflictResolver](./conflict-resolver/spec.md)** | Intelligent Scheduler | Conflict resolution actions | ScheduleBoard | `resolve(...) -> ConflictResolution` | OS: App | ✅ |
 | **[AgentIntelligenceUI](../cerb-ui/agent-intelligence/spec.md)** | System II & Routing | Wait-state UI components | — | `StateFlow<UiState>` | OS: App | 📐 |
@@ -118,6 +118,17 @@ Rule:
 
 - SIM chat may host the follow-up conversation surface
 - SIM chat must not become the owner of generic scheduler storage or a second memory lane
+
+### Base runtime vs Mono rule (2026-03-31)
+
+The repo now treats current SIM-led shell/scheduler/audio delivery as the best available **base-runtime baseline** for non-Mono work.
+
+Interpretation:
+
+- shared shell/UI/UX, Tingwu/audio flow, Path A scheduler flow, and bounded local/session continuity belong to the base runtime
+- Kernel-owned session memory, CRM/entity loading, Path B scheduler enrichment, and plugin/tool runtime remain Mono-only
+- legacy full-side hosts may remain temporarily, but they are wrapper debt rather than product-truth owners
+- SIM-owned entry roots, namespaced persistence, or isolated runtime assembly may remain real implementation boundaries, but they do not create a second non-Mono product truth
 
 ---
 
@@ -150,7 +161,7 @@ Cross-cutting services that aggregate data from multiple Layer 2 sources.
 graph TD
     A["Badge Mic"] --> B["ConnectivityBridge"]
     B --> C["BadgeAudioPipeline"]
-    C --> D["ASR (Tingwu)"]
+    C --> D["ASR / AsrService"]
     D -->|Submits to| E["IntentOrchestrator (Phase 0)"]
     E -->|1. Gateway| E1["LightningRouter"]
     E1 -->|GREETING/NOISE| F1["MascotService"]

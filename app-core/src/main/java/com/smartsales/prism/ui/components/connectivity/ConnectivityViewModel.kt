@@ -56,6 +56,9 @@ class ConnectivityViewModel @Inject constructor(
     private val _batteryLevel = MutableStateFlow(85)
     val batteryLevel: StateFlow<Int> = _batteryLevel.asStateFlow()
 
+    private val _wifiMismatchSuggestedSsid = MutableStateFlow<String?>(null)
+    val wifiMismatchSuggestedSsid: StateFlow<String?> = _wifiMismatchSuggestedSsid.asStateFlow()
+
     // 待更新版本
     private val _pendingVersion = MutableStateFlow<String?>(null)
     val pendingVersion: StateFlow<String?> = _pendingVersion.asStateFlow()
@@ -171,10 +174,13 @@ class ConnectivityViewModel @Inject constructor(
             val result = connectivityService.reconnect()
             Log.d("ConnectivityVM", "service.reconnect() returned: $result")
             when (result) {
-                ReconnectResult.Connected -> _uiOverride.value = null
-                ReconnectResult.DeviceNotFound -> _uiOverride.value = null
-                ReconnectResult.WifiMismatch -> _uiOverride.value = ConnectionState.WIFI_MISMATCH
-                is ReconnectResult.Error -> _uiOverride.value = null
+                ReconnectResult.Connected -> clearTransientConnectivityUi()
+                ReconnectResult.DeviceNotFound -> clearTransientConnectivityUi()
+                is ReconnectResult.WifiMismatch -> {
+                    _wifiMismatchSuggestedSsid.value = result.currentPhoneSsid
+                    _uiOverride.value = ConnectionState.WIFI_MISMATCH
+                }
+                is ReconnectResult.Error -> clearTransientConnectivityUi()
             }
             Log.d("ConnectivityVM", "After reconnect: override=${_uiOverride.value}, effective=${effectiveState.value}")
         }
@@ -219,7 +225,7 @@ class ConnectivityViewModel @Inject constructor(
      * 取消/忽略操作，返回默认状态
      */
     fun cancel() {
-        _uiOverride.value = null  // 恢复真实状态
+        clearTransientConnectivityUi()
     }
 
     /**
@@ -228,7 +234,7 @@ class ConnectivityViewModel @Inject constructor(
     fun resetTransientState() {
         activeOperationJob?.cancel()
         activeOperationJob = null
-        _uiOverride.value = null
+        clearTransientConnectivityUi()
     }
 
     /**
@@ -236,13 +242,19 @@ class ConnectivityViewModel @Inject constructor(
      */
     fun updateWifiConfig(ssid: String, password: String) {
         launchExclusiveOperation("updateWifiConfig") {
+            _wifiMismatchSuggestedSsid.value = ssid
             _uiOverride.value = ConnectionState.RECONNECTING
             val result = connectivityService.updateWifiConfig(ssid, password)
             when (result) {
-                is WifiConfigResult.Success -> _uiOverride.value = null  // 恢复真实状态
+                is WifiConfigResult.Success -> clearTransientConnectivityUi()
                 is WifiConfigResult.Error -> _uiOverride.value = ConnectionState.WIFI_MISMATCH
             }
         }
+    }
+
+    private fun clearTransientConnectivityUi() {
+        _wifiMismatchSuggestedSsid.value = null
+        _uiOverride.value = null
     }
 }
 

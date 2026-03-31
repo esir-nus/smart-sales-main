@@ -71,7 +71,8 @@ class OnboardingInteractionViewModelTest {
         assertEquals(2, state.messages.size)
         assertEquals("客户预算批不下来", state.messages[0].text)
         assertEquals("先别急着压价格，先确认客户卡点。", state.messages[1].text)
-        assertEquals(OnboardingResultOrigin.DEVICE_SPEECH, state.lastResultOrigin)
+        assertEquals(OnboardingTranscriptOrigin.DEVICE_SPEECH, state.lastTranscriptOrigin)
+        assertEquals(OnboardingGenerationOrigin.LLM, state.lastGenerationOrigin)
         assertFalse(state.isProcessing)
         assertEquals(DeviceSpeechMode.FUN_ASR_REALTIME, speechRecognizer.lastMode)
     }
@@ -116,7 +117,8 @@ class OnboardingInteractionViewModelTest {
 
         val state = viewModel.consultationState.value
         assertFalse(state.isProcessing)
-        assertEquals(OnboardingResultOrigin.DETERMINISTIC_FALLBACK, state.lastResultOrigin)
+        assertEquals(OnboardingTranscriptOrigin.DETERMINISTIC_FALLBACK, state.lastTranscriptOrigin)
+        assertEquals(OnboardingGenerationOrigin.DETERMINISTIC_FALLBACK, state.lastGenerationOrigin)
         assertEquals("我想试试怎么更自然地开始和客户沟通。", state.messages.first().text)
     }
 
@@ -146,8 +148,86 @@ class OnboardingInteractionViewModelTest {
 
         val state = viewModel.consultationState.value
         assertFalse(state.isProcessing)
-        assertEquals(OnboardingResultOrigin.DETERMINISTIC_FALLBACK, state.lastResultOrigin)
+        assertEquals(OnboardingTranscriptOrigin.DETERMINISTIC_FALLBACK, state.lastTranscriptOrigin)
+        assertEquals(OnboardingGenerationOrigin.DETERMINISTIC_FALLBACK, state.lastGenerationOrigin)
         assertEquals(2, state.messages.size)
+    }
+
+    @Test
+    fun `consultation cancelled after processing begins falls back and clears processing`() = runTest {
+        speechRecognizer.finishGate = CompletableDeferred()
+
+        assertTrue(viewModel.startConsultationRecording())
+        viewModel.finishConsultationRecording()
+        dispatcher.scheduler.runCurrent()
+
+        assertTrue(viewModel.consultationState.value.isProcessing)
+        assertEquals(
+            OnboardingProcessingPhase.RECOGNIZING,
+            viewModel.consultationState.value.processingPhase
+        )
+
+        speechRecognizer.finishGate?.complete(
+            DeviceSpeechRecognitionResult.Failure(
+                reason = DeviceSpeechFailureReason.CANCELLED,
+                message = "语音识别已取消"
+            )
+        )
+        advanceUntilIdle()
+
+        val state = viewModel.consultationState.value
+        assertFalse(state.isProcessing)
+        assertEquals(OnboardingProcessingPhase.NONE, state.processingPhase)
+        assertEquals(OnboardingTranscriptOrigin.DETERMINISTIC_FALLBACK, state.lastTranscriptOrigin)
+        assertEquals(OnboardingGenerationOrigin.DETERMINISTIC_FALLBACK, state.lastGenerationOrigin)
+        assertEquals("我想试试怎么更自然地开始和客户沟通。", state.messages.first().text)
+    }
+
+    @Test
+    fun `consultation llm failure keeps real transcript and uses deterministic generation`() = runTest {
+        val transcript = "客户预算批不下来"
+        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success(transcript)
+        interactionService.consultationResult =
+            OnboardingConsultationServiceResult.Failure("llm unavailable")
+
+        assertTrue(viewModel.startConsultationRecording())
+        viewModel.finishConsultationRecording()
+        advanceUntilIdle()
+
+        val state = viewModel.consultationState.value
+        assertEquals(transcript, state.messages.first().text)
+        assertEquals(OnboardingTranscriptOrigin.DEVICE_SPEECH, state.lastTranscriptOrigin)
+        assertEquals(OnboardingGenerationOrigin.DETERMINISTIC_FALLBACK, state.lastGenerationOrigin)
+        assertEquals(
+            "先别急着压价格，先确认客户卡的是预算、审批，还是还没看清长期价值。",
+            state.messages[1].text
+        )
+    }
+
+    @Test
+    fun `consultation llm deadline keeps real transcript and uses deterministic generation`() = runTest {
+        val transcript = "客户预算批不下来"
+        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success(transcript)
+        interactionService.consultationDelayMillis = 2_600L
+
+        assertTrue(viewModel.startConsultationRecording())
+        viewModel.finishConsultationRecording()
+
+        dispatcher.scheduler.advanceTimeBy(2_499L)
+        dispatcher.scheduler.runCurrent()
+        assertTrue(viewModel.consultationState.value.isProcessing)
+        assertEquals(
+            OnboardingProcessingPhase.BUILDING_CONSULTATION_REPLY,
+            viewModel.consultationState.value.processingPhase
+        )
+
+        dispatcher.scheduler.advanceTimeBy(1L)
+        advanceUntilIdle()
+
+        val state = viewModel.consultationState.value
+        assertEquals(transcript, state.messages.first().text)
+        assertEquals(OnboardingTranscriptOrigin.DEVICE_SPEECH, state.lastTranscriptOrigin)
+        assertEquals(OnboardingGenerationOrigin.DETERMINISTIC_FALLBACK, state.lastGenerationOrigin)
     }
 
     @Test
@@ -290,7 +370,8 @@ class OnboardingInteractionViewModelTest {
         assertEquals("我是王经理，做 SaaS 销售总监 8 年了，平时用微信。", state.transcript)
         assertEquals("谢谢您的分享，我已经为您建立好了专属档案。", state.acknowledgement)
         assertEquals("王经理", state.draft?.displayName)
-        assertEquals(OnboardingResultOrigin.DEVICE_SPEECH, state.draftOrigin)
+        assertEquals(OnboardingTranscriptOrigin.DEVICE_SPEECH, state.transcriptOrigin)
+        assertEquals(OnboardingGenerationOrigin.LLM, state.generationOrigin)
         assertTrue(state.hasExtractionResult)
     }
 
@@ -327,44 +408,90 @@ class OnboardingInteractionViewModelTest {
     }
 
     @Test
-    fun `profile fallback save writes deterministic onboarding safe values`() = runTest {
-        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Failure(
-            reason = DeviceSpeechFailureReason.NO_MATCH,
-            message = "没有识别到清晰语音"
-        )
-        val realService = RealOnboardingInteractionService()
-        viewModel = OnboardingInteractionViewModel(
-            speechRecognizer = speechRecognizer,
-            interactionService = realService,
-            userProfileRepository = repository
-        )
+    fun `profile cancelled after processing begins falls back and clears processing`() = runTest {
+        speechRecognizer.finishGate = CompletableDeferred()
 
         assertTrue(viewModel.startProfileRecording())
         viewModel.finishProfileRecording()
         dispatcher.scheduler.runCurrent()
 
+        assertTrue(viewModel.profileState.value.isProcessing)
         assertEquals(
-            OnboardingProcessingPhase.DETERMINISTIC_FALLBACK,
+            OnboardingProcessingPhase.RECOGNIZING,
             viewModel.profileState.value.processingPhase
         )
 
-        dispatcher.scheduler.advanceTimeBy(1_200L)
-        dispatcher.scheduler.runCurrent()
+        speechRecognizer.finishGate?.complete(
+            DeviceSpeechRecognitionResult.Failure(
+                reason = DeviceSpeechFailureReason.CANCELLED,
+                message = "语音识别已取消"
+            )
+        )
+        advanceUntilIdle()
+
+        val state = viewModel.profileState.value
+        assertFalse(state.isProcessing)
+        assertEquals(OnboardingProcessingPhase.NONE, state.processingPhase)
+        assertEquals(OnboardingTranscriptOrigin.DETERMINISTIC_FALLBACK, state.transcriptOrigin)
+        assertEquals(OnboardingGenerationOrigin.DETERMINISTIC_FALLBACK, state.generationOrigin)
+        assertTrue(state.hasExtractionResult)
+        assertEquals("李经理", state.draft?.displayName)
+    }
+
+    @Test
+    fun `profile llm failure keeps real transcript and uses deterministic extraction`() = runTest {
+        val transcript = "我是王经理，做 SaaS 销售总监 8 年了，平时主要用微信联系客户。"
+        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success(transcript)
+        interactionService.profileResult =
+            OnboardingProfileExtractionServiceResult.Failure("llm unavailable")
+
+        assertTrue(viewModel.startProfileRecording())
+        viewModel.finishProfileRecording()
+        advanceUntilIdle()
 
         val extracted = viewModel.profileState.value
-        assertEquals(OnboardingResultOrigin.DETERMINISTIC_FALLBACK, extracted.draftOrigin)
-        assertEquals("李经理", extracted.draft?.displayName)
-        assertEquals("科技", extracted.draft?.industry)
+        assertEquals(transcript, extracted.transcript)
+        assertEquals(OnboardingTranscriptOrigin.DEVICE_SPEECH, extracted.transcriptOrigin)
+        assertEquals(OnboardingGenerationOrigin.DETERMINISTIC_FALLBACK, extracted.generationOrigin)
+        assertEquals("王经理", extracted.draft?.displayName)
+        assertEquals("SaaS", extracted.draft?.industry)
 
         viewModel.saveProfileDraft()
         advanceUntilIdle()
 
         val profile = repository.profile.value
-        assertEquals("李经理", profile.displayName)
-        assertEquals("销售经理", profile.role)
-        assertEquals("科技", profile.industry)
-        assertEquals("3年", profile.experienceYears)
+        assertEquals("王经理", profile.displayName)
+        assertEquals("销售总监", profile.role)
+        assertEquals("SaaS", profile.industry)
+        assertEquals("8年", profile.experienceYears)
         assertEquals("微信", profile.communicationPlatform)
+    }
+
+    @Test
+    fun `profile llm deadline keeps real transcript and uses deterministic extraction`() = runTest {
+        val transcript = "我是王经理，做 SaaS 销售总监 8 年了，平时主要用微信联系客户。"
+        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success(transcript)
+        interactionService.profileDelayMillis = 3_600L
+
+        assertTrue(viewModel.startProfileRecording())
+        viewModel.finishProfileRecording()
+
+        dispatcher.scheduler.advanceTimeBy(3_499L)
+        dispatcher.scheduler.runCurrent()
+        assertTrue(viewModel.profileState.value.isProcessing)
+        assertEquals(
+            OnboardingProcessingPhase.BUILDING_PROFILE_RESULT,
+            viewModel.profileState.value.processingPhase
+        )
+
+        dispatcher.scheduler.advanceTimeBy(1L)
+        advanceUntilIdle()
+
+        val state = viewModel.profileState.value
+        assertEquals(transcript, state.transcript)
+        assertEquals(OnboardingTranscriptOrigin.DEVICE_SPEECH, state.transcriptOrigin)
+        assertEquals(OnboardingGenerationOrigin.DETERMINISTIC_FALLBACK, state.generationOrigin)
+        assertEquals("王经理", state.draft?.displayName)
     }
 
     @Test

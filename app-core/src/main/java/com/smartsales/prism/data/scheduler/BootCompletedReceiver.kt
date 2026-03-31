@@ -6,6 +6,8 @@ import android.content.Intent
 import android.util.Log
 import com.smartsales.prism.data.persistence.ScheduledTaskDao
 import com.smartsales.prism.domain.scheduler.AlarmScheduler
+import com.smartsales.prism.domain.scheduler.UrgencyLevel
+import com.smartsales.prism.domain.scheduler.normalizedReminderCascade
 import com.smartsales.prism.domain.time.TimeProvider
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -14,13 +16,12 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import org.json.JSONArray
 
 /**
  * 开机恢复闹钟
  *
  * 设备重启后 AlarmManager 所有闹钟丢失。
- * 此 Receiver 从 Room 中查询所有 hasAlarm=true 的未来任务，
+ * 此 Receiver 从 Room 中查询所有未来精确任务，
  * 逐一调用 AlarmScheduler.scheduleCascade() 重新注册。
  */
 class BootCompletedReceiver : BroadcastReceiver() {
@@ -55,15 +56,18 @@ class BootCompletedReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val nowMs = timeProvider.now.toEpochMilli()
-                val tasks = dao.getFutureTasksWithAlarm(nowMs)
+                val tasks = dao.getFutureExactTasksForReminderRestore(nowMs)
 
                 Log.d(TAG, "需要恢复 ${tasks.size} 个闹钟")
 
                 for (task in tasks) {
-                    val cascade = task.alarmCascadeJson?.let { json ->
-                        val array = JSONArray(json)
-                        List(array.length()) { i -> array.getString(i) }
-                    } ?: listOf("0m")
+                    val urgencyLevel = runCatching { UrgencyLevel.valueOf(task.urgencyLevel) }
+                        .getOrDefault(UrgencyLevel.L3_NORMAL)
+                    val cascade = normalizedReminderCascade(
+                        urgencyLevel = urgencyLevel,
+                        isVague = task.isVague
+                    )
+                    if (cascade.isEmpty()) continue
 
                     scheduler.scheduleCascade(
                         taskId = task.taskId,

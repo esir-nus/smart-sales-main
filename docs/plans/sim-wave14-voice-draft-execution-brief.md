@@ -9,8 +9,8 @@ Owner: Codex
 Reopen the SIM home/chat composer for one narrow interaction upgrade:
 
 - blank draft shows a right-side mic action
-- press-and-hold uses Android device speech recognition
-- recognized text is inserted into the existing input field as an editable draft
+- press-and-hold uses SIM-owned FunASR realtime recognition
+- realtime partial text is shown in the existing input field during capture and the current draft is committed there on release
 - once drafted text exists, the right-side action becomes send
 
 This slice is a SIM-only composer upgrade. It does not reopen the main smart-agent chat and it does not widen scheduler-follow-up voice mutation scope.
@@ -29,7 +29,7 @@ This slice is a SIM-only composer upgrade. It does not reopen the main smart-age
 - active plain chat and active audio-grounded chat composer states
 - onboarding-style six-bar handshake motion reused with SIM styling
 - point-of-use microphone permission
-- device-STT draft only, explicit send still required
+- SIM-owned realtime draft only, explicit send still required
 
 ## Out Of Scope
 
@@ -42,7 +42,8 @@ This slice is a SIM-only composer upgrade. It does not reopen the main smart-age
 ## Implementation Law
 
 - keep `IAgentViewModel` unchanged
-- keep `DeviceSpeechRecognizer` unchanged and reuse it from SIM
+- keep the existing batch `AsrService` untouched and add a SIM-only realtime recognizer seam
+- authenticate SIM realtime capture through backend-issued short-lived DashScope auth instead of a long-lived app-side API key
 - own SIM voice-draft state inside `SimAgentViewModel`
 - cancel stale voice sessions on background/disposal so late recognizer results cannot overwrite the draft
 - keep attach on the left unchanged

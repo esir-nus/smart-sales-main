@@ -2,13 +2,14 @@
 
 > **Status:** Active / Governance
 > **Version:** 2.6 (Draft)
+> **Last Updated:** 2026-03-31
 > **Authority:** This document governs ALL app behaviors. Code must match these specs exactly.
 
 Standalone-mode note:
 
 - This registry governs shared interaction and layering invariants.
 - It does not own the exact shell chrome for standalone modes such as SIM.
-- When SIM narrows or simplifies the shell presentation, use `docs/cerb/sim-shell/spec.md` as the visual owner and keep this registry focused on reusable interaction rules.
+- When a standalone implementation narrows or simplifies shell presentation, keep this registry focused on reusable interaction rules and route active shell truth through `docs/specs/prism-ui-ux-contract.md` plus current shared feature docs.
 
 ---
 

@@ -22,7 +22,7 @@ class AlarmSchedulerTest {
     }
     
     @Test
-    fun `scheduleCascade with L1 critical offsets creates 7 alarms`() = runTest {
+    fun `scheduleCascade with L1 critical offsets creates 3 alarms`() = runTest {
         // Given
         val taskId = "task-flight"
         val eventTime = Instant.parse("2026-02-03T15:00:00Z")
@@ -33,15 +33,15 @@ class AlarmSchedulerTest {
         
         // Then
         val alarms = alarmScheduler.getAlarmsForTask(taskId)
-        assertEquals(6, alarms.size)
-        
-        // 验证偏移量: -2h, -1h, -30m, -15m, -5m, 0m
+        assertEquals(3, alarms.size)
+
+        // 验证偏移量: -1h, -10m, 0m
         val offsets = alarms.mapNotNull { it.offsetMinutes }.sortedDescending()
-        assertEquals(listOf(120, 60, 30, 15, 5, 0), offsets)
+        assertEquals(listOf(60, 10, 0), offsets)
     }
     
     @Test
-    fun `scheduleCascade with L3 normal offsets creates 2 alarms`() = runTest {
+    fun `scheduleCascade with L3 normal offsets creates single deadline alarm`() = runTest {
         // Given
         val taskId = "task-email"
         val eventTime = Instant.parse("2026-02-03T15:00:00Z")
@@ -52,8 +52,8 @@ class AlarmSchedulerTest {
         
         // Then
         val alarms = alarmScheduler.getAlarmsForTask(taskId)
-        assertEquals(3, alarms.size) // -15m, -5m, 0m
-        assertEquals(listOf(15, 5, 0), alarms.map { it.offsetMinutes }.sortedDescending())
+        assertEquals(1, alarms.size)
+        assertEquals(listOf(0), alarms.map { it.offsetMinutes }.sortedDescending())
     }
     
     @Test
@@ -79,7 +79,7 @@ class AlarmSchedulerTest {
         val eventTime = Instant.parse("2026-02-03T15:00:00Z")
         val cascade = UrgencyLevel.buildCascade(UrgencyLevel.L1_CRITICAL)
         alarmScheduler.scheduleCascade(taskId, "Sprint Review", eventTime, cascade)
-        assertEquals(6, alarmScheduler.getAlarmsForTask(taskId).size)
+        assertEquals(3, alarmScheduler.getAlarmsForTask(taskId).size)
         
         // When
         alarmScheduler.cancelReminder(taskId)
@@ -94,7 +94,7 @@ class AlarmSchedulerTest {
         // Given
         val taskId = "task-times"
         val eventTime = Instant.parse("2026-02-03T15:00:00Z")
-        val cascade = UrgencyLevel.buildCascade(UrgencyLevel.L2_IMPORTANT) // -1h, -15m, -5m, -1m
+        val cascade = UrgencyLevel.buildCascade(UrgencyLevel.L2_IMPORTANT) // -30m, 0m
         
         // When
         alarmScheduler.scheduleCascade(taskId, "Performance Review", eventTime, cascade)
@@ -103,13 +103,10 @@ class AlarmSchedulerTest {
         val alarms = alarmScheduler.scheduledAlarms
         
         // 验证每个提醒的触发时间
-        val alarm60m = alarms.find { it.offsetMinutes == 60 }!!
-        assertEquals(Instant.parse("2026-02-03T14:00:00Z"), alarm60m.triggerAt)
-        
-        val alarm15m = alarms.find { it.offsetMinutes == 15 }!!
-        assertEquals(Instant.parse("2026-02-03T14:45:00Z"), alarm15m.triggerAt)
-        
-        val alarm5m = alarms.find { it.offsetMinutes == 5 }!!
-        assertEquals(Instant.parse("2026-02-03T14:55:00Z"), alarm5m.triggerAt)
+        val alarm30m = alarms.find { it.offsetMinutes == 30 }!!
+        assertEquals(Instant.parse("2026-02-03T14:30:00Z"), alarm30m.triggerAt)
+
+        val alarm0m = alarms.find { it.offsetMinutes == 0 }!!
+        assertEquals(Instant.parse("2026-02-03T15:00:00Z"), alarm0m.triggerAt)
     }
 }

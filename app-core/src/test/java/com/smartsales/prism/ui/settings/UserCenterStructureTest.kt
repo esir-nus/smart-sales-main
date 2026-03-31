@@ -14,7 +14,7 @@ class UserCenterStructureTest {
         val source = readSource("app-core/src/main/java/com/smartsales/prism/ui/settings/UserCenterScreen.kt")
 
         assertTrue(source.contains("widthIn(max = 356.dp)"))
-        assertTrue(source.contains("contentAlignment = Alignment.TopCenter"))
+        assertTrue(source.contains("PrismStatusBarTopSafeArea()"))
         assertTrue(source.contains("UserCenterSection(title = \"空间管理\")"))
         assertTrue(source.contains("UserCenterInfoRow("))
         assertTrue(source.contains("label = \"已用空间\""))
@@ -29,7 +29,7 @@ class UserCenterStructureTest {
 
     @Test
     fun `agent shell presents user center as a stronger centered overlay instead of a side drawer`() {
-        val source = readSource("app-core/src/main/java/com/smartsales/prism/ui/AgentShell.kt")
+        val source = readSource("app-core/src/main/java/com/smartsales/prism/ui/AgentShellContent.kt")
 
         assertTrue(source.contains("Color.Black.copy(alpha = 0.38f)"))
         assertTrue(source.contains("padding(top = 12.dp, bottom = 8.dp)"))

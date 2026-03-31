@@ -140,6 +140,15 @@ Meaning:
 - `L2_IMPORTANT` tasks are high-value scheduled work. They still participate in normal Path A collision behavior and may enter Path B when the value gate and candidate extraction justify enrichment.
 - `L1_CRITICAL` tasks are the highest-risk scheduled work. They still participate in normal Path A collision behavior and may enter Path B when the value gate and candidate extraction justify enrichment.
 
+Reminder cascade contract:
+
+- `L1_CRITICAL` must arm `-60m`, `-10m`, and `0m`
+- `L2_IMPORTANT` must arm `-30m` and `0m`
+- `L3_NORMAL` must arm `0m` only
+- `FIRE_OFF` must arm `0m` only
+- `L3_NORMAL` and `FIRE_OFF` may share the same reminder count, but they do not share semantics: `L3_NORMAL` remains a normal scheduled task, while `FIRE_OFF` remains a one-shot fire-off task that bypasses collision logic and must never enter Path B
+- lower layers must normalize reminder metadata such as `hasAlarm` and `alarmCascade` from the task's current urgency contract rather than trusting stale persisted cascade data
+
 Hard gate:
 
 - Path A may schedule `FIRE_OFF`, `L3_NORMAL`, `L2_IMPORTANT`, and `L1_CRITICAL`
@@ -331,6 +340,7 @@ These are the main behavioral universes for Path A creation flow.
 - `明天提醒我打电话` / `tomorrow remind me to go to the airport` must not become `00:00`, current-clock time, lunch time, or any other guessed exact time
 - those inputs belong to `Uni-B` as long as the day anchor is real
 - lawful day-anchor input with an explicit clock cue such as `后天晚上九点去接李总` is still an exact-create universe, not a vague one
+- lawful day-anchor input with an explicit clock cue plus a remaining wake/reminder body such as `明天早上九点喊我起来` is also an exact-create universe and should land as a scheduler task rather than falling through to inspiration-style failure copy
 - if a fallback vague-shaped payload still carries a lawful day anchor plus explicit clock evidence, downstream validation must promote it back into exact create instead of persisting a `时间待定` card
 
 ```text

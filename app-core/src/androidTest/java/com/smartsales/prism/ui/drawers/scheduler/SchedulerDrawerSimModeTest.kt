@@ -26,14 +26,7 @@ class SchedulerDrawerSimModeTest {
             toggleItemSelection("insp_1")
         }
 
-        composeTestRule.setContent {
-            SchedulerDrawer(
-                isOpen = true,
-                onDismiss = {},
-                enableInspirationMultiSelect = false,
-                viewModel = viewModel
-            )
-        }
+        renderSimDrawer(viewModel)
 
         composeTestRule.onNodeWithText("问AI (1)").assertDoesNotExist()
     }
@@ -64,15 +57,10 @@ class SchedulerDrawerSimModeTest {
         }
         var capturedPrompt: String? = null
 
-        composeTestRule.setContent {
-            SchedulerDrawer(
-                isOpen = true,
-                onDismiss = {},
-                onInspirationAskAi = { capturedPrompt = it },
-                enableInspirationMultiSelect = false,
-                viewModel = viewModel
-            )
-        }
+        renderSimDrawer(
+            viewModel = viewModel,
+            onInspirationAskAi = { capturedPrompt = it }
+        )
 
         composeTestRule.onNodeWithText("问AI (1)").assertDoesNotExist()
         composeTestRule.onAllNodesWithText("Ask AI").assertCountEquals(1)
@@ -110,13 +98,7 @@ class SchedulerDrawerSimModeTest {
             )
         }
 
-        composeTestRule.setContent {
-            SchedulerDrawer(
-                isOpen = true,
-                onDismiss = {},
-                viewModel = viewModel
-            )
-        }
+        renderSimDrawer(viewModel)
 
         composeTestRule.onNodeWithText("Visible motion task").assertExists()
 
@@ -161,13 +143,7 @@ class SchedulerDrawerSimModeTest {
             )
         }
 
-        composeTestRule.setContent {
-            SchedulerDrawer(
-                isOpen = true,
-                onDismiss = {},
-                viewModel = viewModel
-            )
-        }
+        renderSimDrawer(viewModel)
 
         composeTestRule.onNodeWithText("Off page motion task").assertDoesNotExist()
         composeTestRule.onNode(
@@ -193,6 +169,8 @@ class SchedulerDrawerSimModeTest {
             SchedulerDrawer(
                 isOpen = true,
                 onDismiss = {},
+                visualMode = SchedulerDrawerVisualMode.SIM,
+                enableInspirationMultiSelect = false,
                 viewModel = viewModel,
                 reminderGuideProvider = { guide },
                 reminderActionOpener = { _, action ->
@@ -234,18 +212,123 @@ class SchedulerDrawerSimModeTest {
             )
         }
 
-        composeTestRule.setContent {
-            SchedulerDrawer(
-                isOpen = true,
-                onDismiss = {},
-                visualMode = SchedulerDrawerVisualMode.SIM,
-                enableInspirationMultiSelect = false,
-                viewModel = viewModel
-            )
-        }
+        renderSimDrawer(viewModel)
 
         composeTestRule.onNodeWithText("17:00 - ...").assertDoesNotExist()
         composeTestRule.onAllNodesWithText("17:00").assertCountEquals(2)
+    }
+
+    @Test
+    fun simModeDoneTaskKeepsCollapsedCardAndDoesNotOpenExpandedDetails() {
+        val doneTask = ScheduledTask(
+            id = "task_done_sim",
+            timeDisplay = "09:00",
+            title = "Finished follow-up call",
+            startTime = LocalDateTime.of(2026, 3, 26, 9, 0).atZone(ZoneId.systemDefault()).toInstant(),
+            durationMinutes = 30,
+            isDone = true,
+            notes = "This note should stay hidden for done cards."
+        )
+        val viewModel = FakeSchedulerViewModel().apply {
+            debugSetTimelineItems(listOf(doneTask))
+        }
+
+        renderSimDrawer(viewModel)
+
+        composeTestRule.onNodeWithText("Finished follow-up call").performClick()
+        composeTestRule.onNodeWithText("This note should stay hidden for done cards.").assertDoesNotExist()
+    }
+
+    @Test
+    fun simModeExpandedDetailsRendersLocationInRealSimPath() {
+        val task = ScheduledTask(
+            id = "task_detail_sim",
+            timeDisplay = "11:00 - 12:00",
+            title = "Client lunch",
+            startTime = LocalDateTime.of(2026, 3, 26, 11, 0).atZone(ZoneId.systemDefault()).toInstant(),
+            endTime = LocalDateTime.of(2026, 3, 26, 12, 0).atZone(ZoneId.systemDefault()).toInstant(),
+            durationMinutes = 60,
+            location = "静安嘉里中心"
+        )
+        val viewModel = FakeSchedulerViewModel().apply {
+            debugSetTimelineItems(listOf(task))
+        }
+
+        renderSimDrawer(viewModel)
+
+        composeTestRule.onNodeWithText("Client lunch").performClick()
+        composeTestRule.onNodeWithText("静安嘉里中心").assertExists()
+    }
+
+    @Test
+    fun simModeExpandedNoteRendersUserNoteCard() {
+        val task = ScheduledTask(
+            id = "task_note_sim",
+            timeDisplay = "13:00 - 14:00",
+            title = "Prepare proposal",
+            startTime = LocalDateTime.of(2026, 3, 26, 13, 0).atZone(ZoneId.systemDefault()).toInstant(),
+            endTime = LocalDateTime.of(2026, 3, 26, 14, 0).atZone(ZoneId.systemDefault()).toInstant(),
+            durationMinutes = 60,
+            notes = "记得带上报价单和样机。"
+        )
+        val viewModel = FakeSchedulerViewModel().apply {
+            debugSetTimelineItems(listOf(task))
+        }
+
+        renderSimDrawer(viewModel)
+
+        composeTestRule.onNodeWithText("Prepare proposal").performClick()
+        composeTestRule.onNodeWithText("用户备注").assertExists()
+        composeTestRule.onNodeWithText("记得带上报价单和样机。").assertExists()
+    }
+
+    @Test
+    fun simModeExpandedTipsRendersCachedTipsCard() {
+        val task = ScheduledTask(
+            id = "task_1",
+            timeDisplay = "10:00 - 11:00",
+            title = "Call John Doe re: pricing",
+            startTime = LocalDateTime.of(2026, 3, 26, 10, 0).atZone(ZoneId.systemDefault()).toInstant(),
+            endTime = LocalDateTime.of(2026, 3, 26, 11, 0).atZone(ZoneId.systemDefault()).toInstant(),
+            durationMinutes = 60,
+            hasAlarm = true,
+            alarmCascade = listOf("-30m", "0m")
+        )
+        val viewModel = FakeSchedulerViewModel().apply {
+            debugSetTimelineItems(listOf(task))
+        }
+
+        renderSimDrawer(viewModel)
+
+        composeTestRule.onNodeWithText("Call John Doe re: pricing").performClick()
+        composeTestRule.onNodeWithText("AI 提示").assertExists()
+        composeTestRule.onNodeWithText("Mention Q3 budget").assertExists()
+        composeTestRule.onNodeWithText("Confirm travel dates").assertExists()
+    }
+
+    @Test
+    fun simModeConflictCardRendersCollapsedBannerAndExpandedDetails() {
+        val task = ScheduledTask(
+            id = "task_conflict_sim",
+            timeDisplay = "14:00 - 15:00",
+            title = "Channel partner sync",
+            startTime = LocalDateTime.of(2026, 3, 26, 14, 0).atZone(ZoneId.systemDefault()).toInstant(),
+            endTime = LocalDateTime.of(2026, 3, 26, 15, 0).atZone(ZoneId.systemDefault()).toInstant(),
+            durationMinutes = 60,
+            hasConflict = true,
+            conflictSummary = "与「季度复盘」时间冲突",
+            location = "8F 会议室"
+        )
+        val viewModel = FakeSchedulerViewModel().apply {
+            debugSetTimelineItems(listOf(task))
+            debugSetDateAttention(emptySet(), emptySet())
+        }
+
+        renderSimDrawer(viewModel)
+
+        composeTestRule.onNodeWithText("与「季度复盘」时间冲突").assertExists()
+        composeTestRule.onNodeWithText("Channel partner sync").performClick()
+        composeTestRule.onNodeWithText("8F 会议室").assertExists()
     }
 
     @Test
@@ -279,5 +362,21 @@ class SchedulerDrawerSimModeTest {
 
     private fun hasDateAttentionKind(kind: String): SemanticsMatcher {
         return SemanticsMatcher.expectValue(SchedulerDateAttentionKindKey, kind)
+    }
+
+    private fun renderSimDrawer(
+        viewModel: FakeSchedulerViewModel,
+        onInspirationAskAi: ((String) -> Unit)? = null
+    ) {
+        composeTestRule.setContent {
+            SchedulerDrawer(
+                isOpen = true,
+                onDismiss = {},
+                visualMode = SchedulerDrawerVisualMode.SIM,
+                onInspirationAskAi = onInspirationAskAi,
+                enableInspirationMultiSelect = false,
+                viewModel = viewModel
+            )
+        }
     }
 }

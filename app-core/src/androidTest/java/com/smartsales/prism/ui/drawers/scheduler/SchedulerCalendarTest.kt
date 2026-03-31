@@ -6,7 +6,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+import java.time.format.DateTimeFormatter
 import java.time.LocalDate
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -54,7 +57,7 @@ class SchedulerCalendarTest {
         }
         
         composeTestRule.onNode(hasTextExactly(todayDay.toString())).assertExists()
-        composeTestRule.onNode(hasTextExactly(offWeekDay.toString())).assertExists()
+        composeTestRule.onAllNodes(hasTextExactly(offWeekDay.toString())).onFirst().assertExists()
     }
 
     @Test
@@ -125,13 +128,84 @@ class SchedulerCalendarTest {
             )
         }
 
-        composeTestRule.onNode(
+        composeTestRule.onAllNodes(
             hasTextExactly(targetDay.toString()) and hasDateAttentionKind("warning")
-        ).performClick()
+        ).onFirst().performClick()
 
-        composeTestRule.onNode(
+        composeTestRule.onAllNodes(
             hasTextExactly(targetDay.toString()) and hasDateAttentionKind("none")
-        ).assertExists()
+        ).onFirst().assertExists()
+    }
+
+    @Test
+    fun calendarMonthPaging_chevronsNavigateVisibleMonth() {
+        val today = LocalDate.now()
+        val formatter = DateTimeFormatter.ofPattern("yyyy年 M月")
+        val nextMonth = today.plusMonths(1).withDayOfMonth(1)
+
+        composeTestRule.setContent {
+            SchedulerCalendar(
+                isExpanded = true,
+                onExpandChange = {},
+                activeDay = 0,
+                onDateSelected = {}
+            )
+        }
+
+        composeTestRule.onNodeWithText(today.withDayOfMonth(1).format(formatter)).assertExists()
+        composeTestRule.onNodeWithContentDescription("Next month").performClick()
+        composeTestRule.onNodeWithText(nextMonth.format(formatter)).assertExists()
+        composeTestRule.onNodeWithContentDescription("Previous month").performClick()
+        composeTestRule.onNodeWithText(today.withDayOfMonth(1).format(formatter)).assertExists()
+    }
+
+    @Test
+    fun calendarMonthPaging_doesNotAcknowledgeAttentionUntilExplicitDayTap() {
+        val today = LocalDate.now()
+        val targetDate = today.plusMonths(1).withDayOfMonth(1)
+        val targetOffset = java.time.temporal.ChronoUnit.DAYS.between(today, targetDate).toInt()
+        val selectedOffsets = mutableListOf<Int>()
+
+        composeTestRule.setContent {
+            var activeDay by remember { mutableStateOf(0) }
+            var unacknowledgedDates by remember { mutableStateOf(setOf(targetOffset)) }
+            var rescheduledDates by remember { mutableStateOf(setOf(targetOffset)) }
+
+            SchedulerCalendar(
+                isExpanded = true,
+                onExpandChange = {},
+                activeDay = activeDay,
+                onDateSelected = { offset ->
+                    selectedOffsets += offset
+                    activeDay = offset
+                    unacknowledgedDates = unacknowledgedDates - offset
+                    rescheduledDates = rescheduledDates - offset
+                },
+                unacknowledgedDates = unacknowledgedDates,
+                rescheduledDates = rescheduledDates
+            )
+        }
+
+        composeTestRule.onNodeWithContentDescription("Next month").performClick()
+        composeTestRule.runOnIdle {
+            assertTrue(selectedOffsets.isEmpty())
+        }
+
+        composeTestRule.onAllNodes(
+            hasTextExactly(targetDate.dayOfMonth.toString()) and hasDateAttentionKind("warning")
+        ).onFirst().assertExists()
+
+        composeTestRule.onAllNodes(
+            hasTextExactly(targetDate.dayOfMonth.toString()) and hasDateAttentionKind("warning")
+        ).onFirst().performClick()
+
+        composeTestRule.runOnIdle {
+            assertEquals(listOf(targetOffset), selectedOffsets)
+        }
+
+        composeTestRule.onAllNodes(
+            hasTextExactly(targetDate.dayOfMonth.toString()) and hasDateAttentionKind("none")
+        ).onFirst().assertExists()
     }
 
     private fun hasDateAttentionKind(kind: String): SemanticsMatcher {

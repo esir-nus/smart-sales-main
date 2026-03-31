@@ -515,7 +515,7 @@ private fun SimHomeHeroTopCap(
     onBoundsChanged: (Rect) -> Unit
 ) {
     val palette = rememberSimHomeHeroPalette()
-    SimVerticalDragTrigger(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .then(
@@ -525,11 +525,6 @@ private fun SimHomeHeroTopCap(
                     Modifier
                 }
             ),
-        direction = DOWN,
-        threshold = 40.dp,
-        velocityThreshold = 1100.dp,
-        enabled = enablePullGesture,
-        onTriggered = onPullOpen
     ) {
         Box(
             modifier = Modifier
@@ -579,7 +574,9 @@ private fun SimHomeHeroTopCap(
                 ) {
                     SimHomeHeroDynamicIsland(
                         items = dynamicIslandItems,
-                        onTap = onSchedulerClick
+                        onTap = onSchedulerClick,
+                        enablePullGesture = enablePullGesture,
+                        onPullOpen = onPullOpen
                     )
                 }
                 SimHomeHeroHeaderSlot {
@@ -600,7 +597,9 @@ private fun SimHomeHeroTopCap(
 @Composable
 private fun SimHomeHeroDynamicIsland(
     items: List<DynamicIslandItem>,
-    onTap: (DynamicIslandTapAction) -> Unit
+    onTap: (DynamicIslandTapAction) -> Unit,
+    enablePullGesture: Boolean = false,
+    onPullOpen: () -> Unit = {}
 ) {
     if (items.isEmpty()) return
 
@@ -639,50 +638,59 @@ private fun SimHomeHeroDynamicIsland(
         currentItemKey = items[nextIndex].stableKey
     }
 
-    Row(
+    SimVerticalDragTrigger(
         modifier = Modifier
             .widthIn(max = SimHomeHeroTokens.IslandMaxWidth)
-            .testTag(SIM_DYNAMIC_ISLAND_TEST_TAG)
-            .shadow(
-                elevation = if (PrismThemeDefaults.isDarkTheme) 0.dp else 3.dp,
-                shape = CircleShape,
-                clip = false,
-                ambientColor = chroma.shadow,
-                spotColor = chroma.shadow
-            )
-            .background(chroma.surface, CircleShape)
-            .border(1.dp, chroma.border, CircleShape)
-            .defaultMinSize(minHeight = 28.dp)
-            .clickable { onTap(currentItem.tapAction) }
-            .padding(
-                horizontal = SimHomeHeroTokens.IslandHorizontalPadding,
-                vertical = SimHomeHeroTokens.IslandVerticalPadding
-            ),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
+            .testTag(SIM_DYNAMIC_ISLAND_TEST_TAG),
+        direction = DOWN,
+        threshold = 40.dp,
+        velocityThreshold = 1100.dp,
+        enabled = enablePullGesture,
+        onTriggered = onPullOpen
     ) {
-        Canvas(modifier = Modifier.size(SimHomeHeroTokens.IslandDotCanvasSize)) {
-            drawCircle(
-                color = chroma.dot.copy(alpha = if (currentItem.isConflict) 0.32f * pulse else 0.18f),
-                radius = size.minDimension * 0.5f
-            )
-            drawCircle(
-                color = chroma.dot.copy(alpha = if (currentItem.isConflict) pulse else 1f),
-                radius = size.minDimension * 0.30f
+        Row(
+            modifier = Modifier
+                .shadow(
+                    elevation = if (PrismThemeDefaults.isDarkTheme) 0.dp else 3.dp,
+                    shape = CircleShape,
+                    clip = false,
+                    ambientColor = chroma.shadow,
+                    spotColor = chroma.shadow
+                )
+                .background(chroma.surface, CircleShape)
+                .border(1.dp, chroma.border, CircleShape)
+                .defaultMinSize(minHeight = 28.dp)
+                .clickable { onTap(currentItem.tapAction) }
+                .padding(
+                    horizontal = SimHomeHeroTokens.IslandHorizontalPadding,
+                    vertical = SimHomeHeroTokens.IslandVerticalPadding
+                ),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Canvas(modifier = Modifier.size(SimHomeHeroTokens.IslandDotCanvasSize)) {
+                drawCircle(
+                    color = chroma.dot.copy(alpha = if (currentItem.isConflict) 0.32f * pulse else 0.18f),
+                    radius = size.minDimension * 0.5f
+                )
+                drawCircle(
+                    color = chroma.dot.copy(alpha = if (currentItem.isConflict) pulse else 1f),
+                    radius = size.minDimension * 0.30f
+                )
+            }
+            Box(modifier = Modifier.width(SimHomeHeroTokens.IslandDotGap))
+            Text(
+                text = currentItem.displayText,
+                style = TextStyle(
+                    brush = Brush.linearGradient(chroma.textGradient),
+                    fontSize = SimHomeHeroTokens.IslandTextSize,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = SimHomeHeroTokens.IslandLetterSpacing
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
-        Box(modifier = Modifier.width(SimHomeHeroTokens.IslandDotGap))
-        Text(
-            text = currentItem.displayText,
-            style = TextStyle(
-                brush = Brush.linearGradient(chroma.textGradient),
-                fontSize = SimHomeHeroTokens.IslandTextSize,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = SimHomeHeroTokens.IslandLetterSpacing
-            ),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
     }
 }
 

@@ -49,12 +49,6 @@ abstract class AiCoreModule {
 
     @Binds
     @Singleton
-    abstract fun bindDashscopeRealtimeTokenProvider(
-        impl: BackendDashscopeRealtimeTokenProvider
-    ): DashscopeRealtimeTokenProvider
-
-    @Binds
-    @Singleton
     abstract fun bindTingwuCredentialsProvider(
         impl: BuildConfigTingwuCredentialsProvider
     ): TingwuCredentialsProvider

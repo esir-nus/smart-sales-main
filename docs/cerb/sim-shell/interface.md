@@ -127,7 +127,7 @@ Guarantees:
 - the shell may open scheduler from a downward pull started inside the upper shell activation zone when the shell is otherwise clear
 - the shell may open audio browse from an upward pull started inside the lower shell activation zone when the shell is otherwise clear
 - the current shipped shell opener is layout-anchored rather than fixed top/middle/bottom thirds
-- the top monolith itself owns the scheduler-open downward drag observation
+- the dynamic island owns the scheduler-open downward drag observation
 - the bottom monolith itself owns the audio-open upward drag observation
 - shell open gestures must not depend on a separate high-z overlay sitting above the live header/composer chrome
 - interactive header/composer taps remain direct until a deliberate vertical drag has clearly direction-locked into a drawer-open gesture
@@ -153,7 +153,7 @@ Gesture notes:
 
 - edge gestures are shell-owned routing only; they do not make chat overscroll a drawer trigger
 - middle-zone scrolling remains chat/history-safe by default
-- scheduler dismisses from its bottom handle by tap or downward swipe
+- scheduler dismisses from the visible calendar handle by upward swipe; the current SIM sheet may also keep the bottom handle affordance during transition
 - SIM audio dismisses from its handle downward
 - shell open gestures should prefer deliberate directional pulls over generic browsing scroll
 

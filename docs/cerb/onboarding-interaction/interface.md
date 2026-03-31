@@ -118,6 +118,6 @@ Rules:
   - consultation about `2.5s`
   - profile extraction about `3.5s`
 - the service layer must not stack a second onboarding-specific timeout underneath that UI-owned watchdog
-- realtime auth/token failures must preserve typed diagnostic evidence in logs, including safe category plus HTTP status when the backend token endpoint returns one
+- realtime auth failures must preserve typed diagnostic evidence in logs, including safe category plus vendor code when the SDK rejects credentials
 - if a real transcript exists and reply/extraction generation fails, the UI preserves that transcript and surfaces retry state without synthesizing a reply or extraction draft
 - failures must stay in the onboarding lane and must not mutate profile state

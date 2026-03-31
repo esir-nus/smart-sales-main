@@ -321,6 +321,7 @@ fun SchedulerDrawer(
                         onExpandChange = { isCalendarExpanded = it },
                         activeDay = activeDayOffset,
                         onDateSelected = { viewModel.onDateSelected(it) },
+                        onDismiss = if (isSimVisualMode) onDismiss else null,
                         unacknowledgedDates = unacknowledgedDates,
                         rescheduledDates = rescheduledDates
                     )

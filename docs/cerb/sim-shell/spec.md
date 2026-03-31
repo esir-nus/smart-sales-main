@@ -294,10 +294,10 @@ Still deferred in this slice:
 
 SIM keeps the shell gesture model zone-scoped and velocity-aware.
 
-- when the normal SIM shell is visible and no support overlay is active, a downward pull that begins in the upper activation region opens the scheduler drawer
+- when the normal SIM shell is visible and no support overlay is active, a downward pull that begins on the dynamic island opens the scheduler drawer
 - when the normal SIM shell is visible and no support overlay is active, an upward pull that begins in the lower activation region opens the audio drawer in browse mode
 - the current shipped activation model is chrome-anchored rather than full-screen thirds
-- the upper activation region is the full shell width from the top edge through the measured SIM header bottom, plus a small 24dp bleed below the header so active-chat pulls still catch reliably
+- the scheduler-open activation region is the visible dynamic island hit target rather than the full top header band
 - the lower activation region is the full shell width from about 12dp above the measured SIM composer top through the bottom edge so the audio opener remains reachable after chat grows
 - shell-owned gesture layers may cover the live header/composer chrome for drag detection, but they must not steal ordinary taps from the attach button, text field, or send button
 - the center body remains a protected chat/history scroll zone rather than a drawer-entry surface
@@ -307,7 +307,7 @@ SIM keeps the shell gesture model zone-scoped and velocity-aware.
 - velocity acts as an override for clearly intentional pulls, not as a replacement for directional and distance checks
 - opening and closing thresholds should use light hysteresis so drawers do not feel twitchy near the commit line
 - the bottom-zone audio-open gesture is disabled while the IME/keyboard is visible
-- scheduler dismissal remains handle-first, bottom-anchored, and tap-or-downward-drag
+- scheduler dismissal must work from the visible calendar handle via upward swipe; the current SIM sheet may also keep the bottom handle affordance during transition
 - SIM audio dismissal is handle-first and downward
 - scheduler month chevrons may page visible month locally, but they must not acknowledge date attention; only explicit day tap may acknowledge and clear attention state
 - list scrolling or general chat overscroll must not act as an alternate drawer-open gesture

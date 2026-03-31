@@ -204,8 +204,8 @@ Policy:
   - consultation generation about `2.5s`
   - profile extraction about `3.5s`
 - onboarding keeps only the guards proved necessary for this slice: stale request invalidation, explicit user/dispose cancellation, and bounded deadlines
-- realtime auth/token failures must preserve typed diagnosis in logs across token fetch, dialog start, and session failure; the client must not flatten quota/config/network/auth causes into one opaque internal branch before evidence is recorded
-- the external `POST /api/ai/dashscope/realtime-token` contract must preserve enough safe evidence for diagnosis, at minimum meaningful HTTP status for 401/403, 429, and 5xx classes
+- the shared realtime lane currently authenticates through direct `DASHSCOPE_API_KEY` SDK init rather than a custom backend token endpoint
+- realtime auth failures must preserve typed diagnosis in logs across direct-key preflight, SDK start, and session failure; the client must not flatten config/auth rejection into one opaque internal branch before evidence is recorded
 - if realtime or generation fails, onboarding stays in retry UI; when a transcript already exists, keep it visible and do not synthesize a reply or draft
 
 ## Ownership Boundary

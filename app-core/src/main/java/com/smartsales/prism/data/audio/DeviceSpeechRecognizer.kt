@@ -519,7 +519,7 @@ class RealDeviceSpeechRecognizer @Inject constructor(
                     "finish_realtime_session outcome=success length=${result.text.length}"
 
                 is SimRealtimeSpeechRecognitionResult.Failure ->
-                    "finish_realtime_session outcome=failure reason=${result.reason} authCategory=${result.diagnostic.logName} httpStatus=${result.diagnostic?.httpStatus.logValue} vendorCode=${result.diagnostic?.vendorCode.logValue} message=${result.message}"
+                    "finish_realtime_session outcome=failure reason=${result.reason} authCategory=${result.diagnostic.logName} vendorCode=${result.diagnostic?.vendorCode.logValue} message=${result.message}"
             }
         )
         return when (result) {
@@ -582,7 +582,7 @@ private val SimRealtimeSpeechEvent.logName: String
         is SimRealtimeSpeechEvent.PartialTranscript -> "partial_transcript"
         is SimRealtimeSpeechEvent.FinalTranscript -> "final_transcript"
         is SimRealtimeSpeechEvent.Failure ->
-            "failure:${reason.name}:auth=${diagnostic.logName}:httpStatus=${diagnostic?.httpStatus.logValue}:vendorCode=${diagnostic?.vendorCode.logValue}"
+            "failure:${reason.name}:auth=${diagnostic.logName}:vendorCode=${diagnostic?.vendorCode.logValue}"
         SimRealtimeSpeechEvent.Cancelled -> "cancelled"
     }
 

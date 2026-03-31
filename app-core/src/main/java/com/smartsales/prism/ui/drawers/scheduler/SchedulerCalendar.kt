@@ -45,6 +45,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.SemanticsPropertyKey
 import androidx.compose.ui.semantics.SemanticsPropertyReceiver
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -55,6 +56,8 @@ import java.time.temporal.ChronoUnit
 
 val SchedulerDateAttentionKindKey = SemanticsPropertyKey<String>("SchedulerDateAttentionKind")
 var SemanticsPropertyReceiver.schedulerDateAttentionKind by SchedulerDateAttentionKindKey
+
+internal const val SCHEDULER_CALENDAR_HANDLE_TEST_TAG = "scheduler_calendar_handle"
 
 private val SchedulerMonthTitleFormatter = DateTimeFormatter.ofPattern("yyyy年 M月")
 private val SchedulerWeekdayLabels = listOf("一", "二", "三", "四", "五", "六", "日")
@@ -69,6 +72,7 @@ fun SchedulerCalendar(
     onExpandChange: (Boolean) -> Unit,
     activeDay: Int,
     onDateSelected: (Int) -> Unit,
+    onDismiss: (() -> Unit)? = null,
     unacknowledgedDates: Set<Int> = emptySet(),
     rescheduledDates: Set<Int> = emptySet()
 ) {
@@ -164,7 +168,8 @@ fun SchedulerCalendar(
 
         ExpansionHandle(
             isExpanded = isExpanded,
-            onExpandChange = onExpandChange
+            onExpandChange = onExpandChange,
+            onDismiss = onDismiss
         )
     }
 }
@@ -363,7 +368,8 @@ private fun CalendarDateCell(
 @Composable
 private fun ExpansionHandle(
     isExpanded: Boolean,
-    onExpandChange: (Boolean) -> Unit
+    onExpandChange: (Boolean) -> Unit,
+    onDismiss: (() -> Unit)? = null
 ) {
     val visuals = currentSchedulerDrawerVisuals
     var dragOffset by remember { mutableStateOf(0f) }
@@ -372,16 +378,21 @@ private fun ExpansionHandle(
         modifier = Modifier
             .fillMaxWidth()
             .height(28.dp)
+            .testTag(SCHEDULER_CALENDAR_HANDLE_TEST_TAG)
             .draggable(
                 orientation = Orientation.Vertical,
                 state = rememberDraggableState { delta ->
                     dragOffset += delta
                 },
                 onDragStopped = {
-                    if (!isExpanded && dragOffset > 30f) {
+                    if (dragOffset < -30f) {
+                        if (onDismiss != null) {
+                            onDismiss()
+                        } else if (isExpanded) {
+                            onExpandChange(false)
+                        }
+                    } else if (!isExpanded && dragOffset > 30f) {
                         onExpandChange(true)
-                    } else if (isExpanded && dragOffset < -30f) {
-                        onExpandChange(false)
                     }
                     dragOffset = 0f
                 }

@@ -15,6 +15,7 @@ import com.smartsales.prism.ui.AgentIntelligenceScreen
 import com.smartsales.prism.ui.AgentIntelligenceVisualMode
 import com.smartsales.prism.ui.components.DynamicIslandItem
 import com.smartsales.prism.ui.components.DynamicIslandTapAction
+import com.smartsales.prism.ui.drawers.scheduler.SCHEDULER_CALENDAR_HANDLE_TEST_TAG
 import com.smartsales.prism.ui.drawers.SCHEDULER_DRAWER_HANDLE_TEST_TAG
 import com.smartsales.prism.ui.drawers.SchedulerDrawer
 import com.smartsales.prism.ui.drawers.scheduler.FakeSchedulerViewModel
@@ -30,7 +31,29 @@ class SimDrawerGestureTest {
     val composeTestRule = createComposeRule()
 
     @Test
-    fun activeChatTopZoneDragDown_opensSchedulerCallback() {
+    fun dynamicIslandDragDown_opensSchedulerCallback() {
+        var openCount = 0
+
+        setMountedSimGestureShell(
+            viewModel = activeChatViewModel(),
+            onOpenScheduler = { openCount += 1 }
+        )
+
+        composeTestRule.onNodeWithTag(SIM_DYNAMIC_ISLAND_TEST_TAG)
+            .assertExists()
+            .performTouchInput {
+                down(center)
+                moveBy(Offset(0f, 300f))
+                up()
+            }
+
+        composeTestRule.runOnIdle {
+            assertEquals(1, openCount)
+        }
+    }
+
+    @Test
+    fun headerDragDown_outsideDynamicIsland_doesNotOpenSchedulerCallback() {
         var openCount = 0
 
         setMountedSimGestureShell(
@@ -41,13 +64,14 @@ class SimDrawerGestureTest {
         composeTestRule.onNodeWithTag(SIM_HEADER_TEST_TAG)
             .assertExists()
             .performTouchInput {
-                down(center)
+                val start = Offset(left + 24f, centerY)
+                down(start)
                 moveBy(Offset(0f, 300f))
                 up()
             }
 
         composeTestRule.runOnIdle {
-            assertEquals(1, openCount)
+            assertEquals(0, openCount)
         }
     }
 
@@ -148,10 +172,10 @@ class SimDrawerGestureTest {
             onOpenScheduler = { schedulerOpenCount += 1 }
         )
 
-        composeTestRule.onNodeWithTag(SIM_HEADER_TEST_TAG).assertExists()
+        composeTestRule.onNodeWithTag(SIM_DYNAMIC_ISLAND_TEST_TAG).assertExists()
         composeTestRule.onNodeWithTag(SIM_INPUT_BAR_TEST_TAG).assertDoesNotExist()
 
-        composeTestRule.onNodeWithTag(SIM_HEADER_TEST_TAG)
+        composeTestRule.onNodeWithTag(SIM_DYNAMIC_ISLAND_TEST_TAG)
             .performTouchInput {
                 down(center)
                 moveBy(Offset(0f, 300f))
@@ -368,6 +392,33 @@ class SimDrawerGestureTest {
 
         composeTestRule.runOnIdle {
             assertEquals(0, dismissCount)
+        }
+    }
+
+    @Test
+    fun simSchedulerCalendarHandle_dragUp_dismissesDrawer() {
+        var dismissCount = 0
+
+        composeTestRule.setContent {
+            SchedulerDrawer(
+                isOpen = true,
+                onDismiss = { dismissCount += 1 },
+                visualMode = SchedulerDrawerVisualMode.SIM,
+                enableInspirationMultiSelect = false,
+                viewModel = FakeSchedulerViewModel()
+            )
+        }
+
+        composeTestRule.onNodeWithTag(SCHEDULER_CALENDAR_HANDLE_TEST_TAG)
+            .assertExists()
+            .performTouchInput {
+                down(center)
+                moveBy(Offset(0f, -120f))
+                up()
+            }
+
+        composeTestRule.runOnIdle {
+            assertEquals(1, dismissCount)
         }
     }
 

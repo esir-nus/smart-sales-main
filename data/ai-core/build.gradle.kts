@@ -21,7 +21,6 @@ fun String.escapeForBuildConfig(): String = this.replace("\\", "\\\\").replace("
 val localProperties = loadLocalProperties()
 val dashscopeApiKey = localProperties.getProperty("DASHSCOPE_API_KEY", "")
 val dashscopeModel = localProperties.getProperty("DASHSCOPE_MODEL", "qwen-turbo")
-val dashscopeAuthBaseUrl = localProperties.getProperty("DASHSCOPE_AUTH_BASE_URL", "")
 val tingwuAppKey = localProperties.getProperty("TINGWU_APP_KEY", "")
 val tingwuApiKey = localProperties.getProperty("TINGWU_API_KEY", tingwuAppKey)
 val tingwuAccessKeyId = localProperties.getProperty("ALIBABA_CLOUD_ACCESS_KEY_ID", "")
@@ -55,11 +54,6 @@ android {
         minSdk = 26
         buildConfigField("String", "DASHSCOPE_API_KEY", "\"${dashscopeApiKey.escapeForBuildConfig()}\"")
         buildConfigField("String", "DASHSCOPE_MODEL", "\"${dashscopeModel.escapeForBuildConfig()}\"")
-        buildConfigField(
-            "String",
-            "DASHSCOPE_AUTH_BASE_URL",
-            "\"${dashscopeAuthBaseUrl.escapeForBuildConfig()}\""
-        )
         buildConfigField("String", "TINGWU_APP_KEY", "\"${tingwuAppKey.escapeForBuildConfig()}\"")
         buildConfigField("String", "TINGWU_API_KEY", "\"${tingwuApiKey.escapeForBuildConfig()}\"")
         buildConfigField(

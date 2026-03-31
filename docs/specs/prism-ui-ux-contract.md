@@ -137,7 +137,7 @@ Role: This document is strictly an index that maps UI modules, components, and f
 
 | Direction | Gesture | Opens | Notes |
 |-----------|---------|-------|-------|
-| **↓ Top → Down** | Pull from top activation band | Scheduler Drawer | Header / top-edge band only; shipped SIM band is 88dp tall; center content stays scroll-safe |
+| **↓ Top → Down** | Pull down from dynamic island | Scheduler Drawer | Shipped SIM opener is the dynamic-island hit target, not the full header band; center content stays scroll-safe |
 | **↑ Bottom → Up** | Pull from bottom activation band | Audio Drawer | Bottom-edge strip only; shipped SIM strip is 28dp tall and must not overlap the composer hit area |
 
 ### Standalone Mode Note

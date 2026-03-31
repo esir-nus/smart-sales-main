@@ -208,6 +208,29 @@ class SchedulerCalendarTest {
         ).onFirst().assertExists()
     }
 
+    @Test
+    fun calendarHandle_tapStillTogglesExpansionWhenDismissHookExists() {
+        composeTestRule.setContent {
+            var isExpanded by remember { mutableStateOf(false) }
+            SchedulerCalendar(
+                isExpanded = isExpanded,
+                onExpandChange = { isExpanded = it },
+                activeDay = 0,
+                onDateSelected = {},
+                onDismiss = {}
+            )
+        }
+
+        composeTestRule.onNodeWithTag(SCHEDULER_CALENDAR_HANDLE_TEST_TAG)
+            .assertExists()
+            .performClick()
+
+        val todayDay = LocalDate.now().dayOfMonth
+        val weekStart = ((todayDay - 1) / 7) * 7 + 1
+        val offWeekDay = if (weekStart > 1) weekStart - 1 else weekStart + 7
+        composeTestRule.onAllNodes(hasTextExactly(offWeekDay.toString())).onFirst().assertExists()
+    }
+
     private fun hasDateAttentionKind(kind: String): SemanticsMatcher {
         return SemanticsMatcher.expectValue(SchedulerDateAttentionKindKey, kind)
     }

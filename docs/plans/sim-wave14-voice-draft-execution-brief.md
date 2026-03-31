@@ -3,6 +3,7 @@
 Status: Implemented
 Date: 2026-03-28
 Owner: Codex
+Current Reading Priority: Historical reference only; not current source of truth.
 
 ## Objective
 
@@ -15,12 +16,23 @@ Reopen the SIM home/chat composer for one narrow interaction upgrade:
 
 This slice is a SIM-only composer upgrade. It does not reopen the main smart-agent chat and it does not widen scheduler-follow-up voice mutation scope.
 
-## Source Of Truth
+## Current Active Truth
+
+- `docs/plans/tracker.md`
+- `docs/core-flow/sim-shell-routing-flow.md`
+- `docs/core-flow/sim-audio-artifact-chat-flow.md`
+- `docs/cerb/audio-management/spec.md`
+- `docs/cerb/audio-management/interface.md`
+- `docs/cerb/tingwu-pipeline/spec.md`
+- `docs/cerb/tingwu-pipeline/interface.md`
+- `docs/cerb/onboarding-interaction/interface.md`
+- `docs/cerb/interface-map.md`
+
+## Historical Shards At The Time
 
 - `docs/cerb/sim-shell/spec.md`
 - `docs/cerb/sim-audio-chat/spec.md`
 - `docs/cerb/sim-audio-chat/interface.md`
-- `docs/cerb/onboarding-interaction/interface.md`
 - `docs/plans/sim-tracker.md`
 
 ## Scope

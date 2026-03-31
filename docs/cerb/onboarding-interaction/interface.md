@@ -119,4 +119,5 @@ Rules:
   - profile extraction about `3.5s`
 - the service layer must not stack a second onboarding-specific timeout underneath that UI-owned watchdog
 - deterministic local generation remains backup only; if a real transcript exists, fallback must stay grounded in that transcript rather than injecting fake user content
+- debug investigation builds may disable deterministic fallback so the UI surfaces calm retry/error state and preserves any real transcript without synthesizing a reply or extraction draft
 - failures must stay in the onboarding lane and must not mutate profile state

@@ -1,14 +1,15 @@
-# Prism UI Element Registry (Atomic Source of Truth)
+# Prism UI Element Registry
 
 > **Status:** Active / Governance
 > **Version:** 2.6 (Draft)
 > **Last Updated:** 2026-03-31
-> **Authority:** This document governs ALL app behaviors. Code must match these specs exactly.
+> **Authority:** This document governs shared interaction, layering, and reusable UI behavior invariants. Code must match these shared rules where they apply.
 
 Standalone-mode note:
 
 - This registry governs shared interaction and layering invariants.
 - It does not own the exact shell chrome for standalone modes such as SIM.
+- It does not own feature-level product behavior or shell-specific source of truth.
 - When a standalone implementation narrows or simplifies shell presentation, keep this registry focused on reusable interaction rules and route active shell truth through `docs/specs/prism-ui-ux-contract.md` plus current shared feature docs.
 
 ---

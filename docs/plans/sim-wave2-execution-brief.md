@@ -5,9 +5,10 @@
 **Wave:** 2
 **Mission:** SIM standalone prototype
 **Behavioral Authority:** `docs/core-flow/sim-audio-artifact-chat-flow.md`
-**Owning Spec:** `docs/cerb/sim-audio-chat/spec.md`
-**Boundary Brief:** `docs/plans/sim_implementation_brief.md`
-**Mission Tracker:** `docs/plans/sim-tracker.md`
+**Current Reading Priority:** Historical reference only; not current source of truth.
+**Historical Owning Spec At The Time:** `docs/cerb/sim-audio-chat/spec.md`
+**Historical Boundary Brief:** `docs/plans/sim_implementation_brief.md`
+**Current Active Truth:** `docs/plans/tracker.md`, `docs/core-flow/sim-audio-artifact-chat-flow.md`, `docs/cerb/audio-management/spec.md`, `docs/cerb/audio-management/interface.md`, `docs/cerb/tingwu-pipeline/spec.md`, `docs/cerb/tingwu-pipeline/interface.md`, `docs/cerb/interface-map.md`
 
 ---
 
@@ -26,13 +27,16 @@ It is the execution brief for the SIM audio informational-mode wave.
 
 Before coding Wave 2, read in this order:
 
-1. `docs/plans/sim-tracker.md`
-2. `docs/plans/sim_implementation_brief.md`
-3. `docs/core-flow/sim-audio-artifact-chat-flow.md`
-4. `docs/cerb/sim-audio-chat/spec.md`
-5. this file
+1. `docs/plans/tracker.md`
+2. `docs/core-flow/sim-audio-artifact-chat-flow.md`
+3. `docs/cerb/audio-management/spec.md`
+4. `docs/cerb/audio-management/interface.md`
+5. `docs/cerb/tingwu-pipeline/spec.md`
+6. `docs/cerb/tingwu-pipeline/interface.md`
+7. `docs/cerb/interface-map.md`
+8. this file as historical execution context
 
-If code reality forces a boundary or ownership change, update the tracker and the owning audio/chat docs in the same session.
+If code reality forces a boundary or ownership change, update the main tracker and the current shared audio/chat docs in the same session.
 
 ---
 
@@ -180,10 +184,12 @@ Do not validate only on warm state.
 
 If Wave 2 changes audio ownership, storage names, or artifact behavior, sync these docs in the same session:
 
-- `docs/plans/sim-tracker.md`
 - `docs/plans/tracker.md`
-- `docs/cerb/sim-audio-chat/spec.md`
-- `docs/cerb/sim-audio-chat/interface.md`
+- `docs/core-flow/sim-audio-artifact-chat-flow.md`
+- `docs/cerb/audio-management/spec.md`
+- `docs/cerb/audio-management/interface.md`
+- `docs/cerb/tingwu-pipeline/spec.md`
+- `docs/cerb/tingwu-pipeline/interface.md`
 - `docs/cerb/interface-map.md` if ownership edges become real
 
 If the implementation hardens or changes the inventory source decision, update:

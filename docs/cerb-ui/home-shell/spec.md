@@ -18,7 +18,7 @@ It is the visual source of truth for:
 It does not own:
 
 - chat-state rendering after the session leaves the empty state
-- the SIM home/here active-discussion family, which is owned by `docs/cerb/sim-shell/spec.md`
+- the shared home/here active-discussion family after the session leaves the empty state; current ownership routes through `docs/specs/prism-ui-ux-contract.md`, `docs/core-flow/sim-shell-routing-flow.md`, `docs/cerb-ui/dynamic-island/spec.md`, and `docs/cerb/interface-map.md`
 - drawer inner contents
 - backend, routing, session model, or plugin behavior
 - Dynamic Island internal behavior, which is owned by `docs/cerb-ui/dynamic-island/spec.md`

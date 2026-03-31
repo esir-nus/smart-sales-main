@@ -1,9 +1,12 @@
-# SIM Mission Tracker
+# SIM Mission Tracker (Retired Campaign Memory)
 
-> **Mission**: Standalone prototype app with two main feature lanes, Scheduler Path A and default SIM chat with optional Tingwu audio context, plus a decoupled connectivity support module.
-> **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Accepted / Wave 6 Isolation Accepted / Wave 7 Feature Acceptance Accepted / Wave 7 Isolation Acceptance Accepted / Wave 7 Closeout Synced / Wave 8 Task-Scoped Scheduler Follow-Up Accepted / Wave 9 Physical-Badge E2E Blocked / Wave 10 Badge Ingress Repair In Progress / Wave 11 General Chat Pivot L1 Accepted / Wave 12 Scheduler-Drawer Voice Reschedule L1 Accepted / Wave 13 Launcher-Core Theme Visibility L1 Accepted / Wave 14 Voice-Draft Composer L1 Verified
+> **Role**: Historical campaign memory for the standalone SIM mission.
+> **Authority**: Historical only. This file no longer acts as active non-Mono product truth.
+> **Historical Mission**: Standalone prototype app with two main feature lanes, Scheduler Path A and default SIM chat with optional Tingwu audio context, plus a decoupled connectivity support module.
+> **Historical Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Accepted / Wave 6 Isolation Accepted / Wave 7 Feature Acceptance Accepted / Wave 7 Isolation Acceptance Accepted / Wave 7 Closeout Synced / Wave 8 Task-Scoped Scheduler Follow-Up Accepted / Wave 9 Physical-Badge E2E Blocked / Wave 10 Badge Ingress Repair In Progress / Wave 11 General Chat Pivot L1 Accepted / Wave 12 Scheduler-Drawer Voice Reschedule L1 Accepted / Wave 13 Launcher-Core Theme Visibility L1 Accepted / Wave 14 Voice-Draft Composer L1 Verified
 > **Started**: 2026-03-19
-> **Current Gate**: Wave 7 closeout remains accepted on **2026-03-22**. Post-closeout `T8.0` task-scoped scheduler follow-up was accepted on **2026-03-22** as a narrow SIM-owned continuity upgrade. `Wave 9` is now blocked by missing real badge recording ingress, `Wave 10` remains the active ESP32/connectivity repair mini-wave, `Wave 11` now has docs/code/L1 verification aligned on **2026-03-22** so normal chatting is directly available with persona plus user metadata while audio stays optional mid-session context, `Wave 12` now has docs/code/L1 verification aligned on **2026-03-23** so the scheduler drawer mic can reschedule one clearly resolved task while ordinary SIM chat and audio-grounded chat remain non-mutating, `Wave 13` now has docs/code/L1 verification aligned on **2026-03-26** so the normal launcher-path SIM host follows the shared app theme preference across launcher-core surfaces (`home/chat`, header, history drawer, and settings drawer), and `Wave 14` now has docs/code/L1 verification aligned on **2026-03-28** so the SIM home/chat composer supports device-STT voice drafting with explicit send still required. Fresh SIM install / reinstall now also reuses the shell-owned `SIM_CONNECTIVITY` onboarding path as a forced first-launch gate before ordinary shell use, while post-completion replay still remains manual and setup-owned. Scheduler drawer, audio drawer, connectivity manager/modal, and onboarding/setup remain explicit light-theme defers for later slices. On **2026-03-24**, the reschedule experiment moved target resolution to a global scheduler-owned contract: selected/opened task state and visible page/date no longer carry semantic authority, weak recent-task hints are still allowed, create-time `keyPerson` / `location` hints are now persisted for later matching, and the delivered implementation now feeds the extractor from a scheduler-owned active retrieval shortlist built from all non-done tasks. The follow-up-only V2 shadow contract remains time-semantics-only telemetry after global target resolution; it still does not change live write authority. On **2026-03-25**, SIM restored the documented `FIRE_OFF` collision law across both shared board reads and SIM-owned direct reschedule paths, so fire-off reminders no longer block or get blocked after scheduler-drawer or badge follow-up reschedule. Device-level re-entry proof is still required before returning to physical-badge follow-up validation.
+> **Retirement Note (2026-03-31)**: Use `docs/plans/tracker.md`, `docs/specs/base-runtime-unification.md`, the SIM core-flow docs, and `docs/cerb/interface-map.md` for active truth. Deprecated SIM Cerb shards and SIM-origin concept docs may still appear below as historical references only.
+> **Historical Final Gate Summary**: Wave 7 closeout remains accepted on **2026-03-22**. Post-closeout `T8.0` task-scoped scheduler follow-up was accepted on **2026-03-22** as a narrow SIM-owned continuity upgrade. `Wave 9` remained blocked by missing real badge recording ingress, `Wave 10` remained the ESP32/connectivity repair mini-wave, `Wave 11` aligned docs/code/L1 verification on **2026-03-22** so normal chatting became directly available with persona plus user metadata while audio stayed optional mid-session context, `Wave 12` aligned docs/code/L1 verification on **2026-03-23** so the scheduler drawer mic could reschedule one clearly resolved task while ordinary SIM chat and audio-grounded chat remained non-mutating, `Wave 13` aligned docs/code/L1 verification on **2026-03-26** so the normal launcher-path SIM host followed the shared app theme preference across launcher-core surfaces (`home/chat`, header, history drawer, and settings drawer), and `Wave 14` aligned docs/code/L1 verification on **2026-03-28** so the SIM home/chat composer supported device-STT voice drafting with explicit send still required. Fresh SIM install / reinstall also reused the shell-owned `SIM_CONNECTIVITY` onboarding path as a forced first-launch gate before ordinary shell use, while post-completion replay remained manual and setup-owned. Scheduler drawer, audio drawer, connectivity manager/modal, and onboarding/setup remained explicit light-theme defers for later slices. On **2026-03-24**, the reschedule experiment moved target resolution to a global scheduler-owned contract: selected/opened task state and visible page/date no longer carried semantic authority, weak recent-task hints remained allowed, create-time `keyPerson` / `location` hints were persisted for later matching, and the delivered implementation fed the extractor from a scheduler-owned active retrieval shortlist built from all non-done tasks. The follow-up-only V2 shadow contract remained time-semantics-only telemetry after global target resolution; it did not change live write authority. On **2026-03-25**, SIM restored the documented `FIRE_OFF` collision law across both shared board reads and SIM-owned direct reschedule paths, so fire-off reminders no longer blocked or were blocked after scheduler-drawer or badge follow-up reschedule. Device-level re-entry proof still remained required before returning to physical-badge follow-up validation.
 > **UI Scope Guard (2026-03-22)**: The SIM home/chat restore back to the sparse screenshot-aligned shell is UI-layer-only. Treat it as presentation rollback/polish inside the existing SIM shell contract, not as a reopening of Wave 7 or Wave 8 behavior, routing, persistence, isolation, acceptance, or boundary scope.
 > **UI Scope Guard (2026-03-22, Dynamic Island)**: A shell-owned top-bar dynamic island that surfaces scheduler reminders and opens the scheduler drawer is also presentation-layer SIM shell polish. The shared renderer stays one-line, sticky, truncation-based, and scheduler-first in copy. SIM may rotate up to the top 3 scheduler entries vertically inside the same header-center slot on a 5-second interval. Conflict-visible scheduler entries rank above normal reminders, use yellow hue, and normal most-immediate entries use red hue. Tapping any visible entry must open the scheduler drawer on that entry's corresponding date page. The SIM home header now keeps only hamburger + centered island + new-chat for visual balance, while connectivity entry moves into the audio drawer. It must stay shell-owned for chrome/routing and scheduler-owned for reminder truth; it does not widen mascot, follow-up, or smart-runtime scope by itself.
 > **UI Scope Guard (2026-03-22, Audio Drawer Mode Split)**: SIM audio drawer chrome is now explicitly split into two presentation modes without reopening Wave 7 behavior. Direct open remains the spec-aligned browse/gallery surface: swipe-right transcribe for pending items, tap-to-expand for transcribed items, and `Ask AI` only from the expanded informational artifact view. Chat attach/upload reopen uses a distinct select-mode picker: no dedicated per-card bottom CTA, no swipe/expand affordances, whole card as the selection target, pending/transcribing helper copy framed as continued chat-side processing, and already-transcribed cards showing truncated transcript preview for recognition. This is a docs-and-UI-language clarification inside the existing SIM audio/chat contract, not a new pipeline, routing, or acceptance wave.
@@ -13,8 +16,16 @@
 > **Closeout Reading Rule**: Wave 7 closeout means the SIM mission is complete at the tracker level. Any remaining unchecked historical sub-items below should be read as archived execution residue unless they are explicitly restated under the post-closeout deferred-debt section.
 > **Product Pivot Note (2026-03-22, Wave 11)**: Accepted Wave 3 proved audio-grounded chat continuation, but Wave 11 now supersedes the old `audio-grounded only` interpretation. SIM chat must be directly available from the home surface using system persona + user metadata + local session history, while `Ask AI` and chat-side attach/reselect add audio artifacts into the same ongoing session instead of defining the only legal chat entry.
 > **Unification Note (2026-03-31)**: This tracker still records the real SIM-owned standalone/runtime boundary, but for future non-Mono product truth the current SIM-led shell/scheduler/audio docs must now be read as the best available **base-runtime baseline**. Mono remains the only lawful deeper divergence layer, and future non-Mono work must not reintroduce separate SIM-vs-full product truth.
-> **Primary Product Doc**: `docs/to-cerb/sim-standalone-prototype/concept.md`
-> **Mental Model Doc**: `docs/to-cerb/sim-standalone-prototype/mental-model.md`
+> **Current Active Truth**:
+> - `docs/plans/tracker.md`
+> - `docs/specs/base-runtime-unification.md`
+> - `docs/core-flow/sim-shell-routing-flow.md`
+> - `docs/core-flow/sim-scheduler-path-a-flow.md`
+> - `docs/core-flow/sim-audio-artifact-chat-flow.md`
+> - `docs/cerb/interface-map.md`
+> **Historical Origin Docs**:
+> - `docs/to-cerb/sim-standalone-prototype/concept.md`
+> - `docs/to-cerb/sim-standalone-prototype/mental-model.md`
 > **Implementation Brief**: `docs/plans/sim_implementation_brief.md`
 > **Wave 1 Execution Brief**: `docs/plans/sim-wave1-execution-brief.md`
 > **Wave 2 Execution Brief**: `docs/plans/sim-wave2-execution-brief.md`
@@ -46,7 +57,7 @@
 > **Wave 12 L1 Validation**: `docs/reports/tests/L1-20260323-sim-wave12-scheduler-drawer-reschedule.md`
 > **Wave 13 L1 Validation**: `docs/reports/tests/L1-20260326-sim-wave13-launcher-core-theme-validation.md`
 > **Wave 14 L1 Validation**: `docs/reports/tests/L1-20260328-sim-wave14-voice-draft.md`
-> **Formal Cerb Shards**:
+> **Historical SIM Cerb Shards**:
 > - `docs/cerb/sim-shell/spec.md`
 > - `docs/cerb/sim-shell/interface.md`
 > - `docs/cerb/sim-scheduler/spec.md`
@@ -66,10 +77,10 @@
 
 - Accepted history: Wave 7 closed the SIM mission on **2026-03-22**.
 - Accepted history: Wave 8 follow-up mini-wave was accepted on **2026-03-22**.
-- Active follow-up: Wave 9 is prepared to close the remaining physical-badge hardware L3 for the badge-origin follow-up lane.
-- Active follow-up: Wave 11 is reopening the SIM chat contract so general chat becomes first-class while preserving SIM boundaries.
-- Active follow-up: Wave 13 reopens SIM shell presentation only far enough to make shared theme switching visible from the default launcher host.
-- Active follow-up: Wave 14 reopens the SIM composer contract only far enough to add device-STT drafting while keeping explicit send and non-scheduler scope.
+- Historical follow-up: Wave 9 recorded the remaining physical-badge hardware L3 debt for the badge-origin follow-up lane.
+- Historical follow-up: Wave 11 reopened the SIM chat contract so general chat became first-class while preserving SIM boundaries.
+- Historical follow-up: Wave 13 reopened SIM shell presentation only far enough to make shared theme switching visible from the default launcher host.
+- Historical follow-up: Wave 14 reopened the SIM composer contract only far enough to add device-STT drafting while keeping explicit send and non-scheduler scope.
 - Cleanup rule: historical wave checklists below are retained as project memory, but they should not be read as active open work unless a debt item is explicitly restated under `6.1 Post-Closeout Deferred Debt`.
 
 ---
@@ -111,64 +122,33 @@ Product mental model:
 
 ---
 
-## 2. Source of Truth
+## 2. Current Reading Order and Historical Reference Map
 
-### Product
+### Current active truth
 
-- `docs/to-cerb/sim-standalone-prototype/concept.md`
-- `docs/to-cerb/sim-standalone-prototype/mental-model.md`
-- `docs/plans/sim_implementation_brief.md`
-- `docs/plans/sim-wave1-execution-brief.md`
-- `docs/plans/sim-wave2-execution-brief.md`
+For active non-Mono work, read in this order:
 
-### SIM Core Flows
+1. `docs/plans/tracker.md`
+2. `docs/specs/base-runtime-unification.md`
+3. relevant current `docs/core-flow/**`
+4. relevant shared `docs/cerb/**` or `docs/cerb-ui/**`
+5. `docs/cerb/interface-map.md`
 
-- `docs/core-flow/sim-shell-routing-flow.md`
-- `docs/core-flow/sim-scheduler-path-a-flow.md`
-- `docs/core-flow/sim-audio-artifact-chat-flow.md`
+### Current shared replacements for historical SIM-only docs
 
-### SIM Standalone
+- shell/UI truth -> `docs/specs/prism-ui-ux-contract.md`, `docs/core-flow/sim-shell-routing-flow.md`, `docs/cerb-ui/dynamic-island/spec.md`, `docs/cerb/interface-map.md`
+- scheduler truth -> `docs/core-flow/sim-scheduler-path-a-flow.md`, `docs/core-flow/scheduler-fast-track-flow.md`, `docs/cerb/scheduler-path-a-spine/spec.md`, related `scheduler-path-a-uni-*` docs, `docs/cerb-ui/scheduler/contract.md`
+- audio/chat truth -> `docs/core-flow/sim-audio-artifact-chat-flow.md`, `docs/cerb/audio-management/spec.md`, `docs/cerb/tingwu-pipeline/spec.md`, `docs/cerb/interface-map.md`
+- connectivity truth -> `docs/specs/flows/OnboardingFlow.md`, `docs/cerb/connectivity-bridge/spec.md`, `docs/cerb/connectivity-bridge/interface.md`
 
-- `docs/cerb/sim-shell/spec.md`
-- `docs/cerb/sim-shell/interface.md`
+### Historical reference groups below
 
-### SIM Scheduler
+References below remain useful only as project memory:
 
-- `docs/cerb/sim-scheduler/spec.md`
-- `docs/cerb/sim-scheduler/interface.md`
-
-### SIM Audio and Chat
-
-- `docs/cerb/sim-audio-chat/spec.md`
-- `docs/cerb/sim-audio-chat/interface.md`
-
-### SIM Connectivity
-
-- `docs/cerb/sim-connectivity/spec.md`
-- `docs/cerb/sim-connectivity/interface.md`
-
-### Scheduler
-
-- `docs/core-flow/scheduler-fast-track-flow.md`
-- `docs/cerb/scheduler-path-a-spine/spec.md`
-- `docs/cerb/scheduler-path-a-uni-a/spec.md`
-- `docs/cerb-ui/scheduler/contract.md`
-
-### Audio and Tingwu
-
-- `docs/cerb/tingwu-pipeline/spec.md`
-- `docs/cerb/audio-management/spec.md`
-- `docs/specs/modules/AudioDrawer.md`
-
-### Connectivity
-
-- `docs/specs/connectivity-spec.md`
-- `docs/cerb/connectivity-bridge/spec.md`
-- `docs/cerb/connectivity-bridge/interface.md`
-
-### Boundary Map
-
-- `docs/cerb/interface-map.md`
+- SIM-origin concept and mental-model docs
+- historical SIM Cerb shards
+- historical execution briefs and acceptance notes
+- historical wave-by-wave planning residue
 
 ---
 
@@ -293,7 +273,7 @@ Wave sections below are retained as project memory. Their checklist items have b
 > - `docs/core-flow/sim-shell-routing-flow.md`
 > - `docs/cerb/sim-shell/spec.md`
 > - `docs/cerb/sim-shell/interface.md`
-> **Owning Shard**: `docs/cerb/sim-shell/spec.md`
+> **Historical shard at the time**: `docs/cerb/sim-shell/spec.md`
 > **Behavioral Authority**: `docs/core-flow/sim-shell-routing-flow.md`
 > **Implementation Law**: reuse shell visuals and drawer language, but do not boot the smart shell.
 > **Validation Requirement**: prove SIM launch path and smart-shell suppression before starting feature-heavy waves.
@@ -344,7 +324,7 @@ Wave sections below are retained as project memory. Their checklist items have b
 > - `docs/core-flow/sim-audio-artifact-chat-flow.md`
 > - `docs/cerb/sim-audio-chat/spec.md`
 > - `docs/cerb/sim-audio-chat/interface.md`
-> **Owning Shard**: `docs/cerb/sim-audio-chat/spec.md`
+> **Historical shard at the time**: `docs/cerb/sim-audio-chat/spec.md`
 > **Behavioral Authority**: `docs/core-flow/sim-audio-artifact-chat-flow.md`
 > **Execution Law**: the UI may format and polish Tingwu output, but it must not invent local semantic substitutes.
 > **Validation Requirement**: prove that the UI displays source-led artifacts faithfully, does not rerun already-transcribed audio, and does not synthesize absent sections.
@@ -433,7 +413,7 @@ Archived planning note:
 
 ### Wave 3: Simple Audio-Grounded Discussion Chat
 > Objective: Deliver the continuation chat surface for discussing a selected transcription.
-> **Owning Shard**: `docs/cerb/sim-audio-chat/spec.md`
+> **Historical shard at the time**: `docs/cerb/sim-audio-chat/spec.md`
 > **Behavioral Authority**: `docs/core-flow/sim-audio-artifact-chat-flow.md`
 > **Execution Law**: chat is for continuing discussion about one transcription, not for reviving the smart-agent OS.
 > **Validation Requirement**: prove that the chat behaves as continuation of the selected transcription discussion and not as a generic agent session.
@@ -529,7 +509,7 @@ Archived planning note:
 
 ### Wave 4: Scheduler Path A Delivery
 > Objective: Deliver the simplified scheduler lane without importing Path B or smart-memory obligations.
-> **Owning Shard**: `docs/cerb/sim-scheduler/spec.md`
+> **Historical shard at the time**: `docs/cerb/sim-scheduler/spec.md`
 > **Behavioral Authority**:
 > - `docs/core-flow/sim-scheduler-path-a-flow.md`
 > - `docs/core-flow/scheduler-fast-track-flow.md`
@@ -598,7 +578,7 @@ Archived planning note:
 
 ### Parallel Carry Lane: Scheduler Shipping Hardening
 > Objective: Close the remaining scheduler shipping gaps after baseline Wave 4 delivery.
-> **Owning Shard**: `docs/cerb/sim-scheduler/spec.md`
+> **Historical shard at the time**: `docs/cerb/sim-scheduler/spec.md`
 > **Behavioral Authority**:
 > - `docs/core-flow/sim-scheduler-path-a-flow.md`
 > - `docs/core-flow/scheduler-fast-track-flow.md`
@@ -662,7 +642,7 @@ Archived planning note:
 
 ### Wave 5: Connectivity Hard Migration
 > Objective: Reuse the mature badge connectivity stack as a decoupled SIM support module.
-> **Owning Shard**: `docs/cerb/sim-connectivity/spec.md`
+> **Historical shard at the time**: `docs/cerb/sim-connectivity/spec.md`
 > **Behavioral Authority**:
 > - `docs/cerb/sim-connectivity/spec.md`
 > - `docs/specs/connectivity-spec.md`
@@ -729,7 +709,7 @@ Archived planning note:
 
 ### Wave 6: Storage and DI Isolation
 > Objective: Build the contamination firewall in runtime composition and persistence.
-> **Owning Shards**:
+> **Historical shards at the time**:
 > - `docs/cerb/sim-shell/spec.md`
 > - `docs/cerb/sim-audio-chat/spec.md`
 > **Execution Law**: if isolation is ambiguous, treat the current smart app as higher priority and keep SIM separate.
@@ -740,20 +720,20 @@ Archived planning note:
   - [x] prevent default boot through the smart singleton graph
   - [x] isolate smart-only services unless deliberately reused behind explicit seams
   - [x] **2026-03-21 Spec Freeze**
-    `docs/cerb/sim-shell/spec.md` is now the owning T6.1 artifact. It freezes the SIM composition chain (`SimMainActivity -> SimShell -> Sim* runtime owners -> SIM-owned dependency assembler`), classifies current dependencies as direct reuse vs SIM-wrapped reuse vs forbidden, and explicitly forbids shared implementation edits in `SimMainActivity`, `SimShell`, and shared notification/alarm entry wiring while T4.8 remains active.
+    `docs/cerb/sim-shell/spec.md` was the owning T6.1 artifact at the time. It froze the SIM composition chain (`SimMainActivity -> SimShell -> Sim* runtime owners -> SIM-owned dependency assembler`), classified current dependencies as direct reuse vs SIM-wrapped reuse vs forbidden, and explicitly forbade shared implementation edits in `SimMainActivity`, `SimShell`, and shared notification/alarm entry wiring while T4.8 remained active.
 - [x] **T6.2: Code / Audio Persistence Namespace**
   - [x] namespace metadata file
   - [x] namespace local audio blob naming
   - [x] namespace artifact file naming
   - [x] namespace audio/chat binding records if needed
   - [x] **2026-03-21 Closeout Note**
-    `SimAudioRepository` is now treated as the owning T6.2 artifact. Focused repository evidence and tests now prove the accepted V1 namespace contract: metadata persists in `sim_audio_metadata.json`, stored audio blobs use `sim_<audioId>.<ext>`, artifacts use `sim_<audioId>_artifacts.json`, and `boundSessionId` persists inside SIM metadata rather than requiring a separate file. Focused verification is green with `:app-core:compileDebugKotlin`, `SimAudioRepositoryNamespaceTest`, and `SimAudioRepositoryRecoveryTest`.
+    `SimAudioRepository` was treated as the owning T6.2 artifact at the time. Focused repository evidence and tests proved the accepted V1 namespace contract: metadata persisted in `sim_audio_metadata.json`, stored audio blobs used `sim_<audioId>.<ext>`, artifacts used `sim_<audioId>_artifacts.json`, and `boundSessionId` persisted inside SIM metadata rather than requiring a separate file. Focused verification was green with `:app-core:compileDebugKotlin`, `SimAudioRepositoryNamespaceTest`, and `SimAudioRepositoryRecoveryTest`.
 - [x] **T6.3: Spec / Session-Chat Persistence Review**
   - [x] decide whether session storage is shared or namespaced
   - [x] document the reason
   - [x] enforce it in code plan
   - [x] **2026-03-21 Closeout Note**
-    `SimSessionRepository` is now treated as the owning T6.3 artifact. SIM chat/session persistence is file-backed and namespaced to `sim_session_metadata.json` plus `sim_session_<sessionId>_messages.json`, durable history stores only user text / AI response / AI audio artifacts / AI error turns, transient UI state remains memory-only, normal runtime no longer seeds demo sessions, and cold start restores grouped history without auto-selecting an active session. Startup reconciliation also normalizes the audio/session binding edge by clearing dangling `boundSessionId`, restoring missing audio-side bindings for valid linked sessions, unlinking sessions whose audio no longer exists, and keeping only the newest session when duplicate persisted sessions claim the same audio. Focused verification is green with `:app-core:compileDebugKotlin`, `SimAgentViewModelTest`, `SimSessionRepositoryTest`, `SimAudioRepositoryNamespaceTest`, and `SimAudioRepositoryRecoveryTest`.
+    `SimSessionRepository` was treated as the owning T6.3 artifact at the time. SIM chat/session persistence was file-backed and namespaced to `sim_session_metadata.json` plus `sim_session_<sessionId>_messages.json`, durable history stored only user text / AI response / AI audio artifacts / AI error turns, transient UI state remained memory-only, normal runtime no longer seeded demo sessions, and cold start restored grouped history without auto-selecting an active session. Startup reconciliation also normalized the audio/session binding edge by clearing dangling `boundSessionId`, restoring missing audio-side bindings for valid linked sessions, unlinking sessions whose audio no longer existed, and keeping only the newest session when duplicate persisted sessions claimed the same audio. Focused verification was green with `:app-core:compileDebugKotlin`, `SimAgentViewModelTest`, `SimSessionRepositoryTest`, `SimAudioRepositoryNamespaceTest`, and `SimAudioRepositoryRecoveryTest`.
 - [x] **T6.4: Validation**
   - [x] prove smart and SIM runtime roots are distinct enough
   - [x] prove persistence cross-contamination is controlled

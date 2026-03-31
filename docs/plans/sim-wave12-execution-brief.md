@@ -5,8 +5,9 @@
 **Wave:** 12  
 **Mission:** SIM standalone prototype post-closeout mini-wave  
 **Behavioral Authority:** `docs/core-flow/sim-scheduler-path-a-flow.md`  
-**Owning Specs:** `docs/cerb/sim-scheduler/spec.md`, `docs/cerb/sim-scheduler/interface.md`  
-**Mission Tracker:** `docs/plans/sim-tracker.md`
+**Current Reading Priority:** Historical reference only; not current source of truth.
+**Historical Owning Specs At The Time:** `docs/cerb/sim-scheduler/spec.md`, `docs/cerb/sim-scheduler/interface.md`
+**Current Active Truth:** `docs/plans/tracker.md`, `docs/core-flow/sim-scheduler-path-a-flow.md`, `docs/cerb/scheduler-path-a-spine/spec.md`, `docs/cerb/scheduler-path-a-spine/interface.md`, `docs/cerb-ui/scheduler/contract.md`, `docs/cerb/interface-map.md`
 **Validation Report:** `docs/reports/tests/L1-20260323-sim-wave12-scheduler-drawer-reschedule.md`
 
 ---
@@ -22,12 +23,13 @@ It is a narrow scheduler-only mini-wave.
 
 ## 2. Required Read Order
 
-1. `docs/plans/sim-tracker.md`
+1. `docs/plans/tracker.md`
 2. `docs/core-flow/sim-scheduler-path-a-flow.md`
-3. `docs/cerb/sim-scheduler/spec.md`
-4. `docs/cerb/sim-scheduler/interface.md`
-5. `docs/cerb/interface-map.md`
-6. this file
+3. `docs/cerb/scheduler-path-a-spine/spec.md`
+4. `docs/cerb/scheduler-path-a-spine/interface.md`
+5. `docs/cerb-ui/scheduler/contract.md`
+6. `docs/cerb/interface-map.md`
+7. this file as historical execution context
 
 ---
 
@@ -59,9 +61,8 @@ Deliver scheduler-drawer voice reschedule that:
 
 ### Step 1: Docs-first lock
 
-- register Wave 12 in `docs/plans/sim-tracker.md`
 - register Wave 12 in `docs/plans/tracker.md`
-- sync the SIM scheduler core-flow/spec/interface docs to the locked scope
+- sync the current shared scheduler core-flow/spec/interface docs to the locked scope
 
 ### Step 2: Scheduler-owned target resolution
 
@@ -96,9 +97,9 @@ Deliver scheduler-drawer voice reschedule that:
 
 ## 7. Doc Sync Targets
 
-- `docs/plans/sim-tracker.md`
 - `docs/plans/tracker.md`
 - `docs/core-flow/sim-scheduler-path-a-flow.md`
-- `docs/cerb/sim-scheduler/spec.md`
-- `docs/cerb/sim-scheduler/interface.md`
+- `docs/cerb/scheduler-path-a-spine/spec.md`
+- `docs/cerb/scheduler-path-a-spine/interface.md`
+- `docs/cerb-ui/scheduler/contract.md`
 - `docs/cerb/interface-map.md`

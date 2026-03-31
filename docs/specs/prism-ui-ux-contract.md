@@ -28,7 +28,8 @@ Rule:
 - use intuitive names in discussion
 - keep this path stable until the repo deliberately migrates references
 - treat this document plus current shared feature docs as the active shell/UI source-of-truth index for non-Mono work
-- legacy SIM shell docs may still be consulted as migration evidence, but they must not act as the active shell owner
+- route shared shell/UI ownership through this document, `docs/core-flow/sim-shell-routing-flow.md`, `docs/cerb-ui/home-shell/spec.md`, `docs/cerb-ui/dynamic-island/spec.md`, and `docs/cerb/interface-map.md`
+- legacy SIM shell docs are historical migration evidence only and must not be used as shell fallback ownership
 - the shared top safe-area law lives in `style-guide.md` and applies repo-wide unless an owning spec explicitly defines a top header/monolith exception
 
 ---

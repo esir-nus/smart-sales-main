@@ -5,8 +5,9 @@
 **Wave:** 9  
 **Mission:** SIM standalone prototype post-closeout hardware validation mini-wave  
 **Behavioral Authority:** `docs/core-flow/sim-shell-routing-flow.md`  
-**Owning Specs:** `docs/cerb/sim-shell/spec.md`, `docs/cerb/sim-scheduler/spec.md`, `docs/cerb/sim-audio-chat/spec.md`  
-**Mission Tracker:** `docs/plans/sim-tracker.md`
+**Current Reading Priority:** Historical reference only; not current source of truth.
+**Historical Owning Specs At The Time:** `docs/cerb/sim-shell/spec.md`, `docs/cerb/sim-scheduler/spec.md`, `docs/cerb/sim-audio-chat/spec.md`
+**Current Active Truth:** `docs/plans/tracker.md`, `docs/core-flow/sim-shell-routing-flow.md`, `docs/core-flow/sim-scheduler-path-a-flow.md`, `docs/core-flow/sim-audio-artifact-chat-flow.md`, `docs/cerb/interface-map.md`
 
 ---
 
@@ -24,13 +25,13 @@ Do not silently convert this brief into implementation work.
 
 ## 2. Required Read Order
 
-1. `docs/plans/sim-tracker.md`
+1. `docs/plans/tracker.md`
 2. `docs/core-flow/sim-shell-routing-flow.md`
-3. `docs/cerb/sim-shell/spec.md`
-4. `docs/cerb/sim-scheduler/spec.md`
-5. `docs/cerb/sim-audio-chat/spec.md`
+3. `docs/core-flow/sim-scheduler-path-a-flow.md`
+4. `docs/core-flow/sim-audio-artifact-chat-flow.md`
+5. `docs/cerb/interface-map.md`
 6. `docs/reports/tests/L3-20260322-sim-wave8-follow-up-validation.md`
-7. this file
+7. this file as historical execution context
 
 ---
 
@@ -134,7 +135,5 @@ Wave 9 is blocked if:
 
 ## 8. Doc Sync Targets
 
-- `docs/plans/sim-tracker.md`
 - `docs/plans/tracker.md`
 - `docs/reports/tests/L3-20260322-sim-wave9-hardware-validation.md`
-

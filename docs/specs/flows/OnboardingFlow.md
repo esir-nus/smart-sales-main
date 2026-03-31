@@ -77,6 +77,7 @@ Rule:
   - `ModelRegistry.ONBOARDING_PROFILE_EXTRACTION` for strict profile JSON extraction
 - if the fast lane is unavailable or fails, onboarding may invisibly switch to a deterministic fallback lane with a short believable dwell
 - if model generation fails after a real transcript has already been resolved, deterministic fallback must stay grounded in that real transcript rather than replacing it with canned user content
+- debug investigation builds may suppress deterministic fallback so the flow exposes calm retry/error UI while preserving any real transcript already captured
 - onboarding owns one visible watchdog per generation lane rather than nested service + UI timeouts:
   - consultation target about `2.5s`
   - profile target about `3.5s`

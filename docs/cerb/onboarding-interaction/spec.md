@@ -81,6 +81,7 @@ Policy:
 - raw FunASR SDK payloads must be sanitized before they reach onboarding transcript, hint, or error surfaces
 - onboarding happy path must not call `AsrService` or OSS upload
 - deterministic fallback is backup-only; it must not become the normal visible result when the LLM path is healthy
+- debug investigation builds may disable deterministic fallback entirely so runtime failures surface as calm retry/error UI instead of synthetic content
 
 ## Shared Mic Footer Contract
 
@@ -170,6 +171,7 @@ Policy:
 - post-release recognizer cancellation is part of this failure bucket and should fast-fallback locally rather than surfacing a stuck intermediate state
 - if a real transcript already exists, deterministic fallback must reuse that transcript rather than injecting fake user content
 - normal network latency alone must not be treated as proof that fallback should win; the fallback lane is for explicit failure or watchdog expiry
+- when the debug investigation policy disables deterministic fallback, the same failure classes must clear processing, preserve any real transcript already captured, and surface calm retry/skip-save affordances instead of landing synthetic consultation/profile content
 - consultation: retry until success if even the deterministic lane cannot complete
 - profile: retry or skip save if even the deterministic lane cannot complete
 - skip save advances onboarding without mutating the profile
@@ -198,6 +200,7 @@ Policy:
   - `ModelRegistry.ONBOARDING_PROFILE_EXTRACTION`
 - onboarding owns one fast-lane user-facing deadline per generation lane rather than stacking a second service-level timeout underneath
 - if the onboarding realtime lane fails, or if LLM generation fails after a real transcript exists, onboarding may use an invisible deterministic fallback with a short artificial dwell to preserve the experience rhythm
+- debug investigation builds may flip this lane into truth-exposure mode, which suppresses deterministic fallback and emits failure-state telemetry instead of synthetic content
 
 ## Ownership Boundary
 

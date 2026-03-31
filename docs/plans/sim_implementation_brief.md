@@ -1,11 +1,12 @@
 # SIM Implementation Brief
 
-**Status:** Boundary Frozen / Ready For Wave 1
+**Status:** Historical Boundary Brief (Frozen at the time)
 **Date:** 2026-03-19
 **Mission:** SIM standalone prototype
-**Primary Product Doc:** `docs/to-cerb/sim-standalone-prototype/concept.md`
-**Mental Model Doc:** `docs/to-cerb/sim-standalone-prototype/mental-model.md`
-**Mission Tracker:** `docs/plans/sim-tracker.md`
+**Current Reading Priority:** Historical reference only; not current source of truth.
+**Current Active Truth:** `docs/plans/tracker.md`, `docs/specs/base-runtime-unification.md`, `docs/core-flow/sim-shell-routing-flow.md`, `docs/core-flow/sim-scheduler-path-a-flow.md`, `docs/core-flow/sim-audio-artifact-chat-flow.md`, `docs/cerb/interface-map.md`
+**Historical Origin Docs:** `docs/to-cerb/sim-standalone-prototype/concept.md`, `docs/to-cerb/sim-standalone-prototype/mental-model.md`
+**Historical Mission Record:** `docs/plans/sim-tracker.md`
 **Evidence Base:**
 - `docs/reports/20260319-sim-standalone-code-audit.md`
 - `docs/reports/20260319-sim-clarification-evidence-audit.md`

@@ -17,7 +17,8 @@ This brief is a follow-up slice after Wave A. It must not be backfilled into `do
 - visual source of truth: `prototypes/onboarding-family/onboarding_interactive_prototype.html`
 - onboarding flow source of truth: `docs/specs/flows/OnboardingFlow.md`
 - pairing runtime source of truth: `docs/cerb/device-pairing/spec.md`
-- SIM routing source of truth: `docs/cerb/sim-connectivity/spec.md`
+- current SIM routing source of truth: `docs/specs/flows/OnboardingFlow.md`
+- shared connectivity runtime source of truth: `docs/cerb/connectivity-bridge/spec.md` and `docs/cerb/connectivity-bridge/interface.md`
 - UI campaign tracker: `docs/plans/ui-tracker.md`
 
 ## Allowed Work

@@ -133,7 +133,7 @@ Global rule for any surface that visually reaches the top edge:
 State ownership:
 
 - `docs/cerb-ui/home-shell/spec.md` owns the generic empty-state `HomeShell` / `ChatWelcome` composition
-- `docs/specs/prism-ui-ux-contract.md` plus current shared shell/core-flow docs own the base-runtime shell state family; legacy SIM shell docs are migration residue only
+- `docs/specs/prism-ui-ux-contract.md`, `docs/core-flow/sim-shell-routing-flow.md`, `docs/cerb-ui/dynamic-island/spec.md`, and current shared feature docs own the base-runtime shell state family
 - approved prototype screenshots may act as the visual reference for one exact substate, but must not be mistaken for the whole feature contract
 
 #### 3.1.1 Current Home Empty State (`HomeShell` / `ChatWelcome`)
@@ -190,7 +190,7 @@ Approved prototype interpretation rule:
 
 ### 3.3 Conversation Surfaces (User Bubble, Assistant Bubble, System Sheet)
 
-Visual only; conversational behavior lives in `docs/specs/prism-ui-ux-contract.md` plus the owning SIM shards.
+Visual only; conversational behavior lives in `docs/specs/prism-ui-ux-contract.md`, `docs/core-flow/sim-audio-artifact-chat-flow.md`, and the current shared audio/chat docs.
 
 For the shipped SIM shell family, assistant bubbles, system sheets, status sheets, strategy sheets, and artifact sheets should read as one coordinated dark frosted material system rather than as unrelated cards.
 

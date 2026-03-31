@@ -15,7 +15,7 @@ Wave A is a polish-and-verification slice. It is not a redesign wave, not a rout
 - onboarding flow source of truth: `docs/specs/flows/OnboardingFlow.md`
 - pairing runtime source of truth: `docs/cerb/device-pairing/spec.md`
 - SIM routing source of truth: `docs/core-flow/sim-shell-routing-flow.md`
-- SIM connectivity contract: `docs/cerb/sim-connectivity/spec.md`
+- current connectivity/runtime routing: `docs/specs/flows/OnboardingFlow.md`, `docs/cerb/connectivity-bridge/spec.md`, and `docs/cerb/connectivity-bridge/interface.md`
 - external onboarding transplant brief: supporting context only, not the portable primary source
 
 ## Allowed Work

@@ -5,9 +5,10 @@
 **Wave:** 1
 **Mission:** SIM standalone prototype
 **Behavioral Authority:** `docs/core-flow/sim-shell-routing-flow.md`
-**Owning Spec:** `docs/cerb/sim-shell/spec.md`
-**Boundary Brief:** `docs/plans/sim_implementation_brief.md`
-**Mission Tracker:** `docs/plans/sim-tracker.md`
+**Current Reading Priority:** Historical reference only; not current source of truth.
+**Historical Owning Spec At The Time:** `docs/cerb/sim-shell/spec.md`
+**Historical Boundary Brief:** `docs/plans/sim_implementation_brief.md`
+**Current Active Truth:** `docs/plans/tracker.md`, `docs/specs/base-runtime-unification.md`, `docs/specs/prism-ui-ux-contract.md`, `docs/core-flow/sim-shell-routing-flow.md`, `docs/cerb/interface-map.md`
 
 ---
 
@@ -26,13 +27,14 @@ It is the execution brief for the standalone shell wave.
 
 Before coding Wave 1, read in this order:
 
-1. `docs/plans/sim-tracker.md`
-2. `docs/plans/sim_implementation_brief.md`
+1. `docs/plans/tracker.md`
+2. `docs/specs/base-runtime-unification.md`
 3. `docs/core-flow/sim-shell-routing-flow.md`
-4. `docs/cerb/sim-shell/spec.md`
-5. this file
+4. `docs/specs/prism-ui-ux-contract.md`
+5. `docs/cerb/interface-map.md`
+6. this file as historical execution context
 
-If code reality forces a boundary change, update the tracker and the owning shell docs in the same session.
+If code reality forces a boundary change, update the main tracker and the current shared shell docs in the same session.
 
 ---
 
@@ -190,10 +192,9 @@ If any of these fail, Wave 1 is not done even if the UI looks correct.
 
 If Wave 1 changes runtime ownership, file paths, or shell behavior, sync these docs in the same session:
 
-- `docs/plans/sim-tracker.md`
 - `docs/plans/tracker.md`
-- `docs/cerb/sim-shell/spec.md`
-- `docs/cerb/sim-shell/interface.md`
+- `docs/specs/prism-ui-ux-contract.md`
+- `docs/core-flow/sim-shell-routing-flow.md`
 - `docs/cerb/interface-map.md` if module ownership edges become real
 
 If the implementation reveals a better SIM root naming choice, update the implementation brief too:

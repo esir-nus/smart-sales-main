@@ -5,9 +5,10 @@
 **Wave:** 5
 **Mission:** SIM standalone prototype
 **Behavioral Authority:** `docs/core-flow/sim-shell-routing-flow.md`
-**Owning Spec:** `docs/cerb/sim-connectivity/spec.md`
-**Companion Specs:** `docs/specs/connectivity-spec.md`, `docs/cerb/connectivity-bridge/spec.md`
-**Mission Tracker:** `docs/plans/sim-tracker.md`
+**Current Reading Priority:** Historical reference only; not current source of truth.
+**Historical Owning Spec At The Time:** `docs/cerb/sim-connectivity/spec.md`
+**Current Active Truth:** `docs/plans/tracker.md`, `docs/specs/flows/OnboardingFlow.md`, `docs/cerb/connectivity-bridge/spec.md`, `docs/cerb/connectivity-bridge/interface.md`, `docs/core-flow/sim-shell-routing-flow.md`
+**Historical Companion Spec At The Time:** `docs/specs/connectivity-spec.md`
 
 ---
 
@@ -120,12 +121,13 @@ Post-acceptance cleanup now in code:
 
 If T5.4 advances in the current session, sync these docs in the same session:
 
-- `docs/plans/sim-tracker.md`
 - `docs/plans/tracker.md`
 - `docs/reports/tests/L3-20260321-sim-wave5-connectivity-absent-rerun-plan.md`
 - `docs/reports/tests/L3-20260321-sim-wave5-connectivity-absent-validation.md`
-- `docs/cerb/sim-connectivity/spec.md`
-- `docs/cerb/sim-audio-chat/spec.md`
+- `docs/specs/flows/OnboardingFlow.md`
+- `docs/cerb/connectivity-bridge/spec.md`
+- `docs/cerb/connectivity-bridge/interface.md`
+- `docs/core-flow/sim-audio-artifact-chat-flow.md`
 
 ---
 

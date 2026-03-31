@@ -6,9 +6,10 @@
 **Mission:** SIM standalone prototype
 **Behavioral Authority:** `docs/core-flow/sim-scheduler-path-a-flow.md`
 **Companion Core Flow:** `docs/core-flow/scheduler-fast-track-flow.md`
-**Owning Spec:** `docs/cerb/sim-scheduler/spec.md`
-**Boundary Brief:** `docs/plans/sim_implementation_brief.md`
-**Mission Tracker:** `docs/plans/sim-tracker.md`
+**Current Reading Priority:** Historical reference only; not current source of truth.
+**Historical Owning Spec At The Time:** `docs/cerb/sim-scheduler/spec.md`
+**Historical Boundary Brief:** `docs/plans/sim_implementation_brief.md`
+**Current Active Truth:** `docs/plans/tracker.md`, `docs/core-flow/sim-scheduler-path-a-flow.md`, `docs/core-flow/scheduler-fast-track-flow.md`, `docs/cerb/scheduler-path-a-spine/spec.md`, `docs/cerb/scheduler-path-a-spine/interface.md`, `docs/cerb-ui/scheduler/contract.md`, `docs/cerb/interface-map.md`
 
 ---
 
@@ -27,14 +28,16 @@ It is the execution brief for the Wave 4 SIM scheduler lane.
 
 Before coding Wave 4, read in this order:
 
-1. `docs/plans/sim-tracker.md`
-2. `docs/plans/sim_implementation_brief.md`
-3. `docs/core-flow/sim-scheduler-path-a-flow.md`
-4. `docs/core-flow/scheduler-fast-track-flow.md`
-5. `docs/cerb/sim-scheduler/spec.md`
-6. this file
+1. `docs/plans/tracker.md`
+2. `docs/core-flow/sim-scheduler-path-a-flow.md`
+3. `docs/core-flow/scheduler-fast-track-flow.md`
+4. `docs/cerb/scheduler-path-a-spine/spec.md`
+5. `docs/cerb/scheduler-path-a-spine/interface.md`
+6. `docs/cerb-ui/scheduler/contract.md`
+7. `docs/cerb/interface-map.md`
+8. this file as historical execution context
 
-If code reality forces a boundary or ownership change, update the tracker and the owning scheduler docs in the same session.
+If code reality forces a boundary or ownership change, update the main tracker and the current shared scheduler docs in the same session.
 
 ---
 
@@ -151,7 +154,7 @@ Wave 4 verification must prove:
 - advanced inspiration shelf follow-on behavior beyond the base shelf-card `Ask AI` chat launcher is deferred
 - smart tips, Path B enrichment, and smart-memory merge remain out of Wave 4 scope
 
-If any of these still exist after implementation, they must be recorded in `docs/plans/sim-tracker.md` rather than silently ignored.
+If any of these still exist after implementation, they must be recorded in `docs/plans/tracker.md` or the current cleanup backlog rather than silently ignored.
 
 ---
 
@@ -159,10 +162,11 @@ If any of these still exist after implementation, they must be recorded in `docs
 
 If Wave 4 changes scheduler ownership, runtime seams, or deferred debt, sync these docs in the same session:
 
-- `docs/plans/sim-tracker.md`
 - `docs/plans/tracker.md`
-- `docs/cerb/sim-scheduler/spec.md`
-- `docs/cerb/sim-scheduler/interface.md`
+- `docs/core-flow/sim-scheduler-path-a-flow.md`
+- `docs/cerb/scheduler-path-a-spine/spec.md`
+- `docs/cerb/scheduler-path-a-spine/interface.md`
+- `docs/cerb-ui/scheduler/contract.md`
 
 ---
 

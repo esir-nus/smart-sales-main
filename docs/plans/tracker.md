@@ -127,6 +127,7 @@
   - Slice 4 now keeps `SimAgentViewModel.kt` as a thin compatibility host and moves the SIM voice-draft lane into `SimAgentVoiceDraftCoordinator.kt`, while extending the existing `SimAgentUiBridge` just enough to let the host-owned state remain source-compatible
   - Slice 5 now locks the repo's non-Mono planning truth in docs: current SIM-led shell/scheduler/audio docs stay the best available base-runtime baseline, separate SIM runtime boundaries remain lawful implementation seams, and Mono stays the only lawful deeper divergence layer
   - On **2026-03-31**, shared onboarding handshake follow-up now hardens the base-runtime fast lane so both hosts keep one interaction engine, dedicated onboarding model profiles, one visible generation watchdog per lane, and deterministic fallback as backup only rather than the expected user-visible result
+  - On **2026-03-31**, debug investigation builds now suppress onboarding deterministic fallback entirely, so failed STT / LLM attempts expose calm retry state plus `fallback_suppressed` / `processing_failed` telemetry instead of synthetic consultation/profile content
   - focused Wave 3D reruns now pass after restoring the extracted scheduler audio-status strings to the evidence-owned legacy full-side values
   - focused Wave 3E reruns now pass with `SimAgentViewModel.kt` back under the transitional ViewModel budget and with the accepted Wave 14 SIM voice-draft behavior preserved
 
@@ -157,9 +158,14 @@
 > **Context**: Direct user-requested standalone prototype mission. This work is intentionally separate from the current agent app and must not contaminate the live agent runtime by default.
 
 - **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Accepted / Wave 6 Isolation Accepted / Wave 7 Feature Acceptance Accepted / Wave 7 Isolation Acceptance Accepted / Wave 7 Closeout Synced / Wave 8 Task-Scoped Scheduler Follow-Up Accepted / Wave 9 Physical-Badge E2E Blocked / Wave 10 Badge Ingress Repair In Progress / Wave 11 General Chat Pivot L1 Accepted / Wave 12 Scheduler-Drawer Voice Reschedule L1 Accepted / Wave 13 Launcher-Core Theme Visibility L1 Accepted / Wave 14 Voice-Draft Composer L1 Verified
-- **Primary Product Doc**: [`docs/to-cerb/sim-standalone-prototype/concept.md`](../to-cerb/sim-standalone-prototype/concept.md)
-- **Mental Model Doc**: [`docs/to-cerb/sim-standalone-prototype/mental-model.md`](../to-cerb/sim-standalone-prototype/mental-model.md)
-- **Mission Tracker**: [`docs/plans/sim-tracker.md`](./sim-tracker.md)
+- **Historical Origin Docs**: [`docs/to-cerb/sim-standalone-prototype/concept.md`](../to-cerb/sim-standalone-prototype/concept.md), [`docs/to-cerb/sim-standalone-prototype/mental-model.md`](../to-cerb/sim-standalone-prototype/mental-model.md)
+- **Historical Mission Record**: [`docs/plans/sim-tracker.md`](./sim-tracker.md)
+- **Current Active Truth**:
+  - [`docs/specs/base-runtime-unification.md`](../specs/base-runtime-unification.md)
+  - [`docs/core-flow/sim-shell-routing-flow.md`](../core-flow/sim-shell-routing-flow.md)
+  - [`docs/core-flow/sim-scheduler-path-a-flow.md`](../core-flow/sim-scheduler-path-a-flow.md)
+  - [`docs/core-flow/sim-audio-artifact-chat-flow.md`](../core-flow/sim-audio-artifact-chat-flow.md)
+  - [`docs/cerb/interface-map.md`](../cerb/interface-map.md)
 - **Connectivity Bug Tracker**: [`docs/plans/bug-tracker.md`](./bug-tracker.md)
 - **Implementation Brief**: [`docs/plans/sim_implementation_brief.md`](./sim_implementation_brief.md)
 - **Wave 1 Execution Brief**: [`docs/plans/sim-wave1-execution-brief.md`](./sim-wave1-execution-brief.md)

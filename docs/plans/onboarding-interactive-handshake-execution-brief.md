@@ -23,7 +23,8 @@ This slice is not a retroactive reinterpretation of Wave A or the SIM intro-dark
 - onboarding interaction ownership: `docs/cerb/onboarding-interaction/spec.md`
 - onboarding interaction interface: `docs/cerb/onboarding-interaction/interface.md`
 - pairing runtime source of truth: `docs/cerb/device-pairing/spec.md`
-- SIM routing source of truth: `docs/cerb/sim-connectivity/spec.md`
+- SIM routing source of truth: `docs/specs/flows/OnboardingFlow.md`
+- shared connectivity runtime source of truth: `docs/cerb/connectivity-bridge/spec.md` and `docs/cerb/connectivity-bridge/interface.md`
 - UI tracker: `docs/plans/ui-tracker.md`
 
 ## Allowed Work
@@ -39,6 +40,7 @@ This slice is not a retroactive reinterpretation of Wave A or the SIM intro-dark
 - allow transcript-grounded deterministic generation fallback when a real transcript exists but LLM generation fails
 - keep one onboarding-owned visible deadline per generation lane instead of nested service + UI timeout caps
 - ensure the post-release recognition phase always terminates; recognizer-side cancellation after release must route through onboarding-local fallback, while explicit user/reset/dispose cancellation still clears silently
+- allow debug investigation builds to disable deterministic fallback entirely so failed STT / LLM attempts surface truthfully as calm retry state rather than synthetic content
 - update static review, previews, and design-browser presets for the new states
 - sync docs, tests, and tracker rows for the new step contract
 

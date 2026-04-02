@@ -4,8 +4,14 @@ import android.util.Log
 import com.smartsales.core.telemetry.PipelineValve
 import com.smartsales.core.util.Result
 import com.smartsales.prism.domain.audio.AudioFile
+import com.smartsales.prism.domain.audio.AudioLocalAvailability
 import com.smartsales.prism.domain.audio.AudioSource
 import com.smartsales.prism.domain.connectivity.WavDownloadResult
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
@@ -18,8 +24,6 @@ internal const val SIM_BADGE_SYNC_CONNECTIVITY_UNAVAILABLE_MESSAGE =
 
 private const val SIM_BADGE_SYNC_LIST_FAILURE_MESSAGE =
     "暂时无法获取徽章录音列表，请稍后重试。"
-private const val SIM_BADGE_SYNC_DOWNLOAD_FAILURE_MESSAGE =
-    "发现新的徽章录音，但暂时无法下载。请稍后重试。"
 private const val SIM_AUDIO_OFFLINE_LOG_TAG = "AudioPipeline"
 private const val SIM_AUDIO_SYNC_LOG_TAG = "AudioPipeline"
 
@@ -39,21 +43,27 @@ internal enum class SimBadgeSyncSkippedReason {
 internal enum class SimBadgeSyncResultBranch {
     DEVICE_EMPTY,
     ALREADY_PRESENT,
-    IMPORTED
+    QUEUED
 }
 
 internal data class SimBadgeSyncOutcome(
     val trigger: SimBadgeSyncTrigger,
-    val importedCount: Int = 0,
+    val queuedCount: Int = 0,
+    val retryQueuedCount: Int = 0,
     val skippedEmptyCount: Int = 0,
     val resultBranch: SimBadgeSyncResultBranch? = null,
     val skippedReason: SimBadgeSyncSkippedReason? = null
 )
 
 private data class SimBadgeSyncExecutionResult(
-    val importedCount: Int,
-    val skippedEmptyCount: Int,
+    val queuedCount: Int,
+    val retryQueuedCount: Int,
     val resultBranch: SimBadgeSyncResultBranch
+)
+
+private data class SimBadgeQueuePlan(
+    val placeholderFilenames: List<String>,
+    val queueFilenames: List<String>
 )
 
 internal fun existingSimBadgeFilenames(entries: List<AudioFile>): Set<String> {
@@ -95,7 +105,13 @@ internal fun simBadgeSyncSuccessMessage(outcome: SimBadgeSyncOutcome): String {
     return when (outcome.resultBranch) {
         SimBadgeSyncResultBranch.DEVICE_EMPTY -> "徽章当前没有录音"
         SimBadgeSyncResultBranch.ALREADY_PRESENT -> "录音已在列表中，无需重复同步$skippedSuffix"
-        SimBadgeSyncResultBranch.IMPORTED -> "已同步 ${outcome.importedCount} 条徽章录音$skippedSuffix"
+        SimBadgeSyncResultBranch.QUEUED -> {
+            if (outcome.queuedCount > 0) {
+                "已发现 ${outcome.queuedCount} 条徽章录音，正在后台同步"
+            } else {
+                "录音已在列表中，后台同步继续进行$skippedSuffix"
+            }
+        }
         null -> error("sync outcome message requires a completed result branch")
     }
 }
@@ -116,12 +132,13 @@ internal fun emitSimAudioBadgeSyncRequestedTelemetry(
 
 internal fun emitSimAudioBadgeSyncCompletedTelemetry(
     trigger: SimBadgeSyncTrigger,
-    importedCount: Int,
+    queuedCount: Int,
+    retryQueuedCount: Int,
     resultBranch: SimBadgeSyncResultBranch,
     log: (String) -> Unit = { message -> android.util.Log.d(SIM_AUDIO_SYNC_LOG_TAG, message) }
 ) {
     val detail =
-        "trigger=${trigger.name.lowercase()} importedCount=$importedCount branch=${resultBranch.name.lowercase()}"
+        "trigger=${trigger.name.lowercase()} queuedCount=$queuedCount retryQueuedCount=$retryQueuedCount branch=${resultBranch.name.lowercase()}"
     PipelineValve.tag(
         checkpoint = PipelineValve.Checkpoint.UI_STATE_EMITTED,
         payloadSize = detail.length,
@@ -178,14 +195,6 @@ internal fun buildSimBadgeSyncListFailureMessage(rawReason: String?): String {
     }
 }
 
-internal fun buildSimBadgeSyncDownloadFailureMessage(rawReason: String?): String {
-    return if (isLikelySimBadgeConnectivityUnavailable(rawReason)) {
-        SIM_BADGE_SYNC_CONNECTIVITY_UNAVAILABLE_MESSAGE
-    } else {
-        SIM_BADGE_SYNC_DOWNLOAD_FAILURE_MESSAGE
-    }
-}
-
 internal class SimAudioRepositorySyncSupport(
     private val runtime: SimAudioRepositoryRuntime,
     private val storeSupport: SimAudioRepositoryStoreSupport
@@ -239,13 +248,14 @@ internal class SimAudioRepositorySyncSupport(
             val executionResult = performBadgeSyncLocked()
             emitSimAudioBadgeSyncCompletedTelemetry(
                 trigger = trigger,
-                importedCount = executionResult.importedCount,
+                queuedCount = executionResult.queuedCount,
+                retryQueuedCount = executionResult.retryQueuedCount,
                 resultBranch = executionResult.resultBranch
             )
             SimBadgeSyncOutcome(
                 trigger = trigger,
-                importedCount = executionResult.importedCount,
-                skippedEmptyCount = executionResult.skippedEmptyCount,
+                queuedCount = executionResult.queuedCount,
+                retryQueuedCount = executionResult.retryQueuedCount,
                 resultBranch = executionResult.resultBranch
             )
         } finally {
@@ -282,78 +292,199 @@ internal class SimAudioRepositorySyncSupport(
             }
         }
 
-        val existingBadgeCount = existingSimBadgeFilenames(runtime.audioFiles.value).size
         val suppressedPendingDeletes = reconcilePendingBadgeDeletes(badgeFiles)
         val pendingDeleteFilenames =
             suppressedPendingDeletes + storeSupport.getPendingBadgeDeletesSnapshot()
 
-        val newFilesToDownload = selectNewSimBadgeFilenames(
-            badgeFilenames = badgeFiles,
-            existingBadgeFilenames = existingSimBadgeFilenames(runtime.audioFiles.value),
-            pendingBadgeDeleteFilenames = pendingDeleteFilenames
+        val queuePlan = planBadgeDownloads(
+            badgeFiles = badgeFiles,
+            pendingDeleteFilenames = pendingDeleteFilenames
         )
-
-        var importedCount = 0
-        var skippedEmptyCount = 0
-        var failedDownloadCount = 0
-        var firstDownloadFailureReason: String? = null
-        for (filename in newFilesToDownload) {
-            when (val downloadResult = runtime.connectivityBridge.downloadRecording(filename)) {
-                is WavDownloadResult.Success -> {
-                    if (downloadResult.sizeBytes < MIN_BADGE_WAV_SIZE_BYTES) {
-                        // 空录音（误触/假启动）——静默跳过，清理临时文件
-                        Log.d(
-                            SIM_AUDIO_SYNC_LOG_TAG,
-                            "SIM badge sync skipped empty recording filename=$filename sizeBytes=${downloadResult.sizeBytes}"
-                        )
-                        downloadResult.localFile.delete()
-                        skippedEmptyCount += 1
-                        continue
-                    }
-                    storeSupport.importDownloadedBadgeAudio(filename, downloadResult.localFile)
-                    importedCount += 1
-                    Log.d(
-                        SIM_AUDIO_SYNC_LOG_TAG,
-                        "SIM badge sync downloadRecording success filename=$filename sizeBytes=${downloadResult.sizeBytes}"
-                    )
-                }
-
-                is WavDownloadResult.Error -> {
-                    failedDownloadCount += 1
-                    if (firstDownloadFailureReason == null) {
-                        firstDownloadFailureReason = downloadResult.message
-                    }
-                    emitSimAudioSyncFailureWhileConnectivityUnavailableTelemetry(
-                        detail = "downloadRecording failed filename=$filename reason=${downloadResult.message}"
-                    )
-                    android.util.Log.e(
-                        "SimAudioRepository",
-                        "syncFromDevice failed: ${downloadResult.message}"
-                    )
-                }
-            }
-        }
-
-        if (newFilesToDownload.isNotEmpty() && importedCount == 0 && failedDownloadCount > 0) {
-            throw Exception(buildSimBadgeSyncDownloadFailureMessage(firstDownloadFailureReason))
-        }
+        val createdCount = storeSupport.createQueuedBadgePlaceholders(queuePlan.placeholderFilenames)
+        enqueueBadgeDownloads(queuePlan.queueFilenames)
 
         val resultBranch = when {
             badgeFiles.isEmpty() -> SimBadgeSyncResultBranch.DEVICE_EMPTY
-            importedCount > 0 -> SimBadgeSyncResultBranch.IMPORTED
+            createdCount > 0 || queuePlan.queueFilenames.isNotEmpty() -> SimBadgeSyncResultBranch.QUEUED
             else -> SimBadgeSyncResultBranch.ALREADY_PRESENT
         }
 
         Log.d(
             SIM_AUDIO_SYNC_LOG_TAG,
-            "SIM badge sync outcome badgeListCount=${badgeFiles.size} existingBadgeCount=$existingBadgeCount pendingDeleteCount=${pendingDeleteFilenames.size} newFilesToDownloadCount=${newFilesToDownload.size} importedCount=$importedCount skippedEmptyCount=$skippedEmptyCount branch=${resultBranch.name.lowercase()}"
+            "SIM badge sync outcome badgeListCount=${badgeFiles.size} pendingDeleteCount=${pendingDeleteFilenames.size} placeholderCount=$createdCount queueCount=${queuePlan.queueFilenames.size} retryQueueCount=${queuePlan.queueFilenames.size - createdCount} branch=${resultBranch.name.lowercase()}"
         )
 
         return SimBadgeSyncExecutionResult(
-            importedCount = importedCount,
-            skippedEmptyCount = skippedEmptyCount,
+            queuedCount = createdCount,
+            retryQueuedCount = (queuePlan.queueFilenames.size - createdCount).coerceAtLeast(0),
             resultBranch = resultBranch
         )
+    }
+
+    suspend fun cancelBadgeDownload(filename: String) = withContext(runtime.ioDispatcher) {
+        val normalizedFilename = normalizeSimBadgeFilename(filename)
+        runtime.badgeDownloadQueueMutex.withLock {
+            runtime.queuedBadgeDownloads.remove(normalizedFilename)
+            if (runtime.activeBadgeDownloadFilename == normalizedFilename) {
+                runtime.activeBadgeDownloadJob?.cancel(
+                    CancellationException("badge audio deleted")
+                )
+            }
+        }
+        Log.d(
+            SIM_AUDIO_SYNC_LOG_TAG,
+            "SIM badge sync download canceled filename=$normalizedFilename"
+        )
+    }
+
+    private fun planBadgeDownloads(
+        badgeFiles: List<String>,
+        pendingDeleteFilenames: Set<String>
+    ): SimBadgeQueuePlan {
+        val normalizedPendingDeletes = pendingDeleteFilenames
+            .map(::normalizeSimBadgeFilename)
+            .toSet()
+        val currentEntries = runtime.audioFiles.value
+            .filter { it.source == AudioSource.SMARTBADGE }
+            .associateBy { normalizeSimBadgeFilename(it.filename) }
+
+        val placeholderFilenames = mutableListOf<String>()
+        val queueFilenames = mutableListOf<String>()
+
+        badgeFiles.forEach { filename ->
+            val normalizedFilename = normalizeSimBadgeFilename(filename)
+            if (normalizedFilename in normalizedPendingDeletes) return@forEach
+
+            val existing = currentEntries[normalizedFilename]
+            when {
+                existing == null -> {
+                    placeholderFilenames += normalizedFilename
+                    queueFilenames += normalizedFilename
+                }
+                existing.localAvailability == AudioLocalAvailability.QUEUED ||
+                    existing.localAvailability == AudioLocalAvailability.FAILED -> {
+                    queueFilenames += normalizedFilename
+                }
+                else -> Unit
+            }
+        }
+
+        return SimBadgeQueuePlan(
+            placeholderFilenames = placeholderFilenames.distinct(),
+            queueFilenames = queueFilenames.distinct()
+        )
+    }
+
+    private fun enqueueBadgeDownloads(filenames: List<String>) {
+        if (filenames.isEmpty()) return
+        runtime.repositoryScope.launch {
+            runtime.badgeDownloadQueueMutex.withLock {
+                filenames.forEach { runtime.queuedBadgeDownloads.add(normalizeSimBadgeFilename(it)) }
+                if (runtime.badgeDownloadWorkerJob?.isActive != true) {
+                    runtime.badgeDownloadWorkerJob = runtime.repositoryScope.launch {
+                        processBadgeDownloadQueue()
+                    }
+                }
+            }
+        }
+    }
+
+    private suspend fun processBadgeDownloadQueue() {
+        Log.d(SIM_AUDIO_SYNC_LOG_TAG, "SIM badge sync background queue started")
+        while (true) {
+            val nextFilename = runtime.badgeDownloadQueueMutex.withLock {
+                runtime.queuedBadgeDownloads.firstOrNull()?.also { runtime.queuedBadgeDownloads.remove(it) }
+            } ?: break
+
+            val placeholder = storeSupport.getAudioByNormalizedBadgeFilename(nextFilename)
+            if (placeholder == null) {
+                Log.d(
+                    SIM_AUDIO_SYNC_LOG_TAG,
+                    "SIM badge sync skipped missing placeholder filename=$nextFilename"
+                )
+                continue
+            }
+            if (normalizeSimBadgeFilename(placeholder.filename) in storeSupport.getPendingBadgeDeletesSnapshot()) {
+                Log.d(
+                    SIM_AUDIO_SYNC_LOG_TAG,
+                    "SIM badge sync skipped tombstoned placeholder filename=$nextFilename"
+                )
+                continue
+            }
+
+            storeSupport.markBadgeDownloadAvailability(
+                filename = nextFilename,
+                availability = AudioLocalAvailability.DOWNLOADING,
+                errorMessage = null
+            )
+            Log.d(
+                SIM_AUDIO_SYNC_LOG_TAG,
+                "SIM badge sync background download start filename=$nextFilename"
+            )
+
+            try {
+                val downloadResult = coroutineScope {
+                    val activeDownload = async { runtime.connectivityBridge.downloadRecording(nextFilename) }
+                    runtime.activeBadgeDownloadFilename = nextFilename
+                    runtime.activeBadgeDownloadJob = activeDownload
+                    activeDownload.await()
+                }
+
+                if (nextFilename in storeSupport.getPendingBadgeDeletesSnapshot()) {
+                    if (downloadResult is WavDownloadResult.Success) {
+                        downloadResult.localFile.delete()
+                    }
+                    Log.d(
+                        SIM_AUDIO_SYNC_LOG_TAG,
+                        "SIM badge sync discarded deleted download filename=$nextFilename"
+                    )
+                    continue
+                }
+
+                when (downloadResult) {
+                    is WavDownloadResult.Success -> {
+                        if (downloadResult.sizeBytes < MIN_BADGE_WAV_SIZE_BYTES) {
+                            downloadResult.localFile.delete()
+                            storeSupport.removeBadgeAudioByFilename(nextFilename)
+                            Log.d(
+                                SIM_AUDIO_SYNC_LOG_TAG,
+                                "SIM badge sync removed empty placeholder filename=$nextFilename sizeBytes=${downloadResult.sizeBytes}"
+                            )
+                            continue
+                        }
+                        storeSupport.importDownloadedBadgeAudio(nextFilename, downloadResult.localFile)
+                        Log.d(
+                            SIM_AUDIO_SYNC_LOG_TAG,
+                            "SIM badge sync background download success filename=$nextFilename sizeBytes=${downloadResult.sizeBytes}"
+                        )
+                    }
+
+                    is WavDownloadResult.Error -> {
+                        storeSupport.markBadgeDownloadAvailability(
+                            filename = nextFilename,
+                            availability = AudioLocalAvailability.FAILED,
+                            errorMessage = downloadResult.message
+                        )
+                        emitSimAudioSyncFailureWhileConnectivityUnavailableTelemetry(
+                            detail = "downloadRecording failed filename=$nextFilename reason=${downloadResult.message}"
+                        )
+                        Log.e(
+                            SIM_AUDIO_SYNC_LOG_TAG,
+                            "SIM badge sync background download failed filename=$nextFilename reason=${downloadResult.message}"
+                        )
+                    }
+                }
+            } catch (cancelled: CancellationException) {
+                Log.d(
+                    SIM_AUDIO_SYNC_LOG_TAG,
+                    "SIM badge sync background download canceled filename=$nextFilename"
+                )
+            } finally {
+                runtime.activeBadgeDownloadFilename = null
+                runtime.activeBadgeDownloadJob = null
+            }
+        }
+        Log.d(SIM_AUDIO_SYNC_LOG_TAG, "SIM badge sync background queue drained")
     }
 
     private suspend fun reconcilePendingBadgeDeletes(badgeFiles: List<String>): Set<String> {

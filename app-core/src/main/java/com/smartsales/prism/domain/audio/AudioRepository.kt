@@ -78,6 +78,7 @@ data class AudioFile(
     val timeDisplay: String,
     val source: AudioSource,
     val status: TranscriptionStatus,
+    val localAvailability: AudioLocalAvailability = AudioLocalAvailability.READY,
     val isStarred: Boolean = false,
     val isTestImport: Boolean = false,
     val summary: String? = null,
@@ -90,6 +91,14 @@ data class AudioFile(
 @Serializable
 enum class AudioSource {
     SMARTBADGE, PHONE
+}
+
+@Serializable
+enum class AudioLocalAvailability {
+    QUEUED,
+    DOWNLOADING,
+    READY,
+    FAILED
 }
 
 @Serializable

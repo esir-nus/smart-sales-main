@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import com.smartsales.prism.data.connectivity.legacy.toBadgeDownloadFilename
 import com.smartsales.prism.domain.audio.AudioFile
+import com.smartsales.prism.domain.audio.AudioLocalAvailability
 import com.smartsales.prism.domain.audio.AudioSource
 import com.smartsales.prism.domain.audio.TranscriptionStatus
 import java.io.File
@@ -38,6 +39,16 @@ internal fun recoverOrphanedSimTranscriptions(entries: List<AudioFile>): List<Au
                 progress = 0f,
                 lastErrorMessage = audio.lastErrorMessage ?: ORPHANED_SIM_TRANSCRIPTION_MESSAGE
             )
+        } else {
+            audio
+        }
+    }
+}
+
+internal fun recoverInterruptedSimDownloads(entries: List<AudioFile>): List<AudioFile> {
+    return entries.map { audio ->
+        if (audio.localAvailability == AudioLocalAvailability.DOWNLOADING) {
+            audio.copy(localAvailability = AudioLocalAvailability.QUEUED)
         } else {
             audio
         }
@@ -143,6 +154,13 @@ internal class SimAudioRepositoryStoreSupport(
 
     fun getAudio(audioId: String): AudioFile? = runtime.audioFiles.value.find { it.id == audioId }
 
+    fun getAudioByNormalizedBadgeFilename(filename: String): AudioFile? {
+        val normalizedFilename = simPendingBadgeDeleteFilename(filename)
+        return runtime.audioFiles.value.firstOrNull {
+            simPendingBadgeDeleteFilename(it.filename) == normalizedFilename
+        }
+    }
+
     fun bindSession(audioId: String, sessionId: String) {
         runtime.audioFiles.update { current ->
             current.map { if (it.id == audioId) it.copy(boundSessionId = sessionId) else it }
@@ -170,8 +188,8 @@ internal class SimAudioRepositoryStoreSupport(
             if (contents.isNotBlank()) {
                 val parsed = runtime.json.decodeFromString<List<AudioFile>>(contents)
                 val normalization = normalizeBadgeOriginEntries(parsed)
-                runtime.audioFiles.value = recoverOrphanedSimTranscriptions(
-                    normalization.entries
+                runtime.audioFiles.value = recoverInterruptedSimDownloads(
+                    recoverOrphanedSimTranscriptions(normalization.entries)
                 )
                 if (normalization.normalizedCount > 0) {
                     android.util.Log.w(
@@ -223,6 +241,7 @@ internal class SimAudioRepositoryStoreSupport(
                         timeDisplay = "内置样本",
                         source = AudioSource.PHONE,
                         status = TranscriptionStatus.PENDING,
+                        localAvailability = AudioLocalAvailability.READY,
                         isStarred = seed.isStarred
                     )
                 }
@@ -258,21 +277,111 @@ internal class SimAudioRepositoryStoreSupport(
         runtime.metadataFile.writeText(runtime.json.encodeToString(retainedFiles))
     }
 
+    suspend fun createQueuedBadgePlaceholders(filenames: List<String>): Int {
+        if (filenames.isEmpty()) return 0
+        val normalizedFilenames = filenames.map(::simPendingBadgeDeleteFilename)
+        var createdCount = 0
+        mutateAndSave { current ->
+            val existingByFilename = current
+                .map { simPendingBadgeDeleteFilename(it.filename) }
+                .toMutableSet()
+            val updated = current.toMutableList()
+            normalizedFilenames.forEach { normalizedFilename ->
+                if (!existingByFilename.add(normalizedFilename)) return@forEach
+                updated += AudioFile(
+                    id = UUID.randomUUID().toString(),
+                    filename = normalizedFilename,
+                    timeDisplay = "Just now",
+                    source = AudioSource.SMARTBADGE,
+                    status = TranscriptionStatus.PENDING,
+                    localAvailability = AudioLocalAvailability.QUEUED,
+                    isStarred = false
+                )
+                createdCount += 1
+            }
+            updated
+        }
+        return createdCount
+    }
+
+    suspend fun markBadgeDownloadAvailability(
+        filename: String,
+        availability: AudioLocalAvailability,
+        errorMessage: String? = null
+    ) {
+        val normalizedFilename = simPendingBadgeDeleteFilename(filename)
+        mutateAndSave { current ->
+            current.map { audio ->
+                if (simPendingBadgeDeleteFilename(audio.filename) == normalizedFilename) {
+                    audio.copy(
+                        localAvailability = availability,
+                        lastErrorMessage = when {
+                            errorMessage != null -> errorMessage
+                            availability == AudioLocalAvailability.READY ||
+                                availability == AudioLocalAvailability.DOWNLOADING ||
+                                availability == AudioLocalAvailability.QUEUED -> null
+                            else -> audio.lastErrorMessage
+                        }
+                    )
+                } else {
+                    audio
+                }
+            }
+        }
+    }
+
+    suspend fun removeBadgeAudioByFilename(filename: String): Boolean {
+        val normalizedFilename = simPendingBadgeDeleteFilename(filename)
+        var removed = false
+        mutateAndSave { current ->
+            current.filterNot { audio ->
+                val matches = simPendingBadgeDeleteFilename(audio.filename) == normalizedFilename
+                if (matches) {
+                    removed = true
+                    runtime.observationJobs.remove(audio.id)?.cancel()
+                    resolveSimStoredAudioFile(runtime.context, audio.id)?.delete()
+                    simArtifactFile(runtime.context, audio.id).delete()
+                }
+                matches
+            }
+        }
+        return removed
+    }
+
     suspend fun importDownloadedBadgeAudio(filename: String, downloadedFile: File) {
-        val newId = UUID.randomUUID().toString()
-        val destFile = simStoredAudioFile(runtime.context, newId, "wav")
+        val existing = getAudioByNormalizedBadgeFilename(filename)
+        val audioId = existing?.id ?: UUID.randomUUID().toString()
+        val destFile = simStoredAudioFile(runtime.context, audioId, "wav")
         downloadedFile.copyTo(destFile, overwrite = true)
         downloadedFile.delete()
 
-        val newFile = AudioFile(
-            id = newId,
-            filename = filename,
-            timeDisplay = "Just now",
+        val normalizedFilename = simPendingBadgeDeleteFilename(filename)
+        val updatedFile = AudioFile(
+            id = audioId,
+            filename = normalizedFilename,
+            timeDisplay = existing?.timeDisplay ?: "Just now",
             source = AudioSource.SMARTBADGE,
-            status = TranscriptionStatus.PENDING,
-            isStarred = false
+            status = existing?.status ?: TranscriptionStatus.PENDING,
+            localAvailability = AudioLocalAvailability.READY,
+            isStarred = existing?.isStarred ?: false,
+            isTestImport = existing?.isTestImport ?: false,
+            summary = existing?.summary,
+            progress = if (existing?.status == TranscriptionStatus.TRANSCRIBING) {
+                existing.progress
+            } else {
+                0f
+            },
+            boundSessionId = existing?.boundSessionId,
+            activeJobId = existing?.activeJobId,
+            lastErrorMessage = null
         )
-        mutateAndSave { current -> current + newFile }
+        mutateAndSave { current ->
+            if (existing == null) {
+                current + updatedFile
+            } else {
+                current.map { audio -> if (audio.id == audioId) updatedFile else audio }
+            }
+        }
     }
 
     suspend fun clearPendingBadgeDeletes(filenames: Set<String>) {
@@ -315,6 +424,7 @@ internal class SimAudioRepositoryStoreSupport(
             timeDisplay = "Just now",
             source = AudioSource.PHONE,
             status = TranscriptionStatus.PENDING,
+            localAvailability = AudioLocalAvailability.READY,
             isStarred = false,
             isTestImport = true
         )

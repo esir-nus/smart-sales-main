@@ -25,16 +25,21 @@ class SimAudioRepositoryRuntime @Inject constructor(
     val ossUploader: OssUploader,
     val tingwuPipeline: TingwuPipeline
 ) {
-    val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
-    val repositoryScope = CoroutineScope(SupervisorJob() + ioDispatcher)
+    var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
+    var repositoryScope = CoroutineScope(SupervisorJob() + ioDispatcher)
     val metadataFile = File(context.filesDir, SIM_AUDIO_METADATA_FILENAME)
     val pendingBadgeDeleteFile = File(context.filesDir, SIM_AUDIO_PENDING_BADGE_DELETE_FILENAME)
     val fileMutex = Mutex()
     val syncMutex = Mutex()
+    val badgeDownloadQueueMutex = Mutex()
     val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     val audioFiles = MutableStateFlow<List<AudioFile>>(emptyList())
     val pendingBadgeDeletes = MutableStateFlow<Set<String>>(emptySet())
     val observationJobs = mutableMapOf<String, Job>()
+    val queuedBadgeDownloads = LinkedHashSet<String>()
+    var badgeDownloadWorkerJob: Job? = null
+    var activeBadgeDownloadFilename: String? = null
+    var activeBadgeDownloadJob: Job? = null
     internal val seedDefinitions = listOf(
         SimSeedDefinition(
             id = "sim_wave2_seed",
@@ -50,6 +55,11 @@ class SimAudioRepositoryRuntime @Inject constructor(
         "sim_wave2_seed_pending_d",
         "sim_wave2_seed_pending_e"
     )
+
+    internal fun overrideConcurrencyForTests(dispatcher: CoroutineDispatcher, scope: CoroutineScope) {
+        ioDispatcher = dispatcher
+        repositoryScope = scope
+    }
 }
 
 internal data class SimSeedDefinition(

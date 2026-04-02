@@ -1,6 +1,7 @@
 package com.smartsales.prism.data.audio
 
 import com.smartsales.prism.domain.audio.AudioFile
+import com.smartsales.prism.domain.audio.AudioLocalAvailability
 import com.smartsales.prism.domain.audio.AudioSource
 import com.smartsales.prism.domain.audio.TranscriptionStatus
 import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
@@ -55,7 +56,9 @@ class SimBadgeAudioPipelineIngestSupport @Inject constructor(
                     timeDisplay = existing?.timeDisplay ?: "Just now",
                     source = AudioSource.SMARTBADGE,
                     status = TranscriptionStatus.TRANSCRIBED,
+                    localAvailability = AudioLocalAvailability.READY,
                     isStarred = existing?.isStarred ?: false,
+                    isTestImport = existing?.isTestImport ?: false,
                     summary = summary,
                     progress = 1f,
                     boundSessionId = existing?.boundSessionId,

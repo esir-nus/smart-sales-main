@@ -2,6 +2,7 @@ package com.smartsales.prism.data.audio
 
 import com.smartsales.core.util.Result
 import com.smartsales.data.oss.OssUploadResult
+import com.smartsales.prism.domain.audio.AudioLocalAvailability
 import com.smartsales.prism.domain.audio.TranscriptionStatus
 import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
 import com.smartsales.prism.domain.tingwu.TingwuJobState
@@ -25,6 +26,9 @@ internal class SimAudioRepositoryTranscriptionSupport(
 
     suspend fun startTranscription(audioId: String) {
         val audio = storeSupport.getAudio(audioId) ?: throw Exception("找不到音频条目")
+        if (audio.localAvailability != AudioLocalAvailability.READY) {
+            throw Exception("录音仍在后台同步，暂时不能开始转写。")
+        }
         if (audio.status == TranscriptionStatus.TRANSCRIBED && artifactSupport.getArtifacts(audioId) != null) {
             android.util.Log.d("SimAudioRepository", "skip rerun for already-transcribed audioId=$audioId")
             return

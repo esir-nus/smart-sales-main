@@ -10,9 +10,9 @@ class InsetOwnershipContractTest {
     private val workingDir = File(System.getProperty("user.dir") ?: ".")
 
     @Test
-    fun `agent shell no longer owns the global top status bar inset`() {
-        val host = readSource("app-core/src/main/java/com/smartsales/prism/ui/AgentShell.kt")
-        val content = readSource("app-core/src/main/java/com/smartsales/prism/ui/AgentShellContent.kt")
+    fun `runtime shell no longer owns the global top status bar inset`() {
+        val host = readSource("app-core/src/main/java/com/smartsales/prism/ui/RuntimeShell.kt")
+        val content = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/RuntimeShellContent.kt")
 
         assertFalse(host.contains(".statusBarsPadding()"))
         assertFalse(content.contains(".statusBarsPadding()"))

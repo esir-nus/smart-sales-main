@@ -3,94 +3,115 @@
 > **Context Boundary**: `docs/cerb-ui/dynamic-island/`
 > **Status**: Active
 > **Visual Role**: Sticky top-header ambient summary surface
+> **Behavioral UX Authority Above This Doc**: [`docs/core-flow/base-runtime-ux-surface-governance-flow.md`](../../core-flow/base-runtime-ux-surface-governance-flow.md) (`UX.HOME.HEADER.DYNAMIC_ISLAND`, `UX.SCHEDULER.ENTRY.DYNAMIC_ISLAND_ENTRY`)
 
 ## 1. Ownership
 
-This shard owns the `Dynamic Island` shell surface used inside the standard top header on eligible top-level screens.
+This shard owns the local `Dynamic Island` renderer contract used inside the standard top header on eligible top-level screens beneath the shared UX authority in `docs/core-flow/base-runtime-ux-surface-governance-flow.md`.
 
 It owns:
 
-- sticky top placement inside the header
 - one-line summary presentation
 - center-slot layout behavior
 - truncation behavior
-- single tap routing payload
+- tap-routing payloads for scheduler and connectivity entry
 - single-item visibility policy
+- RuntimeShell-local lane arbitration rules beneath the shared shell UX contract
+- renderer-local visual states for scheduler and RuntimeShell/SIM connectivity copy
 
 It does not own:
 
-- scheduler task truth
-- scheduler drawer internals
-- home-shell layout outside the center host slot
-- connectivity, agent-activity, or alert logic
+- scheduler task truth, prioritization, or drawer internals
+- connectivity transport truth or connectivity manager behavior
+- shared shell layout outside the center host slot
 - global tokens in `docs/specs/style-guide.md`
 - shared layer rules in `docs/specs/ui_element_registry.md`
+- broad default-header migration outside the current RuntimeShell/SIM slice
 
-## 2. Current v1 Contract
+## 2. Current Contract
 
-The current v1 Dynamic Island is scheduler-scoped only.
+The shared renderer remains a sticky one-line center-slot surface.
 
-Rules:
+Current contract:
 
-- it appears on eligible top-level surfaces that use the standard persistent top header
+- it appears on eligible top-level surfaces that use the persistent shell header family
 - it mounts inside the header, not below it
-- it replaces the previous center title slot only
-- left and right header controls remain outside the island
-- it is always sticky at the top
-- it is always one line
+- it stays one line and never expands vertically
 - it shows only one winning item at a time
-- it never expands vertically
-- tap opens the scheduler drawer and may carry a scheduler date target
-- there are no inline buttons, chips, or secondary actions inside the island
+- it never introduces inline buttons, chips, or second-line subtitles
+- tap follows the currently visible lane
+- downward drag remains a scheduler-only entry gesture
+- scheduler remains the default lane when no connectivity takeover is active
+- RuntimeShell/SIM may temporarily surface a connectivity lane in the same center slot without redefining the rest of the header family
 
 Current composition:
 
 ```text
 ┌──────────────────────────────────────────────┐
-│ [☰] [Badge]     最近：回访客户 · 15:00      [+] │
+│ [☰] [Badge]     [ Dynamic Island ]      [+] │
 └──────────────────────────────────────────────┘
 ```
 
-## 3. Content Rules
+## 3. Lane Arbitration Rules
 
-The island renders one scheduler-backed summary line.
+### Scheduler lane
 
-Current copy pattern:
+Scheduler remains the base lane and uses the existing scheduler-backed summaries:
 
 - conflict item: `冲突：任务标题 · 时间`
 - normal upcoming item: `最近：任务标题 · 时间`
 - idle fallback: `暂无待办`
+- SIM RuntimeShell rotates scheduler candidates every `5s` when more than one lawful scheduler item exists
 
-Current fallback rule:
+### Connectivity lane
 
-- if there is no pending scheduler item, render `暂无待办`
+RuntimeShell/SIM may temporarily replace the scheduler lane with a connectivity lane.
 
-Current overflow rule:
+Rules:
 
-- content remains single-line
-- long content truncates with ellipsis
-- long content must not wrap into a second line
+- transport truth comes from `ConnectivityViewModel.connectionState`
+- included connectivity island states are `CONNECTED`, `DISCONNECTED`, `RECONNECTING`, and `NEEDS_SETUP`
+- `CONNECTED` and `DISCONNECTED` interrupt the scheduler lane for `3s` on state change
+- a heartbeat may re-show `CONNECTED` or `DISCONNECTED` every `30s` for `2.5s` when no takeover is already active
+- `RECONNECTING` and `NEEDS_SETUP` are persistent takeovers until the underlying transport state changes
+- the connectivity lane is suppressed while the scheduler drawer is open or while any connectivity-owned surface (`MODAL`, `SETUP`, `MANAGER`) is already visible
+- visible connectivity tap opens the connectivity entry surface instead of the scheduler drawer
+- downward drag does not open connectivity; it remains reserved for scheduler entry only
 
-Current hue rule:
+Current connectivity copy:
 
-- conflict-visible item uses yellow warning hue
-- most-immediate non-conflict item uses red urgent hue
-- idle fallback stays neutral/cool
+- connected: `Badge 已连接`
+- disconnected: `Badge 已断开`
+- reconnecting: `Badge 重连中...`
+- needs setup: `Badge 需要配网`
+
+Current battery rule:
+
+- the connected connectivity lane may show a compact battery indicator
+- the current battery value is still provisional and comes from `ConnectivityViewModel.batteryLevel`
+- real bridge-backed battery sourcing is deferred and must be tracked as follow-up debt rather than implied as shipped truth
+
+Excluded from this lane:
+
+- update-check / update-found / updating refinements
+- Wi-Fi mismatch and manager-only diagnostic states
+- extra connectivity sub-lanes that do not map to the transport-truth shell contract above
 
 ## 4. Integration Rules
 
-- scheduler remains the owner of task meaning, prioritization, and task selection truth
-- the island consumes one scheduler-backed item plus scheduler-target routing metadata
-- the island may open the scheduler drawer, but it must not become a second scheduler surface
-- shared v1 does not own multi-item rotation; shells such as SIM may layer that presentation locally while still reusing this one-line renderer
-- future non-scheduler lanes must be introduced by updating this shard first
+- scheduler remains the owner of task meaning, prioritization, and scheduler-target routing metadata
+- RuntimeShell owns only the visible-lane arbitration and shell entry routing
+- connectivity island behavior must use transport truth, not manager-only presentation refinements
+- the island may open the scheduler drawer or connectivity entry, but it must not become a second scheduler surface or a second connectivity manager
+- shells other than RuntimeShell/SIM must not inherit the connectivity lane by assumption; they need an explicit spec update first
 
 ## 5. Deferred Scope
 
 The following are explicitly deferred:
 
-- connectivity lane
+- real battery sourcing from a bridge-backed contract
+- shared/default-header migration outside the current RuntimeShell/SIM slice
 - agent activity lane
 - system alert lane
-- multi-lane arbitration beyond the current single scheduler-backed item
+- manager-only connectivity refinements inside the island
 - rich inline actions inside the island

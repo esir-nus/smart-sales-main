@@ -61,7 +61,7 @@ import kotlinx.coroutines.launch
 internal fun SimAudioCard(
     entry: SimAudioEntry,
     viewModel: SimAudioDrawerViewModel,
-    mode: SimAudioDrawerMode,
+    mode: RuntimeAudioDrawerMode,
     expanded: Boolean,
     currentChatAudioId: String?,
     onToggleExpanded: () -> Unit,
@@ -77,7 +77,7 @@ internal fun SimAudioCard(
     var hasReportedArtifactOpen by remember(entry.item.id, expanded) { mutableStateOf(false) }
     var transcriptPreview by remember(entry.item.id) { mutableStateOf<String?>(null) }
     val isCurrentChatAudio = currentChatAudioId == entry.item.id
-    val isBrowseMode = mode == SimAudioDrawerMode.BROWSE
+    val isBrowseMode = mode == RuntimeAudioDrawerMode.BROWSE
     val canExpandInBrowseMode = isBrowseMode && entry.item.status == AudioStatus.TRANSCRIBED
     val canSwipeToTranscribe = canSwipeRightToTranscribe(
         mode = mode,
@@ -119,7 +119,7 @@ internal fun SimAudioCard(
     }
 
     LaunchedEffect(entry.item.id, entry.item.status, mode) {
-        if (mode != SimAudioDrawerMode.CHAT_RESELECT || entry.item.status != AudioStatus.TRANSCRIBED) {
+        if (mode != RuntimeAudioDrawerMode.CHAT_RESELECT || entry.item.status != AudioStatus.TRANSCRIBED) {
             transcriptPreview = null
             return@LaunchedEffect
         }
@@ -192,7 +192,7 @@ internal fun SimAudioCard(
                     imageVector = Icons.Filled.Star,
                     contentDescription = null,
                     tint = if (entry.item.isStarred) SimDrawerAccent else SimDrawerTextMuted,
-                    modifier = if (mode == SimAudioDrawerMode.BROWSE) {
+                    modifier = if (mode == RuntimeAudioDrawerMode.BROWSE) {
                         Modifier.clickable(onClick = onToggleStar)
                     } else {
                         Modifier
@@ -203,7 +203,7 @@ internal fun SimAudioCard(
 
         Spacer(modifier = Modifier.height(6.dp))
 
-        if (mode == SimAudioDrawerMode.CHAT_RESELECT) {
+        if (mode == RuntimeAudioDrawerMode.CHAT_RESELECT) {
             SimAudioCompactPreviewRow(
                 text = buildSimAudioSelectBodyText(
                     entry = entry,
@@ -346,14 +346,14 @@ internal fun SimAudioCard(
             }
         }
     ) {
-        val clickEnabled = if (mode == SimAudioDrawerMode.CHAT_RESELECT) !isCurrentChatAudio else true
+        val clickEnabled = if (mode == RuntimeAudioDrawerMode.CHAT_RESELECT) !isCurrentChatAudio else true
         val onCardClick: () -> Unit = {
             when (mode) {
-                SimAudioDrawerMode.CHAT_RESELECT -> {
+                RuntimeAudioDrawerMode.CHAT_RESELECT -> {
                     if (!isCurrentChatAudio) onSelectForChat()
                 }
 
-                SimAudioDrawerMode.BROWSE -> {
+                RuntimeAudioDrawerMode.BROWSE -> {
                     if (canExpandInBrowseMode) {
                         onToggleExpanded()
                     } else {
@@ -377,7 +377,7 @@ internal fun SimAudioCard(
             }
         }
 
-        if (mode == SimAudioDrawerMode.CHAT_RESELECT) {
+        if (mode == RuntimeAudioDrawerMode.CHAT_RESELECT) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -432,21 +432,21 @@ internal fun SimAudioCard(
 }
 
 internal fun canSwipeRightToTranscribe(
-    mode: SimAudioDrawerMode,
+    mode: RuntimeAudioDrawerMode,
     status: AudioStatus,
     expanded: Boolean
 ): Boolean {
-    return mode == SimAudioDrawerMode.BROWSE &&
+    return mode == RuntimeAudioDrawerMode.BROWSE &&
         !expanded &&
         status == AudioStatus.PENDING
 }
 
 internal fun canSwipeLeftToDelete(
-    mode: SimAudioDrawerMode,
+    mode: RuntimeAudioDrawerMode,
     status: AudioStatus,
     expanded: Boolean
 ): Boolean {
-    return mode == SimAudioDrawerMode.BROWSE &&
+    return mode == RuntimeAudioDrawerMode.BROWSE &&
         !expanded &&
         (status == AudioStatus.PENDING || status == AudioStatus.TRANSCRIBED)
 }

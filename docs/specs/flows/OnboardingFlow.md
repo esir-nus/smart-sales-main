@@ -2,7 +2,8 @@
 
 > Type: Flow
 > Status: Active
-> Last Updated: 2026-03-31
+> Last Updated: 2026-04-01
+> UX Surface Authority Above This Doc: [`docs/core-flow/base-runtime-ux-surface-governance-flow.md`](../../core-flow/base-runtime-ux-surface-governance-flow.md) (`UX.ONBOARDING.*`)
 
 ## Overview
 

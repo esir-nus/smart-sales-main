@@ -20,57 +20,57 @@ class SimShellHandoffTest {
 
     @Test
     fun `sim shell chrome hosted scheduler gesture only opens when shell is clear`() {
-        assertTrue(canOpenSimSchedulerFromEdge(SimShellState()))
-        assertFalse(canOpenSimSchedulerFromEdge(SimShellState(activeDrawer = SimDrawerType.SCHEDULER)))
-        assertFalse(canOpenSimSchedulerFromEdge(SimShellState(showHistory = true)))
+        assertTrue(canOpenSimSchedulerFromEdge(RuntimeShellState()))
+        assertFalse(canOpenSimSchedulerFromEdge(RuntimeShellState(activeDrawer = RuntimeDrawerType.SCHEDULER)))
+        assertFalse(canOpenSimSchedulerFromEdge(RuntimeShellState(showHistory = true)))
         assertFalse(
             canOpenSimSchedulerFromEdge(
-                SimShellState(activeConnectivitySurface = SimConnectivitySurface.MODAL)
+                RuntimeShellState(activeConnectivitySurface = RuntimeConnectivitySurface.MODAL)
             )
         )
-        assertFalse(canOpenSimSchedulerFromEdge(SimShellState(showSettings = true)))
+        assertFalse(canOpenSimSchedulerFromEdge(RuntimeShellState(showSettings = true)))
     }
 
     @Test
     fun `sim shell chrome hosted audio gesture yields to ime visibility`() {
-        assertTrue(canOpenSimAudioFromEdge(SimShellState(), isImeVisible = false))
-        assertFalse(canOpenSimAudioFromEdge(SimShellState(), isImeVisible = true))
+        assertTrue(canOpenSimAudioFromEdge(RuntimeShellState(), isImeVisible = false))
+        assertFalse(canOpenSimAudioFromEdge(RuntimeShellState(), isImeVisible = true))
     }
 
     @Test
     fun `idle composer helper hint only shows when shell is clear and ime is hidden`() {
-        assertTrue(shouldShowSimIdleComposerHint(SimShellState(), isImeVisible = false))
-        assertFalse(shouldShowSimIdleComposerHint(SimShellState(activeDrawer = SimDrawerType.AUDIO), isImeVisible = false))
-        assertFalse(shouldShowSimIdleComposerHint(SimShellState(showHistory = true), isImeVisible = false))
-        assertFalse(shouldShowSimIdleComposerHint(SimShellState(showSettings = true), isImeVisible = false))
+        assertTrue(shouldShowRuntimeIdleComposerHint(RuntimeShellState(), isImeVisible = false))
+        assertFalse(shouldShowRuntimeIdleComposerHint(RuntimeShellState(activeDrawer = RuntimeDrawerType.AUDIO), isImeVisible = false))
+        assertFalse(shouldShowRuntimeIdleComposerHint(RuntimeShellState(showHistory = true), isImeVisible = false))
+        assertFalse(shouldShowRuntimeIdleComposerHint(RuntimeShellState(showSettings = true), isImeVisible = false))
         assertFalse(
-            shouldShowSimIdleComposerHint(
-                SimShellState(activeConnectivitySurface = SimConnectivitySurface.MODAL),
+            shouldShowRuntimeIdleComposerHint(
+                RuntimeShellState(activeConnectivitySurface = RuntimeConnectivitySurface.MODAL),
                 isImeVisible = false
             )
         )
-        assertFalse(shouldShowSimIdleComposerHint(SimShellState(), isImeVisible = true))
+        assertFalse(shouldShowRuntimeIdleComposerHint(RuntimeShellState(), isImeVisible = true))
     }
 
     @Test
     fun `startup scheduler teaser only auto opens once when shell is clear`() {
         assertTrue(
-            shouldAutoOpenSimSchedulerStartupTeaser(
-                state = SimShellState(),
+            shouldAutoOpenRuntimeSchedulerStartupTeaser(
+                state = RuntimeShellState(),
                 isImeVisible = false,
                 teaserPending = true
             )
         )
         assertFalse(
-            shouldAutoOpenSimSchedulerStartupTeaser(
-                state = SimShellState(activeDrawer = SimDrawerType.AUDIO),
+            shouldAutoOpenRuntimeSchedulerStartupTeaser(
+                state = RuntimeShellState(activeDrawer = RuntimeDrawerType.AUDIO),
                 isImeVisible = false,
                 teaserPending = true
             )
         )
         assertFalse(
-            shouldAutoOpenSimSchedulerStartupTeaser(
-                state = SimShellState(),
+            shouldAutoOpenRuntimeSchedulerStartupTeaser(
+                state = RuntimeShellState(),
                 isImeVisible = false,
                 teaserPending = false
             )
@@ -88,6 +88,29 @@ class SimShellHandoffTest {
         assertEquals("SIM", items.single().sessionTitle)
         assertEquals("暂无待办", items.single().schedulerSummary)
         assertTrue(items.single().isIdleEntry)
+    }
+
+    @Test
+    fun `buildSimDynamicIslandItems can show idle teaching hint for scheduler discoverability`() {
+        val items = buildSimDynamicIslandItems(
+            sessionTitle = "",
+            orderedTasks = emptyList(),
+            showIdleTeachingHint = true
+        )
+
+        assertEquals(1, items.size)
+        assertEquals("下滑这里查看日程", items.single().schedulerSummary)
+        assertTrue(items.single().isIdleEntry)
+    }
+
+    @Test
+    fun `dismissRuntimeSchedulerIslandHint only clears session teaching flag`() {
+        val dismissed = dismissRuntimeSchedulerIslandHint(
+            RuntimeShellState(showSchedulerIslandHint = true)
+        )
+
+        assertFalse(dismissed.showSchedulerIslandHint)
+        assertNull(dismissed.activeDrawer)
     }
 
     @Test
@@ -554,38 +577,38 @@ class SimShellHandoffTest {
     }
 
     @Test
-    fun `deriveSimFollowUpSurface follows shell surface priority`() {
+    fun `deriveRuntimeFollowUpSurface follows shell surface priority`() {
         assertEquals(
             SimBadgeFollowUpSurface.CHAT,
-            deriveSimFollowUpSurface(SimShellState())
+            deriveRuntimeFollowUpSurface(RuntimeShellState())
         )
         assertEquals(
             SimBadgeFollowUpSurface.SCHEDULER,
-            deriveSimFollowUpSurface(SimShellState(activeDrawer = SimDrawerType.SCHEDULER))
+            deriveRuntimeFollowUpSurface(RuntimeShellState(activeDrawer = RuntimeDrawerType.SCHEDULER))
         )
         assertEquals(
             SimBadgeFollowUpSurface.CONNECTIVITY,
-            deriveSimFollowUpSurface(
-                SimShellState(
-                    activeDrawer = SimDrawerType.SCHEDULER,
-                    activeConnectivitySurface = SimConnectivitySurface.MODAL
+            deriveRuntimeFollowUpSurface(
+                RuntimeShellState(
+                    activeDrawer = RuntimeDrawerType.SCHEDULER,
+                    activeConnectivitySurface = RuntimeConnectivitySurface.MODAL
                 )
             )
         )
         assertEquals(
             SimBadgeFollowUpSurface.HISTORY,
-            deriveSimFollowUpSurface(
-                SimShellState(
-                    activeDrawer = SimDrawerType.SCHEDULER,
-                    activeConnectivitySurface = SimConnectivitySurface.MODAL,
+            deriveRuntimeFollowUpSurface(
+                RuntimeShellState(
+                    activeDrawer = RuntimeDrawerType.SCHEDULER,
+                    activeConnectivitySurface = RuntimeConnectivitySurface.MODAL,
                     showHistory = true
                 )
             )
         )
         assertEquals(
             SimBadgeFollowUpSurface.SETTINGS,
-            deriveSimFollowUpSurface(
-                SimShellState(
+            deriveRuntimeFollowUpSurface(
+                RuntimeShellState(
                     showSettings = true
                 )
             )
@@ -693,25 +716,25 @@ class SimShellHandoffTest {
 
     @Test
     fun `canOpenSimSchedulerFromEdge only allows clean shell state`() {
-        assertTrue(canOpenSimSchedulerFromEdge(SimShellState()))
+        assertTrue(canOpenSimSchedulerFromEdge(RuntimeShellState()))
         assertFalse(
             canOpenSimSchedulerFromEdge(
-                SimShellState(activeDrawer = SimDrawerType.SCHEDULER)
+                RuntimeShellState(activeDrawer = RuntimeDrawerType.SCHEDULER)
             )
         )
         assertFalse(
             canOpenSimSchedulerFromEdge(
-                SimShellState(showHistory = true)
+                RuntimeShellState(showHistory = true)
             )
         )
         assertFalse(
             canOpenSimSchedulerFromEdge(
-                SimShellState(activeConnectivitySurface = SimConnectivitySurface.MODAL)
+                RuntimeShellState(activeConnectivitySurface = RuntimeConnectivitySurface.MODAL)
             )
         )
         assertFalse(
             canOpenSimSchedulerFromEdge(
-                SimShellState(showSettings = true)
+                RuntimeShellState(showSettings = true)
             )
         )
     }
@@ -720,19 +743,19 @@ class SimShellHandoffTest {
     fun `canOpenSimAudioFromEdge also blocks when ime is visible`() {
         assertTrue(
             canOpenSimAudioFromEdge(
-                state = SimShellState(),
+                state = RuntimeShellState(),
                 isImeVisible = false
             )
         )
         assertFalse(
             canOpenSimAudioFromEdge(
-                state = SimShellState(),
+                state = RuntimeShellState(),
                 isImeVisible = true
             )
         )
         assertFalse(
             canOpenSimAudioFromEdge(
-                state = SimShellState(activeDrawer = SimDrawerType.AUDIO),
+                state = RuntimeShellState(activeDrawer = RuntimeDrawerType.AUDIO),
                 isImeVisible = false
             )
         )

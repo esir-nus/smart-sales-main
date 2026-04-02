@@ -6,6 +6,7 @@ import com.smartsales.prism.data.notification.ReminderReliabilityAdvisor
 import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.domain.scheduler.UrgencyLevel
 import com.smartsales.prism.ui.drawers.SchedulerDrawer
+import com.smartsales.prism.ui.drawers.SCHEDULER_EMPTY_GUIDE_CARD_TEST_TAG
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -63,10 +64,26 @@ class SchedulerDrawerSimModeTest {
         )
 
         composeTestRule.onNodeWithText("问AI (1)").assertDoesNotExist()
-        composeTestRule.onAllNodesWithText("Ask AI").assertCountEquals(1)
-        composeTestRule.onNodeWithText("Ask AI").performClick()
+        composeTestRule.onNodeWithText("灵感记录").assertExists()
+        composeTestRule.onNodeWithText("灵感箱 (1)").assertDoesNotExist()
+        composeTestRule.onNodeWithText("Ask AI").assertDoesNotExist()
+        composeTestRule.onAllNodesWithContentDescription("Ask AI").assertCountEquals(1)
+        composeTestRule.onNodeWithContentDescription("Ask AI").performClick()
 
         assertEquals("Follow up with Acme Corp about the Q3 renewal.", capturedPrompt)
+    }
+
+    @Test
+    fun simModeEmptyStateShowsSchedulerRecordingGuideCard() {
+        val viewModel = FakeSchedulerViewModel().apply {
+            debugRunScenario("EMPTY")
+        }
+
+        renderSimDrawer(viewModel)
+
+        composeTestRule.onNodeWithTag(SCHEDULER_EMPTY_GUIDE_CARD_TEST_TAG).assertExists()
+        composeTestRule.onNodeWithText("用工牌录音创建日程").assertExists()
+        composeTestRule.onNodeWithText("长按工牌录音键，说出你的待办。处理完成后，日程会显示在这里。").assertExists()
     }
 
     @Test

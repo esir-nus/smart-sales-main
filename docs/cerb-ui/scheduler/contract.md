@@ -1,18 +1,18 @@
 # Scheduler Drawer UI Contract
 
 > **Status:** Active UI state contract
-> **Last Updated:** 2026-03-18
-> **Behavioral Authority Above This Doc:** `docs/core-flow/scheduler-fast-track-flow.md`
+> **Last Updated:** 2026-04-01
+> **Behavioral Authority Above This Doc:** `docs/core-flow/base-runtime-ux-surface-governance-flow.md` (`UX.SCHEDULER.*`) plus `docs/core-flow/scheduler-fast-track-flow.md`
 > **Implementation Shards Beneath This Doc:**
 > - `docs/cerb/scheduler-path-a-spine/spec.md`
 > - `docs/cerb/scheduler-path-a-uni-a/spec.md`
 
 ## Purpose
 
-This document is the UI-facing source of truth for the sealed states emitted by the Scheduler Drawer presentation layer.
+This document is the local UI-facing source of truth for the sealed states emitted by the Scheduler Drawer presentation layer beneath the shared UX surface contract.
 It also owns the scheduler card indicator contract used by the scheduler surface outside the transient drawer states.
 
-It does not redefine scheduler business behavior.
+It does not redefine scheduler business behavior or the shared scheduler surface composition already owned by `docs/core-flow/base-runtime-ux-surface-governance-flow.md`.
 It defines the exact UI projection names that must stay aligned with `SchedulerUiState`.
 
 ## State Contract
@@ -78,6 +78,20 @@ Collapsed scheduler cards must preserve separate glanceable signals for urgency,
 - Completion visibility is a separate card treatment from urgency.
 - A completed task may visually de-emphasize the same urgency bar, but it must not replace it with a completion-only color.
 - Completion state must not erase or redefine the underlying urgency classification.
+
+### Reminder Bell Progress Contract
+
+- Collapsed scheduler cards must render reminder progress from the normalized reminder cascade rather than from raw `hasAlarm` alone.
+- The collapsed reminder indicator is a bell strip: one bell per normalized cascade slot.
+- Active bells keep the task urgency-owned accent color.
+- Fired bells turn muted grey.
+- The normalized bell counts are:
+  - `L1_CRITICAL` -> 3 bells
+  - `L2_IMPORTANT` -> 2 bells
+  - `L3_NORMAL` -> 1 bell
+  - `FIRE_OFF` -> 1 bell
+- Reminder progress is per-slot. Example: a 3-slot cascade after the first reminder fires shows `1 grey + 2 active`; after the second fires it shows `2 grey + 1 active`.
+- Completed/crossed-off cards may keep the bell strip only when the completed-memory projection still has reminder metadata; when present, those bells render muted grey.
 
 ## Calendar Date Attention Contract
 

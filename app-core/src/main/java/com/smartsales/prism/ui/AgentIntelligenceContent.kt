@@ -38,7 +38,7 @@ import com.smartsales.core.pipeline.AgentActivity
 import com.smartsales.prism.domain.model.ChatMessage
 import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.domain.scheduler.ScheduledTask
-import com.smartsales.prism.ui.components.DynamicIslandItem
+import com.smartsales.prism.ui.components.DynamicIslandUiState
 import com.smartsales.prism.ui.components.DynamicIslandStateMapper
 import com.smartsales.prism.ui.components.DynamicIslandTapAction
 import com.smartsales.prism.ui.components.PrismSurface
@@ -74,7 +74,7 @@ internal fun AgentIntelligenceContent(
     onOnboardingDesignClick: () -> Unit,
     onProfileClick: () -> Unit,
     showDebugButton: Boolean,
-    simDynamicIslandItems: List<DynamicIslandItem>,
+    simDynamicIslandState: DynamicIslandUiState,
     showSimHeaderMenuButton: Boolean,
     showSimHeaderNewSessionButton: Boolean,
     showSimBottomComposer: Boolean,
@@ -191,7 +191,7 @@ internal fun AgentIntelligenceContent(
                 onNewSessionClick = onNewSessionClick,
                 onSchedulerClick = onSchedulerClick,
                 onAttachClick = onAttachClick,
-                simDynamicIslandItems = simDynamicIslandItems,
+                simDynamicIslandState = simDynamicIslandState,
                 showHeaderMenuButton = showSimHeaderMenuButton,
                 showHeaderNewSessionButton = showSimHeaderNewSessionButton,
                 showBottomComposer = showSimBottomComposer,

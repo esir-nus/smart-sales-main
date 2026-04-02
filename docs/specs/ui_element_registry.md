@@ -2,15 +2,16 @@
 
 > **Status:** Active / Governance
 > **Version:** 2.6 (Draft)
-> **Last Updated:** 2026-03-31
-> **Authority:** This document governs shared interaction, layering, and reusable UI behavior invariants. Code must match these shared rules where they apply.
+> **Last Updated:** 2026-04-01
+> **Authority:** This document is a supporting registry for shared interaction, layering, and reusable UI behavior invariants. Current base-runtime surface behavior is owned first by `docs/core-flow/base-runtime-ux-surface-governance-flow.md`.
 
 Standalone-mode note:
 
+- Product-level app identity, major surfaces, and anti-drift UX laws start in [`SmartSales_PRD.md`](../../SmartSales_PRD.md).
 - This registry governs shared interaction and layering invariants.
 - It does not own the exact shell chrome for standalone modes such as SIM.
 - It does not own feature-level product behavior or shell-specific source of truth.
-- When a standalone implementation narrows or simplifies shell presentation, keep this registry focused on reusable interaction rules and route active shell truth through `docs/specs/prism-ui-ux-contract.md` plus current shared feature docs.
+- When a standalone implementation narrows or simplifies shell presentation, keep this registry focused on reusable interaction rules and route active shell truth through `docs/core-flow/base-runtime-ux-surface-governance-flow.md` plus the owning lower feature docs.
 
 ---
 
@@ -78,8 +79,9 @@ Every element definition follows this strict logic:
 
 Home empty-state composition note:
 
-- The exact current `HomeShell` / `ChatWelcome` layout is owned by `docs/cerb-ui/home-shell/spec.md`.
-- The current center-header Dynamic Island behavior is owned by `docs/cerb-ui/dynamic-island/spec.md`.
+- The exact current `UX.HOME.*` surface behavior is owned first by `docs/core-flow/base-runtime-ux-surface-governance-flow.md`.
+- Local `HomeShell` / `ChatWelcome` refinement is owned by `docs/cerb-ui/home-shell/spec.md`.
+- The current center-header Dynamic Island renderer behavior is owned by `docs/cerb-ui/dynamic-island/spec.md`.
 - This registry should only be used here for shared trigger, drawer, and layer invariants.
 - Historical shell affordances that are not present in the owning home-shell spec must not be reintroduced by inference.
 - Rows below may describe reusable or legacy home-surface triggers; the owning home-shell spec decides which controls are currently mounted on the empty-state shell.

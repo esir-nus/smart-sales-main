@@ -3,7 +3,6 @@ package com.smartsales.prism.ui.drawers.scheduler.components
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
-import androidx.compose.material.icons.outlined.QueryBuilder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -92,13 +91,14 @@ fun TaskCardHeader(
             }
         }
 
-        // Smart Badge Icon
-        if (state.hasAlarm && !state.isDone) {
-            Icon(
-                imageVector = Icons.Outlined.QueryBuilder,
-                contentDescription = "Reminder Scheduled",
-                tint = AccentBlue,
-                modifier = Modifier.size(16.dp).padding(top = 4.dp)
+        if (state.reminderBells.isNotEmpty()) {
+            ReminderBellStrip(
+                bells = state.reminderBells,
+                activeColor = taskCardIndicatorColor(
+                    urgencyLevel = state.urgencyLevel,
+                    isDone = false
+                ),
+                modifier = Modifier.padding(top = 4.dp)
             )
         }
     }
@@ -169,14 +169,14 @@ private fun SimTaskCardHeader(
                 color = visuals.taskTimeColor,
                 fontWeight = FontWeight.Medium
             )
-            if (state.hasAlarm && !state.isDone) {
-                Icon(
-                    imageVector = Icons.Outlined.QueryBuilder,
-                    contentDescription = "Reminder Scheduled",
-                    tint = AccentBlue,
-                    modifier = Modifier
-                        .padding(top = 8.dp)
-                        .size(16.dp)
+            if (state.reminderBells.isNotEmpty()) {
+                ReminderBellStrip(
+                    bells = state.reminderBells,
+                    activeColor = taskCardIndicatorColor(
+                        urgencyLevel = state.urgencyLevel,
+                        isDone = false
+                    ),
+                    modifier = Modifier.padding(top = 8.dp)
                 )
             }
         }

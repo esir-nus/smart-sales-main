@@ -2,11 +2,11 @@
 
 > **Context Boundary**: `docs/cerb-ui/home-shell/`
 > **Status**: Active
-> **Visual Source of Truth**: Current home empty-state shell plus the shared shell chrome that persists into active discussion states
+> **Visual Source of Truth**: Local home-shell contract beneath `docs/core-flow/base-runtime-ux-surface-governance-flow.md`
 
 ## 1. Ownership
 
-This shard owns the current home-shell presentation contract for `HomeShell` and `ChatWelcome`, plus the shared chrome that persists after the empty state ends.
+This shard owns the local home-shell presentation contract for `HomeShell` and `ChatWelcome` beneath `docs/core-flow/base-runtime-ux-surface-governance-flow.md`, especially `UX.HOME.*`.
 
 It is the visual source of truth for:
 
@@ -20,13 +20,13 @@ It is the visual source of truth for:
 It does not own:
 
 - chat-state rendering after the session leaves the empty state
-- the shared home/here active-discussion family after the session leaves the empty state; current ownership routes through `docs/specs/prism-ui-ux-contract.md`, `docs/core-flow/sim-shell-routing-flow.md`, `docs/cerb-ui/dynamic-island/spec.md`, and `docs/cerb/interface-map.md`
+- the shared home/here active-discussion family after the session leaves the empty state; current ownership routes through `docs/core-flow/base-runtime-ux-surface-governance-flow.md`, then the relevant lower shell/dynamic-island/interface docs
 - drawer inner contents
 - backend, routing, session model, or plugin behavior
 - Dynamic Island internal behavior, which is owned by `docs/cerb-ui/dynamic-island/spec.md`
 - token definitions that remain global in `docs/specs/style-guide.md`
 - shared trigger/layer invariants that remain global in `docs/specs/ui_element_registry.md`
-- legacy compatibility hosts such as `AgentShell.kt`, which are implementation debt and not visual truth owners
+- retired split-era shell hosts such as `AgentShell.kt` and `SimShell.kt`, which are no longer visual truth owners
 
 ## 2. Current Empty-State Contract
 
@@ -36,7 +36,7 @@ The current empty-state shell includes only:
 
 - left: hamburger trigger
 - left: Smart Badge / device status badge
-- center: Dynamic Island host slot
+- center: Dynamic Island host slot with scheduler as the default lane and RuntimeShell-local connectivity takeover when that lane is active
 - right: new-session `+`
 - floor: aurora background
 - bottom: floating input capsule
@@ -64,9 +64,11 @@ When the session leaves the empty state, this shard still owns the shared shell 
 - bottom monolith remains the composer foundation family
 - the center canvas is the part that swaps between greeting, discussion, and system-sheet content
 - the Dynamic Island host slot stays centered in the header family
+- RuntimeShell may temporarily swap the centered island content from scheduler to connectivity without moving the side utilities or redefining the header family
 - scheduler-open chrome may temporarily suppress side utility actions while keeping the island mounted
+- visible-lane tap follows the rendered island item, while downward drag remains scheduler-only
 
-This shard does **not** replace `docs/core-flow/sim-shell-routing-flow.md` for routing behavior; it owns the shell chrome and continuity contract that routing flows sit inside.
+This shard does **not** replace `docs/core-flow/base-runtime-ux-surface-governance-flow.md` for shared surface behavior or `docs/core-flow/sim-shell-routing-flow.md` for routing behavior; it refines the local shell chrome and continuity contract beneath those layers.
 
 ## 3. Current Exclusions
 
@@ -82,6 +84,7 @@ If any of these return in the future, they must be reintroduced by an owning fea
 
 ## 4. Integration Rules
 
+- Use `docs/core-flow/base-runtime-ux-surface-governance-flow.md` first for `UX.HOME.*` and shared shell continuity rules.
 - Use `docs/specs/style-guide.md` for tokens, material treatment, and motion primitives.
 - Use `docs/specs/ui_element_registry.md` for shared interaction and Z-layer invariants.
 - Use `docs/cerb-ui/dynamic-island/spec.md` for the center header surface behavior.
@@ -93,6 +96,7 @@ If any of these return in the future, they must be reintroduced by an owning fea
 
 When home empty-state visuals change:
 
-1. update this shard first
-2. update the global UI index if the owning path changes
-3. update compatibility docs that still point to older home-screen descriptions
+1. update `docs/core-flow/base-runtime-ux-surface-governance-flow.md` first for the affected `UX.HOME.*` IDs
+2. update this shard for local home-shell refinement
+3. update the global UI index if the owning path changes
+4. update compatibility docs that still point to older home-screen descriptions

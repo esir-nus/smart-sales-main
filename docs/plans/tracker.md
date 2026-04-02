@@ -5,7 +5,7 @@
 > **Campaign Lifecycle**: Every major initiative (rewrite, refactor, UI polish, large fix) is an "Epic" or "Campaign". Every Campaign MUST be initialized using the `/campaign-planner` workflow to enforce the following checklist sequence:
 > 1. **Docs** (Ensure Specs exist) -> 2. **Interface Map** (Ensure Layer/Contract boundaries align) -> 3. **Plan** (Dev Planner) -> 4. **Execute** (Implementation) -> 5. **Test** (E2E/L2 Verification). 
 > **Master Guide Alignment**: The Master Guide acts as the overarching strategy doc for a campaign. Agents MUST NEVER auto-update the Master Guide without strict explicit human review (like a Review Conference) to prevent architectural hallucination drift. Instead, run `/04-doc-sync` at the *end* of a campaign.
-> **Last Updated**: 2026-03-31
+> **Last Updated**: 2026-04-02
 
 ---
 
@@ -93,19 +93,19 @@
   - [`docs/cerb-ui/dynamic-island/interface.md`](../cerb-ui/dynamic-island/interface.md)
 - **Current Scope**:
   - standard top-header center slot only
-  - sticky one-line scheduler summary
-  - scheduler-first copy using `冲突：...` / `最近：...`
+  - sticky one-line shell summary with scheduler as the default lane
+  - scheduler-first copy using `冲突：...` / `最近：...` plus RuntimeShell-local connectivity takeover for approved transport states
   - truncate overflow rather than horizontal scrolling
-  - single tap opens scheduler drawer and targets the corresponding scheduler date page
-  - SIM may layer a header-center top-3 vertical rotation on top of the shared renderer
-  - future ambient lanes deferred
+  - visible-lane tap opens scheduler or connectivity entry as appropriate, while downward drag remains scheduler-only
+  - SIM RuntimeShell may rotate scheduler items locally and may run the approved connectivity interrupt/heartbeat timing without broadening the shared header contract
+  - real bridge-backed battery sourcing remains deferred debt
 
 ---
 
 ## Active Investigation: Base Runtime Unification
 > **Context**: Direct user-requested investigation to eliminate SIM/full implementation drift by defining one canonical base runtime and treating Mono as the later architecture augmentation layer.
 
-- **Status**: Investigation package delivered on 2026-03-31; Slice 1 wrapper cleanup accepted on 2026-03-31; Slice 2 wrapper cleanup accepted on 2026-03-31; Slice 3 wrapper cleanup accepted on 2026-03-31; Slice 4 wrapper cleanup accepted on 2026-03-31; Slice 5 truth lock accepted on 2026-03-31
+- **Status**: Investigation package delivered on 2026-03-31; Slice 1 wrapper cleanup accepted on 2026-03-31; Slice 2 wrapper cleanup accepted on 2026-03-31; Slice 3 wrapper cleanup accepted on 2026-03-31; Slice 4 wrapper cleanup accepted on 2026-03-31; Slice 5 truth lock accepted on 2026-03-31; final root/shell unification landed on 2026-04-01
 - **North Star**:
   - [`docs/specs/base-runtime-unification.md`](../specs/base-runtime-unification.md)
 - **Audit**:
@@ -131,9 +131,13 @@
   - Slice 3 now keeps `AgentViewModel.kt` as a thin compatibility host and moves UI bridge, session lifecycle, pipeline dispatch, tool dispatch, runtime/dashboard support, and debug scenario ownership into `AgentUiBridge.kt`, `AgentSessionCoordinator.kt`, `AgentPipelineCoordinator.kt`, `AgentToolCoordinator.kt`, `AgentRuntimeSupport.kt`, and `AgentDebugSupport.kt`
   - Slice 4 now keeps `SimAgentViewModel.kt` as a thin compatibility host and moves the SIM voice-draft lane into `SimAgentVoiceDraftCoordinator.kt`, while extending the existing `SimAgentUiBridge` just enough to let the host-owned state remain source-compatible
   - Slice 5 now locks the repo's non-Mono planning truth in docs: current SIM-led shell/scheduler/audio docs stay the best available base-runtime baseline, separate SIM runtime boundaries remain lawful implementation seams, and Mono stays the only lawful deeper divergence layer
+  - On **2026-04-01**, production root ownership was collapsed to one launcher and one shell host: `MainActivity` now mounts `RuntimeShell`, the shared onboarding/discoverability gates now read and write the former split-era flags so existing users keep their completion state, `AlarmDismissReceiver` now re-enters through `MainActivity`, and split-era production hosts `AgentMainActivity`, `SimMainActivity`, `AgentShell`, and `SimShell` are retired
   - On **2026-03-31**, live onboarding logcat proved the failing branch was realtime `recognizer_cancelled` before finger release rather than a slow timeout; the shared handshake now surfaces active-hold failures immediately, treats the later release as a no-op, and clears post-release failures through calm retry UI instead of synthetic content
   - On **2026-03-31**, both hosts now share one simplified onboarding interaction engine with dedicated onboarding model profiles, a `5s` post-capture recognition watchdog plus `2.5s` / `3.5s` generation watchdogs, stale-result invalidation, and no debug-vs-release fallback split
   - On **2026-03-31**, follow-up device proof showed the remaining onboarding blocker was an invented backend-token auth seam rather than the mic hold state machine; the shared realtime lane now uses direct `DASHSCOPE_API_KEY` SDK init and preserves typed realtime-auth diagnosis across direct-key preflight, SDK start, and session failure logs without reintroducing fallback branches
+  - On **2026-04-01**, auth-drift closure landed: `docs/cerb/sim-audio-chat/**` now owns the active SIM auth truth, SIM shell docs defer to the shared realtime recognizer contract instead of restating auth architecture, historical Wave 14 notes are marked superseded, and fresh updated-build device repro confirmed no `auth_fetch_*` / `DASHSCOPE_AUTH_BASE_URL` path while SIM composer plus SIM-connectivity onboarding both reached direct-key realtime starts. Acceptance report: [`docs/reports/tests/L3-20260401-realtime-asr-auth-drift-closure.md`](../reports/tests/L3-20260401-realtime-asr-auth-drift-closure.md)
+  - On **2026-04-02**, `RuntimeShell` landed the approved SIM dynamic-island transplant: scheduler remains the default lane, connectivity may interrupt or heartbeat in the center slot from transport-truth `connectionState`, visible tap follows the current lane, downward drag stays scheduler-only, and real battery sourcing remains deferred behind the current mock/viewmodel value
+  - Deferred UX polish note on **2026-04-01**: `VOICE_HANDSHAKE_PROFILE` currently remains a one-shot extract-and-save onboarding step. Future polish should allow an in-step voice `补充或修改` path after the first extraction card appears, keep the current card visible, merge each follow-up pass into the current draft instead of replacing it wholesale, and allow repeated follow-up passes until `保存并继续`. Manual field editing inside onboarding remains deferred beyond that future slice.
   - focused Wave 3D reruns now pass after restoring the extracted scheduler audio-status strings to the evidence-owned legacy full-side values
   - focused Wave 3E reruns now pass with `SimAgentViewModel.kt` back under the transitional ViewModel budget and with the accepted Wave 14 SIM voice-draft behavior preserved
 
@@ -190,6 +194,7 @@
 - **Wave 14 L1 Validation**: [`docs/reports/tests/L1-20260328-sim-wave14-voice-draft.md`](../reports/tests/L1-20260328-sim-wave14-voice-draft.md)
 - **Current Experiment Note**: follow-up reschedule now resolves targets through a global scheduler-owned contract before time execution; selected/opened task state and visible page/date no longer carry semantic authority, weak recent-task hints remain allowed, create-time `keyPerson` / `location` hints are now persisted for later matching, the extractor now receives a scheduler-owned active shortlist derived from all non-done tasks rather than a 7-day UI window, and the write-disabled V2 shadow contract still gathers time-semantics parity/mismatch telemetry only
 - **2026-03-31 Audio Drawer Sync Correction**: approved doc+code alignment now restores spec-owned manual drawer sync in SIM audio drawer, removes the earlier browse-open auto-sync experiment, and ships badge-pipeline completion ingest into the SIM drawer namespace. Successful ingest now gates badge remote delete so failed ingest preserves manual-recovery path. Focused verification: `:app-core:compileDebugUnitTestKotlin`; targeted audio/SIM suites passed, while unrelated `L2DualEngineBridgeTest` still fails on a stale Uni-A timestamp expectation outside this slice.
+- **2026-04-01 Seed Inventory Cleanup**: fresh installs now keep only one built-in demo audio entry (`SIM_Wave2_Seed.mp3`) instead of the old multi-item pending test list, and startup reconciliation prunes the retired built-in pending sample IDs so upgraded installs do not keep the long seeded drawer inventory by default.
 - **Wave 1 Acceptance**: [`docs/reports/tests/L3-20260319-sim-wave1-shell-acceptance.md`](../reports/tests/L3-20260319-sim-wave1-shell-acceptance.md)
 - **Wave 4 Acceptance**: [`docs/reports/tests/L3-20260320-sim-wave4-scheduler-validation.md`](../reports/tests/L3-20260320-sim-wave4-scheduler-validation.md)
 - **Wave 5 Acceptance**: [`docs/reports/tests/L3-20260321-sim-wave5-connectivity-validation.md`](../reports/tests/L3-20260321-sim-wave5-connectivity-validation.md)
@@ -237,7 +242,8 @@
   - On **2026-03-30**, the reconnect-path connectivity contract was tightened so badge reconnect now always tries to align the badge onto the phone's current Wi‑Fi using the remembered multi-network credential store before surfacing manual repair; the mismatch form now prefills the readable phone SSID while keeping manual entry editable.
   - `Wave 11` now has docs, code, and focused L1 evidence aligned on the general-chat-first contract. Further on-device proof is optional follow-up, not a blocker against this current pivot slice.
   - `Wave 12` now has docs, code, and focused L1 evidence aligned for the scheduler-drawer voice reschedule lane. Scope remains strictly the scheduler drawer mic path; audio drawer, general SIM chat, and random sessions remain out of scope.
-  - `Wave 13` now has docs, code, and focused L1 evidence aligned for launcher-core theme visibility from the default SIM host. Scope remains limited to `SimMainActivity`, home/chat shell, header, history drawer, and settings drawer; scheduler/audio/connectivity/onboarding light-theme parity remains deferred.
+  - `Wave 13` now has docs, code, and focused L1 evidence aligned for launcher-core theme visibility from the default production host. Scope remains limited to `MainActivity`, the home/chat shell, header, history drawer, and settings drawer; scheduler/audio/connectivity/onboarding light-theme parity remains deferred.
+  - On **2026-04-02**, the SIM/base-runtime shell also synced the approved dynamic-island follow-up: `RuntimeShell` now owns the local scheduler-vs-connectivity lane arbitration, scheduler remains the default visible lane, approved connectivity states may interrupt/heartbeat in the island, tap follows the visible lane, downward drag remains scheduler-only, and real battery sourcing stays logged as deferred debt rather than shipped truth.
   - On **2026-03-24**, focused unit verification confirmed the current global-reschedule implementation path for `SimSchedulerViewModelTest` and `SimAgentViewModelTest`; retrieval-hint-heavy cases such as people/location-led follow-up phrasing still need on-device proof.
 
 ---

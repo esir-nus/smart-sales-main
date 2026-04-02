@@ -9,143 +9,143 @@ import org.junit.Test
 class SimConnectivityRoutingTest {
 
     @Test
-    fun `openSimConnectivityModal closes other overlays and opens modal`() {
-        val state = SimShellState(
-            activeDrawer = SimDrawerType.AUDIO,
-            audioDrawerMode = SimAudioDrawerMode.CHAT_RESELECT,
+    fun `openRuntimeConnectivityModal closes other overlays and opens modal`() {
+        val state = RuntimeShellState(
+            activeDrawer = RuntimeDrawerType.AUDIO,
+            audioDrawerMode = RuntimeAudioDrawerMode.CHAT_RESELECT,
             showHistory = true,
             showSettings = true
         )
 
-        val updated = openSimConnectivityModal(state)
+        val updated = openRuntimeConnectivityModal(state)
 
-        assertEquals(SimConnectivitySurface.MODAL, updated.activeConnectivitySurface)
+        assertEquals(RuntimeConnectivitySurface.MODAL, updated.activeConnectivitySurface)
         assertEquals(null, updated.activeDrawer)
-        assertEquals(SimAudioDrawerMode.BROWSE, updated.audioDrawerMode)
+        assertEquals(RuntimeAudioDrawerMode.BROWSE, updated.audioDrawerMode)
         assertFalse(updated.showHistory)
         assertFalse(updated.showSettings)
     }
 
     @Test
-    fun `openSimConnectivitySetup uses full screen route without scrim`() {
-        val updated = openSimConnectivitySetup(SimShellState())
+    fun `openRuntimeConnectivitySetup uses full screen route without scrim`() {
+        val updated = openRuntimeConnectivitySetup(RuntimeShellState())
 
-        assertEquals(SimConnectivitySurface.SETUP, updated.activeConnectivitySurface)
-        assertFalse(shouldShowSimShellScrim(updated))
+        assertEquals(RuntimeConnectivitySurface.SETUP, updated.activeConnectivitySurface)
+        assertFalse(shouldShowRuntimeShellScrim(updated))
     }
 
     @Test
-    fun `shouldShowSimShellScrim only uses connectivity scrim for modal`() {
+    fun `shouldShowRuntimeShellScrim only uses connectivity scrim for modal`() {
         assertTrue(
-            shouldShowSimShellScrim(
-                SimShellState(activeConnectivitySurface = SimConnectivitySurface.MODAL)
+            shouldShowRuntimeShellScrim(
+                RuntimeShellState(activeConnectivitySurface = RuntimeConnectivitySurface.MODAL)
             )
         )
         assertFalse(
-            shouldShowSimShellScrim(
-                SimShellState(activeConnectivitySurface = SimConnectivitySurface.SETUP)
+            shouldShowRuntimeShellScrim(
+                RuntimeShellState(activeConnectivitySurface = RuntimeConnectivitySurface.SETUP)
             )
         )
     }
 
     @Test
-    fun `openSimConnectivityManager uses full screen route without scrim`() {
-        val updated = openSimConnectivityManager(SimShellState())
+    fun `openRuntimeConnectivityManager uses full screen route without scrim`() {
+        val updated = openRuntimeConnectivityManager(RuntimeShellState())
 
-        assertEquals(SimConnectivitySurface.MANAGER, updated.activeConnectivitySurface)
-        assertFalse(shouldShowSimShellScrim(updated))
+        assertEquals(RuntimeConnectivitySurface.MANAGER, updated.activeConnectivitySurface)
+        assertFalse(shouldShowRuntimeShellScrim(updated))
     }
 
     @Test
-    fun `resolveSimConnectivityEntrySurface routes needs setup to modal`() {
+    fun `resolveRuntimeConnectivityEntrySurface routes needs setup to modal`() {
         assertEquals(
-            SimConnectivitySurface.MODAL,
-            resolveSimConnectivityEntrySurface(ConnectionState.NEEDS_SETUP)
+            RuntimeConnectivitySurface.MODAL,
+            resolveRuntimeConnectivityEntrySurface(ConnectionState.NEEDS_SETUP)
         )
     }
 
     @Test
-    fun `resolveSimConnectivityEntrySurface routes configured states to manager`() {
+    fun `resolveRuntimeConnectivityEntrySurface routes configured states to manager`() {
         assertEquals(
-            SimConnectivitySurface.MANAGER,
-            resolveSimConnectivityEntrySurface(ConnectionState.DISCONNECTED)
+            RuntimeConnectivitySurface.MANAGER,
+            resolveRuntimeConnectivityEntrySurface(ConnectionState.DISCONNECTED)
         )
         assertEquals(
-            SimConnectivitySurface.MANAGER,
-            resolveSimConnectivityEntrySurface(ConnectionState.CONNECTED)
+            RuntimeConnectivitySurface.MANAGER,
+            resolveRuntimeConnectivityEntrySurface(ConnectionState.CONNECTED)
         )
     }
 
     @Test
-    fun `openSimConnectivityEntry uses resolved manager route for configured state`() {
-        val updated = openSimConnectivityEntry(
-            state = SimShellState(showHistory = true, showSettings = true),
+    fun `openRuntimeConnectivityEntry uses resolved manager route for configured state`() {
+        val updated = openRuntimeConnectivityEntry(
+            state = RuntimeShellState(showHistory = true, showSettings = true),
             connectionState = ConnectionState.DISCONNECTED
         )
 
-        assertEquals(SimConnectivitySurface.MANAGER, updated.activeConnectivitySurface)
+        assertEquals(RuntimeConnectivitySurface.MANAGER, updated.activeConnectivitySurface)
         assertFalse(updated.showHistory)
         assertFalse(updated.showSettings)
     }
 
     @Test
-    fun `handleSimConnectivityEntryRequest emits bootstrap telemetry for needs setup`() {
+    fun `handleRuntimeConnectivityEntryRequest emits bootstrap telemetry for needs setup`() {
         val telemetry = mutableListOf<Pair<String, String>>()
 
-        val updated = handleSimConnectivityEntryRequest(
-            state = SimShellState(showHistory = true),
+        val updated = handleRuntimeConnectivityEntryRequest(
+            state = RuntimeShellState(showHistory = true),
             connectionState = ConnectionState.NEEDS_SETUP,
             source = "chat_badge",
             emitTelemetry = { summary, detail -> telemetry += summary to detail }
         )
 
-        assertEquals(SimConnectivitySurface.MODAL, updated.activeConnectivitySurface)
+        assertEquals(RuntimeConnectivitySurface.MODAL, updated.activeConnectivitySurface)
         assertEquals(SIM_CONNECTIVITY_ENTRY_OPENED_SUMMARY, telemetry.single().first)
         assertTrue(telemetry.single().second.contains("source=chat_badge"))
         assertTrue(telemetry.single().second.contains("target=MODAL"))
     }
 
     @Test
-    fun `handleSimConnectivityEntryRequest emits manager telemetry for configured states`() {
+    fun `handleRuntimeConnectivityEntryRequest emits manager telemetry for configured states`() {
         val telemetry = mutableListOf<Pair<String, String>>()
 
-        val updated = handleSimConnectivityEntryRequest(
-            state = SimShellState(showSettings = true),
+        val updated = handleRuntimeConnectivityEntryRequest(
+            state = RuntimeShellState(showSettings = true),
             connectionState = ConnectionState.DISCONNECTED,
             source = "history_device",
             emitTelemetry = { summary, detail -> telemetry += summary to detail }
         )
 
-        assertEquals(SimConnectivitySurface.MANAGER, updated.activeConnectivitySurface)
+        assertEquals(RuntimeConnectivitySurface.MANAGER, updated.activeConnectivitySurface)
         assertEquals(SIM_CONNECTIVITY_MANAGER_DIRECT_ENTRY_OPENED_SUMMARY, telemetry.single().first)
         assertTrue(telemetry.single().second.contains("source=history_device"))
         assertTrue(telemetry.single().second.contains("target=MANAGER"))
     }
 
     @Test
-    fun `handleSimConnectivitySetupStart emits setup start telemetry`() {
+    fun `handleRuntimeConnectivitySetupStart emits setup start telemetry`() {
         val telemetry = mutableListOf<Pair<String, String>>()
 
-        val updated = handleSimConnectivitySetupStart(
-            state = SimShellState(),
+        val updated = handleRuntimeConnectivitySetupStart(
+            state = RuntimeShellState(),
             source = "bootstrap_modal",
             emitTelemetry = { summary, detail -> telemetry += summary to detail }
         )
 
-        assertEquals(SimConnectivitySurface.SETUP, updated.activeConnectivitySurface)
+        assertEquals(RuntimeConnectivitySurface.SETUP, updated.activeConnectivitySurface)
         assertEquals(SIM_CONNECTIVITY_SETUP_STARTED_SUMMARY, telemetry.single().first)
         assertTrue(telemetry.single().second.contains("source=bootstrap_modal"))
     }
 
     @Test
-    fun `handleSimConnectivityOnboardingReplayRequest always reopens setup and clears overlays`() {
+    fun `handleRuntimeConnectivityOnboardingReplayRequest always reopens setup and clears overlays`() {
         val telemetry = mutableListOf<Pair<String, String>>()
 
-        val updated = handleSimConnectivityOnboardingReplayRequest(
-            state = SimShellState(
-                activeDrawer = SimDrawerType.AUDIO,
-                audioDrawerMode = SimAudioDrawerMode.CHAT_RESELECT,
-                activeConnectivitySurface = SimConnectivitySurface.MANAGER,
+        val updated = handleRuntimeConnectivityOnboardingReplayRequest(
+            state = RuntimeShellState(
+                activeDrawer = RuntimeDrawerType.AUDIO,
+                audioDrawerMode = RuntimeAudioDrawerMode.CHAT_RESELECT,
+                activeConnectivitySurface = RuntimeConnectivitySurface.MANAGER,
                 showHistory = true,
                 showSettings = true
             ),
@@ -153,9 +153,9 @@ class SimConnectivityRoutingTest {
             emitTelemetry = { summary, detail -> telemetry += summary to detail }
         )
 
-        assertEquals(SimConnectivitySurface.SETUP, updated.activeConnectivitySurface)
+        assertEquals(RuntimeConnectivitySurface.SETUP, updated.activeConnectivitySurface)
         assertEquals(null, updated.activeDrawer)
-        assertEquals(SimAudioDrawerMode.BROWSE, updated.audioDrawerMode)
+        assertEquals(RuntimeAudioDrawerMode.BROWSE, updated.audioDrawerMode)
         assertFalse(updated.showHistory)
         assertFalse(updated.showSettings)
         assertEquals(SIM_CONNECTIVITY_SETUP_STARTED_SUMMARY, telemetry.single().first)
@@ -164,30 +164,30 @@ class SimConnectivityRoutingTest {
     }
 
     @Test
-    fun `handleSimConnectivitySetupCompleted emits success telemetry`() {
+    fun `handleRuntimeConnectivitySetupCompleted emits success telemetry`() {
         val telemetry = mutableListOf<Pair<String, String>>()
 
-        val updated = handleSimConnectivitySetupCompleted(
-            state = SimShellState(
-                activeConnectivitySurface = SimConnectivitySurface.SETUP,
+        val updated = handleRuntimeConnectivitySetupCompleted(
+            state = RuntimeShellState(
+                activeConnectivitySurface = RuntimeConnectivitySurface.SETUP,
                 isForcedFirstLaunchOnboarding = true
             ),
             emitTelemetry = { summary, detail -> telemetry += summary to detail }
         )
 
-        assertEquals(SimConnectivitySurface.MANAGER, updated.activeConnectivitySurface)
+        assertEquals(RuntimeConnectivitySurface.MANAGER, updated.activeConnectivitySurface)
         assertFalse(updated.isForcedFirstLaunchOnboarding)
         assertEquals(SIM_CONNECTIVITY_SETUP_COMPLETED_SUMMARY, telemetry.single().first)
         assertTrue(telemetry.single().second.contains("source=pairing_success"))
     }
 
     @Test
-    fun `handleSimConnectivitySetupSkipped closes setup and clears forced first launch flag`() {
+    fun `handleRuntimeConnectivitySetupSkipped closes setup and clears forced first launch flag`() {
         val telemetry = mutableListOf<Pair<String, String>>()
 
-        val updated = handleSimConnectivitySetupSkipped(
-            state = SimShellState(
-                activeConnectivitySurface = SimConnectivitySurface.SETUP,
+        val updated = handleRuntimeConnectivitySetupSkipped(
+            state = RuntimeShellState(
+                activeConnectivitySurface = RuntimeConnectivitySurface.SETUP,
                 isForcedFirstLaunchOnboarding = true
             ),
             source = "first_launch_skip",
@@ -202,27 +202,27 @@ class SimConnectivityRoutingTest {
     }
 
     @Test
-    fun `initialSimShellState routes forced first launch into setup`() {
-        val state = initialSimShellState(forceSetupOnLaunch = true)
+    fun `initialRuntimeShellState routes forced first launch into setup`() {
+        val state = initialRuntimeShellState(forceSetupOnLaunch = true)
 
-        assertEquals(SimConnectivitySurface.SETUP, state.activeConnectivitySurface)
+        assertEquals(RuntimeConnectivitySurface.SETUP, state.activeConnectivitySurface)
         assertTrue(state.isForcedFirstLaunchOnboarding)
     }
 
     @Test
-    fun `startSimForcedFirstLaunchOnboarding clears overlays and flags forced flow`() {
-        val updated = startSimForcedFirstLaunchOnboarding(
-            SimShellState(
-                activeDrawer = SimDrawerType.AUDIO,
-                audioDrawerMode = SimAudioDrawerMode.CHAT_RESELECT,
+    fun `startRuntimeForcedFirstLaunchOnboarding clears overlays and flags forced flow`() {
+        val updated = startRuntimeForcedFirstLaunchOnboarding(
+            RuntimeShellState(
+                activeDrawer = RuntimeDrawerType.AUDIO,
+                audioDrawerMode = RuntimeAudioDrawerMode.CHAT_RESELECT,
                 showHistory = true,
                 showSettings = true
             )
         )
 
-        assertEquals(SimConnectivitySurface.SETUP, updated.activeConnectivitySurface)
+        assertEquals(RuntimeConnectivitySurface.SETUP, updated.activeConnectivitySurface)
         assertEquals(null, updated.activeDrawer)
-        assertEquals(SimAudioDrawerMode.BROWSE, updated.audioDrawerMode)
+        assertEquals(RuntimeAudioDrawerMode.BROWSE, updated.audioDrawerMode)
         assertFalse(updated.showHistory)
         assertFalse(updated.showSettings)
         assertTrue(updated.isForcedFirstLaunchOnboarding)

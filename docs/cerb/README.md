@@ -2,10 +2,11 @@
 
 > **System**: Smart Sales B2B CRM Assistant
 > **Status**: Active supporting index
-> **Last Updated**: 2026-03-31
+> **Last Updated**: 2026-04-01
 > **Structure Rule**: DO NOT physically nest sub-directories under `docs/cerb/`. Keep all feature specs flat to preserve cross-references (`docs/cerb/[feature]/spec.md`). Use this README as the conceptual human-readable map.
 
-This hub maps the physical feature folders to the conceptual architecture outlined in the Product Requirements Document (PRD).
+This hub maps the physical feature folders to the current product and architecture stack.
+Read the PRD for app identity and major journeys, then use this hub for feature-level contracts.
 
 ---
 
@@ -74,4 +75,4 @@ The downstream capabilities executed by the Pipeline.
 
 ## Critical References
 - **[Interface Map (`interface-map.md`)](./interface-map.md)**: The strict SOT for data ownership limits and dependencies. Read before defining any new edges!
-- **[SmartSales PRD](../../SmartSales_PRD.md)**: Product vision and core mechanics.
+- **[SmartSales PRD](../../SmartSales_PRD.md)**: Product north star for app identity, major surfaces, core journeys, and product-level UX laws.

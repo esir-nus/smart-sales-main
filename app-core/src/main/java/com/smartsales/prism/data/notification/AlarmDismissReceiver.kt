@@ -6,7 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import androidx.core.app.NotificationManagerCompat
-import com.smartsales.prism.AgentMainActivity
+import com.smartsales.prism.MainActivity
 import com.smartsales.prism.domain.notification.NotificationService
 import dagger.hilt.android.EntryPointAccessors
 
@@ -15,7 +15,7 @@ import dagger.hilt.android.EntryPointAccessors
  *
  * 统一处理所有关闭路径：滑动关闭、"知道了"按钮、点击通知。
  * 每条路径都会：停止振动 → 取消通知。
- * 若 EXTRA_OPEN_APP=true，额外启动 PrismMainActivity。
+ * 若 EXTRA_OPEN_APP=true，额外启动 MainActivity。
  */
 class AlarmDismissReceiver : BroadcastReceiver() {
 
@@ -86,7 +86,7 @@ class AlarmDismissReceiver : BroadcastReceiver() {
 
         // 4. 若需要打开应用
         if (openApp) {
-            val launchIntent = Intent(context, AgentMainActivity::class.java).apply {
+            val launchIntent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                 putExtra("navigate_to", "scheduler")
                 putExtra("task_id", taskId)

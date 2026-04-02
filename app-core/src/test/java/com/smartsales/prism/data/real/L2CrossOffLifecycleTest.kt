@@ -24,6 +24,7 @@ import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.domain.scheduler.FakeScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.FastTrackMutationEngine
 import com.smartsales.prism.domain.scheduler.SchedulerLinter
+import com.smartsales.prism.domain.scheduler.UrgencyLevel
 import com.smartsales.prism.domain.scheduler.fakes.FakeTimeProvider
 import com.smartsales.prism.domain.asr.AsrResult
 import com.smartsales.prism.domain.asr.AsrService
@@ -156,6 +157,9 @@ class L2CrossOffLifecycleTest {
             title = "Follow up with client",
             startTime = Instant.now(),
             isDone = false, // Not yet done
+            urgencyLevel = UrgencyLevel.L1_CRITICAL,
+            hasAlarm = true,
+            alarmCascade = listOf("-1h", "-10m", "0m"),
             keyPersonEntityId = "client-entity-123", // Has CRM linkage
             keyPerson = "John Doe"
         )
@@ -178,6 +182,7 @@ class L2CrossOffLifecycleTest {
         assertEquals(insertedId, migratedEntry.entryId)
         assertEquals("Follow up with client", migratedEntry.content) // Title maps to content
         assertEquals(true, migratedEntry.structuredJson?.contains("client-entity-123") == true)
+        assertEquals(true, migratedEntry.outcomeJson?.contains("\"reminderCascade\":[\"-1h\",\"-10m\",\"0m\"]") == true)
         
         // 4. Verification - Actionable Feed (ScheduledTask)
         // Task MUST be deleted from the actionable feed to prevent pipeline ghosting

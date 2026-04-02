@@ -5,34 +5,34 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class SimMainActivityLogicTest {
+class MainActivityLogicTest {
 
     @Test
-    fun `shouldRequestSimCalendarPermissions waits until sim onboarding completes`() {
+    fun `shouldRequestBaseRuntimeCalendarPermissions waits until onboarding completes`() {
         assertFalse(
-            shouldRequestSimCalendarPermissions(
-                simOnboardingCompleted = false,
+            shouldRequestBaseRuntimeCalendarPermissions(
+                onboardingCompleted = false,
                 requestAlreadyAttempted = false
             )
         )
         assertTrue(
-            shouldRequestSimCalendarPermissions(
-                simOnboardingCompleted = true,
+            shouldRequestBaseRuntimeCalendarPermissions(
+                onboardingCompleted = true,
                 requestAlreadyAttempted = false
             )
         )
         assertFalse(
-            shouldRequestSimCalendarPermissions(
-                simOnboardingCompleted = true,
+            shouldRequestBaseRuntimeCalendarPermissions(
+                onboardingCompleted = true,
                 requestAlreadyAttempted = true
             )
         )
     }
 
     @Test
-    fun `resolveSimDarkTheme defaults fresh SIM startup to dark`() {
+    fun `resolveBaseRuntimeDarkTheme defaults fresh startup to dark`() {
         assertTrue(
-            resolveSimDarkTheme(
+            resolveBaseRuntimeDarkTheme(
                 themeMode = PrismThemeMode.SYSTEM,
                 hasStoredThemeMode = false,
                 systemDarkTheme = false
@@ -41,9 +41,9 @@ class SimMainActivityLogicTest {
     }
 
     @Test
-    fun `resolveSimDarkTheme respects stored light choice`() {
+    fun `resolveBaseRuntimeDarkTheme respects stored light choice`() {
         assertFalse(
-            resolveSimDarkTheme(
+            resolveBaseRuntimeDarkTheme(
                 themeMode = PrismThemeMode.LIGHT,
                 hasStoredThemeMode = true,
                 systemDarkTheme = true
@@ -52,9 +52,9 @@ class SimMainActivityLogicTest {
     }
 
     @Test
-    fun `resolveSimDarkTheme respects stored dark choice`() {
+    fun `resolveBaseRuntimeDarkTheme respects stored dark choice`() {
         assertTrue(
-            resolveSimDarkTheme(
+            resolveBaseRuntimeDarkTheme(
                 themeMode = PrismThemeMode.DARK,
                 hasStoredThemeMode = true,
                 systemDarkTheme = false
@@ -63,16 +63,16 @@ class SimMainActivityLogicTest {
     }
 
     @Test
-    fun `resolveSimDarkTheme respects stored system choice`() {
+    fun `resolveBaseRuntimeDarkTheme respects stored system choice`() {
         assertFalse(
-            resolveSimDarkTheme(
+            resolveBaseRuntimeDarkTheme(
                 themeMode = PrismThemeMode.SYSTEM,
                 hasStoredThemeMode = true,
                 systemDarkTheme = false
             )
         )
         assertTrue(
-            resolveSimDarkTheme(
+            resolveBaseRuntimeDarkTheme(
                 themeMode = PrismThemeMode.SYSTEM,
                 hasStoredThemeMode = true,
                 systemDarkTheme = true

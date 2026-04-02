@@ -3,6 +3,8 @@
 > **Scope**: Historical SIM shell shard retained in place for campaign memory.
 > **Status**: Historical redirect
 > **Current Reading Priority**: Historical context only; not current source of truth.
+> **Interpretation Rule**: Read this shard as preserved migration memory for the old SIM lane, not as a second non-Mono shell truth.
+> **Unification Note**: The old shell contract is retained only as a historical base-runtime shell baseline while active shell truth lives in shared docs.
 > **Current Active Truth**:
 > - `docs/core-flow/sim-shell-routing-flow.md`
 > - `docs/specs/prism-ui-ux-contract.md`
@@ -21,6 +23,8 @@
 ## Historical Redirect Note
 
 This shard is no longer allowed to own active shell truth.
+It must not be treated as a second non-Mono shell truth.
+Its only remaining value is historical context for the former SIM-owned shell lane and a record of the base-runtime shell baseline that later moved into shared docs.
 
 Use the current active docs above for implementation and review.
 The remainder of this file is retained only as a historical snapshot of the older SIM-shell framing.
@@ -68,7 +72,7 @@ The user should perceive:
 - the same shell identity continuing into active discussion, with the heavy top and bottom monoliths remaining stable while only the center canvas changes by state
 - restored neutral fuzzy seams on those monoliths so the shell reads as premium hardware rather than a hard-cut black frame; keep the top seam subtle and the bottom seam heavier
 - a bottom message capsule whose idle state keeps a single shimmering inline hint line, rotating across `输入消息...`, audio-library swipe-up guidance, and attachment guidance rather than stacking multiple hint rows
-- a shell-owned voice-draft affordance that shows mic only while the draft is blank, renders SIM-owned FunASR realtime partial text inside the field during capture, commits the current draft into the field on release, flips to send only after draft text exists, and authenticates realtime capture through backend-issued short-lived DashScope auth while the handshake animation ends with capture rather than lingering through post-release processing
+- a shell-owned voice-draft affordance that shows mic only while the draft is blank, renders SIM-owned FunASR realtime partial text inside the field during capture, commits the current draft into the field on release, flips to send only after draft text exists, follows the shared SIM realtime recognizer contract, and ends the handshake animation with capture rather than lingering through post-release processing
 - active discussion states that prefer sparse conversation plus horizontal system sheets over dashboard cards or smart-agent chrome
 - ordinary shell affordances that still feel normal, such as history, new page/session, connectivity entry, and settings
 - a scheduler-open override that keeps the center dynamic island visible but suppresses the left/right header utility buttons while the scheduler slab owns the page
@@ -248,6 +252,7 @@ Expected navigation:
 - blank/new chat is directly usable as normal SIM chat
 - `Ask AI` from audio opens chat with that audio pre-attached
 - selecting audio from chat reopens the audio drawer instead of Android file picker
+- when the SIM scheduler drawer opens with no task items and no inspiration items, show one instructional badge-recording guide card instead of a fake scheduler item
 - the same chat shell may move between empty, plain-chat, audio-grounded, and pending-audio presentation without changing top-level shell identity
 
 ### History Drawer Support Surface
@@ -312,6 +317,7 @@ SIM keeps the shell gesture model zone-scoped and velocity-aware.
 - scheduler month chevrons may page visible month locally, but they must not acknowledge date attention; only explicit day tap may acknowledge and clear attention state
 - list scrolling or general chat overscroll must not act as an alternate drawer-open gesture
 - a first-launch-only scheduler teaser may auto-drop the drawer once to teach dismissal/opening, but it must not repeat on later launches
+- when the scheduler is idle, the island may also show one SIM-local session-only teaching line such as `下滑这里查看日程`; that hint resets on app restart and clears once the user explicitly opens the scheduler
 
 ### Connectivity Boundary Rule
 
@@ -361,6 +367,7 @@ Current delivered scope:
 - render conflict-visible items with yellow hue and most-immediate normal items with red hue
 - tap opens the scheduler drawer and lands on the visible item's corresponding date page
 - when there are no reminder tasks, stay mounted with a scheduler-entry idle summary instead of disappearing
+- the idle summary may temporarily use SIM-local teaching copy such as `下滑这里查看日程` until the user explicitly opens the scheduler in the current app run
 - do not show multi-line stacked reminder content or detached overlay chrome
 - the island remains mounted across empty-home and active-discussion shell states as long as the normal SIM shell is visible
 

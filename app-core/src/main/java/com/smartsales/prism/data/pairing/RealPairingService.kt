@@ -4,6 +4,7 @@ import com.smartsales.core.util.Result
 import com.smartsales.prism.data.connectivity.legacy.BlePeripheral
 import com.smartsales.prism.data.connectivity.legacy.ConnectionState
 import com.smartsales.prism.data.connectivity.legacy.DeviceConnectionManager
+import com.smartsales.prism.data.connectivity.legacy.hasUsableBadgeIp
 import com.smartsales.prism.data.connectivity.legacy.WifiCredentials as LegacyWifiCredentials
 import com.smartsales.prism.data.connectivity.legacy.scan.BleScanner
 import com.smartsales.prism.domain.pairing.*
@@ -220,7 +221,7 @@ class RealPairingService @Inject constructor(
             val result = runCatching { connectionManager.queryNetworkStatus() }
                 .getOrElse { Result.Error(Exception("查询失败: ${it.message}")) }
             
-            if (result is Result.Success && !result.data.ipAddress.isNullOrBlank()) {
+            if (result is Result.Success && hasUsableBadgeIp(result.data.ipAddress)) {
                 Log.d(TAG, "Network check success: IP=${result.data.ipAddress}")
                 networkOk = true
                 return@repeat

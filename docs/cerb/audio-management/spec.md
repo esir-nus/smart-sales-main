@@ -2,7 +2,8 @@
 
 > **Cerb-compliant spec** — Audio file management: sync, transcription, UI interaction.
 > **Status**: SHIPPED
-> **Last Updated**: 2026-03-31
+> **Last Updated**: 2026-04-01
+> **Behavioral UX Authority Above This Doc**: [`docs/core-flow/base-runtime-ux-surface-governance-flow.md`](../../core-flow/base-runtime-ux-surface-governance-flow.md) (`UX.AUDIO.*`)
 
 ---
 
@@ -79,6 +80,23 @@ There is one active inventory rule for current non-Mono work:
 - successful badge-pipeline completions may appear in the drawer automatically because they are ingested into the same repository namespace after pipeline completion
 - automatic pipeline ingest does **not** redefine the drawer-side sync contract
 - browse-open auto-sync is retired migration history, not current truth
+- fresh install inventory may include one built-in phone demo recording for product demonstration, but it must not ship a long list of seeded pending test recordings by default
+- startup reconciliation should prune the retired built-in pending sample IDs so old multi-seed debug inventory does not linger after upgrade
+
+Manual sync outcome rule:
+
+- `徽章当前没有录音` means the badge list was actually empty
+- `录音已在列表中，无需重复同步` means the badge reported recordings, but they were already present locally or currently suppressed by pending badge-delete protection
+- `已同步 X 条徽章录音` means new badge files were imported during this sync run
+- when empty recordings are skipped, the suffix `（跳过 N 条空录音）` is appended to the IMPORTED or ALREADY_PRESENT message
+
+Empty recording filter rule:
+
+- badge recordings smaller than 1 KB (1024 bytes) are silently skipped during sync
+- WAV header alone is 44 bytes; anything below 1 KB cannot contain meaningful audio
+- skipped files are deleted from local temp storage but remain on the badge
+- the skip count is logged and shown in the sync outcome message when nonzero
+- constant: `MIN_BADGE_WAV_SIZE_BYTES = 1024L` in `SimAudioRepositorySyncSupport.kt`
 
 ---
 

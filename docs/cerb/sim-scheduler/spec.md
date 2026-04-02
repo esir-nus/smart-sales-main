@@ -3,6 +3,8 @@
 > **Scope**: Historical SIM scheduler shard retained in place for campaign memory.
 > **Status**: Historical redirect
 > **Current Reading Priority**: Historical context only; not current source of truth.
+> **Interpretation Rule**: Read this shard as preserved migration memory for the old SIM scheduler lane, not as active product truth.
+> **Unification Note**: The old scheduler contract is retained only as a historical base-runtime scheduler baseline while active scheduler truth lives in shared Path A docs.
 > **Current Active Truth**:
 > - `docs/core-flow/sim-scheduler-path-a-flow.md`
 > - `docs/core-flow/scheduler-fast-track-flow.md`
@@ -24,6 +26,8 @@
 ## Historical Redirect Note
 
 This shard is no longer allowed to own active scheduler truth.
+It must not be treated as a second non-Mono scheduler truth.
+Its only remaining value is historical context for the former SIM-owned scheduler lane and a record of the base-runtime scheduler baseline that later moved into shared docs.
 
 Use the current active docs above for implementation and review.
 The remainder of this file is retained only as a historical snapshot of the older SIM-scheduler framing.

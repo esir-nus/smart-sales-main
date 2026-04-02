@@ -125,6 +125,7 @@ Interpret this hierarchy strictly:
 - Keep changes minimal and surgical when editing docs or code.
 - Do not modify `.agent/rules/**` or `.agent/workflows/**` unless the user explicitly asks for Antigravity changes too.
 - When Antigravity guidance contains project knowledge that matters to the task, adapt the intent into Codex behavior rather than rewriting Antigravity files by default.
+- When the user asks for a commit message, suggest the message only. Light formatting or brief commentary is allowed, but never run `git commit`, never present the change as already committed, and assume the user will commit manually unless they explicitly ask for execution.
 
 ## Workflow Portability
 

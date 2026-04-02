@@ -8,7 +8,8 @@ import java.time.ZoneId
 
 internal fun buildSimDynamicIslandItems(
     sessionTitle: String,
-    orderedTasks: List<ScheduledTask>
+    orderedTasks: List<ScheduledTask>,
+    showIdleTeachingHint: Boolean = false
 ): List<DynamicIslandItem> {
     val normalizedTitle = sessionTitle.ifBlank { "SIM" }
     val activeTasks = orderedTasks
@@ -18,7 +19,11 @@ internal fun buildSimDynamicIslandItems(
         return listOf(
             DynamicIslandItem(
                 sessionTitle = normalizedTitle,
-                schedulerSummary = "暂无待办",
+                schedulerSummary = if (showIdleTeachingHint) {
+                    "下滑这里查看日程"
+                } else {
+                    "暂无待办"
+                },
                 isIdleEntry = true,
                 tapAction = DynamicIslandTapAction.OpenSchedulerDrawer()
             )

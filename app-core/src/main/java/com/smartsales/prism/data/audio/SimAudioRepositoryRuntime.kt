@@ -41,32 +41,14 @@ class SimAudioRepositoryRuntime @Inject constructor(
             assetName = "sim_wave2_seed.mp3",
             filename = "SIM_Wave2_Seed.mp3",
             isStarred = true
-        ),
-        SimSeedDefinition(
-            id = "sim_wave2_seed_pending_a",
-            assetName = "sim_wave2_seed.mp3",
-            filename = "SIM_Wave2_Pending_A.mp3"
-        ),
-        SimSeedDefinition(
-            id = "sim_wave2_seed_pending_b",
-            assetName = "sim_wave2_seed.mp3",
-            filename = "SIM_Wave2_Pending_B.mp3"
-        ),
-        SimSeedDefinition(
-            id = "sim_wave2_seed_pending_c",
-            assetName = "sim_wave2_seed.mp3",
-            filename = "SIM_Wave2_Pending_C.mp3"
-        ),
-        SimSeedDefinition(
-            id = "sim_wave2_seed_pending_d",
-            assetName = "sim_wave2_seed.mp3",
-            filename = "SIM_Wave2_Pending_D.mp3"
-        ),
-        SimSeedDefinition(
-            id = "sim_wave2_seed_pending_e",
-            assetName = "sim_wave2_seed.mp3",
-            filename = "SIM_Wave2_Pending_E.mp3"
         )
+    )
+    internal val retiredSeedIds = setOf(
+        "sim_wave2_seed_pending_a",
+        "sim_wave2_seed_pending_b",
+        "sim_wave2_seed_pending_c",
+        "sim_wave2_seed_pending_d",
+        "sim_wave2_seed_pending_e"
     )
 }
 

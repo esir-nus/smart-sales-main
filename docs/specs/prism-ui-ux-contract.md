@@ -1,7 +1,9 @@
 # UI Surface Contract (Legacy filename: `prism-ui-ux-contract.md`)
 
-> **Status:** Active Index & Policy Rule
-> **Last Updated:** 2026-03-31
+> **Status:** Active Boundary Index
+> **Last Updated:** 2026-04-01
+> **Product North Star:** [`SmartSales_PRD.md`](../../SmartSales_PRD.md)
+> **UX Surface North Star:** [`docs/core-flow/base-runtime-ux-surface-governance-flow.md`](../core-flow/base-runtime-ux-surface-governance-flow.md)
 > **Architecture Companion:** [Architecture.md](./Architecture.md)
 > **Terminology:** [GLOSSARY.md](./GLOSSARY.md)
 
@@ -11,24 +13,27 @@
 
 This file remains the compatibility path used across the repo, but its practical role is simple:
 
-- it is the UI surface contract
 - it defines the boundary between UI and lower layers
-- it points readers toward the feature-level UI source of truth
+- it points readers toward the active UX/core-flow and feature-level UI source of truth
+- it keeps the long-lived compatibility path stable while authority routes elsewhere
 
 For the overall UI workflow, also read:
 
+- [`SmartSales_PRD.md`](../../SmartSales_PRD.md) for app identity, major surfaces, and product-level UX laws
 - [`../sops/ui-dev-mode.md`](../sops/ui-dev-mode.md) for the developer operating model
+- [`../core-flow/base-runtime-ux-surface-governance-flow.md`](../core-flow/base-runtime-ux-surface-governance-flow.md) for current shared UX surface behavior
 - [`code-structure-contract.md`](./code-structure-contract.md) for file-shape and anti-god-file rules
 - [`style-guide.md`](./style-guide.md) for visual identity rules
-- [`ui_element_registry.md`](./ui_element_registry.md) for shared element behavior and invariants
+- [`ui_element_registry.md`](./ui_element_registry.md) for shared supporting invariants
 - feature-specific `docs/cerb-ui/**` or `docs/cerb/**` docs for real screen/state ownership
 
 Rule:
 
 - use intuitive names in discussion
 - keep this path stable until the repo deliberately migrates references
-- treat this document plus current shared feature docs as the active shell/UI source-of-truth index for non-Mono work
-- route shared shell/UI ownership through this document, `docs/core-flow/sim-shell-routing-flow.md`, `docs/cerb-ui/home-shell/spec.md`, `docs/cerb-ui/dynamic-island/spec.md`, and `docs/cerb/interface-map.md`
+- product-level shell identity and anti-drift UX laws start in `SmartSales_PRD.md`
+- treat this document as a supporting boundary/index layer rather than the primary UX owner
+- route shared shell/UI ownership through `docs/core-flow/base-runtime-ux-surface-governance-flow.md`, then the relevant lower `docs/core-flow/**`, `docs/cerb-ui/**`, and `docs/cerb/**` docs
 - legacy SIM shell docs are historical migration evidence only and must not be used as shell fallback ownership
 - the shared top safe-area law lives in `style-guide.md` and applies repo-wide unless an owning spec explicitly defines a top header/monolith exception
 
@@ -37,7 +42,8 @@ Rule:
 ## Brain, Body, and Skin
 
 This document is a policy and index layer for Layer 4 UI work.
-Feature-specific UI behavior, state shapes, and visual contracts belong in the owning `docs/cerb-ui/**` or `docs/cerb/**` documents.
+Surface composition and shared UX interaction behavior belong first in `docs/core-flow/base-runtime-ux-surface-governance-flow.md`.
+Feature-specific UI behavior, state shapes, and visual contracts belong in the owning `docs/cerb-ui/**` or `docs/cerb/**` documents beneath that UX layer.
 
 To enable parallel UI development without being blocked by backend pipeline restructuring, the UI layer enforces strict decoupling:
 
@@ -53,6 +59,7 @@ Rule: Do not add raw feature state descriptions to this document. The source of 
 Structure note:
 
 - this document owns the UI boundary and source-of-truth index
+- `docs/core-flow/base-runtime-ux-surface-governance-flow.md` owns current shared base-runtime UX surface behavior
 - `code-structure-contract.md` owns file-shape legality and anti-god-file policy
 
 ---
@@ -100,7 +107,7 @@ enableEdgeToEdge()
 
 ## Federated Spec Index
 
-Role: This document is strictly an index that maps UI modules, components, and flows to their authoritative specs.
+Role: This document is strictly a supporting index that maps UI modules, components, and flows to their authoritative specs beneath the UX surface north star.
 
 ### Modules
 
@@ -108,7 +115,7 @@ Role: This document is strictly an index that maps UI modules, components, and f
 |--------|--------|-----------|
 | Home Screen | Shipped | [home-shell/spec.md](../cerb-ui/home-shell/spec.md) |
 | Chat Interface | Shipped | [ChatInterface.md](../cerb-ui/agent-intelligence/spec.md) |
-| Shared Shell / Base Runtime Shell | Shipped | [base-runtime-unification.md](./base-runtime-unification.md) plus this document |
+| Shared Shell / Base Runtime Shell | Shipped | [../core-flow/base-runtime-ux-surface-governance-flow.md](../core-flow/base-runtime-ux-surface-governance-flow.md) plus [base-runtime-unification.md](./base-runtime-unification.md) |
 | Scheduler Drawer | Shipped | [SchedulerDrawer.md](../cerb-ui/scheduler/contract.md) |
 | History Drawer | Shipped | [HistoryDrawer.md](../cerb/session-history/spec.md) |
 | Audio Drawer | Shipped | [AudioDrawer.md](../cerb/audio-management/spec.md) |
@@ -143,7 +150,9 @@ Role: This document is strictly an index that maps UI modules, components, and f
 ### Standalone Mode Note
 
 - SIM remains a real standalone implementation boundary, but it is no longer a second non-Mono UI truth separate from the shared base runtime.
-- Shared shell/UI truth now routes through this document, `docs/specs/base-runtime-unification.md`, relevant core-flow docs, and shared feature docs.
+- current `SIM` naming in shell/UI docs should be read as the best available base-runtime baseline rather than as permission for a second product truth.
+- Shared shell/UI truth now routes through `docs/core-flow/base-runtime-ux-surface-governance-flow.md`, `docs/specs/base-runtime-unification.md`, relevant lower core-flow docs, and shared feature docs.
+- current production root code is `MainActivity -> RuntimeShell`
 - Global gestures and shared element rules still apply unless a current shared spec explicitly narrows the presentation.
 - Legacy SIM shell docs may still hold migration residue, but new shell truth should be absorbed into shared docs rather than extended there.
 - For shipped shell behavior, the lower audio-open gesture must yield to direct composer interaction; shell gesture surfaces must never screen the attach button, text field, or send button.

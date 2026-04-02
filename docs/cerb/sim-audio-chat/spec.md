@@ -3,6 +3,8 @@
 > **Scope**: Historical SIM audio/chat shard retained in place for campaign memory.
 > **Status**: Historical redirect
 > **Current Reading Priority**: Historical context only; not current source of truth.
+> **Interpretation Rule**: Read this shard as preserved migration memory for the old SIM audio/chat lane, not as active product truth.
+> **Unification Note**: The old audio/chat contract is retained only as a historical base-runtime audio/chat baseline while active truth lives in shared audio and Tingwu docs.
 > **Current Active Truth**:
 > - `docs/core-flow/sim-audio-artifact-chat-flow.md`
 > - `docs/cerb/audio-management/spec.md`
@@ -84,7 +86,7 @@ This shard intentionally replaces the smart-agent interpretation of chat with a 
 - blank/new SIM chat supports real free-text replies
 - baseline chat uses SIM system persona plus user metadata plus local session history
 - blank/new SIM chat may use a SIM-owned FunASR realtime recognizer from the composer to draft text locally, but it must still require explicit send
-- SIM realtime auth must use backend-issued short-lived DashScope credentials rather than a long-lived client-side API key
+- SIM realtime auth uses the shared direct `DASHSCOPE_API_KEY` path at FunASR SDK init rather than a backend-issued short-lived token
 - `Ask AI` starts or reuses a chat session with one selected audio attached as context
 - chat answers may use the chosen audio's artifacts when audio is attached, but audio is not required for a normal SIM chat turn
 - the SIM composer uses mic only while the draft is blank; once typed or recognized draft text exists, the same trailing action becomes send

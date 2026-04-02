@@ -35,6 +35,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -77,6 +79,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.core.content.ContextCompat
 import com.smartsales.prism.ui.components.DynamicIslandItem
+import com.smartsales.prism.ui.components.DynamicIslandUiState
+import com.smartsales.prism.ui.components.DynamicIslandVisualState
 import com.smartsales.prism.ui.components.DynamicIslandTapAction
 import com.smartsales.prism.ui.components.prismNavigationBarPadding
 import com.smartsales.prism.ui.components.prismStatusBarPadding
@@ -176,7 +180,7 @@ internal fun SimEmptyHomeHeroShell(
     greeting: String,
     inputText: String,
     isSending: Boolean,
-    dynamicIslandItems: List<DynamicIslandItem>,
+    dynamicIslandState: DynamicIslandUiState,
     onMenuClick: () -> Unit,
     onNewSessionClick: () -> Unit,
     onSchedulerClick: (DynamicIslandTapAction) -> Unit,
@@ -202,7 +206,7 @@ internal fun SimEmptyHomeHeroShell(
     SimHomeHeroShellFrame(
         inputText = inputText,
         isSending = isSending,
-        dynamicIslandItems = dynamicIslandItems,
+        dynamicIslandState = dynamicIslandState,
         onMenuClick = onMenuClick,
         onNewSessionClick = onNewSessionClick,
         onSchedulerClick = onSchedulerClick,
@@ -236,7 +240,7 @@ internal fun SimEmptyHomeHeroShell(
 internal fun SimHomeHeroShellFrame(
     inputText: String,
     isSending: Boolean,
-    dynamicIslandItems: List<DynamicIslandItem>,
+    dynamicIslandState: DynamicIslandUiState,
     onMenuClick: () -> Unit,
     onNewSessionClick: () -> Unit,
     onSchedulerClick: (DynamicIslandTapAction) -> Unit,
@@ -281,7 +285,7 @@ internal fun SimHomeHeroShellFrame(
                 .fillMaxSize()
         ) {
             SimHomeHeroTopCap(
-                dynamicIslandItems = dynamicIslandItems,
+                dynamicIslandState = dynamicIslandState,
                 onMenuClick = onMenuClick,
                 onNewSessionClick = onNewSessionClick,
                 onSchedulerClick = onSchedulerClick,
@@ -504,7 +508,7 @@ private fun SimHomeHeroAuroraFloor(
 
 @Composable
 private fun SimHomeHeroTopCap(
-    dynamicIslandItems: List<DynamicIslandItem>,
+    dynamicIslandState: DynamicIslandUiState,
     onMenuClick: () -> Unit,
     onNewSessionClick: () -> Unit,
     onSchedulerClick: (DynamicIslandTapAction) -> Unit,
@@ -573,7 +577,7 @@ private fun SimHomeHeroTopCap(
                     contentAlignment = Alignment.Center
                 ) {
                     SimHomeHeroDynamicIsland(
-                        items = dynamicIslandItems,
+                        state = dynamicIslandState,
                         onTap = onSchedulerClick,
                         enablePullGesture = enablePullGesture,
                         onPullOpen = onPullOpen
@@ -596,22 +600,14 @@ private fun SimHomeHeroTopCap(
 
 @Composable
 private fun SimHomeHeroDynamicIsland(
-    items: List<DynamicIslandItem>,
+    state: DynamicIslandUiState,
     onTap: (DynamicIslandTapAction) -> Unit,
     enablePullGesture: Boolean = false,
     onPullOpen: () -> Unit = {}
 ) {
-    if (items.isEmpty()) return
-
+    val currentItem = (state as? DynamicIslandUiState.Visible)?.item ?: return
     val palette = rememberSimHomeHeroPalette()
     val isDarkTheme = PrismThemeDefaults.isDarkTheme
-    val itemKeys = remember(items) { items.map(DynamicIslandItem::stableKey) }
-    var currentItemKey by remember { mutableStateOf<String?>(null) }
-    val currentIndex = resolveSimDynamicIslandIndex(
-        items = items,
-        currentItemKey = currentItemKey
-    )
-    val currentItem = items[currentIndex]
     val chroma = SimHomeHeroIslandChroma.from(
         item = currentItem,
         palette = palette,
@@ -626,17 +622,6 @@ private fun SimHomeHeroDynamicIsland(
         ),
         label = "sim_home_hero_island_pulse_alpha"
     )
-
-    LaunchedEffect(itemKeys) {
-        currentItemKey = items[currentIndex].stableKey
-    }
-
-    LaunchedEffect(itemKeys, currentItem.stableKey) {
-        if (items.size <= 1) return@LaunchedEffect
-        delay(5000L)
-        val nextIndex = (currentIndex + 1) % items.size
-        currentItemKey = items[nextIndex].stableKey
-    }
 
     SimVerticalDragTrigger(
         modifier = Modifier
@@ -670,11 +655,11 @@ private fun SimHomeHeroDynamicIsland(
         ) {
             Canvas(modifier = Modifier.size(SimHomeHeroTokens.IslandDotCanvasSize)) {
                 drawCircle(
-                    color = chroma.dot.copy(alpha = if (currentItem.isConflict) 0.32f * pulse else 0.18f),
+                    color = chroma.dot.copy(alpha = if (currentItem.usesPulse) 0.32f * pulse else 0.18f),
                     radius = size.minDimension * 0.5f
                 )
                 drawCircle(
-                    color = chroma.dot.copy(alpha = if (currentItem.isConflict) pulse else 1f),
+                    color = chroma.dot.copy(alpha = if (currentItem.usesPulse) pulse else 1f),
                     radius = size.minDimension * 0.30f
                 )
             }
@@ -690,7 +675,59 @@ private fun SimHomeHeroDynamicIsland(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            currentItem.batteryPercentage?.takeIf { currentItem.showsBattery }?.let { battery ->
+                Box(modifier = Modifier.width(4.dp))
+                SimHomeHeroBatteryIndicator(
+                    percentage = battery,
+                    accentColor = chroma.batteryAccent ?: chroma.dot
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun SimHomeHeroBatteryIndicator(
+    percentage: Int,
+    accentColor: Color
+) {
+    val boundedPercentage = percentage.coerceIn(0, 100)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .defaultMinSize(minWidth = 22.dp, minHeight = 14.dp)
+                .border(
+                    width = 1.dp,
+                    color = accentColor.copy(alpha = 0.6f),
+                    shape = RoundedCornerShape(3.dp)
+                )
+                .drawBehind {
+                    drawRoundRect(
+                        color = accentColor.copy(alpha = 0.20f),
+                        size = Size(width = size.width * (boundedPercentage / 100f), height = size.height),
+                        cornerRadius = CornerRadius(3.dp.toPx(), 3.dp.toPx())
+                    )
+                }
+                .padding(horizontal = 4.dp, vertical = 1.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = boundedPercentage.toString(),
+                color = accentColor,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
+        }
+        Box(
+            modifier = Modifier
+                .padding(start = 2.dp)
+                .size(width = 2.dp, height = 6.dp)
+                .background(
+                    color = accentColor.copy(alpha = 0.6f),
+                    shape = RoundedCornerShape(topEnd = 2.dp, bottomEnd = 2.dp)
+                )
+        )
     }
 }
 
@@ -699,7 +736,8 @@ private data class SimHomeHeroIslandChroma(
     val textGradient: List<Color>,
     val surface: Color,
     val border: Color,
-    val shadow: Color
+    val shadow: Color,
+    val batteryAccent: Color? = null
 ) {
     companion object {
         fun from(
@@ -707,8 +745,8 @@ private data class SimHomeHeroIslandChroma(
             palette: SimHomeHeroPalette,
             isDarkTheme: Boolean
         ): SimHomeHeroIslandChroma {
-            return when {
-                item.isConflict -> SimHomeHeroIslandChroma(
+            return when (item.visualState) {
+                DynamicIslandVisualState.SCHEDULER_CONFLICT -> SimHomeHeroIslandChroma(
                     dot = Color(0xFFFFD60A),
                     textGradient = listOf(Color(0xFFC93400), Color(0xFFFF9500)),
                     surface = if (isDarkTheme) {
@@ -719,7 +757,7 @@ private data class SimHomeHeroIslandChroma(
                     border = Color(0x33FF9500),
                     shadow = Color(0x1FFF9500)
                 )
-                item.isIdleEntry -> SimHomeHeroIslandChroma(
+                DynamicIslandVisualState.SCHEDULER_IDLE -> SimHomeHeroIslandChroma(
                     dot = palette.islandIdleDot,
                     textGradient = listOf(palette.iconTint, palette.greetingSubtitle),
                     surface = if (isDarkTheme) {
@@ -734,7 +772,46 @@ private data class SimHomeHeroIslandChroma(
                     },
                     shadow = Color.Black.copy(alpha = if (isDarkTheme) 0f else 0.03f)
                 )
-                else -> SimHomeHeroIslandChroma(
+                DynamicIslandVisualState.CONNECTIVITY_CONNECTED -> SimHomeHeroIslandChroma(
+                    dot = Color(0xFF34C759),
+                    textGradient = listOf(Color(0xFFA4E38A), Color(0xFF34C759)),
+                    surface = if (isDarkTheme) {
+                        Color(0x2134C759)
+                    } else {
+                        Color(0x1634C759)
+                    },
+                    border = Color(0x3334C759),
+                    shadow = Color(0x1F34C759),
+                    batteryAccent = Color(0xFF34C759)
+                )
+                DynamicIslandVisualState.CONNECTIVITY_DISCONNECTED -> SimHomeHeroIslandChroma(
+                    dot = Color.White.copy(alpha = 0.30f),
+                    textGradient = listOf(Color(0xFFA0A0A5), Color(0xFF86868B)),
+                    surface = if (isDarkTheme) {
+                        Color.White.copy(alpha = 0.08f)
+                    } else {
+                        Color.Black.copy(alpha = 0.04f)
+                    },
+                    border = if (isDarkTheme) {
+                        Color.White.copy(alpha = 0.05f)
+                    } else {
+                        Color.Black.copy(alpha = 0.04f)
+                    },
+                    shadow = Color.Black.copy(alpha = if (isDarkTheme) 0f else 0.03f)
+                )
+                DynamicIslandVisualState.CONNECTIVITY_RECONNECTING,
+                DynamicIslandVisualState.CONNECTIVITY_NEEDS_SETUP -> SimHomeHeroIslandChroma(
+                    dot = Color(0xFFFF9F0A),
+                    textGradient = listOf(Color(0xFFFFD60A), Color(0xFFFF9F0A)),
+                    surface = if (isDarkTheme) {
+                        Color(0x29FF9F0A)
+                    } else {
+                        Color(0x1AFF9F0A)
+                    },
+                    border = Color(0x33FF9F0A),
+                    shadow = Color(0x1FFF9F0A)
+                )
+                DynamicIslandVisualState.SCHEDULER_UPCOMING -> SimHomeHeroIslandChroma(
                     dot = if (isDarkTheme) Color(0xFFFF453A) else Color(0xFFD70015),
                     textGradient = if (isDarkTheme) {
                         listOf(Color(0xFFFF8A84), Color(0xFFFF453A))

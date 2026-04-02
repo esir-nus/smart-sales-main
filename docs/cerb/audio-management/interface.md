@@ -2,7 +2,7 @@
 
 > **Blackbox contract** — For consumers (AudioDrawer, UI). Don't read implementation.
 > **Status**: Active supporting interface
-> **Last Updated**: 2026-03-31
+> **Last Updated**: 2026-04-01
 
 ---
 
@@ -124,7 +124,7 @@ enum class TranscriptionStatus {
 | Operation | Guarantee |
 |-----------|-----------|
 | `getAudioFiles` | Hot flow, emits current list immediately on collection |
-| `syncFromDevice` | Manual/UI-driven sync entry, idempotent, safe to call multiple times |
+| `syncFromDevice` | Manual/UI-driven sync entry, idempotent, safe to call multiple times; consumer copy must distinguish badge-empty vs already-present vs imported outcomes |
 | `startTranscription` | Updates `status` → `TRANSCRIBING`, emits progress via flow |
 | `deleteAudio` | Idempotent, returns `NotFound` if file is absent |
 

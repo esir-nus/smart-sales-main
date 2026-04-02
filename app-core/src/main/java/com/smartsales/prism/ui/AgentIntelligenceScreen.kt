@@ -9,7 +9,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.smartsales.prism.domain.model.SchedulerFollowUpContext
-import com.smartsales.prism.ui.components.DynamicIslandItem
+import com.smartsales.prism.ui.components.DynamicIslandUiState
 import com.smartsales.prism.ui.components.DynamicIslandTapAction
 import com.smartsales.prism.ui.sim.SimAgentViewModel
 import com.smartsales.prism.ui.sim.SimVoiceDraftUiState
@@ -35,7 +35,7 @@ fun AgentIntelligenceScreen(
     onProfileClick: () -> Unit = {},
     showDebugButton: Boolean = true,
     visualMode: AgentIntelligenceVisualMode = AgentIntelligenceVisualMode.DEFAULT,
-    simDynamicIslandItems: List<DynamicIslandItem> = emptyList(),
+    simDynamicIslandState: DynamicIslandUiState = DynamicIslandUiState.Hidden,
     showSimHeaderMenuButton: Boolean = true,
     showSimHeaderNewSessionButton: Boolean = true,
     showSimBottomComposer: Boolean = true,
@@ -77,7 +77,7 @@ fun AgentIntelligenceScreen(
         ?: remember { mutableStateOf(SimVoiceDraftUiState()) })
     val simVoiceDraftState = simVoiceDraftStateOverride ?: simVoiceDraftObservedState
     val simVoiceDraftEnabled = simVoiceDraftEnabledOverride
-        ?: (visualMode == AgentIntelligenceVisualMode.SIM && currentSchedulerFollowUpContext == null)
+        ?: (simViewModel != null && currentSchedulerFollowUpContext == null)
 
     val context = LocalContext.current
     androidx.compose.runtime.LaunchedEffect(toastMessage) {
@@ -116,7 +116,7 @@ fun AgentIntelligenceScreen(
         onOnboardingDesignClick = onOnboardingDesignClick,
         onProfileClick = onProfileClick,
         showDebugButton = showDebugButton,
-        simDynamicIslandItems = simDynamicIslandItems,
+        simDynamicIslandState = simDynamicIslandState,
         showSimHeaderMenuButton = showSimHeaderMenuButton,
         showSimHeaderNewSessionButton = showSimHeaderNewSessionButton,
         showSimBottomComposer = showSimBottomComposer,

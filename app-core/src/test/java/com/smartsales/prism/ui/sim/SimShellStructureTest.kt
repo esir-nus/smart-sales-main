@@ -10,15 +10,15 @@ class SimShellStructureTest {
     private val workingDir = File(System.getProperty("user.dir") ?: ".")
 
     @Test
-    fun `sim shell host file is reduced to host responsibilities`() {
-        val source = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimShell.kt")
+    fun `runtime shell host file is reduced to host responsibilities`() {
+        val source = readSource("app-core/src/main/java/com/smartsales/prism/ui/RuntimeShell.kt")
 
-        assertTrue(source.contains("fun SimShell("))
+        assertTrue(source.contains("fun RuntimeShell("))
         assertTrue(source.contains("val chatViewModel: SimAgentViewModel = hiltViewModel()"))
         assertTrue(source.contains("val audioViewModel: SimAudioDrawerViewModel = hiltViewModel()"))
-        assertTrue(source.contains("SimShellContent("))
+        assertTrue(source.contains("RuntimeShellContent("))
         assertFalse(source.contains("fun emitSimConnectivityRouteTelemetry("))
-        assertFalse(source.contains("fun openSimConnectivityModal("))
+        assertFalse(source.contains("fun openRuntimeConnectivityModal("))
         assertFalse(source.contains("fun buildSimDynamicIslandItems("))
         assertFalse(source.contains("fun SimSchedulerFollowUpPrompt("))
         assertFalse(source.contains("AgentIntelligenceScreen("))
@@ -26,29 +26,29 @@ class SimShellStructureTest {
 
     @Test
     fun `wave1c extracted files own the moved shell structure`() {
-        val content = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimShellContent.kt")
-        val reducer = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimShellReducer.kt")
+        val content = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/RuntimeShellContent.kt")
+        val reducer = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/RuntimeShellReducer.kt")
         val actions = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimShellActions.kt")
         val telemetry = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimShellTelemetry.kt")
         val projection = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimShellProjection.kt")
         val sections = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimShellSections.kt")
 
-        assertTrue(content.contains("fun SimShellContent("))
+        assertTrue(content.contains("fun RuntimeShellContent("))
         assertTrue(content.contains("AgentIntelligenceScreen("))
         assertTrue(content.contains("SimHistoryDrawer("))
         assertTrue(content.contains("SimUserCenterDrawer("))
-        assertTrue(content.contains("mutateShellState(::openSimSettings)"))
+        assertTrue(content.contains("mutateShellState(::openRuntimeSettings)"))
         assertTrue(content.contains("ConnectivityManagerScreen("))
         assertFalse(content.contains("import com.smartsales.prism.ui.drawers.HistoryDrawer"))
         assertFalse(content.contains("import com.smartsales.prism.ui.settings.UserCenterScreen"))
 
-        assertTrue(reducer.contains("fun openSimConnectivityModal("))
-        assertTrue(reducer.contains("fun handleSimConnectivityEntryRequest("))
-        assertTrue(reducer.contains("fun openSimHistory("))
-        assertTrue(reducer.contains("fun openSimSettings("))
-        assertTrue(reducer.contains("fun handleSimHistoryEntryRequest("))
-        assertTrue(reducer.contains("fun shouldShowSimShellScrim("))
-        assertTrue(reducer.contains("fun resolveSimShellScrimAlpha("))
+        assertTrue(reducer.contains("fun openRuntimeConnectivityModal("))
+        assertTrue(reducer.contains("fun handleRuntimeConnectivityEntryRequest("))
+        assertTrue(reducer.contains("fun openRuntimeHistory("))
+        assertTrue(reducer.contains("fun openRuntimeSettings("))
+        assertTrue(reducer.contains("fun handleRuntimeHistoryEntryRequest("))
+        assertTrue(reducer.contains("fun shouldShowRuntimeShellScrim("))
+        assertTrue(reducer.contains("fun resolveRuntimeShellScrimAlpha("))
 
         assertTrue(actions.contains("fun handleSchedulerShelfAskAiHandoff("))
         assertTrue(actions.contains("fun handleBadgeSchedulerContinuityIngress("))
@@ -75,11 +75,11 @@ class SimShellStructureTest {
     }
 
     @Test
-    fun `scheduler page mode hides the sim bottom composer`() {
-        val content = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimShellContent.kt")
+    fun `scheduler page mode hides the bottom composer`() {
+        val content = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/RuntimeShellContent.kt")
         val heroShell = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimHomeHeroShell.kt")
 
-        assertTrue(content.contains("val showSimBottomComposer = shellState.activeDrawer != SimDrawerType.SCHEDULER"))
+        assertTrue(content.contains("val showSimBottomComposer = shellState.activeDrawer != RuntimeDrawerType.SCHEDULER"))
         assertTrue(content.contains("showSimBottomComposer = showSimBottomComposer"))
         assertTrue(heroShell.contains("if (showBottomComposer) {"))
         assertTrue(heroShell.contains("SimHomeHeroBottomMonolith("))

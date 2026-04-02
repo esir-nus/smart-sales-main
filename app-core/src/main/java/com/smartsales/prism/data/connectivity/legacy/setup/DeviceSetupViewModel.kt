@@ -8,6 +8,7 @@ import com.smartsales.prism.data.connectivity.legacy.BleProfileConfig
 import com.smartsales.prism.data.connectivity.legacy.ConnectionState
 import com.smartsales.prism.data.connectivity.legacy.ConnectivityError
 import com.smartsales.prism.data.connectivity.legacy.DeviceConnectionManager
+import com.smartsales.prism.data.connectivity.legacy.hasUsableBadgeIp
 import com.smartsales.prism.data.connectivity.legacy.WifiCredentials
 import com.smartsales.prism.data.connectivity.legacy.scan.BleScanner
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -326,7 +327,7 @@ class DeviceSetupViewModel @Inject constructor(
                             when (result) {
                                 is Result.Success -> {
                                     val ip = result.data.ipAddress
-                                    if (!ip.isNullOrBlank()) {
+                                    if (hasUsableBadgeIp(ip)) {
                                         // Badge already online! Skip WiFi form
                                         ConnectivityLogger.i("快速路径：徽章已在线 ($ip)，跳过 WiFi 表单")
                                         setReady(ip)
@@ -447,8 +448,10 @@ class DeviceSetupViewModel @Inject constructor(
                     }
                 when (result) {
                     is Result.Success -> {
-                        setReady(result.data.ipAddress)
-                        return@launch
+                        if (hasUsableBadgeIp(result.data.ipAddress)) {
+                            setReady(result.data.ipAddress)
+                            return@launch
+                        }
                     }
 
                     is Result.Error -> {

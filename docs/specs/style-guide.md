@@ -3,16 +3,17 @@
 > **Scope & Ownership**
 >
 > **Status**: LIVING DOCUMENT (Owned by UI Designer Persona)
-> **Last Updated:** 2026-03-31
+> **Last Updated:** 2026-04-01
 >
 > This document defines the **visual language** for SmartSales mobile.
 >
 > **Ownership & Hierarchy Logic:**
-> 1. **Approved Screenshots Are State-Scoped Reference**: Approved prototype screenshots are the visual reference only for the exact state they depict. They do not define the full state space of a feature by themselves.
-> 2. **Owning Feature Specs Control Composition**: Feature-level `docs/cerb-ui/**` or `docs/cerb/**` shards own which elements appear in each state. This style guide owns the shared visual language those states should use.
-> 3. **UI Designer Authority**: The **UI Director (@[/12-ui-director])** owns this file.
-> 4. **Behavior vs. Visuals**: `docs/specs/prism-ui-ux-contract.md` and the owning feature shards own behavior and state composition. This doc owns pixels, material treatment, and visual pattern families.
-> 5. **Code Is Not Automatic Visual Truth**: Existing app UI may reflect testing convenience or incomplete polish. Only approved visuals plus synced docs may redefine the aesthetic source of truth.
+> 1. **Product Identity Comes First**: [`SmartSales_PRD.md`](../../SmartSales_PRD.md) owns app identity, major surfaces, and product-level anti-drift UX laws.
+> 2. **Approved Screenshots Are State-Scoped Reference**: Approved prototype screenshots are the visual reference only for the exact state they depict. They do not define the full state space of a feature by themselves.
+> 3. **Owning Feature Specs Control Composition**: Feature-level `docs/cerb-ui/**` or `docs/cerb/**` shards own which elements appear in each state. This style guide owns the shared visual language those states should use.
+> 4. **UI Designer Authority**: The **UI Director (@[/12-ui-director])** owns this file.
+> 5. **Behavior vs. Visuals**: `docs/specs/prism-ui-ux-contract.md` and the owning feature shards own behavior and state composition. This doc owns pixels, material treatment, and visual pattern families.
+> 6. **Code Is Not Automatic Visual Truth**: Existing app UI may reflect testing convenience or incomplete polish. Only approved visuals plus synced docs may redefine the aesthetic source of truth.
 >
 > **Goal**: A living, authoritative definition of the "SmartSales" premium aesthetic.
 >

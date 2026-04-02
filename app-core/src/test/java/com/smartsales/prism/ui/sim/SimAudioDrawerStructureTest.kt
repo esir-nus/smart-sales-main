@@ -22,7 +22,6 @@ class SimAudioDrawerStructureTest {
 
         assertFalse(host.contains("private fun SimDrawerHeaderAction("))
         assertFalse(host.contains("private fun SimTestImportButton("))
-        assertFalse(host.contains("private fun SimDebugScenarioPanel("))
         assertFalse(host.contains("internal fun SimAudioCard("))
         assertFalse(host.contains("internal fun buildSimAudioSelectBodyText("))
         assertFalse(host.contains("private fun SimArtifactSections("))
@@ -44,7 +43,6 @@ class SimAudioDrawerStructureTest {
         assertTrue(content.contains("internal fun SimAudioDrawerContent("))
         assertTrue(content.contains("private fun SimDrawerHeaderAction("))
         assertTrue(content.contains("private fun SimTestImportButton("))
-        assertTrue(content.contains("private fun SimDebugScenarioPanel("))
 
         assertTrue(card.contains("internal fun SimAudioCard("))
         assertTrue(card.contains("SimArtifactContent(artifacts = artifacts!!)"))

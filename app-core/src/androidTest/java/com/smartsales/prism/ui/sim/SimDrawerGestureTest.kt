@@ -191,8 +191,8 @@ class SimDrawerGestureTest {
     fun edgeZones_hideWhenBlockedByOverlayState() {
         setMountedSimGestureShell(
             viewModel = activeChatViewModel(),
-            shellState = SimShellState(
-                activeDrawer = SimDrawerType.SCHEDULER,
+            shellState = RuntimeShellState(
+                activeDrawer = RuntimeDrawerType.SCHEDULER,
                 showHistory = true
             )
         )
@@ -290,7 +290,7 @@ class SimDrawerGestureTest {
     }
 
     @Test
-    fun simSchedulerHandle_dragDown_dismissesDrawer() {
+    fun simSchedulerHandle_dragUp_dismissesDrawer() {
         var dismissCount = 0
 
         composeTestRule.setContent {
@@ -307,7 +307,7 @@ class SimDrawerGestureTest {
             .assertExists()
             .performTouchInput {
                 down(center)
-                moveBy(Offset(0f, 120f))
+                moveBy(Offset(0f, -120f))
                 up()
             }
 
@@ -342,7 +342,7 @@ class SimDrawerGestureTest {
     }
 
     @Test
-    fun simSchedulerHandle_dragUp_doesNotDismissDrawer() {
+    fun simSchedulerHandle_dragDown_doesNotDismissDrawer() {
         var dismissCount = 0
 
         composeTestRule.setContent {
@@ -359,7 +359,7 @@ class SimDrawerGestureTest {
             .assertExists()
             .performTouchInput {
                 down(center)
-                moveBy(Offset(0f, -120f))
+                moveBy(Offset(0f, 120f))
                 up()
             }
 
@@ -369,7 +369,7 @@ class SimDrawerGestureTest {
     }
 
     @Test
-    fun simSchedulerHandle_smallDragDown_doesNotDismissDrawer() {
+    fun simSchedulerHandle_smallDragUp_doesNotDismissDrawer() {
         var dismissCount = 0
 
         composeTestRule.setContent {
@@ -386,7 +386,7 @@ class SimDrawerGestureTest {
             .assertExists()
             .performTouchInput {
                 down(center)
-                moveBy(Offset(0f, 12f))
+                moveBy(Offset(0f, -12f))
                 up()
             }
 
@@ -424,7 +424,7 @@ class SimDrawerGestureTest {
 
     private fun setMountedSimGestureShell(
         viewModel: FakeAgentViewModel,
-        shellState: SimShellState = SimShellState(),
+        shellState: RuntimeShellState = RuntimeShellState(),
         isImeVisible: Boolean = false,
         onOpenScheduler: () -> Unit = {},
         onOpenAudioBrowse: () -> Unit = {},

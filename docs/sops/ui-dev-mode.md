@@ -104,9 +104,10 @@ Some existing files still use older naming. For this workflow, use the intuitive
 
 | Working Name | Current Repo File | Role |
 |--------------|-------------------|------|
+| UX Surface Governance Core Flow | `docs/core-flow/base-runtime-ux-surface-governance-flow.md` | Primary UX source of truth for surfaces, sections, elements, and transitions |
 | Surface Contract | `docs/specs/prism-ui-ux-contract.md` | UI boundary, state/intent decoupling, feature-spec index |
 | Visual Identity Guide | `docs/specs/style-guide.md` | Global visual law, aesthetic standards, token intent |
-| UI Element Registry | `docs/specs/ui_element_registry.md` | Component behavior, states, layers, invariants |
+| UI Element Registry | `docs/specs/ui_element_registry.md` | Shared supporting invariants, layers, reusable behavior rules |
 | Prototype-First UI Workflow | `docs/sops/ui-building.md` | Prototype, approval, transplant sequence |
 | UI Tracker | `docs/plans/ui-tracker.md` | UI-specific execution tracking, approval state, visual drift |
 
@@ -193,12 +194,13 @@ For prototype-to-Compose transplant, treat the prototype status bar as a visual 
 Before doing major UI work, read in this order:
 
 1. `docs/plans/ui-tracker.md`
-2. `docs/specs/prism-ui-ux-contract.md`
-3. `docs/specs/style-guide.md`
-4. `docs/specs/ui_element_registry.md`
-5. feature-specific spec in `docs/cerb-ui/**` or `docs/cerb/**`
-6. `docs/sops/ui-building.md`
-7. `docs/plans/tracker.md` when the UI task is part of a larger product/feature wave
+2. `docs/core-flow/base-runtime-ux-surface-governance-flow.md`
+3. `docs/specs/prism-ui-ux-contract.md`
+4. `docs/specs/style-guide.md`
+5. `docs/specs/ui_element_registry.md`
+6. feature-specific spec in `docs/cerb-ui/**` or `docs/cerb/**`
+7. `docs/sops/ui-building.md`
+8. `docs/plans/tracker.md` when the UI task is part of a larger product/feature wave
 
 If a `docs/core-flow/**` doc exists for the feature, read it before treating lower docs as final.
 

@@ -2,7 +2,7 @@
 
 > **Definitions**: Uses [GLOSSARY.md](../GLOSSARY.md)
 > **Status**: ✅ Shipped
-> **Source**: Extracted from prism-ui-ux-contract.md L703-731
+> **Source**: Local settings module contract beneath `docs/core-flow/base-runtime-ux-surface-governance-flow.md` (`UX.SETTINGS.*`)
 
 ---
 

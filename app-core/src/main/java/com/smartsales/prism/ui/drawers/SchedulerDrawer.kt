@@ -66,6 +66,7 @@ import com.smartsales.prism.data.notification.ReminderReliabilityAdvisor
 import kotlin.math.abs
 
 internal const val SCHEDULER_DRAWER_HANDLE_TEST_TAG = "scheduler_drawer_handle"
+internal const val SCHEDULER_EMPTY_GUIDE_CARD_TEST_TAG = "scheduler_empty_guide_card"
 
 private val SCHEDULER_HANDLE_DISMISS_DISTANCE = 32.dp
 private val SCHEDULER_HANDLE_DISMISS_VELOCITY = 900.dp
@@ -191,6 +192,13 @@ fun SchedulerDrawer(
     // Wait, I created TimelineItemModel in Domain. I must map it to UI TimelineItem here.
     
     val expandedConflictIds by viewModel.expandedConflictIds.collectAsState()
+    val reminderProgressNow by produceState(initialValue = Instant.now(), key1 = isOpen) {
+        value = Instant.now()
+        while (isOpen) {
+            delay(30_000L)
+            value = Instant.now()
+        }
+    }
     
     val uiItems = remember(
         timelineItems,
@@ -199,10 +207,12 @@ fun SchedulerDrawer(
         effectiveIsSelectionMode,
         effectiveSelectedInspirationIds,
         expandedConflictIds,
-        tipsLoadingSet
+        tipsLoadingSet,
+        reminderProgressNow
     ) {
         val mappedItems = timelineItems.map { model: SchedulerTimelineItem ->
             model.toUiState(
+                now = reminderProgressNow,
                 isSelectionMode = effectiveIsSelectionMode,
                 selectedInspirationIds = effectiveSelectedInspirationIds,
                 expandedConflictIds = expandedConflictIds,
@@ -216,6 +226,7 @@ fun SchedulerDrawer(
             .map { motion ->
                 val snapshot = motion.snapshot
                 val base = snapshot.toUiState(
+                    now = reminderProgressNow,
                     tipsLoadingSet = tipsLoadingSet,
                     cachedTips = viewModel.getCachedTips(snapshot.id)
                 ) as TimelineItem.Task
@@ -249,6 +260,9 @@ fun SchedulerDrawer(
                 }
             )
     }
+    val showSimEmptyGuideCard = isSimVisualMode &&
+        taskItems.isEmpty() &&
+        inspirationItems.isEmpty()
 
     // Drawer container — no internal scrim (AgentShell provides global scrim)
     // Use AnimatedVisibility to slide content in from top
@@ -321,7 +335,7 @@ fun SchedulerDrawer(
                         onExpandChange = { isCalendarExpanded = it },
                         activeDay = activeDayOffset,
                         onDateSelected = { viewModel.onDateSelected(it) },
-                        onDismiss = if (isSimVisualMode) onDismiss else null,
+                        onDismiss = onDismiss,
                         unacknowledgedDates = unacknowledgedDates,
                         rescheduledDates = rescheduledDates
                     )
@@ -360,29 +374,35 @@ fun SchedulerDrawer(
                         val conflictedIds by viewModel.conflictedTaskIds.collectAsState()
                         val causingId by viewModel.causingTaskId.collectAsState()
 
-                        SchedulerTimeline(
-                            items = taskItems,
-                            conflictedTaskIds = conflictedIds,
-                            causingTaskId = causingId,
-                            onItemClick = { id -> viewModel.onItemClick(id) },
-                            onDelete = { id -> viewModel.deleteItem(id) },
-                            onReschedule = { id, text -> viewModel.onReschedule(id, text) },
-                            onMicRecord = { wavFile -> viewModel.processAudio(wavFile) },
-                            onMultiSelectToggle = { id ->
-                                if (enableInspirationMultiSelect) {
-                                    viewModel.toggleItemSelection(id)
-                                }
-                            },
-                            onEnterMultiSelect = {
-                                if (enableInspirationMultiSelect) {
-                                    viewModel.toggleSelectionMode(true)
-                                }
-                            },
-                            onConflictResolve = { action -> viewModel.handleConflictResolution(action) },
-                            onConflictToggle = { id -> viewModel.toggleConflictExpansion(id) },
-                            onCardExpanded = { id, entityId -> /* no-op for now */ },
-                            onToggleDone = { id -> viewModel.toggleDone(id) }
-                        )
+                        if (showSimEmptyGuideCard) {
+                            SimSchedulerEmptyGuideCard(
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        } else {
+                            SchedulerTimeline(
+                                items = taskItems,
+                                conflictedTaskIds = conflictedIds,
+                                causingTaskId = causingId,
+                                onItemClick = { id -> viewModel.onItemClick(id) },
+                                onDelete = { id -> viewModel.deleteItem(id) },
+                                onReschedule = { id, text -> viewModel.onReschedule(id, text) },
+                                onMicRecord = { wavFile -> viewModel.processAudio(wavFile) },
+                                onMultiSelectToggle = { id ->
+                                    if (enableInspirationMultiSelect) {
+                                        viewModel.toggleItemSelection(id)
+                                    }
+                                },
+                                onEnterMultiSelect = {
+                                    if (enableInspirationMultiSelect) {
+                                        viewModel.toggleSelectionMode(true)
+                                    }
+                                },
+                                onConflictResolve = { action -> viewModel.handleConflictResolution(action) },
+                                onConflictToggle = { id -> viewModel.toggleConflictExpansion(id) },
+                                onCardExpanded = { id, entityId -> /* no-op for now */ },
+                                onToggleDone = { id -> viewModel.toggleDone(id) }
+                            )
+                        }
 
                         if (effectiveIsSelectionMode) {
                             Box(
@@ -555,13 +575,51 @@ fun SchedulerDrawer(
 
                     DragHandle(
                         onDismiss = onDismiss,
-                        dismissDirection = if (isSimVisualMode) {
-                            DragHandleDismissDirection.DOWN
-                        } else {
-                            DragHandleDismissDirection.UP
-                        }
+                        dismissDirection = DragHandleDismissDirection.UP
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SimSchedulerEmptyGuideCard(
+    modifier: Modifier = Modifier
+) {
+    val visuals = LocalSchedulerDrawerVisuals.current
+    Box(
+        modifier = modifier
+            .padding(
+                horizontal = visuals.drawerContentHorizontalPadding,
+                vertical = 12.dp
+            ),
+        contentAlignment = Alignment.TopCenter
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag(SCHEDULER_EMPTY_GUIDE_CARD_TEST_TAG),
+            shape = RoundedCornerShape(20.dp),
+            color = visuals.cardBackground.copy(alpha = 0.92f),
+            border = androidx.compose.foundation.BorderStroke(1.dp, visuals.cardBorder)
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 18.dp, vertical = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = "用工牌录音创建日程",
+                    color = visuals.taskTitleColor,
+                    fontSize = 17.sp,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold
+                )
+                Text(
+                    text = "长按工牌录音键，说出你的待办。处理完成后，日程会显示在这里。",
+                    color = visuals.taskContextColor,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp
+                )
             }
         }
     }

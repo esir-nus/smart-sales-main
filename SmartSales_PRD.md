@@ -1,81 +1,350 @@
-# Smart Sales App: Reverse-Engineered PRD
+# Smart Sales Product Requirements Document
 
-### 1. Product Vision & Value Proposition
-**Smart Sales** is a proactive, AI-native CRM assistant built for B2B sales professionals. It abandons the traditional "data-entry" CRM paradigm in favor of an **ambient, voice-first intelligence**. By heavily leveraging hardware integration (connected audio badge) and a dual-engine architecture, it autonomously captures meeting context, manages complex B2B entity relationships (Accounts, Persons), resolves scheduling conflicts, and provides deep contextual analysis—all without blocking the user's primary workflow.
+> **Role**: Product north star
+> **Status**: Active
+> **Last Updated**: 2026-04-01
+> **Primary Scope**: Current Smart Sales app experience
+> **Companion Docs**:
+> - [`docs/specs/base-runtime-unification.md`](./docs/specs/base-runtime-unification.md)
+> - [`docs/core-flow/sim-shell-routing-flow.md`](./docs/core-flow/sim-shell-routing-flow.md)
+> - [`docs/core-flow/sim-scheduler-path-a-flow.md`](./docs/core-flow/sim-scheduler-path-a-flow.md)
+> - [`docs/core-flow/sim-audio-artifact-chat-flow.md`](./docs/core-flow/sim-audio-artifact-chat-flow.md)
+> - [`docs/specs/flows/OnboardingFlow.md`](./docs/specs/flows/OnboardingFlow.md)
 
-### 2. Core Architecture: The Dual-Engine Model
-To balance instant reactivity with deep, multi-step reasoning, the system employs a completely bifurcated architecture known as the Dual-Engine:
-- **System I (The Mascot)**: An ephemeral, read-only layer that handles `NOISE`, `GREETINGS`, and passive system notifications via an overlay. It relies on the `MascotService` and acts instantly, avoiding the chat feed. **Crucially, the Mascot NEVER initiates stateful interaction or database writes.** It may flag an event (e.g., "Conflict Detected"), but it does not resolve it.
-- **System II (The Orchestrator / Analyst)**: A persistent, stateful workhorse. It navigates complex CRM tasks (e.g., entity disambiguation, tool execution) using an **Open-Loop Lifecycle** (Chat → Proposal → Confirm → Result). This guarantees the "human-in-the-loop" before any destructive actions or token-heavy investigations occur.
-- **The Gatekeeper (`LightningRouter`)**: An ultra-fast, "Phase 0" routing mechanism using `ContextDepth.MINIMAL`. It intercepts user intents and routes them to System I (for noise/greeting) or System II (for analysis), or even instantly answers `SIMPLE_QA` on the fast track.
+This document defines the product identity of Smart Sales from the user's point of view.
+It exists to keep user logic ahead of business logic and business logic ahead of code logic.
 
-### 3. OS-Level Memory Model (Context Strategy)
-The app treats LLM context like a traditional Operating System to solve token bloat via a layered memory architecture:
-- **RAM (SessionWorkingSet)**: The active memory managed by the `ContextBuilder`. It loads only the strictly necessary Entities, User Habits, Client Habits, and limited chat history. The LLM only reasons over this `EnhancedContext`.
-- **The In-Memory Alias Index (L1 Cache)**: A highly optimized, lightweight dictionary of `{Alias : Entity Pointer}` loaded entirely into the device's RAM. Instead of querying the full database for disambiguation, the Native code runs phonetic searches against this skinny index to generate a hyper-targeted "Contact Sheet" for the LLM prompt.
-- **SSD (Memory Center / Entity Registry)**: The persistent CRM database where the actual heavy Entity objects, metrics, and relationships live. It is only queried *after* the fast Alias Index and LLM have successfully resolved the target ID.
-- **The RL Module (Implicit Preference Learning)**: An OS-layer RAM application that autonomously observes the user's choices. It tracks explicit confirmations ("Yes, I prefer mornings", weighted 3x) and implicit patterns (weight 1x), applying a 30-day time decay. The LLM surfaces these habits dynamically within the `EnhancedContext` without requiring manual CRM field updates.
+This PRD owns:
 
-### 4. Key Functional Pillars
-- **Hardware & Audio (`badge-audio-pipeline`)**: Captures BLE badge recordings, pipes them into ASR/Tingwu, and automatically extracts actionable tasks and CRM entities into the timeline.
-- **Organic Entity Resolution (`entity-disambiguation`)**: A robust system enforcing strict CRM hygiene. If the background pipeline identifies an ambiguous entity (e.g., "Meeting with Cook"), the system simply flags it. **Human chat input is the exclusive entrance for initiating entity disambiguation and database writing.** Only when the user naturally asks "Who is Cook?" or clarifies "I meant Tim Cook" does the write-through loop trigger via `EntityWriter`.
-- **Intelligent Scheduler**: Manages tasks natively. Resolves double-bookings via the `ConflictResolver` (surfacing breathing amber UI cards) rather than confusing the LLM, and correctly handles Do Not Disturb policies with visual urgency tiers.
-- **Analyze Gateway & Ambient Tool Stream**: A natural, chat-first plugin ecosystem. The Orchestrator does not force rigid TaskBoards or UI buttons. As the user chats about a transcript, the LLM evaluates the context and recommends tools via pure conversational text (e.g., "I recommend generating the Executive Report, but I am missing the budget amount."). If the user types "Give me the PDF, budget is $5M", the system maps the intended tool directly to the `tool01` ID for swift execution without requiring complex JSON outputs.
+- what the app is
+- what the main app experience feels like
+- which surfaces are fundamental to the product
+- which user journeys are non-negotiable
+- which product and UX laws must not drift during implementation
 
-### 5. Scalability & The Blackbox Philosophy
-The architecture guarantees scalability and prevents regressions by treating all heavy modules as decoupled "Blackboxes" interacting strictly through OS-level APIs (via the Interface Map).
-- **Data Flow Separation**: The Orchestrator does not manually extract UI state; it listens to `Flow<UiState>` emitted by isolated Plugins or the `ContextBuilder`.
-- **Stateless LLM Routing**: Model selection (`ModelRouter`) is decoupled from features. A tool requests an LLM based on *task type* (e.g., `qwen3-max` for 32k context reasoning, `qwen-turbo` for fast routing), allowing the entire model tier to be swapped without rewriting business logic.
-- **Fail-Safe Processing**: The system avoids monolithic points of failure. If the `Tingwu` audio pipeline crashes, the user can still type requests. If the Analyst state machine loops, the `LightningRouter` still processes `NOISE` instantly.
-
-### 6. Data Integrity & The Linter Gate
-The system enforces strict data hygiene to prevent LLM hallucinations from poisoning the CRM state via **Deterministic Grounding**:
-- **Pre-Flight Lookup (Speed)**: Before the LLM processes an ambiguous request (e.g., "Schedule meeting with Cook"), native Kotlin code performs a lightning-fast fuzzy search against the local `EntityRegistry`. It injects the top results directly into the LLM prompt (e.g., "Choose only from ID:001 Tim Cook or ID:002 Chef Cook").
-- **Schema Linter (Accuracy)**: A hardcoded deterministic quality gate. It validates *all* structured outputs (Entity Extraction, Scheduling JSON, Execution Plans) *before* persistence. If the LLM generates a valid JSON structure but hallucinates an ID that wasn't in the pre-flight list, the Linter fails the write, suppressing the error from the user and triggering a silent retry or passing it to Organic Disambiguation.
-- **Strict Interface Ownership Rules**: Modules interact via strict interfaces. For instance, `Scheduler` does not write Entities directly; it delegates to the downstream `EntityWriter`. `ContextBuilder` provides `EnhancedContext`, forbidding individual modes from firing direct query searches against the repository.
-
-### 7. Core Testing Philosophy: The Anti-Drift Protocol
-To prevent the agent and developers from shipping "smart" code that drifts from the core CRM specifications, the system enforces a heavily guarded, three-level testing standard rooted in the **Blackbox Philosophy**.
-
-#### Fake-First Development
-No LLM latency or API costs should be burned to verify UI states and data pipelining. Elements like the Orchestrator are built using `FakeAnalystPipeline` to simulate the open-loop state machine rapidly, ensuring UI transitions work identically before real execution.
-
-#### The Three-Level Testing Standard
-1. **L1: Logic Verification (`./gradlew test`)**: Every domain module modification must be covered by unit tests. Tests ensure schemas compile, Linters trigger correctly, and data transformation happens flawlessly.
-2. **L2: Simulated On-Device (The Integration Bridge)**: This is the most critical phase. Because "True" data (L3) causes false positives in LLM applications, developers *must* build Debug UI Buttons that inject *preset, simulated inputs* directly into the ViewModels. This allows the team to validate the isolated feature (e.g., executing a "Schedule Meeting" flow) without having to perform real voice recognition.
-3. **L3: Full On-Device**: Once L2 passes, the app must be verified in a real environment with real UX gestures. If an L3 test fails but L2 passes, the bug sits at the UI layer (missing pointers, uncollected flows) rather than the domain logic layer.
-
-#### The Anti-Laziness Mandate
-- **Negative Testing Focus**: Success paths are cheap. The QA methodology mandates testing `null`, empty, network failures, and missing resources. If you haven't seen it fail, you don't know that it works.
-- **Concrete Verification**: "Looks good" is unacceptable. All test outputs must be visible (ADB logcat, grep results) before code can be shipped.
-- **Acceptance Team**: Prior to merging complex architectural changes, an automated `/acceptance-team-[tool]` workflow runs Build Examiners and Contract Examiners to ensure no legacy Android imports leak into the pure Kotlin `domain/`.
-
-### 8. Interaction Patterns & UX Contract
-- **Gestures**: Persistent pull-down from top for the `Scheduler` drawer; pull-up from bottom for the `Audio` drawer.
-- **Notifications**: Snackbar system acts as an activity feed—surfacing non-blocking insights like "Relationship Change Detected" or "Conflict Spotted" without disrupting chat.
-- **Invisible Heavy-Lifting**: The app favors "zero-latency ASCII" over bulky UI rendering for data-heavy operations. 
+This PRD does not replace detailed flow, spec, interface, or visual-system docs.
+Detailed behavior still belongs in `docs/core-flow/**`, implementation contracts belong in `docs/cerb/**` and `docs/cerb-ui/**`, and detailed UI law belongs in the current UI contract/style/registry docs.
 
 ---
 
-## Panel Review Audit Summary
+## 1. Product Definition
 
-### 🧑‍💼 Sales Expert Perspective
-The ambient audio capture (badge + Tingwu) converting 1-hour meetings into 0-click CRM data is the core value driver for admin-averse reps. Entity disambiguation is a critical deal-saving feature, preventing cross-contamination of client data.
+Smart Sales is a calm, voice-first sales operating app for sales operators who come out of meetings with too much context to process, too many follow-ups to remember, and too little patience for CRM-heavy admin screens.
 
-### 🎨 UX Specialist Perspective
-The Dual-Engine separation perfectly balances system feedback without chat-feed fatigue. The Phase-4 Execution Bypass (TaskBoard) ensures the app functions like snappy, reliable software, avoiding sluggish chat-bot loops for basic tools (e.g., PDF generation).
+The product promise is simple:
 
-### 🏗️ Architecture Perspective
-Treating context as OS RAM (`EnhancedContext`) solves the LLM token budget limitation at scale. The Open-Loop state machine acts as an effective safety gate, protecting against destructive, unverified DB writes.
+- capture real-world sales activity with low friction
+- turn that activity into usable review, follow-up, and scheduling surfaces
+- help the user act on real context without forcing them into dashboard-heavy CRM behavior
+- keep AI assistive, grounded, and recoverable instead of theatrical or autonomous
 
-### 💡 Senior Engineer Synthesis
-The system resembles an LLM operating system rather than a standard wrapper, leveraging Phase 0 fast limits (`LightningRouter`) and native implicit tracking (`RL Module`) effectively. 
+The app is designed for a user who needs to move from captured context to the right next action quickly, stay oriented between meetings and follow-ups, and trust the product to help without forcing them to babysit a complex system.
 
-However, there is a risk of **Interface Coupling Rot**.
+### What the product is
 
-**Current Risks/Gaps**:
-- *Lattice Compliance / Layer Violations*: To prevent developers from illegally bypassing the `EntityWriter` (Layer 3) to call `EntityRepository.save()` (Layer 2), **Lattice Compliance is structurally enforced**. We utilize the Kotlin `internal` modifier on repository mutation methods and enforce regex-based CI/CD blockers via the `/acceptance-team` to guarantee Layer 4 features cannot touch the database directly.
-- *Plugin Reality*: The UI and routing exist, but core workflows (`analyzer`) are migrating. To bridge the gap, the Plugin Registry implements **"Graceful Degradation."** Unregistered or `PARTIAL` tools do not crash the Open-Loop machine; they gracefully surface a snackbar ("Tool under construction") to protect user trust while workflows are built.
-- *Audio Storage*: The 'zero-latency' ASCII hack relies on the physical audio file successfully uploading. To ensure bulletproof reliability, the audio pipeline MUST be bound to an **Android Foreground Service** (to prevent OS Doze kills) and utilize **chunked, resumable OSS uploads** to survive network drops without restarting.
-- *LLM Disambiguation Limitations*: Heavy reliance on the LLM to output accurate JSON `missingEntities` requires robust offline fallbacks to counter hallucinations. This is partly mitigated by the Schema Linter, but semantic hallucinations (wrong person, right schema) will still bypass it.
-- ~~*Deprecation Rot*: The codebase must officially purge all references to `coach` mode, legacy enums, and switchers to prevent future state-machine chaos.~~ *(✅ Resolved: Mar 2026 - All ghost UI, LLM profiles, and pipeline controllers purged)*
+- a sales assistant centered on conversation, audio artifacts, and scheduler action
+- a product that starts from real capture and review, then supports follow-up and execution
+- a premium mobile experience where shell, chat, scheduler, audio, and onboarding feel like one coherent product family
+- an AI-assisted product with clear boundaries around truth, action, and failure recovery
+
+### What the product is not
+
+- not a generic chat app with sales branding
+- not a dashboard-first CRM that expects heavy manual field maintenance
+- not an autonomous agent that silently mutates records or schedules on speculative reasoning
+- not two different non-Mono products split into a SIM truth and a full truth
+- not a plugin cockpit or internal tool console as the default user experience
+
+---
+
+## 2. Current Product Scope
+
+Today, Smart Sales is one unified mobile app experience built around discussion, scheduling, and captured work review.
+What users should understand now is not a family of separate tools, but one calm sales operating app that helps them capture work, understand what happened, and act on next steps without falling into CRM-heavy admin behavior.
+
+Today's app experience includes:
+
+- a home shell and discussion space the user can start from, return to, and work from throughout the day
+- a scheduler lane for creating, moving, reviewing, and resolving work safely
+- an audio and artifact review lane for understanding real captured activity
+- onboarding and connectivity flows that get real capture working without chaos
+- enough continuity that the user can leave and return without feeling the app lost the thread
+
+Deeper intelligence may arrive later through additional memory, entity awareness, tool use, or richer assistance.
+That later depth may expand what Smart Sales can help with, but it must not redefine the main app identity the user experiences today.
+
+Product rule:
+
+- users should experience one coherent Smart Sales app rather than different editions of the product
+- implementation seams may remain during migration
+- those seams must not turn into separate product truths
+
+---
+
+## 3. Definitive App Shape
+
+The definitive Smart Sales app is organized around a small set of recognizable surfaces.
+These surfaces define the product more than any internal architecture term does.
+
+### 3.1 Home Shell and Discussion Surface
+
+The home shell is the user's base camp.
+It must feel calm, premium, and ready for immediate use.
+
+This is where the user starts, returns, and regains orientation during the day.
+It should feel like the safest place to resume work, review context, and decide what to do next.
+
+It exists to:
+
+- hold the main discussion surface
+- expose the scheduler and audio lanes without mode confusion
+- preserve continuity across new session, history, connectivity, and settings entry
+- make the user feel they are inside one product, not jumping between unrelated tools
+
+The discussion surface is a real first-class surface even before audio is attached.
+It is not only a post-audio follow-up screen.
+It must never be confused with a thin wrapper around captured audio or a secondary screen that only matters after transcription.
+
+### 3.2 Scheduler Surface
+
+The scheduler is a core execution surface, not a secondary utility.
+Users come here to confirm what is scheduled, create or change work safely, and resolve conflicts clearly.
+It is where the app should feel most dependable about what will happen next.
+
+The scheduler must feel:
+
+- fast enough for daily use
+- grounded in clear and dependable task state
+- visible about conflict and failure instead of silently dropping intent
+- integrated with the shell rather than living as a separate calendar app
+
+It must never feel like a detached calendar utility, an admin back office, or a sidecar tool outside the main product.
+
+### 3.3 Audio and Artifact Surface
+
+The audio drawer is a core informational surface.
+It is where captured recordings become readable, reviewable artifacts and where audio context can be carried into discussion.
+Users open this surface to understand what actually happened in real captured work before deciding what to ask, review, or do next.
+
+This surface must feel like:
+
+- a trusted review lane for real captured work
+- the review counterpart of the discussion surface
+- a durable place for transcript and artifact understanding
+- a product surface driven by real badge ingress, not by fake local-file-first behavior
+
+It must never feel like a transcript dump, a storage bin, or a debug-owned surface.
+
+### 3.4 Onboarding and Connectivity Surface
+
+Onboarding and connectivity exist to get the user into real capture with calm guidance and minimal chaos.
+They are essential support surfaces, not the product's emotional center.
+Users should only stay here long enough to get capture working, build confidence in the hardware ritual, and return to normal use quickly.
+
+These surfaces must:
+
+- teach the hardware ritual clearly
+- keep setup recoverable and non-panic-inducing
+- reuse the same premium visual family as the rest of the product
+- help the user reach normal shell use quickly
+
+They must never feel like a technical maze, a brittle provisioning flow, or the main reason the product exists.
+
+### 3.5 Support Surfaces
+
+History, new session, settings, and connectivity entry are valid support surfaces.
+They help the user manage continuity and setup, but they must not overpower the main product lanes.
+They exist to help the user return, reset, check setup, or recover continuity without turning support work into the center of the day.
+
+Support surfaces are allowed to simplify compared with older versions of the app so long as the product remains coherent and trustworthy.
+They must never become the hidden primary workflow or the place where core product truth quietly lives.
+
+### 3.6 Ambient Feedback
+
+The app should surface guidance, status, conflict, and recovery in a calm ambient way.
+Ambient feedback exists to reassure, warn, or guide without interrupting the user's main task.
+
+It should not behave like a noisy mascot-driven operating theater.
+It should not become a second conversation layer competing with the main discussion surface.
+It should not steal focus from discussion, scheduler work, or audio review.
+
+Smart Sales should feel observant and helpful, not performative.
+
+---
+
+## 4. Core User Journeys
+
+These journeys define the product at the user level.
+Lower-layer docs must implement them, not reinterpret them.
+
+### 4.1 Start and Enter the Product
+
+The user opens the app and reaches a coherent home shell.
+If setup is still required, the product routes through onboarding/connectivity with calm explanation and then returns to ordinary use.
+
+Success criteria:
+
+- the user understands where they are
+- first-use setup does not feel like a generic Android wizard
+- normal app use starts in a clear, premium, low-friction shell
+
+### 4.2 Capture and Review Real Activity
+
+The user records or syncs real meeting audio, then reviews transcript and artifacts in a readable surface.
+The product treats captured context as real working material, not as decorative content.
+
+Success criteria:
+
+- review begins from audio inventory and artifacts
+- already-transcribed audio reuses durable results
+- pending audio can remain transparent and understandable while processing continues
+
+### 4.3 Move From Review to Discussion
+
+The user can turn captured audio into an active discussion thread through `Ask AI` or audio selection from chat.
+That transition must feel continuous, not like opening a different product.
+
+Success criteria:
+
+- blank chat is still a valid starting point
+- selected audio binds into the discussion thread cleanly
+- ongoing processing remains visible without fake certainty or invented content
+
+### 4.4 Schedule and Change Work Safely
+
+The user can act on scheduling needs from the dedicated scheduler lane with clear and dependable task state.
+The product must favor safe, visible action over magical ambiguity.
+
+Success criteria:
+
+- create, delete, and reschedule behavior remains available without requiring deeper intelligence
+- conflicts are shown rather than silently discarded
+- failure is specific and recoverable when the app is not sure what should be changed or when the requested action is unsafe
+
+### 4.5 Return After Captured or Completed Activity
+
+After captured activity, completion, or follow-up re-entry, the product should bring the user back through calm prompt-first continuity rather than a forced context hijack.
+
+Success criteria:
+
+- the product keeps the user's orientation
+- follow-up remains attached to the correct task or captured context
+- support signals do not override the main shell rhythm
+
+### 4.6 Recover When the App Is Unsure
+
+When the app is unsure, the product must clarify, retry, or safely stop instead of pretending confidence.
+The user should see grounded recovery rather than speculative confidence.
+
+Success criteria:
+
+- missing certainty does not become silent mutation
+- failure states remain calm, legible, and actionable
+- the product preserves trust even when processing is incomplete or temporarily blocked
+
+---
+
+## 5. Product Laws
+
+These laws govern downstream business rules and implementation choices.
+If a lower doc or code path violates them, it is drift.
+
+1. **User-facing journeys define the product**: architecture and implementation exist to support the journeys above, not to replace them.
+2. **Human-in-the-loop truth for consequential action**: the product must not silently commit speculative destructive or identity-sensitive writes on behalf of the user.
+3. **One shared non-Mono product truth**: shared shell, scheduler, audio, and onboarding behavior must not fork into separate product definitions across runtime variants, because users should not feel like they are moving between different editions of Smart Sales.
+4. **Truth-owning surfaces stay explicit**: scheduler owns task truth, audio/artifact surfaces own artifact review, onboarding/connectivity own setup runtime, and support surfaces must not quietly take over those roles, because users should always know where to go for task truth, captured-work review, and setup help.
+5. **Real ingress beats fictional convenience**: production audio truth comes from real badge ingress and durable processing; local import is testing convenience only.
+6. **Support surfaces remain supportive**: history, settings, connectivity entry, and prompts may assist but must not become the hidden center of the app.
+7. **Continuity beats mode theater**: transitions between chat, audio, scheduler, onboarding, and follow-up should feel like one product family rather than a collection of special modes.
+8. **Calm failure handling is a feature**: conflict, ambiguity, offline limits, and processing delay must surface clearly and without panic styling or fake success.
+9. **AI remains grounded and assistive**: the product may summarize, recommend, classify, or help the user act, but it must not invent unsupported business truth.
+10. **Visual polish must not drift away from product truth**: premium styling is required, but it must reinforce the app's actual surface hierarchy and task model.
+
+---
+
+## 6. Definitive Look and Feel
+
+Smart Sales needs a recognizable product body, not only a set of working screens.
+This section defines the anti-drift product layer for that body.
+Detailed pixel decisions still belong in the UI system docs.
+
+### 6.1 Surface Hierarchy
+
+The app should always read as one premium stack with clear hierarchy:
+
+- shell/home as the stable frame the user can always trust
+- discussion as the primary actionable conversational surface
+- scheduler and audio as strong specialized lanes that are easy to reach and hard to confuse
+- onboarding/connectivity as calm support flows that help the user get to real work
+- history/settings as clearly secondary support surfaces
+
+The user should not have to decode which surface is primary in the current moment.
+The shell should always feel stable, discussion should always feel ready for action, and support surfaces should always read as secondary to the main task.
+
+### 6.2 Visual Identity
+
+The app should feel:
+
+- dark-first, calm, and premium
+- grounded rather than playful
+- ambient rather than noisy
+- intentional rather than dashboard-dense
+
+Recognizable product invariants:
+
+- one coherent shell family across empty, active, review, and setup states
+- strong top-surface identity and stable bottom composer identity
+- dark premium materials for chat, system, and artifact surfaces
+- readable artifact presentation that feels product-owned, not debug-owned
+- setup and recovery states that feel guided but never louder than primary work
+- support surfaces that visually defer to discussion, scheduler action, and artifact review
+
+What should never happen visually:
+
+- setup should never visually overpower ordinary work
+- failure should never dominate the screen with theatrical panic styling
+- ambient guidance should never compete with the main task for attention
+- support surfaces should never visually outrank the primary work surface
+- artifact views should never feel like developer tooling or temporary debug UI
+
+### 6.3 Interaction Identity
+
+The app should behave with disciplined continuity:
+
+- one drawer lane should not fight another
+- transitions should preserve orientation
+- prompt-first re-entry is preferred over forced context switching
+- interaction feedback should be calm, legible, and trust-building
+
+The main task should stay visually and behaviorally dominant in each moment.
+Guidance, prompts, and recovery should assist the user without hijacking flow or creating mode-switch drama.
+
+### 6.4 Pixel-Level Anti-Drift Rule
+
+Pixel details matter, but they must stay attached to the same product body.
+The PRD defines the surface identity and non-negotiable experience rules; the detailed pixel and component rules live in:
+
+- [`docs/specs/prism-ui-ux-contract.md`](./docs/specs/prism-ui-ux-contract.md)
+- [`docs/specs/style-guide.md`](./docs/specs/style-guide.md)
+- [`docs/specs/ui_element_registry.md`](./docs/specs/ui_element_registry.md)
+- owning `docs/cerb-ui/**` feature docs
+
+If a future UI proposal looks polished but breaks the surface hierarchy, continuity, or trust model defined here, it is product drift.
+Polish without clear hierarchy, calm action, and stable orientation is still product failure.
+
+---
+
+If Smart Sales stays calm, trustworthy, and action-ready in the user's real day, it is on-model.
+
+## 7. Appendix: Downstream Authority Note
+
+Use this document order when translating product intent toward implementation:
+
+1. `SmartSales_PRD.md` for app identity, major surfaces, journeys, laws, and product-visible look-and-feel rules
+2. `docs/specs/base-runtime-unification.md` for base-runtime versus Mono boundary
+3. `docs/core-flow/**` for detailed behavioral north star
+4. `docs/cerb/**` and `docs/cerb-ui/**` for implementation contracts and feature ownership
+5. `docs/specs/prism-ui-ux-contract.md`, `docs/specs/style-guide.md`, and `docs/specs/ui_element_registry.md` for UI system rules
+6. `docs/plans/tracker.md` and related trackers for campaign state and execution memory only
+
+Practical rule: product identity starts here, details refine below, and lower layers must not silently redefine the user experience from the bottom up.

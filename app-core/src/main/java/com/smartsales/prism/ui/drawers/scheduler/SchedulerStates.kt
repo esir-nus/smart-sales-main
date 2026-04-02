@@ -38,6 +38,7 @@ sealed class TimelineItem {
         val keyPerson: String? = null,
         val highlights: String? = null,
         val alarmCascade: List<String>? = null, // e.g. ["-30m", "0m"]
+        val reminderBells: List<ReminderBellVisual> = emptyList(),
         val processingStatus: String? = null, // For Fake I/O Overlay
         val isExiting: Boolean = false, // For Reschedule Animation
         val exitDirection: ExitDirection = ExitDirection.RIGHT, // Default: slide right (to future)
@@ -80,6 +81,16 @@ sealed class TimelineItem {
         val isExpanded: Boolean = false
     ) : TimelineItem()
 }
+
+enum class ReminderBellState {
+    ACTIVE,
+    FIRED
+}
+
+data class ReminderBellVisual(
+    val offset: String,
+    val state: ReminderBellState
+)
 
 /**
  * 冲突视觉状态 — 用于在卡片上显示冲突指示器

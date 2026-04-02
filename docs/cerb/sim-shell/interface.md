@@ -46,13 +46,15 @@ Responsibilities:
 - own the SIM shell edge-gesture gates for scheduler/audio entry
 - host one SIM home/here shell family that covers empty home, active plain chat, active audio-grounded chat, and pending-audio chat presentation without changing top-level shell identity
 - host the simple chat surface
-- host a bottom message capsule for SIM chat where left attach reopens the SIM audio drawer, the trailing action shows mic only while the draft is blank, successful SIM-owned FunASR realtime recognition writes editable text back into the field, explicit send remains required, backend-issued short-lived DashScope auth is used for realtime capture, and the idle placeholder keeps the scan-shine treatment on placeholder text only
+- host a bottom message capsule for SIM chat where left attach reopens the SIM audio drawer, the trailing action shows mic only while the draft is blank, successful SIM-owned FunASR realtime recognition writes editable text back into the field, explicit send remains required, the shared SIM realtime recognizer contract owns auth details, and the idle placeholder keeps the scan-shine treatment on placeholder text only
 - keep the top header visually balanced with hamburger on the left, centered Dynamic Island, and new-session `+` on the right across normal shell states
 - keep the center canvas stateful: greeting-first when empty, conversation-first when active, and system-sheet capable for status/progress/artifact insertion
 - host SIM support surfaces such as history and connectivity entry, with connectivity entering from the audio drawer rather than the home header
 - keep the SIM history drawer narrow and archive-first, with a fixed bottom user dock that exposes the SIM profile/settings entry without widening the drawer into full utility chrome
 - host the SIM user center as a right-edge dark frosted drawer with scrim-backed dismissal and the existing full-screen edit subflow behind its edit action
 - host a persistent top-header one-line dynamic island that can rotate up to 3 scheduler items every 5 seconds and open the scheduler drawer on the visible item's date page
+- keep a session-only instructional island copy when the scheduler is empty until the user explicitly opens the scheduler; restart may reset this hint while the persisted first-launch teaser remains separate
+- render a SIM-only scheduler empty-state guide card when both scheduler tasks and inspiration items are absent so the drawer teaches badge-driven schedule creation without faking a real task row
 - route `Ask AI` and audio re-selection flows
 - own the badge scheduler follow-up continuity binding metadata
 - show the badge-origin scheduler follow-up prompt/chip when the bound session is not the active chat
@@ -111,7 +113,8 @@ data class SimShellState(
     val audioDrawerMode: SimAudioDrawerMode = SimAudioDrawerMode.BROWSE,
     val activeConnectivitySurface: SimConnectivitySurface? = null,
     val showHistory: Boolean = false,
-    val showSettings: Boolean = false
+    val showSettings: Boolean = false,
+    val showSchedulerIslandHint: Boolean = true
 )
 ```
 
@@ -141,7 +144,9 @@ Guarantees:
 - the shell may keep a persistent dynamic island visible in the top-header center slot while normal SIM shell surfaces are active
 - the shell may use that dynamic island as a scheduler-entry affordance
 - the shell dynamic island stays one-line and may rotate vertically through up to 3 scheduler entries
+- when the scheduler has no pending task, the island may temporarily show one SIM-local teaching line instead of the plain idle fallback until the user explicitly opens the scheduler
 - tapping any visible island entry must open the scheduler drawer on the corresponding scheduler date page
+- the SIM scheduler drawer may replace a fully empty task/inspiration timeline with one informational guide card; that card must remain obviously instructional rather than pretending to be a live task
 - the shell keeps the same top/bottom monolith identity across empty-home and active-discussion states; only the center canvas swaps between greeting, conversation, and system/status content
 - the shell may show system-authored horizontal sheets in the discussion canvas for guidance, status/progress, artifact insertion, or follow-up prompts instead of forcing all non-user content into compact chat bubbles
 - approved prototype screenshots describe only the exact visible substate; the shell contract must still cover the rest of the state family

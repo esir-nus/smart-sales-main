@@ -159,6 +159,11 @@ sealed class SchedulerResult {
   - [ ] L2: "以后想学吉他" → InspirationSaved
   - [x] Successful pipeline completion produces a SIM drawer item without manual sync
   - [x] Drawer-ingest failure preserves the badge WAV for recovery/manual sync
+  - [x] Empty badge recordings (< 1 KB) are silently skipped during manual sync with logged skip count
+
+### Empty Recording Filter
+
+Badge recordings smaller than 1 KB (`MIN_BADGE_WAV_SIZE_BYTES = 1024L`) are dropped at the download boundary in `SimAudioRepositorySyncSupport.performBadgeSyncLocked`. A valid WAV header alone is 44 bytes; files below 1 KB cannot contain meaningful audio content. Skipped files are cleaned from temp storage but remain on the badge. The skip count is logged and appended to the user-facing sync outcome message when nonzero.
 
 ---
 

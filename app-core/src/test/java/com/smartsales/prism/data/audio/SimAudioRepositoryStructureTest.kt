@@ -70,15 +70,13 @@ class SimAudioRepositoryStructureTest {
 
         assertTrue(artifact.contains("internal class SimAudioRepositoryArtifactSupport("))
         assertTrue(artifact.contains("suspend fun getArtifacts(audioId: String)"))
-        assertTrue(artifact.contains("suspend fun seedDebugFailureScenario()"))
-        assertTrue(artifact.contains("internal fun buildSimDebugMissingSectionsArtifacts()"))
-        assertTrue(artifact.contains("internal fun buildSimDebugFallbackArtifacts()"))
         assertTrue(artifact.contains("internal fun simArtifactFilename(audioId: String)"))
 
         assertTrue(sync.contains("internal class SimAudioRepositorySyncSupport("))
         assertTrue(sync.contains("suspend fun syncFromBadge(trigger: SimBadgeSyncTrigger)"))
         assertTrue(sync.contains("suspend fun syncFromDevice()"))
-        assertTrue(sync.contains("internal fun simBadgeSyncSuccessMessage(importedCount: Int)"))
+        assertTrue(sync.contains("internal enum class SimBadgeSyncResultBranch"))
+        assertTrue(sync.contains("internal fun simBadgeSyncSuccessMessage(outcome: SimBadgeSyncOutcome)"))
         assertTrue(sync.contains("internal fun emitSimAudioBadgeSyncRequestedTelemetry("))
         assertTrue(sync.contains("internal fun emitSimAudioSyncFailureWhileConnectivityUnavailableTelemetry("))
         assertTrue(sync.contains("private suspend fun reconcilePendingBadgeDeletes("))

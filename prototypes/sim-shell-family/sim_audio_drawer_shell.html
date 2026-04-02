@@ -155,26 +155,95 @@
 
         .drawer-grip-area {
             display: flex; justify-content: center; align-items: center;
-            height: 24px; flex-shrink: 0; padding-top: 8px;
+            height: 32px; flex-shrink: 0; padding-top: 8px; cursor: grab; position: relative;
         }
+        .drawer-grip-area:active { cursor: grabbing; }
         .drawer-grip {
             width: 36px; height: 4px; border-radius: 2px;
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.2); transition: all 0.2s;
         }
+        .drawer-grip-area.pulling .drawer-grip { background: var(--color-accent-blue); box-shadow: 0 0 8px rgba(10, 132, 255, 0.3); }
 
         /* Mode & Header styling */
-        .drawer-header {
-            padding: 8px 20px 16px 20px;
-            display: flex; justify-content: space-between; align-items: flex-end;
+        .drawer-header-v2 {
+            padding: 20px 20px 16px 20px;
+            display: flex; justify-content: space-between; align-items: center;
             border-bottom: 1px solid var(--border-subtle);
             flex-shrink: 0;
         }
+        .header-left { display: flex; align-items: center; gap: 12px; }
+
         .drawer-title { font-size: 20px; font-weight: 600; letter-spacing: -0.5px;}
-        .drawer-meta { font-size: 13px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+        .drawer-meta-badge { font-size: 13px; color: var(--text-muted); background: rgba(255,255,255,0.06); padding: 4px 10px; border-radius: 12px; font-variant-numeric: tabular-nums; }
         
         /* Select Mode Header Overrides */
         .sim-shell.select-mode .drawer-title { font-size: 16px; color: var(--text-secondary); }
         .sim-shell.select-mode .drawer-title::before { content: "选择附件"; color: var(--text-primary); margin-right: 8px; font-weight: 600;}
+        .sim-shell.select-mode .header-right { display: none; }
+
+        /* Premium Smart Capsule (V2 Design) */
+        .smart-capsule {
+            background: rgba(255,255,255,0.05); border: 0.5px solid var(--border-subtle);
+            padding: 6px 12px 6px 10px; border-radius: 16px; cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+            position: relative; overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+            min-width: 120px; height: 32px;
+        }
+        .smart-capsule:active { transform: scale(0.96); }
+        
+        .capsule-content { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; letter-spacing: 0.5px; transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        .capsule-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; transition: all 0.3s; }
+        .capsule-icon { width: 14px; height: 14px; flex-shrink: 0; display: none; }
+        .capsule-text { background-clip: text; -webkit-background-clip: text; color: transparent; transition: all 0.3s; white-space: nowrap; }
+
+        /* 1. Connected/Idle (Matches Dynamic Island) */
+        .smart-capsule[data-state="connected"] .capsule-dot { background: #34C759; box-shadow: 0 0 10px rgba(52, 199, 89, 0.8); }
+        .smart-capsule[data-state="connected"] .capsule-text { background-image: linear-gradient(135deg, #A4E38A, #34C759); }
+        .smart-capsule[data-state="connected"] .capsule-text::after { content: "Badge 已连接"; }
+
+        /* 2. Disconnected */
+        .smart-capsule[data-state="disconnected"] { opacity: 0.6; pointer-events: none; border: none; }
+        .smart-capsule[data-state="disconnected"] .capsule-dot { background: rgba(255, 255, 255, 0.3); box-shadow: none; }
+        .smart-capsule[data-state="disconnected"] .capsule-text { background-image: linear-gradient(135deg, #A0A0A5, #86868B); }
+        .smart-capsule[data-state="disconnected"] .capsule-text::after { content: "Badge 未连接"; }
+
+        /* 3. Connecting/Warning */
+        .smart-capsule[data-state="connecting"] { pointer-events: none; }
+        .smart-capsule[data-state="connecting"] .capsule-dot { background: #FF9F0A; box-shadow: 0 0 10px rgba(255, 159, 10, 0.8); animation: pulse-warn 1.5s infinite; }
+        .smart-capsule[data-state="connecting"] .capsule-text { background-image: linear-gradient(135deg, #FFD60A, #FF9F0A); }
+        .smart-capsule[data-state="connecting"] .capsule-text::after { content: "Badge 重连中..."; }
+
+        /* 4. Syncing (Active Spin) */
+        .smart-capsule[data-state="syncing"] { background: rgba(10, 132, 255, 0.1); border-color: rgba(10, 132, 255, 0.4); box-shadow: 0 0 12px rgba(10,132,255,0.2); pointer-events: none; min-width: 100px;}
+        .smart-capsule[data-state="syncing"] .capsule-dot { display: none; }
+        .smart-capsule[data-state="syncing"] .capsule-icon.sync-icon { display: block; stroke: #0A84FF; animation: spin 1s linear infinite; }
+        .smart-capsule[data-state="syncing"] .capsule-text { color: #0A84FF; background-image: none; -webkit-text-fill-color: #0A84FF;}
+        .smart-capsule[data-state="syncing"] .capsule-text::after { content: "正在同步..."; }
+
+        /* 5. Synced Success */
+        .smart-capsule[data-state="synced"] { background: rgba(52, 199, 89, 0.1); border-color: rgba(52, 199, 89, 0.4); pointer-events: none; padding: 6px 14px; min-width: 90px;}
+        .smart-capsule[data-state="synced"] .capsule-dot { display: none; }
+        .smart-capsule[data-state="synced"] .capsule-icon.check-icon { display: block; stroke: #34C759; animation: scale-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .smart-capsule[data-state="synced"] .capsule-text { color: #34C759; background-image: none; -webkit-text-fill-color: #34C759;}
+        .smart-capsule[data-state="synced"] .capsule-text::after { content: "已同步"; }
+
+        /* 6. Sync Error */
+        .smart-capsule[data-state="error"] { background: rgba(255, 69, 58, 0.1); border-color: rgba(255, 69, 58, 0.4); animation: shake-capsule 0.4s; pointer-events: none; min-width: 100px;}
+        .smart-capsule[data-state="error"] .capsule-dot { display: none; }
+        .smart-capsule[data-state="error"] .capsule-icon.error-icon { display: block; stroke: #FF453A; animation: scale-in 0.3s; }
+        .smart-capsule[data-state="error"] .capsule-text { color: #FF453A; background-image: none; -webkit-text-fill-color: #FF453A;}
+        .smart-capsule[data-state="error"] .capsule-text::after { content: "同步失败"; }
+
+        @keyframes pulse-warn { 0% { opacity: 0.6; box-shadow: 0 0 4px rgba(255, 214, 10, 0.3); } 50% { opacity: 1; box-shadow: 0 0 14px rgba(255, 214, 10, 0.9); } 100% { opacity: 0.6; box-shadow: 0 0 4px rgba(255, 214, 10, 0.3); } }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes scale-in { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        @keyframes shake-capsule {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-4px); }
+            50% { transform: translateX(4px); }
+            75% { transform: translateX(-2px); }
+        }
 
         /* Content List */
         .drawer-content {
@@ -294,11 +363,36 @@
         .sim-shell.select-mode .audio-card:last-child { border-bottom: none; }
         .sim-shell.select-mode .audio-card.disabled { opacity: 0.4; pointer-events: none; cursor: default; }
         
-        .empty-state {
-            flex-direction: column; align-items: center; justify-content: center;
-            height: 200px; color: var(--text-muted); gap: 12px; text-align: center;
+        /* Seed Cards styles */
+        .seed-card {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 16px; border-radius: 12px;
+            display: flex; gap: 12px; align-items: center;
+            border: 1px dashed rgba(255, 255, 255, 0.15);
         }
-        .empty-icon { opacity: 0.6; width: 48px; height: 48px; }
+        .seed-card .seed-icon { font-size: 20px; color: var(--text-muted); opacity: 0.8; font-weight: bold; width: 24px; text-align: center;}
+        .seed-card .seed-text { flex: 1; display:flex; flex-direction:column; gap:2px; }
+        .seed-card .card-title { font-size: 15px; color: var(--text-primary); font-weight: 500;}
+        .seed-card .card-subtitle { font-size: 13px; color: var(--text-muted); }
+
+        /* The helper text that appears when dragging the grip */
+        .grip-helper-text {
+            position: absolute; top: -18px; font-size: 12px; color: var(--color-accent-blue);
+            opacity: 0; transform: translateY(10px); transition: all 0.2s; font-weight: 500; pointer-events: none;
+        }
+        .drawer-grip-area.pulling-threshold .grip-helper-text {
+            opacity: 1; transform: translateY(0);
+        }
+        .drawer-grip-area.pulling-threshold .drawer-grip { width: 44px; height: 6px; box-shadow: 0 0 10px rgba(10, 132, 255, 0.6); }
+
+        @keyframes flash-grip-denied {
+            0%, 100% { background: rgba(255, 255, 255, 0.2); transform: translateX(0); width: 36px; height: 4px; box-shadow: none; }
+            20% { background: #FF453A; transform: translateX(-4px); width: 44px; height: 6px; box-shadow: 0 0 10px rgba(255, 69, 58, 0.6); }
+            40% { background: #FF453A; transform: translateX(4px); }
+            60% { background: #FF453A; transform: translateX(-2px); }
+            80% { background: #FF453A; transform: translateX(2px); }
+        }
+        .drawer-grip.denied { animation: flash-grip-denied 0.4s; }
 
         /* Actions: Continuous Swipe Pattern */
         .audio-card-container { position: relative; width: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 16px; margin-bottom: 2px; }
@@ -337,6 +431,15 @@
         <h3>Select Mode (Picker)</h3>
         <button id="btn-6" onclick="setView('6-select', 'select', this)">6. Selectable Items</button>
         <button id="btn-7" onclick="setView('7-select-bound', 'select', this)">7. With Disabled Bound Item</button>
+
+        <h3 style="margin-top:24px;">🔗 Badge Connectivity State</h3>
+        <button onclick="setConnState('connected')">● Connected</button>
+        <button onclick="setConnState('connecting')">◌ Connecting</button>
+        <button onclick="setConnState('disconnected')">○ Disconnected</button>
+
+        <h3>↻ Sync Scenarios</h3>
+        <button onclick="triggerSyncDemo(true)">Sync Demo (Success)</button>
+        <button onclick="triggerSyncDemo(false)">Sync Demo (Network Error)</button>
     </div>
 
     <div id="emulator-container">
@@ -366,21 +469,64 @@
 
             <!-- AUDIO DRAWER OVERLAY -->
             <div class="audio-drawer">
-                <div class="drawer-grip-area"><div class="drawer-grip"></div></div>
+                <div class="drawer-grip-area" id="drawer-grip-area">
+                    <div class="grip-helper-text">松开同步</div>
+                    <div class="drawer-grip" id="drawer-grip"></div>
+                </div>
                 
-                <div class="drawer-header">
-                    <div class="drawer-title">录音笔记</div>
-                    <div class="drawer-meta">12 项</div>
+                <div class="drawer-header-v2">
+                    <div class="header-left">
+                        <div class="drawer-title">录音笔记</div>
+                        <div class="drawer-meta-badge">3 项</div>
+                    </div>
+                    <div class="header-right">
+                        <button class="smart-capsule" data-state="connected" onclick="triggerSyncDemo(true)" id="smart-capsule-btn">
+                            <div class="capsule-content">
+                                <span class="capsule-dot"></span>
+                                <svg class="capsule-icon sync-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                                <svg class="capsule-icon check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                <svg class="capsule-icon error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                                <span class="capsule-text"></span>
+                            </div>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="drawer-content">
                     
-                    <!-- State 1: Empty Baseline -->
-                    <div class="state-view show-1-empty empty-state" style="padding: 20px;">
-                        <div>
-                            <div style="font-size: 15px; font-weight: 500; color: var(--text-primary); margin-bottom: 4px;">暂无录音附件</div>
-                            <div style="font-size: 13px;">录音将通过工牌自动同步至此</div>
+                    <!-- State 1: Seeded Onboarding State -->
+                    <div class="state-view show-1-empty" style="flex-direction: column; gap: 12px; padding-bottom: 24px;">
+                        
+                        <!-- Seed Card 1: Pull to Sync -->
+                        <div class="seed-card" id="seed-card-1" onclick="demoGripPulse()" style="cursor: pointer;">
+                            <div class="seed-icon">↑</div>
+                            <div class="seed-text">
+                                <div class="card-title">上拉手柄以手动同步</div>
+                                <div class="card-subtitle">从工牌获取最新录音</div>
+                            </div>
                         </div>
+
+                        <!-- Seed Card 2: Swipe to Delete -->
+                        <div class="audio-card-container seed-helper-swipe" id="seed-card-2-container">
+                            <div class="swipe-bg-delete" style="opacity: 1;"><svg class="svg-icon" style="width:24px; height:24px;" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></div>
+                            <div class="audio-card seed-card" id="seed-card-2" style="border: 0.5px solid var(--border-subtle); margin: 0; align-items: flex-start; cursor: grab;">
+                                <div class="seed-icon" style="margin-top:2px; font-size:16px;">←</div>
+                                <div class="seed-text">
+                                    <div class="card-title">向左滑动以删除录音</div>
+                                    <div class="card-subtitle">消除这行卡片进行练习</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Demo Card 3 -->
+                        <div class="audio-card attention-shimmer" id="demo-card-3" style="cursor: grab;">
+                            <div class="card-header">
+                                <span class="card-title">SmartSales 功能演示</span>
+                                <div class="card-meta">2025-04-01 · 1分23秒 <svg class="svg-icon star-icon outline" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div>
+                            </div>
+                            <div class="swipe-hint text-shimmer">右滑开始转写 >>></div>
+                        </div>
+
                     </div>
 
                     <!-- State 2: Mixed Inventory -->
@@ -545,6 +691,183 @@
             buttons.forEach(b => b.classList.remove('active'));
             btnElem.classList.add('active');
         }
+
+        let currentConnState = 'connected'; // connected, disconnected, connecting
+    
+        function setConnState(state) {
+            currentConnState = state;
+            
+            const capsule = document.getElementById('smart-capsule-btn');
+            // Do not interrupt the visual if it is currently syncing/error/synced 
+            // EXCEPT if it was disconnected mid-sync
+            const activeStatus = capsule.getAttribute('data-state');
+            if (activeStatus === 'syncing' && state === 'disconnected') {
+                capsule.setAttribute('data-state', 'error');
+                setTimeout(() => { capsule.setAttribute('data-state', 'disconnected'); }, 3000);
+            } else if (activeStatus !== 'syncing' && activeStatus !== 'error' && activeStatus !== 'synced') {
+                 capsule.setAttribute('data-state', state);
+            }
+        }
+        
+        function triggerSyncDemo(isSuccess) {
+            if (currentConnState !== 'connected') return;
+            
+            const btn = document.getElementById('smart-capsule-btn');
+            const state = btn.getAttribute('data-state');
+            if (state === 'syncing' || state === 'disconnected' || state === 'connecting') return;
+            
+            btn.setAttribute('data-state', 'syncing');
+            
+            setTimeout(() => {
+                if (currentConnState !== 'connected') {
+                    btn.setAttribute('data-state', 'error');
+                } else if (isSuccess) {
+                    btn.setAttribute('data-state', 'synced');
+                } else {
+                    btn.setAttribute('data-state', 'error');
+                }
+                
+                setTimeout(() => {
+                    btn.setAttribute('data-state', currentConnState);
+                }, isSuccess ? 2000 : 3000);
+                
+            }, 1500);
+        }
+
+        // --- NEW: Grip & Cards Interaction Logic ---
+        function demoGripPulse() {
+            const gripArea = document.getElementById('drawer-grip-area');
+            gripArea.classList.add('pulling');
+            setTimeout(() => {
+                gripArea.classList.add('pulling-threshold');
+                setTimeout(() => {
+                    gripArea.classList.remove('pulling-threshold');
+                    gripArea.classList.remove('pulling');
+                }, 300);
+            }, 300);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const gripArea = document.getElementById('drawer-grip-area');
+            const grip = document.getElementById('drawer-grip');
+            let startY = 0;
+            let isDraggingGrip = false;
+            
+            const handleGripStart = (y) => { startY = y; isDraggingGrip = true; };
+            const handleGripMove = (y) => {
+                if (!isDraggingGrip) return;
+                const deltaY = startY - y; 
+                if (deltaY > 5) {
+                    gripArea.classList.add('pulling');
+                    let pullOffset = Math.min(deltaY * 0.4, 25);
+                    gripArea.style.transform = `translateY(-${pullOffset}px)`;
+                    if (deltaY > 50) {
+                        gripArea.classList.add('pulling-threshold');
+                    } else {
+                        gripArea.classList.remove('pulling-threshold');
+                    }
+                } else {
+                    gripArea.classList.remove('pulling');
+                    gripArea.classList.remove('pulling-threshold');
+                }
+            };
+            const handleGripEnd = () => {
+                if (!isDraggingGrip) return;
+                isDraggingGrip = false;
+                const isThresholdReched = gripArea.classList.contains('pulling-threshold');
+                gripArea.style.transform = '';
+                gripArea.classList.remove('pulling');
+                gripArea.classList.remove('pulling-threshold');
+                if (isThresholdReched) {
+                    if (currentConnState === 'connected') {
+                        const seed1 = document.getElementById('seed-card-1');
+                        if (seed1) {
+                            seed1.style.opacity = '0';
+                            seed1.style.transform = 'scale(0.95)';
+                            setTimeout(() => { 
+                                seed1.style.display = 'none'; 
+                                updateMetaBadge(document.getElementById('seed-card-2') ? '2 项' : '1 项'); 
+                            }, 300);
+                        }
+                        triggerSyncDemo(true);
+                    } else {
+                        grip.classList.add('denied');
+                        setTimeout(() => grip.classList.remove('denied'), 400);
+                    }
+                }
+            };
+
+            gripArea.addEventListener('touchstart', (e) => handleGripStart(e.touches[0].clientY), {passive: true});
+            gripArea.addEventListener('touchmove', (e) => handleGripMove(e.touches[0].clientY));
+            gripArea.addEventListener('touchend', handleGripEnd);
+            gripArea.addEventListener('mousedown', (e) => handleGripStart(e.clientY));
+            window.addEventListener('mousemove', (e) => handleGripMove(e.clientY));
+            window.addEventListener('mouseup', handleGripEnd);
+
+            function updateMetaBadge(text) {
+                const badge = document.querySelector('.show-1-empty').parentElement.parentElement.querySelector('.drawer-meta-badge');
+                if(badge) badge.innerText = text;
+            }
+
+            // Simple swipe-to-delete logic for Seed Card 2 and Demo Card 3
+            function setupSwipeCard(cardId, isRight) {
+                const card = document.getElementById(cardId);
+                if (!card) return;
+                let cStartX = 0;
+                let cIsDragging = false;
+                let cHasFired = false;
+
+                const startSwipe = (x) => { if(cHasFired) return; cStartX = x; cIsDragging = true; card.style.transition = 'none'; };
+                const moveSwipe = (x) => {
+                    if (!cIsDragging || cHasFired) return;
+                    const deltaX = x - cStartX;
+                    if ((isRight && deltaX > 0) || (!isRight && deltaX < 0)) {
+                        card.style.transform = `translateX(${deltaX}px)`;
+                        if (isRight) {
+                            card.style.background = `rgba(10, 132, 255, ${Math.min(deltaX/200, 0.15)})`;
+                            card.style.borderColor = `rgba(10, 132, 255, ${Math.min(deltaX/100, 1)})`;
+                        }
+                    }
+                };
+                const endSwipe = (x) => {
+                    if (!cIsDragging || cHasFired) return;
+                    cIsDragging = false;
+                    card.style.transition = 'transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s';
+                    const deltaX = x - cStartX;
+                    if ((!isRight && deltaX < -70) || (isRight && deltaX > 70)) {
+                        cHasFired = true;
+                        card.style.transform = `translateX(${isRight ? 120 : -120}%)`;
+                        if (!isRight) card.style.opacity = '0'; // fade delete
+                        setTimeout(() => {
+                            if (!isRight) {
+                                const container = document.getElementById(cardId + '-container');
+                                if(container) container.style.display = 'none';
+                                updateMetaBadge(document.getElementById('seed-card-1')?.style.display !== 'none' ? '2 项' : '1 项');
+                            } else {
+                                // Right swipe resets to show transcription state transition
+                                card.style.transform = 'translateX(0)';
+                                card.style.background = ''; card.style.borderColor = '';
+                                cHasFired = false;
+                                setView('3-pending', 'browse', document.getElementById('btn-3'));
+                            }
+                        }, 300);
+                    } else {
+                        card.style.transform = 'translateX(0)';
+                        if (isRight) { card.style.background = ''; card.style.borderColor = ''; }
+                    }
+                };
+
+                card.addEventListener('touchstart', (e) => startSwipe(e.touches[0].clientX), {passive: true});
+                card.addEventListener('touchmove', (e) => moveSwipe(e.touches[0].clientX));
+                card.addEventListener('touchend', (e) => endSwipe(e.changedTouches[0].clientX));
+                card.addEventListener('mousedown', (e) => startSwipe(e.clientX));
+                window.addEventListener('mousemove', (e) => moveSwipe(e.clientX));
+                window.addEventListener('mouseup', (e) => endSwipe(e.clientX));
+            }
+
+            setupSwipeCard('seed-card-2', false);
+            setupSwipeCard('demo-card-3', true);
+        });
     </script>
 </body>
 </html>

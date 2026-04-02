@@ -11,27 +11,27 @@ class SimSettingsRoutingTest {
     private val workingDir = File(System.getProperty("user.dir") ?: ".")
 
     @Test
-    fun `openSimSettings closes other overlays and opens settings`() {
-        val updated = openSimSettings(
-            SimShellState(
-                activeDrawer = SimDrawerType.AUDIO,
-                audioDrawerMode = SimAudioDrawerMode.CHAT_RESELECT,
-                activeConnectivitySurface = SimConnectivitySurface.MODAL,
+    fun `openRuntimeSettings closes other overlays and opens settings`() {
+        val updated = openRuntimeSettings(
+            RuntimeShellState(
+                activeDrawer = RuntimeDrawerType.AUDIO,
+                audioDrawerMode = RuntimeAudioDrawerMode.CHAT_RESELECT,
+                activeConnectivitySurface = RuntimeConnectivitySurface.MODAL,
                 showHistory = true
             )
         )
 
         assertEquals(null, updated.activeDrawer)
-        assertEquals(SimAudioDrawerMode.BROWSE, updated.audioDrawerMode)
+        assertEquals(RuntimeAudioDrawerMode.BROWSE, updated.audioDrawerMode)
         assertEquals(null, updated.activeConnectivitySurface)
         assertFalse(updated.showHistory)
         assertTrue(updated.showSettings)
     }
 
     @Test
-    fun `closeSimSettings keeps other shell state intact`() {
-        val updated = closeSimSettings(
-            SimShellState(showSettings = true)
+    fun `closeRuntimeSettings keeps other shell state intact`() {
+        val updated = closeRuntimeSettings(
+            RuntimeShellState(showSettings = true)
         )
 
         assertFalse(updated.showSettings)
@@ -41,15 +41,15 @@ class SimSettingsRoutingTest {
 
     @Test
     fun `settings drawer keeps scrim visible with generic overlay alpha`() {
-        val state = SimShellState(showSettings = true)
+        val state = RuntimeShellState(showSettings = true)
 
-        assertTrue(shouldShowSimShellScrim(state))
-        assertEquals(0.4f, resolveSimShellScrimAlpha(state))
+        assertTrue(shouldShowRuntimeShellScrim(state))
+        assertEquals(0.4f, resolveRuntimeShellScrimAlpha(state))
     }
 
     @Test
     fun `settings drawer blocks shell edge gestures`() {
-        val state = SimShellState(showSettings = true)
+        val state = RuntimeShellState(showSettings = true)
 
         assertFalse(canOpenSimSchedulerFromEdge(state))
         assertFalse(canOpenSimAudioFromEdge(state, isImeVisible = false))
@@ -87,9 +87,9 @@ class SimSettingsRoutingTest {
 
     @Test
     fun `sim settings overlay uses deterministic handoff aligned animation instead of spring`() {
-        val source = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimShellContent.kt")
+        val source = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/RuntimeShellContent.kt")
 
-        assertTrue(source.contains("val settingsDrawerSlideSpec = tween<Int>("))
+        assertTrue(source.contains("val settingsDrawerSlideSpec = tween<IntOffset>("))
         assertTrue(source.contains("durationMillis = 400"))
         assertTrue(source.contains("val settingsDrawerFadeSpec = tween<Float>("))
         assertTrue(source.contains("durationMillis = 300"))

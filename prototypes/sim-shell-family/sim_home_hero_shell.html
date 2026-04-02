@@ -233,6 +233,82 @@
         }
         .sim-shell[data-island="idle"] .island-text::before { content: "暂无待办"; }
         
+        /* Connectivity States */
+        @keyframes island-flash {
+            0% { transform: scale(1); filter: brightness(1); }
+            50% { transform: scale(1.05); filter: brightness(1.2); }
+            100% { transform: scale(1); filter: brightness(1); }
+        }
+        .island-interrupt {
+            animation: island-flash 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .sim-shell[data-island="badge-connected"] .island-dot {
+            background: #34C759;
+            box-shadow: 0 0 10px rgba(52, 199, 89, 0.8);
+        }
+        .sim-shell[data-island="badge-connected"] .island-text {
+            background-image: linear-gradient(135deg, #A4E38A, #34C759);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .sim-shell[data-island="badge-connected"] .island-text::before { 
+            content: "Badge 已连接"; 
+        }
+        .sim-shell[data-island="badge-connected"] .island-text::after {
+            /* Create a custom battery icon using CSS drawing */
+            content: "78";
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 700;
+            color: #34C759;
+            -webkit-text-fill-color: #34C759;
+            padding: 0 2px;
+            margin-left: 2px;
+            height: 14px;
+            min-width: 22px;
+            border: 1px solid rgba(52, 199, 89, 0.6);
+            border-radius: 3px;
+            background: linear-gradient(90deg, rgba(52, 199, 89, 0.2) 78%, transparent 78%);
+            position: relative;
+        }
+        /* Battery knob/terminal */
+        .sim-shell[data-island="badge-connected"] .island-text {
+            position: relative;
+        }
+        .sim-shell[data-island="badge-connected"] .island-text span.battery-knob {
+            content: "";
+            display: block;
+            width: 2px;
+            height: 6px;
+            background: rgba(52, 199, 89, 0.6);
+            border-radius: 0 2px 2px 0;
+            position: absolute;
+            right: -2px; /* Needs to sit right outside the flex container's border, handled via JS wrapper now */
+        }
+
+        .sim-shell[data-island="badge-disconnected"] .island-dot {
+            background: rgba(255, 255, 255, 0.3);
+            box-shadow: none;
+        }
+        .sim-shell[data-island="badge-disconnected"] .island-text {
+            background-image: linear-gradient(135deg, #A0A0A5, #86868B);
+        }
+        .sim-shell[data-island="badge-disconnected"] .island-text::before { content: "Badge 已断开"; }
+
+        .sim-shell[data-island="badge-reconnecting"] .island-dot {
+            background: #FF9F0A;
+            box-shadow: 0 0 10px rgba(255, 159, 10, 0.8);
+            animation: pulse-warn 1.5s infinite;
+        }
+        .sim-shell[data-island="badge-reconnecting"] .island-text {
+            background-image: linear-gradient(135deg, #FFD60A, #FF9F0A);
+        }
+        .sim-shell[data-island="badge-reconnecting"] .island-text::before { content: "Badge 重连中..."; }
+
         @keyframes pulse-warn {
             0% { opacity: 0.6; box-shadow: 0 0 4px rgba(255, 214, 10, 0.3); }
             50% { opacity: 1; box-shadow: 0 0 14px rgba(255, 214, 10, 0.9); }
@@ -514,6 +590,13 @@
         <button id="btn-island-upcoming" class="active" onclick="setIsland('upcoming', this)">1. Upcoming Task</button>
         <button id="btn-island-conflict" onclick="setIsland('conflict', this)">2. Conflict Notice</button>
         <button id="btn-island-idle" onclick="setIsland('idle', this)">3. Idle / Hidden</button>
+
+        <h3>Badge Connectivity</h3>
+        <button id="btn-island-badge-connected" onclick="simulateBadgeConnect(this)">[Event] Connected</button>
+        <button id="btn-island-badge-disconnected" onclick="simulateBadgeDisconnect(this)">[Event] Disconnected</button>
+        <button id="btn-island-badge-reconnecting" onclick="simulateBadgeReconnecting(this)">[Event] Reconnecting</button>
+        <div style="height: 8px;"></div>
+        <button id="btn-heartbeat-toggle" onclick="toggleHeartbeat(this)" style="background: rgba(255,255,255,0.1);">▶ Start Heartbeat</button>
     </div>
 
     <!-- Full Device Emulator -->
@@ -549,6 +632,7 @@
                     <div class="dynamic-island">
                         <div class="island-dot"></div>
                         <span class="island-text"></span>
+                        <div class="battery-terminal" style="display: none; width: 2px; height: 6px; background: rgba(52, 199, 89, 0.6); border-radius: 0 2px 2px 0; margin-left: -4px;"></div>
                     </div>
                 </div>
                 <div class="top-right">
@@ -666,6 +750,13 @@
     </div>
 
     <script>
+        // State management
+        let currentSchedulerState = 'upcoming';
+        let currentBadgeState = 'badge-connected'; // Base connection truth
+        let heartbeatInterval = null;
+        let eventTimeout = null;
+        let isHeartbeating = false;
+
         function setState(stateName, btnElem) {
             document.getElementById('sim-shell').setAttribute('data-state', stateName);
             
@@ -683,12 +774,117 @@
         }
 
         function setIsland(islandName, btnElem) {
-            document.getElementById('sim-shell').setAttribute('data-island', islandName);
+            // Update base truth
+            currentSchedulerState = islandName;
             
-            // Highlight active button
+            // Apply immediately if not currently in a priority event
+            if (!eventTimeout) {
+                applyIslandState(islandName);
+            }
+            
+            // Highlight active scheduler button
             const buttons = btnElem.parentElement.querySelectorAll('button[id^="btn-island"]');
-            buttons.forEach(btn => btn.classList.remove('active'));
+            const schedButtons = Array.from(buttons).filter(b => b.id.includes('upcoming') || b.id.includes('conflict') || b.id.includes('idle'));
+            schedButtons.forEach(btn => btn.classList.remove('active'));
             btnElem.classList.add('active');
+        }
+
+        function applyIslandState(state) {
+            const shell = document.getElementById('sim-shell');
+            const island = document.querySelector('.dynamic-island');
+            const batteryTerminal = document.querySelector('.battery-terminal');
+            
+            // Re-trigger CSS animation
+            island.classList.remove('island-interrupt');
+            void island.offsetWidth; // Force reflow
+            
+            if (state.startsWith('badge-')) {
+                island.classList.add('island-interrupt');
+            }
+            
+            shell.setAttribute('data-island', state);
+
+            // Handle battery icon terminal visibility
+            if (state === 'badge-connected') {
+                batteryTerminal.style.display = 'block';
+            } else {
+                batteryTerminal.style.display = 'none';
+            }
+        }
+
+        // Connectivity Events
+        function simulateBadgeConnect(btnElem) {
+            triggerConnectivityEvent('badge-connected', 3000, btnElem);
+        }
+        
+        function simulateBadgeDisconnect(btnElem) {
+            triggerConnectivityEvent('badge-disconnected', 3000, btnElem);
+        }
+        
+        function simulateBadgeReconnecting(btnElem) {
+            // Reconnecting holds until connected/disconnected occurs
+            triggerConnectivityEvent('badge-reconnecting', null, btnElem);
+        }
+
+        function triggerConnectivityEvent(state, durationMs, btnElem) {
+            // Clear any existing event/hold
+            if (eventTimeout) clearTimeout(eventTimeout);
+            
+            currentBadgeState = state; // Update base connectivity truth
+            applyIslandState(state);
+            
+            if (durationMs) {
+                eventTimeout = setTimeout(() => {
+                    // Restore scheduler state after event flash
+                    eventTimeout = null;
+                    if (!isHeartbeating) {
+                         applyIslandState(currentSchedulerState);
+                    }
+                }, durationMs);
+            }
+        }
+
+        // Heartbeat logic
+        function toggleHeartbeat(btnElem) {
+            isHeartbeating = !isHeartbeating;
+            
+            if (isHeartbeating) {
+                btnElem.innerText = "⏹ Stop Heartbeat";
+                btnElem.style.background = "rgba(10, 132, 255, 0.2)";
+                btnElem.style.color = "var(--color-accent-blue)";
+                
+                // Do first heartbeat right away
+                doHeartbeat();
+                
+                // Then set interval (e.g. 5s for fast testing, 30s in reality)
+                heartbeatInterval = setInterval(doHeartbeat, 5000); // 5s for demo purposes 
+            } else {
+                btnElem.innerText = "▶ Start Heartbeat";
+                btnElem.style.background = "rgba(255,255,255,0.1)";
+                btnElem.style.color = "";
+                clearInterval(heartbeatInterval);
+                
+                if (!eventTimeout) {
+                    applyIslandState(currentSchedulerState);
+                }
+            }
+        }
+
+        function doHeartbeat() {
+            // Skip heartbeat if we are in the middle of a priority event
+            if (eventTimeout) return;
+            // Skip heartbeat if badge is reconnecting (it holds continuous pulse)
+            if (currentBadgeState === 'badge-reconnecting') return;
+            
+            // Only heartbeat if connected (or disconnected based on Frank's confirmation, per spec: disconnected heartbeat is necessary)
+            applyIslandState(currentBadgeState);
+            
+            // Restore after 2.5s (visible flash)
+            setTimeout(() => {
+                if (!eventTimeout && isHeartbeating) {
+                    applyIslandState(currentSchedulerState);
+                }
+            }, 2500);
         }
     </script>
 </body>

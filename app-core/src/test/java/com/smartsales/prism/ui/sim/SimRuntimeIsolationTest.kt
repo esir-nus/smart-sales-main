@@ -10,11 +10,11 @@ class SimRuntimeIsolationTest {
     private val workingDir = File(System.getProperty("user.dir") ?: ".")
 
     @Test
-    fun `sim main activity mounts sim shell instead of smart shell root`() {
-        val source = readSource("app-core/src/main/java/com/smartsales/prism/SimMainActivity.kt")
+    fun `main activity mounts the unified runtime shell instead of split roots`() {
+        val source = readSource("app-core/src/main/java/com/smartsales/prism/MainActivity.kt")
 
-        assertTrue(source.contains("class SimMainActivity"))
-        assertTrue(source.contains("SimShell("))
+        assertTrue(source.contains("class MainActivity"))
+        assertTrue(source.contains("RuntimeShell("))
         assertTrue(source.contains("badgeAudioPipeline = badgeAudioPipeline"))
         assertTrue(source.contains("ThemePreferenceStore"))
         assertTrue(source.contains("themePreferenceStore.themeMode.collectAsStateWithLifecycle()"))
@@ -26,13 +26,13 @@ class SimRuntimeIsolationTest {
     }
 
     @Test
-    fun `sim shell owns sim runtime collaborators instead of smart chat root`() {
-        val host = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimShell.kt")
-        val content = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/SimShellContent.kt")
+    fun `runtime shell owns the production runtime collaborators directly`() {
+        val host = readSource("app-core/src/main/java/com/smartsales/prism/ui/RuntimeShell.kt")
+        val content = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/RuntimeShellContent.kt")
 
         assertTrue(host.contains("val chatViewModel: SimAgentViewModel = hiltViewModel()"))
         assertTrue(host.contains("val audioViewModel: SimAudioDrawerViewModel = hiltViewModel()"))
-        assertTrue(host.contains("SimShellContent("))
+        assertTrue(host.contains("RuntimeShellContent("))
         assertTrue(content.contains("AgentIntelligenceScreen("))
         assertFalse(host.contains("AgentShell("))
         assertFalse(content.contains("AgentShell("))

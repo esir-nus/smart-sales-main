@@ -28,15 +28,12 @@ class UserCenterStructureTest {
     }
 
     @Test
-    fun `agent shell presents user center as a stronger centered overlay instead of a side drawer`() {
-        val source = readSource("app-core/src/main/java/com/smartsales/prism/ui/AgentShellContent.kt")
+    fun `runtime shell presents settings as the current right-side drawer overlay`() {
+        val source = readSource("app-core/src/main/java/com/smartsales/prism/ui/sim/RuntimeShellContent.kt")
 
-        assertTrue(source.contains("Color.Black.copy(alpha = 0.38f)"))
-        assertTrue(source.contains("padding(top = 12.dp, bottom = 8.dp)"))
-        assertTrue(source.contains("scaleIn("))
-        assertTrue(source.contains("scaleOut("))
-        assertFalse(source.contains("slideInHorizontally("))
-        assertFalse(source.contains("slideOutHorizontally("))
+        assertTrue(source.contains("SimUserCenterDrawer("))
+        assertTrue(source.contains("slideInHorizontally("))
+        assertTrue(source.contains("slideOutHorizontally("))
     }
 
     private fun readSource(relativePath: String): String {

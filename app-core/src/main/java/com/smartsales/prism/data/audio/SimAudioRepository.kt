@@ -48,18 +48,6 @@ class SimAudioRepository @Inject constructor(
         storeSupport.addLocalAudio(uriString)
     }
 
-    suspend fun seedDebugFailureScenario() {
-        artifactSupport.seedDebugFailureScenario()
-    }
-
-    suspend fun seedDebugMissingSectionsScenario() {
-        artifactSupport.seedDebugMissingSectionsScenario()
-    }
-
-    suspend fun seedDebugFallbackScenario() {
-        artifactSupport.seedDebugFallbackScenario()
-    }
-
     suspend fun startTranscription(audioId: String) {
         transcriptionSupport.startTranscription(audioId)
     }

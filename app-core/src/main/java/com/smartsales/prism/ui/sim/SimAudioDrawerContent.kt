@@ -35,7 +35,7 @@ import androidx.compose.ui.unit.sp
 internal fun SimAudioDrawerContent(
     entries: List<SimAudioEntry>,
     viewModel: SimAudioDrawerViewModel,
-    mode: SimAudioDrawerMode,
+    mode: RuntimeAudioDrawerMode,
     expandedAudioIds: Set<String>,
     currentChatAudioId: String?,
     isSyncing: Boolean,
@@ -46,9 +46,6 @@ internal fun SimAudioDrawerContent(
     onDeleteAudio: (String) -> Unit,
     onSelectForChat: (SimChatAudioSelection) -> Unit,
     onImportTestAudio: () -> Unit,
-    onSeedDebugFailureScenario: () -> Unit,
-    onSeedDebugMissingSectionsScenario: () -> Unit,
-    onSeedDebugFallbackScenario: () -> Unit,
     onReplayOnboarding: () -> Unit,
     showTestImportAction: Boolean,
     showDebugScenarioActions: Boolean
@@ -61,7 +58,7 @@ internal fun SimAudioDrawerContent(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = if (mode == SimAudioDrawerMode.CHAT_RESELECT) "选择要讨论的录音" else "录音笔记",
+            text = if (mode == RuntimeAudioDrawerMode.CHAT_RESELECT) "选择要讨论的录音" else "录音笔记",
             style = MaterialTheme.typography.titleLarge.copy(
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 18.sp
@@ -74,7 +71,7 @@ internal fun SimAudioDrawerContent(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            if (mode == SimAudioDrawerMode.BROWSE) {
+            if (mode == RuntimeAudioDrawerMode.BROWSE) {
                 Text(
                     text = "${entries.size} 项",
                     color = SimDrawerTextMuted,
@@ -99,7 +96,7 @@ internal fun SimAudioDrawerContent(
         }
     }
 
-    if (mode == SimAudioDrawerMode.CHAT_RESELECT) {
+    if (mode == RuntimeAudioDrawerMode.CHAT_RESELECT) {
         Text(
             text = "点击录音卡片切换当前聊天",
             color = SimDrawerTextSecondary,
@@ -147,19 +144,9 @@ internal fun SimAudioDrawerContent(
             )
         }
 
-        if (showTestImportAction && mode == SimAudioDrawerMode.BROWSE) {
+        if (showTestImportAction && mode == RuntimeAudioDrawerMode.BROWSE) {
             item {
                 SimTestImportButton(onClick = onImportTestAudio)
-            }
-        }
-
-        if (showDebugScenarioActions && mode == SimAudioDrawerMode.BROWSE) {
-            item {
-                SimDebugScenarioPanel(
-                    onSeedFailureScenario = onSeedDebugFailureScenario,
-                    onSeedMissingSectionsScenario = onSeedDebugMissingSectionsScenario,
-                    onSeedFallbackScenario = onSeedDebugFallbackScenario
-                )
             }
         }
 
@@ -240,67 +227,5 @@ private fun SimTestImportButton(onClick: () -> Unit) {
                 fontWeight = FontWeight.Medium
             )
         }
-    }
-}
-
-
-@Composable
-private fun SimDebugScenarioPanel(
-    onSeedFailureScenario: () -> Unit,
-    onSeedMissingSectionsScenario: () -> Unit,
-    onSeedFallbackScenario: () -> Unit
-) {
-    androidx.compose.foundation.layout.Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Text(
-            text = "调试验证场景",
-            color = SimDrawerTextSecondary,
-            fontWeight = FontWeight.Medium,
-            fontSize = 13.sp
-        )
-        Text(
-            text = "仅调试版可见。点击后会在当前 SIM 录音列表中生成对应验证卡片。",
-            color = SimDrawerTextMuted,
-            fontSize = 11.sp,
-            lineHeight = 17.sp
-        )
-        SimDebugScenarioButton(
-            text = "Seed Failure Scenario",
-            onClick = onSeedFailureScenario
-        )
-        SimDebugScenarioButton(
-            text = "Seed Missing Sections Scenario",
-            onClick = onSeedMissingSectionsScenario
-        )
-        SimDebugScenarioButton(
-            text = "Seed Fallback Scenario",
-            onClick = onSeedFallbackScenario
-        )
-    }
-}
-
-@Composable
-private fun SimDebugScenarioButton(
-    text: String,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(Color.White.copy(alpha = 0.02f))
-            .border(1.dp, SimDrawerAccent.copy(alpha = 0.72f), RoundedCornerShape(14.dp))
-            .clickable(onClick = onClick)
-            .padding(vertical = 14.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            color = SimDrawerAccent,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium
-        )
     }
 }

@@ -131,3 +131,8 @@ internal fun normalizeWifiSsid(rawSsid: String?): String? {
         else -> normalized
     }
 }
+
+internal fun hasUsableBadgeIp(rawIp: String?): Boolean {
+    val normalized = rawIp?.trim().orEmpty()
+    return normalized.isNotBlank() && normalized != "0.0.0.0" && !normalized.startsWith("0.")
+}

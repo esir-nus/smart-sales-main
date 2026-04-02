@@ -130,7 +130,7 @@ internal fun SimAgentIntelligenceContent(
     onNewSessionClick: () -> Unit,
     onSchedulerClick: (DynamicIslandTapAction) -> Unit,
     onAttachClick: () -> Unit,
-    simDynamicIslandItems: List<DynamicIslandItem>,
+    simDynamicIslandState: DynamicIslandUiState,
     showHeaderMenuButton: Boolean = true,
     showHeaderNewSessionButton: Boolean = true,
     showBottomComposer: Boolean = true,
@@ -161,7 +161,7 @@ internal fun SimAgentIntelligenceContent(
         SimHomeHeroShellFrame(
             inputText = inputText,
             isSending = isSending,
-            dynamicIslandItems = simDynamicIslandItems,
+            dynamicIslandState = simDynamicIslandState,
             onMenuClick = onMenuClick,
             onNewSessionClick = onNewSessionClick,
             onSchedulerClick = onSchedulerClick,
@@ -217,7 +217,7 @@ internal fun SimAgentIntelligenceContent(
         ) {
             SimShellHeader(
                 sessionTitle = sessionTitle,
-                dynamicIslandItems = simDynamicIslandItems,
+                dynamicIslandState = simDynamicIslandState,
                 onMenuClick = onMenuClick,
                 onNewSessionClick = onNewSessionClick,
                 onSchedulerClick = onSchedulerClick,
@@ -466,7 +466,7 @@ private fun SimConversationTimeline(
 @Composable
 private fun SimShellHeader(
     sessionTitle: String,
-    dynamicIslandItems: List<DynamicIslandItem>,
+    dynamicIslandState: DynamicIslandUiState,
     onMenuClick: () -> Unit,
     onNewSessionClick: () -> Unit,
     onSchedulerClick: (DynamicIslandTapAction) -> Unit,
@@ -498,9 +498,9 @@ private fun SimShellHeader(
         } else {
             Spacer(modifier = Modifier.size(42.dp))
         }
-        if (dynamicIslandItems.isNotEmpty()) {
+        if (dynamicIslandState is DynamicIslandUiState.Visible) {
             SimRotatingDynamicIsland(
-                items = dynamicIslandItems,
+                state = dynamicIslandState,
                 modifier = Modifier.weight(1f),
                 onTap = onSchedulerClick
             )
@@ -532,34 +532,13 @@ private fun SimShellHeader(
 
 @Composable
 private fun SimRotatingDynamicIsland(
-    items: List<DynamicIslandItem>,
+    state: DynamicIslandUiState.Visible,
     modifier: Modifier = Modifier,
     onTap: (DynamicIslandTapAction) -> Unit
 ) {
-    if (items.isEmpty()) return
-
-    val itemKeys = remember(items) { items.map(DynamicIslandItem::stableKey) }
-    var currentItemKey by remember { mutableStateOf<String?>(null) }
-    val currentIndex = resolveSimDynamicIslandIndex(
-        items = items,
-        currentItemKey = currentItemKey
-    )
-    val currentItem = items[currentIndex]
-
-    LaunchedEffect(itemKeys) {
-        currentItemKey = items[currentIndex].stableKey
-    }
-
-    LaunchedEffect(itemKeys, currentItem.stableKey) {
-        if (items.size <= 1) return@LaunchedEffect
-        delay(5000L)
-        val nextIndex = (currentIndex + 1) % items.size
-        currentItemKey = items[nextIndex].stableKey
-    }
-
     Box(modifier = modifier) {
         AnimatedContent(
-            targetState = currentItem,
+            targetState = state.item,
             transitionSpec = {
                 (slideInVertically { fullHeight -> fullHeight } + fadeIn())
                     .togetherWith(slideOutVertically { fullHeight -> -fullHeight / 2 } + fadeOut())

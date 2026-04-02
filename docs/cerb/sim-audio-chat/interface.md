@@ -188,6 +188,7 @@ Meaning:
 - this seam is the shared low-level FunASR realtime recognizer used by the SIM draft lane and by onboarding through host-owned wrappers
 - the implementation uses FunASR realtime Android SDK plus SIM-owned mic capture
 - the implementation must provide direct `DASHSCOPE_API_KEY` auth at SDK init before starting a realtime session
+- `startDialog` must not carry auth params; auth is already established by the SDK-init payload
 - successful completion returns one editable draft string for the composer rather than a durable chat turn
 - cancel, no-match, timeout, or auth failure must leave durable chat history untouched
 

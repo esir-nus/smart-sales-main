@@ -1,12 +1,13 @@
 # Architecture Guide (Base Runtime Laws and Mono Augmentation)
 
 **Status:** Active Supporting Architecture Reference  
-**Last Updated:** 2026-03-31  
+**Last Updated:** 2026-04-01  
 **Successor to:** Prism-V1.md, Lattice Architecture  
+**Product North Star:** [`SmartSales_PRD.md`](../../SmartSales_PRD.md)  
 **Primary Boundary Doc:** `docs/specs/base-runtime-unification.md`  
 **Use This Doc When:** the task depends on typed mutation architecture, RAM/SSD boundaries, Kernel-owned memory, plugin/tool runtime, or pipeline observability laws.
 
-> **Preamble**: This document is no longer the repo-default product-truth doc for every task. For shared non-Mono delivery, read `docs/specs/base-runtime-unification.md` first, then the relevant `docs/core-flow/**` and feature specs. Use this file for stable cross-cutting architecture laws and for the deferred Mono augmentation layer.
+> **Preamble**: This document is no longer the repo-default product-truth doc for every task. Read `SmartSales_PRD.md` first for app identity and major journeys, then read `docs/specs/base-runtime-unification.md` for the base-vs-Mono boundary, then the relevant `docs/core-flow/**` and feature specs. Use this file for stable cross-cutting architecture laws and for the deferred Mono augmentation layer.
 
 ---
 
@@ -28,11 +29,12 @@ That belongs to `docs/core-flow/**` and the owning feature specs.
 
 Treat architecture guidance in this order:
 
-1. `docs/specs/base-runtime-unification.md` for shared non-Mono product truth and the base-vs-Mono boundary
-2. relevant `docs/core-flow/**` for behavioral north-star truth
-3. relevant `docs/cerb/**`, `docs/cerb-ui/**`, and feature specs for implementation contracts
-4. `docs/specs/Architecture.md` for deeper system laws that apply when the feature touches typed mutation, RAM/SSD ownership, plugins, or Mono augmentation
-5. code and validation evidence
+1. `SmartSales_PRD.md` for app identity, major surfaces, core journeys, and product-level UX laws
+2. `docs/specs/base-runtime-unification.md` for shared non-Mono posture and the base-vs-Mono boundary
+3. relevant `docs/core-flow/**` for behavioral north-star truth
+4. relevant `docs/cerb/**`, `docs/cerb-ui/**`, and feature specs for implementation contracts
+5. `docs/specs/Architecture.md` for deeper system laws that apply when the feature touches typed mutation, RAM/SSD ownership, plugins, or Mono augmentation
+6. code and validation evidence
 
 ### What belongs here
 
@@ -311,13 +313,14 @@ When reviewing architecture-sensitive work, verify the following:
 Do not treat architecture questions as one flat list.
 Resolve conflicts by category.
 
-### 9.1 Product posture and boundary conflicts
+### 9.1 Product identity and boundary conflicts
 
 Use this order:
 
-1. `docs/specs/base-runtime-unification.md`
-2. `docs/specs/Architecture.md`
-3. relevant tracker / interface-map notes
+1. `SmartSales_PRD.md` for app identity, major surfaces, and journey-level intent
+2. `docs/specs/base-runtime-unification.md` for shared non-Mono posture and the base-vs-Mono boundary
+3. `docs/specs/Architecture.md` for deeper architectural law when that layer is truly in play
+4. relevant tracker / interface-map notes
 
 ### 9.2 Feature behavior conflicts
 

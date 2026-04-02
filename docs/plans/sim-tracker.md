@@ -982,7 +982,7 @@ Wave 7 acceptance closed the SIM mission on **2026-03-22**. The remaining items 
 > - `docs/cerb/sim-audio-chat/spec.md`
 > - `docs/cerb/sim-audio-chat/interface.md`
 > - `docs/plans/ui-tracker.md`
-> **Execution Law**: keep this slice local to SIM home/chat composer state. SIM-owned FunASR realtime recognition may draft text into the field, must authenticate through backend-issued short-lived DashScope auth rather than a long-lived client key, but explicit send remains required and scheduler-follow-up voice mutation authority must not widen through this lane.
+> **Execution Law**: keep this slice local to SIM home/chat composer state. SIM-owned FunASR realtime recognition may draft text into the field, but explicit send remains required and scheduler-follow-up voice mutation authority must not widen through this lane. Historical note: the early backend-issued short-lived DashScope auth experiment was later superseded on 2026-03-31; current auth authority uses direct `DASHSCOPE_API_KEY` at FunASR SDK init.
 > **Validation Requirement**: prove successful recognition drafts text without auto-send, prove failure/cancel paths do not mutate history, and prove updated Android-test/UI seams compile.
 
 - [x] **T14.0: Docs-First Scope Lock**

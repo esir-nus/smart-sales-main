@@ -29,10 +29,12 @@ class DefaultDeviceConnectionManagerIngressTest {
         val gateway = FakeGattSessionLifecycle(
             connectResult = Result.Error(IllegalStateException("boom"))
         )
+        val monitor = FakeBadgeStateMonitor()
         val manager = newManager(
             gateway = gateway,
             scope = backgroundScope,
-            dispatcher = StandardTestDispatcher(testScheduler)
+            dispatcher = StandardTestDispatcher(testScheduler),
+            monitor = monitor
         )
 
         manager.selectPeripheral(BlePeripheral("badge-1", "Badge", -40))
@@ -41,6 +43,7 @@ class DefaultDeviceConnectionManagerIngressTest {
         assertFalse(manager.state.value is ConnectionState.Connected)
         assertFalse(manager.state.value is ConnectionState.WifiProvisioned)
         assertFalse(manager.state.value is ConnectionState.Syncing)
+        assertEquals(emptyList<String>(), monitor.connectedSessions)
     }
 
     @Test
@@ -77,6 +80,7 @@ class DefaultDeviceConnectionManagerIngressTest {
         assertTrue(manager.state.value is ConnectionState.WifiProvisioned)
         assertEquals(listOf("badge-1"), monitor.connectedSessions)
         assertEquals(BadgeState.CONNECTED, monitor.status.value.state)
+        assertFalse(monitor.pollingStarted)
     }
 
     @Test
@@ -368,6 +372,56 @@ class DefaultDeviceConnectionManagerIngressTest {
 
         assertTrue(state is ConnectionState.WifiProvisioned)
         assertEquals(2, provisioner.networkCalls.size)
+    }
+
+    @Test
+    fun `queryNetworkStatus demotes ready transport when badge later reports offline`() = runTest {
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val monitor = FakeBadgeStateMonitor()
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("MstRobot", "secret")
+            )
+        }
+        val provisioner = FakeWifiProvisioner().apply {
+            stubNetworkResults += Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "192.168.0.9",
+                    deviceWifiName = "MstRobot",
+                    phoneWifiName = "",
+                    rawResponse = "IP#192.168.0.9, SD#MstRobot"
+                )
+            )
+            stubNetworkResults += Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "0.0.0.0",
+                    deviceWifiName = "MstRobot",
+                    phoneWifiName = "",
+                    rawResponse = "IP#0.0.0.0, SD#MstRobot"
+                )
+            )
+        }
+        val manager = newManager(
+            gateway = gateway,
+            provisioner = provisioner,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            monitor = monitor,
+            phoneWifiProvider = FakePhoneWifiProvider("MstRobot")
+        )
+
+        val reconnectState = manager.reconnectAndWait()
+        advanceUntilIdle()
+        assertTrue(reconnectState is ConnectionState.WifiProvisioned)
+
+        val queryResult = manager.queryNetworkStatus()
+        advanceUntilIdle()
+
+        assertTrue(queryResult is Result.Success)
+        assertTrue(manager.state.value is ConnectionState.Disconnected)
+        assertEquals(BadgeState.OFFLINE, monitor.status.value.state)
     }
 
     @Test

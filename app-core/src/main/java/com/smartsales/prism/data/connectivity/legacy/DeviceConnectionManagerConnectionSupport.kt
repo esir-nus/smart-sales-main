@@ -47,11 +47,11 @@ internal class DeviceConnectionManagerConnectionSupport(
     fun selectPeripheral(peripheral: BlePeripheral) {
         val session = BleSession.fromPeripheral(peripheral)
         runtime.currentSession = session
-        badgeStateMonitor.onBleConnected(session)
 
         scope.launch(dispatchers.io) {
             val result = bleGateway.connect(peripheral.id)
             if (result is Result.Success) {
+                badgeStateMonitor.onBleConnected(session)
                 ingressSupport.startNotificationListener(session)
                 if (runtime.state.value !is ConnectionState.Pairing) {
                     runtime.state.value = ConnectionState.Connected(session)
@@ -207,21 +207,16 @@ internal class DeviceConnectionManagerConnectionSupport(
         }
 
         badgeStateMonitor.onBleConnected(session)
-        badgeStateMonitor.stopPolling()
         ingressSupport.startNotificationListener(session)
 
-        return try {
-            when (val networkStatus = performForegroundNetworkQuery(session, promoteConnectedState = false)) {
-                is Result.Success -> {
-                    resolveReconnectState(session, networkStatus.data)
-                }
-                is Result.Error -> {
-                    val error = mapProvisioningError(networkStatus.throwable)
-                    ConnectionState.Error(error)
-                }
+        return when (val networkStatus = performForegroundNetworkQuery(session, promoteConnectedState = false)) {
+            is Result.Success -> {
+                resolveReconnectState(session, networkStatus.data)
             }
-        } finally {
-            badgeStateMonitor.startPolling()
+            is Result.Error -> {
+                val error = mapProvisioningError(networkStatus.throwable)
+                ConnectionState.Error(error)
+            }
         }
     }
 
@@ -303,6 +298,21 @@ internal class DeviceConnectionManagerConnectionSupport(
             return
         }
 
+        if (!hasUsableBadgeIp(status.ipAddress)) {
+            if (
+                runtime.state.value is ConnectionState.WifiProvisioned ||
+                runtime.state.value is ConnectionState.Syncing
+            ) {
+                runtime.heartbeatJob?.cancel()
+                runtime.heartbeatJob = null
+                runtime.state.value = ConnectionState.Disconnected
+                ConnectivityLogger.w(
+                    "⚠️ Network status lost usable IP, demoting shared transport readiness"
+                )
+            }
+            return
+        }
+
         val syntheticStatus = ingressSupport.syntheticProvisioningStatus(status)
         ConnectivityLogger.d(
             "🌐 Network status ok device=${session.peripheralName} ip=${status.ipAddress}"
@@ -376,7 +386,7 @@ internal class DeviceConnectionManagerConnectionSupport(
         val badgeSsid = normalizeWifiSsid(networkStatus.deviceWifiName)
         val phoneSsid = resolveReadablePhoneSsid()
             ?: return resolvePhoneWifiUnavailableState(
-                context = if (ip.isBlank() || ip == "0.0.0.0" || ip.startsWith("0.")) {
+                context = if (!hasUsableBadgeIp(ip)) {
                     "replay skipped"
                 } else {
                     "reconnect blocked while badge has ip=$ip"
@@ -384,7 +394,7 @@ internal class DeviceConnectionManagerConnectionSupport(
                 badgeSsid = badgeSsid
             )
 
-        if (ip.isBlank() || ip == "0.0.0.0" || ip.startsWith("0.")) {
+        if (!hasUsableBadgeIp(ip)) {
             ConnectivityLogger.d("🔌 connectUsingSession: badge offline, ip=$ip")
             return attemptDeterministicWifiReplay(
                 session = session,
@@ -475,7 +485,7 @@ internal class DeviceConnectionManagerConnectionSupport(
                 is Result.Success -> {
                     val status = result.data
                     val ip = status.ipAddress
-                    if (ip.isBlank() || ip == "0.0.0.0" || ip.startsWith("0.")) {
+                    if (!hasUsableBadgeIp(ip)) {
                         ConnectivityLogger.d("🔁 replay confirm attempt=${attempt + 1}: still offline ip=$ip")
                         return@repeat
                     }
@@ -531,7 +541,7 @@ internal class DeviceConnectionManagerConnectionSupport(
                 is Result.Success -> {
                     val status = result.data
                     val ip = status.ipAddress
-                    if (ip.isBlank() || ip == "0.0.0.0" || ip.startsWith("0.")) {
+                    if (!hasUsableBadgeIp(ip)) {
                         ConnectivityLogger.d(
                             "🛜 manual repair confirm attempt=${attempt + 1}: badge still offline ip=$ip"
                         )

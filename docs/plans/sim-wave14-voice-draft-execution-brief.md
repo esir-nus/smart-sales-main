@@ -55,7 +55,7 @@ This slice is a SIM-only composer upgrade. It does not reopen the main smart-age
 
 - keep `IAgentViewModel` unchanged
 - keep the existing batch `AsrService` untouched and add a SIM-only realtime recognizer seam
-- authenticate SIM realtime capture through backend-issued short-lived DashScope auth instead of a long-lived app-side API key
+- historical note: the early backend-issued short-lived DashScope auth experiment for this wave was superseded on 2026-03-31 after SDK-guide drift audit; current auth authority uses direct `DASHSCOPE_API_KEY` at FunASR SDK init
 - own SIM voice-draft state inside `SimAgentViewModel`
 - cancel stale voice sessions on background/disposal so late recognizer results cannot overwrite the draft
 - keep attach on the left unchanged

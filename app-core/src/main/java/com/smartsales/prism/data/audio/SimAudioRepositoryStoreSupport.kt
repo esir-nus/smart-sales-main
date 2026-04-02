@@ -2,6 +2,7 @@ package com.smartsales.prism.data.audio
 
 import android.content.Context
 import android.net.Uri
+import com.smartsales.prism.data.connectivity.legacy.toBadgeDownloadFilename
 import com.smartsales.prism.domain.audio.AudioFile
 import com.smartsales.prism.domain.audio.AudioSource
 import com.smartsales.prism.domain.audio.TranscriptionStatus
@@ -51,7 +52,10 @@ internal fun simStoredAudioFile(context: Context, audioId: String, extension: St
     return File(context.filesDir, simStoredAudioFilename(audioId, extension))
 }
 
-internal fun simPendingBadgeDeleteFilename(filename: String): String = filename.trim()
+internal fun simPendingBadgeDeleteFilename(filename: String): String {
+    val normalized = filename.toBadgeDownloadFilename()
+    return normalized.ifBlank { filename.trim() }
+}
 
 internal fun resolveSimStoredAudioFile(context: Context, audioId: String): File? {
     val candidates = listOf("wav", "mp3", "m4a", "aac", "ogg")
@@ -199,6 +203,8 @@ internal class SimAudioRepositoryStoreSupport(
 
     fun backfillSeedInventory() {
         runCatching {
+            pruneRetiredSeedInventory()
+
             val existingIds = runtime.audioFiles.value.map { it.id }.toSet()
             val updatedFiles = runtime.audioFiles.value.toMutableList()
 
@@ -233,6 +239,23 @@ internal class SimAudioRepositoryStoreSupport(
         }.onFailure {
             android.util.Log.e("SimAudioRepository", "seed inventory failed", it)
         }
+    }
+
+    private fun pruneRetiredSeedInventory() {
+        if (runtime.retiredSeedIds.isEmpty()) return
+
+        runtime.retiredSeedIds.forEach { retiredSeedId ->
+            runtime.observationJobs.remove(retiredSeedId)?.cancel()
+            resolveSimStoredAudioFile(runtime.context, retiredSeedId)?.delete()
+            simArtifactFile(runtime.context, retiredSeedId).delete()
+        }
+
+        val retainedFiles = runtime.audioFiles.value.filterNot { it.id in runtime.retiredSeedIds }
+        if (retainedFiles == runtime.audioFiles.value) return
+
+        runtime.audioFiles.value = retainedFiles
+        runtime.metadataFile.parentFile?.mkdirs()
+        runtime.metadataFile.writeText(runtime.json.encodeToString(retainedFiles))
     }
 
     suspend fun importDownloadedBadgeAudio(filename: String, downloadedFile: File) {

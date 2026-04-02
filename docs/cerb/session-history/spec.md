@@ -3,6 +3,7 @@
 > **Cerb-compliant spec** — Session metadata persistence and History Drawer backend.
 > **OS Layer**: SSD
 > **State**: ✅ SHIPPED
+> **Behavioral UX Authority Above This Doc**: [`docs/core-flow/base-runtime-ux-surface-governance-flow.md`](../../core-flow/base-runtime-ux-surface-governance-flow.md) (`UX.HISTORY.*`)
 
 ---
 

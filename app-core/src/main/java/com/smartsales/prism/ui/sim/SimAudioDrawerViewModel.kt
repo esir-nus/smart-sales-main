@@ -136,39 +136,6 @@ class SimAudioDrawerViewModel @Inject constructor(
         }
     }
 
-    fun seedDebugFailureScenario() {
-        viewModelScope.launch {
-            try {
-                repository.seedDebugFailureScenario()
-                _uiEvents.emit("调试失败场景已就绪")
-            } catch (e: Exception) {
-                _uiEvents.emit(e.message ?: "调试失败场景创建失败")
-            }
-        }
-    }
-
-    fun seedDebugMissingSectionsScenario() {
-        viewModelScope.launch {
-            try {
-                repository.seedDebugMissingSectionsScenario()
-                _uiEvents.emit("缺失区块调试场景已就绪")
-            } catch (e: Exception) {
-                _uiEvents.emit(e.message ?: "缺失区块调试场景创建失败")
-            }
-        }
-    }
-
-    fun seedDebugFallbackScenario() {
-        viewModelScope.launch {
-            try {
-                repository.seedDebugFallbackScenario()
-                _uiEvents.emit("回退展示调试场景已就绪")
-            } catch (e: Exception) {
-                _uiEvents.emit(e.message ?: "回退展示调试场景创建失败")
-            }
-        }
-    }
-
     fun syncFromBadgeManually() {
         if (_isSyncing.value) {
             return
@@ -197,7 +164,7 @@ class SimAudioDrawerViewModel @Inject constructor(
             try {
                 val outcome = repository.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
                 if (outcome.skippedReason != SimBadgeSyncSkippedReason.ALREADY_RUNNING) {
-                    _uiEvents.emit(simBadgeSyncSuccessMessage(outcome.importedCount))
+                    _uiEvents.emit(simBadgeSyncSuccessMessage(outcome))
                 }
             } catch (e: Exception) {
                 Log.w(

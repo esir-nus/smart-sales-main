@@ -12,6 +12,7 @@ import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 import com.smartsales.prism.domain.scheduler.ScheduledTask
+import com.smartsales.prism.domain.mapper.TaskMemoryMapper
 import com.smartsales.core.pipeline.*
 
 /**
@@ -60,7 +61,10 @@ class SchedulerCoordinator @Inject constructor(
 
         expiredTasks.forEach { task ->
             // Phase 3 Cross-Off: Migrate to Memory, Delete from Task
-            val memoryEntry = com.smartsales.prism.domain.mapper.TaskMemoryMapper.toMemoryEntry(task)
+            val memoryEntry = TaskMemoryMapper.toMemoryEntry(
+                task = task,
+                completionSource = TaskMemoryMapper.COMPLETION_SOURCE_AUTO_EXPIRED
+            )
             memoryRepository.save(memoryEntry)
             taskRepository.deleteItem(task.id)
             alarmScheduler.cancelReminder(task.id)

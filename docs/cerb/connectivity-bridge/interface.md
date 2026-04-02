@@ -2,7 +2,7 @@
 
 > **Blackbox contract** — For consumers (Scheduler, Badge Audio Pipeline). Don't read implementation.
 > **Status**: Active supporting interface
-> **Last Updated**: 2026-03-31
+> **Last Updated**: 2026-04-02
 
 ---
 
@@ -36,6 +36,9 @@ interface ConnectivityBridge {
     /**
      * List all WAV files currently stored on the badge.
      * 
+     * Reuses the current runtime endpoint when one has already been confirmed;
+     * normal HTTP sync must not trigger repeated BLE Wi‑Fi status queries.
+     *
      * @return List of filenames (e.g., ["rec1.wav", "rec2.wav"]) or error
      */
     suspend fun listRecordings(): Result<List<String>>
@@ -59,12 +62,14 @@ interface ConnectivityBridge {
     /**
      * Check if badge is connected and reachable.
      * Performs pre-flight check (BLE + HTTP).
+     * Reuses the current runtime endpoint unless that snapshot has been invalidated.
      */
     suspend fun isReady(): Boolean
     
     /**
      * Delete a WAV file from badge after successful processing.
      * Called after transcription completes.
+     * Reuses the current runtime endpoint unless that snapshot has been invalidated.
      */
     suspend fun deleteRecording(filename: String): Boolean
 }
@@ -165,9 +170,10 @@ sealed class WifiConfigResult {
 | `connectionState` | Always emits current state immediately on collect |
 | `managerStatus` | Manager-only richer BLE/Wi‑Fi diagnostic state; no shell-routing authority |
 | `downloadRecording` | Rate-limited, max 1 concurrent download |
+| `listRecordings` | Reuses the active runtime endpoint; no repeated BLE Wi‑Fi query in the normal happy path |
 | `recordingNotifications` | Hot flow, buffered (1), no replay |
-| `isReady()` | Pre-flight check with 3s timeout |
-| `deleteRecording` | Idempotent, returns true if file removed or didn't exist |
+| `isReady()` | Pre-flight check with 3s timeout; may refresh endpoint only when the active snapshot is missing or invalidated |
+| `deleteRecording` | Idempotent, returns true if file removed or didn't exist; reuses the active runtime endpoint when valid |
 
 `BadgeConnectionState.Connected` means the badge session is actually usable:
 persistent GATT notification listening is active and the badge has valid network reachability.
@@ -176,6 +182,9 @@ persistent GATT notification listening is active and the badge has valid network
 
 - `BlePairedNetworkUnknown`: BLE is still held, but Wi‑Fi readiness is not yet confirmed
 - `BlePairedNetworkOffline`: BLE is still held, but the badge reported no usable IP / network
+
+Normal badge HTTP work (`/list`, `/download`, `/delete`) should reuse the current runtime endpoint snapshot.
+Repeated BLE `wifi#address#ip#name` querying is not part of the normal sync path.
 
 `ConnectivityService.reconnect()` may return `WifiMismatch` in either of these deterministic reconnect cases:
 

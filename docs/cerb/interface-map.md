@@ -4,7 +4,7 @@
 >
 > **Purpose**: Module ownership + data flow. Read this BEFORE any cross-module change.
 > **Rule**: If data belongs to Module B, query B's interface at runtime. Don't store B's data on A's model.
-> **Last Updated**: 2026-03-31 (Audio drawer / badge pipeline sync correction; connectivity debug APK host)
+> **Last Updated**: 2026-04-02 (RuntimeShell dynamic-island arbitration sync; audio drawer / badge pipeline sync correction; connectivity debug APK host)
 >
 > **Status Legend**: ✅ = Shipped (Real impl) · 📐 = Interface only (Fake impl) · 🔲 = Not yet coded
 
@@ -103,14 +103,24 @@ User-facing features. Each receives processed results from Orchestrator (Layer 3
 
 > **Domain vs UI Decoupling Rule (Wave 13)**: Features in Layer 4 (e.g., Scheduler, CRM) MUST define their own internal UI State projections (e.g., `SchedulerUiState`). They MUST NOT leak `app-core` ViewModels or UI State flags directly into Layer 2 Domain contracts. The Domain contract (`ScheduledTask`) is the SSD truth; the UI translates it.
 
-> **Dynamic Island ownership rule**: the island owns only shell-level presentation and the tap-to-open entrypoint. Scheduler remains the owner of task truth, prioritization, and drawer behavior.
+> **Dynamic Island ownership rule**: the island owns only shell-level presentation and the shell entrypoint. Scheduler remains the owner of task truth, prioritization, and drawer behavior, while connectivity transport truth remains outside the island renderer.
+
+### RuntimeShell dynamic-island arbitration edge (2026-04-02)
+
+The current base-runtime/SIM shell introduces one narrow shell-owned arbitration edge:
+
+- `RuntimeShell` owns visible-lane arbitration for the center-slot Dynamic Island
+- scheduler content still arrives from scheduler-owned `buildSimDynamicIslandItems(...)` projection
+- connectivity takeover uses `ConnectivityViewModel.connectionState`, which is the shell-visible transport truth fed by `ConnectivityBridge`
+- tap routing follows the visible lane back into shell-owned entry handlers, while downstream scheduler drawer and connectivity manager behavior remain owned by their existing modules
+- the connected battery badge is still provisional and comes from `ConnectivityViewModel.batteryLevel`; real bridge-backed battery sourcing remains explicit follow-up debt
 
 ### SIM T8.0 follow-up ownership edge
 
 The SIM post-closeout scheduler follow-up mini-wave introduces one explicit SIM-only cross-lane edge:
 
-- `BadgeAudioPipeline` scheduler completion may create a SIM shell-owned follow-up binding
-- `SimShell` / `SimAgentViewModel` may host the follow-up session and task selection UI
+- `BadgeAudioPipeline` scheduler completion may create a shell-owned follow-up binding
+- `RuntimeShell` / `SimAgentViewModel` may host the follow-up session and task selection UI
 - actual task mutation truth still routes through scheduler-owned collaborators (`ScheduledTaskRepository`, conflict check, reminder stack)
 - global follow-up candidate-space truth may route through `ActiveTaskRetrievalIndex`, which remains scheduler-owned and derived from canonical tasks rather than chat/session memory
 
@@ -132,11 +142,11 @@ Interpretation:
 
 Current wrapper-debt hosts tracked in code/docs:
 
-- `AgentShell.kt`
 - `AgentViewModel.kt`
 - `SchedulerViewModel.kt`
 
-These may remain as compatibility hosts, but current shell/scheduler/audio truth routes through shared docs rather than through those host files.
+The former split-era shell hosts were retired on 2026-04-01 when production moved to `MainActivity -> RuntimeShell`.
+Remaining wrapper debt may remain as compatibility hosts, but current shell/scheduler/audio truth routes through shared docs rather than through those host files.
 
 ### Connectivity debug host rule (2026-03-31)
 

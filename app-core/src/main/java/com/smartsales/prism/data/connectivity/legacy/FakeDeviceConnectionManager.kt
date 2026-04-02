@@ -40,6 +40,7 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
     var forgetCalls = 0
     var autoReconnectCalls = 0
     var forceReconnectCalls = 0
+    var queryNetworkStatusCalls = 0
     
     override fun selectPeripheral(peripheral: BlePeripheral) {
         selectCalls.add(peripheral)
@@ -69,7 +70,10 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
     
     override suspend fun requestHotspotCredentials(): Result<WifiCredentials> = stubHotspotResult
     
-    override suspend fun queryNetworkStatus(): Result<DeviceNetworkStatus> = stubNetworkResult
+    override suspend fun queryNetworkStatus(): Result<DeviceNetworkStatus> {
+        queryNetworkStatusCalls++
+        return stubNetworkResult
+    }
 
     override suspend fun confirmManualWifiProvision(credentials: WifiCredentials): ConnectionState {
         confirmManualWifiProvisionCalls += credentials
@@ -117,5 +121,6 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
         forgetCalls = 0
         autoReconnectCalls = 0
         forceReconnectCalls = 0
+        queryNetworkStatusCalls = 0
     }
 }

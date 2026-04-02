@@ -2,7 +2,7 @@
 
 > **Purpose**: BLE + HTTP protocol between Android app and ESP32 badge  
 > **Source of Truth**: `reference-source/webserver-test.c` + `reference-source/bluetooch.py`  
-> **Last Updated**: 2026-03-22
+> **Last Updated**: 2026-04-02
 
 ---
 
@@ -34,10 +34,9 @@ Communication happens via:
 
 | Parameter | Value | Enforced By |
 |-----------|-------|-------------|
-| **Network query TTL** | 2s | `DeviceConnectionManager.queryNetworkStatus()` |
-| **Polling interval** | 10s | `BadgeStateMonitor.POLL_INTERVAL_MS` |
-| **Min poll gap** | 5s | `BadgeStateMonitor.MIN_POLL_GAP_MS` |
-| **Max consecutive failures** | 3 | `BadgeStateMonitor.MAX_CONSECUTIVE_FAILURES` |
+| **BLE query floor** | 2s | `RateLimitedBleGateway.MIN_QUERY_INTERVAL_MS` |
+| **Foreground query mode** | Event-driven only | connect/reconnect/setup/manual repair/explicit refresh |
+| **HTTP endpoint reuse** | Current runtime only | `RealConnectivityBridge` active endpoint snapshot |
 | **Inter-command gap** | 300ms | `GattBleGateway` (WiFi provision steps) |
 
 **Offline detection**: Response of `wifi#address#0.0.0.0#...` indicates badge has no WiFi.

@@ -3,7 +3,8 @@
 > **Cerb-compliant spec** — Prism-safe wrapper for legacy BLE + HTTP connectivity.
 > **OS Layer**: Infrastructure (Layer 1) — Leaf service, no upstream dependencies
 > **Status**: SHIPPED
-> **Last Updated**: 2026-03-31
+> **Last Updated**: 2026-04-02
+> **Behavioral UX Authority Above This Doc**: [`docs/core-flow/base-runtime-ux-surface-governance-flow.md`](../../core-flow/base-runtime-ux-surface-governance-flow.md) (`UX.CONNECTIVITY.*`)
 
 ---
 
@@ -47,20 +48,21 @@ Connectivity Bridge provides a **thin, Prism-compatible interface** to legacy `f
 
 ---
 
-## Rate Limiting Policy (PRESERVED)
+## ESP32 Traffic Policy (PRESERVED)
 
 > [!CAUTION]
 > **ESP32 overload protection**. Do NOT remove or weaken these limits.
 
 | Parameter | Value | Enforcement |
 |-----------|-------|-------------|
-| **Network query TTL** | 2s | `queryNetworkStatus()` |
-| **Polling interval** | 10s | Badge state monitor |
-| **Min poll gap** | 5s | Prevents burst |
-| **Max consecutive failures** | 3 | Circuit breaker |
+| **BLE query floor** | 2s | `RateLimitedBleGateway.MIN_QUERY_INTERVAL_MS` |
+| **Foreground query mode** | Event-driven only | connect/reconnect/setup/manual repair/explicit refresh |
+| **HTTP endpoint reuse** | Current runtime only | `RealConnectivityBridge` active endpoint snapshot |
 | **Inter-command gap** | 300ms | BLE command spacing |
 
 **Offline detection**: `wifi#address#0.0.0.0#...` indicates badge has no WiFi. This is a valid offline signal and must not be treated as a parser failure.
+
+`/list`, `/download`, and `/delete` remain valid normal HTTP traffic. The overload signature to avoid is repeated BLE `wifi#address#ip#name` querying in the background.
 
 ## Formal On-Device Debug Path
 
@@ -223,13 +225,14 @@ Reconnect rule:
 
 - reconnect must feed `BadgeStateMonitor` immediately after persistent GATT reconnect succeeds
 - reconnect must publish the foreground network-query result into the monitor synchronously
-- manager-only BLE/Wi‑Fi diagnostics must not wait for the next background poll tick to become visible
+- manager-only BLE/Wi‑Fi diagnostics must not wait for a background poll tick to become visible
+- reconnect/setup/manual repair may use bounded foreground confirmation loops, but the runtime must not resume continuous BLE Wi‑Fi polling after those checks complete
 - connectivity UI must treat reconnect and manual Wi‑Fi repair as one exclusive foreground operation so duplicate taps do not stack concurrent repair attempts
 
 Reconnect credential rule:
 
-- target firmware does not persist Wi‑Fi credentials across power loss / reconnect
-- app-side `SessionStore` therefore owns the remembered Wi‑Fi list
+- target firmware stores one last-working Wi‑Fi credential and auto-reconnects itself after reconnect / power recovery
+- app-side `SessionStore` still owns the multi-network remembered Wi‑Fi list
 - app may store multiple known networks, keyed by exact normalized SSID
 - when BLE reconnect succeeds, the app must always align the badge to the phone's current Wi‑Fi SSID:
   - read the phone's current Wi‑Fi SSID
@@ -249,6 +252,8 @@ Reconnect credential rule:
 - manual repair must not route back to `WIFI_MISMATCH` merely because phone Wi‑Fi is unreadable/unavailable or because the badge is still offline during the bounded confirmation window
 - if the user closes the connectivity surface mid-repair, only the transient override is cleared; underlying bridge/manager truth remains authoritative on next reopen
 - reconnect foreground network query must tolerate the BLE 2s minimum query floor and retry after the guard delay instead of failing immediately on a throttle timeout
+- badge IP is reused only as an in-memory active runtime endpoint snapshot; the app must not persist a last-known badge IP across sessions
+- HTTP sync/delete flows should reuse that active runtime endpoint instead of re-querying BLE Wi‑Fi status before every `/list` / `/download` / `/delete`
 - shared transport readiness stays strict: BLE-held + Wi‑Fi-offline is not `Connected`
 
 #### Implementation Status
@@ -270,7 +275,7 @@ Reconnect credential rule:
 | **1** | Interface + Fake | ✅ SHIPPED | `ConnectivityBridge` interface, `FakeConnectivityBridge` |
 | **2** | Real Implementation (Backend) | ✅ SHIPPED | `RealConnectivityBridge` wrapping legacy |
 | **2.5** | UI Wiring | ✅ SHIPPED | `RealConnectivityService`, DI binding, modal integration, `NeedsSetup` routing |
-| **2.7** | Session Persistence + Soft Disconnect | ✅ SHIPPED | `OnboardingGate`, `SessionStore`, `disconnectBle()`, `unpair()` |
+| **2.7** | Session Persistence + Soft Disconnect | ✅ SHIPPED | `BaseRuntimeOnboardingGate`, `SessionStore`, `disconnectBle()`, `unpair()` |
 | **3** | Recording Log Handler | ✅ SHIPPED | `log#YYYYMMDD_HHMMSS` BLE listener, notification flow |
 | **4** | Battery Level Reporting | 🔲 | Real BLE battery characteristic (pending hardware) |
 
@@ -336,7 +341,7 @@ Reconnect credential rule:
 
 ### Problem Summary
 
-1. **Onboarding reset on app restart**: `AgentMainActivity` used `rememberSaveable` → not persisted across process death → always showed onboarding
+1. **Onboarding reset on app restart**: the old split-era root used ephemeral UI state → not persisted across process death → always showed onboarding
 2. **Session lost on disconnect**: `DeviceConnectionManager` stored BLE session in-memory only → lost after app restart → reconnection impossible
 3. **Disconnect nuked session**: `disconnect()` called `forgetDevice()` → cleared session → forced full re-onboarding
 
@@ -344,7 +349,7 @@ Reconnect credential rule:
 
 | Fix | Component | Implementation |
 |-----|-----------|----------------|
-| **1. Onboarding Gate** | `OnboardingGate` (Prism-native) | SharedPreferences-backed `StateFlow<Boolean>`, survives process death |
+| **1. Onboarding Gate** | `BaseRuntimeOnboardingGate` | SharedPreferences-backed `StateFlow<Boolean>`, survives process death and now bridges the former split-era gate flags |
 | **2. Session Store** | `SessionStore` interface + impls | Persists `BleSession` + `WifiCredentials` to SharedPrefs (production) or memory (tests) |
 | **3. Soft Disconnect** | `disconnectBle()` vs `forgetDevice()` | `disconnectBle()` keeps session (reconnect possible), `forgetDevice()` clears (requires onboarding) |
 
@@ -367,7 +372,7 @@ Reconnect credential rule:
 ### Exit Criteria
 
 - **Exit Criteria**:
-  - [x] `OnboardingGate` with SharedPreferences persistence
+  - [x] `BaseRuntimeOnboardingGate` with SharedPreferences persistence
   - [x] `SessionStore` interface + `SharedPrefsSessionStore` + `InMemorySessionStore`
   - [x] `DefaultDeviceConnectionManager` loads session on init, saves on provisioning success, clears on unpair
   - [x] `disconnectBle()` added to `DeviceConnectionManager` interface
@@ -380,18 +385,18 @@ Reconnect credential rule:
 - **Test Cases**:
   - [x] Unit: `DefaultDeviceConnectionManagerTest` with `InMemorySessionStore`
   - [ ] L2: Fresh install → onboarding shown
-  - [ ] L2: Complete onboarding → force-close app → relaunch → **AgentShell shown (not onboarding)**
+  - [ ] L2: Complete onboarding → force-close app → relaunch → **RuntimeShell shown (not onboarding)**
   - [ ] L2: Disconnect → reconnect → **reconnects without onboarding**
 
 ### Files Changed
 
 **New** (3):
-- `app-core/src/main/java/com/smartsales/prism/data/onboarding/OnboardingGate.kt`
+- `app-core/src/main/java/com/smartsales/prism/data/onboarding/BaseRuntimeOnboardingGate.kt`
 - `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/SessionStore.kt`
 - `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/SessionStoreImpl.kt`
 
 **Modified** (11):
-- `app-core/src/main/java/com/smartsales/prism/AgentMainActivity.kt`
+- `app-core/src/main/java/com/smartsales/prism/MainActivity.kt`
 - `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/DeviceConnectionManager.kt`
 - `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/ConnectivityModule.kt`
 - `app-core/src/test/java/com/smartsales/prism/data/connectivity/legacy/DefaultDeviceConnectionManagerTest.kt`

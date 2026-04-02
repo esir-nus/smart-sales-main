@@ -53,10 +53,6 @@ internal class SimAudioRepositoryTranscriptionSupport(
             val fileToTranscribe = resolveSimStoredAudioFile(runtime.context, audioId)
                 ?: throw Exception("找不到 SIM 本地音频实体")
 
-            if (isSimDebugFailureScenario(audioId)) {
-                throw Exception(DEBUG_FAILURE_SCENARIO_MESSAGE)
-            }
-
             val objectKey = "smartsales/sim/audio/${System.currentTimeMillis()}/${fileToTranscribe.name}"
             val uploadResult = runtime.ossUploader.upload(fileToTranscribe, objectKey)
             val publicUrl = when (uploadResult) {

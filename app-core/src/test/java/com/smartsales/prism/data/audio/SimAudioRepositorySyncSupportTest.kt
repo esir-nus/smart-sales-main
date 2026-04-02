@@ -3,13 +3,15 @@ package com.smartsales.prism.data.audio
 import android.content.Context
 import com.smartsales.core.util.Result
 import com.smartsales.data.oss.OssUploader
+import com.smartsales.prism.domain.audio.AudioFile
+import com.smartsales.prism.domain.audio.AudioSource
+import com.smartsales.prism.domain.audio.TranscriptionStatus
 import com.smartsales.prism.domain.connectivity.BadgeConnectionState
 import com.smartsales.prism.domain.connectivity.BadgeManagerStatus
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.connectivity.RecordingNotification
 import com.smartsales.prism.domain.connectivity.WavDownloadResult
 import com.smartsales.prism.domain.tingwu.TingwuPipeline
-import java.io.File
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
@@ -115,6 +117,104 @@ class SimAudioRepositorySyncSupportTest {
     }
 
     @Test
+    fun `manual sync returns device empty when badge list is empty`() = runTest {
+        connectivityBridge.isReadyResult = true
+        connectivityBridge.listResult = Result.Success(emptyList())
+
+        val outcome = syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+
+        assertEquals(SimBadgeSyncResultBranch.DEVICE_EMPTY, outcome.resultBranch)
+        assertEquals(0, outcome.importedCount)
+    }
+
+    @Test
+    fun `manual sync returns already present when listed files already exist locally`() = runTest {
+        connectivityBridge.isReadyResult = true
+        connectivityBridge.listResult = Result.Success(listOf("log#20260327_135948"))
+        runtime.audioFiles.value = listOf(
+            AudioFile(
+                id = "badge-1",
+                filename = "log_20260327_135948.wav",
+                timeDisplay = "Now",
+                source = AudioSource.SMARTBADGE,
+                status = TranscriptionStatus.TRANSCRIBED
+            )
+        )
+
+        val outcome = syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+
+        assertEquals(SimBadgeSyncResultBranch.ALREADY_PRESENT, outcome.resultBranch)
+        assertEquals(0, outcome.importedCount)
+        assertFalse(connectivityBridge.calls.any { it.startsWith("downloadRecording:") })
+    }
+
+    @Test
+    fun `manual sync returns imported when new badge file downloads successfully`() = runTest {
+        connectivityBridge.isReadyResult = true
+        connectivityBridge.listResult = Result.Success(listOf("log#20260327_135948"))
+        connectivityBridge.downloadResults["log_20260327_135948.wav"] = WavDownloadResult.Success(
+            localFile = tempFolder.newFile("downloaded.wav").apply { writeText("audio") },
+            originalFilename = "log_20260327_135948.wav",
+            sizeBytes = 2048L
+        )
+
+        val outcome = syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+
+        assertEquals(SimBadgeSyncResultBranch.IMPORTED, outcome.resultBranch)
+        assertEquals(1, outcome.importedCount)
+        assertEquals(0, outcome.skippedEmptyCount)
+        assertTrue(
+            runtime.audioFiles.value.any { it.filename == "log_20260327_135948.wav" }
+        )
+    }
+
+    @Test
+    fun `manual sync skips empty recordings below 1KB threshold`() = runTest {
+        connectivityBridge.isReadyResult = true
+        connectivityBridge.listResult = Result.Success(listOf("log#20260327_140000", "log#20260327_140100"))
+        val emptyFile = tempFolder.newFile("empty.wav")
+        val normalFile = tempFolder.newFile("normal.wav").apply { writeText("audio-content") }
+        connectivityBridge.downloadResults["log_20260327_140000.wav"] = WavDownloadResult.Success(
+            localFile = emptyFile,
+            originalFilename = "log_20260327_140000.wav",
+            sizeBytes = 44L
+        )
+        connectivityBridge.downloadResults["log_20260327_140100.wav"] = WavDownloadResult.Success(
+            localFile = normalFile,
+            originalFilename = "log_20260327_140100.wav",
+            sizeBytes = 2048L
+        )
+
+        val outcome = syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+
+        assertEquals(SimBadgeSyncResultBranch.IMPORTED, outcome.resultBranch)
+        assertEquals(1, outcome.importedCount)
+        assertEquals(1, outcome.skippedEmptyCount)
+        assertTrue(runtime.audioFiles.value.any { it.filename == "log_20260327_140100.wav" })
+        assertFalse(runtime.audioFiles.value.any { it.filename == "log_20260327_140000.wav" })
+    }
+
+    @Test
+    fun `manual sync treats pipeline ingested recording as already present`() = runTest {
+        connectivityBridge.isReadyResult = true
+        connectivityBridge.listResult = Result.Success(listOf("log#20260331_101500"))
+        val tempAudio = tempFolder.newFile("badge_temp.wav").apply {
+            writeText("audio-bytes")
+        }
+        SimBadgeAudioPipelineIngestSupport(runtime).ingestCompletedRecording(
+            filename = "log_20260331_101500.wav",
+            localFile = tempAudio,
+            transcript = "客户确认下周二复盘。"
+        )
+
+        val outcome = syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+
+        assertEquals(SimBadgeSyncResultBranch.ALREADY_PRESENT, outcome.resultBranch)
+        assertEquals(0, outcome.importedCount)
+        assertFalse(connectivityBridge.calls.any { it.startsWith("downloadRecording:") })
+    }
+
+    @Test
     fun `manual sync suppresses tombstoned badge filenames instead of reimporting them`() = runTest {
         connectivityBridge.isReadyResult = true
         connectivityBridge.listResult = Result.Success(listOf("log_20260327_135948.wav"))
@@ -123,6 +223,7 @@ class SimAudioRepositorySyncSupportTest {
 
         val outcome = syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
 
+        assertEquals(SimBadgeSyncResultBranch.ALREADY_PRESENT, outcome.resultBranch)
         assertEquals(0, outcome.importedCount)
         assertEquals(setOf("log_20260327_135948.wav"), storeSupport.getPendingBadgeDeletesSnapshot())
         assertTrue(connectivityBridge.calls.contains("deleteRecording:log_20260327_135948.wav"))
@@ -138,6 +239,7 @@ class SimAudioRepositorySyncSupportTest {
 
         val outcome = syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
 
+        assertEquals(SimBadgeSyncResultBranch.ALREADY_PRESENT, outcome.resultBranch)
         assertEquals(0, outcome.importedCount)
         assertTrue(storeSupport.getPendingBadgeDeletesSnapshot().isEmpty())
         assertTrue(connectivityBridge.calls.contains("deleteRecording:log_20260327_135948.wav"))

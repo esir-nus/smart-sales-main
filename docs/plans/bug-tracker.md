@@ -40,7 +40,7 @@
 - `IP#0.0.0.0` is a valid badge-offline result, not a parser error.
 - Time sync uses badge `tim#get` and app response `tim#YYYYMMDDHHMMSS`.
 - Wave 10 already hardened connection-truth reporting so BLE-only connection success should not be treated as fully healthy transport when persistent notification listening is absent.
-- Firmware team confirmed the badge never stores Wi‑Fi credentials; deterministic reconnect must therefore replay app-stored credentials when possible.
+- Firmware behavior for the active ESP32 badge: the badge stores one last-working Wi‑Fi credential and auto-reconnects itself; the app still owns the multi-network remembered credential list.
 
 ## Current Active Bugs
 
@@ -172,11 +172,12 @@
 - Status: `Fix in progress`
 - Affected layer: onboarding pairing, provisioning, NUS notification/status handling
 - First seen: 2026-03-26
-- Last updated: 2026-03-26
+- Last updated: 2026-04-02
 - Current hypothesis:
   - The earlier failure was caused by app-side provisioning completion logic expecting an immediate BLE ack and falling back to a direct `6E400003...` read that the target firmware may not support.
 - Latest attempted fix:
-  - The app now follows the documented two-step `SD#...` -> `PD#...` write path and relies on later `wifi#address#ip#name` polling instead of an immediate provisioning-status read.
+  - The app now follows the documented two-step `SD#...` -> `PD#...` write path and relies on bounded foreground `wifi#address#ip#name` confirmation instead of an immediate provisioning-status read.
+  - Continuous BLE Wi‑Fi polling is no longer part of the normal post-provisioning runtime.
 - Next action:
   - Re-run physical-badge pairing/provisioning and capture whether the path now succeeds without the `读取特征失败: 6e400003...` signature.
 - Linked evidence:
@@ -193,10 +194,10 @@
 - Status: `Fix in progress`
 - Affected layer: reconnect state machine, session persistence, manager UI state mapping
 - First seen: 2026-03-26
-- Last updated: 2026-03-27
+- Last updated: 2026-04-02
 - Current hypothesis:
-  - Reconnect is technically succeeding at the BLE layer, but the badge legitimately returns `IP#0.0.0.0` because firmware never stores Wi‑Fi credentials.
-  - The app therefore needs deterministic credential replay rather than assuming badge-side Wi‑Fi memory.
+  - Reconnect is technically succeeding at the BLE layer, but the badge may still be offline or on the wrong SSID even though firmware retains one last-working Wi‑Fi credential.
+  - The app therefore still needs deterministic SSID alignment using its own multi-network credential store when the badge is offline or on a different network.
 - Latest attempted fix:
   - `SessionStore` now keeps multiple known Wi‑Fi credentials.
   - Reconnect now silently replays the exact remembered credential for the phone's current SSID when the badge reports `0.0.0.0`.
@@ -205,6 +206,7 @@
   - Reconnect now distinguishes `phone not on Wi‑Fi` from `phone Wi‑Fi connected but SSID unreadable`.
   - Reconnect foreground query now retries once after the BLE 2s query-floor timeout instead of failing immediately on throttle.
   - Manual Wi‑Fi repair no longer falls back into generic reconnect after `SD#...` / `PD#...`; it now uses a setup-aligned bounded online-confirmation loop against the submitted SSID.
+  - Badge network status is now passive/event-driven instead of background-polled, and HTTP `/list` / `/download` / `/delete` reuse the active runtime endpoint snapshot instead of re-querying BLE before every call.
   - Connected-vs-ready evidence diagnostics now log the manual-sync gate branch, `ConnectivityBridge.isReady()` preflight, badge network query result, resolved base URL, and HTTP reachability outcome under the existing `SmartSalesConn` / `AudioPipeline` capture tags.
 - Next action:
   - Revalidate on device with `adb logcat` capture that:

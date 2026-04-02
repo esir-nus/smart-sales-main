@@ -41,14 +41,14 @@ internal enum class SimVerticalGestureDirection {
     DOWN
 }
 
-internal fun canOpenSimSchedulerFromEdge(state: SimShellState): Boolean =
+internal fun canOpenSimSchedulerFromEdge(state: RuntimeShellState): Boolean =
     state.activeDrawer == null &&
         !state.showHistory &&
         state.activeConnectivitySurface == null &&
         !state.showSettings
 
 internal fun canOpenSimAudioFromEdge(
-    state: SimShellState,
+    state: RuntimeShellState,
     isImeVisible: Boolean
 ): Boolean = canOpenSimSchedulerFromEdge(state) && !isImeVisible
 

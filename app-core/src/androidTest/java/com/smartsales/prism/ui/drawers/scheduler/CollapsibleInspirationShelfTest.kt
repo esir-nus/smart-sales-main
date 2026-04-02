@@ -36,6 +36,38 @@ class CollapsibleInspirationShelfTest {
         assertEquals("i want to learn guitar", capturedTitle)
     }
 
+
+    @Test
+    fun simShelfUsesIconOnlyAskAiAffordance() {
+        var capturedTitle: String? = null
+
+        composeTestRule.setContent {
+            androidx.compose.runtime.CompositionLocalProvider(
+                LocalSchedulerDrawerVisuals provides schedulerDrawerVisualsFor(SchedulerDrawerVisualMode.SIM),
+                LocalSchedulerDrawerVisualMode provides SchedulerDrawerVisualMode.SIM
+            ) {
+                CollapsibleInspirationShelf(
+                    items = listOf(
+                        TimelineItem.Inspiration(
+                            id = "insp-1",
+                            timeDisplay = "💡",
+                            title = "i want to learn guitar"
+                        )
+                    ),
+                    isExpanded = true,
+                    onToggle = {},
+                    onDelete = {},
+                    onAskAI = { capturedTitle = it }
+                )
+            }
+        }
+
+        composeTestRule.onNodeWithText("Ask AI").assertDoesNotExist()
+        composeTestRule.onNodeWithContentDescription("Ask AI").assertExists().performClick()
+
+        assertEquals("i want to learn guitar", capturedTitle)
+    }
+
     @Test
     fun shelfAskAiHiddenWhenCallbackAbsent() {
         composeTestRule.setContent {

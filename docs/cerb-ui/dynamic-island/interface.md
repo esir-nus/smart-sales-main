@@ -1,7 +1,7 @@
 # Dynamic Island UI Interface
 
 > **Context Boundary**: `docs/cerb-ui/dynamic-island/`
-> **OS Layer**: Display-only shell projection with a single scheduler resume action
+> **OS Layer**: Shell-level one-line projection with scheduler and connectivity entry actions
 > **Status**: Active
 
 ## 1. Responsibility
@@ -12,8 +12,9 @@ The contract is intentionally small:
 
 - one hidden state
 - one visible state
-- one scheduler-backed item payload
-- one allowed tap action with optional scheduler target metadata
+- one one-line visible item payload
+- shell-owned lane and visual-state metadata
+- two allowed tap actions with optional scheduler target metadata
 
 ## 2. State Contract
 
@@ -28,12 +29,28 @@ sealed interface DynamicIslandUiState {
     data class Visible(val item: DynamicIslandItem) : DynamicIslandUiState
 }
 
+enum class DynamicIslandLane {
+    SCHEDULER,
+    CONNECTIVITY
+}
+
+enum class DynamicIslandVisualState {
+    SCHEDULER_UPCOMING,
+    SCHEDULER_CONFLICT,
+    SCHEDULER_IDLE,
+    CONNECTIVITY_CONNECTED,
+    CONNECTIVITY_DISCONNECTED,
+    CONNECTIVITY_RECONNECTING,
+    CONNECTIVITY_NEEDS_SETUP
+}
+
 data class DynamicIslandItem(
-    val sessionTitle: String,
-    val schedulerSummary: String,
-    val isConflict: Boolean = false,
-    val isIdleEntry: Boolean = false,
-    val tapAction: DynamicIslandTapAction
+    val sessionTitle: String = "",
+    val displayText: String,
+    val lane: DynamicIslandLane = DynamicIslandLane.SCHEDULER,
+    val visualState: DynamicIslandVisualState = DynamicIslandVisualState.SCHEDULER_UPCOMING,
+    val batteryPercentage: Int? = null,
+    val tapAction: DynamicIslandTapAction = DynamicIslandTapAction.OpenSchedulerDrawer()
 )
 
 data class DynamicIslandSchedulerTarget(
@@ -46,20 +63,26 @@ sealed interface DynamicIslandTapAction {
     data class OpenSchedulerDrawer(
         val target: DynamicIslandSchedulerTarget? = null
     ) : DynamicIslandTapAction
+
+    data object OpenConnectivityEntry : DynamicIslandTapAction
 }
 ```
 
 ## 4. Invariants
 
-- v1 content is scheduler-only
+- scheduler remains the default lane when no connectivity takeover is active
 - only one item may be visible at a time
 - the item stays one line even when content is long
 - overflow truncates rather than wrapping or marquee-scrolling
-- tap action is limited to `OpenSchedulerDrawer`
-- when a scheduler target is present, the shell should use it to land on the corresponding scheduler date page
+- visible-lane tap must follow the currently rendered item
+- downward drag is scheduler-only and is lawful only when the scheduler lane is visible
+- the RuntimeShell/SIM connectivity lane may reuse the same renderer without widening the surrounding header contract
+- connectivity takeover must use transport-truth `connectionState`, not manager-only refinement state
+- connected battery display is provisional and currently sourced from the shell/viewmodel mock value until a bridge-backed battery contract lands
 
 ## 5. You Should NOT
 
 - do not pass raw scheduler repositories or drawer state machines into the island component
 - do not let the island own scheduler task selection or mutation logic
-- do not add second-line subtitles or stacked lanes without updating this interface first
+- do not derive connectivity island behavior from `effectiveState`, manager-only BLE/Wi-Fi diagnostics, update-check branches, or Wi-Fi mismatch copy
+- do not add second-line subtitles, stacked lanes, or inline buttons without updating this interface first

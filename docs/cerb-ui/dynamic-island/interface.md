@@ -68,6 +68,8 @@ sealed interface DynamicIslandTapAction {
 }
 ```
 
+`batteryPercentage` remains provisional connected-lane data. It is consumed by shell-owned connected ambient chrome and must not be rendered as inline battery UI inside the one-line island body.
+
 ## 4. Invariants
 
 - scheduler remains the default lane when no connectivity takeover is active
@@ -79,6 +81,7 @@ sealed interface DynamicIslandTapAction {
 - the RuntimeShell/SIM connectivity lane may reuse the same renderer without widening the surrounding header contract
 - connectivity takeover must use transport-truth `connectionState`, not manager-only refinement state
 - connected battery display is provisional and currently sourced from the shell/viewmodel mock value until a bridge-backed battery contract lands
+- any connected battery presentation stays shell-owned ambient chrome outside the island body rather than inline island UI
 
 ## 5. You Should NOT
 

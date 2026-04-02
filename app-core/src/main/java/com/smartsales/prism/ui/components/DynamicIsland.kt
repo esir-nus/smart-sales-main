@@ -1,39 +1,28 @@
 package com.smartsales.prism.ui.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bluetooth
-import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.shape.RoundedCornerShape
 import com.smartsales.prism.domain.scheduler.ScheduledTask
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 
-private val DynamicIslandTextColor = Color.White.copy(alpha = 0.95f)
 private val DynamicIslandConflictColor = Color(0xFFF59E0B)
 private val DynamicIslandImmediateColor = Color(0xFFEF4444)
 private val DynamicIslandIdleColor = Color(0xFF38BDF8)
@@ -95,9 +84,6 @@ data class DynamicIslandItem(
 
     val isIdleEntry: Boolean
         get() = visualState == DynamicIslandVisualState.SCHEDULER_IDLE
-
-    val showsBattery: Boolean
-        get() = visualState == DynamicIslandVisualState.CONNECTIVITY_CONNECTED && batteryPercentage != null
 
     val usesPulse: Boolean
         get() = when (visualState) {
@@ -192,111 +178,71 @@ fun DynamicIsland(
     onTap: (DynamicIslandTapAction) -> Unit
 ) {
     if (state !is DynamicIslandUiState.Visible) return
-    val accentColor = state.item.resolveAccentColor()
-    val icon = when (state.item.lane) {
-        DynamicIslandLane.SCHEDULER -> Icons.Filled.Schedule
-        DynamicIslandLane.CONNECTIVITY -> Icons.Filled.Bluetooth
-    }
+    val chroma = state.item.resolveChroma()
 
-    PrismSurface(
-        modifier = modifier
-            .clickable {
-                onTap(state.item.tapAction)
-            },
-        shape = RoundedCornerShape(18.dp),
-        backgroundColor = accentColor.copy(alpha = 0.10f)
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center
     ) {
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                .defaultMinSize(minHeight = 28.dp)
+                .clickable { onTap(state.item.tapAction) }
+                .padding(horizontal = 14.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = accentColor,
-                modifier = Modifier.size(16.dp)
-            )
+            Canvas(modifier = Modifier.size(6.dp)) {
+                drawCircle(color = chroma.dot)
+            }
+            Box(modifier = Modifier.size(width = 8.dp, height = 1.dp))
             Text(
                 text = state.item.displayText,
-                modifier = Modifier.weight(1f),
-                style = MaterialTheme.typography.labelLarge,
-                color = DynamicIslandTextColor,
-                fontWeight = FontWeight.Medium,
+                style = TextStyle(
+                    brush = Brush.linearGradient(chroma.textGradient),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 0.5.sp
+                ),
                 maxLines = 1,
                 softWrap = false,
                 overflow = TextOverflow.Ellipsis
             )
-            state.item.batteryPercentage?.takeIf { state.item.showsBattery }?.let { percent ->
-                DynamicIslandBatteryIndicator(
-                    percentage = percent,
-                    accentColor = accentColor
-                )
-            }
         }
     }
 }
 
-@Composable
-private fun DynamicIslandBatteryIndicator(
-    percentage: Int,
-    accentColor: Color,
-    modifier: Modifier = Modifier
-) {
-    val boundedPercentage = percentage.coerceIn(0, 100)
-    Row(
-        modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .defaultMinSize(minWidth = 22.dp)
-                .border(
-                    width = 1.dp,
-                    color = accentColor.copy(alpha = 0.6f),
-                    shape = RoundedCornerShape(3.dp)
-                )
-                .drawBehind {
-                    drawRoundRect(
-                        color = accentColor.copy(alpha = 0.20f),
-                        size = Size(width = size.width * (boundedPercentage / 100f), height = size.height),
-                        cornerRadius = CornerRadius(3.dp.toPx(), 3.dp.toPx())
-                    )
-                }
-                .padding(horizontal = 4.dp, vertical = 1.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = boundedPercentage.toString(),
-                color = accentColor,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1
-            )
-        }
-        Box(
-            modifier = Modifier
-                .padding(start = 2.dp)
-                .size(width = 2.dp, height = 6.dp)
-                .background(
-                    color = accentColor.copy(alpha = 0.6f),
-                    shape = RoundedCornerShape(topEnd = 2.dp, bottomEnd = 2.dp)
-                )
-        )
-    }
-}
+private data class DynamicIslandChroma(
+    val dot: Color,
+    val textGradient: List<Color>
+)
 
-private fun DynamicIslandItem.resolveAccentColor(): Color {
+private fun DynamicIslandItem.resolveChroma(): DynamicIslandChroma {
     return when (visualState) {
-        DynamicIslandVisualState.SCHEDULER_IDLE -> DynamicIslandIdleColor
-        DynamicIslandVisualState.SCHEDULER_CONFLICT -> DynamicIslandConflictColor
-        DynamicIslandVisualState.SCHEDULER_UPCOMING -> DynamicIslandImmediateColor
-        DynamicIslandVisualState.CONNECTIVITY_CONNECTED -> DynamicIslandConnectedColor
-        DynamicIslandVisualState.CONNECTIVITY_DISCONNECTED -> DynamicIslandDisconnectedColor
+        DynamicIslandVisualState.SCHEDULER_IDLE -> DynamicIslandChroma(
+            dot = Color.White.copy(alpha = 0.42f),
+            textGradient = listOf(Color.White, Color(0xFFA0A0A5))
+        )
+        DynamicIslandVisualState.SCHEDULER_CONFLICT -> DynamicIslandChroma(
+            dot = DynamicIslandConflictColor,
+            textGradient = listOf(Color(0xFFC93400), DynamicIslandConflictColor)
+        )
+        DynamicIslandVisualState.SCHEDULER_UPCOMING -> DynamicIslandChroma(
+            dot = Color(0xFFFF453A),
+            textGradient = listOf(Color(0xFFFF8A84), Color(0xFFFF453A))
+        )
+        DynamicIslandVisualState.CONNECTIVITY_CONNECTED -> DynamicIslandChroma(
+            dot = DynamicIslandConnectedColor,
+            textGradient = listOf(Color(0xFFA4E38A), DynamicIslandConnectedColor)
+        )
+        DynamicIslandVisualState.CONNECTIVITY_DISCONNECTED -> DynamicIslandChroma(
+            dot = Color.White.copy(alpha = 0.30f),
+            textGradient = listOf(Color(0xFFA0A0A5), DynamicIslandDisconnectedColor)
+        )
         DynamicIslandVisualState.CONNECTIVITY_RECONNECTING,
-        DynamicIslandVisualState.CONNECTIVITY_NEEDS_SETUP -> DynamicIslandReconnectColor
+        DynamicIslandVisualState.CONNECTIVITY_NEEDS_SETUP -> DynamicIslandChroma(
+            dot = DynamicIslandReconnectColor,
+            textGradient = listOf(Color(0xFFFFD380), DynamicIslandReconnectColor)
+        )
     }
 }
 

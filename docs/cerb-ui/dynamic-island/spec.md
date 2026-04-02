@@ -38,6 +38,7 @@ Current contract:
 - it mounts inside the header, not below it
 - it stays one line and never expands vertically
 - it shows only one winning item at a time
+- the visible island body is borderless chroma-led text plus a state dot rather than a framed pill
 - it never introduces inline buttons, chips, or second-line subtitles
 - tap follows the currently visible lane
 - downward drag remains a scheduler-only entry gesture
@@ -87,7 +88,9 @@ Current connectivity copy:
 
 Current battery rule:
 
-- the connected connectivity lane may show a compact battery indicator
+- the connected connectivity lane may expose provisional battery data through shell-owned ambient chrome
+- RuntimeShell/SIM may render decorative left/right ambient flank icons when the connected lane is visible
+- the right ambient flank may use the provisional battery value, but it must remain outside the one-line island body
 - the current battery value is still provisional and comes from `ConnectivityViewModel.batteryLevel`
 - real bridge-backed battery sourcing is deferred and must be tracked as follow-up debt rather than implied as shipped truth
 

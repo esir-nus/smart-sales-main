@@ -37,6 +37,7 @@ The current empty-state shell includes only:
 - left: hamburger trigger
 - left: Smart Badge / device status badge
 - center: Dynamic Island host slot with scheduler as the default lane and RuntimeShell-local connectivity takeover when that lane is active
+- connected-state shell chrome may add decorative ambient flank icons around the centered island without changing the side utility layout
 - right: new-session `+`
 - floor: aurora background
 - bottom: floating input capsule

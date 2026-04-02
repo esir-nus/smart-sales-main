@@ -4,12 +4,18 @@ import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -34,7 +40,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -45,6 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -72,6 +78,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.CircularProgressIndicator
@@ -93,6 +100,10 @@ import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
 internal const val SIM_EMPTY_HOME_GREETING = "你好, SmartSales 用户"
+internal const val SIM_HEADER_LEFT_AMBIENT_ICON_TEST_TAG = "sim_header_left_ambient_icon"
+internal const val SIM_HEADER_RIGHT_AMBIENT_ICON_TEST_TAG = "sim_header_right_ambient_icon"
+
+private val SimHomeHeroAmbientEasing = CubicBezierEasing(0.2f, 0.8f, 0.2f, 1f)
 
 private data class SimHomeHeroPalette(
     val appBackground: Color,
@@ -519,6 +530,10 @@ private fun SimHomeHeroTopCap(
     onBoundsChanged: (Rect) -> Unit
 ) {
     val palette = rememberSimHomeHeroPalette()
+    val isDarkTheme = PrismThemeDefaults.isDarkTheme
+    val visibleItem = (dynamicIslandState as? DynamicIslandUiState.Visible)?.item
+    val showAmbientFlanks = visibleItem?.visualState == DynamicIslandVisualState.CONNECTIVITY_CONNECTED
+    val ambientBatteryPercentage = visibleItem?.batteryPercentage ?: 78
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -534,7 +549,7 @@ private fun SimHomeHeroTopCap(
             modifier = Modifier
                 .fillMaxWidth()
                 .shadow(
-                    elevation = if (PrismThemeDefaults.isDarkTheme) 0.dp else 1.dp,
+                    elevation = if (isDarkTheme) 0.dp else 1.dp,
                     shape = RectangleShape,
                     clip = false,
                     ambientColor = palette.monolithShadow,
@@ -542,58 +557,168 @@ private fun SimHomeHeroTopCap(
                 )
                 .background(palette.monolithBackground)
                 .drawBehind {
-                    drawLine(
-                        color = palette.monolithStroke,
-                        start = Offset(0f, size.height - 1f),
-                        end = Offset(size.width, size.height - 1f),
-                        strokeWidth = 1.dp.toPx()
-                    )
+                    if (!isDarkTheme) {
+                        drawLine(
+                            color = palette.monolithStroke,
+                            start = Offset(0f, size.height - 1f),
+                            end = Offset(size.width, size.height - 1f),
+                            strokeWidth = 1.dp.toPx()
+                        )
+                    }
                 }
                 .onGloballyPositioned { coordinates ->
                     onBoundsChanged(coordinates.boundsInRoot())
                 }
         ) {
-            Row(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .prismStatusBarPadding()
                     .height(SimHomeHeroTokens.HeaderHeight)
-                    .padding(horizontal = SimHomeHeroTokens.HeaderHorizontalPadding),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
             ) {
-                SimHomeHeroHeaderSlot {
-                    if (showMenuButton) {
-                        SimHomeHeroIconButton(
-                            icon = Icons.Filled.Menu,
-                            contentDescription = "Open menu",
-                            onClick = onMenuClick,
-                            modifier = Modifier.testTag(SIM_HEADER_MENU_BUTTON_TEST_TAG)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = SimHomeHeroTokens.HeaderHorizontalPadding),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SimHomeHeroHeaderSlot {
+                        if (showMenuButton) {
+                            SimHomeHeroIconButton(
+                                icon = Icons.Filled.Menu,
+                                contentDescription = "Open menu",
+                                onClick = onMenuClick,
+                                modifier = Modifier.testTag(SIM_HEADER_MENU_BUTTON_TEST_TAG)
+                            )
+                        }
+                    }
+                    Box(
+                        modifier = Modifier.weight(1f),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        SimHomeHeroDynamicIsland(
+                            state = dynamicIslandState,
+                            onTap = onSchedulerClick,
+                            enablePullGesture = enablePullGesture,
+                            onPullOpen = onPullOpen
                         )
                     }
+                    SimHomeHeroHeaderSlot {
+                        if (showNewSessionButton) {
+                            SimHomeHeroIconButton(
+                                icon = Icons.Filled.Add,
+                                contentDescription = "Start new chat",
+                                onClick = onNewSessionClick,
+                                modifier = Modifier.testTag(SIM_HEADER_NEW_CHAT_BUTTON_TEST_TAG)
+                            )
+                        }
+                    }
                 }
-                Box(
-                    modifier = Modifier.weight(1f),
-                    contentAlignment = Alignment.Center
+
+                SimHomeHeroAmbientFlankIcon(
+                    visible = showAmbientFlanks,
+                    alignment = Alignment.CenterStart,
+                    offsetX = SimHomeHeroTokens.AmbientIconHorizontalOffset,
+                    delayMillis = 100,
+                    testTag = SIM_HEADER_LEFT_AMBIENT_ICON_TEST_TAG
                 ) {
-                    SimHomeHeroDynamicIsland(
-                        state = dynamicIslandState,
-                        onTap = onSchedulerClick,
-                        enablePullGesture = enablePullGesture,
-                        onPullOpen = onPullOpen
+                    Icon(
+                        imageVector = Icons.Filled.Link,
+                        contentDescription = null,
+                        tint = Color(0xFF34C759),
+                        modifier = Modifier.size(SimHomeHeroTokens.AmbientLinkIconSize)
                     )
                 }
-                SimHomeHeroHeaderSlot {
-                    if (showNewSessionButton) {
-                        SimHomeHeroIconButton(
-                            icon = Icons.Filled.Add,
-                            contentDescription = "Start new chat",
-                            onClick = onNewSessionClick,
-                            modifier = Modifier.testTag(SIM_HEADER_NEW_CHAT_BUTTON_TEST_TAG)
-                        )
-                    }
+
+                SimHomeHeroAmbientFlankIcon(
+                    visible = showAmbientFlanks,
+                    alignment = Alignment.CenterEnd,
+                    offsetX = -SimHomeHeroTokens.AmbientIconHorizontalOffset,
+                    delayMillis = 0,
+                    testTag = SIM_HEADER_RIGHT_AMBIENT_ICON_TEST_TAG
+                ) {
+                    SimHomeHeroAmbientBatteryGlyph(
+                        percentage = ambientBatteryPercentage,
+                        accentColor = Color(0xFF34C759)
+                    )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun BoxScope.SimHomeHeroAmbientFlankIcon(
+    visible: Boolean,
+    alignment: Alignment,
+    offsetX: androidx.compose.ui.unit.Dp,
+    delayMillis: Int,
+    testTag: String,
+    content: @Composable () -> Unit
+) {
+    AnimatedVisibility(
+        visible = visible,
+        modifier = Modifier
+            .align(alignment)
+            .offset(x = offsetX),
+        enter = fadeIn(
+            animationSpec = tween(
+                durationMillis = 400,
+                delayMillis = delayMillis,
+                easing = SimHomeHeroAmbientEasing
+            )
+        ) + scaleIn(
+            animationSpec = tween(
+                durationMillis = 400,
+                delayMillis = delayMillis,
+                easing = SimHomeHeroAmbientEasing
+            ),
+            initialScale = 0.95f
+        ),
+        exit = fadeOut(
+            animationSpec = tween(
+                durationMillis = 300,
+                easing = SimHomeHeroAmbientEasing
+            )
+        ) + scaleOut(
+            animationSpec = tween(
+                durationMillis = 300,
+                easing = SimHomeHeroAmbientEasing
+            ),
+            targetScale = 0.95f
+        )
+    ) {
+        val transition = rememberInfiniteTransition(label = "sim_home_hero_ambient_breathe")
+        val breatheScale by transition.animateFloat(
+            initialValue = 0.95f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 1500, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "sim_home_hero_ambient_scale"
+        )
+        val breatheAlpha by transition.animateFloat(
+            initialValue = 0.35f,
+            targetValue = 0.7f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 1500, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse
+            ),
+            label = "sim_home_hero_ambient_alpha"
+        )
+
+        Box(
+            modifier = Modifier
+                .graphicsLayer {
+                    alpha = breatheAlpha
+                    scaleX = breatheScale
+                    scaleY = breatheScale
+                }
+                .testTag(testTag)
+        ) {
+            content()
         }
     }
 }
@@ -635,15 +760,6 @@ private fun SimHomeHeroDynamicIsland(
     ) {
         Row(
             modifier = Modifier
-                .shadow(
-                    elevation = if (PrismThemeDefaults.isDarkTheme) 0.dp else 3.dp,
-                    shape = CircleShape,
-                    clip = false,
-                    ambientColor = chroma.shadow,
-                    spotColor = chroma.shadow
-                )
-                .background(chroma.surface, CircleShape)
-                .border(1.dp, chroma.border, CircleShape)
                 .defaultMinSize(minHeight = 28.dp)
                 .clickable { onTap(currentItem.tapAction) }
                 .padding(
@@ -675,19 +791,12 @@ private fun SimHomeHeroDynamicIsland(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            currentItem.batteryPercentage?.takeIf { currentItem.showsBattery }?.let { battery ->
-                Box(modifier = Modifier.width(4.dp))
-                SimHomeHeroBatteryIndicator(
-                    percentage = battery,
-                    accentColor = chroma.batteryAccent ?: chroma.dot
-                )
-            }
         }
     }
 }
 
 @Composable
-private fun SimHomeHeroBatteryIndicator(
+private fun SimHomeHeroAmbientBatteryGlyph(
     percentage: Int,
     accentColor: Color
 ) {
@@ -695,37 +804,34 @@ private fun SimHomeHeroBatteryIndicator(
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
             modifier = Modifier
-                .defaultMinSize(minWidth = 22.dp, minHeight = 14.dp)
+                .size(
+                    width = SimHomeHeroTokens.AmbientBatteryWidth,
+                    height = SimHomeHeroTokens.AmbientBatteryHeight
+                )
                 .border(
-                    width = 1.dp,
-                    color = accentColor.copy(alpha = 0.6f),
-                    shape = RoundedCornerShape(3.dp)
+                    width = 1.5.dp,
+                    color = accentColor,
+                    shape = RoundedCornerShape(2.dp)
                 )
                 .drawBehind {
                     drawRoundRect(
-                        color = accentColor.copy(alpha = 0.20f),
+                        color = accentColor,
                         size = Size(width = size.width * (boundedPercentage / 100f), height = size.height),
-                        cornerRadius = CornerRadius(3.dp.toPx(), 3.dp.toPx())
+                        cornerRadius = CornerRadius(1.dp.toPx(), 1.dp.toPx())
                     )
-                }
-                .padding(horizontal = 4.dp, vertical = 1.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = boundedPercentage.toString(),
-                color = accentColor,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1
-            )
-        }
+                },
+            contentAlignment = Alignment.CenterStart
+        ) {}
         Box(
             modifier = Modifier
                 .padding(start = 2.dp)
-                .size(width = 2.dp, height = 6.dp)
+                .size(
+                    width = SimHomeHeroTokens.AmbientBatteryNubWidth,
+                    height = SimHomeHeroTokens.AmbientBatteryNubHeight
+                )
                 .background(
-                    color = accentColor.copy(alpha = 0.6f),
-                    shape = RoundedCornerShape(topEnd = 2.dp, bottomEnd = 2.dp)
+                    color = accentColor,
+                    shape = RoundedCornerShape(topEnd = 1.dp, bottomEnd = 1.dp)
                 )
         )
     }
@@ -733,11 +839,7 @@ private fun SimHomeHeroBatteryIndicator(
 
 private data class SimHomeHeroIslandChroma(
     val dot: Color,
-    val textGradient: List<Color>,
-    val surface: Color,
-    val border: Color,
-    val shadow: Color,
-    val batteryAccent: Color? = null
+    val textGradient: List<Color>
 ) {
     companion object {
         fun from(
@@ -748,68 +850,24 @@ private data class SimHomeHeroIslandChroma(
             return when (item.visualState) {
                 DynamicIslandVisualState.SCHEDULER_CONFLICT -> SimHomeHeroIslandChroma(
                     dot = Color(0xFFFFD60A),
-                    textGradient = listOf(Color(0xFFC93400), Color(0xFFFF9500)),
-                    surface = if (isDarkTheme) {
-                        Color(0x29FF9500)
-                    } else {
-                        Color(0x1AFF9500)
-                    },
-                    border = Color(0x33FF9500),
-                    shadow = Color(0x1FFF9500)
+                    textGradient = listOf(Color(0xFFC93400), Color(0xFFFF9500))
                 )
                 DynamicIslandVisualState.SCHEDULER_IDLE -> SimHomeHeroIslandChroma(
                     dot = palette.islandIdleDot,
-                    textGradient = listOf(palette.iconTint, palette.greetingSubtitle),
-                    surface = if (isDarkTheme) {
-                        Color.White.copy(alpha = 0.08f)
-                    } else {
-                        Color.Black.copy(alpha = 0.04f)
-                    },
-                    border = if (isDarkTheme) {
-                        Color.White.copy(alpha = 0.05f)
-                    } else {
-                        Color.Black.copy(alpha = 0.04f)
-                    },
-                    shadow = Color.Black.copy(alpha = if (isDarkTheme) 0f else 0.03f)
+                    textGradient = listOf(palette.iconTint, palette.greetingSubtitle)
                 )
                 DynamicIslandVisualState.CONNECTIVITY_CONNECTED -> SimHomeHeroIslandChroma(
                     dot = Color(0xFF34C759),
-                    textGradient = listOf(Color(0xFFA4E38A), Color(0xFF34C759)),
-                    surface = if (isDarkTheme) {
-                        Color(0x2134C759)
-                    } else {
-                        Color(0x1634C759)
-                    },
-                    border = Color(0x3334C759),
-                    shadow = Color(0x1F34C759),
-                    batteryAccent = Color(0xFF34C759)
+                    textGradient = listOf(Color(0xFFA4E38A), Color(0xFF34C759))
                 )
                 DynamicIslandVisualState.CONNECTIVITY_DISCONNECTED -> SimHomeHeroIslandChroma(
                     dot = Color.White.copy(alpha = 0.30f),
-                    textGradient = listOf(Color(0xFFA0A0A5), Color(0xFF86868B)),
-                    surface = if (isDarkTheme) {
-                        Color.White.copy(alpha = 0.08f)
-                    } else {
-                        Color.Black.copy(alpha = 0.04f)
-                    },
-                    border = if (isDarkTheme) {
-                        Color.White.copy(alpha = 0.05f)
-                    } else {
-                        Color.Black.copy(alpha = 0.04f)
-                    },
-                    shadow = Color.Black.copy(alpha = if (isDarkTheme) 0f else 0.03f)
+                    textGradient = listOf(Color(0xFFA0A0A5), Color(0xFF86868B))
                 )
                 DynamicIslandVisualState.CONNECTIVITY_RECONNECTING,
                 DynamicIslandVisualState.CONNECTIVITY_NEEDS_SETUP -> SimHomeHeroIslandChroma(
                     dot = Color(0xFFFF9F0A),
-                    textGradient = listOf(Color(0xFFFFD60A), Color(0xFFFF9F0A)),
-                    surface = if (isDarkTheme) {
-                        Color(0x29FF9F0A)
-                    } else {
-                        Color(0x1AFF9F0A)
-                    },
-                    border = Color(0x33FF9F0A),
-                    shadow = Color(0x1FFF9F0A)
+                    textGradient = listOf(Color(0xFFFFD60A), Color(0xFFFF9F0A))
                 )
                 DynamicIslandVisualState.SCHEDULER_UPCOMING -> SimHomeHeroIslandChroma(
                     dot = if (isDarkTheme) Color(0xFFFF453A) else Color(0xFFD70015),
@@ -817,18 +875,7 @@ private data class SimHomeHeroIslandChroma(
                         listOf(Color(0xFFFF8A84), Color(0xFFFF453A))
                     } else {
                         listOf(Color(0xFFD70015), Color(0xFFFF3B30))
-                    },
-                    surface = if (isDarkTheme) {
-                        Color(0x1AFF453A)
-                    } else {
-                        Color(0x14FF3B30)
-                    },
-                    border = if (isDarkTheme) {
-                        Color(0x26FF453A)
-                    } else {
-                        Color(0x26FF3B30)
-                    },
-                    shadow = Color(0x1FFF3B30)
+                    }
                 )
             }
         }
@@ -944,6 +991,7 @@ private fun SimHomeHeroBottomMonolith(
     onBoundsChanged: (Rect) -> Unit
 ) {
     val palette = rememberSimHomeHeroPalette()
+    val isDarkTheme = PrismThemeDefaults.isDarkTheme
     val context = LocalContext.current
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -986,7 +1034,7 @@ private fun SimHomeHeroBottomMonolith(
                 modifier = Modifier
                     .fillMaxWidth()
                     .shadow(
-                        elevation = if (PrismThemeDefaults.isDarkTheme) 0.dp else 2.dp,
+                        elevation = if (isDarkTheme) 0.dp else 2.dp,
                         shape = RectangleShape,
                         clip = false,
                         ambientColor = palette.monolithShadow,
@@ -994,12 +1042,14 @@ private fun SimHomeHeroBottomMonolith(
                     )
                     .background(palette.monolithBackground)
                     .drawBehind {
-                        drawLine(
-                            color = palette.monolithStroke,
-                            start = Offset(0f, 0f),
-                            end = Offset(size.width, 0f),
-                            strokeWidth = 1.dp.toPx()
-                        )
+                        if (!isDarkTheme) {
+                            drawLine(
+                                color = palette.monolithStroke,
+                                start = Offset(0f, 0f),
+                                end = Offset(size.width, 0f),
+                                strokeWidth = 1.dp.toPx()
+                            )
+                        }
                     }
                     .onGloballyPositioned { coordinates ->
                         onBoundsChanged(coordinates.boundsInRoot())

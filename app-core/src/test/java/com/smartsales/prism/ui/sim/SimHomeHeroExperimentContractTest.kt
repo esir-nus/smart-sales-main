@@ -39,6 +39,7 @@ class SimHomeHeroExperimentContractTest {
         assertTrue(tokenSource.contains("val HeaderHeight = 64.dp"))
         assertTrue(tokenSource.contains("val BottomMonolithHeight = 56.dp"))
         assertTrue(tokenSource.contains("val IslandMaxWidth = 240.dp"))
+        assertTrue(tokenSource.contains("val AmbientIconHorizontalOffset = 72.dp"))
         assertTrue(tokenSource.contains("val CenterCanvasHorizontalPadding = 16.dp"))
         assertTrue(tokenSource.contains("fun layoutMetrics(layoutMode: ShellLayoutMode)"))
         assertTrue(layoutSource.contains("availableHeight < 700.dp -> ShellLayoutMode.TIGHT"))
@@ -46,6 +47,9 @@ class SimHomeHeroExperimentContractTest {
         assertTrue(layoutSource.contains("availableWidth >= 380.dp"))
         assertTrue(source.contains("internal fun SimHomeHeroCenterStage("))
         assertTrue(source.contains("heightIn(min = SimHomeHeroTokens.BottomMonolithHeight)"))
+        assertTrue(source.contains("SimHomeHeroAmbientFlankIcon("))
+        assertTrue(source.contains("SimHomeHeroAmbientBatteryGlyph("))
+        assertFalse(source.contains("SimHomeHeroBatteryIndicator("))
         assertTrue(!gestureSource.contains(".zIndex(PrismElevation.Handles)"))
     }
 

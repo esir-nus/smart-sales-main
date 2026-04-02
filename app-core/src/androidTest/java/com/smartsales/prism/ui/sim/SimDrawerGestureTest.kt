@@ -14,7 +14,10 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import com.smartsales.prism.ui.AgentIntelligenceScreen
 import com.smartsales.prism.ui.AgentIntelligenceVisualMode
 import com.smartsales.prism.ui.components.DynamicIslandItem
+import com.smartsales.prism.ui.components.DynamicIslandLane
 import com.smartsales.prism.ui.components.DynamicIslandTapAction
+import com.smartsales.prism.ui.components.DynamicIslandUiState
+import com.smartsales.prism.ui.components.DynamicIslandVisualState
 import com.smartsales.prism.ui.drawers.scheduler.SCHEDULER_CALENDAR_HANDLE_TEST_TAG
 import com.smartsales.prism.ui.drawers.SCHEDULER_DRAWER_HANDLE_TEST_TAG
 import com.smartsales.prism.ui.drawers.SchedulerDrawer
@@ -261,7 +264,7 @@ class SimDrawerGestureTest {
             SimHomeHeroShellFrame(
                 inputText = "",
                 isSending = false,
-                dynamicIslandItems = listOf(
+                dynamicIslandState = DynamicIslandUiState.Visible(
                     DynamicIslandItem(
                         sessionTitle = "SIM",
                         schedulerSummary = "最近：客户回访 · 15:00",
@@ -287,6 +290,68 @@ class SimDrawerGestureTest {
         composeTestRule.onNodeWithTag(SIM_DYNAMIC_ISLAND_TEST_TAG).assertExists()
         composeTestRule.onNodeWithTag(SIM_HEADER_MENU_BUTTON_TEST_TAG).assertDoesNotExist()
         composeTestRule.onNodeWithTag(SIM_HEADER_NEW_CHAT_BUTTON_TEST_TAG).assertDoesNotExist()
+    }
+
+    @Test
+    fun simConnectedHeader_showsAmbientFlankIcons() {
+        composeTestRule.setContent {
+            SimHomeHeroShellFrame(
+                inputText = "",
+                isSending = false,
+                dynamicIslandState = DynamicIslandUiState.Visible(
+                    DynamicIslandItem(
+                        displayText = "Badge 已连接",
+                        lane = DynamicIslandLane.CONNECTIVITY,
+                        visualState = DynamicIslandVisualState.CONNECTIVITY_CONNECTED,
+                        batteryPercentage = 85,
+                        tapAction = DynamicIslandTapAction.OpenConnectivityEntry
+                    )
+                ),
+                onMenuClick = {},
+                onNewSessionClick = {},
+                onSchedulerClick = {},
+                onTextChanged = {},
+                onSend = {},
+                onAttachClick = {},
+                showBottomComposer = false
+            ) { modifier ->
+                Box(modifier = modifier.fillMaxSize())
+            }
+        }
+
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag(SIM_HEADER_LEFT_AMBIENT_ICON_TEST_TAG).assertExists()
+        composeTestRule.onNodeWithTag(SIM_HEADER_RIGHT_AMBIENT_ICON_TEST_TAG).assertExists()
+    }
+
+    @Test
+    fun simNonConnectedHeader_hidesAmbientFlankIcons() {
+        composeTestRule.setContent {
+            SimHomeHeroShellFrame(
+                inputText = "",
+                isSending = false,
+                dynamicIslandState = DynamicIslandUiState.Visible(
+                    DynamicIslandItem(
+                        sessionTitle = "SIM",
+                        schedulerSummary = "最近：客户回访 · 15:00",
+                        tapAction = DynamicIslandTapAction.OpenSchedulerDrawer()
+                    )
+                ),
+                onMenuClick = {},
+                onNewSessionClick = {},
+                onSchedulerClick = {},
+                onTextChanged = {},
+                onSend = {},
+                onAttachClick = {},
+                showBottomComposer = false
+            ) { modifier ->
+                Box(modifier = modifier.fillMaxSize())
+            }
+        }
+
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag(SIM_HEADER_LEFT_AMBIENT_ICON_TEST_TAG).assertDoesNotExist()
+        composeTestRule.onNodeWithTag(SIM_HEADER_RIGHT_AMBIENT_ICON_TEST_TAG).assertDoesNotExist()
     }
 
     @Test

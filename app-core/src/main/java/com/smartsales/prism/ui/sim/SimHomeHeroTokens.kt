@@ -33,6 +33,12 @@ internal object SimHomeHeroTokens {
     val HeaderHorizontalPadding = 16.dp
     val HeaderIconTouchSize = 38.dp
     val HeaderIconSize = 21.dp
+    val AmbientIconHorizontalOffset = 72.dp
+    val AmbientLinkIconSize = 16.dp
+    val AmbientBatteryWidth = 18.dp
+    val AmbientBatteryHeight = 10.dp
+    val AmbientBatteryNubWidth = 2.dp
+    val AmbientBatteryNubHeight = 5.dp
     val TopSeamInsideSofteningHeight = 8.dp
     val TopSeamOutsideFeatherHeight = 14.dp
     const val TopSeamInnerHighlightAlpha = 0.04f

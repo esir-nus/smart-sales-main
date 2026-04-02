@@ -575,7 +575,11 @@ fun SchedulerDrawer(
 
                     DragHandle(
                         onDismiss = onDismiss,
-                        dismissDirection = DragHandleDismissDirection.UP
+                        dismissDirection = if (isSimVisualMode) {
+                            DragHandleDismissDirection.UP
+                        } else {
+                            DragHandleDismissDirection.DOWN
+                        }
                     )
                 }
             }

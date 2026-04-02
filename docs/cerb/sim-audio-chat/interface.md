@@ -102,7 +102,9 @@ Notes:
 
 - `syncFromDevice()` is the product ingress for badge-origin recordings.
 - browse-mode manual sync and browse-open auto-sync must both call this same contract.
+- manual and auto badge sync start with `/list` directly; they must not run a separate `isReady()` HTTP reachability preflight first.
 - badge sync is additive-only for this slice: repeated `/list` checks are allowed, but a badge filename already present in local `SMARTBADGE` inventory must not be redownloaded into local storage.
+- if one badge file hits a hard `/download` failure after the bridge retry, the current sync run aborts immediately, keeps any earlier successful imports, and surfaces the failing filename as drawer-local error feedback.
 - SmartBadge delete persists a pending-delete tombstone keyed by exact badge filename so failed HTTP badge cleanup does not let the same WAV reappear as a “new” recording on later sync.
 - load-time repository recovery must normalize legacy badge-like `log_YYYYMMDD_HHMMSS.wav` entries back to `SMARTBADGE` and rewrite the persisted metadata so later delete/sync behavior stays aligned.
 - `addLocalAudio(uriString)` is a test-only convenience seam for QA/dev validation; it must not become the default product upload path.

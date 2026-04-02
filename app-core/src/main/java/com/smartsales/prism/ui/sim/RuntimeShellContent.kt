@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.smartsales.prism.BuildConfig
+import com.smartsales.prism.domain.audio.AudioLocalAvailability
 import com.smartsales.prism.domain.model.SchedulerFollowUpContext
 import com.smartsales.prism.domain.model.SessionPreview
 import com.smartsales.prism.ui.AgentIntelligenceScreen
@@ -325,6 +326,10 @@ internal fun RuntimeShellContent(
                     }
                 },
                 onSelectForChat = { selection ->
+                    val isLocalReady = selection.localAvailability == AudioLocalAvailability.READY
+                    if (selection.status == AudioStatus.PENDING && !isLocalReady) {
+                        return@SimAudioDrawer onSelectForChat
+                    }
                     val entersPendingFlow = selection.status != AudioStatus.TRANSCRIBED
                     coroutineScope.launch {
                         val sessionId = chatViewModel.selectAudioForChat(
@@ -345,7 +350,7 @@ internal fun RuntimeShellContent(
                             trackedPendingAudioIds.remove(selection.audioId)
                         } else {
                             trackedPendingAudioIds[selection.audioId] = sessionId
-                            if (selection.status == AudioStatus.PENDING) {
+                            if (selection.status == AudioStatus.PENDING && isLocalReady) {
                                 runCatching {
                                     audioViewModel.startTranscriptionForChat(selection.audioId)
                                 }.onFailure { error ->

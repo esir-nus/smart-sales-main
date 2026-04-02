@@ -51,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.smartsales.prism.domain.audio.AudioLocalAvailability
 import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
 import com.smartsales.prism.ui.components.PrismButton
 import com.smartsales.prism.ui.drawers.AudioStatus
@@ -82,6 +83,7 @@ internal fun SimAudioCard(
     val canSwipeToTranscribe = canSwipeRightToTranscribe(
         mode = mode,
         status = entry.item.status,
+        localAvailability = entry.localAvailability,
         expanded = expanded
     )
     val canSwipeToDelete = canSwipeLeftToDelete(
@@ -284,14 +286,21 @@ internal fun SimAudioCard(
             Spacer(modifier = Modifier.height(8.dp))
             when (entry.item.status) {
                 AudioStatus.PENDING -> {
-                    SimAudioCompactPreviewRow(
-                        previewContent = {
-                            SimBrowseModeSwipePrompt(
-                                transcribeActive = dismissState.dismissDirection ==
-                                    SwipeToDismissBoxValue.StartToEnd
-                            )
-                        }
-                    )
+                    if (entry.localAvailability == AudioLocalAvailability.READY) {
+                        SimAudioCompactPreviewRow(
+                            previewContent = {
+                                SimBrowseModeSwipePrompt(
+                                    transcribeActive = dismissState.dismissDirection ==
+                                        SwipeToDismissBoxValue.StartToEnd
+                                )
+                            }
+                        )
+                    } else {
+                        SimAudioCompactPreviewRow(
+                            text = entry.preview,
+                            maxLines = 1
+                        )
+                    }
                 }
 
                 AudioStatus.TRANSCRIBING -> {
@@ -346,7 +355,12 @@ internal fun SimAudioCard(
             }
         }
     ) {
-        val clickEnabled = if (mode == RuntimeAudioDrawerMode.CHAT_RESELECT) !isCurrentChatAudio else true
+        val clickEnabled = if (mode == RuntimeAudioDrawerMode.CHAT_RESELECT) {
+            !isCurrentChatAudio &&
+                (entry.item.status != AudioStatus.PENDING || entry.localAvailability == AudioLocalAvailability.READY)
+        } else {
+            true
+        }
         val onCardClick: () -> Unit = {
             when (mode) {
                 RuntimeAudioDrawerMode.CHAT_RESELECT -> {
@@ -434,11 +448,13 @@ internal fun SimAudioCard(
 internal fun canSwipeRightToTranscribe(
     mode: RuntimeAudioDrawerMode,
     status: AudioStatus,
+    localAvailability: AudioLocalAvailability,
     expanded: Boolean
 ): Boolean {
     return mode == RuntimeAudioDrawerMode.BROWSE &&
         !expanded &&
-        status == AudioStatus.PENDING
+        status == AudioStatus.PENDING &&
+        localAvailability == AudioLocalAvailability.READY
 }
 
 internal fun canSwipeLeftToDelete(

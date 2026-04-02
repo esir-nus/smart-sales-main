@@ -4,6 +4,7 @@ import android.content.Context
 import com.smartsales.core.util.Result
 import com.smartsales.data.oss.OssUploader
 import com.smartsales.prism.domain.audio.AudioFile
+import com.smartsales.prism.domain.audio.AudioLocalAvailability
 import com.smartsales.prism.domain.audio.AudioSource
 import com.smartsales.prism.domain.audio.TranscriptionStatus
 import com.smartsales.prism.domain.connectivity.BadgeConnectionState
@@ -15,6 +16,10 @@ import com.smartsales.prism.domain.tingwu.TingwuPipeline
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -48,6 +53,11 @@ class SimAudioRepositorySyncSupportTest {
             connectivityBridge = connectivityBridge,
             ossUploader = mock<OssUploader>(),
             tingwuPipeline = mock<TingwuPipeline>()
+        )
+        val dispatcher = StandardTestDispatcher()
+        runtime.overrideConcurrencyForTests(
+            dispatcher = dispatcher,
+            scope = CoroutineScope(SupervisorJob() + dispatcher)
         )
         storeSupport = SimAudioRepositoryStoreSupport(runtime)
         syncSupport = SimAudioRepositorySyncSupport(
@@ -100,11 +110,10 @@ class SimAudioRepositorySyncSupportTest {
             message = "timeout"
         )
 
-        val error = runCatching {
-            syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
-        }.exceptionOrNull()
+        val outcome = syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+        advanceUntilIdle()
 
-        assertEquals(SIM_BADGE_SYNC_CONNECTIVITY_UNAVAILABLE_MESSAGE, error?.message)
+        assertEquals(SimBadgeSyncResultBranch.QUEUED, outcome.resultBranch)
         assertTrue(
             connectivityBridge.calls.containsAll(
                 listOf(
@@ -124,7 +133,7 @@ class SimAudioRepositorySyncSupportTest {
         val outcome = syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
 
         assertEquals(SimBadgeSyncResultBranch.DEVICE_EMPTY, outcome.resultBranch)
-        assertEquals(0, outcome.importedCount)
+        assertEquals(0, outcome.queuedCount)
     }
 
     @Test
@@ -144,12 +153,12 @@ class SimAudioRepositorySyncSupportTest {
         val outcome = syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
 
         assertEquals(SimBadgeSyncResultBranch.ALREADY_PRESENT, outcome.resultBranch)
-        assertEquals(0, outcome.importedCount)
+        assertEquals(0, outcome.queuedCount)
         assertFalse(connectivityBridge.calls.any { it.startsWith("downloadRecording:") })
     }
 
     @Test
-    fun `manual sync returns imported when new badge file downloads successfully`() = runTest {
+    fun `manual sync creates placeholder immediately then upgrades it after background download`() = runTest {
         connectivityBridge.isReadyResult = true
         connectivityBridge.listResult = Result.Success(listOf("log#20260327_135948"))
         connectivityBridge.downloadResults["log_20260327_135948.wav"] = WavDownloadResult.Success(
@@ -160,16 +169,23 @@ class SimAudioRepositorySyncSupportTest {
 
         val outcome = syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
 
-        assertEquals(SimBadgeSyncResultBranch.IMPORTED, outcome.resultBranch)
-        assertEquals(1, outcome.importedCount)
-        assertEquals(0, outcome.skippedEmptyCount)
-        assertTrue(
-            runtime.audioFiles.value.any { it.filename == "log_20260327_135948.wav" }
+        assertEquals(SimBadgeSyncResultBranch.QUEUED, outcome.resultBranch)
+        assertEquals(1, outcome.queuedCount)
+        assertEquals(
+            AudioLocalAvailability.QUEUED,
+            runtime.audioFiles.value.single { it.filename == "log_20260327_135948.wav" }.localAvailability
+        )
+
+        advanceUntilIdle()
+
+        assertEquals(
+            AudioLocalAvailability.READY,
+            runtime.audioFiles.value.single { it.filename == "log_20260327_135948.wav" }.localAvailability
         )
     }
 
     @Test
-    fun `manual sync skips empty recordings below 1KB threshold`() = runTest {
+    fun `manual sync removes placeholder when background download is below 1KB threshold`() = runTest {
         connectivityBridge.isReadyResult = true
         connectivityBridge.listResult = Result.Success(listOf("log#20260327_140000", "log#20260327_140100"))
         val emptyFile = tempFolder.newFile("empty.wav")
@@ -187,9 +203,11 @@ class SimAudioRepositorySyncSupportTest {
 
         val outcome = syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
 
-        assertEquals(SimBadgeSyncResultBranch.IMPORTED, outcome.resultBranch)
-        assertEquals(1, outcome.importedCount)
-        assertEquals(1, outcome.skippedEmptyCount)
+        assertEquals(SimBadgeSyncResultBranch.QUEUED, outcome.resultBranch)
+        assertEquals(2, outcome.queuedCount)
+
+        advanceUntilIdle()
+
         assertTrue(runtime.audioFiles.value.any { it.filename == "log_20260327_140100.wav" })
         assertFalse(runtime.audioFiles.value.any { it.filename == "log_20260327_140000.wav" })
     }
@@ -210,7 +228,7 @@ class SimAudioRepositorySyncSupportTest {
         val outcome = syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
 
         assertEquals(SimBadgeSyncResultBranch.ALREADY_PRESENT, outcome.resultBranch)
-        assertEquals(0, outcome.importedCount)
+        assertEquals(0, outcome.queuedCount)
         assertFalse(connectivityBridge.calls.any { it.startsWith("downloadRecording:") })
     }
 
@@ -224,7 +242,7 @@ class SimAudioRepositorySyncSupportTest {
         val outcome = syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
 
         assertEquals(SimBadgeSyncResultBranch.ALREADY_PRESENT, outcome.resultBranch)
-        assertEquals(0, outcome.importedCount)
+        assertEquals(0, outcome.queuedCount)
         assertEquals(setOf("log_20260327_135948.wav"), storeSupport.getPendingBadgeDeletesSnapshot())
         assertTrue(connectivityBridge.calls.contains("deleteRecording:log_20260327_135948.wav"))
         assertFalse(connectivityBridge.calls.any { it.startsWith("downloadRecording:") })
@@ -240,10 +258,39 @@ class SimAudioRepositorySyncSupportTest {
         val outcome = syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
 
         assertEquals(SimBadgeSyncResultBranch.ALREADY_PRESENT, outcome.resultBranch)
-        assertEquals(0, outcome.importedCount)
+        assertEquals(0, outcome.queuedCount)
         assertTrue(storeSupport.getPendingBadgeDeletesSnapshot().isEmpty())
         assertTrue(connectivityBridge.calls.contains("deleteRecording:log_20260327_135948.wav"))
         assertFalse(connectivityBridge.calls.any { it.startsWith("downloadRecording:") })
+    }
+
+    @Test
+    fun `manual sync keeps failed placeholder visible and allows later files to continue`() = runTest {
+        connectivityBridge.isReadyResult = true
+        connectivityBridge.listResult = Result.Success(listOf("a.wav", "b.wav"))
+        connectivityBridge.downloadResults["a.wav"] = WavDownloadResult.Error(
+            code = WavDownloadResult.ErrorCode.DOWNLOAD_FAILED,
+            message = "timeout"
+        )
+        connectivityBridge.downloadResults["b.wav"] = WavDownloadResult.Success(
+            localFile = tempFolder.newFile("b.wav").apply { writeText("audio-content") },
+            originalFilename = "b.wav",
+            sizeBytes = 2048L
+        )
+
+        val outcome = syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+
+        assertEquals(SimBadgeSyncResultBranch.QUEUED, outcome.resultBranch)
+        advanceUntilIdle()
+
+        assertEquals(
+            AudioLocalAvailability.FAILED,
+            runtime.audioFiles.value.single { it.filename == "a.wav" }.localAvailability
+        )
+        assertEquals(
+            AudioLocalAvailability.READY,
+            runtime.audioFiles.value.single { it.filename == "b.wav" }.localAvailability
+        )
     }
 
     @Test

@@ -1,6 +1,7 @@
 package com.smartsales.prism.ui.sim
 
 import androidx.compose.ui.graphics.Color
+import com.smartsales.prism.domain.audio.AudioLocalAvailability
 import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
 import com.smartsales.prism.ui.drawers.AudioStatus
 
@@ -22,7 +23,8 @@ data class SimChatAudioSelection(
     val audioId: String,
     val title: String,
     val summary: String?,
-    val status: AudioStatus
+    val status: AudioStatus,
+    val localAvailability: AudioLocalAvailability
 )
 
 internal fun buildSimAudioSelectBodyText(
@@ -44,8 +46,15 @@ internal fun buildSimAudioSelectBodyText(
         }
 
         AudioStatus.PENDING -> {
-            if (isCurrentChatAudio) "可在当前聊天中继续处理"
-            else "选择后在当前聊天中继续处理"
+            when (entry.localAvailability) {
+                AudioLocalAvailability.READY -> {
+                    if (isCurrentChatAudio) "可在当前聊天中继续处理"
+                    else "选择后在当前聊天中继续处理"
+                }
+                AudioLocalAvailability.DOWNLOADING -> "录音正在后台同步，暂不可用于聊天"
+                AudioLocalAvailability.QUEUED -> "录音等待后台同步，暂不可用于聊天"
+                AudioLocalAvailability.FAILED -> "录音同步失败，请先重试同步"
+            }
         }
     }
 

@@ -52,7 +52,11 @@ class SimAudioRepository @Inject constructor(
         transcriptionSupport.startTranscription(audioId)
     }
 
-    internal suspend fun deleteAudio(audioId: String): SimAudioDeleteResult = storeSupport.deleteAudio(audioId)
+    internal suspend fun deleteAudio(audioId: String): SimAudioDeleteResult {
+        val target = storeSupport.getAudio(audioId) ?: return SimAudioDeleteResult.NotFound
+        syncSupport.cancelBadgeDownload(target.filename)
+        return storeSupport.deleteAudio(audioId)
+    }
 
     fun toggleStar(audioId: String) {
         storeSupport.toggleStar(audioId)

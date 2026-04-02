@@ -156,7 +156,51 @@
             padding-right: 16px;
             box-shadow: 0 10px 40px rgba(0,0,0,0.8);
             z-index: 20;
+            position: relative;
         }
+
+        /* Ambient Flanking Icons */
+        .ambient-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            border-radius: 20px;
+            padding: 0;
+            color: #34C759;
+            gap: 4px;
+            opacity: 0;
+            transform: translateY(-50%) scale(0.9);
+            transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+            pointer-events: none;
+            position: absolute;
+            top: 50%;
+        }
+
+        .ambient-icon.visible {
+            opacity: 1;
+            transform: translateY(-50%) scale(1);
+            animation: ambient-breathe 3s infinite ease-in-out;
+        }
+
+        .ambient-icon.left-flank {
+            left: 72px;
+            transition-delay: 0.1s;
+        }
+        .ambient-icon.right-flank {
+            right: 72px;
+        }
+        .ambient-icon:not(.visible) {
+            transition-delay: 0s !important;
+            transition-duration: 0.3s;
+        }
+
+        @keyframes ambient-breathe {
+            0%, 100% { opacity: 0.35; transform: translateY(-50%) scale(0.95); }
+            50% { opacity: 0.7; transform: translateY(-50%) scale(1); }
+        }
+
 
         .icon-btn {
             background: none;
@@ -255,39 +299,6 @@
         }
         .sim-shell[data-island="badge-connected"] .island-text::before { 
             content: "Badge 已连接"; 
-        }
-        .sim-shell[data-island="badge-connected"] .island-text::after {
-            /* Create a custom battery icon using CSS drawing */
-            content: "78";
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-            font-weight: 700;
-            color: #34C759;
-            -webkit-text-fill-color: #34C759;
-            padding: 0 2px;
-            margin-left: 2px;
-            height: 14px;
-            min-width: 22px;
-            border: 1px solid rgba(52, 199, 89, 0.6);
-            border-radius: 3px;
-            background: linear-gradient(90deg, rgba(52, 199, 89, 0.2) 78%, transparent 78%);
-            position: relative;
-        }
-        /* Battery knob/terminal */
-        .sim-shell[data-island="badge-connected"] .island-text {
-            position: relative;
-        }
-        .sim-shell[data-island="badge-connected"] .island-text span.battery-knob {
-            content: "";
-            display: block;
-            width: 2px;
-            height: 6px;
-            background: rgba(52, 199, 89, 0.6);
-            border-radius: 0 2px 2px 0;
-            position: absolute;
-            right: -2px; /* Needs to sit right outside the flex container's border, handled via JS wrapper now */
         }
 
         .sim-shell[data-island="badge-disconnected"] .island-dot {
@@ -628,13 +639,24 @@
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
                     </button>
                 </div>
+                
+                <div class="ambient-icon left-flank" id="ambient-left">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                </div>
+
                 <div class="top-center">
                     <div class="dynamic-island">
                         <div class="island-dot"></div>
                         <span class="island-text"></span>
-                        <div class="battery-terminal" style="display: none; width: 2px; height: 6px; background: rgba(52, 199, 89, 0.6); border-radius: 0 2px 2px 0; margin-left: -4px;"></div>
                     </div>
                 </div>
+
+                <div class="ambient-icon right-flank" id="ambient-right">
+                    <div style="width: 18px; height: 10px; border: 1.5px solid currentColor; border-radius: 2px; position: relative; background: linear-gradient(90deg, currentColor 78%, transparent 78%);">
+                        <div style="width: 2px; height: 5px; background: currentColor; position: absolute; right: -4px; top: 50%; transform: translateY(-50%); border-radius: 0 1px 1px 0;"></div>
+                    </div>
+                </div>
+
                 <div class="top-right">
                     <button class="icon-btn borderless">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -792,7 +814,8 @@
         function applyIslandState(state) {
             const shell = document.getElementById('sim-shell');
             const island = document.querySelector('.dynamic-island');
-            const batteryTerminal = document.querySelector('.battery-terminal');
+            const ambientLeft = document.getElementById('ambient-left');
+            const ambientRight = document.getElementById('ambient-right');
             
             // Re-trigger CSS animation
             island.classList.remove('island-interrupt');
@@ -806,9 +829,11 @@
 
             // Handle battery icon terminal visibility
             if (state === 'badge-connected') {
-                batteryTerminal.style.display = 'block';
+                ambientLeft.classList.add('visible');
+                ambientRight.classList.add('visible');
             } else {
-                batteryTerminal.style.display = 'none';
+                ambientLeft.classList.remove('visible');
+                ambientRight.classList.remove('visible');
             }
         }
 

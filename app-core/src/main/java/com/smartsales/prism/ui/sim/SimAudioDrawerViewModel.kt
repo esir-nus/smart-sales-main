@@ -37,7 +37,7 @@ import kotlinx.coroutines.launch
 data class SimAudioEntry(
     val item: AudioItemState,
     val preview: String,
-    val localAvailability: AudioLocalAvailability,
+    val localAvailability: AudioLocalAvailability = AudioLocalAvailability.READY,
     val failureMessage: String? = null,
     val isTestImport: Boolean = false
 )

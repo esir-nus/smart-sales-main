@@ -24,7 +24,7 @@ data class SimChatAudioSelection(
     val title: String,
     val summary: String?,
     val status: AudioStatus,
-    val localAvailability: AudioLocalAvailability
+    val localAvailability: AudioLocalAvailability = AudioLocalAvailability.READY
 )
 
 internal fun buildSimAudioSelectBodyText(

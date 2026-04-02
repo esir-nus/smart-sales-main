@@ -328,7 +328,7 @@ internal fun RuntimeShellContent(
                 onSelectForChat = { selection ->
                     val isLocalReady = selection.localAvailability == AudioLocalAvailability.READY
                     if (selection.status == AudioStatus.PENDING && !isLocalReady) {
-                        return@SimAudioDrawer onSelectForChat
+                        return@SimAudioDrawer
                     }
                     val entersPendingFlow = selection.status != AudioStatus.TRANSCRIBED
                     coroutineScope.launch {

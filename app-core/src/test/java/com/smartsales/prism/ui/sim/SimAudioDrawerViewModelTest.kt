@@ -1,6 +1,7 @@
 package com.smartsales.prism.ui.sim
 
 import com.smartsales.prism.domain.audio.AudioFile
+import com.smartsales.prism.domain.audio.AudioLocalAvailability
 import com.smartsales.prism.domain.audio.AudioSource as DomainAudioSource
 import com.smartsales.prism.domain.audio.TranscriptionStatus
 import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
@@ -125,7 +126,12 @@ class SimAudioDrawerViewModelTest {
         assertEquals(
             "选择后在当前聊天中继续处理",
             buildSimAudioSelectBodyText(
-                entry = testEntry(status = AudioStatus.PENDING, summary = null, preview = "通用预览"),
+                entry = testEntry(
+                    status = AudioStatus.PENDING,
+                    summary = null,
+                    preview = "通用预览",
+                    localAvailability = AudioLocalAvailability.READY
+                ),
                 transcriptPreview = null,
                 isCurrentChatAudio = false
             )
@@ -145,7 +151,12 @@ class SimAudioDrawerViewModelTest {
         assertEquals(
             "当前讨论中 · 可在当前聊天中继续处理",
             buildSimAudioSelectBodyText(
-                entry = testEntry(status = AudioStatus.PENDING, summary = null, preview = "通用预览"),
+                entry = testEntry(
+                    status = AudioStatus.PENDING,
+                    summary = null,
+                    preview = "通用预览",
+                    localAvailability = AudioLocalAvailability.READY
+                ),
                 transcriptPreview = null,
                 isCurrentChatAudio = true
             )
@@ -195,6 +206,36 @@ class SimAudioDrawerViewModelTest {
     }
 
     @Test
+    fun `buildSimAudioSelectBodyText marks non-ready pending entries as unavailable for chat`() {
+        assertEquals(
+            "录音等待后台同步，暂不可用于聊天",
+            buildSimAudioSelectBodyText(
+                entry = testEntry(
+                    status = AudioStatus.PENDING,
+                    summary = null,
+                    preview = "通用预览",
+                    localAvailability = AudioLocalAvailability.QUEUED
+                ),
+                transcriptPreview = null,
+                isCurrentChatAudio = false
+            )
+        )
+        assertEquals(
+            "录音同步失败，请先重试同步",
+            buildSimAudioSelectBodyText(
+                entry = testEntry(
+                    status = AudioStatus.PENDING,
+                    summary = null,
+                    preview = "通用预览",
+                    localAvailability = AudioLocalAvailability.FAILED
+                ),
+                transcriptPreview = null,
+                isCurrentChatAudio = false
+            )
+        )
+    }
+
+    @Test
     fun `buildSimAudioTranscriptPreview strips markdown decorations and normalizes whitespace`() {
         val preview = buildSimAudioTranscriptPreview(
             TingwuJobArtifacts(
@@ -208,7 +249,8 @@ class SimAudioDrawerViewModelTest {
     private fun testEntry(
         status: AudioStatus,
         summary: String?,
-        preview: String
+        preview: String,
+        localAvailability: AudioLocalAvailability = AudioLocalAvailability.READY
     ): SimAudioEntry {
         return SimAudioEntry(
             item = AudioItemState(
@@ -219,7 +261,8 @@ class SimAudioDrawerViewModelTest {
                 status = status,
                 summary = summary
             ),
-            preview = preview
+            preview = preview,
+            localAvailability = localAvailability
         )
     }
 }

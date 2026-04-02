@@ -1,5 +1,6 @@
 package com.smartsales.prism.ui.sim
 
+import com.smartsales.prism.domain.audio.AudioLocalAvailability
 import com.smartsales.prism.ui.drawers.AudioStatus
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -13,6 +14,7 @@ class SimAudioDrawerCardContractTest {
             canSwipeRightToTranscribe(
                 mode = RuntimeAudioDrawerMode.BROWSE,
                 status = AudioStatus.PENDING,
+                localAvailability = AudioLocalAvailability.READY,
                 expanded = false
             )
         )
@@ -20,6 +22,7 @@ class SimAudioDrawerCardContractTest {
             canSwipeRightToTranscribe(
                 mode = RuntimeAudioDrawerMode.BROWSE,
                 status = AudioStatus.PENDING,
+                localAvailability = AudioLocalAvailability.READY,
                 expanded = true
             )
         )
@@ -27,6 +30,7 @@ class SimAudioDrawerCardContractTest {
             canSwipeRightToTranscribe(
                 mode = RuntimeAudioDrawerMode.BROWSE,
                 status = AudioStatus.TRANSCRIBED,
+                localAvailability = AudioLocalAvailability.READY,
                 expanded = false
             )
         )
@@ -34,6 +38,15 @@ class SimAudioDrawerCardContractTest {
             canSwipeRightToTranscribe(
                 mode = RuntimeAudioDrawerMode.CHAT_RESELECT,
                 status = AudioStatus.PENDING,
+                localAvailability = AudioLocalAvailability.READY,
+                expanded = false
+            )
+        )
+        assertFalse(
+            canSwipeRightToTranscribe(
+                mode = RuntimeAudioDrawerMode.BROWSE,
+                status = AudioStatus.PENDING,
+                localAvailability = AudioLocalAvailability.QUEUED,
                 expanded = false
             )
         )

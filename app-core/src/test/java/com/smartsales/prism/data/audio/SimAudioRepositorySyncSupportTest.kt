@@ -18,9 +18,10 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestCoroutineScheduler
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -54,11 +55,6 @@ class SimAudioRepositorySyncSupportTest {
             ossUploader = mock<OssUploader>(),
             tingwuPipeline = mock<TingwuPipeline>()
         )
-        val dispatcher = StandardTestDispatcher()
-        runtime.overrideConcurrencyForTests(
-            dispatcher = dispatcher,
-            scope = CoroutineScope(SupervisorJob() + dispatcher)
-        )
         storeSupport = SimAudioRepositoryStoreSupport(runtime)
         syncSupport = SimAudioRepositorySyncSupport(
             runtime = runtime,
@@ -68,6 +64,7 @@ class SimAudioRepositorySyncSupportTest {
 
     @Test
     fun `manual sync fails at strict preflight before list work begins`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
         connectivityBridge.isReadyResult = false
 
         val error = runCatching {
@@ -80,6 +77,7 @@ class SimAudioRepositorySyncSupportTest {
 
     @Test
     fun `auto sync skips quietly when strict preflight is not ready`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
         connectivityBridge.isReadyResult = false
 
         val outcome = syncSupport.syncFromBadge(SimBadgeSyncTrigger.AUTO)
@@ -90,6 +88,7 @@ class SimAudioRepositorySyncSupportTest {
 
     @Test
     fun `manual sync reaches list stage after ready preflight and surfaces list failure`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
         connectivityBridge.isReadyResult = true
         connectivityBridge.listResult = Result.Error(Exception("socket timeout"))
 
@@ -103,6 +102,7 @@ class SimAudioRepositorySyncSupportTest {
 
     @Test
     fun `manual sync reaches download stage after ready preflight and surfaces download failure`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
         connectivityBridge.isReadyResult = true
         connectivityBridge.listResult = Result.Success(listOf("log_20260327_135948.wav"))
         connectivityBridge.downloadResults["log_20260327_135948.wav"] = WavDownloadResult.Error(
@@ -127,6 +127,7 @@ class SimAudioRepositorySyncSupportTest {
 
     @Test
     fun `manual sync returns device empty when badge list is empty`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
         connectivityBridge.isReadyResult = true
         connectivityBridge.listResult = Result.Success(emptyList())
 
@@ -138,6 +139,7 @@ class SimAudioRepositorySyncSupportTest {
 
     @Test
     fun `manual sync returns already present when listed files already exist locally`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
         connectivityBridge.isReadyResult = true
         connectivityBridge.listResult = Result.Success(listOf("log#20260327_135948"))
         runtime.audioFiles.value = listOf(
@@ -159,6 +161,7 @@ class SimAudioRepositorySyncSupportTest {
 
     @Test
     fun `manual sync creates placeholder immediately then upgrades it after background download`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
         connectivityBridge.isReadyResult = true
         connectivityBridge.listResult = Result.Success(listOf("log#20260327_135948"))
         connectivityBridge.downloadResults["log_20260327_135948.wav"] = WavDownloadResult.Success(
@@ -186,6 +189,7 @@ class SimAudioRepositorySyncSupportTest {
 
     @Test
     fun `manual sync removes placeholder when background download is below 1KB threshold`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
         connectivityBridge.isReadyResult = true
         connectivityBridge.listResult = Result.Success(listOf("log#20260327_140000", "log#20260327_140100"))
         val emptyFile = tempFolder.newFile("empty.wav")
@@ -214,6 +218,7 @@ class SimAudioRepositorySyncSupportTest {
 
     @Test
     fun `manual sync treats pipeline ingested recording as already present`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
         connectivityBridge.isReadyResult = true
         connectivityBridge.listResult = Result.Success(listOf("log#20260331_101500"))
         val tempAudio = tempFolder.newFile("badge_temp.wav").apply {
@@ -234,6 +239,7 @@ class SimAudioRepositorySyncSupportTest {
 
     @Test
     fun `manual sync suppresses tombstoned badge filenames instead of reimporting them`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
         connectivityBridge.isReadyResult = true
         connectivityBridge.listResult = Result.Success(listOf("log_20260327_135948.wav"))
         connectivityBridge.deleteRecordingResults["log_20260327_135948.wav"] = false
@@ -250,6 +256,7 @@ class SimAudioRepositorySyncSupportTest {
 
     @Test
     fun `manual sync clears tombstone when badge delete retry succeeds`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
         connectivityBridge.isReadyResult = true
         connectivityBridge.listResult = Result.Success(listOf("log_20260327_135948.wav"))
         connectivityBridge.deleteRecordingResults["log_20260327_135948.wav"] = true
@@ -266,6 +273,7 @@ class SimAudioRepositorySyncSupportTest {
 
     @Test
     fun `manual sync keeps failed placeholder visible and allows later files to continue`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
         connectivityBridge.isReadyResult = true
         connectivityBridge.listResult = Result.Success(listOf("a.wav", "b.wav"))
         connectivityBridge.downloadResults["a.wav"] = WavDownloadResult.Error(
@@ -302,6 +310,14 @@ class SimAudioRepositorySyncSupportTest {
                 existingBadgeFilenames = emptySet(),
                 pendingBadgeDeleteFilenames = setOf("a.wav")
             )
+        )
+    }
+
+    private fun bindRuntimeToTestScheduler(scheduler: TestCoroutineScheduler) {
+        val dispatcher = StandardTestDispatcher(scheduler)
+        runtime.overrideConcurrencyForTests(
+            dispatcher = dispatcher,
+            scope = CoroutineScope(SupervisorJob() + dispatcher)
         )
     }
 

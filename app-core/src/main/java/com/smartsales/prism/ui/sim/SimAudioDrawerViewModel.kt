@@ -12,6 +12,7 @@ import com.smartsales.prism.data.audio.SimBadgeSyncTrigger
 import com.smartsales.prism.data.audio.SIM_BADGE_SYNC_CONNECTIVITY_UNAVAILABLE_MESSAGE
 import com.smartsales.prism.data.audio.simBadgeSyncSuccessMessage
 import com.smartsales.prism.domain.audio.AudioFile
+import com.smartsales.prism.domain.audio.AudioLocalAvailability
 import com.smartsales.prism.domain.audio.AudioSource as DomainAudioSource
 import com.smartsales.prism.domain.audio.TranscriptionStatus
 import com.smartsales.prism.domain.connectivity.BadgeManagerStatus
@@ -36,6 +37,7 @@ import kotlinx.coroutines.launch
 data class SimAudioEntry(
     val item: AudioItemState,
     val preview: String,
+    val localAvailability: AudioLocalAvailability,
     val failureMessage: String? = null,
     val isTestImport: Boolean = false
 )
@@ -265,10 +267,20 @@ class SimAudioDrawerViewModel @Inject constructor(
                 progress = if (status == TranscriptionStatus.TRANSCRIBING) progress else null
             ),
             preview = when (status) {
-                TranscriptionStatus.PENDING -> lastErrorMessage ?: "真实本地音频已就绪，点击开始转写。"
+                TranscriptionStatus.PENDING -> when (localAvailability) {
+                    AudioLocalAvailability.READY ->
+                        lastErrorMessage ?: "真实本地音频已就绪，点击开始转写。"
+                    AudioLocalAvailability.QUEUED ->
+                        "录音已发现，等待后台同步"
+                    AudioLocalAvailability.DOWNLOADING ->
+                        "正在后台同步录音..."
+                    AudioLocalAvailability.FAILED ->
+                        lastErrorMessage ?: "录音同步失败，请重试"
+                }
                 TranscriptionStatus.TRANSCRIBING -> "Tingwu 正在处理音频，SIM 仅做进度与展示承接。"
                 TranscriptionStatus.TRANSCRIBED -> summary ?: "转写结果已可阅读。"
             },
+            localAvailability = localAvailability,
             failureMessage = lastErrorMessage,
             isTestImport = isTestImport
         )

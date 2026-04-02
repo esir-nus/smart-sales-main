@@ -137,7 +137,8 @@ internal fun SimAudioDrawerContent(
                             audioId = entry.item.id,
                             title = entry.item.filename,
                             summary = entry.item.summary ?: entry.preview,
-                            status = entry.item.status
+                            status = entry.item.status,
+                            localAvailability = entry.localAvailability
                         )
                     )
                 }

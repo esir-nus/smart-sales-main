@@ -17,6 +17,7 @@ import com.smartsales.prism.data.audio.SimAudioRepository
 import com.smartsales.prism.data.audio.SimAudioRepositoryRuntime
 import com.smartsales.prism.data.audio.SimRealtimeSpeechEvent
 import com.smartsales.prism.data.audio.SimRealtimeSpeechFailureReason
+import com.smartsales.prism.data.audio.SimRealtimeSpeechProfile
 import com.smartsales.prism.data.audio.SimRealtimeSpeechRecognitionResult
 import com.smartsales.prism.data.audio.SimRealtimeSpeechRecognizer
 import com.smartsales.prism.data.audio.simArtifactFilename
@@ -229,6 +230,7 @@ class SimAgentViewModelTest {
             1,
             speechRecognizer.startCount
         )
+        assertEquals(SimRealtimeSpeechProfile.SIM_DRAFT, speechRecognizer.lastProfile)
     }
 
     @Test
@@ -393,7 +395,7 @@ class SimAgentViewModelTest {
         viewModel.markArtifactTranscriptRevealConsumed(artifactMessage.id, isLongTranscript = true)
 
         assertEquals(
-            SimAgentViewModel.ArtifactTranscriptRevealState(
+            SimArtifactTranscriptRevealState(
                 consumed = true,
                 isLongTranscript = true
             ),
@@ -449,9 +451,10 @@ class SimAgentViewModelTest {
 
     @Test
     fun `general send uses persona backed reply instead of audio only guidance`() = runTest {
-        val viewModel = newViewModel()
         fakeExecutor.enqueueResponse(ExecutorResult.Success("你好，Default User。我会先按你的销售背景继续聊。"))
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("日常问候"))
 
+        val viewModel = newViewModel()
         viewModel.updateInput("你好")
         viewModel.send()
         advanceUntilIdle()
@@ -460,9 +463,102 @@ class SimAgentViewModelTest {
         val response = lastMessage.uiState as UiState.Response
         assertTrue(response.content.contains("Default User"))
         assertFalse(response.content.contains("只支持围绕已选录音继续讨论"))
-        assertTrue(fakeExecutor.executedPrompts.last().contains("姓名：Default User"))
-        assertTrue(fakeExecutor.executedPrompts.last().contains("角色：sales_rep"))
-        assertTrue(fakeExecutor.executedPrompts.last().contains("用户刚刚说："))
+        val chatPrompt = fakeExecutor.executedPrompts[0]
+        assertTrue(chatPrompt.contains("姓名：Default User"))
+        assertTrue(chatPrompt.contains("角色：sales_rep"))
+        assertTrue(chatPrompt.contains("用户刚刚说："))
+    }
+
+    @Test
+    fun `general send auto generates title for new session`() = runTest {
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("好的,帮你复盘Q4的预算执行情况。"))
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("Q4预算复盘"))
+
+        val viewModel = newViewModel()
+        viewModel.updateInput("帮我复盘一下Q4的预算")
+        viewModel.send()
+        advanceUntilIdle()
+
+        assertEquals("Q4预算复盘", viewModel.sessionTitle.value)
+        assertEquals(2, fakeExecutor.executedPrompts.size)
+        assertTrue(fakeExecutor.executedPrompts[1].contains("用4-6个中文字总结"))
+        assertTrue(fakeExecutor.executedPrompts[1].contains("帮我复盘一下Q4的预算"))
+    }
+
+    @Test
+    fun `title generation does not fire for audio grounded sessions`() = runTest {
+        writeAudioMetadata(
+            AudioFile(
+                id = "audio_no_title_gen",
+                filename = "NoTitleGen.wav",
+                timeDisplay = "Now",
+                source = AudioSource.PHONE,
+                status = TranscriptionStatus.TRANSCRIBED
+            )
+        )
+        writeArtifacts(
+            audioId = "audio_no_title_gen",
+            artifacts = TingwuJobArtifacts(
+                transcriptMarkdown = "客户说下周启动。",
+                smartSummary = TingwuSmartSummary(summary = "客户启动")
+            )
+        )
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("录音里提到下周启动。"))
+        val viewModel = newViewModel()
+
+        viewModel.selectAudioForChat(
+            audioId = "audio_no_title_gen",
+            title = "NoTitleGen.wav",
+            summary = "已有摘要",
+            entersPendingFlow = false
+        )
+        advanceUntilIdle()
+        viewModel.updateInput("客户什么时候启动？")
+        viewModel.send()
+        advanceUntilIdle()
+        Thread.sleep(150)
+        advanceUntilIdle()
+
+        assertEquals(1, fakeExecutor.executedPrompts.size)
+        assertFalse(fakeExecutor.executedPrompts[0].contains("用4-6个中文字总结"))
+    }
+
+    @Test
+    fun `title generation does not re-fire after first rename`() = runTest {
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("好的,帮你复盘。"))
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("Q4复盘"))
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("继续聊,关于预算分配的细节。"))
+
+        val viewModel = newViewModel()
+        viewModel.updateInput("帮我复盘一下Q4的预算")
+        viewModel.send()
+        advanceUntilIdle()
+
+        assertEquals("Q4复盘", viewModel.sessionTitle.value)
+
+        viewModel.updateInput("预算分配有什么问题？")
+        viewModel.send()
+        advanceUntilIdle()
+
+        assertEquals(3, fakeExecutor.executedPrompts.size)
+        assertEquals("Q4复盘", viewModel.sessionTitle.value)
+    }
+
+    @Test
+    fun `title generation failure does not block chat`() = runTest {
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("你好，Default User。"))
+        fakeExecutor.enqueueResponse(ExecutorResult.Failure(error = "network timeout", retryable = true))
+
+        val viewModel = newViewModel()
+        viewModel.updateInput("你好")
+        viewModel.send()
+        advanceUntilIdle()
+
+        val lastMessage = viewModel.history.value.last() as ChatMessage.Ai
+        val response = lastMessage.uiState as UiState.Response
+        assertTrue(response.content.contains("Default User"))
+        assertEquals(UiState.Idle, viewModel.uiState.value)
+        assertTrue(viewModel.sessionTitle.value in setOf("SIM", "新对话"))
     }
 
     @Test
@@ -480,19 +576,20 @@ class SimAgentViewModelTest {
         val originalStartTime = taskRepository.getTask("task_general_boundary")!!.startTime
         val viewModel = newViewModel()
         fakeExecutor.enqueueResponse(ExecutorResult.Success("我可以帮你分析怎么改期，但当前普通聊天不会直接改日程。"))
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("会议改期"))
 
         viewModel.updateInput("把客户会议改到今晚九点")
         viewModel.send()
         advanceUntilIdle()
 
         assertEquals(originalStartTime, taskRepository.getTask("task_general_boundary")?.startTime)
-        assertTrue(fakeExecutor.executedPrompts.last().contains("把客户会议改到今晚九点"))
+        assertTrue(fakeExecutor.executedPrompts[0].contains("把客户会议改到今晚九点"))
         val lastMessage = viewModel.history.value.last() as ChatMessage.Ai
         assertTrue((lastMessage.uiState as UiState.Response).content.contains("不会直接改日程"))
     }
 
     @Test
-    fun `selectAudioForChat reuses current general session and preserves prior turns`() = runTest {
+    fun `selectAudioForChat creates dedicated session instead of attaching to current general session`() = runTest {
         writeAudioMetadata(
             AudioFile(
                 id = "audio_attach_1",
@@ -511,12 +608,13 @@ class SimAgentViewModelTest {
         )
         val viewModel = newViewModel()
         fakeExecutor.enqueueResponse(ExecutorResult.Success("先继续普通聊天。"))
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("客户开场"))
 
         viewModel.updateInput("先聊聊今天怎么跟客户开场")
         viewModel.send()
         advanceUntilIdle()
         val generalSessionId = viewModel.currentSessionId.value
-        val historyBeforeAttach = viewModel.history.value.size
+        val generalHistorySize = viewModel.history.value.size
 
         viewModel.selectAudioForChat(
             audioId = "audio_attach_1",
@@ -526,15 +624,23 @@ class SimAgentViewModelTest {
         )
         advanceUntilIdle()
 
-        assertEquals(generalSessionId, viewModel.currentSessionId.value)
+        // 音频创建了独立的新会话，不是复用当前通用会话
+        val audioSessionId = viewModel.currentSessionId.value
+        assertTrue(audioSessionId != generalSessionId)
         assertEquals("audio_attach_1", viewModel.currentLinkedAudioId.value)
-        assertTrue(viewModel.history.value.size > historyBeforeAttach)
-        val introMessage = viewModel.history.value[historyBeforeAttach] as ChatMessage.Ai
+        assertEquals("Attach.wav", viewModel.sessionTitle.value)
+
+        // 新会话只有 intro + artifacts，无通用聊天历史
+        val introMessage = viewModel.history.value.first() as ChatMessage.Ai
         val intro = introMessage.uiState as UiState.Response
         assertTrue(intro.content.contains("已接入《Attach.wav》"))
-        assertFalse(intro.content.contains("客户录音摘要"))
         val lastMessage = viewModel.history.value.last() as ChatMessage.Ai
         assertTrue(lastMessage.uiState is UiState.AudioArtifacts)
+
+        // 切回通用会话 → 历史完好
+        viewModel.switchSession(generalSessionId!!)
+        assertEquals(generalHistorySize, viewModel.history.value.size)
+        assertNull(viewModel.currentLinkedAudioId.value)
     }
 
     @Test
@@ -1416,6 +1522,62 @@ class SimAgentViewModelTest {
         assertTrue((lastMessage.uiState as UiState.Response).content.contains("明确目标"))
     }
 
+    @Test
+    fun `scheduler follow up send resolves explicit global target without requiring task selection`() = runTest {
+        taskRepository.insertTask(
+            ScheduledTask(
+                id = "task_follow_global_a",
+                timeDisplay = "10:00",
+                title = "客户A回访",
+                urgencyLevel = UrgencyLevel.L3_NORMAL,
+                startTime = Instant.parse("2026-03-22T02:00:00Z"),
+                durationMinutes = 30
+            )
+        )
+        taskRepository.insertTask(
+            ScheduledTask(
+                id = "task_follow_global_b",
+                timeDisplay = "11:00",
+                title = "客户B回访",
+                urgencyLevel = UrgencyLevel.L3_NORMAL,
+                startTime = Instant.parse("2026-03-22T03:00:00Z"),
+                durationMinutes = 30
+            )
+        )
+        val viewModel = newViewModel()
+        val sessionId = viewModel.createBadgeSchedulerFollowUpSession(
+            threadId = "thread_follow_global_success",
+            transcript = "安排两个客户回访",
+            tasks = listOf(
+                SchedulerFollowUpTaskSummary("task_follow_global_a", "客户A回访", 0, Instant.parse("2026-03-22T02:00:00Z").toEpochMilli(), 30),
+                SchedulerFollowUpTaskSummary("task_follow_global_b", "客户B回访", 0, Instant.parse("2026-03-22T03:00:00Z").toEpochMilli(), 30)
+            )
+        )
+        viewModel.switchSession(sessionId!!)
+
+        assertNull(viewModel.selectedSchedulerFollowUpTaskId.value)
+        activeTaskRetrievalIndex.nextResolveResult = ActiveTaskResolveResult.Resolved("task_follow_global_b")
+        enqueueGlobalRescheduleExtraction(
+            targetQuery = "客户B回访",
+            timeInstruction = "推迟1个小时"
+        )
+        enqueueFollowUpShadowDelta(minutes = 60)
+        viewModel.updateInput("把客户B回访推迟1个小时")
+        viewModel.send()
+        advanceUntilIdle()
+
+        assertEquals(
+            Instant.parse("2026-03-22T02:00:00Z"),
+            taskRepository.getTask("task_follow_global_a")?.startTime
+        )
+        assertEquals(
+            Instant.parse("2026-03-22T04:00:00Z"),
+            taskRepository.getTask("task_follow_global_b")?.startTime
+        )
+        val lastMessage = viewModel.history.value.last() as ChatMessage.Ai
+        assertTrue((lastMessage.uiState as UiState.Response).content.contains("已改期：客户B回访"))
+    }
+
     private fun newViewModel(
         audioRepository: SimAudioRepository = newAudioRepository(),
         executor: FakeExecutor = fakeExecutor
@@ -1443,14 +1605,16 @@ class SimAgentViewModelTest {
         var finishDelayMillis: Long = 0L
         var failStart = false
         var startCount: Int = 0
+        var lastProfile: SimRealtimeSpeechProfile? = null
         private val eventFlow = MutableSharedFlow<SimRealtimeSpeechEvent>(extraBufferCapacity = 16)
         private var listening = false
 
         override val events: Flow<SimRealtimeSpeechEvent> = eventFlow.asSharedFlow()
 
-        override fun startListening() {
+        override fun startListening(profile: SimRealtimeSpeechProfile) {
             if (failStart) error("start failed")
             startCount += 1
+            lastProfile = profile
             listening = true
         }
 

@@ -14,7 +14,9 @@ import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.domain.repository.UserProfileRepository
 import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
 import java.util.UUID
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -24,7 +26,8 @@ internal class SimAgentChatCoordinator(
     private val audioRepository: SimAudioRepository,
     private val executor: Executor,
     private val userProfileRepository: UserProfileRepository,
-    private val bridge: SimAgentUiBridge
+    private val bridge: SimAgentUiBridge,
+    private val scope: CoroutineScope
 ) {
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
@@ -53,37 +56,22 @@ internal class SimAgentChatCoordinator(
         startSeededSession(initialUserInput)
     }
 
+    // 音频讨论会话路由：
+    // 1. 已有绑定会话 → 切回
+    // 2. 无绑定 → 创建专属新会话（不污染当前通用聊天）
     fun openAudioDiscussion(
         audioId: String,
         title: String,
         summary: String?,
         summaryLabel: String = "当前预览"
     ): String {
-        val currentSessionId = sessionCoordinator.currentSessionId()
-        val currentRecord = currentSessionId?.let(sessionCoordinator::getSession)
-        if (currentSessionId != null && currentRecord != null) {
-            if (currentRecord.preview.sessionKind != SessionKind.SCHEDULER_FOLLOW_UP) {
-                if (currentRecord.preview.linkedAudioId == audioId) {
-                    sessionCoordinator.switchSession(currentSessionId)
-                    return currentSessionId
-                }
-                sessionCoordinator.attachAudioToSession(
-                    sessionId = currentSessionId,
-                    audioId = audioId,
-                    title = title,
-                    summary = summary,
-                    retainExistingTitle = shouldRetainSessionTitleOnAudioAttach(currentRecord),
-                    introMessage = buildAudioDiscussionIntro(title, summary, summaryLabel)
-                )
-                return currentSessionId
-            }
-        }
-
+        // 优先检查：该音频是否已有绑定会话
         sessionCoordinator.existingSessionIdForAudio(audioId)?.let { existing ->
             sessionCoordinator.switchSession(existing)
             return existing
         }
 
+        // 无绑定 → 创建专属音频讨论会话
         val sessionId = UUID.randomUUID().toString()
         val preview = SessionPreview(
             id = sessionId,
@@ -208,14 +196,14 @@ internal class SimAgentChatCoordinator(
         val prompt = buildGeneralChatPrompt(record, content)
         when (val result = executor.execute(ModelRegistry.COACH, prompt)) {
             is ExecutorResult.Success -> {
+                val aiReply = result.content.ifBlank {
+                    "我在这里，刚刚没有组织出合适的回复。你可以换个说法继续聊。"
+                }
                 sessionCoordinator.appendAiMessage(
                     sessionId,
-                    UiState.Response(
-                        result.content.ifBlank {
-                            "我在这里，刚刚没有组织出合适的回复。你可以换个说法继续聊。"
-                        }
-                    )
+                    UiState.Response(aiReply)
                 )
+                tryGenerateSessionTitle(sessionId, content, aiReply)
                 bridge.setIsSending(false)
                 bridge.setUiState(UiState.Idle)
             }
@@ -336,10 +324,6 @@ internal class SimAgentChatCoordinator(
         }
     }
 
-    private fun shouldRetainSessionTitleOnAudioAttach(record: SimSessionRecord): Boolean {
-        if (record.messages.isEmpty()) return false
-        return record.preview.clientName !in setOf("SIM", "新对话")
-    }
 
     private fun buildGeneralChatPrompt(
         record: SimSessionRecord,
@@ -487,5 +471,56 @@ internal class SimAgentChatCoordinator(
             }
             TranscriptionStatus.TRANSCRIBED -> "《$title》转写已完成"
         }
+    }
+
+    // 会话自动命名：首次成功的「通用聊天」交换后，
+    // 用一次轻量 LLM 调用生成 4-6 字中文主题标题。
+    private fun tryGenerateSessionTitle(
+        sessionId: String,
+        userInput: String,
+        aiReply: String
+    ) {
+        val record = sessionCoordinator.getSession(sessionId) ?: return
+        if (record.preview.clientName !in UNTITLED_SESSION_NAMES) return
+
+        scope.launch {
+            try {
+                val titlePrompt = buildTitlePrompt(userInput, aiReply)
+                when (val result = executor.execute(ModelRegistry.COACH, titlePrompt)) {
+                    is ExecutorResult.Success -> {
+                        val title = result.content.trim()
+                            .replace(Regex("[，。！？、；：\"\"''\\s]+"), "")
+                            .take(6)
+                        if (title.isNotBlank()) {
+                            sessionCoordinator.updateSession(sessionId) { r ->
+                                r.copy(
+                                    preview = r.preview.copy(clientName = title)
+                                )
+                            }
+                            Log.d(TAG, "Auto-titled session $sessionId: $title")
+                        }
+                    }
+                    is ExecutorResult.Failure -> {
+                        Log.d(TAG, "Title generation failed: ${result.error}")
+                    }
+                }
+            } catch (e: Exception) {
+                Log.d(TAG, "Title generation error", e)
+            }
+        }
+    }
+
+    private fun buildTitlePrompt(userInput: String, aiReply: String): String {
+        return buildString {
+            appendLine("用4-6个中文字总结以下对话的主题。只返回主题词，不要标点或解释。")
+            appendLine()
+            appendLine("用户：$userInput")
+            appendLine("助手：${aiReply.take(200)}")
+        }
+    }
+
+    companion object {
+        private const val TAG = "SimChatCoordinator"
+        private val UNTITLED_SESSION_NAMES = setOf("SIM", "新对话")
     }
 }

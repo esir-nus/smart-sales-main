@@ -101,11 +101,6 @@ class SimAgentViewModel @Inject constructor(
     timeProvider: TimeProvider
 ) : ViewModel(), IAgentViewModel {
 
-    data class ArtifactTranscriptRevealState(
-        val consumed: Boolean = false,
-        val isLongTranscript: Boolean = false
-    )
-
     private val _currentSessionId = MutableStateFlow<String?>(null)
     val currentSessionId: StateFlow<String?> = _currentSessionId.asStateFlow()
 
@@ -178,8 +173,8 @@ class SimAgentViewModel @Inject constructor(
         _selectedSchedulerFollowUpTaskId.asStateFlow()
 
     private val _artifactTranscriptRevealState =
-        MutableStateFlow<Map<String, ArtifactTranscriptRevealState>>(emptyMap())
-    val artifactTranscriptRevealState: StateFlow<Map<String, ArtifactTranscriptRevealState>> =
+        MutableStateFlow<Map<String, SimArtifactTranscriptRevealState>>(emptyMap())
+    val artifactTranscriptRevealState: StateFlow<Map<String, SimArtifactTranscriptRevealState>> =
         _artifactTranscriptRevealState.asStateFlow()
 
     private val bridge = SimAgentUiBridge(
@@ -219,7 +214,8 @@ class SimAgentViewModel @Inject constructor(
         audioRepository = audioRepository,
         executor = executor,
         userProfileRepository = userProfileRepository,
-        bridge = bridge
+        bridge = bridge,
+        scope = viewModelScope
     )
 
     private val followUpCoordinator = SimAgentFollowUpCoordinator(
@@ -386,7 +382,7 @@ class SimAgentViewModel @Inject constructor(
             return
         }
         _artifactTranscriptRevealState.value = _artifactTranscriptRevealState.value + (
-            messageId to ArtifactTranscriptRevealState(
+            messageId to SimArtifactTranscriptRevealState(
                 consumed = true,
                 isLongTranscript = current?.isLongTranscript == true || isLongTranscript
             )

@@ -1,5 +1,8 @@
 package com.smartsales.prism.ui.onboarding
 
+import com.smartsales.prism.data.notification.ReminderReliabilityAdvisor
+import com.smartsales.prism.domain.scheduler.UrgencyLevel
+
 /**
  * onboarding 互动消息来源。
  */
@@ -39,7 +42,6 @@ data class OnboardingProfileDraft(
  * onboarding 麦克风交互模式。
  */
 enum class OnboardingMicInteractionMode {
-    HOLD_TO_SEND,
     TAP_TO_SEND
 }
 
@@ -50,7 +52,8 @@ enum class OnboardingProcessingPhase {
     NONE,
     RECOGNIZING,
     BUILDING_CONSULTATION_REPLY,
-    BUILDING_PROFILE_RESULT
+    BUILDING_PROFILE_RESULT,
+    BUILDING_QUICK_START_RESULT
 }
 
 /**
@@ -64,7 +67,8 @@ enum class OnboardingTranscriptOrigin {
  * onboarding 生成来源。
  */
 enum class OnboardingGenerationOrigin {
-    LLM
+    LLM,
+    SCHEDULER_PATH_A
 }
 
 /**
@@ -80,7 +84,7 @@ data class OnboardingConsultationUiState(
     val errorMessage: String? = null,
     val guidanceMessage: String? = null,
     val awaitingMicPermission: Boolean = false,
-    val micInteractionMode: OnboardingMicInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+    val micInteractionMode: OnboardingMicInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
     val processingPhase: OnboardingProcessingPhase = OnboardingProcessingPhase.NONE,
     val lastTranscriptOrigin: OnboardingTranscriptOrigin? = null,
     val lastGenerationOrigin: OnboardingGenerationOrigin? = null
@@ -103,13 +107,71 @@ data class OnboardingProfileUiState(
     val errorMessage: String? = null,
     val guidanceMessage: String? = null,
     val awaitingMicPermission: Boolean = false,
-    val micInteractionMode: OnboardingMicInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+    val micInteractionMode: OnboardingMicInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
     val processingPhase: OnboardingProcessingPhase = OnboardingProcessingPhase.NONE,
     val transcriptOrigin: OnboardingTranscriptOrigin? = null,
     val generationOrigin: OnboardingGenerationOrigin? = null
 ) {
     val hasExtractionResult: Boolean get() = draft != null && acknowledgement.isNotBlank()
     val canSkipAfterFailure: Boolean get() = errorMessage != null
+}
+
+/**
+ * quick start 教学轮次。
+ */
+enum class OnboardingQuickStartRound {
+    INITIAL_LIST,
+    APPEND_ITEM,
+    UPDATE_ITEM,
+    COMPLETE
+}
+
+/**
+ * quick start 暂存日程项。
+ */
+data class OnboardingQuickStartItem(
+    val stableId: String,
+    val title: String,
+    val timeLabel: String,
+    val dateLabel: String,
+    val dateIso: String,
+    val urgencyLevel: UrgencyLevel,
+    val startHour: Int? = null,
+    val startMinute: Int? = null,
+    val highlightToken: Int = 0,
+    val keyPerson: String? = null,
+    val location: String? = null,
+    val timeHint: String? = null,
+    val notesDigest: String? = null
+) {
+    val isExact: Boolean get() = startHour != null && startMinute != null
+}
+
+/**
+ * quick start 页面状态。
+ */
+data class OnboardingQuickStartUiState(
+    val isRecording: Boolean = false,
+    val isProcessing: Boolean = false,
+    val liveTranscript: String = "",
+    val transcript: String = "",
+    val items: List<OnboardingQuickStartItem> = emptyList(),
+    val errorMessage: String? = null,
+    val guidanceMessage: String? = null,
+    val transientNoticeMessage: String? = null,
+    val transientNoticeToken: Int = 0,
+    val awaitingMicPermission: Boolean = false,
+    val micInteractionMode: OnboardingMicInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
+    val processingPhase: OnboardingProcessingPhase = OnboardingProcessingPhase.NONE,
+    val lastTranscriptOrigin: OnboardingTranscriptOrigin? = null,
+    val lastGenerationOrigin: OnboardingGenerationOrigin? = null,
+    val reminderGuide: ReminderReliabilityAdvisor.ReminderReliabilityGuide? = null,
+    val reminderGuidePrompted: Boolean = false,
+    val calendarPermissionRequested: Boolean = false,
+    val calendarPermissionGranted: Boolean = false,
+    val calendarPermissionRequestToken: Int = 0
+) {
+    val canContinue: Boolean get() = items.isNotEmpty() && !isRecording && !isProcessing
 }
 
 enum class OnboardingConsultationCaptureState {
@@ -127,6 +189,14 @@ enum class OnboardingProfileCaptureState {
     PROCESSING,
     EXTRACTED,
     ERROR
+}
+
+enum class OnboardingQuickStartCaptureState {
+    IDLE,
+    INITIAL_LIST,
+    APPENDED,
+    UPDATED,
+    COMPLETE
 }
 
 sealed interface OnboardingInteractionEffect {

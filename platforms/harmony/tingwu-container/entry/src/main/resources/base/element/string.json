@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "Transient Harmony Tingwu container"
+    },
+    {
+      "name": "entryability_desc",
+      "value": "Tingwu-only Harmony entry ability"
+    },
+    {
+      "name": "entryability_label",
+      "value": "Tingwu Container"
+    }
+  ]
+}

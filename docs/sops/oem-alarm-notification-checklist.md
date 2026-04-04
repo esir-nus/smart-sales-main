@@ -4,6 +4,7 @@
 > **Primary SOT**:
 > - `docs/cerb/notifications/spec.md`
 > - `app-core/src/main/java/com/smartsales/prism/data/notification/OemCompat.kt`
+> - `docs/sops/oem-alarm-notification-control-plane.md`
 > **Scope**: Reminder banner, deadline alarm, lock-screen visibility, and reboot/background survival for Smart Sales / SIM scheduler reminders.
 
 ---
@@ -35,13 +36,15 @@ Check these in order:
 
 1. **App notifications enabled at system level**
 2. **Exact alarm**
-3. **Battery optimization exemption**
-4. **Auto-start / app launch management**
-5. **Lock-screen display**
-6. **Floating notification**
-7. **Background local notification**
+3. **Full-screen alarm permission on Android 14+**
+4. **Battery optimization exemption**
+5. **Auto-start / app launch management**
+6. **Lock-screen display**
+7. **Floating notification**
+8. **Background local notification**
+9. **Background popup / background activity launch**
 
-If logs show the receiver fired but the user saw nothing, first rule out app-level notification blocking, then prioritize steps 5-7 on Xiaomi/HyperOS.
+If logs show the receiver fired but the user saw nothing, first rule out app-level notification blocking, then prioritize steps 6-9 on Xiaomi/HyperOS.
 
 ---
 
@@ -53,6 +56,7 @@ Apply on all OEMs first:
 - [ ] App notification importance is not blocked / none
 - [ ] Task reminder channels are enabled
 - [ ] Exact alarm permission is enabled on Android 12+
+- [ ] Full-screen alarm permission is enabled on Android 14+ when validating screen-off DEADLINE alarms
 - [ ] Battery optimization is disabled / ignored for the app
 - [ ] App is not in a sleeping / restricted / optimized bucket
 - [ ] DND is off while validating EARLY reminders
@@ -87,6 +91,8 @@ This is the highest-risk OEM path in the current repo.
 
 - [ ] **Exact alarm** enabled
   - Path: Settings -> Apps -> Special permissions -> Alarms & reminders -> Smart Sales
+- [ ] **Full-screen alarm permission** enabled on Android 14+
+  - Path: Settings -> Special app access -> Full-screen intents -> Smart Sales
 - [ ] **Battery optimization** ignored
   - Path: Settings -> Apps -> Smart Sales -> Battery -> No restrictions
 - [ ] **Auto-start** enabled
@@ -98,6 +104,8 @@ This is the highest-risk OEM path in the current repo.
   - Needed for visible banner-style presentation
 - [ ] **Background notifications** enabled
   - HyperOS can block local notifications from background even after scheduling succeeds
+- [ ] **Background popup / background page launch** allowed
+  - HyperOS can separately block page launch from background even when the notification object exists
 
 ### Repo-backed interpretation
 
@@ -110,6 +118,11 @@ Mapped in `OemCompat.kt`:
 - `canShowFloatingNotification(...)`
 - `canSendBackgroundNotification(...)`
 
+Currently missing in code follow-up:
+
+- Android 14+ dedicated full-screen-intent settings routing
+- HyperOS background-popup management
+
 ### Practical reading
 
 If logs show:
@@ -120,27 +133,36 @@ If logs show:
 
 but the user saw nothing, Xiaomi/HyperOS permission state is still the primary suspect.
 
+If the device is Android 14+ and the alarm must wake the screen, also rule out app-level full-screen-intent denial before treating it as Xiaomi-only drift.
+
 ---
 
-## 6. Huawei / Honor Checklist
+## 6. Huawei / Honor / HarmonyOS Checklist
 
 Huawei/Honor usually fails through background launch management rather than Xiaomi-style AppOps.
+For this repo, HarmonyOS support means the existing Android app guides the user through Huawei-family launch management; it does not use native Harmony reminder APIs.
 
 ### Required checks
 
 - [ ] **Exact alarm** enabled on Android 12+
-- [ ] **Battery optimization** disabled
+- [ ] **Full-screen alarm permission** enabled on Android 14+ when validating screen-off DEADLINE alarms
 - [ ] **App launch management / auto-start** set to manual allow
 - [ ] **Allow auto-launch**
 - [ ] **Allow secondary launch**
 - [ ] **Allow background activity**
-- [ ] Lock-screen notifications enabled
+- [ ] **Battery optimization** disabled
+- [ ] **Lock-screen notifications** enabled
+  - Path: Settings -> Notifications and status bar -> Lock screen notifications
+- [ ] **Floating/banner notifications** enabled
+  - Path: Settings -> Notifications and status bar -> Smart Sales -> Allow floating
+- [ ] Notification master switch and reminder channels enabled
 
 ### Practical paths
 
-- Settings -> Apps -> App launch -> Smart Sales -> Manage manually
+- Settings -> Apps and services -> App launch -> Smart Sales -> Manage manually
 - Settings -> Battery -> App launch / Launch manager
 - Settings -> Notifications -> Lock screen notifications
+- Settings -> Notifications and status bar -> Smart Sales
 
 ### Repo-backed interpretation
 
@@ -149,6 +171,8 @@ The repo treats Huawei/Honor as:
 - aggressive on boot/background survival
 - less inspectable programmatically than Xiaomi
 - more dependent on user-managed launch/background settings
+- primary reminder hardening branch = App Launch / Launch Management
+- secondary reminder hardening branch = battery optimization exemption
 
 ---
 
@@ -181,11 +205,11 @@ Primary failure mode: aggressive battery/background management.
 | Symptom | Most Likely Cause |
 |---------|-------------------|
 | Logs show receiver fired, `importance=NONE` / `numBlocked > 0` | App notifications globally disabled by system |
-| Logs show reminder fired, user saw nothing | Xiaomi lock-screen / floating / background notification permission |
+| Logs show reminder fired, user saw nothing | Xiaomi lock-screen / floating / background notification / background popup permission |
 | Reminder arrives late by minutes or longer | Exact alarm missing or battery optimization still active |
 | Works only while app is open | Background restriction / OEM kill policy |
 | Lost after reboot | Auto-start / app launch management |
-| Full-screen deadline never appears | Full-screen/lock-screen presentation blocked by OEM settings |
+| Full-screen deadline never appears | Android full-screen-intent denied, or OEM launch/lock-screen presentation blocked |
 
 ---
 

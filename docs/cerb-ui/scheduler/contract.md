@@ -51,6 +51,7 @@ sealed class SchedulerUiState {
 - `Executing` means the confirmed mutation is in flight and the drawer should suppress duplicate user actions.
 - `Success` means the mutation completed and the drawer can surface the completion message.
 - `Error` means the drawer must show explicit fast-fail feedback instead of silently dropping the action.
+- scheduler warning/error copy must remain scheduler-owned UI language; raw model, extractor, classifier, or JSON/parser wording is not a lawful visible `Error` message.
 
 ## Scheduler Card Indicator Contract
 

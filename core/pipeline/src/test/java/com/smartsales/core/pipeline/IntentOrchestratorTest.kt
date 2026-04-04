@@ -12,6 +12,7 @@ import com.smartsales.core.test.fakes.FakeAliasCache
 import com.smartsales.core.test.fakes.FakeExecutor
 import com.smartsales.core.test.fakes.FakeInspirationRepository
 import com.smartsales.core.test.fakes.FakeScheduleBoard
+import com.smartsales.core.test.fakes.FakeActiveTaskRetrievalIndex
 import com.smartsales.prism.domain.memory.CacheResult
 import com.smartsales.prism.domain.memory.EntityEntry
 import com.smartsales.prism.domain.memory.EntityType
@@ -70,6 +71,8 @@ class IntentOrchestratorTest {
     private lateinit var fakeTaskRepository: ScheduledTaskRepository
     private lateinit var fakeScheduleBoard: FakeScheduleBoard
     private lateinit var fakeInspirationRepository: FakeInspirationRepository
+    private lateinit var fakeActiveTaskRetrievalIndex: FakeActiveTaskRetrievalIndex
+    private lateinit var testTimeProvider: TimeProvider
     private lateinit var storedTasks: MutableMap<String, ScheduledTask>
     private val testScope = TestScope(UnconfinedTestDispatcher())
     
@@ -86,6 +89,7 @@ class IntentOrchestratorTest {
         fakeUniAExecutor = FakeExecutor()
         fakeScheduleBoard = FakeScheduleBoard()
         fakeInspirationRepository = FakeInspirationRepository()
+        fakeActiveTaskRetrievalIndex = FakeActiveTaskRetrievalIndex()
         storedTasks = mutableMapOf()
         fakeTaskRepository = object : ScheduledTaskRepository {
             override suspend fun batchInsertTasks(rules: List<ScheduledTask>): List<String> {
@@ -121,7 +125,7 @@ class IntentOrchestratorTest {
             }
         }
         
-        val testTimeProvider = object : TimeProvider {
+        testTimeProvider = object : TimeProvider {
             override val now: Instant = fixedNow
             override val currentTime: LocalTime = fixedCurrentTime
             override val today: LocalDate = fixedToday
@@ -849,5 +853,194 @@ class IntentOrchestratorTest {
         assertEquals("existing-21", pathAResult.task.conflictWithTaskId)
         assertEquals("与「回家睡觉」时间冲突", pathAResult.task.conflictSummary)
         assertEquals(0, pathAResult.task.durationMinutes)
+    }
+
+    @Test
+    fun `shared scheduler router gives top level voice batch create parity`() = runTest {
+        setup()
+        val sharedExecutor = FakeExecutor()
+        val sharedOrchestrator = buildSharedSchedulerOrchestrator(sharedExecutor)
+
+        fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.DEEP_ANALYSIS, true, ""))
+        sharedExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision":"MULTI_CREATE",
+                  "fragments":[
+                    {
+                      "title":"开会",
+                      "mode":"EXACT",
+                      "anchorKind":"ABSOLUTE",
+                      "startTimeIso":"2026-03-19T02:00:00Z",
+                      "durationMinutes":60,
+                      "urgency":"L2"
+                    },
+                    {
+                      "title":"发报告",
+                      "mode":"EXACT",
+                      "anchorKind":"ABSOLUTE",
+                      "startTimeIso":"2026-03-19T07:00:00Z",
+                      "durationMinutes":30,
+                      "urgency":"L2"
+                    }
+                  ]
+                }
+                """.trimIndent()
+            )
+        )
+        fakeUnifiedPipeline.nextResultFlow = flowOf(PipelineResult.ConversationalReply("Path B reply"))
+
+        val results = sharedOrchestrator.processInput(
+            "明天十点开会，然后下午三点发报告",
+            isVoice = true
+        ).toList()
+
+        val committed = results.filterIsInstance<PipelineResult.PathACommitted>()
+        assertEquals(2, committed.size)
+        assertEquals(listOf("开会", "发报告"), committed.map { it.task.title })
+        assertTrue(storedTasks.values.any { it.title == "开会" })
+        assertTrue(storedTasks.values.any { it.title == "发报告" })
+        assertTrue(results.any { it == PipelineResult.ConversationalReply("Path B reply") })
+    }
+
+    @Test
+    fun `shared scheduler router commits qualified weekday exact create before path b`() = runTest {
+        setup()
+        val sharedExecutor = FakeExecutor()
+        val sharedOrchestrator = buildSharedSchedulerOrchestrator(sharedExecutor)
+
+        fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.DEEP_ANALYSIS, true, ""))
+        fakeUnifiedPipeline.nextResultFlow = flowOf(PipelineResult.ConversationalReply("Path B reply"))
+
+        val results = sharedOrchestrator.processInput(
+            "下周三早上八点钟提醒我起床",
+            isVoice = true
+        ).toList()
+
+        val committed = results.filterIsInstance<PipelineResult.PathACommitted>()
+        assertEquals(1, committed.size)
+        assertEquals("起床", committed.first().task.title)
+        assertEquals(Instant.parse("2026-03-25T00:00:00Z"), committed.first().task.startTime)
+        assertTrue(results.any { it == PipelineResult.ConversationalReply("Path B reply") })
+    }
+
+    @Test
+    fun `shared scheduler router resolves top level voice global reschedule before path b`() = runTest {
+        setup()
+        val sharedExecutor = FakeExecutor()
+        val sharedOrchestrator = buildSharedSchedulerOrchestrator(sharedExecutor)
+        val existing = ScheduledTask(
+            id = "task-1",
+            timeDisplay = "10:00",
+            title = "张总会议",
+            urgencyLevel = com.smartsales.prism.domain.scheduler.UrgencyLevel.L2_IMPORTANT,
+            startTime = Instant.parse("2026-03-19T02:00:00Z"),
+            durationMinutes = 60
+        )
+        fakeTaskRepository.upsertTask(existing)
+        fakeActiveTaskRetrievalIndex.nextShortlist = listOf(
+            com.smartsales.prism.domain.scheduler.ActiveTaskContext(
+                taskId = "task-1",
+                title = "张总会议",
+                timeSummary = "明天 10:00",
+                isVague = false
+            )
+        )
+        fakeActiveTaskRetrievalIndex.nextResolveResult =
+            com.smartsales.prism.domain.scheduler.ActiveTaskResolveResult.Resolved("task-1")
+
+        fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.DEEP_ANALYSIS, true, ""))
+        sharedExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision":"RESCHEDULE_TARGETED",
+                  "suggestedTaskId":"task-1",
+                  "targetQuery":"张总会议",
+                  "timeInstruction":"推迟一小时"
+                }
+                """.trimIndent()
+            )
+        )
+        fakeUnifiedPipeline.nextResultFlow = flowOf(
+            PipelineResult.TaskCommandProposal(
+                SchedulerTaskCommand.CreateTasks(
+                    com.smartsales.prism.domain.scheduler.CreateTasksParams(
+                        tasks = listOf(
+                            com.smartsales.prism.domain.scheduler.TaskDefinition(
+                                title = "Path B hallucinated follow-up",
+                                startTimeIso = "2026-03-19T04:44:00Z",
+                                durationMinutes = 60,
+                                urgency = com.smartsales.prism.domain.scheduler.UrgencyEnum.L2_IMPORTANT
+                            )
+                        )
+                    )
+                )
+            ),
+            PipelineResult.ConversationalReply("Path B reply")
+        )
+
+        val results = sharedOrchestrator.processInput(
+            "把明天和张总的会推迟一小时",
+            isVoice = true
+        ).toList()
+
+        val committed = results.filterIsInstance<PipelineResult.PathACommitted>()
+        assertEquals(1, committed.size)
+        assertEquals("task-1", committed.first().task.id)
+        assertEquals(Instant.parse("2026-03-19T03:00:00Z"), committed.first().task.startTime)
+        assertFalse(storedTasks.values.any { it.title == "Path B hallucinated follow-up" })
+        assertEquals("把明天和张总的会推迟一小时", fakeActiveTaskRetrievalIndex.lastShortlistTranscript)
+        assertTrue(results.any { it == PipelineResult.ConversationalReply("Path B reply") })
+    }
+
+    private fun buildSharedSchedulerOrchestrator(sharedExecutor: FakeExecutor): IntentOrchestrator {
+        val linter = SchedulerLinter(testTimeProvider)
+        return IntentOrchestrator(
+            contextBuilder = fakeContextBuilder,
+            lightningRouter = fakeLightningRouter,
+            mascotService = fakeMascotService,
+            unifiedPipeline = fakeUnifiedPipeline,
+            entityWriter = fakeEntityWriter,
+            aliasCache = fakeAliasCache,
+            uniAExtractionService = RealUniAExtractionService(
+                executor = sharedExecutor,
+                promptCompiler = PromptCompiler(),
+                schedulerLinter = linter
+            ),
+            uniBExtractionService = RealUniBExtractionService(
+                executor = sharedExecutor,
+                promptCompiler = PromptCompiler(),
+                schedulerLinter = linter
+            ),
+            uniCExtractionService = RealUniCExtractionService(
+                executor = sharedExecutor,
+                promptCompiler = PromptCompiler(),
+                schedulerLinter = linter
+            ),
+            fastTrackMutationEngine = FastTrackMutationEngine(
+                taskRepository = fakeTaskRepository,
+                scheduleBoard = fakeScheduleBoard,
+                inspirationRepository = fakeInspirationRepository,
+                timeProvider = testTimeProvider
+            ),
+            taskRepository = fakeTaskRepository,
+            scheduleBoard = fakeScheduleBoard,
+            toolRegistry = FakeToolRegistry(),
+            timeProvider = testTimeProvider,
+            appScope = testScope,
+            activeTaskRetrievalIndex = fakeActiveTaskRetrievalIndex,
+            uniMExtractionService = RealUniMExtractionService(
+                executor = sharedExecutor,
+                promptCompiler = PromptCompiler(),
+                schedulerLinter = linter
+            ),
+            globalRescheduleExtractionService = RealGlobalRescheduleExtractionService(
+                executor = sharedExecutor,
+                promptCompiler = PromptCompiler(),
+                schedulerLinter = linter
+            )
+        )
     }
 }

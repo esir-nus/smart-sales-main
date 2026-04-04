@@ -160,9 +160,9 @@ internal fun handleRuntimeConnectivitySetupCompleted(
 ): RuntimeShellState {
     emitTelemetry(
         SIM_CONNECTIVITY_SETUP_COMPLETED_SUMMARY,
-        "source=pairing_success target=${RuntimeConnectivitySurface.MANAGER}"
+        "source=pairing_success target=HOME"
     )
-    return openRuntimeConnectivityManager(state).copy(isForcedFirstLaunchOnboarding = false)
+    return closeRuntimeOverlays(state).copy(isForcedFirstLaunchOnboarding = false)
 }
 
 internal fun handleRuntimeConnectivitySetupSkipped(
@@ -194,8 +194,21 @@ internal fun shouldAutoOpenRuntimeSchedulerStartupTeaser(
     state: RuntimeShellState,
     isImeVisible: Boolean,
     teaserPending: Boolean
-): Boolean = teaserPending &&
-    shouldShowRuntimeIdleComposerHint(state, isImeVisible)
+): Boolean = shouldAutoOpenRuntimeSchedulerWhenShellIsClear(
+    state = state,
+    isImeVisible = isImeVisible,
+    pending = teaserPending
+)
+
+internal fun shouldAutoOpenRuntimeSchedulerPostOnboardingHandoff(
+    state: RuntimeShellState,
+    isImeVisible: Boolean,
+    handoffPending: Boolean
+): Boolean = shouldAutoOpenRuntimeSchedulerWhenShellIsClear(
+    state = state,
+    isImeVisible = isImeVisible,
+    pending = handoffPending
+)
 
 
 internal fun dismissRuntimeSchedulerIslandHint(state: RuntimeShellState): RuntimeShellState =
@@ -261,3 +274,10 @@ private fun BaseRuntimeShellCoreState.toRuntimeDrawerType(): RuntimeDrawerType? 
         BaseRuntimeDrawerType.HISTORY,
         null -> null
     }
+
+private fun shouldAutoOpenRuntimeSchedulerWhenShellIsClear(
+    state: RuntimeShellState,
+    isImeVisible: Boolean,
+    pending: Boolean
+): Boolean = pending &&
+    shouldShowRuntimeIdleComposerHint(state, isImeVisible)

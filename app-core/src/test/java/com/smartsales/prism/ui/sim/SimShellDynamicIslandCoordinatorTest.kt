@@ -55,7 +55,7 @@ class SimShellDynamicIslandCoordinatorTest {
     }
 
     @Test
-    fun `connectivity change interrupts for three seconds then yields back to scheduler`() = runTest {
+    fun `disconnected change interrupts for three seconds then yields back to scheduler`() = runTest {
         val connectivityState = MutableStateFlow(ConnectionState.CONNECTED)
         val coordinator = createCoordinator(
             parentScope = this,
@@ -92,7 +92,44 @@ class SimShellDynamicIslandCoordinatorTest {
     }
 
     @Test
-    fun `heartbeat surfaces connected lane every thirty seconds with mock battery`() = runTest {
+    fun `connected change interrupts for five seconds then yields back to scheduler`() = runTest {
+        val connectivityState = MutableStateFlow(ConnectionState.DISCONNECTED)
+        val coordinator = createCoordinator(
+            parentScope = this,
+            schedulerItems = MutableStateFlow(listOf(schedulerItem("最近：客户回访 · 09:00"))),
+            connectivityState = connectivityState
+        )
+
+        runCurrent()
+        connectivityState.value = ConnectionState.CONNECTED
+        runCurrent()
+        assertVisible(
+            coordinator = coordinator,
+            expectedLane = DynamicIslandLane.CONNECTIVITY,
+            expectedText = "Badge 已连接"
+        )
+
+        advanceTimeBy(4_999L)
+        runCurrent()
+        assertVisible(
+            coordinator = coordinator,
+            expectedLane = DynamicIslandLane.CONNECTIVITY,
+            expectedText = "Badge 已连接"
+        )
+
+        advanceTimeBy(1L)
+        runCurrent()
+        assertVisible(
+            coordinator = coordinator,
+            expectedLane = DynamicIslandLane.SCHEDULER,
+            expectedText = "最近：客户回访 · 09:00"
+        )
+
+        coordinator.close()
+    }
+
+    @Test
+    fun `heartbeat surfaces connected lane for five seconds every thirty seconds with mock battery`() = runTest {
         val batteryLevel = MutableStateFlow(85)
         val coordinator = createCoordinator(
             parentScope = this,
@@ -115,7 +152,7 @@ class SimShellDynamicIslandCoordinatorTest {
             coordinator.presentation.value.visibleItem?.visualState
         )
 
-        advanceTimeBy(2_499L)
+        advanceTimeBy(4_999L)
         runCurrent()
         assertVisible(
             coordinator = coordinator,
@@ -178,12 +215,117 @@ class SimShellDynamicIslandCoordinatorTest {
             expectedText = "Badge 已连接"
         )
 
-        advanceTimeBy(3_000L)
+        advanceTimeBy(5_000L)
         runCurrent()
         assertVisible(
             coordinator = coordinator,
             expectedLane = DynamicIslandLane.SCHEDULER,
             expectedText = "最近：客户回访 · 09:00"
+        )
+
+        coordinator.close()
+    }
+
+    @Test
+    fun `suppressed transient interrupt reveals after suppression clears with full dwell`() = runTest {
+        val connectivityState = MutableStateFlow(ConnectionState.CONNECTED)
+        val takeoverSuppressed = MutableStateFlow(true)
+        val coordinator = createCoordinator(
+            parentScope = this,
+            schedulerItems = MutableStateFlow(listOf(schedulerItem("最近：客户回访 · 09:00"))),
+            connectivityState = connectivityState,
+            takeoverSuppressed = takeoverSuppressed
+        )
+
+        runCurrent()
+        connectivityState.value = ConnectionState.DISCONNECTED
+        runCurrent()
+        assertVisible(
+            coordinator = coordinator,
+            expectedLane = DynamicIslandLane.SCHEDULER,
+            expectedText = "最近：客户回访 · 09:00"
+        )
+
+        advanceTimeBy(10_000L)
+        runCurrent()
+        takeoverSuppressed.value = false
+        runCurrent()
+        assertVisible(
+            coordinator = coordinator,
+            expectedLane = DynamicIslandLane.CONNECTIVITY,
+            expectedText = "Badge 已断开"
+        )
+
+        advanceTimeBy(2_999L)
+        runCurrent()
+        assertVisible(
+            coordinator = coordinator,
+            expectedLane = DynamicIslandLane.CONNECTIVITY,
+            expectedText = "Badge 已断开"
+        )
+
+        advanceTimeBy(1L)
+        runCurrent()
+        assertVisible(
+            coordinator = coordinator,
+            expectedLane = DynamicIslandLane.SCHEDULER,
+            expectedText = "最近：客户回访 · 09:00"
+        )
+
+        coordinator.close()
+    }
+
+    @Test
+    fun `latest suppressed transient wins when multiple state changes happen before reveal`() = runTest {
+        val connectivityState = MutableStateFlow(ConnectionState.CONNECTED)
+        val takeoverSuppressed = MutableStateFlow(true)
+        val coordinator = createCoordinator(
+            parentScope = this,
+            schedulerItems = MutableStateFlow(listOf(schedulerItem("最近：客户回访 · 09:00"))),
+            connectivityState = connectivityState,
+            takeoverSuppressed = takeoverSuppressed
+        )
+
+        runCurrent()
+        connectivityState.value = ConnectionState.DISCONNECTED
+        runCurrent()
+        connectivityState.value = ConnectionState.CONNECTED
+        runCurrent()
+
+        takeoverSuppressed.value = false
+        runCurrent()
+        assertVisible(
+            coordinator = coordinator,
+            expectedLane = DynamicIslandLane.CONNECTIVITY,
+            expectedText = "Badge 已连接"
+        )
+
+        coordinator.close()
+    }
+
+    @Test
+    fun `persistent state clears deferred transient when suppression ends`() = runTest {
+        val connectivityState = MutableStateFlow(ConnectionState.CONNECTED)
+        val takeoverSuppressed = MutableStateFlow(true)
+        val coordinator = createCoordinator(
+            parentScope = this,
+            schedulerItems = MutableStateFlow(listOf(schedulerItem("最近：客户回访 · 09:00"))),
+            connectivityState = connectivityState,
+            takeoverSuppressed = takeoverSuppressed
+        )
+
+        runCurrent()
+        connectivityState.value = ConnectionState.DISCONNECTED
+        runCurrent()
+        connectivityState.value = ConnectionState.RECONNECTING
+        runCurrent()
+
+        takeoverSuppressed.value = false
+        runCurrent()
+        assertVisible(
+            coordinator = coordinator,
+            expectedLane = DynamicIslandLane.CONNECTIVITY,
+            expectedText = "Badge 重连中..."
         )
 
         coordinator.close()

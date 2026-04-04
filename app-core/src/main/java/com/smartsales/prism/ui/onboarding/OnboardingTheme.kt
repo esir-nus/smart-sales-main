@@ -22,6 +22,13 @@ internal val OnboardingLogoTile = Color(0xFF12161E)
 
 internal const val ONBOARDING_MIC_BUTTON_TEST_TAG = "onboarding_mic_button"
 internal const val ONBOARDING_PERMISSIONS_CONTINUE_TEST_TAG = "onboarding_permissions_continue"
+internal const val ONBOARDING_QUICK_START_CARD_TEST_TAG = "onboarding_quick_start_card"
+internal const val ONBOARDING_QUICK_START_COUNT_BADGE_TEST_TAG = "onboarding_quick_start_count_badge"
+internal const val ONBOARDING_QUICK_START_SUCCESS_NOTE_TEST_TAG = "onboarding_quick_start_success_note"
+internal const val ONBOARDING_QUICK_START_ROW_TIME_TEST_TAG = "onboarding_quick_start_row_time"
+internal const val ONBOARDING_QUICK_START_ROW_DESC_TEST_TAG = "onboarding_quick_start_row_desc"
+internal const val ONBOARDING_QUICK_START_ROW_BELLS_TEST_TAG = "onboarding_quick_start_row_bells"
+internal const val ONBOARDING_QUICK_START_ROW_DATE_TEST_TAG = "onboarding_quick_start_row_date"
 
 internal tailrec fun Context.findComponentActivity(): ComponentActivity? = when (this) {
     is ComponentActivity -> this

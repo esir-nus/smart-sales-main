@@ -76,6 +76,7 @@ Examples:
 
 - "book me with Frank tomorrow afternoon at three"
 - "set a flight reminder for Friday 6am"
+- "下周三早上八点提醒我起床"
 - "next Wednesday 2:30 review the Q2 deck"
 
 These are not safe to solve with regex, substring math, or hand-authored Kotlin date rules as the source of truth.
@@ -198,6 +199,7 @@ For `Uni-A`, it should validate that:
 - closed-set relative-day anchors are normalized deterministically before persistence:
   - `明天` / `tomorrow` / `后天` = real-date family from `nowIso`
   - `下一天` / `后一天` = page-relative family from `displayedDateIso`
+  - `下周X` / `下星期X` / `下礼拜X` = qualified next-week weekday family from `nowIso`
   - when the transcript family is unambiguous and context exists, normalization is preferred over rejection
 
 `SchedulerLinter` is not the semantic source of truth for exactness.

@@ -99,7 +99,7 @@ private fun VoiceHandshakeConsultationContent(
                     enter = expandVertically() + fadeIn(),
                     exit = shrinkVertically() + fadeOut()
                 ) {
-                    TitleBlock("初次沟通体验", "按住下方麦克风，用真实语音试着开启一次销售咨询。")
+                    TitleBlock("初次沟通体验", "点击下方麦克风开始说话，再次点击结束并提交这次销售咨询。")
                 }
             }
             items(state.messages) { message -> OnboardingMessageBubble(message = message) }

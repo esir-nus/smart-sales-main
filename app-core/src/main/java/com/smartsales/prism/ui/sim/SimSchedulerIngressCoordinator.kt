@@ -2,6 +2,8 @@ package com.smartsales.prism.ui.sim
 
 import android.util.Log
 import com.smartsales.core.pipeline.RealGlobalRescheduleExtractionService
+import com.smartsales.core.pipeline.SchedulerIntelligenceRouter
+import com.smartsales.core.pipeline.SchedulerPathACreateInterpreter
 import com.smartsales.core.pipeline.RealUniAExtractionService
 import com.smartsales.core.pipeline.RealUniBExtractionService
 import com.smartsales.core.pipeline.RealUniCExtractionService
@@ -29,11 +31,160 @@ import com.smartsales.prism.domain.scheduler.UniMTaskFragment
 import com.smartsales.prism.domain.scheduler.UniMTaskMode
 import com.smartsales.prism.domain.scheduler.RelativeTimeResolver
 import com.smartsales.prism.domain.time.TimeProvider
+import com.smartsales.prism.ui.scheduler.SharedPathACreateInterpreter
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.OffsetDateTime
 import java.util.UUID
+
+internal fun buildSimSchedulerTranscriptLog(
+    transcript: String,
+    source: String
+): String {
+    return "transcript_ingress source=$source length=${transcript.length} text=$transcript"
+}
+
+internal fun buildSimSchedulerRouterPreflightLog(
+    transcript: String,
+    displayedDateIso: String?,
+    mightReschedule: Boolean,
+    shortlistSize: Int
+): String {
+    return buildString {
+        append("route_preflight ")
+        append("length=")
+        append(transcript.length)
+        append(" displayedDateIso=")
+        append(displayedDateIso ?: "null")
+        append(" mightReschedule=")
+        append(mightReschedule)
+        append(" shortlistSize=")
+        append(shortlistSize)
+        append(" transcript=")
+        append(transcript)
+    }
+}
+
+internal fun buildSimSchedulerRouterDecisionLog(
+    metadata: SchedulerIntelligenceRouter.RouteMetadata
+): String {
+    return buildString {
+        append("route_decision ")
+        append("intent=")
+        append(metadata.intentKind)
+        append(" shape=")
+        append(metadata.taskShape)
+        append(" owner=")
+        append(metadata.owner)
+        append(" terminal=")
+        append(metadata.schedulerTerminalOnCommit)
+        append(" reason=")
+        append(metadata.reason ?: "none")
+    }
+}
+
+internal fun buildSimSchedulerCreateResultLog(
+    resultKind: String,
+    telemetry: SchedulerPathACreateInterpreter.Telemetry,
+    itemCount: Int,
+    parseUnresolvedCount: Int,
+    downgradedCount: Int
+): String {
+    return buildString {
+        append("create_result ")
+        append("kind=")
+        append(resultKind)
+        append(" routeStage=")
+        append(telemetry.routeStage)
+        append(" uniM=")
+        append(telemetry.uniMAttemptOutcome)
+        append(" itemCount=")
+        append(itemCount)
+        append(" parseUnresolved=")
+        append(parseUnresolvedCount)
+        append(" downgraded=")
+        append(downgradedCount)
+    }
+}
+
+internal fun buildSimSchedulerUiFailureLog(
+    branch: String,
+    metadata: SchedulerIntelligenceRouter.RouteMetadata,
+    displayedMessage: String,
+    createReason: String? = null,
+    uniCReason: String? = null
+): String {
+    return buildString {
+        append("ui_failure ")
+        append("branch=")
+        append(branch)
+        append(" intent=")
+        append(metadata.intentKind)
+        append(" owner=")
+        append(metadata.owner)
+        if (createReason != null) {
+            append(" createReason=")
+            append(createReason)
+        }
+        if (uniCReason != null) {
+            append(" uniCReason=")
+            append(uniCReason)
+        }
+        append(" displayed=")
+        append(displayedMessage)
+    }
+}
+
+internal fun normalizeSimSchedulerDrawerFailureMessage(
+    intentKind: SchedulerIntelligenceRouter.SchedulerIntentKind,
+    rawMessage: String
+): String {
+    val trimmed = rawMessage.trim()
+    if (trimmed.isBlank()) {
+        return when (intentKind) {
+            SchedulerIntelligenceRouter.SchedulerIntentKind.RESCHEDULE ->
+                "改期目标解析失败，请稍后重试"
+            SchedulerIntelligenceRouter.SchedulerIntentKind.DELETE_UNSUPPORTED ->
+                "SIM 当前不支持语音删除，请在面板手动操作"
+            SchedulerIntelligenceRouter.SchedulerIntentKind.CREATE,
+            SchedulerIntelligenceRouter.SchedulerIntentKind.NONE ->
+                "未能解析为可创建日程，请换一种更明确的说法"
+        }
+    }
+    if (
+        intentKind == SchedulerIntelligenceRouter.SchedulerIntentKind.RESCHEDULE ||
+        intentKind == SchedulerIntelligenceRouter.SchedulerIntentKind.DELETE_UNSUPPORTED
+    ) {
+        return trimmed
+    }
+
+    val normalized = trimmed.lowercase()
+    return if (
+        normalized.contains("安排日程") ||
+        normalized.contains("时间信息") ||
+        normalized.contains("schedulable") ||
+        normalized.contains("可安排的日程提醒") ||
+        normalized.contains("排程承诺") ||
+        normalized.contains("可执行的日程安排") ||
+        normalized.contains("输入包含") ||
+        normalized.contains("灵感提取") ||
+        normalized.contains("inspiration") ||
+        normalized.contains("not_inspiration") ||
+        normalized.contains("not inspiration") ||
+        normalized.contains("not_vague") ||
+        normalized.contains("not vague") ||
+        normalized.contains("not_exact") ||
+        normalized.contains("not exact") ||
+        normalized.startsWith("uni-") ||
+        normalized.contains("extractor") ||
+        normalized.contains("json")
+    ) {
+        "未能解析为可创建日程，请换一种更明确的说法"
+    } else {
+        trimmed
+    }
+}
 
 internal class SimSchedulerIngressCoordinator(
     private val taskRepository: ScheduledTaskRepository,
@@ -48,6 +199,19 @@ internal class SimSchedulerIngressCoordinator(
     private val projectionSupport: SimSchedulerProjectionSupport,
     private val mutationCoordinator: SimSchedulerMutationCoordinator
 ) {
+
+    private val createInterpreter = SharedPathACreateInterpreter(
+        uniMExtractionService = uniMExtractionService,
+        uniAExtractionService = uniAExtractionService,
+        uniBExtractionService = uniBExtractionService,
+        timeProvider = timeProvider
+    )
+
+    private val schedulerRouter = SchedulerIntelligenceRouter(
+        timeProvider = timeProvider,
+        createInterpreter = createInterpreter,
+        globalRescheduleExtractionService = globalRescheduleExtractionService
+    )
 
     private enum class SingleTaskTelemetryAnchor {
         NOW_OFFSET,
@@ -82,34 +246,12 @@ internal class SimSchedulerIngressCoordinator(
     }
 
     companion object {
+        private const val FAILURE_TAG = "SimSchedulerIngress"
         private val NOW_DAY_OFFSET_REGEX = Regex(
             pattern = "(明天|后天|tomorrow|day after tomorrow)"
         )
         private val CLOCK_HINT_REGEX = Regex(
             pattern = "(上午|下午|中午|晚上|凌晨|早上|\\d{1,2}:\\d{2}|\\d{1,2}点半?|\\d{1,2}時|\\d{1,2}时)"
-        )
-        private val RESCHEDULE_KEYWORDS = listOf(
-            "改期到",
-            "改到",
-            "改成",
-            "改期",
-            "挪到",
-            "推迟到",
-            "提前到",
-            "往后推",
-            "往前提",
-            "推迟",
-            "推后",
-            "延后到",
-            "延期到",
-            "延后",
-            "延期",
-            "提前",
-            "提早",
-            "reschedule to",
-            "reschedule",
-            "move to",
-            "move "
         )
     }
 
@@ -118,180 +260,139 @@ internal class SimSchedulerIngressCoordinator(
             projectionSupport.emitFailure("未识别到有效日程内容")
             return
         }
-        if (looksLikeDeletionTranscript(transcript)) {
-            projectionSupport.emitFailure("SIM 当前不支持语音删除，请在面板手动操作")
-            return
-        }
-        if (looksLikeRescheduleTranscript(transcript)) {
-            handleVoiceRescheduleTranscript(transcript)
-            return
-        }
 
-        val normalizedTranscript = RelativeTimeResolver.normalizeExplicitRelativeTimeTranscript(transcript)
-        val normalizedOverride = normalizedTranscript.takeIf { it != transcript }
-
-        buildDeterministicRelativeCreateCandidate(
-            transcript = transcript,
-            normalizedTranscript = normalizedTranscript
-        )?.let { candidate ->
-            Log.d(
-                "SimSchedulerRelative",
-                "single deterministic relative create matched=${candidate.matchedText} title=${candidate.title} start=${candidate.startTimeIso} transcript=$transcript normalized=${candidate.normalizedTranscript}"
-            )
-            val result = FastTrackResult.CreateTasks(
-                params = CreateTasksParams(
-                    unifiedId = UUID.randomUUID().toString(),
-                    tasks = listOf(
-                        TaskDefinition(
-                            title = candidate.title,
-                            startTimeIso = candidate.startTimeIso,
-                            durationMinutes = 0,
-                            urgency = com.smartsales.prism.domain.scheduler.UrgencyEnum.L3_NORMAL
-                        )
-                    )
-                )
-            )
-            emitSingleTaskExtractionTelemetry(transcript, result)
-            mutationCoordinator.handleMutation(result)
-            return
+        val displayedDateIso = projectionSupport.displayedDateIso()
+        val mightReschedule = schedulerRouter.mightExpressReschedule(transcript)
+        val shortlist = if (mightReschedule) {
+            activeTaskRetrievalIndex.buildShortlist(transcript)
+        } else {
+            emptyList()
         }
-        if (
-            RelativeTimeResolver.resolveExact(
-                userText = transcript,
-                nowIso = timeProvider.now.toString(),
-                timezone = timeProvider.zoneId.id
-            ) != null && !looksLikeMultiTaskCreateTranscript(transcript)
-        ) {
-            Log.w(
-                "SimSchedulerRelative",
-                "single deterministic relative create rejected transcript=$transcript normalized=$normalizedTranscript"
-            )
-            projectionSupport.emitFailure("已识别为相对时间日程，但任务内容不完整")
-            return
-        }
-
-        buildDeterministicWakeCreateCandidate(transcript)?.let { candidate ->
-            val result = FastTrackResult.CreateTasks(
-                params = CreateTasksParams(
-                    unifiedId = UUID.randomUUID().toString(),
-                    tasks = listOf(
-                        TaskDefinition(
-                            title = candidate.title,
-                            startTimeIso = candidate.startTimeIso,
-                            durationMinutes = 0,
-                            urgency = com.smartsales.prism.domain.scheduler.UrgencyEnum.FIRE_OFF
-                        )
-                    )
-                )
-            )
-            emitSingleTaskExtractionTelemetry(transcript, result)
-            mutationCoordinator.handleMutation(result)
-            return
-        }
-        if (
-            looksLikeWakeReminderTranscript(transcript) &&
-            ExactTimeCueResolver.resolveExactDayClockStartTime(
+        Log.d(
+            FAILURE_TAG,
+            buildSimSchedulerRouterPreflightLog(
                 transcript = transcript,
-                nowIso = timeProvider.now.toString(),
-                timezone = timeProvider.zoneId.id,
-                displayedDateIso = projectionSupport.displayedDateIso()
-            ) != null &&
-            !looksLikeMultiTaskCreateTranscript(transcript)
-        ) {
-            projectionSupport.emitFailure("已识别为明确时间日程，但任务内容不完整")
-            return
-        }
-
-        val batchId = UUID.randomUUID().toString()
-        when (val multi = uniMExtractionService.extract(
-            UniMExtractionRequest(
-                transcript = transcript,
-                normalizedTranscript = normalizedOverride,
-                nowIso = timeProvider.now.toString(),
-                timezone = timeProvider.zoneId.id,
-                batchId = batchId,
-                displayedDateIso = projectionSupport.displayedDateIso()
+                displayedDateIso = displayedDateIso,
+                mightReschedule = mightReschedule,
+                shortlistSize = shortlist.size
             )
-        )) {
-            is UniMExtractionResult.MultiCreate -> {
-                handleMultiTaskCreate(batchId, multi.fragments)
-                return
+        )
+
+        val decision = schedulerRouter.routeGeneral(
+            SchedulerIntelligenceRouter.GeneralContext(
+                transcript = transcript,
+                surface = SchedulerIntelligenceRouter.SchedulerSurface.SCHEDULER_DRAWER,
+                displayedDateIso = displayedDateIso,
+                activeTaskShortlist = shortlist
+            )
+        )
+        Log.d(FAILURE_TAG, buildSimSchedulerRouterDecisionLog(decision.metadata))
+
+        when (decision) {
+            is SchedulerIntelligenceRouter.Decision.Create -> {
+                when (val result = decision.result) {
+                    is SchedulerPathACreateInterpreter.Result.SingleMatched -> {
+                        Log.d(
+                            FAILURE_TAG,
+                            buildSimSchedulerCreateResultLog(
+                                resultKind = result.intent::class.simpleName ?: "unknown",
+                                telemetry = result.telemetry,
+                                itemCount = 1,
+                                parseUnresolvedCount = result.telemetry.parseUnresolvedCount,
+                                downgradedCount = result.telemetry.downgradedCount
+                            )
+                        )
+                        emitSingleTaskExtractionTelemetry(transcript, result.intent)
+                        mutationCoordinator.handleMutation(result.intent)
+                    }
+                    is SchedulerPathACreateInterpreter.Result.MultiMatched -> {
+                        Log.d(
+                            FAILURE_TAG,
+                            buildSimSchedulerCreateResultLog(
+                                resultKind = "MultiMatched",
+                                telemetry = result.telemetry,
+                                itemCount = result.intents.size,
+                                parseUnresolvedCount = result.parseUnresolvedCount,
+                                downgradedCount = result.downgradedCount
+                            )
+                        )
+                        handleMultiTaskCreate(
+                            batchId = result.telemetry.batchId ?: UUID.randomUUID().toString(),
+                            intents = result.intents,
+                            parseUnresolvedCount = result.parseUnresolvedCount,
+                            downgradedCount = result.downgradedCount
+                        )
+                    }
+                    else -> Unit
+                }
             }
-            is UniMExtractionResult.NotMulti -> Unit
-        }
 
-        val unifiedId = UUID.randomUUID().toString()
-        val exact = uniAExtractionService.extract(
-            UniAExtractionRequest(
-                transcript = transcript,
-                normalizedTranscript = normalizedOverride,
-                nowIso = timeProvider.now.toString(),
-                timezone = timeProvider.zoneId.id,
-                unifiedId = unifiedId,
-                displayedDateIso = projectionSupport.displayedDateIso()
-            )
-        )
-        if (exact !is FastTrackResult.NoMatch) {
-            emitSingleTaskExtractionTelemetry(transcript, exact)
-            mutationCoordinator.handleMutation(exact)
-            return
-        }
+            is SchedulerIntelligenceRouter.Decision.GlobalReschedule -> {
+                handleResolvedGlobalReschedule(decision.extracted)
+            }
 
-        val vague = uniBExtractionService.extract(
-            UniBExtractionRequest(
-                transcript = transcript,
-                normalizedTranscript = normalizedOverride,
-                nowIso = timeProvider.now.toString(),
-                timezone = timeProvider.zoneId.id,
-                unifiedId = unifiedId,
-                displayedDateIso = projectionSupport.displayedDateIso()
-            )
-        )
-        if (vague !is FastTrackResult.NoMatch) {
-            mutationCoordinator.handleMutation(vague)
-            return
-        }
+            is SchedulerIntelligenceRouter.Decision.FollowUpReschedule -> {
+                projectionSupport.emitFailure("SIM 当前不支持从此入口直接进入选中任务改期")
+            }
 
-        val inspiration = uniCExtractionService.extract(
-            UniCExtractionRequest(
-                transcript = transcript,
-                nowIso = timeProvider.now.toString(),
-                timezone = timeProvider.zoneId.id,
-                unifiedId = unifiedId
-            )
-        )
-        if (inspiration !is FastTrackResult.NoMatch) {
-            mutationCoordinator.handleMutation(inspiration)
-            return
-        }
+            is SchedulerIntelligenceRouter.Decision.Reject -> {
+                surfaceNormalizedFailure(
+                    branch = "reject",
+                    metadata = decision.metadata,
+                    rawMessage = decision.message
+                )
+            }
 
-        projectionSupport.emitFailure(sanitizeTerminalCreateFailure(inspiration.reason))
+            is SchedulerIntelligenceRouter.Decision.NotMatched -> {
+                Log.w(
+                    FAILURE_TAG,
+                    "create_not_matched reason=${decision.reason}"
+                )
+                val inspiration = uniCExtractionService.extract(
+                    UniCExtractionRequest(
+                        transcript = transcript,
+                        nowIso = timeProvider.now.toString(),
+                        timezone = timeProvider.zoneId.id,
+                        unifiedId = UUID.randomUUID().toString()
+                    )
+                )
+                if (inspiration !is FastTrackResult.NoMatch) {
+                    mutationCoordinator.handleMutation(inspiration)
+                    return
+                }
+                Log.w(
+                    FAILURE_TAG,
+                    "uni_c_not_matched reason=${inspiration.reason}"
+                )
+                surfaceNormalizedFailure(
+                    branch = "not_matched_uni_c",
+                    metadata = decision.metadata,
+                    rawMessage = inspiration.reason,
+                    createReason = decision.reason,
+                    uniCReason = inspiration.reason
+                )
+            }
+        }
     }
 
-    private suspend fun handleMultiTaskCreate(batchId: String, fragments: List<UniMTaskFragment>) {
-        Log.d("SimSchedulerMulti", "batch=$batchId fragments=${fragments.size}")
+    private suspend fun handleMultiTaskCreate(
+        batchId: String,
+        intents: List<FastTrackResult>,
+        parseUnresolvedCount: Int,
+        downgradedCount: Int
+    ) {
+        Log.d("SimSchedulerMulti", "batch=$batchId intents=${intents.size} parseUnresolved=$parseUnresolvedCount")
 
-        var anchorState = FragmentAnchorState()
         val createdTasks = mutableListOf<ScheduledTask>()
-        val unresolvedReasons = mutableListOf<String>()
-        var downgradedCount = 0
+        val unresolvedReasons = MutableList(parseUnresolvedCount) { "片段未创建" }
 
-        fragments.forEachIndexed { index, fragment ->
-            when (val resolved = resolveMultiTaskFragment(fragment, anchorState)) {
-                is ResolvedMultiTaskFragment.Resolved -> {
-                    val execution = mutationCoordinator.executeCreateIntent(resolved.intent)
-                    if (execution.createdTasks.isNotEmpty()) {
-                        createdTasks += execution.createdTasks
-                        anchorState = resolved.nextState
-                        if (resolved.downgraded) downgradedCount += 1
-                    } else {
-                        unresolvedReasons += execution.unresolvedReasons.ifEmpty {
-                            listOf("片段${index + 1}未创建")
-                        }
-                    }
-                }
-                is ResolvedMultiTaskFragment.Unresolved -> {
-                    unresolvedReasons += "片段${index + 1}未创建：${resolved.reason}"
+        intents.forEachIndexed { index, intent ->
+            val execution = mutationCoordinator.executeCreateIntent(intent)
+            if (execution.createdTasks.isNotEmpty()) {
+                createdTasks += execution.createdTasks
+            } else {
+                unresolvedReasons += execution.unresolvedReasons.ifEmpty {
+                    listOf("片段${index + 1}未创建")
                 }
             }
         }
@@ -463,19 +564,10 @@ internal class SimSchedulerIngressCoordinator(
     }
 
     private fun sanitizeTerminalCreateFailure(reason: String): String {
-        val normalized = reason.lowercase()
-        return if (
-            normalized.contains("安排日程") ||
-            normalized.contains("时间信息") ||
-            normalized.contains("schedulable") ||
-            normalized.startsWith("uni-") ||
-            normalized.contains("json") ||
-            normalized.contains("not_inspiration")
-        ) {
-            "未能解析为可创建日程，请换一种更明确的说法"
-        } else {
-            reason
-        }
+        return normalizeSimSchedulerDrawerFailureMessage(
+            intentKind = SchedulerIntelligenceRouter.SchedulerIntentKind.NONE,
+            rawMessage = reason
+        )
     }
 
     private fun looksLikeMultiTaskCreateTranscript(text: String): Boolean {
@@ -777,37 +869,16 @@ internal class SimSchedulerIngressCoordinator(
         )
     }
 
-    private suspend fun handleVoiceRescheduleTranscript(transcript: String) {
-        val shortlist = activeTaskRetrievalIndex.buildShortlist(transcript)
+    private suspend fun handleResolvedGlobalReschedule(
+        supported: GlobalRescheduleExtractionResult.Supported
+    ) {
+        val shortlist = activeTaskRetrievalIndex.buildShortlist(supported.target.targetQuery)
         PipelineValve.tag(
             PipelineValve.Checkpoint.UI_STATE_EMITTED,
             shortlist.size,
             SIM_SCHEDULER_GLOBAL_SHORTLIST_BUILT_SUMMARY,
             "shortlistSize=${shortlist.size}"
         )
-        val extracted = globalRescheduleExtractionService.extract(
-            GlobalRescheduleExtractionRequest(
-                transcript = transcript,
-                nowIso = timeProvider.now.toString(),
-                timezone = timeProvider.zoneId.id,
-                activeTaskShortlist = shortlist
-            )
-        )
-        val supported = when (extracted) {
-            is GlobalRescheduleExtractionResult.Supported -> extracted
-            is GlobalRescheduleExtractionResult.Unsupported -> {
-                projectionSupport.emitFailure("SIM 当前仅支持明确目标 + 明确时间改期")
-                return
-            }
-            is GlobalRescheduleExtractionResult.Invalid -> {
-                projectionSupport.emitFailure("改期目标或时间无法解析，请换一种明确说法")
-                return
-            }
-            is GlobalRescheduleExtractionResult.Failure -> {
-                projectionSupport.emitFailure("改期目标解析失败，请稍后重试")
-                return
-            }
-        }
 
         PipelineValve.tag(
             PipelineValve.Checkpoint.UI_STATE_EMITTED,
@@ -838,26 +909,28 @@ internal class SimSchedulerIngressCoordinator(
         }
     }
 
-    private fun findRescheduleKeywordRange(text: String): IntRange? {
-        val normalized = text.lowercase()
-        return RESCHEDULE_KEYWORDS
-            .mapNotNull { keyword ->
-                normalized.indexOf(keyword)
-                    .takeIf { it >= 0 }
-                    ?.let { it until (it + keyword.length) }
-            }
-            .minByOrNull { it.first }
-    }
-
-    private fun looksLikeRescheduleTranscript(text: String): Boolean {
-        val normalized = text.lowercase()
-        return RESCHEDULE_KEYWORDS.any { normalized.contains(it) } || normalized.contains("actually")
-    }
-
-    private fun looksLikeDeletionTranscript(text: String): Boolean {
-        val normalized = text.lowercase()
-        return listOf("删除", "取消", "删掉", "delete", "cancel")
-            .any { normalized.contains(it) }
+    private fun surfaceNormalizedFailure(
+        branch: String,
+        metadata: SchedulerIntelligenceRouter.RouteMetadata,
+        rawMessage: String,
+        createReason: String? = null,
+        uniCReason: String? = null
+    ) {
+        val normalizedMessage = normalizeSimSchedulerDrawerFailureMessage(
+            intentKind = metadata.intentKind,
+            rawMessage = rawMessage
+        )
+        Log.w(
+            FAILURE_TAG,
+            buildSimSchedulerUiFailureLog(
+                branch = branch,
+                metadata = metadata,
+                displayedMessage = normalizedMessage,
+                createReason = createReason,
+                uniCReason = uniCReason ?: rawMessage.takeIf { branch == "not_matched_uni_c" }
+            )
+        )
+        projectionSupport.emitFailure(normalizedMessage)
     }
 
     private fun parseExactInstant(raw: String): Instant? {

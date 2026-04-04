@@ -229,13 +229,19 @@ private fun OnboardingExtractionRow(label: String, value: String, isLast: Boolea
 }
 
 @Composable
-internal fun OnboardingSuccessNote(title: String, subtitle: String) {
-    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+internal fun OnboardingSuccessNote(
+    title: String,
+    subtitle: String? = null,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         StatusOrb(Icons.Default.CheckCircle, tint = OnboardingMint, modifier = Modifier.size(64.dp), iconSize = 28)
         Spacer(Modifier.height(12.dp))
         Text(title, color = OnboardingText, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(6.dp))
-        Text(subtitle, color = OnboardingMuted, textAlign = TextAlign.Center)
+        if (!subtitle.isNullOrBlank()) {
+            Spacer(Modifier.height(6.dp))
+            Text(subtitle, color = OnboardingMuted, textAlign = TextAlign.Center)
+        }
     }
 }
 

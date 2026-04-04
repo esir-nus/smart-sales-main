@@ -19,9 +19,11 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 private const val SIM_DYNAMIC_ISLAND_SCHEDULER_ROTATION_MILLIS = 5_000L
-private const val SIM_DYNAMIC_ISLAND_INTERRUPT_LOCK_MILLIS = 3_000L
+private const val SIM_DYNAMIC_ISLAND_CONNECTED_INTERRUPT_LOCK_MILLIS = 5_000L
+private const val SIM_DYNAMIC_ISLAND_DISCONNECTED_INTERRUPT_LOCK_MILLIS = 3_000L
 private const val SIM_DYNAMIC_ISLAND_HEARTBEAT_INTERVAL_MILLIS = 30_000L
-private const val SIM_DYNAMIC_ISLAND_HEARTBEAT_DWELL_MILLIS = 2_500L
+private const val SIM_DYNAMIC_ISLAND_CONNECTED_HEARTBEAT_DWELL_MILLIS = 5_000L
+private const val SIM_DYNAMIC_ISLAND_DISCONNECTED_HEARTBEAT_DWELL_MILLIS = 2_500L
 
 internal data class SimShellDynamicIslandPresentation(
     val uiState: DynamicIslandUiState = DynamicIslandUiState.Hidden
@@ -51,6 +53,7 @@ internal class SimShellDynamicIslandCoordinator(
     private var isTakeoverSuppressed: Boolean = takeoverSuppressed.value
     private var activeConnectivityLane: ConnectionState? = resolvePersistentConnectivityLane(currentConnectivityState)
     private var activeConnectivityLanePersistent: Boolean = activeConnectivityLane != null
+    private var deferredTransientConnectivityLane: ConnectionState? = null
     private var activeConnectivityLaneToken: Long = 0L
     private var transientConnectivityJob: Job? = null
     private var heartbeatJob: Job? = null
@@ -88,7 +91,11 @@ internal class SimShellDynamicIslandCoordinator(
 
         scope.launch {
             takeoverSuppressed.collect { suppressed ->
+                val becameUnsuppressed = isTakeoverSuppressed && !suppressed
                 isTakeoverSuppressed = suppressed
+                if (becameUnsuppressed && revealDeferredTransientConnectivityLaneIfNeeded()) {
+                    return@collect
+                }
                 updatePresentation()
             }
         }
@@ -109,17 +116,24 @@ internal class SimShellDynamicIslandCoordinator(
         restartHeartbeatLoop()
         val persistentLane = resolvePersistentConnectivityLane(state)
         if (persistentLane != null) {
+            clearDeferredTransientConnectivityLane()
             showPersistentConnectivityLane(persistentLane)
             return
         }
 
         clearPersistentConnectivityLane()
         if (state == ConnectionState.CONNECTED || state == ConnectionState.DISCONNECTED) {
-            startTransientConnectivityLane(
-                state = state,
-                durationMillis = SIM_DYNAMIC_ISLAND_INTERRUPT_LOCK_MILLIS
-            )
+            if (isTakeoverSuppressed) {
+                deferredTransientConnectivityLane = state
+                updatePresentation()
+            } else {
+                startTransientConnectivityLane(
+                    state = state,
+                    durationMillis = resolveInterruptDwellMillis(state)
+                )
+            }
         } else {
+            clearDeferredTransientConnectivityLane()
             updatePresentation()
         }
     }
@@ -141,6 +155,7 @@ internal class SimShellDynamicIslandCoordinator(
     private fun showPersistentConnectivityLane(state: ConnectionState) {
         transientConnectivityJob?.cancel()
         transientConnectivityJob = null
+        clearDeferredTransientConnectivityLane()
         activeConnectivityLane = state
         activeConnectivityLanePersistent = true
         updatePresentation()
@@ -162,6 +177,7 @@ internal class SimShellDynamicIslandCoordinator(
             return
         }
         transientConnectivityJob?.cancel()
+        clearDeferredTransientConnectivityLane()
         activeConnectivityLanePersistent = false
         activeConnectivityLane = state
         activeConnectivityLaneToken += 1L
@@ -176,6 +192,25 @@ internal class SimShellDynamicIslandCoordinator(
         }
     }
 
+    private fun revealDeferredTransientConnectivityLaneIfNeeded(): Boolean {
+        val deferredState = deferredTransientConnectivityLane ?: return false
+        if (resolvePersistentConnectivityLane(currentConnectivityState) != null ||
+            currentConnectivityState != deferredState
+        ) {
+            clearDeferredTransientConnectivityLane()
+            return false
+        }
+        startTransientConnectivityLane(
+            state = deferredState,
+            durationMillis = resolveInterruptDwellMillis(deferredState)
+        )
+        return true
+    }
+
+    private fun clearDeferredTransientConnectivityLane() {
+        deferredTransientConnectivityLane = null
+    }
+
     private fun restartHeartbeatLoop() {
         heartbeatJob?.cancel()
         heartbeatJob = scope.launch {
@@ -184,7 +219,7 @@ internal class SimShellDynamicIslandCoordinator(
                 if (canShowConnectivityHeartbeat()) {
                     startTransientConnectivityLane(
                         state = currentConnectivityState,
-                        durationMillis = SIM_DYNAMIC_ISLAND_HEARTBEAT_DWELL_MILLIS
+                        durationMillis = resolveHeartbeatDwellMillis(currentConnectivityState)
                     )
                 }
             }
@@ -217,6 +252,22 @@ internal class SimShellDynamicIslandCoordinator(
         _presentation.value = SimShellDynamicIslandPresentation(
             uiState = visibleItem?.let(DynamicIslandUiState::Visible) ?: DynamicIslandUiState.Hidden
         )
+    }
+}
+
+private fun resolveInterruptDwellMillis(state: ConnectionState): Long {
+    return when (state) {
+        ConnectionState.CONNECTED -> SIM_DYNAMIC_ISLAND_CONNECTED_INTERRUPT_LOCK_MILLIS
+        ConnectionState.DISCONNECTED -> SIM_DYNAMIC_ISLAND_DISCONNECTED_INTERRUPT_LOCK_MILLIS
+        else -> SIM_DYNAMIC_ISLAND_DISCONNECTED_INTERRUPT_LOCK_MILLIS
+    }
+}
+
+private fun resolveHeartbeatDwellMillis(state: ConnectionState): Long {
+    return when (state) {
+        ConnectionState.CONNECTED -> SIM_DYNAMIC_ISLAND_CONNECTED_HEARTBEAT_DWELL_MILLIS
+        ConnectionState.DISCONNECTED -> SIM_DYNAMIC_ISLAND_DISCONNECTED_HEARTBEAT_DWELL_MILLIS
+        else -> SIM_DYNAMIC_ISLAND_DISCONNECTED_HEARTBEAT_DWELL_MILLIS
     }
 }
 

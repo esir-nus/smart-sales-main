@@ -2,6 +2,7 @@ package com.smartsales.prism.ui.sim
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -9,8 +10,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.unit.dp
 import com.smartsales.prism.ui.AgentIntelligenceScreen
 import com.smartsales.prism.ui.AgentIntelligenceVisualMode
 import com.smartsales.prism.ui.components.DynamicIslandItem
@@ -32,6 +36,10 @@ class SimDrawerGestureTest {
 
     @get:Rule
     val composeTestRule = createComposeRule()
+
+    private companion object {
+        const val SIM_AUDIO_BROWSE_GRIP_TEST_TAG = "sim_audio_browse_grip"
+    }
 
     @Test
     fun dynamicIslandDragDown_opensSchedulerCallback() {
@@ -234,7 +242,147 @@ class SimDrawerGestureTest {
     }
 
     @Test
-    fun schedulerHandle_dragUp_dismissesDrawer() {
+    fun simAudioBrowseGrip_dragUp_pastThreshold_triggersManualSync() {
+        var syncCount = 0
+        var dismissCount = 0
+        var pullThresholdPx = 0f
+
+        composeTestRule.setContent {
+            val density = LocalDensity.current
+            LaunchedEffect(density) {
+                pullThresholdPx = with(density) { 55.dp.toPx() }
+            }
+            SimAudioBrowseGrip(
+                syncVisualState = SimAudioSyncVisualState.READY,
+                onDismiss = { dismissCount += 1 },
+                onSyncFromBadge = { syncCount += 1 },
+                onBrowsePullOffsetChanged = {},
+                onBrowsePullSettled = {},
+                modifier = Modifier.testTag(SIM_AUDIO_BROWSE_GRIP_TEST_TAG)
+            )
+        }
+
+        composeTestRule.onNodeWithTag(SIM_AUDIO_BROWSE_GRIP_TEST_TAG)
+            .assertExists()
+            .performTouchInput {
+                down(center)
+                moveBy(Offset(0f, -(pullThresholdPx + 96f)))
+                up()
+            }
+
+        composeTestRule.runOnIdle {
+            assertEquals(1, syncCount)
+            assertEquals(0, dismissCount)
+        }
+    }
+
+    @Test
+    fun simAudioBrowseGrip_smallDragUp_doesNotTriggerSync() {
+        var syncCount = 0
+        var dismissCount = 0
+        var pullThresholdPx = 0f
+
+        composeTestRule.setContent {
+            val density = LocalDensity.current
+            LaunchedEffect(density) {
+                pullThresholdPx = with(density) { 55.dp.toPx() }
+            }
+            SimAudioBrowseGrip(
+                syncVisualState = SimAudioSyncVisualState.READY,
+                onDismiss = { dismissCount += 1 },
+                onSyncFromBadge = { syncCount += 1 },
+                onBrowsePullOffsetChanged = {},
+                onBrowsePullSettled = {},
+                modifier = Modifier.testTag(SIM_AUDIO_BROWSE_GRIP_TEST_TAG)
+            )
+        }
+
+        composeTestRule.onNodeWithTag(SIM_AUDIO_BROWSE_GRIP_TEST_TAG)
+            .assertExists()
+            .performTouchInput {
+                down(center)
+                moveBy(Offset(0f, -(pullThresholdPx * 0.25f)))
+                up()
+            }
+
+        composeTestRule.runOnIdle {
+            assertEquals(0, syncCount)
+            assertEquals(0, dismissCount)
+        }
+    }
+
+    @Test
+    fun simAudioBrowseGrip_dragDown_dismissesDrawer() {
+        var syncCount = 0
+        var dismissCount = 0
+        var dismissThresholdPx = 0f
+
+        composeTestRule.setContent {
+            val density = LocalDensity.current
+            LaunchedEffect(density) {
+                dismissThresholdPx = with(density) { 56.dp.toPx() }
+            }
+            SimAudioBrowseGrip(
+                syncVisualState = SimAudioSyncVisualState.READY,
+                onDismiss = { dismissCount += 1 },
+                onSyncFromBadge = { syncCount += 1 },
+                onBrowsePullOffsetChanged = {},
+                onBrowsePullSettled = {},
+                modifier = Modifier.testTag(SIM_AUDIO_BROWSE_GRIP_TEST_TAG)
+            )
+        }
+
+        composeTestRule.onNodeWithTag(SIM_AUDIO_BROWSE_GRIP_TEST_TAG)
+            .assertExists()
+            .performTouchInput {
+                down(center)
+                moveBy(Offset(0f, dismissThresholdPx + 96f))
+                up()
+            }
+
+        composeTestRule.runOnIdle {
+            assertEquals(0, syncCount)
+            assertEquals(1, dismissCount)
+        }
+    }
+
+    @Test
+    fun simAudioBrowseGrip_blockedDragUp_doesNotTriggerCallbacks() {
+        var syncCount = 0
+        var dismissCount = 0
+        var pullThresholdPx = 0f
+
+        composeTestRule.setContent {
+            val density = LocalDensity.current
+            LaunchedEffect(density) {
+                pullThresholdPx = with(density) { 55.dp.toPx() }
+            }
+            SimAudioBrowseGrip(
+                syncVisualState = SimAudioSyncVisualState.BLOCKED,
+                onDismiss = { dismissCount += 1 },
+                onSyncFromBadge = { syncCount += 1 },
+                onBrowsePullOffsetChanged = {},
+                onBrowsePullSettled = {},
+                modifier = Modifier.testTag(SIM_AUDIO_BROWSE_GRIP_TEST_TAG)
+            )
+        }
+
+        composeTestRule.onNodeWithTag(SIM_AUDIO_BROWSE_GRIP_TEST_TAG)
+            .assertExists()
+            .performTouchInput {
+                down(center)
+                moveBy(Offset(0f, -(pullThresholdPx + 96f)))
+                up()
+            }
+
+        composeTestRule.runOnIdle {
+            assertEquals(0, syncCount)
+            assertEquals(0, dismissCount)
+        }
+    }
+
+    @Test
+    fun schedulerHandle_dragDown_dismissesDrawer() {
         var dismissCount = 0
 
         composeTestRule.setContent {
@@ -249,7 +397,7 @@ class SimDrawerGestureTest {
             .assertExists()
             .performTouchInput {
                 down(center)
-                moveBy(Offset(0f, -300f))
+                moveBy(Offset(0f, 300f))
                 up()
             }
 

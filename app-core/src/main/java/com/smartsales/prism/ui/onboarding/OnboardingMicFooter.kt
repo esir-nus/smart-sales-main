@@ -39,6 +39,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -66,7 +68,7 @@ internal fun OnboardingMicFooter(
     val currentInteractionMode by rememberUpdatedState(interactionMode)
     val currentOnPressStart by rememberUpdatedState(onPressStart)
     val currentOnPressEnd by rememberUpdatedState(onPressEnd)
-    val currentOnPressCancel by rememberUpdatedState(onPressCancel)
+    val haptic = LocalHapticFeedback.current
     var handshakeVisible by remember { mutableStateOf(false) }
     val motion = rememberInfiniteTransition(label = "onboardingMicMotion")
     val waveProgress = rememberVoiceHandshakeWaveProgress(isRecording = isRecording, labelPrefix = "onboarding")
@@ -131,19 +133,16 @@ internal fun OnboardingMicFooter(
                         shape = CircleShape
                     )
                     .testTag(ONBOARDING_MIC_BUTTON_TEST_TAG)
-                    .pointerInput(Unit) {
+                    .pointerInput(currentInteractionMode) {
                         detectTapGestures(
-                            onPress = {
+                            onTap = {
                                 if (currentIsProcessing) return@detectTapGestures
-                                if (currentIsRecording && currentInteractionMode == OnboardingMicInteractionMode.TAP_TO_SEND) {
-                                    val released = tryAwaitRelease()
-                                    if (released) currentOnPressEnd() else currentOnPressCancel()
-                                    return@detectTapGestures
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                if (currentIsRecording) {
+                                    currentOnPressEnd()
+                                } else {
+                                    currentOnPressStart()
                                 }
-                                val started = currentOnPressStart()
-                                if (!started) return@detectTapGestures
-                                val released = tryAwaitRelease()
-                                if (released) currentOnPressEnd() else currentOnPressCancel()
                             }
                         )
                     },
@@ -160,10 +159,9 @@ internal fun OnboardingMicFooter(
         Spacer(Modifier.height(12.dp))
         Text(
             text = when {
-                isRecording && interactionMode == OnboardingMicInteractionMode.TAP_TO_SEND -> "正在聆听...点击发送"
-                isRecording -> "正在聆听...松开发送"
+                isRecording -> "正在聆听...再次点击结束"
                 isProcessing -> processingLabel
-                else -> "按住说话"
+                else -> "点击开始说话"
             },
             color = if (isRecording || isProcessing) OnboardingBlue else OnboardingMuted,
             fontSize = 13.sp,

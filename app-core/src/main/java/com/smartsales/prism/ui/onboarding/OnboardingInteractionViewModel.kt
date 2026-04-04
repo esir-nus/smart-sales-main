@@ -1,5 +1,6 @@
 package com.smartsales.prism.ui.onboarding
 
+import android.os.SystemClock
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -9,7 +10,10 @@ import com.smartsales.prism.data.audio.DeviceSpeechRecognitionEvent
 import com.smartsales.prism.data.audio.DeviceSpeechMode
 import com.smartsales.prism.data.audio.DeviceSpeechRecognitionResult
 import com.smartsales.prism.data.audio.DeviceSpeechRecognizer
+import com.smartsales.prism.data.notification.ReminderReliabilityAdvisor
+import com.smartsales.prism.data.onboarding.RuntimeOnboardingHandoffGate
 import com.smartsales.prism.domain.repository.UserProfileRepository
+import com.smartsales.prism.domain.time.TimeProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
@@ -30,11 +34,18 @@ import kotlinx.coroutines.withTimeout
 class OnboardingInteractionViewModel @Inject constructor(
     private val speechRecognizer: DeviceSpeechRecognizer,
     private val interactionService: OnboardingInteractionService,
-    private val userProfileRepository: UserProfileRepository
+    private val userProfileRepository: UserProfileRepository,
+    private val quickStartService: OnboardingQuickStartService,
+    private val quickStartCommitter: OnboardingSchedulerQuickStartCommitter,
+    private val quickStartReminderGuideCoordinator: OnboardingQuickStartReminderGuideCoordinator,
+    private val quickStartCalendarExporter: OnboardingQuickStartCalendarExporter,
+    private val onboardingHandoffGate: RuntimeOnboardingHandoffGate,
+    private val timeProvider: TimeProvider
 ) : ViewModel() {
 
     private var consultationRequestId = 0L
     private var profileRequestId = 0L
+    private var quickStartRequestId = 0L
     private var activeSpeechLane: ProcessingLane? = null
     private var currentHost: OnboardingHost? = null
 
@@ -43,6 +54,9 @@ class OnboardingInteractionViewModel @Inject constructor(
 
     private val _profileState = MutableStateFlow(OnboardingProfileUiState())
     val profileState: StateFlow<OnboardingProfileUiState> = _profileState.asStateFlow()
+
+    private val _quickStartState = MutableStateFlow(OnboardingQuickStartUiState())
+    val quickStartState: StateFlow<OnboardingQuickStartUiState> = _quickStartState.asStateFlow()
 
     private val _effects = MutableSharedFlow<OnboardingInteractionEffect>(extraBufferCapacity = 1)
     val effects: SharedFlow<OnboardingInteractionEffect> = _effects.asSharedFlow()
@@ -57,6 +71,7 @@ class OnboardingInteractionViewModel @Inject constructor(
         cancelActiveRecording()
         _consultationState.value = OnboardingConsultationUiState()
         _profileState.value = OnboardingProfileUiState()
+        clearQuickStartSandbox()
     }
 
     fun bindHost(host: OnboardingHost) {
@@ -64,7 +79,7 @@ class OnboardingInteractionViewModel @Inject constructor(
     }
 
     fun startConsultationRecording(): Boolean {
-        return startConsultationRecording(OnboardingMicInteractionMode.HOLD_TO_SEND)
+        return startConsultationRecording(OnboardingMicInteractionMode.TAP_TO_SEND)
     }
 
     fun onConsultationMicPermissionRequested() {
@@ -72,7 +87,7 @@ class OnboardingInteractionViewModel @Inject constructor(
         if (state.isProcessing || state.isCompleted || state.isRecording || speechRecognizer.isListening()) return
         _consultationState.value = state.copy(
             awaitingMicPermission = true,
-            micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+            micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
             guidanceMessage = null,
             errorMessage = null
         )
@@ -83,7 +98,7 @@ class OnboardingInteractionViewModel @Inject constructor(
         if (!granted) {
             _consultationState.value = state.copy(
                 awaitingMicPermission = false,
-                micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
                 guidanceMessage = null,
                 errorMessage = "无法录音：未授予麦克风权限"
             )
@@ -92,7 +107,7 @@ class OnboardingInteractionViewModel @Inject constructor(
         if (state.awaitingMicPermission) {
             _consultationState.value = state.copy(
                 awaitingMicPermission = false,
-                micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
                 guidanceMessage = MIC_PERMISSION_GRANTED_GUIDANCE,
                 errorMessage = null
             )
@@ -124,7 +139,7 @@ class OnboardingInteractionViewModel @Inject constructor(
                 errorMessage = "当前无法开始录音，请重试。",
                 guidanceMessage = null,
                 awaitingMicPermission = false,
-                micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
                 processingPhase = OnboardingProcessingPhase.NONE
             )
             false
@@ -158,7 +173,7 @@ class OnboardingInteractionViewModel @Inject constructor(
     }
 
     fun startProfileRecording(): Boolean {
-        return startProfileRecording(OnboardingMicInteractionMode.HOLD_TO_SEND)
+        return startProfileRecording(OnboardingMicInteractionMode.TAP_TO_SEND)
     }
 
     fun onProfileMicPermissionRequested() {
@@ -166,7 +181,7 @@ class OnboardingInteractionViewModel @Inject constructor(
         if (state.isProcessing || state.hasExtractionResult || state.isRecording || speechRecognizer.isListening()) return
         _profileState.value = state.copy(
             awaitingMicPermission = true,
-            micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+            micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
             guidanceMessage = null,
             errorMessage = null
         )
@@ -177,7 +192,7 @@ class OnboardingInteractionViewModel @Inject constructor(
         if (!granted) {
             _profileState.value = state.copy(
                 awaitingMicPermission = false,
-                micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
                 guidanceMessage = null,
                 errorMessage = "无法录音：未授予麦克风权限"
             )
@@ -186,7 +201,7 @@ class OnboardingInteractionViewModel @Inject constructor(
         if (state.awaitingMicPermission) {
             _profileState.value = state.copy(
                 awaitingMicPermission = false,
-                micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
                 guidanceMessage = MIC_PERMISSION_GRANTED_GUIDANCE,
                 errorMessage = null
             )
@@ -218,7 +233,7 @@ class OnboardingInteractionViewModel @Inject constructor(
                 errorMessage = "当前无法开始录音，请重试。",
                 guidanceMessage = null,
                 awaitingMicPermission = false,
-                micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
                 processingPhase = OnboardingProcessingPhase.NONE
             )
             false
@@ -249,6 +264,171 @@ class OnboardingInteractionViewModel @Inject constructor(
                 null -> Unit
             }
         }
+    }
+
+    fun startQuickStartRecording(): Boolean {
+        return startQuickStartRecording(OnboardingMicInteractionMode.TAP_TO_SEND)
+    }
+
+    fun onQuickStartMicPermissionRequested() {
+        val state = _quickStartState.value
+        if (state.isProcessing || state.isRecording || speechRecognizer.isListening()) return
+        _quickStartState.value = state.copy(
+            awaitingMicPermission = true,
+            micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
+            transientNoticeMessage = null,
+            guidanceMessage = null,
+            errorMessage = null
+        )
+    }
+
+    fun onQuickStartMicPermissionResult(granted: Boolean) {
+        val state = _quickStartState.value
+        if (!granted) {
+            _quickStartState.value = state.copy(
+                awaitingMicPermission = false,
+                micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
+                transientNoticeMessage = null,
+                guidanceMessage = null,
+                errorMessage = "无法录音：未授予麦克风权限"
+            )
+            return
+        }
+        if (state.awaitingMicPermission) {
+            _quickStartState.value = state.copy(
+                awaitingMicPermission = false,
+                micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
+                transientNoticeMessage = null,
+                guidanceMessage = QUICK_START_MIC_PERMISSION_GRANTED_GUIDANCE,
+                errorMessage = null
+            )
+        }
+    }
+
+    fun onQuickStartCalendarPermissionResult(granted: Boolean) {
+        val state = _quickStartState.value
+        _quickStartState.value = state.copy(
+            calendarPermissionGranted = granted,
+            transientNoticeMessage = if (granted) {
+                "系统日历已开启，完成后会同步到系统日历。"
+            } else {
+                "未开启系统日历权限，仍可继续体验，完成后不会同步到系统日历。"
+            },
+            transientNoticeToken = state.transientNoticeToken + 1,
+            errorMessage = null
+        )
+    }
+
+    fun clearQuickStartTransientNotice() {
+        val state = _quickStartState.value
+        if (state.transientNoticeMessage == null) return
+        _quickStartState.value = state.copy(transientNoticeMessage = null)
+    }
+
+    fun dismissQuickStartReminderGuide() {
+        val state = _quickStartState.value
+        if (state.reminderGuide == null) return
+        _quickStartState.value = state.copy(reminderGuide = null)
+    }
+
+    fun openQuickStartReminderAction(action: ReminderReliabilityAdvisor.Action) {
+        quickStartReminderGuideCoordinator.openAction(action)
+        dismissQuickStartReminderGuide()
+    }
+
+    private fun startQuickStartRecording(
+        interactionMode: OnboardingMicInteractionMode
+    ): Boolean {
+        val state = _quickStartState.value
+        if (state.isProcessing || state.isRecording || speechRecognizer.isListening()) return false
+        return runCatching {
+            speechRecognizer.startListening(DeviceSpeechMode.FUN_ASR_REALTIME)
+            activeSpeechLane = ProcessingLane.QUICK_START
+            _quickStartState.value = state.copy(
+                isRecording = true,
+                liveTranscript = "",
+                errorMessage = null,
+                transientNoticeMessage = null,
+                guidanceMessage = null,
+                awaitingMicPermission = false,
+                micInteractionMode = interactionMode,
+                processingPhase = OnboardingProcessingPhase.NONE
+            )
+            true
+        }.getOrElse {
+            activeSpeechLane = null
+            _quickStartState.value = state.copy(
+                errorMessage = "当前无法开始录音，请重试。",
+                transientNoticeMessage = null,
+                guidanceMessage = null,
+                awaitingMicPermission = false,
+                micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
+                processingPhase = OnboardingProcessingPhase.NONE
+            )
+            false
+        }
+    }
+
+    fun finishQuickStartRecording() {
+        val state = _quickStartState.value
+        if (!state.isRecording) return
+        val requestId = beginQuickStartProcessing(state)
+        viewModelScope.launch {
+            when (val resolution = resolveTranscript(requestId, ProcessingLane.QUICK_START)) {
+                is TranscriptResolution.Transcript -> {
+                    processQuickStartTranscript(
+                        requestId = requestId,
+                        transcript = resolution.text,
+                        transcriptOrigin = resolution.origin
+                    )
+                }
+
+                is TranscriptResolution.Failure -> {
+                    handleQuickStartFailure(
+                        requestId = requestId,
+                        transcript = state.liveTranscript,
+                        transcriptOrigin = null,
+                        cause = resolution.cause
+                    )
+                }
+
+                null -> Unit
+            }
+        }
+    }
+
+    suspend fun finalizeFullAppCompletion(): String? {
+        val quickStartState = _quickStartState.value
+        if (quickStartState.isRecording || quickStartState.isProcessing) {
+            return "体验日程仍在处理中，请稍候。"
+        }
+        if (quickStartState.items.isEmpty()) {
+            return "请先完成一次真实日程体验。"
+        }
+        return when (val result = quickStartCommitter.commitIfNeeded()) {
+            is OnboardingSchedulerQuickStartCommitResult.Success -> {
+                if (quickStartState.calendarPermissionGranted) {
+                    runCatching {
+                        quickStartCalendarExporter.exportCommittedTaskIds(result.taskIds)
+                    }
+                }
+                onboardingHandoffGate.markSchedulerAutoOpenPending()
+                clearQuickStartSandbox()
+                null
+            }
+            OnboardingSchedulerQuickStartCommitResult.Noop -> {
+                onboardingHandoffGate.markSchedulerAutoOpenPending()
+                clearQuickStartSandbox()
+                null
+            }
+            is OnboardingSchedulerQuickStartCommitResult.Failure -> result.message
+        }
+    }
+
+    fun clearQuickStartSandbox() {
+        quickStartRequestId += 1
+        quickStartCommitter.clear()
+        _quickStartState.value = OnboardingQuickStartUiState()
     }
 
     fun saveProfileDraft() {
@@ -304,7 +484,7 @@ class OnboardingInteractionViewModel @Inject constructor(
             liveTranscript = "",
             awaitingMicPermission = false,
             guidanceMessage = null,
-            micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+            micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
             processingPhase = OnboardingProcessingPhase.NONE
         )
         _profileState.value = _profileState.value.copy(
@@ -313,7 +493,18 @@ class OnboardingInteractionViewModel @Inject constructor(
             liveTranscript = "",
             awaitingMicPermission = false,
             guidanceMessage = null,
-            micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+            micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
+            processingPhase = OnboardingProcessingPhase.NONE
+        )
+        _quickStartState.value = _quickStartState.value.copy(
+            isRecording = false,
+            isProcessing = false,
+            liveTranscript = "",
+            awaitingMicPermission = false,
+            errorMessage = null,
+            transientNoticeMessage = null,
+            guidanceMessage = null,
+            micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
             processingPhase = OnboardingProcessingPhase.NONE
         )
     }
@@ -370,7 +561,7 @@ class OnboardingInteractionViewModel @Inject constructor(
                         completedRounds = round,
                         errorMessage = null,
                         guidanceMessage = null,
-                        micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                        micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
                         processingPhase = OnboardingProcessingPhase.NONE,
                         lastTranscriptOrigin = transcriptOrigin,
                         lastGenerationOrigin = OnboardingGenerationOrigin.LLM
@@ -440,7 +631,7 @@ class OnboardingInteractionViewModel @Inject constructor(
                         draft = result.draft,
                         errorMessage = null,
                         guidanceMessage = null,
-                        micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                        micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
                         processingPhase = OnboardingProcessingPhase.NONE,
                         transcriptOrigin = transcriptOrigin,
                         generationOrigin = OnboardingGenerationOrigin.LLM
@@ -516,7 +707,7 @@ class OnboardingInteractionViewModel @Inject constructor(
                 },
                 errorMessage = consultationFailureMessage(cause),
                 guidanceMessage = null,
-                micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
                 processingPhase = OnboardingProcessingPhase.NONE,
                 lastTranscriptOrigin = transcriptOrigin,
                 lastGenerationOrigin = null
@@ -546,7 +737,7 @@ class OnboardingInteractionViewModel @Inject constructor(
                 draft = null,
                 errorMessage = profileFailureMessage(cause),
                 guidanceMessage = null,
-                micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
                 processingPhase = OnboardingProcessingPhase.NONE,
                 transcriptOrigin = transcriptOrigin,
                 generationOrigin = null
@@ -554,6 +745,164 @@ class OnboardingInteractionViewModel @Inject constructor(
         }
         logProcessingFailed(
             lane = ProcessingLane.PROFILE,
+            requestId = requestId,
+            cause = cause,
+            transcriptOrigin = transcriptOrigin
+        )
+    }
+
+    private suspend fun processQuickStartTranscript(
+        requestId: Long,
+        transcript: String,
+        transcriptOrigin: OnboardingTranscriptOrigin
+    ) {
+        val normalized = transcript.trim()
+        if (normalized.length < MIN_TRANSCRIPT_LENGTH) {
+            handleQuickStartFailure(
+                requestId = requestId,
+                transcript = normalized,
+                transcriptOrigin = transcriptOrigin,
+                cause = FailureCause.TRANSCRIPT_TOO_SHORT
+            )
+            return
+        }
+        updateQuickStartStateIfCurrent(requestId) {
+            it.copy(processingPhase = OnboardingProcessingPhase.BUILDING_QUICK_START_RESULT)
+        }
+
+        val startedAt = SystemClock.elapsedRealtime()
+        Log.d(
+            TAG,
+            "quick_start_apply_begin host=${currentHost.logName} requestId=$requestId transcriptLength=${normalized.length} stagedItems=${_quickStartState.value.items.size}"
+        )
+        val result = try {
+            withTimeout(QUICK_START_LLM_DEADLINE_MS) {
+                quickStartService.applyTranscript(normalized, _quickStartState.value.items)
+            }
+        } catch (_: TimeoutCancellationException) {
+            Log.w(
+                TAG,
+                "quick_start_apply_timeout host=${currentHost.logName} requestId=$requestId durationMs=${SystemClock.elapsedRealtime() - startedAt} transcriptOrigin=${transcriptOrigin.logName}"
+            )
+            handleQuickStartFailure(
+                requestId = requestId,
+                transcript = normalized,
+                transcriptOrigin = transcriptOrigin,
+                cause = FailureCause.LLM_TIMEOUT
+            )
+            return
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            Log.w(
+                TAG,
+                "quick_start_apply_exception host=${currentHost.logName} requestId=$requestId durationMs=${SystemClock.elapsedRealtime() - startedAt} transcriptOrigin=${transcriptOrigin.logName} message=${error.message}",
+                error
+            )
+            handleQuickStartFailure(
+                requestId = requestId,
+                transcript = normalized,
+                transcriptOrigin = transcriptOrigin,
+                cause = FailureCause.LLM_EXCEPTION
+            )
+            return
+        }
+
+        when (result) {
+            is OnboardingQuickStartServiceResult.Success -> {
+                Log.d(
+                    TAG,
+                    "quick_start_apply_success host=${currentHost.logName} requestId=$requestId durationMs=${SystemClock.elapsedRealtime() - startedAt} items=${result.items.size} touchedExact=${result.touchedExactTask} mutation=${result.mutationKind.name.lowercase()}"
+                )
+                activeSpeechLane = null
+                quickStartCommitter.stage(result.items)
+                val reminderGuide = if (
+                    result.touchedExactTask &&
+                    !quickStartState.value.reminderGuidePrompted
+                ) {
+                    quickStartReminderGuideCoordinator.consumeGuideIfNeeded()
+                } else {
+                    null
+                }
+                updateQuickStartStateIfCurrent(requestId) { current ->
+                    val nextCalendarToken =
+                        if (result.touchedExactTask && !current.calendarPermissionRequested) {
+                            current.calendarPermissionRequestToken + 1
+                        } else {
+                            current.calendarPermissionRequestToken
+                        }
+                    current.copy(
+                        isProcessing = false,
+                        liveTranscript = "",
+                        transcript = normalized,
+                        items = result.items,
+                        errorMessage = null,
+                        transientNoticeMessage = null,
+                        guidanceMessage = when (result.mutationKind) {
+                            OnboardingQuickStartServiceResult.Success.MutationKind.CREATE ->
+                                "可以继续补充或修改，也可以直接下一步。"
+                            OnboardingQuickStartServiceResult.Success.MutationKind.UPDATE ->
+                                "已更新体验日程，你也可以继续补充。"
+                        },
+                        micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
+                        processingPhase = OnboardingProcessingPhase.NONE,
+                        lastTranscriptOrigin = transcriptOrigin,
+                        lastGenerationOrigin = OnboardingGenerationOrigin.SCHEDULER_PATH_A,
+                        reminderGuide = reminderGuide,
+                        reminderGuidePrompted = current.reminderGuidePrompted || reminderGuide != null,
+                        calendarPermissionRequested = current.calendarPermissionRequested || result.touchedExactTask,
+                        calendarPermissionRequestToken = nextCalendarToken
+                    )
+                }
+                logProcessingCleared(
+                    lane = ProcessingLane.QUICK_START,
+                    requestId = requestId,
+                    outcome = "quick_start_result",
+                    transcriptOrigin = transcriptOrigin,
+                    generationOrigin = OnboardingGenerationOrigin.SCHEDULER_PATH_A
+                )
+            }
+
+            is OnboardingQuickStartServiceResult.Failure -> {
+                Log.w(
+                    TAG,
+                    "quick_start_apply_failure host=${currentHost.logName} requestId=$requestId durationMs=${SystemClock.elapsedRealtime() - startedAt} message=${result.message}"
+                )
+                handleQuickStartFailure(
+                    requestId = requestId,
+                    transcript = normalized,
+                    transcriptOrigin = transcriptOrigin,
+                    cause = FailureCause.LLM_FAILURE,
+                    messageOverride = result.message
+                )
+            }
+        }
+    }
+
+    private fun handleQuickStartFailure(
+        requestId: Long,
+        transcript: String? = null,
+        transcriptOrigin: OnboardingTranscriptOrigin? = null,
+        cause: FailureCause,
+        messageOverride: String? = null
+    ) {
+        activeSpeechLane = null
+        updateQuickStartStateIfCurrent(requestId) {
+            it.copy(
+                isProcessing = false,
+                liveTranscript = "",
+                transcript = transcript?.trim().orEmpty(),
+                errorMessage = messageOverride ?: quickStartFailureMessage(cause),
+                transientNoticeMessage = null,
+                guidanceMessage = null,
+                micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
+                processingPhase = OnboardingProcessingPhase.NONE,
+                lastTranscriptOrigin = transcriptOrigin,
+                lastGenerationOrigin = null
+            )
+        }
+        logProcessingFailed(
+            lane = ProcessingLane.QUICK_START,
             requestId = requestId,
             cause = cause,
             transcriptOrigin = transcriptOrigin
@@ -569,6 +918,7 @@ class OnboardingInteractionViewModel @Inject constructor(
                 speechRecognizer.finishListening()
             }
         } catch (_: TimeoutCancellationException) {
+            runCatching { speechRecognizer.cancelListening() }
             logRecognizerResolution(
                 lane = lane,
                 requestId = requestId,
@@ -583,6 +933,7 @@ class OnboardingInteractionViewModel @Inject constructor(
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
+            runCatching { speechRecognizer.cancelListening() }
             logRecognizerResolution(
                 lane = lane,
                 requestId = requestId,
@@ -667,7 +1018,7 @@ class OnboardingInteractionViewModel @Inject constructor(
             errorMessage = null,
             guidanceMessage = null,
             awaitingMicPermission = false,
-            micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+            micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
             processingPhase = OnboardingProcessingPhase.RECOGNIZING
         )
         return consultationRequestId
@@ -687,20 +1038,43 @@ class OnboardingInteractionViewModel @Inject constructor(
             errorMessage = null,
             guidanceMessage = null,
             awaitingMicPermission = false,
-            micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+            micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
             processingPhase = OnboardingProcessingPhase.RECOGNIZING
         )
         return profileRequestId
     }
 
+    private fun beginQuickStartProcessing(
+        state: OnboardingQuickStartUiState
+    ): Long {
+        quickStartRequestId += 1
+        logProcessingStarted(
+            lane = ProcessingLane.QUICK_START,
+            requestId = quickStartRequestId
+        )
+        _quickStartState.value = state.copy(
+            isRecording = false,
+            isProcessing = true,
+            errorMessage = null,
+            guidanceMessage = null,
+            awaitingMicPermission = false,
+            micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
+            processingPhase = OnboardingProcessingPhase.RECOGNIZING
+        )
+        return quickStartRequestId
+    }
+
     private fun invalidateProcessingRequests() {
         consultationRequestId += 1
         profileRequestId += 1
+        quickStartRequestId += 1
     }
 
     private fun isCurrentConsultationRequest(requestId: Long): Boolean = consultationRequestId == requestId
 
     private fun isCurrentProfileRequest(requestId: Long): Boolean = profileRequestId == requestId
+
+    private fun isCurrentQuickStartRequest(requestId: Long): Boolean = quickStartRequestId == requestId
 
     private fun isCurrentRequest(
         lane: ProcessingLane,
@@ -709,6 +1083,7 @@ class OnboardingInteractionViewModel @Inject constructor(
         return when (lane) {
             ProcessingLane.CONSULTATION -> isCurrentConsultationRequest(requestId)
             ProcessingLane.PROFILE -> isCurrentProfileRequest(requestId)
+            ProcessingLane.QUICK_START -> isCurrentQuickStartRequest(requestId)
         }
     }
 
@@ -728,6 +1103,14 @@ class OnboardingInteractionViewModel @Inject constructor(
         _profileState.value = transform(_profileState.value)
     }
 
+    private inline fun updateQuickStartStateIfCurrent(
+        requestId: Long,
+        transform: (OnboardingQuickStartUiState) -> OnboardingQuickStartUiState
+    ) {
+        if (!isCurrentQuickStartRequest(requestId)) return
+        _quickStartState.value = transform(_quickStartState.value)
+    }
+
     private sealed interface TranscriptResolution {
         data class Transcript(
             val text: String,
@@ -739,7 +1122,8 @@ class OnboardingInteractionViewModel @Inject constructor(
 
     private enum class ProcessingLane {
         CONSULTATION,
-        PROFILE
+        PROFILE,
+        QUICK_START
     }
 
     private enum class FailureCause {
@@ -778,7 +1162,7 @@ class OnboardingInteractionViewModel @Inject constructor(
                         liveTranscript = "",
                         errorMessage = consultationFailureMessage(event.reason),
                         guidanceMessage = null,
-                        micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                        micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
                         processingPhase = OnboardingProcessingPhase.NONE
                     )
                     logRealtimeFailureWhileRecording(
@@ -799,11 +1183,32 @@ class OnboardingInteractionViewModel @Inject constructor(
                         liveTranscript = "",
                         errorMessage = profileFailureMessage(event.reason),
                         guidanceMessage = null,
-                        micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                        micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
                         processingPhase = OnboardingProcessingPhase.NONE
                     )
                     logRealtimeFailureWhileRecording(
                         lane = ProcessingLane.PROFILE,
+                        reason = event.reason,
+                        message = event.message
+                    )
+                }
+            }
+
+            ProcessingLane.QUICK_START -> {
+                val state = _quickStartState.value
+                if (state.isRecording && !state.isProcessing) {
+                    activeSpeechLane = null
+                    _quickStartState.value = state.copy(
+                        isRecording = false,
+                        isProcessing = false,
+                        liveTranscript = "",
+                        errorMessage = quickStartFailureMessage(event.reason),
+                        guidanceMessage = null,
+                        micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
+                        processingPhase = OnboardingProcessingPhase.NONE
+                    )
+                    logRealtimeFailureWhileRecording(
+                        lane = ProcessingLane.QUICK_START,
                         reason = event.reason,
                         message = event.message
                     )
@@ -826,7 +1231,7 @@ class OnboardingInteractionViewModel @Inject constructor(
                         liveTranscript = "",
                         errorMessage = consultationFailureMessage(DeviceSpeechFailureReason.CANCELLED),
                         guidanceMessage = null,
-                        micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                        micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
                         processingPhase = OnboardingProcessingPhase.NONE
                     )
                     logRealtimeFailureWhileRecording(
@@ -850,11 +1255,35 @@ class OnboardingInteractionViewModel @Inject constructor(
                         liveTranscript = "",
                         errorMessage = profileFailureMessage(DeviceSpeechFailureReason.CANCELLED),
                         guidanceMessage = null,
-                        micInteractionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                        micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
                         processingPhase = OnboardingProcessingPhase.NONE
                     )
                     logRealtimeFailureWhileRecording(
                         lane = ProcessingLane.PROFILE,
+                        reason = DeviceSpeechFailureReason.CANCELLED,
+                        message = "realtime_cancelled_while_recording"
+                    )
+                } else {
+                    activeSpeechLane = null
+                    clearLiveTranscript()
+                }
+            }
+
+            ProcessingLane.QUICK_START -> {
+                val state = _quickStartState.value
+                if (state.isRecording && !state.isProcessing) {
+                    activeSpeechLane = null
+                    _quickStartState.value = state.copy(
+                        isRecording = false,
+                        isProcessing = false,
+                        liveTranscript = "",
+                        errorMessage = quickStartFailureMessage(DeviceSpeechFailureReason.CANCELLED),
+                        guidanceMessage = null,
+                        micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
+                        processingPhase = OnboardingProcessingPhase.NONE
+                    )
+                    logRealtimeFailureWhileRecording(
+                        lane = ProcessingLane.QUICK_START,
                         reason = DeviceSpeechFailureReason.CANCELLED,
                         message = "realtime_cancelled_while_recording"
                     )
@@ -885,6 +1314,12 @@ class OnboardingInteractionViewModel @Inject constructor(
                 }
             }
 
+            ProcessingLane.QUICK_START -> {
+                if (_quickStartState.value.isRecording) {
+                    finishQuickStartRecording()
+                }
+            }
+
             null -> Unit
         }
     }
@@ -903,6 +1338,12 @@ class OnboardingInteractionViewModel @Inject constructor(
                 _profileState.value = state.copy(liveTranscript = text)
             }
 
+            ProcessingLane.QUICK_START -> {
+                val state = _quickStartState.value
+                if (!state.isRecording && !state.isProcessing) return
+                _quickStartState.value = state.copy(liveTranscript = text)
+            }
+
             null -> Unit
         }
     }
@@ -910,6 +1351,7 @@ class OnboardingInteractionViewModel @Inject constructor(
     private fun clearLiveTranscript() {
         _consultationState.value = _consultationState.value.copy(liveTranscript = "")
         _profileState.value = _profileState.value.copy(liveTranscript = "")
+        _quickStartState.value = _quickStartState.value.copy(liveTranscript = "")
     }
 
     private fun logProcessingStarted(
@@ -976,7 +1418,9 @@ class OnboardingInteractionViewModel @Inject constructor(
         private const val DEVICE_RECOGNITION_TIMEOUT_MS = 5_000L
         private const val CONSULTATION_LLM_DEADLINE_MS = 2_500L
         private const val PROFILE_LLM_DEADLINE_MS = 3_500L
-        private const val MIC_PERMISSION_GRANTED_GUIDANCE = "麦克风已开启，请重新按住说话"
+        private const val QUICK_START_LLM_DEADLINE_MS = 10_000L
+        private const val MIC_PERMISSION_GRANTED_GUIDANCE = "麦克风已开启，请点击开始说话"
+        private const val QUICK_START_MIC_PERMISSION_GRANTED_GUIDANCE = "麦克风已开启，请点击开始说话"
 
         private fun consultationFailureMessage(cause: FailureCause): String {
             return when (cause) {
@@ -986,7 +1430,7 @@ class OnboardingInteractionViewModel @Inject constructor(
                     "当前 AI 咨询暂时没有返回，请再试一次。"
 
                 FailureCause.TRANSCRIPT_TOO_SHORT ->
-                    "这次语音太短了，请再按住多说一点。"
+                    "这次语音太短了，请点击后多说一点。"
 
                 FailureCause.RECOGNIZER_TIMEOUT,
                 FailureCause.RECOGNIZER_EXCEPTION,
@@ -999,7 +1443,7 @@ class OnboardingInteractionViewModel @Inject constructor(
         private fun consultationFailureMessage(reason: DeviceSpeechFailureReason): String {
             return when (reason) {
                 DeviceSpeechFailureReason.NO_MATCH ->
-                    "这次语音太短了，请再按住多说一点。"
+                    "这次语音太短了，请点击后多说一点。"
 
                 DeviceSpeechFailureReason.UNAVAILABLE ->
                     "当前语音识别暂不可用，请稍后重试。"
@@ -1018,7 +1462,7 @@ class OnboardingInteractionViewModel @Inject constructor(
                     "当前 AI 资料提取暂时没有返回，请再试一次。"
 
                 FailureCause.TRANSCRIPT_TOO_SHORT ->
-                    "这次语音太短了，请再按住多说一点。"
+                    "这次语音太短了，请点击后多说一点。"
 
                 FailureCause.RECOGNIZER_TIMEOUT,
                 FailureCause.RECOGNIZER_EXCEPTION,
@@ -1031,7 +1475,39 @@ class OnboardingInteractionViewModel @Inject constructor(
         private fun profileFailureMessage(reason: DeviceSpeechFailureReason): String {
             return when (reason) {
                 DeviceSpeechFailureReason.NO_MATCH ->
-                    "这次语音太短了，请再按住多说一点。"
+                    "这次语音太短了，请点击后多说一点。"
+
+                DeviceSpeechFailureReason.UNAVAILABLE ->
+                    "当前语音识别暂不可用，请稍后重试。"
+
+                DeviceSpeechFailureReason.ERROR,
+                DeviceSpeechFailureReason.CANCELLED ->
+                    "这次语音识别没有完成，请再试一次。"
+            }
+        }
+
+        private fun quickStartFailureMessage(cause: FailureCause): String {
+            return when (cause) {
+                FailureCause.LLM_TIMEOUT,
+                FailureCause.LLM_FAILURE,
+                FailureCause.LLM_EXCEPTION ->
+                    "当前日程整理暂时没有返回，请再试一次。"
+
+                FailureCause.TRANSCRIPT_TOO_SHORT ->
+                    "这次语音太短了，请点击后多说一点。"
+
+                FailureCause.RECOGNIZER_TIMEOUT,
+                FailureCause.RECOGNIZER_EXCEPTION,
+                FailureCause.RECOGNIZER_FAILURE,
+                FailureCause.RECOGNIZER_CANCELLED ->
+                    "这次语音识别没有完成，请再试一次。"
+            }
+        }
+
+        private fun quickStartFailureMessage(reason: DeviceSpeechFailureReason): String {
+            return when (reason) {
+                DeviceSpeechFailureReason.NO_MATCH ->
+                    "这次语音太短了，请点击后多说一点。"
 
                 DeviceSpeechFailureReason.UNAVAILABLE ->
                     "当前语音识别暂不可用，请稍后重试。"
@@ -1047,18 +1523,21 @@ class OnboardingInteractionViewModel @Inject constructor(
         get() = when (this) {
             ProcessingLane.CONSULTATION -> "consultation"
             ProcessingLane.PROFILE -> "profile"
+            ProcessingLane.QUICK_START -> "quick_start"
         }
 
     private val ProcessingLane.profileName: String
         get() = when (this) {
             ProcessingLane.CONSULTATION -> ONBOARDING_CONSULTATION_PROFILE_NAME
             ProcessingLane.PROFILE -> ONBOARDING_PROFILE_EXTRACTION_PROFILE_NAME
+            ProcessingLane.QUICK_START -> "scheduler_quick_start"
         }
 
     private val ProcessingLane.modelId: String
         get() = when (this) {
             ProcessingLane.CONSULTATION -> ModelRegistry.ONBOARDING_CONSULTATION.modelId
             ProcessingLane.PROFILE -> ModelRegistry.ONBOARDING_PROFILE_EXTRACTION.modelId
+            ProcessingLane.QUICK_START -> "scheduler_path_a_reuse"
         }
 
     private val OnboardingTranscriptOrigin.logName: String
@@ -1072,6 +1551,7 @@ class OnboardingInteractionViewModel @Inject constructor(
     private val OnboardingGenerationOrigin.logName: String
         get() = when (this) {
             OnboardingGenerationOrigin.LLM -> "llm"
+            OnboardingGenerationOrigin.SCHEDULER_PATH_A -> "scheduler_path_a"
         }
 
     private val FailureCause.logName: String

@@ -16,6 +16,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.snapshots.SnapshotStateMap
 import androidx.compose.ui.Alignment
@@ -59,12 +62,15 @@ internal fun RuntimeShellContent(
     connectivityViewModel: ConnectivityViewModel,
     connectivityState: ConnectionState,
     shellState: RuntimeShellState,
+    activeReminderBanner: SimReminderBannerState?,
     activeFollowUp: SimBadgeFollowUpState?,
     currentSessionId: String?,
     groupedSessions: Map<String, List<SessionPreview>>,
     currentChatAudioId: String?,
+    transcriptRevealState: Map<String, SimArtifactTranscriptRevealState>,
     currentSchedulerFollowUpContext: SchedulerFollowUpContext?,
     selectedSchedulerFollowUpTaskId: String?,
+    voiceDraftState: SimVoiceDraftUiState,
     dynamicIslandState: DynamicIslandUiState,
     isImeVisible: Boolean,
     showRuntimeIdleComposerHint: Boolean,
@@ -73,6 +79,7 @@ internal fun RuntimeShellContent(
     onImportTestAudio: () -> Unit,
     onForcedFirstLaunchOnboardingCompleted: () -> Unit,
     onReplayOnboarding: () -> Unit,
+    dismissReminderBanner: () -> Unit,
     clearFollowUp: (SimBadgeFollowUpClearReason) -> Unit,
     closeOverlays: () -> Unit,
     openScheduler: (DynamicIslandTapAction) -> Unit,
@@ -95,6 +102,9 @@ internal fun RuntimeShellContent(
     val showSimHeaderMenuButton = shellState.activeDrawer != RuntimeDrawerType.SCHEDULER
     val showSimHeaderNewSessionButton = shellState.activeDrawer != RuntimeDrawerType.SCHEDULER
     val showSimBottomComposer = shellState.activeDrawer != RuntimeDrawerType.SCHEDULER
+    val showReminderBanner = activeReminderBanner != null &&
+        shellState.activeDrawer != RuntimeDrawerType.SCHEDULER &&
+        shellState.activeDrawer != RuntimeDrawerType.AUDIO
     val schedulerGapDismissHeight = SimHomeHeroTokens.BottomMonolithHeight + 16.dp
 
     Box(
@@ -138,7 +148,18 @@ internal fun RuntimeShellContent(
             enableSimSchedulerPullGesture = canOpenSimSchedulerFromEdge(shellState),
             enableSimAudioPullGesture = canOpenSimAudioFromEdge(shellState, isImeVisible),
             onSimSchedulerPullOpen = { openScheduler(DynamicIslandTapAction.OpenSchedulerDrawer()) },
-            onSimAudioPullOpen = { openAudioDrawer(RuntimeAudioDrawerMode.BROWSE) }
+            onSimAudioPullOpen = { openAudioDrawer(RuntimeAudioDrawerMode.BROWSE) },
+            transcriptRevealState = transcriptRevealState,
+            onArtifactTranscriptRevealConsumed =
+                chatViewModel::markArtifactTranscriptRevealConsumed,
+            simVoiceDraftStateOverride = voiceDraftState,
+            simVoiceDraftEnabledOverride = currentSchedulerFollowUpContext == null,
+            onSimVoiceDraftPermissionRequested =
+                chatViewModel::onVoiceDraftPermissionRequested,
+            onSimVoiceDraftPermissionResult = chatViewModel::onVoiceDraftPermissionResult,
+            onSimVoiceDraftStart = chatViewModel::startVoiceDraft,
+            onSimVoiceDraftFinish = chatViewModel::finishVoiceDraft,
+            onSimVoiceDraftCancel = chatViewModel::cancelVoiceDraft
         )
 
         AnimatedVisibility(
@@ -196,6 +217,30 @@ internal fun RuntimeShellContent(
                         .clickable {
                             mutateShellState { state -> state.copy(activeDrawer = null) }
                         }
+                )
+            }
+        }
+
+        if (showReminderBanner) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.statusBars)
+                    .padding(horizontal = 16.dp, vertical = 68.dp)
+                    .zIndex(PrismElevation.Drawer + 1.5f)
+            ) {
+                SimReminderBannerHost(
+                    bannerState = activeReminderBanner,
+                    onClick = {
+                        dismissReminderBanner()
+                        closeOverlays()
+                        openScheduler(
+                            DynamicIslandTapAction.OpenSchedulerDrawer(
+                                target = activeReminderBanner?.primaryEntry?.target
+                            )
+                        )
+                    }
                 )
             }
         }
@@ -282,6 +327,7 @@ internal fun RuntimeShellContent(
                 },
                 mode = shellState.audioDrawerMode,
                 currentChatAudioId = currentChatAudioId,
+                connectionState = connectivityState,
                 showTestImportAction = BuildConfig.DEBUG && shellState.audioDrawerMode == RuntimeAudioDrawerMode.BROWSE,
                 showDebugScenarioActions = BuildConfig.DEBUG && shellState.audioDrawerMode == RuntimeAudioDrawerMode.BROWSE,
                 viewModel = audioViewModel,

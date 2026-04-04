@@ -4,6 +4,8 @@ import android.util.Log
 import com.smartsales.core.pipeline.RealGlobalRescheduleExtractionService
 import com.smartsales.core.pipeline.RealFollowUpRescheduleExtractionService
 import com.smartsales.core.pipeline.RealUniAExtractionService
+import com.smartsales.core.pipeline.SchedulerIntelligenceRouter
+import com.smartsales.core.pipeline.SchedulerRescheduleTimeInterpreter
 import com.smartsales.core.telemetry.PipelineValve
 import com.smartsales.prism.domain.memory.ConflictResult
 import com.smartsales.prism.domain.memory.ScheduleBoard
@@ -41,6 +43,12 @@ internal class SimAgentFollowUpCoordinator(
     private val timeProvider: TimeProvider,
     private val bridge: SimAgentUiBridge
 ) {
+
+    private val schedulerRouter = SchedulerIntelligenceRouter(
+        timeProvider = timeProvider,
+        globalRescheduleExtractionService = globalRescheduleExtractionService,
+        followUpRescheduleExtractionService = followUpRescheduleExtractionService
+    )
 
     suspend fun createDebugBadgeSchedulerFollowUpSession(
         threadId: String,
@@ -237,92 +245,134 @@ internal class SimAgentFollowUpCoordinator(
             summary = SIM_SCHEDULER_GLOBAL_SHORTLIST_BUILT_SUMMARY,
             detail = "shortlistSize=${shortlist.size}"
         )
-        val extracted = globalRescheduleExtractionService.extract(
-            GlobalRescheduleExtractionRequest(
-                transcript = content,
-                nowIso = timeProvider.now.toString(),
-                timezone = timeProvider.zoneId.id,
-                recentTaskHints = recentTaskHints,
-                activeTaskShortlist = shortlist
-            )
-        )
-        val supported = when (extracted) {
-            is GlobalRescheduleExtractionResult.Supported -> extracted
-            is GlobalRescheduleExtractionResult.Unsupported -> {
-                blockSchedulerFollowUpAction("当前跟进只支持明确目标 + 明确时间改期，请直接说出要改的日程和时间。")
-                return
-            }
-            is GlobalRescheduleExtractionResult.Invalid -> {
-                blockSchedulerFollowUpAction("改期目标或时间无法解析，请换一种明确说法。")
-                return
-            }
-            is GlobalRescheduleExtractionResult.Failure -> {
-                blockSchedulerFollowUpAction("改期目标解析失败，请稍后重试。")
-                return
-            }
-        }
-
-        emitSchedulerFollowUpTelemetry(
-            summary = SIM_SCHEDULER_GLOBAL_SUGGESTION_RECEIVED_SUMMARY,
-            detail = "suggestedTaskId=${supported.suggestedTaskId ?: "null"}"
-        )
-        val task = when (
-            val resolution = activeTaskRetrievalIndex.resolveTarget(
-                target = supported.target,
-                suggestedTaskId = supported.suggestedTaskId
+        val selectedTask = resolveSelectedSchedulerFollowUpTask()
+        when (
+            val decision = schedulerRouter.routeFollowUp(
+                SchedulerIntelligenceRouter.FollowUpContext(
+                    transcript = content,
+                    selectedTask = selectedTask,
+                    recentTaskHints = recentTaskHints,
+                    activeTaskShortlist = shortlist
+                )
             )
         ) {
-            is ActiveTaskResolveResult.Resolved -> {
-                taskRepository.getTask(resolution.taskId)
-                    ?: run {
-                        blockSchedulerFollowUpAction("找不到要改期的日程。")
+            is SchedulerIntelligenceRouter.Decision.GlobalReschedule -> {
+                emitSchedulerFollowUpTelemetry(
+                    summary = SIM_SCHEDULER_GLOBAL_SUGGESTION_RECEIVED_SUMMARY,
+                    detail = "suggestedTaskId=${decision.extracted.suggestedTaskId ?: "null"}"
+                )
+                val task = when (
+                    val resolution = activeTaskRetrievalIndex.resolveTarget(
+                        target = decision.extracted.target,
+                        suggestedTaskId = decision.extracted.suggestedTaskId
+                    )
+                ) {
+                    is ActiveTaskResolveResult.Resolved -> {
+                        taskRepository.getTask(resolution.taskId)
+                            ?: run {
+                                blockSchedulerFollowUpAction("找不到要改期的日程。")
+                                return
+                            }
+                    }
+                    is ActiveTaskResolveResult.Ambiguous -> {
+                        blockSchedulerFollowUpAction("目标不明确，未执行改动。")
                         return
                     }
+                    is ActiveTaskResolveResult.NoMatch -> {
+                        blockSchedulerFollowUpAction("未找到匹配的日程，请更具体一些。")
+                        return
+                    }
+                }
+
+                val v1ResolvedTime = SimRescheduleTimeInterpreter.resolve(
+                    originalTask = task,
+                    transcript = decision.extracted.timeInstruction,
+                    displayedDateIso = task.startTime.atZone(timeProvider.zoneId).toLocalDate().toString(),
+                    timeProvider = timeProvider,
+                    uniAExtractionService = uniAExtractionService
+                )
+                val v2ShadowResult = SimFollowUpRescheduleShadowInterpreter.resolve(
+                    originalTask = task,
+                    transcript = decision.extracted.timeInstruction,
+                    timeProvider = timeProvider,
+                    extractionService = followUpRescheduleExtractionService
+                )
+                emitFollowUpRescheduleShadowTelemetry(
+                    task = task,
+                    transcript = decision.extracted.timeInstruction,
+                    v1Result = v1ResolvedTime,
+                    v2Result = v2ShadowResult
+                )
+
+                val resolved = when (v1ResolvedTime) {
+                    is SimRescheduleTimeInterpreter.Result.Success -> v1ResolvedTime
+                    SimRescheduleTimeInterpreter.Result.Unsupported -> {
+                        blockSchedulerFollowUpAction("当前跟进只支持明确时间改期，请直接输入新的具体时间。")
+                        return
+                    }
+                    SimRescheduleTimeInterpreter.Result.InvalidExactTime -> {
+                        blockSchedulerFollowUpAction("改期时间格式无法解析，请换一种明确说法。")
+                        return
+                    }
+                }
+
+                applyFollowUpReschedule(
+                    task = task,
+                    newStart = resolved.startTime,
+                    newDuration = resolved.durationMinutes ?: task.durationMinutes
+                )
             }
-            is ActiveTaskResolveResult.Ambiguous -> {
-                blockSchedulerFollowUpAction("目标不明确，未执行改动。")
+
+            is SchedulerIntelligenceRouter.Decision.FollowUpReschedule -> {
+                val targetTask = decision.selectedTask
+                val v1ResolvedTime = SimRescheduleTimeInterpreter.resolve(
+                    originalTask = targetTask,
+                    transcript = content,
+                    displayedDateIso = targetTask.startTime.atZone(timeProvider.zoneId).toLocalDate().toString(),
+                    timeProvider = timeProvider,
+                    uniAExtractionService = uniAExtractionService
+                )
+                val v2ShadowResult = SimFollowUpRescheduleShadowInterpreter.resolve(
+                    originalTask = targetTask,
+                    transcript = content,
+                    timeProvider = timeProvider,
+                    extractionService = followUpRescheduleExtractionService
+                )
+                emitFollowUpRescheduleShadowTelemetry(
+                    task = targetTask,
+                    transcript = content,
+                    v1Result = v1ResolvedTime,
+                    v2Result = v2ShadowResult
+                )
+                applyFollowUpReschedule(
+                    task = targetTask,
+                    newStart = SchedulerRescheduleTimeInterpreter.resolveFollowUpOperand(
+                        originalTask = targetTask,
+                        operand = decision.extracted.operand,
+                        timeProvider = timeProvider
+                    ),
+                    newDuration = targetTask.durationMinutes
+                )
+            }
+
+            is SchedulerIntelligenceRouter.Decision.Reject -> {
+                blockSchedulerFollowUpAction(decision.message)
                 return
             }
-            is ActiveTaskResolveResult.NoMatch -> {
-                blockSchedulerFollowUpAction("未找到匹配的日程，请更具体一些。")
-                return
-            }
-        }
 
-        val v1ResolvedTime = SimRescheduleTimeInterpreter.resolve(
-            originalTask = task,
-            transcript = supported.timeInstruction,
-            displayedDateIso = LocalDate.ofInstant(task.startTime, timeProvider.zoneId).toString(),
-            timeProvider = timeProvider,
-            uniAExtractionService = uniAExtractionService
-        )
-        val v2ShadowResult = SimFollowUpRescheduleShadowInterpreter.resolve(
-            originalTask = task,
-            transcript = supported.timeInstruction,
-            timeProvider = timeProvider,
-            extractionService = followUpRescheduleExtractionService
-        )
-        emitFollowUpRescheduleShadowTelemetry(
-            task = task,
-            transcript = supported.timeInstruction,
-            v1Result = v1ResolvedTime,
-            v2Result = v2ShadowResult
-        )
-
-        val resolved = when (v1ResolvedTime) {
-            is SimRescheduleTimeInterpreter.Result.Success -> v1ResolvedTime
-            SimRescheduleTimeInterpreter.Result.Unsupported -> {
+            is SchedulerIntelligenceRouter.Decision.NotMatched,
+            is SchedulerIntelligenceRouter.Decision.Create -> {
                 blockSchedulerFollowUpAction("当前跟进只支持明确时间改期，请直接输入新的具体时间。")
                 return
             }
-            SimRescheduleTimeInterpreter.Result.InvalidExactTime -> {
-                blockSchedulerFollowUpAction("改期时间格式无法解析，请换一种明确说法。")
-                return
-            }
         }
+    }
 
-        val newStart = resolved.startTime
-        val newDuration = resolved.durationMinutes ?: task.durationMinutes
+    private suspend fun applyFollowUpReschedule(
+        task: ScheduledTask,
+        newStart: Instant,
+        newDuration: Int
+    ) {
         val conflict = if (bypassesConflictEvaluation(task.urgencyLevel)) {
             null
         } else {

@@ -39,7 +39,7 @@ import com.smartsales.prism.domain.model.Mode
 import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.ui.components.*
 import com.smartsales.prism.ui.components.agent.*
-import com.smartsales.prism.ui.sim.SimAgentViewModel
+import com.smartsales.prism.ui.sim.SimArtifactTranscriptRevealState
 import com.smartsales.prism.ui.sim.SimArtifactBubble
 import com.smartsales.prism.ui.sim.SimTranscriptPresentation
 import com.smartsales.prism.ui.theme.AccentBlue
@@ -55,7 +55,7 @@ internal fun ChatTimeline(
     agentActivity: AgentActivity?,
     taskBoardItems: List<com.smartsales.prism.domain.analyst.TaskBoardItem>,
     isThinkingCollapsed: Boolean,
-    transcriptRevealState: Map<String, SimAgentViewModel.ArtifactTranscriptRevealState>,
+    transcriptRevealState: Map<String, SimArtifactTranscriptRevealState>,
     onArtifactTranscriptRevealConsumed: (messageId: String, isLongTranscript: Boolean) -> Unit,
     onConfirmPlan: () -> Unit,
     onAmendPlan: () -> Unit,

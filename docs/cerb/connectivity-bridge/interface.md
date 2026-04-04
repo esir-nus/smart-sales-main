@@ -138,6 +138,7 @@ interface ConnectivityService {
     suspend fun reconnect(): ReconnectResult
     suspend fun disconnect()
     suspend fun unpair()
+    // Rejects blank/whitespace-only credentials locally; no transport write on that path.
     suspend fun updateWifiConfig(ssid: String, password: String): WifiConfigResult
 }
 
@@ -174,9 +175,12 @@ sealed class WifiConfigResult {
 | `recordingNotifications` | Hot flow, buffered (1), no replay |
 | `isReady()` | Pre-flight check with 3s timeout; may refresh endpoint only when the active snapshot is missing or invalidated |
 | `deleteRecording` | Idempotent, returns true if file removed or didn't exist; reuses the active runtime endpoint when valid |
+| `updateWifiConfig` | Rejects blank/whitespace-only SSID or password before any BLE provision/write attempt |
 
 `BadgeConnectionState.Connected` means the badge session is actually usable:
 persistent GATT notification listening is active and the badge has valid network reachability.
+
+Under the current reconnect contract, the bridge may surface this connected state as soon as BLE is restored and the badge reports a usable IP / transport-ready network result. Normal HTTP file work still performs its own preflight / endpoint validation without delaying shell state reflection.
 
 `managerStatus` may refine a plain disconnected manager view into:
 
@@ -194,6 +198,9 @@ Repeated BLE `wifi#address#ip#name` querying is not part of the normal sync path
 
 When reconnect can read the phone's current Wi‑Fi SSID, `ReconnectResult.WifiMismatch.currentPhoneSsid`
 must carry that suggestion so the repair form can prefill it while keeping the SSID editable.
+
+`ConnectivityService.updateWifiConfig()` must treat `trim().isEmpty()` on either field as an immediate local error.
+That rejection is a guard rail only: it must not call BLE provisioning, manual repair confirmation, or remembered-network persistence.
 
 This richer state is for connectivity manager presentation only. Shared shell/history routing must continue to use `connectionState`.
 

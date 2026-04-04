@@ -43,7 +43,7 @@ import com.smartsales.prism.ui.components.DynamicIslandStateMapper
 import com.smartsales.prism.ui.components.DynamicIslandTapAction
 import com.smartsales.prism.ui.components.PrismSurface
 import com.smartsales.prism.ui.sim.SimAgentIntelligenceContent
-import com.smartsales.prism.ui.sim.SimAgentViewModel
+import com.smartsales.prism.ui.sim.SimArtifactTranscriptRevealState
 import com.smartsales.prism.ui.theme.AccentDanger
 
 @Composable
@@ -60,7 +60,7 @@ internal fun AgentIntelligenceContent(
     heroAccomplished: List<ScheduledTask>,
     heroGreeting: String,
     isSimShell: Boolean,
-    transcriptRevealState: Map<String, SimAgentViewModel.ArtifactTranscriptRevealState>,
+    transcriptRevealState: Map<String, SimArtifactTranscriptRevealState>,
     onArtifactTranscriptRevealConsumed: (messageId: String, isLongTranscript: Boolean) -> Unit,
     onMenuClick: () -> Unit,
     onNewSessionClick: () -> Unit,
@@ -142,6 +142,14 @@ internal fun AgentIntelligenceContent(
         sessionTitle = sessionTitle,
         upcoming = heroUpcoming
     )
+    val resolvedSimDynamicIslandState = if (
+        isSimShell && simDynamicIslandState is DynamicIslandUiState.Hidden
+    ) {
+        // 兼容直接挂载的 SIM 入口；未注入运行时岛状态时回退到本地日程投影。
+        dynamicIslandState
+    } else {
+        simDynamicIslandState
+    }
     val screenWidthDp = LocalConfiguration.current.screenWidthDp.dp
     val glowRadiusPx = with(LocalDensity.current) { (screenWidthDp * 2.5f).toPx() }
 
@@ -191,7 +199,7 @@ internal fun AgentIntelligenceContent(
                 onNewSessionClick = onNewSessionClick,
                 onSchedulerClick = onSchedulerClick,
                 onAttachClick = onAttachClick,
-                simDynamicIslandState = simDynamicIslandState,
+                simDynamicIslandState = resolvedSimDynamicIslandState,
                 showHeaderMenuButton = showSimHeaderMenuButton,
                 showHeaderNewSessionButton = showSimHeaderNewSessionButton,
                 showBottomComposer = showSimBottomComposer,

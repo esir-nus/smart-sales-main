@@ -12,15 +12,17 @@ internal class SimSchedulerReminderSupport(
     private val bridge: SimSchedulerUiBridge
 ) {
 
+    fun emitReminderReliabilityPromptIfNeeded() {
+        if (exactAlarmPermissionGate.shouldPromptForExactAlarm()) {
+            bridge.emitExactAlarmPermissionNeeded()
+        }
+    }
+
     suspend fun scheduleReminderIfExact(task: ScheduledTask) {
         if (task.isVague || task.isDone) return
 
         val cascade = task.normalizedReminderCascade()
         if (cascade.isEmpty()) return
-
-        if (exactAlarmPermissionGate.shouldPromptForExactAlarm()) {
-            bridge.emitExactAlarmPermissionNeeded()
-        }
 
         runCatching {
             alarmScheduler.scheduleCascade(

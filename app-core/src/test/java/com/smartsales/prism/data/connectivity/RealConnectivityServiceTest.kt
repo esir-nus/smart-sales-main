@@ -105,6 +105,100 @@ class RealConnectivityServiceTest {
     }
 
     @Test
+    fun `updateWifiConfig rejects blank ssid before transport writes`() = runTest {
+        val session = BleSession.fromPeripheral(
+            BlePeripheral("badge-1", "Badge", -40)
+        )
+        val manager = FakeDeviceConnectionManager().apply {
+            setState(ConnectionState.Connected(session))
+        }
+        val provisioner = FakeWifiProvisioner()
+        val sessionStore = InMemorySessionStore().apply {
+            saveSession(session)
+        }
+        val service = RealConnectivityService(
+            deviceManager = manager,
+            wifiProvisioner = provisioner,
+            sessionStore = sessionStore
+        )
+
+        val result = service.updateWifiConfig(ssid = "   ", password = "secret-2")
+
+        assertEquals(WifiConfigResult.Error("Wi-Fi 名称和密码不能为空"), result)
+        assertTrue(provisioner.provisionCalls.isEmpty())
+        assertTrue(manager.confirmManualWifiProvisionCalls.isEmpty())
+        assertTrue(sessionStore.findKnownNetworkBySsid("OfficeGuest") == null)
+    }
+
+    @Test
+    fun `updateWifiConfig rejects blank password before transport writes`() = runTest {
+        val session = BleSession.fromPeripheral(
+            BlePeripheral("badge-1", "Badge", -40)
+        )
+        val manager = FakeDeviceConnectionManager().apply {
+            setState(ConnectionState.Connected(session))
+        }
+        val provisioner = FakeWifiProvisioner()
+        val sessionStore = InMemorySessionStore().apply {
+            saveSession(session)
+        }
+        val service = RealConnectivityService(
+            deviceManager = manager,
+            wifiProvisioner = provisioner,
+            sessionStore = sessionStore
+        )
+
+        val result = service.updateWifiConfig(ssid = "OfficeGuest", password = "   ")
+
+        assertEquals(WifiConfigResult.Error("Wi-Fi 名称和密码不能为空"), result)
+        assertTrue(provisioner.provisionCalls.isEmpty())
+        assertTrue(manager.confirmManualWifiProvisionCalls.isEmpty())
+        assertTrue(sessionStore.findKnownNetworkBySsid("OfficeGuest") == null)
+    }
+
+    @Test
+    fun `updateWifiConfig trims credentials before provisioning`() = runTest {
+        val session = BleSession.fromPeripheral(
+            BlePeripheral("badge-1", "Badge", -40)
+        )
+        val manager = FakeDeviceConnectionManager().apply {
+            stubConfirmManualWifiProvisionResult = ConnectionState.WifiProvisioned(
+                session = session,
+                status = ProvisioningStatus(
+                    wifiSsid = "OfficeGuest",
+                    handshakeId = "manual-confirm-ok",
+                    credentialsHash = "hash"
+                )
+            )
+            setState(ConnectionState.Connected(session))
+        }
+        val provisioner = FakeWifiProvisioner().apply {
+            stubProvisionResult = Result.Success(
+                ProvisioningStatus(
+                    wifiSsid = "OfficeGuest",
+                    handshakeId = "manual-update",
+                    credentialsHash = "hash"
+                )
+            )
+        }
+        val sessionStore = InMemorySessionStore().apply {
+            saveSession(session)
+        }
+        val service = RealConnectivityService(
+            deviceManager = manager,
+            wifiProvisioner = provisioner,
+            sessionStore = sessionStore
+        )
+
+        val result = service.updateWifiConfig(ssid = "  OfficeGuest  ", password = "  secret-2  ")
+
+        assertEquals(WifiConfigResult.Success, result)
+        assertEquals("OfficeGuest", provisioner.provisionCalls.single().second.ssid)
+        assertEquals("secret-2", provisioner.provisionCalls.single().second.password)
+        assertEquals("secret-2", manager.confirmManualWifiProvisionCalls.single().password)
+    }
+
+    @Test
     fun `updateWifiConfig returns wifi mismatch only when manual repair confirms badge on different ssid`() = runTest {
         val session = BleSession.fromPeripheral(
             BlePeripheral("badge-1", "Badge", -40)

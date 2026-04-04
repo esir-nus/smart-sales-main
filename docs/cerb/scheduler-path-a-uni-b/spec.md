@@ -37,6 +37,7 @@ This slice does **not** yet commit fully undated vague requests such as `schedul
 
 This slice also does **not** own lawful day-anchor input that still carries an explicit clock cue.
 If fallback extraction preserves a real day anchor plus a concrete cue such as `晚上九点`, the runtime must promote that payload back into exact Path A create instead of persisting vague.
+That same exact-first rule applies to qualified next-week weekday anchors such as `下周三早上八点`.
 
 ## Date-Only Law
 

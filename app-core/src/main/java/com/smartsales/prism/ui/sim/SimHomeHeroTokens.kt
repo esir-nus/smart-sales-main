@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.TextUnit
+import com.smartsales.prism.ui.components.resolveShellLayoutMode
 import com.smartsales.prism.ui.components.ShellLayoutMode
 
 internal data class SimHomeHeroLayoutMetrics(
@@ -33,29 +34,38 @@ internal object SimHomeHeroTokens {
     val HeaderHorizontalPadding = 16.dp
     val HeaderIconTouchSize = 38.dp
     val HeaderIconSize = 21.dp
+    const val HeaderCenterClusterFillFraction = 0.84f
+    val HeaderCenterClusterMaxWidth = 224.dp
     val AmbientIconHorizontalOffset = 72.dp
+    val AmbientClusterInset = 4.dp
     val AmbientLinkIconSize = 16.dp
-    val AmbientBatteryWidth = 18.dp
+    val AmbientBatteryWidth = 20.dp
     val AmbientBatteryHeight = 10.dp
     val AmbientBatteryNubWidth = 2.dp
     val AmbientBatteryNubHeight = 5.dp
+    const val AmbientBreatheMinScale = 0.9f
+    const val AmbientBreatheMaxScale = 1.08f
+    const val AmbientBreatheMinAlpha = 0.2f
+    const val AmbientBreatheMaxAlpha = 0.92f
+    const val AmbientBreatheDurationMillis = 1250
     val TopSeamInsideSofteningHeight = 8.dp
     val TopSeamOutsideFeatherHeight = 14.dp
     const val TopSeamInnerHighlightAlpha = 0.04f
     const val TopSeamOutsideHazeAlpha = 0.18f
 
-    val IslandMaxWidth = 240.dp
-    val IslandVerticalPadding = 6.dp
-    val IslandHorizontalPadding = 14.dp
+    val IslandMinWidth = 104.dp
+    val IslandMaxWidth = 228.dp
+    val IslandVerticalPadding = 5.dp
+    val IslandHorizontalPadding = 12.dp
     val IslandDotCanvasSize = 10.dp
-    val IslandDotGap = 8.dp
+    val IslandDotGap = 7.dp
     val IslandTextSize = 13.sp
-    val IslandLetterSpacing = 0.5.sp
+    val IslandLetterSpacing = 0.4.sp
 
     val GreetingHorizontalPadding = 16.dp
-    val GreetingVerticalPadding = 10.dp
+    val GreetingVerticalPadding = 12.dp
     val CenterCanvasHorizontalPadding = 16.dp
-    val CenterCanvasVerticalPadding = 10.dp
+    val CenterCanvasVerticalPadding = 12.dp
     const val GreetingUpwardOffsetRatio = 0.14f
     val GreetingMaxUpwardOffset = 72.dp
     val GreetingTitleSize = 25.sp
@@ -94,6 +104,23 @@ internal object SimHomeHeroTokens {
     val AuroraCyanCore = Color(0x3364D2FF)
     val AuroraCyanMid = Color(0x1264D2FF)
 
+    fun resolveGreetingLayoutMode(
+        availableWidth: Dp,
+        availableHeight: Dp
+    ): ShellLayoutMode {
+        val sharedMode = resolveShellLayoutMode(
+            availableWidth = availableWidth,
+            availableHeight = availableHeight
+        )
+
+        return when {
+            sharedMode != ShellLayoutMode.TIGHT -> sharedMode
+            availableHeight < 620.dp -> ShellLayoutMode.TIGHT
+            availableWidth < 340.dp -> ShellLayoutMode.TIGHT
+            else -> ShellLayoutMode.COMPACT
+        }
+    }
+
     fun layoutMetrics(layoutMode: ShellLayoutMode): SimHomeHeroLayoutMetrics = when (layoutMode) {
         ShellLayoutMode.TALL -> SimHomeHeroLayoutMetrics(
             centerCanvasVerticalPadding = CenterCanvasVerticalPadding,
@@ -109,14 +136,14 @@ internal object SimHomeHeroTokens {
             bottomBottomPadding = BottomBottomPadding
         )
         ShellLayoutMode.COMPACT -> SimHomeHeroLayoutMetrics(
-            centerCanvasVerticalPadding = 8.dp,
+            centerCanvasVerticalPadding = 10.dp,
             greetingHorizontalPadding = 14.dp,
-            greetingVerticalPadding = 8.dp,
-            greetingUpwardOffsetRatio = 0.08f,
-            greetingMaxUpwardOffset = 36.dp,
-            greetingTitleSize = 22.sp,
+            greetingVerticalPadding = 10.dp,
+            greetingUpwardOffsetRatio = 0.05f,
+            greetingMaxUpwardOffset = 40.dp,
+            greetingTitleSize = 24.sp,
             greetingSubtitleSize = 14.sp,
-            greetingSubtitleTopPadding = 6.dp,
+            greetingSubtitleTopPadding = 7.dp,
             greetingTopBiasPadding = 0.dp,
             bottomTopPadding = 8.dp,
             bottomBottomPadding = 12.dp
@@ -130,7 +157,7 @@ internal object SimHomeHeroTokens {
             greetingTitleSize = 20.sp,
             greetingSubtitleSize = 13.sp,
             greetingSubtitleTopPadding = 5.dp,
-            greetingTopBiasPadding = 52.dp,
+            greetingTopBiasPadding = 36.dp,
             bottomTopPadding = 8.dp,
             bottomBottomPadding = 12.dp
         )

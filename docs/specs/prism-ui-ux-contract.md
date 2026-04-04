@@ -153,6 +153,8 @@ Role: This document is strictly a supporting index that maps UI modules, compone
 - current `SIM` naming in shell/UI docs should be read as the best available base-runtime baseline rather than as permission for a second product truth.
 - Shared shell/UI truth now routes through `docs/core-flow/base-runtime-ux-surface-governance-flow.md`, `docs/specs/base-runtime-unification.md`, relevant lower core-flow docs, and shared feature docs.
 - current production root code is `MainActivity -> RuntimeShell`
+- shared composables such as `AgentIntelligenceScreen` and `SchedulerDrawer` must take explicit shared contracts; they must not silently default to legacy wrapper owners
+- SIM/base-runtime shell-only adjunct state must be wired explicitly from `RuntimeShell` rather than recovered by downcasting shared UI to `SimAgentViewModel`
 - Global gestures and shared element rules still apply unless a current shared spec explicitly narrows the presentation.
 - Legacy SIM shell docs may still hold migration residue, but new shell truth should be absorbed into shared docs rather than extended there.
 - For shipped shell behavior, the lower audio-open gesture must yield to direct composer interaction; shell gesture surfaces must never screen the attach button, text field, or send button.

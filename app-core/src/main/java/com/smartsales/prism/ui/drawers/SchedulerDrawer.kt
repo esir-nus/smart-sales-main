@@ -38,7 +38,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.smartsales.prism.ui.drawers.scheduler.SchedulerCalendar
@@ -87,7 +86,7 @@ fun SchedulerDrawer(
     visualMode: SchedulerDrawerVisualMode = SchedulerDrawerVisualMode.STANDARD,
     onInspirationAskAi: ((String) -> Unit)? = null,
     enableInspirationMultiSelect: Boolean = true,
-    viewModel: ISchedulerViewModel = hiltViewModel<SchedulerViewModel>(),
+    viewModel: ISchedulerViewModel,
     reminderGuideProvider: (android.content.Context) -> ReminderReliabilityAdvisor.ReminderReliabilityGuide? =
         ReminderReliabilityAdvisor::fromContext,
     reminderActionOpener: (android.content.Context, ReminderReliabilityAdvisor.Action) -> Boolean =

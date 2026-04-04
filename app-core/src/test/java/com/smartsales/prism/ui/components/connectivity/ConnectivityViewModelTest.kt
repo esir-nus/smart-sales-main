@@ -26,6 +26,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -152,6 +153,72 @@ class ConnectivityViewModelTest {
         updateGate.complete(WifiConfigResult.Error("repair failed"))
         advanceUntilIdle()
         assertEquals(ConnectivityManagerState.WIFI_MISMATCH, viewModel.managerState.value)
+        assertEquals("repair failed", viewModel.wifiMismatchErrorMessage.value)
+    }
+
+    @Test
+    fun `updateWifiConfig blocks blank ssid locally without entering reconnecting`() = runTest {
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Disconnected,
+            manager = BadgeManagerStatus.BlePairedNetworkOffline
+        )
+        val service = FakeConnectivityService()
+        val viewModel = ConnectivityViewModel(
+            connectivityService = service,
+            connectivityBridge = bridge
+        )
+        advanceUntilIdle()
+
+        viewModel.updateWifiConfig(ssid = "   ", password = "secret")
+        advanceUntilIdle()
+
+        assertTrue(service.updateWifiConfigCalls.isEmpty())
+        assertEquals(ConnectivityManagerState.BLE_PAIRED_NETWORK_OFFLINE, viewModel.managerState.value)
+        assertEquals(WIFI_MISMATCH_EMPTY_CREDENTIALS_ERROR, viewModel.wifiMismatchErrorMessage.value)
+    }
+
+    @Test
+    fun `updateWifiConfig blocks blank password locally without entering reconnecting`() = runTest {
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Disconnected,
+            manager = BadgeManagerStatus.BlePairedNetworkOffline
+        )
+        val service = FakeConnectivityService()
+        val viewModel = ConnectivityViewModel(
+            connectivityService = service,
+            connectivityBridge = bridge
+        )
+        advanceUntilIdle()
+
+        viewModel.updateWifiConfig(ssid = "OfficeGuest", password = "   ")
+        advanceUntilIdle()
+
+        assertTrue(service.updateWifiConfigCalls.isEmpty())
+        assertEquals(ConnectivityManagerState.BLE_PAIRED_NETWORK_OFFLINE, viewModel.managerState.value)
+        assertEquals(WIFI_MISMATCH_EMPTY_CREDENTIALS_ERROR, viewModel.wifiMismatchErrorMessage.value)
+    }
+
+    @Test
+    fun `updateWifiConfig trims valid credentials before calling service`() = runTest {
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Disconnected,
+            manager = BadgeManagerStatus.BlePairedNetworkOffline
+        )
+        val updateGate = CompletableDeferred<WifiConfigResult>()
+        val service = FakeConnectivityService(updateWifiConfigResults = listOf(updateGate))
+        val viewModel = ConnectivityViewModel(
+            connectivityService = service,
+            connectivityBridge = bridge
+        )
+        advanceUntilIdle()
+
+        viewModel.updateWifiConfig(ssid = "  OfficeGuest  ", password = "  secret  ")
+        advanceUntilIdle()
+
+        assertEquals(listOf("OfficeGuest" to "secret"), service.updateWifiConfigCalls)
+        updateGate.complete(WifiConfigResult.Success)
+        advanceUntilIdle()
+        assertNull(viewModel.wifiMismatchErrorMessage.value)
     }
 
     @Test
@@ -184,6 +251,7 @@ class ConnectivityViewModelTest {
             viewModel.managerState.value
         )
         assertNull(viewModel.wifiMismatchSuggestedSsid.value)
+        assertNull(viewModel.wifiMismatchErrorMessage.value)
     }
 
     @Test
@@ -294,6 +362,27 @@ class ConnectivityViewModelTest {
 
         assertEquals(ConnectivityManagerState.WIFI_MISMATCH, viewModel.managerState.value)
         assertEquals("OfficeGuest", viewModel.wifiMismatchSuggestedSsid.value)
+    }
+
+    @Test
+    fun `clearWifiMismatchError clears current repair error message`() = runTest {
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Disconnected,
+            manager = BadgeManagerStatus.BlePairedNetworkOffline
+        )
+        val viewModel = ConnectivityViewModel(
+            connectivityService = FakeConnectivityService(),
+            connectivityBridge = bridge
+        )
+        advanceUntilIdle()
+
+        viewModel.updateWifiConfig(ssid = "", password = "")
+        advanceUntilIdle()
+        assertEquals(WIFI_MISMATCH_EMPTY_CREDENTIALS_ERROR, viewModel.wifiMismatchErrorMessage.value)
+
+        viewModel.clearWifiMismatchError()
+        advanceUntilIdle()
+        assertNull(viewModel.wifiMismatchErrorMessage.value)
     }
 
     private class FakeConnectivityBridge(

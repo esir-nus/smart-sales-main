@@ -150,8 +150,12 @@ class RealDeviceSpeechRecognizer @Inject constructor(
         session = nextSession
 
         if (nextSession.strategy == DeviceSpeechStrategy.REALTIME_FUN_ASR) {
-            Log.d(TAG, "start_realtime_session")
-            realtimeSpeechRecognizer.startListening()
+            val realtimeProfile = realtimeSpeechProfileForMode(nextSession.mode)
+            Log.d(
+                TAG,
+                "start_realtime_session profile=${realtimeProfile.name.lowercase()}"
+            )
+            realtimeSpeechRecognizer.startListening(realtimeProfile)
             return
         }
 
@@ -621,4 +625,14 @@ internal fun shouldPreferLocalAsrFallback(
         "meizu"
     )
     return oemKeywords.any { keyword -> combined.contains(keyword) }
+}
+
+internal fun realtimeSpeechProfileForMode(
+    mode: DeviceSpeechMode
+): SimRealtimeSpeechProfile {
+    return when (mode) {
+        DeviceSpeechMode.FUN_ASR_REALTIME -> SimRealtimeSpeechProfile.ONBOARDING
+        DeviceSpeechMode.DEVICE_ONLY,
+        DeviceSpeechMode.DEVICE_WITH_LOCAL_ASR_FALLBACK -> SimRealtimeSpeechProfile.SIM_DRAFT
+    }
 }

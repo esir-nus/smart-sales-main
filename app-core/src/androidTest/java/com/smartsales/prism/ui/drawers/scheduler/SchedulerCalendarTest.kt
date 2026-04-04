@@ -231,7 +231,66 @@ class SchedulerCalendarTest {
         composeTestRule.onAllNodes(hasTextExactly(offWeekDay.toString())).onFirst().assertExists()
     }
 
+    @Test
+    fun calendarHandle_hiddenNormalAttention_exposesGlowSemanticsWhenCollapsed() {
+        val today = LocalDate.now()
+        val hiddenOffset = if (today.dayOfMonth <= 21) 10 else -10
+
+        composeTestRule.setContent {
+            SchedulerCalendar(
+                isExpanded = false,
+                onExpandChange = {},
+                activeDay = 0,
+                onDateSelected = {},
+                unacknowledgedDates = setOf(hiddenOffset)
+            )
+        }
+
+        composeTestRule.onNodeWithTag(SCHEDULER_CALENDAR_HANDLE_TEST_TAG)
+            .assert(hasHandleAttentionKind("normal"))
+    }
+
+    @Test
+    fun calendarHandle_hiddenWarningAttention_exposesGlowSemanticsWhenCollapsed() {
+        val today = LocalDate.now()
+        val hiddenOffset = if (today.dayOfMonth <= 21) 10 else -10
+
+        composeTestRule.setContent {
+            SchedulerCalendar(
+                isExpanded = false,
+                onExpandChange = {},
+                activeDay = 0,
+                onDateSelected = {},
+                unacknowledgedDates = setOf(hiddenOffset),
+                rescheduledDates = setOf(hiddenOffset)
+            )
+        }
+
+        composeTestRule.onNodeWithTag(SCHEDULER_CALENDAR_HANDLE_TEST_TAG)
+            .assert(hasHandleAttentionKind("warning"))
+    }
+
+    @Test
+    fun calendarHandle_visibleWeekAttention_doesNotExposeGlowSemantics() {
+        composeTestRule.setContent {
+            SchedulerCalendar(
+                isExpanded = false,
+                onExpandChange = {},
+                activeDay = 0,
+                onDateSelected = {},
+                unacknowledgedDates = setOf(0)
+            )
+        }
+
+        composeTestRule.onNodeWithTag(SCHEDULER_CALENDAR_HANDLE_TEST_TAG)
+            .assert(hasHandleAttentionKind("none"))
+    }
+
     private fun hasDateAttentionKind(kind: String): SemanticsMatcher {
         return SemanticsMatcher.expectValue(SchedulerDateAttentionKindKey, kind)
+    }
+
+    private fun hasHandleAttentionKind(kind: String): SemanticsMatcher {
+        return SemanticsMatcher.expectValue(SchedulerHandleAttentionKindKey, kind)
     }
 }

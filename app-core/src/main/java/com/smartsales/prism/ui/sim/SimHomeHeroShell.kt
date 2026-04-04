@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -66,6 +67,8 @@ import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -594,15 +597,53 @@ private fun SimHomeHeroTopCap(
                         }
                     }
                     Box(
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(),
                         contentAlignment = Alignment.Center
                     ) {
-                        SimHomeHeroDynamicIsland(
-                            state = dynamicIslandState,
-                            onTap = onSchedulerClick,
-                            enablePullGesture = enablePullGesture,
-                            onPullOpen = onPullOpen
-                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(SimHomeHeroTokens.HeaderCenterClusterFillFraction)
+                                .widthIn(max = SimHomeHeroTokens.HeaderCenterClusterMaxWidth)
+                                .fillMaxHeight(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            SimHomeHeroDynamicIsland(
+                                state = dynamicIslandState,
+                                onTap = onSchedulerClick,
+                                enablePullGesture = enablePullGesture,
+                                onPullOpen = onPullOpen
+                            )
+
+                            SimHomeHeroAmbientFlankIcon(
+                                visible = showAmbientFlanks,
+                                alignment = Alignment.CenterStart,
+                                offsetX = SimHomeHeroTokens.AmbientClusterInset,
+                                delayMillis = 100,
+                                testTag = SIM_HEADER_LEFT_AMBIENT_ICON_TEST_TAG
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Link,
+                                    contentDescription = null,
+                                    tint = Color(0xFF34C759),
+                                    modifier = Modifier.size(SimHomeHeroTokens.AmbientLinkIconSize)
+                                )
+                            }
+
+                            SimHomeHeroAmbientFlankIcon(
+                                visible = showAmbientFlanks,
+                                alignment = Alignment.CenterEnd,
+                                offsetX = -SimHomeHeroTokens.AmbientClusterInset,
+                                delayMillis = 0,
+                                testTag = SIM_HEADER_RIGHT_AMBIENT_ICON_TEST_TAG
+                            ) {
+                                SimHomeHeroAmbientBatteryGlyph(
+                                    percentage = ambientBatteryPercentage,
+                                    accentColor = Color(0xFF34C759)
+                                )
+                            }
+                        }
                     }
                     SimHomeHeroHeaderSlot {
                         if (showNewSessionButton) {
@@ -614,34 +655,6 @@ private fun SimHomeHeroTopCap(
                             )
                         }
                     }
-                }
-
-                SimHomeHeroAmbientFlankIcon(
-                    visible = showAmbientFlanks,
-                    alignment = Alignment.CenterStart,
-                    offsetX = SimHomeHeroTokens.AmbientIconHorizontalOffset,
-                    delayMillis = 100,
-                    testTag = SIM_HEADER_LEFT_AMBIENT_ICON_TEST_TAG
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Link,
-                        contentDescription = null,
-                        tint = Color(0xFF34C759),
-                        modifier = Modifier.size(SimHomeHeroTokens.AmbientLinkIconSize)
-                    )
-                }
-
-                SimHomeHeroAmbientFlankIcon(
-                    visible = showAmbientFlanks,
-                    alignment = Alignment.CenterEnd,
-                    offsetX = -SimHomeHeroTokens.AmbientIconHorizontalOffset,
-                    delayMillis = 0,
-                    testTag = SIM_HEADER_RIGHT_AMBIENT_ICON_TEST_TAG
-                ) {
-                    SimHomeHeroAmbientBatteryGlyph(
-                        percentage = ambientBatteryPercentage,
-                        accentColor = Color(0xFF34C759)
-                    )
                 }
             }
         }
@@ -691,19 +704,25 @@ private fun BoxScope.SimHomeHeroAmbientFlankIcon(
     ) {
         val transition = rememberInfiniteTransition(label = "sim_home_hero_ambient_breathe")
         val breatheScale by transition.animateFloat(
-            initialValue = 0.95f,
-            targetValue = 1f,
+            initialValue = SimHomeHeroTokens.AmbientBreatheMinScale,
+            targetValue = SimHomeHeroTokens.AmbientBreatheMaxScale,
             animationSpec = infiniteRepeatable(
-                animation = tween(durationMillis = 1500, easing = LinearEasing),
+                animation = tween(
+                    durationMillis = SimHomeHeroTokens.AmbientBreatheDurationMillis,
+                    easing = LinearEasing
+                ),
                 repeatMode = RepeatMode.Reverse
             ),
             label = "sim_home_hero_ambient_scale"
         )
         val breatheAlpha by transition.animateFloat(
-            initialValue = 0.35f,
-            targetValue = 0.7f,
+            initialValue = SimHomeHeroTokens.AmbientBreatheMinAlpha,
+            targetValue = SimHomeHeroTokens.AmbientBreatheMaxAlpha,
             animationSpec = infiniteRepeatable(
-                animation = tween(durationMillis = 1500, easing = LinearEasing),
+                animation = tween(
+                    durationMillis = SimHomeHeroTokens.AmbientBreatheDurationMillis,
+                    easing = LinearEasing
+                ),
                 repeatMode = RepeatMode.Reverse
             ),
             label = "sim_home_hero_ambient_alpha"
@@ -750,7 +769,10 @@ private fun SimHomeHeroDynamicIsland(
 
     SimVerticalDragTrigger(
         modifier = Modifier
-            .widthIn(max = SimHomeHeroTokens.IslandMaxWidth)
+            .widthIn(
+                min = SimHomeHeroTokens.IslandMinWidth,
+                max = SimHomeHeroTokens.IslandMaxWidth
+            )
             .testTag(SIM_DYNAMIC_ISLAND_TEST_TAG),
         direction = DOWN,
         threshold = 40.dp,
@@ -890,10 +912,14 @@ private fun SimHomeHeroIconButton(
     modifier: Modifier = Modifier
 ) {
     val palette = rememberSimHomeHeroPalette()
+    val haptic = LocalHapticFeedback.current
     Box(
         modifier = modifier
             .size(SimHomeHeroTokens.HeaderIconTouchSize)
-            .clickable(onClick = onClick),
+            .clickable {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onClick()
+            },
         contentAlignment = Alignment.Center
     ) {
         Icon(
@@ -926,7 +952,8 @@ private fun SimHomeHeroGreetingCanvas(
         modifier = modifier.fillMaxWidth(),
         contentAlignment = Alignment.Center
     ) {
-        val layoutMode = resolveShellLayoutMode(
+        // 空首页问候语在常规手机高度下保持原型的居中节奏，不复用更激进的窄宽度压缩。
+        val layoutMode = SimHomeHeroTokens.resolveGreetingLayoutMode(
             availableWidth = maxWidth,
             availableHeight = maxHeight
         )
@@ -998,6 +1025,7 @@ private fun SimHomeHeroBottomMonolith(
     ) { granted ->
         onVoiceDraftPermissionResult(granted)
     }
+    val haptic = LocalHapticFeedback.current
     val actionEnabled = text.isNotBlank() && !isSending
     val showVoiceMic = voiceDraftEnabled && text.isBlank()
     val displayText = if (text.isBlank() && voiceDraftState.liveTranscript.isNotBlank()) {
@@ -1085,7 +1113,10 @@ private fun SimHomeHeroBottomMonolith(
                             modifier = Modifier
                                 .size(SimHomeHeroTokens.BottomIconTouchSize)
                                 .testTag(SIM_ATTACH_BUTTON_TEST_TAG)
-                                .clickable(onClick = onAttachClick),
+                                .clickable {
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    onAttachClick()
+                                },
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -1170,6 +1201,7 @@ private fun SimHomeHeroBottomMonolith(
                                                         permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
                                                         return@detectTapGestures
                                                     }
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                                     val started = onVoiceDraftStart()
                                                     if (!started) return@detectTapGestures
                                                     val released = tryAwaitRelease()
@@ -1184,7 +1216,10 @@ private fun SimHomeHeroBottomMonolith(
                                     } else {
                                         Modifier.clickable(
                                             enabled = actionEnabled,
-                                            onClick = onSend
+                                            onClick = {
+                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                onSend()
+                                            }
                                         )
                                     }
                                 ),

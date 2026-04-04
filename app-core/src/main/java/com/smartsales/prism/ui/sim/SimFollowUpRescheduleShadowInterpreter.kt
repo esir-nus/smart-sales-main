@@ -1,15 +1,13 @@
 package com.smartsales.prism.ui.sim
 
 import com.smartsales.core.pipeline.RealFollowUpRescheduleExtractionService
+import com.smartsales.core.pipeline.SchedulerRescheduleTimeInterpreter
 import com.smartsales.prism.domain.scheduler.FollowUpRescheduleExtractionRequest
 import com.smartsales.prism.domain.scheduler.FollowUpRescheduleExtractionResult
 import com.smartsales.prism.domain.scheduler.FollowUpRescheduleOperand
 import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.domain.time.TimeProvider
 import java.time.Instant
-import java.time.LocalTime
-import java.time.OffsetDateTime
-import java.time.temporal.ChronoUnit
 
 /**
  * 跟进改期 V2 影子解释器。
@@ -97,25 +95,11 @@ internal object SimFollowUpRescheduleShadowInterpreter {
         originalTask: ScheduledTask,
         timeProvider: TimeProvider
     ): Instant {
-        return when (operand) {
-            is FollowUpRescheduleOperand.DeltaFromTarget -> {
-                originalTask.startTime.plus(operand.minutes.toLong(), ChronoUnit.MINUTES)
-            }
-
-            is FollowUpRescheduleOperand.RelativeDayClock -> {
-                val targetDate = timeProvider.today.plusDays(operand.dayOffset.toLong())
-                val targetTime = LocalTime.parse(operand.clockTime)
-                targetDate.atTime(targetTime).atZone(timeProvider.zoneId).toInstant()
-            }
-
-            is FollowUpRescheduleOperand.AbsoluteStart -> parseExactInstant(operand.startTimeIso)
-        }
-    }
-
-    private fun parseExactInstant(raw: String): Instant {
-        return runCatching { Instant.parse(raw) }
-            .recoverCatching { OffsetDateTime.parse(raw).toInstant() }
-            .getOrThrow()
+        return SchedulerRescheduleTimeInterpreter.resolveFollowUpOperand(
+            originalTask = originalTask,
+            operand = operand,
+            timeProvider = timeProvider
+        )
     }
 
     private fun classifyTranscript(transcript: String): TranscriptClass {

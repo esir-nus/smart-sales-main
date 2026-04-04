@@ -40,6 +40,36 @@ When a user provides substantive input, the pipeline executes the following sequ
   - Pure workflow suggestions remain recommendations for the plugin lane.
 - **Execution Ownership**: The `IntentOrchestrator` owns confirmation and execution handoff. Scheduler task commands are executed through scheduler-owned paths (`FastTrackMutationEngine` / `ScheduledTaskRepository` / `ScheduleBoard`), while plugin execution remains outside this seam.
 
+## Scheduler Routing Contract (2026-04-03)
+
+Scheduler-bound text in `RealUnifiedPipeline` now follows the shared scheduler intelligence stack before it trusts the generic analyst JSON block.
+
+Delivered routing order:
+
+1. Build the shared `SchedulerIntelligenceRouter` with the core `SchedulerPathACreateInterpreter` plus shared reschedule extractors.
+2. Route the text as `PATH_B_TEXT`:
+   - global reschedule detection + extraction first
+   - then deterministic create / chained create / `Uni-M`
+   - then `Uni-A` / `Uni-B`
+3. Emit a typed `PipelineResult.TaskCommandProposal` with one of:
+   - `SchedulerTaskCommand.CreateTasks`
+   - `SchedulerTaskCommand.CreateVagueTask`
+   - `SchedulerTaskCommand.CreateBatch`
+   - `SchedulerTaskCommand.RescheduleTask`
+4. Fall back to the legacy `UnifiedMutation` JSON scheduler parsing path only when the shared scheduler router is unavailable or returns no scheduler match.
+
+This closes the earlier Path A / Path B drift where voice used the newer extraction contracts but text still relied directly on the legacy JSON mutation block.
+
+## Later-Lane Suppression Contract
+
+`UnifiedPipeline` may still continue after an early Path A scheduler commit, but later scheduler work is no longer allowed to mutate the same thread twice.
+
+Delivered rule:
+
+- if `IntentOrchestrator` already recorded a terminal scheduler commit for the current `unifiedId`, later scheduler `TaskCommandProposal` or scheduler tool dispatch from `UnifiedPipeline` must be suppressed
+- the suppression guard now lives in the shared Path A owner through `SchedulerTerminalCommit`
+- non-scheduler downstream work may still continue normally
+
 ## Wave Plan
 
 | Wave | Focus | Status | Deliverables |

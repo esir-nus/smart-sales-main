@@ -28,6 +28,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.smartsales.prism.BuildConfig
 import com.smartsales.prism.ui.components.connectivity.ConnectivityManagerState
 import com.smartsales.prism.ui.components.connectivity.ConnectivityViewModel
+import com.smartsales.prism.ui.components.connectivity.WIFI_MISMATCH_EMPTY_CREDENTIALS_ERROR
 import kotlinx.coroutines.delay
 
 /**
@@ -46,6 +47,7 @@ fun ConnectivityModal(
     val state by viewModel.managerState.collectAsState()
     val batteryLevel by viewModel.batteryLevel.collectAsState()
     val wifiMismatchSuggestedSsid by viewModel.wifiMismatchSuggestedSsid.collectAsState()
+    val wifiMismatchErrorMessage by viewModel.wifiMismatchErrorMessage.collectAsState()
 
     Box(
         modifier = Modifier
@@ -97,7 +99,9 @@ fun ConnectivityModal(
                     onCancel = viewModel::cancel,
                     onCompleteUpdate = viewModel::completeUpdate,
                     onUpdateWifi = viewModel::updateWifiConfig,
-                    wifiMismatchSuggestedSsid = wifiMismatchSuggestedSsid
+                    wifiMismatchSuggestedSsid = wifiMismatchSuggestedSsid,
+                    wifiMismatchErrorMessage = wifiMismatchErrorMessage,
+                    onWifiMismatchInputChanged = viewModel::clearWifiMismatchError
                 )
                 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -115,6 +119,7 @@ fun ConnectivityManagerScreen(
     val state by viewModel.managerState.collectAsState()
     val batteryLevel by viewModel.batteryLevel.collectAsState()
     val wifiMismatchSuggestedSsid by viewModel.wifiMismatchSuggestedSsid.collectAsState()
+    val wifiMismatchErrorMessage by viewModel.wifiMismatchErrorMessage.collectAsState()
 
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -162,7 +167,9 @@ fun ConnectivityManagerScreen(
                     onCancel = viewModel::cancel,
                     onCompleteUpdate = viewModel::completeUpdate,
                     onUpdateWifi = viewModel::updateWifiConfig,
-                    wifiMismatchSuggestedSsid = wifiMismatchSuggestedSsid
+                    wifiMismatchSuggestedSsid = wifiMismatchSuggestedSsid,
+                    wifiMismatchErrorMessage = wifiMismatchErrorMessage,
+                    onWifiMismatchInputChanged = viewModel::clearWifiMismatchError
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -183,7 +190,9 @@ private fun ConnectivityStateContent(
     onCancel: () -> Unit,
     onCompleteUpdate: () -> Unit,
     onUpdateWifi: (String, String) -> Unit,
-    wifiMismatchSuggestedSsid: String?
+    wifiMismatchSuggestedSsid: String?,
+    wifiMismatchErrorMessage: String?,
+    onWifiMismatchInputChanged: () -> Unit
 ) {
     AnimatedContent(targetState = state, label = "StateTransition") { currentState ->
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -220,7 +229,9 @@ private fun ConnectivityStateContent(
                 ConnectivityManagerState.RECONNECTING -> ReconnectingView()
                 ConnectivityManagerState.WIFI_MISMATCH -> WifiMismatchView(
                     suggestedSsid = wifiMismatchSuggestedSsid,
+                    errorMessage = wifiMismatchErrorMessage,
                     onUpdate = onUpdateWifi,
+                    onInputChanged = onWifiMismatchInputChanged,
                     onIgnore = onCancel
                 )
             }
@@ -578,9 +589,11 @@ private fun ReconnectingView() {
 }
 
 @Composable
-private fun WifiMismatchView(
+internal fun WifiMismatchView(
     suggestedSsid: String?,
+    errorMessage: String?,
     onUpdate: (String, String) -> Unit,
+    onInputChanged: () -> Unit,
     onIgnore: () -> Unit
 ) {
     Icon(
@@ -603,6 +616,10 @@ private fun WifiMismatchView(
     // 输入状态
     var ssid by remember(suggestedSsid) { mutableStateOf(resolveWifiMismatchInitialSsid(suggestedSsid)) }
     var password by remember { mutableStateOf("") }
+    var localValidationError by remember { mutableStateOf<String?>(null) }
+    var pendingConfirmation by remember { mutableStateOf<WifiMismatchConfirmationPayload?>(null) }
+
+    val displayedError = localValidationError ?: errorMessage
 
     // WiFi 输入框
     Column(
@@ -618,11 +635,17 @@ private fun WifiMismatchView(
             Spacer(Modifier.height(4.dp))
             OutlinedTextField(
                 value = ssid,
-                onValueChange = { ssid = it },
+                onValueChange = {
+                    ssid = it
+                    localValidationError = null
+                    pendingConfirmation = null
+                    onInputChanged()
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag(WIFI_MISMATCH_SSID_INPUT_TEST_TAG),
                 singleLine = true,
+                isError = displayedError != null,
                 placeholder = { Text("请输入当前 WiFi 名称", color = Color.Gray) },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = Color.White,
@@ -639,11 +662,17 @@ private fun WifiMismatchView(
             Spacer(Modifier.height(4.dp))
             OutlinedTextField(
                 value = password,
-                onValueChange = { password = it },
+                onValueChange = {
+                    password = it
+                    localValidationError = null
+                    pendingConfirmation = null
+                    onInputChanged()
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag(WIFI_MISMATCH_PASSWORD_INPUT_TEST_TAG),
                 singleLine = true,
+                isError = displayedError != null,
                 visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
                 placeholder = { Text("请输入密码", color = Color.Gray) },
                 colors = OutlinedTextFieldDefaults.colors(
@@ -652,6 +681,15 @@ private fun WifiMismatchView(
                     focusedBorderColor = Color(0xFF2196F3),
                     unfocusedBorderColor = Color.Gray
                 )
+            )
+        }
+
+        if (displayedError != null) {
+            Text(
+                text = displayedError,
+                color = Color(0xFFFF8A80),
+                fontSize = 12.sp,
+                modifier = Modifier.testTag(WIFI_MISMATCH_ERROR_TEST_TAG)
             )
         }
     }
@@ -667,12 +705,66 @@ private fun WifiMismatchView(
         }
 
         Button(
-            onClick = { onUpdate(ssid, password) },
+            onClick = {
+                val normalizedSsid = ssid.trim()
+                val normalizedPassword = password.trim()
+                if (normalizedSsid.isEmpty() || normalizedPassword.isEmpty()) {
+                    localValidationError = WIFI_MISMATCH_EMPTY_CREDENTIALS_ERROR
+                    pendingConfirmation = null
+                } else {
+                    localValidationError = null
+                    pendingConfirmation = WifiMismatchConfirmationPayload(
+                        ssid = normalizedSsid,
+                        password = normalizedPassword
+                    )
+                }
+            },
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
             modifier = Modifier.weight(1f)
         ) {
             Text("更新配置")
         }
+    }
+
+    pendingConfirmation?.let { confirmation ->
+        AlertDialog(
+            modifier = Modifier.testTag(WIFI_MISMATCH_CONFIRM_DIALOG_TEST_TAG),
+            onDismissRequest = { pendingConfirmation = null },
+            title = { Text("确认更新 Wi-Fi", color = Color.White) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("即将把以下网络配置发送到徽章：", color = Color(0xFFDDDDDD))
+                    Text(
+                        text = "Wi-Fi：${confirmation.ssid}",
+                        color = Color.White,
+                        modifier = Modifier.testTag(WIFI_MISMATCH_CONFIRM_SSID_TEST_TAG)
+                    )
+                    Text("密码：已隐藏", color = Color(0xFFAAAAAA))
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingConfirmation = null
+                        onUpdate(confirmation.ssid, confirmation.password)
+                    },
+                    modifier = Modifier.testTag(WIFI_MISMATCH_CONFIRM_BUTTON_TEST_TAG)
+                ) {
+                    Text("确认发送")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { pendingConfirmation = null },
+                    modifier = Modifier.testTag(WIFI_MISMATCH_CONFIRM_CANCEL_BUTTON_TEST_TAG)
+                ) {
+                    Text("取消")
+                }
+            },
+            containerColor = Color(0xFF2B2B38),
+            titleContentColor = Color.White,
+            textContentColor = Color(0xFFDDDDDD)
+        )
     }
 }
 
@@ -680,3 +772,13 @@ internal fun resolveWifiMismatchInitialSsid(suggestedSsid: String?): String = su
 
 internal const val WIFI_MISMATCH_SSID_INPUT_TEST_TAG = "wifi_mismatch_ssid_input"
 internal const val WIFI_MISMATCH_PASSWORD_INPUT_TEST_TAG = "wifi_mismatch_password_input"
+internal const val WIFI_MISMATCH_ERROR_TEST_TAG = "wifi_mismatch_error"
+internal const val WIFI_MISMATCH_CONFIRM_DIALOG_TEST_TAG = "wifi_mismatch_confirm_dialog"
+internal const val WIFI_MISMATCH_CONFIRM_BUTTON_TEST_TAG = "wifi_mismatch_confirm_button"
+internal const val WIFI_MISMATCH_CONFIRM_CANCEL_BUTTON_TEST_TAG = "wifi_mismatch_confirm_cancel_button"
+internal const val WIFI_MISMATCH_CONFIRM_SSID_TEST_TAG = "wifi_mismatch_confirm_ssid"
+
+private data class WifiMismatchConfirmationPayload(
+    val ssid: String,
+    val password: String
+)

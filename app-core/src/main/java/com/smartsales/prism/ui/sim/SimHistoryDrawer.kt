@@ -47,7 +47,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -321,6 +323,8 @@ private fun SimHistoryRow(
     var showRenameDialog by remember(session.id) { mutableStateOf(false) }
     var renameTitle by remember(session.id) { mutableStateOf(session.clientName) }
 
+    val haptic = LocalHapticFeedback.current
+
     Box(modifier = Modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
@@ -335,7 +339,10 @@ private fun SimHistoryRow(
                 )
                 .combinedClickable(
                     onClick = onClick,
-                    onLongClick = { showMenu = true }
+                    onLongClick = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        showMenu = true
+                    }
                 )
                 .padding(horizontal = 14.dp, vertical = 12.dp)
         ) {

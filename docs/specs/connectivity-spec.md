@@ -260,7 +260,8 @@ DeviceSetup must **not** set `ConnectionState` directly. It should call public A
 
 * `Connected(session)`
 
-  * BLE and HTTP endpoint verified healthy as of last check.
+  * Persistent GATT notification listening is active and the badge reports usable transport reachability under the current reconnect contract.
+  * HTTP file operations still run their own endpoint/preflight checks before `/list`, `/download`, or `/delete`.
   * DeviceManager/Home treat this as “ready”.
 
 * `Error(reason)`
@@ -276,7 +277,8 @@ DeviceSetup must **not** set `ConnectionState` directly. It should call public A
 
 ### 4.2 Guarantees
 
-* **Connected** means “BT311 reachable + HTTP `/` (or equivalent health) returned OK”. Anything less must be `Disconnected` or `Error`.
+* **Connected** means persistent GATT notification listening is active and the badge reports usable transport reachability under the current reconnect contract. Anything less must be `Disconnected` or `Error`.
+* HTTP readiness for badge file work remains a separate preflight concern; shell/history routing must not wait for a fresh `/` health check before reflecting a newly restored connection.
 * Auto-reconnect never mutates user credentials; it only reuses stored session.
 * Methods:
 
@@ -389,8 +391,8 @@ Every change in `app-core/.../connectivity/legacy` or `feature/media/devicemanag
 
   * `DefaultDeviceConnectionManager`:
 
-    * Stored session + BLE OK + HTTP OK → `Connected`.
-    * BLE OK + HTTP fail → `Error(EndpointUnreachable)` → `Disconnected`.
+    * Stored session + persistent GATT + usable badge IP/reachability → `Connected`.
+    * BLE OK but badge still offline / unreachable for the reconnect contract → `Error(...)` or `Disconnected` based on the failure branch.
     * No stored session → `NeedsSetup`.
     * Backoff behavior for auto-reconnect.
 * **DeviceSetupViewModel**
@@ -429,7 +431,8 @@ At least:
 
 **Don’t:**
 
-* Don’t set `Connected` based only on BLE; HTTP health check is required.
+* Don’t set `Connected` based only on BLE; require persistent GATT plus usable badge transport reachability.
+* Don’t skip HTTP preflight for badge file operations just because the shared transport state is already `Connected`.
 * Don’t show “重试连接” when state is `NeedsSetup`.
 * Don’t start BLE scan without giving user a way to retry if it fails.
 * Don’t catch connectivity exceptions and silently ignore them—surface them as `Error(reason)` and map to UI.

@@ -1,0 +1,108 @@
+name: Prism Clean Check
+
+on:
+  push:
+    paths:
+      - 'domain/prism-core/**'
+      - 'data/prism-lib/**'
+  pull_request:
+    paths:
+      - 'domain/prism-core/**'
+      - 'data/prism-lib/**'
+
+jobs:
+  contamination-check:
+    runs-on: ubuntu-latest
+    name: Check Prism for Legacy Contamination
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Check prism-lib for legacy imports
+        run: |
+          echo "🔍 Checking prism-lib for legacy contamination..."
+          
+          FAILED=0
+          
+          # Check for feature package imports (legacy UI/ViewModels)
+          if grep -rn "com.smartsales.feature" data/prism-lib/src/; then
+            echo "❌ FAIL: Legacy 'feature' package found in prism-lib"
+            FAILED=1
+          else
+            echo "✅ No 'feature' imports in prism-lib"
+          fi
+          
+          # Check for ai-core imports (legacy AI implementation)
+          if grep -rn "com.smartsales.data.aicore" data/prism-lib/src/; then
+            echo "❌ FAIL: Legacy 'ai-core' package found in prism-lib"
+            FAILED=1
+          else
+            echo "✅ No 'ai-core' imports in prism-lib"
+          fi
+          
+          # Check for MetaHub imports (legacy memory system)
+          if grep -rn "MetaHub" data/prism-lib/src/; then
+            echo "❌ FAIL: Legacy 'MetaHub' found in prism-lib"
+            FAILED=1
+          else
+            echo "✅ No 'MetaHub' references in prism-lib"
+          fi
+          
+          if [ $FAILED -eq 1 ]; then
+            echo ""
+            echo "💀 Prism contamination detected. Review imports."
+            exit 1
+          fi
+          
+          echo ""
+          echo "🎉 prism-lib is clean!"
+      
+      - name: Check prism-core for Android imports
+        run: |
+          echo "🔍 Checking prism-core for Android contamination..."
+          
+          # Domain layer should NOT have Android imports (pure Kotlin)
+          # Exception: It's now Android library, but should avoid
+          # android.* in actual source (only AndroidManifest is OK)
+          
+          if grep -rn "^import android\." domain/prism-core/src/main/kotlin/; then
+            echo "⚠️ WARNING: Android imports found in prism-core domain layer"
+            echo "Domain layer should remain platform-agnostic where possible"
+            # Not failing for now since we converted to Android library
+          else
+            echo "✅ No Android imports in prism-core domain layer"
+          fi
+          
+          echo ""
+          echo "🎉 prism-core is clean!"
+      
+      - name: Check build.gradle.kts for legacy dependencies
+        run: |
+          echo "🔍 Checking prism-lib build.gradle.kts for legacy deps..."
+          
+          FAILED=0
+          
+          # Check for ai-core dependency
+          if grep -n "projects.data.aiCore\|:data:ai-core" data/prism-lib/build.gradle.kts; then
+            echo "❌ FAIL: Legacy ai-core dependency in prism-lib"
+            FAILED=1
+          else
+            echo "✅ No ai-core dependency"
+          fi
+          
+          # Check for feature dependencies
+          if grep -n "projects.feature\|:feature:" data/prism-lib/build.gradle.kts; then
+            echo "❌ FAIL: Legacy feature dependency in prism-lib"
+            FAILED=1
+          else
+            echo "✅ No feature dependencies"
+          fi
+          
+          if [ $FAILED -eq 1 ]; then
+            echo ""
+            echo "💀 Legacy dependency detected in build config."
+            exit 1
+          fi
+          
+          echo ""
+          echo "🎉 Dependencies are clean!"

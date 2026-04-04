@@ -124,7 +124,7 @@ internal fun SimAgentIntelligenceContent(
     sessionTitle: String,
     agentActivity: AgentActivity?,
     heroGreeting: String,
-    transcriptRevealState: Map<String, SimAgentViewModel.ArtifactTranscriptRevealState>,
+    transcriptRevealState: Map<String, SimArtifactTranscriptRevealState>,
     onArtifactTranscriptRevealConsumed: (messageId: String, isLongTranscript: Boolean) -> Unit,
     onMenuClick: () -> Unit,
     onNewSessionClick: () -> Unit,
@@ -278,7 +278,7 @@ private fun SimConversationTimeline(
     history: List<ChatMessage>,
     uiState: UiState,
     agentActivity: AgentActivity?,
-    transcriptRevealState: Map<String, SimAgentViewModel.ArtifactTranscriptRevealState>,
+    transcriptRevealState: Map<String, SimArtifactTranscriptRevealState>,
     onArtifactTranscriptRevealConsumed: (messageId: String, isLongTranscript: Boolean) -> Unit,
     onConfirmPlan: () -> Unit,
     onAmendPlan: () -> Unit

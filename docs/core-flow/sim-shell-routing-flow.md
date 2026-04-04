@@ -11,12 +11,13 @@
 
 ## How To Read This Doc
 
-This document defines **what the SIM shell must do**, not the final class names or DI layout.
+This document defines **what the current legacy-named SIM/base-runtime shell must do**, not the final class names or DI layout.
 
 Authority note:
 
 - treat this flow as the detailed shell-routing authority beneath `docs/core-flow/base-runtime-ux-surface-governance-flow.md` for the current shared base-runtime shell lane
 - deprecated SIM shell/connectivity Cerb shards are migration memory only and must not be used as the active spec layer
+- current `SIM` naming in this file is legacy naming for the canonical base-runtime shell lane, not permission for a second non-Mono product line
 
 - If this document conflicts with lower specs, treat the lower specs as drift candidates first.
 - If this document conflicts with code, treat the code as behind or off-contract first.
@@ -47,6 +48,7 @@ This file is allowed to be ahead of the codebase.
 7. **Shell state must not require the smart app's orchestration model**: general SIM chat may track user metadata, local SIM history, and optional attached audio, but SIM must not depend on the smart app's broader memory architecture by default.
 8. **Badge scheduler follow-up is prompt-first**: badge-origin scheduler success may create or rebind a task-scoped follow-up session, but SIM must surface it through an in-shell prompt/chip rather than force-switching chat immediately.
 9. **Dynamic island routing follows the visible lane**: scheduler remains the default island lane, connectivity may interrupt in the center slot, tap follows the visible item, and downward drag remains scheduler-only.
+10. **Shared UI must stay explicit**: shared shell/chat/scheduler surfaces may consume shell-owned adjunct state, but that state must be passed explicitly from `RuntimeShell` rather than inferred by shared-UI downcasts or legacy wrapper defaults.
 
 ---
 
@@ -94,8 +96,10 @@ The RuntimeShell-owned dynamic island in SIM follows these shell-routing rules:
 
 - scheduler is the default lane and still draws its content from scheduler-owned projections
 - connectivity takeover uses transport-truth `ConnectivityViewModel.connectionState`, not `effectiveState` or manager-only refinement state
-- `CONNECTED` and `DISCONNECTED` may interrupt the scheduler lane for `3s` on state change
-- `CONNECTED` or `DISCONNECTED` may also heartbeat back into view every `30s` for `2.5s` when no other takeover is active
+- `CONNECTED` may interrupt the scheduler lane for `5s` on state change so the success state remains readable in the shell header
+- `DISCONNECTED` may interrupt the scheduler lane for `3s` on state change
+- `CONNECTED` may also heartbeat back into view every `30s` for `5s` when no other takeover is active
+- `DISCONNECTED` may also heartbeat back into view every `30s` for `2.5s` when no other takeover is active
 - `RECONNECTING` and `NEEDS_SETUP` stay pinned until the underlying transport state clears
 - connectivity takeover is suppressed while the scheduler drawer is open or while any connectivity-owned surface (`MODAL`, `SETUP`, `MANAGER`) is already visible
 - island tap routes to the currently visible lane: scheduler-visible tap opens scheduler, connectivity-visible tap opens connectivity entry

@@ -24,7 +24,9 @@ private fun previewState(
     consultationCaptureState: OnboardingConsultationCaptureState =
         OnboardingConsultationCaptureState.COMPLETE,
     profileCaptureState: OnboardingProfileCaptureState =
-        OnboardingProfileCaptureState.EXTRACTED
+        OnboardingProfileCaptureState.EXTRACTED,
+    quickStartCaptureState: OnboardingQuickStartCaptureState =
+        OnboardingQuickStartCaptureState.UPDATED
 ): OnboardingVisualCaptureState = OnboardingVisualCaptureState(
     host = host,
     step = step,
@@ -35,7 +37,8 @@ private fun previewState(
     permissionDenied = permissionDenied,
     showProvisioningForm = showProvisioningForm,
     consultationCaptureState = consultationCaptureState,
-    profileCaptureState = profileCaptureState
+    profileCaptureState = profileCaptureState,
+    quickStartCaptureState = quickStartCaptureState
 )
 
 @Preview(showBackground = true, backgroundColor = 0xFF05060A, name = "Full App 1. Welcome")
@@ -166,7 +169,33 @@ fun PreviewOnboardingFullAppProfileExtracted() {
     )
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF05060A, name = "Full App 4. Hardware Wake")
+@Preview(showBackground = true, backgroundColor = 0xFF05060A, name = "Full App 4. Quick Start List")
+@Composable
+fun PreviewOnboardingFullAppQuickStartList() {
+    OnboardingStaticScreen(
+        state = previewState(
+            host = OnboardingHost.FULL_APP,
+            step = OnboardingStep.SCHEDULER_QUICK_START,
+            badge = null,
+            quickStartCaptureState = OnboardingQuickStartCaptureState.INITIAL_LIST
+        )
+    )
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF05060A, name = "Full App 4. Quick Start Update")
+@Composable
+fun PreviewOnboardingFullAppQuickStartUpdate() {
+    OnboardingStaticScreen(
+        state = previewState(
+            host = OnboardingHost.FULL_APP,
+            step = OnboardingStep.SCHEDULER_QUICK_START,
+            badge = null,
+            quickStartCaptureState = OnboardingQuickStartCaptureState.UPDATED
+        )
+    )
+}
+
+@Preview(showBackground = true, backgroundColor = 0xFF05060A, name = "Full App 5. Hardware Wake")
 @Composable
 fun PreviewOnboardingFullAppHardwareWake() {
     OnboardingStaticScreen(
@@ -178,7 +207,7 @@ fun PreviewOnboardingFullAppHardwareWake() {
     )
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF05060A, name = "Full App 5. Scan")
+@Preview(showBackground = true, backgroundColor = 0xFF05060A, name = "Full App 6. Scan")
 @Composable
 fun PreviewOnboardingFullAppScan() {
     OnboardingStaticScreen(
@@ -190,7 +219,7 @@ fun PreviewOnboardingFullAppScan() {
     )
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF05060A, name = "Full App 6. Device Found")
+@Preview(showBackground = true, backgroundColor = 0xFF05060A, name = "Full App 7. Device Found")
 @Composable
 fun PreviewOnboardingFullAppDeviceFound() {
     OnboardingStaticScreen(
@@ -201,7 +230,7 @@ fun PreviewOnboardingFullAppDeviceFound() {
     )
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF05060A, name = "Full App 7. Provisioning Form")
+@Preview(showBackground = true, backgroundColor = 0xFF05060A, name = "Full App 8. Provisioning Form")
 @Composable
 fun PreviewOnboardingFullAppProvisioningForm() {
     OnboardingStaticScreen(
@@ -212,7 +241,7 @@ fun PreviewOnboardingFullAppProvisioningForm() {
     )
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF05060A, name = "Full App 8. Complete")
+@Preview(showBackground = true, backgroundColor = 0xFF05060A, name = "Full App 9. Complete")
 @Composable
 fun PreviewOnboardingFullAppComplete() {
     OnboardingStaticScreen(

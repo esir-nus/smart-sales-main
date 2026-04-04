@@ -2,19 +2,20 @@ package com.smartsales.core.pipeline
 
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.core.context.ContextBuilder
-import com.smartsales.core.context.ContextDepth
+import com.smartsales.prism.domain.scheduler.ActiveTaskResolveResult
+import com.smartsales.prism.domain.scheduler.ActiveTaskRetrievalIndex
+import com.smartsales.prism.domain.scheduler.CreateTasksParams
 import com.smartsales.prism.domain.scheduler.FastTrackResult
+import com.smartsales.prism.domain.scheduler.RescheduleTaskParams
+import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.SchedulerLinter
-
-
+import com.smartsales.prism.domain.time.TimeProvider
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import javax.inject.Inject
 import javax.inject.Singleton
-import java.time.ZoneId
-import java.time.temporal.ChronoUnit
 import com.smartsales.core.llm.Executor
 import com.smartsales.core.llm.LlmProfile
 import com.smartsales.core.llm.ExecutorResult
@@ -43,8 +44,47 @@ class RealUnifiedPipeline @Inject constructor(
     private val executor: Executor,
     private val telemetry: PipelineTelemetry,
     private val habitListener: HabitListener,
-    @Named("AppScope") private val appScope: kotlinx.coroutines.CoroutineScope
+    @Named("AppScope") private val appScope: kotlinx.coroutines.CoroutineScope,
+    private val taskRepository: ScheduledTaskRepository? = null,
+    private val activeTaskRetrievalIndex: ActiveTaskRetrievalIndex? = null,
+    private val timeProvider: TimeProvider? = null,
+    private val uniAExtractionService: RealUniAExtractionService? = null,
+    private val uniBExtractionService: RealUniBExtractionService? = null,
+    private val uniMExtractionService: RealUniMExtractionService? = null,
+    private val globalRescheduleExtractionService: RealGlobalRescheduleExtractionService? = null
 ) : UnifiedPipeline {
+    private sealed interface SharedSchedulerCommandResult {
+        data class Command(
+            val command: SchedulerTaskCommand
+        ) : SharedSchedulerCommandResult
+
+        data object Reject : SharedSchedulerCommandResult
+
+        data object NotMatchedOrUnavailable : SharedSchedulerCommandResult
+    }
+
+    private val sharedSchedulerCreateInterpreter: SchedulerPathACreateInterpreter? by lazy {
+        val uniM = uniMExtractionService ?: return@lazy null
+        val uniA = uniAExtractionService ?: return@lazy null
+        val uniB = uniBExtractionService ?: return@lazy null
+        val sharedTimeProvider = timeProvider ?: return@lazy null
+        SchedulerPathACreateInterpreter(
+            uniMExtractionService = uniM,
+            uniAExtractionService = uniA,
+            uniBExtractionService = uniB,
+            timeProvider = sharedTimeProvider
+        )
+    }
+
+    private val sharedSchedulerIntelligenceRouter: SchedulerIntelligenceRouter? by lazy {
+        val createInterpreter = sharedSchedulerCreateInterpreter ?: return@lazy null
+        val sharedTimeProvider = timeProvider ?: return@lazy null
+        SchedulerIntelligenceRouter(
+            timeProvider = sharedTimeProvider,
+            createInterpreter = createInterpreter,
+            globalRescheduleExtractionService = globalRescheduleExtractionService
+        )
+    }
     
     override suspend fun processInput(input: PipelineInput): Flow<PipelineResult> = flow {
         Log.d("RealUnifiedPipeline", "🚀 Starting unified pipeline ETL for input: ${input.rawText}")
@@ -306,6 +346,7 @@ class RealUnifiedPipeline @Inject constructor(
                     }
                     
                     buildSchedulerTaskCommand(
+                        input = input,
                         mutation = mutation,
                         rawJson = llmResult.content,
                         unifiedId = input.unifiedId
@@ -330,7 +371,152 @@ class RealUnifiedPipeline @Inject constructor(
         }
     }
 
-    private fun buildSchedulerTaskCommand(
+    private suspend fun buildSchedulerTaskCommand(
+        input: PipelineInput,
+        mutation: com.smartsales.prism.domain.core.UnifiedMutation,
+        rawJson: String,
+        unifiedId: String
+    ): SchedulerTaskCommand? {
+        return when (mutation.classification.lowercase()) {
+            "schedulable",
+            "reschedule" -> when (val shared = buildSharedSchedulerTaskCommand(input, unifiedId)) {
+                is SharedSchedulerCommandResult.Command -> shared.command
+                SharedSchedulerCommandResult.Reject -> null
+                SharedSchedulerCommandResult.NotMatchedOrUnavailable -> {
+                    buildLegacySchedulerTaskCommand(
+                        mutation = mutation,
+                        rawJson = rawJson,
+                        unifiedId = unifiedId
+                    )
+                }
+            }
+            "deletion" -> mutation.targetTitle
+                ?.takeIf { it.isNotBlank() }
+                ?.let { SchedulerTaskCommand.DeleteTask(it) }
+            else -> null
+        }
+    }
+
+    private suspend fun buildSharedSchedulerTaskCommand(
+        input: PipelineInput,
+        unifiedId: String
+    ): SharedSchedulerCommandResult {
+        val router = sharedSchedulerIntelligenceRouter ?: return SharedSchedulerCommandResult.NotMatchedOrUnavailable
+        val shortlist = if (router.mightExpressReschedule(input.rawText)) {
+            activeTaskRetrievalIndex?.buildShortlist(input.rawText).orEmpty()
+        } else {
+            emptyList()
+        }
+        return when (
+            val decision = router.routeGeneral(
+                SchedulerIntelligenceRouter.GeneralContext(
+                    transcript = input.rawText,
+                    surface = SchedulerIntelligenceRouter.SchedulerSurface.PATH_B_TEXT,
+                    displayedDateIso = null,
+                    activeTaskShortlist = shortlist
+                )
+            )
+        ) {
+            is SchedulerIntelligenceRouter.Decision.Create -> {
+                buildCreateCommandFromDecision(decision, unifiedId)
+                    ?.let(SharedSchedulerCommandResult::Command)
+                    ?: SharedSchedulerCommandResult.NotMatchedOrUnavailable
+            }
+            is SchedulerIntelligenceRouter.Decision.GlobalReschedule -> {
+                buildSharedRescheduleCommand(
+                    extracted = decision.extracted,
+                    unifiedId = unifiedId
+                )
+            }
+            is SchedulerIntelligenceRouter.Decision.NotMatched -> SharedSchedulerCommandResult.NotMatchedOrUnavailable
+            is SchedulerIntelligenceRouter.Decision.Reject,
+            is SchedulerIntelligenceRouter.Decision.FollowUpReschedule -> SharedSchedulerCommandResult.Reject
+        }
+    }
+
+    private fun buildCreateCommandFromDecision(
+        decision: SchedulerIntelligenceRouter.Decision.Create,
+        unifiedId: String
+    ): SchedulerTaskCommand? {
+        return when (val result = decision.result) {
+            is SchedulerPathACreateInterpreter.Result.SingleMatched -> {
+                fastTrackCreateToCommand(result.intent, unifiedId)
+            }
+            is SchedulerPathACreateInterpreter.Result.MultiMatched -> {
+                val operations = result.intents.mapNotNull { intent ->
+                    fastTrackCreateToOperation(intent, unifiedId)
+                }
+                if (operations.isEmpty()) {
+                    null
+                } else {
+                    val exactOperations = operations.filterIsInstance<SchedulerTaskCommand.CreateOperation.Exact>()
+                    when {
+                        operations.size == 1 -> operationToCommand(operations.single())
+                        exactOperations.size == operations.size -> {
+                            SchedulerTaskCommand.CreateTasks(
+                                CreateTasksParams(
+                                    unifiedId = unifiedId,
+                                    tasks = exactOperations.flatMap { it.params.tasks }
+                                )
+                            )
+                        }
+                        else -> SchedulerTaskCommand.CreateBatch(operations)
+                    }
+                }
+            }
+            is SchedulerPathACreateInterpreter.Result.DirectFailure,
+            is SchedulerPathACreateInterpreter.Result.NotMatched -> null
+        }
+    }
+
+    private suspend fun buildSharedRescheduleCommand(
+        extracted: com.smartsales.prism.domain.scheduler.GlobalRescheduleExtractionResult.Supported,
+        unifiedId: String
+    ): SharedSchedulerCommandResult {
+        val retrievalIndex = activeTaskRetrievalIndex ?: return SharedSchedulerCommandResult.NotMatchedOrUnavailable
+        val tasks = taskRepository ?: return SharedSchedulerCommandResult.NotMatchedOrUnavailable
+        val sharedTimeProvider = timeProvider ?: return SharedSchedulerCommandResult.NotMatchedOrUnavailable
+        val uniA = uniAExtractionService ?: return SharedSchedulerCommandResult.NotMatchedOrUnavailable
+
+        val task = when (
+            val resolution = retrievalIndex.resolveTarget(
+                target = extracted.target,
+                suggestedTaskId = extracted.suggestedTaskId
+            )
+        ) {
+            is ActiveTaskResolveResult.Resolved -> tasks.getTask(resolution.taskId)
+            is ActiveTaskResolveResult.Ambiguous,
+            is ActiveTaskResolveResult.NoMatch -> return SharedSchedulerCommandResult.Reject
+        } ?: return SharedSchedulerCommandResult.Reject
+
+        val resolvedTime = when (
+            val timeResult = SchedulerRescheduleTimeInterpreter.resolveNaturalInstruction(
+                originalTask = task,
+                transcript = extracted.timeInstruction,
+                displayedDateIso = task.startTime.atZone(sharedTimeProvider.zoneId).toLocalDate().toString(),
+                timeProvider = sharedTimeProvider,
+                uniAExtractionService = uniA
+            )
+        ) {
+            is SchedulerRescheduleTimeInterpreter.Result.Success -> timeResult
+            SchedulerRescheduleTimeInterpreter.Result.InvalidExactTime,
+            SchedulerRescheduleTimeInterpreter.Result.Unsupported -> return SharedSchedulerCommandResult.Reject
+        }
+
+        return SharedSchedulerCommandResult.Command(
+            SchedulerTaskCommand.RescheduleTask(
+                RescheduleTaskParams(
+                    unifiedId = unifiedId,
+                    resolvedTaskId = task.id,
+                    targetQuery = extracted.target.targetQuery,
+                    newStartTimeIso = resolvedTime.startTime.toString(),
+                    newDurationMinutes = resolvedTime.durationMinutes ?: task.durationMinutes
+                )
+            )
+        )
+    }
+
+    private fun buildLegacySchedulerTaskCommand(
         mutation: com.smartsales.prism.domain.core.UnifiedMutation,
         rawJson: String,
         unifiedId: String
@@ -339,6 +525,11 @@ class RealUnifiedPipeline @Inject constructor(
             "schedulable" -> when (val parsed = schedulerLinter.parseFastTrackIntent(rawJson)) {
                 is FastTrackResult.CreateTasks -> {
                     SchedulerTaskCommand.CreateTasks(
+                        parsed.params.copy(unifiedId = unifiedId)
+                    )
+                }
+                is FastTrackResult.CreateVagueTask -> {
+                    SchedulerTaskCommand.CreateVagueTask(
                         parsed.params.copy(unifiedId = unifiedId)
                     )
                 }
@@ -352,9 +543,41 @@ class RealUnifiedPipeline @Inject constructor(
                 }
                 else -> null
             }
-            "deletion" -> mutation.targetTitle
-                ?.takeIf { it.isNotBlank() }
-                ?.let { SchedulerTaskCommand.DeleteTask(it) }
+            else -> null
+        }
+    }
+
+    private fun fastTrackCreateToCommand(
+        intent: FastTrackResult,
+        unifiedId: String
+    ): SchedulerTaskCommand? {
+        return fastTrackCreateToOperation(intent, unifiedId)?.let(::operationToCommand)
+    }
+
+    private fun operationToCommand(
+        operation: SchedulerTaskCommand.CreateOperation
+    ): SchedulerTaskCommand {
+        return when (operation) {
+            is SchedulerTaskCommand.CreateOperation.Exact -> SchedulerTaskCommand.CreateTasks(operation.params)
+            is SchedulerTaskCommand.CreateOperation.Vague -> SchedulerTaskCommand.CreateVagueTask(operation.params)
+        }
+    }
+
+    private fun fastTrackCreateToOperation(
+        intent: FastTrackResult,
+        unifiedId: String
+    ): SchedulerTaskCommand.CreateOperation? {
+        return when (intent) {
+            is FastTrackResult.CreateTasks -> {
+                SchedulerTaskCommand.CreateOperation.Exact(
+                    params = intent.params.copy(unifiedId = unifiedId)
+                )
+            }
+            is FastTrackResult.CreateVagueTask -> {
+                SchedulerTaskCommand.CreateOperation.Vague(
+                    params = intent.params.copy(unifiedId = unifiedId)
+                )
+            }
             else -> null
         }
     }

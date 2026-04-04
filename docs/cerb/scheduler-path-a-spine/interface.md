@@ -40,6 +40,7 @@ sealed class PipelineResult {
 - the scheduler task was already persisted through `ScheduledTaskRepository`
 - the persisted task uses the shared scheduler thread identity (`unifiedId`)
 - this is the foreground completion checkpoint for badge-audio consumers
+- this early commit also arms the later-lane scheduler suppression guard for the same scheduler thread, so downstream Path B scheduler writes do not re-mutate the same `unifiedId`
 
 `PathACommitted` does **not** guarantee:
 
@@ -78,6 +79,6 @@ It deliberately leaves later universe semantics open:
 - conflict universe rules
 - reschedule universe rules
 
-Those must be defined by later Cerb shards or later revisions of this shard before coding proceeds.
+Those are governed by the later scheduler Cerb shards and core-flow docs rather than by this minimal interface contract.
 
 `Uni-A` exact-create is now defined in `docs/cerb/scheduler-path-a-uni-a/spec.md`.

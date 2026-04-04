@@ -56,6 +56,8 @@ import java.time.temporal.ChronoUnit
 
 val SchedulerDateAttentionKindKey = SemanticsPropertyKey<String>("SchedulerDateAttentionKind")
 var SemanticsPropertyReceiver.schedulerDateAttentionKind by SchedulerDateAttentionKindKey
+val SchedulerHandleAttentionKindKey = SemanticsPropertyKey<String>("SchedulerHandleAttentionKind")
+var SemanticsPropertyReceiver.schedulerHandleAttentionKind by SchedulerHandleAttentionKindKey
 
 internal const val SCHEDULER_CALENDAR_HANDLE_TEST_TAG = "scheduler_calendar_handle"
 
@@ -111,6 +113,21 @@ fun SchedulerCalendar(
     }
     val collapsedWeek = remember(collapsedWeekStart) {
         List(7) { index -> collapsedWeekStart.plusDays(index.toLong()) }
+    }
+    val hiddenHandleAttentionKind = remember(
+        isExpanded,
+        collapsedWeek,
+        today,
+        unacknowledgedDates,
+        rescheduledDates
+    ) {
+        resolveSchedulerHandleAttentionKind(
+            isExpanded = isExpanded,
+            collapsedWeek = collapsedWeek,
+            today = today,
+            unacknowledgedDates = unacknowledgedDates,
+            rescheduledDates = rescheduledDates
+        )
     }
 
     Column(
@@ -169,7 +186,8 @@ fun SchedulerCalendar(
         ExpansionHandle(
             isExpanded = isExpanded,
             onExpandChange = onExpandChange,
-            onDismiss = onDismiss
+            onDismiss = onDismiss,
+            hiddenAttentionKind = hiddenHandleAttentionKind
         )
     }
 }
@@ -369,16 +387,42 @@ private fun CalendarDateCell(
 private fun ExpansionHandle(
     isExpanded: Boolean,
     onExpandChange: (Boolean) -> Unit,
-    onDismiss: (() -> Unit)? = null
+    onDismiss: (() -> Unit)? = null,
+    hiddenAttentionKind: String = "none"
 ) {
     val visuals = currentSchedulerDrawerVisuals
     var dragOffset by remember { mutableStateOf(0f) }
+    val hasAttention = hiddenAttentionKind != "none"
+    // 呼吸动画仅用于 chevron 图标本身的 drop-shadow + 色调渐变
+    val breathe = rememberInfiniteTransition(label = "calendarHandleGlow")
+    val breatheProgress by breathe.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(3000, easing = FastOutSlowInEasing),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+        ),
+        label = "calendarHandleGlowProgress"
+    )
+    // 蓝色呼吸光：注意力信号时 chevron 从灰色渐变到蓝色
+    val chevronBlue = Color(0xFF3C8CFF)
+    val chevronTint = if (hasAttention) {
+        androidx.compose.ui.graphics.lerp(visuals.calendarChevronColor, chevronBlue, breatheProgress * 0.85f)
+    } else {
+        visuals.calendarChevronColor
+    }
+    // drop-shadow 半径和透明度随呼吸周期变化
+    val dropShadowAlpha = if (hasAttention) 0.3f + breatheProgress * 0.4f else 0f
+    val dropShadowSpread = if (hasAttention) 3f + breatheProgress * 3f else 0f
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(28.dp)
             .testTag(SCHEDULER_CALENDAR_HANDLE_TEST_TAG)
+            .semantics {
+                schedulerHandleAttentionKind = hiddenAttentionKind
+            }
             .draggable(
                 orientation = Orientation.Vertical,
                 state = rememberDraggableState { delta ->
@@ -411,11 +455,43 @@ private fun ExpansionHandle(
             Icon(
                 imageVector = Icons.Default.KeyboardArrowDown,
                 contentDescription = null,
-                tint = visuals.calendarChevronColor,
-                modifier = Modifier.graphicsLayer {
-                    rotationZ = if (isExpanded) 180f else 0f
-                }
+                tint = chevronTint,
+                modifier = Modifier
+                    .then(
+                        if (hasAttention) {
+                            Modifier.drawBehind {
+                                // 紧贴图标的蓝色 drop-shadow，模拟原型中的 filter: drop-shadow()
+                                drawCircle(
+                                    color = chevronBlue.copy(alpha = dropShadowAlpha),
+                                    radius = size.minDimension / 2f + dropShadowSpread.dp.toPx()
+                                )
+                            }
+                        } else {
+                            Modifier
+                        }
+                    )
+                    .graphicsLayer {
+                        rotationZ = if (isExpanded) 180f else 0f
+                    }
             )
         }
+    }
+}
+
+internal fun resolveSchedulerHandleAttentionKind(
+    isExpanded: Boolean,
+    collapsedWeek: List<LocalDate>,
+    today: LocalDate,
+    unacknowledgedDates: Set<Int>,
+    rescheduledDates: Set<Int>
+): String {
+    if (isExpanded) return "none"
+    val visibleOffsets = collapsedWeek
+        .map { ChronoUnit.DAYS.between(today, it).toInt() }
+        .toSet()
+    return when {
+        rescheduledDates.any { it !in visibleOffsets } -> "warning"
+        unacknowledgedDates.any { it !in visibleOffsets } -> "normal"
+        else -> "none"
     }
 }

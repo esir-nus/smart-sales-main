@@ -62,6 +62,78 @@ internal fun profileStateForCapture(
     )
 }
 
+internal fun quickStartStateForCapture(
+    captureState: OnboardingQuickStartCaptureState
+): OnboardingQuickStartUiState = when (captureState) {
+    OnboardingQuickStartCaptureState.IDLE -> OnboardingQuickStartUiState()
+    OnboardingQuickStartCaptureState.INITIAL_LIST -> OnboardingQuickStartUiState(
+        items = listOf(
+            OnboardingQuickStartItem(
+                stableId = "preview-1",
+                title = "起床闹钟",
+                timeLabel = "07:00",
+                dateLabel = "明天",
+                dateIso = "2026-04-04",
+                urgencyLevel = com.smartsales.prism.domain.scheduler.UrgencyLevel.L1_CRITICAL,
+                startHour = 7,
+                startMinute = 0
+            ),
+            OnboardingQuickStartItem(
+                stableId = "preview-2",
+                title = "带合同见老板",
+                timeLabel = "09:00",
+                dateLabel = "明天",
+                dateIso = "2026-04-04",
+                urgencyLevel = com.smartsales.prism.domain.scheduler.UrgencyLevel.L2_IMPORTANT,
+                startHour = 9,
+                startMinute = 0
+            ),
+            OnboardingQuickStartItem(
+                stableId = "preview-3",
+                title = "接王经理",
+                timeLabel = "14:00",
+                dateLabel = "后天",
+                dateIso = "2026-04-05",
+                urgencyLevel = com.smartsales.prism.domain.scheduler.UrgencyLevel.L3_NORMAL,
+                startHour = 14,
+                startMinute = 0
+            )
+        )
+    )
+    OnboardingQuickStartCaptureState.APPENDED -> quickStartStateForCapture(
+        OnboardingQuickStartCaptureState.INITIAL_LIST
+    ).copy(
+        items = quickStartStateForCapture(OnboardingQuickStartCaptureState.INITIAL_LIST).items +
+            OnboardingQuickStartItem(
+                stableId = "preview-4",
+                title = "赶飞机",
+                timeLabel = "待定",
+                dateLabel = "后天",
+                dateIso = "2026-04-05",
+                urgencyLevel = com.smartsales.prism.domain.scheduler.UrgencyLevel.L2_IMPORTANT
+            )
+    )
+    OnboardingQuickStartCaptureState.UPDATED -> quickStartStateForCapture(
+        OnboardingQuickStartCaptureState.APPENDED
+    ).copy(
+        items = quickStartStateForCapture(OnboardingQuickStartCaptureState.APPENDED).items.map { item ->
+            if (item.title == "赶飞机") {
+                item.copy(
+                    title = "推迟后的飞机",
+                    dateLabel = "大后天",
+                    dateIso = "2026-04-06",
+                    highlightToken = 1
+                )
+            } else {
+                item
+            }
+        }
+    )
+    OnboardingQuickStartCaptureState.COMPLETE -> quickStartStateForCapture(
+        OnboardingQuickStartCaptureState.UPDATED
+    )
+}
+
 internal fun consultationProcessingLabel(phase: OnboardingProcessingPhase): String = when (phase) {
     OnboardingProcessingPhase.RECOGNIZING -> "正在识别语音..."
     OnboardingProcessingPhase.BUILDING_CONSULTATION_REPLY -> "正在整理建议..."

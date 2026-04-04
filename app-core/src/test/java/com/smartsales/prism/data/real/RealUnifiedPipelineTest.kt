@@ -1,8 +1,12 @@
 package com.smartsales.prism.data.real
 
 import com.smartsales.core.context.RealContextBuilder
+import com.smartsales.core.pipeline.PromptCompiler
+import com.smartsales.core.pipeline.RealGlobalRescheduleExtractionService
+import com.smartsales.core.pipeline.RealUniAExtractionService
+import com.smartsales.core.pipeline.RealUniBExtractionService
+import com.smartsales.core.pipeline.RealUniMExtractionService
 import com.smartsales.core.pipeline.RealUnifiedPipeline
-
 import com.smartsales.prism.domain.model.Mode
 import com.smartsales.core.context.ContextBuilder
 import com.smartsales.core.context.ContextDepth
@@ -15,10 +19,12 @@ import com.smartsales.core.pipeline.ParseResult
 import com.smartsales.core.pipeline.DisambiguationResult
 import com.smartsales.core.pipeline.PluginToolIds
 import com.smartsales.core.pipeline.QueryQuality
+import com.smartsales.core.pipeline.SchedulerTaskCommand
 import com.smartsales.prism.domain.scheduler.SchedulerLinter
 import com.smartsales.prism.domain.scheduler.SchedulerTimelineItem
 import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.domain.scheduler.FakeScheduledTaskRepository
+import com.smartsales.prism.domain.scheduler.UrgencyLevel
 import com.smartsales.prism.domain.scheduler.fakes.FakeTimeProvider
 import com.smartsales.core.test.fakes.*
 import com.smartsales.prism.domain.telemetry.PipelineTelemetry
@@ -99,6 +105,33 @@ class RealUnifiedPipelineTest {
         )
     }
 
+    private fun buildSharedSchedulerPipeline(
+        sharedExecutor: FakeExecutor,
+        retrievalIndex: FakeActiveTaskRetrievalIndex = FakeActiveTaskRetrievalIndex()
+    ): RealUnifiedPipeline {
+        val sharedLinter = SchedulerLinter(timeProvider)
+        return RealUnifiedPipeline(
+            contextBuilder = contextBuilder,
+            entityDisambiguationService = entityDisambiguationService,
+            inputParserService = inputParserService,
+            schedulerLinter = sharedLinter,
+            entityWriter = entityWriter,
+            sessionTitleGenerator = sessionTitleGenerator,
+            promptCompiler = promptCompiler,
+            executor = sharedExecutor,
+            telemetry = telemetry,
+            habitListener = habitListener,
+            appScope = testScope,
+            taskRepository = scheduledTaskRepository,
+            activeTaskRetrievalIndex = retrievalIndex,
+            timeProvider = timeProvider,
+            uniAExtractionService = RealUniAExtractionService(sharedExecutor, PromptCompiler(), sharedLinter),
+            uniBExtractionService = RealUniBExtractionService(sharedExecutor, PromptCompiler(), sharedLinter),
+            uniMExtractionService = RealUniMExtractionService(sharedExecutor, PromptCompiler(), sharedLinter),
+            globalRescheduleExtractionService = RealGlobalRescheduleExtractionService(sharedExecutor, PromptCompiler(), sharedLinter)
+        )
+    }
+
     @Test
     fun `processInput Context Branch - CRM_TASK execution routing`() = runTest {
         // Arrange
@@ -144,6 +177,131 @@ class RealUnifiedPipelineTest {
         // Background Path Validation
         assertEquals("Habit listener MUST be triggered after ETL", 1, habitListener.analyzeAsyncCallCount)
         assertEquals("Schedule a meeting", habitListener.rawInputCaptured)
+    }
+
+    @Test
+    fun `processInput shared scheduler router emits batch create proposal for mixed Path B text scheduling`() = runTest {
+        val sharedExecutor = FakeExecutor()
+        val localPipeline = buildSharedSchedulerPipeline(sharedExecutor)
+
+        inputParserService.nextResult = ParseResult.Success(emptyList(), null, """{"intent":"scheduler"}""")
+        entityDisambiguationService.nextResult = DisambiguationResult.PassThrough
+        sharedExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                content = """{
+                    "classification": "schedulable",
+                    "response": "好的，我为您起草日程。"
+                }""".trimIndent(),
+                tokenUsage = com.smartsales.core.llm.TokenUsage(60, 10)
+            )
+        )
+        sharedExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                content = """{
+                    "decision":"MULTI_CREATE",
+                    "fragments":[
+                        {
+                            "title":"带合同见老板",
+                            "mode":"EXACT",
+                            "anchorKind":"ABSOLUTE",
+                            "startTimeIso":"2026-03-21T01:00:00Z",
+                            "durationMinutes":30,
+                            "urgency":"L2"
+                        },
+                        {
+                            "title":"跟进客户",
+                            "mode":"VAGUE",
+                            "anchorKind":"ABSOLUTE",
+                            "anchorDateIso":"2026-03-22",
+                            "timeHint":"下午",
+                            "urgency":"L2"
+                        }
+                    ]
+                }""".trimIndent(),
+                tokenUsage = com.smartsales.core.llm.TokenUsage(40, 10)
+            )
+        )
+
+        val results = localPipeline.processInput(
+            PipelineInput(
+                rawText = "明天上午九点带合同见老板，然后后天下午跟进客户",
+                isVoice = false,
+                intent = QueryQuality.CRM_TASK,
+                unifiedId = "shared_batch_unified_id"
+            )
+        ).toList()
+
+        val taskCommand = results.filterIsInstance<PipelineResult.TaskCommandProposal>().singleOrNull()
+        assertTrue(taskCommand != null)
+        assertTrue(taskCommand!!.command is SchedulerTaskCommand.CreateBatch)
+        val batch = taskCommand.command as SchedulerTaskCommand.CreateBatch
+        assertEquals(2, batch.operations.size)
+        val exact = batch.operations.filterIsInstance<SchedulerTaskCommand.CreateOperation.Exact>().singleOrNull()
+        val vague = batch.operations.filterIsInstance<SchedulerTaskCommand.CreateOperation.Vague>().singleOrNull()
+        assertTrue(exact != null)
+        assertTrue(vague != null)
+        assertEquals("带合同见老板", exact!!.params.tasks.single().title)
+        assertEquals("跟进客户", vague!!.params.title)
+    }
+
+    @Test
+    fun `processInput shared scheduler router resolves global reschedule proposal for Path B text scheduling`() = runTest {
+        val sharedExecutor = FakeExecutor()
+        val retrievalIndex = FakeActiveTaskRetrievalIndex()
+        val localPipeline = buildSharedSchedulerPipeline(sharedExecutor, retrievalIndex)
+        val existingTaskId = scheduledTaskRepository.insertTask(
+            ScheduledTask(
+                id = "task-1",
+                timeDisplay = "10:00",
+                title = "张总会议",
+                urgencyLevel = UrgencyLevel.L2_IMPORTANT,
+                startTime = java.time.Instant.parse("2026-03-20T02:00:00Z"),
+                durationMinutes = 60
+            )
+        )
+
+        inputParserService.nextResult = ParseResult.Success(emptyList(), null, """{"intent":"scheduler"}""")
+        entityDisambiguationService.nextResult = DisambiguationResult.PassThrough
+        retrievalIndex.nextResolveResult =
+            com.smartsales.prism.domain.scheduler.ActiveTaskResolveResult.Resolved(existingTaskId)
+        sharedExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                content = """{
+                    "classification": "reschedule",
+                    "response": "好的，我为您起草改期。"
+                }""".trimIndent(),
+                tokenUsage = com.smartsales.core.llm.TokenUsage(60, 10)
+            )
+        )
+        sharedExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                content = """{
+                    "decision":"RESCHEDULE_TARGETED",
+                    "targetQuery":"张总会议",
+                    "timeInstruction":"推迟一小时"
+                }""".trimIndent(),
+                tokenUsage = com.smartsales.core.llm.TokenUsage(40, 10)
+            )
+        )
+
+        val rawText = "把张总会议推迟一小时"
+        val results = localPipeline.processInput(
+            PipelineInput(
+                rawText = rawText,
+                isVoice = false,
+                intent = QueryQuality.CRM_TASK,
+                unifiedId = "shared_reschedule_unified_id"
+            )
+        ).toList()
+
+        val taskCommand = results.filterIsInstance<PipelineResult.TaskCommandProposal>().singleOrNull()
+        assertTrue(taskCommand != null)
+        assertTrue(taskCommand!!.command is SchedulerTaskCommand.RescheduleTask)
+        val command = taskCommand.command as SchedulerTaskCommand.RescheduleTask
+        assertEquals(existingTaskId, command.params.resolvedTaskId)
+        assertEquals("张总会议", retrievalIndex.lastResolveTarget?.targetQuery)
+        assertEquals(rawText, retrievalIndex.lastShortlistTranscript)
+        assertEquals("2026-03-20T03:00:00Z", command.params.newStartTimeIso)
     }
 
     @Test

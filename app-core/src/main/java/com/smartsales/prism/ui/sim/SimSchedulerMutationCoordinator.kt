@@ -34,7 +34,12 @@ internal class SimSchedulerMutationCoordinator(
                 val createdTasks = mutation.taskIds.mapNotNull { taskRepository.getTask(it) }
                 when (result) {
                     is FastTrackResult.CreateTasks,
-                    is FastTrackResult.CreateVagueTask -> projectionSupport.markCreatedDates(createdTasks)
+                    is FastTrackResult.CreateVagueTask -> {
+                        projectionSupport.markCreatedDates(createdTasks)
+                        if (createdTasks.isNotEmpty()) {
+                            reminderSupport.emitReminderReliabilityPromptIfNeeded()
+                        }
+                    }
                     else -> Unit
                 }
                 if (result is FastTrackResult.CreateTasks) {
@@ -78,7 +83,12 @@ internal class SimSchedulerMutationCoordinator(
                 val createdTasks = mutation.taskIds.mapNotNull { taskRepository.getTask(it) }
                 when (result) {
                     is FastTrackResult.CreateTasks,
-                    is FastTrackResult.CreateVagueTask -> projectionSupport.markCreatedDates(createdTasks)
+                    is FastTrackResult.CreateVagueTask -> {
+                        projectionSupport.markCreatedDates(createdTasks)
+                        if (createdTasks.isNotEmpty()) {
+                            reminderSupport.emitReminderReliabilityPromptIfNeeded()
+                        }
+                    }
                     else -> Unit
                 }
                 if (result is FastTrackResult.CreateTasks) {

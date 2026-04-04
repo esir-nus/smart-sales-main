@@ -11,6 +11,7 @@ import com.smartsales.prism.data.connectivity.legacy.ProvisioningStatus
 import com.smartsales.prism.data.connectivity.legacy.badge.BadgeState
 import com.smartsales.prism.data.connectivity.legacy.badge.BadgeStatus
 import com.smartsales.prism.data.connectivity.legacy.badge.FakeBadgeStateMonitor
+import com.smartsales.prism.domain.connectivity.BadgeConnectionState
 import com.smartsales.prism.domain.connectivity.BadgeManagerStatus
 import com.smartsales.prism.domain.connectivity.RecordingNotification
 import kotlinx.coroutines.CoroutineStart
@@ -33,18 +34,40 @@ class RealConnectivityBridgeTest {
     @Test
     fun `recordingNotifications ignores events while transport is not ready`() = runTest {
         val manager = FakeDeviceConnectionManager()
-        val bridge = RealConnectivityBridge(manager, mock(), FakeBadgeStateMonitor(), phoneWifiProvider)
-        val recorded = mutableListOf<RecordingNotification>()
-        val job = backgroundScope.async(start = CoroutineStart.UNDISPATCHED) {
+        val monitor = FakeBadgeStateMonitor()
+        val bridge = RealConnectivityBridge(manager, mock(), monitor, phoneWifiProvider)
+        val unexpected = backgroundScope.async(start = CoroutineStart.UNDISPATCHED) {
             bridge.recordingNotifications().first()
         }
 
         manager.setState(ConnectionState.Disconnected)
         manager.emitRecordingReadyEvent("log_20260322_170000.wav")
-        advanceUntilIdle()
+        Thread.sleep(200)
+        assertFalse(unexpected.isCompleted)
+        unexpected.cancel()
 
-        assertEquals(emptyList<RecordingNotification>(), recorded)
-        job.cancel()
+        val expected = backgroundScope.async(start = CoroutineStart.UNDISPATCHED) {
+            bridge.recordingNotifications().first()
+        }
+
+        manager.setState(
+            ConnectionState.WifiProvisioned(
+                session = BlePeripheral("badge-1", "Badge", -40).let { ble ->
+                    com.smartsales.prism.data.connectivity.legacy.BleSession.fromPeripheral(ble)
+                },
+                status = ProvisioningStatus(
+                    wifiSsid = "MstRobot",
+                    handshakeId = "h1",
+                    credentialsHash = "c1"
+                )
+            )
+        )
+        monitor.simulateConnected(ip = "192.168.0.115", wifiName = "MstRobot")
+        manager.emitRecordingReadyEvent("log_20260322_170001.wav")
+        assertEquals(
+            RecordingNotification.RecordingReady("log_20260322_170001.wav"),
+            expected.await()
+        )
     }
 
     @Test
@@ -136,6 +159,59 @@ class RealConnectivityBridgeTest {
         assertEquals(
             BadgeManagerStatus.NeedsSetup,
             awaitManagerStatus(bridge, BadgeManagerStatus.NeedsSetup)
+        )
+    }
+
+    @Test
+    fun `connectionState promotes reconnect success to connected as soon as monitor reports transport ready`() = runTest {
+        val manager = FakeDeviceConnectionManager()
+        val monitor = FakeBadgeStateMonitor()
+        val bridge = RealConnectivityBridge(manager, mock(), monitor, phoneWifiProvider)
+
+        manager.setState(ConnectionState.AutoReconnecting(attempt = 1))
+        monitor.setStatus(
+            BadgeStatus(
+                state = BadgeState.CONNECTED,
+                ipAddress = "192.168.0.115",
+                wifiName = "MstRobot",
+                bleConnected = true,
+                lastCheckMs = 1L
+            )
+        )
+
+        assertEquals(
+            BadgeConnectionState.Connected(
+                badgeIp = "192.168.0.115",
+                ssid = "MstRobot"
+            ),
+            awaitConnectionState(
+                bridge,
+                BadgeConnectionState.Connected(
+                    badgeIp = "192.168.0.115",
+                    ssid = "MstRobot"
+                )
+            )
+        )
+    }
+
+    @Test
+    fun `connectionState keeps ble only reconnect in connecting until monitor reports usable ip`() = runTest {
+        val manager = FakeDeviceConnectionManager()
+        val monitor = FakeBadgeStateMonitor()
+        val bridge = RealConnectivityBridge(manager, mock(), monitor, phoneWifiProvider)
+
+        manager.setState(ConnectionState.AutoReconnecting(attempt = 1))
+        monitor.setStatus(
+            BadgeStatus(
+                state = BadgeState.PAIRED,
+                bleConnected = true,
+                lastCheckMs = 1L
+            )
+        )
+
+        assertEquals(
+            BadgeConnectionState.Connecting,
+            awaitConnectionState(bridge, BadgeConnectionState.Connecting)
         )
     }
 
@@ -263,4 +339,21 @@ class RealConnectivityBridgeTest {
         fail("Timed out waiting for managerStatus=$expected actual=${bridge.managerStatus.value}")
         throw IllegalStateException("unreachable")
     }
+
+    private suspend fun awaitConnectionState(
+        bridge: RealConnectivityBridge,
+        expected: BadgeConnectionState
+    ): BadgeConnectionState {
+        val deadline = System.currentTimeMillis() + 1_000
+        while (System.currentTimeMillis() < deadline) {
+            val current = bridge.connectionState.value
+            if (current == expected) {
+                return current
+            }
+            Thread.sleep(20)
+        }
+        fail("Timed out waiting for connectionState=$expected actual=${bridge.connectionState.value}")
+        throw IllegalStateException("unreachable")
+    }
+
 }

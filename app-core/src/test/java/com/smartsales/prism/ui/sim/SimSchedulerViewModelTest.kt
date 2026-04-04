@@ -3,6 +3,8 @@ package com.smartsales.prism.ui.sim
 import com.smartsales.core.llm.ExecutorResult
 import com.smartsales.core.pipeline.PromptCompiler
 import com.smartsales.core.pipeline.RealGlobalRescheduleExtractionService
+import com.smartsales.core.pipeline.SchedulerIntelligenceRouter
+import com.smartsales.core.pipeline.SchedulerPathACreateInterpreter
 import com.smartsales.core.pipeline.RealUniAExtractionService
 import com.smartsales.core.pipeline.RealUniBExtractionService
 import com.smartsales.core.pipeline.RealUniCExtractionService
@@ -205,6 +207,76 @@ class SimSchedulerViewModelTest {
         assertTrue(fakeExecutor.executedPrompts.isEmpty())
     }
 
+
+    @Test
+    fun `processAudio keeps displayed page date in shared create prompts`() = runTest {
+        viewModel.onDateSelected(2)
+        asrService.nextResult = AsrResult.Success("后一天提醒我回电话")
+        enqueueNotMultiResponse()
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "NOT_EXACT",
+                  "reason": "date only"
+                }
+                """.trimIndent()
+            )
+        )
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "VAGUE_CREATE",
+                  "task": {
+                    "title": "回电话",
+                    "anchorDateIso": "2026-03-23",
+                    "timeHint": "白天",
+                    "urgency": "L2"
+                  }
+                }
+                """.trimIndent()
+            )
+        )
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        assertTrue(fakeExecutor.executedPrompts.any { it.contains("displayed_date_iso: 2026-03-22") })
+        val tasks = taskRepository.queryByDateRange(timeProvider.today, timeProvider.today.plusDays(4)).snapshot()
+            .filterIsInstance<ScheduledTask>()
+        assertTrue(tasks.any { it.title == "回电话" && it.isVague })
+    }
+
+    @Test
+    fun `processAudio actually prefix no longer forces scheduler drawer into reschedule lane`() = runTest {
+        asrService.nextResult = AsrResult.Success("actually 明天早上九点带合同见老板")
+        enqueueNotMultiResponse()
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "EXACT_CREATE",
+                  "task": {
+                    "title": "带合同见老板",
+                    "startTimeIso": "2026-03-21T01:00:00Z",
+                    "durationMinutes": 0,
+                    "urgency": "L2"
+                  }
+                }
+                """.trimIndent()
+            )
+        )
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        val tasks = taskRepository.queryByDateRange(timeProvider.today, timeProvider.today.plusDays(2)).snapshot()
+            .filterIsInstance<ScheduledTask>()
+        assertTrue(tasks.any { it.title == "带合同见老板" })
+        assertNull(activeTaskRetrievalIndex.lastShortlistTranscript)
+    }
+
     @Test
     fun `processAudio malformed explicit relative input fails with scheduler owned copy`() = runTest {
         asrService.nextResult = AsrResult.Success("八个小时以后")
@@ -239,6 +311,30 @@ class SimSchedulerViewModelTest {
         assertEquals(listOf("0m"), createdTask.alarmCascade)
         assertTrue(createdTask.hasAlarm)
         assertEquals(null, viewModel.conflictWarning.value)
+        assertTrue(fakeExecutor.executedPrompts.isEmpty())
+    }
+
+    @Test
+    fun `processAudio qualified weekday wake reminder uses deterministic exact branch`() = runTest {
+        asrService.nextResult = AsrResult.Success("下周三早上八点钟提醒我起床")
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        val expectedStart = timeProvider.today.plusDays(5)
+            .atTime(8, 0)
+            .atZone(timeProvider.zoneId)
+            .toInstant()
+        val tasks = taskRepository.queryByDateRange(timeProvider.today, timeProvider.today.plusDays(7)).snapshot()
+            .filterIsInstance<ScheduledTask>()
+        val createdTask = tasks.single()
+
+        assertEquals("起床", createdTask.title)
+        assertEquals(expectedStart, createdTask.startTime)
+        assertEquals(UrgencyLevel.FIRE_OFF, createdTask.urgencyLevel)
+        assertEquals(listOf("0m"), createdTask.alarmCascade)
+        assertTrue(createdTask.hasAlarm)
+        assertNull(viewModel.conflictWarning.value)
         assertTrue(fakeExecutor.executedPrompts.isEmpty())
     }
 
@@ -320,6 +416,118 @@ class SimSchedulerViewModelTest {
 
         assertEquals("未能解析为可创建日程，请换一种更明确的说法", viewModel.pipelineStatus.value)
         assertEquals("未能解析为可创建日程，请换一种更明确的说法", viewModel.conflictWarning.value)
+    }
+
+    @Test
+    fun `normalizeSimSchedulerDrawerFailureMessage replaces raw classifier wording`() {
+        val rawMessage = "输入包含可执行的日程安排，如“下周三提醒我”和“早上8点起床”，不符合灵感提取标准"
+
+        val displayed = normalizeSimSchedulerDrawerFailureMessage(
+            intentKind = SchedulerIntelligenceRouter.SchedulerIntentKind.CREATE,
+            rawMessage = rawMessage
+        )
+
+        assertEquals("未能解析为可创建日程，请换一种更明确的说法", displayed)
+    }
+
+    @Test
+    fun `normalizeSimSchedulerDrawerFailureMessage replaces schedulable classifier wording family`() {
+        val rawMessage = "该输入明确是一个可安排的日程提醒，属于可执行的排程承诺"
+
+        val displayed = normalizeSimSchedulerDrawerFailureMessage(
+            intentKind = SchedulerIntelligenceRouter.SchedulerIntentKind.CREATE,
+            rawMessage = rawMessage
+        )
+
+        assertEquals("未能解析为可创建日程，请换一种更明确的说法", displayed)
+    }
+
+    @Test
+    fun `buildSimSchedulerTranscriptLog includes transcript source and text`() {
+        val message = buildSimSchedulerTranscriptLog(
+            transcript = "明天早上九点带合同见老板",
+            source = "scheduler_rec_asr"
+        )
+
+        assertEquals(
+            "transcript_ingress source=scheduler_rec_asr length=12 text=明天早上九点带合同见老板",
+            message
+        )
+    }
+
+    @Test
+    fun `buildSimSchedulerRouterDecisionLog includes owner and reason`() {
+        val metadata = SchedulerIntelligenceRouter.RouteMetadata(
+            surface = SchedulerIntelligenceRouter.SchedulerSurface.SCHEDULER_DRAWER,
+            intentKind = SchedulerIntelligenceRouter.SchedulerIntentKind.NONE,
+            taskShape = SchedulerIntelligenceRouter.SchedulerTaskShape.UNSUPPORTED,
+            owner = SchedulerIntelligenceRouter.SchedulerRouteOwner.REJECT,
+            schedulerTerminalOnCommit = false,
+            reason = "Uni-B decided input is not vague-create"
+        )
+
+        val message = buildSimSchedulerRouterDecisionLog(metadata)
+
+        assertEquals(
+            "route_decision intent=NONE shape=UNSUPPORTED owner=REJECT terminal=false reason=Uni-B decided input is not vague-create",
+            message
+        )
+    }
+
+    @Test
+    fun `buildSimSchedulerUiFailureLog includes create and uni c reasons`() {
+        val metadata = SchedulerIntelligenceRouter.RouteMetadata(
+            surface = SchedulerIntelligenceRouter.SchedulerSurface.SCHEDULER_DRAWER,
+            intentKind = SchedulerIntelligenceRouter.SchedulerIntentKind.NONE,
+            taskShape = SchedulerIntelligenceRouter.SchedulerTaskShape.UNSUPPORTED,
+            owner = SchedulerIntelligenceRouter.SchedulerRouteOwner.REJECT,
+            schedulerTerminalOnCommit = false,
+            reason = "not used"
+        )
+
+        val message = buildSimSchedulerUiFailureLog(
+            branch = "not_matched_uni_c",
+            metadata = metadata,
+            displayedMessage = "未能解析为可创建日程，请换一种更明确的说法",
+            createReason = "Uni-B decided input is not vague-create",
+            uniCReason = "该输入明确包含时间信息和可执行的提醒动作，属于日程安排"
+        )
+
+        assertEquals(
+            "ui_failure branch=not_matched_uni_c intent=NONE owner=REJECT createReason=Uni-B decided input is not vague-create uniCReason=该输入明确包含时间信息和可执行的提醒动作，属于日程安排 displayed=未能解析为可创建日程，请换一种更明确的说法",
+            message
+        )
+    }
+
+    @Test
+    fun `buildSimSchedulerCreateResultLog includes route stage and uni m outcome`() {
+        val message = buildSimSchedulerCreateResultLog(
+            resultKind = "CreateTasks",
+            telemetry = SchedulerPathACreateInterpreter.Telemetry(
+                routeStage = SchedulerPathACreateInterpreter.RouteStage.UNI_A,
+                uniMAttemptOutcome = SchedulerPathACreateInterpreter.UniMAttemptOutcome.NOT_MULTI
+            ),
+            itemCount = 1,
+            parseUnresolvedCount = 0,
+            downgradedCount = 0
+        )
+
+        assertEquals(
+            "create_result kind=CreateTasks routeStage=UNI_A uniM=NOT_MULTI itemCount=1 parseUnresolved=0 downgraded=0",
+            message
+        )
+    }
+
+    @Test
+    fun `processAudio scheduler drawer reschedule unsupported keeps scheduler owned copy`() = runTest {
+        asrService.nextResult = AsrResult.Success("把客户复盘改期")
+        enqueueGlobalRescheduleUnsupported("输入不明确，无法确定要改期的具体任务或目标线索")
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        assertEquals("SIM 当前仅支持明确目标 + 明确时间改期", viewModel.pipelineStatus.value)
+        assertEquals("SIM 当前仅支持明确目标 + 明确时间改期", viewModel.conflictWarning.value)
     }
 
     @Test
@@ -1458,25 +1666,31 @@ class SimSchedulerViewModelTest {
     }
 
     @Test
-    fun `applyFastTrack vague create does not schedule native reminders`() = runTest {
-        viewModel.applyFastTrackResultForTesting(
-            FastTrackResult.CreateVagueTask(
-                CreateVagueTaskParams(
-                    unifiedId = "task-vague",
-                    title = "提醒客户",
-                    anchorDateIso = "2026-03-21",
-                    timeHint = "下午",
-                    urgency = UrgencyEnum.L3_NORMAL
+    fun `applyFastTrack vague create emits prompt but does not schedule native reminders`() = runTest {
+        exactAlarmPermissionGate.needsPrompt = true
+
+        val promptCount = collectReminderPromptCount {
+            viewModel.applyFastTrackResultForTesting(
+                FastTrackResult.CreateVagueTask(
+                    CreateVagueTaskParams(
+                        unifiedId = "task-vague",
+                        title = "提醒客户",
+                        anchorDateIso = "2026-03-21",
+                        timeHint = "下午",
+                        urgency = UrgencyEnum.L3_NORMAL
+                    )
                 )
             )
-        )
-        advanceUntilIdle()
+            advanceUntilIdle()
+        }
 
         assertTrue(alarmScheduler.scheduledAlarms.isEmpty())
+        assertEquals(1, promptCount)
     }
 
     @Test
     fun `processAudio Uni-M mixed exact and vague fragments schedule only exact reminders`() = runTest {
+        exactAlarmPermissionGate.needsPrompt = true
         asrService.nextResult = AsrResult.Success("明天下午三点开会，明天提醒我回电话")
         enqueueMultiCreateResponse(
             """
@@ -1505,8 +1719,10 @@ class SimSchedulerViewModelTest {
             """.trimIndent()
         )
 
-        viewModel.processAudio(File("dummy.wav"))
-        advanceUntilIdle()
+        val promptCount = collectReminderPromptCount {
+            viewModel.processAudio(File("dummy.wav"))
+            advanceUntilIdle()
+        }
 
         val tasks = taskRepository.queryByDateRange(timeProvider.today, timeProvider.today.plusDays(2)).snapshot()
             .filterIsInstance<ScheduledTask>()
@@ -1516,6 +1732,7 @@ class SimSchedulerViewModelTest {
         assertEquals(2, tasks.size)
         assertEquals(UrgencyLevel.buildCascade(UrgencyLevel.L2_IMPORTANT).size, alarmScheduler.getAlarmsForTask(exactTask.id).size)
         assertTrue(alarmScheduler.getAlarmsForTask(vagueTask.id).isEmpty())
+        assertEquals(1, promptCount)
     }
 
     @Test
@@ -1681,6 +1898,18 @@ class SimSchedulerViewModelTest {
 
     private suspend fun <T> kotlinx.coroutines.flow.Flow<List<T>>.snapshot(): List<T> = first()
 
+    private suspend fun kotlinx.coroutines.CoroutineScope.collectReminderPromptCount(
+        block: suspend () -> Unit
+    ): Int {
+        val promptEvents = mutableListOf<Unit>()
+        val collector = launch {
+            viewModel.exactAlarmPermissionNeeded.collect { promptEvents += Unit }
+        }
+        block()
+        collector.cancel()
+        return promptEvents.size
+    }
+
     private fun enqueueNotMultiResponse(reason: String = "单任务") {
         fakeExecutor.enqueueResponse(
             ExecutorResult.Success(
@@ -1713,6 +1942,19 @@ class SimSchedulerViewModelTest {
                   "targetPerson": ${targetPerson?.let { "\"$it\"" } ?: "null"},
                   "targetLocation": ${targetLocation?.let { "\"$it\"" } ?: "null"},
                   "timeInstruction": "$timeInstruction"
+                }
+                """.trimIndent()
+            )
+        )
+    }
+
+    private fun enqueueGlobalRescheduleUnsupported(reason: String) {
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "NOT_SUPPORTED",
+                  "reason": "$reason"
                 }
                 """.trimIndent()
             )

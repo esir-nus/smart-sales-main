@@ -1,33 +1,11 @@
 package com.smartsales.prism
 
 import com.smartsales.prism.ui.theme.PrismThemeMode
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class MainActivityLogicTest {
-
-    @Test
-    fun `shouldRequestBaseRuntimeCalendarPermissions waits until onboarding completes`() {
-        assertFalse(
-            shouldRequestBaseRuntimeCalendarPermissions(
-                onboardingCompleted = false,
-                requestAlreadyAttempted = false
-            )
-        )
-        assertTrue(
-            shouldRequestBaseRuntimeCalendarPermissions(
-                onboardingCompleted = true,
-                requestAlreadyAttempted = false
-            )
-        )
-        assertFalse(
-            shouldRequestBaseRuntimeCalendarPermissions(
-                onboardingCompleted = true,
-                requestAlreadyAttempted = true
-            )
-        )
-    }
 
     @Test
     fun `resolveBaseRuntimeDarkTheme defaults fresh startup to dark`() {

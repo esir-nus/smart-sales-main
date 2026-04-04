@@ -82,6 +82,11 @@ class RealConnectivityService @Inject constructor(
     }
     
     override suspend fun updateWifiConfig(ssid: String, password: String): WifiConfigResult {
+        val normalizedSsid = ssid.trim()
+        val normalizedPassword = password.trim()
+        if (normalizedSsid.isEmpty() || normalizedPassword.isEmpty()) {
+            return WifiConfigResult.Error("Wi-Fi 名称和密码不能为空")
+        }
         val session = when (val connectState = deviceManager.state.value) {
             is com.smartsales.prism.data.connectivity.legacy.ConnectionState.Connected -> connectState.session
             is com.smartsales.prism.data.connectivity.legacy.ConnectionState.WifiProvisioned -> connectState.session
@@ -89,7 +94,7 @@ class RealConnectivityService @Inject constructor(
             else -> sessionStore.loadSession()
         } ?: return WifiConfigResult.Error("设备未连接")
         
-        val credentials = WifiCredentials(ssid, password)
+        val credentials = WifiCredentials(normalizedSsid, normalizedPassword)
         
         return when (val result = wifiProvisioner.provision(session, credentials)) {
             is Result.Success -> {

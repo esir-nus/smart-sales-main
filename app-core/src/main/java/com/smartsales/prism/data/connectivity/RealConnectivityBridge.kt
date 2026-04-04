@@ -19,15 +19,20 @@ import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.connectivity.RecordingNotification
 import com.smartsales.prism.domain.connectivity.WavDownloadResult
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.io.File
@@ -60,6 +65,27 @@ class RealConnectivityBridge @Inject constructor(
     private val endpointMutex = Mutex()
     private var activeEndpointSnapshot: ActiveEndpointSnapshot? = null
     private var endpointRefreshRequired = false
+    private val recordingNotificationsFlow = MutableSharedFlow<RecordingNotification>(
+        replay = 0,
+        extraBufferCapacity = 1
+    )
+
+    init {
+        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            deviceManager.recordingReadyEvents.collect { filename ->
+                if (!isTransportReadyForRecordingNotifications()) {
+                    android.util.Log.w(
+                        TAG,
+                        "🚫 Dropping recording notification while transport not ready: $filename"
+                    )
+                    return@collect
+                }
+                recordingNotificationsFlow.emit(
+                    RecordingNotification.RecordingReady(filename.toBadgeDownloadFilename())
+                )
+            }
+        }
+    }
     
     
     override val connectionState: StateFlow<BadgeConnectionState> = combine(
@@ -127,9 +153,7 @@ class RealConnectivityBridge @Inject constructor(
     
     
     override fun recordingNotifications(): Flow<RecordingNotification> =
-        deviceManager.recordingReadyEvents.map { filename ->
-            RecordingNotification.RecordingReady(filename.toBadgeDownloadFilename())
-        }
+        recordingNotificationsFlow.asSharedFlow()
     
     
     override suspend fun isReady(): Boolean {
@@ -168,19 +192,29 @@ class RealConnectivityBridge @Inject constructor(
         return when (legacy) {
             is ConnectionState.Disconnected -> BadgeConnectionState.Disconnected
             is ConnectionState.NeedsSetup -> BadgeConnectionState.NeedsSetup
-            
-            is ConnectionState.Pairing,
+
+            is ConnectionState.Pairing -> BadgeConnectionState.Connecting
+
             is ConnectionState.Connected,
-            is ConnectionState.AutoReconnecting -> BadgeConnectionState.Connecting
-            
+            is ConnectionState.AutoReconnecting -> {
+                if (badgeStatus.hasSharedTransportReadiness()) {
+                    BadgeConnectionState.Connected(
+                        badgeIp = badgeStatus.ipAddress ?: "pending",
+                        ssid = badgeStatus.wifiName ?: extractSsid(legacy)
+                    )
+                } else {
+                    BadgeConnectionState.Connecting
+                }
+            }
+
             is ConnectionState.WifiProvisioned,
             is ConnectionState.Syncing -> {
                 BadgeConnectionState.Connected(
                     badgeIp = badgeStatus.ipAddress ?: "pending",
-                    ssid = extractSsid(legacy)
+                    ssid = badgeStatus.wifiName ?: extractSsid(legacy)
                 )
             }
-            
+
             is ConnectionState.Error -> BadgeConnectionState.Error(legacy.error.toString())
         }
     }
@@ -219,6 +253,22 @@ class RealConnectivityBridge @Inject constructor(
             is ConnectionState.WifiProvisioned -> state.status.wifiSsid
             is ConnectionState.Syncing -> state.status.wifiSsid
             else -> "Unknown"
+        }
+    }
+
+    private fun BadgeStatus.hasSharedTransportReadiness(): Boolean {
+        return bleConnected &&
+            state == BadgeState.CONNECTED &&
+            hasUsableBadgeIp(ipAddress)
+    }
+
+    private fun isTransportReadyForRecordingNotifications(): Boolean {
+        return when (deviceManager.state.value) {
+            is ConnectionState.WifiProvisioned,
+            is ConnectionState.Syncing -> true
+            is ConnectionState.Connected,
+            is ConnectionState.AutoReconnecting -> badgeStateMonitor.status.value.hasSharedTransportReadiness()
+            else -> false
         }
     }
     

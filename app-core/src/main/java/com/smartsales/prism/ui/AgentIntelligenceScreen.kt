@@ -4,14 +4,10 @@ import android.widget.Toast
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import androidx.hilt.navigation.compose.hiltViewModel
-import com.smartsales.prism.domain.model.SchedulerFollowUpContext
 import com.smartsales.prism.ui.components.DynamicIslandUiState
 import com.smartsales.prism.ui.components.DynamicIslandTapAction
-import com.smartsales.prism.ui.sim.SimAgentViewModel
+import com.smartsales.prism.ui.sim.SimArtifactTranscriptRevealState
 import com.smartsales.prism.ui.sim.SimVoiceDraftUiState
 
 enum class AgentIntelligenceVisualMode {
@@ -21,7 +17,7 @@ enum class AgentIntelligenceVisualMode {
 
 @Composable
 fun AgentIntelligenceScreen(
-    viewModel: IAgentViewModel = hiltViewModel<AgentViewModel>(),
+    viewModel: IAgentViewModel,
     onMenuClick: () -> Unit = {},
     onNewSessionClick: () -> Unit = {},
     onSchedulerClick: (DynamicIslandTapAction) -> Unit = {},
@@ -44,13 +40,16 @@ fun AgentIntelligenceScreen(
     enableSimAudioPullGesture: Boolean = false,
     onSimSchedulerPullOpen: () -> Unit = {},
     onSimAudioPullOpen: () -> Unit = {},
+    transcriptRevealState: Map<String, SimArtifactTranscriptRevealState> = emptyMap(),
+    onArtifactTranscriptRevealConsumed: (messageId: String, isLongTranscript: Boolean) -> Unit =
+        { _, _ -> },
     simVoiceDraftStateOverride: SimVoiceDraftUiState? = null,
-    simVoiceDraftEnabledOverride: Boolean? = null,
-    onSimVoiceDraftPermissionRequested: (() -> Unit)? = null,
-    onSimVoiceDraftPermissionResult: ((Boolean) -> Unit)? = null,
-    onSimVoiceDraftStart: (() -> Boolean)? = null,
-    onSimVoiceDraftFinish: (() -> Unit)? = null,
-    onSimVoiceDraftCancel: (() -> Unit)? = null
+    simVoiceDraftEnabledOverride: Boolean = false,
+    onSimVoiceDraftPermissionRequested: () -> Unit = {},
+    onSimVoiceDraftPermissionResult: (Boolean) -> Unit = {},
+    onSimVoiceDraftStart: () -> Boolean = { false },
+    onSimVoiceDraftFinish: () -> Unit = {},
+    onSimVoiceDraftCancel: () -> Unit = {}
 ) {
     val history by viewModel.history.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
@@ -64,20 +63,8 @@ fun AgentIntelligenceScreen(
     val heroUpcoming by viewModel.heroUpcoming.collectAsState()
     val heroAccomplished by viewModel.heroAccomplished.collectAsState()
     val heroGreeting by viewModel.heroGreeting.collectAsState()
-    val simViewModel = viewModel as? SimAgentViewModel
-    val transcriptRevealState by (simViewModel?.artifactTranscriptRevealState?.collectAsState()
-        ?: remember {
-            mutableStateOf(
-                emptyMap<String, SimAgentViewModel.ArtifactTranscriptRevealState>()
-            )
-        })
-    val currentSchedulerFollowUpContext by (simViewModel?.currentSchedulerFollowUpContext?.collectAsState()
-        ?: remember { mutableStateOf<SchedulerFollowUpContext?>(null) })
-    val simVoiceDraftObservedState by (simViewModel?.voiceDraftState?.collectAsState()
-        ?: remember { mutableStateOf(SimVoiceDraftUiState()) })
-    val simVoiceDraftState = simVoiceDraftStateOverride ?: simVoiceDraftObservedState
+    val simVoiceDraftState = simVoiceDraftStateOverride ?: SimVoiceDraftUiState()
     val simVoiceDraftEnabled = simVoiceDraftEnabledOverride
-        ?: (simViewModel != null && currentSchedulerFollowUpContext == null)
 
     val context = LocalContext.current
     androidx.compose.runtime.LaunchedEffect(toastMessage) {
@@ -101,9 +88,7 @@ fun AgentIntelligenceScreen(
         heroGreeting = heroGreeting,
         isSimShell = visualMode == AgentIntelligenceVisualMode.SIM,
         transcriptRevealState = transcriptRevealState,
-        onArtifactTranscriptRevealConsumed = { messageId, isLongTranscript ->
-            simViewModel?.markArtifactTranscriptRevealConsumed(messageId, isLongTranscript)
-        },
+        onArtifactTranscriptRevealConsumed = onArtifactTranscriptRevealConsumed,
         onMenuClick = onMenuClick,
         onNewSessionClick = onNewSessionClick,
         onSchedulerClick = onSchedulerClick,
@@ -127,21 +112,11 @@ fun AgentIntelligenceScreen(
         onSimAudioPullOpen = onSimAudioPullOpen,
         simVoiceDraftState = simVoiceDraftState,
         simVoiceDraftEnabled = simVoiceDraftEnabled,
-        onSimVoiceDraftPermissionRequested = onSimVoiceDraftPermissionRequested
-            ?: simViewModel?.let { it::onVoiceDraftPermissionRequested }
-            ?: {},
-        onSimVoiceDraftPermissionResult = onSimVoiceDraftPermissionResult
-            ?: simViewModel?.let { it::onVoiceDraftPermissionResult }
-            ?: {},
-        onSimVoiceDraftStart = onSimVoiceDraftStart
-            ?: simViewModel?.let { it::startVoiceDraft }
-            ?: { false },
-        onSimVoiceDraftFinish = onSimVoiceDraftFinish
-            ?: simViewModel?.let { it::finishVoiceDraft }
-            ?: {},
-        onSimVoiceDraftCancel = onSimVoiceDraftCancel
-            ?: simViewModel?.let { it::cancelVoiceDraft }
-            ?: {},
+        onSimVoiceDraftPermissionRequested = onSimVoiceDraftPermissionRequested,
+        onSimVoiceDraftPermissionResult = onSimVoiceDraftPermissionResult,
+        onSimVoiceDraftStart = onSimVoiceDraftStart,
+        onSimVoiceDraftFinish = onSimVoiceDraftFinish,
+        onSimVoiceDraftCancel = onSimVoiceDraftCancel,
         onUpdateInput = viewModel::updateInput,
         onSend = viewModel::send,
         onConfirmPlan = viewModel::confirmAnalystPlan,

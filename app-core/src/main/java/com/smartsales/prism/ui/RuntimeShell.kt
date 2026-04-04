@@ -41,6 +41,7 @@ import com.smartsales.prism.ui.sim.initialRuntimeShellState
 import com.smartsales.prism.ui.sim.openRuntimeAudioDrawer
 import com.smartsales.prism.ui.sim.openRuntimeScheduler
 import com.smartsales.prism.ui.sim.rememberSimImeVisibility
+import com.smartsales.prism.ui.sim.shouldAutoOpenRuntimeSchedulerPostOnboardingHandoff
 import com.smartsales.prism.ui.sim.shouldAutoOpenRuntimeSchedulerStartupTeaser
 import com.smartsales.prism.ui.sim.shouldShowRuntimeIdleComposerHint
 import com.smartsales.prism.ui.sim.startRuntimeForcedFirstLaunchOnboarding
@@ -55,7 +56,9 @@ internal fun RuntimeShell(
     forceSetupOnLaunch: Boolean = false,
     onForcedSetupCompleted: () -> Unit = {},
     shouldShowFirstLaunchSchedulerTeaser: Boolean = false,
-    onFirstLaunchSchedulerTeaserShown: () -> Unit = {}
+    onFirstLaunchSchedulerTeaserShown: () -> Unit = {},
+    shouldAutoOpenSchedulerAfterOnboarding: Boolean = false,
+    onPostOnboardingSchedulerAutoOpened: () -> Unit = {}
 ) {
     val chatViewModel: SimAgentViewModel = hiltViewModel()
     val schedulerViewModel: SimSchedulerViewModel = viewModel()
@@ -77,15 +80,21 @@ internal fun RuntimeShell(
     val currentSessionId by chatViewModel.currentSessionId.collectAsStateWithLifecycle()
     val sessionTitle by chatViewModel.sessionTitle.collectAsStateWithLifecycle()
     val topUrgentTasks by schedulerViewModel.topUrgentTasks.collectAsStateWithLifecycle()
+    val activeReminderBanner by schedulerViewModel.activeReminderBanner.collectAsStateWithLifecycle()
     val currentSchedulerFollowUpContext by chatViewModel.currentSchedulerFollowUpContext.collectAsStateWithLifecycle()
     val selectedSchedulerFollowUpTaskId by chatViewModel.selectedSchedulerFollowUpTaskId.collectAsStateWithLifecycle()
     val groupedSessions by chatViewModel.groupedSessions.collectAsStateWithLifecycle()
     val currentChatAudioId by chatViewModel.currentLinkedAudioId.collectAsStateWithLifecycle()
+    val transcriptRevealState by chatViewModel.artifactTranscriptRevealState.collectAsStateWithLifecycle()
+    val voiceDraftState by chatViewModel.voiceDraftState.collectAsStateWithLifecycle()
     val audioEntries by audioViewModel.entries.collectAsStateWithLifecycle()
     val trackedPendingAudioIds = remember { mutableStateMapOf<String, String>() }
     val isImeVisible = rememberSimImeVisibility()
     var startupSchedulerTeaserPending by remember {
         mutableStateOf(shouldShowFirstLaunchSchedulerTeaser)
+    }
+    var postOnboardingSchedulerAutoOpenPending by remember {
+        mutableStateOf(shouldAutoOpenSchedulerAfterOnboarding)
     }
     val schedulerIslandItems = remember(sessionTitle, topUrgentTasks, shellState.showSchedulerIslandHint) {
         buildSimDynamicIslandItems(
@@ -219,11 +228,15 @@ internal fun RuntimeShell(
         )
     }
 
-    LaunchedEffect(startupSchedulerTeaserPending, shellState, isImeVisible) {
-        if (shouldAutoOpenRuntimeSchedulerStartupTeaser(shellState, isImeVisible, startupSchedulerTeaserPending)) {
-            startupSchedulerTeaserPending = false
-            onFirstLaunchSchedulerTeaserShown()
-            shellState = openRuntimeScheduler(shellState)
+    LaunchedEffect(shouldShowFirstLaunchSchedulerTeaser) {
+        if (shouldShowFirstLaunchSchedulerTeaser) {
+            startupSchedulerTeaserPending = true
+        }
+    }
+
+    LaunchedEffect(shouldAutoOpenSchedulerAfterOnboarding) {
+        if (shouldAutoOpenSchedulerAfterOnboarding) {
+            postOnboardingSchedulerAutoOpenPending = true
         }
     }
 
@@ -283,6 +296,37 @@ internal fun RuntimeShell(
         )
     }
 
+    LaunchedEffect(
+        postOnboardingSchedulerAutoOpenPending,
+        startupSchedulerTeaserPending,
+        shellState,
+        isImeVisible
+    ) {
+        when {
+            shouldAutoOpenRuntimeSchedulerPostOnboardingHandoff(
+                state = shellState,
+                isImeVisible = isImeVisible,
+                handoffPending = postOnboardingSchedulerAutoOpenPending
+            ) -> {
+                postOnboardingSchedulerAutoOpenPending = false
+                startupSchedulerTeaserPending = false
+                onPostOnboardingSchedulerAutoOpened()
+                onFirstLaunchSchedulerTeaserShown()
+                openScheduler()
+            }
+
+            shouldAutoOpenRuntimeSchedulerStartupTeaser(
+                state = shellState,
+                isImeVisible = isImeVisible,
+                teaserPending = startupSchedulerTeaserPending
+            ) -> {
+                startupSchedulerTeaserPending = false
+                onFirstLaunchSchedulerTeaserShown()
+                openScheduler()
+            }
+        }
+    }
+
     RuntimeShellContent(
         chatViewModel = chatViewModel,
         dependencies = dependencies,
@@ -291,12 +335,15 @@ internal fun RuntimeShell(
         connectivityViewModel = connectivityViewModel,
         connectivityState = connectivityState,
         shellState = shellState,
+        activeReminderBanner = activeReminderBanner,
         activeFollowUp = activeFollowUp,
         currentSessionId = currentSessionId,
         groupedSessions = groupedSessions,
         currentChatAudioId = currentChatAudioId,
+        transcriptRevealState = transcriptRevealState,
         currentSchedulerFollowUpContext = currentSchedulerFollowUpContext,
         selectedSchedulerFollowUpTaskId = selectedSchedulerFollowUpTaskId,
+        voiceDraftState = voiceDraftState,
         dynamicIslandState = dynamicIslandPresentation.uiState,
         isImeVisible = isImeVisible,
         showRuntimeIdleComposerHint = shouldShowRuntimeIdleComposerHint(shellState, isImeVisible),
@@ -305,6 +352,7 @@ internal fun RuntimeShell(
         onImportTestAudio = { importTestAudioLauncher.launch("audio/*") },
         onForcedFirstLaunchOnboardingCompleted = onForcedSetupCompleted,
         onReplayOnboarding = ::replayOnboarding,
+        dismissReminderBanner = schedulerViewModel::dismissActiveReminderBanner,
         clearFollowUp = followUpOwner::clear,
         closeOverlays = ::closeOverlays,
         openScheduler = ::handleDynamicIslandTap,

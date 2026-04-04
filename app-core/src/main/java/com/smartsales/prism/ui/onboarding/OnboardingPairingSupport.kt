@@ -62,7 +62,9 @@ internal fun PairingErrorStep(
     primaryLabel: String,
     onPrimary: () -> Unit,
     secondaryLabel: String,
-    onSecondary: () -> Unit
+    onSecondary: () -> Unit,
+    tertiaryLabel: String? = null,
+    onTertiary: (() -> Unit)? = null
 ) {
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         StatusOrb(icon = Icons.Default.Warning, tint = OnboardingAmber, iconSize = 32)
@@ -80,5 +82,9 @@ internal fun PairingErrorStep(
         PrimaryPillButton(primaryLabel, onPrimary, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(10.dp))
         SecondaryPillButton(secondaryLabel, onSecondary, modifier = Modifier.fillMaxWidth())
+        if (tertiaryLabel != null && onTertiary != null) {
+            Spacer(Modifier.height(10.dp))
+            QuietGhostButton(tertiaryLabel, onTertiary, modifier = Modifier.fillMaxWidth())
+        }
     }
 }

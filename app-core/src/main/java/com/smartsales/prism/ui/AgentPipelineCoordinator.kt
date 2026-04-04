@@ -103,6 +103,8 @@ internal class AgentPipelineCoordinator(
             is PipelineResult.TaskCommandProposal -> {
                 val message = when (result.command) {
                     is SchedulerTaskCommand.CreateTasks -> "已为您起草日程创建，请点击卡片确认。"
+                    is SchedulerTaskCommand.CreateVagueTask -> "已为您起草日程创建，请点击卡片确认。"
+                    is SchedulerTaskCommand.CreateBatch -> "已为您起草批量日程创建，请点击卡片确认。"
                     is SchedulerTaskCommand.DeleteTask -> "已为您起草日程删除，请点击卡片确认。"
                     is SchedulerTaskCommand.RescheduleTask -> "已为您起草日程改期，请点击卡片确认。"
                 }

@@ -5,9 +5,16 @@ import com.smartsales.prism.data.audio.DeviceSpeechRecognitionEvent
 import com.smartsales.prism.data.audio.DeviceSpeechMode
 import com.smartsales.prism.data.audio.DeviceSpeechRecognitionResult
 import com.smartsales.prism.data.audio.DeviceSpeechRecognizer
+import com.smartsales.prism.data.notification.ReminderReliabilityAdvisor
+import com.smartsales.prism.data.onboarding.RuntimeOnboardingHandoffGate
 import com.smartsales.prism.domain.config.SubscriptionTier
 import com.smartsales.prism.domain.memory.UserProfile
 import com.smartsales.prism.domain.repository.UserProfileRepository
+import com.smartsales.prism.domain.time.TimeProvider
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -36,6 +43,12 @@ class OnboardingInteractionViewModelTest {
     private lateinit var speechRecognizer: FakeDeviceSpeechRecognizer
     private lateinit var interactionService: FakeOnboardingInteractionService
     private lateinit var repository: FakeUserProfileRepository
+    private lateinit var quickStartService: FakeOnboardingQuickStartService
+    private lateinit var quickStartCommitter: FakeOnboardingSchedulerQuickStartCommitter
+    private lateinit var quickStartReminderGuideCoordinator: FakeOnboardingQuickStartReminderGuideCoordinator
+    private lateinit var quickStartCalendarExporter: FakeOnboardingQuickStartCalendarExporter
+    private lateinit var onboardingHandoffGate: FakeRuntimeOnboardingHandoffGate
+    private lateinit var timeProvider: FakeTimeProvider
     private lateinit var viewModel: OnboardingInteractionViewModel
 
     @Before
@@ -44,10 +57,22 @@ class OnboardingInteractionViewModelTest {
         speechRecognizer = FakeDeviceSpeechRecognizer()
         interactionService = FakeOnboardingInteractionService()
         repository = FakeUserProfileRepository()
+        quickStartService = FakeOnboardingQuickStartService()
+        quickStartCommitter = FakeOnboardingSchedulerQuickStartCommitter()
+        quickStartReminderGuideCoordinator = FakeOnboardingQuickStartReminderGuideCoordinator()
+        quickStartCalendarExporter = FakeOnboardingQuickStartCalendarExporter()
+        onboardingHandoffGate = FakeRuntimeOnboardingHandoffGate()
+        timeProvider = FakeTimeProvider()
         viewModel = OnboardingInteractionViewModel(
             speechRecognizer = speechRecognizer,
             interactionService = interactionService,
-            userProfileRepository = repository
+            userProfileRepository = repository,
+            quickStartService = quickStartService,
+            quickStartCommitter = quickStartCommitter,
+            quickStartReminderGuideCoordinator = quickStartReminderGuideCoordinator,
+            quickStartCalendarExporter = quickStartCalendarExporter,
+            onboardingHandoffGate = onboardingHandoffGate,
+            timeProvider = timeProvider
         )
     }
 
@@ -74,6 +99,7 @@ class OnboardingInteractionViewModelTest {
         assertEquals(OnboardingTranscriptOrigin.DEVICE_SPEECH, state.lastTranscriptOrigin)
         assertEquals(OnboardingGenerationOrigin.LLM, state.lastGenerationOrigin)
         assertFalse(state.isProcessing)
+        assertEquals(OnboardingMicInteractionMode.TAP_TO_SEND, state.micInteractionMode)
         assertEquals(DeviceSpeechMode.FUN_ASR_REALTIME, speechRecognizer.lastMode)
     }
 
@@ -121,10 +147,12 @@ class OnboardingInteractionViewModelTest {
         assertEquals("这次语音识别没有完成，请再试一次。", state.errorMessage)
         assertNull(state.lastTranscriptOrigin)
         assertNull(state.lastGenerationOrigin)
+        assertFalse(speechRecognizer.isListening())
+        assertTrue(viewModel.startConsultationRecording())
     }
 
     @Test
-    fun `consultation failure while recording surfaces immediately and release becomes no op`() = runTest {
+    fun `consultation failure while recording returns to tap retry state and stale stop is no op`() = runTest {
         assertTrue(viewModel.startConsultationRecording())
 
         speechRecognizer.emitEvent(
@@ -141,6 +169,7 @@ class OnboardingInteractionViewModelTest {
         assertFalse(failedState.isProcessing)
         assertEquals("当前语音识别暂不可用，请稍后重试。", failedState.errorMessage)
         assertTrue(failedState.messages.isEmpty())
+        assertEquals(OnboardingMicInteractionMode.TAP_TO_SEND, failedState.micInteractionMode)
 
         viewModel.finishConsultationRecording()
         advanceUntilIdle()
@@ -178,6 +207,7 @@ class OnboardingInteractionViewModelTest {
         assertNull(state.lastTranscriptOrigin)
         assertNull(state.lastGenerationOrigin)
         assertEquals("这次语音识别没有完成，请再试一次。", state.errorMessage)
+        assertEquals(OnboardingMicInteractionMode.TAP_TO_SEND, state.micInteractionMode)
     }
 
     @Test
@@ -227,7 +257,7 @@ class OnboardingInteractionViewModelTest {
     }
 
     @Test
-    fun `consultation permission grant returns to idle and asks for fresh press`() {
+    fun `consultation permission grant returns to idle and asks for fresh tap`() {
         viewModel.onConsultationMicPermissionRequested()
         assertTrue(viewModel.consultationState.value.awaitingMicPermission)
 
@@ -236,9 +266,9 @@ class OnboardingInteractionViewModelTest {
         val state = viewModel.consultationState.value
         assertFalse(state.isRecording)
         assertFalse(state.awaitingMicPermission)
-        assertEquals(OnboardingMicInteractionMode.HOLD_TO_SEND, state.micInteractionMode)
+        assertEquals(OnboardingMicInteractionMode.TAP_TO_SEND, state.micInteractionMode)
         assertFalse(speechRecognizer.isListening())
-        assertEquals("麦克风已开启，请重新按住说话", state.guidanceMessage)
+        assertEquals("麦克风已开启，请点击开始说话", state.guidanceMessage)
         assertEquals(null, speechRecognizer.lastMode)
     }
 
@@ -294,7 +324,7 @@ class OnboardingInteractionViewModelTest {
     }
 
     @Test
-    fun `consultation capture limit moves state into processing and later release is no op`() = runTest {
+    fun `consultation capture limit moves state into processing and later extra stop is no op`() = runTest {
         speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success("客户预算批不下来")
         speechRecognizer.finishDelayMillis = 1_000L
 
@@ -311,6 +341,7 @@ class OnboardingInteractionViewModelTest {
         val state = viewModel.consultationState.value
         assertEquals(1, state.completedRounds)
         assertEquals("客户预算批不下来", state.messages.first().text)
+        assertEquals(OnboardingMicInteractionMode.TAP_TO_SEND, state.micInteractionMode)
     }
 
     @Test
@@ -323,12 +354,12 @@ class OnboardingInteractionViewModelTest {
         val state = viewModel.profileState.value
         assertFalse(state.awaitingMicPermission)
         assertFalse(state.isRecording)
-        assertEquals(OnboardingMicInteractionMode.HOLD_TO_SEND, state.micInteractionMode)
+        assertEquals(OnboardingMicInteractionMode.TAP_TO_SEND, state.micInteractionMode)
         assertEquals("无法录音：未授予麦克风权限", state.errorMessage)
     }
 
     @Test
-    fun `profile permission grant returns to idle and asks for fresh press`() {
+    fun `profile permission grant returns to idle and asks for fresh tap`() {
         viewModel.onProfileMicPermissionRequested()
         assertTrue(viewModel.profileState.value.awaitingMicPermission)
 
@@ -337,9 +368,24 @@ class OnboardingInteractionViewModelTest {
         val state = viewModel.profileState.value
         assertFalse(state.isRecording)
         assertFalse(state.awaitingMicPermission)
-        assertEquals(OnboardingMicInteractionMode.HOLD_TO_SEND, state.micInteractionMode)
+        assertEquals(OnboardingMicInteractionMode.TAP_TO_SEND, state.micInteractionMode)
         assertFalse(speechRecognizer.isListening())
-        assertEquals("麦克风已开启，请重新按住说话", state.guidanceMessage)
+        assertEquals("麦克风已开启，请点击开始说话", state.guidanceMessage)
+    }
+
+    @Test
+    fun `quick start permission grant returns to idle and asks for fresh tap`() {
+        viewModel.onQuickStartMicPermissionRequested()
+        assertTrue(viewModel.quickStartState.value.awaitingMicPermission)
+
+        viewModel.onQuickStartMicPermissionResult(granted = true)
+
+        val state = viewModel.quickStartState.value
+        assertFalse(state.isRecording)
+        assertFalse(state.awaitingMicPermission)
+        assertEquals(OnboardingMicInteractionMode.TAP_TO_SEND, state.micInteractionMode)
+        assertFalse(speechRecognizer.isListening())
+        assertEquals("麦克风已开启，请点击开始说话", state.guidanceMessage)
     }
 
     @Test
@@ -369,6 +415,7 @@ class OnboardingInteractionViewModelTest {
         assertEquals(OnboardingTranscriptOrigin.DEVICE_SPEECH, state.transcriptOrigin)
         assertEquals(OnboardingGenerationOrigin.LLM, state.generationOrigin)
         assertTrue(state.hasExtractionResult)
+        assertEquals(OnboardingMicInteractionMode.TAP_TO_SEND, state.micInteractionMode)
     }
 
     @Test
@@ -404,7 +451,7 @@ class OnboardingInteractionViewModelTest {
     }
 
     @Test
-    fun `profile failure while recording surfaces immediately and release becomes no op`() = runTest {
+    fun `profile failure while recording returns to tap retry state and stale stop is no op`() = runTest {
         assertTrue(viewModel.startProfileRecording())
 
         speechRecognizer.emitEvent(
@@ -421,6 +468,7 @@ class OnboardingInteractionViewModelTest {
         assertFalse(failedState.isProcessing)
         assertEquals("这次语音识别没有完成，请再试一次。", failedState.errorMessage)
         assertFalse(failedState.hasExtractionResult)
+        assertEquals(OnboardingMicInteractionMode.TAP_TO_SEND, failedState.micInteractionMode)
 
         viewModel.finishProfileRecording()
         advanceUntilIdle()
@@ -457,6 +505,7 @@ class OnboardingInteractionViewModelTest {
         assertNull(state.generationOrigin)
         assertFalse(state.hasExtractionResult)
         assertEquals("这次语音识别没有完成，请再试一次。", state.errorMessage)
+        assertEquals(OnboardingMicInteractionMode.TAP_TO_SEND, state.micInteractionMode)
     }
 
     @Test
@@ -509,6 +558,461 @@ class OnboardingInteractionViewModelTest {
     }
 
     @Test
+    fun `quick start uses real transcript service and keeps continue available for more edits`() = runTest {
+        val createdItems = listOf(
+            OnboardingQuickStartItem(
+                stableId = "task-1",
+                title = "带合同见老板",
+                timeLabel = "09:00",
+                dateLabel = "明天",
+                dateIso = "2026-04-04",
+                urgencyLevel = com.smartsales.prism.domain.scheduler.UrgencyLevel.L2_IMPORTANT,
+                startHour = 9,
+                startMinute = 0
+            )
+        )
+        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success("明天早上九点带合同见老板")
+        quickStartReminderGuideCoordinator.nextGuide = notificationSettingsGuide()
+        quickStartService.nextResult = OnboardingQuickStartServiceResult.Success(
+            items = createdItems,
+            touchedExactTask = true,
+            mutationKind = OnboardingQuickStartServiceResult.Success.MutationKind.CREATE
+        )
+
+        assertTrue(viewModel.startQuickStartRecording())
+        viewModel.finishQuickStartRecording()
+        advanceUntilIdle()
+
+        val state = viewModel.quickStartState.value
+        assertEquals("明天早上九点带合同见老板", quickStartService.lastTranscript)
+        assertEquals(createdItems, state.items)
+        assertTrue(state.canContinue)
+        assertEquals(OnboardingMicInteractionMode.TAP_TO_SEND, state.micInteractionMode)
+        assertEquals(OnboardingTranscriptOrigin.DEVICE_SPEECH, state.lastTranscriptOrigin)
+        assertEquals(OnboardingGenerationOrigin.SCHEDULER_PATH_A, state.lastGenerationOrigin)
+        assertTrue(quickStartCommitter.stagedItems.isNotEmpty())
+        assertEquals("应用通知被系统关闭", state.reminderGuide?.title)
+        assertTrue(state.reminderGuidePrompted)
+        assertEquals(1, quickStartReminderGuideCoordinator.consumeCalls)
+        assertEquals(1, state.calendarPermissionRequestToken)
+    }
+
+    @Test
+    fun `quick start exact success supports exact alarm reminder guide branch`() = runTest {
+        val createdItems = listOf(
+            OnboardingQuickStartItem(
+                stableId = "task-1",
+                title = "带合同见老板",
+                timeLabel = "09:00",
+                dateLabel = "明天",
+                dateIso = "2026-04-04",
+                urgencyLevel = com.smartsales.prism.domain.scheduler.UrgencyLevel.L2_IMPORTANT,
+                startHour = 9,
+                startMinute = 0
+            )
+        )
+        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success("明天早上九点带合同见老板")
+        quickStartReminderGuideCoordinator.nextGuide = exactAlarmGuide()
+        quickStartService.nextResult = OnboardingQuickStartServiceResult.Success(
+            items = createdItems,
+            touchedExactTask = true,
+            mutationKind = OnboardingQuickStartServiceResult.Success.MutationKind.CREATE
+        )
+
+        assertTrue(viewModel.startQuickStartRecording())
+        viewModel.finishQuickStartRecording()
+        advanceUntilIdle()
+
+        val state = viewModel.quickStartState.value
+        assertEquals(OnboardingMicInteractionMode.TAP_TO_SEND, state.micInteractionMode)
+        assertEquals(ReminderReliabilityAdvisor.Action.EXACT_ALARM, state.reminderGuide?.primaryAction)
+        assertEquals("闹钟权限", state.reminderGuide?.primaryLabel)
+    }
+
+    @Test
+    fun `quick start llm deadline keeps transcript and surfaces retry`() = runTest {
+        val transcript = "后天联系王经理"
+        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success(transcript)
+        quickStartService.delayMillis = 10_100L
+        quickStartService.nextResult = OnboardingQuickStartServiceResult.Success(
+            items = emptyList(),
+            touchedExactTask = false,
+            mutationKind = OnboardingQuickStartServiceResult.Success.MutationKind.CREATE
+        )
+
+        assertTrue(viewModel.startQuickStartRecording())
+        viewModel.finishQuickStartRecording()
+
+        dispatcher.scheduler.advanceTimeBy(4_999L)
+        dispatcher.scheduler.runCurrent()
+        assertTrue(viewModel.quickStartState.value.isProcessing)
+        assertEquals(
+            OnboardingProcessingPhase.BUILDING_QUICK_START_RESULT,
+            viewModel.quickStartState.value.processingPhase
+        )
+
+        dispatcher.scheduler.advanceTimeBy(5_001L)
+        advanceUntilIdle()
+
+        val state = viewModel.quickStartState.value
+        assertEquals(OnboardingMicInteractionMode.TAP_TO_SEND, state.micInteractionMode)
+        assertEquals(transcript, state.transcript)
+        assertEquals(OnboardingTranscriptOrigin.DEVICE_SPEECH, state.lastTranscriptOrigin)
+        assertNull(state.lastGenerationOrigin)
+        assertEquals("当前日程整理暂时没有返回，请再试一次。", state.errorMessage)
+        assertTrue(state.items.isEmpty())
+        assertTrue(quickStartCommitter.stagedItems.isEmpty())
+    }
+
+    @Test
+    fun `quick start tolerates slower shared scheduler routing within expanded deadline`() = runTest {
+        val transcript = "明天早上九点带合同见老板"
+        val createdItems = listOf(
+            OnboardingQuickStartItem(
+                stableId = "task-1",
+                title = "带合同见老板",
+                timeLabel = "09:00",
+                dateLabel = "明天",
+                dateIso = "2026-04-04",
+                startHour = 9,
+                startMinute = 0,
+                urgencyLevel = com.smartsales.prism.domain.scheduler.UrgencyLevel.L2_IMPORTANT
+            )
+        )
+        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success(transcript)
+        quickStartService.delayMillis = 7_000L
+        quickStartService.nextResult = OnboardingQuickStartServiceResult.Success(
+            items = createdItems,
+            touchedExactTask = true,
+            mutationKind = OnboardingQuickStartServiceResult.Success.MutationKind.CREATE
+        )
+
+        assertTrue(viewModel.startQuickStartRecording())
+        viewModel.finishQuickStartRecording()
+
+        dispatcher.scheduler.advanceTimeBy(6_999L)
+        dispatcher.scheduler.runCurrent()
+        assertTrue(viewModel.quickStartState.value.isProcessing)
+
+        dispatcher.scheduler.advanceTimeBy(1L)
+        advanceUntilIdle()
+
+        val state = viewModel.quickStartState.value
+        assertEquals(createdItems, state.items)
+        assertNull(state.errorMessage)
+        assertEquals(OnboardingGenerationOrigin.SCHEDULER_PATH_A, state.lastGenerationOrigin)
+        assertEquals(createdItems, quickStartCommitter.stagedItems)
+    }
+
+    @Test
+    fun `quick start exception keeps transcript and surfaces retry`() = runTest {
+        val transcript = "后天联系王经理"
+        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success(transcript)
+        quickStartService.throwable = IllegalStateException("boom")
+
+        assertTrue(viewModel.startQuickStartRecording())
+        viewModel.finishQuickStartRecording()
+        advanceUntilIdle()
+
+        val state = viewModel.quickStartState.value
+        assertEquals(OnboardingMicInteractionMode.TAP_TO_SEND, state.micInteractionMode)
+        assertEquals(transcript, state.transcript)
+        assertEquals(OnboardingTranscriptOrigin.DEVICE_SPEECH, state.lastTranscriptOrigin)
+        assertNull(state.lastGenerationOrigin)
+        assertEquals("当前日程整理暂时没有返回，请再试一次。", state.errorMessage)
+        assertTrue(state.items.isEmpty())
+        assertTrue(quickStartCommitter.stagedItems.isEmpty())
+    }
+
+    @Test
+    fun `quick start realtime cancellation while recording returns to tap retry state`() = runTest {
+        assertTrue(viewModel.startQuickStartRecording())
+
+        speechRecognizer.emitEvent(DeviceSpeechRecognitionEvent.Cancelled)
+        advanceUntilIdle()
+
+        val state = viewModel.quickStartState.value
+        assertFalse(state.isRecording)
+        assertFalse(state.isProcessing)
+        assertEquals(OnboardingMicInteractionMode.TAP_TO_SEND, state.micInteractionMode)
+        assertEquals("这次语音识别没有完成，请再试一次。", state.errorMessage)
+    }
+
+    @Test
+    fun `quick start permission grant records calendar sync capability without blocking flow`() {
+        viewModel.onQuickStartCalendarPermissionResult(granted = true)
+
+        val state = viewModel.quickStartState.value
+        assertTrue(state.calendarPermissionGranted)
+        assertEquals(OnboardingMicInteractionMode.TAP_TO_SEND, state.micInteractionMode)
+        assertEquals("系统日历已开启，完成后会同步到系统日历。", state.transientNoticeMessage)
+        assertNull(state.guidanceMessage)
+    }
+
+    @Test
+    fun `quick start success clears stale calendar notice and restores normal guidance`() = runTest {
+        viewModel.onQuickStartCalendarPermissionResult(granted = true)
+        val createdItems = listOf(
+            OnboardingQuickStartItem(
+                stableId = "task-1",
+                title = "带合同见老板",
+                timeLabel = "09:00",
+                dateLabel = "明天",
+                dateIso = "2026-04-04",
+                urgencyLevel = com.smartsales.prism.domain.scheduler.UrgencyLevel.L2_IMPORTANT,
+                startHour = 9,
+                startMinute = 0
+            )
+        )
+        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success("明天早上九点带合同见老板")
+        quickStartService.nextResult = OnboardingQuickStartServiceResult.Success(
+            items = createdItems,
+            touchedExactTask = true,
+            mutationKind = OnboardingQuickStartServiceResult.Success.MutationKind.CREATE
+        )
+
+        assertTrue(viewModel.startQuickStartRecording())
+        viewModel.finishQuickStartRecording()
+        advanceUntilIdle()
+
+        val state = viewModel.quickStartState.value
+        assertEquals(OnboardingMicInteractionMode.TAP_TO_SEND, state.micInteractionMode)
+        assertNull(state.transientNoticeMessage)
+        assertEquals("可以继续补充或修改，也可以直接下一步。", state.guidanceMessage)
+    }
+
+    @Test
+    fun `quick start vague success does not surface reminder guide`() = runTest {
+        val createdItems = listOf(
+            OnboardingQuickStartItem(
+                stableId = "task-1",
+                title = "联系王经理",
+                timeLabel = "尽快",
+                dateLabel = "后天",
+                dateIso = "2026-04-05",
+                urgencyLevel = com.smartsales.prism.domain.scheduler.UrgencyLevel.L2_IMPORTANT
+            )
+        )
+        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success("后天联系王经理")
+        quickStartReminderGuideCoordinator.nextGuide = notificationSettingsGuide()
+        quickStartService.nextResult = OnboardingQuickStartServiceResult.Success(
+            items = createdItems,
+            touchedExactTask = false,
+            mutationKind = OnboardingQuickStartServiceResult.Success.MutationKind.CREATE
+        )
+
+        assertTrue(viewModel.startQuickStartRecording())
+        viewModel.finishQuickStartRecording()
+        advanceUntilIdle()
+
+        val state = viewModel.quickStartState.value
+        assertNull(state.reminderGuide)
+        assertFalse(state.reminderGuidePrompted)
+        assertEquals(OnboardingMicInteractionMode.TAP_TO_SEND, state.micInteractionMode)
+        assertEquals(0, quickStartReminderGuideCoordinator.consumeCalls)
+    }
+
+    @Test
+    fun `dismissing quick start reminder guide keeps staged items and continue state`() = runTest {
+        val createdItems = listOf(
+            OnboardingQuickStartItem(
+                stableId = "task-1",
+                title = "带合同见老板",
+                timeLabel = "09:00",
+                dateLabel = "明天",
+                dateIso = "2026-04-04",
+                urgencyLevel = com.smartsales.prism.domain.scheduler.UrgencyLevel.L2_IMPORTANT,
+                startHour = 9,
+                startMinute = 0
+            )
+        )
+        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success("明天早上九点带合同见老板")
+        quickStartReminderGuideCoordinator.nextGuide = notificationSettingsGuide()
+        quickStartService.nextResult = OnboardingQuickStartServiceResult.Success(
+            items = createdItems,
+            touchedExactTask = true,
+            mutationKind = OnboardingQuickStartServiceResult.Success.MutationKind.CREATE
+        )
+
+        assertTrue(viewModel.startQuickStartRecording())
+        viewModel.finishQuickStartRecording()
+        advanceUntilIdle()
+
+        viewModel.dismissQuickStartReminderGuide()
+
+        val state = viewModel.quickStartState.value
+        assertNull(state.reminderGuide)
+        assertTrue(state.canContinue)
+        assertEquals(createdItems, state.items)
+    }
+
+    @Test
+    fun `opening quick start reminder action clears dialog and delegates to coordinator`() = runTest {
+        val createdItems = listOf(
+            OnboardingQuickStartItem(
+                stableId = "task-1",
+                title = "带合同见老板",
+                timeLabel = "09:00",
+                dateLabel = "明天",
+                dateIso = "2026-04-04",
+                urgencyLevel = com.smartsales.prism.domain.scheduler.UrgencyLevel.L2_IMPORTANT,
+                startHour = 9,
+                startMinute = 0
+            )
+        )
+        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success("明天早上九点带合同见老板")
+        quickStartReminderGuideCoordinator.nextGuide = notificationSettingsGuide()
+        quickStartService.nextResult = OnboardingQuickStartServiceResult.Success(
+            items = createdItems,
+            touchedExactTask = true,
+            mutationKind = OnboardingQuickStartServiceResult.Success.MutationKind.CREATE
+        )
+
+        assertTrue(viewModel.startQuickStartRecording())
+        viewModel.finishQuickStartRecording()
+        advanceUntilIdle()
+
+        viewModel.openQuickStartReminderAction(ReminderReliabilityAdvisor.Action.APP_NOTIFICATION_SETTINGS)
+
+        val state = viewModel.quickStartState.value
+        assertNull(state.reminderGuide)
+        assertEquals(
+            ReminderReliabilityAdvisor.Action.APP_NOTIFICATION_SETTINGS,
+            quickStartReminderGuideCoordinator.openedActions.single()
+        )
+    }
+
+    @Test
+    fun `quick start reminder guide is not reconsumed after first exact success`() = runTest {
+        val createdItems = listOf(
+            OnboardingQuickStartItem(
+                stableId = "task-1",
+                title = "带合同见老板",
+                timeLabel = "09:00",
+                dateLabel = "明天",
+                dateIso = "2026-04-04",
+                urgencyLevel = com.smartsales.prism.domain.scheduler.UrgencyLevel.L2_IMPORTANT,
+                startHour = 9,
+                startMinute = 0
+            )
+        )
+        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success("明天早上九点带合同见老板")
+        quickStartReminderGuideCoordinator.nextGuide = notificationSettingsGuide()
+        quickStartService.nextResult = OnboardingQuickStartServiceResult.Success(
+            items = createdItems,
+            touchedExactTask = true,
+            mutationKind = OnboardingQuickStartServiceResult.Success.MutationKind.CREATE
+        )
+
+        assertTrue(viewModel.startQuickStartRecording())
+        viewModel.finishQuickStartRecording()
+        advanceUntilIdle()
+        viewModel.dismissQuickStartReminderGuide()
+
+        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success("改到明天上午十点")
+        quickStartReminderGuideCoordinator.nextGuide = exactAlarmGuide()
+        quickStartService.nextResult = OnboardingQuickStartServiceResult.Success(
+            items = createdItems.map {
+                it.copy(timeLabel = "10:00", startHour = 10, highlightToken = 1)
+            },
+            touchedExactTask = true,
+            mutationKind = OnboardingQuickStartServiceResult.Success.MutationKind.UPDATE
+        )
+
+        assertTrue(viewModel.startQuickStartRecording())
+        viewModel.finishQuickStartRecording()
+        advanceUntilIdle()
+
+        val state = viewModel.quickStartState.value
+        assertNull(state.reminderGuide)
+        assertEquals(1, quickStartReminderGuideCoordinator.consumeCalls)
+    }
+
+    @Test
+    fun `finalization commits quick start marks shell handoff and clears sandbox for unified onboarding`() = runTest {
+        viewModel.bindHost(OnboardingHost.SIM_CONNECTIVITY)
+        val createdItems = listOf(
+            OnboardingQuickStartItem(
+                stableId = "task-1",
+                title = "带合同见老板",
+                timeLabel = "09:00",
+                dateLabel = "明天",
+                dateIso = "2026-04-04",
+                urgencyLevel = com.smartsales.prism.domain.scheduler.UrgencyLevel.L2_IMPORTANT,
+                startHour = 9,
+                startMinute = 0
+            )
+        )
+        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success("明天早上九点带合同见老板")
+        quickStartService.nextResult = OnboardingQuickStartServiceResult.Success(
+            items = createdItems,
+            touchedExactTask = true,
+            mutationKind = OnboardingQuickStartServiceResult.Success.MutationKind.CREATE
+        )
+        assertTrue(viewModel.startQuickStartRecording())
+        viewModel.finishQuickStartRecording()
+        advanceUntilIdle()
+        quickStartCommitter.nextResult =
+            OnboardingSchedulerQuickStartCommitResult.Success(taskIds = listOf("task-1"))
+        viewModel.onQuickStartCalendarPermissionResult(granted = true)
+
+        val error = viewModel.finalizeFullAppCompletion()
+
+        assertNull(error)
+        assertEquals(1, quickStartCommitter.commitCalls)
+        assertTrue(quickStartCommitter.cleared)
+        assertTrue(onboardingHandoffGate.pending)
+        assertEquals(listOf("task-1"), quickStartCalendarExporter.exportedTaskIds)
+        assertTrue(viewModel.quickStartState.value.items.isEmpty())
+    }
+
+    @Test
+    fun `finalization failure keeps staged state for retry and does not arm shell handoff`() = runTest {
+        viewModel.bindHost(OnboardingHost.SIM_CONNECTIVITY)
+        quickStartCommitter.nextResult =
+            OnboardingSchedulerQuickStartCommitResult.Failure("体验日程同步失败，请稍后重试。")
+        quickStartCommitter.stagedItems = listOf(
+            OnboardingQuickStartItem(
+                stableId = "task-1",
+                title = "带合同见老板",
+                timeLabel = "09:00",
+                dateLabel = "明天",
+                dateIso = "2026-04-04",
+                urgencyLevel = com.smartsales.prism.domain.scheduler.UrgencyLevel.L2_IMPORTANT,
+                startHour = 9,
+                startMinute = 0
+            )
+        )
+        quickStartService.nextResult = OnboardingQuickStartServiceResult.Success(
+            items = quickStartCommitter.stagedItems,
+            touchedExactTask = true,
+            mutationKind = OnboardingQuickStartServiceResult.Success.MutationKind.CREATE
+        )
+        speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success("明天早上九点带合同见老板")
+        assertTrue(viewModel.startQuickStartRecording())
+        viewModel.finishQuickStartRecording()
+        advanceUntilIdle()
+
+        val error = viewModel.finalizeFullAppCompletion()
+
+        assertEquals("体验日程同步失败，请稍后重试。", error)
+        assertEquals(1, quickStartCommitter.commitCalls)
+        assertFalse(onboardingHandoffGate.pending)
+        assertFalse(viewModel.quickStartState.value.items.isEmpty())
+    }
+
+    @Test
+    fun `finalization blocks incomplete quick start sandbox`() = runTest {
+        viewModel.bindHost(OnboardingHost.SIM_CONNECTIVITY)
+
+        val error = viewModel.finalizeFullAppCompletion()
+
+        assertEquals("请先完成一次真实日程体验。", error)
+        assertEquals(0, quickStartCommitter.commitCalls)
+        assertFalse(onboardingHandoffGate.pending)
+    }
+
+    @Test
     fun `reset invalidates stale consultation result`() = runTest {
         val delayedReply = CompletableDeferred<OnboardingConsultationServiceResult>()
         speechRecognizer.nextResult = DeviceSpeechRecognitionResult.Success("客户预算批不下来")
@@ -558,20 +1062,26 @@ class OnboardingInteractionViewModelTest {
     fun `cancel active recording clears pending permission and interaction mode`() {
         viewModel.onConsultationMicPermissionRequested()
         viewModel.onConsultationMicPermissionResult(granted = true)
+        viewModel.onQuickStartMicPermissionRequested()
+        viewModel.onQuickStartMicPermissionResult(granted = true)
         assertFalse(viewModel.consultationState.value.isRecording)
 
         viewModel.cancelActiveRecording()
 
         val consultation = viewModel.consultationState.value
         val profile = viewModel.profileState.value
+        val quickStart = viewModel.quickStartState.value
         assertFalse(consultation.isRecording)
         assertFalse(consultation.awaitingMicPermission)
         assertNull(consultation.guidanceMessage)
-        assertEquals(OnboardingMicInteractionMode.HOLD_TO_SEND, consultation.micInteractionMode)
+        assertEquals(OnboardingMicInteractionMode.TAP_TO_SEND, consultation.micInteractionMode)
         assertEquals(OnboardingProcessingPhase.NONE, consultation.processingPhase)
         assertFalse(profile.awaitingMicPermission)
         assertNull(profile.guidanceMessage)
-        assertEquals(OnboardingMicInteractionMode.HOLD_TO_SEND, profile.micInteractionMode)
+        assertEquals(OnboardingMicInteractionMode.TAP_TO_SEND, profile.micInteractionMode)
+        assertFalse(quickStart.awaitingMicPermission)
+        assertNull(quickStart.guidanceMessage)
+        assertEquals(OnboardingMicInteractionMode.TAP_TO_SEND, quickStart.micInteractionMode)
         assertFalse(speechRecognizer.isListening())
     }
 
@@ -601,11 +1111,15 @@ class OnboardingInteractionViewModelTest {
         }
 
         override suspend fun finishListening(): DeviceSpeechRecognitionResult {
-            listening = false
-            finishGate?.let { return it.await() }
+            finishGate?.let {
+                val result = it.await()
+                listening = false
+                return result
+            }
             if (finishDelayMillis > 0L) {
                 delay(finishDelayMillis)
             }
+            listening = false
             return nextResult
         }
 
@@ -665,6 +1179,118 @@ class OnboardingInteractionViewModelTest {
             return profileResult
         }
     }
+
+    private class FakeOnboardingSchedulerQuickStartCommitter :
+        OnboardingSchedulerQuickStartCommitter {
+        var stagedItems: List<OnboardingQuickStartItem> = emptyList()
+        var nextResult: OnboardingSchedulerQuickStartCommitResult =
+            OnboardingSchedulerQuickStartCommitResult.Success(emptyList())
+        var commitCalls: Int = 0
+        var cleared: Boolean = false
+
+        override fun stage(items: List<OnboardingQuickStartItem>) {
+            stagedItems = items
+            cleared = false
+        }
+
+        override fun clear() {
+            stagedItems = emptyList()
+            cleared = true
+        }
+
+        override suspend fun commitIfNeeded(): OnboardingSchedulerQuickStartCommitResult {
+            commitCalls += 1
+            return nextResult
+        }
+    }
+
+    private class FakeOnboardingQuickStartService : OnboardingQuickStartService {
+        var nextResult: OnboardingQuickStartServiceResult =
+            OnboardingQuickStartServiceResult.Failure("not configured")
+        var lastTranscript: String? = null
+        var delayMillis: Long = 0L
+        var throwable: Throwable? = null
+
+        override suspend fun applyTranscript(
+            transcript: String,
+            currentItems: List<OnboardingQuickStartItem>
+        ): OnboardingQuickStartServiceResult {
+            lastTranscript = transcript
+            if (delayMillis > 0L) {
+                delay(delayMillis)
+            }
+            throwable?.let { throw it }
+            return nextResult
+        }
+    }
+
+    private class FakeOnboardingQuickStartReminderGuideCoordinator :
+        OnboardingQuickStartReminderGuideCoordinator {
+        var nextGuide: ReminderReliabilityAdvisor.ReminderReliabilityGuide? = null
+        var consumeCalls = 0
+        val openedActions = mutableListOf<ReminderReliabilityAdvisor.Action>()
+
+        override fun consumeGuideIfNeeded(): ReminderReliabilityAdvisor.ReminderReliabilityGuide? {
+            consumeCalls += 1
+            return nextGuide
+        }
+
+        override fun openAction(action: ReminderReliabilityAdvisor.Action): Boolean {
+            openedActions += action
+            return true
+        }
+    }
+
+    private class FakeOnboardingQuickStartCalendarExporter :
+        OnboardingQuickStartCalendarExporter {
+        var exportedTaskIds: List<String> = emptyList()
+
+        override suspend fun exportCommittedTaskIds(taskIds: List<String>): Boolean {
+            exportedTaskIds = taskIds
+            return true
+        }
+    }
+
+    private class FakeRuntimeOnboardingHandoffGate : RuntimeOnboardingHandoffGate {
+        var pending = false
+
+        override fun shouldAutoOpenSchedulerAfterOnboarding(): Boolean = pending
+
+        override fun markSchedulerAutoOpenPending() {
+            pending = true
+        }
+
+        override fun consumeSchedulerAutoOpenPending() {
+            pending = false
+        }
+    }
+
+    private class FakeTimeProvider : TimeProvider {
+        override val now: Instant = Instant.parse("2026-04-03T08:00:00Z")
+        override val today: LocalDate = LocalDate.parse("2026-04-03")
+        override val currentTime: LocalTime = LocalTime.of(16, 0)
+        override val zoneId: ZoneId = ZoneId.of("Asia/Shanghai")
+
+        override fun formatForLlm(): String = "2026年4月3日（周五）16:00"
+    }
+
+    private fun notificationSettingsGuide() = ReminderReliabilityAdvisor.ReminderReliabilityGuide(
+        title = "应用通知被系统关闭",
+        message = "系统当前已禁用本应用通知。即使闹钟已触发、Receiver 已运行，系统仍会直接拦截展示。",
+        checklist = listOf("系统已关闭本应用通知，请先在应用通知设置中重新开启，否则提醒会被系统直接拦截。"),
+        primaryAction = ReminderReliabilityAdvisor.Action.APP_NOTIFICATION_SETTINGS,
+        primaryLabel = "通知设置",
+        secondaryAction = ReminderReliabilityAdvisor.Action.AUTO_START,
+        secondaryLabel = "自启动"
+    )
+
+    private fun exactAlarmGuide() = ReminderReliabilityAdvisor.ReminderReliabilityGuide(
+        title = "精确闹钟权限",
+        message = "未授予精确闹钟权限时，提醒可能延迟最多 1 小时。",
+        checklist = listOf("开启“闹钟和提醒 / 精确闹钟”权限，避免提醒被延迟。"),
+        primaryAction = ReminderReliabilityAdvisor.Action.EXACT_ALARM,
+        primaryLabel = "闹钟权限"
+    )
 
     private class FakeUserProfileRepository : UserProfileRepository {
         private val state = MutableStateFlow(

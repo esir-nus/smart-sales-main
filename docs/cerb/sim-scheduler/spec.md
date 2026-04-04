@@ -180,7 +180,8 @@ Current SIM-specific state and remaining gaps:
 - SIM now reuses the shared reminder stack for persisted exact tasks only: create and conflict-create arm reminders, vague tasks do not, delete and mark-done cancel, reschedule cancels then rearms, and restore-from-done does not rearm in T4.8
 - reminder restore must rebuild exact-task reminder truth from persisted urgency rather than trusting stale stored cascade JSON or stale `hasAlarm` flags
 - collapsed reminder visibility is product-facing reminder truth, not a legacy `isSmartAlarm` presentation rule
-- reminder-reliability prompting stays on the viewmodel/UI boundary through a process-lifetime gate so one create batch does not spam repeated settings prompts; the same seam may carry exact-alarm and OEM-specific notification hardening guidance
+- reminder-reliability prompting stays on the viewmodel/UI boundary through a process-lifetime gate so one scheduler-owned create batch does not spam repeated settings prompts; exact and vague task creates may both emit the prompt, while only exact tasks still arm task-time reminders
+- when an `EARLY` reminder fires while the app process is alive, the shared reminder path may also emit one process-local shell reminder surface event; this remains additive foreground UX only and does not replace the system notification as reminder truth
 - SIM still defers immediate create/conflict/completion native notifications and still lacks device-level acceptance proof for full banner/deadline delivery
 
 ### Dynamic Island Reminder Projection Contract
@@ -193,6 +194,17 @@ The SIM scheduler remains the owner of dynamic-island reminder truth even though
 - each projected reminder must remain targetable to its corresponding scheduler date page
 - the SIM shell may present at most the first 3 projected entries and rotate them vertically one line at a time
 - the shared island renderer may still collapse one visible item at a time; the top-3 rotation is shell presentation, not scheduler-owned chrome
+
+### Foreground Reminder Banner Contract
+
+The SIM scheduler also owns the content truth for a narrow foreground-only reminder banner lane, while the shell owns presentation and entry choreography.
+
+- only `EARLY` reminder deliveries may emit this process-local surface; `DEADLINE` remains on the shared full-screen `AlarmActivity` path
+- `TaskReminderReceiver` may publish a lossy process-local reminder event only after the normal system notification path runs
+- `SimSchedulerViewModel` must merge and de-duplicate banner entries by `taskId`, prefer the more urgent `5m` reminder ahead of `15m` when both are visible, and preserve scheduler target metadata for tap routing
+- `RuntimeShell` may show the banner only while scheduler and audio overlays are not already dominating the shell
+- tapping the banner must enter the normal scheduler drawer path and, when possible, pre-target the corresponding scheduler date/task instead of inventing a second reminder detail host
+- the banner may auto-dismiss locally after a short timeout; clearing the banner must not cancel the underlying scheduled reminder truth
 
 ### Deferred
 
@@ -276,7 +288,7 @@ SIM adopts the shared scheduler reminder infrastructure with a narrowed boundary
 - mark-done cancels the task reminder
 - restore-from-done does not rearm the reminder in T4.8
 - reschedule cancels the prior reminder and then arms the new exact-time reminder
-- reminder-reliability prompting stays at the `ISchedulerViewModel` boundary and is gated to one prompt emission per process lifetime
+- reminder-reliability prompting stays at the `ISchedulerViewModel` boundary, is gated to one prompt emission per process lifetime, and may emit for any successful scheduler-owned task create even when the created task remains vague
 - the delivered prompt must adapt to current OEM risk when possible: exact alarm, battery optimization, and OEM-specific lock-screen / floating / background-notification guidance should not be hardcoded as Xiaomi-only copy
 - reminder scheduling failure must not roll back task persistence or batch success
 
@@ -311,7 +323,8 @@ Minimum required projection:
 - conflict state
 - active day offset
 - ordered active reminder projection for shell dynamic island summary selection
-- exact alarm permission prompts only if reminders remain in SIM V1 scope
+- foreground reminder banner state with scheduler target metadata for shell tap routing
+- reminder-reliability prompt event for successful scheduler-owned task creates while reminders remain in SIM V1 scope
 - persisted optional `keyPerson` / `location` retrieval hints for tasks created through Uni-A / Uni-B / Uni-M when extraction supplies them
 
 If a current scheduler field only exists for smart-app integration, SIM should not depend on it by default.

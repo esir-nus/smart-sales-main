@@ -12,6 +12,7 @@ Centralizes all Android notification logic behind a single interface. Features c
 
 > See [interface.md](file:///home/cslh-frank/main_app/docs/cerb/notifications/interface.md) for the full interface contract and output types.
 > Live OEM operator checklist: `docs/sops/oem-alarm-notification-checklist.md`
+> OEM management control plane: `docs/sops/oem-alarm-notification-control-plane.md`
 
 ---
 
@@ -188,6 +189,7 @@ App Launch
 - Each cascade alarm gets a **unique notification** (already done — `notificationId = "$taskId-$offsetMinutes"`) 
 - `AlarmActivity` should display a **stack** of active alarms instead of replacing
 - When `onNewIntent()` arrives, **add** to display list instead of replacing
+- the in-activity stack must de-duplicate by `taskId`, refresh the newest payload in place, and keep the newest active task on top
 - Each card in the stack is independently dismissible
 
 **Ship Criteria**: 2 alarms at the same time → both visible as stacked cards in `AlarmActivity`.
@@ -215,15 +217,26 @@ App Launch
 
 ### 1.7.8: Chinese OEM Compatibility (Anti-Ghosting)
 
-**Problem**: Xiaomi (MIUI), Huawei (EMUI/HarmonyOS), Oppo (ColorOS), Vivo (OriginOS) aggressively kill background apps, cancel `AlarmManager` intents, and block `BOOT_COMPLETED` delivery. These mechanisms are **layered** and each must be addressed independently.
+**Problem**: Xiaomi (MIUI), Huawei/Honor (EMUI/HarmonyOS), Oppo (ColorOS), Vivo (OriginOS) aggressively kill background apps, cancel `AlarmManager` intents, and block `BOOT_COMPLETED` delivery. These mechanisms are **layered** and each must be addressed independently.
 
 **Architecture**: **Single APK, runtime detection** via `Build.MANUFACTURER`. No multi-APK flavors.
 
-For day-to-day debugging and manual validation, keep `docs/sops/oem-alarm-notification-checklist.md` synchronized with this section and `OemCompat.kt`.
+For day-to-day debugging and manual validation, keep `docs/sops/oem-alarm-notification-checklist.md`, `docs/sops/oem-alarm-notification-control-plane.md`, and `OemCompat.kt` synchronized with this section.
 
 The shipped runtime guidance should also stay adaptive to the current OEM. If the app already knows it is on Xiaomi/HyperOS, Huawei/Honor, Oppo/Realme, or Vivo/iQOO, the user-facing hardening prompt must prefer OEM-specific checklist copy and the nearest reachable settings page over a generic one-size-fits-all alarm warning.
 
+For Huawei/Honor, the current Android-app strategy remains a single Huawei-family branch keyed by `Build.MANUFACTURER in {"huawei", "honor"}`. This slice does **not** add native Harmony reminder APIs; it keeps the Android app path and treats HarmonyOS/EMUI reliability as a launch-management problem first.
+
 The first branch in that adaptive prompt must be app-level notification blocking itself. If the system has already set the app to `importance=NONE`, `POST_NOTIFICATION: ignore`, or an equivalent “all notifications off” state, the runtime should guide the user back to app notification settings before suggesting deeper OEM hardening.
+
+For Android 14+ screen-off deadline alarms, app-level full-screen-intent permission is also a first-class gate. The runtime should not treat a denied full-screen-intent setting as an OEM-only issue; it must route the user to the Android full-screen-intent settings page before or alongside OEM-specific hardening.
+
+For Xiaomi / HyperOS, screen-off deadline alarm presentation is now understood as two separate launch/display branches:
+
+- Android full-screen-intent policy
+- HyperOS background popup policy
+
+Do not collapse these into the same diagnosis. A device may allow `fullScreenIntent` in the Android sense while HyperOS still blocks background page launch.
 
 ```kotlin
 // OemCompat.kt — utility for OEM detection + settings navigation
@@ -257,22 +270,36 @@ object OemCompat {
 - User-facing text: "为确保任务提醒准时送达，请允许后台运行"
 - Store preference flag → don't re-prompt after user decision
 
+Huawei/Honor note: on HarmonyOS/EMUI this remains secondary guidance only. The real first-line defense is App Launch / Launch Management manual allow.
+
 #### Defense Layer 2: Autostart Guidance
 
 **Goal**: Ensure `BOOT_COMPLETED` is delivered after reboot.
 
 - On first alarm schedule (Chinese OEM only) → show one-time guidance dialog
+- Huawei/Honor must treat this layer as the primary runtime guidance after app-level notification blocking and exact-alarm checks, even when battery optimization already looks healthy
 - OEM-specific Intent map:
 
 | OEM | Package | Activity | Fallback |
 |-----|---------|----------|----------|
 | Xiaomi | `com.miui.securitycenter` | `AutoStartManagementActivity` | App Info |
-| Huawei | `com.huawei.systemmanager` | `StartupAppControlActivity` | App Info |
+| Huawei/Honor | `com.huawei.systemmanager` | `StartupAppControlActivity` -> `StartupNormalAppListActivity` -> `ProtectActivity` | App Info |
 | Oppo | `com.coloros.safecenter` | `StartupAppListActivity` | App Info |
 | Vivo | `com.iqoo.secure` | `MainCenterActivity` | App Info |
 
 - All Intents wrapped in `try/catch` → graceful fallback to system App Info screen
 - User-facing text: "请在系统设置中开启 Smart Sales 的自启动权限，否则重启后提醒将丢失"
+- Huawei/Honor copy must explicitly mention `应用启动管理 / Launch Management` and the three manual toggles: auto-launch, secondary launch, background activity
+- Huawei/Honor copy must also mention lock-screen notification and floating notification settings (设置 → 通知和状态栏)
+
+#### Screen-off deadline presentation follow-up
+
+The current repo state is:
+
+- Xiaomi / HyperOS has real locked-device evidence that `AlarmActivity` can launch through the shared deadline path on at least one device
+- Huawei / Honor guidance is documentation-backed but still needs stronger locked-device validation evidence before this branch can be treated as fully closed
+
+Track this work through `docs/plans/oem-alarm-hardening-plan.md`.
 
 #### Defense Layer 3: Foreground Service (Optional, P2)
 
@@ -356,11 +383,11 @@ fun cascadeTier(offsetMinutes: Int): CascadeTier = when (offsetMinutes) {
 - [ ] >3 concurrent alarms → summary notification grouping
 - [ ] Tap "知道了" → vibration stops within 200ms
 
-**Chinese OEM (MIUI/EMUI)**:
+**Chinese OEM (MIUI/EMUI/HarmonyOS)**:
 - [ ] Lock screen + Xiaomi MIUI → screen wakes and alarm shows
 - [ ] Xiaomi: Swipe kill → alarm still fires (with Layer 1+2 enabled)
 - [ ] Xiaomi: Reboot → alarm survives (with autostart enabled)
-- [ ] Huawei: Deep Doze → alarm fires within 1 min tolerance
+- [ ] Huawei/Honor: Deep Doze → alarm fires within 1 min tolerance
 - [ ] Battery optimization dialog shown on first alarm (Chinese OEM only)
-- [ ] OEM autostart Intent resolves (Xiaomi, Huawei, Oppo, Vivo)
+- [ ] OEM autostart Intent resolves (Xiaomi, Huawei/Honor, Oppo, Vivo)
 - [ ] Graceful fallback on unsupported/unknown OEM

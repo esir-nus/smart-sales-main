@@ -23,6 +23,7 @@ This shard is no longer allowed to own active connectivity truth.
 
 Use the current active docs above for implementation and review.
 The remainder of this file is retained only as a historical snapshot of the older SIM-connectivity framing.
+Current production truth no longer uses a separate `SIM_CONNECTIVITY` onboarding route for completion; onboarding now completes back into home through the shared canonical flow.
 
 ---
 
@@ -32,7 +33,7 @@ The remainder of this file is retained only as a historical snapshot of the olde
 
 This shard exists so SIM can:
 
-- expose a shell-level connectivity entry/icon
+- expose a shell-level connectivity entry
 - let users manage badge BLE/Wi-Fi connection state
 - keep connectivity behavior as isolated infrastructure/support logic
 
@@ -130,7 +131,7 @@ SIM may not:
 
 ## 6. Shell Entry Rule
 
-The SIM shell should expose a connectivity entry/icon as a support action.
+The SIM shell should expose a connectivity entry as a support action.
 
 Expectations:
 
@@ -192,7 +193,7 @@ The worst failure is letting connectivity reuse drag smart runtime assumptions i
 
 SIM connectivity is ready only when:
 
-- a SIM shell entry/icon exists for badge connection management
+- a SIM shell entry exists for badge connection management
 - existing connectivity contracts remain the behavioral source
 - connectivity use does not contaminate scheduler/audio/chat runtime behavior
 - the shell/connectivity ownership split remains explicit after the T5.3 cleanup

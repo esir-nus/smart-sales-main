@@ -1,5 +1,6 @@
 package com.smartsales.prism.data.notification
 
+import android.app.NotificationManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -12,7 +13,7 @@ import android.util.Log
 /**
  * 中国 OEM 兼容工具
  *
- * 国产 ROM (MIUI, EMUI, ColorOS, OriginOS) 会主动杀死后台应用、
+ * 国产 ROM (MIUI, EMUI/HarmonyOS, ColorOS, OriginOS) 会主动杀死后台应用、
  * 取消 AlarmManager 闹钟、拦截 BOOT_COMPLETED。
  * 此工具提供运行时检测和设置引导。
  *
@@ -99,6 +100,37 @@ object OemCompat {
         }
     }
 
+    /**
+     * 检查 Android 14+ 全屏闹钟权限
+     */
+    fun canUseFullScreenIntent(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return true
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        return nm.canUseFullScreenIntent()
+    }
+
+    /**
+     * 打开 Android 14+ 全屏闹钟权限设置
+     * 降级到应用通知设置，再由其降级到应用信息页
+     */
+    fun openFullScreenIntentSettings(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            return openNotificationSettings(context)
+        }
+        return try {
+            val intent = Intent(Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT).apply {
+                data = Uri.parse("package:${context.packageName}")
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+            Log.d(TAG, "已打开全屏闹钟权限设置")
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "无法打开全屏闹钟权限设置: ${e.message}")
+            openNotificationSettings(context)
+        }
+    }
+
     // ---- Defense Layer 4: MIUI 锁屏显示权限 ----
 
     /**
@@ -125,7 +157,7 @@ object OemCompat {
             true
         } catch (e: Exception) {
             Log.w(TAG, "MIUI 权限编辑页不可用: ${e.message}")
-            openAppInfo(context)
+            openNotificationSettings(context)
         }
     }
 
@@ -146,6 +178,31 @@ object OemCompat {
         } catch (e: Exception) {
             Log.w(TAG, "无法打开应用通知设置: ${e.message}")
             openAppInfo(context)
+        }
+    }
+
+    /**
+     * 打开华为通知管理设置
+     * HarmonyOS/EMUI 路径: 设置 → 通知和状态栏 → [App]
+     * 降级到标准通知设置
+     */
+    fun openHuaweiNotificationSettings(context: Context): Boolean {
+        if (!isHuawei) return openNotificationSettings(context)
+        return try {
+            val intent = Intent().apply {
+                component = ComponentName(
+                    "com.huawei.systemmanager",
+                    "com.huawei.notificationmanager.ui.NotificationManagmentActivity"
+                )
+                putExtra("packageName", context.packageName)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+            Log.d(TAG, "已打开华为通知管理设置")
+            true
+        } catch (e: Exception) {
+            Log.w(TAG, "华为通知管理页不可用, 降级标准通知设置: ${e.message}")
+            openNotificationSettings(context)
         }
     }
 
@@ -239,7 +296,7 @@ object OemCompat {
      * OEM 自启动管理 Activity 映射
      * 全部 try/catch 降级到系统应用信息页
      */
-    private data class AutoStartTarget(
+    internal data class AutoStartTarget(
         val packageName: String,
         val className: String
     )
@@ -255,11 +312,14 @@ object OemCompat {
             AutoStartTarget("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity")
         ),
         "huawei" to listOf(
+            AutoStartTarget("com.huawei.systemmanager", "com.huawei.systemmanager.appcontrol.activity.StartupAppControlActivity"),
             AutoStartTarget("com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity"),
             AutoStartTarget("com.huawei.systemmanager", "com.huawei.systemmanager.optimize.process.ProtectActivity")
         ),
         "honor" to listOf(
-            AutoStartTarget("com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity")
+            AutoStartTarget("com.huawei.systemmanager", "com.huawei.systemmanager.appcontrol.activity.StartupAppControlActivity"),
+            AutoStartTarget("com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity"),
+            AutoStartTarget("com.huawei.systemmanager", "com.huawei.systemmanager.optimize.process.ProtectActivity")
         ),
         "oppo" to listOf(
             AutoStartTarget("com.coloros.safecenter", "com.coloros.safecenter.startupapp.StartupAppListActivity"),
@@ -280,6 +340,11 @@ object OemCompat {
         )
     )
 
+    internal fun autoStartTargetsForManufacturer(manufacturerName: String): List<AutoStartTarget> {
+        val normalizedManufacturer = manufacturerName.lowercase()
+        return autoStartTargets[normalizedManufacturer] ?: autoStartTargets.values.flatten()
+    }
+
     /**
      * 尝试打开 OEM 自启动设置
      * 如果 OEM 页面不可用，降级到系统应用信息页
@@ -287,7 +352,7 @@ object OemCompat {
      */
     fun openAutoStartSettings(context: Context): Boolean {
         // 优先尝试厂商特定的 Intent
-        val targets = autoStartTargets[manufacturer] ?: autoStartTargets.values.flatten()
+        val targets = autoStartTargetsForManufacturer(manufacturer)
         
         for (target in targets) {
             try {

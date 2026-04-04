@@ -39,6 +39,7 @@ internal fun ProvisioningStep(
     onPasswordChange: (String) -> Unit,
     onBack: () -> Unit,
     onRetryScan: () -> Unit,
+    onSkipToQuickStart: () -> Unit,
     onComplete: () -> Unit
 ) {
     val pairingState by viewModel.pairingState.collectAsState()
@@ -66,6 +67,7 @@ internal fun ProvisioningStep(
         onPasswordChange = onPasswordChange,
         onBack = onBack,
         onRetryScan = onRetryScan,
+        onSkipToQuickStart = onSkipToQuickStart,
         onSubmit = {
             showProvisioningForm = false
             viewModel.pairBadge(badge = badge, wifiCreds = WifiCredentials(ssid, password))
@@ -85,6 +87,7 @@ internal fun ProvisioningStepContent(
     onPasswordChange: (String) -> Unit,
     onBack: () -> Unit,
     onRetryScan: () -> Unit,
+    onSkipToQuickStart: () -> Unit,
     onSubmit: () -> Unit,
     onRetryProvisioning: () -> Unit
 ) {
@@ -96,7 +99,15 @@ internal fun ProvisioningStepContent(
     when (pairingState) {
         is PairingState.Error -> {
             if (showProvisioningForm) {
-                ProvisioningForm(ssid, password, onSsidChange, onPasswordChange, onBack, onSubmit)
+                ProvisioningForm(
+                    ssid = ssid,
+                    password = password,
+                    onSsidChange = onSsidChange,
+                    onPasswordChange = onPasswordChange,
+                    onBack = onBack,
+                    onSubmit = onSubmit,
+                    onSkipToQuickStart = onSkipToQuickStart
+                )
             } else {
                 val presentation = resolveConnectivityPairingErrorUiModel(OnboardingStep.PROVISIONING, pairingState)
                 PairingErrorStep(
@@ -110,12 +121,22 @@ internal fun ProvisioningStepContent(
                         }
                     },
                     secondaryLabel = presentation.secondaryLabel,
-                    onSecondary = onBack
+                    onSecondary = onBack,
+                    tertiaryLabel = "跳过，直接体验日程",
+                    onTertiary = onSkipToQuickStart
                 )
             }
         }
         is PairingState.Pairing, is PairingState.Success -> ProvisioningProgressContent(pairingState, badge)
-        else -> ProvisioningForm(ssid, password, onSsidChange, onPasswordChange, onBack, onSubmit)
+        else -> ProvisioningForm(
+            ssid = ssid,
+            password = password,
+            onSsidChange = onSsidChange,
+            onPasswordChange = onPasswordChange,
+            onBack = onBack,
+            onSubmit = onSubmit,
+            onSkipToQuickStart = onSkipToQuickStart
+        )
     }
 }
 
@@ -126,7 +147,8 @@ private fun ProvisioningForm(
     onSsidChange: (String) -> Unit,
     onPasswordChange: (String) -> Unit,
     onBack: () -> Unit,
-    onSubmit: () -> Unit
+    onSubmit: () -> Unit,
+    onSkipToQuickStart: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         TitleBlock("配置网络", "输入 Wi‑Fi 信息后，设备会完成写入、联网检查与最终准备。")
@@ -140,6 +162,8 @@ private fun ProvisioningForm(
                 PrimaryPillButton("开始写入", onSubmit, modifier = Modifier.fillMaxWidth(), enabled = ssid.isNotBlank() && password.isNotBlank())
                 Spacer(Modifier.height(10.dp))
                 SecondaryPillButton("返回设备卡片", onBack, modifier = Modifier.fillMaxWidth())
+                Spacer(Modifier.height(10.dp))
+                QuietGhostButton("跳过，直接体验日程", onSkipToQuickStart, modifier = Modifier.fillMaxWidth())
             }
         }
     }
@@ -190,7 +214,8 @@ private fun ProvisioningProgressContent(pairingState: PairingState, badge: Disco
 
 @Composable
 internal fun CompleteStep(
-    host: OnboardingHost,
+    isFinalizing: Boolean = false,
+    errorMessage: String? = null,
     onAcknowledge: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -199,34 +224,42 @@ internal fun CompleteStep(
         Text("一切就绪！", color = OnboardingText, fontSize = 32.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(12.dp))
         Text(
-            text = if (host == OnboardingHost.SIM_CONNECTIVITY) "连接已完成，下一步进入设备连接管理。" else "欢迎进入 SmartSales 主界面。",
+            text = "欢迎进入 SmartSales 主界面。",
             color = OnboardingMuted,
             textAlign = TextAlign.Center
         )
         Spacer(Modifier.height(28.dp))
         FrostedCard(
             modifier = Modifier.fillMaxWidth(),
-            containerColor = if (host == OnboardingHost.FULL_APP) OnboardingBlue.copy(alpha = 0.05f) else OnboardingCard,
-            borderColor = if (host == OnboardingHost.FULL_APP) OnboardingBlue.copy(alpha = 0.20f) else OnboardingCardBorder
+            containerColor = OnboardingBlue.copy(alpha = 0.05f),
+            borderColor = OnboardingBlue.copy(alpha = 0.20f)
         ) {
             Text(
-                text = if (host == OnboardingHost.FULL_APP) "FULL APP HOST" else "SIM CONNECTIVITY HOST",
+                text = "SMARTSALES HOME HANDOFF",
                 color = OnboardingMuted,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold
             )
             Spacer(Modifier.height(10.dp))
             Text(
-                text = if (host == OnboardingHost.SIM_CONNECTIVITY) "完成当前配对后，流转进入连接管理稳态。" else "完成当前引导后，流转进入 SmartSales 主界面。",
+                text = "完成当前引导后，流转进入 SmartSales 主界面，并通过真实抽屉动效展开日程。",
                 color = OnboardingText,
                 lineHeight = 22.sp
             )
         }
         Spacer(Modifier.height(36.dp))
+        errorMessage?.let {
+            OnboardingInlineNotice(it)
+            Spacer(Modifier.height(16.dp))
+        }
         PrimaryPillButton(
-            text = if (host == OnboardingHost.SIM_CONNECTIVITY) "进入连接管理" else "进入首页",
+            text = when {
+                isFinalizing -> "正在同步体验日程..."
+                else -> "进入首页"
+            },
             onClick = onAcknowledge,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isFinalizing
         )
     }
 }

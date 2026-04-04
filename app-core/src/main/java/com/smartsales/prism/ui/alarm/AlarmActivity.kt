@@ -9,20 +9,31 @@ import android.os.Bundle
 import android.util.Log
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
@@ -35,12 +46,18 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.semantics.SemanticsPropertyKey
+import androidx.compose.ui.semantics.SemanticsPropertyReceiver
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
 import com.smartsales.prism.data.notification.AlarmDismissReceiver
 import com.smartsales.prism.domain.notification.NotificationPriority
 import com.smartsales.prism.domain.notification.NotificationService
@@ -48,14 +65,30 @@ import com.smartsales.prism.domain.notification.PrismNotificationChannel
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.delay
 
+val AlarmStackCountKey = SemanticsPropertyKey<Int>("AlarmStackCount")
+var SemanticsPropertyReceiver.alarmStackCount by AlarmStackCountKey
+
+private val AlarmOverlayScrim = Color(0xEB0A0A0C)
+private val AlarmGlassCard = Color(0x0FFFFFFF)
+private val AlarmGlassBorder = Color(0x26FFFFFF)
+private val AlarmHeaderMeta = Color(0xFFAEAEB2)
+private val AlarmCardMeta = Color(0xFF86868B)
+private val AlarmCritical = Color(0xFFFF453A)
+private val AlarmButtonContainer = Color(0x1AFFFFFF)
+private val AlarmCountBadge = Color.White
+private val AlarmCountText = Color(0xFF0A0A0C)
+private val AlarmVibeContainer = Color(0x1AFF453A)
+
+internal fun upsertAlarmStack(existing: List<AlarmItem>, incoming: AlarmItem): List<AlarmItem> {
+    return listOf(incoming) + existing.filterNot { it.taskId == incoming.taskId }
+}
+
 /**
  * 闹钟全屏 Activity
  *
  * 半透明覆盖层，显示任务名称和时间。
- * 支持多个闹钟同时显示 (堆叠)。
- * 5 种关闭方式：知道了按钮、上滑、音量键、通知滑动、通知按钮。
- * 1分钟无操作自动关闭，留"未接提醒"静默通知。
- * launchMode="singleTop" — 新闹钟通过 onNewIntent() 加入栈。
+ * 支持多个闹钟同时显示（堆叠）。
+ * launchMode="singleTop" —— 新闹钟通过 onNewIntent() 进入顶部。
  */
 class AlarmActivity : ComponentActivity() {
 
@@ -75,38 +108,30 @@ class AlarmActivity : ComponentActivity() {
         fun notificationService(): NotificationService
     }
 
-    // 闹钟栈 — 支持多个闹钟同时显示
     private val alarmStack = mutableStateListOf<AlarmItem>()
-
-    // 防止重复 dismiss (用于全局关闭操作)
     private var isDismissing = false
 
-    // 监听来自 AlarmDismissReceiver 的关闭广播
     private val finishReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
-            if (intent.action == ACTION_FINISH_ALARM) {
-                val targetTaskId = intent.getStringExtra(AlarmDismissReceiver.EXTRA_TASK_ID)
-                if (!targetTaskId.isNullOrEmpty()) {
-                    // 关闭特定闹钟
-                    removeAlarmByTaskId(targetTaskId)
-                } else {
-                    // 关闭所有 (fallback: 如果 Receiver 没传 ID)
-                    Log.d(TAG, "收到通用关闭广播，关闭所有闹钟")
-                    finish()
-                }
+            if (intent.action != ACTION_FINISH_ALARM) return
+            val targetTaskId = intent.getStringExtra(AlarmDismissReceiver.EXTRA_TASK_ID)
+            if (!targetTaskId.isNullOrEmpty()) {
+                removeAlarmByTaskId(targetTaskId)
+            } else {
+                Log.d(TAG, "收到通用关闭广播，关闭所有闹钟")
+                finish()
             }
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // 锁屏上显示 + 唤醒屏幕
         setShowWhenLocked(true)
         setTurnScreenOn(true)
         window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
 
         super.onCreate(savedInstanceState)
 
-        // 注册关闭广播
         val filter = IntentFilter(ACTION_FINISH_ALARM)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(finishReceiver, filter, RECEIVER_NOT_EXPORTED)
@@ -114,10 +139,8 @@ class AlarmActivity : ComponentActivity() {
             registerReceiver(finishReceiver, filter)
         }
 
-        // 从 Intent 读取数据并加入栈
         addAlarmFromIntent(intent)
 
-        // 启动持续振动 — 仅当 Activity 成功启动后（Ghost Alarm 修复：振动不在 Receiver 启动）
         val entryPoint = EntryPointAccessors.fromApplication(
             applicationContext,
             NotificationEntryPoint::class.java
@@ -126,9 +149,12 @@ class AlarmActivity : ComponentActivity() {
         Log.d(TAG, "持续振动已启动 (onCreate)")
 
         setContent {
+            BackHandler(enabled = true) {
+                // 锁屏闹钟不允许直接返回离开
+            }
             AlarmStackScreen(
                 alarms = alarmStack,
-                onDismiss = { item -> dismissAlarm(item) },
+                onDismissTop = { dismissAlarm(it) },
                 onAutoDismiss = { autoDismissAll() }
             )
         }
@@ -136,7 +162,6 @@ class AlarmActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        // singleTop: 新闹钟到达时加入栈
         addAlarmFromIntent(intent)
         Log.d(TAG, "onNewIntent: 新闹钟已加入栈，当前数量: ${alarmStack.size}")
     }
@@ -145,12 +170,10 @@ class AlarmActivity : ComponentActivity() {
         super.onDestroy()
         try {
             unregisterReceiver(finishReceiver)
-        } catch (_: Exception) { }
+        } catch (_: Exception) {
+        }
     }
 
-    /**
-     * 音量键关闭所有闹钟
-     */
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         if (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
             Log.d(TAG, "音量键按下，关闭所有闹钟")
@@ -164,12 +187,11 @@ class AlarmActivity : ComponentActivity() {
         val title = intent.getStringExtra(EXTRA_TASK_TITLE) ?: "任务提醒"
         val time = intent.getStringExtra(EXTRA_TIME_TEXT) ?: ""
         val notifId = intent.getStringExtra(EXTRA_NOTIFICATION_ID) ?: ""
-        val tId = intent.getStringExtra(EXTRA_TASK_ID) ?: ""
-
-        // 避免重复添加同一个任务
-        if (tId.isNotEmpty() && alarmStack.none { it.taskId == tId }) {
-            alarmStack.add(AlarmItem(tId, notifId, title, time))
-        }
+        val taskId = intent.getStringExtra(EXTRA_TASK_ID) ?: return
+        val next = AlarmItem(taskId = taskId, notificationId = notifId, title = title, timeText = time)
+        val updated = upsertAlarmStack(alarmStack.toList(), next)
+        alarmStack.clear()
+        alarmStack.addAll(updated)
     }
 
     private fun removeAlarmByTaskId(id: String) {
@@ -180,7 +202,6 @@ class AlarmActivity : ComponentActivity() {
     }
 
     private fun dismissAlarm(item: AlarmItem) {
-        // 用户点击"知道了" -> 关闭单个闹钟
         sendDismissBroadcast(item)
         alarmStack.remove(item)
         if (alarmStack.isEmpty()) {
@@ -191,10 +212,8 @@ class AlarmActivity : ComponentActivity() {
     private fun dismissAllAlarms() {
         if (isDismissing) return
         isDismissing = true
-        
-        // Copy list to avoid concurrent modification during iteration
         val copy = alarmStack.toList()
-        copy.forEach { sendDismissBroadcast(it) }
+        copy.forEach(::sendDismissBroadcast)
         alarmStack.clear()
         finish()
     }
@@ -206,10 +225,7 @@ class AlarmActivity : ComponentActivity() {
 
         val copy = alarmStack.toList()
         copy.forEach { item ->
-            // 停止振动 + 取消原始通知
             sendDismissBroadcast(item)
-            
-            // 留一条静默的"未接提醒"通知
             sendMissedNotification(item)
         }
         alarmStack.clear()
@@ -238,138 +254,321 @@ class AlarmActivity : ComponentActivity() {
                 id = "${item.taskId}-missed",
                 title = "未接提醒: ${item.title}",
                 body = item.timeText,
-                channel = PrismNotificationChannel.TASK_REMINDER_EARLY,  // 静默通知用 EARLY 渠道
+                channel = PrismNotificationChannel.TASK_REMINDER_EARLY,
                 priority = NotificationPriority.LOW
             )
-        } catch (e: Exception) {
-            Log.w(TAG, "未接提醒通知发送失败: ${e.message}")
+        } catch (error: Exception) {
+            Log.w(TAG, "未接提醒通知发送失败: ${error.message}")
         }
     }
 }
 
-// 闹钟项数据模型
-private data class AlarmItem(
+internal data class AlarmItem(
     val taskId: String,
     val notificationId: String,
     val title: String,
     val timeText: String
 )
 
-/**
- * 闹钟堆叠 UI
- * 显示所有激活的闹钟卡片
- */
 @Composable
 private fun AlarmStackScreen(
     alarms: List<AlarmItem>,
-    onDismiss: (AlarmItem) -> Unit,
+    onDismissTop: (AlarmItem) -> Unit,
     onAutoDismiss: () -> Unit
 ) {
-    // 1分钟无操作自动关闭 (每次列表变动重置计时)
     LaunchedEffect(alarms.size) {
+        if (alarms.isEmpty()) return@LaunchedEffect
         delay(AlarmActivity.AUTO_DISMISS_MS)
         onAutoDismiss()
     }
 
+    val primaryAlarm = alarms.firstOrNull() ?: return
+    val secondaryAlarms = alarms.drop(1).take(2)
+    val isStacked = alarms.size > 1
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xCC000000),
-                        Color(0xE6000000),
-                        Color(0xCC000000)
-                    )
-                )
-            ),
-        contentAlignment = Alignment.Center
+            .background(AlarmOverlayScrim)
     ) {
-        LazyColumn(
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(vertical = 40.dp)
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.systemBars)
+                .padding(horizontal = 20.dp, vertical = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            items(alarms, key = { it.taskId }) { item ->
-                AlarmCard(item, onDismiss)
-            }
-        }
-        
-        if (alarms.size > 1) {
-             Text(
-                text = "${alarms.size} 个提醒待处理",
-                color = Color.White.copy(alpha = 0.7f),
-                fontSize = 14.sp,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 24.dp)
+            AlarmHeader(primaryAlarm = primaryAlarm, alarmCount = alarms.size)
+            Spacer(modifier = Modifier.height(28.dp))
+            AlarmCardsStack(
+                alarms = alarms,
+                primaryAlarm = primaryAlarm,
+                secondaryAlarms = secondaryAlarms,
+                isStacked = isStacked,
+                onDismissTop = onDismissTop
             )
         }
     }
 }
 
 @Composable
-private fun AlarmCard(
-    item: AlarmItem,
-    onDismiss: (AlarmItem) -> Unit
-) {
-    // 简单的卡片 UI
-     Column(
+private fun AlarmHeader(primaryAlarm: AlarmItem, alarmCount: Int) {
+    val transition = rememberInfiniteTransition(label = "alarmHeader")
+    val bellRotation = transition.animateFloat(
+        initialValue = -15f,
+        targetValue = 15f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(500, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "alarmBellRotation"
+    )
+    val pulseScale = transition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.8f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = LinearEasing)
+        ),
+        label = "alarmPulseScale"
+    )
+    val pulseAlpha = transition.animateFloat(
+        initialValue = 0.6f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = LinearEasing)
+        ),
+        label = "alarmPulseAlpha"
+    )
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color(0xFF2D2D2D), RoundedCornerShape(16.dp))
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+            .padding(top = 20.dp)
     ) {
-        // 图标
-        Icon(
-            imageVector = Icons.Filled.Notifications,
-            contentDescription = null,
-            tint = Color(0xFFFFB74D),
-            modifier = Modifier.size(48.dp)
-        )
+        Box(
+            modifier = Modifier.size(72.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        scaleX = pulseScale.value
+                        scaleY = pulseScale.value
+                        alpha = pulseAlpha.value
+                    }
+                    .border(2.dp, AlarmCritical, CircleShape)
+            )
+            Box(
+                modifier = Modifier
+                    .size(72.dp)
+                    .clip(CircleShape)
+                    .background(AlarmVibeContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Notifications,
+                    contentDescription = null,
+                    tint = AlarmCritical,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .graphicsLayer { rotationZ = bellRotation.value }
+                )
+            }
+        }
 
-        // 任务标题
+        Spacer(modifier = Modifier.height(24.dp))
+
         Text(
-            text = item.title,
+            text = if (alarmCount > 1) {
+                "有 $alarmCount 个待办已到期"
+            } else {
+                primaryAlarm.title
+            },
             color = Color.White,
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            maxLines = 2
-        )
-
-        // 时间文本
-        Text(
-            text = item.timeText,
-            color = Color(0xB3FFFFFF),
-            fontSize = 16.sp,
+            fontSize = 24.sp,
+            fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center
         )
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 知道了按钮
-        Button(
-            onClick = { onDismiss(item) },
+        Text(
+            text = if (alarmCount > 1) {
+                "请务必尽快处理"
+            } else {
+                "现已到时间 (${primaryAlarm.timeText.ifBlank { "现在" }})"
+            },
+            color = AlarmHeaderMeta,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Normal,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun AlarmCardsStack(
+    alarms: List<AlarmItem>,
+    primaryAlarm: AlarmItem,
+    secondaryAlarms: List<AlarmItem>,
+    isStacked: Boolean,
+    onDismissTop: (AlarmItem) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .semantics { alarmStackCount = alarms.size },
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        AlarmPrimaryCard(
+            item = primaryAlarm,
+            alarmCount = alarms.size,
+            showCountBadge = isStacked,
+            onDismiss = { onDismissTop(primaryAlarm) }
+        )
+
+        secondaryAlarms.forEachIndexed { index, item ->
+            AlarmSecondaryCard(
+                item = item,
+                scale = if (index == 0) 0.96f else 0.92f,
+                translationYOffset = if (index == 0) -8.dp else -16.dp,
+                alpha = if (index == 0) 0.7f else 0.3f
+            )
+        }
+    }
+}
+
+@Composable
+private fun AlarmPrimaryCard(
+    item: AlarmItem,
+    alarmCount: Int,
+    showCountBadge: Boolean,
+    onDismiss: () -> Unit
+) {
+    Box {
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp),
-                shape = RoundedCornerShape(24.dp),
+                .clip(RoundedCornerShape(24.dp))
+                .background(AlarmGlassCard)
+                .border(BorderStroke(0.5.dp, AlarmGlassBorder), RoundedCornerShape(24.dp))
+                .drawBehind {
+                    drawRoundRect(
+                        color = AlarmCritical,
+                        size = androidx.compose.ui.geometry.Size(4.dp.toPx(), size.height),
+                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(8.dp.toPx(), 8.dp.toPx())
+                    )
+                }
+                .padding(start = 20.dp, top = 20.dp, end = 20.dp, bottom = 20.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = item.title,
+                        color = Color.White,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        lineHeight = 24.sp
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = item.timeText.ifBlank { "请尽快处理" },
+                        color = AlarmCardMeta,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Normal
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Button(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color(0xFFFFB74D)
-                )
+                    containerColor = AlarmButtonContainer,
+                    contentColor = Color.White
+                ),
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Text(
                     text = "知道了",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color.Black
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold
                 )
             }
+        }
+
+        if (showCountBadge) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 10.dp, end = 10.dp)
+                    .size(24.dp)
+                    .background(AlarmCountBadge, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = alarmCount.toString(),
+                    color = AlarmCountText,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AlarmSecondaryCard(
+    item: AlarmItem,
+    scale: Float,
+    translationYOffset: androidx.compose.ui.unit.Dp,
+    alpha: Float
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+                this.translationY = translationYOffset.toPx()
+                this.alpha = alpha
+            }
+            .clip(RoundedCornerShape(24.dp))
+            .background(AlarmGlassCard)
+            .border(BorderStroke(0.5.dp, AlarmGlassBorder), RoundedCornerShape(24.dp))
+            .drawBehind {
+                drawRoundRect(
+                    color = AlarmCritical,
+                    size = androidx.compose.ui.geometry.Size(4.dp.toPx(), size.height),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(8.dp.toPx(), 8.dp.toPx())
+                )
+            }
+            .padding(start = 20.dp, top = 20.dp, end = 20.dp, bottom = 20.dp)
+    ) {
+        Text(
+            text = item.title,
+            color = Color.White,
+            fontSize = 17.sp,
+            fontWeight = FontWeight.SemiBold,
+            lineHeight = 24.sp
+        )
+        if (item.timeText.isNotBlank()) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = item.timeText,
+                color = AlarmCardMeta,
+                fontSize = 13.sp
+            )
+        }
     }
 }

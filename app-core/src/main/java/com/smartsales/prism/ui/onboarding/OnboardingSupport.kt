@@ -15,7 +15,9 @@ internal data class OnboardingVisualCaptureState(
     val consultationCaptureState: OnboardingConsultationCaptureState =
         OnboardingConsultationCaptureState.COMPLETE,
     val profileCaptureState: OnboardingProfileCaptureState =
-        OnboardingProfileCaptureState.EXTRACTED
+        OnboardingProfileCaptureState.EXTRACTED,
+    val quickStartCaptureState: OnboardingQuickStartCaptureState =
+        OnboardingQuickStartCaptureState.UPDATED
 )
 
 enum class OnboardingExitPolicy {

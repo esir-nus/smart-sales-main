@@ -78,6 +78,38 @@ class SimShellHandoffTest {
     }
 
     @Test
+    fun `post onboarding scheduler handoff only auto opens once when shell is clear`() {
+        assertTrue(
+            shouldAutoOpenRuntimeSchedulerPostOnboardingHandoff(
+                state = RuntimeShellState(),
+                isImeVisible = false,
+                handoffPending = true
+            )
+        )
+        assertFalse(
+            shouldAutoOpenRuntimeSchedulerPostOnboardingHandoff(
+                state = RuntimeShellState(activeDrawer = RuntimeDrawerType.AUDIO),
+                isImeVisible = false,
+                handoffPending = true
+            )
+        )
+        assertFalse(
+            shouldAutoOpenRuntimeSchedulerPostOnboardingHandoff(
+                state = RuntimeShellState(),
+                isImeVisible = true,
+                handoffPending = true
+            )
+        )
+        assertFalse(
+            shouldAutoOpenRuntimeSchedulerPostOnboardingHandoff(
+                state = RuntimeShellState(),
+                isImeVisible = false,
+                handoffPending = false
+            )
+        )
+    }
+
+    @Test
     fun `buildSimDynamicIslandItems keeps idle fallback when no tasks exist`() {
         val items = buildSimDynamicIslandItems(
             sessionTitle = "",

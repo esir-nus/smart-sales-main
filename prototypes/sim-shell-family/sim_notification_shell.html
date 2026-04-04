@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SIM Notification UI Prototype</title>
+    <style>
+        :root {
+            --status-bar-height: 44px;
+            --bg-app: #0D0D12;
+            --monolith-bg: #020205; 
+            --color-accent-blue: #0A84FF; 
+            --text-primary: #FFFFFF;
+            --text-secondary: #86868B;
+            --text-muted: #AEAEB2;
+            --font-cn: "Inter", "PingFang SC", system-ui, sans-serif;
+            
+            /* The Core Glass Materials */
+            --surface-drawer: rgba(20, 20, 22, 0.85); /* Standard dark frosted */
+            --surface-alarm: rgba(10, 10, 12, 0.92); /* Deeper alarm overlay */
+            --surface-card: rgba(255, 255, 255, 0.05); /* Standard item card */
+            --border-glass: rgba(255, 255, 255, 0.15);
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            
+            /* Notification & Alarm Chroma Semantic Tokens */
+            --urgent-critical: #FF453A; /* 🚨 Deadline 0m */
+            --urgent-high: #FF9F0A; /* ⚠️ Early -5m */
+            --urgent-normal: #0A84FF; /* ⏰ Early -15m */
+            --success-green: #32D74B;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        ::-webkit-scrollbar { display: none; }
+
+        body {
+            background: #000; color: var(--text-primary);
+            font-family: var(--font-cn); display: flex;
+            justify-content: center; align-items: center;
+            min-height: 100vh; overflow: hidden;
+        }
+
+        /* Review Toggles Overlay */
+        .review-controls {
+            position: fixed; left: 20px; top: 20px; width: 260px;
+            background: #111; border: 1px solid #333; padding: 16px;
+            border-radius: 12px; z-index: 1000;
+            overflow-y: auto; max-height: 90vh;
+        }
+        .review-controls h3 {
+            font-size: 13px; color: #888; margin-bottom: 8px; margin-top: 16px;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .review-controls h3:first-child { margin-top: 0; }
+        .review-controls button {
+            display: block; width: 100%; text-align: left;
+            background: rgba(255,255,255,0.05); color: #FFF; border: none;
+            padding: 10px 12px; margin-bottom: 4px; border-radius: 6px;
+            cursor: pointer; font-size: 13px; transition: all 0.2s;
+        }
+        .review-controls button:hover, .review-controls button.active {
+            background: rgba(10, 132, 255, 0.2); color: var(--color-accent-blue);
+        }
+
+        /* Emulator Frame */
+        #emulator-container {
+            width: 390px; height: 844px; background: var(--bg-app);
+            border-radius: 40px; position: relative; border: 8px solid #222;
+            box-shadow: 0 0 60px rgba(0,0,0,0.8); overflow: hidden;
+            display: flex; flex-direction: column;
+        }
+
+        /* Floor layer - Aurora */
+        .layer-floor {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 0; background: #0D0D12; overflow: hidden;
+        }
+        .blob { position: absolute; border-radius: 50%; filter: blur(80px); mix-blend-mode: screen; }
+        .blob-1 { width: 250px; height: 250px; background: rgba(94, 92, 230, 0.18); top: 10%; left: -10%; animation: drift1 20s infinite alternate ease-in-out; }
+        .blob-2 { width: 280px; height: 280px; background: rgba(10, 132, 255, 0.15); top: 50%; left: 40%; animation: drift2 25s infinite alternate ease-in-out; }
+        @keyframes drift1 { 0% { transform: translate(0, 0); } 100% { transform: translate(40px, -20px); } }
+        @keyframes drift2 { 0% { transform: translate(0, 0); } 100% { transform: translate(-30px, 30px); } }
+
+        /* The Shell Structure */
+        .sim-shell {
+            position: absolute; top: var(--status-bar-height); left: 0; right: 0; bottom: 0;
+            z-index: 10; display: flex; flex-direction: column;
+        }
+
+        /* Top Monolith */
+        .top-monolith {
+            height: 64px; background: var(--monolith-bg);
+            display: flex; align-items: center; justify-content: space-between;
+            padding-left: 16px; padding-right: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.8); z-index: 40; position: relative;
+        }
+        .icon-btn { background: none; border: none; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 4px; }
+        .svg-icon { stroke: currentColor; fill: none; stroke-width: 2; width: 20px; height: 20px; }
+        
+        .dynamic-island { font-size: 13px; font-weight: 600; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px; }
+        .island-text { background-image: linear-gradient(135deg, #FFFFFF 0%, #A0A0A5 100%); -webkit-background-clip: text; color: transparent; }
+        .dynamic-island .island-text::before { content: "Home Shell"; }
+        .island-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; background: rgba(255, 255, 255, 0.8); box-shadow: 0 0 6px rgba(255, 255, 255, 0.5); }
+
+        .center-canvas-container { flex: 1; position: relative; z-index: 10; display: flex; align-items: center; justify-content: center;}
+        
+        /* Base Scene Text */
+        .mock-app-content { color: var(--text-muted); font-size: 14px; opacity: 0.5; text-align: center; }
+
+        /* ---- COMPONENTS START ---- */
+        
+        /* 1. In-App Banner (Early Warnings) */
+        .in-app-banner-container {
+            position: absolute; top: 12px; left: 16px; right: 16px;
+            z-index: 100;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
+            transform: translateY(-150%); opacity: 0; pointer-events: none;
+        }
+        
+        .sim-shell[data-view="4-banner-early"] .in-app-banner-container.l1,
+        .sim-shell[data-view="5-banner-high"] .in-app-banner-container.l2 {
+            transform: translateY(0); opacity: 1; pointer-events: auto;
+        }
+
+        .in-app-banner {
+            background: var(--surface-drawer);
+            backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
+            border: 0.5px solid var(--border-subtle);
+            border-radius: 20px;
+            padding: 16px;
+            display: flex; gap: 14px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            position: relative; overflow: hidden;
+            align-items: center;
+        }
+        
+        .banner-icon-area {
+            width: 36px; height: 36px; border-radius: 18px;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+            position: relative;
+        }
+        .banner-icon-area svg { width: 18px; height: 18px; position: relative; z-index: 2;}
+        .banner-icon-bg { position: absolute; top: 0; left: 0; right: 0; bottom: 0; border-radius: 50%; opacity: 0.15; z-index: 1;}
+        
+        .in-app-banner-container.l1 .banner-icon-area { color: var(--urgent-normal); }
+        .in-app-banner-container.l1 .banner-icon-bg { background: var(--urgent-normal); }
+        
+        .in-app-banner-container.l2 .banner-icon-area { color: var(--urgent-high); }
+        .in-app-banner-container.l2 .banner-icon-bg { background: var(--urgent-high); }
+        
+        .banner-text-area { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+        .banner-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+        .banner-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.4; display: flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums;}
+
+        /* 2. Full-Screen Alarm Overlay */
+        .alarm-overlay {
+            position: absolute; top: -44px; left: 0; right: 0; bottom: 0;
+            background: var(--surface-alarm);
+            backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+            z-index: 200;
+            display: flex; flex-direction: column;
+            padding: 64px 20px 40px 20px;
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.5s;
+        }
+        .sim-shell[data-view="1-alarm-single"] .alarm-overlay,
+        .sim-shell[data-view="2-alarm-stack"] .alarm-overlay {
+            opacity: 1; pointer-events: auto;
+        }
+        
+        .alarm-header-area { display: flex; flex-direction: column; align-items: center; margin-bottom: 40px; margin-top: 40px;}
+        
+        .alarm-vibe-icon {
+            width: 72px; height: 72px; border-radius: 36px;
+            background: rgba(255, 69, 58, 0.1);
+            color: var(--urgent-critical);
+            display: flex; align-items: center; justify-content: center;
+            margin-bottom: 24px;
+            position: relative;
+        }
+        .alarm-vibe-icon svg { width: 32px; height: 32px; }
+        
+        .sim-shell[data-view="1-alarm-single"] .alarm-vibe-icon svg,
+        .sim-shell[data-view="2-alarm-stack"] .alarm-vibe-icon svg {
+             animation: shake-bell 0.5s infinite;
+        }
+        
+        @keyframes shake-bell {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(15deg); }
+            50% { transform: rotate(0deg); }
+            75% { transform: rotate(-15deg); }
+        }
+
+        .pulse-ring {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            border-radius: 50%; border: 2px solid var(--urgent-critical);
+            opacity: 0;
+        }
+        .sim-shell[data-view="1-alarm-single"] .pulse-ring,
+        .sim-shell[data-view="2-alarm-stack"] .pulse-ring {
+            animation: pulse-ring-anim 2s infinite cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        
+        @keyframes pulse-ring-anim {
+            0% { transform: scale(1); opacity: 0.6; }
+            100% { transform: scale(1.8); opacity: 0; }
+        }
+
+        .alarm-main-title { font-size: 24px; font-weight: 600; letter-spacing: 0.5px; margin-bottom: 8px; text-align: center;}
+        .alarm-main-meta { font-size: 15px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+        
+        /* Stack specific */
+        .alarm-badge-count {
+            position: absolute; top: -6px; right: -6px;
+            background: var(--text-primary); color: #000;
+            font-size: 12px; font-weight: 700; width: 24px; height: 24px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+
+        /* Alarm Cards Area */
+        .alarm-cards-container {
+            display: flex; flex-direction: column; gap: 12px;
+            flex: 1; overflow-y: auto; padding-bottom: 20px;
+        }
+
+        .glass-alarm-card {
+            background: rgba(255, 255, 255, 0.06);
+            border: 0.5px solid var(--border-glass);
+            border-radius: 24px;
+            padding: 20px;
+            display: flex; flex-direction: column; gap: 12px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 20px 40px rgba(0,0,0,0.4);
+            position: relative; overflow: hidden;
+            transition: all 0.3s;
+        }
+        
+        .glass-alarm-card::before {
+            content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 4px;
+            background: var(--urgent-critical); box-shadow: 2px 0 10px rgba(255, 69, 58, 0.5);
+        }
+        
+        .ac-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .ac-title { font-size: 17px; font-weight: 600; color: var(--text-primary); line-height: 1.4; padding-left: 4px;}
+        .ac-meta { font-size: 13px; color: var(--text-secondary); margin-top: 6px; padding-left: 4px;}
+        
+        .ac-actions { display: flex; gap: 12px; margin-top: 8px;}
+        .ac-btn-dismiss {
+            flex: 1; background: rgba(255, 255, 255, 0.1); border: none; border-radius: 12px;
+            color: var(--text-primary); font-size: 15px; font-weight: 600; padding: 14px 0;
+            display: flex; justify-content: center; align-items: center;
+        }
+        .ac-btn-dismiss:active { background: rgba(255,255,255,0.15); }
+
+        /* Secondary card in stack is slightly dimmed */
+        .glass-alarm-card.stacked-secondary {
+            opacity: 0.7; transform: scale(0.96) translateY(-8px);
+            z-index: 0; margin-bottom: -16px;
+        }
+        /* Bring active card forward */
+        .glass-alarm-card.stacked-primary { z-index: 10; }
+
+        /* 3. Android Shade Tray Elements (Simulated inside Canvas) */
+        .shade-tray-container {
+            position: absolute; top: 80px; left: 16px; right: 16px;
+            display: flex; flex-direction: column; gap: 12px;
+            opacity: 0; pointer-events: none;
+        }
+        .sim-shell[data-view="6-tray-early"] .shade-tray-container,
+        .sim-shell[data-view="7-tray-deadline"] .shade-tray-container { opacity: 1; }
+
+        .sys-notification-card {
+            background: rgba(40, 40, 42, 0.9);
+            border-radius: 16px; padding: 12px 14px;
+            display: none; flex-direction: column; gap: 8px;
+        }
+        
+        .sim-shell[data-view="6-tray-early"] .sys-notification-card.c-early { display: flex; }
+        .sim-shell[data-view="7-tray-deadline"] .sys-notification-card.c-deadline { display: flex; }
+
+        .sn-header { display: flex; align-items: center; justify-content: space-between; font-size: 12px; }
+        .sn-app-info { display: flex; align-items: center; gap: 6px; }
+        .sn-app-icon { width: 16px; height: 16px; border-radius: 4px; background: var(--color-accent-blue); display: flex; justify-content: center; align-items: center; color: white;}
+        .sn-app-icon svg { width: 10px; height: 10px; }
+        .sn-time { color: var(--text-muted); }
+        .sn-body { display: flex; flex-direction: column; gap: 2px; padding-left: 2px;}
+        .sn-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
+        .sn-text { font-size: 14px; color: var(--text-secondary); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;}
+        .sn-actions { display: flex; gap: 6px; margin-top: 4px;}
+        .sn-action-btn { background: rgba(255,255,255,0.08); border: none; color: var(--text-primary); border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: 500;}
+
+        .c-deadline .sn-app-icon { background: var(--urgent-critical); }
+        /* VIEW STATES MAPPING */
+        .state-viewable { display: none; }
+        
+    </style>
+</head>
+<body>
+    <div class="review-controls">
+        <h3>1. Full-Screen Alarm</h3>
+        <button id="btn-1" onclick="setView('1-alarm-single', this)">1. Single Deadline (0m)</button>
+        <button id="btn-2" onclick="setView('2-alarm-stack', this)">2. Stacked Alarms (2+)</button>
+
+        <h3>2. Early Warning Banner</h3>
+        <button id="btn-4" onclick="setView('4-banner-early', this)">3. Banner (-15m) Blue</button>
+        <button id="btn-5" onclick="setView('5-banner-high', this)">4. Banner (-5m) Orange</button>
+
+        <h3>3. Notification Shade Tray</h3>
+        <button id="btn-6" onclick="setView('6-tray-early', this)">5. Tray: Early Warning</button>
+        <button id="btn-7" onclick="setView('7-tray-deadline', this)">6. Tray: Deadline Alarm</button>
+        
+        <div style="margin-top:24px;"></div>
+        <button id="btn-0" class="active" onclick="setView('0-baseline', this)">0. Reset Shell Baseline</button>
+    </div>
+
+    <div id="emulator-container">
+        <!-- System Status Bar -->
+        <div class="system-status-bar" style="position: absolute; top: 0; left: 0; right: 0; height: var(--status-bar-height); z-index: 100; display: flex; justify-content: space-between; align-items: center; padding: 0 24px; font-size: 15px; font-weight: 600; color: var(--text-primary); pointer-events: none;">
+            <span>10:30</span>
+            <div style="display: flex; gap: 6px; align-items: center;">
+                <span style="font-size: 13px;">5G</span>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M17 4h-3V2h-4v2H7v18h10V4z"/></svg>
+            </div>
+        </div>
+
+        <div class="layer-floor"><div class="blob blob-1"></div><div class="blob blob-2"></div></div>
+
+        <!-- App Shell Foundation -->
+        <div id="sim-shell" class="sim-shell" data-view="0-baseline">
+            
+            <header class="top-monolith">
+                <div class="top-left"><button class="icon-btn borderless"><svg class="svg-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 8 12 12 14 14"></polyline></svg></button></div>
+                <div class="top-center"><div class="dynamic-island"><div class="island-dot"></div><span class="island-text"></span></div></div>
+                <div class="top-right"><button class="icon-btn borderless"><svg class="svg-icon" viewBox="0 0 24 24"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg></button></div>
+            </header>
+
+            <main class="center-canvas-container">
+                <div class="mock-app-content">SmartSales CRM <br/> Default Workspace Background</div>
+                
+                <!-- SURFACE 3: Shade Tray (Simulated inline) -->
+        <div class="shade-tray-container">
+            <!-- Shade notification: Early Warning -->
+            <div class="sys-notification-card c-early">
+                <div class="sn-header">
+                    <div class="sn-app-info">
+                        <div class="sn-app-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 8 12 12 14 14"></polyline></svg></div>
+                        <span>SmartSales</span>
+                    </div>
+                    <span class="sn-time">14:45</span>
+                </div>
+                <div class="sn-body">
+                    <div class="sn-title">15分钟后开始</div>
+                    <div class="sn-text">李总报价方案宣讲 • 提前准备资料</div>
+                </div>
+            </div>
+
+            <!-- Shade notification: Deadline -->
+            <div class="sys-notification-card c-deadline">
+                <div class="sn-header">
+                    <div class="sn-app-info">
+                        <div class="sn-app-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg></div>
+                        <span>SmartSales</span>
+                    </div>
+                    <span class="sn-time">15:00</span>
+                </div>
+                <div class="sn-body">
+                    <div class="sn-title">李总报价方案宣讲</div>
+                    <div class="sn-text">包含3份附件需要准备详情</div>
+                    <div class="sn-actions">
+                        <button class="sn-action-btn">知道了</button>
+                    </div>
+                </div>
+            </div>
+            
+
+        </div>
+        <!-- (Close Shade Tray Container) -->
+
+        <!-- SURFACE 1: Full-Screen Alarm Overlay -->
+        <div class="alarm-overlay">
+            
+            <div class="alarm-header-area">
+                <div class="alarm-vibe-icon">
+                    <div class="pulse-ring"></div>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                </div>
+                <div class="alarm-main-title state-viewable" style="display:block;">李总报价方案宣讲</div>
+                <div class="alarm-main-title state-viewable" style="display:none;">有 3 个待办已到期</div>
+                <div class="alarm-main-meta state-viewable" style="display:block;">现已到时间 (15:00)</div>
+                <div class="alarm-main-meta state-viewable" style="display:none;">请务必尽快处理</div>
+            </div>
+
+            <div class="alarm-cards-container">
+                
+                <!-- Card 1 -->
+                <div class="glass-alarm-card stacked-primary state-viewable" style="display:flex;">
+                    <div class="alarm-badge-count state-viewable" style="display:none;">3</div>
+                    <div class="ac-header">
+                        <div>
+                            <div class="ac-title">李总报价方案宣讲</div>
+                            <div class="ac-meta">包含3份附件需要准备</div>
+                        </div>
+                    </div>
+                    <div class="ac-actions state-viewable" style="display:flex;">
+                        <button class="ac-btn-dismiss">知道了</button>
+                    </div>
+                </div>
+
+                <!-- Stacked secondary representation -->
+                <div class="glass-alarm-card stacked-secondary state-viewable" style="display:none;">
+                    <div class="ac-header">
+                        <div>
+                            <div class="ac-title">更新合同条款审查</div>
+                            <div class="ac-meta">法务部协同处理</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-alarm-card stacked-secondary state-viewable" style="display:none; z-index:-1; transform: scale(0.92) translateY(-16px); opacity:0.3; margin-bottom:0;">
+                    <div class="ac-header">
+                        <div>
+                            <div class="ac-title">王建国日常回访</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        
+        <!-- SURFACE 2: In-App Banners -->
+        <div class="in-app-banner-container l1">
+            <div class="in-app-banner">
+                <div class="banner-icon-area">
+                    <div class="banner-icon-bg"></div>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                </div>
+                <div class="banner-text-area">
+                    <div class="banner-title">15分钟后开始</div>
+                    <div class="banner-desc">
+                        <span>李总报价方案宣讲</span>
+                        <span style="opacity:0.5; font-size:10px;">•</span>
+                        <span>提前准备资料</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="in-app-banner-container l2">
+            <div class="in-app-banner">
+                <div class="banner-icon-area" style="color: var(--urgent-high);">
+                    <div class="banner-icon-bg" style="background: var(--urgent-high);"></div>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                </div>
+                <div class="banner-text-area">
+                    <div class="banner-title">会议即将开始 (5分钟)</div>
+                    <div class="banner-desc">
+                        <span>李总报价方案宣讲</span>
+                        <span style="opacity:0.5; font-size:10px;">•</span>
+                        <span>点击进入会议大板</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        
+            </main>
+        </div>
+    </div>
+
+    <script>
+        function setView(viewName, btnElem) {
+            const shell = document.getElementById('sim-shell');
+            shell.setAttribute('data-view', viewName);
+            
+            const buttons = document.querySelectorAll('.review-controls button');
+            buttons.forEach(b => b.classList.remove('active'));
+            btnElem.classList.add('active');
+
+            // Handle alarm specific text visibility based on single vs stack
+            const isStack = viewName === '2-alarm-stack';
+            const alarmTitles = document.querySelectorAll('.alarm-main-title');
+            const alarmMetas = document.querySelectorAll('.alarm-main-meta');
+            const badgeCount = document.querySelector('.alarm-badge-count');
+            const secondaryCards = document.querySelectorAll('.stacked-secondary');
+            
+            if (alarmTitles.length > 1) {
+                alarmTitles[0].style.display = isStack ? 'none' : 'block';
+                alarmTitles[1].style.display = isStack ? 'block' : 'none';
+                alarmMetas[0].style.display = isStack ? 'none' : 'block';
+                alarmMetas[1].style.display = isStack ? 'block' : 'none';
+                
+                if (badgeCount) badgeCount.style.display = isStack ? 'flex' : 'none';
+                secondaryCards.forEach(c => c.style.display = isStack ? 'flex' : 'none');
+            }
+        }
+    </script>
+</body>
+</html>

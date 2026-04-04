@@ -1,8 +1,30 @@
-# Huawei HarmonyOS / EMUI Platform Guide
+# Huawei HarmonyOS / EMUI Compatibility Guide for the Android App
 
-> **Purpose**: Actionable reference for developing on Huawei HarmonyOS (EMUI).
+> **Purpose**: Actionable reference for the current Android app running on Huawei/Honor/Harmony devices.
 > **Sources**: [HarmonyOS Guides](https://developer.huawei.com/consumer/cn/doc/harmonyos-guides/application-dev-guide), Industry Knowledge (DontKillMyApp).
-> **Last Updated**: 2026-02-11
+> **Last Updated**: 2026-04-04
+> **Governance Note**: This file now documents the legacy Android-app compatibility path on Huawei/Honor/Harmony devices. It does not define the native Harmony implementation strategy.
+
+---
+
+## Scope Rule
+
+Use this file when the repo is shipping the existing Android app onto Huawei/Honor/Harmony devices and needs operational compatibility guidance.
+
+This file is the legacy Android-app compatibility path.
+
+It is **not**:
+
+- the native Harmony product strategy
+- the owner doc for future Harmony-native code
+- permission to mix native Harmony artifacts into the current Android source tree
+
+See also:
+
+- `docs/specs/platform-governance.md`
+- `docs/reference/platform-targets.md`
+- `docs/platforms/android/notifications.md`
+- `docs/platforms/harmony/notifications.md`
 
 ---
 
@@ -57,7 +79,7 @@ HarmonyOS has a dual permission model (Android + Harmony). For Android apps:
 HarmonyOS has a dedicated system for alarms called "Agent-powered Reminders" (代理提醒). This allows the system to post notifications even if the app process is dead.
 *   **Pros**: 100% reliability.
 *   **Cons**: Requires native HarmonyOS integration (not standard Android `AlarmManager`) and specific permission application to Huawei.
-*   **Android App Strategy**: Stick to `AlarmManager.setAlarmClock()` + "Manage Manually" whitelist.
+*   **Android App Strategy**: Stick to `AlarmManager.setAlarmClock()` + "Manage Manually" whitelist. In this repo, this remains the only shipped Harmony-device path for the Android app.
 
 ---
 
@@ -87,11 +109,12 @@ For reliable operation on Huawei/Honor devices:
 
 ## 6. Debug Commands
 
-**Launch Settings Intent** (Try these to open settings programmatically):
+**Launch Settings Intent** (Try these in this order to open settings programmatically):
 ```kotlin
 // ComponentName for various EMUI versions
-ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity")
 ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.appcontrol.activity.StartupAppControlActivity")
+ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity")
+ComponentName("com.huawei.systemmanager", "com.huawei.systemmanager.optimize.process.ProtectActivity")
 ```
 
 **Check Package State**:

@@ -2,6 +2,7 @@ package com.smartsales.core.pipeline
 
 import com.smartsales.core.context.ContextDepth
 import com.smartsales.prism.domain.scheduler.CreateTasksParams
+import com.smartsales.prism.domain.scheduler.CreateVagueTaskParams
 import com.smartsales.prism.domain.scheduler.RescheduleTaskParams
 import com.smartsales.prism.domain.scheduler.ScheduledTask
 
@@ -9,6 +10,30 @@ sealed interface SchedulerTaskCommand {
     data class CreateTasks(
         val params: CreateTasksParams
     ) : SchedulerTaskCommand
+
+    data class CreateVagueTask(
+        val params: CreateVagueTaskParams
+    ) : SchedulerTaskCommand
+
+    sealed interface CreateOperation {
+        data class Exact(
+            val params: CreateTasksParams
+        ) : CreateOperation
+
+        data class Vague(
+            val params: CreateVagueTaskParams
+        ) : CreateOperation
+    }
+
+    data class CreateBatch(
+        val operations: List<CreateOperation>
+    ) : SchedulerTaskCommand {
+        init {
+            require(operations.isNotEmpty()) {
+                "CreateBatch must contain at least one create operation"
+            }
+        }
+    }
 
     data class DeleteTask(
         val targetTitle: String

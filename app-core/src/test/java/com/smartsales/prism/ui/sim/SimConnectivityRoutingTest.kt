@@ -164,7 +164,7 @@ class SimConnectivityRoutingTest {
     }
 
     @Test
-    fun `handleRuntimeConnectivitySetupCompleted emits success telemetry`() {
+    fun `handleRuntimeConnectivitySetupCompleted returns to home and emits success telemetry`() {
         val telemetry = mutableListOf<Pair<String, String>>()
 
         val updated = handleRuntimeConnectivitySetupCompleted(
@@ -175,10 +175,11 @@ class SimConnectivityRoutingTest {
             emitTelemetry = { summary, detail -> telemetry += summary to detail }
         )
 
-        assertEquals(RuntimeConnectivitySurface.MANAGER, updated.activeConnectivitySurface)
+        assertEquals(null, updated.activeConnectivitySurface)
         assertFalse(updated.isForcedFirstLaunchOnboarding)
         assertEquals(SIM_CONNECTIVITY_SETUP_COMPLETED_SUMMARY, telemetry.single().first)
         assertTrue(telemetry.single().second.contains("source=pairing_success"))
+        assertTrue(telemetry.single().second.contains("target=HOME"))
     }
 
     @Test

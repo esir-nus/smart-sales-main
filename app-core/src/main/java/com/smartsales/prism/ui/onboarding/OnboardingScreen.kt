@@ -6,8 +6,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.smartsales.prism.domain.pairing.DiscoveredBadge
+import kotlinx.coroutines.launch
 
 @Composable
 fun OnboardingScreen(
@@ -38,6 +40,14 @@ fun OnboardingCoordinator(
     var discoveredBadge by remember(host) { mutableStateOf<DiscoveredBadge?>(null) }
     var wifiSsid by remember(host) { mutableStateOf("") }
     var wifiPassword by remember(host) { mutableStateOf("") }
+    var completionError by remember(host) { mutableStateOf<String?>(null) }
+    var isCompleting by remember(host) { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val enterQuickStart = {
+        pairingViewModel.cancelPairing()
+        completionError = null
+        currentStep = OnboardingStep.SCHEDULER_QUICK_START
+    }
 
     LaunchedEffect(host) {
         interactionViewModel.bindHost(host)
@@ -48,8 +58,9 @@ fun OnboardingCoordinator(
         host = host,
         currentStep = currentStep,
         exitPolicy = exitPolicy,
+        showExitAction = false,
         onExit = {
-            interactionViewModel.cancelActiveRecording()
+            interactionViewModel.resetInteractionState()
             pairingViewModel.cancelPairing()
             if (host == OnboardingHost.SIM_CONNECTIVITY) {
                 onExit()
@@ -77,8 +88,14 @@ fun OnboardingCoordinator(
                 onContinue = { currentStep = nextOnboardingStep(it, host) }
             )
 
-            OnboardingStep.HARDWARE_WAKE -> HardwareWakeStep(
+            OnboardingStep.SCHEDULER_QUICK_START -> SchedulerQuickStartStep(
+                viewModel = interactionViewModel,
                 onContinue = { currentStep = nextOnboardingStep(it, host) }
+            )
+
+            OnboardingStep.HARDWARE_WAKE -> HardwareWakeStep(
+                onContinue = { currentStep = nextOnboardingStep(it, host) },
+                onSkipToQuickStart = enterQuickStart
             )
 
             OnboardingStep.SCAN -> ScanStep(
@@ -120,16 +137,28 @@ fun OnboardingCoordinator(
                     discoveredBadge = null
                     currentStep = OnboardingStep.SCAN
                 },
+                onSkipToQuickStart = enterQuickStart,
                 onComplete = {
                     currentStep = nextOnboardingStep(it, host)
                 }
             )
 
             OnboardingStep.COMPLETE -> CompleteStep(
-                host = host,
+                isFinalizing = isCompleting,
+                errorMessage = completionError,
                 onAcknowledge = {
-                    pairingViewModel.cancelPairing()
-                    onComplete()
+                    completionError = null
+                    scope.launch {
+                        isCompleting = true
+                        val commitError = interactionViewModel.finalizeFullAppCompletion()
+                        isCompleting = false
+                        if (commitError != null) {
+                            completionError = commitError
+                            return@launch
+                        }
+                        pairingViewModel.cancelPairing()
+                        onComplete()
+                    }
                 }
             )
         }
@@ -145,6 +174,7 @@ internal fun OnboardingStaticScreen(
         host = state.host,
         currentStep = state.step,
         exitPolicy = OnboardingExitPolicy.ALLOW_EXIT,
+        showExitAction = false,
         animateStepContent = false,
         onExit = onExit
     ) {
@@ -156,6 +186,9 @@ internal fun OnboardingStaticScreen(
             )
             OnboardingStep.VOICE_HANDSHAKE_PROFILE -> VoiceHandshakeProfileStaticStep(
                 captureState = state.profileCaptureState
+            )
+            OnboardingStep.SCHEDULER_QUICK_START -> SchedulerQuickStartStaticStep(
+                captureState = state.quickStartCaptureState
             )
             OnboardingStep.HARDWARE_WAKE -> HardwareWakeStep(onContinue = {})
             OnboardingStep.SCAN -> ScanStepContent(
@@ -180,13 +213,11 @@ internal fun OnboardingStaticScreen(
                 onPasswordChange = {},
                 onBack = {},
                 onRetryScan = {},
+                onSkipToQuickStart = {},
                 onSubmit = {},
                 onRetryProvisioning = {}
             )
-            OnboardingStep.COMPLETE -> CompleteStep(
-                host = state.host,
-                onAcknowledge = {}
-            )
+            OnboardingStep.COMPLETE -> CompleteStep(onAcknowledge = {})
         }
     }
 }

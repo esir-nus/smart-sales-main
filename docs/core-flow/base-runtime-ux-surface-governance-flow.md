@@ -3,7 +3,7 @@
 > **Role**: Core Flow
 > **Authority**: Primary UX source of truth for the current base-runtime app
 > **Status**: Active
-> **Last Updated**: 2026-04-02
+> **Last Updated**: 2026-04-03
 > **Scope**: Current shipped/shared base-runtime surfaces, sections, elements, and cross-surface interaction rules
 > **Product North Star**: [`SmartSales_PRD.md`](../../SmartSales_PRD.md)
 > **Supporting Docs**: [`docs/specs/prism-ui-ux-contract.md`](../specs/prism-ui-ux-contract.md), [`docs/specs/style-guide.md`](../specs/style-guide.md), [`docs/specs/ui_element_registry.md`](../specs/ui_element_registry.md), feature `docs/cerb-ui/**`, feature `docs/cerb/**`
@@ -91,6 +91,7 @@ Element rows use this schema:
 5. Shared shell continuity is preserved by keeping the header family and composer family stable while the center canvas changes.
 6. Ambient/system guidance may appear inline or as support surfaces, but it must not become a second competing conversation thread.
 7. Status-bar and navigation-bar handling must follow real inset ownership, not prototype hardcoding.
+8. Shared shell surfaces take explicit shared contracts and shell-owned adjunct state; they must not recover runtime-specific behavior by defaulting to legacy wrapper owners or by downcasting to a concrete SIM/base-runtime ViewModel.
 
 ---
 
@@ -234,7 +235,7 @@ Purpose: bottom drawer for inventory, manual sync/transcribe/delete actions, and
 
 ```text
 ┌──────────────────────────────────────────────┐
-│ browse grip / title / capsule / connectivity │  UX.AUDIO.HEADER
+│ browse grip / title / capsule                 │  UX.AUDIO.HEADER
 ├──────────────────────────────────────────────┤
 │ helper rows + audio card list                │  UX.AUDIO.BROWSE
 │ pending / transcribing / transcribed rows    │
@@ -258,8 +259,7 @@ Purpose: bottom drawer for inventory, manual sync/transcribe/delete actions, and
 |---|---|---|---|---|---|---|---|---|---|
 | `UX.AUDIO.ENTRY.BOTTOM_STRIP` | Bottom-edge audio entry | actionable | narrow gesture strip | upward drag from bottom activation band | idle -> open intent | no competing drawer; composer not hit | opens audio drawer | gesture strip must not overlap attach, field, or send targets | `docs/core-flow/sim-shell-routing-flow.md` |
 | `UX.AUDIO.HEADER.BROWSE_GRIP` | Browse grip | actionable | dual-purpose drawer grip | tap / downward drag / upward drag | idle, pull, threshold, denied, syncing, synced | browse mode; drawer open | dismisses drawer or triggers manual sync | browse grip must keep dismiss semantics while reserving upward drag for manual sync only when the badge-sync gate is ready | `docs/cerb/audio-management/spec.md` |
-| `UX.AUDIO.HEADER.MANUAL_SYNC` | Browse smart capsule | actionable | explicit inventory refresh/status chip | tap | ready, syncing, synced, blocked | browse mode; drawer open | refreshes drawer-visible inventory or hands off to connectivity when blocked | browse-open must not auto-trigger active sync as product behavior | `docs/cerb/audio-management/spec.md` |
-| `UX.AUDIO.HEADER.CONNECTIVITY_ENTRY` | Connectivity entry | actionable | dedicated support icon | tap | available | drawer open | opens connectivity surface | audio drawer must keep a separate connectivity entry even when the capsule also reflects badge status | `docs/cerb/sim-shell/spec.md` |
+| `UX.AUDIO.HEADER.MANUAL_SYNC` | Browse smart capsule | actionable | explicit inventory refresh/status chip | tap | ready, syncing, synced, blocked | browse mode; drawer open | refreshes drawer-visible inventory or hands off to connectivity when blocked | browse-open must not auto-trigger active sync as product behavior, and the capsule is the only connectivity handoff in the browse header | `docs/cerb/audio-management/spec.md` |
 | `UX.AUDIO.BROWSE.ONBOARDING_HELPERS` | Browse onboarding helpers | informational | transient helper deck | browse open while demo seed is the only item | hidden, sync-helper, delete-helper, both | built-in demo seed only; browse mode | teaches grip sync and swipe-delete | helper rows are browse-only teaching chrome and must not delete real repository items during practice | `docs/cerb/audio-management/spec.md` |
 | `UX.AUDIO.BROWSE.PENDING_CARD` | Pending/transcribing audio card | status-bearing | compact processing row | swipe / tap when lawful | pending, transcribing | stored audio item exists | transcribe, monitor progress, or stay informational | pending rows must stay transparent about unfinished processing | `docs/cerb/audio-management/spec.md` |
 | `UX.AUDIO.BROWSE.TRANSCRIBED_CARD` | Transcribed audio card | actionable | reviewable artifact row | tap / ask AI / swipe when lawful | collapsed, expanded if supported | transcript/artifact available | opens review affordance or grounded discussion handoff | artifact review is a first-class informational lane, not a storage dump | `docs/cerb/audio-management/spec.md` |
@@ -347,7 +347,7 @@ Purpose: recoverable support surface for badge status, pairing repair, Wi-Fi ali
 
 ### Connectivity transitions
 
-- onboarding may hand into connectivity-owned setup/manager states
+- connectivity entry may hand into onboarding-owned setup, but successful onboarding returns to home rather than entering connectivity manager first
 - shell and history entry points converge into the same support surface family
 
 ---
@@ -359,7 +359,7 @@ Purpose: calm setup lane that teaches the badge ritual, captures prerequisites, 
 ```text
 ┌──────────────────────────────────────────────┐
 │ welcome / permissions primer                 │  UX.ONBOARDING.INTRO
-│ voice handshake consultation/profile         │  UX.ONBOARDING.HANDSHAKE
+│ voice consultation/profile/quick start       │  UX.ONBOARDING.HANDSHAKE
 │ hardware wake / scan / found / provisioning  │  UX.ONBOARDING.PAIRING
 │ completion                                   │  UX.ONBOARDING.COMPLETE
 └──────────────────────────────────────────────┘
@@ -370,7 +370,7 @@ Purpose: calm setup lane that teaches the badge ritual, captures prerequisites, 
 | ID | Section | Purpose |
 |---|---|---|
 | `UX.ONBOARDING.INTRO` | Intro | calm expectation-setting |
-| `UX.ONBOARDING.HANDSHAKE` | Handshake | phone-mic trust-building and profile intake |
+| `UX.ONBOARDING.HANDSHAKE` | Handshake | phone-mic trust-building, profile intake, and scheduler quick-start preview |
 | `UX.ONBOARDING.PAIRING` | Pairing | hardware wake, scan, found, provisioning |
 | `UX.ONBOARDING.COMPLETE` | Complete | successful handoff to normal app use |
 
@@ -380,17 +380,19 @@ Purpose: calm setup lane that teaches the badge ritual, captures prerequisites, 
 |---|---|---|---|---|---|---|---|---|---|
 | `UX.ONBOARDING.INTRO.WELCOME_CTA` | Welcome CTA | actionable | calm intro continuation | tap | visible | onboarding active | advances to permissions primer | intro must feel like product onboarding, not generic Android setup | `docs/specs/flows/OnboardingFlow.md` |
 | `UX.ONBOARDING.INTRO.PERMISSIONS_PRIMER` | Permissions primer | reactive-static | explanatory pre-permission guidance | tap continue / point-of-use permission later | visible | onboarding active | advances without prematurely firing native prompts | explanation first, native prompt only at point of use | `docs/specs/flows/OnboardingFlow.md` |
-| `UX.ONBOARDING.HANDSHAKE.VOICE_CAPTURE` | Voice handshake steps | actionable | real consultation/profile capture | hold/tap mic; save CTA | idle, listening, parsed, error | onboarding host and mic availability | advances to hardware wake once complete | handshake must be real interaction, not fake placeholder theater | `docs/specs/flows/OnboardingFlow.md` |
-| `UX.ONBOARDING.PAIRING.HARDWARE_WAKE` | Hardware wake step | actionable | badge ritual instruction | tap continue after ritual | visible | onboarding active | enters scan step | hardware ritual must be clearly taught before scan | `docs/specs/flows/OnboardingFlow.md` |
+| `UX.ONBOARDING.HANDSHAKE.VOICE_CAPTURE` | Voice handshake steps | actionable | real consultation/profile capture | hold/tap mic; save CTA | idle, listening, parsed, error | onboarding active and mic availability | advances to hardware wake once complete | handshake must be real interaction, not fake placeholder theater | `docs/specs/flows/OnboardingFlow.md` |
+| `UX.ONBOARDING.HANDSHAKE.SCHEDULER_QUICK_START` | Scheduler quick-start sandbox | actionable | deterministic staged scheduler preview | hold mic footer rounds; tap continue; optional exact-alarm settings handoff | idle, recording, processing, staged preview, completed | successful provisioning or approved pairing-step skip | advances to the success wrapper after preview completion | preview stays local and deterministic until final completion commits through scheduler-owned seams | `docs/cerb/onboarding-interaction/spec.md` |
+| `UX.ONBOARDING.PAIRING.HARDWARE_WAKE` | Hardware wake step | actionable | badge ritual instruction | tap continue after ritual; local skip action | visible | onboarding active | enters scan step or quick-start sandbox | hardware ritual must be clearly taught before scan, and pairing-step skip must stay local to this page rather than living in global chrome | `docs/specs/flows/OnboardingFlow.md` |
 | `UX.ONBOARDING.PAIRING.SCAN` | Scan surface | status-bearing | technical search state | auto progress / cancel / result | searching, found, error | Bluetooth path active | proceeds to found/error branch | scan must request permission at point of use and remain recoverable | `docs/specs/flows/OnboardingFlow.md` |
 | `UX.ONBOARDING.PAIRING.DEVICE_FOUND` | Found device card | actionable | explicit found-state confirmation | tap manual connect | visible | scan success | enters provisioning | found state must not auto-connect silently | `docs/specs/flows/OnboardingFlow.md` |
-| `UX.ONBOARDING.PAIRING.PROVISIONING` | Provisioning form | actionable | Wi-Fi setup and progress seam | submit / retry / back | idle, submitting, error | selected device and network data | configures network and pairing | provisioning must stay inside one recoverable presentation seam | `docs/specs/flows/OnboardingFlow.md` |
-| `UX.ONBOARDING.COMPLETE.SUCCESS_CTA` | Completion CTA | actionable | success wrapper handoff | tap | visible | provisioning success | enters home or connectivity manager host path | onboarding should exit quickly into normal product use | `docs/specs/flows/OnboardingFlow.md` |
+| `UX.ONBOARDING.PAIRING.PROVISIONING` | Provisioning form | actionable | Wi-Fi setup and progress seam | submit / retry / back / local skip action on recoverable surfaces | idle, submitting, error | selected device and network data | configures network and pairing or enters quick-start sandbox | provisioning must stay inside one recoverable presentation seam; skip must not appear on progress/success | `docs/specs/flows/OnboardingFlow.md` |
+| `UX.ONBOARDING.COMPLETE.SUCCESS_CTA` | Completion CTA | actionable | success wrapper handoff | tap | visible | quick-start or no-op completion ready | enters home | onboarding should exit quickly into normal product use | `docs/specs/flows/OnboardingFlow.md` |
 
 ### Onboarding transitions
 
-- host selection may change entry/exit context, not the visible wave family
-- completion returns to normal shell use or connectivity manager, not to a dead-end screen
+- entry context may change where onboarding is launched from, but not the visible production sequence
+- onboarding leaves pairing into the quick-start sandbox after successful provisioning or approved local pairing-step skip, then shows the shared completion wrapper before home
+- successful completion returns to normal shell use and auto-opens the real scheduler drawer once through the shell-owned drawer animation
 
 ---
 
@@ -476,7 +478,7 @@ Purpose: shared support-layer elements that are not full primary surfaces but st
 | `UX.HOME` or `UX.CHAT` | `UX.AUDIO.ENTRY.BOTTOM_STRIP` | `UX.AUDIO` | bottom strip opens audio without stealing composer taps |
 | `UX.CHAT` | `UX.CHAT.COMPOSER.ATTACH` | `UX.AUDIO.SELECT` | chat audio rebinding reuses audio drawer select mode |
 | `UX.HISTORY` | `UX.HISTORY.FOOTER.SETTINGS_ENTRY` | `UX.SETTINGS` | settings surface is shared regardless of entry point |
-| `UX.CONNECTIVITY` / `UX.ONBOARDING` | completion CTAs | `UX.HOME` or connectivity manager | support flows must return the user to normal product use quickly |
+| `UX.CONNECTIVITY` / `UX.ONBOARDING` | completion CTAs | `UX.HOME` | support flows must return the user to normal product use quickly |
 
 ---
 

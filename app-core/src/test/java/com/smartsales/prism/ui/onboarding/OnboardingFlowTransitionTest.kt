@@ -39,13 +39,17 @@ class OnboardingFlowTransitionTest {
             nextOnboardingStep(OnboardingStep.DEVICE_FOUND, OnboardingHost.FULL_APP)
         )
         assertEquals(
-            OnboardingStep.COMPLETE,
+            OnboardingStep.SCHEDULER_QUICK_START,
             nextOnboardingStep(OnboardingStep.PROVISIONING, OnboardingHost.FULL_APP)
+        )
+        assertEquals(
+            OnboardingStep.COMPLETE,
+            nextOnboardingStep(OnboardingStep.SCHEDULER_QUICK_START, OnboardingHost.FULL_APP)
         )
     }
 
     @Test
-    fun `sim host starts at welcome and walks the shared intro plus pairing path`() {
+    fun `sim host now follows the same production path through quick start`() {
         assertEquals(OnboardingStep.WELCOME, initialOnboardingStep(OnboardingHost.SIM_CONNECTIVITY))
         assertEquals(
             OnboardingStep.PERMISSIONS_PRIMER,
@@ -76,8 +80,12 @@ class OnboardingFlowTransitionTest {
             nextOnboardingStep(OnboardingStep.DEVICE_FOUND, OnboardingHost.SIM_CONNECTIVITY)
         )
         assertEquals(
-            OnboardingStep.COMPLETE,
+            OnboardingStep.SCHEDULER_QUICK_START,
             nextOnboardingStep(OnboardingStep.PROVISIONING, OnboardingHost.SIM_CONNECTIVITY)
+        )
+        assertEquals(
+            OnboardingStep.COMPLETE,
+            nextOnboardingStep(OnboardingStep.SCHEDULER_QUICK_START, OnboardingHost.SIM_CONNECTIVITY)
         )
     }
 

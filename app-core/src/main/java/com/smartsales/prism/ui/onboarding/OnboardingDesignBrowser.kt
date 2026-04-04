@@ -68,6 +68,9 @@ private enum class OnboardingDesignPreset(
     PROFILE_RECORDING("Profile Recording"),
     PROFILE_PROCESSING("Profile Processing"),
     PROFILE("Profile"),
+    QUICK_START_LIST("Quick Start List"),
+    QUICK_START_APPEND("Quick Start Append"),
+    QUICK_START_UPDATE("Quick Start Update"),
     HARDWARE_WAKE("Wake"),
     SCAN("Scan"),
     SCAN_TIMEOUT("Timeout"),
@@ -150,6 +153,27 @@ private enum class OnboardingDesignPreset(
             step = OnboardingStep.VOICE_HANDSHAKE_PROFILE,
             badge = null,
             profileCaptureState = OnboardingProfileCaptureState.EXTRACTED
+        )
+
+        QUICK_START_LIST -> OnboardingVisualCaptureState(
+            host = host,
+            step = OnboardingStep.SCHEDULER_QUICK_START,
+            badge = null,
+            quickStartCaptureState = OnboardingQuickStartCaptureState.INITIAL_LIST
+        )
+
+        QUICK_START_APPEND -> OnboardingVisualCaptureState(
+            host = host,
+            step = OnboardingStep.SCHEDULER_QUICK_START,
+            badge = null,
+            quickStartCaptureState = OnboardingQuickStartCaptureState.APPENDED
+        )
+
+        QUICK_START_UPDATE -> OnboardingVisualCaptureState(
+            host = host,
+            step = OnboardingStep.SCHEDULER_QUICK_START,
+            badge = null,
+            quickStartCaptureState = OnboardingQuickStartCaptureState.UPDATED
         )
 
         HARDWARE_WAKE -> OnboardingVisualCaptureState(

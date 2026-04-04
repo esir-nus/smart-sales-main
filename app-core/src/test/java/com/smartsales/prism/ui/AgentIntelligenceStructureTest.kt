@@ -19,6 +19,20 @@ class AgentIntelligenceStructureTest {
         assertFalse(source.contains("fun SimConversationTimeline("))
         assertFalse(source.contains("fun HomeHeroDashboard("))
         assertFalse(source.contains("@Preview("))
+        assertFalse(source.contains("hiltViewModel<AgentViewModel>()"))
+        assertFalse(source.contains("viewModel as? SimAgentViewModel"))
+    }
+
+    @Test
+    fun `shared surfaces no longer default to legacy runtime owners`() {
+        val screen = readSource("app-core/src/main/java/com/smartsales/prism/ui/AgentIntelligenceScreen.kt")
+        val schedulerDrawer = readSource("app-core/src/main/java/com/smartsales/prism/ui/drawers/SchedulerDrawer.kt")
+
+        assertTrue(screen.contains("viewModel: IAgentViewModel"))
+        assertTrue(schedulerDrawer.contains("viewModel: ISchedulerViewModel"))
+        assertFalse(screen.contains("viewModel: IAgentViewModel ="))
+        assertFalse(schedulerDrawer.contains("viewModel: ISchedulerViewModel ="))
+        assertFalse(schedulerDrawer.contains("hiltViewModel<SchedulerViewModel>()"))
     }
 
     @Test

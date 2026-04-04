@@ -4,9 +4,33 @@
 >
 > **Purpose**: Module ownership + data flow. Read this BEFORE any cross-module change.
 > **Rule**: If data belongs to Module B, query B's interface at runtime. Don't store B's data on A's model.
-> **Last Updated**: 2026-04-02 (RuntimeShell dynamic-island arbitration sync; audio drawer / badge pipeline sync correction; connectivity debug APK host)
+> **Last Updated**: 2026-04-04 (Onboarding quick-start post-pairing handoff sync; RuntimeShell dynamic-island arbitration sync; audio drawer / badge pipeline sync correction; connectivity debug APK host; platform-governance ownership overlay; transient Harmony Tingwu container root and native runtime slice)
 >
 > **Status Legend**: ✅ = Shipped (Real impl) · 📐 = Interface only (Fake impl) · 🔲 = Not yet coded
+> **Platform Ownership Legend**: `shared` = same product contract across platforms · `android-only` = owned by the current Android lineage · `harmony-only` = owned by the future native Harmony root · `platform-adapter` = shared product contract, platform-specific delivery layer · `legacy-android-on-harmony` = Android app compatibility behavior on Huawei/Honor/Harmony devices
+
+---
+
+## Cross-Platform Ownership Overlay (2026-04-04)
+
+This overlay classifies the current repo's cross-platform-sensitive surfaces without duplicating the full module tables below.
+
+| Surface | Platform Ownership | Current Repo Path / Owner | Rule |
+|--------|--------------------|---------------------------|------|
+| Shared product flows and Cerb contracts | `shared` | `docs/core-flow/**`, `docs/cerb/**`, `docs/cerb-ui/**`, `docs/specs/**` | Shared product truth stays single-source unless user-visible behavior diverges heavily enough to require a platform companion spec. |
+| Pure domain contracts and platform-neutral scheduler semantics | `shared` | `domain/**`, approved platform-neutral portions of `core/**` | Sharing is allowed only while the code stays runtime-neutral and does not absorb OS delivery assumptions. |
+| Reminder / notification delivery mechanics | `platform-adapter` | shared truth in `docs/cerb/notifications/spec.md`; overlays in `docs/platforms/android/**` and `docs/platforms/harmony/**` | Shared reminder semantics stay single-source; permissions, lifecycle, FSI, OEM branches, and native reminder APIs are platform-owned. |
+| `ConnectivityBridge`, `BadgeAudioPipeline`, `DevicePairing` | `android-only` | current Android lineage | Current hardware path is Android-owned and must not be treated as the default native Harmony implementation. |
+| Transient Harmony Tingwu container | `harmony-only` | `platforms/harmony/tingwu-container/**`, `docs/platforms/harmony/tingwu-container.md` | This transient app may consume shared Tingwu/audio contracts, but it must stay local-audio-only and must hide scheduler, reminder, chat, onboarding handoff, and badge-hardware capability instead of redefining shared truth. The Harmony root now owns its ArkTS config seam, hvigor-generated Harmony local config artifact, document-picker ingress, Harmony namespaced file store, Harmony HTTP/OSS client, Tingwu polling client, and container UI. |
+| `OnboardingInteraction` delivery mechanics | `platform-adapter` | shared flow/spec plus platform overlays | User journey and scheduler intent stay shared; permission, lifecycle, hardware, and OS-entry details are platform-owned. |
+| Android app on Huawei/Honor/Harmony devices | `legacy-android-on-harmony` | `docs/reference/harmonyos-platform-guide.md`, Android overlays, Android code lineage | This path remains the Android app running on Harmony-family devices. It is not the native Harmony product owner. |
+| Broader future native Harmony implementation root | `harmony-only` | reserved future platform root beyond the transient Tingwu container | Native Harmony code must not land under `app/**`, `app-core/**`, `core/**`, `data/**`, or `domain/**`. |
+
+### Cross-platform split rule
+
+- shared docs answer what the product does
+- platform overlays answer how Android or Harmony delivers it
+- native Harmony artifacts are forbidden in the current Android tree
 
 ---
 
@@ -69,8 +93,13 @@ Orchestrates LLM-powered processing. Reads from Layer 2 data services.
 | **[SchedulerLinter](./scheduler-path-a-spine/spec.md)** | Intelligent Scheduler | Intent parsing to DTOs | — | `suspend parseFastTrackIntent(String) -> FastTrackResult` | OS: App | ✅ |
 | **[UnifiedPipeline](./unified-pipeline/spec.md)** | System II & Routing | System II context ETL, typed profile proposals, typed scheduler task-command proposals | ContextBuilder, InputParser, EntityDisambiguator | `suspend processInput(PipelineInput) -> Flow<PipelineResult>` | OS: App | ✅ |
 | **[IntentOrchestrator](./scheduler-path-a-spine/spec.md)** | System II & Routing | High-level intent routing (Phase 0) and shared Path A scheduler spine | AgentViewModel, LightningRouter, UnifiedPipeline, PluginRegistry | `suspend processInput(String, isVoice) -> Flow<PipelineResult>` | OS: App | ✅ |
+| **SchedulerIntelligenceRouter** | Intelligent Scheduler | Shared scheduler intent routing across voice, Path B text, drawer, follow-up, and onboarding surfaces | `SchedulerPathACreateInterpreter`, `RealGlobalRescheduleExtractionService`, `RealFollowUpRescheduleExtractionService`, `TimeProvider` | `suspend routeGeneral(...)`, `suspend routeFollowUp(...)` | OS: App | ✅ |
 
 > **UnifiedPipeline emits typed proposals; IntentOrchestrator owns commit handoff.** Profile/entity proposals commit through `EntityWriter`. Scheduler create/delete/reschedule proposals commit through scheduler-owned paths (`FastTrackMutationEngine`, `ScheduledTaskRepository`, `ScheduleBoard`). Feature modules still receive results; they do not own these writes.
+>
+> **Shared scheduler routing is now core-owned.** `IntentOrchestrator` voice routing and `UnifiedPipeline` `PATH_B_TEXT` routing both delegate to `SchedulerIntelligenceRouter` first; the legacy JSON mutation scheduler path remains a compatibility fallback only when the shared router is unavailable or does not match.
+>
+> **Later-lane scheduler suppression is now explicit.** After an early Path A scheduler commit, `IntentOrchestrator` records a terminal scheduler guard and suppresses later scheduler task-command / reschedule tool emissions for the same `unifiedId`.
 >
 > **ContextBuilder reads EntityRegistry for Entity Knowledge Context.** `ContextBuilder.buildEntityKnowledge()` calls `EntityRepository.getAll()` at session start to load the structured entity graph into the LLM prompt (RAM Section 1). This is a Kernel → SSD read.
 >
@@ -94,7 +123,7 @@ User-facing features. Each receives processed results from Orchestrator (Layer 3
 | **[BadgeAudioPipeline](./badge-audio-pipeline/spec.md)** | Hardware & Audio | Audio recording lifecycle | ASR, OSS, ConnectivityBridge | Uses `AsrService` for the scheduler fast path; on successful completion also ingests the recording into SIM audio storage before badge cleanup | — | ✅ |
 | **[AudioManagement](./audio-management/spec.md)** | Hardware & Audio | Drawer-visible audio inventory, manual sync/transcribe/delete states, persisted artifacts | ConnectivityBridge, TingwuPipeline | Receives completed badge recordings through the shared SIM audio namespace owned by `SimAudioRepository` | OS: App | ✅ |
 | **[SIM Audio Chat Lane](../core-flow/sim-audio-artifact-chat-flow.md)** | Hardware & Audio | SIM-local chat composer draft state, audio-grounded discussion continuity, FunASR realtime draft bridge | SimAudioRepository, SimSessionRepository, SimRealtimeSpeechRecognizer, UserProfileRepository | `SimAgentViewModel`, durable chat/session projections; active behavior authority routes through shared audio-management, Tingwu, and core-flow docs | OS: App | 🚧 |
-| **[OnboardingInteraction](./onboarding-interaction/spec.md)** | Hardware & Audio | Pre-pairing phone-mic onboarding interaction state, consultation reply, typed profile draft, CTA-gated profile save | DeviceSpeechRecognizer, UserProfileRepository | `OnboardingInteractionService`, `DeviceSpeechRecognizer`, `OnboardingInteractionViewModel` | OS: App | 🚧 |
+| **[OnboardingInteraction](./onboarding-interaction/spec.md)** | Hardware & Audio | Pre-pairing phone-mic onboarding interaction state, consultation reply, typed profile draft, scheduler quick-start sandbox, CTA-gated profile save, post-completion shell handoff request | DeviceSpeechRecognizer, UserProfileRepository, scheduler Path A extraction services, FastTrackMutationEngine, ExactAlarmPermissionGate, Calendar provider/permission bridge, `RuntimeOnboardingHandoffGate` | `OnboardingInteractionService`, `OnboardingQuickStartService`, `OnboardingSchedulerQuickStartCommitter`, `OnboardingQuickStartCalendarExporter`, `OnboardingInteractionViewModel` | OS: App | 🚧 |
 | **[ConflictResolver](./conflict-resolver/spec.md)** | Intelligent Scheduler | Conflict resolution actions | ScheduleBoard | `resolve(...) -> ConflictResolution` | OS: App | ✅ |
 | **[AgentIntelligenceUI](../cerb-ui/agent-intelligence/spec.md)** | System II & Routing | Wait-state UI components | — | `StateFlow<UiState>` | OS: App | 📐 |
 | **[DevicePairing](./device-pairing/spec.md)** | Hardware & Audio | BLE pairing session states | Legacy BLE stack | `StateFlow<PairingState>` | OS: App | ✅ |
@@ -115,6 +144,24 @@ The current base-runtime/SIM shell introduces one narrow shell-owned arbitration
 - tap routing follows the visible lane back into shell-owned entry handlers, while downstream scheduler drawer and connectivity manager behavior remain owned by their existing modules
 - the connected battery badge is still provisional and comes from `ConnectivityViewModel.batteryLevel`; real bridge-backed battery sourcing remains explicit follow-up debt
 
+### RuntimeShell foreground reminder-banner edge (2026-04-03)
+
+The shared reminder lane now introduces one additional narrow shell-owned presentation edge for foreground reminder surfacing:
+
+- `TaskReminderReceiver` may emit lossy process-local `EARLY` reminder events through `SchedulerReminderSurfaceBus` after it posts the normal reminder notification
+- `SimSchedulerViewModel` owns banner-entry merge/de-duplication plus scheduler-target derivation from canonical task rows
+- `RuntimeShell` / `RuntimeShellContent` own banner visibility gating, auto-clear timing, and tap routing back into the existing scheduler drawer seam
+- `AlarmActivity` remains the owner of `DEADLINE` full-screen reminder presentation, including concurrent stacked alarm cards
+
+### Onboarding-to-shell scheduler handoff edge (2026-04-03)
+
+The unified production onboarding quick-start completion now introduces one narrow shell-owned handoff edge:
+
+- `OnboardingInteractionViewModel` may arm `RuntimeOnboardingHandoffGate` only after successful onboarding completion finalization
+- `RuntimeShell` may consume that one-shot gate only when the shell is clear enough to use the real scheduler drawer animation path
+- the handoff opens the scheduler through the same shell-owned drawer seam used by normal island entry; onboarding does not become a second scheduler host
+- the same handoff also consumes the first-launch scheduler discoverability teaser so users are not taught twice
+
 ### SIM T8.0 follow-up ownership edge
 
 The SIM post-closeout scheduler follow-up mini-wave introduces one explicit SIM-only cross-lane edge:
@@ -123,6 +170,7 @@ The SIM post-closeout scheduler follow-up mini-wave introduces one explicit SIM-
 - `RuntimeShell` / `SimAgentViewModel` may host the follow-up session and task selection UI
 - actual task mutation truth still routes through scheduler-owned collaborators (`ScheduledTaskRepository`, conflict check, reminder stack)
 - global follow-up candidate-space truth may route through `ActiveTaskRetrievalIndex`, which remains scheduler-owned and derived from canonical tasks rather than chat/session memory
+- multi-task follow-up reschedule must attempt global target routing before it requires a selected task; if the target stays unresolved, it fails safely inside scheduler-owned copy rather than mutating by UI selection accident
 
 Rule:
 
@@ -137,6 +185,7 @@ Interpretation:
 
 - shared shell/UI/UX, Tingwu/audio flow, Path A scheduler flow, and bounded local/session continuity belong to the base runtime
 - Kernel-owned session memory, CRM/entity loading, Path B scheduler enrichment, and plugin/tool runtime remain Mono-only
+- the current canonical base-runtime owners under `RuntimeShell` are `SimAgentViewModel` for chat/session/audio/follow-up and `SimSchedulerViewModel` for scheduler/reminder-banner/top-summary behavior
 - legacy full-side hosts may remain temporarily, but they are wrapper debt rather than product-truth owners
 - SIM-owned entry roots, namespaced persistence, or isolated runtime assembly may remain real implementation boundaries, but they do not create a second non-Mono product truth
 
@@ -147,6 +196,7 @@ Current wrapper-debt hosts tracked in code/docs:
 
 The former split-era shell hosts were retired on 2026-04-01 when production moved to `MainActivity -> RuntimeShell`.
 Remaining wrapper debt may remain as compatibility hosts, but current shell/scheduler/audio truth routes through shared docs rather than through those host files.
+Shared composables such as `AgentIntelligenceScreen` and `SchedulerDrawer` must now receive explicit shared contracts from the shell path rather than defaulting to those wrapper-debt hosts.
 
 ### Connectivity debug host rule (2026-03-31)
 

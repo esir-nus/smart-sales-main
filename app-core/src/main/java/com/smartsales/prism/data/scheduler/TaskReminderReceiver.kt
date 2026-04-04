@@ -15,6 +15,8 @@ import com.smartsales.prism.domain.notification.NotificationService
 import com.smartsales.prism.domain.notification.PrismNotificationChannel
 import com.smartsales.prism.domain.scheduler.CascadeTier
 import com.smartsales.prism.domain.scheduler.SchedulerRefreshBus
+import com.smartsales.prism.domain.scheduler.SchedulerReminderSurfaceBus
+import com.smartsales.prism.domain.scheduler.SchedulerReminderSurfaceEvent
 import com.smartsales.prism.ui.alarm.AlarmActivity
 import dagger.hilt.android.EntryPointAccessors
 
@@ -145,7 +147,9 @@ class TaskReminderReceiver : BroadcastReceiver() {
         // DEADLINE: fullScreenIntent → AlarmActivity
         if (tier == CascadeTier.DEADLINE) {
             val fullScreenActivity = Intent(context, AlarmActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP
                 putExtra(AlarmActivity.EXTRA_TASK_TITLE, taskTitle)
                 putExtra(AlarmActivity.EXTRA_TIME_TEXT, timeText)
                 putExtra(AlarmActivity.EXTRA_NOTIFICATION_ID, notificationId)
@@ -178,6 +182,17 @@ class TaskReminderReceiver : BroadcastReceiver() {
         }
 
         // DEADLINE: 持续振动在 AlarmActivity.onCreate 内启动，不在 Receiver 启动（避免 Ghost Alarm）
+
+        if (tier == CascadeTier.EARLY) {
+            SchedulerReminderSurfaceBus.emit(
+                SchedulerReminderSurfaceEvent(
+                    taskId = taskId,
+                    offsetMinutes = offsetMinutes,
+                    taskTitle = taskTitle,
+                    timeText = timeText
+                )
+            )
+        }
 
         // DEADLINE 到期 → 通知 ViewModel 刷新（实时标记过期任务）
         if (tier == CascadeTier.DEADLINE) {

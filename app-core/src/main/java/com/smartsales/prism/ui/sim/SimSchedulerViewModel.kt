@@ -1,5 +1,6 @@
 package com.smartsales.prism.ui.sim
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.smartsales.core.pipeline.RealGlobalRescheduleExtractionService
@@ -20,6 +21,7 @@ import com.smartsales.prism.domain.scheduler.InspirationRepository
 import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.SchedulerTimelineItem
+import com.smartsales.prism.domain.scheduler.SchedulerReminderSurfaceBus
 import com.smartsales.prism.domain.time.TimeProvider
 import com.smartsales.prism.ui.drawers.scheduler.ISchedulerViewModel
 import com.smartsales.prism.ui.drawers.scheduler.RescheduleExitMotion
@@ -34,6 +36,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
 /**
@@ -98,10 +101,14 @@ class SimSchedulerViewModel @Inject constructor(
     private val _exitingTasks = MutableStateFlow<List<RescheduleExitMotion>>(emptyList())
     override val exitingTasks: StateFlow<List<RescheduleExitMotion>> = _exitingTasks.asStateFlow()
 
+    private val _activeReminderBanner = MutableStateFlow<SimReminderBannerState?>(null)
+    internal val activeReminderBanner: StateFlow<SimReminderBannerState?> = _activeReminderBanner.asStateFlow()
+
     private val _exactAlarmPermissionNeeded = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     override val exactAlarmPermissionNeeded: SharedFlow<Unit> = _exactAlarmPermissionNeeded.asSharedFlow()
 
     private var pipelineStatusResetJob: Job? = null
+    private var reminderBannerDismissJob: Job? = null
 
     private val bridge = SimSchedulerUiBridge(
         getActiveDayOffset = { _activeDayOffset.value },
@@ -159,6 +166,31 @@ class SimSchedulerViewModel @Inject constructor(
 
     override val timelineItems: StateFlow<List<SchedulerTimelineItem>> =
         projectionSupport.buildTimelineItems(taskRepository, inspirationRepository, _activeDayOffset)
+
+    init {
+        viewModelScope.launch {
+            SchedulerReminderSurfaceBus.events.collect { event ->
+                val task = taskRepository.getTask(event.taskId)
+                val entry = buildSimReminderBannerEntry(
+                    task = task,
+                    taskId = event.taskId,
+                    title = event.taskTitle,
+                    offsetMinutes = event.offsetMinutes,
+                    emittedAtMillis = event.emittedAtMillis
+                )
+                val mergedEntries = mergeSimReminderBannerEntries(
+                    existing = _activeReminderBanner.value?.entries.orEmpty(),
+                    incoming = entry
+                )
+                _activeReminderBanner.value = SimReminderBannerState(mergedEntries)
+                reminderBannerDismissJob?.cancel()
+                reminderBannerDismissJob = viewModelScope.launch {
+                    kotlinx.coroutines.delay(5_000L)
+                    _activeReminderBanner.value = null
+                }
+            }
+        }
+    }
 
     override fun onDateSelected(dayOffset: Int) {
         _activeDayOffset.value = dayOffset
@@ -245,7 +277,17 @@ class SimSchedulerViewModel @Inject constructor(
             projectionSupport.clearFailureState()
             projectionSupport.emitStatus("语音转写中...", autoClear = false)
             when (val transcriptResult = asrService.transcribe(file)) {
-                is AsrResult.Success -> ingressCoordinator.processTranscript(transcriptResult.text.trim())
+                is AsrResult.Success -> {
+                    val transcript = transcriptResult.text.trim()
+                    Log.d(
+                        "SimSchedulerViewModel",
+                        buildSimSchedulerTranscriptLog(
+                            transcript = transcript,
+                            source = "scheduler_rec_asr"
+                        )
+                    )
+                    ingressCoordinator.processTranscript(transcript)
+                }
                 is AsrResult.Error -> projectionSupport.emitFailure("录音转写失败: ${transcriptResult.message}")
             }
         }
@@ -253,5 +295,10 @@ class SimSchedulerViewModel @Inject constructor(
 
     internal suspend fun applyFastTrackResultForTesting(result: FastTrackResult) {
         mutationCoordinator.handleMutation(result)
+    }
+
+    internal fun dismissActiveReminderBanner() {
+        reminderBannerDismissJob?.cancel()
+        _activeReminderBanner.value = null
     }
 }

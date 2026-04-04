@@ -76,11 +76,17 @@ class SimComposerInteractionTest {
     @Test
     fun simComposer_voiceDraftFillsInputAndTurnsActionIntoSend() {
         val viewModel = FakeAgentViewModel()
-        var startCount = 0
         var finishCount = 0
 
         composeTestRule.setContent {
-            var voiceDraftState by remember { mutableStateOf(SimVoiceDraftUiState()) }
+            var voiceDraftState by remember {
+                mutableStateOf(
+                    SimVoiceDraftUiState(
+                        isRecording = true,
+                        interactionMode = SimVoiceDraftInteractionMode.TAP_TO_SEND
+                    )
+                )
+            }
 
             Box(modifier = Modifier.fillMaxSize()) {
                 AgentIntelligenceScreen(
@@ -89,11 +95,6 @@ class SimComposerInteractionTest {
                     showDebugButton = false,
                     simVoiceDraftStateOverride = voiceDraftState,
                     simVoiceDraftEnabledOverride = true,
-                    onSimVoiceDraftStart = {
-                        startCount += 1
-                        voiceDraftState = voiceDraftState.copy(isRecording = true)
-                        true
-                    },
                     onSimVoiceDraftFinish = {
                         finishCount += 1
                         viewModel.updateInput("语音草稿内容")
@@ -121,7 +122,6 @@ class SimComposerInteractionTest {
             .performClick()
 
         composeTestRule.runOnIdle {
-            assertEquals(1, startCount)
             assertEquals(1, finishCount)
             assertEquals("", viewModel.inputText.value)
             assertEquals(1, viewModel.history.value.size)

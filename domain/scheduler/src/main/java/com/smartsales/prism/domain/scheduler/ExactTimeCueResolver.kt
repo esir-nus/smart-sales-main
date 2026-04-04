@@ -20,8 +20,14 @@ object ExactTimeCueResolver {
         REAL_TODAY,
         REAL_PLUS_1,
         REAL_PLUS_2,
-        PAGE_PLUS_1
+        PAGE_PLUS_1,
+        QUALIFIED_WEEKDAY
     }
+
+    private data class QualifiedWeekdayAnchor(
+        val family: RelativeDayFamily,
+        val dayOfWeek: Int
+    )
 
     fun normalizeRelativeDayStartTime(
         transcript: String?,
@@ -90,6 +96,7 @@ object ExactTimeCueResolver {
 
     private fun detectRelativeDayFamily(transcript: String?): RelativeDayFamily? {
         val normalized = transcript?.lowercase()?.trim() ?: return null
+        detectQualifiedWeekdayAnchor(normalized)?.let { return it.family }
         return when {
             normalized.contains("下一天") || normalized.contains("后一天") || normalized.contains("nextday") || normalized.contains("next day") -> {
                 RelativeDayFamily.PAGE_PLUS_1
@@ -113,13 +120,51 @@ object ExactTimeCueResolver {
         timezone: String?,
         displayedDateIso: String?
     ): LocalDate? {
-        val family = detectRelativeDayFamily(transcript) ?: return null
+        val normalized = transcript?.lowercase()?.trim()
+        val qualifiedWeekday = detectQualifiedWeekdayAnchor(normalized)
+        val family = qualifiedWeekday?.family ?: detectRelativeDayFamily(transcript) ?: return null
         return when (family) {
             RelativeDayFamily.REAL_TODAY -> resolveNowDate(nowIso, timezone)
             RelativeDayFamily.REAL_PLUS_1 -> resolveNowDate(nowIso, timezone)?.plusDays(1)
             RelativeDayFamily.REAL_PLUS_2 -> resolveNowDate(nowIso, timezone)?.plusDays(2)
             RelativeDayFamily.PAGE_PLUS_1 -> displayedDateIso?.let(LocalDate::parse)?.plusDays(1)
+            RelativeDayFamily.QUALIFIED_WEEKDAY -> resolveQualifiedWeekdayAnchorDate(
+                nowIso = nowIso,
+                timezone = timezone,
+                dayOfWeek = qualifiedWeekday?.dayOfWeek
+            )
         }
+    }
+
+    private fun detectQualifiedWeekdayAnchor(normalized: String?): QualifiedWeekdayAnchor? {
+        val source = normalized ?: return null
+        val match = Regex("(下周|下星期|下礼拜)([一二三四五六日天])").find(source) ?: return null
+        val dayOfWeek = when (match.groupValues[2]) {
+            "一" -> 1
+            "二" -> 2
+            "三" -> 3
+            "四" -> 4
+            "五" -> 5
+            "六" -> 6
+            "日", "天" -> 7
+            else -> return null
+        }
+        return QualifiedWeekdayAnchor(
+            family = RelativeDayFamily.QUALIFIED_WEEKDAY,
+            dayOfWeek = dayOfWeek
+        )
+    }
+
+    private fun resolveQualifiedWeekdayAnchorDate(
+        nowIso: String?,
+        timezone: String?,
+        dayOfWeek: Int?
+    ): LocalDate? {
+        val targetDayOfWeek = dayOfWeek ?: return null
+        val today = resolveNowDate(nowIso, timezone) ?: return null
+        val currentWeekStart = today.minusDays((today.dayOfWeek.value - 1).toLong())
+        val nextWeekStart = currentWeekStart.plusDays(7)
+        return nextWeekStart.plusDays((targetDayOfWeek - 1).toLong())
     }
 
     private fun resolveNowDate(nowIso: String?, timezone: String?): LocalDate? {
@@ -169,7 +214,7 @@ object ExactTimeCueResolver {
     }
 
     private fun parseChineseClock(normalized: String): LocalTime? {
-        val match = Regex("""(凌晨|早上|上午|中午|下午|晚上|今晚|午夜|半夜)?([零一二两三四五六七八九十百\d]{1,3})点(半)?""")
+        val match = Regex("""(凌晨|早上|上午|中午|下午|晚上|今晚|午夜|半夜)?([零一二两三四五六七八九十百\d]{1,3})点(半|钟)?""")
             .find(normalized)
             ?: return null
         val prefix = match.groupValues[1]

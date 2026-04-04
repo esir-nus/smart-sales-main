@@ -16,8 +16,9 @@ class OnboardingMicFooterGestureTest {
     val composeTestRule = createComposeRule()
 
     @Test
-    fun holdRelease_stillSendsAfterRecordingStateFlips() {
-        var releaseCount = 0
+    fun secondTap_stillSendsAfterRecordingStateFlips() {
+        var startCount = 0
+        var endCount = 0
         var cancelCount = 0
 
         composeTestRule.setContent {
@@ -26,16 +27,17 @@ class OnboardingMicFooterGestureTest {
             OnboardingMicFooter(
                 isRecording = isRecording,
                 isProcessing = false,
-                interactionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                interactionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
                 handshakeHint = "试试说一句",
                 processingLabel = "正在思考...",
                 onPressStart = {
                     isRecording = true
+                    startCount += 1
                     true
                 },
                 onPressEnd = {
                     isRecording = false
-                    releaseCount += 1
+                    endCount += 1
                 },
                 onPressCancel = {
                     isRecording = false
@@ -52,10 +54,24 @@ class OnboardingMicFooterGestureTest {
             }
 
         composeTestRule.runOnIdle {
-            assertEquals(1, releaseCount)
+            assertEquals(1, startCount)
+            assertEquals(0, endCount)
             assertEquals(0, cancelCount)
         }
-        composeTestRule.onNodeWithText("按住说话").assertExists()
+        composeTestRule.onNodeWithText("正在聆听...再次点击结束").assertExists()
+
+        composeTestRule.onNodeWithTag(ONBOARDING_MIC_BUTTON_TEST_TAG)
+            .performTouchInput {
+                down(center)
+                up()
+            }
+
+        composeTestRule.runOnIdle {
+            assertEquals(1, startCount)
+            assertEquals(1, endCount)
+            assertEquals(0, cancelCount)
+        }
+        composeTestRule.onNodeWithText("点击开始说话").assertExists()
     }
 
     @Test
@@ -66,7 +82,7 @@ class OnboardingMicFooterGestureTest {
             OnboardingMicFooter(
                 isRecording = false,
                 isProcessing = true,
-                interactionMode = OnboardingMicInteractionMode.HOLD_TO_SEND,
+                interactionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
                 handshakeHint = transcript,
                 processingLabel = "正在思考...",
                 onPressStart = { false },
@@ -78,4 +94,5 @@ class OnboardingMicFooterGestureTest {
         composeTestRule.onNodeWithText(transcript).assertExists()
         composeTestRule.onNodeWithText("正在思考...").assertExists()
     }
+
 }

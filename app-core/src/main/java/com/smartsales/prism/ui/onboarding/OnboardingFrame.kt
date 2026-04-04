@@ -33,6 +33,7 @@ internal fun OnboardingFrame(
     currentStep: OnboardingStep,
     exitPolicy: OnboardingExitPolicy,
     onExit: () -> Unit,
+    showExitAction: Boolean = true,
     animateStepContent: Boolean = true,
     content: @Composable (OnboardingStep) -> Unit
 ) {
@@ -55,7 +56,7 @@ internal fun OnboardingFrame(
                 .fillMaxSize()
                 .padding(horizontal = 24.dp, vertical = 20.dp)
         ) {
-            if (shouldShowOnboardingExitAction(exitPolicy)) {
+            if (showExitAction && shouldShowOnboardingExitAction(exitPolicy)) {
                 val compactSimSkipAction = host == OnboardingHost.SIM_CONNECTIVITY &&
                     exitPolicy == OnboardingExitPolicy.EXPLICIT_ACTION_ONLY
                 TextButton(

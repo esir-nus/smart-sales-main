@@ -58,6 +58,8 @@ class ConnectivityViewModel @Inject constructor(
 
     private val _wifiMismatchSuggestedSsid = MutableStateFlow<String?>(null)
     val wifiMismatchSuggestedSsid: StateFlow<String?> = _wifiMismatchSuggestedSsid.asStateFlow()
+    private val _wifiMismatchErrorMessage = MutableStateFlow<String?>(null)
+    val wifiMismatchErrorMessage: StateFlow<String?> = _wifiMismatchErrorMessage.asStateFlow()
 
     // 待更新版本
     private val _pendingVersion = MutableStateFlow<String?>(null)
@@ -169,6 +171,7 @@ class ConnectivityViewModel @Inject constructor(
     fun reconnect() {
         Log.d("ConnectivityVM", "reconnect() called, current effectiveState=${effectiveState.value}")
         launchExclusiveOperation("reconnect") {
+            _wifiMismatchErrorMessage.value = null
             _uiOverride.value = ConnectionState.RECONNECTING
             Log.d("ConnectivityVM", "Set override=RECONNECTING, calling service.reconnect()")
             val result = connectivityService.reconnect()
@@ -228,6 +231,10 @@ class ConnectivityViewModel @Inject constructor(
         clearTransientConnectivityUi()
     }
 
+    fun clearWifiMismatchError() {
+        _wifiMismatchErrorMessage.value = null
+    }
+
     /**
      * 重置瞬时连接 UI 状态
      */
@@ -241,22 +248,35 @@ class ConnectivityViewModel @Inject constructor(
      * 更新 WiFi 配置
      */
     fun updateWifiConfig(ssid: String, password: String) {
+        val normalizedSsid = ssid.trim()
+        val normalizedPassword = password.trim()
+        if (normalizedSsid.isEmpty() || normalizedPassword.isEmpty()) {
+            _wifiMismatchErrorMessage.value = WIFI_MISMATCH_EMPTY_CREDENTIALS_ERROR
+            return
+        }
         launchExclusiveOperation("updateWifiConfig") {
-            _wifiMismatchSuggestedSsid.value = ssid
+            _wifiMismatchErrorMessage.value = null
+            _wifiMismatchSuggestedSsid.value = normalizedSsid
             _uiOverride.value = ConnectionState.RECONNECTING
-            val result = connectivityService.updateWifiConfig(ssid, password)
+            val result = connectivityService.updateWifiConfig(normalizedSsid, normalizedPassword)
             when (result) {
                 is WifiConfigResult.Success -> clearTransientConnectivityUi()
-                is WifiConfigResult.Error -> _uiOverride.value = ConnectionState.WIFI_MISMATCH
+                is WifiConfigResult.Error -> {
+                    _wifiMismatchErrorMessage.value = result.message
+                    _uiOverride.value = ConnectionState.WIFI_MISMATCH
+                }
             }
         }
     }
 
     private fun clearTransientConnectivityUi() {
         _wifiMismatchSuggestedSsid.value = null
+        _wifiMismatchErrorMessage.value = null
         _uiOverride.value = null
     }
 }
+
+internal const val WIFI_MISMATCH_EMPTY_CREDENTIALS_ERROR = "Wi-Fi 名称和密码不能为空"
 
 /**
  * 连接模态框状态枚举

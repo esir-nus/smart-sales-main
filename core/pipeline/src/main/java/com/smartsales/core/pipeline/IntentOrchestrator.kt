@@ -14,7 +14,12 @@ import com.smartsales.prism.domain.model.CandidateOption
 import com.smartsales.prism.domain.memory.ScheduleBoard
 import com.smartsales.prism.domain.scheduler.ClarificationState
 import com.smartsales.prism.domain.scheduler.FastTrackResult
+import com.smartsales.prism.domain.scheduler.ActiveTaskResolveResult
+import com.smartsales.prism.domain.scheduler.ActiveTaskRetrievalIndex
+import com.smartsales.prism.domain.scheduler.RescheduleTaskParams
+import com.smartsales.prism.domain.scheduler.ScheduledTask
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -58,7 +63,10 @@ class IntentOrchestrator @Inject constructor(
     private val scheduleBoard: ScheduleBoard,
     private val toolRegistry: ToolRegistry,
     private val timeProvider: TimeProvider,
-    @Named("AppScope") private val appScope: CoroutineScope
+    @Named("AppScope") private val appScope: CoroutineScope,
+    private val activeTaskRetrievalIndex: ActiveTaskRetrievalIndex? = null,
+    private val uniMExtractionService: RealUniMExtractionService? = null,
+    private val globalRescheduleExtractionService: RealGlobalRescheduleExtractionService? = null
 ) {
     private sealed interface PendingExecution {
         data class ProfileMutation(
@@ -77,6 +85,51 @@ class IntentOrchestrator @Inject constructor(
     }
 
     private var pendingExecution: PendingExecution? = null
+
+    private data class SchedulerTerminalCommit(
+        val taskIds: LinkedHashSet<String>,
+        val source: String
+    ) {
+        val primaryTaskId: String?
+            get() = taskIds.lastOrNull()
+
+        fun blocks(result: PipelineResult): Boolean {
+            return when (result) {
+                is PipelineResult.TaskCommandProposal -> true
+                is PipelineResult.ToolDispatch ->
+                    PluginToolIds.canonicalize(result.toolId) == "reschedule"
+                is PipelineResult.ToolDispatchProposal ->
+                    PluginToolIds.canonicalize(result.toolId) == "reschedule"
+                else -> false
+            }
+        }
+    }
+
+    private data class VoiceSchedulerRoutingOutcome(
+        val stopPipeline: Boolean,
+        val terminalCommit: SchedulerTerminalCommit? = null
+    )
+
+    private val sharedSchedulerCreateInterpreter: SchedulerPathACreateInterpreter? by lazy {
+        uniMExtractionService?.let { uniM ->
+            SchedulerPathACreateInterpreter(
+                uniMExtractionService = uniM,
+                uniAExtractionService = uniAExtractionService,
+                uniBExtractionService = uniBExtractionService,
+                timeProvider = timeProvider
+            )
+        }
+    }
+
+    private val sharedSchedulerIntelligenceRouter: SchedulerIntelligenceRouter? by lazy {
+        val createInterpreter = sharedSchedulerCreateInterpreter ?: return@lazy null
+        val globalService = globalRescheduleExtractionService ?: return@lazy null
+        SchedulerIntelligenceRouter(
+            timeProvider = timeProvider,
+            createInterpreter = createInterpreter,
+            globalRescheduleExtractionService = globalService
+        )
+    }
 
     suspend fun processInput(
         input: String,
@@ -239,13 +292,38 @@ class IntentOrchestrator @Inject constructor(
             unifiedId = unifiedId
         )
 
-        var pathATaskId: String? = null
+        var schedulerTerminalCommit: SchedulerTerminalCommit? = null
+        fun rememberSchedulerTerminalCommit(source: String, taskIds: List<String>) {
+            val committedIds = LinkedHashSet(taskIds.filter { it.isNotBlank() })
+            if (committedIds.isNotEmpty()) {
+                schedulerTerminalCommit = SchedulerTerminalCommit(
+                    taskIds = committedIds,
+                    source = source
+                )
+            }
+        }
         var attemptedUniA = false
         var attemptedUniB = false
         var attemptedUniC = false
-        
-        // --- PATH A: Bounded Uni-A attempt for surviving voice input ---
+
         if (isVoice) {
+            val routeOutcome = attemptSharedVoiceSchedulerRouting(
+                input = input,
+                displayedDateIso = displayedDateIso,
+                unifiedId = unifiedId
+            )
+            if (routeOutcome.stopPipeline) {
+                return@flow
+            }
+            routeOutcome.terminalCommit?.let { schedulerTerminalCommit = it }
+        }
+
+        // --- PATH A: Legacy bounded Uni-A cascade for environments that do not inject the shared router support ---
+        if (
+            isVoice &&
+            schedulerTerminalCommit == null &&
+            (sharedSchedulerIntelligenceRouter == null || activeTaskRetrievalIndex == null)
+        ) {
             attemptedUniA = true
             android.util.Log.d(
                 "IntentOrchestrator",
@@ -278,7 +356,10 @@ class IntentOrchestrator @Inject constructor(
                             val exactTaskId = mutationResult.taskIds.firstOrNull() ?: unifiedId
                             val exactTask = taskRepository.getTask(exactTaskId)
                             if (exactTask != null) {
-                                pathATaskId = exactTask.id
+                                rememberSchedulerTerminalCommit(
+                                    source = "legacy_uni_a",
+                                    taskIds = listOf(exactTask.id)
+                                )
                                 PipelineValve.tag(
                                     checkpoint = PipelineValve.Checkpoint.CONFLICT_EVALUATED,
                                     payloadSize = exactTask.durationMinutes,
@@ -349,7 +430,10 @@ class IntentOrchestrator @Inject constructor(
                                     val exactTaskId = mutationResult.taskIds.firstOrNull() ?: unifiedId
                                     val exactTask = taskRepository.getTask(exactTaskId)
                                     if (exactTask != null) {
-                                        pathATaskId = exactTask.id
+                                        rememberSchedulerTerminalCommit(
+                                            source = "legacy_uni_b_exact",
+                                            taskIds = listOf(exactTask.id)
+                                        )
                                         PipelineValve.tag(
                                             checkpoint = PipelineValve.Checkpoint.CONFLICT_EVALUATED,
                                             payloadSize = exactTask.durationMinutes,
@@ -395,7 +479,10 @@ class IntentOrchestrator @Inject constructor(
                                     val vagueTaskId = mutationResult.taskIds.firstOrNull() ?: unifiedId
                                     val vagueTask = taskRepository.getTask(vagueTaskId)
                                     if (vagueTask != null) {
-                                        pathATaskId = vagueTask.id
+                                        rememberSchedulerTerminalCommit(
+                                            source = "legacy_uni_b_vague",
+                                            taskIds = listOf(vagueTask.id)
+                                        )
                                         PipelineValve.tag(
                                             checkpoint = PipelineValve.Checkpoint.PATH_A_DB_WRITTEN,
                                             payloadSize = vagueTask.id.hashCode(),
@@ -481,7 +568,7 @@ class IntentOrchestrator @Inject constructor(
                 else -> Unit
             }
         }
-        if ((attemptedUniA || attemptedUniB || attemptedUniC) && pathATaskId == null) {
+        if ((attemptedUniA || attemptedUniB || attemptedUniC) && schedulerTerminalCommit == null) {
             android.util.Log.d("IntentOrchestrator", "Path A produced no commit for $unifiedId; falling through to Path B")
         }
         
@@ -514,10 +601,10 @@ class IntentOrchestrator @Inject constructor(
                 }
             } else if (result is PipelineResult.TaskCommandProposal) {
                 if (isVoice) {
-                    if (pathATaskId != null) {
+                    if (schedulerTerminalCommit?.blocks(result) == true) {
                         android.util.Log.d(
                             "IntentOrchestrator",
-                            "Suppressing later-lane scheduler command for $unifiedId because Path A already committed task=$pathATaskId"
+                            "Suppressing later-lane scheduler mutation for $unifiedId because Path A terminal owner=${schedulerTerminalCommit?.source} tasks=${schedulerTerminalCommit?.taskIds}"
                         )
                         return@collect
                     }
@@ -543,6 +630,13 @@ class IntentOrchestrator @Inject constructor(
             } else if (result is PipelineResult.ToolDispatch) {
                 val canonicalToolId = PluginToolIds.canonicalize(result.toolId)
                 if (isVoice) {
+                    if (schedulerTerminalCommit?.blocks(result) == true) {
+                        android.util.Log.d(
+                            "IntentOrchestrator",
+                            "Suppressing later-lane scheduler tool dispatch for $unifiedId because Path A terminal owner=${schedulerTerminalCommit?.source} tasks=${schedulerTerminalCommit?.taskIds}"
+                        )
+                        return@collect
+                    }
                     // --- PATH B: Auto-Commit for Voice Plugins ---
                     val request = PluginRequest(input, result.params)
                     val runtimeGateway = RuntimePluginGateway(
@@ -571,7 +665,7 @@ class IntentOrchestrator @Inject constructor(
                     return@collect
                 }
             } else if (isVoice && result is PipelineResult.DisambiguationIntercepted) {
-                val taskId = pathATaskId
+                val taskId = schedulerTerminalCommit?.primaryTaskId
                 if (taskId != null) {
                     val existing = taskRepository.getTask(taskId)
                     val awaitingClarification = result.uiState as? UiState.AwaitingClarification
@@ -593,7 +687,7 @@ class IntentOrchestrator @Inject constructor(
                 }
                 return@collect
             } else if (isVoice && result is PipelineResult.ClarificationNeeded) {
-                val taskId = pathATaskId
+                val taskId = schedulerTerminalCommit?.primaryTaskId
                 if (taskId != null) {
                     val existing = taskRepository.getTask(taskId)
                     if (existing != null) {
@@ -611,6 +705,256 @@ class IntentOrchestrator @Inject constructor(
     }
     }
 
+    private suspend fun FlowCollector<PipelineResult>.attemptSharedVoiceSchedulerRouting(
+        input: String,
+        displayedDateIso: String?,
+        unifiedId: String
+    ): VoiceSchedulerRoutingOutcome {
+        val router = sharedSchedulerIntelligenceRouter ?: return VoiceSchedulerRoutingOutcome(stopPipeline = false)
+        val retrievalIndex = activeTaskRetrievalIndex ?: return VoiceSchedulerRoutingOutcome(stopPipeline = false)
+
+        val shortlist = if (router.mightExpressReschedule(input)) {
+            retrievalIndex.buildShortlist(input)
+        } else {
+            emptyList()
+        }
+
+        return when (
+            val decision = router.routeGeneral(
+                SchedulerIntelligenceRouter.GeneralContext(
+                    transcript = input,
+                    surface = SchedulerIntelligenceRouter.SchedulerSurface.TOP_LEVEL_VOICE,
+                    displayedDateIso = displayedDateIso,
+                    activeTaskShortlist = shortlist
+                )
+            )
+        ) {
+            is SchedulerIntelligenceRouter.Decision.Create -> {
+                val committed = when (val result = decision.result) {
+                    is SchedulerPathACreateInterpreter.Result.SingleMatched -> {
+                        commitVoiceSchedulerIntent(
+                            intent = overrideUnifiedIdForVoice(result.intent, unifiedId),
+                            source = "shared_${decision.metadata.owner.name.lowercase()}"
+                        )
+                    }
+
+                    is SchedulerPathACreateInterpreter.Result.MultiMatched -> {
+                        commitVoiceBatchSchedulerIntents(
+                            intents = result.intents,
+                            source = "shared_${decision.metadata.owner.name.lowercase()}"
+                        )
+                    }
+
+                    else -> null
+                }
+                if (committed != null) {
+                    for (task in committed.tasks) {
+                        emit(PipelineResult.PathACommitted(task))
+                    }
+                }
+                VoiceSchedulerRoutingOutcome(
+                    stopPipeline = false,
+                    terminalCommit = committed?.terminalCommit
+                )
+            }
+
+            is SchedulerIntelligenceRouter.Decision.GlobalReschedule -> {
+                handleSharedVoiceGlobalReschedule(
+                    extracted = decision.extracted,
+                    unifiedId = unifiedId
+                )
+            }
+
+            is SchedulerIntelligenceRouter.Decision.Reject -> {
+                emit(PipelineResult.ConversationalReply(decision.message))
+                VoiceSchedulerRoutingOutcome(stopPipeline = true)
+            }
+
+            is SchedulerIntelligenceRouter.Decision.NotMatched -> {
+                val inspirationRequest = UniCExtractionRequest(
+                    transcript = input,
+                    nowIso = timeProvider.now.toString(),
+                    timezone = timeProvider.zoneId.id,
+                    unifiedId = unifiedId
+                )
+                when (val inspirationIntent = uniCExtractionService.extract(inspirationRequest)) {
+                    is FastTrackResult.CreateInspiration -> {
+                        when (val mutationResult = fastTrackMutationEngine.execute(inspirationIntent)) {
+                            is com.smartsales.prism.domain.scheduler.MutationResult.InspirationCreated -> {
+                                emit(
+                                    PipelineResult.InspirationCommitted(
+                                        id = mutationResult.id,
+                                        content = inspirationIntent.params.content
+                                    )
+                                )
+                                VoiceSchedulerRoutingOutcome(stopPipeline = true)
+                            }
+
+                            else -> VoiceSchedulerRoutingOutcome(stopPipeline = false)
+                        }
+                    }
+
+                    else -> VoiceSchedulerRoutingOutcome(stopPipeline = false)
+                }
+            }
+
+            is SchedulerIntelligenceRouter.Decision.FollowUpReschedule -> {
+                VoiceSchedulerRoutingOutcome(stopPipeline = false)
+            }
+        }
+    }
+
+    private suspend fun FlowCollector<PipelineResult>.handleSharedVoiceGlobalReschedule(
+        extracted: com.smartsales.prism.domain.scheduler.GlobalRescheduleExtractionResult.Supported,
+        unifiedId: String
+    ): VoiceSchedulerRoutingOutcome {
+        val retrievalIndex = activeTaskRetrievalIndex
+            ?: return VoiceSchedulerRoutingOutcome(stopPipeline = false)
+        val task = when (
+            val resolution = retrievalIndex.resolveTarget(
+                target = extracted.target,
+                suggestedTaskId = extracted.suggestedTaskId
+            )
+        ) {
+            is ActiveTaskResolveResult.Resolved -> {
+                taskRepository.getTask(resolution.taskId)
+                    ?: run {
+                        emit(PipelineResult.ConversationalReply("找不到要改期的日程。"))
+                        return VoiceSchedulerRoutingOutcome(stopPipeline = true)
+                    }
+            }
+
+            is ActiveTaskResolveResult.Ambiguous -> {
+                emit(PipelineResult.ConversationalReply("目标不明确，未执行改动。"))
+                return VoiceSchedulerRoutingOutcome(stopPipeline = true)
+            }
+
+            is ActiveTaskResolveResult.NoMatch -> {
+                emit(PipelineResult.ConversationalReply("未找到匹配的日程，请更具体一些。"))
+                return VoiceSchedulerRoutingOutcome(stopPipeline = true)
+            }
+        }
+
+        val resolvedTime = when (
+            val timeResult = SchedulerRescheduleTimeInterpreter.resolveNaturalInstruction(
+                originalTask = task,
+                transcript = extracted.timeInstruction,
+                displayedDateIso = task.startTime.atZone(timeProvider.zoneId).toLocalDate().toString(),
+                timeProvider = timeProvider,
+                uniAExtractionService = uniAExtractionService
+            )
+        ) {
+            is SchedulerRescheduleTimeInterpreter.Result.Success -> timeResult
+            SchedulerRescheduleTimeInterpreter.Result.Unsupported -> {
+                emit(PipelineResult.ConversationalReply("当前仅支持明确时间改期，请直接说出新的时间。"))
+                return VoiceSchedulerRoutingOutcome(stopPipeline = true)
+            }
+
+            SchedulerRescheduleTimeInterpreter.Result.InvalidExactTime -> {
+                emit(PipelineResult.ConversationalReply("改期时间格式无法解析，请换一种明确说法。"))
+                return VoiceSchedulerRoutingOutcome(stopPipeline = true)
+            }
+        }
+
+        val command = FastTrackResult.RescheduleTask(
+            params = RescheduleTaskParams(
+                unifiedId = unifiedId,
+                resolvedTaskId = task.id,
+                targetQuery = extracted.target.targetQuery,
+                newStartTimeIso = resolvedTime.startTime.toString(),
+                newDurationMinutes = resolvedTime.durationMinutes ?: task.durationMinutes
+            )
+        )
+        val committed = commitVoiceSchedulerIntent(
+            intent = command,
+            source = "shared_global_reschedule"
+        )
+        if (committed == null) {
+            emit(PipelineResult.ConversationalReply("改期失败，请稍后重试。"))
+            return VoiceSchedulerRoutingOutcome(stopPipeline = true)
+        }
+        for (task in committed.tasks) {
+            emit(PipelineResult.PathACommitted(task))
+        }
+        return VoiceSchedulerRoutingOutcome(
+            stopPipeline = false,
+            terminalCommit = committed.terminalCommit
+        )
+    }
+
+    private data class CommittedSchedulerTasks(
+        val tasks: List<ScheduledTask>,
+        val terminalCommit: SchedulerTerminalCommit
+    )
+
+    private suspend fun commitVoiceBatchSchedulerIntents(
+        intents: List<FastTrackResult>,
+        source: String
+    ): CommittedSchedulerTasks? {
+        val committedTasks = mutableListOf<ScheduledTask>()
+        intents.forEach { intent ->
+            val committed = commitVoiceSchedulerIntent(
+                intent = intent,
+                source = source
+            )
+            if (committed != null) {
+                committedTasks += committed.tasks
+            }
+        }
+        if (committedTasks.isEmpty()) return null
+        return CommittedSchedulerTasks(
+            tasks = committedTasks,
+            terminalCommit = SchedulerTerminalCommit(
+                taskIds = LinkedHashSet(committedTasks.map { it.id }),
+                source = source
+            )
+        )
+    }
+
+    private suspend fun commitVoiceSchedulerIntent(
+        intent: FastTrackResult,
+        source: String
+    ): CommittedSchedulerTasks? {
+        return when (val mutationResult = fastTrackMutationEngine.execute(intent)) {
+            is com.smartsales.prism.domain.scheduler.MutationResult.Success -> {
+                val committedTasks = mutableListOf<ScheduledTask>()
+                mutationResult.taskIds.forEach { taskId ->
+                    taskRepository.getTask(taskId)?.let(committedTasks::add)
+                }
+                if (committedTasks.isEmpty()) {
+                    null
+                } else {
+                    CommittedSchedulerTasks(
+                        tasks = committedTasks,
+                        terminalCommit = SchedulerTerminalCommit(
+                            taskIds = LinkedHashSet(committedTasks.map { it.id }),
+                            source = source
+                        )
+                    )
+                }
+            }
+
+            else -> null
+        }
+    }
+
+    private fun overrideUnifiedIdForVoice(
+        intent: FastTrackResult,
+        unifiedId: String
+    ): FastTrackResult {
+        return when (intent) {
+            is FastTrackResult.CreateTasks -> FastTrackResult.CreateTasks(
+                intent.params.copy(unifiedId = unifiedId)
+            )
+
+            is FastTrackResult.CreateVagueTask -> FastTrackResult.CreateVagueTask(
+                intent.params.copy(unifiedId = unifiedId)
+            )
+
+            else -> intent
+        }
+    }
+
     private suspend fun executeSchedulerTaskCommand(command: SchedulerTaskCommand): String {
         PipelineValve.tag(
             checkpoint = PipelineValve.Checkpoint.TASK_COMMAND_ROUTED,
@@ -626,6 +970,71 @@ class IntentOrchestrator @Inject constructor(
                     is com.smartsales.prism.domain.scheduler.MutationResult.AmbiguousMatch -> "未找到唯一匹配的任务，请在面板手动处理。"
                     is com.smartsales.prism.domain.scheduler.MutationResult.Error -> "日程创建失败：${result.exception.message ?: "未知错误"}"
                     is com.smartsales.prism.domain.scheduler.MutationResult.InspirationCreated -> "当前命令不支持灵感写入。"
+                }
+            }
+            is SchedulerTaskCommand.CreateVagueTask -> {
+                when (val result = fastTrackMutationEngine.execute(FastTrackResult.CreateVagueTask(command.params))) {
+                    is com.smartsales.prism.domain.scheduler.MutationResult.Success -> "✅ 日程已创建。"
+                    is com.smartsales.prism.domain.scheduler.MutationResult.NoMatch -> "未能创建日程：${result.reason}"
+                    is com.smartsales.prism.domain.scheduler.MutationResult.AmbiguousMatch -> "未找到唯一匹配的任务，请在面板手动处理。"
+                    is com.smartsales.prism.domain.scheduler.MutationResult.Error -> "日程创建失败：${result.exception.message ?: "未知错误"}"
+                    is com.smartsales.prism.domain.scheduler.MutationResult.InspirationCreated -> "当前命令不支持灵感写入。"
+                }
+            }
+            is SchedulerTaskCommand.CreateBatch -> {
+                var createdCount = 0
+                var firstFailure: String? = null
+                command.operations.forEach { operation ->
+                    when (operation) {
+                        is SchedulerTaskCommand.CreateOperation.Exact -> {
+                            when (val result = fastTrackMutationEngine.execute(FastTrackResult.CreateTasks(operation.params))) {
+                                is com.smartsales.prism.domain.scheduler.MutationResult.Success -> {
+                                    createdCount += result.taskIds.size.coerceAtLeast(1)
+                                }
+                                is com.smartsales.prism.domain.scheduler.MutationResult.NoMatch -> {
+                                    if (firstFailure == null) firstFailure = result.reason
+                                }
+                                is com.smartsales.prism.domain.scheduler.MutationResult.AmbiguousMatch -> {
+                                    if (firstFailure == null) firstFailure = "未找到唯一匹配的任务，请在面板手动处理。"
+                                }
+                                is com.smartsales.prism.domain.scheduler.MutationResult.Error -> {
+                                    if (firstFailure == null) {
+                                        firstFailure = result.exception.message ?: "未知错误"
+                                    }
+                                }
+                                is com.smartsales.prism.domain.scheduler.MutationResult.InspirationCreated -> {
+                                    if (firstFailure == null) firstFailure = "当前命令不支持灵感写入。"
+                                }
+                            }
+                        }
+                        is SchedulerTaskCommand.CreateOperation.Vague -> {
+                            when (val result = fastTrackMutationEngine.execute(FastTrackResult.CreateVagueTask(operation.params))) {
+                                is com.smartsales.prism.domain.scheduler.MutationResult.Success -> {
+                                    createdCount += result.taskIds.size.coerceAtLeast(1)
+                                }
+                                is com.smartsales.prism.domain.scheduler.MutationResult.NoMatch -> {
+                                    if (firstFailure == null) firstFailure = result.reason
+                                }
+                                is com.smartsales.prism.domain.scheduler.MutationResult.AmbiguousMatch -> {
+                                    if (firstFailure == null) firstFailure = "未找到唯一匹配的任务，请在面板手动处理。"
+                                }
+                                is com.smartsales.prism.domain.scheduler.MutationResult.Error -> {
+                                    if (firstFailure == null) {
+                                        firstFailure = result.exception.message ?: "未知错误"
+                                    }
+                                }
+                                is com.smartsales.prism.domain.scheduler.MutationResult.InspirationCreated -> {
+                                    if (firstFailure == null) firstFailure = "当前命令不支持灵感写入。"
+                                }
+                            }
+                        }
+                    }
+                }
+                when {
+                    createdCount > 0 && firstFailure == null -> "✅ 已创建${createdCount}个日程。"
+                    createdCount > 0 -> "已创建${createdCount}个日程，部分失败：$firstFailure"
+                    firstFailure != null -> "未能创建日程：$firstFailure"
+                    else -> "未能创建日程。"
                 }
             }
             is SchedulerTaskCommand.RescheduleTask -> {

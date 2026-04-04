@@ -58,8 +58,10 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -440,8 +442,12 @@ private fun SimUserCenterProfileHero(
             SimUserCenterMetadataChip(text = "PRO", accent = true)
         }
 
+        val haptic = LocalHapticFeedback.current
         Surface(
-            modifier = Modifier.clickable(onClick = onEdit),
+            modifier = Modifier.clickable {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onEdit()
+            },
             color = palette.editButtonSurface,
             shape = RoundedCornerShape(15.dp),
             border = androidx.compose.foundation.BorderStroke(0.5.dp, palette.editButtonBorder)
@@ -693,7 +699,11 @@ private fun SimUserCenterRow(
         .heightIn(min = 52.dp)
         .then(
             if (isInteractive) {
-                Modifier.clickable(onClick = onClick!!)
+                val haptic = LocalHapticFeedback.current
+                Modifier.clickable {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onClick!!()
+                }
             } else {
                 Modifier
             }

@@ -2,7 +2,7 @@
 
 > Purpose: active working board and evidence ledger for connectivity-module bugs, hypotheses, fix status, and next actions.
 > Scope: connectivity-specific for now; this is not a repo-wide generic bug tracker.
-> Last Updated: 2026-03-31
+> Last Updated: 2026-04-02
 
 ## Operating Rules
 
@@ -206,6 +206,8 @@
   - Reconnect now distinguishes `phone not on Wi‑Fi` from `phone Wi‑Fi connected but SSID unreadable`.
   - Reconnect foreground query now retries once after the BLE 2s query-floor timeout instead of failing immediately on throttle.
   - Manual Wi‑Fi repair no longer falls back into generic reconnect after `SD#...` / `PD#...`; it now uses a setup-aligned bounded online-confirmation loop against the submitted SSID.
+  - Manual `WIFI_MISMATCH` repair now blocks blank/whitespace SSID or password locally and at the service seam so empty credentials cannot overwrite the badge's stored Wi‑Fi profile.
+  - Manual `WIFI_MISMATCH` repair now requires an explicit send-confirm dialog before valid credentials are written to the badge.
   - Badge network status is now passive/event-driven instead of background-polled, and HTTP `/list` / `/download` / `/delete` reuse the active runtime endpoint snapshot instead of re-querying BLE before every call.
   - Connected-vs-ready evidence diagnostics now log the manual-sync gate branch, `ConnectivityBridge.isReady()` preflight, badge network query result, resolved base URL, and HTTP reachability outcome under the existing `SmartSalesConn` / `AudioPipeline` capture tags.
 - Next action:

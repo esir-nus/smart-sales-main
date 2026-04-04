@@ -16,6 +16,7 @@ It is the visual source of truth for:
 - the Dynamic Island host slot inside the home header
 - the shared top/bottom monolith identity that remains stable as the center canvas moves from empty home into active discussion
 - the current shell-chrome inclusion/exclusion rule for normal non-Mono work
+- the fact that current home-shell truth is mounted only through `MainActivity -> RuntimeShell`, not through retired split-era shell hosts
 
 It does not own:
 
@@ -91,6 +92,7 @@ If any of these return in the future, they must be reintroduced by an owning fea
 - Use `docs/cerb-ui/dynamic-island/spec.md` for the center header surface behavior.
 - Use `docs/core-flow/sim-shell-routing-flow.md` for shell routing behavior and support-surface transitions.
 - Use `docs/specs/base-runtime-unification.md` and `docs/cerb/interface-map.md` for the wrapper-debt rule on legacy full-side hosts.
+- shared home-shell surfaces may consume shell-owned adjunct state only through explicit RuntimeShell wiring, never through shared-UI downcasts to a concrete ViewModel.
 - Do not treat those global docs as the owner of the home empty-state composition.
 
 ## 5. Doc Alignment Rules

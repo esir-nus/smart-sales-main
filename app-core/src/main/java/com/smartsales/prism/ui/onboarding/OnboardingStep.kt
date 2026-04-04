@@ -16,6 +16,7 @@ enum class OnboardingStep {
     PERMISSIONS_PRIMER,
     VOICE_HANDSHAKE_CONSULTATION,
     VOICE_HANDSHAKE_PROFILE,
+    SCHEDULER_QUICK_START,
     HARDWARE_WAKE,
     SCAN,
     DEVICE_FOUND,
@@ -30,16 +31,17 @@ internal fun initialOnboardingStep(host: OnboardingHost): OnboardingStep = when 
 
 internal fun nextOnboardingStep(
     currentStep: OnboardingStep,
-    host: OnboardingHost
+    @Suppress("UNUSED_PARAMETER") host: OnboardingHost
 ): OnboardingStep = when (currentStep) {
     OnboardingStep.WELCOME -> OnboardingStep.PERMISSIONS_PRIMER
     OnboardingStep.PERMISSIONS_PRIMER -> OnboardingStep.VOICE_HANDSHAKE_CONSULTATION
     OnboardingStep.VOICE_HANDSHAKE_CONSULTATION -> OnboardingStep.VOICE_HANDSHAKE_PROFILE
     OnboardingStep.VOICE_HANDSHAKE_PROFILE -> OnboardingStep.HARDWARE_WAKE
+    OnboardingStep.SCHEDULER_QUICK_START -> OnboardingStep.COMPLETE
     OnboardingStep.HARDWARE_WAKE -> OnboardingStep.SCAN
     OnboardingStep.SCAN -> OnboardingStep.DEVICE_FOUND
     OnboardingStep.DEVICE_FOUND -> OnboardingStep.PROVISIONING
-    OnboardingStep.PROVISIONING -> OnboardingStep.COMPLETE
+    OnboardingStep.PROVISIONING -> OnboardingStep.SCHEDULER_QUICK_START
     OnboardingStep.COMPLETE -> OnboardingStep.COMPLETE
 }
 

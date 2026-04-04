@@ -18,6 +18,7 @@ It owns:
 - single-item visibility policy
 - RuntimeShell-local lane arbitration rules beneath the shared shell UX contract
 - renderer-local visual states for scheduler and RuntimeShell/SIM connectivity copy
+- the current single-production-host mounting assumption under `MainActivity -> RuntimeShell`
 
 It does not own:
 
@@ -72,8 +73,10 @@ Rules:
 
 - transport truth comes from `ConnectivityViewModel.connectionState`
 - included connectivity island states are `CONNECTED`, `DISCONNECTED`, `RECONNECTING`, and `NEEDS_SETUP`
-- `CONNECTED` and `DISCONNECTED` interrupt the scheduler lane for `3s` on state change
-- a heartbeat may re-show `CONNECTED` or `DISCONNECTED` every `30s` for `2.5s` when no takeover is already active
+- `CONNECTED` interrupts the scheduler lane for `5s` on state change so the success state can read clearly in the shared header
+- `DISCONNECTED` interrupts the scheduler lane for `3s` on state change
+- a heartbeat may re-show `CONNECTED` every `30s` for `5s` when no takeover is already active
+- a heartbeat may re-show `DISCONNECTED` every `30s` for `2.5s` when no takeover is already active
 - `RECONNECTING` and `NEEDS_SETUP` are persistent takeovers until the underlying transport state changes
 - the connectivity lane is suppressed while the scheduler drawer is open or while any connectivity-owned surface (`MODAL`, `SETUP`, `MANAGER`) is already visible
 - visible connectivity tap opens the connectivity entry surface instead of the scheduler drawer
@@ -104,6 +107,7 @@ Excluded from this lane:
 
 - scheduler remains the owner of task meaning, prioritization, and scheduler-target routing metadata
 - RuntimeShell owns only the visible-lane arbitration and shell entry routing
+- shared renderer callers must pass scheduler/connectivity inputs explicitly; the renderer must not infer runtime truth from legacy wrapper defaults or concrete shared-UI downcasts
 - connectivity island behavior must use transport truth, not manager-only presentation refinements
 - the island may open the scheduler drawer or connectivity entry, but it must not become a second scheduler surface or a second connectivity manager
 - shells other than RuntimeShell/SIM must not inherit the connectivity lane by assumption; they need an explicit spec update first

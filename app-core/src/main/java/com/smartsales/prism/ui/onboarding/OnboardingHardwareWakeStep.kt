@@ -31,7 +31,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-internal fun HardwareWakeStep(onContinue: () -> Unit) {
+internal fun HardwareWakeStep(
+    onContinue: () -> Unit,
+    onSkipToQuickStart: (() -> Unit)? = null
+) {
     val transition = rememberInfiniteTransition(label = "hardwareWake")
     val glow by transition.animateFloat(
         initialValue = 0.4f,
@@ -81,5 +84,13 @@ internal fun HardwareWakeStep(onContinue: () -> Unit) {
         }
         Spacer(Modifier.height(28.dp))
         PrimaryPillButton("蓝灯已经在闪了", onContinue, modifier = Modifier.fillMaxWidth())
+        onSkipToQuickStart?.let {
+            Spacer(Modifier.height(10.dp))
+            QuietGhostButton(
+                text = "跳过，直接体验日程",
+                onClick = it,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
     }
 }

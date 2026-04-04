@@ -130,6 +130,8 @@ sealed class BadgeManagerStatus {
 `BadgeConnectionState` remains the strict shared transport contract.
 `BadgeManagerStatus` is a manager-only refinement layer used for BLE/Wi‑Fi diagnostics in connectivity surfaces without changing shell/history routing.
 
+For the current reconnect contract, shared `BadgeConnectionState.Connected` may resume as soon as persistent GATT is active and the badge reports a usable IP / transport-ready network result. HTTP file operations still keep their own endpoint validation path.
+
 ### RecordingNotification
 
 ```kotlin
@@ -201,7 +203,7 @@ sealed class WavDownloadResult {
 > Shared shell routing still treats that as `DISCONNECTED`.
 > `NEEDS_SETUP` only shows on cold boot (no session ever existed).
 > Tapping "重试连接" from a disconnected manager state triggers auto-reconnect using persisted session.
-> Tapping "更新配置" from `WIFI_MISMATCH` immediately enters reconnect/progress and runs the repair flow without requiring a second manual retry.
+> Tapping "更新配置" from `WIFI_MISMATCH` first performs local validation plus an explicit send-confirm dialog; only the confirmed valid submit enters reconnect/progress and runs the repair flow without requiring a second manual retry.
 > The richer `BLE_PAIRED_NETWORK_*` states are manager-only refinements derived from `ConnectivityBridge.managerStatus`; they must not redefine global transport readiness.
 > Debug builds may additionally expose a temporary `断开连接` action in `BLE_PAIRED_NETWORK_*` states for hardware testing convenience; that control must not be treated as a release-surface contract.
 > Closing the connectivity modal/manager clears transient reconnect or mismatch override state so later reopen reflects live manager truth rather than a retained stale repair screen.
@@ -241,13 +243,15 @@ Reconnect credential rule:
   - if phone Wi‑Fi transport is connected but SSID is unreadable, route to `WIFI_MISMATCH` rather than blind-replaying a credential
   - otherwise route the manager UI to `WIFI_MISMATCH` so the user can re-enter credentials
 - reconnect-driven `WIFI_MISMATCH` must carry the current phone SSID suggestion when readable so the repair form can prefill it without locking the field
-- when the user submits manual SSID/password from `WIFI_MISMATCH`, the UI must immediately show reconnect/progress while `updateWifiConfig()` runs its provision-plus-confirm repair path
+- when the user submits manual SSID/password from `WIFI_MISMATCH`, the UI must trim both fields, reject blank values locally, require an explicit confirmation dialog, and only then show reconnect/progress while `updateWifiConfig()` runs its provision-plus-confirm repair path
 - manual repair must not fall back into the generic reconnect path after sending credentials
 - manual repair confirmation must:
   - keep the current BLE session
   - poll badge network status with the same bounded tolerance used by setup (`3` attempts, `1500ms` interval)
   - validate against the user-submitted SSID rather than the phone's current SSID
 - the manual repair form should prefill the current phone SSID when reconnect surfaced one, but keep the SSID editable and keep password blank/manual
+- empty or whitespace-only SSID/password must never be sent to the badge from the manual repair flow
+- invalid manual repair input must stay on `WIFI_MISMATCH`, surface a local error message, and must not transition into reconnect/progress
 - manual repair may return to `WIFI_MISMATCH` only when the badge proves it came online on a different SSID than the submitted one
 - manual repair must not route back to `WIFI_MISMATCH` merely because phone Wi‑Fi is unreadable/unavailable or because the badge is still offline during the bounded confirmation window
 - if the user closes the connectivity surface mid-repair, only the transient override is cleared; underlying bridge/manager truth remains authoritative on next reopen

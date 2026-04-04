@@ -91,6 +91,7 @@ Production root unification landed on 2026-04-01:
 - `MainActivity` is now the single production activity
 - `RuntimeShell` is now the single production shell host
 - former `AgentMainActivity`, `SimMainActivity`, `AgentShell`, and `SimShell` are retired from production ownership
+- the current canonical base-runtime owners under that shell are `SimAgentViewModel` for chat/session/audio/follow-up and `SimSchedulerViewModel` for scheduler/reminder-banner/top-summary behavior
 
 Temporary legacy wrappers may remain only where deeper Mono or legacy-full internals are still being reduced, but they are compatibility owners, not product-truth owners.
 
@@ -100,6 +101,7 @@ Current wrapper-debt hosts in code:
 - `app-core/.../drawers/scheduler/SchedulerViewModel.kt`
 
 These files may remain as compatibility hosts while shared base-runtime truth lives in current docs and lower support files.
+They must not remain the default owners for shared composables or production shell wiring.
 
 ---
 
@@ -117,6 +119,8 @@ Rules:
 - do not create separate SIM/full UI interfaces
 - do not fork shared UI behavior for non-Mono work
 - keep shell/UI decisions capability-layered, not version-layered
+- shared composables must receive explicit `IAgentViewModel` / `ISchedulerViewModel` inputs rather than silently defaulting to legacy wrapper owners
+- shell-only adjunct state such as SIM transcript-reveal or voice-draft control must be passed explicitly from `RuntimeShell` rather than inferred by downcasting shared UI to a concrete ViewModel
 
 ---
 

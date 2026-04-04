@@ -1,0 +1,76 @@
+name: Platform Governance Check
+
+on:
+  push:
+    paths:
+      - '.github/CODEOWNERS'
+      - '.github/workflows/platform-governance-check.yml'
+      - 'docs/**'
+      - 'app/**'
+      - 'app-core/**'
+      - 'core/**'
+      - 'data/**'
+      - 'domain/**'
+      - 'platforms/**'
+  pull_request:
+    paths:
+      - '.github/CODEOWNERS'
+      - '.github/workflows/platform-governance-check.yml'
+      - 'docs/**'
+      - 'app/**'
+      - 'app-core/**'
+      - 'core/**'
+      - 'data/**'
+      - 'domain/**'
+      - 'platforms/**'
+
+jobs:
+  governance-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify governance docs exist
+        run: |
+          test -f docs/specs/platform-governance.md
+          test -f docs/reference/platform-targets.md
+          test -f docs/platforms/README.md
+          test -f docs/platforms/android/README.md
+          test -f docs/platforms/harmony/README.md
+          test -f docs/platforms/harmony/tingwu-container.md
+          test -f platforms/harmony/tingwu-container/README.md
+          test -f platforms/harmony/tingwu-container/oh-package.json5
+          test -f platforms/harmony/tingwu-container/build-profile.json5
+          test -f platforms/harmony/tingwu-container/hvigorfile.ts
+          test -f platforms/harmony/tingwu-container/AppScope/app.json5
+          test -f platforms/harmony/tingwu-container/entry/src/main/module.json5
+          test -f platforms/harmony/tingwu-container/entry/src/main/ets/entryability/EntryAbility.ets
+          test -f platforms/harmony/tingwu-container/entry/src/main/ets/pages/Index.ets
+
+      - name: Verify Harmony compatibility guide is legacy-scoped
+        run: |
+          grep -n "legacy Android-app compatibility path" docs/reference/harmonyos-platform-guide.md
+          grep -n "does not define the native Harmony implementation strategy" docs/reference/harmonyos-platform-guide.md
+
+  android-tree-boundary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Block native Harmony artifacts inside the current Android tree
+        run: |
+          forbidden_files="$(find app app-core core data domain -type f \( -name 'module.json5' -o -name 'oh-package.json5' -o -name 'hvigorfile.ts' -o -name '*.ets' \))"
+          if [ -n "$forbidden_files" ]; then
+            echo "Native Harmony artifacts were found inside the Android lineage:"
+            echo "$forbidden_files"
+            exit 1
+          fi
+
+      - name: Block native Harmony imports inside the current Android tree
+        run: |
+          if grep -R -n -E '(^|[^A-Za-z0-9_])ohos\\.' app app-core core data domain \
+            --exclude-dir=build \
+            --exclude='*.md'; then
+            echo "Native Harmony imports were found inside the current Android lineage."
+            exit 1
+          fi

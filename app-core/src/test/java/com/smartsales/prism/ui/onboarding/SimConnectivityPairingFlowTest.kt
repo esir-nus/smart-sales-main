@@ -20,6 +20,7 @@ class SimConnectivityPairingFlowTest {
         assertFalse(OnboardingStep.PERMISSIONS_PRIMER.isConnectivityPairingStep())
         assertFalse(OnboardingStep.VOICE_HANDSHAKE_CONSULTATION.isConnectivityPairingStep())
         assertFalse(OnboardingStep.VOICE_HANDSHAKE_PROFILE.isConnectivityPairingStep())
+        assertFalse(OnboardingStep.SCHEDULER_QUICK_START.isConnectivityPairingStep())
         assertFalse(OnboardingStep.COMPLETE.isConnectivityPairingStep())
     }
 

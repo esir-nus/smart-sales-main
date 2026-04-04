@@ -32,12 +32,22 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 internal const val FUN_ASR_REALTIME_SERVICE_URL = "wss://dashscope.aliyuncs.com/api-ws/v1/inference"
+internal const val FUN_ASR_REALTIME_SAMPLE_RATE = 16_000
+internal const val FUN_ASR_REALTIME_MODEL_NAME = "fun-asr-realtime"
+internal const val FUN_ASR_ONBOARDING_MAX_SENTENCE_SILENCE_MILLIS = 6_000
 
 enum class SimRealtimeSpeechFailureReason {
     UNAVAILABLE,
     NO_MATCH,
     ERROR,
     CANCELLED
+}
+
+enum class SimRealtimeSpeechProfile(
+    internal val maxSentenceSilenceMillis: Int? = null
+) {
+    SIM_DRAFT,
+    ONBOARDING(maxSentenceSilenceMillis = FUN_ASR_ONBOARDING_MAX_SENTENCE_SILENCE_MILLIS)
 }
 
 sealed interface SimRealtimeSpeechRecognitionResult {
@@ -68,7 +78,7 @@ interface SimRealtimeSpeechRecognizer {
     val events: Flow<SimRealtimeSpeechEvent>
         get() = emptyFlow()
 
-    fun startListening()
+    fun startListening(profile: SimRealtimeSpeechProfile = SimRealtimeSpeechProfile.SIM_DRAFT)
     suspend fun finishListening(): SimRealtimeSpeechRecognitionResult
     fun cancelListening()
     fun isListening(): Boolean
@@ -82,12 +92,10 @@ class FunAsrRealtimeSpeechRecognizer @Inject constructor(
 
     companion object {
         private const val TAG = "FunAsrRealtime"
-        private const val SAMPLE_RATE = 16_000
         private const val CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO
         private const val AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT
         private const val MAX_CAPTURE_DURATION_MILLIS = 60_000L
         private const val START_STOP_TIMEOUT_MILLIS = 10_000L
-        private const val MODEL_NAME = "fun-asr-realtime"
         private const val AUTH_FAILED_CODE = 240070
     }
 
@@ -105,10 +113,13 @@ class FunAsrRealtimeSpeechRecognizer @Inject constructor(
 
     override val events: Flow<SimRealtimeSpeechEvent> = _events.asSharedFlow()
 
-    override fun startListening() {
-        Log.d(TAG, "start_requested")
+    override fun startListening(profile: SimRealtimeSpeechProfile) {
+        Log.d(
+            TAG,
+            "start_requested profile=${profile.logName} maxSentenceSilence=${profile.maxSentenceSilenceLogValue}"
+        )
         clearFinishedSession()
-        val activeSession = RecognitionSession()
+        val activeSession = RecognitionSession(profile = profile)
         synchronized(sessionLock) {
             session = activeSession
         }
@@ -324,21 +335,8 @@ class FunAsrRealtimeSpeechRecognizer @Inject constructor(
         return initialized
     }
 
-    private fun buildRealtimeParams(): String {
-        val nlsConfig = JSONObject()
-        nlsConfig.put("sr_format", "pcm")
-        nlsConfig.put("model", MODEL_NAME)
-        nlsConfig.put("sample_rate", SAMPLE_RATE)
-        nlsConfig.put("semantic_punctuation_enabled", false)
-
-        val params = JSONObject()
-        params.put("nls_config", nlsConfig)
-        params.put("service_type", Constants.kServiceTypeSpeechTranscriber)
-        return params.toString()
-    }
-
     private fun startDialog(activeSession: RecognitionSession): Boolean {
-        nui.setParams(buildRealtimeParams())
+        nui.setParams(buildFunAsrRealtimeParams(activeSession.profile))
         val startCode = nui.startDialog(
             Constants.VadMode.TYPE_P2T,
             buildFunAsrDialogParams()
@@ -388,14 +386,14 @@ class FunAsrRealtimeSpeechRecognizer @Inject constructor(
         }
         releaseAudioRecord()
         val minBufferSize = AudioRecord.getMinBufferSize(
-            SAMPLE_RATE,
+            FUN_ASR_REALTIME_SAMPLE_RATE,
             CHANNEL_CONFIG,
             AUDIO_FORMAT
         )
         if (minBufferSize <= 0) return false
         val createdRecorder = AudioRecord(
             MediaRecorder.AudioSource.DEFAULT,
-            SAMPLE_RATE,
+            FUN_ASR_REALTIME_SAMPLE_RATE,
             CHANNEL_CONFIG,
             AUDIO_FORMAT,
             minBufferSize * 2
@@ -496,6 +494,7 @@ class FunAsrRealtimeSpeechRecognizer @Inject constructor(
     }
 
     private inner class RecognitionSession(
+        val profile: SimRealtimeSpeechProfile,
         val deferred: CompletableDeferred<SimRealtimeSpeechRecognitionResult> = CompletableDeferred()
     ) {
         var latestTranscript: String = ""
@@ -529,6 +528,12 @@ private val DashscopeRealtimeAuthFailureCategory.logName: String
 private val Int?.logValue: String
     get() = this?.toString() ?: "none"
 
+private val SimRealtimeSpeechProfile.logName: String
+    get() = name.lowercase()
+
+private val SimRealtimeSpeechProfile.maxSentenceSilenceLogValue: String
+    get() = maxSentenceSilenceMillis?.toString() ?: "default"
+
 internal fun buildMissingApiKeyAuthDiagnostic(): DashscopeRealtimeAuthDiagnostic =
     DashscopeRealtimeAuthDiagnostic(
         category = DashscopeRealtimeAuthFailureCategory.CONFIG_MISSING,
@@ -548,6 +553,24 @@ internal fun buildFunAsrInitParams(
 }
 
 internal fun buildFunAsrDialogParams(): String = JSONObject().toString()
+
+internal fun buildFunAsrRealtimeParams(
+    profile: SimRealtimeSpeechProfile
+): String {
+    val nlsConfig = JSONObject()
+    nlsConfig.put("sr_format", "pcm")
+    nlsConfig.put("model", FUN_ASR_REALTIME_MODEL_NAME)
+    nlsConfig.put("sample_rate", FUN_ASR_REALTIME_SAMPLE_RATE)
+    nlsConfig.put("semantic_punctuation_enabled", false)
+    profile.maxSentenceSilenceMillis?.let {
+        nlsConfig.put("max_sentence_silence", it)
+    }
+
+    val params = JSONObject()
+    params.put("nls_config", nlsConfig)
+    params.put("service_type", Constants.kServiceTypeSpeechTranscriber)
+    return params.toString()
+}
 
 internal fun sanitizeFunAsrTranscript(raw: String?): String {
     val payload = raw?.trim().orEmpty()

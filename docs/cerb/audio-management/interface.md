@@ -2,7 +2,7 @@
 
 > **Blackbox contract** — For consumers (AudioDrawer, UI). Don't read implementation.
 > **Status**: Active supporting interface
-> **Last Updated**: 2026-04-01
+> **Last Updated**: 2026-04-02
 
 ---
 
@@ -75,6 +75,7 @@ data class AudioFile(
     val timeDisplay: String,  // "10:15" or "2 days"
     val source: AudioSource,
     val status: TranscriptionStatus,
+    val localAvailability: AudioLocalAvailability,
     val isStarred: Boolean = false,
     val isTestImport: Boolean = false,
     val summary: String? = null,
@@ -91,6 +92,17 @@ data class AudioFile(
 enum class AudioSource {
     SMARTBADGE,
     PHONE
+}
+```
+
+### AudioLocalAvailability
+
+```kotlin
+enum class AudioLocalAvailability {
+    QUEUED,      // 已列出，等待后台下载
+    DOWNLOADING, // 正在后台下载 WAV
+    READY,       // 本地 WAV 已存在，可进入转写/聊天待处理路径
+    FAILED       // 后台下载失败，等待后续手动重试
 }
 ```
 
@@ -124,7 +136,7 @@ enum class TranscriptionStatus {
 | Operation | Guarantee |
 |-----------|-----------|
 | `getAudioFiles` | Hot flow, emits current list immediately on collection |
-| `syncFromDevice` | Manual/UI-driven sync entry, idempotent, safe to call multiple times; consumer copy must distinguish badge-empty vs already-present vs imported outcomes |
+| `syncFromDevice` | Manual/UI-driven sync entry, idempotent, safe to call multiple times; current SIM contract is list-first: new badge filenames may appear immediately as placeholder cards while WAV download continues in one background queue |
 | `startTranscription` | Updates `status` → `TRANSCRIBING`, emits progress via flow |
 | `deleteAudio` | Idempotent, returns `NotFound` if file is absent |
 
@@ -132,6 +144,8 @@ Additional inventory guarantee:
 
 - successful badge-pipeline completions may appear in the drawer inventory without calling `syncFromDevice`, because pipeline completion ingests the recording into the same repository namespace
 - this does **not** change the drawer-side sync contract: consumers must still treat `syncFromDevice` as manual-only
+- placeholder SmartBadge cards may exist before the local WAV exists; consumers must gate transcribe/chat-pending actions on `localAvailability == READY`
+- placeholder SmartBadge cards remain deletable and use the same badge tombstone/delete cleanup contract
 
 SmartBadge delete guarantees:
 

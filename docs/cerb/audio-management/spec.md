@@ -2,7 +2,7 @@
 
 > **Cerb-compliant spec** — Audio file management: sync, transcription, UI interaction.
 > **Status**: SHIPPED
-> **Last Updated**: 2026-04-01
+> **Last Updated**: 2026-04-02
 > **Behavioral UX Authority Above This Doc**: [`docs/core-flow/base-runtime-ux-surface-governance-flow.md`](../../core-flow/base-runtime-ux-surface-governance-flow.md) (`UX.AUDIO.*`)
 
 ---
@@ -14,6 +14,13 @@
 Audio Management owns the drawer-visible audio inventory, manual sync/download/delete/transcription behavior, and persisted artifact access for badge recordings and phone/test audio.
 
 Users manually trigger drawer-side sync and deletion through the Audio Drawer UI.
+
+Current SIM manual badge sync is list-first:
+
+- `/list` creates new SmartBadge cards immediately
+- large WAV downloads continue in one repository-owned background queue
+- placeholder cards stay visible and deletable while waiting for local WAV readiness
+- transcribe/chat-pending actions remain blocked until the local WAV exists
 
 Completed badge-pipeline recordings must also appear in the same drawer inventory without requiring the user to reopen the drawer or run manual sync. The delivered implementation does this by ingesting successful `BadgeAudioPipeline` completions directly into the SIM audio namespace before badge cleanup.
 
@@ -87,8 +94,18 @@ Manual sync outcome rule:
 
 - `徽章当前没有录音` means the badge list was actually empty
 - `录音已在列表中，无需重复同步` means the badge reported recordings, but they were already present locally or currently suppressed by pending badge-delete protection
-- `已同步 X 条徽章录音` means new badge files were imported during this sync run
-- when empty recordings are skipped, the suffix `（跳过 N 条空录音）` is appended to the IMPORTED or ALREADY_PRESENT message
+- `已发现 X 条徽章录音，正在后台同步` means `/list` discovered new badge files and created immediate placeholder cards while the background queue downloads WAVs
+- `录音已在列表中，后台同步继续进行` means the current sync mostly resumed retryable placeholder downloads instead of discovering brand-new filenames
+- when empty recordings are skipped, the sync surface should append the suffix `（跳过 N 条空录音）` only after that empty-file evidence is actually observed
+
+Browse header contract:
+
+- SIM browse mode keeps one top header family: dual-purpose grip, title plus count badge, and one smart sync/status capsule that also acts as the connectivity handoff when sync is blocked
+- browse grip keeps dismiss semantics on tap or downward pull, but reserves upward pull for manual sync only when the badge-sync gate is ready
+- blocked or disconnected upward pull must stay in-place and communicate denial locally instead of inventing auto-sync behavior
+- browse smart capsule is the only browse-header connectivity affordance in this slice; ready taps trigger manual sync, while blocked taps hand off to connectivity instead of pretending sync can start
+- browse-only helper rows are legal only while the built-in demo seed is the lone visible inventory item; they teach sync/delete mechanics and must not mutate real repository items
+- select mode remains the narrower rebinding picker and must not surface browse smart-capsule chrome or browse helper teaching rows
 
 Empty recording filter rule:
 
@@ -104,6 +121,7 @@ Empty recording filter rule:
 
 See [interface.md](./interface.md) for:
 - `AudioFile` — Core audio metadata + status
+- `AudioLocalAvailability` — QUEUED, DOWNLOADING, READY, FAILED
 - `AudioSource` — SMARTBADGE vs PHONE
 - `TranscriptionStatus` — PENDING, TRANSCRIBING, TRANSCRIBED
 
@@ -127,7 +145,7 @@ See [interface.md](./interface.md) for:
 **Implementation**:
 - [x] `AudioRepository` interface (8 methods)
 - [x] `FakeAudioRepository` with sample data
-- [x] Domain models: `AudioFile`, `AudioSource`, `TranscriptionStatus`
+- [x] Domain models: `AudioFile`, `AudioLocalAvailability`, `AudioSource`, `TranscriptionStatus`
 - [x] DI binding for fake
 
 **Testing**:
@@ -146,19 +164,21 @@ See [interface.md](./interface.md) for:
 
 **Implementation**:
 - [x] storage-backed audio repositories ship in `app-core/src/main/java/com/smartsales/prism/data/audio/`
-- [x] manual drawer sync downloads badge WAVs through `ConnectivityBridge`
+- [x] current SIM path is list-first: `/list` creates placeholder cards immediately and one background queue downloads badge WAVs sequentially
 - [x] transcription uses `TingwuPipeline.submit()` plus job observation
 - [x] drawer delete requires one-time per drawer-open confirmation before the first `SMARTBADGE` delete
 - [x] persisted legacy badge-like filenames (`log_YYYYMMDD_HHMMSS.wav`) are normalized back to `SMARTBADGE` on load, and delete-confirm/delete-sync fallback also treats them as badge-origin before reload normalization finishes
 - [x] SmartBadge delete persists tombstones keyed by exact badge filename before remote cleanup finishes
 - [x] later manual sync suppresses tombstoned badge filenames until remote cleanup succeeds or the badge no longer reports them
+- [x] placeholder SmartBadge cards may exist before the local WAV exists; they stay deletable but block transcribe/chat-pending actions until `localAvailability == READY`
 - [x] SIM keeps its own namespaced storage (`sim_audio_metadata.json`, `sim_<audioId>.*`, `sim_<audioId>_artifacts.json`)
 
 **Testing**:
-- [x] manual badge sync imports new files into drawer inventory
+- [x] manual badge sync creates immediate drawer-visible placeholder cards for new filenames before background download completes
 - [x] transcription progress and artifact persistence update drawer state
 - [x] SmartBadge delete confirms once per drawer-open session, removes local data, and suppresses reimport on remote-delete failure
 - [x] legacy persisted badge-like entries with drifted `PHONE` source still trigger the same delete-confirm/delete-sync contract
+- [x] deleting a queued/downloading SmartBadge placeholder removes it locally, writes the same badge tombstone, and suppresses reappearance until remote cleanup succeeds
 - [x] star / session-binding persistence survives reload
 
 ---
@@ -170,7 +190,7 @@ See [interface.md](./interface.md) for:
 **Implementation**:
 - [x] `RealBadgeAudioPipeline` writes successful badge recordings into the SIM drawer namespace through `SimBadgeAudioPipelineIngestSupport`
 - [x] auto-ingested entries are marked `SMARTBADGE` + `TRANSCRIBED` and write minimal persisted artifacts from the completed transcript
-- [x] exact badge filenames dedupe repeated ingest
+- [x] exact badge filenames dedupe repeated ingest, including upgrade-in-place when a pipeline completion matches an existing placeholder card
 - [x] badge remote delete runs only after ingest succeeds; failed ingest preserves the badge file for recovery/manual sync
 
 **Testing**:

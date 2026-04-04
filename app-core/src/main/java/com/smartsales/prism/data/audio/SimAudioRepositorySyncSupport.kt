@@ -205,45 +205,65 @@ internal class SimAudioRepositorySyncSupport(
     }
 
     suspend fun syncFromBadge(trigger: SimBadgeSyncTrigger): SimBadgeSyncOutcome = withContext(runtime.ioDispatcher) {
-        Log.d(
-            SIM_AUDIO_SYNC_LOG_TAG,
-            "SIM badge sync preflight start trigger=${trigger.name.lowercase()}"
-        )
-        val isReady = canSyncFromBadge()
-        Log.d(
-            SIM_AUDIO_SYNC_LOG_TAG,
-            "SIM badge sync preflight result trigger=${trigger.name.lowercase()} isReady=$isReady"
-        )
-        if (trigger == SimBadgeSyncTrigger.AUTO && !isReady) {
-            Log.d(
-                SIM_AUDIO_SYNC_LOG_TAG,
-                "SIM badge sync skipped trigger=auto stage=strict-preflight reason=not-ready"
-            )
-            return@withContext SimBadgeSyncOutcome(
-                trigger = trigger,
-                skippedReason = SimBadgeSyncSkippedReason.NOT_READY
-            )
-        }
+        syncFromBadgeInternal(trigger = trigger, requireStrictPreflight = true)
+    }
 
-        if (trigger == SimBadgeSyncTrigger.MANUAL && !isReady) {
+    suspend fun syncFromBadgeAfterVerifiedReadiness(
+        trigger: SimBadgeSyncTrigger
+    ): SimBadgeSyncOutcome = withContext(runtime.ioDispatcher) {
+        syncFromBadgeInternal(trigger = trigger, requireStrictPreflight = false)
+    }
+
+    private suspend fun syncFromBadgeInternal(
+        trigger: SimBadgeSyncTrigger,
+        requireStrictPreflight: Boolean
+    ): SimBadgeSyncOutcome {
+        if (requireStrictPreflight) {
             Log.d(
                 SIM_AUDIO_SYNC_LOG_TAG,
-                "SIM badge sync blocked trigger=manual stage=strict-preflight reason=not-ready"
+                "SIM badge sync preflight start trigger=${trigger.name.lowercase()}"
             )
-            emitSimAudioSyncFailureWhileConnectivityUnavailableTelemetry(
-                detail = "manual preflight failed: connectivity not ready"
+            val isReady = canSyncFromBadge()
+            Log.d(
+                SIM_AUDIO_SYNC_LOG_TAG,
+                "SIM badge sync preflight result trigger=${trigger.name.lowercase()} isReady=$isReady"
             )
-            throw Exception(SIM_BADGE_SYNC_CONNECTIVITY_UNAVAILABLE_MESSAGE)
+            if (trigger == SimBadgeSyncTrigger.AUTO && !isReady) {
+                Log.d(
+                    SIM_AUDIO_SYNC_LOG_TAG,
+                    "SIM badge sync skipped trigger=auto stage=strict-preflight reason=not-ready"
+                )
+                return SimBadgeSyncOutcome(
+                    trigger = trigger,
+                    skippedReason = SimBadgeSyncSkippedReason.NOT_READY
+                )
+            }
+
+            if (trigger == SimBadgeSyncTrigger.MANUAL && !isReady) {
+                Log.d(
+                    SIM_AUDIO_SYNC_LOG_TAG,
+                    "SIM badge sync blocked trigger=manual stage=strict-preflight reason=not-ready"
+                )
+                emitSimAudioSyncFailureWhileConnectivityUnavailableTelemetry(
+                    detail = "manual preflight failed: connectivity not ready"
+                )
+                throw Exception(SIM_BADGE_SYNC_CONNECTIVITY_UNAVAILABLE_MESSAGE)
+            }
+        } else {
+            Log.d(
+                SIM_AUDIO_SYNC_LOG_TAG,
+                "SIM badge sync preflight accepted upstream trigger=${trigger.name.lowercase()}"
+            )
         }
 
         if (!runtime.syncMutex.tryLock()) {
-            return@withContext SimBadgeSyncOutcome(
+            return SimBadgeSyncOutcome(
                 trigger = trigger,
                 skippedReason = SimBadgeSyncSkippedReason.ALREADY_RUNNING
             )
         }
 
-        try {
+        return try {
             emitSimAudioBadgeSyncRequestedTelemetry(trigger)
             val executionResult = performBadgeSyncLocked()
             emitSimAudioBadgeSyncCompletedTelemetry(

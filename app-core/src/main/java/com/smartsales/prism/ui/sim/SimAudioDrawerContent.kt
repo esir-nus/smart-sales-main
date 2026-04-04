@@ -1,8 +1,17 @@
 package com.smartsales.prism.ui.sim
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.keyframes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -16,20 +25,40 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.North
+import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.filled.ViewCarousel
-import androidx.compose.material3.Icon
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.smartsales.prism.ui.components.connectivity.ConnectionState
+import kotlin.math.abs
+
+private const val SIM_AUDIO_BROWSE_GRIP_VISUAL_TRANSLATION_FACTOR = 0.35f
 
 @Composable
 internal fun SimAudioDrawerContent(
@@ -38,7 +67,10 @@ internal fun SimAudioDrawerContent(
     mode: RuntimeAudioDrawerMode,
     expandedAudioIds: Set<String>,
     currentChatAudioId: String?,
+    onDismiss: () -> Unit,
+    connectionState: ConnectionState,
     isSyncing: Boolean,
+    syncFeedback: SimAudioSyncFeedback?,
     onSyncFromBadge: () -> Unit,
     onOpenConnectivity: () -> Unit,
     onArtifactOpened: (String, String) -> Unit,
@@ -47,63 +79,56 @@ internal fun SimAudioDrawerContent(
     onSelectForChat: (SimChatAudioSelection) -> Unit,
     onImportTestAudio: () -> Unit,
     onReplayOnboarding: () -> Unit,
+    onBrowsePullOffsetChanged: (Float) -> Unit,
+    onBrowsePullSettled: () -> Unit,
     showTestImportAction: Boolean,
     showDebugScenarioActions: Boolean
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+    val syncVisualState = resolveSimAudioSyncVisualState(
+        connectionState = connectionState,
+        isSyncing = isSyncing,
+        syncFeedback = syncFeedback
+    )
+    val showBrowseHelperDeck = shouldShowSimAudioBrowseHelperDeck(entries, mode)
+
+    if (mode == RuntimeAudioDrawerMode.BROWSE) {
+        SimAudioBrowseHeader(
+            entryCount = entries.size,
+            connectionState = connectionState,
+            syncVisualState = syncVisualState,
+            onDismiss = onDismiss,
+            onSyncFromBadge = onSyncFromBadge,
+            onOpenConnectivity = onOpenConnectivity,
+            onReplayOnboarding = onReplayOnboarding,
+            onBrowsePullOffsetChanged = onBrowsePullOffsetChanged,
+            onBrowsePullSettled = onBrowsePullSettled,
+            showDebugScenarioActions = showDebugScenarioActions
+        )
+    } else {
+        SimDrawerHandle(
+            dismissDirection = SimVerticalGestureDirection.DOWN,
+            onDismiss = onDismiss,
+            testTag = SIM_AUDIO_HANDLE_TEST_TAG,
+            dismissOnTap = true
+        )
         Text(
-            text = if (mode == RuntimeAudioDrawerMode.CHAT_RESELECT) "选择要讨论的录音" else "录音笔记",
+            text = "选择要讨论的录音",
             style = MaterialTheme.typography.titleLarge.copy(
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 18.sp
             ),
             color = SimDrawerTextPrimary,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
         )
-
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            if (mode == RuntimeAudioDrawerMode.BROWSE) {
-                Text(
-                    text = "${entries.size} 项",
-                    color = SimDrawerTextMuted,
-                    fontSize = 12.sp
-                )
-                SimDrawerHeaderAction(
-                    text = "工牌连接",
-                    onClick = onOpenConnectivity
-                )
-                if (showDebugScenarioActions) {
-                    SimDrawerHeaderIconAction(
-                        onClick = onReplayOnboarding,
-                        contentDescription = "重新开始设备引导"
-                    )
-                }
-                SimDrawerHeaderAction(
-                    text = if (isSyncing) "同步中..." else "同步徽章",
-                    onClick = onSyncFromBadge,
-                    enabled = !isSyncing
-                )
-            }
-        }
-    }
-
-    if (mode == RuntimeAudioDrawerMode.CHAT_RESELECT) {
         Text(
             text = "点击录音卡片切换当前聊天",
             color = SimDrawerTextSecondary,
             fontSize = 11.sp,
             modifier = Modifier
                 .padding(horizontal = 20.dp)
-                .padding(bottom = 6.dp)
+                .padding(top = 6.dp, bottom = 10.dp)
         )
     }
 
@@ -116,6 +141,23 @@ internal fun SimAudioDrawerContent(
         verticalArrangement = Arrangement.spacedBy(12.dp),
         contentPadding = PaddingValues(top = 16.dp, bottom = 24.dp)
     ) {
+        if (showBrowseHelperDeck) {
+            item {
+                SimAudioBrowseHelperCard(
+                    icon = Icons.Filled.North,
+                    title = "上拉手柄同步工牌录音",
+                    body = "当前演示库存只保留一条内置录音；上拉手柄可练习手动同步。"
+                )
+            }
+            item {
+                SimAudioBrowseHelperCard(
+                    icon = Icons.Filled.Delete,
+                    title = "左滑卡片可删除录音",
+                    body = "教学辅助只在内置演示录音独占库存时显示，不会删除真实同步数据。"
+                )
+            }
+        }
+
         items(entries, key = { it.item.id }) { entry ->
             SimAudioCard(
                 entry = entry,
@@ -156,49 +198,475 @@ internal fun SimAudioDrawerContent(
 }
 
 @Composable
-private fun SimDrawerHeaderAction(
-    text: String,
-    onClick: () -> Unit,
-    enabled: Boolean = true
+private fun SimAudioBrowseHeader(
+    entryCount: Int,
+    connectionState: ConnectionState,
+    syncVisualState: SimAudioSyncVisualState,
+    onDismiss: () -> Unit,
+    onSyncFromBadge: () -> Unit,
+    onOpenConnectivity: () -> Unit,
+    onReplayOnboarding: () -> Unit,
+    onBrowsePullOffsetChanged: (Float) -> Unit,
+    onBrowsePullSettled: () -> Unit,
+    showDebugScenarioActions: Boolean
+) {
+    SimAudioBrowseGrip(
+        syncVisualState = syncVisualState,
+        onDismiss = onDismiss,
+        onSyncFromBadge = onSyncFromBadge,
+        onBrowsePullOffsetChanged = onBrowsePullOffsetChanged,
+        onBrowsePullSettled = onBrowsePullSettled
+    )
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 12.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "录音笔记",
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 20.sp,
+                    letterSpacing = (-0.5).sp
+                ),
+                color = SimDrawerTextPrimary
+            )
+            Surface(
+                color = Color.White.copy(alpha = 0.08f),
+                shape = RoundedCornerShape(999.dp)
+            ) {
+                Text(
+                    text = "$entryCount 项",
+                    color = SimDrawerTextMuted,
+                    fontSize = 11.sp,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
+        }
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            if (showDebugScenarioActions) {
+                SimDrawerHeaderIconAction(
+                    onClick = onReplayOnboarding,
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Filled.ViewCarousel,
+                            contentDescription = null,
+                            tint = SimDrawerTextMuted,
+                            modifier = Modifier.size(15.dp)
+                        )
+                    }
+                )
+            }
+            SimAudioSmartCapsule(
+                visualState = syncVisualState,
+                connectionState = connectionState,
+                onSyncFromBadge = onSyncFromBadge,
+                onOpenConnectivity = onOpenConnectivity
+            )
+        }
+    }
+}
+
+@Composable
+internal fun SimAudioBrowseGrip(
+    syncVisualState: SimAudioSyncVisualState,
+    onDismiss: () -> Unit,
+    onSyncFromBadge: () -> Unit,
+    onBrowsePullOffsetChanged: (Float) -> Unit,
+    onBrowsePullSettled: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val density = LocalDensity.current
+    val pullThresholdPx = with(density) { 55.dp.toPx() }
+    val maxTravelPx = with(density) { 90.dp.toPx() }
+    val dismissThresholdPx = with(density) { 56.dp.toPx() }
+    val touchSlopPx = with(density) { 8.dp.toPx() }
+    val canTriggerSync = canTriggerSimAudioSync(syncVisualState)
+    var gestureOffsetPx by remember { mutableFloatStateOf(0f) }
+    var thresholdReached by remember { mutableFloatStateOf(0f) }
+    var deniedTick by remember { mutableIntStateOf(0) }
+    val shakeOffset = remember { Animatable(0f) }
+    val helperAlpha by animateFloatAsState(
+        targetValue = if (thresholdReached > 0f) 1f else 0f,
+        label = "sim_audio_grip_helper_alpha"
+    )
+    val helperOffsetY by animateDpAsState(
+        targetValue = if (thresholdReached > 0f) 0.dp else 10.dp,
+        label = "sim_audio_grip_helper_offset"
+    )
+    val gripWidth by animateDpAsState(
+        targetValue = if (thresholdReached > 0f) 44.dp else 36.dp,
+        label = "sim_audio_grip_width"
+    )
+    val gripHeight by animateDpAsState(
+        targetValue = if (thresholdReached > 0f) 6.dp else 4.dp,
+        label = "sim_audio_grip_height"
+    )
+
+    LaunchedEffect(deniedTick) {
+        if (deniedTick == 0) return@LaunchedEffect
+        shakeOffset.snapTo(0f)
+        shakeOffset.animateTo(
+            targetValue = 0f,
+            animationSpec = keyframes {
+                durationMillis = 360
+                0f at 0
+                (-10f) at 50
+                10f at 110
+                (-8f) at 170
+                6f at 230
+                0f at 320
+            }
+        )
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 10.dp)
+            .padding(horizontal = 20.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .height(36.dp)
+                .graphicsLayer { translationX = shakeOffset.value }
+                .clip(RoundedCornerShape(18.dp))
+                .background(Color.Transparent)
+                .pointerInput(syncVisualState) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        val startPosition = down.position
+                        val touchSlop = viewConfiguration.touchSlop
+                        var activePointerId = down.id
+                        var dragLocked = false
+                        var rejected = false
+
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull { it.id == activePointerId }
+                                ?: event.changes.firstOrNull()
+                                ?: break
+
+                            activePointerId = change.id
+
+                            if (change.changedToUpIgnoreConsumed() || !change.pressed) {
+                                val shouldDismiss =
+                                    gestureOffsetPx <= -dismissThresholdPx && thresholdReached == 0f
+                                val shouldSync = thresholdReached > 0f
+                                gestureOffsetPx = 0f
+                                thresholdReached = 0f
+                                onBrowsePullSettled()
+                                when {
+                                    shouldSync && canTriggerSync -> onSyncFromBadge()
+                                    shouldSync -> deniedTick += 1
+                                    shouldDismiss -> onDismiss()
+                                }
+                                break
+                            }
+
+                            val totalDx = change.position.x - startPosition.x
+                            val totalDy = change.position.y - startPosition.y
+                            val absDx = abs(totalDx)
+                            val absDy = abs(totalDy)
+
+                            if (!dragLocked && !rejected && (absDx > touchSlop || absDy > touchSlop)) {
+                                if (absDy >= absDx) {
+                                    dragLocked = true
+                                } else {
+                                    rejected = true
+                                }
+                            }
+
+                            if (dragLocked) {
+                                change.consume()
+                                val updatedGestureOffsetPx =
+                                    (-totalDy).coerceIn(-maxTravelPx, maxTravelPx)
+                                gestureOffsetPx = updatedGestureOffsetPx
+                                val upwardPullPx = updatedGestureOffsetPx.coerceAtLeast(0f)
+                                val translatedPullPx =
+                                    (upwardPullPx * SIM_AUDIO_BROWSE_GRIP_VISUAL_TRANSLATION_FACTOR)
+                                        .coerceAtMost(maxTravelPx)
+                                // 阈值跟随真实上拉距离，视觉位移继续保留橡皮筋手感。
+                                thresholdReached = if (upwardPullPx >= pullThresholdPx) 1f else 0f
+                                onBrowsePullOffsetChanged(translatedPullPx)
+                            }
+                        }
+                    }
+                }
+                .clickable(onClick = onDismiss),
+            contentAlignment = Alignment.Center
+        ) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 2.dp)
+                    .graphicsLayer { translationY = with(density) { helperOffsetY.toPx() } }
+                    .alpha(helperAlpha),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Sync,
+                    contentDescription = null,
+                    tint = SimDrawerAccent,
+                    modifier = Modifier.size(13.dp)
+                )
+                Text(
+                    text = "松开同步",
+                    color = SimDrawerTextSecondary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(width = gripWidth, height = gripHeight)
+                    .align(Alignment.Center)
+                    .background(
+                        when {
+                            thresholdReached > 0f -> SimDrawerAccent
+                            gestureOffsetPx > touchSlopPx -> SimDrawerAccent.copy(alpha = 0.72f)
+                            else -> Color.White.copy(alpha = 0.2f)
+                        },
+                        RoundedCornerShape(999.dp)
+                    )
+            )
+        }
+    }
+}
+
+@Composable
+private fun SimAudioSmartCapsule(
+    visualState: SimAudioSyncVisualState,
+    connectionState: ConnectionState,
+    onSyncFromBadge: () -> Unit,
+    onOpenConnectivity: () -> Unit
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val label = resolveSimAudioSyncLabel(visualState, connectionState)
+    val actionEnabled = canTriggerSimAudioSync(visualState)
+    val backgroundColor = when (visualState) {
+        SimAudioSyncVisualState.READY -> Color.White.copy(alpha = 0.05f)
+        SimAudioSyncVisualState.SYNCING -> SimDrawerAccent.copy(alpha = 0.12f)
+        SimAudioSyncVisualState.SYNCED -> SimDrawerAccentSuccess.copy(alpha = 0.12f)
+        SimAudioSyncVisualState.RECONNECTING -> Color(0x26FF9F0A)
+        SimAudioSyncVisualState.ERROR -> SimDrawerDeleteBackground.copy(alpha = 0.12f)
+        SimAudioSyncVisualState.BLOCKED -> Color.White.copy(alpha = 0.03f)
+    }
+    val borderColor = when (visualState) {
+        SimAudioSyncVisualState.READY -> SimDrawerDividerStrong
+        SimAudioSyncVisualState.SYNCING -> SimDrawerAccent.copy(alpha = 0.45f)
+        SimAudioSyncVisualState.SYNCED -> SimDrawerAccentSuccess.copy(alpha = 0.45f)
+        SimAudioSyncVisualState.RECONNECTING -> Color(0x66FF9F0A)
+        SimAudioSyncVisualState.ERROR -> SimDrawerDeleteBackground.copy(alpha = 0.45f)
+        SimAudioSyncVisualState.BLOCKED -> SimDrawerDivider
+    }
+    val contentTint = when (visualState) {
+        SimAudioSyncVisualState.SYNCING -> SimDrawerAccent
+        SimAudioSyncVisualState.SYNCED -> SimDrawerAccentSuccess
+        SimAudioSyncVisualState.ERROR -> SimDrawerDeleteBackground
+        SimAudioSyncVisualState.BLOCKED -> SimDrawerBlockedText
+        else -> SimDrawerTextPrimary
+    }
+
+    Surface(
+        color = backgroundColor,
+        shape = RoundedCornerShape(999.dp),
+        modifier = Modifier
+            .graphicsLayer {
+                scaleX = if (isPressed) 0.96f else 1f
+                scaleY = if (isPressed) 0.96f else 1f
+            }
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = {
+                    if (actionEnabled) onSyncFromBadge() else onOpenConnectivity()
+                }
+            ),
+        border = androidx.compose.foundation.BorderStroke(1.dp, borderColor)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            AnimatedContent(targetState = visualState, label = "sim_audio_capsule_state") { targetState ->
+                when (targetState) {
+                    SimAudioSyncVisualState.READY -> {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .background(
+                                        SimDrawerAccentSuccess,
+                                        RoundedCornerShape(999.dp)
+                                    )
+                            )
+                            Text(
+                                text = label,
+                                color = contentTint,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                    SimAudioSyncVisualState.SYNCING,
+                    SimAudioSyncVisualState.RECONNECTING -> {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Sync,
+                                contentDescription = null,
+                                tint = contentTint,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Text(
+                                text = label,
+                                color = contentTint,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                    SimAudioSyncVisualState.SYNCED -> {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Check,
+                                contentDescription = null,
+                                tint = contentTint,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Text(
+                                text = label,
+                                color = contentTint,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                    SimAudioSyncVisualState.ERROR -> {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.ErrorOutline,
+                                contentDescription = null,
+                                tint = contentTint,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Text(
+                                text = label,
+                                color = contentTint,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                    SimAudioSyncVisualState.BLOCKED -> {
+                        Text(
+                            text = label,
+                            color = contentTint,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SimAudioBrowseHelperCard(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    body: String
 ) {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(999.dp))
-            .background(Color.White.copy(alpha = 0.06f), RoundedCornerShape(999.dp))
-            .border(1.dp, SimDrawerDivider, RoundedCornerShape(999.dp))
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 9.dp, vertical = 5.dp)
-            .alpha(if (enabled) 1f else 0.5f)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color.White.copy(alpha = 0.05f))
+            .border(1.dp, SimDrawerDivider, RoundedCornerShape(18.dp))
+            .padding(horizontal = 14.dp, vertical = 12.dp)
     ) {
-        Text(
-            text = text,
-            color = SimDrawerTextMuted,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Medium
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(SimDrawerAccent.copy(alpha = 0.14f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = SimDrawerAccent,
+                    modifier = Modifier.size(15.dp)
+                )
+            }
+            androidx.compose.foundation.layout.Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = title,
+                    color = SimDrawerTextPrimary,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = body,
+                    color = SimDrawerTextSecondary,
+                    fontSize = 12.sp,
+                    lineHeight = 17.sp
+                )
+            }
+        }
     }
 }
 
 @Composable
 private fun SimDrawerHeaderIconAction(
     onClick: () -> Unit,
-    contentDescription: String
+    icon: @Composable () -> Unit
 ) {
     Box(
         modifier = Modifier
-            .size(28.dp)
+            .size(30.dp)
             .clip(RoundedCornerShape(999.dp))
             .background(Color.White.copy(alpha = 0.06f), RoundedCornerShape(999.dp))
             .border(1.dp, SimDrawerDivider, RoundedCornerShape(999.dp))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
-        Icon(
-            imageVector = Icons.Filled.ViewCarousel,
-            contentDescription = contentDescription,
-            tint = SimDrawerTextMuted,
-            modifier = Modifier.size(15.dp)
-        )
+        icon()
     }
 }
 

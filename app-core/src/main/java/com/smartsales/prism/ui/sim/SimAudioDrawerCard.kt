@@ -335,12 +335,17 @@ internal fun SimAudioCard(
         enableDismissFromStartToEnd = canSwipeToTranscribe,
         enableDismissFromEndToStart = canSwipeToDelete,
         backgroundContent = {
-            if (dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart) {
+            val showDeleteBackground = canSwipeToDelete &&
+                (
+                    dismissState.targetValue == SwipeToDismissBoxValue.EndToStart ||
+                        dismissState.dismissDirection == SwipeToDismissBoxValue.EndToStart
+                    )
+            if (showDeleteBackground) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(
-                            if (canSwipeToDelete) SimDrawerDeleteBackground else Color.Transparent,
+                            SimDrawerDeleteBackground,
                             RoundedCornerShape(20.dp)
                         )
                         .padding(horizontal = 20.dp),
@@ -349,7 +354,7 @@ internal fun SimAudioCard(
                     Icon(
                         imageVector = Icons.Filled.Delete,
                         contentDescription = null,
-                        tint = if (canSwipeToDelete) Color.White else Color.Transparent
+                        tint = Color.White
                     )
                 }
             }

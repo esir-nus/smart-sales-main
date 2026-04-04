@@ -3,6 +3,7 @@ package com.smartsales.prism.ui.sim
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -21,15 +22,22 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.smartsales.prism.ui.components.PrismSurface
+import com.smartsales.prism.ui.components.connectivity.ConnectionState
 import com.smartsales.prism.ui.components.prismNavigationBarPadding
 import com.smartsales.prism.ui.theme.BackdropScrim
+import kotlinx.coroutines.launch
 
 internal const val SIM_AUDIO_BADGE_DELETE_DIALOG_TEST_TAG = "sim_audio_badge_delete_dialog"
 internal const val SIM_AUDIO_BADGE_DELETE_CONFIRM_TEST_TAG = "sim_audio_badge_delete_confirm"
@@ -41,6 +49,7 @@ fun SimAudioDrawer(
     onDismiss: () -> Unit,
     onAskAi: (SimAudioDiscussion) -> Unit,
     onSelectForChat: (SimChatAudioSelection) -> Unit,
+    connectionState: ConnectionState,
     onSyncFromBadge: () -> Unit = {},
     onOpenConnectivity: () -> Unit = {},
     onArtifactOpened: (String, String) -> Unit = { _, _ -> },
@@ -57,9 +66,13 @@ fun SimAudioDrawer(
     val entries = viewModel.entries.collectAsStateWithLifecycle()
     val expandedAudioIds = viewModel.expandedAudioIds.collectAsStateWithLifecycle()
     val isSyncing = viewModel.isSyncing.collectAsStateWithLifecycle()
+    val syncFeedback = viewModel.syncFeedback.collectAsStateWithLifecycle()
     val pendingBadgeDeleteConfirmation =
         viewModel.pendingBadgeDeleteConfirmation.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val browsePullOffsetPx = remember { Animatable(0f) }
+    val coroutineScope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
 
     LaunchedEffect(viewModel) {
         viewModel.uiEvents.collect { message ->
@@ -84,7 +97,10 @@ fun SimAudioDrawer(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(BackdropScrim)
-                    .clickable { onDismiss() }
+                    .clickable {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onDismiss()
+                    }
             )
         }
 
@@ -108,7 +124,10 @@ fun SimAudioDrawer(
             PrismSurface(
                 modifier = modifier
                     .fillMaxWidth()
-                    .fillMaxHeight(0.9f),
+                    .fillMaxHeight(0.9f)
+                    .graphicsLayer {
+                        translationY = -browsePullOffsetPx.value
+                    },
                 shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
                 backgroundColor = SimDrawerSurface,
                 elevation = 18.dp
@@ -118,20 +137,16 @@ fun SimAudioDrawer(
                         .fillMaxSize()
                         .prismNavigationBarPadding()
                 ) {
-                    SimDrawerHandle(
-                        dismissDirection = SimVerticalGestureDirection.DOWN,
-                        onDismiss = onDismiss,
-                        testTag = SIM_AUDIO_HANDLE_TEST_TAG,
-                        dismissOnTap = true
-                    )
-
                     SimAudioDrawerContent(
                         entries = entries.value,
                         viewModel = viewModel,
                         mode = mode,
                         expandedAudioIds = expandedAudioIds.value,
                         currentChatAudioId = currentChatAudioId,
+                        onDismiss = onDismiss,
+                        connectionState = connectionState,
                         isSyncing = isSyncing.value,
+                        syncFeedback = syncFeedback.value,
                         onSyncFromBadge = onSyncFromBadge,
                         onOpenConnectivity = onOpenConnectivity,
                         onArtifactOpened = onArtifactOpened,
@@ -140,6 +155,22 @@ fun SimAudioDrawer(
                         onSelectForChat = onSelectForChat,
                         onImportTestAudio = onImportTestAudio,
                         onReplayOnboarding = onReplayOnboarding,
+                        onBrowsePullOffsetChanged = { pullOffset ->
+                            coroutineScope.launch {
+                                browsePullOffsetPx.snapTo(pullOffset)
+                            }
+                        },
+                        onBrowsePullSettled = {
+                            coroutineScope.launch {
+                                browsePullOffsetPx.animateTo(
+                                    targetValue = 0f,
+                                    animationSpec = spring(
+                                        dampingRatio = 0.5f,
+                                        stiffness = Spring.StiffnessLow
+                                    )
+                                )
+                            }
+                        },
                         showTestImportAction = showTestImportAction,
                         showDebugScenarioActions = showDebugScenarioActions
                     )

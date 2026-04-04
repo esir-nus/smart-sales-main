@@ -62,6 +62,9 @@ Active rule:
 
 - drawer-side badge sync is manual and UI-owned
 - opening the drawer must not auto-run badge sync as current product truth
+- manual sync may list remote badge recordings first and create immediate placeholder cards before local WAV download completes
+- placeholder cards remain visible and deletable while background download continues
+- placeholder cards must not enter transcribe or chat-pending flows until the local WAV exists
 - successful badge-pipeline completions may still appear in the drawer automatically because pipeline completion ingests them into the same SIM audio inventory
 
 Historical rule:
@@ -236,6 +239,7 @@ When the user requests another audio inside chat:
 - the user must be able to select one audio item
 - selecting an already-transcribed item must bind chat to stored artifacts without rerunning Tingwu
 - selecting a pending item must bind chat immediately to that audio and continue the same SIM Tingwu pipeline inside chat with transparent progress states
+- selecting a remote-only placeholder that is still `QUEUED` / `DOWNLOADING` / `FAILED` must stay blocked in the drawer instead of opening a fake pending-chat run without a local WAV
 - once that pending-item run completes, chat must append a durable artifact-backed discussion turn rather than leaving only a lightweight completion notice
 - while that audio is already pending/transcribing, the drawer must lock its transcribe trigger for that item so the user cannot start a duplicate run from swipe or button actions
 - when that pending-item run completes, the resulting artifact/state must already be reflected back in the audio drawer without requiring a separate drawer-origin rerun

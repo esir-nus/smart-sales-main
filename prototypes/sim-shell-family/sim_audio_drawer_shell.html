@@ -162,7 +162,6 @@
             width: 36px; height: 4px; border-radius: 2px;
             background: rgba(255, 255, 255, 0.2); transition: all 0.2s;
         }
-        .drawer-grip-area.pulling .drawer-grip { background: var(--color-accent-blue); box-shadow: 0 0 8px rgba(10, 132, 255, 0.3); }
 
         /* Mode & Header styling */
         .drawer-header-v2 {
@@ -306,23 +305,6 @@
             background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center;
             flex-shrink: 0;
         }
-
-        
-        
-        .audio-card.attention-shimmer {
-            position: relative;
-            overflow: hidden;
-            border: 1px solid rgba(10, 132, 255, 0.25);
-        }
-        .audio-card.attention-shimmer::after {
-            content: '';
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.06) 50%, transparent 70%);
-            background-size: 200% 100%;
-            animation: textShimmerScan 2.5s infinite linear;
-            pointer-events: none;
-            border-radius: inherit;
-        }
         
         /* Progress Bar */
         .progress-bar-container { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; margin-top: 4px; }
@@ -363,27 +345,18 @@
         .sim-shell.select-mode .audio-card:last-child { border-bottom: none; }
         .sim-shell.select-mode .audio-card.disabled { opacity: 0.4; pointer-events: none; cursor: default; }
         
-        /* Seed Cards styles */
-        .seed-card {
-            background: rgba(255, 255, 255, 0.02);
-            padding: 16px; border-radius: 12px;
-            display: flex; gap: 12px; align-items: center;
-            border: 1px dashed rgba(255, 255, 255, 0.15);
-        }
-        .seed-card .seed-icon { font-size: 20px; color: var(--text-muted); opacity: 0.8; font-weight: bold; width: 24px; text-align: center;}
-        .seed-card .seed-text { flex: 1; display:flex; flex-direction:column; gap:2px; }
-        .seed-card .card-title { font-size: 15px; color: var(--text-primary); font-weight: 500;}
-        .seed-card .card-subtitle { font-size: 13px; color: var(--text-muted); }
-
         /* The helper text that appears when dragging the grip */
         .grip-helper-text {
-            position: absolute; top: -18px; font-size: 12px; color: var(--color-accent-blue);
-            opacity: 0; transform: translateY(10px); transition: all 0.2s; font-weight: 500; pointer-events: none;
+            position: absolute; top: -24px; font-size: 12px; color: var(--color-accent-blue);
+            opacity: 0; transform: translateY(10px); transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); font-weight: 500; pointer-events: none;
+            display: flex; align-items: center; justify-content: center; gap: 4px;
         }
-        .drawer-grip-area.pulling-threshold .grip-helper-text {
+        .grip-helper-text svg { width: 14px; height: 14px; }
+        .audio-drawer.pulling-threshold .grip-helper-text {
             opacity: 1; transform: translateY(0);
         }
-        .drawer-grip-area.pulling-threshold .drawer-grip { width: 44px; height: 6px; box-shadow: 0 0 10px rgba(10, 132, 255, 0.6); }
+        .audio-drawer.pulling-threshold .drawer-grip { width: 44px; height: 6px; box-shadow: 0 0 10px rgba(10, 132, 255, 0.6); }
+        .audio-drawer.pulling .drawer-grip { background: var(--color-accent-blue); box-shadow: 0 0 8px rgba(10, 132, 255, 0.3); }
 
         @keyframes flash-grip-denied {
             0%, 100% { background: rgba(255, 255, 255, 0.2); transform: translateX(0); width: 36px; height: 4px; box-shadow: none; }
@@ -413,6 +386,7 @@
 
         .sim-shell[data-view="9-action-delete"] .show-9-action-delete { display: flex; }
         .sim-shell[data-view="10-action-transcribe"] .show-10-action-transcribe { display: flex; }
+        .sim-shell[data-view="11-downloading"] .show-11-downloading { display: flex; }
 
     </style>
 </head>
@@ -427,6 +401,7 @@
         <button id="btn-8" onclick="setView('8-longlist', 'browse', this)">8. Long-list / Scroll Check</button>
         <button id="btn-9" onclick="setView('9-action-delete', 'browse', this)">9. Action: Left Swipe (Delete)</button>
         <button id="btn-10" onclick="setView('10-action-transcribe', 'browse', this)">10. Action: Right Swipe (Transcribe)</button>
+        <button id="btn-11" onclick="setView('11-downloading', 'browse', this)">11. State: Downloading</button>
 
         <h3>Select Mode (Picker)</h3>
         <button id="btn-6" onclick="setView('6-select', 'select', this)">6. Selectable Items</button>
@@ -470,7 +445,10 @@
             <!-- AUDIO DRAWER OVERLAY -->
             <div class="audio-drawer">
                 <div class="drawer-grip-area" id="drawer-grip-area">
-                    <div class="grip-helper-text">松开同步</div>
+                    <div class="grip-helper-text">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                        松开同步
+                    </div>
                     <div class="drawer-grip" id="drawer-grip"></div>
                 </div>
                 
@@ -498,28 +476,30 @@
                     <div class="state-view show-1-empty" style="flex-direction: column; gap: 12px; padding-bottom: 24px;">
                         
                         <!-- Seed Card 1: Pull to Sync -->
-                        <div class="seed-card" id="seed-card-1" onclick="demoGripPulse()" style="cursor: pointer;">
-                            <div class="seed-icon">↑</div>
-                            <div class="seed-text">
-                                <div class="card-title">上拉手柄以手动同步</div>
-                                <div class="card-subtitle">从工牌获取最新录音</div>
+                        <div class="audio-card-container" id="seed-card-1-container">
+                            <div class="swipe-bg-delete" style="opacity: 1;"><svg class="svg-icon" style="width:24px; height:24px;" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></div>
+                            <div class="audio-card" id="seed-card-1" onclick="demoGripPulse()" style="cursor: grab;">
+                                <div class="card-header">
+                                    <span class="card-title">上拉手柄以手动同步</span>
+                                    <div class="card-meta">↑</div>
+                                </div>
+                                <div class="swipe-hint text-shimmer">从工牌获取最新录音...</div>
                             </div>
                         </div>
 
                         <!-- Seed Card 2: Swipe to Delete -->
                         <div class="audio-card-container seed-helper-swipe" id="seed-card-2-container">
                             <div class="swipe-bg-delete" style="opacity: 1;"><svg class="svg-icon" style="width:24px; height:24px;" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></div>
-                            <div class="audio-card seed-card" id="seed-card-2" style="border: 0.5px solid var(--border-subtle); margin: 0; align-items: flex-start; cursor: grab;">
-                                <div class="seed-icon" style="margin-top:2px; font-size:16px;">←</div>
-                                <div class="seed-text">
-                                    <div class="card-title">向左滑动以删除录音</div>
-                                    <div class="card-subtitle">消除这行卡片进行练习</div>
+                            <div class="audio-card" id="seed-card-2" style="cursor: grab;">
+                                <div class="card-header">
+                                    <span class="card-title">消除这行卡片进行练习</span>
                                 </div>
+                                <div class="swipe-hint text-shimmer"><<< 向左滑动以删除录音</div>
                             </div>
                         </div>
 
                         <!-- Demo Card 3 -->
-                        <div class="audio-card attention-shimmer" id="demo-card-3" style="cursor: grab;">
+                        <div class="audio-card" id="demo-card-3" style="cursor: grab;">
                             <div class="card-header">
                                 <span class="card-title">SmartSales 功能演示</span>
                                 <div class="card-meta">2025-04-01 · 1分23秒 <svg class="svg-icon star-icon outline" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div>
@@ -548,7 +528,7 @@
                             </div>
                             <div class="swipe-hint text-shimmer">右滑开始转写 >>></div>
                         </div>
-                        <div class="audio-card attention-shimmer">
+                        <div class="audio-card">
                             <div class="card-header">
                                 <span class="card-title">李总产品演示反馈</span>
                                 <div class="card-meta">3月12日 · 45分20秒 <svg class="svg-icon star-icon solid" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div>
@@ -626,6 +606,36 @@
                                     <div class="card-meta">13:15 · 05分30秒 <svg class="svg-icon star-icon outline" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div>
                                 </div>
                                 <div class="swipe-hint text-shimmer">>>> 释放以转写</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- State 11: Downloading -->
+                    <div class="state-view show-11-downloading" style="flex-direction: column; gap: 12px;">
+                        <!-- Downloading Active -->
+                        <div class="audio-card" style="border-color: rgba(52, 199, 89, 0.4); background: rgba(52, 199, 89, 0.05);">
+                            <div class="card-header">
+                                <span class="card-title">新录音 005 (传输中)</span>
+                                <div class="card-meta">22分10秒 · 38.2 MB</div>
+                            </div>
+                            <div class="card-preview" style="color: #34C759; display: flex; justify-content: space-between;">
+                                <span>从工牌下载中...</span>
+                                <span style="font-variant-numeric: tabular-nums;">64%</span>
+                            </div>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar-fill" style="width: 64%; background: #34C759;"></div>
+                            </div>
+                        </div>
+
+                        <!-- Download Pending -->
+                        <div class="audio-card" style="opacity: 0.6;">
+                            <div class="card-header">
+                                <span class="card-title">新录音 006 (等待中)</span>
+                                <div class="card-meta">05分30秒 · 9.5 MB</div>
+                            </div>
+                            <div class="card-preview">等待传输...</div>
+                            <div class="progress-bar-container">
+                                <div class="progress-bar-fill" style="width: 0%; background: #34C759; animation: none;"></div>
                             </div>
                         </div>
                     </div>
@@ -736,48 +746,57 @@
 
         // --- NEW: Grip & Cards Interaction Logic ---
         function demoGripPulse() {
-            const gripArea = document.getElementById('drawer-grip-area');
-            gripArea.classList.add('pulling');
+            const drawer = document.querySelector('.audio-drawer');
+            drawer.classList.add('pulling');
             setTimeout(() => {
-                gripArea.classList.add('pulling-threshold');
+                drawer.classList.add('pulling-threshold');
                 setTimeout(() => {
-                    gripArea.classList.remove('pulling-threshold');
-                    gripArea.classList.remove('pulling');
+                    drawer.classList.remove('pulling-threshold');
+                    drawer.classList.remove('pulling');
                 }, 300);
             }, 300);
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            const drawer = document.querySelector('.audio-drawer');
             const gripArea = document.getElementById('drawer-grip-area');
             const grip = document.getElementById('drawer-grip');
             let startY = 0;
             let isDraggingGrip = false;
             
-            const handleGripStart = (y) => { startY = y; isDraggingGrip = true; };
+            const handleGripStart = (y) => { 
+                startY = y; 
+                isDraggingGrip = true; 
+                drawer.style.transition = 'none'; // Lock to finger
+            };
             const handleGripMove = (y) => {
                 if (!isDraggingGrip) return;
                 const deltaY = startY - y; 
                 if (deltaY > 5) {
-                    gripArea.classList.add('pulling');
-                    let pullOffset = Math.min(deltaY * 0.4, 25);
-                    gripArea.style.transform = `translateY(-${pullOffset}px)`;
-                    if (deltaY > 50) {
-                        gripArea.classList.add('pulling-threshold');
+                    drawer.classList.add('pulling');
+                    let pullOffset = Math.min(deltaY * 0.35, 90); // Rubber band max 90px
+                    drawer.style.transform = `translateY(-${Math.max(0, pullOffset)}px)`;
+                    if (pullOffset > 55) {
+                        drawer.classList.add('pulling-threshold');
                     } else {
-                        gripArea.classList.remove('pulling-threshold');
+                        drawer.classList.remove('pulling-threshold');
                     }
                 } else {
-                    gripArea.classList.remove('pulling');
-                    gripArea.classList.remove('pulling-threshold');
+                    drawer.classList.remove('pulling');
+                    drawer.classList.remove('pulling-threshold');
+                    drawer.style.transform = `translateY(0)`; // Clamp downward drag
                 }
             };
             const handleGripEnd = () => {
                 if (!isDraggingGrip) return;
                 isDraggingGrip = false;
-                const isThresholdReched = gripArea.classList.contains('pulling-threshold');
-                gripArea.style.transform = '';
-                gripArea.classList.remove('pulling');
-                gripArea.classList.remove('pulling-threshold');
+                const isThresholdReched = drawer.classList.contains('pulling-threshold');
+                
+                drawer.style.transition = 'transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)'; // Spring bounce
+                drawer.style.transform = '';
+                drawer.classList.remove('pulling');
+                drawer.classList.remove('pulling-threshold');
+                
                 if (isThresholdReched) {
                     if (currentConnState === 'connected') {
                         const seed1 = document.getElementById('seed-card-1');
@@ -785,7 +804,8 @@
                             seed1.style.opacity = '0';
                             seed1.style.transform = 'scale(0.95)';
                             setTimeout(() => { 
-                                seed1.style.display = 'none'; 
+                                const seed1Container = document.getElementById('seed-card-1-container');
+                                if (seed1Container) seed1Container.style.display = 'none'; 
                                 updateMetaBadge(document.getElementById('seed-card-2') ? '2 项' : '1 项'); 
                             }, 300);
                         }
@@ -865,6 +885,7 @@
                 window.addEventListener('mouseup', (e) => endSwipe(e.clientX));
             }
 
+            setupSwipeCard('seed-card-1', false);
             setupSwipeCard('seed-card-2', false);
             setupSwipeCard('demo-card-3', true);
         });

@@ -49,10 +49,11 @@ class SimBadgeSyncAvailabilityTest {
         }
 
     @Test
-    fun `resolveSimBadgeManualSyncBlockedMessage keeps ready state deferred to repository strict preflight`() =
+    fun `resolveSimBadgeManualSyncBlockedMessage uses strict preflight for ready state`() =
         runTest {
             var canSyncChecks = 0
-            assertNull(
+            assertEquals(
+                SIM_BADGE_SYNC_CONNECTIVITY_UNAVAILABLE_MESSAGE,
                 resolveSimBadgeManualSyncBlockedMessage(
                     availability = SimBadgeSyncAvailability.READY,
                     canSyncFromBadge = {
@@ -61,7 +62,7 @@ class SimBadgeSyncAvailabilityTest {
                     }
                 )
             )
-            assertEquals(0, canSyncChecks)
+            assertEquals(1, canSyncChecks)
         }
 
     @Test
@@ -98,6 +99,20 @@ class SimBadgeSyncAvailabilityTest {
                 resolveSimBadgeManualSyncGateDecision(
                     availability = SimBadgeSyncAvailability.BLE_CONNECTED_NETWORK_OFFLINE,
                     canSyncFromBadge = { true }
+                ).branch
+            )
+            assertEquals(
+                SimBadgeManualSyncGateBranch.STRICT_PRECHECK_ALLOWED,
+                resolveSimBadgeManualSyncGateDecision(
+                    availability = SimBadgeSyncAvailability.READY,
+                    canSyncFromBadge = { true }
+                ).branch
+            )
+            assertEquals(
+                SimBadgeManualSyncGateBranch.STRICT_PRECHECK_BLOCKED,
+                resolveSimBadgeManualSyncGateDecision(
+                    availability = SimBadgeSyncAvailability.READY,
+                    canSyncFromBadge = { false }
                 ).branch
             )
             assertEquals(

@@ -177,8 +177,15 @@ Meaning:
 ### SIM Realtime Speech Contract
 
 ```kotlin
+enum class SimRealtimeSpeechProfile {
+    SIM_DRAFT,
+    ONBOARDING
+}
+```
+
+```kotlin
 interface SimRealtimeSpeechRecognizer {
-    fun startListening()
+    fun startListening(profile: SimRealtimeSpeechProfile = SimRealtimeSpeechProfile.SIM_DRAFT)
     suspend fun finishListening(): SimRealtimeSpeechRecognitionResult
     fun cancelListening()
     fun isListening(): Boolean
@@ -190,6 +197,8 @@ Meaning:
 - this seam is the shared low-level FunASR realtime recognizer used by the SIM draft lane and by onboarding through host-owned wrappers
 - the implementation uses FunASR realtime Android SDK plus SIM-owned mic capture
 - the implementation must provide direct `DASHSCOPE_API_KEY` auth at SDK init before starting a realtime session
+- `SIM_DRAFT` remains the default profile for the SIM composer lane
+- `ONBOARDING` is reserved for onboarding's phone-mic flow and currently widens `max_sentence_silence` to `6000ms` so short thinking pauses survive before the stop tap
 - `startDialog` must not carry auth params; auth is already established by the SDK-init payload
 - successful completion returns one editable draft string for the composer rather than a durable chat turn
 - cancel, no-match, timeout, or auth failure must leave durable chat history untouched

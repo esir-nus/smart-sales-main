@@ -5,6 +5,7 @@ import com.smartsales.prism.domain.audio.AudioLocalAvailability
 import com.smartsales.prism.domain.audio.AudioSource as DomainAudioSource
 import com.smartsales.prism.domain.audio.TranscriptionStatus
 import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
+import com.smartsales.prism.ui.components.connectivity.ConnectionState
 import com.smartsales.prism.ui.drawers.AudioItemState
 import com.smartsales.prism.ui.drawers.AudioSource
 import com.smartsales.prism.ui.drawers.AudioStatus
@@ -14,6 +15,97 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SimAudioDrawerViewModelTest {
+
+    @Test
+    fun `resolveSimAudioSyncVisualState prioritizes syncing and feedback over transport`() {
+        assertEquals(
+            SimAudioSyncVisualState.SYNCING,
+            resolveSimAudioSyncVisualState(
+                connectionState = ConnectionState.CONNECTED,
+                isSyncing = true,
+                syncFeedback = null
+            )
+        )
+        assertEquals(
+            SimAudioSyncVisualState.SYNCED,
+            resolveSimAudioSyncVisualState(
+                connectionState = ConnectionState.CONNECTED,
+                isSyncing = false,
+                syncFeedback = SimAudioSyncFeedback.SYNCED
+            )
+        )
+        assertEquals(
+            SimAudioSyncVisualState.ERROR,
+            resolveSimAudioSyncVisualState(
+                connectionState = ConnectionState.CONNECTED,
+                isSyncing = false,
+                syncFeedback = SimAudioSyncFeedback.ERROR
+            )
+        )
+    }
+
+    @Test
+    fun `resolveSimAudioSyncVisualState falls back to ready reconnecting and blocked transport states`() {
+        assertEquals(
+            SimAudioSyncVisualState.READY,
+            resolveSimAudioSyncVisualState(
+                connectionState = ConnectionState.CONNECTED,
+                isSyncing = false,
+                syncFeedback = null
+            )
+        )
+        assertEquals(
+            SimAudioSyncVisualState.RECONNECTING,
+            resolveSimAudioSyncVisualState(
+                connectionState = ConnectionState.RECONNECTING,
+                isSyncing = false,
+                syncFeedback = null
+            )
+        )
+        assertEquals(
+            SimAudioSyncVisualState.BLOCKED,
+            resolveSimAudioSyncVisualState(
+                connectionState = ConnectionState.DISCONNECTED,
+                isSyncing = false,
+                syncFeedback = null
+            )
+        )
+    }
+
+    @Test
+    fun `shouldShowSimAudioBrowseHelperDeck only appears for browse mode lone built in demo seed`() {
+        val seedOnlyEntry = testEntry(
+            status = AudioStatus.TRANSCRIBED,
+            summary = "摘要",
+            preview = "预览",
+            isBuiltInSeed = true
+        )
+
+        assertTrue(
+            shouldShowSimAudioBrowseHelperDeck(
+                entries = listOf(seedOnlyEntry),
+                mode = RuntimeAudioDrawerMode.BROWSE
+            )
+        )
+        assertFalse(
+            shouldShowSimAudioBrowseHelperDeck(
+                entries = listOf(seedOnlyEntry),
+                mode = RuntimeAudioDrawerMode.CHAT_RESELECT
+            )
+        )
+        assertFalse(
+            shouldShowSimAudioBrowseHelperDeck(
+                entries = listOf(
+                    testEntry(
+                        status = AudioStatus.TRANSCRIBED,
+                        summary = "摘要",
+                        preview = "预览"
+                    )
+                ),
+                mode = RuntimeAudioDrawerMode.BROWSE
+            )
+        )
+    }
 
     @Test
     fun `toggleExpandedAudioIds adds audio id when card is first opened`() {
@@ -250,7 +342,8 @@ class SimAudioDrawerViewModelTest {
         status: AudioStatus,
         summary: String?,
         preview: String,
-        localAvailability: AudioLocalAvailability = AudioLocalAvailability.READY
+        localAvailability: AudioLocalAvailability = AudioLocalAvailability.READY,
+        isBuiltInSeed: Boolean = false
     ): SimAudioEntry {
         return SimAudioEntry(
             item = AudioItemState(
@@ -262,7 +355,8 @@ class SimAudioDrawerViewModelTest {
                 summary = summary
             ),
             preview = preview,
-            localAvailability = localAvailability
+            localAvailability = localAvailability,
+            isBuiltInSeed = isBuiltInSeed
         )
     }
 }

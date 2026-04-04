@@ -23,6 +23,8 @@ import com.smartsales.prism.ui.drawers.AudioSource
 import com.smartsales.prism.ui.drawers.AudioStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -39,7 +41,8 @@ data class SimAudioEntry(
     val preview: String,
     val localAvailability: AudioLocalAvailability = AudioLocalAvailability.READY,
     val failureMessage: String? = null,
-    val isTestImport: Boolean = false
+    val isTestImport: Boolean = false,
+    val isBuiltInSeed: Boolean = false
 )
 
 private const val SIM_AUDIO_DRAWER_SYNC_LOG_TAG = "AudioPipeline"
@@ -58,11 +61,14 @@ class SimAudioDrawerViewModel @Inject constructor(
     val expandedAudioIds: StateFlow<Set<String>> = _expandedAudioIds
     private val _isSyncing = MutableStateFlow(false)
     val isSyncing: StateFlow<Boolean> = _isSyncing
+    private val _syncFeedback = MutableStateFlow<SimAudioSyncFeedback?>(null)
+    internal val syncFeedback: StateFlow<SimAudioSyncFeedback?> = _syncFeedback
     private val _pendingBadgeDeleteConfirmation =
         MutableStateFlow<SimBadgeDeleteConfirmationRequest?>(null)
     internal val pendingBadgeDeleteConfirmation: StateFlow<SimBadgeDeleteConfirmationRequest?> =
         _pendingBadgeDeleteConfirmation
     private var hasConfirmedBadgeDeleteThisSession = false
+    private var syncFeedbackResetJob: Job? = null
     private val badgeSyncAvailability: StateFlow<SimBadgeSyncAvailability> =
         connectivityBridge.managerStatus
             .map(::resolveSimBadgeSyncAvailability)
@@ -145,34 +151,52 @@ class SimAudioDrawerViewModel @Inject constructor(
 
         viewModelScope.launch {
             val availability = badgeSyncAvailability.value
+            val strictPrecheckOwnedByGate =
+                shouldRunSimBadgeStrictPrecheckInGate(availability)
+            var gateDecision: SimBadgeManualSyncGateDecision? = null
             Log.d(
                 SIM_AUDIO_DRAWER_SYNC_LOG_TAG,
                 "SIM manual badge sync tapped availability=${availability.name.lowercase()} isSyncing=${_isSyncing.value}"
             )
-            val gateDecision = resolveSimBadgeManualSyncGateDecision(
-                availability = availability,
-                canSyncFromBadge = { repository.canSyncFromBadge() }
-            )
-            Log.d(
-                SIM_AUDIO_DRAWER_SYNC_LOG_TAG,
-                "SIM manual badge sync gate availability=${availability.name.lowercase()} branch=${gateDecision.branch.name.lowercase()} blocked=${gateDecision.blockedMessage != null}"
-            )
-            if (gateDecision.blockedMessage != null) {
-                _uiEvents.emit(gateDecision.blockedMessage)
-                return@launch
-            }
-
-            _isSyncing.value = true
             try {
-                val outcome = repository.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+                if (strictPrecheckOwnedByGate) {
+                    _isSyncing.value = true
+                }
+
+                gateDecision = resolveSimBadgeManualSyncGateDecision(
+                    availability = availability,
+                    canSyncFromBadge = { repository.canSyncFromBadge() }
+                )
+                Log.d(
+                    SIM_AUDIO_DRAWER_SYNC_LOG_TAG,
+                    "SIM manual badge sync gate availability=${availability.name.lowercase()} branch=${gateDecision.branch.name.lowercase()} blocked=${gateDecision.blockedMessage != null}"
+                )
+                val blockedMessage = gateDecision.blockedMessage
+                if (blockedMessage != null) {
+                    showSyncFeedback(SimAudioSyncFeedback.DENIED, durationMillis = 1200L)
+                    _uiEvents.emit(blockedMessage)
+                    return@launch
+                }
+
+                if (!strictPrecheckOwnedByGate) {
+                    _isSyncing.value = true
+                }
+
+                val outcome = if (strictPrecheckOwnedByGate) {
+                    repository.syncFromBadgeAfterVerifiedReadiness(SimBadgeSyncTrigger.MANUAL)
+                } else {
+                    repository.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+                }
                 if (outcome.skippedReason != SimBadgeSyncSkippedReason.ALREADY_RUNNING) {
+                    showSyncFeedback(SimAudioSyncFeedback.SYNCED)
                     _uiEvents.emit(simBadgeSyncSuccessMessage(outcome))
                 }
             } catch (e: Exception) {
                 Log.w(
                     SIM_AUDIO_DRAWER_SYNC_LOG_TAG,
-                    "SIM manual badge sync failed after gate branch=${gateDecision.branch.name.lowercase()} error=${e.message}"
+                    "SIM manual badge sync failed after gate branch=${gateDecision?.branch?.name?.lowercase() ?: "unknown"} error=${e.message}"
                 )
+                showSyncFeedback(SimAudioSyncFeedback.ERROR)
                 _uiEvents.emit(e.message ?: "同步失败")
             } finally {
                 _isSyncing.value = false
@@ -282,8 +306,23 @@ class SimAudioDrawerViewModel @Inject constructor(
             },
             localAvailability = localAvailability,
             failureMessage = lastErrorMessage,
-            isTestImport = isTestImport
+            isTestImport = isTestImport,
+            isBuiltInSeed = id == SIM_AUDIO_DEMO_SEED_ID
         )
+    }
+
+    private fun showSyncFeedback(
+        feedback: SimAudioSyncFeedback,
+        durationMillis: Long = 2200L
+    ) {
+        syncFeedbackResetJob?.cancel()
+        _syncFeedback.value = feedback
+        syncFeedbackResetJob = viewModelScope.launch {
+            delay(durationMillis)
+            if (_syncFeedback.value == feedback) {
+                _syncFeedback.value = null
+            }
+        }
     }
 }
 
@@ -355,6 +394,13 @@ internal fun resolveSimBadgeSyncAvailability(
     }
 }
 
+internal fun shouldRunSimBadgeStrictPrecheckInGate(
+    availability: SimBadgeSyncAvailability
+): Boolean {
+    return availability == SimBadgeSyncAvailability.READY ||
+        availability == SimBadgeSyncAvailability.UNAVAILABLE
+}
+
 internal suspend fun resolveSimBadgeManualSyncBlockedMessage(
     availability: SimBadgeSyncAvailability,
     canSyncFromBadge: suspend () -> Boolean
@@ -370,10 +416,19 @@ internal suspend fun resolveSimBadgeManualSyncGateDecision(
     canSyncFromBadge: suspend () -> Boolean
 ): SimBadgeManualSyncGateDecision {
     return when (availability) {
-        SimBadgeSyncAvailability.READY -> SimBadgeManualSyncGateDecision(
-            branch = SimBadgeManualSyncGateBranch.STRICT_PRECHECK_ALLOWED,
-            blockedMessage = null
-        )
+        SimBadgeSyncAvailability.READY -> {
+            if (canSyncFromBadge()) {
+                SimBadgeManualSyncGateDecision(
+                    branch = SimBadgeManualSyncGateBranch.STRICT_PRECHECK_ALLOWED,
+                    blockedMessage = null
+                )
+            } else {
+                SimBadgeManualSyncGateDecision(
+                    branch = SimBadgeManualSyncGateBranch.STRICT_PRECHECK_BLOCKED,
+                    blockedMessage = SIM_BADGE_SYNC_CONNECTIVITY_UNAVAILABLE_MESSAGE
+                )
+            }
+        }
         SimBadgeSyncAvailability.BLE_CONNECTED_NETWORK_PENDING ->
             SimBadgeManualSyncGateDecision(
                 branch = SimBadgeManualSyncGateBranch.MANAGER_PENDING_BLOCK,

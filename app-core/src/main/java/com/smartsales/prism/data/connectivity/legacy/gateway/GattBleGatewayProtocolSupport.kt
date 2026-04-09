@@ -99,6 +99,11 @@ internal fun parseBadgeNotificationPayload(rawPayload: String): BadgeNotificatio
             if (filename.isBlank()) BadgeNotification.Unknown(raw)
             else BadgeNotification.RecordingReady(filename)
         }
+        raw.startsWith("rec#", ignoreCase = true) -> {
+            val token = raw.removePrefix("rec#").trim()
+            if (token.isBlank()) BadgeNotification.Unknown(raw)
+            else BadgeNotification.AudioRecordingReady(token)
+        }
         else -> BadgeNotification.Unknown(raw)
     }
 }

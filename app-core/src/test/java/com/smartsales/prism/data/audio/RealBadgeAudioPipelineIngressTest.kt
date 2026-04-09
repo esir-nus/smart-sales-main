@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -76,6 +77,8 @@ class RealBadgeAudioPipelineIngressTest {
         override suspend fun listRecordings(): Result<List<String>> = Result.Success(emptyList())
 
         override fun recordingNotifications(): Flow<RecordingNotification> = notifications
+
+        override fun audioRecordingNotifications(): Flow<RecordingNotification.AudioRecordingReady> = emptyFlow()
 
         override suspend fun isReady(): Boolean = true
 

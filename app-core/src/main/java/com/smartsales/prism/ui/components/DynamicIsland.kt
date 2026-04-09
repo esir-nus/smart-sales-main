@@ -7,6 +7,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -29,6 +32,7 @@ private val DynamicIslandIdleColor = Color(0xFF38BDF8)
 private val DynamicIslandConnectedColor = Color(0xFF34C759)
 private val DynamicIslandDisconnectedColor = Color(0xFF86868B)
 private val DynamicIslandReconnectColor = Color(0xFFFF9F0A)
+private val DynamicIslandTitleBlue = Color(0xFF0A84FF)
 
 sealed interface DynamicIslandUiState {
     data object Hidden : DynamicIslandUiState
@@ -37,17 +41,22 @@ sealed interface DynamicIslandUiState {
 
 enum class DynamicIslandLane {
     SCHEDULER,
-    CONNECTIVITY
+    CONNECTIVITY,
+    SYNC
 }
 
 enum class DynamicIslandVisualState {
     SCHEDULER_UPCOMING,
     SCHEDULER_CONFLICT,
     SCHEDULER_IDLE,
+    SESSION_TITLE_HIGHLIGHT,
     CONNECTIVITY_CONNECTED,
     CONNECTIVITY_DISCONNECTED,
     CONNECTIVITY_RECONNECTING,
-    CONNECTIVITY_NEEDS_SETUP
+    CONNECTIVITY_NEEDS_SETUP,
+    SYNC_IN_PROGRESS,
+    SYNC_COMPLETE,
+    SYNC_UP_TO_DATE
 }
 
 data class DynamicIslandItem(
@@ -55,6 +64,7 @@ data class DynamicIslandItem(
     val displayText: String,
     val lane: DynamicIslandLane = DynamicIslandLane.SCHEDULER,
     val visualState: DynamicIslandVisualState = DynamicIslandVisualState.SCHEDULER_UPCOMING,
+    val showsAudioIndicator: Boolean = false,
     val batteryPercentage: Int? = null,
     val tapAction: DynamicIslandTapAction = DynamicIslandTapAction.OpenSchedulerDrawer()
 ) {
@@ -89,9 +99,13 @@ data class DynamicIslandItem(
         get() = when (visualState) {
             DynamicIslandVisualState.SCHEDULER_CONFLICT,
             DynamicIslandVisualState.CONNECTIVITY_RECONNECTING,
-            DynamicIslandVisualState.CONNECTIVITY_NEEDS_SETUP -> true
+            DynamicIslandVisualState.CONNECTIVITY_NEEDS_SETUP,
+            DynamicIslandVisualState.SYNC_IN_PROGRESS -> true
             else -> false
         }
+
+    val isSessionTitleItem: Boolean
+        get() = visualState == DynamicIslandVisualState.SESSION_TITLE_HIGHLIGHT
 
     val stableKey: String
         get() = buildString {
@@ -102,6 +116,8 @@ data class DynamicIslandItem(
             append(lane)
             append('|')
             append(visualState)
+            append('|')
+            append(showsAudioIndicator)
             append('|')
             append(batteryPercentage ?: -1)
             append('|')
@@ -175,10 +191,12 @@ object DynamicIslandStateMapper {
 fun DynamicIsland(
     state: DynamicIslandUiState,
     modifier: Modifier = Modifier,
+    displayTextOverride: String? = null,
     onTap: (DynamicIslandTapAction) -> Unit
 ) {
     if (state !is DynamicIslandUiState.Visible) return
     val chroma = state.item.resolveChroma()
+    val resolvedText = displayTextOverride ?: state.item.displayText
 
     Box(
         modifier = modifier,
@@ -191,12 +209,21 @@ fun DynamicIsland(
                 .padding(horizontal = 14.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (state.item.showsAudioIndicator) {
+                Icon(
+                    imageVector = Icons.Filled.GraphicEq,
+                    contentDescription = null,
+                    tint = chroma.dot,
+                    modifier = Modifier.size(14.dp)
+                )
+                Box(modifier = Modifier.size(width = 6.dp, height = 1.dp))
+            }
             Canvas(modifier = Modifier.size(6.dp)) {
                 drawCircle(color = chroma.dot)
             }
             Box(modifier = Modifier.size(width = 8.dp, height = 1.dp))
             Text(
-                text = state.item.displayText,
+                text = resolvedText,
                 style = TextStyle(
                     brush = Brush.linearGradient(chroma.textGradient),
                     fontSize = 13.sp,
@@ -230,6 +257,10 @@ private fun DynamicIslandItem.resolveChroma(): DynamicIslandChroma {
             dot = Color(0xFFFF453A),
             textGradient = listOf(Color(0xFFFF8A84), Color(0xFFFF453A))
         )
+        DynamicIslandVisualState.SESSION_TITLE_HIGHLIGHT -> DynamicIslandChroma(
+            dot = DynamicIslandTitleBlue,
+            textGradient = listOf(Color(0xFF7BC0FF), DynamicIslandTitleBlue)
+        )
         DynamicIslandVisualState.CONNECTIVITY_CONNECTED -> DynamicIslandChroma(
             dot = DynamicIslandConnectedColor,
             textGradient = listOf(Color(0xFFA4E38A), DynamicIslandConnectedColor)
@@ -242,6 +273,18 @@ private fun DynamicIslandItem.resolveChroma(): DynamicIslandChroma {
         DynamicIslandVisualState.CONNECTIVITY_NEEDS_SETUP -> DynamicIslandChroma(
             dot = DynamicIslandReconnectColor,
             textGradient = listOf(Color(0xFFFFD380), DynamicIslandReconnectColor)
+        )
+        DynamicIslandVisualState.SYNC_IN_PROGRESS -> DynamicIslandChroma(
+            dot = DynamicIslandIdleColor,
+            textGradient = listOf(Color(0xFFA7D8F0), DynamicIslandIdleColor)
+        )
+        DynamicIslandVisualState.SYNC_COMPLETE -> DynamicIslandChroma(
+            dot = DynamicIslandConnectedColor,
+            textGradient = listOf(Color(0xFFA4E38A), DynamicIslandConnectedColor)
+        )
+        DynamicIslandVisualState.SYNC_UP_TO_DATE -> DynamicIslandChroma(
+            dot = Color.White.copy(alpha = 0.42f),
+            textGradient = listOf(Color.White, Color(0xFFA0A0A5))
         )
     }
 }

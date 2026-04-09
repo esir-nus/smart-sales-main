@@ -26,6 +26,11 @@ internal class DeviceConnectionManagerIngressSupport(
                             ConnectivityLogger.i("📥 Badge recording ready: $filename")
                             runtime.recordingReadyEvents.tryEmit(filename)
                         }
+                        is BadgeNotification.AudioRecordingReady -> {
+                            val filename = event.token.toBadgeAudioFilename()
+                            ConnectivityLogger.i("📥 Badge audio recording ready: $filename")
+                            runtime.audioRecordingReadyEvents.tryEmit(filename)
+                        }
                         is BadgeNotification.TimeSyncRequested -> {
                             ConnectivityLogger.d("⏰ Badge time sync requested")
                         }
@@ -61,5 +66,16 @@ internal fun String.toBadgeDownloadFilename(): String {
             "log_$token.wav"
         }
         else -> "log_$trimmed.wav"
+    }
+}
+
+/** rec# 令牌 → rec_YYYYMMDD_HHMMSS.wav */
+internal fun String.toBadgeAudioFilename(): String {
+    val trimmed = trim()
+    return when {
+        trimmed.isBlank() -> ""
+        trimmed.endsWith(".wav", ignoreCase = true) -> trimmed
+        trimmed.startsWith("rec_", ignoreCase = true) -> "$trimmed.wav"
+        else -> "rec_$trimmed.wav"
     }
 }

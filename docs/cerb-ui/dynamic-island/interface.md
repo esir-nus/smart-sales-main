@@ -38,6 +38,7 @@ enum class DynamicIslandVisualState {
     SCHEDULER_UPCOMING,
     SCHEDULER_CONFLICT,
     SCHEDULER_IDLE,
+    SESSION_TITLE_HIGHLIGHT,
     CONNECTIVITY_CONNECTED,
     CONNECTIVITY_DISCONNECTED,
     CONNECTIVITY_RECONNECTING,
@@ -49,6 +50,7 @@ data class DynamicIslandItem(
     val displayText: String,
     val lane: DynamicIslandLane = DynamicIslandLane.SCHEDULER,
     val visualState: DynamicIslandVisualState = DynamicIslandVisualState.SCHEDULER_UPCOMING,
+    val showsAudioIndicator: Boolean = false,
     val batteryPercentage: Int? = null,
     val tapAction: DynamicIslandTapAction = DynamicIslandTapAction.OpenSchedulerDrawer()
 )
@@ -70,12 +72,16 @@ sealed interface DynamicIslandTapAction {
 
 `batteryPercentage` remains provisional connected-lane data. It is consumed by shell-owned connected ambient chrome and must not be rendered as inline battery UI inside the one-line island body.
 
+`showsAudioIndicator` is a shell-owned presentation hint. In the current SIM slice it prepends a fixed audio glyph on rendered session-title surfaces when the session has ever carried audio context.
+
 ## 4. Invariants
 
 - scheduler remains the default lane when no connectivity takeover is active
 - only one item may be visible at a time
 - the item stays one line even when content is long
 - overflow truncates rather than wrapping or marquee-scrolling
+- `SESSION_TITLE_HIGHLIGHT` remains a scheduler-lane presentation variant, not a new tap lane
+- the current SIM shell may dwell `SESSION_TITLE_HIGHLIGHT` for `3s` while scheduler-backed items keep the local `5s` dwell
 - visible-lane tap must follow the currently rendered item
 - downward drag is scheduler-only and is lawful only when the scheduler lane is visible
 - the RuntimeShell/SIM connectivity lane may reuse the same renderer without widening the surrounding header contract

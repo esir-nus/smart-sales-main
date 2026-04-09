@@ -4,6 +4,7 @@ import com.smartsales.prism.ui.components.DynamicIslandItem
 import com.smartsales.prism.ui.components.DynamicIslandLane
 import com.smartsales.prism.ui.components.DynamicIslandVisualState
 import com.smartsales.prism.ui.components.connectivity.ConnectionState
+import java.time.Instant
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.advanceTimeBy
@@ -52,6 +53,97 @@ class SimShellDynamicIslandCoordinatorTest {
         )
 
         coordinator.close()
+    }
+
+    @Test
+    fun `session title item rotates after three seconds when visible`() = runTest {
+        val coordinator = createCoordinator(
+            parentScope = this,
+            schedulerItems = MutableStateFlow(
+                listOf(
+                    titleItem("Q4复盘"),
+                    schedulerItem("最近：客户回访 · 09:00")
+                )
+            ),
+            connectivityState = MutableStateFlow(ConnectionState.CONNECTED)
+        )
+
+        runCurrent()
+        assertVisible(
+            coordinator = coordinator,
+            expectedLane = DynamicIslandLane.SCHEDULER,
+            expectedText = "Q4复盘"
+        )
+
+        advanceTimeBy(2_999L)
+        runCurrent()
+        assertVisible(
+            coordinator = coordinator,
+            expectedLane = DynamicIslandLane.SCHEDULER,
+            expectedText = "Q4复盘"
+        )
+
+        advanceTimeBy(1L)
+        runCurrent()
+        assertVisible(
+            coordinator = coordinator,
+            expectedLane = DynamicIslandLane.SCHEDULER,
+            expectedText = "最近：客户回访 · 09:00"
+        )
+
+        coordinator.close()
+    }
+
+    @Test
+    fun `title interrupt jumps to title item immediately`() = runTest {
+        val coordinator = createCoordinator(
+            parentScope = this,
+            schedulerItems = MutableStateFlow(
+                listOf(
+                    titleItem("Q4复盘"),
+                    schedulerItem("最近：客户回访 · 09:00")
+                )
+            ),
+            connectivityState = MutableStateFlow(ConnectionState.CONNECTED)
+        )
+
+        runCurrent()
+        advanceTimeBy(3_000L)
+        runCurrent()
+        assertVisible(
+            coordinator = coordinator,
+            expectedLane = DynamicIslandLane.SCHEDULER,
+            expectedText = "最近：客户回访 · 09:00"
+        )
+
+        coordinator.updateSessionTitleInterruptToken(1)
+        runCurrent()
+        assertVisible(
+            coordinator = coordinator,
+            expectedLane = DynamicIslandLane.SCHEDULER,
+            expectedText = "Q4复盘"
+        )
+
+        coordinator.close()
+    }
+
+    @Test
+    fun `projection caps mixed title and scheduler rotation at three items`() {
+        val items = buildSimDynamicIslandItems(
+            sessionTitle = "Q4复盘",
+            sessionHasAudioContextHistory = true,
+            orderedTasks = listOf(
+                scheduledTask("task_1", "客户回访", "09:00"),
+                scheduledTask("task_2", "发送报价", "10:00"),
+                scheduledTask("task_3", "确认合同", "11:00")
+            )
+        )
+
+        assertEquals(3, items.size)
+        assertEquals("Q4复盘", items.first().displayText)
+        assertEquals(true, items.first().showsAudioIndicator)
+        assertEquals("最近：客户回访 · 09:00", items[1].displayText)
+        assertEquals("最近：发送报价 · 10:00", items[2].displayText)
     }
 
     @Test
@@ -336,14 +428,16 @@ class SimShellDynamicIslandCoordinatorTest {
         schedulerItems: MutableStateFlow<List<DynamicIslandItem>>,
         connectivityState: MutableStateFlow<ConnectionState>,
         batteryLevel: MutableStateFlow<Int> = MutableStateFlow(85),
-        takeoverSuppressed: MutableStateFlow<Boolean> = MutableStateFlow(false)
+        takeoverSuppressed: MutableStateFlow<Boolean> = MutableStateFlow(false),
+        syncEvents: kotlinx.coroutines.flow.MutableSharedFlow<com.smartsales.prism.data.audio.SimBadgeSyncIslandEvent> = kotlinx.coroutines.flow.MutableSharedFlow()
     ): SimShellDynamicIslandCoordinator {
         return SimShellDynamicIslandCoordinator(
             parentScope = parentScope,
             schedulerItems = schedulerItems,
             connectivityState = connectivityState,
             batteryLevel = batteryLevel,
-            takeoverSuppressed = takeoverSuppressed
+            takeoverSuppressed = takeoverSuppressed,
+            syncEvents = syncEvents
         )
     }
 
@@ -353,6 +447,26 @@ class SimShellDynamicIslandCoordinatorTest {
             schedulerSummary = text
         )
     }
+
+    private fun titleItem(text: String): DynamicIslandItem {
+        return DynamicIslandItem(
+            sessionTitle = text,
+            displayText = text,
+            visualState = DynamicIslandVisualState.SESSION_TITLE_HIGHLIGHT
+        )
+    }
+
+    private fun scheduledTask(
+        id: String,
+        title: String,
+        timeDisplay: String
+    ) = com.smartsales.prism.domain.scheduler.ScheduledTask(
+        id = id,
+        title = title,
+        timeDisplay = timeDisplay,
+        startTime = Instant.parse("2026-03-22T08:00:00Z"),
+        durationMinutes = 30
+    )
 
     private fun assertVisible(
         coordinator: SimShellDynamicIslandCoordinator,

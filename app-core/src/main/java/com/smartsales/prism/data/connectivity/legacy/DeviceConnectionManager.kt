@@ -26,6 +26,13 @@ interface DeviceConnectionManager {
      */
     val recordingReadyEvents: SharedFlow<String>
 
+    /**
+     * Badge 音频就绪通知流 — Badge 发送 rec#YYYYMMDD_HHMMSS 时触发
+     *
+     * Emits full downloadable badge filename (e.g., "rec_20260409_150000.wav")
+     */
+    val audioRecordingReadyEvents: SharedFlow<String>
+
     fun selectPeripheral(peripheral: BlePeripheral)
     suspend fun startPairing(peripheral: BlePeripheral, credentials: WifiCredentials): Result<Unit>
     suspend fun retry(): Result<Unit>
@@ -88,6 +95,7 @@ class DefaultDeviceConnectionManager @Inject constructor(
 
     override val state: StateFlow<ConnectionState> = runtime.state.asStateFlow()
     override val recordingReadyEvents: SharedFlow<String> = runtime.recordingReadyEvents.asSharedFlow()
+    override val audioRecordingReadyEvents: SharedFlow<String> = runtime.audioRecordingReadyEvents.asSharedFlow()
 
     init {
         connectionSupport.restoreSession()

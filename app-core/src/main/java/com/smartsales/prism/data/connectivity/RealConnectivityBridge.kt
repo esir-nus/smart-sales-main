@@ -69,6 +69,10 @@ class RealConnectivityBridge @Inject constructor(
         replay = 0,
         extraBufferCapacity = 1
     )
+    private val audioRecordingNotificationsFlow = MutableSharedFlow<RecordingNotification.AudioRecordingReady>(
+        replay = 0,
+        extraBufferCapacity = 3
+    )
 
     init {
         scope.launch(start = CoroutineStart.UNDISPATCHED) {
@@ -82,6 +86,20 @@ class RealConnectivityBridge @Inject constructor(
                 }
                 recordingNotificationsFlow.emit(
                     RecordingNotification.RecordingReady(filename.toBadgeDownloadFilename())
+                )
+            }
+        }
+        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            deviceManager.audioRecordingReadyEvents.collect { filename ->
+                if (!isTransportReadyForRecordingNotifications()) {
+                    android.util.Log.w(
+                        TAG,
+                        "🚫 Dropping audio recording notification while transport not ready: $filename"
+                    )
+                    return@collect
+                }
+                audioRecordingNotificationsFlow.emit(
+                    RecordingNotification.AudioRecordingReady(filename)
                 )
             }
         }
@@ -154,6 +172,9 @@ class RealConnectivityBridge @Inject constructor(
     
     override fun recordingNotifications(): Flow<RecordingNotification> =
         recordingNotificationsFlow.asSharedFlow()
+
+    override fun audioRecordingNotifications(): Flow<RecordingNotification.AudioRecordingReady> =
+        audioRecordingNotificationsFlow.asSharedFlow()
     
     
     override suspend fun isReady(): Boolean {

@@ -12,6 +12,10 @@ internal class DeviceConnectionManagerRuntime {
         replay = 0,
         extraBufferCapacity = 3
     )
+    val audioRecordingReadyEvents = MutableSharedFlow<String>(
+        replay = 0,
+        extraBufferCapacity = 3
+    )
     var currentSession: BleSession? = null
     var lastCredentials: WifiCredentials? = null
     var heartbeatJob: Job? = null

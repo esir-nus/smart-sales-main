@@ -3,6 +3,8 @@ name: Platform Governance Check
 on:
   push:
     paths:
+      - 'AGENTS.md'
+      - '.codex/**'
       - '.github/CODEOWNERS'
       - '.github/workflows/platform-governance-check.yml'
       - '.agent/**'
@@ -21,6 +23,8 @@ on:
       - 'platforms/**'
   pull_request:
     paths:
+      - 'AGENTS.md'
+      - '.codex/**'
       - '.github/CODEOWNERS'
       - '.github/workflows/platform-governance-check.yml'
       - '.agent/**'

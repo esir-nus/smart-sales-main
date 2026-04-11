@@ -1,6 +1,9 @@
 # Handoff: DTQ-03 Connectivity and OEM Hardening
 
 > **Lane ID**: `DTQ-03`
+> **Registry Lane ID**: `DTQ-03`
+> **Branch**: `Unassigned in registry; create or attach a dedicated lane branch before resuming feature edits`
+> **Recommended Worktree**: `Unassigned in registry; create or attach a dedicated lane worktree before resuming feature edits`
 > **Scope**: Connectivity truth, OEM reminder hardening, and compatibility-guidance lane for the current dirty tree.
 
 ## Scope

@@ -2,14 +2,19 @@
 
 > **Role**: Canonical cross-platform version-control and ownership law
 > **Status**: Active governance law
-> **Date**: 2026-04-04
+> **Date**: 2026-04-11
 > **Purpose**: Freeze the current Android/AOSP product line as beta-maintenance while opening a clean native HarmonyOS forward lane without forking shared product truth.
 > **Related Docs**:
 > - `docs/reference/platform-targets.md`
+> - `docs/platforms/harmony/native-development-framework.md`
 > - `docs/reference/harmonyos-platform-guide.md`
 > - `docs/cerb/interface-map.md`
 > - `docs/plans/tracker.md`
+> - `docs/plans/harmony-tracker.md`
 > - `docs/plans/dirty-tree-quarantine.md`
+> - `docs/sops/tracker-governance.md`
+> - `docs/sops/lane-worktree-governance.md`
+> - `ops/lane-registry.json`
 > - `docs/specs/base-runtime-unification.md`
 
 ---
@@ -30,6 +35,7 @@ Before any default-branch swap, branch promotion, or baseline tagging:
 
 - inventory all tracked and untracked work in the active line
 - assign every dirty path to a bounded lane in `docs/plans/dirty-tree-quarantine.md`, including any explicit `Deferred` row used to park or exclude residue from the current promotion path
+- record the same active lane ownership in `ops/lane-registry.json`
 - decide explicitly what lands, what is parked, and what is deferred
 - create the Android beta baseline tag only from that explicit stabilization commit
 
@@ -37,9 +43,12 @@ No branch-default switch is valid if the dirty-worktree quarantine step was skip
 
 When parallel agents are active:
 
-- one lane has one active build state at a time
+- one feature lane must normally run inside one dedicated `git worktree`
+- the repo root worktree is integration-only and must not carry feature edits
+- one lane has one active local lease at a time
 - paused or transferred lanes must carry a current handoff file in `handoffs/`
 - no lane may be treated as promotion-ready while its doc-code alignment state is unresolved
+- local hooks and CI must validate the same lane ownership rules through `scripts/lane_guard.py`
 
 ---
 
@@ -193,6 +202,29 @@ Create a platform-specific companion spec only when:
 - implementation ownership diverges heavily, or
 - user-visible behavior diverges enough that overlays become misleading
 
+### 6.4 Tracker governance
+
+The repo uses one master ledger plus specialist standing trackers.
+
+Rules:
+
+- `docs/plans/tracker.md` stays the campaign index and branch/governance summary only
+- specialist trackers own structure, UI, bugs, validation, dirty-lane hygiene, or Harmony-native bounded delivery according to `docs/sops/tracker-governance.md`
+- execution briefs are temporary slice docs and must not replace a standing tracker
+- the current Harmony program uses one standing tracker, `docs/plans/harmony-tracker.md`, until backend rewriting grows large enough to justify a split
+
+### 6.5 Lane harness governance
+
+The repo now uses a lane execution harness for dirty-tree prevention.
+
+Rules:
+
+- `docs/plans/dirty-tree-quarantine.md` stays the human lane board and promotion ledger
+- `ops/lane-registry.json` is the machine-readable lane registry used by hooks and CI
+- `docs/sops/lane-worktree-governance.md` owns the operator workflow for start/resume/pause/integrate
+- `AGENTS.md`, `.codex/**`, `.agent/**`, `.claude/**`, and `CLAUDE.md` are shared runtime-registration surfaces and must stay lane-owned like the rest of the governance control plane
+- `.githooks/pre-commit`, `.githooks/pre-push`, and `.github/workflows/platform-governance-check.yml` must enforce the same validator logic rather than drifting into separate rule sets
+
 ---
 
 ## 7. Release Branch Rule
@@ -206,6 +238,19 @@ Daily delivery rule:
 
 - short-lived feature branches fork from the canonical trunk
 - release branches are for stabilization and hotfix work only
+- an active transient Harmony branch may exist for bounded delivery, but it must not become an alternate product-truth branch
+- lane branches should use `lane/<lane-id>/<slug>` when the harness creates a new lane worktree
+
+### 7.1 Branch restore record
+
+Any active transient Harmony branch must be recorded in `docs/plans/tracker.md` plus the owning Harmony tracker entry with these fields:
+
+- `Branch`
+- `Purpose`
+- `Baseline Commit or Tag`
+- `Restore Procedure Reference`
+- `Capability Class`
+- `Current Restore Confidence`
 
 ---
 
@@ -213,9 +258,10 @@ Daily delivery rule:
 
 Repo-stored guardrails:
 
-- `CODEOWNERS` must route shared docs/contracts, Android lineage, Harmony overlays, and workflow changes through explicit review ownership
+- `CODEOWNERS` must route shared docs/contracts, Android lineage, Harmony overlays, lane harness files, and workflow changes through explicit review ownership
 - CI must fail if native Harmony artifacts appear inside the Android tree
-- governance docs and platform-target definitions must remain present in the repo
+- governance docs, lane harness docs, and platform-target definitions must remain present in the repo
+- the lane harness registry, validator, and shared hooks must remain present in the repo
 - the transient Harmony Tingwu container overlay and root placeholder must remain present once introduced
 
 Manual admin guardrails that still require GitHub settings:
@@ -232,6 +278,9 @@ This governance split is only working if:
 
 - shared product truth remains single-source
 - Android beta work stays narrow and explicit
+- feature work normally starts in lane worktrees rather than the integration tree
+- lane ownership is visible in both `docs/plans/dirty-tree-quarantine.md` and `ops/lane-registry.json`
+- paused or transferred lanes remain resumable through current handoffs
 - native Harmony work does not contaminate the current Android tree
 - platform-specific constraints are documented in overlays instead of leaking into shared specs by accident
 - future engineers can tell whether a change is `shared-contract`, `android-beta`, `harmony-native`, or `cross-platform-governance` without guesswork

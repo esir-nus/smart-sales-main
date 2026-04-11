@@ -1,6 +1,9 @@
 # Handoff: DTQ-01 Onboarding and Quick Start
 
 > **Lane ID**: `DTQ-01`
+> **Registry Lane ID**: `DTQ-01`
+> **Branch**: `Unassigned in registry; create or attach a dedicated lane branch before resuming feature edits`
+> **Recommended Worktree**: `Unassigned in registry; create or attach a dedicated lane worktree before resuming feature edits`
 > **Scope**: Onboarding and quick-start lane for the current dirty tree, including the staged scheduler quick-start sandbox, onboarding flow progression, and the one-shot handoff back into the runtime shell.
 
 ## Scope

@@ -147,6 +147,10 @@ workflows/
 *.swo
 *~
 
+# Python cache artifacts for local lane tooling
+__pycache__/
+*.pyc
+
 # Kotlin
 *.kotlin_module
 

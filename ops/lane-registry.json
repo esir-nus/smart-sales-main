@@ -5,6 +5,8 @@
     "admin_paths": [
       ".github/**",
       ".githooks/**",
+      ".gitignore",
+      "gitignore",
       "docs/plans/dirty-tree-quarantine.md",
       "docs/plans/tracker.md",
       "docs/specs/platform-governance.md",
@@ -179,6 +181,8 @@
       "owned_paths": [
         ".github/**",
         ".githooks/**",
+        ".gitignore",
+        "gitignore",
         "docs/plans/dirty-tree-quarantine.md",
         "docs/plans/tracker.md",
         "docs/specs/platform-governance.md",

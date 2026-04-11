@@ -1,0 +1,255 @@
+{
+  "protocol_version": 1,
+  "integration_tree": {
+    "mode": "integration-only",
+    "admin_paths": [
+      ".github/**",
+      ".githooks/**",
+      "docs/plans/dirty-tree-quarantine.md",
+      "docs/plans/tracker.md",
+      "docs/specs/platform-governance.md",
+      "docs/sops/lane-worktree-governance.md",
+      "docs/sops/tracker-governance.md",
+      "handoffs/README.md",
+      "ops/lane-registry.json",
+      "scripts/install-hooks.sh",
+      "scripts/lane",
+      "scripts/lane_guard.py",
+      "scripts/tests/test_lane_guard.py",
+      "ops/**",
+      "scripts/tests/**",
+      "AGENTS.md",
+      ".codex/**",
+      ".agent/rules/smart-sales.md",
+      ".agent/**",
+      ".claude/**",
+      "CLAUDE.md",
+      "agent/**",
+      "claude/**",
+      "codex/**",
+      "github/**",
+      ".agent/workflows/lane-ship-*",
+      "agent/workflows/lane-ship-*"
+    ],
+    "path": "/home/cslh-frank/main_app"
+  },
+  "lanes": [
+    {
+      "lane_id": "DTQ-01",
+      "title": "Onboarding and quick-start",
+      "status": "active",
+      "work_class": "android-beta",
+      "branch": null,
+      "recommended_worktree": null,
+      "owned_paths": [
+        "app-core/src/main/java/com/smartsales/prism/data/onboarding/**",
+        "app-core/src/main/java/com/smartsales/prism/ui/onboarding/**",
+        "app-core/src/test/**/onboarding/**",
+        "app-core/src/androidTest/**/onboarding/**",
+        "docs/cerb/onboarding-interaction/**",
+        "docs/specs/flows/OnboardingFlow.md",
+        "docs/reports/tests/L3-20260403-onboarding-quick-start-session-recovery.md",
+        "prototypes/onboarding-family/**"
+      ],
+      "allowed_shared_paths": [
+        "handoffs/schedule_quick_start_compose_handoff.md"
+      ],
+      "handoff_path": "handoffs/schedule_quick_start_compose_handoff.md",
+      "tracker_refs": [
+        "docs/plans/dirty-tree-quarantine.md",
+        "docs/plans/tracker.md"
+      ],
+      "alignment": "Both pending"
+    },
+    {
+      "lane_id": "DTQ-02",
+      "title": "Scheduler intelligence and reminders",
+      "status": "active",
+      "work_class": "android-beta",
+      "branch": null,
+      "recommended_worktree": null,
+      "owned_paths": [
+        "app-core/src/main/java/com/smartsales/prism/ui/**/Scheduler*.kt",
+        "app-core/src/main/java/com/smartsales/prism/ui/drawers/**",
+        "app-core/src/main/java/com/smartsales/prism/data/scheduler/**",
+        "app-core/src/main/java/com/smartsales/prism/data/notification/**",
+        "domain/scheduler/**",
+        "docs/cerb/notifications/**",
+        "docs/cerb/scheduler/**",
+        "docs/reports/tests/L3-20260404-single-runtime-shell-acceptance.md",
+        "prototypes/**/scheduler/**"
+      ],
+      "allowed_shared_paths": [
+        "handoffs/notification_compose_handoff.md"
+      ],
+      "handoff_path": "handoffs/notification_compose_handoff.md",
+      "tracker_refs": [
+        "docs/plans/dirty-tree-quarantine.md",
+        "docs/plans/tracker.md"
+      ],
+      "alignment": "Both pending"
+    },
+    {
+      "lane_id": "DTQ-03",
+      "title": "Connectivity and OEM hardening",
+      "status": "active",
+      "work_class": "android-beta",
+      "branch": null,
+      "recommended_worktree": null,
+      "owned_paths": [
+        "app-core/src/main/java/com/smartsales/prism/data/connectivity/**",
+        "app-core/src/main/java/com/smartsales/prism/ui/components/connectivity/**",
+        "app-core/src/main/java/com/smartsales/prism/data/notification/OemCompat.kt",
+        "app-core/src/test/**/connectivity/**",
+        "app-core/src/test/**/notification/**",
+        "docs/cerb/connectivity-bridge/**",
+        "docs/cerb/sim-connectivity/**",
+        "docs/specs/connectivity-spec.md",
+        "docs/sops/oem-alarm-notification-control-plane.md",
+        "docs/sops/oem-alarm-notification-checklist.md",
+        "docs/plans/bug-tracker.md",
+        "scripts/dtq03_device_verify.sh"
+      ],
+      "allowed_shared_paths": [
+        "handoffs/oem_permission_diagnosis.md"
+      ],
+      "handoff_path": "handoffs/oem_permission_diagnosis.md",
+      "tracker_refs": [
+        "docs/plans/dirty-tree-quarantine.md",
+        "docs/plans/tracker.md"
+      ],
+      "alignment": "Aligned"
+    },
+    {
+      "lane_id": "DTQ-04",
+      "title": "Runtime shell and SIM chrome",
+      "status": "active",
+      "work_class": "android-beta",
+      "branch": null,
+      "recommended_worktree": null,
+      "owned_paths": [
+        "app-core/src/main/java/com/smartsales/prism/MainActivity.kt",
+        "app-core/src/main/java/com/smartsales/prism/ui/RuntimeShell.kt",
+        "app-core/src/main/java/com/smartsales/prism/ui/AgentIntelligence*.kt",
+        "app-core/src/main/java/com/smartsales/prism/ui/sim/**",
+        "app-core/src/test/**/ui/sim/**",
+        "docs/cerb/sim-shell/**",
+        "docs/core-flow/sim-shell-routing-flow.md",
+        "docs/plans/ui-tracker.md",
+        "prototypes/**/audio/**"
+      ],
+      "allowed_shared_paths": [
+        "handoffs/audio_drawer_compose_handoff.md"
+      ],
+      "handoff_path": "handoffs/audio_drawer_compose_handoff.md",
+      "tracker_refs": [
+        "docs/plans/dirty-tree-quarantine.md",
+        "docs/plans/tracker.md"
+      ],
+      "alignment": "Both pending"
+    },
+    {
+      "lane_id": "DTQ-05",
+      "title": "Voice runtime and pipeline support",
+      "status": "active",
+      "work_class": "shared-contract",
+      "branch": null,
+      "recommended_worktree": null,
+      "owned_paths": [
+        "app-core/src/main/java/com/smartsales/prism/**/SpeechRecognizer*.kt",
+        "core/pipeline/**",
+        "core/test-fakes-platform/**",
+        "docs/cerb/unified-pipeline/**"
+      ],
+      "allowed_shared_paths": [],
+      "handoff_path": null,
+      "tracker_refs": [
+        "docs/plans/dirty-tree-quarantine.md",
+        "docs/plans/tracker.md"
+      ],
+      "alignment": "Both pending"
+    },
+    {
+      "lane_id": "DTQ-06",
+      "title": "Governance, trackers, and repo guardrails",
+      "status": "active",
+      "work_class": "cross-platform-governance",
+      "branch": "lane/DTQ-06/governance-harness",
+      "recommended_worktree": "/home/cslh-frank/lane-worktrees/DTQ-06-governance-harness",
+      "owned_paths": [
+        ".github/**",
+        ".githooks/**",
+        "docs/plans/dirty-tree-quarantine.md",
+        "docs/plans/tracker.md",
+        "docs/specs/platform-governance.md",
+        "docs/sops/lane-worktree-governance.md",
+        "docs/sops/tracker-governance.md",
+        "docs/platforms/**",
+        "docs/reference/platform-targets.md",
+        "handoffs/README.md",
+        "ops/lane-registry.json",
+        "scripts/install-hooks.sh",
+        "scripts/lane",
+        "scripts/lane_guard.py",
+        "scripts/tests/test_lane_guard.py",
+        "AGENTS.md",
+        ".codex/**",
+        ".agent/rules/smart-sales.md",
+        ".agent/**",
+        ".claude/**",
+        "CLAUDE.md",
+        "agent/**",
+        "claude/**",
+        "codex/**",
+        "github/**",
+        "ops/**",
+        "scripts/tests/**",
+        ".agent/workflows/lane-ship-*",
+        "agent/workflows/lane-ship-*"
+      ],
+      "allowed_shared_paths": [
+        "handoffs/*.md"
+      ],
+      "handoff_path": null,
+      "tracker_refs": [
+        "docs/plans/dirty-tree-quarantine.md",
+        "docs/plans/tracker.md"
+      ],
+      "alignment": "Aligned"
+    },
+    {
+      "lane_id": "DTQ-07",
+      "title": "Cross-feature handoff/workflow assets",
+      "status": "deferred",
+      "work_class": "cross-platform-governance",
+      "branch": null,
+      "recommended_worktree": null,
+      "owned_paths": [
+        ".agent/workflows/compose-handoff-writer-[tool].md"
+      ],
+      "allowed_shared_paths": [],
+      "handoff_path": null,
+      "tracker_refs": [
+        "docs/plans/dirty-tree-quarantine.md"
+      ],
+      "alignment": "Deferred"
+    },
+    {
+      "lane_id": "DTQ-99",
+      "title": "Foreign local artifact",
+      "status": "deferred",
+      "work_class": "foreign-local-artifact",
+      "branch": null,
+      "recommended_worktree": null,
+      "owned_paths": [
+        "wechat_4.1.1.4-2_amd64.deb"
+      ],
+      "allowed_shared_paths": [],
+      "handoff_path": null,
+      "tracker_refs": [
+        "docs/plans/dirty-tree-quarantine.md"
+      ],
+      "alignment": "Deferred"
+    }
+  ]
+}

@@ -1,6 +1,9 @@
 # Handoff: DTQ-02 Scheduler Intelligence and Reminder Surfaces
 
 > **Lane ID**: `DTQ-02`
+> **Registry Lane ID**: `DTQ-02`
+> **Branch**: `Unassigned in registry; create or attach a dedicated lane branch before resuming feature edits`
+> **Recommended Worktree**: `Unassigned in registry; create or attach a dedicated lane worktree before resuming feature edits`
 > **Scope**: Shared scheduler-routing, reminder-surface, banner/alarm, and scheduler-drawer lane for the current dirty tree.
 
 ## Scope

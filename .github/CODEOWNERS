@@ -10,6 +10,12 @@
 /docs/reference/platform-targets.md @esir-nus
 /docs/reference/harmonyos-platform-guide.md @esir-nus
 /docs/platforms/** @esir-nus
+/docs/sops/** @esir-nus
+/handoffs/** @esir-nus
+/ops/** @esir-nus
+/CLAUDE.md @esir-nus
+/.claude/** @esir-nus
+/.agent/rules/smart-sales.md @esir-nus
 
 # Current Android lineage
 /app/** @esir-nus
@@ -24,3 +30,8 @@
 # Repo guardrails
 /.github/CODEOWNERS @esir-nus
 /.github/workflows/** @esir-nus
+/.githooks/** @esir-nus
+/scripts/lane @esir-nus
+/scripts/lane_guard.py @esir-nus
+/scripts/install-hooks.sh @esir-nus
+/scripts/tests/test_lane_guard.py @esir-nus

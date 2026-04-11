@@ -1,6 +1,9 @@
 # Handoff: DTQ-04 Runtime Shell and SIM Chrome
 
 > **Lane ID**: `DTQ-04`
+> **Registry Lane ID**: `DTQ-04`
+> **Branch**: `Unassigned in registry; create or attach a dedicated lane branch before resuming feature edits`
+> **Recommended Worktree**: `Unassigned in registry; create or attach a dedicated lane worktree before resuming feature edits`
 > **Scope**: Runtime shell, SIM chrome, dynamic-island, and audio-drawer presentation lane for the current dirty tree.
 
 ## Scope

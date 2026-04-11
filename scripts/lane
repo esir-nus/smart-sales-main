@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT_DIR"
+
+print_help() {
+  cat <<'USAGE'
+Usage:
+  scripts/lane create <lane-id> <slug> --paths <glob...> [--allow <glob...>] [--work-class <class>] [--branch <branch>] [--worktree <path>] [--handoff <path>] [--title <title>]
+  scripts/lane attach <lane-id>
+  scripts/lane resume <lane-id>
+  scripts/lane pause <lane-id> <handoff-path>
+  scripts/lane status [--json] [--message <msg>]
+  scripts/lane commit [--message <msg>]
+  scripts/lane push [--message <msg>]
+  scripts/lane ship [--message <msg>]
+  scripts/lane validate [dirty|staged|all]
+  scripts/lane collisions [path...]
+  scripts/lane integrate <lane-id>
+  scripts/lane install-hooks
+  scripts/lane registry
+
+Examples:
+  scripts/lane validate
+  scripts/lane attach DTQ-04
+  scripts/lane pause DTQ-04 handoffs/audio_drawer_compose_handoff.md
+  scripts/lane ship
+USAGE
+}
+
+if [ $# -eq 0 ]; then
+  print_help
+  exit 1
+fi
+
+COMMAND="$1"
+shift
+
+case "$COMMAND" in
+  create)
+    python3 scripts/lane_guard.py create "$@"
+    ;;
+  attach)
+    python3 scripts/lane_guard.py attach "$@"
+    ;;
+  resume)
+    python3 scripts/lane_guard.py resume "$@"
+    ;;
+  pause)
+    python3 scripts/lane_guard.py pause "$@"
+    ;;
+  validate)
+    MODE="${1:-dirty}"
+    python3 scripts/lane_guard.py validate-worktree --mode "$MODE"
+    ;;
+  status)
+    python3 scripts/lane_guard.py status "$@"
+    ;;
+  commit)
+    python3 scripts/lane_guard.py commit "$@"
+    ;;
+  push)
+    python3 scripts/lane_guard.py push "$@"
+    ;;
+  ship)
+    python3 scripts/lane_guard.py ship "$@"
+    ;;
+  collisions)
+    python3 scripts/lane_guard.py report-collisions "$@"
+    ;;
+  integrate)
+    python3 scripts/lane_guard.py integrate "$@"
+    ;;
+  install-hooks)
+    ./scripts/install-hooks.sh
+    ;;
+  registry)
+    python3 scripts/lane_guard.py validate-registry
+    ;;
+  help|-h|--help)
+    print_help
+    ;;
+  *)
+    echo "Unknown lane command: $COMMAND" >&2
+    print_help >&2
+    exit 1
+    ;;
+esac

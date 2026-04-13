@@ -407,42 +407,32 @@ internal class DeviceConnectionManagerConnectionSupport(
     ): ConnectionState {
         val ip = networkStatus.ipAddress
         val badgeSsid = normalizeWifiSsid(networkStatus.deviceWifiName)
+
+        // 徽章已有可用 IP → 直接视为已连接，不检查手机 SSID
+        if (hasUsableBadgeIp(ip)) {
+            ConnectivityLogger.d("🔌 connectUsingSession: connected via badge IP, ip=$ip ssid=$badgeSsid")
+            return ConnectionState.WifiProvisioned(
+                session,
+                ingressSupport.syntheticProvisioningStatus(networkStatus)
+            )
+        }
+
+        // 徽章离线 — 尝试重播已知凭据（仅当手机 SSID 可读时）
         val phoneSsid = resolveReadablePhoneSsid()
-            ?: return resolvePhoneWifiUnavailableState(
-                context = if (!hasUsableBadgeIp(ip)) {
-                    "replay skipped"
-                } else {
-                    "reconnect blocked while badge has ip=$ip"
-                },
+        if (phoneSsid == null) {
+            ConnectivityLogger.w("🔌 connectUsingSession: badge offline ip=$ip, phone SSID unreadable")
+            return resolvePhoneWifiUnavailableState(
+                context = "replay skipped",
                 badgeSsid = badgeSsid
             )
-
-        if (!hasUsableBadgeIp(ip)) {
-            ConnectivityLogger.d("🔌 connectUsingSession: badge offline, ip=$ip")
-            return attemptDeterministicWifiReplay(
-                session = session,
-                badgeSsid = badgeSsid,
-                phoneSsid = phoneSsid,
-                reason = "badge offline"
-            )
         }
 
-        if (badgeSsid != phoneSsid) {
-            ConnectivityLogger.w(
-                "🔌 reconnect mismatch: badge=$badgeSsid phone=$phoneSsid, attempting alignment replay"
-            )
-            return attemptDeterministicWifiReplay(
-                session = session,
-                badgeSsid = badgeSsid,
-                phoneSsid = phoneSsid,
-                reason = "badge online on different network"
-            )
-        }
-
-        ConnectivityLogger.d("🔌 connectUsingSession: connected, ip=$ip ssid=$badgeSsid")
-        return ConnectionState.WifiProvisioned(
-            session,
-            ingressSupport.syntheticProvisioningStatus(networkStatus)
+        ConnectivityLogger.d("🔌 connectUsingSession: badge offline, ip=$ip, attempting replay")
+        return attemptDeterministicWifiReplay(
+            session = session,
+            badgeSsid = badgeSsid,
+            phoneSsid = phoneSsid,
+            reason = "badge offline"
         )
     }
 

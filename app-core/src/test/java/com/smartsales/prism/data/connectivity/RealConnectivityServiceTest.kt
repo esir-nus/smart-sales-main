@@ -239,7 +239,7 @@ class RealConnectivityServiceTest {
     }
 
     @Test
-    fun `updateWifiConfig falls back to live manager state for non mismatch confirmation failure`() = runTest {
+    fun `updateWifiConfig returns error for non mismatch confirmation failure`() = runTest {
         val session = BleSession.fromPeripheral(
             BlePeripheral("badge-1", "Badge", -40)
         )
@@ -272,7 +272,7 @@ class RealConnectivityServiceTest {
 
         val result = service.updateWifiConfig(ssid = "OfficeGuest", password = "secret-2")
 
-        assertEquals(WifiConfigResult.Success, result)
+        assertTrue(result is WifiConfigResult.Error)
         assertEquals(1, manager.confirmManualWifiProvisionCalls.size)
         assertEquals(0, manager.reconnectAndWaitCalls)
     }

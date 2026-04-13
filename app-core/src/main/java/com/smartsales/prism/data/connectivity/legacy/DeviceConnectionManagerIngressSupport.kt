@@ -15,6 +15,7 @@ internal class DeviceConnectionManagerIngressSupport(
 
     fun startNotificationListener(session: BleSession) {
         runtime.notificationListenerJob?.cancel()
+        val generation = ++runtime.notificationListenerGeneration
         runtime.notificationListenerActive = true
         runtime.notificationListenerJob = scope.launch(dispatchers.io) {
             try {
@@ -40,7 +41,10 @@ internal class DeviceConnectionManagerIngressSupport(
                     }
                 }
             } finally {
-                runtime.notificationListenerActive = false
+                // 仅当本代的监听器仍为当前代时才清除标记
+                if (runtime.notificationListenerGeneration == generation) {
+                    runtime.notificationListenerActive = false
+                }
             }
         }
     }

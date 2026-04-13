@@ -207,7 +207,7 @@ class DefaultDeviceConnectionManagerIngressTest {
     }
 
     @Test
-    fun `reconnectAndWait replays known wifi credentials when badge is online on a different ssid than phone`() = runTest {
+    fun `reconnectAndWait trusts badge IP directly when badge is online on different ssid than phone`() = runTest {
         val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
         val monitor = FakeBadgeStateMonitor()
         val sessionStore = InMemorySessionStore().apply {
@@ -225,14 +225,6 @@ class DefaultDeviceConnectionManagerIngressTest {
                     rawResponse = "IP#192.168.0.8, SD#OldWifi"
                 )
             )
-            stubNetworkResults += Result.Success(
-                DeviceNetworkStatus(
-                    ipAddress = "192.168.0.9",
-                    deviceWifiName = "OfficeGuest",
-                    phoneWifiName = "",
-                    rawResponse = "IP#192.168.0.9, SD#OfficeGuest"
-                )
-            )
         }
         val manager = newManager(
             gateway = gateway,
@@ -247,10 +239,10 @@ class DefaultDeviceConnectionManagerIngressTest {
         val state = manager.reconnectAndWait()
         advanceUntilIdle()
 
+        // 徽章有可用 IP → 直接视为已连接，不触发凭据重播
         assertTrue(state is ConnectionState.WifiProvisioned)
         assertTrue(manager.state.value is ConnectionState.WifiProvisioned)
-        assertEquals(1, provisioner.provisionCalls.size)
-        assertEquals("OfficeGuest", provisioner.provisionCalls.single().second.ssid)
+        assertEquals(0, provisioner.provisionCalls.size)
         assertEquals(BadgeState.CONNECTED, monitor.status.value.state)
     }
 
@@ -339,6 +331,47 @@ class DefaultDeviceConnectionManagerIngressTest {
         val error = (state as ConnectionState.Error).error as ConnectivityError.WifiDisconnected
         assertEquals(WifiDisconnectedReason.PHONE_WIFI_SSID_UNREADABLE, error.reason)
         assertEquals(0, provisioner.provisionCalls.size)
+    }
+
+    @Test
+    fun `reconnectAndWait trusts badge IP even when phone ssid is unreadable on OEM`() = runTest {
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val monitor = FakeBadgeStateMonitor()
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("MstRobot", "secret")
+            )
+        }
+        val manager = newManager(
+            gateway = gateway,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            monitor = monitor,
+            phoneWifiProvider = FakePhoneWifiProvider(
+                snapshot = PhoneWifiSnapshot.Connected(
+                    normalizedSsid = null,
+                    rawSsid = "<unknown ssid>"
+                )
+            ),
+            networkResult = Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "192.168.0.108",
+                    deviceWifiName = "MstRobot",
+                    phoneWifiName = "MstRobot",
+                    rawResponse = "IP#192.168.0.108, SD#MstRobot"
+                )
+            )
+        )
+
+        val state = manager.reconnectAndWait()
+        advanceUntilIdle()
+
+        // 徽章有可用 IP → 直接已连接，无需手机 SSID
+        assertTrue(state is ConnectionState.WifiProvisioned)
+        assertTrue(manager.state.value is ConnectionState.WifiProvisioned)
+        assertEquals(BadgeState.CONNECTED, monitor.status.value.state)
     }
 
     @Test

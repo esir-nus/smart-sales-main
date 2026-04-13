@@ -4,6 +4,10 @@
 *.ap_
 *.aab
 
+# AAR/native library directories
+app-core/libs/
+app-core/libs
+
 # Files for the ART/Dalvik VM
 *.dex
 

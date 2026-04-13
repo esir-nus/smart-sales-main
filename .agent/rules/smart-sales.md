@@ -29,7 +29,6 @@ trigger: always_on
 **Alignment Audit**: `/cerb-check` workflow
 **Lane Harness Rule**: If work touches dirty-tree ownership, handoffs, or branch/worktree posture, read `docs/plans/dirty-tree-quarantine.md`, `docs/sops/lane-worktree-governance.md`, and `ops/lane-registry.json` before editing.
 **Multi-Agent Collaboration**: Codex, Antigravity, and Claude may all be valid operators on this repo. Shared lane harness files are cooperative control-plane state, not runtime conflicts.
-**Lane Ship Rule**: For lane-local commit or push, prefer `scripts/lane status`, `scripts/lane commit`, `scripts/lane push`, or `scripts/lane ship` over ad-hoc raw git commands.
 
 ---
 
@@ -91,42 +90,3 @@ When code diverges from spec:
 - **Build**: `./gradlew :app:assembleDebug`
 - **Tests**: `./gradlew testDebugUnitTest`
 - **Provider Default**: Tingwu + OSS (XFyun disabled)
-
----
-
-## Frank-Reflect (Always-On Observation)
-
-Throughout every Smart Sales conversation, passively observe Frank's thinking patterns:
-- **Thinking jumps** (connections across domains)
-- **Communication style** (direct, evidence-based)
-- **Decision flow** (how conclusions are reached)
-
-At session end (or on explicit request), append observations to `.agent/frank_thinking_journal.md`.
-
-**This is passive logging only.** Do not auto-execute tasks based on observations.
-
-### Relationship to /frank-grading
-
-| /frank-reflect | /frank-grading |
-|----------------|----------------|
-| For Real Frank | For project work |
-| Passive observer | Active grader |
-| Logs thinking patterns | Logs successful practices |
-| Points to grading for more logging | Does NOT point back |
-
-**They evolve separately.** Reflect feeds personal self-awareness. Grading feeds project heuristics.
-
----
-
-## Logging Hygiene (Stack vs Override)
-
-To prevent document bloat, logs follow these rules:
-
-| Log Type | Mode | Rule |
-|----------|------|------|
-| `frank_thinking_journal.md` | **STACK** | Append-only, never prune mid-session |
-| `frank_evidence_log.md` candidates | **STACK** | Append new candidates |
-| `frank_evidence_log.md` observations | **OVERRIDE** | Increment count, don't duplicate |
-| `frank_principles.md` | **OVERRIDE** | Update existing rules, don't stack versions |
-
-**Quarterly pruning**: Archive stale journal entries to `frank_thinking_journal_archive_YYYY.md`

@@ -98,8 +98,10 @@ Rules:
 - native Harmony work must build from shared product docs and approved shared contracts
 - native Harmony work must not be implemented as a slow contamination of the current Android tree
 - the first live Harmony root may be a curated transient container instead of a full-parity app
-- the current approved transient container is the Tingwu-only Harmony app rooted at `platforms/harmony/tingwu-container/`
+- the current approved public transient container is the Tingwu-only Harmony app rooted at `platforms/harmony/tingwu-container/`
+- the repo may also host an internal Harmony UI verification app rooted at `platforms/harmony/ui-verification/` when page-native ArkUI rewriting and device UI checks need to run in parallel with backend work
 - the transient container must stay honest about its reduced capability set and must not pretend scheduler, reminder, chat, or badge-hardware support exists when it does not
+- the internal UI verification app must stay explicit that it is internal verification only and must not present mock-backed pages as public parity
 - release branch `release/harmony-alpha` stays deferred until the Harmony program moves beyond the transient Tingwu container and the first Harmony CI lane is alive
 
 ---
@@ -152,7 +154,8 @@ Current posture:
 - the Android lineage remains in the existing Gradle/Kotlin app modules
 - the Harmony-native lineage must land in a dedicated Harmony-owned root when that scaffold work starts
 - the first live Harmony root is the transient Tingwu container at `platforms/harmony/tingwu-container/`
-- that transient root is a bounded Harmony-owned app container, not proof that full Harmony parity is implemented
+- a second Harmony-owned internal verification root may exist at `platforms/harmony/ui-verification/` for page-native ArkUI checks and must remain internal-only
+- those roots are bounded Harmony-owned app containers, not proof that full Harmony parity is implemented
 
 Hard guardrail:
 
@@ -211,7 +214,7 @@ Rules:
 - `docs/plans/tracker.md` stays the campaign index and branch/governance summary only
 - specialist trackers own structure, UI, bugs, validation, dirty-lane hygiene, or Harmony-native bounded delivery according to `docs/sops/tracker-governance.md`
 - execution briefs are temporary slice docs and must not replace a standing tracker
-- the current Harmony program uses one standing tracker, `docs/plans/harmony-tracker.md`, until backend rewriting grows large enough to justify a split
+- the current Harmony program uses Stage 2 tracking: `docs/plans/harmony-tracker.md` owns Harmony program-summary state and `docs/plans/harmony-ui-translation-tracker.md` owns page-by-page ArkUI rewrite evidence; a dedicated Harmony dataflow tracker remains deferred until backend rewriting grows large enough to justify it
 
 ### 6.5 Lane harness governance
 
@@ -222,7 +225,6 @@ Rules:
 - `docs/plans/dirty-tree-quarantine.md` stays the human lane board and promotion ledger
 - `ops/lane-registry.json` is the machine-readable lane registry used by hooks and CI
 - `docs/sops/lane-worktree-governance.md` owns the operator workflow for start/resume/pause/integrate
-- `AGENTS.md`, `.codex/**`, `.agent/**`, `.claude/**`, and `CLAUDE.md` are shared runtime-registration surfaces and must stay lane-owned like the rest of the governance control plane
 - `.githooks/pre-commit`, `.githooks/pre-push`, and `.github/workflows/platform-governance-check.yml` must enforce the same validator logic rather than drifting into separate rule sets
 
 ---

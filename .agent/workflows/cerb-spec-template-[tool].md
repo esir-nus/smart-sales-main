@@ -1,5 +1,6 @@
 ---
 description: Create a standardized Cerb feature specification (Interface + Spec + Wave Plan)
+last_reviewed: 2026-04-13
 ---
 
 # Cerb Spec Scaffolder

@@ -1,3 +1,8 @@
+---
+description: Data-Oriented OS Protocol - LLM outputs governed by strict Kotlin data class contracts
+trigger: pipeline linter prompt LLM JSON contract data class serialization PromptCompiler
+---
+
 # The Data-Oriented OS Protocol (Anti-Drift Strategy)
 
 > **Core Principle**: The SSD (Memory) is the center of the universe. Interfaces are defined by Data, not by Behaviors.

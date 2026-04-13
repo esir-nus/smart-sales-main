@@ -18,10 +18,11 @@ Read `SmartSales_PRD.md` for full product identity.
 Docs > Code > Guessing.
 
 Resolution order when documents conflict:
+0. `docs/specs/harness-manifesto.md` -- harness operating protocol (governs how to read everything else)
 1. `SmartSales_PRD.md` -- product identity, surfaces, journeys, UX laws
 2. `docs/specs/base-runtime-unification.md` -- base-runtime vs Mono boundary
 3. `docs/core-flow/**` -- behavioral north star (may be ahead of spec and code)
-4. `docs/cerb/**`, `docs/cerb-ui/**` -- implementation contracts
+4. `docs/cerb/**`, `docs/cerb-ui/**` -- implementation contracts (cerb-era: reference for intent, not backend authority)
 5. `docs/specs/Architecture.md` -- deeper system laws (typed mutation, RAM/SSD, plugins)
 6. Code and validation evidence
 
@@ -35,12 +36,9 @@ Before writing code:
 3. Read `docs/cerb/interface-map.md` if the change spans modules
 4. Read `docs/plans/tracker.md` for campaign state
 5. If the work touches branch/worktree ownership or a dirty tree, read `docs/plans/dirty-tree-quarantine.md`, `docs/sops/lane-worktree-governance.md`, and `ops/lane-registry.json` before editing
+6. Check `evidence_class` in `ops/lane-registry.json` when the work involves verification or acceptance -- the declared class governs what proof modality is required
 
 After implementation, sync all docs touched by the change in the same session.
-
-For lane-local publication:
-- use `scripts/lane status`, `scripts/lane commit`, `scripts/lane push`, or `scripts/lane ship`
-- do not improvise raw `git commit` / `git push` if the lane harness command can answer the same need
 
 ## Module Structure
 
@@ -109,6 +107,7 @@ If current logs are insufficient, add targeted tags/logging and rerun instead of
 
 | Resource | Path |
 |----------|------|
+| **Harness operating protocol** | **`docs/specs/harness-manifesto.md`** |
 | Product north star | `SmartSales_PRD.md` |
 | Main tracker | `docs/plans/tracker.md` |
 | Dirty-tree ledger | `docs/plans/dirty-tree-quarantine.md` |
@@ -137,7 +136,6 @@ Shared collaboration rules:
 - keep those files aligned when branch/worktree ownership changes
 - do not treat another agent's presence as a conflict by itself; treat unclear ownership as the real conflict
 - prefer dedicated lane worktrees over continuing mixed edits in the integration tree
-- when committing or pushing lane work, prefer the repo-owned lane ship commands so all runtimes follow the same safety proof
 
 Do not modify without intent:
 - `.agent/` (Antigravity rules and workflows) unless the task explicitly includes Antigravity registration or sync

@@ -1,5 +1,6 @@
 ---
 description: Gateway workflow for feature development - enforces single-spec scope, anti-drift protocol, OS Model alignment, and 3-level testing
+last_reviewed: 2026-04-13
 ---
 
 # Feature Dev Planner

@@ -1,5 +1,6 @@
 ---
 description: Create a standardized Cerb specification for Plugins and Tools (Independent Workflows)
+last_reviewed: 2026-04-13
 ---
 
 # Cerb Plugin & Tool Scaffolder

@@ -7,22 +7,6 @@ description: Docs-first feature planning and delivery for the Smart Sales reposi
 
 Use this skill for feature work in this repository. It ports the intent of the Antigravity feature-planning workflow into a Codex-native execution pattern.
 
-## Lane Harness Rule
-
-Feature delivery in this repo is lane-first by default.
-
-- Treat `docs/sops/lane-worktree-governance.md` and `ops/lane-registry.json` as operational law, not optional references.
-- Before any feature edit, decide whether the task fits an existing lane or requires a new lane.
-- Do not continue feature edits in the integration tree.
-- If lane ownership, worktree, or owned paths are unclear, stop and resolve that first.
-- Use `scripts/lane` commands for lane creation, validation, status, and publication instead of improvising raw git workflow.
-
-This rule should be enforced wisely:
-
-- governance-only work may remain in the integration tree when it fits the declared admin/control-plane scope
-- feature planning may begin before implementation, but the plan must still identify the lane/worktree decision before code edits
-- cross-runtime collaboration with Codex, Antigravity, and Claude is normal; shared control-plane surfaces still need explicit lane ownership
-
 ## Delivery Order
 
 Follow this repository-specific order:
@@ -40,13 +24,12 @@ If a feature has a `docs/core-flow/**` document, treat it as the behavioral nort
 Start with the repo contract and the owning docs:
 
 1. Read `AGENTS.md`.
-2. Read `docs/sops/lane-worktree-governance.md`.
-3. Read `docs/plans/dirty-tree-quarantine.md`.
-4. Read the relevant `docs/core-flow/**` doc when it exists.
-5. Read `docs/plans/tracker.md`.
-6. Read the owning spec or SOP in `docs/cerb/**`, `docs/specs/**`, or `docs/sops/**`.
-7. Read `docs/cerb/interface-map.md` if the change spans modules.
-8. Read `.agent/rules/lessons-learned.md` if the task resembles a known trap.
+2. Read the relevant `docs/core-flow/**` doc when it exists.
+3. Read `docs/plans/tracker.md`.
+4. Read the owning spec or SOP in `docs/cerb/**`, `docs/specs/**`, or `docs/sops/**`.
+5. Read `docs/cerb/interface-map.md` if the change spans modules.
+6. Read `.agent/rules/lessons-learned.md` before planning or editing greenfield, migration, cross-platform, architecture-sensitive, repeated-failure, or other known-risk work.
+7. If any lesson trigger matches, or if the index is too shallow for the current risk, read `docs/reference/agent-lessons-details.md` before proceeding.
 
 Open `docs/specs/Architecture.md` only when the task clearly requires architecture-law interpretation or the user explicitly wants that document consulted.
 
@@ -59,14 +42,7 @@ If the task has no owning spec or interface, switch to `$smart-sales-cerb-specs`
 - Prefer one feature task to map to one owning `spec.md` plus one owning `interface.md`.
 - If the request is truly cross-cutting, say so explicitly instead of inventing a fake single owner.
 - Treat tracker entries as navigation, not business logic.
-
-### 1A. Decide the lane before editing
-
-- Determine whether the task fits an existing lane in `ops/lane-registry.json` and `docs/plans/dirty-tree-quarantine.md`.
-- If the task does not fit a current lane, define a new bounded lane before implementation starts.
-- Identify `owned_paths`, any narrowly justified `allowed_shared_paths`, expected branch, and recommended worktree.
-- If implementation is expected, create or attach the lane worktree and validate it before editing feature files.
-- If the user has switched Codex into Plan mode, the lane/worktree decision should still be part of the plan before any code step.
+- Confirm the lane's `evidence_class` in `ops/lane-registry.json` matches the nature of the work before planning verification.
 
 ### 2. Quote the source behavior
 
@@ -121,17 +97,13 @@ After the code change:
 
 - Update the owning spec if behavior, states, or models changed.
 - Update `docs/plans/tracker.md` when status or debt changed.
-- Update `docs/plans/dirty-tree-quarantine.md` and `ops/lane-registry.json` when lane ownership, status, handoff, or bounded scope changed.
 - Update `docs/cerb/interface-map.md` if module edges changed.
 - Run the relevant verification.
-- Use `scripts/lane status`, `scripts/lane commit`, `scripts/lane push`, or `scripts/lane ship` for lane-local publication.
 
 ## Mandatory Checks
 
 Before saying a feature plan is ready, verify:
 
-- The lane decision is explicit: existing lane, new lane, or governance-only exception.
-- The feature will not be edited from the integration tree.
 - The Core Flow source is identified when one exists.
 - The owning spec and interface are identified.
 - The behavior is quoted from the correct source.
@@ -143,8 +115,6 @@ Before saying a feature plan is ready, verify:
 ## Anti-Patterns
 
 - Planning from tracker bullets alone
-- Treating lane setup as optional for feature work
-- Starting implementation in the integration tree and trusting hooks to sort it out later
 - Treating current code as more authoritative than a valid Core Flow north star
 - Implementing code before reading the owning spec
 - Copying legacy structure instead of rewriting from the current contract

@@ -40,7 +40,7 @@ Core design goals:
 These invariants are non-optional:
 
 1. one feature worktree attaches to one lane lease
-2. one active/paused/review lane owns one bounded write scope
+2. one active/paused/awaiting-evidence/review lane owns one bounded write scope
 3. one changed path may not belong to multiple reserved lanes
 4. the integration tree must not carry feature edits
 5. a paused lane must have a current handoff file
@@ -51,6 +51,7 @@ Reserved lane statuses are:
 
 - `Active`
 - `Paused`
+- `Awaiting evidence`
 - `Review`
 
 Only reserved lanes block path reuse.
@@ -66,7 +67,6 @@ The lane harness control plane is:
 - `ops/lane-registry.json`: machine-readable lane ownership and status
 - `docs/plans/dirty-tree-quarantine.md`: human-readable lane board and intent ledger
 - `handoffs/*.md`: resumable paused-lane state
-- `AGENTS.md`, `.codex/**`, `.agent/**`, `.claude/**`, and `CLAUDE.md`: cross-runtime operator registration surfaces for Codex, Antigravity, and Claude
 - `docs/specs/platform-governance.md` and this SOP: policy law
 
 ### 3.2 Data plane
@@ -115,6 +115,7 @@ Each lane entry must include:
 - `title`
 - `status`
 - `work_class`
+- `evidence_class`
 - `branch`
 - `recommended_worktree`
 - `owned_paths`
@@ -129,12 +130,57 @@ Rules:
 - `allowed_shared_paths` should stay small and explicit
 - if a lane is `Paused`, `handoff_path` must exist
 - if `branch` is declared, the attached worktree must actually be on that branch
+- `evidence_class` declares the lane's primary proof modality; allowed values are `ui-visible`, `runtime-telemetry`, `contract-test`, `platform-runtime`, `governance-proof`
+- deferred or residue lanes may omit `evidence_class`
 
 ---
 
-## 6. Local Mechanism
+## 6. Lifecycle Gates
 
-### 6.1 Shared commands
+Every nontrivial slice must pass five gates in order. Any worker — human or agent — must satisfy the same gates. These are obligations, not role assignments.
+
+### 6.1 Classify
+
+- entry: task exists
+- exit: source of truth, lane, `work_class`, `evidence_class`, and bounded outcome are explicit
+- artifacts: lane registered in `ops/lane-registry.json`, execution brief created if applicable
+
+### 6.2 Execute
+
+- entry: slice is classified
+- exit: implementation or analysis work is complete enough to gather proof
+- artifacts: code, docs, or governance changes within the lane's owned scope
+
+### 6.3 Evidence
+
+- entry: there is something to verify
+- exit: required proof for the declared `evidence_class` is collected
+- evidence rules:
+  - `ui-visible`: operator-supplied real-device screenshots of the actual app interface
+  - `runtime-telemetry`: logs, telemetry, monitoring traces
+  - `contract-test`: compile/test/contract verification
+  - `platform-runtime`: adb logcat plus runtime proof (Android), install/deploy/signing chain (Harmony)
+  - `governance-proof`: docs, validator behavior, hooks, CI alignment
+- the wrong proof modality must be rejected; screenshots do not substitute for telemetry and vice versa
+
+### 6.4 Evaluate
+
+- entry: evidence exists or the missing-evidence state is explicit
+- exit: accepted / rejected / awaiting-evidence decision is recorded
+- if required evidence is unavailable due to sandbox or device limitations, the lane moves to `Awaiting evidence` and the worker may request human evidence escalation
+- missing evidence must not be converted into optimistic acceptance
+
+### 6.5 Close
+
+- entry: evaluation is complete
+- exit: integrated / deferred / paused-with-handoff state is explicit in both the lane registry and the dirty-tree-quarantine board
+- handoff file must be current if the lane is paused
+
+---
+
+## 7. Local Mechanism
+
+### 7.1 Shared commands
 
 Use the repo wrapper instead of ad-hoc branch/worktree setup when possible:
 
@@ -142,16 +188,12 @@ Use the repo wrapper instead of ad-hoc branch/worktree setup when possible:
 - `scripts/lane attach`
 - `scripts/lane resume`
 - `scripts/lane pause`
-- `scripts/lane status`
-- `scripts/lane commit`
-- `scripts/lane push`
-- `scripts/lane ship`
 - `scripts/lane validate`
 - `scripts/lane collisions`
 - `scripts/lane integrate`
 - `scripts/lane install-hooks`
 
-### 6.2 Lease model
+### 7.2 Lease model
 
 Each non-integration worktree carries one local lease:
 
@@ -163,7 +205,7 @@ It exists only to answer one question quickly and deterministically:
 
 - which lane is this worktree allowed to edit right now?
 
-### 6.3 Hook model
+### 7.3 Hook model
 
 Local hooks live in `.githooks/` and are activated by:
 
@@ -174,27 +216,11 @@ Current behavior:
 - `pre-commit`: validates staged paths against the lane harness and preserves the existing dashboard regeneration behavior for `docs/cerb/interface-map.md`
 - `pre-push`: validates current dirty paths so unsafe local bypasses are caught before push
 
-### 6.4 Commit and push autopilot
-
-The lane harness now provides a lane-aware ship surface:
-
-- `scripts/lane status`: prove the current worktree, branch, lane, staged set, and generated commit message
-- `scripts/lane commit`: commit the currently staged lane-owned files with an auto-generated lane-aware message
-- `scripts/lane push`: push the attached lane branch, publishing the upstream if needed
-- `scripts/lane ship`: run the full lane-local commit + push sequence
-
-Rules:
-
-- these commands must run from the lane worktree, not the integration tree
-- they must fail closed if the worktree lease, branch, lane status, or staged paths do not satisfy the harness
-- an intentional operator invocation is sufficient authorization; the command should not stop for a second human confirmation step
-- the generated commit message should include the lane id and lane-scoped summary by default, with optional explicit override via `--message`
-
 ---
 
-## 7. Operator Workflow
+## 8. Operator Workflow
 
-### 7.1 Start lane
+### 8.1 Start lane
 
 1. define the lane in `ops/lane-registry.json` or use `scripts/lane create`
 2. create or attach the dedicated `git worktree`
@@ -202,7 +228,7 @@ Rules:
 4. run `scripts/lane validate`
 5. only then start editing
 
-### 7.2 Resume lane
+### 8.2 Resume lane
 
 1. open the lane worktree
 2. ensure the handoff file still reflects reality
@@ -210,13 +236,13 @@ Rules:
 4. run `scripts/lane validate`
 5. continue only inside the lane's owned scope
 
-### 7.3 Pause lane
+### 8.3 Pause lane
 
 1. update the handoff file
 2. run `scripts/lane pause <lane-id> <handoff-path>`
 3. leave the lane resumable, with current drift/evidence state recorded
 
-### 7.4 Integrate lane
+### 8.4 Integrate lane
 
 1. keep feature edits in the lane worktree, not the integration tree
 2. run `scripts/lane validate`
@@ -224,17 +250,9 @@ Rules:
 4. run `scripts/lane integrate <lane-id>` to move the lane to `Review`
 5. perform the final governance/tracker updates in the integration tree if needed
 
-### 7.5 Commit and push lane
-
-1. stage only the files that belong to the attached lane
-2. run `scripts/lane status` to confirm branch, lane id, staged set, and generated message
-3. run `scripts/lane commit` or `scripts/lane ship`
-4. if only the branch publication step remains, run `scripts/lane push`
-5. if the command fails, fix the harness violation instead of bypassing it with raw git commands
-
 ---
 
-## 8. Failure Semantics
+## 9. Failure Semantics
 
 The harness must fail with concrete evidence.
 
@@ -258,7 +276,7 @@ Examples of required failures:
 
 ---
 
-## 9. CI Backstop
+## 10. CI Backstop
 
 CI must run the same validator logic as local workflows.
 
@@ -274,7 +292,7 @@ Rule:
 
 ---
 
-## 10. Maintenance Rules
+## 11. Maintenance Rules
 
 Treat the harness as production control-plane code.
 
@@ -288,7 +306,7 @@ Rules:
 
 ---
 
-## 11. Rollout Posture
+## 12. Rollout Posture
 
 ### Phase 1
 

@@ -28,7 +28,6 @@ SOPs:
 - UI building: `docs/sops/ui-building.md`
 - Tracker governance: `docs/sops/tracker-governance.md`
 - Lane worktree governance: `docs/sops/lane-worktree-governance.md`
-- Lane ship commands: `scripts/lane status|commit|push|ship`
 
 Platform overlays:
 - Android: `docs/platforms/android/`

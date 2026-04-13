@@ -1,5 +1,6 @@
 ---
 description: Perform an evidence-based code audit to reduce guessing and prevent hallucinations
+last_reviewed: 2026-04-13
 ---
 
 # Evidence-Based Code Audit

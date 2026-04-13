@@ -4,7 +4,6 @@ import argparse
 import fnmatch
 import json
 import os
-import re
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -12,12 +11,11 @@ from pathlib import Path
 from typing import Iterable, List, Optional, Sequence, Tuple
 
 
-RESERVED_STATUSES = {"active", "paused", "review"}
-ALLOWED_STATUSES = {"active", "paused", "review", "accepted", "deferred"}
+RESERVED_STATUSES = {"active", "paused", "awaiting-evidence", "review"}
+ALLOWED_STATUSES = {"active", "paused", "awaiting-evidence", "review", "accepted", "rejected", "integrated", "deferred"}
+ALLOWED_EVIDENCE_CLASSES = {"ui-visible", "runtime-telemetry", "contract-test", "platform-runtime", "governance-proof"}
 DEFAULT_REGISTRY = "ops/lane-registry.json"
 LEASE_RELATIVE_PATH = "smart-sales/current-lane.json"
-IGNORED_DIR_MARKERS = ("/__pycache__/", ".pytest_cache/", "/.mypy_cache/")
-IGNORED_SUFFIXES = (".pyc",)
 
 
 class LaneGuardError(Exception):
@@ -28,14 +26,6 @@ class LaneGuardError(Exception):
 class ValidationMessage:
     level: str
     text: str
-
-
-@dataclass
-class LaneState:
-    lane: dict
-    staged_paths: List[str]
-    dirty_paths: List[str]
-    generated_message: Optional[str]
 
 
 @dataclass
@@ -98,13 +88,6 @@ def normalize_path(value: str) -> str:
     return value.replace("\\", "/").strip("/")
 
 
-def should_ignore_path(path: str) -> bool:
-    normalized = normalize_path(path)
-    if any(marker in f"/{normalized}/" for marker in IGNORED_DIR_MARKERS):
-        return True
-    return normalized.endswith(IGNORED_SUFFIXES)
-
-
 def matches(patterns: Iterable[str], candidate: str) -> bool:
     candidate = normalize_path(candidate)
     for raw_pattern in patterns:
@@ -164,7 +147,7 @@ def get_changed_paths(mode: str, cwd: Path) -> List[str]:
             if " -> " in path:
                 path = path.split(" -> ", 1)[1]
             files.append(normalize_path(path))
-    deduped = sorted(set(path for path in files if path and not should_ignore_path(path)))
+    deduped = sorted(set(path for path in files if path))
     return deduped
 
 
@@ -183,54 +166,6 @@ def path_owners(registry: dict, path: str, include_non_reserved: bool = True) ->
         if matches(all_patterns, path):
             owners.append(lane)
     return owners
-
-
-def validate_lane_runtime(context: LaneContext, registry: dict, require_staged: bool = False) -> LaneState:
-    messages = validate_registry_payload(registry, repo_root=context.repo_root)
-    lease = load_lease(context)
-    lane = None
-    if context.is_integration_tree(registry):
-        messages.append(ValidationMessage("error", "integration tree cannot run lane-local commit/push commands"))
-    if not lease:
-        messages.append(ValidationMessage("error", "no lane lease is attached to this worktree"))
-    else:
-        lane = lane_map(registry).get(lease.get("lane_id"))
-        if not lane:
-            messages.append(ValidationMessage("error", f"lease references unknown lane {lease.get('lane_id')}"))
-        else:
-            if lane.get("branch") and lane["branch"] != context.branch:
-                messages.append(
-                    ValidationMessage(
-                        "error",
-                        f"lease lane {lane['lane_id']} expects branch {lane['branch']} but current branch is {context.branch}",
-                    )
-                )
-            if lane.get("status") not in {"active", "review"}:
-                messages.append(
-                    ValidationMessage(
-                        "error",
-                        f"lane {lane['lane_id']} must be active or review before commit/push, current status is {lane.get('status')}",
-                    )
-                )
-
-    dirty_paths = get_changed_paths("dirty", cwd=context.worktree_root)
-    staged_paths = get_changed_paths("staged", cwd=context.worktree_root)
-    admin_paths = registry.get("integration_tree", {}).get("admin_paths", [])
-    messages.extend(validate_paths_for_lane(registry, lane, dirty_paths, admin_paths, integration_tree=False))
-    messages.extend(validate_paths_for_lane(registry, lane, staged_paths, admin_paths, integration_tree=False))
-
-    if require_staged and not staged_paths:
-        messages.append(ValidationMessage("error", "no staged files found for lane commit"))
-
-    require_clean(messages)
-    assert lane is not None
-    generated_message = generate_commit_message(lane, staged_paths) if staged_paths else None
-    return LaneState(
-        lane=lane,
-        staged_paths=staged_paths,
-        dirty_paths=dirty_paths,
-        generated_message=generated_message,
-    )
 
 
 def validate_registry_payload(registry: dict, repo_root: Optional[Path] = None) -> List[ValidationMessage]:
@@ -257,6 +192,12 @@ def validate_registry_payload(registry: dict, repo_root: Optional[Path] = None) 
         status = lane.get("status")
         if status not in ALLOWED_STATUSES:
             messages.append(ValidationMessage("error", f"lane {lane_id} has unsupported status {status!r}"))
+
+        evidence_class = lane.get("evidence_class")
+        if evidence_class is not None and evidence_class not in ALLOWED_EVIDENCE_CLASSES:
+            messages.append(ValidationMessage("error", f"lane {lane_id} has invalid evidence_class {evidence_class!r}"))
+        if evidence_class is None and status in RESERVED_STATUSES:
+            messages.append(ValidationMessage("warn", f"lane {lane_id} is {status} but has no evidence_class"))
 
         owned_paths = lane.get("owned_paths", [])
         if status in RESERVED_STATUSES and not owned_paths:
@@ -330,117 +271,6 @@ def validate_paths_for_lane(registry: dict, lane: dict, paths: Sequence[str], ad
     return messages
 
 
-def human_lane_title(lane: dict) -> str:
-    return re.sub(r"\s+", " ", lane.get("title", lane["lane_id"]).strip()).lower()
-
-
-def is_control_plane_path(path: str) -> bool:
-    control_plane_prefixes = (
-        ".agent/",
-        "agent/",
-        ".claude/",
-        "claude/",
-        ".github/",
-        "github/",
-        ".githooks/",
-        "githooks/",
-        "ops/",
-        "scripts/",
-        "docs/",
-        "handoffs/",
-    )
-    return path in {"CLAUDE.md", ".claude", ".agent", ".github", ".githooks", "ops", "scripts"} or path.startswith(control_plane_prefixes)
-
-
-def generate_commit_message(lane: dict, staged_paths: Sequence[str], explicit_message: Optional[str] = None) -> str:
-    if explicit_message:
-        return explicit_message.strip()
-    if not staged_paths:
-        raise LaneGuardError("cannot generate a commit message from an empty staged set")
-
-    lane_title = human_lane_title(lane)
-    all_docs = all(path.startswith("docs/") or path.startswith("handoffs/") for path in staged_paths)
-    all_control_plane = all(is_control_plane_path(path) for path in staged_paths)
-
-    if all_control_plane and lane["lane_id"] == "DTQ-06":
-        summary = "update lane harness governance"
-    elif all_docs:
-        summary = f"sync {lane_title} docs"
-    else:
-        summary = f"sync {lane_title} changes"
-    return f"{lane['lane_id']}: {summary}"
-
-
-def find_attached_lane(context: LaneContext, registry: dict) -> dict:
-    lease = load_lease(context)
-    if not lease:
-        raise LaneGuardError("no lane lease is attached to this worktree")
-    lane = lane_map(registry).get(lease.get("lane_id"))
-    if not lane:
-        raise LaneGuardError(f"lease references unknown lane {lease.get('lane_id')}")
-    if lane.get("branch") and lane["branch"] != context.branch:
-        raise LaneGuardError(
-            f"lease lane {lane['lane_id']} expects branch {lane['branch']} but current branch is {context.branch}"
-        )
-    return lane
-
-
-def collect_lane_state(
-    context: LaneContext,
-    registry: dict,
-    explicit_message: Optional[str] = None,
-    require_staged: bool = True,
-) -> LaneState:
-    messages = validate_registry_payload(registry, repo_root=context.repo_root)
-    lane = find_attached_lane(context, registry)
-    if context.is_integration_tree(registry):
-        messages.append(ValidationMessage("error", "integration tree cannot run lane commit/push commands"))
-    if lane.get("status") not in {"active", "review"}:
-        messages.append(
-            ValidationMessage(
-                "error",
-                f"lane {lane['lane_id']} must be active or review before commit/push, current status is {lane.get('status')}",
-            )
-        )
-
-    admin_paths = registry.get("integration_tree", {}).get("admin_paths", [])
-    dirty_paths = get_changed_paths("dirty", cwd=context.worktree_root)
-    staged_paths = get_changed_paths("staged", cwd=context.worktree_root)
-    messages.extend(validate_paths_for_lane(registry, lane, dirty_paths, admin_paths, integration_tree=False))
-    messages.extend(validate_paths_for_lane(registry, lane, staged_paths, admin_paths, integration_tree=False))
-    if require_staged and not staged_paths:
-        messages.append(ValidationMessage("error", "no staged files found for this lane"))
-    require_clean(messages)
-    generated_message = None
-    if staged_paths or explicit_message:
-        generated_message = generate_commit_message(lane, staged_paths, explicit_message)
-
-    return LaneState(
-        lane=lane,
-        staged_paths=staged_paths,
-        dirty_paths=dirty_paths,
-        generated_message=generated_message,
-    )
-
-
-def lane_state_payload(context: LaneContext, registry: dict, state: LaneState) -> dict:
-    upstream = run_git(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], cwd=context.worktree_root, check=False)
-    return {
-        "worktree_path": str(context.worktree_root),
-        "branch": context.branch,
-        "lane_id": state.lane["lane_id"],
-        "lane_title": state.lane.get("title"),
-        "lane_status": state.lane.get("status"),
-        "integration_tree": context.is_integration_tree(registry),
-        "staged_files": state.staged_paths,
-        "dirty_files": state.dirty_paths,
-        "can_commit": True,
-        "can_push": True,
-        "generated_message": state.generated_message,
-        "upstream": upstream or None,
-    }
-
-
 def print_messages(messages: Sequence[ValidationMessage]) -> None:
     for message in messages:
         prefix = "ERROR" if message.level == "error" else "WARN"
@@ -486,27 +316,6 @@ def command_validate_worktree(args: argparse.Namespace) -> int:
     require_clean(messages)
     lane_label = lane["lane_id"] if lane else "integration-tree"
     print(f"lane worktree ok: {lane_label} ({args.mode}, {len(paths)} paths checked)")
-    return 0
-
-
-def command_status(args: argparse.Namespace) -> int:
-    context = get_context(args.registry)
-    registry = read_json(context.registry_path)
-    state = collect_lane_state(context, registry, explicit_message=args.message, require_staged=False)
-    payload = lane_state_payload(context, registry, state)
-    if args.json:
-        print(json.dumps(payload, indent=2, ensure_ascii=True))
-        return 0
-
-    print(f"worktree: {payload['worktree_path']}")
-    print(f"branch: {payload['branch']}")
-    print(f"lane: {payload['lane_id']} ({payload['lane_title']})")
-    print(f"status: {payload['lane_status']}")
-    print(f"staged: {len(payload['staged_files'])} file(s)")
-    print(f"dirty: {len(payload['dirty_files'])} path(s)")
-    print(f"message: {payload['generated_message'] or '(no staged files)'}")
-    push_target = payload["upstream"] or f"origin/{payload['branch']}"
-    print(f"push target: {push_target}")
     return 0
 
 
@@ -621,54 +430,6 @@ def command_ci(args: argparse.Namespace) -> int:
     return 0
 
 
-def push_target(context: LaneContext) -> Tuple[List[str], str]:
-    upstream = run_git(["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"], cwd=context.worktree_root, check=False)
-    if upstream:
-        return ["push"], upstream
-    return ["push", "-u", "origin", context.branch], f"origin/{context.branch}"
-
-
-def command_commit(args: argparse.Namespace) -> int:
-    context = get_context(args.registry)
-    registry = read_json(context.registry_path)
-    state = collect_lane_state(context, registry, explicit_message=args.message, require_staged=True)
-    print(f"[lane-ship] lane {state.lane['lane_id']} on {context.branch}")
-    print(f"[lane-ship] staged {len(state.staged_paths)} file(s)")
-    print(f"[lane-ship] commit message: {state.generated_message}")
-    run_git(["commit", "-m", state.generated_message], cwd=context.worktree_root)
-    print(f"lane commit created on {context.branch}")
-    return 0
-
-
-def command_push(args: argparse.Namespace) -> int:
-    context = get_context(args.registry)
-    registry = read_json(context.registry_path)
-    state = collect_lane_state(context, registry, explicit_message=args.message, require_staged=False)
-    del state
-    git_args, target = push_target(context)
-    print(f"[lane-ship] lane push target: {target}")
-    run_git(git_args, cwd=context.worktree_root)
-    print(f"lane pushed to {target}")
-    return 0
-
-
-def command_ship(args: argparse.Namespace) -> int:
-    context = get_context(args.registry)
-    registry = read_json(context.registry_path)
-    state = collect_lane_state(context, registry, explicit_message=args.message, require_staged=True)
-    git_args, target = push_target(context)
-    print(f"[lane-ship] worktree: {context.worktree_root}")
-    print(f"[lane-ship] branch: {context.branch}")
-    print(f"[lane-ship] lane: {state.lane['lane_id']} ({state.lane.get('title')})")
-    print(f"[lane-ship] staged: {len(state.staged_paths)} file(s)")
-    print(f"[lane-ship] commit message: {state.generated_message}")
-    print(f"[lane-ship] push target: {target}")
-    run_git(["commit", "-m", state.generated_message], cwd=context.worktree_root)
-    run_git(git_args, cwd=context.worktree_root)
-    print(f"lane ship completed for {state.lane['lane_id']}")
-    return 0
-
-
 def command_create(args: argparse.Namespace) -> int:
     context = get_context(args.registry)
     registry = read_json(context.registry_path)
@@ -707,19 +468,38 @@ def command_create(args: argparse.Namespace) -> int:
     return 0
 
 
+def command_validate_evidence(args: argparse.Namespace) -> int:
+    context = get_context(args.registry)
+    registry = read_json(context.registry_path)
+    messages: List[ValidationMessage] = []
+    for lane in registry.get("lanes", []):
+        lane_id = lane.get("lane_id", "?")
+        status = lane.get("status")
+        if status not in RESERVED_STATUSES:
+            continue
+        evidence_class = lane.get("evidence_class")
+        if evidence_class is None:
+            messages.append(ValidationMessage("error", f"lane {lane_id} is {status} but has no evidence_class"))
+        elif evidence_class not in ALLOWED_EVIDENCE_CLASSES:
+            messages.append(ValidationMessage("error", f"lane {lane_id} has invalid evidence_class {evidence_class!r}"))
+    if messages:
+        print_messages(messages)
+        if any(m.level == "error" for m in messages):
+            return 1
+    print(f"evidence class validation ok: {context.registry_path}")
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Smart Sales lane harness validator")
     parser.add_argument("--registry", default=None, help="Path to the lane registry relative to repo root")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     subparsers.add_parser("validate-registry")
+    subparsers.add_parser("validate-evidence")
 
     validate_worktree = subparsers.add_parser("validate-worktree")
     validate_worktree.add_argument("--mode", choices=["dirty", "staged", "all"], default="dirty")
-
-    status = subparsers.add_parser("status")
-    status.add_argument("--json", action="store_true")
-    status.add_argument("--message", default=None)
 
     report = subparsers.add_parser("report-collisions")
     report.add_argument("path", nargs="*")
@@ -742,15 +522,6 @@ def build_parser() -> argparse.ArgumentParser:
     ci.add_argument("--head-ref", default="HEAD")
     ci.add_argument("--branch", default=None)
 
-    commit = subparsers.add_parser("commit")
-    commit.add_argument("--message", default=None)
-
-    push = subparsers.add_parser("push")
-    push.add_argument("--message", default=None)
-
-    ship = subparsers.add_parser("ship")
-    ship.add_argument("--message", default=None)
-
     create = subparsers.add_parser("create")
     create.add_argument("lane_id")
     create.add_argument("slug")
@@ -770,17 +541,14 @@ def main() -> int:
     args = parser.parse_args()
     command_map = {
         "validate-registry": command_validate_registry,
+        "validate-evidence": command_validate_evidence,
         "validate-worktree": command_validate_worktree,
-        "status": command_status,
         "report-collisions": command_report_collisions,
         "attach": command_attach,
         "pause": command_pause,
         "resume": command_resume,
         "integrate": command_integrate,
         "validate-ci": command_ci,
-        "commit": command_commit,
-        "push": command_push,
-        "ship": command_ship,
         "create": command_create,
     }
     try:

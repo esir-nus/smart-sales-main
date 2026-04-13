@@ -3,8 +3,6 @@ name: Platform Governance Check
 on:
   push:
     paths:
-      - 'AGENTS.md'
-      - '.codex/**'
       - '.github/CODEOWNERS'
       - '.github/workflows/platform-governance-check.yml'
       - '.agent/**'
@@ -23,8 +21,6 @@ on:
       - 'platforms/**'
   pull_request:
     paths:
-      - 'AGENTS.md'
-      - '.codex/**'
       - '.github/CODEOWNERS'
       - '.github/workflows/platform-governance-check.yml'
       - '.agent/**'
@@ -87,6 +83,9 @@ jobs:
 
       - name: Validate lane registry schema
         run: python3 scripts/lane_guard.py validate-registry
+
+      - name: Validate evidence class declarations
+        run: python3 scripts/lane_guard.py validate-evidence
 
       - name: Validate lane branch ownership
         env:

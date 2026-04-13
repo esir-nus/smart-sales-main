@@ -6,3 +6,4 @@ ROOT_DIR="$(git rev-parse --show-toplevel)"
 cd "$ROOT_DIR"
 
 python3 scripts/lane_guard.py validate-worktree --mode dirty
+python3 scripts/lane_guard.py validate-evidence

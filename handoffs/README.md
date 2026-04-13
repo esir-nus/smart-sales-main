@@ -22,17 +22,18 @@ Each active handoff should include:
 
 1. **Lane ID**
 2. **Registry Lane ID**
-3. **Branch**
-4. **Recommended Worktree**
-5. **Scope**
-6. **Owned Paths**
-7. **Current Repo State / Implementation Truth**
-8. **What Is Finished**
-9. **What Is Still Open**
-10. **Doc-Code Alignment**
-11. **Required Evidence / Verification**
-12. **Safe Next Actions**
-13. **Do Not Touch / Collision Notes**
+3. **Evidence Class**
+4. **Branch**
+5. **Recommended Worktree**
+6. **Scope**
+7. **Owned Paths**
+8. **Current Repo State / Implementation Truth**
+9. **What Is Finished**
+10. **What Is Still Open**
+11. **Doc-Code Alignment**
+12. **Required Evidence / Verification**
+13. **Safe Next Actions**
+14. **Do Not Touch / Collision Notes**
 
 Suggested title pattern:
 

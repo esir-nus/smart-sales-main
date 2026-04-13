@@ -1,0 +1,1058 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<issues format="6" by="lint 8.13.0" type="baseline" client="gradle" dependencies="false" name="AGP (8.13.0)" variant="all" version="8.13.0">
+
+    <issue
+        id="InlinedApi"
+        message="Field requires API level 31 (current min is 26): `android.Manifest.permission#BLUETOOTH_CONNECT`"
+        errorLine1="            android.Manifest.permission.BLUETOOTH_CONNECT"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/connectivity/legacy/scan/AndroidBleScanner.kt"
+            line="145"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="InlinedApi"
+        message="Field requires API level 31 (current min is 26): `android.Manifest.permission#BLUETOOTH_CONNECT`"
+        errorLine1="                context, Manifest.permission.BLUETOOTH_CONNECT"
+        errorLine2="                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/connectivity/legacy/DeviceConnectionManager.kt"
+            line="104"
+            column="26"/>
+    </issue>
+
+    <issue
+        id="InlinedApi"
+        message="Field requires API level 31 (current min is 26): `android.Manifest.permission#BLUETOOTH_CONNECT`"
+        errorLine1="                                Manifest.permission.BLUETOOTH_CONNECT,"
+        errorLine2="                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/connectivity/legacy/gateway/GattBleGatewaySessionSupport.kt"
+            line="300"
+            column="33"/>
+    </issue>
+
+    <issue
+        id="InlinedApi"
+        message="Field requires API level 31 (current min is 26): `android.Manifest.permission#BLUETOOTH_SCAN`"
+        errorLine1="                                Manifest.permission.BLUETOOTH_SCAN"
+        errorLine2="                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/connectivity/legacy/gateway/GattBleGatewaySessionSupport.kt"
+            line="301"
+            column="33"/>
+    </issue>
+
+    <issue
+        id="InlinedApi"
+        message="Field requires API level 31 (current min is 26): `android.Manifest.permission#BLUETOOTH_CONNECT`"
+        errorLine1="                            Manifest.permission.BLUETOOTH_CONNECT,"
+        errorLine2="                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/connectivity/legacy/gateway/GattBleGatewaySessionSupport.kt"
+            line="329"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="InlinedApi"
+        message="Field requires API level 31 (current min is 26): `android.Manifest.permission#BLUETOOTH_SCAN`"
+        errorLine1="                            Manifest.permission.BLUETOOTH_SCAN"
+        errorLine2="                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/connectivity/legacy/gateway/GattBleGatewaySessionSupport.kt"
+            line="330"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="InlinedApi"
+        message="Field requires API level 31 (current min is 26): `android.Manifest.permission#BLUETOOTH_CONNECT`"
+        errorLine1="                            Manifest.permission.BLUETOOTH_CONNECT,"
+        errorLine2="                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/connectivity/legacy/gateway/GattBleGatewaySessionSupport.kt"
+            line="360"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="InlinedApi"
+        message="Field requires API level 31 (current min is 26): `android.Manifest.permission#BLUETOOTH_SCAN`"
+        errorLine1="                            Manifest.permission.BLUETOOTH_SCAN"
+        errorLine2="                            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/connectivity/legacy/gateway/GattBleGatewaySessionSupport.kt"
+            line="361"
+            column="29"/>
+    </issue>
+
+    <issue
+        id="InlinedApi"
+        message="Field requires API level 31 (current min is 26): `android.Manifest.permission#BLUETOOTH_CONNECT`"
+        errorLine1="        Manifest.permission.BLUETOOTH_CONNECT"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/connectivity/legacy/gateway/GattBleGatewaySessionSupport.kt"
+            line="816"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 27 (current min is 26): `android.app.Activity#setShowWhenLocked`"
+        errorLine1="        setShowWhenLocked(true)"
+        errorLine2="        ~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/alarm/AlarmActivity.kt"
+            line="128"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 27 (current min is 26): `android.app.Activity#setTurnScreenOn`"
+        errorLine1="        setTurnScreenOn(true)"
+        errorLine2="        ~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/alarm/AlarmActivity.kt"
+            line="129"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 34, or core library desugaring (current min is 26): `java.time.LocalDate#ofInstant`"
+        errorLine1="                        anchorDate = LocalDate.ofInstant(start, timeProvider.zoneId)"
+        errorLine2="                                               ~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/onboarding/OnboardingQuickStartService.kt"
+            line="525"
+            column="48"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 34, or core library desugaring (current min is 26): `java.time.LocalDate#ofInstant`"
+        errorLine1="                    anchorDate = LocalDate.ofInstant(targetStart, timeProvider.zoneId)"
+        errorLine2="                                           ~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/onboarding/OnboardingQuickStartService.kt"
+            line="568"
+            column="44"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 34, or core library desugaring (current min is 26): `java.time.LocalDate#ofInstant`"
+        errorLine1="                val anchorDate = LocalDate.ofInstant(targetStart, timeProvider.zoneId)"
+        errorLine2="                                           ~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/onboarding/OnboardingQuickStartService.kt"
+            line="572"
+            column="44"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 34, or core library desugaring (current min is 26): `java.time.LocalDate#ofInstant`"
+        errorLine1="                        anchorDate = LocalDate.ofInstant(targetStart, timeProvider.zoneId)"
+        errorLine2="                                               ~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/onboarding/OnboardingQuickStartService.kt"
+            line="653"
+            column="48"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 34, or core library desugaring (current min is 26): `java.time.LocalDate#ofInstant`"
+        errorLine1="                    val anchorDate = LocalDate.ofInstant(targetStart, timeProvider.zoneId)"
+        errorLine2="                                               ~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/onboarding/OnboardingQuickStartService.kt"
+            line="657"
+            column="48"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 29 (current min is 26): `android.net.NetworkCapabilities#getTransportInfo`"
+        errorLine1="            val transportInfoSsid = (capabilities?.transportInfo as? WifiInfo)?.ssid"
+        errorLine2="                                                   ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/connectivity/legacy/PhoneWifiProvider.kt"
+            line="39"
+            column="52"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Cast from `TransportInfo` to `WifiInfo` requires API level 29 (current min is 26)"
+        errorLine1="            val transportInfoSsid = (capabilities?.transportInfo as? WifiInfo)?.ssid"
+        errorLine2="                                     ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/connectivity/legacy/PhoneWifiProvider.kt"
+            line="39"
+            column="38"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="This Kotlin extension function will be hidden by `java.util.SequencedCollection` starting in API 35: `removeFirst`. When this source code is recompiled against API level 35, it will crash on older levels. You can avoid this by using `removeAt(0)` instead."
+        errorLine1="                notificationBuffer.removeFirst()"
+        errorLine2="                                   ~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/connectivity/RealConnectivityBridge.kt"
+            line="231"
+            column="36"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 34, or core library desugaring (current min is 26): `java.time.LocalDate#ofInstant`"
+        errorLine1="        return LocalDate.ofInstant(start, timeProvider.zoneId)"
+        errorLine2="                         ~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/sim/SimAgentFollowUpCoordinator.kt"
+            line="603"
+            column="26"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 34, or core library desugaring (current min is 26): `java.time.LocalDate#ofInstant`"
+        errorLine1="                        anchorDate = LocalDate.ofInstant(start, timeProvider.zoneId)"
+        errorLine2="                                               ~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/sim/SimSchedulerIngressCoordinator.kt"
+            line="607"
+            column="48"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 34, or core library desugaring (current min is 26): `java.time.LocalDate#ofInstant`"
+        errorLine1="                        anchorDate = LocalDate.ofInstant(targetStart, timeProvider.zoneId)"
+        errorLine2="                                               ~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/sim/SimSchedulerIngressCoordinator.kt"
+            line="652"
+            column="48"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 34, or core library desugaring (current min is 26): `java.time.LocalDate#ofInstant`"
+        errorLine1="                    val anchorDate = LocalDate.ofInstant(targetStart, timeProvider.zoneId)"
+        errorLine2="                                               ~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/sim/SimSchedulerIngressCoordinator.kt"
+            line="656"
+            column="48"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 34, or core library desugaring (current min is 26): `java.time.LocalDate#ofInstant`"
+        errorLine1="                    anchorDate = LocalDate.ofInstant(targetStart, timeProvider.zoneId)"
+        errorLine2="                                           ~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/sim/SimSchedulerIngressCoordinator.kt"
+            line="708"
+            column="44"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 34, or core library desugaring (current min is 26): `java.time.LocalDate#ofInstant`"
+        errorLine1="                val anchorDate = LocalDate.ofInstant(targetStart, timeProvider.zoneId)"
+        errorLine2="                                           ~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/sim/SimSchedulerIngressCoordinator.kt"
+            line="712"
+            column="44"/>
+    </issue>
+
+    <issue
+        id="NewApi"
+        message="Call requires API level 34, or core library desugaring (current min is 26): `java.time.LocalDate#ofInstant`"
+        errorLine1="        return java.time.LocalDate.ofInstant(start, timeProvider.zoneId)"
+        errorLine2="                                   ~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/sim/SimSchedulerProjectionSupport.kt"
+            line="250"
+            column="36"/>
+    </issue>
+
+    <issue
+        id="OldTargetApi"
+        message="Not targeting the latest versions of Android; compatibility modes apply. Consider testing and updating this version. Consult the `android.os.Build.VERSION_CODES` javadoc for details."
+        errorLine1="        targetSdk = 34"
+        errorLine2="        ~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="18"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `usesPermissionFlags` is only used in API level 31 and higher (current min is 26)"
+        errorLine1="        android:usesPermissionFlags=&quot;neverForLocation&quot; />"
+        errorLine2="        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="34"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `showWhenLocked` is only used in API level 27 and higher (current min is 26)"
+        errorLine1="            android:showWhenLocked=&quot;true&quot;"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="71"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UnusedAttribute"
+        message="Attribute `turnScreenOn` is only used in API level 27 and higher (current min is 26)"
+        errorLine1="            android:turnScreenOn=&quot;true&quot;"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="72"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="BatteryLife"
+        message="Use of `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` violates the Play Store Content Policy regarding acceptable use cases, as described in https://developer.android.com/training/monitoring-device-state/doze-standby.html"
+        errorLine1="        return Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {"
+        errorLine2="                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/notification/OemCompat.kt"
+            line="49"
+            column="32"/>
+    </issue>
+
+    <issue
+        id="CoarseFineLocation"
+        message="If you need access to FINE location, you must request both `ACCESS_FINE_LOCATION` and `ACCESS_COARSE_LOCATION`"
+        errorLine1="    &lt;uses-permission android:name=&quot;android.permission.ACCESS_FINE_LOCATION&quot; />"
+        errorLine2="    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="42"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="UnspecifiedRegisterReceiverFlag"
+        message="`finishReceiver` is missing `RECEIVER_EXPORTED` or `RECEIVER_NOT_EXPORTED` flag for unprotected broadcasts registered for com.smartsales.prism.FINISH_ALARM"
+        errorLine1="            registerReceiver(finishReceiver, filter)"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/alarm/AlarmActivity.kt"
+            line="139"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="GradleDependency"
+        message="A newer version of `compileSdkVersion` than 34 is available: 36"
+        errorLine1="    compileSdk = 34"
+        errorLine2="    ~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="11"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="LockedOrientationActivity"
+        message="Expecting `android:screenOrientation=&quot;unspecified&quot;` or `&quot;fullSensor&quot;` for this activity so the user can use the application in any orientation and provide a great experience on Chrome OS devices"
+        errorLine1="            android:screenOrientation=&quot;portrait&quot;"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="68"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of com.google.guava:guava than 32.1.3-android is available: 33.5.0-android"
+        errorLine1="    implementation(&quot;com.google.guava:guava:32.1.3-android&quot;)"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="111"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="NewerVersionAvailable"
+        message="A newer version of org.json:json than 20231013 is available: 20251224"
+        errorLine1="    testImplementation(&quot;org.json:json:20231013&quot;)  // Real JSON lib for unit tests"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="175"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/components/AgentActivityBanner.kt"
+            line="52"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/drawers/HistoryDrawer.kt"
+            line="68"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/debug/L2DebugHud.kt"
+            line="79"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/analyst/MarkdownStrategyBubble.kt"
+            line="31"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/onboarding/OnboardingProfileStep.kt"
+            line="235"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/components/ResponseBubble.kt"
+            line="29"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/drawers/SchedulerDrawer.kt"
+            line="640"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/drawers/scheduler/components/SchedulerTaskCard.kt"
+            line="36"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/components/SessionItem.kt"
+            line="28"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/sim/SimArtifactContent.kt"
+            line="58"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/sim/SimArtifactContent.kt"
+            line="106"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/sim/SimArtifactContent.kt"
+            line="174"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier,"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/sim/SimAudioDrawer.kt"
+            line="63"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="ModifierParameter"
+        message="Modifier parameter should be the first optional parameter"
+        errorLine1="    modifier: Modifier = Modifier"
+        errorLine2="    ~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/drawers/scheduler/components/TaskCardClarification.kt"
+            line="23"
+            column="5"/>
+    </issue>
+
+    <issue
+        id="DiscouragedApi"
+        message="Fixed screen orientations will be ignored in most cases, starting from Android 16. Android is moving toward a model where apps are expected to adapt to various orientations, display sizes, and aspect ratios."
+        errorLine1="            android:screenOrientation=&quot;portrait&quot;"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/AndroidManifest.xml"
+            line="68"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="HardwareIds"
+        message="Using `getString` to get device identifiers is not recommended"
+        errorLine1="                deviceId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)"
+        errorLine2="                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/audio/SimRealtimeSpeechRecognizer.kt"
+            line="325"
+            column="28"/>
+    </issue>
+
+    <issue
+        id="TrustAllX509TrustManager"
+        message="`checkClientTrusted` is empty, which could cause insecure network traffic due to trusting arbitrary TLS/SSL certificates presented by peers">
+        <location
+            file="$GRADLE_USER_HOME/caches/modules-2/files-2.1/com.aliyun/aliyun-http-apache/0.2.15-beta/611830a1bf1a06c5ee1de93d5de6991ad8780593/aliyun-http-apache-0.2.15-beta.jar"/>
+    </issue>
+
+    <issue
+        id="TrustAllX509TrustManager"
+        message="`checkClientTrusted` is empty, which could cause insecure network traffic due to trusting arbitrary TLS/SSL certificates presented by peers">
+        <location
+            file="$GRADLE_USER_HOME/caches/modules-2/files-2.1/com.aliyun/aliyun-java-auth/0.2.15-beta/ae5e913eb904fe3277fa682b18084f87b111511e/aliyun-java-auth-0.2.15-beta.jar"/>
+    </issue>
+
+    <issue
+        id="TrustAllX509TrustManager"
+        message="`checkServerTrusted` is empty, which could cause insecure network traffic due to trusting arbitrary TLS/SSL certificates presented by peers">
+        <location
+            file="$GRADLE_USER_HOME/caches/modules-2/files-2.1/com.aliyun/aliyun-java-auth/0.2.15-beta/ae5e913eb904fe3277fa682b18084f87b111511e/aliyun-java-auth-0.2.15-beta.jar"/>
+    </issue>
+
+    <issue
+        id="TrustAllX509TrustManager"
+        message="`checkClientTrusted` is empty, which could cause insecure network traffic due to trusting arbitrary TLS/SSL certificates presented by peers">
+        <location
+            file="$GRADLE_USER_HOME/caches/modules-2/files-2.1/com.aliyun/aliyun-java-sdk-core/4.6.0/29bca6086a80bed1a20a488e0c02f47ffd13c1fa/aliyun-java-sdk-core-4.6.0.jar"/>
+    </issue>
+
+    <issue
+        id="InsecureBaseConfiguration"
+        message="Insecure Base Configuration"
+        errorLine1="    &lt;base-config cleartextTrafficPermitted=&quot;true&quot; />"
+        errorLine2="                                            ~~~~">
+        <location
+            file="src/main/res/xml/network_security_config.xml"
+            line="4"
+            column="45"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; `SDK_INT` is never &lt; 26"
+        errorLine1="        if (Build.VERSION.SDK_INT &lt; Build.VERSION_CODES.O) return true"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/notification/OemCompat.kt"
+            line="279"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; `SDK_INT` is never &lt; 26"
+        errorLine1="        if (Build.VERSION.SDK_INT &lt; Build.VERSION_CODES.O) {"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/notification/RealNotificationService.kt"
+            line="184"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="Unnecessary; `SDK_INT` is never &lt; 26"
+        errorLine1="        if (Build.VERSION.SDK_INT &lt; Build.VERSION_CODES.O) return"
+        errorLine2="            ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/scheduler/TaskReminderReceiver.kt"
+            line="223"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="ObsoleteSdkInt"
+        message="This folder configuration (`v26`) is unnecessary; `minSdkVersion` is 26. Merge all the resources in this folder into `mipmap-anydpi`.">
+        <location
+            file="src/main/res/mipmap-anydpi-v26"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableFloatStateOf` instead of `mutableStateOf`"
+        errorLine1="                    var accumulatedDrag by remember { mutableStateOf(0f) }"
+        errorLine2="                                                      ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/drawers/AudioDrawer.kt"
+            line="123"
+            column="55"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableFloatStateOf` instead of `mutableStateOf`"
+        errorLine1="    var dragOffset by remember { mutableStateOf(0f) }"
+        errorLine2="                                 ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerCalendar.kt"
+            line="394"
+            column="34"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var currentHintIndex by remember(visible, displayedHints) { mutableStateOf(0) }"
+        errorLine2="                                                                ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/sim/SimAgentIntelligenceContent.kt"
+            line="866"
+            column="65"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var renderedLineCount by remember(text) { mutableStateOf(0) }"
+        errorLine2="                                              ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/sim/SimArtifactContent.kt"
+            line="223"
+            column="47"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableLongStateOf` instead of `mutableStateOf`"
+        errorLine1="        mutableStateOf(if (presentation.enableInitialReveal) SystemClock.uptimeMillis() else 0L)"
+        errorLine2="        ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/sim/SimArtifactContent.kt"
+            line="226"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableFloatStateOf` instead of `mutableStateOf`"
+        errorLine1="    var rootTopInRoot by remember { mutableStateOf(0f) }"
+        errorLine2="                                    ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/sim/SimHomeHeroShell.kt"
+            line="284"
+            column="37"/>
+    </issue>
+
+    <issue
+        id="AutoboxingStateCreation"
+        message="Prefer `mutableIntStateOf` instead of `mutableStateOf`"
+        errorLine1="    var currentHintIndex by remember(visible, displayedHints) { mutableStateOf(0) }"
+        errorLine2="                                                                ~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/sim/SimHomeHeroShell.kt"
+            line="1447"
+            column="65"/>
+    </issue>
+
+    <issue
+        id="UseOfNonLambdaOffsetOverload"
+        message="State backed values should use the lambda overload of Modifier.offset"
+        errorLine1="                    .offset(x = shakeAnim.value.dp)"
+        errorLine2="                     ~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/drawers/AudioCard.kt"
+            line="147"
+            column="22"/>
+    </issue>
+
+    <issue
+        id="UseOfNonLambdaOffsetOverload"
+        message="State backed values should use the lambda overload of Modifier.offset"
+        errorLine1="                        .offset(x = offsetX.value.dp)"
+        errorLine2="                         ~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/sim/SimAudioDrawerCard.kt"
+            line="413"
+            column="26"/>
+    </issue>
+
+    <issue
+        id="UseOfNonLambdaOffsetOverload"
+        message="State backed values should use the lambda overload of Modifier.offset"
+        errorLine1="                        .offset(x = offsetX.value.dp)"
+        errorLine2="                         ~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/sim/SimAudioDrawerCard.kt"
+            line="444"
+            column="26"/>
+    </issue>
+
+    <issue
+        id="IconLocation"
+        message="Found bitmap drawable `res/drawable/ic_launcher_foreground.png` in densityless folder">
+        <location
+            file="src/main/res/drawable/ic_launcher_foreground.png"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="            prefs.edit().putBoolean(KEY_SCHEDULER_TEASER_SEEN, true).apply()"
+        errorLine2="            ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/onboarding/BaseRuntimeDiscoverabilityGate.kt"
+            line="24"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="            prefs.edit().putBoolean(KEY_COMPLETED, value).apply()"
+        errorLine2="            ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/onboarding/BaseRuntimeOnboardingGate.kt"
+            line="41"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="            prefs.edit().putBoolean(KEY_SCHEDULER_AUTO_OPEN_PENDING, value).apply()"
+        errorLine2="            ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/onboarding/BaseRuntimeOnboardingHandoffGate.kt"
+            line="39"
+            column="13"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="            data = Uri.parse(&quot;package:${context.packageName}&quot;)"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/notification/OemCompat.kt"
+            line="50"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="            data = Uri.parse(&quot;package:${context.packageName}&quot;)"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/notification/OemCompat.kt"
+            line="50"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="                data = Uri.parse(&quot;package:${context.packageName}&quot;)"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/notification/OemCompat.kt"
+            line="91"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="                data = Uri.parse(&quot;package:${context.packageName}&quot;)"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/notification/OemCompat.kt"
+            line="91"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="                data = Uri.parse(&quot;package:${context.packageName}&quot;)"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/notification/OemCompat.kt"
+            line="122"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="                data = Uri.parse(&quot;package:${context.packageName}&quot;)"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/notification/OemCompat.kt"
+            line="122"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="                data = Uri.parse(&quot;package:${context.packageName}&quot;)"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/notification/OemCompat.kt"
+            line="381"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="                data = Uri.parse(&quot;package:${context.packageName}&quot;)"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/notification/OemCompat.kt"
+            line="381"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="        val uri = Uri.parse(uriString)"
+        errorLine2="                  ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/audio/RealAudioRepository.kt"
+            line="152"
+            column="19"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="        prefs.edit().putString(KEY_INSPIRATIONS, array.toString()).apply()"
+        errorLine2="        ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/scheduler/RealInspirationRepository.kt"
+            line="99"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="        prefs.edit().clear().apply()"
+        errorLine2="        ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/connectivity/legacy/SessionStoreImpl.kt"
+            line="78"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="        prefs.edit()"
+        errorLine2="        ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/connectivity/legacy/SessionStoreImpl.kt"
+            line="115"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `String.toUri` instead?"
+        errorLine1="        val uri = Uri.parse(uriString)"
+        errorLine2="                  ~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/data/audio/SimAudioRepositoryStoreSupport.kt"
+            line="93"
+            column="19"/>
+    </issue>
+
+    <issue
+        id="UseKtx"
+        message="Use the KTX extension function `SharedPreferences.edit` instead?"
+        errorLine1="        prefs.edit().putString(KEY_THEME_MODE, mode.name).apply()"
+        errorLine2="        ~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/theme/ThemePreferenceStore.kt"
+            line="47"
+            column="9"/>
+    </issue>
+
+    <issue
+        id="UseTomlInstead"
+        message="Use version catalog instead"
+        errorLine1="    implementation(&quot;com.google.guava:guava:32.1.3-android&quot;)"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="111"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="UseTomlInstead"
+        message="Use version catalog instead"
+        errorLine1="    implementation(&quot;androidx.navigation:navigation-compose:2.7.7&quot;)"
+        errorLine2="                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="156"
+            column="20"/>
+    </issue>
+
+    <issue
+        id="UseTomlInstead"
+        message="Use version catalog instead"
+        errorLine1="    testImplementation(&quot;org.jetbrains.kotlin:kotlin-reflect&quot;)"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="170"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="UseTomlInstead"
+        message="Use version catalog instead"
+        errorLine1="    testImplementation(&quot;org.json:json:20231013&quot;)  // Real JSON lib for unit tests"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="175"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="UseTomlInstead"
+        message="Use version catalog instead"
+        errorLine1="    testImplementation(&quot;androidx.room:room-testing:2.6.1&quot;)  // Room DAO tests"
+        errorLine2="                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="176"
+            column="24"/>
+    </issue>
+
+    <issue
+        id="UseTomlInstead"
+        message="Use version catalog instead"
+        errorLine1="    androidTestImplementation(&quot;androidx.compose.ui:ui-test-junit4&quot;)"
+        errorLine2="                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="180"
+            column="31"/>
+    </issue>
+
+    <issue
+        id="UseTomlInstead"
+        message="Use version catalog instead"
+        errorLine1="    debugImplementation(&quot;androidx.compose.ui:ui-test-manifest&quot;)"
+        errorLine2="                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="build.gradle.kts"
+            line="181"
+            column="25"/>
+    </issue>
+
+    <issue
+        id="ConstantLocale"
+        message="Assigning `Locale.getDefault()` to a final static field is suspicious; this code will not work correctly if the user changes locale while the app is running"
+        errorLine1="private val SimHistoryMonthFormatter = DateTimeFormatter.ofPattern(&quot;yyyy-MM&quot;, Locale.getDefault())"
+        errorLine2="                                                                              ~~~~~~~~~~~~~~~~~~~">
+        <location
+            file="src/main/java/com/smartsales/prism/ui/sim/SimAgentSessionCoordinator.kt"
+            line="20"
+            column="79"/>
+    </issue>
+
+</issues>

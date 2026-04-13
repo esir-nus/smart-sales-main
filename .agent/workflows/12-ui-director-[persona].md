@@ -1,5 +1,6 @@
 ---
 description: UI Director - creative strategy, design briefs, style guide ownership (does NOT code or port)
+last_reviewed: 2026-04-13
 ---
 
 # UI Director

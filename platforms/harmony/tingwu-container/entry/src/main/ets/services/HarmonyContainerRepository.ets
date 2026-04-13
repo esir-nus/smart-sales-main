@@ -22,6 +22,7 @@ import {
 } from '../utils/HarmonyFormatUtils';
 
 type HarmonySnapshotListener = (snapshot: HarmonyContainerSnapshot) => void;
+type HarmonyContainerError = Error | Object | string | number | boolean | undefined | null;
 
 class HarmonyContainerRepository {
   private context?: common.UIAbilityContext;
@@ -38,14 +39,13 @@ class HarmonyContainerRepository {
     this.context = context;
     this.items = harmonyFileStore.loadMetadata(context)
       .sort((left: HarmonyTingwuAudioItem, right: HarmonyTingwuAudioItem) => right.importedAt - left.importedAt);
-    this.snapshot = {
-      ...this.snapshot,
-      items: [...this.items],
-      configMissingKeys: getHarmonyRuntimeConfigMissingKeys(),
-      isLoading: false,
-      isBusy: false,
-      busyMessage: ''
-    };
+    const nextSnapshot = this.copySnapshot(this.snapshot);
+    nextSnapshot.items = this.sortedItems();
+    nextSnapshot.configMissingKeys = this.copyStringArray(getHarmonyRuntimeConfigMissingKeys());
+    nextSnapshot.isLoading = false;
+    nextSnapshot.isBusy = false;
+    nextSnapshot.busyMessage = '';
+    this.snapshot = nextSnapshot;
     this.emit();
     this.resumeProcessingJobs();
   }
@@ -87,13 +87,14 @@ class HarmonyContainerRepository {
         status: HarmonyJobStatus.IMPORTED,
         keywords: []
       };
-      this.items = [item, ...this.items];
+      this.items = this.prependItem(item);
       this.persist();
       this.setBusy(false, '');
       return item;
     } catch (error) {
+      const message = this.errorMessage(error);
       this.failGlobal(error);
-      throw error;
+      throw new Error(message);
     }
   }
 
@@ -106,11 +107,13 @@ class HarmonyContainerRepository {
     }
     this.activeJobs[audioId] = true;
     try {
-      this.patchItem(audioId, {
-        status: HarmonyJobStatus.UPLOADING,
-        progressPercent: 8,
-        lastErrorMessage: undefined,
-        updatedAt: Date.now()
+      this.updateItem(audioId, (itemToUpdate: HarmonyTingwuAudioItem) => {
+        const nextItem = this.copyItem(itemToUpdate);
+        nextItem.status = HarmonyJobStatus.UPLOADING;
+        nextItem.progressPercent = 8;
+        nextItem.lastErrorMessage = undefined;
+        nextItem.updatedAt = Date.now();
+        return nextItem;
       });
 
       const objectKey = buildObjectKey(item.localFileName);
@@ -120,62 +123,71 @@ class HarmonyContainerRepository {
         guessMimeType(item.extension)
       );
 
-      this.patchItem(audioId, {
-        status: HarmonyJobStatus.PROCESSING,
-        progressPercent: 24,
-        objectKey: upload.objectKey,
-        publicUrl: upload.publicUrl,
-        updatedAt: Date.now()
+      this.updateItem(audioId, (itemToUpdate: HarmonyTingwuAudioItem) => {
+        const nextItem = this.copyItem(itemToUpdate);
+        nextItem.status = HarmonyJobStatus.PROCESSING;
+        nextItem.progressPercent = 24;
+        nextItem.objectKey = upload.objectKey;
+        nextItem.publicUrl = upload.publicUrl;
+        nextItem.updatedAt = Date.now();
+        return nextItem;
       });
 
       const submit = await harmonyTingwuService.submitTask(upload.publicUrl, item.localFileName);
-      this.patchItem(audioId, {
-        status: HarmonyJobStatus.PROCESSING,
-        progressPercent: 30,
-        jobId: submit.jobId,
-        updatedAt: Date.now()
+      this.updateItem(audioId, (itemToUpdate: HarmonyTingwuAudioItem) => {
+        const nextItem = this.copyItem(itemToUpdate);
+        nextItem.status = HarmonyJobStatus.PROCESSING;
+        nextItem.progressPercent = 30;
+        nextItem.jobId = submit.jobId;
+        nextItem.updatedAt = Date.now();
+        return nextItem;
       });
 
       const completed = await harmonyTingwuService.observeUntilComplete(
         submit.jobId,
         (progress: number) => {
           const mappedProgress = Math.max(30, Math.min(95, progress));
-          this.patchItem(audioId, {
-            status: HarmonyJobStatus.PROCESSING,
-            progressPercent: mappedProgress,
-            updatedAt: Date.now()
+          this.updateItem(audioId, (itemToUpdate: HarmonyTingwuAudioItem) => {
+            const nextItem = this.copyItem(itemToUpdate);
+            nextItem.status = HarmonyJobStatus.PROCESSING;
+            nextItem.progressPercent = mappedProgress;
+            nextItem.updatedAt = Date.now();
+            return nextItem;
           });
         }
       );
 
       harmonyFileStore.saveArtifacts(context, audioId, completed.artifacts);
-      this.patchItem(audioId, {
-        status: HarmonyJobStatus.COMPLETED,
-        progressPercent: 100,
-        summary: completed.summary,
-        transcriptPreview: completed.transcriptPreview,
-        completedAt: Date.now(),
-        lastErrorMessage: undefined,
-        keywords: completed.artifacts.keywords,
-        jobId: undefined,
-        updatedAt: Date.now()
+      this.updateItem(audioId, (itemToUpdate: HarmonyTingwuAudioItem) => {
+        const nextItem = this.copyItem(itemToUpdate);
+        nextItem.status = HarmonyJobStatus.COMPLETED;
+        nextItem.progressPercent = 100;
+        nextItem.summary = completed.summary;
+        nextItem.transcriptPreview = completed.transcriptPreview;
+        nextItem.completedAt = Date.now();
+        nextItem.lastErrorMessage = undefined;
+        nextItem.keywords = this.copyStringArray(completed.artifacts.keywords);
+        nextItem.jobId = undefined;
+        nextItem.updatedAt = Date.now();
+        return nextItem;
       });
     } catch (error) {
       const message = this.errorMessage(error);
-      this.patchItem(audioId, {
-        status: HarmonyJobStatus.FAILED,
-        progressPercent: 0,
-        lastErrorMessage: message,
-        updatedAt: Date.now()
+      this.updateItem(audioId, (itemToUpdate: HarmonyTingwuAudioItem) => {
+        const nextItem = this.copyItem(itemToUpdate);
+        nextItem.status = HarmonyJobStatus.FAILED;
+        nextItem.progressPercent = 0;
+        nextItem.lastErrorMessage = message;
+        nextItem.updatedAt = Date.now();
+        return nextItem;
       });
-      this.snapshot = {
-        ...this.snapshot,
-        lastErrorMessage: message
-      };
+      const nextSnapshot = this.copySnapshot(this.snapshot);
+      nextSnapshot.lastErrorMessage = message;
+      this.snapshot = nextSnapshot;
       this.emit();
-      throw error;
+      throw new Error(message);
     } finally {
-      delete this.activeJobs[audioId];
+      this.activeJobs[audioId] = false;
     }
   }
 
@@ -188,7 +200,10 @@ class HarmonyContainerRepository {
     this.items
       .filter((item: HarmonyTingwuAudioItem) => item.status === HarmonyJobStatus.PROCESSING && !!item.jobId)
       .forEach((item: HarmonyTingwuAudioItem) => {
-        this.resumeObservation(item.id, item.jobId!).catch((error: Error) => {
+        if (!item.jobId) {
+          return;
+        }
+        this.resumeObservation(item.id, item.jobId).catch((error: Error) => {
           console.error(`Failed to resume harmony job ${item.id}: ${error.message}`);
         });
       });
@@ -204,34 +219,41 @@ class HarmonyContainerRepository {
         jobId,
         (progress: number) => {
           const mappedProgress = Math.max(30, Math.min(95, progress));
-          this.patchItem(audioId, {
-            status: HarmonyJobStatus.PROCESSING,
-            progressPercent: mappedProgress,
-            updatedAt: Date.now()
+          this.updateItem(audioId, (itemToUpdate: HarmonyTingwuAudioItem) => {
+            const nextItem = this.copyItem(itemToUpdate);
+            nextItem.status = HarmonyJobStatus.PROCESSING;
+            nextItem.progressPercent = mappedProgress;
+            nextItem.updatedAt = Date.now();
+            return nextItem;
           });
         }
       );
       harmonyFileStore.saveArtifacts(this.requireContext(), audioId, completed.artifacts);
-      this.patchItem(audioId, {
-        status: HarmonyJobStatus.COMPLETED,
-        progressPercent: 100,
-        summary: completed.summary,
-        transcriptPreview: completed.transcriptPreview,
-        completedAt: Date.now(),
-        lastErrorMessage: undefined,
-        keywords: completed.artifacts.keywords,
-        jobId: undefined,
-        updatedAt: Date.now()
+      this.updateItem(audioId, (itemToUpdate: HarmonyTingwuAudioItem) => {
+        const nextItem = this.copyItem(itemToUpdate);
+        nextItem.status = HarmonyJobStatus.COMPLETED;
+        nextItem.progressPercent = 100;
+        nextItem.summary = completed.summary;
+        nextItem.transcriptPreview = completed.transcriptPreview;
+        nextItem.completedAt = Date.now();
+        nextItem.lastErrorMessage = undefined;
+        nextItem.keywords = this.copyStringArray(completed.artifacts.keywords);
+        nextItem.jobId = undefined;
+        nextItem.updatedAt = Date.now();
+        return nextItem;
       });
     } catch (error) {
-      this.patchItem(audioId, {
-        status: HarmonyJobStatus.FAILED,
-        progressPercent: 0,
-        lastErrorMessage: this.errorMessage(error),
-        updatedAt: Date.now()
+      const message = this.errorMessage(error);
+      this.updateItem(audioId, (itemToUpdate: HarmonyTingwuAudioItem) => {
+        const nextItem = this.copyItem(itemToUpdate);
+        nextItem.status = HarmonyJobStatus.FAILED;
+        nextItem.progressPercent = 0;
+        nextItem.lastErrorMessage = message;
+        nextItem.updatedAt = Date.now();
+        return nextItem;
       });
     } finally {
-      delete this.activeJobs[audioId];
+      this.activeJobs[audioId] = false;
     }
   }
 
@@ -246,49 +268,54 @@ class HarmonyContainerRepository {
     return this.items.find((item: HarmonyTingwuAudioItem) => item.id === audioId);
   }
 
-  private patchItem(audioId: string, patch: Partial<HarmonyTingwuAudioItem>): void {
-    this.items = this.items.map((item: HarmonyTingwuAudioItem) => item.id === audioId ? {
-      ...item,
-      ...patch
-    } : item);
+  private updateItem(
+    audioId: string,
+    updater: (item: HarmonyTingwuAudioItem) => HarmonyTingwuAudioItem
+  ): void {
+    const nextItems: HarmonyTingwuAudioItem[] = [];
+    this.items.forEach((item: HarmonyTingwuAudioItem) => {
+      if (item.id === audioId) {
+        nextItems.push(updater(item));
+      } else {
+        nextItems.push(this.copyItem(item));
+      }
+    });
+    this.items = nextItems;
     this.persist();
   }
 
   private persist(): void {
     const context = this.requireContext();
     harmonyFileStore.saveMetadata(context, this.items);
-    this.snapshot = {
-      ...this.snapshot,
-      items: [...this.items].sort((left: HarmonyTingwuAudioItem, right: HarmonyTingwuAudioItem) => right.importedAt - left.importedAt),
-      configMissingKeys: getHarmonyRuntimeConfigMissingKeys(),
-      isLoading: false
-    };
+    const nextSnapshot = this.copySnapshot(this.snapshot);
+    nextSnapshot.items = this.sortedItems();
+    nextSnapshot.configMissingKeys = this.copyStringArray(getHarmonyRuntimeConfigMissingKeys());
+    nextSnapshot.isLoading = false;
+    this.snapshot = nextSnapshot;
     this.emit();
   }
 
   private setBusy(isBusy: boolean, busyMessage: string): void {
-    this.snapshot = {
-      ...this.snapshot,
-      isBusy,
-      busyMessage,
-      lastErrorMessage: undefined,
-      configMissingKeys: getHarmonyRuntimeConfigMissingKeys()
-    };
+    const nextSnapshot = this.copySnapshot(this.snapshot);
+    nextSnapshot.isBusy = isBusy;
+    nextSnapshot.busyMessage = busyMessage;
+    nextSnapshot.lastErrorMessage = undefined;
+    nextSnapshot.configMissingKeys = this.copyStringArray(getHarmonyRuntimeConfigMissingKeys());
+    this.snapshot = nextSnapshot;
     this.emit();
   }
 
-  private failGlobal(error: unknown): void {
-    this.snapshot = {
-      ...this.snapshot,
-      isBusy: false,
-      busyMessage: '',
-      lastErrorMessage: this.errorMessage(error),
-      configMissingKeys: getHarmonyRuntimeConfigMissingKeys()
-    };
+  private failGlobal(error: HarmonyContainerError): void {
+    const nextSnapshot = this.copySnapshot(this.snapshot);
+    nextSnapshot.isBusy = false;
+    nextSnapshot.busyMessage = '';
+    nextSnapshot.lastErrorMessage = this.errorMessage(error);
+    nextSnapshot.configMissingKeys = this.copyStringArray(getHarmonyRuntimeConfigMissingKeys());
+    this.snapshot = nextSnapshot;
     this.emit();
   }
 
-  private errorMessage(error: unknown): string {
+  private errorMessage(error: HarmonyContainerError): string {
     if (error instanceof Error) {
       return error.message;
     }
@@ -297,6 +324,71 @@ class HarmonyContainerRepository {
 
   private emit(): void {
     this.listeners.forEach((listener: HarmonySnapshotListener) => listener(this.snapshot));
+  }
+
+  private prependItem(item: HarmonyTingwuAudioItem): HarmonyTingwuAudioItem[] {
+    const nextItems: HarmonyTingwuAudioItem[] = [this.copyItem(item)];
+    this.items.forEach((candidate: HarmonyTingwuAudioItem) => {
+      nextItems.push(this.copyItem(candidate));
+    });
+    return nextItems;
+  }
+
+  private sortedItems(): HarmonyTingwuAudioItem[] {
+    const nextItems = this.copyItems(this.items);
+    nextItems.sort((left: HarmonyTingwuAudioItem, right: HarmonyTingwuAudioItem) => right.importedAt - left.importedAt);
+    return nextItems;
+  }
+
+  private copyItems(items: HarmonyTingwuAudioItem[]): HarmonyTingwuAudioItem[] {
+    const copies: HarmonyTingwuAudioItem[] = [];
+    items.forEach((item: HarmonyTingwuAudioItem) => {
+      copies.push(this.copyItem(item));
+    });
+    return copies;
+  }
+
+  private copyItem(item: HarmonyTingwuAudioItem): HarmonyTingwuAudioItem {
+    return {
+      id: item.id,
+      displayName: item.displayName,
+      sourceUri: item.sourceUri,
+      localFileName: item.localFileName,
+      localPath: item.localPath,
+      extension: item.extension,
+      sizeBytes: item.sizeBytes,
+      importedAt: item.importedAt,
+      updatedAt: item.updatedAt,
+      progressPercent: item.progressPercent,
+      status: item.status,
+      objectKey: item.objectKey,
+      publicUrl: item.publicUrl,
+      jobId: item.jobId,
+      summary: item.summary,
+      transcriptPreview: item.transcriptPreview,
+      lastErrorMessage: item.lastErrorMessage,
+      completedAt: item.completedAt,
+      keywords: this.copyStringArray(item.keywords)
+    };
+  }
+
+  private copySnapshot(snapshot: HarmonyContainerSnapshot): HarmonyContainerSnapshot {
+    return {
+      items: this.copyItems(snapshot.items),
+      configMissingKeys: this.copyStringArray(snapshot.configMissingKeys),
+      isLoading: snapshot.isLoading,
+      isBusy: snapshot.isBusy,
+      busyMessage: snapshot.busyMessage,
+      lastErrorMessage: snapshot.lastErrorMessage
+    };
+  }
+
+  private copyStringArray(values: string[]): string[] {
+    const nextValues: string[] = [];
+    values.forEach((value: string) => {
+      nextValues.push(value);
+    });
+    return nextValues;
   }
 }
 

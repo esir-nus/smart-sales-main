@@ -1,6 +1,6 @@
 {
   "app": {
-    "bundleName": "smartsales.HOS.test",
+    "bundleName": "smartsales.HOS.ui",
     "label": "$string:app_label",
     "icon": "$media:app_icon",
     "vendor": "smartsales",

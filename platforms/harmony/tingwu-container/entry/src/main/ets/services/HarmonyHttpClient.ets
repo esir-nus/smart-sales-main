@@ -11,7 +11,7 @@ class HarmonyHttpClient {
   async requestText(
     url: string,
     method: http.RequestMethod,
-    headers: Record<string, string>,
+    headers: Object,
     extraData?: string | ArrayBuffer
   ): Promise<HarmonyHttpResponse> {
     return this.request(url, method, headers, http.HttpDataType.STRING, extraData);
@@ -20,7 +20,7 @@ class HarmonyHttpClient {
   async requestBinary(
     url: string,
     method: http.RequestMethod,
-    headers: Record<string, string>,
+    headers: Object,
     extraData?: string | ArrayBuffer
   ): Promise<HarmonyHttpResponse> {
     return this.request(url, method, headers, http.HttpDataType.ARRAY_BUFFER, extraData);
@@ -29,7 +29,7 @@ class HarmonyHttpClient {
   private async request(
     url: string,
     method: http.RequestMethod,
-    headers: Record<string, string>,
+    headers: Object,
     expectDataType: http.HttpDataType,
     extraData?: string | ArrayBuffer
   ): Promise<HarmonyHttpResponse> {

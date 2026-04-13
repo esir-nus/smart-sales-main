@@ -1,7 +1,5 @@
 import fs from 'node:fs';
-import { createRequire } from 'node:module';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 type HarmonyRuntimeConfig = {
   TINGWU_BASE_URL: string;
@@ -16,7 +14,7 @@ type HarmonyRuntimeConfig = {
   OSS_ENDPOINT: string;
 };
 
-const PROJECT_DIR = path.dirname(fileURLToPath(import.meta.url));
+const PROJECT_DIR = __dirname;
 const REPO_ROOT = path.resolve(PROJECT_DIR, '..', '..', '..');
 const LOCAL_PROPERTIES_PATH = path.resolve(REPO_ROOT, 'local.properties');
 const GENERATED_CONFIG_PATH = path.resolve(
@@ -28,8 +26,6 @@ const GENERATED_CONFIG_PATH = path.resolve(
   'config',
   'HarmonyContainerConfig.local.ets'
 );
-const require = createRequire(import.meta.url);
-
 const REQUIRED_KEYS: Array<keyof HarmonyRuntimeConfig> = [
   'TINGWU_BASE_URL',
   'TINGWU_APP_KEY',

@@ -2,19 +2,19 @@
   "string": [
     {
       "name": "module_desc",
-      "value": "Transient Harmony Tingwu container"
+      "value": "Harmony UI verification package"
     },
     {
       "name": "entryability_desc",
-      "value": "Tingwu-only Harmony entry ability"
+      "value": "Internal Harmony UI verification entry ability"
     },
     {
       "name": "entryability_label",
-      "value": "Tingwu Container"
+      "value": "Harmony UI Verification"
     },
     {
       "name": "app_label",
-      "value": "Smart Sales Harmony"
+      "value": "Smart Sales Harmony UI"
     }
   ]
 }

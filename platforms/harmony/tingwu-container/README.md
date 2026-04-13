@@ -10,6 +10,7 @@ Current role:
 Current capability boundary:
 
 - supported: local audio import/selection, Tingwu processing, transcript/artifact viewing, persisted artifact reopen
+- operator-only backend verification: Harmony scheduler Path A mini lab for Uni-A exact create and Uni-B vague create, with owner-chain and Path A commit visibility
 - hidden and unsupported: scheduler, reminders, follow-up mutation, Ask-AI/chat, onboarding scheduler handoff, badge pairing/sync/download
 
 Current scaffold files:
@@ -26,7 +27,12 @@ Current scaffold files:
 - `entry/src/main/ets/config/HarmonyContainerRuntimeConfig.ets`
 - `entry/src/main/ets/config/HarmonyContainerConfig.local.ets` (auto-generated, ignored)
 - `entry/src/main/ets/model/HarmonyTingwuModels.ets`
+- `entry/src/main/ets/model/HarmonySchedulerModels.ets`
 - `entry/src/main/ets/services/HarmonyContainerRepository.ets`
+- `entry/src/main/ets/services/HarmonySchedulerIngressCoordinator.ets`
+- `entry/src/main/ets/services/HarmonySchedulerRepository.ets`
+- `entry/src/main/ets/services/HarmonySchedulerStore.ets`
+- `entry/src/main/ets/services/HarmonySchedulerTelemetry.ets`
 - `entry/src/main/ets/services/HarmonyFileStore.ets`
 - `entry/src/main/ets/services/HarmonyHttpClient.ets`
 - `entry/src/main/ets/services/HarmonyOssService.ets`
@@ -42,6 +48,7 @@ Current runtime behavior:
 - stores imported media as `harmony_<audioId>.<ext>`
 - stores provider artifacts as `harmony_<audioId>_artifacts.json`
 - owns Harmony-local OSS upload and Tingwu polling seams inside the Harmony root
+- keeps an operator-only Harmony scheduler Path A mini lab with local task/trace persistence, ingress-owner visibility, owner-chain visibility, and Path A commit inspection
 - treats `hvigorfile.ts` as the Harmony root build-owned generator for `entry/src/main/ets/config/HarmonyContainerConfig.local.ets`
 - keeps tracked ArkTS imports stable through `entry/src/main/ets/config/HarmonyContainerRuntimeConfig.ets`, which falls back to empty config when the generated artifact is absent
 

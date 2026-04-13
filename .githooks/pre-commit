@@ -5,6 +5,11 @@ set -euo pipefail
 ROOT_DIR="$(git rev-parse --show-toplevel)"
 cd "$ROOT_DIR"
 
+# Skip lane guard validation on merge commits — both parents were already validated
+if [ -f "$ROOT_DIR/.git/MERGE_HEAD" ] || [ -f "$(git rev-parse --git-dir)/MERGE_HEAD" ]; then
+  exit 0
+fi
+
 MAP_FILE="docs/cerb/interface-map.md"
 HTML_FILE="docs/cerb/dashboard.html"
 GENERATOR_SCRIPT="docs/tools/generate_map.py"

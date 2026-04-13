@@ -403,6 +403,8 @@ class ConnectivityViewModelTest {
 
         override fun recordingNotifications(): Flow<RecordingNotification> = emptyFlow()
 
+        override fun audioRecordingNotifications(): Flow<RecordingNotification.AudioRecordingReady> = emptyFlow()
+
         override suspend fun isReady(): Boolean = false
 
         override suspend fun deleteRecording(filename: String): Boolean = false

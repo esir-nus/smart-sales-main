@@ -6,11 +6,13 @@ import com.smartsales.prism.data.connectivity.legacy.badge.BadgeStateMonitor
 import com.smartsales.prism.data.connectivity.legacy.gateway.GattSessionLifecycle
 import com.smartsales.prism.data.connectivity.legacy.gateway.RateLimitedBleGateway
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 
 internal class DeviceConnectionManagerConnectionSupport(
     private val provisioner: WifiProvisioner,
@@ -122,6 +124,20 @@ internal class DeviceConnectionManagerConnectionSupport(
         ConnectivityLogger.d("🔌 Soft disconnect (session preserved)")
     }
 
+    /**
+     * 处理意外 GATT 断开（僵尸会话清理后由 GattBleGateway 触发）。
+     * 取消心跳和通知监听，更新 badge 状态，设置 Disconnected。
+     */
+    fun handleUnexpectedDisconnect() {
+        runtime.heartbeatJob?.cancel()
+        runtime.heartbeatJob = null
+        runtime.notificationListenerJob?.cancel()
+        runtime.notificationListenerActive = false
+        badgeStateMonitor.onBleDisconnected()
+        runtime.state.value = ConnectionState.Disconnected
+        ConnectivityLogger.w("🔌 Unexpected disconnect cleanup: heartbeat + listener cancelled")
+    }
+
     fun forgetDevice() {
         cancelAllJobs()
         badgeStateMonitor.onBleDisconnected()
@@ -196,27 +212,34 @@ internal class DeviceConnectionManagerConnectionSupport(
     }
 
     suspend fun connectUsingSession(session: BleSession): ConnectionState {
-        bleGateway.connect(session.peripheralId).let { result ->
-            if (result is Result.Error) {
-                ConnectivityLogger.w("🔌 Persistent GATT connect failed: ${result.throwable.message}")
-                runtime.notificationListenerActive = false
-                return ConnectionState.Error(
-                    ConnectivityError.Transport("持久 BLE 通知通道未建立")
-                )
-            }
-        }
+        return try {
+            withTimeout(CONNECT_USING_SESSION_TIMEOUT_MS) {
+                bleGateway.connect(session.peripheralId, isReconnect = true).let { result ->
+                    if (result is Result.Error) {
+                        ConnectivityLogger.w("🔌 Persistent GATT connect failed: ${result.throwable.message}")
+                        runtime.notificationListenerActive = false
+                        return@withTimeout ConnectionState.Error(
+                            ConnectivityError.Transport("持久 BLE 通知通道未建立")
+                        )
+                    }
+                }
 
-        badgeStateMonitor.onBleConnected(session)
-        ingressSupport.startNotificationListener(session)
+                badgeStateMonitor.onBleConnected(session)
+                ingressSupport.startNotificationListener(session)
 
-        return when (val networkStatus = performForegroundNetworkQuery(session, promoteConnectedState = false)) {
-            is Result.Success -> {
-                resolveReconnectState(session, networkStatus.data)
+                when (val networkStatus = performForegroundNetworkQuery(session, promoteConnectedState = false)) {
+                    is Result.Success -> {
+                        resolveReconnectState(session, networkStatus.data)
+                    }
+                    is Result.Error -> {
+                        val error = mapProvisioningError(networkStatus.throwable)
+                        ConnectionState.Error(error)
+                    }
+                }
             }
-            is Result.Error -> {
-                val error = mapProvisioningError(networkStatus.throwable)
-                ConnectionState.Error(error)
-            }
+        } catch (_: TimeoutCancellationException) {
+            ConnectivityLogger.w("🔌 connectUsingSession timed out after ${CONNECT_USING_SESSION_TIMEOUT_MS}ms")
+            ConnectionState.Error(ConnectivityError.Timeout(CONNECT_USING_SESSION_TIMEOUT_MS))
         }
     }
 
@@ -474,11 +497,8 @@ internal class DeviceConnectionManagerConnectionSupport(
         expectedPhoneSsid: String
     ): ConnectionState {
         repeat(RECONNECT_REPLAY_QUERY_ATTEMPTS) { attempt ->
-            val delayMs = if (attempt == 0) {
-                RECONNECT_REPLAY_FIRST_QUERY_DELAY_MS
-            } else {
-                RECONNECT_REPLAY_QUERY_DELAY_MS
-            }
+            val delayMs = RECONNECT_REPLAY_INITIAL_DELAY_MS +
+                (attempt * RECONNECT_REPLAY_BACKOFF_INCREMENT_MS)
             delay(delayMs)
 
             when (val result = performForegroundNetworkQuery(session, promoteConnectedState = false)) {
@@ -535,7 +555,9 @@ internal class DeviceConnectionManagerConnectionSupport(
         val expectedSsid = normalizeWifiSsid(credentials.ssid)
 
         repeat(MANUAL_PROVISION_QUERY_ATTEMPTS) { attempt ->
-            delay(MANUAL_PROVISION_QUERY_DELAY_MS)
+            val delayMs = MANUAL_PROVISION_INITIAL_DELAY_MS +
+                (attempt * MANUAL_PROVISION_BACKOFF_INCREMENT_MS)
+            delay(delayMs)
 
             when (val result = performForegroundNetworkQuery(session, promoteConnectedState = false)) {
                 is Result.Success -> {
@@ -641,11 +663,13 @@ internal class DeviceConnectionManagerConnectionSupport(
         const val HEARTBEAT_INTERVAL_MS = 1_500L
         const val AUTO_RETRY_DELAY_MS = 2_000L
         const val AUTO_RETRY_MAX_ATTEMPTS = 2
-        const val RECONNECT_REPLAY_FIRST_QUERY_DELAY_MS = 2_200L
-        const val RECONNECT_REPLAY_QUERY_DELAY_MS = 2_000L
-        const val RECONNECT_REPLAY_QUERY_ATTEMPTS = 3
-        const val MANUAL_PROVISION_QUERY_DELAY_MS = 1_500L
-        const val MANUAL_PROVISION_QUERY_ATTEMPTS = 3
+        const val CONNECT_USING_SESSION_TIMEOUT_MS = 30_000L
+        const val RECONNECT_REPLAY_INITIAL_DELAY_MS = 3_000L
+        const val RECONNECT_REPLAY_BACKOFF_INCREMENT_MS = 1_000L
+        const val RECONNECT_REPLAY_QUERY_ATTEMPTS = 4
+        const val MANUAL_PROVISION_INITIAL_DELAY_MS = 2_000L
+        const val MANUAL_PROVISION_BACKOFF_INCREMENT_MS = 1_000L
+        const val MANUAL_PROVISION_QUERY_ATTEMPTS = 4
         const val QUERY_FLOOR_TIMEOUT_MS = RateLimitedBleGateway.MIN_QUERY_INTERVAL_MS
         const val QUERY_FLOOR_RETRY_DELAY_MS = RateLimitedBleGateway.MIN_QUERY_INTERVAL_MS + 100L
     }

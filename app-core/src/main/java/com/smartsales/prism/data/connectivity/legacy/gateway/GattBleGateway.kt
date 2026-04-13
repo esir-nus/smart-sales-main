@@ -36,8 +36,8 @@ class GattBleGateway @Inject constructor(
         protocolSupport = protocolSupport
     )
 
-    override suspend fun connect(peripheralId: String): com.smartsales.core.util.Result<Unit> {
-        return sessionSupport.connect(peripheralId)
+    override suspend fun connect(peripheralId: String, isReconnect: Boolean): com.smartsales.core.util.Result<Unit> {
+        return sessionSupport.connect(peripheralId, isReconnect)
     }
 
     override suspend fun disconnect() {
@@ -46,6 +46,10 @@ class GattBleGateway @Inject constructor(
 
     override fun listenForBadgeNotifications(): Flow<BadgeNotification> {
         return sessionSupport.listenForBadgeNotifications()
+    }
+
+    override fun unexpectedDisconnects(): Flow<Unit> {
+        return runtime.unexpectedDisconnects
     }
 
     override suspend fun provision(

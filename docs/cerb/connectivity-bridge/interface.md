@@ -2,7 +2,7 @@
 
 > **Blackbox contract** — For consumers (Scheduler, Badge Audio Pipeline). Don't read implementation.
 > **Status**: Active supporting interface
-> **Last Updated**: 2026-04-02
+> **Last Updated**: 2026-04-13
 
 ---
 
@@ -190,17 +190,19 @@ Under the current reconnect contract, the bridge may surface this connected stat
 Normal badge HTTP work (`/list`, `/download`, `/delete`) should reuse the current runtime endpoint snapshot.
 Repeated BLE `wifi#address#ip#name` querying is not part of the normal sync path.
 
-`ConnectivityService.reconnect()` may return `WifiMismatch` in either of these deterministic reconnect cases:
+Current reconnect contract:
 
-- the phone's current Wi‑Fi SSID has no exact remembered credential to replay
-- the phone is on Wi‑Fi but the app cannot read the SSID, so exact-match replay cannot be proven safely
-- credential replay completes, but the badge confirms it is on a different Wi‑Fi than the phone
+- reconnect must not require readable phone Wi‑Fi SSID
+- if BLE is restored and the badge reports a usable IP, `ConnectivityService.reconnect()` should return `Connected` immediately even when the phone SSID is unreadable on the current OEM
+- `ReconnectResult.WifiMismatch` must not be returned solely because phone SSID is unreadable
+- `ReconnectResult.WifiMismatch` is reserved for explicit repair or trusted mismatch states where the runtime has concrete evidence that the badge is on the wrong network for the operator's intended repair target
 
 When reconnect can read the phone's current Wi‑Fi SSID, `ReconnectResult.WifiMismatch.currentPhoneSsid`
-must carry that suggestion so the repair form can prefill it while keeping the SSID editable.
+may carry that suggestion so the repair form can prefill it while keeping the SSID editable. When the OS does not expose the SSID, null is expected and must not be treated as reconnect failure by itself.
 
 `ConnectivityService.updateWifiConfig()` must treat `trim().isEmpty()` on either field as an immediate local error.
 That rejection is a guard rail only: it must not call BLE provisioning, manual repair confirmation, or remembered-network persistence.
+Manual repair confirmation failure must return an explicit error and must not be collapsed into synthetic success.
 
 This richer state is for connectivity manager presentation only. Shared shell/history routing must continue to use `connectionState`.
 

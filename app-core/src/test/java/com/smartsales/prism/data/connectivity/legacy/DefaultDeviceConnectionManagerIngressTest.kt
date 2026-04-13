@@ -6,6 +6,8 @@ import com.smartsales.prism.data.connectivity.legacy.badge.FakeBadgeStateMonitor
 import com.smartsales.prism.data.connectivity.legacy.badge.BadgeState
 import com.smartsales.prism.data.connectivity.legacy.gateway.BadgeNotification
 import com.smartsales.prism.data.connectivity.legacy.gateway.GattSessionLifecycle
+import android.content.Context
+import android.content.pm.PackageManager
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineDispatcher
@@ -20,6 +22,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.mockito.Mockito
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DefaultDeviceConnectionManagerIngressTest {
@@ -574,7 +577,8 @@ class DefaultDeviceConnectionManagerIngressTest {
         val error = (state as ConnectionState.Error).error as ConnectivityError.WifiDisconnected
         assertEquals(WifiDisconnectedReason.BADGE_WIFI_OFFLINE, error.reason)
         assertTrue(manager.state.value is ConnectionState.Disconnected)
-        assertEquals(3, provisioner.networkCalls.size)
+        // 4 attempts: escalating backoff with 4 confirmation polls
+        assertEquals(4, provisioner.networkCalls.size)
     }
 
     @Test
@@ -632,6 +636,11 @@ class DefaultDeviceConnectionManagerIngressTest {
             badgeStateMonitor = monitor,
             sessionStore = sessionStore,
             phoneWifiProvider = phoneWifiProvider,
+            context = Mockito.mock(Context::class.java).also { ctx ->
+                Mockito.`when`(ctx.checkPermission(
+                    Mockito.anyString(), Mockito.anyInt(), Mockito.anyInt()
+                )).thenReturn(PackageManager.PERMISSION_GRANTED)
+            },
             scope = scope
         )
     }
@@ -644,11 +653,13 @@ class DefaultDeviceConnectionManagerIngressTest {
             extraBufferCapacity = 4
         )
 
-        override suspend fun connect(peripheralId: String): Result<Unit> = connectResult
+        override suspend fun connect(peripheralId: String, isReconnect: Boolean): Result<Unit> = connectResult
 
         override suspend fun disconnect() = Unit
 
         override fun listenForBadgeNotifications(): Flow<BadgeNotification> = notifications
+
+        override fun unexpectedDisconnects(): Flow<Unit> = kotlinx.coroutines.flow.emptyFlow()
 
         suspend fun emit(notification: BadgeNotification) {
             notifications.emit(notification)

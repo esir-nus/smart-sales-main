@@ -94,7 +94,6 @@ class L2AdaptiveHabitLoopTest {
             inputParserService = FakeInputParserService(),
             schedulerLinter = SchedulerLinter(),
             entityWriter = entityWriter,
-            sessionTitleGenerator = FakeSessionTitleGenerator(),
             promptCompiler = FakePromptCompiler(),
             executor = FakeExecutor(),
             telemetry = FakePipelineTelemetry(),

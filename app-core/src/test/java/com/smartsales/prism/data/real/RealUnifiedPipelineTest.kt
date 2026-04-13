@@ -60,7 +60,6 @@ class RealUnifiedPipelineTest {
     private lateinit var scheduleBoard: FakeScheduleBoard
     private lateinit var inspirationRepository: FakeInspirationRepository
     private lateinit var alarmScheduler: FakeAlarmScheduler
-    private lateinit var sessionTitleGenerator: FakeSessionTitleGenerator
     private lateinit var promptCompiler: FakePromptCompiler
     private lateinit var executor: FakeExecutor
     private lateinit var timeProvider: FakeTimeProvider
@@ -84,7 +83,6 @@ class RealUnifiedPipelineTest {
         scheduleBoard = FakeScheduleBoard()
         inspirationRepository = FakeInspirationRepository()
         alarmScheduler = FakeAlarmScheduler()
-        sessionTitleGenerator = FakeSessionTitleGenerator()
         promptCompiler = FakePromptCompiler()
         executor = FakeExecutor()
         telemetry = mock<PipelineTelemetry>()
@@ -96,7 +94,6 @@ class RealUnifiedPipelineTest {
             inputParserService = inputParserService,
             schedulerLinter = SchedulerLinter(),
             entityWriter = entityWriter,
-            sessionTitleGenerator = sessionTitleGenerator,
             promptCompiler = promptCompiler,
             executor = executor,
             telemetry = telemetry,
@@ -116,7 +113,6 @@ class RealUnifiedPipelineTest {
             inputParserService = inputParserService,
             schedulerLinter = sharedLinter,
             entityWriter = entityWriter,
-            sessionTitleGenerator = sessionTitleGenerator,
             promptCompiler = promptCompiler,
             executor = sharedExecutor,
             telemetry = telemetry,
@@ -278,13 +274,13 @@ class RealUnifiedPipelineTest {
                 content = """{
                     "decision":"RESCHEDULE_TARGETED",
                     "targetQuery":"张总会议",
-                    "timeInstruction":"推迟一小时"
+                    "timeInstruction":"明天上午十一点"
                 }""".trimIndent(),
                 tokenUsage = com.smartsales.core.llm.TokenUsage(40, 10)
             )
         )
 
-        val rawText = "把张总会议推迟一小时"
+        val rawText = "把张总会议改到明天上午十一点"
         val results = localPipeline.processInput(
             PipelineInput(
                 rawText = rawText,
@@ -301,7 +297,7 @@ class RealUnifiedPipelineTest {
         assertEquals(existingTaskId, command.params.resolvedTaskId)
         assertEquals("张总会议", retrievalIndex.lastResolveTarget?.targetQuery)
         assertEquals(rawText, retrievalIndex.lastShortlistTranscript)
-        assertEquals("2026-03-20T03:00:00Z", command.params.newStartTimeIso)
+        assertEquals("2026-02-03T03:00:00Z", command.params.newStartTimeIso)
     }
 
     @Test
@@ -445,10 +441,7 @@ class RealUnifiedPipelineTest {
         // Assert
         assertTrue("Pipeline did not emit results", results.isNotEmpty())
         
-        // Assert exactly two results: AutoRenameTriggered (from Parser) and ConversationalReply (from Pipeline fallback)
-        val renameResult = results.filterIsInstance<PipelineResult.AutoRenameTriggered>().firstOrNull()
-        assertTrue("Expected AutoRenameTriggered", renameResult != null)
-        
+        // The legacy parser-driven auto-rename path has been removed.
         val replyResult = results.filterIsInstance<PipelineResult.ConversationalReply>().firstOrNull()
         assertTrue("Expected ConversationalReply", replyResult != null)
         
@@ -477,7 +470,6 @@ class RealUnifiedPipelineTest {
             inputParserService = inputParserService,
             schedulerLinter = SchedulerLinter(),
             entityWriter = entityWriter,
-            sessionTitleGenerator = sessionTitleGenerator,
             promptCompiler = promptCompiler,
             executor = executor,
             telemetry = telemetry,

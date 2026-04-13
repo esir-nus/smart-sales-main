@@ -958,7 +958,7 @@ class IntentOrchestratorTest {
                   "decision":"RESCHEDULE_TARGETED",
                   "suggestedTaskId":"task-1",
                   "targetQuery":"张总会议",
-                  "timeInstruction":"推迟一小时"
+                  "timeInstruction":"明天上午十一点"
                 }
                 """.trimIndent()
             )
@@ -982,7 +982,7 @@ class IntentOrchestratorTest {
         )
 
         val results = sharedOrchestrator.processInput(
-            "把明天和张总的会推迟一小时",
+            "把明天和张总的会改到明天上午十一点",
             isVoice = true
         ).toList()
 
@@ -991,7 +991,7 @@ class IntentOrchestratorTest {
         assertEquals("task-1", committed.first().task.id)
         assertEquals(Instant.parse("2026-03-19T03:00:00Z"), committed.first().task.startTime)
         assertFalse(storedTasks.values.any { it.title == "Path B hallucinated follow-up" })
-        assertEquals("把明天和张总的会推迟一小时", fakeActiveTaskRetrievalIndex.lastShortlistTranscript)
+        assertEquals("把明天和张总的会改到明天上午十一点", fakeActiveTaskRetrievalIndex.lastShortlistTranscript)
         assertTrue(results.any { it == PipelineResult.ConversationalReply("Path B reply") })
     }
 

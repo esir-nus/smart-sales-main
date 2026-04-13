@@ -36,9 +36,6 @@ class RealUnifiedPipeline @Inject constructor(
     private val inputParserService: InputParserService,
     private val schedulerLinter: SchedulerLinter,
     private val entityWriter: com.smartsales.prism.domain.memory.EntityWriter,
-    // Wave 4: Synchronous Auto-Renaming
-    private val sessionTitleGenerator: com.smartsales.prism.domain.session.SessionTitleGenerator,
-    
     // Wave 3: Extracted LLM Execution
     private val promptCompiler: PromptCompiler,
     private val executor: Executor,
@@ -177,18 +174,6 @@ class RealUnifiedPipeline @Inject constructor(
                 }
                 if (parseResult is ParseResult.Success) {
                     resolvedEntities.addAll(parseResult.resolvedEntityIds)
-                    
-                    // Wave 4: Generate title synchronously from the raw JSON payload
-                    if (parseResult.rawParsedJson.isNotBlank()) {
-                        val generatedTitle = sessionTitleGenerator.generateTitle(
-                            rawParsedJson = parseResult.rawParsedJson,
-                            resolvedNames = parseResult.resolvedEntityIds // In reality we'd want names, but IDs are safer than nothing for debugging
-                        )
-                        Log.d("RealUnifiedPipeline", "Auto-Rename prepared via JSON: $generatedTitle")
-                        generatedTitle.clientName?.let { name ->
-                            emit(PipelineResult.AutoRenameTriggered(name))
-                        }
-                    }
                 }
             }
         }

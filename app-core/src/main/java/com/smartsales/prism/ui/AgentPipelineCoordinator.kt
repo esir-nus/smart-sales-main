@@ -84,11 +84,6 @@ internal class AgentPipelineCoordinator(
                 sessionCoordinator.appendAssistantTurn(ui)
                 bridge.setUiState(UiState.Idle)
             }
-            is PipelineResult.AutoRenameTriggered -> {
-                if (bridge.getSessionTitle() == DEFAULT_AGENT_SESSION_TITLE) {
-                    sessionCoordinator.updateSessionTitle(result.newTitle)
-                }
-            }
             is PipelineResult.DisambiguationIntercepted -> {
                 if (result.uiState !is UiState.Idle) {
                     sessionCoordinator.appendAssistantTurn(result.uiState)

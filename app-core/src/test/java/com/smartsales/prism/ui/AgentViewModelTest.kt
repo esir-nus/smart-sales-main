@@ -529,33 +529,4 @@ class AgentViewModelTest {
         assertEquals("新标题", fakeHistoryRepo.getSession("session-1")?.clientName)
     }
 
-    @Test
-    fun `auto rename only updates default untitled sessions`() = runTest {
-        fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.DEEP_ANALYSIS, false, ""))
-        fakeUnifiedPipeline.nextResultFlow = flowOf(
-            PipelineResult.AutoRenameTriggered("自动标题"),
-            PipelineResult.ConversationalReply("分析已完成")
-        )
-
-        viewModel.updateInput("第一次请求")
-        viewModel.send()
-        advanceUntilIdle()
-
-        assertEquals("自动标题", viewModel.sessionTitle.value)
-
-        viewModel.updateSessionTitle("手动标题")
-        advanceUntilIdle()
-
-        fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.DEEP_ANALYSIS, false, ""))
-        fakeUnifiedPipeline.nextResultFlow = flowOf(
-            PipelineResult.AutoRenameTriggered("不应覆盖"),
-            PipelineResult.ConversationalReply("再次完成")
-        )
-
-        viewModel.updateInput("第二次请求")
-        viewModel.send()
-        advanceUntilIdle()
-
-        assertEquals("手动标题", viewModel.sessionTitle.value)
-    }
 }

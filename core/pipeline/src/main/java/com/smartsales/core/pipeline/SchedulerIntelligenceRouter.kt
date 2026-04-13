@@ -1,12 +1,9 @@
 package com.smartsales.core.pipeline
 
 import com.smartsales.prism.domain.scheduler.ActiveTaskContext
-import com.smartsales.prism.domain.scheduler.FollowUpRescheduleExtractionRequest
 import com.smartsales.prism.domain.scheduler.FollowUpRescheduleExtractionResult
 import com.smartsales.prism.domain.scheduler.GlobalRescheduleExtractionRequest
 import com.smartsales.prism.domain.scheduler.GlobalRescheduleExtractionResult
-import com.smartsales.prism.domain.scheduler.RecentTaskHint
-import com.smartsales.prism.domain.scheduler.RelativeTimeResolver
 import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.domain.time.TimeProvider
 
@@ -68,7 +65,6 @@ class SchedulerIntelligenceRouter(
         val transcript: String,
         val surface: SchedulerSurface,
         val displayedDateIso: String?,
-        val recentTaskHints: List<RecentTaskHint> = emptyList(),
         val activeTaskShortlist: List<ActiveTaskContext> = emptyList(),
         val uniMTimeoutMs: Long? = null
     )
@@ -76,7 +72,6 @@ class SchedulerIntelligenceRouter(
     data class FollowUpContext(
         val transcript: String,
         val selectedTask: ScheduledTask? = null,
-        val recentTaskHints: List<RecentTaskHint> = emptyList(),
         val activeTaskShortlist: List<ActiveTaskContext> = emptyList()
     )
 
@@ -133,7 +128,6 @@ class SchedulerIntelligenceRouter(
                         transcript = transcript,
                         nowIso = timeProvider.now.toString(),
                         timezone = timeProvider.zoneId.id,
-                        recentTaskHints = context.recentTaskHints,
                         activeTaskShortlist = context.activeTaskShortlist
                     )
                 )
@@ -259,7 +253,6 @@ class SchedulerIntelligenceRouter(
                         transcript = transcript,
                         nowIso = timeProvider.now.toString(),
                         timezone = timeProvider.zoneId.id,
-                        recentTaskHints = context.recentTaskHints,
                         activeTaskShortlist = context.activeTaskShortlist
                     )
                 )
@@ -290,120 +283,45 @@ class SchedulerIntelligenceRouter(
                     )
                 }
                 is GlobalRescheduleExtractionResult.Unsupported -> {
-                    if (context.selectedTask == null) {
-                        return Decision.Reject(
-                            message = unsupportedRescheduleMessage(SchedulerSurface.FOLLOW_UP_SESSION),
-                            metadata = RouteMetadata(
-                                surface = SchedulerSurface.FOLLOW_UP_SESSION,
-                                intentKind = SchedulerIntentKind.RESCHEDULE,
-                                taskShape = SchedulerTaskShape.UNSUPPORTED,
-                                owner = SchedulerRouteOwner.REJECT,
-                                schedulerTerminalOnCommit = false,
-                                reason = extracted.reason
-                            )
+                    return Decision.Reject(
+                        message = unsupportedRescheduleMessage(SchedulerSurface.FOLLOW_UP_SESSION),
+                        metadata = RouteMetadata(
+                            surface = SchedulerSurface.FOLLOW_UP_SESSION,
+                            intentKind = SchedulerIntentKind.RESCHEDULE,
+                            taskShape = SchedulerTaskShape.UNSUPPORTED,
+                            owner = SchedulerRouteOwner.REJECT,
+                            schedulerTerminalOnCommit = false,
+                            reason = extracted.reason
                         )
-                    }
+                    )
                 }
                 is GlobalRescheduleExtractionResult.Invalid -> {
-                    if (context.selectedTask == null) {
-                        return Decision.Reject(
-                            message = invalidRescheduleMessage(SchedulerSurface.FOLLOW_UP_SESSION),
-                            metadata = RouteMetadata(
-                                surface = SchedulerSurface.FOLLOW_UP_SESSION,
-                                intentKind = SchedulerIntentKind.RESCHEDULE,
-                                taskShape = SchedulerTaskShape.UNSUPPORTED,
-                                owner = SchedulerRouteOwner.REJECT,
-                                schedulerTerminalOnCommit = false,
-                                reason = extracted.reason
-                            )
+                    return Decision.Reject(
+                        message = invalidRescheduleMessage(SchedulerSurface.FOLLOW_UP_SESSION),
+                        metadata = RouteMetadata(
+                            surface = SchedulerSurface.FOLLOW_UP_SESSION,
+                            intentKind = SchedulerIntentKind.RESCHEDULE,
+                            taskShape = SchedulerTaskShape.UNSUPPORTED,
+                            owner = SchedulerRouteOwner.REJECT,
+                            schedulerTerminalOnCommit = false,
+                            reason = extracted.reason
                         )
-                    }
+                    )
                 }
             }
         }
 
-        val selectedTask = context.selectedTask
-            ?: return Decision.Reject(
-                message = "请先选择要改期的日程。",
-                metadata = RouteMetadata(
-                    surface = SchedulerSurface.FOLLOW_UP_SESSION,
-                    intentKind = SchedulerIntentKind.RESCHEDULE,
-                    taskShape = SchedulerTaskShape.UNSUPPORTED,
-                    owner = SchedulerRouteOwner.REJECT,
-                    schedulerTerminalOnCommit = false,
-                    reason = "no selected task"
-                )
+        return Decision.Reject(
+            message = unsupportedRescheduleMessage(SchedulerSurface.FOLLOW_UP_SESSION),
+            metadata = RouteMetadata(
+                surface = SchedulerSurface.FOLLOW_UP_SESSION,
+                intentKind = SchedulerIntentKind.RESCHEDULE,
+                taskShape = SchedulerTaskShape.UNSUPPORTED,
+                owner = SchedulerRouteOwner.REJECT,
+                schedulerTerminalOnCommit = false,
+                reason = "follow-up explicit target required"
             )
-
-        val extractionService = followUpRescheduleExtractionService
-            ?: error("followUpRescheduleExtractionService is required for follow-up routing")
-        return when (
-            val extracted = extractionService.extract(
-                FollowUpRescheduleExtractionRequest(
-                    transcript = transcript,
-                    nowIso = timeProvider.now.toString(),
-                    timezone = timeProvider.zoneId.id,
-                    selectedTaskStartIso = selectedTask.startTime.toString(),
-                    selectedTaskDurationMinutes = selectedTask.durationMinutes,
-                    selectedTaskTitle = selectedTask.title,
-                    selectedTaskLocation = selectedTask.location,
-                    selectedTaskPerson = selectedTask.keyPerson
-                )
-            )
-        ) {
-            is FollowUpRescheduleExtractionResult.Supported -> {
-                Decision.FollowUpReschedule(
-                    selectedTask = selectedTask,
-                    extracted = extracted,
-                    metadata = RouteMetadata(
-                        surface = SchedulerSurface.FOLLOW_UP_SESSION,
-                        intentKind = SchedulerIntentKind.RESCHEDULE,
-                        taskShape = SchedulerTaskShape.TARGETED_UPDATE,
-                        owner = SchedulerRouteOwner.FOLLOW_UP_RESCHEDULE,
-                        schedulerTerminalOnCommit = true
-                    )
-                )
-            }
-            is FollowUpRescheduleExtractionResult.Unsupported -> {
-                Decision.Reject(
-                    message = "当前跟进只支持明确时间改期，请直接输入新的具体时间。",
-                    metadata = RouteMetadata(
-                        surface = SchedulerSurface.FOLLOW_UP_SESSION,
-                        intentKind = SchedulerIntentKind.RESCHEDULE,
-                        taskShape = SchedulerTaskShape.UNSUPPORTED,
-                        owner = SchedulerRouteOwner.REJECT,
-                        schedulerTerminalOnCommit = false,
-                        reason = extracted.reason
-                    )
-                )
-            }
-            is FollowUpRescheduleExtractionResult.Invalid -> {
-                Decision.Reject(
-                    message = "改期时间格式无法解析，请换一种明确说法。",
-                    metadata = RouteMetadata(
-                        surface = SchedulerSurface.FOLLOW_UP_SESSION,
-                        intentKind = SchedulerIntentKind.RESCHEDULE,
-                        taskShape = SchedulerTaskShape.UNSUPPORTED,
-                        owner = SchedulerRouteOwner.REJECT,
-                        schedulerTerminalOnCommit = false,
-                        reason = extracted.reason
-                    )
-                )
-            }
-            is FollowUpRescheduleExtractionResult.Failure -> {
-                Decision.Reject(
-                    message = "改期时间解析失败，请稍后重试。",
-                    metadata = RouteMetadata(
-                        surface = SchedulerSurface.FOLLOW_UP_SESSION,
-                        intentKind = SchedulerIntentKind.RESCHEDULE,
-                        taskShape = SchedulerTaskShape.UNSUPPORTED,
-                        owner = SchedulerRouteOwner.REJECT,
-                        schedulerTerminalOnCommit = false,
-                        reason = extracted.reason
-                    )
-                )
-            }
-        }
+        )
     }
 
     fun mightExpressReschedule(text: String): Boolean {

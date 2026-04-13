@@ -1,14 +1,16 @@
 # Feature Development SOP
 
 > **Purpose**: A rigorous, repeatable process for developing features that align with spec, clean architecture, and E2E flow integrity.
+>
+> **Post-harness note (2026-04-13)**: For backend/pipeline work, do not use this SOP. Run `/sprint` instead -- it routes to the backend engine with the correct Backend-First Reading Order. This SOP's Phase 1 reading order is UI-feature-led and does not reflect the post-harness paradigm. See `docs/specs/harness-manifesto.md` for the operating protocol.
 
 ---
 
 ## When to Use
 
-- Implementing new features (not bugfixes or refactors)
-- Adding major capabilities to existing modules
-- M1+ backlog items
+- UI-focused feature implementation (prototype-to-native transplant, Compose screens)
+- Adding major UI capabilities to existing modules
+- M1+ backlog items where the backend contract already exists and is proven
 
 ---
 

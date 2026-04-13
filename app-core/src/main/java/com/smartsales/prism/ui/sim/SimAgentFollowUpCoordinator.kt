@@ -21,7 +21,6 @@ import com.smartsales.prism.domain.scheduler.ActiveTaskRetrievalIndex
 import com.smartsales.prism.domain.scheduler.AlarmScheduler
 import com.smartsales.prism.domain.scheduler.GlobalRescheduleExtractionRequest
 import com.smartsales.prism.domain.scheduler.GlobalRescheduleExtractionResult
-import com.smartsales.prism.domain.scheduler.RecentTaskHint
 import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.UrgencyLevel
@@ -224,22 +223,8 @@ internal class SimAgentFollowUpCoordinator(
                 blockSchedulerFollowUpAction("当前没有可用于改期的跟进上下文。")
                 return
             }
-        val recentTaskHints = buildList {
-            context.taskSummaries.forEach { summary ->
-                val liveTask = taskRepository.getTask(summary.taskId)
-                add(
-                    RecentTaskHint(
-                        taskId = summary.taskId,
-                        title = liveTask?.title ?: summary.title,
-                        keyPerson = liveTask?.keyPerson,
-                        location = liveTask?.location
-                    )
-                )
-            }
-        }
         val shortlist = activeTaskRetrievalIndex.buildShortlist(
-            transcript = content,
-            preferredTaskIds = recentTaskHints.mapTo(linkedSetOf()) { it.taskId }
+            transcript = content
         )
         emitSchedulerFollowUpTelemetry(
             summary = SIM_SCHEDULER_GLOBAL_SHORTLIST_BUILT_SUMMARY,
@@ -251,7 +236,6 @@ internal class SimAgentFollowUpCoordinator(
                 SchedulerIntelligenceRouter.FollowUpContext(
                     transcript = content,
                     selectedTask = selectedTask,
-                    recentTaskHints = recentTaskHints,
                     activeTaskShortlist = shortlist
                 )
             )

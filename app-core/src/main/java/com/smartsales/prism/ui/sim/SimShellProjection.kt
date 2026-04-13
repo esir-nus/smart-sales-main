@@ -4,44 +4,64 @@ import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.ui.components.DynamicIslandItem
 import com.smartsales.prism.ui.components.DynamicIslandSchedulerTarget
 import com.smartsales.prism.ui.components.DynamicIslandTapAction
+import com.smartsales.prism.ui.components.DynamicIslandVisualState
 import java.time.ZoneId
 
 internal fun buildSimDynamicIslandItems(
     sessionTitle: String,
+    sessionHasAudioContextHistory: Boolean = false,
     orderedTasks: List<ScheduledTask>,
     showIdleTeachingHint: Boolean = false
 ): List<DynamicIslandItem> {
     val normalizedTitle = sessionTitle.ifBlank { "SIM" }
-    val activeTasks = orderedTasks
-        .filterNot { it.isDone }
-        .take(3)
-    if (activeTasks.isEmpty()) {
-        return listOf(
-            DynamicIslandItem(
-                sessionTitle = normalizedTitle,
-                schedulerSummary = if (showIdleTeachingHint) {
-                    "下滑这里查看日程"
-                } else {
-                    "暂无待办"
-                },
-                isIdleEntry = true,
-                tapAction = DynamicIslandTapAction.OpenSchedulerDrawer()
-            )
-        )
-    }
-    return activeTasks.map { task ->
+    val titleItem = if (isSimSessionTitleEligibleForIsland(normalizedTitle)) {
         DynamicIslandItem(
             sessionTitle = normalizedTitle,
-            schedulerSummary = buildSimDynamicIslandSummary(task),
-            isConflict = task.hasConflict,
-            tapAction = DynamicIslandTapAction.OpenSchedulerDrawer(
-                target = DynamicIslandSchedulerTarget(
-                    date = task.startTime.atZone(ZoneId.systemDefault()).toLocalDate(),
-                    taskId = task.id,
-                    isConflict = task.hasConflict
+            displayText = normalizedTitle,
+            visualState = DynamicIslandVisualState.SESSION_TITLE_HIGHLIGHT,
+            showsAudioIndicator = sessionHasAudioContextHistory,
+            tapAction = DynamicIslandTapAction.OpenSchedulerDrawer()
+        )
+    } else {
+        null
+    }
+    val activeTasks = orderedTasks
+        .filterNot { it.isDone }
+        .take(if (titleItem != null) 2 else 3)
+    if (activeTasks.isEmpty()) {
+        val schedulerFallback = DynamicIslandItem(
+            sessionTitle = normalizedTitle,
+            schedulerSummary = if (showIdleTeachingHint) {
+                "下滑这里查看日程"
+            } else {
+                "暂无待办"
+            },
+            isIdleEntry = true,
+            tapAction = DynamicIslandTapAction.OpenSchedulerDrawer()
+        )
+        return buildList {
+            titleItem?.let(::add)
+            add(schedulerFallback)
+        }
+    }
+    return buildList {
+        titleItem?.let(::add)
+        activeTasks.forEach { task ->
+            add(
+                DynamicIslandItem(
+                    sessionTitle = normalizedTitle,
+                    schedulerSummary = buildSimDynamicIslandSummary(task),
+                    isConflict = task.hasConflict,
+                    tapAction = DynamicIslandTapAction.OpenSchedulerDrawer(
+                        target = DynamicIslandSchedulerTarget(
+                            date = task.startTime.atZone(ZoneId.systemDefault()).toLocalDate(),
+                            taskId = task.id,
+                            isConflict = task.hasConflict
+                        )
+                    )
                 )
             )
-        )
+        }
     }
 }
 

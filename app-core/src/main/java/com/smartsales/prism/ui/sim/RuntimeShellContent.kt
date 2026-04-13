@@ -72,8 +72,10 @@ internal fun RuntimeShellContent(
     selectedSchedulerFollowUpTaskId: String?,
     voiceDraftState: SimVoiceDraftUiState,
     dynamicIslandState: DynamicIslandUiState,
+    schedulerEnabled: Boolean,
     isImeVisible: Boolean,
     showRuntimeIdleComposerHint: Boolean,
+    currentSessionHasAudioContextHistory: Boolean,
     trackedPendingAudioIds: SnapshotStateMap<String, String>,
     coroutineScope: CoroutineScope,
     onImportTestAudio: () -> Unit,
@@ -98,11 +100,15 @@ internal fun RuntimeShellContent(
         durationMillis = 300,
         easing = FastOutSlowInEasing
     )
-    val showSchedulerInteractionShield = shellState.activeDrawer == RuntimeDrawerType.SCHEDULER
-    val showSimHeaderMenuButton = shellState.activeDrawer != RuntimeDrawerType.SCHEDULER
-    val showSimHeaderNewSessionButton = shellState.activeDrawer != RuntimeDrawerType.SCHEDULER
-    val showSimBottomComposer = shellState.activeDrawer != RuntimeDrawerType.SCHEDULER
-    val showReminderBanner = activeReminderBanner != null &&
+    val showSchedulerInteractionShield = schedulerEnabled &&
+        shellState.activeDrawer == RuntimeDrawerType.SCHEDULER
+    val showSimHeaderMenuButton = !schedulerEnabled ||
+        shellState.activeDrawer != RuntimeDrawerType.SCHEDULER
+    val showSimHeaderNewSessionButton = !schedulerEnabled ||
+        shellState.activeDrawer != RuntimeDrawerType.SCHEDULER
+    val showSimBottomComposer = !schedulerEnabled ||
+        shellState.activeDrawer != RuntimeDrawerType.SCHEDULER
+    val showReminderBanner = schedulerEnabled && activeReminderBanner != null &&
         shellState.activeDrawer != RuntimeDrawerType.SCHEDULER &&
         shellState.activeDrawer != RuntimeDrawerType.AUDIO
     val schedulerGapDismissHeight = SimHomeHeroTokens.BottomMonolithHeight + 16.dp
@@ -145,9 +151,14 @@ internal fun RuntimeShellContent(
             showSimHeaderNewSessionButton = showSimHeaderNewSessionButton,
             showSimBottomComposer = showSimBottomComposer,
             showSimIdleComposerHint = showRuntimeIdleComposerHint,
-            enableSimSchedulerPullGesture = canOpenSimSchedulerFromEdge(shellState),
+            simSessionHasAudioContextHistory = currentSessionHasAudioContextHistory,
+            enableSimSchedulerPullGesture = schedulerEnabled && canOpenSimSchedulerFromEdge(shellState),
             enableSimAudioPullGesture = canOpenSimAudioFromEdge(shellState, isImeVisible),
-            onSimSchedulerPullOpen = { openScheduler(DynamicIslandTapAction.OpenSchedulerDrawer()) },
+            onSimSchedulerPullOpen = {
+                if (schedulerEnabled) {
+                    openScheduler(DynamicIslandTapAction.OpenSchedulerDrawer())
+                }
+            },
             onSimAudioPullOpen = { openAudioDrawer(RuntimeAudioDrawerMode.BROWSE) },
             transcriptRevealState = transcriptRevealState,
             onArtifactTranscriptRevealConsumed =
@@ -295,23 +306,25 @@ internal fun RuntimeShellContent(
             }
         }
 
-        Box(modifier = Modifier.zIndex(PrismElevation.Drawer)) {
-            SchedulerDrawer(
-                isOpen = shellState.activeDrawer == RuntimeDrawerType.SCHEDULER,
-                onDismiss = { mutateShellState { state -> state.copy(activeDrawer = null) } },
-                visualMode = SchedulerDrawerVisualMode.SIM,
-                onInspirationAskAi = { promptText ->
-                    handleSchedulerShelfAskAiHandoff(
-                        promptText = promptText,
-                        startSession = chatViewModel::startSchedulerShelfSession,
-                        closeDrawer = {
-                            mutateShellState { state -> state.copy(activeDrawer = null) }
-                        }
-                    )
-                },
-                enableInspirationMultiSelect = false,
-                viewModel = dependencies.schedulerViewModel
-            )
+        if (schedulerEnabled) {
+            Box(modifier = Modifier.zIndex(PrismElevation.Drawer)) {
+                SchedulerDrawer(
+                    isOpen = shellState.activeDrawer == RuntimeDrawerType.SCHEDULER,
+                    onDismiss = { mutateShellState { state -> state.copy(activeDrawer = null) } },
+                    visualMode = SchedulerDrawerVisualMode.SIM,
+                    onInspirationAskAi = { promptText ->
+                        handleSchedulerShelfAskAiHandoff(
+                            promptText = promptText,
+                            startSession = chatViewModel::startSchedulerShelfSession,
+                            closeDrawer = {
+                                mutateShellState { state -> state.copy(activeDrawer = null) }
+                            }
+                        )
+                    },
+                    enableInspirationMultiSelect = false,
+                    viewModel = dependencies.schedulerViewModel
+                )
+            }
         }
 
         Box(modifier = Modifier.zIndex(PrismElevation.Drawer)) {

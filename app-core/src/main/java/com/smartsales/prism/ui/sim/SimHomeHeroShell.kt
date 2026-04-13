@@ -81,6 +81,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachFile
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Mic
@@ -766,6 +767,20 @@ private fun SimHomeHeroDynamicIsland(
         ),
         label = "sim_home_hero_island_pulse_alpha"
     )
+    var visibleText by remember(currentItem.stableKey) {
+        mutableStateOf(if (currentItem.isSessionTitleItem) "" else currentItem.displayText)
+    }
+    LaunchedEffect(currentItem.stableKey) {
+        if (!currentItem.isSessionTitleItem) {
+            visibleText = currentItem.displayText
+            return@LaunchedEffect
+        }
+        visibleText = ""
+        currentItem.displayText.forEachIndexed { index, _ ->
+            delay(28L)
+            visibleText = currentItem.displayText.take(index + 1)
+        }
+    }
 
     SimVerticalDragTrigger(
         modifier = Modifier
@@ -791,6 +806,15 @@ private fun SimHomeHeroDynamicIsland(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (currentItem.showsAudioIndicator) {
+                Icon(
+                    imageVector = Icons.Filled.GraphicEq,
+                    contentDescription = null,
+                    tint = chroma.dot,
+                    modifier = Modifier.size(14.dp)
+                )
+                Box(modifier = Modifier.width(6.dp))
+            }
             Canvas(modifier = Modifier.size(SimHomeHeroTokens.IslandDotCanvasSize)) {
                 drawCircle(
                     color = chroma.dot.copy(alpha = if (currentItem.usesPulse) 0.32f * pulse else 0.18f),
@@ -803,7 +827,7 @@ private fun SimHomeHeroDynamicIsland(
             }
             Box(modifier = Modifier.width(SimHomeHeroTokens.IslandDotGap))
             Text(
-                text = currentItem.displayText,
+                text = visibleText,
                 style = TextStyle(
                     brush = Brush.linearGradient(chroma.textGradient),
                     fontSize = SimHomeHeroTokens.IslandTextSize,
@@ -878,6 +902,10 @@ private data class SimHomeHeroIslandChroma(
                     dot = palette.islandIdleDot,
                     textGradient = listOf(palette.iconTint, palette.greetingSubtitle)
                 )
+                DynamicIslandVisualState.SESSION_TITLE_HIGHLIGHT -> SimHomeHeroIslandChroma(
+                    dot = SimHomeHeroTokens.OutgoingBlue,
+                    textGradient = listOf(Color(0xFF7BC0FF), SimHomeHeroTokens.OutgoingBlue)
+                )
                 DynamicIslandVisualState.CONNECTIVITY_CONNECTED -> SimHomeHeroIslandChroma(
                     dot = Color(0xFF34C759),
                     textGradient = listOf(Color(0xFFA4E38A), Color(0xFF34C759))
@@ -898,6 +926,18 @@ private data class SimHomeHeroIslandChroma(
                     } else {
                         listOf(Color(0xFFD70015), Color(0xFFFF3B30))
                     }
+                )
+                DynamicIslandVisualState.SYNC_IN_PROGRESS -> SimHomeHeroIslandChroma(
+                    dot = Color(0xFF38BDF8),
+                    textGradient = listOf(Color(0xFFA7D8F0), Color(0xFF38BDF8))
+                )
+                DynamicIslandVisualState.SYNC_COMPLETE -> SimHomeHeroIslandChroma(
+                    dot = Color(0xFF34C759),
+                    textGradient = listOf(Color(0xFFA4E38A), Color(0xFF34C759))
+                )
+                DynamicIslandVisualState.SYNC_UP_TO_DATE -> SimHomeHeroIslandChroma(
+                    dot = Color.White.copy(alpha = 0.42f),
+                    textGradient = listOf(Color.White, Color(0xFFA0A0A5))
                 )
             }
         }

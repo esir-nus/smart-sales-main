@@ -242,6 +242,7 @@
         "app-core/src/harmony/**",
         "app-core/src/main/java/com/smartsales/prism/AppFlavor.kt",
         "app-core/src/main/java/com/smartsales/prism/PrismApplication.kt",
+        "app-core/src/main/java/com/smartsales/prism/data/audio/SimBadgeSyncIslandEvent.kt",
         "app-core/src/main/res/values/strings.xml",
         "data/ai-core/src/main/AndroidManifest.xml",
         "docs/cerb/interface-map.md",

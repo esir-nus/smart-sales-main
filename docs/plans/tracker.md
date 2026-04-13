@@ -13,7 +13,7 @@
 ## Active Governance Campaign: Android Beta Freeze and Harmony-Native Split
 > **Context**: Direct user-approved governance campaign to freeze the current Android/AOSP line as beta-maintenance while opening a clean native HarmonyOS forward lane without forking shared product truth.
 
-- **Status**: Governance slice started on 2026-04-04; docs/control-plane and local repo guardrails landed first; the first live Harmony root now includes a transient `tingwu-container` app under `platforms/harmony/tingwu-container/` with a native ArkTS runtime slice for document-picker import, Harmony-local file persistence, OSS upload, Tingwu polling, artifact reopen, and auto-generated Harmony credentials sourced from repo-root `local.properties`; the Harmony config seam is now hardened so `hvigorfile.ts` remains the build-owned generator, tracked ArkTS imports route through a stable runtime config entrypoint, and missing generated local config falls back to explicit missing-key state instead of module-resolution failure; a native Harmony north-star framework doc now locks the repo posture to translation-first, doc-first native rewriting rather than Compose-structure porting or shared-JS-first re-platforming; broader full-capability Harmony app work remains deferred; tracker governance is now formalized in a dedicated SOP and the transient Harmony lane now has one standing `docs/plans/harmony-tracker.md` surface instead of hiding UI-translation, capability-limit, and backend/dataflow notes only inside the master tracker; Harmony scheduler backend-first phase 1 is now narrowed to an operator-only Path A mini-lab for Uni-A exact create and Uni-B vague create rather than a fake UI-parity rollout; lane-first dirty-tree prevention is now formalized as a harness with `ops/lane-registry.json`, `scripts/lane_guard.py`, shared `.githooks/`, and CI branch/path validation so mixed work is blocked before landing
+- **Status**: Governance slice started on 2026-04-04; docs/control-plane and local repo guardrails landed first; the first live Harmony root now includes a transient `tingwu-container` app under `platforms/harmony/tingwu-container/` with a native ArkTS runtime slice for document-picker import, Harmony-local file persistence, OSS upload, Tingwu polling, artifact reopen, and auto-generated Harmony credentials sourced from repo-root `local.properties`; the Harmony config seam is now hardened so `hvigorfile.ts` remains the build-owned generator, tracked ArkTS imports route through a stable runtime config entrypoint, and missing generated local config falls back to explicit missing-key state instead of module-resolution failure; a native Harmony north-star framework doc now locks the repo posture to translation-first, doc-first native rewriting rather than Compose-structure porting or shared-JS-first re-platforming; broader full-capability Harmony app work remains deferred; Harmony tracking is now in Stage 2, with `docs/plans/harmony-tracker.md` acting as the program-summary tracker and `docs/plans/harmony-ui-translation-tracker.md` acting as the page-by-page ArkUI tracker; a dedicated internal `ui-verification` Harmony package now exists beside the backend mini-lab root so native page rewrites and later on-device UI checks can proceed without widening the public Tingwu container capability boundary; Harmony scheduler backend-first phase 1 remains an operator-only Path A mini-lab for Uni-A exact create and Uni-B vague create rather than a fake UI-parity rollout; lane-first dirty-tree prevention is now formalized as a harness with `ops/lane-registry.json`, `scripts/lane_guard.py`, shared `.githooks/`, and CI branch/path validation so mixed work is blocked before landing
 - **Primary Law**:
   - [`docs/specs/platform-governance.md`](../specs/platform-governance.md)
 - **Dirty-Tree Quarantine Ledger**:
@@ -38,6 +38,10 @@
   - [`ops/lane-registry.json`](../../ops/lane-registry.json)
 - **Harmony Native Tracker**:
   - [`docs/plans/harmony-tracker.md`](./harmony-tracker.md)
+- **Harmony UI Translation Tracker**:
+  - [`docs/plans/harmony-ui-translation-tracker.md`](./harmony-ui-translation-tracker.md)
+- **Harmony UI Verification Overlay**:
+  - [`docs/platforms/harmony/ui-verification.md`](../platforms/harmony/ui-verification.md)
 - **Harmony Scheduler Backend Phase 1**:
   - [`docs/platforms/harmony/scheduler-backend-first.md`](../platforms/harmony/scheduler-backend-first.md)
 - **Harmony Scheduler Backend Brief**:
@@ -66,7 +70,7 @@
   - allow the transient Harmony Tingwu container to live only in the Harmony-owned root while it stays explicit about hiding scheduler, reminder, chat, and badge-hardware capability
   - keep Harmony Tingwu credentials/config local to the Harmony root by generating a Harmony-owned local config artifact from repo-root `local.properties` instead of inheriting Android `BuildConfig`
   - route platform-specific delivery differences into overlay docs instead of duplicating the full shared docs tree
-  - keep one primary standing tracker per active Harmony slice and defer separate Harmony UI/dataflow trackers until the backend rewrite surface actually grows large enough to justify them
+  - keep Stage 2 Harmony tracking explicit: `docs/plans/harmony-tracker.md` owns program-summary state while `docs/plans/harmony-ui-translation-tracker.md` owns page-pass evidence; a separate Harmony dataflow tracker stays deferred until backend rewriting genuinely needs it
   - defer `release/harmony-alpha` until Harmony delivery moves beyond the transient Tingwu container and its first CI path is alive
 
 ---
@@ -238,8 +242,8 @@
 > **Context**: Direct user-requested standalone prototype mission. This work is intentionally separate from the current agent app and must not contaminate the live agent runtime by default.
 
 - **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Accepted / Wave 6 Isolation Accepted / Wave 7 Feature Acceptance Accepted / Wave 7 Isolation Acceptance Accepted / Wave 7 Closeout Synced / Wave 8 Task-Scoped Scheduler Follow-Up Accepted / Wave 9 Physical-Badge E2E Blocked / Wave 10 Badge Ingress Repair In Progress / Wave 11 General Chat Pivot L1 Accepted / Wave 12 Scheduler-Drawer Voice Reschedule L1 Accepted / Wave 13 Launcher-Core Theme Visibility L1 Accepted / Wave 14 Voice-Draft Composer L1 Verified
-- **Historical Origin Docs**: [`docs/to-cerb/sim-standalone-prototype/concept.md`](../to-cerb/sim-standalone-prototype/concept.md), [`docs/to-cerb/sim-standalone-prototype/mental-model.md`](../to-cerb/sim-standalone-prototype/mental-model.md)
-- **Historical Mission Record**: [`docs/plans/sim-tracker.md`](./sim-tracker.md)
+- **Historical Origin Docs**: [`docs/archive/to-cerb/sim-standalone-prototype/concept.md`](../archive/to-cerb/sim-standalone-prototype/concept.md), [`docs/archive/to-cerb/sim-standalone-prototype/mental-model.md`](../archive/to-cerb/sim-standalone-prototype/mental-model.md)
+- **Historical Mission Record**: [`docs/archive/plans-completed/sim-tracker.md`](../archive/plans-completed/sim-tracker.md)
 - **Current Active Truth**:
   - [`docs/specs/base-runtime-unification.md`](../specs/base-runtime-unification.md)
   - [`docs/core-flow/sim-shell-routing-flow.md`](../core-flow/sim-shell-routing-flow.md)

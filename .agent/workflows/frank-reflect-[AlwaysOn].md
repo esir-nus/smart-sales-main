@@ -1,6 +1,10 @@
 ---
-description: Log Frank's stream of consciousness and thinking patterns for self-reflection
+description: "[ARCHIVED 2026-04-13] Log Frank's stream of consciousness and thinking patterns for self-reflection. Produced 1 entry in 15 months. No longer always-on."
+trigger: manual
+last_reviewed: 2026-04-13
 ---
+
+> **Status: Archived 2026-04-13.** This workflow was always-on but produced minimal output. Demoted to manual trigger. The frank_*.md files are preserved as historical reference.
 
 # Frank Reflection
 
@@ -36,7 +40,7 @@ When invoked or at session end, append observations to the journal:
 - [Arc of the conversation]
 ```
 
-**Location**: `.agent/frank_thinking_journal.md`
+**Location**: `docs/archive/agent-pre-harness/frank_thinking_journal.md` (archived 2026-04-13)
 
 **No grading. No actions. Just observation.**
 

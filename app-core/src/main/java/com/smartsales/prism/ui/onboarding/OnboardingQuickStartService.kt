@@ -138,8 +138,7 @@ class RealOnboardingQuickStartSandboxResolver @Inject constructor() :
                     participants = listOfNotNull(item.keyPerson),
                     location = item.location,
                     notes = item.notesDigest ?: item.timeHint
-                ),
-                preferredTaskIds = target.preferredTaskIds
+                )
             )
         }
             .filter { (_, score) -> score > 0 }
@@ -250,14 +249,6 @@ class RealOnboardingQuickStartService @Inject constructor(
                         transcript = normalized,
                         surface = SchedulerIntelligenceRouter.SchedulerSurface.ONBOARDING_SANDBOX,
                         displayedDateIso = null,
-                        recentTaskHints = currentItems.takeLast(3).map { item ->
-                            com.smartsales.prism.domain.scheduler.RecentTaskHint(
-                                taskId = item.stableId,
-                                title = item.title,
-                                keyPerson = item.keyPerson,
-                                location = item.location
-                            )
-                        },
                         activeTaskShortlist = sandboxResolver.buildShortlist(currentItems),
                         uniMTimeoutMs = ONBOARDING_UNI_M_TIMEOUT_MS
                     )
@@ -747,17 +738,6 @@ class RealOnboardingQuickStartService @Inject constructor(
                 )
             }
             return QuickStartUpdate(updatedItem = updated, touchedExactTask = original.isExact)
-        }
-
-        if (original.isExact) {
-            RelativeTimeResolver.resolveSignedDeltaMinutes(timeInstruction)?.let { delta ->
-                val originalStart = original.toExactInstant(timeProvider.zoneId) ?: return null
-                val updatedStart = originalStart.plusSeconds(delta.offsetMinutes * 60)
-                return QuickStartUpdate(
-                    updatedItem = original.withExactStart(updatedStart, timeProvider.today, timeProvider.zoneId),
-                    touchedExactTask = true
-                )
-            }
         }
 
         val exactTimeIso = ExactTimeCueResolver.resolveExactDayClockStartTime(

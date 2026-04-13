@@ -40,6 +40,7 @@ internal fun ProvisioningStep(
     onBack: () -> Unit,
     onRetryScan: () -> Unit,
     onSkipToQuickStart: () -> Unit,
+    skipButtonText: String = "跳过，直接体验日程",
     onComplete: () -> Unit
 ) {
     val pairingState by viewModel.pairingState.collectAsState()
@@ -68,6 +69,7 @@ internal fun ProvisioningStep(
         onBack = onBack,
         onRetryScan = onRetryScan,
         onSkipToQuickStart = onSkipToQuickStart,
+        skipButtonText = skipButtonText,
         onSubmit = {
             showProvisioningForm = false
             viewModel.pairBadge(badge = badge, wifiCreds = WifiCredentials(ssid, password))
@@ -88,6 +90,7 @@ internal fun ProvisioningStepContent(
     onBack: () -> Unit,
     onRetryScan: () -> Unit,
     onSkipToQuickStart: () -> Unit,
+    skipButtonText: String = "跳过，直接体验日程",
     onSubmit: () -> Unit,
     onRetryProvisioning: () -> Unit
 ) {
@@ -106,7 +109,8 @@ internal fun ProvisioningStepContent(
                     onPasswordChange = onPasswordChange,
                     onBack = onBack,
                     onSubmit = onSubmit,
-                    onSkipToQuickStart = onSkipToQuickStart
+                    onSkipToQuickStart = onSkipToQuickStart,
+                    skipButtonText = skipButtonText
                 )
             } else {
                 val presentation = resolveConnectivityPairingErrorUiModel(OnboardingStep.PROVISIONING, pairingState)
@@ -122,7 +126,7 @@ internal fun ProvisioningStepContent(
                     },
                     secondaryLabel = presentation.secondaryLabel,
                     onSecondary = onBack,
-                    tertiaryLabel = "跳过，直接体验日程",
+                    tertiaryLabel = skipButtonText,
                     onTertiary = onSkipToQuickStart
                 )
             }
@@ -135,7 +139,8 @@ internal fun ProvisioningStepContent(
             onPasswordChange = onPasswordChange,
             onBack = onBack,
             onSubmit = onSubmit,
-            onSkipToQuickStart = onSkipToQuickStart
+            onSkipToQuickStart = onSkipToQuickStart,
+            skipButtonText = skipButtonText
         )
     }
 }
@@ -148,7 +153,8 @@ private fun ProvisioningForm(
     onPasswordChange: (String) -> Unit,
     onBack: () -> Unit,
     onSubmit: () -> Unit,
-    onSkipToQuickStart: () -> Unit
+    onSkipToQuickStart: () -> Unit,
+    skipButtonText: String
 ) {
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         TitleBlock("配置网络", "输入 Wi‑Fi 信息后，设备会完成写入、联网检查与最终准备。")
@@ -163,7 +169,7 @@ private fun ProvisioningForm(
                 Spacer(Modifier.height(10.dp))
                 SecondaryPillButton("返回设备卡片", onBack, modifier = Modifier.fillMaxWidth())
                 Spacer(Modifier.height(10.dp))
-                QuietGhostButton("跳过，直接体验日程", onSkipToQuickStart, modifier = Modifier.fillMaxWidth())
+                QuietGhostButton(skipButtonText, onSkipToQuickStart, modifier = Modifier.fillMaxWidth())
             }
         }
     }
@@ -216,6 +222,7 @@ private fun ProvisioningProgressContent(pairingState: PairingState, badge: Disco
 internal fun CompleteStep(
     isFinalizing: Boolean = false,
     errorMessage: String? = null,
+    showSchedulerHandoff: Boolean = true,
     onAcknowledge: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -242,7 +249,11 @@ internal fun CompleteStep(
             )
             Spacer(Modifier.height(10.dp))
             Text(
-                text = "完成当前引导后，流转进入 SmartSales 主界面，并通过真实抽屉动效展开日程。",
+                text = if (showSchedulerHandoff) {
+                    "完成当前引导后，流转进入 SmartSales 主界面，并通过真实抽屉动效展开日程。"
+                } else {
+                    "完成当前引导后，直接进入 SmartSales 主界面，不再显示日程教学或日程抽屉。"
+                },
                 color = OnboardingText,
                 lineHeight = 22.sp
             )
@@ -254,7 +265,8 @@ internal fun CompleteStep(
         }
         PrimaryPillButton(
             text = when {
-                isFinalizing -> "正在同步体验日程..."
+                isFinalizing && showSchedulerHandoff -> "正在同步体验日程..."
+                isFinalizing -> "正在完成引导..."
                 else -> "进入首页"
             },
             onClick = onAcknowledge,

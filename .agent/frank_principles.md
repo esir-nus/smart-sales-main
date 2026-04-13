@@ -1,3 +1,5 @@
+> **Status: Archived 2026-04-13.** This principles system has been unchanged since 2025-01-25 with an empty promotion queue. Kept for historical reference. Core principles remain valid as project knowledge but are no longer actively curated.
+
 # Frank's Principles
 
 **Last Updated**: 2025-01-25

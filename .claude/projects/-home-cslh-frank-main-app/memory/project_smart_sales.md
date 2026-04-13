@@ -41,7 +41,6 @@ Lane harness posture:
 - Repo root is now the integration tree and should not carry normal feature edits
 - Active feature work should normally run in dedicated lane worktrees
 - Lane ownership is machine-checked in `ops/lane-registry.json` and human-tracked in `docs/plans/dirty-tree-quarantine.md`
-- Lane-local publication should use `scripts/lane status|commit|push|ship`
 
 Active handoffs (see `handoffs/README.md`):
 - `handoffs/audio_drawer_compose_handoff.md`

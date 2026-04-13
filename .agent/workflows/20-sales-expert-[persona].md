@@ -1,5 +1,6 @@
 ---
 description: Get expert B2B sales/marketing perspective — top performer, CMO, KA manager mindset
+last_reviewed: 2026-04-13
 ---
 
 # Sales & Marketing Expert

@@ -1,5 +1,6 @@
 ---
 description: Generate consistent gallery cards using locked template pattern
+last_reviewed: 2026-04-13
 ---
 
 # Gallery Card Template

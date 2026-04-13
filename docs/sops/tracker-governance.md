@@ -57,6 +57,7 @@ All new or reopened standing-tracker entries must carry this minimum shape:
 - `ID`
 - `Title`
 - `Work Class`
+- `Evidence Class`
 - `Platform Lane`
 - `Owner`
 - `Status`

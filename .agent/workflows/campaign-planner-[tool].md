@@ -1,5 +1,6 @@
 ---
 description: Formalizes a new Epic/Campaign with the rigorous 5-step Cerb compliance checklist (Docs, Arch, Plan, Execute, Test) depending on task nature.
+last_reviewed: 2026-04-13
 ---
 
 # Campaign Planner

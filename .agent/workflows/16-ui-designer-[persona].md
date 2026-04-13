@@ -1,5 +1,6 @@
 ---
 description: "The Challenger: A high-end competitor design persona to challenge the implementation status quo with divergent concepts."
+last_reviewed: 2026-04-13
 ---
 
 # UI Designer (The Challenger)

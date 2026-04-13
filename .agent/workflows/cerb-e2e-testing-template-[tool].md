@@ -1,5 +1,6 @@
 ---
 description: Create a standardized Cerb Testing Script specification (Protocol + Coverage + Scenarios)
+last_reviewed: 2026-04-13
 ---
 
 # Cerb Test Script Scaffolder

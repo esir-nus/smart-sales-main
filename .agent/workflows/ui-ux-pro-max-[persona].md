@@ -1,5 +1,6 @@
 ---
 description: UI/UX Pro Max - execute design briefs with platform expertise and creative freedom
+last_reviewed: 2026-04-13
 ---
 
 # UI/UX Pro Max

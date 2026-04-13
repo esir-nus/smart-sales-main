@@ -33,6 +33,15 @@ trigger: always_on
 - **Spec Drift from Component Extraction** → Extracting logic (like Session Renaming) from UI to pure Pipeline layers renders old specs inaccurate. ALWAYS update the `trigger` definitions in the matching spec. (Ref: *Architectural Extraction Spec Drift*)
 - **Bypassing Centralized Writers** → Bypassing the central `EntityWriter` for "quick" entity resolutions causes downstream ghosting (e.g., missing CRM account linkages). All state mutations must funnel through the unified writer. (Ref: *Bypassing Centralized Writers*)
 
+## Harmony Migration & Lane Hygiene
+- **Starting Harmony work from Android assumptions** → Translation-first still requires explicit platform evidence. Do not copy Android behavior into Harmony-native docs/code without checking the Harmony overlay and governance docs. (Ref: *Android Assumption Leakage into Harmony*)
+- **Mixing Android and Harmony artifacts in one lane** → Keep Harmony-native files and Android-mainline files in separate write scopes unless shared-truth docs explicitly require both. (Ref: *Lane Contamination Across Android and Harmony*)
+- **Claiming parity without platform proof** → Do not promise Harmony parity for reminders, background work, notifications, scheduler flows, or onboarding unless the Harmony lane has evidence. (Ref: *Fake Parity Without Harmony Evidence*)
+- **Using tracker intent as Harmony spec** → A Harmony migration note or tracker bullet is not enough to invent native behavior. Read the owning shared contract and the Harmony overlay first. (Ref: *Harmony Spec Invention from Migration Notes*)
+- **Greenfield Harmony scaffolding without doc sync** → New Harmony roots, containers, or native service seams must sync their ownership and contract docs in the same session. (Ref: *Harmony Greenfield Scaffolding Without Contract Sync*)
+- **Debugging Harmony by analogy only** → Do not diagnose Harmony-native failures from Android intuition alone. Gather Harmony-native logs, artifacts, or runtime evidence before claiming root cause. (Ref: *Harmony Evidence Gap*)
+- **Harmony build passes but device proof still fails** → Treat compile, signing/profile readiness, `hdc` deploy, bundle identity, and runtime logs as one lane contract. Unsigned build output is not device proof. (Ref: *Harmony Build Proof Is Not Device Proof*)
+
 ## 🐛 Core Data & Kotlin
 - **Stale UI after update** → 90% chance it's a missing Flow trigger, not persistence. (Ref: *Ghost UI After Update*)
 - **Unassigned Flow reference** → Calling `asSharedFlow()` without `combine/collect` does nothing. (Ref: *Dead Flow Reference*)

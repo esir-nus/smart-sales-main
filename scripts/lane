@@ -12,11 +12,8 @@ Usage:
   scripts/lane attach <lane-id>
   scripts/lane resume <lane-id>
   scripts/lane pause <lane-id> <handoff-path>
-  scripts/lane status [--json] [--message <msg>]
-  scripts/lane commit [--message <msg>]
-  scripts/lane push [--message <msg>]
-  scripts/lane ship [--message <msg>]
   scripts/lane validate [dirty|staged|all]
+  scripts/lane validate-evidence
   scripts/lane collisions [path...]
   scripts/lane integrate <lane-id>
   scripts/lane install-hooks
@@ -26,7 +23,6 @@ Examples:
   scripts/lane validate
   scripts/lane attach DTQ-04
   scripts/lane pause DTQ-04 handoffs/audio_drawer_compose_handoff.md
-  scripts/lane ship
 USAGE
 }
 
@@ -55,17 +51,8 @@ case "$COMMAND" in
     MODE="${1:-dirty}"
     python3 scripts/lane_guard.py validate-worktree --mode "$MODE"
     ;;
-  status)
-    python3 scripts/lane_guard.py status "$@"
-    ;;
-  commit)
-    python3 scripts/lane_guard.py commit "$@"
-    ;;
-  push)
-    python3 scripts/lane_guard.py push "$@"
-    ;;
-  ship)
-    python3 scripts/lane_guard.py ship "$@"
+  validate-evidence)
+    python3 scripts/lane_guard.py validate-evidence
     ;;
   collisions)
     python3 scripts/lane_guard.py report-collisions "$@"

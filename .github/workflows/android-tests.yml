@@ -1,0 +1,86 @@
+name: Android Tests
+
+on:
+  push:
+    paths:
+      - 'app/**'
+      - 'app-core/**'
+      - 'core/**'
+      - 'data/**'
+      - 'domain/**'
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'app-core/**'
+      - 'core/**'
+      - 'data/**'
+      - 'domain/**'
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Gradle cache
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/master' }}
+
+      - name: Create local.properties
+        run: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+
+      - name: Run all unit tests
+        run: ./gradlew testDebugUnitTest :domain:core:test :domain:scheduler:test :domain:session:test :domain:crm:test :domain:memory:test :domain:habit:test :core:pipeline:test --continue
+
+      - name: Upload test reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            **/build/reports/tests/
+            **/build/test-results/
+          retention-days: 7
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Gradle cache
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/master' }}
+
+      - name: Create local.properties
+        run: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+
+      - name: Run lint
+        run: ./gradlew :app-core:lintFullDebug --continue
+
+      - name: Upload lint reports on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-reports
+          path: '**/build/reports/lint-results*.html'
+          retention-days: 7

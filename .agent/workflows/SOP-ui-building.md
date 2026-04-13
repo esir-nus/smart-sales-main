@@ -1,5 +1,6 @@
 ---
 description: UI Building SOP entrance — read SOP, build feature UI through 4-phase process
+last_reviewed: 2026-04-13
 ---
 
 # SOP: UI Building

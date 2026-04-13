@@ -1,5 +1,6 @@
 ---
 description: Plan and orchestrate a multi-persona review conference, then run /01-senior-reviewr with the assembled panel
+last_reviewed: 2026-04-13
 ---
 
 # Review Conference Planner

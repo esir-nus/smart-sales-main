@@ -1,5 +1,6 @@
 ---
 description: Explain complex code flows in plain language with step-by-step visual traces
+last_reviewed: 2026-04-13
 ---
 
 # Explainer Tool

@@ -1,5 +1,6 @@
 ---
 description: Generate a rigorous Compose Transplant Handoff document from an HTML prototype
+last_reviewed: 2026-04-13
 ---
 
 # Compose Handoff Writer (Transplant Prep)

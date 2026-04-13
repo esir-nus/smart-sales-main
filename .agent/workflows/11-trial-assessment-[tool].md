@@ -1,5 +1,6 @@
 ---
 description: Formalized workflow for generating comprehensive Trial Assessments and Contextual Context Reports
+last_reviewed: 2026-04-13
 ---
 
 # 11-trial-assessment-[tool]

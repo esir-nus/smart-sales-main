@@ -1,5 +1,6 @@
 ---
 description: UI Transplant - analyze gaps between prototype and production, produce visual specification for execution
+last_reviewed: 2026-04-13
 ---
 
 # UI Transplant (Planner/Auditor)

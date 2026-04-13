@@ -1,0 +1,4 @@
+- [User Profile](user_profile.md) — Frank (@esir-nus), project owner, docs-first evidence-based working style
+- [Project: Smart Sales](project_smart_sales.md) — Voice-first sales app, Android authority + HarmonyOS container, current state and trackers
+- [Reference: Key Docs](reference_docs.md) — SOT chain paths, SOPs, platform overlays, handoff registry
+- [Project: Harness Eval](project_harness_eval.md) — 2026-04-13 harness audit grades, gaps, and prioritized recommendations

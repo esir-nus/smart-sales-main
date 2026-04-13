@@ -13,6 +13,12 @@ Use this file when the repo is shipping the existing Android app onto Huawei/Hon
 
 This file is the legacy Android-app compatibility path.
 
+Current temporary delivery split:
+
+- `智能销售-安卓` remains the full Android flavor
+- `智能销售-鸿蒙` is the Harmony-compatible Android flavor
+- the Harmony-compatible Android flavor currently disables the scheduler family, including scheduler onboarding quick start, reminders, alarm delivery, and badge-triggered scheduler continuity ingress, instead of pretending those flows are supported
+
 It is **not**:
 
 - the native Harmony product strategy

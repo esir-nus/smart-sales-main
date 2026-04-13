@@ -1,3 +1,7 @@
+---
+last_reviewed: 2026-04-13
+---
+
 # DocSync Workflow
 
 Synchronize documentation after completing development work. This workflow is **context-driven** - it discovers what needs updating based on the work done.

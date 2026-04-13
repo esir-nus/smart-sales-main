@@ -26,6 +26,7 @@
       "docs/sops/harmony-operator-runbook.md",
       "docs/sops/lane-worktree-governance.md",
       "docs/sops/tracker-governance.md",
+      "docs/sops/feature-development.md",
       "handoffs/*.md",
       "ops/lane-registry.json",
       "ops/**",

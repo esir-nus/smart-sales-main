@@ -1,5 +1,6 @@
 ---
 description: Grade work through Frank's personal heuristics and log successful patterns
+last_reviewed: 2026-04-13
 ---
 
 # Frank Grading Workflow
@@ -77,7 +78,7 @@ If something worked particularly well, add it to the evidence log:
 - **Observations**: 1
 ```
 
-**Location**: `.agent/frank_evidence_log.md`
+**Location**: `docs/archive/agent-pre-harness/frank_evidence_log.md` (archived 2026-04-13)
 
 ---
 

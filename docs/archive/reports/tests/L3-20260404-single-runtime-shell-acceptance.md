@@ -72,7 +72,7 @@
 | :--- | :--- | :--- | :---: |
 | **Forced first-launch branch** | When onboarding gates are forced incomplete, cold launch should surface onboarding instead of the normal home shell | After writing the onboarding gate prefs to `completed=false` and relaunching `MainActivity`, `uiautomator dump` showed the onboarding welcome copy `SmartSales`, `您的 AI 销售教练`, and CTA `开启旅程` over the runtime | ✅ |
 | **Back-block invariant** | Forced first-launch onboarding must not be dismissed by a simple back press | After `KEYCODE_BACK`, the onboarding welcome UI remained visible in the follow-up dump rather than dropping into home | ✅ |
-| **Post-onboarding scheduler handoff** | Successful onboarding completion should arm a one-shot scheduler auto-open when returning home | With onboarding gates written back to `completed=true` and `base_runtime_onboarding_handoff_gate.xml` set to `scheduler_auto_open_pending=true`, the next launch immediately showed the scheduler drawer (`2026年 4月`, `叫我起床`, `去拿快递`, `去机场接人`) and the gate was consumed back to `false` | ⚠️ |
+| **Post-onboarding scheduler handoff** | Successful onboarding completion should arm a one-shot scheduler auto-open when returning home | A later organic onboarding rerun kept `MainActivity` as the top resumed activity, left `base_runtime_onboarding_gate.xml` at `completed=true`, consumed `base_runtime_onboarding_handoff_gate.xml` back to `false`, and the immediate `uiautomator dump` showed the scheduler drawer open with `2026年 4月` and timeline content instead of the plain home shell | ✅ |
 
 ### T7: Connectivity Takeover and Routing from the Visible Island Lane
 
@@ -85,7 +85,6 @@
 
 ## 4. Deviations & Limits
 
-* **Onboarding handoff is only partially natural**: the forced first-launch onboarding launch/back-block branch was reproduced on device, and the scheduler auto-open handoff was reproduced by device-side gate mutation plus gate-consumption proof, but this pass still did not walk the entire in-session `COMPLETE` path from live onboarding inputs back into home.
 * **Connectivity branch required state forcing**: the connectivity takeover branch was reproduced on device by clearing `ble_session_store.xml` and using the real audio-drawer -> connectivity -> reconnect route to drive `NeedsSetup`.
 * **Drawer conflict branch only partially covered**: the one-drawer-at-a-time invariant is supported by observed rendered states, but the strict “open second drawer while first is active” conflict branch was not fully reproduced during this pass.
 
@@ -99,11 +98,10 @@ Concrete L3 evidence now shows that:
 * a completed-gate cold launch lands in the unified shell home surface rather than split-era production hosts
 * scheduler entry/exit stays inside that same shell lane
 * audio open/select/reselect stays drawer-based and returns through the shell instead of escaping to Android file management
-* forced first-launch onboarding still blocks back dismissal, and the shell-side scheduler handoff gate is consumed after an auto-open launch
+* forced first-launch onboarding still blocks back dismissal, and organic onboarding completion now proves the one-shot scheduler auto-open handoff in the live runtime
 * the connectivity needs-setup branch can take over the dynamic island, visible-lane tap reopens connectivity entry, and downward drag remains scheduler-only
 * no overlapping scheduler/audio drawer render was observed during the exercised transitions
 
 Residual L3 gaps remain:
 
-* a full natural onboarding `COMPLETE` -> home-shell handoff was not rerun end-to-end through live onboarding input on this device state
 * the explicit scheduler-vs-audio second-drawer conflict branch still needs a cleaner direct repro if that invariant becomes release-critical for this slice

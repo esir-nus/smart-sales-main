@@ -61,8 +61,7 @@ interface ScheduleBoard {
 data class TargetResolutionRequest(
     val targetQuery: String = "",
     val targetPerson: String? = null,
-    val targetLocation: String? = null,
-    val preferredTaskIds: Set<String> = emptySet()
+    val targetLocation: String? = null
 ) {
     fun describeForFailure(): String {
         return listOfNotNull(

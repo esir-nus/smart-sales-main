@@ -20,15 +20,13 @@ class RealActiveTaskRetrievalIndex @Inject constructor(
 
     override suspend fun buildShortlist(
         transcript: String,
-        preferredTaskIds: Set<String>,
         limit: Int
     ): List<ActiveTaskContext> {
         return rankedTasks(
             tasks = taskRepository.getActiveTasks(),
             query = transcript,
             person = null,
-            location = null,
-            preferredTaskIds = preferredTaskIds
+            location = null
         ).take(limit)
             .map { (task, _) -> task.toContext() }
     }
@@ -41,8 +39,7 @@ class RealActiveTaskRetrievalIndex @Inject constructor(
             tasks = taskRepository.getActiveTasks(),
             query = target.targetQuery,
             person = target.targetPerson,
-            location = target.targetLocation,
-            preferredTaskIds = target.preferredTaskIds
+            location = target.targetLocation
         )
         val top = ranked.firstOrNull() ?: return ActiveTaskResolveResult.NoMatch(target.describeForFailure())
         val topScore = top.second
@@ -84,8 +81,7 @@ class RealActiveTaskRetrievalIndex @Inject constructor(
         tasks: List<ScheduledTask>,
         query: String,
         person: String?,
-        location: String?,
-        preferredTaskIds: Set<String>
+        location: String?
     ): List<Pair<ScheduledTask, Int>> {
         val normalizedQuery = TaskRetrievalScoring.normalize(query)
         val normalizedPerson = TaskRetrievalScoring.normalize(person)
@@ -96,8 +92,7 @@ class RealActiveTaskRetrievalIndex @Inject constructor(
                     task = task,
                     query = normalizedQuery,
                     person = normalizedPerson,
-                    location = normalizedLocation,
-                    preferredTaskIds = preferredTaskIds
+                    location = normalizedLocation
                 )
             }
             .filter { (_, score) -> score > 0 }
@@ -108,8 +103,7 @@ class RealActiveTaskRetrievalIndex @Inject constructor(
         task: ScheduledTask,
         query: String,
         person: String,
-        location: String,
-        preferredTaskIds: Set<String>
+        location: String
     ): Int = TaskRetrievalScoring.scoreCandidate(
         query = query,
         person = person,
@@ -120,8 +114,7 @@ class RealActiveTaskRetrievalIndex @Inject constructor(
             participants = task.keyPerson?.let(::listOf).orEmpty(),
             location = task.location,
             notes = task.notes
-        ),
-        preferredTaskIds = preferredTaskIds
+        )
     )
 
     private fun ScheduledTask.toContext(): ActiveTaskContext {

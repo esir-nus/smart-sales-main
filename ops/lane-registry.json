@@ -81,9 +81,7 @@
         "docs/reports/tests/L3-20260403-onboarding-quick-start-session-recovery.md",
         "prototypes/onboarding-family/**"
       ],
-      "allowed_shared_paths": [
-        "handoffs/schedule_quick_start_compose_handoff.md"
-      ],
+      "allowed_shared_paths": [],
       "handoff_path": "handoffs/schedule_quick_start_compose_handoff.md",
       "tracker_refs": [
         "docs/plans/dirty-tree-quarantine.md",
@@ -117,9 +115,7 @@
         "docs/reports/tests/L3-20260404-single-runtime-shell-acceptance.md",
         "prototypes/**/scheduler/**"
       ],
-      "allowed_shared_paths": [
-        "handoffs/notification_compose_handoff.md"
-      ],
+      "allowed_shared_paths": [],
       "handoff_path": "handoffs/notification_compose_handoff.md",
       "tracker_refs": [
         "docs/plans/dirty-tree-quarantine.md",
@@ -149,9 +145,7 @@
         "docs/plans/bug-tracker.md",
         "scripts/dtq03_device_verify.sh"
       ],
-      "allowed_shared_paths": [
-        "handoffs/oem_permission_diagnosis.md"
-      ],
+      "allowed_shared_paths": [],
       "handoff_path": "handoffs/oem_permission_diagnosis.md",
       "tracker_refs": [
         "docs/plans/dirty-tree-quarantine.md",
@@ -179,9 +173,7 @@
         "docs/plans/ui-tracker.md",
         "prototypes/**/audio/**"
       ],
-      "allowed_shared_paths": [
-        "handoffs/audio_drawer_compose_handoff.md"
-      ],
+      "allowed_shared_paths": [],
       "handoff_path": "handoffs/audio_drawer_compose_handoff.md",
       "tracker_refs": [
         "docs/plans/dirty-tree-quarantine.md",
@@ -213,9 +205,7 @@
         "docs/cerb/session-history/spec.md",
         "domain/session/**"
       ],
-      "allowed_shared_paths": [
-        "handoffs/shared_runtime_session_contracts_handoff.md"
-      ],
+      "allowed_shared_paths": [],
       "handoff_path": "handoffs/shared_runtime_session_contracts_handoff.md",
       "tracker_refs": [
         "docs/plans/dirty-tree-quarantine.md",
@@ -314,9 +304,7 @@
         "platforms/harmony/tingwu-container/**",
         "platforms/harmony/ui-verification/**"
       ],
-      "allowed_shared_paths": [
-        "handoffs/harmony_native_bounded_delivery_handoff.md"
-      ],
+      "allowed_shared_paths": [],
       "handoff_path": "handoffs/harmony_native_bounded_delivery_handoff.md",
       "tracker_refs": [
         "docs/plans/dirty-tree-quarantine.md",

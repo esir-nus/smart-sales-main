@@ -106,8 +106,7 @@ internal fun RuntimeShellContent(
         shellState.activeDrawer != RuntimeDrawerType.SCHEDULER
     val showSimHeaderNewSessionButton = !schedulerEnabled ||
         shellState.activeDrawer != RuntimeDrawerType.SCHEDULER
-    val showSimBottomComposer = !schedulerEnabled ||
-        shellState.activeDrawer != RuntimeDrawerType.SCHEDULER
+    val showSimBottomComposer = shellState.activeDrawer != RuntimeDrawerType.SCHEDULER
     val showReminderBanner = schedulerEnabled && activeReminderBanner != null &&
         shellState.activeDrawer != RuntimeDrawerType.SCHEDULER &&
         shellState.activeDrawer != RuntimeDrawerType.AUDIO

@@ -4,7 +4,6 @@ import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.ui.components.DynamicIslandItem
 import com.smartsales.prism.ui.components.DynamicIslandSchedulerTarget
 import com.smartsales.prism.ui.components.DynamicIslandTapAction
-import com.smartsales.prism.ui.components.DynamicIslandVisualState
 import java.time.ZoneId
 
 internal fun buildSimDynamicIslandItems(
@@ -14,20 +13,9 @@ internal fun buildSimDynamicIslandItems(
     showIdleTeachingHint: Boolean = false
 ): List<DynamicIslandItem> {
     val normalizedTitle = sessionTitle.ifBlank { "SIM" }
-    val titleItem = if (isSimSessionTitleEligibleForIsland(normalizedTitle)) {
-        DynamicIslandItem(
-            sessionTitle = normalizedTitle,
-            displayText = normalizedTitle,
-            visualState = DynamicIslandVisualState.SESSION_TITLE_HIGHLIGHT,
-            showsAudioIndicator = sessionHasAudioContextHistory,
-            tapAction = DynamicIslandTapAction.OpenSchedulerDrawer()
-        )
-    } else {
-        null
-    }
     val activeTasks = orderedTasks
         .filterNot { it.isDone }
-        .take(if (titleItem != null) 2 else 3)
+        .take(3)
     if (activeTasks.isEmpty()) {
         val schedulerFallback = DynamicIslandItem(
             sessionTitle = normalizedTitle,
@@ -39,29 +27,21 @@ internal fun buildSimDynamicIslandItems(
             isIdleEntry = true,
             tapAction = DynamicIslandTapAction.OpenSchedulerDrawer()
         )
-        return buildList {
-            titleItem?.let(::add)
-            add(schedulerFallback)
-        }
+        return listOf(schedulerFallback)
     }
-    return buildList {
-        titleItem?.let(::add)
-        activeTasks.forEach { task ->
-            add(
-                DynamicIslandItem(
-                    sessionTitle = normalizedTitle,
-                    schedulerSummary = buildSimDynamicIslandSummary(task),
-                    isConflict = task.hasConflict,
-                    tapAction = DynamicIslandTapAction.OpenSchedulerDrawer(
-                        target = DynamicIslandSchedulerTarget(
-                            date = task.startTime.atZone(ZoneId.systemDefault()).toLocalDate(),
-                            taskId = task.id,
-                            isConflict = task.hasConflict
-                        )
-                    )
+    return activeTasks.map { task ->
+        DynamicIslandItem(
+            sessionTitle = normalizedTitle,
+            schedulerSummary = buildSimDynamicIslandSummary(task),
+            isConflict = task.hasConflict,
+            tapAction = DynamicIslandTapAction.OpenSchedulerDrawer(
+                target = DynamicIslandSchedulerTarget(
+                    date = task.startTime.atZone(ZoneId.systemDefault()).toLocalDate(),
+                    taskId = task.id,
+                    isConflict = task.hasConflict
                 )
             )
-        }
+        )
     }
 }
 

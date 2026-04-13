@@ -69,8 +69,8 @@
       "status": "active",
       "work_class": "android-beta",
       "evidence_class": "ui-visible",
-      "branch": null,
-      "recommended_worktree": null,
+      "branch": "lane/DTQ-01/onboarding-quick-start",
+      "recommended_worktree": "/home/cslh-frank/lane-worktrees/DTQ-01-onboarding-quick-start",
       "owned_paths": [
         "app-core/src/main/java/com/smartsales/prism/data/onboarding/**",
         "app-core/src/main/java/com/smartsales/prism/ui/onboarding/**",
@@ -97,8 +97,8 @@
       "status": "active",
       "work_class": "shared-contract",
       "evidence_class": "contract-test",
-      "branch": null,
-      "recommended_worktree": null,
+      "branch": "lane/DTQ-02/scheduler-intelligence",
+      "recommended_worktree": "/home/cslh-frank/lane-worktrees/DTQ-02-scheduler-intelligence",
       "owned_paths": [
         "app-core/src/main/java/com/smartsales/prism/ui/**/Scheduler*.kt",
         "app-core/src/main/java/com/smartsales/prism/ui/drawers/**",
@@ -133,8 +133,8 @@
       "status": "active",
       "work_class": "android-beta",
       "evidence_class": "platform-runtime",
-      "branch": null,
-      "recommended_worktree": null,
+      "branch": "lane/DTQ-03/connectivity-oem",
+      "recommended_worktree": "/home/cslh-frank/lane-worktrees/DTQ-03-connectivity-oem",
       "owned_paths": [
         "app-core/src/main/java/com/smartsales/prism/data/connectivity/**",
         "app-core/src/main/java/com/smartsales/prism/ui/components/connectivity/**",
@@ -165,8 +165,8 @@
       "status": "active",
       "work_class": "android-beta",
       "evidence_class": "ui-visible",
-      "branch": null,
-      "recommended_worktree": null,
+      "branch": "lane/DTQ-04/runtime-shell-sim",
+      "recommended_worktree": "/home/cslh-frank/lane-worktrees/DTQ-04-runtime-shell-sim",
       "owned_paths": [
         "app-core/src/main/java/com/smartsales/prism/MainActivity.kt",
         "app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepositorySyncSupport.kt",

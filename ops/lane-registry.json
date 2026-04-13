@@ -166,6 +166,7 @@
         "app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepositorySyncSupport.kt",
         "app-core/src/main/java/com/smartsales/prism/ui/RuntimeShell.kt",
         "app-core/src/main/java/com/smartsales/prism/ui/AgentIntelligence*.kt",
+        "app-core/src/main/java/com/smartsales/prism/ui/AgentShell.kt",
         "app-core/src/main/java/com/smartsales/prism/ui/sim/**",
         "app-core/src/test/**/ui/sim/**",
         "docs/cerb/sim-shell/**",

@@ -80,13 +80,11 @@ sealed interface WavCommandResult {
     data class DeviceMissing(val peripheralId: String) : WavCommandResult
 }
 
-/**
- * 徽章通过 BLE 发送的通知事件
- */
+/** 徽章通过 BLE 发送的通知事件 */
 sealed class BadgeNotification {
     /** 徽章请求时间同步 (tim#get) */
     data object TimeSyncRequested : BadgeNotification()
-    
+
     /** 徽章报告录音就绪 (log#YYYYMMDD_HHMMSS) */
     data class RecordingReady(val filename: String) : BadgeNotification()
 
@@ -95,6 +93,12 @@ sealed class BadgeNotification {
 
     /** 未识别的命令 */
     data class Unknown(val raw: String) : BadgeNotification()
+}
+
+/** Provisioning 握手应答解析结果 */
+sealed interface ProvisioningAckResult {
+    data object Accepted : ProvisioningAckResult
+    data class Rejected(val reason: String) : ProvisioningAckResult
 }
 
 

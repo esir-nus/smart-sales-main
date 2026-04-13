@@ -2,7 +2,7 @@
 
 > **Purpose**: Human-readable lane/build-state ledger for quarantining, splitting, landing, or parking the current dirty worktree before any branch-promotion step.
 > **Status**: Active
-> **Last Updated**: 2026-04-11
+> **Last Updated**: 2026-04-13
 > **Primary Law**: `docs/specs/platform-governance.md`
 > **Campaign Index**: `docs/plans/tracker.md`
 > **Audit Report**: `docs/reports/20260404-dirty-tree-quarantine-audit.md`
@@ -78,6 +78,29 @@ Interpretation:
 
 ---
 
+### 3B. Lane Isolation Completion (2026-04-13)
+
+The `harmony/tingwu-container` branch (893 commits) was merged to `master` via fast-forward. The 200-file dirty tree was then sorted:
+
+- admin-path and governance files committed directly on `master` (101 files)
+- remaining admin residue, dashboards, and registry updates committed on `master` (6 files)
+- lane registry updated with branch and worktree assignments for all active lanes
+
+All feature-lane files were committed into dedicated worktrees:
+
+| Lane | Branch | Worktree | Files |
+|------|--------|----------|-------|
+| DTQ-01 | `lane/DTQ-01/onboarding-quick-start` | `~/lane-worktrees/DTQ-01-onboarding-quick-start` | 5 |
+| DTQ-02 | `lane/DTQ-02/scheduler-intelligence` | `~/lane-worktrees/DTQ-02-scheduler-intelligence` | 13 |
+| DTQ-03 | `lane/DTQ-03/connectivity-oem` | `~/lane-worktrees/DTQ-03-connectivity-oem` | 13 |
+| DTQ-04 | `lane/DTQ-04/runtime-shell-sim` | `~/lane-worktrees/DTQ-04-runtime-shell-sim` | 19 |
+| DTQ-05 | `lane/DTQ-05/shared-runtime-session-contracts` | `~/lane-worktrees/DTQ-05-shared-runtime-session-contracts` | 30 |
+| DTQ-08 | `lane/DTQ-08/harmony-native-bounded-delivery` | `~/lane-worktrees/DTQ-08-harmony-native-bounded-delivery` | 50 |
+
+Lane leases are attached, registry validates, and lane guard passed on every commit. Master is clean and pushed to origin. `.gitignore` updated to exclude `.hvigor/`, `hvigor/`, `__pycache__/`, and Harmony toolchain dumps. Admin paths widened to cover `.gitignore`, `.gemini/**`, `.kiro/**`, `.roo/**`, `.windsurf/**`, `app-core/lint-baseline.xml`, `app/src/main/java/**`, and `data/ai-core/src/main/AndroidManifest.xml`.
+
+---
+
 ## 4. Lane Board
 
 | Lane | Theme | Owned Write Scope | Explicit Off-Limits | Status | Alignment | Evidence Class | Required Evidence | Current Handoff | Notes |
@@ -89,7 +112,7 @@ Interpretation:
 | `DTQ-05` | Shared runtime, pipeline, and session contracts | shared pipeline hosts, session-title contract cleanup, session persistence/history docs, parser/session tests, `domain/session/**`, `docs/cerb/input-parser/spec.md`, `docs/cerb/session-history/spec.md`, `docs/cerb/unified-pipeline/**` | onboarding page composition, runtime shell chrome, connectivity service layer, Harmony-native roots, governance docs | `Active` | `Both pending` | `contract-test` | focused pipeline/session tests plus contract re-read for parser, session-title, and persistence drift | `handoffs/shared_runtime_session_contracts_handoff.md` | The 2026-04-11 governance pass widened this lane so the parser/session-title cleanup, session persistence changes, and their tests no longer sit ungoverned between shell and scheduler lanes. |
 | `DTQ-06` | Governance, trackers, and repo guardrails | repo law docs, tracker/index ownership, lane harness control plane, Codex/Antigravity rule surfaces, Harmony governance overlays, and Android/Harmony compat registration surfaces such as flavor/build-manifest gates | feature-owned code lanes except for explicit governance-owned registration/control-plane surfaces and lane-local handoff files | `Active` | `Aligned` | `governance-proof` | docs consistency re-read plus local and CI lane-harness verification | — | Reopened on 2026-04-11 to own the lane harness control plane, shared hooks, registry, CI enforcement, and the cross-runtime registration surfaces that govern Android-vs-Harmony capability splits. |
 | `DTQ-07` | Cross-feature handoff/workflow assets | `.agent/workflows/compose-handoff-writer-[tool].md` and any future cross-feature handoff-generator/support assets | feature code, feature docs, branch-governance docs unless explicitly moved | `Deferred` | `Deferred` | — | confirm whether the asset is truly reusable project tooling rather than lane-local residue | — | Park unless it proves to be real reusable workflow infrastructure. |
-| `DTQ-08` | Harmony-native bounded delivery | `platforms/harmony/tingwu-container/**`, `platforms/harmony/ui-verification/**`, Harmony program trackers, Harmony scheduler backend-first overlay docs, Harmony UI verification overlays | Android beta code lanes, shared scheduler semantics, repo governance law surfaces | `Paused` | `Both pending` | `platform-runtime` | Harmony lane isolation plus registry/handoff truth before any new feature continuation | `handoffs/harmony_native_bounded_delivery_handoff.md` | The source tree is now explicitly owned, but this lane stays paused until the Harmony-native dirty work moves into its own worktree and stops blocking the integration tree. |
+| `DTQ-08` | Harmony-native bounded delivery | `platforms/harmony/tingwu-container/**`, `platforms/harmony/ui-verification/**`, Harmony program trackers, Harmony scheduler backend-first overlay docs, Harmony UI verification overlays | Android beta code lanes, shared scheduler semantics, repo governance law surfaces | `Paused` | `Both pending` | `platform-runtime` | Harmony lane isolation plus registry/handoff truth before any new feature continuation | `handoffs/harmony_native_bounded_delivery_handoff.md` | 2026-04-13: Harmony dirty work is now physically isolated in its own worktree at `~/lane-worktrees/DTQ-08-harmony-native-bounded-delivery` on branch `lane/DTQ-08/harmony-native-bounded-delivery`. Lane lease attached, 50 files committed. Stays paused pending Harmony-native verification. |
 | `DTQ-99` | Deferred local artifact and toolchain residue | `wechat_4.1.1.4-2_amd64.deb`, Harmony commandline-tool dumps, handoff PDFs, local cache residue such as `scripts/__pycache__/` | all product code/docs | `Deferred` | `Deferred` | — | explicit confirmation that the path is local residue rather than product deliverable | — | Exclude from the current promotion path; do not treat as product work or as a hidden feature lane. |
 
 ---
@@ -220,3 +243,26 @@ When this table reaches a reviewable state, the next human/operator action is to
 - `DTQ-99` now also parks Harmony commandline-tool residue, handoff PDFs, and `scripts/__pycache__/` instead of leaving those paths ungoverned.
 - `DTQ-01`, `DTQ-02`, `DTQ-04`, and `DTQ-05` remain non-accepted implementation lanes because the current dirty inventory still spans code, docs, and tests with `Both pending` alignment and without a final focused verification bundle.
 - `DTQ-03` separately remains non-accepted because the runtime/device verification bundle is still missing even though the bridge-contract mismatch is now closed.
+
+---
+
+## 9. Lane Isolation Completion (2026-04-13)
+
+The dirty-tree quarantine is now physically resolved. All feature-lane files have been committed into dedicated worktrees with lane leases and the integration tree (master) is clean.
+
+Actions taken:
+- `harmony/tingwu-container` (893 commits) merged to `master` via fast-forward
+- 200-file dirty tree sorted into admin commit (101 files) + 6 lane branches (130 files total)
+- `.gitignore` updated: `.hvigor/`, `hvigor/`, `__pycache__/`, Harmony toolchain dumps
+- `admin_paths` widened: `.gitignore`, `.gemini/**`, `.kiro/**`, `.roo/**`, `.windsurf/**`, `app-core/lint-baseline.xml`, `app/src/main/java/**`, `data/ai-core/src/main/AndroidManifest.xml`, `docs/platforms/harmony/hui-02-tingwu-docking-contract.md`
+- DTQ-06 `owned_paths` updated to match widened `admin_paths`
+- DTQ-08 `owned_paths` updated to include `hui-02-tingwu-docking-contract.md`
+- Lane registry validates (`lane_guard.py validate-registry` passes)
+- Master pushed to origin
+
+Remaining work per lane:
+- DTQ-01 through DTQ-05: `Both pending` alignment; need focused verification in their worktrees
+- DTQ-03: `Aligned` but runtime/device evidence still missing
+- DTQ-06: `Aligned`; governance proof via lane guard passing
+- DTQ-08: `Paused`; now physically isolated, awaiting Harmony-native verification
+- DTQ-07, DTQ-99: `Deferred`; no action needed

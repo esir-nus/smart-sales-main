@@ -179,6 +179,7 @@
         "app-core/src/main/java/com/smartsales/prism/ui/AgentShell.kt",
         "app-core/src/main/java/com/smartsales/prism/ui/sim/**",
         "app-core/src/test/**/ui/sim/**",
+        "app-core/src/test/**/data/audio/**",
         "docs/cerb/sim-shell/**",
         "docs/core-flow/sim-shell-routing-flow.md",
         "docs/plans/ui-tracker.md",

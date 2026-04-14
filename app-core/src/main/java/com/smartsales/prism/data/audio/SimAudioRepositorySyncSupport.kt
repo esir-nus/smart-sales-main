@@ -35,18 +35,6 @@ internal enum class SimBadgeSyncTrigger {
     AUTO
 }
 
-/** Dynamic Island 同步事件 — 由自动下载器和手动同步共同发送 */
-internal sealed class SimBadgeSyncIslandEvent {
-    /** rec# 单文件自动下载完成 */
-    data class RecFileDownloaded(val filename: String) : SimBadgeSyncIslandEvent()
-    /** /list 批量同步开始 */
-    data object ManualSyncStarted : SimBadgeSyncIslandEvent()
-    /** /list 批量同步完成，count 为新增数量 */
-    data class ManualSyncComplete(val count: Int) : SimBadgeSyncIslandEvent()
-    /** /list 同步完成但没有新文件 */
-    data object AlreadyUpToDate : SimBadgeSyncIslandEvent()
-}
-
 internal enum class SimBadgeSyncSkippedReason {
     NOT_READY,
     ALREADY_RUNNING

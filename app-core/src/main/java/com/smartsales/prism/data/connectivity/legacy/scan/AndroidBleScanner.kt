@@ -140,6 +140,9 @@ class AndroidBleScanner @Inject constructor(
     }
 
     private fun hasConnectPermission(): Boolean {
+        if (android.os.Build.VERSION.SDK_INT < 31) {
+            return true
+        }
         return ContextCompat.checkSelfPermission(
             appContext,
             android.Manifest.permission.BLUETOOTH_CONNECT

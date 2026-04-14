@@ -159,7 +159,7 @@ class DefaultDeviceConnectionManagerIngressTest {
     }
 
     @Test
-    fun `reconnectAndWait replays known wifi credentials when badge is offline on exact phone ssid match`() = runTest {
+    fun `reconnectAndWait self-heals when badge comes online during confirmation window on exact phone ssid match`() = runTest {
         val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
         val monitor = FakeBadgeStateMonitor()
         val sessionStore = InMemorySessionStore().apply {
@@ -177,6 +177,7 @@ class DefaultDeviceConnectionManagerIngressTest {
                     rawResponse = "IP#0.0.0.0, SD#N/A"
                 )
             )
+            // Self-heal window picks up the badge coming online
             stubNetworkResults += Result.Success(
                 DeviceNetworkStatus(
                     ipAddress = "192.168.0.9",
@@ -201,8 +202,8 @@ class DefaultDeviceConnectionManagerIngressTest {
 
         assertTrue(state is ConnectionState.WifiProvisioned)
         assertTrue(manager.state.value is ConnectionState.WifiProvisioned)
-        assertEquals(1, provisioner.provisionCalls.size)
-        assertEquals("MstRobot", provisioner.provisionCalls.single().second.ssid)
+        // Self-heal recovered without credential replay
+        assertEquals(0, provisioner.provisionCalls.size)
         assertEquals(BadgeState.CONNECTED, monitor.status.value.state)
     }
 
@@ -674,6 +675,7 @@ class DefaultDeviceConnectionManagerIngressTest {
                     Mockito.anyString(), Mockito.anyInt(), Mockito.anyInt()
                 )).thenReturn(PackageManager.PERMISSION_GRANTED)
             },
+            httpClient = FakeBadgeHttpClient(),
             scope = scope
         )
     }

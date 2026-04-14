@@ -23,7 +23,8 @@ internal class DeviceConnectionManagerConnectionSupport(
     private val phoneWifiProvider: PhoneWifiProvider,
     private val scope: CoroutineScope,
     private val runtime: DeviceConnectionManagerRuntime,
-    private val ingressSupport: DeviceConnectionManagerIngressSupport
+    private val ingressSupport: DeviceConnectionManagerIngressSupport,
+    private val httpClient: BadgeHttpClient
 ) {
 
     fun restoreSession() {
@@ -57,6 +58,7 @@ internal class DeviceConnectionManagerConnectionSupport(
                 ingressSupport.startNotificationListener(session)
                 if (runtime.state.value !is ConnectionState.Pairing) {
                     runtime.state.value = ConnectionState.Connected(session)
+                    performForegroundNetworkQuery(session, promoteConnectedState = true)
                 }
                 ConnectivityLogger.i("📡 Persistent session + listener active for ${peripheral.name}")
             } else {
@@ -407,33 +409,123 @@ internal class DeviceConnectionManagerConnectionSupport(
     ): ConnectionState {
         val ip = networkStatus.ipAddress
         val badgeSsid = normalizeWifiSsid(networkStatus.deviceWifiName)
+        val phoneSsid = resolveReadablePhoneSsid()
 
-        // 徽章已有可用 IP → 直接视为已连接，不检查手机 SSID
-        if (hasUsableBadgeIp(ip)) {
-            ConnectivityLogger.d("🔌 connectUsingSession: connected via badge IP, ip=$ip ssid=$badgeSsid")
-            return ConnectionState.WifiProvisioned(
-                session,
-                ingressSupport.syntheticProvisioningStatus(networkStatus)
-            )
+        // 手机 SSID 不可读但 Badge 有可用 IP — 尝试 HTTP 可达性救援
+        if (phoneSsid == null && hasUsableBadgeIp(ip)) {
+            val rescued = rescueReachabilityCheck(session, networkStatus)
+            if (rescued != null) return rescued
         }
 
-        // 徽章离线 — 尝试重播已知凭据（仅当手机 SSID 可读时）
-        val phoneSsid = resolveReadablePhoneSsid()
         if (phoneSsid == null) {
-            ConnectivityLogger.w("🔌 connectUsingSession: badge offline ip=$ip, phone SSID unreadable")
             return resolvePhoneWifiUnavailableState(
-                context = "replay skipped",
+                context = if (!hasUsableBadgeIp(ip)) {
+                    "replay skipped"
+                } else {
+                    "reconnect blocked while badge has ip=$ip"
+                },
                 badgeSsid = badgeSsid
             )
         }
 
-        ConnectivityLogger.d("🔌 connectUsingSession: badge offline, ip=$ip, attempting replay")
-        return attemptDeterministicWifiReplay(
-            session = session,
-            badgeSsid = badgeSsid,
-            phoneSsid = phoneSsid,
-            reason = "badge offline"
+        if (!hasUsableBadgeIp(ip)) {
+            ConnectivityLogger.d("🔌 connectUsingSession: badge offline, ip=$ip — entering self-heal window")
+            val healed = waitForSelfHealWindow(session)
+            if (healed != null) {
+                val healedBadgeSsid = normalizeWifiSsid(healed.deviceWifiName)
+                if (healedBadgeSsid == phoneSsid) {
+                    ConnectivityLogger.i("🩹 self-heal recovered: ip=${healed.ipAddress} ssid=$healedBadgeSsid")
+                    return ConnectionState.WifiProvisioned(
+                        session,
+                        ingressSupport.syntheticProvisioningStatus(healed)
+                    )
+                }
+                ConnectivityLogger.w("🩹 self-heal ip ok but ssid mismatch: badge=$healedBadgeSsid phone=$phoneSsid")
+            }
+            return attemptDeterministicWifiReplay(
+                session = session,
+                badgeSsid = badgeSsid,
+                phoneSsid = phoneSsid,
+                reason = "badge offline (self-heal exhausted)"
+            )
+        }
+
+        // Badge SSID 不可读但有可用 IP — 尝试 HTTP 可达性救援
+        if (badgeSsid == null && hasUsableBadgeIp(ip)) {
+            val rescued = rescueReachabilityCheck(session, networkStatus)
+            if (rescued != null) return rescued
+        }
+
+        if (badgeSsid != phoneSsid) {
+            ConnectivityLogger.w(
+                "🔌 reconnect mismatch: badge=$badgeSsid phone=$phoneSsid, attempting alignment replay"
+            )
+            return attemptDeterministicWifiReplay(
+                session = session,
+                badgeSsid = badgeSsid,
+                phoneSsid = phoneSsid,
+                reason = "badge online on different network"
+            )
+        }
+
+        ConnectivityLogger.d("🔌 connectUsingSession: connected, ip=$ip ssid=$badgeSsid")
+        return ConnectionState.WifiProvisioned(
+            session,
+            ingressSupport.syntheticProvisioningStatus(networkStatus)
         )
+    }
+
+    private suspend fun rescueReachabilityCheck(
+        session: BleSession,
+        networkStatus: DeviceNetworkStatus
+    ): ConnectionState? {
+        val ip = networkStatus.ipAddress
+        val baseUrl = "http://$ip:$BADGE_HTTP_PORT"
+        ConnectivityLogger.d("🔎 rescue reachability check: $baseUrl")
+        return if (httpClient.isReachable(baseUrl)) {
+            ConnectivityLogger.i("🔎 rescue reachability confirmed: ip=$ip — treating as connected")
+            ConnectionState.WifiProvisioned(
+                session,
+                ingressSupport.syntheticProvisioningStatus(networkStatus)
+            )
+        } else {
+            ConnectivityLogger.w("🔎 rescue reachability failed: ip=$ip — not reachable")
+            null
+        }
+    }
+
+    private suspend fun waitForSelfHealWindow(
+        session: BleSession
+    ): DeviceNetworkStatus? {
+        repeat(SELF_HEAL_QUERY_ATTEMPTS) { attempt ->
+            val delayMs = if (attempt == 0) {
+                SELF_HEAL_FIRST_QUERY_DELAY_MS
+            } else {
+                SELF_HEAL_QUERY_DELAY_MS
+            }
+            delay(delayMs)
+
+            when (val result = performForegroundNetworkQuery(session, promoteConnectedState = false)) {
+                is Result.Success -> {
+                    val status = result.data
+                    if (hasUsableBadgeIp(status.ipAddress)) {
+                        ConnectivityLogger.d(
+                            "🩹 self-heal window: badge came online attempt=${attempt + 1} ip=${status.ipAddress}"
+                        )
+                        return status
+                    }
+                    ConnectivityLogger.d(
+                        "🩹 self-heal window: still offline attempt=${attempt + 1} ip=${status.ipAddress}"
+                    )
+                }
+                is Result.Error -> {
+                    ConnectivityLogger.w(
+                        "🩹 self-heal window: query failed attempt=${attempt + 1}: ${result.throwable.message}"
+                    )
+                }
+            }
+        }
+        return null
     }
 
     private suspend fun attemptDeterministicWifiReplay(
@@ -662,5 +754,9 @@ internal class DeviceConnectionManagerConnectionSupport(
         const val MANUAL_PROVISION_QUERY_ATTEMPTS = 4
         const val QUERY_FLOOR_TIMEOUT_MS = RateLimitedBleGateway.MIN_QUERY_INTERVAL_MS
         const val QUERY_FLOOR_RETRY_DELAY_MS = RateLimitedBleGateway.MIN_QUERY_INTERVAL_MS + 100L
+        const val BADGE_HTTP_PORT = 8088
+        const val SELF_HEAL_FIRST_QUERY_DELAY_MS = 3_000L
+        const val SELF_HEAL_QUERY_DELAY_MS = 2_000L
+        const val SELF_HEAL_QUERY_ATTEMPTS = 3
     }
 }

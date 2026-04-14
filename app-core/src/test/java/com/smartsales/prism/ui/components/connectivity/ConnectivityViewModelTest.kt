@@ -365,6 +365,24 @@ class ConnectivityViewModelTest {
     }
 
     @Test
+    fun `scheduleAutoReconnect delegates to service`() = runTest {
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Disconnected,
+            manager = BadgeManagerStatus.BlePairedNetworkOffline
+        )
+        val service = FakeConnectivityService()
+        val viewModel = ConnectivityViewModel(
+            connectivityService = service,
+            connectivityBridge = bridge
+        )
+        advanceUntilIdle()
+
+        viewModel.scheduleAutoReconnect()
+
+        assertEquals(1, service.scheduleAutoReconnectCalls)
+    }
+
+    @Test
     fun `clearWifiMismatchError clears current repair error message`() = runTest {
         val bridge = FakeConnectivityBridge(
             connection = BadgeConnectionState.Disconnected,
@@ -385,12 +403,98 @@ class ConnectivityViewModelTest {
         assertNull(viewModel.wifiMismatchErrorMessage.value)
     }
 
+    @Test
+    fun `wifi mismatch override auto-clears when bridge recovers to Connected`() = runTest {
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Disconnected,
+            manager = BadgeManagerStatus.BlePairedNetworkOffline
+        )
+        val viewModel = ConnectivityViewModel(
+            connectivityService = FakeConnectivityService(
+                reconnectResults = listOf(
+                    CompletableDeferred<ReconnectResult>().apply {
+                        complete(ReconnectResult.WifiMismatch(currentPhoneSsid = "OfficeGuest"))
+                    }
+                )
+            ),
+            connectivityBridge = bridge
+        )
+        advanceUntilIdle()
+
+        viewModel.reconnect()
+        advanceUntilIdle()
+        assertEquals(ConnectivityManagerState.WIFI_MISMATCH, viewModel.managerState.value)
+
+        bridge._connectionState.value = BadgeConnectionState.Connected(badgeIp = "192.168.1.50", ssid = "OfficeGuest")
+        bridge._managerStatus.value = BadgeManagerStatus.Ready(ssid = "OfficeGuest")
+        advanceUntilIdle()
+
+        assertNull(viewModel.wifiMismatchSuggestedSsid.value)
+        assertEquals(
+            ConnectivityManagerState.CONNECTED,
+            viewModel.managerState.value
+        )
+    }
+
+    @Test
+    fun `wifi mismatch override persists when bridge transitions to Connecting`() = runTest {
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Disconnected,
+            manager = BadgeManagerStatus.BlePairedNetworkOffline
+        )
+        val viewModel = ConnectivityViewModel(
+            connectivityService = FakeConnectivityService(
+                reconnectResults = listOf(
+                    CompletableDeferred<ReconnectResult>().apply {
+                        complete(ReconnectResult.WifiMismatch(currentPhoneSsid = "OfficeGuest"))
+                    }
+                )
+            ),
+            connectivityBridge = bridge
+        )
+        advanceUntilIdle()
+
+        viewModel.reconnect()
+        advanceUntilIdle()
+        assertEquals(ConnectivityManagerState.WIFI_MISMATCH, viewModel.managerState.value)
+
+        bridge._connectionState.value = BadgeConnectionState.Connecting
+        advanceUntilIdle()
+
+        assertEquals(ConnectivityManagerState.WIFI_MISMATCH, viewModel.managerState.value)
+        assertEquals("OfficeGuest", viewModel.wifiMismatchSuggestedSsid.value)
+    }
+
+    @Test
+    fun `non-mismatch override is not affected by bridge Connected`() = runTest {
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Disconnected,
+            manager = BadgeManagerStatus.BlePairedNetworkOffline
+        )
+        val reconnectGate = CompletableDeferred<ReconnectResult>()
+        val viewModel = ConnectivityViewModel(
+            connectivityService = FakeConnectivityService(reconnectResults = listOf(reconnectGate)),
+            connectivityBridge = bridge
+        )
+        advanceUntilIdle()
+
+        viewModel.reconnect()
+        advanceUntilIdle()
+        assertEquals(ConnectivityManagerState.RECONNECTING, viewModel.managerState.value)
+
+        bridge._connectionState.value = BadgeConnectionState.Connected(badgeIp = "192.168.1.50", ssid = "OfficeGuest")
+        advanceUntilIdle()
+
+        // RECONNECTING override should NOT be cleared — only WIFI_MISMATCH auto-clears
+        assertEquals(ConnectivityManagerState.RECONNECTING, viewModel.managerState.value)
+    }
+
     private class FakeConnectivityBridge(
         connection: BadgeConnectionState,
         manager: BadgeManagerStatus
     ) : ConnectivityBridge {
-        private val _connectionState = MutableStateFlow(connection)
-        private val _managerStatus = MutableStateFlow(manager)
+        val _connectionState = MutableStateFlow(connection)
+        val _managerStatus = MutableStateFlow(manager)
 
         override val connectionState: StateFlow<BadgeConnectionState> = _connectionState.asStateFlow()
         override val managerStatus: StateFlow<BadgeManagerStatus> = _managerStatus.asStateFlow()
@@ -426,6 +530,8 @@ class ConnectivityViewModelTest {
         private val updateWifiConfigQueue = ArrayDeque(updateWifiConfigResults)
         var reconnectCalls = 0
             private set
+        var scheduleAutoReconnectCalls = 0
+            private set
         val updateWifiConfigCalls = mutableListOf<Pair<String, String>>()
 
         override suspend fun checkForUpdate(): UpdateResult = UpdateResult.None
@@ -442,6 +548,10 @@ class ConnectivityViewModelTest {
         override suspend fun disconnect() = Unit
 
         override suspend fun unpair() = Unit
+
+        override fun scheduleAutoReconnect() {
+            scheduleAutoReconnectCalls += 1
+        }
 
         override suspend fun updateWifiConfig(ssid: String, password: String): WifiConfigResult {
             updateWifiConfigCalls += ssid to password

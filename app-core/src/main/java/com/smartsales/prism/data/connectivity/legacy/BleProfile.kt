@@ -12,7 +12,8 @@ data class BleProfileConfig(
     val displayName: String,
     val nameKeywords: List<String>,
     val scanServiceUuids: List<UUID> = emptyList(),
-    val scanMatchMode: BleScanMatchMode = BleScanMatchMode.NAME_OR_SERVICE
+    val scanMatchMode: BleScanMatchMode = BleScanMatchMode.NAME_OR_SERVICE,
+    val macAddressPrefixes: List<String> = emptyList()
 ) {
     fun matches(deviceName: String?, advertisedUuids: Collection<UUID>): Boolean {
         val normalizedName = deviceName.orEmpty().lowercase(Locale.US)

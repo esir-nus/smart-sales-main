@@ -128,6 +128,11 @@ class RealConnectivityService @Inject constructor(
         }
     }
 
+    override fun scheduleAutoReconnect() {
+        Log.d(TAG, "scheduleAutoReconnect() delegating to deviceManager")
+        deviceManager.scheduleAutoReconnectIfNeeded()
+    }
+
     private fun mapReconnectWifiError(
         error: com.smartsales.prism.data.connectivity.legacy.ConnectivityError.WifiDisconnected
     ): ReconnectResult {

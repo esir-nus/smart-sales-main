@@ -73,6 +73,7 @@ class DefaultDeviceConnectionManager @Inject constructor(
     private val sessionStore: SessionStore,
     private val phoneWifiProvider: PhoneWifiProvider,
     @ApplicationContext private val context: Context,
+    private val httpClient: BadgeHttpClient,
     @ConnectivityScope private val scope: CoroutineScope
 ) : DeviceConnectionManager, Closeable {
 
@@ -92,7 +93,8 @@ class DefaultDeviceConnectionManager @Inject constructor(
         phoneWifiProvider = phoneWifiProvider,
         scope = scope,
         runtime = runtime,
-        ingressSupport = ingressSupport
+        ingressSupport = ingressSupport,
+        httpClient = httpClient
     )
     private val reconnectSupport = DeviceConnectionManagerReconnectSupport(
         dispatchers = dispatchers,

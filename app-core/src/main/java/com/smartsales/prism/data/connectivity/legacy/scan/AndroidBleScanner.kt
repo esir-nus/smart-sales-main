@@ -21,7 +21,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -144,10 +146,19 @@ class AndroidBleScanner @Inject constructor(
         }
     }
 
-    private fun hasConnectPermission(): Boolean {
-        if (android.os.Build.VERSION.SDK_INT < 31) {
-            return true
+    @SuppressLint("MissingPermission")
+    override suspend fun scanForFirst(timeoutMs: Long): BlePeripheral? {
+        stop()
+        start()
+        if (!_isScanning.value) return null
+        val result = withTimeoutOrNull(timeoutMs) {
+            _devices.first { it.isNotEmpty() }
         }
+        stop()
+        return result?.firstOrNull()
+    }
+
+    private fun hasConnectPermission(): Boolean {
         return ContextCompat.checkSelfPermission(
             appContext,
             android.Manifest.permission.BLUETOOTH_CONNECT

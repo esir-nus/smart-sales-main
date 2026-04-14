@@ -59,10 +59,8 @@ class RealConnectivityBridge @Inject constructor(
     
     companion object {
         private const val TAG = "AudioPipeline"
-        private const val NOTIFICATION_BUFFER_TTL_MS = 30_000L
-        private const val NOTIFICATION_BUFFER_MAX_SIZE = 10
     }
-
+    
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val endpointMutex = Mutex()
     private var activeEndpointSnapshot: ActiveEndpointSnapshot? = null
@@ -71,19 +69,25 @@ class RealConnectivityBridge @Inject constructor(
         replay = 0,
         extraBufferCapacity = 1
     )
-    private val audioRecordingNotificationsFlow = MutableSharedFlow<RecordingNotification.AudioRecordingReady>(
-        replay = 0,
-        extraBufferCapacity = 3
-    )
 
-    private data class BufferedNotification(
-        val filename: String,
-        val receivedAtMs: Long,
-        val isAudio: Boolean
-    )
-    private val notificationBufferMutex = Mutex()
-    private val notificationBuffer = mutableListOf<BufferedNotification>()
-
+    init {
+        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            deviceManager.recordingReadyEvents.collect { filename ->
+                if (!isTransportReadyForRecordingNotifications()) {
+                    android.util.Log.w(
+                        TAG,
+                        "🚫 Dropping recording notification while transport not ready: $filename"
+                    )
+                    return@collect
+                }
+                recordingNotificationsFlow.emit(
+                    RecordingNotification.RecordingReady(filename.toBadgeDownloadFilename())
+                )
+            }
+        }
+    }
+    
+    
     override val connectionState: StateFlow<BadgeConnectionState> = combine(
         deviceManager.state,
         badgeStateMonitor.status
@@ -113,49 +117,19 @@ class RealConnectivityBridge @Inject constructor(
             badgeStatus = badgeStateMonitor.status.value
         )
     )
-
-    init {
-        scope.launch(start = CoroutineStart.UNDISPATCHED) {
-            deviceManager.recordingReadyEvents.collect { filename ->
-                if (isTransportReadyForRecordingNotifications()) {
-                    recordingNotificationsFlow.emit(
-                        RecordingNotification.RecordingReady(filename.toBadgeDownloadFilename())
-                    )
-                } else {
-                    bufferNotification(filename.toBadgeDownloadFilename(), isAudio = false)
-                }
-            }
-        }
-        scope.launch(start = CoroutineStart.UNDISPATCHED) {
-            deviceManager.audioRecordingReadyEvents.collect { filename ->
-                if (isTransportReadyForRecordingNotifications()) {
-                    audioRecordingNotificationsFlow.emit(
-                        RecordingNotification.AudioRecordingReady(filename)
-                    )
-                } else {
-                    bufferNotification(filename, isAudio = true)
-                }
-            }
-        }
-        // 当连接状态变为 Connected 时，刷新缓冲的通知
-        scope.launch {
-            connectionState.collect { state ->
-                if (state is BadgeConnectionState.Connected) {
-                    flushNotificationBuffer()
-                }
-            }
-        }
-    }
     
-    override suspend fun downloadRecording(filename: String): WavDownloadResult {
+    override suspend fun downloadRecording(
+        filename: String,
+        onProgress: ((bytesRead: Long, totalBytes: Long) -> Unit)?
+    ): WavDownloadResult {
         val baseUrl = resolveBaseUrl() ?: return WavDownloadResult.Error(
             code = WavDownloadResult.ErrorCode.NOT_CONNECTED,
             message = "无法获取设备IP — 请确认 Badge 已连接 WiFi"
         )
         android.util.Log.d(TAG, "⬇️ Downloading: $baseUrl/download?file=$filename")
         val tempFile = File.createTempFile("badge_recording_", ".wav")
-        
-        return when (val result = httpClient.downloadWav(baseUrl, filename, tempFile)) {
+
+        return when (val result = httpClient.downloadWav(baseUrl, filename, tempFile, onProgress)) {
             is Result.Success -> WavDownloadResult.Success(
                 localFile = tempFile,
                 originalFilename = filename,
@@ -183,9 +157,6 @@ class RealConnectivityBridge @Inject constructor(
     
     override fun recordingNotifications(): Flow<RecordingNotification> =
         recordingNotificationsFlow.asSharedFlow()
-
-    override fun audioRecordingNotifications(): Flow<RecordingNotification.AudioRecordingReady> =
-        audioRecordingNotificationsFlow.asSharedFlow()
     
     
     override suspend fun isReady(): Boolean {
@@ -216,48 +187,7 @@ class RealConnectivityBridge @Inject constructor(
             }
         }
     }
-
-    private suspend fun bufferNotification(filename: String, isAudio: Boolean) {
-        notificationBufferMutex.withLock {
-            notificationBuffer.add(
-                BufferedNotification(
-                    filename = filename,
-                    receivedAtMs = System.currentTimeMillis(),
-                    isAudio = isAudio
-                )
-            )
-            if (notificationBuffer.size > NOTIFICATION_BUFFER_MAX_SIZE) {
-                notificationBuffer.removeFirst()
-            }
-            android.util.Log.w(
-                TAG,
-                "📦 Buffered ${if (isAudio) "audio" else "recording"} notification (transport not ready): $filename"
-            )
-        }
-    }
-
-    private suspend fun flushNotificationBuffer() {
-        notificationBufferMutex.withLock {
-            val now = System.currentTimeMillis()
-            val valid = notificationBuffer.filter { now - it.receivedAtMs < NOTIFICATION_BUFFER_TTL_MS }
-            if (valid.isNotEmpty()) {
-                android.util.Log.i(TAG, "📦 Flushing ${valid.size} buffered notification(s) after Connected")
-            }
-            valid.forEach { buffered ->
-                if (buffered.isAudio) {
-                    audioRecordingNotificationsFlow.emit(
-                        RecordingNotification.AudioRecordingReady(buffered.filename)
-                    )
-                } else {
-                    recordingNotificationsFlow.emit(
-                        RecordingNotification.RecordingReady(buffered.filename)
-                    )
-                }
-            }
-            notificationBuffer.clear()
-        }
-    }
-
+    
     private fun mapToPrismState(
         legacy: ConnectionState,
         badgeStatus: BadgeStatus

@@ -2,7 +2,7 @@
 
 > **Blackbox contract** — For consumers (Scheduler, Badge Audio Pipeline). Don't read implementation.
 > **Status**: Active supporting interface
-> **Last Updated**: 2026-04-13
+> **Last Updated**: 2026-04-14
 
 ---
 
@@ -29,9 +29,13 @@ interface ConnectivityBridge {
      * Rate-limited internally.
      *
      * @param filename File name on badge (e.g., "log_20260205_143000.wav")
+     * @param onProgress Optional callback invoked with (bytesRead, totalBytes) during download
      * @return Downloaded file or error
      */
-    suspend fun downloadRecording(filename: String): WavDownloadResult
+    suspend fun downloadRecording(
+        filename: String,
+        onProgress: ((bytesRead: Long, totalBytes: Long) -> Unit)? = null
+    ): WavDownloadResult
     
     /**
      * List all WAV files currently stored on the badge.
@@ -170,7 +174,7 @@ sealed class WifiConfigResult {
 |-----------|-----------|
 | `connectionState` | Always emits current state immediately on collect |
 | `managerStatus` | Manager-only richer BLE/Wi‑Fi diagnostic state; no shell-routing authority |
-| `downloadRecording` | Rate-limited, max 1 concurrent download |
+| `downloadRecording` | Rate-limited, max 1 concurrent download; `onProgress` callback (if provided) is invoked on the IO dispatcher with (bytesRead, totalBytes) — consumers must throttle UI updates themselves |
 | `listRecordings` | Reuses the active runtime endpoint; no repeated BLE Wi‑Fi query in the normal happy path |
 | `recordingNotifications` | Hot flow, buffered (1), no replay |
 | `isReady()` | Pre-flight check with 3s timeout; may refresh endpoint only when the active snapshot is missing or invalidated |
@@ -190,19 +194,17 @@ Under the current reconnect contract, the bridge may surface this connected stat
 Normal badge HTTP work (`/list`, `/download`, `/delete`) should reuse the current runtime endpoint snapshot.
 Repeated BLE `wifi#address#ip#name` querying is not part of the normal sync path.
 
-Current reconnect contract:
+`ConnectivityService.reconnect()` may return `WifiMismatch` in either of these deterministic reconnect cases:
 
-- reconnect must not require readable phone Wi‑Fi SSID
-- if BLE is restored and the badge reports a usable IP, `ConnectivityService.reconnect()` should return `Connected` immediately even when the phone SSID is unreadable on the current OEM
-- `ReconnectResult.WifiMismatch` must not be returned solely because phone SSID is unreadable
-- `ReconnectResult.WifiMismatch` is reserved for explicit repair or trusted mismatch states where the runtime has concrete evidence that the badge is on the wrong network for the operator's intended repair target
+- the phone's current Wi‑Fi SSID has no exact remembered credential to replay
+- the phone is on Wi‑Fi but the app cannot read the SSID, so exact-match replay cannot be proven safely
+- credential replay completes, but the badge confirms it is on a different Wi‑Fi than the phone
 
 When reconnect can read the phone's current Wi‑Fi SSID, `ReconnectResult.WifiMismatch.currentPhoneSsid`
-may carry that suggestion so the repair form can prefill it while keeping the SSID editable. When the OS does not expose the SSID, null is expected and must not be treated as reconnect failure by itself.
+must carry that suggestion so the repair form can prefill it while keeping the SSID editable.
 
 `ConnectivityService.updateWifiConfig()` must treat `trim().isEmpty()` on either field as an immediate local error.
 That rejection is a guard rail only: it must not call BLE provisioning, manual repair confirmation, or remembered-network persistence.
-Manual repair confirmation failure must return an explicit error and must not be collapsed into synthetic success.
 
 This richer state is for connectivity manager presentation only. Shared shell/history routing must continue to use `connectionState`.
 

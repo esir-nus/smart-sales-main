@@ -3,7 +3,7 @@
 > **Cerb-compliant spec** — Prism-safe wrapper for legacy BLE + HTTP connectivity.
 > **OS Layer**: Infrastructure (Layer 1) — Leaf service, no upstream dependencies
 > **Status**: SHIPPED
-> **Last Updated**: 2026-04-13
+> **Last Updated**: 2026-04-02
 > **Behavioral UX Authority Above This Doc**: [`docs/core-flow/base-runtime-ux-surface-governance-flow.md`](../../core-flow/base-runtime-ux-surface-governance-flow.md) (`UX.CONNECTIVITY.*`)
 
 ---
@@ -234,27 +234,26 @@ Reconnect rule:
 Reconnect credential rule:
 
 - target firmware stores one last-working Wi‑Fi credential and auto-reconnects itself after reconnect / power recovery
-- on current target OEMs, the app must assume phone Wi‑Fi SSID may be unreadable even when Wi‑Fi transport is connected; unreadable SSID is normal runtime reality, not a reconnect error by itself
-- app-side `SessionStore` still owns the multi-network remembered Wi‑Fi list, but remembered credentials are for explicit manual repair assistance only
-- when BLE reconnect succeeds:
-  - if the badge reports a usable IP, reconnect must treat transport as connected immediately
-  - reconnect must not gate `Connected` on readable phone SSID
-  - reconnect must not auto-replay remembered credentials or try to switch the badge network in the background
-  - if the badge remains offline or reports no usable IP, the manager may surface BLE-held offline or unknown diagnostics and offer explicit manual repair
-- reconnect must not route to `WIFI_MISMATCH` solely because phone SSID is unreadable
-- reconnect-driven `WIFI_MISMATCH` is no longer the default path; mismatch UI is reserved for explicit repair contexts where the user or a trusted runtime comparison has produced a concrete mismatch state
+- app-side `SessionStore` still owns the multi-network remembered Wi‑Fi list
+- app may store multiple known networks, keyed by exact normalized SSID
+- when BLE reconnect succeeds, the app must always align the badge to the phone's current Wi‑Fi SSID:
+  - read the phone's current Wi‑Fi SSID
+  - if the badge reports `IP#0.0.0.0`, silently replay the exact-match remembered credential when one exists
+  - if the badge is online on a different SSID than the phone, silently replay the exact-match remembered credential when one exists so the badge switches to the phone's current network
+  - if phone Wi‑Fi transport is connected but SSID is unreadable, route to `WIFI_MISMATCH` rather than blind-replaying a credential
+  - otherwise route the manager UI to `WIFI_MISMATCH` so the user can re-enter credentials
+- reconnect-driven `WIFI_MISMATCH` must carry the current phone SSID suggestion when readable so the repair form can prefill it without locking the field
 - when the user submits manual SSID/password from `WIFI_MISMATCH`, the UI must trim both fields, reject blank values locally, require an explicit confirmation dialog, and only then show reconnect/progress while `updateWifiConfig()` runs its provision-plus-confirm repair path
 - manual repair must not fall back into the generic reconnect path after sending credentials
 - manual repair confirmation must:
   - keep the current BLE session
   - poll badge network status with the same bounded tolerance used by setup (`3` attempts, `1500ms` interval)
   - validate against the user-submitted SSID rather than the phone's current SSID
-- the manual repair form should prefill the current phone SSID only when the OS exposes one; blank SSID is expected on OEMs that hide it, and the field must remain editable with password blank/manual
+- the manual repair form should prefill the current phone SSID when reconnect surfaced one, but keep the SSID editable and keep password blank/manual
 - empty or whitespace-only SSID/password must never be sent to the badge from the manual repair flow
 - invalid manual repair input must stay on `WIFI_MISMATCH`, surface a local error message, and must not transition into reconnect/progress
 - manual repair may return to `WIFI_MISMATCH` only when the badge proves it came online on a different SSID than the submitted one
 - manual repair must not route back to `WIFI_MISMATCH` merely because phone Wi‑Fi is unreadable/unavailable or because the badge is still offline during the bounded confirmation window
-- manual repair confirmation failure must surface an explicit error/result and must not be collapsed into synthetic success
 - if the user closes the connectivity surface mid-repair, only the transient override is cleared; underlying bridge/manager truth remains authoritative on next reopen
 - reconnect foreground network query must tolerate the BLE 2s minimum query floor and retry after the guard delay instead of failing immediately on a throttle timeout
 - badge IP is reused only as an in-memory active runtime endpoint snapshot; the app must not persist a last-known badge IP across sessions
@@ -472,8 +471,11 @@ class RealConnectivityBridge @Inject constructor(
     override val connectionState: StateFlow<BadgeConnectionState>
         get() = legacyManager.connectionState.map { /* transform to Prism type */ }
     
-    override suspend fun downloadRecording(filename: String): WavDownloadResult {
-        // Delegate to httpClient.downloadWav()
+    override suspend fun downloadRecording(
+        filename: String,
+        onProgress: ((bytesRead: Long, totalBytes: Long) -> Unit)?
+    ): WavDownloadResult {
+        // Delegate to httpClient.downloadWav() with onProgress forwarded
         // Transform result to Prism type
     }
     

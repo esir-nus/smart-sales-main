@@ -85,7 +85,10 @@
         "docs/reports/tests/L3-20260403-onboarding-quick-start-session-recovery.md",
         "prototypes/onboarding-family/**"
       ],
-      "allowed_shared_paths": [],
+      "allowed_shared_paths": [
+        "app-core/src/main/AndroidManifest.xml",
+        "app/src/main/AndroidManifest.xml"
+      ],
       "handoff_path": "handoffs/schedule_quick_start_compose_handoff.md",
       "tracker_refs": [
         "docs/plans/dirty-tree-quarantine.md",

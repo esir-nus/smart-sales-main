@@ -27,6 +27,8 @@ internal class DeviceConnectionManagerConnectionSupport(
     private val httpClient: BadgeHttpClient
 ) {
 
+    internal var reconnectSupport: DeviceConnectionManagerReconnectSupport? = null
+
     fun restoreSession() {
         val session = sessionStore.loadSession() ?: return
         runtime.currentSession = session
@@ -204,11 +206,19 @@ internal class DeviceConnectionManagerConnectionSupport(
         runtime.heartbeatJob = scope.launch(dispatchers.default) {
             while (isActive) {
                 delay(HEARTBEAT_INTERVAL_MS)
-                runtime.state.value = ConnectionState.Syncing(
-                    session = session,
-                    status = status,
-                    lastHeartbeatAtMillis = System.currentTimeMillis()
-                )
+                if (bleGateway.isReachable()) {
+                    runtime.state.value = ConnectionState.Syncing(
+                        session = session,
+                        status = status,
+                        lastHeartbeatAtMillis = System.currentTimeMillis()
+                    )
+                } else {
+                    ConnectivityLogger.w("💔 Heartbeat: badge unreachable, transitioning to Disconnected")
+                    badgeStateMonitor.onBleDisconnected()
+                    runtime.state.value = ConnectionState.Disconnected
+                    reconnectSupport?.scheduleAutoReconnectIfNeeded()
+                    return@launch
+                }
             }
         }
     }

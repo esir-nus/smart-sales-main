@@ -113,6 +113,7 @@ class DefaultDeviceConnectionManager @Inject constructor(
     override val audioRecordingReadyEvents: SharedFlow<String> = runtime.audioRecordingReadyEvents.asSharedFlow()
 
     init {
+        connectionSupport.reconnectSupport = reconnectSupport
         connectionSupport.restoreSession()
         // 监听意外 GATT 断开，清理心跳并触发自动重连
         scope.launch(dispatchers.io) {

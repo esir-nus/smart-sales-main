@@ -645,6 +645,53 @@ class DefaultDeviceConnectionManagerIngressTest {
         assertEquals(1, monitor.queryFailureCount)
     }
 
+    @Test
+    fun `heartbeat detects unreachable badge and transitions to Disconnected`() = runTest {
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val monitor = FakeBadgeStateMonitor()
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("MstRobot", "secret")
+            )
+        }
+        val manager = newManager(
+            gateway = gateway,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            monitor = monitor,
+            phoneWifiProvider = FakePhoneWifiProvider("MstRobot"),
+            networkResult = Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "192.168.0.9",
+                    deviceWifiName = "MstRobot",
+                    phoneWifiName = "MstRobot",
+                    rawResponse = "IP#192.168.0.9, SD#MstRobot"
+                )
+            )
+        )
+
+        val state = manager.reconnectAndWait()
+        advanceUntilIdle()
+        assertTrue(state is ConnectionState.WifiProvisioned)
+
+        gateway.reachable = false
+        advanceUntilIdle()
+
+        assertTrue(manager.state.value is ConnectionState.Disconnected)
+    }
+
+    @Test
+    fun `backoff intervals follow updated schedule`() {
+        assertEquals(0L, requiredIntervalFor(0))
+        assertEquals(5_000L, requiredIntervalFor(1))
+        assertEquals(10_000L, requiredIntervalFor(2))
+        assertEquals(30_000L, requiredIntervalFor(3))
+        assertEquals(60_000L, requiredIntervalFor(4))
+        assertEquals(60_000L, requiredIntervalFor(10))
+    }
+
     private fun newManager(
         gateway: FakeGattSessionLifecycle,
         scope: CoroutineScope,
@@ -681,7 +728,8 @@ class DefaultDeviceConnectionManagerIngressTest {
     }
 
     private class FakeGattSessionLifecycle(
-        private val connectResult: Result<Unit>
+        private val connectResult: Result<Unit>,
+        var reachable: Boolean = true
     ) : GattSessionLifecycle {
         private val notifications = MutableSharedFlow<BadgeNotification>(
             replay = 1,
@@ -695,6 +743,8 @@ class DefaultDeviceConnectionManagerIngressTest {
         override fun listenForBadgeNotifications(): Flow<BadgeNotification> = notifications
 
         override fun unexpectedDisconnects(): Flow<Unit> = kotlinx.coroutines.flow.emptyFlow()
+
+        override suspend fun isReachable(): Boolean = reachable
 
         suspend fun emit(notification: BadgeNotification) {
             notifications.emit(notification)

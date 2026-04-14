@@ -14,4 +14,5 @@ interface GattSessionLifecycle {
 
     /** 当持久 GATT 会话意外断开时触发（僵尸会话清理后）。 */
     fun unexpectedDisconnects(): Flow<Unit>
+    suspend fun isReachable(): Boolean
 }

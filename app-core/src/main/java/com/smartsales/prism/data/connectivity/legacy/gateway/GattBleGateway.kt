@@ -52,6 +52,10 @@ class GattBleGateway @Inject constructor(
         return runtime.unexpectedDisconnects
     }
 
+    override suspend fun isReachable(): Boolean {
+        return sessionSupport.isReachable()
+    }
+
     override suspend fun provision(
         session: BleSession,
         credentials: WifiCredentials

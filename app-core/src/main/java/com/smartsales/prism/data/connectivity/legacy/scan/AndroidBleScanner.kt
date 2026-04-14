@@ -76,6 +76,11 @@ class AndroidBleScanner @Inject constructor(
             _isScanning.value = false
             return
         }
+        if (!hasScanPermissions()) {
+            Log.w("BT311Scan", "Missing scan permissions (BLUETOOTH_SCAN or ACCESS_FINE_LOCATION)")
+            _isScanning.value = false
+            return
+        }
         _devices.value = emptyList()
         _isScanning.value = true
         debugLoggedCount = 0
@@ -147,6 +152,15 @@ class AndroidBleScanner @Inject constructor(
             appContext,
             android.Manifest.permission.BLUETOOTH_CONNECT
         ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun hasScanPermissions(): Boolean {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            if (ContextCompat.checkSelfPermission(appContext, android.Manifest.permission.BLUETOOTH_SCAN)
+                != PackageManager.PERMISSION_GRANTED) return false
+        }
+        return ContextCompat.checkSelfPermission(appContext, android.Manifest.permission.ACCESS_FINE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED
     }
 
     private fun parseAdvertisedUuids(payload: ByteArray): List<java.util.UUID> {

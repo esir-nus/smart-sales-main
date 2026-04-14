@@ -179,6 +179,15 @@ internal fun RuntimeShell(
                 shellState.activeConnectivitySurface != null
     }
 
+    // 自动重连：当 shell 启动或连接状态回到 DISCONNECTED 时，调度退避重连
+    LaunchedEffect(connectivityViewModel) {
+        connectivityViewModel.connectionState.collect { state ->
+            if (state == com.smartsales.prism.ui.components.connectivity.ConnectionState.DISCONNECTED) {
+                connectivityViewModel.scheduleAutoReconnect()
+            }
+        }
+    }
+
 
     LaunchedEffect(audioEntries, trackedPendingAudioIds.keys.toSet()) {
         val completedAudioIds = mutableListOf<String>()

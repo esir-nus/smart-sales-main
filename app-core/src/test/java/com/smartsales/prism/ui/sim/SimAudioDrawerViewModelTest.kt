@@ -131,7 +131,7 @@ class SimAudioDrawerViewModelTest {
                 source = DomainAudioSource.SMARTBADGE,
                 status = TranscriptionStatus.PENDING
             ),
-            hasConfirmedBadgeDeleteThisSession = false
+            hasOptedOutBadgeDeleteWarning = false
         )
 
         assertEquals(
@@ -153,7 +153,7 @@ class SimAudioDrawerViewModelTest {
                 source = DomainAudioSource.PHONE,
                 status = TranscriptionStatus.PENDING
             ),
-            hasConfirmedBadgeDeleteThisSession = false
+            hasOptedOutBadgeDeleteWarning = false
         )
 
         assertEquals(
@@ -166,7 +166,7 @@ class SimAudioDrawerViewModelTest {
     }
 
     @Test
-    fun `resolveSimBadgeDeleteConfirmationRequest skips confirmation after session approval or for plain phone audio`() {
+    fun `resolveSimBadgeDeleteConfirmationRequest skips confirmation after opt-out or for plain phone audio`() {
         assertEquals(
             null,
             resolveSimBadgeDeleteConfirmationRequest(
@@ -177,7 +177,7 @@ class SimAudioDrawerViewModelTest {
                     source = DomainAudioSource.SMARTBADGE,
                     status = TranscriptionStatus.PENDING
                 ),
-                hasConfirmedBadgeDeleteThisSession = true
+                hasOptedOutBadgeDeleteWarning = true
             )
         )
         assertEquals(
@@ -190,7 +190,7 @@ class SimAudioDrawerViewModelTest {
                     source = DomainAudioSource.PHONE,
                     status = TranscriptionStatus.PENDING
                 ),
-                hasConfirmedBadgeDeleteThisSession = false
+                hasOptedOutBadgeDeleteWarning = false
             )
         )
     }

@@ -1,5 +1,6 @@
 package com.smartsales.prism.ui.sim
 
+import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
@@ -23,6 +24,7 @@ import com.smartsales.prism.ui.drawers.AudioItemState
 import com.smartsales.prism.ui.drawers.AudioSource
 import com.smartsales.prism.ui.drawers.AudioStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.Instant
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -48,12 +50,19 @@ data class SimAudioEntry(
 )
 
 private const val SIM_AUDIO_DRAWER_SYNC_LOG_TAG = "AudioPipeline"
+private const val BADGE_DELETE_PREFS_NAME = "sim_audio_badge_delete"
+private const val KEY_OPTED_OUT_BADGE_DELETE_WARNING = "opted_out_badge_delete_warning"
 
 @HiltViewModel
 class SimAudioDrawerViewModel @Inject constructor(
     private val repository: SimAudioRepository,
-    connectivityBridge: ConnectivityBridge
+    connectivityBridge: ConnectivityBridge,
+    @ApplicationContext private val appContext: Context
 ) : ViewModel() {
+
+    private val deletePrefs by lazy {
+        appContext.getSharedPreferences(BADGE_DELETE_PREFS_NAME, Context.MODE_PRIVATE)
+    }
 
     private val _uiEvents = MutableSharedFlow<String>()
     val uiEvents: SharedFlow<String> = _uiEvents.asSharedFlow()
@@ -117,13 +126,14 @@ class SimAudioDrawerViewModel @Inject constructor(
 
     fun deleteAudio(audioId: String) {
         val audio = repository.getAudio(audioId) ?: return
+        val optedOut = deletePrefs.getBoolean(KEY_OPTED_OUT_BADGE_DELETE_WARNING, false)
         val confirmationRequest = resolveSimBadgeDeleteConfirmationRequest(
             audio = audio,
-            hasConfirmedBadgeDeleteThisSession = hasConfirmedBadgeDeleteThisSession
+            hasOptedOutBadgeDeleteWarning = optedOut
         )
         Log.d(
             SIM_AUDIO_DRAWER_SYNC_LOG_TAG,
-            "SIM badge delete gate audioId=${audio.id} filename=${audio.filename} source=${audio.source.name} badgeOrigin=${isBadgeOriginAudio(audio)} sessionConfirmed=$hasConfirmedBadgeDeleteThisSession showDialog=${confirmationRequest != null}"
+            "SIM badge delete gate audioId=${audio.id} filename=${audio.filename} source=${audio.source.name} badgeOrigin=${isBadgeOriginAudio(audio)} optedOut=$optedOut showDialog=${confirmationRequest != null}"
         )
         if (confirmationRequest != null) {
             _pendingBadgeDeleteConfirmation.value = confirmationRequest
@@ -132,19 +142,16 @@ class SimAudioDrawerViewModel @Inject constructor(
         deleteAudioConfirmed(audioId)
     }
 
-    fun confirmBadgeDelete() {
+    fun confirmBadgeDelete(optOutWarning: Boolean) {
         val pending = _pendingBadgeDeleteConfirmation.value ?: return
-        hasConfirmedBadgeDeleteThisSession = true
+        if (optOutWarning) {
+            deletePrefs.edit().putBoolean(KEY_OPTED_OUT_BADGE_DELETE_WARNING, true).apply()
+        }
         _pendingBadgeDeleteConfirmation.value = null
         deleteAudioConfirmed(pending.audioId)
     }
 
     fun dismissBadgeDeleteConfirmation() {
-        _pendingBadgeDeleteConfirmation.value = null
-    }
-
-    fun resetDeleteConfirmationSession() {
-        hasConfirmedBadgeDeleteThisSession = false
         _pendingBadgeDeleteConfirmation.value = null
     }
 
@@ -392,11 +399,11 @@ internal data class SimBadgeDeleteConfirmationRequest(
 
 internal fun resolveSimBadgeDeleteConfirmationRequest(
     audio: AudioFile?,
-    hasConfirmedBadgeDeleteThisSession: Boolean
+    hasOptedOutBadgeDeleteWarning: Boolean
 ): SimBadgeDeleteConfirmationRequest? {
     if (audio == null) return null
     if (!isBadgeOriginAudio(audio)) return null
-    if (hasConfirmedBadgeDeleteThisSession) return null
+    if (hasOptedOutBadgeDeleteWarning) return null
     return SimBadgeDeleteConfirmationRequest(
         audioId = audio.id,
         filename = audio.filename

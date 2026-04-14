@@ -19,7 +19,7 @@ class SimAudioDrawerStructureTest {
         assertTrue(host.contains("SimAudioDrawerContent("))
         assertTrue(host.contains("connectionState = connectionState"))
         assertTrue(host.contains("syncFeedback = syncFeedback.value"))
-        assertTrue(host.contains("viewModel.resetDeleteConfirmationSession()"))
+        assertTrue(host.contains("viewModel.confirmBadgeDelete("))
 
         assertFalse(host.contains("private fun SimDrawerHeaderAction("))
         assertFalse(host.contains("private fun SimTestImportButton("))

@@ -13,17 +13,24 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -32,6 +39,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.smartsales.prism.ui.components.PrismSurface
 import com.smartsales.prism.ui.components.connectivity.ConnectionState
@@ -42,6 +50,7 @@ import kotlinx.coroutines.launch
 internal const val SIM_AUDIO_BADGE_DELETE_DIALOG_TEST_TAG = "sim_audio_badge_delete_dialog"
 internal const val SIM_AUDIO_BADGE_DELETE_CONFIRM_TEST_TAG = "sim_audio_badge_delete_confirm"
 internal const val SIM_AUDIO_BADGE_DELETE_DISMISS_TEST_TAG = "sim_audio_badge_delete_dismiss"
+internal const val SIM_AUDIO_BADGE_DELETE_OPT_OUT_TEST_TAG = "sim_audio_badge_delete_opt_out"
 
 @Composable
 fun SimAudioDrawer(
@@ -84,7 +93,6 @@ fun SimAudioDrawer(
     LaunchedEffect(isOpen) {
         if (!isOpen) {
             viewModel.resetExpandedCards()
-            viewModel.resetDeleteConfirmationSession()
         }
     }
 
@@ -182,19 +190,37 @@ fun SimAudioDrawer(
     }
 
     pendingBadgeDeleteConfirmation.value?.let { pendingDelete ->
+        var optOutChecked by remember { mutableStateOf(false) }
         AlertDialog(
             modifier = Modifier.testTag(SIM_AUDIO_BADGE_DELETE_DIALOG_TEST_TAG),
             onDismissRequest = viewModel::dismissBadgeDeleteConfirmation,
             title = { Text("删除徽章录音") },
             text = {
-                Text(
-                    "“${pendingDelete.filename}”会从当前抽屉中删除，并同步删除徽章上的原始录音。删除后，同步不会再把它带回当前列表。"
-                )
+                Column {
+                    Text(
+                        "\u201C${pendingDelete.filename}\u201D会从当前抽屉中删除，并同步删除徽章上的原始录音。删除后，同步不会再把它带回当前列表。"
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.clickable { optOutChecked = !optOutChecked }
+                    ) {
+                        Checkbox(
+                            checked = optOutChecked,
+                            onCheckedChange = { optOutChecked = it },
+                            modifier = Modifier.testTag(SIM_AUDIO_BADGE_DELETE_OPT_OUT_TEST_TAG)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "不再提示",
+                            fontSize = 14.sp
+                        )
+                    }
+                }
             },
             confirmButton = {
                 TextButton(
                     modifier = Modifier.testTag(SIM_AUDIO_BADGE_DELETE_CONFIRM_TEST_TAG),
-                    onClick = viewModel::confirmBadgeDelete
+                    onClick = { viewModel.confirmBadgeDelete(optOutChecked) }
                 ) {
                     Text("确认删除")
                 }

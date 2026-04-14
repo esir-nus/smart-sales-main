@@ -149,7 +149,10 @@
         "docs/plans/bug-tracker.md",
         "scripts/dtq03_device_verify.sh"
       ],
-      "allowed_shared_paths": [],
+      "allowed_shared_paths": [
+        "handoffs/oem_permission_diagnosis.md",
+        "data/connectivity/src/**"
+      ],
       "handoff_path": "handoffs/oem_permission_diagnosis.md",
       "tracker_refs": [
         "docs/plans/dirty-tree-quarantine.md",

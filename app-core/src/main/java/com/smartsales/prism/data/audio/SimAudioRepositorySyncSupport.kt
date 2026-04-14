@@ -507,6 +507,11 @@ internal class SimAudioRepositorySyncSupport(
                     }
                 }
             } catch (cancelled: CancellationException) {
+                storeSupport.markBadgeDownloadAvailability(
+                    filename = nextFilename,
+                    availability = AudioLocalAvailability.FAILED,
+                    errorMessage = "下载被中断，请重试同步"
+                )
                 Log.d(
                     SIM_AUDIO_SYNC_LOG_TAG,
                     "SIM badge sync background download canceled filename=$nextFilename"

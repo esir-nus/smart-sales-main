@@ -93,6 +93,9 @@ data class DynamicIslandItem(
             else -> false
         }
 
+    val usesBreathing: Boolean
+        get() = visualState == DynamicIslandVisualState.CONNECTIVITY_RECONNECTING
+
     val stableKey: String
         get() = buildString {
             append(sessionTitle)
@@ -238,7 +241,10 @@ private fun DynamicIslandItem.resolveChroma(): DynamicIslandChroma {
             dot = Color.White.copy(alpha = 0.30f),
             textGradient = listOf(Color(0xFFA0A0A5), DynamicIslandDisconnectedColor)
         )
-        DynamicIslandVisualState.CONNECTIVITY_RECONNECTING,
+        DynamicIslandVisualState.CONNECTIVITY_RECONNECTING -> DynamicIslandChroma(
+            dot = DynamicIslandConnectedColor,
+            textGradient = listOf(Color(0xFF86EFAC), DynamicIslandConnectedColor)
+        )
         DynamicIslandVisualState.CONNECTIVITY_NEEDS_SETUP -> DynamicIslandChroma(
             dot = DynamicIslandReconnectColor,
             textGradient = listOf(Color(0xFFFFD380), DynamicIslandReconnectColor)

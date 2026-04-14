@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -766,6 +767,15 @@ private fun SimHomeHeroDynamicIsland(
         ),
         label = "sim_home_hero_island_pulse_alpha"
     )
+    val breathe by rememberInfiniteTransition(label = "sim_home_hero_island_breathe").animateFloat(
+        initialValue = 0.35f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2800, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "sim_home_hero_island_breathe_alpha"
+    )
 
     SimVerticalDragTrigger(
         modifier = Modifier
@@ -792,12 +802,22 @@ private fun SimHomeHeroDynamicIsland(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Canvas(modifier = Modifier.size(SimHomeHeroTokens.IslandDotCanvasSize)) {
+                val outerAlpha = when {
+                    currentItem.usesBreathing -> 0.22f * breathe
+                    currentItem.usesPulse -> 0.32f * pulse
+                    else -> 0.18f
+                }
+                val innerAlpha = when {
+                    currentItem.usesBreathing -> breathe
+                    currentItem.usesPulse -> pulse
+                    else -> 1f
+                }
                 drawCircle(
-                    color = chroma.dot.copy(alpha = if (currentItem.usesPulse) 0.32f * pulse else 0.18f),
+                    color = chroma.dot.copy(alpha = outerAlpha),
                     radius = size.minDimension * 0.5f
                 )
                 drawCircle(
-                    color = chroma.dot.copy(alpha = if (currentItem.usesPulse) pulse else 1f),
+                    color = chroma.dot.copy(alpha = innerAlpha),
                     radius = size.minDimension * 0.30f
                 )
             }
@@ -886,7 +906,10 @@ private data class SimHomeHeroIslandChroma(
                     dot = Color.White.copy(alpha = 0.30f),
                     textGradient = listOf(Color(0xFFA0A0A5), Color(0xFF86868B))
                 )
-                DynamicIslandVisualState.CONNECTIVITY_RECONNECTING,
+                DynamicIslandVisualState.CONNECTIVITY_RECONNECTING -> SimHomeHeroIslandChroma(
+                    dot = Color(0xFF34C759),
+                    textGradient = listOf(Color(0xFF86EFAC), Color(0xFF34C759))
+                )
                 DynamicIslandVisualState.CONNECTIVITY_NEEDS_SETUP -> SimHomeHeroIslandChroma(
                     dot = Color(0xFFFF9F0A),
                     textGradient = listOf(Color(0xFFFFD60A), Color(0xFFFF9F0A))

@@ -2,27 +2,20 @@ package com.smartsales.prism.data.connectivity.legacy
 
 import com.smartsales.core.util.DispatcherProvider
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.withTimeout
 
 internal class DeviceConnectionManagerReconnectSupport(
     private val dispatchers: DispatcherProvider,
     private val scope: CoroutineScope,
     private val runtime: DeviceConnectionManagerRuntime,
-    private val connectionSupport: DeviceConnectionManagerConnectionSupport,
-    private val hasBlePermission: () -> Boolean
+    private val connectionSupport: DeviceConnectionManagerConnectionSupport
 ) {
 
     fun scheduleAutoReconnectIfNeeded() {
         val credsReady = connectionSupport.hasStoredSession()
         if (!credsReady) {
             runtime.state.value = ConnectionState.NeedsSetup
-            return
-        }
-        if (!hasBlePermission()) {
-            ConnectivityLogger.w("🔄 Auto-reconnect skipped: BLUETOOTH_CONNECT permission not granted")
             return
         }
         when (runtime.state.value) {
@@ -45,32 +38,17 @@ internal class DeviceConnectionManagerReconnectSupport(
             runtime.state.value = ConnectionState.NeedsSetup
             return
         }
-        if (!hasBlePermission()) {
-            ConnectivityLogger.w("🔄 Force reconnect skipped: BLUETOOTH_CONNECT permission not granted")
-            return
-        }
         launchReconnect(ignoreBackoff = true)
     }
 
     suspend fun reconnectAndWait(): ConnectionState = withContext(dispatchers.io) {
-        if (!hasBlePermission()) {
-            ConnectivityLogger.w("🔄 reconnectAndWait skipped: BLUETOOTH_CONNECT permission not granted")
-            return@withContext ConnectionState.Disconnected
-        }
         val sessionSnapshot = connectionSupport.currentSessionOrNull()
         if (sessionSnapshot == null) {
             runtime.state.value = ConnectionState.NeedsSetup
             return@withContext ConnectionState.NeedsSetup
         }
         runtime.state.value = ConnectionState.AutoReconnecting(1)
-        val outcome = try {
-            withTimeout(RECONNECT_TIMEOUT_MS) {
-                connectionSupport.connectUsingSession(sessionSnapshot)
-            }
-        } catch (_: TimeoutCancellationException) {
-            ConnectivityLogger.w("🔄 reconnectAndWait timed out after ${RECONNECT_TIMEOUT_MS}ms")
-            ConnectionState.Error(ConnectivityError.Timeout(RECONNECT_TIMEOUT_MS))
-        }
+        val outcome = connectionSupport.connectUsingSession(sessionSnapshot)
         when (outcome) {
             is ConnectionState.WifiProvisioned -> {
                 runtime.state.value = outcome
@@ -90,22 +68,14 @@ internal class DeviceConnectionManagerReconnectSupport(
         }
         val attempt = runtime.reconnectMeta.failureCount + 1
         runtime.state.value = ConnectionState.AutoReconnecting(attempt)
+        val sessionSnapshot = connectionSupport.currentSessionOrNull()
         scope.launch(dispatchers.io) {
             runtime.reconnectMeta = runtime.reconnectMeta.copy(lastAttemptMillis = System.currentTimeMillis())
-            val sessionSnapshot = connectionSupport.currentSessionOrNull()
             if (sessionSnapshot == null) {
                 runtime.state.value = ConnectionState.NeedsSetup
                 return@launch
             }
-            val outcome = try {
-                withTimeout(RECONNECT_TIMEOUT_MS) {
-                    connectionSupport.connectUsingSession(sessionSnapshot)
-                }
-            } catch (_: TimeoutCancellationException) {
-                ConnectivityLogger.w("🔄 launchReconnect timed out after ${RECONNECT_TIMEOUT_MS}ms")
-                ConnectionState.Error(ConnectivityError.Timeout(RECONNECT_TIMEOUT_MS))
-            }
-            when (outcome) {
+            when (val outcome = connectionSupport.connectUsingSession(sessionSnapshot)) {
                 is ConnectionState.WifiProvisioned -> {
                     runtime.state.value = outcome
                     connectionSupport.startHeartbeat(outcome.session, outcome.status)
@@ -139,5 +109,3 @@ internal fun requiredIntervalFor(failureCount: Int): Long = when (failureCount) 
     3 -> 30_000L
     else -> 60_000L
 }
-
-private const val RECONNECT_TIMEOUT_MS = 35_000L

@@ -4,21 +4,14 @@ import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.util.Result
 import com.smartsales.prism.data.connectivity.legacy.badge.BadgeStateMonitor
 import com.smartsales.prism.data.connectivity.legacy.gateway.GattSessionLifecycle
-import android.Manifest
-import android.content.Context
-import android.content.pm.PackageManager
-import androidx.core.content.ContextCompat
-import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.Closeable
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 
 // 文件路径: feature/connectivity/src/main/java/com/smartsales/feature/connectivity/DeviceConnectionManager.kt
 // 文件作用: 定义设备连接接口及默认实现
@@ -32,13 +25,6 @@ interface DeviceConnectionManager {
      * Emits full downloadable badge filename (e.g., "log_20260209_142605.wav")
      */
     val recordingReadyEvents: SharedFlow<String>
-
-    /**
-     * Badge 音频就绪通知流 — Badge 发送 rec#YYYYMMDD_HHMMSS 时触发
-     *
-     * Emits full downloadable badge filename (e.g., "rec_20260409_150000.wav")
-     */
-    val audioRecordingReadyEvents: SharedFlow<String>
 
     fun selectPeripheral(peripheral: BlePeripheral)
     suspend fun startPairing(peripheral: BlePeripheral, credentials: WifiCredentials): Result<Unit>
@@ -72,8 +58,6 @@ class DefaultDeviceConnectionManager @Inject constructor(
     private val badgeStateMonitor: BadgeStateMonitor,
     private val sessionStore: SessionStore,
     private val phoneWifiProvider: PhoneWifiProvider,
-    @ApplicationContext private val context: Context,
-    private val httpClient: BadgeHttpClient,
     @ConnectivityScope private val scope: CoroutineScope
 ) : DeviceConnectionManager, Closeable {
 
@@ -93,38 +77,21 @@ class DefaultDeviceConnectionManager @Inject constructor(
         phoneWifiProvider = phoneWifiProvider,
         scope = scope,
         runtime = runtime,
-        ingressSupport = ingressSupport,
-        httpClient = httpClient
+        ingressSupport = ingressSupport
     )
     private val reconnectSupport = DeviceConnectionManagerReconnectSupport(
         dispatchers = dispatchers,
         scope = scope,
         runtime = runtime,
-        connectionSupport = connectionSupport,
-        hasBlePermission = {
-            ContextCompat.checkSelfPermission(
-                context, Manifest.permission.BLUETOOTH_CONNECT
-            ) == PackageManager.PERMISSION_GRANTED
-        }
+        connectionSupport = connectionSupport
     )
 
     override val state: StateFlow<ConnectionState> = runtime.state.asStateFlow()
     override val recordingReadyEvents: SharedFlow<String> = runtime.recordingReadyEvents.asSharedFlow()
-    override val audioRecordingReadyEvents: SharedFlow<String> = runtime.audioRecordingReadyEvents.asSharedFlow()
 
     init {
         connectionSupport.reconnectSupport = reconnectSupport
         connectionSupport.restoreSession()
-        // 监听意外 GATT 断开，清理心跳并触发自动重连
-        scope.launch(dispatchers.io) {
-            bleGateway.unexpectedDisconnects().collect {
-                ConnectivityLogger.w("🔌 Unexpected GATT disconnect detected, cleaning up")
-                connectionSupport.handleUnexpectedDisconnect()
-                // 等待 Android BLE 栈稳定后尝试自动重连
-                delay(1_000L)
-                reconnectSupport.scheduleAutoReconnectIfNeeded()
-            }
-        }
     }
 
     override fun close() = connectionSupport.cancelAllJobs()

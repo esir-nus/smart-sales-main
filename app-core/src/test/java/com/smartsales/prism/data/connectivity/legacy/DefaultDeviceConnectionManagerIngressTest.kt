@@ -6,8 +6,6 @@ import com.smartsales.prism.data.connectivity.legacy.badge.FakeBadgeStateMonitor
 import com.smartsales.prism.data.connectivity.legacy.badge.BadgeState
 import com.smartsales.prism.data.connectivity.legacy.gateway.BadgeNotification
 import com.smartsales.prism.data.connectivity.legacy.gateway.GattSessionLifecycle
-import android.content.Context
-import android.content.pm.PackageManager
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineDispatcher
@@ -22,7 +20,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import org.mockito.Mockito
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class DefaultDeviceConnectionManagerIngressTest {
@@ -159,7 +156,7 @@ class DefaultDeviceConnectionManagerIngressTest {
     }
 
     @Test
-    fun `reconnectAndWait self-heals when badge comes online during confirmation window on exact phone ssid match`() = runTest {
+    fun `reconnectAndWait replays known wifi credentials when badge is offline on exact phone ssid match`() = runTest {
         val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
         val monitor = FakeBadgeStateMonitor()
         val sessionStore = InMemorySessionStore().apply {
@@ -177,7 +174,6 @@ class DefaultDeviceConnectionManagerIngressTest {
                     rawResponse = "IP#0.0.0.0, SD#N/A"
                 )
             )
-            // Self-heal window picks up the badge coming online
             stubNetworkResults += Result.Success(
                 DeviceNetworkStatus(
                     ipAddress = "192.168.0.9",
@@ -202,13 +198,13 @@ class DefaultDeviceConnectionManagerIngressTest {
 
         assertTrue(state is ConnectionState.WifiProvisioned)
         assertTrue(manager.state.value is ConnectionState.WifiProvisioned)
-        // Self-heal recovered without credential replay
-        assertEquals(0, provisioner.provisionCalls.size)
+        assertEquals(1, provisioner.provisionCalls.size)
+        assertEquals("MstRobot", provisioner.provisionCalls.single().second.ssid)
         assertEquals(BadgeState.CONNECTED, monitor.status.value.state)
     }
 
     @Test
-    fun `reconnectAndWait trusts badge IP directly when badge is online on different ssid than phone`() = runTest {
+    fun `reconnectAndWait replays known wifi credentials when badge is online on a different ssid than phone`() = runTest {
         val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
         val monitor = FakeBadgeStateMonitor()
         val sessionStore = InMemorySessionStore().apply {
@@ -226,6 +222,14 @@ class DefaultDeviceConnectionManagerIngressTest {
                     rawResponse = "IP#192.168.0.8, SD#OldWifi"
                 )
             )
+            stubNetworkResults += Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "192.168.0.9",
+                    deviceWifiName = "OfficeGuest",
+                    phoneWifiName = "",
+                    rawResponse = "IP#192.168.0.9, SD#OfficeGuest"
+                )
+            )
         }
         val manager = newManager(
             gateway = gateway,
@@ -240,10 +244,10 @@ class DefaultDeviceConnectionManagerIngressTest {
         val state = manager.reconnectAndWait()
         advanceUntilIdle()
 
-        // 徽章有可用 IP → 直接视为已连接，不触发凭据重播
         assertTrue(state is ConnectionState.WifiProvisioned)
         assertTrue(manager.state.value is ConnectionState.WifiProvisioned)
-        assertEquals(0, provisioner.provisionCalls.size)
+        assertEquals(1, provisioner.provisionCalls.size)
+        assertEquals("OfficeGuest", provisioner.provisionCalls.single().second.ssid)
         assertEquals(BadgeState.CONNECTED, monitor.status.value.state)
     }
 
@@ -332,47 +336,6 @@ class DefaultDeviceConnectionManagerIngressTest {
         val error = (state as ConnectionState.Error).error as ConnectivityError.WifiDisconnected
         assertEquals(WifiDisconnectedReason.PHONE_WIFI_SSID_UNREADABLE, error.reason)
         assertEquals(0, provisioner.provisionCalls.size)
-    }
-
-    @Test
-    fun `reconnectAndWait trusts badge IP even when phone ssid is unreadable on OEM`() = runTest {
-        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
-        val monitor = FakeBadgeStateMonitor()
-        val sessionStore = InMemorySessionStore().apply {
-            save(
-                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
-                credentials = WifiCredentials("MstRobot", "secret")
-            )
-        }
-        val manager = newManager(
-            gateway = gateway,
-            sessionStore = sessionStore,
-            scope = backgroundScope,
-            dispatcher = StandardTestDispatcher(testScheduler),
-            monitor = monitor,
-            phoneWifiProvider = FakePhoneWifiProvider(
-                snapshot = PhoneWifiSnapshot.Connected(
-                    normalizedSsid = null,
-                    rawSsid = "<unknown ssid>"
-                )
-            ),
-            networkResult = Result.Success(
-                DeviceNetworkStatus(
-                    ipAddress = "192.168.0.108",
-                    deviceWifiName = "MstRobot",
-                    phoneWifiName = "MstRobot",
-                    rawResponse = "IP#192.168.0.108, SD#MstRobot"
-                )
-            )
-        )
-
-        val state = manager.reconnectAndWait()
-        advanceUntilIdle()
-
-        // 徽章有可用 IP → 直接已连接，无需手机 SSID
-        assertTrue(state is ConnectionState.WifiProvisioned)
-        assertTrue(manager.state.value is ConnectionState.WifiProvisioned)
-        assertEquals(BadgeState.CONNECTED, monitor.status.value.state)
     }
 
     @Test
@@ -611,8 +574,7 @@ class DefaultDeviceConnectionManagerIngressTest {
         val error = (state as ConnectionState.Error).error as ConnectivityError.WifiDisconnected
         assertEquals(WifiDisconnectedReason.BADGE_WIFI_OFFLINE, error.reason)
         assertTrue(manager.state.value is ConnectionState.Disconnected)
-        // 4 attempts: escalating backoff with 4 confirmation polls
-        assertEquals(4, provisioner.networkCalls.size)
+        assertEquals(3, provisioner.networkCalls.size)
     }
 
     @Test
@@ -647,7 +609,10 @@ class DefaultDeviceConnectionManagerIngressTest {
 
     @Test
     fun `heartbeat detects unreachable badge and transitions to Disconnected`() = runTest {
-        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val gateway = FakeGattSessionLifecycle(
+            connectResult = Result.Success(Unit),
+            reachable = false
+        )
         val monitor = FakeBadgeStateMonitor()
         val sessionStore = InMemorySessionStore().apply {
             save(
@@ -674,11 +639,8 @@ class DefaultDeviceConnectionManagerIngressTest {
 
         val state = manager.reconnectAndWait()
         advanceUntilIdle()
+
         assertTrue(state is ConnectionState.WifiProvisioned)
-
-        gateway.reachable = false
-        advanceUntilIdle()
-
         assertTrue(manager.state.value is ConnectionState.Disconnected)
     }
 
@@ -717,12 +679,6 @@ class DefaultDeviceConnectionManagerIngressTest {
             badgeStateMonitor = monitor,
             sessionStore = sessionStore,
             phoneWifiProvider = phoneWifiProvider,
-            context = Mockito.mock(Context::class.java).also { ctx ->
-                Mockito.`when`(ctx.checkPermission(
-                    Mockito.anyString(), Mockito.anyInt(), Mockito.anyInt()
-                )).thenReturn(PackageManager.PERMISSION_GRANTED)
-            },
-            httpClient = FakeBadgeHttpClient(),
             scope = scope
         )
     }
@@ -736,13 +692,11 @@ class DefaultDeviceConnectionManagerIngressTest {
             extraBufferCapacity = 4
         )
 
-        override suspend fun connect(peripheralId: String, isReconnect: Boolean): Result<Unit> = connectResult
+        override suspend fun connect(peripheralId: String): Result<Unit> = connectResult
 
         override suspend fun disconnect() = Unit
 
         override fun listenForBadgeNotifications(): Flow<BadgeNotification> = notifications
-
-        override fun unexpectedDisconnects(): Flow<Unit> = kotlinx.coroutines.flow.emptyFlow()
 
         override suspend fun isReachable(): Boolean = reachable
 

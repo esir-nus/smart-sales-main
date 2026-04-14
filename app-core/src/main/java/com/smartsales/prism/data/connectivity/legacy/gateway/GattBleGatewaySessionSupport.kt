@@ -35,7 +35,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 
 private const val DEFAULT_CONNECTION_TIMEOUT_MS = 10_000L
-private const val AUTOCONNECT_TIMEOUT_MS = 30_000L
 private const val DEFAULT_OPERATION_TIMEOUT_MS = 5_000L
 private const val RSSI_TIMEOUT_MS = 3_000L
 
@@ -48,7 +47,7 @@ internal class GattBleGatewaySessionSupport(
     private val protocolSupport: GattBleGatewayProtocolSupport
 ) {
 
-    suspend fun connect(peripheralId: String, isReconnect: Boolean = false): com.smartsales.core.util.Result<Unit> = withContext(dispatchers.io) {
+    suspend fun connect(peripheralId: String): com.smartsales.core.util.Result<Unit> = withContext(dispatchers.io) {
         runtime.sessionLock.withLock {
             if (runtime.persistentSession != null) {
                 return@withContext com.smartsales.core.util.Result.Success(Unit)
@@ -75,7 +74,6 @@ internal class GattBleGatewaySessionSupport(
                             if (runtime.persistentSession?.callback === disconnectedCallback) {
                                 runtime.persistentSession = null
                                 ConnectivityLogger.w("⚠️ Unexpected GATT disconnect -> Zombie session cleared")
-                                runtime.unexpectedDisconnects.tryEmit(Unit)
                             }
                         }
                     }
@@ -86,7 +84,7 @@ internal class GattBleGatewaySessionSupport(
                     }
                 }
             )
-            val gatt = connectGattDevice(device, callback, autoConnect = isReconnect)
+            val gatt = connectGattDevice(device, callback)
                 ?: return@withContext com.smartsales.core.util.Result.Error(
                     IllegalStateException("BLE 连接失败")
                 )
@@ -217,7 +215,6 @@ internal class GattBleGatewaySessionSupport(
             val rawResponses = mutableListOf<String>()
             val maxFragments = 3
             val fragmentTimeout = 2000L
-            val receivedPrefixes = mutableSetOf<String>()
 
             repeat(maxFragments) {
                 val response = try {
@@ -235,11 +232,7 @@ internal class GattBleGatewaySessionSupport(
                 val raw = response.decodeToString().trim()
                 ConnectivityLogger.rx("NetworkResponse", response)
                 rawResponses.add(raw)
-
-                // 跟踪已收到的片段类型，当 IP 和 SD 都到齐时提前退出
-                val prefix = raw.substringBefore("#", "").uppercase()
-                if (prefix.isNotBlank()) receivedPrefixes.add(prefix)
-                if ("IP" in receivedPrefixes && "SD" in receivedPrefixes) return@repeat
+                if (raw.startsWith("IP#", ignoreCase = true)) return@repeat
             }
 
             mergeNetworkFragments(rawResponses)
@@ -398,15 +391,13 @@ internal class GattBleGatewaySessionSupport(
     @SuppressLint("MissingPermission")
     private suspend fun connectGattDevice(
         device: BluetoothDevice,
-        callback: GatewayGattCallback,
-        autoConnect: Boolean = false
+        callback: GatewayGattCallback
     ): BluetoothGatt? {
         val adapter: BluetoothAdapter = bluetoothManager.adapter ?: return null
         if (!adapter.isEnabled) return null
-        val gatt = device.connectGatt(context, autoConnect, callback, BluetoothDevice.TRANSPORT_LE)
-        val timeoutMs = if (autoConnect) AUTOCONNECT_TIMEOUT_MS else DEFAULT_CONNECTION_TIMEOUT_MS
+        val gatt = device.connectGatt(context, false, callback, BluetoothDevice.TRANSPORT_LE)
         return try {
-            withTimeout(timeoutMs) {
+            withTimeout(DEFAULT_CONNECTION_TIMEOUT_MS) {
                 callback.awaitConnection()
             }
             gatt
@@ -594,7 +585,7 @@ internal class GatewayGattCallback(
     private val writeResultChannel = Channel<UUID>(Channel.BUFFERED)
     private val readResultChannel = Channel<Pair<UUID, ByteArray>>(Channel.BUFFERED)
     private val descriptorResultChannel = Channel<UUID>(Channel.BUFFERED)
-    private val notificationChannel = Channel<Pair<UUID, ByteArray>>(capacity = 128)
+    private val notificationChannel = Channel<Pair<UUID, ByteArray>>(Channel.BUFFERED)
     private var pendingWriteUuid: UUID? = null
     private var pendingReadUuid: UUID? = null
     private var pendingDescriptorUuid: UUID? = null
@@ -655,27 +646,11 @@ internal class GatewayGattCallback(
     }
 
     override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
-        ConnectivityLogger.d("📡 GATT onConnectionStateChange status=$status newState=$newState")
-        when {
-            status == BluetoothGatt.GATT_SUCCESS && newState == BluetoothProfile.STATE_CONNECTED -> {
-                connectionReady.complete(true)
-            }
-            // GATT error (如 133) + STATE_CONNECTED = 不稳定连接，视为失败
-            status != BluetoothGatt.GATT_SUCCESS && newState == BluetoothProfile.STATE_CONNECTED -> {
-                ConnectivityLogger.w("⚠️ GATT connected with error status=$status, treating as failure")
-                connectionReady.complete(false)
-                onDisconnect(this)
-            }
-            newState == BluetoothProfile.STATE_DISCONNECTED -> {
-                ConnectivityLogger.d("📡 GATT disconnected status=$status")
-                connectionReady.complete(false)
-                onDisconnect(this)
-            }
-            else -> {
-                ConnectivityLogger.w("⚠️ GATT unexpected: status=$status newState=$newState")
-                connectionReady.complete(false)
-                onDisconnect(this)
-            }
+        if (status == BluetoothGatt.GATT_SUCCESS && newState == BluetoothProfile.STATE_CONNECTED) {
+            connectionReady.complete(true)
+        } else if (status != BluetoothGatt.GATT_SUCCESS || newState == BluetoothProfile.STATE_DISCONNECTED) {
+            connectionReady.complete(false)
+            onDisconnect(this)
         }
     }
 
@@ -690,11 +665,7 @@ internal class GatewayGattCallback(
     ) {
         val expected = pendingWriteUuid
         if (status == BluetoothGatt.GATT_SUCCESS && expected != null) {
-            writeResultChannel.trySend(expected).also { result ->
-                if (result.isFailure) {
-                    ConnectivityLogger.w("⚠️ Write result channel full, send failed for $expected")
-                }
-            }
+            writeResultChannel.trySend(expected)
         } else if (status != BluetoothGatt.GATT_SUCCESS) {
             ConnectivityLogger.w("Characteristic write failed: $status")
         }
@@ -707,11 +678,7 @@ internal class GatewayGattCallback(
     ) {
         val expected = pendingReadUuid
         if (status == BluetoothGatt.GATT_SUCCESS && expected != null) {
-            readResultChannel.trySend(characteristic.uuid to (characteristic.legacyValue() ?: byteArrayOf())).also { result ->
-                if (result.isFailure) {
-                    ConnectivityLogger.w("⚠️ Read result channel full, send failed for $expected")
-                }
-            }
+            readResultChannel.trySend(characteristic.uuid to (characteristic.legacyValue() ?: byteArrayOf()))
         } else if (status != BluetoothGatt.GATT_SUCCESS) {
             ConnectivityLogger.w("Characteristic read failed: $status")
         }
@@ -724,11 +691,7 @@ internal class GatewayGattCallback(
     ) {
         val expected = pendingDescriptorUuid
         if (status == BluetoothGatt.GATT_SUCCESS && expected != null) {
-            descriptorResultChannel.trySend(expected).also { result ->
-                if (result.isFailure) {
-                    ConnectivityLogger.w("⚠️ Descriptor result channel full, send failed for $expected")
-                }
-            }
+            descriptorResultChannel.trySend(expected)
         } else if (status != BluetoothGatt.GATT_SUCCESS) {
             ConnectivityLogger.w("Descriptor write failed: $status")
         }
@@ -744,11 +707,7 @@ internal class GatewayGattCallback(
     ) {
         val value = characteristic.legacyValue() ?: byteArrayOf()
         ConnectivityLogger.rx("Notification", value)
-        notificationChannel.trySend(characteristic.uuid to value).also { result ->
-            if (result.isFailure) {
-                ConnectivityLogger.w("⚠️ Notification channel full (capacity=128), dropping from ${characteristic.uuid}")
-            }
-        }
+        notificationChannel.trySend(characteristic.uuid to value)
         badgeNotifications?.let { flow ->
             when (val notification = parseBadgeNotificationPayload(value.decodeToString())) {
                 is BadgeNotification.TimeSyncRequested -> {
@@ -756,7 +715,6 @@ internal class GatewayGattCallback(
                     onTimeSync()
                 }
                 is BadgeNotification.RecordingReady -> flow.tryEmit(notification)
-                is BadgeNotification.AudioRecordingReady -> flow.tryEmit(notification)
                 is BadgeNotification.Unknown -> flow.tryEmit(notification)
                 null -> Unit
             }

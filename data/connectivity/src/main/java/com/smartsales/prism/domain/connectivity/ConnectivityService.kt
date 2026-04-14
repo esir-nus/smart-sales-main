@@ -30,6 +30,11 @@ interface ConnectivityService {
      * 更新 WiFi 配置
      */
     suspend fun updateWifiConfig(ssid: String, password: String): WifiConfigResult
+
+    /**
+     * 调度自动重连 — 非阻塞，尊重退避策略
+     */
+    fun scheduleAutoReconnect()
 }
 
 /**

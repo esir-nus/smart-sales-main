@@ -443,8 +443,23 @@ internal class SimAudioRepositorySyncSupport(
             )
 
             try {
+                var lastProgressUpdateMs = 0L
+                val onProgress: (Long, Long) -> Unit = { bytesRead, totalBytes ->
+                    val now = System.currentTimeMillis()
+                    if (now - lastProgressUpdateMs >= 200L || bytesRead == totalBytes) {
+                        lastProgressUpdateMs = now
+                        storeSupport.updateBadgeDownloadProgress(
+                            filename = nextFilename,
+                            downloadProgress = (bytesRead.toFloat() / totalBytes).coerceIn(0f, 1f),
+                            downloadedBytes = bytesRead,
+                            downloadTotalBytes = totalBytes
+                        )
+                    }
+                }
                 val downloadResult = coroutineScope {
-                    val activeDownload = async { runtime.connectivityBridge.downloadRecording(nextFilename) }
+                    val activeDownload = async {
+                        runtime.connectivityBridge.downloadRecording(nextFilename, onProgress)
+                    }
                     runtime.activeBadgeDownloadFilename = nextFilename
                     runtime.activeBadgeDownloadJob = activeDownload
                     activeDownload.await()

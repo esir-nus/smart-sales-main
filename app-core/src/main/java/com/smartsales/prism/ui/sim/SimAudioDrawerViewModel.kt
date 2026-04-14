@@ -44,7 +44,10 @@ data class SimAudioEntry(
     val localAvailability: AudioLocalAvailability = AudioLocalAvailability.READY,
     val failureMessage: String? = null,
     val isTestImport: Boolean = false,
-    val isBuiltInSeed: Boolean = false
+    val isBuiltInSeed: Boolean = false,
+    val downloadProgress: Float = 0f,
+    val downloadedBytes: Long = 0L,
+    val downloadTotalBytes: Long = 0L
 )
 
 private const val SIM_AUDIO_DRAWER_SYNC_LOG_TAG = "AudioPipeline"
@@ -310,7 +313,10 @@ class SimAudioDrawerViewModel @Inject constructor(
             localAvailability = localAvailability,
             failureMessage = lastErrorMessage,
             isTestImport = isTestImport,
-            isBuiltInSeed = id == SIM_AUDIO_DEMO_SEED_ID
+            isBuiltInSeed = id == SIM_AUDIO_DEMO_SEED_ID,
+            downloadProgress = downloadProgress,
+            downloadedBytes = downloadedBytes,
+            downloadTotalBytes = downloadTotalBytes
         )
     }
 

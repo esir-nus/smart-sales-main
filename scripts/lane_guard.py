@@ -253,6 +253,9 @@ def validate_paths_for_lane(registry: dict, lane: dict, paths: Sequence[str], ad
 
         owned_patterns = list(lane.get("owned_paths", [])) + list(lane.get("allowed_shared_paths", []))
         if not matches(owned_patterns, path):
+            # admin_paths are governance-owned and safe to change from any branch
+            if matches(admin_paths, path):
+                continue
             owners = [owner["lane_id"] for owner in path_owners(registry, path, include_non_reserved=False) if owner["lane_id"] != lane_id]
             if owners:
                 messages.append(

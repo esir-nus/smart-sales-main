@@ -128,8 +128,9 @@ private fun VoiceHandshakeConsultationContent(
                     interactionMode = state.micInteractionMode,
                     handshakeHint = when {
                         (state.isRecording || state.isProcessing) && state.liveTranscript.isNotBlank() -> state.liveTranscript
-                        state.isProcessing -> ""
-                        else -> "试试说：“帮我搞定这个客户”"
+                        state.isProcessing -> “”
+                        state.completedRounds == 0 -> “试试说：”帮我搞定这个客户””
+                        else -> “试试说：”客户要求的价格太低””
                     },
                     processingLabel = consultationProcessingLabel(state.processingPhase),
                     onPressStart = onPressStart,

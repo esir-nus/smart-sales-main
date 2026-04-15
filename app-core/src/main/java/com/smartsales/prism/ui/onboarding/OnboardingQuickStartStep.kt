@@ -10,7 +10,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,8 +25,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
@@ -41,22 +38,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -133,7 +126,6 @@ internal fun SchedulerQuickStartStaticStep(captureState: OnboardingQuickStartCap
 }
 
 @Composable
-@OptIn(ExperimentalFoundationApi::class)
 private fun SchedulerQuickStartContent(
     state: OnboardingQuickStartUiState,
     onContinue: () -> Unit,
@@ -145,19 +137,14 @@ private fun SchedulerQuickStartContent(
     onPressCancel: () -> Unit
 ) {
     val listState = rememberLazyListState()
-    val density = LocalDensity.current
-    val successNoteBringIntoViewRequester = remember { BringIntoViewRequester() }
-    var footerHeightPx by remember { mutableIntStateOf(0) }
-    val footerPadding = with(density) { footerHeightPx.toDp() } + 24.dp
     val previewRevealSignal = remember(state.items) {
         state.items.map { item -> item.stableId to item.highlightToken }
     }
+    val itemCount = 2 + if (state.items.isNotEmpty()) 1 else 0
 
     LaunchedEffect(previewRevealSignal) {
         if (previewRevealSignal.isEmpty()) return@LaunchedEffect
-        withFrameNanos { }
-        withFrameNanos { }
-        successNoteBringIntoViewRequester.bringIntoView()
+        listState.animateScrollToItem(itemCount - 1)
     }
 
     LaunchedEffect(state.transientNoticeToken) {
@@ -171,7 +158,7 @@ private fun SchedulerQuickStartContent(
             state = listState,
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(18.dp),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 24.dp, bottom = footerPadding)
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 24.dp, bottom = 200.dp)
         ) {
             item {
                 TitleBlock(
@@ -194,7 +181,6 @@ private fun SchedulerQuickStartContent(
                         title = "体验已就绪",
                         modifier = Modifier
                             .testTag(ONBOARDING_QUICK_START_SUCCESS_NOTE_TEST_TAG)
-                            .bringIntoViewRequester(successNoteBringIntoViewRequester)
                     )
                 }
             }
@@ -205,8 +191,7 @@ private fun SchedulerQuickStartContent(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .navigationBarsPadding()
-                .padding(horizontal = 4.dp, vertical = 8.dp)
-                .onSizeChanged { footerHeightPx = it.height },
+                .padding(horizontal = 4.dp, vertical = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             state.errorMessage?.let {

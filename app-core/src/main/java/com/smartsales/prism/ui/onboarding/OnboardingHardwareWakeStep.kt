@@ -33,7 +33,8 @@ import androidx.compose.ui.unit.sp
 @Composable
 internal fun HardwareWakeStep(
     onContinue: () -> Unit,
-    onSkipToQuickStart: (() -> Unit)? = null
+    onSkipToQuickStart: (() -> Unit)? = null,
+    skipButtonText: String = "跳过，直接体验日程"
 ) {
     val transition = rememberInfiniteTransition(label = "hardwareWake")
     val glow by transition.animateFloat(
@@ -87,7 +88,7 @@ internal fun HardwareWakeStep(
         onSkipToQuickStart?.let {
             Spacer(Modifier.height(10.dp))
             QuietGhostButton(
-                text = "跳过，直接体验日程",
+                text = skipButtonText,
                 onClick = it,
                 modifier = Modifier.fillMaxWidth()
             )

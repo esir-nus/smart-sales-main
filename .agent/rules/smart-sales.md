@@ -17,9 +17,7 @@ trigger: always_on
 | [docs/specs/Architecture.md](file:///home/cslh-frank/main_app/docs/specs/Architecture.md) | **Architecture Reference** ⚠️ READ ONLY WITH FRANK'S EXPLICIT APPROVAL |
 | [docs/specs/prism-ui-ux-contract.md](file:///home/cslh-frank/main_app/docs/specs/prism-ui-ux-contract.md) | **UX SOT** — Layouts, Gestures, Component Registry |
 | [docs/plans/tracker.md](file:///home/cslh-frank/main_app/docs/plans/tracker.md) | **Living tracker** — architecture status, milestones |
-| [docs/plans/dirty-tree-quarantine.md](file:///home/cslh-frank/main_app/docs/plans/dirty-tree-quarantine.md) | **Dirty-tree lane ledger** — human lane ownership and promotion hygiene |
-| [docs/sops/lane-worktree-governance.md](file:///home/cslh-frank/main_app/docs/sops/lane-worktree-governance.md) | **Lane harness SOP** — start/resume/pause/integrate worktree rules |
-| [ops/lane-registry.json](file:///home/cslh-frank/main_app/ops/lane-registry.json) | **Machine lane registry** — branch/worktree/path ownership |
+| [docs/specs/platform-governance.md](file:///home/cslh-frank/main_app/docs/specs/platform-governance.md) | **Platform governance** — branch model, platform ownership |
 | [docs/reference/legacy-to-prism-dictionary.md](file:///home/cslh-frank/main_app/docs/reference/legacy-to-prism-dictionary.md) | **Reference dictionary** — legacy→Prism mapping, working code refs |
 
 **Hierarchy**: Cerb docs (`docs/cerb/*/spec.md`) > prism-ui-ux-contract.md > code
@@ -27,8 +25,8 @@ trigger: always_on
 **Legacy Lookup**: When encountering M1/M2/M3, MetaHub, or Lattice terms → consult dictionary
 **⚠️ Dictionary is micro-functional reference only** — NOT architecture guidance. Rewrite from Cerb spec, don't copy legacy.
 **Alignment Audit**: `/cerb-check` workflow
-**Lane Harness Rule**: If work touches dirty-tree ownership, handoffs, or branch/worktree posture, read `docs/plans/dirty-tree-quarantine.md`, `docs/sops/lane-worktree-governance.md`, and `ops/lane-registry.json` before editing.
-**Multi-Agent Collaboration**: Codex, Antigravity, and Claude may all be valid operators on this repo. Shared lane harness files are cooperative control-plane state, not runtime conflicts.
+**Branch Model**: `master` (protected, PR-only) <- `develop` (daily work) <- `platform/harmony` (HarmonyOS). Feature branches off `develop`, PR back.
+**Multi-Agent Collaboration**: Codex, Antigravity, and Claude may all be valid operators on this repo. Claude plans/codes/analyzes; Codex commits/pushes/creates PRs.
 
 ---
 

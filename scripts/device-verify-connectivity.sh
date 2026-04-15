@@ -18,18 +18,18 @@ fi
 
 print_help() {
     cat <<'EOF'
-Usage: scripts/dtq03_device_verify.sh [all|connectivity|oem|snapshot] [serial]
+Usage: scripts/device-verify-connectivity.sh [all|connectivity|oem|snapshot] [serial]
 
 Modes:
-  all           Print DTQ-03 repro checklist, dump device/package snapshot, then stream focused logcat
+  all           Print connectivity/OEM repro checklist, dump device/package snapshot, then stream focused logcat
   connectivity  Print connectivity-specific repro checklist, dump snapshot, then stream focused logcat
   oem           Print OEM reminder-specific repro checklist, dump snapshot, then stream focused logcat
   snapshot      Dump device/package snapshot only
 
 Examples:
-  scripts/dtq03_device_verify.sh
-  scripts/dtq03_device_verify.sh connectivity
-  scripts/dtq03_device_verify.sh all emulator-5554
+  scripts/device-verify-connectivity.sh
+  scripts/device-verify-connectivity.sh connectivity
+  scripts/device-verify-connectivity.sh all emulator-5554
 EOF
 }
 
@@ -42,14 +42,14 @@ require_device() {
     local device_count
     device_count="$("${ADB[@]}" devices | awk 'NR>1 && $2=="device" {count++} END {print count+0}')"
     if [[ "$device_count" -eq 0 ]]; then
-        echo "No adb device attached. Connect a DTQ-03 target and rerun." >&2
+        echo "No adb device attached. Connect a target device and rerun." >&2
         exit 1
     fi
 }
 
 print_header() {
-    echo "DTQ-03 Device Verification"
-    echo "=========================="
+    echo "Device Connectivity Verification"
+    echo "================================"
     echo "Mode: $MODE"
     echo "Package: $PACKAGE_NAME"
     if [[ -n "$SERIAL" ]]; then

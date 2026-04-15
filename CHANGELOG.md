@@ -2,6 +2,13 @@
 
 ## 最近更新
 
+### 2026-04-15
+
+- **[修复] 徽章下载进度条实时更新** — 修复 RealConnectivityBridge 未透传 `onProgress` 的问题，徽章录音下载进度不再停留在 0%。
+- **[维护] develop 分支治理切换完成** — 仓库完成从 DTQ 车道系统切换到 `master` / `develop` / `platform/harmony` 分支模型，日常协作路径更清晰。
+- **[维护] 清理残留 DTQ 仓库工件** — 移除旧 handoff 目录、lane 检查脚本与过期 CI 校验，活跃仓库仅保留 `docs/archive/dtq-era/` 历史归档。
+- **[维护] 发布与更新日志工具链补齐** — 补齐 `/ship`、`/merge`、`/changelog` 协作流程，并新增 CHANGELOG 生成脚本用于导出 HTML 版本。
+
 ### 2026-04-14
 
 - **[新增] 徽章重连时的动态岛呼吸提示** — 徽章在重新连接时，动态岛会显示Chrome绿色呼吸动画，让用户清楚地看到连接恢复的过程。

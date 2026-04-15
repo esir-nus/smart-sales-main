@@ -194,6 +194,11 @@ Under the current reconnect contract, the bridge may surface this connected stat
 Normal badge HTTP work (`/list`, `/download`, `/delete`) should reuse the current runtime endpoint snapshot.
 Repeated BLE `wifi#address#ip#name` querying is not part of the normal sync path.
 
+For `/download`, `totalBytes` is derived from HTTP `Content-Length`.
+When the badge omits that header or uses chunked/unknown-length transfer, the bridge must still invoke
+`onProgress(bytesRead, totalBytes)` with `totalBytes <= 0` so downstream consumers can render
+indeterminate download progress instead of suppressing progress updates entirely.
+
 `ConnectivityService.reconnect()` may return `WifiMismatch` in either of these deterministic reconnect cases:
 
 - the phone's current Wi‑Fi SSID has no exact remembered credential to replay

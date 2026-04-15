@@ -83,9 +83,9 @@ data class AudioFile(
     val boundSessionId: String? = null,
     val activeJobId: String? = null,
     val lastErrorMessage: String? = null,
-    val downloadProgress: Float = 0f,      // 0.0 to 1.0 (WAV download from badge)
+    val downloadProgress: Float = 0f,      // 0.0 to 1.0; -1.0 means indeterminate/unknown total size
     val downloadedBytes: Long = 0L,        // bytes received so far
-    val downloadTotalBytes: Long = 0L      // total expected bytes (from Content-Length)
+    val downloadTotalBytes: Long = 0L      // total expected bytes (from Content-Length); <= 0 means unknown
 )
 ```
 
@@ -150,6 +150,7 @@ Additional inventory guarantee:
 - placeholder SmartBadge cards may exist before the local WAV exists; consumers must gate transcribe/chat-pending actions on `localAvailability == READY`
 - placeholder SmartBadge cards remain deletable and use the same badge tombstone/delete cleanup contract
 - `downloadProgress`, `downloadedBytes`, and `downloadTotalBytes` are transient in-memory-only fields updated during active WAV downloads; they are not persisted to disk and reset to zero on availability transitions (READY, FAILED, QUEUED); consumers may use them to render real-time download progress UI when `localAvailability == DOWNLOADING`
+- when the badge download response omits `Content-Length`, `downloadTotalBytes` may be `<= 0` and `downloadProgress` must be `-1f`; consumers should treat that as an indeterminate download and may show transferred bytes instead of a percentage
 
 SmartBadge delete guarantees:
 

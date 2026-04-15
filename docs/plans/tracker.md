@@ -192,7 +192,7 @@
 ## Shipped Slice: Governance Simplification — DTQ System Decommissioned
 > **Context**: The DTQ lane system (9 worktrees, 351-line JSON registry, Python lane guard, handoff contracts) repeatedly created blockers when reality outpaced the registry. Replaced with industry-standard develop + platform branch model.
 
-- **Status**: Shipped (2026-04-15). Push to origin pending (network unavailable at ship time).
+- **Status**: Shipped (2026-04-15). Remote sync completed on 2026-04-15.
 - **Scope**:
   - New branch model: `master` (protected, promotion-only) -> `develop` (Android + shared, daily work) -> `platform/harmony` (HarmonyOS)
   - All 6 active DTQ lanes merged into `develop` in stability order: DTQ-03 -> DTQ-01 -> DTQ-04 -> DTQ-05 -> DTQ-02 -> DTQ-06
@@ -208,11 +208,11 @@
   - DTQ-specific Codex/Claude skills
 - **Archived**: `docs/plans/dirty-tree-quarantine.md`, `docs/sops/lane-worktree-governance.md`, `docs/sops/tracker-governance.md`, `handoffs/` -> `docs/archive/dtq-era/`
 - **Updated**: `.github/CODEOWNERS` simplified to module-level ownership; `CLAUDE.md` rewritten for new branch model and platform philosophies
-- **Pending** (when network is restored):
-  - `git push -u origin develop`
-  - `git push -u origin platform/harmony`
-  - Set branch protection on `master` via `gh api`
-  - Delete remote `lane/DTQ-*` branches
+- **Remote Sync** (completed 2026-04-15):
+  - `develop` pushed and tracking `origin/develop`
+  - `platform/harmony` pushed and tracking `origin/platform/harmony`
+  - `master` branch protection set (PR-required, no force push, no deletion)
+  - 6 remote `lane/DTQ-*` branches deleted
 > **Context**: Direct user-requested investigation to eliminate SIM/full implementation drift by defining one canonical base runtime and treating Mono as the later architecture augmentation layer.
 
 - **Status**: Investigation package delivered on 2026-03-31; Slice 1 wrapper cleanup accepted on 2026-03-31; Slice 2 wrapper cleanup accepted on 2026-03-31; Slice 3 wrapper cleanup accepted on 2026-03-31; Slice 4 wrapper cleanup accepted on 2026-03-31; Slice 5 truth lock accepted on 2026-03-31; final root/shell unification landed on 2026-04-01

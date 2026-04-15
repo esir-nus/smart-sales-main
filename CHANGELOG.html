@@ -152,6 +152,14 @@
   <div class="date-header"><h3>2026-04-15</h3></div>
   <div class="entries">
       <div class="entry">
+        <span class="badge badge-other">维护</span>
+        <span class="entry-msg"><strong>Android CI 私有 SDK 依赖补齐</strong> — 将 NUI SDK AAR 与 DashScope 相关 Maven 元数据补入 `third_party/maven-repo`，并调整 `.gitignore` 以允许跟踪 CI 必需的私有构件。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-other">维护</span>
+        <span class="entry-msg"><strong>develop 发布前构建链路修复</strong> — 补齐 `TINGWU_BASE_URL` 默认值、移除失效的本地 AAR 引用并改回 Maven 坐标，恢复 Lint 与单元测试在 CI 上的可解析性。</span>
+      </div>
+      <div class="entry">
         <span class="badge badge-修复">修复</span>
         <span class="entry-msg"><strong>SIM 音频会话补齐上下文历史标记</strong> — 新建音频讨论会话与补挂音频记录时会正确写入 `hasAudioContextHistory`，音频上下文标识不再被隐藏。</span>
       </div>

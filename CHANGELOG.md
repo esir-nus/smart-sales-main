@@ -4,6 +4,8 @@
 
 ### 2026-04-15
 
+- **[维护] Android CI 私有 SDK 依赖补齐** — 将 NUI SDK AAR 与 DashScope 相关 Maven 元数据补入 `third_party/maven-repo`，并调整 `.gitignore` 以允许跟踪 CI 必需的私有构件。
+- **[维护] develop 发布前构建链路修复** — 补齐 `TINGWU_BASE_URL` 默认值、移除失效的本地 AAR 引用并改回 Maven 坐标，恢复 Lint 与单元测试在 CI 上的可解析性。
 - **[修复] SIM 音频会话补齐上下文历史标记** — 新建音频讨论会话与补挂音频记录时会正确写入 `hasAudioContextHistory`，音频上下文标识不再被隐藏。
 - **[修复] SIM 动态岛标题轮播恢复** — 恢复会话标题在动态岛中的高亮注入、`3s` 停留时长，以及重命名后的立即打断轮播能力。
 - **[新增] SIM 新增设备引导入口** — SIM 首次引导补充独立的新增设备入口路径，便于在已完成初始设置后继续接入新徽章。

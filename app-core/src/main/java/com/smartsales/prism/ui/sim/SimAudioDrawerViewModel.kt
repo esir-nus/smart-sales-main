@@ -1,5 +1,6 @@
 package com.smartsales.prism.ui.sim
 
+import android.content.Context
 import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
@@ -7,7 +8,6 @@ import androidx.lifecycle.viewModelScope
 import com.smartsales.prism.data.audio.isBadgeOriginAudio
 import com.smartsales.prism.data.audio.SimAudioDeleteResult
 import com.smartsales.prism.data.audio.SimAudioRepository
-import com.smartsales.prism.data.audio.SimBadgeSyncIslandEvent
 import com.smartsales.prism.data.audio.SimBadgeSyncSkippedReason
 import com.smartsales.prism.data.audio.SimBadgeSyncTrigger
 import com.smartsales.prism.data.audio.SIM_BADGE_SYNC_CONNECTIVITY_UNAVAILABLE_MESSAGE
@@ -23,8 +23,9 @@ import com.smartsales.prism.ui.drawers.AudioItemState
 import com.smartsales.prism.ui.drawers.AudioSource
 import com.smartsales.prism.ui.drawers.AudioStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
-import java.time.Instant
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
+import java.time.Instant
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -37,6 +38,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.smartsales.prism.data.audio.SimBadgeSyncIslandEvent
+import com.smartsales.prism.data.audio.SimBadgeSyncResultBranch
 
 data class SimAudioEntry(
     val item: AudioItemState,
@@ -44,7 +47,10 @@ data class SimAudioEntry(
     val localAvailability: AudioLocalAvailability = AudioLocalAvailability.READY,
     val failureMessage: String? = null,
     val isTestImport: Boolean = false,
-    val isBuiltInSeed: Boolean = false
+    val isBuiltInSeed: Boolean = false,
+    val downloadProgress: Float = 0f,
+    val downloadedBytes: Long = 0L,
+    val downloadTotalBytes: Long = 0L
 )
 
 private const val SIM_AUDIO_DRAWER_SYNC_LOG_TAG = "AudioPipeline"
@@ -52,9 +58,13 @@ private const val SIM_AUDIO_DRAWER_SYNC_LOG_TAG = "AudioPipeline"
 @HiltViewModel
 class SimAudioDrawerViewModel @Inject constructor(
     private val repository: SimAudioRepository,
-    connectivityBridge: ConnectivityBridge
+    connectivityBridge: ConnectivityBridge,
+    @ApplicationContext context: Context
 ) : ViewModel() {
 
+    private val deleteWarningPrefs = context.getSharedPreferences(
+        "sim_audio_delete_warning", Context.MODE_PRIVATE
+    )
     private val _uiEvents = MutableSharedFlow<String>()
     val uiEvents: SharedFlow<String> = _uiEvents.asSharedFlow()
     private val _deletedAudioIds = MutableSharedFlow<String>()
@@ -65,20 +75,17 @@ class SimAudioDrawerViewModel @Inject constructor(
     val isSyncing: StateFlow<Boolean> = _isSyncing
     private val _syncFeedback = MutableStateFlow<SimAudioSyncFeedback?>(null)
     internal val syncFeedback: StateFlow<SimAudioSyncFeedback?> = _syncFeedback
+    private val _lastSyncTimestamp = MutableStateFlow<Instant?>(null)
+    internal val lastSyncTimestamp: StateFlow<Instant?> = _lastSyncTimestamp
+    private val _syncIslandEvents = MutableSharedFlow<SimBadgeSyncIslandEvent>(
+        extraBufferCapacity = 4
+    )
+    internal val syncIslandEvents: SharedFlow<SimBadgeSyncIslandEvent> = _syncIslandEvents.asSharedFlow()
     private val _pendingBadgeDeleteConfirmation =
         MutableStateFlow<SimBadgeDeleteConfirmationRequest?>(null)
     internal val pendingBadgeDeleteConfirmation: StateFlow<SimBadgeDeleteConfirmationRequest?> =
         _pendingBadgeDeleteConfirmation
-    private val _lastSyncTimestamp = MutableStateFlow<Instant?>(null)
-    val lastSyncTimestamp: StateFlow<Instant?> = _lastSyncTimestamp
-    private val _syncIslandEvents = MutableSharedFlow<SimBadgeSyncIslandEvent>(
-        replay = 0,
-        extraBufferCapacity = 4
-    )
-    internal val syncIslandEvents: SharedFlow<SimBadgeSyncIslandEvent> = _syncIslandEvents.asSharedFlow()
-    private var hasConfirmedBadgeDeleteThisSession = false
     private var syncFeedbackResetJob: Job? = null
-    private var autoSyncDebounceJob: Job? = null
     private val badgeSyncAvailability: StateFlow<SimBadgeSyncAvailability> =
         connectivityBridge.managerStatus
             .map(::resolveSimBadgeSyncAvailability)
@@ -87,21 +94,6 @@ class SimAudioDrawerViewModel @Inject constructor(
                 started = SharingStarted.Eagerly,
                 initialValue = resolveSimBadgeSyncAvailability(connectivityBridge.managerStatus.value)
             )
-
-    init {
-        // 监听连接状态，非 Ready → Ready 时自动触发 /list 同步（3s 防抖）
-        viewModelScope.launch {
-            var prevAvailability = badgeSyncAvailability.value
-            badgeSyncAvailability.collect { current ->
-                val wasNotReady = prevAvailability != SimBadgeSyncAvailability.READY
-                val isNowReady = current == SimBadgeSyncAvailability.READY
-                prevAvailability = current
-                if (wasNotReady && isNowReady) {
-                    scheduleAutoSync()
-                }
-            }
-        }
-    }
 
     val entries: StateFlow<List<SimAudioEntry>> = repository.getAudioFiles()
         .map { files -> files.map { it.toSimEntry() } }
@@ -117,13 +109,14 @@ class SimAudioDrawerViewModel @Inject constructor(
 
     fun deleteAudio(audioId: String) {
         val audio = repository.getAudio(audioId) ?: return
+        val hasOptedOut = deleteWarningPrefs.getBoolean(PREF_KEY_OPTED_OUT_BADGE_DELETE_WARNING, false)
         val confirmationRequest = resolveSimBadgeDeleteConfirmationRequest(
             audio = audio,
-            hasConfirmedBadgeDeleteThisSession = hasConfirmedBadgeDeleteThisSession
+            hasOptedOutBadgeDeleteWarning = hasOptedOut
         )
         Log.d(
             SIM_AUDIO_DRAWER_SYNC_LOG_TAG,
-            "SIM badge delete gate audioId=${audio.id} filename=${audio.filename} source=${audio.source.name} badgeOrigin=${isBadgeOriginAudio(audio)} sessionConfirmed=$hasConfirmedBadgeDeleteThisSession showDialog=${confirmationRequest != null}"
+            "SIM badge delete gate audioId=${audio.id} filename=${audio.filename} source=${audio.source.name} badgeOrigin=${isBadgeOriginAudio(audio)} optedOut=$hasOptedOut showDialog=${confirmationRequest != null}"
         )
         if (confirmationRequest != null) {
             _pendingBadgeDeleteConfirmation.value = confirmationRequest
@@ -132,19 +125,16 @@ class SimAudioDrawerViewModel @Inject constructor(
         deleteAudioConfirmed(audioId)
     }
 
-    fun confirmBadgeDelete() {
+    fun confirmBadgeDelete(optOutWarning: Boolean = false) {
         val pending = _pendingBadgeDeleteConfirmation.value ?: return
-        hasConfirmedBadgeDeleteThisSession = true
+        if (optOutWarning) {
+            deleteWarningPrefs.edit().putBoolean(PREF_KEY_OPTED_OUT_BADGE_DELETE_WARNING, true).apply()
+        }
         _pendingBadgeDeleteConfirmation.value = null
         deleteAudioConfirmed(pending.audioId)
     }
 
     fun dismissBadgeDeleteConfirmation() {
-        _pendingBadgeDeleteConfirmation.value = null
-    }
-
-    fun resetDeleteConfirmationSession() {
-        hasConfirmedBadgeDeleteThisSession = false
         _pendingBadgeDeleteConfirmation.value = null
     }
 
@@ -207,21 +197,28 @@ class SimAudioDrawerViewModel @Inject constructor(
                     _isSyncing.value = true
                 }
 
+                _syncIslandEvents.tryEmit(SimBadgeSyncIslandEvent.ManualSyncStarted)
                 val outcome = if (strictPrecheckOwnedByGate) {
                     repository.syncFromBadgeAfterVerifiedReadiness(SimBadgeSyncTrigger.MANUAL)
                 } else {
                     repository.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
                 }
                 if (outcome.skippedReason != SimBadgeSyncSkippedReason.ALREADY_RUNNING) {
+                    when (outcome.resultBranch) {
+                        SimBadgeSyncResultBranch.QUEUED -> {
+                            _lastSyncTimestamp.value = Instant.now()
+                            _syncIslandEvents.tryEmit(
+                                SimBadgeSyncIslandEvent.ManualSyncComplete(outcome.queuedCount)
+                            )
+                        }
+                        SimBadgeSyncResultBranch.ALREADY_PRESENT,
+                        SimBadgeSyncResultBranch.DEVICE_EMPTY -> {
+                            _syncIslandEvents.tryEmit(SimBadgeSyncIslandEvent.AlreadyUpToDate)
+                        }
+                        null -> Unit
+                    }
                     showSyncFeedback(SimAudioSyncFeedback.SYNCED)
                     _uiEvents.emit(simBadgeSyncSuccessMessage(outcome))
-                    _lastSyncTimestamp.value = Instant.now()
-                    val islandEvent = when {
-                        outcome.queuedCount > 0 ->
-                            SimBadgeSyncIslandEvent.ManualSyncComplete(outcome.queuedCount)
-                        else -> SimBadgeSyncIslandEvent.AlreadyUpToDate
-                    }
-                    _syncIslandEvents.tryEmit(islandEvent)
                 }
             } catch (e: Exception) {
                 Log.w(
@@ -278,32 +275,6 @@ class SimAudioDrawerViewModel @Inject constructor(
 
     fun getAudio(audioId: String): AudioFile? {
         return repository.getAudio(audioId)
-    }
-
-    private fun scheduleAutoSync() {
-        autoSyncDebounceJob?.cancel()
-        autoSyncDebounceJob = viewModelScope.launch {
-            delay(3_000L)
-            if (_isSyncing.value) return@launch
-            try {
-                _syncIslandEvents.tryEmit(SimBadgeSyncIslandEvent.ManualSyncStarted)
-                val outcome = repository.syncFromBadge(SimBadgeSyncTrigger.AUTO)
-                if (outcome.skippedReason == null) {
-                    _lastSyncTimestamp.value = Instant.now()
-                    val islandEvent = when {
-                        outcome.queuedCount > 0 ->
-                            SimBadgeSyncIslandEvent.ManualSyncComplete(outcome.queuedCount)
-                        else -> SimBadgeSyncIslandEvent.AlreadyUpToDate
-                    }
-                    _syncIslandEvents.tryEmit(islandEvent)
-                }
-            } catch (e: Exception) {
-                Log.d(
-                    SIM_AUDIO_DRAWER_SYNC_LOG_TAG,
-                    "SIM auto badge sync silent failure: ${e.message}"
-                )
-            }
-        }
     }
 
     private fun deleteAudioConfirmed(audioId: String) {
@@ -365,7 +336,10 @@ class SimAudioDrawerViewModel @Inject constructor(
             localAvailability = localAvailability,
             failureMessage = lastErrorMessage,
             isTestImport = isTestImport,
-            isBuiltInSeed = id == SIM_AUDIO_DEMO_SEED_ID
+            isBuiltInSeed = id == SIM_AUDIO_DEMO_SEED_ID,
+            downloadProgress = downloadProgress,
+            downloadedBytes = downloadedBytes,
+            downloadTotalBytes = downloadTotalBytes
         )
     }
 
@@ -390,13 +364,15 @@ internal data class SimBadgeDeleteConfirmationRequest(
     val filename: String
 )
 
+private const val PREF_KEY_OPTED_OUT_BADGE_DELETE_WARNING = "opted_out_badge_delete_warning"
+
 internal fun resolveSimBadgeDeleteConfirmationRequest(
     audio: AudioFile?,
-    hasConfirmedBadgeDeleteThisSession: Boolean
+    hasOptedOutBadgeDeleteWarning: Boolean
 ): SimBadgeDeleteConfirmationRequest? {
     if (audio == null) return null
     if (!isBadgeOriginAudio(audio)) return null
-    if (hasConfirmedBadgeDeleteThisSession) return null
+    if (hasOptedOutBadgeDeleteWarning) return null
     return SimBadgeDeleteConfirmationRequest(
         audioId = audio.id,
         filename = audio.filename

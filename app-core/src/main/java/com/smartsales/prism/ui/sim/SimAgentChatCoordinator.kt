@@ -14,9 +14,7 @@ import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.domain.repository.UserProfileRepository
 import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
 import java.util.UUID
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -26,11 +24,12 @@ internal class SimAgentChatCoordinator(
     private val audioRepository: SimAudioRepository,
     private val executor: Executor,
     private val userProfileRepository: UserProfileRepository,
-    private val bridge: SimAgentUiBridge,
-    private val scope: CoroutineScope
+    private val bridge: SimAgentUiBridge
 ) {
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
+    private val pendingAutoTitleSnapshots = mutableMapOf<String, AutoTitleSnapshot>()
+    private val autoTitleRetryBudget = mutableMapOf<String, Int>()
 
     fun startSeededSession(initialUserInput: String, sendAction: () -> Unit): String? {
         if (initialUserInput.isBlank()) return null
@@ -67,6 +66,7 @@ internal class SimAgentChatCoordinator(
     ): String {
         // 优先检查：该音频是否已有绑定会话
         sessionCoordinator.existingSessionIdForAudio(audioId)?.let { existing ->
+            sessionCoordinator.markSessionHasAudioContextHistory(existing)
             sessionCoordinator.switchSession(existing)
             return existing
         }
@@ -75,7 +75,7 @@ internal class SimAgentChatCoordinator(
         val sessionId = UUID.randomUUID().toString()
         val preview = SessionPreview(
             id = sessionId,
-            clientName = title,
+            clientName = UNTITLED_AUDIO_SESSION_TITLE,
             summary = (summary ?: "音频讨论").take(6),
             timestamp = System.currentTimeMillis(),
             linkedAudioId = audioId,
@@ -91,7 +91,7 @@ internal class SimAgentChatCoordinator(
             messages = listOf(firstMessage),
             autoSelect = true,
             bindLinkedAudio = true
-        )
+        ).also { sessionCoordinator.markSessionHasAudioContextHistory(it) }
     }
 
     fun selectAudioForChat(
@@ -203,7 +203,7 @@ internal class SimAgentChatCoordinator(
                     sessionId,
                     UiState.Response(aiReply)
                 )
-                tryGenerateSessionTitle(sessionId, content, aiReply)
+                tryGenerateSessionTitle(sessionId, aiReply)
                 bridge.setIsSending(false)
                 bridge.setUiState(UiState.Idle)
             }
@@ -263,6 +263,12 @@ internal class SimAgentChatCoordinator(
                             "我暂时没能从这段录音里整理出可回答的内容，请换个问法试试。"
                         }
                     )
+                )
+                tryGenerateSessionTitle(
+                    sessionId,
+                    result.content.ifBlank {
+                        "我暂时没能从这段录音里整理出可回答的内容，请换个问法试试。"
+                    }
                 )
                 bridge.setIsSending(false)
                 bridge.setUiState(UiState.Idle)
@@ -473,54 +479,178 @@ internal class SimAgentChatCoordinator(
         }
     }
 
-    // 会话自动命名：首次成功的「通用聊天」交换后，
-    // 用一次轻量 LLM 调用生成 4-6 字中文主题标题。
-    private fun tryGenerateSessionTitle(
+    // 会话自动命名：只看首个真实助手答复；若首轮生成失败或过于泛化，仅允许下一次真实答复重试一次。
+    private suspend fun tryGenerateSessionTitle(
         sessionId: String,
-        userInput: String,
-        aiReply: String
+        latestAssistantReply: String? = null
     ) {
         val record = sessionCoordinator.getSession(sessionId) ?: return
-        if (record.preview.clientName !in UNTITLED_SESSION_NAMES) return
+        if (!shouldAutoTitle(record.preview) ||
+            record.preview.sessionKind == SessionKind.SCHEDULER_FOLLOW_UP
+        ) {
+            pendingAutoTitleSnapshots.remove(sessionId)
+            autoTitleRetryBudget.remove(sessionId)
+            return
+        }
+        val remainingAttempts = autoTitleRetryBudget[sessionId] ?: AUTO_TITLE_MAX_ATTEMPTS
+        if (remainingAttempts <= 0) {
+            return
+        }
+        val existingSnapshot = pendingAutoTitleSnapshots[sessionId]
+        val latestEligibleReply = latestAssistantReply
+            ?.trim()
+            ?.takeIf(::isEligibleAutoTitleReply)
+        val candidateReply = when {
+            existingSnapshot == null -> {
+                extractFirstEligibleAutoTitleReply(record.messages) ?: latestEligibleReply
+            }
+            remainingAttempts == AUTO_TITLE_RETRY_ATTEMPTS && latestEligibleReply != null -> {
+                latestEligibleReply
+            }
+            else -> existingSnapshot.assistantReply
+        }
+        val shouldAttempt = when {
+            candidateReply.isNullOrBlank() -> false
+            existingSnapshot == null -> true
+            remainingAttempts == AUTO_TITLE_RETRY_ATTEMPTS && latestEligibleReply != null -> true
+            else -> false
+        }
+        if (!shouldAttempt || candidateReply == null) {
+            return
+        }
+        val snapshot = AutoTitleSnapshot(candidateReply)
+        pendingAutoTitleSnapshots[sessionId] = snapshot
+        autoTitleRetryBudget.putIfAbsent(sessionId, AUTO_TITLE_MAX_ATTEMPTS)
 
-        scope.launch {
-            try {
-                val titlePrompt = buildTitlePrompt(userInput, aiReply)
-                when (val result = executor.execute(ModelRegistry.COACH, titlePrompt)) {
-                    is ExecutorResult.Success -> {
-                        val title = result.content.trim()
-                            .replace(Regex("[，。！？、；：\"\"''\\s]+"), "")
-                            .take(6)
-                        if (title.isNotBlank()) {
-                            sessionCoordinator.updateSession(sessionId) { r ->
-                                r.copy(
-                                    preview = r.preview.copy(clientName = title)
-                                )
-                            }
-                            Log.d(TAG, "Auto-titled session $sessionId: $title")
+        try {
+            autoTitleRetryBudget[sessionId] = remainingAttempts - 1
+            val titlePrompt = buildTitlePrompt(snapshot.assistantReply)
+            when (val result = executor.execute(ModelRegistry.COACH, titlePrompt)) {
+                is ExecutorResult.Success -> {
+                    val title = sanitizeGeneratedTitle(result.content)
+                    if (isValidGeneratedTitle(record.preview, title)) {
+                        sessionCoordinator.updateSession(sessionId) { r ->
+                            r.copy(
+                                preview = r.preview.copy(clientName = title)
+                            )
                         }
-                    }
-                    is ExecutorResult.Failure -> {
-                        Log.d(TAG, "Title generation failed: ${result.error}")
+                        if (sessionCoordinator.currentSessionId() == sessionId) {
+                            bridge.setSessionTitle(title)
+                        }
+                        bridge.bumpSessionTitleInterruptToken()
+                        pendingAutoTitleSnapshots.remove(sessionId)
+                        autoTitleRetryBudget.remove(sessionId)
+                        Log.d(TAG, "Auto-titled session $sessionId: $title")
+                    } else {
+                        Log.d(TAG, "Auto title rejected for session $sessionId: ${result.content}")
                     }
                 }
-            } catch (e: Exception) {
-                Log.d(TAG, "Title generation error", e)
+                is ExecutorResult.Failure -> {
+                    Log.d(TAG, "Title generation failed: ${result.error}")
+                }
             }
+        } catch (e: Exception) {
+            Log.d(TAG, "Title generation error", e)
         }
     }
 
-    private fun buildTitlePrompt(userInput: String, aiReply: String): String {
+    private fun extractFirstEligibleAutoTitleReply(messages: List<ChatMessage>): String? {
+        val firstUserTimestamp = messages
+            .filterIsInstance<ChatMessage.User>()
+            .minOfOrNull { it.timestamp }
+            ?: return null
+        return messages
+            .asSequence()
+            .mapNotNull { it as? ChatMessage.Ai }
+            .filter { it.timestamp >= firstUserTimestamp }
+            .mapNotNull { (it.uiState as? UiState.Response)?.content?.trim() }
+            .firstOrNull(::isEligibleAutoTitleReply)
+    }
+
+    private fun buildTitlePrompt(assistantReply: String): String {
         return buildString {
-            appendLine("用4-6个中文字总结以下对话的主题。只返回主题词，不要标点或解释。")
+            appendLine("请根据以下这一次助手答复，为当前会话生成一个4-6个中文字的中文标题。")
+            appendLine("标题必须抓住这次答复里的具体问题、任务、对象或讨论焦点。")
+            appendLine("不要总结助手的人设、用户职业、行业、背景或泛化领域。")
+            appendLine("如果答复主要是寒暄、泛泛自我介绍、行业/角色判断，或看不出明确主题，请只返回 NO_TITLE。")
+            appendLine("坏例子：教育行业、教育管理、销售顾问、沟通建议。")
+            appendLine("好例子：预算复盘、试点启动、客户跟进、转写问答。")
+            appendLine("只返回标题本身或 NO_TITLE，不要标点，不要解释。")
             appendLine()
-            appendLine("用户：$userInput")
-            appendLine("助手：${aiReply.take(200)}")
+            appendLine("助手答复：${assistantReply.take(AUTO_TITLE_REPLY_MAX_CHARS)}")
         }
+    }
+
+    private fun shouldAutoTitle(preview: SessionPreview): Boolean {
+        if (preview.sessionKind == SessionKind.SCHEDULER_FOLLOW_UP) return false
+        if (preview.clientName in UNTITLED_SESSION_NAMES) return true
+        
+        val cn = preview.clientName.trim()
+        if (cn.endsWith(".mp3", ignoreCase = true) || 
+            cn.endsWith(".wav", ignoreCase = true) || 
+            cn.endsWith(".m4a", ignoreCase = true)) {
+            return true
+        }
+        
+        val linkedAudioId = preview.linkedAudioId ?: return false
+        val linkedAudioFilename = audioRepository.getAudio(linkedAudioId)?.filename?.trim()
+        return !linkedAudioFilename.isNullOrEmpty() && preview.clientName.trim() == linkedAudioFilename
+    }
+
+    private fun isEligibleAutoTitleReply(content: String): Boolean {
+        val trimmed = content.trim()
+        if (trimmed.isBlank()) return false
+        if (trimmed.startsWith("已接入《") && trimmed.contains("录音上下文。")) return false
+        if (trimmed.startsWith("《") &&
+            trimmed.contains("》转写已完成") &&
+            trimmed.contains("现在可以继续围绕这段音频讨论")
+        ) {
+            return false
+        }
+        return true
+    }
+
+    private fun sanitizeGeneratedTitle(raw: String): String {
+        return raw
+            .filterNot { it.isWhitespace() || it in "，。！？、；：\"'" }
+            .take(6)
+    }
+
+    private fun isValidGeneratedTitle(preview: SessionPreview, title: String): Boolean {
+        if (title.isBlank()) return false
+        if (title == AUTO_TITLE_NO_RESULT) return false
+        if (title in UNTITLED_SESSION_NAMES) return false
+        if (title in AUTO_TITLE_BLOCKED_TITLES) return false
+        val linkedAudioId = preview.linkedAudioId
+        if (linkedAudioId != null) {
+            val audioFilename = audioRepository.getAudio(linkedAudioId)?.filename?.trim()
+            if (!audioFilename.isNullOrBlank() && title == audioFilename.take(title.length)) {
+                return false
+            }
+        }
+        return true
     }
 
     companion object {
         private const val TAG = "SimChatCoordinator"
         private val UNTITLED_SESSION_NAMES = setOf("SIM", "新对话")
+        private const val UNTITLED_AUDIO_SESSION_TITLE = "新对话"
+        private const val AUTO_TITLE_MAX_ATTEMPTS = 2
+        private const val AUTO_TITLE_RETRY_ATTEMPTS = 1
+        private const val AUTO_TITLE_REPLY_MAX_CHARS = 200
+        private const val AUTO_TITLE_NO_RESULT = "NO_TITLE"
+        private val AUTO_TITLE_BLOCKED_TITLES = setOf(
+            "教育行业",
+            "教育管理",
+            "销售顾问",
+            "销售助手",
+            "行业分析",
+            "行业建议",
+            "沟通建议"
+        )
     }
 }
+
+private data class AutoTitleSnapshot(
+    val assistantReply: String
+)

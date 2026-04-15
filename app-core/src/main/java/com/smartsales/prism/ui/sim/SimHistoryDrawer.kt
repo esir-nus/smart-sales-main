@@ -50,6 +50,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -346,13 +347,14 @@ private fun SimHistoryRow(
                 )
                 .padding(horizontal = 14.dp, vertical = 12.dp)
         ) {
-            Text(
-                text = session.clientName,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
+            SimSessionTitleLabel(
+                title = session.clientName,
+                hasAudioContextHistory = session.hasAudioContextHistory,
                 color = palette.rowTitle,
-                fontSize = 15.sp,
-                lineHeight = 18.sp,
+                style = TextStyle(
+                    fontSize = 15.sp,
+                    lineHeight = 18.sp
+                ),
                 fontWeight = if (isCurrent) FontWeight.Medium else FontWeight.Normal
             )
         }

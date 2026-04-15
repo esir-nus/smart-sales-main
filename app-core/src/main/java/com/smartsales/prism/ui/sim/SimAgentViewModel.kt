@@ -134,6 +134,13 @@ class SimAgentViewModel @Inject constructor(
     private val _sessionTitle = MutableStateFlow("SIM")
     override val sessionTitle: StateFlow<String> = _sessionTitle.asStateFlow()
 
+    private val _currentSessionHasAudioContextHistory = MutableStateFlow(false)
+    val currentSessionHasAudioContextHistory: StateFlow<Boolean> =
+        _currentSessionHasAudioContextHistory.asStateFlow()
+
+    private val _sessionTitleInterruptToken = MutableStateFlow(0)
+    val sessionTitleInterruptToken: StateFlow<Int> = _sessionTitleInterruptToken.asStateFlow()
+
     private val _heroUpcoming = MutableStateFlow<List<ScheduledTask>>(emptyList())
     override val heroUpcoming: StateFlow<List<ScheduledTask>> = _heroUpcoming.asStateFlow()
 
@@ -195,8 +202,10 @@ class SimAgentViewModel @Inject constructor(
         setSessionTitle = { _sessionTitle.value = it },
         setGroupedSessions = { _groupedSessions.value = it },
         setCurrentLinkedAudioId = { _currentLinkedAudioId.value = it },
+        setCurrentSessionHasAudioContextHistory = { _currentSessionHasAudioContextHistory.value = it },
         setCurrentSchedulerFollowUpContext = { _currentSchedulerFollowUpContext.value = it },
         setSelectedSchedulerFollowUpTaskId = { _selectedSchedulerFollowUpTaskId.value = it },
+        bumpSessionTitleInterruptToken = { _sessionTitleInterruptToken.value += 1 },
         removeArtifactTranscriptReveal = { messageIds ->
             _artifactTranscriptRevealState.value =
                 _artifactTranscriptRevealState.value - messageIds
@@ -214,8 +223,7 @@ class SimAgentViewModel @Inject constructor(
         audioRepository = audioRepository,
         executor = executor,
         userProfileRepository = userProfileRepository,
-        bridge = bridge,
-        scope = viewModelScope
+        bridge = bridge
     )
 
     private val followUpCoordinator = SimAgentFollowUpCoordinator(

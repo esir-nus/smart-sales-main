@@ -79,6 +79,13 @@ Interpret this hierarchy strictly:
 - When a `docs/core-flow/**` document exists, read it before treating specs as the final behavioral source.
 - Do not downgrade a Core Flow doc just because the codebase is behind it; instead, identify which lower layer must catch up.
 
+### Lessons-Learned Discipline
+
+- For greenfield, migration, cross-platform translation, platform-divergence, repeated-failure, or other known-risk work, read `.agent/rules/lessons-learned.md` before planning or editing.
+- If any trigger matches, or if the index is too thin for the current risk, read `docs/reference/agent-lessons-details.md` before acting.
+- Treat the lessons index as a preflight check for Codex too, not only for `.agent/workflows/**`.
+- Add new lessons only after the user confirms the problem is fixed, and keep the index concise while storing the operating detail in `docs/reference/agent-lessons-details.md`.
+
 ### Evidence Over Assumption
 
 - Verify claims with repo evidence before stating them.
@@ -134,6 +141,7 @@ The `.agent/workflows/**` layer is important project knowledge.
 - Treat those files as reusable project playbooks, not as dead Antigravity residue.
 - For Codex work, reuse the workflow logic when the task matches, even if the Antigravity slash-command wrapper does not apply directly.
 - Do not assume every workflow should become a standalone Codex skill. Some belong in repo instructions, some remain reference SOPs, and some are runtime-specific.
+- Workflows carry a `last_reviewed` frontmatter date. Workflows without a `last_reviewed` date within 6 months should be considered stale candidates for archival.
 
 High-transfer workflows for Codex-style execution include:
 - `feature-dev-planner-[tool].md`

@@ -4,15 +4,13 @@ import {
   HarmonyRuntimeConfig
 } from './HarmonyContainerConfig';
 
-type HarmonyRuntimeConfigModule = {
+interface HarmonyRuntimeConfigModule {
   harmonyRuntimeConfig?: HarmonyRuntimeConfig;
-};
+}
 
 const LOCAL_CONFIG_MODULE = './HarmonyContainerConfig.local';
 
-let runtimeConfig: HarmonyRuntimeConfig = {
-  ...emptyHarmonyRuntimeConfig
-};
+let runtimeConfig: HarmonyRuntimeConfig = cloneRuntimeConfig(emptyHarmonyRuntimeConfig);
 let loadPromise: Promise<HarmonyRuntimeConfig> | undefined = undefined;
 
 export async function ensureHarmonyRuntimeConfigLoaded(): Promise<HarmonyRuntimeConfig> {
@@ -35,11 +33,9 @@ async function loadHarmonyRuntimeConfig(): Promise<HarmonyRuntimeConfig> {
     const moduleLoader = createModuleLoader();
     const localModule = await moduleLoader(LOCAL_CONFIG_MODULE);
     runtimeConfig = sanitizeRuntimeConfig(localModule.harmonyRuntimeConfig);
-  } catch (error) {
-    console.warn(`Harmony local config unavailable, falling back to empty config: ${error}`);
-    runtimeConfig = {
-      ...emptyHarmonyRuntimeConfig
-    };
+  } catch (_error) {
+    console.warn('Harmony local config unavailable, falling back to empty config.');
+    runtimeConfig = cloneRuntimeConfig(emptyHarmonyRuntimeConfig);
   }
   return runtimeConfig;
 }
@@ -47,24 +43,20 @@ async function loadHarmonyRuntimeConfig(): Promise<HarmonyRuntimeConfig> {
 function sanitizeRuntimeConfig(
   candidate?: HarmonyRuntimeConfig
 ): HarmonyRuntimeConfig {
+  const source = candidate || emptyHarmonyRuntimeConfig;
   const nextConfig: HarmonyRuntimeConfig = {
-    ...emptyHarmonyRuntimeConfig,
-    ...(candidate || emptyHarmonyRuntimeConfig)
+    TINGWU_BASE_URL: source.TINGWU_BASE_URL.trim(),
+    TINGWU_API_KEY: source.TINGWU_API_KEY.trim(),
+    TINGWU_APP_KEY: source.TINGWU_APP_KEY.trim(),
+    TINGWU_ACCESS_KEY_ID: source.TINGWU_ACCESS_KEY_ID.trim(),
+    TINGWU_ACCESS_KEY_SECRET: source.TINGWU_ACCESS_KEY_SECRET.trim(),
+    TINGWU_SECURITY_TOKEN: source.TINGWU_SECURITY_TOKEN.trim(),
+    OSS_ACCESS_KEY_ID: source.OSS_ACCESS_KEY_ID.trim(),
+    OSS_ACCESS_KEY_SECRET: source.OSS_ACCESS_KEY_SECRET.trim(),
+    OSS_BUCKET_NAME: source.OSS_BUCKET_NAME.trim(),
+    OSS_ENDPOINT: source.OSS_ENDPOINT.trim()
   };
-
-  return {
-    ...nextConfig,
-    TINGWU_BASE_URL: nextConfig.TINGWU_BASE_URL.trim(),
-    TINGWU_API_KEY: nextConfig.TINGWU_API_KEY.trim(),
-    TINGWU_APP_KEY: nextConfig.TINGWU_APP_KEY.trim(),
-    TINGWU_ACCESS_KEY_ID: nextConfig.TINGWU_ACCESS_KEY_ID.trim(),
-    TINGWU_ACCESS_KEY_SECRET: nextConfig.TINGWU_ACCESS_KEY_SECRET.trim(),
-    TINGWU_SECURITY_TOKEN: nextConfig.TINGWU_SECURITY_TOKEN.trim(),
-    OSS_ACCESS_KEY_ID: nextConfig.OSS_ACCESS_KEY_ID.trim(),
-    OSS_ACCESS_KEY_SECRET: nextConfig.OSS_ACCESS_KEY_SECRET.trim(),
-    OSS_BUCKET_NAME: nextConfig.OSS_BUCKET_NAME.trim(),
-    OSS_ENDPOINT: nextConfig.OSS_ENDPOINT.trim()
-  };
+  return nextConfig;
 }
 
 function createModuleLoader(): (
@@ -72,5 +64,20 @@ function createModuleLoader(): (
 ) => Promise<HarmonyRuntimeConfigModule> {
   return (specifier: string) => {
     return import(specifier) as Promise<HarmonyRuntimeConfigModule>;
+  };
+}
+
+function cloneRuntimeConfig(source: HarmonyRuntimeConfig): HarmonyRuntimeConfig {
+  return {
+    TINGWU_BASE_URL: source.TINGWU_BASE_URL,
+    TINGWU_API_KEY: source.TINGWU_API_KEY,
+    TINGWU_APP_KEY: source.TINGWU_APP_KEY,
+    TINGWU_ACCESS_KEY_ID: source.TINGWU_ACCESS_KEY_ID,
+    TINGWU_ACCESS_KEY_SECRET: source.TINGWU_ACCESS_KEY_SECRET,
+    TINGWU_SECURITY_TOKEN: source.TINGWU_SECURITY_TOKEN,
+    OSS_ACCESS_KEY_ID: source.OSS_ACCESS_KEY_ID,
+    OSS_ACCESS_KEY_SECRET: source.OSS_ACCESS_KEY_SECRET,
+    OSS_BUCKET_NAME: source.OSS_BUCKET_NAME,
+    OSS_ENDPOINT: source.OSS_ENDPOINT
   };
 }

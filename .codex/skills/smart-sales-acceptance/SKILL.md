@@ -14,6 +14,7 @@ Verification must be concrete, hostile, and evidence-based.
 - Do not claim “verified manually” without concrete steps.
 - Prefer affected-module verification over a single cherry-picked test.
 - Include failure-path thinking, not only the happy path.
+- Check the lane's `evidence_class` in `ops/lane-registry.json`; reject evidence that does not match the declared class (e.g. screenshots for `contract-test` work, logs for `ui-visible` work).
 - When a corresponding `docs/core-flow/**` document exists, acceptance MUST read it first and use it as the behavioral north star.
 - A green build does not override Core Flow drift. Acceptance must explicitly judge whether the delivered result aligns with the Core Flow, not only whether tests passed.
 

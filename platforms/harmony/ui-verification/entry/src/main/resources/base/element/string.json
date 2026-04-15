@@ -1,0 +1,20 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "Harmony UI verification package"
+    },
+    {
+      "name": "entryability_desc",
+      "value": "Internal Harmony UI verification entry ability"
+    },
+    {
+      "name": "entryability_label",
+      "value": "Harmony UI Verification"
+    },
+    {
+      "name": "app_label",
+      "value": "Smart Sales Harmony UI"
+    }
+  ]
+}

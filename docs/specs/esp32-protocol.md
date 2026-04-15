@@ -24,7 +24,8 @@ Communication happens via:
 | 4 | WAV Download | ✅ Implemented | `WavDownloadCoordinator` + `BadgeHttpClient.downloadWav()` |
 | 5 | WAV Delete | ✅ Implemented | `BadgeHttpClient.deleteWav()` |
 | 6 | Time Sync | ✅ Implemented | `GattBleGateway.listenForTimeSync()` |
-| 7 | Recording End | ✅ Implemented | BLE `log#...` -> `ConnectivityBridge.recordingNotifications()` -> `BadgeAudioPipeline` |
+| 7 | Recording End (scheduler) | ✅ Implemented | BLE `log#...` -> `ConnectivityBridge.recordingNotifications()` -> `BadgeAudioPipeline` |
+| 8 | Audio Recording Ready (drawer) | ✅ Implemented | BLE `rec#...` -> `ConnectivityBridge.audioRecordingNotifications()` -> `SimBadgeAudioAutoDownloader` |
 
 ---
 
@@ -107,16 +108,16 @@ Badge sends:  tim#get
 App returns:  tim#20260112175600   (YYYYMMDDHHMMSS)
 ```
 
-### 6. Recording End Notification
+### 6. Recording End Notification (Scheduler Pipeline)
 
 > **Added**: 2026-02-05 (firmware update from hardware team)
 > **Updated**: 2026-02-08 — corrected command from `record#end` to `log#YYYYMMDD_HHMMSS`
 
-When user finishes recording on badge, ESP32 notifies app with the filename.
+When user finishes recording on badge, ESP32 notifies app with the filename. Triggers the full download + transcribe + schedule pipeline.
 
 ```
 Badge sends:  log#20260208_201345    (YYYYMMDD_HHMMSS, ESP32 local time)
-App:          (downloads /download?file=log_20260208_201345.wav)
+App:          (downloads /download?file=log_20260208_201345.wav, transcribes, schedules)
 ```
 
 **Workflow**:
@@ -126,6 +127,25 @@ App:          (downloads /download?file=log_20260208_201345.wav)
 4. User stops recording
 5. Badge sends `log#YYYYMMDD_HHMMSS` (ESP32 local time)
 6. App downloads WAV via HTTP `/download?file=log_YYYYMMDD_HHMMSS.wav` (app learns filename from `log#` command)
+
+### 7. Audio Recording Ready Notification (Drawer Pipeline)
+
+> **Added**: 2026-04-09
+
+When user finishes recording on badge and the file is ready for download, ESP32 notifies app with a `rec#` command. This triggers audio-only download into the drawer — no transcription or scheduling.
+
+```
+Badge sends:  rec#20260409_150000    (YYYYMMDD_HHMMSS, ESP32 local time)
+App:          (downloads /download?file=rec_20260409_150000.wav, stores in audio drawer)
+```
+
+**Differences from `log#`**:
+- `log#` → full scheduler pipeline (download + transcribe + schedule)
+- `rec#` → audio-only pipeline (download + drawer placeholder, no transcribe/schedule)
+- Both share the same `ConnectivityBridge.downloadRecording()` HTTP transport
+- `/list` fallback on reconnection covers files recorded while app was disconnected
+
+**Filename convention**: `rec#YYYYMMDD_HHMMSS` → file stored as `rec_YYYYMMDD_HHMMSS.wav`
 
 ---
 

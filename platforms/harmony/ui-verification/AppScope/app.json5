@@ -1,0 +1,10 @@
+{
+  "app": {
+    "bundleName": "smartsales.HOS.ui",
+    "label": "$string:app_label",
+    "icon": "$media:app_icon",
+    "vendor": "smartsales",
+    "versionCode": 1,
+    "versionName": "0.1.0"
+  }
+}

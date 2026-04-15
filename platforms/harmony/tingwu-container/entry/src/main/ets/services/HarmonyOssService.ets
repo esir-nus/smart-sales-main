@@ -12,6 +12,12 @@ export interface HarmonyOssUploadResult {
   publicUrl: string;
 }
 
+interface HarmonyOssHeaders {
+  Date: string;
+  Authorization: string;
+  'Content-Type': string;
+}
+
 class HarmonyOssService {
   async uploadAudio(
     localPath: string,
@@ -34,12 +40,18 @@ class HarmonyOssService {
     const stringToSign = `PUT\n\n${contentType}\n${date}\n/${bucketName}/${normalizedKey}`;
     const signature = hmacSha1Base64(accessKeySecret, stringToSign);
     const uploadBody = harmonyFileStore.readBinary(localPath);
-
-    const response = await harmonyHttpClient.requestText(publicUrl, http.RequestMethod.PUT, {
+    const headers: HarmonyOssHeaders = {
       Date: date,
       Authorization: `OSS ${accessKeyId}:${signature}`,
       'Content-Type': contentType
-    }, uploadBody);
+    };
+
+    const response = await harmonyHttpClient.requestText(
+      publicUrl,
+      http.RequestMethod.PUT,
+      headers,
+      uploadBody
+    );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw new Error(`OSS upload failed (${response.statusCode}) ${response.textBody || ''}`.trim());

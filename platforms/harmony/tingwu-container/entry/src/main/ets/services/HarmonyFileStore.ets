@@ -1,5 +1,6 @@
 import { common } from '@kit.AbilityKit';
 import { fileIo as fs } from '@kit.CoreFileKit';
+import util from '@ohos.util';
 import {
   HarmonyTingwuArtifacts,
   HarmonyTingwuAudioItem
@@ -7,6 +8,8 @@ import {
 import { guessExtension } from '../utils/HarmonyFormatUtils';
 
 const METADATA_FILE_NAME = 'harmony_tingwu_metadata.json';
+const TEXT_DECODER = new util.TextDecoder();
+const TEXT_ENCODER = new util.TextEncoder();
 
 export interface ImportedAudioRecord {
   displayName: string;
@@ -39,10 +42,10 @@ class HarmonyFileStore {
       return [];
     }
     try {
-      const parsed = JSON.parse(raw);
+      const parsed: Object = JSON.parse(raw) as Object;
       return Array.isArray(parsed) ? parsed as HarmonyTingwuAudioItem[] : [];
-    } catch (error) {
-      console.error(`Failed to parse harmony metadata: ${JSON.stringify(error)}`);
+    } catch (_error) {
+      console.error('Failed to parse harmony metadata.');
       return [];
     }
   }
@@ -57,9 +60,10 @@ class HarmonyFileStore {
       return undefined;
     }
     try {
-      return JSON.parse(raw) as HarmonyTingwuArtifacts;
-    } catch (error) {
-      console.error(`Failed to parse harmony artifacts: ${JSON.stringify(error)}`);
+      const parsed: Object = JSON.parse(raw) as Object;
+      return parsed as HarmonyTingwuArtifacts;
+    } catch (_error) {
+      console.error('Failed to parse harmony artifacts.');
       return undefined;
     }
   }
@@ -118,20 +122,20 @@ class HarmonyFileStore {
   private readTextIfExists(path: string): string | undefined {
     try {
       return this.readText(path);
-    } catch (error) {
+    } catch (_error) {
       return undefined;
     }
   }
 
   private readText(path: string): string {
     const bytes = new Uint8Array(this.readBinary(path));
-    return new TextDecoder().decode(bytes);
+    return TEXT_DECODER.decode(bytes);
   }
 
   private writeText(path: string, contents: string): void {
     const file = fs.openSync(path, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE | fs.OpenMode.TRUNC);
     try {
-      const bytes = new TextEncoder().encode(contents);
+      const bytes = TEXT_ENCODER.encode(contents);
       fs.writeSync(file.fd, bytes.buffer);
     } finally {
       fs.closeSync(file);

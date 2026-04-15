@@ -1,3 +1,7 @@
+---
+last_reviewed: 2026-04-13
+---
+
 # Cerb Concept Scaffolder
 
 > **Purpose**: Create a standardized conceptual specification for unconstrained brainstorming ("The Fifth Pillar").

@@ -41,6 +41,7 @@ Current contract:
 - it shows only one winning item at a time
 - the visible island body is borderless chroma-led text plus a state dot rather than a framed pill
 - it never introduces inline buttons, chips, or second-line subtitles
+- the scheduler lane may also host a session-title highlight item in the same one-line body
 - tap follows the currently visible lane
 - downward drag remains a scheduler-only entry gesture
 - scheduler remains the default lane when no connectivity takeover is active
@@ -60,10 +61,12 @@ Current composition:
 
 Scheduler remains the base lane and uses the existing scheduler-backed summaries:
 
+- session-title highlight item: current renamed session title, chrome blue, `3s` dwell, optional leading audio indicator, and local typewriter reveal when it becomes visible
 - conflict item: `冲突：任务标题 · 时间`
 - normal upcoming item: `最近：任务标题 · 时间`
 - idle fallback: `暂无待办`
-- SIM RuntimeShell rotates scheduler candidates every `5s` when more than one lawful scheduler item exists
+- SIM RuntimeShell rotates scheduler candidates locally, with a `3s` dwell for the session-title highlight item and `5s` for scheduler-backed items
+- when a session-title highlight item exists, the SIM-local scheduler lane may cap the visible rotation set at `3` total items (`title + up to 2 scheduler summaries`)
 
 ### Connectivity lane
 
@@ -107,6 +110,7 @@ Excluded from this lane:
 
 - scheduler remains the owner of task meaning, prioritization, and scheduler-target routing metadata
 - RuntimeShell owns only the visible-lane arbitration and shell entry routing
+- RuntimeShell/SIM may project session-title and audio-history metadata into the scheduler lane, but the renderer still treats them as shell-owned presentation inputs rather than new scheduler truth
 - shared renderer callers must pass scheduler/connectivity inputs explicitly; the renderer must not infer runtime truth from legacy wrapper defaults or concrete shared-UI downcasts
 - connectivity island behavior must use transport truth, not manager-only presentation refinements
 - the island may open the scheduler drawer or connectivity entry, but it must not become a second scheduler surface or a second connectivity manager

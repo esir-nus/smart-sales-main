@@ -16,8 +16,10 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
         replay = 0,
         extraBufferCapacity = 1
     )
-    override val recordingReadyEvents: kotlinx.coroutines.flow.SharedFlow<String> = 
+    override val recordingReadyEvents: kotlinx.coroutines.flow.SharedFlow<String> =
         _recordingReadyEvents.asSharedFlow()
+    override val audioRecordingReadyEvents: kotlinx.coroutines.flow.SharedFlow<String> =
+        kotlinx.coroutines.flow.MutableSharedFlow<String>(replay = 0).asSharedFlow()
     
     var stubPairingResult: Result<Unit> = Result.Success(Unit)
     var stubRetryResult: Result<Unit> = Result.Success(Unit)

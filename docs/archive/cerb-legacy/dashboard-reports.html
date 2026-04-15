@@ -1,0 +1,1455 @@
+
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Cerb Interface Map - 2D Dashboard</title>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code&display=swap" rel="stylesheet">
+        <!-- SVG drawing library for architecture maps -->
+        <script src="https://cdn.jsdelivr.net/npm/leader-line-new@1.1.9/leader-line.min.js"></script>
+        <style>
+    :root {
+        --bg: #0f172a;
+        --surface: rgba(30, 41, 59, 0.8);
+        --surface-hover: rgba(51, 65, 85, 0.9);
+        --border: #334155;
+        --text: #f8fafc;
+        --text-muted: #94a3b8;
+        --glow: #c084fc;
+        --glow: #c084fc;
+        --success: #22c55e;
+        --warning: #f59e0b;
+        --error: #ef4444;
+        
+        --status-shipped: rgba(34, 197, 94, 0.2);
+        --status-shipped-border: #22c55e;
+        --status-planned: rgba(148, 163, 184, 0.1);
+        --status-planned-border: #64748b;
+        --status-interface: rgba(234, 179, 8, 0.2);
+        --status-interface-border: #eab308;
+        --status-wip: rgba(249, 115, 22, 0.2);
+        --status-wip-border: #f97316;
+        --status-blocked: rgba(239, 68, 68, 0.2);
+        --status-blocked-border: #ef4444;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        background: radial-gradient(circle at top, #1e293b 0%, #020617 100%);
+        color: var(--text);
+        line-height: 1.6;
+        padding: 40px;
+    }
+    body::before {
+        content: '';
+        position: fixed;
+        top: -200px;
+        left: -200px;
+        width: 600px;
+        height: 600px;
+        background: radial-gradient(circle, rgba(167, 139, 250, 0.15) 0%, transparent 60%);
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    .header {
+        margin-bottom: 60px;
+        text-align: center;
+        position: relative;
+        z-index: 10;
+    }
+    
+    .header h1 {
+        font-size: 2.5rem;
+        background: linear-gradient(135deg, #60a5fa, #c084fc);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 10px;
+    }
+    
+    .header p { color: var(--text-muted); }
+
+    .layer-container {
+        display: flex;
+        flex-direction: column-reverse; /* Bottom to top reading like a stack */
+        gap: 60px;
+        max-width: 1200px;
+        margin: 0 auto;
+        position: relative;
+    }
+
+    .layer {
+        position: relative;
+        background: transparent;
+        border: none;
+        padding: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .layer-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 30px;
+        color: var(--accent);
+        display: inline-block;
+        background: var(--bg);
+        padding: 5px 15px;
+        border: 1px solid var(--accent);
+        border-radius: 20px;
+        box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
+        position: relative;
+        z-index: 10;
+    }
+
+    .modules-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 40px 30px;
+        position: relative;
+        z-index: 10; /* Ensure grid is above the lines */
+    }
+
+    .module-card {
+        border-radius: 16px;
+        padding: 20px;
+        background: rgba(30, 41, 59, 0.5);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        position: relative;
+        overflow: visible;
+        z-index: 15; /* Ensure cards are above everything else in grid */
+    }
+
+    .module-card:hover {
+        transform: translateY(-4px);
+        border-color: rgba(255, 255, 255, 0.2);
+        box-shadow: 0 14px 20px -5px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+        z-index: 20;
+    }
+
+    /* Connection anchoring points */
+    .anchor-top, .anchor-bottom {
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        background: var(--accent);
+        border-radius: 50%;
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0; /* Hidden by default, useful for debugging */
+    }
+    
+    .anchor-top { top: -4px; }
+    .anchor-bottom { bottom: -4px; background: var(--glow); }
+
+    .module-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 15px;
+        position: relative;
+    }
+
+    .module-name {
+        font-weight: 700;
+        font-size: 1.15rem;
+    }
+    
+    .module-name a {
+        color: var(--text);
+        text-decoration: none;
+    }
+    
+    .module-name a:hover {
+        color: var(--accent);
+        text-decoration: underline;
+    }
+
+    .module-status {
+        font-size: 0.85rem;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-weight: 600;
+        border: 1px solid;
+    }
+
+    /* Status Styles */
+    .status-shipped { background: var(--status-shipped); border-color: var(--status-shipped-border); color: var(--status-shipped-border); }
+    .status-planned { background: var(--status-planned); border-color: var(--status-planned-border); color: var(--status-planned-border); border-style: dashed; }
+    .status-interface { background: var(--status-interface); border-color: var(--status-interface-border); color: var(--status-interface-border); }
+    .status-wip { background: var(--status-wip); border-color: var(--status-wip-border); color: var(--status-wip-border); }
+    .status-blocked { background: var(--status-blocked); border-color: var(--status-blocked-border); color: var(--status-blocked-border); }
+
+    .module-detail {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        margin-bottom: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding-bottom: 8px;
+        border-bottom: 1px dotted rgba(255,255,255,0.1);
+    }
+    
+    .module-explanation {
+        font-size: 0.85rem;
+        color: #e2e8f0;
+        margin-bottom: 15px;
+        line-height: 1.5;
+        background: rgba(0,0,0,0.3);
+        padding: 10px 12px;
+        border-radius: 6px;
+        border-left: 3px solid var(--accent);
+    }
+
+    .module-detail span.label {
+        font-weight: 600;
+        color: var(--text);
+        opacity: 0.9;
+    }
+
+    .card-signature {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px dashed var(--border);
+        font-family: 'Fira Code', monospace;
+        font-size: 0.8rem;
+        color: #a78bfa;
+        word-break: break-all;
+    }
+    
+    .os-layer {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        font-size: 0.7rem;
+        background: rgba(0,0,0,0.4);
+        padding: 6px 10px;
+        border-top-left-radius: 12px;
+        border-bottom-right-radius: 12px;
+        color: var(--text-muted);
+    }
+    
+    .legend {
+        display: flex;
+        justify-content: center;
+        gap: 20px;
+        margin-bottom: 40px;
+        flex-wrap: wrap;
+        background: var(--surface);
+        padding: 15px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.95rem;
+        font-weight: 500;
+    }
+    
+    .translation-hint {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+        margin-left: 4px;
+        font-weight: normal;
+    }
+
+    .tabs {
+        display: inline-flex;
+        justify-content: center;
+        gap: 5px;
+        margin-bottom: 40px;
+        position: relative;
+        z-index: 20;
+        background: rgba(0,0,0,0.2);
+        padding: 6px;
+        border-radius: 12px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    
+    .tab-btn {
+        background: transparent;
+        border: none;
+        color: #94a3b8;
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-size: 1.05rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .tab-btn:hover {
+        background: rgba(255,255,255,0.05);
+        color: var(--text);
+    }
+    
+    .tab-btn.active {
+        background: #3b82f6;
+        color: white;
+        box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.5);
+        border-color: transparent;
+    }
+    
+    .tab-content {
+        display: none;
+        animation: fadeIn 0.3s ease-in-out;
+    }
+    
+    .tab-content.active {
+        display: block;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Code Estimate CSS */
+    .container { max-width: 1200px; margin: 0 auto; display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px; }
+    .card { 
+        background: rgba(30, 41, 59, 0.5); 
+        backdrop-filter: blur(12px); 
+        border: 1px solid rgba(255, 255, 255, 0.08); 
+        border-radius: 16px; 
+        padding: 30px; 
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.05); 
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease; 
+        position: relative;
+        z-index: 2;
+    }
+    .card:hover { 
+        transform: translateY(-4px); 
+        border-color: rgba(255, 255, 255, 0.2); 
+        box-shadow: 0 14px 20px -5px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255, 255, 255, 0.1); 
+    }
+    .card h2 { font-size: 1.5rem; color: var(--accent); margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+    .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 30px; }
+    .stat-box { background: rgba(0,0,0,0.4); padding: 20px; border-radius: 12px; text-align: center; border: 1px solid var(--border); }
+    .stat-value { font-size: 2.2rem; font-weight: 700; color: var(--text); font-family: 'Fira Code', monospace; margin-bottom: 5px; letter-spacing: -1px; text-shadow: 0 0 15px rgba(192, 132, 252, 0.3); }
+    .stat-value.glow { color: var(--glow); text-shadow: 0 0 10px rgba(192, 132, 252, 0.5); }
+    .stat-label { font-size: 0.9rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+    .full-width { grid-column: 1 / -1; }
+    .chart-container { position: relative; height: 300px; width: 100%; margin-top: 20px; }
+    
+    .gap-badge { display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; margin-left: 10px; }
+    .gap-success { background: rgba(34, 197, 94, 0.15); color: var(--success); border: 1px solid var(--success); }
+    .gap-warning { background: rgba(245, 158, 11, 0.15); color: var(--warning); border: 1px solid var(--warning); }
+    .gap-error { background: rgba(239, 68, 68, 0.15); color: var(--error); border: 1px solid var(--error); }
+    
+    .reports-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 30px;
+        margin-top: 20px;
+    }
+    .report-card {
+        background: rgba(30, 41, 59, 0.5);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        display: flex;
+        flex-direction: column;
+        z-index: 2;
+    }
+    .report-card:hover {
+        transform: translateY(-4px);
+        border-color: rgba(255, 255, 255, 0.2);
+        box-shadow: 0 14px 20px -5px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+    }
+    .report-date { font-family: 'Fira Code', monospace; color: var(--accent); font-size: 0.85rem; margin-bottom: 8px; }
+    .report-title { font-size: 1.25rem; font-weight: 600; color: var(--text); margin-bottom: 12px; }
+    .report-body { flex: 1; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 15px; display: -webkit-box; -webkit-line-clamp: 4; line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+    .report-meta { font-size: 0.8rem; color: #64748b; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; margin-bottom: 15px; line-height: 1.4; }
+    .report-link { margin-top: auto; display: inline-block; padding: 8px 16px; background: rgba(59, 130, 246, 0.15); color: #60a5fa; border-radius: 6px; text-decoration: none; font-size: 0.9rem; font-weight: 500; text-align: center; border: 1px solid rgba(59, 130, 246, 0.3); transition: all 0.2s; }
+    .report-link:hover { background: rgba(59, 130, 246, 0.3); color: #fff; border-color: #60a5fa; }
+
+    .increment-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); }
+    .increment-item:last-child { border-bottom: none; }
+    .increment-title { font-weight: 500; color: var(--text); }
+    .increment-lines { font-family: 'Fira Code', monospace; color: var(--accent); }
+    .increment-progress { height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; margin-top: 8px; overflow: hidden; }
+    .increment-bar { height: 100%; border-radius: 3px; }
+
+    .card table { width: 100%; text-align: left; border-collapse: collapse; margin-bottom: 20px; font-size: 0.95rem; }
+    .card th { text-transform: uppercase; font-size: 11px; font-weight: 600; color: #64748b; letter-spacing: 0.1em; padding: 16px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+    .card td { padding: 12px 14px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+    .card tr:hover td { background: rgba(255, 255, 255, 0.02); }
+    
+    .diagnosis { border-left: 4px solid; border-image: linear-gradient(to bottom, #f59e0b, #d97706) 1; background: rgba(245, 158, 11, 0.03); padding: 20px; color: #e2e8f0; }
+    .diagnosis-doc { border-left: 4px solid; border-image: linear-gradient(to bottom, #c084fc, #9333ea) 1; background: rgba(192, 132, 252, 0.03); padding: 20px; color: #e2e8f0; }
+
+    /* Topology specific CSS */
+    .topology-sequence {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 20px;
+        padding: 40px 0;
+    }
+    .layer-block {
+        background: rgba(30, 41, 59, 0.5);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 16px;
+        padding: 24px 32px;
+        width: 100%;
+        max-width: 800px;
+        text-align: center;
+        position: relative;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.05);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        z-index: 2;
+    }
+    .layer-block:hover {
+        transform: translateY(-4px);
+        border-color: rgba(255, 255, 255, 0.2);
+        box-shadow: 0 14px 20px -5px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+    }
+    .layer-block h2 {
+        color: var(--accent);
+        font-size: 1.5rem;
+        margin-bottom: 12px;
+        text-shadow: 0 0 10px rgba(167, 139, 250, 0.3);
+    }
+    .layer-desc {
+        color: var(--text-muted);
+        font-size: 0.95rem;
+        margin-bottom: 20px;
+        line-height: 1.5;
+    }
+    .layer-modules-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        justify-content: center;
+    }
+    .mini-module {
+        background: rgba(30, 41, 59, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 8px 18px;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: #e2e8f0;
+        font-family: 'Fira Code', monospace;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3);
+        transition: background 0.2s;
+    }
+    .mini-module:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+    .seq-arrow {
+        color: var(--accent);
+        font-size: 2rem;
+        line-height: 1;
+        opacity: 0.6;
+        animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+        0% { opacity: 0.3; transform: translateY(0); }
+        50% { opacity: 0.8; transform: translateY(-5px); }
+        100% { opacity: 0.3; transform: translateY(0); }
+    }
+
+    .two-col-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px; }
+    .stat-grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+    @media (max-width: 992px) {
+        .modules-grid { grid-template-columns: repeat(2, 1fr); }
+        .container { grid-template-columns: 1fr; }
+        .two-col-grid { grid-template-columns: 1fr; }
+        .stat-grid-4 { grid-template-columns: repeat(2, 1fr); }
+    }
+    
+    @media (max-width: 768px) {
+        body { padding: 10px; }
+        .header h1 { font-size: 2rem; }
+        .modules-grid { grid-template-columns: 1fr; }
+        .stat-grid { grid-template-columns: 1fr; }
+        .stat-grid-4 { grid-template-columns: 1fr; }
+        .tabs { flex-direction: column; }
+        .layer-container { gap: 30px; padding-left: 10px; }
+        .chart-container { height: 300px !important; }
+        #compositionList { max-height: 400px; }
+    }
+    </style>
+    </head>
+    <body>
+        
+        <div class="header">
+            <h1>Cerb 服务端架构大盘 <br><span style="font-size: 1.5rem; color: #a78bfa;">(分布式架构与项目规模面板)</span></h1>
+            <p>实时模块状态、领域层读写数据流契约与代码库物理演进大盘</p>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item"><span class="module-status status-shipped">已上线</span> <span class="translation-hint">(真实且完整的业务实现)</span></div>
+            <div class="legend-item"><span class="module-status status-interface">接口定义</span> <span class="translation-hint">(仅接口契约声明或内存模拟器)</span></div>
+            <div class="legend-item"><span class="module-status status-planned">计划中</span> <span class="translation-hint">(系统设计中，暂未投入研发)</span></div>
+            <div class="legend-item"><span class="module-status status-wip">开发中</span> <span class="translation-hint">(特性代码施工中)</span></div>
+            <div class="legend-item"><span class="module-status status-blocked">已阻塞</span> <span class="translation-hint">(被其他前置任务挂起)</span></div>
+        </div>
+
+        <div class="tabs">
+            <a href="dashboard-topology.html" class="tab-btn " style="text-decoration: none; display: inline-block;">拓扑层级</a>
+            <a href="dashboard-dataflow.html" class="tab-btn " style="text-decoration: none; display: inline-block;">跨模块数据流</a>
+            <a href="dashboard-estimate.html" class="tab-btn " style="text-decoration: none; display: inline-block;">代码量估算</a>
+            <a href="dashboard-reports.html" class="tab-btn active" style="text-decoration: none; display: inline-block;">报告中心</a>
+        </div>
+
+        <!-- 4. Report Center View -->
+        <div id="reports" class="tab-content active">
+            <div class="container" style="display: block;">
+                <h2 style="color: var(--glow); margin-bottom: 10px;">系统评估与试验报告</h2>
+                <p style="color: var(--text-muted); margin-bottom: 30px;">架构复盘、协议试验结果和高级研判的报告墓地</p>
+                <div class="reports-grid">
+                    
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">pipeline_valve_audit_wave16.md</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/pipeline_valve_audit_wave16.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">📋 Review Conference Report: Pipeline Explainer Validation Roadmap</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260311-pipeline-explainer-validation-roadmap.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">docsync_proposal_20260313.md</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/docsync_proposal_20260313.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">Wave 20 T2: Typed Mutation Lane Audit</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260317-wave20-t2-mutation-lane-audit.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">📋 Review Conference Report</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260311-wave4-adaptive-habit-loop-review-conference.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">20260311-wave6-transparent-mind-review.md</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260311-wave6-transparent-mind-review.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">ESP32 Connectivity Hardening Notes</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260322-esp32-connectivity-hardening-notes.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">docsync_proposal_20260314_reactive_engine.md</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/docsync_proposal_20260314_reactive_engine.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">Pre-Fix Report: Scheduler LLM Hallucinated "ByteDance"</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/debug_prefix_scheduler_hallucination.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">Acceptance Report: Anti-Illusion Audit W2 (`memory/crm`)</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260310-acceptance_report_w2_crm.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">debug_prefix_scheduler_audio.md</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/debug_prefix_scheduler_audio.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">智能销售架构演进：从设备接入端到数据驱动操作系统 (Data-Oriented OS)</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260313-project-history-book.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">🛡️ Code Audit: Prism-to-Agent UI Renaming (Wave 2)</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260309-audit-agentviewmodel-renaming.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">🔧 Pre-Fix Report: The Missing Scheduler Plugin</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/debug_prefix_create_task_plugin.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">Acceptance Report: W1 Dataflow Veracity</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260310-acceptance_report_w1_dataflow_veracity.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">Acceptance Report: Wave 17 T1 (Data Contracts & Linter Pipeline)</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260316-wave17-t1-acceptance-report.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">Acceptance Report: Wave 17 T2 - Dedicated Mutation Module</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260316-wave17-t2-acceptance-report.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">Wave 20 T5: Plugin Gateway / Capability SDK Audit</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260317-wave20-t5-plugin-gateway-capability-sdk-audit.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">🛡️ Code Audit: Pipeline Explainer Ghost & Drift Analysis</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/pipeline_explainer_audit.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">🛡️ Code Audit: Lightning Router (Phase 0)</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260310-audit-lightning-router.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">Multiple Choice Architecture: SSD-Centric Design Analysis</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/multiple-choice-architecture-discussion.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">📋 Review Conference Report</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260313-wave1-contract-audit.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">interface-impact-explainer.md</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/interface-impact-explainer.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">SIM Shell Family: Transplant Notes</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/sim_prototype_family_transplant_notes.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">Wave 20 T3: Reinforcement Write-Through Audit</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260317-wave20-t3-reinforcement-write-through-audit.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">Acceptance Report: RL Harmonization (Wave 4.5)</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260313-wave4-5-acceptance-report.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">Acceptance Report: Anti-Illusion Audit W1 (`session`)</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260310-acceptance_report_w1_session.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">20260311-pipeline-explainer-remediation-review.md</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260311-pipeline-explainer-remediation-review.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">SIM Prototype Alignment Audit</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260323-sim-prototype-alignment-audit.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">Acceptance Report: Ring 3 W2 (Context Branch Coverage)</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260310-acceptance_report_ring3_w2_context_branch.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">Legacy vs Current Scheduler Logic Differences</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/legacy_vs_current_logic_diff.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">🌟 North Star: Path A Surgical Migration (ID Conservation)</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/path_a_migration_north_star.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">docsync_proposal_20260316.md</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/docsync_proposal_20260316.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">docsync_proposal_20260314_uiskin.md</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/docsync_proposal_20260314_uiskin.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">Acceptance Report: Wave 3 (Scheduler Migration)</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260313-wave3-acceptance-report.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">Acceptance Report: Ring 3 W1 (Mock Eviction: Routing)</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260310-acceptance_report_ring3_w1_mock_eviction.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">Wave 20 T4: Session Memory Extension Audit</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260317-wave20-t4-session-memory-extension-audit.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">🛡️ Code Audit: The Anti-Illusion Test Overhaul</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260309-audit-test-overhaul.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">Sentinel Audit - Batch 3 Report</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260311-sentinel-audit-batch3.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">🛡️ Senior Code Audit: Pipeline Explainer vs Implemented Reality</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260311-pipeline-explainer-drift-audit.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">docsync_proposal_20260313_handoff.md</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/docsync_proposal_20260313_handoff.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">Sentinel Audit - Batch 2 Report</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260311-sentinel-audit-batch2.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">Acceptance Report: Analyst Harmonization (Wave 4)</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260313-wave4-acceptance-report.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">docsync_proposal_20260314_uisync.md</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/docsync_proposal_20260314_uisync.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">🛡️ Acceptance Team & Code Audit: EntityWriter Linter Upgrade (Mono Wave 2)</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260313-wave2-audit-report.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">Scheduler Intelligence & Routing Audit</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/scheduler_intelligence_routing_audit.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">Acceptance Report: Wave 4 (Adaptive Habit Loop)</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260311-acceptance_report_wave4_adaptive_habit_loop.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">Acceptance Report: Ring 3 W3 (Strict Interface Integrity)</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260310-acceptance_report_ring3_w3_interface_integrity.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">ESP32 Live Capture Findings</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260322-esp32-live-capture-findings.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">SIM Wave 5 Boundary Audit</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260321-sim-wave5-boundary-audit.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">Acceptance Report: Ring 4 W2 (UI Literal Sync)</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260310-acceptance_report_ring4_w2_ui_literal_sync.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">Wave 20 T6: Cross-Lane Composition Audit</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260317-wave20-t6-cross-lane-composition-audit.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">Unknown</div>
+            <div class="report-title">20260316-t2-review-conference.md</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260316-t2-review-conference.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">2026-04-04</div>
+            <div class="report-title">Dirty Tree Quarantine Audit</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260404-dirty-tree-quarantine-audit.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">2026-03-31</div>
+            <div class="report-title">Base Runtime Unification Drift Audit</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260331-base-runtime-unification-drift-audit.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">2026-03-19</div>
+            <div class="report-title">SIM Clarification Evidence Audit</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260319-sim-clarification-evidence-audit.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">2026-03-19</div>
+            <div class="report-title">SIM Standalone Prototype Code Audit</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260319-sim-standalone-code-audit.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">2026-03-17</div>
+            <div class="report-title">Wave 19 T0 Reverse Alignment Check</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/wave19-t0-reverse-alignment-check.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">2026-03-17</div>
+            <div class="report-title">Wave 20 T1: Query Lane Audit</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260317-wave20-t1-query-lane-audit.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">2026-03-17</div>
+            <div class="report-title">Wave 20 T0: Architecture Constitution Evidence Map</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260317-wave20-t0-architecture-evidence-map.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">2026-03-12</div>
+            <div class="report-title">architecture-drift-analysis-20260312.md</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/architecture-drift-analysis-20260312.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">2026-03-12</div>
+            <div class="report-title">Assessment Report: The Crucible (Pipeline Validation)</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> `RealUnifiedPipeline`, `IntentOrchestrator`, `RealContextBuilder`, L2 Mock Eviction (`L2WriteBackConcurrencyTest.kt`)</div>
+            </div>
+            <a href="../reports/20260312-the-crucible-epic-assessment.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">2026-03-11</div>
+            <div class="report-title">Assessment Report: Wave 4 (Adaptive Habit Loop) Mock Eviction</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> `L2AdaptiveHabitLoopTest.kt`, `RealReinforcementLearner.kt`, `FakeUserHabitRepository.kt`</div>
+            </div>
+            <a href="../reports/20260311-trial_assessment_wave4_adaptive_habit_loop.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">2026-03-10</div>
+            <div class="report-title">Assessment Report: Initial Anti-Illusion Audit (Rings 1-3)</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Anti-Illusion Testing Standard & Core to Outer Rim Modularization</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> All tasks marked `[x]` in `tracker.md` (Rings 1-3)</div>
+            </div>
+            <a href="../reports/20260310-anti-illusion-accomplished-audit.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">2026-03-10</div>
+            <div class="report-title">L2 Simulated Test Record: MarkdownStrategyBubble</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Unknown</div>
+            </div>
+            <a href="../reports/20260310-l2-test-markdown-strategy-bubble.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">2026-03-10</div>
+            <div class="report-title">Assessment Report: Tracker Reality Check & Anti-Illusion Audit</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> Unknown</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> Tasklist Validity (Phase 3 E2E Waves)</div>
+            </div>
+            <a href="../reports/20260310-tracker-reality-check.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">2026-03-09</div>
+            <div class="report-title">Assessment Report: Anti-Illusion Test Overhaul Wave 2 (Pre-Execution Audit)</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> `docs/cerb-e2e-test/testing-protocol.md`</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> `RealLightningRouterTest.kt`, `IntentOrchestratorTest.kt`, `EchoPluginTest.kt`</div>
+            </div>
+            <a href="../reports/20260309-anti-illusion-wave2-assessment.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+        <div class="report-card">
+            <div class="report-date">2026-03-09</div>
+            <div class="report-title">Assessment Report: Wave 1 Lightning Router E2E Trial</div>
+            <div class="report-body"></div>
+            <div class="report-meta">
+                <div><strong>Protocol:</strong> `docs/cerb-e2e-test/testing-protocol.md`</div>
+                <div style="margin-top: 4px;"><strong>Target:</strong> `RealLightningRouterTest.kt` & `AgentViewModelTest.kt`</div>
+            </div>
+            <a href="../reports/20260309-e2e-lightning-router-wave1.md" target="_blank" class="report-link">查看全文 ↗</a>
+        </div>
+        
+                </div>
+            </div>
+        </div>
+
+        <script>
+            let lines = [];
+            let linesInitialized = false;
+
+            function initLines() {
+                if (linesInitialized) return;
+                linesInitialized = true;
+
+                const cards = document.querySelectorAll('#feature .module-card');
+                
+                cards.forEach(card => {
+                    const sourceId = card.id;
+                    const depsStr = card.getAttribute('data-reads-from');
+                    if (!depsStr || depsStr === '{}') return;
+                    
+                    try {
+                        const deps = JSON.parse(depsStr);
+                        deps.forEach(targetId => {
+                            const targetEl = document.getElementById(targetId);
+                            
+                            if (targetEl && targetEl !== card) {
+                                const line = new LeaderLine(
+                                    targetEl,
+                                    card,
+                                    {
+                                        color: 'rgba(59, 130, 246, 0.35)',
+                                        startSocket: 'bottom',
+                                        endSocket: 'top',
+                                        path: 'grid',
+                                        startSocketGravity: [0, 50],
+                                        endSocketGravity: [0, -50],
+                                        startPlug: 'square',
+                                        endPlug: 'arrow3',
+                                        size: 2,
+                                        dash: {
+                                            animation: true,
+                                            len: 6,
+                                            gap: 6
+                                        },
+                                        dropShadow: {
+                                            dx: 0,
+                                            dy: 0,
+                                            blur: 4,
+                                            color: 'rgba(192, 132, 252, 0.4)'
+                                        },
+                                        hide: true
+                                    }
+                                );
+                                lines.push(line);
+                            }
+                        });
+                    } catch (e) {
+                        console.error('Failed to parse deps for', sourceId, e);
+                    }
+                });
+                
+                setTimeout(() => {
+                    document.querySelectorAll('.leader-line').forEach(svg => {
+                        svg.style.zIndex = '-1';
+                    });
+                }, 100);
+
+                if (window.AnimEvent) {
+                    window.addEventListener('scroll', AnimEvent.add(function() {
+                        lines.forEach(l => l.position());
+                    }), false);
+                }
+            }
+
+            
+            
+            let chartsInitialized = false;
+            let sunburstData = [{"name": "app", "children": [{"name": ".idea", "children": [{"name": "caches", "value": 1329}, {"name": "(\u6839\u76ee\u5f55\u6587\u4ef6)", "value": 110}]}, {"name": "(\u6839\u76ee\u5f55\u6587\u4ef6)", "value": 56}]}, {"name": "app-core", "children": [{"name": "androidTest", "children": [{"name": "data", "children": [{"name": "scheduler", "value": 214}]}, {"name": "ui", "children": [{"name": "components", "value": 118}, {"name": "onboarding", "value": 179}, {"name": "drawers", "children": [{"name": "scheduler", "value": 808}]}, {"name": "sim", "value": 807}]}]}, {"name": "domain", "children": [{"name": "mapper", "value": 100}, {"name": "audio", "value": 197}, {"name": "activity", "value": 39}, {"name": "analyst", "value": 15}, {"name": "pipeline", "value": 91}, {"name": "pairing", "value": 104}, {"name": "scheduler", "value": 115}]}, {"name": "di", "value": 478}, {"name": "data", "children": [{"name": "persistence", "value": 109}, {"name": "fakes", "value": 106}, {"name": "time", "value": 53}, {"name": "rl", "value": 70}, {"name": "audio", "value": 3754}, {"name": "memory", "value": 182}, {"name": "notification", "value": 1015}, {"name": "connectivity", "children": [{"name": "legacy", "children": [{"name": "gateway", "value": 1308}, {"name": "setup", "value": 1150}, {"name": "scan", "value": 258}, {"name": "badge", "value": 265}, {"name": "(\u6839\u76ee\u5f55\u6587\u4ef6)", "value": 2635}]}, {"name": "(\u6839\u76ee\u5f55\u6587\u4ef6)", "value": 601}]}, {"name": "asr", "value": 204}, {"name": "pairing", "value": 294}, {"name": "session", "value": 319}, {"name": "onboarding", "value": 150}, {"name": "scheduler", "value": 1486}, {"name": "real", "children": [{"name": "session", "value": 58}, {"name": "plugins", "value": 364}]}, {"name": "tingwu", "value": 581}]}, {"name": "ui", "children": [{"name": "fakes", "value": 124}, {"name": "debug", "value": 650}, {"name": "alarm", "value": 574}, {"name": "analyst", "value": 242}, {"name": "components", "children": [{"name": "connectivity", "value": 306}, {"name": "agent", "value": 572}, {"name": "(\u6839\u76ee\u5f55\u6587\u4ef6)", "value": 2769}]}, {"name": "shell", "value": 111}, {"name": "onboarding", "value": 7505}, {"name": "settings", "value": 1037}, {"name": "scheduler", "children": [{"name": "mapper", "value": 107}, {"name": "(\u6839\u76ee\u5f55\u6587\u4ef6)", "value": 5}]}, {"name": "drawers", "children": [{"name": "audio", "value": 285}, {"name": "scheduler", "children": [{"name": "components", "value": 1024}, {"name": "(\u6839\u76ee\u5f55\u6587\u4ef6)", "value": 2981}]}, {"name": "(\u6839\u76ee\u5f55\u6587\u4ef6)", "value": 2686}]}, {"name": "sim", "value": 13833}, {"name": "theme", "value": 402}, {"name": "(\u6839\u76ee\u5f55\u6587\u4ef6)", "value": 2483}]}, {"name": "(\u6839\u76ee\u5f55\u6587\u4ef6)", "value": 154}, {"name": "(\u6839\u76ee\u5f55\u6587\u4ef6)", "value": 106}, {"name": "test", "children": [{"name": "domain", "children": [{"name": "crm", "value": 188}, {"name": "core", "value": 61}, {"name": "rl", "value": 156}, {"name": "audio", "value": 53}, {"name": "memory", "value": 254}, {"name": "notification", "value": 113}, {"name": "session", "value": 461}, {"name": "scheduler", "value": 564}]}, {"name": "data", "children": [{"name": "persistence", "value": 110}, {"name": "fakes", "children": [{"name": "plugins", "value": 107}, {"name": "(\u6839\u76ee\u5f55\u6587\u4ef6)", "value": 149}]}, {"name": "rl", "value": 176}, {"name": "audio", "value": 878}, {"name": "notification", "value": 315}, {"name": "connectivity", "children": [{"name": "legacy", "value": 872}, {"name": "(\u6839\u76ee\u5f55\u6587\u4ef6)", "value": 746}]}, {"name": "asr", "value": 79}, {"name": "pairing", "value": 146}, {"name": "session", "value": 185}, {"name": "scheduler", "value": 125}, {"name": "real", "children": [{"name": "session", "value": 55}, {"name": "plugins", "value": 123}, {"name": "(\u6839\u76ee\u5f55\u6587\u4ef6)", "value": 3119}]}, {"name": "tingwu", "value": 225}]}, {"name": "architecture", "value": 112}, {"name": "ui", "children": [{"name": "alarm", "value": 38}, {"name": "components", "children": [{"name": "connectivity", "value": 453}, {"name": "(\u6839\u76ee\u5f55\u6587\u4ef6)", "value": 150}]}, {"name": "onboarding", "value": 2273}, {"name": "settings", "value": 284}, {"name": "drawers", "children": [{"name": "scheduler", "value": 526}]}, {"name": "sim", "value": 7046}, {"name": "theme", "value": 204}, {"name": "(\u6839\u76ee\u5f55\u6587\u4ef6)", "value": 1255}]}, {"name": "(\u6839\u76ee\u5f55\u6587\u4ef6)", "value": 60}]}]}, {"name": "core", "children": [{"name": "test-fakes-domain", "children": [{"name": "domain", "children": [{"name": "scheduler", "children": [{"name": "fakes", "value": 196}]}]}, {"name": "core", "children": [{"name": "test", "children": [{"name": "fakes", "value": 980}]}]}, {"name": "test", "children": [{"name": "core", "children": [{"name": "test", "value": 37}]}]}]}, {"name": "llm", "children": [{"name": "core", "children": [{"name": "llm", "value": 236}]}]}, {"name": "test-fakes-platform", "children": [{"name": "core", "children": [{"name": "test", "children": [{"name": "fakes", "value": 521}]}]}, {"name": "test", "children": [{"name": "core", "children": [{"name": "test", "value": 29}]}]}]}, {"name": "pipeline", "children": [{"name": "core", "children": [{"name": "pipeline", "value": 5730}]}, {"name": "test", "children": [{"name": "core", "children": [{"name": "pipeline", "value": 3081}]}]}]}, {"name": "context", "children": [{"name": "core", "children": [{"name": "context", "value": 642}]}]}, {"name": "telemetry", "children": [{"name": "domain", "children": [{"name": "telemetry", "value": 46}]}, {"name": "data", "children": [{"name": "real", "children": [{"name": "telemetry", "value": 26}]}]}, {"name": "core", "children": [{"name": "telemetry", "value": 91}]}]}, {"name": "util", "children": [{"name": "core", "children": [{"name": "util", "value": 207}, {"name": "metahub", "value": 1206}]}, {"name": "test", "children": [{"name": "core", "children": [{"name": "metahub", "value": 471}]}]}]}, {"name": "notifications", "children": [{"name": "domain", "children": [{"name": "notification", "value": 112}]}]}, {"name": "database", "children": [{"name": "di", "value": 165}, {"name": "data", "children": [{"name": "persistence", "value": 710}]}]}, {"name": "test", "children": [{"name": "core", "children": [{"name": "test", "value": 15}]}, {"name": "test", "children": [{"name": "core", "children": [{"name": "test", "value": 34}]}]}]}]}, {"name": "data", "children": [{"name": "crm", "children": [{"name": "data", "children": [{"name": "crm", "children": [{"name": "hub", "value": 134}, {"name": "writer", "value": 376}, {"name": "(\u6839\u76ee\u5f55\u6587\u4ef6)", "value": 250}]}]}, {"name": "test", "children": [{"name": "data", "children": [{"name": "crm", "value": 932}]}]}]}, {"name": "ai-core", "children": [{"name": "data", "children": [{"name": "aicore", "children": [{"name": "debug", "value": 656}, {"name": "posttingwu", "value": 343}, {"name": "metahub", "value": 274}, {"name": "tingwu", "value": 4419}, {"name": "params", "value": 177}, {"name": "(\u6839\u76ee\u5f55\u6587\u4ef6)", "value": 3134}]}]}, {"name": "test", "children": [{"name": "data", "children": [{"name": "aicore", "value": 5820}]}]}]}, {"name": "memory", "children": [{"name": "data", "children": [{"name": "memory", "value": 133}]}]}, {"name": "habit", "children": [{"name": "data", "children": [{"name": "habit", "value": 121}]}]}, {"name": "oss", "children": [{"name": "data", "children": [{"name": "oss", "children": [{"name": "di", "value": 54}, {"name": "(\u6839\u76ee\u5f55\u6587\u4ef6)", "value": 158}]}]}, {"name": "(\u6839\u76ee\u5f55\u6587\u4ef6)", "value": 3}, {"name": "test", "children": [{"name": "data", "children": [{"name": "oss", "value": 118}]}]}]}, {"name": "connectivity", "children": [{"name": "domain", "children": [{"name": "connectivity", "value": 266}]}]}, {"name": "asr", "children": [{"name": "domain", "children": [{"name": "asr", "value": 64}]}]}, {"name": "session", "children": [{"name": "data", "children": [{"name": "session", "value": 187}]}]}, {"name": "tingwu", "children": [{"name": "domain", "children": [{"name": "tingwu", "value": 149}]}, {"name": "data", "children": [{"name": "fakes", "children": [{"name": "tingwu", "value": 56}]}]}]}]}, {"name": "domain", "children": [{"name": "crm", "children": [{"name": "domain", "children": [{"name": "crm", "children": [{"name": "writeback", "value": 35}, {"name": "(\u6839\u76ee\u5f55\u6587\u4ef6)", "value": 67}]}, {"name": "memory", "value": 233}]}]}, {"name": "core", "children": [{"name": "domain", "children": [{"name": "core", "value": 143}, {"name": "time", "value": 36}]}]}, {"name": "memory", "children": [{"name": "domain", "children": [{"name": "memory", "value": 120}, {"name": "config", "value": 28}]}]}, {"name": "habit", "children": [{"name": "domain", "children": [{"name": "rl", "value": 146}, {"name": "habit", "value": 105}]}]}, {"name": "session", "children": [{"name": "domain", "children": [{"name": "model", "value": 204}, {"name": "repository", "value": 82}, {"name": "memory", "value": 24}, {"name": "system", "value": 12}, {"name": "session", "value": 190}]}, {"name": "data", "children": [{"name": "fakes", "value": 37}, {"name": "real", "value": 19}]}]}, {"name": "scheduler", "children": [{"name": "domain", "children": [{"name": "memory", "value": 165}, {"name": "scheduler", "value": 2924}]}, {"name": "test", "children": [{"name": "domain", "children": [{"name": "memory", "value": 90}, {"name": "scheduler", "value": 1251}]}]}]}]}];
+            window.originalSunburstDataString = JSON.stringify(sunburstData);
+            function initCharts() {
+                if (chartsInitialized) return;
+                chartsInitialized = true;
+                
+                const ctxPie = document.getElementById('compositionChart');
+                if (ctxPie && typeof echarts !== 'undefined') {
+                    let myChart = echarts.init(ctxPie);
+                    window.compositionChartInstance = myChart;
+                    window.compositionChartOption = {
+                        series: {
+                            type: 'sunburst',
+                            data: sunburstData,
+                            radius: [0, '95%'],
+                            sort: null,
+                            emphasis: { focus: 'ancestor' },
+                            itemStyle: { borderRadius: 4, borderWidth: 1, borderColor: '#1e293b' },
+                            label: { show: false }
+                        },
+                        tooltip: {
+                            formatter: function (info) {
+                                var value = info.value;
+                                var treePathInfo = info.treePathInfo;
+                                var treePath = [];
+                                for (var i = 1; i < treePathInfo.length; i++) {
+                                    treePath.push(treePathInfo[i].name);
+                                }
+                                return '<div style="font-family: Inter;"><strong>' + treePath.join('/') + '</strong><br>物理代码行数 (LOC): ' + value.toLocaleString() + '</div>';
+                            }
+                        }
+                    };
+                    myChart.setOption(window.compositionChartOption);
+                    
+                    const listContainer = document.getElementById('compositionList');
+                    if (listContainer) {
+                        function calculateValue(node) {
+                            if (node.value !== undefined) return node.value;
+                            if (node.children) {
+                                let sum = 0;
+                                node.children.forEach(c => sum += calculateValue(c));
+                                node.value = sum;
+                                return sum;
+                            }
+                            return 0;
+                        }
+                        sunburstData.forEach(calculateValue);
+                        
+                        let html = '<table>';
+                        html += '<thead><tr><th>物理模块 (Directory)</th><th style="text-align: right;">代码行数 (LOC)</th></tr></thead><tbody>';
+                        
+                        let sortedData = [...sunburstData].sort((a, b) => b.value - a.value);
+                        
+                        sortedData.forEach(item => {
+                            html += '<tr>';
+                            html += '<td style="font-weight: 500; display: flex; align-items: center; gap: 10px;">';
+                            html += '<div style="width: 10px; height: 10px; border-radius: 50%; background: var(--glow);"></div>';
+                            html += item.name + '</td>';
+                            html += '<td style="text-align: right; color: var(--glow); font-family: monospace; font-weight: bold;">' + item.value.toLocaleString() + '</td>';
+                            html += '</tr>';
+                            
+                            if (item.children) {
+                                let sortedChildren = [...item.children].sort((a, b) => b.value - a.value);
+                                sortedChildren.forEach(child => {
+                                    html += '<tr>';
+                                    html += '<td style="padding-left: 30px; color: var(--text-muted); font-size: 0.85rem; font-family: monospace;">↳ ' + child.name + '</td>';
+                                    html += '<td style="text-align: right; color: var(--text-muted); font-family: monospace; font-size: 0.85rem;">' + child.value.toLocaleString() + '</td>';
+                                    html += '</tr>';
+                                    
+                                    if (child.children) {
+                                        let nestedChildren = [...child.children].sort((a, b) => b.value - a.value);
+                                        nestedChildren.forEach(nested => {
+                                            html += '<tr>';
+                                            html += '<td style="padding-left: 50px; color: rgba(255,255,255,0.3); font-size: 0.8rem; font-family: monospace;">- ' + nested.name + '</td>';
+                                            html += '<td style="text-align: right; color: rgba(255,255,255,0.3); font-family: monospace; font-size: 0.8rem;">' + nested.value.toLocaleString() + '</td>';
+                                            html += '</tr>';
+                                        });
+                                    }
+                                });
+                            }
+                        });
+                        html += '</tbody></table>';
+                        listContainer.innerHTML = html;
+                    }
+                }
+
+                const ctxTrend = document.getElementById('trendChart').getContext('2d');
+                new Chart(ctxTrend, {
+                    type: 'bar',
+                    data: {
+                        labels: ['之前 (旧架构)', '清理前 (2026年3月)', '当前状态快照', '生产：保守目标', '生产：理想目标'],
+                        datasets: [
+                            { label: '核心代码量', data: [22232, 118579, 164060, 179060, 194060], backgroundColor: 'rgba(59, 130, 246, 0.6)', borderColor: 'rgba(59, 130, 246, 1)', borderWidth: 1 },
+                            { label: '项目总行数', data: [72658, 146976, 181010, 203010, 200200], backgroundColor: 'rgba(192, 132, 252, 0.6)', borderColor: 'rgba(192, 132, 252, 1)', borderWidth: 1 }
+                        ]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.1)' }, ticks: { color: '#94a3b8' }, title: { display: true, text: '代码行数', color: '#f8fafc' } }, x: { grid: { display: false }, ticks: { color: '#94a3b8' } } }, plugins: { legend: { labels: { color: '#f8fafc', font: { family: 'Inter' } } } } }
+                });
+            }
+
+            
+        </script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    </body>
+    </html>
+
+    

@@ -28,7 +28,8 @@ Start with the repo contract and the owning docs:
 3. Read `docs/plans/tracker.md`.
 4. Read the owning spec or SOP in `docs/cerb/**`, `docs/specs/**`, or `docs/sops/**`.
 5. Read `docs/cerb/interface-map.md` if the change spans modules.
-6. Read `.agent/rules/lessons-learned.md` if the task resembles a known trap.
+6. Read `.agent/rules/lessons-learned.md` before planning or editing greenfield, migration, cross-platform, architecture-sensitive, repeated-failure, or other known-risk work.
+7. If any lesson trigger matches, or if the index is too shallow for the current risk, read `docs/reference/agent-lessons-details.md` before proceeding.
 
 Open `docs/specs/Architecture.md` only when the task clearly requires architecture-law interpretation or the user explicitly wants that document consulted.
 
@@ -41,6 +42,7 @@ If the task has no owning spec or interface, switch to `$smart-sales-cerb-specs`
 - Prefer one feature task to map to one owning `spec.md` plus one owning `interface.md`.
 - If the request is truly cross-cutting, say so explicitly instead of inventing a fake single owner.
 - Treat tracker entries as navigation, not business logic.
+- Confirm the lane's `evidence_class` in `ops/lane-registry.json` matches the nature of the work before planning verification.
 
 ### 2. Quote the source behavior
 

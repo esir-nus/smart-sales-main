@@ -1,5 +1,6 @@
 ---
 description: Diagnose and fix OEM-specific permission issues — doc alignment check + troubleshooting from user description
+last_reviewed: 2026-04-13
 ---
 
 # OEM Permission Hardening

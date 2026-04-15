@@ -36,6 +36,92 @@ export interface HarmonyTingwuSubmitResult {
   taskKey: string;
 }
 
+type HarmonyJsonObject = Record<string, Object>;
+type HarmonyStringMap = Record<string, string>;
+
+interface HarmonyTingwuSubmitInput {
+  SourceLanguage: string;
+  TaskKey: string;
+  FileUrl: string;
+}
+
+interface HarmonyTingwuSubmitDiarization {
+  OutputLevel: number;
+}
+
+interface HarmonyTingwuSubmitTranscription {
+  DiarizationEnabled: boolean;
+  Diarization: HarmonyTingwuSubmitDiarization;
+}
+
+interface HarmonyTingwuSubmitSummarization {
+  Types: string[];
+}
+
+interface HarmonyTingwuSubmitMeetingAssistance {
+  Types: string[];
+}
+
+interface HarmonyTingwuSubmitTranscoding {
+  TargetAudioFormat: string;
+}
+
+interface HarmonyTingwuSubmitParameters {
+  Transcription: HarmonyTingwuSubmitTranscription;
+  AutoChaptersEnabled: boolean;
+  SummarizationEnabled: boolean;
+  Summarization: HarmonyTingwuSubmitSummarization;
+  MeetingAssistanceEnabled: boolean;
+  MeetingAssistance: HarmonyTingwuSubmitMeetingAssistance;
+  Transcoding: HarmonyTingwuSubmitTranscoding;
+}
+
+interface HarmonyTingwuSubmitRequest {
+  AppKey: string;
+  Input: HarmonyTingwuSubmitInput;
+  Parameters: HarmonyTingwuSubmitParameters;
+}
+
+interface HarmonyTingwuGetHeaders {
+  Accept: string;
+}
+
+interface HarmonyTingwuHeaderState {
+  accept: string;
+  contentType: string;
+  date: string;
+  xAcsDate: string;
+  xAcsAccessKeyId: string;
+  xAcsSignatureMethod: string;
+  xAcsSignatureVersion: string;
+  xAcsSignatureNonce: string;
+  xTingwuAppKey: string;
+  xAcsSecurityToken?: string;
+  authorization?: string;
+}
+
+interface HarmonyTingwuRequestHeaders {
+  Accept: string;
+  'Content-Type': string;
+  Date: string;
+  'x-acs-date': string;
+  'x-acs-access-key-id': string;
+  'x-acs-signature-method': string;
+  'x-acs-signature-version': string;
+  'x-acs-signature-nonce': string;
+  'x-tingwu-app-key': string;
+  'x-acs-security-token'?: string;
+  Authorization?: string;
+}
+
+interface HarmonyTingwuProviderPayloads {
+  transcription: string;
+  autoChapters: string;
+  summarization: string;
+  meetingAssistance: string;
+  identityRecognition: string;
+}
+
 interface HarmonyTingwuStatusData {
   TaskId?: string;
   TaskKey?: string;
@@ -47,7 +133,7 @@ interface HarmonyTingwuStatusData {
   OutputMp4Path?: string;
   OutputThumbnailPath?: string;
   OutputSpectrumPath?: string;
-  Result?: Record<string, string>;
+  Result?: HarmonyStringMap;
 }
 
 interface HarmonyTingwuStatusEnvelope {
@@ -66,40 +152,48 @@ class HarmonyTingwuService {
   async submitTask(fileUrl: string, audioAssetName: string): Promise<HarmonyTingwuSubmitResult> {
     const harmonyRuntimeConfig = getHarmonyRuntimeConfig();
     const taskKey = `${audioAssetName}_${Date.now()}`.replace(/[^a-zA-Z0-9]/g, '_');
-    const body = JSON.stringify({
+    const input: HarmonyTingwuSubmitInput = {
+      SourceLanguage: 'cn',
+      TaskKey: taskKey,
+      FileUrl: fileUrl
+    };
+    const diarization: HarmonyTingwuSubmitDiarization = {
+      OutputLevel: 1
+    };
+    const transcription: HarmonyTingwuSubmitTranscription = {
+      DiarizationEnabled: true,
+      Diarization: diarization
+    };
+    const summarization: HarmonyTingwuSubmitSummarization = {
+      Types: ['Paragraph', 'Conversational', 'QuestionsAnswering']
+    };
+    const meetingAssistance: HarmonyTingwuSubmitMeetingAssistance = {
+      Types: ['Actions', 'KeyInformation']
+    };
+    const transcoding: HarmonyTingwuSubmitTranscoding = {
+      TargetAudioFormat: 'mp3'
+    };
+    const parameters: HarmonyTingwuSubmitParameters = {
+      Transcription: transcription,
+      AutoChaptersEnabled: true,
+      SummarizationEnabled: true,
+      Summarization: summarization,
+      MeetingAssistanceEnabled: true,
+      MeetingAssistance: meetingAssistance,
+      Transcoding: transcoding
+    };
+    const requestBody: HarmonyTingwuSubmitRequest = {
       AppKey: harmonyRuntimeConfig.TINGWU_APP_KEY.trim(),
-      Input: {
-        SourceLanguage: 'cn',
-        TaskKey: taskKey,
-        FileUrl: fileUrl
-      },
-      Parameters: {
-        Transcription: {
-          DiarizationEnabled: true,
-          Diarization: {
-            OutputLevel: 1
-          }
-        },
-        AutoChaptersEnabled: true,
-        SummarizationEnabled: true,
-        Summarization: {
-          Types: ['Paragraph', 'Conversational', 'QuestionsAnswering']
-        },
-        MeetingAssistanceEnabled: true,
-        MeetingAssistance: {
-          Types: ['Actions', 'KeyInformation']
-        },
-        Transcoding: {
-          TargetAudioFormat: 'mp3'
-        }
-      }
-    });
+      Input: input,
+      Parameters: parameters
+    };
+    const body = JSON.stringify(requestBody);
     const response = await this.signedRequest('PUT', 'tasks?type=offline', body);
-    const payload = this.parseJson(response.textBody || '{}') as Record<string, Object>;
+    const payload = this.parseJsonObject(response.textBody || '{}');
     if (cleanString(payload.Code) && payload.Code !== '0') {
       throw new Error(`Tingwu submit failed: ${cleanString(payload.Message) || payload.Code}`);
     }
-    const data = safeObject(payload.Data) || {};
+    const data = safeObject(payload.Data) || this.emptyJsonObject();
     const jobId = cleanString(data.TaskId);
     if (!jobId) {
       throw new Error('Tingwu submit returned no TaskId');
@@ -131,7 +225,7 @@ class HarmonyTingwuService {
 
   private async getTaskStatus(jobId: string): Promise<HarmonyTingwuStatusEnvelope> {
     const response = await this.signedRequest('GET', `tasks/${encodeURIComponent(jobId)}?type=offline`);
-    const payload = this.parseJson(response.textBody || '{}') as HarmonyTingwuStatusEnvelope;
+    const payload = this.parseJsonObject(response.textBody || '{}') as HarmonyTingwuStatusEnvelope;
     if (payload.Code && payload.Code !== '0' && payload.Code !== 'TaskNotFound') {
       throw new Error(`Tingwu status failed: ${payload.Message || payload.Code}`);
     }
@@ -139,21 +233,24 @@ class HarmonyTingwuService {
   }
 
   private async fetchArtifacts(data: HarmonyTingwuStatusData): Promise<HarmonyTingwuCompletedResult> {
-    const resultLinks = data.Result || {};
+    const resultLinks = data.Result || this.emptyStringMap();
     const transcriptionUrl = resultLinks.Transcription;
     const autoChaptersUrl = resultLinks.AutoChapters;
     const summarizationUrl = resultLinks.Summarization;
     const meetingAssistanceUrl = resultLinks.MeetingAssistance;
     const identityRecognitionUrl = resultLinks.IdentityRecognition;
-
-    const [transcriptionRaw, autoChaptersRaw, summarizationRaw, meetingAssistanceRaw, identityRecognitionRaw] =
-      await Promise.all([
-        this.fetchPublicBody(transcriptionUrl),
-        this.fetchPublicBody(autoChaptersUrl),
-        this.fetchPublicBody(summarizationUrl),
-        this.fetchPublicBody(meetingAssistanceUrl),
-        this.fetchPublicBody(identityRecognitionUrl)
-      ]);
+    const artifactBodies = await Promise.all([
+      this.fetchPublicBody(transcriptionUrl),
+      this.fetchPublicBody(autoChaptersUrl),
+      this.fetchPublicBody(summarizationUrl),
+      this.fetchPublicBody(meetingAssistanceUrl),
+      this.fetchPublicBody(identityRecognitionUrl)
+    ]);
+    const transcriptionRaw = artifactBodies[0];
+    const autoChaptersRaw = artifactBodies[1];
+    const summarizationRaw = artifactBodies[2];
+    const meetingAssistanceRaw = artifactBodies[3];
+    const identityRecognitionRaw = artifactBodies[4];
 
     const transcriptionRoot = this.extractTranscriptionRoot(transcriptionRaw);
     const diarizedSegments = this.parseDiarizedSegments(transcriptionRoot);
@@ -174,6 +271,13 @@ class HarmonyTingwuService {
     const keywords = this.parseKeywords(meetingAssistanceRaw);
     const links = this.makeResultLinks(resultLinks);
 
+    const providerPayloads: HarmonyTingwuProviderPayloads = {
+      transcription: transcriptionRaw || '',
+      autoChapters: autoChaptersRaw || '',
+      summarization: summarizationRaw || '',
+      meetingAssistance: meetingAssistanceRaw || '',
+      identityRecognition: identityRecognitionRaw || ''
+    };
     const artifacts: HarmonyTingwuArtifacts = {
       outputMp3Path: cleanString(data.OutputMp3Path),
       outputMp4Path: cleanString(data.OutputMp4Path),
@@ -190,13 +294,7 @@ class HarmonyTingwuService {
       diarizedSegments,
       speakerLabels,
       keywords,
-      providerPayloads: {
-        transcription: transcriptionRaw || '',
-        autoChapters: autoChaptersRaw || '',
-        summarization: summarizationRaw || '',
-        meetingAssistance: meetingAssistanceRaw || '',
-        identityRecognition: identityRecognitionRaw || ''
-      }
+      providerPayloads
     };
 
     return {
@@ -210,9 +308,10 @@ class HarmonyTingwuService {
     if (!url || url.trim().length === 0) {
       return undefined;
     }
-    const response = await harmonyHttpClient.requestText(url, http.RequestMethod.GET, {
+    const headers: HarmonyTingwuGetHeaders = {
       Accept: 'application/json'
-    });
+    };
+    const response = await harmonyHttpClient.requestText(url, http.RequestMethod.GET, headers);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       return undefined;
     }
@@ -236,24 +335,25 @@ class HarmonyTingwuService {
     const date = buildRfc1123Date();
     const nonce = buildNonce();
     const contentType = 'application/json; charset=UTF-8';
-    const headers: Record<string, string> = {
-      Accept: 'application/json',
-      'Content-Type': contentType,
-      Date: date,
-      'x-acs-date': date,
-      'x-acs-access-key-id': accessKeyId,
-      'x-acs-signature-method': 'HMAC-SHA1',
-      'x-acs-signature-version': '1.0',
-      'x-acs-signature-nonce': nonce,
-      'x-tingwu-app-key': appKey
+    const headerState: HarmonyTingwuHeaderState = {
+      accept: 'application/json',
+      contentType: contentType,
+      date: date,
+      xAcsDate: date,
+      xAcsAccessKeyId: accessKeyId,
+      xAcsSignatureMethod: 'HMAC-SHA1',
+      xAcsSignatureVersion: '1.0',
+      xAcsSignatureNonce: nonce,
+      xTingwuAppKey: appKey
     };
     if (harmonyRuntimeConfig.TINGWU_SECURITY_TOKEN.trim().length > 0) {
-      headers['x-acs-security-token'] = harmonyRuntimeConfig.TINGWU_SECURITY_TOKEN.trim();
+      headerState.xAcsSecurityToken = harmonyRuntimeConfig.TINGWU_SECURITY_TOKEN.trim();
     }
 
-    const stringToSign = this.buildStringToSign(method, headers, contentType, date, resource);
+    const stringToSign = this.buildStringToSign(method, headerState, contentType, date, resource);
     const signature = hmacSha1Base64(accessKeySecret, stringToSign);
-    headers.Authorization = `acs ${accessKeyId}:${signature}`;
+    headerState.authorization = `acs ${accessKeyId}:${signature}`;
+    const headers = this.createRequestHeaders(headerState);
 
     const response = await harmonyHttpClient.requestText(
       `${baseUrl}${resource}`,
@@ -270,45 +370,76 @@ class HarmonyTingwuService {
 
   private buildStringToSign(
     method: string,
-    headers: Record<string, string>,
+    headers: HarmonyTingwuHeaderState,
     contentType: string,
     date: string,
     resource: string
   ): string {
-    const canonicalHeaderLines = Object.keys(headers)
-      .filter((key: string) => key.toLowerCase().startsWith('x-acs-'))
-      .sort()
-      .map((key: string) => `${key.toLowerCase()}:${headers[key].trim()}`)
-      .join('\n');
+    const canonicalLines: string[] = [];
+    canonicalLines.push(`x-acs-access-key-id:${headers.xAcsAccessKeyId.trim()}`);
+    canonicalLines.push(`x-acs-date:${headers.xAcsDate.trim()}`);
+    if (headers.xAcsSecurityToken) {
+      canonicalLines.push(`x-acs-security-token:${headers.xAcsSecurityToken.trim()}`);
+    }
+    canonicalLines.push(`x-acs-signature-method:${headers.xAcsSignatureMethod.trim()}`);
+    canonicalLines.push(`x-acs-signature-nonce:${headers.xAcsSignatureNonce.trim()}`);
+    canonicalLines.push(`x-acs-signature-version:${headers.xAcsSignatureVersion.trim()}`);
+    const canonicalHeaderLines = canonicalLines.join('\n');
     return `${method}\napplication/json\n\n${contentType}\n${date}\n${canonicalHeaderLines}\n/${resource}`;
   }
 
-  private parseJson(raw: string): Object {
+  private createRequestHeaders(state: HarmonyTingwuHeaderState): HarmonyTingwuRequestHeaders {
+    const headers: HarmonyTingwuRequestHeaders = {
+      Accept: state.accept,
+      'Content-Type': state.contentType,
+      Date: state.date,
+      'x-acs-date': state.xAcsDate,
+      'x-acs-access-key-id': state.xAcsAccessKeyId,
+      'x-acs-signature-method': state.xAcsSignatureMethod,
+      'x-acs-signature-version': state.xAcsSignatureVersion,
+      'x-acs-signature-nonce': state.xAcsSignatureNonce,
+      'x-tingwu-app-key': state.xTingwuAppKey,
+      'x-acs-security-token': state.xAcsSecurityToken,
+      Authorization: state.authorization
+    };
+    return headers;
+  }
+
+  private parseJsonObject(raw: string): HarmonyJsonObject {
     try {
-      return JSON.parse(raw) as Object;
-    } catch (error) {
-      return {};
+      const parsed: Object = JSON.parse(raw) as Object;
+      const payload = safeObject(parsed);
+      return payload ? payload as HarmonyJsonObject : this.emptyJsonObject();
+    } catch (_error) {
+      return this.emptyJsonObject();
     }
   }
 
-  private extractTranscriptionRoot(raw?: string): Record<string, Object> {
-    const payload = safeObject(this.parseJson(raw || '{}')) || {};
-    return safeObject(payload.Transcription) || payload;
+  private extractTranscriptionRoot(raw?: string): HarmonyJsonObject {
+    const payload = this.parseJsonObject(raw || '{}');
+    return safeObject(payload.Transcription) as HarmonyJsonObject || payload;
   }
 
-  private parseDiarizedSegments(root: Record<string, Object>): HarmonyDiarizedSegment[] {
-    return arrayOfObjects(root.Segments).map((segment: Record<string, Object>, index: number) => ({
-      speakerId: cleanString(segment.Speaker) || cleanString(segment.SpeakerId),
-      speakerIndex: Number(segment.Id || index),
-      startMs: Math.floor(Number(segment.Start || 0) * 1000),
-      endMs: Math.floor(Number(segment.End || 0) * 1000),
-      text: cleanString(segment.Text) || ''
-    })).filter((segment: HarmonyDiarizedSegment) => segment.text.length > 0);
+  private parseDiarizedSegments(root: HarmonyJsonObject): HarmonyDiarizedSegment[] {
+    const result: HarmonyDiarizedSegment[] = [];
+    arrayOfObjects(root.Segments).forEach((segment, index: number) => {
+      const nextSegment: HarmonyDiarizedSegment = {
+        speakerId: cleanString(segment.Speaker) || cleanString(segment.SpeakerId),
+        speakerIndex: Number(segment.Id || index),
+        startMs: Math.floor(Number(segment.Start || 0) * 1000),
+        endMs: Math.floor(Number(segment.End || 0) * 1000),
+        text: cleanString(segment.Text) || ''
+      };
+      if (nextSegment.text.length > 0) {
+        result.push(nextSegment);
+      }
+    });
+    return result;
   }
 
-  private parseTranscriptionSpeakerLabels(root: Record<string, Object>): Record<string, string> {
-    const labels: Record<string, string> = {};
-    arrayOfObjects(root.Speakers).forEach((speaker: Record<string, Object>) => {
+  private parseTranscriptionSpeakerLabels(root: HarmonyJsonObject): HarmonyStringMap {
+    const labels = this.emptyStringMap();
+    arrayOfObjects(root.Speakers).forEach((speaker) => {
       const speakerId = cleanString(speaker.Id) || cleanString(speaker.SpeakerId);
       const label = cleanString(speaker.Name) || cleanString(speaker.SpeakerName);
       if (speakerId && label) {
@@ -318,13 +449,13 @@ class HarmonyTingwuService {
     return labels;
   }
 
-  private parseIdentitySpeakerLabels(raw?: string): Record<string, string> {
-    const payload = this.parseJson(raw || '{}');
-    const labels: Record<string, string> = {};
+  private parseIdentitySpeakerLabels(raw?: string): HarmonyStringMap {
+    const payload = this.parseJsonObject(raw || '{}');
+    const labels = this.emptyStringMap();
     const root = safeObject(payload);
     const items = arrayOfObjects(root?.IdentityRecognition)
       .concat(arrayOfObjects(safeObject(root?.Data)?.IdentityRecognition));
-    items.forEach((item: Record<string, Object>) => {
+    items.forEach((item) => {
       const speakerId = cleanString(item.SpeakerId) || cleanString(item.Speaker);
       const identity = safeObject(item.Identity);
       const label = cleanString(identity?.Name) || cleanString(item.IdentityName) || cleanString(item.Name);
@@ -336,11 +467,11 @@ class HarmonyTingwuService {
   }
 
   private mergeSpeakerLabels(
-    base: Record<string, string>,
+    base: HarmonyStringMap,
     segments: HarmonyDiarizedSegment[],
-    identityLabels: Record<string, string>
-  ): Record<string, string> {
-    const merged: Record<string, string> = {};
+    identityLabels: HarmonyStringMap
+  ): HarmonyStringMap {
+    const merged = this.emptyStringMap();
     Object.keys(base).forEach((key: string) => {
       merged[key] = base[key];
     });
@@ -360,21 +491,26 @@ class HarmonyTingwuService {
   }
 
   private parseChapters(raw?: string): HarmonyChapter[] {
-    const payload = safeObject(this.parseJson(raw || '{}')) || {};
+    const payload = this.parseJsonObject(raw || '{}');
     const items = arrayOfObjects(payload.AutoChapters)
       .concat(arrayOfObjects(payload.Chapters))
       .concat(arrayOfObjects(safeObject(payload.Data)?.AutoChapters))
       .concat(arrayOfObjects(safeObject(payload.Data)?.Chapters));
-    return items.map((item: Record<string, Object>, index: number) => ({
-      title: cleanString(item.Title) || cleanString(item.Head) || `Chapter ${index + 1}`,
-      startMs: Math.floor(Number(item.Start || item.StartTime || 0) * 1000),
-      endMs: Math.floor(Number(item.End || item.EndTime || 0) * 1000),
-      summary: cleanString(item.Summary) || cleanString(item.Text)
-    }));
+    const chapters: HarmonyChapter[] = [];
+    items.forEach((item, index: number) => {
+      const chapter: HarmonyChapter = {
+        title: cleanString(item.Title) || cleanString(item.Head) || `Chapter ${index + 1}`,
+        startMs: Math.floor(Number(item.Start || item.StartTime || 0) * 1000),
+        endMs: Math.floor(Number(item.End || item.EndTime || 0) * 1000),
+        summary: cleanString(item.Summary) || cleanString(item.Text)
+      };
+      chapters.push(chapter);
+    });
+    return chapters;
   }
 
   private parseSmartSummary(raw?: string): HarmonySmartSummary | undefined {
-    const payload = safeObject(this.parseJson(raw || '{}')) || {};
+    const payload = this.parseJsonObject(raw || '{}');
     const summaryRoot = safeObject(payload.Summarization)
       || safeObject(payload.Data)
       || payload;
@@ -406,20 +542,25 @@ class HarmonyTingwuService {
   }
 
   private parseKeywords(raw?: string): string[] {
-    const payload = safeObject(this.parseJson(raw || '{}')) || {};
+    const payload = this.parseJsonObject(raw || '{}');
     const meetingRoot = safeObject(payload.MeetingAssistance) || payload;
     return uniqueStrings(safeStringArray(meetingRoot.Keywords));
   }
 
-  private makeResultLinks(resultLinks: Record<string, string>): HarmonyResultLink[] {
-    return Object.keys(resultLinks).map((label: string) => ({
-      label,
-      url: resultLinks[label]
-    }));
+  private makeResultLinks(resultLinks: HarmonyStringMap): HarmonyResultLink[] {
+    const links: HarmonyResultLink[] = [];
+    Object.keys(resultLinks).forEach((label: string) => {
+      const nextLink: HarmonyResultLink = {
+        label,
+        url: resultLinks[label]
+      };
+      links.push(nextLink);
+    });
+    return links;
   }
 
-  private extractExtraResultUrls(resultLinks: Record<string, string>): Record<string, string> {
-    const extras: Record<string, string> = {};
+  private extractExtraResultUrls(resultLinks: HarmonyStringMap): HarmonyStringMap {
+    const extras = this.emptyStringMap();
     Object.keys(resultLinks).forEach((label: string) => {
       if (label !== 'Transcription' && label !== 'AutoChapters') {
         extras[label] = resultLinks[label];
@@ -432,6 +573,16 @@ class HarmonyTingwuService {
     return new Promise((resolve: () => void) => {
       setTimeout(() => resolve(), durationMs);
     });
+  }
+
+  private emptyJsonObject(): HarmonyJsonObject {
+    const empty: HarmonyJsonObject = {};
+    return empty;
+  }
+
+  private emptyStringMap(): HarmonyStringMap {
+    const empty: HarmonyStringMap = {};
+    return empty;
   }
 }
 

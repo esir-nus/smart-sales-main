@@ -89,7 +89,10 @@ sealed class BadgeNotification {
     
     /** 徽章报告录音就绪 (log#YYYYMMDD_HHMMSS) */
     data class RecordingReady(val filename: String) : BadgeNotification()
-    
+
+    /** 徽章报告音频文件就绪，仅下载不转写 (rec#YYYYMMDD_HHMMSS) */
+    data class AudioRecordingReady(val token: String) : BadgeNotification()
+
     /** 未识别的命令 */
     data class Unknown(val raw: String) : BadgeNotification()
 }

@@ -683,6 +683,7 @@ internal class GatewayGattCallback(
                     onTimeSync()
                 }
                 is BadgeNotification.RecordingReady -> flow.tryEmit(notification)
+                is BadgeNotification.AudioRecordingReady -> flow.tryEmit(notification)
                 is BadgeNotification.Unknown -> flow.tryEmit(notification)
                 null -> Unit
             }

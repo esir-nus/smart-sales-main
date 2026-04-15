@@ -38,12 +38,42 @@ const REQUIRED_KEYS: Array<keyof HarmonyRuntimeConfig> = [
   'OSS_ENDPOINT'
 ];
 
+function getConfigValue(
+  config: HarmonyRuntimeConfig,
+  key: keyof HarmonyRuntimeConfig
+): string {
+  switch (key) {
+    case 'TINGWU_BASE_URL':
+      return config.TINGWU_BASE_URL;
+    case 'TINGWU_API_KEY':
+      return config.TINGWU_API_KEY;
+    case 'TINGWU_APP_KEY':
+      return config.TINGWU_APP_KEY;
+    case 'TINGWU_ACCESS_KEY_ID':
+      return config.TINGWU_ACCESS_KEY_ID;
+    case 'TINGWU_ACCESS_KEY_SECRET':
+      return config.TINGWU_ACCESS_KEY_SECRET;
+    case 'TINGWU_SECURITY_TOKEN':
+      return config.TINGWU_SECURITY_TOKEN;
+    case 'OSS_ACCESS_KEY_ID':
+      return config.OSS_ACCESS_KEY_ID;
+    case 'OSS_ACCESS_KEY_SECRET':
+      return config.OSS_ACCESS_KEY_SECRET;
+    case 'OSS_BUCKET_NAME':
+      return config.OSS_BUCKET_NAME;
+    case 'OSS_ENDPOINT':
+      return config.OSS_ENDPOINT;
+    default:
+      return '';
+  }
+}
+
 export function getMissingConfigKeys(
   config: HarmonyRuntimeConfig = emptyHarmonyRuntimeConfig
 ): string[] {
   const missing: string[] = [];
   REQUIRED_KEYS.forEach((key: keyof HarmonyRuntimeConfig) => {
-    if (config[key].trim().length === 0) {
+    if (getConfigValue(config, key).trim().length === 0) {
       missing.push(key);
     }
   });

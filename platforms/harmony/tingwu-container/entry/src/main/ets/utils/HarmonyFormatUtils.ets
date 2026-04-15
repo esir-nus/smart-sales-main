@@ -6,6 +6,9 @@ import {
   HarmonySpeakerSummary
 } from '../model/HarmonyTingwuModels';
 
+type HarmonyLooseValue = Object | string | number | boolean | undefined | null;
+type HarmonyLooseObject = Record<string, Object>;
+
 export function createHarmonyAudioId(): string {
   return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -137,7 +140,7 @@ export function uniqueStrings(values: string[]): string[] {
   return result;
 }
 
-export function cleanString(value: unknown): string | undefined {
+export function cleanString(value: HarmonyLooseValue): string | undefined {
   if (typeof value !== 'string') {
     return undefined;
   }
@@ -145,53 +148,73 @@ export function cleanString(value: unknown): string | undefined {
   return normalized.length > 0 ? normalized : undefined;
 }
 
-export function arrayOfObjects(value: unknown): Array<Record<string, Object>> {
+export function arrayOfObjects(
+  value: HarmonyLooseValue | Array<HarmonyLooseValue>
+): HarmonyLooseObject[] {
   if (!Array.isArray(value)) {
     return [];
   }
-  return value.filter((item: unknown) => typeof item === 'object' && item !== null) as Array<Record<string, Object>>;
+  const result: HarmonyLooseObject[] = [];
+  value.forEach((item: HarmonyLooseValue) => {
+    if (typeof item === 'object' && item !== null && !Array.isArray(item)) {
+      result.push(item as HarmonyLooseObject);
+    }
+  });
+  return result;
 }
 
-export function safeObject(value: unknown): Record<string, Object> | undefined {
+export function safeObject(value: HarmonyLooseValue): HarmonyLooseObject | undefined {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return undefined;
   }
-  return value as Record<string, Object>;
+  return value as HarmonyLooseObject;
 }
 
-export function safeStringArray(value: unknown): string[] {
+export function safeStringArray(
+  value: HarmonyLooseValue | Array<HarmonyLooseValue>
+): string[] {
   if (!Array.isArray(value)) {
     return [];
   }
-  return value
-    .map((item: unknown) => cleanString(item))
-    .filter((item: string | undefined): item is string => item !== undefined);
+  const result: string[] = [];
+  value.forEach((item: HarmonyLooseValue) => {
+    const nextValue = cleanString(item);
+    if (nextValue !== undefined) {
+      result.push(nextValue);
+    }
+  });
+  return result;
 }
 
-export function makeSpeakerSummaries(items: Array<Record<string, Object>>): HarmonySpeakerSummary[] {
-  return items
-    .map((item: Record<string, Object>) => {
-      const summary = cleanString(item.Summary) || cleanString(item.summary);
-      if (!summary) {
-        return undefined;
-      }
-      return {
-        name: cleanString(item.Name) || cleanString(item.name),
-        summary
-      };
-    })
-    .filter((item: HarmonySpeakerSummary | undefined): item is HarmonySpeakerSummary => item !== undefined);
+export function makeSpeakerSummaries(items: HarmonyLooseObject[]): HarmonySpeakerSummary[] {
+  const result: HarmonySpeakerSummary[] = [];
+  items.forEach((item: HarmonyLooseObject) => {
+    const summary = cleanString(item.Summary) || cleanString(item.summary);
+    if (!summary) {
+      return;
+    }
+    const nextItem: HarmonySpeakerSummary = {
+      name: cleanString(item.Name) || cleanString(item.name),
+      summary
+    };
+    result.push(nextItem);
+  });
+  return result;
 }
 
-export function makeQuestionAnswers(items: Array<Record<string, Object>>): HarmonyQuestionAnswer[] {
-  return items
-    .map((item: Record<string, Object>) => {
-      const question = cleanString(item.Question) || cleanString(item.question);
-      const answer = cleanString(item.Answer) || cleanString(item.answer);
-      if (!question || !answer) {
-        return undefined;
-      }
-      return { question, answer };
-    })
-    .filter((item: HarmonyQuestionAnswer | undefined): item is HarmonyQuestionAnswer => item !== undefined);
+export function makeQuestionAnswers(items: HarmonyLooseObject[]): HarmonyQuestionAnswer[] {
+  const result: HarmonyQuestionAnswer[] = [];
+  items.forEach((item: HarmonyLooseObject) => {
+    const question = cleanString(item.Question) || cleanString(item.question);
+    const answer = cleanString(item.Answer) || cleanString(item.answer);
+    if (!question || !answer) {
+      return;
+    }
+    const nextItem: HarmonyQuestionAnswer = {
+      question,
+      answer
+    };
+    result.push(nextItem);
+  });
+  return result;
 }

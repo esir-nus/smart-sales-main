@@ -10,6 +10,8 @@ android {
     namespace = "com.smartsales.prism"
     compileSdk = 34
 
+    flavorDimensions += "distribution"
+
     defaultConfig {
         applicationId = "com.smartsales.prism"
         minSdk = 26
@@ -27,6 +29,23 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+    }
+
+    productFlavors {
+        create("full") {
+            dimension = "distribution"
+            buildConfigField("boolean", "IS_HARMONY_COMPAT_FLAVOR", "false")
+            buildConfigField("boolean", "ENABLE_SCHEDULER", "true")
+            resValue("string", "app_name", "智能销售-安卓")
+        }
+        create("harmony") {
+            dimension = "distribution"
+            applicationIdSuffix = ".harmony"
+            versionNameSuffix = "-harmony"
+            buildConfigField("boolean", "IS_HARMONY_COMPAT_FLAVOR", "true")
+            buildConfigField("boolean", "ENABLE_SCHEDULER", "false")
+            resValue("string", "app_name", "智能销售-鸿蒙")
         }
     }
 
@@ -71,6 +90,10 @@ android {
         unitTests {
             isReturnDefaultValues = true
         }
+    }
+
+    lint {
+        baseline = file("lint-baseline.xml")
     }
 }
 

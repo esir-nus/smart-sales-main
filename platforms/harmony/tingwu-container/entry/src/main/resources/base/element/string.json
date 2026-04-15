@@ -11,6 +11,10 @@
     {
       "name": "entryability_label",
       "value": "Tingwu Container"
+    },
+    {
+      "name": "app_label",
+      "value": "Smart Sales Harmony"
     }
   ]
 }

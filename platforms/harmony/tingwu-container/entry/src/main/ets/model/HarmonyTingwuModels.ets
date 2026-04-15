@@ -52,7 +52,7 @@ export interface HarmonyTingwuArtifacts {
   transcriptionUrl?: string;
   autoChaptersUrl?: string;
   customPromptUrl?: string;
-  extraResultUrls: Record<string, string>;
+  extraResultUrls: Object;
   meetingAssistanceRaw?: string;
   transcriptMarkdown?: string;
   chapters: HarmonyChapter[];
@@ -60,7 +60,7 @@ export interface HarmonyTingwuArtifacts {
   diarizedSegments: HarmonyDiarizedSegment[];
   speakerLabels: Record<string, string>;
   keywords: string[];
-  providerPayloads: Record<string, string>;
+  providerPayloads: Object;
 }
 
 export interface HarmonyTingwuAudioItem {

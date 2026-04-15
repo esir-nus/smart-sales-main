@@ -1,5 +1,6 @@
 ---
 description: Create a standardized Cerb UI/UX specification (States + Interactions + Layout)
+last_reviewed: 2026-04-13
 ---
 
 # Cerb UI Spec Scaffolder

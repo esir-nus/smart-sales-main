@@ -1,3 +1,8 @@
+---
+description: Anti-illusion testing rules - prevent hallucinated tests that mock the happy path
+trigger: always_on
+---
+
 # Anti-Illusion Testing Protocol (防幻觉测试铁律)
 
 > **Root Cause**: AI agents write "hallucinated" tests that optimize for green checkmarks by mocking the happy path, bypassing the actual information gates and physical complexities of the pipeline.

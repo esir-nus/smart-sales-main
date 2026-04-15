@@ -1,5 +1,6 @@
 ---
 description: Perform a comprehensive, evidence-based code audit against the interface-map.md SOT
+last_reviewed: 2026-04-13
 ---
 
 # Interface Map Audit Workflow

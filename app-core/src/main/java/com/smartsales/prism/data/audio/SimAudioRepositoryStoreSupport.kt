@@ -321,7 +321,32 @@ internal class SimAudioRepositoryStoreSupport(
                                 availability == AudioLocalAvailability.DOWNLOADING ||
                                 availability == AudioLocalAvailability.QUEUED -> null
                             else -> audio.lastErrorMessage
-                        }
+                        },
+                        downloadProgress = 0f,
+                        downloadedBytes = 0L,
+                        downloadTotalBytes = 0L
+                    )
+                } else {
+                    audio
+                }
+            }
+        }
+    }
+
+    fun updateBadgeDownloadProgress(
+        filename: String,
+        downloadProgress: Float,
+        downloadedBytes: Long,
+        downloadTotalBytes: Long
+    ) {
+        val normalizedFilename = simPendingBadgeDeleteFilename(filename)
+        runtime.audioFiles.update { current ->
+            current.map { audio ->
+                if (simPendingBadgeDeleteFilename(audio.filename) == normalizedFilename) {
+                    audio.copy(
+                        downloadProgress = downloadProgress,
+                        downloadedBytes = downloadedBytes,
+                        downloadTotalBytes = downloadTotalBytes
                     )
                 } else {
                     audio

@@ -36,6 +36,7 @@ import kotlinx.coroutines.withTimeout
 
 private const val DEFAULT_CONNECTION_TIMEOUT_MS = 10_000L
 private const val DEFAULT_OPERATION_TIMEOUT_MS = 5_000L
+private const val RSSI_TIMEOUT_MS = 3_000L
 
 internal class GattBleGatewaySessionSupport(
     private val context: Context,
@@ -144,6 +145,24 @@ internal class GattBleGatewaySessionSupport(
     }
 
     fun listenForBadgeNotifications(): Flow<BadgeNotification> = runtime.badgeNotifications.asSharedFlow()
+
+    @SuppressLint("MissingPermission")
+    suspend fun isReachable(): Boolean = withContext(dispatchers.io) {
+        runtime.sessionLock.withLock {
+            val session = runtime.persistentSession ?: return@withContext false
+            try {
+                session.callback.prepareRssi()
+                if (!session.gatt.readRemoteRssi()) return@withContext false
+                withTimeout(RSSI_TIMEOUT_MS) {
+                    session.callback.awaitRssiResult()
+                }
+            } catch (_: TimeoutCancellationException) {
+                false
+            } catch (_: Exception) {
+                false
+            }
+        }
+    }
 
     suspend fun provision(
         session: BleSession,
@@ -570,6 +589,7 @@ internal class GatewayGattCallback(
     private var pendingWriteUuid: UUID? = null
     private var pendingReadUuid: UUID? = null
     private var pendingDescriptorUuid: UUID? = null
+    private var rssiDeferred: CompletableDeferred<Boolean>? = null
 
     suspend fun awaitConnection() {
         val success = connectionReady.await()
@@ -607,6 +627,14 @@ internal class GatewayGattCallback(
     suspend fun awaitDescriptorResult(uuid: UUID) {
         val descriptorUuid = descriptorResultChannel.receive()
         if (descriptorUuid != uuid) throw IllegalStateException("通知配置不匹配 $uuid")
+    }
+
+    fun prepareRssi() {
+        rssiDeferred = CompletableDeferred()
+    }
+
+    suspend fun awaitRssiResult(): Boolean {
+        return rssiDeferred?.await() ?: false
     }
 
     suspend fun awaitNotification(uuid: UUID): ByteArray {
@@ -667,6 +695,10 @@ internal class GatewayGattCallback(
         } else if (status != BluetoothGatt.GATT_SUCCESS) {
             ConnectivityLogger.w("Descriptor write failed: $status")
         }
+    }
+
+    override fun onReadRemoteRssi(gatt: BluetoothGatt, rssi: Int, status: Int) {
+        rssiDeferred?.complete(status == BluetoothGatt.GATT_SUCCESS)
     }
 
     override fun onCharacteristicChanged(

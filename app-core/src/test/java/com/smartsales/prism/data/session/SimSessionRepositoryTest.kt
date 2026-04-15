@@ -31,6 +31,7 @@ class SimSessionRepositoryTest {
                 timestamp = 123L,
                 isPinned = true,
                 linkedAudioId = "audio_1",
+                hasAudioContextHistory = true,
                 sessionKind = SessionKind.SCHEDULER_FOLLOW_UP,
                 schedulerFollowUpContext = SchedulerFollowUpContext(
                     sourceBadgeThreadId = "thread_1",
@@ -84,6 +85,7 @@ class SimSessionRepositoryTest {
 
         assertEquals("session_1", stored.preview.id)
         assertEquals("audio_1", stored.preview.linkedAudioId)
+        assertTrue(stored.preview.hasAudioContextHistory)
         assertEquals(SessionKind.SCHEDULER_FOLLOW_UP, stored.preview.sessionKind)
         assertEquals("thread_1", stored.preview.schedulerFollowUpContext?.sourceBadgeThreadId)
         assertTrue(stored.preview.isPinned)
@@ -181,5 +183,40 @@ class SimSessionRepositoryTest {
         assertTrue(File(tempFolder.root, "sim_session_session_iso_1_messages.json").exists())
         assertFalse(File(tempFolder.root, "session_metadata.json").exists())
         assertFalse(File(tempFolder.root, "session_session_iso_1_messages.json").exists())
+    }
+
+    @Test
+    fun `repository backfills historical audio flag from linked audio and audio grounded session kind`() {
+        File(tempFolder.root, "sim_session_metadata.json").writeText(
+            """
+            [
+              {
+                "sessionId":"legacy_audio_link",
+                "clientName":"旧录音",
+                "summary":"摘要",
+                "timestamp":123,
+                "isPinned":false,
+                "linkedAudioId":"audio_legacy",
+                "sessionKind":"GENERAL"
+              },
+              {
+                "sessionId":"legacy_audio_kind",
+                "clientName":"旧讨论",
+                "summary":"摘要",
+                "timestamp":456,
+                "isPinned":false,
+                "linkedAudioId":null,
+                "sessionKind":"AUDIO_GROUNDED"
+              }
+            ]
+            """.trimIndent()
+        )
+
+        val stored = SimSessionRepository(tempFolder.root)
+            .loadSessions()
+            .associateBy { it.preview.id }
+
+        assertTrue(stored.getValue("legacy_audio_link").preview.hasAudioContextHistory)
+        assertTrue(stored.getValue("legacy_audio_kind").preview.hasAudioContextHistory)
     }
 }

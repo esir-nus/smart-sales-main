@@ -12,6 +12,16 @@ subprojects {
     apply(plugin = "org.jlleitschuh.gradle.ktlint")
     
     configurations.all {
+        resolutionStrategy.eachDependency {
+            // 固定动态注解版本，避免第三方 SDK 的 latest.release 触发远端元数据查询。
+            if (requested.group == "org.jetbrains" &&
+                requested.name == "annotations" &&
+                requested.version == "latest.release"
+            ) {
+                useVersion("26.1.0")
+                because("Keep Android builds installable when remote Maven metadata is unavailable")
+            }
+        }
         resolutionStrategy.capabilitiesResolution
             .withCapability("com.google.guava:listenablefuture") {
                 select("com.google.guava:listenablefuture:1.0")

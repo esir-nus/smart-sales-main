@@ -53,6 +53,9 @@ internal fun ScanStep(
                 add(android.Manifest.permission.BLUETOOTH_SCAN)
                 add(android.Manifest.permission.BLUETOOTH_CONNECT)
             }
+            // Chinese OEMs (Xiaomi, Huawei, OPPO, Vivo) require location for BLE scan
+            // even on Android 12+. Pre-12 devices always need it.
+            add(android.Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
     var permissionsGranted by remember { mutableStateOf(permissions.isEmpty()) }
@@ -104,7 +107,7 @@ internal fun ScanStepContent(
     onCancel: () -> Unit
 ) {
     when {
-        permissionDenied -> PairingErrorStep("需要蓝牙权限", "请授权蓝牙搜索与连接后继续扫描。", "授权并重试", onRequestPermissions, "返回上一步", onCancel)
+        permissionDenied -> PairingErrorStep("需要蓝牙和位置权限", "请授权蓝牙搜索、连接和位置信息后继续扫描。", "授权并重试", onRequestPermissions, "返回上一步", onCancel)
         pairingState is PairingState.Error -> {
             val presentation = resolveConnectivityPairingErrorUiModel(OnboardingStep.SCAN, pairingState)
             PairingErrorStep(presentation.title, presentation.description, presentation.primaryLabel, onRetryScan, presentation.secondaryLabel, onCancel)

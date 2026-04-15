@@ -106,7 +106,6 @@ internal fun requiredIntervalFor(failureCount: Int): Long = when (failureCount) 
     0 -> 0L
     1 -> 5_000L
     2 -> 10_000L
-    3 -> 20_000L
-    4 -> 40_000L
+    3 -> 30_000L
     else -> 60_000L
 }

@@ -5,7 +5,7 @@
 > **Campaign Lifecycle**: Every major initiative (rewrite, refactor, UI polish, large fix) is an "Epic" or "Campaign". Every Campaign MUST be initialized using the `/campaign-planner` workflow to enforce the following checklist sequence:
 > 1. **Docs** (Ensure Specs exist) -> 2. **Interface Map** (Ensure Layer/Contract boundaries align) -> 3. **Plan** (Dev Planner) -> 4. **Execute** (Implementation) -> 5. **Test** (E2E/L2 Verification). 
 > **Master Guide Alignment**: The Master Guide acts as the overarching strategy doc for a campaign. Agents MUST NEVER auto-update the Master Guide without strict explicit human review (like a Review Conference) to prevent architectural hallucination drift. Instead, run `/04-doc-sync` at the *end* of a campaign.
-> **Last Updated**: 2026-04-13
+> **Last Updated**: 2026-04-15
 > **Work Classification**: `shared-contract` = shared product docs/contracts · `android-beta` = current Android/AOSP beta-maintenance line · `harmony-native` = future native Harmony delivery · `cross-platform-governance` = branch/review/ownership guardrails
 
 ---
@@ -13,7 +13,7 @@
 ## Active Governance Campaign: Android Beta Freeze and Harmony-Native Split
 > **Context**: Direct user-approved governance campaign to freeze the current Android/AOSP line as beta-maintenance while opening a clean native HarmonyOS forward lane without forking shared product truth.
 
-- **Status**: Governance slice started on 2026-04-04; docs/control-plane and local repo guardrails landed first; the first live Harmony root now includes a transient `tingwu-container` app under `platforms/harmony/tingwu-container/` with a native ArkTS runtime slice for document-picker import, Harmony-local file persistence, OSS upload, Tingwu polling, artifact reopen, and auto-generated Harmony credentials sourced from repo-root `local.properties`; the Harmony config seam is now hardened so `hvigorfile.ts` remains the build-owned generator, tracked ArkTS imports route through a stable runtime config entrypoint, and missing generated local config falls back to explicit missing-key state instead of module-resolution failure; a native Harmony north-star framework doc now locks the repo posture to translation-first, doc-first native rewriting rather than Compose-structure porting or shared-JS-first re-platforming; broader full-capability Harmony app work remains deferred; Harmony tracking is now in Stage 2, with `docs/plans/harmony-tracker.md` acting as the program-summary tracker and `docs/plans/harmony-ui-translation-tracker.md` acting as the page-by-page ArkUI tracker; a dedicated internal `ui-verification` Harmony package now exists beside the backend mini-lab root so native page rewrites and later on-device UI checks can proceed without widening the public Tingwu container capability boundary; Harmony scheduler backend-first phase 1 remains an operator-only Path A mini-lab for Uni-A exact create and Uni-B vague create rather than a fake UI-parity rollout; lane-first dirty-tree prevention is now formalized as a harness with `ops/lane-registry.json`, `scripts/lane_guard.py`, shared `.githooks/`, and CI branch/path validation so mixed work is blocked before landing
+- **Status**: Governance slice started on 2026-04-04; docs/control-plane and local repo guardrails landed first; the first live Harmony root now includes a transient `tingwu-container` app under `platforms/harmony/tingwu-container/` with a native ArkTS runtime slice for document-picker import, Harmony-local file persistence, OSS upload, Tingwu polling, artifact reopen, and auto-generated Harmony credentials sourced from repo-root `local.properties`; the Harmony config seam is now hardened so `hvigorfile.ts` remains the build-owned generator, tracked ArkTS imports route through a stable runtime config entrypoint, and missing generated local config falls back to explicit missing-key state instead of module-resolution failure; broader full-capability Harmony app work remains deferred
 - **Primary Law**:
   - [`docs/specs/platform-governance.md`](../specs/platform-governance.md)
 - **Dirty-Tree Quarantine Ledger**:
@@ -26,39 +26,13 @@
   - [`docs/reference/harmonyos-platform-guide.md`](../reference/harmonyos-platform-guide.md)
 - **Current Overlay Root**:
   - [`docs/platforms/README.md`](../platforms/README.md)
-- **Harmony Native Framework**:
-  - [`docs/platforms/harmony/native-development-framework.md`](../platforms/harmony/native-development-framework.md)
 - **Transient Harmony Container Overlay**:
   - [`docs/platforms/harmony/tingwu-container.md`](../platforms/harmony/tingwu-container.md)
-- **Tracker Governance SOP**:
-  - [`docs/sops/tracker-governance.md`](../sops/tracker-governance.md)
-- **Lane Worktree Governance SOP**:
-  - [`docs/sops/lane-worktree-governance.md`](../sops/lane-worktree-governance.md)
-- **Lane Registry**:
-  - [`ops/lane-registry.json`](../../ops/lane-registry.json)
-- **Harmony Native Tracker**:
-  - [`docs/plans/harmony-tracker.md`](./harmony-tracker.md)
-- **Harmony UI Translation Tracker**:
-  - [`docs/plans/harmony-ui-translation-tracker.md`](./harmony-ui-translation-tracker.md)
-- **Harmony UI Verification Overlay**:
-  - [`docs/platforms/harmony/ui-verification.md`](../platforms/harmony/ui-verification.md)
-- **Harmony Scheduler Backend Phase 1**:
-  - [`docs/platforms/harmony/scheduler-backend-first.md`](../platforms/harmony/scheduler-backend-first.md)
-- **Harmony Scheduler Backend Brief**:
-  - [`docs/plans/harmony-scheduler-backend-phase1-brief.md`](./harmony-scheduler-backend-phase1-brief.md)
 - **Work Classification Rule**:
   - shared product flows, domain rules, scheduler semantics, and interface ownership stay `shared-contract`
   - current Kotlin/Gradle app lineage work is `android-beta`
   - native Harmony delivery work is `harmony-native`
   - branch, CODEOWNERS, CI, tracker, and ownership-law work is `cross-platform-governance`
-- **Branch Restore Snapshot**:
-  - active Harmony branch: `harmony/tingwu-container`
-  - branch purpose: transient Harmony-native Tingwu container for quick restore and bounded delivery
-  - capability class: `curated-container`
-  - baseline commit or tag: `401772ab`
-  - current head snapshot at tracker sync: `adbecd0a`
-  - restore procedure reference: [`docs/plans/harmony-tracker.md`](./harmony-tracker.md) and [`docs/specs/platform-governance.md`](../specs/platform-governance.md)
-  - current restore confidence: manual git restore is possible now; CI-backed Harmony restore remains deferred
 - **Immediate Objectives**:
   - keep exactly one canonical protected trunk regardless of whether its branch name is `main` or `master`
   - freeze the current Android/AOSP line to beta-maintenance scope
@@ -66,11 +40,9 @@
   - make one dirty lane equal one write scope and one CERB-style build state, with a handoff when paused or transferred
   - require every active dirty lane to carry explicit doc-code alignment state so no code stays ahead of docs and no shipped/current doc stays ahead of code
   - keep native Harmony artifacts out of `app/**`, `app-core/**`, `core/**`, `data/**`, and `domain/**`
-  - keep native Harmony implementation translation-first and doc-first, rewriting platform code natively instead of porting Kotlin Compose structure or inventing a shared JS UI runtime by default
   - allow the transient Harmony Tingwu container to live only in the Harmony-owned root while it stays explicit about hiding scheduler, reminder, chat, and badge-hardware capability
   - keep Harmony Tingwu credentials/config local to the Harmony root by generating a Harmony-owned local config artifact from repo-root `local.properties` instead of inheriting Android `BuildConfig`
   - route platform-specific delivery differences into overlay docs instead of duplicating the full shared docs tree
-  - keep Stage 2 Harmony tracking explicit: `docs/plans/harmony-tracker.md` owns program-summary state while `docs/plans/harmony-ui-translation-tracker.md` owns page-pass evidence; a separate Harmony dataflow tracker stays deferred until backend rewriting genuinely needs it
   - defer `release/harmony-alpha` until Harmony delivery moves beyond the transient Tingwu container and its first CI path is alive
 
 ---
@@ -168,6 +140,55 @@
 
 ---
 
+## Shipped Slice: Multi-Device Registry and Connectivity Modal Rewrite
+> **Context**: Multi-device management layer enabling device switching, renaming, default promotion, and frosted-glass connectivity modal rewrite.
+
+- **Status**: Shipped (2026-04-15)
+- **Scope**:
+  - `DeviceRegistry` (Layer 2, SharedPrefs persistence) + `DeviceRegistryManager` (Layer 4, multi-device orchestration)
+  - `RegisteredDevice` model with `fromPairing()`, `fromSession()` migration helpers, `macSuffix` display
+  - `ConnectivityModal` full rewrite: frosted glass styling (`SimHomeHeroTokens`), active device header, device list with inline rename/switch/remove/set-default
+  - `ConnectivityViewModel` now depends on `DeviceRegistryManager` for `registeredDevices`, `activeDevice`, and management actions
+  - `SimShellDynamicIslandCoordinator` receives `activeDeviceName` and shows device-specific connectivity text
+  - `RealPairingService` calls `registryManager.registerDevice()` after successful pairing (first becomes default)
+  - Mutex-protected device switch: soft-disconnect → seed session → force reconnect
+  - Legacy single-device auto-migration from `SessionStore` on first launch
+  - `InMemoryDeviceRegistry` test fake
+  - Test updates: `ConnectivityViewModelTest`, `RealPairingServiceTest`
+- **Interface Map**: updated on 2026-04-15
+
+---
+
+## Shipped Slice: Agent Intelligence Wave 6 — Conversational Polish
+> **Context**: UI polish pass aligning agent intelligence surface with conversational patterns.
+
+- **Status**: Shipped (2026-04-15)
+- **Scope**:
+  - `SimThinkingBanner` replaces `SimStatusSheet` for `UiState.Thinking` (compact inline banner, pulsing sparkle, 800ms animation)
+  - `SimStreamingBubble` replaces `SimStatusSheet` for `UiState.Streaming` (stream-into-bubble with blinking cursor)
+  - `SimAssistantBubble` widened to `fillMaxWidth(0.88f)` (was `300.dp`)
+  - Multi-line input capsule (`singleLine = false`, `maxLines = 4`, auto-grows to 140dp max)
+  - `SimSuggestionActionCards` after completed AI responses (3 static suggestions, `onSuggestionClick` → send as user message)
+- **Owning Shard**:
+  - [`docs/cerb-ui/agent-intelligence/spec.md`](../cerb-ui/agent-intelligence/spec.md)
+  - [`docs/cerb-ui/agent-intelligence/interface.md`](../cerb-ui/agent-intelligence/interface.md)
+  - [`docs/cerb-ui/home-shell/spec.md`](../cerb-ui/home-shell/spec.md)
+
+---
+
+## Shipped Slice: Connectivity Bridge Download Progress and Audio Inventory Fields
+> **Context**: `downloadRecording` now supports `onProgress` callback; audio inventory gains transient download progress fields.
+
+- **Status**: Shipped (2026-04-15)
+- **Scope**:
+  - `ConnectivityBridge.downloadRecording()` signature gains optional `onProgress: ((bytesRead, totalBytes) -> Unit)?` parameter
+  - `AudioFile` model gains `downloadProgress`, `downloadedBytes`, `downloadTotalBytes` transient in-memory fields for active WAV download progress UI
+- **Owning Shard**:
+  - [`docs/cerb/connectivity-bridge/interface.md`](../cerb/connectivity-bridge/interface.md)
+  - [`docs/cerb/audio-management/interface.md`](../cerb/audio-management/interface.md)
+
+---
+
 ## Active Investigation: Base Runtime Unification
 > **Context**: Direct user-requested investigation to eliminate SIM/full implementation drift by defining one canonical base runtime and treating Mono as the later architecture augmentation layer.
 
@@ -210,7 +231,7 @@
   - On **2026-04-03**, onboarding mic control switched to one shared two-phase tap contract across consultation, profile, and quick start: first tap starts listening, second tap ends capture and submits
   - On **2026-04-03**, L3 device rerun proved the onboarding recognizer-timeout recovery no longer leaves `SCHEDULER_QUICK_START` with a dead mic button: after the earlier profile-lane timeout, fresh quick-start attempts reached realtime start, deterministic chained-day-clock create, `Uni-M` timeout -> later-lane fallback, and staged-item reschedule/update on device. Acceptance report: [`docs/reports/tests/L3-20260403-onboarding-quick-start-session-recovery.md`](../reports/tests/L3-20260403-onboarding-quick-start-session-recovery.md). Remaining gap: this sandbox still lacks dedicated `VALVE_PROTOCOL` checkpoints and the full outer `10s` quick-start watchdog branch remains unverified at L3.
   - On **2026-04-04**, the shared-surface cleanup pass locked the approved single-runtime v2 rule in code and active docs: `AgentIntelligenceScreen` and `SchedulerDrawer` no longer default to legacy wrapper owners, shell-owned SIM/base-runtime adjunct state now flows explicitly from `RuntimeShell`, `SimAgentViewModel` / `SimSchedulerViewModel` are the current canonical base-runtime owners under the one production shell, and `AgentViewModel` / `SchedulerViewModel` remain documented wrapper debt only.
-  - On **2026-04-04**, focused L3 device acceptance for the unified shell slice remained conditionally accepted after the follow-up branch pass: cold launch and resumed-activity evidence stayed on `MainActivity`, the completed onboarding gate entered the shared home shell directly, scheduler entry/exit remained inside `RuntimeShell`, audio open/select/reselect stayed drawer-based instead of escaping to Android file management, forced onboarding launch/back-block was reproduced on device, a later organic onboarding rerun kept `MainActivity` foregrounded and proved the one-shot scheduler auto-open handoff with the scheduler drawer visible while the handoff gate consumed back to `false`, and the connectivity `NeedsSetup` island takeover now shows `Badge 需要配网`, routes visible-lane tap into connectivity entry, and keeps downward drag scheduler-only. Acceptance report: [`docs/reports/tests/L3-20260404-single-runtime-shell-acceptance.md`](../reports/tests/L3-20260404-single-runtime-shell-acceptance.md). Remaining gap: a cleaner direct scheduler-vs-audio drawer-conflict repro remains unverified at L3.
+  - On **2026-04-04**, focused L3 device acceptance for the unified shell slice remained conditionally accepted after the follow-up branch pass: cold launch and resumed-activity evidence stayed on `MainActivity`, the completed onboarding gate entered the shared home shell directly, scheduler entry/exit remained inside `RuntimeShell`, audio open/select/reselect stayed drawer-based instead of escaping to Android file management, forced onboarding launch/back-block was reproduced on device, the scheduler auto-open handoff gate was device-verified through gate mutation plus one-shot consumption, and the connectivity `NeedsSetup` island takeover now shows `Badge 需要配网`, routes visible-lane tap into connectivity entry, and keeps downward drag scheduler-only. Acceptance report: [`docs/reports/tests/L3-20260404-single-runtime-shell-acceptance.md`](../reports/tests/L3-20260404-single-runtime-shell-acceptance.md). Remaining gaps: a full natural onboarding `COMPLETE` -> home handoff and a cleaner direct scheduler-vs-audio drawer-conflict repro remain unverified at L3.
   - Deferred UX polish note on **2026-04-01**: `VOICE_HANDSHAKE_PROFILE` currently remains a one-shot extract-and-save onboarding step. Future polish should allow an in-step voice `补充或修改` path after the first extraction card appears, keep the current card visible, merge each follow-up pass into the current draft instead of replacing it wholesale, and allow repeated follow-up passes until `保存并继续`. Manual field editing inside onboarding remains deferred beyond that future slice.
   - focused Wave 3D reruns now pass after restoring the extracted scheduler audio-status strings to the evidence-owned legacy full-side values
   - focused Wave 3E reruns now pass with `SimAgentViewModel.kt` back under the transitional ViewModel budget and with the accepted Wave 14 SIM voice-draft behavior preserved
@@ -242,8 +263,8 @@
 > **Context**: Direct user-requested standalone prototype mission. This work is intentionally separate from the current agent app and must not contaminate the live agent runtime by default.
 
 - **Status**: Wave 1 Accepted / Wave 2 Negative-Branch L3 Accepted / Wave 4 Scheduler Accepted / Wave 5 Connectivity Accepted / Wave 6 Isolation Accepted / Wave 7 Feature Acceptance Accepted / Wave 7 Isolation Acceptance Accepted / Wave 7 Closeout Synced / Wave 8 Task-Scoped Scheduler Follow-Up Accepted / Wave 9 Physical-Badge E2E Blocked / Wave 10 Badge Ingress Repair In Progress / Wave 11 General Chat Pivot L1 Accepted / Wave 12 Scheduler-Drawer Voice Reschedule L1 Accepted / Wave 13 Launcher-Core Theme Visibility L1 Accepted / Wave 14 Voice-Draft Composer L1 Verified
-- **Historical Origin Docs**: [`docs/archive/to-cerb/sim-standalone-prototype/concept.md`](../archive/to-cerb/sim-standalone-prototype/concept.md), [`docs/archive/to-cerb/sim-standalone-prototype/mental-model.md`](../archive/to-cerb/sim-standalone-prototype/mental-model.md)
-- **Historical Mission Record**: [`docs/archive/plans-completed/sim-tracker.md`](../archive/plans-completed/sim-tracker.md)
+- **Historical Origin Docs**: [`docs/to-cerb/sim-standalone-prototype/concept.md`](../to-cerb/sim-standalone-prototype/concept.md), [`docs/to-cerb/sim-standalone-prototype/mental-model.md`](../to-cerb/sim-standalone-prototype/mental-model.md)
+- **Historical Mission Record**: [`docs/plans/sim-tracker.md`](./sim-tracker.md)
 - **Current Active Truth**:
   - [`docs/specs/base-runtime-unification.md`](../specs/base-runtime-unification.md)
   - [`docs/core-flow/sim-shell-routing-flow.md`](../core-flow/sim-shell-routing-flow.md)
@@ -266,7 +287,7 @@
 - **Wave 12 L1 Validation**: [`docs/reports/tests/L1-20260323-sim-wave12-scheduler-drawer-reschedule.md`](../reports/tests/L1-20260323-sim-wave12-scheduler-drawer-reschedule.md)
 - **Wave 13 L1 Validation**: [`docs/reports/tests/L1-20260326-sim-wave13-launcher-core-theme-validation.md`](../reports/tests/L1-20260326-sim-wave13-launcher-core-theme-validation.md)
 - **Wave 14 L1 Validation**: [`docs/reports/tests/L1-20260328-sim-wave14-voice-draft.md`](../reports/tests/L1-20260328-sim-wave14-voice-draft.md)
-- **Current Scheduler Routing Contract**: follow-up reschedule now resolves targets through a global scheduler-owned contract before time execution; the current utterance must restate an explicit target plus a new exact time, selected/opened task state and visible page/date no longer carry semantic authority, create-time `keyPerson` / `location` hints are now persisted for later matching, the extractor now receives a scheduler-owned active shortlist derived from all non-done tasks rather than a 7-day UI window, omitted-target and delta-only reschedule phrases safe-fail, and the write-disabled V2 shadow contract still gathers time-semantics parity/mismatch telemetry only
+- **Current Scheduler Routing Contract**: follow-up reschedule now resolves targets through a global scheduler-owned contract before time execution; selected/opened task state and visible page/date no longer carry semantic authority, weak recent-task hints remain allowed, create-time `keyPerson` / `location` hints are now persisted for later matching, the extractor now receives a scheduler-owned active shortlist derived from all non-done tasks rather than a 7-day UI window, and the write-disabled V2 shadow contract still gathers time-semantics parity/mismatch telemetry only
 - **2026-04-03 Scheduler Intelligence Overhaul**: the shared core routing stack is now wired through `SchedulerIntelligenceRouter` instead of being trapped in SIM-only coordinators. `IntentOrchestrator` voice routing now owns deterministic create, `Uni-M` batch create, vague create, and global reschedule through the same core router; `RealUnifiedPipeline` `PATH_B_TEXT` now uses that same shared scheduler router before the legacy `UnifiedMutation` JSON fallback; later-lane scheduler suppression is implemented through `SchedulerTerminalCommit`; multi-task follow-up without a selected task now reaches global target clarification / safe-fail instead of failing at selection-first gating. The shared exact-create anchor set now also accepts qualified next-week weekday cues such as `下周三早上八点`, and SIM scheduler drawer terminal failures keep scheduler-owned copy even when later classifiers describe the input as a schedulable reminder/commitment. Focused verification: `./gradlew :domain:scheduler:test --tests 'com.smartsales.prism.domain.scheduler.ExactTimeCueResolverTest'`, `./gradlew :core:pipeline:testDebugUnitTest --tests 'com.smartsales.core.pipeline.SchedulerIntelligenceRouterTest' --tests 'com.smartsales.core.pipeline.IntentOrchestratorTest'`, and `./gradlew :app-core:testDebugUnitTest --tests 'com.smartsales.prism.ui.sim.SimSchedulerViewModelTest'`.
 - **2026-03-31 Audio Drawer Sync Correction**: approved doc+code alignment now restores spec-owned manual drawer sync in SIM audio drawer, removes the earlier browse-open auto-sync experiment, and ships badge-pipeline completion ingest into the SIM drawer namespace. Successful ingest now gates badge remote delete so failed ingest preserves manual-recovery path. Focused verification: `:app-core:compileDebugUnitTestKotlin`; targeted audio/SIM suites passed, while unrelated `L2DualEngineBridgeTest` still fails on a stale Uni-A timestamp expectation outside this slice.
 - **2026-04-04 Audio Drawer Gesture/Gate Follow-Up**: the SIM browse grip now measures its manual-sync trigger against raw upward pull while keeping the rubber-band drawer translation visual-only, fixing the dead-motion branch where the old reduced travel could never cross the real threshold on device. The READY manual-sync lane now also runs the strict badge-readiness precheck inside the drawer-owned gate before repository sync begins, so unavailable transport fails through the existing blocked path instead of looking like an inert gesture. Focused verification: `./gradlew :app-core:testDebugUnitTest --tests "com.smartsales.prism.ui.sim.SimAudioDrawerViewModelTest" --tests "com.smartsales.prism.ui.sim.SimBadgeSyncAvailabilityTest" --tests "com.smartsales.prism.data.audio.SimAudioRepositorySyncSupportTest" --tests "com.smartsales.prism.ui.sim.SimAudioDrawerStructureTest"` and `./gradlew :app-core:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.smartsales.prism.ui.sim.SimDrawerGestureTest`.
@@ -316,13 +337,11 @@
   - On **2026-03-30**, SIM badge-audio delete semantics were tightened: the first SmartBadge delete per drawer-open session now requires confirmation, and pending-delete tombstones now suppress re-import when HTTP badge cleanup has not finished yet.
   - On **2026-03-31**, shared and SIM badge delete handling were hardened against legacy persisted source drift: badge-like `log_YYYYMMDD_HHMMSS.wav` entries now normalize back to `SMARTBADGE` on load, the first-delete confirmation/delete-cleanup fallback still treats them as badge-origin before rewrite completes, and focused Compose AndroidTests now cover first-delete confirm, same-session skip, and drawer-reopen reset. Manual physical-device proof is still pending.
   - On **2026-04-02**, the reconnect-path connectivity contract was simplified to match current ESP32 firmware reality: reconnect now trusts the badge's own one-credential auto-reconnect, treats BLE + usable badge IP as connected immediately, removes reconnect-time phone SSID gating/permission prompts, and reserves remembered credentials for manual repair prefill instead of automatic replay or network switching.
-  - On **2026-04-13**, live L3 rerun on device `fc8ede3e` confirmed the active docs had drifted behind the intended reconnect contract. `adb logcat` evidence showed the badge returning a usable IP while reconnect still blocked on unreadable phone SSID, manual repair still allowed confirmation failure to collapse into apparent success, and SIM badge sync stayed blocked behind strict HTTP preflight after reconnect never promoted to ready. Active connectivity docs now assume phone SSID may be unreadable by default on target OEMs, require reconnect to trust BLE + usable badge IP without SSID gating, and reserve remembered credentials for explicit manual repair only. Evidence report: [`docs/reports/tests/L3-20260413-connectivity-reconnect-oem-ssid-drift.md`](../reports/tests/L3-20260413-connectivity-reconnect-oem-ssid-drift.md)
   - `Wave 11` now has docs, code, and focused L1 evidence aligned on the general-chat-first contract. Further on-device proof is optional follow-up, not a blocker against this current pivot slice.
   - `Wave 12` now has docs, code, and focused L1 evidence aligned for the scheduler-drawer voice reschedule lane. Scope remains strictly the scheduler drawer mic path; audio drawer, general SIM chat, and random sessions remain out of scope.
   - `Wave 13` now has docs, code, and focused L1 evidence aligned for launcher-core theme visibility from the default production host. Scope remains limited to `MainActivity`, the home/chat shell, header, history drawer, and settings drawer; scheduler/audio/connectivity/onboarding light-theme parity remains deferred.
   - On **2026-04-02**, the SIM/base-runtime shell also synced the approved dynamic-island follow-up: `RuntimeShell` now owns the local scheduler-vs-connectivity lane arbitration, scheduler remains the default visible lane, approved connectivity states may interrupt/heartbeat in the island, tap follows the visible lane, downward drag remains scheduler-only, and real battery sourcing stays logged as deferred debt rather than shipped truth.
   - On **2026-04-02**, the dynamic-island connectivity lane was hardened to reflect `DISCONNECTED` / `RECONNECTING` / reconnect-success `CONNECTED` immediately from transport truth, including replaying the latest suppressed transient confirmation once scheduler/connectivity overlays clear instead of waiting for the next heartbeat.
-  - On **2026-04-04**, the SIM session-title polish slice landed in docs and code: untitled general sessions now auto-rename from the first real successful assistant reply, seeded transcript/audio intro copy is excluded from rename input, generic outputs such as broad industry or role labels are rejected with one retry on the next successful organic turn, the top-header Dynamic Island may rotate the renamed session title in chrome blue for `3s` alongside scheduler items while capping the visible set at `3` total items, and SIM session-title surfaces now prepend a fixed audio indicator once that session has ever included an audio recording.
   - On **2026-04-03**, reminder presentation sync landed across the shared alarm/shell path: foreground `EARLY` reminders may now surface one transient shell banner with scheduler-target routing while `DEADLINE` alarms now stack concurrent tasks inside `AlarmActivity` instead of letting `singleTop` replace the earlier card. Focused verification: `:app-core:compileDebugKotlin`, `:app-core:compileDebugUnitTestKotlin`, `:app-core:testDebugUnitTest --tests com.smartsales.prism.ui.alarm.AlarmActivityStateTest --tests com.smartsales.prism.ui.sim.SimReminderBannerSupportTest`.
   - On **2026-03-24**, focused unit verification confirmed the current global-reschedule implementation path for `SimSchedulerViewModelTest` and `SimAgentViewModelTest`; retrieval-hint-heavy cases such as people/location-led follow-up phrasing still need on-device proof.
   - On **2026-04-03**, the scheduler-intelligence overhaul closed the main architecture split between SIM and core routing, but the compatibility fallback from `RealUnifiedPipeline` into legacy JSON scheduler parsing still remains for shared-router `NotMatchedOrUnavailable` cases. Removing that fallback entirely remains follow-up debt after more production evidence is gathered.

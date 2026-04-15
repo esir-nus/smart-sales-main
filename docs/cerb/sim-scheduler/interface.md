@@ -95,12 +95,12 @@ Required meaning:
 - restore-from-done must not reschedule reminders in T4.8
 - reschedule must cancel the old reminder before scheduling the new exact-time cascade
 - `FIRE_OFF` tasks must remain non-conflicting during SIM reschedule/follow-up execution; reschedule must not surface conflict state for them even if another exact task exists at the same instant
+- every reschedule clause must contain an explicit target plus a new exact time; omitted-target mutation such as `改到3点` must safe-fail
 - explicit day+clock reschedule phrasing such as `明天早上8点` must be interpreted through scheduler-owned deterministic parsing before any model-led exact-time fallback
-- explicit delta reschedule phrasing such as `推迟1小时` / `提前半小时` must be interpreted relative to the resolved or already-selected task start time rather than `nowIso`
+- explicit delta reschedule phrasing such as `推迟1小时` / `提前半小时` is unsupported and must safe-fail
 - reschedule target resolution must stay global across all non-done scheduler-owned task truth; current selected/opened task state and current visible page/date are not semantic authority
 - the runtime may use a scheduler-owned active retrieval index derived from `ScheduledTask` rows to build a bounded shortlist context pack for extraction
 - the delivered shortlist cap is top 8 candidates
-- a recent-task-set prior may be used only as a weak hint layer for reschedule matching
 - create ingress should persist optional `keyPerson` / `location` retrieval hints whenever Uni-A / Uni-B / Uni-M extraction supplies them
 - notes may enter the retrieval context pack only as weak evidence
 - selected-task follow-up reschedule may run a dedicated V2 shadow extractor for time semantics, but the shadow path must stay write-disabled and must not alter user-visible mutation results
@@ -127,12 +127,14 @@ Scheduler-drawer voice resolution rule:
 - the scheduler drawer mic may request reschedule within scheduler-owned scope
 - target resolution must not depend on SQL/exact-title equality alone
 - one clearly dominant task may be resolved and mutated
-- matching may use title plus persisted participant/location cues, weak notes digest context, and a weak recent-task-set prior
+- matching may use title plus persisted participant/location cues and weak notes digest context
 - the extractor may only reason over a scheduler-owned bounded shortlist from the active retrieval index rather than the full task corpus
 - current visible page/date and selected/opened task state must not become semantic authority for target choice
+- the current clause must itself say which task is moving; follow-up selection/prefill cannot silently supply the target
 - after target resolution, exact day+clock tails such as `改到明天早上8点` must remain valid even when the tail itself does not restate the task title
-- after target resolution, explicit delta phrasing must anchor to that resolved task's persisted start time
+- delta-only tails must safe-fail rather than mutate from the resolved task's persisted start time
 - ambiguous or weak matches must not mutate state
+- multiple clean reschedule clauses in one utterance decompose into ordinary independent reschedules rather than a distinct batch mode
 - this rule does not widen ordinary SIM chat or audio drawer routes into scheduler mutation ownership
 
 ---

@@ -10,7 +10,7 @@ sealed class ParseResult {
      * 高确信度：解析成功且实体匹配明确
      * @param resolvedEntityIds 匹配到的明确的实体 ID 列表
      * @param temporalIntent 提取的时间意图（如 "明天", "下周一"）
-     * @param rawParsedJson 原始的 JSON，主要用于自动生成会话标题
+     * @param rawParsedJson 原始的 JSON，主要用于下游诊断与测试
      */
     data class Success(
         val resolvedEntityIds: List<String>,

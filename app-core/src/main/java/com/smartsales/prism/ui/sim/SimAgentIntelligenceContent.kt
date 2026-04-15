@@ -148,6 +148,7 @@ internal fun SimAgentIntelligenceContent(
     onVoiceDraftCancel: () -> Unit,
     onUpdateInput: (String) -> Unit,
     onSend: () -> Unit,
+    onSuggestionClick: (String) -> Unit = {},
     onConfirmPlan: () -> Unit,
     onAmendPlan: () -> Unit
 ) {
@@ -201,6 +202,7 @@ internal fun SimAgentIntelligenceContent(
                         agentActivity = agentActivity,
                         transcriptRevealState = transcriptRevealState,
                         onArtifactTranscriptRevealConsumed = onArtifactTranscriptRevealConsumed,
+                        onSuggestionClick = onSuggestionClick,
                         onConfirmPlan = onConfirmPlan,
                         onAmendPlan = onAmendPlan
                     )
@@ -245,6 +247,7 @@ internal fun SimAgentIntelligenceContent(
                     agentActivity = agentActivity,
                     transcriptRevealState = transcriptRevealState,
                     onArtifactTranscriptRevealConsumed = onArtifactTranscriptRevealConsumed,
+                    onSuggestionClick = onSuggestionClick,
                     onConfirmPlan = onConfirmPlan,
                     onAmendPlan = onAmendPlan
                 )
@@ -280,15 +283,26 @@ private fun SimConversationTimeline(
     agentActivity: AgentActivity?,
     transcriptRevealState: Map<String, SimArtifactTranscriptRevealState>,
     onArtifactTranscriptRevealConsumed: (messageId: String, isLongTranscript: Boolean) -> Unit,
+    onSuggestionClick: (String) -> Unit = {},
     onConfirmPlan: () -> Unit,
     onAmendPlan: () -> Unit
 ) {
+    val showSuggestions = uiState is UiState.Idle &&
+        agentActivity == null &&
+        history.isNotEmpty() &&
+        history.lastOrNull() is ChatMessage.Ai
     LazyColumn(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(10.dp),
         contentPadding = PaddingValues(horizontal = 2.dp, vertical = 8.dp),
         reverseLayout = true
     ) {
+        if (showSuggestions) {
+            item(key = "sim_suggestions") {
+                SimSuggestionCards(onSuggestionClick = onSuggestionClick)
+            }
+        }
+
         agentActivity?.let { activity ->
             item {
                 SimStatusSheet(
@@ -313,19 +327,11 @@ private fun SimConversationTimeline(
         if (agentActivity == null && uiState !is UiState.Idle) {
             item {
                 when (uiState) {
-                    is UiState.Thinking -> SimStatusSheet(
-                        title = "当前对话分析",
-                        action = "处理中...",
-                        body = uiState.hint ?: "SIM 正在处理当前对话",
-                        icon = Icons.Outlined.AutoAwesome,
-                        accent = ProMaxAccent
+                    is UiState.Thinking -> SimThinkingBanner(
+                        hint = uiState.hint
                     )
-                    is UiState.Streaming -> SimStatusSheet(
-                        title = "回复生成中",
-                        action = "生成中...",
-                        body = uiState.partialContent.takeIf { it.isNotBlank() } ?: "SIM 正在生成回复",
-                        icon = Icons.Outlined.AutoAwesome,
-                        accent = ProMaxAccent
+                    is UiState.Streaming -> SimStreamingBubble(
+                        content = uiState.partialContent
                     )
                     is UiState.AwaitingClarification -> SimAssistantBubble(
                         content = uiState.question,
@@ -428,19 +434,11 @@ private fun SimConversationTimeline(
                                 }
                             )
                         }
-                        is UiState.Thinking -> SimStatusSheet(
-                            title = "当前对话分析",
-                            action = "处理中...",
-                            body = state.hint ?: "SIM 正在处理当前对话",
-                            icon = Icons.Outlined.AutoAwesome,
-                            accent = ProMaxAccent
+                        is UiState.Thinking -> SimThinkingBanner(
+                            hint = state.hint
                         )
-                        is UiState.Streaming -> SimStatusSheet(
-                            title = "回复生成中",
-                            action = "生成中...",
-                            body = state.partialContent.takeIf { it.isNotBlank() } ?: "SIM 正在生成回复",
-                            icon = Icons.Outlined.AutoAwesome,
-                            accent = ProMaxAccent
+                        is UiState.Streaming -> SimStreamingBubble(
+                            content = state.partialContent
                         )
                         is UiState.ExecutingTool -> SimStatusSheet(
                             title = "工具执行",
@@ -659,7 +657,7 @@ private fun SimInputBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 58.dp)
+                .heightIn(min = 58.dp, max = 140.dp)
                 .testTag(SIM_INPUT_BAR_TEST_TAG)
                 .background(Color(0xFF1C232D).copy(alpha = 0.96f), RoundedCornerShape(28.dp))
                 .padding(horizontal = 8.dp, vertical = 6.dp),
@@ -694,7 +692,8 @@ private fun SimInputBar(
                         }
                     },
                     modifier = Modifier.testTag(SIM_INPUT_FIELD_TEST_TAG),
-                    singleLine = true,
+                    singleLine = false,
+                    maxLines = 4,
                     textStyle = TextStyle(
                         color = Color.White.copy(alpha = 0.92f),
                         fontSize = 15.sp
@@ -863,6 +862,185 @@ private fun SimIdleComposerRotatingHint(
 }
 
 @Composable
+private fun SimThinkingBanner(hint: String?) {
+    val palette = rememberSimConversationSurfacePalette()
+    val transition = rememberInfiniteTransition(label = "sim_thinking_pulse")
+    val dotAlpha by transition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 800, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "sim_thinking_dot_alpha"
+    )
+    val shape = RoundedCornerShape(
+        topStart = 20.dp,
+        topEnd = 20.dp,
+        bottomEnd = 20.dp,
+        bottomStart = 4.dp
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 1.dp),
+        horizontalArrangement = Arrangement.Start
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth(0.78f)
+                .background(palette.surface, shape)
+                .border(1.dp, palette.border, shape)
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "\u2726",
+                color = ProMaxAccent.copy(alpha = dotAlpha),
+                fontSize = 14.sp
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = hint ?: "SIM 正在分析...",
+                color = palette.bodyMuted,
+                fontSize = 13.sp,
+                lineHeight = 18.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun SimStreamingBubble(content: String) {
+    if (content.isBlank()) {
+        SimThinkingBanner(hint = "SIM 正在生成回复...")
+        return
+    }
+    val palette = rememberSimConversationSurfacePalette()
+    var cursorVisible by remember { mutableStateOf(true) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(500)
+            cursorVisible = !cursorVisible
+        }
+    }
+    val shape = RoundedCornerShape(
+        topStart = 20.dp,
+        topEnd = 20.dp,
+        bottomEnd = 20.dp,
+        bottomStart = 4.dp
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 1.dp),
+        horizontalArrangement = Arrangement.Start
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(0.88f)
+                .background(palette.surface, shape)
+                .border(1.dp, palette.border, shape)
+                .padding(horizontal = 16.dp, vertical = 11.dp)
+        ) {
+            MarkdownText(
+                text = content + if (cursorVisible) "\u258C" else "",
+                color = palette.body,
+                fontSize = 15.sp,
+                lineHeight = 20.sp
+            )
+        }
+    }
+}
+
+private data class SimSuggestion(
+    val icon: String,
+    val title: String,
+    val description: String
+)
+
+private val SimDefaultSuggestions = listOf(
+    SimSuggestion(
+        icon = "\uD83C\uDFAF",
+        title = "复盘一段客户沟通",
+        description = "点出关键转折、情绪信号、机会点"
+    ),
+    SimSuggestion(
+        icon = "\uD83D\uDDE3\uFE0F",
+        title = "演练开场白或异议应对",
+        description = "基于你的行业经验给具体建议"
+    ),
+    SimSuggestion(
+        icon = "\uD83D\uDD0D",
+        title = "分析一段录音",
+        description = "上滑打开录音库，选择要分析的录音"
+    )
+)
+
+@Composable
+private fun SimSuggestionCards(
+    onSuggestionClick: (String) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        SimDefaultSuggestions.forEach { suggestion ->
+            SimSuggestionActionCard(
+                icon = suggestion.icon,
+                title = suggestion.title,
+                description = suggestion.description,
+                onClick = { onSuggestionClick(suggestion.title) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun SimSuggestionActionCard(
+    icon: String,
+    title: String,
+    description: String,
+    onClick: () -> Unit
+) {
+    val palette = rememberSimConversationSurfacePalette()
+    val shape = RoundedCornerShape(14.dp)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(palette.surface, shape)
+            .border(1.dp, palette.border, shape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Text(
+            text = icon,
+            fontSize = 18.sp,
+            modifier = Modifier.padding(end = 12.dp, top = 1.dp)
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                color = palette.title,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Medium,
+                lineHeight = 20.sp
+            )
+            Text(
+                text = description,
+                color = palette.bodyMuted,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+                modifier = Modifier.padding(top = 2.dp)
+            )
+        }
+    }
+}
+
+@Composable
 private fun SimInlineLoading() {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -938,7 +1116,7 @@ private fun SimAssistantBubble(
     ) {
         Column(
             modifier = Modifier
-                .widthIn(max = 300.dp)
+                .fillMaxWidth(0.88f)
                 .background(palette.surface, shape)
                 .border(1.dp, resolvedBorderColor, shape)
                 .padding(horizontal = 16.dp, vertical = 11.dp)

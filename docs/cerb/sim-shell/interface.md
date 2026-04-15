@@ -52,7 +52,7 @@ Responsibilities:
 - host SIM support surfaces such as history and connectivity entry, with connectivity entering from the audio drawer rather than the home header
 - keep the SIM history drawer narrow and archive-first, with a fixed bottom user dock that exposes the SIM profile/settings entry without widening the drawer into full utility chrome
 - host the SIM user center as a right-edge dark frosted drawer with scrim-backed dismissal and the existing full-screen edit subflow behind its edit action
-- host a persistent top-header one-line dynamic island that can rotate up to 3 scheduler items every 5 seconds and open the scheduler drawer on the visible item's date page
+- host a persistent top-header one-line dynamic island that may rotate up to 3 total items and open the scheduler drawer on the visible item's date page
 - keep a session-only instructional island copy when the scheduler is empty until the user explicitly opens the scheduler; restart may reset this hint while the persisted first-launch teaser remains separate
 - render a SIM-only scheduler empty-state guide card when both scheduler tasks and inspiration items are absent so the drawer teaches badge-driven schedule creation without faking a real task row
 - route `Ask AI` and audio re-selection flows
@@ -90,7 +90,7 @@ Notes:
 - cold start may restore grouped history entries, but does not auto-resume an active chat session
 - normal runtime does not seed demo sessions into SIM history
 - durable history is limited to user text, AI response, AI audio artifacts, and AI error turns
-- session metadata may also persist a SIM session kind plus optional scheduler-follow-up context snapshot
+- session metadata may also persist a SIM session kind, sticky audio-context-history flag, plus optional scheduler-follow-up context snapshot
 - input text, sending/thinking state, toast/error presentation, and transcript-reveal UI state remain memory-only
 
 ---
@@ -143,7 +143,10 @@ Guarantees:
 - the SIM home header keeps only the hamburger button, centered island, and new-chat button so the chrome remains visually balanced
 - the shell may keep a persistent dynamic island visible in the top-header center slot while normal SIM shell surfaces are active
 - the shell may use that dynamic island as a scheduler-entry affordance
-- the shell dynamic island stays one-line and may rotate vertically through up to 3 scheduler entries
+- the shell dynamic island stays one-line and may rotate vertically through up to 3 total visible items
+- the shell may inject the current renamed session title as the leading rotation item when the active session title is not a placeholder
+- the session-title rotation item uses chrome blue, dwells for `3s`, and the existing scheduler items keep the `5s` dwell
+- when the current session has any audio recording in its history, the shell may prepend a fixed audio indicator to the rendered session title surfaces
 - when the scheduler has no pending task, the island may temporarily show one SIM-local teaching line instead of the plain idle fallback until the user explicitly opens the scheduler
 - tapping any visible island entry must open the scheduler drawer on the corresponding scheduler date page
 - the SIM scheduler drawer may replace a fully empty task/inspiration timeline with one informational guide card; that card must remain obviously instructional rather than pretending to be a live task

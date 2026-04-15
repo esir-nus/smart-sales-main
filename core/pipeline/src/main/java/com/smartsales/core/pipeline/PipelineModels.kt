@@ -177,12 +177,4 @@ sealed class PipelineResult {
      */
     data class PluginExecutionStarted(val toolId: String) : PipelineResult()
     data class PluginExecutionEmittedState(val uiState: com.smartsales.prism.domain.model.UiState) : PipelineResult()
-
-    /**
-     * Wave 4: Auto-Renaming
-     * Triggered when the pipeline successfully parses an intent and generates a new session title.
-     */
-    data class AutoRenameTriggered(
-        val newTitle: String
-    ) : PipelineResult()
 }

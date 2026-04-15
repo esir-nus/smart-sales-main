@@ -57,6 +57,16 @@ internal class GattBleGatewayProtocolSupport {
         }
     }
 
+    // 解析设备 Provisioning 确认响应，返回是否成功及可选错误原因。
+    fun parseProvisioningAck(payload: ByteArray): ProvisioningAckResult {
+        val raw = payload.decodeToString().trim()
+        return if (raw.startsWith("ok", ignoreCase = true)) {
+            ProvisioningAckResult.Accepted
+        } else {
+            ProvisioningAckResult.Rejected(raw)
+        }
+    }
+
     fun parseWavResponse(payload: ByteArray): WavCommandResult {
         val raw = payload.decodeToString().trim()
         if (raw.isBlank()) throw IllegalStateException("WAV响应为空")

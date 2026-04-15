@@ -2,40 +2,68 @@ package com.smartsales.prism.ui.components
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BatteryFull
-import androidx.compose.material.icons.filled.Bluetooth
-import androidx.compose.material.icons.filled.BluetoothDisabled
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.smartsales.prism.BuildConfig
+import com.smartsales.prism.data.connectivity.registry.RegisteredDevice
 import com.smartsales.prism.ui.components.connectivity.ConnectivityManagerState
 import com.smartsales.prism.ui.components.connectivity.ConnectivityViewModel
 import com.smartsales.prism.ui.components.connectivity.WIFI_MISMATCH_EMPTY_CREDENTIALS_ERROR
 import kotlinx.coroutines.delay
 
+// ── Design Tokens ─────────────────────────────────────────────
+// Matching SimHomeHeroTokens and onboarding theme for consistency
+
+private val ModalBackground = Color(0xFF0D0D12)
+private val ModalSurface = Color(0xFF14141A)
+private val CardFrost = Color(0x14FFFFFF)
+private val CardBorder = Color(0x12FFFFFF)
+private val TextPrimary = Color(0xFFF3F7FF)
+private val TextSecondary = Color(0xFF86868B)
+private val TextMuted = Color(0xFFAEAEB2)
+private val AccentBlue = Color(0xFF0A84FF)
+private val ConnectedGreen = Color(0xFF34C759)
+private val DisconnectedGrey = Color(0xFF86868B)
+private val ReconnectingAmber = Color(0xFFFF9F0A)
+private val DangerRed = Color(0xFFFF453A)
+
+// ── Entry Points ──────────────────────────────────────────────
+
 /**
- * Connectivity Modal (Truncated Onboarding)
- * @see prism-ui-ux-contract.md §1.6.1
- * 
- * 重构: 使用 ViewModel 管理状态，而非直接注入 Service。
+ * Evolved Connectivity Modal — 设备状态 + 设备管理 Hub
+ *
+ * 统一的单一界面：活跃设备状态 + 其他已注册设备列表 + 管理操作。
+ * 设计语言与 SimHomeHero / Onboarding frosted glass 保持一致。
  */
 @Composable
 fun ConnectivityModal(
@@ -43,143 +71,144 @@ fun ConnectivityModal(
     onNavigateToSetup: () -> Unit = {},
     viewModel: ConnectivityViewModel = hiltViewModel()
 ) {
-    // Manager/modal 使用 richer managerState；shell 路由仍使用 shared connectionState
     val state by viewModel.managerState.collectAsState()
     val batteryLevel by viewModel.batteryLevel.collectAsState()
+    val activeDevice by viewModel.activeDevice.collectAsState()
+    val registeredDevices by viewModel.registeredDevices.collectAsState()
     val wifiMismatchSuggestedSsid by viewModel.wifiMismatchSuggestedSsid.collectAsState()
     val wifiMismatchErrorMessage by viewModel.wifiMismatchErrorMessage.collectAsState()
+
+    val otherDevices = registeredDevices.filter { it.macAddress != activeDevice?.macAddress }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .clickable(enabled = false) {}, // 拦截点击
+            .background(Color.Black.copy(alpha = 0.6f))
+            .clickable(enabled = false) {},
         contentAlignment = Alignment.Center
     ) {
-        Card(
+        Box(
             modifier = Modifier
-                .padding(24.dp)
-                .fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E2C)),
-            shape = RoundedCornerShape(24.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
+                .padding(horizontal = 20.dp, vertical = 48.dp)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(26.dp))
+                .background(ModalSurface)
+                .border(1.dp, CardBorder, RoundedCornerShape(26.dp))
         ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            LazyColumn(
+                modifier = Modifier.padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(0.dp)
             ) {
-                // 关闭按钮
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    IconButton(
-                        onClick = {
+                // Close button
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(CardFrost)
+                                .clickable {
+                                    viewModel.resetTransientState()
+                                    onDismiss()
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Close",
+                                tint = TextMuted,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
+
+                // Active device section
+                item {
+                    ActiveDeviceSection(
+                        device = activeDevice,
+                        state = state,
+                        batteryLevel = batteryLevel,
+                        onDisconnect = viewModel::disconnect,
+                        onCheckUpdate = viewModel::checkForUpdate,
+                        onReconnect = viewModel::reconnect,
+                        onStartSetup = {
                             viewModel.resetTransientState()
                             onDismiss()
-                        }
-                    ) {
-                        Icon(Icons.Default.Close, "Close", tint = Color.Gray)
+                            onNavigateToSetup()
+                        },
+                        onStartUpdate = viewModel::startUpdate,
+                        onCancel = viewModel::cancel,
+                        onCompleteUpdate = viewModel::completeUpdate,
+                        onUpdateWifi = viewModel::updateWifiConfig,
+                        onRename = viewModel::renameDevice,
+                        wifiMismatchSuggestedSsid = wifiMismatchSuggestedSsid,
+                        wifiMismatchErrorMessage = wifiMismatchErrorMessage,
+                        onWifiMismatchInputChanged = viewModel::clearWifiMismatchError
+                    )
+                }
+
+                // Other devices section
+                if (otherDevices.isNotEmpty()) {
+                    item {
+                        Spacer(modifier = Modifier.height(20.dp))
+                        OtherDevicesDivider()
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+
+                    items(otherDevices, key = { it.macAddress }) { device ->
+                        OtherDeviceCard(
+                            device = device,
+                            onSwitch = { viewModel.switchToDevice(device.macAddress) },
+                            onSetDefault = { viewModel.setDefault(device.macAddress) },
+                            onRemove = { viewModel.removeDevice(device.macAddress) },
+                            onRename = { newName -> viewModel.renameDevice(device.macAddress, newName) }
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
-
-                ConnectivityStateContent(
-                    state = state,
-                    batteryLevel = batteryLevel,
-                    onDisconnect = viewModel::disconnect,
-                    onCheckUpdate = viewModel::checkForUpdate,
-                    onReconnect = viewModel::reconnect,
-                    onStartSetup = {
+                // Add device button
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    AddDeviceButton(onClick = {
                         viewModel.resetTransientState()
                         onDismiss()
                         onNavigateToSetup()
-                    },
-                    onStartUpdate = viewModel::startUpdate,
-                    onCancel = viewModel::cancel,
-                    onCompleteUpdate = viewModel::completeUpdate,
-                    onUpdateWifi = viewModel::updateWifiConfig,
-                    wifiMismatchSuggestedSsid = wifiMismatchSuggestedSsid,
-                    wifiMismatchErrorMessage = wifiMismatchErrorMessage,
-                    onWifiMismatchInputChanged = viewModel::clearWifiMismatchError
-                )
-                
-                Spacer(modifier = Modifier.height(16.dp))
+                    })
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
             }
         }
     }
 }
 
+/**
+ * Full-screen variant (same content, used in manager navigation).
+ */
 @Composable
 fun ConnectivityManagerScreen(
     onClose: () -> Unit,
     onNavigateToSetup: () -> Unit = {},
     viewModel: ConnectivityViewModel = hiltViewModel()
 ) {
-    val state by viewModel.managerState.collectAsState()
-    val batteryLevel by viewModel.batteryLevel.collectAsState()
-    val wifiMismatchSuggestedSsid by viewModel.wifiMismatchSuggestedSsid.collectAsState()
-    val wifiMismatchErrorMessage by viewModel.wifiMismatchErrorMessage.collectAsState()
-
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Card(
-            modifier = Modifier
-                .padding(24.dp)
-                .fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E2C)),
-            shape = RoundedCornerShape(24.dp),
-            elevation = CardDefaults.cardElevation(defaultElevation = 16.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    IconButton(
-                        onClick = {
-                            viewModel.resetTransientState()
-                            onClose()
-                        }
-                    ) {
-                        Icon(Icons.Default.Close, "Close", tint = Color.Gray)
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                ConnectivityStateContent(
-                    state = state,
-                    batteryLevel = batteryLevel,
-                    onDisconnect = viewModel::disconnect,
-                    onCheckUpdate = viewModel::checkForUpdate,
-                    onReconnect = viewModel::reconnect,
-                    onStartSetup = {
-                        viewModel.resetTransientState()
-                        onNavigateToSetup()
-                    },
-                    onStartUpdate = viewModel::startUpdate,
-                    onCancel = viewModel::cancel,
-                    onCompleteUpdate = viewModel::completeUpdate,
-                    onUpdateWifi = viewModel::updateWifiConfig,
-                    wifiMismatchSuggestedSsid = wifiMismatchSuggestedSsid,
-                    wifiMismatchErrorMessage = wifiMismatchErrorMessage,
-                    onWifiMismatchInputChanged = viewModel::clearWifiMismatchError
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-        }
-    }
+    ConnectivityModal(
+        onDismiss = onClose,
+        onNavigateToSetup = onNavigateToSetup,
+        viewModel = viewModel
+    )
 }
 
+// ── Active Device Section ─────────────────────────────────────
+
 @Composable
-private fun ConnectivityStateContent(
+private fun ActiveDeviceSection(
+    device: RegisteredDevice?,
     state: ConnectivityManagerState,
     batteryLevel: Int,
     onDisconnect: () -> Unit,
@@ -190,358 +219,256 @@ private fun ConnectivityStateContent(
     onCancel: () -> Unit,
     onCompleteUpdate: () -> Unit,
     onUpdateWifi: (String, String) -> Unit,
+    onRename: (String, String) -> Unit,
     wifiMismatchSuggestedSsid: String?,
     wifiMismatchErrorMessage: String?,
     onWifiMismatchInputChanged: () -> Unit
 ) {
-    AnimatedContent(targetState = state, label = "StateTransition") { currentState ->
+    AnimatedContent(targetState = state, label = "ActiveDeviceState") { currentState ->
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             when (currentState) {
-                ConnectivityManagerState.CONNECTED -> ConnectedView(
-                    battery = batteryLevel,
-                    onUnbind = onDisconnect,
-                    onCheckUpdate = onCheckUpdate
-                )
-                ConnectivityManagerState.DISCONNECTED -> DisconnectedView(
-                    onReconnect = onReconnect
-                )
-                ConnectivityManagerState.BLE_PAIRED_NETWORK_UNKNOWN -> BlePairedPendingNetworkView(
-                    onReconnect = onReconnect,
-                    onDisconnect = onDisconnect,
-                    showDebugDisconnect = BuildConfig.DEBUG
-                )
-                ConnectivityManagerState.BLE_PAIRED_NETWORK_OFFLINE -> BlePairedOfflineView(
-                    onReconnect = onReconnect,
-                    onDisconnect = onDisconnect,
-                    showDebugDisconnect = BuildConfig.DEBUG
-                )
-                ConnectivityManagerState.NEEDS_SETUP -> NeedsSetupView(
-                    onStartSetup = onStartSetup
-                )
-                ConnectivityManagerState.CHECKING_UPDATE -> CheckingUpdateView()
-                ConnectivityManagerState.UPDATE_FOUND -> UpdateFoundView(
-                    onSync = onStartUpdate,
-                    onLater = onCancel
-                )
-                ConnectivityManagerState.UPDATING -> UpdatingView(
-                    onComplete = onCompleteUpdate
-                )
-                ConnectivityManagerState.RECONNECTING -> ReconnectingView()
-                ConnectivityManagerState.WIFI_MISMATCH -> WifiMismatchView(
-                    suggestedSsid = wifiMismatchSuggestedSsid,
-                    errorMessage = wifiMismatchErrorMessage,
-                    onUpdate = onUpdateWifi,
-                    onInputChanged = onWifiMismatchInputChanged,
-                    onIgnore = onCancel
-                )
+                ConnectivityManagerState.CONNECTED ->
+                    ConnectedView(device, batteryLevel, onDisconnect, onCheckUpdate, onRename)
+                ConnectivityManagerState.DISCONNECTED ->
+                    DisconnectedView(device, onReconnect)
+                ConnectivityManagerState.BLE_PAIRED_NETWORK_UNKNOWN ->
+                    BlePairedView(device, "蓝牙已连接，正在确认网络状态", onReconnect, onDisconnect)
+                ConnectivityManagerState.BLE_PAIRED_NETWORK_OFFLINE ->
+                    BlePairedView(device, "蓝牙已连接，但设备未接入网络", onReconnect, onDisconnect)
+                ConnectivityManagerState.NEEDS_SETUP ->
+                    NeedsSetupView(onStartSetup)
+                ConnectivityManagerState.CHECKING_UPDATE ->
+                    TransientStateView("正在检查更新...", "连接服务器中")
+                ConnectivityManagerState.UPDATE_FOUND ->
+                    UpdateFoundView(onStartUpdate, onCancel)
+                ConnectivityManagerState.UPDATING ->
+                    UpdatingView(onCompleteUpdate)
+                ConnectivityManagerState.RECONNECTING ->
+                    TransientStateView("正在重新连接...", "搜索附近设备")
+                ConnectivityManagerState.WIFI_MISMATCH ->
+                    WifiMismatchView(
+                        suggestedSsid = wifiMismatchSuggestedSsid,
+                        errorMessage = wifiMismatchErrorMessage,
+                        onUpdate = onUpdateWifi,
+                        onInputChanged = onWifiMismatchInputChanged,
+                        onIgnore = onCancel
+                    )
             }
         }
     }
 }
 
-// --- Sub-Views ---
+// ── Sub-Views ─────────────────────────────────────────────────
 
 @Composable
 private fun ConnectedView(
-    battery: Int,
-    onUnbind: () -> Unit,
-    onCheckUpdate: () -> Unit
+    device: RegisteredDevice?,
+    batteryLevel: Int,
+    onDisconnect: () -> Unit,
+    onCheckUpdate: () -> Unit,
+    onRename: (String, String) -> Unit
 ) {
-    // 脉冲动画
-    val infiniteTransition = rememberInfiniteTransition(label = "Pulse")
-    val alpha by infiniteTransition.animateFloat(
-        initialValue = 0.6f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1000),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "Alpha"
-    )
+    val deviceName = device?.displayName ?: "Badge"
+    val macSuffix = device?.macSuffix ?: ""
 
-    Icon(
-        imageVector = Icons.Default.Bluetooth,
-        contentDescription = "Connected",
-        tint = Color(0xFF4CAF50).copy(alpha = alpha),
-        modifier = Modifier
-            .size(64.dp)
-            .background(Color(0xFF4CAF50).copy(alpha = 0.1f), CircleShape)
-            .padding(12.dp)
-    )
-
-    Spacer(modifier = Modifier.height(16.dp))
-
-    Text("SmartBadge Pro", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text("ID: 8842", fontSize = 14.sp, color = Color(0xFFAAAAAA))
-        Spacer(modifier = Modifier.width(8.dp))
-        Icon(
-            imageVector = Icons.Default.BatteryFull,
-            contentDescription = null,
-            tint = Color(0xFFAAAAAA),
-            modifier = Modifier.size(16.dp)
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.Start
+    ) {
+        DeviceHeader(
+            name = deviceName,
+            macSuffix = macSuffix,
+            statusDot = ConnectedGreen,
+            statusText = buildString {
+                if (device?.isDefault == true) append("默认 · ")
+                append("已连接")
+            },
+            onRename = device?.let { d -> { newName: String -> onRename(d.macAddress, newName) } }
         )
-        Spacer(modifier = Modifier.width(4.dp))
-        Text("$battery%", fontSize = 14.sp, color = Color(0xFFAAAAAA))
-    }
-    Text("v1.2.0", fontSize = 12.sp, color = Color.Gray)
 
-    Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
-    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        OutlinedButton(
-            onClick = onUnbind,
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF5252))
-        ) {
-            Text("断开连接")
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("$batteryLevel%", fontSize = 12.sp, color = TextMuted)
+            Spacer(modifier = Modifier.width(12.dp))
+            Text("v1.2.0", fontSize = 12.sp, color = TextSecondary)
         }
 
-        Button(
-            onClick = onCheckUpdate,
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text("检查更新")
+            ModalActionButton(
+                text = "断开连接",
+                color = DangerRed,
+                modifier = Modifier.weight(1f),
+                onClick = onDisconnect
+            )
+            ModalActionButton(
+                text = "检查更新",
+                color = AccentBlue,
+                modifier = Modifier.weight(1f),
+                onClick = onCheckUpdate
+            )
         }
     }
 }
 
 @Composable
 private fun DisconnectedView(
+    device: RegisteredDevice?,
     onReconnect: () -> Unit
 ) {
-    Icon(
-        imageVector = Icons.Default.BluetoothDisabled,
-        contentDescription = "Disconnected",
-        tint = Color.Gray,
-        modifier = Modifier
-            .size(64.dp)
-            .background(Color.Gray.copy(alpha = 0.1f), CircleShape)
-            .padding(12.dp)
-    )
+    val deviceName = device?.displayName ?: "Badge"
 
-    Spacer(modifier = Modifier.height(16.dp))
-
-    Text("设备离线", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
-    Text(
-        "请确保设备在附近并已开机",
-        fontSize = 14.sp,
-        color = Color(0xFFAAAAAA),
-        textAlign = TextAlign.Center
-    )
-
-    Spacer(modifier = Modifier.height(32.dp))
-
-    Button(
-        onClick = onReconnect,
-        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
-        modifier = Modifier.fillMaxWidth(0.8f)
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.Start
     ) {
-        Text("重试连接")
+        DeviceHeader(
+            name = deviceName,
+            macSuffix = device?.macSuffix ?: "",
+            statusDot = DisconnectedGrey,
+            statusText = buildString {
+                if (device?.isDefault == true) append("默认 · ")
+                append("已断开")
+            }
+        )
+
+        Spacer(modifier = Modifier.height(6.dp))
+        Text("请确保设备在附近并已开机", fontSize = 13.sp, color = TextSecondary)
+        Spacer(modifier = Modifier.height(20.dp))
+
+        ModalActionButton(
+            text = "重试连接",
+            color = AccentBlue,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onReconnect
+        )
     }
 }
 
 @Composable
-private fun BlePairedPendingNetworkView(
+private fun BlePairedView(
+    device: RegisteredDevice?,
+    message: String,
     onReconnect: () -> Unit,
-    onDisconnect: () -> Unit,
-    showDebugDisconnect: Boolean
+    onDisconnect: () -> Unit
 ) {
-    Icon(
-        imageVector = Icons.Default.Bluetooth,
-        contentDescription = "Ble paired",
-        tint = Color(0xFF4FC3F7),
-        modifier = Modifier
-            .size(64.dp)
-            .background(Color(0xFF4FC3F7).copy(alpha = 0.12f), CircleShape)
-            .padding(12.dp)
-    )
-
-    Spacer(modifier = Modifier.height(16.dp))
-
-    Text("已连接设备", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
-    Text(
-        "蓝牙已连接，正在确认设备网络状态",
-        fontSize = 14.sp,
-        color = Color(0xFFAAAAAA),
-        textAlign = TextAlign.Center
-    )
-    Spacer(modifier = Modifier.height(8.dp))
-    Text(
-        "如果长时间停留在此状态，请重试连接并检查徽章 Wi‑Fi 状态",
-        fontSize = 12.sp,
-        color = Color.Gray,
-        textAlign = TextAlign.Center
-    )
-
-    Spacer(modifier = Modifier.height(32.dp))
-
-    if (showDebugDisconnect) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            OutlinedButton(
-                onClick = onDisconnect,
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF5252))
-            ) {
-                Text("断开连接")
-            }
-
-            Button(
-                onClick = onReconnect,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))
-            ) {
-                Text("重试连接")
-            }
-        }
-    } else {
-        Button(
-            onClick = onReconnect,
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
-            modifier = Modifier.fillMaxWidth(0.8f)
-        ) {
-            Text("重试连接")
-        }
-    }
-}
-
-@Composable
-private fun BlePairedOfflineView(
-    onReconnect: () -> Unit,
-    onDisconnect: () -> Unit,
-    showDebugDisconnect: Boolean
-) {
-    Icon(
-        imageVector = Icons.Default.Bluetooth,
-        contentDescription = "Ble paired offline",
-        tint = Color(0xFF4FC3F7),
-        modifier = Modifier
-            .size(64.dp)
-            .background(Color(0xFF4FC3F7).copy(alpha = 0.12f), CircleShape)
-            .padding(12.dp)
-    )
-
-    Spacer(modifier = Modifier.height(16.dp))
-
-    Text("已连接设备", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
-    Text(
-        "蓝牙已连接，但设备当前未接入可用网络",
-        fontSize = 14.sp,
-        color = Color(0xFFAAAAAA),
-        textAlign = TextAlign.Center
-    )
-    Spacer(modifier = Modifier.height(8.dp))
-    Text(
-        "请确认设备附近已开机，并检查徽章 Wi‑Fi 状态",
-        fontSize = 12.sp,
-        color = Color.Gray,
-        textAlign = TextAlign.Center
-    )
-
-    Spacer(modifier = Modifier.height(32.dp))
-
-    if (showDebugDisconnect) {
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            OutlinedButton(
-                onClick = onDisconnect,
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF5252))
-            ) {
-                Text("断开连接")
-            }
-
-            Button(
-                onClick = onReconnect,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))
-            ) {
-                Text("重试连接")
-            }
-        }
-    } else {
-        Button(
-            onClick = onReconnect,
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
-            modifier = Modifier.fillMaxWidth(0.8f)
-        ) {
-            Text("重试连接")
-        }
-    }
-}
-
-@Composable
-private fun NeedsSetupView(
-    onStartSetup: () -> Unit
-) {
-    Icon(
-        imageVector = Icons.Default.Warning,
-        contentDescription = "Needs Setup",
-        tint = Color(0xFFFFC107),
-        modifier = Modifier
-            .size(64.dp)
-            .background(Color(0xFFFFC107).copy(alpha = 0.1f), CircleShape)
-            .padding(12.dp)
-    )
-
-    Spacer(modifier = Modifier.height(16.dp))
-
-    Text("设备未配网", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
-    Text("需要完成初始化设置才能连接", fontSize = 14.sp, color = Color(0xFFAAAAAA))
-
-    Spacer(modifier = Modifier.height(32.dp))
-
-    Button(
-        onClick = onStartSetup,
-        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
-        modifier = Modifier.fillMaxWidth(0.8f)
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.Start
     ) {
-        Text("开始配网")
+        DeviceHeader(
+            name = device?.displayName ?: "Badge",
+            macSuffix = device?.macSuffix ?: "",
+            statusDot = ReconnectingAmber,
+            statusText = "蓝牙已连接"
+        )
+
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(message, fontSize = 13.sp, color = TextSecondary, lineHeight = 18.sp)
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            if (BuildConfig.DEBUG) {
+                ModalActionButton(
+                    text = "断开",
+                    color = DangerRed,
+                    modifier = Modifier.weight(1f),
+                    onClick = onDisconnect
+                )
+            }
+            ModalActionButton(
+                text = "重试连接",
+                color = AccentBlue,
+                modifier = Modifier.weight(1f),
+                onClick = onReconnect
+            )
+        }
     }
 }
 
 @Composable
-private fun UpdateFoundView(
-    onSync: () -> Unit,
-    onLater: () -> Unit
-) {
-    Icon(
-        imageVector = Icons.Default.Download,
-        contentDescription = "Update",
-        tint = Color(0xFFFFC107),
-        modifier = Modifier
-            .size(64.dp)
-            .background(Color(0xFFFFC107).copy(alpha = 0.1f), CircleShape)
-            .padding(12.dp)
-    )
-
-    Spacer(modifier = Modifier.height(16.dp))
-
-    Text("发现新版本 v1.3", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
-    Text("包含重要安全修复与性能提升", fontSize = 14.sp, color = Color(0xFFAAAAAA))
-
-    Spacer(modifier = Modifier.height(32.dp))
-
-    Button(
-        onClick = onSync,
-        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
-        modifier = Modifier.fillMaxWidth(0.8f)
+private fun NeedsSetupView(onStartSetup: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.Start
     ) {
-        Text("立即同步")
-    }
-    
-    Spacer(modifier = Modifier.height(8.dp))
-    
-    TextButton(onClick = onLater) {
-        Text("稍后", color = Color.Gray)
+        Text("暂无设备", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+        Spacer(modifier = Modifier.height(6.dp))
+        Text("需要完成初始化设置才能连接", fontSize = 14.sp, color = TextSecondary)
+        Spacer(modifier = Modifier.height(20.dp))
+
+        ModalActionButton(
+            text = "开始配网",
+            color = AccentBlue,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onStartSetup
+        )
     }
 }
 
 @Composable
-private fun UpdatingView(
-    onComplete: () -> Unit
-) {
-    // 模拟进度
+private fun TransientStateView(title: String, subtitle: String) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(8.dp))
+        CircularProgressIndicator(
+            modifier = Modifier.size(36.dp),
+            color = AccentBlue,
+            strokeWidth = 3.dp
+        )
+        Spacer(modifier = Modifier.height(14.dp))
+        Text(title, fontSize = 16.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(subtitle, fontSize = 13.sp, color = TextSecondary)
+        Spacer(modifier = Modifier.height(8.dp))
+    }
+}
+
+@Composable
+private fun UpdateFoundView(onSync: () -> Unit, onLater: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.Start
+    ) {
+        Text("发现新版本", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+        Spacer(modifier = Modifier.height(6.dp))
+        Text("包含重要安全修复与性能提升", fontSize = 14.sp, color = TextSecondary)
+        Spacer(modifier = Modifier.height(20.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            ModalActionButton(
+                text = "稍后",
+                color = TextSecondary,
+                modifier = Modifier.weight(1f),
+                onClick = onLater
+            )
+            ModalActionButton(
+                text = "立即同步",
+                color = AccentBlue,
+                modifier = Modifier.weight(1f),
+                onClick = onSync
+            )
+        }
+    }
+}
+
+@Composable
+private fun UpdatingView(onComplete: () -> Unit) {
     var progress by remember { mutableFloatStateOf(0f) }
-    
+
     LaunchedEffect(Unit) {
         while (progress < 1f) {
             delay(50)
@@ -550,43 +477,386 @@ private fun UpdatingView(
         onComplete()
     }
 
-    CircularProgressIndicator(
-        progress = { progress },
-        modifier = Modifier.size(64.dp),
-        color = Color(0xFF2196F3),
-    )
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(8.dp))
+        CircularProgressIndicator(
+            progress = { progress },
+            modifier = Modifier.size(36.dp),
+            color = AccentBlue,
+            strokeWidth = 3.dp
+        )
+        Spacer(modifier = Modifier.height(14.dp))
+        Text("正在安装... ${(progress * 100).toInt()}%", fontSize = 16.sp, color = TextPrimary)
+        Spacer(modifier = Modifier.height(4.dp))
+        Text("请保持设备连接", fontSize = 13.sp, color = TextSecondary)
+        Spacer(modifier = Modifier.height(8.dp))
+    }
+}
 
-    Spacer(modifier = Modifier.height(16.dp))
+// ── Device Header ─────────────────────────────────────────────
 
-    Text("正在安装... ${(progress * 100).toInt()}%", fontSize = 16.sp, color = Color.White)
-    Text("请保持设备连接", fontSize = 12.sp, color = Color.Gray)
+@Composable
+private fun DeviceHeader(
+    name: String,
+    macSuffix: String,
+    statusDot: Color,
+    statusText: String,
+    onRename: ((String) -> Unit)? = null
+) {
+    var isEditing by remember { mutableStateOf(false) }
+    var editText by remember { mutableStateOf(name) }
+    val focusRequester = remember { FocusRequester() }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top
+    ) {
+        // Status dot
+        Canvas(
+            modifier = Modifier
+                .padding(top = 8.dp)
+                .size(8.dp)
+        ) {
+            drawCircle(color = statusDot)
+        }
+        Spacer(modifier = Modifier.width(10.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            if (isEditing && onRename != null) {
+                BasicTextField(
+                    value = editText,
+                    onValueChange = { editText = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .focusRequester(focusRequester),
+                    textStyle = TextStyle(
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimary
+                    ),
+                    cursorBrush = SolidColor(AccentBlue),
+                    singleLine = true
+                )
+                LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "取消",
+                        fontSize = 13.sp,
+                        color = TextMuted,
+                        modifier = Modifier.clickable {
+                            editText = name
+                            isEditing = false
+                        }
+                    )
+                    Text(
+                        "确认",
+                        fontSize = 13.sp,
+                        color = AccentBlue,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.clickable {
+                            val trimmed = editText.trim()
+                            if (trimmed.isNotEmpty()) {
+                                onRename(trimmed)
+                            }
+                            isEditing = false
+                        }
+                    )
+                }
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = name,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (onRename != null) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Rename",
+                            tint = TextSecondary,
+                            modifier = Modifier
+                                .size(14.dp)
+                                .clickable {
+                                    editText = name
+                                    isEditing = true
+                                }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(2.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(statusText, fontSize = 13.sp, color = TextMuted)
+                if (macSuffix.isNotEmpty()) {
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(macSuffix, fontSize = 12.sp, color = TextSecondary)
+                }
+            }
+        }
+    }
+}
+
+// ── Other Devices ─────────────────────────────────────────────
+
+@Composable
+private fun OtherDevicesDivider() {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        HorizontalDivider(
+            modifier = Modifier.weight(1f),
+            color = CardBorder
+        )
+        Text(
+            "其他设备",
+            modifier = Modifier.padding(horizontal = 12.dp),
+            fontSize = 12.sp,
+            color = TextSecondary
+        )
+        HorizontalDivider(
+            modifier = Modifier.weight(1f),
+            color = CardBorder
+        )
+    }
 }
 
 @Composable
-private fun CheckingUpdateView() {
-    CircularProgressIndicator(
-        modifier = Modifier.size(64.dp),
-        color = Color(0xFF2196F3),
-    )
+private fun OtherDeviceCard(
+    device: RegisteredDevice,
+    onSwitch: () -> Unit,
+    onSetDefault: () -> Unit,
+    onRemove: () -> Unit,
+    onRename: (String) -> Unit
+) {
+    var showActions by remember { mutableStateOf(false) }
+    var showRemoveDialog by remember { mutableStateOf(false) }
+    var isRenaming by remember { mutableStateOf(false) }
+    var renameText by remember { mutableStateOf(device.displayName) }
+    val focusRequester = remember { FocusRequester() }
 
-    Spacer(modifier = Modifier.height(16.dp))
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(CardFrost)
+            .border(1.dp, CardBorder, RoundedCornerShape(14.dp))
+            .clickable { showActions = !showActions }
+            .padding(14.dp)
+    ) {
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Canvas(modifier = Modifier.size(6.dp)) {
+                    drawCircle(color = DisconnectedGrey)
+                }
+                Spacer(modifier = Modifier.width(8.dp))
 
-    Text("正在检查更新...", fontSize = 16.sp, color = Color.White)
-    Text("连接服务器中", fontSize = 12.sp, color = Color.Gray)
+                if (isRenaming) {
+                    BasicTextField(
+                        value = renameText,
+                        onValueChange = { renameText = it },
+                        modifier = Modifier
+                            .weight(1f)
+                            .focusRequester(focusRequester),
+                        textStyle = TextStyle(
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = TextPrimary
+                        ),
+                        cursorBrush = SolidColor(AccentBlue),
+                        singleLine = true
+                    )
+                    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+                } else {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                device.displayName,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = TextPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            if (device.isDefault) {
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    "默认",
+                                    fontSize = 10.sp,
+                                    color = AccentBlue,
+                                    modifier = Modifier
+                                        .border(1.dp, AccentBlue.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
+                                        .padding(horizontal = 4.dp, vertical = 1.dp)
+                                )
+                            }
+                        }
+                        Text(device.macSuffix, fontSize = 12.sp, color = TextSecondary)
+                    }
+                }
+
+                if (isRenaming) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            "取消",
+                            fontSize = 13.sp,
+                            color = TextMuted,
+                            modifier = Modifier.clickable {
+                                renameText = device.displayName
+                                isRenaming = false
+                            }
+                        )
+                        Text(
+                            "确认",
+                            fontSize = 13.sp,
+                            color = AccentBlue,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.clickable {
+                                val trimmed = renameText.trim()
+                                if (trimmed.isNotEmpty()) onRename(trimmed)
+                                isRenaming = false
+                            }
+                        )
+                    }
+                } else {
+                    Text(
+                        "切换",
+                        fontSize = 13.sp,
+                        color = AccentBlue,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.clickable { onSwitch() }
+                    )
+                }
+            }
+
+            // Expandable action bar
+            AnimatedVisibility(visible = showActions && !isRenaming) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        "重命名",
+                        fontSize = 13.sp,
+                        color = TextMuted,
+                        modifier = Modifier.clickable {
+                            renameText = device.displayName
+                            isRenaming = true
+                        }
+                    )
+                    if (!device.isDefault) {
+                        Text(
+                            "设为默认",
+                            fontSize = 13.sp,
+                            color = AccentBlue,
+                            modifier = Modifier.clickable { onSetDefault() }
+                        )
+                    }
+                    Text(
+                        "移除",
+                        fontSize = 13.sp,
+                        color = DangerRed,
+                        modifier = Modifier.clickable { showRemoveDialog = true }
+                    )
+                }
+            }
+        }
+    }
+
+    if (showRemoveDialog) {
+        AlertDialog(
+            onDismissRequest = { showRemoveDialog = false },
+            title = { Text("移除设备", color = TextPrimary) },
+            text = {
+                Text(
+                    "确定要将「${device.displayName}」从注册列表中移除？",
+                    color = TextMuted
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    showRemoveDialog = false
+                    onRemove()
+                }) {
+                    Text("移除", color = DangerRed)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRemoveDialog = false }) {
+                    Text("取消", color = TextMuted)
+                }
+            },
+            containerColor = ModalSurface,
+            titleContentColor = TextPrimary,
+            textContentColor = TextMuted
+        )
+    }
 }
+
+// ── Add Device Button ─────────────────────────────────────────
 
 @Composable
-private fun ReconnectingView() {
-    CircularProgressIndicator(
-        modifier = Modifier.size(64.dp),
-        color = Color(0xFF2196F3),
-    )
-
-    Spacer(modifier = Modifier.height(16.dp))
-
-    Text("正在重新连接...", fontSize = 16.sp, color = Color.White)
-    Text("搜索附近设备", fontSize = 12.sp, color = Color.Gray)
+private fun AddDeviceButton(onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(CardFrost)
+            .border(1.dp, CardBorder, RoundedCornerShape(14.dp))
+            .clickable { onClick() }
+            .padding(14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            Icons.Default.Add,
+            contentDescription = "Add",
+            tint = AccentBlue,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text("添加新设备", fontSize = 14.sp, color = AccentBlue, fontWeight = FontWeight.Medium)
+    }
 }
+
+// ── Action Button ─────────────────────────────────────────────
+
+@Composable
+private fun ModalActionButton(
+    text: String,
+    color: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(color.copy(alpha = 0.12f))
+            .border(1.dp, color.copy(alpha = 0.20f), RoundedCornerShape(12.dp))
+            .clickable { onClick() }
+            .padding(vertical = 10.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(text, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = color)
+    }
+}
+
+// ── WiFi Mismatch View ────────────────────────────────────────
 
 @Composable
 internal fun WifiMismatchView(
@@ -596,175 +866,163 @@ internal fun WifiMismatchView(
     onInputChanged: () -> Unit,
     onIgnore: () -> Unit
 ) {
-    Icon(
-        imageVector = Icons.Default.Warning,
-        contentDescription = "WiFi Mismatch",
-        tint = Color(0xFFFFC107), // Amber
-        modifier = Modifier
-            .size(64.dp)
-            .background(Color(0xFFFFC107).copy(alpha = 0.1f), CircleShape)
-            .padding(12.dp)
-    )
-
-    Spacer(modifier = Modifier.height(16.dp))
-
-    Text("网络环境已变更", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
-    Text("检测到徽章 WiFi 与当前网络不匹配", fontSize = 14.sp, color = Color(0xFFAAAAAA))
-
-    Spacer(modifier = Modifier.height(24.dp))
-
-    // 输入状态
-    var ssid by remember(suggestedSsid) { mutableStateOf(resolveWifiMismatchInitialSsid(suggestedSsid)) }
-    var password by remember { mutableStateOf("") }
-    var localValidationError by remember { mutableStateOf<String?>(null) }
-    var pendingConfirmation by remember { mutableStateOf<WifiMismatchConfirmationPayload?>(null) }
-
-    val displayedError = localValidationError ?: errorMessage
-
-    // WiFi 输入框
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFF2B2B38), RoundedCornerShape(12.dp))
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.Start
     ) {
-        // SSID 输入
-        Column {
-            Text("WiFi 名称 (SSID)", fontSize = 12.sp, color = Color.Gray)
-            Spacer(Modifier.height(4.dp))
-            OutlinedTextField(
-                value = ssid,
-                onValueChange = {
-                    ssid = it
-                    localValidationError = null
-                    pendingConfirmation = null
-                    onInputChanged()
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag(WIFI_MISMATCH_SSID_INPUT_TEST_TAG),
-                singleLine = true,
-                isError = displayedError != null,
-                placeholder = { Text("请输入当前 WiFi 名称", color = Color.Gray) },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    focusedBorderColor = Color(0xFF2196F3),
-                    unfocusedBorderColor = Color.Gray
-                )
-            )
-        }
-        
-        // 密码输入
-        Column {
-            Text("密码", fontSize = 12.sp, color = Color.Gray)
-            Spacer(Modifier.height(4.dp))
-            OutlinedTextField(
-                value = password,
-                onValueChange = {
-                    password = it
-                    localValidationError = null
-                    pendingConfirmation = null
-                    onInputChanged()
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag(WIFI_MISMATCH_PASSWORD_INPUT_TEST_TAG),
-                singleLine = true,
-                isError = displayedError != null,
-                visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
-                placeholder = { Text("请输入密码", color = Color.Gray) },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    focusedBorderColor = Color(0xFF2196F3),
-                    unfocusedBorderColor = Color.Gray
-                )
-            )
-        }
+        Text("网络环境已变更", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+        Spacer(modifier = Modifier.height(6.dp))
+        Text("检测到徽章 WiFi 与当前网络不匹配", fontSize = 14.sp, color = TextSecondary)
+        Spacer(modifier = Modifier.height(18.dp))
 
-        if (displayedError != null) {
-            Text(
-                text = displayedError,
-                color = Color(0xFFFF8A80),
-                fontSize = 12.sp,
-                modifier = Modifier.testTag(WIFI_MISMATCH_ERROR_TEST_TAG)
-            )
-        }
-    }
+        var ssid by remember(suggestedSsid) { mutableStateOf(resolveWifiMismatchInitialSsid(suggestedSsid)) }
+        var password by remember { mutableStateOf("") }
+        var localValidationError by remember { mutableStateOf<String?>(null) }
+        var pendingConfirmation by remember { mutableStateOf<WifiMismatchConfirmationPayload?>(null) }
 
-    Spacer(modifier = Modifier.height(24.dp))
+        val displayedError = localValidationError ?: errorMessage
 
-    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        TextButton(
-            onClick = onIgnore,
-            colors = ButtonDefaults.textButtonColors(contentColor = Color.Gray)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(CardFrost)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Text("忽略")
-        }
-
-        Button(
-            onClick = {
-                val normalizedSsid = ssid.trim()
-                val normalizedPassword = password.trim()
-                if (normalizedSsid.isEmpty() || normalizedPassword.isEmpty()) {
-                    localValidationError = WIFI_MISMATCH_EMPTY_CREDENTIALS_ERROR
-                    pendingConfirmation = null
-                } else {
-                    localValidationError = null
-                    pendingConfirmation = WifiMismatchConfirmationPayload(
-                        ssid = normalizedSsid,
-                        password = normalizedPassword
-                    )
-                }
-            },
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
-            modifier = Modifier.weight(1f)
-        ) {
-            Text("更新配置")
-        }
-    }
-
-    pendingConfirmation?.let { confirmation ->
-        AlertDialog(
-            modifier = Modifier.testTag(WIFI_MISMATCH_CONFIRM_DIALOG_TEST_TAG),
-            onDismissRequest = { pendingConfirmation = null },
-            title = { Text("确认更新 Wi-Fi", color = Color.White) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("即将把以下网络配置发送到徽章：", color = Color(0xFFDDDDDD))
-                    Text(
-                        text = "Wi-Fi：${confirmation.ssid}",
-                        color = Color.White,
-                        modifier = Modifier.testTag(WIFI_MISMATCH_CONFIRM_SSID_TEST_TAG)
-                    )
-                    Text("密码：已隐藏", color = Color(0xFFAAAAAA))
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
+            Column {
+                Text("WiFi 名称 (SSID)", fontSize = 12.sp, color = TextSecondary)
+                Spacer(Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = ssid,
+                    onValueChange = {
+                        ssid = it
+                        localValidationError = null
                         pendingConfirmation = null
-                        onUpdate(confirmation.ssid, confirmation.password)
+                        onInputChanged()
                     },
-                    modifier = Modifier.testTag(WIFI_MISMATCH_CONFIRM_BUTTON_TEST_TAG)
-                ) {
-                    Text("确认发送")
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(WIFI_MISMATCH_SSID_INPUT_TEST_TAG),
+                    singleLine = true,
+                    isError = displayedError != null,
+                    placeholder = { Text("请输入当前 WiFi 名称", color = TextSecondary) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary,
+                        focusedBorderColor = AccentBlue,
+                        unfocusedBorderColor = TextSecondary
+                    )
+                )
+            }
+
+            Column {
+                Text("密码", fontSize = 12.sp, color = TextSecondary)
+                Spacer(Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = {
+                        password = it
+                        localValidationError = null
+                        pendingConfirmation = null
+                        onInputChanged()
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag(WIFI_MISMATCH_PASSWORD_INPUT_TEST_TAG),
+                    singleLine = true,
+                    isError = displayedError != null,
+                    visualTransformation = PasswordVisualTransformation(),
+                    placeholder = { Text("请输入密码", color = TextSecondary) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary,
+                        focusedBorderColor = AccentBlue,
+                        unfocusedBorderColor = TextSecondary
+                    )
+                )
+            }
+
+            if (displayedError != null) {
+                Text(
+                    text = displayedError,
+                    color = DangerRed,
+                    fontSize = 12.sp,
+                    modifier = Modifier.testTag(WIFI_MISMATCH_ERROR_TEST_TAG)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(18.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            ModalActionButton(
+                text = "忽略",
+                color = TextSecondary,
+                modifier = Modifier.weight(1f),
+                onClick = onIgnore
+            )
+            ModalActionButton(
+                text = "更新配置",
+                color = AccentBlue,
+                modifier = Modifier.weight(1f),
+                onClick = {
+                    val normalizedSsid = ssid.trim()
+                    val normalizedPassword = password.trim()
+                    if (normalizedSsid.isEmpty() || normalizedPassword.isEmpty()) {
+                        localValidationError = WIFI_MISMATCH_EMPTY_CREDENTIALS_ERROR
+                        pendingConfirmation = null
+                    } else {
+                        localValidationError = null
+                        pendingConfirmation = WifiMismatchConfirmationPayload(normalizedSsid, normalizedPassword)
+                    }
                 }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { pendingConfirmation = null },
-                    modifier = Modifier.testTag(WIFI_MISMATCH_CONFIRM_CANCEL_BUTTON_TEST_TAG)
-                ) {
-                    Text("取消")
-                }
-            },
-            containerColor = Color(0xFF2B2B38),
-            titleContentColor = Color.White,
-            textContentColor = Color(0xFFDDDDDD)
-        )
+            )
+        }
+
+        pendingConfirmation?.let { confirmation ->
+            AlertDialog(
+                modifier = Modifier.testTag(WIFI_MISMATCH_CONFIRM_DIALOG_TEST_TAG),
+                onDismissRequest = { pendingConfirmation = null },
+                title = { Text("确认更新 Wi-Fi", color = TextPrimary) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("即将把以下网络配置发送到徽章：", color = TextMuted)
+                        Text(
+                            text = "Wi-Fi：${confirmation.ssid}",
+                            color = TextPrimary,
+                            modifier = Modifier.testTag(WIFI_MISMATCH_CONFIRM_SSID_TEST_TAG)
+                        )
+                        Text("密码：已隐藏", color = TextSecondary)
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            pendingConfirmation = null
+                            onUpdate(confirmation.ssid, confirmation.password)
+                        },
+                        modifier = Modifier.testTag(WIFI_MISMATCH_CONFIRM_BUTTON_TEST_TAG)
+                    ) {
+                        Text("确认发送", color = AccentBlue)
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { pendingConfirmation = null },
+                        modifier = Modifier.testTag(WIFI_MISMATCH_CONFIRM_CANCEL_BUTTON_TEST_TAG)
+                    ) {
+                        Text("取消", color = TextMuted)
+                    }
+                },
+                containerColor = ModalSurface,
+                titleContentColor = TextPrimary,
+                textContentColor = TextMuted
+            )
+        }
     }
 }
 

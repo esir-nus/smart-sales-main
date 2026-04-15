@@ -58,8 +58,7 @@ internal object TaskRetrievalScoring {
         query: String,
         person: String,
         location: String,
-        candidate: TaskRetrievalCandidate,
-        preferredTaskIds: Set<String>
+        candidate: TaskRetrievalCandidate
     ): Int {
         val normalizedTitle = normalize(candidate.title)
         val normalizedParticipants = candidate.participants
@@ -117,11 +116,6 @@ internal object TaskRetrievalScoring {
             score += (tokenOverlap(query, normalizedNotes) * 8f).toInt()
             score += (diceCoefficient(query, normalizedNotes) * 6f).toInt()
         }
-
-        if (candidate.id in preferredTaskIds) {
-            score += 12
-        }
-
         return score
     }
 

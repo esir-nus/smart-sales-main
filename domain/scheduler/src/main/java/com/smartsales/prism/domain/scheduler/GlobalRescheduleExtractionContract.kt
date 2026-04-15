@@ -11,15 +11,7 @@ data class GlobalRescheduleExtractionRequest(
     val transcript: String,
     val nowIso: String,
     val timezone: String,
-    val recentTaskHints: List<RecentTaskHint> = emptyList(),
     val activeTaskShortlist: List<ActiveTaskContext> = emptyList()
-)
-
-data class RecentTaskHint(
-    val taskId: String,
-    val title: String,
-    val keyPerson: String? = null,
-    val location: String? = null
 )
 
 @Serializable

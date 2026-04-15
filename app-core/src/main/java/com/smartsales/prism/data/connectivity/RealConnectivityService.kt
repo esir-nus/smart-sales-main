@@ -114,18 +114,23 @@ class RealConnectivityService @Inject constructor(
                             WifiConfigResult.Error("设备与输入的 Wi‑Fi 不匹配，请重新检查配置")
                         } else {
                             Log.w(TAG, "manual wifi repair did not confirm online: $error")
-                            WifiConfigResult.Success
+                            WifiConfigResult.Error("Wi‑Fi 修复未确认在线: $error")
                         }
                     }
 
                     else -> {
                         Log.w(TAG, "manual wifi repair fell back to live manager state: $confirmation")
-                        WifiConfigResult.Success
+                        WifiConfigResult.Error("Wi‑Fi 修复未达到预期状态: $confirmation")
                     }
                 }
             }
             is Result.Error -> WifiConfigResult.Error(result.throwable.message ?: "WiFi 配置失败")
         }
+    }
+
+    override fun scheduleAutoReconnect() {
+        Log.d(TAG, "scheduleAutoReconnect() delegating to deviceManager")
+        deviceManager.scheduleAutoReconnectIfNeeded()
     }
 
     private fun mapReconnectWifiError(

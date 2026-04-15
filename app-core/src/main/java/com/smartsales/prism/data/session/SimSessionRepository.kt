@@ -108,6 +108,7 @@ private data class SimStoredSessionMetadata(
     val timestamp: Long,
     val isPinned: Boolean = false,
     val linkedAudioId: String? = null,
+    val hasAudioContextHistory: Boolean = false,
     val sessionKind: String = SessionKind.GENERAL.name,
     val schedulerFollowUpContext: SimStoredSchedulerFollowUpContext? = null
 )
@@ -182,12 +183,15 @@ private fun SessionPreview.toStored(): SimStoredSessionMetadata {
         timestamp = timestamp,
         isPinned = isPinned,
         linkedAudioId = linkedAudioId,
+        hasAudioContextHistory = hasAudioContextHistory,
         sessionKind = sessionKind.name,
         schedulerFollowUpContext = schedulerFollowUpContext?.toStored()
     )
 }
 
 private fun SimStoredSessionMetadata.toDomain(): SessionPreview {
+    val resolvedSessionKind =
+        SessionKind.entries.firstOrNull { it.name == sessionKind } ?: SessionKind.GENERAL
     return SessionPreview(
         id = sessionId,
         clientName = clientName,
@@ -195,7 +199,10 @@ private fun SimStoredSessionMetadata.toDomain(): SessionPreview {
         timestamp = timestamp,
         isPinned = isPinned,
         linkedAudioId = linkedAudioId,
-        sessionKind = SessionKind.entries.firstOrNull { it.name == sessionKind } ?: SessionKind.GENERAL,
+        hasAudioContextHistory = hasAudioContextHistory ||
+            !linkedAudioId.isNullOrBlank() ||
+            resolvedSessionKind == SessionKind.AUDIO_GROUNDED,
+        sessionKind = resolvedSessionKind,
         schedulerFollowUpContext = schedulerFollowUpContext?.toDomain()
     )
 }

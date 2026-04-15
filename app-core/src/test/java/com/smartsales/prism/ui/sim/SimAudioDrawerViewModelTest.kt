@@ -131,7 +131,7 @@ class SimAudioDrawerViewModelTest {
                 source = DomainAudioSource.SMARTBADGE,
                 status = TranscriptionStatus.PENDING
             ),
-            hasConfirmedBadgeDeleteThisSession = false
+            hasOptedOutBadgeDeleteWarning = false
         )
 
         assertEquals(
@@ -153,7 +153,7 @@ class SimAudioDrawerViewModelTest {
                 source = DomainAudioSource.PHONE,
                 status = TranscriptionStatus.PENDING
             ),
-            hasConfirmedBadgeDeleteThisSession = false
+            hasOptedOutBadgeDeleteWarning = false
         )
 
         assertEquals(
@@ -166,7 +166,7 @@ class SimAudioDrawerViewModelTest {
     }
 
     @Test
-    fun `resolveSimBadgeDeleteConfirmationRequest skips confirmation after session approval or for plain phone audio`() {
+    fun `resolveSimBadgeDeleteConfirmationRequest skips confirmation after opt-out or for plain phone audio`() {
         assertEquals(
             null,
             resolveSimBadgeDeleteConfirmationRequest(
@@ -177,7 +177,7 @@ class SimAudioDrawerViewModelTest {
                     source = DomainAudioSource.SMARTBADGE,
                     status = TranscriptionStatus.PENDING
                 ),
-                hasConfirmedBadgeDeleteThisSession = true
+                hasOptedOutBadgeDeleteWarning = true
             )
         )
         assertEquals(
@@ -190,7 +190,7 @@ class SimAudioDrawerViewModelTest {
                     source = DomainAudioSource.PHONE,
                     status = TranscriptionStatus.PENDING
                 ),
-                hasConfirmedBadgeDeleteThisSession = false
+                hasOptedOutBadgeDeleteWarning = false
             )
         )
     }
@@ -336,6 +336,24 @@ class SimAudioDrawerViewModelTest {
         )
 
         assertEquals("标题 第一行 内容 第二行", preview)
+    }
+
+    @Test
+    fun `formatDownloadFileSize formats bytes into human readable sizes`() {
+        assertEquals("", formatDownloadFileSize(0))
+        assertEquals("512 B", formatDownloadFileSize(512))
+        assertEquals("1 KB", formatDownloadFileSize(1024))
+        assertEquals("500 KB", formatDownloadFileSize(512_000))
+        assertEquals("9.5 MB", formatDownloadFileSize(9_961_472))
+        assertEquals("38.2 MB", formatDownloadFileSize(40_054_374))
+    }
+
+    @Test
+    fun `formatDownloadSpeed formats bytes per second into readable speed`() {
+        assertEquals("", formatDownloadSpeed(0))
+        assertEquals("512 B/s", formatDownloadSpeed(512))
+        assertEquals("150 KB/s", formatDownloadSpeed(153_600))
+        assertEquals("1.0 MB/s", formatDownloadSpeed(1_048_576))
     }
 
     private fun testEntry(

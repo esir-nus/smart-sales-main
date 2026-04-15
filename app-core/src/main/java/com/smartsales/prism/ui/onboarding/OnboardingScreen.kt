@@ -5,9 +5,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.smartsales.prism.AppFlavor
 import com.smartsales.prism.domain.pairing.DiscoveredBadge
 import kotlinx.coroutines.launch
 
@@ -36,6 +37,12 @@ fun OnboardingCoordinator(
     pairingViewModel: PairingFlowViewModel = hiltViewModel(),
     interactionViewModel: OnboardingInteractionViewModel = hiltViewModel()
 ) {
+    val schedulerEnabled = AppFlavor.schedulerEnabled
+    val skipButtonText = if (schedulerEnabled) {
+        "跳过，直接体验日程"
+    } else {
+        "跳过，直接进入首页"
+    }
     var currentStep by remember(host) { mutableStateOf(initialOnboardingStep(host)) }
     var discoveredBadge by remember(host) { mutableStateOf<DiscoveredBadge?>(null) }
     var wifiSsid by remember(host) { mutableStateOf("") }
@@ -43,10 +50,14 @@ fun OnboardingCoordinator(
     var completionError by remember(host) { mutableStateOf<String?>(null) }
     var isCompleting by remember(host) { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    val enterQuickStart = {
+    val enterPostPairingFlow = {
         pairingViewModel.cancelPairing()
         completionError = null
-        currentStep = OnboardingStep.SCHEDULER_QUICK_START
+        currentStep = if (schedulerEnabled) {
+            OnboardingStep.SCHEDULER_QUICK_START
+        } else {
+            OnboardingStep.COMPLETE
+        }
     }
 
     LaunchedEffect(host) {
@@ -95,7 +106,8 @@ fun OnboardingCoordinator(
 
             OnboardingStep.HARDWARE_WAKE -> HardwareWakeStep(
                 onContinue = { currentStep = nextOnboardingStep(it, host) },
-                onSkipToQuickStart = enterQuickStart
+                onSkipToQuickStart = enterPostPairingFlow,
+                skipButtonText = skipButtonText
             )
 
             OnboardingStep.SCAN -> ScanStep(
@@ -137,7 +149,8 @@ fun OnboardingCoordinator(
                     discoveredBadge = null
                     currentStep = OnboardingStep.SCAN
                 },
-                onSkipToQuickStart = enterQuickStart,
+                onSkipToQuickStart = enterPostPairingFlow,
+                skipButtonText = skipButtonText,
                 onComplete = {
                     currentStep = nextOnboardingStep(it, host)
                 }
@@ -146,11 +159,17 @@ fun OnboardingCoordinator(
             OnboardingStep.COMPLETE -> CompleteStep(
                 isFinalizing = isCompleting,
                 errorMessage = completionError,
+                showSchedulerHandoff = schedulerEnabled,
                 onAcknowledge = {
                     completionError = null
                     scope.launch {
                         isCompleting = true
-                        val commitError = interactionViewModel.finalizeFullAppCompletion()
+                        val commitError = if (schedulerEnabled) {
+                            interactionViewModel.finalizeFullAppCompletion()
+                        } else {
+                            interactionViewModel.resetInteractionState()
+                            null
+                        }
                         isCompleting = false
                         if (commitError != null) {
                             completionError = commitError
@@ -190,7 +209,14 @@ internal fun OnboardingStaticScreen(
             OnboardingStep.SCHEDULER_QUICK_START -> SchedulerQuickStartStaticStep(
                 captureState = state.quickStartCaptureState
             )
-            OnboardingStep.HARDWARE_WAKE -> HardwareWakeStep(onContinue = {})
+            OnboardingStep.HARDWARE_WAKE -> HardwareWakeStep(
+                onContinue = {},
+                skipButtonText = if (AppFlavor.schedulerEnabled) {
+                    "跳过，直接体验日程"
+                } else {
+                    "跳过，直接进入首页"
+                }
+            )
             OnboardingStep.SCAN -> ScanStepContent(
                 pairingState = state.pairingState,
                 permissionDenied = state.permissionDenied,
@@ -214,10 +240,18 @@ internal fun OnboardingStaticScreen(
                 onBack = {},
                 onRetryScan = {},
                 onSkipToQuickStart = {},
+                skipButtonText = if (AppFlavor.schedulerEnabled) {
+                    "跳过，直接体验日程"
+                } else {
+                    "跳过，直接进入首页"
+                },
                 onSubmit = {},
                 onRetryProvisioning = {}
             )
-            OnboardingStep.COMPLETE -> CompleteStep(onAcknowledge = {})
+            OnboardingStep.COMPLETE -> CompleteStep(
+                showSchedulerHandoff = AppFlavor.schedulerEnabled,
+                onAcknowledge = {}
+            )
         }
     }
 }

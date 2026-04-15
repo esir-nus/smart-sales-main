@@ -21,7 +21,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -73,6 +75,11 @@ class AndroidBleScanner @Inject constructor(
         if (adapter == null || !adapter.isEnabled) {
             Log.w("BT311Scan", "Bluetooth adapter null or disabled, adapter=$adapter, isEnabled=${adapter?.isEnabled}")
             _devices.value = emptyList()
+            _isScanning.value = false
+            return
+        }
+        if (!hasScanPermissions()) {
+            Log.w("BT311Scan", "Missing scan permissions (BLUETOOTH_SCAN or ACCESS_FINE_LOCATION)")
             _isScanning.value = false
             return
         }
@@ -139,11 +146,32 @@ class AndroidBleScanner @Inject constructor(
         }
     }
 
+    @SuppressLint("MissingPermission")
+    override suspend fun scanForFirst(timeoutMs: Long): BlePeripheral? {
+        stop()
+        start()
+        if (!_isScanning.value) return null
+        val result = withTimeoutOrNull(timeoutMs) {
+            _devices.first { it.isNotEmpty() }
+        }
+        stop()
+        return result?.firstOrNull()
+    }
+
     private fun hasConnectPermission(): Boolean {
         return ContextCompat.checkSelfPermission(
             appContext,
             android.Manifest.permission.BLUETOOTH_CONNECT
         ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun hasScanPermissions(): Boolean {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            if (ContextCompat.checkSelfPermission(appContext, android.Manifest.permission.BLUETOOTH_SCAN)
+                != PackageManager.PERMISSION_GRANTED) return false
+        }
+        return ContextCompat.checkSelfPermission(appContext, android.Manifest.permission.ACCESS_FINE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED
     }
 
     private fun parseAdvertisedUuids(payload: ByteArray): List<java.util.UUID> {

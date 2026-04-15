@@ -933,6 +933,11 @@ internal class SimSchedulerIngressCoordinator(
         projectionSupport.emitFailure(normalizedMessage)
     }
 
+    // 处理语音改期转录文本的入口桩，后续由全局改期流程承接实际执行。
+    private suspend fun handleVoiceRescheduleTranscript(transcript: String) {
+        processTranscript(transcript)
+    }
+
     private fun parseExactInstant(raw: String): Instant? {
         return runCatching { Instant.parse(raw) }
             .recoverCatching { OffsetDateTime.parse(raw).toInstant() }

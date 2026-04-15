@@ -45,9 +45,15 @@ interface BadgeHttpClient {
      * @param baseUrl Base URL with port
      * @param filename Name of WAV file to download
      * @param dest Destination file to save to
+     * @param onProgress Optional callback invoked with (bytesRead, totalBytes) during download
      * @return Success if downloaded, Error otherwise
      */
-    suspend fun downloadWav(baseUrl: String, filename: String, dest: File): Result<Unit>
+    suspend fun downloadWav(
+        baseUrl: String,
+        filename: String,
+        dest: File,
+        onProgress: ((bytesRead: Long, totalBytes: Long) -> Unit)? = null
+    ): Result<Unit>
 
     /**
      * Delete a WAV file from badge.
@@ -148,13 +154,15 @@ class DefaultBadgeHttpClient @Inject constructor(
     override suspend fun downloadWav(
         baseUrl: String,
         filename: String,
-        dest: File
-    ): Result<Unit> = retryOnServerError { downloadWavOnce(baseUrl, filename, dest) }
-    
+        dest: File,
+        onProgress: ((bytesRead: Long, totalBytes: Long) -> Unit)?
+    ): Result<Unit> = retryOnServerError { downloadWavOnce(baseUrl, filename, dest, onProgress) }
+
     private suspend fun downloadWavOnce(
         baseUrl: String,
         filename: String,
-        dest: File
+        dest: File,
+        onProgress: ((bytesRead: Long, totalBytes: Long) -> Unit)?
     ): Result<Unit> = withContext(dispatchers.io) {
         // Validate filename
         if (!filename.lowercase().endsWith(".wav")) {
@@ -174,7 +182,19 @@ class DefaultBadgeHttpClient @Inject constructor(
                     response.isSuccessful -> {
                         response.body?.byteStream()?.use { input ->
                             FileOutputStream(dest).use { output ->
-                                input.copyTo(output)
+                                val totalBytes = response.body?.contentLength() ?: -1L
+                                if (onProgress != null && totalBytes > 0) {
+                                    val buffer = ByteArray(8192)
+                                    var bytesRead = 0L
+                                    var read: Int
+                                    while (input.read(buffer).also { read = it } != -1) {
+                                        output.write(buffer, 0, read)
+                                        bytesRead += read
+                                        onProgress(bytesRead, totalBytes)
+                                    }
+                                } else {
+                                    input.copyTo(output)
+                                }
                             }
                         }
                         Result.Success(Unit)

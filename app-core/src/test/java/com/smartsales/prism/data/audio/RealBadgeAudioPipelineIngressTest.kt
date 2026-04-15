@@ -66,7 +66,10 @@ class RealBadgeAudioPipelineIngressTest {
         override val managerStatus: StateFlow<BadgeManagerStatus> =
             MutableStateFlow<BadgeManagerStatus>(BadgeManagerStatus.Ready("192.168.0.9", "MstRobot")).asStateFlow()
 
-        override suspend fun downloadRecording(filename: String): WavDownloadResult {
+        override suspend fun downloadRecording(
+            filename: String,
+            onProgress: ((bytesRead: Long, totalBytes: Long) -> Unit)?
+        ): WavDownloadResult {
             downloadCalls += filename
             return WavDownloadResult.Error(
                 code = WavDownloadResult.ErrorCode.DOWNLOAD_FAILED,

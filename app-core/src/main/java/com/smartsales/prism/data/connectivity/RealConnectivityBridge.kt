@@ -136,15 +136,18 @@ class RealConnectivityBridge @Inject constructor(
         )
     )
     
-    override suspend fun downloadRecording(filename: String): WavDownloadResult {
+    override suspend fun downloadRecording(
+        filename: String,
+        onProgress: ((bytesRead: Long, totalBytes: Long) -> Unit)?
+    ): WavDownloadResult {
         val baseUrl = resolveBaseUrl() ?: return WavDownloadResult.Error(
             code = WavDownloadResult.ErrorCode.NOT_CONNECTED,
             message = "无法获取设备IP — 请确认 Badge 已连接 WiFi"
         )
         android.util.Log.d(TAG, "⬇️ Downloading: $baseUrl/download?file=$filename")
         val tempFile = File.createTempFile("badge_recording_", ".wav")
-        
-        return when (val result = httpClient.downloadWav(baseUrl, filename, tempFile)) {
+
+        return when (val result = httpClient.downloadWav(baseUrl, filename, tempFile, onProgress)) {
             is Result.Success -> WavDownloadResult.Success(
                 localFile = tempFile,
                 originalFilename = filename,

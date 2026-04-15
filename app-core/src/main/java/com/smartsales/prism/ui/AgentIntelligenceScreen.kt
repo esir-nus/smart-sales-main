@@ -36,6 +36,7 @@ fun AgentIntelligenceScreen(
     showSimHeaderNewSessionButton: Boolean = true,
     showSimBottomComposer: Boolean = true,
     showSimIdleComposerHint: Boolean = false,
+    simSessionHasAudioContextHistory: Boolean = false,
     enableSimSchedulerPullGesture: Boolean = false,
     enableSimAudioPullGesture: Boolean = false,
     onSimSchedulerPullOpen: () -> Unit = {},
@@ -106,6 +107,7 @@ fun AgentIntelligenceScreen(
         showSimHeaderNewSessionButton = showSimHeaderNewSessionButton,
         showSimBottomComposer = showSimBottomComposer,
         showSimIdleComposerHint = showSimIdleComposerHint,
+        currentSessionHasAudioContextHistory = simSessionHasAudioContextHistory,
         enableSimSchedulerPullGesture = enableSimSchedulerPullGesture,
         enableSimAudioPullGesture = enableSimAudioPullGesture,
         onSimSchedulerPullOpen = onSimSchedulerPullOpen,
@@ -119,6 +121,10 @@ fun AgentIntelligenceScreen(
         onSimVoiceDraftCancel = onSimVoiceDraftCancel,
         onUpdateInput = viewModel::updateInput,
         onSend = viewModel::send,
+        onSuggestionClick = { suggestion ->
+            viewModel.updateInput(suggestion)
+            viewModel.send()
+        },
         onConfirmPlan = viewModel::confirmAnalystPlan,
         onAmendPlan = viewModel::amendAnalystPlan,
         onSelectTaskBoardItem = viewModel::selectTaskBoardItem

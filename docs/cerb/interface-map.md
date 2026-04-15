@@ -4,7 +4,7 @@
 >
 > **Purpose**: Module ownership + data flow. Read this BEFORE any cross-module change.
 > **Rule**: If data belongs to Module B, query B's interface at runtime. Don't store B's data on A's model.
-> **Last Updated**: 2026-04-08 (Onboarding quick-start post-pairing handoff sync; RuntimeShell dynamic-island arbitration sync; audio drawer / badge pipeline sync correction; connectivity debug APK host; platform-governance ownership overlay; transient Harmony Tingwu container root and native runtime slice; Harmony scheduler backend-first verification sandbox)
+> **Last Updated**: 2026-04-15 (DeviceRegistry multi-device layer; ConnectivityModal multi-device management rewrite; DynamicIsland activeDeviceName; pairing→registry integration; downloadRecording onProgress; audio download progress fields; agent intelligence Wave 6 conversational polish)
 >
 > **Status Legend**: ✅ = Shipped (Real impl) · 📐 = Interface only (Fake impl) · 🔲 = Not yet coded
 > **Platform Ownership Legend**: `shared` = same product contract across platforms · `android-only` = owned by the current Android lineage · `harmony-only` = owned by the future native Harmony root · `platform-adapter` = shared product contract, platform-specific delivery layer · `legacy-android-on-harmony` = Android app compatibility behavior on Huawei/Honor/Harmony devices
@@ -21,8 +21,7 @@ This overlay classifies the current repo's cross-platform-sensitive surfaces wit
 | Pure domain contracts and platform-neutral scheduler semantics | `shared` | `domain/**`, approved platform-neutral portions of `core/**` | Sharing is allowed only while the code stays runtime-neutral and does not absorb OS delivery assumptions. |
 | Reminder / notification delivery mechanics | `platform-adapter` | shared truth in `docs/cerb/notifications/spec.md`; overlays in `docs/platforms/android/**` and `docs/platforms/harmony/**` | Shared reminder semantics stay single-source; permissions, lifecycle, FSI, OEM branches, and native reminder APIs are platform-owned. |
 | `ConnectivityBridge`, `BadgeAudioPipeline`, `DevicePairing` | `android-only` | current Android lineage | Current hardware path is Android-owned and must not be treated as the default native Harmony implementation. |
-| Transient Harmony Tingwu container | `harmony-only` | `platforms/harmony/tingwu-container/**`, `docs/platforms/harmony/tingwu-container.md` | This transient app may consume shared Tingwu/audio contracts and may host an operator-only Harmony scheduler backend verification sandbox, but it must still hide user-facing scheduler, reminder, chat, onboarding handoff, and badge-hardware capability instead of redefining shared truth. The Harmony root now owns its ArkTS config seam, hvigor-generated Harmony local config artifact, document-picker ingress, Harmony namespaced file store, Harmony HTTP/OSS client, Tingwu polling client, container UI, and bounded scheduler-backend verification scaffold. |
-| Internal Harmony UI verification package | `harmony-only` | `platforms/harmony/ui-verification/**`, `docs/platforms/harmony/ui-verification.md` | This internal package owns ArkUI page-native verification, page-facing mock drivers, internal gate control, and later page-by-page docking adapters. It does not own shared product truth or backend verification, and it must keep mock-backed scheduler pages hidden/internal until capability docs are intentionally widened. |
+| Transient Harmony Tingwu container | `harmony-only` | `platforms/harmony/tingwu-container/**`, `docs/platforms/harmony/tingwu-container.md` | This transient app may consume shared Tingwu/audio contracts, but it must stay local-audio-only and must hide scheduler, reminder, chat, onboarding handoff, and badge-hardware capability instead of redefining shared truth. The Harmony root now owns its ArkTS config seam, hvigor-generated Harmony local config artifact, document-picker ingress, Harmony namespaced file store, Harmony HTTP/OSS client, Tingwu polling client, and container UI. |
 | `OnboardingInteraction` delivery mechanics | `platform-adapter` | shared flow/spec plus platform overlays | User journey and scheduler intent stay shared; permission, lifecycle, hardware, and OS-entry details are platform-owned. |
 | Android app on Huawei/Honor/Harmony devices | `legacy-android-on-harmony` | `docs/reference/harmonyos-platform-guide.md`, Android overlays, Android code lineage | This path remains the Android app running on Harmony-family devices. It is not the native Harmony product owner. |
 | Broader future native Harmony implementation root | `harmony-only` | reserved future platform root beyond the transient Tingwu container | Native Harmony code must not land under `app/**`, `app-core/**`, `core/**`, `data/**`, or `domain/**`. |
@@ -70,6 +69,7 @@ Store and query domain data. Other modules use their interfaces but never each o
 | **AliasCache** (L1 Cache) | Entity Resolution | Fast-lookup mapping for EntityCandidates | EntityRegistry (Hydration) | `suspend match(List<String>) -> CacheResult` | OS: RAM | ✅ |
 | **[Mutation Module](./scheduler-domain/spec.md)** | Intelligent Scheduler | Atomic Operations, Lexical Conflict Checks, Delete->Insert Reschedule | ScheduleBoard | `suspend rescheduleTask(...)`, `insertTask(...)` | OS: RAM | ✅ |
 | **[SchedulerDomain](./scheduler-domain/spec.md)** (LTM) | Intelligent Scheduler | ScheduledTask, InspirationEntry | — | `ScheduledTaskRepository` | OS: SSD | ✅ |
+| **DeviceRegistry** | Hardware & Audio | Registered device list (MAC, name, default flag, timestamps) | — | `DeviceRegistry` (`loadAll`, `register`, `rename`, `setDefault`, `remove`) | OS: SSD | ✅ |
 
 > **EntityWriter vs EntityRegistry**: Writer handles mutations (dedup, merge, alias registration) AND write-through to RAM S1. Registry handles queries. Callers MUST use Writer for writes, Registry for reads. Never call `EntityRepository.save()` directly.
 >
@@ -127,7 +127,8 @@ User-facing features. Each receives processed results from Orchestrator (Layer 3
 | **[OnboardingInteraction](./onboarding-interaction/spec.md)** | Hardware & Audio | Pre-pairing phone-mic onboarding interaction state, consultation reply, typed profile draft, scheduler quick-start sandbox, CTA-gated profile save, post-completion shell handoff request | DeviceSpeechRecognizer, UserProfileRepository, scheduler Path A extraction services, FastTrackMutationEngine, ExactAlarmPermissionGate, Calendar provider/permission bridge, `RuntimeOnboardingHandoffGate` | `OnboardingInteractionService`, `OnboardingQuickStartService`, `OnboardingSchedulerQuickStartCommitter`, `OnboardingQuickStartCalendarExporter`, `OnboardingInteractionViewModel` | OS: App | 🚧 |
 | **[ConflictResolver](./conflict-resolver/spec.md)** | Intelligent Scheduler | Conflict resolution actions | ScheduleBoard | `resolve(...) -> ConflictResolution` | OS: App | ✅ |
 | **[AgentIntelligenceUI](../cerb-ui/agent-intelligence/spec.md)** | System II & Routing | Wait-state UI components | — | `StateFlow<UiState>` | OS: App | 📐 |
-| **[DevicePairing](./device-pairing/spec.md)** | Hardware & Audio | BLE pairing session states | Legacy BLE stack | `StateFlow<PairingState>` | OS: App | ✅ |
+| **[DevicePairing](./device-pairing/spec.md)** | Hardware & Audio | BLE pairing session states | Legacy BLE stack, DeviceRegistryManager (post-pairing registration) | `StateFlow<PairingState>` | OS: App | ✅ |
+| **DeviceRegistryManager** | Hardware & Audio | Multi-device orchestration (active device, switch, register, remove, rename, legacy migration) | DeviceRegistry, SessionStore, DeviceConnectionManager | `registeredDevices: StateFlow`, `activeDevice: StateFlow`, `switchToDevice()` | OS: App | ✅ |
 
 > **"Reads From" vs "Receives From"**: "Reads From" = the feature calls the interface directly. "Receives From" = UnifiedPipeline pushes results into the feature's ViewModel. This distinction prevents confusion about who initiates the call.
 
@@ -170,8 +171,8 @@ The SIM post-closeout scheduler follow-up mini-wave introduces one explicit SIM-
 - `BadgeAudioPipeline` scheduler completion may create a shell-owned follow-up binding
 - `RuntimeShell` / `SimAgentViewModel` may host the follow-up session and task selection UI
 - actual task mutation truth still routes through scheduler-owned collaborators (`ScheduledTaskRepository`, conflict check, reminder stack)
-- global follow-up candidate-space truth may route through `ActiveTaskRetrievalIndex`, which remains scheduler-owned and derived from canonical tasks rather than chat/session memory or recency/UI bias
-- follow-up reschedule must restate an explicit target plus a new exact time in the current clause; if global routing stays unresolved, it fails safely inside scheduler-owned copy rather than mutating by UI selection accident
+- global follow-up candidate-space truth may route through `ActiveTaskRetrievalIndex`, which remains scheduler-owned and derived from canonical tasks rather than chat/session memory
+- multi-task follow-up reschedule must attempt global target routing before it requires a selected task; if the target stays unresolved, it fails safely inside scheduler-owned copy rather than mutating by UI selection accident
 
 Rule:
 
@@ -208,6 +209,25 @@ A separate debug-only APK now exists for the active connectivity lane:
 - it may host the real connectivity modal, connectivity manager, `SIM_CONNECTIVITY` onboarding, and SIM audio drawer sync/delete UX for fast debug iteration
 - the main app is the frozen consumer for this lane until shared fixes are proven in the debug host
 - wrapper-local code may add operator controls or logcat helpers, but must not fork connectivity business logic
+
+### Multi-device registry and ConnectivityModal management edge (2026-04-15)
+
+The connectivity surface now supports multi-device management through `DeviceRegistryManager`:
+
+- `DeviceRegistryManager` orchestrates "which device" while `DeviceConnectionManager` continues to handle "how to connect"
+- `DeviceRegistry` (SharedPrefs-backed, Layer 2) persists the registered device list; `DeviceRegistryManager` (Layer 4) owns active device selection, switching, and legacy single-device migration
+- `RealPairingService` calls `registryManager.registerDevice()` after successful pairing; the first registered device automatically becomes the default
+- `ConnectivityModal` now displays active device + device list with inline rename, switch, remove, and set-default actions; frosted glass styling follows `SimHomeHeroTokens`
+- `ConnectivityViewModel` now depends on `DeviceRegistryManager` for `registeredDevices`, `activeDevice`, and device management actions
+- `SimShellDynamicIslandCoordinator` now receives `activeDeviceName` and shows device-specific connectivity text (e.g., "Pro 已连接" vs "Badge 已连接")
+- device switch is mutex-protected: soft-disconnect current → seed session for target → force reconnect
+- legacy single-device users are auto-migrated from `SessionStore` on first launch
+
+Rule:
+
+- `DeviceRegistryManager` owns multi-device orchestration; `DeviceConnectionManager` must not become multi-device-aware
+- `ConnectivityModal` may display and manage the device list but must not own device persistence or connection logic
+- Dynamic Island may display the active device name but must not own device selection
 
 ---
 

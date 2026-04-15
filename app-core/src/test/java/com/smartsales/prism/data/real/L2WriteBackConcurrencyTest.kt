@@ -106,7 +106,6 @@ class L2WriteBackConcurrencyTest {
             inputParserService = fakeInputParserService,
             schedulerLinter = SchedulerLinter(),
             entityWriter = entityWriter,
-            sessionTitleGenerator = FakeSessionTitleGenerator(),
             promptCompiler = FakePromptCompiler(),
             executor = FakeExecutor(),
             telemetry = FakePipelineTelemetry(),

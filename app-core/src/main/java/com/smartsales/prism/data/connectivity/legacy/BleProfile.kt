@@ -16,17 +16,8 @@ data class BleProfileConfig(
 ) {
     fun matches(deviceName: String?, advertisedUuids: Collection<UUID>): Boolean {
         val normalizedName = deviceName.orEmpty().lowercase(Locale.US)
-        val foldedName = normalizedName
-            .replace("-", "")
-            .replace("_", "")
-            .replace(" ", "")
         val keywordHit = nameKeywords.any { keyword ->
-            val normalizedKeyword = keyword.lowercase(Locale.US)
-            val foldedKeyword = normalizedKeyword
-                .replace("-", "")
-                .replace("_", "")
-                .replace(" ", "")
-            normalizedName.contains(normalizedKeyword) || foldedName.contains(foldedKeyword)
+            normalizedName == keyword.lowercase(Locale.US)
         }
         val serviceHit = scanServiceUuids.any { advertisedUuids.contains(it) }
         val hasFilters = nameKeywords.isNotEmpty() || scanServiceUuids.isNotEmpty()

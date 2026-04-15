@@ -61,7 +61,12 @@ class FakeBadgeHttpClient @Inject constructor() : BadgeHttpClient {
         return listResult
     }
 
-    override suspend fun downloadWav(baseUrl: String, filename: String, dest: File): Result<Unit> {
+    override suspend fun downloadWav(
+        baseUrl: String,
+        filename: String,
+        dest: File,
+        onProgress: ((bytesRead: Long, totalBytes: Long) -> Unit)?
+    ): Result<Unit> {
         downloadCalls.add(DownloadCall(baseUrl, filename, dest.absolutePath))
         return downloadResult
     }

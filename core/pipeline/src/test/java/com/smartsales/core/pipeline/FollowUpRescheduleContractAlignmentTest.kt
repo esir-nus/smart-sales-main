@@ -5,6 +5,7 @@ import com.smartsales.prism.domain.scheduler.FollowUpRescheduleExtractionRequest
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.descriptors.StructureKind
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -54,11 +55,10 @@ class FollowUpRescheduleContractAlignmentTest {
         )
         assertTrue(prompt.contains("selected_task_title"))
         assertTrue(prompt.contains("selected_task_start_iso"))
-        assertTrue(prompt.contains("推迟1小时"))
-        assertTrue(prompt.contains("提前半小时"))
+        assertTrue(prompt.contains("delta-only 改期"))
         assertTrue(prompt.contains("明天早上8点"))
         assertTrue(prompt.contains("RELATIVE_DAY_CLOCK"))
-        assertTrue(prompt.contains("DELTA_FROM_TARGET"))
+        assertFalse(prompt.contains("DELTA_FROM_TARGET"))
         assertTrue(prompt.contains("NOT_SUPPORTED"))
         assertTrue(prompt.contains("页面相对日期"))
     }

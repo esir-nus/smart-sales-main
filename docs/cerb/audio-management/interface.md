@@ -2,7 +2,7 @@
 
 > **Blackbox contract** — For consumers (AudioDrawer, UI). Don't read implementation.
 > **Status**: Active supporting interface
-> **Last Updated**: 2026-04-02
+> **Last Updated**: 2026-04-14
 
 ---
 
@@ -79,10 +79,13 @@ data class AudioFile(
     val isStarred: Boolean = false,
     val isTestImport: Boolean = false,
     val summary: String? = null,
-    val progress: Float = 0f,  // 0.0 to 1.0
+    val progress: Float = 0f,  // 0.0 to 1.0 (transcription progress)
     val boundSessionId: String? = null,
     val activeJobId: String? = null,
-    val lastErrorMessage: String? = null
+    val lastErrorMessage: String? = null,
+    val downloadProgress: Float = 0f,      // 0.0 to 1.0 (WAV download from badge)
+    val downloadedBytes: Long = 0L,        // bytes received so far
+    val downloadTotalBytes: Long = 0L      // total expected bytes (from Content-Length)
 )
 ```
 
@@ -146,6 +149,7 @@ Additional inventory guarantee:
 - this does **not** change the drawer-side sync contract: consumers must still treat `syncFromDevice` as manual-only
 - placeholder SmartBadge cards may exist before the local WAV exists; consumers must gate transcribe/chat-pending actions on `localAvailability == READY`
 - placeholder SmartBadge cards remain deletable and use the same badge tombstone/delete cleanup contract
+- `downloadProgress`, `downloadedBytes`, and `downloadTotalBytes` are transient in-memory-only fields updated during active WAV downloads; they are not persisted to disk and reset to zero on availability transitions (READY, FAILED, QUEUED); consumers may use them to render real-time download progress UI when `localAvailability == DOWNLOADING`
 
 SmartBadge delete guarantees:
 

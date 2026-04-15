@@ -8,6 +8,7 @@ import java.time.ZoneId
 
 internal fun buildSimDynamicIslandItems(
     sessionTitle: String,
+    sessionHasAudioContextHistory: Boolean = false,
     orderedTasks: List<ScheduledTask>,
     showIdleTeachingHint: Boolean = false
 ): List<DynamicIslandItem> {
@@ -16,18 +17,17 @@ internal fun buildSimDynamicIslandItems(
         .filterNot { it.isDone }
         .take(3)
     if (activeTasks.isEmpty()) {
-        return listOf(
-            DynamicIslandItem(
-                sessionTitle = normalizedTitle,
-                schedulerSummary = if (showIdleTeachingHint) {
-                    "下滑这里查看日程"
-                } else {
-                    "暂无待办"
-                },
-                isIdleEntry = true,
-                tapAction = DynamicIslandTapAction.OpenSchedulerDrawer()
-            )
+        val schedulerFallback = DynamicIslandItem(
+            sessionTitle = normalizedTitle,
+            schedulerSummary = if (showIdleTeachingHint) {
+                "下滑这里查看日程"
+            } else {
+                "暂无待办"
+            },
+            isIdleEntry = true,
+            tapAction = DynamicIslandTapAction.OpenSchedulerDrawer()
         )
+        return listOf(schedulerFallback)
     }
     return activeTasks.map { task ->
         DynamicIslandItem(

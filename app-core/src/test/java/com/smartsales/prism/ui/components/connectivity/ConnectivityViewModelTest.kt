@@ -1,6 +1,10 @@
 package com.smartsales.prism.ui.components.connectivity
 
 import com.smartsales.core.util.Result
+import com.smartsales.prism.data.connectivity.legacy.BlePeripheral
+import com.smartsales.prism.data.connectivity.legacy.BleSession
+import com.smartsales.prism.data.connectivity.registry.DeviceRegistryManager
+import com.smartsales.prism.data.connectivity.registry.RegisteredDevice
 import com.smartsales.prism.domain.connectivity.BadgeConnectionState
 import com.smartsales.prism.domain.connectivity.BadgeManagerStatus
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
@@ -45,16 +49,22 @@ class ConnectivityViewModelTest {
         Dispatchers.resetMain()
     }
 
+    private fun createViewModel(
+        service: ConnectivityService = FakeConnectivityService(),
+        bridge: ConnectivityBridge = FakeConnectivityBridge(),
+    ) = ConnectivityViewModel(
+        connectivityService = service,
+        connectivityBridge = bridge,
+        registryManager = FakeDeviceRegistryManager()
+    )
+
     @Test
     fun `managerState shows ble paired offline while shared shell state stays disconnected`() = runTest {
         val bridge = FakeConnectivityBridge(
             connection = BadgeConnectionState.Disconnected,
             manager = BadgeManagerStatus.BlePairedNetworkOffline
         )
-        val viewModel = ConnectivityViewModel(
-            connectivityService = FakeConnectivityService(),
-            connectivityBridge = bridge
-        )
+        val viewModel = createViewModel(bridge = bridge)
         advanceUntilIdle()
 
         assertEquals(ConnectionState.DISCONNECTED, viewModel.connectionState.value)
@@ -71,10 +81,7 @@ class ConnectivityViewModelTest {
             connection = BadgeConnectionState.NeedsSetup,
             manager = BadgeManagerStatus.NeedsSetup
         )
-        val viewModel = ConnectivityViewModel(
-            connectivityService = FakeConnectivityService(),
-            connectivityBridge = bridge
-        )
+        val viewModel = createViewModel(bridge = bridge)
         advanceUntilIdle()
 
         assertEquals(ConnectionState.NEEDS_SETUP, viewModel.connectionState.value)
@@ -88,9 +95,9 @@ class ConnectivityViewModelTest {
             manager = BadgeManagerStatus.BlePairedNetworkOffline
         )
         val reconnectGate = CompletableDeferred<ReconnectResult>()
-        val viewModel = ConnectivityViewModel(
-            connectivityService = FakeConnectivityService(reconnectResults = listOf(reconnectGate)),
-            connectivityBridge = bridge
+        val viewModel = createViewModel(
+            service = FakeConnectivityService(reconnectResults = listOf(reconnectGate)),
+            bridge = bridge
         )
         advanceUntilIdle()
 
@@ -114,10 +121,7 @@ class ConnectivityViewModelTest {
         )
         val updateGate = CompletableDeferred<WifiConfigResult>()
         val service = FakeConnectivityService(updateWifiConfigResults = listOf(updateGate))
-        val viewModel = ConnectivityViewModel(
-            connectivityService = service,
-            connectivityBridge = bridge
-        )
+        val viewModel = createViewModel(service = service, bridge = bridge)
         advanceUntilIdle()
 
         viewModel.updateWifiConfig(ssid = "OfficeGuest", password = "secret")
@@ -140,9 +144,9 @@ class ConnectivityViewModelTest {
             manager = BadgeManagerStatus.BlePairedNetworkOffline
         )
         val updateGate = CompletableDeferred<WifiConfigResult>()
-        val viewModel = ConnectivityViewModel(
-            connectivityService = FakeConnectivityService(updateWifiConfigResults = listOf(updateGate)),
-            connectivityBridge = bridge
+        val viewModel = createViewModel(
+            service = FakeConnectivityService(updateWifiConfigResults = listOf(updateGate)),
+            bridge = bridge
         )
         advanceUntilIdle()
 
@@ -163,10 +167,7 @@ class ConnectivityViewModelTest {
             manager = BadgeManagerStatus.BlePairedNetworkOffline
         )
         val service = FakeConnectivityService()
-        val viewModel = ConnectivityViewModel(
-            connectivityService = service,
-            connectivityBridge = bridge
-        )
+        val viewModel = createViewModel(service = service, bridge = bridge)
         advanceUntilIdle()
 
         viewModel.updateWifiConfig(ssid = "   ", password = "secret")
@@ -184,10 +185,7 @@ class ConnectivityViewModelTest {
             manager = BadgeManagerStatus.BlePairedNetworkOffline
         )
         val service = FakeConnectivityService()
-        val viewModel = ConnectivityViewModel(
-            connectivityService = service,
-            connectivityBridge = bridge
-        )
+        val viewModel = createViewModel(service = service, bridge = bridge)
         advanceUntilIdle()
 
         viewModel.updateWifiConfig(ssid = "OfficeGuest", password = "   ")
@@ -206,10 +204,7 @@ class ConnectivityViewModelTest {
         )
         val updateGate = CompletableDeferred<WifiConfigResult>()
         val service = FakeConnectivityService(updateWifiConfigResults = listOf(updateGate))
-        val viewModel = ConnectivityViewModel(
-            connectivityService = service,
-            connectivityBridge = bridge
-        )
+        val viewModel = createViewModel(service = service, bridge = bridge)
         advanceUntilIdle()
 
         viewModel.updateWifiConfig(ssid = "  OfficeGuest  ", password = "  secret  ")
@@ -227,15 +222,15 @@ class ConnectivityViewModelTest {
             connection = BadgeConnectionState.Disconnected,
             manager = BadgeManagerStatus.BlePairedNetworkOffline
         )
-        val viewModel = ConnectivityViewModel(
-            connectivityService = FakeConnectivityService(
+        val viewModel = createViewModel(
+            service = FakeConnectivityService(
                 reconnectResults = listOf(
                     CompletableDeferred<ReconnectResult>().apply {
                         complete(ReconnectResult.WifiMismatch(currentPhoneSsid = "OfficeGuest"))
                     }
                 )
             ),
-            connectivityBridge = bridge
+            bridge = bridge
         )
         advanceUntilIdle()
 
@@ -269,10 +264,7 @@ class ConnectivityViewModelTest {
                 }
             )
         )
-        val viewModel = ConnectivityViewModel(
-            connectivityService = service,
-            connectivityBridge = bridge
-        )
+        val viewModel = createViewModel(service = service, bridge = bridge)
         advanceUntilIdle()
 
         viewModel.reconnect()
@@ -303,10 +295,7 @@ class ConnectivityViewModelTest {
         )
         val updateGate = CompletableDeferred<WifiConfigResult>()
         val service = FakeConnectivityService(updateWifiConfigResults = listOf(updateGate))
-        val viewModel = ConnectivityViewModel(
-            connectivityService = service,
-            connectivityBridge = bridge
-        )
+        val viewModel = createViewModel(service = service, bridge = bridge)
         advanceUntilIdle()
 
         viewModel.updateWifiConfig(ssid = "OfficeGuest", password = "secret")
@@ -323,15 +312,15 @@ class ConnectivityViewModelTest {
             connection = BadgeConnectionState.Disconnected,
             manager = BadgeManagerStatus.BlePairedNetworkOffline
         )
-        val viewModel = ConnectivityViewModel(
-            connectivityService = FakeConnectivityService(
+        val viewModel = createViewModel(
+            service = FakeConnectivityService(
                 reconnectResults = listOf(
                     CompletableDeferred<ReconnectResult>().apply {
                         complete(ReconnectResult.WifiMismatch(currentPhoneSsid = "OfficeGuest"))
                     }
                 )
             ),
-            connectivityBridge = bridge
+            bridge = bridge
         )
         advanceUntilIdle()
 
@@ -349,9 +338,9 @@ class ConnectivityViewModelTest {
             manager = BadgeManagerStatus.BlePairedNetworkOffline
         )
         val updateGate = CompletableDeferred<WifiConfigResult>()
-        val viewModel = ConnectivityViewModel(
-            connectivityService = FakeConnectivityService(updateWifiConfigResults = listOf(updateGate)),
-            connectivityBridge = bridge
+        val viewModel = createViewModel(
+            service = FakeConnectivityService(updateWifiConfigResults = listOf(updateGate)),
+            bridge = bridge
         )
         advanceUntilIdle()
 
@@ -370,10 +359,7 @@ class ConnectivityViewModelTest {
             connection = BadgeConnectionState.Disconnected,
             manager = BadgeManagerStatus.BlePairedNetworkOffline
         )
-        val viewModel = ConnectivityViewModel(
-            connectivityService = FakeConnectivityService(),
-            connectivityBridge = bridge
-        )
+        val viewModel = createViewModel(bridge = bridge)
         advanceUntilIdle()
 
         viewModel.updateWifiConfig(ssid = "", password = "")
@@ -395,7 +381,10 @@ class ConnectivityViewModelTest {
         override val connectionState: StateFlow<BadgeConnectionState> = _connectionState.asStateFlow()
         override val managerStatus: StateFlow<BadgeManagerStatus> = _managerStatus.asStateFlow()
 
-        override suspend fun downloadRecording(filename: String): WavDownloadResult {
+        override suspend fun downloadRecording(
+            filename: String,
+            onProgress: ((bytesRead: Long, totalBytes: Long) -> Unit)?
+        ): WavDownloadResult {
             error("Not used in ConnectivityViewModelTest")
         }
 
@@ -449,5 +438,20 @@ class ConnectivityViewModelTest {
                 }
             return gate.await()
         }
+    }
+
+    private class FakeDeviceRegistryManager : DeviceRegistryManager {
+        private val _registeredDevices = MutableStateFlow<List<RegisteredDevice>>(emptyList())
+        private val _activeDevice = MutableStateFlow<RegisteredDevice?>(null)
+
+        override val registeredDevices: StateFlow<List<RegisteredDevice>> = _registeredDevices.asStateFlow()
+        override val activeDevice: StateFlow<RegisteredDevice?> = _activeDevice.asStateFlow()
+
+        override fun registerDevice(peripheral: BlePeripheral, session: BleSession) = Unit
+        override fun renameDevice(macAddress: String, newName: String) = Unit
+        override fun setDefault(macAddress: String) = Unit
+        override suspend fun switchToDevice(macAddress: String) = Unit
+        override fun removeDevice(macAddress: String) = Unit
+        override fun initializeOnLaunch() = Unit
     }
 }

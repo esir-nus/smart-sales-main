@@ -358,11 +358,16 @@ The island is:
 
 Current delivered scope:
 
-- render one sticky one-line scheduler item at a time in the header center slot
+- render one sticky one-line island item at a time in the header center slot
+- inject the current renamed session title into the same rotation lane whenever the title is not the untitled placeholder
+- render the session-title item in chrome blue and dwell on it for `3s`
+- keep scheduler items on the existing `5s` dwell
+- cap the SIM-local rotation list at `3` total visible candidates when a title item exists (`session title + up to 2 scheduler items`)
+- allow the session-title item to re-interrupt the local scheduler rotation when an auto-rename lands
+- render an audio indicator in front of the session title on SIM title surfaces whenever the session has ever carried audio context in its history
 - use scheduler-first copy such as `冲突：...` or `即将：...`
 - keep overflow on one line through truncation rather than marquee
-- rotate vertically through up to the top 3 scheduler items when more than one eligible item exists
-- rotate every 5 seconds
+- rotate vertically through up to the top 3 lawful visible items
 - keep conflict-visible scheduler items ahead of normal reminders
 - render conflict-visible items with yellow hue and most-immediate normal items with red hue
 - tap opens the scheduler drawer and lands on the visible item's corresponding date page
@@ -373,7 +378,7 @@ Current delivered scope:
 
 Boundary rule:
 
-- the shell owns island presentation, top-3 vertical rotation, and tap routing
+- the shell owns island presentation, session-title insertion, top-3 vertical rotation, local dwell timing, and tap routing
 - scheduler still owns task truth, conflict priority, and reminder ordering
 - mascot behavior is not widened by this shell surface in the current slice
 
@@ -555,7 +560,7 @@ This slice does not implement:
 - normal runtime does not seed demo sessions into SIM history
 - durable turns are limited to user text, AI response, AI audio artifacts, and AI error
 - transient UI state such as input text, sending/thinking state, toast/error presentation, and transcript-reveal knowledge remains memory-only
-- Wave 8 extends this metadata with a session kind plus optional scheduler-follow-up context:
+- Wave 8 extends this metadata with a session kind, sticky audio-context-history flag, plus optional scheduler-follow-up context:
   badge thread id,
   bound task ids,
   optional batch id,

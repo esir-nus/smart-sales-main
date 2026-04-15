@@ -21,6 +21,7 @@ internal class DeviceConnectionManagerRuntime {
     var heartbeatJob: Job? = null
     var notificationListenerJob: Job? = null
     var notificationListenerActive = false
+    var notificationListenerGeneration = 0L
     var autoRetryJob: Job? = null
     var autoRetryAttempts = 0
     var reconnectMeta = AutoReconnectMeta()

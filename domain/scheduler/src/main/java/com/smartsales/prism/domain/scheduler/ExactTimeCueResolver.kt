@@ -42,6 +42,8 @@ object ExactTimeCueResolver {
         } catch (_: Exception) {
             return startTimeIso
         }
+        // 若大模型给出的日期已经在锚定日期之后，说明大模型对未来日期的判断更准确，直接信任大模型结果。
+        if (!zoned.toLocalDate().isBefore(lawfulDate)) return startTimeIso
         return zoned.withYear(lawfulDate.year)
             .withMonth(lawfulDate.monthValue)
             .withDayOfMonth(lawfulDate.dayOfMonth)

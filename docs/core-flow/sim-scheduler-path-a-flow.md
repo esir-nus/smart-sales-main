@@ -206,18 +206,20 @@ If the scheduler drawer mic receives a reschedule-style transcript:
 - SIM must resolve the target against scheduler-owned global task truth using confidence-gated matching
 - the candidate space must come from a scheduler-owned active retrieval index derived from all non-done tasks, not a 7-day UI window and not a separate session-memory lane
 - that retrieval index may expose a bounded shortlist context pack to the extractor, but the extractor remains advisory only
-- it may use normalized title, persisted participant/location metadata, notes digest, and a weak recent-task-set prior as supporting signals
+- it may use normalized title, persisted participant/location metadata, and notes digest as supporting signals
 - current selected/opened task state and current visible page/date must not become semantic authority for target choice
 - it must not rely on plain exact-title or SQL-only equality as the product contract
 - raw model output alone must not authorize a write; the scheduler-owned final gate must still accept `resolved / ambiguous / no-match`
+- the utterance must itself contain an explicit reschedule target plus a new exact time; omitted-target follow-up mutation such as `改到3点` must safe-fail
 - once one target is resolved, explicit day+clock phrasing such as `明天早上8点` must be accepted through scheduler-owned deterministic parsing before any model-led exact-time fallback
-- once one target is resolved, explicit delta phrasing such as `推迟1小时` / `提前半小时` must anchor to that task's current persisted start time rather than `nowIso`
+- delta-only phrasing such as `推迟1小时` / `提前半小时` must safe-fail rather than mutate from the resolved task's current start time
 - low-confidence resolution must degrade to explicit safe failure, not guessed mutation
 
 The same global target-resolution law also applies to the task-scoped follow-up reschedule lane:
 
-- follow-up reschedule may pass the currently bound task set only as a weak recent-task prior
+- follow-up reschedule still requires the current utterance to restate the explicit target; the bound task set is not mutation authority
 - selected-task UI state may still drive quick actions such as delete/done, but it must not override global reschedule resolution
+- multiple reschedules in one utterance are not a special mode; they decompose into ordinary independent explicit-target reschedule clauses
 
 ---
 

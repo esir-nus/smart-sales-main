@@ -74,6 +74,7 @@ Path A may use **small session memory** to understand a user follow-up such as:
 
 This session memory is short-lived continuation context for the active scheduling thread.
 It is not the same as CRM/entity memory.
+It also does not authorize omitted-target reschedule mutation: reschedule still requires an explicit target plus a new exact time in the current utterance.
 
 ### Path B: Inform
 

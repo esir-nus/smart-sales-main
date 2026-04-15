@@ -180,7 +180,8 @@
         "app-core/src/main/java/com/smartsales/prism/data/audio/**",
         "app-core/src/main/java/com/smartsales/prism/domain/audio/**",
         "app-core/src/test/**/data/audio/**",
-        "docs/cerb/audio-management/**"
+        "docs/cerb/audio-management/**",
+        "docs/cerb-ui/**"
       ],
       "allowed_shared_paths": [
         "handoffs/audio_drawer_compose_handoff.md"

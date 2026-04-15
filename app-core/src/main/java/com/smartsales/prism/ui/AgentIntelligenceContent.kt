@@ -93,6 +93,7 @@ internal fun AgentIntelligenceContent(
     onSimVoiceDraftCancel: () -> Unit,
     onUpdateInput: (String) -> Unit,
     onSend: () -> Unit,
+    onSuggestionClick: (String) -> Unit = {},
     onConfirmPlan: () -> Unit,
     onAmendPlan: () -> Unit,
     onSelectTaskBoardItem: (String) -> Unit
@@ -219,6 +220,7 @@ internal fun AgentIntelligenceContent(
                 onVoiceDraftCancel = onSimVoiceDraftCancel,
                 onUpdateInput = onUpdateInput,
                 onSend = onSend,
+                onSuggestionClick = onSuggestionClick,
                 onConfirmPlan = onConfirmPlan,
                 onAmendPlan = onAmendPlan
             )

@@ -50,7 +50,7 @@ class SimHomeHeroExperimentContractTest {
         assertTrue(layoutSource.contains("availableHeight < 820.dp -> ShellLayoutMode.COMPACT"))
         assertTrue(layoutSource.contains("availableWidth >= 380.dp"))
         assertTrue(source.contains("internal fun SimHomeHeroCenterStage("))
-        assertTrue(source.contains("heightIn(min = SimHomeHeroTokens.BottomMonolithHeight)"))
+        assertTrue(source.contains("heightIn(min = SimHomeHeroTokens.BottomMonolithHeight"))
         assertTrue(source.contains("SimHomeHeroAmbientFlankIcon("))
         assertTrue(source.contains("SimHomeHeroAmbientBatteryGlyph("))
         assertTrue(source.contains("fillMaxWidth(SimHomeHeroTokens.HeaderCenterClusterFillFraction)"))

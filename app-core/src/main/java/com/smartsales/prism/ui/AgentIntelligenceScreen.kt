@@ -121,6 +121,10 @@ fun AgentIntelligenceScreen(
         onSimVoiceDraftCancel = onSimVoiceDraftCancel,
         onUpdateInput = viewModel::updateInput,
         onSend = viewModel::send,
+        onSuggestionClick = { suggestion ->
+            viewModel.updateInput(suggestion)
+            viewModel.send()
+        },
         onConfirmPlan = viewModel::confirmAnalystPlan,
         onAmendPlan = viewModel::amendAnalystPlan,
         onSelectTaskBoardItem = viewModel::selectTaskBoardItem

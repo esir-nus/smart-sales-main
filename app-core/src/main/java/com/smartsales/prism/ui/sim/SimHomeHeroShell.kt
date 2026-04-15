@@ -1146,7 +1146,7 @@ private fun SimHomeHeroBottomMonolith(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .heightIn(min = SimHomeHeroTokens.BottomMonolithHeight),
+                            .heightIn(min = SimHomeHeroTokens.BottomMonolithHeight, max = 140.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
@@ -1183,7 +1183,8 @@ private fun SimHomeHeroBottomMonolith(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .testTag(SIM_INPUT_FIELD_TEST_TAG),
-                                singleLine = true,
+                                singleLine = false,
+                                maxLines = 4,
                                 textStyle = TextStyle(
                                     color = palette.inputText,
                                     fontSize = SimHomeHeroTokens.BottomInputTextSize,

@@ -96,7 +96,7 @@ Home empty-state composition note:
 | **Scan** | Technical radar | Cancel or wait for result | `正在搜索设备` | Requests Bluetooth permission at point-of-use, then emits found/error. | Verified |
 | **Device Found** | High-fidelity device card | Tap `手动连接` | MAC + dBm | Manual connect only, never auto-connect. | Verified |
 | **Provisioning** | Glass form + linear progress | Submit Wi-Fi, retry, or back | `配置网络` | Runs pairing/write-through/network check inside one presentation seam. | Verified |
-| **Complete** | Shared success wrapper | Tap host CTA | `一切就绪！` | `FULL_APP` enters home; `SIM_CONNECTIVITY` enters manager first. | Verified |
+| **Complete** | Shared success wrapper | Tap host CTA | `一切就绪！` | `FULL_APP` enters home; `SIM_CONNECTIVITY` enters manager first; `SIM_ADD_DEVICE` closes back to connectivity-owned add-device flow. | Verified |
 
 ### 1.6 User Center (Settings Blueprint)
 | Element | Visual | Interaction | Microcopy | Result | Status |

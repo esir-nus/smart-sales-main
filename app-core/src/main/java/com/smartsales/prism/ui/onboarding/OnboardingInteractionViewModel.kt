@@ -1570,6 +1570,7 @@ class OnboardingInteractionViewModel @Inject constructor(
         get() = when (this) {
             OnboardingHost.FULL_APP -> "full_app"
             OnboardingHost.SIM_CONNECTIVITY -> "sim_connectivity"
+            OnboardingHost.SIM_ADD_DEVICE -> "sim_add_device"
             null -> "unbound"
         }
 }

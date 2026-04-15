@@ -325,6 +325,7 @@ fun OnboardingDesignBrowser(
                     when (it) {
                         OnboardingHost.FULL_APP -> "Full App"
                         OnboardingHost.SIM_CONNECTIVITY -> "SIM"
+                        OnboardingHost.SIM_ADD_DEVICE -> "Add Device"
                     }
                 },
                 onSelect = { host = it }

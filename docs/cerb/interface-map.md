@@ -4,7 +4,7 @@
 >
 > **Purpose**: Module ownership + data flow. Read this BEFORE any cross-module change.
 > **Rule**: If data belongs to Module B, query B's interface at runtime. Don't store B's data on A's model.
-> **Last Updated**: 2026-04-15 (DeviceRegistry multi-device layer; ConnectivityModal multi-device management rewrite; DynamicIsland activeDeviceName; pairing→registry integration; downloadRecording onProgress; audio download progress fields; agent intelligence Wave 6 conversational polish)
+> **Last Updated**: 2026-04-15 (DeviceRegistry multi-device layer; ConnectivityModal multi-device management rewrite; dedicated add-device onboarding route; DynamicIsland activeDeviceName; pairing→registry integration; downloadRecording onProgress; audio download progress fields; agent intelligence Wave 6 conversational polish)
 >
 > **Status Legend**: ✅ = Shipped (Real impl) · 📐 = Interface only (Fake impl) · 🔲 = Not yet coded
 > **Platform Ownership Legend**: `shared` = same product contract across platforms · `android-only` = owned by the current Android lineage · `harmony-only` = owned by the future native Harmony root · `platform-adapter` = shared product contract, platform-specific delivery layer · `legacy-android-on-harmony` = Android app compatibility behavior on Huawei/Honor/Harmony devices
@@ -218,6 +218,7 @@ The connectivity surface now supports multi-device management through `DeviceReg
 - `DeviceRegistry` (SharedPrefs-backed, Layer 2) persists the registered device list; `DeviceRegistryManager` (Layer 4) owns active device selection, switching, and legacy single-device migration
 - `RealPairingService` calls `registryManager.registerDevice()` after successful pairing; the first registered device automatically becomes the default
 - `ConnectivityModal` now displays active device + device list with inline rename, switch, remove, and set-default actions; frosted glass styling follows `SimHomeHeroTokens`
+- `ConnectivityModal` now splits first-time setup from later add-device entry: `NEEDS_SETUP` continues to the full `SIM_CONNECTIVITY` onboarding route, while the manager `添加设备` action opens the shell-owned `ADD_DEVICE` surface backed by `OnboardingHost.SIM_ADD_DEVICE`
 - `ConnectivityViewModel` now depends on `DeviceRegistryManager` for `registeredDevices`, `activeDevice`, and device management actions
 - `SimShellDynamicIslandCoordinator` now receives `activeDeviceName` and shows device-specific connectivity text (e.g., "Pro 已连接" vs "Badge 已连接")
 - device switch is mutex-protected: soft-disconnect current → seed session for target → force reconnect
@@ -227,6 +228,7 @@ Rule:
 
 - `DeviceRegistryManager` owns multi-device orchestration; `DeviceConnectionManager` must not become multi-device-aware
 - `ConnectivityModal` may display and manage the device list but must not own device persistence or connection logic
+- `RuntimeShell` owns connectivity-surface routing between `MODAL`, `SETUP`, `MANAGER`, and `ADD_DEVICE`; pairing runtime truth remains with onboarding/device-pairing collaborators
 - Dynamic Island may display the active device name but must not own device selection
 
 ---

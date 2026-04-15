@@ -437,6 +437,14 @@ internal fun RuntimeShellContent(
                             )
                         }
                     },
+                    onNavigateToAddDevice = {
+                        mutateShellState { state ->
+                            handleRuntimeAddDeviceStart(
+                                state = state,
+                                source = "bootstrap_modal"
+                            )
+                        }
+                    },
                     viewModel = connectivityViewModel
                 )
             }
@@ -498,7 +506,31 @@ internal fun RuntimeShellContent(
                         )
                     }
                 },
+                onNavigateToAddDevice = {
+                    mutateShellState { state ->
+                        handleRuntimeAddDeviceStart(
+                            state = state,
+                            source = "manager_add_device"
+                        )
+                    }
+                },
                 viewModel = connectivityViewModel
+            )
+        }
+
+        // 添加新设备 — 跳过欢迎/语音，直接进入配网流程
+        AnimatedVisibility(
+            visible = shellState.activeConnectivitySurface == RuntimeConnectivitySurface.ADD_DEVICE,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.zIndex(PrismElevation.Drawer + 1f)
+        ) {
+            OnboardingCoordinator(
+                host = OnboardingHost.SIM_ADD_DEVICE,
+                onExit = { mutateShellState(::closeRuntimeConnectivitySurface) },
+                onComplete = { mutateShellState(::closeRuntimeConnectivitySurface) },
+                exitPolicy = OnboardingExitPolicy.ALLOW_EXIT,
+                pairingViewModel = pairingViewModel
             )
         }
 

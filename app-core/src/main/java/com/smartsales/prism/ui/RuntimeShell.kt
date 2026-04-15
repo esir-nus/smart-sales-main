@@ -40,7 +40,6 @@ import com.smartsales.prism.ui.sim.dismissRuntimeSchedulerIslandHint
 import com.smartsales.prism.ui.sim.deriveRuntimeFollowUpSurface
 import com.smartsales.prism.ui.sim.handleBadgeSchedulerContinuityIngress
 import com.smartsales.prism.ui.sim.handleRuntimeConnectivityEntryRequest
-import com.smartsales.prism.ui.sim.handleRuntimeConnectivityOnboardingReplayRequest
 import com.smartsales.prism.ui.sim.initialRuntimeShellState
 import com.smartsales.prism.ui.sim.openRuntimeAudioDrawer
 import com.smartsales.prism.ui.sim.openRuntimeScheduler
@@ -350,14 +349,6 @@ internal fun RuntimeShell(
         shellState = openRuntimeAudioDrawer(shellState, mode)
     }
 
-    fun replayOnboarding() {
-        pairingViewModel.cancelPairing()
-        shellState = handleRuntimeConnectivityOnboardingReplayRequest(
-            state = shellState,
-            source = "audio_drawer_replay"
-        )
-    }
-
     LaunchedEffect(
         schedulerEnabled,
         postOnboardingSchedulerAutoOpenPending,
@@ -417,7 +408,6 @@ internal fun RuntimeShell(
         coroutineScope = coroutineScope,
         onImportTestAudio = { importTestAudioLauncher.launch("audio/*") },
         onForcedFirstLaunchOnboardingCompleted = onForcedSetupCompleted,
-        onReplayOnboarding = ::replayOnboarding,
         dismissReminderBanner = schedulerViewModel::dismissActiveReminderBanner,
         clearFollowUp = followUpOwner::clear,
         closeOverlays = ::closeOverlays,

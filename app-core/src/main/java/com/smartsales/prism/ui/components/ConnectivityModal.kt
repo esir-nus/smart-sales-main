@@ -69,6 +69,7 @@ private val DangerRed = Color(0xFFFF453A)
 fun ConnectivityModal(
     onDismiss: () -> Unit,
     onNavigateToSetup: () -> Unit = {},
+    onNavigateToAddDevice: () -> Unit = {},
     viewModel: ConnectivityViewModel = hiltViewModel()
 ) {
     val state by viewModel.managerState.collectAsState()
@@ -179,7 +180,7 @@ fun ConnectivityModal(
                     AddDeviceButton(onClick = {
                         viewModel.resetTransientState()
                         onDismiss()
-                        onNavigateToSetup()
+                        onNavigateToAddDevice()
                     })
                     Spacer(modifier = Modifier.height(4.dp))
                 }
@@ -195,11 +196,13 @@ fun ConnectivityModal(
 fun ConnectivityManagerScreen(
     onClose: () -> Unit,
     onNavigateToSetup: () -> Unit = {},
+    onNavigateToAddDevice: () -> Unit = {},
     viewModel: ConnectivityViewModel = hiltViewModel()
 ) {
     ConnectivityModal(
         onDismiss = onClose,
         onNavigateToSetup = onNavigateToSetup,
+        onNavigateToAddDevice = onNavigateToAddDevice,
         viewModel = viewModel
     )
 }

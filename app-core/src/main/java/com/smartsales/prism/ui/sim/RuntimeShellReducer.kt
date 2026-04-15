@@ -101,6 +101,7 @@ internal fun openRuntimeConnectivityEntry(
     RuntimeConnectivitySurface.MODAL -> openRuntimeConnectivityModal(state)
     RuntimeConnectivitySurface.SETUP -> openRuntimeConnectivitySetup(state)
     RuntimeConnectivitySurface.MANAGER -> openRuntimeConnectivityManager(state)
+    RuntimeConnectivitySurface.ADD_DEVICE -> openRuntimeConnectivitySetup(state)
 }
 
 internal fun closeRuntimeConnectivitySurface(state: RuntimeShellState): RuntimeShellState =
@@ -138,7 +139,7 @@ internal fun handleRuntimeConnectivitySetupStart(
     return openRuntimeConnectivitySetup(state)
 }
 
-internal fun handleRuntimeConnectivityOnboardingReplayRequest(
+internal fun handleRuntimeAddDeviceStart(
     state: RuntimeShellState,
     source: String,
     emitTelemetry: (String, String) -> Unit = { summary, detail ->
@@ -147,9 +148,11 @@ internal fun handleRuntimeConnectivityOnboardingReplayRequest(
 ): RuntimeShellState {
     emitTelemetry(
         SIM_CONNECTIVITY_SETUP_STARTED_SUMMARY,
-        "source=$source target=${RuntimeConnectivitySurface.SETUP} replay=true"
+        "source=$source target=${RuntimeConnectivitySurface.ADD_DEVICE}"
     )
-    return openRuntimeConnectivitySetup(state)
+    return closeRuntimeOverlays(state).copy(
+        activeConnectivitySurface = RuntimeConnectivitySurface.ADD_DEVICE
+    )
 }
 
 internal fun handleRuntimeConnectivitySetupCompleted(
@@ -256,6 +259,7 @@ private fun RuntimeConnectivitySurface?.toBaseRuntimeConnectivitySurface(): Base
         RuntimeConnectivitySurface.MODAL -> BaseRuntimeConnectivitySurface.MODAL
         RuntimeConnectivitySurface.SETUP -> BaseRuntimeConnectivitySurface.SETUP
         RuntimeConnectivitySurface.MANAGER -> BaseRuntimeConnectivitySurface.MANAGER
+        RuntimeConnectivitySurface.ADD_DEVICE -> BaseRuntimeConnectivitySurface.SETUP
         null -> null
     }
 

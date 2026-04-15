@@ -203,6 +203,46 @@
 
 ---
 
+## Shipped Fix: Download Progress Bar UI — Indeterminate Progress + Speed Display
+> **Context**: ESP32 badge HTTP server sends no `Content-Length` header (chunked transfer encoding), so `totalBytes = -1`. App now shows indeterminate progress bar with animated sliding indicator, downloaded bytes count, and live speed (KB/s) instead of waiting for file size.
+
+- **Status**: Shipped (2026-04-15)
+- **Scope**:
+  - `BadgeHttpClient.downloadWavOnce()` now always streams progress callbacks when `onProgress` callback is present, regardless of `Content-Length` header presence
+  - `SimAudioRepositorySyncSupport` callback handles `totalBytes <= 0` gracefully: uses `-1f` sentinel for indeterminate progress state
+  - `SimAudioDrawerCard` UI supports dual modes:
+    - **Indeterminate** (`downloadProgress < 0`): animated `LinearProgressIndicator()` + downloaded bytes display (e.g., "15.2 MB")
+    - **Determinate** (`downloadProgress >= 0`): filling bar + percentage display (e.g., "45%")
+  - Both modes show live download speed (e.g., "125 KB/s") via existing `LaunchedEffect(entry.downloadedBytes)` wiring
+- **Files Changed**:
+  - `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/BadgeHttpClient.kt` (line 186)
+  - `app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepositorySyncSupport.kt` (lines 446-458)
+  - `app-core/src/main/java/com/smartsales/prism/ui/sim/SimAudioDrawerCard.kt` (lines 342-357)
+- **Testing Evidence**:
+  - adb telemetry confirmed ESP32 response: `Content-Length=-1 Transfer-Encoding=chunked` for 37MB WAV file
+  - On-device 5-minute download completed with progress bar animating and speed updating in real time
+- **Follow-Up from**: Shipped Fix: Download Progress Bar Wiring
+
+---
+
+## Deferred Enhancement: Download Progress Bar — File Size Support via `/list` Endpoint
+> **Context**: Next-gen progress bar shows determinate percentage when file size is available. Requires firmware team to add file size data to `/list` endpoint response.
+
+- **Status**: Deferred (awaiting firmware implementation — ETA: days)
+- **Scope** (to be implemented once firmware ships file sizes):
+  - Firmware adds file size field to `/list` response: `[{"name": "file.wav", "size": 19914866}, ...]`
+  - `BadgeHttpClient.listWavFiles()` gains overload to parse size info, with backward-compatible fallback to string-only array format
+  - `SimAudioRepository` caches file sizes keyed by filename
+  - `SimAudioRepositorySyncSupport` pre-fetches total size before download, passes it to `RealConnectivityBridge`
+  - When total size known: `SimAudioDrawerCard` switches to determinate mode (percentage display + filling bar)
+- **Benefits**:
+  - Avoids firmware Content-Length header changes (less intrusive)
+  - Allows app to pre-calculate total bytes before download starts
+  - Deterministic progress display (percentage) once size info arrives
+- **Blocker**: Firmware team implementation of file size field in `/list` response
+
+---
+
 ## Shipped Slice: Governance Simplification — DTQ System Decommissioned
 > **Context**: The DTQ lane system (9 worktrees, 351-line JSON registry, Python lane guard, handoff contracts) repeatedly created blockers when reality outpaced the registry. Replaced with industry-standard develop + platform branch model.
 

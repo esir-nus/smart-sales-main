@@ -5,8 +5,8 @@ import com.smartsales.prism.domain.audio.AudioLocalAvailability
 import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
 import com.smartsales.prism.ui.components.connectivity.ConnectionState
 import com.smartsales.prism.ui.drawers.AudioStatus
-import java.time.Duration
 import java.time.Instant
+import java.time.Duration
 
 internal const val SIM_AUDIO_DEMO_SEED_ID = "sim_wave2_seed"
 
@@ -119,29 +119,32 @@ internal fun resolveSimAudioSyncLabel(
     }
 }
 
+/** 根据最后同步时间生成相对时间标签，用于胶囊右侧同步部分 */
 internal fun resolveSimAudioSyncRelativeLabel(
     visualState: SimAudioSyncVisualState,
     lastSyncTimestamp: Instant?
 ): String {
     return when (visualState) {
-        SimAudioSyncVisualState.READY -> formatSimAudioLastSyncLabel(lastSyncTimestamp)
-        SimAudioSyncVisualState.SYNCING -> "正在同步"
-        SimAudioSyncVisualState.SYNCED -> "刚刚同步"
-        SimAudioSyncVisualState.RECONNECTING -> "重连中"
-        SimAudioSyncVisualState.ERROR -> "同步失败"
-        SimAudioSyncVisualState.BLOCKED -> "去连接"
+        SimAudioSyncVisualState.SYNCING -> "正在同步..."
+        SimAudioSyncVisualState.BLOCKED,
+        SimAudioSyncVisualState.RECONNECTING -> ""
+        else -> {
+            if (lastSyncTimestamp == null) {
+                "未同步"
+            } else {
+                formatRelativeSyncTime(lastSyncTimestamp)
+            }
+        }
     }
 }
 
-private fun formatSimAudioLastSyncLabel(lastSyncTimestamp: Instant?): String {
-    val timestamp = lastSyncTimestamp ?: return "同步录音"
-    val elapsed = Duration.between(timestamp, Instant.now())
-    val seconds = elapsed.seconds.coerceAtLeast(0L)
+/** 将同步时间转换为相对描述，例如 "已同步 (1s)" / "已同步 (1min)" / "已同步 (1h)" */
+internal fun formatRelativeSyncTime(lastSync: Instant): String {
+    val seconds = Duration.between(lastSync, Instant.now()).seconds.coerceAtLeast(0)
     return when {
-        seconds < 60L -> "刚刚同步"
-        seconds < 3600L -> "${seconds / 60L} 分钟前"
-        seconds < 86_400L -> "${seconds / 3600L} 小时前"
-        else -> "${seconds / 86_400L} 天前"
+        seconds < 60 -> "已同步 (${seconds}s)"
+        seconds < 3600 -> "已同步 (${seconds / 60}min)"
+        else -> "已同步 (${seconds / 3600}h)"
     }
 }
 
@@ -176,23 +179,5 @@ internal fun buildTransparentStateLabel(progress: Float): String {
         progress < 0.35f -> "正在整理转写..."
         progress < 0.7f -> "正在提取摘要与重点..."
         else -> "正在生成章节与说话人..."
-    }
-}
-
-internal fun formatDownloadFileSize(bytes: Long): String {
-    return when {
-        bytes <= 0 -> ""
-        bytes < 1024 -> "$bytes B"
-        bytes < 1024 * 1024 -> "${bytes / 1024} KB"
-        else -> "%.1f MB".format(bytes / (1024.0 * 1024.0))
-    }
-}
-
-internal fun formatDownloadSpeed(bytesPerSecond: Long): String {
-    return when {
-        bytesPerSecond <= 0 -> ""
-        bytesPerSecond < 1024 -> "$bytesPerSecond B/s"
-        bytesPerSecond < 1024 * 1024 -> "${bytesPerSecond / 1024} KB/s"
-        else -> "%.1f MB/s".format(bytesPerSecond / (1024.0 * 1024.0))
     }
 }

@@ -140,9 +140,10 @@ class SimShellDynamicIslandCoordinatorTest {
         )
 
         assertEquals(3, items.size)
-        assertEquals("最近：客户回访 · 09:00", items[0].displayText)
-        assertEquals("最近：发送报价 · 10:00", items[1].displayText)
-        assertEquals("最近：确认合同 · 11:00", items[2].displayText)
+        assertEquals("Q4复盘", items.first().displayText)
+        assertEquals(true, items.first().showsAudioIndicator)
+        assertEquals("最近：客户回访 · 09:00", items[1].displayText)
+        assertEquals("最近：发送报价 · 10:00", items[2].displayText)
     }
 
     @Test

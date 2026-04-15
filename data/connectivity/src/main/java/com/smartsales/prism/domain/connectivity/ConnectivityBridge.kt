@@ -51,12 +51,21 @@ interface ConnectivityBridge {
     
     /**
      * 录音通知流
-     * 
+     *
      * Badge 通过 BLE 发送 `log#YYYYMMDD_HHMMSS` 时触发
-     * 
+     *
      * Hot flow, buffered(1), 无历史回放
      */
     fun recordingNotifications(): Flow<RecordingNotification>
+
+    /**
+     * 音频录音通知流 — 仅下载，不转写
+     *
+     * Badge 通过 BLE 发送 `rec#YYYYMMDD_HHMMSS` 时触发
+     *
+     * Hot flow, buffered(3), 无历史回放
+     */
+    fun audioRecordingNotifications(): Flow<RecordingNotification.AudioRecordingReady>
     
     /**
      * 检查 Badge 是否就绪

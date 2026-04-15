@@ -189,6 +189,20 @@
 
 ---
 
+## Shipped Fix: Download Progress Bar Wiring — RealConnectivityBridge onProgress Forwarding
+> **Context**: The audio card download progress bar appeared but stayed at 0% because `RealConnectivityBridge` did not forward `onProgress` to `BadgeHttpClient.downloadWav()`. A dead compat extension (`ConnectivityBridgeDownloadCompat.kt`) masked the gap by emitting progress only at 100% on completion.
+
+- **Status**: Shipped (2026-04-15)
+- **Scope**:
+  - `RealConnectivityBridge.downloadRecording()` updated to accept `onProgress` parameter and forward it to `httpClient.downloadWav(baseUrl, filename, tempFile, onProgress)`
+  - Removed dead `ConnectivityBridgeDownloadCompat.kt` compat extension that only emitted final-state progress
+- **Files Changed**:
+  - `app-core/src/main/java/com/smartsales/prism/data/connectivity/RealConnectivityBridge.kt`
+  - `app-core/src/main/java/com/smartsales/prism/data/audio/ConnectivityBridgeDownloadCompat.kt` (deleted)
+- **Follow-Up from**: Shipped Slice: Connectivity Bridge Download Progress and Audio Inventory Fields
+
+---
+
 ## Shipped Slice: Governance Simplification — DTQ System Decommissioned
 > **Context**: The DTQ lane system (9 worktrees, 351-line JSON registry, Python lane guard, handoff contracts) repeatedly created blockers when reality outpaced the registry. Replaced with industry-standard develop + platform branch model.
 

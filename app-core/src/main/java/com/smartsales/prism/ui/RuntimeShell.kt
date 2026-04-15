@@ -15,6 +15,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.smartsales.prism.AppFlavor
+import com.smartsales.prism.data.connectivity.registry.RegisteredDevice
 import com.smartsales.prism.domain.audio.BadgeAudioPipeline
 import com.smartsales.prism.ui.components.DynamicIslandItem
 import com.smartsales.prism.ui.components.DynamicIslandLane
@@ -86,8 +87,7 @@ internal fun RuntimeShell(
     val sessionTitle by chatViewModel.sessionTitle.collectAsStateWithLifecycle()
     val currentSessionHasAudioContextHistory by
         chatViewModel.currentSessionHasAudioContextHistory.collectAsStateWithLifecycle()
-    val sessionTitleInterruptToken by
-        chatViewModel.sessionTitleInterruptToken.collectAsStateWithLifecycle()
+    val activeDevice by connectivityViewModel.activeDevice.collectAsStateWithLifecycle()
     val rawTopUrgentTasks by schedulerViewModel.topUrgentTasks.collectAsStateWithLifecycle()
     val rawActiveReminderBanner by schedulerViewModel.activeReminderBanner.collectAsStateWithLifecycle()
     val rawCurrentSchedulerFollowUpContext by chatViewModel.currentSchedulerFollowUpContext.collectAsStateWithLifecycle()
@@ -144,14 +144,17 @@ internal fun RuntimeShell(
     val islandTakeoverSuppressedFlow = remember {
         MutableStateFlow(false)
     }
-    val dynamicIslandCoordinator = remember(coroutineScope, connectivityViewModel, audioViewModel) {
+    val activeDeviceNameFlow = remember {
+        MutableStateFlow<String?>(null)
+    }
+    val dynamicIslandCoordinator = remember(coroutineScope, connectivityViewModel) {
         SimShellDynamicIslandCoordinator(
             parentScope = coroutineScope,
             schedulerItems = schedulerIslandItemsFlow,
             connectivityState = connectivityViewModel.connectionState,
             batteryLevel = connectivityViewModel.batteryLevel,
             takeoverSuppressed = islandTakeoverSuppressedFlow,
-            syncEvents = audioViewModel.syncIslandEvents
+            activeDeviceName = activeDeviceNameFlow
         )
     }
     DisposableEffect(dynamicIslandCoordinator) {
@@ -170,8 +173,8 @@ internal fun RuntimeShell(
         schedulerIslandItemsFlow.value = schedulerIslandItems
     }
 
-    LaunchedEffect(sessionTitleInterruptToken) {
-        dynamicIslandCoordinator.updateSessionTitleInterruptToken(sessionTitleInterruptToken)
+    LaunchedEffect(activeDevice) {
+        activeDeviceNameFlow.value = activeDevice?.displayName
     }
 
     LaunchedEffect(shellState.activeDrawer, shellState.activeConnectivitySurface) {

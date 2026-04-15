@@ -206,7 +206,6 @@ internal fun AgentIntelligenceContent(
                 showHeaderNewSessionButton = showSimHeaderNewSessionButton,
                 showBottomComposer = showSimBottomComposer,
                 showIdleComposerHint = showSimIdleComposerHint,
-                currentSessionHasAudioContextHistory = currentSessionHasAudioContextHistory,
                 enableSimSchedulerPullGesture = enableSimSchedulerPullGesture,
                 enableSimAudioPullGesture = enableSimAudioPullGesture,
                 onSimSchedulerPullOpen = onSimSchedulerPullOpen,

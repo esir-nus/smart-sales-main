@@ -80,7 +80,6 @@ internal fun RuntimeShellContent(
     coroutineScope: CoroutineScope,
     onImportTestAudio: () -> Unit,
     onForcedFirstLaunchOnboardingCompleted: () -> Unit,
-    onReplayOnboarding: () -> Unit,
     dismissReminderBanner: () -> Unit,
     clearFollowUp: (SimBadgeFollowUpClearReason) -> Unit,
     closeOverlays: () -> Unit,
@@ -341,7 +340,6 @@ internal fun RuntimeShellContent(
                 currentChatAudioId = currentChatAudioId,
                 connectionState = connectivityState,
                 showTestImportAction = BuildConfig.DEBUG && shellState.audioDrawerMode == RuntimeAudioDrawerMode.BROWSE,
-                showDebugScenarioActions = BuildConfig.DEBUG && shellState.audioDrawerMode == RuntimeAudioDrawerMode.BROWSE,
                 viewModel = audioViewModel,
                 onOpenConnectivity = {
                     mutateShellState { state ->
@@ -354,7 +352,6 @@ internal fun RuntimeShellContent(
                 },
                 onSyncFromBadge = { audioViewModel.syncFromBadgeManually() },
                 onImportTestAudio = onImportTestAudio,
-                onReplayOnboarding = onReplayOnboarding,
                 onArtifactOpened = { audioId, title ->
                     emitSimAudioPersistedArtifactOpenedTelemetry(
                         audioId = audioId,

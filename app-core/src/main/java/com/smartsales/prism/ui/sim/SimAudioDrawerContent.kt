@@ -32,7 +32,6 @@ import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.filled.North
 import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material.icons.filled.ViewCarousel
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -82,11 +81,9 @@ internal fun SimAudioDrawerContent(
     onDeleteAudio: (String) -> Unit,
     onSelectForChat: (SimChatAudioSelection) -> Unit,
     onImportTestAudio: () -> Unit,
-    onReplayOnboarding: () -> Unit,
     onBrowsePullOffsetChanged: (Float) -> Unit,
     onBrowsePullSettled: () -> Unit,
-    showTestImportAction: Boolean,
-    showDebugScenarioActions: Boolean
+    showTestImportAction: Boolean
 ) {
     val syncVisualState = resolveSimAudioSyncVisualState(
         connectionState = connectionState,
@@ -104,10 +101,8 @@ internal fun SimAudioDrawerContent(
             onDismiss = onDismiss,
             onSyncFromBadge = onSyncFromBadge,
             onOpenConnectivity = onOpenConnectivity,
-            onReplayOnboarding = onReplayOnboarding,
             onBrowsePullOffsetChanged = onBrowsePullOffsetChanged,
-            onBrowsePullSettled = onBrowsePullSettled,
-            showDebugScenarioActions = showDebugScenarioActions
+            onBrowsePullSettled = onBrowsePullSettled
         )
     } else {
         SimDrawerHandle(
@@ -211,10 +206,8 @@ private fun SimAudioBrowseHeader(
     onDismiss: () -> Unit,
     onSyncFromBadge: () -> Unit,
     onOpenConnectivity: () -> Unit,
-    onReplayOnboarding: () -> Unit,
     onBrowsePullOffsetChanged: (Float) -> Unit,
-    onBrowsePullSettled: () -> Unit,
-    showDebugScenarioActions: Boolean
+    onBrowsePullSettled: () -> Unit
 ) {
     SimAudioBrowseGrip(
         syncVisualState = syncVisualState,
@@ -262,19 +255,6 @@ private fun SimAudioBrowseHeader(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            if (showDebugScenarioActions) {
-                SimDrawerHeaderIconAction(
-                    onClick = onReplayOnboarding,
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Filled.ViewCarousel,
-                            contentDescription = null,
-                            tint = SimDrawerTextMuted,
-                            modifier = Modifier.size(15.dp)
-                        )
-                    }
-                )
-            }
             SimAudioSmartCapsule(
                 visualState = syncVisualState,
                 connectionState = connectionState,
@@ -502,7 +482,7 @@ private fun SimAudioSmartCapsule(
                         modifier = Modifier.size(12.dp)
                     )
                     Text(
-                        text = "徽章",
+                        text = "徽章管理",
                         color = if (isConnected) SimDrawerTextPrimary else SimDrawerBlockedText,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium

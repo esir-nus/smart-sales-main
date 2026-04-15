@@ -118,7 +118,7 @@ Manual sync outcome rule:
 
 Browse header contract:
 
-- SIM browse mode keeps one top header family: dual-purpose grip, title plus count badge, and one two-part smart capsule: left section shows connection icon + "徽章" (taps → connectivity manager), right section shows sync icon + relative time label (taps → manual sync; hidden when disconnected)
+- SIM browse mode keeps one top header family: dual-purpose grip, title plus count badge, and one two-part smart capsule: left section shows connection icon + "徽章管理" (taps → connectivity manager), right section shows sync icon + relative time label (taps → manual sync; hidden when disconnected)
 - browse grip keeps dismiss semantics on tap or downward pull, but reserves upward pull for manual sync only when the badge-sync gate is ready
 - blocked or disconnected upward pull must stay in-place and communicate denial locally instead of inventing auto-sync behavior
 - browse smart capsule is the only browse-header connectivity affordance in this slice; connected right-side sync taps trigger manual sync, left-side connection tap hands off to connectivity

@@ -141,6 +141,7 @@ dependencies {
     implementation(projects.data.session)
     implementation(projects.core.telemetry) // Pipeline Telemetry Logging
     implementation(projects.core.notifications) // Centralized Android Notifications
+    implementation("com.alibaba.idst:nui-android:2.7.0-039") // FunASR realtime ASR
     // Legacy BLE removed: implementation(projects.feature.connectivity)
     implementation(platform(libs.compose.bom))
     implementation(libs.bundles.compose.ui)

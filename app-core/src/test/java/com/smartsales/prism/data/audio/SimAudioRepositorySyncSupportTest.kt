@@ -388,10 +388,7 @@ class SimAudioRepositorySyncSupportTest {
         var downloadSuspender: (suspend () -> Unit)? = null
         val calls = mutableListOf<String>()
 
-        override suspend fun downloadRecording(
-            filename: String,
-            onProgress: ((bytesRead: Long, totalBytes: Long) -> Unit)?
-        ): WavDownloadResult {
+        override suspend fun downloadRecording(filename: String): WavDownloadResult {
             calls += "downloadRecording:$filename"
             downloadSuspender?.invoke()
             return downloadResults[filename]
@@ -407,6 +404,9 @@ class SimAudioRepositorySyncSupportTest {
         }
 
         override fun recordingNotifications(): Flow<RecordingNotification> = emptyFlow()
+
+        override fun audioRecordingNotifications(): Flow<RecordingNotification.AudioRecordingReady> =
+            emptyFlow()
 
         override suspend fun isReady(): Boolean {
             calls += "isReady"

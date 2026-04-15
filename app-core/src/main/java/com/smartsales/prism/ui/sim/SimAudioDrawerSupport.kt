@@ -5,6 +5,8 @@ import com.smartsales.prism.domain.audio.AudioLocalAvailability
 import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
 import com.smartsales.prism.ui.components.connectivity.ConnectionState
 import com.smartsales.prism.ui.drawers.AudioStatus
+import java.time.Duration
+import java.time.Instant
 
 internal const val SIM_AUDIO_DEMO_SEED_ID = "sim_wave2_seed"
 
@@ -114,6 +116,32 @@ internal fun resolveSimAudioSyncLabel(
         SimAudioSyncVisualState.BLOCKED -> {
             if (connectionState == ConnectionState.NEEDS_SETUP) "需要配网" else "Badge 未连接"
         }
+    }
+}
+
+internal fun resolveSimAudioSyncRelativeLabel(
+    visualState: SimAudioSyncVisualState,
+    lastSyncTimestamp: Instant?
+): String {
+    return when (visualState) {
+        SimAudioSyncVisualState.READY -> formatSimAudioLastSyncLabel(lastSyncTimestamp)
+        SimAudioSyncVisualState.SYNCING -> "正在同步"
+        SimAudioSyncVisualState.SYNCED -> "刚刚同步"
+        SimAudioSyncVisualState.RECONNECTING -> "重连中"
+        SimAudioSyncVisualState.ERROR -> "同步失败"
+        SimAudioSyncVisualState.BLOCKED -> "去连接"
+    }
+}
+
+private fun formatSimAudioLastSyncLabel(lastSyncTimestamp: Instant?): String {
+    val timestamp = lastSyncTimestamp ?: return "同步录音"
+    val elapsed = Duration.between(timestamp, Instant.now())
+    val seconds = elapsed.seconds.coerceAtLeast(0L)
+    return when {
+        seconds < 60L -> "刚刚同步"
+        seconds < 3600L -> "${seconds / 60L} 分钟前"
+        seconds < 86_400L -> "${seconds / 3600L} 小时前"
+        else -> "${seconds / 86_400L} 天前"
     }
 }
 

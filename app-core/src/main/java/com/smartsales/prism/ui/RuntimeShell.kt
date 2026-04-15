@@ -44,6 +44,7 @@ import com.smartsales.prism.ui.sim.initialRuntimeShellState
 import com.smartsales.prism.ui.sim.openRuntimeAudioDrawer
 import com.smartsales.prism.ui.sim.openRuntimeScheduler
 import com.smartsales.prism.ui.sim.rememberSimImeVisibility
+import com.smartsales.prism.ui.sim.scheduleAutoReconnect
 import com.smartsales.prism.ui.sim.shouldAutoOpenRuntimeSchedulerPostOnboardingHandoff
 import com.smartsales.prism.ui.sim.shouldAutoOpenRuntimeSchedulerStartupTeaser
 import com.smartsales.prism.ui.sim.shouldShowRuntimeIdleComposerHint

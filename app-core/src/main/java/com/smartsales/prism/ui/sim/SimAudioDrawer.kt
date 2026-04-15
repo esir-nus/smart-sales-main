@@ -74,6 +74,7 @@ fun SimAudioDrawer(
     val expandedAudioIds = viewModel.expandedAudioIds.collectAsStateWithLifecycle()
     val isSyncing = viewModel.isSyncing.collectAsStateWithLifecycle()
     val syncFeedback = viewModel.syncFeedback.collectAsStateWithLifecycle()
+    val lastSyncTimestamp = viewModel.lastSyncTimestamp.collectAsStateWithLifecycle()
     val pendingBadgeDeleteConfirmation =
         viewModel.pendingBadgeDeleteConfirmation.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -153,6 +154,7 @@ fun SimAudioDrawer(
                         connectionState = connectionState,
                         isSyncing = isSyncing.value,
                         syncFeedback = syncFeedback.value,
+                        lastSyncTimestamp = lastSyncTimestamp.value,
                         onSyncFromBadge = onSyncFromBadge,
                         onOpenConnectivity = onOpenConnectivity,
                         onArtifactOpened = onArtifactOpened,

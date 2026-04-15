@@ -25,6 +25,7 @@ import com.smartsales.prism.ui.drawers.AudioStatus
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
+import java.time.Instant
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -37,6 +38,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import com.smartsales.prism.data.audio.SimBadgeSyncIslandEvent
+import com.smartsales.prism.data.audio.SimBadgeSyncResultBranch
 
 data class SimAudioEntry(
     val item: AudioItemState,
@@ -72,6 +75,12 @@ class SimAudioDrawerViewModel @Inject constructor(
     val isSyncing: StateFlow<Boolean> = _isSyncing
     private val _syncFeedback = MutableStateFlow<SimAudioSyncFeedback?>(null)
     internal val syncFeedback: StateFlow<SimAudioSyncFeedback?> = _syncFeedback
+    private val _lastSyncTimestamp = MutableStateFlow<Instant?>(null)
+    internal val lastSyncTimestamp: StateFlow<Instant?> = _lastSyncTimestamp
+    private val _syncIslandEvents = MutableSharedFlow<SimBadgeSyncIslandEvent>(
+        extraBufferCapacity = 4
+    )
+    internal val syncIslandEvents: SharedFlow<SimBadgeSyncIslandEvent> = _syncIslandEvents.asSharedFlow()
     private val _pendingBadgeDeleteConfirmation =
         MutableStateFlow<SimBadgeDeleteConfirmationRequest?>(null)
     internal val pendingBadgeDeleteConfirmation: StateFlow<SimBadgeDeleteConfirmationRequest?> =
@@ -188,12 +197,26 @@ class SimAudioDrawerViewModel @Inject constructor(
                     _isSyncing.value = true
                 }
 
+                _syncIslandEvents.tryEmit(SimBadgeSyncIslandEvent.ManualSyncStarted)
                 val outcome = if (strictPrecheckOwnedByGate) {
                     repository.syncFromBadgeAfterVerifiedReadiness(SimBadgeSyncTrigger.MANUAL)
                 } else {
                     repository.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
                 }
                 if (outcome.skippedReason != SimBadgeSyncSkippedReason.ALREADY_RUNNING) {
+                    when (outcome.resultBranch) {
+                        SimBadgeSyncResultBranch.QUEUED -> {
+                            _lastSyncTimestamp.value = Instant.now()
+                            _syncIslandEvents.tryEmit(
+                                SimBadgeSyncIslandEvent.ManualSyncComplete(outcome.queuedCount)
+                            )
+                        }
+                        SimBadgeSyncResultBranch.ALREADY_PRESENT,
+                        SimBadgeSyncResultBranch.DEVICE_EMPTY -> {
+                            _syncIslandEvents.tryEmit(SimBadgeSyncIslandEvent.AlreadyUpToDate)
+                        }
+                        null -> Unit
+                    }
                     showSyncFeedback(SimAudioSyncFeedback.SYNCED)
                     _uiEvents.emit(simBadgeSyncSuccessMessage(outcome))
                 }

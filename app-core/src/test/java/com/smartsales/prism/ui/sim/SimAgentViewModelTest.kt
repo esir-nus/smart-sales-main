@@ -669,7 +669,6 @@ class SimAgentViewModelTest {
                 summary = "摘要",
                 timestamp = 123L,
                 linkedAudioId = "audio_restore_title_1",
-                hasAudioContextHistory = true,
                 sessionKind = SessionKind.AUDIO_GROUNDED
             ),
             messages = listOf(

@@ -102,7 +102,6 @@ class L2StrictInterfaceIntegrityTest {
             inputParserService = fakeInputParserService,
             schedulerLinter = fakeLinter,
             entityWriter = entityWriter,
-            sessionTitleGenerator = FakeSessionTitleGenerator(),
             promptCompiler = FakePromptCompiler(),
             executor = fakeExecutor,
             telemetry = FakePipelineTelemetry(),

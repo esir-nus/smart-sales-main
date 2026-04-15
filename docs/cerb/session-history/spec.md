@@ -137,7 +137,7 @@ data class SessionPreview(
 |---|---|---|---|
 | **1** | **Persistence** | ✅ SHIPPED | `SessionEntity`, `SessionDao`, `RoomHistoryRepository` |
 | **2** | **ViewModel** | ✅ SHIPPED | `HistoryViewModel`, `HistoryDrawer` wiring |
-| **4** | **Auto-Renaming** | ✅ SHIPPED | `SessionTitleGenerator`, `LlmSessionTitleGenerator`, PrismVM trigger, horizontal layout |
+| **4** | **Auto-Renaming** | ✅ SHIPPED | `SimAgentChatCoordinator` first-real-reply title trigger, SIM title persistence, horizontal layout |
 | **3** | **Session Creation** | ✅ SHIPPED | New session lifecycle (reset RAM + persist SSD) |
 
 ### Wave 3: New Session Lifecycle
@@ -168,25 +168,21 @@ interface ContextBuilder {
 
 ### Wave 4: Auto-Renaming
 
-**Trigger**: When a **new session** (default title "新对话") receives its first parsed JSON payload from the `IntentOrchestrator`.
+**Trigger**: When a SIM session that still uses an untitled placeholder (`SIM` / `新对话`) or a legacy audio filename title receives its first **real successful assistant reply**.
 
 **Mechanism**:
-1. `RealUnifiedPipeline` (Layer 3) handles the raw parsed JSON.
-2. Calls `SessionTitleGenerator.generateTitle(rawParsedJson, resolvedEntityIds)`.
-3. Emits `PipelineResult.AutoRenameTriggered(title.clientName)` to the UI tier.
-4. `AgentViewModel` intercepts the event, checks if `sessionTitle == "新对话"`, and commits the rename via `HistoryRepository.renameSession()`.
+1. `SimAgentChatCoordinator` watches the persisted SIM chat turns for an auto-title-eligible session.
+2. It ignores shell-seeded audio/transcript intro copy and other non-conversational SIM system lines; for audio-grounded chat, the first user question and the first organic assistant answer define the rename source.
+3. It calls the title generator prompt using that single assistant answer only and writes the returned short Chinese title back into `SimSessionRepository`.
+4. If the first title-generation attempt fails transiently or yields a generic/bad title, the coordinator retries exactly once on the next successful organic assistant turn.
+5. After a successful rename or after the single retry budget is exhausted, the auto-rename path stops for that session.
 
 **Contract**:
-```kotlin
-interface SessionTitleGenerator {
-    suspend fun generateTitle(rawParsedJson: String, resolvedNames: List<String>): TitleResult
-}
-
-data class TitleResult(
-    val clientName: String,
-    val summary: String // Deprecated field (currently ignored in UI)
-)
-```
+- auto-rename is SIM-session-local behavior, not shared `IntentOrchestrator` JSON behavior
+- the generator input is the first real successful assistant reply, not raw parsed JSON and not later chat history unless the single retry is consumed
+- audio-grounded sessions may auto-rename too, but they must ignore seeded "已接入…" intro copy and instead use the first real assistant reply after the first user turn
+- broad industry / role / persona labels such as `教育管理` are invalid title outputs and must not replace the placeholder title
+- the rename remains metadata-only; it does not rewrite stored message content
 
 ---
 

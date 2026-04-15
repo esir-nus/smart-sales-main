@@ -34,6 +34,7 @@ data class SessionPreview(
     val timestamp: Long,
     val isPinned: Boolean = false,
     val linkedAudioId: String? = null,  // 关联的音频文件ID（用于分析模式）
+    val hasAudioContextHistory: Boolean = false,
     val sessionKind: SessionKind = SessionKind.GENERAL,
     val schedulerFollowUpContext: SchedulerFollowUpContext? = null
 ) {

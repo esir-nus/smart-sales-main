@@ -1,6 +1,6 @@
 # Input Parser (Turbo Router)
 
-> **Cerb-compliant spec** — Semantic parsing, alias disambiguation, and session auto-renaming trigger.
+> **Cerb-compliant spec** — Semantic parsing and alias disambiguation.
 > **OS Layer**: RAM Application (Gateway before Kernel context assembly)
 > **State**: ✅ SHIPPED
 
@@ -13,7 +13,7 @@ The `input-parser` (Turbo Router) is the **Step 1 Gateway** for all voice and te
 **Key Principles**:
 1. **Extraction First, LLM Semantic Mapping**: We do not use SQL `LIKE` or Kotlin string-distance (Levenshtein) math for name resolution. Instead, we pass a lightweight "Contact Sheet" to `qwen-turbo`. The LLM's vast semantic knowledge natively resolves typos, homophones, and even missing nicknames (e.g., mapping "CEO" to "Tim Cook").
 2. **Clarification Loop**: If the Alias Index yields low confidence (multiple matches or missing CRM data), the parser halts the pipeline and yields a clarification request back to the user.
-3. **Auto-Renaming Hook**: The parsed semantic intent is immediately routed to the `SessionTitleGenerator` in the background.
+3. **No Session-Title Ownership**: Parsed semantic intent stops at routing/disambiguation; session auto-renaming is owned by the SIM session layer instead of the parser.
 
 ---
 
@@ -40,7 +40,7 @@ sealed class ParseResult {
     data class Success(
         val resolvedEntityIds: List<String>, 
         val temporalIntent: String?,
-        val rawParsedJson: String // For auto-renaming
+        val rawParsedJson: String // Raw parser trace payload for downstream diagnostics/tests
     ) : ParseResult()
 
     /** Low confidence. Halt pipeline and ask user. */
@@ -67,7 +67,7 @@ sealed class ParseResult {
 
 > *Cerb specs capture logic, but these notes capture the human developer experience that an AI must not overwrite or "optimize" away.*
 
-1. **The Mascot Bypass (Why Auto-Renaming is Safe):** `NOISE` and `GREETING` intents are evaluated by the `LightningRouter` upstream and routed entirely to the `Mascot`. They *never* touch the `UnifiedPipeline` or this `InputParser`. Thus, the background Auto-Renaming hook is guaranteed to only fire when the user makes a substantive query that warrants renaming the session. Do not try to handle small talk here.
+1. **The Mascot Bypass:** `NOISE` and `GREETING` intents are evaluated by the `LightningRouter` upstream and routed entirely to the `Mascot`. They *never* touch the `UnifiedPipeline` or this `InputParser`. Do not try to handle small talk here.
 2. **Anti-SQL / No String Math:** An agent might be tempted to use Kotlin Levenshtein distance or SQL `LIKE` to match names. **Do not do this.** We pass a lightweight Contact Sheet explicitly so `qwen-turbo` can use its vast semantic knowledge to natively map nicknames, homophones, or titles (e.g., mapping "CEO" to the correct person). The LLM is our fuzzy search engine.
 3. **Organic UX Disambiguation:** If the LLM is unsure, we do not force a guess. We yield a Clarification state and rely on the natural, conversational UI to ask the user. Code should not try to aggressively resolve ambiguity behind the user's back.
 
@@ -91,7 +91,7 @@ sealed class ParseResult {
 | **1** | **Contracts & Payload Generation** | ✅ SHIPPED | `InputParserService`, `ParseResult`, Semantic Mapping JSON generation. |
 | **2** | **Turbo LLM Disambiguation** | ✅ SHIPPED | `RealInputParserService` injecting Payload into `qwen-turbo`. |
 | **3** | **Pipeline Wiring** | ✅ SHIPPED | Mount at the front of `UnifiedPipeline`. Handle Clarification loop UI state. |
-| **4** | **Auto-Renaming Hook** | ✅ SHIPPED | Fire `SemanticSessionTitleGenerator` using the parsed JSON synchronously. |
+| **4** | **Parser Trace Output** | ✅ SHIPPED | Preserve raw parser JSON for downstream diagnostics/tests only; no session-title hook. |
 
 ---
 

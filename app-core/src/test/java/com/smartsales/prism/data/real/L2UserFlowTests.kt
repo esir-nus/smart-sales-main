@@ -111,7 +111,6 @@ class L2UserFlowTests {
             inputParserService = inputParserService,
             schedulerLinter = SchedulerLinter(),
             entityWriter = entityWriter,
-            sessionTitleGenerator = FakeSessionTitleGenerator(),
             promptCompiler = promptCompiler,
             executor = executor,
             telemetry = FakePipelineTelemetry(),

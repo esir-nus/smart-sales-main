@@ -10,7 +10,6 @@ import com.smartsales.prism.data.fakes.FakePublisher
 
 import com.smartsales.prism.data.fakes.FakeUserProfileRepository 
 import com.smartsales.core.llm.DashscopeExecutor
-import com.smartsales.prism.domain.session.SessionTitleGenerator
 import com.smartsales.prism.domain.audio.AudioRepository
 
 import com.smartsales.prism.domain.memory.MemoryRepository
@@ -158,9 +157,6 @@ abstract class PrismModule {
     @Binds
     @Singleton
     abstract fun bindEntityWriter(impl: com.smartsales.data.crm.writer.RealEntityWriter): com.smartsales.prism.domain.memory.EntityWriter
-
-    @Binds @Singleton
-    abstract fun bindSessionTitleGenerator(impl: com.smartsales.prism.data.real.session.SemanticSessionTitleGenerator): SessionTitleGenerator
 
     // === Input Parser (Turbo Router) ===
 

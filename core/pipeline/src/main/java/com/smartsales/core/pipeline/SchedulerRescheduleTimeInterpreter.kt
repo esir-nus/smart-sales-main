@@ -48,13 +48,6 @@ object SchedulerRescheduleTimeInterpreter {
         timeProvider: TimeProvider,
         uniAExtractionService: RealUniAExtractionService
     ): Result {
-        RelativeTimeResolver.resolveSignedDeltaMinutes(transcript)?.let { delta ->
-            return Result.Success(
-                startTime = originalTask.startTime.plus(delta.offsetMinutes, ChronoUnit.MINUTES),
-                durationMinutes = null
-            )
-        }
-
         val normalizedTranscript = normalizeExactRescheduleInstruction(transcript)
         ExactTimeCueResolver.resolveExactDayClockStartTime(
             transcript = normalizedTranscript,

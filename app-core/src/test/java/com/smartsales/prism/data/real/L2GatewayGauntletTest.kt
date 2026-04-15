@@ -105,7 +105,6 @@ class L2GatewayGauntletTest {
             inputParserService = inputParserService,
             schedulerLinter = SchedulerLinter(),
             entityWriter = entityWriter,
-            sessionTitleGenerator = FakeSessionTitleGenerator(),
             promptCompiler = FakePromptCompiler(),
             executor = executor,
             telemetry = FakePipelineTelemetry(),

@@ -5,13 +5,28 @@
 Smart Sales is a voice-first sales operating app for sales operators. It captures real-world sales activity with low friction, turns it into review/follow-up/scheduling surfaces, and keeps AI assistive rather than autonomous.
 
 Platform posture:
-- Android: authority platform (beta-maintenance, bug fixes, hardening)
-- HarmonyOS: forward-development via transient Tingwu container at `platforms/harmony/tingwu-container/`
-- iOS: anticipated but not yet scaffolded
+- **Android**: primary platform, cerb-compliant (code and docs are written together and kept aligned)
+- **HarmonyOS**: backend-centric port, references Android docs as product truth, UI docks to backend
+- **iOS**: anticipated, same model as HarmonyOS (not yet started)
 
-Android is the canonical implementation. HarmonyOS and iOS are container variants that consume Android's docs and specs, then rewrite into their native frameworks.
+Android is the canonical implementation. HarmonyOS and iOS consume Android's docs and specs, then rewrite into their native frameworks.
 
 Read `SmartSales_PRD.md` for full product identity.
+
+## Branch Model
+
+```
+master (protected, promotion-only — requires PR)
+  └── develop (Android + shared code, daily work)
+        ├── platform/harmony (HarmonyOS platform work)
+        └── platform/ios (future)
+```
+
+- **develop**: All Android and shared-contract work happens here. Cerb-compliance applies.
+- **platform/harmony**: HarmonyOS-specific work. Receives shared contracts from develop via merge. Never merges back into develop.
+- **master**: Protected. Receives promotions from develop via PR only. No direct commits.
+- Feature work: create branch from `develop` (or `platform/harmony`), PR back.
+- Shared contracts flow: `develop → platform/*`, never the reverse.
 
 ## Source of Truth
 
@@ -35,10 +50,8 @@ Before writing code:
 2. Read the owning spec or SOP (`docs/cerb/**`, `docs/specs/**`, `docs/sops/**`)
 3. Read `docs/cerb/interface-map.md` if the change spans modules
 4. Read `docs/plans/tracker.md` for campaign state
-5. If the work touches branch/worktree ownership or a dirty tree, read `docs/plans/dirty-tree-quarantine.md`, `docs/sops/lane-worktree-governance.md`, and `ops/lane-registry.json` before editing
-6. Check `evidence_class` in `ops/lane-registry.json` when the work involves verification or acceptance -- the declared class governs what proof modality is required
 
-After implementation, sync all docs touched by the change in the same session.
+After implementation, sync all docs touched by the change in the same session (Android/cerb-compliant work only).
 
 ## Module Structure
 
@@ -107,12 +120,8 @@ If current logs are insufficient, add targeted tags/logging and rerun instead of
 
 | Resource | Path |
 |----------|------|
-| **Harness operating protocol** | **`docs/specs/harness-manifesto.md`** |
 | Product north star | `SmartSales_PRD.md` |
 | Main tracker | `docs/plans/tracker.md` |
-| Dirty-tree ledger | `docs/plans/dirty-tree-quarantine.md` |
-| Lane harness SOP | `docs/sops/lane-worktree-governance.md` |
-| Lane registry | `ops/lane-registry.json` |
 | Interface ownership | `docs/cerb/interface-map.md` |
 | UX contract | `docs/specs/prism-ui-ux-contract.md` |
 | Style guide | `docs/specs/style-guide.md` |
@@ -122,7 +131,6 @@ If current logs are insufficient, add targeted tags/logging and rerun instead of
 | Code structure | `docs/specs/code-structure-contract.md` |
 | Platform governance | `docs/specs/platform-governance.md` |
 | Glossary | `docs/specs/GLOSSARY.md` |
-| Handoff registry | `handoffs/README.md` |
 | Lessons learned | `docs/reference/agent-lessons-details.md` |
 | Harmony tracker | `docs/plans/harmony-tracker.md` |
 | Harmony container spec | `docs/platforms/harmony/tingwu-container.md` |
@@ -131,20 +139,13 @@ If current logs are insufficient, add targeted tags/logging and rerun instead of
 
 This repo hosts configurations for multiple AI agent runtimes. Each has its own instruction layer; all share `docs/`. Codex, Antigravity, and Claude are expected to collaborate on the same repo state.
 
-Shared collaboration rules:
-- treat `docs/plans/dirty-tree-quarantine.md`, `docs/sops/lane-worktree-governance.md`, `ops/lane-registry.json`, and `handoffs/README.md` as the shared lane-harness control plane
-- keep those files aligned when branch/worktree ownership changes
-- do not treat another agent's presence as a conflict by itself; treat unclear ownership as the real conflict
-- prefer dedicated lane worktrees over continuing mixed edits in the integration tree
-
 Do not modify without intent:
 - `.agent/` (Antigravity rules and workflows) unless the task explicitly includes Antigravity registration or sync
 - `.codex/` (Codex skills)
 - `.gemini/`, `.kiro/`, `.roo/`, `.windsurf/`
 - `AGENTS.md` (Codex root instructions)
-- `docs/AGENTS.md` (human reference)
 
-When those files contain useful project knowledge, read and apply the knowledge. If the task explicitly includes collaboration-surface sync, update the relevant runtime-facing files in the same session instead of letting them drift.
+When those files contain useful project knowledge, read and apply the knowledge.
 
 ## Security
 

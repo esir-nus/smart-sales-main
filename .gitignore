@@ -137,6 +137,13 @@ workflows/
 !.agent/
 !.agent/workflows/
 
+# Claude local working state
+.claude/plans/
+
+# Generated docs artifacts
+CHANGELOG.html
+docs/cerb/dashboard-*.html
+
 # Plans (internal)
 
 # Test outputs

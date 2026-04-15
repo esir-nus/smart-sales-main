@@ -284,6 +284,7 @@ internal class SimAgentSessionCoordinator(
                     clientName = currentTitle,
                     summary = currentSummary,
                     linkedAudioId = audioId,
+                    hasAudioContextHistory = true,
                     sessionKind = SessionKind.AUDIO_GROUNDED,
                     timestamp = System.currentTimeMillis()
                 )
@@ -421,7 +422,10 @@ internal class SimAgentSessionCoordinator(
                 record
             } else if (record.preview.linkedAudioId != null) {
                 record.copy(
-                    preview = record.preview.copy(sessionKind = SessionKind.AUDIO_GROUNDED)
+                    preview = record.preview.copy(
+                        hasAudioContextHistory = true,
+                        sessionKind = SessionKind.AUDIO_GROUNDED
+                    )
                 )
             } else {
                 record

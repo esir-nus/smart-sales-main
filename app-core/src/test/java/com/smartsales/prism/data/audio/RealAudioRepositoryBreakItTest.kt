@@ -47,7 +47,7 @@ class RealAudioRepositoryBreakItTest {
         whenever(bridge.listRecordings()).thenReturn(
             com.smartsales.core.util.Result.Success(listOf("test1.wav", "test2.wav", "test3.wav", "test4.wav", "test5.wav", "test6.wav", "test7.wav", "test8.wav", "test9.wav", "test10.wav"))
         )
-        whenever(bridge.downloadRecording(org.mockito.kotlin.any())).thenAnswer { invocation ->
+        whenever(bridge.downloadRecording(org.mockito.kotlin.any(), org.mockito.kotlin.anyOrNull())).thenAnswer { invocation ->
             val filename = invocation.arguments[0] as String
             val tempFile = File(tempFolder.root, "temp_${java.util.UUID.randomUUID()}_$filename")
             tempFile.writeText("fake wav data")

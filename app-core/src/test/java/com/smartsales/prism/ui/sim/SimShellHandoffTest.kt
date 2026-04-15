@@ -155,10 +155,12 @@ class SimShellHandoffTest {
             )
         )
 
-        assertEquals(2, items.size)
-        assertEquals("客户A", items.first().sessionTitle)
-        assertEquals("最近：优先回访 · 15:00", items.first().schedulerSummary)
-        val tapAction = items.first().tapAction as DynamicIslandTapAction.OpenSchedulerDrawer
+        assertEquals(3, items.size)
+        assertTrue(items[0].isSessionTitleItem)
+        assertEquals("客户A", items[0].displayText)
+        assertEquals("客户A", items[1].sessionTitle)
+        assertEquals("最近：优先回访 · 15:00", items[1].schedulerSummary)
+        val tapAction = items[1].tapAction as DynamicIslandTapAction.OpenSchedulerDrawer
         assertEquals("l1", tapAction.target?.taskId)
     }
 
@@ -174,11 +176,14 @@ class SimShellHandoffTest {
             )
         )
 
-        assertEquals(listOf("c1", "n1", "n2"), items.map {
+        assertEquals(3, items.size)
+        assertTrue(items[0].isSessionTitleItem)
+        val taskItems = items.drop(1)
+        assertEquals(listOf("c1", "n1"), taskItems.map {
             ((it.tapAction as DynamicIslandTapAction.OpenSchedulerDrawer).target?.taskId).orEmpty()
         })
-        assertTrue(items.first().isConflict)
-        assertEquals("冲突：冲突日程 · 16:00", items.first().schedulerSummary)
+        assertTrue(taskItems.first().isConflict)
+        assertEquals("冲突：冲突日程 · 16:00", taskItems.first().schedulerSummary)
     }
 
     @Test

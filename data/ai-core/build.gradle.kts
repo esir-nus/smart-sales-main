@@ -26,13 +26,7 @@ val tingwuApiKey = localProperties.getProperty("TINGWU_API_KEY", tingwuAppKey)
 val tingwuAccessKeyId = localProperties.getProperty("ALIBABA_CLOUD_ACCESS_KEY_ID", "")
 val tingwuAccessKeySecret = localProperties.getProperty("ALIBABA_CLOUD_ACCESS_KEY_SECRET", "")
 val tingwuSecurityToken = localProperties.getProperty("TINGWU_SECURITY_TOKEN", "")
-val tingwuBaseUrl = localProperties.getProperty("TINGWU_BASE_URL")
-    ?: error(
-        """
-        Missing TINGWU_BASE_URL in local.properties.
-        Example: TINGWU_BASE_URL=https://tingwu.cn-beijing.aliyuncs.com/
-        """.trimIndent()
-    )
+val tingwuBaseUrl = localProperties.getProperty("TINGWU_BASE_URL", "https://tingwu.cn-beijing.aliyuncs.com/")
 val tingwuModel = localProperties.getProperty("TINGWU_MODEL", "tingwu-service-insights")
 val ossAccessKeyId = localProperties.getProperty("OSS_ACCESS_KEY_ID", "")
 val ossAccessKeySecret = localProperties.getProperty("OSS_ACCESS_KEY_SECRET", "")

@@ -372,8 +372,8 @@ class ConnectivityViewModelTest {
     }
 
     private class FakeConnectivityBridge(
-        connection: BadgeConnectionState,
-        manager: BadgeManagerStatus
+        connection: BadgeConnectionState = BadgeConnectionState.Disconnected,
+        manager: BadgeManagerStatus = BadgeManagerStatus.Disconnected
     ) : ConnectivityBridge {
         private val _connectionState = MutableStateFlow(connection)
         private val _managerStatus = MutableStateFlow(manager)
@@ -391,6 +391,9 @@ class ConnectivityViewModelTest {
         override suspend fun listRecordings(): Result<List<String>> = Result.Success(emptyList())
 
         override fun recordingNotifications(): Flow<RecordingNotification> = emptyFlow()
+
+        override fun audioRecordingNotifications(): Flow<RecordingNotification.AudioRecordingReady> =
+            emptyFlow()
 
         override suspend fun isReady(): Boolean = false
 
@@ -438,6 +441,8 @@ class ConnectivityViewModelTest {
                 }
             return gate.await()
         }
+
+        override fun scheduleAutoReconnect() = Unit
     }
 
     private class FakeDeviceRegistryManager : DeviceRegistryManager {

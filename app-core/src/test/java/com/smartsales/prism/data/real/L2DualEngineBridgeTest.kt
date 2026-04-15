@@ -114,7 +114,6 @@ class L2DualEngineBridgeTest {
             inputParserService = fakeInputParserService,
             schedulerLinter = fakeLinter,
             entityWriter = entityWriter,
-            sessionTitleGenerator = FakeSessionTitleGenerator(),
             promptCompiler = FakePromptCompiler(),
             executor = FakeExecutor(),
             telemetry = FakePipelineTelemetry(),
@@ -280,6 +279,8 @@ class L2DualEngineBridgeTest {
             override suspend fun downloadRecording(filename: String, onProgress: ((bytesRead: Long, totalBytes: Long) -> Unit)?) = com.smartsales.prism.domain.connectivity.WavDownloadResult.Success(java.io.File.createTempFile("test", ".wav").apply { deleteOnExit() }, "test.wav", 100L)
             override suspend fun listRecordings() = com.smartsales.core.util.Result.Success(emptyList<String>())
             override fun recordingNotifications() = kotlinx.coroutines.flow.emptyFlow<com.smartsales.prism.domain.connectivity.RecordingNotification>()
+            override fun audioRecordingNotifications() =
+                kotlinx.coroutines.flow.emptyFlow<com.smartsales.prism.domain.connectivity.RecordingNotification.AudioRecordingReady>()
             override suspend fun isReady() = true
             override suspend fun deleteRecording(filename: String) = true
         }

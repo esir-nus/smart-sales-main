@@ -471,8 +471,11 @@ class RealConnectivityBridge @Inject constructor(
     override val connectionState: StateFlow<BadgeConnectionState>
         get() = legacyManager.connectionState.map { /* transform to Prism type */ }
     
-    override suspend fun downloadRecording(filename: String): WavDownloadResult {
-        // Delegate to httpClient.downloadWav()
+    override suspend fun downloadRecording(
+        filename: String,
+        onProgress: ((bytesRead: Long, totalBytes: Long) -> Unit)?
+    ): WavDownloadResult {
+        // Delegate to httpClient.downloadWav() with onProgress forwarded
         // Transform result to Prism type
     }
     

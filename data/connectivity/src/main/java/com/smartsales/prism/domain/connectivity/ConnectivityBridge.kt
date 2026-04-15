@@ -30,13 +30,17 @@ interface ConnectivityBridge {
     
     /**
      * 从 Badge SD 卡下载 WAV 文件
-     * 
+     *
      * 内部自动限流
-     * 
+     *
      * @param filename Badge 上的文件名（例: "log_20260205_143000.wav"）
+     * @param onProgress Optional callback invoked with (bytesRead, totalBytes) during download
      * @return 下载结果（本地文件或错误）
      */
-    suspend fun downloadRecording(filename: String): WavDownloadResult
+    suspend fun downloadRecording(
+        filename: String,
+        onProgress: ((bytesRead: Long, totalBytes: Long) -> Unit)? = null
+    ): WavDownloadResult
     
     /**
      * 获取 Badge 上目前存储的所有 WAV 文件名列表

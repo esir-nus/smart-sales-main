@@ -1,6 +1,9 @@
 # Handoff: DTQ-04 Runtime Shell and SIM Chrome
 
 > **Lane ID**: `DTQ-04`
+> **Registry Lane ID**: `DTQ-04`
+> **Branch**: `not yet isolated from the integration tree`
+> **Recommended Worktree**: `not yet assigned; create a dedicated DTQ-04 lane worktree before resuming feature edits`
 > **Scope**: Runtime shell, SIM chrome, dynamic-island, and audio-drawer presentation lane for the current dirty tree.
 
 ## Scope
@@ -10,10 +13,11 @@ This handoff owns runtime shell chrome and SIM-only visual/presentation work in 
 ## Owned Paths
 
 - `app-core/src/main/java/com/smartsales/prism/MainActivity.kt`
+- `app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepositorySyncSupport.kt`
 - `app-core/src/main/java/com/smartsales/prism/ui/RuntimeShell.kt`
 - `app-core/src/main/java/com/smartsales/prism/ui/sim/RuntimeShellContent.kt`
 - `app-core/src/main/java/com/smartsales/prism/ui/sim/RuntimeShellReducer.kt`
-- shell/audio/history/home files under `app-core/src/main/java/com/smartsales/prism/ui/sim/**`, especially `SimAudioDrawer*.kt`, `SimHistoryDrawer.kt`, `SimHomeHeroShell.kt`, `SimHomeHeroTokens.kt`, `SimUserCenterDrawer.kt`, and `SimShellDynamicIslandCoordinator.kt`
+- shell/audio/history/home files under `app-core/src/main/java/com/smartsales/prism/ui/sim/**`, especially `SimAudioDrawer*.kt`, `SimHistoryDrawer.kt`, `SimHomeHeroShell.kt`, `SimSessionTitlePresentation.kt`, `SimHomeHeroTokens.kt`, `SimUserCenterDrawer.kt`, and `SimShellDynamicIslandCoordinator.kt`
 - shell/UI tests under `app-core/src/test/**` and `app-core/src/androidTest/**`
 - `docs/core-flow/base-runtime-ux-surface-governance-flow.md`
 - `docs/core-flow/sim-shell-routing-flow.md`
@@ -25,19 +29,22 @@ This handoff owns runtime shell chrome and SIM-only visual/presentation work in 
 
 ## Current Repo State / Implementation Truth
 
-The current dirty tree already contains live shell and SIM chrome work, not just a design transplant note. This includes runtime shell host behavior, dynamic-island presentation, shell drawer polish, and audio drawer UI behavior.
+The current dirty tree already contains live shell and SIM chrome work, not just a design transplant note. This includes runtime shell host behavior, dynamic-island presentation, shell drawer polish, audio drawer UI behavior, and the shell-side consumption of Harmony compat gating plus session-title presentation state.
 
 The detailed Compose translation notes below remain useful historical implementation memory for the audio drawer surface, but current truth lives in the live shell/audio code and the owning docs listed here.
 
 ## What Is Finished
 
 - The runtime-shell/SIM-chrome lane already has a bounded write scope in the quarantine tracker.
+- The 2026-04-11 governance pass now explicitly assigns `SimAudioRepositorySyncSupport.kt` to this lane so audio-drawer sync presentation no longer sits outside the shell boundary.
 - The historical audio drawer transplant notes remain preserved as implementation detail memory.
-- This handoff now records lane ID, drift state, and exact owning docs so the next pass can resume cleanly.
+- This handoff now records lane ID, registry linkage, drift state, and exact owning docs so the next pass can resume cleanly.
 
 ## What Is Still Open
 
 - Keep shell/audio/history/home chrome changes aligned with the shell/audio docs and UI tracker.
+- Keep the Harmony compat scheduler-disabled shell behavior as a shell consumer of `DTQ-06` registration surfaces rather than silently taking ownership of flavor/build law.
+- Keep session-title display and dynamic-island presentation here, but leave parser/session-title generation semantics and persistence contract cleanup with `DTQ-05`.
 - Re-check whether any shell work is quietly absorbing scheduler truth or connectivity transport logic; split instead of broadening.
 - Do not mark the lane `Accepted` until focused shell/UI verification and doc sync are complete.
 
@@ -73,12 +80,15 @@ The detailed Compose translation notes below remain useful historical implementa
 - Continue only inside the shell/audio-owned paths listed above.
 - Sync shell/audio docs in the same session as any behavior change.
 - Split scheduler truth back to `DTQ-02` and connectivity transport logic back to `DTQ-03` if either starts leaking into this lane.
+- Treat `AppFlavor.kt`, `PrismApplication.kt`, and Android/Harmony flavor wiring as `DTQ-06` registration surfaces even when shell behavior consumes them.
+- Treat parser/session-title generation and session-history contract changes as `DTQ-05` even when shell surfaces render their results.
 
 ## Do Not Touch / Collision Notes
 
 - Do not absorb shared scheduler-routing or reminder-truth ownership from `DTQ-02`.
 - Do not absorb connectivity bridge/service ownership from `DTQ-03`.
 - Do not use shell chrome as a backdoor owner for governance/control-plane work.
+- Do not claim parser/session-title generator removal or session-history contract law from `DTQ-05`.
 
 ## Detailed Historical Notes
 

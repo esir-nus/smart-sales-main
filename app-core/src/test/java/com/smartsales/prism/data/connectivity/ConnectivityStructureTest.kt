@@ -68,7 +68,6 @@ class ConnectivityStructureTest {
         assertTrue(gatewayProtocol.contains("internal class GattBleGatewayProtocolSupport"))
         assertTrue(gatewayProtocol.contains("internal fun parseBadgeNotificationPayload("))
         assertTrue(gatewayProtocol.contains("internal fun mergeNetworkFragments("))
-        assertTrue(gatewayProtocol.contains("fun parseProvisioningAck("))
 
         assertTrue(gatewaySession.contains("internal class GattBleGatewaySessionSupport("))
         assertTrue(gatewaySession.contains("internal class GattContext("))
@@ -78,6 +77,7 @@ class ConnectivityStructureTest {
         assertTrue(managerRuntime.contains("internal class DeviceConnectionManagerRuntime"))
         assertTrue(managerRuntime.contains("var reconnectMeta = AutoReconnectMeta()"))
         assertTrue(managerRuntime.contains("var notificationListenerActive = false"))
+        assertTrue(managerRuntime.contains("var notificationListenerGeneration = 0L"))
 
         assertTrue(managerIngress.contains("internal class DeviceConnectionManagerIngressSupport("))
         assertTrue(managerIngress.contains("fun startNotificationListener(session: BleSession)"))

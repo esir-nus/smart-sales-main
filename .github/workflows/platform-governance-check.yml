@@ -5,7 +5,14 @@ on:
     paths:
       - '.github/CODEOWNERS'
       - '.github/workflows/platform-governance-check.yml'
+      - '.agent/**'
+      - '.claude/**'
+      - '.githooks/**'
+      - 'CLAUDE.md'
       - 'docs/**'
+      - 'handoffs/**'
+      - 'ops/**'
+      - 'scripts/**'
       - 'app/**'
       - 'app-core/**'
       - 'core/**'
@@ -16,7 +23,14 @@ on:
     paths:
       - '.github/CODEOWNERS'
       - '.github/workflows/platform-governance-check.yml'
+      - '.agent/**'
+      - '.claude/**'
+      - '.githooks/**'
+      - 'CLAUDE.md'
       - 'docs/**'
+      - 'handoffs/**'
+      - 'ops/**'
+      - 'scripts/**'
       - 'app/**'
       - 'app-core/**'
       - 'core/**'
@@ -38,6 +52,14 @@ jobs:
           test -f docs/platforms/android/README.md
           test -f docs/platforms/harmony/README.md
           test -f docs/platforms/harmony/tingwu-container.md
+          test -f docs/sops/lane-worktree-governance.md
+          test -f handoffs/README.md
+          test -f ops/lane-registry.json
+          test -f scripts/lane_guard.py
+          test -f scripts/lane
+          test -f scripts/install-hooks.sh
+          test -f .githooks/pre-commit
+          test -f .githooks/pre-push
           test -f platforms/harmony/tingwu-container/README.md
           test -f platforms/harmony/tingwu-container/oh-package.json5
           test -f platforms/harmony/tingwu-container/build-profile.json5
@@ -51,6 +73,38 @@ jobs:
         run: |
           grep -n "legacy Android-app compatibility path" docs/reference/harmonyos-platform-guide.md
           grep -n "does not define the native Harmony implementation strategy" docs/reference/harmonyos-platform-guide.md
+
+  lane-harness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate lane registry schema
+        run: python3 scripts/lane_guard.py validate-registry
+
+      - name: Validate evidence class declarations
+        run: python3 scripts/lane_guard.py validate-evidence
+
+      - name: Validate lane branch ownership
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PUSH_BASE: ${{ github.event.before }}
+          PUSH_HEAD: ${{ github.sha }}
+          PUSH_BRANCH: ${{ github.ref_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          PR_BRANCH: ${{ github.head_ref }}
+        run: |
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            python3 scripts/lane_guard.py validate-ci --base-ref "$PR_BASE" --head-ref "$PR_HEAD" --branch "$PR_BRANCH"
+          else
+            python3 scripts/lane_guard.py validate-ci --base-ref "$PUSH_BASE" --head-ref "$PUSH_HEAD" --branch "$PUSH_BRANCH"
+          fi
+
+      - name: Run lane harness unit tests
+        run: python3 -m unittest scripts.tests.test_lane_guard
 
   android-tree-boundary:
     runs-on: ubuntu-latest
@@ -68,7 +122,7 @@ jobs:
 
       - name: Block native Harmony imports inside the current Android tree
         run: |
-          if grep -R -n -E '(^|[^A-Za-z0-9_])ohos\\.' app app-core core data domain \
+          if grep -R -n -E '(^|[^A-Za-z0-9_])ohos\.' app app-core core data domain \
             --exclude-dir=build \
             --exclude='*.md'; then
             echo "Native Harmony imports were found inside the current Android lineage."

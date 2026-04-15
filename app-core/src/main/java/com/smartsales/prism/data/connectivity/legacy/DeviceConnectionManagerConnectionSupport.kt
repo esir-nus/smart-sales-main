@@ -5,6 +5,7 @@ import com.smartsales.core.util.Result
 import com.smartsales.prism.data.connectivity.legacy.badge.BadgeStateMonitor
 import com.smartsales.prism.data.connectivity.legacy.gateway.GattSessionLifecycle
 import com.smartsales.prism.data.connectivity.legacy.gateway.RateLimitedBleGateway
+import com.smartsales.prism.data.connectivity.legacy.scan.BleScanner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -21,8 +22,11 @@ internal class DeviceConnectionManagerConnectionSupport(
     private val phoneWifiProvider: PhoneWifiProvider,
     private val scope: CoroutineScope,
     private val runtime: DeviceConnectionManagerRuntime,
-    private val ingressSupport: DeviceConnectionManagerIngressSupport
+    private val ingressSupport: DeviceConnectionManagerIngressSupport,
+    private val bleScanner: BleScanner? = null
 ) {
+
+    internal var reconnectSupport: DeviceConnectionManagerReconnectSupport? = null
 
     fun restoreSession() {
         val session = sessionStore.loadSession() ?: return
@@ -186,38 +190,76 @@ internal class DeviceConnectionManagerConnectionSupport(
         runtime.heartbeatJob = scope.launch(dispatchers.default) {
             while (isActive) {
                 delay(HEARTBEAT_INTERVAL_MS)
-                runtime.state.value = ConnectionState.Syncing(
-                    session = session,
-                    status = status,
-                    lastHeartbeatAtMillis = System.currentTimeMillis()
-                )
+                if (bleGateway.isReachable()) {
+                    runtime.state.value = ConnectionState.Syncing(
+                        session = session,
+                        status = status,
+                        lastHeartbeatAtMillis = System.currentTimeMillis()
+                    )
+                } else {
+                    ConnectivityLogger.w("💔 Heartbeat: badge unreachable, transitioning to Disconnected")
+                    badgeStateMonitor.onBleDisconnected()
+                    runtime.state.value = ConnectionState.Disconnected
+                    reconnectSupport?.scheduleAutoReconnectIfNeeded()
+                    return@launch
+                }
             }
         }
     }
 
     suspend fun connectUsingSession(session: BleSession): ConnectionState {
-        bleGateway.connect(session.peripheralId).let { result ->
-            if (result is Result.Error) {
-                ConnectivityLogger.w("🔌 Persistent GATT connect failed: ${result.throwable.message}")
-                runtime.notificationListenerActive = false
-                return ConnectionState.Error(
-                    ConnectivityError.Transport("持久 BLE 通知通道未建立")
-                )
-            }
-        }
+        val activeSession = connectOrRescan(session) ?: return ConnectionState.Error(
+            ConnectivityError.DeviceNotFound(session.peripheralId)
+        )
 
-        badgeStateMonitor.onBleConnected(session)
-        ingressSupport.startNotificationListener(session)
+        badgeStateMonitor.onBleConnected(activeSession)
+        ingressSupport.startNotificationListener(activeSession)
 
-        return when (val networkStatus = performForegroundNetworkQuery(session, promoteConnectedState = false)) {
+        return when (val networkStatus = performForegroundNetworkQuery(activeSession, promoteConnectedState = false)) {
             is Result.Success -> {
-                resolveReconnectState(session, networkStatus.data)
+                resolveReconnectState(activeSession, networkStatus.data)
             }
             is Result.Error -> {
                 val error = mapProvisioningError(networkStatus.throwable)
                 ConnectionState.Error(error)
             }
         }
+    }
+
+    private suspend fun connectOrRescan(session: BleSession): BleSession? {
+        val directResult = bleGateway.connect(session.peripheralId)
+        if (directResult is Result.Success) return session
+
+        ConnectivityLogger.w("🔌 Stored MAC ${session.peripheralId} unreachable, attempting scan fallback")
+        runtime.notificationListenerActive = false
+
+        val peripheral = bleScanner?.scanForFirst() ?: run {
+            ConnectivityLogger.w("🔌 Scan fallback: no matching device found")
+            return null
+        }
+
+        if (peripheral.id == session.peripheralId) {
+            ConnectivityLogger.w("🔌 Scan fallback: same MAC found but connect failed earlier")
+            return null
+        }
+
+        ConnectivityLogger.i("🔌 Scan fallback: found ${peripheral.name} at new MAC ${peripheral.id}")
+        val updatedSession = session.copy(
+            peripheralId = peripheral.id,
+            peripheralName = peripheral.name,
+            signalStrengthDbm = peripheral.signalStrengthDbm
+        )
+
+        val retryResult = bleGateway.connect(updatedSession.peripheralId)
+        if (retryResult is Result.Error) {
+            ConnectivityLogger.w("🔌 Scan fallback: connect to new MAC also failed: ${retryResult.throwable.message}")
+            return null
+        }
+
+        runtime.currentSession = updatedSession
+        sessionStore.saveSession(updatedSession)
+        ConnectivityLogger.i("🔌 Session updated to new MAC ${updatedSession.peripheralId}")
+        return updatedSession
     }
 
     private fun launchProvisioning() {
@@ -384,83 +426,34 @@ internal class DeviceConnectionManagerConnectionSupport(
     ): ConnectionState {
         val ip = networkStatus.ipAddress
         val badgeSsid = normalizeWifiSsid(networkStatus.deviceWifiName)
-        val phoneSsid = resolveReadablePhoneSsid()
-            ?: return resolvePhoneWifiUnavailableState(
-                context = if (!hasUsableBadgeIp(ip)) {
-                    "replay skipped"
-                } else {
-                    "reconnect blocked while badge has ip=$ip"
-                },
-                badgeSsid = badgeSsid
-            )
 
-        if (!hasUsableBadgeIp(ip)) {
-            ConnectivityLogger.d("🔌 connectUsingSession: badge offline, ip=$ip")
-            return attemptDeterministicWifiReplay(
-                session = session,
-                badgeSsid = badgeSsid,
-                phoneSsid = phoneSsid,
-                reason = "badge offline"
+        if (hasUsableBadgeIp(ip)) {
+            ConnectivityLogger.d("🔌 connectUsingSession: connected, ip=$ip ssid=$badgeSsid")
+            return ConnectionState.WifiProvisioned(
+                session,
+                ingressSupport.syntheticProvisioningStatus(networkStatus)
             )
         }
 
-        if (badgeSsid != phoneSsid) {
-            ConnectivityLogger.w(
-                "🔌 reconnect mismatch: badge=$badgeSsid phone=$phoneSsid, attempting alignment replay"
-            )
-            return attemptDeterministicWifiReplay(
-                session = session,
-                badgeSsid = badgeSsid,
-                phoneSsid = phoneSsid,
-                reason = "badge online on different network"
-            )
-        }
-
-        ConnectivityLogger.d("🔌 connectUsingSession: connected, ip=$ip ssid=$badgeSsid")
-        return ConnectionState.WifiProvisioned(
-            session,
-            ingressSupport.syntheticProvisioningStatus(networkStatus)
-        )
-    }
-
-    private suspend fun attemptDeterministicWifiReplay(
-        session: BleSession,
-        badgeSsid: String?,
-        phoneSsid: String,
-        reason: String
-    ): ConnectionState {
-        val knownNetwork = sessionStore.findKnownNetworkBySsid(phoneSsid)
-        if (knownNetwork == null) {
-            ConnectivityLogger.w(
-                "🔁 replay skipped ($reason): no known network for phoneSsid=$phoneSsid"
-            )
+        // Badge offline — replay last known credentials
+        ConnectivityLogger.d("🔌 connectUsingSession: badge offline, ip=$ip, attempting credential replay")
+        val lastCredentials = runtime.lastCredentials
+        if (lastCredentials == null) {
+            ConnectivityLogger.w("🔁 replay skipped: no stored credentials")
             return ConnectionState.Error(
                 ConnectivityError.WifiDisconnected(
-                    reason = WifiDisconnectedReason.NO_KNOWN_CREDENTIAL_FOR_PHONE_WIFI,
-                    phoneSsid = phoneSsid,
+                    reason = WifiDisconnectedReason.BADGE_WIFI_OFFLINE,
                     badgeSsid = badgeSsid
                 )
             )
         }
-
-        val replayCredentials = knownNetwork.credentials
-        runtime.lastCredentials = replayCredentials
-        ConnectivityLogger.i(
-            "🔁 replaying saved Wi‑Fi credentials ssid=${replayCredentials.ssid} because $reason"
-        )
-        when (val provisionResult = provisioner.provision(session, replayCredentials)) {
-            is Result.Success -> {
-                return waitForReconnectReplayOnline(session, replayCredentials, phoneSsid)
-            }
-
+        return when (val provisionResult = provisioner.provision(session, lastCredentials)) {
+            is Result.Success -> waitForReconnectReplayOnline(session, lastCredentials, normalizeWifiSsid(lastCredentials.ssid))
             is Result.Error -> {
-                ConnectivityLogger.w(
-                    "🔁 replay failed before online confirmation: ${provisionResult.throwable.message}"
-                )
-                return ConnectionState.Error(
+                ConnectivityLogger.w("🔁 replay failed: ${provisionResult.throwable.message}")
+                ConnectionState.Error(
                     ConnectivityError.WifiDisconnected(
                         reason = WifiDisconnectedReason.CREDENTIAL_REPLAY_FAILED,
-                        phoneSsid = phoneSsid,
                         badgeSsid = badgeSsid
                     )
                 )
@@ -471,7 +464,7 @@ internal class DeviceConnectionManagerConnectionSupport(
     private suspend fun waitForReconnectReplayOnline(
         session: BleSession,
         credentials: WifiCredentials,
-        expectedPhoneSsid: String
+        expectedSsid: String?
     ): ConnectionState {
         repeat(RECONNECT_REPLAY_QUERY_ATTEMPTS) { attempt ->
             val delayMs = if (attempt == 0) {
@@ -491,19 +484,6 @@ internal class DeviceConnectionManagerConnectionSupport(
                     }
 
                     val badgeSsid = normalizeWifiSsid(status.deviceWifiName)
-                    if (badgeSsid != expectedPhoneSsid) {
-                        ConnectivityLogger.w(
-                            "🔁 replay confirm mismatch: badge=$badgeSsid phone=$expectedPhoneSsid"
-                        )
-                        return ConnectionState.Error(
-                            ConnectivityError.WifiDisconnected(
-                                reason = WifiDisconnectedReason.BADGE_PHONE_NETWORK_MISMATCH,
-                                phoneSsid = expectedPhoneSsid,
-                                badgeSsid = badgeSsid
-                            )
-                        )
-                    }
-
                     persistSessionAndKnownNetwork(session, credentials)
                     ConnectivityLogger.i("🔁 replay confirmed online ip=$ip ssid=$badgeSsid")
                     return ConnectionState.WifiProvisioned(
@@ -523,7 +503,7 @@ internal class DeviceConnectionManagerConnectionSupport(
         return ConnectionState.Error(
             ConnectivityError.WifiDisconnected(
                 reason = WifiDisconnectedReason.CREDENTIAL_REPLAY_FAILED,
-                phoneSsid = expectedPhoneSsid
+                badgeSsid = expectedSsid
             )
         )
     }
@@ -593,42 +573,6 @@ internal class DeviceConnectionManagerConnectionSupport(
                 badgeSsid = expectedSsid
             )
         )
-    }
-
-    private fun resolveReadablePhoneSsid(): String? {
-        return when (val snapshot = phoneWifiProvider.currentWifiSnapshot()) {
-            PhoneWifiSnapshot.Unavailable -> null
-            is PhoneWifiSnapshot.Connected -> snapshot.normalizedSsid
-        }
-    }
-
-    private fun resolvePhoneWifiUnavailableState(
-        context: String,
-        badgeSsid: String?
-    ): ConnectionState {
-        return when (val snapshot = phoneWifiProvider.currentWifiSnapshot()) {
-            PhoneWifiSnapshot.Unavailable -> {
-                ConnectivityLogger.w("🔁 $context: phone Wi‑Fi unavailable")
-                ConnectionState.Error(
-                    ConnectivityError.WifiDisconnected(
-                        reason = WifiDisconnectedReason.PHONE_WIFI_UNAVAILABLE,
-                        badgeSsid = badgeSsid
-                    )
-                )
-            }
-
-            is PhoneWifiSnapshot.Connected -> {
-                ConnectivityLogger.w(
-                    "🔁 $context: phone Wi‑Fi connected but SSID unreadable raw=${snapshot.rawSsid ?: "null"}"
-                )
-                ConnectionState.Error(
-                    ConnectivityError.WifiDisconnected(
-                        reason = WifiDisconnectedReason.PHONE_WIFI_SSID_UNREADABLE,
-                        badgeSsid = badgeSsid
-                    )
-                )
-            }
-        }
     }
 
     private fun persistSessionAndKnownNetwork(session: BleSession, credentials: WifiCredentials) {

@@ -395,7 +395,10 @@ class ConnectivityViewModelTest {
         override val connectionState: StateFlow<BadgeConnectionState> = _connectionState.asStateFlow()
         override val managerStatus: StateFlow<BadgeManagerStatus> = _managerStatus.asStateFlow()
 
-        override suspend fun downloadRecording(filename: String): WavDownloadResult {
+        override suspend fun downloadRecording(
+            filename: String,
+            onProgress: ((bytesRead: Long, totalBytes: Long) -> Unit)?
+        ): WavDownloadResult {
             error("Not used in ConnectivityViewModelTest")
         }
 

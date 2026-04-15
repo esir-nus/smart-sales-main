@@ -162,3 +162,13 @@ workflows/
 # Virtual machine crash logs
 hs_err_pid*
 ata/
+
+# HarmonyOS build cache
+.hvigor/
+hvigor/
+
+# Python cache
+__pycache__/
+
+# Harmony toolchain dumps (local only)
+platforms/harmony/commandline-tools-linux-x64-*/

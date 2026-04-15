@@ -1,5 +1,6 @@
 ---
 description: Run the Verification Acceptance Team to validate work
+last_reviewed: 2026-04-13
 ---
 
 # Acceptance Team

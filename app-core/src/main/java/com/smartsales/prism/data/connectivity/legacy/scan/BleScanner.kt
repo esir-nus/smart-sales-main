@@ -14,4 +14,6 @@ interface BleScanner {
 
     fun start()
     fun stop()
+
+    suspend fun scanForFirst(timeoutMs: Long = 8_000L): BlePeripheral?
 }

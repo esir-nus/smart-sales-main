@@ -5,6 +5,8 @@ import com.smartsales.prism.domain.audio.AudioLocalAvailability
 import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
 import com.smartsales.prism.ui.components.connectivity.ConnectionState
 import com.smartsales.prism.ui.drawers.AudioStatus
+import java.time.Instant
+import java.time.Duration
 
 internal const val SIM_AUDIO_DEMO_SEED_ID = "sim_wave2_seed"
 
@@ -114,6 +116,35 @@ internal fun resolveSimAudioSyncLabel(
         SimAudioSyncVisualState.BLOCKED -> {
             if (connectionState == ConnectionState.NEEDS_SETUP) "需要配网" else "Badge 未连接"
         }
+    }
+}
+
+/** 根据最后同步时间生成相对时间标签，用于胶囊右侧同步部分 */
+internal fun resolveSimAudioSyncRelativeLabel(
+    visualState: SimAudioSyncVisualState,
+    lastSyncTimestamp: Instant?
+): String {
+    return when (visualState) {
+        SimAudioSyncVisualState.SYNCING -> "正在同步..."
+        SimAudioSyncVisualState.BLOCKED,
+        SimAudioSyncVisualState.RECONNECTING -> ""
+        else -> {
+            if (lastSyncTimestamp == null) {
+                "未同步"
+            } else {
+                formatRelativeSyncTime(lastSyncTimestamp)
+            }
+        }
+    }
+}
+
+/** 将同步时间转换为相对描述，例如 "已同步 (1s)" / "已同步 (1min)" / "已同步 (1h)" */
+internal fun formatRelativeSyncTime(lastSync: Instant): String {
+    val seconds = Duration.between(lastSync, Instant.now()).seconds.coerceAtLeast(0)
+    return when {
+        seconds < 60 -> "已同步 (${seconds}s)"
+        seconds < 3600 -> "已同步 (${seconds / 60}min)"
+        else -> "已同步 (${seconds / 3600}h)"
     }
 }
 

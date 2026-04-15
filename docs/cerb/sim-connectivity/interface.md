@@ -61,7 +61,10 @@ SIM should reuse the existing connectivity contracts as its behavioral backend:
 interface ConnectivityBridge {
     val connectionState: StateFlow<BadgeConnectionState>
     val managerStatus: StateFlow<BadgeManagerStatus>
-    suspend fun downloadRecording(filename: String): WavDownloadResult
+    suspend fun downloadRecording(
+        filename: String,
+        onProgress: ((bytesRead: Long, totalBytes: Long) -> Unit)? = null
+    ): WavDownloadResult
     suspend fun listRecordings(): Result<List<String>>
     fun recordingNotifications(): Flow<RecordingNotification>
     suspend fun isReady(): Boolean

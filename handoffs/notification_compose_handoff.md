@@ -1,6 +1,9 @@
 # Handoff: DTQ-02 Scheduler Intelligence and Reminder Surfaces
 
 > **Lane ID**: `DTQ-02`
+> **Registry Lane ID**: `DTQ-02`
+> **Branch**: `not yet isolated from the integration tree`
+> **Recommended Worktree**: `not yet assigned; create a dedicated DTQ-02 lane worktree before resuming feature edits`
 > **Scope**: Shared scheduler-routing, reminder-surface, banner/alarm, and scheduler-drawer lane for the current dirty tree.
 
 ## Scope
@@ -12,32 +15,36 @@ This handoff covers scheduler intelligence and reminder delivery surfaces, inclu
 - `app-core/src/main/java/com/smartsales/prism/data/scheduler/TaskReminderReceiver.kt`
 - `app-core/src/main/java/com/smartsales/prism/ui/alarm/**`
 - scheduler/reminder surfaces such as `app-core/src/main/java/com/smartsales/prism/ui/drawers/scheduler/**`, `app-core/src/main/java/com/smartsales/prism/ui/sim/SimScheduler*.kt`, and `app-core/src/main/java/com/smartsales/prism/ui/sim/SimReminderBanner*.kt`
-- shared scheduler-routing files such as `core/pipeline/src/main/java/com/smartsales/core/pipeline/IntentOrchestrator.kt`, `SchedulerIntelligenceRouter.kt`, `SchedulerPathACreateInterpreter.kt`, and `SchedulerRescheduleTimeInterpreter.kt`
+- `app-core/src/main/java/com/smartsales/prism/data/memory/RealScheduleBoard.kt`
 - scheduler domain timing/reschedule files under `domain/scheduler/**`
-- reminder/scheduler tests under `app-core/src/test/**`, `app-core/src/androidTest/**`, `core/pipeline/src/test/**`, and `domain/scheduler/src/test/**`
+- scheduler retrieval fake support: `core/test-fakes-domain/src/main/java/com/smartsales/core/test/fakes/FakeActiveTaskRetrievalIndex.kt`
+- reminder/scheduler tests under `app-core/src/test/**`, `app-core/src/androidTest/**`, and `domain/scheduler/src/test/**`
 - `docs/cerb/notifications/spec.md`
-- scheduler-routing and scheduler-surface docs under `docs/cerb/scheduler-path-a-*/**`, `docs/cerb/sim-scheduler/**`, and `docs/cerb-ui/scheduler/contract.md`
+- scheduler-routing and scheduler-surface docs under `docs/cerb/scheduler-path-a-*/**`, `docs/cerb/sim-scheduler/**`, `docs/cerb-ui/scheduler/contract.md`, `docs/core-flow/scheduler-fast-track-flow.md`, and `docs/core-flow/sim-scheduler-path-a-flow.md`
+- `docs/plans/sim-tracker.md`
 - reminder/scheduler prototype assets under `prototypes/sim-shell-family/**`
 
 ## Current Repo State / Implementation Truth
 
-The current dirty tree already contains real shared scheduler-routing and reminder-surface work. This is no longer just a notification UI translation note; it now spans alarm delivery, reminder banners, deterministic/shared routing, and scheduler-facing warning copy.
+The current dirty tree already contains real shared scheduler-contract and reminder-surface work. This is no longer just a notification UI translation note; it now spans alarm delivery, reminder banners, retrieval-board truth, and the tightened explicit-target reschedule contract.
 
-The detailed UI notes below remain useful implementation memory for the alarm/banner surfaces, but current repo truth lives in the active code paths and the owning scheduler/notification docs listed here.
+The tightened contract now requires an explicit target plus a new exact time in the current utterance, resolves globally across active exact tasks, and safe-fails on omitted target, ambiguity, no match, and non-exact time. The detailed UI notes below remain useful implementation memory for the alarm/banner surfaces, but current repo truth lives in the active code paths and the owning scheduler/notification docs listed here.
 
 ## What Is Finished
 
 - The lane is isolated in the quarantine tracker with a stable reminder/scheduler seam.
+- The 2026-04-11 governance pass now explicitly assigns the tightened scheduler core-flow/spec docs and retrieval-board support files to this lane instead of leaving them ungoverned.
 - Historical UI translation notes remain preserved for the alarm/banner surfaces.
 - This handoff now carries explicit source-of-truth and drift state so the next pass can resume without re-auditing from scratch.
-- DTQ-02 audit on 2026-04-04 found no scheduler/reminder-specific contradiction between the shared routing docs, reminder/banner docs, and the live `SchedulerIntelligenceRouter` / `IntentOrchestrator` / `RealUnifiedPipeline` / `TaskReminderReceiver` / `AlarmActivity` / `SimSchedulerViewModel` code.
+- DTQ-02 audit on 2026-04-04 found no scheduler/reminder-specific contradiction between the shared scheduler docs, reminder/banner docs, and the live `TaskReminderReceiver` / `AlarmActivity` / `SimSchedulerViewModel` code plus the scheduler-owned retrieval/domain seams.
 - Focused DTQ-02 verification passed in this audit session:
   - `./gradlew :core:pipeline:testDebugUnitTest --tests 'com.smartsales.core.pipeline.SchedulerIntelligenceRouterTest' --tests 'com.smartsales.core.pipeline.IntentOrchestratorTest'`
   - `./gradlew :app-core:testDebugUnitTest --tests 'com.smartsales.prism.ui.sim.SimSchedulerViewModelTest' --tests 'com.smartsales.prism.ui.sim.SimReminderBannerSupportTest' --tests 'com.smartsales.prism.ui.alarm.AlarmActivityStateTest'`
 
 ## What Is Still Open
 
-- Finalize code/doc alignment for shared scheduler routing and reminder presentation.
+- Finalize code/doc alignment for the shared scheduler contract and reminder presentation.
+- Keep the explicit-target reschedule rule honest across docs, retrieval support, and downstream pipeline execution; do not reintroduce newest-task bias, selected-task authority, or delta-only mutation.
 - Keep the lane focused on scheduler/reminder behavior; if changes broaden into onboarding flow ownership or connectivity transport, split the work.
 - Do not mark this lane `Accepted` yet while the dirty scheduler/reminder lane is still unlanded and this audit session does not include a fresh runtime/device rerun for reminder delivery and alarm presentation.
 
@@ -50,7 +57,9 @@ The detailed UI notes below remain useful implementation memory for the alarm/ba
   - `docs/cerb/scheduler-path-a-uni-a/spec.md`
   - `docs/cerb/scheduler-path-a-uni-b/spec.md`
   - `docs/cerb/sim-scheduler/spec.md`
-  - `docs/cerb/unified-pipeline/spec.md`
+  - `docs/core-flow/scheduler-fast-track-flow.md`
+  - `docs/core-flow/sim-scheduler-path-a-flow.md`
+  - `docs/plans/sim-tracker.md`
   - `docs/plans/tracker.md`
 - **Current alignment state**: `Both pending`
 - **Docs still needing sync or final confirmation before `Accepted`**:
@@ -60,7 +69,7 @@ The detailed UI notes below remain useful implementation memory for the alarm/ba
 
 ## Required Evidence / Verification
 
-- Focused scheduler-routing and reminder verification, including the affected `core/pipeline`, `domain/scheduler`, and `app-core` test surfaces.
+- Focused scheduler-contract and reminder verification, including the affected `domain/scheduler`, retrieval-support, and `app-core` test surfaces.
 - Current audit evidence:
   - `SchedulerIntelligenceRouterTest`
   - `IntentOrchestratorTest`
@@ -75,7 +84,7 @@ The detailed UI notes below remain useful implementation memory for the alarm/ba
 ## Safe Next Actions
 
 - Continue only inside the scheduler/reminder-owned paths listed above.
-- Keep shared router changes synced with the owning scheduler and notification docs in the same session.
+- Keep shared scheduler-contract changes synced with the owning core-flow/spec docs in the same session.
 - Split onboarding-specific staged-flow behavior back to `DTQ-01` and OEM-specific delivery hardening back to `DTQ-03`.
 
 ## Do Not Touch / Collision Notes
@@ -83,6 +92,7 @@ The detailed UI notes below remain useful implementation memory for the alarm/ba
 - Do not claim onboarding flow ownership from `DTQ-01`.
 - Do not absorb connectivity bridge/service or OEM settings ownership from `DTQ-03`.
 - Do not treat runtime shell chrome as scheduler-owned implementation territory unless the change is strictly reminder/scheduler presentation.
+- Do not claim the parser/session-title cleanup bundle from `DTQ-05`; pipeline-hosted consumers may depend on the scheduler contract, but the parser/session-history ownership split is separate.
 
 ## Detailed Historical Notes
 

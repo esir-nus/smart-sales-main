@@ -1,5 +1,6 @@
 ---
 description: Pipeline Valve Audit & Sync (Evidence-Based Telemetry Check)
+last_reviewed: 2026-04-13
 ---
 # Pipeline Valve Audit
 

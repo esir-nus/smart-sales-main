@@ -1,5 +1,6 @@
 ---
 description: Run manual physical device tests (L2/L3) with adb log monitoring and agent-evaluated pass/fail
+last_reviewed: 2026-04-13
 ---
 
 # On-Device Test Runner (L2/L3)

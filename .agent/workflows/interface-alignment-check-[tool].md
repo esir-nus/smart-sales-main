@@ -1,5 +1,6 @@
 ---
 description: Verify that interface.md files across features are compatible before integration
+last_reviewed: 2026-04-13
 ---
 
 # Interface Alignment Check

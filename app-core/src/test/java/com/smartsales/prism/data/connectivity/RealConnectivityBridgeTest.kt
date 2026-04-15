@@ -32,6 +32,16 @@ class RealConnectivityBridgeTest {
     private val phoneWifiProvider = FakePhoneWifiProvider("MstRobot")
 
     @Test
+    fun `bridge initializes connectionState before startup collectors begin`() = runTest {
+        val manager = FakeDeviceConnectionManager()
+        val monitor = FakeBadgeStateMonitor()
+
+        val bridge = RealConnectivityBridge(manager, mock(), monitor, phoneWifiProvider)
+
+        assertEquals(BadgeConnectionState.Disconnected, bridge.connectionState.value)
+    }
+
+    @Test
     fun `recordingNotifications ignores events while transport is not ready`() = runTest {
         val manager = FakeDeviceConnectionManager()
         val monitor = FakeBadgeStateMonitor()

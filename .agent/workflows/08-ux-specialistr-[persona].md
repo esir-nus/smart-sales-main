@@ -1,5 +1,6 @@
 ---
 description: Natural language to production-grade UX — audit, understand, and optimize any user flow with a UX specialist mindset
+last_reviewed: 2026-04-13
 ---
 
 # UX Specialist

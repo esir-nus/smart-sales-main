@@ -63,7 +63,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.key
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -136,7 +135,6 @@ internal fun SimAgentIntelligenceContent(
     showHeaderNewSessionButton: Boolean = true,
     showBottomComposer: Boolean = true,
     showIdleComposerHint: Boolean = false,
-    currentSessionHasAudioContextHistory: Boolean,
     enableSimSchedulerPullGesture: Boolean,
     enableSimAudioPullGesture: Boolean,
     onSimSchedulerPullOpen: () -> Unit,
@@ -161,17 +159,17 @@ internal fun SimAgentIntelligenceContent(
     )
 
     if (showSimSharedHomeHeroShell) {
-            SimHomeHeroShellFrame(
-                inputText = inputText,
-                isSending = isSending,
-                dynamicIslandState = simDynamicIslandState,
+        SimHomeHeroShellFrame(
+            inputText = inputText,
+            isSending = isSending,
+            dynamicIslandState = simDynamicIslandState,
             onMenuClick = onMenuClick,
             onNewSessionClick = onNewSessionClick,
-                onSchedulerClick = onSchedulerClick,
-                showMenuButton = showHeaderMenuButton,
-                showNewSessionButton = showHeaderNewSessionButton,
-                onTextChanged = onUpdateInput,
-                onSend = onSend,
+            onSchedulerClick = onSchedulerClick,
+            showMenuButton = showHeaderMenuButton,
+            showNewSessionButton = showHeaderNewSessionButton,
+            onTextChanged = onUpdateInput,
+            onSend = onSend,
             onAttachClick = onAttachClick,
             showIdleComposerHint = showIdleComposerHint && history.isEmpty(),
             showBottomComposer = showBottomComposer,
@@ -227,7 +225,6 @@ internal fun SimAgentIntelligenceContent(
                 onSchedulerClick = onSchedulerClick,
                 showMenuButton = showHeaderMenuButton,
                 showNewSessionButton = showHeaderNewSessionButton,
-                currentSessionHasAudioContextHistory = currentSessionHasAudioContextHistory,
                 onBoundsChanged = null
             )
 
@@ -294,7 +291,6 @@ private fun SimConversationTimeline(
         agentActivity == null &&
         history.isNotEmpty() &&
         history.lastOrNull() is ChatMessage.Ai
-
     LazyColumn(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -474,7 +470,6 @@ private fun SimShellHeader(
     onSchedulerClick: (DynamicIslandTapAction) -> Unit,
     showMenuButton: Boolean,
     showNewSessionButton: Boolean,
-    currentSessionHasAudioContextHistory: Boolean,
     onBoundsChanged: ((Rect) -> Unit)? = null
 ) {
     Row(
@@ -512,9 +507,8 @@ private fun SimShellHeader(
                 modifier = Modifier.weight(1f),
                 contentAlignment = Alignment.Center
             ) {
-                SimSessionTitleLabel(
-                    title = sessionTitle,
-                    hasAudioContextHistory = currentSessionHasAudioContextHistory,
+                Text(
+                    text = sessionTitle.ifBlank { "SIM" },
                     color = Color.White.copy(alpha = 0.84f),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold
@@ -549,26 +543,11 @@ private fun SimRotatingDynamicIsland(
             },
             label = "sim_dynamic_island_rotation"
         ) { item ->
-            var visibleText by remember(item.stableKey) {
-                mutableStateOf(if (item.isSessionTitleItem) "" else item.displayText)
-            }
-            LaunchedEffect(item.stableKey) {
-                if (!item.isSessionTitleItem) {
-                    visibleText = item.displayText
-                    return@LaunchedEffect
-                }
-                visibleText = ""
-                item.displayText.forEachIndexed { index, _ ->
-                    delay(28L)
-                    visibleText = item.displayText.take(index + 1)
-                }
-            }
             DynamicIsland(
                 state = DynamicIslandUiState.Visible(item),
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag(SIM_DYNAMIC_ISLAND_TEST_TAG),
-                displayTextOverride = visibleText,
                 onTap = onTap
             )
         }

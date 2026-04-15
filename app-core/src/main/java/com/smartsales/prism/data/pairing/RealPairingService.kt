@@ -2,11 +2,13 @@ package com.smartsales.prism.data.pairing
 
 import com.smartsales.core.util.Result
 import com.smartsales.prism.data.connectivity.legacy.BlePeripheral
+import com.smartsales.prism.data.connectivity.legacy.BleSession
 import com.smartsales.prism.data.connectivity.legacy.ConnectionState
 import com.smartsales.prism.data.connectivity.legacy.DeviceConnectionManager
 import com.smartsales.prism.data.connectivity.legacy.hasUsableBadgeIp
 import com.smartsales.prism.data.connectivity.legacy.WifiCredentials as LegacyWifiCredentials
 import com.smartsales.prism.data.connectivity.legacy.scan.BleScanner
+import com.smartsales.prism.data.connectivity.registry.DeviceRegistryManager
 import com.smartsales.prism.domain.pairing.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -23,7 +25,8 @@ import javax.inject.Singleton
 @Singleton
 class RealPairingService @Inject constructor(
     private val bleScanner: BleScanner,
-    private val connectionManager: DeviceConnectionManager
+    private val connectionManager: DeviceConnectionManager,
+    private val registryManager: DeviceRegistryManager
 ) : PairingService {
     
     private val _state = MutableStateFlow<PairingState>(PairingState.Idle)
@@ -111,8 +114,8 @@ class RealPairingService @Inject constructor(
         wifiCreds: WifiCredentials
     ): PairingResult {
         Log.d(TAG, "pairBadge() called for ${badge.name} with SSID=${wifiCreds.ssid}")
-        val peripheral = discoveredPeripherals[badge.id]
-        if (peripheral == null) {
+        val selectedPeripheral = discoveredPeripherals[badge.id]
+        if (selectedPeripheral == null) {
             Log.w(TAG, "pairBadge() missing peripheral for badgeId=${badge.id}")
             val error = PairingState.Error(
                 message = "设备已不可用，请重新扫描",
@@ -126,13 +129,13 @@ class RealPairingService @Inject constructor(
         // 阶段 1：选择设备 (10%)
         Log.d(TAG, "State → Pairing(10%) - Selecting peripheral")
         _state.value = PairingState.Pairing(progress = 10)
-        connectionManager.selectPeripheral(peripheral)
+        connectionManager.selectPeripheral(selectedPeripheral)
 
         // 阶段 2：发送 WiFi 配网 (40%)
         Log.d(TAG, "State → Pairing(40%) - Starting WiFi provisioning")
         _state.value = PairingState.Pairing(progress = 40)
         val pairingResult = connectionManager.startPairing(
-            peripheral = peripheral,
+            peripheral = selectedPeripheral,
             credentials = LegacyWifiCredentials(
                 ssid = wifiCreds.ssid,
                 password = wifiCreds.password
@@ -248,7 +251,19 @@ class RealPairingService @Inject constructor(
             badgeId = badge.id,
             badgeName = badge.name
         )
-        
+
+        // 注册到设备注册表
+        val session = BleSession(
+            peripheralId = badge.id,
+            peripheralName = badge.name,
+            signalStrengthDbm = badge.signalStrengthDbm,
+            profileId = selectedPeripheral.profileId,
+            secureToken = java.util.UUID.randomUUID().toString(),
+            establishedAtMillis = System.currentTimeMillis()
+        )
+        registryManager.registerDevice(selectedPeripheral, session)
+        Log.i(TAG, "Device registered: ${badge.name} (${badge.id})")
+
         return PairingResult.Success(badge.id)
     }
     

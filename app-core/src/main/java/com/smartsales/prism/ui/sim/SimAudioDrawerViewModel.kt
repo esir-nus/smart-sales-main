@@ -39,7 +39,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import com.smartsales.prism.data.audio.SimBadgeSyncIslandEvent
 import com.smartsales.prism.data.audio.SimBadgeSyncResultBranch
 
 data class SimAudioEntry(
@@ -86,14 +85,6 @@ class SimAudioDrawerViewModel @Inject constructor(
         MutableStateFlow<SimBadgeDeleteConfirmationRequest?>(null)
     internal val pendingBadgeDeleteConfirmation: StateFlow<SimBadgeDeleteConfirmationRequest?> =
         _pendingBadgeDeleteConfirmation
-    private val _lastSyncTimestamp = MutableStateFlow<Instant?>(null)
-    val lastSyncTimestamp: StateFlow<Instant?> = _lastSyncTimestamp
-    private val _syncIslandEvents = MutableSharedFlow<SimBadgeSyncIslandEvent>(
-        replay = 0,
-        extraBufferCapacity = 4
-    )
-    internal val syncIslandEvents: SharedFlow<SimBadgeSyncIslandEvent> = _syncIslandEvents.asSharedFlow()
-    private var hasConfirmedBadgeDeleteThisSession = false
     private var syncFeedbackResetJob: Job? = null
     private var autoSyncDebounceJob: Job? = null
     private val badgeSyncAvailability: StateFlow<SimBadgeSyncAvailability> =

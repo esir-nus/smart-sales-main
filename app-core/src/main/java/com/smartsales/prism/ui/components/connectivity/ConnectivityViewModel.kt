@@ -3,6 +3,8 @@ package com.smartsales.prism.ui.components.connectivity
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.smartsales.prism.data.connectivity.registry.DeviceRegistryManager
+import com.smartsales.prism.data.connectivity.registry.RegisteredDevice
 import com.smartsales.prism.domain.connectivity.BadgeConnectionState
 import com.smartsales.prism.domain.connectivity.BadgeManagerStatus
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
@@ -31,22 +33,13 @@ import javax.inject.Inject
 @HiltViewModel
 class ConnectivityViewModel @Inject constructor(
     private val connectivityService: ConnectivityService,
-    private val connectivityBridge: ConnectivityBridge
+    private val connectivityBridge: ConnectivityBridge,
+    private val registryManager: DeviceRegistryManager
 ) : ViewModel() {
 
-    init {
-        // 当 bridge 恢复为 Connected 时自动清除陈旧的 WIFI_MISMATCH 覆盖
-        viewModelScope.launch {
-            connectivityBridge.connectionState.collect { bridgeState ->
-                if (bridgeState is BadgeConnectionState.Connected &&
-                    _uiOverride.value == ConnectionState.WIFI_MISMATCH
-                ) {
-                    Log.d("ConnectivityVM", "Auto-clearing stale WIFI_MISMATCH: bridge recovered to Connected")
-                    clearTransientConnectivityUi()
-                }
-            }
-        }
-    }
+    // 设备注册表 — 多设备管理
+    val registeredDevices: StateFlow<List<RegisteredDevice>> = registryManager.registeredDevices
+    val activeDevice: StateFlow<RegisteredDevice?> = registryManager.activeDevice
 
     // 连接状态 — 从真实 ConnectivityBridge 订阅
     val connectionState: StateFlow<ConnectionState> = connectivityBridge.connectionState
@@ -147,6 +140,28 @@ class ConnectivityViewModel @Inject constructor(
     }
 
 
+    // --- 设备注册表操作 ---
+
+    fun switchToDevice(macAddress: String) {
+        launchExclusiveOperation("switchToDevice") {
+            _uiOverride.value = ConnectionState.RECONNECTING
+            registryManager.switchToDevice(macAddress)
+            clearTransientConnectivityUi()
+        }
+    }
+
+    fun setDefault(macAddress: String) {
+        registryManager.setDefault(macAddress)
+    }
+
+    fun removeDevice(macAddress: String) {
+        registryManager.removeDevice(macAddress)
+    }
+
+    fun renameDevice(macAddress: String, newName: String) {
+        registryManager.renameDevice(macAddress, newName)
+    }
+
     /**
      * 检查固件更新
      */
@@ -174,13 +189,6 @@ class ConnectivityViewModel @Inject constructor(
             connectivityService.disconnect()
             // disconnectBle() keeps session → state naturally becomes Disconnected
         }
-    }
-
-    /**
-     * 调度自动重连 — 非阻塞，尊重退避策略，由 shell 自动触发
-     */
-    fun scheduleAutoReconnect() {
-        connectivityService.scheduleAutoReconnect()
     }
 
     /**

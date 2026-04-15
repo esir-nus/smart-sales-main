@@ -3,11 +3,9 @@
 > Key spec/impl changes, newest first. Like `git log --oneline`.
 > Historical shipment log only. Do not use this file as the active source of open/closed testing-wave status; `docs/plans/tracker.md` and `docs/cerb-e2e-test/tasklist_log.md` own that.
 
-### 2026-04-08
-- **tracker-governance**: SHIPPED staged tracker-governance SOP. Locked `docs/plans/tracker.md` to master-ledger duty, formalized specialist tracker routing, and added the staged Harmony tracker model so the transient Harmony lane stays bounded without premature tracker sprawl.
-- **harmony-native**: SHIPPED `docs/plans/harmony-tracker.md` as the current standing tracker for the Tingwu container lane, including supported/disabled capability declarations, backend/dataflow evidence expectations, and branch-restore snapshot fields.
-- **harmony-native**: SHIPPED human-facing `docs/sops/harmony-operator-runbook.md`, defining the operator workflow for Harmony slice classification, agent briefing, evidence review, tracker advancement, and Cerb `interface.md` reuse rules.
-- **harmony-native**: SHIPPED backend-first Harmony scheduler phase-1 protocol and scaffold. Added `docs/platforms/harmony/scheduler-backend-first.md`, `docs/plans/harmony-scheduler-backend-phase1-brief.md`, a new Harmony tracker row for scheduler backend verification, and an operator-only ArkTS scheduler sandbox with local task/trace persistence plus critical-joint telemetry.
+### 2026-04-15
+- **android-build**: Install pipeline HOTFIXED. Pinned the transitive `org.jetbrains:annotations` dependency away from `latest.release` at root Gradle resolution so `:app-core:installDebug` no longer depends on remote Maven metadata lookup when the Aliyun Tingwu SDK chain is present. This stabilizes local/offline-ish Android build installs in the current environment.
+- **connectivity**: Pairing compile regression HOTFIXED. Repaired `RealPairingService` after the multi-device registry landing by keeping the selected BLE peripheral in one local variable through provisioning and registry registration, removing the duplicate declaration that blocked `:app-core:compileDebugKotlin`.
 
 ### 2026-03-17
 - **scheduler**: Wave 16 Scheduler Decoupling (The Archival Purge) SHIPPED. Formalized the Scheduler as a standalone plugin/domain by severing all hardcoded dependencies from the Core OS Pipeline.

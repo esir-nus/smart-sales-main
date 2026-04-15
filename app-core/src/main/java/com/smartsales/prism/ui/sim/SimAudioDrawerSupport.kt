@@ -181,3 +181,21 @@ internal fun buildTransparentStateLabel(progress: Float): String {
         else -> "正在生成章节与说话人..."
     }
 }
+
+internal fun formatDownloadFileSize(bytes: Long): String {
+    return when {
+        bytes <= 0 -> ""
+        bytes < 1024 -> "$bytes B"
+        bytes < 1024 * 1024 -> "${bytes / 1024} KB"
+        else -> "%.1f MB".format(bytes / (1024.0 * 1024.0))
+    }
+}
+
+internal fun formatDownloadSpeed(bytesPerSecond: Long): String {
+    return when {
+        bytesPerSecond <= 0 -> ""
+        bytesPerSecond < 1024 -> "$bytesPerSecond B/s"
+        bytesPerSecond < 1024 * 1024 -> "${bytesPerSecond / 1024} KB/s"
+        else -> "%.1f MB/s".format(bytesPerSecond / (1024.0 * 1024.0))
+    }
+}

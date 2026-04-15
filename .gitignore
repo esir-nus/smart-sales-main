@@ -3,6 +3,8 @@
 *.aar
 *.ap_
 *.aab
+# Allow vendored private SDK AARs in third_party/maven-repo
+!third_party/maven-repo/**/*.aar
 
 # AAR/native library directories
 app-core/libs/
@@ -121,7 +123,13 @@ reference-source/
 tingwuTestApp/
 
 # Third-party dependencies (should be managed via Gradle)
-third_party/maven-repo/
+# Ignore public packages downloadable from Maven Central / Google / Aliyun mirrors
+third_party/maven-repo/androidx/
+third_party/maven-repo/com/google/
+third_party/maven-repo/com/squareup/
+third_party/maven-repo/com/android/
+third_party/maven-repo/com/aliyun/
+# Private SDKs (com/alibaba/) are committed because they are not on any public mirror
 
 # Documentation that may contain sensitive info
 agent.md

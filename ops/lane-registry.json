@@ -176,7 +176,11 @@
         "docs/cerb/sim-shell/**",
         "docs/core-flow/sim-shell-routing-flow.md",
         "docs/plans/ui-tracker.md",
-        "prototypes/**/audio/**"
+        "prototypes/**/audio/**",
+        "app-core/src/main/java/com/smartsales/prism/data/audio/**",
+        "app-core/src/main/java/com/smartsales/prism/domain/audio/**",
+        "app-core/src/test/**/data/audio/**",
+        "docs/cerb/audio-management/**"
       ],
       "allowed_shared_paths": [
         "handoffs/audio_drawer_compose_handoff.md"

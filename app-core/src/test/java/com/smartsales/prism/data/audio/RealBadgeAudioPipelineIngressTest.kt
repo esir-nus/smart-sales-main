@@ -14,7 +14,6 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -66,7 +65,10 @@ class RealBadgeAudioPipelineIngressTest {
         override val managerStatus: StateFlow<BadgeManagerStatus> =
             MutableStateFlow<BadgeManagerStatus>(BadgeManagerStatus.Ready("192.168.0.9", "MstRobot")).asStateFlow()
 
-        override suspend fun downloadRecording(filename: String): WavDownloadResult {
+        override suspend fun downloadRecording(
+            filename: String,
+            onProgress: ((bytesRead: Long, totalBytes: Long) -> Unit)?
+        ): WavDownloadResult {
             downloadCalls += filename
             return WavDownloadResult.Error(
                 code = WavDownloadResult.ErrorCode.DOWNLOAD_FAILED,
@@ -77,8 +79,6 @@ class RealBadgeAudioPipelineIngressTest {
         override suspend fun listRecordings(): Result<List<String>> = Result.Success(emptyList())
 
         override fun recordingNotifications(): Flow<RecordingNotification> = notifications
-
-        override fun audioRecordingNotifications(): Flow<RecordingNotification.AudioRecordingReady> = emptyFlow()
 
         override suspend fun isReady(): Boolean = true
 

@@ -146,7 +146,8 @@
         "docs/sops/oem-alarm-notification-control-plane.md",
         "docs/sops/oem-alarm-notification-checklist.md",
         "docs/plans/bug-tracker.md",
-        "scripts/dtq03_device_verify.sh"
+        "scripts/dtq03_device_verify.sh",
+        "data/connectivity/**"
       ],
       "allowed_shared_paths": [
         "handoffs/oem_permission_diagnosis.md"

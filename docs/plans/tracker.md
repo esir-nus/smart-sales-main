@@ -17,7 +17,7 @@
 - **Primary Law**:
   - [`docs/specs/platform-governance.md`](../specs/platform-governance.md)
 - **Dirty-Tree Quarantine Ledger**:
-  - [`docs/plans/dirty-tree-quarantine.md`](./dirty-tree-quarantine.md)
+  - Archived to [`docs/archive/dtq-era/dirty-tree-quarantine.md`](../archive/dtq-era/dirty-tree-quarantine.md) (DTQ system decommissioned 2026-04-15, replaced by develop + platform branch model)
 - **Dirty-Tree Audit**:
   - [`docs/reports/20260404-dirty-tree-quarantine-audit.md`](../reports/20260404-dirty-tree-quarantine-audit.md)
 - **Platform Target Reference**:
@@ -189,7 +189,30 @@
 
 ---
 
-## Active Investigation: Base Runtime Unification
+## Shipped Slice: Governance Simplification — DTQ System Decommissioned
+> **Context**: The DTQ lane system (9 worktrees, 351-line JSON registry, Python lane guard, handoff contracts) repeatedly created blockers when reality outpaced the registry. Replaced with industry-standard develop + platform branch model.
+
+- **Status**: Shipped (2026-04-15). Push to origin pending (network unavailable at ship time).
+- **Scope**:
+  - New branch model: `master` (protected, promotion-only) -> `develop` (Android + shared, daily work) -> `platform/harmony` (HarmonyOS)
+  - All 6 active DTQ lanes merged into `develop` in stability order: DTQ-03 -> DTQ-01 -> DTQ-04 -> DTQ-05 -> DTQ-02 -> DTQ-06
+  - DTQ-08 (Harmony native) merged into `platform/harmony`, then synced with `develop`
+  - 19 NO-MATCH dirty files + 7 new registry files committed directly on `develop`
+  - 33 MATCH dirty files resolved automatically via lane merges
+- **Decommissioned**:
+  - `ops/lane-registry.json` (replaced by CODEOWNERS + branch model)
+  - `scripts/lane_guard.py`, `scripts/lane`, `scripts/install-hooks.sh`, `scripts/tests/test_lane_guard.py`
+  - `.githooks/pre-commit`, `.githooks/pre-push` (lane guard hooks)
+  - 7 lane worktrees at `/home/cslh-frank/lane-worktrees/DTQ-*`
+  - 7 `lane/DTQ-*` branches (local deleted, remote pending)
+  - DTQ-specific Codex/Claude skills
+- **Archived**: `docs/plans/dirty-tree-quarantine.md`, `docs/sops/lane-worktree-governance.md`, `docs/sops/tracker-governance.md`, `handoffs/` -> `docs/archive/dtq-era/`
+- **Updated**: `.github/CODEOWNERS` simplified to module-level ownership; `CLAUDE.md` rewritten for new branch model and platform philosophies
+- **Pending** (when network is restored):
+  - `git push -u origin develop`
+  - `git push -u origin platform/harmony`
+  - Set branch protection on `master` via `gh api`
+  - Delete remote `lane/DTQ-*` branches
 > **Context**: Direct user-requested investigation to eliminate SIM/full implementation drift by defining one canonical base runtime and treating Mono as the later architecture augmentation layer.
 
 - **Status**: Investigation package delivered on 2026-03-31; Slice 1 wrapper cleanup accepted on 2026-03-31; Slice 2 wrapper cleanup accepted on 2026-03-31; Slice 3 wrapper cleanup accepted on 2026-03-31; Slice 4 wrapper cleanup accepted on 2026-03-31; Slice 5 truth lock accepted on 2026-03-31; final root/shell unification landed on 2026-04-01

@@ -187,7 +187,7 @@ sealed class WavDownloadResult {
 
 | State | Visual | Actions |
 |-------|--------|---------|
-| `CONNECTED` | ✅ Green pulsing BT icon<br>Badge name + ID + battery | **⚡ 断开连接**<br>**🔄 检查更新** |
+| `CONNECTED` | ✅ Green pulsing BT icon<br>Active device header (name + MAC suffix + battery)<br>Registered device list | **⚡ 断开连接**<br>**🔄 检查更新**<br>Device list: **切换** / **重命名** / **设为默认** / **移除** |
 | `DISCONNECTED` | ⚫ Gray BT icon<br>"🔴 离线" | **重试连接** |
 | `BLE_PAIRED_NETWORK_UNKNOWN` | 🔵 BT icon<br>"已连接设备"<br>"蓝牙已连接，正在确认设备网络状态" | **重试连接** |
 | `BLE_PAIRED_NETWORK_OFFLINE` | 🔵 BT icon<br>"已连接设备"<br>"蓝牙已连接，但设备当前未接入可用网络" | **重试连接** |
@@ -203,15 +203,26 @@ sealed class WavDownloadResult {
 > Shared shell routing still treats that as `DISCONNECTED`.
 > `NEEDS_SETUP` only shows on cold boot (no session ever existed).
 > Tapping "重试连接" from a disconnected manager state triggers auto-reconnect using persisted session.
+> Tapping `开始配网` from `NEEDS_SETUP` still enters the full shared onboarding coordinator with `host = SIM_CONNECTIVITY`.
+> Tapping the manager `添加设备` action enters the streamlined add-device coordinator with `host = SIM_ADD_DEVICE`, reusing pairing/provisioning runtime while skipping intro handshake and scheduler quick start.
 > Tapping "更新配置" from `WIFI_MISMATCH` first performs local validation plus an explicit send-confirm dialog; only the confirmed valid submit enters reconnect/progress and runs the repair flow without requiring a second manual retry.
 > The richer `BLE_PAIRED_NETWORK_*` states are manager-only refinements derived from `ConnectivityBridge.managerStatus`; they must not redefine global transport readiness.
 > Debug builds may additionally expose a temporary `断开连接` action in `BLE_PAIRED_NETWORK_*` states for hardware testing convenience; that control must not be treated as a release-surface contract.
 > Closing the connectivity modal/manager clears transient reconnect or mismatch override state so later reopen reflects live manager truth rather than a retained stale repair screen.
+> The modal now renders a frosted glass overlay (matching `SimHomeHeroTokens`) with active device header, registered device list, and per-device management actions. `ConnectivityViewModel` sources device state from `DeviceRegistryManager.registeredDevices` and `DeviceRegistryManager.activeDevice`. Inline rename uses a `DeviceHeader` component with editable text field. Device switch is mutex-protected and routes through `DeviceRegistryManager.switchToDevice()`.
 
 #### Data Flow
 
 ``` 
 User Action → ConnectivityViewModel → ConnectivityService → ConnectivityBridge → Legacy
+```
+
+Multi-device management path:
+
+```
+ConnectivityViewModel → DeviceRegistryManager → DeviceRegistry (SharedPrefs)
+                                              → SessionStore (session seeding)
+                                              → DeviceConnectionManager (reconnect)
 ```
 
 Manager-only refinement path:
@@ -264,11 +275,14 @@ Reconnect credential rule:
 
 | Component | Status | Wave |
 |-----------|--------|------|
-| `ConnectivityModal.kt` | ✅ Shipped | Pre-existing + Wave 2.5 |
-| `ConnectivityViewModel.kt` | ✅ Shipped | Pre-existing + Wave 2.5 |
+| `ConnectivityModal.kt` | ✅ Shipped | Pre-existing + Wave 2.5 + Multi-device rewrite |
+| `ConnectivityViewModel.kt` | ✅ Shipped | Pre-existing + Wave 2.5 + DeviceRegistryManager integration |
 | `ConnectivityService` (interface) | ✅ Shipped | Pre-existing |
 | `RealConnectivityService` | ✅ Shipped | Wave 2.5 |
 | `ConnectivityBridge` | ✅ Shipped | Wave 2 |
+| `DeviceRegistry` + `SharedPrefsDeviceRegistry` | ✅ Shipped | Multi-device |
+| `DeviceRegistryManager` + `RealDeviceRegistryManager` | ✅ Shipped | Multi-device |
+| `DeviceRegistryModule` (Hilt DI) | ✅ Shipped | Multi-device |
 
 ---
 
@@ -471,8 +485,11 @@ class RealConnectivityBridge @Inject constructor(
     override val connectionState: StateFlow<BadgeConnectionState>
         get() = legacyManager.connectionState.map { /* transform to Prism type */ }
     
-    override suspend fun downloadRecording(filename: String): WavDownloadResult {
-        // Delegate to httpClient.downloadWav()
+    override suspend fun downloadRecording(
+        filename: String,
+        onProgress: ((bytesRead: Long, totalBytes: Long) -> Unit)?
+    ): WavDownloadResult {
+        // Delegate to httpClient.downloadWav() with onProgress forwarded
         // Transform result to Prism type
     }
     

@@ -32,8 +32,7 @@ class RealGlobalRescheduleExtractionService @Inject constructor(
                             target = TargetResolutionRequest(
                                 targetQuery = parsed.target.targetQuery,
                                 targetPerson = parsed.target.targetPerson,
-                                targetLocation = parsed.target.targetLocation,
-                                preferredTaskIds = request.recentTaskHints.mapTo(linkedSetOf()) { it.taskId }
+                                targetLocation = parsed.target.targetLocation
                             ),
                             suggestedTaskId = parsed.suggestedTaskId?.takeIf { it in shortlistedTaskIds }
                         )

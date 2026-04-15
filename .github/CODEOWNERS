@@ -1,26 +1,20 @@
-# Repository-wide default owner. Replace or extend with team handles when platform owners are formalized.
+# Default owner
 * @esir-nus
 
-# Shared product truth and governance
-/docs/core-flow/** @esir-nus
-/docs/cerb/** @esir-nus
-/docs/cerb-ui/** @esir-nus
-/docs/specs/** @esir-nus
-/docs/plans/tracker.md @esir-nus
-/docs/reference/platform-targets.md @esir-nus
-/docs/reference/harmonyos-platform-guide.md @esir-nus
-/docs/platforms/** @esir-nus
+# Android app (cerb-compliant — code+docs stay aligned)
+/app/ @esir-nus
+/app-core/ @esir-nus
+/core/ @esir-nus
+/data/ @esir-nus
+/domain/ @esir-nus
 
-# Current Android lineage
-/app/** @esir-nus
-/app-core/** @esir-nus
-/core/** @esir-nus
-/data/** @esir-nus
-/domain/** @esir-nus
+# Cerb documentation (Android source of truth)
+/docs/cerb/ @esir-nus
+/docs/cerb-ui/ @esir-nus
+/docs/core-flow/ @esir-nus
 
-# Future Harmony-native root
-/platforms/harmony/** @esir-nus
+# Harmony platform (backend-centric, references Android docs)
+/platforms/harmony/ @esir-nus
 
-# Repo guardrails
-/.github/CODEOWNERS @esir-nus
-/.github/workflows/** @esir-nus
+# Governance
+/.github/ @esir-nus

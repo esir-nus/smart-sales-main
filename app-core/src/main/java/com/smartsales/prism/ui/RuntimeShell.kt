@@ -14,9 +14,13 @@ import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.smartsales.prism.AppFlavor
+import com.smartsales.prism.data.connectivity.registry.RegisteredDevice
 import com.smartsales.prism.domain.audio.BadgeAudioPipeline
 import com.smartsales.prism.ui.components.DynamicIslandItem
+import com.smartsales.prism.ui.components.DynamicIslandLane
 import com.smartsales.prism.ui.components.DynamicIslandTapAction
+import com.smartsales.prism.ui.components.DynamicIslandVisualState
 import com.smartsales.prism.ui.components.toDayOffset
 import com.smartsales.prism.ui.components.connectivity.ConnectivityViewModel
 import com.smartsales.prism.ui.drawers.AudioStatus
@@ -36,11 +40,11 @@ import com.smartsales.prism.ui.sim.dismissRuntimeSchedulerIslandHint
 import com.smartsales.prism.ui.sim.deriveRuntimeFollowUpSurface
 import com.smartsales.prism.ui.sim.handleBadgeSchedulerContinuityIngress
 import com.smartsales.prism.ui.sim.handleRuntimeConnectivityEntryRequest
-import com.smartsales.prism.ui.sim.handleRuntimeConnectivityOnboardingReplayRequest
 import com.smartsales.prism.ui.sim.initialRuntimeShellState
 import com.smartsales.prism.ui.sim.openRuntimeAudioDrawer
 import com.smartsales.prism.ui.sim.openRuntimeScheduler
 import com.smartsales.prism.ui.sim.rememberSimImeVisibility
+import com.smartsales.prism.ui.sim.scheduleAutoReconnect
 import com.smartsales.prism.ui.sim.shouldAutoOpenRuntimeSchedulerPostOnboardingHandoff
 import com.smartsales.prism.ui.sim.shouldAutoOpenRuntimeSchedulerStartupTeaser
 import com.smartsales.prism.ui.sim.shouldShowRuntimeIdleComposerHint
@@ -60,6 +64,7 @@ internal fun RuntimeShell(
     shouldAutoOpenSchedulerAfterOnboarding: Boolean = false,
     onPostOnboardingSchedulerAutoOpened: () -> Unit = {}
 ) {
+    val schedulerEnabled = AppFlavor.schedulerEnabled
     val chatViewModel: SimAgentViewModel = hiltViewModel()
     val schedulerViewModel: SimSchedulerViewModel = viewModel()
     val followUpOwner: SimBadgeFollowUpOwner = viewModel()
@@ -79,29 +84,58 @@ internal fun RuntimeShell(
     val activeFollowUp by followUpOwner.activeFollowUp.collectAsStateWithLifecycle()
     val currentSessionId by chatViewModel.currentSessionId.collectAsStateWithLifecycle()
     val sessionTitle by chatViewModel.sessionTitle.collectAsStateWithLifecycle()
-    val topUrgentTasks by schedulerViewModel.topUrgentTasks.collectAsStateWithLifecycle()
-    val activeReminderBanner by schedulerViewModel.activeReminderBanner.collectAsStateWithLifecycle()
-    val currentSchedulerFollowUpContext by chatViewModel.currentSchedulerFollowUpContext.collectAsStateWithLifecycle()
-    val selectedSchedulerFollowUpTaskId by chatViewModel.selectedSchedulerFollowUpTaskId.collectAsStateWithLifecycle()
+    val currentSessionHasAudioContextHistory by
+        chatViewModel.currentSessionHasAudioContextHistory.collectAsStateWithLifecycle()
+    val activeDevice by connectivityViewModel.activeDevice.collectAsStateWithLifecycle()
+    val rawTopUrgentTasks by schedulerViewModel.topUrgentTasks.collectAsStateWithLifecycle()
+    val rawActiveReminderBanner by schedulerViewModel.activeReminderBanner.collectAsStateWithLifecycle()
+    val rawCurrentSchedulerFollowUpContext by chatViewModel.currentSchedulerFollowUpContext.collectAsStateWithLifecycle()
+    val rawSelectedSchedulerFollowUpTaskId by chatViewModel.selectedSchedulerFollowUpTaskId.collectAsStateWithLifecycle()
     val groupedSessions by chatViewModel.groupedSessions.collectAsStateWithLifecycle()
     val currentChatAudioId by chatViewModel.currentLinkedAudioId.collectAsStateWithLifecycle()
     val transcriptRevealState by chatViewModel.artifactTranscriptRevealState.collectAsStateWithLifecycle()
     val voiceDraftState by chatViewModel.voiceDraftState.collectAsStateWithLifecycle()
     val audioEntries by audioViewModel.entries.collectAsStateWithLifecycle()
+    val topUrgentTasks = if (schedulerEnabled) rawTopUrgentTasks else emptyList()
+    val activeReminderBanner = if (schedulerEnabled) rawActiveReminderBanner else null
+    val currentSchedulerFollowUpContext = if (schedulerEnabled) {
+        rawCurrentSchedulerFollowUpContext
+    } else {
+        null
+    }
+    val selectedSchedulerFollowUpTaskId = if (schedulerEnabled) {
+        rawSelectedSchedulerFollowUpTaskId
+    } else {
+        null
+    }
     val trackedPendingAudioIds = remember { mutableStateMapOf<String, String>() }
     val isImeVisible = rememberSimImeVisibility()
     var startupSchedulerTeaserPending by remember {
-        mutableStateOf(shouldShowFirstLaunchSchedulerTeaser)
+        mutableStateOf(schedulerEnabled && shouldShowFirstLaunchSchedulerTeaser)
     }
     var postOnboardingSchedulerAutoOpenPending by remember {
-        mutableStateOf(shouldAutoOpenSchedulerAfterOnboarding)
+        mutableStateOf(schedulerEnabled && shouldAutoOpenSchedulerAfterOnboarding)
     }
-    val schedulerIslandItems = remember(sessionTitle, topUrgentTasks, shellState.showSchedulerIslandHint) {
-        buildSimDynamicIslandItems(
-            sessionTitle = sessionTitle,
-            orderedTasks = topUrgentTasks,
-            showIdleTeachingHint = shellState.showSchedulerIslandHint
-        )
+    val schedulerIslandItems = remember(
+        schedulerEnabled,
+        sessionTitle,
+        currentSessionHasAudioContextHistory,
+        topUrgentTasks,
+        shellState.showSchedulerIslandHint
+    ) {
+        if (schedulerEnabled) {
+            buildSimDynamicIslandItems(
+                sessionTitle = sessionTitle,
+                sessionHasAudioContextHistory = currentSessionHasAudioContextHistory,
+                orderedTasks = topUrgentTasks,
+                showIdleTeachingHint = shellState.showSchedulerIslandHint
+            )
+        } else {
+            buildHarmonyCompatDynamicIslandItems(
+                sessionTitle = sessionTitle,
+                sessionHasAudioContextHistory = currentSessionHasAudioContextHistory
+            )
+        }
     }
     val schedulerIslandItemsFlow = remember {
         MutableStateFlow(emptyList<DynamicIslandItem>())
@@ -109,13 +143,17 @@ internal fun RuntimeShell(
     val islandTakeoverSuppressedFlow = remember {
         MutableStateFlow(false)
     }
+    val activeDeviceNameFlow = remember {
+        MutableStateFlow<String?>(null)
+    }
     val dynamicIslandCoordinator = remember(coroutineScope, connectivityViewModel) {
         SimShellDynamicIslandCoordinator(
             parentScope = coroutineScope,
             schedulerItems = schedulerIslandItemsFlow,
             connectivityState = connectivityViewModel.connectionState,
             batteryLevel = connectivityViewModel.batteryLevel,
-            takeoverSuppressed = islandTakeoverSuppressedFlow
+            takeoverSuppressed = islandTakeoverSuppressedFlow,
+            activeDeviceName = activeDeviceNameFlow
         )
     }
     DisposableEffect(dynamicIslandCoordinator) {
@@ -134,10 +172,23 @@ internal fun RuntimeShell(
         schedulerIslandItemsFlow.value = schedulerIslandItems
     }
 
+    LaunchedEffect(activeDevice) {
+        activeDeviceNameFlow.value = activeDevice?.displayName
+    }
+
     LaunchedEffect(shellState.activeDrawer, shellState.activeConnectivitySurface) {
         islandTakeoverSuppressedFlow.value =
             shellState.activeDrawer == com.smartsales.prism.ui.sim.RuntimeDrawerType.SCHEDULER ||
                 shellState.activeConnectivitySurface != null
+    }
+
+    // 自动重连：当 shell 启动或连接状态回到 DISCONNECTED 时，调度退避重连
+    LaunchedEffect(connectivityViewModel) {
+        connectivityViewModel.connectionState.collect { state ->
+            if (state == com.smartsales.prism.ui.components.connectivity.ConnectionState.DISCONNECTED) {
+                connectivityViewModel.scheduleAutoReconnect()
+            }
+        }
     }
 
 
@@ -186,6 +237,7 @@ internal fun RuntimeShell(
     }
 
     LaunchedEffect(badgeAudioPipeline) {
+        if (!schedulerEnabled) return@LaunchedEffect
         badgeAudioPipeline.events.collectLatest { event ->
             handleBadgeSchedulerContinuityIngress(
                 event = event,
@@ -208,6 +260,7 @@ internal fun RuntimeShell(
     }
 
     LaunchedEffect(debugFollowUpScenario) {
+        if (!schedulerEnabled) return@LaunchedEffect
         val scenario = debugFollowUpScenario ?: return@LaunchedEffect
         handleBadgeSchedulerContinuityIngress(
             event = buildSimDebugFollowUpEvent(scenario),
@@ -229,13 +282,13 @@ internal fun RuntimeShell(
     }
 
     LaunchedEffect(shouldShowFirstLaunchSchedulerTeaser) {
-        if (shouldShowFirstLaunchSchedulerTeaser) {
+        if (schedulerEnabled && shouldShowFirstLaunchSchedulerTeaser) {
             startupSchedulerTeaserPending = true
         }
     }
 
     LaunchedEffect(shouldAutoOpenSchedulerAfterOnboarding) {
-        if (shouldAutoOpenSchedulerAfterOnboarding) {
+        if (schedulerEnabled && shouldAutoOpenSchedulerAfterOnboarding) {
             postOnboardingSchedulerAutoOpenPending = true
         }
     }
@@ -258,6 +311,14 @@ internal fun RuntimeShell(
     }
 
     fun openScheduler(action: DynamicIslandTapAction = DynamicIslandTapAction.OpenSchedulerDrawer()) {
+        if (!schedulerEnabled) {
+            shellState = handleRuntimeConnectivityEntryRequest(
+                state = shellState,
+                connectionState = connectivityState,
+                source = "harmony_scheduler_blocked"
+            )
+            return
+        }
         when (action) {
             is DynamicIslandTapAction.OpenSchedulerDrawer -> {
                 action.target
@@ -288,21 +349,15 @@ internal fun RuntimeShell(
         shellState = openRuntimeAudioDrawer(shellState, mode)
     }
 
-    fun replayOnboarding() {
-        pairingViewModel.cancelPairing()
-        shellState = handleRuntimeConnectivityOnboardingReplayRequest(
-            state = shellState,
-            source = "audio_drawer_replay"
-        )
-    }
-
     LaunchedEffect(
+        schedulerEnabled,
         postOnboardingSchedulerAutoOpenPending,
         startupSchedulerTeaserPending,
         shellState,
         isImeVisible
     ) {
         when {
+            !schedulerEnabled -> Unit
             shouldAutoOpenRuntimeSchedulerPostOnboardingHandoff(
                 state = shellState,
                 isImeVisible = isImeVisible,
@@ -345,13 +400,14 @@ internal fun RuntimeShell(
         selectedSchedulerFollowUpTaskId = selectedSchedulerFollowUpTaskId,
         voiceDraftState = voiceDraftState,
         dynamicIslandState = dynamicIslandPresentation.uiState,
+        schedulerEnabled = schedulerEnabled,
         isImeVisible = isImeVisible,
         showRuntimeIdleComposerHint = shouldShowRuntimeIdleComposerHint(shellState, isImeVisible),
+        currentSessionHasAudioContextHistory = currentSessionHasAudioContextHistory,
         trackedPendingAudioIds = trackedPendingAudioIds,
         coroutineScope = coroutineScope,
         onImportTestAudio = { importTestAudioLauncher.launch("audio/*") },
         onForcedFirstLaunchOnboardingCompleted = onForcedSetupCompleted,
-        onReplayOnboarding = ::replayOnboarding,
         dismissReminderBanner = schedulerViewModel::dismissActiveReminderBanner,
         clearFollowUp = followUpOwner::clear,
         closeOverlays = ::closeOverlays,
@@ -360,5 +416,22 @@ internal fun RuntimeShell(
         mutateShellState = { transform ->
             shellState = transform(shellState)
         }
+    )
+}
+
+private fun buildHarmonyCompatDynamicIslandItems(
+    sessionTitle: String,
+    sessionHasAudioContextHistory: Boolean
+): List<DynamicIslandItem> {
+    val normalizedTitle = sessionTitle.ifBlank { "智能销售" }
+    return listOf(
+        DynamicIslandItem(
+            sessionTitle = normalizedTitle,
+            displayText = normalizedTitle,
+            lane = DynamicIslandLane.CONNECTIVITY,
+            visualState = DynamicIslandVisualState.SESSION_TITLE_HIGHLIGHT,
+            showsAudioIndicator = sessionHasAudioContextHistory,
+            tapAction = DynamicIslandTapAction.OpenConnectivityEntry
+        )
     )
 }

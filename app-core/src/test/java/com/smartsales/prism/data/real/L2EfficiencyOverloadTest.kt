@@ -101,7 +101,6 @@ class L2EfficiencyOverloadTest {
             inputParserService = fakeInputParserService,
             schedulerLinter = SchedulerLinter(),
             entityWriter = entityWriter,
-            sessionTitleGenerator = FakeSessionTitleGenerator(),
             promptCompiler = FakePromptCompiler(),
             executor = fakeExecutor,
             telemetry = FakePipelineTelemetry(),

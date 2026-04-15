@@ -12,6 +12,7 @@ graph TD
     UI[Onboarding UI] -->|Observe| PS[PairingService]
     PS -->|Wrap| LM[Legacy Manager]
     PS -->|Wrap| BS[BleScanner]
+    PS -->|Register| RM[DeviceRegistryManager]
     
     subgraph Legacy Layer
     LM[DeviceConnectionManager]
@@ -26,7 +27,7 @@ graph TD
 
 | Wave | Focus | Status | Deliverables |
 |------|-------|--------|--------------|
-| **1** | Core Service | ✅ SHIPPED | `RealPairingService` implementation wrapping legacy components. Support Scan -> Pair -> Success happy path. |
+| **1** | Core Service | ✅ SHIPPED | `RealPairingService` implementation wrapping legacy components. Support Scan -> Pair -> Success happy path. Post-pairing device registration via `DeviceRegistryManager.registerDevice()` (first device becomes default). |
 | **1.5** | Wiring | Shipped | `PairingFlowViewModel` now owns the shared pairing seam used by the host-driven onboarding coordinator. |
 | **2** | Robustness | 🔲 PLANNED | implementations for timeouts, retries, and error mapping from legacy 9-states. |
 | **3** | Polish | 🔲 PLANNED | UX refinements, progress granularity, cancellation handling. |
@@ -56,6 +57,7 @@ BLE scanning requires runtime permissions on Android 12+. Permissions are reques
 - `BleScanner` (Legacy)
 - `DeviceConnectionManager` (Legacy)
 - `WifiProvisioner` (Legacy) or direct via Manager
+- `DeviceRegistryManager` (post-pairing registration)
 - `CoroutineScope` (Process-scoped)
 
 **State Mapping Strategy (Legacy → Prism)**

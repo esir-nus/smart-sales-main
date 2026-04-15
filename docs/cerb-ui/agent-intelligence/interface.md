@@ -45,6 +45,7 @@ The UI component emits these events back to the RAM layer (`AgentViewModel`):
 |-------|---------|-----------------|
 | `onConfirmPlan` | User taps the "确认执行" CTA on a `MarkdownStrategyBubble`. | Triggers `intentOrchestrator.processInput("确认执行")` |
 | `onAmendPlan` | User taps "修改计划" CTA on a `MarkdownStrategyBubble`. | Surfaces a Toast prompting the user to type their amendments. |
+| `onSuggestionClick` | User taps a suggestion action card when conversation is idle. | Calls `viewModel.updateInput(suggestionTitle)` then `viewModel.send()`, sending the suggestion as a user message. |
 
 ## 5. You Should NOT
 - **Do not** bind these UI components directly to the network or the SSD (Database). They strictly read the emitted `UiState`.

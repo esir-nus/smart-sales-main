@@ -13,7 +13,6 @@ interface ActiveTaskRetrievalIndex {
      */
     suspend fun buildShortlist(
         transcript: String,
-        preferredTaskIds: Set<String> = emptySet(),
         limit: Int = 8
     ): List<ActiveTaskContext>
 

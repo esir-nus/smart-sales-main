@@ -28,9 +28,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.LinkOff
 import androidx.compose.material.icons.filled.North
 import androidx.compose.material.icons.filled.Sync
-import androidx.compose.material.icons.filled.ViewCarousel
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -56,6 +57,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.smartsales.prism.ui.components.connectivity.ConnectionState
+import java.time.Instant
 import kotlin.math.abs
 
 private const val SIM_AUDIO_BROWSE_GRIP_VISUAL_TRANSLATION_FACTOR = 0.35f
@@ -71,6 +73,7 @@ internal fun SimAudioDrawerContent(
     connectionState: ConnectionState,
     isSyncing: Boolean,
     syncFeedback: SimAudioSyncFeedback?,
+    lastSyncTimestamp: Instant?,
     onSyncFromBadge: () -> Unit,
     onOpenConnectivity: () -> Unit,
     onArtifactOpened: (String, String) -> Unit,
@@ -78,11 +81,9 @@ internal fun SimAudioDrawerContent(
     onDeleteAudio: (String) -> Unit,
     onSelectForChat: (SimChatAudioSelection) -> Unit,
     onImportTestAudio: () -> Unit,
-    onReplayOnboarding: () -> Unit,
     onBrowsePullOffsetChanged: (Float) -> Unit,
     onBrowsePullSettled: () -> Unit,
-    showTestImportAction: Boolean,
-    showDebugScenarioActions: Boolean
+    showTestImportAction: Boolean
 ) {
     val syncVisualState = resolveSimAudioSyncVisualState(
         connectionState = connectionState,
@@ -96,13 +97,12 @@ internal fun SimAudioDrawerContent(
             entryCount = entries.size,
             connectionState = connectionState,
             syncVisualState = syncVisualState,
+            lastSyncTimestamp = lastSyncTimestamp,
             onDismiss = onDismiss,
             onSyncFromBadge = onSyncFromBadge,
             onOpenConnectivity = onOpenConnectivity,
-            onReplayOnboarding = onReplayOnboarding,
             onBrowsePullOffsetChanged = onBrowsePullOffsetChanged,
-            onBrowsePullSettled = onBrowsePullSettled,
-            showDebugScenarioActions = showDebugScenarioActions
+            onBrowsePullSettled = onBrowsePullSettled
         )
     } else {
         SimDrawerHandle(
@@ -202,13 +202,12 @@ private fun SimAudioBrowseHeader(
     entryCount: Int,
     connectionState: ConnectionState,
     syncVisualState: SimAudioSyncVisualState,
+    lastSyncTimestamp: Instant?,
     onDismiss: () -> Unit,
     onSyncFromBadge: () -> Unit,
     onOpenConnectivity: () -> Unit,
-    onReplayOnboarding: () -> Unit,
     onBrowsePullOffsetChanged: (Float) -> Unit,
-    onBrowsePullSettled: () -> Unit,
-    showDebugScenarioActions: Boolean
+    onBrowsePullSettled: () -> Unit
 ) {
     SimAudioBrowseGrip(
         syncVisualState = syncVisualState,
@@ -256,22 +255,10 @@ private fun SimAudioBrowseHeader(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            if (showDebugScenarioActions) {
-                SimDrawerHeaderIconAction(
-                    onClick = onReplayOnboarding,
-                    icon = {
-                        Icon(
-                            imageVector = Icons.Filled.ViewCarousel,
-                            contentDescription = null,
-                            tint = SimDrawerTextMuted,
-                            modifier = Modifier.size(15.dp)
-                        )
-                    }
-                )
-            }
             SimAudioSmartCapsule(
                 visualState = syncVisualState,
                 connectionState = connectionState,
+                lastSyncTimestamp = lastSyncTimestamp,
                 onSyncFromBadge = onSyncFromBadge,
                 onOpenConnectivity = onOpenConnectivity
             )
@@ -454,147 +441,112 @@ internal fun SimAudioBrowseGrip(
 private fun SimAudioSmartCapsule(
     visualState: SimAudioSyncVisualState,
     connectionState: ConnectionState,
+    lastSyncTimestamp: Instant?,
     onSyncFromBadge: () -> Unit,
     onOpenConnectivity: () -> Unit
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val isPressed by interactionSource.collectIsPressedAsState()
-    val label = resolveSimAudioSyncLabel(visualState, connectionState)
-    val actionEnabled = canTriggerSimAudioSync(visualState)
-    val backgroundColor = when (visualState) {
-        SimAudioSyncVisualState.READY -> Color.White.copy(alpha = 0.05f)
-        SimAudioSyncVisualState.SYNCING -> SimDrawerAccent.copy(alpha = 0.12f)
-        SimAudioSyncVisualState.SYNCED -> SimDrawerAccentSuccess.copy(alpha = 0.12f)
-        SimAudioSyncVisualState.RECONNECTING -> Color(0x26FF9F0A)
-        SimAudioSyncVisualState.ERROR -> SimDrawerDeleteBackground.copy(alpha = 0.12f)
-        SimAudioSyncVisualState.BLOCKED -> Color.White.copy(alpha = 0.03f)
-    }
-    val borderColor = when (visualState) {
-        SimAudioSyncVisualState.READY -> SimDrawerDividerStrong
-        SimAudioSyncVisualState.SYNCING -> SimDrawerAccent.copy(alpha = 0.45f)
-        SimAudioSyncVisualState.SYNCED -> SimDrawerAccentSuccess.copy(alpha = 0.45f)
-        SimAudioSyncVisualState.RECONNECTING -> Color(0x66FF9F0A)
-        SimAudioSyncVisualState.ERROR -> SimDrawerDeleteBackground.copy(alpha = 0.45f)
-        SimAudioSyncVisualState.BLOCKED -> SimDrawerDivider
-    }
-    val contentTint = when (visualState) {
-        SimAudioSyncVisualState.SYNCING -> SimDrawerAccent
-        SimAudioSyncVisualState.SYNCED -> SimDrawerAccentSuccess
-        SimAudioSyncVisualState.ERROR -> SimDrawerDeleteBackground
-        SimAudioSyncVisualState.BLOCKED -> SimDrawerBlockedText
-        else -> SimDrawerTextPrimary
-    }
+    val isConnected = connectionState == ConnectionState.CONNECTED
+    val syncRelativeLabel = resolveSimAudioSyncRelativeLabel(visualState, lastSyncTimestamp)
+    val syncActionEnabled = canTriggerSimAudioSync(visualState)
 
     Surface(
-        color = backgroundColor,
+        color = Color.White.copy(alpha = 0.04f),
         shape = RoundedCornerShape(999.dp),
-        modifier = Modifier
-            .graphicsLayer {
-                scaleX = if (isPressed) 0.96f else 1f
-                scaleY = if (isPressed) 0.96f else 1f
-            }
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = {
-                    if (actionEnabled) onSyncFromBadge() else onOpenConnectivity()
-                }
-            ),
-        border = androidx.compose.foundation.BorderStroke(1.dp, borderColor)
+        border = androidx.compose.foundation.BorderStroke(1.dp, SimDrawerDividerStrong)
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            AnimatedContent(targetState = visualState, label = "sim_audio_capsule_state") { targetState ->
-                when (targetState) {
-                    SimAudioSyncVisualState.READY -> {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .background(
-                                        SimDrawerAccentSuccess,
-                                        RoundedCornerShape(999.dp)
-                                    )
-                            )
-                            Text(
-                                text = label,
-                                color = contentTint,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // 左侧：连接状态（点击打开连接管理器）
+            val connInteraction = remember { MutableInteractionSource() }
+            val connPressed by connInteraction.collectIsPressedAsState()
+            Box(
+                modifier = Modifier
+                    .graphicsLayer {
+                        scaleX = if (connPressed) 0.96f else 1f
+                        scaleY = if (connPressed) 0.96f else 1f
                     }
-                    SimAudioSyncVisualState.SYNCING,
-                    SimAudioSyncVisualState.RECONNECTING -> {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Sync,
-                                contentDescription = null,
-                                tint = contentTint,
-                                modifier = Modifier.size(13.dp)
-                            )
-                            Text(
-                                text = label,
-                                color = contentTint,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-                    SimAudioSyncVisualState.SYNCED -> {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Check,
-                                contentDescription = null,
-                                tint = contentTint,
-                                modifier = Modifier.size(13.dp)
-                            )
-                            Text(
-                                text = label,
-                                color = contentTint,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-                    SimAudioSyncVisualState.ERROR -> {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.ErrorOutline,
-                                contentDescription = null,
-                                tint = contentTint,
-                                modifier = Modifier.size(13.dp)
-                            )
-                            Text(
-                                text = label,
-                                color = contentTint,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
-                    SimAudioSyncVisualState.BLOCKED -> {
-                        Text(
-                            text = label,
-                            color = contentTint,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium
+                    .clickable(
+                        interactionSource = connInteraction,
+                        indication = null,
+                        onClick = onOpenConnectivity
+                    )
+                    .padding(start = 10.dp, end = 8.dp, top = 7.dp, bottom = 7.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    Icon(
+                        imageVector = if (isConnected) Icons.Filled.Link else Icons.Filled.LinkOff,
+                        contentDescription = null,
+                        tint = if (isConnected) SimDrawerAccentSuccess else SimDrawerBlockedText,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Text(
+                        text = "徽章管理",
+                        color = if (isConnected) SimDrawerTextPrimary else SimDrawerBlockedText,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            // 右侧：同步状态（仅在已连接时显示；点击触发手动同步）
+            if (isConnected) {
+                Box(
+                    modifier = Modifier
+                        .background(
+                            color = SimDrawerDivider,
+                            shape = RoundedCornerShape(0.dp)
                         )
+                        .size(width = 1.dp, height = 18.dp)
+                )
+
+                val syncInteraction = remember { MutableInteractionSource() }
+                val syncPressed by syncInteraction.collectIsPressedAsState()
+                Box(
+                    modifier = Modifier
+                        .graphicsLayer {
+                            scaleX = if (syncPressed) 0.96f else 1f
+                            scaleY = if (syncPressed) 0.96f else 1f
+                        }
+                        .clickable(
+                            interactionSource = syncInteraction,
+                            indication = null,
+                            onClick = { if (syncActionEnabled) onSyncFromBadge() }
+                        )
+                        .padding(start = 8.dp, end = 10.dp, top = 7.dp, bottom = 7.dp)
+                ) {
+                    AnimatedContent(
+                        targetState = visualState,
+                        label = "sim_audio_capsule_sync_state"
+                    ) { targetState ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            val syncTint = when (targetState) {
+                                SimAudioSyncVisualState.SYNCING -> SimDrawerAccent
+                                SimAudioSyncVisualState.SYNCED -> SimDrawerAccentSuccess
+                                SimAudioSyncVisualState.ERROR -> SimDrawerDeleteBackground
+                                else -> SimDrawerTextSecondary
+                            }
+                            Icon(
+                                imageVector = when (targetState) {
+                                    SimAudioSyncVisualState.SYNCED -> Icons.Filled.Check
+                                    SimAudioSyncVisualState.ERROR -> Icons.Filled.ErrorOutline
+                                    else -> Icons.Filled.Sync
+                                },
+                                contentDescription = null,
+                                tint = syncTint,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Text(
+                                text = syncRelativeLabel,
+                                color = syncTint,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                     }
                 }
             }

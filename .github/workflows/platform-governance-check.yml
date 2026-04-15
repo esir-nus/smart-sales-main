@@ -5,7 +5,12 @@ on:
     paths:
       - '.github/CODEOWNERS'
       - '.github/workflows/platform-governance-check.yml'
+      - '.agent/**'
+      - '.claude/**'
+      - '.githooks/**'
+      - 'CLAUDE.md'
       - 'docs/**'
+      - 'scripts/**'
       - 'app/**'
       - 'app-core/**'
       - 'core/**'
@@ -16,7 +21,12 @@ on:
     paths:
       - '.github/CODEOWNERS'
       - '.github/workflows/platform-governance-check.yml'
+      - '.agent/**'
+      - '.claude/**'
+      - '.githooks/**'
+      - 'CLAUDE.md'
       - 'docs/**'
+      - 'scripts/**'
       - 'app/**'
       - 'app-core/**'
       - 'core/**'
@@ -68,7 +78,7 @@ jobs:
 
       - name: Block native Harmony imports inside the current Android tree
         run: |
-          if grep -R -n -E '(^|[^A-Za-z0-9_])ohos\\.' app app-core core data domain \
+          if grep -R -n -E '(^|[^A-Za-z0-9_])ohos\.' app app-core core data domain \
             --exclude-dir=build \
             --exclude='*.md'; then
             echo "Native Harmony imports were found inside the current Android lineage."

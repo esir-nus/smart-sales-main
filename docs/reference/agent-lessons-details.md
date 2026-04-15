@@ -24,6 +24,146 @@ When adding a new lesson (after USER confirms "problem fixed"):
 
 ## Lessons
 
+### Harmony Build Proof Is Not Device Proof — 2026-04-11
+
+**Symptom**: A Harmony lane reaches `assembleHap` success, but on-device scheduler/backend verification is still blocked or misleading because signing, deployment, or launch does not line up with the same app identity.
+**Root Cause**: Compile/build proof, signing/profile readiness, `hdc` deployment, bundle identity, and runtime evidence were treated as separate chores instead of one lane contract. The backend mini-lab `smartsales.HOS.test` path only became reliable when the generated config path, signing lane, deploy target, and launch target all agreed.
+**Wrong Approach**:
+1. Treating unsigned Harmony build output as if it proved install or device readiness
+2. Mixing the backend mini-lab lane with the still-blocked `smartsales.HOS.ui` package assumptions
+3. Treating `hvigorfile.ts` config generation, AGC signing, `hdc install`, and `hilog` inspection as disconnected steps
+**Correct Fix**:
+1. Keep `hvigorfile.ts` as the build-owned generator for the Harmony local config artifact sourced from repo-root `local.properties`
+2. Keep bundle identity, signing lane, and `hdc` target aligned to the same Harmony app lane
+3. Require the full chain: compile, signed deploy, launch, and runtime log proof before calling the lane device-ready
+4. Record the proof in the Harmony signing/operator docs so future agents do not repeat the same partial-proof mistake
+**File(s)**:
+- `docs/platforms/harmony/test-signing-ledger.md`
+- `platforms/harmony/tingwu-container/hvigorfile.ts`
+- `docs/plans/harmony-tracker.md`
+**Pattern**: Harmony progress is only real when build proof, signing proof, deploy proof, and runtime proof all belong to the same app identity and the same lane.
+
+---
+
+### Android Assumption Leakage into Harmony — 2026-04-11
+
+**Symptom**: A Harmony migration task copies Android behavior, lifecycle, permissions, packaging, or background expectations straight into Harmony planning without proving the platform can support them the same way.
+**Root Cause**: The task was treated as ordinary porting instead of platform translation with explicit evidence. Android was used as a convenient template rather than as input truth that still needs Harmony validation.
+**Wrong Approach**:
+1. Reusing Android-native assumptions as if they were Harmony facts
+2. Treating the Android implementation as permission to claim Harmony parity
+3. Skipping the Harmony overlay and governance docs because the feature "should work the same"
+**Correct Fix**:
+1. Start with shared product truth plus the relevant Harmony overlay
+2. Separate behavior truth from platform delivery mechanics
+3. Require Harmony-native evidence before promising parity for notifications, reminders, lifecycle, background work, scheduler ingress, or onboarding completion
+**File(s)**:
+- `AGENTS.md`
+- `.codex/skills/harmony-translation-guardrail/SKILL.md`
+- `docs/platforms/harmony/**`
+**Pattern**: Harmony translation starts from shared truth, but every platform-owned claim still needs Harmony evidence.
+
+---
+
+### Lane Contamination Across Android and Harmony — 2026-04-11
+
+**Symptom**: One task or branch mixes Harmony-native artifacts, Android-mainline edits, and shared-truth changes without clearly separating ownership.
+**Root Cause**: The work treated "migration" as one blended lane, which makes contamination and accidental contract drift likely.
+**Wrong Approach**:
+1. Editing Android and Harmony implementation roots together by default
+2. Hiding governance or shared-truth changes inside a platform pass
+3. Letting Harmony-native files appear inside Android-owned trees
+**Correct Fix**:
+1. Split work into shared, Android, Harmony, or governance write scopes
+2. Keep Harmony-native artifacts in Harmony-owned roots only
+3. Record shared contract changes separately from platform adaptation changes
+**File(s)**:
+- `AGENTS.md`
+- `.codex/skills/harmony-translation-guardrail/SKILL.md`
+- `docs/specs/platform-governance.md`
+**Pattern**: Parallel lanes only stay safe when write scope and ownership are explicit.
+
+---
+
+### Fake Parity Without Harmony Evidence — 2026-04-11
+
+**Symptom**: Docs or implementation claim Harmony supports a feature family because Android supports it, but no Harmony-native evidence exists for the actual operator path.
+**Root Cause**: Parity was inferred from product intent instead of demonstrated by platform-owned behavior and verification.
+**Wrong Approach**:
+1. Saying a feature is "the same on Harmony" without runtime proof
+2. Treating copy translation or scaffold presence as evidence of working behavior
+3. Leaving unsupported affordances visible to avoid admitting reduced capability
+**Correct Fix**:
+1. Require platform evidence before claiming parity
+2. Use curated-container framing when Harmony supports only a bounded subset
+3. Fail closed by hiding or blocking unsupported entrypoints instead of leaving dead promises
+**File(s)**:
+- `.codex/skills/harmony-translation-guardrail/SKILL.md`
+- `docs/platforms/harmony/**`
+**Pattern**: Platform parity is earned by evidence, not borrowed from Android.
+
+---
+
+### Harmony Spec Invention from Migration Notes — 2026-04-11
+
+**Symptom**: A Harmony tracker item, migration brief, or TODO note gets treated as if it already defines native behavior or interface rules.
+**Root Cause**: Navigation docs were mistaken for implementation contracts.
+**Wrong Approach**:
+1. Inventing native behavior from tracker bullets or handoff notes
+2. Treating "migrate feature X" as enough detail to choose Harmony semantics
+3. Using migration momentum to skip the shared Core Flow or spec layer
+**Correct Fix**:
+1. Use trackers as routing only
+2. Read the owning shared contract first, then the Harmony overlay
+3. If Harmony behavior truly diverges, document the divergence explicitly instead of inventing it in code
+**File(s)**:
+- `docs/plans/tracker.md`
+- `docs/platforms/harmony/**`
+- `docs/cerb/**`
+**Pattern**: Migration notes say what to visit, not what to build.
+
+---
+
+### Harmony Greenfield Scaffolding Without Contract Sync — 2026-04-11
+
+**Symptom**: A new Harmony root, container, service seam, or scaffold appears before ownership, capability limits, and contract docs are updated.
+**Root Cause**: Greenfield implementation moved faster than the docs-first contract, so future agents cannot tell what the scaffold is allowed to do.
+**Wrong Approach**:
+1. Creating Harmony scaffolding first and promising to document it later
+2. Leaving capability boundaries implicit
+3. Adding native seams without updating interface ownership or platform overlays
+**Correct Fix**:
+1. Sync the owning docs in the same session as the scaffold
+2. Record supported and unsupported capability sets for curated containers
+3. Update ownership docs when new platform seams change module boundaries
+**File(s)**:
+- `docs/platforms/harmony/**`
+- `docs/cerb/interface-map.md`
+- `docs/plans/tracker.md`
+**Pattern**: Greenfield speed without contract sync creates future migration hallucinations.
+
+---
+
+### Harmony Evidence Gap — 2026-04-11
+
+**Symptom**: A Harmony-native diagnosis is stated confidently from Android analogy, screenshots, or expectation, but no Harmony log, runtime artifact, or platform-native evidence supports it.
+**Root Cause**: Evidence standards did not move with the platform. Android intuition was used as proof.
+**Wrong Approach**:
+1. Calling root cause before collecting Harmony-native evidence
+2. Treating Android logs or prior Android failures as enough to explain Harmony behavior
+3. Accepting screenshots or user recollection as primary diagnosis evidence
+**Correct Fix**:
+1. Gather Harmony-native logs, telemetry, or runtime artifacts first
+2. Lower confidence explicitly when Harmony evidence is unavailable
+3. Add targeted logging or operator-visible traces instead of guessing
+**File(s)**:
+- `AGENTS.md`
+- `docs/platforms/harmony/**`
+- `docs/sops/**`
+**Pattern**: Platform migration changes the evidence surface; diagnostics must move with it.
+
+---
+
 ### Cold-Start Empty State Masquerading as Layout Regression — 2026-03-19
 
 **Symptom**: After fixing SIM history row actions, the on-device history drawer reopened as a white sheet with header/footer but no visible cards. It looked like the new row layout had broken the drawer.  

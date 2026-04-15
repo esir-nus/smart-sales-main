@@ -140,6 +140,11 @@ internal fun SimAudioCard(
         }
     }
 
+    val isDownloading = entry.item.status == AudioStatus.PENDING &&
+        entry.localAvailability == AudioLocalAvailability.DOWNLOADING
+    val isQueued = entry.item.status == AudioStatus.PENDING &&
+        entry.localAvailability == AudioLocalAvailability.QUEUED
+
     val cardContent: @Composable ColumnScope.() -> Unit = {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -150,7 +155,11 @@ internal fun SimAudioCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = entry.item.filename,
+                    text = when {
+                        isDownloading -> "${entry.item.filename} (传输中)"
+                        isQueued -> "${entry.item.filename} (等待中)"
+                        else -> entry.item.filename
+                    },
                     modifier = Modifier.weight(1f),
                     color = SimDrawerTextPrimary,
                     fontWeight = FontWeight.SemiBold,
@@ -179,9 +188,21 @@ internal fun SimAudioCard(
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                entry.item.timeDisplay.takeIf { it.isNotBlank() }?.let { timeDisplay ->
+                val metaText = if (
+                    (isDownloading || isQueued) && entry.downloadTotalBytes > 0
+                ) {
+                    val sizeStr = formatDownloadFileSize(entry.downloadTotalBytes)
+                    if (entry.item.timeDisplay.isNotBlank()) {
+                        "${entry.item.timeDisplay} · $sizeStr"
+                    } else {
+                        sizeStr
+                    }
+                } else {
+                    entry.item.timeDisplay
+                }
+                metaText.takeIf { it.isNotBlank() }?.let {
                     Text(
-                        text = timeDisplay,
+                        text = it,
                         color = SimDrawerTextFaint,
                         fontSize = 10.sp,
                         maxLines = 1
@@ -286,7 +307,88 @@ internal fun SimAudioCard(
             Spacer(modifier = Modifier.height(8.dp))
             when (entry.item.status) {
                 AudioStatus.PENDING -> {
-                    if (entry.localAvailability == AudioLocalAvailability.READY) {
+                    if (isDownloading) {
+                        var prevBytes by remember { mutableStateOf(0L) }
+                        var prevTimeMs by remember { mutableStateOf(System.currentTimeMillis()) }
+                        var speed by remember { mutableStateOf(0L) }
+                        LaunchedEffect(entry.downloadedBytes) {
+                            val now = System.currentTimeMillis()
+                            val elapsed = now - prevTimeMs
+                            val byteDiff = entry.downloadedBytes - prevBytes
+                            if (elapsed > 100L && byteDiff > 0) {
+                                speed = byteDiff * 1000L / elapsed
+                            }
+                            prevBytes = entry.downloadedBytes
+                            prevTimeMs = now
+                        }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "从工牌下载中...",
+                                color = SimDrawerAccentSuccess,
+                                fontSize = 13.sp,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (speed > 0) {
+                                Text(
+                                    text = formatDownloadSpeed(speed),
+                                    color = SimDrawerTextSecondary,
+                                    fontSize = 11.sp
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                            }
+                            if (entry.downloadProgress >= 0f) {
+                                Text(
+                                    text = "${(entry.downloadProgress * 100).toInt()}%",
+                                    color = SimDrawerAccentSuccess,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            } else {
+                                Text(
+                                    text = formatDownloadFileSize(entry.downloadedBytes),
+                                    color = SimDrawerAccentSuccess,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        if (entry.downloadProgress >= 0f) {
+                            LinearProgressIndicator(
+                                progress = { entry.downloadProgress.coerceIn(0f, 1f) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(3.dp),
+                                color = SimDrawerAccentSuccess,
+                                trackColor = SimDrawerDivider
+                            )
+                        } else {
+                            LinearProgressIndicator(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(3.dp),
+                                color = SimDrawerAccentSuccess,
+                                trackColor = SimDrawerDivider
+                            )
+                        }
+                    } else if (isQueued) {
+                        SimAudioCompactPreviewRow(
+                            text = "等待传输...",
+                            maxLines = 1
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        LinearProgressIndicator(
+                            progress = { 0f },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(3.dp),
+                            color = SimDrawerAccentSuccess,
+                            trackColor = SimDrawerDivider
+                        )
+                    } else if (entry.localAvailability == AudioLocalAvailability.READY) {
                         SimAudioCompactPreviewRow(
                             previewContent = {
                                 SimBrowseModeSwipePrompt(
@@ -419,20 +521,21 @@ internal fun SimAudioCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .then(if (isQueued) Modifier.alpha(0.55f) else Modifier)
                     .clip(RoundedCornerShape(18.dp))
                     .background(
-                        if (entry.item.status == AudioStatus.TRANSCRIBING) {
-                            SimDrawerCardSurfaceStrong
-                        } else {
-                            SimDrawerCardSurface
+                        when {
+                            isDownloading -> SimDrawerAccentSuccess.copy(alpha = 0.06f)
+                            entry.item.status == AudioStatus.TRANSCRIBING -> SimDrawerCardSurfaceStrong
+                            else -> SimDrawerCardSurface
                         }
                     )
                     .border(
                         width = 1.dp,
-                        color = if (entry.item.status == AudioStatus.TRANSCRIBING) {
-                            SimDrawerCardBorderStrong
-                        } else {
-                            SimDrawerCardBorder
+                        color = when {
+                            isDownloading -> SimDrawerAccentSuccess.copy(alpha = 0.4f)
+                            entry.item.status == AudioStatus.TRANSCRIBING -> SimDrawerCardBorderStrong
+                            else -> SimDrawerCardBorder
                         },
                         shape = RoundedCornerShape(18.dp)
                     )

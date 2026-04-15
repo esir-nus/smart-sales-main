@@ -13,17 +13,24 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -54,12 +61,10 @@ fun SimAudioDrawer(
     onOpenConnectivity: () -> Unit = {},
     onArtifactOpened: (String, String) -> Unit = { _, _ -> },
     onImportTestAudio: () -> Unit = {},
-    onReplayOnboarding: () -> Unit = {},
     onDeleteAudio: (String) -> Unit = {},
     mode: RuntimeAudioDrawerMode = RuntimeAudioDrawerMode.BROWSE,
     currentChatAudioId: String? = null,
     showTestImportAction: Boolean = false,
-    showDebugScenarioActions: Boolean = false,
     modifier: Modifier = Modifier,
     viewModel: SimAudioDrawerViewModel
 ) {
@@ -67,6 +72,7 @@ fun SimAudioDrawer(
     val expandedAudioIds = viewModel.expandedAudioIds.collectAsStateWithLifecycle()
     val isSyncing = viewModel.isSyncing.collectAsStateWithLifecycle()
     val syncFeedback = viewModel.syncFeedback.collectAsStateWithLifecycle()
+    val lastSyncTimestamp = viewModel.lastSyncTimestamp.collectAsStateWithLifecycle()
     val pendingBadgeDeleteConfirmation =
         viewModel.pendingBadgeDeleteConfirmation.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -83,7 +89,6 @@ fun SimAudioDrawer(
     LaunchedEffect(isOpen) {
         if (!isOpen) {
             viewModel.resetExpandedCards()
-            viewModel.resetDeleteConfirmationSession()
         }
     }
 
@@ -147,6 +152,7 @@ fun SimAudioDrawer(
                         connectionState = connectionState,
                         isSyncing = isSyncing.value,
                         syncFeedback = syncFeedback.value,
+                        lastSyncTimestamp = lastSyncTimestamp.value,
                         onSyncFromBadge = onSyncFromBadge,
                         onOpenConnectivity = onOpenConnectivity,
                         onArtifactOpened = onArtifactOpened,
@@ -154,7 +160,6 @@ fun SimAudioDrawer(
                         onDeleteAudio = onDeleteAudio,
                         onSelectForChat = onSelectForChat,
                         onImportTestAudio = onImportTestAudio,
-                        onReplayOnboarding = onReplayOnboarding,
                         onBrowsePullOffsetChanged = { pullOffset ->
                             coroutineScope.launch {
                                 browsePullOffsetPx.snapTo(pullOffset)
@@ -171,8 +176,7 @@ fun SimAudioDrawer(
                                 )
                             }
                         },
-                        showTestImportAction = showTestImportAction,
-                        showDebugScenarioActions = showDebugScenarioActions
+                        showTestImportAction = showTestImportAction
                     )
                 }
             }
@@ -180,19 +184,33 @@ fun SimAudioDrawer(
     }
 
     pendingBadgeDeleteConfirmation.value?.let { pendingDelete ->
+        var optOutChecked by remember { mutableStateOf(false) }
         AlertDialog(
             modifier = Modifier.testTag(SIM_AUDIO_BADGE_DELETE_DIALOG_TEST_TAG),
             onDismissRequest = viewModel::dismissBadgeDeleteConfirmation,
             title = { Text("删除徽章录音") },
             text = {
-                Text(
-                    "“${pendingDelete.filename}”会从当前抽屉中删除，并同步删除徽章上的原始录音。删除后，同步不会再把它带回当前列表。"
-                )
+                Column {
+                    Text(
+                        "“${pendingDelete.filename}”会从当前抽屉中删除，并同步删除徽章上的原始录音。删除后，同步不会再把它带回当前列表。"
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.clickable { optOutChecked = !optOutChecked }
+                    ) {
+                        Checkbox(
+                            checked = optOutChecked,
+                            onCheckedChange = { optOutChecked = it }
+                        )
+                        Text("不再提示")
+                    }
+                }
             },
             confirmButton = {
                 TextButton(
                     modifier = Modifier.testTag(SIM_AUDIO_BADGE_DELETE_CONFIRM_TEST_TAG),
-                    onClick = viewModel::confirmBadgeDelete
+                    onClick = { viewModel.confirmBadgeDelete(optOutWarning = optOutChecked) }
                 ) {
                     Text("确认删除")
                 }

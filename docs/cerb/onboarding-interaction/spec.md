@@ -25,6 +25,7 @@ It does not own:
 - Tingwu long-form processing
 - live scheduler drawer/runtime behavior outside the onboarding sandbox
 - SIM shell routing after onboarding completion
+- the add-device-only pairing shortcut that skips the interaction shard entirely
 
 ## Step Contract
 
@@ -38,6 +39,12 @@ All production entry paths use the same sequence through `VOICE_HANDSHAKE_PROFIL
 Onboarding routes directly into `HARDWARE_WAKE`, keeps pairing ownership through successful `PROVISIONING`, then inserts `SCHEDULER_QUICK_START` before `COMPLETE`.
 
 Pairing-owned steps still begin at `HARDWARE_WAKE`.
+
+Host narrowing rule:
+
+- `SIM_ADD_DEVICE` is a production host that begins directly at `HARDWARE_WAKE`
+- `SIM_ADD_DEVICE` does not enter `VOICE_HANDSHAKE_CONSULTATION`, `VOICE_HANDSHAKE_PROFILE`, or `SCHEDULER_QUICK_START`
+- this shard remains authoritative only for `FULL_APP` and `SIM_CONNECTIVITY` paths plus the local pairing-step skip that still lands in quick start
 
 ### Permissions Primer Layout
 

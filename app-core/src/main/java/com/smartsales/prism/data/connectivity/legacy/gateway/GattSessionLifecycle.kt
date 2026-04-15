@@ -11,4 +11,5 @@ interface GattSessionLifecycle {
     suspend fun connect(peripheralId: String): Result<Unit>
     suspend fun disconnect()
     fun listenForBadgeNotifications(): Flow<BadgeNotification>
+    suspend fun isReachable(): Boolean
 }

@@ -1,5 +1,6 @@
 ---
 description: Calibrate visual values across platforms with controlled experiments
+last_reviewed: 2026-04-13
 ---
 
 # Platform Anchoring Workflow

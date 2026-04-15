@@ -69,6 +69,10 @@ class RealConnectivityBridge @Inject constructor(
         replay = 0,
         extraBufferCapacity = 1
     )
+    private val audioRecordingNotificationsFlow = MutableSharedFlow<RecordingNotification.AudioRecordingReady>(
+        replay = 0,
+        extraBufferCapacity = 3
+    )
 
     init {
         scope.launch(start = CoroutineStart.UNDISPATCHED) {
@@ -82,6 +86,20 @@ class RealConnectivityBridge @Inject constructor(
                 }
                 recordingNotificationsFlow.emit(
                     RecordingNotification.RecordingReady(filename.toBadgeDownloadFilename())
+                )
+            }
+        }
+        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            deviceManager.audioRecordingReadyEvents.collect { filename ->
+                if (!isTransportReadyForRecordingNotifications()) {
+                    android.util.Log.w(
+                        TAG,
+                        "🚫 Dropping audio recording notification while transport not ready: $filename"
+                    )
+                    return@collect
+                }
+                audioRecordingNotificationsFlow.emit(
+                    RecordingNotification.AudioRecordingReady(filename)
                 )
             }
         }
@@ -118,15 +136,18 @@ class RealConnectivityBridge @Inject constructor(
         )
     )
     
-    override suspend fun downloadRecording(filename: String): WavDownloadResult {
+    override suspend fun downloadRecording(
+        filename: String,
+        onProgress: ((bytesRead: Long, totalBytes: Long) -> Unit)?
+    ): WavDownloadResult {
         val baseUrl = resolveBaseUrl() ?: return WavDownloadResult.Error(
             code = WavDownloadResult.ErrorCode.NOT_CONNECTED,
             message = "无法获取设备IP — 请确认 Badge 已连接 WiFi"
         )
         android.util.Log.d(TAG, "⬇️ Downloading: $baseUrl/download?file=$filename")
         val tempFile = File.createTempFile("badge_recording_", ".wav")
-        
-        return when (val result = httpClient.downloadWav(baseUrl, filename, tempFile)) {
+
+        return when (val result = httpClient.downloadWav(baseUrl, filename, tempFile, onProgress)) {
             is Result.Success -> WavDownloadResult.Success(
                 localFile = tempFile,
                 originalFilename = filename,
@@ -154,6 +175,9 @@ class RealConnectivityBridge @Inject constructor(
     
     override fun recordingNotifications(): Flow<RecordingNotification> =
         recordingNotificationsFlow.asSharedFlow()
+
+    override fun audioRecordingNotifications(): Flow<RecordingNotification.AudioRecordingReady> =
+        audioRecordingNotificationsFlow.asSharedFlow()
     
     
     override suspend fun isReady(): Boolean {

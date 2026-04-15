@@ -1,5 +1,6 @@
 ---
 description: Audit any Cerb doc (Feature, UI, Plugin, Testing) for context boundary, OS Model, and anti-illusion compliance
+last_reviewed: 2026-04-13
 ---
 
 # Cerb Doc Check (The Context-Aware Linter)

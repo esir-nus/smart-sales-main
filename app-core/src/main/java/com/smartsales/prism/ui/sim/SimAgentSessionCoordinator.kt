@@ -42,8 +42,10 @@ internal data class SimAgentUiBridge(
     val setSessionTitle: (String) -> Unit,
     val setGroupedSessions: (Map<String, List<SessionPreview>>) -> Unit,
     val setCurrentLinkedAudioId: (String?) -> Unit,
+    val setCurrentSessionHasAudioContextHistory: (Boolean) -> Unit,
     val setCurrentSchedulerFollowUpContext: (SchedulerFollowUpContext?) -> Unit,
     val setSelectedSchedulerFollowUpTaskId: (String?) -> Unit,
+    val bumpSessionTitleInterruptToken: () -> Unit,
     val removeArtifactTranscriptReveal: (Set<String>) -> Unit
 )
 
@@ -109,6 +111,7 @@ internal class SimAgentSessionCoordinator(
         bridge.setUiState(UiState.Idle)
         bridge.setErrorMessage(null)
         bridge.setCurrentLinkedAudioId(null)
+        bridge.setCurrentSessionHasAudioContextHistory(false)
         bridge.setCurrentSchedulerFollowUpContext(null)
         bridge.setSelectedSchedulerFollowUpTaskId(null)
     }
@@ -127,6 +130,7 @@ internal class SimAgentSessionCoordinator(
         bridge.setCurrentSessionId(sessionId)
         bridge.setSessionTitle(preview.clientName)
         bridge.setCurrentLinkedAudioId(preview.linkedAudioId)
+        bridge.setCurrentSessionHasAudioContextHistory(preview.hasAudioContextHistory)
         bridge.setCurrentSchedulerFollowUpContext(null)
         bridge.setSelectedSchedulerFollowUpTaskId(null)
         refreshGroupedSessions()
@@ -162,6 +166,7 @@ internal class SimAgentSessionCoordinator(
         bridge.setUiState(UiState.Idle)
         bridge.setInputText("")
         bridge.setCurrentLinkedAudioId(record.preview.linkedAudioId)
+        bridge.setCurrentSessionHasAudioContextHistory(record.preview.hasAudioContextHistory)
         bridge.setCurrentSchedulerFollowUpContext(record.preview.schedulerFollowUpContext)
         bridge.setSelectedSchedulerFollowUpTaskId(
             defaultSelectedFollowUpTaskId(record.preview.schedulerFollowUpContext)
@@ -199,6 +204,7 @@ internal class SimAgentSessionCoordinator(
             bridge.setSessionTitle("SIM")
             bridge.setUiState(UiState.Idle)
             bridge.setCurrentLinkedAudioId(null)
+            bridge.setCurrentSessionHasAudioContextHistory(false)
             bridge.setCurrentSchedulerFollowUpContext(null)
             bridge.setSelectedSchedulerFollowUpTaskId(null)
         }
@@ -278,6 +284,7 @@ internal class SimAgentSessionCoordinator(
                     clientName = currentTitle,
                     summary = currentSummary,
                     linkedAudioId = audioId,
+                    hasAudioContextHistory = true,
                     sessionKind = SessionKind.AUDIO_GROUNDED,
                     timestamp = System.currentTimeMillis()
                 )
@@ -346,6 +353,7 @@ internal class SimAgentSessionCoordinator(
             bridge.setHistory(updated.messages)
             bridge.setSessionTitle(updated.preview.clientName)
             bridge.setCurrentLinkedAudioId(updated.preview.linkedAudioId)
+            bridge.setCurrentSessionHasAudioContextHistory(updated.preview.hasAudioContextHistory)
             bridge.setCurrentSchedulerFollowUpContext(updated.preview.schedulerFollowUpContext)
             if (updated.preview.schedulerFollowUpContext == null) {
                 bridge.setSelectedSchedulerFollowUpTaskId(null)
@@ -406,6 +414,23 @@ internal class SimAgentSessionCoordinator(
         }
         audioBindings[audioId] = sessionId
         audioRepository.bindSession(audioId, sessionId)
+    }
+
+    fun markSessionHasAudioContextHistory(sessionId: String) {
+        updateSession(sessionId) { record ->
+            if (record.preview.hasAudioContextHistory) {
+                record
+            } else if (record.preview.linkedAudioId != null) {
+                record.copy(
+                    preview = record.preview.copy(
+                        hasAudioContextHistory = true,
+                        sessionKind = SessionKind.AUDIO_GROUNDED
+                    )
+                )
+            } else {
+                record
+            }
+        }
     }
 
     private fun persistSession(sessionId: String) {

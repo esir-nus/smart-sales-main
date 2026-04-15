@@ -41,7 +41,7 @@ The current empty-state shell includes only:
 - connected-state shell chrome may add decorative ambient flank icons around the centered island without changing the side utility layout
 - right: new-session `+`
 - floor: aurora background
-- bottom: floating input capsule
+- bottom: floating input capsule (multi-line, auto-grows from 1 to 4 lines, max height 140dp)
 
 ### ChatWelcome (empty-state canvas)
 
@@ -63,7 +63,7 @@ Rule:
 When the session leaves the empty state, this shard still owns the shared shell chrome rules:
 
 - top monolith remains the shell header family
-- bottom monolith remains the composer foundation family
+- bottom monolith remains the composer foundation family (multi-line input, `singleLine = false`, `maxLines = 4`, auto-grows to max 140dp height)
 - the center canvas is the part that swaps between greeting, discussion, and system-sheet content
 - the Dynamic Island host slot stays centered in the header family
 - RuntimeShell may temporarily swap the centered island content from scheduler to connectivity without moving the side utilities or redefining the header family

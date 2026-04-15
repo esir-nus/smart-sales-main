@@ -48,6 +48,10 @@ class GattBleGateway @Inject constructor(
         return sessionSupport.listenForBadgeNotifications()
     }
 
+    override suspend fun isReachable(): Boolean {
+        return sessionSupport.isReachable()
+    }
+
     override suspend fun provision(
         session: BleSession,
         credentials: WifiCredentials

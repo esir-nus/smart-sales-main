@@ -2,13 +2,19 @@ package com.smartsales.prism.data.pairing
 
 import com.smartsales.core.util.Result
 import com.smartsales.prism.data.connectivity.legacy.BlePeripheral
+import com.smartsales.prism.data.connectivity.legacy.BleSession
 import com.smartsales.prism.data.connectivity.legacy.DeviceNetworkStatus
 import com.smartsales.prism.data.connectivity.legacy.FakeDeviceConnectionManager
 import com.smartsales.prism.data.connectivity.legacy.scan.FakeBleScanner
+import com.smartsales.prism.data.connectivity.registry.DeviceRegistryManager
+import com.smartsales.prism.data.connectivity.registry.RegisteredDevice
 import com.smartsales.prism.domain.pairing.ErrorReason
 import com.smartsales.prism.domain.pairing.PairingResult
 import com.smartsales.prism.domain.pairing.PairingState
 import com.smartsales.prism.domain.pairing.WifiCredentials
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -33,7 +39,7 @@ class RealPairingServiceTest {
                 rawResponse = "ok"
             )
         )
-        service = RealPairingService(bleScanner, connectionManager)
+        service = RealPairingService(bleScanner, connectionManager, FakeDeviceRegistryManager())
     }
 
     @Test
@@ -142,5 +148,20 @@ class RealPairingServiceTest {
 
     private fun waitForBackgroundPropagation() {
         Thread.sleep(25)
+    }
+
+    private class FakeDeviceRegistryManager : DeviceRegistryManager {
+        private val _registeredDevices = MutableStateFlow<List<RegisteredDevice>>(emptyList())
+        private val _activeDevice = MutableStateFlow<RegisteredDevice?>(null)
+
+        override val registeredDevices: StateFlow<List<RegisteredDevice>> = _registeredDevices.asStateFlow()
+        override val activeDevice: StateFlow<RegisteredDevice?> = _activeDevice.asStateFlow()
+
+        override fun registerDevice(peripheral: BlePeripheral, session: BleSession) = Unit
+        override fun renameDevice(macAddress: String, newName: String) = Unit
+        override fun setDefault(macAddress: String) = Unit
+        override suspend fun switchToDevice(macAddress: String) = Unit
+        override fun removeDevice(macAddress: String) = Unit
+        override fun initializeOnLaunch() = Unit
     }
 }

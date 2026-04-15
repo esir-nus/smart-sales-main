@@ -39,7 +39,7 @@ internal fun resolveOnboardingExitActionLabel(
     exitPolicy: OnboardingExitPolicy
 ): String {
     return when {
-        host == OnboardingHost.SIM_CONNECTIVITY &&
+        host != OnboardingHost.FULL_APP &&
             exitPolicy == OnboardingExitPolicy.ALLOW_EXIT -> "关闭"
         else -> "跳过"
     }

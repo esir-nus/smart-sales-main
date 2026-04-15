@@ -443,8 +443,27 @@ internal class SimAudioRepositorySyncSupport(
             )
 
             try {
+                var lastProgressUpdateMs = 0L
+                val onProgress: (Long, Long) -> Unit = { bytesRead, totalBytes ->
+                    val now = System.currentTimeMillis()
+                    if (now - lastProgressUpdateMs >= 200L || (totalBytes > 0 && bytesRead == totalBytes)) {
+                        lastProgressUpdateMs = now
+                        storeSupport.updateBadgeDownloadProgress(
+                            filename = nextFilename,
+                            downloadProgress = if (totalBytes > 0) {
+                                (bytesRead.toFloat() / totalBytes).coerceIn(0f, 1f)
+                            } else {
+                                -1f
+                            },
+                            downloadedBytes = bytesRead,
+                            downloadTotalBytes = totalBytes
+                        )
+                    }
+                }
                 val downloadResult = coroutineScope {
-                    val activeDownload = async { runtime.connectivityBridge.downloadRecording(nextFilename) }
+                    val activeDownload = async {
+                        runtime.connectivityBridge.downloadRecording(nextFilename, onProgress)
+                    }
                     runtime.activeBadgeDownloadFilename = nextFilename
                     runtime.activeBadgeDownloadJob = activeDownload
                     activeDownload.await()
@@ -495,6 +514,11 @@ internal class SimAudioRepositorySyncSupport(
                     }
                 }
             } catch (cancelled: CancellationException) {
+                storeSupport.markBadgeDownloadAvailability(
+                    filename = nextFilename,
+                    availability = AudioLocalAvailability.FAILED,
+                    errorMessage = "下载被中断，请重试同步"
+                )
                 Log.d(
                     SIM_AUDIO_SYNC_LOG_TAG,
                     "SIM badge sync background download canceled filename=$nextFilename"

@@ -37,6 +37,9 @@ class SchedulerPathACreateInterpreter(
     private val timeProvider: TimeProvider
 ) {
 
+    private fun anchorDateFor(instant: Instant): LocalDate =
+        instant.atZone(timeProvider.zoneId).toLocalDate()
+
     data class Telemetry(
         val routeStage: RouteStage,
         val uniMAttemptOutcome: UniMAttemptOutcome,
@@ -524,7 +527,7 @@ class SchedulerPathACreateInterpreter(
                     ),
                     nextState = FragmentAnchorState(
                         exactStart = start,
-                        anchorDate = LocalDate.ofInstant(start, timeProvider.zoneId)
+                        anchorDate = anchorDateFor(start)
                     )
                 )
             }
@@ -569,11 +572,11 @@ class SchedulerPathACreateInterpreter(
                 ),
                 nextState = FragmentAnchorState(
                     exactStart = targetStart,
-                    anchorDate = LocalDate.ofInstant(targetStart, timeProvider.zoneId)
+                    anchorDate = anchorDateFor(targetStart)
                 )
             )
             UniMTaskMode.VAGUE -> {
-                val anchorDate = LocalDate.ofInstant(targetStart, timeProvider.zoneId)
+                val anchorDate = anchorDateFor(targetStart)
                 ResolvedMultiTaskFragment.Resolved(
                     intent = buildVagueCreateResult(
                         title = fragment.title,
@@ -660,11 +663,11 @@ class SchedulerPathACreateInterpreter(
                     ),
                     nextState = FragmentAnchorState(
                         exactStart = targetStart,
-                        anchorDate = LocalDate.ofInstant(targetStart, timeProvider.zoneId)
+                        anchorDate = anchorDateFor(targetStart)
                     )
                 )
                 UniMTaskMode.VAGUE -> {
-                    val anchorDate = LocalDate.ofInstant(targetStart, timeProvider.zoneId)
+                    val anchorDate = anchorDateFor(targetStart)
                     ResolvedMultiTaskFragment.Resolved(
                         intent = buildVagueCreateResult(
                             title = fragment.title,

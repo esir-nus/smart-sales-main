@@ -85,7 +85,10 @@ data class AudioFile(
     val progress: Float = 0f,
     val boundSessionId: String? = null, // Links to Analysis chat session
     val activeJobId: String? = null,
-    val lastErrorMessage: String? = null
+    val lastErrorMessage: String? = null,
+    val downloadProgress: Float = 0f,
+    val downloadedBytes: Long = 0L,
+    val downloadTotalBytes: Long = 0L
 )
 
 @Serializable

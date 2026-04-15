@@ -39,22 +39,22 @@ class BaseRuntimeTruthLockGuardrailTest {
     @Test
     fun `sim baseline docs keep standalone boundaries without becoming second product truth`() {
         assertHeadContains(
-            "docs/to-cerb/sim-standalone-prototype/concept.md",
+            "docs/archive/to-cerb/sim-standalone-prototype/concept.md",
             "best available **base-runtime baseline**",
             headLineCount = 48
         )
         assertHeadContains(
-            "docs/to-cerb/sim-standalone-prototype/concept.md",
+            "docs/archive/to-cerb/sim-standalone-prototype/concept.md",
             "second non-Mono product line",
             headLineCount = 48
         )
         assertHeadContains(
-            "docs/to-cerb/sim-standalone-prototype/mental-model.md",
+            "docs/archive/to-cerb/sim-standalone-prototype/mental-model.md",
             "best available **base-runtime baseline**",
             headLineCount = 40
         )
         assertHeadContains(
-            "docs/plans/sim-tracker.md",
+            "docs/archive/plans-completed/sim-tracker.md",
             "best available **base-runtime baseline**",
             headLineCount = 24
         )

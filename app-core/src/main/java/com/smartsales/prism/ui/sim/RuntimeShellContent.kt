@@ -72,13 +72,14 @@ internal fun RuntimeShellContent(
     selectedSchedulerFollowUpTaskId: String?,
     voiceDraftState: SimVoiceDraftUiState,
     dynamicIslandState: DynamicIslandUiState,
+    schedulerEnabled: Boolean,
     isImeVisible: Boolean,
     showRuntimeIdleComposerHint: Boolean,
+    currentSessionHasAudioContextHistory: Boolean,
     trackedPendingAudioIds: SnapshotStateMap<String, String>,
     coroutineScope: CoroutineScope,
     onImportTestAudio: () -> Unit,
     onForcedFirstLaunchOnboardingCompleted: () -> Unit,
-    onReplayOnboarding: () -> Unit,
     dismissReminderBanner: () -> Unit,
     clearFollowUp: (SimBadgeFollowUpClearReason) -> Unit,
     closeOverlays: () -> Unit,
@@ -98,11 +99,14 @@ internal fun RuntimeShellContent(
         durationMillis = 300,
         easing = FastOutSlowInEasing
     )
-    val showSchedulerInteractionShield = shellState.activeDrawer == RuntimeDrawerType.SCHEDULER
-    val showSimHeaderMenuButton = shellState.activeDrawer != RuntimeDrawerType.SCHEDULER
-    val showSimHeaderNewSessionButton = shellState.activeDrawer != RuntimeDrawerType.SCHEDULER
+    val showSchedulerInteractionShield = schedulerEnabled &&
+        shellState.activeDrawer == RuntimeDrawerType.SCHEDULER
+    val showSimHeaderMenuButton = !schedulerEnabled ||
+        shellState.activeDrawer != RuntimeDrawerType.SCHEDULER
+    val showSimHeaderNewSessionButton = !schedulerEnabled ||
+        shellState.activeDrawer != RuntimeDrawerType.SCHEDULER
     val showSimBottomComposer = shellState.activeDrawer != RuntimeDrawerType.SCHEDULER
-    val showReminderBanner = activeReminderBanner != null &&
+    val showReminderBanner = schedulerEnabled && activeReminderBanner != null &&
         shellState.activeDrawer != RuntimeDrawerType.SCHEDULER &&
         shellState.activeDrawer != RuntimeDrawerType.AUDIO
     val schedulerGapDismissHeight = SimHomeHeroTokens.BottomMonolithHeight + 16.dp
@@ -145,9 +149,14 @@ internal fun RuntimeShellContent(
             showSimHeaderNewSessionButton = showSimHeaderNewSessionButton,
             showSimBottomComposer = showSimBottomComposer,
             showSimIdleComposerHint = showRuntimeIdleComposerHint,
-            enableSimSchedulerPullGesture = canOpenSimSchedulerFromEdge(shellState),
+            simSessionHasAudioContextHistory = currentSessionHasAudioContextHistory,
+            enableSimSchedulerPullGesture = schedulerEnabled && canOpenSimSchedulerFromEdge(shellState),
             enableSimAudioPullGesture = canOpenSimAudioFromEdge(shellState, isImeVisible),
-            onSimSchedulerPullOpen = { openScheduler(DynamicIslandTapAction.OpenSchedulerDrawer()) },
+            onSimSchedulerPullOpen = {
+                if (schedulerEnabled) {
+                    openScheduler(DynamicIslandTapAction.OpenSchedulerDrawer())
+                }
+            },
             onSimAudioPullOpen = { openAudioDrawer(RuntimeAudioDrawerMode.BROWSE) },
             transcriptRevealState = transcriptRevealState,
             onArtifactTranscriptRevealConsumed =
@@ -295,23 +304,25 @@ internal fun RuntimeShellContent(
             }
         }
 
-        Box(modifier = Modifier.zIndex(PrismElevation.Drawer)) {
-            SchedulerDrawer(
-                isOpen = shellState.activeDrawer == RuntimeDrawerType.SCHEDULER,
-                onDismiss = { mutateShellState { state -> state.copy(activeDrawer = null) } },
-                visualMode = SchedulerDrawerVisualMode.SIM,
-                onInspirationAskAi = { promptText ->
-                    handleSchedulerShelfAskAiHandoff(
-                        promptText = promptText,
-                        startSession = chatViewModel::startSchedulerShelfSession,
-                        closeDrawer = {
-                            mutateShellState { state -> state.copy(activeDrawer = null) }
-                        }
-                    )
-                },
-                enableInspirationMultiSelect = false,
-                viewModel = dependencies.schedulerViewModel
-            )
+        if (schedulerEnabled) {
+            Box(modifier = Modifier.zIndex(PrismElevation.Drawer)) {
+                SchedulerDrawer(
+                    isOpen = shellState.activeDrawer == RuntimeDrawerType.SCHEDULER,
+                    onDismiss = { mutateShellState { state -> state.copy(activeDrawer = null) } },
+                    visualMode = SchedulerDrawerVisualMode.SIM,
+                    onInspirationAskAi = { promptText ->
+                        handleSchedulerShelfAskAiHandoff(
+                            promptText = promptText,
+                            startSession = chatViewModel::startSchedulerShelfSession,
+                            closeDrawer = {
+                                mutateShellState { state -> state.copy(activeDrawer = null) }
+                            }
+                        )
+                    },
+                    enableInspirationMultiSelect = false,
+                    viewModel = dependencies.schedulerViewModel
+                )
+            }
         }
 
         Box(modifier = Modifier.zIndex(PrismElevation.Drawer)) {
@@ -329,7 +340,6 @@ internal fun RuntimeShellContent(
                 currentChatAudioId = currentChatAudioId,
                 connectionState = connectivityState,
                 showTestImportAction = BuildConfig.DEBUG && shellState.audioDrawerMode == RuntimeAudioDrawerMode.BROWSE,
-                showDebugScenarioActions = BuildConfig.DEBUG && shellState.audioDrawerMode == RuntimeAudioDrawerMode.BROWSE,
                 viewModel = audioViewModel,
                 onOpenConnectivity = {
                     mutateShellState { state ->
@@ -342,7 +352,6 @@ internal fun RuntimeShellContent(
                 },
                 onSyncFromBadge = { audioViewModel.syncFromBadgeManually() },
                 onImportTestAudio = onImportTestAudio,
-                onReplayOnboarding = onReplayOnboarding,
                 onArtifactOpened = { audioId, title ->
                     emitSimAudioPersistedArtifactOpenedTelemetry(
                         audioId = audioId,
@@ -428,6 +437,14 @@ internal fun RuntimeShellContent(
                             )
                         }
                     },
+                    onNavigateToAddDevice = {
+                        mutateShellState { state ->
+                            handleRuntimeAddDeviceStart(
+                                state = state,
+                                source = "bootstrap_modal"
+                            )
+                        }
+                    },
                     viewModel = connectivityViewModel
                 )
             }
@@ -489,7 +506,31 @@ internal fun RuntimeShellContent(
                         )
                     }
                 },
+                onNavigateToAddDevice = {
+                    mutateShellState { state ->
+                        handleRuntimeAddDeviceStart(
+                            state = state,
+                            source = "manager_add_device"
+                        )
+                    }
+                },
                 viewModel = connectivityViewModel
+            )
+        }
+
+        // 添加新设备 — 跳过欢迎/语音，直接进入配网流程
+        AnimatedVisibility(
+            visible = shellState.activeConnectivitySurface == RuntimeConnectivitySurface.ADD_DEVICE,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.zIndex(PrismElevation.Drawer + 1f)
+        ) {
+            OnboardingCoordinator(
+                host = OnboardingHost.SIM_ADD_DEVICE,
+                onExit = { mutateShellState(::closeRuntimeConnectivitySurface) },
+                onComplete = { mutateShellState(::closeRuntimeConnectivitySurface) },
+                exitPolicy = OnboardingExitPolicy.ALLOW_EXIT,
+                pairingViewModel = pairingViewModel
             )
         }
 

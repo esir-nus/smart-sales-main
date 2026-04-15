@@ -2,7 +2,7 @@
 
 > **Blackbox contract** — For consumers (Scheduler, Badge Audio Pipeline). Don't read implementation.
 > **Status**: Active supporting interface
-> **Last Updated**: 2026-04-02
+> **Last Updated**: 2026-04-14
 
 ---
 
@@ -29,9 +29,13 @@ interface ConnectivityBridge {
      * Rate-limited internally.
      *
      * @param filename File name on badge (e.g., "log_20260205_143000.wav")
+     * @param onProgress Optional callback invoked with (bytesRead, totalBytes) during download
      * @return Downloaded file or error
      */
-    suspend fun downloadRecording(filename: String): WavDownloadResult
+    suspend fun downloadRecording(
+        filename: String,
+        onProgress: ((bytesRead: Long, totalBytes: Long) -> Unit)? = null
+    ): WavDownloadResult
     
     /**
      * List all WAV files currently stored on the badge.
@@ -170,7 +174,7 @@ sealed class WifiConfigResult {
 |-----------|-----------|
 | `connectionState` | Always emits current state immediately on collect |
 | `managerStatus` | Manager-only richer BLE/Wi‑Fi diagnostic state; no shell-routing authority |
-| `downloadRecording` | Rate-limited, max 1 concurrent download |
+| `downloadRecording` | Rate-limited, max 1 concurrent download; `onProgress` callback (if provided) is invoked on the IO dispatcher with (bytesRead, totalBytes) — consumers must throttle UI updates themselves |
 | `listRecordings` | Reuses the active runtime endpoint; no repeated BLE Wi‑Fi query in the normal happy path |
 | `recordingNotifications` | Hot flow, buffered (1), no replay |
 | `isReady()` | Pre-flight check with 3s timeout; may refresh endpoint only when the active snapshot is missing or invalidated |
@@ -189,6 +193,11 @@ Under the current reconnect contract, the bridge may surface this connected stat
 
 Normal badge HTTP work (`/list`, `/download`, `/delete`) should reuse the current runtime endpoint snapshot.
 Repeated BLE `wifi#address#ip#name` querying is not part of the normal sync path.
+
+For `/download`, `totalBytes` is derived from HTTP `Content-Length`.
+When the badge omits that header or uses chunked/unknown-length transfer, the bridge must still invoke
+`onProgress(bytesRead, totalBytes)` with `totalBytes <= 0` so downstream consumers can render
+indeterminate download progress instead of suppressing progress updates entirely.
 
 `ConnectivityService.reconnect()` may return `WifiMismatch` in either of these deterministic reconnect cases:
 

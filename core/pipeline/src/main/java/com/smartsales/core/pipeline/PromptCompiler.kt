@@ -383,18 +383,6 @@ ${transcriptForExtraction}
     open fun compileGlobalRescheduleExtractionPrompt(
         request: GlobalRescheduleExtractionRequest
     ): String {
-        val recentHints = if (request.recentTaskHints.isEmpty()) {
-            "- recent_task_hints: []"
-        } else {
-            buildString {
-                appendLine("- recent_task_hints:")
-                request.recentTaskHints.take(3).forEach { hint ->
-                    appendLine("  - title: ${hint.title}")
-                    appendLine("    key_person: ${hint.keyPerson ?: "null"}")
-                    appendLine("    location: ${hint.location ?: "null"}")
-                }
-            }.trimEnd()
-        }
         val activeShortlist = if (request.activeTaskShortlist.isEmpty()) {
             "- active_task_shortlist: []"
         } else {
@@ -421,7 +409,6 @@ ${transcriptForExtraction}
 当前时间锚点：
 - now_iso: ${request.nowIso}
 - timezone: ${request.timezone}
-$recentHints
 $activeShortlist
 
 规则：
@@ -431,12 +418,11 @@ $activeShortlist
    - 如果 `active_task_shortlist` 中有一个明确主候选，请输出它的 `suggestedTaskId`
    - `timeInstruction` 必须只保留新的时间指令
    - `targetQuery` 应保留用户当前提到的目标线索
-   - 如果用户没有重说标题，但短名单或最近任务线索足以唯一补全，可用其中的标题/人物/地点生成简短检索短语
-   - `targetPerson` / `targetLocation` 只有在输入或最近任务线索中有明确依据时才填写
-4. 最近任务线索只是弱提示，不能因为 UI 选中态、点开卡片或当前页面日期去猜一个任务。
+   - `targetPerson` / `targetLocation` 只有在当前输入里有明确依据时才填写
+4. 如果当前输入没有明确说出要改的目标，必须输出 `NOT_SUPPORTED`；不能借助最近任务、UI 选中态、点开卡片、当前页面日期或“最像的那个任务”来补目标。
 5. `active_task_shortlist` 是当前活跃任务真相的边界；不要输出短名单之外的 `suggestedTaskId`。
 6. 如果你觉得目标仍然含糊或可能对应多个任务，就输出 `NOT_SUPPORTED`。
-7. `timeInstruction` 可以是 `明天早上8点`、`推迟1个小时`、`提前半小时`、`改到2026-03-25 18:00`，但不要把目标标题再塞回去。
+7. `timeInstruction` 只能保留新的**明确时点**，例如 `明天早上8点`、`周五上午11点`、`2026-03-25 18:00`。像 `推迟1个小时`、`提前半小时` 这类 delta-only 改期不支持，必须输出 `NOT_SUPPORTED`。
 8. 只能输出严格 JSON，禁止 Markdown 包裹。
 
 严格输出以下 Kotlin contract 对应的 JSON：
@@ -478,28 +464,23 @@ ${request.transcript}
 规则：
 1. 你只处理已选中任务的时间语义，不输出目标任务，不重写标题，不决定时长。
 2. 如果能表达成明确改期，输出 `decision = "RESCHEDULE_EXACT"`。
-3. 如果是模糊说法、页面相对日期、闲聊、删除、创建、或你没有把握，输出 `decision = "NOT_SUPPORTED"`。
+3. 如果是模糊说法、delta-only 改期、页面相对日期、闲聊、删除、创建、或你没有把握，输出 `decision = "NOT_SUPPORTED"`。
 4. `RESCHEDULE_EXACT` 时，`timeKind` 只能是：
-   - `DELTA_FROM_TARGET`
    - `RELATIVE_DAY_CLOCK`
    - `ABSOLUTE`
-5. `DELTA_FROM_TARGET`：
-   - 仅用于“推迟1小时 / 提前半小时 / 往后推20分钟”这类相对已选中任务开始时间的偏移
-   - 必须填写 `deltaFromTargetMinutes`
-   - 不要填写 `relativeDayOffset`、`clockTime`、`absoluteStartIso`
-6. `RELATIVE_DAY_CLOCK`：
+5. `RELATIVE_DAY_CLOCK`：
    - 仅用于“明天早上8点 / 后天晚上9点 / tomorrow 6:30 pm”这类真实日期 + 明确钟点
    - 必须填写 `relativeDayOffset`
    - 必须填写严格 `HH:mm` 的 `clockTime`
    - 不要填写 `deltaFromTargetMinutes`、`absoluteStartIso`
    - `今天/today/今晚` = 0，`明天/tomorrow` = 1，`后天/day after tomorrow` = 2
-7. 页面相对日期（如 `下一天` / `后一天` / `next day`）在这个实验里不支持，必须输出 `NOT_SUPPORTED`。
-8. `ABSOLUTE`：
+6. 页面相对日期（如 `下一天` / `后一天` / `next day`）在这个实验里不支持，必须输出 `NOT_SUPPORTED`。
+7. `ABSOLUTE`：
    - 仅用于用户直接给出明确绝对时刻
    - 必须填写 `absoluteStartIso`
    - 不要填写其他时间字段
-9. 不能同时填写多种时间分支字段。
-10. 只能输出严格 JSON，禁止 Markdown 包裹。
+8. 不能同时填写多种时间分支字段。
+9. 只能输出严格 JSON，禁止 Markdown 包裹。
 
 严格输出以下 Kotlin contract 对应的 JSON：
 ${

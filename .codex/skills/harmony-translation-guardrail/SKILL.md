@@ -21,13 +21,18 @@ This is an execution guardrail, not a replacement for repo law. If the current g
 Read the minimum set needed to classify the task before editing:
 
 1. `AGENTS.md`
-2. `docs/plans/tracker.md`
-3. `docs/specs/platform-governance.md`
-4. `docs/reference/platform-targets.md`
-5. `docs/platforms/README.md`
-6. `docs/platforms/harmony/README.md`
-7. the relevant platform overlay in `docs/platforms/harmony/**`
-8. `docs/cerb/interface-map.md` if ownership crosses modules
+2. `.agent/rules/lessons-learned.md`
+3. `docs/plans/tracker.md`
+4. `docs/specs/platform-governance.md`
+5. `docs/reference/platform-targets.md`
+6. `docs/platforms/README.md`
+7. `docs/platforms/harmony/README.md`
+8. the relevant platform overlay in `docs/platforms/harmony/**`
+9. `docs/cerb/interface-map.md` if ownership crosses modules
+
+Harmony tasks are high-risk by default because they often combine greenfield scaffolding, platform translation, and lane-separation hazards. Treat the lessons index as mandatory preflight, not optional context.
+
+If any lesson trigger matches, or if Harmony migration risk is not well covered by the summary index, read `docs/reference/agent-lessons-details.md` before planning code. Use that read as a contamination, divergence, and fake-parity check.
 
 Read `docs/reference/harmonyos-platform-guide.md` only when the task is about the Android app running on Huawei/Honor/Harmony devices. That file is the Android compatibility path, not the native Harmony implementation owner.
 

@@ -117,8 +117,7 @@ class RealScheduleBoard @Inject constructor(
                     query = normalizedQuery,
                     person = normalizedPerson,
                     location = normalizedLocation,
-                    candidate = candidate,
-                    preferredTaskIds = request.preferredTaskIds
+                    candidate = candidate
                 )
             }
             .filter { (_, score) -> score > 0 }
@@ -165,8 +164,7 @@ class RealScheduleBoard @Inject constructor(
         query: String,
         person: String,
         location: String,
-        candidate: ScheduleItem,
-        preferredTaskIds: Set<String>
+        candidate: ScheduleItem
     ): Int = TaskRetrievalScoring.scoreCandidate(
         query = query,
         person = person,
@@ -176,7 +174,6 @@ class RealScheduleBoard @Inject constructor(
             title = candidate.title,
             participants = candidate.participants.orEmpty(),
             location = candidate.location
-        ),
-        preferredTaskIds = preferredTaskIds
+        )
     )
 }

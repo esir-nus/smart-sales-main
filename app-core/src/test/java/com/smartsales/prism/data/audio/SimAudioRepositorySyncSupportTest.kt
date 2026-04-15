@@ -313,6 +313,58 @@ class SimAudioRepositorySyncSupportTest {
         )
     }
 
+    @Test
+    fun `canceled download transitions entry from DOWNLOADING to FAILED`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
+        connectivityBridge.isReadyResult = true
+        connectivityBridge.listResult = Result.Success(listOf("log_20260401_090000.wav"))
+        connectivityBridge.downloadSuspender = { kotlinx.coroutines.awaitCancellation() }
+
+        syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+        advanceUntilIdle()
+
+        assertEquals(
+            AudioLocalAvailability.DOWNLOADING,
+            runtime.audioFiles.value.single { it.filename == "log_20260401_090000.wav" }.localAvailability
+        )
+
+        syncSupport.cancelBadgeDownload("log_20260401_090000.wav")
+        advanceUntilIdle()
+
+        val entry = runtime.audioFiles.value.single { it.filename == "log_20260401_090000.wav" }
+        assertEquals(AudioLocalAvailability.FAILED, entry.localAvailability)
+        assertEquals("下载被中断，请重试同步", entry.lastErrorMessage)
+    }
+
+    @Test
+    fun `canceled download allows remaining queued downloads to proceed`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
+        connectivityBridge.isReadyResult = true
+        connectivityBridge.listResult = Result.Success(listOf("a.wav", "b.wav"))
+        connectivityBridge.downloadSuspender = { kotlinx.coroutines.awaitCancellation() }
+        connectivityBridge.downloadResults["b.wav"] = WavDownloadResult.Success(
+            localFile = tempFolder.newFile("b.wav").apply { writeText("audio-content") },
+            originalFilename = "b.wav",
+            sizeBytes = 2048L
+        )
+
+        syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+        advanceUntilIdle()
+
+        syncSupport.cancelBadgeDownload("a.wav")
+        connectivityBridge.downloadSuspender = null
+        advanceUntilIdle()
+
+        assertEquals(
+            AudioLocalAvailability.FAILED,
+            runtime.audioFiles.value.single { it.filename == "a.wav" }.localAvailability
+        )
+        assertEquals(
+            AudioLocalAvailability.READY,
+            runtime.audioFiles.value.single { it.filename == "b.wav" }.localAvailability
+        )
+    }
+
     private fun bindRuntimeToTestScheduler(scheduler: TestCoroutineScheduler) {
         val dispatcher = StandardTestDispatcher(scheduler)
         runtime.overrideConcurrencyForTests(
@@ -333,10 +385,15 @@ class SimAudioRepositorySyncSupportTest {
         var listResult: Result<List<String>> = Result.Success(emptyList())
         var downloadResults: MutableMap<String, WavDownloadResult> = mutableMapOf()
         var deleteRecordingResults: MutableMap<String, Boolean> = mutableMapOf()
+        var downloadSuspender: (suspend () -> Unit)? = null
         val calls = mutableListOf<String>()
 
-        override suspend fun downloadRecording(filename: String): WavDownloadResult {
+        override suspend fun downloadRecording(
+            filename: String,
+            onProgress: ((bytesRead: Long, totalBytes: Long) -> Unit)?
+        ): WavDownloadResult {
             calls += "downloadRecording:$filename"
+            downloadSuspender?.invoke()
             return downloadResults[filename]
                 ?: WavDownloadResult.Error(
                     code = WavDownloadResult.ErrorCode.DOWNLOAD_FAILED,
@@ -350,6 +407,8 @@ class SimAudioRepositorySyncSupportTest {
         }
 
         override fun recordingNotifications(): Flow<RecordingNotification> = emptyFlow()
+
+        override fun audioRecordingNotifications(): Flow<RecordingNotification.AudioRecordingReady> = emptyFlow()
 
         override suspend fun isReady(): Boolean {
             calls += "isReady"

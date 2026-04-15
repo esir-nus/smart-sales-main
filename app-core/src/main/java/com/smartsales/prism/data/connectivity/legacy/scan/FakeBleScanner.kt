@@ -10,32 +10,36 @@ import kotlinx.coroutines.flow.StateFlow
 class FakeBleScanner : BleScanner {
     private val _devices = MutableStateFlow<List<BlePeripheral>>(emptyList())
     private val _isScanning = MutableStateFlow(false)
-    
+
     override val devices: StateFlow<List<BlePeripheral>> = _devices
     override val isScanning: StateFlow<Boolean> = _isScanning
     override val isBluetoothEnabled: Boolean = true
-    
+
     var startCalls = 0
     var stopCalls = 0
-    
+    var scanForFirstResult: BlePeripheral? = null
+
     override fun start() {
         startCalls++
         _isScanning.value = true
     }
-    
+
     override fun stop() {
         stopCalls++
         _isScanning.value = false
     }
-    
+
+    override suspend fun scanForFirst(timeoutMs: Long): BlePeripheral? = scanForFirstResult
+
     fun setDevices(list: List<BlePeripheral>) {
         _devices.value = list
     }
-    
+
     fun reset() {
         _devices.value = emptyList()
         _isScanning.value = false
         startCalls = 0
         stopCalls = 0
+        scanForFirstResult = null
     }
 }

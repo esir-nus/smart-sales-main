@@ -313,7 +313,7 @@ class SimAgentViewModelTest {
         )
 
         assertEquals("audio_pending_1", viewModel.currentLinkedAudioId.value)
-        assertEquals("待转写录音", viewModel.sessionTitle.value)
+        assertEquals("新对话", viewModel.sessionTitle.value)
         assertTrue(viewModel.uiState.value is UiState.Thinking)
         assertEquals(1, viewModel.history.value.size)
 
@@ -343,7 +343,7 @@ class SimAgentViewModelTest {
         val lastMessage = viewModel.history.value.last() as ChatMessage.Ai
         val response = lastMessage.uiState as UiState.Response
         assertTrue(response.content.contains("转写已完成"))
-        assertTrue(response.content.contains("会议录音"))
+        assertTrue(response.content.contains("新对话"))
     }
 
     @Test
@@ -371,7 +371,7 @@ class SimAgentViewModelTest {
         val lastMessage = viewModel.history.value.last() as ChatMessage.Ai
         val state = lastMessage.uiState as UiState.AudioArtifacts
         assertEquals("audio_done_1", state.audioId)
-        assertEquals("客户录音", state.title)
+        assertEquals("新对话", state.title)
         assertTrue(state.artifactsJson.contains("完整转写"))
     }
 
@@ -470,7 +470,7 @@ class SimAgentViewModelTest {
     }
 
     @Test
-    fun `general send auto generates title for new session`() = runTest {
+    fun `general send auto generates title from first assistant reply`() = runTest {
         fakeExecutor.enqueueResponse(ExecutorResult.Success("好的,帮你复盘Q4的预算执行情况。"))
         fakeExecutor.enqueueResponse(ExecutorResult.Success("Q4预算复盘"))
 
@@ -481,12 +481,15 @@ class SimAgentViewModelTest {
 
         assertEquals("Q4预算复盘", viewModel.sessionTitle.value)
         assertEquals(2, fakeExecutor.executedPrompts.size)
-        assertTrue(fakeExecutor.executedPrompts[1].contains("用4-6个中文字总结"))
-        assertTrue(fakeExecutor.executedPrompts[1].contains("帮我复盘一下Q4的预算"))
+        assertTrue(fakeExecutor.executedPrompts[1].contains("生成一个4-6个中文字的中文标题"))
+        assertTrue(fakeExecutor.executedPrompts[1].contains("好的,帮你复盘Q4的预算执行情况。"))
+        assertTrue(fakeExecutor.executedPrompts[1].contains("NO_TITLE"))
+        assertFalse(fakeExecutor.executedPrompts[1].contains("两段助手回复"))
+        assertFalse(fakeExecutor.executedPrompts[1].contains("帮我复盘一下Q4的预算"))
     }
 
     @Test
-    fun `title generation does not fire for audio grounded sessions`() = runTest {
+    fun `audio grounded send auto generates title from first organic assistant reply`() = runTest {
         writeAudioMetadata(
             AudioFile(
                 id = "audio_no_title_gen",
@@ -504,6 +507,7 @@ class SimAgentViewModelTest {
             )
         )
         fakeExecutor.enqueueResponse(ExecutorResult.Success("录音里提到下周启动。"))
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("试点启动安排"))
         val viewModel = newViewModel()
 
         viewModel.selectAudioForChat(
@@ -513,20 +517,23 @@ class SimAgentViewModelTest {
             entersPendingFlow = false
         )
         advanceUntilIdle()
+        assertEquals("新对话", viewModel.sessionTitle.value)
         viewModel.updateInput("客户什么时候启动？")
         viewModel.send()
         advanceUntilIdle()
         Thread.sleep(150)
         advanceUntilIdle()
-
-        assertEquals(1, fakeExecutor.executedPrompts.size)
-        assertFalse(fakeExecutor.executedPrompts[0].contains("用4-6个中文字总结"))
+        assertEquals(2, fakeExecutor.executedPrompts.size)
+        assertEquals("试点启动安排", viewModel.sessionTitle.value)
+        assertTrue(fakeExecutor.executedPrompts[1].contains("录音里提到下周启动。"))
+        assertFalse(fakeExecutor.executedPrompts[1].contains("已接入《NoTitleGen.wav》"))
     }
 
     @Test
     fun `title generation does not re-fire after first rename`() = runTest {
         fakeExecutor.enqueueResponse(ExecutorResult.Success("好的,帮你复盘。"))
         fakeExecutor.enqueueResponse(ExecutorResult.Success("Q4复盘"))
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("先看整体预算变化。"))
         fakeExecutor.enqueueResponse(ExecutorResult.Success("继续聊,关于预算分配的细节。"))
 
         val viewModel = newViewModel()
@@ -536,29 +543,190 @@ class SimAgentViewModelTest {
 
         assertEquals("Q4复盘", viewModel.sessionTitle.value)
 
+        viewModel.updateInput("继续")
+        viewModel.send()
+        advanceUntilIdle()
+
+        assertEquals("Q4复盘", viewModel.sessionTitle.value)
+
         viewModel.updateInput("预算分配有什么问题？")
         viewModel.send()
         advanceUntilIdle()
 
-        assertEquals(3, fakeExecutor.executedPrompts.size)
+        assertEquals(4, fakeExecutor.executedPrompts.size)
         assertEquals("Q4复盘", viewModel.sessionTitle.value)
     }
 
     @Test
-    fun `title generation failure does not block chat`() = runTest {
+    fun `title generation failure retries once on next successful turn`() = runTest {
         fakeExecutor.enqueueResponse(ExecutorResult.Success("你好，Default User。"))
         fakeExecutor.enqueueResponse(ExecutorResult.Failure(error = "network timeout", retryable = true))
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("我们再往下细化。"))
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("日常问候"))
 
         val viewModel = newViewModel()
         viewModel.updateInput("你好")
         viewModel.send()
         advanceUntilIdle()
 
+        assertEquals("新对话", viewModel.sessionTitle.value)
+
+        viewModel.updateInput("再继续")
+        viewModel.send()
+        advanceUntilIdle()
+
         val lastMessage = viewModel.history.value.last() as ChatMessage.Ai
         val response = lastMessage.uiState as UiState.Response
-        assertTrue(response.content.contains("Default User"))
+        assertTrue(response.content.contains("细化") || response.content.contains("再往下"))
         assertEquals(UiState.Idle, viewModel.uiState.value)
-        assertTrue(viewModel.sessionTitle.value in setOf("SIM", "新对话"))
+        assertEquals("日常问候", viewModel.sessionTitle.value)
+    }
+
+    @Test
+    fun `title generation stops after second failure and does not block chat`() = runTest {
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("你好，Default User。"))
+        fakeExecutor.enqueueResponse(ExecutorResult.Failure(error = "network timeout", retryable = true))
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("我们再往下细化。"))
+        fakeExecutor.enqueueResponse(ExecutorResult.Failure(error = "still timeout", retryable = true))
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("第四次继续聊。"))
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("第五次继续聊。"))
+
+        val viewModel = newViewModel()
+        viewModel.updateInput("你好")
+        viewModel.send()
+        advanceUntilIdle()
+        viewModel.updateInput("继续")
+        viewModel.send()
+        advanceUntilIdle()
+        viewModel.updateInput("再继续")
+        viewModel.send()
+        advanceUntilIdle()
+
+        val lastMessage = viewModel.history.value.last() as ChatMessage.Ai
+        val response = lastMessage.uiState as UiState.Response
+        assertTrue(response.content.contains("第四次继续聊"))
+        assertEquals(UiState.Idle, viewModel.uiState.value)
+        assertEquals("新对话", viewModel.sessionTitle.value)
+    }
+
+    @Test
+    fun `restored untitled session backfills title from first eligible historical assistant reply`() = runTest {
+        sessionRepository.saveSession(
+            preview = SessionPreview(
+                id = "session_restore_general_title",
+                clientName = "新对话",
+                summary = "摘要",
+                timestamp = 123L,
+                sessionKind = SessionKind.GENERAL
+            ),
+            messages = listOf(
+                ChatMessage.User(id = "u1", timestamp = 1L, content = "第一问"),
+                ChatMessage.Ai(id = "a1", timestamp = 2L, uiState = UiState.Response("第一答复")),
+                ChatMessage.User(id = "u2", timestamp = 3L, content = "第二问"),
+                ChatMessage.Ai(id = "a2", timestamp = 4L, uiState = UiState.Response("第二答复")),
+                ChatMessage.User(id = "u3", timestamp = 5L, content = "第三问"),
+                ChatMessage.Ai(id = "a3", timestamp = 6L, uiState = UiState.Response("第三答复"))
+            )
+        )
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("第四答复"))
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("恢复会话标题"))
+
+        val viewModel = newViewModel()
+        viewModel.switchSession("session_restore_general_title")
+        viewModel.updateInput("继续")
+        viewModel.send()
+        advanceUntilIdle()
+
+        assertEquals("恢复会话标题", viewModel.sessionTitle.value)
+        assertEquals(2, fakeExecutor.executedPrompts.size)
+        assertTrue(fakeExecutor.executedPrompts[1].contains("第一答复"))
+        assertFalse(fakeExecutor.executedPrompts[1].contains("第二答复"))
+        assertFalse(fakeExecutor.executedPrompts[1].contains("第三答复"))
+    }
+
+    @Test
+    fun `restored audio session with filename title ignores intro copy and uses first real answer`() = runTest {
+        writeAudioMetadata(
+            AudioFile(
+                id = "audio_restore_title_1",
+                filename = "Restore.wav",
+                timeDisplay = "Now",
+                source = AudioSource.PHONE,
+                status = TranscriptionStatus.TRANSCRIBED
+            )
+        )
+        writeArtifacts(
+            audioId = "audio_restore_title_1",
+            artifacts = TingwuJobArtifacts(
+                transcriptMarkdown = "这是恢复后的转写内容。",
+                smartSummary = TingwuSmartSummary(summary = "恢复后的摘要")
+            )
+        )
+        sessionRepository.saveSession(
+            preview = SessionPreview(
+                id = "session_restore_audio_title",
+                clientName = "Restore.wav",
+                summary = "摘要",
+                timestamp = 123L,
+                linkedAudioId = "audio_restore_title_1",
+                sessionKind = SessionKind.AUDIO_GROUNDED
+            ),
+            messages = listOf(
+                ChatMessage.Ai(
+                    id = "intro",
+                    timestamp = 1L,
+                    uiState = UiState.Response("已接入《Restore.wav》的录音上下文。\n\n结构化结果已载入，现在可以继续围绕这段录音讨论。")
+                ),
+                ChatMessage.User(id = "u1", timestamp = 2L, content = "这段录音讲了什么"),
+                ChatMessage.Ai(id = "a1", timestamp = 3L, uiState = UiState.Response("第一段录音答复")),
+                ChatMessage.User(id = "u2", timestamp = 4L, content = "还有别的吗"),
+                ChatMessage.Ai(id = "a2", timestamp = 5L, uiState = UiState.Response("第二段录音答复"))
+            )
+        )
+        val audioRepository = newAudioRepository()
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("第三段录音答复"))
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("录音跟进重点"))
+
+        val viewModel = newViewModel(audioRepository = audioRepository)
+        viewModel.switchSession("session_restore_audio_title")
+        viewModel.updateInput("继续")
+        viewModel.send()
+        advanceUntilIdle()
+        Thread.sleep(150)
+        advanceUntilIdle()
+
+        assertEquals("录音跟进重点", viewModel.sessionTitle.value)
+        assertEquals(2, fakeExecutor.executedPrompts.size)
+        assertTrue(fakeExecutor.executedPrompts[1].contains("第一段录音答复"))
+        assertFalse(fakeExecutor.executedPrompts[1].contains("第二段录音答复"))
+        assertFalse(fakeExecutor.executedPrompts[1].contains("已接入《Restore.wav》"))
+    }
+
+    @Test
+    fun `generic title output is rejected and next organic reply retries once`() = runTest {
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success("你好，Default User。我会结合你的教育行业背景继续帮你梳理。")
+        )
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("教育管理"))
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("我们先复盘试听转化和续费节点。"))
+        fakeExecutor.enqueueResponse(ExecutorResult.Success("续费复盘"))
+
+        val viewModel = newViewModel()
+        viewModel.updateInput("你好")
+        viewModel.send()
+        advanceUntilIdle()
+
+        assertEquals("新对话", viewModel.sessionTitle.value)
+        assertEquals(2, fakeExecutor.executedPrompts.size)
+
+        viewModel.updateInput("继续")
+        viewModel.send()
+        advanceUntilIdle()
+
+        assertEquals("续费复盘", viewModel.sessionTitle.value)
+        assertEquals(4, fakeExecutor.executedPrompts.size)
+        assertTrue(fakeExecutor.executedPrompts[1].contains("教育管理"))
+        assertTrue(fakeExecutor.executedPrompts[3].contains("试听转化和续费节点"))
     }
 
     @Test
@@ -628,7 +796,8 @@ class SimAgentViewModelTest {
         val audioSessionId = viewModel.currentSessionId.value
         assertTrue(audioSessionId != generalSessionId)
         assertEquals("audio_attach_1", viewModel.currentLinkedAudioId.value)
-        assertEquals("Attach.wav", viewModel.sessionTitle.value)
+        assertEquals("新对话", viewModel.sessionTitle.value)
+        assertTrue(viewModel.currentSessionHasAudioContextHistory.value)
 
         // 新会话只有 intro + artifacts，无通用聊天历史
         val introMessage = viewModel.history.value.first() as ChatMessage.Ai
@@ -641,6 +810,7 @@ class SimAgentViewModelTest {
         viewModel.switchSession(generalSessionId!!)
         assertEquals(generalHistorySize, viewModel.history.value.size)
         assertNull(viewModel.currentLinkedAudioId.value)
+        assertFalse(viewModel.currentSessionHasAudioContextHistory.value)
     }
 
     @Test
@@ -688,10 +858,10 @@ class SimAgentViewModelTest {
         val lastMessage = viewModel.history.value.last() as ChatMessage.Ai
         val response = lastMessage.uiState as UiState.Response
         assertTrue(response.content.contains("下周启动"))
-        assertTrue(fakeExecutor.executedPrompts.last().contains("客户希望下周启动试点"))
-        assertTrue(fakeExecutor.executedPrompts.last().contains("发言人总结"))
-        assertTrue(fakeExecutor.executedPrompts.last().contains("问答回顾"))
-        assertTrue(fakeExecutor.executedPrompts.last().contains("客户什么时候启动"))
+        assertTrue(fakeExecutor.executedPrompts.first().contains("客户希望下周启动试点"))
+        assertTrue(fakeExecutor.executedPrompts.first().contains("发言人总结"))
+        assertTrue(fakeExecutor.executedPrompts.first().contains("问答回顾"))
+        assertTrue(fakeExecutor.executedPrompts.first().contains("客户什么时候启动"))
     }
 
     @Test
@@ -739,7 +909,7 @@ class SimAgentViewModelTest {
         advanceUntilIdle()
 
         assertEquals(originalStartTime, taskRepository.getTask("task_audio_boundary")?.startTime)
-        assertTrue(fakeExecutor.executedPrompts.last().contains("把客户会议改到今晚九点"))
+        assertTrue(fakeExecutor.executedPrompts.first().contains("把客户会议改到今晚九点"))
         val lastMessage = viewModel.history.value.last() as ChatMessage.Ai
         assertTrue((lastMessage.uiState as UiState.Response).content.contains("不会直接改日程"))
     }
@@ -778,7 +948,7 @@ class SimAgentViewModelTest {
         Thread.sleep(150)
         advanceUntilIdle()
 
-        assertTrue(fakeExecutor.executedPrompts.last().contains("这是历史中的转写内容"))
+        assertTrue(fakeExecutor.executedPrompts.first().contains("这是历史中的转写内容"))
         val lastMessage = viewModel.history.value.last() as ChatMessage.Ai
         assertTrue((lastMessage.uiState as UiState.Response).content.contains("继续回答"))
     }
@@ -1206,7 +1376,7 @@ class SimAgentViewModelTest {
     }
 
     @Test
-    fun `scheduler follow up send resolves target globally by explicit delta and records V2 shadow parity`() = runTest {
+    fun `scheduler follow up send resolves explicit global target and records V2 shadow parity`() = runTest {
         val valveEvents = mutableListOf<Pair<PipelineValve.Checkpoint, String>>()
         PipelineValve.testInterceptor = { checkpoint, _, summary ->
             valveEvents += checkpoint to summary
@@ -1240,15 +1410,15 @@ class SimAgentViewModelTest {
 
         enqueueGlobalRescheduleExtraction(
             targetQuery = "赶高铁",
-            timeInstruction = "推迟1个小时"
+            timeInstruction = "明天早上8点"
         )
-        enqueueFollowUpShadowDelta(minutes = 60)
-        viewModel.updateInput("推迟1个小时")
+        enqueueFollowUpShadowRelativeDayClock(dayOffset = 1, clockTime = "08:00")
+        viewModel.updateInput("把赶高铁改到明天早上8点")
         viewModel.send()
         advanceUntilIdle()
 
         val updated = taskRepository.getTask(taskId)
-        assertEquals(Instant.parse("2026-03-22T09:00:00Z"), updated?.startTime)
+        assertEquals(Instant.parse("2026-03-23T00:00:00Z"), updated?.startTime)
         val lastMessage = viewModel.history.value.last() as ChatMessage.Ai
         assertTrue((lastMessage.uiState as UiState.Response).content.contains("已改期：赶高铁"))
         assertTrue(fakeExecutor.executedPrompts.isNotEmpty())
@@ -1267,7 +1437,7 @@ class SimAgentViewModelTest {
     }
 
     @Test
-    fun `scheduler follow up send keeps V1 write when V2 shadow reports unsupported and emits mismatch support`() = runTest {
+    fun `scheduler follow up send keeps V1 write when V2 shadow reports unsupported exact extraction`() = runTest {
         val valveEvents = mutableListOf<Pair<PipelineValve.Checkpoint, String>>()
         PipelineValve.testInterceptor = { checkpoint, _, summary ->
             valveEvents += checkpoint to summary
@@ -1301,15 +1471,15 @@ class SimAgentViewModelTest {
 
         enqueueGlobalRescheduleExtraction(
             targetQuery = "赶高铁",
-            timeInstruction = "推迟1个小时"
+            timeInstruction = "明天早上8点"
         )
         enqueueFollowUpShadowUnsupported("shadow experiment does not support this")
-        viewModel.updateInput("推迟1个小时")
+        viewModel.updateInput("把赶高铁改到明天早上8点")
         viewModel.send()
         advanceUntilIdle()
 
         val updated = taskRepository.getTask(taskId)
-        assertEquals(Instant.parse("2026-03-22T09:00:00Z"), updated?.startTime)
+        assertEquals(Instant.parse("2026-03-23T00:00:00Z"), updated?.startTime)
         assertTrue(
             valveEvents.contains(
                 PipelineValve.Checkpoint.UI_STATE_EMITTED to
@@ -1319,7 +1489,7 @@ class SimAgentViewModelTest {
     }
 
     @Test
-    fun `scheduler follow up send still supports absolute exact reschedule while V2 shadow runs`() = runTest {
+    fun `scheduler follow up send still supports explicit target exact reschedule while V2 shadow runs`() = runTest {
         val taskId = taskRepository.insertTask(
             ScheduledTask(
                 id = "task_follow_absolute",
@@ -1352,7 +1522,7 @@ class SimAgentViewModelTest {
             timeInstruction = "明天早上8点"
         )
         enqueueFollowUpShadowRelativeDayClock(dayOffset = 1, clockTime = "08:00")
-        viewModel.updateInput("改到明天早上8点")
+        viewModel.updateInput("把客户回访改到明天早上8点")
         viewModel.send()
         advanceUntilIdle()
 
@@ -1363,7 +1533,7 @@ class SimAgentViewModelTest {
     }
 
     @Test
-    fun `scheduler follow up send reschedules globally resolved conflicted task by explicit delta and recomputes conflict while V2 shadow runs`() = runTest {
+    fun `scheduler follow up send reschedules conflicted task by explicit target and exact time while V2 shadow runs`() = runTest {
         val taskId = taskRepository.insertTask(
             ScheduledTask(
                 id = "task_follow_conflict",
@@ -1406,15 +1576,15 @@ class SimAgentViewModelTest {
 
         enqueueGlobalRescheduleExtraction(
             targetQuery = "赶高铁",
-            timeInstruction = "推迟1个小时"
+            timeInstruction = "明天早上9点"
         )
-        enqueueFollowUpShadowDelta(minutes = 60)
-        viewModel.updateInput("推迟1个小时")
+        enqueueFollowUpShadowRelativeDayClock(dayOffset = 1, clockTime = "09:00")
+        viewModel.updateInput("把赶高铁改到明天早上9点")
         viewModel.send()
         advanceUntilIdle()
 
         val updated = taskRepository.getTask(taskId)
-        assertEquals(Instant.parse("2026-03-22T09:00:00Z"), updated?.startTime)
+        assertEquals(Instant.parse("2026-03-23T01:00:00Z"), updated?.startTime)
         assertTrue(updated?.hasConflict == true)
         val lastMessage = viewModel.history.value.last() as ChatMessage.Ai
         assertTrue((lastMessage.uiState as UiState.Response).content.contains("注意：与「叫我吃饭」时间冲突"))
@@ -1422,7 +1592,7 @@ class SimAgentViewModelTest {
     }
 
     @Test
-    fun `scheduler follow up send keeps fire off task non conflicting on reschedule`() = runTest {
+    fun `scheduler follow up send keeps fire off task non conflicting on explicit exact reschedule`() = runTest {
         val taskId = taskRepository.insertTask(
             ScheduledTask(
                 id = "task_follow_fireoff",
@@ -1463,16 +1633,16 @@ class SimAgentViewModelTest {
         activeTaskRetrievalIndex.nextResolveResult = ActiveTaskResolveResult.Resolved(taskId)
 
         enqueueGlobalRescheduleExtraction(
-            targetQuery = "提醒我喝水",
-            timeInstruction = "推迟1个小时"
+            targetQuery = "喝水",
+            timeInstruction = "明天早上9点"
         )
-        enqueueFollowUpShadowDelta(minutes = 60)
-        viewModel.updateInput("推迟1个小时")
+        enqueueFollowUpShadowRelativeDayClock(dayOffset = 1, clockTime = "09:00")
+        viewModel.updateInput("把喝水这件事改到明天早上9点")
         viewModel.send()
         advanceUntilIdle()
 
         val updated = taskRepository.getTask(taskId)
-        assertEquals(Instant.parse("2026-03-22T09:00:00Z"), updated?.startTime)
+        assertEquals(Instant.parse("2026-03-23T01:00:00Z"), updated?.startTime)
         assertTrue(updated?.hasConflict == false)
         assertNull(scheduleBoard.lastDurationMinutes)
         val lastMessage = viewModel.history.value.last() as ChatMessage.Ai
@@ -1559,10 +1729,10 @@ class SimAgentViewModelTest {
         activeTaskRetrievalIndex.nextResolveResult = ActiveTaskResolveResult.Resolved("task_follow_global_b")
         enqueueGlobalRescheduleExtraction(
             targetQuery = "客户B回访",
-            timeInstruction = "推迟1个小时"
+            timeInstruction = "明天下午三点"
         )
-        enqueueFollowUpShadowDelta(minutes = 60)
-        viewModel.updateInput("把客户B回访推迟1个小时")
+        enqueueFollowUpShadowRelativeDayClock(dayOffset = 1, clockTime = "15:00")
+        viewModel.updateInput("把客户B回访改到明天下午三点")
         viewModel.send()
         advanceUntilIdle()
 
@@ -1571,7 +1741,7 @@ class SimAgentViewModelTest {
             taskRepository.getTask("task_follow_global_a")?.startTime
         )
         assertEquals(
-            Instant.parse("2026-03-22T04:00:00Z"),
+            Instant.parse("2026-03-23T07:00:00Z"),
             taskRepository.getTask("task_follow_global_b")?.startTime
         )
         val lastMessage = viewModel.history.value.last() as ChatMessage.Ai

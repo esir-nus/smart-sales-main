@@ -1,5 +1,6 @@
 ---
 description: Enter Web Prototype Mode for visual-first UI development with phone emulator
+last_reviewed: 2026-04-13
 ---
 
 // turbo-all

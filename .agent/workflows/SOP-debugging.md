@@ -1,6 +1,7 @@
 ---
 description: Systematic debugging process with phase gates, severity classification, and evidence-based diagnosis
 trigger: auto-invoke on ANY user request containing "bug", "debug", "fix", or "issue"
+last_reviewed: 2026-04-13
 ---
 
 # SOP: Debugging

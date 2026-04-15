@@ -1,5 +1,6 @@
 ---
 description: Audit agent thinking visibility - Thinking Box, Toast, Notifications, Pop-outs
+last_reviewed: 2026-04-13
 ---
 
 # Agent Visibility Audit

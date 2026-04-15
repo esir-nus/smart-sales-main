@@ -89,9 +89,10 @@ class MainActivity : ComponentActivity() {
                         debugFollowUpScenario = parseDebugFollowUpScenario(),
                         forceSetupOnLaunch = !onboardingCompleted,
                         onForcedSetupCompleted = onboardingGate::markCompleted,
-                        shouldShowFirstLaunchSchedulerTeaser = discoverabilityGate.shouldShowFirstLaunchSchedulerTeaser(),
+                        shouldShowFirstLaunchSchedulerTeaser = AppFlavor.schedulerEnabled &&
+                            discoverabilityGate.shouldShowFirstLaunchSchedulerTeaser(),
                         onFirstLaunchSchedulerTeaserShown = discoverabilityGate::markFirstLaunchSchedulerTeaserSeen,
-                        shouldAutoOpenSchedulerAfterOnboarding =
+                        shouldAutoOpenSchedulerAfterOnboarding = AppFlavor.schedulerEnabled &&
                             onboardingHandoffGate.shouldAutoOpenSchedulerAfterOnboarding(),
                         onPostOnboardingSchedulerAutoOpened =
                             onboardingHandoffGate::consumeSchedulerAutoOpenPending

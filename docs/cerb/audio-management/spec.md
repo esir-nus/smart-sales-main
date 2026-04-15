@@ -2,7 +2,7 @@
 
 > **Cerb-compliant spec** — Audio file management: sync, transcription, UI interaction.
 > **Status**: SHIPPED
-> **Last Updated**: 2026-04-02
+> **Last Updated**: 2026-04-09
 > **Behavioral UX Authority Above This Doc**: [`docs/core-flow/base-runtime-ux-surface-governance-flow.md`](../../core-flow/base-runtime-ux-surface-governance-flow.md) (`UX.AUDIO.*`)
 
 ---
@@ -24,7 +24,13 @@ Current SIM manual badge sync is list-first:
 
 Completed badge-pipeline recordings must also appear in the same drawer inventory without requiring the user to reopen the drawer or run manual sync. The delivered implementation does this by ingesting successful `BadgeAudioPipeline` completions directly into the SIM audio namespace before badge cleanup.
 
-**Key Distinction**: drawer sync remains **UI-driven and manual**. Automatic badge recording handling belongs to [Badge Audio Pipeline](../badge-audio-pipeline/interface.md), but its completed recordings flow back into the same audio-management inventory.
+**Key Distinction**: drawer sync remains **UI-driven and manual**, but is now supplemented by two automatic paths:
+
+1. **`rec#` push-based auto-download** (`SimBadgeAudioAutoDownloader`): badge sends `rec#YYYYMMDD_HHMMSS` over BLE when a recording finishes → app immediately creates QUEUED placeholder and downloads in background. No transcription or scheduling.
+
+2. **`/list` reconnection fallback** (`SimAudioDrawerViewModel`): when badge reconnects (managerStatus transitions to Ready), app auto-runs `/list` with a 3s debounce to catch files recorded while disconnected.
+
+These paths are parallel and independent. `log#` / `BadgeAudioPipeline` remains the scheduler path unchanged.
 
 Deprecated-shard rule:
 
@@ -83,12 +89,24 @@ graph TB
 
 There is one active inventory rule for current non-Mono work:
 
-- drawer-visible badge sync is an explicit UI/manual action
+- drawer-visible badge sync is an explicit UI/manual action, **plus** two automatic paths (see below)
 - successful badge-pipeline completions may appear in the drawer automatically because they are ingested into the same repository namespace after pipeline completion
 - automatic pipeline ingest does **not** redefine the drawer-side sync contract
 - browse-open auto-sync is retired migration history, not current truth
 - fresh install inventory may include one built-in phone demo recording for product demonstration, but it must not ship a long list of seeded pending test recordings by default
 - startup reconciliation should prune the retired built-in pending sample IDs so old multi-seed debug inventory does not linger after upgrade
+
+**Auto-sync on reconnection rule**:
+- when `BadgeManagerStatus` transitions from any non-Ready state to `Ready`, the app automatically fires `/list` sync after a 3s debounce
+- reconnection auto-sync failures are silent (no toast, no spinner) — only affects Dynamic Island
+- the 3s debounce prevents collision with the CONNECTIVITY "Badge 已连接" transient Dynamic Island item
+
+**`rec#` push-based auto-download rule**:
+- badge sends `rec#YYYYMMDD_HHMMSS` when a recording finishes and the file is ready
+- app creates QUEUED placeholder immediately, downloads in background
+- sub-1KB files are discarded silently (same as `/list` sync)
+- no transcription or scheduling is triggered by the `rec#` path
+- Dynamic Island shows transient "已同步：rec_filename" for 3s on success
 
 Manual sync outcome rule:
 
@@ -100,10 +118,11 @@ Manual sync outcome rule:
 
 Browse header contract:
 
-- SIM browse mode keeps one top header family: dual-purpose grip, title plus count badge, and one smart sync/status capsule that also acts as the connectivity handoff when sync is blocked
+- SIM browse mode keeps one top header family: dual-purpose grip, title plus count badge, and one two-part smart capsule: left section shows connection icon + "徽章管理" (taps → connectivity manager), right section shows sync icon + relative time label (taps → manual sync; hidden when disconnected)
 - browse grip keeps dismiss semantics on tap or downward pull, but reserves upward pull for manual sync only when the badge-sync gate is ready
 - blocked or disconnected upward pull must stay in-place and communicate denial locally instead of inventing auto-sync behavior
-- browse smart capsule is the only browse-header connectivity affordance in this slice; ready taps trigger manual sync, while blocked taps hand off to connectivity instead of pretending sync can start
+- browse smart capsule is the only browse-header connectivity affordance in this slice; connected right-side sync taps trigger manual sync, left-side connection tap hands off to connectivity
+- relative sync time labels: "未同步" (never synced this session), "已同步 (Xs)" / "已同步 (Xmin)" / "已同步 (Xh)" (after first sync)
 - browse-only helper rows are legal only while the built-in demo seed is the lone visible inventory item; they teach sync/delete mechanics and must not mutate real repository items
 - select mode remains the narrower rebinding picker and must not surface browse smart-capsule chrome or browse helper teaching rows
 

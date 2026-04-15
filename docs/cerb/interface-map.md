@@ -4,7 +4,7 @@
 >
 > **Purpose**: Module ownership + data flow. Read this BEFORE any cross-module change.
 > **Rule**: If data belongs to Module B, query B's interface at runtime. Don't store B's data on A's model.
-> **Last Updated**: 2026-04-04 (Onboarding quick-start post-pairing handoff sync; RuntimeShell dynamic-island arbitration sync; audio drawer / badge pipeline sync correction; connectivity debug APK host; platform-governance ownership overlay; transient Harmony Tingwu container root and native runtime slice)
+> **Last Updated**: 2026-04-15 (DeviceRegistry multi-device layer; ConnectivityModal multi-device management rewrite; dedicated add-device onboarding route; DynamicIsland activeDeviceName; pairing→registry integration; downloadRecording onProgress; audio download progress fields; agent intelligence Wave 6 conversational polish)
 >
 > **Status Legend**: ✅ = Shipped (Real impl) · 📐 = Interface only (Fake impl) · 🔲 = Not yet coded
 > **Platform Ownership Legend**: `shared` = same product contract across platforms · `android-only` = owned by the current Android lineage · `harmony-only` = owned by the future native Harmony root · `platform-adapter` = shared product contract, platform-specific delivery layer · `legacy-android-on-harmony` = Android app compatibility behavior on Huawei/Honor/Harmony devices
@@ -69,6 +69,7 @@ Store and query domain data. Other modules use their interfaces but never each o
 | **AliasCache** (L1 Cache) | Entity Resolution | Fast-lookup mapping for EntityCandidates | EntityRegistry (Hydration) | `suspend match(List<String>) -> CacheResult` | OS: RAM | ✅ |
 | **[Mutation Module](./scheduler-domain/spec.md)** | Intelligent Scheduler | Atomic Operations, Lexical Conflict Checks, Delete->Insert Reschedule | ScheduleBoard | `suspend rescheduleTask(...)`, `insertTask(...)` | OS: RAM | ✅ |
 | **[SchedulerDomain](./scheduler-domain/spec.md)** (LTM) | Intelligent Scheduler | ScheduledTask, InspirationEntry | — | `ScheduledTaskRepository` | OS: SSD | ✅ |
+| **DeviceRegistry** | Hardware & Audio | Registered device list (MAC, name, default flag, timestamps) | — | `DeviceRegistry` (`loadAll`, `register`, `rename`, `setDefault`, `remove`) | OS: SSD | ✅ |
 
 > **EntityWriter vs EntityRegistry**: Writer handles mutations (dedup, merge, alias registration) AND write-through to RAM S1. Registry handles queries. Callers MUST use Writer for writes, Registry for reads. Never call `EntityRepository.save()` directly.
 >
@@ -126,7 +127,8 @@ User-facing features. Each receives processed results from Orchestrator (Layer 3
 | **[OnboardingInteraction](./onboarding-interaction/spec.md)** | Hardware & Audio | Pre-pairing phone-mic onboarding interaction state, consultation reply, typed profile draft, scheduler quick-start sandbox, CTA-gated profile save, post-completion shell handoff request | DeviceSpeechRecognizer, UserProfileRepository, scheduler Path A extraction services, FastTrackMutationEngine, ExactAlarmPermissionGate, Calendar provider/permission bridge, `RuntimeOnboardingHandoffGate` | `OnboardingInteractionService`, `OnboardingQuickStartService`, `OnboardingSchedulerQuickStartCommitter`, `OnboardingQuickStartCalendarExporter`, `OnboardingInteractionViewModel` | OS: App | 🚧 |
 | **[ConflictResolver](./conflict-resolver/spec.md)** | Intelligent Scheduler | Conflict resolution actions | ScheduleBoard | `resolve(...) -> ConflictResolution` | OS: App | ✅ |
 | **[AgentIntelligenceUI](../cerb-ui/agent-intelligence/spec.md)** | System II & Routing | Wait-state UI components | — | `StateFlow<UiState>` | OS: App | 📐 |
-| **[DevicePairing](./device-pairing/spec.md)** | Hardware & Audio | BLE pairing session states | Legacy BLE stack | `StateFlow<PairingState>` | OS: App | ✅ |
+| **[DevicePairing](./device-pairing/spec.md)** | Hardware & Audio | BLE pairing session states | Legacy BLE stack, DeviceRegistryManager (post-pairing registration) | `StateFlow<PairingState>` | OS: App | ✅ |
+| **DeviceRegistryManager** | Hardware & Audio | Multi-device orchestration (active device, switch, register, remove, rename, legacy migration) | DeviceRegistry, SessionStore, DeviceConnectionManager | `registeredDevices: StateFlow`, `activeDevice: StateFlow`, `switchToDevice()` | OS: App | ✅ |
 
 > **"Reads From" vs "Receives From"**: "Reads From" = the feature calls the interface directly. "Receives From" = UnifiedPipeline pushes results into the feature's ViewModel. This distinction prevents confusion about who initiates the call.
 
@@ -207,6 +209,27 @@ A separate debug-only APK now exists for the active connectivity lane:
 - it may host the real connectivity modal, connectivity manager, `SIM_CONNECTIVITY` onboarding, and SIM audio drawer sync/delete UX for fast debug iteration
 - the main app is the frozen consumer for this lane until shared fixes are proven in the debug host
 - wrapper-local code may add operator controls or logcat helpers, but must not fork connectivity business logic
+
+### Multi-device registry and ConnectivityModal management edge (2026-04-15)
+
+The connectivity surface now supports multi-device management through `DeviceRegistryManager`:
+
+- `DeviceRegistryManager` orchestrates "which device" while `DeviceConnectionManager` continues to handle "how to connect"
+- `DeviceRegistry` (SharedPrefs-backed, Layer 2) persists the registered device list; `DeviceRegistryManager` (Layer 4) owns active device selection, switching, and legacy single-device migration
+- `RealPairingService` calls `registryManager.registerDevice()` after successful pairing; the first registered device automatically becomes the default
+- `ConnectivityModal` now displays active device + device list with inline rename, switch, remove, and set-default actions; frosted glass styling follows `SimHomeHeroTokens`
+- `ConnectivityModal` now splits first-time setup from later add-device entry: `NEEDS_SETUP` continues to the full `SIM_CONNECTIVITY` onboarding route, while the manager `添加设备` action opens the shell-owned `ADD_DEVICE` surface backed by `OnboardingHost.SIM_ADD_DEVICE`
+- `ConnectivityViewModel` now depends on `DeviceRegistryManager` for `registeredDevices`, `activeDevice`, and device management actions
+- `SimShellDynamicIslandCoordinator` now receives `activeDeviceName` and shows device-specific connectivity text (e.g., "Pro 已连接" vs "Badge 已连接")
+- device switch is mutex-protected: soft-disconnect current → seed session for target → force reconnect
+- legacy single-device users are auto-migrated from `SessionStore` on first launch
+
+Rule:
+
+- `DeviceRegistryManager` owns multi-device orchestration; `DeviceConnectionManager` must not become multi-device-aware
+- `ConnectivityModal` may display and manage the device list but must not own device persistence or connection logic
+- `RuntimeShell` owns connectivity-surface routing between `MODAL`, `SETUP`, `MANAGER`, and `ADD_DEVICE`; pairing runtime truth remains with onboarding/device-pairing collaborators
+- Dynamic Island may display the active device name but must not own device selection
 
 ---
 

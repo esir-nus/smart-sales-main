@@ -48,6 +48,15 @@ internal object SimHomeHeroTokens {
     const val AmbientBreatheMinAlpha = 0.2f
     const val AmbientBreatheMaxAlpha = 0.92f
     const val AmbientBreatheDurationMillis = 1250
+
+    // 会话气泡呼吸动画
+    const val ConversationBreatheDurationMillis = 1250
+    const val ConversationBreatheMinGlowAlpha = 0.06f
+    const val ConversationBreatheMaxGlowAlpha = 0.22f
+    const val StreamingCursorOnFraction = 0.6f
+    const val StreamingCursorCycleMillis = 1000
+    const val BubbleEnterDurationMillis = 220
+    const val BubbleEnterOffsetDp = 8f
     val TopSeamInsideSofteningHeight = 8.dp
     val TopSeamOutsideFeatherHeight = 14.dp
     const val TopSeamInnerHighlightAlpha = 0.04f

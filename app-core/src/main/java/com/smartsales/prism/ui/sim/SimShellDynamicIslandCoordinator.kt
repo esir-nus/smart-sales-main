@@ -19,6 +19,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 private const val SIM_DYNAMIC_ISLAND_SCHEDULER_ROTATION_MILLIS = 5_000L
+private const val SIM_DYNAMIC_ISLAND_SESSION_TITLE_ROTATION_MILLIS = 3_000L
 private const val SIM_DYNAMIC_ISLAND_CONNECTED_INTERRUPT_LOCK_MILLIS = 5_000L
 private const val SIM_DYNAMIC_ISLAND_DISCONNECTED_INTERRUPT_LOCK_MILLIS = 3_000L
 private const val SIM_DYNAMIC_ISLAND_HEARTBEAT_INTERVAL_MILLIS = 30_000L
@@ -37,7 +38,8 @@ internal class SimShellDynamicIslandCoordinator(
     schedulerItems: StateFlow<List<DynamicIslandItem>>,
     connectivityState: StateFlow<ConnectionState>,
     batteryLevel: StateFlow<Int>,
-    takeoverSuppressed: StateFlow<Boolean>
+    takeoverSuppressed: StateFlow<Boolean>,
+    activeDeviceName: StateFlow<String?> = MutableStateFlow(null)
 ) : AutoCloseable {
 
     private val coordinatorJob = SupervisorJob(parentScope.coroutineContext[Job])
@@ -57,6 +59,7 @@ internal class SimShellDynamicIslandCoordinator(
     private var activeConnectivityLaneToken: Long = 0L
     private var transientConnectivityJob: Job? = null
     private var heartbeatJob: Job? = null
+    private var currentDeviceName: String? = activeDeviceName.value
 
     init {
         updatePresentation()
@@ -64,9 +67,12 @@ internal class SimShellDynamicIslandCoordinator(
 
         scope.launch {
             schedulerItems.collect { items ->
+                val previousTitleKey = currentSchedulerItems.firstOrNull { it.isSessionTitleItem }?.stableKey
                 currentSchedulerItems = items
+                val incomingTitleKey = currentSchedulerItems.firstOrNull { it.isSessionTitleItem }?.stableKey
                 currentSchedulerItemKey = when {
                     currentSchedulerItems.isEmpty() -> null
+                    incomingTitleKey != null && incomingTitleKey != previousTitleKey -> incomingTitleKey
                     currentSchedulerItemKey == null -> currentSchedulerItems.first().stableKey
                     currentSchedulerItems.none { it.stableKey == currentSchedulerItemKey } -> currentSchedulerItems.first().stableKey
                     else -> currentSchedulerItemKey
@@ -102,8 +108,15 @@ internal class SimShellDynamicIslandCoordinator(
 
         scope.launch {
             while (isActive) {
-                delay(SIM_DYNAMIC_ISLAND_SCHEDULER_ROTATION_MILLIS)
+                delay(resolveSchedulerRotationDwellMillis(_presentation.value.visibleItem))
                 rotateSchedulerLaneIfVisible()
+            }
+        }
+
+        scope.launch {
+            activeDeviceName.collect { name ->
+                currentDeviceName = name
+                updatePresentation()
             }
         }
     }
@@ -236,7 +249,7 @@ internal class SimShellDynamicIslandCoordinator(
     private fun updatePresentation() {
         val visibleItem = when {
             !isTakeoverSuppressed && activeConnectivityLane != null -> {
-                buildConnectivityLaneItem(activeConnectivityLane!!, currentBatteryLevel)
+                buildConnectivityLaneItem(activeConnectivityLane!!, currentBatteryLevel, currentDeviceName)
             }
             currentSchedulerItems.isNotEmpty() -> {
                 val currentIndex = resolveSimDynamicIslandIndex(
@@ -252,6 +265,14 @@ internal class SimShellDynamicIslandCoordinator(
         _presentation.value = SimShellDynamicIslandPresentation(
             uiState = visibleItem?.let(DynamicIslandUiState::Visible) ?: DynamicIslandUiState.Hidden
         )
+    }
+}
+
+private fun resolveSchedulerRotationDwellMillis(item: DynamicIslandItem?): Long {
+    return if (item?.isSessionTitleItem == true) {
+        SIM_DYNAMIC_ISLAND_SESSION_TITLE_ROTATION_MILLIS
+    } else {
+        SIM_DYNAMIC_ISLAND_SCHEDULER_ROTATION_MILLIS
     }
 }
 
@@ -281,24 +302,31 @@ private fun resolvePersistentConnectivityLane(state: ConnectionState): Connectio
 
 private fun buildConnectivityLaneItem(
     state: ConnectionState,
-    batteryLevel: Int
+    batteryLevel: Int,
+    deviceName: String? = null
 ): DynamicIslandItem {
+    val label = deviceName?.let { name ->
+        // Use a short prefix for the device name (up to ~8 chars)
+        val shortName = if (name.length > 8) name.take(8).trimEnd() else name
+        shortName
+    } ?: "Badge"
+
     return when (state) {
         ConnectionState.CONNECTED -> DynamicIslandItem(
-            displayText = "Badge 已连接",
+            displayText = "$label 已连接",
             lane = DynamicIslandLane.CONNECTIVITY,
             visualState = DynamicIslandVisualState.CONNECTIVITY_CONNECTED,
             batteryPercentage = batteryLevel.coerceIn(0, 100),
             tapAction = DynamicIslandTapAction.OpenConnectivityEntry
         )
         ConnectionState.DISCONNECTED -> DynamicIslandItem(
-            displayText = "Badge 已断开",
+            displayText = "$label 已断开",
             lane = DynamicIslandLane.CONNECTIVITY,
             visualState = DynamicIslandVisualState.CONNECTIVITY_DISCONNECTED,
             tapAction = DynamicIslandTapAction.OpenConnectivityEntry
         )
         ConnectionState.RECONNECTING -> DynamicIslandItem(
-            displayText = "Badge 重连中...",
+            displayText = "$label 重连中...",
             lane = DynamicIslandLane.CONNECTIVITY,
             visualState = DynamicIslandVisualState.CONNECTIVITY_RECONNECTING,
             tapAction = DynamicIslandTapAction.OpenConnectivityEntry
@@ -310,7 +338,7 @@ private fun buildConnectivityLaneItem(
             tapAction = DynamicIslandTapAction.OpenConnectivityEntry
         )
         else -> DynamicIslandItem(
-            displayText = "Badge 已断开",
+            displayText = "$label 已断开",
             lane = DynamicIslandLane.CONNECTIVITY,
             visualState = DynamicIslandVisualState.CONNECTIVITY_DISCONNECTED,
             tapAction = DynamicIslandTapAction.OpenConnectivityEntry

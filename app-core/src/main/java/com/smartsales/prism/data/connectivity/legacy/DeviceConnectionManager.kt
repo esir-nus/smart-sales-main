@@ -4,6 +4,7 @@ import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.util.Result
 import com.smartsales.prism.data.connectivity.legacy.badge.BadgeStateMonitor
 import com.smartsales.prism.data.connectivity.legacy.gateway.GattSessionLifecycle
+import com.smartsales.prism.data.connectivity.legacy.scan.BleScanner
 import java.io.Closeable
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -25,6 +26,13 @@ interface DeviceConnectionManager {
      * Emits full downloadable badge filename (e.g., "log_20260209_142605.wav")
      */
     val recordingReadyEvents: SharedFlow<String>
+
+    /**
+     * Badge 音频就绪通知流 — Badge 发送 rec#YYYYMMDD_HHMMSS 时触发
+     *
+     * Emits full downloadable badge filename (e.g., "rec_20260409_150000.wav")
+     */
+    val audioRecordingReadyEvents: SharedFlow<String>
 
     fun selectPeripheral(peripheral: BlePeripheral)
     suspend fun startPairing(peripheral: BlePeripheral, credentials: WifiCredentials): Result<Unit>
@@ -58,6 +66,7 @@ class DefaultDeviceConnectionManager @Inject constructor(
     private val badgeStateMonitor: BadgeStateMonitor,
     private val sessionStore: SessionStore,
     private val phoneWifiProvider: PhoneWifiProvider,
+    private val bleScanner: BleScanner,
     @ConnectivityScope private val scope: CoroutineScope
 ) : DeviceConnectionManager, Closeable {
 
@@ -77,7 +86,8 @@ class DefaultDeviceConnectionManager @Inject constructor(
         phoneWifiProvider = phoneWifiProvider,
         scope = scope,
         runtime = runtime,
-        ingressSupport = ingressSupport
+        ingressSupport = ingressSupport,
+        bleScanner = bleScanner
     )
     private val reconnectSupport = DeviceConnectionManagerReconnectSupport(
         dispatchers = dispatchers,
@@ -88,8 +98,10 @@ class DefaultDeviceConnectionManager @Inject constructor(
 
     override val state: StateFlow<ConnectionState> = runtime.state.asStateFlow()
     override val recordingReadyEvents: SharedFlow<String> = runtime.recordingReadyEvents.asSharedFlow()
+    override val audioRecordingReadyEvents: SharedFlow<String> = runtime.audioRecordingReadyEvents.asSharedFlow()
 
     init {
+        connectionSupport.reconnectSupport = reconnectSupport
         connectionSupport.restoreSession()
     }
 

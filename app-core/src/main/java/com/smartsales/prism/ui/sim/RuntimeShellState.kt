@@ -13,7 +13,8 @@ enum class RuntimeAudioDrawerMode {
 enum class RuntimeConnectivitySurface {
     MODAL,
     SETUP,
-    MANAGER
+    MANAGER,
+    ADD_DEVICE
 }
 
 data class RuntimeShellState(

@@ -25,6 +25,8 @@ release/
 .gradle-user/
 .gradle-local/
 .gradle-tmp/
+.gradle-temp/
+.gradle-user-home/
 build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
@@ -142,14 +144,9 @@ workflows/
 
 # Generated docs artifacts
 CHANGELOG.html
-docs/cerb/dashboard-*.html
+docs/cerb/dashboard*.html
 
 # Plans (internal)
-
-# Test outputs
-*.ap_
-*.apk
-*.aab
 
 # Temporary files
 *.tmp
@@ -181,9 +178,6 @@ ata/
 # HarmonyOS build cache
 .hvigor/
 hvigor/
-
-# Python cache
-__pycache__/
 
 # Harmony toolchain dumps (local only)
 platforms/harmony/commandline-tools-linux-x64-*/

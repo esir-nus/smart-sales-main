@@ -1,37 +1,20 @@
-# Repository-wide default owner. Replace or extend with team handles when platform owners are formalized.
+# Default owner
 * @esir-nus
 
-# Shared product truth and governance
-/docs/core-flow/** @esir-nus
-/docs/cerb/** @esir-nus
-/docs/cerb-ui/** @esir-nus
-/docs/specs/** @esir-nus
-/docs/plans/tracker.md @esir-nus
-/docs/reference/platform-targets.md @esir-nus
-/docs/reference/harmonyos-platform-guide.md @esir-nus
-/docs/platforms/** @esir-nus
-/docs/sops/** @esir-nus
-/handoffs/** @esir-nus
-/ops/** @esir-nus
-/CLAUDE.md @esir-nus
-/.claude/** @esir-nus
-/.agent/rules/smart-sales.md @esir-nus
+# Android app (cerb-compliant — code+docs stay aligned)
+/app/ @esir-nus
+/app-core/ @esir-nus
+/core/ @esir-nus
+/data/ @esir-nus
+/domain/ @esir-nus
 
-# Current Android lineage
-/app/** @esir-nus
-/app-core/** @esir-nus
-/core/** @esir-nus
-/data/** @esir-nus
-/domain/** @esir-nus
+# Cerb documentation (Android source of truth)
+/docs/cerb/ @esir-nus
+/docs/cerb-ui/ @esir-nus
+/docs/core-flow/ @esir-nus
 
-# Future Harmony-native root
-/platforms/harmony/** @esir-nus
+# Harmony platform (backend-centric, references Android docs)
+/platforms/harmony/ @esir-nus
 
-# Repo guardrails
-/.github/CODEOWNERS @esir-nus
-/.github/workflows/** @esir-nus
-/.githooks/** @esir-nus
-/scripts/lane @esir-nus
-/scripts/lane_guard.py @esir-nus
-/scripts/install-hooks.sh @esir-nus
-/scripts/tests/test_lane_guard.py @esir-nus
+# Governance
+/.github/ @esir-nus

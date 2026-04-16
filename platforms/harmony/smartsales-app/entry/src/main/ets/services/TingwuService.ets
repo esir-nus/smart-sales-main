@@ -30,7 +30,7 @@ import {
   buildRfc1123Date,
   hmacSha1Base64
 } from '../utils/SignatureUtils';
-import { httpClient } from './HttpClient';
+import { httpClient, HttpResponse } from './HttpClient';
 
 export interface TingwuSubmitResult {
   jobId: string;
@@ -203,7 +203,7 @@ class TingwuService {
 
     return {
       artifacts,
-      summary: summarizeArtifacts({ summary: smartSummaryResult?.summary, keyPoints: smartSummaryResult?.keyPoints || [] }, transcriptMarkdown),
+      summary: summarizeArtifacts(smartSummaryResult, transcriptMarkdown),
       transcriptPreview: transcriptPreview(transcriptMarkdown)
     };
   }
@@ -225,7 +225,7 @@ class TingwuService {
     method: 'GET' | 'PUT',
     resource: string,
     body?: string
-  ) {
+  ): Promise<HttpResponse> {
     const runtimeConfig = getAppRuntimeConfig();
     const baseUrl = normalizeTingwuBaseUrl(runtimeConfig.TINGWU_BASE_URL);
     const accessKeyId = runtimeConfig.TINGWU_ACCESS_KEY_ID.trim();

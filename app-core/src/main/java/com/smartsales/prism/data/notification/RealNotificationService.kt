@@ -111,6 +111,7 @@ class RealNotificationService @Inject constructor(
                 PrismNotificationChannel.TASK_REMINDER_DEADLINE -> longArrayOf(0, 500, 300, 500)
                 PrismNotificationChannel.COACH_NUDGE -> longArrayOf(0, 150)
                 PrismNotificationChannel.BADGE_STATUS -> null
+                PrismNotificationChannel.BADGE_DOWNLOAD_PROGRESS -> null
                 PrismNotificationChannel.MEMORY_UPDATE -> null
             }
         }
@@ -194,6 +195,7 @@ class RealNotificationService @Inject constructor(
                 PrismNotificationChannel.TASK_REMINDER_DEADLINE -> NotificationManager.IMPORTANCE_HIGH
                 PrismNotificationChannel.COACH_NUDGE -> NotificationManager.IMPORTANCE_DEFAULT
                 PrismNotificationChannel.BADGE_STATUS -> NotificationManager.IMPORTANCE_LOW
+                PrismNotificationChannel.BADGE_DOWNLOAD_PROGRESS -> NotificationManager.IMPORTANCE_LOW
                 PrismNotificationChannel.MEMORY_UPDATE -> NotificationManager.IMPORTANCE_DEFAULT
             }
 

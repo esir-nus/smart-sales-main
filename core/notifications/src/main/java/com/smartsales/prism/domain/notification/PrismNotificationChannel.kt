@@ -22,6 +22,9 @@ enum class PrismNotificationChannel(
     /** 设备状态 — 录音完成、同步状态 */
     BADGE_STATUS("prism_badge_status", "设备状态"),
 
+    /** 后台下载进度 — 前台服务保活通知，低优先级持续显示 */
+    BADGE_DOWNLOAD_PROGRESS("prism_badge_download_progress", "录音下载进度"),
+
     /** 记忆更新 — 实体合并通知 */
     MEMORY_UPDATE("prism_memory_update", "记忆更新")
 }

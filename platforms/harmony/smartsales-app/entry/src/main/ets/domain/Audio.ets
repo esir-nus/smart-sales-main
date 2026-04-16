@@ -67,10 +67,12 @@ export interface DiarizedSegment {
   text: string;
 }
 
-// 智能摘要结构
+// 智能摘要结构（含说话人摘要和问答对，与 HarmonySmartSummary 语义一致）
 export interface SmartSummary {
   summary?: string;
   keyPoints: string[];
+  speakerSummaries: SpeakerSummary[];
+  questionAnswers: QuestionAnswer[];
 }
 
 // 说话人摘要

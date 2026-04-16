@@ -15,12 +15,11 @@ import { audioRepository } from '../services/AudioRepository';
 import {
   formatBytes,
   formatDateTime,
-  formatDuration,
   statusLabel
 } from '../utils/FormatUtils';
 
 @Component
-struct AudioPage {
+export struct AudioPage {
   @State snapshot: AudioSnapshot = createEmptyAudioSnapshot();
   @State selectedAudioId: string = '';
   @State selectedArtifacts?: AudioArtifacts = undefined;

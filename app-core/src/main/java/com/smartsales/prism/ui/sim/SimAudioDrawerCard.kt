@@ -248,7 +248,7 @@ internal fun SimAudioCard(
                 )
             }
         } else if (expanded && entry.item.status == AudioStatus.TRANSCRIBED) {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             when {
                 isArtifactLoading -> {
@@ -286,7 +286,7 @@ internal fun SimAudioCard(
                         artifacts = artifacts!!,
                         fallbackOverview = entry.item.summary ?: entry.preview
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
                     SimArtifactContent(artifacts = artifacts!!)
                 }
             }
@@ -543,7 +543,7 @@ internal fun SimAudioCard(
             ) {
                 Column(
                     modifier = Modifier
-                        .padding(horizontal = 14.dp, vertical = 12.dp)
+                        .padding(horizontal = 16.dp, vertical = 14.dp)
                         .offset(x = offsetX.value.dp)
                 ) {
                     cardContent()

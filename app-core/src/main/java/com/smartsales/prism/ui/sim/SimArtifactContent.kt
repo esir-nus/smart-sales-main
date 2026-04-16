@@ -183,23 +183,23 @@ internal fun SimArtifactOverviewHeader(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(16.dp))
             .background(palette.quietFill)
-            .border(1.dp, palette.border, RoundedCornerShape(14.dp))
-            .padding(horizontal = 12.dp, vertical = 10.dp)
+            .border(1.dp, palette.border, RoundedCornerShape(16.dp))
+            .padding(horizontal = 14.dp, vertical = 12.dp)
     ) {
         overview?.let {
             Text(
                 text = it,
                 color = palette.bodyMuted,
-                fontSize = 13.sp,
-                lineHeight = 19.sp
+                fontSize = 14.sp,
+                lineHeight = 21.sp
             )
         }
         if (keywords.isNotEmpty()) {
             SimArtifactKeywordChips(
                 keywords = keywords,
-                modifier = if (overview != null) Modifier.padding(top = 10.dp) else Modifier
+                modifier = if (overview != null) Modifier.padding(top = 12.dp) else Modifier
             )
         }
     }
@@ -333,14 +333,14 @@ private fun SimArtifactSection(
                     expanded = !expanded
                     onExpandedChange?.invoke(expanded)
                 }
-                .padding(vertical = 8.dp),
+                .padding(vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
                 text = title,
                 color = palette.title,
-                fontWeight = FontWeight.Medium,
-                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp,
                 modifier = Modifier.weight(1f)
             )
             Icon(
@@ -351,7 +351,7 @@ private fun SimArtifactSection(
         }
 
         AnimatedVisibility(visible = expanded) {
-            Box(modifier = Modifier.padding(bottom = 10.dp)) {
+            Box(modifier = Modifier.padding(bottom = 14.dp)) {
                 if (useMarkdown) {
                     MarkdownText(
                         text = text,
@@ -388,10 +388,9 @@ private fun SimArtifactKeywordChips(
         keywords.forEach { keyword ->
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(palette.quietFill)
-                    .border(1.dp, palette.border, RoundedCornerShape(10.dp))
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(palette.chipFill)
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
                 Text(
                     text = keyword,

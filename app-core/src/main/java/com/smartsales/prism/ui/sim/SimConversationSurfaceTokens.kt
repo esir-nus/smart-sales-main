@@ -7,12 +7,13 @@ import com.smartsales.prism.ui.theme.PrismThemeDefaults
 internal object SimConversationSurfaceTokens {
     val Surface = Color(0xFF171B22).copy(alpha = 0.76f)
     val Border = Color.White.copy(alpha = 0.11f)
-    val Divider = Color.White.copy(alpha = 0.06f)
+    val Divider = Color.White.copy(alpha = 0.10f)
     val Title = Color.White.copy(alpha = 0.96f)
     val Body = Color.White.copy(alpha = 0.92f)
     val BodyMuted = Color.White.copy(alpha = 0.72f)
     val Icon = Color.White.copy(alpha = 0.62f)
     val QuietFill = Color.White.copy(alpha = 0.04f)
+    val ChipFill = Color.White.copy(alpha = 0.10f)
 }
 
 internal data class SimConversationSurfacePalette(
@@ -23,7 +24,8 @@ internal data class SimConversationSurfacePalette(
     val body: Color,
     val bodyMuted: Color,
     val icon: Color,
-    val quietFill: Color
+    val quietFill: Color,
+    val chipFill: Color
 )
 
 @Composable
@@ -38,7 +40,8 @@ internal fun rememberSimConversationSurfacePalette(): SimConversationSurfacePale
             body = SimConversationSurfaceTokens.Body,
             bodyMuted = SimConversationSurfaceTokens.BodyMuted,
             icon = SimConversationSurfaceTokens.Icon,
-            quietFill = SimConversationSurfaceTokens.QuietFill
+            quietFill = SimConversationSurfaceTokens.QuietFill,
+            chipFill = SimConversationSurfaceTokens.ChipFill
         )
     } else {
         SimConversationSurfacePalette(
@@ -49,7 +52,8 @@ internal fun rememberSimConversationSurfacePalette(): SimConversationSurfacePale
             body = prismColors.textPrimary,
             bodyMuted = prismColors.textSecondary,
             icon = prismColors.textSecondary,
-            quietFill = Color.Black.copy(alpha = 0.04f)
+            quietFill = Color.Black.copy(alpha = 0.04f),
+            chipFill = Color.Black.copy(alpha = 0.07f)
         )
     }
 }

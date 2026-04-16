@@ -183,7 +183,8 @@ class DefaultBadgeHttpClient @Inject constructor(
                         response.body?.byteStream()?.use { input ->
                             FileOutputStream(dest).use { output ->
                                 val totalBytes = response.body?.contentLength() ?: -1L
-                                if (onProgress != null && totalBytes > 0) {
+                                Log.d("AudioPipeline", "⬇️ download response Content-Length=$totalBytes Transfer-Encoding=${response.header("Transfer-Encoding")} filename=$filename")
+                                if (onProgress != null) {
                                     val buffer = ByteArray(8192)
                                     var bytesRead = 0L
                                     var read: Int

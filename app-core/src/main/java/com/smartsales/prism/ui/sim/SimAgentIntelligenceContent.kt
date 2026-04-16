@@ -11,9 +11,11 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.StartOffset
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -50,6 +52,9 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.ErrorOutline
+import androidx.compose.material.icons.outlined.GraphicEq
+import androidx.compose.material.icons.outlined.RecordVoiceOver
+import androidx.compose.material.icons.outlined.TrackChanges
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -63,6 +68,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -70,6 +76,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.boundsInRoot
@@ -96,6 +103,7 @@ import com.smartsales.prism.ui.components.DynamicIslandTapAction
 import com.smartsales.prism.ui.components.DynamicIslandUiState
 import com.smartsales.prism.ui.components.MarkdownText
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 internal const val SIM_HEADER_TEST_TAG = "sim_header"
 internal const val SIM_DYNAMIC_ISLAND_TEST_TAG = "sim_dynamic_island"
@@ -203,6 +211,7 @@ internal fun SimAgentIntelligenceContent(
                         transcriptRevealState = transcriptRevealState,
                         onArtifactTranscriptRevealConsumed = onArtifactTranscriptRevealConsumed,
                         onSuggestionClick = onSuggestionClick,
+                        onAttachClick = onAttachClick,
                         onConfirmPlan = onConfirmPlan,
                         onAmendPlan = onAmendPlan
                     )
@@ -248,6 +257,7 @@ internal fun SimAgentIntelligenceContent(
                     transcriptRevealState = transcriptRevealState,
                     onArtifactTranscriptRevealConsumed = onArtifactTranscriptRevealConsumed,
                     onSuggestionClick = onSuggestionClick,
+                    onAttachClick = onAttachClick,
                     onConfirmPlan = onConfirmPlan,
                     onAmendPlan = onAmendPlan
                 )
@@ -284,6 +294,7 @@ private fun SimConversationTimeline(
     transcriptRevealState: Map<String, SimArtifactTranscriptRevealState>,
     onArtifactTranscriptRevealConsumed: (messageId: String, isLongTranscript: Boolean) -> Unit,
     onSuggestionClick: (String) -> Unit = {},
+    onAttachClick: () -> Unit = {},
     onConfirmPlan: () -> Unit,
     onAmendPlan: () -> Unit
 ) {
@@ -299,7 +310,10 @@ private fun SimConversationTimeline(
     ) {
         if (showSuggestions) {
             item(key = "sim_suggestions") {
-                SimSuggestionCards(onSuggestionClick = onSuggestionClick)
+                SimSuggestionCards(
+                    onSuggestionClick = onSuggestionClick,
+                    onAttachClick = onAttachClick
+                )
             }
         }
 
@@ -869,10 +883,25 @@ private fun SimThinkingBanner(hint: String?) {
         initialValue = 0.3f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 800, easing = LinearEasing),
+            animation = tween(
+                durationMillis = SimHomeHeroTokens.ConversationBreatheDurationMillis,
+                easing = FastOutSlowInEasing
+            ),
             repeatMode = RepeatMode.Reverse
         ),
         label = "sim_thinking_dot_alpha"
+    )
+    val glowAlpha by transition.animateFloat(
+        initialValue = SimHomeHeroTokens.ConversationBreatheMinGlowAlpha,
+        targetValue = SimHomeHeroTokens.ConversationBreatheMaxGlowAlpha,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = SimHomeHeroTokens.ConversationBreatheDurationMillis,
+                easing = FastOutSlowInEasing
+            ),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "sim_thinking_glow_alpha"
     )
     val shape = RoundedCornerShape(
         topStart = 20.dp,
@@ -890,14 +919,15 @@ private fun SimThinkingBanner(hint: String?) {
             modifier = Modifier
                 .fillMaxWidth(0.78f)
                 .background(palette.surface, shape)
-                .border(1.dp, palette.border, shape)
+                .border(1.dp, ProMaxAccent.copy(alpha = glowAlpha), shape)
                 .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(
-                text = "\u2726",
-                color = ProMaxAccent.copy(alpha = dotAlpha),
-                fontSize = 14.sp
+            Icon(
+                imageVector = Icons.Outlined.AutoAwesome,
+                contentDescription = null,
+                tint = ProMaxAccent.copy(alpha = dotAlpha),
+                modifier = Modifier.size(16.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
@@ -917,13 +947,32 @@ private fun SimStreamingBubble(content: String) {
         return
     }
     val palette = rememberSimConversationSurfacePalette()
-    var cursorVisible by remember { mutableStateOf(true) }
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(500)
-            cursorVisible = !cursorVisible
-        }
-    }
+    val transition = rememberInfiniteTransition(label = "sim_streaming")
+    val cursorPhase by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = SimHomeHeroTokens.StreamingCursorCycleMillis,
+                easing = LinearEasing
+            ),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "sim_streaming_cursor_phase"
+    )
+    val glowAlpha by transition.animateFloat(
+        initialValue = SimHomeHeroTokens.ConversationBreatheMinGlowAlpha,
+        targetValue = SimHomeHeroTokens.ConversationBreatheMaxGlowAlpha,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = SimHomeHeroTokens.ConversationBreatheDurationMillis,
+                easing = FastOutSlowInEasing
+            ),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "sim_streaming_glow_alpha"
+    )
+    val cursorVisible = cursorPhase < SimHomeHeroTokens.StreamingCursorOnFraction
     val shape = RoundedCornerShape(
         topStart = 20.dp,
         topEnd = 20.dp,
@@ -940,7 +989,7 @@ private fun SimStreamingBubble(content: String) {
             modifier = Modifier
                 .fillMaxWidth(0.88f)
                 .background(palette.surface, shape)
-                .border(1.dp, palette.border, shape)
+                .border(1.dp, ProMaxAccent.copy(alpha = glowAlpha), shape)
                 .padding(horizontal = 16.dp, vertical = 11.dp)
         ) {
             MarkdownText(
@@ -954,24 +1003,24 @@ private fun SimStreamingBubble(content: String) {
 }
 
 private data class SimSuggestion(
-    val icon: String,
+    val icon: ImageVector,
     val title: String,
     val description: String
 )
 
 private val SimDefaultSuggestions = listOf(
     SimSuggestion(
-        icon = "\uD83C\uDFAF",
+        icon = Icons.Outlined.TrackChanges,
         title = "复盘一段客户沟通",
         description = "点出关键转折、情绪信号、机会点"
     ),
     SimSuggestion(
-        icon = "\uD83D\uDDE3\uFE0F",
+        icon = Icons.Outlined.RecordVoiceOver,
         title = "演练开场白或异议应对",
         description = "基于你的行业经验给具体建议"
     ),
     SimSuggestion(
-        icon = "\uD83D\uDD0D",
+        icon = Icons.Outlined.GraphicEq,
         title = "分析一段录音",
         description = "上滑打开录音库，选择要分析的录音"
     )
@@ -979,20 +1028,31 @@ private val SimDefaultSuggestions = listOf(
 
 @Composable
 private fun SimSuggestionCards(
-    onSuggestionClick: (String) -> Unit
+    onSuggestionClick: (String) -> Unit,
+    onAttachClick: () -> Unit = {}
 ) {
+    val scope = rememberCoroutineScope()
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 4.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        SimDefaultSuggestions.forEach { suggestion ->
+        SimDefaultSuggestions.forEachIndexed { index, suggestion ->
             SimSuggestionActionCard(
                 icon = suggestion.icon,
                 title = suggestion.title,
                 description = suggestion.description,
-                onClick = { onSuggestionClick(suggestion.title) }
+                onClick = {
+                    onSuggestionClick(suggestion.title)
+                    // 分析录音卡片：发送消息后自动打开音频抽屉
+                    if (index == 2) {
+                        scope.launch {
+                            delay(180L)
+                            onAttachClick()
+                        }
+                    }
+                }
             )
         }
     }
@@ -1000,7 +1060,7 @@ private fun SimSuggestionCards(
 
 @Composable
 private fun SimSuggestionActionCard(
-    icon: String,
+    icon: ImageVector,
     title: String,
     description: String,
     onClick: () -> Unit
@@ -1016,11 +1076,13 @@ private fun SimSuggestionActionCard(
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.Top
     ) {
-        Text(
-            text = icon,
-            fontSize = 18.sp,
-            modifier = Modifier.padding(end = 12.dp, top = 1.dp)
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = palette.bodyMuted,
+            modifier = Modifier.size(20.dp)
         )
+        Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
@@ -1102,6 +1164,24 @@ private fun SimAssistantBubble(
     val palette = rememberSimConversationSurfacePalette()
     val resolvedAccent = accent ?: palette.title
     val resolvedBorderColor = borderColor ?: palette.border
+    var appeared by remember { mutableStateOf(false) }
+    val enterAlpha by animateFloatAsState(
+        targetValue = if (appeared) 1f else 0f,
+        animationSpec = tween(
+            durationMillis = SimHomeHeroTokens.BubbleEnterDurationMillis,
+            easing = FastOutSlowInEasing
+        ),
+        label = "sim_assistant_bubble_enter_alpha"
+    )
+    val enterOffsetY by animateFloatAsState(
+        targetValue = if (appeared) 0f else SimHomeHeroTokens.BubbleEnterOffsetDp,
+        animationSpec = tween(
+            durationMillis = SimHomeHeroTokens.BubbleEnterDurationMillis,
+            easing = FastOutSlowInEasing
+        ),
+        label = "sim_assistant_bubble_enter_offset"
+    )
+    LaunchedEffect(Unit) { appeared = true }
     val shape = RoundedCornerShape(
         topStart = 20.dp,
         topEnd = 20.dp,
@@ -1111,7 +1191,11 @@ private fun SimAssistantBubble(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 1.dp),
+            .padding(vertical = 1.dp)
+            .graphicsLayer {
+                alpha = enterAlpha
+                translationY = enterOffsetY
+            },
         horizontalArrangement = Arrangement.Start
     ) {
         Column(

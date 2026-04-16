@@ -1,104 +1,132 @@
-Ship the current working changes through the DTQ lane pipeline. This is the ONLY correct way to land work — never commit directly to master.
+Ship current work on `develop` or a feature branch. Never touches `master` -- only `/merge` and `promote-to-master` touch master through PRs.
 
-Lane worktrees live at `/home/cslh-frank/lane-worktrees/`. Use `git worktree list` to discover them.
+Primary path: produce a structured handoff block for Codex to execute git operations.
+Backup path: if Codex is unavailable, Claude executes the git operations directly.
 
 ## Pipeline
 
 Execute these steps in order. Stop immediately if any gating step fails.
 
-### Step 1: Preflight — Where Am I?
+### Step 1: Preflight
 
-1. Run `pwd`, `git rev-parse --abbrev-ref HEAD`, and `git worktree list`.
+1. Run `git rev-parse --abbrev-ref HEAD` and `git status --porcelain`.
 2. Run `git diff --name-only` (unstaged) and `git diff --cached --name-only` (staged) to identify changed files.
 3. If no changes exist, stop: "Nothing to ship."
-4. Determine context:
-   - **Case A — Lane worktree**: cwd is under `/home/cslh-frank/lane-worktrees/DTQ-*`. Use this lane directly. Skip to Step 3.
-   - **Case B — Main worktree on master**: cwd is `/home/cslh-frank/main_app`, branch is `master`. Proceed to Step 2.
-   - **Case C — Anything else**: Warn the user and ask how to proceed.
+4. Determine branch context and target action:
+   - **develop**: handoff = commit + push
+   - **feature/\***: handoff = commit + push + PR to develop
+   - **platform/harmony**: handoff = commit + push
+   - **master**: STOP. "Never commit directly to master. Switch to develop or a feature branch."
+   - **other**: warn, ask the user to confirm the target branch and action
 
-### Step 2: Lane Resolution (only from main worktree)
+### Step 2: Classify Changes
 
-Resolve which lane worktree to target. In order of precedence:
+For each changed file, determine:
 
-1. **Explicit argument**: If the user passed a lane number (e.g., `/ship 04`), map it to the matching worktree directory from `git worktree list`. If no match, stop with error.
-2. **Auto-detect**: Match changed file paths against lane worktree names. Use simple keyword matching against the worktree directory names (e.g., `connectivity` files → `DTQ-03-connectivity-oem`, `ui/sim` or `DynamicIsland` or `RuntimeShell` files → `DTQ-04-runtime-shell-sim`). When ambiguous, also read the "Owned Write Scope" column of section 4 in `docs/plans/dirty-tree-quarantine.md` for clarification.
-3. **Ambiguous or no match**: Show the user the changed files and available lane worktrees. Ask them to pick.
+1. **Module ownership**: `app/`, `app-core/`, `core/*`, `data/*`, `domain/*`, `platforms/harmony/`, `docs/`, `.github/`, `.claude/`, `.codex/`, build config
+2. **Commit prefix** (from diff analysis):
+   - New implementation files -> `feat`
+   - Bug-related fixes -> `fix`
+   - Structural changes -> `refactor`
+   - Test files only -> `test`
+   - Doc files only -> `docs`
+   - Config/governance only -> `chore`
+   - Mix of code + docs -> use the code prefix (docs travel with code in cerb-compliant work)
+3. **Scope string**: derive from file paths (e.g., `connectivity`, `scheduler`, `shell`, `pipeline`, `sim`, `harmony`)
 
-Then **copy the changed files** to the target lane worktree:
-- For each changed file, copy it to the same relative path in the lane worktree directory.
-- After copying, verify each file landed correctly (check it exists and diff the copy against the source).
-- Do NOT revert changes in the main worktree — the user may want to keep working.
-- `cd` into the lane worktree for subsequent steps.
+### Step 3: Validate
 
-### Step 3: Validate (scoped to what changed)
+Run targeted validation from repo root. Scope to what actually changed:
 
-Run validation **from within the lane worktree directory**. Scope to what actually changed:
+| Changed path | Compile target | Test target |
+|---|---|---|
+| `app-core/` | `./gradlew :app-core:compileDebugKotlin` | `scripts/run-tests.sh app` |
+| `app/` | `./gradlew :app:assembleDebug` | -- |
+| `data/{sub}/` | `./gradlew :data:{sub}:compileDebugKotlin` | `./gradlew :data:{sub}:test` (if test sources exist) |
+| `domain/{sub}/` | -- (pure Kotlin) | `./gradlew :domain:{sub}:test` |
+| `core/pipeline/` | `./gradlew :core:pipeline:compileDebugKotlin` | `scripts/run-tests.sh pipeline` |
+| `core/{other}/` | `./gradlew :core:{other}:compileDebugKotlin` | -- |
+| `platforms/harmony/` | skip (uses hvigor) | skip |
+| `docs/` or config only | skip | skip |
+| build files (`*.gradle.kts`, `settings.gradle.kts`) | `./gradlew :app:assembleDebug` | skip |
 
-- If `app-core/` files changed: `./gradlew :app-core:compileDebugKotlin`, then `scripts/run-tests.sh app`
-- If `data/` files changed: compile the relevant submodule (e.g., `:data:connectivity:compileDebugKotlin`)
-- If `domain/` files changed: test the relevant submodule (e.g., `:domain:scheduler:test`)
-- If only `docs/` or `.github/` files changed: skip compile and test entirely
-- If only config/build files changed: compile only, skip tests
-
-If validation fails, stop and report errors. Do not commit.
+If validation fails, stop and report errors. Do not produce the handoff.
 
 ### Step 4: Doc-Code Alignment Advisory
 
-Read the target lane's row in `docs/plans/dirty-tree-quarantine.md` section 4 (Lane Board). Check the **Alignment** column value:
-- `Aligned` → proceed silently
-- `Both pending` or `Doc update required` → warn: "Lane DTQ-{NN} alignment is '{value}'. Consider updating owning docs before shipping."
-- This is advisory only — warn, do not block.
+Check whether owning docs were updated alongside code changes:
 
-### Step 5: Commit
+1. If code under `data/{feature}/` changed, check whether `docs/cerb/{feature}/spec.md` or `docs/cerb/{feature}/interface.md` was also modified.
+2. If code under `app-core/` changed, check whether a relevant `docs/core-flow/*-flow.md` was also modified.
+3. If the owning doc exists and was NOT modified in this changeset, warn:
+   "Consider updating `{doc path}` before shipping."
+4. This is advisory only -- warn, do not block.
 
-Working directory: the lane worktree.
+### Step 5: Produce Handoff Block
 
-1. Stage the specific changed files (never `git add -A` or `git add .`).
-2. Draft a commit message in conventional format: `feat|fix|refactor|ship(scope): description`
-   - Analyze the diff to pick the right prefix.
-   - Keep the first line under 72 chars.
-3. Commit using a HEREDOC:
-   ```
+Output the following structured block:
+
+```
+## Codex Ship Handoff
+
+### Branch
+- Current: {branch name}
+- Action: {commit + push | commit + push + PR to develop | commit + push + PR to platform/harmony}
+- Base: {develop | platform/harmony | N/A for direct push}
+
+### Changed Files
+{grouped by module}
+- app-core/src/main/.../File.kt
+- docs/cerb/.../spec.md
+
+### Validation
+- Compile: {PASS | SKIP}
+- Tests: {PASS (N tests) | SKIP}
+
+### Commit
+- Prefix: {feat|fix|refactor|docs|chore|test}
+- Scope: {e.g., connectivity}
+- Message: {conventional format first line, under 72 chars}
+
+### PR (if on feature branch)
+- Title: {from commit message, under 70 chars}
+- Base: develop
+- Body:
+  ## Summary
+  {2-3 bullets}
+
+  ## Test plan
+  - [ ] CI passes (android-tests, platform-governance-check)
+  - [ ] {feature-specific checks}
+
+### Doc Alignment
+- {OK | Advisory: consider updating {path}}
+
+### Instructions for Codex
+1. Stage these files: {explicit file list}
+2. Commit:
    git commit -m "$(cat <<'EOF'
-   {message}
+   {prefix}({scope}): {description}
 
    Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
    EOF
    )"
-   ```
+3. Push: git push {-u origin {branch} if no upstream | origin}
+4. {If PR needed}: gh pr create --base {base} --head {branch} --title "{title}" --body "{body}"
+```
 
-### Step 6: Push and Create PR
+### Step 6: User Instruction
 
-1. Check if a PR already exists for this branch: `gh pr list --head {branch-name} --json number,url`
-   - If PR exists: push only (`git push`), report "Pushed to existing PR #{N}".
-   - If no PR: push with `-u` flag, then create PR.
-2. Create PR with `gh pr create`:
-   - Title: from commit message (under 70 chars)
-   - Body (use HEREDOC):
-     ```
-     ## Summary
-     - {bullet points}
+After the handoff block, print:
 
-     ## DTQ Lane
-     DTQ-{NN}: {lane theme}
+> Copy the handoff block above to Codex. Codex will execute the git operations.
+> If doc alignment advisory was raised, consider addressing it before or after shipping.
 
-     ## Test plan
-     - [ ] {verification checklist}
+## Hard Rules
 
-     🤖 Generated with [Claude Code](https://claude.com/claude-code)
-     ```
-   - Base: `master`
-
-### Step 7: Return
-
-If we started from the main worktree, `cd` back to `/home/cslh-frank/main_app`.
-
-### Step 8: Report
-
-Print:
-- PR URL (or "pushed to existing PR #{N}")
-- Lane: DTQ-{NN} ({theme})
-- Worktree: {path}
-- Commit: {hash} {first line}
-- Validation: {pass/skip summary}
-- Alignment: {status or "OK"}
+- `/ship` never touches master. Only `/merge` and `promote-to-master` touch master through PRs.
+- Primary mode is READ-ONLY (produce handoff for Codex). Backup mode (Codex unavailable): Claude executes directly.
+- Never produce a handoff for direct commits to master. Never create PRs targeting master.
+- If validation fails, do not produce the handoff or execute.
+- The handoff block must contain enough context for Codex to execute without re-reading the codebase.
+- Always stage specific files -- never `git add -A` or `git add .`.

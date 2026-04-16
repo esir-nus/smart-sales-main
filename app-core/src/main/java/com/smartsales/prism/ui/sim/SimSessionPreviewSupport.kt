@@ -1,7 +1,5 @@
 package com.smartsales.prism.ui.sim
 
-import com.smartsales.prism.domain.model.SessionKind
-import com.smartsales.prism.domain.model.SessionPreview
-
-internal val SessionPreview.hasAudioContextHistory: Boolean
-    get() = linkedAudioId != null || sessionKind == SessionKind.AUDIO_GROUNDED
+// hasAudioContextHistory 现在是 SessionPreview 的存储字段，不再需要扩展属性。
+// 创建音频会话时必须显式设置 hasAudioContextHistory = true。
+// 从磁盘反序列化时 SimSessionRepository.toDomain() 也会正确计算该字段。

@@ -95,15 +95,16 @@ class SimShellDynamicIslandCoordinatorTest {
     }
 
     @Test
-    fun `title interrupt jumps to title item immediately`() = runTest {
+    fun `renamed title item re-interrupts scheduler immediately when a new title lands`() = runTest {
+        val schedulerItems = MutableStateFlow(
+            listOf(
+                titleItem("Q4复盘"),
+                schedulerItem("最近：客户回访 · 09:00")
+            )
+        )
         val coordinator = createCoordinator(
             parentScope = this,
-            schedulerItems = MutableStateFlow(
-                listOf(
-                    titleItem("Q4复盘"),
-                    schedulerItem("最近：客户回访 · 09:00")
-                )
-            ),
+            schedulerItems = schedulerItems,
             connectivityState = MutableStateFlow(ConnectionState.CONNECTED)
         )
 
@@ -116,12 +117,15 @@ class SimShellDynamicIslandCoordinatorTest {
             expectedText = "最近：客户回访 · 09:00"
         )
 
-        coordinator.updateSessionTitleInterruptToken(1)
+        schedulerItems.value = listOf(
+            titleItem("Q1复盘"),
+            schedulerItem("最近：客户回访 · 09:00")
+        )
         runCurrent()
         assertVisible(
             coordinator = coordinator,
             expectedLane = DynamicIslandLane.SCHEDULER,
-            expectedText = "Q4复盘"
+            expectedText = "Q1复盘"
         )
 
         coordinator.close()
@@ -428,16 +432,14 @@ class SimShellDynamicIslandCoordinatorTest {
         schedulerItems: MutableStateFlow<List<DynamicIslandItem>>,
         connectivityState: MutableStateFlow<ConnectionState>,
         batteryLevel: MutableStateFlow<Int> = MutableStateFlow(85),
-        takeoverSuppressed: MutableStateFlow<Boolean> = MutableStateFlow(false),
-        syncEvents: kotlinx.coroutines.flow.MutableSharedFlow<com.smartsales.prism.data.audio.SimBadgeSyncIslandEvent> = kotlinx.coroutines.flow.MutableSharedFlow()
+        takeoverSuppressed: MutableStateFlow<Boolean> = MutableStateFlow(false)
     ): SimShellDynamicIslandCoordinator {
         return SimShellDynamicIslandCoordinator(
             parentScope = parentScope,
             schedulerItems = schedulerItems,
             connectivityState = connectivityState,
             batteryLevel = batteryLevel,
-            takeoverSuppressed = takeoverSuppressed,
-            syncEvents = syncEvents
+            takeoverSuppressed = takeoverSuppressed
         )
     }
 

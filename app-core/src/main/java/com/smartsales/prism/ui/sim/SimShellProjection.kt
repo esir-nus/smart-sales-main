@@ -4,6 +4,7 @@ import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.ui.components.DynamicIslandItem
 import com.smartsales.prism.ui.components.DynamicIslandSchedulerTarget
 import com.smartsales.prism.ui.components.DynamicIslandTapAction
+import com.smartsales.prism.ui.components.DynamicIslandVisualState
 import java.time.ZoneId
 
 internal fun buildSimDynamicIslandItems(
@@ -13,9 +14,21 @@ internal fun buildSimDynamicIslandItems(
     showIdleTeachingHint: Boolean = false
 ): List<DynamicIslandItem> {
     val normalizedTitle = sessionTitle.ifBlank { "SIM" }
+    val titleItem = if (isSimSessionTitleEligibleForIsland(normalizedTitle)) {
+        DynamicIslandItem(
+            sessionTitle = normalizedTitle,
+            displayText = normalizedTitle,
+            visualState = DynamicIslandVisualState.SESSION_TITLE_HIGHLIGHT,
+            showsAudioIndicator = sessionHasAudioContextHistory,
+            tapAction = DynamicIslandTapAction.OpenSchedulerDrawer()
+        )
+    } else {
+        null
+    }
+    val taskLimit = if (titleItem != null) 2 else 3
     val activeTasks = orderedTasks
         .filterNot { it.isDone }
-        .take(3)
+        .take(taskLimit)
     if (activeTasks.isEmpty()) {
         val schedulerFallback = DynamicIslandItem(
             sessionTitle = normalizedTitle,
@@ -27,9 +40,11 @@ internal fun buildSimDynamicIslandItems(
             isIdleEntry = true,
             tapAction = DynamicIslandTapAction.OpenSchedulerDrawer()
         )
-        return listOf(schedulerFallback)
+        return listOfNotNull(titleItem, schedulerFallback)
     }
-    return activeTasks.map { task ->
+    return buildList {
+        titleItem?.let(::add)
+        addAll(activeTasks.map { task ->
         DynamicIslandItem(
             sessionTitle = normalizedTitle,
             schedulerSummary = buildSimDynamicIslandSummary(task),
@@ -42,6 +57,7 @@ internal fun buildSimDynamicIslandItems(
                 )
             )
         )
+        })
     }
 }
 

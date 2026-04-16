@@ -80,7 +80,6 @@ internal fun RuntimeShellContent(
     coroutineScope: CoroutineScope,
     onImportTestAudio: () -> Unit,
     onForcedFirstLaunchOnboardingCompleted: () -> Unit,
-    onReplayOnboarding: () -> Unit,
     dismissReminderBanner: () -> Unit,
     clearFollowUp: (SimBadgeFollowUpClearReason) -> Unit,
     closeOverlays: () -> Unit,
@@ -341,7 +340,6 @@ internal fun RuntimeShellContent(
                 currentChatAudioId = currentChatAudioId,
                 connectionState = connectivityState,
                 showTestImportAction = BuildConfig.DEBUG && shellState.audioDrawerMode == RuntimeAudioDrawerMode.BROWSE,
-                showDebugScenarioActions = BuildConfig.DEBUG && shellState.audioDrawerMode == RuntimeAudioDrawerMode.BROWSE,
                 viewModel = audioViewModel,
                 onOpenConnectivity = {
                     mutateShellState { state ->
@@ -354,7 +352,6 @@ internal fun RuntimeShellContent(
                 },
                 onSyncFromBadge = { audioViewModel.syncFromBadgeManually() },
                 onImportTestAudio = onImportTestAudio,
-                onReplayOnboarding = onReplayOnboarding,
                 onArtifactOpened = { audioId, title ->
                     emitSimAudioPersistedArtifactOpenedTelemetry(
                         audioId = audioId,
@@ -440,6 +437,14 @@ internal fun RuntimeShellContent(
                             )
                         }
                     },
+                    onNavigateToAddDevice = {
+                        mutateShellState { state ->
+                            handleRuntimeAddDeviceStart(
+                                state = state,
+                                source = "bootstrap_modal"
+                            )
+                        }
+                    },
                     viewModel = connectivityViewModel
                 )
             }
@@ -501,7 +506,31 @@ internal fun RuntimeShellContent(
                         )
                     }
                 },
+                onNavigateToAddDevice = {
+                    mutateShellState { state ->
+                        handleRuntimeAddDeviceStart(
+                            state = state,
+                            source = "manager_add_device"
+                        )
+                    }
+                },
                 viewModel = connectivityViewModel
+            )
+        }
+
+        // 添加新设备 — 跳过欢迎/语音，直接进入配网流程
+        AnimatedVisibility(
+            visible = shellState.activeConnectivitySurface == RuntimeConnectivitySurface.ADD_DEVICE,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.zIndex(PrismElevation.Drawer + 1f)
+        ) {
+            OnboardingCoordinator(
+                host = OnboardingHost.SIM_ADD_DEVICE,
+                onExit = { mutateShellState(::closeRuntimeConnectivitySurface) },
+                onComplete = { mutateShellState(::closeRuntimeConnectivitySurface) },
+                exitPolicy = OnboardingExitPolicy.ALLOW_EXIT,
+                pairingViewModel = pairingViewModel
             )
         }
 

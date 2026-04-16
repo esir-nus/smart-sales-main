@@ -17,7 +17,7 @@
 - **Primary Law**:
   - [`docs/specs/platform-governance.md`](../specs/platform-governance.md)
 - **Dirty-Tree Quarantine Ledger**:
-  - [`docs/plans/dirty-tree-quarantine.md`](./dirty-tree-quarantine.md)
+  - Archived to [`docs/archive/dtq-era/dirty-tree-quarantine.md`](../archive/dtq-era/dirty-tree-quarantine.md) (DTQ system decommissioned 2026-04-15, replaced by develop + platform branch model)
 - **Dirty-Tree Audit**:
   - [`docs/reports/20260404-dirty-tree-quarantine-audit.md`](../reports/20260404-dirty-tree-quarantine-audit.md)
 - **Platform Target Reference**:
@@ -189,7 +189,84 @@
 
 ---
 
-## Active Investigation: Base Runtime Unification
+## Shipped Fix: Download Progress Bar Wiring — RealConnectivityBridge onProgress Forwarding
+> **Context**: The audio card download progress bar appeared but stayed at 0% because `RealConnectivityBridge` did not forward `onProgress` to `BadgeHttpClient.downloadWav()`. A dead compat extension (`ConnectivityBridgeDownloadCompat.kt`) masked the gap by emitting progress only at 100% on completion.
+
+- **Status**: Shipped (2026-04-15)
+- **Scope**:
+  - `RealConnectivityBridge.downloadRecording()` updated to accept `onProgress` parameter and forward it to `httpClient.downloadWav(baseUrl, filename, tempFile, onProgress)`
+  - Removed dead `ConnectivityBridgeDownloadCompat.kt` compat extension that only emitted final-state progress
+- **Files Changed**:
+  - `app-core/src/main/java/com/smartsales/prism/data/connectivity/RealConnectivityBridge.kt`
+  - `app-core/src/main/java/com/smartsales/prism/data/audio/ConnectivityBridgeDownloadCompat.kt` (deleted)
+- **Follow-Up from**: Shipped Slice: Connectivity Bridge Download Progress and Audio Inventory Fields
+
+---
+
+## Shipped Fix: Download Progress Bar UI — Indeterminate Progress + Speed Display
+> **Context**: ESP32 badge HTTP server sends no `Content-Length` header (chunked transfer encoding), so `totalBytes = -1`. App now shows indeterminate progress bar with animated sliding indicator, downloaded bytes count, and live speed (KB/s) instead of waiting for file size.
+
+- **Status**: Shipped (2026-04-15)
+- **Scope**:
+  - `BadgeHttpClient.downloadWavOnce()` now always streams progress callbacks when `onProgress` callback is present, regardless of `Content-Length` header presence
+  - `SimAudioRepositorySyncSupport` callback handles `totalBytes <= 0` gracefully: uses `-1f` sentinel for indeterminate progress state
+  - `SimAudioDrawerCard` UI supports dual modes:
+    - **Indeterminate** (`downloadProgress < 0`): animated `LinearProgressIndicator()` + downloaded bytes display (e.g., "15.2 MB")
+    - **Determinate** (`downloadProgress >= 0`): filling bar + percentage display (e.g., "45%")
+  - Both modes show live download speed (e.g., "125 KB/s") via existing `LaunchedEffect(entry.downloadedBytes)` wiring
+- **Files Changed**:
+  - `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/BadgeHttpClient.kt` (line 186)
+  - `app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepositorySyncSupport.kt` (lines 446-458)
+  - `app-core/src/main/java/com/smartsales/prism/ui/sim/SimAudioDrawerCard.kt` (lines 342-357)
+- **Testing Evidence**:
+  - adb telemetry confirmed ESP32 response: `Content-Length=-1 Transfer-Encoding=chunked` for 37MB WAV file
+  - On-device 5-minute download completed with progress bar animating and speed updating in real time
+- **Follow-Up from**: Shipped Fix: Download Progress Bar Wiring
+
+---
+
+## Deferred Enhancement: Download Progress Bar — File Size Support via `/list` Endpoint
+> **Context**: Next-gen progress bar shows determinate percentage when file size is available. Requires firmware team to add file size data to `/list` endpoint response.
+
+- **Status**: Deferred (awaiting firmware implementation — ETA: days)
+- **Scope** (to be implemented once firmware ships file sizes):
+  - Firmware adds file size field to `/list` response: `[{"name": "file.wav", "size": 19914866}, ...]`
+  - `BadgeHttpClient.listWavFiles()` gains overload to parse size info, with backward-compatible fallback to string-only array format
+  - `SimAudioRepository` caches file sizes keyed by filename
+  - `SimAudioRepositorySyncSupport` pre-fetches total size before download, passes it to `RealConnectivityBridge`
+  - When total size known: `SimAudioDrawerCard` switches to determinate mode (percentage display + filling bar)
+- **Benefits**:
+  - Avoids firmware Content-Length header changes (less intrusive)
+  - Allows app to pre-calculate total bytes before download starts
+  - Deterministic progress display (percentage) once size info arrives
+- **Blocker**: Firmware team implementation of file size field in `/list` response
+
+---
+
+## Shipped Slice: Governance Simplification — DTQ System Decommissioned
+> **Context**: The DTQ lane system (9 worktrees, 351-line JSON registry, Python lane guard, handoff contracts) repeatedly created blockers when reality outpaced the registry. Replaced with industry-standard develop + platform branch model.
+
+- **Status**: Shipped (2026-04-15). Remote sync completed on 2026-04-15.
+- **Scope**:
+  - New branch model: `master` (protected, promotion-only) -> `develop` (Android + shared, daily work) -> `platform/harmony` (HarmonyOS)
+  - All 6 active DTQ lanes merged into `develop` in stability order: DTQ-03 -> DTQ-01 -> DTQ-04 -> DTQ-05 -> DTQ-02 -> DTQ-06
+  - DTQ-08 (Harmony native) merged into `platform/harmony`, then synced with `develop`
+  - 19 NO-MATCH dirty files + 7 new registry files committed directly on `develop`
+  - 33 MATCH dirty files resolved automatically via lane merges
+- **Decommissioned**:
+  - `ops/lane-registry.json` (replaced by CODEOWNERS + branch model)
+  - `scripts/lane_guard.py`, `scripts/lane`, `scripts/install-hooks.sh`, `scripts/tests/test_lane_guard.py`
+  - `.githooks/pre-commit`, `.githooks/pre-push` (lane guard hooks)
+  - 7 lane worktrees at `/home/cslh-frank/lane-worktrees/DTQ-*`
+  - 7 `lane/DTQ-*` branches (local deleted, remote pending)
+  - DTQ-specific Codex/Claude skills
+- **Archived**: `docs/plans/dirty-tree-quarantine.md`, `docs/sops/lane-worktree-governance.md`, `docs/sops/tracker-governance.md`, `handoffs/` -> `docs/archive/dtq-era/`
+- **Updated**: `.github/CODEOWNERS` simplified to module-level ownership; `CLAUDE.md` rewritten for new branch model and platform philosophies
+- **Remote Sync** (completed 2026-04-15):
+  - `develop` pushed and tracking `origin/develop`
+  - `platform/harmony` pushed and tracking `origin/platform/harmony`
+  - `master` branch protection set (PR-required, no force push, no deletion)
+  - 6 remote `lane/DTQ-*` branches deleted
 > **Context**: Direct user-requested investigation to eliminate SIM/full implementation drift by defining one canonical base runtime and treating Mono as the later architecture augmentation layer.
 
 - **Status**: Investigation package delivered on 2026-03-31; Slice 1 wrapper cleanup accepted on 2026-03-31; Slice 2 wrapper cleanup accepted on 2026-03-31; Slice 3 wrapper cleanup accepted on 2026-03-31; Slice 4 wrapper cleanup accepted on 2026-03-31; Slice 5 truth lock accepted on 2026-03-31; final root/shell unification landed on 2026-04-01

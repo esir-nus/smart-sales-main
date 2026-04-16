@@ -7,10 +7,10 @@
 
 ## Overview
 
-The production onboarding flow now follows one canonical sequence across cold-start product onboarding, connectivity setup replay, and forced first-launch setup entry.
+The production onboarding flow now uses one shared coordinator across cold-start product onboarding, connectivity setup replay, forced first-launch setup entry, and the SIM add-device route.
 
-The same Compose coordinator owns all production entry points. Remaining host toggles are preview/capture debt only; they are no longer allowed to change production routing or completion behavior.
-Production completion always returns through the same `MainActivity -> RuntimeShell` handoff path; legacy wrapper hosts are not lawful onboarding completion owners.
+The same Compose coordinator owns all production entry points. Host selection may narrow the lawful step span when the product intent differs, but it must not fork the pairing runtime or invent a second completion owner.
+Production completion returns through `MainActivity -> RuntimeShell`; the shell then decides whether to continue into home, stay in connectivity, or close the transient add-device surface.
 
 Behavior authority for the pairing runtime remains:
 
@@ -20,18 +20,19 @@ Behavior authority for the pairing runtime remains:
 
 ## Production Sequence
 
-1. `WELCOME`
-2. `PERMISSIONS_PRIMER`
-3. `VOICE_HANDSHAKE_CONSULTATION`
-4. `VOICE_HANDSHAKE_PROFILE`
-5. `HARDWARE_WAKE`
-6. `SCAN`
-7. `DEVICE_FOUND`
-8. `PROVISIONING`
-9. `SCHEDULER_QUICK_START`
-10. `COMPLETE`
+Primary host paths:
 
-All production entry points now reuse the same calm intro prefix, pairing lane, quick-start sandbox, and home-first completion.
+1. `FULL_APP` and `SIM_CONNECTIVITY`
+   `WELCOME -> PERMISSIONS_PRIMER -> VOICE_HANDSHAKE_CONSULTATION -> VOICE_HANDSHAKE_PROFILE -> HARDWARE_WAKE -> SCAN -> DEVICE_FOUND -> PROVISIONING -> SCHEDULER_QUICK_START -> COMPLETE`
+2. `SIM_ADD_DEVICE`
+   `HARDWARE_WAKE -> SCAN -> DEVICE_FOUND -> PROVISIONING -> COMPLETE`
+
+Rule:
+
+- `SIM_ADD_DEVICE` is the only lawful production shortcut host that skips the intro/handshake prefix
+- `SIM_ADD_DEVICE` reuses the same pairing and provisioning runtime as the other hosts
+- `SIM_ADD_DEVICE` must not stage or commit onboarding quick-start scheduler items
+- `SIM_ADD_DEVICE` completion closes back to the current connectivity-owned add-device surface rather than teaching home-first onboarding again
 
 ## Wave Intent
 
@@ -88,6 +89,7 @@ Rule:
 - `DEVICE_FOUND` requires explicit manual tap to connect
 - `PROVISIONING` combines Wi-Fi entry plus visible pairing/progress states
 - successful `PROVISIONING` now hands into `SCHEDULER_QUICK_START` instead of leaving onboarding immediately
+- the dedicated `SIM_ADD_DEVICE` host is the one exception: after successful `PROVISIONING`, it advances directly to `COMPLETE`
 - the local skip shortcut is visible on `HARDWARE_WAKE` and on the recoverable Wi-Fi entry / Wi-Fi failure surfaces only
 - the local skip shortcut is not visible on `SCAN`, `DEVICE_FOUND`, or provisioning progress/success
 
@@ -105,6 +107,7 @@ Rule:
 - after successful completion enters home, the shell auto-opens the real scheduler drawer once through the shell-owned drawer animation as the organic teaching handoff for the just-created quick-start items
 - on fresh install / reinstall, forced first-launch setup still boots directly into onboarding before ordinary shell use
 - later connectivity setup replay still reuses the same onboarding lane, but successful completion returns to home rather than opening connectivity manager
+- later add-device entry reuses the same coordinator through `SIM_ADD_DEVICE`, but successful completion closes the transient connectivity-owned add-device surface rather than routing through home or quick start
 - forced first-launch setup keeps system-back blocked until the user finishes onboarding; the only intentional shortcut is the local pairing-step jump into `SCHEDULER_QUICK_START`
 
 ## Locked Invariants

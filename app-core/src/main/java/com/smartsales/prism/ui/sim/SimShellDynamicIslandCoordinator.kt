@@ -19,6 +19,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 private const val SIM_DYNAMIC_ISLAND_SCHEDULER_ROTATION_MILLIS = 5_000L
+private const val SIM_DYNAMIC_ISLAND_SESSION_TITLE_ROTATION_MILLIS = 3_000L
 private const val SIM_DYNAMIC_ISLAND_CONNECTED_INTERRUPT_LOCK_MILLIS = 5_000L
 private const val SIM_DYNAMIC_ISLAND_DISCONNECTED_INTERRUPT_LOCK_MILLIS = 3_000L
 private const val SIM_DYNAMIC_ISLAND_HEARTBEAT_INTERVAL_MILLIS = 30_000L
@@ -66,9 +67,12 @@ internal class SimShellDynamicIslandCoordinator(
 
         scope.launch {
             schedulerItems.collect { items ->
+                val previousTitleKey = currentSchedulerItems.firstOrNull { it.isSessionTitleItem }?.stableKey
                 currentSchedulerItems = items
+                val incomingTitleKey = currentSchedulerItems.firstOrNull { it.isSessionTitleItem }?.stableKey
                 currentSchedulerItemKey = when {
                     currentSchedulerItems.isEmpty() -> null
+                    incomingTitleKey != null && incomingTitleKey != previousTitleKey -> incomingTitleKey
                     currentSchedulerItemKey == null -> currentSchedulerItems.first().stableKey
                     currentSchedulerItems.none { it.stableKey == currentSchedulerItemKey } -> currentSchedulerItems.first().stableKey
                     else -> currentSchedulerItemKey
@@ -104,7 +108,7 @@ internal class SimShellDynamicIslandCoordinator(
 
         scope.launch {
             while (isActive) {
-                delay(SIM_DYNAMIC_ISLAND_SCHEDULER_ROTATION_MILLIS)
+                delay(resolveSchedulerRotationDwellMillis(_presentation.value.visibleItem))
                 rotateSchedulerLaneIfVisible()
             }
         }
@@ -261,6 +265,14 @@ internal class SimShellDynamicIslandCoordinator(
         _presentation.value = SimShellDynamicIslandPresentation(
             uiState = visibleItem?.let(DynamicIslandUiState::Visible) ?: DynamicIslandUiState.Hidden
         )
+    }
+}
+
+private fun resolveSchedulerRotationDwellMillis(item: DynamicIslandItem?): Long {
+    return if (item?.isSessionTitleItem == true) {
+        SIM_DYNAMIC_ISLAND_SESSION_TITLE_ROTATION_MILLIS
+    } else {
+        SIM_DYNAMIC_ISLAND_SCHEDULER_ROTATION_MILLIS
     }
 }
 

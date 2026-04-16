@@ -73,7 +73,7 @@ fun OnboardingCoordinator(
         onExit = {
             interactionViewModel.resetInteractionState()
             pairingViewModel.cancelPairing()
-            if (host == OnboardingHost.SIM_CONNECTIVITY) {
+            if (host != OnboardingHost.FULL_APP) {
                 onExit()
             } else {
                 onComplete()

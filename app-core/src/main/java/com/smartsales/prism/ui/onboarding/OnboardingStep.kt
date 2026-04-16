@@ -7,7 +7,9 @@ import com.smartsales.prism.AppFlavor
  */
 enum class OnboardingHost {
     FULL_APP,
-    SIM_CONNECTIVITY
+    SIM_CONNECTIVITY,
+    /** 已有设备后添加新徽章，跳过欢迎/语音采集，直接进入配网流程。 */
+    SIM_ADD_DEVICE
 }
 
 /**
@@ -29,11 +31,12 @@ enum class OnboardingStep {
 internal fun initialOnboardingStep(host: OnboardingHost): OnboardingStep = when (host) {
     OnboardingHost.FULL_APP -> OnboardingStep.WELCOME
     OnboardingHost.SIM_CONNECTIVITY -> OnboardingStep.WELCOME
+    OnboardingHost.SIM_ADD_DEVICE -> OnboardingStep.HARDWARE_WAKE
 }
 
 internal fun nextOnboardingStep(
     currentStep: OnboardingStep,
-    @Suppress("UNUSED_PARAMETER") host: OnboardingHost
+    host: OnboardingHost
 ): OnboardingStep = when (currentStep) {
     OnboardingStep.WELCOME -> OnboardingStep.PERMISSIONS_PRIMER
     OnboardingStep.PERMISSIONS_PRIMER -> OnboardingStep.VOICE_HANDSHAKE_CONSULTATION
@@ -43,7 +46,9 @@ internal fun nextOnboardingStep(
     OnboardingStep.HARDWARE_WAKE -> OnboardingStep.SCAN
     OnboardingStep.SCAN -> OnboardingStep.DEVICE_FOUND
     OnboardingStep.DEVICE_FOUND -> OnboardingStep.PROVISIONING
-    OnboardingStep.PROVISIONING -> if (AppFlavor.schedulerEnabled) {
+    OnboardingStep.PROVISIONING -> if (host == OnboardingHost.SIM_ADD_DEVICE) {
+        OnboardingStep.COMPLETE
+    } else if (AppFlavor.schedulerEnabled) {
         OnboardingStep.SCHEDULER_QUICK_START
     } else {
         OnboardingStep.COMPLETE

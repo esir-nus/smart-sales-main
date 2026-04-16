@@ -83,7 +83,7 @@ dependencies {
     implementation(projects.data.aiCore)
     // REMOVED: projects.appPrism (is application module, not library)
     // REMOVED: projects.domain.prismCore (archived - see archived/ folder)
-    implementation(projects.tingwuTestApp)
+    // REMOVED: projects.tingwuTestApp (gitignored local debug module, nothing imported it)
     implementation(projects.core.util)
 
     implementation(platform(libs.compose.bom))

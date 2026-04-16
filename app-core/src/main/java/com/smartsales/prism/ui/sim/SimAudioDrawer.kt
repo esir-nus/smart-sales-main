@@ -61,12 +61,10 @@ fun SimAudioDrawer(
     onOpenConnectivity: () -> Unit = {},
     onArtifactOpened: (String, String) -> Unit = { _, _ -> },
     onImportTestAudio: () -> Unit = {},
-    onReplayOnboarding: () -> Unit = {},
     onDeleteAudio: (String) -> Unit = {},
     mode: RuntimeAudioDrawerMode = RuntimeAudioDrawerMode.BROWSE,
     currentChatAudioId: String? = null,
     showTestImportAction: Boolean = false,
-    showDebugScenarioActions: Boolean = false,
     modifier: Modifier = Modifier,
     viewModel: SimAudioDrawerViewModel
 ) {
@@ -162,7 +160,6 @@ fun SimAudioDrawer(
                         onDeleteAudio = onDeleteAudio,
                         onSelectForChat = onSelectForChat,
                         onImportTestAudio = onImportTestAudio,
-                        onReplayOnboarding = onReplayOnboarding,
                         onBrowsePullOffsetChanged = { pullOffset ->
                             coroutineScope.launch {
                                 browsePullOffsetPx.snapTo(pullOffset)
@@ -179,8 +176,7 @@ fun SimAudioDrawer(
                                 )
                             }
                         },
-                        showTestImportAction = showTestImportAction,
-                        showDebugScenarioActions = showDebugScenarioActions
+                        showTestImportAction = showTestImportAction
                     )
                 }
             }

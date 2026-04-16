@@ -100,8 +100,7 @@ object ConnectivityProvidesModule {
             displayName = "CHLE Intelligent",
             nameKeywords = listOf("CHLE_Intelligent"),
             scanServiceUuids = listOf(defaultService, altUartService),
-            scanMatchMode = BleScanMatchMode.NAME_ONLY,
-            macAddressPrefixes = listOf("14:C1:9F") // 针对新 ESP32 的出厂 MAC 频段
+            scanMatchMode = BleScanMatchMode.NAME_ONLY
         )
         return listOf(defaultProfile)
     }

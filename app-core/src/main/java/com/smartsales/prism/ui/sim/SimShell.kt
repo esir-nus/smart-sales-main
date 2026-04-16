@@ -80,7 +80,6 @@ internal fun SimShell(
         coroutineScope = coroutineScope,
         onImportTestAudio = {},
         onForcedFirstLaunchOnboardingCompleted = onForcedFirstLaunchOnboardingCompleted,
-        onReplayOnboarding = {},
         dismissReminderBanner = {},
         clearFollowUp = { _ -> },
         closeOverlays = { shellState = closeRuntimeOverlays(shellState) },

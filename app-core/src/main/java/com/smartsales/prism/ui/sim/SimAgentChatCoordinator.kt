@@ -79,6 +79,7 @@ internal class SimAgentChatCoordinator(
             summary = (summary ?: "音频讨论").take(6),
             timestamp = System.currentTimeMillis(),
             linkedAudioId = audioId,
+            hasAudioContextHistory = true,
             sessionKind = SessionKind.AUDIO_GROUNDED
         )
         val firstMessage = ChatMessage.Ai(

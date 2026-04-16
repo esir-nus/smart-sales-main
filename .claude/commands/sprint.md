@@ -38,7 +38,7 @@ Before producing the contract, read docs in this order (from `docs/specs/harness
 
 1. Core-flow doc (`docs/core-flow/[feature]-flow.md`)
 2. Pipeline/data contract (`docs/cerb/[feature]/interface.md`)
-3. Verification boundary (lane's `evidence_class` in `ops/lane-registry.json`)
+3. Verification boundary (determine appropriate evidence class: L1 unit/module, L2 simulated, L3 on-device)
 4. UI docking surface (`docs/cerb/[feature]/spec.md`) -- reference only
 
 If the core-flow doc does not exist, flag this to the operator. That is the first deliverable, not a reason to skip ahead.
@@ -51,8 +51,8 @@ Output this template, filled in from the reading:
 ### Sprint Contract: [Slice Name]
 
 **Engine**: [Backend/Pipeline | UI | Architecture | Governance | Doc]
-**Lane**: [lane_id from registry, or "new lane needed"]
-**Evidence class**: [from registry or recommended class]
+**Branch**: [develop | feature/{name} | platform/harmony]
+**Evidence class**: [L1 | L2 | L3 -- choose based on scope and risk]
 **Date**: [today]
 
 **Scope**:

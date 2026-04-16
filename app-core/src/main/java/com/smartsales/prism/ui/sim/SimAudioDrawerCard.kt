@@ -339,22 +339,41 @@ internal fun SimAudioCard(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                             }
-                            Text(
-                                text = "${(entry.downloadProgress * 100).toInt()}%",
-                                color = SimDrawerAccentSuccess,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
+                            if (entry.downloadProgress >= 0f) {
+                                Text(
+                                    text = "${(entry.downloadProgress * 100).toInt()}%",
+                                    color = SimDrawerAccentSuccess,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            } else {
+                                Text(
+                                    text = formatDownloadFileSize(entry.downloadedBytes),
+                                    color = SimDrawerAccentSuccess,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
                         }
                         Spacer(modifier = Modifier.height(8.dp))
-                        LinearProgressIndicator(
-                            progress = { entry.downloadProgress.coerceIn(0f, 1f) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(3.dp),
-                            color = SimDrawerAccentSuccess,
-                            trackColor = SimDrawerDivider
-                        )
+                        if (entry.downloadProgress >= 0f) {
+                            LinearProgressIndicator(
+                                progress = { entry.downloadProgress.coerceIn(0f, 1f) },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(3.dp),
+                                color = SimDrawerAccentSuccess,
+                                trackColor = SimDrawerDivider
+                            )
+                        } else {
+                            LinearProgressIndicator(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(3.dp),
+                                color = SimDrawerAccentSuccess,
+                                trackColor = SimDrawerDivider
+                            )
+                        }
                     } else if (isQueued) {
                         SimAudioCompactPreviewRow(
                             text = "等待传输...",

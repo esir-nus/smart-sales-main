@@ -138,32 +138,6 @@ class SimConnectivityRoutingTest {
     }
 
     @Test
-    fun `handleRuntimeConnectivityOnboardingReplayRequest always reopens setup and clears overlays`() {
-        val telemetry = mutableListOf<Pair<String, String>>()
-
-        val updated = handleRuntimeConnectivityOnboardingReplayRequest(
-            state = RuntimeShellState(
-                activeDrawer = RuntimeDrawerType.AUDIO,
-                audioDrawerMode = RuntimeAudioDrawerMode.CHAT_RESELECT,
-                activeConnectivitySurface = RuntimeConnectivitySurface.MANAGER,
-                showHistory = true,
-                showSettings = true
-            ),
-            source = "audio_drawer_replay",
-            emitTelemetry = { summary, detail -> telemetry += summary to detail }
-        )
-
-        assertEquals(RuntimeConnectivitySurface.SETUP, updated.activeConnectivitySurface)
-        assertEquals(null, updated.activeDrawer)
-        assertEquals(RuntimeAudioDrawerMode.BROWSE, updated.audioDrawerMode)
-        assertFalse(updated.showHistory)
-        assertFalse(updated.showSettings)
-        assertEquals(SIM_CONNECTIVITY_SETUP_STARTED_SUMMARY, telemetry.single().first)
-        assertTrue(telemetry.single().second.contains("source=audio_drawer_replay"))
-        assertTrue(telemetry.single().second.contains("replay=true"))
-    }
-
-    @Test
     fun `handleRuntimeConnectivitySetupCompleted returns to home and emits success telemetry`() {
         val telemetry = mutableListOf<Pair<String, String>>()
 
@@ -227,5 +201,29 @@ class SimConnectivityRoutingTest {
         assertFalse(updated.showHistory)
         assertFalse(updated.showSettings)
         assertTrue(updated.isForcedFirstLaunchOnboarding)
+    }
+
+    @Test
+    fun `handleRuntimeAddDeviceStart clears overlays and opens add device surface`() {
+        val telemetry = mutableListOf<Pair<String, String>>()
+
+        val updated = handleRuntimeAddDeviceStart(
+            state = RuntimeShellState(
+                activeDrawer = RuntimeDrawerType.AUDIO,
+                showHistory = true,
+                showSettings = true
+            ),
+            source = "bootstrap_modal",
+            emitTelemetry = { summary, detail -> telemetry += summary to detail }
+        )
+
+        assertEquals(RuntimeConnectivitySurface.ADD_DEVICE, updated.activeConnectivitySurface)
+        assertEquals(null, updated.activeDrawer)
+        assertFalse(updated.showHistory)
+        assertFalse(updated.showSettings)
+        assertFalse(updated.isForcedFirstLaunchOnboarding)
+        assertEquals(SIM_CONNECTIVITY_SETUP_STARTED_SUMMARY, telemetry.single().first)
+        assertTrue(telemetry.single().second.contains("source=bootstrap_modal"))
+        assertTrue(telemetry.single().second.contains("target=ADD_DEVICE"))
     }
 }

@@ -9,6 +9,8 @@ import {
   AudioJobStatus,
   AudioArtifacts,
   AudioItem,
+  SpeakerSummary,
+  QuestionAnswer,
   createEmptyAudioSnapshot
 } from '../domain/Audio';
 import { audioRepository } from '../services/AudioRepository';
@@ -22,17 +24,22 @@ import {
 export struct AudioPage {
   @State snapshot: AudioSnapshot = createEmptyAudioSnapshot();
   @State selectedAudioId: string = '';
-  @State selectedArtifacts?: AudioArtifacts = undefined;
+  @State selectedArtifacts: AudioArtifacts | undefined = undefined;
   @State detailErrorMessage: string = '';
+  @State expandedSection: string = '';
   private unsubscribe?: () => void;
 
   aboutToAppear(): void {
     const context = this.getUIContext().getHostContext() as common.UIAbilityContext;
     audioRepository.initialize(context)
       .catch((error: Error) => {
+        // 逐字段构造新快照，避免 ArkTS 禁止的 spread 语法
         this.snapshot = {
-          ...this.snapshot,
+          items: this.snapshot.items,
+          configMissingKeys: this.snapshot.configMissingKeys,
           isLoading: false,
+          isBusy: this.snapshot.isBusy,
+          busyMessage: this.snapshot.busyMessage,
           lastErrorMessage: error.message
         };
       });
@@ -89,6 +96,27 @@ export struct AudioPage {
     }
   }
 
+  // 辅助：计算项目选中状态颜色，避免在 @Builder 内使用 const
+  private primaryColor(itemId: string): string {
+    return this.selectedAudioId === itemId ? '#FFF8ED' : '#2B241C';
+  }
+
+  private secondaryColor(itemId: string): string {
+    return this.selectedAudioId === itemId ? '#F3E7D5' : '#5A5148';
+  }
+
+  private rowBackground(itemId: string): string {
+    return this.selectedAudioId === itemId ? '#2F5D50' : '#FFF8ED';
+  }
+
+  private progressFontColor(itemId: string): string {
+    return this.selectedAudioId === itemId ? '#F8F2E9' : '#2F5D50';
+  }
+
+  private toggleSection(key: string): void {
+    this.expandedSection = this.expandedSection === key ? '' : key;
+  }
+
   build() {
     Scroll() {
       Column({ space: 18 }) {
@@ -107,7 +135,7 @@ export struct AudioPage {
   }
 
   @Builder
-  private renderHero() {
+  renderHero() {
     Column({ space: 12 }) {
       Text('Audio Processing')
         .fontSize(30)
@@ -156,7 +184,7 @@ export struct AudioPage {
   }
 
   @Builder
-  private renderConfigCard() {
+  renderConfigCard() {
     Column({ space: 10 }) {
       Text('Configuration')
         .fontSize(20)
@@ -186,7 +214,7 @@ export struct AudioPage {
   }
 
   @Builder
-  private renderInventoryPanel() {
+  renderInventoryPanel() {
     Column({ space: 12 }) {
       Text('Audio items')
         .fontSize(20)
@@ -199,20 +227,17 @@ export struct AudioPage {
           .opacity(0.72)
       } else {
         ForEach(this.snapshot.items, (item: AudioItem) => {
-          const isSelected = this.selectedAudioId === item.id;
-          const primaryTextColor = isSelected ? '#FFF8ED' : '#2B241C';
-          const secondaryTextColor = isSelected ? '#F3E7D5' : '#5A5148';
           Column({ space: 10 }) {
             Row() {
               Column({ space: 4 }) {
                 Text(item.displayName)
                   .fontSize(16)
                   .fontWeight(FontWeight.Medium)
-                  .fontColor(primaryTextColor)
+                  .fontColor(this.primaryColor(item.id))
                 Text(`${statusLabel(item.status)} · ${formatBytes(item.sizeBytes)} · ${formatDateTime(item.importedAt)}`)
                   .fontSize(12)
                   .opacity(0.66)
-                  .fontColor(secondaryTextColor)
+                  .fontColor(this.secondaryColor(item.id))
               }
               .alignItems(HorizontalAlign.Start)
               .layoutWeight(1)
@@ -220,7 +245,7 @@ export struct AudioPage {
               Text(`${item.progressPercent}%`)
                 .fontSize(12)
                 .fontWeight(FontWeight.Medium)
-                .fontColor(isSelected ? '#F8F2E9' : '#2F5D50')
+                .fontColor(this.progressFontColor(item.id))
             }
 
             Progress({ value: item.progressPercent, total: 100, type: ProgressType.Linear })
@@ -235,7 +260,7 @@ export struct AudioPage {
                 .fontSize(13)
                 .lineHeight(19)
                 .maxLines(3)
-                .fontColor(primaryTextColor)
+                .fontColor(this.primaryColor(item.id))
             }
 
             if (item.lastErrorMessage) {
@@ -246,7 +271,7 @@ export struct AudioPage {
           }
           .padding(16)
           .borderRadius(20)
-          .backgroundColor(isSelected ? '#2F5D50' : '#FFF8ED')
+          .backgroundColor(this.rowBackground(item.id))
           .width('100%')
           .alignItems(HorizontalAlign.Start)
           .onClick(() => {
@@ -263,96 +288,19 @@ export struct AudioPage {
   }
 
   @Builder
-  private renderDetailPanel() {
-    const item = this.currentItem();
+  renderDetailPanel() {
     Column({ space: 12 }) {
       Text('Details')
         .fontSize(20)
         .fontWeight(FontWeight.Medium)
 
-      if (!item) {
+      if (this.currentItem() === undefined) {
         Text('Select an audio item to view details.')
           .fontSize(14)
           .lineHeight(21)
           .opacity(0.72)
       } else {
-        Text(item.displayName)
-          .fontSize(18)
-          .fontWeight(FontWeight.Medium)
-
-        Text(`File: ${item.localFileName}`)
-          .fontSize(13)
-          .opacity(0.7)
-
-        Row({ space: 12 }) {
-          Button(item.status === AudioJobStatus.COMPLETED ? 'Re-process' : 'Process')
-            .enabled(item.status !== AudioJobStatus.UPLOADING && item.status !== AudioJobStatus.PROCESSING)
-            .backgroundColor('#8C5A34')
-            .fontColor('#FFF8ED')
-            .borderRadius(16)
-            .onClick(async () => {
-              await this.handleProcess(item.id);
-            })
-
-          Text(statusLabel(item.status))
-            .fontSize(13)
-            .fontWeight(FontWeight.Medium)
-        }
-
-        if (this.detailErrorMessage) {
-          Text(this.detailErrorMessage)
-            .fontSize(12)
-            .fontColor('#8D2F2F')
-        }
-
-        if (item.keywords.length > 0) {
-          Text(`Keywords: ${item.keywords.join(' · ')}`)
-            .fontSize(13)
-            .lineHeight(19)
-        }
-
-        if (this.selectedArtifacts?.smartSummary) {
-          this.renderSubsection('Summary', this.selectedArtifacts.smartSummary)
-        }
-
-        if ((this.selectedArtifacts?.smartSummaryStructured?.keyPoints || []).length > 0) {
-          this.renderListSubsection('Key points', this.selectedArtifacts?.smartSummaryStructured?.keyPoints || [])
-        }
-
-        if ((this.selectedArtifacts?.chapters || []).length > 0) {
-          Column({ space: 8 }) {
-            Text('Chapters')
-              .fontSize(16)
-              .fontWeight(FontWeight.Medium)
-            ForEach(this.selectedArtifacts?.chapters || [], (chapter) => {
-              Text(`- ${chapter}`)
-                .fontSize(13)
-                .lineHeight(20)
-            })
-          }
-          .alignItems(HorizontalAlign.Start)
-          .width('100%')
-        }
-
-        if (this.selectedArtifacts?.transcriptMarkdown) {
-          this.renderSubsection('Transcript', this.selectedArtifacts.transcriptMarkdown)
-        }
-
-        if (Object.keys(this.selectedArtifacts?.resultLinks || {}).length > 0) {
-          Column({ space: 8 }) {
-            Text('Links')
-              .fontSize(16)
-              .fontWeight(FontWeight.Medium)
-            const links = this.selectedArtifacts?.resultLinks || {};
-            ForEach(Object.keys(links), (label: string) => {
-              Text(`- ${label}: ${links[label]}`)
-                .fontSize(12)
-                .lineHeight(18)
-            })
-          }
-          .alignItems(HorizontalAlign.Start)
-          .width('100%')
-        }
+        this.renderSelectedDetails()
       }
     }
     .padding(18)
@@ -363,32 +311,142 @@ export struct AudioPage {
   }
 
   @Builder
-  private renderSubsection(title: string, body: string) {
-    Column({ space: 8 }) {
-      Text(title)
-        .fontSize(16)
-        .fontWeight(FontWeight.Medium)
-      Text(body)
+  renderSelectedDetails() {
+    Text(this.currentItem()!.displayName)
+      .fontSize(18)
+      .fontWeight(FontWeight.Medium)
+
+    Text(`File: ${this.currentItem()!.localFileName}`)
+      .fontSize(13)
+      .opacity(0.7)
+
+    Row({ space: 12 }) {
+      Button(this.currentItem()!.status === AudioJobStatus.COMPLETED ? 'Re-process' : 'Process')
+        .enabled(
+          this.currentItem()!.status !== AudioJobStatus.UPLOADING
+            && this.currentItem()!.status !== AudioJobStatus.PROCESSING
+        )
+        .backgroundColor('#8C5A34')
+        .fontColor('#FFF8ED')
+        .borderRadius(16)
+        .onClick(async () => {
+          await this.handleProcess(this.currentItem()!.id);
+        })
+
+      Text(statusLabel(this.currentItem()!.status))
         .fontSize(13)
-        .lineHeight(20)
+        .fontWeight(FontWeight.Medium)
     }
-    .alignItems(HorizontalAlign.Start)
-    .width('100%')
+
+    if (this.detailErrorMessage) {
+      Text(this.detailErrorMessage)
+        .fontSize(12)
+        .fontColor('#8D2F2F')
+    }
+
+    // Overview: summary + keywords + chapters merged
+    if (this.selectedArtifacts) {
+      if (this.selectedArtifacts.smartSummary.length > 0) {
+        Text(this.selectedArtifacts.smartSummary)
+          .fontSize(13)
+          .lineHeight(20)
+      }
+
+      if (this.currentItem()!.keywords.length > 0) {
+        Text(`Keywords: ${this.currentItem()!.keywords.join(' · ')}`)
+          .fontSize(13)
+          .lineHeight(19)
+      }
+
+      if (this.selectedArtifacts.chapters.length > 0) {
+        Column({ space: 4 }) {
+          ForEach(this.selectedArtifacts.chapters, (chapter: string) => {
+            Text(`· ${chapter}`)
+              .fontSize(12)
+              .lineHeight(18)
+              .opacity(0.8)
+          })
+        }
+        .alignItems(HorizontalAlign.Start)
+        .width('100%')
+      }
+    }
+
+    // Accordion sections
+    if (this.selectedArtifacts && this.selectedArtifacts.transcriptMarkdown.length > 0) {
+      this.renderAccordionHeader('转写', 'transcript')
+      if (this.expandedSection === 'transcript') {
+        Text(this.selectedArtifacts.transcriptMarkdown)
+          .fontSize(13)
+          .lineHeight(20)
+      }
+    }
+
+    if (this.selectedArtifacts && this.selectedArtifacts.speakerSummaries.length > 0) {
+      this.renderAccordionHeader('发言人总结', 'speakers')
+      if (this.expandedSection === 'speakers') {
+        Column({ space: 12 }) {
+          ForEach(this.selectedArtifacts!.speakerSummaries, (speaker: SpeakerSummary) => {
+            Column({ space: 4 }) {
+              if (speaker.name) {
+                Text(speaker.name)
+                  .fontSize(14)
+                  .fontWeight(FontWeight.Medium)
+              }
+              Text(speaker.summary)
+                .fontSize(13)
+                .lineHeight(20)
+            }
+            .alignItems(HorizontalAlign.Start)
+            .width('100%')
+          })
+        }
+        .alignItems(HorizontalAlign.Start)
+        .width('100%')
+      }
+    }
+
+    if (this.selectedArtifacts && this.selectedArtifacts.questionAnswers.length > 0) {
+      this.renderAccordionHeader('问答回顾', 'qa')
+      if (this.expandedSection === 'qa') {
+        Column({ space: 12 }) {
+          ForEach(this.selectedArtifacts!.questionAnswers, (qa: QuestionAnswer) => {
+            Column({ space: 4 }) {
+              Text(`Q: ${qa.question}`)
+                .fontSize(13)
+                .lineHeight(20)
+                .fontWeight(FontWeight.Medium)
+              Text(`A: ${qa.answer}`)
+                .fontSize(13)
+                .lineHeight(20)
+            }
+            .alignItems(HorizontalAlign.Start)
+            .width('100%')
+          })
+        }
+        .alignItems(HorizontalAlign.Start)
+        .width('100%')
+      }
+    }
   }
 
   @Builder
-  private renderListSubsection(title: string, rows: string[]) {
-    Column({ space: 8 }) {
+  renderAccordionHeader(title: string, sectionKey: string) {
+    Row() {
       Text(title)
         .fontSize(16)
         .fontWeight(FontWeight.Medium)
-      ForEach(rows, (row: string) => {
-        Text(`- ${row}`)
-          .fontSize(13)
-          .lineHeight(20)
-      })
+        .layoutWeight(1)
+      Text(this.expandedSection === sectionKey ? '▲' : '▼')
+        .fontSize(14)
+        .opacity(0.6)
     }
-    .alignItems(HorizontalAlign.Start)
     .width('100%')
+    .padding({ top: 12, bottom: 12 })
+    .border({ width: { bottom: 1 }, color: '#E0D5C5' })
+    .onClick(() => {
+      this.toggleSection(sectionKey);
+    })
   }
+
 }

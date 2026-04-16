@@ -90,7 +90,8 @@ They must not land under:
 Current scaffold landing:
 
 - root config placeholders: `oh-package.json5`, `build-profile.json5`, `hvigorfile.ts`, `AppScope/app.json5`
-- entry module placeholders: `entry/oh-package.json5`, `entry/src/main/module.json5`
+- entry module placeholders: `entry/build-profile.json5`, `entry/hvigorfile.ts`, `entry/oh-package.json5`, `entry/src/main/module.json5`
+- app metadata resources: `AppScope/app.json5` must reference a tracked app label and icon resource such as `entry/src/main/resources/base/media/app_icon.svg`
 - entry ability and page shell: `entry/src/main/ets/entryability/EntryAbility.ets`, `entry/src/main/ets/pages/Index.ets`
 - Harmony-local config seam: `entry/src/main/ets/config/HarmonyContainerConfig.ets`
 - Harmony-local tracked runtime config entrypoint: `entry/src/main/ets/config/HarmonyContainerRuntimeConfig.ets`
@@ -114,13 +115,22 @@ Current live structure:
 - metadata persists as `harmony_tingwu_metadata.json`
 - imported media persists as `harmony_<audioId>.<ext>`
 - artifact payloads persist as `harmony_<audioId>_artifacts.json`
+- Tingwu task submission enables `DiarizationEnabled` with `SpeakerCount: 0` (auto-detect) and `IdentityRecognitionEnabled: true` for speaker name recognition
 - the current ArkTS UI exposes empty state, inventory, progress, and artifact detail on one container page
+- artifact detail currently renders summary, chapters, transcript, and links as stacked sections on the container page
+- the richer accordion layout for transcript, speaker summaries, and Q&A currently lives in `platforms/harmony/smartsales-app/entry/src/main/ets/pages/AudioPage.ets`
 
 Current config law:
 
 - Tingwu and OSS credentials remain Harmony-owned at runtime through the generated artifact `entry/src/main/ets/config/HarmonyContainerConfig.local.ets`
 - repo-root `local.properties` is only the local authoring source for developers, not the runtime source consumed by ArkTS services
 - `hvigorfile.ts` is the Harmony root build-owned generator and must emit the Harmony local config artifact before compile instead of reusing Android `BuildConfig`
+- `hvigorfile.ts` must stay compatible with hvigor's current CommonJS script loading path; do not use ESM-only `import.meta` there unless the Harmony toolchain is explicitly proven to execute hvigor files as ESM
+- `build-profile.json5` must use Harmony's API-qualified SDK string format (for example `5.0.0(12)`) for `compatibleSdkVersion` under the current toolchain
+- the Harmony root `build-profile.json5` must map module targets to products explicitly, and each module must provide its own `entry/build-profile.json5` target declaration for current hvigor scaffolds
+- each Harmony module must also provide its own `entry/hvigorfile.ts` wired to `hapTasks`; the root `hvigorfile.ts` alone is not enough for current hvigor
+- `AppScope/app.json5` must include `icon` and `label`, and each module `entry/oh-package.json5` must include a SemVer `version`
+- stage-model entry abilities must include `startWindowIcon` in `entry/src/main/module.json5`
 - tracked ArkTS code must import `HarmonyContainerRuntimeConfig.ets` rather than hard-importing the ignored generated artifact directly
 - when the generated artifact is absent, the tracked runtime config entrypoint must fall back to empty config and surface missing-key state honestly instead of failing module resolution
 

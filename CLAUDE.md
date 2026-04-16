@@ -5,11 +5,11 @@
 Smart Sales is a voice-first sales operating app for sales operators. It captures real-world sales activity with low friction, turns it into review/follow-up/scheduling surfaces, and keeps AI assistive rather than autonomous.
 
 Platform posture:
-- **Android**: primary platform, cerb-compliant (code and docs are written together and kept aligned)
-- **HarmonyOS**: backend-centric port, references Android docs as product truth, UI docks to backend
-- **iOS**: anticipated, same model as HarmonyOS (not yet started)
+- **Android**: beta-maintenance platform, cerb-compliant (code and docs are written together and kept aligned). Foundation and source of shared truth.
+- **HarmonyOS**: primary forward platform, complete native ArkTS/ArkUI rewrite. Translates shared product truth into native implementation.
+- **iOS**: anticipated, same translation-first model as HarmonyOS (not yet started)
 
-Android is the canonical implementation. HarmonyOS and iOS consume Android's docs and specs, then rewrite into their native frameworks.
+Android is the foundation implementation and source of shared product truth. HarmonyOS and iOS consume shared docs, domain semantics, and Android behavior as reference, then rewrite natively into their platform frameworks. See `docs/specs/cross-platform-sync-contract.md`.
 
 Read `SmartSales_PRD.md` for full product identity.
 
@@ -17,16 +17,18 @@ Read `SmartSales_PRD.md` for full product identity.
 
 ```
 master (protected, promotion-only — requires PR)
-  └── develop (Android + shared code, daily work)
-        ├── platform/harmony (HarmonyOS platform work)
-        └── platform/ios (future)
+  └── develop (Android maintenance + shared contracts, daily trunk)
+        └── platform/harmony (HarmonyOS integration trunk, daily Harmony work)
+              ├── harmony/feat-x (feature branches, PR back to platform/harmony)
+              └── harmony/feat-y
 ```
 
-- **develop**: All Android and shared-contract work happens here. Cerb-compliance applies.
-- **platform/harmony**: HarmonyOS-specific work. Receives shared contracts from develop via merge. Never merges back into develop.
+- **develop**: Android maintenance and shared-contract work. Cerb-compliance applies.
+- **platform/harmony**: HarmonyOS-native integration trunk. Receives shared contracts from develop via merge. Never merges back into develop. All Harmony daily work lands here.
 - **master**: Protected. Receives promotions from develop via PR only. No direct commits.
-- Feature work: create branch from `develop` (or `platform/harmony`), PR back.
-- Shared contracts flow: `develop → platform/*`, never the reverse.
+- Feature work: create branch from `develop` (for Android) or `platform/harmony` (for Harmony), PR back to origin branch.
+- Shared contracts flow: `develop → platform/harmony`, never the reverse. Sync at least weekly.
+- Harmony-native is the primary forward platform. Android is beta-maintenance.
 
 ## Source of Truth
 
@@ -66,7 +68,8 @@ Key layout:
 - `domain/` -- pure Kotlin, NO Android imports
 - `data/` -- Room, network, platform services
 - `core/` -- shared utilities and infrastructure
-- `platforms/harmony/tingwu-container/` -- HarmonyOS ArkTS transient app
+- `platforms/harmony/smartsales-app/` -- HarmonyOS complete native ArkTS/ArkUI app
+- `platforms/harmony/tingwu-container/` -- HarmonyOS Tingwu container (pattern foundation, being absorbed into smartsales-app)
 
 ## Language Rules
 

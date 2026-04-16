@@ -1,15 +1,15 @@
 # Harmony Native Tracker
 
-> **Purpose**: Active program-summary tracker for the current bounded Harmony-native lanes, with one durable surface for capability limits, backend/dataflow evidence posture, UI-lane routing, and restore state.
+> **Purpose**: Program-summary tracker for the complete HarmonyOS-native migration, tracking feature parity delivery, backend verification, and platform readiness.
 > **Status**: Active
-> **Last Updated**: 2026-04-11
+> **Last Updated**: 2026-04-16
 > **Primary Laws**:
-> - `docs/sops/tracker-governance.md`
 > - `docs/specs/platform-governance.md`
+> - `docs/specs/cross-platform-sync-contract.md`
 > **Related Docs**:
 > - `docs/platforms/harmony/native-development-framework.md`
+> - `docs/platforms/harmony/app-architecture.md`
 > - `docs/platforms/harmony/tingwu-container.md`
-> - `docs/platforms/harmony/ui-verification.md`
 > - `docs/platforms/harmony/test-signing-ledger.md`
 > - `docs/plans/harmony-ui-translation-tracker.md`
 > - `docs/reference/platform-targets.md`
@@ -19,15 +19,17 @@
 
 ## 1. Operating Posture
 
-This tracker now acts as the Harmony program-summary surface.
+HarmonyOS-native is the **primary forward platform**. HarmonyOS NEXT drops the Android compatibility layer; complete native ArkTS/ArkUI migration is urgent.
 
 Current rule:
 
-- Android remains the main product-development line
-- Harmony work is active now, but it is still a transient platform lane
-- Stage 2 Harmony tracking is now active because the repo has separate backend/dataflow and ArkUI page-native rewrite lanes
+- Android is the foundation and source of shared product truth (beta-maintenance)
+- HarmonyOS-native work is the primary forward development line
+- the complete native app will be rooted at `platforms/harmony/smartsales-app/`
+- the existing Tingwu container (`platforms/harmony/tingwu-container/`) is the pattern foundation being absorbed into the complete app
+- all Harmony work lands on `platform/harmony` branch; feature branches fork from it
+- shared contracts sync from `develop → platform/harmony` at least weekly per `docs/specs/cross-platform-sync-contract.md`
 - page-by-page ArkUI execution detail lives in `docs/plans/harmony-ui-translation-tracker.md`
-- backend/dataflow proof, capability limits, restore state, and cross-lane honesty stay summarized here
 
 ---
 
@@ -70,15 +72,15 @@ Every active Harmony program-summary entry must include:
 
 ## 4. Active Board
 
-### H-01: Transient Tingwu Container
+### H-01: Tingwu Container (Pattern Foundation)
 
 - `ID`: `H-01`
-- `Title`: `tingwu-container` transient Harmony app
+- `Title`: `tingwu-container` pattern foundation for complete native app
 - `Work Class`: `harmony-native`
 - `Platform Lane`: `harmony`
-- `Capability Class`: `curated-container`
-- `Owner`: Harmony-native transient container lane
-- `Status`: `Active`
+- `Capability Class`: `pattern-foundation`
+- `Owner`: Harmony-native audio pipeline lane
+- `Status`: `Active` (being absorbed into H-04 complete native app)
 - `Source of Truth`:
   - `docs/platforms/harmony/native-development-framework.md`
   - `docs/platforms/harmony/tingwu-container.md`
@@ -250,3 +252,63 @@ Every active Harmony program-summary entry must include:
   - HUI-02 no longer uses inline mock cards; it now runs through a dedicated Tingwu page adapter seam
   - the HUI-02 docking contract defines a future direction toward shell evolution, contingent on signing gate clearance and successful docking
   - local UI-lane signed HAP proof now exists, and the script now refuses missing or wrong-bundle AGC assets before install, but device-accepted install proof is still pending
+
+### H-04: Complete Native App (smartsales-app)
+
+- `ID`: `H-04`
+- `Title`: Complete native HarmonyOS ArkTS/ArkUI app
+- `Work Class`: `harmony-native`
+- `Platform Lane`: `harmony`
+- `Capability Class`: `complete-native`
+- `Owner`: Harmony-native complete app lane
+- `Status`: `Active` (Phase 2A in progress)
+- `Source of Truth`:
+  - `docs/platforms/harmony/app-architecture.md`
+  - `docs/platforms/harmony/native-development-framework.md`
+  - `docs/specs/cross-platform-sync-contract.md`
+  - all shared `docs/core-flow/**`, `docs/cerb/**`, and `docs/specs/**` docs
+- `Required Evidence`:
+  - app scaffold builds and launches on device
+  - each feature phase verified with device-accepted install and hilog evidence
+  - domain model translations match Kotlin domain/ semantics
+  - Harmony overlay docs updated per feature delivery
+- `UI Translation / Native Rewrite`:
+  - complete native ArkTS/ArkUI implementation, not a Compose port
+  - absorbs Tingwu container patterns as foundation
+  - page-by-page native rewrite following translation-first workflow
+- `Backend / Dataflow Evidence`:
+  - domain models translated from Kotlin domain/ layer with semantic fidelity
+  - service layer implements same API contracts as Android data/ layer
+  - state management uses proven pub-sub repository pattern from Tingwu container
+- `Supported Set` (phased):
+  - Phase 1: app shell, navigation, lifecycle, config generation (Complete)
+  - Phase 2A: audio pipeline (Tingwu import, upload, poll, artifacts — migrated from H-01) (Service layer and UI complete, device evidence pending)
+  - Phase 2B: scheduler (create, conflict, reminders — builds on H-02 backend proof)
+  - Phase 2C: AI/chat (LLM conversation, session binding)
+  - Phase 2D: CRM/entity management
+  - Phase 2E: device integration, onboarding, settings
+- `Disabled Set`:
+  - features not yet in the current phase must be hidden or blocked, not faked
+  - badge pairing deferred pending HarmonyOS NEXT BLE API availability
+- `User-visible Limitation`:
+  - during phased delivery, the app honestly surfaces only the features that are complete
+- `Does Not Own`:
+  - shared product semantics (owned by develop branch)
+  - Android implementation (owned by Android lineage)
+  - cross-platform governance (owned by `docs/specs/platform-governance.md`)
+- `Branch Restore Snapshot`:
+  - `Branch`: `platform/harmony`
+  - `Purpose`: complete native HarmonyOS app for full product parity
+  - `Capability Class`: `complete-native`
+  - `Baseline Commit or Tag`: `30353b3e1` (post-migration-restructure sync)
+  - `Current Head Snapshot`: Phase 2A service layer complete (HttpClient, FileStore, Picker, OssService, TingwuService, AudioRepository, AudioPage, Index wiring)
+  - `Restore Procedure Reference`: this tracker entry plus `docs/platforms/harmony/app-architecture.md`
+  - `Current Restore Confidence`: Phase 2A builds and type-checks; device-evidence gate (hvigor build + hdc install + hilog) next
+- `Last Updated`: `2026-04-16`
+- `Notes / Drift`:
+  - this entry supersedes H-01 as the primary Harmony delivery vehicle
+  - H-01 Tingwu container patterns are the architectural foundation
+  - Phase 2A implementation: SignatureUtils, FormatUtils, Audio.ets domain models, AppConfig/AppRuntimeConfig, HttpClient, FileStore, Picker, OssService, TingwuService, AudioRepository, AudioPage, and Index.ets wiring complete
+  - H-02 scheduler backend proof informs Phase 2B scheduler delivery
+  - H-03 UI verification patterns inform page-native rewrite approach
+  - the cross-platform sync contract (`docs/specs/cross-platform-sync-contract.md`) governs how shared truth flows to this app

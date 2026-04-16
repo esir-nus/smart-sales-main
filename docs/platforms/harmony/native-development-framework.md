@@ -219,17 +219,20 @@ Honesty is more important than parity theater.
 
 Current repo posture:
 
-- the Android app remains the best live behavior reference
-- the Android-on-Huawei/Harmony compatibility path is legacy and not the future native owner
-- the native Harmony lane is the forward platform
-- the first live Harmony root remains a bounded transient container
-- a second internal Harmony UI verification root may coexist for page-native ArkUI checks while staying explicit that it is not the public product app
-- neither Harmony root is proof of full-product parity
+- HarmonyOS NEXT drops the Android compatibility layer; complete native ArkTS/ArkUI migration is urgent
+- the Android app remains the best live behavior reference and source of shared product truth
+- the Android-on-Huawei/Harmony compatibility path is deprecated
+- the native Harmony lane is the **primary forward platform**
+- the complete native app is rooted at `platforms/harmony/smartsales-app/`
+- the Tingwu container (`platforms/harmony/tingwu-container/`) is the pattern foundation being absorbed into the complete app
+- architecture patterns, domain model translation rules, and module structure are documented in `docs/platforms/harmony/app-architecture.md`
+- cross-platform sync rules are governed by `docs/specs/cross-platform-sync-contract.md`
 
-Until a broader Harmony-native app exists, every new Harmony slice must answer these questions first:
+Every new Harmony feature slice must answer these questions first:
 
 1. what behavior is being translated from shared truth
 2. what must be rewritten natively
 3. what is unsupported and therefore must fail closed
+4. which Kotlin domain models need ArkTS translation
 
 If those answers are not explicit, the slice is not ready to implement.

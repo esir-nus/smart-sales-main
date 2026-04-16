@@ -2,19 +2,16 @@
 
 > **Role**: Canonical cross-platform version-control and ownership law
 > **Status**: Active governance law
-> **Date**: 2026-04-11
-> **Purpose**: Freeze the current Android/AOSP product line as beta-maintenance while opening a clean native HarmonyOS forward lane without forking shared product truth.
+> **Date**: 2026-04-16
+> **Purpose**: Maintain Android/AOSP as beta-maintenance while HarmonyOS-native is the primary forward platform. HarmonyOS NEXT drops the Android compatibility layer; complete native ArkTS/ArkUI migration is now urgent.
 > **Related Docs**:
 > - `docs/reference/platform-targets.md`
 > - `docs/platforms/harmony/native-development-framework.md`
+> - `docs/platforms/harmony/app-architecture.md`
 > - `docs/reference/harmonyos-platform-guide.md`
 > - `docs/cerb/interface-map.md`
 > - `docs/plans/tracker.md`
 > - `docs/plans/harmony-tracker.md`
-> - `docs/plans/dirty-tree-quarantine.md`
-> - `docs/sops/tracker-governance.md`
-> - `docs/sops/lane-worktree-governance.md`
-> - `ops/lane-registry.json`
 > - `docs/specs/base-runtime-unification.md`
 
 ---
@@ -26,29 +23,30 @@ The repo keeps exactly one canonical protected trunk.
 Rules:
 
 - The exact branch name (`main` or `master`) is an operational choice, not a product-law distinction.
-- All shared docs, shared contracts, Android beta work, and future Harmony-native work must converge back to the same canonical trunk.
-- Long-lived platform branches are release/stabilization branches only. They are not allowed to become alternate product-truth branches.
+- All shared docs, shared contracts, Android beta work, and Harmony-native work must converge back to the same canonical trunk via the branch model below.
+- Long-lived platform branches (`platform/harmony`) are integration trunks for platform-specific work, not alternate product-truth branches.
 
-### Dirty-worktree quarantine gate
+### Branch model
 
-Before any default-branch swap, branch promotion, or baseline tagging:
+```
+master (protected, promotion-only — requires PR)
+  └── develop (Android maintenance + shared contracts, daily trunk)
+        └── platform/harmony (HarmonyOS integration trunk, daily Harmony work)
+              ├── harmony/feat-x (feature branches, PR back to platform/harmony)
+              └── harmony/feat-y
+```
 
-- inventory all tracked and untracked work in the active line
-- assign every dirty path to a bounded lane in `docs/plans/dirty-tree-quarantine.md`, including any explicit `Deferred` row used to park or exclude residue from the current promotion path
-- record the same active lane ownership in `ops/lane-registry.json`
-- decide explicitly what lands, what is parked, and what is deferred
-- create the Android beta baseline tag only from that explicit stabilization commit
+Rules:
 
-No branch-default switch is valid if the dirty-worktree quarantine step was skipped.
+- `develop` is the Android maintenance trunk and the source of shared contracts
+- `platform/harmony` is the HarmonyOS-native integration trunk; all daily Harmony work lands here
+- shared contracts flow `develop → platform/harmony` via deliberate merge, at least weekly; never the reverse
+- feature branches fork from `develop` (for Android) or `platform/harmony` (for Harmony) and PR back to origin branch
+- `master` receives promotions from `develop` via PR only; no direct commits
 
-When parallel agents are active:
+### Historical note
 
-- one feature lane must normally run inside one dedicated `git worktree`
-- the repo root worktree is integration-only and must not carry feature edits
-- one lane has one active local lease at a time
-- paused or transferred lanes must carry a current handoff file in `handoffs/`
-- no lane may be treated as promotion-ready while its doc-code alignment state is unresolved
-- local hooks and CI must validate the same lane ownership rules through `scripts/lane_guard.py`
+The previous Dirty-Tree Quarantine (DTQ) lane harness was decommissioned on 2026-04-15. Archived docs are in `docs/archive/dtq-era/` for reference only.
 
 ---
 
@@ -91,18 +89,18 @@ Disallowed by default:
 
 ### 3.2 Harmony-native
 
-Harmony-native is the **forward-development** platform.
+Harmony-native is the **primary forward platform (urgent migration)**.
+
+Context: HarmonyOS NEXT drops the Android compatibility layer entirely. The Android-on-Harmony compatibility target is deprecated. Complete native ArkTS/ArkUI is the only viable path forward.
 
 Rules:
 
 - native Harmony work must build from shared product docs and approved shared contracts
 - native Harmony work must not be implemented as a slow contamination of the current Android tree
-- the first live Harmony root may be a curated transient container instead of a full-parity app
-- the current approved public transient container is the Tingwu-only Harmony app rooted at `platforms/harmony/tingwu-container/`
-- the repo may also host an internal Harmony UI verification app rooted at `platforms/harmony/ui-verification/` when page-native ArkUI rewriting and device UI checks need to run in parallel with backend work
-- the transient container must stay honest about its reduced capability set and must not pretend scheduler, reminder, chat, or badge-hardware support exists when it does not
-- the internal UI verification app must stay explicit that it is internal verification only and must not present mock-backed pages as public parity
-- release branch `release/harmony-alpha` stays deferred until the Harmony program moves beyond the transient Tingwu container and the first Harmony CI lane is alive
+- the migration target is a complete native ArkTS/ArkUI app with full product parity, not a bounded container
+- the existing Tingwu container (`platforms/harmony/tingwu-container/`) provides proven patterns and is the foundation for the complete native app (`platforms/harmony/smartsales-app/`)
+- each delivered feature must be honest about its current capability set; features not yet implemented must be hidden or blocked, not faked
+- release branch `release/harmony-alpha` may be created once the native app shell and at least one feature lane (audio pipeline) are device-verified
 
 ---
 
@@ -152,10 +150,10 @@ Anything with those assumptions is platform-owned even if the logic looks reusab
 Current posture:
 
 - the Android lineage remains in the existing Gradle/Kotlin app modules
-- the Harmony-native lineage must land in a dedicated Harmony-owned root when that scaffold work starts
-- the first live Harmony root is the transient Tingwu container at `platforms/harmony/tingwu-container/`
-- a second Harmony-owned internal verification root may exist at `platforms/harmony/ui-verification/` for page-native ArkUI checks and must remain internal-only
-- those roots are bounded Harmony-owned app containers, not proof that full Harmony parity is implemented
+- the Harmony-native lineage lives under `platforms/harmony/`
+- the complete native app is rooted at `platforms/harmony/smartsales-app/`
+- the existing Tingwu container at `platforms/harmony/tingwu-container/` is the pattern foundation; its code will be absorbed into the complete native app
+- `platforms/harmony/ui-verification/` may exist for internal page-native ArkUI checks during development
 
 Hard guardrail:
 
@@ -212,20 +210,13 @@ The repo uses one master ledger plus specialist standing trackers.
 Rules:
 
 - `docs/plans/tracker.md` stays the campaign index and branch/governance summary only
-- specialist trackers own structure, UI, bugs, validation, dirty-lane hygiene, or Harmony-native bounded delivery according to `docs/sops/tracker-governance.md`
+- specialist trackers own structure, UI, bugs, and Harmony-native delivery
 - execution briefs are temporary slice docs and must not replace a standing tracker
-- the current Harmony program uses Stage 2 tracking: `docs/plans/harmony-tracker.md` owns Harmony program-summary state and `docs/plans/harmony-ui-translation-tracker.md` owns page-by-page ArkUI rewrite evidence; a dedicated Harmony dataflow tracker remains deferred until backend rewriting grows large enough to justify it
+- the Harmony program uses `docs/plans/harmony-tracker.md` for program-summary state and `docs/plans/harmony-ui-translation-tracker.md` for page-by-page ArkUI rewrite evidence
 
-### 6.5 Lane harness governance
+### 6.5 Historical note
 
-The repo now uses a lane execution harness for dirty-tree prevention.
-
-Rules:
-
-- `docs/plans/dirty-tree-quarantine.md` stays the human lane board and promotion ledger
-- `ops/lane-registry.json` is the machine-readable lane registry used by hooks and CI
-- `docs/sops/lane-worktree-governance.md` owns the operator workflow for start/resume/pause/integrate
-- `.githooks/pre-commit`, `.githooks/pre-push`, and `.github/workflows/platform-governance-check.yml` must enforce the same validator logic rather than drifting into separate rule sets
+The previous lane harness governance system (DTQ, lane-registry.json, lane_guard.py, .githooks) was decommissioned on 2026-04-15. Archived documentation is in `docs/archive/dtq-era/`. The current governance model uses feature branches and PRs per section 1.
 
 ---
 
@@ -234,14 +225,13 @@ Rules:
 Current release-branch posture:
 
 - `release/android-beta` is the stabilization line for the current Android lineage
-- `release/harmony-alpha` is reserved and must not be created while Harmony delivery is still only the transient Tingwu container and before the first Harmony CI path runs
+- `release/harmony-alpha` may be created once the native app shell and at least one feature lane (audio pipeline) are device-verified and Harmony CI is running
 
 Daily delivery rule:
 
-- short-lived feature branches fork from the canonical trunk
+- short-lived feature branches fork from `develop` (for Android) or `platform/harmony` (for Harmony)
 - release branches are for stabilization and hotfix work only
-- an active transient Harmony branch may exist for bounded delivery, but it must not become an alternate product-truth branch
-- lane branches should use `lane/<lane-id>/<slug>` when the harness creates a new lane worktree
+- `platform/harmony` is the Harmony integration trunk, not a release branch
 
 ### 7.1 Branch restore record
 
@@ -260,11 +250,10 @@ Any active transient Harmony branch must be recorded in `docs/plans/tracker.md` 
 
 Repo-stored guardrails:
 
-- `CODEOWNERS` must route shared docs/contracts, Android lineage, Harmony overlays, lane harness files, and workflow changes through explicit review ownership
+- `CODEOWNERS` must route shared docs/contracts, Android lineage, and Harmony overlays through explicit review ownership
 - CI must fail if native Harmony artifacts appear inside the Android tree
-- governance docs, lane harness docs, and platform-target definitions must remain present in the repo
-- the lane harness registry, validator, and shared hooks must remain present in the repo
-- the transient Harmony Tingwu container overlay and root placeholder must remain present once introduced
+- governance docs and platform-target definitions must remain present in the repo
+- the Harmony app root and platform overlay docs must remain present once introduced
 
 Manual admin guardrails that still require GitHub settings:
 
@@ -278,11 +267,10 @@ Manual admin guardrails that still require GitHub settings:
 
 This governance split is only working if:
 
-- shared product truth remains single-source
-- Android beta work stays narrow and explicit
-- feature work normally starts in lane worktrees rather than the integration tree
-- lane ownership is visible in both `docs/plans/dirty-tree-quarantine.md` and `ops/lane-registry.json`
-- paused or transferred lanes remain resumable through current handoffs
-- native Harmony work does not contaminate the current Android tree
-- platform-specific constraints are documented in overlays instead of leaking into shared specs by accident
+- shared product truth remains single-source (docs > code > guessing)
+- Android beta-maintenance work stays narrow and explicit
+- Harmony-native work progresses on `platform/harmony` without contaminating the Android tree
+- shared contract syncs from `develop → platform/harmony` happen at least weekly
+- platform-specific constraints are documented in overlays instead of leaking into shared specs
 - future engineers can tell whether a change is `shared-contract`, `android-beta`, `harmony-native`, or `cross-platform-governance` without guesswork
+- the cross-platform development contract (`docs/specs/cross-platform-sync-contract.md`) is followed for all shared truth changes

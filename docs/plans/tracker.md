@@ -5,7 +5,7 @@
 > **Campaign Lifecycle**: Every major initiative (rewrite, refactor, UI polish, large fix) is an "Epic" or "Campaign". Every Campaign MUST be initialized using the `/campaign-planner` workflow to enforce the following checklist sequence:
 > 1. **Docs** (Ensure Specs exist) -> 2. **Interface Map** (Ensure Layer/Contract boundaries align) -> 3. **Plan** (Dev Planner) -> 4. **Execute** (Implementation) -> 5. **Test** (E2E/L2 Verification). 
 > **Master Guide Alignment**: The Master Guide acts as the overarching strategy doc for a campaign. Agents MUST NEVER auto-update the Master Guide without strict explicit human review (like a Review Conference) to prevent architectural hallucination drift. Instead, run `/04-doc-sync` at the *end* of a campaign.
-> **Last Updated**: 2026-04-15
+> **Last Updated**: 2026-04-16
 > **Work Classification**: `shared-contract` = shared product docs/contracts · `android-beta` = current Android/AOSP beta-maintenance line · `harmony-native` = future native Harmony delivery · `cross-platform-governance` = branch/review/ownership guardrails
 
 ---
@@ -222,6 +222,20 @@
   - adb telemetry confirmed ESP32 response: `Content-Length=-1 Transfer-Encoding=chunked` for 37MB WAV file
   - On-device 5-minute download completed with progress bar animating and speed updating in real time
 - **Follow-Up from**: Shipped Fix: Download Progress Bar Wiring
+
+---
+
+## Shipped Fix: Badge WAV Download Keepalive — Foreground Service During Background Queue Work
+> **Context**: Manual badge sync and `rec#` auto-download already queued WAV downloads in the SIM audio namespace, but Android had no foreground-service anchor to keep that work alive after the app was backgrounded or swiped away from recents.
+
+- **Status**: Shipped (2026-04-16)
+- **Scope**:
+  - `DownloadForegroundService` is now declared in `app-core` manifest with `dataSync` foreground-service type and explicit non-exported keepalive ownership
+  - manual queue enqueue in `SimAudioRepositorySyncSupport` and `rec#` auto-download in `SimBadgeAudioAutoDownloader` both trigger the same `DownloadServiceOrchestrator`
+  - keepalive notification uses low-priority `BADGE_DOWNLOAD_PROGRESS` channel and auto-stops after the queue stays idle through the 800ms debounce window
+  - service stop coordination now uses a real delayed idle debounce instead of depending on a second `StateFlow` emission after the queue becomes idle
+- **Focused Verification**:
+  - `:app-core:testFullDebugUnitTest --tests 'com.smartsales.prism.data.audio.SimAudioRepositorySyncSupportTest' --tests 'com.smartsales.prism.data.audio.SimBadgeAudioAutoDownloaderTest' --tests 'com.smartsales.prism.service.DownloadForegroundServiceContractTest' --tests 'com.smartsales.prism.service.DownloadServiceOrchestratorTest'`
 
 ---
 

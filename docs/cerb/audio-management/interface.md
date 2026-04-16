@@ -2,7 +2,7 @@
 
 > **Blackbox contract** — For consumers (AudioDrawer, UI). Don't read implementation.
 > **Status**: Active supporting interface
-> **Last Updated**: 2026-04-14
+> **Last Updated**: 2026-04-16
 
 ---
 
@@ -147,6 +147,7 @@ Additional inventory guarantee:
 
 - successful badge-pipeline completions may appear in the drawer inventory without calling `syncFromDevice`, because pipeline completion ingests the recording into the same repository namespace
 - this does **not** change the drawer-side sync contract: consumers must still treat `syncFromDevice` as manual-only
+- when badge WAV download work is queued from manual sync or `rec#` auto-download, Android may show a low-priority ongoing foreground-service notification to keep the download process alive while the app is backgrounded or removed from recents; this is lifecycle protection only, not a new consumer API or autonomous sync mode
 - placeholder SmartBadge cards may exist before the local WAV exists; consumers must gate transcribe/chat-pending actions on `localAvailability == READY`
 - placeholder SmartBadge cards remain deletable and use the same badge tombstone/delete cleanup contract
 - `downloadProgress`, `downloadedBytes`, and `downloadTotalBytes` are transient in-memory-only fields updated during active WAV downloads; they are not persisted to disk and reset to zero on availability transitions (READY, FAILED, QUEUED); consumers may use them to render real-time download progress UI when `localAvailability == DOWNLOADING`

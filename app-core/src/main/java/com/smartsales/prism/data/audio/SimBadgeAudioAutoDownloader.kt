@@ -8,9 +8,7 @@ import android.util.Log
 import com.smartsales.prism.domain.audio.AudioLocalAvailability
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.connectivity.WavDownloadResult
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
+import com.smartsales.prism.service.DownloadServiceOrchestrator
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -25,7 +23,8 @@ private const val TAG = "AudioPipeline"
 @Singleton
 class SimBadgeAudioAutoDownloader @Inject constructor(
     private val connectivityBridge: ConnectivityBridge,
-    private val runtime: SimAudioRepositoryRuntime
+    private val runtime: SimAudioRepositoryRuntime,
+    private val orchestrator: DownloadServiceOrchestrator
 ) {
 
     private val storeSupport = SimAudioRepositoryStoreSupport(runtime)
@@ -36,10 +35,8 @@ class SimBadgeAudioAutoDownloader @Inject constructor(
     )
     internal val syncIslandEvents: SharedFlow<SimBadgeSyncIslandEvent> = _syncIslandEvents.asSharedFlow()
 
-    private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
-
     init {
-        scope.launch {
+        runtime.repositoryScope.launch {
             connectivityBridge.audioRecordingNotifications().collect { notification ->
                 handleAudioRecordingReady(notification.filename)
             }
@@ -57,9 +54,10 @@ class SimBadgeAudioAutoDownloader @Inject constructor(
         // 立即在抽屉创建 QUEUED 占位符
         storeSupport.createQueuedBadgePlaceholders(listOf(filename))
         Log.d(TAG, "rec# auto-download: placeholder created filename=$filename")
+        orchestrator.notifyDownloadStarting()
 
         // 后台下载
-        scope.launch {
+        runtime.repositoryScope.launch {
             downloadAndUpgrade(filename)
         }
     }

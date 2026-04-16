@@ -2,7 +2,7 @@
 
 > **Cerb-compliant spec** — Audio file management: sync, transcription, UI interaction.
 > **Status**: SHIPPED
-> **Last Updated**: 2026-04-09
+> **Last Updated**: 2026-04-16
 > **Behavioral UX Authority Above This Doc**: [`docs/core-flow/base-runtime-ux-surface-governance-flow.md`](../../core-flow/base-runtime-ux-surface-governance-flow.md) (`UX.AUDIO.*`)
 
 ---
@@ -21,12 +21,14 @@ Current SIM manual badge sync is list-first:
 - large WAV downloads continue in one repository-owned background queue
 - placeholder cards stay visible and deletable while waiting for local WAV readiness
 - transcribe/chat-pending actions remain blocked until the local WAV exists
+- when badge WAV download work is queued, Android may hold a low-priority foreground-service keepalive notification so the queue can survive app backgrounding or recents-task removal without changing the manual-sync ownership model
 
 Completed badge-pipeline recordings must also appear in the same drawer inventory without requiring the user to reopen the drawer or run manual sync. The delivered implementation does this by ingesting successful `BadgeAudioPipeline` completions directly into the SIM audio namespace before badge cleanup.
 
 **Key Distinction**: drawer sync remains **UI-driven and manual**, but is now supplemented by two automatic paths:
 
 1. **`rec#` push-based auto-download** (`SimBadgeAudioAutoDownloader`): badge sends `rec#YYYYMMDD_HHMMSS` over BLE when a recording finishes → app immediately creates QUEUED placeholder and downloads in background. No transcription or scheduling.
+   - Android may start the same low-priority foreground-service keepalive notification used by manual queue downloads so the file can finish after the app is backgrounded or swiped from recents.
 
 2. **`/list` reconnection fallback** (`SimAudioDrawerViewModel`): when badge reconnects (managerStatus transitions to Ready), app auto-runs `/list` with a 3s debounce to catch files recorded while disconnected.
 

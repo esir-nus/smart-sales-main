@@ -399,6 +399,7 @@ internal class SimAudioRepositorySyncSupport(
 
     private fun enqueueBadgeDownloads(filenames: List<String>) {
         if (filenames.isEmpty()) return
+        orchestrator.notifyDownloadStarting()
         runtime.repositoryScope.launch {
             runtime.badgeDownloadQueueMutex.withLock {
                 filenames.forEach { runtime.queuedBadgeDownloads.add(normalizeSimBadgeFilename(it)) }

@@ -15,15 +15,113 @@ import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.smartsales.prism.R
 import com.smartsales.prism.data.audio.SimAudioRepositoryRuntime
+import com.smartsales.prism.domain.audio.AudioFile
 import com.smartsales.prism.domain.audio.AudioLocalAvailability
-import com.smartsales.prism.domain.notification.NotificationAction
 import com.smartsales.prism.domain.notification.NotificationService
-import com.smartsales.prism.domain.notification.NotificationPriority
 import com.smartsales.prism.domain.notification.PrismNotificationChannel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+internal const val DOWNLOAD_FOREGROUND_STOP_DEBOUNCE_MS = 800L
+
+internal data class DownloadForegroundSnapshot(
+    val downloadingCount: Int,
+    val queuedCount: Int,
+    val completedCount: Int,
+    val queueSize: Int,
+    val currentFilename: String?
+) {
+    val totalCount: Int = downloadingCount + queuedCount + completedCount
+    val hasPendingDownloads: Boolean = downloadingCount > 0 || queuedCount > 0 || queueSize > 0
+}
+
+internal data class DownloadForegroundNotificationModel(
+    val contentText: String,
+    val progressPercent: Int,
+    val indeterminate: Boolean
+)
+
+internal fun buildDownloadForegroundSnapshot(
+    audioFiles: List<AudioFile>,
+    queueSize: Int
+): DownloadForegroundSnapshot {
+    val downloadingCount = audioFiles.count {
+        it.localAvailability == AudioLocalAvailability.DOWNLOADING
+    }
+    val queuedCount = audioFiles.count {
+        it.localAvailability == AudioLocalAvailability.QUEUED
+    }
+    val completedCount = audioFiles.count {
+        it.localAvailability == AudioLocalAvailability.READY
+    }
+    val currentFilename = audioFiles.firstOrNull {
+        it.localAvailability == AudioLocalAvailability.DOWNLOADING
+    }?.filename
+    return DownloadForegroundSnapshot(
+        downloadingCount = downloadingCount,
+        queuedCount = queuedCount,
+        completedCount = completedCount,
+        queueSize = queueSize,
+        currentFilename = currentFilename
+    )
+}
+
+internal fun buildDownloadForegroundNotificationModel(
+    snapshot: DownloadForegroundSnapshot
+): DownloadForegroundNotificationModel {
+    val contentText = when {
+        snapshot.currentFilename != null && snapshot.totalCount > 0 -> {
+            val displayName = snapshot.currentFilename.substringBeforeLast(".")
+            "正在下载 $displayName（已完成 ${snapshot.completedCount} / 共 ${snapshot.totalCount} 条）"
+        }
+        snapshot.totalCount > 0 -> "已完成 ${snapshot.completedCount} / ${snapshot.totalCount} 条"
+        else -> "正在同步录音文件…"
+    }
+    val progressPercent = if (snapshot.totalCount > 0) {
+        (snapshot.completedCount * 100) / snapshot.totalCount
+    } else {
+        0
+    }
+    return DownloadForegroundNotificationModel(
+        contentText = contentText,
+        progressPercent = progressPercent,
+        indeterminate = snapshot.totalCount == 0
+    )
+}
+
+internal class DownloadForegroundStopCoordinator(
+    private val debounceMs: Long = DOWNLOAD_FOREGROUND_STOP_DEBOUNCE_MS
+) {
+    private var pendingStopJob: Job? = null
+
+    fun onSnapshot(
+        snapshot: DownloadForegroundSnapshot,
+        scope: CoroutineScope,
+        onStopReady: suspend () -> Unit
+    ) {
+        if (snapshot.hasPendingDownloads) {
+            pendingStopJob?.cancel()
+            pendingStopJob = null
+            return
+        }
+        if (pendingStopJob?.isActive == true) return
+
+        pendingStopJob = scope.launch {
+            delay(debounceMs)
+            pendingStopJob = null
+            onStopReady()
+        }
+    }
+
+    fun cancel() {
+        pendingStopJob?.cancel()
+        pendingStopJob = null
+    }
+}
 
 /**
  * 下载保活前台服务
@@ -54,6 +152,8 @@ class DownloadForegroundService : LifecycleService() {
     @Inject
     lateinit var notificationService: NotificationService
 
+    private val stopCoordinator = DownloadForegroundStopCoordinator()
+
     companion object {
         private const val TAG = "DownloadService"
         // NOTIFICATION_ID 不能是 const，因为 hashCode() 不是编译时常量
@@ -68,9 +168,10 @@ class DownloadForegroundService : LifecycleService() {
 
         // 启动前台服务 — 必须在 5 秒内调用（Android 12+ 要求）
         val notification = buildDownloadNotification(
-            currentFile = null,
-            completedCount = 0,
-            totalCount = 0
+            buildDownloadForegroundSnapshot(
+                audioFiles = emptyList(),
+                queueSize = runtime.queuedBadgeDownloads.size
+            )
         )
 
         // API 34+ 需要指定 SERVICE_TYPE_DATA_SYNC；低版本此参数被忽略
@@ -89,42 +190,33 @@ class DownloadForegroundService : LifecycleService() {
 
         // 观察 audioFiles 流，更新通知和停止条件
         lifecycleScope.launch {
-            var lastStopCheckTime = 0L
             runtime.audioFiles.collect { audioFiles ->
-                val downloadingCount = audioFiles.count { it.localAvailability == AudioLocalAvailability.DOWNLOADING }
-                val queuedCount = audioFiles.count { it.localAvailability == AudioLocalAvailability.QUEUED }
-                val completedCount = audioFiles.count { it.localAvailability == AudioLocalAvailability.READY }
+                val snapshot = buildDownloadForegroundSnapshot(
+                    audioFiles = audioFiles,
+                    queueSize = runtime.queuedBadgeDownloads.size
+                )
 
-                Log.d(TAG, "Audio files state: downloading=$downloadingCount, queued=$queuedCount, ready=$completedCount, " +
-                    "queueSize=${runtime.queuedBadgeDownloads.size}")
-
-                // 获取当前正在下载的文件名（用于通知显示）
-                val currentFile = audioFiles.firstOrNull { it.localAvailability == AudioLocalAvailability.DOWNLOADING }
+                Log.d(
+                    TAG,
+                    "Audio files state: downloading=${snapshot.downloadingCount}, queued=${snapshot.queuedCount}, ready=${snapshot.completedCount}, queueSize=${snapshot.queueSize}"
+                )
 
                 // 更新通知
-                val updatedNotification = buildDownloadNotification(
-                    currentFile = currentFile?.filename,
-                    completedCount = completedCount,
-                    totalCount = downloadingCount + queuedCount + completedCount
-                )
+                val updatedNotification = buildDownloadNotification(snapshot)
                 updateForegroundNotification(updatedNotification)
 
-                // 检查停止条件：没有正在下载或等待的条目，且队列为空
-                val shouldStop = downloadingCount == 0 && queuedCount == 0 && runtime.queuedBadgeDownloads.isEmpty()
-
-                if (shouldStop) {
-                    val now = System.currentTimeMillis()
-                    if (lastStopCheckTime == 0L) {
-                        lastStopCheckTime = now
-                        Log.d(TAG, "Stop condition met, scheduling 800ms debounce")
-                    } else if (now - lastStopCheckTime >= 800L) {
+                stopCoordinator.onSnapshot(snapshot, lifecycleScope) {
+                    val latestSnapshot = buildDownloadForegroundSnapshot(
+                        audioFiles = runtime.audioFiles.value,
+                        queueSize = runtime.queuedBadgeDownloads.size
+                    )
+                    if (!latestSnapshot.hasPendingDownloads) {
                         Log.d(TAG, "Debounce expired, stopping foreground service")
                         stopForeground(STOP_FOREGROUND_REMOVE)
                         stopSelf()
-                        lastStopCheckTime = 0L
+                    } else {
+                        Log.d(TAG, "Stop debounce canceled because downloads resumed")
                     }
-                } else {
-                    lastStopCheckTime = 0L  // 重置去抖动计数器
                 }
             }
         }
@@ -134,7 +226,7 @@ class DownloadForegroundService : LifecycleService() {
         Log.d(TAG, "onStartCommand called (idempotent)")
         // 返回 START_STICKY 以便进程被杀后重启时恢复服务
         // 由于生命周期锚点模式，下载队列由 recovery 机制重建
-        return super.onStartCommand(intent, flags, startId)
+        return START_STICKY
     }
 
     /**
@@ -146,38 +238,22 @@ class DownloadForegroundService : LifecycleService() {
      * - 进度条: 不可用则显示不确定进度
      * - 属性: ongoing=true（用户不可关闭）
      */
-    private fun buildDownloadNotification(
-        currentFile: String?,
-        completedCount: Int,
-        totalCount: Int
-    ): android.app.Notification {
-        val contentText = when {
-            currentFile != null && totalCount > 0 -> {
-                // 提取文件名，移除扩展名以保证简洁
-                val displayName = currentFile.substringBeforeLast(".")
-                "正在下载 $displayName（已完成 $completedCount / 共 $totalCount 条）"
-            }
-            totalCount > 0 -> "已完成 $completedCount / $totalCount 条"
-            else -> "正在同步录音文件…"
-        }
-
-        val progressPercent = if (totalCount > 0) {
-            (completedCount * 100) / totalCount
-        } else {
-            0
-        }
-
-        val notification = NotificationCompat.Builder(this, PrismNotificationChannel.BADGE_DOWNLOAD_PROGRESS.channelId)
+    private fun buildDownloadNotification(snapshot: DownloadForegroundSnapshot): android.app.Notification {
+        val model = buildDownloadForegroundNotificationModel(snapshot)
+        val notification = NotificationCompat.Builder(
+            this,
+            PrismNotificationChannel.BADGE_DOWNLOAD_PROGRESS.channelId
+        )
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("正在后台同步录音")
-            .setContentText(contentText)
-            .setStyle(NotificationCompat.BigTextStyle().bigText(contentText))
+            .setContentText(model.contentText)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(model.contentText))
             .setOngoing(true)  // 用户不可关闭
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_PROGRESS)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setAutoCancel(false)
-            .setProgress(100, progressPercent, totalCount == 0)  // 进度条
+            .setProgress(100, model.progressPercent, model.indeterminate)  // 进度条
 
         // 点击打开主界面
         val launchIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
@@ -210,6 +286,7 @@ class DownloadForegroundService : LifecycleService() {
     }
 
     override fun onDestroy() {
+        stopCoordinator.cancel()
         super.onDestroy()
         Log.d(TAG, "DownloadForegroundService destroyed")
     }

@@ -31,6 +31,8 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.never
+import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 
 class SimAudioRepositorySyncSupportTest {
@@ -139,6 +141,7 @@ class SimAudioRepositorySyncSupportTest {
 
         assertEquals(SimBadgeSyncResultBranch.DEVICE_EMPTY, outcome.resultBranch)
         assertEquals(0, outcome.queuedCount)
+        verify(orchestrator, never()).notifyDownloadStarting()
     }
 
     @Test
@@ -178,6 +181,7 @@ class SimAudioRepositorySyncSupportTest {
 
         assertEquals(SimBadgeSyncResultBranch.QUEUED, outcome.resultBranch)
         assertEquals(1, outcome.queuedCount)
+        verify(orchestrator).notifyDownloadStarting()
         assertEquals(
             AudioLocalAvailability.QUEUED,
             runtime.audioFiles.value.single { it.filename == "log_20260327_135948.wav" }.localAvailability

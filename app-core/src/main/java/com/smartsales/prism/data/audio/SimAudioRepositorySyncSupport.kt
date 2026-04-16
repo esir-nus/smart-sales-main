@@ -7,6 +7,7 @@ import com.smartsales.prism.domain.audio.AudioFile
 import com.smartsales.prism.domain.audio.AudioLocalAvailability
 import com.smartsales.prism.domain.audio.AudioSource
 import com.smartsales.prism.domain.connectivity.WavDownloadResult
+import com.smartsales.prism.service.DownloadServiceOrchestrator
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
@@ -197,7 +198,8 @@ internal fun buildSimBadgeSyncListFailureMessage(rawReason: String?): String {
 
 internal class SimAudioRepositorySyncSupport(
     private val runtime: SimAudioRepositoryRuntime,
-    private val storeSupport: SimAudioRepositoryStoreSupport
+    private val storeSupport: SimAudioRepositoryStoreSupport,
+    private val orchestrator: DownloadServiceOrchestrator
 ) {
 
     suspend fun canSyncFromBadge(): Boolean = withContext(runtime.ioDispatcher) {

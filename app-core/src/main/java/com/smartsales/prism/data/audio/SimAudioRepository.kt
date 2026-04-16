@@ -2,6 +2,7 @@ package com.smartsales.prism.data.audio
 
 import com.smartsales.prism.domain.audio.AudioFile
 import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
+import com.smartsales.prism.service.DownloadServiceOrchestrator
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
@@ -13,12 +14,13 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 @Singleton
 class SimAudioRepository @Inject constructor(
-    private val runtime: SimAudioRepositoryRuntime
+    private val runtime: SimAudioRepositoryRuntime,
+    private val orchestrator: DownloadServiceOrchestrator
 ) {
 
     private val storeSupport = SimAudioRepositoryStoreSupport(runtime)
     private val artifactSupport = SimAudioRepositoryArtifactSupport(runtime, storeSupport)
-    private val syncSupport = SimAudioRepositorySyncSupport(runtime, storeSupport)
+    private val syncSupport = SimAudioRepositorySyncSupport(runtime, storeSupport, orchestrator)
     private val transcriptionSupport = SimAudioRepositoryTranscriptionSupport(
         runtime = runtime,
         storeSupport = storeSupport,

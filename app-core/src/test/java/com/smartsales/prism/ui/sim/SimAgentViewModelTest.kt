@@ -42,6 +42,7 @@ import com.smartsales.prism.domain.tingwu.TingwuQuestionAnswer
 import com.smartsales.prism.domain.tingwu.TingwuSpeakerSummary
 import com.smartsales.prism.domain.tingwu.TingwuPipeline
 import com.smartsales.prism.domain.tingwu.TingwuSmartSummary
+import com.smartsales.prism.service.DownloadServiceOrchestrator
 import java.time.Instant
 import java.io.File
 import kotlinx.coroutines.delay
@@ -1892,7 +1893,8 @@ class SimAgentViewModelTest {
                 connectivityBridge = mock<ConnectivityBridge>(),
                 ossUploader = mock<OssUploader>(),
                 tingwuPipeline = mock<TingwuPipeline>()
-            )
+            ),
+            orchestrator = mock<DownloadServiceOrchestrator>()
         )
     }
 

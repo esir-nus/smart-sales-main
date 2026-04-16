@@ -13,6 +13,7 @@ import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.connectivity.RecordingNotification
 import com.smartsales.prism.domain.connectivity.WavDownloadResult
 import com.smartsales.prism.domain.tingwu.TingwuPipeline
+import com.smartsales.prism.service.DownloadServiceOrchestrator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
@@ -41,6 +42,7 @@ class SimAudioRepositorySyncSupportTest {
     private lateinit var connectivityBridge: FakeConnectivityBridge
     private lateinit var runtime: SimAudioRepositoryRuntime
     private lateinit var storeSupport: SimAudioRepositoryStoreSupport
+    private lateinit var orchestrator: DownloadServiceOrchestrator
     private lateinit var syncSupport: SimAudioRepositorySyncSupport
 
     @Before
@@ -56,9 +58,11 @@ class SimAudioRepositorySyncSupportTest {
             tingwuPipeline = mock<TingwuPipeline>()
         )
         storeSupport = SimAudioRepositoryStoreSupport(runtime)
+        orchestrator = mock<DownloadServiceOrchestrator>()
         syncSupport = SimAudioRepositorySyncSupport(
             runtime = runtime,
-            storeSupport = storeSupport
+            storeSupport = storeSupport,
+            orchestrator = orchestrator
         )
     }
 

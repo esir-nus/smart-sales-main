@@ -7,6 +7,7 @@ import com.smartsales.prism.domain.audio.AudioSource
 import com.smartsales.prism.domain.audio.TranscriptionStatus
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.tingwu.TingwuPipeline
+import com.smartsales.prism.service.DownloadServiceOrchestrator
 import java.io.File
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -65,7 +66,8 @@ class SimAudioRepositoryNamespaceTest {
                 connectivityBridge = connectivityBridge,
                 ossUploader = ossUploader,
                 tingwuPipeline = tingwuPipeline
-            )
+            ),
+            orchestrator = mock<DownloadServiceOrchestrator>()
         )
 
         assertEquals("session-123", repository.getBoundSessionId("audio-1"))
@@ -94,7 +96,8 @@ class SimAudioRepositoryNamespaceTest {
                 connectivityBridge = connectivityBridge,
                 ossUploader = ossUploader,
                 tingwuPipeline = tingwuPipeline
-            )
+            ),
+            orchestrator = mock<DownloadServiceOrchestrator>()
         )
 
         repository.bindSession("audio-2", "session-456")
@@ -116,7 +119,8 @@ class SimAudioRepositoryNamespaceTest {
                 connectivityBridge = connectivityBridge,
                 ossUploader = ossUploader,
                 tingwuPipeline = tingwuPipeline
-            )
+            ),
+            orchestrator = mock<DownloadServiceOrchestrator>()
         )
 
         assertEquals("session-456", reloadedRepository.getBoundSessionId("audio-2"))

@@ -1,0 +1,8 @@
+{
+  "app": {
+    "bundleName": "com.smartsales.harmony.app",
+    "vendor": "smartsales",
+    "versionCode": 1,
+    "versionName": "0.1.0"
+  }
+}

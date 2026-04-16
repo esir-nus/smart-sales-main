@@ -170,6 +170,7 @@ If a workflow proves repeatedly useful in Codex, promote it deliberately into on
 
 ## Quick Reference
 
+- Agent coalition contract: `docs/specs/agent-coalition.md`
 - Main tracker: `docs/plans/tracker.md`
 - UX SOT: `docs/specs/prism-ui-ux-contract.md`
 - Interface ownership: `docs/cerb/interface-map.md`

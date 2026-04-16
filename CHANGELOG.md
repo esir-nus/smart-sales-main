@@ -2,6 +2,14 @@
 
 ## 最近更新
 
+### 2026-04-16
+
+- **[新增] HarmonyOS 原生应用根目录落位** — 新建 `platforms/harmony/smartsales-app/` 完整原生应用骨架，为后续 ArkTS/ArkUI 功能迁移提供正式落点。
+- **[修复] Harmony 音频链路 ArkTS 类型安全问题** — 修复 Phase 2A 音频管线中的 ArkTS 类型约束与兼容性问题，降低 `.ets` 编译失败风险。
+- **[修复] 徽章下载前台保活链路恢复** — 补齐下载通知通道与前台服务保活 wiring，避免录音下载过程中前台任务丢失。
+- **[修复] 转写音频抽屉卡片细节优化** — 调整音频抽屉卡片的界面表现与交互细节，改善转写内容浏览体验。
+- **[维护] HarmonyOS 治理与协作约定补齐** — 新增 ArkTS 合规规则与 agent coalition 协作文档，并同步 Claude/Codex 参考入口，降低 HarmonyOS 原生迁移期间的协作偏差。
+
 ### 2026-04-15
 
 - **[维护] Android CI 私有 SDK 依赖补齐** — 将 NUI SDK AAR 与 DashScope 相关 Maven 元数据补入 `third_party/maven-repo`，并调整 `.gitignore` 以允许跟踪 CI 必需的私有构件。

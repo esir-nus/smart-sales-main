@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "Smart Sales HarmonyOS native app"
+    },
+    {
+      "name": "entryability_desc",
+      "value": "Smart Sales main entry"
+    },
+    {
+      "name": "entryability_label",
+      "value": "Smart Sales"
+    }
+  ]
+}

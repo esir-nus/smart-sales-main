@@ -1,0 +1,10 @@
+{
+  "src": [
+    "pages/Index",
+    "pages/AudioPage",
+    "pages/SchedulerPage",
+    "pages/ChatPage",
+    "pages/ContactsPage",
+    "pages/SettingsPage"
+  ]
+}

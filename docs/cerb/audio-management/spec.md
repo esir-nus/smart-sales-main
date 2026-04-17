@@ -124,6 +124,7 @@ Browse header contract:
 - browse grip keeps dismiss semantics on tap or downward pull, but reserves upward pull for manual sync only when the badge-sync gate is ready
 - blocked or disconnected upward pull must stay in-place and communicate denial locally instead of inventing auto-sync behavior
 - browse smart capsule is the only browse-header connectivity affordance in this slice; connected right-side sync taps trigger manual sync, left-side connection tap hands off to connectivity
+- manual badge sync failure now immediately hands off to the existing Wi‑Fi mismatch repair prompt instead of waiting for a second tap into connectivity; the prompt should prefill the phone's current SSID when readable
 - relative sync time labels: "未同步" (never synced this session), "已同步 (Xs)" / "已同步 (Xmin)" / "已同步 (Xh)" (after first sync)
 - browse-only helper rows are legal only while the built-in demo seed is the lone visible inventory item; they teach sync/delete mechanics and must not mutate real repository items
 - select mode remains the narrower rebinding picker and must not surface browse smart-capsule chrome or browse helper teaching rows

@@ -2,10 +2,12 @@ package com.smartsales.prism.data.audio
 
 import android.content.Context
 import com.smartsales.data.oss.OssUploader
+import com.smartsales.prism.data.connectivity.legacy.FakePhoneWifiProvider
 import com.smartsales.prism.domain.audio.AudioFile
 import com.smartsales.prism.domain.audio.AudioSource
 import com.smartsales.prism.domain.audio.TranscriptionStatus
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
+import com.smartsales.prism.domain.connectivity.ConnectivityPrompt
 import com.smartsales.prism.domain.tingwu.TingwuPipeline
 import com.smartsales.prism.service.DownloadServiceOrchestrator
 import java.io.File
@@ -65,7 +67,9 @@ class SimAudioRepositoryNamespaceTest {
                 context = context,
                 connectivityBridge = connectivityBridge,
                 ossUploader = ossUploader,
-                tingwuPipeline = tingwuPipeline
+                tingwuPipeline = tingwuPipeline,
+                connectivityPrompt = mock<ConnectivityPrompt>(),
+                phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest")
             ),
             orchestrator = mock<DownloadServiceOrchestrator>()
         )
@@ -95,7 +99,9 @@ class SimAudioRepositoryNamespaceTest {
                 context = context,
                 connectivityBridge = connectivityBridge,
                 ossUploader = ossUploader,
-                tingwuPipeline = tingwuPipeline
+                tingwuPipeline = tingwuPipeline,
+                connectivityPrompt = mock<ConnectivityPrompt>(),
+                phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest")
             ),
             orchestrator = mock<DownloadServiceOrchestrator>()
         )
@@ -118,7 +124,9 @@ class SimAudioRepositoryNamespaceTest {
                 context = context,
                 connectivityBridge = connectivityBridge,
                 ossUploader = ossUploader,
-                tingwuPipeline = tingwuPipeline
+                tingwuPipeline = tingwuPipeline,
+                connectivityPrompt = mock<ConnectivityPrompt>(),
+                phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest")
             ),
             orchestrator = mock<DownloadServiceOrchestrator>()
         )

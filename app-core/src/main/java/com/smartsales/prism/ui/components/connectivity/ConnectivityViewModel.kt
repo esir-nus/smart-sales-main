@@ -14,9 +14,12 @@ import com.smartsales.prism.domain.connectivity.UpdateResult
 import com.smartsales.prism.domain.connectivity.WifiConfigResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -34,7 +37,8 @@ import javax.inject.Inject
 class ConnectivityViewModel @Inject constructor(
     private val connectivityService: ConnectivityService,
     private val connectivityBridge: ConnectivityBridge,
-    private val registryManager: DeviceRegistryManager
+    private val registryManager: DeviceRegistryManager,
+    private val promptCoordinator: ConnectivityPromptCoordinator
 ) : ViewModel() {
 
     // 设备注册表 — 多设备管理
@@ -67,6 +71,8 @@ class ConnectivityViewModel @Inject constructor(
     val wifiMismatchSuggestedSsid: StateFlow<String?> = _wifiMismatchSuggestedSsid.asStateFlow()
     private val _wifiMismatchErrorMessage = MutableStateFlow<String?>(null)
     val wifiMismatchErrorMessage: StateFlow<String?> = _wifiMismatchErrorMessage.asStateFlow()
+    private val _promptRequests = MutableSharedFlow<WifiMismatchPromptRequest>(extraBufferCapacity = 1)
+    val promptRequests: SharedFlow<WifiMismatchPromptRequest> = _promptRequests.asSharedFlow()
 
     // 待更新版本
     private val _pendingVersion = MutableStateFlow<String?>(null)
@@ -97,6 +103,17 @@ class ConnectivityViewModel @Inject constructor(
         SharingStarted.Eagerly,
         mapToManagerUiState(connectivityBridge.managerStatus.value)
     )
+
+    init {
+        viewModelScope.launch {
+            promptCoordinator.wifiMismatchRequests.collect { request ->
+                _wifiMismatchSuggestedSsid.value = request.suggestedSsid
+                _wifiMismatchErrorMessage.value = null
+                _uiOverride.value = ConnectionState.WIFI_MISMATCH
+                _promptRequests.emit(request)
+            }
+        }
+    }
     
     /**
      * 映射 Badge 连接状态 → UI 状态
@@ -210,6 +227,7 @@ class ConnectivityViewModel @Inject constructor(
                 ReconnectResult.DeviceNotFound -> clearTransientConnectivityUi()
                 is ReconnectResult.WifiMismatch -> {
                     _wifiMismatchSuggestedSsid.value = result.currentPhoneSsid
+                    _wifiMismatchErrorMessage.value = null
                     _uiOverride.value = ConnectionState.WIFI_MISMATCH
                 }
                 is ReconnectResult.Error -> clearTransientConnectivityUi()

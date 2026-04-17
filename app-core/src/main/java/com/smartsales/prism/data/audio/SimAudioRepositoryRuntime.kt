@@ -2,8 +2,10 @@ package com.smartsales.prism.data.audio
 
 import android.content.Context
 import com.smartsales.data.oss.OssUploader
+import com.smartsales.prism.data.connectivity.legacy.PhoneWifiProvider
 import com.smartsales.prism.domain.audio.AudioFile
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
+import com.smartsales.prism.domain.connectivity.ConnectivityPrompt
 import com.smartsales.prism.domain.tingwu.TingwuPipeline
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
@@ -23,7 +25,9 @@ class SimAudioRepositoryRuntime @Inject constructor(
     @ApplicationContext val context: Context,
     val connectivityBridge: ConnectivityBridge,
     val ossUploader: OssUploader,
-    val tingwuPipeline: TingwuPipeline
+    val tingwuPipeline: TingwuPipeline,
+    val connectivityPrompt: ConnectivityPrompt,
+    val phoneWifiProvider: PhoneWifiProvider
 ) {
     var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
     var repositoryScope = CoroutineScope(SupervisorJob() + ioDispatcher)

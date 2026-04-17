@@ -13,6 +13,13 @@ interface PhoneWifiProvider {
     fun currentWifiSnapshot(): PhoneWifiSnapshot
 }
 
+fun PhoneWifiProvider.currentNormalizedSsid(): String? {
+    return when (val snapshot = currentWifiSnapshot()) {
+        PhoneWifiSnapshot.Unavailable -> null
+        is PhoneWifiSnapshot.Connected -> snapshot.normalizedSsid
+    }
+}
+
 sealed interface PhoneWifiSnapshot {
     data object Unavailable : PhoneWifiSnapshot
     data class Connected(

@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -52,10 +53,12 @@ class ConnectivityViewModelTest {
     private fun createViewModel(
         service: ConnectivityService = FakeConnectivityService(),
         bridge: ConnectivityBridge = FakeConnectivityBridge(),
+        promptCoordinator: ConnectivityPromptCoordinator = ConnectivityPromptCoordinator(),
     ) = ConnectivityViewModel(
         connectivityService = service,
         connectivityBridge = bridge,
-        registryManager = FakeDeviceRegistryManager()
+        registryManager = FakeDeviceRegistryManager(),
+        promptCoordinator = promptCoordinator
     )
 
     @Test
@@ -351,6 +354,28 @@ class ConnectivityViewModelTest {
 
         assertEquals(ConnectivityManagerState.WIFI_MISMATCH, viewModel.managerState.value)
         assertEquals("OfficeGuest", viewModel.wifiMismatchSuggestedSsid.value)
+    }
+
+    @Test
+    fun `external wifi mismatch prompt updates modal state and emits shell prompt effect`() = runTest {
+        val promptCoordinator = ConnectivityPromptCoordinator()
+        val viewModel = createViewModel(promptCoordinator = promptCoordinator)
+        val receivedRequests = mutableListOf<WifiMismatchPromptRequest>()
+        val collectJob = launch {
+            viewModel.promptRequests.collect { request ->
+                receivedRequests += request
+            }
+        }
+        advanceUntilIdle()
+
+        promptCoordinator.promptWifiMismatch("OfficeGuest")
+        advanceUntilIdle()
+
+        assertEquals(ConnectivityManagerState.WIFI_MISMATCH, viewModel.managerState.value)
+        assertEquals("OfficeGuest", viewModel.wifiMismatchSuggestedSsid.value)
+        assertEquals(listOf(WifiMismatchPromptRequest("OfficeGuest")), receivedRequests)
+
+        collectJob.cancel()
     }
 
     @Test

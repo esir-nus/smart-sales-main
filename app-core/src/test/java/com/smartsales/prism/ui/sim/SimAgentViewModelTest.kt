@@ -12,6 +12,7 @@ import com.smartsales.core.test.fakes.FakeExecutor
 import com.smartsales.core.test.fakes.FakeScheduleBoard
 import com.smartsales.core.test.fakes.FakeUserProfileRepository
 import com.smartsales.data.oss.OssUploader
+import com.smartsales.prism.data.connectivity.legacy.FakePhoneWifiProvider
 import com.smartsales.prism.data.audio.SIM_AUDIO_METADATA_FILENAME
 import com.smartsales.prism.data.audio.SimAudioRepository
 import com.smartsales.prism.data.audio.SimAudioRepositoryRuntime
@@ -26,6 +27,7 @@ import com.smartsales.prism.domain.audio.AudioFile
 import com.smartsales.prism.domain.audio.AudioSource
 import com.smartsales.prism.domain.audio.TranscriptionStatus
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
+import com.smartsales.prism.domain.connectivity.ConnectivityPrompt
 import com.smartsales.prism.domain.model.ChatMessage
 import com.smartsales.prism.domain.model.SchedulerFollowUpTaskSummary
 import com.smartsales.prism.domain.model.SessionKind
@@ -1892,7 +1894,9 @@ class SimAgentViewModelTest {
                 context = context,
                 connectivityBridge = mock<ConnectivityBridge>(),
                 ossUploader = mock<OssUploader>(),
-                tingwuPipeline = mock<TingwuPipeline>()
+                tingwuPipeline = mock<TingwuPipeline>(),
+                connectivityPrompt = mock<ConnectivityPrompt>(),
+                phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest")
             ),
             orchestrator = mock<DownloadServiceOrchestrator>()
         )

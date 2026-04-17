@@ -41,6 +41,7 @@ import com.smartsales.prism.ui.sim.handleBadgeSchedulerContinuityIngress
 import com.smartsales.prism.ui.sim.handleRuntimeConnectivityEntryRequest
 import com.smartsales.prism.ui.sim.initialRuntimeShellState
 import com.smartsales.prism.ui.sim.openRuntimeAudioDrawer
+import com.smartsales.prism.ui.sim.openRuntimeConnectivityModal
 import com.smartsales.prism.ui.sim.openRuntimeScheduler
 import com.smartsales.prism.ui.sim.rememberSimImeVisibility
 import com.smartsales.prism.ui.sim.scheduleAutoReconnect
@@ -182,6 +183,13 @@ internal fun RuntimeShell(
             }
         }
     }
+
+    LaunchedEffect(connectivityViewModel) {
+        connectivityViewModel.promptRequests.collectLatest {
+            shellState = openRuntimeConnectivityModal(shellState)
+        }
+    }
+
 
     LaunchedEffect(audioEntries, trackedPendingAudioIds.keys.toSet()) {
         val completedAudioIds = mutableListOf<String>()

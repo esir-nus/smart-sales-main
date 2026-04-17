@@ -3,6 +3,7 @@ package com.smartsales.prism.data.audio
 import android.util.Log
 import com.smartsales.core.telemetry.PipelineValve
 import com.smartsales.core.util.Result
+import com.smartsales.prism.data.connectivity.legacy.currentNormalizedSsid
 import com.smartsales.prism.domain.audio.AudioFile
 import com.smartsales.prism.domain.audio.AudioLocalAvailability
 import com.smartsales.prism.domain.audio.AudioSource
@@ -249,6 +250,7 @@ internal class SimAudioRepositorySyncSupport(
                 emitSimAudioSyncFailureWhileConnectivityUnavailableTelemetry(
                     detail = "manual preflight failed: connectivity not ready"
                 )
+                promptWifiMismatchIfManual(trigger)
                 throw Exception(SIM_BADGE_SYNC_CONNECTIVITY_UNAVAILABLE_MESSAGE)
             }
         } else {
@@ -267,7 +269,7 @@ internal class SimAudioRepositorySyncSupport(
 
         return try {
             emitSimAudioBadgeSyncRequestedTelemetry(trigger)
-            val executionResult = performBadgeSyncLocked()
+            val executionResult = performBadgeSyncLocked(trigger)
             emitSimAudioBadgeSyncCompletedTelemetry(
                 trigger = trigger,
                 queuedCount = executionResult.queuedCount,
@@ -287,11 +289,13 @@ internal class SimAudioRepositorySyncSupport(
 
     suspend fun syncFromDevice(): Unit = withContext(runtime.ioDispatcher) {
         runtime.syncMutex.withLock {
-            performBadgeSyncLocked()
+            performBadgeSyncLocked(SimBadgeSyncTrigger.MANUAL)
         }
     }
 
-    private suspend fun performBadgeSyncLocked(): SimBadgeSyncExecutionResult {
+    private suspend fun performBadgeSyncLocked(
+        trigger: SimBadgeSyncTrigger
+    ): SimBadgeSyncExecutionResult {
         val listResult = runtime.connectivityBridge.listRecordings()
         val badgeFiles = when (listResult) {
             is Result.Success -> {
@@ -310,6 +314,7 @@ internal class SimAudioRepositorySyncSupport(
                 emitSimAudioSyncFailureWhileConnectivityUnavailableTelemetry(
                     detail = "listRecordings failed: $reason"
                 )
+                promptWifiMismatchIfManual(trigger)
                 throw Exception(buildSimBadgeSyncListFailureMessage(reason))
             }
         }
@@ -559,5 +564,12 @@ internal class SimAudioRepositorySyncSupport(
             }
         }
         return currentPendingDeletes.intersect(badgeFilenameSet)
+    }
+
+    private suspend fun promptWifiMismatchIfManual(trigger: SimBadgeSyncTrigger) {
+        if (trigger != SimBadgeSyncTrigger.MANUAL) return
+        runtime.connectivityPrompt.promptWifiMismatch(
+            runtime.phoneWifiProvider.currentNormalizedSsid()
+        )
     }
 }

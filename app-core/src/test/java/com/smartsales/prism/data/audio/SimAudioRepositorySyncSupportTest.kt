@@ -3,6 +3,7 @@ package com.smartsales.prism.data.audio
 import android.content.Context
 import com.smartsales.core.util.Result
 import com.smartsales.data.oss.OssUploader
+import com.smartsales.prism.data.connectivity.legacy.FakePhoneWifiProvider
 import com.smartsales.prism.domain.audio.AudioFile
 import com.smartsales.prism.domain.audio.AudioLocalAvailability
 import com.smartsales.prism.domain.audio.AudioSource
@@ -10,6 +11,7 @@ import com.smartsales.prism.domain.audio.TranscriptionStatus
 import com.smartsales.prism.domain.connectivity.BadgeConnectionState
 import com.smartsales.prism.domain.connectivity.BadgeManagerStatus
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
+import com.smartsales.prism.domain.connectivity.ConnectivityPrompt
 import com.smartsales.prism.domain.connectivity.RecordingNotification
 import com.smartsales.prism.domain.connectivity.WavDownloadResult
 import com.smartsales.prism.domain.tingwu.TingwuPipeline
@@ -46,6 +48,7 @@ class SimAudioRepositorySyncSupportTest {
     private lateinit var storeSupport: SimAudioRepositoryStoreSupport
     private lateinit var orchestrator: DownloadServiceOrchestrator
     private lateinit var syncSupport: SimAudioRepositorySyncSupport
+    private lateinit var connectivityPrompt: FakeConnectivityPrompt
 
     @Before
     fun setup() {
@@ -53,11 +56,14 @@ class SimAudioRepositorySyncSupportTest {
         whenever(context.filesDir).thenReturn(tempFolder.root)
 
         connectivityBridge = FakeConnectivityBridge()
+        connectivityPrompt = FakeConnectivityPrompt()
         runtime = SimAudioRepositoryRuntime(
             context = context,
             connectivityBridge = connectivityBridge,
             ossUploader = mock<OssUploader>(),
-            tingwuPipeline = mock<TingwuPipeline>()
+            tingwuPipeline = mock<TingwuPipeline>(),
+            connectivityPrompt = connectivityPrompt,
+            phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest")
         )
         storeSupport = SimAudioRepositoryStoreSupport(runtime)
         orchestrator = mock<DownloadServiceOrchestrator>()
@@ -79,6 +85,7 @@ class SimAudioRepositorySyncSupportTest {
 
         assertEquals(SIM_BADGE_SYNC_CONNECTIVITY_UNAVAILABLE_MESSAGE, error?.message)
         assertEquals(listOf("isReady"), connectivityBridge.calls)
+        assertEquals(listOf("OfficeGuest"), connectivityPrompt.suggestedSsids)
     }
 
     @Test
@@ -90,6 +97,7 @@ class SimAudioRepositorySyncSupportTest {
 
         assertEquals(SimBadgeSyncSkippedReason.NOT_READY, outcome.skippedReason)
         assertEquals(listOf("isReady"), connectivityBridge.calls)
+        assertTrue(connectivityPrompt.suggestedSsids.isEmpty())
     }
 
     @Test
@@ -104,6 +112,7 @@ class SimAudioRepositorySyncSupportTest {
 
         assertEquals(SIM_BADGE_SYNC_CONNECTIVITY_UNAVAILABLE_MESSAGE, error?.message)
         assertEquals(listOf("isReady", "listRecordings"), connectivityBridge.calls)
+        assertEquals(listOf("OfficeGuest"), connectivityPrompt.suggestedSsids)
     }
 
     @Test
@@ -426,6 +435,14 @@ class SimAudioRepositorySyncSupportTest {
         override suspend fun deleteRecording(filename: String): Boolean {
             calls += "deleteRecording:$filename"
             return deleteRecordingResults[filename] ?: true
+        }
+    }
+
+    private class FakeConnectivityPrompt : ConnectivityPrompt {
+        val suggestedSsids = mutableListOf<String?>()
+
+        override suspend fun promptWifiMismatch(suggestedSsid: String?) {
+            suggestedSsids += suggestedSsid
         }
     }
 }

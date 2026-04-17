@@ -118,6 +118,7 @@ class DownloadForegroundServiceContractTest {
         assertTrue(manifest.contains("android:name=\".service.DownloadForegroundService\""))
         assertTrue(manifest.contains("android:foregroundServiceType=\"dataSync\""))
         assertTrue(manifest.contains("android:stopWithTask=\"false\""))
+        assertTrue(serviceSource.contains("super.onStartCommand("))
         assertTrue(serviceSource.contains("return START_STICKY"))
     }
 

@@ -223,6 +223,7 @@ class DownloadForegroundService : LifecycleService() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        super.onStartCommand(intent, flags, startId)
         Log.d(TAG, "onStartCommand called (idempotent)")
         super.onStartCommand(intent, flags, startId)
         // 返回 START_STICKY 以便进程被杀后重启时恢复服务

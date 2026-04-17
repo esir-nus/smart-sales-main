@@ -63,6 +63,7 @@ Interpretation:
 - Android / AOSP native and Android-on-Huawei/Harmony both belong to the current Android product lineage.
 - Android-on-Huawei/Harmony is a compatibility target for the Android app, not a native Harmony product.
 - Harmony-native is a separate implementation target with separate platform ownership.
+- the deprecated `app-core` Android `harmony` flavor is retired; the Android lineage now ships from the single default `app-core` variant, while native Harmony delivery lives under `platforms/harmony/`
 
 `docs/reference/platform-targets.md` owns the plain-language definition of these targets.
 

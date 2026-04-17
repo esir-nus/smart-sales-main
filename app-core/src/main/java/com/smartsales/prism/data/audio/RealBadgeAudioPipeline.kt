@@ -1,6 +1,5 @@
 package com.smartsales.prism.data.audio
 
-import com.smartsales.prism.BuildConfig
 import com.smartsales.prism.domain.asr.AsrResult
 import com.smartsales.prism.domain.asr.AsrService
 import com.smartsales.prism.domain.audio.BadgeAudioPipeline
@@ -44,7 +43,6 @@ class RealBadgeAudioPipeline @Inject constructor(
         private const val TAG = "AudioPipeline"
     }
 
-    private val schedulerEnabled = BuildConfig.ENABLE_SCHEDULER
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     private val _events = MutableSharedFlow<PipelineEvent>(
@@ -57,23 +55,19 @@ class RealBadgeAudioPipeline @Inject constructor(
     override val currentState: StateFlow<PipelineState> = _currentState.asStateFlow()
 
     init {
-        if (schedulerEnabled) {
-            // 启动录音监听
-            scope.launch {
-                connectivityBridge.recordingNotifications().collect { notification ->
-                    when (notification) {
-                        is RecordingNotification.RecordingReady -> {
-                            android.util.Log.d(TAG, "New recording detected: ${notification.filename}")
-                            processFile(notification.filename)
-                        }
-                        is RecordingNotification.AudioRecordingReady -> {
-                            // rec# 通知由 SimBadgeAudioAutoDownloader 处理，scheduler pipeline 忽略
-                        }
+        // Android 主线固定启用录音监听。
+        scope.launch {
+            connectivityBridge.recordingNotifications().collect { notification ->
+                when (notification) {
+                    is RecordingNotification.RecordingReady -> {
+                        android.util.Log.d(TAG, "New recording detected: ${notification.filename}")
+                        processFile(notification.filename)
+                    }
+                    is RecordingNotification.AudioRecordingReady -> {
+                        // rec# 通知由 SimBadgeAudioAutoDownloader 处理，scheduler pipeline 忽略
                     }
                 }
             }
-        } else {
-            android.util.Log.d(TAG, "Scheduler disabled for this flavor; skipping badge scheduler listener")
         }
     }
 
@@ -123,69 +117,64 @@ class RealBadgeAudioPipeline @Inject constructor(
             val transcript = (asrResult as AsrResult.Success).text
             android.util.Log.d(TAG, "Transcribed: $transcript")
             
-            val schedulerResult = if (schedulerEnabled) {
-                currentStage = PipelineEvent.Stage.SCHEDULE
-                _currentState.value = PipelineState.PROCESSING
-                _events.emit(PipelineEvent.Processing(transcript))
-                android.util.Log.d(TAG, "Scheduling task...")
+            currentStage = PipelineEvent.Stage.SCHEDULE
+            _currentState.value = PipelineState.PROCESSING
+            _events.emit(PipelineEvent.Processing(transcript))
+            android.util.Log.d(TAG, "Scheduling task...")
 
-                val pathACompletion = CompletableDeferred<SchedulerResult>()
+            val pathACompletion = CompletableDeferred<SchedulerResult>()
 
-                scope.launch(Dispatchers.IO) {
-                    try {
-                        intentOrchestrator.processInput(transcript, isVoice = true).collect { result ->
-                            when (result) {
-                                is PipelineResult.PathACommitted -> {
-                                    if (!pathACompletion.isCompleted) {
-                                        pathACompletion.complete(
-                                            SchedulerResult.TaskCreated(
-                                                taskId = result.task.id,
-                                                title = result.task.title,
-                                                dayOffset = 0,
-                                                scheduledAtMillis = result.task.startTime.toEpochMilli(),
-                                                durationMinutes = result.task.durationMinutes
-                                            )
+            scope.launch(Dispatchers.IO) {
+                try {
+                    intentOrchestrator.processInput(transcript, isVoice = true).collect { result ->
+                        when (result) {
+                            is PipelineResult.PathACommitted -> {
+                                if (!pathACompletion.isCompleted) {
+                                    pathACompletion.complete(
+                                        SchedulerResult.TaskCreated(
+                                            taskId = result.task.id,
+                                            title = result.task.title,
+                                            dayOffset = 0,
+                                            scheduledAtMillis = result.task.startTime.toEpochMilli(),
+                                            durationMinutes = result.task.durationMinutes
                                         )
-                                    }
+                                    )
                                 }
-                                is PipelineResult.InspirationCommitted -> {
-                                    if (!pathACompletion.isCompleted) {
-                                        pathACompletion.complete(SchedulerResult.InspirationSaved(result.id))
-                                    }
-                                }
-                                is PipelineResult.MascotIntercepted,
-                                is PipelineResult.BadgeDelegationIntercepted,
-                                is PipelineResult.ConversationalReply,
-                                is PipelineResult.ToolRecommendation,
-                                is PipelineResult.MutationProposal,
-                                is PipelineResult.ToolDispatch,
-                                is PipelineResult.PluginExecutionStarted,
-                                is PipelineResult.PluginExecutionEmittedState -> {
-                                    if (!pathACompletion.isCompleted) {
-                                        pathACompletion.complete(SchedulerResult.Ignored)
-                                    }
-                                }
-                                else -> Unit
                             }
-                        }
-                        if (!pathACompletion.isCompleted) {
-                            pathACompletion.complete(SchedulerResult.Ignored)
-                        }
-                    } catch (e: Exception) {
-                        if (!pathACompletion.isCompleted) {
-                            pathACompletion.completeExceptionally(e)
-                        } else {
-                            android.util.Log.e(TAG, "Path A/Path B collection failed after completion: ${e.message}", e)
+                            is PipelineResult.InspirationCommitted -> {
+                                if (!pathACompletion.isCompleted) {
+                                    pathACompletion.complete(SchedulerResult.InspirationSaved(result.id))
+                                }
+                            }
+                            is PipelineResult.MascotIntercepted,
+                            is PipelineResult.BadgeDelegationIntercepted,
+                            is PipelineResult.ConversationalReply,
+                            is PipelineResult.ToolRecommendation,
+                            is PipelineResult.MutationProposal,
+                            is PipelineResult.ToolDispatch,
+                            is PipelineResult.PluginExecutionStarted,
+                            is PipelineResult.PluginExecutionEmittedState -> {
+                                if (!pathACompletion.isCompleted) {
+                                    pathACompletion.complete(SchedulerResult.Ignored)
+                                }
+                            }
+                            else -> Unit
                         }
                     }
+                    if (!pathACompletion.isCompleted) {
+                        pathACompletion.complete(SchedulerResult.Ignored)
+                    }
+                } catch (e: Exception) {
+                    if (!pathACompletion.isCompleted) {
+                        pathACompletion.completeExceptionally(e)
+                    } else {
+                        android.util.Log.e(TAG, "Path A/Path B collection failed after completion: ${e.message}", e)
+                    }
                 }
+            }
 
-                pathACompletion.await().also { result ->
-                    android.util.Log.d(TAG, "Path A committed via IntentOrchestrator: $result")
-                }
-            } else {
-                android.util.Log.d(TAG, "Scheduler disabled for this flavor; keeping badge recording as audio-only ingest")
-                SchedulerResult.Ignored
+            val schedulerResult = pathACompletion.await().also { result ->
+                android.util.Log.d(TAG, "Path A committed via IntentOrchestrator: $result")
             }
             
             // 4. Cleanup (Emit Completion for Path A to close Drawer)

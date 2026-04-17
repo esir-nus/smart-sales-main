@@ -14,7 +14,6 @@ import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.smartsales.prism.AppFlavor
 import com.smartsales.prism.data.connectivity.registry.RegisteredDevice
 import com.smartsales.prism.domain.audio.BadgeAudioPipeline
 import com.smartsales.prism.ui.components.DynamicIslandItem
@@ -64,7 +63,7 @@ internal fun RuntimeShell(
     shouldAutoOpenSchedulerAfterOnboarding: Boolean = false,
     onPostOnboardingSchedulerAutoOpened: () -> Unit = {}
 ) {
-    val schedulerEnabled = AppFlavor.schedulerEnabled
+    val schedulerEnabled = true
     val chatViewModel: SimAgentViewModel = hiltViewModel()
     val schedulerViewModel: SimSchedulerViewModel = viewModel()
     val followUpOwner: SimBadgeFollowUpOwner = viewModel()
@@ -123,19 +122,12 @@ internal fun RuntimeShell(
         topUrgentTasks,
         shellState.showSchedulerIslandHint
     ) {
-        if (schedulerEnabled) {
-            buildSimDynamicIslandItems(
-                sessionTitle = sessionTitle,
-                sessionHasAudioContextHistory = currentSessionHasAudioContextHistory,
-                orderedTasks = topUrgentTasks,
-                showIdleTeachingHint = shellState.showSchedulerIslandHint
-            )
-        } else {
-            buildHarmonyCompatDynamicIslandItems(
-                sessionTitle = sessionTitle,
-                sessionHasAudioContextHistory = currentSessionHasAudioContextHistory
-            )
-        }
+        buildSimDynamicIslandItems(
+            sessionTitle = sessionTitle,
+            sessionHasAudioContextHistory = currentSessionHasAudioContextHistory,
+            orderedTasks = topUrgentTasks,
+            showIdleTeachingHint = shellState.showSchedulerIslandHint
+        )
     }
     val schedulerIslandItemsFlow = remember {
         MutableStateFlow(emptyList<DynamicIslandItem>())
@@ -190,7 +182,6 @@ internal fun RuntimeShell(
             }
         }
     }
-
 
     LaunchedEffect(audioEntries, trackedPendingAudioIds.keys.toSet()) {
         val completedAudioIds = mutableListOf<String>()
@@ -416,22 +407,5 @@ internal fun RuntimeShell(
         mutateShellState = { transform ->
             shellState = transform(shellState)
         }
-    )
-}
-
-private fun buildHarmonyCompatDynamicIslandItems(
-    sessionTitle: String,
-    sessionHasAudioContextHistory: Boolean
-): List<DynamicIslandItem> {
-    val normalizedTitle = sessionTitle.ifBlank { "智能销售" }
-    return listOf(
-        DynamicIslandItem(
-            sessionTitle = normalizedTitle,
-            displayText = normalizedTitle,
-            lane = DynamicIslandLane.CONNECTIVITY,
-            visualState = DynamicIslandVisualState.SESSION_TITLE_HIGHLIGHT,
-            showsAudioIndicator = sessionHasAudioContextHistory,
-            tapAction = DynamicIslandTapAction.OpenConnectivityEntry
-        )
     )
 }

@@ -32,10 +32,8 @@ class PrismApplication : Application() {
         // 启动 rec# 自动下载器，监听 BLE 音频通知并后台同步到抽屉。
         entryPoint.simBadgeAudioAutoDownloader()
 
-        // Harmony 兼容 flavor 彻底关闭 scheduler 家族，避免后台录音管道继续偷跑日程写入。
-        if (BuildConfig.ENABLE_SCHEDULER) {
-            entryPoint.badgeAudioPipeline()
-        }
+        // Android 主线固定启用 scheduler 音频管道。
+        entryPoint.badgeAudioPipeline()
     }
 }
 

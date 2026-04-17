@@ -55,10 +55,11 @@ class FollowUpRescheduleContractAlignmentTest {
         )
         assertTrue(prompt.contains("selected_task_title"))
         assertTrue(prompt.contains("selected_task_start_iso"))
-        assertTrue(prompt.contains("delta-only 改期"))
+        assertTrue(prompt.contains("推迟1个小时"))
         assertTrue(prompt.contains("明天早上8点"))
         assertTrue(prompt.contains("RELATIVE_DAY_CLOCK"))
-        assertFalse(prompt.contains("DELTA_FROM_TARGET"))
+        assertTrue(prompt.contains("DELTA_FROM_TARGET"))
+        assertTrue(prompt.contains("deltaFromTargetMinutes"))
         assertTrue(prompt.contains("NOT_SUPPORTED"))
         assertTrue(prompt.contains("页面相对日期"))
     }

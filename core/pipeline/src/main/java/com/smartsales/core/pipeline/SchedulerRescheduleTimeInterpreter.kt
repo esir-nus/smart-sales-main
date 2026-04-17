@@ -49,6 +49,13 @@ object SchedulerRescheduleTimeInterpreter {
         uniAExtractionService: RealUniAExtractionService
     ): Result {
         val normalizedTranscript = normalizeExactRescheduleInstruction(transcript)
+        RelativeTimeResolver.resolveSignedDeltaMinutes(normalizedTranscript)?.let { delta ->
+            if (originalTask.isVague) return Result.Unsupported
+            return Result.Success(
+                startTime = originalTask.startTime.plus(delta.offsetMinutes, ChronoUnit.MINUTES),
+                durationMinutes = originalTask.durationMinutes
+            )
+        }
         ExactTimeCueResolver.resolveExactDayClockStartTime(
             transcript = normalizedTranscript,
             nowIso = timeProvider.now.toString(),
@@ -93,6 +100,7 @@ object SchedulerRescheduleTimeInterpreter {
     ): Instant {
         return when (operand) {
             is FollowUpRescheduleOperand.DeltaFromTarget -> {
+                require(!originalTask.isVague) { "delta reschedule does not support vague tasks" }
                 originalTask.startTime.plus(operand.minutes.toLong(), ChronoUnit.MINUTES)
             }
 

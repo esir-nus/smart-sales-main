@@ -66,13 +66,25 @@ internal object SimFollowUpRescheduleShadowInterpreter {
             )
         ) {
             is FollowUpRescheduleExtractionResult.Supported -> {
-                Result.Success(
-                    startTime = resolveSupportedOperand(
+                runCatching {
+                    resolveSupportedOperand(
                         operand = extracted.operand,
                         originalTask = originalTask,
                         timeProvider = timeProvider
-                    ),
-                    transcriptClass = transcriptClass
+                    )
+                }.fold(
+                    onSuccess = { startTime ->
+                        Result.Success(
+                            startTime = startTime,
+                            transcriptClass = transcriptClass
+                        )
+                    },
+                    onFailure = {
+                        Result.Unsupported(
+                            reason = it.message ?: "follow-up shadow operand is unsupported",
+                            transcriptClass = transcriptClass
+                        )
+                    }
                 )
             }
 

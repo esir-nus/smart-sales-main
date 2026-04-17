@@ -1440,6 +1440,58 @@ class SimAgentViewModelTest {
     }
 
     @Test
+    fun `scheduler follow up send delta phrase keeps V1 and V2 in parity`() = runTest {
+        val valveEvents = mutableListOf<Pair<PipelineValve.Checkpoint, String>>()
+        PipelineValve.testInterceptor = { checkpoint, _, summary ->
+            valveEvents += checkpoint to summary
+        }
+        val taskId = taskRepository.insertTask(
+            ScheduledTask(
+                id = "task_follow_delta_parity",
+                timeDisplay = "16:00",
+                title = "赶高铁",
+                urgencyLevel = UrgencyLevel.L2_IMPORTANT,
+                startTime = Instant.parse("2026-03-22T08:00:00Z"),
+                durationMinutes = 30
+            )
+        )
+        val viewModel = newViewModel()
+        val sessionId = viewModel.createBadgeSchedulerFollowUpSession(
+            threadId = "thread_follow_delta_parity",
+            transcript = "安排赶高铁",
+            tasks = listOf(
+                SchedulerFollowUpTaskSummary(
+                    taskId = taskId,
+                    title = "赶高铁",
+                    dayOffset = 0,
+                    scheduledAtMillis = Instant.parse("2026-03-22T08:00:00Z").toEpochMilli(),
+                    durationMinutes = 30
+                )
+            )
+        )
+        viewModel.switchSession(sessionId!!)
+        activeTaskRetrievalIndex.nextResolveResult = ActiveTaskResolveResult.Resolved(taskId)
+
+        enqueueGlobalRescheduleExtraction(
+            targetQuery = "赶高铁",
+            timeInstruction = "推迟1个小时"
+        )
+        enqueueFollowUpShadowDelta(minutes = 60)
+        viewModel.updateInput("把赶高铁推迟1个小时")
+        viewModel.send()
+        advanceUntilIdle()
+
+        val updated = taskRepository.getTask(taskId)
+        assertEquals(Instant.parse("2026-03-22T09:00:00Z"), updated?.startTime)
+        assertTrue(
+            valveEvents.contains(
+                PipelineValve.Checkpoint.UI_STATE_EMITTED to
+                    SIM_BADGE_SCHEDULER_FOLLOW_UP_V2_SHADOW_PARITY_SUMMARY
+            )
+        )
+    }
+
+    @Test
     fun `scheduler follow up send keeps V1 write when V2 shadow reports unsupported exact extraction`() = runTest {
         val valveEvents = mutableListOf<Pair<PipelineValve.Checkpoint, String>>()
         PipelineValve.testInterceptor = { checkpoint, _, summary ->

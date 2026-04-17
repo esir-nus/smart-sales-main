@@ -332,8 +332,26 @@ internal class SchedulerLinterParsingSupport(
 
                     when (timeKind) {
                         FollowUpRescheduleTimeKind.DELTA_FROM_TARGET -> {
-                            FollowUpRescheduleExtractionResult.Unsupported(
-                                "Follow-up reschedule V2 no longer allows delta-only time shifts"
+                            if (payload.relativeDayOffset != null ||
+                                payload.clockTime != null ||
+                                payload.absoluteStartIso != null
+                            ) {
+                                return FollowUpRescheduleExtractionResult.Invalid(
+                                    "Follow-up reschedule V2 delta payload contains illegal extra fields"
+                                )
+                            }
+                            val deltaMinutes = payload.deltaFromTargetMinutes
+                                ?: return FollowUpRescheduleExtractionResult.Invalid(
+                                    "Follow-up reschedule V2 deltaFromTargetMinutes missing"
+                                )
+                            if (deltaMinutes == 0) {
+                                return FollowUpRescheduleExtractionResult.Invalid(
+                                    "Follow-up reschedule V2 deltaFromTargetMinutes must not be 0"
+                                )
+                            }
+                            FollowUpRescheduleExtractionResult.Supported(
+                                timeKind = timeKind,
+                                operand = FollowUpRescheduleOperand.DeltaFromTarget(deltaMinutes)
                             )
                         }
 

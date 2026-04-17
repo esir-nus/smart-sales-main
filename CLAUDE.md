@@ -33,6 +33,10 @@ master (protected, promotion-only — requires PR)
 - Harmony-native is the primary forward platform. Android is beta-maintenance.
 - **iOS (future)**: `platform/ios` will follow the same model as `platform/harmony`. Not yet created. See `docs/specs/cross-platform-sync-contract.md`.
 
+## Harmony Sprint Gate
+
+Edits under `platforms/harmony/**` require an `Active` or `Blocked` sprint entry in `docs/plans/sprint-tracker.md`. Enforced by the PreToolUse hook `.claude/hooks/harmony-sprint-gate.sh`. Open a sprint via `/sprint` before touching Harmony files. See `docs/specs/platform-governance.md` §3.3 for the full rule.
+
 ## Source of Truth
 
 Docs > Code > Guessing.
@@ -138,7 +142,7 @@ If current logs are insufficient, add targeted tags/logging and rerun instead of
 | Platform governance | `docs/specs/platform-governance.md` |
 | Glossary | `docs/specs/GLOSSARY.md` |
 | Lessons learned | `docs/reference/agent-lessons-details.md` |
-| Harmony tracker | `docs/plans/harmony-tracker.md` |
+| Harmony sprint tracker | `docs/plans/sprint-tracker.md` |
 | Harmony container spec | `docs/platforms/harmony/tingwu-container.md` |
 | Agent coalition contract | `docs/specs/agent-coalition.md` |
 

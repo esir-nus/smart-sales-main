@@ -1,12 +1,23 @@
 {
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/harmony-sprint-gate.sh"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Write|Edit",
         "hooks": [
           {
             "type": "command",
-            "command": "echo \"$CLAUDE_TOOL_INPUT\" | grep -q 'platforms/harmony/smartsales-app' && echo '[TRACKER] Harmony app file modified — check if docs/plans/harmony-tracker.md H-04 Notes/Drift needs updating.' || true"
+            "command": "echo \"$CLAUDE_TOOL_INPUT\" | grep -q 'platforms/harmony/smartsales-app' && echo '[TRACKER] Harmony app file modified — check if docs/plans/sprint-tracker.md HS-005 (Phase 2A) Evidence log or Notes need updating.' || true"
           }
         ]
       }

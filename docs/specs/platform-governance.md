@@ -11,7 +11,7 @@
 > - `docs/reference/harmonyos-platform-guide.md`
 > - `docs/cerb/interface-map.md`
 > - `docs/plans/tracker.md`
-> - `docs/plans/harmony-tracker.md`
+> - `docs/plans/sprint-tracker.md`
 > - `docs/specs/base-runtime-unification.md`
 
 ---
@@ -31,9 +31,10 @@ Rules:
 ```
 master (protected, promotion-only — requires PR)
   └── develop (Android maintenance + shared contracts, daily trunk)
-        └── platform/harmony (HarmonyOS integration trunk, daily Harmony work)
-              ├── harmony/feat-x (feature branches, PR back to platform/harmony)
-              └── harmony/feat-y
+        ├── platform/harmony (HarmonyOS integration trunk, daily Harmony work)
+        │     ├── harmony/feat-x (feature branches, PR back to platform/harmony)
+        │     └── harmony/feat-y
+        └── platform/ios (anticipated, not yet created)
 ```
 
 Rules:
@@ -43,6 +44,8 @@ Rules:
 - shared contracts flow `develop → platform/harmony` via deliberate merge, at least weekly; never the reverse
 - feature branches fork from `develop` (for Android) or `platform/harmony` (for Harmony) and PR back to origin branch
 - `master` receives promotions from `develop` via PR only; no direct commits
+- `develop` and `platform/harmony` are PR-only trunks: all code changes land through PRs from feature branches (`feature/* -> develop`, `harmony/* -> platform/harmony`), not direct commits
+- `platform/ios`: anticipated integration trunk for iOS-native, same model as `platform/harmony`; not yet created
 
 ### Historical note
 
@@ -102,6 +105,21 @@ Rules:
 - the existing Tingwu container (`platforms/harmony/tingwu-container/`) provides proven patterns and is the foundation for the complete native app (`platforms/harmony/smartsales-app/`)
 - each delivered feature must be honest about its current capability set; features not yet implemented must be hidden or blocked, not faked
 - release branch `release/harmony-alpha` may be created once the native app shell and at least one feature lane (audio pipeline) are device-verified
+
+### 3.3 Sprint-gated Harmony work
+
+Every non-trivial Harmony edit must execute inside an open sprint contract. `docs/plans/sprint-tracker.md` is the authoritative ledger; a sprint is "live" when its entry has `Status: Active` or `Status: Blocked` (per the tracker's §2 status model).
+
+Rules:
+
+- edits under `platforms/harmony/**` require at least one live sprint in `docs/plans/sprint-tracker.md` at the moment of the edit
+- operators open sprint contracts via `/sprint` (see `.claude/commands/sprint.md`)
+- `Proposed`, `Accepted`, `Deferred`, and `Absorbed` statuses do not qualify — they are not inside contract bounds
+- the rule is enforced by the PreToolUse hook `.claude/hooks/harmony-sprint-gate.sh`, wired in `.claude/settings.json`; the hook blocks `Edit`, `Write`, and `NotebookEdit` on Harmony paths when no live sprint exists
+- `Bash` is not gated — operators must honor the rule manually for shell-driven edits
+- `platforms/ios/**` will inherit the same mechanism once the iOS integration trunk is created; it is out of scope today
+
+Rationale: Harmony is the primary forward platform (§3.2). Unattributed drift here is more costly than on Android beta-maintenance. The gate makes sprint authorship a hard precondition rather than a documentation hope.
 
 ---
 
@@ -213,7 +231,7 @@ Rules:
 - `docs/plans/tracker.md` stays the campaign index and branch/governance summary only
 - specialist trackers own structure, UI, bugs, and Harmony-native delivery
 - execution briefs are temporary slice docs and must not replace a standing tracker
-- the Harmony program uses `docs/plans/harmony-tracker.md` for program-summary state and `docs/plans/harmony-ui-translation-tracker.md` for page-by-page ArkUI rewrite evidence
+- the Harmony program uses `docs/plans/sprint-tracker.md` as the persistent log of sprint contracts (feature + debug) and `docs/plans/harmony-ui-translation-tracker.md` for page-by-page ArkUI rewrite evidence
 
 ### 6.5 Historical note
 

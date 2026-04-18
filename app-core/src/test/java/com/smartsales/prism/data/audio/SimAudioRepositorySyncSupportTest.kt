@@ -551,5 +551,7 @@ class SimAudioRepositorySyncSupportTest {
         override suspend fun promptWifiMismatch(suggestedSsid: String?) {
             suggestedSsids += suggestedSsid
         }
+
+        override suspend fun promptSuspectedIsolation(badgeIp: String) = Unit
     }
 }

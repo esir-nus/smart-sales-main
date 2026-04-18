@@ -80,6 +80,10 @@ class ConnectivityViewModel @Inject constructor(
     private val _promptRequests = MutableSharedFlow<WifiMismatchPromptRequest>(extraBufferCapacity = 1)
     val promptRequests: SharedFlow<WifiMismatchPromptRequest> = _promptRequests.asSharedFlow()
 
+    // 疑似隔离时记录徽章 IP，用于界面诊断展示
+    private val _isolationBadgeIp = MutableStateFlow<String?>(null)
+    val isolationBadgeIp: StateFlow<String?> = _isolationBadgeIp.asStateFlow()
+
     // 待更新版本
     private val _pendingVersion = MutableStateFlow<String?>(null)
     val pendingVersion: StateFlow<String?> = _pendingVersion.asStateFlow()
@@ -124,6 +128,16 @@ class ConnectivityViewModel @Inject constructor(
                 _wifiMismatchErrorMessage.value = null
                 _uiOverride.value = ConnectionState.WIFI_MISMATCH
                 _promptRequests.emit(request)
+            }
+        }
+        viewModelScope.launch {
+            // 疑似客户端隔离：手机网络已验证但 HTTP 探测超时 → 展示隔离提示模态框
+            promptCoordinator.suspectedIsolationRequests.collect { request ->
+                _isolationBadgeIp.value = request.badgeIp
+                _repairState.value = WifiRepairState.HardFailure(
+                    WifiRepairState.HardFailure.HardFailureReason.SUSPECTED_ISOLATION
+                )
+                _uiOverride.value = ConnectionState.WIFI_MISMATCH
             }
         }
         viewModelScope.launch {
@@ -413,6 +427,7 @@ class ConnectivityViewModel @Inject constructor(
     private fun clearTransientConnectivityUi() {
         _wifiMismatchSuggestedSsid.value = null
         _wifiMismatchErrorMessage.value = null
+        _isolationBadgeIp.value = null
         _repairState.value = WifiRepairState.Idle
         _uiOverride.value = null
     }

@@ -24,7 +24,9 @@ sealed interface PhoneWifiSnapshot {
     data object Unavailable : PhoneWifiSnapshot
     data class Connected(
         val normalizedSsid: String?,
-        val rawSsid: String? = null
+        val rawSsid: String? = null,
+        // NET_CAPABILITY_VALIDATED: 手机 WiFi 已通过互联网可达性验证
+        val isValidated: Boolean = false
     ) : PhoneWifiSnapshot
 }
 
@@ -57,9 +59,14 @@ class AndroidPhoneWifiProvider @Inject constructor(
                 .mapNotNull { it?.trim()?.takeIf(String::isNotBlank) }
                 .firstOrNull()
 
+            // 检测网络是否通过 Android 可达性验证（隔离网络判断的关键信号）
+            val isValidated = capabilities
+                ?.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED) == true
+
             PhoneWifiSnapshot.Connected(
                 normalizedSsid = normalizeWifiSsid(rawSsid),
-                rawSsid = rawSsid
+                rawSsid = rawSsid,
+                isValidated = isValidated
             )
         }.getOrElse {
             PhoneWifiSnapshot.Unavailable
@@ -70,13 +77,14 @@ class AndroidPhoneWifiProvider @Inject constructor(
 class FakePhoneWifiProvider(
     var snapshot: PhoneWifiSnapshot = PhoneWifiSnapshot.Unavailable
 ) : PhoneWifiProvider {
-    constructor(currentSsid: String?) : this(
+    constructor(currentSsid: String?, isValidated: Boolean = false) : this(
         snapshot = if (currentSsid == null) {
             PhoneWifiSnapshot.Unavailable
         } else {
             PhoneWifiSnapshot.Connected(
                 normalizedSsid = normalizeWifiSsid(currentSsid),
-                rawSsid = currentSsid
+                rawSsid = currentSsid,
+                isValidated = isValidated
             )
         }
     )

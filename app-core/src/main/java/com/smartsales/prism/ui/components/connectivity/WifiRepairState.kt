@@ -43,14 +43,17 @@ sealed class WifiRepairState {
     data class RetryableFailure(val reason: String) : WifiRepairState()
 
     /**
-     * 硬失败：原因明确，用户必须重新输入凭据。
-     * 对应 SSID 不匹配、设备离线（传输未确认）、凭据重播失败。
+     * 硬失败：原因明确，用户必须采取行动。
+     * SSID_MISMATCH / BADGE_OFFLINE / CREDENTIAL_REPLAY_FAILED：重新输入凭据。
+     * SUSPECTED_ISOLATION：网络隔离，引导用户切换网络或开启热点。
      */
     data class HardFailure(val reason: HardFailureReason) : WifiRepairState() {
         enum class HardFailureReason {
             SSID_MISMATCH,
             BADGE_OFFLINE,
             CREDENTIAL_REPLAY_FAILED,
+            // 配对后 HTTP 探测失败且手机网络已验证 — 疑似客户端隔离
+            SUSPECTED_ISOLATION,
         }
     }
 }

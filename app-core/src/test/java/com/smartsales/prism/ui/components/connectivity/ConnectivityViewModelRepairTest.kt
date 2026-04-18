@@ -142,6 +142,28 @@ class ConnectivityViewModelRepairTest {
     }
 
     @Test
+    fun `repairState goes to HardFailure SUSPECTED_ISOLATION and badgeIp set when isolation prompt fires`() = runTest {
+        val coordinator = ConnectivityPromptCoordinator()
+        val viewModel = ConnectivityViewModel(
+            connectivityService = StubConnectivityService(),
+            connectivityBridge = StubRepairBridge(),
+            registryManager = NoOpDeviceRegistryManager(),
+            promptCoordinator = coordinator
+        )
+        advanceUntilIdle()
+
+        coordinator.promptSuspectedIsolation("192.168.1.18")
+        advanceUntilIdle()
+
+        assertEquals(
+            WifiRepairState.HardFailure(WifiRepairState.HardFailure.HardFailureReason.SUSPECTED_ISOLATION),
+            viewModel.repairState.value
+        )
+        assertEquals(ConnectionState.WIFI_MISMATCH, viewModel.effectiveState.value)
+        assertEquals("192.168.1.18", viewModel.isolationBadgeIp.value)
+    }
+
+    @Test
     fun `effectiveState stays WIFI_MISMATCH and is not cleared when result is HttpDelayed`() = runTest {
         val bridge = StubRepairBridge()
         val service = StubConnectivityService(

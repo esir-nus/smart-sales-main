@@ -11,6 +11,11 @@ data class WifiMismatchPromptRequest(
     val suggestedSsid: String?
 )
 
+// 疑似客户端隔离提示请求 — 携带徽章 IP 用于界面诊断展示
+data class SuspectedIsolationPromptRequest(
+    val badgeIp: String
+)
+
 @Singleton
 class ConnectivityPromptCoordinator @Inject constructor() : ConnectivityPrompt {
 
@@ -20,6 +25,12 @@ class ConnectivityPromptCoordinator @Inject constructor() : ConnectivityPrompt {
     val wifiMismatchRequests: SharedFlow<WifiMismatchPromptRequest> =
         _wifiMismatchRequests.asSharedFlow()
 
+    private val _suspectedIsolationRequests = MutableSharedFlow<SuspectedIsolationPromptRequest>(
+        extraBufferCapacity = 8
+    )
+    val suspectedIsolationRequests: SharedFlow<SuspectedIsolationPromptRequest> =
+        _suspectedIsolationRequests.asSharedFlow()
+
     override suspend fun promptWifiMismatch(suggestedSsid: String?) {
         _wifiMismatchRequests.emit(
             WifiMismatchPromptRequest(
@@ -27,6 +38,12 @@ class ConnectivityPromptCoordinator @Inject constructor() : ConnectivityPrompt {
                     ?.trim()
                     ?.takeIf(String::isNotEmpty)
             )
+        )
+    }
+
+    override suspend fun promptSuspectedIsolation(badgeIp: String) {
+        _suspectedIsolationRequests.emit(
+            SuspectedIsolationPromptRequest(badgeIp = badgeIp.trim())
         )
     }
 }

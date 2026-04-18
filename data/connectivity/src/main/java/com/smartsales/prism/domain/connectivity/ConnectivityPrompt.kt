@@ -8,4 +8,6 @@ package com.smartsales.prism.domain.connectivity
  */
 interface ConnectivityPrompt {
     suspend fun promptWifiMismatch(suggestedSsid: String?)
+    // 配对后 HTTP 不可达且手机网络已验证 — 疑似客户端隔离
+    suspend fun promptSuspectedIsolation(badgeIp: String)
 }

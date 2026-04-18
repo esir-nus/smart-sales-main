@@ -51,7 +51,10 @@ sealed class UpdateResult {
  */
 sealed class ReconnectResult {
     object Connected : ReconnectResult()
-    data class WifiMismatch(val currentPhoneSsid: String? = null) : ReconnectResult()
+    data class WifiMismatch(
+        val currentPhoneSsid: String? = null,
+        val errorMessage: String? = null,
+    ) : ReconnectResult()
     object DeviceNotFound : ReconnectResult()
     data class Error(val message: String) : ReconnectResult()
 }
@@ -61,5 +64,13 @@ sealed class ReconnectResult {
  */
 sealed class WifiConfigResult {
     object Success : WifiConfigResult()
+    /**
+     * 传输已确认（IP + SSID 切换），但 HTTP :8088 服务尚未响应。
+     * 这不是失败 — 网络切换成功，HTTP 服务仍在预热。
+     */
+    data class TransportConfirmedHttpDelayed(
+        val badgeSsid: String?,
+        val baseUrl: String,
+    ) : WifiConfigResult()
     data class Error(val message: String) : WifiConfigResult()
 }

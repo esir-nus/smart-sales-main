@@ -38,6 +38,7 @@ import com.smartsales.prism.BuildConfig
 import com.smartsales.prism.data.connectivity.registry.RegisteredDevice
 import com.smartsales.prism.ui.components.connectivity.ConnectivityManagerState
 import com.smartsales.prism.ui.components.connectivity.ConnectivityViewModel
+import com.smartsales.prism.ui.components.connectivity.WifiRepairState
 import com.smartsales.prism.ui.components.connectivity.WIFI_MISMATCH_EMPTY_CREDENTIALS_ERROR
 import kotlinx.coroutines.delay
 
@@ -78,6 +79,7 @@ fun ConnectivityModal(
     val registeredDevices by viewModel.registeredDevices.collectAsState()
     val wifiMismatchSuggestedSsid by viewModel.wifiMismatchSuggestedSsid.collectAsState()
     val wifiMismatchErrorMessage by viewModel.wifiMismatchErrorMessage.collectAsState()
+    val repairState by viewModel.repairState.collectAsState()
 
     val otherDevices = registeredDevices.filter { it.macAddress != activeDevice?.macAddress }
 
@@ -150,7 +152,8 @@ fun ConnectivityModal(
                         onRename = viewModel::renameDevice,
                         wifiMismatchSuggestedSsid = wifiMismatchSuggestedSsid,
                         wifiMismatchErrorMessage = wifiMismatchErrorMessage,
-                        onWifiMismatchInputChanged = viewModel::clearWifiMismatchError
+                        onWifiMismatchInputChanged = viewModel::clearWifiMismatchError,
+                        repairState = repairState
                     )
                 }
 
@@ -225,7 +228,8 @@ private fun ActiveDeviceSection(
     onRename: (String, String) -> Unit,
     wifiMismatchSuggestedSsid: String?,
     wifiMismatchErrorMessage: String?,
-    onWifiMismatchInputChanged: () -> Unit
+    onWifiMismatchInputChanged: () -> Unit,
+    repairState: WifiRepairState = WifiRepairState.Idle,
 ) {
     AnimatedContent(targetState = state, label = "ActiveDeviceState") { currentState ->
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -250,6 +254,7 @@ private fun ActiveDeviceSection(
                     TransientStateView("正在重新连接...", "搜索附近设备")
                 ConnectivityManagerState.WIFI_MISMATCH ->
                     WifiMismatchView(
+                        repairState = repairState,
                         suggestedSsid = wifiMismatchSuggestedSsid,
                         errorMessage = wifiMismatchErrorMessage,
                         onUpdate = onUpdateWifi,
@@ -863,6 +868,48 @@ private fun ModalActionButton(
 
 @Composable
 internal fun WifiMismatchView(
+    repairState: WifiRepairState,
+    suggestedSsid: String?,
+    errorMessage: String?,
+    onUpdate: (String, String) -> Unit,
+    onInputChanged: () -> Unit,
+    onIgnore: () -> Unit
+) {
+    when (repairState) {
+        is WifiRepairState.Idle,
+        is WifiRepairState.EditCredentials,
+        is WifiRepairState.RetryableFailure ->
+            WifiCredentialFormContent(
+                suggestedSsid = suggestedSsid,
+                errorMessage = errorMessage,
+                onUpdate = onUpdate,
+                onInputChanged = onInputChanged,
+                onIgnore = onIgnore
+            )
+
+        is WifiRepairState.SendingCredentials,
+        is WifiRepairState.WaitingForBadgeNetworkSwitch,
+        is WifiRepairState.TransportConfirmed,
+        is WifiRepairState.HttpCheckPending,
+        is WifiRepairState.HttpReady ->
+            WifiRepairProgressContent(repairState = repairState, onIgnore = onIgnore)
+
+        is WifiRepairState.HttpDelayed ->
+            WifiRepairHttpDelayedContent(
+                badgeSsid = repairState.badgeSsid,
+                onDismiss = onIgnore
+            )
+
+        is WifiRepairState.HardFailure ->
+            WifiRepairHardFailureContent(
+                reason = repairState.reason,
+                onRetry = onIgnore
+            )
+    }
+}
+
+@Composable
+private fun WifiCredentialFormContent(
     suggestedSsid: String?,
     errorMessage: String?,
     onUpdate: (String, String) -> Unit,
@@ -1026,6 +1073,84 @@ internal fun WifiMismatchView(
                 textContentColor = TextMuted
             )
         }
+    }
+}
+
+@Composable
+private fun WifiRepairProgressContent(
+    repairState: WifiRepairState,
+    onIgnore: () -> Unit
+) {
+    val phaseLabel = when (repairState) {
+        is WifiRepairState.SendingCredentials -> "正在发送 Wi-Fi 配置..."
+        is WifiRepairState.WaitingForBadgeNetworkSwitch -> "等待设备切换网络..."
+        is WifiRepairState.TransportConfirmed -> "网络切换成功，正在验证服务..."
+        is WifiRepairState.HttpCheckPending -> "正在验证服务连通性..."
+        is WifiRepairState.HttpReady -> "服务已就绪"
+        else -> "正在处理..."
+    }
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(12.dp))
+        CircularProgressIndicator(color = AccentBlue, modifier = Modifier.size(36.dp))
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(phaseLabel, fontSize = 15.sp, color = TextPrimary, fontWeight = FontWeight.Medium)
+        Spacer(modifier = Modifier.height(24.dp))
+        ModalActionButton(text = "取消", color = TextSecondary, onClick = onIgnore)
+    }
+}
+
+@Composable
+private fun WifiRepairHttpDelayedContent(
+    badgeSsid: String?,
+    onDismiss: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.Start
+    ) {
+        Text(
+            "网络已切换成功",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = ConnectedGreen
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        val detail = if (badgeSsid != null) {
+            "设备已接入 $badgeSsid，服务仍在启动中（通常需要 10–30 秒）"
+        } else {
+            "设备网络切换成功，服务仍在启动中（通常需要 10–30 秒）"
+        }
+        Text(detail, fontSize = 14.sp, color = TextSecondary)
+        Spacer(modifier = Modifier.height(24.dp))
+        ModalActionButton(text = "关闭", color = AccentBlue, onClick = onDismiss)
+    }
+}
+
+@Composable
+private fun WifiRepairHardFailureContent(
+    reason: WifiRepairState.HardFailure.HardFailureReason,
+    onRetry: () -> Unit
+) {
+    val detail = when (reason) {
+        WifiRepairState.HardFailure.HardFailureReason.SSID_MISMATCH ->
+            "设备接入的 Wi-Fi 与输入不符，请重新检查凭据后重试"
+        WifiRepairState.HardFailure.HardFailureReason.BADGE_OFFLINE ->
+            "设备未能接入网络，请确认 Wi-Fi 密码后重试"
+        WifiRepairState.HardFailure.HardFailureReason.CREDENTIAL_REPLAY_FAILED ->
+            "已保存凭据重播失败，请重新输入"
+    }
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.Start
+    ) {
+        Text("网络配置失败", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = DangerRed)
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(detail, fontSize = 14.sp, color = TextSecondary)
+        Spacer(modifier = Modifier.height(24.dp))
+        ModalActionButton(text = "重新输入", color = AccentBlue, onClick = onRetry)
     }
 }
 

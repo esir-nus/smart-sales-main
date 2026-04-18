@@ -117,6 +117,7 @@ Home empty-state composition note:
 | **Connectivity Modal** | `Connected` | Auto | Pulse | Shows Battery/ID. | Mutex (Atomic). | ✅ Verified |
 | **Connectivity (WiFi)** | `Mismatch` | Auto | Alert | Manual SSID/Pwd. | Reconnect Edge Case. | ✅ Verified |
 | **Dynamic Island** | `One-Line Summary` | Tap | Ripple | Opens **Scheduler Drawer**. | Sticky top slot, single-line only, horizontal overflow only. | ✅ Verified |
+| **Dynamic Island (Partial Conn.)** | `CONNECTIVITY_PARTIAL` | Tap | Steady (no pulse/breathing) | Opens **Connectivity Manager**. | Amber one-line `<name> WiFi 未连接`; ambient flanks render with BLE-green left + Wi-Fi-red right + provisional battery; persistent until transport state changes. See `docs/cerb-ui/dynamic-island/spec.md` §3. | ✅ Verified |
 | **Debug Toggle [🐞]** | `Off` | Tap | Tint | **Legacy Debug**. | Beta only. | ✅ Verified |
 | **New Session [➕]** | `Idle` | Tap | Ripple | 1. Clear Context.<br>2. New UUID. | Reset Coach. | ✅ Verified |
 | **Tingwu Menu [≣]** | `Idle` | Tap | Slide In | Opens **Tingwu Drawer**. | Exclusive. | ❌ Pending |

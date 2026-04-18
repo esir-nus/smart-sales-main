@@ -5,23 +5,22 @@ import com.smartsales.prism.data.connectivity.legacy.BadgeHttpClient
 import com.smartsales.prism.data.connectivity.legacy.BadgeHttpException
 import com.smartsales.prism.data.connectivity.legacy.ConnectionState
 import com.smartsales.prism.data.connectivity.legacy.DeviceConnectionManager
-import com.smartsales.prism.data.connectivity.legacy.PhoneWifiProvider
-import com.smartsales.prism.data.connectivity.legacy.PhoneWifiSnapshot
 import com.smartsales.prism.data.connectivity.legacy.badge.BadgeState
 import com.smartsales.prism.data.connectivity.legacy.badge.BadgeStateMonitor
 import com.smartsales.prism.data.connectivity.legacy.badge.BadgeStatus
 import com.smartsales.prism.data.connectivity.legacy.hasUsableBadgeIp
-import com.smartsales.prism.data.connectivity.legacy.normalizeWifiSsid
 import com.smartsales.prism.data.connectivity.legacy.toBadgeDownloadFilename
 import com.smartsales.prism.domain.connectivity.BadgeConnectionState
 import com.smartsales.prism.domain.connectivity.BadgeManagerStatus
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.connectivity.RecordingNotification
 import com.smartsales.prism.domain.connectivity.WavDownloadResult
+import com.smartsales.prism.domain.connectivity.WifiRepairEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -54,11 +53,12 @@ class RealConnectivityBridge @Inject constructor(
     private val deviceManager: DeviceConnectionManager,
     private val httpClient: BadgeHttpClient,
     private val badgeStateMonitor: BadgeStateMonitor,
-    private val phoneWifiProvider: PhoneWifiProvider
+    private val endpointRecoveryCoordinator: BadgeEndpointRecoveryCoordinator
 ) : ConnectivityBridge {
     
     companion object {
         private const val TAG = "AudioPipeline"
+        private const val POST_CREDENTIAL_GRACE_ATTEMPTS = 3
     }
     
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
@@ -75,6 +75,14 @@ class RealConnectivityBridge @Inject constructor(
     )
 
     init {
+        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            deviceManager.state
+                .map(::runtimeKeyForState)
+                .distinctUntilChanged()
+                .collect { runtimeKey ->
+                    endpointRecoveryCoordinator.noteCurrentRuntimeKey(runtimeKey)
+                }
+        }
         scope.launch(start = CoroutineStart.UNDISPATCHED) {
             deviceManager.recordingReadyEvents.collect { filename ->
                 if (!isTransportReadyForRecordingNotifications()) {
@@ -182,20 +190,31 @@ class RealConnectivityBridge @Inject constructor(
     
     override suspend fun isReady(): Boolean {
         android.util.Log.d(TAG, "🔎 isReady preflight: start")
-        val baseUrl = resolveBaseUrl() ?: run {
-            android.util.Log.d(TAG, "🔎 isReady preflight: result=not-ready reason=base-url-unresolved")
-            return false
+        val runtimeKey = currentRuntimeKey()
+        val hasGrace = endpointRecoveryCoordinator.hasPendingPostCredentialGrace(runtimeKey)
+        if (!hasGrace) {
+            return probeReadyOnce()
         }
-        android.util.Log.d(TAG, "🔎 isReady preflight: checking reachability baseUrl=$baseUrl")
-        val reachable = httpClient.isReachable(baseUrl)
-        if (!reachable) {
-            invalidateActiveEndpoint("http reachability failed")
+        val activeRuntimeKey = runtimeKey ?: return probeReadyOnce()
+
+        repeat(POST_CREDENTIAL_GRACE_ATTEMPTS) { attempt ->
+            val delayMs = endpointRecoveryCoordinator.consumePostCredentialProbeDelayMs(
+                runtimeKey = activeRuntimeKey,
+                allowImplicitArm = false
+            ) ?: return@repeat
+            android.util.Log.i(
+                TAG,
+                "🛜 post-credential readiness grace wait=${delayMs}ms attempt=${attempt + 1} runtime=${activeRuntimeKey.toLogString()}"
+            )
+            delay(delayMs)
+            if (probeReadyOnce()) {
+                endpointRecoveryCoordinator.clearPostCredentialGrace(activeRuntimeKey)
+                return true
+            }
         }
-        android.util.Log.d(
-            TAG,
-            "🔎 isReady preflight: result=${if (reachable) "ready" else "not-ready"} baseUrl=$baseUrl"
-        )
-        return reachable
+
+        endpointRecoveryCoordinator.clearPostCredentialGrace(activeRuntimeKey)
+        return false
     }
     
     override suspend fun deleteRecording(filename: String): Boolean {
@@ -232,6 +251,7 @@ class RealConnectivityBridge @Inject constructor(
             }
 
             is ConnectionState.WifiProvisioned,
+            is ConnectionState.WifiProvisionedHttpDelayed,
             is ConnectionState.Syncing -> {
                 BadgeConnectionState.Connected(
                     badgeIp = badgeStatus.ipAddress ?: "pending",
@@ -262,6 +282,9 @@ class RealConnectivityBridge @Inject constructor(
             is ConnectionState.Connected,
             is ConnectionState.AutoReconnecting -> BadgeManagerStatus.Connecting
             is ConnectionState.WifiProvisioned -> BadgeManagerStatus.Ready(
+                ssid = legacy.status.wifiSsid
+            )
+            is ConnectionState.WifiProvisionedHttpDelayed -> BadgeManagerStatus.Ready(
                 ssid = legacy.status.wifiSsid
             )
             is ConnectionState.Syncing -> BadgeManagerStatus.Ready(
@@ -319,12 +342,10 @@ class RealConnectivityBridge @Inject constructor(
      */
     private suspend fun resolveBaseUrl(): String? {
         return endpointMutex.withLock {
-            val phoneSsid = currentPhoneSsid()
             activeEndpointSnapshot
                 ?.takeIf { snapshot ->
                     snapshot.matches(
                         runtimeKey = currentRuntimeKey(),
-                        phoneSsid = phoneSsid,
                         refreshRequired = endpointRefreshRequired
                     )
                 }
@@ -338,10 +359,17 @@ class RealConnectivityBridge @Inject constructor(
                 activeEndpointSnapshot = null
             }
 
-            monitorSnapshot(phoneSsid)
+            monitorSnapshot()
                 ?.takeUnless { endpointRefreshRequired }
                 ?.let { snapshot ->
                     activeEndpointSnapshot = snapshot
+                    endpointRecoveryCoordinator.noteResolvedEndpoint(
+                        BadgeEndpointSnapshot(
+                            runtimeKey = snapshot.runtimeKey,
+                            badgeIp = snapshot.badgeIp,
+                            baseUrl = snapshot.baseUrl
+                        )
+                    )
                     android.util.Log.d(TAG, "🌐 resolveBaseUrl: seeded active endpoint ${snapshot.baseUrl}")
                     return@withLock snapshot.baseUrl
                 }
@@ -351,7 +379,7 @@ class RealConnectivityBridge @Inject constructor(
                 is Result.Success -> {
                     android.util.Log.d(
                         TAG,
-                        "🌐 resolveBaseUrl: ip=${result.data.ipAddress} badgeSsid=${result.data.deviceWifiName} phoneSsid=${result.data.phoneWifiName}"
+                        "🌐 resolveBaseUrl: ip=${result.data.ipAddress} badgeSsid=${result.data.deviceWifiName} phoneSsidForDiag=${result.data.phoneWifiName}"
                     )
                     result.data
                 }
@@ -367,60 +395,58 @@ class RealConnectivityBridge @Inject constructor(
                 )
                 return@withLock null
             }
-            if (!isPhoneAlignedWithBadge(phoneSsid, networkStatus.deviceWifiName)) {
-                android.util.Log.w(
-                    TAG,
-                    "❌ resolveBaseUrl: badge ssid=${networkStatus.deviceWifiName} does not match phone ssid=$phoneSsid"
-                )
-                endpointRefreshRequired = true
-                return@withLock null
-            }
 
             val runtimeKey = currentRuntimeKey()
-                ?: ActiveEndpointRuntimeKey(
+                ?: BadgeRuntimeKey(
                     peripheralId = "untracked",
                     secureToken = networkStatus.rawResponse
                 )
             val snapshot = ActiveEndpointSnapshot(
                 runtimeKey = runtimeKey,
-                phoneSsid = phoneSsid,
                 badgeIp = networkStatus.ipAddress,
                 badgeSsid = networkStatus.deviceWifiName.takeIf { it.isNotBlank() },
                 baseUrl = "http://${networkStatus.ipAddress}:8088"
             )
             activeEndpointSnapshot = snapshot
             endpointRefreshRequired = false
+            endpointRecoveryCoordinator.noteResolvedEndpoint(
+                BadgeEndpointSnapshot(
+                    runtimeKey = snapshot.runtimeKey,
+                    badgeIp = snapshot.badgeIp,
+                    baseUrl = snapshot.baseUrl
+                )
+            )
             android.util.Log.d(TAG, "🌐 resolveBaseUrl: refreshed ${snapshot.baseUrl}")
             snapshot.baseUrl
         }
     }
 
-    private fun monitorSnapshot(phoneSsid: String?): ActiveEndpointSnapshot? {
+    private fun monitorSnapshot(): ActiveEndpointSnapshot? {
         val runtimeKey = currentRuntimeKey() ?: return null
         val badgeStatus = badgeStateMonitor.status.value
         val ip = badgeStatus.ipAddress
         if (badgeStatus.state != BadgeState.CONNECTED || !hasUsableBadgeIp(ip)) {
             return null
         }
-        if (!isPhoneAlignedWithBadge(phoneSsid, badgeStatus.wifiName)) {
-            return null
-        }
         return ActiveEndpointSnapshot(
             runtimeKey = runtimeKey,
-            phoneSsid = phoneSsid,
             badgeIp = ip ?: return null,
             badgeSsid = badgeStatus.wifiName,
             baseUrl = "http://${ip}:8088"
         )
     }
 
-    private fun currentRuntimeKey(): ActiveEndpointRuntimeKey? {
-        return when (val state = deviceManager.state.value) {
-            is ConnectionState.WifiProvisioned -> ActiveEndpointRuntimeKey(
+    private fun currentRuntimeKey(): BadgeRuntimeKey? {
+        return runtimeKeyForState(deviceManager.state.value)
+    }
+
+    private fun runtimeKeyForState(state: ConnectionState): BadgeRuntimeKey? {
+        return when (state) {
+            is ConnectionState.WifiProvisioned -> BadgeRuntimeKey(
                 peripheralId = state.session.peripheralId,
                 secureToken = state.session.secureToken
             )
-            is ConnectionState.Syncing -> ActiveEndpointRuntimeKey(
+            is ConnectionState.Syncing -> BadgeRuntimeKey(
                 peripheralId = state.session.peripheralId,
                 secureToken = state.session.secureToken
             )
@@ -428,12 +454,24 @@ class RealConnectivityBridge @Inject constructor(
         }
     }
 
-    private fun currentPhoneSsid(): String? {
-        return when (val snapshot = phoneWifiProvider.currentWifiSnapshot()) {
-            PhoneWifiSnapshot.Unavailable -> null
-            is PhoneWifiSnapshot.Connected -> snapshot.normalizedSsid
+    private suspend fun probeReadyOnce(): Boolean {
+        val baseUrl = resolveBaseUrl() ?: run {
+            android.util.Log.d(TAG, "🔎 isReady preflight: result=not-ready reason=base-url-unresolved")
+            return false
         }
+        android.util.Log.d(TAG, "🔎 isReady preflight: checking reachability baseUrl=$baseUrl")
+        val reachable = httpClient.isReachable(baseUrl)
+        if (!reachable) {
+            invalidateActiveEndpoint("http reachability failed")
+        }
+        android.util.Log.d(
+            TAG,
+            "🔎 isReady preflight: result=${if (reachable) "ready" else "not-ready"} baseUrl=$baseUrl"
+        )
+        return reachable
     }
+
+    override fun wifiRepairEvents(): Flow<WifiRepairEvent> = deviceManager.wifiRepairEvents
 
     private fun invalidateActiveEndpoint(reason: String) {
         android.util.Log.w(TAG, "🌐 invalidate active endpoint reason=$reason")
@@ -441,38 +479,21 @@ class RealConnectivityBridge @Inject constructor(
         endpointRefreshRequired = true
     }
 
-    private fun isPhoneAlignedWithBadge(
-        phoneSsid: String?,
-        badgeSsidRaw: String?
-    ): Boolean {
-        val badgeSsid = normalizeWifiSsid(badgeSsidRaw)
-        return phoneSsid == null || badgeSsid == null || badgeSsid == phoneSsid
-    }
-
-    private data class ActiveEndpointRuntimeKey(
-        val peripheralId: String,
-        val secureToken: String
-    )
-
     private data class ActiveEndpointSnapshot(
-        val runtimeKey: ActiveEndpointRuntimeKey,
-        val phoneSsid: String?,
+        val runtimeKey: BadgeRuntimeKey,
         val badgeIp: String,
         val badgeSsid: String?,
         val baseUrl: String
     ) {
         fun matches(
-            runtimeKey: ActiveEndpointRuntimeKey?,
-            phoneSsid: String?,
+            runtimeKey: BadgeRuntimeKey?,
             refreshRequired: Boolean
         ): Boolean {
             if (refreshRequired || runtimeKey == null || this.runtimeKey != runtimeKey) {
                 return false
             }
-            if (phoneSsid != null && this.phoneSsid != null && phoneSsid != this.phoneSsid) {
-                return false
-            }
             return hasUsableBadgeIp(badgeIp)
         }
     }
+
 }

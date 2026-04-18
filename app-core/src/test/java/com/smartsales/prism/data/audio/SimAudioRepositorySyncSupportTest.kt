@@ -3,6 +3,9 @@ package com.smartsales.prism.data.audio
 import android.content.Context
 import com.smartsales.core.util.Result
 import com.smartsales.data.oss.OssUploader
+import com.smartsales.prism.data.connectivity.BadgeEndpointRecoveryCoordinator
+import com.smartsales.prism.data.connectivity.BadgeEndpointSnapshot
+import com.smartsales.prism.data.connectivity.BadgeRuntimeKey
 import com.smartsales.prism.data.connectivity.legacy.FakePhoneWifiProvider
 import com.smartsales.prism.domain.audio.AudioFile
 import com.smartsales.prism.domain.audio.AudioLocalAvailability
@@ -44,6 +47,7 @@ class SimAudioRepositorySyncSupportTest {
 
     private lateinit var context: Context
     private lateinit var connectivityBridge: FakeConnectivityBridge
+    private lateinit var endpointRecoveryCoordinator: BadgeEndpointRecoveryCoordinator
     private lateinit var runtime: SimAudioRepositoryRuntime
     private lateinit var storeSupport: SimAudioRepositoryStoreSupport
     private lateinit var orchestrator: DownloadServiceOrchestrator
@@ -56,10 +60,12 @@ class SimAudioRepositorySyncSupportTest {
         whenever(context.filesDir).thenReturn(tempFolder.root)
 
         connectivityBridge = FakeConnectivityBridge()
+        endpointRecoveryCoordinator = BadgeEndpointRecoveryCoordinator()
         connectivityPrompt = FakeConnectivityPrompt()
         runtime = SimAudioRepositoryRuntime(
             context = context,
             connectivityBridge = connectivityBridge,
+            endpointRecoveryCoordinator = endpointRecoveryCoordinator,
             ossUploader = mock<OssUploader>(),
             tingwuPipeline = mock<TingwuPipeline>(),
             connectivityPrompt = connectivityPrompt,
@@ -98,6 +104,87 @@ class SimAudioRepositorySyncSupportTest {
         assertEquals(SimBadgeSyncSkippedReason.NOT_READY, outcome.skippedReason)
         assertEquals(listOf("isReady"), connectivityBridge.calls)
         assertTrue(connectivityPrompt.suggestedSsids.isEmpty())
+    }
+
+    @Test
+    fun `auto sync is suppressed when known http unreachable latch matches current runtime and endpoint`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
+        val runtimeKey = noteActiveEndpoint("badge-1", "token-1", "192.168.0.9")
+        connectivityBridge.isReadyResult = true
+        connectivityBridge.listResult = Result.Error(Exception("socket timeout"))
+
+        runCatching {
+            syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+        }
+
+        connectivityBridge.calls.clear()
+        endpointRecoveryCoordinator.noteCurrentRuntimeKey(runtimeKey)
+
+        val outcome = syncSupport.syncFromBadge(SimBadgeSyncTrigger.AUTO)
+
+        assertEquals(SimBadgeSyncSkippedReason.KNOWN_HTTP_UNREACHABLE, outcome.skippedReason)
+        assertTrue(connectivityBridge.calls.isEmpty())
+    }
+
+    @Test
+    fun `auto sync latch clears when runtime key changes`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
+        noteActiveEndpoint("badge-1", "token-1", "192.168.0.9")
+        connectivityBridge.isReadyResult = true
+        connectivityBridge.listResult = Result.Error(Exception("socket timeout"))
+
+        runCatching {
+            syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+        }
+
+        endpointRecoveryCoordinator.noteCurrentRuntimeKey(
+            BadgeRuntimeKey(peripheralId = "badge-2", secureToken = "token-2")
+        )
+
+        assertFalse(syncSupport.shouldSuppressAutoSync())
+    }
+
+    @Test
+    fun `auto sync latch clears when endpoint changes`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
+        val runtimeKey = noteActiveEndpoint("badge-1", "token-1", "192.168.0.9")
+        connectivityBridge.isReadyResult = true
+        connectivityBridge.listResult = Result.Error(Exception("socket timeout"))
+
+        runCatching {
+            syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+        }
+
+        endpointRecoveryCoordinator.noteResolvedEndpoint(
+            BadgeEndpointSnapshot(
+                runtimeKey = runtimeKey,
+                badgeIp = "192.168.0.12",
+                baseUrl = "http://192.168.0.12:8088"
+            )
+        )
+
+        assertFalse(syncSupport.shouldSuppressAutoSync())
+    }
+
+    @Test
+    fun `manual sync remains allowed and clears latch after success`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
+        noteActiveEndpoint("badge-1", "token-1", "192.168.0.9")
+        connectivityBridge.isReadyResult = true
+        connectivityBridge.listResult = Result.Error(Exception("socket timeout"))
+
+        runCatching {
+            syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+        }
+
+        connectivityBridge.calls.clear()
+        connectivityBridge.listResult = Result.Success(emptyList())
+
+        val outcome = syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+
+        assertEquals(SimBadgeSyncResultBranch.DEVICE_EMPTY, outcome.resultBranch)
+        assertTrue(connectivityBridge.calls.containsAll(listOf("isReady", "listRecordings")))
+        assertFalse(syncSupport.shouldSuppressAutoSync())
     }
 
     @Test
@@ -390,6 +477,23 @@ class SimAudioRepositorySyncSupportTest {
         )
     }
 
+    private suspend fun noteActiveEndpoint(
+        peripheralId: String,
+        secureToken: String,
+        badgeIp: String
+    ): BadgeRuntimeKey {
+        val runtimeKey = BadgeRuntimeKey(peripheralId = peripheralId, secureToken = secureToken)
+        endpointRecoveryCoordinator.noteCurrentRuntimeKey(runtimeKey)
+        endpointRecoveryCoordinator.noteResolvedEndpoint(
+            BadgeEndpointSnapshot(
+                runtimeKey = runtimeKey,
+                badgeIp = badgeIp,
+                baseUrl = "http://$badgeIp:8088"
+            )
+        )
+        return runtimeKey
+    }
+
     private class FakeConnectivityBridge : ConnectivityBridge {
         override val connectionState = MutableStateFlow<BadgeConnectionState>(
             BadgeConnectionState.Disconnected
@@ -436,6 +540,9 @@ class SimAudioRepositorySyncSupportTest {
             calls += "deleteRecording:$filename"
             return deleteRecordingResults[filename] ?: true
         }
+
+        override fun wifiRepairEvents(): kotlinx.coroutines.flow.Flow<com.smartsales.prism.domain.connectivity.WifiRepairEvent> =
+            emptyFlow()
     }
 
     private class FakeConnectivityPrompt : ConnectivityPrompt {

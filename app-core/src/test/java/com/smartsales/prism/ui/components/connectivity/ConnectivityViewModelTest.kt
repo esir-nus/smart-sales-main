@@ -14,11 +14,14 @@ import com.smartsales.prism.domain.connectivity.RecordingNotification
 import com.smartsales.prism.domain.connectivity.UpdateResult
 import com.smartsales.prism.domain.connectivity.WavDownloadResult
 import com.smartsales.prism.domain.connectivity.WifiConfigResult
+import com.smartsales.prism.domain.connectivity.WifiRepairEvent
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
@@ -62,7 +65,7 @@ class ConnectivityViewModelTest {
     )
 
     @Test
-    fun `managerState shows ble paired offline while shared shell state stays disconnected`() = runTest {
+    fun `shell state surfaces partial when manager reports ble paired network offline`() = runTest {
         val bridge = FakeConnectivityBridge(
             connection = BadgeConnectionState.Disconnected,
             manager = BadgeManagerStatus.BlePairedNetworkOffline
@@ -70,12 +73,48 @@ class ConnectivityViewModelTest {
         val viewModel = createViewModel(bridge = bridge)
         advanceUntilIdle()
 
-        assertEquals(ConnectionState.DISCONNECTED, viewModel.connectionState.value)
-        assertEquals(ConnectionState.DISCONNECTED, viewModel.effectiveState.value)
+        assertEquals(ConnectionState.PARTIAL_WIFI_DOWN, viewModel.connectionState.value)
+        assertEquals(ConnectionState.PARTIAL_WIFI_DOWN, viewModel.effectiveState.value)
         assertEquals(
             ConnectivityManagerState.BLE_PAIRED_NETWORK_OFFLINE,
             viewModel.managerState.value
         )
+    }
+
+    @Test
+    fun `shell state surfaces partial when manager reports ble paired network unknown`() = runTest {
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Disconnected,
+            manager = BadgeManagerStatus.BlePairedNetworkUnknown
+        )
+        val viewModel = createViewModel(bridge = bridge)
+        advanceUntilIdle()
+
+        assertEquals(ConnectionState.PARTIAL_WIFI_DOWN, viewModel.connectionState.value)
+    }
+
+    @Test
+    fun `shell state keeps disconnected when neither ble nor wifi are up`() = runTest {
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Disconnected,
+            manager = BadgeManagerStatus.Disconnected
+        )
+        val viewModel = createViewModel(bridge = bridge)
+        advanceUntilIdle()
+
+        assertEquals(ConnectionState.DISCONNECTED, viewModel.connectionState.value)
+    }
+
+    @Test
+    fun `connected badge state wins over diagnostic manager status`() = runTest {
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Connected(badgeIp = "192.168.1.10", ssid = "OfficeGuest"),
+            manager = BadgeManagerStatus.BlePairedNetworkOffline
+        )
+        val viewModel = createViewModel(bridge = bridge)
+        advanceUntilIdle()
+
+        assertEquals(ConnectionState.CONNECTED, viewModel.connectionState.value)
     }
 
     @Test
@@ -335,6 +374,87 @@ class ConnectivityViewModelTest {
     }
 
     @Test
+    fun `reconnect wifi mismatch surfaces diagnostic error message on repair form`() = runTest {
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Disconnected,
+            manager = BadgeManagerStatus.BlePairedNetworkOffline
+        )
+        val viewModel = createViewModel(
+            service = FakeConnectivityService(
+                reconnectResults = listOf(
+                    CompletableDeferred<ReconnectResult>().apply {
+                        complete(
+                            ReconnectResult.WifiMismatch(
+                                currentPhoneSsid = "OfficeGuest",
+                                errorMessage = "设备当前未接入可用 Wi‑Fi，请重新输入凭据"
+                            )
+                        )
+                    }
+                )
+            ),
+            bridge = bridge
+        )
+        advanceUntilIdle()
+
+        viewModel.reconnect()
+        advanceUntilIdle()
+
+        assertEquals(ConnectivityManagerState.WIFI_MISMATCH, viewModel.managerState.value)
+        assertEquals("OfficeGuest", viewModel.wifiMismatchSuggestedSsid.value)
+        assertEquals(
+            "设备当前未接入可用 Wi‑Fi，请重新输入凭据",
+            viewModel.wifiMismatchErrorMessage.value
+        )
+    }
+
+    @Test
+    fun `scheduleAutoReconnect delegates to service without entering reconnect override`() = runTest {
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Disconnected,
+            manager = BadgeManagerStatus.BlePairedNetworkOffline
+        )
+        val service = FakeConnectivityService()
+        val viewModel = createViewModel(service = service, bridge = bridge)
+        advanceUntilIdle()
+
+        viewModel.scheduleAutoReconnect()
+        advanceUntilIdle()
+
+        assertEquals(1, service.scheduleAutoReconnectCalls)
+        assertEquals(0, service.reconnectCalls)
+        assertEquals(
+            ConnectivityManagerState.BLE_PAIRED_NETWORK_OFFLINE,
+            viewModel.managerState.value
+        )
+    }
+
+    @Test
+    fun `scheduleAutoReconnect is ignored while wifi mismatch override is active`() = runTest {
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Disconnected,
+            manager = BadgeManagerStatus.BlePairedNetworkOffline
+        )
+        val service = FakeConnectivityService(
+            reconnectResults = listOf(
+                CompletableDeferred<ReconnectResult>().apply {
+                    complete(ReconnectResult.WifiMismatch(currentPhoneSsid = "OfficeGuest"))
+                }
+            )
+        )
+        val viewModel = createViewModel(service = service, bridge = bridge)
+        advanceUntilIdle()
+
+        viewModel.reconnect()
+        advanceUntilIdle()
+        viewModel.scheduleAutoReconnect()
+        advanceUntilIdle()
+
+        assertEquals(1, service.reconnectCalls)
+        assertEquals(0, service.scheduleAutoReconnectCalls)
+        assertEquals(ConnectivityManagerState.WIFI_MISMATCH, viewModel.managerState.value)
+    }
+
+    @Test
     fun `wifi repair failure keeps submitted ssid as next mismatch suggestion`() = runTest {
         val bridge = FakeConnectivityBridge(
             connection = BadgeConnectionState.Disconnected,
@@ -402,6 +522,10 @@ class ConnectivityViewModelTest {
     ) : ConnectivityBridge {
         private val _connectionState = MutableStateFlow(connection)
         private val _managerStatus = MutableStateFlow(manager)
+        private val _repairEvents = MutableSharedFlow<WifiRepairEvent>(
+            replay = 0,
+            extraBufferCapacity = 16
+        )
 
         override val connectionState: StateFlow<BadgeConnectionState> = _connectionState.asStateFlow()
         override val managerStatus: StateFlow<BadgeManagerStatus> = _managerStatus.asStateFlow()
@@ -423,6 +547,10 @@ class ConnectivityViewModelTest {
         override suspend fun isReady(): Boolean = false
 
         override suspend fun deleteRecording(filename: String): Boolean = false
+
+        override fun wifiRepairEvents(): Flow<WifiRepairEvent> = _repairEvents
+
+        suspend fun emitRepairEvent(event: WifiRepairEvent) = _repairEvents.emit(event)
     }
 
     private class FakeConnectivityService(
@@ -440,6 +568,8 @@ class ConnectivityViewModelTest {
         private val reconnectQueue = ArrayDeque(reconnectResults)
         private val updateWifiConfigQueue = ArrayDeque(updateWifiConfigResults)
         var reconnectCalls = 0
+            private set
+        var scheduleAutoReconnectCalls = 0
             private set
         val updateWifiConfigCalls = mutableListOf<Pair<String, String>>()
 
@@ -467,7 +597,9 @@ class ConnectivityViewModelTest {
             return gate.await()
         }
 
-        override fun scheduleAutoReconnect() = Unit
+        override fun scheduleAutoReconnect() {
+            scheduleAutoReconnectCalls += 1
+        }
     }
 
     private class FakeDeviceRegistryManager : DeviceRegistryManager {

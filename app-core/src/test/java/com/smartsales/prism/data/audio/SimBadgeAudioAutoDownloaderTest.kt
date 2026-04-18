@@ -3,6 +3,7 @@ package com.smartsales.prism.data.audio
 import android.content.Context
 import com.smartsales.core.util.Result
 import com.smartsales.data.oss.OssUploader
+import com.smartsales.prism.data.connectivity.BadgeEndpointRecoveryCoordinator
 import com.smartsales.prism.data.connectivity.legacy.FakePhoneWifiProvider
 import com.smartsales.prism.domain.audio.AudioLocalAvailability
 import com.smartsales.prism.domain.connectivity.BadgeConnectionState
@@ -51,6 +52,7 @@ class SimBadgeAudioAutoDownloaderTest {
         runtime = SimAudioRepositoryRuntime(
             context = context,
             connectivityBridge = connectivityBridge,
+            endpointRecoveryCoordinator = BadgeEndpointRecoveryCoordinator(),
             ossUploader = mock<OssUploader>(),
             tingwuPipeline = mock<TingwuPipeline>(),
             connectivityPrompt = mock<ConnectivityPrompt>(),
@@ -141,5 +143,8 @@ class SimBadgeAudioAutoDownloaderTest {
         override suspend fun isReady(): Boolean = true
 
         override suspend fun deleteRecording(filename: String): Boolean = true
+
+        override fun wifiRepairEvents(): kotlinx.coroutines.flow.Flow<com.smartsales.prism.domain.connectivity.WifiRepairEvent> =
+            kotlinx.coroutines.flow.emptyFlow()
     }
 }

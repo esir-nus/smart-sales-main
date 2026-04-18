@@ -2,6 +2,7 @@ package com.smartsales.prism.data.connectivity.legacy
 
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.util.Result
+import com.smartsales.prism.data.connectivity.BadgeEndpointRecoveryCoordinator
 import com.smartsales.prism.data.connectivity.legacy.badge.FakeBadgeStateMonitor
 import com.smartsales.prism.data.connectivity.legacy.badge.BadgeState
 import com.smartsales.prism.data.connectivity.legacy.gateway.BadgeNotification
@@ -12,6 +13,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -64,7 +67,6 @@ class DefaultDeviceConnectionManagerIngressTest {
             scope = backgroundScope,
             dispatcher = StandardTestDispatcher(testScheduler),
             monitor = monitor,
-            phoneWifiProvider = FakePhoneWifiProvider("MstRobot"),
             networkResult = Result.Success(
                 DeviceNetworkStatus(
                     ipAddress = "192.168.0.9",
@@ -136,7 +138,6 @@ class DefaultDeviceConnectionManagerIngressTest {
             scope = backgroundScope,
             dispatcher = StandardTestDispatcher(testScheduler),
             monitor = monitor,
-            phoneWifiProvider = FakePhoneWifiProvider("MstRobot"),
             networkResult = Result.Success(
                 DeviceNetworkStatus(
                     ipAddress = "0.0.0.0",
@@ -191,8 +192,7 @@ class DefaultDeviceConnectionManagerIngressTest {
             sessionStore = sessionStore,
             scope = backgroundScope,
             dispatcher = StandardTestDispatcher(testScheduler),
-            monitor = monitor,
-            phoneWifiProvider = FakePhoneWifiProvider("MstRobot")
+            monitor = monitor
         )
 
         val state = manager.reconnectAndWait()
@@ -231,8 +231,7 @@ class DefaultDeviceConnectionManagerIngressTest {
             sessionStore = sessionStore,
             scope = backgroundScope,
             dispatcher = StandardTestDispatcher(testScheduler),
-            monitor = monitor,
-            phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest")
+            monitor = monitor
         )
 
         val state = manager.reconnectAndWait()
@@ -268,8 +267,7 @@ class DefaultDeviceConnectionManagerIngressTest {
             sessionStore = sessionStore,
             scope = backgroundScope,
             dispatcher = StandardTestDispatcher(testScheduler),
-            monitor = monitor,
-            phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest")
+            monitor = monitor
         )
 
         val state = manager.reconnectAndWait()
@@ -309,13 +307,7 @@ class DefaultDeviceConnectionManagerIngressTest {
             provisioner = provisioner,
             sessionStore = sessionStore,
             scope = backgroundScope,
-            dispatcher = StandardTestDispatcher(testScheduler),
-            phoneWifiProvider = FakePhoneWifiProvider(
-                snapshot = PhoneWifiSnapshot.Connected(
-                    normalizedSsid = null,
-                    rawSsid = "<unknown ssid>"
-                )
-            )
+            dispatcher = StandardTestDispatcher(testScheduler)
         )
 
         val state = manager.reconnectAndWait()
@@ -352,8 +344,7 @@ class DefaultDeviceConnectionManagerIngressTest {
             provisioner = provisioner,
             sessionStore = sessionStore,
             scope = backgroundScope,
-            dispatcher = StandardTestDispatcher(testScheduler),
-            phoneWifiProvider = FakePhoneWifiProvider("MstRobot")
+            dispatcher = StandardTestDispatcher(testScheduler)
         )
 
         val state = manager.reconnectAndWait()
@@ -397,8 +388,7 @@ class DefaultDeviceConnectionManagerIngressTest {
             sessionStore = sessionStore,
             scope = backgroundScope,
             dispatcher = StandardTestDispatcher(testScheduler),
-            monitor = monitor,
-            phoneWifiProvider = FakePhoneWifiProvider("MstRobot")
+            monitor = monitor
         )
 
         val reconnectState = manager.reconnectAndWait()
@@ -447,13 +437,7 @@ class DefaultDeviceConnectionManagerIngressTest {
             sessionStore = sessionStore,
             scope = backgroundScope,
             dispatcher = StandardTestDispatcher(testScheduler),
-            monitor = monitor,
-            phoneWifiProvider = FakePhoneWifiProvider(
-                snapshot = PhoneWifiSnapshot.Connected(
-                    normalizedSsid = null,
-                    rawSsid = "<unknown ssid>"
-                )
-            )
+            monitor = monitor
         )
 
         val state = manager.confirmManualWifiProvision(
@@ -465,6 +449,47 @@ class DefaultDeviceConnectionManagerIngressTest {
         assertTrue(manager.state.value is ConnectionState.WifiProvisioned)
         assertEquals(2, provisioner.networkCalls.size)
         assertEquals(BadgeState.CONNECTED, monitor.status.value.state)
+    }
+
+    @Test
+    fun `confirmManualWifiProvision probes http before declaring success`() = runTest {
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val monitor = FakeBadgeStateMonitor()
+        val badgeHttpClient = FakeBadgeHttpClient().apply { setReachable(true) }
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("OldWifi", "secret")
+            )
+        }
+        val provisioner = FakeWifiProvisioner().apply {
+            stubNetworkResult = Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "192.168.0.9",
+                    deviceWifiName = "OfficeGuest",
+                    phoneWifiName = "",
+                    rawResponse = "IP#192.168.0.9, SD#OfficeGuest"
+                )
+            )
+        }
+        val manager = newManager(
+            gateway = gateway,
+            provisioner = provisioner,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            monitor = monitor,
+            badgeHttpClient = badgeHttpClient
+        )
+
+        val state = manager.confirmManualWifiProvision(
+            WifiCredentials("OfficeGuest", "secret-2")
+        )
+        advanceUntilIdle()
+
+        assertTrue(state is ConnectionState.WifiProvisioned)
+        assertEquals(2_000L, testScheduler.currentTime)
+        assertEquals(listOf("http://192.168.0.9:8088"), badgeHttpClient.getReachableCalls())
     }
 
     @Test
@@ -493,8 +518,7 @@ class DefaultDeviceConnectionManagerIngressTest {
             sessionStore = sessionStore,
             scope = backgroundScope,
             dispatcher = StandardTestDispatcher(testScheduler),
-            monitor = monitor,
-            phoneWifiProvider = FakePhoneWifiProvider("WrongPhoneWifi")
+            monitor = monitor
         )
 
         val state = manager.confirmManualWifiProvision(
@@ -550,8 +574,7 @@ class DefaultDeviceConnectionManagerIngressTest {
             provisioner = provisioner,
             sessionStore = sessionStore,
             scope = backgroundScope,
-            dispatcher = StandardTestDispatcher(testScheduler),
-            phoneWifiProvider = FakePhoneWifiProvider("WrongPhoneWifi")
+            dispatcher = StandardTestDispatcher(testScheduler)
         )
 
         val state = manager.confirmManualWifiProvision(
@@ -564,6 +587,247 @@ class DefaultDeviceConnectionManagerIngressTest {
         assertEquals(WifiDisconnectedReason.BADGE_WIFI_OFFLINE, error.reason)
         assertTrue(manager.state.value is ConnectionState.Disconnected)
         assertEquals(3, provisioner.networkCalls.size)
+    }
+
+    @Test
+    fun `confirmManualWifiProvision returns http delayed when transport confirmed but http never comes up`() = runTest {
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val badgeHttpClient = FakeBadgeHttpClient().apply { setReachable(false) }
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("OldWifi", "secret")
+            )
+        }
+        val provisioner = FakeWifiProvisioner().apply {
+            repeat(3) {
+                stubNetworkResults += Result.Success(
+                    DeviceNetworkStatus(
+                        ipAddress = "192.168.0.9",
+                        deviceWifiName = "OfficeGuest",
+                        phoneWifiName = "",
+                        rawResponse = "IP#192.168.0.9, SD#OfficeGuest"
+                    )
+                )
+            }
+        }
+        val manager = newManager(
+            gateway = gateway,
+            provisioner = provisioner,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            badgeHttpClient = badgeHttpClient
+        )
+
+        val state = manager.confirmManualWifiProvision(
+            WifiCredentials("OfficeGuest", "secret-2")
+        )
+        advanceUntilIdle()
+
+        // 传输已确认（IP + SSID），HTTP 仍在预热 — 不应视为失败
+        assertTrue(state is ConnectionState.WifiProvisionedHttpDelayed)
+        val delayed = state as ConnectionState.WifiProvisionedHttpDelayed
+        assertEquals("http://192.168.0.9:8088", delayed.baseUrl)
+        // confirmManualWifiProvision 提升为 WifiProvisioned（心跳继续）
+        assertTrue(manager.state.value is ConnectionState.WifiProvisioned)
+        assertEquals(10_000L, testScheduler.currentTime)
+        assertEquals(3, provisioner.networkCalls.size)
+        assertEquals(
+            listOf(
+                "http://192.168.0.9:8088",
+                "http://192.168.0.9:8088",
+                "http://192.168.0.9:8088"
+            ),
+            badgeHttpClient.getReachableCalls()
+        )
+    }
+
+    @Test
+    fun `confirmManualWifiProvision emits TransportConfirmed and HttpReady events when http is ready`() = runTest {
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val badgeHttpClient = FakeBadgeHttpClient().apply { setReachable(true) }
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("OldWifi", "secret")
+            )
+        }
+        val provisioner = FakeWifiProvisioner().apply {
+            stubNetworkResult = Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "192.168.0.9",
+                    deviceWifiName = "OfficeGuest",
+                    phoneWifiName = "",
+                    rawResponse = "IP#192.168.0.9, SD#OfficeGuest"
+                )
+            )
+        }
+        val manager = newManager(
+            gateway = gateway,
+            provisioner = provisioner,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            badgeHttpClient = badgeHttpClient
+        )
+
+        val collectedEvents = mutableListOf<com.smartsales.prism.domain.connectivity.WifiRepairEvent>()
+        val collectionJob = backgroundScope.launch {
+            manager.wifiRepairEvents.collect { collectedEvents.add(it) }
+        }
+
+        val state = manager.confirmManualWifiProvision(WifiCredentials("OfficeGuest", "secret-2"))
+        advanceUntilIdle()
+
+        assertTrue(state is ConnectionState.WifiProvisioned)
+        assertTrue(
+            "Expected TransportConfirmed event",
+            collectedEvents.any { it is com.smartsales.prism.domain.connectivity.WifiRepairEvent.TransportConfirmed }
+        )
+        assertTrue(
+            "Expected HttpReady event",
+            collectedEvents.any { it is com.smartsales.prism.domain.connectivity.WifiRepairEvent.HttpReady }
+        )
+        collectionJob.cancel()
+    }
+
+    @Test
+    fun `confirmManualWifiProvision emits HttpDelayed event when transport confirmed but http never ready`() = runTest {
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val badgeHttpClient = FakeBadgeHttpClient().apply { setReachable(false) }
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("OldWifi", "secret")
+            )
+        }
+        val provisioner = FakeWifiProvisioner().apply {
+            repeat(3) {
+                stubNetworkResults += Result.Success(
+                    DeviceNetworkStatus(
+                        ipAddress = "192.168.0.9",
+                        deviceWifiName = "OfficeGuest",
+                        phoneWifiName = "",
+                        rawResponse = "IP#192.168.0.9, SD#OfficeGuest"
+                    )
+                )
+            }
+        }
+        val manager = newManager(
+            gateway = gateway,
+            provisioner = provisioner,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            badgeHttpClient = badgeHttpClient
+        )
+
+        val collectedEvents = mutableListOf<com.smartsales.prism.domain.connectivity.WifiRepairEvent>()
+        val collectionJob = backgroundScope.launch {
+            manager.wifiRepairEvents.collect { collectedEvents.add(it) }
+        }
+
+        val state = manager.confirmManualWifiProvision(WifiCredentials("OfficeGuest", "secret-2"))
+        advanceUntilIdle()
+
+        assertTrue(state is ConnectionState.WifiProvisionedHttpDelayed)
+        assertTrue(
+            "Expected HttpDelayed event",
+            collectedEvents.any { it is com.smartsales.prism.domain.connectivity.WifiRepairEvent.HttpDelayed }
+        )
+        assertFalse(
+            "Must not emit DefinitiveMismatch when SSID is correct",
+            collectedEvents.any { it is com.smartsales.prism.domain.connectivity.WifiRepairEvent.DefinitiveMismatch }
+        )
+        assertFalse(
+            "Must not emit BadgeOffline when IP is usable",
+            collectedEvents.any { it is com.smartsales.prism.domain.connectivity.WifiRepairEvent.BadgeOffline }
+        )
+        collectionJob.cancel()
+    }
+
+    @Test
+    fun `confirmManualWifiProvision emits DefinitiveMismatch when badge proves different ssid`() = runTest {
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("OldWifi", "secret")
+            )
+        }
+        val provisioner = FakeWifiProvisioner().apply {
+            stubNetworkResult = Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "192.168.0.9",
+                    deviceWifiName = "OtherWifi",
+                    phoneWifiName = "",
+                    rawResponse = "IP#192.168.0.9, SD#OtherWifi"
+                )
+            )
+        }
+        val manager = newManager(
+            gateway = gateway,
+            provisioner = provisioner,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler)
+        )
+
+        val collectedEvents = mutableListOf<com.smartsales.prism.domain.connectivity.WifiRepairEvent>()
+        val collectionJob = backgroundScope.launch {
+            manager.wifiRepairEvents.collect { collectedEvents.add(it) }
+        }
+
+        val state = manager.confirmManualWifiProvision(WifiCredentials("OfficeGuest", "secret-2"))
+        advanceUntilIdle()
+
+        assertTrue(state is ConnectionState.Error)
+        val error = (state as ConnectionState.Error).error as ConnectivityError.WifiDisconnected
+        assertEquals(WifiDisconnectedReason.BADGE_PHONE_NETWORK_MISMATCH, error.reason)
+        assertTrue(
+            "Expected DefinitiveMismatch event",
+            collectedEvents.any { it is com.smartsales.prism.domain.connectivity.WifiRepairEvent.DefinitiveMismatch }
+        )
+        collectionJob.cancel()
+    }
+
+    @Test
+    fun `confirmManualWifiProvision returns badge offline when ssid never readable despite valid ip`() = runTest {
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("OldWifi", "secret")
+            )
+        }
+        val provisioner = FakeWifiProvisioner().apply {
+            repeat(3) {
+                stubNetworkResults += Result.Success(
+                    DeviceNetworkStatus(
+                        ipAddress = "192.168.0.9",
+                        deviceWifiName = "",
+                        phoneWifiName = "",
+                        rawResponse = "IP#192.168.0.9, SD#N/A"
+                    )
+                )
+            }
+        }
+        val manager = newManager(
+            gateway = gateway,
+            provisioner = provisioner,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler)
+        )
+
+        val state = manager.confirmManualWifiProvision(WifiCredentials("OfficeGuest", "secret-2"))
+        advanceUntilIdle()
+
+        // SSID 始终不可读，不应被误判为传输已确认
+        assertTrue(state is ConnectionState.Error)
+        val error = (state as ConnectionState.Error).error as ConnectivityError.WifiDisconnected
+        assertEquals(WifiDisconnectedReason.BADGE_WIFI_OFFLINE, error.reason)
     }
 
     @Test
@@ -615,7 +879,6 @@ class DefaultDeviceConnectionManagerIngressTest {
             scope = backgroundScope,
             dispatcher = StandardTestDispatcher(testScheduler),
             monitor = monitor,
-            phoneWifiProvider = FakePhoneWifiProvider("MstRobot"),
             networkResult = Result.Success(
                 DeviceNetworkStatus(
                     ipAddress = "192.168.0.9",
@@ -657,7 +920,7 @@ class DefaultDeviceConnectionManagerIngressTest {
         provisioner: FakeWifiProvisioner = FakeWifiProvisioner(),
         sessionStore: SessionStore = InMemorySessionStore(),
         monitor: FakeBadgeStateMonitor = FakeBadgeStateMonitor(),
-        phoneWifiProvider: PhoneWifiProvider = FakePhoneWifiProvider("MstRobot"),
+        badgeHttpClient: BadgeHttpClient = FakeBadgeHttpClient(),
         networkResult: Result<DeviceNetworkStatus>? = null,
         bleScanner: BleScanner = FakeBleScanner()
     ): DefaultDeviceConnectionManager {
@@ -672,10 +935,11 @@ class DefaultDeviceConnectionManagerIngressTest {
         return DefaultDeviceConnectionManager(
             provisioner = provisioner,
             bleGateway = gateway,
+            badgeHttpClient = badgeHttpClient,
+            endpointRecoveryCoordinator = BadgeEndpointRecoveryCoordinator(),
             dispatchers = dispatchers,
             badgeStateMonitor = monitor,
             sessionStore = sessionStore,
-            phoneWifiProvider = phoneWifiProvider,
             bleScanner = bleScanner,
             scope = scope
         )

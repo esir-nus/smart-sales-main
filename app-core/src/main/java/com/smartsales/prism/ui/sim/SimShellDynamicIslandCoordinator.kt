@@ -295,7 +295,8 @@ private fun resolveHeartbeatDwellMillis(state: ConnectionState): Long {
 private fun resolvePersistentConnectivityLane(state: ConnectionState): ConnectionState? {
     return when (state) {
         ConnectionState.RECONNECTING,
-        ConnectionState.NEEDS_SETUP -> state
+        ConnectionState.NEEDS_SETUP,
+        ConnectionState.PARTIAL_WIFI_DOWN -> state
         else -> null
     }
 }
@@ -316,6 +317,13 @@ private fun buildConnectivityLaneItem(
             displayText = "$label 已连接",
             lane = DynamicIslandLane.CONNECTIVITY,
             visualState = DynamicIslandVisualState.CONNECTIVITY_CONNECTED,
+            batteryPercentage = batteryLevel.coerceIn(0, 100),
+            tapAction = DynamicIslandTapAction.OpenConnectivityEntry
+        )
+        ConnectionState.PARTIAL_WIFI_DOWN -> DynamicIslandItem(
+            displayText = "$label WiFi 未连接",
+            lane = DynamicIslandLane.CONNECTIVITY,
+            visualState = DynamicIslandVisualState.CONNECTIVITY_PARTIAL,
             batteryPercentage = batteryLevel.coerceIn(0, 100),
             tapAction = DynamicIslandTapAction.OpenConnectivityEntry
         )

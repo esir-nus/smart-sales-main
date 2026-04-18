@@ -44,7 +44,6 @@ import com.smartsales.prism.ui.sim.openRuntimeAudioDrawer
 import com.smartsales.prism.ui.sim.openRuntimeConnectivityModal
 import com.smartsales.prism.ui.sim.openRuntimeScheduler
 import com.smartsales.prism.ui.sim.rememberSimImeVisibility
-import com.smartsales.prism.ui.sim.scheduleAutoReconnect
 import com.smartsales.prism.ui.sim.shouldAutoOpenRuntimeSchedulerPostOnboardingHandoff
 import com.smartsales.prism.ui.sim.shouldAutoOpenRuntimeSchedulerStartupTeaser
 import com.smartsales.prism.ui.sim.shouldShowRuntimeIdleComposerHint
@@ -175,9 +174,10 @@ internal fun RuntimeShell(
                 shellState.activeConnectivitySurface != null
     }
 
-    // 自动重连：当 shell 启动或连接状态回到 DISCONNECTED 时，调度退避重连
+    // 自动重连：仅在有效 UI 状态确认为 DISCONNECTED 时调度退避重连，
+    // 避免 WIFI_MISMATCH / 手动修复流程被后台重连覆盖。
     LaunchedEffect(connectivityViewModel) {
-        connectivityViewModel.connectionState.collect { state ->
+        connectivityViewModel.effectiveState.collect { state ->
             if (state == com.smartsales.prism.ui.components.connectivity.ConnectionState.DISCONNECTED) {
                 connectivityViewModel.scheduleAutoReconnect()
             }

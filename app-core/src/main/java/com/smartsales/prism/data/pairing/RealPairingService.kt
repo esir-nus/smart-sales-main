@@ -298,6 +298,7 @@ class RealPairingService @Inject constructor(
             is ConnectionState.AutoReconnecting -> PairingState.Pairing(progress = 50)
             is ConnectionState.Connected -> PairingState.Pairing(progress = 60)
             is ConnectionState.WifiProvisioned -> PairingState.Pairing(progress = 80)
+            is ConnectionState.WifiProvisionedHttpDelayed -> PairingState.Pairing(progress = 80)
             is ConnectionState.Syncing -> PairingState.Pairing(progress = 90)
             is ConnectionState.Error -> PairingState.Error(
                 message = legacy.error.toString(),

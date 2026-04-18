@@ -3,10 +3,11 @@ package com.smartsales.prism.data.connectivity
 import com.smartsales.core.util.Result
 import com.smartsales.prism.data.connectivity.legacy.BlePeripheral
 import com.smartsales.prism.data.connectivity.legacy.ConnectionState
+import com.smartsales.prism.data.connectivity.legacy.BadgeHttpClient
 import com.smartsales.prism.data.connectivity.legacy.DeviceNetworkStatus
+import com.smartsales.prism.data.connectivity.legacy.BleSession
 import com.smartsales.prism.data.connectivity.legacy.FakeBadgeHttpClient
 import com.smartsales.prism.data.connectivity.legacy.FakeDeviceConnectionManager
-import com.smartsales.prism.data.connectivity.legacy.FakePhoneWifiProvider
 import com.smartsales.prism.data.connectivity.legacy.ProvisioningStatus
 import com.smartsales.prism.data.connectivity.legacy.badge.BadgeState
 import com.smartsales.prism.data.connectivity.legacy.badge.BadgeStatus
@@ -29,14 +30,12 @@ import org.mockito.kotlin.mock
 @OptIn(ExperimentalCoroutinesApi::class)
 class RealConnectivityBridgeTest {
 
-    private val phoneWifiProvider = FakePhoneWifiProvider("MstRobot")
-
     @Test
     fun `bridge initializes connectionState before startup collectors begin`() = runTest {
         val manager = FakeDeviceConnectionManager()
         val monitor = FakeBadgeStateMonitor()
 
-        val bridge = RealConnectivityBridge(manager, mock(), monitor, phoneWifiProvider)
+        val bridge = newBridge(manager, mock(), monitor)
 
         assertEquals(BadgeConnectionState.Disconnected, bridge.connectionState.value)
     }
@@ -45,7 +44,7 @@ class RealConnectivityBridgeTest {
     fun `recordingNotifications ignores events while transport is not ready`() = runTest {
         val manager = FakeDeviceConnectionManager()
         val monitor = FakeBadgeStateMonitor()
-        val bridge = RealConnectivityBridge(manager, mock(), monitor, phoneWifiProvider)
+        val bridge = newBridge(manager, mock(), monitor)
         val unexpected = backgroundScope.async(start = CoroutineStart.UNDISPATCHED) {
             bridge.recordingNotifications().first()
         }
@@ -83,7 +82,7 @@ class RealConnectivityBridgeTest {
     @Test
     fun `recordingNotifications forwards full filename when wifi provisioned`() = runTest {
         val manager = FakeDeviceConnectionManager()
-        val bridge = RealConnectivityBridge(manager, mock(), FakeBadgeStateMonitor(), phoneWifiProvider)
+        val bridge = newBridge(manager, mock(), FakeBadgeStateMonitor())
         val recorded = backgroundScope.async(start = CoroutineStart.UNDISPATCHED) {
             bridge.recordingNotifications().first()
         }
@@ -113,7 +112,7 @@ class RealConnectivityBridgeTest {
     fun `managerStatus refines disconnected into ble paired network unknown`() = runTest {
         val manager = FakeDeviceConnectionManager()
         val monitor = FakeBadgeStateMonitor()
-        val bridge = RealConnectivityBridge(manager, mock(), monitor, phoneWifiProvider)
+        val bridge = newBridge(manager, mock(), monitor)
 
         manager.setState(ConnectionState.Disconnected)
         monitor.setStatus(
@@ -134,7 +133,7 @@ class RealConnectivityBridgeTest {
     fun `managerStatus refines disconnected into ble paired network offline`() = runTest {
         val manager = FakeDeviceConnectionManager()
         val monitor = FakeBadgeStateMonitor()
-        val bridge = RealConnectivityBridge(manager, mock(), monitor, phoneWifiProvider)
+        val bridge = newBridge(manager, mock(), monitor)
 
         manager.setState(ConnectionState.Disconnected)
         monitor.setStatus(
@@ -155,7 +154,7 @@ class RealConnectivityBridgeTest {
     fun `managerStatus does not override needs setup with paired offline monitor state`() = runTest {
         val manager = FakeDeviceConnectionManager()
         val monitor = FakeBadgeStateMonitor()
-        val bridge = RealConnectivityBridge(manager, mock(), monitor, phoneWifiProvider)
+        val bridge = newBridge(manager, mock(), monitor)
 
         manager.setState(ConnectionState.NeedsSetup)
         monitor.setStatus(
@@ -176,7 +175,7 @@ class RealConnectivityBridgeTest {
     fun `connectionState promotes reconnect success to connected as soon as monitor reports transport ready`() = runTest {
         val manager = FakeDeviceConnectionManager()
         val monitor = FakeBadgeStateMonitor()
-        val bridge = RealConnectivityBridge(manager, mock(), monitor, phoneWifiProvider)
+        val bridge = newBridge(manager, mock(), monitor)
 
         manager.setState(ConnectionState.AutoReconnecting(attempt = 1))
         monitor.setStatus(
@@ -208,7 +207,7 @@ class RealConnectivityBridgeTest {
     fun `connectionState keeps ble only reconnect in connecting until monitor reports usable ip`() = runTest {
         val manager = FakeDeviceConnectionManager()
         val monitor = FakeBadgeStateMonitor()
-        val bridge = RealConnectivityBridge(manager, mock(), monitor, phoneWifiProvider)
+        val bridge = newBridge(manager, mock(), monitor)
 
         manager.setState(ConnectionState.AutoReconnecting(attempt = 1))
         monitor.setStatus(
@@ -229,7 +228,7 @@ class RealConnectivityBridgeTest {
     fun `isReady returns false when badge reports no usable ip`() = runTest {
         val manager = FakeDeviceConnectionManager()
         val httpClient = FakeBadgeHttpClient()
-        val bridge = RealConnectivityBridge(manager, httpClient, FakeBadgeStateMonitor(), phoneWifiProvider)
+        val bridge = newBridge(manager, httpClient, FakeBadgeStateMonitor())
         manager.stubNetworkResult = Result.Success(
             DeviceNetworkStatus(
                 ipAddress = "0.0.0.0",
@@ -247,7 +246,7 @@ class RealConnectivityBridgeTest {
     fun `isReady resolves base url and still fails when http reachability is false`() = runTest {
         val manager = FakeDeviceConnectionManager()
         val httpClient = FakeBadgeHttpClient().apply { setReachable(false) }
-        val bridge = RealConnectivityBridge(manager, httpClient, FakeBadgeStateMonitor(), phoneWifiProvider)
+        val bridge = newBridge(manager, httpClient, FakeBadgeStateMonitor())
         manager.stubNetworkResult = Result.Success(
             DeviceNetworkStatus(
                 ipAddress = "192.168.0.115",
@@ -265,13 +264,34 @@ class RealConnectivityBridgeTest {
     }
 
     @Test
+    fun `isReady accepts reachable endpoint without phone ssid alignment`() = runTest {
+        val manager = FakeDeviceConnectionManager()
+        val httpClient = FakeBadgeHttpClient().apply { setReachable(true) }
+        val bridge = newBridge(manager, httpClient, FakeBadgeStateMonitor())
+        manager.stubNetworkResult = Result.Success(
+            DeviceNetworkStatus(
+                ipAddress = "192.168.0.115",
+                deviceWifiName = "OtherWifi",
+                phoneWifiName = "",
+                rawResponse = "IP#192.168.0.115 SD#OtherWifi"
+            )
+        )
+
+        assertEquals(true, bridge.isReady())
+        assertEquals(
+            listOf("http://192.168.0.115:8088"),
+            httpClient.getReachableCalls()
+        )
+    }
+
+    @Test
     fun `list and download reuse active endpoint without repeated network query`() = runTest {
         val manager = FakeDeviceConnectionManager()
         val monitor = FakeBadgeStateMonitor()
         val httpClient = FakeBadgeHttpClient().apply {
             setListResult(Result.Success(listOf("log_20260402_094256.wav")))
         }
-        val bridge = RealConnectivityBridge(manager, httpClient, monitor, phoneWifiProvider)
+        val bridge = newBridge(manager, httpClient, monitor)
         manager.setState(
             ConnectionState.WifiProvisioned(
                 session = BlePeripheral("badge-1", "Badge", -40).let { ble ->
@@ -303,7 +323,7 @@ class RealConnectivityBridgeTest {
             setReachable(false)
             setListResult(Result.Success(listOf("log_20260402_094256.wav")))
         }
-        val bridge = RealConnectivityBridge(manager, httpClient, monitor, phoneWifiProvider)
+        val bridge = newBridge(manager, httpClient, monitor)
         manager.setState(
             ConnectionState.WifiProvisioned(
                 session = BlePeripheral("badge-1", "Badge", -40).let { ble ->
@@ -332,6 +352,51 @@ class RealConnectivityBridgeTest {
         bridge.listRecordings()
 
         assertEquals(1, manager.queryNetworkStatusCalls)
+    }
+
+    @Test
+    fun `isReady applies post credential grace schedule before giving up`() = runTest {
+        val manager = FakeDeviceConnectionManager()
+        val monitor = FakeBadgeStateMonitor()
+        val httpClient = FakeBadgeHttpClient().apply { setReachable(false) }
+        val coordinator = BadgeEndpointRecoveryCoordinator()
+        val bridge = newBridge(manager, httpClient, monitor, coordinator)
+        val session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40))
+        manager.setState(
+            ConnectionState.WifiProvisioned(
+                session = session,
+                status = ProvisioningStatus(
+                    wifiSsid = "MstRobot",
+                    handshakeId = "h1",
+                    credentialsHash = "c1"
+                )
+            )
+        )
+        manager.stubNetworkResult = Result.Success(
+            DeviceNetworkStatus(
+                ipAddress = "192.168.0.115",
+                deviceWifiName = "MstRobot",
+                phoneWifiName = "MstRobot",
+                rawResponse = "IP#192.168.0.115 SD#MstRobot"
+            )
+        )
+        val runtimeKey = BadgeRuntimeKey(
+            peripheralId = session.peripheralId,
+            secureToken = session.secureToken
+        )
+        coordinator.noteCurrentRuntimeKey(runtimeKey)
+        coordinator.armPostCredentialGrace(runtimeKey)
+
+        assertFalse(bridge.isReady())
+        assertEquals(10_000L, testScheduler.currentTime)
+        assertEquals(
+            listOf(
+                "http://192.168.0.115:8088",
+                "http://192.168.0.115:8088",
+                "http://192.168.0.115:8088"
+            ),
+            httpClient.getReachableCalls()
+        )
     }
 
     private suspend fun awaitManagerStatus(
@@ -364,6 +429,20 @@ class RealConnectivityBridgeTest {
         }
         fail("Timed out waiting for connectionState=$expected actual=${bridge.connectionState.value}")
         throw IllegalStateException("unreachable")
+    }
+
+    private fun newBridge(
+        manager: FakeDeviceConnectionManager,
+        httpClient: BadgeHttpClient,
+        monitor: FakeBadgeStateMonitor,
+        coordinator: BadgeEndpointRecoveryCoordinator = BadgeEndpointRecoveryCoordinator()
+    ): RealConnectivityBridge {
+        return RealConnectivityBridge(
+            deviceManager = manager,
+            httpClient = httpClient,
+            badgeStateMonitor = monitor,
+            endpointRecoveryCoordinator = coordinator
+        )
     }
 
 }

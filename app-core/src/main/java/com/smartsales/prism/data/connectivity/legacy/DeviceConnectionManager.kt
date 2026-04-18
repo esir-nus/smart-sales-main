@@ -2,9 +2,11 @@ package com.smartsales.prism.data.connectivity.legacy
 
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.util.Result
+import com.smartsales.prism.data.connectivity.BadgeEndpointRecoveryCoordinator
 import com.smartsales.prism.data.connectivity.legacy.badge.BadgeStateMonitor
 import com.smartsales.prism.data.connectivity.legacy.gateway.GattSessionLifecycle
 import com.smartsales.prism.data.connectivity.legacy.scan.BleScanner
+import com.smartsales.prism.domain.connectivity.WifiRepairEvent
 import java.io.Closeable
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -34,6 +36,12 @@ interface DeviceConnectionManager {
      */
     val audioRecordingReadyEvents: SharedFlow<String>
 
+    /**
+     * Wi-Fi 修复流程细粒度事件流。
+     * Hot flow，replay=0，仅在 confirmManualWifiProvision() 窗口内发射。
+     */
+    val wifiRepairEvents: SharedFlow<WifiRepairEvent>
+
     fun selectPeripheral(peripheral: BlePeripheral)
     suspend fun startPairing(peripheral: BlePeripheral, credentials: WifiCredentials): Result<Unit>
     suspend fun retry(): Result<Unit>
@@ -62,10 +70,11 @@ interface DeviceConnectionManager {
 class DefaultDeviceConnectionManager @Inject constructor(
     private val provisioner: WifiProvisioner,
     private val bleGateway: GattSessionLifecycle,
+    private val badgeHttpClient: BadgeHttpClient,
+    private val endpointRecoveryCoordinator: BadgeEndpointRecoveryCoordinator,
     private val dispatchers: DispatcherProvider,
     private val badgeStateMonitor: BadgeStateMonitor,
     private val sessionStore: SessionStore,
-    private val phoneWifiProvider: PhoneWifiProvider,
     private val bleScanner: BleScanner,
     @ConnectivityScope private val scope: CoroutineScope
 ) : DeviceConnectionManager, Closeable {
@@ -80,10 +89,11 @@ class DefaultDeviceConnectionManager @Inject constructor(
     private val connectionSupport = DeviceConnectionManagerConnectionSupport(
         provisioner = provisioner,
         bleGateway = bleGateway,
+        httpReachabilityProbe = { baseUrl -> badgeHttpClient.isReachable(baseUrl) },
+        endpointRecoveryCoordinator = endpointRecoveryCoordinator,
         dispatchers = dispatchers,
         badgeStateMonitor = badgeStateMonitor,
         sessionStore = sessionStore,
-        phoneWifiProvider = phoneWifiProvider,
         scope = scope,
         runtime = runtime,
         ingressSupport = ingressSupport,
@@ -99,6 +109,7 @@ class DefaultDeviceConnectionManager @Inject constructor(
     override val state: StateFlow<ConnectionState> = runtime.state.asStateFlow()
     override val recordingReadyEvents: SharedFlow<String> = runtime.recordingReadyEvents.asSharedFlow()
     override val audioRecordingReadyEvents: SharedFlow<String> = runtime.audioRecordingReadyEvents.asSharedFlow()
+    override val wifiRepairEvents: SharedFlow<WifiRepairEvent> = runtime.repairEvents.asSharedFlow()
 
     init {
         connectionSupport.reconnectSupport = reconnectSupport

@@ -2,7 +2,7 @@
 
 > **Blackbox contract** — For consumers (Scheduler, Badge Audio Pipeline). Don't read implementation.
 > **Status**: Active supporting interface
-> **Last Updated**: 2026-04-14
+> **Last Updated**: 2026-04-17
 
 ---
 
@@ -76,6 +76,15 @@ interface ConnectivityBridge {
      * Reuses the current runtime endpoint unless that snapshot has been invalidated.
      */
     suspend fun deleteRecording(filename: String): Boolean
+
+    /**
+     * Fine-grained Wi-Fi repair event stream for the manager/modal repair UI.
+     *
+     * Emits only during an active repair-confirmation window.
+     * Used to drive progress / delayed-service / hard-failure sub-states without
+     * inferring them from shared transport state.
+     */
+    fun wifiRepairEvents(): Flow<WifiRepairEvent>
 }
 ```
 
@@ -154,14 +163,41 @@ sealed class UpdateResult {
 
 sealed class ReconnectResult {
     object Connected : ReconnectResult()
-    data class WifiMismatch(val currentPhoneSsid: String? = null) : ReconnectResult()
+    data class WifiMismatch(
+        val currentPhoneSsid: String? = null,
+        val errorMessage: String? = null,
+    ) : ReconnectResult()
     object DeviceNotFound : ReconnectResult()
     data class Error(val message: String) : ReconnectResult()
 }
 
 sealed class WifiConfigResult {
     object Success : WifiConfigResult()
+    data class TransportConfirmedHttpDelayed(
+        val badgeSsid: String?,
+        val baseUrl: String,
+    ) : WifiConfigResult()
     data class Error(val message: String) : WifiConfigResult()
+}
+```
+
+### WifiRepairEvent
+
+```kotlin
+sealed class WifiRepairEvent {
+    data class CredentialsDispatched(val ssid: String) : WifiRepairEvent()
+    data class TargetSsidObserved(val badgeSsid: String) : WifiRepairEvent()
+    data class UsableIpObserved(val ip: String) : WifiRepairEvent()
+    data class TransportConfirmed(
+        val ip: String,
+        val badgeSsid: String?,
+        val runtimeKeyLog: String,
+    ) : WifiRepairEvent()
+    data class HttpReady(val baseUrl: String) : WifiRepairEvent()
+    data class HttpDelayed(val baseUrl: String) : WifiRepairEvent()
+    data class DefinitiveMismatch(val expectedSsid: String, val badgeSsid: String) : WifiRepairEvent()
+    data object BadgeOffline : WifiRepairEvent()
+    data object CredentialReplayFailed : WifiRepairEvent()
 }
 ```
 
@@ -175,11 +211,12 @@ sealed class WifiConfigResult {
 | `connectionState` | Always emits current state immediately on collect |
 | `managerStatus` | Manager-only richer BLE/Wi‑Fi diagnostic state; no shell-routing authority |
 | `downloadRecording` | Rate-limited, max 1 concurrent download; `onProgress` callback (if provided) is invoked on the IO dispatcher with (bytesRead, totalBytes) — consumers must throttle UI updates themselves |
-| `listRecordings` | Reuses the active runtime endpoint; no repeated BLE Wi‑Fi query in the normal happy path |
+| `listRecordings` | Reuses the active runtime endpoint; endpoint reuse is keyed only to the active badge runtime and invalidation state, not phone SSID |
 | `recordingNotifications` | Hot flow, buffered (1), no replay |
 | `isReady()` | Pre-flight check with 3s timeout; may refresh endpoint only when the active snapshot is missing or invalidated |
 | `deleteRecording` | Idempotent, returns true if file removed or didn't exist; reuses the active runtime endpoint when valid |
-| `updateWifiConfig` | Rejects blank/whitespace-only SSID or password before any BLE provision/write attempt |
+| `updateWifiConfig` | Rejects blank/whitespace-only SSID or password before any BLE provision/write attempt; manual repair always performs bounded HTTP `:8088` probing after BLE credential dispatch, but IP + submitted-SSID transport confirmation may still return `TransportConfirmedHttpDelayed` when Wi‑Fi switching is complete and HTTP is still warming |
+| `wifiRepairEvents()` | Hot flow, buffered, no replay; emits repair-only progress and diagnosis states for the connectivity manager/modal |
 
 `BadgeConnectionState.Connected` means the badge session is actually usable:
 persistent GATT notification listening is active and the badge has valid network reachability.
@@ -192,6 +229,7 @@ Under the current reconnect contract, the bridge may surface this connected stat
 - `BlePairedNetworkOffline`: BLE is still held, but the badge reported no usable IP / network
 
 Normal badge HTTP work (`/list`, `/download`, `/delete`) should reuse the current runtime endpoint snapshot.
+That snapshot is a runtime-only badge endpoint cache and must not be accepted or rejected based on phone SSID heuristics.
 Repeated BLE `wifi#address#ip#name` querying is not part of the normal sync path.
 
 For `/download`, `totalBytes` is derived from HTTP `Content-Length`.
@@ -199,17 +237,36 @@ When the badge omits that header or uses chunked/unknown-length transfer, the br
 `onProgress(bytesRead, totalBytes)` with `totalBytes <= 0` so downstream consumers can render
 indeterminate download progress instead of suppressing progress updates entirely.
 
-`ConnectivityService.reconnect()` may return `WifiMismatch` in either of these deterministic reconnect cases:
+`ConnectivityService.reconnect()` returns `WifiMismatch` for every Wi‑Fi-recoverable failure so the user can re-enter credentials via the repair form. This covers:
 
 - the phone's current Wi‑Fi SSID has no exact remembered credential to replay
 - the phone is on Wi‑Fi but the app cannot read the SSID, so exact-match replay cannot be proven safely
 - credential replay completes, but the badge confirms it is on a different Wi‑Fi than the phone
+- the badge reports no usable Wi‑Fi at all (`BADGE_WIFI_OFFLINE`)
+- the badge joined Wi‑Fi but its HTTP `:8088` service is unreachable (`HTTP_UNREACHABLE`)
+- the saved credential was replayed but the badge never came online (`CREDENTIAL_REPLAY_FAILED`)
+- the phone has no usable Wi‑Fi transport (`PHONE_WIFI_UNAVAILABLE`)
 
 When reconnect can read the phone's current Wi‑Fi SSID, `ReconnectResult.WifiMismatch.currentPhoneSsid`
 must carry that suggestion so the repair form can prefill it while keeping the SSID editable.
+When the failure reason is diagnostic (offline, HTTP unreachable, replay failed, phone Wi‑Fi unavailable),
+`ReconnectResult.WifiMismatch.errorMessage` carries a short Simplified Chinese explanation that the repair
+form renders above the action row. The three silent routing cases (no known credential, unreadable SSID,
+badge/phone network mismatch) leave `errorMessage` null.
+
+`ReconnectResult.Error` is reserved for non-Wi‑Fi transport failures; it does not route to the repair form.
 
 `ConnectivityService.updateWifiConfig()` must treat `trim().isEmpty()` on either field as an immediate local error.
 That rejection is a guard rail only: it must not call BLE provisioning, manual repair confirmation, or remembered-network persistence.
+
+Manual repair now has three outcome classes:
+
+- `Success`: BLE dispatch, submitted-SSID confirmation, and bounded HTTP readiness all completed
+- `TransportConfirmedHttpDelayed`: BLE dispatch plus submitted-SSID / usable-IP transport confirmation completed, but bounded HTTP probing exhausted before `:8088` was ready
+- `Error`: explicit mismatch, offline, phone-side Wi‑Fi failure, or other hard failure
+
+`TransportConfirmedHttpDelayed` is not a generic success alias.
+It is a dedicated repair outcome for the positive-but-incomplete state where the badge has switched onto the intended Wi‑Fi transport and the UI should show a non-error "service still starting" message instead of routing back to a credential error form.
 
 This richer state is for connectivity manager presentation only. Shared shell/history routing must continue to use `connectionState`.
 

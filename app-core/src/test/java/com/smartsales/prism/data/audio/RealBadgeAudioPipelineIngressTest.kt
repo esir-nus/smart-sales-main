@@ -87,6 +87,9 @@ class RealBadgeAudioPipelineIngressTest {
 
         override suspend fun deleteRecording(filename: String): Boolean = true
 
+        override fun wifiRepairEvents(): kotlinx.coroutines.flow.Flow<com.smartsales.prism.domain.connectivity.WifiRepairEvent> =
+            kotlinx.coroutines.flow.emptyFlow()
+
         suspend fun emit(notification: RecordingNotification) {
             notifications.emit(notification)
         }

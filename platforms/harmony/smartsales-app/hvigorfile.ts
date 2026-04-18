@@ -5,9 +5,7 @@
 // 模式来源: tingwu-container/hvigorfile.ts
 
 import fs from 'node:fs';
-import { createRequire } from 'node:module';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 type AppRuntimeConfigShape = {
   TINGWU_BASE_URL: string;
@@ -16,6 +14,8 @@ type AppRuntimeConfigShape = {
   TINGWU_ACCESS_KEY_ID: string;
   TINGWU_ACCESS_KEY_SECRET: string;
   TINGWU_SECURITY_TOKEN: string;
+  TINGWU_POLL_TIMEOUT_MS: string;
+  TINGWU_FORCE_TASK_EXPIRED_JOB_ID: string;
   OSS_ACCESS_KEY_ID: string;
   OSS_ACCESS_KEY_SECRET: string;
   OSS_BUCKET_NAME: string;
@@ -24,7 +24,7 @@ type AppRuntimeConfigShape = {
   AI_API_KEY: string;
 };
 
-const PROJECT_DIR = path.dirname(fileURLToPath(import.meta.url));
+const PROJECT_DIR = __dirname;
 const REPO_ROOT = path.resolve(PROJECT_DIR, '..', '..', '..');
 const LOCAL_PROPERTIES_PATH = path.resolve(REPO_ROOT, 'local.properties');
 const GENERATED_CONFIG_PATH = path.resolve(
@@ -36,8 +36,6 @@ const GENERATED_CONFIG_PATH = path.resolve(
   'config',
   'AppConfig.local.ets'
 );
-const require = createRequire(import.meta.url);
-
 // 构建时必需的键（AI 键在 Phase 2C 前是可选的）
 const REQUIRED_KEYS: Array<keyof AppRuntimeConfigShape> = [
   'TINGWU_BASE_URL',
@@ -127,6 +125,8 @@ function resolveRuntimeConfig(
     TINGWU_ACCESS_KEY_ID: tingwuAccessKeyId,
     TINGWU_ACCESS_KEY_SECRET: tingwuAccessKeySecret,
     TINGWU_SECURITY_TOKEN: pickProperty(properties, ['TINGWU_SECURITY_TOKEN']),
+    TINGWU_POLL_TIMEOUT_MS: pickProperty(properties, ['TINGWU_POLL_TIMEOUT_MS']),
+    TINGWU_FORCE_TASK_EXPIRED_JOB_ID: pickProperty(properties, ['TINGWU_FORCE_TASK_EXPIRED_JOB_ID']),
     OSS_ACCESS_KEY_ID: ossAccessKeyId,
     OSS_ACCESS_KEY_SECRET: ossAccessKeySecret,
     OSS_BUCKET_NAME: pickProperty(properties, ['OSS_BUCKET_NAME']),

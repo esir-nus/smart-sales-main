@@ -15,6 +15,7 @@ import com.smartsales.prism.domain.connectivity.BadgeConnectionState
 import com.smartsales.prism.domain.connectivity.BadgeManagerStatus
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.connectivity.ConnectivityPrompt
+import com.smartsales.prism.domain.connectivity.IsolationTriggerContext
 import com.smartsales.prism.domain.connectivity.RecordingNotification
 import com.smartsales.prism.domain.connectivity.WavDownloadResult
 import com.smartsales.prism.domain.tingwu.TingwuPipeline
@@ -48,6 +49,7 @@ class SimAudioRepositorySyncSupportTest {
     private lateinit var context: Context
     private lateinit var connectivityBridge: FakeConnectivityBridge
     private lateinit var endpointRecoveryCoordinator: BadgeEndpointRecoveryCoordinator
+    private lateinit var phoneWifiProvider: FakePhoneWifiProvider
     private lateinit var runtime: SimAudioRepositoryRuntime
     private lateinit var storeSupport: SimAudioRepositoryStoreSupport
     private lateinit var orchestrator: DownloadServiceOrchestrator
@@ -62,6 +64,7 @@ class SimAudioRepositorySyncSupportTest {
         connectivityBridge = FakeConnectivityBridge()
         endpointRecoveryCoordinator = BadgeEndpointRecoveryCoordinator()
         connectivityPrompt = FakeConnectivityPrompt()
+        phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest")
         runtime = SimAudioRepositoryRuntime(
             context = context,
             connectivityBridge = connectivityBridge,
@@ -69,7 +72,7 @@ class SimAudioRepositorySyncSupportTest {
             ossUploader = mock<OssUploader>(),
             tingwuPipeline = mock<TingwuPipeline>(),
             connectivityPrompt = connectivityPrompt,
-            phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest")
+            phoneWifiProvider = phoneWifiProvider
         )
         storeSupport = SimAudioRepositoryStoreSupport(runtime)
         orchestrator = mock<DownloadServiceOrchestrator>()
@@ -104,6 +107,24 @@ class SimAudioRepositorySyncSupportTest {
         assertEquals(SimBadgeSyncSkippedReason.NOT_READY, outcome.skippedReason)
         assertEquals(listOf("isReady"), connectivityBridge.calls)
         assertTrue(connectivityPrompt.suggestedSsids.isEmpty())
+    }
+
+    @Test
+    fun `auto sync prompts ON_CONNECT isolation and arms suppression when validated wifi and badge ip are known`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
+        noteActiveEndpoint("badge-1", "token-1", "192.168.0.9")
+        phoneWifiProvider.snapshot = FakePhoneWifiProvider("OfficeGuest", isValidated = true).snapshot
+        connectivityBridge.isReadyResult = false
+
+        val outcome = syncSupport.syncFromBadge(SimBadgeSyncTrigger.AUTO)
+
+        assertEquals(SimBadgeSyncSkippedReason.NOT_READY, outcome.skippedReason)
+        assertEquals(listOf("isReady"), connectivityBridge.calls)
+        assertEquals(
+            listOf("192.168.0.9" to IsolationTriggerContext.ON_CONNECT),
+            connectivityPrompt.isolationPrompts
+        )
+        assertTrue(syncSupport.shouldSuppressAutoSync())
     }
 
     @Test
@@ -547,11 +568,17 @@ class SimAudioRepositorySyncSupportTest {
 
     private class FakeConnectivityPrompt : ConnectivityPrompt {
         val suggestedSsids = mutableListOf<String?>()
+        val isolationPrompts = mutableListOf<Pair<String, IsolationTriggerContext>>()
 
         override suspend fun promptWifiMismatch(suggestedSsid: String?) {
             suggestedSsids += suggestedSsid
         }
 
-        override suspend fun promptSuspectedIsolation(badgeIp: String) = Unit
+        override suspend fun promptSuspectedIsolation(
+            badgeIp: String,
+            triggerContext: IsolationTriggerContext
+        ) {
+            isolationPrompts += badgeIp to triggerContext
+        }
     }
 }

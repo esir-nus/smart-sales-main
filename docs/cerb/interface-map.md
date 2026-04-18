@@ -4,7 +4,7 @@
 >
 > **Purpose**: Module ownership + data flow. Read this BEFORE any cross-module change.
 > **Rule**: If data belongs to Module B, query B's interface at runtime. Don't store B's data on A's model.
-> **Last Updated**: 2026-04-15 (DeviceRegistry multi-device layer; ConnectivityModal multi-device management rewrite; dedicated add-device onboarding route; DynamicIsland activeDeviceName; pairing→registry integration; downloadRecording onProgress; audio download progress fields; agent intelligence Wave 6 conversational polish)
+> **Last Updated**: 2026-04-18 (DeviceRegistry multi-device layer; ConnectivityModal multi-device management rewrite; dedicated add-device onboarding route; DynamicIsland activeDeviceName; pairing→registry integration; downloadRecording onProgress; audio download progress fields; agent intelligence Wave 6 conversational polish; post-pairing isolation detection via NET_CAPABILITY_VALIDATED + HTTP probe; isolation detection expanded: pre-sync gate in SimAudioRepositorySyncSupport + on-disconnect probe in RealConnectivityBridge + IsolationTriggerContext + IsolationProbeHelper + context-aware ConnectivityModal copy; ON_CONNECT isolation detection: AUTO sync preflight failure on badge-ready transition now triggers isolation prompt + latch)
 >
 > **Status Legend**: ✅ = Shipped (Real impl) · 📐 = Interface only (Fake impl) · 🔲 = Not yet coded
 > **Platform Ownership Legend**: `shared` = same product contract across platforms · `android-only` = owned by the current Android lineage · `harmony-only` = owned by the future native Harmony root · `platform-adapter` = shared product contract, platform-specific delivery layer · `legacy-android-on-harmony` = Android app compatibility behavior on Huawei/Honor/Harmony devices
@@ -230,6 +230,87 @@ Rule:
 - `ConnectivityModal` may display and manage the device list but must not own device persistence or connection logic
 - `RuntimeShell` owns connectivity-surface routing between `MODAL`, `SETUP`, `MANAGER`, and `ADD_DEVICE`; pairing runtime truth remains with onboarding/device-pairing collaborators
 - Dynamic Island may display the active device name but must not own device selection
+
+### Isolation detection: pre-sync gate + on-disconnect probe (2026-04-18)
+
+> Extends the post-pairing isolation probe shipped on 2026-04-18. The same `!isReachable && isValidated` logic is now extracted into a shared helper and applied at two additional trigger points to surface AP isolation before a sync attempt fails upstream.
+
+#### Shared probe helper
+
+`IsolationProbeHelper.kt` (`app-core/.../data/connectivity/`) provides `runIsolationProbeIfSuspected(badgeIp, httpClient, phoneWifiProvider, connectivityPrompt, triggerContext)`. Detection signal (both conditions required):
+
+- `PhoneWifiSnapshot.Connected.isValidated == true` — phone WiFi has passed Android `NET_CAPABILITY_VALIDATED` (internet reachable)
+- `BadgeHttpClient.isReachable("http://{badgeIp}:8088") == false` — single HTTP probe to badge times out
+
+ESP32 constraint: the probe is a single HTTP request, never a BLE query. No BLE traffic is added at any trigger point.
+
+#### Trigger contexts (`IsolationTriggerContext` enum — domain layer)
+
+| Value | When | Owner |
+|---|---|---|
+| `POST_PAIRING` | Immediately after pairing network check (original behavior) | `RealPairingService` |
+| `PRE_SYNC` | Preflight fails for MANUAL sync + phone WiFi validated | `SimAudioRepositorySyncSupport` |
+| `ON_DISCONNECT` | Badge transitions WifiProvisioned/Syncing → Disconnected + last IP known | `RealConnectivityBridge` |
+| `ON_CONNECT` | AUTO sync preflight fails after badge becomes Ready + phone WiFi validated + last IP known | `SimAudioRepositorySyncSupport` |
+
+#### Pre-sync isolation gate
+
+In `SimAudioRepositorySyncSupport.syncFromBadgeInternal()`, when MANUAL preflight (`canSyncFromBadge()`) fails:
+
+1. Check `phoneWifiProvider.currentWifiSnapshot().isValidated` and `endpointRecoveryCoordinator.latestResolvedEndpoint()?.badgeIp`
+2. If both non-null/true: call `connectivityPrompt.promptSuspectedIsolation(ip, PRE_SYNC)` and throw `IsolationBlockedSyncException`
+3. Otherwise: call `promptWifiMismatch()` and throw the standard connectivity error (unchanged behavior)
+
+`IsolationBlockedSyncException` is caught in `SimAudioDrawerViewModel.syncFromBadgeManually()` before the generic `Exception` catch. It shows `DENIED` feedback only — no error snackbar — because the ConnectivityModal is already handling the isolation prompt.
+
+#### On-disconnect probe
+
+`RealConnectivityBridge` watches `deviceManager.state`. On `WifiProvisioned|Syncing → Disconnected` transition, if `lastKnownBadgeIp != null`, it delays 1s then runs `runIsolationProbeIfSuspected(..., ON_DISCONNECT)`. `lastKnownBadgeIp` is saved whenever `resolveBaseUrl()` establishes a valid endpoint snapshot.
+
+#### UI: context-aware isolation content
+
+`WifiRepairIsolationContent` receives `triggerContext: IsolationTriggerContext?` and selects title + body copy:
+
+| Context | Title | Body |
+|---|---|---|
+| `POST_PAIRING` (default) | 网络可能隔离了设备 | 手机和徽章均已接入同一网络，但无法互相通信... |
+| `PRE_SYNC` | 同步暂停 — 网络可能隔离了设备 | 录音无法上传。...尝试切换到个人热点后重新同步。 |
+| `ON_DISCONNECT` | 设备断开 — 网络可能正在隔离设备 | 设备已断开连接，可能由网络隔离引起...开启个人热点后重新连接。 |
+| `ON_CONNECT` | 连接后网络检测异常 | 徽章已接入网络，但无法通过 HTTP 访问...可能是路由器隔离了设备间通信。 |
+
+#### Key contracts changed (2026-04-18 extension)
+
+- New: `IsolationTriggerContext` enum in `data/connectivity` domain module
+- `ConnectivityPrompt.promptSuspectedIsolation` gains `triggerContext: IsolationTriggerContext = POST_PAIRING` parameter
+- `SuspectedIsolationPromptRequest` gains `triggerContext: IsolationTriggerContext`
+- `ConnectivityViewModel` gains `isolationTriggerContext: StateFlow<IsolationTriggerContext?>`
+- `RealConnectivityBridge` gains `PhoneWifiProvider` + `ConnectivityPrompt` constructor deps, `@Volatile lastKnownBadgeIp`
+- New internal type `IsolationBlockedSyncException` in `SimAudioRepositorySyncSupport.kt`
+- `WifiRepairIsolationContent` gains `triggerContext: IsolationTriggerContext?` parameter
+
+#### Rules (original + extended)
+
+- `RealPairingService` owns POST_PAIRING isolation probe; it must not surface this as a pairing failure
+- `SimAudioRepositorySyncSupport` owns PRE_SYNC gate; it must run isolation check before falling back to WiFi-mismatch prompt
+- `RealConnectivityBridge` owns ON_DISCONNECT probe; it must use a 1s grace delay and must not add BLE traffic
+- `ConnectivityPrompt` / `ConnectivityPromptCoordinator` own async prompt dispatch; callers must not call ViewModel directly
+- SSID comparison is explicitly excluded — OEM restrictions make phone SSID reads unreliable; `NET_CAPABILITY_VALIDATED` is the only phone-side discriminator
+- IP classification (`BadgeIpClassifier`) is excluded from detection logic to avoid false negatives on standard `192.168.x.x` networks
+
+---
+
+### Post-pairing isolation detection edge (2026-04-18)
+
+> Original post-pairing probe. See "Isolation detection: pre-sync gate + on-disconnect probe" above for the extended multi-trigger design.
+
+After a successful pairing network check, `RealPairingService` runs an asynchronous isolation probe (now delegated to `runIsolationProbeIfSuspected` from `IsolationProbeHelper`) before returning `PairingResult.Success`. The probe does not block or fail pairing.
+
+Key contracts (from original shipping):
+
+- `PhoneWifiSnapshot.Connected` has `isValidated: Boolean = false` (populated by `AndroidPhoneWifiProvider` from `NET_CAPABILITY_VALIDATED`)
+- `WifiRepairState.HardFailure.HardFailureReason` has `SUSPECTED_ISOLATION`
+- `ConnectivityPromptCoordinator` has `suspectedIsolationRequests: SharedFlow<SuspectedIsolationPromptRequest>`
+- `ConnectivityViewModel` has `isolationBadgeIp: StateFlow<String?>`
 
 ---
 

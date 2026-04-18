@@ -12,6 +12,7 @@ import com.smartsales.prism.data.connectivity.legacy.scan.FakeBleScanner
 import com.smartsales.prism.data.connectivity.registry.DeviceRegistryManager
 import com.smartsales.prism.data.connectivity.registry.RegisteredDevice
 import com.smartsales.prism.domain.connectivity.ConnectivityPrompt
+import com.smartsales.prism.domain.connectivity.IsolationTriggerContext
 import com.smartsales.prism.domain.pairing.ErrorReason
 import com.smartsales.prism.domain.pairing.PairingResult
 import com.smartsales.prism.domain.pairing.PairingState
@@ -229,11 +230,16 @@ class RealPairingServiceTest {
     private class FakeConnectivityPrompt : ConnectivityPrompt {
         var isolationCallCount = 0
         var lastIsolationIp: String? = null
+        var lastIsolationTriggerContext: IsolationTriggerContext? = null
 
         override suspend fun promptWifiMismatch(suggestedSsid: String?) = Unit
-        override suspend fun promptSuspectedIsolation(badgeIp: String) {
+        override suspend fun promptSuspectedIsolation(
+            badgeIp: String,
+            triggerContext: IsolationTriggerContext
+        ) {
             isolationCallCount++
             lastIsolationIp = badgeIp
+            lastIsolationTriggerContext = triggerContext
         }
     }
 

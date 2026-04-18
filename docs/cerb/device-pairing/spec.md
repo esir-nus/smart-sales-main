@@ -27,7 +27,7 @@ graph TD
 
 | Wave | Focus | Status | Deliverables |
 |------|-------|--------|--------------|
-| **1** | Core Service | ✅ SHIPPED | `RealPairingService` implementation wrapping legacy components. Support Scan -> Pair -> Success happy path. Post-pairing device registration via `DeviceRegistryManager.registerDevice()` (first device becomes default). |
+| **1** | Core Service | ✅ SHIPPED | `RealPairingService` implementation wrapping legacy components. Support Scan -> Pair -> Success happy path. Post-pairing device registration via `DeviceRegistryManager.registerDevice()` (first device becomes default). Post-pairing isolation probe: if `NET_CAPABILITY_VALIDATED == true` and `BadgeHttpClient.isReachable()` fails, fires `ConnectivityPrompt.promptSuspectedIsolation(badgeIp, POST_PAIRING)` asynchronously — does not fail pairing. Probe logic now delegated to `IsolationProbeHelper.runIsolationProbeIfSuspected()` (shared with PRE_SYNC and ON_DISCONNECT probes). |
 | **1.5** | Wiring | Shipped | `PairingFlowViewModel` now owns the shared pairing seam used by the host-driven onboarding coordinator. |
 | **2** | Robustness | 🔲 PLANNED | implementations for timeouts, retries, and error mapping from legacy 9-states. |
 | **3** | Polish | 🔲 PLANNED | UX refinements, progress granularity, cancellation handling. |
@@ -58,6 +58,9 @@ BLE scanning requires runtime permissions on Android 12+. Permissions are reques
 - `DeviceConnectionManager` (Legacy)
 - `WifiProvisioner` (Legacy) or direct via Manager
 - `DeviceRegistryManager` (post-pairing registration)
+- `BadgeHttpClient` (post-pairing isolation probe)
+- `PhoneWifiProvider` (reads `isValidated` from `NET_CAPABILITY_VALIDATED`)
+- `ConnectivityPrompt` (dispatches isolation prompt if probe fails on validated network)
 - `CoroutineScope` (Process-scoped)
 
 **State Mapping Strategy (Legacy → Prism)**
@@ -88,8 +91,15 @@ BLE scanning requires runtime permissions on Android 12+. Permissions are reques
   4. Call `connectionManager.startPairing(...)`
   5. Treat `startPairing(...)` success as credential-dispatch success only
   6. Move into the later network-status phase and poll/query for the badge IP
-  7. On network success -> emit `Success`
+  7. On network success -> run isolation probe (see below)
   8. On network failure/timeout -> emit `Error(NETWORK_CHECK_FAILED)`
+  9. Emit `Success` regardless of isolation probe result — pairing is complete; the isolation prompt is informational only
+- **Post-pairing isolation probe**:
+  - After the network check confirms a usable badge IP, call `BadgeHttpClient.isReachable("http://{ip}:8088")`
+  - Read `PhoneWifiProvider.currentWifiSnapshot().isValidated`
+  - If `!isReachable && isValidated` → call `ConnectivityPrompt.promptSuspectedIsolation(badgeIp, POST_PAIRING)`
+  - Detection rationale: phone has validated internet (WiFi is healthy) but cannot reach the badge — infers client isolation at the AP level
+  - SSID comparison is excluded: OEM restrictions make phone SSID reads unreliable on many devices tested
 - **WiFi Connect Protocol**:
   - send `SD#<ssid>`
   - wait the command gap

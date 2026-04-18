@@ -39,6 +39,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.smartsales.prism.BuildConfig
 import com.smartsales.prism.data.connectivity.registry.RegisteredDevice
+import com.smartsales.prism.domain.connectivity.IsolationTriggerContext
 import com.smartsales.prism.ui.components.connectivity.ConnectivityManagerState
 import com.smartsales.prism.ui.components.connectivity.ConnectivityViewModel
 import com.smartsales.prism.ui.components.connectivity.WifiRepairState
@@ -85,6 +86,7 @@ fun ConnectivityModal(
     val wifiMismatchErrorMessage by viewModel.wifiMismatchErrorMessage.collectAsState()
     val repairState by viewModel.repairState.collectAsState()
     val isolationBadgeIp by viewModel.isolationBadgeIp.collectAsState()
+    val isolationTriggerContext by viewModel.isolationTriggerContext.collectAsState()
 
     val otherDevices = registeredDevices.filter { it.macAddress != activeDevice?.macAddress }
 
@@ -159,7 +161,8 @@ fun ConnectivityModal(
                         wifiMismatchErrorMessage = wifiMismatchErrorMessage,
                         onWifiMismatchInputChanged = viewModel::clearWifiMismatchError,
                         repairState = repairState,
-                        isolationBadgeIp = isolationBadgeIp
+                        isolationBadgeIp = isolationBadgeIp,
+                        isolationTriggerContext = isolationTriggerContext
                     )
                 }
 
@@ -237,6 +240,7 @@ private fun ActiveDeviceSection(
     onWifiMismatchInputChanged: () -> Unit,
     repairState: WifiRepairState = WifiRepairState.Idle,
     isolationBadgeIp: String? = null,
+    isolationTriggerContext: IsolationTriggerContext? = null,
 ) {
     AnimatedContent(targetState = state, label = "ActiveDeviceState") { currentState ->
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -267,7 +271,8 @@ private fun ActiveDeviceSection(
                         onUpdate = onUpdateWifi,
                         onInputChanged = onWifiMismatchInputChanged,
                         onIgnore = onCancel,
-                        isolationBadgeIp = isolationBadgeIp
+                        isolationBadgeIp = isolationBadgeIp,
+                        isolationTriggerContext = isolationTriggerContext
                     )
             }
         }
@@ -883,6 +888,7 @@ internal fun WifiMismatchView(
     onInputChanged: () -> Unit,
     onIgnore: () -> Unit,
     isolationBadgeIp: String? = null,
+    isolationTriggerContext: IsolationTriggerContext? = null,
 ) {
     when (repairState) {
         is WifiRepairState.Idle,
@@ -914,6 +920,7 @@ internal fun WifiMismatchView(
             if (repairState.reason == WifiRepairState.HardFailure.HardFailureReason.SUSPECTED_ISOLATION) {
                 WifiRepairIsolationContent(
                     badgeIp = isolationBadgeIp,
+                    triggerContext = isolationTriggerContext,
                     onRePair = onIgnore
                 )
             } else {
@@ -1149,18 +1156,41 @@ private fun WifiRepairHttpDelayedContent(
 @Composable
 private fun WifiRepairIsolationContent(
     badgeIp: String?,
+    triggerContext: IsolationTriggerContext? = null,
     onRePair: () -> Unit,
 ) {
     val context = LocalContext.current
+
+    // 根据触发场景选择标题和说明文案
+    val titleText = when (triggerContext) {
+        IsolationTriggerContext.PRE_SYNC -> "同步暂停 — 网络可能隔离了设备"
+        IsolationTriggerContext.ON_DISCONNECT -> "设备断开 — 网络可能正在隔离设备"
+        IsolationTriggerContext.ON_CONNECT -> "连接后网络检测异常"
+        else -> "网络可能隔离了设备"  // POST_PAIRING 或未知
+    }
+    val bodyText = when (triggerContext) {
+        IsolationTriggerContext.PRE_SYNC ->
+            "录音无法上传。手机与徽章均已接入网络，但无法互相通信。" +
+            "尝试切换到个人热点后重新同步。"
+        IsolationTriggerContext.ON_DISCONNECT ->
+            "设备已断开连接，可能由网络隔离引起。" +
+            "请切换到其他 Wi-Fi 或开启个人热点后重新连接。"
+        IsolationTriggerContext.ON_CONNECT ->
+            "徽章已接入网络，但无法通过 HTTP 访问。" +
+            "可能是路由器隔离了设备间通信。尝试切换到个人热点。"
+        else ->
+            "手机和徽章均已接入同一网络，但无法互相通信。" +
+            "部分访客网络和企业 Wi-Fi 会隔离设备间的直接通信。"
+    }
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.Start
     ) {
-        Text("网络可能隔离了设备", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = ReconnectingAmber)
+        Text(titleText, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = ReconnectingAmber)
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            "手机和徽章均已接入同一网络，但无法互相通信。" +
-            "部分访客网络和企业 Wi-Fi 会隔离设备间的直接通信。",
+            bodyText,
             fontSize = 14.sp,
             color = TextSecondary,
             lineHeight = 20.sp

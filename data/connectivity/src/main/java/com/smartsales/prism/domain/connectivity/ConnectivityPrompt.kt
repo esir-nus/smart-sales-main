@@ -8,6 +8,15 @@ package com.smartsales.prism.domain.connectivity
  */
 interface ConnectivityPrompt {
     suspend fun promptWifiMismatch(suggestedSsid: String?)
-    // 配对后 HTTP 不可达且手机网络已验证 — 疑似客户端隔离
-    suspend fun promptSuspectedIsolation(badgeIp: String)
+
+    /**
+     * HTTP 不可达且手机 WiFi 已验证 → 疑似 AP 客户端隔离。
+     *
+     * @param badgeIp 探测失败的徽章 IP，用于界面诊断展示
+     * @param triggerContext 探测触发来源（配对后 / 同步前 / 断开时），决定界面文案
+     */
+    suspend fun promptSuspectedIsolation(
+        badgeIp: String,
+        triggerContext: IsolationTriggerContext = IsolationTriggerContext.POST_PAIRING
+    )
 }

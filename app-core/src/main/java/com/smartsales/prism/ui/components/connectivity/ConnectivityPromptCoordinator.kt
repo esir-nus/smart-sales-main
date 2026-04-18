@@ -1,6 +1,7 @@
 package com.smartsales.prism.ui.components.connectivity
 
 import com.smartsales.prism.domain.connectivity.ConnectivityPrompt
+import com.smartsales.prism.domain.connectivity.IsolationTriggerContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -11,9 +12,10 @@ data class WifiMismatchPromptRequest(
     val suggestedSsid: String?
 )
 
-// 疑似客户端隔离提示请求 — 携带徽章 IP 用于界面诊断展示
+// 疑似客户端隔离提示请求 — 携带徽章 IP 和触发场景用于界面诊断展示及文案选择
 data class SuspectedIsolationPromptRequest(
-    val badgeIp: String
+    val badgeIp: String,
+    val triggerContext: IsolationTriggerContext = IsolationTriggerContext.POST_PAIRING
 )
 
 @Singleton
@@ -41,9 +43,15 @@ class ConnectivityPromptCoordinator @Inject constructor() : ConnectivityPrompt {
         )
     }
 
-    override suspend fun promptSuspectedIsolation(badgeIp: String) {
+    override suspend fun promptSuspectedIsolation(
+        badgeIp: String,
+        triggerContext: IsolationTriggerContext
+    ) {
         _suspectedIsolationRequests.emit(
-            SuspectedIsolationPromptRequest(badgeIp = badgeIp.trim())
+            SuspectedIsolationPromptRequest(
+                badgeIp = badgeIp.trim(),
+                triggerContext = triggerContext
+            )
         )
     }
 }

@@ -1,18 +1,19 @@
 package com.smartsales.prism.data.pairing
 
 import com.smartsales.core.util.Result
+import com.smartsales.prism.data.connectivity.runIsolationProbeIfSuspected
 import com.smartsales.prism.data.connectivity.legacy.BadgeHttpClient
 import com.smartsales.prism.data.connectivity.legacy.BlePeripheral
 import com.smartsales.prism.data.connectivity.legacy.BleSession
 import com.smartsales.prism.data.connectivity.legacy.ConnectionState
 import com.smartsales.prism.data.connectivity.legacy.DeviceConnectionManager
 import com.smartsales.prism.data.connectivity.legacy.PhoneWifiProvider
-import com.smartsales.prism.data.connectivity.legacy.PhoneWifiSnapshot
 import com.smartsales.prism.data.connectivity.legacy.hasUsableBadgeIp
 import com.smartsales.prism.data.connectivity.legacy.WifiCredentials as LegacyWifiCredentials
 import com.smartsales.prism.data.connectivity.legacy.scan.BleScanner
 import com.smartsales.prism.data.connectivity.registry.DeviceRegistryManager
 import com.smartsales.prism.domain.connectivity.ConnectivityPrompt
+import com.smartsales.prism.domain.connectivity.IsolationTriggerContext
 import com.smartsales.prism.domain.pairing.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -255,19 +256,15 @@ class RealPairingService @Inject constructor(
             return PairingResult.Error(error.message, error.reason)
         }
 
-        // 隔离探测：手机网络已验证但 HTTP 不可达 → 疑似客户端隔离
+        // 隔离探测：配对完成后检查 HTTP 可达性（委托给 IsolationProbeHelper）
         // 配对本身已成功，探测结果仅用于触发异步提示，不阻断流程
-        val ip = badgeIp
-        if (ip != null) {
-            val snapshot = wifiProvider.currentWifiSnapshot()
-            val isValidated = snapshot is PhoneWifiSnapshot.Connected && snapshot.isValidated
-            val isReachable = httpClient.isReachable("http://$ip:8088")
-            Log.d(TAG, "Isolation probe: ip=$ip isValidated=$isValidated isReachable=$isReachable")
-            if (!isReachable && isValidated) {
-                Log.w(TAG, "Suspected isolation: HTTP unreachable on validated network. ip=$ip")
-                connectivityPrompt.promptSuspectedIsolation(ip)
-            }
-        }
+        runIsolationProbeIfSuspected(
+            badgeIp = badgeIp,
+            httpClient = httpClient,
+            phoneWifiProvider = wifiProvider,
+            connectivityPrompt = connectivityPrompt,
+            triggerContext = IsolationTriggerContext.POST_PAIRING
+        )
 
         // 阶段 4：成功 (100%)
         _state.value = PairingState.Success(

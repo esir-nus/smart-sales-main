@@ -3,7 +3,11 @@ package com.smartsales.prism.data.audio
 import android.util.Log
 import com.smartsales.core.telemetry.PipelineValve
 import com.smartsales.core.util.Result
+import com.smartsales.prism.data.connectivity.BadgeEndpointSnapshot
+import com.smartsales.prism.data.connectivity.BadgeRuntimeKey
+import com.smartsales.prism.data.connectivity.legacy.PhoneWifiSnapshot
 import com.smartsales.prism.data.connectivity.legacy.currentNormalizedSsid
+import com.smartsales.prism.domain.connectivity.IsolationTriggerContext
 import com.smartsales.prism.domain.audio.AudioFile
 import com.smartsales.prism.domain.audio.AudioLocalAvailability
 import com.smartsales.prism.domain.audio.AudioSource
@@ -39,8 +43,16 @@ internal enum class SimBadgeSyncTrigger {
 
 internal enum class SimBadgeSyncSkippedReason {
     NOT_READY,
-    ALREADY_RUNNING
+    ALREADY_RUNNING,
+    KNOWN_HTTP_UNREACHABLE
 }
+
+/**
+ * 同步前安全检查门检测到疑似 AP 客户端隔离时抛出。
+ * 由调用方（SimAudioDrawerViewModel）捕获，区别于一般连接不可用异常，
+ * 避免展示错误 snackbar（隔离提示已通过 ConnectivityModal 单独处理）。
+ */
+internal class IsolationBlockedSyncException(val badgeIp: String) : Exception("sync-isolation-blocked")
 
 internal enum class SimBadgeSyncResultBranch {
     DEVICE_EMPTY,
@@ -66,6 +78,12 @@ private data class SimBadgeSyncExecutionResult(
 private data class SimBadgeQueuePlan(
     val placeholderFilenames: List<String>,
     val queueFilenames: List<String>
+)
+
+private data class SimKnownHttpUnreachableLatch(
+    val runtimeKey: BadgeRuntimeKey,
+    val badgeIp: String,
+    val baseUrl: String
 )
 
 internal fun existingSimBadgeFilenames(entries: List<AudioFile>): Set<String> {
@@ -202,9 +220,19 @@ internal class SimAudioRepositorySyncSupport(
     private val storeSupport: SimAudioRepositoryStoreSupport,
     private val orchestrator: DownloadServiceOrchestrator
 ) {
+    private var knownHttpUnreachableLatch: SimKnownHttpUnreachableLatch? = null
 
     suspend fun canSyncFromBadge(): Boolean = withContext(runtime.ioDispatcher) {
-        runtime.connectivityBridge.isReady()
+        reconcileKnownHttpUnreachableLatch()
+        val ready = runtime.connectivityBridge.isReady()
+        if (ready) {
+            clearKnownHttpUnreachableLatch("ready_probe_success")
+        }
+        ready
+    }
+
+    suspend fun shouldSuppressAutoSync(): Boolean = withContext(runtime.ioDispatcher) {
+        shouldSuppressAutoSyncInternal(logSuppression = true)
     }
 
     suspend fun syncFromBadge(trigger: SimBadgeSyncTrigger): SimBadgeSyncOutcome = withContext(runtime.ioDispatcher) {
@@ -221,6 +249,13 @@ internal class SimAudioRepositorySyncSupport(
         trigger: SimBadgeSyncTrigger,
         requireStrictPreflight: Boolean
     ): SimBadgeSyncOutcome {
+        if (trigger == SimBadgeSyncTrigger.AUTO && shouldSuppressAutoSyncInternal(logSuppression = true)) {
+            return SimBadgeSyncOutcome(
+                trigger = trigger,
+                skippedReason = SimBadgeSyncSkippedReason.KNOWN_HTTP_UNREACHABLE
+            )
+        }
+
         if (requireStrictPreflight) {
             Log.d(
                 SIM_AUDIO_SYNC_LOG_TAG,
@@ -236,6 +271,22 @@ internal class SimAudioRepositorySyncSupport(
                     SIM_AUDIO_SYNC_LOG_TAG,
                     "SIM badge sync skipped trigger=auto stage=strict-preflight reason=not-ready"
                 )
+                // 连接后 preflight 失败：手机 WiFi 已验证但 HTTP 不可达 → 疑似 AP 客户端隔离
+                val latestIp = runtime.endpointRecoveryCoordinator.latestResolvedEndpoint()?.badgeIp
+                val wifiSnapshot = runtime.phoneWifiProvider.currentWifiSnapshot()
+                val phoneWifiValidated =
+                    wifiSnapshot is PhoneWifiSnapshot.Connected && wifiSnapshot.isValidated
+                if (phoneWifiValidated && latestIp != null) {
+                    Log.w(
+                        SIM_AUDIO_SYNC_LOG_TAG,
+                        "SIM badge sync isolation suspected ip=$latestIp context=on_connect — triggering isolation prompt"
+                    )
+                    runtime.connectivityPrompt.promptSuspectedIsolation(
+                        badgeIp = latestIp,
+                        triggerContext = IsolationTriggerContext.ON_CONNECT
+                    )
+                    maybeArmKnownHttpUnreachableLatch("on_connect_isolation", shouldArm = true)
+                }
                 return SimBadgeSyncOutcome(
                     trigger = trigger,
                     skippedReason = SimBadgeSyncSkippedReason.NOT_READY
@@ -250,6 +301,26 @@ internal class SimAudioRepositorySyncSupport(
                 emitSimAudioSyncFailureWhileConnectivityUnavailableTelemetry(
                     detail = "manual preflight failed: connectivity not ready"
                 )
+
+                // 同步前安全检查门：preflight 失败时区分隔离与普通不可用
+                // 手机 WiFi 已验证（互联网可达）但 HTTP 不可达 → 疑似 AP 客户端隔离
+                val latestIp = runtime.endpointRecoveryCoordinator.latestResolvedEndpoint()?.badgeIp
+                val wifiSnapshot = runtime.phoneWifiProvider.currentWifiSnapshot()
+                val phoneWifiValidated =
+                    wifiSnapshot is PhoneWifiSnapshot.Connected && wifiSnapshot.isValidated
+                if (phoneWifiValidated && latestIp != null) {
+                    Log.w(
+                        SIM_AUDIO_SYNC_LOG_TAG,
+                        "SIM badge sync isolation suspected ip=$latestIp context=pre_sync — blocking sync, triggering isolation prompt"
+                    )
+                    runtime.connectivityPrompt.promptSuspectedIsolation(
+                        badgeIp = latestIp,
+                        triggerContext = IsolationTriggerContext.PRE_SYNC
+                    )
+                    throw IsolationBlockedSyncException(latestIp)
+                }
+
+                // 非隔离情形：手机 WiFi 未验证或无已知徽章 IP → 普通连接不可用
                 promptWifiMismatchIfManual(trigger)
                 throw Exception(SIM_BADGE_SYNC_CONNECTIVITY_UNAVAILABLE_MESSAGE)
             }
@@ -270,6 +341,9 @@ internal class SimAudioRepositorySyncSupport(
         return try {
             emitSimAudioBadgeSyncRequestedTelemetry(trigger)
             val executionResult = performBadgeSyncLocked(trigger)
+            if (trigger == SimBadgeSyncTrigger.MANUAL) {
+                clearKnownHttpUnreachableLatch("manual_sync_success")
+            }
             emitSimAudioBadgeSyncCompletedTelemetry(
                 trigger = trigger,
                 queuedCount = executionResult.queuedCount,
@@ -311,6 +385,10 @@ internal class SimAudioRepositorySyncSupport(
             }
             is Result.Error -> {
                 val reason = listResult.throwable.message ?: "unknown"
+                maybeArmKnownHttpUnreachableLatch(
+                    reason = "list_failed:${reason}",
+                    shouldArm = isLikelySimBadgeConnectivityUnavailable(reason)
+                )
                 emitSimAudioSyncFailureWhileConnectivityUnavailableTelemetry(
                     detail = "listRecordings failed: $reason"
                 )
@@ -507,6 +585,11 @@ internal class SimAudioRepositorySyncSupport(
                     }
 
                     is WavDownloadResult.Error -> {
+                        maybeArmKnownHttpUnreachableLatch(
+                            reason = "download_failed:${downloadResult.message}",
+                            shouldArm = downloadResult.code == WavDownloadResult.ErrorCode.DOWNLOAD_FAILED &&
+                                isLikelySimBadgeConnectivityUnavailable(downloadResult.message)
+                        )
                         storeSupport.markBadgeDownloadAvailability(
                             filename = nextFilename,
                             availability = AudioLocalAvailability.FAILED,
@@ -571,5 +654,67 @@ internal class SimAudioRepositorySyncSupport(
         runtime.connectivityPrompt.promptWifiMismatch(
             runtime.phoneWifiProvider.currentNormalizedSsid()
         )
+    }
+
+    private suspend fun shouldSuppressAutoSyncInternal(logSuppression: Boolean): Boolean {
+        reconcileKnownHttpUnreachableLatch()
+        val latch = knownHttpUnreachableLatch ?: return false
+        if (logSuppression) {
+            Log.i(
+                SIM_AUDIO_SYNC_LOG_TAG,
+                "SIM badge auto sync suppressed runtime=${latch.runtimeKey.toLogString()} baseUrl=${latch.baseUrl} reason=known_http_unreachable"
+            )
+        }
+        return true
+    }
+
+    private suspend fun reconcileKnownHttpUnreachableLatch() {
+        val latch = knownHttpUnreachableLatch ?: return
+        val currentRuntimeKey = runtime.endpointRecoveryCoordinator.currentRuntimeKey()
+        if (currentRuntimeKey != latch.runtimeKey) {
+            clearKnownHttpUnreachableLatch("runtime_changed")
+            return
+        }
+
+        val latestEndpoint = runtime.endpointRecoveryCoordinator.latestResolvedEndpoint()
+        if (latestEndpoint != null && endpointChanged(latch, latestEndpoint)) {
+            clearKnownHttpUnreachableLatch("endpoint_changed")
+        }
+    }
+
+    private suspend fun maybeArmKnownHttpUnreachableLatch(
+        reason: String,
+        shouldArm: Boolean
+    ) {
+        if (!shouldArm) return
+        val latestEndpoint = runtime.endpointRecoveryCoordinator.latestResolvedEndpoint() ?: return
+        val nextLatch = SimKnownHttpUnreachableLatch(
+            runtimeKey = latestEndpoint.runtimeKey,
+            badgeIp = latestEndpoint.badgeIp,
+            baseUrl = latestEndpoint.baseUrl
+        )
+        if (knownHttpUnreachableLatch == nextLatch) return
+        knownHttpUnreachableLatch = nextLatch
+        Log.i(
+            SIM_AUDIO_SYNC_LOG_TAG,
+            "SIM badge auto sync latch armed runtime=${nextLatch.runtimeKey.toLogString()} baseUrl=${nextLatch.baseUrl} reason=$reason"
+        )
+    }
+
+    private fun clearKnownHttpUnreachableLatch(reason: String) {
+        val latch = knownHttpUnreachableLatch ?: return
+        knownHttpUnreachableLatch = null
+        Log.i(
+            SIM_AUDIO_SYNC_LOG_TAG,
+            "SIM badge auto sync latch cleared runtime=${latch.runtimeKey.toLogString()} baseUrl=${latch.baseUrl} reason=$reason"
+        )
+    }
+
+    private fun endpointChanged(
+        latch: SimKnownHttpUnreachableLatch,
+        latestEndpoint: BadgeEndpointSnapshot
+    ): Boolean {
+        return latestEndpoint.badgeIp != latch.badgeIp ||
+            latestEndpoint.baseUrl != latch.baseUrl
     }
 }

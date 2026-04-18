@@ -2,7 +2,7 @@
 
 > **Cerb-compliant spec** — Audio file management: sync, transcription, UI interaction.
 > **Status**: SHIPPED
-> **Last Updated**: 2026-04-16
+> **Last Updated**: 2026-04-18
 > **Behavioral UX Authority Above This Doc**: [`docs/core-flow/base-runtime-ux-surface-governance-flow.md`](../../core-flow/base-runtime-ux-surface-governance-flow.md) (`UX.AUDIO.*`)
 
 ---
@@ -102,6 +102,10 @@ There is one active inventory rule for current non-Mono work:
 - when `BadgeManagerStatus` transitions from any non-Ready state to `Ready`, the app automatically fires `/list` sync after a 3s debounce
 - reconnection auto-sync failures are silent (no toast, no spinner) — only affects Dynamic Island
 - the 3s debounce prevents collision with the CONNECTIVITY "Badge 已连接" transient Dynamic Island item
+- if the app already proved that the current runtime + badge endpoint has a known `:8088` HTTP failure, AUTO `/list` must be suppressed instead of churning the same unreachable endpoint
+- the AUTO suppression latch is in-memory only, keyed by runtime key + badge IP/baseUrl, and applies only to AUTO sync; MANUAL sync always remains available
+- the latch clears immediately on runtime change, badge IP/baseUrl change, successful readiness probe, or successful MANUAL sync
+- latch telemetry must log arm, each AUTO suppression, and clear at info level with runtime key + baseUrl + reason so on-device captures can correlate the skip decision
 
 **`rec#` push-based auto-download rule**:
 - badge sends `rec#YYYYMMDD_HHMMSS` when a recording finishes and the file is ready
@@ -109,6 +113,17 @@ There is one active inventory rule for current non-Mono work:
 - sub-1KB files are discarded silently (same as `/list` sync)
 - no transcription or scheduling is triggered by the `rec#` path
 - Dynamic Island shows transient "已同步：rec_filename" for 3s on success
+
+**Pre-sync isolation gate rule**:
+- before any MANUAL badge sync attempt starts, `SimAudioRepositorySyncSupport` checks whether a preflight failure is caused by AP client isolation: if the preflight fails **and** the phone WiFi is `NET_CAPABILITY_VALIDATED` **and** the last known badge IP is non-null, the gate fires `ConnectivityPrompt.promptSuspectedIsolation(ip, PRE_SYNC)` and throws `IsolationBlockedSyncException` instead of the generic connectivity error
+- `IsolationBlockedSyncException` is caught in `SimAudioDrawerViewModel.syncFromBadgeManually()` separately from generic `Exception`; it shows `DENIED` sync feedback only — no error snackbar — because the ConnectivityModal isolation card is already handling the UX
+- the gate is a single synchronous HTTP reachability check (already completed as part of the `isReady()` preflight); no additional BLE queries are issued
+
+**ON_CONNECT isolation detection rule** (AUTO path):
+- when the badge transitions to Ready and the auto-sync preflight (`isReady()`) fails, `SimAudioRepositorySyncSupport` applies the same isolation check: if the phone WiFi is `NET_CAPABILITY_VALIDATED` **and** the last known badge IP is non-null, it fires `ConnectivityPrompt.promptSuspectedIsolation(ip, ON_CONNECT)` and arms the `known_http_unreachable` latch to suppress subsequent AUTO retries
+- the isolation modal shows context-specific copy ("连接后网络检测异常") distinct from PRE_SYNC and ON_DISCONNECT contexts
+- no additional BLE or HTTP traffic is added; the failed `isReady()` call is the probe
+- covers both manual reconnect path (user taps reconnect button) and automatic backoff reconnect path
 
 Manual sync outcome rule:
 

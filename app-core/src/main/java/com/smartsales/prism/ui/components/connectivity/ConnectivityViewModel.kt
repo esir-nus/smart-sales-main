@@ -9,6 +9,7 @@ import com.smartsales.prism.domain.connectivity.BadgeConnectionState
 import com.smartsales.prism.domain.connectivity.BadgeManagerStatus
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.connectivity.ConnectivityService
+import com.smartsales.prism.domain.connectivity.IsolationTriggerContext
 import com.smartsales.prism.domain.connectivity.ReconnectResult
 import com.smartsales.prism.domain.connectivity.UpdateResult
 import com.smartsales.prism.domain.connectivity.WifiConfigResult
@@ -84,6 +85,10 @@ class ConnectivityViewModel @Inject constructor(
     private val _isolationBadgeIp = MutableStateFlow<String?>(null)
     val isolationBadgeIp: StateFlow<String?> = _isolationBadgeIp.asStateFlow()
 
+    // 隔离触发场景 — 决定 ConnectivityModal 展示的标题与说明文案
+    private val _isolationTriggerContext = MutableStateFlow<IsolationTriggerContext?>(null)
+    val isolationTriggerContext: StateFlow<IsolationTriggerContext?> = _isolationTriggerContext.asStateFlow()
+
     // 待更新版本
     private val _pendingVersion = MutableStateFlow<String?>(null)
     val pendingVersion: StateFlow<String?> = _pendingVersion.asStateFlow()
@@ -134,6 +139,7 @@ class ConnectivityViewModel @Inject constructor(
             // 疑似客户端隔离：手机网络已验证但 HTTP 探测超时 → 展示隔离提示模态框
             promptCoordinator.suspectedIsolationRequests.collect { request ->
                 _isolationBadgeIp.value = request.badgeIp
+                _isolationTriggerContext.value = request.triggerContext
                 _repairState.value = WifiRepairState.HardFailure(
                     WifiRepairState.HardFailure.HardFailureReason.SUSPECTED_ISOLATION
                 )
@@ -428,6 +434,7 @@ class ConnectivityViewModel @Inject constructor(
         _wifiMismatchSuggestedSsid.value = null
         _wifiMismatchErrorMessage.value = null
         _isolationBadgeIp.value = null
+        _isolationTriggerContext.value = null
         _repairState.value = WifiRepairState.Idle
         _uiOverride.value = null
     }

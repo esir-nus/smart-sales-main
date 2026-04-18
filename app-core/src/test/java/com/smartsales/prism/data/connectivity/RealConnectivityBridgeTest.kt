@@ -8,12 +8,15 @@ import com.smartsales.prism.data.connectivity.legacy.DeviceNetworkStatus
 import com.smartsales.prism.data.connectivity.legacy.BleSession
 import com.smartsales.prism.data.connectivity.legacy.FakeBadgeHttpClient
 import com.smartsales.prism.data.connectivity.legacy.FakeDeviceConnectionManager
+import com.smartsales.prism.data.connectivity.legacy.FakePhoneWifiProvider
 import com.smartsales.prism.data.connectivity.legacy.ProvisioningStatus
 import com.smartsales.prism.data.connectivity.legacy.badge.BadgeState
 import com.smartsales.prism.data.connectivity.legacy.badge.BadgeStatus
 import com.smartsales.prism.data.connectivity.legacy.badge.FakeBadgeStateMonitor
 import com.smartsales.prism.domain.connectivity.BadgeConnectionState
 import com.smartsales.prism.domain.connectivity.BadgeManagerStatus
+import com.smartsales.prism.domain.connectivity.ConnectivityPrompt
+import com.smartsales.prism.domain.connectivity.IsolationTriggerContext
 import com.smartsales.prism.domain.connectivity.RecordingNotification
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -441,8 +444,19 @@ class RealConnectivityBridgeTest {
             deviceManager = manager,
             httpClient = httpClient,
             badgeStateMonitor = monitor,
-            endpointRecoveryCoordinator = coordinator
+            endpointRecoveryCoordinator = coordinator,
+            phoneWifiProvider = FakePhoneWifiProvider(null),
+            connectivityPrompt = NoOpConnectivityPrompt
         )
+    }
+
+    private object NoOpConnectivityPrompt : ConnectivityPrompt {
+        override suspend fun promptWifiMismatch(suggestedSsid: String?) = Unit
+
+        override suspend fun promptSuspectedIsolation(
+            badgeIp: String,
+            triggerContext: IsolationTriggerContext
+        ) = Unit
     }
 
 }

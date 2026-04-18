@@ -5,6 +5,7 @@ import com.smartsales.prism.data.connectivity.legacy.BadgeHttpClient
 import com.smartsales.prism.data.connectivity.legacy.BadgeHttpException
 import com.smartsales.prism.data.connectivity.legacy.ConnectionState
 import com.smartsales.prism.data.connectivity.legacy.DeviceConnectionManager
+import com.smartsales.prism.data.connectivity.legacy.PhoneWifiProvider
 import com.smartsales.prism.data.connectivity.legacy.badge.BadgeState
 import com.smartsales.prism.data.connectivity.legacy.badge.BadgeStateMonitor
 import com.smartsales.prism.data.connectivity.legacy.badge.BadgeStatus
@@ -13,6 +14,8 @@ import com.smartsales.prism.data.connectivity.legacy.toBadgeDownloadFilename
 import com.smartsales.prism.domain.connectivity.BadgeConnectionState
 import com.smartsales.prism.domain.connectivity.BadgeManagerStatus
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
+import com.smartsales.prism.domain.connectivity.ConnectivityPrompt
+import com.smartsales.prism.domain.connectivity.IsolationTriggerContext
 import com.smartsales.prism.domain.connectivity.RecordingNotification
 import com.smartsales.prism.domain.connectivity.WavDownloadResult
 import com.smartsales.prism.domain.connectivity.WifiRepairEvent
@@ -53,7 +56,9 @@ class RealConnectivityBridge @Inject constructor(
     private val deviceManager: DeviceConnectionManager,
     private val httpClient: BadgeHttpClient,
     private val badgeStateMonitor: BadgeStateMonitor,
-    private val endpointRecoveryCoordinator: BadgeEndpointRecoveryCoordinator
+    private val endpointRecoveryCoordinator: BadgeEndpointRecoveryCoordinator,
+    private val phoneWifiProvider: PhoneWifiProvider,
+    private val connectivityPrompt: ConnectivityPrompt,
 ) : ConnectivityBridge {
     
     companion object {
@@ -65,6 +70,8 @@ class RealConnectivityBridge @Inject constructor(
     private val endpointMutex = Mutex()
     private var activeEndpointSnapshot: ActiveEndpointSnapshot? = null
     private var endpointRefreshRequired = false
+    // 保存最后已知的徽章 IP，用于断开时隔离探测
+    @Volatile private var lastKnownBadgeIp: String? = null
     private val recordingNotificationsFlow = MutableSharedFlow<RecordingNotification>(
         replay = 0,
         extraBufferCapacity = 1
@@ -109,6 +116,33 @@ class RealConnectivityBridge @Inject constructor(
                 audioRecordingNotificationsFlow.emit(
                     RecordingNotification.AudioRecordingReady(filename)
                 )
+            }
+        }
+
+        // 断开时隔离探测：当徽章从已配网状态意外断开时，延迟 1s 检查是否为 AP 客户端隔离
+        // 探测仅使用单次 HTTP 请求，不触发 BLE 查询，满足 ESP32 280K RAM 约束
+        scope.launch {
+            var prevLegacyState: ConnectionState = deviceManager.state.value
+            deviceManager.state.collect { current ->
+                val wasProvisioned = prevLegacyState is ConnectionState.WifiProvisioned ||
+                    prevLegacyState is ConnectionState.Syncing
+                val isNowDisconnected = current is ConnectionState.Disconnected
+                prevLegacyState = current
+
+                if (wasProvisioned && isNowDisconnected) {
+                    val ip = lastKnownBadgeIp
+                    lastKnownBadgeIp = null
+                    if (ip != null) {
+                        delay(1_000L) // 等待断开状态稳定后再探测
+                        runIsolationProbeIfSuspected(
+                            badgeIp = ip,
+                            httpClient = httpClient,
+                            phoneWifiProvider = phoneWifiProvider,
+                            connectivityPrompt = connectivityPrompt,
+                            triggerContext = IsolationTriggerContext.ON_DISCONNECT
+                        )
+                    }
+                }
             }
         }
     }
@@ -363,6 +397,7 @@ class RealConnectivityBridge @Inject constructor(
                 ?.takeUnless { endpointRefreshRequired }
                 ?.let { snapshot ->
                     activeEndpointSnapshot = snapshot
+                    lastKnownBadgeIp = snapshot.badgeIp
                     endpointRecoveryCoordinator.noteResolvedEndpoint(
                         BadgeEndpointSnapshot(
                             runtimeKey = snapshot.runtimeKey,
@@ -408,6 +443,7 @@ class RealConnectivityBridge @Inject constructor(
                 baseUrl = "http://${networkStatus.ipAddress}:8088"
             )
             activeEndpointSnapshot = snapshot
+            lastKnownBadgeIp = snapshot.badgeIp
             endpointRefreshRequired = false
             endpointRecoveryCoordinator.noteResolvedEndpoint(
                 BadgeEndpointSnapshot(

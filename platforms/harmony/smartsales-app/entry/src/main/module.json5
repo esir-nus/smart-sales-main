@@ -17,6 +17,7 @@
         "srcEntry": "./ets/entryability/EntryAbility.ets",
         "description": "$string:entryability_desc",
         "label": "$string:entryability_label",
+        "startWindowIcon": "$media:app_icon",
         "startWindowBackground": "$color:start_window_background",
         "exported": true
       }
@@ -27,6 +28,14 @@
       },
       {
         "name": "ohos.permission.READ_MEDIA"
+        ,
+        "reason": "$string:read_media_reason",
+        "usedScene": {
+          "abilities": [
+            "EntryAbility"
+          ],
+          "when": "inuse"
+        }
       }
     ]
   }

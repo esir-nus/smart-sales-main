@@ -1,6 +1,8 @@
 {
   "app": {
-    "bundleName": "com.smartsales.harmony.app",
+    "bundleName": "smartsales.HOS.test",
+    "icon": "$media:app_icon",
+    "label": "$string:app_name",
     "vendor": "smartsales",
     "versionCode": 1,
     "versionName": "0.1.0"

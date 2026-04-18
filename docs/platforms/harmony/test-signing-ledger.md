@@ -107,3 +107,26 @@ _Pending — blocked on AGC asset set creation._
 - **Method**: after completion, `hdc shell hilog -r` cleared logs, `aa force-stop smartsales.HOS.test` stopped the app, then `aa start -a EntryAbility -b smartsales.HOS.test` cold-launched it again
 - **Logs**: post-relaunch `hilog` grep for `smartsales\\.HOS\\.test|HS-010|Tingwu|JSAPP|upload attempt|submit` returned no matches, i.e. zero observed resubmit/upload activity during reopen
 - **Interpretation**: the Harmony Tingwu lane now has real L3 evidence for successful end-to-end completion and persisted reopen without duplicate submit; remaining open HS-010 device branches are the bad-OSS auth classification drift (`NETWORK_FAILED` vs intended `AUTH_FAILED`) and explicit poll-timeout / task-expired mini-lab evidence
+- **L3 branch: AUTH_FAILED fixed**
+- **Method**: rebuilt and signed a temporary bad-OSS variant with invalid `OSS_ACCESS_KEY_ID` / `OSS_ACCESS_KEY_SECRET`, relaunched `smartsales.HOS.test`, selected `3speakertestings.mp3`, tapped `Process`, then read the persisted metadata file on-device
+- **Logs**: `hilog` captured exactly one `[HS-010][OSS] upload attempt=1 key=smartsales/harmony/audio/.../audio_mo2x9gw6lkcub6.mp3`; no retry loop followed
+- **Persisted terminal state**: `/data/app/el2/100/base/smartsales.HOS.test/haps/entry/files/smartsales_audio_metadata.json` recorded `lastErrorReason: "AUTH_FAILED"` and `lastErrorMessage` containing OSS `InvalidAccessKeyId`
+- **Interpretation**: joint 1 now closes with typed auth classification instead of the earlier false `NETWORK_FAILED`
+- **L3 branch: POLL_TIMEOUT**
+- **Method**: local-only rebuild with `TINGWU_POLL_TIMEOUT_MS=1000`, re-signed and reinstalled, then tapped `Re-process` on the completed WAV item
+- **Logs**: `hilog` captured `[HS-010][OSS] upload attempt=1 ...` followed by `[HS-010][Tingwu] submit taskKey=...`
+- **Persisted terminal state**: metadata recorded `lastErrorReason: "POLL_TIMEOUT"` and `lastErrorMessage: "Tingwu polling timed out after 1000ms ..."`; UI detail pane rendered `Reason: Polling timed out`
+- **Interpretation**: joint 3a now has direct L3 timeout evidence without waiting on a 30-minute live poll
+- **L3 branch: TASK_EXPIRED**
+- **Method**: because live provider-side expiry was not reproducible on demand, used the sprint-allowed local-only force path `TINGWU_FORCE_TASK_EXPIRED_JOB_ID=hs010-task-expired-missing-job`; rewrote the failed MP3 metadata to `PROCESSING` with that `jobId`, cold-launched the app, and let `resumeProcessingJobs()` exercise the path
+- **Logs**: `hilog` captured `[HS-010][Tingwu] forced TaskNotFound for job hs010-task-expired-missing-job`
+- **Persisted terminal state**: metadata recorded `lastErrorReason: "TASK_EXPIRED"` with `lastErrorMessage: "Tingwu task expired or missing: hs010-task-expired-missing-job"`
+- **Interpretation**: joint 3b closes with deterministic L3 evidence while keeping the live-code path unchanged when the override is unset
+- **L3 branch: chapter parity**
+- **Method**: fixed `TingwuService.parseChapters()` to read provider `AutoChapters.Headline`, rebuilt a clean variant, reprocessed `3speakertestings.wav`, then compared the fresh device artifact JSON with the provider payload embedded in `providerPayloads.autoChapters`
+- **Artifact check**: persisted chapter tuple now matches exactly: `title/startMs/endMs/summary` = provider `Headline/Start*1000/End*1000/Summary`
+- **Interpretation**: Harmony now matches the Android `TingwuChapter` semantic shape instead of collapsing to synthetic `Chapter 1`
+- **L3 branch: legacy chapter normalization**
+- **Method**: downgraded the persisted completed artifact on-device back to `chapters: ["Legacy Chapter 1"]`, cold-launched the app, and inspected the loaded detail layout
+- **UI/Layout evidence**: app launched without crash; `uitest dumpLayout` captured `· Legacy Chapter 1` in the detail panel while the item remained `Completed`
+- **Interpretation**: `FileStore.loadArtifacts()` normalized legacy `string[]` chapter payloads into renderable `ChapterSegment[]` at load time

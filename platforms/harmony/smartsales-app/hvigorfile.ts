@@ -14,6 +14,8 @@ type AppRuntimeConfigShape = {
   TINGWU_ACCESS_KEY_ID: string;
   TINGWU_ACCESS_KEY_SECRET: string;
   TINGWU_SECURITY_TOKEN: string;
+  TINGWU_POLL_TIMEOUT_MS: string;
+  TINGWU_FORCE_TASK_EXPIRED_JOB_ID: string;
   OSS_ACCESS_KEY_ID: string;
   OSS_ACCESS_KEY_SECRET: string;
   OSS_BUCKET_NAME: string;
@@ -123,6 +125,8 @@ function resolveRuntimeConfig(
     TINGWU_ACCESS_KEY_ID: tingwuAccessKeyId,
     TINGWU_ACCESS_KEY_SECRET: tingwuAccessKeySecret,
     TINGWU_SECURITY_TOKEN: pickProperty(properties, ['TINGWU_SECURITY_TOKEN']),
+    TINGWU_POLL_TIMEOUT_MS: pickProperty(properties, ['TINGWU_POLL_TIMEOUT_MS']),
+    TINGWU_FORCE_TASK_EXPIRED_JOB_ID: pickProperty(properties, ['TINGWU_FORCE_TASK_EXPIRED_JOB_ID']),
     OSS_ACCESS_KEY_ID: ossAccessKeyId,
     OSS_ACCESS_KEY_SECRET: ossAccessKeySecret,
     OSS_BUCKET_NAME: pickProperty(properties, ['OSS_BUCKET_NAME']),

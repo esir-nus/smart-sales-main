@@ -58,6 +58,10 @@ function readConfigValue(config: AppRuntimeConfigShape, key: keyof AppRuntimeCon
       return config.TINGWU_ACCESS_KEY_SECRET;
     case 'TINGWU_SECURITY_TOKEN':
       return config.TINGWU_SECURITY_TOKEN;
+    case 'TINGWU_POLL_TIMEOUT_MS':
+      return config.TINGWU_POLL_TIMEOUT_MS;
+    case 'TINGWU_FORCE_TASK_EXPIRED_JOB_ID':
+      return config.TINGWU_FORCE_TASK_EXPIRED_JOB_ID;
     case 'OSS_ACCESS_KEY_ID':
       return config.OSS_ACCESS_KEY_ID;
     case 'OSS_ACCESS_KEY_SECRET':

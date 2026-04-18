@@ -2,6 +2,17 @@
 
 ## 最近更新
 
+### 2026-04-18
+
+- **[新增] 传输优先的 WiFi 修复流程** — 徽章同步或连接异常时，系统会优先尝试 transport-first WiFi 修复路径，并联动动态岛、ConnectivityModal 与连接状态提示，减少手动排障成本。
+
+### 2026-04-17
+
+- **[修复] 前台下载服务生命周期保活** — 补齐 `DownloadForegroundService` 前台启动时的生命周期维护，降低录音下载过程中服务被系统回收的风险。
+- **[修复] 日程改期支持显式 delta 表达** — Scheduler 现在可识别显式增减时间的改期语义，跟进与全局改期解析更稳定。
+- **[新增] 同步失败后的 WiFi 修复提示** — 录音同步失败时会主动提示用户执行 WiFi 修复，并将提示链路接入 SIM 音频同步与连接状态协调流程。
+- **[重构] Android 侧废弃 Harmony flavor 清理** — 移除 `app-core` 中遗留的 Harmony flavor 与相关分支判断，减少 Android 构建与运行时分叉。
+
 ### 2026-04-16
 
 - **[新增] 鸿蒙原生应用根目录落位** — 新建 `platforms/harmony/smartsales-app/` 完整原生应用骨架，为后续 ArkTS/ArkUI 功能迁移提供正式落点。

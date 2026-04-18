@@ -74,7 +74,7 @@ interface CanonicalQueryEntry {
 }
 
 const POLL_INTERVAL_MS = 5000;
-const POLL_TIMEOUT_MS = 30 * 60 * 1000;
+const DEFAULT_POLL_TIMEOUT_MS = 30 * 60 * 1000;
 
 // 提交任务请求体的类型定义（ArkTS 要求所有字面量都匹配声明的接口）
 interface TingwuDiarizationParam {
@@ -160,6 +160,7 @@ class TingwuService {
       Parameters: parameters
     };
     const body = JSON.stringify(submitBody);
+    console.info(`[HS-010][Tingwu] submit taskKey=${taskKey} audio=${audioAssetName}`);
     const response = await this.signedRequest('PUT', 'tasks?type=offline', body);
     const payload = this.parseJson(response.textBody || '{}') as Record<string, Object>;
     if (cleanString(payload.Code) && payload.Code !== '0') {
@@ -179,8 +180,9 @@ class TingwuService {
     jobId: string,
     onProgress: (progress: number, statusLabel: string) => void
   ): Promise<TingwuCompletedResult> {
+    const pollTimeoutMs = this.resolvePollTimeoutMs();
     const startedAt = Date.now();
-    while (Date.now() - startedAt <= POLL_TIMEOUT_MS) {
+    while (Date.now() - startedAt <= pollTimeoutMs) {
       const status = await this.getTaskStatus(jobId);
       if (status.Code === 'TaskNotFound') {
         throw new AudioPipelineError(
@@ -215,11 +217,19 @@ class TingwuService {
     }
     throw new AudioPipelineError(
       AudioErrorReason.POLL_TIMEOUT,
-      `Tingwu polling timed out after ${POLL_TIMEOUT_MS}ms for job ${jobId}`
+      `Tingwu polling timed out after ${pollTimeoutMs}ms for job ${jobId}`
     );
   }
 
   private async getTaskStatus(jobId: string): Promise<TingwuStatusEnvelope> {
+    const forcedExpiredJobId = getAppRuntimeConfig().TINGWU_FORCE_TASK_EXPIRED_JOB_ID.trim();
+    if (forcedExpiredJobId.length > 0 && forcedExpiredJobId === jobId) {
+      console.info(`[HS-010][Tingwu] forced TaskNotFound for job ${jobId}`);
+      return {
+        Code: 'TaskNotFound',
+        Message: 'Forced task-expired mini-lab'
+      };
+    }
     const response = await this.signedRequest(
       'GET',
       `tasks/${encodeURIComponent(jobId)}?type=offline`,
@@ -437,6 +447,15 @@ class TingwuService {
     return `${method}\n${accept}\n${contentMd5}\n${contentType}\n${date}\n${canonicalHeaderLines}\n${canonicalResource}`;
   }
 
+  private resolvePollTimeoutMs(): number {
+    const raw = getAppRuntimeConfig().TINGWU_POLL_TIMEOUT_MS.trim();
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return DEFAULT_POLL_TIMEOUT_MS;
+    }
+    return Math.floor(parsed);
+  }
+
   private buildCanonicalResource(requestUrl: string): string {
     const withoutOrigin = requestUrl.replace(/^https?:\/\/[^/]+/i, '');
     const pathAndQuery = withoutOrigin.startsWith('/') ? withoutOrigin : `/${withoutOrigin}`;
@@ -599,7 +618,7 @@ class TingwuService {
     const chapters: ChapterSegment[] = [];
     items.forEach((item: Record<string, Object>, index: number) => {
       const chapter: ChapterSegment = {
-        title: cleanString(item.Title) || cleanString(item.Head) || `Chapter ${index + 1}`,
+        title: cleanString(item.Title) || cleanString(item.Headline) || cleanString(item.Head) || `Chapter ${index + 1}`,
         startMs: Math.floor(Number(item.Start || item.StartTime || 0) * 1000),
         endMs: Math.floor(Number(item.End || item.EndTime || 0) * 1000),
         summary: cleanString(item.Summary) || cleanString(item.Text)

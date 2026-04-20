@@ -146,9 +146,105 @@
   <div class="page-header">
     <h1>更新日志</h1>
     <p class="subtitle">产品功能与修复记录</p>
-    <span class="generated">生成于 2026年04月15日</span>
+    <span class="generated">生成于 2026年04月20日</span>
   </div>
   <div class="section-title">最近更新</div>
+  <div class="date-header"><h3>2026-04-20</h3></div>
+  <div class="entries">
+      <div class="entry">
+        <span class="badge badge-发布">发布</span>
+        <span class="entry-msg"><strong>HarmonyOS 日程 Phase 2B 交付</strong> — 完成 HS-006 Phase 2B，补齐 HarmonyOS 日程链路的本轮交付范围。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-新增">新增</span>
+        <span class="entry-msg"><strong>徽章设备控制信号</strong> — 新增设备控制信号通道，可承载徽章侧音量等快速控制指令。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-新增">新增</span>
+        <span class="entry-msg"><strong>智能对话气泡支持长按复制</strong> — 聊天气泡新增长按复制能力，便于转存 Agent 输出内容。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-修复">修复</span>
+        <span class="entry-msg"><strong>日程提交后保留徽章 WAV 文件</strong> — 移除日程提交完成后的徽章端录音删除动作，避免后续下载命中已不存在文件并触发 HTTP 403。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-other">维护</span>
+        <span class="entry-msg"><strong>Debug 版本号写入分支与提交信息</strong> — Debug 构建产物现在会带上当前 Git branch 与 commit 标识，便于现场排查安装包来源。</span>
+      </div>
+  </div>
+  <div class="date-header"><h3>2026-04-18</h3></div>
+  <div class="entries">
+      <div class="entry">
+        <span class="badge badge-新增">新增</span>
+        <span class="entry-msg"><strong>连接后隔离状态提示</strong> — 连接建立后会显式暴露隔离态与锁存结果，便于识别连接成功但链路不可用的异常场景。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-新增">新增</span>
+        <span class="entry-msg"><strong>WiFi 修复切换为 transport-first 流程</strong> — 徽章同步异常时优先按传输链路状态推进 WiFi 修复，减少盲目重试。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-修复">修复</span>
+        <span class="entry-msg"><strong>配对后疑似 WiFi 隔离识别</strong> — 配对完成后若出现疑似 WiFi 隔离，系统会更早标记异常并引导修复。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-新增">新增</span>
+        <span class="entry-msg"><strong>HarmonyOS Tingwu 音频链路加固</strong> — 对 HS-010 音频管线进行加固，降低 HarmonyOS 端 Tingwu 处理不稳定问题。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-修复">修复</span>
+        <span class="entry-msg"><strong>HarmonyOS Tingwu L3 收尾缺口</strong> — 补齐 HS-010 L3 遗留问题，减少 HarmonyOS 音频结果偏差与后续返工。</span>
+      </div>
+  </div>
+  <div class="date-header"><h3>2026-04-17</h3></div>
+  <div class="entries">
+      <div class="entry">
+        <span class="badge badge-新增">新增</span>
+        <span class="entry-msg"><strong>同步失败时提示 WiFi 修复</strong> — 当同步失败与链路异常相关时，界面会直接给出 WiFi 修复引导。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-修复">修复</span>
+        <span class="entry-msg"><strong>前台服务启动生命周期保持</strong> — 修复前台启动时的生命周期保持问题，降低服务被系统提前回收的风险。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-修复">修复</span>
+        <span class="entry-msg"><strong>日程显式 delta 重排支持</strong> — 日程调度链路恢复对显式 delta reschedule 的支持，避免变更未正确落地。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-other">重构</span>
+        <span class="entry-msg"><strong>移除废弃 Harmony flavor</strong> — 清理已废弃的 Harmony flavor 配置，减少双平台演进时的旧分支负担。</span>
+      </div>
+  </div>
+  <div class="date-header"><h3>2026-04-16</h3></div>
+  <div class="entries">
+      <div class="entry">
+        <span class="badge badge-新增">新增</span>
+        <span class="entry-msg"><strong>HarmonyOS 原生应用骨架落地</strong> — 完成 HarmonyOS 原生应用根结构脚手架，为后续独立容器与功能迁移提供落点。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-修复">修复</span>
+        <span class="entry-msg"><strong>HarmonyOS Phase 2A 音频链路类型安全</strong> — 修复 Phase 2A 音频管线中的类型安全问题，减少 HarmonyOS 端编译与接线错误。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-修复">修复</span>
+        <span class="entry-msg"><strong>HarmonyOS Tingwu 说话人区分与详情展示对齐</strong> — 调整 Tingwu diarization 与详情 UI 映射，减少人物区分和结果展示错位。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-修复">修复</span>
+        <span class="entry-msg"><strong>徽章下载前台保活恢复</strong> — 恢复徽章录音下载期间的前台保活链路，降低后台阶段被系统中断的风险。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-修复">修复</span>
+        <span class="entry-msg"><strong>下载通知前台通道恢复</strong> — 补回下载前台服务所需的通知通道接线，确保下载态提示与服务启动一致。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-修复">修复</span>
+        <span class="entry-msg"><strong>音频下载服务恢复 Lint-safe 接线</strong> — 调整下载服务 wiring，使音频下载链路重新满足构建检查并保持运行时行为稳定。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-修复">修复</span>
+        <span class="entry-msg"><strong>转录音频抽屉卡片细节优化</strong> — 调整转录音频抽屉卡片的展示细节，提升信息层次与可读性。</span>
+      </div>
+  </div>
   <div class="date-header"><h3>2026-04-15</h3></div>
   <div class="entries">
       <div class="entry">

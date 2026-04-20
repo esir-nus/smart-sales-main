@@ -8,7 +8,9 @@ import { ensureAppRuntimeConfigLoaded, getAppRuntimeConfigMissingKeys } from '..
 import {
   AudioItem,
   AudioJobStatus,
+  AudioErrorReason,
   AudioArtifacts,
+  AudioPipelineError,
   AudioSnapshot,
   isProcessingStatus,
   createEmptyAudioSnapshot
@@ -25,12 +27,36 @@ import {
 
 type AudioSnapshotListener = (snapshot: AudioSnapshot) => void;
 
+interface AudioItemPatch {
+  id?: string;
+  displayName?: string;
+  status?: AudioJobStatus;
+  progressPercent?: number;
+  summary?: string;
+  transcriptPreview?: string;
+  lastErrorMessage?: string;
+  lastErrorReason?: AudioErrorReason;
+  clearLastErrorReason?: boolean;
+  keywords?: string[];
+  sourceUri?: string;
+  localFileName?: string;
+  localPath?: string;
+  extension?: string;
+  sizeBytes?: number;
+  importedAt?: number;
+  updatedAt?: number;
+  completedAt?: number;
+  objectKey?: string;
+  publicUrl?: string;
+  jobId?: string;
+}
+
 class AudioRepository {
   private context?: common.UIAbilityContext;
   private items: AudioItem[] = [];
   private listeners: AudioSnapshotListener[] = [];
   private snapshot: AudioSnapshot = createEmptyAudioSnapshot();
-  private activeJobs: Record<string, boolean> = {};
+  private activeJobs: Map<string, boolean> = new Map();
 
   async initialize(context: common.UIAbilityContext): Promise<void> {
     if (this.context?.filesDir === context.filesDir && !this.snapshot.isLoading) {
@@ -40,14 +66,14 @@ class AudioRepository {
     this.context = context;
     this.items = fileStore.loadMetadata(context)
       .sort((left: AudioItem, right: AudioItem) => right.importedAt - left.importedAt);
-    this.snapshot = {
-      ...this.snapshot,
-      items: [...this.items],
-      configMissingKeys: getAppRuntimeConfigMissingKeys(),
-      isLoading: false,
-      isBusy: false,
-      busyMessage: ''
-    };
+    this.snapshot = this.buildSnapshot(
+      this.cloneItems(this.items),
+      getAppRuntimeConfigMissingKeys(),
+      false,
+      false,
+      '',
+      this.snapshot.lastErrorMessage
+    );
     this.emit();
     this.resumeProcessingJobs();
   }
@@ -90,6 +116,7 @@ class AudioRepository {
         summary: '',
         transcriptPreview: '',
         lastErrorMessage: '',
+        lastErrorReason: undefined,
         keywords: [],
         completedAt: 0,
         objectKey: '',
@@ -102,7 +129,7 @@ class AudioRepository {
       return item;
     } catch (error) {
       this.failGlobal(error);
-      throw error;
+      throw this.asError(error);
     }
   }
 
@@ -110,15 +137,25 @@ class AudioRepository {
     await ensureAppRuntimeConfigLoaded();
     const context = this.requireContext();
     const item = this.findItem(audioId);
-    if (!item || isProcessingStatus(item.status) || this.activeJobs[audioId]) {
+    if (!item) {
+      console.warn(`[HS-010][AudioRepository] start skipped missing-item audioId=${audioId}`);
       return;
     }
-    this.activeJobs[audioId] = true;
+    if (isProcessingStatus(item.status)) {
+      console.info(`[HS-010][AudioRepository] start skipped processing-status audioId=${audioId} status=${item.status}`);
+      return;
+    }
+    if (this.activeJobs.get(audioId) === true) {
+      console.info(`[HS-010][AudioRepository] start skipped active-job audioId=${audioId}`);
+      return;
+    }
+    this.activeJobs.set(audioId, true);
     try {
       this.patchItem(audioId, {
         status: AudioJobStatus.UPLOADING,
         progressPercent: 8,
         lastErrorMessage: '',
+        clearLastErrorReason: true,
         updatedAt: Date.now()
       });
 
@@ -165,26 +202,33 @@ class AudioRepository {
         transcriptPreview: completed.transcriptPreview,
         completedAt: Date.now(),
         lastErrorMessage: '',
+        clearLastErrorReason: true,
         keywords: completed.artifacts.keywords,
         jobId: '',
         updatedAt: Date.now()
       });
     } catch (error) {
       const message = this.errorMessage(error);
+      const reason = this.errorReason(error);
       this.patchItem(audioId, {
         status: AudioJobStatus.FAILED,
         progressPercent: 0,
         lastErrorMessage: message,
+        lastErrorReason: reason,
         updatedAt: Date.now()
       });
-      this.snapshot = {
-        ...this.snapshot,
-        lastErrorMessage: message
-      };
+      this.snapshot = this.buildSnapshot(
+        this.snapshot.items,
+        this.snapshot.configMissingKeys,
+        this.snapshot.isLoading,
+        this.snapshot.isBusy,
+        this.snapshot.busyMessage,
+        message
+      );
       this.emit();
-      throw error;
+      throw this.asError(error);
     } finally {
-      delete this.activeJobs[audioId];
+      this.activeJobs.delete(audioId);
     }
   }
 
@@ -204,10 +248,10 @@ class AudioRepository {
   }
 
   private async resumeObservation(audioId: string, jobId: string): Promise<void> {
-    if (this.activeJobs[audioId]) {
+    if (this.activeJobs.get(audioId) === true) {
       return;
     }
-    this.activeJobs[audioId] = true;
+    this.activeJobs.set(audioId, true);
     try {
       const completed = await tingwuService.observeUntilComplete(
         jobId,
@@ -228,6 +272,7 @@ class AudioRepository {
         transcriptPreview: completed.transcriptPreview,
         completedAt: Date.now(),
         lastErrorMessage: '',
+        clearLastErrorReason: true,
         keywords: completed.artifacts.keywords,
         jobId: '',
         updatedAt: Date.now()
@@ -237,10 +282,11 @@ class AudioRepository {
         status: AudioJobStatus.FAILED,
         progressPercent: 0,
         lastErrorMessage: this.errorMessage(error),
+        lastErrorReason: this.errorReason(error),
         updatedAt: Date.now()
       });
     } finally {
-      delete this.activeJobs[audioId];
+      this.activeJobs.delete(audioId);
     }
   }
 
@@ -255,53 +301,128 @@ class AudioRepository {
     return this.items.find((item: AudioItem) => item.id === audioId);
   }
 
-  private patchItem(audioId: string, patch: Partial<AudioItem>): void {
-    this.items = this.items.map((item: AudioItem) => item.id === audioId ? {
-      ...item,
-      ...patch
-    } : item);
+  private patchItem(audioId: string, patch: AudioItemPatch): void {
+    this.items = this.items.map((item: AudioItem) => {
+      if (item.id !== audioId) {
+        return item;
+      }
+      return this.mergeItem(item, patch);
+    });
     this.persist();
   }
 
   private persist(): void {
     const context = this.requireContext();
     fileStore.saveMetadata(context, this.items);
-    this.snapshot = {
-      ...this.snapshot,
-      items: [...this.items].sort((left: AudioItem, right: AudioItem) => right.importedAt - left.importedAt),
-      configMissingKeys: getAppRuntimeConfigMissingKeys(),
-      isLoading: false
-    };
+    this.snapshot = this.buildSnapshot(
+      this.sortedItems(),
+      getAppRuntimeConfigMissingKeys(),
+      false,
+      this.snapshot.isBusy,
+      this.snapshot.busyMessage,
+      this.snapshot.lastErrorMessage
+    );
     this.emit();
   }
 
   private setBusy(isBusy: boolean, busyMessage: string): void {
-    this.snapshot = {
-      ...this.snapshot,
+    this.snapshot = this.buildSnapshot(
+      this.snapshot.items,
+      getAppRuntimeConfigMissingKeys(),
+      this.snapshot.isLoading,
       isBusy,
       busyMessage,
-      lastErrorMessage: undefined,
-      configMissingKeys: getAppRuntimeConfigMissingKeys()
-    };
+      undefined
+    );
     this.emit();
   }
 
-  private failGlobal(error: unknown): void {
-    this.snapshot = {
-      ...this.snapshot,
-      isBusy: false,
-      busyMessage: '',
-      lastErrorMessage: this.errorMessage(error),
-      configMissingKeys: getAppRuntimeConfigMissingKeys()
-    };
+  private failGlobal(error: Object | null | undefined): void {
+    this.snapshot = this.buildSnapshot(
+      this.snapshot.items,
+      getAppRuntimeConfigMissingKeys(),
+      this.snapshot.isLoading,
+      false,
+      '',
+      this.errorMessage(error)
+    );
     this.emit();
   }
 
-  private errorMessage(error: unknown): string {
+  private errorMessage(error: Object | null | undefined): string {
     if (error instanceof Error) {
       return error.message;
     }
     return `${error}`;
+  }
+
+  private errorReason(error: Object | null | undefined): AudioErrorReason {
+    if (error instanceof AudioPipelineError) {
+      return error.reason;
+    }
+    return AudioErrorReason.UNKNOWN;
+  }
+
+  private asError(error: Object | null | undefined): Error {
+    if (error instanceof Error) {
+      return error;
+    }
+    return new Error(`${error}`);
+  }
+
+  private sortedItems(): AudioItem[] {
+    const items = this.cloneItems(this.items);
+    items.sort((left: AudioItem, right: AudioItem) => right.importedAt - left.importedAt);
+    return items;
+  }
+
+  private cloneItems(items: AudioItem[]): AudioItem[] {
+    return items.map((item: AudioItem) => this.mergeItem(item, {}));
+  }
+
+  private buildSnapshot(
+    items: AudioItem[],
+    configMissingKeys: string[],
+    isLoading: boolean,
+    isBusy: boolean,
+    busyMessage: string,
+    lastErrorMessage?: string
+  ): AudioSnapshot {
+    return {
+      items,
+      configMissingKeys,
+      isLoading,
+      isBusy,
+      busyMessage,
+      lastErrorMessage
+    };
+  }
+
+  private mergeItem(base: AudioItem, patch: AudioItemPatch): AudioItem {
+    return {
+      id: patch.id !== undefined ? patch.id : base.id,
+      displayName: patch.displayName !== undefined ? patch.displayName : base.displayName,
+      status: patch.status !== undefined ? patch.status : base.status,
+      progressPercent: patch.progressPercent !== undefined ? patch.progressPercent : base.progressPercent,
+      summary: patch.summary !== undefined ? patch.summary : base.summary,
+      transcriptPreview: patch.transcriptPreview !== undefined ? patch.transcriptPreview : base.transcriptPreview,
+      lastErrorMessage: patch.lastErrorMessage !== undefined ? patch.lastErrorMessage : base.lastErrorMessage,
+      lastErrorReason: patch.lastErrorReason !== undefined
+        ? patch.lastErrorReason
+        : (patch.clearLastErrorReason === true ? undefined : base.lastErrorReason),
+      keywords: patch.keywords !== undefined ? patch.keywords : base.keywords,
+      sourceUri: patch.sourceUri !== undefined ? patch.sourceUri : base.sourceUri,
+      localFileName: patch.localFileName !== undefined ? patch.localFileName : base.localFileName,
+      localPath: patch.localPath !== undefined ? patch.localPath : base.localPath,
+      extension: patch.extension !== undefined ? patch.extension : base.extension,
+      sizeBytes: patch.sizeBytes !== undefined ? patch.sizeBytes : base.sizeBytes,
+      importedAt: patch.importedAt !== undefined ? patch.importedAt : base.importedAt,
+      updatedAt: patch.updatedAt !== undefined ? patch.updatedAt : base.updatedAt,
+      completedAt: patch.completedAt !== undefined ? patch.completedAt : base.completedAt,
+      objectKey: patch.objectKey !== undefined ? patch.objectKey : base.objectKey,
+      publicUrl: patch.publicUrl !== undefined ? patch.publicUrl : base.publicUrl,
+      jobId: patch.jobId !== undefined ? patch.jobId : base.jobId
+    };
   }
 
   private emit(): void {

@@ -5,7 +5,7 @@
 > **Campaign Lifecycle**: Every major initiative (rewrite, refactor, UI polish, large fix) is an "Epic" or "Campaign". Every Campaign MUST be initialized using the `/campaign-planner` workflow to enforce the following checklist sequence:
 > 1. **Docs** (Ensure Specs exist) -> 2. **Interface Map** (Ensure Layer/Contract boundaries align) -> 3. **Plan** (Dev Planner) -> 4. **Execute** (Implementation) -> 5. **Test** (E2E/L2 Verification). 
 > **Master Guide Alignment**: The Master Guide acts as the overarching strategy doc for a campaign. Agents MUST NEVER auto-update the Master Guide without strict explicit human review (like a Review Conference) to prevent architectural hallucination drift. Instead, run `/04-doc-sync` at the *end* of a campaign.
-> **Last Updated**: 2026-04-16
+> **Last Updated**: 2026-04-18
 > **Work Classification**: `shared-contract` = shared product docs/contracts · `android-beta` = current Android/AOSP beta-maintenance line · `harmony-native` = future native Harmony delivery · `cross-platform-governance` = branch/review/ownership guardrails
 
 ---
@@ -218,10 +218,83 @@
   - `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/BadgeHttpClient.kt` (line 186)
   - `app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepositorySyncSupport.kt` (lines 446-458)
   - `app-core/src/main/java/com/smartsales/prism/ui/sim/SimAudioDrawerCard.kt` (lines 342-357)
+
+---
+
+## Shipped Fix: Debug Install Version Metadata Visibility
+> **Context**: On-device testing was repeatedly obscured because Android App Info always showed static `versionCode = 1` and `versionName = 0.1.0*`, making fresh debug installs indistinguishable from stale packages.
+
+- **Status**: Shipped (2026-04-17)
+- **Scope**:
+  - Added shared Android application versioning helper at `gradle/android-app-versioning.gradle.kts`
+  - `:app-core` debug builds now append build stamp plus git short SHA to the installed package version string
+  - `:app` debug builds follow the same scheme so all debug-installed APKs expose traceable build identity in Android App Info
+  - Base release version names remain stable; only debug install visibility was changed in this slice
 - **Testing Evidence**:
   - adb telemetry confirmed ESP32 response: `Content-Length=-1 Transfer-Encoding=chunked` for 37MB WAV file
   - On-device 5-minute download completed with progress bar animating and speed updating in real time
 - **Follow-Up from**: Shipped Fix: Download Progress Bar Wiring
+
+---
+
+## Shipped Fix: Pre-Sync Isolation Gate + On-Disconnect Probe
+> **Context**: Post-pairing isolation detection (shipped 2026-04-18) was informational only — pairing returned Success regardless, users proceeded to sync, and the batch upload failed upstream with no actionable signal. The OI-03 L3 evidence confirmed that `MotionTime1`-class AP isolation produces exactly this pattern: BLE stays alive, badge IP resolves, HTTP `:8088` is unreachable, yet the user has no indication before attempting sync. This fix moves detection to two earlier trigger points: the MANUAL sync preflight and the on-disconnect transition.
+
+- **Status**: Shipped (2026-04-18)
+- **Classification**: `android-beta`
+- **Scope**:
+  - New `IsolationTriggerContext` enum (`POST_PAIRING`, `PRE_SYNC`, `ON_DISCONNECT`) in `data/connectivity` domain module
+  - New `IsolationProbeHelper.runIsolationProbeIfSuspected()` in `app-core` — shared probe logic extracted from `RealPairingService`, reused by all three trigger points; single HTTP probe, zero BLE traffic, ESP32-safe
+  - `ConnectivityPrompt.promptSuspectedIsolation` gains `triggerContext` parameter; `SuspectedIsolationPromptRequest` carries it
+  - `SimAudioRepositorySyncSupport`: MANUAL preflight failure path now checks `isValidated + lastKnownIp` before falling back to WiFi-mismatch prompt; fires `PRE_SYNC` isolation prompt and throws `IsolationBlockedSyncException`
+  - `SimAudioDrawerViewModel`: catches `IsolationBlockedSyncException` separately — shows `DENIED` feedback only, no error snackbar (ConnectivityModal handles UX)
+  - `RealConnectivityBridge`: gains `PhoneWifiProvider` + `ConnectivityPrompt` deps; tracks `lastKnownBadgeIp`; on `WifiProvisioned|Syncing → Disconnected` fires deferred 1s `ON_DISCONNECT` probe
+  - `ConnectivityViewModel` gains `isolationTriggerContext: StateFlow<IsolationTriggerContext?>`, populated by `suspectedIsolationRequests` collector
+  - `WifiRepairIsolationContent` gains `triggerContext` parameter; renders context-aware title + body copy for PRE_SYNC ("同步暂停") and ON_DISCONNECT ("设备断开") alongside the existing POST_PAIRING default
+- **Files Changed**:
+  - `data/connectivity/src/main/java/com/smartsales/prism/domain/connectivity/IsolationTriggerContext.kt` (new)
+  - `data/connectivity/src/main/java/com/smartsales/prism/domain/connectivity/ConnectivityPrompt.kt`
+  - `app-core/src/main/java/com/smartsales/prism/data/connectivity/IsolationProbeHelper.kt` (new)
+  - `app-core/src/main/java/com/smartsales/prism/data/pairing/RealPairingService.kt`
+  - `app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepositorySyncSupport.kt`
+  - `app-core/src/main/java/com/smartsales/prism/ui/sim/SimAudioDrawerViewModel.kt`
+  - `app-core/src/main/java/com/smartsales/prism/data/connectivity/RealConnectivityBridge.kt`
+  - `app-core/src/main/java/com/smartsales/prism/ui/components/connectivity/ConnectivityPromptCoordinator.kt`
+  - `app-core/src/main/java/com/smartsales/prism/ui/components/connectivity/ConnectivityViewModel.kt`
+  - `app-core/src/main/java/com/smartsales/prism/ui/components/ConnectivityModal.kt`
+- **Owning Shard**:
+  - [`docs/cerb/interface-map.md`](../cerb/interface-map.md) (isolation detection: pre-sync gate + on-disconnect probe)
+  - [`docs/cerb/audio-management/spec.md`](../cerb/audio-management/spec.md) (pre-sync isolation gate rule)
+  - [`docs/cerb/device-pairing/spec.md`](../cerb/device-pairing/spec.md)
+
+---
+
+## Shipped Fix: Post-Pairing Isolation Detection
+> **Context**: On guest and enterprise WiFi networks (e.g. Motiontime1-class — client isolation, mesh per-AP subnets), badge and phone both join the same SSID and badge gets an IP, but the phone cannot reach the badge over HTTP. The existing WiFi-repair prompt incorrectly assumed credential mismatch and asked the user to re-enter WiFi credentials, which does not help on an isolated network. Real-world probe on Motiontime1 confirmed the failure mode: TCP connect succeeds but HTTP response never arrives (0 bytes, 3s timeout) — classic layer 3/4 AP isolation. SSID comparison was evaluated and dropped: OEM restrictions make phone SSID reads unreliable; `NET_CAPABILITY_VALIDATED` is the reliable discriminator.
+
+- **Status**: Shipped (2026-04-18)
+- **Scope**:
+  - `PhoneWifiSnapshot.Connected` gains `isValidated: Boolean = false`, populated from Android `NET_CAPABILITY_VALIDATED` in `AndroidPhoneWifiProvider` — no new permissions required
+  - `RealPairingService` runs a post-pairing isolation probe: `!isReachable(badgeIp:8088) && isValidated` → fires `ConnectivityPrompt.promptSuspectedIsolation(badgeIp)`; pairing returns `Success` regardless
+  - `ConnectivityPrompt` interface gains `suspend fun promptSuspectedIsolation(badgeIp: String)`
+  - `ConnectivityPromptCoordinator` gains `suspectedIsolationRequests: SharedFlow<SuspectedIsolationPromptRequest>`
+  - `WifiRepairState.HardFailure.HardFailureReason` gains `SUSPECTED_ISOLATION`
+  - `ConnectivityViewModel` gains `isolationBadgeIp: StateFlow<String?>`, routes isolation prompt to `HardFailure(SUSPECTED_ISOLATION)` + `_uiOverride = WIFI_MISMATCH`
+  - `ConnectivityModal` adds `WifiRepairIsolationContent`: title + body copy, badge IP for diagnosis, three action buttons (WiFi settings / hotspot settings / re-pair)
+- **Files Changed**:
+  - `app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/PhoneWifiProvider.kt`
+  - `app-core/src/main/java/com/smartsales/prism/ui/components/connectivity/WifiRepairState.kt`
+  - `data/connectivity/src/main/java/com/smartsales/prism/domain/connectivity/ConnectivityPrompt.kt`
+  - `app-core/src/main/java/com/smartsales/prism/ui/components/connectivity/ConnectivityPromptCoordinator.kt`
+  - `app-core/src/main/java/com/smartsales/prism/data/pairing/RealPairingService.kt`
+  - `app-core/src/main/java/com/smartsales/prism/ui/components/connectivity/ConnectivityViewModel.kt`
+  - `app-core/src/main/java/com/smartsales/prism/ui/components/ConnectivityModal.kt`
+- **Tests**:
+  - `RealPairingServiceTest`: 3 new cases (validated+unreachable → prompt fires; unvalidated+unreachable → no prompt; validated+reachable → no prompt)
+  - `ConnectivityViewModelRepairTest`: 1 new case (isolation prompt emit → `SUSPECTED_ISOLATION` state + `isolationBadgeIp` set)
+- **Owning Shard**:
+  - [`docs/cerb/interface-map.md`](../cerb/interface-map.md) (post-pairing isolation detection edge)
+  - [`docs/cerb/device-pairing/spec.md`](../cerb/device-pairing/spec.md)
 
 ---
 
@@ -437,6 +510,9 @@
   - On **2026-03-24**, focused unit verification confirmed the current global-reschedule implementation path for `SimSchedulerViewModelTest` and `SimAgentViewModelTest`; retrieval-hint-heavy cases such as people/location-led follow-up phrasing still need on-device proof.
   - On **2026-04-03**, the scheduler-intelligence overhaul closed the main architecture split between SIM and core routing, but the compatibility fallback from `RealUnifiedPipeline` into legacy JSON scheduler parsing still remains for shared-router `NotMatchedOrUnavailable` cases. Removing that fallback entirely remains follow-up debt after more production evidence is gathered.
   - On **2026-04-03**, the SIM scheduler drawer `REC` lane was hardened so terminal warning banners now normalize create-family reject text through scheduler-owned copy before UI projection; raw classifier/extractor wording no longer belongs on the visible warning banner, while the existing scheduler-owned reschedule unsupported copy remains intact.
+  - On **2026-04-17**, scheduler fallback parsing was split off the shared extractor lane: `Uni-A`, `Uni-B`, `Uni-C`, global reschedule, and follow-up reschedule now use a dedicated `ModelRegistry.SCHEDULER_EXTRACTOR` profile pinned to `qwen-plus`, while generic bounded extraction stays on shared `EXTRACTOR = qwen-turbo`. This is a preventive scheduler-only lane hardening and model upgrade; deterministic scheduler parsing and existing scheduler contracts remain unchanged.
+  - On **2026-04-17**, focused L3 on-device validation confirmed the scheduler lane split did not regress the checked runtime paths: `下周三早上8点提醒我买机票` still routed as `CREATE / SINGLE_EXACT / UNI_A`, `把拿合同改到今天下午4点` still routed as `RESCHEDULE / TARGETED_UPDATE / GLOBAL_RESCHEDULE`, and `把拿合同的时间推迟1个小时` was rejected as `RESCHEDULE / UNSUPPORTED / REJECT` with scheduler-owned copy because delta-only time shifts remain out of contract. Acceptance report: [`docs/reports/tests/L3-20260417-scheduler-extractor-lane-on-device.md`](../reports/tests/L3-20260417-scheduler-extractor-lane-on-device.md).
+  - On **2026-04-17**, the shared scheduler reschedule contract was widened to accept explicit-target signed delta time shifts such as `推迟1个小时` / `提前半小时` when the resolved task already has an exact scheduled start. Global reschedule, scheduler-drawer voice reschedule, and the follow-up V2 shadow path now stay aligned on that rule; vague / `时间待定` tasks still reject delta and require a concrete new clock time, while fuzzy relative phrases and omitted-target shortcuts remain unsupported. Focused verification: `:domain:scheduler:test --tests com.smartsales.prism.domain.scheduler.SchedulerLinterTest`, `:core:pipeline:testDebugUnitTest --tests com.smartsales.core.pipeline.FollowUpRescheduleContractAlignmentTest --tests com.smartsales.core.pipeline.GlobalRescheduleContractAlignmentTest --tests com.smartsales.core.pipeline.SchedulerRescheduleTimeInterpreterTest`, `:app-core:testDebugUnitTest --tests com.smartsales.prism.ui.sim.SimSchedulerViewModelTest --tests com.smartsales.prism.ui.sim.SimAgentViewModelTest`.
 
 ---
 

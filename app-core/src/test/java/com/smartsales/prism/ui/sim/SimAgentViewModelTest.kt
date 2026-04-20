@@ -12,6 +12,7 @@ import com.smartsales.core.test.fakes.FakeExecutor
 import com.smartsales.core.test.fakes.FakeScheduleBoard
 import com.smartsales.core.test.fakes.FakeUserProfileRepository
 import com.smartsales.data.oss.OssUploader
+import com.smartsales.prism.data.connectivity.BadgeEndpointRecoveryCoordinator
 import com.smartsales.prism.data.connectivity.legacy.FakePhoneWifiProvider
 import com.smartsales.prism.data.audio.SIM_AUDIO_METADATA_FILENAME
 import com.smartsales.prism.data.audio.SimAudioRepository
@@ -1945,6 +1946,7 @@ class SimAgentViewModelTest {
             runtime = SimAudioRepositoryRuntime(
                 context = context,
                 connectivityBridge = mock<ConnectivityBridge>(),
+                endpointRecoveryCoordinator = BadgeEndpointRecoveryCoordinator(),
                 ossUploader = mock<OssUploader>(),
                 tingwuPipeline = mock<TingwuPipeline>(),
                 connectivityPrompt = mock<ConnectivityPrompt>(),

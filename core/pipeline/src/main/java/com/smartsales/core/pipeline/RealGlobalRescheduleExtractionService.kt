@@ -23,7 +23,7 @@ class RealGlobalRescheduleExtractionService @Inject constructor(
 
     suspend fun extract(request: GlobalRescheduleExtractionRequest): GlobalRescheduleExtractionResult {
         val prompt = promptCompiler.compileGlobalRescheduleExtractionPrompt(request)
-        return when (val result = executor.execute(ModelRegistry.EXTRACTOR, prompt)) {
+        return when (val result = executor.execute(ModelRegistry.SCHEDULER_EXTRACTOR, prompt)) {
             is ExecutorResult.Success -> {
                 when (val parsed = schedulerLinter.parseGlobalRescheduleExtraction(result.content)) {
                     is GlobalRescheduleExtractionResult.Supported -> {

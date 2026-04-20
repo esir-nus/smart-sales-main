@@ -7,8 +7,10 @@ import { common } from '@kit.AbilityKit';
 import {
   AudioSnapshot,
   AudioJobStatus,
+  AudioErrorReason,
   AudioArtifacts,
   AudioItem,
+  ChapterSegment,
   SpeakerSummary,
   QuestionAnswer,
   createEmptyAudioSnapshot
@@ -17,6 +19,7 @@ import { audioRepository } from '../services/AudioRepository';
 import {
   formatBytes,
   formatDateTime,
+  formatDuration,
   statusLabel
 } from '../utils/FormatUtils';
 
@@ -111,6 +114,32 @@ export struct AudioPage {
 
   private progressFontColor(itemId: string): string {
     return this.selectedAudioId === itemId ? '#F8F2E9' : '#2F5D50';
+  }
+
+  private reasonLabel(reason?: AudioErrorReason): string {
+    switch (reason) {
+      case AudioErrorReason.AUTH_FAILED:
+        return 'Auth failed';
+      case AudioErrorReason.NETWORK_FAILED:
+        return 'Network failed';
+      case AudioErrorReason.POLL_TIMEOUT:
+        return 'Polling timed out';
+      case AudioErrorReason.TASK_EXPIRED:
+        return 'Task expired';
+      case AudioErrorReason.UPLOAD_FAILED:
+        return 'Upload failed';
+      case AudioErrorReason.UNKNOWN:
+        return 'Unknown failure';
+      default:
+        return '';
+    }
+  }
+
+  private chapterWindow(chapter: ChapterSegment): string {
+    if (chapter.startMs <= 0 && chapter.endMs <= 0) {
+      return '';
+    }
+    return `${formatDuration(chapter.startMs)}-${formatDuration(chapter.endMs)}`;
   }
 
   private toggleSection(key: string): void {
@@ -268,6 +297,12 @@ export struct AudioPage {
                 .fontSize(12)
                 .fontColor('#8D2F2F')
             }
+
+            if (item.lastErrorReason) {
+              Text(this.reasonLabel(item.lastErrorReason))
+                .fontSize(11)
+                .fontColor('#A04A1A')
+            }
           }
           .padding(16)
           .borderRadius(20)
@@ -344,6 +379,12 @@ export struct AudioPage {
         .fontColor('#8D2F2F')
     }
 
+    if (this.currentItem()!.lastErrorReason) {
+      Text(`Reason: ${this.reasonLabel(this.currentItem()!.lastErrorReason)}`)
+        .fontSize(12)
+        .fontColor('#A04A1A')
+    }
+
     // Overview: summary + keywords + chapters merged
     if (this.selectedArtifacts) {
       if (this.selectedArtifacts.smartSummary.length > 0) {
@@ -359,12 +400,27 @@ export struct AudioPage {
       }
 
       if (this.selectedArtifacts.chapters.length > 0) {
-        Column({ space: 4 }) {
-          ForEach(this.selectedArtifacts.chapters, (chapter: string) => {
-            Text(`· ${chapter}`)
-              .fontSize(12)
-              .lineHeight(18)
-              .opacity(0.8)
+        Column({ space: 8 }) {
+          ForEach(this.selectedArtifacts.chapters, (chapter: ChapterSegment) => {
+            Column({ space: 2 }) {
+              Text(`· ${chapter.title}`)
+                .fontSize(12)
+                .lineHeight(18)
+                .opacity(0.9)
+              if (this.chapterWindow(chapter).length > 0) {
+                Text(this.chapterWindow(chapter))
+                  .fontSize(11)
+                  .opacity(0.65)
+              }
+              if (chapter.summary && chapter.summary.length > 0) {
+                Text(chapter.summary)
+                  .fontSize(11)
+                  .lineHeight(17)
+                  .opacity(0.75)
+              }
+            }
+            .alignItems(HorizontalAlign.Start)
+            .width('100%')
           })
         }
         .alignItems(HorizontalAlign.Start)

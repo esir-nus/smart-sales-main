@@ -86,6 +86,8 @@ import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -537,7 +539,10 @@ private fun SimHomeHeroTopCap(
     val palette = rememberSimHomeHeroPalette()
     val isDarkTheme = PrismThemeDefaults.isDarkTheme
     val visibleItem = (dynamicIslandState as? DynamicIslandUiState.Visible)?.item
-    val showAmbientFlanks = visibleItem?.visualState == DynamicIslandVisualState.CONNECTIVITY_CONNECTED
+    val showAmbientFlanks = visibleItem?.visualState == DynamicIslandVisualState.CONNECTIVITY_CONNECTED ||
+        visibleItem?.visualState == DynamicIslandVisualState.CONNECTIVITY_PARTIAL
+    val wifiConnected = visibleItem?.visualState == DynamicIslandVisualState.CONNECTIVITY_CONNECTED
+    val bleTint = if (showAmbientFlanks) Color(0xFF34C759) else Color.White.copy(alpha = 0.30f)
     val ambientBatteryPercentage = visibleItem?.batteryPercentage ?: 78
     Box(
         modifier = Modifier
@@ -628,7 +633,7 @@ private fun SimHomeHeroTopCap(
                                 Icon(
                                     imageVector = Icons.Filled.Link,
                                     contentDescription = null,
-                                    tint = Color(0xFF34C759),
+                                    tint = bleTint,
                                     modifier = Modifier.size(SimHomeHeroTokens.AmbientLinkIconSize)
                                 )
                             }
@@ -640,10 +645,21 @@ private fun SimHomeHeroTopCap(
                                 delayMillis = 0,
                                 testTag = SIM_HEADER_RIGHT_AMBIENT_ICON_TEST_TAG
                             ) {
-                                SimHomeHeroAmbientBatteryGlyph(
-                                    percentage = ambientBatteryPercentage,
-                                    accentColor = Color(0xFF34C759)
-                                )
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = if (wifiConnected) Icons.Filled.Wifi else Icons.Filled.WifiOff,
+                                        contentDescription = null,
+                                        tint = if (wifiConnected) Color(0xFF34C759) else Color(0xFFFF453A),
+                                        modifier = Modifier.size(SimHomeHeroTokens.AmbientLinkIconSize)
+                                    )
+                                    SimHomeHeroAmbientBatteryGlyph(
+                                        percentage = ambientBatteryPercentage,
+                                        accentColor = Color(0xFF34C759)
+                                    )
+                                }
                             }
                         }
                     }
@@ -929,6 +945,10 @@ private data class SimHomeHeroIslandChroma(
                 DynamicIslandVisualState.CONNECTIVITY_CONNECTED -> SimHomeHeroIslandChroma(
                     dot = Color(0xFF34C759),
                     textGradient = listOf(Color(0xFFA4E38A), Color(0xFF34C759))
+                )
+                DynamicIslandVisualState.CONNECTIVITY_PARTIAL -> SimHomeHeroIslandChroma(
+                    dot = Color(0xFFFF9F0A),
+                    textGradient = listOf(Color(0xFFFFD380), Color(0xFFFF9F0A))
                 )
                 DynamicIslandVisualState.CONNECTIVITY_DISCONNECTED -> SimHomeHeroIslandChroma(
                     dot = Color.White.copy(alpha = 0.30f),

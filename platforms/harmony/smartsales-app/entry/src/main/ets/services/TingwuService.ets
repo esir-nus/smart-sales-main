@@ -9,6 +9,9 @@ import { getAppRuntimeConfig } from '../config/AppRuntimeConfig';
 import {
   AudioArtifacts,
   AudioProviderPayloads,
+  AudioErrorReason,
+  AudioPipelineError,
+  ChapterSegment,
   DiarizedSegment,
   SmartSummary,
   SpeakerSummary,
@@ -64,9 +67,19 @@ export interface TingwuCompletedResult {
   transcriptPreview: string;
 }
 
+interface CanonicalQueryEntry {
+  raw: string;
+  name: string;
+  value: string;
+}
+
+const POLL_INTERVAL_MS = 5000;
+const DEFAULT_POLL_TIMEOUT_MS = 30 * 60 * 1000;
+
 // 提交任务请求体的类型定义（ArkTS 要求所有字面量都匹配声明的接口）
 interface TingwuDiarizationParam {
-  SpeakerCount: number;
+  SpeakerCount?: number;
+  OutputLevel?: number;
 }
 
 interface TingwuTranscriptionParam {
@@ -109,14 +122,6 @@ interface TingwuSubmitBody {
   Parameters: TingwuParameters;
 }
 
-// 章节元素类型（替换原先的内联对象类型）
-interface ChapterItem {
-  title: string;
-  startMs: number;
-  endMs: number;
-  summary?: string;
-}
-
 class TingwuService {
   async submitTask(fileUrl: string, audioAssetName: string): Promise<TingwuSubmitResult> {
     const runtimeConfig = getAppRuntimeConfig();
@@ -126,7 +131,7 @@ class TingwuService {
       TaskKey: taskKey,
       FileUrl: fileUrl
     };
-    const diarization: TingwuDiarizationParam = { SpeakerCount: 0 };
+    const diarization: TingwuDiarizationParam = { OutputLevel: 1 };
     const transcription: TingwuTranscriptionParam = {
       DiarizationEnabled: true,
       Diarization: diarization
@@ -145,7 +150,8 @@ class TingwuService {
       Summarization: summarization,
       MeetingAssistanceEnabled: true,
       MeetingAssistance: meetingAssistance,
-      IdentityRecognitionEnabled: true,
+      // Harmony 当前没有 Android 那种 identity hint 供给链，不能空开关直传。
+      IdentityRecognitionEnabled: false,
       Transcoding: transcoding
     };
     const submitBody: TingwuSubmitBody = {
@@ -154,6 +160,7 @@ class TingwuService {
       Parameters: parameters
     };
     const body = JSON.stringify(submitBody);
+    console.info(`[HS-010][Tingwu] submit taskKey=${taskKey} audio=${audioAssetName}`);
     const response = await this.signedRequest('PUT', 'tasks?type=offline', body);
     const payload = this.parseJson(response.textBody || '{}') as Record<string, Object>;
     if (cleanString(payload.Code) && payload.Code !== '0') {
@@ -173,27 +180,88 @@ class TingwuService {
     jobId: string,
     onProgress: (progress: number, statusLabel: string) => void
   ): Promise<TingwuCompletedResult> {
-    while (true) {
+    const pollTimeoutMs = this.resolvePollTimeoutMs();
+    const startedAt = Date.now();
+    while (Date.now() - startedAt <= pollTimeoutMs) {
       const status = await this.getTaskStatus(jobId);
+      if (status.Code === 'TaskNotFound') {
+        throw new AudioPipelineError(
+          AudioErrorReason.TASK_EXPIRED,
+          `Tingwu task expired or missing: ${jobId}`,
+          'TaskNotFound'
+        );
+      }
       const statusLabel = status.Data?.TaskStatus || 'UNKNOWN';
       const progress = status.Data?.TaskProgress || 0;
       onProgress(progress, statusLabel);
-      if (statusLabel === 'COMPLETED') {
+      const normalizedStatusLabel = statusLabel.trim().toUpperCase();
+      if (normalizedStatusLabel === 'COMPLETED') {
         const emptyStatusData: TingwuStatusData = {};
         return this.fetchArtifacts(status.Data || emptyStatusData);
       }
-      if (statusLabel === 'FAILED') {
-        throw new Error(status.Data?.ErrorMessage || status.Data?.ErrorCode || 'Tingwu task failed');
+      if (normalizedStatusLabel.includes('EXPIRED')) {
+        throw new AudioPipelineError(
+          AudioErrorReason.TASK_EXPIRED,
+          status.Data?.ErrorMessage || 'Tingwu task expired',
+          status.Data?.ErrorCode || normalizedStatusLabel
+        );
       }
-      await this.sleep(5000);
+      if (normalizedStatusLabel === 'FAILED') {
+        throw new AudioPipelineError(
+          AudioErrorReason.UNKNOWN,
+          status.Data?.ErrorMessage || status.Data?.ErrorCode || 'Tingwu task failed',
+          status.Data?.ErrorCode
+        );
+      }
+      await this.sleep(POLL_INTERVAL_MS);
     }
+    throw new AudioPipelineError(
+      AudioErrorReason.POLL_TIMEOUT,
+      `Tingwu polling timed out after ${pollTimeoutMs}ms for job ${jobId}`
+    );
   }
 
   private async getTaskStatus(jobId: string): Promise<TingwuStatusEnvelope> {
-    const response = await this.signedRequest('GET', `tasks/${encodeURIComponent(jobId)}?type=offline`);
+    const forcedExpiredJobId = getAppRuntimeConfig().TINGWU_FORCE_TASK_EXPIRED_JOB_ID.trim();
+    if (forcedExpiredJobId.length > 0 && forcedExpiredJobId === jobId) {
+      console.info(`[HS-010][Tingwu] forced TaskNotFound for job ${jobId}`);
+      return {
+        Code: 'TaskNotFound',
+        Message: 'Forced task-expired mini-lab'
+      };
+    }
+    const response = await this.signedRequest(
+      'GET',
+      `tasks/${encodeURIComponent(jobId)}?type=offline`,
+      undefined,
+      true
+    );
     const payload = this.parseJson(response.textBody || '{}') as TingwuStatusEnvelope;
-    if (payload.Code && payload.Code !== '0' && payload.Code !== 'TaskNotFound') {
-      throw new Error(`Tingwu status failed: ${payload.Message || payload.Code}`);
+    if (response.statusCode === 404 && (!payload.Code || payload.Code === 'TaskNotFound')) {
+      const missingPayload: TingwuStatusEnvelope = {
+        Code: 'TaskNotFound',
+        Message: payload.Message || 'Task not found'
+      };
+      return missingPayload;
+    }
+    if (payload.Code === 'TaskNotFound') {
+      return payload;
+    }
+    if (payload.Code && payload.Code !== '0') {
+      throw new AudioPipelineError(
+        AudioErrorReason.UNKNOWN,
+        `Tingwu status failed: ${payload.Message || payload.Code}`,
+        payload.Code,
+        response.statusCode
+      );
+    }
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw new AudioPipelineError(
+        AudioErrorReason.UNKNOWN,
+        `Tingwu status HTTP ${response.statusCode}: ${payload.Message || response.textBody || ''}`.trim(),
+        payload.Code,
+        response.statusCode
+      );
     }
     return payload;
   }
@@ -251,9 +319,6 @@ class TingwuService {
     providerPayloads.meetingAssistance = meetingAssistanceRaw || '';
     providerPayloads.identityRecognition = identityRecognitionRaw || '';
 
-    const chapterTitles: string[] = [];
-    chapters.forEach((ch: ChapterItem) => chapterTitles.push(ch.title));
-
     const artifacts: AudioArtifacts = {
       outputMp3Path: cleanString(data.OutputMp3Path) || '',
       outputMp4Path: cleanString(data.OutputMp4Path) || '',
@@ -264,7 +329,7 @@ class TingwuService {
       autoChaptersUrl: autoChaptersUrl || '',
       customPromptUrl: '',
       transcriptMarkdown: transcriptMarkdown || '',
-      chapters: chapterTitles,
+      chapters,
       smartSummary: smartSummaryResult?.summary || '',
       smartSummaryStructured: smartSummaryResult,
       diarizedSegments: diarizedSegments,
@@ -298,7 +363,8 @@ class TingwuService {
   private async signedRequest(
     method: 'GET' | 'PUT',
     resource: string,
-    body?: string
+    body?: string,
+    allowNonSuccess: boolean = false
   ): Promise<HttpResponse> {
     const runtimeConfig = getAppRuntimeConfig();
     const baseUrl = normalizeTingwuBaseUrl(runtimeConfig.TINGWU_BASE_URL);
@@ -327,19 +393,34 @@ class TingwuService {
       headers['x-acs-security-token'] = runtimeConfig.TINGWU_SECURITY_TOKEN.trim();
     }
 
-    const stringToSign = this.buildStringToSign(method, headers, contentType, date, resource);
+    const requestUrl = `${baseUrl}${resource}`;
+    const canonicalResource = this.buildCanonicalResource(requestUrl);
+    const stringToSign = this.buildStringToSign(method, headers, canonicalResource);
     const signature = hmacSha1Base64(accessKeySecret, stringToSign);
     headers['Authorization'] = `acs ${accessKeyId}:${signature}`;
 
     const response = await httpClient.requestText(
-      `${baseUrl}${resource}`,
+      requestUrl,
       method === 'GET' ? http.RequestMethod.GET : http.RequestMethod.PUT,
       headers,
       body
     );
+    if (this.isAuthFailure(response.statusCode, response.textBody || '')) {
+      throw new AudioPipelineError(
+        AudioErrorReason.AUTH_FAILED,
+        `Tingwu auth failed (${response.statusCode}): ${response.textBody || ''}`.trim(),
+        this.extractAuthDetailCode(response.textBody || ''),
+        response.statusCode
+      );
+    }
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw new Error(`Tingwu HTTP ${response.statusCode}: ${response.textBody || ''}`.trim());
+    if (!allowNonSuccess && (response.statusCode < 200 || response.statusCode >= 300)) {
+      throw new AudioPipelineError(
+        AudioErrorReason.UNKNOWN,
+        `Tingwu HTTP ${response.statusCode}: ${response.textBody || ''}`.trim(),
+        undefined,
+        response.statusCode
+      );
     }
     return response;
   }
@@ -347,21 +428,94 @@ class TingwuService {
   private buildStringToSign(
     method: string,
     headers: Record<string, string>,
-    contentType: string,
-    date: string,
-    resource: string
+    canonicalResource: string
   ): string {
     const acsKeys: string[] = [];
     Object.keys(headers).forEach((key: string) => {
       if (key.toLowerCase().startsWith('x-acs-')) {
-        acsKeys.push(key);
+        acsKeys.push(key.toLowerCase());
       }
     });
     acsKeys.sort();
     const canonicalHeaderLines = acsKeys
       .map((key: string) => `${key.toLowerCase()}:${headers[key].trim()}`)
       .join('\n');
-    return `${method}\napplication/json\n\n${contentType}\n${date}\n${canonicalHeaderLines}\n/${resource}`;
+    const accept = headers['Accept'] || 'application/json';
+    const contentMd5 = headers['Content-MD5'] || '';
+    const contentType = headers['Content-Type'] || 'application/json; charset=UTF-8';
+    const date = headers['Date'] || '';
+    return `${method}\n${accept}\n${contentMd5}\n${contentType}\n${date}\n${canonicalHeaderLines}\n${canonicalResource}`;
+  }
+
+  private resolvePollTimeoutMs(): number {
+    const raw = getAppRuntimeConfig().TINGWU_POLL_TIMEOUT_MS.trim();
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return DEFAULT_POLL_TIMEOUT_MS;
+    }
+    return Math.floor(parsed);
+  }
+
+  private buildCanonicalResource(requestUrl: string): string {
+    const withoutOrigin = requestUrl.replace(/^https?:\/\/[^/]+/i, '');
+    const pathAndQuery = withoutOrigin.startsWith('/') ? withoutOrigin : `/${withoutOrigin}`;
+    const queryIndex = pathAndQuery.indexOf('?');
+    if (queryIndex < 0) {
+      return pathAndQuery;
+    }
+    const path = pathAndQuery.slice(0, queryIndex) || '/';
+    const rawQuery = pathAndQuery.slice(queryIndex + 1);
+    const canonicalQuery = this.sortQueryString(rawQuery);
+    if (!canonicalQuery) {
+      return path;
+    }
+    return `${path}?${canonicalQuery}`;
+  }
+
+  private sortQueryString(rawQuery: string): string {
+    const entries: CanonicalQueryEntry[] = rawQuery
+      .split('&')
+      .map((part: string) => part.trim())
+      .filter((part: string) => part.length > 0)
+      .map((part: string): CanonicalQueryEntry => {
+        const equalsIndex = part.indexOf('=');
+        if (equalsIndex < 0) {
+          return {
+            raw: part,
+            name: part,
+            value: ''
+          };
+        }
+        return {
+          raw: part,
+          name: part.slice(0, equalsIndex),
+          value: part.slice(equalsIndex + 1)
+        };
+      });
+    entries.sort((left: CanonicalQueryEntry, right: CanonicalQueryEntry) => {
+      if (left.name === right.name) {
+        return left.value.localeCompare(right.value);
+      }
+      return left.name.localeCompare(right.name);
+    });
+    return entries.map((entry: CanonicalQueryEntry) => entry.raw).join('&');
+  }
+
+  private isAuthFailure(statusCode: number, body: string): boolean {
+    if (statusCode === 401 || statusCode === 403) {
+      return true;
+    }
+    return body.includes('SignatureDoesNotMatch') || body.includes('InvalidAccessKeyId');
+  }
+
+  private extractAuthDetailCode(body: string): string | undefined {
+    if (body.includes('SignatureDoesNotMatch')) {
+      return 'SignatureDoesNotMatch';
+    }
+    if (body.includes('InvalidAccessKeyId')) {
+      return 'InvalidAccessKeyId';
+    }
+    return undefined;
   }
 
   private parseJson(raw: string): Object {
@@ -453,7 +607,7 @@ class TingwuService {
     return merged;
   }
 
-  private parseChapters(raw?: string): ChapterItem[] {
+  private parseChapters(raw?: string): ChapterSegment[] {
     const empty: Record<string, Object> = {};
     const payload = safeObject(this.parseJson(raw || '{}')) || empty;
     const dataRoot = safeObject(payload.Data);
@@ -461,10 +615,10 @@ class TingwuService {
       .concat(arrayOfObjects(payload.Chapters))
       .concat(arrayOfObjects(dataRoot?.AutoChapters))
       .concat(arrayOfObjects(dataRoot?.Chapters));
-    const chapters: ChapterItem[] = [];
+    const chapters: ChapterSegment[] = [];
     items.forEach((item: Record<string, Object>, index: number) => {
-      const chapter: ChapterItem = {
-        title: cleanString(item.Title) || cleanString(item.Head) || `Chapter ${index + 1}`,
+      const chapter: ChapterSegment = {
+        title: cleanString(item.Title) || cleanString(item.Headline) || cleanString(item.Head) || `Chapter ${index + 1}`,
         startMs: Math.floor(Number(item.Start || item.StartTime || 0) * 1000),
         endMs: Math.floor(Number(item.End || item.EndTime || 0) * 1000),
         summary: cleanString(item.Summary) || cleanString(item.Text)

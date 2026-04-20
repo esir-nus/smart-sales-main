@@ -13,6 +13,53 @@ export enum AudioJobStatus {
   FAILED = 'FAILED'
 }
 
+// 音频失败原因枚举
+export enum AudioErrorReason {
+  AUTH_FAILED = 'AUTH_FAILED',
+  NETWORK_FAILED = 'NETWORK_FAILED',
+  POLL_TIMEOUT = 'POLL_TIMEOUT',
+  TASK_EXPIRED = 'TASK_EXPIRED',
+  UPLOAD_FAILED = 'UPLOAD_FAILED',
+  UNKNOWN = 'UNKNOWN'
+}
+
+// 听悟章节时间片段
+export interface ChapterSegment {
+  title: string;
+  startMs: number;
+  endMs: number;
+  summary?: string;
+}
+
+// Provider 原始载荷
+export interface AudioProviderPayloads {
+  transcription: string;
+  autoChapters: string;
+  summarization: string;
+  meetingAssistance: string;
+  identityRecognition: string;
+}
+
+// 带失败原因的错误对象，供服务层向仓库层传递可判定错误
+export class AudioPipelineError extends Error {
+  reason: AudioErrorReason;
+  detailCode?: string;
+  statusCode?: number;
+
+  constructor(
+    reason: AudioErrorReason,
+    message: string,
+    detailCode?: string,
+    statusCode?: number
+  ) {
+    super(message);
+    this.name = 'AudioPipelineError';
+    this.reason = reason;
+    this.detailCode = detailCode;
+    this.statusCode = statusCode;
+  }
+}
+
 // 音频项目数据模型（21 字段，与容器版本语义一致）
 export interface AudioItem {
   id: string;
@@ -22,6 +69,7 @@ export interface AudioItem {
   summary: string;
   transcriptPreview: string;
   lastErrorMessage: string;
+  lastErrorReason?: AudioErrorReason;
   keywords: string[];
   sourceUri: string;
   localFileName: string;
@@ -41,7 +89,7 @@ export interface AudioArtifacts {
   transcriptMarkdown: string;
   smartSummary: string;
   smartSummaryStructured?: SmartSummary;
-  chapters: string[];
+  chapters: ChapterSegment[];
   outputMp3Path: string;
   outputMp4Path: string;
   outputThumbnailPath: string;
@@ -55,7 +103,7 @@ export interface AudioArtifacts {
   speakerSummaries: SpeakerSummary[];
   questionAnswers: QuestionAnswer[];
   keywords: string[];
-  providerPayloads: Record<string, string>;
+  providerPayloads: AudioProviderPayloads;
 }
 
 // 说话人分段

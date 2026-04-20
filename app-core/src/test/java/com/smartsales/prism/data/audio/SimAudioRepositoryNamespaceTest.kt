@@ -2,6 +2,7 @@ package com.smartsales.prism.data.audio
 
 import android.content.Context
 import com.smartsales.data.oss.OssUploader
+import com.smartsales.prism.data.connectivity.BadgeEndpointRecoveryCoordinator
 import com.smartsales.prism.data.connectivity.legacy.FakePhoneWifiProvider
 import com.smartsales.prism.domain.audio.AudioFile
 import com.smartsales.prism.domain.audio.AudioSource
@@ -66,6 +67,7 @@ class SimAudioRepositoryNamespaceTest {
             runtime = SimAudioRepositoryRuntime(
                 context = context,
                 connectivityBridge = connectivityBridge,
+                endpointRecoveryCoordinator = BadgeEndpointRecoveryCoordinator(),
                 ossUploader = ossUploader,
                 tingwuPipeline = tingwuPipeline,
                 connectivityPrompt = mock<ConnectivityPrompt>(),
@@ -98,6 +100,7 @@ class SimAudioRepositoryNamespaceTest {
             runtime = SimAudioRepositoryRuntime(
                 context = context,
                 connectivityBridge = connectivityBridge,
+                endpointRecoveryCoordinator = BadgeEndpointRecoveryCoordinator(),
                 ossUploader = ossUploader,
                 tingwuPipeline = tingwuPipeline,
                 connectivityPrompt = mock<ConnectivityPrompt>(),
@@ -123,6 +126,7 @@ class SimAudioRepositoryNamespaceTest {
             runtime = SimAudioRepositoryRuntime(
                 context = context,
                 connectivityBridge = connectivityBridge,
+                endpointRecoveryCoordinator = BadgeEndpointRecoveryCoordinator(),
                 ossUploader = ossUploader,
                 tingwuPipeline = tingwuPipeline,
                 connectivityPrompt = mock<ConnectivityPrompt>(),

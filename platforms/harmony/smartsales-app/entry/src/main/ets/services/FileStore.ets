@@ -4,9 +4,10 @@
 // Author: created on 2026-04-16
 
 import { common } from '@kit.AbilityKit';
+import { util } from '@kit.ArkTS';
 import { fileIo as fs } from '@kit.CoreFileKit';
-import { AudioItem, AudioArtifacts } from '../domain/Audio';
-import { guessExtension } from '../utils/FormatUtils';
+import { AudioItem, AudioArtifacts, ChapterSegment } from '../domain/Audio';
+import { cleanString, guessExtension, safeObject } from '../utils/FormatUtils';
 
 const METADATA_FILE_NAME = 'smartsales_audio_metadata.json';
 
@@ -41,7 +42,7 @@ class FileStore {
       return [];
     }
     try {
-      const parsed = JSON.parse(raw);
+      const parsed = JSON.parse(raw) as Object;
       return Array.isArray(parsed) ? parsed as AudioItem[] : [];
     } catch (error) {
       console.error(`Failed to parse metadata: ${JSON.stringify(error)}`);
@@ -59,7 +60,14 @@ class FileStore {
       return undefined;
     }
     try {
-      return JSON.parse(raw) as AudioArtifacts;
+      const parsed = JSON.parse(raw) as Object;
+      const record = safeObject(parsed);
+      if (!record) {
+        return undefined;
+      }
+      const artifacts = parsed as AudioArtifacts;
+      artifacts.chapters = this.normalizeChapters(record['chapters']);
+      return artifacts;
     } catch (error) {
       console.error(`Failed to parse artifacts: ${JSON.stringify(error)}`);
       return undefined;
@@ -68,6 +76,60 @@ class FileStore {
 
   saveArtifacts(context: common.UIAbilityContext, audioId: string, artifacts: AudioArtifacts): void {
     this.writeText(this.artifactPath(context, audioId), JSON.stringify(artifacts, null, 2));
+  }
+
+  private normalizeChapters(value: Object | null | undefined): ChapterSegment[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+    const chapters: ChapterSegment[] = [];
+    value.forEach((entry: Object | string) => {
+      if (typeof entry === 'string') {
+        const title = cleanString(entry) || 'Chapter';
+        chapters.push({
+          title,
+          startMs: 0,
+          endMs: 0,
+          summary: undefined
+        });
+        return;
+      }
+      const record = safeObject(entry);
+      if (!record) {
+        return;
+      }
+      const title = cleanString(record['title']) || cleanString(record['Title']) || 'Chapter';
+      const startMs = this.readMillis(record['startMs'], record['StartMs'], record['Start']);
+      const endMs = this.readMillis(record['endMs'], record['EndMs'], record['End']);
+      const summary = cleanString(record['summary']) || cleanString(record['Summary']);
+      chapters.push({
+        title,
+        startMs,
+        endMs,
+        summary
+      });
+    });
+    return chapters;
+  }
+
+  private readMillis(
+    primary: Object | null | undefined,
+    secondary: Object | null | undefined,
+    tertiary: Object | null | undefined
+  ): number {
+    const primaryValue = Number(primary);
+    if (Number.isFinite(primaryValue) && primaryValue >= 0) {
+      return Math.floor(primaryValue);
+    }
+    const secondaryValue = Number(secondary);
+    if (Number.isFinite(secondaryValue) && secondaryValue >= 0) {
+      return Math.floor(secondaryValue);
+    }
+    const tertiaryValue = Number(tertiary);
+    if (Number.isFinite(tertiaryValue) && tertiaryValue >= 0) {
+      return Math.floor(tertiaryValue);
+    }
+    return 0;
   }
 
   importFromUri(
@@ -127,13 +189,13 @@ class FileStore {
 
   private readText(path: string): string {
     const bytes = new Uint8Array(this.readBinary(path));
-    return new TextDecoder().decode(bytes);
+    return util.TextDecoder.create('utf-8').decodeToString(bytes);
   }
 
   private writeText(path: string, contents: string): void {
     const file = fs.openSync(path, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE | fs.OpenMode.TRUNC);
     try {
-      const bytes = new TextEncoder().encode(contents);
+      const bytes = new util.TextEncoder().encodeInto(contents);
       fs.writeSync(file.fd, bytes.buffer);
     } finally {
       fs.closeSync(file);

@@ -115,11 +115,12 @@ Rules:
 - edits under `platforms/harmony/**` require at least one live sprint in `docs/plans/sprint-tracker.md` at the moment of the edit
 - operators open sprint contracts via `/sprint` (see `.claude/commands/sprint.md`)
 - `Proposed`, `Accepted`, `Deferred`, and `Absorbed` statuses do not qualify — they are not inside contract bounds
-- the rule is enforced by the PreToolUse hook `.claude/hooks/harmony-sprint-gate.sh`, wired in `.claude/settings.json`; the hook blocks `Edit`, `Write`, and `NotebookEdit` on Harmony paths when no live sprint exists
-- `Bash` is not gated — operators must honor the rule manually for shell-driven edits
+- repo-owned CI enforces the rule on push and pull request via `.github/workflows/platform-governance-check.yml`; Harmony path diffs fail when `docs/plans/sprint-tracker.md` has no `Active` or `Blocked` sprint
+- runtime-local hooks may add earlier local blocking, but the repo must not depend on a `.claude`-owned hook path as the only enforcement layer
+- shell-driven edits are still a human discipline concern until a runtime adds earlier local interception; CI is the mandatory backstop
 - `platforms/ios/**` will inherit the same mechanism once the iOS integration trunk is created; it is out of scope today
 
-Rationale: Harmony is the primary forward platform (§3.2). Unattributed drift here is more costly than on Android beta-maintenance. The gate makes sprint authorship a hard precondition rather than a documentation hope.
+Rationale: Harmony is the primary forward platform (§3.2). Unattributed drift here is more costly than on Android beta-maintenance. The gate keeps sprint authorship as a merge-time precondition rather than a documentation hope, while leaving room for stricter local runtime hooks on top.
 
 ---
 

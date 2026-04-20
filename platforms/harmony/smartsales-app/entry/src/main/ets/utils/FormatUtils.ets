@@ -12,6 +12,8 @@ import {
   QuestionAnswer
 } from '../domain/Audio';
 
+type JsonValue = Object | string | number | boolean | null | undefined;
+
 // 生成唯一音频 ID
 export function createAudioId(): string {
   return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
@@ -156,7 +158,7 @@ export function uniqueStrings(values: string[]): string[] {
 }
 
 // 安全字符串提取（非字符串或空白返回 undefined）
-export function cleanString(value: unknown): string | undefined {
+export function cleanString(value: JsonValue): string | undefined {
   if (typeof value !== 'string') {
     return undefined;
   }
@@ -165,17 +167,21 @@ export function cleanString(value: unknown): string | undefined {
 }
 
 // 安全对象数组提取
-export function arrayOfObjects(value: unknown): Array<Record<string, Object>> {
+export function arrayOfObjects(value: JsonValue): Array<Record<string, Object>> {
   if (!Array.isArray(value)) {
     return [];
   }
-  return value.filter(
-    (item: unknown) => typeof item === 'object' && item !== null
-  ) as Array<Record<string, Object>>;
+  const result: Array<Record<string, Object>> = [];
+  (value as Array<JsonValue>).forEach((item: JsonValue) => {
+    if (typeof item === 'object' && item !== null && !Array.isArray(item)) {
+      result.push(item as Record<string, Object>);
+    }
+  });
+  return result;
 }
 
 // 安全 object 提取
-export function safeObject(value: unknown): Record<string, Object> | undefined {
+export function safeObject(value: JsonValue): Record<string, Object> | undefined {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return undefined;
   }
@@ -183,41 +189,46 @@ export function safeObject(value: unknown): Record<string, Object> | undefined {
 }
 
 // 安全字符串数组提取
-export function safeStringArray(value: unknown): string[] {
+export function safeStringArray(value: JsonValue): string[] {
   if (!Array.isArray(value)) {
     return [];
   }
-  return value
-    .map((item: unknown) => cleanString(item))
-    .filter((item: string | undefined): item is string => item !== undefined);
+  const result: string[] = [];
+  (value as Array<JsonValue>).forEach((item: JsonValue) => {
+    const normalized = cleanString(item);
+    if (normalized !== undefined) {
+      result.push(normalized);
+    }
+  });
+  return result;
 }
 
 // 从 JSON 解析说话人摘要列表
 export function makeSpeakerSummaries(items: Array<Record<string, Object>>): SpeakerSummary[] {
-  return items
-    .map((item: Record<string, Object>) => {
-      const summary = cleanString(item['Summary']) || cleanString(item['summary']);
-      if (!summary) {
-        return undefined;
-      }
-      return {
-        name: cleanString(item['Name']) || cleanString(item['name']),
-        summary
-      } as SpeakerSummary;
-    })
-    .filter((item: SpeakerSummary | undefined): item is SpeakerSummary => item !== undefined);
+  const result: SpeakerSummary[] = [];
+  items.forEach((item: Record<string, Object>) => {
+    const summary = cleanString(item['Summary']) || cleanString(item['summary']);
+    if (!summary) {
+      return;
+    }
+    result.push({
+      name: cleanString(item['Name']) || cleanString(item['name']),
+      summary
+    });
+  });
+  return result;
 }
 
 // 从 JSON 解析问答对列表
 export function makeQuestionAnswers(items: Array<Record<string, Object>>): QuestionAnswer[] {
-  return items
-    .map((item: Record<string, Object>) => {
-      const question = cleanString(item['Question']) || cleanString(item['question']);
-      const answer = cleanString(item['Answer']) || cleanString(item['answer']);
-      if (!question || !answer) {
-        return undefined;
-      }
-      return { question, answer } as QuestionAnswer;
-    })
-    .filter((item: QuestionAnswer | undefined): item is QuestionAnswer => item !== undefined);
+  const result: QuestionAnswer[] = [];
+  items.forEach((item: Record<string, Object>) => {
+    const question = cleanString(item['Question']) || cleanString(item['question']);
+    const answer = cleanString(item['Answer']) || cleanString(item['answer']);
+    if (!question || !answer) {
+      return;
+    }
+    result.push({ question, answer });
+  });
+  return result;
 }

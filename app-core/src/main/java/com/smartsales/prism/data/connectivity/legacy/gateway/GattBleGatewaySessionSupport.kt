@@ -275,6 +275,24 @@ internal class GattBleGatewaySessionSupport(
         runtime.configCache.remove(peripheral.id)
     }
 
+    /**
+     * 直接向徽章写入一段 ASCII 命令（如 "commandend#1"）。
+     * 不等待通知响应，失败时抛出异常由调用方处理。
+     */
+    suspend fun sendBadgeSignal(session: BleSession, payload: String) {
+        val outcome = execute(session.peripheralId) { gattContext, config ->
+            val bytes = payload.toByteArray(Charsets.US_ASCII)
+            ConnectivityLogger.tx("BadgeSignal", bytes)
+            gattContext.writeCharacteristic(config.credentialCharacteristicUuid, bytes)
+        }
+        when (outcome) {
+            is GatewayOutcome.Success -> Unit
+            is GatewayOutcome.Failure -> throw IllegalStateException(
+                "徽章信号写入失败: ${outcome.error}"
+            )
+        }
+    }
+
     private suspend fun respondToTimeSync() {
         try {
             val session = runtime.persistentSession ?: return

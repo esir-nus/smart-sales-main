@@ -1,6 +1,7 @@
 package com.smartsales.prism.ui.settings
 
 import android.content.SharedPreferences
+import com.smartsales.prism.data.connectivity.legacy.FakeDeviceConnectionManager
 import com.smartsales.prism.domain.config.SubscriptionTier
 import com.smartsales.prism.domain.memory.UserProfile
 import com.smartsales.prism.domain.notification.NotificationAction
@@ -47,8 +48,16 @@ class UserCenterViewModelTest {
         val themeStore = ThemePreferenceStore(InMemorySharedPreferences().apply {
             edit().putString("theme_mode", PrismThemeMode.DARK.name).apply()
         })
+        val voiceVolumeStore = VoiceVolumePreferenceStore(InMemorySharedPreferences())
+        val connectionManager = FakeDeviceConnectionManager()
 
-        val viewModel = UserCenterViewModel(repository, notificationService, themeStore)
+        val viewModel = UserCenterViewModel(
+            repository,
+            notificationService,
+            themeStore,
+            voiceVolumeStore,
+            connectionManager
+        )
 
         assertEquals(PrismThemeMode.DARK, viewModel.themeMode.value)
     }
@@ -58,7 +67,15 @@ class UserCenterViewModelTest {
         val repository = FakeUserProfileRepository()
         val notificationService = FakeNotificationService()
         val themeStore = ThemePreferenceStore(InMemorySharedPreferences())
-        val viewModel = UserCenterViewModel(repository, notificationService, themeStore)
+        val voiceVolumeStore = VoiceVolumePreferenceStore(InMemorySharedPreferences())
+        val connectionManager = FakeDeviceConnectionManager()
+        val viewModel = UserCenterViewModel(
+            repository,
+            notificationService,
+            themeStore,
+            voiceVolumeStore,
+            connectionManager
+        )
 
         viewModel.setThemeMode(PrismThemeMode.LIGHT)
 
@@ -70,7 +87,15 @@ class UserCenterViewModelTest {
         val repository = FakeUserProfileRepository()
         val notificationService = FakeNotificationService()
         val themeStore = ThemePreferenceStore(InMemorySharedPreferences())
-        val viewModel = UserCenterViewModel(repository, notificationService, themeStore)
+        val voiceVolumeStore = VoiceVolumePreferenceStore(InMemorySharedPreferences())
+        val connectionManager = FakeDeviceConnectionManager()
+        val viewModel = UserCenterViewModel(
+            repository,
+            notificationService,
+            themeStore,
+            voiceVolumeStore,
+            connectionManager
+        )
         val collectionJob = backgroundScope.launch { viewModel.profile.collect { } }
         advanceUntilIdle()
 
@@ -92,6 +117,65 @@ class UserCenterViewModelTest {
         assertTrue(profile.updatedAt > 0L)
 
         collectionJob.cancel()
+    }
+
+    @Test
+    fun `voice volume commit persists desired volume and marks applied on successful send`() = runTest {
+        val repository = FakeUserProfileRepository()
+        val notificationService = FakeNotificationService()
+        val themeStore = ThemePreferenceStore(InMemorySharedPreferences())
+        val prefs = InMemorySharedPreferences()
+        val voiceVolumeStore = VoiceVolumePreferenceStore(prefs)
+        val connectionManager = FakeDeviceConnectionManager()
+        val viewModel = UserCenterViewModel(
+            repository,
+            notificationService,
+            themeStore,
+            voiceVolumeStore,
+            connectionManager
+        )
+
+        viewModel.onVoiceVolumeDrag(72)
+        viewModel.onVoiceVolumeCommitted()
+        advanceUntilIdle()
+
+        assertEquals(72, voiceVolumeStore.desiredVolume.value)
+        assertEquals(72, voiceVolumeStore.lastAppliedVolume.value)
+        assertEquals(listOf(72), connectionManager.voiceVolumeCalls)
+    }
+
+    @Test
+    fun `voice volume commit retries same value after disconnected no-op send`() = runTest {
+        val repository = FakeUserProfileRepository()
+        val notificationService = FakeNotificationService()
+        val themeStore = ThemePreferenceStore(InMemorySharedPreferences())
+        val prefs = InMemorySharedPreferences()
+        val voiceVolumeStore = VoiceVolumePreferenceStore(prefs)
+        val connectionManager = FakeDeviceConnectionManager().apply {
+            setVoiceVolumeShouldSucceed = false
+        }
+        val viewModel = UserCenterViewModel(
+            repository,
+            notificationService,
+            themeStore,
+            voiceVolumeStore,
+            connectionManager
+        )
+
+        viewModel.onVoiceVolumeDrag(61)
+        viewModel.onVoiceVolumeCommitted()
+        advanceUntilIdle()
+
+        assertEquals(61, voiceVolumeStore.desiredVolume.value)
+        assertEquals(null, voiceVolumeStore.lastAppliedVolume.value)
+        assertEquals(listOf(61), connectionManager.voiceVolumeCalls)
+
+        connectionManager.setVoiceVolumeShouldSucceed = true
+        viewModel.onVoiceVolumeCommitted()
+        advanceUntilIdle()
+
+        assertEquals(61, voiceVolumeStore.lastAppliedVolume.value)
+        assertEquals(listOf(61, 61), connectionManager.voiceVolumeCalls)
     }
 
     private class FakeUserProfileRepository : UserProfileRepository {

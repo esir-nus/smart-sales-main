@@ -74,6 +74,10 @@ class GattBleGateway @Inject constructor(
         return sessionSupport.sendWavCommand(session, command)
     }
 
+    override suspend fun sendBadgeSignal(session: BleSession, payload: String) {
+        sessionSupport.sendBadgeSignal(session, payload)
+    }
+
     override fun forget(peripheral: BlePeripheral) {
         sessionSupport.forget(peripheral)
     }

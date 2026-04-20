@@ -3,6 +3,7 @@ package com.smartsales.prism.ui.components.connectivity
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.smartsales.prism.data.connectivity.legacy.DeviceConnectionManager
 import com.smartsales.prism.data.connectivity.registry.DeviceRegistryManager
 import com.smartsales.prism.data.connectivity.registry.RegisteredDevice
 import com.smartsales.prism.domain.connectivity.BadgeConnectionState
@@ -12,6 +13,7 @@ import com.smartsales.prism.domain.connectivity.ConnectivityService
 import com.smartsales.prism.domain.connectivity.ReconnectResult
 import com.smartsales.prism.domain.connectivity.UpdateResult
 import com.smartsales.prism.domain.connectivity.WifiConfigResult
+import com.smartsales.prism.ui.settings.VoiceVolumePreferenceStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -34,7 +36,9 @@ import javax.inject.Inject
 class ConnectivityViewModel @Inject constructor(
     private val connectivityService: ConnectivityService,
     private val connectivityBridge: ConnectivityBridge,
-    private val registryManager: DeviceRegistryManager
+    private val registryManager: DeviceRegistryManager,
+    private val voiceVolumeStore: VoiceVolumePreferenceStore,
+    private val connectionManager: DeviceConnectionManager
 ) : ViewModel() {
 
     // 设备注册表 — 多设备管理
@@ -302,6 +306,30 @@ class ConnectivityViewModel @Inject constructor(
         _wifiMismatchSuggestedSsid.value = null
         _wifiMismatchErrorMessage.value = null
         _uiOverride.value = null
+    }
+
+    // --- 徽章语音音量（快速入口） ---
+    // 拖动期间仅更新 UI 显示状态；松手时通过 onVoiceVolumeCommitted 下发 BLE，
+    // 避免 ESP32 在高频写入下崩溃。
+    private val _voiceVolume = MutableStateFlow(voiceVolumeStore.desiredVolume.value)
+    val voiceVolume: StateFlow<Int> = _voiceVolume.asStateFlow()
+
+    private var voiceVolumeJob: Job? = null
+
+    fun onVoiceVolumeDrag(level: Int) {
+        _voiceVolume.value = level.coerceIn(0, 100)
+    }
+
+    fun onVoiceVolumeCommitted() {
+        val level = _voiceVolume.value
+        voiceVolumeStore.setDesiredVolume(level)
+        if (level == voiceVolumeStore.lastAppliedVolume.value) return
+        voiceVolumeJob?.cancel()
+        voiceVolumeJob = viewModelScope.launch {
+            if (connectionManager.setVoiceVolume(level)) {
+                voiceVolumeStore.markAppliedVolume(level)
+            }
+        }
     }
 }
 

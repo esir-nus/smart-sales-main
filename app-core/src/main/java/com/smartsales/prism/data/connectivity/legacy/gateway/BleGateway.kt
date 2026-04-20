@@ -58,9 +58,14 @@ interface BleGateway {
     suspend fun queryNetwork(session: BleSession): NetworkQueryResult
     
     suspend fun sendWavCommand(session: BleSession, command: WavCommand): WavCommandResult
-    
 
-    
+    /**
+     * Fire-and-forget 信号写入，用于向徽章发送不期待响应的短命令
+     * （例如任务闹钟触发时的提示音信号 "commandend#1"）。
+     * 遇到任何错误都会抛出给调用方，由调用方决定是否吞掉。
+     */
+    suspend fun sendBadgeSignal(session: BleSession, payload: String)
+
     fun forget(peripheral: BlePeripheral)
 }
 
@@ -100,5 +105,4 @@ sealed interface ProvisioningAckResult {
     data object Accepted : ProvisioningAckResult
     data class Rejected(val reason: String) : ProvisioningAckResult
 }
-
 

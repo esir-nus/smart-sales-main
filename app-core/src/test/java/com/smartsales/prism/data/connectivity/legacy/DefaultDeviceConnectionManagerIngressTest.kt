@@ -5,6 +5,7 @@ import com.smartsales.core.util.Result
 import com.smartsales.prism.data.connectivity.legacy.badge.FakeBadgeStateMonitor
 import com.smartsales.prism.data.connectivity.legacy.badge.BadgeState
 import com.smartsales.prism.data.connectivity.legacy.gateway.BadgeNotification
+import com.smartsales.prism.data.connectivity.legacy.gateway.FakeBleGateway
 import com.smartsales.prism.data.connectivity.legacy.gateway.GattSessionLifecycle
 import com.smartsales.prism.data.connectivity.legacy.scan.BleScanner
 import com.smartsales.prism.data.connectivity.legacy.scan.FakeBleScanner
@@ -650,6 +651,89 @@ class DefaultDeviceConnectionManagerIngressTest {
         assertEquals(60_000L, requiredIntervalFor(10))
     }
 
+    @Test
+    fun `setVoiceVolume sends clamped badge signal only when ble is connected`() = runTest {
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val monitor = FakeBadgeStateMonitor().apply {
+            simulateConnected(ip = "192.168.0.9", wifiName = "MstRobot")
+        }
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("MstRobot", "secret")
+            )
+        }
+        val badgeGateway = FakeBleGateway()
+        val manager = newManager(
+            gateway = gateway,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            monitor = monitor,
+            badgeGateway = badgeGateway
+        )
+
+        val sent = manager.setVoiceVolume(128)
+        advanceUntilIdle()
+
+        assertTrue(sent)
+        assertEquals(1, badgeGateway.badgeSignalCalls.size)
+        assertEquals("volume#100", badgeGateway.badgeSignalCalls.single().second)
+    }
+
+    @Test
+    fun `setVoiceVolume returns false and skips signal when ble is disconnected`() = runTest {
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("MstRobot", "secret")
+            )
+        }
+        val badgeGateway = FakeBleGateway()
+        val manager = newManager(
+            gateway = gateway,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            badgeGateway = badgeGateway
+        )
+
+        val sent = manager.setVoiceVolume(45)
+        advanceUntilIdle()
+
+        assertFalse(sent)
+        assertTrue(badgeGateway.badgeSignalCalls.isEmpty())
+    }
+
+    @Test
+    fun `notifyTaskFired sends badge chime only when ble is connected`() = runTest {
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val monitor = FakeBadgeStateMonitor().apply {
+            simulateConnected(ip = "192.168.0.9", wifiName = "MstRobot")
+        }
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("MstRobot", "secret")
+            )
+        }
+        val badgeGateway = FakeBleGateway()
+        val manager = newManager(
+            gateway = gateway,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            monitor = monitor,
+            badgeGateway = badgeGateway
+        )
+
+        manager.notifyTaskFired()
+        advanceUntilIdle()
+
+        assertEquals(listOf("commandend#1"), badgeGateway.badgeSignalCalls.map { it.second })
+    }
+
     private fun newManager(
         gateway: FakeGattSessionLifecycle,
         scope: CoroutineScope,
@@ -659,7 +743,8 @@ class DefaultDeviceConnectionManagerIngressTest {
         monitor: FakeBadgeStateMonitor = FakeBadgeStateMonitor(),
         phoneWifiProvider: PhoneWifiProvider = FakePhoneWifiProvider("MstRobot"),
         networkResult: Result<DeviceNetworkStatus>? = null,
-        bleScanner: BleScanner = FakeBleScanner()
+        bleScanner: BleScanner = FakeBleScanner(),
+        badgeGateway: FakeBleGateway = FakeBleGateway()
     ): DefaultDeviceConnectionManager {
         val dispatchers = object : DispatcherProvider {
             override val io: CoroutineDispatcher = dispatcher
@@ -672,6 +757,7 @@ class DefaultDeviceConnectionManagerIngressTest {
         return DefaultDeviceConnectionManager(
             provisioner = provisioner,
             bleGateway = gateway,
+            badgeGateway = badgeGateway,
             dispatchers = dispatchers,
             badgeStateMonitor = monitor,
             sessionStore = sessionStore,

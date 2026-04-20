@@ -3,6 +3,7 @@ package com.smartsales.prism.data.connectivity.legacy
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.util.Result
 import com.smartsales.prism.data.connectivity.legacy.badge.BadgeStateMonitor
+import com.smartsales.prism.data.connectivity.legacy.gateway.BleGateway
 import com.smartsales.prism.data.connectivity.legacy.gateway.GattSessionLifecycle
 import com.smartsales.prism.data.connectivity.legacy.scan.BleScanner
 import java.io.Closeable
@@ -56,12 +57,26 @@ interface DeviceConnectionManager {
 
     /** 挂起式重连：等待 BLE GATT + 网络查询完成后返回实际结果。 */
     suspend fun reconnectAndWait(): ConnectionState
+
+    /**
+     * 向徽章发送一次"任务闹钟触发"信号（ASCII "commandend#1"）。
+     * 若 BLE 未连接或写入失败，静默忽略；不影响调用方流程。
+     */
+    suspend fun notifyTaskFired()
+
+    /**
+     * 设置徽章语音播报音量，payload 为 "volume#<0..100>"。
+     * UI 层应仅在滑块松手时调用，避免 ESP32 端高频写入。
+     * 若 BLE 未连接或写入失败，静默忽略。
+     */
+    suspend fun setVoiceVolume(level: Int): Boolean
 }
 
 @Singleton
 class DefaultDeviceConnectionManager @Inject constructor(
     private val provisioner: WifiProvisioner,
     private val bleGateway: GattSessionLifecycle,
+    private val badgeGateway: BleGateway,
     private val dispatchers: DispatcherProvider,
     private val badgeStateMonitor: BadgeStateMonitor,
     private val sessionStore: SessionStore,
@@ -152,5 +167,30 @@ class DefaultDeviceConnectionManager @Inject constructor(
 
     override suspend fun reconnectAndWait(): ConnectionState {
         return reconnectSupport.reconnectAndWait()
+    }
+
+    override suspend fun notifyTaskFired() {
+        val session = connectionSupport.currentSessionOrNull() ?: return
+        if (!badgeStateMonitor.status.value.bleConnected) return
+        try {
+            badgeGateway.sendBadgeSignal(session, "commandend#1")
+            ConnectivityLogger.i("🔔 Badge chime signal sent for task fire")
+        } catch (ex: Exception) {
+            ConnectivityLogger.w("🔔 Badge chime send failed (non-fatal): ${ex.message}")
+        }
+    }
+
+    override suspend fun setVoiceVolume(level: Int): Boolean {
+        val clamped = level.coerceIn(0, 100)
+        val session = connectionSupport.currentSessionOrNull() ?: return false
+        if (!badgeStateMonitor.status.value.bleConnected) return false
+        try {
+            badgeGateway.sendBadgeSignal(session, "volume#$clamped")
+            ConnectivityLogger.i("🔊 Badge voice volume set to $clamped")
+            return true
+        } catch (ex: Exception) {
+            ConnectivityLogger.w("🔊 Badge volume send failed (non-fatal): ${ex.message}")
+            return false
+        }
     }
 }

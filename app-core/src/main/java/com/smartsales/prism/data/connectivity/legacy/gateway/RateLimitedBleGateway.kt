@@ -55,7 +55,9 @@ class RateLimitedBleGateway(
         command: WavCommand
     ): WavCommandResult = delegate.sendWavCommand(session, command)
 
-
+    override suspend fun sendBadgeSignal(session: BleSession, payload: String) {
+        delegate.sendBadgeSignal(session, payload)
+    }
 
     override fun forget(peripheral: BlePeripheral) = delegate.forget(peripheral)
 

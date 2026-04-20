@@ -3,6 +3,7 @@ package com.smartsales.prism.ui.components.connectivity
 import com.smartsales.core.util.Result
 import com.smartsales.prism.data.connectivity.legacy.BlePeripheral
 import com.smartsales.prism.data.connectivity.legacy.BleSession
+import com.smartsales.prism.data.connectivity.legacy.FakeDeviceConnectionManager
 import com.smartsales.prism.data.connectivity.registry.DeviceRegistryManager
 import com.smartsales.prism.data.connectivity.registry.RegisteredDevice
 import com.smartsales.prism.domain.connectivity.BadgeConnectionState
@@ -14,6 +15,7 @@ import com.smartsales.prism.domain.connectivity.RecordingNotification
 import com.smartsales.prism.domain.connectivity.UpdateResult
 import com.smartsales.prism.domain.connectivity.WavDownloadResult
 import com.smartsales.prism.domain.connectivity.WifiConfigResult
+import com.smartsales.prism.ui.settings.VoiceVolumePreferenceStore
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -52,10 +54,14 @@ class ConnectivityViewModelTest {
     private fun createViewModel(
         service: ConnectivityService = FakeConnectivityService(),
         bridge: ConnectivityBridge = FakeConnectivityBridge(),
+        voiceVolumeStore: VoiceVolumePreferenceStore = VoiceVolumePreferenceStore(InMemorySharedPreferences()),
+        connectionManager: FakeDeviceConnectionManager = FakeDeviceConnectionManager()
     ) = ConnectivityViewModel(
         connectivityService = service,
         connectivityBridge = bridge,
-        registryManager = FakeDeviceRegistryManager()
+        registryManager = FakeDeviceRegistryManager(),
+        voiceVolumeStore = voiceVolumeStore,
+        connectionManager = connectionManager
     )
 
     @Test
@@ -371,6 +377,64 @@ class ConnectivityViewModelTest {
         assertNull(viewModel.wifiMismatchErrorMessage.value)
     }
 
+    @Test
+    fun `voice volume commit persists desired volume and marks applied on successful send`() = runTest {
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Connected(
+                badgeIp = "192.168.0.9",
+                ssid = "Office"
+            ),
+            manager = BadgeManagerStatus.Ready(
+                badgeIp = "192.168.0.9",
+                ssid = "Office"
+            )
+        )
+        val store = VoiceVolumePreferenceStore(InMemorySharedPreferences())
+        val connectionManager = FakeDeviceConnectionManager()
+        val viewModel = createViewModel(
+            bridge = bridge,
+            voiceVolumeStore = store,
+            connectionManager = connectionManager
+        )
+
+        viewModel.onVoiceVolumeDrag(64)
+        viewModel.onVoiceVolumeCommitted()
+        advanceUntilIdle()
+
+        assertEquals(64, store.desiredVolume.value)
+        assertEquals(64, store.lastAppliedVolume.value)
+        assertEquals(listOf(64), connectionManager.voiceVolumeCalls)
+    }
+
+    @Test
+    fun `voice volume commit retries same value after no-op send and skips after success`() = runTest {
+        val store = VoiceVolumePreferenceStore(InMemorySharedPreferences())
+        val connectionManager = FakeDeviceConnectionManager().apply {
+            setVoiceVolumeShouldSucceed = false
+        }
+        val viewModel = createViewModel(
+            voiceVolumeStore = store,
+            connectionManager = connectionManager
+        )
+
+        viewModel.onVoiceVolumeDrag(41)
+        viewModel.onVoiceVolumeCommitted()
+        advanceUntilIdle()
+
+        assertEquals(41, store.desiredVolume.value)
+        assertNull(store.lastAppliedVolume.value)
+        assertEquals(listOf(41), connectionManager.voiceVolumeCalls)
+
+        connectionManager.setVoiceVolumeShouldSucceed = true
+        viewModel.onVoiceVolumeCommitted()
+        advanceUntilIdle()
+        viewModel.onVoiceVolumeCommitted()
+        advanceUntilIdle()
+
+        assertEquals(41, store.lastAppliedVolume.value)
+        assertEquals(listOf(41, 41), connectionManager.voiceVolumeCalls)
+    }
+
     private class FakeConnectivityBridge(
         connection: BadgeConnectionState = BadgeConnectionState.Disconnected,
         manager: BadgeManagerStatus = BadgeManagerStatus.Disconnected
@@ -458,5 +522,102 @@ class ConnectivityViewModelTest {
         override suspend fun switchToDevice(macAddress: String) = Unit
         override fun removeDevice(macAddress: String) = Unit
         override fun initializeOnLaunch() = Unit
+    }
+
+    private class InMemorySharedPreferences : android.content.SharedPreferences {
+        private val values = linkedMapOf<String, Any?>()
+
+        override fun getAll(): MutableMap<String, *> = values.toMutableMap()
+
+        override fun getString(key: String?, defValue: String?): String? {
+            return values[key] as? String ?: defValue
+        }
+
+        override fun getStringSet(key: String?, defValues: MutableSet<String>?): MutableSet<String>? {
+            @Suppress("UNCHECKED_CAST")
+            return (values[key] as? Set<String>)?.toMutableSet() ?: defValues
+        }
+
+        override fun getInt(key: String?, defValue: Int): Int = values[key] as? Int ?: defValue
+
+        override fun getLong(key: String?, defValue: Long): Long = values[key] as? Long ?: defValue
+
+        override fun getFloat(key: String?, defValue: Float): Float = values[key] as? Float ?: defValue
+
+        override fun getBoolean(key: String?, defValue: Boolean): Boolean = values[key] as? Boolean ?: defValue
+
+        override fun contains(key: String?): Boolean = values.containsKey(key)
+
+        override fun edit(): android.content.SharedPreferences.Editor = Editor(values)
+
+        override fun registerOnSharedPreferenceChangeListener(
+            listener: android.content.SharedPreferences.OnSharedPreferenceChangeListener?
+        ) = Unit
+
+        override fun unregisterOnSharedPreferenceChangeListener(
+            listener: android.content.SharedPreferences.OnSharedPreferenceChangeListener?
+        ) = Unit
+
+        private class Editor(
+            private val values: MutableMap<String, Any?>
+        ) : android.content.SharedPreferences.Editor {
+            private val pending = linkedMapOf<String, Any?>()
+            private var clearRequested = false
+
+            override fun putString(key: String?, value: String?): android.content.SharedPreferences.Editor = apply {
+                pending[key.orEmpty()] = value
+            }
+
+            override fun putStringSet(
+                key: String?,
+                values: MutableSet<String>?
+            ): android.content.SharedPreferences.Editor = apply {
+                pending[key.orEmpty()] = values?.toSet()
+            }
+
+            override fun putInt(key: String?, value: Int): android.content.SharedPreferences.Editor = apply {
+                pending[key.orEmpty()] = value
+            }
+
+            override fun putLong(key: String?, value: Long): android.content.SharedPreferences.Editor = apply {
+                pending[key.orEmpty()] = value
+            }
+
+            override fun putFloat(key: String?, value: Float): android.content.SharedPreferences.Editor = apply {
+                pending[key.orEmpty()] = value
+            }
+
+            override fun putBoolean(key: String?, value: Boolean): android.content.SharedPreferences.Editor = apply {
+                pending[key.orEmpty()] = value
+            }
+
+            override fun remove(key: String?): android.content.SharedPreferences.Editor = apply {
+                pending[key.orEmpty()] = null
+            }
+
+            override fun clear(): android.content.SharedPreferences.Editor = apply {
+                clearRequested = true
+            }
+
+            override fun commit(): Boolean {
+                apply()
+                return true
+            }
+
+            override fun apply() {
+                if (clearRequested) {
+                    values.clear()
+                }
+                pending.forEach { (key, value) ->
+                    if (value == null) {
+                        values.remove(key)
+                    } else {
+                        values[key] = value
+                    }
+                }
+                pending.clear()
+                clearRequested = false
+            }
+        }
     }
 }

@@ -19,6 +19,7 @@ class FakeBleGateway : BleGateway {
     val hotspotCalls = mutableListOf<BleSession>()
     val networkCalls = mutableListOf<BleSession>()
     val wavCalls = mutableListOf<Pair<BleSession, WavCommand>>()
+    val badgeSignalCalls = mutableListOf<Pair<BleSession, String>>()
     val forgetCalls = mutableListOf<BlePeripheral>()
     
     override suspend fun provision(session: BleSession, credentials: WifiCredentials): BleGatewayResult {
@@ -40,6 +41,10 @@ class FakeBleGateway : BleGateway {
         wavCalls.add(session to command)
         return stubWavResult
     }
+
+    override suspend fun sendBadgeSignal(session: BleSession, payload: String) {
+        badgeSignalCalls.add(session to payload)
+    }
     
     
     override fun forget(peripheral: BlePeripheral) {
@@ -51,6 +56,7 @@ class FakeBleGateway : BleGateway {
         hotspotCalls.clear()
         networkCalls.clear()
         wavCalls.clear()
+        badgeSignalCalls.clear()
         forgetCalls.clear()
     }
 }

@@ -1,6 +1,6 @@
 package com.smartsales.prism.data.audio
 
-import com.smartsales.prism.BuildConfig
+import com.smartsales.prism.AppFlavor
 import com.smartsales.prism.domain.asr.AsrResult
 import com.smartsales.prism.domain.asr.AsrService
 import com.smartsales.prism.domain.audio.BadgeAudioPipeline
@@ -44,7 +44,7 @@ class RealBadgeAudioPipeline @Inject constructor(
         private const val TAG = "AudioPipeline"
     }
 
-    private val schedulerEnabled = BuildConfig.ENABLE_SCHEDULER
+    private val schedulerEnabled = AppFlavor.schedulerEnabled
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
     private val _events = MutableSharedFlow<PipelineEvent>(
@@ -205,17 +205,12 @@ class RealBadgeAudioPipeline @Inject constructor(
             _currentState.value = PipelineState.IDLE
             _events.emit(PipelineEvent.Complete(schedulerResult, filename, transcript))
 
-            val deleted = if (drawerIngested) {
-                connectivityBridge.deleteRecording(filename)
-            } else {
-                false
-            }
             if (localFile.exists()) {
                 localFile.delete()
             }
             android.util.Log.d(
                 TAG,
-                "Path A Cleanup: drawerIngested=$drawerIngested badge=${if (deleted) "deleted" else "preserved"} local=${if (localFile.exists()) "preserved" else "deleted"}"
+                "Path A Cleanup: drawerIngested=$drawerIngested local=${if (localFile.exists()) "preserved" else "deleted"} (badge WAV retained — badge manages own retention)"
             )
             
         } catch (e: Exception) {

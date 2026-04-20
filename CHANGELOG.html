@@ -146,11 +146,26 @@
   <div class="page-header">
     <h1>更新日志</h1>
     <p class="subtitle">产品功能与修复记录</p>
-    <span class="generated">生成于 2026年04月18日</span>
+    <span class="generated">生成于 2026年04月20日</span>
   </div>
   <div class="section-title">最近更新</div>
+  <div class="date-header"><h3>2026-04-20</h3></div>
+  <div class="entries">
+      <div class="entry">
+        <span class="badge badge-other">维护</span>
+        <span class="entry-msg"><strong>develop 主分支协作路由收敛</strong> — 统一 feature 与 harmony 分支默认向 `develop` 发起协作与交付，移除平台分支作为日常目标的旧路由，简化 `/merge` 与 `/ship` 治理规则。</span>
+      </div>
+  </div>
   <div class="date-header"><h3>2026-04-18</h3></div>
   <div class="entries">
+      <div class="entry">
+        <span class="badge badge-新增">新增</span>
+        <span class="entry-msg"><strong>配对完成后的隔离态提示与锁存</strong> — 连接建立后会主动暴露 WiFi isolation 风险并锁存关键上下文，让 ConnectivityModal、配对流程与音频同步链路更早联动修复提示。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-修复">修复</span>
+        <span class="entry-msg"><strong>配对后疑似 WiFi isolation 预警</strong> — 徽章完成配对后若检测到疑似 WiFi isolation，系统会更早标记风险并推动修复提示，减少后续同步失败才暴露问题的情况。</span>
+      </div>
       <div class="entry">
         <span class="badge badge-新增">新增</span>
         <span class="entry-msg"><strong>传输优先的 WiFi 修复流程</strong> — 徽章同步或连接异常时，系统会优先尝试 transport-first WiFi 修复路径，并联动动态岛、ConnectivityModal 与连接状态提示，减少手动排障成本。</span>

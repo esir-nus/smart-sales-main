@@ -104,7 +104,19 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
         reconnectAndWaitCalls++
         return stubReconnectAndWaitResult
     }
-    
+
+    var notifyTaskFiredCalls = 0
+    override suspend fun notifyTaskFired() {
+        notifyTaskFiredCalls++
+    }
+
+    val voiceVolumeCalls = mutableListOf<Int>()
+    var setVoiceVolumeShouldSucceed = true
+    override suspend fun setVoiceVolume(level: Int): Boolean {
+        voiceVolumeCalls.add(level.coerceIn(0, 100))
+        return setVoiceVolumeShouldSucceed
+    }
+
     fun setState(newState: ConnectionState) {
         _state.value = newState
     }

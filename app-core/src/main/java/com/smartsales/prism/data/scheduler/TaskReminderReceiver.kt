@@ -10,6 +10,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.smartsales.prism.R
+import com.smartsales.prism.data.connectivity.legacy.DeviceConnectionManager
 import com.smartsales.prism.data.notification.AlarmDismissReceiver
 import com.smartsales.prism.domain.notification.NotificationService
 import com.smartsales.prism.domain.notification.PrismNotificationChannel
@@ -19,6 +20,9 @@ import com.smartsales.prism.domain.scheduler.SchedulerReminderSurfaceBus
 import com.smartsales.prism.domain.scheduler.SchedulerReminderSurfaceEvent
 import com.smartsales.prism.ui.alarm.AlarmActivity
 import dagger.hilt.android.EntryPointAccessors
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * 任务提醒广播接收器
@@ -38,6 +42,7 @@ class TaskReminderReceiver : BroadcastReceiver() {
     @dagger.hilt.InstallIn(dagger.hilt.components.SingletonComponent::class)
     interface NotificationServiceEntryPoint {
         fun notificationService(): NotificationService
+        fun deviceConnectionManager(): DeviceConnectionManager
     }
 
     override fun onReceive(context: Context, intent: Intent) {
@@ -56,6 +61,10 @@ class TaskReminderReceiver : BroadcastReceiver() {
         }
 
         Log.d(TAG, "收到任务提醒: taskId=$taskId, title=$taskTitle, offset=${offsetMinutes}min, tier=$tier")
+
+        // 每一次闹钟触发都向徽章发送一次提示音信号（与等级无关）
+        // 通过 goAsync() 保证 BLE 写入能在 Receiver 返回后完成
+        fireBadgeChime(context)
 
         // DEADLINE 需要 WakeLock 确保 Activity 启动
         // 如果 fullScreenIntent 权限未授予（中国 OEM 常见），
@@ -262,6 +271,31 @@ class TaskReminderReceiver : BroadcastReceiver() {
             }
             nm.createNotificationChannel(channel)
             Log.d(TAG, "Receiver 内补建渠道: ${prismChannel.channelId}")
+        }
+    }
+
+    /**
+     * 触发徽章提示音：每次闹钟无论等级都发送一次 BLE 信号。
+     * BLE 未连接或写入失败时静默跳过，不影响闹钟主流程。
+     */
+    private fun fireBadgeChime(context: Context) {
+        val entryPoint = runCatching {
+            EntryPointAccessors.fromApplication(
+                context.applicationContext,
+                NotificationServiceEntryPoint::class.java
+            )
+        }.getOrNull() ?: return
+
+        val manager = runCatching { entryPoint.deviceConnectionManager() }.getOrNull() ?: return
+        val pending = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                manager.notifyTaskFired()
+            } catch (e: Exception) {
+                Log.w(TAG, "Badge chime dispatch failed: ${e.message}")
+            } finally {
+                pending.finish()
+            }
         }
     }
 }

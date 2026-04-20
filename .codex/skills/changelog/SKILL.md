@@ -27,7 +27,8 @@ For any `feat:`, `fix:`, `ship:`, or significant `chore:`/`refactor:` commits no
 
 **Format rules:**
 - Written in Chinese
-- Tech jargon kept in English: BLE, SIM, HarmonyOS, Tingwu, DashScope, FunASR, ESP32, Compose, Kotlin, Gradle, CI, PR
+- Tech jargon kept in English: BLE, SIM, Tingwu, DashScope, FunASR, ESP32, Compose, Kotlin, Gradle, CI, PR
+- For the public changelog, write `鸿蒙OS`, not `HarmonyOS`
 - Use 徽章 instead of Badge
 
 **Entry format:**

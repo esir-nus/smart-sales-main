@@ -30,6 +30,16 @@ master (protected, promotion-only — requires PR)
 - Shared contracts flow: `develop → platform/harmony`, never the reverse. Sync at least weekly.
 - Harmony-native is the primary forward platform. Android is beta-maintenance.
 
+## Declaration-First Shipping
+
+Every test/build/ship command must declare its **Lane** (`android`, `harmony`, or `docs`) and **Ship Scope** (explicit files/modules). Declarations are per-command, never sticky.
+
+`android` and `harmony` are platform delivery lanes. `docs` is a shared-infrastructure lane — documentation and repo-root markdown always land on `develop` regardless of which platform they describe.
+
+Before starting a declared task, run the pre-flight scope conflict check against `docs/plans/active-lanes.md` and the dirty tree. File-level overlap with in-flight work refuses the task; same-directory overlap warns and asks.
+
+Branch name is advisory — the declared lane decides what ships, not the branch. Unrelated dirty files are reported, not blocked. See `docs/specs/declaration-first-shipping.md` for the full contract and philosophy (friction upfront, not downstream).
+
 ## Source of Truth
 
 Docs > Code > Guessing.

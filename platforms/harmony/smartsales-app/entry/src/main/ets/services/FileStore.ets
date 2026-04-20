@@ -7,9 +7,20 @@ import { common } from '@kit.AbilityKit';
 import { util } from '@kit.ArkTS';
 import { fileIo as fs } from '@kit.CoreFileKit';
 import { AudioItem, AudioArtifacts, ChapterSegment } from '../domain/Audio';
+import {
+  ScheduledTask,
+  ClarificationState,
+  ClarificationPersonCandidate,
+  UrgencyLevel,
+  buildAlarmCascade,
+  parseConflictPolicy,
+  parseDurationSource,
+  parseUrgencyLevel
+} from '../domain/Scheduler';
 import { cleanString, guessExtension, safeObject } from '../utils/FormatUtils';
 
 const METADATA_FILE_NAME = 'smartsales_audio_metadata.json';
+const TASK_FILE_NAME = 'smartsales_scheduler_tasks.json';
 
 export interface ImportedAudioRecord {
   displayName: string;
@@ -34,6 +45,10 @@ class FileStore {
 
   artifactPath(context: common.UIAbilityContext, audioId: string): string {
     return `${context.filesDir}/smartsales_${audioId}_artifacts.json`;
+  }
+
+  taskPath(context: common.UIAbilityContext): string {
+    return `${context.filesDir}/${TASK_FILE_NAME}`;
   }
 
   loadMetadata(context: common.UIAbilityContext): AudioItem[] {
@@ -76,6 +91,38 @@ class FileStore {
 
   saveArtifacts(context: common.UIAbilityContext, audioId: string, artifacts: AudioArtifacts): void {
     this.writeText(this.artifactPath(context, audioId), JSON.stringify(artifacts, null, 2));
+  }
+
+  loadTasks(context: common.UIAbilityContext): ScheduledTask[] {
+    const raw = this.readTextIfExists(this.taskPath(context));
+    if (!raw) {
+      console.info('[HS-006][FileStore] loadTasks no-file');
+      return [];
+    }
+    try {
+      const parsed = JSON.parse(raw) as Object;
+      if (!Array.isArray(parsed)) {
+        console.warn('[HS-006][FileStore] loadTasks invalid-root');
+        return [];
+      }
+      const tasks: ScheduledTask[] = [];
+      parsed.forEach((entry: Object) => {
+        const task = this.normalizeTask(entry);
+        if (task) {
+          tasks.push(task);
+        }
+      });
+      console.info(`[HS-006][FileStore] loadTasks success count=${tasks.length}`);
+      return tasks;
+    } catch (error) {
+      console.error(`[HS-006][FileStore] loadTasks parse-failed error=${JSON.stringify(error)}`);
+      return [];
+    }
+  }
+
+  saveTasks(context: common.UIAbilityContext, tasks: ScheduledTask[]): void {
+    this.writeText(this.taskPath(context), JSON.stringify(tasks, null, 2));
+    console.info(`[HS-006][FileStore] saveTasks success count=${tasks.length}`);
   }
 
   private normalizeChapters(value: Object | null | undefined): ChapterSegment[] {
@@ -130,6 +177,180 @@ class FileStore {
       return Math.floor(tertiaryValue);
     }
     return 0;
+  }
+
+  private normalizeTask(value: Object | null | undefined): ScheduledTask | undefined {
+    const record = safeObject(value);
+    if (!record) {
+      return undefined;
+    }
+    const id = cleanString(record['id']);
+    const title = cleanString(record['title']);
+    if (!id || !title) {
+      return undefined;
+    }
+    const startTime = this.readMillis(record['startTime'], record['startAt'], record['scheduledAt']);
+    if (startTime <= 0) {
+      return undefined;
+    }
+    const urgencyLevel = parseUrgencyLevel(record['urgencyLevel']);
+    const createdAt = this.readMillis(record['createdAt'], record['created_at'], record['startTime']);
+    const updatedAt = this.readMillis(record['updatedAt'], record['updated_at'], record['createdAt']);
+    const endTime = this.readOptionalMillis(record['endTime']);
+    const alarmCascade = this.readAlarmCascade(record['alarmCascade'], urgencyLevel);
+    const clarificationState = this.readClarificationState(record['clarificationState']);
+    const timeDisplay = cleanString(record['timeDisplay']) || this.formatTimeDisplay(startTime);
+    const dateRange = cleanString(record['dateRange']) || this.formatDateRange(startTime, endTime);
+    const isDone = this.readBoolean(record['isDone']) || this.readBoolean(record['isCompleted']);
+    return {
+      id,
+      timeDisplay,
+      title,
+      urgencyLevel,
+      isDone,
+      hasAlarm: this.readBoolean(record['hasAlarm'], true),
+      isSmartAlarm: this.readBoolean(record['isSmartAlarm']),
+      startTime,
+      endTime,
+      durationMinutes: this.readInteger(record['durationMinutes']),
+      durationSource: parseDurationSource(record['durationSource']),
+      conflictPolicy: parseConflictPolicy(record['conflictPolicy']),
+      dateRange,
+      location: cleanString(record['location']),
+      notes: cleanString(record['notes']) || cleanString(record['description']),
+      keyPerson: cleanString(record['keyPerson']),
+      keyPersonEntityId: cleanString(record['keyPersonEntityId']),
+      highlights: cleanString(record['highlights']),
+      alarmCascade,
+      hasConflict: this.readBoolean(record['hasConflict']),
+      conflictWithTaskId: cleanString(record['conflictWithTaskId']),
+      conflictSummary: cleanString(record['conflictSummary']),
+      isVague: this.readBoolean(record['isVague']),
+      clarificationState,
+      createdAt: createdAt > 0 ? createdAt : startTime,
+      updatedAt: updatedAt > 0 ? updatedAt : createdAt > 0 ? createdAt : startTime
+    };
+  }
+
+  private readOptionalMillis(value: Object | null | undefined): number | undefined {
+    const millis = Number(value);
+    if (Number.isFinite(millis) && millis > 0) {
+      return Math.floor(millis);
+    }
+    return undefined;
+  }
+
+  private readInteger(value: Object | null | undefined): number {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed) && parsed >= 0) {
+      return Math.floor(parsed);
+    }
+    return 0;
+  }
+
+  private readBoolean(value: Object | null | undefined, fallback: boolean = false): boolean {
+    if (typeof value === 'boolean') {
+      return value;
+    }
+    if (typeof value === 'string') {
+      const normalized = value.trim().toLowerCase();
+      if (normalized === 'true') {
+        return true;
+      }
+      if (normalized === 'false') {
+        return false;
+      }
+    }
+    return fallback;
+  }
+
+  private readAlarmCascade(value: Object | null | undefined, urgencyLevel: UrgencyLevel): string[] {
+    if (Array.isArray(value)) {
+      const cascade: string[] = [];
+      value.forEach((entry: Object | string) => {
+        const normalized = cleanString(entry);
+        if (normalized) {
+          cascade.push(normalized);
+        }
+      });
+      if (cascade.length > 0) {
+        return cascade;
+      }
+    }
+    return buildAlarmCascade(urgencyLevel);
+  }
+
+  private readClarificationState(value: Object | null | undefined): ClarificationState | undefined {
+    const record = safeObject(value);
+    if (!record) {
+      return undefined;
+    }
+    const kind = cleanString(record['kind']);
+    const question = cleanString(record['question']);
+    if (!kind || !question) {
+      return undefined;
+    }
+    if (kind === 'AMBIGUOUS_PERSON') {
+      const candidates = this.readClarificationCandidates(record['candidates']);
+      return {
+        kind: 'AMBIGUOUS_PERSON',
+        question,
+        candidates
+      };
+    }
+    if (kind === 'MISSING_INFORMATION') {
+      return {
+        kind: 'MISSING_INFORMATION',
+        question
+      };
+    }
+    return undefined;
+  }
+
+  private readClarificationCandidates(value: Object | null | undefined): ClarificationPersonCandidate[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+    const candidates: ClarificationPersonCandidate[] = [];
+    value.forEach((entry: Object) => {
+      const record = safeObject(entry);
+      if (!record) {
+        return;
+      }
+      const entityId = cleanString(record['entityId']);
+      const displayName = cleanString(record['displayName']);
+      if (!entityId || !displayName) {
+        return;
+      }
+      candidates.push({
+        entityId,
+        displayName,
+        description: cleanString(record['description'])
+      });
+    });
+    return candidates;
+  }
+
+  private formatTimeDisplay(epochMillis: number): string {
+    const date = new Date(epochMillis);
+    const hour = `${date.getHours()}`.padStart(2, '0');
+    const minute = `${date.getMinutes()}`.padStart(2, '0');
+    return `${hour}:${minute}`;
+  }
+
+  private formatDateRange(startTime: number, endTime?: number): string {
+    const startDate = new Date(startTime);
+    const year = startDate.getFullYear();
+    const month = `${startDate.getMonth() + 1}`.padStart(2, '0');
+    const day = `${startDate.getDate()}`.padStart(2, '0');
+    if (!endTime) {
+      return `${year}-${month}-${day}`;
+    }
+    const endDate = new Date(endTime);
+    const endYear = endDate.getFullYear();
+    const endMonth = `${endDate.getMonth() + 1}`.padStart(2, '0');
+    const endDay = `${endDate.getDate()}`.padStart(2, '0');
+    return `${year}-${month}-${day} ~ ${endYear}-${endMonth}-${endDay}`;
   }
 
   importFromUri(

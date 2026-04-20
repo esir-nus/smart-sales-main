@@ -250,3 +250,63 @@ Every active Harmony program-summary entry must include:
   - HUI-02 no longer uses inline mock cards; it now runs through a dedicated Tingwu page adapter seam
   - the HUI-02 docking contract defines a future direction toward shell evolution, contingent on signing gate clearance and successful docking
   - local UI-lane signed HAP proof now exists, and the script now refuses missing or wrong-bundle AGC assets before install, but device-accepted install proof is still pending
+
+### H-04: Complete Native App (smartsales-app)
+
+- `ID`: `H-04`
+- `Title`: Complete native HarmonyOS ArkTS/ArkUI app
+- `Work Class`: `harmony-native`
+- `Platform Lane`: `harmony`
+- `Capability Class`: `complete-native`
+- `Owner`: Harmony-native complete app lane
+- `Status`: `Active` (Phase 2B device-verified)
+- `Source of Truth`:
+  - `docs/platforms/harmony/app-architecture.md`
+  - `docs/platforms/harmony/native-development-framework.md`
+  - `docs/specs/cross-platform-sync-contract.md`
+  - all shared `docs/core-flow/**`, `docs/cerb/**`, and `docs/specs/**` docs
+- `Required Evidence`:
+  - app scaffold builds locally from the Harmony-owned root
+  - each feature phase records what is build-verified versus device-verified
+  - domain model translations stay aligned to Kotlin `domain/` semantics
+  - signing and `hdc` proof is recorded before the lane claims device parity
+- `UI Translation / Native Rewrite`:
+  - complete native ArkTS/ArkUI implementation, not a Compose port
+  - absorbs Tingwu container patterns as foundation
+  - page-native scheduler UI is now wired into the public shell instead of a placeholder
+- `Backend / Dataflow Evidence`:
+  - state management follows the repository pub-sub shape proven in the Tingwu container
+  - Phase 2B now includes manual exact-task create/list/complete/delete plus local JSON persistence
+  - reminder publish/cancel is explicitly deferred to HS-011 when Harmony adapter provisioning is not yet ready
+- `Supported Set`:
+  - Phase 1: app shell, navigation, lifecycle, config generation
+  - Phase 2A: audio pipeline (import, upload, poll, artifacts)
+  - Phase 2B: manual scheduler create/list/complete/delete with cold-launch restore
+- `Disabled Set`:
+  - LLM/voice scheduler extraction
+  - conflict/reschedule UI
+  - real Harmony reminder adapter delivery
+  - Phase 2C/2D/2E surfaces beyond placeholders
+- `User-visible Limitation`:
+  - the app only claims the slices that are locally implemented and verified; reminder adapter delivery remains deferred to HS-011 even though the reminder-attempt log now exists
+- `Does Not Own`:
+  - shared product semantics
+  - Android implementation shape
+  - cross-platform governance outside the Harmony-owned root
+- `Branch Restore Snapshot`:
+  - `Branch`: `harmony/scheduler-phase-2b`
+  - `Purpose`: complete native HarmonyOS app for phased parity delivery
+  - `Capability Class`: `complete-native`
+  - `Baseline Commit or Tag`: `platform/harmony` plus imported `smartsales-app` scaffold
+  - `Current Head Snapshot`: Phase 2B scheduler slice added on top of the complete app scaffold
+  - `Restore Procedure Reference`: this tracker entry plus `docs/platforms/harmony/app-architecture.md`
+  - `Current Restore Confidence`: local build plus AGC signing/install/device proof now exist for create -> restore -> complete -> delete using the shared `smartsales.HOS.test` lane
+- `Last Updated`: `2026-04-20`
+- `Notes / Drift`:
+  - the complete-native app scaffold was restored into this branch before HS-006 implementation because the current `platform/harmony` branch did not yet carry it as tracked content
+  - `Scheduler.ets` now mirrors the Android task semantics with Harmony-owned `createdAt` / `updatedAt` metadata
+  - `SchedulerRepository.ets` mirrors the audio repository persistence pattern and writes `smartsales_scheduler_tasks.json`
+  - reminder registration is intentionally logged as deferred rather than faked until a real Harmony reminder adapter seam is available
+  - the HS-006 device harness now uses a deterministic form preset button so the create path still flows through `handleCreate()` / `SchedulerRepository.addTask()` / `FileStore.saveTasks()` without relying on unstable Harmony IME automation
+  - the scheduler list row key now includes `updatedAt` and completion state because the first device pass exposed ArkUI row reuse that left the `Complete` button visually stale after a successful completion
+  - on-device evidence on connect key `4NY0225613001090` now includes `loadTasks success count=1`, `initialize restored count=1`, `Completed · 2030-01-15 09:30`, `loadTasks success count=0`, and `initialize restored count=0`

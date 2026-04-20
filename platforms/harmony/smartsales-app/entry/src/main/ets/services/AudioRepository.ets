@@ -137,7 +137,16 @@ class AudioRepository {
     await ensureAppRuntimeConfigLoaded();
     const context = this.requireContext();
     const item = this.findItem(audioId);
-    if (!item || isProcessingStatus(item.status) || this.activeJobs.get(audioId) === true) {
+    if (!item) {
+      console.warn(`[HS-010][AudioRepository] start skipped missing-item audioId=${audioId}`);
+      return;
+    }
+    if (isProcessingStatus(item.status)) {
+      console.info(`[HS-010][AudioRepository] start skipped processing-status audioId=${audioId} status=${item.status}`);
+      return;
+    }
+    if (this.activeJobs.get(audioId) === true) {
+      console.info(`[HS-010][AudioRepository] start skipped active-job audioId=${audioId}`);
       return;
     }
     this.activeJobs.set(audioId, true);

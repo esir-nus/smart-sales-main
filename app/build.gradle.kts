@@ -1,9 +1,35 @@
+import java.io.ByteArrayOutputStream
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.kapt)
     alias(libs.plugins.hilt)
 }
+
+// 读取 git 分支与 commit 摘要，用于 debug 构建版本号自识别
+fun gitBranch(): String = runCatching {
+    val out = ByteArrayOutputStream()
+    exec {
+        commandLine("git", "rev-parse", "--abbrev-ref", "HEAD")
+        standardOutput = out
+        isIgnoreExitValue = true
+    }
+    out.toString().trim().ifEmpty { "unknown" }
+}.getOrDefault("unknown")
+
+fun gitDescribe(): String = runCatching {
+    val out = ByteArrayOutputStream()
+    exec {
+        commandLine("git", "describe", "--always", "--dirty", "--abbrev=7")
+        standardOutput = out
+        isIgnoreExitValue = true
+    }
+    out.toString().trim().ifEmpty { "unknown" }
+}.getOrDefault("unknown")
+
+val gitBranchValue = gitBranch()
+val gitDescribeValue = gitDescribe()
 
 android {
     namespace = "com.smartsales.aitest"
@@ -17,9 +43,15 @@ android {
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
+        buildConfigField("String", "GIT_BRANCH", "\"$gitBranchValue\"")
+        buildConfigField("String", "GIT_DESCRIBE", "\"$gitDescribeValue\"")
     }
 
     buildTypes {
+        debug {
+            // 在 versionName 末尾追加 +分支@commit，便于 QA 设备一眼识别构建来源
+            versionNameSuffix = "+$gitBranchValue@$gitDescribeValue"
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(

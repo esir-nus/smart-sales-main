@@ -14,8 +14,8 @@ Execute these steps in order. Stop immediately if any gating step fails.
 3. If no changes exist, stop: "Nothing to ship."
 4. Determine branch context and target action:
    - **develop**: handoff = commit + push
-   - **feature/\***: handoff = commit + push + PR to develop
-   - **platform/harmony**: handoff = commit + push
+   - **feature/\*** or **harmony/\***: handoff = commit + push + PR to develop
+   - **platform/\***: STOP. "Platform branches are shipping snapshots. Switch to develop or create a feature branch from develop."
    - **master**: STOP. "Never commit directly to master. Switch to develop or a feature branch."
    - **other**: warn, ask the user to confirm the target branch and action
 
@@ -71,8 +71,8 @@ Output the following structured block:
 
 ### Branch
 - Current: {branch name}
-- Action: {commit + push | commit + push + PR to develop | commit + push + PR to platform/harmony}
-- Base: {develop | platform/harmony | N/A for direct push}
+- Action: {commit + push | commit + push + PR to develop}
+- Base: {develop | N/A for direct push}
 
 ### Changed Files
 {grouped by module}

@@ -40,8 +40,8 @@ Based on the current branch:
 | Branch | Action |
 |---|---|
 | `develop` | stage + commit + push |
-| `feature/*` | stage + commit + push + create PR to develop |
-| `platform/harmony` | stage + commit + push |
+| `feature/*` or `harmony/*` | stage + commit + push + create PR to develop |
+| `platform/*` | STOP. "Platform branches are shipping snapshots. Switch to develop or create a feature branch from develop." |
 | `master` | STOP. Never commit directly to master. |
 | other | ask the user to confirm |
 

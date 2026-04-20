@@ -138,13 +138,28 @@ view_file docs/plans/tracker.md
 - Update `docs/plans/tracker.md` with feature status
 - Move item from 🔲 to ✅
 
-### 5.2 Exit Checklist
+### 5.2 Changelog Entry
+
+Changelog entries must name the **user-visible surface** the feature reaches, not just the component that was touched.
+
+Rules:
+
+- Good: `feat(agent-intelligence): long-press copy on chat bubbles (SIM runtime, full runtime)`
+- Bad: `feat(agent-intelligence): add CopyableBubble wrapper`
+- The entry fails review if the named component is not wired into any active runtime path (SIM / full / flavor). Shipping a component that no runtime renders is a latent feature, not a delivered one — log it as `chore(infra):` instead.
+- If the feature only reaches a subset of runtimes, name the subset explicitly.
+
+Rationale: diagnosed 2026-04-20 when a shipped `CopyableBubble` was absent from the SIM runtime path actually rendered to users. The changelog entry was technically true about the code, but misleading about the delivered behavior.
+
+### 5.3 Exit Checklist
 
 ```markdown
 - [x] Feature works E2E
+- [x] Feature reaches active runtime path (SIM / full / flavor named explicitly)
 - [x] /cerb-check passes all 3 gates
 - [x] Build + tests green
 - [x] Tracker updated
+- [x] Changelog entry names user-visible surface
 ```
 
 ---

@@ -48,6 +48,24 @@ Rules:
 
 The previous Dirty-Tree Quarantine (DTQ) lane harness was decommissioned on 2026-04-15. Archived docs are in `docs/archive/dtq-era/` for reference only.
 
+### Feature-branch freshness rule
+
+A feature branch that has not merged back (or been rebased onto its origin trunk) within **5 calendar days of its most recent commit** is treated as stale. Stale feature branches are a governance failure, not a work-in-progress signal.
+
+Rules:
+
+- If a branch genuinely needs to live longer than 5 days (architectural rewrite, phased migration), declare it an integration trunk and document its scope and merge cadence in `docs/plans/tracker.md`.
+- A stale branch must either merge, rebase on its trunk, or be converted to an integration trunk before any further commits land on it.
+- Multi-platform isolation is not an excuse for drift: Harmony work and Android work proceed independently, but neither gets to hoard fixes on a side branch.
+
+Rationale: long-lived feature branches accumulate unmerged user-visible fixes. When a build is installed from a different branch, those fixes appear to have "disappeared," which is an integration failure diagnosed in 2026-04-20 (see `docs/reference/agent-lessons-details.md`).
+
+### Multi-platform isolation
+
+Android work and Harmony work are isolated by construction. Uncommitted work on one platform must not block a build or fix on the other.
+
+Operational pattern: use git worktrees (`docs/sops/worktree-usage.md`) to build, install, or verify a different branch without disturbing the current working tree. This is the sanctioned way to respect platform isolation without pausing in-flight work.
+
 ---
 
 ## 2. Supported Product Targets

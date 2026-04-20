@@ -37,6 +37,22 @@ Rule:
 - do not add speculative fallback branches, build-type splits, or hidden success masking unless the spec or reproduced runtime evidence requires them
 - for Android runtime bugs, use logcat to prove whether failure happened during hold, release, processing, or result delivery before editing code
 
+## Missing-Behavior Rule (Ancestry First)
+
+When a user reports that a previously-seen feature is now missing, gone, or regressed, the **first** diagnostic is branch ancestry — not code search.
+
+Procedure:
+
+1. Identify the expected commit or feature name.
+2. Run `git log --all --oneline --grep="<feature keyword>"` or locate the commit from the changelog.
+3. Run `git merge-base --is-ancestor <commit> HEAD` (exit 0 = in HEAD, exit 1 = missing).
+4. If missing: run `git branch -a --contains <commit>` to see where the commit actually lives.
+5. Check the device build's version stamp (`Settings → About`, or `adb shell dumpsys package <id> | grep versionName`) against the commit you expect. Divergence means the device is running a different branch than the user assumes.
+
+Only after confirming the commit is in HEAD should you start reading code for a regression. A "missing feature" with the commit not in HEAD is an integration gap, not a code bug — jump to the `/merge` or worktree path instead of writing new code.
+
+Rationale: diagnosed 2026-04-20 when a user-reported missing Wi-Fi repair modal was traced to a coalition feature branch never merged into the installed branch. Eight hours of intermittent investigation shortened to thirty seconds once ancestry was checked first.
+
 ---
 
 ## When to Use

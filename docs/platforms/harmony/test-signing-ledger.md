@@ -27,6 +27,12 @@ Current Harmony lanes:
   - ability: `EntryAbility`
   - branch: `harmony/tingwu-container`
   - role name: `ui-verification`
+- complete native app
+  - bundle name: `smartsales.HOS.test`
+  - module: `entry`
+  - ability: `EntryAbility`
+  - branch: `harmony/scheduler-phase-2b`
+  - role name: `smartsales-app`
 
 Rule:
 
@@ -88,6 +94,7 @@ Script usage:
 |---|---|---|---|
 | `tingwu-container` | `smartsales.HOS.test` | active AGC-backed signing lane with shared credential | Shared `.p12` and alias, package-specific `.p7b` |
 | `ui-verification` | `smartsales.HOS.ui` | AGC-backed signing lane with shared credential; device install pending operator confirmation | Shared `.p12` and alias, package-specific `.p7b`; local signed HAP verified; AGC preflight wired |
+| `smartsales-app` | `smartsales.HOS.test` | AGC-backed device proof recorded for HS-006 | Uses the same bundle lane as the mini-lab but a different app root under `platforms/harmony/smartsales-app/` |
 
 Common values:
 
@@ -116,6 +123,35 @@ UI verification build:
 ```bash
 cd platforms/harmony/ui-verification
 ../../commandline-tools-linux-x64-6.0.2.650/command-line-tools/bin/hvigorw --mode module -p product=default -p buildMode=debug assembleHap --stacktrace
+```
+
+Complete native app build:
+
+```bash
+cd platforms/harmony/smartsales-app
+~/.local/bin/hvigorw assembleHap --mode module -p product=default
+```
+
+Complete native app AGC-backed device install:
+
+```bash
+java -jar platforms/harmony/commandline-tools-linux-x64-6.0.2.650/command-line-tools/sdk/default/openharmony/toolchains/lib/hap-sign-tool.jar \
+  sign-app \
+  -mode localSign \
+  -keyAlias tingwuAgcDebug \
+  -keyPwd "$KEY_PASSWORD" \
+  -appCertFile ~/.ohos/tingwu-container-signing/agc-debug/com.smartsales.harmony.app.cer \
+  -profileFile ~/.ohos/tingwu-container-signing/agc-debug/com.smartsales.harmony.appDebug.p7b \
+  -inFile platforms/harmony/smartsales-app/entry/build/default/outputs/default/entry-default-unsigned.hap \
+  -signAlg SHA256withECDSA \
+  -keystoreFile ~/.ohos/tingwu-container-signing/agc-debug/tingwu-agc-debug.p12 \
+  -keystorePwd "$STORE_PASSWORD" \
+  -outFile platforms/harmony/smartsales-app/entry/build/agcDeviceDebug/outputs/agcDeviceDebug/entry-agcDeviceDebug-signed-hs006.hap \
+  -compatibleVersion 12 \
+  -signCode 1
+
+hdc -t <connect_key> install -r platforms/harmony/smartsales-app/entry/build/agcDeviceDebug/outputs/agcDeviceDebug/entry-agcDeviceDebug-signed-hs006.hap
+hdc -t <connect_key> shell aa start -a EntryAbility -b smartsales.HOS.test
 ```
 
 UI verification signed build (local chain):
@@ -277,6 +313,39 @@ Correct fix:
 Operator reminder:
 
 - `platforms/harmony/ui-verification/**` now has unsigned-build proof plus local signed-HAP proof, but it still does not have device-accepted install proof; do not reuse this mini-lab evidence to claim UI-package install readiness
+
+---
+
+## 6a. Complete Native App Evidence Note: HS-006 Scheduler Harness
+
+This evidence note applies to `platforms/harmony/smartsales-app` on branch `harmony/scheduler-phase-2b`.
+
+Resolved chain on 2026-04-20:
+
+1. build the complete native app from `platforms/harmony/smartsales-app`
+2. sign the unsigned HAP against the active AGC-backed `smartsales.HOS.test` lane
+3. install on device `4NY0225613001090`
+4. launch `EntryAbility`
+5. run the HS-010-style harness loop with screenshots, layout dumps, relaunch, and `hilog`
+
+Recorded evidence:
+
+- create path rendered on device through the real form submit path using the deterministic `Load HS-006 Demo Values` preset and `Create Task`
+- reminder attempt stayed honest via the deferred HS-011 path for a future start time
+- cold restore logs showed:
+  - `[HS-006][FileStore] loadTasks success count=1`
+  - `[HS-006][SchedulerRepository] initialize restored count=1`
+- the first device pass exposed an ArkUI row-reuse bug where completion succeeded but the row kept the stale `Complete` button; the fix was to key the task row by `id + updatedAt + completion state`
+- after the UI fix, the restored task row rendered `Completed · 2030-01-15 09:30`
+- after delete plus cold restart, `hilog` showed:
+  - `[HS-006][FileStore] loadTasks success count=0`
+  - `[HS-006][SchedulerRepository] initialize restored count=0`
+- the final scheduler screenshot returned to `0 tasks saved locally`
+
+Operator caution:
+
+- Harmony `uitest` transport and foreground focus remained unstable during the pass
+- do not claim raw IME automation reliability from this run; the deterministic form preset exists specifically to keep the harness on the real create pipeline without trusting Harmony text entry
 
 ---
 

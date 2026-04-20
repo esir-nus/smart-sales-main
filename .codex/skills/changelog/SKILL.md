@@ -5,7 +5,7 @@ description: Update CHANGELOG.md with new entries from git history, regenerate C
 
 # Update Changelog
 
-Update the changelog to the latest state, then commit and push.
+Update the changelog to the latest repository-wide state, then commit and push.
 
 ## Step 1: Regenerate HTML
 
@@ -15,19 +15,20 @@ bash scripts/changelog.sh
 
 ## Step 2: Find new commits
 
-Check the latest `### YYYY-MM-DD` header in `CHANGELOG.md` to find the cutoff date. Then get commits since that date:
+Check the latest `### YYYY-MM-DD` header in `CHANGELOG.md` to find the cutoff date. Then get repository-wide commits since that date:
 
 ```bash
-git log --oneline --after="YYYY-MM-DD" --no-merges
+git log --all --oneline --after="YYYY-MM-DD" --no-merges
 ```
 
 ## Step 3: Append new entries
 
-For any `feat:`, `fix:`, `ship:`, or significant `chore:`/`refactor:` commits not yet represented, append new dated sections to the top of the `## 最近更新` section in `CHANGELOG.md`.
+For any `feat:`, `fix:`, `ship:`, or significant `chore:`/`refactor:` commits not yet represented from any active branch, append new dated sections to the top of the `## 最近更新` section in `CHANGELOG.md`.
 
 **Format rules:**
 - Written in Chinese
-- Tech jargon kept in English: BLE, SIM, HarmonyOS, Tingwu, DashScope, FunASR, ESP32, Compose, Kotlin, Gradle, CI, PR
+- Tech jargon kept in English: BLE, SIM, Tingwu, DashScope, FunASR, ESP32, Compose, Kotlin, Gradle, CI, PR
+- For the public changelog, write `鸿蒙OS`, not `HarmonyOS`
 - Use 徽章 instead of Badge
 
 **Entry format:**
@@ -73,7 +74,8 @@ Print how many new entries were added and the date range covered.
 
 ## Rules
 
-- Never commit directly to master. This skill runs on develop.
+- Never commit directly to master.
 - Group commits by date, not by individual commit.
+- The public changelog is repository-wide, not branch-local. Include relevant changes from all active branches.
 - Skip merge commits and trivial CI/config changes unless they're user-visible.
 - Keep entries concise -- one line per feature/fix.

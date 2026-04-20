@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -154,6 +155,19 @@ fun ConnectivityModal(
                     )
                 }
 
+                // 语音音量快速入口 — 仅当存在活跃设备时显示
+                if (activeDevice != null && state == ConnectivityManagerState.CONNECTED) {
+                    item {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        val voiceVolume by viewModel.voiceVolume.collectAsState()
+                        VoiceVolumeQuickEntry(
+                            level = voiceVolume,
+                            onValueChange = viewModel::onVoiceVolumeDrag,
+                            onValueChangeFinished = viewModel::onVoiceVolumeCommitted
+                        )
+                    }
+                }
+
                 // Other devices section
                 if (otherDevices.isNotEmpty()) {
                     item {
@@ -208,6 +222,61 @@ fun ConnectivityManagerScreen(
 }
 
 // ── Active Device Section ─────────────────────────────────────
+
+@Composable
+private fun VoiceVolumeQuickEntry(
+    level: Int,
+    onValueChange: (Int) -> Unit,
+    onValueChangeFinished: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(CardFrost)
+            .border(1.dp, CardBorder, RoundedCornerShape(18.dp))
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                    contentDescription = null,
+                    tint = TextMuted,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = "语音音量",
+                    color = TextPrimary,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+            Text(text = level.toString(), color = TextMuted, fontSize = 12.sp)
+        }
+        // 拖动期间不发 BLE，松手 (onValueChangeFinished) 才下发，保护 ESP32
+        Slider(
+            value = level.toFloat(),
+            onValueChange = { onValueChange(it.toInt()) },
+            onValueChangeFinished = onValueChangeFinished,
+            valueRange = 0f..100f,
+            colors = SliderDefaults.colors(
+                thumbColor = AccentBlue,
+                activeTrackColor = AccentBlue,
+                inactiveTrackColor = CardBorder
+            ),
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
+}
 
 @Composable
 private fun ActiveDeviceSection(

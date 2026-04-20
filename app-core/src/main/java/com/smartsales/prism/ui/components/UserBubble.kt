@@ -31,21 +31,23 @@ fun UserBubble(text: String) {
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.End // 右对齐
     ) {
-        Box(
-            modifier = Modifier
-                .widthIn(max = 280.dp)
-                .background(
-                    color = Color(0xFF2196F3), // User Blue
-                    shape = RoundedCornerShape(16.dp, 16.dp, 4.dp, 16.dp)
+        CopyableBubble(textToCopy = text) {
+            Box(
+                modifier = Modifier
+                    .widthIn(max = 280.dp)
+                    .background(
+                        color = Color(0xFF2196F3), // User Blue
+                        shape = RoundedCornerShape(16.dp, 16.dp, 4.dp, 16.dp)
+                    )
+                    .padding(12.dp)
+            ) {
+                Text(
+                    text = text,
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp
                 )
-                .padding(12.dp)
-        ) {
-            Text(
-                text = text,
-                color = Color.White,
-                fontSize = 14.sp,
-                lineHeight = 20.sp
-            )
+            }
         }
     }
 }

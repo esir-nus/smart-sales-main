@@ -3,6 +3,9 @@
 > Key spec/impl changes, newest first. Like `git log --oneline`.
 > Historical shipment log only. Do not use this file as the active source of open/closed testing-wave status; `docs/plans/tracker.md` and `docs/cerb-e2e-test/tasklist_log.md` own that.
 
+### 2026-04-20
+- **docs / declaration-first-shipping**: SHIPPED declaration-first governance for `/ship` and related operator prompts. Added [`docs/specs/declaration-first-shipping.md`](../specs/declaration-first-shipping.md) with §0 philosophy ("friction upfront, not downstream"), rewrote the Codex [`ship` skill](../../.codex/skills/ship/SKILL.md) around declared lane/scope review, reverse-dependency checks, scope-only staging, registry cleanup, and automated trace logging, added the `docs` lane scaffold in [`docs/plans/active-lanes.md`](./active-lanes.md), and inserted a declaration-first pointer block into [`CLAUDE.md`](../../CLAUDE.md). Verification: docs reviewed and passed; no tests run. Branch: `develop` ship target from declared `docs` lane. Ignored dirt: unrelated Android/Harmony changes remained in the source worktree on `harmony/scheduler-phase-2b` with no reverse-dependency hits against shipped files.
+
 ### 2026-04-15
 - **android-build**: Install pipeline HOTFIXED. Pinned the transitive `org.jetbrains:annotations` dependency away from `latest.release` at root Gradle resolution so `:app-core:installDebug` no longer depends on remote Maven metadata lookup when the Aliyun Tingwu SDK chain is present. This stabilizes local/offline-ish Android build installs in the current environment.
 - **connectivity**: Pairing compile regression HOTFIXED. Repaired `RealPairingService` after the multi-device registry landing by keeping the selected BLE peripheral in one local variable through provisioning and registry registration, removing the duplicate declaration that blocked `:app-core:compileDebugKotlin`.

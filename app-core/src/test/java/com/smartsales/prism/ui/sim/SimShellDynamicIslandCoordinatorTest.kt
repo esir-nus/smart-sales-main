@@ -400,6 +400,40 @@ class SimShellDynamicIslandCoordinatorTest {
     }
 
     @Test
+    fun `partial wifi down surfaces persistent amber connectivity lane`() = runTest {
+        val connectivityState = MutableStateFlow(ConnectionState.CONNECTED)
+        val activeDeviceName = MutableStateFlow<String?>("CHLE_Int")
+        val coordinator = SimShellDynamicIslandCoordinator(
+            parentScope = this,
+            schedulerItems = MutableStateFlow(listOf(schedulerItem("最近：客户回访 · 09:00"))),
+            connectivityState = connectivityState,
+            batteryLevel = MutableStateFlow(85),
+            takeoverSuppressed = MutableStateFlow(false),
+            activeDeviceName = activeDeviceName
+        )
+
+        runCurrent()
+        connectivityState.value = ConnectionState.PARTIAL_WIFI_DOWN
+        runCurrent()
+
+        val visibleItem = coordinator.presentation.value.visibleItem
+        assertEquals(DynamicIslandLane.CONNECTIVITY, visibleItem?.lane)
+        assertEquals("CHLE_Int WiFi 未连接", visibleItem?.displayText)
+        assertEquals(DynamicIslandVisualState.CONNECTIVITY_PARTIAL, visibleItem?.visualState)
+        assertEquals(85, visibleItem?.batteryPercentage)
+
+        // Persistent — does not auto-dismiss after the transient interrupt lock
+        advanceTimeBy(10_000L)
+        runCurrent()
+        assertEquals(
+            "CHLE_Int WiFi 未连接",
+            coordinator.presentation.value.visibleItem?.displayText
+        )
+
+        coordinator.close()
+    }
+
+    @Test
     fun `persistent state clears deferred transient when suppression ends`() = runTest {
         val connectivityState = MutableStateFlow(ConnectionState.CONNECTED)
         val takeoverSuppressed = MutableStateFlow(true)

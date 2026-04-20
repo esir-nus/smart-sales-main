@@ -51,7 +51,7 @@ Output this template, filled in from the reading:
 ### Sprint Contract: [Slice Name]
 
 **Engine**: [Backend/Pipeline | UI | Architecture | Governance | Doc]
-**Branch**: [develop | feature/{name} | platform/harmony]
+**Branch**: [develop | feature/{name} | harmony/{name}]
 **Evidence class**: [L1 | L2 | L3 -- choose based on scope and risk]
 **Date**: [today]
 

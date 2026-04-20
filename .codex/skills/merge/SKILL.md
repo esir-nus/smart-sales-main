@@ -1,29 +1,41 @@
 ---
 name: merge
-description: Execute PR creation and merge for feature branches into develop. Use when the user says /merge for a feature branch. For develop -> master promotion, use the promote-to-master skill instead.
+description: Execute PR creation and merge for feature branches into develop. If the worktree has uncommitted changes, stop and direct to /ship first. Use when the user says /merge for a feature branch. For develop -> master promotion, use the promote-to-master skill instead.
 ---
 
 # Merge feature branch to develop
 
 Create a PR from the current feature branch to develop, wait for CI, and merge.
 
+`develop` is the studio — all feature work (Android, Harmony, shared docs, everything) targets it. Platform branches (`platform/harmony`, `platform/android`, etc.) are shipping snapshots and never accept PRs from feature work.
+
 For develop -> master promotion, use the `promote-to-master` skill instead.
 
 ## Step 1: Preflight
 
-1. Confirm branch is NOT `develop`, `master`, or `platform/harmony`:
+1. Confirm branch is a feature branch (not a trunk or platform branch):
    ```bash
    git rev-parse --abbrev-ref HEAD
    ```
    - On `develop`: STOP. "Use promote-to-master skill for develop -> master."
    - On `master`: STOP. "Cannot merge from master."
-   - On `platform/harmony`: STOP. "Platform branches do not merge back."
+   - On `platform/*` (e.g. `platform/harmony`, `platform/android`): STOP. "Platform branches are shipping snapshots — they do not merge back. Create a feature branch from develop instead."
 
-2. Working tree is clean:
+2. Check for uncommitted changes:
    ```bash
    git status --porcelain
+   git diff --name-only
+   git diff --cached --name-only
+   git ls-files --others --exclude-standard
    ```
-   If dirty: STOP. "Uncommitted changes. Commit or stash first."
+
+   If any uncommitted or untracked product files exist:
+   - STOP. Print: "Uncommitted changes detected. Run `/ship` to commit and push first, then re-run `/merge`."
+   - List the changed files grouped by directory.
+   - Do NOT classify, split, or route. Do NOT auto-stash or auto-commit.
+   - Exception: untracked `.codex/**` or local tooling files are advisory only — report them but do not block.
+
+   If tree is clean: continue to Step 3.
 
 3. Branch has commits ahead of develop:
    ```bash
@@ -117,20 +129,25 @@ Print:
 - Merge status
 - Commit landed on develop
 
-## Optional: Harmony sync
+## Optional: Promote to platform branch
 
-If the user requests, sync into platform/harmony:
+If the user asks to snapshot current develop state into a platform branch:
 
 ```bash
 git checkout platform/harmony
-git merge develop --no-ff -m "merge: sync shared contracts from develop"
+git merge develop --no-ff -m "promote: develop → platform/harmony snapshot"
 git push origin platform/harmony
 git checkout develop
 ```
 
+Use `platform/android`, `platform/ios`, etc. for other platform targets. Platform branches are shipping snapshots — they receive output from develop, never the reverse.
+
 ## Rules
 
 - This skill is for feature -> develop only. Use `promote-to-master` for develop -> master.
+- All feature branches (`feature/*`, `harmony/*`, or any name) target `develop`. There is no separate Harmony trunk for daily work.
+- Platform branches (`platform/*`) are shipping snapshots. They do not accept PRs from feature branches and never merge back.
+- The dirty-tree check is diagnostic only. Do not auto-stash, auto-commit, auto-branch, or auto-split.
 - Never force-push to develop or master.
 - Never merge if CI fails — report and stop.
 - Never delete the develop branch.

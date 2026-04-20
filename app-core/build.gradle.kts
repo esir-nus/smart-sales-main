@@ -6,46 +6,47 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
+apply(from = rootProject.file("gradle/android-app-versioning.gradle.kts"))
+
+@Suppress("UNCHECKED_CAST")
+val resolveAndroidAppVersion =
+    extra["resolveAndroidAppVersion"] as (String, Int) -> Map<String, Any>
+val prismVersioning = resolveAndroidAppVersion("0.1.0-prism", 1)
+val prismBaseVersionCode = prismVersioning["baseVersionCode"] as Int
+val prismBaseVersionName = prismVersioning["baseVersionName"] as String
+val prismBuildStamp = prismVersioning["buildStamp"] as String
+val prismGitSha = prismVersioning["gitSha"] as String
+val prismDebugVersionSuffix = prismVersioning["debugVersionSuffix"] as String
+val prismDebugDisplayVersion = prismVersioning["debugDisplayVersion"] as String
+
 android {
     namespace = "com.smartsales.prism"
     compileSdk = 34
-
-    flavorDimensions += "distribution"
 
     defaultConfig {
         applicationId = "com.smartsales.prism"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0-prism"
+        versionCode = prismBaseVersionCode
+        versionName = prismBaseVersionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
+        resValue("string", "app_name", "智能销售-安卓")
+        buildConfigField("String", "APP_BUILD_STAMP", "\"$prismBuildStamp\"")
+        buildConfigField("String", "APP_GIT_SHA", "\"$prismGitSha\"")
+        buildConfigField("String", "APP_DISPLAY_VERSION", "\"$prismDebugDisplayVersion\"")
     }
 
     buildTypes {
+        debug {
+            versionNameSuffix = prismDebugVersionSuffix
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-        }
-    }
-
-    productFlavors {
-        create("full") {
-            dimension = "distribution"
-            buildConfigField("boolean", "IS_HARMONY_COMPAT_FLAVOR", "false")
-            buildConfigField("boolean", "ENABLE_SCHEDULER", "true")
-            resValue("string", "app_name", "智能销售-安卓")
-        }
-        create("harmony") {
-            dimension = "distribution"
-            applicationIdSuffix = ".harmony"
-            versionNameSuffix = "-harmony"
-            buildConfigField("boolean", "IS_HARMONY_COMPAT_FLAVOR", "true")
-            buildConfigField("boolean", "ENABLE_SCHEDULER", "false")
-            resValue("string", "app_name", "智能销售-鸿蒙")
         }
     }
 

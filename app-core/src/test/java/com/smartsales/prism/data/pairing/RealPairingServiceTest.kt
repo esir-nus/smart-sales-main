@@ -4,10 +4,15 @@ import com.smartsales.core.util.Result
 import com.smartsales.prism.data.connectivity.legacy.BlePeripheral
 import com.smartsales.prism.data.connectivity.legacy.BleSession
 import com.smartsales.prism.data.connectivity.legacy.DeviceNetworkStatus
+import com.smartsales.prism.data.connectivity.legacy.FakeBadgeHttpClient
 import com.smartsales.prism.data.connectivity.legacy.FakeDeviceConnectionManager
+import com.smartsales.prism.data.connectivity.legacy.FakePhoneWifiProvider
+import com.smartsales.prism.data.connectivity.legacy.PhoneWifiSnapshot
 import com.smartsales.prism.data.connectivity.legacy.scan.FakeBleScanner
 import com.smartsales.prism.data.connectivity.registry.DeviceRegistryManager
 import com.smartsales.prism.data.connectivity.registry.RegisteredDevice
+import com.smartsales.prism.domain.connectivity.ConnectivityPrompt
+import com.smartsales.prism.domain.connectivity.IsolationTriggerContext
 import com.smartsales.prism.domain.pairing.ErrorReason
 import com.smartsales.prism.domain.pairing.PairingResult
 import com.smartsales.prism.domain.pairing.PairingState
@@ -17,6 +22,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -25,6 +31,9 @@ class RealPairingServiceTest {
 
     private lateinit var bleScanner: FakeBleScanner
     private lateinit var connectionManager: FakeDeviceConnectionManager
+    private lateinit var httpClient: FakeBadgeHttpClient
+    private lateinit var wifiProvider: FakePhoneWifiProvider
+    private lateinit var connectivityPrompt: FakeConnectivityPrompt
     private lateinit var service: RealPairingService
 
     @Before
@@ -39,7 +48,15 @@ class RealPairingServiceTest {
                 rawResponse = "ok"
             )
         )
-        service = RealPairingService(bleScanner, connectionManager, FakeDeviceRegistryManager())
+        httpClient = FakeBadgeHttpClient()
+        wifiProvider = FakePhoneWifiProvider(
+            snapshot = PhoneWifiSnapshot.Connected(normalizedSsid = "officewifi", isValidated = true)
+        )
+        connectivityPrompt = FakeConnectivityPrompt()
+        service = RealPairingService(
+            bleScanner, connectionManager, FakeDeviceRegistryManager(),
+            httpClient, wifiProvider, connectivityPrompt
+        )
     }
 
     @Test
@@ -134,6 +151,66 @@ class RealPairingServiceTest {
         assertEquals(ErrorReason.WIFI_PROVISIONING_FAILED, state.reason)
     }
 
+    // ── Isolation probe tests ────────────────────────────────────
+
+    @Test
+    fun `pairBadge fires isolation prompt when validated network but HTTP unreachable`() = runTest {
+        httpClient.setReachable(false)
+        wifiProvider.snapshot = PhoneWifiSnapshot.Connected(
+            normalizedSsid = "officewifi",
+            isValidated = true
+        )
+        val peripheral = BlePeripheral("badge-1", "SmartBadge Pro", -42, "bt311")
+        service.startScan()
+        bleScanner.setDevices(listOf(peripheral))
+        val badge = awaitDeviceFound().badge
+
+        val result = service.pairBadge(badge, WifiCredentials("OfficeWifi", "secret"))
+
+        // 配对本身成功
+        assertTrue(result is PairingResult.Success)
+        // 隔离提示已触发
+        assertEquals(1, connectivityPrompt.isolationCallCount)
+        assertEquals("192.168.0.8", connectivityPrompt.lastIsolationIp)
+    }
+
+    @Test
+    fun `pairBadge does not fire isolation prompt when network is not validated`() = runTest {
+        httpClient.setReachable(false)
+        wifiProvider.snapshot = PhoneWifiSnapshot.Connected(
+            normalizedSsid = "officewifi",
+            isValidated = false  // 整体网络有问题，不应判定为隔离
+        )
+        val peripheral = BlePeripheral("badge-1", "SmartBadge Pro", -42, "bt311")
+        service.startScan()
+        bleScanner.setDevices(listOf(peripheral))
+        val badge = awaitDeviceFound().badge
+
+        val result = service.pairBadge(badge, WifiCredentials("OfficeWifi", "secret"))
+
+        assertTrue(result is PairingResult.Success)
+        assertEquals(0, connectivityPrompt.isolationCallCount)
+    }
+
+    @Test
+    fun `pairBadge does not fire isolation prompt when HTTP is reachable`() = runTest {
+        httpClient.setReachable(true)
+        wifiProvider.snapshot = PhoneWifiSnapshot.Connected(
+            normalizedSsid = "officewifi",
+            isValidated = true
+        )
+        val peripheral = BlePeripheral("badge-1", "SmartBadge Pro", -42, "bt311")
+        service.startScan()
+        bleScanner.setDevices(listOf(peripheral))
+        val badge = awaitDeviceFound().badge
+
+        val result = service.pairBadge(badge, WifiCredentials("OfficeWifi", "secret"))
+
+        assertTrue(result is PairingResult.Success)
+        assertEquals(0, connectivityPrompt.isolationCallCount)
+        assertNull(connectivityPrompt.lastIsolationIp)
+    }
+
     private fun awaitDeviceFound(timeoutMs: Long = 2_000): PairingState.DeviceFound {
         val deadline = System.currentTimeMillis() + timeoutMs
         while (System.currentTimeMillis() < deadline) {
@@ -148,6 +225,22 @@ class RealPairingServiceTest {
 
     private fun waitForBackgroundPropagation() {
         Thread.sleep(25)
+    }
+
+    private class FakeConnectivityPrompt : ConnectivityPrompt {
+        var isolationCallCount = 0
+        var lastIsolationIp: String? = null
+        var lastIsolationTriggerContext: IsolationTriggerContext? = null
+
+        override suspend fun promptWifiMismatch(suggestedSsid: String?) = Unit
+        override suspend fun promptSuspectedIsolation(
+            badgeIp: String,
+            triggerContext: IsolationTriggerContext
+        ) {
+            isolationCallCount++
+            lastIsolationIp = badgeIp
+            lastIsolationTriggerContext = triggerContext
+        }
     }
 
     private class FakeDeviceRegistryManager : DeviceRegistryManager {

@@ -22,7 +22,7 @@ class RealFollowUpRescheduleExtractionService @Inject constructor(
 
     suspend fun extract(request: FollowUpRescheduleExtractionRequest): FollowUpRescheduleExtractionResult {
         val prompt = promptCompiler.compileFollowUpRescheduleExtractionPrompt(request)
-        return when (val result = executor.execute(ModelRegistry.EXTRACTOR, prompt)) {
+        return when (val result = executor.execute(ModelRegistry.SCHEDULER_EXTRACTOR, prompt)) {
             is ExecutorResult.Success -> schedulerLinter.parseFollowUpRescheduleExtraction(
                 input = result.content,
                 transcript = request.transcript

@@ -16,9 +16,9 @@ This is a read-only skill. Claude gathers context and produces a structured bloc
 If `$ARGUMENTS` names an action (commit, push, PR, rebase, cherry-pick, sync, etc.), use that.
 
 Otherwise, infer from state:
-- Uncommitted changes on `feature/*` branch -> suggest: commit + push + PR to develop
+- Uncommitted changes on `feature/*` or `harmony/*` branch -> suggest: commit + push + PR to develop
 - Uncommitted changes on `develop` -> suggest: commit + push
-- Uncommitted changes on `platform/harmony` -> suggest: commit + push
+- On `platform/*` branch -> warn: "Platform branches are shipping snapshots. Switch to develop or create a feature branch."
 - Clean tree, feature branch ahead of develop -> suggest: create PR to develop
 - Clean tree, develop ahead of master -> suggest: promotion (route to Codex's `promote-to-master` skill)
 - On `master` -> warn: "Direct work on master is not allowed. Switch to develop or a feature branch."

@@ -18,17 +18,24 @@ Read `SmartSales_PRD.md` for full product identity.
 ```
 master (protected, promotion-only — requires PR)
   └── develop (Android maintenance + shared contracts, daily trunk)
-        └── platform/harmony (HarmonyOS integration trunk, daily Harmony work)
-              ├── harmony/feat-x (feature branches, PR back to platform/harmony)
-              └── harmony/feat-y
+        ├── platform/harmony (HarmonyOS integration trunk, daily Harmony work)
+        │     ├── harmony/feat-x (feature branches, PR back to platform/harmony)
+        │     └── harmony/feat-y
+        └── platform/ios (anticipated, not yet created)
 ```
 
 - **develop**: Android maintenance and shared-contract work. Cerb-compliance applies.
 - **platform/harmony**: HarmonyOS-native integration trunk. Receives shared contracts from develop via merge. Never merges back into develop. All Harmony daily work lands here.
 - **master**: Protected. Receives promotions from develop via PR only. No direct commits.
 - Feature work: create branch from `develop` (for Android) or `platform/harmony` (for Harmony), PR back to origin branch.
+- **PR-only trunks**: develop and platform/harmony do not accept direct commits. All work lands through PRs from feature branches (`feature/* -> develop`, `harmony/* -> platform/harmony`).
 - Shared contracts flow: `develop → platform/harmony`, never the reverse. Sync at least weekly.
 - Harmony-native is the primary forward platform. Android is beta-maintenance.
+- **iOS (future)**: `platform/ios` will follow the same model as `platform/harmony`. Not yet created. See `docs/specs/cross-platform-sync-contract.md`.
+
+## Harmony Sprint Gate
+
+Edits under `platforms/harmony/**` require an `Active` or `Blocked` sprint entry in `docs/plans/sprint-tracker.md`. Enforced by the PreToolUse hook `.claude/hooks/harmony-sprint-gate.sh`. Open a sprint via `/sprint` before touching Harmony files. See `docs/specs/platform-governance.md` §3.3 for the full rule.
 
 ## Source of Truth
 
@@ -135,8 +142,9 @@ If current logs are insufficient, add targeted tags/logging and rerun instead of
 | Platform governance | `docs/specs/platform-governance.md` |
 | Glossary | `docs/specs/GLOSSARY.md` |
 | Lessons learned | `docs/reference/agent-lessons-details.md` |
-| Harmony tracker | `docs/plans/harmony-tracker.md` |
+| Harmony sprint tracker | `docs/plans/sprint-tracker.md` |
 | Harmony container spec | `docs/platforms/harmony/tingwu-container.md` |
+| Agent coalition contract | `docs/specs/agent-coalition.md` |
 
 ## Multi-Agent Coexistence
 

@@ -212,7 +212,9 @@ If the scheduler drawer mic receives a reschedule-style transcript:
 - raw model output alone must not authorize a write; the scheduler-owned final gate must still accept `resolved / ambiguous / no-match`
 - the utterance must itself contain an explicit reschedule target plus a new exact time; omitted-target follow-up mutation such as `改到3点` must safe-fail
 - once one target is resolved, explicit day+clock phrasing such as `明天早上8点` must be accepted through scheduler-owned deterministic parsing before any model-led exact-time fallback
-- delta-only phrasing such as `推迟1小时` / `提前半小时` must safe-fail rather than mutate from the resolved task's current start time
+- explicit signed delta phrasing such as `推迟1小时` / `提前半小时` is supported when the resolved task already has an exact start time
+- the same delta phrasing must still safe-fail for vague / `时间待定` tasks because there is no lawful stored base time to shift from
+- fuzzy relative phrasing such as `待会儿` / `晚点` remains unsupported and must still safe-fail
 - low-confidence resolution must degrade to explicit safe failure, not guessed mutation
 
 The same global target-resolution law also applies to the task-scoped follow-up reschedule lane:

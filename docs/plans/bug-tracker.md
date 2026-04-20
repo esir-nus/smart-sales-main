@@ -2,7 +2,7 @@
 
 > Purpose: active working board and evidence ledger for connectivity-module bugs, hypotheses, fix status, and next actions.
 > Scope: connectivity-specific for now; this is not a repo-wide generic bug tracker.
-> Last Updated: 2026-04-02
+> Last Updated: 2026-04-17
 
 ## Operating Rules
 
@@ -191,10 +191,10 @@
 
 ### OI-03: BLE reconnect succeeds, but badge stays offline until Wi‑Fi credentials are replayed
 
-- Status: `Fix in progress`
+- Status: `Blocked`
 - Affected layer: reconnect state machine, session persistence, manager UI state mapping
 - First seen: 2026-03-26
-- Last updated: 2026-04-02
+- Last updated: 2026-04-17
 - Current hypothesis:
   - Reconnect is technically succeeding at the BLE layer, but the badge may still be offline or on the wrong SSID even though firmware retains one last-working Wi‑Fi credential.
   - The app therefore still needs deterministic SSID alignment using its own multi-network credential store when the badge is offline or on a different network.
@@ -210,23 +210,142 @@
   - Manual `WIFI_MISMATCH` repair now requires an explicit send-confirm dialog before valid credentials are written to the badge.
   - Badge network status is now passive/event-driven instead of background-polled, and HTTP `/list` / `/download` / `/delete` reuse the active runtime endpoint snapshot instead of re-querying BLE before every call.
   - Connected-vs-ready evidence diagnostics now log the manual-sync gate branch, `ConnectivityBridge.isReady()` preflight, badge network query result, resolved base URL, and HTTP reachability outcome under the existing `SmartSalesConn` / `AudioPipeline` capture tags.
+  - `RealConnectivityBridge` no longer uses phone SSID alignment to accept, reuse, or refresh the active badge HTTP endpoint snapshot.
+  - Manual `WIFI_MISMATCH` repair now probes `http://<badge-ip>:8088` before declaring success; bounded probe timeout remains the existing `BadgeHttpClient.isReachable()` 3s preflight budget.
+  - Manual repair now returns explicit `HTTP_UNREACHABLE` diagnostics when BLE confirmation reaches a usable IP and matching submitted SSID but badge HTTP service still cannot be reached.
+  - Runtime shell auto-reconnect no longer calls immediate foreground `reconnect()` through the old compat shim; it now respects `effectiveState` so `WIFI_MISMATCH` and in-flight manual repair are not overwritten by a background reconnect loop.
+  - Post-credential readiness proof now uses a graduated `2s -> 3s -> 5s` grace budget before the app concludes that badge HTTP `:8088` is still unreachable.
+  - SIM audio AUTO `/list` sync now arms an in-memory known-HTTP-unreachable latch for the current runtime + badge endpoint and suppresses repeated AUTO churn until runtime/IP/readiness evidence changes.
+  - The bridge diagnostics log now labels phone SSID as `phoneSsidForDiag=` to make clear that it is operator context only, not an endpoint gate.
+- App-side improvement landed (2026-04-18):
+  - Pre-sync isolation gate: MANUAL sync preflight failure now checks `isValidated + lastKnownIp` before falling back to WiFi-mismatch prompt. If isolation is suspected, `ConnectivityModal` shows the isolation card (`PRE_SYNC` context) and sync is blocked cleanly — no upstream batch failure, no misleading WiFi-mismatch prompt.
+  - On-disconnect probe: `RealConnectivityBridge` now runs a deferred 1s HTTP probe when badge drops from `WifiProvisioned|Syncing` to `Disconnected`; suspected isolation surfaces immediately as `ON_DISCONNECT` card.
+  - These changes address the upstream batch-failure UX problem. The underlying `MotionTime1` HTTP unreachability remains firmware/AP-isolation ownership.
 - Next action:
-  - Revalidate on device with `adb logcat` capture that:
-    1. BLE reconnect succeeds
-    2. offline `IP#0.0.0.0` is classified as offline, not pending/parser-failed
-    3. exact-match remembered Wi‑Fi is replayed automatically
-    4. non-matching phone Wi‑Fi routes to the repair form
-    5. manual `更新配置` enters reconnect/progress immediately and does not require a second reconnect tap
-    6. closing and reopening badge connection no longer reopens on a stale `WIFI_MISMATCH` screen when live manager state has changed
-    7. manual repair does not loop back to `网络环境已变更` unless the badge explicitly reports a different SSID than the submitted one
-    8. one fresh failing manual-sync repro includes the manager gate decision, `isReady()` result, resolved base URL decision, and HTTP reachability result so app-vs-badge ownership can be assigned cleanly
+  - Treat `MotionTime1` `:8088` failure as a firmware / AP-isolation / badge
+    HTTP-service investigation unless new app evidence appears.
+  - If hardware follow-up is needed, compare badge-side HTTP listener behavior
+    on `MotionTime1` against the same APK + device baseline that reached
+    `http://192.168.0.108:8088` on `MstRobot`.
+  - Keep the current app telemetry in place for any future rerun; this L3 did
+    not indicate another app-side reconnect or AUTO-churn fix is needed.
 - Linked evidence:
   - `docs/cerb/connectivity-bridge/spec.md`
   - `docs/cerb/device-pairing/spec.md`
   - `docs/specs/modules/ConnectivityModal.md`
+  - `docs/reports/tests/L3-20260417-connectivity-wifi-mismatch-manual-repair-loop.md`
+  - `docs/reports/tests/L3-20260417-connectivity-oi03-rerun-after-churn-suppression.md`
   - `/tmp/esp32_connectivity_live.log`
+  - `/tmp/l3-20260417-connectivity-wifi-mismatch-loop.log`
+  - `/tmp/l3-20260417-oi03-rerun.log`
 
 #### Evidence History
+
+##### 2026-04-17: Rerun validated the app-side churn suppression slice, but `MotionTime1` still failed badge HTTP
+
+- Scenario:
+  - Fresh on-device L3 rerun after the manual-repair copy normalization,
+    graduated `2s -> 3s -> 5s` readiness grace budget, `phoneSsidForDiag=`
+    log rename, and SIM audio AUTO known-HTTP-unreachable latch shipped.
+- Observed evidence:
+  - Manual repair on `MotionTime1` reached `IP#192.168.1.18`, spent the full
+    grace budget, and ended with `🛜 repair outcome=http_unreachable`.
+  - The follow-up sync preflight stayed on
+    `🔎 isReady preflight: result=not-ready baseUrl=http://192.168.1.18:8088`;
+    this rerun did not capture the old `ReconnectResult.Connected` overwrite
+    symptom after manual failure.
+  - Manual repair on `MstRobot` later reached
+    `BadgeHttpClient.isReachable response ... code=200 reachable=true`,
+    `🛜 repair outcome=wifi_provisioned`, and subsequent
+    `🔎 isReady preflight: result=ready baseUrl=http://192.168.0.108:8088`.
+  - After switching back to `MotionTime1`, the app refreshed
+    `http://192.168.1.18:8088`, BLE ingress stayed active, repeated
+    `/download` attempts still failed with `Failed to connect to
+    /192.168.1.18:8088`, and the new
+    `SIM badge auto sync suppressed ... reason=known_http_unreachable`
+    telemetry fired repeatedly for the same runtime + endpoint.
+- App interpretation:
+  - The app-side stale-IP hypothesis is now closed by stronger evidence than the
+    prior report, because the same build and phone reached badge HTTP `200` on
+    one network.
+  - The reconnect-overwrite symptom was not observed in this rerun, and AUTO
+    churn suppression behaved as designed.
+  - Remaining ownership is now network-specific to `MotionTime1` or the badge
+    HTTP service on that network, rather than phone-SSID endpoint gating or app
+    endpoint staleness.
+- Linked evidence:
+  - `docs/reports/tests/L3-20260417-connectivity-oi03-rerun-after-churn-suppression.md`
+  - `/tmp/l3-20260417-oi03-rerun.log`
+
+##### 2026-04-17: OI-03 app-side churn suppression slice landed
+
+- Scenario:
+  - Code/doc sync slice after the 2026-04-17 device captures confirmed stale badge IP was no longer the app-side problem but same-network `:8088` reachability still failed.
+- Observed evidence:
+  - Manual repair failure copy is now normalized through human-readable Chinese mapping instead of leaking raw `WifiDisconnected(...)` text.
+  - Manual repair confirmation and reconnect-side first HTTP readiness probe now share the graduated `2s -> 3s -> 5s` post-credential grace budget.
+  - SIM audio AUTO `/list` now suppresses repeated retries against a known-unreachable runtime + endpoint and logs latch arm/suppress/clear lines for capture correlation.
+  - Bridge diagnostics now log `phoneSsidForDiag=` instead of the ambiguous `phoneSsid=`.
+- App interpretation:
+  - App-side IP staleness and phone-SSID endpoint gating remain closed for this slice.
+  - If the badge still reaches BLE online state but `:8088` stays unreachable after the bounded grace budget, remaining ownership is firmware / HTTP service / AP isolation rather than sync-loop churn in the app.
+- Linked evidence:
+  - `docs/cerb/connectivity-bridge/spec.md`
+  - `docs/cerb/audio-management/spec.md`
+
+##### 2026-04-17: Manual repair refreshed the badge IP, but sync still failed on the new endpoint
+
+- Scenario:
+  - Physical-device L3 run of the new manual-sync to `WIFI_MISMATCH` handoff and
+    manual Wi-Fi repair flow using two submitted credential sets.
+- Observed evidence:
+  - The app blocked manual sync first at `http://192.168.1.18:8088` after
+    `isReady()` reachability failure.
+  - Repair with old credentials (`MstRobot`) wrote `SD#...` / `PD#...`, then
+    confirmed the badge online at `192.168.0.109`.
+  - The app refreshed to `http://192.168.0.109:8088`, but the next sync still
+    failed from phone address `192.168.1.35`, while the log recorded
+    `phoneSsid=` as blank.
+  - Repair with new credentials (`MotionTime1`) then wrote `SD#...` / `PD#...`,
+    confirmed the badge online at `192.168.1.18`, and refreshed
+    `http://192.168.1.18:8088`.
+  - Sync and later `rec#` auto-download still failed to connect to
+    `192.168.1.18:8088` even though BLE recording-ready ingress remained alive.
+- App interpretation:
+  - The app is not stuck on a stale pre-repair IP.
+  - The remaining drift is twofold:
+    1. unreadable phone SSID still weakens endpoint-alignment protection enough
+       to allow false-positive repair success on a different network
+    2. even after the badge moves onto the intended network, badge HTTP
+       readiness is still not proven by the current manual-repair success
+       contract
+- Linked evidence:
+  - `docs/reports/tests/L3-20260417-connectivity-wifi-mismatch-manual-repair-loop.md`
+  - `/tmp/l3-20260417-connectivity-wifi-mismatch-loop.log`
+
+##### 2026-04-17: HTTP proof failure was still being overwritten by shell auto-reconnect
+
+- Scenario:
+  - Live on-device monitoring against debug build
+    `0.1.0-prism-debug.26107.1735.92cac1d` while reproducing the
+    `WIFI_MISMATCH` manual repair flow with `MstRobot`.
+- Observed evidence:
+  - Manual repair wrote `SD#MstRobot` and `PD#...`, then ran three bounded
+    HTTP probes against `http://192.168.0.108:8088`.
+  - All three probes failed from phone address `192.168.1.35`, ending with
+    `🛜 repair outcome=http_unreachable`.
+  - During the same window, `ConnectivityViewModel.reconnect()` was triggered
+    again from the runtime shell auto-reconnect collector and
+    `ConnectivityService.reconnect()` returned `ReconnectResult.Connected`,
+    clearing the modal override back to connected.
+- App interpretation:
+  - The shipped HTTP proof contract is active and correctly classifies the
+    repair as failed.
+  - The remaining false-success symptom is caused by an app-side shell
+    auto-reconnect loop overriding the repair result, not by a stale APK.
+- Linked evidence:
+  - `/tmp/connectivity-debug-20260417-173857/logcat-app.log`
+  - `/tmp/connectivity-debug-20260417-173857/logcat-system-focus.log`
 
 ##### 2026-03-26: Live capture proved BLE reconnect and badge-offline split
 

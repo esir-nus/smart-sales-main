@@ -11,7 +11,7 @@
 > - `docs/reference/harmonyos-platform-guide.md`
 > - `docs/cerb/interface-map.md`
 > - `docs/plans/tracker.md`
-> - `docs/plans/harmony-tracker.md`
+> - `docs/plans/sprint-tracker.md`
 > - `docs/specs/base-runtime-unification.md`
 
 ---
@@ -31,9 +31,10 @@ Rules:
 ```
 master (protected, promotion-only — requires PR)
   └── develop (Android maintenance + shared contracts, daily trunk)
-        └── platform/harmony (HarmonyOS integration trunk, daily Harmony work)
-              ├── harmony/feat-x (feature branches, PR back to platform/harmony)
-              └── harmony/feat-y
+        ├── platform/harmony (HarmonyOS integration trunk, daily Harmony work)
+        │     ├── harmony/feat-x (feature branches, PR back to platform/harmony)
+        │     └── harmony/feat-y
+        └── platform/ios (anticipated, not yet created)
 ```
 
 Rules:
@@ -43,6 +44,8 @@ Rules:
 - shared contracts flow `develop → platform/harmony` via deliberate merge, at least weekly; never the reverse
 - feature branches fork from `develop` (for Android) or `platform/harmony` (for Harmony) and PR back to origin branch
 - `master` receives promotions from `develop` via PR only; no direct commits
+- `develop` and `platform/harmony` are PR-only trunks: all code changes land through PRs from feature branches (`feature/* -> develop`, `harmony/* -> platform/harmony`), not direct commits
+- `platform/ios`: anticipated integration trunk for iOS-native, same model as `platform/harmony`; not yet created
 
 ### Historical note
 
@@ -63,6 +66,7 @@ Interpretation:
 - Android / AOSP native and Android-on-Huawei/Harmony both belong to the current Android product lineage.
 - Android-on-Huawei/Harmony is a compatibility target for the Android app, not a native Harmony product.
 - Harmony-native is a separate implementation target with separate platform ownership.
+- the deprecated `app-core` Android `harmony` flavor is retired; the Android lineage now ships from the single default `app-core` variant, while native Harmony delivery lives under `platforms/harmony/`
 
 `docs/reference/platform-targets.md` owns the plain-language definition of these targets.
 
@@ -101,6 +105,22 @@ Rules:
 - the existing Tingwu container (`platforms/harmony/tingwu-container/`) provides proven patterns and is the foundation for the complete native app (`platforms/harmony/smartsales-app/`)
 - each delivered feature must be honest about its current capability set; features not yet implemented must be hidden or blocked, not faked
 - release branch `release/harmony-alpha` may be created once the native app shell and at least one feature lane (audio pipeline) are device-verified
+
+### 3.3 Sprint-gated Harmony work
+
+Every non-trivial Harmony edit must execute inside an open sprint contract. `docs/plans/sprint-tracker.md` is the authoritative ledger; a sprint is "live" when its entry has `Status: Active` or `Status: Blocked` (per the tracker's §2 status model).
+
+Rules:
+
+- edits under `platforms/harmony/**` require at least one live sprint in `docs/plans/sprint-tracker.md` at the moment of the edit
+- operators open sprint contracts via `/sprint` (see `.claude/commands/sprint.md`)
+- `Proposed`, `Accepted`, `Deferred`, and `Absorbed` statuses do not qualify — they are not inside contract bounds
+- repo-owned CI enforces the rule on push and pull request via `.github/workflows/platform-governance-check.yml`; Harmony path diffs fail when `docs/plans/sprint-tracker.md` has no `Active` or `Blocked` sprint
+- runtime-local hooks may add earlier local blocking, but the repo must not depend on a `.claude`-owned hook path as the only enforcement layer
+- shell-driven edits are still a human discipline concern until a runtime adds earlier local interception; CI is the mandatory backstop
+- `platforms/ios/**` will inherit the same mechanism once the iOS integration trunk is created; it is out of scope today
+
+Rationale: Harmony is the primary forward platform (§3.2). Unattributed drift here is more costly than on Android beta-maintenance. The gate keeps sprint authorship as a merge-time precondition rather than a documentation hope, while leaving room for stricter local runtime hooks on top.
 
 ---
 
@@ -212,7 +232,7 @@ Rules:
 - `docs/plans/tracker.md` stays the campaign index and branch/governance summary only
 - specialist trackers own structure, UI, bugs, and Harmony-native delivery
 - execution briefs are temporary slice docs and must not replace a standing tracker
-- the Harmony program uses `docs/plans/harmony-tracker.md` for program-summary state and `docs/plans/harmony-ui-translation-tracker.md` for page-by-page ArkUI rewrite evidence
+- the Harmony program uses `docs/plans/sprint-tracker.md` as the persistent log of sprint contracts (feature + debug) and `docs/plans/harmony-ui-translation-tracker.md` for page-by-page ArkUI rewrite evidence
 
 ### 6.5 Historical note
 

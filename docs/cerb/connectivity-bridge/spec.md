@@ -3,7 +3,7 @@
 > **Cerb-compliant spec** — Prism-safe wrapper for legacy BLE + HTTP connectivity.
 > **OS Layer**: Infrastructure (Layer 1) — Leaf service, no upstream dependencies
 > **Status**: SHIPPED
-> **Last Updated**: 2026-04-02
+> **Last Updated**: 2026-04-17
 > **Behavioral UX Authority Above This Doc**: [`docs/core-flow/base-runtime-ux-surface-governance-flow.md`](../../core-flow/base-runtime-ux-surface-governance-flow.md) (`UX.CONNECTIVITY.*`)
 
 ---
@@ -206,6 +206,7 @@ sealed class WavDownloadResult {
 > Tapping `开始配网` from `NEEDS_SETUP` still enters the full shared onboarding coordinator with `host = SIM_CONNECTIVITY`.
 > Tapping the manager `添加设备` action enters the streamlined add-device coordinator with `host = SIM_ADD_DEVICE`, reusing pairing/provisioning runtime while skipping intro handshake and scheduler quick start.
 > Tapping "更新配置" from `WIFI_MISMATCH` first performs local validation plus an explicit send-confirm dialog; only the confirmed valid submit enters reconnect/progress and runs the repair flow without requiring a second manual retry.
+> Manual badge-sync failures may also auto-open the same `WIFI_MISMATCH` form as a repair handoff; this is a connectivity-owned recovery surface, not a second sync-specific dialog.
 > The richer `BLE_PAIRED_NETWORK_*` states are manager-only refinements derived from `ConnectivityBridge.managerStatus`; they must not redefine global transport readiness.
 > Debug builds may additionally expose a temporary `断开连接` action in `BLE_PAIRED_NETWORK_*` states for hardware testing convenience; that control must not be treated as a release-surface contract.
 > Closing the connectivity modal/manager clears transient reconnect or mismatch override state so later reopen reflects live manager truth rather than a retained stale repair screen.
@@ -253,22 +254,34 @@ Reconnect credential rule:
   - if the badge is online on a different SSID than the phone, silently replay the exact-match remembered credential when one exists so the badge switches to the phone's current network
   - if phone Wi‑Fi transport is connected but SSID is unreadable, route to `WIFI_MISMATCH` rather than blind-replaying a credential
   - otherwise route the manager UI to `WIFI_MISMATCH` so the user can re-enter credentials
+- every `WifiDisconnectedReason` from reconnect must route to `WIFI_MISMATCH` — silent prompts (`NO_KNOWN_CREDENTIAL_FOR_PHONE_WIFI`, `PHONE_WIFI_SSID_UNREADABLE`, `BADGE_PHONE_NETWORK_MISMATCH`) leave `ReconnectResult.WifiMismatch.errorMessage` null; the diagnostic reasons (`BADGE_WIFI_OFFLINE`, `HTTP_UNREACHABLE`, `CREDENTIAL_REPLAY_FAILED`, `PHONE_WIFI_UNAVAILABLE`) must each carry a short Simplified Chinese explanation so the repair form shows the user why re-entry is being requested
+- `ReconnectResult.Error` is reserved for non-Wi‑Fi transport failures; Wi‑Fi failures must never fall back to `Error` (which silently dismisses the reconnect modal)
 - reconnect-driven `WIFI_MISMATCH` must carry the current phone SSID suggestion when readable so the repair form can prefill it without locking the field
 - when the user submits manual SSID/password from `WIFI_MISMATCH`, the UI must trim both fields, reject blank values locally, require an explicit confirmation dialog, and only then show reconnect/progress while `updateWifiConfig()` runs its provision-plus-confirm repair path
 - manual repair must not fall back into the generic reconnect path after sending credentials
 - manual repair confirmation must:
   - keep the current BLE session
-  - poll badge network status with the same bounded tolerance used by setup (`3` attempts, `1500ms` interval)
+  - use a graduated post-credential readiness grace budget before it gives up on HTTP proof (`2s`, then `3s`, then `5s`; `10s` total)
   - validate against the user-submitted SSID rather than the phone's current SSID
+  - treat submitted-SSID + usable-IP transport confirmation as the Wi‑Fi-switch success boundary
+  - still probe HTTP `http://<badge-ip>:8088` within the bounded grace budget so the UI can distinguish fully-ready service from warming service
+  - use the bounded `BadgeHttpClient.isReachable()` preflight timeout (`3s`) during that proof step so dead `:8088` does not stall the repair loop indefinitely
+  - surface only human-readable Simplified Chinese failure copy; raw `WifiDisconnected(...)` text must never reach the repair form
+  - emit fine-grained `WifiRepairEvent` progress signals so the repair UI does not have to infer transport / HTTP phases from the shared bridge state
 - the manual repair form should prefill the current phone SSID when reconnect surfaced one, but keep the SSID editable and keep password blank/manual
 - empty or whitespace-only SSID/password must never be sent to the badge from the manual repair flow
 - invalid manual repair input must stay on `WIFI_MISMATCH`, surface a local error message, and must not transition into reconnect/progress
 - manual repair may return to `WIFI_MISMATCH` only when the badge proves it came online on a different SSID than the submitted one
 - manual repair must not route back to `WIFI_MISMATCH` merely because phone Wi‑Fi is unreadable/unavailable or because the badge is still offline during the bounded confirmation window
+- if the badge joins the submitted Wi‑Fi and transport is confirmed but HTTP `:8088` stays unreachable through the bounded proof loop, the repair outcome must surface as a dedicated non-error delayed-service state (`TransportConfirmedHttpDelayed` / `HttpDelayed`) rather than a generic hard failure
+- if the badge never reaches submitted-SSID transport confirmation, the repair outcome must remain a real failure (`BADGE_OFFLINE`, mismatch, replay failure, or another explicit diagnosis)
 - if the user closes the connectivity surface mid-repair, only the transient override is cleared; underlying bridge/manager truth remains authoritative on next reopen
 - reconnect foreground network query must tolerate the BLE 2s minimum query floor and retry after the guard delay instead of failing immediately on a throttle timeout
 - badge IP is reused only as an in-memory active runtime endpoint snapshot; the app must not persist a last-known badge IP across sessions
 - HTTP sync/delete flows should reuse that active runtime endpoint instead of re-querying BLE Wi‑Fi status before every `/list` / `/download` / `/delete`
+- bridge endpoint reuse and refresh must not depend on phone SSID alignment; the authoritative endpoint proof for `/list` / `/download` / `/delete` is HTTP reachability to the badge's current `:8088` service
+- endpoint diagnostics may still log the phone SSID for operator context, but the field is diagnostic-only (`phoneSsidForDiag`) and must never act as an endpoint gate
+- after a reconnect-side credential replay, the first bridge readiness probe may reuse the same `2s -> 3s -> 5s` post-credential grace budget before it concludes that `:8088` is still unreachable
 - shared transport readiness stays strict: BLE-held + Wi‑Fi-offline is not `Connected`
 
 #### Implementation Status

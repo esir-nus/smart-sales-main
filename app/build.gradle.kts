@@ -5,6 +5,19 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
+apply(from = rootProject.file("gradle/android-app-versioning.gradle.kts"))
+
+@Suppress("UNCHECKED_CAST")
+val resolveAndroidAppVersion =
+    extra["resolveAndroidAppVersion"] as (String, Int) -> Map<String, Any>
+val aiTestVersioning = resolveAndroidAppVersion("0.1.0", 1)
+val aiTestBaseVersionCode = aiTestVersioning["baseVersionCode"] as Int
+val aiTestBaseVersionName = aiTestVersioning["baseVersionName"] as String
+val aiTestBuildStamp = aiTestVersioning["buildStamp"] as String
+val aiTestGitSha = aiTestVersioning["gitSha"] as String
+val aiTestDebugVersionSuffix = aiTestVersioning["debugVersionSuffix"] as String
+val aiTestDebugDisplayVersion = aiTestVersioning["debugDisplayVersion"] as String
+
 android {
     namespace = "com.smartsales.aitest"
     compileSdk = 34
@@ -13,13 +26,19 @@ android {
         applicationId = "com.smartsales.aitest"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = aiTestBaseVersionCode
+        versionName = aiTestBaseVersionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
+        buildConfigField("String", "APP_BUILD_STAMP", "\"$aiTestBuildStamp\"")
+        buildConfigField("String", "APP_GIT_SHA", "\"$aiTestGitSha\"")
+        buildConfigField("String", "APP_DISPLAY_VERSION", "\"$aiTestDebugDisplayVersion\"")
     }
 
     buildTypes {
+        debug {
+            versionNameSuffix = aiTestDebugVersionSuffix
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(

@@ -146,9 +146,81 @@
   <div class="page-header">
     <h1>更新日志</h1>
     <p class="subtitle">产品功能与修复记录</p>
-    <span class="generated">生成于 2026年04月15日</span>
+    <span class="generated">生成于 2026年04月20日</span>
   </div>
   <div class="section-title">最近更新</div>
+  <div class="date-header"><h3>2026-04-20</h3></div>
+  <div class="entries">
+      <div class="entry">
+        <span class="badge badge-other">维护</span>
+        <span class="entry-msg"><strong>develop 主分支协作路由收敛</strong> — 统一 feature 与 harmony 分支默认向 `develop` 发起协作与交付，移除平台分支作为日常目标的旧路由，简化 `/merge` 与 `/ship` 治理规则。</span>
+      </div>
+  </div>
+  <div class="date-header"><h3>2026-04-18</h3></div>
+  <div class="entries">
+      <div class="entry">
+        <span class="badge badge-新增">新增</span>
+        <span class="entry-msg"><strong>配对完成后的隔离态提示与锁存</strong> — 连接建立后会主动暴露 WiFi isolation 风险并锁存关键上下文，让 ConnectivityModal、配对流程与音频同步链路更早联动修复提示。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-修复">修复</span>
+        <span class="entry-msg"><strong>配对后疑似 WiFi isolation 预警</strong> — 徽章完成配对后若检测到疑似 WiFi isolation，系统会更早标记风险并推动修复提示，减少后续同步失败才暴露问题的情况。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-新增">新增</span>
+        <span class="entry-msg"><strong>传输优先的 WiFi 修复流程</strong> — 徽章同步或连接异常时，系统会优先尝试 transport-first WiFi 修复路径，并联动动态岛、ConnectivityModal 与连接状态提示，减少手动排障成本。</span>
+      </div>
+  </div>
+  <div class="date-header"><h3>2026-04-17</h3></div>
+  <div class="entries">
+      <div class="entry">
+        <span class="badge badge-修复">修复</span>
+        <span class="entry-msg"><strong>前台下载服务生命周期保活</strong> — 补齐 `DownloadForegroundService` 前台启动时的生命周期维护，降低录音下载过程中服务被系统回收的风险。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-修复">修复</span>
+        <span class="entry-msg"><strong>日程改期支持显式 delta 表达</strong> — Scheduler 现在可识别显式增减时间的改期语义，跟进与全局改期解析更稳定。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-新增">新增</span>
+        <span class="entry-msg"><strong>同步失败后的 WiFi 修复提示</strong> — 录音同步失败时会主动提示用户执行 WiFi 修复，并将提示链路接入 SIM 音频同步与连接状态协调流程。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-other">重构</span>
+        <span class="entry-msg"><strong>Android 侧废弃 Harmony flavor 清理</strong> — 移除 `app-core` 中遗留的 Harmony flavor 与相关分支判断，减少 Android 构建与运行时分叉。</span>
+      </div>
+  </div>
+  <div class="date-header"><h3>2026-04-16</h3></div>
+  <div class="entries">
+      <div class="entry">
+        <span class="badge badge-新增">新增</span>
+        <span class="entry-msg"><strong>鸿蒙原生应用根目录落位</strong> — 新建 `platforms/harmony/smartsales-app/` 完整原生应用骨架，为后续 ArkTS/ArkUI 功能迁移提供正式落点。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-修复">修复</span>
+        <span class="entry-msg"><strong>鸿蒙音频链路 ArkTS 类型安全问题</strong> — 修复 Phase 2A 音频管线中的 ArkTS 类型约束与兼容性问题，降低 `.ets` 编译失败风险。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-修复">修复</span>
+        <span class="entry-msg"><strong>鸿蒙 Tingwu 说话人分离与详情 UI 对齐</strong> — 校正 Tingwu 说话人分离结果在鸿蒙音频详情界面的映射与展示，减少转写细节错位。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-修复">修复</span>
+        <span class="entry-msg"><strong>徽章下载前台保活链路恢复</strong> — 补齐下载通知通道与前台服务保活 wiring，避免录音下载过程中前台任务丢失。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-修复">修复</span>
+        <span class="entry-msg"><strong>转写音频抽屉卡片细节优化</strong> — 调整音频抽屉卡片的界面表现与交互细节，改善转写内容浏览体验。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-other">维护</span>
+        <span class="entry-msg"><strong>鸿蒙治理与协作约定补齐</strong> — 新增 ArkTS 合规规则与 agent coalition 协作文档，并同步 Claude/Codex 参考入口，降低鸿蒙原生迁移期间的协作偏差。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-other">维护</span>
+        <span class="entry-msg"><strong>SmartSales 用户手册补齐</strong> — 新增成体系的 SmartSales 使用手册，便于用户统一查阅快速开始、聊天、日程与连接相关说明。</span>
+      </div>
+  </div>
   <div class="date-header"><h3>2026-04-15</h3></div>
   <div class="entries">
       <div class="entry">
@@ -257,7 +329,7 @@
       </div>
       <div class="entry">
         <span class="badge badge-发布">发布</span>
-        <span class="entry-msg"><strong>HarmonyOS平台音频处理基础设施</strong> — 为HarmonyOS平台发布了音频处理的隔离容器架构。</span>
+        <span class="entry-msg"><strong>鸿蒙平台音频处理基础设施</strong> — 为鸿蒙平台发布了音频处理的隔离容器架构。</span>
       </div>
   </div>
   <div class="date-header"><h3>2026-04-02</h3></div>

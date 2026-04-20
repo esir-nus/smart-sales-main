@@ -77,7 +77,7 @@ class HarmonyTingwuService {
         Transcription: {
           DiarizationEnabled: true,
           Diarization: {
-            OutputLevel: 1
+            SpeakerCount: 0
           }
         },
         AutoChaptersEnabled: true,
@@ -89,6 +89,7 @@ class HarmonyTingwuService {
         MeetingAssistance: {
           Types: ['Actions', 'KeyInformation']
         },
+        IdentityRecognitionEnabled: true,
         Transcoding: {
           TargetAudioFormat: 'mp3'
         }

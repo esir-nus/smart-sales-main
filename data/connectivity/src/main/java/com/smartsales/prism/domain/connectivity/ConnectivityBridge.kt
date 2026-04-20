@@ -3,6 +3,7 @@ package com.smartsales.prism.domain.connectivity
 import com.smartsales.core.util.Result
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.SharedFlow
 
 /**
  * 连接 Bridge — Prism 访问 Badge 连接的唯一入口
@@ -78,11 +79,18 @@ interface ConnectivityBridge {
     
     /**
      * 删除 Badge 上的 WAV 文件
-     * 
+     *
      * 处理成功后调用
-     * 
+     *
      * @param filename Badge 上的文件名
      * @return true 如果文件已删除或不存在（幂等）
      */
     suspend fun deleteRecording(filename: String): Boolean
+
+    /**
+     * Wi-Fi 修复流程细粒度事件流。
+     * Hot flow，replay=0，仅在修复窗口内发射。
+     * UI 通过此流驱动修复状态机，而非推断 managerStatus。
+     */
+    fun wifiRepairEvents(): Flow<WifiRepairEvent>
 }

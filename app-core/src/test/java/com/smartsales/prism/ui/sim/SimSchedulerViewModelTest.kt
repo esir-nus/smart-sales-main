@@ -929,7 +929,7 @@ class SimSchedulerViewModelTest {
     }
 
     @Test
-    fun `processAudio scheduler drawer voice reschedule delta phrase safely fails without mutation`() = runTest {
+    fun `processAudio scheduler drawer voice reschedule delta phrase shifts exact task`() = runTest {
         val original = scheduledTask(
             id = "task-1",
             title = "赶高铁",
@@ -937,22 +937,26 @@ class SimSchedulerViewModelTest {
             urgencyLevel = UrgencyLevel.L2_IMPORTANT
         )
         taskRepository.insertTask(original)
+        activeTaskRetrievalIndex.nextResolveResult = ActiveTaskResolveResult.Resolved("task-1")
         asrService.nextResult = AsrResult.Success("赶高铁时间推迟1个小时")
-        enqueueGlobalRescheduleUnsupported("delta-only reschedule is unsupported")
+        enqueueGlobalRescheduleExtraction(
+            targetQuery = "赶高铁",
+            timeInstruction = "推迟1个小时"
+        )
 
         viewModel.processAudio(File("dummy.wav"))
         advanceUntilIdle()
 
         val updated = taskRepository.getTask("task-1")
         assertNotNull(updated)
-        assertEquals(Instant.parse("2026-03-20T09:00:00Z"), updated!!.startTime)
+        assertEquals(Instant.parse("2026-03-20T10:00:00Z"), updated!!.startTime)
         assertFalse(updated.hasConflict)
-        assertEquals("SIM 当前仅支持明确目标 + 明确时间改期", viewModel.conflictWarning.value)
-        assertNull(scheduleBoard.lastDurationMinutes)
+        assertNull(viewModel.conflictWarning.value)
+        assertEquals(30, scheduleBoard.lastDurationMinutes)
     }
 
     @Test
-    fun `processAudio scheduler drawer voice reschedule delta phrase keeps conflicted target unchanged`() = runTest {
+    fun `processAudio scheduler drawer voice reschedule delta phrase keeps conflict visibility`() = runTest {
         val original = scheduledTask(
             id = "task-1",
             title = "赶高铁",
@@ -961,6 +965,7 @@ class SimSchedulerViewModelTest {
             hasConflict = true
         )
         taskRepository.insertTask(original)
+        activeTaskRetrievalIndex.nextResolveResult = ActiveTaskResolveResult.Resolved("task-1")
         scheduleBoard.nextConflictResult = ConflictResult.Conflict(
             overlaps = listOf(
                 ScheduleItem(
@@ -974,20 +979,23 @@ class SimSchedulerViewModelTest {
             )
         )
         asrService.nextResult = AsrResult.Success("赶高铁时间推迟1个小时")
-        enqueueGlobalRescheduleUnsupported("delta-only reschedule is unsupported")
+        enqueueGlobalRescheduleExtraction(
+            targetQuery = "赶高铁",
+            timeInstruction = "推迟1个小时"
+        )
 
         viewModel.processAudio(File("dummy.wav"))
         advanceUntilIdle()
 
         val updated = taskRepository.getTask("task-1")
         assertNotNull(updated)
-        assertEquals(Instant.parse("2026-03-20T09:00:00Z"), updated!!.startTime)
+        assertEquals(Instant.parse("2026-03-20T10:00:00Z"), updated!!.startTime)
         assertTrue(updated.hasConflict)
-        assertEquals("SIM 当前仅支持明确目标 + 明确时间改期", viewModel.conflictWarning.value)
+        assertEquals("与「叫我吃饭」时间冲突", viewModel.conflictWarning.value)
     }
 
     @Test
-    fun `processAudio scheduler drawer voice reschedule delta phrase keeps fire off task unchanged`() = runTest {
+    fun `processAudio scheduler drawer voice reschedule delta phrase keeps fire off task non conflicting`() = runTest {
         val original = scheduledTask(
             id = "task-fireoff",
             title = "提醒我喝水",
@@ -1009,17 +1017,49 @@ class SimSchedulerViewModelTest {
             )
         )
         asrService.nextResult = AsrResult.Success("提醒我喝水推迟1个小时")
-        enqueueGlobalRescheduleUnsupported("delta-only reschedule is unsupported")
+        enqueueGlobalRescheduleExtraction(
+            targetQuery = "提醒我喝水",
+            timeInstruction = "推迟1个小时"
+        )
 
         viewModel.processAudio(File("dummy.wav"))
         advanceUntilIdle()
 
         val updated = taskRepository.getTask("task-fireoff")
         assertNotNull(updated)
-        assertEquals(Instant.parse("2026-03-20T09:00:00Z"), updated!!.startTime)
+        assertEquals(Instant.parse("2026-03-20T10:00:00Z"), updated!!.startTime)
         assertFalse(updated.hasConflict)
-        assertEquals("SIM 当前仅支持明确目标 + 明确时间改期", viewModel.conflictWarning.value)
+        assertNull(viewModel.conflictWarning.value)
         assertNull(scheduleBoard.lastDurationMinutes)
+    }
+
+    @Test
+    fun `processAudio scheduler drawer voice reschedule delta phrase rejects vague task`() = runTest {
+        val original = ScheduledTask(
+            id = "task-vague",
+            timeDisplay = "待定",
+            title = "提醒我开会",
+            urgencyLevel = UrgencyLevel.L3_NORMAL,
+            startTime = Instant.parse("2026-03-20T09:00:00Z"),
+            durationMinutes = 0,
+            isVague = true
+        )
+        taskRepository.insertTask(original)
+        activeTaskRetrievalIndex.nextResolveResult = ActiveTaskResolveResult.Resolved("task-vague")
+        asrService.nextResult = AsrResult.Success("提醒我开会推迟1个小时")
+        enqueueGlobalRescheduleExtraction(
+            targetQuery = "提醒我开会",
+            timeInstruction = "推迟1个小时"
+        )
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        val updated = taskRepository.getTask("task-vague")
+        assertNotNull(updated)
+        assertEquals(Instant.parse("2026-03-20T09:00:00Z"), updated!!.startTime)
+        assertTrue(updated.isVague)
+        assertEquals("SIM 当前仅支持明确时间改期", viewModel.conflictWarning.value)
     }
 
     @Test

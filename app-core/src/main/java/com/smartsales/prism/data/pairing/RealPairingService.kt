@@ -1,14 +1,19 @@
 package com.smartsales.prism.data.pairing
 
 import com.smartsales.core.util.Result
+import com.smartsales.prism.data.connectivity.runIsolationProbeIfSuspected
+import com.smartsales.prism.data.connectivity.legacy.BadgeHttpClient
 import com.smartsales.prism.data.connectivity.legacy.BlePeripheral
 import com.smartsales.prism.data.connectivity.legacy.BleSession
 import com.smartsales.prism.data.connectivity.legacy.ConnectionState
 import com.smartsales.prism.data.connectivity.legacy.DeviceConnectionManager
+import com.smartsales.prism.data.connectivity.legacy.PhoneWifiProvider
 import com.smartsales.prism.data.connectivity.legacy.hasUsableBadgeIp
 import com.smartsales.prism.data.connectivity.legacy.WifiCredentials as LegacyWifiCredentials
 import com.smartsales.prism.data.connectivity.legacy.scan.BleScanner
 import com.smartsales.prism.data.connectivity.registry.DeviceRegistryManager
+import com.smartsales.prism.domain.connectivity.ConnectivityPrompt
+import com.smartsales.prism.domain.connectivity.IsolationTriggerContext
 import com.smartsales.prism.domain.pairing.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
@@ -26,7 +31,10 @@ import javax.inject.Singleton
 class RealPairingService @Inject constructor(
     private val bleScanner: BleScanner,
     private val connectionManager: DeviceConnectionManager,
-    private val registryManager: DeviceRegistryManager
+    private val registryManager: DeviceRegistryManager,
+    private val httpClient: BadgeHttpClient,
+    private val wifiProvider: PhoneWifiProvider,
+    private val connectivityPrompt: ConnectivityPrompt,
 ) : PairingService {
     
     private val _state = MutableStateFlow<PairingState>(PairingState.Idle)
@@ -219,22 +227,24 @@ class RealPairingService @Inject constructor(
         
         // 轮询网络状态
         var networkOk = false
+        var badgeIp: String? = null
         repeat(NETWORK_CHECK_RETRY_COUNT) { attempt ->
             Log.d(TAG, "Network check attempt ${attempt + 1}/${NETWORK_CHECK_RETRY_COUNT}")
             val result = runCatching { connectionManager.queryNetworkStatus() }
                 .getOrElse { Result.Error(Exception("查询失败: ${it.message}")) }
-            
+
             if (result is Result.Success && hasUsableBadgeIp(result.data.ipAddress)) {
                 Log.d(TAG, "Network check success: IP=${result.data.ipAddress}")
                 networkOk = true
+                badgeIp = result.data.ipAddress
                 return@repeat
             }
-            
+
             if (attempt < NETWORK_CHECK_RETRY_COUNT - 1) {
                 delay(NETWORK_CHECK_RETRY_DELAY_MS)
             }
         }
-        
+
         if (!networkOk) {
             Log.w(TAG, "Network check failed after $NETWORK_CHECK_RETRY_COUNT attempts")
             val error = PairingState.Error(
@@ -245,7 +255,17 @@ class RealPairingService @Inject constructor(
             _state.value = error
             return PairingResult.Error(error.message, error.reason)
         }
-        
+
+        // 隔离探测：配对完成后检查 HTTP 可达性（委托给 IsolationProbeHelper）
+        // 配对本身已成功，探测结果仅用于触发异步提示，不阻断流程
+        runIsolationProbeIfSuspected(
+            badgeIp = badgeIp,
+            httpClient = httpClient,
+            phoneWifiProvider = wifiProvider,
+            connectivityPrompt = connectivityPrompt,
+            triggerContext = IsolationTriggerContext.POST_PAIRING
+        )
+
         // 阶段 4：成功 (100%)
         _state.value = PairingState.Success(
             badgeId = badge.id,
@@ -298,6 +318,7 @@ class RealPairingService @Inject constructor(
             is ConnectionState.AutoReconnecting -> PairingState.Pairing(progress = 50)
             is ConnectionState.Connected -> PairingState.Pairing(progress = 60)
             is ConnectionState.WifiProvisioned -> PairingState.Pairing(progress = 80)
+            is ConnectionState.WifiProvisionedHttpDelayed -> PairingState.Pairing(progress = 80)
             is ConnectionState.Syncing -> PairingState.Pairing(progress = 90)
             is ConnectionState.Error -> PairingState.Error(
                 message = legacy.error.toString(),

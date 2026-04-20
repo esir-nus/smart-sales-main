@@ -1,5 +1,6 @@
 package com.smartsales.prism.data.connectivity.legacy
 
+import com.smartsales.prism.domain.connectivity.WifiRepairEvent
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,6 +16,10 @@ internal class DeviceConnectionManagerRuntime {
     val audioRecordingReadyEvents = MutableSharedFlow<String>(
         replay = 0,
         extraBufferCapacity = 3
+    )
+    val repairEvents = MutableSharedFlow<WifiRepairEvent>(
+        replay = 0,
+        extraBufferCapacity = 16
     )
     var currentSession: BleSession? = null
     var lastCredentials: WifiCredentials? = null

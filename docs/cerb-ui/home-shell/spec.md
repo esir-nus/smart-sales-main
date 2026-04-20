@@ -38,7 +38,7 @@ The current empty-state shell includes only:
 - left: hamburger trigger
 - left: Smart Badge / device status badge
 - center: Dynamic Island host slot with scheduler as the default lane and RuntimeShell-local connectivity takeover when that lane is active
-- connected-state shell chrome may add decorative ambient flank icons around the centered island without changing the side utility layout
+- connected-state shell chrome may add decorative ambient flank icons around the centered island without changing the side utility layout; the same ambient affordance also renders in the partial `CONNECTIVITY_PARTIAL` state so the shell can distinguish "BLE paired, Wi-Fi down" from a fully disconnected link, with the left flank tinted by BLE liveness and the right flank rendering a Wi-Fi glyph plus the provisional battery glyph as a cluster (see `docs/cerb-ui/dynamic-island/spec.md` §3)
 - right: new-session `+`
 - floor: aurora background
 - bottom: floating input capsule (multi-line, auto-grows from 1 to 4 lines, max height 140dp)

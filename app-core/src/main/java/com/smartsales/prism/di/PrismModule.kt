@@ -30,6 +30,8 @@ import javax.inject.Named
 import com.smartsales.core.metahub.MetaHub
 import com.smartsales.core.metahub.InMemoryMetaHub
 import com.smartsales.data.aicore.AiCoreConfig
+import com.smartsales.prism.domain.connectivity.ConnectivityPrompt
+import com.smartsales.prism.ui.components.connectivity.ConnectivityPromptCoordinator
 
 import dagger.Binds
 import dagger.Provides
@@ -78,6 +80,11 @@ abstract class PrismModule {
     
     @Binds @Singleton
     abstract fun bindAudioRepository(real: RealAudioRepository): AudioRepository
+
+    @Binds @Singleton
+    abstract fun bindConnectivityPrompt(
+        impl: ConnectivityPromptCoordinator
+    ): ConnectivityPrompt
 
     // === User Profile ===
 

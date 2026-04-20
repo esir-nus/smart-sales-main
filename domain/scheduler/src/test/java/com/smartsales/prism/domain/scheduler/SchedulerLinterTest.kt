@@ -497,7 +497,7 @@ class SchedulerLinterTest {
     }
 
     @Test
-    fun `follow-up reschedule V2 delta extraction is now unsupported`() {
+    fun `follow-up reschedule V2 delta extraction is supported`() {
         val json = """
             {
               "decision": "RESCHEDULE_EXACT",
@@ -511,11 +511,30 @@ class SchedulerLinterTest {
             transcript = "推迟1个小时"
         )
 
-        assertTrue(result is FollowUpRescheduleExtractionResult.Unsupported)
-        assertTrue(
-            (result as FollowUpRescheduleExtractionResult.Unsupported)
-                .reason.contains("no longer allows delta-only")
+        assertTrue(result is FollowUpRescheduleExtractionResult.Supported)
+        val supported = result as FollowUpRescheduleExtractionResult.Supported
+        assertEquals(FollowUpRescheduleTimeKind.DELTA_FROM_TARGET, supported.timeKind)
+        assertEquals(60, (supported.operand as FollowUpRescheduleOperand.DeltaFromTarget).minutes)
+    }
+
+    @Test
+    fun `follow-up reschedule V2 negative delta extraction preserves sign`() {
+        val json = """
+            {
+              "decision": "RESCHEDULE_EXACT",
+              "timeKind": "DELTA_FROM_TARGET",
+              "deltaFromTargetMinutes": -30
+            }
+        """.trimIndent()
+
+        val result = linter.parseFollowUpRescheduleExtraction(
+            input = json,
+            transcript = "提前半小时"
         )
+
+        assertTrue(result is FollowUpRescheduleExtractionResult.Supported)
+        val supported = result as FollowUpRescheduleExtractionResult.Supported
+        assertEquals(-30, (supported.operand as FollowUpRescheduleOperand.DeltaFromTarget).minutes)
     }
 
     @Test

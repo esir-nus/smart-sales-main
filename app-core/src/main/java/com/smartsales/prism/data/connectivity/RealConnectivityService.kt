@@ -4,6 +4,7 @@ import android.util.Log
 import com.smartsales.core.util.Result
 import com.smartsales.prism.data.connectivity.legacy.DeviceConnectionManager
 import com.smartsales.prism.data.connectivity.legacy.SessionStore
+import com.smartsales.prism.data.connectivity.legacy.ConnectivityLogger
 import com.smartsales.prism.data.connectivity.legacy.WifiCredentials
 import com.smartsales.prism.data.connectivity.legacy.WifiProvisioner
 import com.smartsales.prism.domain.connectivity.ConnectivityService
@@ -95,9 +96,11 @@ class RealConnectivityService @Inject constructor(
         } ?: return WifiConfigResult.Error("设备未连接")
         
         val credentials = WifiCredentials(normalizedSsid, normalizedPassword)
+        ConnectivityLogger.i("🛜 repair submit ssid=$normalizedSsid")
         
         return when (val result = wifiProvisioner.provision(session, credentials)) {
             is Result.Success -> {
+                ConnectivityLogger.i("🛜 repair write dispatched ssid=$normalizedSsid")
                 sessionStore.saveSession(session)
                 sessionStore.upsertKnownNetwork(credentials)
                 when (val confirmation = deviceManager.confirmManualWifiProvision(credentials)) {
@@ -105,16 +108,25 @@ class RealConnectivityService @Inject constructor(
                     is com.smartsales.prism.data.connectivity.legacy.ConnectionState.Syncing ->
                         WifiConfigResult.Success
 
+                    // 传输已确认，HTTP 服务仍在预热 — 非失败
+                    is com.smartsales.prism.data.connectivity.legacy.ConnectionState.WifiProvisionedHttpDelayed -> {
+                        ConnectivityLogger.i(
+                            "🛜 repair transport confirmed, HTTP delayed baseUrl=${confirmation.baseUrl}"
+                        )
+                        WifiConfigResult.TransportConfirmedHttpDelayed(
+                            badgeSsid = confirmation.status.wifiSsid,
+                            baseUrl = confirmation.baseUrl
+                        )
+                    }
+
                     is com.smartsales.prism.data.connectivity.legacy.ConnectionState.Error -> {
                         val error = confirmation.error
-                        if (
-                            error is com.smartsales.prism.data.connectivity.legacy.ConnectivityError.WifiDisconnected &&
-                            error.reason == com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.BADGE_PHONE_NETWORK_MISMATCH
-                        ) {
-                            WifiConfigResult.Error("设备与输入的 Wi‑Fi 不匹配，请重新检查配置")
+                        if (error is com.smartsales.prism.data.connectivity.legacy.ConnectivityError.WifiDisconnected) {
+                            Log.w(TAG, "manual wifi repair did not confirm online: $error")
+                            WifiConfigResult.Error(mapWifiDisconnectedRepairMessage(error))
                         } else {
                             Log.w(TAG, "manual wifi repair did not confirm online: $error")
-                            WifiConfigResult.Error("Wi‑Fi 修复未确认在线: $error")
+                            WifiConfigResult.Error("Wi‑Fi 修复未确认在线，请稍后重试")
                         }
                     }
 
@@ -136,17 +148,63 @@ class RealConnectivityService @Inject constructor(
     private fun mapReconnectWifiError(
         error: com.smartsales.prism.data.connectivity.legacy.ConnectivityError.WifiDisconnected
     ): ReconnectResult {
+        // 蓝牙已配对但 Wi‑Fi 链路失败时统一引导用户回到凭据表单重新输入
         return when (error.reason) {
             com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.NO_KNOWN_CREDENTIAL_FOR_PHONE_WIFI,
             com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.PHONE_WIFI_SSID_UNREADABLE,
             com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.BADGE_PHONE_NETWORK_MISMATCH ->
                 ReconnectResult.WifiMismatch(currentPhoneSsid = error.phoneSsid)
             com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.PHONE_WIFI_UNAVAILABLE ->
-                ReconnectResult.Error("手机当前未连接可用 Wi‑Fi")
+                ReconnectResult.WifiMismatch(
+                    currentPhoneSsid = error.phoneSsid,
+                    errorMessage = wifiDisconnectedChineseMessage(error.reason)
+                )
+            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.HTTP_UNREACHABLE ->
+                ReconnectResult.WifiMismatch(
+                    currentPhoneSsid = error.phoneSsid,
+                    errorMessage = wifiDisconnectedChineseMessage(error.reason)
+                )
             com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.BADGE_WIFI_OFFLINE ->
-                ReconnectResult.Error("设备当前未接入可用 Wi‑Fi")
+                ReconnectResult.WifiMismatch(
+                    currentPhoneSsid = error.phoneSsid,
+                    errorMessage = wifiDisconnectedChineseMessage(error.reason)
+                )
             com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.CREDENTIAL_REPLAY_FAILED ->
-                ReconnectResult.Error("已尝试恢复已保存 Wi‑Fi，但设备仍未接入网络")
+                ReconnectResult.WifiMismatch(
+                    currentPhoneSsid = error.phoneSsid,
+                    errorMessage = wifiDisconnectedChineseMessage(error.reason)
+                )
+        }
+    }
+
+    private fun mapWifiDisconnectedRepairMessage(
+        error: com.smartsales.prism.data.connectivity.legacy.ConnectivityError.WifiDisconnected
+    ): String {
+        return when (error.reason) {
+            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.BADGE_PHONE_NETWORK_MISMATCH ->
+                "设备与输入的 Wi‑Fi 不匹配，请重新检查配置"
+            else -> wifiDisconnectedChineseMessage(error.reason)
+        }
+    }
+
+    private fun wifiDisconnectedChineseMessage(
+        reason: com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason
+    ): String {
+        return when (reason) {
+            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.BADGE_WIFI_OFFLINE ->
+                "设备当前未接入可用 Wi‑Fi，请重新输入凭据"
+            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.HTTP_UNREACHABLE ->
+                "设备已接入 Wi‑Fi，但设备服务不可达，请确认网络后重新输入"
+            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.PHONE_WIFI_UNAVAILABLE ->
+                "手机当前未连接可用 Wi‑Fi，请先连接 Wi‑Fi 后重新输入凭据"
+            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.PHONE_WIFI_SSID_UNREADABLE ->
+                "手机当前 Wi‑Fi 名称不可读，请确认手机已连接 Wi‑Fi 后重新输入凭据"
+            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.NO_KNOWN_CREDENTIAL_FOR_PHONE_WIFI ->
+                "当前手机 Wi‑Fi 没有已保存凭据，请重新输入凭据"
+            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.BADGE_PHONE_NETWORK_MISMATCH ->
+                "设备与输入的 Wi‑Fi 不匹配，请重新检查配置"
+            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.CREDENTIAL_REPLAY_FAILED ->
+                "已尝试恢复已保存 Wi‑Fi，但设备仍未接入网络，请重新输入凭据"
         }
     }
 }

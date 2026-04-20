@@ -5,9 +5,12 @@ import android.util.Log
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.smartsales.prism.data.connectivity.legacy.PhoneWifiProvider
+import com.smartsales.prism.data.connectivity.legacy.currentNormalizedSsid
 import com.smartsales.prism.data.audio.isBadgeOriginAudio
 import com.smartsales.prism.data.audio.SimAudioDeleteResult
 import com.smartsales.prism.data.audio.SimAudioRepository
+import com.smartsales.prism.data.audio.IsolationBlockedSyncException
 import com.smartsales.prism.data.audio.SimBadgeSyncIslandEvent
 import com.smartsales.prism.data.audio.SimBadgeSyncSkippedReason
 import com.smartsales.prism.data.audio.SimBadgeSyncTrigger
@@ -19,6 +22,7 @@ import com.smartsales.prism.domain.audio.AudioSource as DomainAudioSource
 import com.smartsales.prism.domain.audio.TranscriptionStatus
 import com.smartsales.prism.domain.connectivity.BadgeManagerStatus
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
+import com.smartsales.prism.domain.connectivity.ConnectivityPrompt
 import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
 import com.smartsales.prism.ui.drawers.AudioItemState
 import com.smartsales.prism.ui.drawers.AudioSource
@@ -59,6 +63,8 @@ private const val SIM_AUDIO_DRAWER_SYNC_LOG_TAG = "AudioPipeline"
 class SimAudioDrawerViewModel @Inject constructor(
     private val repository: SimAudioRepository,
     connectivityBridge: ConnectivityBridge,
+    private val connectivityPrompt: ConnectivityPrompt,
+    private val phoneWifiProvider: PhoneWifiProvider,
     @ApplicationContext context: Context
 ) : ViewModel() {
 
@@ -204,6 +210,7 @@ class SimAudioDrawerViewModel @Inject constructor(
                 )
                 val blockedMessage = gateDecision.blockedMessage
                 if (blockedMessage != null) {
+                    requestWifiMismatchPrompt()
                     showSyncFeedback(SimAudioSyncFeedback.DENIED, durationMillis = 1200L)
                     _uiEvents.emit(blockedMessage)
                     return@launch
@@ -243,6 +250,14 @@ class SimAudioDrawerViewModel @Inject constructor(
                     }
                     _syncIslandEvents.tryEmit(islandEvent)
                 }
+            } catch (e: IsolationBlockedSyncException) {
+                // 疑似 AP 客户端隔离：ConnectivityModal 已通过 promptSuspectedIsolation 接管提示，
+                // 此处仅收起同步进度，不另行展示错误 snackbar
+                Log.w(
+                    SIM_AUDIO_DRAWER_SYNC_LOG_TAG,
+                    "SIM manual badge sync isolation blocked ip=${e.badgeIp}"
+                )
+                showSyncFeedback(SimAudioSyncFeedback.DENIED, durationMillis = 1200L)
             } catch (e: Exception) {
                 Log.w(
                     SIM_AUDIO_DRAWER_SYNC_LOG_TAG,
@@ -305,6 +320,7 @@ class SimAudioDrawerViewModel @Inject constructor(
         autoSyncDebounceJob = viewModelScope.launch {
             delay(3_000L)
             if (_isSyncing.value) return@launch
+            if (repository.shouldSuppressAutoSync()) return@launch
             try {
                 _syncIslandEvents.tryEmit(SimBadgeSyncIslandEvent.ManualSyncStarted)
                 val outcome = repository.syncFromBadge(SimBadgeSyncTrigger.AUTO)
@@ -404,6 +420,10 @@ class SimAudioDrawerViewModel @Inject constructor(
                 _syncFeedback.value = null
             }
         }
+    }
+
+    private suspend fun requestWifiMismatchPrompt() {
+        connectivityPrompt.promptWifiMismatch(phoneWifiProvider.currentNormalizedSsid())
     }
 }
 

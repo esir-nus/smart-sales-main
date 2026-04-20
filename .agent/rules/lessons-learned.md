@@ -41,6 +41,7 @@ trigger: always_on
 - **Greenfield Harmony scaffolding without doc sync** → New Harmony roots, containers, or native service seams must sync their ownership and contract docs in the same session. (Ref: *Harmony Greenfield Scaffolding Without Contract Sync*)
 - **Debugging Harmony by analogy only** → Do not diagnose Harmony-native failures from Android intuition alone. Gather Harmony-native logs, artifacts, or runtime evidence before claiming root cause. (Ref: *Harmony Evidence Gap*)
 - **Harmony build passes but device proof still fails** → Treat compile, signing/profile readiness, `hdc` deploy, bundle identity, and runtime logs as one lane contract. Unsigned build output is not device proof. (Ref: *Harmony Build Proof Is Not Device Proof*)
+- **Writing or reviewing ArkTS/ArkUI code (.ets files)** → ArkTS is NOT TypeScript. Read `docs/platforms/harmony/arkts-compliance-rules.md` before writing any .ets code. Common traps: spread syntax, delete operator, unknown/any types, destructuring, string indexing, is type guards, const in @Builder, TextEncoder/TextDecoder globals. (Ref: *ArkTS Language Compliance*)
 
 ## 🐛 Core Data & Kotlin
 - **Stale UI after update** → 90% chance it's a missing Flow trigger, not persistence. (Ref: *Ghost UI After Update*)

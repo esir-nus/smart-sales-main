@@ -62,6 +62,7 @@ data class DeviceNetworkStatus(
 
 enum class WifiDisconnectedReason {
     BADGE_WIFI_OFFLINE,
+    HTTP_UNREACHABLE,
     PHONE_WIFI_UNAVAILABLE,
     PHONE_WIFI_SSID_UNREADABLE,
     NO_KNOWN_CREDENTIAL_FOR_PHONE_WIFI,
@@ -101,6 +102,16 @@ sealed interface ConnectionState {
     data class WifiProvisioned(
         val session: BleSession,
         val status: ProvisioningStatus
+    ) : ConnectionState
+
+    /**
+     * 传输已确认（IP 可用 + SSID 匹配），但 HTTP :8088 服务尚未响应。
+     * 区别于 BADGE_WIFI_OFFLINE — 网络切换本身成功，HTTP 仍在预热。
+     */
+    data class WifiProvisionedHttpDelayed(
+        val session: BleSession,
+        val status: ProvisioningStatus,
+        val baseUrl: String,
     ) : ConnectionState
 
     data class Syncing(

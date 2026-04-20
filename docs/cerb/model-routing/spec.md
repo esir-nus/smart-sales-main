@@ -19,10 +19,20 @@ The registry provides static `LlmProfile` objects (not strings) acting as a "Kot
 | Profile | Task Profile | Target Model | Context Needed | Opt. Temp |
 |---------|--------------|--------------|----------------|-----------|
 | **EXTRACTOR** | Fast parsing, Named Entity Recognition, Intent extraction | `qwen-turbo` | 100K | `0.0f` |
+| **SCHEDULER_EXTRACTOR** | Scheduler-only extraction, create fallback, reschedule fallback | `qwen-plus` | 1M | `0.0f` |
 | **PLANNER** | Retrieving memory, reading large context, strategy formulation | `qwen-plus` | 1M | `0.5f` |
 | **EXECUTOR** | Generating tool execution, strict JSON structure | `qwen3-max-2026-01-23` | 32k | `0.0f` |
 | **ONBOARDING_CONSULTATION** | First-run consultation reply with fast natural language | `qwen-turbo` | 100K | `0.4f` |
 | **ONBOARDING_PROFILE_EXTRACTION** | First-run structured profile extraction JSON | `qwen-turbo` | 100K | `0.0f` |
+
+## Scheduler Lane Split
+
+Scheduler parsing no longer shares the generic extractor lane.
+
+- shared `EXTRACTOR` remains on `qwen-turbo` for general bounded extraction work
+- scheduler-owned fallback services use `SCHEDULER_EXTRACTOR`
+- this is both a lane split and a scheduler-only model upgrade from `qwen-turbo` to `qwen-plus`
+- deterministic scheduler parsing such as `ExactTimeCueResolver` remains unchanged; this change only affects the scheduler LLM extraction lane
 
 ## Wave Plan
 

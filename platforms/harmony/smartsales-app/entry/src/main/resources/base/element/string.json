@@ -11,6 +11,10 @@
     {
       "name": "entryability_label",
       "value": "Smart Sales"
+    },
+    {
+      "name": "read_media_reason",
+      "value": "Import local audio files for Tingwu processing"
     }
   ]
 }

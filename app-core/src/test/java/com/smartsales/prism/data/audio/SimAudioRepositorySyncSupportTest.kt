@@ -3,6 +3,10 @@ package com.smartsales.prism.data.audio
 import android.content.Context
 import com.smartsales.core.util.Result
 import com.smartsales.data.oss.OssUploader
+import com.smartsales.prism.data.connectivity.BadgeEndpointRecoveryCoordinator
+import com.smartsales.prism.data.connectivity.BadgeEndpointSnapshot
+import com.smartsales.prism.data.connectivity.BadgeRuntimeKey
+import com.smartsales.prism.data.connectivity.legacy.FakePhoneWifiProvider
 import com.smartsales.prism.domain.audio.AudioFile
 import com.smartsales.prism.domain.audio.AudioLocalAvailability
 import com.smartsales.prism.domain.audio.AudioSource
@@ -10,6 +14,8 @@ import com.smartsales.prism.domain.audio.TranscriptionStatus
 import com.smartsales.prism.domain.connectivity.BadgeConnectionState
 import com.smartsales.prism.domain.connectivity.BadgeManagerStatus
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
+import com.smartsales.prism.domain.connectivity.ConnectivityPrompt
+import com.smartsales.prism.domain.connectivity.IsolationTriggerContext
 import com.smartsales.prism.domain.connectivity.RecordingNotification
 import com.smartsales.prism.domain.connectivity.WavDownloadResult
 import com.smartsales.prism.domain.tingwu.TingwuPipeline
@@ -42,10 +48,13 @@ class SimAudioRepositorySyncSupportTest {
 
     private lateinit var context: Context
     private lateinit var connectivityBridge: FakeConnectivityBridge
+    private lateinit var endpointRecoveryCoordinator: BadgeEndpointRecoveryCoordinator
+    private lateinit var phoneWifiProvider: FakePhoneWifiProvider
     private lateinit var runtime: SimAudioRepositoryRuntime
     private lateinit var storeSupport: SimAudioRepositoryStoreSupport
     private lateinit var orchestrator: DownloadServiceOrchestrator
     private lateinit var syncSupport: SimAudioRepositorySyncSupport
+    private lateinit var connectivityPrompt: FakeConnectivityPrompt
 
     @Before
     fun setup() {
@@ -53,11 +62,17 @@ class SimAudioRepositorySyncSupportTest {
         whenever(context.filesDir).thenReturn(tempFolder.root)
 
         connectivityBridge = FakeConnectivityBridge()
+        endpointRecoveryCoordinator = BadgeEndpointRecoveryCoordinator()
+        connectivityPrompt = FakeConnectivityPrompt()
+        phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest")
         runtime = SimAudioRepositoryRuntime(
             context = context,
             connectivityBridge = connectivityBridge,
+            endpointRecoveryCoordinator = endpointRecoveryCoordinator,
             ossUploader = mock<OssUploader>(),
-            tingwuPipeline = mock<TingwuPipeline>()
+            tingwuPipeline = mock<TingwuPipeline>(),
+            connectivityPrompt = connectivityPrompt,
+            phoneWifiProvider = phoneWifiProvider
         )
         storeSupport = SimAudioRepositoryStoreSupport(runtime)
         orchestrator = mock<DownloadServiceOrchestrator>()
@@ -79,6 +94,7 @@ class SimAudioRepositorySyncSupportTest {
 
         assertEquals(SIM_BADGE_SYNC_CONNECTIVITY_UNAVAILABLE_MESSAGE, error?.message)
         assertEquals(listOf("isReady"), connectivityBridge.calls)
+        assertEquals(listOf("OfficeGuest"), connectivityPrompt.suggestedSsids)
     }
 
     @Test
@@ -90,6 +106,106 @@ class SimAudioRepositorySyncSupportTest {
 
         assertEquals(SimBadgeSyncSkippedReason.NOT_READY, outcome.skippedReason)
         assertEquals(listOf("isReady"), connectivityBridge.calls)
+        assertTrue(connectivityPrompt.suggestedSsids.isEmpty())
+    }
+
+    @Test
+    fun `auto sync prompts ON_CONNECT isolation and arms suppression when validated wifi and badge ip are known`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
+        noteActiveEndpoint("badge-1", "token-1", "192.168.0.9")
+        phoneWifiProvider.snapshot = FakePhoneWifiProvider("OfficeGuest", isValidated = true).snapshot
+        connectivityBridge.isReadyResult = false
+
+        val outcome = syncSupport.syncFromBadge(SimBadgeSyncTrigger.AUTO)
+
+        assertEquals(SimBadgeSyncSkippedReason.NOT_READY, outcome.skippedReason)
+        assertEquals(listOf("isReady"), connectivityBridge.calls)
+        assertEquals(
+            listOf("192.168.0.9" to IsolationTriggerContext.ON_CONNECT),
+            connectivityPrompt.isolationPrompts
+        )
+        assertTrue(syncSupport.shouldSuppressAutoSync())
+    }
+
+    @Test
+    fun `auto sync is suppressed when known http unreachable latch matches current runtime and endpoint`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
+        val runtimeKey = noteActiveEndpoint("badge-1", "token-1", "192.168.0.9")
+        connectivityBridge.isReadyResult = true
+        connectivityBridge.listResult = Result.Error(Exception("socket timeout"))
+
+        runCatching {
+            syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+        }
+
+        connectivityBridge.calls.clear()
+        endpointRecoveryCoordinator.noteCurrentRuntimeKey(runtimeKey)
+
+        val outcome = syncSupport.syncFromBadge(SimBadgeSyncTrigger.AUTO)
+
+        assertEquals(SimBadgeSyncSkippedReason.KNOWN_HTTP_UNREACHABLE, outcome.skippedReason)
+        assertTrue(connectivityBridge.calls.isEmpty())
+    }
+
+    @Test
+    fun `auto sync latch clears when runtime key changes`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
+        noteActiveEndpoint("badge-1", "token-1", "192.168.0.9")
+        connectivityBridge.isReadyResult = true
+        connectivityBridge.listResult = Result.Error(Exception("socket timeout"))
+
+        runCatching {
+            syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+        }
+
+        endpointRecoveryCoordinator.noteCurrentRuntimeKey(
+            BadgeRuntimeKey(peripheralId = "badge-2", secureToken = "token-2")
+        )
+
+        assertFalse(syncSupport.shouldSuppressAutoSync())
+    }
+
+    @Test
+    fun `auto sync latch clears when endpoint changes`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
+        val runtimeKey = noteActiveEndpoint("badge-1", "token-1", "192.168.0.9")
+        connectivityBridge.isReadyResult = true
+        connectivityBridge.listResult = Result.Error(Exception("socket timeout"))
+
+        runCatching {
+            syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+        }
+
+        endpointRecoveryCoordinator.noteResolvedEndpoint(
+            BadgeEndpointSnapshot(
+                runtimeKey = runtimeKey,
+                badgeIp = "192.168.0.12",
+                baseUrl = "http://192.168.0.12:8088"
+            )
+        )
+
+        assertFalse(syncSupport.shouldSuppressAutoSync())
+    }
+
+    @Test
+    fun `manual sync remains allowed and clears latch after success`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
+        noteActiveEndpoint("badge-1", "token-1", "192.168.0.9")
+        connectivityBridge.isReadyResult = true
+        connectivityBridge.listResult = Result.Error(Exception("socket timeout"))
+
+        runCatching {
+            syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+        }
+
+        connectivityBridge.calls.clear()
+        connectivityBridge.listResult = Result.Success(emptyList())
+
+        val outcome = syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+
+        assertEquals(SimBadgeSyncResultBranch.DEVICE_EMPTY, outcome.resultBranch)
+        assertTrue(connectivityBridge.calls.containsAll(listOf("isReady", "listRecordings")))
+        assertFalse(syncSupport.shouldSuppressAutoSync())
     }
 
     @Test
@@ -104,6 +220,7 @@ class SimAudioRepositorySyncSupportTest {
 
         assertEquals(SIM_BADGE_SYNC_CONNECTIVITY_UNAVAILABLE_MESSAGE, error?.message)
         assertEquals(listOf("isReady", "listRecordings"), connectivityBridge.calls)
+        assertEquals(listOf("OfficeGuest"), connectivityPrompt.suggestedSsids)
     }
 
     @Test
@@ -381,6 +498,23 @@ class SimAudioRepositorySyncSupportTest {
         )
     }
 
+    private suspend fun noteActiveEndpoint(
+        peripheralId: String,
+        secureToken: String,
+        badgeIp: String
+    ): BadgeRuntimeKey {
+        val runtimeKey = BadgeRuntimeKey(peripheralId = peripheralId, secureToken = secureToken)
+        endpointRecoveryCoordinator.noteCurrentRuntimeKey(runtimeKey)
+        endpointRecoveryCoordinator.noteResolvedEndpoint(
+            BadgeEndpointSnapshot(
+                runtimeKey = runtimeKey,
+                badgeIp = badgeIp,
+                baseUrl = "http://$badgeIp:8088"
+            )
+        )
+        return runtimeKey
+    }
+
     private class FakeConnectivityBridge : ConnectivityBridge {
         override val connectionState = MutableStateFlow<BadgeConnectionState>(
             BadgeConnectionState.Disconnected
@@ -426,6 +560,25 @@ class SimAudioRepositorySyncSupportTest {
         override suspend fun deleteRecording(filename: String): Boolean {
             calls += "deleteRecording:$filename"
             return deleteRecordingResults[filename] ?: true
+        }
+
+        override fun wifiRepairEvents(): kotlinx.coroutines.flow.Flow<com.smartsales.prism.domain.connectivity.WifiRepairEvent> =
+            emptyFlow()
+    }
+
+    private class FakeConnectivityPrompt : ConnectivityPrompt {
+        val suggestedSsids = mutableListOf<String?>()
+        val isolationPrompts = mutableListOf<Pair<String, IsolationTriggerContext>>()
+
+        override suspend fun promptWifiMismatch(suggestedSsid: String?) {
+            suggestedSsids += suggestedSsid
+        }
+
+        override suspend fun promptSuspectedIsolation(
+            badgeIp: String,
+            triggerContext: IsolationTriggerContext
+        ) {
+            isolationPrompts += badgeIp to triggerContext
         }
     }
 }

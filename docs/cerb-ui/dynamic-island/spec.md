@@ -74,13 +74,16 @@ RuntimeShell/SIM may temporarily replace the scheduler lane with a connectivity 
 
 Rules:
 
-- transport truth comes from `ConnectivityViewModel.connectionState`
-- included connectivity island states are `CONNECTED`, `DISCONNECTED`, `RECONNECTING`, and `NEEDS_SETUP`
+- transport truth comes from `ConnectivityViewModel.connectionState`, which fuses the flat `BadgeConnectionState` with the `BadgeManagerStatus.BlePairedNetwork{Offline,Unknown}` diagnostic so the UI can distinguish a BLE-paired-but-device-WiFi-down link from a fully disconnected one
+- included connectivity island states are `CONNECTED`, `PARTIAL_WIFI_DOWN`, `DISCONNECTED`, `RECONNECTING`, and `NEEDS_SETUP`
+- `CONNECTED` means both BLE and device-side Wi-Fi are ready; its strict contract (equivalent to `RealConnectivityBridge.hasSharedTransportReadiness()`) is not weakened by the partial surface
+- `PARTIAL_WIFI_DOWN` means BLE is paired and the badge is reachable, but the device has no usable Wi-Fi IP; it is a first-class transport-truth state, not a manager-only diagnostic
 - `CONNECTED` interrupts the scheduler lane for `5s` on state change so the success state can read clearly in the shared header
 - `DISCONNECTED` interrupts the scheduler lane for `3s` on state change
 - a heartbeat may re-show `CONNECTED` every `30s` for `5s` when no takeover is already active
 - a heartbeat may re-show `DISCONNECTED` every `30s` for `2.5s` when no takeover is already active
-- `RECONNECTING` and `NEEDS_SETUP` are persistent takeovers until the underlying transport state changes
+- `RECONNECTING`, `NEEDS_SETUP`, and `PARTIAL_WIFI_DOWN` are persistent takeovers until the underlying transport state changes
+- `PARTIAL_WIFI_DOWN` renders in the amber NEEDS_SETUP palette but stays steady (no pulse, no breathing) so it separates visually from the pulsing orange setup takeover and the breathing green reconnect takeover
 - the connectivity lane is suppressed while the scheduler drawer is open or while any connectivity-owned surface (`MODAL`, `SETUP`, `MANAGER`) is already visible
 - visible connectivity tap opens the connectivity entry surface instead of the scheduler drawer
 - downward drag does not open connectivity; it remains reserved for scheduler entry only
@@ -88,22 +91,25 @@ Rules:
 Current connectivity copy:
 
 - connected: `Badge 已连接`
+- partial wifi down: `Badge WiFi 未连接`
 - disconnected: `Badge 已断开`
 - reconnecting: `Badge 重连中...`
 - needs setup: `Badge 需要配网`
 
-Current battery rule:
+Current ambient flank rule:
 
 - the connected connectivity lane may expose provisional battery data through shell-owned ambient chrome
-- RuntimeShell/SIM may render decorative left/right ambient flank icons when the connected lane is visible
-- the right ambient flank may use the provisional battery value, but it must remain outside the one-line island body
+- RuntimeShell/SIM may render decorative left/right ambient flank icons when the connected or partial lane is visible; they remain hidden for disconnected/reconnecting/needs-setup
+- the left flank renders a BLE link glyph tinted green when BLE is paired (both connected and partial qualify) and dim otherwise
+- the right flank renders a Wi-Fi glyph plus the provisional battery glyph as a cluster; the Wi-Fi glyph is green when Wi-Fi is ready and red when it is not, and the battery glyph stays in its current provisional green treatment
+- all ambient chrome remains outside the one-line island body
 - the current battery value is still provisional and comes from `ConnectivityViewModel.batteryLevel`
 - real bridge-backed battery sourcing is deferred and must be tracked as follow-up debt rather than implied as shipped truth
 
 Excluded from this lane:
 
 - update-check / update-found / updating refinements
-- Wi-Fi mismatch and manager-only diagnostic states
+- Wi-Fi mismatch and other manager-only diagnostic states (`PARTIAL_WIFI_DOWN` is not manager-only; it is a transport-truth state derived from the same bridge the flat `BadgeConnectionState` reads)
 - extra connectivity sub-lanes that do not map to the transport-truth shell contract above
 
 ## 4. Integration Rules

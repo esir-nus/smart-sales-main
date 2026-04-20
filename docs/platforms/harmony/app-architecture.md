@@ -21,7 +21,7 @@
 platforms/harmony/smartsales-app/
 ```
 
-Bundle ID: `com.smartsales.harmony.app`
+Bundle ID: `smartsales.HOS.test`
 
 This is the complete native HarmonyOS app. It absorbs patterns from the Tingwu container (`platforms/harmony/tingwu-container/`) and implements full product parity through phased delivery.
 
@@ -274,7 +274,7 @@ Configure signing in `build-profile.json5` with AGC-generated certificate. See `
 
 ```bash
 hdc install <path-to-signed.hap>
-hdc shell aa start -a EntryAbility -b com.smartsales.harmony.app
+hdc shell aa start -a EntryAbility -b smartsales.HOS.test
 ```
 
 ### 5.4 Debug

@@ -154,6 +154,7 @@ App:          (downloads /download?file=rec_20260409_150000.wav, stores in audio
 **Base URL**: `http://<badge-ip>:8088`
 
 > **SOT**: `webserver-test.c` line 492: `config.server_port = 8088`
+> **App-side repair rule**: after manual BLE credential dispatch (`SD#...` then `PD#...`), the Android app must not declare repair success until HTTP `GET /` on `http://<badge-ip>:8088` is reachable within the bounded preflight timeout.
 
 ### GET `/` — Health Check
 

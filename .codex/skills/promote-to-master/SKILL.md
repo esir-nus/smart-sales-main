@@ -53,16 +53,18 @@ ${COMMITS}
    ```
    Do NOT delete the develop branch after merge — it is the long-lived working branch.
 
-## Sync platform branches (optional)
+## Promote to platform branch (optional)
 
-If the user asks, sync the promotion into platform branches:
+If the user wants to snapshot the current develop state into a platform shipping branch:
 
 ```bash
 git checkout platform/harmony
-git merge develop --no-ff -m "merge: sync shared contracts from develop"
+git merge develop --no-ff -m "promote: develop → platform/harmony snapshot"
 git push origin platform/harmony
 git checkout develop
 ```
+
+Use `platform/android`, `platform/ios`, etc. for other platform targets. Platform branches are code-only shipping snapshots — docs stay on develop. They receive output from develop, never the reverse.
 
 ## Rules
 

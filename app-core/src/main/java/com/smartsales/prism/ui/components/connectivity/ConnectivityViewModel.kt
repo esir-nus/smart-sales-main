@@ -9,14 +9,19 @@ import com.smartsales.prism.domain.connectivity.BadgeConnectionState
 import com.smartsales.prism.domain.connectivity.BadgeManagerStatus
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.connectivity.ConnectivityService
+import com.smartsales.prism.domain.connectivity.IsolationTriggerContext
 import com.smartsales.prism.domain.connectivity.ReconnectResult
 import com.smartsales.prism.domain.connectivity.UpdateResult
 import com.smartsales.prism.domain.connectivity.WifiConfigResult
+import com.smartsales.prism.domain.connectivity.WifiRepairEvent
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -34,20 +39,26 @@ import javax.inject.Inject
 class ConnectivityViewModel @Inject constructor(
     private val connectivityService: ConnectivityService,
     private val connectivityBridge: ConnectivityBridge,
-    private val registryManager: DeviceRegistryManager
+    private val registryManager: DeviceRegistryManager,
+    private val promptCoordinator: ConnectivityPromptCoordinator
 ) : ViewModel() {
 
     // 设备注册表 — 多设备管理
     val registeredDevices: StateFlow<List<RegisteredDevice>> = registryManager.registeredDevices
     val activeDevice: StateFlow<RegisteredDevice?> = registryManager.activeDevice
 
-    // 连接状态 — 从真实 ConnectivityBridge 订阅
-    val connectionState: StateFlow<ConnectionState> = connectivityBridge.connectionState
-        .map { badgeState -> mapToUiState(badgeState) }
+    // 连接状态 — 融合 flat badge state 与 manager 诊断，以便 UI 层可识别 BLE 已配对/Wi-Fi 未就绪的中间态
+    val connectionState: StateFlow<ConnectionState> = combine(
+        connectivityBridge.connectionState,
+        connectivityBridge.managerStatus
+    ) { badgeState, managerStatus -> fuseUiState(badgeState, managerStatus) }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Eagerly,
-            initialValue = mapToUiState(connectivityBridge.connectionState.value)
+            initialValue = fuseUiState(
+                connectivityBridge.connectionState.value,
+                connectivityBridge.managerStatus.value
+            )
         )
 
     // 连接管理界面专用状态 — richer BLE / Wi‑Fi 诊断，但不影响 shell 路由
@@ -67,10 +78,24 @@ class ConnectivityViewModel @Inject constructor(
     val wifiMismatchSuggestedSsid: StateFlow<String?> = _wifiMismatchSuggestedSsid.asStateFlow()
     private val _wifiMismatchErrorMessage = MutableStateFlow<String?>(null)
     val wifiMismatchErrorMessage: StateFlow<String?> = _wifiMismatchErrorMessage.asStateFlow()
+    private val _promptRequests = MutableSharedFlow<WifiMismatchPromptRequest>(extraBufferCapacity = 1)
+    val promptRequests: SharedFlow<WifiMismatchPromptRequest> = _promptRequests.asSharedFlow()
+
+    // 疑似隔离时记录徽章 IP，用于界面诊断展示
+    private val _isolationBadgeIp = MutableStateFlow<String?>(null)
+    val isolationBadgeIp: StateFlow<String?> = _isolationBadgeIp.asStateFlow()
+
+    // 隔离触发场景 — 决定 ConnectivityModal 展示的标题与说明文案
+    private val _isolationTriggerContext = MutableStateFlow<IsolationTriggerContext?>(null)
+    val isolationTriggerContext: StateFlow<IsolationTriggerContext?> = _isolationTriggerContext.asStateFlow()
 
     // 待更新版本
     private val _pendingVersion = MutableStateFlow<String?>(null)
     val pendingVersion: StateFlow<String?> = _pendingVersion.asStateFlow()
+
+    // Wi-Fi 修复流程专用状态机 — 独立于 ConnectivityManagerState
+    private val _repairState = MutableStateFlow<WifiRepairState>(WifiRepairState.Idle)
+    val repairState: StateFlow<WifiRepairState> = _repairState.asStateFlow()
 
     // 临时 UI 状态覆盖（用于非 Badge 状态的 UI 流程）
     private val _uiOverride = MutableStateFlow<ConnectionState?>(null)
@@ -84,7 +109,10 @@ class ConnectivityViewModel @Inject constructor(
     }.stateIn(
         viewModelScope,
         SharingStarted.Eagerly,
-        mapToUiState(connectivityBridge.connectionState.value)
+        fuseUiState(
+            connectivityBridge.connectionState.value,
+            connectivityBridge.managerStatus.value
+        )
     )
 
     val managerState: StateFlow<ConnectivityManagerState> = combine(
@@ -97,6 +125,62 @@ class ConnectivityViewModel @Inject constructor(
         SharingStarted.Eagerly,
         mapToManagerUiState(connectivityBridge.managerStatus.value)
     )
+
+    init {
+        viewModelScope.launch {
+            promptCoordinator.wifiMismatchRequests.collect { request ->
+                _wifiMismatchSuggestedSsid.value = request.suggestedSsid
+                _wifiMismatchErrorMessage.value = null
+                _uiOverride.value = ConnectionState.WIFI_MISMATCH
+                _promptRequests.emit(request)
+            }
+        }
+        viewModelScope.launch {
+            // 疑似客户端隔离：手机网络已验证但 HTTP 探测超时 → 展示隔离提示模态框
+            promptCoordinator.suspectedIsolationRequests.collect { request ->
+                _isolationBadgeIp.value = request.badgeIp
+                _isolationTriggerContext.value = request.triggerContext
+                _repairState.value = WifiRepairState.HardFailure(
+                    WifiRepairState.HardFailure.HardFailureReason.SUSPECTED_ISOLATION
+                )
+                _uiOverride.value = ConnectionState.WIFI_MISMATCH
+            }
+        }
+        viewModelScope.launch {
+            connectivityBridge.wifiRepairEvents().collect { event ->
+                _repairState.value = when (event) {
+                    is WifiRepairEvent.CredentialsDispatched ->
+                        WifiRepairState.SendingCredentials(event.ssid)
+                    is WifiRepairEvent.UsableIpObserved ->
+                        WifiRepairState.WaitingForBadgeNetworkSwitch(
+                            (repairState.value as? WifiRepairState.SendingCredentials)?.ssid
+                                ?: event.ip
+                        )
+                    is WifiRepairEvent.TransportConfirmed ->
+                        WifiRepairState.TransportConfirmed(event.ip, event.badgeSsid)
+                    is WifiRepairEvent.HttpReady ->
+                        WifiRepairState.HttpReady(event.baseUrl)
+                    is WifiRepairEvent.HttpDelayed ->
+                        WifiRepairState.HttpDelayed(
+                            badgeSsid = (repairState.value as? WifiRepairState.TransportConfirmed)?.badgeSsid,
+                            baseUrl = event.baseUrl
+                        )
+                    is WifiRepairEvent.DefinitiveMismatch ->
+                        WifiRepairState.HardFailure(WifiRepairState.HardFailure.HardFailureReason.SSID_MISMATCH)
+                    is WifiRepairEvent.BadgeOffline ->
+                        // 仅在传输从未确认时升级为 HardFailure；UsableIpObserved 后的 BadgeOffline 忽略
+                        if (_repairState.value is WifiRepairState.TransportConfirmed ||
+                            _repairState.value is WifiRepairState.HttpCheckPending
+                        ) _repairState.value
+                        else WifiRepairState.HardFailure(WifiRepairState.HardFailure.HardFailureReason.BADGE_OFFLINE)
+                    is WifiRepairEvent.CredentialReplayFailed ->
+                        WifiRepairState.HardFailure(WifiRepairState.HardFailure.HardFailureReason.CREDENTIAL_REPLAY_FAILED)
+                    // TargetSsidObserved — 无独立 UI 状态变化，保持当前
+                    else -> _repairState.value
+                }
+            }
+        }
+    }
     
     /**
      * 映射 Badge 连接状态 → UI 状态
@@ -108,6 +192,25 @@ class ConnectivityViewModel @Inject constructor(
             is BadgeConnectionState.Connecting -> ConnectionState.RECONNECTING
             is BadgeConnectionState.Connected -> ConnectionState.CONNECTED
             is BadgeConnectionState.Error -> ConnectionState.DISCONNECTED
+        }
+    }
+
+    /**
+     * 融合 flat badge state 与 manager 诊断态：只有当 badge 尚未进入 Connected 时，
+     * 才让 BLE 已配对但 Wi-Fi 未就绪的中间态上浮为 PARTIAL_WIFI_DOWN；否则保持原映射，
+     * 从而保证下游对 CONNECTED 语义的合约（等价于 hasSharedTransportReadiness）不被削弱。
+     */
+    private fun fuseUiState(
+        badgeState: BadgeConnectionState,
+        managerStatus: BadgeManagerStatus
+    ): ConnectionState {
+        if (badgeState is BadgeConnectionState.Connected) {
+            return ConnectionState.CONNECTED
+        }
+        return when (managerStatus) {
+            is BadgeManagerStatus.BlePairedNetworkOffline,
+            is BadgeManagerStatus.BlePairedNetworkUnknown -> ConnectionState.PARTIAL_WIFI_DOWN
+            else -> mapToUiState(badgeState)
         }
     }
 
@@ -129,6 +232,7 @@ class ConnectivityViewModel @Inject constructor(
     private fun mapOverrideToManagerUiState(state: ConnectionState): ConnectivityManagerState {
         return when (state) {
             ConnectionState.CONNECTED -> ConnectivityManagerState.CONNECTED
+            ConnectionState.PARTIAL_WIFI_DOWN -> ConnectivityManagerState.BLE_PAIRED_NETWORK_OFFLINE
             ConnectionState.DISCONNECTED -> ConnectivityManagerState.DISCONNECTED
             ConnectionState.NEEDS_SETUP -> ConnectivityManagerState.NEEDS_SETUP
             ConnectionState.CHECKING_UPDATE -> ConnectivityManagerState.CHECKING_UPDATE
@@ -210,12 +314,30 @@ class ConnectivityViewModel @Inject constructor(
                 ReconnectResult.DeviceNotFound -> clearTransientConnectivityUi()
                 is ReconnectResult.WifiMismatch -> {
                     _wifiMismatchSuggestedSsid.value = result.currentPhoneSsid
+                    _wifiMismatchErrorMessage.value = result.errorMessage
+                    _repairState.value = WifiRepairState.EditCredentials(result.currentPhoneSsid)
                     _uiOverride.value = ConnectionState.WIFI_MISMATCH
                 }
                 is ReconnectResult.Error -> clearTransientConnectivityUi()
             }
             Log.d("ConnectivityVM", "After reconnect: override=${_uiOverride.value}, effective=${effectiveState.value}")
         }
+    }
+
+    fun scheduleAutoReconnect() {
+        if (activeOperationJob?.isActive == true) {
+            Log.d("ConnectivityVM", "scheduleAutoReconnect skipped - another operation already in progress")
+            return
+        }
+        // 允许在 DISCONNECTED 或 PARTIAL_WIFI_DOWN（BLE 已配对但 Wi-Fi 未就绪）场景下重连，
+        // 保持 PARTIAL_WIFI_DOWN 引入前的行为不被削弱。
+        val state = effectiveState.value
+        if (state != ConnectionState.DISCONNECTED && state != ConnectionState.PARTIAL_WIFI_DOWN) {
+            Log.d("ConnectivityVM", "scheduleAutoReconnect skipped - effectiveState=$state")
+            return
+        }
+        Log.d("ConnectivityVM", "scheduleAutoReconnect() delegating to service")
+        connectivityService.scheduleAutoReconnect()
     }
 
     private fun launchExclusiveOperation(
@@ -286,11 +408,21 @@ class ConnectivityViewModel @Inject constructor(
         launchExclusiveOperation("updateWifiConfig") {
             _wifiMismatchErrorMessage.value = null
             _wifiMismatchSuggestedSsid.value = normalizedSsid
+            _repairState.value = WifiRepairState.SendingCredentials(normalizedSsid)
             _uiOverride.value = ConnectionState.RECONNECTING
             val result = connectivityService.updateWifiConfig(normalizedSsid, normalizedPassword)
             when (result) {
                 is WifiConfigResult.Success -> clearTransientConnectivityUi()
+                // 传输已确认，HTTP 仍在预热 — 保持表单区域但展示"切换成功"状态
+                is WifiConfigResult.TransportConfirmedHttpDelayed -> {
+                    _repairState.value = WifiRepairState.HttpDelayed(
+                        badgeSsid = result.badgeSsid,
+                        baseUrl = result.baseUrl
+                    )
+                    _uiOverride.value = ConnectionState.WIFI_MISMATCH
+                }
                 is WifiConfigResult.Error -> {
+                    _repairState.value = WifiRepairState.RetryableFailure(result.message)
                     _wifiMismatchErrorMessage.value = result.message
                     _uiOverride.value = ConnectionState.WIFI_MISMATCH
                 }
@@ -301,6 +433,9 @@ class ConnectivityViewModel @Inject constructor(
     private fun clearTransientConnectivityUi() {
         _wifiMismatchSuggestedSsid.value = null
         _wifiMismatchErrorMessage.value = null
+        _isolationBadgeIp.value = null
+        _isolationTriggerContext.value = null
+        _repairState.value = WifiRepairState.Idle
         _uiOverride.value = null
     }
 }
@@ -312,6 +447,7 @@ internal const val WIFI_MISMATCH_EMPTY_CREDENTIALS_ERROR = "Wi-Fi 名称和密�
  */
 enum class ConnectionState {
     CONNECTED,
+    PARTIAL_WIFI_DOWN,   // BLE 已配对但设备 Wi-Fi 未就绪
     DISCONNECTED,
     NEEDS_SETUP,     // 需要初始化配网
     CHECKING_UPDATE,

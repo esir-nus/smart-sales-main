@@ -1,0 +1,4 @@
+interface:
+  display_name: "中文改动解释"
+  short_description: "把技术任务表面问题、真实工作量和背后改动讲成清楚中文"
+  default_prompt: "Use $plain-chinese-change-explainer to explain this technical work in plain Simplified Chinese, focusing on what looked small, what changed underneath, and why the workload was larger than it looked."

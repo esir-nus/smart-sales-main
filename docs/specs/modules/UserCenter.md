@@ -31,6 +31,9 @@ Full-app settings and profile management overlay. Accessed from the main profile
 │    [ AI Lab ]                                       │
 │    [ Message Notifications ]                        │
 ├─────────────────────────────────────────────────────┤
+│  § Device Control                                   │
+│    [ Badge Voice Volume: 0..100 ]                   │
+├─────────────────────────────────────────────────────┤
 │  § Space Management                                 │
 │    [ Used Space: 128MB ]                            │
 │    [ Clear Cache ]                                  │
@@ -52,17 +55,21 @@ Full-app settings and profile management overlay. Accessed from the main profile
 |---------|----------|
 | **Profile Card** | Avatar, Name, Position, Metadata Chips, Edit |
 | **Preferences** | Theme, AI Lab, Message Notifications |
+| **Device Control** | Badge Voice Volume |
 | **Storage** | Used Space, Clear Cache |
 | **Security** | Change Password |
 | **About** | Help Center, Version |
 
 ## Current IA Freeze
 
-- the current full-app `User Center` IA is fixed to `Preferences / Storage / Security / About / Logout`
+- the current full-app `User Center` IA is fixed to `Preferences / Device Control / Storage / Security / About / Logout`
 - the older separate `Support` section is retired in the full-app path
 - `Help Center` currently lives under `About`
 - biometric / face ID no longer ships on the full-app `User Center` surface
 - storage is presented as two rows: `已用空间` and `清除缓存`
+- `Device Control` currently contains one real row: `徽章语音音量`
+- badge voice volume is persisted locally, but the badge command is sent only when the user releases the slider
+- duplicate voice-volume writes are skipped only after the same value was confirmed as written to the badge; a disconnected/no-op attempt must remain retryable
 
 ## Theme Behavior
 

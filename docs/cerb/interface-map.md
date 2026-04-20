@@ -4,7 +4,7 @@
 >
 > **Purpose**: Module ownership + data flow. Read this BEFORE any cross-module change.
 > **Rule**: If data belongs to Module B, query B's interface at runtime. Don't store B's data on A's model.
-> **Last Updated**: 2026-04-15 (DeviceRegistry multi-device layer; ConnectivityModal multi-device management rewrite; dedicated add-device onboarding route; DynamicIsland activeDeviceName; pairing→registry integration; downloadRecording onProgress; audio download progress fields; agent intelligence Wave 6 conversational polish)
+> **Last Updated**: 2026-04-20 (Badge control signals: reminder chime and persisted voice volume; ConnectivityModal connected-only voice volume quick entry; User Center device-control row; confirmed-write volume de-dupe semantics)
 >
 > **Status Legend**: ✅ = Shipped (Real impl) · 📐 = Interface only (Fake impl) · 🔲 = Not yet coded
 > **Platform Ownership Legend**: `shared` = same product contract across platforms · `android-only` = owned by the current Android lineage · `harmony-only` = owned by the future native Harmony root · `platform-adapter` = shared product contract, platform-specific delivery layer · `legacy-android-on-harmony` = Android app compatibility behavior on Huawei/Honor/Harmony devices
@@ -23,7 +23,7 @@ This overlay classifies the current repo's cross-platform-sensitive surfaces wit
 | `ConnectivityBridge`, `BadgeAudioPipeline`, `DevicePairing` | `android-only` | current Android lineage | Current hardware path is Android-owned and must not be treated as the default native Harmony implementation. |
 | Transient Harmony Tingwu container | `harmony-only` | `platforms/harmony/tingwu-container/**`, `docs/platforms/harmony/tingwu-container.md` | This transient app may consume shared Tingwu/audio contracts, but it must stay local-audio-only and must hide scheduler, reminder, chat, onboarding handoff, and badge-hardware capability instead of redefining shared truth. The Harmony root now owns its ArkTS config seam, hvigor-generated Harmony local config artifact, document-picker ingress, Harmony namespaced file store, Harmony HTTP/OSS client, Tingwu polling client, and container UI. |
 | `OnboardingInteraction` delivery mechanics | `platform-adapter` | shared flow/spec plus platform overlays | User journey and scheduler intent stay shared; permission, lifecycle, hardware, and OS-entry details are platform-owned. |
-| Android app on Huawei/Honor/Harmony devices | `legacy-android-on-harmony` | `docs/reference/harmonyos-platform-guide.md`, Android overlays, Android code lineage | This path remains the Android app running on Harmony-family devices. It is not the native Harmony product owner. |
+| Android app on Huawei/Honor/Harmony devices | `legacy-android-on-harmony` | `docs/reference/harmonyos-platform-guide.md`, Android overlays, Android code lineage | This path remains the Android app running on Harmony-family devices. It is not the native Harmony product owner, and it should reuse the canonical Android app artifact rather than fork a second Android package by default. |
 | Broader future native Harmony implementation root | `harmony-only` | reserved future platform root beyond the transient Tingwu container | Native Harmony code must not land under `app/**`, `app-core/**`, `core/**`, `data/**`, or `domain/**`. |
 
 ### Cross-platform split rule
@@ -151,6 +151,7 @@ The current base-runtime/SIM shell introduces one narrow shell-owned arbitration
 The shared reminder lane now introduces one additional narrow shell-owned presentation edge for foreground reminder surfacing:
 
 - `TaskReminderReceiver` may emit lossy process-local `EARLY` reminder events through `SchedulerReminderSurfaceBus` after it posts the normal reminder notification
+- `TaskReminderReceiver` may also emit one best-effort badge chime through `DeviceConnectionManager.notifyTaskFired()`; this side effect must never block or downgrade reminder delivery
 - `SimSchedulerViewModel` owns banner-entry merge/de-duplication plus scheduler-target derivation from canonical task rows
 - `RuntimeShell` / `RuntimeShellContent` own banner visibility gating, auto-clear timing, and tap routing back into the existing scheduler drawer seam
 - `AlarmActivity` remains the owner of `DEADLINE` full-screen reminder presentation, including concurrent stacked alarm cards
@@ -218,8 +219,10 @@ The connectivity surface now supports multi-device management through `DeviceReg
 - `DeviceRegistry` (SharedPrefs-backed, Layer 2) persists the registered device list; `DeviceRegistryManager` (Layer 4) owns active device selection, switching, and legacy single-device migration
 - `RealPairingService` calls `registryManager.registerDevice()` after successful pairing; the first registered device automatically becomes the default
 - `ConnectivityModal` now displays active device + device list with inline rename, switch, remove, and set-default actions; frosted glass styling follows `SimHomeHeroTokens`
+- `ConnectivityModal` may expose a connected-only badge voice-volume quick entry that persists the desired slider value locally and sends one best-effort BLE `volume#<0..100>` command only on finger-up
 - `ConnectivityModal` now splits first-time setup from later add-device entry: `NEEDS_SETUP` continues to the full `SIM_CONNECTIVITY` onboarding route, while the manager `添加设备` action opens the shell-owned `ADD_DEVICE` surface backed by `OnboardingHost.SIM_ADD_DEVICE`
 - `ConnectivityViewModel` now depends on `DeviceRegistryManager` for `registeredDevices`, `activeDevice`, and device management actions
+- `ConnectivityViewModel` and `UserCenterViewModel` may both edit the shared badge voice-volume preference, but duplicate BLE writes must be skipped only after the same value is confirmed as previously applied to the badge
 - `SimShellDynamicIslandCoordinator` now receives `activeDeviceName` and shows device-specific connectivity text (e.g., "Pro 已连接" vs "Badge 已连接")
 - device switch is mutex-protected: soft-disconnect current → seed session for target → force reconnect
 - legacy single-device users are auto-migrated from `SessionStore` on first launch

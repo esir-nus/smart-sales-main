@@ -66,10 +66,11 @@ Centralizes all Android notification logic behind a single interface. Features c
 
 **Goal**: Migrate `TaskReminderReceiver` to use `NotificationService` instead of building notifications directly.
 
-**Ship Criteria**: `TaskReminderReceiver.showNotification()` delegates to `NotificationService.show()`. Notification behavior unchanged.
+**Ship Criteria**: `TaskReminderReceiver.showNotification()` delegates to `NotificationService.show()`. Reminder notification behavior remains unchanged, while the receiver may also emit a best-effort badge chime signal that never blocks reminder delivery.
 
 ### Changes
 - `TaskReminderReceiver`: Replace inline `NotificationCompat.Builder` with `NotificationService.show()` call
+- `TaskReminderReceiver`: after the reminder path starts, optionally emit one best-effort badge chime (`commandend#1`) through `DeviceConnectionManager.notifyTaskFired()`
 - Challenge: `BroadcastReceiver` doesn't support constructor injection — use `@AndroidEntryPoint` or manual `EntryPointAccessors`
 
 ### Test Cases
@@ -130,7 +131,7 @@ App Launch
 
 | File | Current Role | Wave |
 |------|-------------|------|
-| `TaskReminderReceiver.kt` | WakeLock + Notification + fullScreenIntent + Vibration | Shipped (Wave 1.5), Hardening (Wave 1.7) |
+| `TaskReminderReceiver.kt` | WakeLock + Notification + fullScreenIntent + Vibration + best-effort badge chime | Shipped (Wave 1.5), Hardening (Wave 1.7) |
 | `AlarmActivity.kt` | Full-screen alarm overlay (semi-transparent, 5 dismiss paths) | Shipped |
 | `AlarmDismissReceiver.kt` | Unified dismiss handler (stop vibration + cancel notification) | Shipped |
 | `RealNotificationService.kt` | Channel creation, vibration, notification display | Shipped |

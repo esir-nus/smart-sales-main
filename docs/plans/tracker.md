@@ -5,7 +5,7 @@
 > **Campaign Lifecycle**: Every major initiative (rewrite, refactor, UI polish, large fix) is an "Epic" or "Campaign". Every Campaign MUST be initialized using the `/campaign-planner` workflow to enforce the following checklist sequence:
 > 1. **Docs** (Ensure Specs exist) -> 2. **Interface Map** (Ensure Layer/Contract boundaries align) -> 3. **Plan** (Dev Planner) -> 4. **Execute** (Implementation) -> 5. **Test** (E2E/L2 Verification). 
 > **Master Guide Alignment**: The Master Guide acts as the overarching strategy doc for a campaign. Agents MUST NEVER auto-update the Master Guide without strict explicit human review (like a Review Conference) to prevent architectural hallucination drift. Instead, run `/04-doc-sync` at the *end* of a campaign.
-> **Last Updated**: 2026-04-16
+> **Last Updated**: 2026-04-20
 > **Work Classification**: `shared-contract` = shared product docs/contracts · `android-beta` = current Android/AOSP beta-maintenance line · `harmony-native` = future native Harmony delivery · `cross-platform-governance` = branch/review/ownership guardrails
 
 ---
@@ -35,6 +35,7 @@
   - branch, CODEOWNERS, CI, tracker, and ownership-law work is `cross-platform-governance`
 - **Immediate Objectives**:
   - keep exactly one canonical protected trunk regardless of whether its branch name is `main` or `master`
+  - keep exactly one canonical Android debug artifact for the Android lineage; Harmony-device compatibility stays an Android runtime/operator concern unless an explicitly approved platform-owned release path says otherwise
   - freeze the current Android/AOSP line to beta-maintenance scope
   - quarantine the current mixed dirty worktree into bounded lanes before any promotion/tagging step
   - make one dirty lane equal one write scope and one CERB-style build state, with a handoff when paused or transferred
@@ -156,6 +157,23 @@
   - `InMemoryDeviceRegistry` test fake
   - Test updates: `ConnectivityViewModelTest`, `RealPairingServiceTest`
 - **Interface Map**: updated on 2026-04-15
+
+---
+
+## Shipped Slice: Badge Control Signals — Reminder Chime and Voice Volume
+> **Context**: Add a bundled badge-control slice that reuses the existing BLE badge-signal primitive for task reminder chime and user-controlled badge voice volume.
+
+- **Status**: Shipped (2026-04-20)
+- **Scope**:
+  - `TaskReminderReceiver` now emits one best-effort badge chime signal per reminder trigger through `DeviceConnectionManager.notifyTaskFired()`, without changing reminder notification semantics
+  - `DeviceConnectionManager.setVoiceVolume(level)` now reports whether a BLE write actually happened, while still using the existing `sendBadgeSignal(...)` primitive
+  - `VoiceVolumePreferenceStore` persists `desiredVolume` and `lastAppliedVolume` separately so disconnected/no-op sends remain retryable
+  - `UserCenterScreen` adds a `设备控制` section with a full-row `徽章语音音量` slider
+  - `ConnectivityModal` adds a connected-only `语音音量` quick entry above the device list
+  - `UserCenterViewModel` and `ConnectivityViewModel` update local slider state while dragging and send BLE only on `onValueChangeFinished`
+  - Duplicate volume sends are skipped only after the same value was confirmed as applied to the badge
+  - Test updates: `UserCenterViewModelTest`, `ConnectivityViewModelTest`, `DefaultDeviceConnectionManagerIngressTest`
+- **Interface Map**: updated on 2026-04-20
 
 ---
 

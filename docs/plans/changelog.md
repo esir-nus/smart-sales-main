@@ -3,6 +3,9 @@
 > Key spec/impl changes, newest first. Like `git log --oneline`.
 > Historical shipment log only. Do not use this file as the active source of open/closed testing-wave status; `docs/plans/tracker.md` and `docs/cerb-e2e-test/tasklist_log.md` own that.
 
+### 2026-04-20
+- **android-beta / agent-intelligence-ui**: Long-press copy on chat bubbles SHIPPED. Both `UserBubble` and the AI `CompleteBubble` now wrap their content in a new `CopyableBubble` (`app-core/.../ui/components/CopyableBubble.kt`) that registers `combinedClickable(onLongClick = ...)` and surfaces a single "复制" `DropdownMenu` item, writing the bubble's plain text to the system clipboard via a new `ClipboardHelper` (`app-core/.../ui/util/ClipboardHelper.kt`) and confirming with a "已复制" toast. The wrapper uses `onClick = {}` with no indication so existing inner clickables ("展开完整解析与原文..." / "收起原文") continue to win on tap. For `---EXPAND---`-split AI replies the copied payload joins both halves so the user always gets the complete text. Streaming/thinking/error bubbles intentionally left out of scope. Pattern mirrors `HistoryDrawer.kt`'s long-press menu.
+
 ### 2026-04-15
 - **android-build**: Install pipeline HOTFIXED. Pinned the transitive `org.jetbrains:annotations` dependency away from `latest.release` at root Gradle resolution so `:app-core:installDebug` no longer depends on remote Maven metadata lookup when the Aliyun Tingwu SDK chain is present. This stabilizes local/offline-ish Android build installs in the current environment.
 - **connectivity**: Pairing compile regression HOTFIXED. Repaired `RealPairingService` after the multi-device registry landing by keeping the selected BLE peripheral in one local variable through provisioning and registry registration, removing the duplicate declaration that blocked `:app-core:compileDebugKotlin`.

@@ -181,15 +181,21 @@ private fun StreamingBubble(content: String, modifier: Modifier = Modifier) {
 
 @Composable
 private fun CompleteBubble(content: String, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A40))
-    ) {
-        val parts = content.split("---EXPAND---")
-        if (parts.size > 1) {
-            var expanded by remember { mutableStateOf(false) }
-            Column(modifier = Modifier.padding(16.dp)) {
+    val parts = content.split("---EXPAND---")
+    val fullText = if (parts.size > 1) {
+        (parts[0].trim() + "\n\n" + parts.drop(1).joinToString("\n").trim()).trim()
+    } else {
+        content
+    }
+    CopyableBubble(textToCopy = fullText, modifier = modifier.fillMaxWidth()) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2A40))
+        ) {
+            if (parts.size > 1) {
+                var expanded by remember { mutableStateOf(false) }
+                Column(modifier = Modifier.padding(16.dp)) {
                 MarkdownText(
                     text = parts[0].trim(),
                     color = Color.White,
@@ -235,6 +241,7 @@ private fun CompleteBubble(content: String, modifier: Modifier = Modifier) {
                 modifier = Modifier.padding(16.dp)
             )
         }
+    }
     }
 }
 

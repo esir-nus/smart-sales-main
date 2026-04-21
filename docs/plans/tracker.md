@@ -208,6 +208,23 @@
 
 ---
 
+## Shipped Slice: Screen-Off Hardening for Watch-Initiated Scheduling
+> **Context**: The badge `log#...` scheduler path could previously stall silently under screen-off / Doze because it ran on a singleton coroutine scope with no foreground-service execution envelope or user-visible completion/failure signal.
+
+- **Status**: Shipped (2026-04-21)
+- **Scope**:
+  - added `SchedulerPipelineOrchestrator` + `SchedulerPipelineForegroundService` so automatic `log#...` Path A execution runs FIFO inside one `dataSync` foreground service while the app process is alive
+  - preserved the public `BadgeAudioPipeline` contract by keeping manual `processFile(filename)` as the inline retry/manual-import path
+  - added stage-aware ongoing notification (`Receiving` -> `Transcribing` -> `Creating your schedule`) plus typed outcome/failure notifications for all delivered `SchedulerResult` variants
+  - added permission-denied fallback: BLE badge chime + in-memory missed-outcome toast on next app foreground
+  - added targeted orchestrator / service-contract / notification-mapping / ingress tests
+- **Owning Shard**:
+  - [`docs/cerb/badge-audio-pipeline/spec.md`](../cerb/badge-audio-pipeline/spec.md)
+  - [`docs/cerb/badge-audio-pipeline/interface.md`](../cerb/badge-audio-pipeline/interface.md)
+  - [`docs/cerb/interface-map.md`](../cerb/interface-map.md)
+
+---
+
 ## Shipped Fix: Download Progress Bar Wiring — RealConnectivityBridge onProgress Forwarding
 > **Context**: The audio card download progress bar appeared but stayed at 0% because `RealConnectivityBridge` did not forward `onProgress` to `BadgeHttpClient.downloadWav()`. A dead compat extension (`ConnectivityBridgeDownloadCompat.kt`) masked the gap by emitting progress only at 100% on completion.
 

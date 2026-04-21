@@ -157,15 +157,14 @@ internal fun OnboardingMicFooter(
             }
         }
         Spacer(Modifier.height(12.dp))
+        // 静默态不显示提示文案，保持录音/处理态反馈；用 alpha 占位避免布局跳动
+        val showLabel = isRecording || isProcessing
         Text(
-            text = when {
-                isRecording -> "正在聆听...再次点击结束"
-                isProcessing -> processingLabel
-                else -> "点击开始说话"
-            },
-            color = if (isRecording || isProcessing) OnboardingBlue else OnboardingMuted,
+            text = if (isRecording) "正在聆听...再次点击结束" else processingLabel,
+            color = OnboardingBlue,
             fontSize = 13.sp,
-            fontWeight = if (isRecording || isProcessing) FontWeight.Medium else FontWeight.Normal
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.alpha(if (showLabel) 1f else 0f)
         )
     }
 }

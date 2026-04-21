@@ -76,6 +76,7 @@ case "${lane}" in
     bundle_id="smartsales.HOS.test"
     app_dir="${ROOT_DIR}/platforms/harmony/smartsales-app"
     artifact_patterns=(
+      "*signed-phase2c-current.hap"
       "*signed-hs006.hap"
       "*signed-test-profile-hs006.hap"
       "*signed-test-profile*.hap"

@@ -5,8 +5,10 @@ import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.animateColorAsState
@@ -161,10 +163,16 @@ private fun SchedulerQuickStartContent(
             contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 24.dp, bottom = 200.dp)
         ) {
             item {
-                TitleBlock(
-                    title = "快速体验：日程",
-                    subtitle = "试试用语音安排接下来几天的日程。体验完毕后，刚才的安排将保留到您的主界面。"
-                )
+                AnimatedVisibility(
+                    visible = state.items.isEmpty(),
+                    enter = expandVertically() + fadeIn(),
+                    exit = shrinkVertically() + fadeOut()
+                ) {
+                    TitleBlock(
+                        title = "快速体验：日程",
+                        subtitle = "试试用语音安排接下来几天的日程。体验完毕后，刚才的安排将保留到您的主界面。"
+                    )
+                }
             }
             item {
                 AnimatedVisibility(

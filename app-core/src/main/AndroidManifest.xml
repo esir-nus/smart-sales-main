@@ -71,6 +71,12 @@
             android:foregroundServiceType="dataSync"
             android:stopWithTask="false" />
 
+        <service
+            android:name=".service.SchedulerPipelineForegroundService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync" />
+
         <!-- 闹钟全屏 Activity — 半透明覆盖层 -->
         <activity
             android:name=".ui.alarm.AlarmActivity"

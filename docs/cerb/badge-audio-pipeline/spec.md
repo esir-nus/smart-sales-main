@@ -1,3 +1,10 @@
+---
+era: post-harness
+engine: backend
+evidence_class: platform-runtime
+lane: android
+---
+
 # Badge Audio Pipeline
 
 > **Cerb-compliant spec** — End-to-end orchestration from badge recording to scheduler.
@@ -30,6 +37,62 @@ Delete WAV from badge (cleanup after drawer ingest succeeds)
 ```
 
 **Key Principle**: This is the only automatic scheduler-ingress path for badge audio. Scheduler does NOT know about badge connectivity, and drawer visibility is repaired through the pipeline rather than by teaching scheduler or shell UI about badge transport.
+
+## Background Execution
+
+The automatic `log#...` scheduler path now runs inside `SchedulerPipelineForegroundService`, not inside `RealBadgeAudioPipeline`'s own long-lived worker scope.
+
+- `RealBadgeAudioPipeline` still owns the badge audio stage machine and still emits the same `PipelineEvent` / `PipelineState` contract.
+- The init collector on `ConnectivityBridge.recordingNotifications()` now enqueues `log#...` filenames into `SchedulerPipelineOrchestrator`.
+- `SchedulerPipelineOrchestrator` deduplicates queued + in-flight filenames, starts the foreground service when needed, and feeds one FIFO `Channel<String>` consumer.
+- `SchedulerPipelineForegroundService` owns the screen-off execution envelope: foreground lifetime, one-at-a-time processing, stage-aware progress notification, outcome/failure notification dispatch, and 800 ms drain debounce before stop.
+- Public `BadgeAudioPipeline.processFile(filename)` remains the manual / retry surface and still runs inline until complete. It does not route through the foreground service.
+
+### Automatic Path Shape
+
+```text
+BLE log# notification
+  -> RealBadgeAudioPipeline init collector
+  -> SchedulerPipelineOrchestrator.enqueue(filename)
+  -> SchedulerPipelineForegroundService
+      -> download
+      -> transcribe
+      -> schedule
+      -> drawer ingest
+      -> outcome notification / fallback
+```
+
+### Stage Notification Contract
+
+- Ongoing foreground channel: `prism_scheduler_pipeline_progress`
+- Stage text:
+  - `RECEIVING` -> `Receiving recording from badge...`
+  - `TRANSCRIBING` -> `Transcribing your request...`
+  - `SCHEDULING` -> `Creating your schedule...`
+- Service stop rule: when queue + in-flight work both drain, wait 800 ms, then `stopForeground(REMOVE)` + `stopSelf()`
+
+### Outcome Mapping
+
+| Result | User Signal | Channel | Tap Action |
+|------|-------------|---------|------------|
+| `TaskCreated` | Heads-up: `Schedule created` | `prism_scheduler_pipeline_outcome` | Open app root |
+| `MultiTaskCreated` | Heads-up summarizing count + titles | `prism_scheduler_pipeline_outcome` | Open app root |
+| `InspirationSaved` | Heads-up: `Saved to inspirations` | `prism_scheduler_pipeline_outcome` | Open app root |
+| `AwaitingClarification` | Heads-up: `Tap to answer` | `prism_scheduler_pipeline_outcome` | Open app root |
+| `Ignored` | Low-priority non-heads-up status entry | `prism_scheduler_pipeline_progress` | None |
+| `Error(DOWNLOAD)` | Heads-up retry guidance | `prism_scheduler_pipeline_outcome` | None |
+| `Error(TRANSCRIBE)` | Heads-up retry guidance | `prism_scheduler_pipeline_outcome` | None |
+| `Error(SCHEDULE)` | Heads-up rephrase guidance | `prism_scheduler_pipeline_outcome` | None |
+
+### Permission-Denied Fallback
+
+If `POST_NOTIFICATIONS` is denied on Android 13+:
+
+- the pipeline still completes inside the foreground-service envelope
+- the outcome notification is skipped intentionally
+- the app sends one BLE badge chime via `DeviceConnectionManager.notifyTaskFired()`
+- the missed outcome summary is stored in an in-memory ring buffer
+- `MainActivity.onStart()` consumes that buffer and shows a toast once the user returns to foreground
 
 ---
 
@@ -88,7 +151,7 @@ sealed class SchedulerResult {
         val scheduledAtMillis: Long,
         val durationMinutes: Int
     ) : SchedulerResult()
-    data class MultiTaskCreated(val taskIds: List<String>) : SchedulerResult()
+    data class MultiTaskCreated(val tasks: List<TaskCreated>) : SchedulerResult()
     data class InspirationSaved(val id: String) : SchedulerResult()
     data class AwaitingClarification(val question: String) : SchedulerResult()
     data object Ignored : SchedulerResult()  // 非调度意图（聊天、无效输入）

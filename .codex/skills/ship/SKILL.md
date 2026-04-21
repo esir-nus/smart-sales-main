@@ -11,48 +11,68 @@ Codex is the git operator. Claude (or the user) prepares the changes; Codex revi
 
 This skill follows the declaration-first shipping contract. See `docs/specs/declaration-first-shipping.md` for the governing philosophy: friction belongs upfront (at declaration and task start), not at ship time. `/ship` enforces only what the earlier gates cannot.
 
-## Step 1: Understand the handoff
+## Step 1: Read the handoff summary
 
-Every `/ship` invocation must carry a declaration. Expected fields:
+The operator's ship summary is trusted. Read lane + scope + test results from it and proceed — do not re-ask or ask the operator to re-confirm. Expected fields:
 
 - **Lane**: `android`, `harmony`, or `docs`
+- **Intent**: `dataflow`, `cosmetic`, or `hybrid` (from the originating sprint contract; see `.claude/commands/sprint.md` Step 2)
 - **Ship Scope**: explicit file list or module slice
+- **Verification Scope**: tests/build/device evidence the operator already ran
+- **Device-loop evidence**: required when the originating sprint contract declared `Device loop: required` (L3 on `lane: android` or `lane: harmony`). See `docs/specs/device-loop-protocol.md` §6 for the schema.
 - **Out-of-Scope Files**: optional
-- **Verification Scope**: tests/build/device evidence (for `docs` lane: doc-render check or "n/a")
 
-If a Claude handoff block is present, read these from it. If missing, ask the operator before proceeding — do not infer from `git status`. The declaration is the source of truth; the dirty tree is context.
+If the summary is genuinely missing lane, intent, or scope, ask once. Otherwise trust it.
+
+### Auto-split for docs files
+
+Scan the dirty tree against the declared Ship Scope:
+
+- Any file under `docs/`, `CLAUDE.md`, `AGENTS.md`, `SmartSales_PRD.md`, `CHANGELOG.md`, or other repo-root markdown is **auto-routed to a `docs` lane split**.
+- If the operator declared `lane: android` or `lane: harmony` and the Ship Scope includes doc files, silently peel them out into a second `docs` lane ship targeting `develop`. Do not ask — this is automatic.
+- If the dirty tree contains out-of-scope doc files the operator did not declare, include them in the auto-split `docs` ship only if the operator's summary implies they belong (e.g., they are explicitly listed or referenced). Otherwise leave them as unrelated dirt.
+
+Result: up to two ships per invocation — one platform lane (if declared) and one `docs` lane (if docs touched).
 
 Gather branch context for reporting:
 
 1. `git rev-parse --abbrev-ref HEAD`
 2. `git status --porcelain`
-3. `git diff --name-only` and `git diff --cached --name-only`
 
-## Step 2: Peer review the declared scope
+## Step 2: Light review + verification
 
-Review ONLY files in the declared Ship Scope. Run `git diff -- <scope files>` and check:
+Trust the operator's review and test evidence. Do a light sanity pass on declared scope files only:
 
-1. **Correctness**: Does the code match the declared behavior?
-2. **Regressions**: Broken imports, missing files, obvious deletions of needed code.
-3. **Boundary violations**: `domain/` importing `android.*`? Harmony artifacts under `app/`, `app-core/`, `core/`, `data/`, or `domain/`?
-4. **Secrets**: API keys, tokens, `local.properties` content, hardcoded credentials.
-5. **Lane-scope coherence**:
-   - `lane: android` → no files under `platforms/harmony/`, no files under `docs/` or repo-root markdown
-   - `lane: harmony` → only `platforms/harmony/` or shared contract paths from `docs/cerb/interface-map.md`; no `docs/` or repo-root markdown
-   - `lane: docs` → only `docs/`, `CLAUDE.md`, `AGENTS.md`, `SmartSales_PRD.md`, `CHANGELOG.md`, other repo-root markdown; no code; must ship to `develop`
-   - all declared files exist; Ship Scope non-empty
-6. **Reverse-dependency check**: for each dirty out-of-scope file, grep for imports of shipped files. A hit means shipping the declared scope would leave broken references in the worktree.
+1. **Secrets**: API keys, tokens, `local.properties` content, hardcoded credentials. (Hard blocker.)
+2. **Lane-scope coherence**:
+   - `lane: android` → no `platforms/harmony/` files (docs auto-split already handled)
+   - `lane: harmony` → only `platforms/harmony/` or shared contract paths from `docs/cerb/interface-map.md`
+   - `lane: docs` → only docs + repo-root markdown; no code
+3. **Broken imports / missing files** (grep-level check, not full review).
+4. **Reverse-dependency check**: for each dirty out-of-scope file, grep for imports of shipped files. A hit is a blocker.
+5. **Intent-vs-diff coherence** (see `.claude/commands/sprint.md` Step 2 for the intent axis):
+   - `intent: cosmetic` → diff must NOT touch any file matching `**/*ViewModel.kt`, `**/*Repository.kt`, `**/repository/**`, `**/data/**`, `**/domain/**`, `**/flow/**`, `**/*Mapper.kt`, `**/*UseCase.kt`, or equivalent ArkTS state/service files. Any hit is a blocker — re-declare as `dataflow`.
+   - `intent: hybrid` → declared file count must be ≤3. Diff file count must not exceed the declared list. Either violation is a blocker — split into `dataflow` + `cosmetic`.
+   - `intent: cosmetic | hybrid` declared for net-new feature work → blocker. New features must enter as `dataflow`. Signal: handoff scope summary uses words like "add", "new", "introduce" combined with a non-existing-before surface. When ambiguous, ask once.
+   - `intent: cosmetic` → diff must NOT add new UI element registrations to `docs/specs/ui_element_registry.md`. Restyling registered elements is allowed; adding new ones requires a `dataflow` sprint.
+
+Re-run the declared tests from Verification Scope to confirm they still pass after any scope-splitting. For `lane: docs` with no tests declared, skip.
 
 Blockers (halt ship):
-- any of the above inside declared scope
+- secrets
+- lane-scope incoherence
+- broken imports inside declared scope
 - reverse-dependency hits from out-of-scope dirt
+- declared tests fail on re-run
+- **Device-loop evidence missing on L3 sprint**: if the sprint contract declared `Device loop: required` and the handoff lacks the schema fields from `docs/specs/device-loop-protocol.md` §6 (device id, signed artifact, per-joint log excerpts for both first pass and cold relaunch, UI states verified, deferred list), halt ship and ask the operator to run the device loop and attach evidence. Compile success is not a substitute.
+- **Intent-vs-diff violation** (cosmetic touches dataflow files; hybrid exceeds 3-file cap; cosmetic/hybrid declared for net-new feature; cosmetic registers new UI elements). See Step 2 rule 5 above.
 
 Non-blockers (report in final output, do not halt):
-- branch name mismatch with declared lane (e.g., shipping `android` from `platform/harmony`)
-- unrelated dirty files outside scope with no reverse-dependency on shipped files
+- branch name mismatch with declared lane
+- unrelated dirty files outside scope with no reverse-dep
 - cosmetic/style issues
 
-Do NOT widen review to the full dirty tree. Out-of-scope dirt is inspected only for reverse-dependency and reported as context.
+Do NOT re-do the operator's full review. The handoff summary is the primary evidence; this step is just verification the ship won't break the tree.
 
 ## Step 3: Determine the action
 
@@ -123,7 +143,7 @@ EOF
 After a successful push (and PR creation if applicable):
 
 1. Remove the shipped task's entry from `docs/plans/active-lanes.md`.
-2. Append a trace entry to `docs/plans/changelog.md` with: date, lane, title, behavior summary, verification summary, branch, ignored-dirt summary, any `--force-parallel` reasons from the originating task. This is automated — do not ask the operator to fill it in.
+2. Append a trace entry to `docs/plans/changelog.md` with: date, lane, **intent** (`dataflow | cosmetic | hybrid`), title, behavior summary, verification summary, branch, ignored-dirt summary, any `--force-parallel` reasons from the originating task. This is automated — do not ask the operator to fill it in. The `intent` field feeds the hybrid-frequency drift signal in `/sprint` Step 2.
 
 ## Step 8: Report
 
@@ -146,4 +166,6 @@ Print:
 - If a blocker is found inside declared scope or via reverse-dependency, stop and report — do not ship.
 - Non-blockers (branch mismatch, unrelated dirt) are reported, not gated.
 - If no handoff declaration is present, ask the operator — do not infer lane/scope from `git status`.
+- L3 sprints on `lane: android` or `lane: harmony` ship only with device-loop evidence per `docs/specs/device-loop-protocol.md`. No exceptions; missing evidence is a hard blocker, not a non-blocker.
+- `intent` is mandatory in every handoff (`dataflow | cosmetic | hybrid`). Intent-vs-diff violations (cosmetic touching dataflow files, hybrid exceeding 3-file cap, cosmetic/hybrid declared for net-new work, cosmetic adding new registry entries) are hard blockers per `.claude/commands/sprint.md` Step 2.
 - If no changes to commit in declared scope, say so and stop.

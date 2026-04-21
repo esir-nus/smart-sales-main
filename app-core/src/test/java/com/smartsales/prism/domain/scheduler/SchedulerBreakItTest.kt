@@ -4,6 +4,7 @@ import com.smartsales.core.pipeline.UnifiedPipeline
 import com.smartsales.core.test.fakes.FakeMemoryRepository
 import com.smartsales.prism.domain.memory.MemoryEntryType
 import com.smartsales.prism.domain.memory.ScheduleBoard
+import com.smartsales.prism.domain.scheduler.fakes.FakeTimeProvider
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -12,9 +13,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import java.time.Instant
-import java.time.LocalDate
-import java.time.ZoneId
-import java.time.temporal.ChronoUnit
 
 class SchedulerBreakItTest {
 
@@ -24,11 +22,13 @@ class SchedulerBreakItTest {
     private lateinit var scheduleBoard: ScheduleBoard
     private lateinit var alarmScheduler: AlarmScheduler
     private lateinit var unifiedPipeline: UnifiedPipeline
+    private lateinit var timeProvider: FakeTimeProvider
 
     @Before
     fun setup() {
         taskRepository = FakeScheduledTaskRepository()
         memoryRepository = FakeMemoryRepository()
+        timeProvider = FakeTimeProvider()
         
         scheduleBoard = object : ScheduleBoard {
             override val upcomingItems = kotlinx.coroutines.flow.MutableStateFlow(emptyList<com.smartsales.prism.domain.memory.ScheduleItem>())
@@ -49,7 +49,8 @@ class SchedulerBreakItTest {
             memoryRepository,
             scheduleBoard,
             alarmScheduler,
-            unifiedPipeline
+            unifiedPipeline,
+            timeProvider
         )
     }
 

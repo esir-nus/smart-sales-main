@@ -25,17 +25,25 @@ Each entry is appended when a task passes the pre-flight scope conflict check, a
     - docs/plans/active-lanes.md
     - app-core/src/main/java/com/smartsales/prism/data/memory/RealScheduleBoard.kt
     - app-core/src/main/java/com/smartsales/prism/data/scheduler/RealActiveTaskRetrievalIndex.kt
+    - app-core/src/main/java/com/smartsales/prism/domain/scheduler/SchedulerCoordinator.kt
     - domain/scheduler/src/main/java/com/smartsales/prism/domain/scheduler/ExactTimeCueResolver.kt
     - domain/scheduler/src/main/java/com/smartsales/prism/domain/scheduler/GlobalRescheduleExtractionContract.kt
     - domain/scheduler/src/main/java/com/smartsales/prism/domain/scheduler/SchedulerLinterParsingSupport.kt
     - core/pipeline/src/main/java/com/smartsales/core/pipeline/PromptCompiler.kt
     - core/pipeline/src/main/java/com/smartsales/core/pipeline/RealGlobalRescheduleExtractionService.kt
+    - app-core/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerViewModel.kt
+    - app-core/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerViewModelAudioIngressCoordinator.kt
+    - app-core/src/main/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerViewModelProjectionSupport.kt
     - app-core/src/test/java/com/smartsales/prism/data/scheduler/RealActiveTaskRetrievalIndexTest.kt
+    - app-core/src/test/java/com/smartsales/prism/data/real/L2CrossOffLifecycleTest.kt
     - app-core/src/test/java/com/smartsales/prism/domain/memory/ScheduleBoardTest.kt
+    - app-core/src/test/java/com/smartsales/prism/domain/scheduler/SchedulerBreakItTest.kt
+    - app-core/src/test/java/com/smartsales/prism/domain/scheduler/SchedulerCoordinatorTest.kt
     - domain/scheduler/src/test/java/com/smartsales/prism/domain/scheduler/ExactTimeCueResolverTest.kt
     - domain/scheduler/src/test/java/com/smartsales/prism/domain/scheduler/SchedulerLinterTest.kt
     - core/pipeline/src/test/java/com/smartsales/core/pipeline/FollowUpRescheduleContractAlignmentTest.kt
     - core/pipeline/src/test/java/com/smartsales/core/pipeline/RealGlobalRescheduleExtractionServiceTest.kt
+    - app-core/src/test/java/com/smartsales/prism/ui/drawers/scheduler/SchedulerViewModelAudioStatusTest.kt
 - date: 2026-04-21
   lane: docs
   title: DTQ-03 scheduler hardening docs sync

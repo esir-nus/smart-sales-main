@@ -73,6 +73,7 @@ class SchedulerViewModelAudioStatusTest {
     private lateinit var fakeUnifiedPipeline: FakeUnifiedPipeline
     private lateinit var fakeInspirationRepository: FakeInspirationRepository
     private lateinit var fakeScheduleBoard: FakeScheduleBoard
+    private lateinit var timeProvider: FakeTimeProvider
     private lateinit var asrService: StubAsrService
     private lateinit var viewModel: SchedulerViewModel
 
@@ -87,6 +88,7 @@ class SchedulerViewModelAudioStatusTest {
         fakeUnifiedPipeline = FakeUnifiedPipeline()
         fakeInspirationRepository = FakeInspirationRepository()
         fakeScheduleBoard = FakeScheduleBoard()
+        timeProvider = FakeTimeProvider()
         asrService = StubAsrService()
 
         val coordinator = SchedulerCoordinator(
@@ -94,7 +96,8 @@ class SchedulerViewModelAudioStatusTest {
             memoryRepository = memoryRepository,
             scheduleBoard = fakeScheduleBoard,
             alarmScheduler = FakeAlarmScheduler(),
-            unifiedPipeline = fakeUnifiedPipeline
+            unifiedPipeline = fakeUnifiedPipeline,
+            timeProvider = timeProvider
         )
 
         val intentOrchestrator = IntentOrchestrator(
@@ -141,7 +144,8 @@ class SchedulerViewModelAudioStatusTest {
             tipGenerator = StubTipGenerator(),
             asrService = asrService,
             intentOrchestrator = intentOrchestrator,
-            toolRegistry = FakeToolRegistry()
+            toolRegistry = FakeToolRegistry(),
+            timeProvider = timeProvider
         )
     }
 
@@ -213,7 +217,7 @@ class SchedulerViewModelAudioStatusTest {
 
     @Test
     fun `processAudio forwards displayed scheduler day into Uni-A prompt`() = kotlinx.coroutines.test.runTest {
-        val expectedDisplayedDate = LocalDate.now().plusDays(1).toString()
+        val expectedDisplayedDate = timeProvider.today.plusDays(1).toString()
         asrService.nextResult = AsrResult.Success("后一天一点提醒我开会")
         fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.DEEP_ANALYSIS, true, ""))
         fakeUniAExecutor.enqueueResponse(

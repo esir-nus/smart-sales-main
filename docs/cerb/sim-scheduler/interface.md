@@ -95,9 +95,9 @@ Required meaning:
 - restore-from-done must not reschedule reminders in T4.8
 - reschedule must cancel the old reminder before scheduling the new exact-time cascade
 - `FIRE_OFF` tasks must remain non-conflicting during SIM reschedule/follow-up execution; reschedule must not surface conflict state for them even if another exact task exists at the same instant
-- every reschedule clause must contain an explicit target plus a new exact time; omitted-target mutation such as `改到3点` must safe-fail
-- explicit day+clock reschedule phrasing such as `明天早上8点` must be interpreted through scheduler-owned deterministic parsing before any model-led exact-time fallback
-- explicit delta reschedule phrasing such as `推迟1小时` / `提前半小时` is unsupported and must safe-fail
+- every reschedule clause must contain an explicit target plus either a new exact time or one explicit bounded delta from the resolved task; omitted-target mutation such as `改到3点` must safe-fail
+- explicit day+clock reschedule phrasing such as `明天早上8点` must be interpreted through scheduler-owned deterministic parsing before any model-led exact-time fallback, and model-led relative-day dates must reject values beyond `anchor + 365d`
+- explicit delta reschedule phrasing such as `推迟1小时` / `提前半小时` is supported only through one non-zero `deltaFromTargetMinutes` within `+/-20160`; zero or out-of-bounds delta must safe-fail
 - reschedule target resolution must stay global across all non-done scheduler-owned task truth; current selected/opened task state and current visible page/date are not semantic authority
 - the runtime may use a scheduler-owned active retrieval index derived from `ScheduledTask` rows to build a bounded shortlist context pack for extraction
 - the delivered shortlist cap is top 8 candidates
@@ -107,7 +107,7 @@ Required meaning:
 - the follow-up V2 shadow path must emit explicit parity / mismatch / invalid / failure observability without widening scheduler authority
 - task-scoped follow-up reschedule must resolve the target globally first; selected-task UI state may still support quick actions or prefill only
 - scheduler-drawer voice reschedule target resolution must be confidence-gated; low-confidence and near-tie results must surface explicit failure and no write
-- model-suggested task choice is advisory only and must be corroborated by scheduler-owned retrieval-index evidence before mutation
+- model-suggested task choice is advisory only and must be corroborated by scheduler-owned retrieval-index evidence before mutation; `suggestedTaskId` / `preferredTaskIds` outside the shortlist must be stripped before that corroboration
 - reminder-reliability prompt emission must be process-lifetime gated so one batch does not repeatedly re-prompt
 - successful scheduler-owned exact and vague creates may both emit the reminder-reliability prompt, while only exact tasks schedule reminders through `AlarmScheduler`
 - the prompt content should adapt to current OEM risk rather than always showing a generic exact-alarm-only message
@@ -132,7 +132,7 @@ Scheduler-drawer voice resolution rule:
 - current visible page/date and selected/opened task state must not become semantic authority for target choice
 - the current clause must itself say which task is moving; follow-up selection/prefill cannot silently supply the target
 - after target resolution, exact day+clock tails such as `改到明天早上8点` must remain valid even when the tail itself does not restate the task title
-- delta-only tails must safe-fail rather than mutate from the resolved task's persisted start time
+- delta-only tails may mutate only when they decode into one bounded non-zero `deltaFromTargetMinutes`; otherwise they must safe-fail rather than mutate from the resolved task's persisted start time
 - ambiguous or weak matches must not mutate state
 - multiple clean reschedule clauses in one utterance decompose into ordinary independent reschedules rather than a distinct batch mode
 - this rule does not widen ordinary SIM chat or audio drawer routes into scheduler mutation ownership

@@ -5,6 +5,7 @@ import com.smartsales.core.test.fakes.FakeMemoryRepository
 import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.domain.memory.MemoryEntryType
 import com.smartsales.prism.domain.memory.ScheduleBoard
+import com.smartsales.prism.domain.scheduler.fakes.FakeTimeProvider
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -14,7 +15,6 @@ import org.junit.Before
 import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 
 class SchedulerCoordinatorTest {
@@ -25,11 +25,13 @@ class SchedulerCoordinatorTest {
     private lateinit var scheduleBoard: ScheduleBoard
     private lateinit var alarmScheduler: AlarmScheduler
     private lateinit var unifiedPipeline: UnifiedPipeline
+    private lateinit var timeProvider: FakeTimeProvider
 
     @Before
     fun setup() {
         taskRepository = FakeScheduledTaskRepository()
         memoryRepository = FakeMemoryRepository()
+        timeProvider = FakeTimeProvider()
         
         // Setup minimal dummy stubs for dependencies not being tested directly
         scheduleBoard = object : ScheduleBoard {
@@ -51,14 +53,15 @@ class SchedulerCoordinatorTest {
             memoryRepository,
             scheduleBoard,
             alarmScheduler,
-            unifiedPipeline
+            unifiedPipeline,
+            timeProvider
         )
     }
 
     @Test
     fun `autoCompleteExpiredTasks sweeps actionable task into factual memory`() = runTest {
         // Arrange: Inject a task from yesterday that is not done
-        val yesterday = Instant.now().minus(1, ChronoUnit.DAYS)
+        val yesterday = timeProvider.now.minus(1, ChronoUnit.DAYS)
         val expiredTask = ScheduledTask(
             id = "expired_task_1",
             timeDisplay = "10:00",
@@ -77,7 +80,7 @@ class SchedulerCoordinatorTest {
         coordinator.autoCompleteExpiredTasks()
 
         // Assert 1: Removed from actionable feed
-        val today = LocalDate.now()
+        val today = timeProvider.today
         val activeTasks = taskRepository.queryByDateRange(today, today).first()
         val stillExists = activeTasks.any { it.id == insertedId }
         assertEquals(false, stillExists)

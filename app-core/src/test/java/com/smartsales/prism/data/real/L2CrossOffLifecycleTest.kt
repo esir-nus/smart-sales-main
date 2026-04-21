@@ -58,6 +58,7 @@ class L2CrossOffLifecycleTest {
     private lateinit var taskRepository: FakeScheduledTaskRepository
     private lateinit var memoryRepository: FakeMemoryRepository
     private lateinit var viewModel: SchedulerViewModel
+    private lateinit var timeProvider: FakeTimeProvider
 
     @Before
     fun setup() {
@@ -65,6 +66,7 @@ class L2CrossOffLifecycleTest {
 
         taskRepository = FakeScheduledTaskRepository()
         memoryRepository = FakeMemoryRepository()
+        timeProvider = FakeTimeProvider()
         val scheduleBoard = FakeScheduleBoard()
         val unifiedPipeline = FakeUnifiedPipeline()
         val coordinator = SchedulerCoordinator(
@@ -72,7 +74,8 @@ class L2CrossOffLifecycleTest {
             memoryRepository = memoryRepository,
             scheduleBoard = scheduleBoard,
             alarmScheduler = FakeAlarmScheduler(),
-            unifiedPipeline = unifiedPipeline
+            unifiedPipeline = unifiedPipeline,
+            timeProvider = timeProvider
         )
         // Local JVM test leaf seam: Android Context has no shared fake and is not on the behavior path here.
         val appContext = mock(Context::class.java)
@@ -93,7 +96,8 @@ class L2CrossOffLifecycleTest {
             tipGenerator = tipGenerator,
             asrService = asrService,
             intentOrchestrator = intentOrchestrator,
-            toolRegistry = FakeToolRegistry()
+            toolRegistry = FakeToolRegistry(),
+            timeProvider = timeProvider
         )
     }
 

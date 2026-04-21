@@ -46,11 +46,15 @@ class OssService {
     const stringToSign = `PUT\n\n${contentType}\n${date}\n/${bucketName}/${normalizedKey}`;
     const signature = hmacSha1Base64(accessKeySecret, stringToSign);
     const uploadBody = fileStore.readBinary(localPath);
-    const headers: OssUploadHeaders = {
+    const headerShape: OssUploadHeaders = {
       Date: date,
       Authorization: `OSS ${accessKeyId}:${signature}`,
       'Content-Type': contentType
     };
+    const headers: Record<string, string> = {};
+    headers['Date'] = headerShape.Date;
+    headers['Authorization'] = headerShape.Authorization;
+    headers['Content-Type'] = contentType;
 
     let attempt = 0;
     while (attempt <= RETRY_DELAYS_MS.length) {

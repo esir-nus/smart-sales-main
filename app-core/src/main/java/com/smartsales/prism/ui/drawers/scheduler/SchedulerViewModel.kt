@@ -13,6 +13,7 @@ import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.SchedulerCoordinator
 import com.smartsales.prism.domain.scheduler.SchedulerTimelineItem
 import com.smartsales.prism.domain.scheduler.TipGenerator
+import com.smartsales.prism.domain.time.TimeProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
@@ -42,7 +43,8 @@ class SchedulerViewModel @Inject constructor(
     private val tipGenerator: TipGenerator,
     private val asrService: AsrService,
     private val intentOrchestrator: IntentOrchestrator,
-    private val toolRegistry: ToolRegistry
+    private val toolRegistry: ToolRegistry,
+    private val timeProvider: TimeProvider
 ) : ViewModel(), ISchedulerViewModel {
 
     private val _activeDayOffset = MutableStateFlow(0)
@@ -95,7 +97,8 @@ class SchedulerViewModel @Inject constructor(
         scope = viewModelScope,
         taskRepository = taskRepository,
         memoryRepository = memoryRepository,
-        inspirationRepository = inspirationRepository
+        inspirationRepository = inspirationRepository,
+        timeProvider = timeProvider
     )
 
     private val legacyActions = SchedulerViewModelLegacyActions(
@@ -119,6 +122,7 @@ class SchedulerViewModel @Inject constructor(
         scope = viewModelScope,
         asrService = asrService,
         intentOrchestrator = intentOrchestrator,
+        timeProvider = timeProvider,
         bridge = SchedulerViewModelAudioBridge(
             getActiveDayOffset = { _activeDayOffset.value },
             getPipelineStatus = { _pipelineStatus.value },

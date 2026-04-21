@@ -3,11 +3,11 @@ package com.smartsales.prism.domain.scheduler
 import com.smartsales.prism.domain.memory.MemoryEntry
 import com.smartsales.prism.domain.memory.MemoryRepository
 import com.smartsales.prism.domain.memory.ScheduleBoard
+import com.smartsales.prism.domain.time.TimeProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import java.time.Instant
 import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -25,7 +25,8 @@ class SchedulerCoordinator @Inject constructor(
     private val memoryRepository: MemoryRepository,
     private val scheduleBoard: ScheduleBoard,
     private val alarmScheduler: AlarmScheduler,
-    private val unifiedPipeline: UnifiedPipeline
+    private val unifiedPipeline: UnifiedPipeline,
+    private val timeProvider: TimeProvider
 ) {
     private val scope = CoroutineScope(Dispatchers.IO)
 
@@ -46,8 +47,8 @@ class SchedulerCoordinator @Inject constructor(
      * Expiration: endTime < now && !isDone
      */
     suspend fun autoCompleteExpiredTasks() {
-        val now = Instant.now()
-        val today = LocalDate.now()
+        val now = timeProvider.now
+        val today = timeProvider.today
         // Sweep all active tasks from the beginning of time up to today
         val allItems = taskRepository.queryByDateRange(LocalDate.ofEpochDay(0), today).first()
         val expiredTasks = allItems

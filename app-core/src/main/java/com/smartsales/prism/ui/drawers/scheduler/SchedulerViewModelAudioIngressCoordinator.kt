@@ -5,8 +5,8 @@ import com.smartsales.core.pipeline.PipelineResult
 import com.smartsales.core.telemetry.PipelineValve
 import com.smartsales.prism.domain.asr.AsrResult
 import com.smartsales.prism.domain.asr.AsrService
+import com.smartsales.prism.domain.time.TimeProvider
 import java.io.File
-import java.time.LocalDate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -21,7 +21,8 @@ internal class SchedulerViewModelAudioIngressCoordinator(
     private val scope: CoroutineScope,
     private val asrService: AsrService,
     private val intentOrchestrator: IntentOrchestrator,
-    private val bridge: SchedulerViewModelAudioBridge
+    private val bridge: SchedulerViewModelAudioBridge,
+    private val timeProvider: TimeProvider
 ) {
 
     fun processAudio(file: File) {
@@ -49,7 +50,7 @@ internal class SchedulerViewModelAudioIngressCoordinator(
         bridge.setPipelineStatus("处理意图...")
         var schedulerWriteProven = false
         var inspirationWriteProven = false
-        val displayedDateIso = LocalDate.now()
+        val displayedDateIso = timeProvider.today
             .plusDays(bridge.getActiveDayOffset().toLong())
             .toString()
 

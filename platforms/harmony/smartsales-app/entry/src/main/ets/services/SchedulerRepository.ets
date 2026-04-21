@@ -174,11 +174,17 @@ class SchedulerRepository {
       durationSource: input.durationMinutes > 0 ? DurationSource.USER_SET : DurationSource.DEFAULT,
       conflictPolicy: ConflictPolicy.EXCLUSIVE,
       dateRange: this.formatDateRange(input.startTime, endTime),
+      location: undefined,
       notes: this.cleanNotes(input.notes),
+      keyPerson: undefined,
+      keyPersonEntityId: undefined,
+      highlights: undefined,
       alarmCascade: buildCascade(input.urgencyLevel),
       hasConflict: false,
       conflictWithTaskId: undefined,
       conflictSummary: undefined,
+      isVague: false,
+      clarificationState: undefined,
       createdAt: now,
       updatedAt: now
     };
@@ -193,19 +199,35 @@ class SchedulerRepository {
       if (task.id !== taskId) {
         return task;
       }
-      return {
-        ...task,
+      const nextTask: ScheduledTask = {
+        id: task.id,
+        timeDisplay: patch.timeDisplay !== undefined ? patch.timeDisplay : task.timeDisplay,
+        title: task.title,
+        urgencyLevel: patch.urgencyLevel !== undefined ? patch.urgencyLevel : task.urgencyLevel,
         isDone: patch.isDone !== undefined ? patch.isDone : task.isDone,
+        hasAlarm: task.hasAlarm,
+        isSmartAlarm: task.isSmartAlarm,
         startTime: patch.startTime !== undefined ? patch.startTime : task.startTime,
         endTime: patch.endTime !== undefined ? patch.endTime : task.endTime,
         durationMinutes: patch.durationMinutes !== undefined ? patch.durationMinutes : task.durationMinutes,
         durationSource: patch.durationMinutes !== undefined ? (patch.durationMinutes > 0 ? DurationSource.USER_SET : DurationSource.DEFAULT) : task.durationSource,
-        urgencyLevel: patch.urgencyLevel !== undefined ? patch.urgencyLevel : task.urgencyLevel,
-        alarmCascade: patch.alarmCascade !== undefined ? patch.alarmCascade.slice() : task.alarmCascade.slice(),
-        timeDisplay: patch.timeDisplay !== undefined ? patch.timeDisplay : task.timeDisplay,
+        conflictPolicy: task.conflictPolicy,
         dateRange: patch.dateRange !== undefined ? patch.dateRange : task.dateRange,
+        location: task.location,
+        notes: task.notes,
+        keyPerson: task.keyPerson,
+        keyPersonEntityId: task.keyPersonEntityId,
+        highlights: task.highlights,
+        alarmCascade: patch.alarmCascade !== undefined ? patch.alarmCascade.slice() : task.alarmCascade.slice(),
+        hasConflict: task.hasConflict,
+        conflictWithTaskId: task.conflictWithTaskId,
+        conflictSummary: task.conflictSummary,
+        isVague: task.isVague,
+        clarificationState: task.clarificationState,
+        createdAt: task.createdAt,
         updatedAt: patch.updatedAt !== undefined ? patch.updatedAt : task.updatedAt
       };
+      return nextTask;
     });
     this.persist();
   }
@@ -259,10 +281,37 @@ class SchedulerRepository {
   }
 
   private cloneTasks(tasks: ScheduledTask[]): ScheduledTask[] {
-    return tasks.map((task: ScheduledTask) => ({
-      ...task,
-      alarmCascade: task.alarmCascade.slice()
-    }));
+    return tasks.map((task: ScheduledTask) => {
+      const clone: ScheduledTask = {
+        id: task.id,
+        timeDisplay: task.timeDisplay,
+        title: task.title,
+        urgencyLevel: task.urgencyLevel,
+        isDone: task.isDone,
+        hasAlarm: task.hasAlarm,
+        isSmartAlarm: task.isSmartAlarm,
+        startTime: task.startTime,
+        endTime: task.endTime,
+        durationMinutes: task.durationMinutes,
+        durationSource: task.durationSource,
+        conflictPolicy: task.conflictPolicy,
+        dateRange: task.dateRange,
+        location: task.location,
+        notes: task.notes,
+        keyPerson: task.keyPerson,
+        keyPersonEntityId: task.keyPersonEntityId,
+        highlights: task.highlights,
+        alarmCascade: task.alarmCascade.slice(),
+        hasConflict: task.hasConflict,
+        conflictWithTaskId: task.conflictWithTaskId,
+        conflictSummary: task.conflictSummary,
+        isVague: task.isVague,
+        clarificationState: task.clarificationState,
+        createdAt: task.createdAt,
+        updatedAt: task.updatedAt
+      };
+      return clone;
+    });
   }
 
   private sortTasks(tasks: ScheduledTask[]): ScheduledTask[] {

@@ -4,6 +4,8 @@
 // Author: created on 2026-04-16
 // 迁移来源: platforms/harmony/tingwu-container/entry/src/main/ets/utils/HarmonySignatureUtils.ets
 
+import { util } from '@kit.ArkTS';
+
 const BASE64_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 
 // 32 位循环左移
@@ -13,7 +15,7 @@ function rotateLeft(value: number, shift: number): number {
 
 // 字符串转 UTF-8 字节数组
 function stringToBytes(value: string): Uint8Array {
-  return new TextEncoder().encode(value);
+  return new util.TextEncoder().encodeInto(value);
 }
 
 // 字节数组转 Base64 字符串
@@ -24,10 +26,10 @@ function bytesToBase64(bytes: Uint8Array): string {
     const second = index + 1 < bytes.length ? bytes[index + 1] : 0;
     const third = index + 2 < bytes.length ? bytes[index + 2] : 0;
     const chunk = (first << 16) | (second << 8) | third;
-    result += BASE64_ALPHABET[(chunk >> 18) & 63];
-    result += BASE64_ALPHABET[(chunk >> 12) & 63];
-    result += index + 1 < bytes.length ? BASE64_ALPHABET[(chunk >> 6) & 63] : '=';
-    result += index + 2 < bytes.length ? BASE64_ALPHABET[chunk & 63] : '=';
+    result += BASE64_ALPHABET.charAt((chunk >> 18) & 63);
+    result += BASE64_ALPHABET.charAt((chunk >> 12) & 63);
+    result += index + 1 < bytes.length ? BASE64_ALPHABET.charAt((chunk >> 6) & 63) : '=';
+    result += index + 2 < bytes.length ? BASE64_ALPHABET.charAt(chunk & 63) : '=';
   }
   return result;
 }

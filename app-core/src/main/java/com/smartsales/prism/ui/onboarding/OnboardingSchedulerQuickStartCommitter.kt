@@ -1,5 +1,6 @@
 package com.smartsales.prism.ui.onboarding
 
+import com.smartsales.core.pipeline.TaskCreationBadgeSignal
 import com.smartsales.prism.domain.scheduler.CreateTasksParams
 import com.smartsales.prism.domain.scheduler.CreateVagueTaskParams
 import com.smartsales.prism.domain.scheduler.FastTrackMutationEngine
@@ -35,7 +36,8 @@ sealed interface OnboardingSchedulerQuickStartCommitResult {
 class RealOnboardingSchedulerQuickStartCommitter @Inject constructor(
     private val mutationEngine: FastTrackMutationEngine,
     private val taskRepository: ScheduledTaskRepository,
-    private val timeProvider: TimeProvider
+    private val timeProvider: TimeProvider,
+    private val taskCreationBadgeSignal: TaskCreationBadgeSignal = TaskCreationBadgeSignal.NoOp
 ) : OnboardingSchedulerQuickStartCommitter {
 
     private var stagedItems: List<OnboardingQuickStartItem> = emptyList()
@@ -104,6 +106,9 @@ class RealOnboardingSchedulerQuickStartCommitter @Inject constructor(
         }
 
         stagedItems = emptyList()
+        if (committedTaskIds.isNotEmpty()) {
+            taskCreationBadgeSignal.onTasksCreated()
+        }
         return OnboardingSchedulerQuickStartCommitResult.Success(committedTaskIds)
     }
 

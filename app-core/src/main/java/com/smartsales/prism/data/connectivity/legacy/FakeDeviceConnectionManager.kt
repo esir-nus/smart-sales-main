@@ -105,6 +105,11 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
         return stubReconnectAndWaitResult
     }
 
+    var notifyTaskCreatedCalls = 0
+    override suspend fun notifyTaskCreated() {
+        notifyTaskCreatedCalls++
+    }
+
     var notifyTaskFiredCalls = 0
     override suspend fun notifyTaskFired() {
         notifyTaskFiredCalls++
@@ -136,5 +141,7 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
         autoReconnectCalls = 0
         forceReconnectCalls = 0
         queryNetworkStatusCalls = 0
+        notifyTaskCreatedCalls = 0
+        notifyTaskFiredCalls = 0
     }
 }

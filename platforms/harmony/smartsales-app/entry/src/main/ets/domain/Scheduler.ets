@@ -24,6 +24,25 @@ export enum ConflictPolicy {
   BACKGROUND = 'BACKGROUND'
 }
 
+export interface ClarificationPersonCandidate {
+  entityId: string;
+  displayName: string;
+  description?: string;
+}
+
+export type ClarificationState = ClarificationAmbiguousPerson | ClarificationMissingInformation;
+
+export interface ClarificationAmbiguousPerson {
+  kind: 'AMBIGUOUS_PERSON';
+  question: string;
+  candidates: ClarificationPersonCandidate[];
+}
+
+export interface ClarificationMissingInformation {
+  kind: 'MISSING_INFORMATION';
+  question: string;
+}
+
 export interface ScheduledTask {
   id: string;
   timeDisplay: string;
@@ -38,11 +57,17 @@ export interface ScheduledTask {
   durationSource: DurationSource;
   conflictPolicy: ConflictPolicy;
   dateRange: string;
+  location?: string;
   notes?: string;
+  keyPerson?: string;
+  keyPersonEntityId?: string;
+  highlights?: string;
   alarmCascade: string[];
   hasConflict: boolean;
   conflictWithTaskId?: string;
   conflictSummary?: string;
+  isVague: boolean;
+  clarificationState?: ClarificationState;
   createdAt: number;
   updatedAt: number;
 }
@@ -81,6 +106,10 @@ export function buildCascade(level: UrgencyLevel): string[] {
     default:
       return ['0m'];
   }
+}
+
+export function buildAlarmCascade(level: UrgencyLevel): string[] {
+  return buildCascade(level);
 }
 
 export function parseUrgencyLevel(value: Object | null | undefined): UrgencyLevel {

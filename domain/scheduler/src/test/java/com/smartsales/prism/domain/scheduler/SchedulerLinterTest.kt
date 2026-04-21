@@ -497,7 +497,7 @@ class SchedulerLinterTest {
     }
 
     @Test
-    fun `follow-up reschedule V2 delta extraction is now unsupported`() {
+    fun `follow-up reschedule V2 delta extraction returns supported operand`() {
         val json = """
             {
               "decision": "RESCHEDULE_EXACT",
@@ -511,10 +511,34 @@ class SchedulerLinterTest {
             transcript = "推迟1个小时"
         )
 
-        assertTrue(result is FollowUpRescheduleExtractionResult.Unsupported)
+        assertTrue(result is FollowUpRescheduleExtractionResult.Supported)
+        val supported = result as FollowUpRescheduleExtractionResult.Supported
+        assertEquals(FollowUpRescheduleTimeKind.DELTA_FROM_TARGET, supported.timeKind)
+        assertEquals(
+            FollowUpRescheduleOperand.DeltaFromTarget(60),
+            supported.operand
+        )
+    }
+
+    @Test
+    fun `follow-up reschedule V2 delta extraction rejects out of bounds offset`() {
+        val json = """
+            {
+              "decision": "RESCHEDULE_EXACT",
+              "timeKind": "DELTA_FROM_TARGET",
+              "deltaFromTargetMinutes": 20161
+            }
+        """.trimIndent()
+
+        val result = linter.parseFollowUpRescheduleExtraction(
+            input = json,
+            transcript = "推迟15天"
+        )
+
+        assertTrue(result is FollowUpRescheduleExtractionResult.Invalid)
         assertTrue(
-            (result as FollowUpRescheduleExtractionResult.Unsupported)
-                .reason.contains("no longer allows delta-only")
+            (result as FollowUpRescheduleExtractionResult.Invalid)
+                .reason.contains("+/-20160")
         )
     }
 
@@ -569,6 +593,7 @@ class SchedulerLinterTest {
         val json = """
             {
               "decision": "RESCHEDULE_TARGETED",
+              "preferredTaskIds": ["task-9", "task-1"],
               "targetQuery": "和张总吃饭",
               "targetPerson": "张总",
               "timeInstruction": "明天晚上八点"
@@ -582,6 +607,7 @@ class SchedulerLinterTest {
         assertEquals("和张总吃饭", supported.target.targetQuery)
         assertEquals("张总", supported.target.targetPerson)
         assertEquals("明天晚上八点", supported.timeInstruction)
+        assertEquals(listOf("task-9", "task-1"), supported.preferredTaskIds)
     }
 
     @Test
@@ -597,5 +623,32 @@ class SchedulerLinterTest {
 
         assertTrue(result is GlobalRescheduleExtractionResult.Invalid)
         assertTrue((result as GlobalRescheduleExtractionResult.Invalid).reason.contains("target clues"))
+    }
+
+    @Test
+    fun `Uni-A exact extraction rejects relative anchor date beyond one year`() {
+        val json = """
+            {
+              "decision": "EXACT_CREATE",
+              "task": {
+                "title": "提醒我和张总开会",
+                "startTimeIso": "2027-04-26T08:00:00+08:00",
+                "durationMinutes": 30,
+                "urgency": "L2"
+              }
+            }
+        """.trimIndent()
+
+        val result = linter.parseUniAExtraction(
+            input = json,
+            unifiedId = "uni-a-006",
+            transcript = "明天早上8点和张总开会",
+            nowIso = "2026-03-20T09:00:00Z",
+            timezone = "Asia/Shanghai",
+            displayedDateIso = null
+        )
+
+        assertTrue(result is FastTrackResult.NoMatch)
+        assertTrue((result as FastTrackResult.NoMatch).reason.contains("relative-anchor bound"))
     }
 }

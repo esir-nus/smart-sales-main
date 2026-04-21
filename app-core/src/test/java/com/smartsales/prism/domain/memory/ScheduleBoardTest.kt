@@ -1,5 +1,17 @@
 package com.smartsales.prism.domain.memory
 
+import com.smartsales.prism.data.memory.RealScheduleBoard
+import com.smartsales.prism.domain.scheduler.ScheduledTask
+import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
+import com.smartsales.prism.domain.scheduler.SchedulerTimelineItem
+import com.smartsales.prism.domain.time.TimeProvider
+import java.time.Instant
+import java.time.LocalDate
+import java.time.LocalTime
+import java.time.ZoneId
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.test.runTest
@@ -181,6 +193,24 @@ class ScheduleBoardTest {
 
         assertEquals(ConflictResult.Clear, result)
     }
+
+    @Test
+    fun `real schedule board queries date range from injected local day`() = runTest {
+        val repository = CapturingScheduledTaskRepository()
+        val timeProvider = object : TimeProvider {
+            override val now: Instant = Instant.parse("2026-04-21T23:58:00Z")
+            override val today: LocalDate = LocalDate.of(2026, 4, 22)
+            override val currentTime: LocalTime = LocalTime.of(7, 58)
+            override val zoneId: ZoneId = ZoneId.of("Asia/Shanghai")
+            override fun formatForLlm(): String = "2026年4月22日（周三）07:58"
+        }
+
+        RealScheduleBoard(repository, timeProvider)
+
+        assertTrue("RealScheduleBoard did not query the repository", repository.awaitInitialQuery())
+        assertEquals(LocalDate.of(2026, 4, 22), repository.lastQueryStart)
+        assertEquals(LocalDate.of(2026, 4, 29), repository.lastQueryEnd)
+    }
     
     // ===== Helper =====
     
@@ -251,4 +281,45 @@ class FakeScheduleBoard : ScheduleBoard {
         return findLexicalMatch(request.targetQuery)?.let(TargetResolution::Resolved)
             ?: TargetResolution.NoMatch(request.describeForFailure())
     }
+}
+
+private class CapturingScheduledTaskRepository : ScheduledTaskRepository {
+    private val items = MutableStateFlow<List<SchedulerTimelineItem>>(emptyList())
+    private val queryLatch = CountDownLatch(1)
+
+    var lastQueryStart: LocalDate? = null
+        private set
+    var lastQueryEnd: LocalDate? = null
+        private set
+
+    fun awaitInitialQuery(): Boolean = queryLatch.await(1, TimeUnit.SECONDS)
+
+    override fun getTimelineItems(dayOffset: Int): Flow<List<SchedulerTimelineItem>> = items
+
+    override fun queryByDateRange(start: LocalDate, end: LocalDate): Flow<List<SchedulerTimelineItem>> {
+        lastQueryStart = start
+        lastQueryEnd = end
+        queryLatch.countDown()
+        return items
+    }
+
+    override suspend fun insertTask(task: ScheduledTask): String = task.id
+
+    override suspend fun getTask(id: String): ScheduledTask? = null
+
+    override suspend fun updateTask(task: ScheduledTask) = Unit
+
+    override suspend fun upsertTask(task: ScheduledTask): String = task.id
+
+    override suspend fun batchInsertTasks(tasks: List<ScheduledTask>): List<String> = tasks.map { it.id }
+
+    override suspend fun rescheduleTask(oldTaskId: String, newTask: ScheduledTask) = Unit
+
+    override suspend fun deleteItem(id: String) = Unit
+
+    override suspend fun getRecentCompleted(limit: Int): List<ScheduledTask> = emptyList()
+
+    override suspend fun getTopUrgentActiveForEntity(entityId: String): ScheduledTask? = null
+
+    override fun observeByEntityId(entityId: String): Flow<List<ScheduledTask>> = MutableStateFlow(emptyList())
 }

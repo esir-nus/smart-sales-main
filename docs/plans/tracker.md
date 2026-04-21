@@ -5,7 +5,7 @@
 > **Campaign Lifecycle**: Every major initiative (rewrite, refactor, UI polish, large fix) is an "Epic" or "Campaign". Every Campaign MUST be initialized using the `/campaign-planner` workflow to enforce the following checklist sequence:
 > 1. **Docs** (Ensure Specs exist) -> 2. **Interface Map** (Ensure Layer/Contract boundaries align) -> 3. **Plan** (Dev Planner) -> 4. **Execute** (Implementation) -> 5. **Test** (E2E/L2 Verification). 
 > **Master Guide Alignment**: The Master Guide acts as the overarching strategy doc for a campaign. Agents MUST NEVER auto-update the Master Guide without strict explicit human review (like a Review Conference) to prevent architectural hallucination drift. Instead, run `/04-doc-sync` at the *end* of a campaign.
-> **Last Updated**: 2026-04-20
+> **Last Updated**: 2026-04-21
 > **Work Classification**: `shared-contract` = shared product docs/contracts · `android-beta` = current Android/AOSP beta-maintenance line · `harmony-native` = future native Harmony delivery · `cross-platform-governance` = branch/review/ownership guardrails
 
 ---
@@ -13,7 +13,7 @@
 ## Active Governance Campaign: Android Beta Freeze and Harmony-Native Split
 > **Context**: Direct user-approved governance campaign to freeze the current Android/AOSP line as beta-maintenance while opening a clean native HarmonyOS forward lane without forking shared product truth.
 
-- **Status**: Governance slice started on 2026-04-04; docs/control-plane and local repo guardrails landed first; the first live Harmony root now includes a transient `tingwu-container` app under `platforms/harmony/tingwu-container/` with a native ArkTS runtime slice for document-picker import, Harmony-local file persistence, OSS upload, Tingwu polling, artifact reopen, and auto-generated Harmony credentials sourced from repo-root `local.properties`; the Harmony config seam is now hardened so `hvigorfile.ts` remains the build-owned generator, tracked ArkTS imports route through a stable runtime config entrypoint, and missing generated local config falls back to explicit missing-key state instead of module-resolution failure; broader full-capability Harmony app work remains deferred
+- **Status**: Governance slice started on 2026-04-04; docs/control-plane and local repo guardrails landed first; the first live Harmony root now includes a transient `tingwu-container` app under `platforms/harmony/tingwu-container/` with a native ArkTS runtime slice for document-picker import, Harmony-local file persistence, OSS upload, Tingwu polling, artifact reopen, and auto-generated Harmony credentials sourced from repo-root `local.properties`; the Harmony config seam is now hardened so `hvigorfile.ts` remains the build-owned generator, tracked ArkTS imports route through a stable runtime config entrypoint, and missing generated local config falls back to explicit missing-key state instead of module-resolution failure; `develop` now restores the Codex `cnp` save-point skill so the branch carries the full current governance helper set; broader full-capability Harmony app work remains deferred
 - **Primary Law**:
   - [`docs/specs/platform-governance.md`](../specs/platform-governance.md)
 - **Dirty-Tree Quarantine Ledger**:
@@ -160,12 +160,13 @@
 
 ---
 
-## Shipped Slice: Badge Control Signals — Reminder Chime and Voice Volume
-> **Context**: Add a bundled badge-control slice that reuses the existing BLE badge-signal primitive for task reminder chime and user-controlled badge voice volume.
+## Shipped Slice: Badge Control Signals — Task Create Chime, Reminder Chime, and Voice Volume
+> **Context**: Add a bundled badge-control slice that reuses the existing BLE badge-signal primitive for scheduler create success, task reminder chime, and user-controlled badge voice volume.
 
 - **Status**: Shipped (2026-04-20)
 - **Scope**:
-  - `TaskReminderReceiver` now emits one best-effort badge chime signal per reminder trigger through `DeviceConnectionManager.notifyTaskFired()`, without changing reminder notification semantics
+  - successful scheduler task creation now emits one best-effort badge chime signal through the pure `TaskCreationBadgeSignal` seam and Android `DeviceConnectionManager.notifyTaskCreated()`, using the same BLE payload `commandend#1`
+  - `TaskReminderReceiver` still emits one best-effort badge chime signal per reminder trigger through `DeviceConnectionManager.notifyTaskFired()`, without changing reminder notification semantics
   - `DeviceConnectionManager.setVoiceVolume(level)` now reports whether a BLE write actually happened, while still using the existing `sendBadgeSignal(...)` primitive
   - `VoiceVolumePreferenceStore` persists `desiredVolume` and `lastAppliedVolume` separately so disconnected/no-op sends remain retryable
   - `UserCenterScreen` adds a `设备控制` section with a full-row `徽章语音音量` slider

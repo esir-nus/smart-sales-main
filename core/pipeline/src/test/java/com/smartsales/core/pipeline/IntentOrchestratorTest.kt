@@ -74,6 +74,7 @@ class IntentOrchestratorTest {
     private lateinit var fakeActiveTaskRetrievalIndex: FakeActiveTaskRetrievalIndex
     private lateinit var testTimeProvider: TimeProvider
     private lateinit var storedTasks: MutableMap<String, ScheduledTask>
+    private lateinit var fakeTaskCreationBadgeSignal: FakeTaskCreationBadgeSignal
     private val testScope = TestScope(UnconfinedTestDispatcher())
     
     private lateinit var orchestrator: IntentOrchestrator
@@ -90,6 +91,7 @@ class IntentOrchestratorTest {
         fakeScheduleBoard = FakeScheduleBoard()
         fakeInspirationRepository = FakeInspirationRepository()
         fakeActiveTaskRetrievalIndex = FakeActiveTaskRetrievalIndex()
+        fakeTaskCreationBadgeSignal = FakeTaskCreationBadgeSignal()
         storedTasks = mutableMapOf()
         fakeTaskRepository = object : ScheduledTaskRepository {
             override suspend fun batchInsertTasks(rules: List<ScheduledTask>): List<String> {
@@ -165,7 +167,8 @@ class IntentOrchestratorTest {
             scheduleBoard = fakeScheduleBoard,
             toolRegistry = FakeToolRegistry(),
             timeProvider = testTimeProvider,
-            appScope = testScope
+            appScope = testScope,
+            taskCreationBadgeSignal = fakeTaskCreationBadgeSignal
         )
     }
 
@@ -386,6 +389,7 @@ class IntentOrchestratorTest {
         assertFalse(pathAResult.task.hasConflict)
         assertNotNull(fakeTaskRepository.getTask(pathAResult.task.id))
         assertTrue(results.contains(expectedReply))
+        assertEquals(1, fakeTaskCreationBadgeSignal.calls)
     }
 
     @Test
@@ -533,6 +537,7 @@ class IntentOrchestratorTest {
         assertNotNull(fakeTaskRepository.getTask(pathAResult.task.id))
         assertTrue(results.contains(expectedReply))
         assertTrue(fakeUniAExecutor.executedPrompts.last().contains("anchorDateIso"))
+        assertEquals(1, fakeTaskCreationBadgeSignal.calls)
     }
 
     @Test
@@ -993,6 +998,53 @@ class IntentOrchestratorTest {
         assertFalse(storedTasks.values.any { it.title == "Path B hallucinated follow-up" })
         assertEquals("把明天和张总的会改到明天上午十一点", fakeActiveTaskRetrievalIndex.lastShortlistTranscript)
         assertTrue(results.any { it == PipelineResult.ConversationalReply("Path B reply") })
+        assertEquals(0, fakeTaskCreationBadgeSignal.calls)
+    }
+
+    @Test
+    fun `voice inspiration path does not trigger task creation badge signal`() = runTest {
+        setup()
+        val input = "记一下这个想法"
+
+        fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.DEEP_ANALYSIS, true, ""))
+        fakeUniAExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "NOT_EXACT",
+                  "reason": "not a task"
+                }
+                """.trimIndent()
+            )
+        )
+        fakeUniAExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "NOT_VAGUE",
+                  "reason": "still not a task"
+                }
+                """.trimIndent()
+            )
+        )
+        fakeUniAExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "INSPIRATION_CREATE",
+                  "idea": {
+                    "content": "记一下这个想法",
+                    "title": "记一下这个想法"
+                  }
+                }
+                """.trimIndent()
+            )
+        )
+
+        val results = orchestrator.processInput(input, isVoice = true).toList()
+
+        assertTrue(results.first() is PipelineResult.InspirationCommitted)
+        assertEquals(0, fakeTaskCreationBadgeSignal.calls)
     }
 
     private fun buildSharedSchedulerOrchestrator(sharedExecutor: FakeExecutor): IntentOrchestrator {
@@ -1030,6 +1082,7 @@ class IntentOrchestratorTest {
             toolRegistry = FakeToolRegistry(),
             timeProvider = testTimeProvider,
             appScope = testScope,
+            taskCreationBadgeSignal = fakeTaskCreationBadgeSignal,
             activeTaskRetrievalIndex = fakeActiveTaskRetrievalIndex,
             uniMExtractionService = RealUniMExtractionService(
                 executor = sharedExecutor,
@@ -1042,5 +1095,13 @@ class IntentOrchestratorTest {
                 schedulerLinter = linter
             )
         )
+    }
+
+    private class FakeTaskCreationBadgeSignal : TaskCreationBadgeSignal {
+        var calls = 0
+
+        override suspend fun onTasksCreated() {
+            calls++
+        }
     }
 }

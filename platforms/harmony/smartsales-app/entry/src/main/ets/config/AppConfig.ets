@@ -12,6 +12,8 @@ export interface AppRuntimeConfigShape {
   TINGWU_ACCESS_KEY_ID: string;
   TINGWU_ACCESS_KEY_SECRET: string;
   TINGWU_SECURITY_TOKEN: string;
+  TINGWU_POLL_TIMEOUT_MS: string;
+  TINGWU_FORCE_TASK_EXPIRED_JOB_ID: string;
 
   // OSS 存储
   OSS_ACCESS_KEY_ID: string;
@@ -45,6 +47,8 @@ export function createEmptyConfig(): AppRuntimeConfigShape {
     TINGWU_ACCESS_KEY_ID: '',
     TINGWU_ACCESS_KEY_SECRET: '',
     TINGWU_SECURITY_TOKEN: '',
+    TINGWU_POLL_TIMEOUT_MS: '',
+    TINGWU_FORCE_TASK_EXPIRED_JOB_ID: '',
     OSS_ACCESS_KEY_ID: '',
     OSS_ACCESS_KEY_SECRET: '',
     OSS_BUCKET_NAME: '',

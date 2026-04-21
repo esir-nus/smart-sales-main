@@ -1,5 +1,6 @@
 package com.smartsales.prism.ui.onboarding
 
+import com.smartsales.core.pipeline.TaskCreationBadgeSignal
 import com.smartsales.prism.domain.memory.ConflictResult
 import com.smartsales.prism.domain.memory.ScheduleBoard
 import com.smartsales.prism.domain.memory.ScheduleItem
@@ -34,6 +35,7 @@ class OnboardingSchedulerQuickStartCommitterTest {
         val scheduleBoard = FakeScheduleBoard()
         val inspirationRepository = FakeInspirationRepository()
         val timeProvider = FakeTimeProvider()
+        val badgeSignal = FakeTaskCreationBadgeSignal()
         val mutationEngine = FastTrackMutationEngine(
             taskRepository = repository,
             scheduleBoard = scheduleBoard,
@@ -43,7 +45,8 @@ class OnboardingSchedulerQuickStartCommitterTest {
         val committer = RealOnboardingSchedulerQuickStartCommitter(
             mutationEngine = mutationEngine,
             taskRepository = repository,
-            timeProvider = timeProvider
+            timeProvider = timeProvider,
+            taskCreationBadgeSignal = badgeSignal
         )
 
         committer.stage(
@@ -78,6 +81,7 @@ class OnboardingSchedulerQuickStartCommitterTest {
         assertEquals(2, repository.tasks.size)
         assertTrue(repository.tasks.any { it.id == "item-1" && !it.isVague })
         assertTrue(repository.tasks.any { it.id == "item-2" && it.isVague })
+        assertEquals(1, badgeSignal.calls)
     }
 
     @Test
@@ -86,6 +90,7 @@ class OnboardingSchedulerQuickStartCommitterTest {
         val scheduleBoard = FakeScheduleBoard()
         val inspirationRepository = FakeInspirationRepository()
         val timeProvider = FakeTimeProvider()
+        val badgeSignal = FakeTaskCreationBadgeSignal()
         val mutationEngine = FastTrackMutationEngine(
             taskRepository = repository,
             scheduleBoard = scheduleBoard,
@@ -95,7 +100,8 @@ class OnboardingSchedulerQuickStartCommitterTest {
         val committer = RealOnboardingSchedulerQuickStartCommitter(
             mutationEngine = mutationEngine,
             taskRepository = repository,
-            timeProvider = timeProvider
+            timeProvider = timeProvider,
+            taskCreationBadgeSignal = badgeSignal
         )
 
         committer.stage(
@@ -128,6 +134,7 @@ class OnboardingSchedulerQuickStartCommitterTest {
             result
         )
         assertTrue(repository.tasks.isEmpty())
+        assertEquals(0, badgeSignal.calls)
     }
 
     private open class FakeScheduledTaskRepository : ScheduledTaskRepository {
@@ -219,5 +226,13 @@ class OnboardingSchedulerQuickStartCommitterTest {
         override val zoneId: ZoneId = ZoneId.of("Asia/Shanghai")
 
         override fun formatForLlm(): String = "2026年4月3日（周五）16:00"
+    }
+
+    private class FakeTaskCreationBadgeSignal : TaskCreationBadgeSignal {
+        var calls = 0
+
+        override suspend fun onTasksCreated() {
+            calls++
+        }
     }
 }

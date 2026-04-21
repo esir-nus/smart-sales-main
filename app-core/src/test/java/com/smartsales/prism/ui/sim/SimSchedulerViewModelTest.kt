@@ -9,6 +9,7 @@ import com.smartsales.core.pipeline.RealUniAExtractionService
 import com.smartsales.core.pipeline.RealUniBExtractionService
 import com.smartsales.core.pipeline.RealUniCExtractionService
 import com.smartsales.core.pipeline.RealUniMExtractionService
+import com.smartsales.core.pipeline.TaskCreationBadgeSignal
 import com.smartsales.core.telemetry.PipelineValve
 import com.smartsales.core.test.fakes.FakeActiveTaskRetrievalIndex
 import com.smartsales.core.test.fakes.FakeExecutor
@@ -125,7 +126,8 @@ class SimSchedulerViewModelTest {
             uniAExtractionService = RealUniAExtractionService(fakeExecutor, promptCompiler, schedulerLinter),
             uniBExtractionService = RealUniBExtractionService(fakeExecutor, promptCompiler, schedulerLinter),
             uniCExtractionService = RealUniCExtractionService(fakeExecutor, promptCompiler, schedulerLinter),
-            timeProvider = timeProvider
+            timeProvider = timeProvider,
+            taskCreationBadgeSignal = TaskCreationBadgeSignal.NoOp
         )
     }
 

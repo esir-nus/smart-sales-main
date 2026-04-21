@@ -4,7 +4,7 @@
 >
 > **Purpose**: Module ownership + data flow. Read this BEFORE any cross-module change.
 > **Rule**: If data belongs to Module B, query B's interface at runtime. Don't store B's data on A's model.
-> **Last Updated**: 2026-04-20 (Badge control signals: reminder chime and persisted voice volume; ConnectivityModal connected-only voice volume quick entry; User Center device-control row; confirmed-write volume de-dupe semantics)
+> **Last Updated**: 2026-04-21 (Badge control signals: task-create chime, reminder chime, and persisted voice volume; ConnectivityModal connected-only voice volume quick entry; User Center device-control row; confirmed-write volume de-dupe semantics)
 >
 > **Status Legend**: ✅ = Shipped (Real impl) · 📐 = Interface only (Fake impl) · 🔲 = Not yet coded
 > **Platform Ownership Legend**: `shared` = same product contract across platforms · `android-only` = owned by the current Android lineage · `harmony-only` = owned by the future native Harmony root · `platform-adapter` = shared product contract, platform-specific delivery layer · `legacy-android-on-harmony` = Android app compatibility behavior on Huawei/Honor/Harmony devices
@@ -151,6 +151,7 @@ The current base-runtime/SIM shell introduces one narrow shell-owned arbitration
 The shared reminder lane now introduces one additional narrow shell-owned presentation edge for foreground reminder surfacing:
 
 - `TaskReminderReceiver` may emit lossy process-local `EARLY` reminder events through `SchedulerReminderSurfaceBus` after it posts the normal reminder notification
+- successful scheduler task creation may emit one best-effort badge chime through the pure `TaskCreationBadgeSignal` seam; Android currently binds that seam to `DeviceConnectionManager.notifyTaskCreated()` and uses BLE payload `commandend#1`
 - `TaskReminderReceiver` may also emit one best-effort badge chime through `DeviceConnectionManager.notifyTaskFired()`; this side effect must never block or downgrade reminder delivery
 - `SimSchedulerViewModel` owns banner-entry merge/de-duplication plus scheduler-target derivation from canonical task rows
 - `RuntimeShell` / `RuntimeShellContent` own banner visibility gating, auto-clear timing, and tap routing back into the existing scheduler drawer seam

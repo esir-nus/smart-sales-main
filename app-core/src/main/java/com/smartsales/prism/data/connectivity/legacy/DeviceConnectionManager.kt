@@ -59,6 +59,12 @@ interface DeviceConnectionManager {
     suspend fun reconnectAndWait(): ConnectionState
 
     /**
+     * 向徽章发送一次"任务创建成功"信号（ASCII "commandend#1"）。
+     * 若 BLE 未连接或写入失败，静默忽略；不影响调用方流程。
+     */
+    suspend fun notifyTaskCreated()
+
+    /**
      * 向徽章发送一次"任务闹钟触发"信号（ASCII "commandend#1"）。
      * 若 BLE 未连接或写入失败，静默忽略；不影响调用方流程。
      */
@@ -167,6 +173,17 @@ class DefaultDeviceConnectionManager @Inject constructor(
 
     override suspend fun reconnectAndWait(): ConnectionState {
         return reconnectSupport.reconnectAndWait()
+    }
+
+    override suspend fun notifyTaskCreated() {
+        val session = connectionSupport.currentSessionOrNull() ?: return
+        if (!badgeStateMonitor.status.value.bleConnected) return
+        try {
+            badgeGateway.sendBadgeSignal(session, "commandend#1")
+            ConnectivityLogger.i("🔔 Badge chime signal sent for task create")
+        } catch (ex: Exception) {
+            ConnectivityLogger.w("🔔 Badge chime send failed on task create (non-fatal): ${ex.message}")
+        }
     }
 
     override suspend fun notifyTaskFired() {

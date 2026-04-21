@@ -13,8 +13,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import java.time.Instant
-import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -38,7 +36,7 @@ class RealScheduleBoard @Inject constructor(
         // 订阅任务变化，投射到 ScheduleItem
         scope.launch {
             // 查询未来7天的任务
-            val today = LocalDate.now()
+            val today = timeProvider.today
             val endDate = today.plusDays(7)
             
             taskRepository.queryByDateRange(today, endDate).collect { items ->
@@ -82,7 +80,10 @@ class RealScheduleBoard @Inject constructor(
             Log.d("ScheduleBoard", "✅ checkConflict: CLEAR (proposed=${proposedStart}, dur=${durationMinutes}min)")
             ConflictResult.Clear
         } else {
-            Log.d("ScheduleBoard", "⚠️ checkConflict: ${overlaps.size} conflicts (${overlaps.map { it.title }})")
+            Log.d(
+                "ScheduleBoard",
+                "⚠️ checkConflict: ${overlaps.size} conflicts (${overlaps.joinToString { it.redactedTitle() }})"
+            )
             ConflictResult.Conflict(overlaps)
         }
     }
@@ -176,4 +177,9 @@ class RealScheduleBoard @Inject constructor(
             location = candidate.location
         )
     )
+
+    private fun ScheduleItem.redactedTitle(): String {
+        val normalizedTitle = title.trim()
+        return "hash=${normalizedTitle.hashCode().toUInt().toString(16)},len=${normalizedTitle.length}"
+    }
 }

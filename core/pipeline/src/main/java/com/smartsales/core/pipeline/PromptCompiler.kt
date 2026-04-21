@@ -464,23 +464,29 @@ ${request.transcript}
 规则：
 1. 你只处理已选中任务的时间语义，不输出目标任务，不重写标题，不决定时长。
 2. 如果能表达成明确改期，输出 `decision = "RESCHEDULE_EXACT"`。
-3. 如果是模糊说法、delta-only 改期、页面相对日期、闲聊、删除、创建、或你没有把握，输出 `decision = "NOT_SUPPORTED"`。
+3. 如果是模糊说法、页面相对日期、闲聊、删除、创建、或你没有把握，输出 `decision = "NOT_SUPPORTED"`。
 4. `RESCHEDULE_EXACT` 时，`timeKind` 只能是：
+   - `DELTA_FROM_TARGET`
    - `RELATIVE_DAY_CLOCK`
    - `ABSOLUTE`
-5. `RELATIVE_DAY_CLOCK`：
+5. `DELTA_FROM_TARGET`：
+   - 仅用于相对已选中任务当前时间的明确偏移，例如 `推迟1个小时`、`提前半小时`
+   - 必须填写 `deltaFromTargetMinutes`
+   - 不要填写 `relativeDayOffset`、`clockTime`、`absoluteStartIso`
+   - 如果说法是 `待会儿`、`晚点` 这类模糊相对时间，必须输出 `NOT_SUPPORTED`
+6. `RELATIVE_DAY_CLOCK`：
    - 仅用于“明天早上8点 / 后天晚上9点 / tomorrow 6:30 pm”这类真实日期 + 明确钟点
    - 必须填写 `relativeDayOffset`
    - 必须填写严格 `HH:mm` 的 `clockTime`
    - 不要填写 `deltaFromTargetMinutes`、`absoluteStartIso`
    - `今天/today/今晚` = 0，`明天/tomorrow` = 1，`后天/day after tomorrow` = 2
-6. 页面相对日期（如 `下一天` / `后一天` / `next day`）在这个实验里不支持，必须输出 `NOT_SUPPORTED`。
-7. `ABSOLUTE`：
+7. 页面相对日期（如 `下一天` / `后一天` / `next day`）在这个实验里不支持，必须输出 `NOT_SUPPORTED`。
+8. `ABSOLUTE`：
    - 仅用于用户直接给出明确绝对时刻
    - 必须填写 `absoluteStartIso`
    - 不要填写其他时间字段
-8. 不能同时填写多种时间分支字段。
-9. 只能输出严格 JSON，禁止 Markdown 包裹。
+9. 不能同时填写多种时间分支字段。
+10. 只能输出严格 JSON，禁止 Markdown 包裹。
 
 严格输出以下 Kotlin contract 对应的 JSON：
 ${

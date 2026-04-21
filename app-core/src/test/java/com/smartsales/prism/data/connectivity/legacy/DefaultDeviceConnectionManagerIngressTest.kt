@@ -734,6 +734,58 @@ class DefaultDeviceConnectionManagerIngressTest {
         assertEquals(listOf("commandend#1"), badgeGateway.badgeSignalCalls.map { it.second })
     }
 
+    @Test
+    fun `notifyTaskCreated sends badge chime only when ble is connected`() = runTest {
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val monitor = FakeBadgeStateMonitor().apply {
+            simulateConnected(ip = "192.168.0.9", wifiName = "MstRobot")
+        }
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("MstRobot", "secret")
+            )
+        }
+        val badgeGateway = FakeBleGateway()
+        val manager = newManager(
+            gateway = gateway,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            monitor = monitor,
+            badgeGateway = badgeGateway
+        )
+
+        manager.notifyTaskCreated()
+        advanceUntilIdle()
+
+        assertEquals(listOf("commandend#1"), badgeGateway.badgeSignalCalls.map { it.second })
+    }
+
+    @Test
+    fun `notifyTaskCreated skips badge chime when ble is disconnected`() = runTest {
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("MstRobot", "secret")
+            )
+        }
+        val badgeGateway = FakeBleGateway()
+        val manager = newManager(
+            gateway = gateway,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            badgeGateway = badgeGateway
+        )
+
+        manager.notifyTaskCreated()
+        advanceUntilIdle()
+
+        assertTrue(badgeGateway.badgeSignalCalls.isEmpty())
+    }
+
     private fun newManager(
         gateway: FakeGattSessionLifecycle,
         scope: CoroutineScope,

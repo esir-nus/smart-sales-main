@@ -16,6 +16,8 @@ import java.time.format.DateTimeFormatter
  */
 object ExactTimeCueResolver {
 
+    private const val MAX_LLM_FUTURE_DAYS_FROM_ANCHOR = 365L
+
     private enum class RelativeDayFamily {
         REAL_TODAY,
         REAL_PLUS_1,
@@ -24,10 +26,40 @@ object ExactTimeCueResolver {
         QUALIFIED_WEEKDAY
     }
 
+    sealed interface CueRejection {
+        data object RequiresDisplayedPageContext : CueRejection
+        data object DateOutOfBounds : CueRejection
+    }
+
     private data class QualifiedWeekdayAnchor(
         val family: RelativeDayFamily,
         val dayOfWeek: Int
     )
+
+    fun rejectRelativeDayStartTime(
+        transcript: String?,
+        startTimeIso: String,
+        nowIso: String?,
+        timezone: String?,
+        displayedDateIso: String?
+    ): CueRejection? {
+        val family = detectRelativeDayFamily(transcript) ?: return null
+        if (family == RelativeDayFamily.PAGE_PLUS_1 && displayedDateIso == null) {
+            return CueRejection.RequiresDisplayedPageContext
+        }
+        val lawfulDate = computeLawfulAnchorDate(transcript, nowIso, timezone, displayedDateIso) ?: return null
+        val zoned = try {
+            OffsetDateTime.parse(startTimeIso)
+        } catch (_: Exception) {
+            return null
+        }
+        val latestAllowedDate = lawfulDate.plusDays(MAX_LLM_FUTURE_DAYS_FROM_ANCHOR)
+        return if (zoned.toLocalDate().isAfter(latestAllowedDate)) {
+            CueRejection.DateOutOfBounds
+        } else {
+            null
+        }
+    }
 
     fun normalizeRelativeDayStartTime(
         transcript: String?,
@@ -35,7 +67,7 @@ object ExactTimeCueResolver {
         nowIso: String?,
         timezone: String?,
         displayedDateIso: String?
-    ): String? {
+    ): String {
         val lawfulDate = computeLawfulAnchorDate(transcript, nowIso, timezone, displayedDateIso) ?: return startTimeIso
         val zoned = try {
             OffsetDateTime.parse(startTimeIso)
@@ -56,7 +88,7 @@ object ExactTimeCueResolver {
         nowIso: String?,
         timezone: String?,
         displayedDateIso: String?
-    ): String? {
+    ): String {
         val lawfulDate = computeLawfulAnchorDate(transcript, nowIso, timezone, displayedDateIso) ?: return anchorDateIso
         return lawfulDate.toString()
     }

@@ -4,12 +4,17 @@ import com.smartsales.prism.domain.core.UnifiedMutation
 import com.smartsales.prism.domain.memory.TargetResolutionRequest
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
+import kotlin.math.abs
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.json.Json
 
 internal class SchedulerLinterParsingSupport(
     private val jsonInterpreter: Json
 ) {
+
+    private companion object {
+        const val MAX_DELTA_FROM_TARGET_MINUTES = 14 * 24 * 60
+    }
 
     fun parseFastTrackIntent(input: String): FastTrackResult {
         return try {
@@ -92,14 +97,35 @@ internal class SchedulerLinterParsingSupport(
                     if (startTimeIso.isBlank()) {
                         return FastTrackResult.NoMatch("Uni-A exact task time is blank")
                     }
+                    when (
+                        ExactTimeCueResolver.rejectRelativeDayStartTime(
+                            transcript = transcript,
+                            startTimeIso = startTimeIso,
+                            nowIso = nowIso,
+                            timezone = timezone,
+                            displayedDateIso = displayedDateIso
+                        )
+                    ) {
+                        ExactTimeCueResolver.CueRejection.RequiresDisplayedPageContext -> {
+                            return FastTrackResult.NoMatch(
+                                "Uni-A exact date anchor requires displayed page context"
+                            )
+                        }
+
+                        ExactTimeCueResolver.CueRejection.DateOutOfBounds -> {
+                            return FastTrackResult.NoMatch(
+                                "Uni-A exact task time exceeds the relative-anchor bound"
+                            )
+                        }
+
+                        null -> Unit
+                    }
                     val normalizedStartTimeIso = ExactTimeCueResolver.normalizeRelativeDayStartTime(
                         transcript = transcript,
                         startTimeIso = startTimeIso,
                         nowIso = nowIso,
                         timezone = timezone,
                         displayedDateIso = displayedDateIso
-                    ) ?: return FastTrackResult.NoMatch(
-                        "Uni-A exact date anchor requires displayed page context"
                     )
                     if (schedulerLinterParseStrictOffsetDateTime(normalizedStartTimeIso) == null) {
                         return FastTrackResult.NoMatch("Uni-A exact task time must be strict ISO-8601")
@@ -220,8 +246,6 @@ internal class SchedulerLinterParsingSupport(
                         nowIso = nowIso,
                         timezone = timezone,
                         displayedDateIso = displayedDateIso
-                    ) ?: return FastTrackResult.NoMatch(
-                        "Uni-B page-relative anchor requires displayed page context"
                     )
                     try {
                         LocalDate.parse(normalizedAnchorDateIso)
@@ -332,8 +356,31 @@ internal class SchedulerLinterParsingSupport(
 
                     when (timeKind) {
                         FollowUpRescheduleTimeKind.DELTA_FROM_TARGET -> {
-                            FollowUpRescheduleExtractionResult.Unsupported(
-                                "Follow-up reschedule V2 no longer allows delta-only time shifts"
+                            if (payload.relativeDayOffset != null ||
+                                payload.clockTime != null ||
+                                payload.absoluteStartIso != null
+                            ) {
+                                return FollowUpRescheduleExtractionResult.Invalid(
+                                    "Follow-up reschedule V2 delta payload contains illegal extra fields"
+                                )
+                            }
+                            val deltaMinutes = payload.deltaFromTargetMinutes
+                                ?: return FollowUpRescheduleExtractionResult.Invalid(
+                                    "Follow-up reschedule V2 deltaFromTargetMinutes missing"
+                                )
+                            if (deltaMinutes == 0) {
+                                return FollowUpRescheduleExtractionResult.Invalid(
+                                    "Follow-up reschedule V2 deltaFromTargetMinutes must not be 0"
+                                )
+                            }
+                            if (abs(deltaMinutes) > MAX_DELTA_FROM_TARGET_MINUTES) {
+                                return FollowUpRescheduleExtractionResult.Invalid(
+                                    "Follow-up reschedule V2 deltaFromTargetMinutes must stay within +/-$MAX_DELTA_FROM_TARGET_MINUTES"
+                                )
+                            }
+                            FollowUpRescheduleExtractionResult.Supported(
+                                timeKind = timeKind,
+                                operand = FollowUpRescheduleOperand.DeltaFromTarget(deltaMinutes)
                             )
                         }
 
@@ -444,7 +491,12 @@ internal class SchedulerLinterParsingSupport(
                             targetLocation = targetLocation
                         ),
                         timeInstruction = timeInstruction,
-                        suggestedTaskId = payload.suggestedTaskId?.trim()?.takeIf { it.isNotBlank() }
+                        suggestedTaskId = payload.suggestedTaskId?.trim()?.takeIf { it.isNotBlank() },
+                        preferredTaskIds = payload.preferredTaskIds
+                            .mapNotNull { candidateId ->
+                                candidateId.trim().takeIf { it.isNotBlank() }
+                            }
+                            .distinct()
                     )
                 }
 

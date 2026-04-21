@@ -2,7 +2,7 @@
 
 > **Purpose**: Program-summary tracker for the complete HarmonyOS-native migration, tracking feature parity delivery, backend verification, and platform readiness.
 > **Status**: Active
-> **Last Updated**: 2026-04-16
+> **Last Updated**: 2026-04-21
 > **Primary Laws**:
 > - `docs/specs/platform-governance.md`
 > - `docs/specs/cross-platform-sync-contract.md`
@@ -272,6 +272,7 @@ Every active Harmony program-summary entry must include:
   - each feature phase verified with device-accepted install and hilog evidence
   - domain model translations match Kotlin domain/ semantics
   - Harmony overlay docs updated per feature delivery
+  - complete-app device claims must use a lane where signed HAP path, bundle ID, install target, launch target, and runtime logs all refer to the same app identity; `smartsales.HOS.test` proof does not transfer to `com.smartsales.harmony.app`
 - `UI Translation / Native Rewrite`:
   - complete native ArkTS/ArkUI implementation, not a Compose port
   - absorbs Tingwu container patterns as foundation
@@ -312,3 +313,4 @@ Every active Harmony program-summary entry must include:
   - H-02 scheduler backend proof informs Phase 2B scheduler delivery
   - H-03 UI verification patterns inform page-native rewrite approach
   - the cross-platform sync contract (`docs/specs/cross-platform-sync-contract.md`) governs how shared truth flows to this app
+  - the current repo now treats signed-HAP verification as a paved-road lane contract documented in `docs/platforms/harmony/test-signing-ledger.md`; do not call H-04 device-ready from unsigned output, stale signed artifacts, or bundle-mismatched proof

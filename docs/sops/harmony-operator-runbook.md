@@ -134,6 +134,26 @@ Before you move the tracker state forward, confirm:
 - CLI verification exists when build/device/runtime behavior was part of the slice
 - Harmony-native files stayed inside the Harmony-owned root
 
+### Step 7A: Use one signing lane contract
+
+For any Harmony device pass, do not improvise the HAP/sign/install flow.
+
+Use `docs/platforms/harmony/test-signing-ledger.md` as the canonical lane contract and confirm all of these belong to the same app identity:
+
+- built root
+- signed HAP artifact
+- bundle ID
+- `hdc install` target
+- `aa start` bundle
+- `hilog` evidence
+
+Operator rule:
+
+- unsigned HAP output is never enough for L3/device claims
+- a stale signed HAP is not evidence for a newly requested slice
+- if the binary on device does not expose the requested surface, hold the slice even if install/launch succeeded
+- use `scripts/harmony-lane-proof.sh <lane>` to resolve the exact signed artifact and matching commands for the lane under review
+
 ### Step 8: Decide the outcome
 
 Use only these outcomes:

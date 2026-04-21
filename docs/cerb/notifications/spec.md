@@ -66,11 +66,12 @@ Centralizes all Android notification logic behind a single interface. Features c
 
 **Goal**: Migrate `TaskReminderReceiver` to use `NotificationService` instead of building notifications directly.
 
-**Ship Criteria**: `TaskReminderReceiver.showNotification()` delegates to `NotificationService.show()`. Reminder notification behavior remains unchanged, while the receiver may also emit a best-effort badge chime signal that never blocks reminder delivery.
+**Ship Criteria**: `TaskReminderReceiver.showNotification()` delegates to `NotificationService.show()`. Reminder notification behavior remains unchanged, while the receiver may also emit a best-effort badge chime signal that never blocks reminder delivery. Scheduler create-success badge signaling is additive and is owned outside this receiver path.
 
 ### Changes
 - `TaskReminderReceiver`: Replace inline `NotificationCompat.Builder` with `NotificationService.show()` call
 - `TaskReminderReceiver`: after the reminder path starts, optionally emit one best-effort badge chime (`commandend#1`) through `DeviceConnectionManager.notifyTaskFired()`
+- scheduler create-success paths may separately emit the same best-effort badge chime (`commandend#1`) through the pure `TaskCreationBadgeSignal` seam and Android `DeviceConnectionManager.notifyTaskCreated()`; this is not owned by `TaskReminderReceiver`
 - Challenge: `BroadcastReceiver` doesn't support constructor injection — use `@AndroidEntryPoint` or manual `EntryPointAccessors`
 
 ### Test Cases

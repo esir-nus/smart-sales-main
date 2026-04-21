@@ -64,6 +64,7 @@ class IntentOrchestrator @Inject constructor(
     private val toolRegistry: ToolRegistry,
     private val timeProvider: TimeProvider,
     @Named("AppScope") private val appScope: CoroutineScope,
+    private val taskCreationBadgeSignal: TaskCreationBadgeSignal = TaskCreationBadgeSignal.NoOp,
     private val activeTaskRetrievalIndex: ActiveTaskRetrievalIndex? = null,
     private val uniMExtractionService: RealUniMExtractionService? = null,
     private val globalRescheduleExtractionService: RealGlobalRescheduleExtractionService? = null
@@ -353,6 +354,7 @@ class IntentOrchestrator @Inject constructor(
 
                     when (val mutationResult = fastTrackMutationEngine.execute(fastTrackIntent)) {
                         is com.smartsales.prism.domain.scheduler.MutationResult.Success -> {
+                            taskCreationBadgeSignal.onTasksCreated()
                             val exactTaskId = mutationResult.taskIds.firstOrNull() ?: unifiedId
                             val exactTask = taskRepository.getTask(exactTaskId)
                             if (exactTask != null) {
@@ -427,6 +429,7 @@ class IntentOrchestrator @Inject constructor(
                             )
                             when (val mutationResult = fastTrackMutationEngine.execute(vagueIntent)) {
                                 is com.smartsales.prism.domain.scheduler.MutationResult.Success -> {
+                                    taskCreationBadgeSignal.onTasksCreated()
                                     val exactTaskId = mutationResult.taskIds.firstOrNull() ?: unifiedId
                                     val exactTask = taskRepository.getTask(exactTaskId)
                                     if (exactTask != null) {
@@ -476,6 +479,7 @@ class IntentOrchestrator @Inject constructor(
                             )
                             when (val mutationResult = fastTrackMutationEngine.execute(vagueIntent)) {
                                 is com.smartsales.prism.domain.scheduler.MutationResult.Success -> {
+                                    taskCreationBadgeSignal.onTasksCreated()
                                     val vagueTaskId = mutationResult.taskIds.firstOrNull() ?: unifiedId
                                     val vagueTask = taskRepository.getTask(vagueTaskId)
                                     if (vagueTask != null) {
@@ -917,6 +921,9 @@ class IntentOrchestrator @Inject constructor(
     ): CommittedSchedulerTasks? {
         return when (val mutationResult = fastTrackMutationEngine.execute(intent)) {
             is com.smartsales.prism.domain.scheduler.MutationResult.Success -> {
+                if (intent.isTaskCreationIntent()) {
+                    taskCreationBadgeSignal.onTasksCreated()
+                }
                 val committedTasks = mutableListOf<ScheduledTask>()
                 mutationResult.taskIds.forEach { taskId ->
                     taskRepository.getTask(taskId)?.let(committedTasks::add)
@@ -965,7 +972,10 @@ class IntentOrchestrator @Inject constructor(
         return when (command) {
             is SchedulerTaskCommand.CreateTasks -> {
                 when (val result = fastTrackMutationEngine.execute(FastTrackResult.CreateTasks(command.params))) {
-                    is com.smartsales.prism.domain.scheduler.MutationResult.Success -> "✅ 日程已创建。"
+                    is com.smartsales.prism.domain.scheduler.MutationResult.Success -> {
+                        taskCreationBadgeSignal.onTasksCreated()
+                        "✅ 日程已创建。"
+                    }
                     is com.smartsales.prism.domain.scheduler.MutationResult.NoMatch -> "未能创建日程：${result.reason}"
                     is com.smartsales.prism.domain.scheduler.MutationResult.AmbiguousMatch -> "未找到唯一匹配的任务，请在面板手动处理。"
                     is com.smartsales.prism.domain.scheduler.MutationResult.Error -> "日程创建失败：${result.exception.message ?: "未知错误"}"
@@ -974,7 +984,10 @@ class IntentOrchestrator @Inject constructor(
             }
             is SchedulerTaskCommand.CreateVagueTask -> {
                 when (val result = fastTrackMutationEngine.execute(FastTrackResult.CreateVagueTask(command.params))) {
-                    is com.smartsales.prism.domain.scheduler.MutationResult.Success -> "✅ 日程已创建。"
+                    is com.smartsales.prism.domain.scheduler.MutationResult.Success -> {
+                        taskCreationBadgeSignal.onTasksCreated()
+                        "✅ 日程已创建。"
+                    }
                     is com.smartsales.prism.domain.scheduler.MutationResult.NoMatch -> "未能创建日程：${result.reason}"
                     is com.smartsales.prism.domain.scheduler.MutationResult.AmbiguousMatch -> "未找到唯一匹配的任务，请在面板手动处理。"
                     is com.smartsales.prism.domain.scheduler.MutationResult.Error -> "日程创建失败：${result.exception.message ?: "未知错误"}"
@@ -989,6 +1002,7 @@ class IntentOrchestrator @Inject constructor(
                         is SchedulerTaskCommand.CreateOperation.Exact -> {
                             when (val result = fastTrackMutationEngine.execute(FastTrackResult.CreateTasks(operation.params))) {
                                 is com.smartsales.prism.domain.scheduler.MutationResult.Success -> {
+                                    taskCreationBadgeSignal.onTasksCreated()
                                     createdCount += result.taskIds.size.coerceAtLeast(1)
                                 }
                                 is com.smartsales.prism.domain.scheduler.MutationResult.NoMatch -> {
@@ -1010,6 +1024,7 @@ class IntentOrchestrator @Inject constructor(
                         is SchedulerTaskCommand.CreateOperation.Vague -> {
                             when (val result = fastTrackMutationEngine.execute(FastTrackResult.CreateVagueTask(operation.params))) {
                                 is com.smartsales.prism.domain.scheduler.MutationResult.Success -> {
+                                    taskCreationBadgeSignal.onTasksCreated()
                                     createdCount += result.taskIds.size.coerceAtLeast(1)
                                 }
                                 is com.smartsales.prism.domain.scheduler.MutationResult.NoMatch -> {
@@ -1053,5 +1068,9 @@ class IntentOrchestrator @Inject constructor(
                 "✅ 日程已删除。"
             }
         }
+    }
+
+    private fun FastTrackResult.isTaskCreationIntent(): Boolean {
+        return this is FastTrackResult.CreateTasks || this is FastTrackResult.CreateVagueTask
     }
 }

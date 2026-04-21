@@ -1,5 +1,6 @@
 package com.smartsales.prism.ui.sim
 
+import com.smartsales.core.pipeline.TaskCreationBadgeSignal
 import com.smartsales.core.pipeline.RealUniAExtractionService
 import com.smartsales.prism.domain.memory.ConflictResult
 import com.smartsales.prism.domain.memory.ScheduleBoard
@@ -24,7 +25,8 @@ internal class SimSchedulerMutationCoordinator(
     private val uniAExtractionService: RealUniAExtractionService,
     private val timeProvider: TimeProvider,
     private val projectionSupport: SimSchedulerProjectionSupport,
-    private val reminderSupport: SimSchedulerReminderSupport
+    private val reminderSupport: SimSchedulerReminderSupport,
+    private val taskCreationBadgeSignal: TaskCreationBadgeSignal = TaskCreationBadgeSignal.NoOp
 ) {
 
     suspend fun handleMutation(result: FastTrackResult) {
@@ -35,6 +37,7 @@ internal class SimSchedulerMutationCoordinator(
                 when (result) {
                     is FastTrackResult.CreateTasks,
                     is FastTrackResult.CreateVagueTask -> {
+                        taskCreationBadgeSignal.onTasksCreated()
                         projectionSupport.markCreatedDates(createdTasks)
                         if (createdTasks.isNotEmpty()) {
                             reminderSupport.emitReminderReliabilityPromptIfNeeded()
@@ -84,6 +87,7 @@ internal class SimSchedulerMutationCoordinator(
                 when (result) {
                     is FastTrackResult.CreateTasks,
                     is FastTrackResult.CreateVagueTask -> {
+                        taskCreationBadgeSignal.onTasksCreated()
                         projectionSupport.markCreatedDates(createdTasks)
                         if (createdTasks.isNotEmpty()) {
                             reminderSupport.emitReminderReliabilityPromptIfNeeded()

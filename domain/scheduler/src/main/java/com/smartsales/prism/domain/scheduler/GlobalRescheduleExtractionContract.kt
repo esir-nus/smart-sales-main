@@ -19,6 +19,7 @@ data class GlobalRescheduleExtractionPayload(
     /** MUST BE one of: RESCHEDULE_TARGETED, NOT_SUPPORTED */
     val decision: String = "NOT_SUPPORTED",
     val suggestedTaskId: String? = null,
+    val preferredTaskIds: List<String> = emptyList(),
     val targetQuery: String? = null,
     val targetPerson: String? = null,
     val targetLocation: String? = null,
@@ -30,8 +31,24 @@ sealed interface GlobalRescheduleExtractionResult {
     data class Supported(
         val target: TargetResolutionRequest,
         val timeInstruction: String,
-        val suggestedTaskId: String? = null
-    ) : GlobalRescheduleExtractionResult
+        val suggestedTaskId: String? = null,
+        val preferredTaskIds: List<String> = emptyList()
+    ) : GlobalRescheduleExtractionResult {
+        fun filterByOwnership(ownedIds: Set<String>): Supported {
+            val filteredPreferredTaskIds = preferredTaskIds
+                .mapNotNull { candidateId ->
+                    candidateId.trim().takeIf { it.isNotBlank() && it in ownedIds }
+                }
+                .distinct()
+            return copy(
+                suggestedTaskId = suggestedTaskId
+                    ?.trim()
+                    ?.takeIf { it.isNotBlank() && it in ownedIds }
+                    ?: filteredPreferredTaskIds.firstOrNull(),
+                preferredTaskIds = filteredPreferredTaskIds
+            )
+        }
+    }
 
     data class Unsupported(val reason: String) : GlobalRescheduleExtractionResult
     data class Invalid(val reason: String) : GlobalRescheduleExtractionResult

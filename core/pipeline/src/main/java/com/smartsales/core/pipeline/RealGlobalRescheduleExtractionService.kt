@@ -28,14 +28,15 @@ class RealGlobalRescheduleExtractionService @Inject constructor(
                 when (val parsed = schedulerLinter.parseGlobalRescheduleExtraction(result.content)) {
                     is GlobalRescheduleExtractionResult.Supported -> {
                         val shortlistedTaskIds = request.activeTaskShortlist.mapTo(linkedSetOf()) { it.taskId }
-                        parsed.copy(
-                            target = TargetResolutionRequest(
-                                targetQuery = parsed.target.targetQuery,
-                                targetPerson = parsed.target.targetPerson,
-                                targetLocation = parsed.target.targetLocation
-                            ),
-                            suggestedTaskId = parsed.suggestedTaskId?.takeIf { it in shortlistedTaskIds }
-                        )
+                        parsed
+                            .copy(
+                                target = TargetResolutionRequest(
+                                    targetQuery = parsed.target.targetQuery,
+                                    targetPerson = parsed.target.targetPerson,
+                                    targetLocation = parsed.target.targetLocation
+                                )
+                            )
+                            .filterByOwnership(shortlistedTaskIds)
                     }
 
                     else -> parsed

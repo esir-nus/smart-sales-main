@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.smartsales.core.pipeline.RealGlobalRescheduleExtractionService
+import com.smartsales.core.pipeline.TaskCreationBadgeSignal
 import com.smartsales.core.pipeline.RealUniAExtractionService
 import com.smartsales.core.pipeline.RealUniBExtractionService
 import com.smartsales.core.pipeline.RealUniCExtractionService
@@ -59,7 +60,8 @@ class SimSchedulerViewModel @Inject constructor(
     private val uniAExtractionService: RealUniAExtractionService,
     private val uniBExtractionService: RealUniBExtractionService,
     private val uniCExtractionService: RealUniCExtractionService,
-    private val timeProvider: TimeProvider
+    private val timeProvider: TimeProvider,
+    private val taskCreationBadgeSignal: TaskCreationBadgeSignal
 ) : ViewModel(), ISchedulerViewModel {
 
     private val _activeDayOffset = MutableStateFlow(0)
@@ -145,7 +147,8 @@ class SimSchedulerViewModel @Inject constructor(
         uniAExtractionService = uniAExtractionService,
         timeProvider = timeProvider,
         projectionSupport = projectionSupport,
-        reminderSupport = reminderSupport
+        reminderSupport = reminderSupport,
+        taskCreationBadgeSignal = taskCreationBadgeSignal
     )
     private val ingressCoordinator = SimSchedulerIngressCoordinator(
         taskRepository = taskRepository,

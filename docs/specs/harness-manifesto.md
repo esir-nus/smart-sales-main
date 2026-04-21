@@ -124,7 +124,7 @@ The first proven engine, grounded in the Harmony scheduler slice experiment (`do
 - Telemetry at critical dataflow joints
 
 **Evaluator verifies** (by evidence class):
-- `platform-runtime`: agent operates `adb logcat` (Android) or `hdc log` (HarmonyOS) to confirm telemetry at declared joints
+- `platform-runtime`: agent operates the **Deterministic Device-Loop Protocol** (`docs/specs/device-loop-protocol.md`) on the declared lane. Compile success is not runtime proof; cold-relaunch plus per-joint log capture (Android `adb logcat` or HarmonyOS `hdc shell hilog`) is the minimum bar.
 - `contract-test`: agent runs test suite, verifies typed mutations match contract
 - `ui-visible`: agent requests human operator to supply real-device screenshots -- the agent cannot see phone pixels, the operator is the evaluator's eyes
 
@@ -132,16 +132,26 @@ The evaluator rejects evidence of the wrong modality. A passing test is not runt
 
 ### Future engines (declared, not yet proven)
 
-These engines are anticipated but must not be built until an experiment proves their mechanics:
+The Backend/Pipeline engine is the only proven engine. Other work is classified at contract time by **intent**, not by engine, using the axis defined in `.claude/commands/sprint.md` §2:
 
-| Engine | Task Type | Planner Reads First | Evaluator Uses |
+| Intent | What it means | Execution path | Evidence focus |
 |---|---|---|---|
-| **UI** | Compose/ArkTS surfaces | UI contract, prototype brief, style guide | `ui-visible` (operator screenshots), component regression tests |
-| **Architecture** | Module boundaries, interface changes | Interface map, code-structure contract | `governance-proof` (validator pass, CI) |
-| **Governance** | SOPs, trackers, lane harness | Lane governance SOP, lane registry | `governance-proof` (doc alignment, hook/CI behavior) |
-| **Doc** | Spec creation, doc migration | Core-flow, existing spec (if cerb-era) | Peer review against post-harness shape |
+| **dataflow** | New feature, behavior change, typed mutations, pipeline contract. Owns the minimal UI surface needed to exercise the pipeline. | Backend/Pipeline engine (above) | pipeline contract + critical joints + mini-lab scenarios; screenshots support only |
+| **cosmetic** | Pure aesthetic polish on UI elements already registered in `docs/specs/ui_element_registry.md`. Zero behavior change. | Interim UI workflow (engine not yet formally built) | `ui-visible` screenshots (authoritative) + registry compliance |
+| **hybrid** | Small tweak against an already-shipped surface that genuinely touches both, capped at ≤3 files. | Dataflow slice runs first, then cosmetic slice, within one contract. | Union of dataflow and cosmetic evidence; no bypass on either |
 
-Do not build these engines speculatively. Build each one when a real task demands it, prove it on a bounded slice, then codify it.
+Hard rules (enforced at `/sprint` planner time and `/ship` evaluator time):
+
+- Net-new feature work must be `dataflow`. `cosmetic` and `hybrid` cannot be the entry contract for a new surface.
+- `cosmetic` cannot create new UI elements. It restyles elements already registered in `ui_element_registry.md`.
+- `cosmetic` cannot touch dataflow files (ViewModel, Repository, flow, mapper, domain, UseCase, ArkTS state/service).
+- `cosmetic` that uncovers a behavior bug halts and hands off to a new `dataflow` contract. No mid-sprint scope change.
+- `hybrid` is capped at ≤3 files. Violation triggers split into `dataflow` + `cosmetic`.
+- Drift signal: if `hybrid` exceeds 30% of ships in a 20-ship rolling window (tracked via `docs/plans/changelog.md`), the next `/sprint` invocation rejects hybrid until the ratio returns below threshold.
+
+The planner/operator/evaluator role structure from §5 above is preserved across all three intents -- only the template fields, evidence class, and evaluator gates differ. Architecture, Governance, and Doc work route through the intent axis as well: module-boundary or interface-map changes are `dataflow` (they modify behavior contracts); SOP/tracker/registry edits are `cosmetic` when they only restyle existing structure and `dataflow` when they change governance behavior; new spec creation is `dataflow` (net-new artifact, new reading contract).
+
+Do not build speculative engine scaffolding ahead of proven need. New engines emerge when a real task demands one, proves its mechanics on a bounded slice, and then codifies.
 
 ---
 

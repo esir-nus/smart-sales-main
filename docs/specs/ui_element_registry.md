@@ -134,11 +134,11 @@ Home empty-state composition note:
 | **Attachment [📎]** | `Idle` | Tap | Ripple | System Picker or SIM audio selector. | Generic chat may open picker; grounded SIM audio chat reopens Audio Drawer selector. | 🚧 In-Progress |
 | **Audio Upload** | `Picked` | Confirm | Progress | Sync to **Audio Drawer**. | `storage` folder. | ❌ Pending |
 | **Mic FAB** | `Idle` | Tap | Morph | **Phone Mic** Capture. | Not Badge. | ✅ Verified |
-| **Audio Card** | `Star` | Tap | `spring` | **Star Toggle** | Heart/Star flip, color change. | ✅ Verified |
-| **Audio Card** | `PENDING` | Swipe L→R | `Shimmer` | **Transcribe** | "右滑开始转写 >>>" prompt. | ✅ Verified |
-| **Audio Card** | `TRANSCRIBING` | System | `LinearProgress` | **Processing** | "正在转写..." + progress bar. | ✅ Verified |
-| **Audio Drawer (Select Mode)** | `Opened from Chat` | Tap attach/upload in grounded chat | Bottom sheet | Open audio selector | No swipe hints, no bottom CTA. | ❌ Pending |
-| **Audio Card (Select Mode)** | `TRANSCRIBED` | Tap card | Ripple | Bind current chat to selected audio | Show truncated transcript preview for recognition. | ❌ Pending |
+| **Audio Card** | `Star` | Tap | `spring(0.9, 500)` | **Star Toggle** | Heart/Star flip, color change. Refined motion contract: `docs/specs/modules/AudioDrawer.md` §R.5. | ✅ Verified |
+| **Audio Card** | `PENDING` | Swipe L→R | `aurora-chip` | **Transcribe** | Aurora chip "→ transcribe" + static hint. Replaces the shimmer prompt per `AudioDrawer.md` §R.4. | 🚧 Refining |
+| **Audio Card** | `TRANSCRIBING` | System | `LinearProgress` (aurora gradient) | **Processing** | Progress bar + numeric % label. No "正在转写..." text. See `AudioDrawer.md` §R.4. | 🚧 Refining |
+| **Audio Drawer (Select Mode)** | `Opened from Chat` | Tap attach/upload in grounded chat | Bottom sheet `spring(0.9, 500)` | Open audio selector | No swipe hints, no bottom CTA. | ❌ Pending |
+| **Audio Card (Select Mode)** | `TRANSCRIBED` | Tap card | Ripple + aurora edge-bar | Bind current chat to selected audio | Show truncated transcript preview for recognition; current selection signaled by 2px aurora edge-bar (no pill). | ❌ Pending |
 | **Audio Card (Select Mode)** | `PENDING/TRANSCRIBING` | Tap card | Ripple | Bind current chat and continue processing in chat | Compact row-body copy plus progress communicates continued chat-side processing. | ❌ Pending |
 
 ---
@@ -192,18 +192,20 @@ Home empty-state composition note:
 
 ## 5. Audio Drawer (Bottom)
 
+> **Visual & motion authority**: `docs/specs/modules/AudioDrawer.md` §R (Refined Visual & Motion Contract). The rows below capture interaction invariants only; chrome and spring values live in §R.
+
 | Element | Visual State | Trigger | Animation | Result | Invariant | Status |
 |---------|--------------|---------|-----------|--------|-----------|--------|
-| **Drawer Handle** | `Peeking` | Drag Up | `spring(Low)` | Expands 50%/100%. | Fade Content. | ✅ Verified |
+| **Drawer Handle** | `Peeking` | Drag Up | `spring(0.9, 500)` | Expands 50%/100%. | Fade Content. Critically damped, no overshoot per `AudioDrawer.md` §R.5. | ✅ Verified |
 | **Waveform** | `Recording` | Audio In | Hertz | Visualizes **Phone Mic**. | Phone Source. | 🚧 In-Progress |
-| **Audio List** | `Syncing` | Event | Pulse | Mirror `storage`. | Badge + Local. | ❌ Pending |
+| **Audio List** | `Syncing` | Event | Aurora-dot pulse on sync-pill | Mirror `storage`. | Badge + Local. Sync state encoded by aurora dot color (mint/blue/red), not pill chrome. | ❌ Pending |
 | **Audio Card** | `Idle` | Play | Toggle | Playback. | Stop others. | ❌ Pending |
-| **Audio Card** | `Non-Transcribed` | Tap | Shake | **Rejects Expansion**. | "Transcribe First". | ❌ Pending |
-| **Audio Card** | `Transcribed` | Tap | Expand | Opens Hub. | N/A | ❌ Pending |
-| **Audio Card** | `问AI` | Tap | Navigate | **Creates/Opens Analyst Session** | Session binding. | ✅ Verified |
-| **Audio Drawer** | `Select Mode` | Chat attach/upload | Slide Up | Opens `选择要讨论的录音`. | Static picker; no swipe or expand affordances. | ❌ Pending |
-| **Audio Card** | `Select / Current` | Visible in selector | Disabled | Remains current discussion audio. | Show `当前讨论中`. | ❌ Pending |
-| **Audio Card** | `Select / Transcribed` | Tap | Ripple | Switch chat to this audio immediately. | Compact header plus truncated transcript preview; no dedicated button or status pill. | ❌ Pending |
+| **Audio Card** | `Non-Transcribed` | Tap | Opacity dip 120ms | **Rejects Expansion**. | Replaces shake keyframes per `AudioDrawer.md` §R.5. | ❌ Pending |
+| **Audio Card** | `Transcribed` | Tap | Expand `spring(0.9, 500)` | Opens Hub. | Hub fades in with 4px Y-translation. | ❌ Pending |
+| **Audio Card** | `问AI` | Tap | Navigate | **Creates/Opens Analyst Session** | Session binding. Aurora glass `ask-ai` button with "✧ Ask AI" glyph. | ✅ Verified |
+| **Audio Drawer** | `Select Mode` | Chat attach/upload | Slide Up `spring(0.9, 500)` | Opens `选择要讨论的录音`. | Static picker; no swipe or expand affordances. | ❌ Pending |
+| **Audio Card** | `Select / Current` | Visible in selector | Aurora edge-bar (left, 2px) | Remains current discussion audio. | Inline `当前讨论中 · …` in summary; no pill chrome per `AudioDrawer.md` §R.4. | ❌ Pending |
+| **Audio Card** | `Select / Transcribed` | Tap | Ripple + edge-bar slide-in 180ms | Switch chat to this audio immediately. | Compact header plus truncated transcript preview; no dedicated button or status pill. | ❌ Pending |
 | **Audio Card** | `Select / Pending` | Tap | Ripple | Switch chat and continue processing. | Compact row-body copy explains continued processing in chat; no source badge chrome. | ❌ Pending |
 
 ---

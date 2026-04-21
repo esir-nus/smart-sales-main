@@ -1,8 +1,10 @@
 # Audio Drawer Module
 
 > **Definitions**: Uses [GLOSSARY.md](../GLOSSARY.md)
-> **Status**: ✅ Shipped
+> **Status**: ✅ Shipped (semantics) · 🚧 Refined visual/motion contract in effect 2026-04-21
 > **Source**: Extracted from prism-ui-ux-contract.md L707-849
+> **Visual prototype**: [`docs/inbox/audio-drawer-vibes.html`](../../inbox/audio-drawer-vibes.html) — HTML source of truth for the refined direction below
+> **Visual/motion authority**: §R (Refined Visual & Motion Contract) supersedes the table/ASCII chrome notes in §Layout Structure, §Interactions Spring row, §Audio Card States, and §Transcription States. Behavioural contract (Browse vs Select modes, gesture semantics, sync flow) is unchanged and remains authoritative above.
 
 ---
 
@@ -200,3 +202,152 @@ Browse-Mode Drawer Opens
 | **Audio Card** | `collapsed`, `expanded`, `playing`, `transcribing`, `current_discussion`, `selectable` |
 | **Transcript Box** | `folded`, `unfolded`, `streaming` |
 | **Upload Button** | `idle`, `picking`, `uploading` |
+
+---
+
+## R. Refined Visual & Motion Contract (2026-04-21)
+
+> **Authority**: This section governs the **visual layer and motion** of the Audio Drawer. The behavioural contract above (Browse/Select semantics, gestures, sync flow, mode-specific microcopy) is unchanged. Where this section conflicts with the older ASCII chrome diagrams or `Spring Animation: damping 25, stiffness 200` row, this section wins.
+> **Reference prototype**: `docs/inbox/audio-drawer-vibes.html` — element tree, tokens, and scenarios are mirrored verbatim from that file.
+> **Vibe**: refined glass + aurora — keep the frosted sheet and aurora wash, strip one layer of visual noise per surface, replace shimmer-text hints with a single aurora chip, unify all springs to critically-damped (no overshoot), and move state out of pill chrome into typography weight + aurora-dot color.
+
+### R.1 Layer & surface treatment
+
+| Surface | Treatment |
+|---------|-----------|
+| Sheet | `rgba(22,24,32,0.62)` + `backdrop-filter: blur(28px) saturate(140%)` · top corners radius 22 · 1px hairline border `white/8%` on top edge |
+| Aurora wash | Top 140px of sheet · radial-gradient layer (`#4a7cff` 28% top-left, `#8a5cff` 22% top-right) masked by linear fade to transparent at 100% · pointer-events none |
+| Scrim | `rgba(10,12,18,0.38)` · fades with sheet via critically-damped opacity tween |
+| Card (collapsed) | `white/4%` background · 1px hairline `white/6%` · radius 14 |
+| Card (hover/focus) | `white/6%` |
+| Card (expanded) | `white/7%` + border `white/10%` |
+| Card (current in Select Mode) | aurora edge-bar (2px wide, top-to-bottom, `linear-gradient(#4a7cff → #8a5cff)`) on left edge — replaces any `当前讨论中` pill chrome |
+| Hairline | `white/6%` everywhere (hub divider, accordion separators) |
+
+Z-order remains Drawer (Z=4.0) per `ui_element_registry.md` §0. Handle remains Touchable (Z=5.0).
+
+### R.2 Element tree (canonical)
+
+```
+sheet
+├ handle             (36×4, ink/22%)
+├ sheet-header
+│  ├ title-block
+│  │  ├ sheet-title  (15/600, -0.005em)            "Recordings" or "选择要讨论的录音"
+│  │  └ sheet-sub    (10, uppercase, ink/45%)      "browse · 12 items" / "select · tap to attach" / "browse · syncing"
+│  └ sync-pill       (glass chip · aurora dot encodes state · text label)
+└ list (gutter 14, gap 8)
+   ├ card[PENDING]
+   │  ├ row(star, filename, meta)
+   │  └ pending-hint                                aurora chip "→ transcribe" + static hint copy
+   ├ card[TRANSCRIBING]
+   │  ├ row(star, filename, meta)
+   │  └ progress(track 2px · aurora gradient fill · numeric % label)
+   ├ card[TRANSCRIBED, COLLAPSED]
+   │  ├ row(★ active when starred, filename, meta)
+   │  └ summary (max 2 lines)
+   ├ card[TRANSCRIBED, EXPANDED]                    Browse Mode only
+   │  ├ row + summary
+   │  └ hub
+   │       ├ player    (aurora play-btn · tabular numerals · waveform mask)
+   │       ├ ask-ai    (aurora glass button, "✧ Ask AI")
+   │       └ accordion (Transcript / Summary / Chapters / AI Insights)
+   └ card[ERROR]
+       ├ row(star, filename, meta)
+       └ pending-hint   (warn-gradient chip "retry" + "transcription failed")
+```
+
+### R.3 Token table
+
+| Token | Value |
+|-------|-------|
+| `surface.sheet` | `rgba(22,24,32,0.62)` + blur 28 sat 140 |
+| `surface.card` / `.hover` / `.expanded` | `white/4%` · `white/6%` · `white/7%` |
+| `hairline` | `white/6%` |
+| `aurora.primary` | `#4a7cff → #8a5cff` (chip, ask-ai, edge-bar) |
+| `aurora.active` | `#4a7cff → #3ad6c8` (progress fill, playing indicator) |
+| `aurora.warn` / `aurora.error` | `#ffb86b` / `#ff6b7a` |
+| `ink.100 / 70 / 45 / 25` | primary / body / meta / disabled |
+| `radius.sheet / .card / .btn / .pill` | 22 / 14 / 10 / 999 |
+| `type.title / .body / .meta / .micro` | 15/600 · 13.5/500 · 11 tabular · 10 uppercase |
+| `space.list-gutter / .card-pad / .card-gap` | 14 · 12×14 · 8 |
+| `motion.sheet / .card / .micro` | 320 / 240 / 180 ms · cubic-bezier(0.2,0,0,1) |
+| `motion.spring` (Compose) | `dampingRatio = 0.9`, `stiffness = 500` |
+
+### R.4 State → visual mapping
+
+| Surface | State | Treatment (replaces older chrome) |
+|---------|-------|-----------------------------------|
+| Sync pill | `idle` | dot = `aurora.active` (mint), label = "Synced" |
+| Sync pill | `syncing` | dot = `aurora.primary` (cool blue), pulses 1.4s ease, label = "Syncing", `sheet-sub` shows "browse · syncing" |
+| Sync pill | `done` | identical to `idle`; transition fades over 180ms |
+| Sync pill | `error` | dot = `aurora.error`, label = "Retry" (tap = re-trigger sync), `sheet-sub` = "browse · sync failed" |
+| Card | `pending` (Browse) | row + `pending-hint` (aurora chip "→ transcribe" + "swipe right to start") |
+| Card | `pending` (Select) | row + `pending-hint` ("pending · tap to select"), no chip |
+| Card | `transcribing` | row + `progress` (aurora gradient fill, % label). No "正在转写..." text. |
+| Card | `transcribed, collapsed` | row + `summary` (2 lines max). No `已转写` pill. |
+| Card | `transcribed, expanded` | as above + `hub` (player → ask-ai → accordion). Browse Mode only. |
+| Card | `current_discussion` (Select) | aurora edge-bar (left, 2px) + `summary` ("当前讨论中 · …" inline). No pill. |
+| Card | `error` | `pending-hint` with warn-gradient chip "retry" + "transcription failed". Replaces "转写失败，请重试" badge. |
+
+### R.5 Motion contract (critically damped, quick)
+
+All motion uses one curve and three durations. **No `MediumBouncy`, `LowBouncy`, or visible overshoot anywhere.** This replaces the `damping: 25, stiffness: 200` row in §Interactions and the bouncy springs at `AudioDrawer.kt:93–103` and `AudioCard.kt:158–162`.
+
+| Surface | Compose spring | CSS equivalent | Notes |
+|---------|----------------|----------------|-------|
+| Sheet open | `spring(dampingRatio = 0.9f, stiffness = 500f)` | `cubic-bezier(0.2, 0, 0, 1) 320ms` | Slide up from bottom edge |
+| Sheet close | `spring(dampingRatio = 0.9f, stiffness = 500f)` | `cubic-bezier(0.2, 0, 0, 1) 320ms` | Same curve in reverse |
+| Card expand / collapse | `spring(dampingRatio = 0.9f, stiffness = 500f)` | `cubic-bezier(0.2, 0, 0, 1) 240ms` | Hub fades in with 4px Y-translation |
+| Accordion row | `tween(180ms, easing = FastOutSlowInEasing)` | `cubic-bezier(0.2, 0, 0, 1) 180ms` | Chevron rotates 90° |
+| Sync dot pulse (syncing only) | `infiniteRepeatable(tween(1400ms, ease))` opacity 0.5 ↔ 1.0 | n/a | The only infinite transition that survives the refresh |
+| Disallowed-tap feedback | `tween(120ms)` opacity 1.0 → 0.6 → 1.0 | n/a | **Replaces** the shake keyframes at `AudioCard.kt:171–179` |
+
+**Removed motion primitives** (do not reintroduce):
+- `DampingRatioMediumBouncy`, `DampingRatioLowBouncy` — overshoot reads as toy.
+- Shimmer infinite transitions on PENDING hint and buffer placeholders — replaced by aurora chip + static hint.
+- Shake keyframes on reject — replaced by a single 120ms opacity dip.
+
+### R.6 Interaction affordances under the refined chrome
+
+Behaviour from §Interactions, §Browse-Mode Gestures, §Select-Mode Interaction Contract is unchanged. Only the **visual signal** changes:
+
+| Gesture | Old signal | Refined signal |
+|---------|-----------|----------------|
+| Swipe right (PENDING, Browse) | shimmer text "右滑开始转写 >>>" | aurora chip "→ transcribe" + static hint "swipe right to start" |
+| Swipe left (Browse) | reveal tray | unchanged tray, hairline-bordered glass surface, aurora-error tint on Delete |
+| Tap body (TRANSCRIBED) | expand | unchanged; hub fades in via card spring |
+| Tap body (non-TRANSCRIBED) | shake | 120ms opacity dip |
+| Long-press | rename dialog | unchanged dialog; surface uses sheet-glass tokens |
+| Tap card (Select Mode) | ripple | aurora edge-bar slides in over 180ms on the selected card; previous selection's edge-bar fades out |
+| Tap [问AI] / Ask AI | navigate | unchanged; button is the aurora glass `ask-ai` element with "✧ Ask AI" glyph prefix |
+
+### R.7 Browse vs Select preserved
+
+The dual-mode contract from §Mode Variants and §Select-Mode Interaction Contract is preserved verbatim. Only the **chrome** changes per the tables above. In particular:
+
+- Select Mode still suppresses swipe, expansion, and `问AI`.
+- Select Mode header copy still uses "选择要讨论的录音" with the `sheet-sub` micro-label "select · tap to attach".
+- Current discussion is now signaled by the aurora edge-bar + inline `当前讨论中 · …` copy in `summary`, **not** a status pill.
+- Compact transcript preview rules from §Select-Mode Card States are unchanged.
+
+### R.8 Implementation pointers
+
+| File | Change |
+|------|--------|
+| `app-core/src/main/java/com/smartsales/prism/ui/drawers/AudioDrawer.kt` :93–103 | Replace `DampingRatioMediumBouncy` / `DampingRatioNoBouncy` with `spring(dampingRatio = 0.9f, stiffness = 500f)` for both open and close |
+| `app-core/src/main/java/com/smartsales/prism/ui/drawers/AudioCard.kt` :158–162 | Replace `DampingRatioLowBouncy / StiffnessLow` with `spring(dampingRatio = 0.9f, stiffness = 500f)` for card expand/collapse |
+| `app-core/src/main/java/com/smartsales/prism/ui/drawers/AudioCard.kt` :171–179 | Replace shake `keyframes` with `animateFloatAsState` for opacity dip 1.0 → 0.6 → 1.0 over 120ms |
+| `AudioCard.kt` (PENDING shimmer) | Remove infinite shimmer transition; render `pending-hint` composable: aurora chip + static text |
+| `AudioCard.kt` (status pills) | Remove `已转写` / `转写中` / `待处理` pill composables; rely on body treatment from §R.4 |
+| `AudioDrawer.kt` (sheet-header) | Add `sheet-sub` text below title (10sp, uppercase, ink/45%); reflect sync state in sub copy |
+| Glass surface | Confirm `Modifier.background(...).blur(...)` or equivalent renders sheet at `surface.sheet` token. If current implementation uses a non-blurred translucent fill, switch to `androidx.compose.ui.graphics.BlurEffect` or platform `RenderEffect.createBlurEffect` |
+
+Implementation lands on a feature branch from `develop` (Android lane) per `docs/specs/declaration-first-shipping.md`. This contract itself ships on the `docs` lane.
+
+### R.9 Verification
+
+1. Open `docs/inbox/audio-drawer-vibes.html` in any browser. Each scenario tab (Browse / Select / Syncing / Error) should match the §R.4 mapping. The "Replay motion" button should produce a single, smooth 320ms slide-up with no overshoot.
+2. After Kotlin implementation: drag drawer up → confirm critically-damped feel (no bounce). Tap a TRANSCRIBED card → hub fades in over ~240ms with no overshoot. Swipe-right on a PENDING card in Browse Mode → aurora chip activates and transcription begins.
+3. `./gradlew :app:assembleDebug` then `./gradlew :app:installDebug`; `./gradlew testDebugUnitTest` and `./gradlew lint` clean.
+4. Cross-doc: `docs/specs/ui_element_registry.md` §2 (Audio Card spring rows) and `docs/specs/prism-ui-ux-contract.md` §1.8 reference the refined contract via this document; no behavioural rules duplicated.

@@ -118,7 +118,7 @@ Role: This document is strictly a supporting index that maps UI modules, compone
 | Shared Shell / Base Runtime Shell | Shipped | [../core-flow/base-runtime-ux-surface-governance-flow.md](../core-flow/base-runtime-ux-surface-governance-flow.md) plus [base-runtime-unification.md](./base-runtime-unification.md) |
 | Scheduler Drawer | Shipped | [SchedulerDrawer.md](../cerb-ui/scheduler/contract.md) |
 | History Drawer | Shipped | [HistoryDrawer.md](../cerb/session-history/spec.md) |
-| Audio Drawer | Shipped | [AudioDrawer.md](../cerb/audio-management/spec.md) |
+| Audio Drawer | Shipped (refined visual/motion contract 2026-04-21) | [AudioDrawer.md](./modules/AudioDrawer.md) · cerb behaviour: [audio-management/spec.md](../cerb/audio-management/spec.md) |
 | Connectivity Modal | Shipped | [ConnectivityModal.md](../cerb/connectivity-bridge/spec.md) |
 | User Center | Shipped | [UserCenter.md](./modules/UserCenter.md) |
 | Analyst Mode | In Progress | [AnalystMode.md](../cerb/model-routing/spec.md) |

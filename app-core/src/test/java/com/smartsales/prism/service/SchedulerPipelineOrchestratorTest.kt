@@ -101,4 +101,23 @@ class SchedulerPipelineOrchestratorTest {
             )
         }
     }
+
+    @Test
+    fun `failed foreground service start does not leave stale queued work`() = runTest {
+        mockStatic(ContextCompat::class.java).use { mockedContextCompat ->
+            mockedContextCompat
+                .`when`<Intent> { ContextCompat.startForegroundService(eq(context), any<Intent>()) }
+                .thenThrow(IllegalStateException("fgs rejected"))
+
+            orchestrator.enqueue("log_20260421_090004.wav")
+
+            assertFalse(orchestrator.hasPendingWork())
+            assertEquals(null, withTimeoutOrNull(50) { orchestrator.receiveNext() })
+
+            mockedContextCompat.verify(
+                { ContextCompat.startForegroundService(eq(context), any<Intent>()) },
+                times(1)
+            )
+        }
+    }
 }

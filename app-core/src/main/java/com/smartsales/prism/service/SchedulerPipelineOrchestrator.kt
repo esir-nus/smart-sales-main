@@ -25,56 +25,56 @@ open class SchedulerPipelineOrchestrator @Inject constructor(
         val normalized = filename.trim()
         if (normalized.isBlank()) return
 
-        var shouldStartService = false
-        var droppedDuplicate = false
-        var queueSize = 0
-        var inFlightDuplicate = false
-
-        synchronized(lock) {
-            inFlightDuplicate = normalized in inFlight
-            droppedDuplicate = normalized in queued || inFlightDuplicate
+        val decision = synchronized(lock) {
+            val inFlightDuplicate = normalized in inFlight
+            val droppedDuplicate = normalized in queued || inFlightDuplicate
             if (!droppedDuplicate) {
                 queued.add(normalized)
-                queue.trySend(normalized).getOrThrow()
-                queueSize = queued.size
-                if (!serviceMarkedRunning) {
-                    serviceMarkedRunning = true
-                    shouldStartService = true
-                }
-            } else {
-                queueSize = queued.size
             }
+            val shouldStartService = !droppedDuplicate && !serviceMarkedRunning
+            if (shouldStartService) {
+                serviceMarkedRunning = true
+            }
+            EnqueueDecision(
+                shouldStartService = shouldStartService,
+                droppedDuplicate = droppedDuplicate,
+                queueSize = queued.size,
+                inFlightDuplicate = inFlightDuplicate
+            )
         }
 
-        if (droppedDuplicate) {
+        if (decision.droppedDuplicate) {
             Log.d(
                 TAG,
-                "enqueue dropped_duplicate filename=$normalized queue=$queueSize inflight=$inFlightDuplicate"
+                "enqueue dropped_duplicate filename=$normalized queue=${decision.queueSize} inflight=${decision.inFlightDuplicate}"
             )
             return
         }
 
         Log.d(
             TAG,
-            "enqueue filename=$normalized queue=$queueSize inflight=$inFlightDuplicate"
+            "enqueue filename=$normalized queue=${decision.queueSize} inflight=${decision.inFlightDuplicate}"
         )
 
-        if (!shouldStartService) return
-
-        try {
-            withContext(Dispatchers.Main.immediate) {
-                ContextCompat.startForegroundService(
-                    context,
-                    SchedulerPipelineForegroundService.newIntent(context)
-                )
+        if (decision.shouldStartService) {
+            try {
+                withContext(Dispatchers.Main.immediate) {
+                    ContextCompat.startForegroundService(
+                        context,
+                        SchedulerPipelineForegroundService.newIntent(context)
+                    )
+                }
+            } catch (t: Throwable) {
+                synchronized(lock) {
+                    queued.remove(normalized)
+                    serviceMarkedRunning = false
+                }
+                Log.e(TAG, "Failed to start scheduler pipeline foreground service", t)
+                return
             }
-        } catch (t: Throwable) {
-            synchronized(lock) {
-                queued.remove(normalized)
-                serviceMarkedRunning = false
-            }
-            Log.e(TAG, "Failed to start scheduler pipeline foreground service", t)
         }
+
+        queue.trySend(normalized).getOrThrow()
     }
 
     open suspend fun receiveNext(): String = queue.receive()
@@ -106,3 +106,10 @@ open class SchedulerPipelineOrchestrator @Inject constructor(
         private const val TAG = "SchedulerPipelineOrchestrator"
     }
 }
+
+private data class EnqueueDecision(
+    val shouldStartService: Boolean,
+    val droppedDuplicate: Boolean,
+    val queueSize: Int,
+    val inFlightDuplicate: Boolean
+)

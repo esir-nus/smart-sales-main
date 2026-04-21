@@ -20,9 +20,9 @@ class RealInspirationRepositoryTest {
         val items = repository.getAll().first()
 
         assertEquals(1, items.size)
-        val item = items.first() as SchedulerTimelineItem.Inspiration
+        val item = items.first()
         assertEquals("以后想学吉他", item.title)
-        assertTrue(item.timeDisplay.isBlank())
+        assertTrue(item.timeDisplay.isNotBlank())
     }
 
     @Test
@@ -54,7 +54,7 @@ class RealInspirationRepositoryTest {
         repository.delete(firstId)
 
         val items = repository.getAll().first()
-        assertEquals(listOf("第二条"), items.map { (it as SchedulerTimelineItem.Inspiration).title })
+        assertEquals(listOf("第二条"), items.map { it.title })
     }
 
     @Test

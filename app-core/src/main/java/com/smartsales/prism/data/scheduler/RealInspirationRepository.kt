@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.map
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -33,6 +35,8 @@ class RealInspirationRepository private constructor(
 
     internal constructor(prefs: SharedPreferences, @Suppress("UNUSED_PARAMETER") testOnly: Boolean = true) :
         this(prefs)
+
+    private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault())
     
     // 内存缓存 + Flow 发射
     private val _inspirations = MutableStateFlow<List<InspirationData>>(emptyList())
@@ -107,7 +111,7 @@ class RealInspirationRepository private constructor(
     private fun InspirationData.toModel(): SchedulerTimelineItem.Inspiration {
         return SchedulerTimelineItem.Inspiration(
             id = id,
-            timeDisplay = "",
+            timeDisplay = timeFormatter.format(Instant.ofEpochMilli(createdAt)),
             title = text
         )
     }

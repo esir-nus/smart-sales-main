@@ -327,21 +327,27 @@ combine(_activeDayOffset, _refreshTrigger.asSharedFlow()) { offset, _ -> offset 
 
 **Symptom**: Inspiration cards show only 💡 emoji, no title text visible  
 **Root Cause**: **Prompt told LLM to omit content for inspiration classification**  
-- DashscopeExecutor L263: `如果是 "inspiration"，只需返回 classification 字段，tasks 可省略`
-- LLM returns `{"classification": "inspiration"}` with NO title/content field
-- SchedulerLinter extracts `json.optString("title", "")` → empty string
+- Uni-C extractor prompt allowed inspiration output without durable content semantics
+- LLM/Extractor returns inspiration classification with missing or blank content
+- SchedulerLinter extracts blank content and persistence stores an empty string
 - InspirationRepository stores empty string → UI renders empty text  
 **Wrong Approach**: Assuming LLM would include the inspiration text automatically  
 **Correct Fix**:  
-1. Update prompt to **require** `inspirationText` field for inspiration classification
-2. Add example: `{"classification": "inspiration", "inspirationText": "以后想学吉他"}`
-3. Update Linter to read `inspirationText` with fallback chain  
+1. Update the real Uni-C prompt owner to require non-empty inspiration content
+2. Add a worked example using `以后想学吉他`
+3. Update the linter fallback chain to read content, then title, then the raw utterance
+4. Drop blank inspiration writes before repository insert and add persistence coverage
 **File(s)**:  
-- [DashscopeExecutor.kt L262-274](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/data/real/DashscopeExecutor.kt#L262-L274)
-- [SchedulerLinter.kt L37-40](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/domain/scheduler/SchedulerLinter.kt#L37-L40)  
+- [PromptCompiler.kt](file:///home/cslh-frank/main_app/core/pipeline/src/main/java/com/smartsales/core/pipeline/PromptCompiler.kt)
+- [RealUniCExtractionService.kt](file:///home/cslh-frank/main_app/core/pipeline/src/main/java/com/smartsales/core/pipeline/RealUniCExtractionService.kt)
+- [SchedulerLinter.kt](file:///home/cslh-frank/main_app/domain/scheduler/src/main/java/com/smartsales/prism/domain/scheduler/SchedulerLinter.kt)
+- [SchedulerLinterParsingSupport.kt](file:///home/cslh-frank/main_app/domain/scheduler/src/main/java/com/smartsales/prism/domain/scheduler/SchedulerLinterParsingSupport.kt)
+- [FastTrackMutationEngine.kt](file:///home/cslh-frank/main_app/domain/scheduler/src/main/java/com/smartsales/prism/domain/scheduler/FastTrackMutationEngine.kt)
+- [RealInspirationRepository.kt](file:///home/cslh-frank/main_app/app-core/src/main/java/com/smartsales/prism/data/scheduler/RealInspirationRepository.kt)
+- [RealInspirationRepositoryTest.kt](file:///home/cslh-frank/main_app/app-core/src/test/java/com/smartsales/prism/data/scheduler/RealInspirationRepositoryTest.kt)  
 **Pattern**: **When LLM classifies + extracts data, ensure prompt REQUIRES all fields that downstream code expects.** Don't rely on optional fields.  
 **Heuristic**: If Linter extracts field X from LLM JSON, grep prompt for requirement of field X.  
-**Status**: ✅ CONFIRMED 2026-02-05
+**Status**: Fixed in the current Uni-C extractor/linter path on 2026-04-21; keep the prompt/linter contract alignment check in place
 
 ---
 

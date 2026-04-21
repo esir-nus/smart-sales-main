@@ -163,6 +163,8 @@ Owns:
 - refusing schedulable intent
 - extracting the core idea only
 - declining when the utterance is better handled by later-lane conversational logic
+- requiring non-empty inspiration content in the prompt contract, with a worked example for `以后想学吉他`
+- emitting extractor-side evidence for raw Uni-C JSON and extracted content length
 
 ### SchedulerLinter
 
@@ -170,6 +172,7 @@ Owns:
 
 - strict decode of the serializer-backed `Uni-C` contract
 - validating that inspiration payloads are structurally sound
+- falling back from `idea.content` to `idea.title` to the raw transcript so legacy/partial extractor output does not persist blank inspiration text
 - refusing malformed or task-shaped payloads
 
 ### Inspiration Repository / Owner
@@ -178,6 +181,7 @@ Owns:
 
 - the only real write path for `Uni-C`
 - persistence of the extracted idea
+- safe recovery to empty state when persistence JSON is corrupt
 - storage semantics that remain separate from scheduler tasks
 
 ## Persistence Contract
@@ -215,6 +219,7 @@ Unacceptable render shapes include:
 `Uni-C` should emit distinct runtime evidence:
 
 - `THOUGHT_EXTRACTED`
+- extractor raw JSON plus extracted inspiration content length at the extractor -> linter joint
 - `PATH_A_DB_WRITTEN` for inspiration storage
 - `UI_STATE_EMITTED` for the inspiration lane / confirmation state
 
@@ -225,6 +230,7 @@ It must not reuse scheduler create summaries that make inspiration look like `Un
 T3 verification should prove:
 
 - timeless input becomes one inspiration artifact
+- legacy/partial extractor output falls back to the raw transcript instead of persisting blank inspiration text
 - no scheduler task row is created
 - no conflict check is run
 - no Path B enrichment branch is activated

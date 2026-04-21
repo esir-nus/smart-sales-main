@@ -147,8 +147,15 @@ workflows/
 !.agent/
 !.agent/workflows/
 
-# Claude local working state
+# Agent governance (personal, not project)
 .claude/plans/
+.claude/sessions/
+.claude/cache/
+.codex/.tmp/
+**/*.agent.md
+**/*.local.md
+notes/
+scratch/
 
 # Generated docs artifacts
 CHANGELOG.html

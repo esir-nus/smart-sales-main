@@ -4,6 +4,7 @@
 // Author: created on 2026-04-16
 
 import { AudioPage } from './AudioPage';
+import { SchedulerPage } from './SchedulerPage';
 
 @Entry
 @Component
@@ -26,7 +27,7 @@ struct Index {
         if (this.currentTab === 0) {
           AudioPage()
         } else if (this.currentTab === 1) {
-          SchedulerPagePlaceholder()
+          SchedulerPage()
         } else if (this.currentTab === 2) {
           ChatPagePlaceholder()
         } else if (this.currentTab === 3) {
@@ -74,29 +75,6 @@ interface TabItem {
   label: string;
   icon: Resource;
   route: string;
-}
-
-@Component
-struct SchedulerPagePlaceholder {
-  build() {
-    Column() {
-      Text('日程')
-        .fontSize(24)
-        .fontWeight(FontWeight.Bold)
-      Text('任务创建、冲突检测、提醒管理')
-        .fontSize(14)
-        .fontColor('#666666')
-        .margin({ top: 8 })
-      Text('Phase 2B: 基于 H-02 后端验证构建')
-        .fontSize(12)
-        .fontColor('#999999')
-        .margin({ top: 16 })
-    }
-    .width('100%')
-    .height('100%')
-    .justifyContent(FlexAlign.Center)
-    .alignItems(HorizontalAlign.Center)
-  }
 }
 
 @Component

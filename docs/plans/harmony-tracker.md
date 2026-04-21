@@ -261,54 +261,59 @@ Every active Harmony program-summary entry must include:
 - `Platform Lane`: `harmony`
 - `Capability Class`: `complete-native`
 - `Owner`: Harmony-native complete app lane
-- `Status`: `Active` (Phase 2A in progress)
+- `Status`: `Active` (Phase 2C implementation landed; Phase 2B device-verified, Phase 2C device evidence pending)
 - `Source of Truth`:
   - `docs/platforms/harmony/app-architecture.md`
   - `docs/platforms/harmony/native-development-framework.md`
   - `docs/specs/cross-platform-sync-contract.md`
   - all shared `docs/core-flow/**`, `docs/cerb/**`, and `docs/specs/**` docs
 - `Required Evidence`:
-  - app scaffold builds and launches on device
-  - each feature phase verified with device-accepted install and hilog evidence
-  - domain model translations match Kotlin domain/ semantics
-  - Harmony overlay docs updated per feature delivery
+  - app scaffold builds locally from the Harmony-owned root
+  - each feature phase records what is build-verified versus device-verified
+  - domain model translations stay aligned to Kotlin `domain/` semantics
+  - signing and `hdc` proof is recorded before the lane claims device parity
 - `UI Translation / Native Rewrite`:
   - complete native ArkTS/ArkUI implementation, not a Compose port
   - absorbs Tingwu container patterns as foundation
-  - page-by-page native rewrite following translation-first workflow
+  - page-native scheduler UI is now wired into the public shell instead of a placeholder
 - `Backend / Dataflow Evidence`:
-  - domain models translated from Kotlin domain/ layer with semantic fidelity
-  - service layer implements same API contracts as Android data/ layer
-  - state management uses proven pub-sub repository pattern from Tingwu container
-- `Supported Set` (phased):
-  - Phase 1: app shell, navigation, lifecycle, config generation (Complete)
-  - Phase 2A: audio pipeline (Tingwu import, upload, poll, artifacts — migrated from H-01) (Service layer and UI complete, device evidence pending)
-  - Phase 2B: scheduler (create, conflict, reminders — builds on H-02 backend proof)
-  - Phase 2C: AI/chat (LLM conversation, session binding)
-  - Phase 2D: CRM/entity management
-  - Phase 2E: device integration, onboarding, settings
+  - state management follows the repository pub-sub shape proven in the Tingwu container
+  - Phase 2B now includes manual exact-task create/list/complete/delete plus local JSON persistence
+  - Phase 2C now adds GUID-preserving reschedule, full-list conflict evaluation on add/reschedule/persist/initialize, and deterministic overlap seeding for the device harness
+  - reminder publish/cancel is explicitly deferred to HS-011 when Harmony adapter provisioning is not yet ready
+- `Supported Set`:
+  - Phase 1: app shell, navigation, lifecycle, config generation
+  - Phase 2A: audio pipeline (import, upload, poll, artifacts)
+  - Phase 2B: manual scheduler create/list/complete/delete with cold-launch restore
+  - Phase 2C: manual scheduler reschedule, conflict caution render, and deterministic conflict harness preset
 - `Disabled Set`:
-  - features not yet in the current phase must be hidden or blocked, not faked
-  - badge pairing deferred pending HarmonyOS NEXT BLE API availability
+  - LLM/voice scheduler extraction
+  - real Harmony reminder adapter delivery
+  - Phase 2D/2E surfaces beyond placeholders
 - `User-visible Limitation`:
-  - during phased delivery, the app honestly surfaces only the features that are complete
+  - the app only claims the slices that are locally implemented and verified; reminder adapter delivery remains deferred to HS-011 even though the reminder-attempt log now exists
 - `Does Not Own`:
-  - shared product semantics (owned by develop branch)
-  - Android implementation (owned by Android lineage)
-  - cross-platform governance (owned by `docs/specs/platform-governance.md`)
+  - shared product semantics
+  - Android implementation shape
+  - cross-platform governance outside the Harmony-owned root
 - `Branch Restore Snapshot`:
-  - `Branch`: `platform/harmony`
-  - `Purpose`: complete native HarmonyOS app for full product parity
+  - `Branch`: `harmony/scheduler-phase-2b`
+  - `Purpose`: complete native HarmonyOS app for phased parity delivery
   - `Capability Class`: `complete-native`
-  - `Baseline Commit or Tag`: `30353b3e1` (post-migration-restructure sync)
-  - `Current Head Snapshot`: Phase 2A service layer complete (HttpClient, FileStore, Picker, OssService, TingwuService, AudioRepository, AudioPage, Index wiring)
+  - `Baseline Commit or Tag`: `platform/harmony` plus imported `smartsales-app` scaffold
+  - `Current Head Snapshot`: Phase 2C scheduler slice added on top of the complete app scaffold
   - `Restore Procedure Reference`: this tracker entry plus `docs/platforms/harmony/app-architecture.md`
-  - `Current Restore Confidence`: Phase 2A builds and type-checks; device-evidence gate (hvigor build + hdc install + hilog) next
-- `Last Updated`: `2026-04-16`
+  - `Current Restore Confidence`: local build plus AGC signing/install/device proof now exist for create -> restore -> complete -> delete using the shared `smartsales.HOS.test` lane
+- `Last Updated`: `2026-04-21`
 - `Notes / Drift`:
-  - this entry supersedes H-01 as the primary Harmony delivery vehicle
-  - H-01 Tingwu container patterns are the architectural foundation
-  - Phase 2A implementation: SignatureUtils, FormatUtils, Audio.ets domain models, AppConfig/AppRuntimeConfig, HttpClient, FileStore, Picker, OssService, TingwuService, AudioRepository, AudioPage, and Index.ets wiring complete
-  - H-02 scheduler backend proof informs Phase 2B scheduler delivery
-  - H-03 UI verification patterns inform page-native rewrite approach
-  - the cross-platform sync contract (`docs/specs/cross-platform-sync-contract.md`) governs how shared truth flows to this app
+  - the complete-native app scaffold was restored into this branch before HS-006 implementation because the current `platform/harmony` branch did not yet carry it as tracked content
+  - `Scheduler.ets` now mirrors the Android task semantics with Harmony-owned `createdAt` / `updatedAt` metadata
+  - `SchedulerRepository.ets` mirrors the audio repository persistence pattern and writes `smartsales_scheduler_tasks.json`
+  - reminder registration is intentionally logged as deferred rather than faked until a real Harmony reminder adapter seam is available
+  - the HS-006 device harness now uses a deterministic form preset button so the create path still flows through `handleCreate()` / `SchedulerRepository.addTask()` / `FileStore.saveTasks()` without relying on unstable Harmony IME automation
+  - the Phase 2C harness adds a second deterministic preset that seeds the overlap scenario directly through the Harmony repository so conflict/reschedule L3 proof can be repeated without fragile manual setup
+  - Phase 2C repository writes now normalize conflict flags inside the existing persist pipeline and rerun that evaluation on initialize so cold relaunch restores the latest conflict state without a second storage path
+  - Phase 2C reschedule currently emits honest deferred HS-011 stub logs for cancel-old and publish-new; this proves the adapter seam without claiming reminder delivery parity
+  - the scheduler list row key now includes `updatedAt` and completion state because the first device pass exposed ArkUI row reuse that left the `Complete` button visually stale after a successful completion
+  - on-device evidence on connect key `4NY0225613001090` now includes `loadTasks success count=1`, `initialize restored count=1`, `Completed · 2030-01-15 09:30`, `loadTasks success count=0`, and `initialize restored count=0`
+  - the new Phase 2C device loop for conflict create, conflict clear, cold relaunch, deferred reminder seam, and FIRE_OFF bypass is defined but still needs operator-run `hilog` plus screenshots before this row can claim Phase 2C device verification

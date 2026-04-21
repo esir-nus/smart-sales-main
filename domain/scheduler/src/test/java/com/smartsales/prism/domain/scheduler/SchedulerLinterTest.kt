@@ -482,6 +482,56 @@ class SchedulerLinterTest {
     }
 
     @Test
+    fun `Uni-C inspiration extraction falls back to title when content is blank`() {
+        val json = """
+            {
+              "decision": "INSPIRATION_CREATE",
+              "idea": {
+                "content": "   ",
+                "title": "以后想学吉他"
+              }
+            }
+        """.trimIndent()
+
+        val result = linter.parseUniCExtraction(
+            input = json,
+            unifiedId = "uni-c-002",
+            transcript = "原始语音"
+        )
+
+        assertTrue(result is FastTrackResult.CreateInspiration)
+        assertEquals(
+            "以后想学吉他",
+            (result as FastTrackResult.CreateInspiration).params.content
+        )
+    }
+
+    @Test
+    fun `Uni-C inspiration extraction falls back to transcript when model omits content`() {
+        val json = """
+            {
+              "decision": "INSPIRATION_CREATE",
+              "idea": {
+                "content": "",
+                "title": null
+              }
+            }
+        """.trimIndent()
+
+        val result = linter.parseUniCExtraction(
+            input = json,
+            unifiedId = "uni-c-003",
+            transcript = "以后想学吉他"
+        )
+
+        assertTrue(result is FastTrackResult.CreateInspiration)
+        assertEquals(
+            "以后想学吉他",
+            (result as FastTrackResult.CreateInspiration).params.content
+        )
+    }
+
+    @Test
     fun `Uni-C not inspiration returns NoMatch`() {
         val json = """
             {

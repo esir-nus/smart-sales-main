@@ -105,6 +105,18 @@ class FastTrackMutationEngineTest {
     }
 
     @Test
+    fun `CreateInspiration drops blank content before repository insert`() = runTest {
+        val intent = FastTrackResult.CreateInspiration(
+            CreateInspirationParams(unifiedId = "uni-c-blank", content = "   ")
+        )
+
+        val result = engine.execute(intent)
+
+        assertTrue(result is MutationResult.NoMatch)
+        assertEquals(emptyList<Any>(), inspirationRepository.inspirations)
+    }
+
+    @Test
     fun `CreateTasks with unifiedId preserves exact task id`() = runTest {
         val intent = FastTrackResult.CreateTasks(
             CreateTasksParams(

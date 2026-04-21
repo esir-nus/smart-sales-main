@@ -5,9 +5,7 @@
 // 模式来源: tingwu-container/hvigorfile.ts
 
 import fs from 'node:fs';
-import { createRequire } from 'node:module';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 type AppRuntimeConfigShape = {
   TINGWU_BASE_URL: string;
@@ -24,7 +22,7 @@ type AppRuntimeConfigShape = {
   AI_API_KEY: string;
 };
 
-const PROJECT_DIR = path.dirname(fileURLToPath(import.meta.url));
+const PROJECT_DIR = typeof __dirname === 'string' ? __dirname : process.cwd();
 const REPO_ROOT = path.resolve(PROJECT_DIR, '..', '..', '..');
 const LOCAL_PROPERTIES_PATH = path.resolve(REPO_ROOT, 'local.properties');
 const GENERATED_CONFIG_PATH = path.resolve(
@@ -36,8 +34,6 @@ const GENERATED_CONFIG_PATH = path.resolve(
   'config',
   'AppConfig.local.ets'
 );
-const require = createRequire(import.meta.url);
-
 // 构建时必需的键（AI 键在 Phase 2C 前是可选的）
 const REQUIRED_KEYS: Array<keyof AppRuntimeConfigShape> = [
   'TINGWU_BASE_URL',

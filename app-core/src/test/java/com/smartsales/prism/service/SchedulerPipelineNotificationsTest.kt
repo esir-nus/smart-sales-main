@@ -1,6 +1,5 @@
 package com.smartsales.prism.service
 
-import com.smartsales.prism.data.audio.BadgeAudioPipelineRunOutcome
 import com.smartsales.prism.data.connectivity.legacy.FakeDeviceConnectionManager
 import com.smartsales.prism.data.fakes.FakeNotificationService
 import com.smartsales.prism.domain.audio.PipelineEvent
@@ -36,21 +35,23 @@ class SchedulerPipelineNotificationsTest {
     @Test
     fun `completed variants map to expected channels priority and actions`() = runTest {
         val completedVariants = listOf(
-            BadgeAudioPipelineRunOutcome.Completed(
-                SchedulerResult.TaskCreated(
+            PipelineEvent.Complete(
+                result = SchedulerResult.TaskCreated(
                     taskId = "task_1",
                     title = "Client follow up",
                     dayOffset = 0,
                     scheduledAtMillis = 1_745_000_000_000L,
                     durationMinutes = 30
-                )
+                ),
+                filename = "file_0",
+                transcript = "Follow up with client"
             ) to Triple(
                 PrismNotificationChannel.SCHEDULER_PIPELINE_OUTCOME,
                 NotificationPriority.HIGH,
                 NotificationAction.OpenApp()
             ),
-            BadgeAudioPipelineRunOutcome.Completed(
-                SchedulerResult.MultiTaskCreated(
+            PipelineEvent.Complete(
+                result = SchedulerResult.MultiTaskCreated(
                     tasks = listOf(
                         SchedulerResult.TaskCreated(
                             taskId = "task_2",
@@ -67,35 +68,45 @@ class SchedulerPipelineNotificationsTest {
                             durationMinutes = 30
                         )
                     )
-                )
+                ),
+                filename = "file_1",
+                transcript = "两个客户回访"
             ) to Triple(
                 PrismNotificationChannel.SCHEDULER_PIPELINE_OUTCOME,
                 NotificationPriority.HIGH,
                 NotificationAction.OpenApp()
             ),
-            BadgeAudioPipelineRunOutcome.Completed(
-                SchedulerResult.InspirationSaved(id = "insp_1")
+            PipelineEvent.Complete(
+                result = SchedulerResult.InspirationSaved(id = "insp_1"),
+                filename = "file_2",
+                transcript = "灵感"
             ) to Triple(
                 PrismNotificationChannel.SCHEDULER_PIPELINE_OUTCOME,
                 NotificationPriority.HIGH,
                 NotificationAction.OpenApp()
             ),
-            BadgeAudioPipelineRunOutcome.Completed(
-                SchedulerResult.AwaitingClarification(question = "Which client did you mean?")
+            PipelineEvent.Complete(
+                result = SchedulerResult.AwaitingClarification(question = "Which client did you mean?"),
+                filename = "file_3",
+                transcript = "Follow up"
             ) to Triple(
                 PrismNotificationChannel.SCHEDULER_PIPELINE_OUTCOME,
                 NotificationPriority.HIGH,
                 NotificationAction.OpenApp()
             ),
-            BadgeAudioPipelineRunOutcome.Completed(SchedulerResult.Ignored) to Triple(
+            PipelineEvent.Complete(
+                result = SchedulerResult.Ignored,
+                filename = "file_4",
+                transcript = "Noise"
+            ) to Triple(
                 PrismNotificationChannel.SCHEDULER_PIPELINE_PROGRESS,
                 NotificationPriority.LOW,
                 NotificationAction.None
             )
         )
 
-        completedVariants.forEachIndexed { index, (outcome, expected) ->
-            val dispatch = notifications.dispatchOutcome("file_$index", outcome)
+        completedVariants.forEachIndexed { index, (event, expected) ->
+            val dispatch = notifications.dispatchOutcome("file_$index", event)
             val shown = notificationService.shownNotifications[index]
 
             assertEquals(expected.first, shown.channel)
@@ -117,9 +128,10 @@ class SchedulerPipelineNotificationsTest {
         stages.forEachIndexed { index, stage ->
             val dispatch = notifications.dispatchOutcome(
                 filename = "error_$index",
-                outcome = BadgeAudioPipelineRunOutcome.Failed(
+                event = PipelineEvent.Error(
                     stage = stage,
-                    message = "boom"
+                    message = "boom",
+                    filename = "error_$index"
                 )
             )
             val shown = notificationService.shownNotifications[index]
@@ -137,14 +149,16 @@ class SchedulerPipelineNotificationsTest {
 
         val dispatch = notifications.dispatchOutcome(
             filename = "permission_denied.wav",
-            outcome = BadgeAudioPipelineRunOutcome.Completed(
-                SchedulerResult.TaskCreated(
+            event = PipelineEvent.Complete(
+                result = SchedulerResult.TaskCreated(
                     taskId = "task_9",
                     title = "Review contract",
                     dayOffset = 0,
                     scheduledAtMillis = 1_745_000_000_000L,
                     durationMinutes = 45
-                )
+                ),
+                filename = "permission_denied.wav",
+                transcript = "Review contract with client"
             )
         )
 

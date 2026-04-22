@@ -3,6 +3,8 @@ PR creation and merge orchestration. This is the only path that touches `master`
 Primary path: produce a Codex handoff for `/merge` (feature -> develop) or `promote-to-master` (develop -> master).
 Backup path: if Codex is unavailable, Claude executes the PR creation and merge directly.
 
+For `harmony/*` feature branches landing into `platform/harmony`, use `/merge-harmony` instead.
+
 Use this when the user asks to merge, integrate, promote, or land a branch. Two modes: feature branch -> develop, or develop -> master (promotion).
 
 ## Pipeline
@@ -146,6 +148,7 @@ Print:
 - Never force-push to master.
 - Never delete the `develop` branch.
 - Never merge `platform/harmony` back into develop.
+- For `harmony/*` feature branches, use `/merge-harmony` (targets `platform/harmony`), not this command.
 - If working tree is dirty, refuse and redirect to `/ship`.
 - If CI fails, report the failure -- do not bypass.
 - This skill is read-only for git write operations. Codex executes the handoff.

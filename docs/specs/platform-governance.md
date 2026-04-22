@@ -13,6 +13,7 @@
 > - `docs/plans/tracker.md`
 > - `docs/plans/harmony-tracker.md`
 > - `docs/specs/base-runtime-unification.md`
+> - `docs/specs/task-branch-workflow.md` (task-level Declare -> Route -> Verify -> Edit discipline)
 
 ---
 

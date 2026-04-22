@@ -1,5 +1,7 @@
 # Declaration-First Shipping Contract
 
+> **Edit-time complement**: `docs/specs/task-branch-workflow.md` extends this contract upstream — the `task-route-gate.sh` hook enforces lane/worktree routing at *edit time* (before the first file is touched), not only at ship time. Both specs share the same "friction upfront" philosophy. Read `task-branch-workflow.md` for the full Declare -> Route -> Verify -> Edit discipline.
+
 ## 0. Philosophy: Friction Upfront, Not Downstream
 
 Checks and confirmations belong at the **earliest point they can prevent a mess**, not at the latest point they can detect one.

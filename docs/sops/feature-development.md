@@ -20,6 +20,7 @@
 
 | Order | File | Purpose |
 |-------|------|---------|
+| 0 | `docs/specs/task-branch-workflow.md` | Declare lane + task before any edit; route to correct branch/worktree |
 | 1 | `docs/specs/GLOSSARY.md` | Terms, no-synonyms rule (Rule #1) |
 | 2 | `docs/specs/prism-ui-ux-contract.md` | UI INDEX — find your module/flow |
 | 3 | `docs/sops/ui-dev-mode.md` | UI development model, prototype-first workflow, approval gates |

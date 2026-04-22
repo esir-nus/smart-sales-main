@@ -168,12 +168,31 @@ If a workflow proves repeatedly useful in Codex, promote it deliberately into on
 2. A shared SOP in `docs/sops/**`
 3. A dedicated Codex skill when the task is specialized, repeatable, and benefits from bundled resources
 
+## Branch and Task Routing
+
+Every task begins with an operator declaration before any file is edited:
+
+```
+lane: <android|harmony|docs>, task: <short-slug>[, id: HS-NNN]
+```
+
+The AI writes `.claude/state/active-task.json` and routes to the correct worktree and branch. `.claude/hooks/task-route-gate.sh` (registered under `PreToolUse`) refuses any edit whose CWD, HEAD, or file path does not match the declared lane.
+
+- `lane: android` — feature branch (`feat/<slug>`, `fix/<slug>`) from `origin/develop`; cerb-compliant (code + docs together); sweep to `develop` via `/merge`.
+- `lane: harmony` — feature branch (`harmony/<slug>`) from `origin/platform/harmony` with an active HS-NNN sprint contract; sweep to `platform/harmony` via `/merge-harmony`.
+- `lane: docs` — clean `develop` worktree; repo-root markdown and `docs/**` only; sweep to `develop` via `/merge`.
+
+A new declaration overwrites state and triggers re-routing. Never silently reuse an active worktree for a different task.
+
+Full contract: `docs/specs/task-branch-workflow.md`
+
 ## Quick Reference
 
 - Main tracker: `docs/plans/tracker.md`
 - UX SOT: `docs/specs/prism-ui-ux-contract.md`
 - Interface ownership: `docs/cerb/interface-map.md`
 - Feature SOP: `docs/sops/feature-development.md`
+- Task-branch workflow: `docs/specs/task-branch-workflow.md`
 - Codex skill library: `.codex/skills/*/SKILL.md`
 - Human reference: `docs/AGENTS.md`
 - Antigravity runtime rules: `.agent/rules/*.md`

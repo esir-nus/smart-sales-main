@@ -1,11 +1,13 @@
 ---
 name: merge
-description: Execute PR creation and merge for feature branches into develop. If the worktree is dirty, classify whether it is coherent or lane-mixed, print a recovery plan, and stop. Use when the user says /merge for a feature branch. For develop -> master promotion, use the promote-to-master skill instead.
+description: Execute PR creation and merge for feature branches into develop. If the worktree is dirty, classify whether it is coherent or lane-mixed, print a recovery plan, and stop. Use when the user says /merge for a feature branch. For develop -> master promotion, use the promote-to-master skill instead. For harmony/* feature branches landing into platform/harmony, use /merge-harmony instead.
 ---
 
 # Merge feature branch to develop
 
 Create a PR from the current feature branch to develop, wait for CI, and merge.
+
+For `harmony/*` feature branches, use `/merge-harmony` (targets `platform/harmony`). This skill only sweeps into `develop`.
 
 If the worktree is dirty, do not blindly stop with a generic warning. Run the dirty-tree preflight below, classify the tree, print recovery guidance, and stop without mutating git state.
 

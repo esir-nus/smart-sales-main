@@ -2,6 +2,7 @@ package com.smartsales.prism
 
 import android.graphics.Color.TRANSPARENT
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -55,6 +56,9 @@ class MainActivity : ComponentActivity() {
     @Inject
     lateinit var themePreferenceStore: ThemePreferenceStore
 
+    @Inject
+    lateinit var schedulerPipelineOutcomeStore: com.smartsales.prism.service.SchedulerPipelineOutcomeStore
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge(
@@ -99,6 +103,13 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        schedulerPipelineOutcomeStore.consumeToastSummary()?.let { summary ->
+            Toast.makeText(this, summary, Toast.LENGTH_SHORT).show()
         }
     }
 

@@ -235,29 +235,6 @@ internal fun CompleteStep(
             color = OnboardingMuted,
             textAlign = TextAlign.Center
         )
-        Spacer(Modifier.height(28.dp))
-        FrostedCard(
-            modifier = Modifier.fillMaxWidth(),
-            containerColor = OnboardingBlue.copy(alpha = 0.05f),
-            borderColor = OnboardingBlue.copy(alpha = 0.20f)
-        ) {
-            Text(
-                text = "SMARTSALES HOME HANDOFF",
-                color = OnboardingMuted,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(Modifier.height(10.dp))
-            Text(
-                text = if (showSchedulerHandoff) {
-                    "完成当前引导后，流转进入 SmartSales 主界面，并通过真实抽屉动效展开日程。"
-                } else {
-                    "完成当前引导后，直接进入 SmartSales 主界面，不再显示日程教学或日程抽屉。"
-                },
-                color = OnboardingText,
-                lineHeight = 22.sp
-            )
-        }
         Spacer(Modifier.height(36.dp))
         errorMessage?.let {
             OnboardingInlineNotice(it)

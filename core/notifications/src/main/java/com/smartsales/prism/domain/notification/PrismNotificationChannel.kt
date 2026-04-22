@@ -25,6 +25,12 @@ enum class PrismNotificationChannel(
     /** 后台下载进度 — 前台服务保活通知，低优先级持续显示 */
     BADGE_DOWNLOAD_PROGRESS("prism_badge_download_progress", "录音下载进度"),
 
+    /** 日程保活进度 — 徽章 Path A 前台服务，低优先级持续显示 */
+    SCHEDULER_PIPELINE_PROGRESS("prism_scheduler_pipeline_progress", "日程处理进度"),
+
+    /** 日程处理结果 — 徽章 Path A 完成或失败结果 */
+    SCHEDULER_PIPELINE_OUTCOME("prism_scheduler_pipeline_outcome", "日程处理结果"),
+
     /** 记忆更新 — 实体合并通知 */
     MEMORY_UPDATE("prism_memory_update", "记忆更新")
 }

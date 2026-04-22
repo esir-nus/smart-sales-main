@@ -400,6 +400,7 @@ Behavioral rule:
 - if that parse does not yield exact time semantics, Path A must not fake `Uni-A` by inventing exact structure from heuristic code
 - if a later fallback branch surfaces the same utterance as day-anchored plus explicit-clock, Path A must recover the exact-create outcome rather than freezing the mistake into `Uni-B`
 - those cases should fall through to vague, inspiration, or later handling according to the actual extracted meaning
+- after `DB_WRITE_EXECUTED`, scheduler timeline refresh must come from canonical storage invalidation and projection recompute; downstream UI must not depend on a parallel manual refresh trigger to surface the committed task
 
 ---
 

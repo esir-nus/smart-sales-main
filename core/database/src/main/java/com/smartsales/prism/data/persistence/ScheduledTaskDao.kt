@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Upsert
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 
@@ -20,6 +21,9 @@ interface ScheduledTaskDao {
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAll(entities: List<ScheduledTaskEntity>)
+
+    @Upsert
+    suspend fun upsert(entity: ScheduledTaskEntity)
 
     @Update
     suspend fun update(entity: ScheduledTaskEntity)

@@ -930,6 +930,10 @@ private data class SimHomeHeroIslandChroma(
                     dot = Color(0xFF34C759),
                     textGradient = listOf(Color(0xFFA4E38A), Color(0xFF34C759))
                 )
+                DynamicIslandVisualState.CONNECTIVITY_PARTIAL -> SimHomeHeroIslandChroma(
+                    dot = Color(0xFFFF9F0A),
+                    textGradient = listOf(Color(0xFFFFD60A), Color(0xFFFF9F0A))
+                )
                 DynamicIslandVisualState.CONNECTIVITY_DISCONNECTED -> SimHomeHeroIslandChroma(
                     dot = Color.White.copy(alpha = 0.30f),
                     textGradient = listOf(Color(0xFFA0A0A5), Color(0xFF86868B))

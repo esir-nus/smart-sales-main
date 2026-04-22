@@ -2,10 +2,13 @@ package com.smartsales.prism.data.connectivity.legacy
 
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.util.Result
+import com.smartsales.prism.data.connectivity.BadgeEndpointRecoveryCoordinator
+import com.smartsales.prism.data.connectivity.BadgeRuntimeKey
 import com.smartsales.prism.data.connectivity.legacy.badge.BadgeStateMonitor
 import com.smartsales.prism.data.connectivity.legacy.gateway.GattSessionLifecycle
 import com.smartsales.prism.data.connectivity.legacy.gateway.RateLimitedBleGateway
 import com.smartsales.prism.data.connectivity.legacy.scan.BleScanner
+import com.smartsales.prism.domain.connectivity.WifiRepairEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -16,10 +19,11 @@ import kotlinx.coroutines.withContext
 internal class DeviceConnectionManagerConnectionSupport(
     private val provisioner: WifiProvisioner,
     private val bleGateway: GattSessionLifecycle,
+    private val httpReachabilityProbe: suspend (String) -> Boolean,
+    private val endpointRecoveryCoordinator: BadgeEndpointRecoveryCoordinator,
     private val dispatchers: DispatcherProvider,
     private val badgeStateMonitor: BadgeStateMonitor,
     private val sessionStore: SessionStore,
-    private val phoneWifiProvider: PhoneWifiProvider,
     private val scope: CoroutineScope,
     private val runtime: DeviceConnectionManagerRuntime,
     private val ingressSupport: DeviceConnectionManagerIngressSupport,
@@ -171,6 +175,13 @@ internal class DeviceConnectionManagerConnectionSupport(
         when (outcome) {
             is ConnectionState.WifiProvisioned -> {
                 runtime.state.value = outcome
+                startHeartbeat(outcome.session, outcome.status)
+            }
+
+            // 传输已确认，HTTP 仍在预热 — 提升为 WifiProvisioned 维持心跳
+            is ConnectionState.WifiProvisionedHttpDelayed -> {
+                val promoted = ConnectionState.WifiProvisioned(outcome.session, outcome.status)
+                runtime.state.value = promoted
                 startHeartbeat(outcome.session, outcome.status)
             }
 
@@ -448,7 +459,10 @@ internal class DeviceConnectionManagerConnectionSupport(
             )
         }
         return when (val provisionResult = provisioner.provision(session, lastCredentials)) {
-            is Result.Success -> waitForReconnectReplayOnline(session, lastCredentials, normalizeWifiSsid(lastCredentials.ssid))
+            is Result.Success -> {
+                endpointRecoveryCoordinator.armPostCredentialGrace(session.runtimeKey())
+                waitForReconnectReplayOnline(session, lastCredentials, normalizeWifiSsid(lastCredentials.ssid))
+            }
             is Result.Error -> {
                 ConnectivityLogger.w("🔁 replay failed: ${provisionResult.throwable.message}")
                 ConnectionState.Error(
@@ -513,25 +527,48 @@ internal class DeviceConnectionManagerConnectionSupport(
         credentials: WifiCredentials
     ): ConnectionState {
         val expectedSsid = normalizeWifiSsid(credentials.ssid)
+        val runtimeKey = session.runtimeKey()
+        runtime.repairEvents.tryEmit(WifiRepairEvent.CredentialsDispatched(credentials.ssid))
 
         repeat(MANUAL_PROVISION_QUERY_ATTEMPTS) { attempt ->
-            delay(MANUAL_PROVISION_QUERY_DELAY_MS)
+            endpointRecoveryCoordinator.consumePostCredentialProbeDelayMs(
+                runtimeKey = runtimeKey,
+                allowImplicitArm = true
+            )?.let { delayMs ->
+                ConnectivityLogger.i(
+                    "🛜 repair readiness grace wait=${delayMs}ms attempt=${attempt + 1} runtime=${runtimeKey.toLogString()}"
+                )
+                delay(delayMs)
+            }
+            val attemptNumber = attempt + 1
 
             when (val result = performForegroundNetworkQuery(session, promoteConnectedState = false)) {
                 is Result.Success -> {
                     val status = result.data
                     val ip = status.ipAddress
+                    val badgeSsid = normalizeWifiSsid(status.deviceWifiName)
+                    ConnectivityLogger.d(
+                        "🛜 repair query attempt=$attemptNumber ip=$ip badgeSsid=${badgeSsid ?: "null"}"
+                    )
+
                     if (!hasUsableBadgeIp(ip)) {
                         ConnectivityLogger.d(
-                            "🛜 manual repair confirm attempt=${attempt + 1}: badge still offline ip=$ip"
+                            "🛜 manual repair confirm attempt=$attemptNumber: badge still offline ip=$ip"
                         )
+                        runtime.repairEvents.tryEmit(WifiRepairEvent.BadgeOffline)
                         return@repeat
                     }
 
-                    val badgeSsid = normalizeWifiSsid(status.deviceWifiName)
+                    runtime.repairEvents.tryEmit(WifiRepairEvent.UsableIpObserved(ip))
+
                     if (expectedSsid != null && badgeSsid != null && badgeSsid != expectedSsid) {
+                        endpointRecoveryCoordinator.clearPostCredentialGrace(runtimeKey)
                         ConnectivityLogger.w(
                             "🛜 manual repair mismatch: expected=$expectedSsid badge=$badgeSsid"
+                        )
+                        ConnectivityLogger.w("🛜 repair outcome=badge_phone_network_mismatch")
+                        runtime.repairEvents.tryEmit(
+                            WifiRepairEvent.DefinitiveMismatch(expectedSsid, badgeSsid)
                         )
                         return ConnectionState.Error(
                             ConnectivityError.WifiDisconnected(
@@ -544,29 +581,71 @@ internal class DeviceConnectionManagerConnectionSupport(
 
                     if (badgeSsid == null) {
                         ConnectivityLogger.w(
-                            "🛜 manual repair confirm attempt=${attempt + 1}: ip=$ip but badge ssid unreadable raw=${status.rawResponse}"
+                            "🛜 manual repair confirm attempt=$attemptNumber: ip=$ip but badge ssid unreadable raw=${status.rawResponse}"
                         )
                         return@repeat
                     }
 
-                    persistSessionAndKnownNetwork(session, credentials)
-                    ConnectivityLogger.i(
-                        "🛜 manual repair confirmed online ip=$ip ssid=$badgeSsid"
+                    // 传输已确认：IP 可用 + SSID 匹配
+                    runtime.repairEvents.tryEmit(WifiRepairEvent.TargetSsidObserved(badgeSsid))
+                    runtime.repairEvents.tryEmit(
+                        WifiRepairEvent.TransportConfirmed(ip, badgeSsid, runtimeKey.toLogString())
                     )
-                    return ConnectionState.WifiProvisioned(
+                    ConnectivityLogger.i(
+                        "🛜 repair TRANSPORT_CONFIRMED ip=$ip ssid=$badgeSsid runtime=${runtimeKey.toLogString()}"
+                    )
+
+                    // BadgeHttpClient.isReachable() uses a bounded 3s probe timeout.
+                    val baseUrl = "http://$ip:8088"
+                    val reachable = httpReachabilityProbe(baseUrl)
+                    ConnectivityLogger.i(
+                        "🛜 repair probe attempt=$attemptNumber url=$baseUrl reachable=$reachable"
+                    )
+
+                    if (reachable) {
+                        persistSessionAndKnownNetwork(session, credentials)
+                        endpointRecoveryCoordinator.clearPostCredentialGrace(runtimeKey)
+                        runtime.repairEvents.tryEmit(WifiRepairEvent.HttpReady(baseUrl))
+                        ConnectivityLogger.i("🛜 repair outcome=wifi_provisioned ip=$ip ssid=$badgeSsid")
+                        return ConnectionState.WifiProvisioned(
+                            session,
+                            ingressSupport.syntheticProvisioningStatus(status)
+                        )
+                    }
+
+                    // HTTP 未就绪但仍有剩余 grace 配额 → 继续下一次循环
+                    if (attempt < MANUAL_PROVISION_QUERY_ATTEMPTS - 1) {
+                        return@repeat
+                    }
+
+                    // grace 预算用完，传输已确认 → HttpDelayed（非失败）
+                    persistSessionAndKnownNetwork(session, credentials)
+                    endpointRecoveryCoordinator.clearPostCredentialGrace(runtimeKey)
+                    runtime.repairEvents.tryEmit(WifiRepairEvent.HttpDelayed(baseUrl))
+                    ConnectivityLogger.i(
+                        "🛜 repair HTTP_DELAYED baseUrl=$baseUrl runtime=${runtimeKey.toLogString()}"
+                    )
+                    ConnectivityLogger.i("🛜 repair outcome=http_delayed (transport confirmed)")
+                    return ConnectionState.WifiProvisionedHttpDelayed(
                         session,
-                        ingressSupport.syntheticProvisioningStatus(status)
+                        ingressSupport.syntheticProvisioningStatus(status),
+                        baseUrl
                     )
                 }
 
                 is Result.Error -> {
                     ConnectivityLogger.w(
-                        "🛜 manual repair confirm query failed attempt=${attempt + 1}: ${result.throwable.message}"
+                        "🛜 repair query attempt=$attemptNumber error=${result.throwable.message}"
+                    )
+                    ConnectivityLogger.w(
+                        "🛜 manual repair confirm query failed attempt=$attemptNumber: ${result.throwable.message}"
                     )
                 }
             }
         }
 
+        endpointRecoveryCoordinator.clearPostCredentialGrace(runtimeKey)
+        ConnectivityLogger.w("🛜 repair outcome=badge_wifi_offline")
         return ConnectionState.Error(
             ConnectivityError.WifiDisconnected(
                 reason = WifiDisconnectedReason.BADGE_WIFI_OFFLINE,
@@ -581,6 +660,13 @@ internal class DeviceConnectionManagerConnectionSupport(
         ConnectivityLogger.d("🔌 Session persisted: ${session.peripheralId}")
     }
 
+    private fun BleSession.runtimeKey(): BadgeRuntimeKey {
+        return BadgeRuntimeKey(
+            peripheralId = peripheralId,
+            secureToken = secureToken
+        )
+    }
+
     private companion object {
         const val HEARTBEAT_INTERVAL_MS = 1_500L
         const val AUTO_RETRY_DELAY_MS = 2_000L
@@ -588,7 +674,6 @@ internal class DeviceConnectionManagerConnectionSupport(
         const val RECONNECT_REPLAY_FIRST_QUERY_DELAY_MS = 2_200L
         const val RECONNECT_REPLAY_QUERY_DELAY_MS = 2_000L
         const val RECONNECT_REPLAY_QUERY_ATTEMPTS = 3
-        const val MANUAL_PROVISION_QUERY_DELAY_MS = 1_500L
         const val MANUAL_PROVISION_QUERY_ATTEMPTS = 3
         const val QUERY_FLOOR_TIMEOUT_MS = RateLimitedBleGateway.MIN_QUERY_INTERVAL_MS
         const val QUERY_FLOOR_RETRY_DELAY_MS = RateLimitedBleGateway.MIN_QUERY_INTERVAL_MS + 100L

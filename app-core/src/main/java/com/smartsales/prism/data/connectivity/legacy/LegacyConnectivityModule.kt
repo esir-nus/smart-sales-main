@@ -4,8 +4,8 @@ import android.bluetooth.BluetoothManager
 import android.content.Context
 import com.smartsales.core.pipeline.TaskCreationBadgeSignal
 import com.smartsales.core.util.DispatcherProvider
-import com.smartsales.prism.data.connectivity.legacy.BleProfileConfig
 import com.smartsales.prism.data.connectivity.DefaultTaskCreationBadgeSignal
+import com.smartsales.prism.data.connectivity.legacy.BleProfileConfig
 import com.smartsales.prism.BuildConfig
 import com.smartsales.prism.data.connectivity.legacy.badge.BadgeStateMonitor
 import com.smartsales.prism.data.connectivity.legacy.badge.RealBadgeStateMonitor

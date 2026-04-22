@@ -360,6 +360,7 @@ class DeviceSetupViewModel @Inject constructor(
                     }
 
                     is ConnectionState.WifiProvisioned,
+                    is ConnectionState.WifiProvisionedHttpDelayed,
                     is ConnectionState.Syncing -> {
                         cancelScanTimeout()
                         updateUi { current ->
@@ -543,6 +544,8 @@ class DeviceSetupViewModel @Inject constructor(
         is ConnectivityError.WifiDisconnected -> when (error.reason) {
             com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.BADGE_WIFI_OFFLINE ->
                 "设备当前未接入可用 Wi‑Fi，请重新配置网络"
+            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.HTTP_UNREACHABLE ->
+                "设备已接入 Wi‑Fi，但设备服务不可达，请确认手机与徽章处于同一局域网后重试"
             com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.PHONE_WIFI_UNAVAILABLE ->
                 "请先让手机连接 Wi‑Fi，再继续配网"
             com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.PHONE_WIFI_SSID_UNREADABLE ->

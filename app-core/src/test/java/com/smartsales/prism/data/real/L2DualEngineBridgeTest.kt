@@ -283,6 +283,8 @@ class L2DualEngineBridgeTest {
                 kotlinx.coroutines.flow.emptyFlow<com.smartsales.prism.domain.connectivity.RecordingNotification.AudioRecordingReady>()
             override suspend fun isReady() = true
             override suspend fun deleteRecording(filename: String) = true
+            override fun wifiRepairEvents() =
+                kotlinx.coroutines.flow.emptyFlow<com.smartsales.prism.domain.connectivity.WifiRepairEvent>()
         }
 
         // We fake the UnifiedPipeline to realistically delay its emission representing the "Heavyweight" Path B LLM call

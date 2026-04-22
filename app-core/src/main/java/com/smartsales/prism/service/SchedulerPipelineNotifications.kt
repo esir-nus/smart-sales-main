@@ -3,10 +3,8 @@ package com.smartsales.prism.service
 import android.app.Notification
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.smartsales.prism.R
-import com.smartsales.prism.data.connectivity.legacy.DeviceConnectionManager
 import com.smartsales.prism.domain.audio.PipelineEvent
 import com.smartsales.prism.domain.audio.SchedulerResult
 import com.smartsales.prism.domain.notification.NotificationAction
@@ -50,7 +48,6 @@ internal data class SchedulerPipelineNotificationDispatch(
 @Singleton
 class SchedulerPipelineNotifications @Inject constructor(
     private val notificationService: NotificationService,
-    private val deviceConnectionManager: DeviceConnectionManager,
     private val outcomeStore: SchedulerPipelineOutcomeStore
 ) {
 
@@ -80,15 +77,11 @@ class SchedulerPipelineNotifications @Inject constructor(
             )
         }
 
-        runCatching { deviceConnectionManager.notifyTaskFired() }
-            .onFailure { throwable ->
-                Log.w(TAG, "Badge chime fallback failed: ${throwable.message}")
-            }
         outcomeStore.record(model.toastSummary)
         return SchedulerPipelineNotificationDispatch(
             variant = model.variant,
             postedDescriptor = "false:permission_denied",
-            fallback = "badge_chime"
+            fallback = "toast_store"
         )
     }
 
@@ -182,7 +175,6 @@ class SchedulerPipelineNotifications @Inject constructor(
     }
 
     private companion object {
-        private const val TAG = "SchedulerPipelineFgs"
         private val TIME_FORMATTER = DateTimeFormatter.ofPattern("M/d HH:mm")
     }
 }

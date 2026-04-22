@@ -28,7 +28,6 @@ import com.smartsales.prism.domain.scheduler.SchedulerTimelineItem
 import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.domain.scheduler.FastTrackMutationEngine
 import com.smartsales.prism.domain.model.UiState
-import com.smartsales.prism.service.SchedulerPipelineOrchestrator
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.flow.Flow
@@ -367,8 +366,7 @@ class L2DualEngineBridgeTest {
             connectivityBridge = fakeConnectivity,
             asrService = fakeAsr,
             intentOrchestrator = orchestrator,
-            simBadgeAudioPipelineIngestSupport = org.mockito.kotlin.mock(),
-            schedulerPipelineOrchestrator = org.mockito.kotlin.mock<SchedulerPipelineOrchestrator>()
+            simBadgeAudioPipelineIngestSupport = org.mockito.kotlin.mock()
         )
 
         // 1. Trigger the transaction. By the time this suspend function returns, Path A is fully complete, and Path B is launched.

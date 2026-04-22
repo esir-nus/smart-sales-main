@@ -6,7 +6,6 @@ import android.content.Intent
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.smartsales.prism.R
-import com.smartsales.prism.data.audio.BadgeAudioPipelineRunOutcome
 import com.smartsales.prism.data.connectivity.legacy.DeviceConnectionManager
 import com.smartsales.prism.domain.audio.PipelineEvent
 import com.smartsales.prism.domain.audio.SchedulerResult
@@ -57,11 +56,12 @@ class SchedulerPipelineNotifications @Inject constructor(
 
     internal suspend fun dispatchOutcome(
         filename: String,
-        outcome: BadgeAudioPipelineRunOutcome
+        event: PipelineEvent
     ): SchedulerPipelineNotificationDispatch {
-        val model = when (outcome) {
-            is BadgeAudioPipelineRunOutcome.Completed -> buildCompletedNotificationModel(outcome.result)
-            is BadgeAudioPipelineRunOutcome.Failed -> buildFailureNotificationModel(outcome.stage)
+        val model = when (event) {
+            is PipelineEvent.Complete -> buildCompletedNotificationModel(event.result)
+            is PipelineEvent.Error -> buildFailureNotificationModel(event.stage)
+            else -> return SchedulerPipelineNotificationDispatch("Ignored", "true", "none")
         }
 
         if (notificationService.hasPermission()) {

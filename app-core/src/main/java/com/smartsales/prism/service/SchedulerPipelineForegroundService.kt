@@ -8,13 +8,13 @@ import android.util.Log
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
-import com.smartsales.prism.data.audio.BadgeAudioPipelineRunOutcome
 import com.smartsales.prism.data.audio.RealBadgeAudioPipeline
 import com.smartsales.prism.domain.audio.PipelineEvent
 import com.smartsales.prism.domain.audio.SchedulerResult
 import com.smartsales.prism.domain.notification.NotificationService
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -87,49 +87,82 @@ class SchedulerPipelineForegroundService : LifecycleService() {
                 continue
             }
 
-            schedulerPipelineOrchestrator.onProcessingStarted(filename)
-            try {
-                val outcome = badgeAudioPipeline.runStages(filename) { stage ->
-                    mapStage(stage)?.let { progressStage ->
-                        Log.d(TAG, "stage filename=$filename stage=${progressStage.logValue}")
-                        updateForegroundNotification(
-                            buildSchedulerForegroundNotification(this, progressStage)
-                        )
+        schedulerPipelineOrchestrator.onProcessingStarted(filename)
+        val outcomeDeferred = CompletableDeferred<PipelineEvent>()
+        val eventJob: Job = lifecycleScope.launch {
+            badgeAudioPipeline.events.collect { event ->
+                when (event) {
+                    is PipelineEvent.Downloading -> if (event.filename == filename) {
+                        mapStage(PipelineEvent.Stage.DOWNLOAD)?.let { progressStage ->
+                            Log.d(TAG, "stage filename=$filename stage=${progressStage.logValue}")
+                            updateForegroundNotification(
+                                buildSchedulerForegroundNotification(this@SchedulerPipelineForegroundService, progressStage)
+                            )
+                        }
                     }
+                    is PipelineEvent.Transcribing -> if (event.filename == filename) {
+                        mapStage(PipelineEvent.Stage.TRANSCRIBE)?.let { progressStage ->
+                            Log.d(TAG, "stage filename=$filename stage=${progressStage.logValue}")
+                            updateForegroundNotification(
+                                buildSchedulerForegroundNotification(this@SchedulerPipelineForegroundService, progressStage)
+                            )
+                        }
+                    }
+                    is PipelineEvent.Processing -> {
+                        mapStage(PipelineEvent.Stage.SCHEDULE)?.let { progressStage ->
+                            Log.d(TAG, "stage filename=$filename stage=${progressStage.logValue}")
+                            updateForegroundNotification(
+                                buildSchedulerForegroundNotification(this@SchedulerPipelineForegroundService, progressStage)
+                            )
+                        }
+                    }
+                    is PipelineEvent.Complete -> if (event.filename == filename && !outcomeDeferred.isCompleted) {
+                        outcomeDeferred.complete(event)
+                    }
+                    is PipelineEvent.Error -> if (event.filename == filename && !outcomeDeferred.isCompleted) {
+                        outcomeDeferred.complete(event)
+                    }
+                    else -> Unit
                 }
-                dispatchOutcome(filename, outcome)
-            } catch (t: Throwable) {
-                Log.e(TAG, "Unhandled scheduler pipeline failure for filename=$filename", t)
-                dispatchOutcome(
-                    filename = filename,
-                    outcome = BadgeAudioPipelineRunOutcome.Failed(
-                        stage = PipelineEvent.Stage.SCHEDULE,
-                        message = t.message ?: "Unhandled scheduler pipeline failure"
-                    )
+            }
+        }
+        try {
+            badgeAudioPipeline.processFile(filename)
+            dispatchOutcome(filename, outcomeDeferred.await())
+        } catch (t: Throwable) {
+            Log.e(TAG, "Unhandled scheduler pipeline failure for filename=$filename", t)
+            dispatchOutcome(
+                filename = filename,
+                event = PipelineEvent.Error(
+                    stage = PipelineEvent.Stage.SCHEDULE,
+                    message = t.message ?: "Unhandled scheduler pipeline failure",
+                    filename = filename
                 )
-            } finally {
-                schedulerPipelineOrchestrator.onProcessingFinished(filename)
+            )
+        } finally {
+            eventJob.cancel()
+            schedulerPipelineOrchestrator.onProcessingFinished(filename)
             }
         }
     }
 
     private suspend fun dispatchOutcome(
         filename: String,
-        outcome: BadgeAudioPipelineRunOutcome
+        event: PipelineEvent
     ) {
-        val variant = when (outcome) {
-            is BadgeAudioPipelineRunOutcome.Completed -> when (outcome.result) {
+        val variant = when (event) {
+            is PipelineEvent.Complete -> when (event.result) {
                 is SchedulerResult.TaskCreated -> "TaskCreated"
                 is SchedulerResult.MultiTaskCreated -> "MultiTaskCreated"
                 is SchedulerResult.InspirationSaved -> "InspirationSaved"
                 is SchedulerResult.AwaitingClarification -> "AwaitingClarification"
                 SchedulerResult.Ignored -> "Ignored"
             }
-
-            is BadgeAudioPipelineRunOutcome.Failed -> "Error:${outcome.stage.name}"
+            is PipelineEvent.Error -> "Error:${event.stage.name}"
+            else -> "Unknown"
         }
         Log.d(TAG, "outcome filename=$filename variant=$variant")
-        val dispatch = schedulerPipelineNotifications.dispatchOutcome(filename, outcome)
+        val dispatch = schedulerPipelineNotifications.dispatchOutcome(filename, event)
         Log.d(
             TAG,
             "notify variant=${dispatch.variant} posted=${dispatch.postedDescriptor} fallback=${dispatch.fallback}"

@@ -5,10 +5,10 @@ rootProject.name = "main_app"
 pluginManagement {
     repositories {
         maven { url = uri("$rootDir/third_party/maven-repo") }
-        maven { url = uri("https://maven.aliyun.com/repository/google") }
         google()
-        maven { url = uri("https://maven.aliyun.com/repository/public") }
         mavenCentral()
+        maven { url = uri("https://maven.aliyun.com/repository/google") }
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
         gradlePluginPortal()
     }
 }
@@ -16,10 +16,10 @@ pluginManagement {
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
-        maven { url = uri("https://maven.aliyun.com/repository/public") }
-        maven { url = uri("https://maven.aliyun.com/repository/google") }
         google()
         mavenCentral()
+        maven { url = uri("https://maven.aliyun.com/repository/google") }
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
         maven { url = uri("$rootDir/third_party/maven-repo") }
     }
 }

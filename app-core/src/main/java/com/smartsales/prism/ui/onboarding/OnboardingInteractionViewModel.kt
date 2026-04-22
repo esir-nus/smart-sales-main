@@ -838,12 +838,7 @@ class OnboardingInteractionViewModel @Inject constructor(
                         items = result.items,
                         errorMessage = null,
                         transientNoticeMessage = null,
-                        guidanceMessage = when (result.mutationKind) {
-                            OnboardingQuickStartServiceResult.Success.MutationKind.CREATE ->
-                                "可以继续补充或修改，也可以直接下一步。"
-                            OnboardingQuickStartServiceResult.Success.MutationKind.UPDATE ->
-                                "已更新体验日程，你也可以继续补充。"
-                        },
+                        guidanceMessage = null,
                         micInteractionMode = OnboardingMicInteractionMode.TAP_TO_SEND,
                         processingPhase = OnboardingProcessingPhase.NONE,
                         lastTranscriptOrigin = transcriptOrigin,

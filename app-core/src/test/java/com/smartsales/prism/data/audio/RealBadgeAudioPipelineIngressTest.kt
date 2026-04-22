@@ -7,6 +7,7 @@ import com.smartsales.prism.domain.connectivity.BadgeManagerStatus
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.connectivity.RecordingNotification
 import com.smartsales.prism.domain.connectivity.WavDownloadResult
+import com.smartsales.prism.service.SchedulerPipelineOrchestrator
 import com.smartsales.core.pipeline.IntentOrchestrator
 import com.smartsales.core.util.Result
 import kotlinx.coroutines.flow.Flow
@@ -17,29 +18,29 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.mockito.kotlin.mock
 
 class RealBadgeAudioPipelineIngressTest {
 
     @Test
-    fun `bridge notification triggers processFile through init collector`() = runTest {
+    fun `bridge notification enqueues scheduler pipeline through init collector`() = runTest {
         val bridge = FakeConnectivityBridge()
+        val orchestrator = FakeSchedulerPipelineOrchestrator()
         val pipeline = RealBadgeAudioPipeline(
             connectivityBridge = bridge,
             asrService = mock<AsrService>(),
             intentOrchestrator = mock<IntentOrchestrator>(),
-            simBadgeAudioPipelineIngestSupport = mock<SimBadgeAudioPipelineIngestSupport>()
+            simBadgeAudioPipelineIngestSupport = mock<SimBadgeAudioPipelineIngestSupport>(),
+            schedulerPipelineOrchestrator = orchestrator
         )
 
         bridge.emit(RecordingNotification.RecordingReady("log_20260322_170000.wav"))
-        waitUntil { bridge.downloadCalls.isNotEmpty() && pipeline.events.replayCache.size >= 2 }
-        val events = pipeline.events.replayCache
+        waitUntil { orchestrator.enqueueCalls.isNotEmpty() }
 
-        assertEquals(listOf("log_20260322_170000.wav"), bridge.downloadCalls)
-        assertTrue(events.first() is PipelineEvent.Downloading)
-        assertTrue(events.last() is PipelineEvent.Error)
+        assertEquals(listOf("log_20260322_170000.wav"), orchestrator.enqueueCalls)
+        assertEquals(emptyList<String>(), bridge.downloadCalls)
+        assertEquals(emptyList<PipelineEvent>(), pipeline.events.replayCache)
     }
 
     private fun waitUntil(timeoutMs: Long = 2_000, condition: () -> Boolean) {
@@ -89,6 +90,14 @@ class RealBadgeAudioPipelineIngressTest {
 
         suspend fun emit(notification: RecordingNotification) {
             notifications.emit(notification)
+        }
+    }
+
+    private class FakeSchedulerPipelineOrchestrator : SchedulerPipelineOrchestrator(mock()) {
+        val enqueueCalls = mutableListOf<String>()
+
+        override suspend fun enqueue(filename: String) {
+            enqueueCalls += filename
         }
     }
 }

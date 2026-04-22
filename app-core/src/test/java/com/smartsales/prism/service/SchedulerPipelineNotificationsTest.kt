@@ -1,0 +1,157 @@
+package com.smartsales.prism.service
+
+import com.smartsales.prism.data.audio.BadgeAudioPipelineRunOutcome
+import com.smartsales.prism.data.connectivity.legacy.FakeDeviceConnectionManager
+import com.smartsales.prism.data.fakes.FakeNotificationService
+import com.smartsales.prism.domain.audio.PipelineEvent
+import com.smartsales.prism.domain.audio.SchedulerResult
+import com.smartsales.prism.domain.notification.NotificationAction
+import com.smartsales.prism.domain.notification.NotificationPriority
+import com.smartsales.prism.domain.notification.PrismNotificationChannel
+import kotlinx.coroutines.test.runTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+
+class SchedulerPipelineNotificationsTest {
+
+    private lateinit var notificationService: FakeNotificationService
+    private lateinit var deviceConnectionManager: FakeDeviceConnectionManager
+    private lateinit var outcomeStore: SchedulerPipelineOutcomeStore
+    private lateinit var notifications: SchedulerPipelineNotifications
+
+    @Before
+    fun setup() {
+        notificationService = FakeNotificationService()
+        deviceConnectionManager = FakeDeviceConnectionManager()
+        outcomeStore = SchedulerPipelineOutcomeStore()
+        notifications = SchedulerPipelineNotifications(
+            notificationService = notificationService,
+            deviceConnectionManager = deviceConnectionManager,
+            outcomeStore = outcomeStore
+        )
+    }
+
+    @Test
+    fun `completed variants map to expected channels priority and actions`() = runTest {
+        val completedVariants = listOf(
+            BadgeAudioPipelineRunOutcome.Completed(
+                SchedulerResult.TaskCreated(
+                    taskId = "task_1",
+                    title = "Client follow up",
+                    dayOffset = 0,
+                    scheduledAtMillis = 1_745_000_000_000L,
+                    durationMinutes = 30
+                )
+            ) to Triple(
+                PrismNotificationChannel.SCHEDULER_PIPELINE_OUTCOME,
+                NotificationPriority.HIGH,
+                NotificationAction.OpenApp()
+            ),
+            BadgeAudioPipelineRunOutcome.Completed(
+                SchedulerResult.MultiTaskCreated(
+                    tasks = listOf(
+                        SchedulerResult.TaskCreated(
+                            taskId = "task_2",
+                            title = "客户A回访",
+                            dayOffset = 0,
+                            scheduledAtMillis = 1_745_000_000_000L,
+                            durationMinutes = 30
+                        ),
+                        SchedulerResult.TaskCreated(
+                            taskId = "task_3",
+                            title = "客户B回访",
+                            dayOffset = 0,
+                            scheduledAtMillis = 1_745_000_060_000L,
+                            durationMinutes = 30
+                        )
+                    )
+                )
+            ) to Triple(
+                PrismNotificationChannel.SCHEDULER_PIPELINE_OUTCOME,
+                NotificationPriority.HIGH,
+                NotificationAction.OpenApp()
+            ),
+            BadgeAudioPipelineRunOutcome.Completed(
+                SchedulerResult.InspirationSaved(id = "insp_1")
+            ) to Triple(
+                PrismNotificationChannel.SCHEDULER_PIPELINE_OUTCOME,
+                NotificationPriority.HIGH,
+                NotificationAction.OpenApp()
+            ),
+            BadgeAudioPipelineRunOutcome.Completed(
+                SchedulerResult.AwaitingClarification(question = "Which client did you mean?")
+            ) to Triple(
+                PrismNotificationChannel.SCHEDULER_PIPELINE_OUTCOME,
+                NotificationPriority.HIGH,
+                NotificationAction.OpenApp()
+            ),
+            BadgeAudioPipelineRunOutcome.Completed(SchedulerResult.Ignored) to Triple(
+                PrismNotificationChannel.SCHEDULER_PIPELINE_PROGRESS,
+                NotificationPriority.LOW,
+                NotificationAction.None
+            )
+        )
+
+        completedVariants.forEachIndexed { index, (outcome, expected) ->
+            val dispatch = notifications.dispatchOutcome("file_$index", outcome)
+            val shown = notificationService.shownNotifications[index]
+
+            assertEquals(expected.first, shown.channel)
+            assertEquals(expected.second, shown.priority)
+            assertEquals(expected.third, shown.action)
+            assertEquals("true", dispatch.postedDescriptor)
+            assertEquals("none", dispatch.fallback)
+        }
+    }
+
+    @Test
+    fun `error stages map to heads up outcome channel`() = runTest {
+        val stages = listOf(
+            PipelineEvent.Stage.DOWNLOAD,
+            PipelineEvent.Stage.TRANSCRIBE,
+            PipelineEvent.Stage.SCHEDULE
+        )
+
+        stages.forEachIndexed { index, stage ->
+            val dispatch = notifications.dispatchOutcome(
+                filename = "error_$index",
+                outcome = BadgeAudioPipelineRunOutcome.Failed(
+                    stage = stage,
+                    message = "boom"
+                )
+            )
+            val shown = notificationService.shownNotifications[index]
+
+            assertEquals(PrismNotificationChannel.SCHEDULER_PIPELINE_OUTCOME, shown.channel)
+            assertEquals(NotificationPriority.HIGH, shown.priority)
+            assertEquals(NotificationAction.None, shown.action)
+            assertTrue(dispatch.variant.startsWith("Error:"))
+        }
+    }
+
+    @Test
+    fun `permission denied falls back to badge chime and outcome toast store`() = runTest {
+        notificationService.permissionGranted = false
+
+        val dispatch = notifications.dispatchOutcome(
+            filename = "permission_denied.wav",
+            outcome = BadgeAudioPipelineRunOutcome.Completed(
+                SchedulerResult.TaskCreated(
+                    taskId = "task_9",
+                    title = "Review contract",
+                    dayOffset = 0,
+                    scheduledAtMillis = 1_745_000_000_000L,
+                    durationMinutes = 45
+                )
+            )
+        )
+
+        assertTrue(notificationService.shownNotifications.isEmpty())
+        assertEquals(1, deviceConnectionManager.notifyTaskFiredCalls)
+        assertTrue(outcomeStore.consumeToastSummary()?.contains("Schedule created") == true)
+        assertEquals("false:permission_denied", dispatch.postedDescriptor)
+        assertEquals("badge_chime", dispatch.fallback)
+    }
+}

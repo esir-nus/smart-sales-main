@@ -17,7 +17,8 @@ class FakeNotificationService : NotificationService {
         val title: String,
         val body: String,
         val channel: PrismNotificationChannel,
-        val priority: NotificationPriority
+        val priority: NotificationPriority,
+        val action: NotificationAction
     )
 
     private val _shown = mutableListOf<ShownNotification>()
@@ -37,7 +38,7 @@ class FakeNotificationService : NotificationService {
         action: NotificationAction
     ) {
         if (!hasPermission()) return
-        _shown.add(ShownNotification(id, title, body, channel, priority))
+        _shown.add(ShownNotification(id, title, body, channel, priority, action))
     }
 
     override fun cancel(id: String) {

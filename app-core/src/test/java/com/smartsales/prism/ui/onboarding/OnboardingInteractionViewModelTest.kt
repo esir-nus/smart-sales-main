@@ -750,7 +750,7 @@ class OnboardingInteractionViewModelTest {
     }
 
     @Test
-    fun `quick start success clears stale calendar notice and restores normal guidance`() = runTest {
+    fun `quick start success clears stale calendar notice`() = runTest {
         viewModel.onQuickStartCalendarPermissionResult(granted = true)
         val createdItems = listOf(
             OnboardingQuickStartItem(
@@ -778,7 +778,7 @@ class OnboardingInteractionViewModelTest {
         val state = viewModel.quickStartState.value
         assertEquals(OnboardingMicInteractionMode.TAP_TO_SEND, state.micInteractionMode)
         assertNull(state.transientNoticeMessage)
-        assertEquals("可以继续补充或修改，也可以直接下一步。", state.guidanceMessage)
+        assertNull(state.guidanceMessage)
     }
 
     @Test

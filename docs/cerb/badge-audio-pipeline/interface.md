@@ -25,7 +25,7 @@ interface BadgeAudioPipeline {
     
     /**
      * Manually trigger processing for a specific file.
-     * Used for retry or manual import.
+     * Used for retry or manual import; runs inline until complete.
      */
     suspend fun processFile(filename: String)
     
@@ -59,10 +59,17 @@ sealed class PipelineEvent {
 }
 
 sealed class SchedulerResult {
-    data class TaskCreated(val taskId: String, val title: String) : SchedulerResult()
-    data class MultiTaskCreated(val taskIds: List<String>) : SchedulerResult()
+    data class TaskCreated(
+        val taskId: String,
+        val title: String,
+        val dayOffset: Int,
+        val scheduledAtMillis: Long,
+        val durationMinutes: Int
+    ) : SchedulerResult()
+    data class MultiTaskCreated(val tasks: List<TaskCreated>) : SchedulerResult()
     data class InspirationSaved(val id: String) : SchedulerResult()
     data class AwaitingClarification(val question: String) : SchedulerResult()
+    data object Ignored : SchedulerResult()
 }
 ```
 
@@ -74,7 +81,8 @@ sealed class SchedulerResult {
 |-----------|-----------|
 | `events` | Hot flow, buffered (3), starts on injection |
 | `currentState` | Always reflects latest state |
-| `processFile` | Returns after processing complete (success or error) |
+| automatic `log#` ingress | Enqueued through `SchedulerPipelineForegroundService` for screen-off execution while process is alive |
+| `processFile` | Manual/retry path; returns after inline processing completes (success or error) |
 | Drawer visibility | Successful completions may already exist in SIM audio inventory before any manual drawer sync |
 | WAV cleanup | Local temp is cleaned after processing; badge-side delete happens only after successful drawer ingest |
 
@@ -84,7 +92,7 @@ sealed class SchedulerResult {
 
 Pipeline auto-starts on injection:
 1. Listens to `ConnectivityBridge.recordingNotifications()`
-2. Processes recordings automatically
+2. Enqueues automatic `log#` recordings into the scheduler foreground-service wrapper
 3. Emits events for UI to display
 
 **No manual start required.**

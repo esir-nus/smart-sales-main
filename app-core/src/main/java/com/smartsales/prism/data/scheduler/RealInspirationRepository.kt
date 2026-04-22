@@ -1,6 +1,7 @@
 package com.smartsales.prism.data.scheduler
 
 import android.content.Context
+import android.content.SharedPreferences
 import com.smartsales.prism.domain.scheduler.InspirationRepository
 import com.smartsales.prism.domain.scheduler.SchedulerTimelineItem
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -23,11 +24,18 @@ import javax.inject.Singleton
  * 灵感是轻量级全局数据，不需要复杂查询，使用 SharedPreferences 足够
  */
 @Singleton
-class RealInspirationRepository @Inject constructor(
-    @ApplicationContext private val context: Context
+class RealInspirationRepository private constructor(
+    private val prefs: SharedPreferences
 ) : InspirationRepository {
-    
-    private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    @Inject
+    constructor(@ApplicationContext context: Context) : this(
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    )
+
+    internal constructor(prefs: SharedPreferences, @Suppress("UNUSED_PARAMETER") testOnly: Boolean = true) :
+        this(prefs)
+
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault())
     
     // 内存缓存 + Flow 发射
@@ -39,11 +47,12 @@ class RealInspirationRepository @Inject constructor(
     }
     
     override suspend fun insert(text: String): String {
+        val normalizedText = text.trim()
         val id = UUID.randomUUID().toString()
         val now = Instant.now()
         val newItem = InspirationData(
             id = id,
-            text = text,
+            text = normalizedText,
             createdAt = now.toEpochMilli()
         )
         

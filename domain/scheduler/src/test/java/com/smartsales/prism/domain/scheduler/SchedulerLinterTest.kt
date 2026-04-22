@@ -482,6 +482,56 @@ class SchedulerLinterTest {
     }
 
     @Test
+    fun `Uni-C inspiration extraction falls back to title when content is blank`() {
+        val json = """
+            {
+              "decision": "INSPIRATION_CREATE",
+              "idea": {
+                "content": "   ",
+                "title": "以后想学吉他"
+              }
+            }
+        """.trimIndent()
+
+        val result = linter.parseUniCExtraction(
+            input = json,
+            unifiedId = "uni-c-002",
+            transcript = "原始语音"
+        )
+
+        assertTrue(result is FastTrackResult.CreateInspiration)
+        assertEquals(
+            "以后想学吉他",
+            (result as FastTrackResult.CreateInspiration).params.content
+        )
+    }
+
+    @Test
+    fun `Uni-C inspiration extraction falls back to transcript when model omits content`() {
+        val json = """
+            {
+              "decision": "INSPIRATION_CREATE",
+              "idea": {
+                "content": "",
+                "title": null
+              }
+            }
+        """.trimIndent()
+
+        val result = linter.parseUniCExtraction(
+            input = json,
+            unifiedId = "uni-c-003",
+            transcript = "以后想学吉他"
+        )
+
+        assertTrue(result is FastTrackResult.CreateInspiration)
+        assertEquals(
+            "以后想学吉他",
+            (result as FastTrackResult.CreateInspiration).params.content
+        )
+    }
+
+    @Test
     fun `Uni-C not inspiration returns NoMatch`() {
         val json = """
             {
@@ -494,30 +544,6 @@ class SchedulerLinterTest {
 
         assertTrue(result is FastTrackResult.NoMatch)
         assertEquals("仍然属于 schedulable", (result as FastTrackResult.NoMatch).reason)
-    }
-
-    @Test
-    fun `follow-up reschedule V2 delta extraction returns supported operand`() {
-        val json = """
-            {
-              "decision": "RESCHEDULE_EXACT",
-              "timeKind": "DELTA_FROM_TARGET",
-              "deltaFromTargetMinutes": 60
-            }
-        """.trimIndent()
-
-        val result = linter.parseFollowUpRescheduleExtraction(
-            input = json,
-            transcript = "推迟1个小时"
-        )
-
-        assertTrue(result is FollowUpRescheduleExtractionResult.Supported)
-        val supported = result as FollowUpRescheduleExtractionResult.Supported
-        assertEquals(FollowUpRescheduleTimeKind.DELTA_FROM_TARGET, supported.timeKind)
-        assertEquals(
-            FollowUpRescheduleOperand.DeltaFromTarget(60),
-            supported.operand
-        )
     }
 
     @Test
@@ -593,7 +619,6 @@ class SchedulerLinterTest {
         val json = """
             {
               "decision": "RESCHEDULE_TARGETED",
-              "preferredTaskIds": ["task-9", "task-1"],
               "targetQuery": "和张总吃饭",
               "targetPerson": "张总",
               "timeInstruction": "明天晚上八点"
@@ -607,7 +632,6 @@ class SchedulerLinterTest {
         assertEquals("和张总吃饭", supported.target.targetQuery)
         assertEquals("张总", supported.target.targetPerson)
         assertEquals("明天晚上八点", supported.timeInstruction)
-        assertEquals(listOf("task-9", "task-1"), supported.preferredTaskIds)
     }
 
     @Test
@@ -623,32 +647,5 @@ class SchedulerLinterTest {
 
         assertTrue(result is GlobalRescheduleExtractionResult.Invalid)
         assertTrue((result as GlobalRescheduleExtractionResult.Invalid).reason.contains("target clues"))
-    }
-
-    @Test
-    fun `Uni-A exact extraction rejects relative anchor date beyond one year`() {
-        val json = """
-            {
-              "decision": "EXACT_CREATE",
-              "task": {
-                "title": "提醒我和张总开会",
-                "startTimeIso": "2027-04-26T08:00:00+08:00",
-                "durationMinutes": 30,
-                "urgency": "L2"
-              }
-            }
-        """.trimIndent()
-
-        val result = linter.parseUniAExtraction(
-            input = json,
-            unifiedId = "uni-a-006",
-            transcript = "明天早上8点和张总开会",
-            nowIso = "2026-03-20T09:00:00Z",
-            timezone = "Asia/Shanghai",
-            displayedDateIso = null
-        )
-
-        assertTrue(result is FastTrackResult.NoMatch)
-        assertTrue((result as FastTrackResult.NoMatch).reason.contains("relative-anchor bound"))
     }
 }

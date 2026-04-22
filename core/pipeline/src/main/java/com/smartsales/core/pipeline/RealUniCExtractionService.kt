@@ -1,5 +1,6 @@
 package com.smartsales.core.pipeline
 
+import android.util.Log
 import com.smartsales.core.llm.Executor
 import com.smartsales.core.llm.ExecutorResult
 import com.smartsales.core.llm.ModelRegistry
@@ -23,10 +24,29 @@ class RealUniCExtractionService @Inject constructor(
     suspend fun extract(request: UniCExtractionRequest): FastTrackResult {
         val prompt = promptCompiler.compileUniCExtractionPrompt(request)
         return when (val result = executor.execute(ModelRegistry.EXTRACTOR, prompt)) {
-            is ExecutorResult.Success -> schedulerLinter.parseUniCExtraction(
-                input = result.content,
-                unifiedId = request.unifiedId
-            )
+            is ExecutorResult.Success -> {
+                Log.d("UniCExtraction", "raw_json=${result.content}")
+                val parsed = schedulerLinter.parseUniCExtraction(
+                    input = result.content,
+                    unifiedId = request.unifiedId,
+                    transcript = request.transcript
+                )
+                when (parsed) {
+                    is FastTrackResult.CreateInspiration -> {
+                        Log.d(
+                            "UniCExtraction",
+                            "extracted_content_length=${parsed.params.content.length}"
+                        )
+                    }
+
+                    is FastTrackResult.NoMatch -> {
+                        Log.d("UniCExtraction", "extraction_rejected=${parsed.reason}")
+                    }
+
+                    else -> Unit
+                }
+                parsed
+            }
             is ExecutorResult.Failure -> {
                 FastTrackResult.NoMatch(
                     reason = "Uni-C extractor failed: ${result.error}"

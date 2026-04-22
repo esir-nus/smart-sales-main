@@ -213,7 +213,14 @@ class FastTrackMutationEngine @Inject constructor(
     }
 
     private suspend fun handleCreateInspiration(params: CreateInspirationParams): MutationResult {
-        val id = inspirationRepository.insert(params.content)
+        val content = params.content.trim()
+        if (content.isBlank()) {
+            return MutationResult.NoMatch(
+                query = params.unifiedId ?: "<blank-inspiration>",
+                reason = "Inspiration content blank before repository insert"
+            )
+        }
+        val id = inspirationRepository.insert(content)
         return MutationResult.InspirationCreated(id)
     }
 

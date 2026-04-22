@@ -87,8 +87,12 @@ class SchedulerLinter @Inject constructor() {
         return parsingSupport.parseGlobalRescheduleExtraction(input)
     }
 
-    fun parseUniCExtraction(input: String, unifiedId: String): FastTrackResult {
-        return parsingSupport.parseUniCExtraction(input, unifiedId)
+    fun parseUniCExtraction(
+        input: String,
+        unifiedId: String,
+        transcript: String? = null
+    ): FastTrackResult {
+        return parsingSupport.parseUniCExtraction(input, unifiedId, transcript)
     }
 
     /**

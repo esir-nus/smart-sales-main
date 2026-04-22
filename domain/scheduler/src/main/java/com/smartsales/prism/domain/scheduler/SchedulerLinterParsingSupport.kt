@@ -246,6 +246,8 @@ internal class SchedulerLinterParsingSupport(
                         nowIso = nowIso,
                         timezone = timezone,
                         displayedDateIso = displayedDateIso
+                    ) ?: return FastTrackResult.NoMatch(
+                        "Uni-B page-relative anchor requires displayed page context"
                     )
                     try {
                         LocalDate.parse(normalizedAnchorDateIso)
@@ -515,14 +517,22 @@ internal class SchedulerLinterParsingSupport(
         }
     }
 
-    fun parseUniCExtraction(input: String, unifiedId: String): FastTrackResult {
+    fun parseUniCExtraction(
+        input: String,
+        unifiedId: String,
+        transcript: String? = null
+    ): FastTrackResult {
         return try {
             val payload = jsonInterpreter.decodeFromString<UniCExtractionPayload>(schedulerLinterCleanJson(input))
             when (payload.decision.uppercase()) {
                 "INSPIRATION_CREATE" -> {
                     val idea = payload.idea
                         ?: return FastTrackResult.NoMatch("Uni-C inspiration result missing idea payload")
-                    val content = idea.content.trim()
+                    val content = resolveUniCInspirationContent(
+                        content = idea.content,
+                        title = idea.title,
+                        transcript = transcript
+                    )
                     if (content.isBlank()) {
                         return FastTrackResult.NoMatch("Uni-C inspiration content is blank")
                     }
@@ -545,6 +555,17 @@ internal class SchedulerLinterParsingSupport(
         } catch (e: Exception) {
             FastTrackResult.NoMatch("Uni-C 解析失败: ${e.message}")
         }
+    }
+
+    private fun resolveUniCInspirationContent(
+        content: String,
+        title: String?,
+        transcript: String?
+    ): String {
+        return listOf(content, title, transcript)
+            .firstOrNull { !it.isNullOrBlank() }
+            ?.trim()
+            .orEmpty()
     }
 
     private fun rejectFabricatedExactTime(

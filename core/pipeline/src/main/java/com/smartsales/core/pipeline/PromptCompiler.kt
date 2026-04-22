@@ -518,12 +518,15 @@ ${request.transcript}
 1. 只有当输入表达的是想法、愿望、提醒自己、未来某天再说、值得记住的念头，而不是当前可执行的排程承诺时，才输出 `decision = "INSPIRATION_CREATE"`。
 2. 如果输入其实是在安排日程，哪怕时间不完整，也必须输出 `NOT_INSPIRATION`，留给 `Uni-A` / `Uni-B`。
 3. `INSPIRATION_CREATE` 时，必须填写 `idea`，并满足：
-   - `content` 为非空自然语言核心内容
+   - `content` 为非空自然语言核心内容，必须保留用户真正想记住的灵感文本，不能留空、不能只写概括标签
    - `title` 可为空；若存在，只能是短标题，不能夹带时间/任务字段
 4. 不要把 schedulable 语句伪装成 inspiration。
    - 例如 `明天提醒我打电话`、`三天以后提醒我开会` 都不是 `Uni-C`
 5. 如果你没有把握，输出 `NOT_INSPIRATION`，不要“为了保存点什么”就输出灵感。
 6. 只能输出严格 JSON，禁止 Markdown 包裹。
+7. worked example:
+   - 输入：`以后想学吉他`
+   - 输出：`{"decision":"INSPIRATION_CREATE","idea":{"content":"以后想学吉他","title":"学吉他"}}`
 
 严格输出以下 Kotlin contract 对应的 JSON：
 ${

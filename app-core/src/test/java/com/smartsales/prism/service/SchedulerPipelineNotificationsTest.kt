@@ -1,6 +1,5 @@
 package com.smartsales.prism.service
 
-import com.smartsales.prism.data.connectivity.legacy.FakeDeviceConnectionManager
 import com.smartsales.prism.data.fakes.FakeNotificationService
 import com.smartsales.prism.domain.audio.PipelineEvent
 import com.smartsales.prism.domain.audio.SchedulerResult
@@ -16,18 +15,15 @@ import org.junit.Test
 class SchedulerPipelineNotificationsTest {
 
     private lateinit var notificationService: FakeNotificationService
-    private lateinit var deviceConnectionManager: FakeDeviceConnectionManager
     private lateinit var outcomeStore: SchedulerPipelineOutcomeStore
     private lateinit var notifications: SchedulerPipelineNotifications
 
     @Before
     fun setup() {
         notificationService = FakeNotificationService()
-        deviceConnectionManager = FakeDeviceConnectionManager()
         outcomeStore = SchedulerPipelineOutcomeStore()
         notifications = SchedulerPipelineNotifications(
             notificationService = notificationService,
-            deviceConnectionManager = deviceConnectionManager,
             outcomeStore = outcomeStore
         )
     }
@@ -163,9 +159,8 @@ class SchedulerPipelineNotificationsTest {
         )
 
         assertTrue(notificationService.shownNotifications.isEmpty())
-        assertEquals(1, deviceConnectionManager.notifyTaskFiredCalls)
         assertTrue(outcomeStore.consumeToastSummary()?.contains("Schedule created") == true)
         assertEquals("false:permission_denied", dispatch.postedDescriptor)
-        assertEquals("badge_chime", dispatch.fallback)
+        assertEquals("toast_store", dispatch.fallback)
     }
 }

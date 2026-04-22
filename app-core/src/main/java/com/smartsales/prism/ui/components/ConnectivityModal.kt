@@ -16,7 +16,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,11 +33,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.content.Intent
+import android.provider.Settings
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.smartsales.prism.BuildConfig
 import com.smartsales.prism.data.connectivity.registry.RegisteredDevice
+import com.smartsales.prism.domain.connectivity.IsolationTriggerContext
 import com.smartsales.prism.ui.components.connectivity.ConnectivityManagerState
 import com.smartsales.prism.ui.components.connectivity.ConnectivityViewModel
+import com.smartsales.prism.ui.components.connectivity.WifiRepairState
 import com.smartsales.prism.ui.components.connectivity.WIFI_MISMATCH_EMPTY_CREDENTIALS_ERROR
 import kotlinx.coroutines.delay
 
@@ -57,6 +61,7 @@ private val ConnectedGreen = Color(0xFF34C759)
 private val DisconnectedGrey = Color(0xFF86868B)
 private val ReconnectingAmber = Color(0xFFFF9F0A)
 private val DangerRed = Color(0xFFFF453A)
+private const val ACTION_TETHER_SETTINGS = "android.settings.TETHER_SETTINGS"
 
 // ── Entry Points ──────────────────────────────────────────────
 
@@ -79,6 +84,9 @@ fun ConnectivityModal(
     val registeredDevices by viewModel.registeredDevices.collectAsState()
     val wifiMismatchSuggestedSsid by viewModel.wifiMismatchSuggestedSsid.collectAsState()
     val wifiMismatchErrorMessage by viewModel.wifiMismatchErrorMessage.collectAsState()
+    val repairState by viewModel.repairState.collectAsState()
+    val isolationBadgeIp by viewModel.isolationBadgeIp.collectAsState()
+    val isolationTriggerContext by viewModel.isolationTriggerContext.collectAsState()
 
     val otherDevices = registeredDevices.filter { it.macAddress != activeDevice?.macAddress }
 
@@ -151,21 +159,11 @@ fun ConnectivityModal(
                         onRename = viewModel::renameDevice,
                         wifiMismatchSuggestedSsid = wifiMismatchSuggestedSsid,
                         wifiMismatchErrorMessage = wifiMismatchErrorMessage,
-                        onWifiMismatchInputChanged = viewModel::clearWifiMismatchError
+                        onWifiMismatchInputChanged = viewModel::clearWifiMismatchError,
+                        repairState = repairState,
+                        isolationBadgeIp = isolationBadgeIp,
+                        isolationTriggerContext = isolationTriggerContext
                     )
-                }
-
-                // 语音音量快速入口 — 仅当存在活跃设备时显示
-                if (activeDevice != null && state == ConnectivityManagerState.CONNECTED) {
-                    item {
-                        Spacer(modifier = Modifier.height(12.dp))
-                        val voiceVolume by viewModel.voiceVolume.collectAsState()
-                        VoiceVolumeQuickEntry(
-                            level = voiceVolume,
-                            onValueChange = viewModel::onVoiceVolumeDrag,
-                            onValueChangeFinished = viewModel::onVoiceVolumeCommitted
-                        )
-                    }
                 }
 
                 // Other devices section
@@ -224,61 +222,6 @@ fun ConnectivityManagerScreen(
 // ── Active Device Section ─────────────────────────────────────
 
 @Composable
-private fun VoiceVolumeQuickEntry(
-    level: Int,
-    onValueChange: (Int) -> Unit,
-    onValueChangeFinished: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(CardFrost)
-            .border(1.dp, CardBorder, RoundedCornerShape(18.dp))
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-                    contentDescription = null,
-                    tint = TextMuted,
-                    modifier = Modifier.size(16.dp)
-                )
-                Text(
-                    text = "语音音量",
-                    color = TextPrimary,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-            Text(text = level.toString(), color = TextMuted, fontSize = 12.sp)
-        }
-        // 拖动期间不发 BLE，松手 (onValueChangeFinished) 才下发，保护 ESP32
-        Slider(
-            value = level.toFloat(),
-            onValueChange = { onValueChange(it.toInt()) },
-            onValueChangeFinished = onValueChangeFinished,
-            valueRange = 0f..100f,
-            colors = SliderDefaults.colors(
-                thumbColor = AccentBlue,
-                activeTrackColor = AccentBlue,
-                inactiveTrackColor = CardBorder
-            ),
-            modifier = Modifier.fillMaxWidth()
-        )
-    }
-}
-
-@Composable
 private fun ActiveDeviceSection(
     device: RegisteredDevice?,
     state: ConnectivityManagerState,
@@ -294,7 +237,10 @@ private fun ActiveDeviceSection(
     onRename: (String, String) -> Unit,
     wifiMismatchSuggestedSsid: String?,
     wifiMismatchErrorMessage: String?,
-    onWifiMismatchInputChanged: () -> Unit
+    onWifiMismatchInputChanged: () -> Unit,
+    repairState: WifiRepairState = WifiRepairState.Idle,
+    isolationBadgeIp: String? = null,
+    isolationTriggerContext: IsolationTriggerContext? = null,
 ) {
     AnimatedContent(targetState = state, label = "ActiveDeviceState") { currentState ->
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -319,11 +265,14 @@ private fun ActiveDeviceSection(
                     TransientStateView("正在重新连接...", "搜索附近设备")
                 ConnectivityManagerState.WIFI_MISMATCH ->
                     WifiMismatchView(
+                        repairState = repairState,
                         suggestedSsid = wifiMismatchSuggestedSsid,
                         errorMessage = wifiMismatchErrorMessage,
                         onUpdate = onUpdateWifi,
                         onInputChanged = onWifiMismatchInputChanged,
-                        onIgnore = onCancel
+                        onIgnore = onCancel,
+                        isolationBadgeIp = isolationBadgeIp,
+                        isolationTriggerContext = isolationTriggerContext
                     )
             }
         }
@@ -932,6 +881,59 @@ private fun ModalActionButton(
 
 @Composable
 internal fun WifiMismatchView(
+    repairState: WifiRepairState,
+    suggestedSsid: String?,
+    errorMessage: String?,
+    onUpdate: (String, String) -> Unit,
+    onInputChanged: () -> Unit,
+    onIgnore: () -> Unit,
+    isolationBadgeIp: String? = null,
+    isolationTriggerContext: IsolationTriggerContext? = null,
+) {
+    when (repairState) {
+        is WifiRepairState.Idle,
+        is WifiRepairState.EditCredentials,
+        is WifiRepairState.RetryableFailure ->
+            WifiCredentialFormContent(
+                suggestedSsid = suggestedSsid,
+                errorMessage = errorMessage,
+                onUpdate = onUpdate,
+                onInputChanged = onInputChanged,
+                onIgnore = onIgnore
+            )
+
+        is WifiRepairState.SendingCredentials,
+        is WifiRepairState.WaitingForBadgeNetworkSwitch,
+        is WifiRepairState.TransportConfirmed,
+        is WifiRepairState.HttpCheckPending,
+        is WifiRepairState.HttpReady ->
+            WifiRepairProgressContent(repairState = repairState, onIgnore = onIgnore)
+
+        is WifiRepairState.HttpDelayed ->
+            WifiRepairHttpDelayedContent(
+                badgeSsid = repairState.badgeSsid,
+                onDismiss = onIgnore
+            )
+
+        is WifiRepairState.HardFailure ->
+            // 隔离场景路由到专用视图，其余原因沿用硬失败视图
+            if (repairState.reason == WifiRepairState.HardFailure.HardFailureReason.SUSPECTED_ISOLATION) {
+                WifiRepairIsolationContent(
+                    badgeIp = isolationBadgeIp,
+                    triggerContext = isolationTriggerContext,
+                    onRePair = onIgnore
+                )
+            } else {
+                WifiRepairHardFailureContent(
+                    reason = repairState.reason,
+                    onRetry = onIgnore
+                )
+            }
+    }
+}
+
+@Composable
+private fun WifiCredentialFormContent(
     suggestedSsid: String?,
     errorMessage: String?,
     onUpdate: (String, String) -> Unit,
@@ -1095,6 +1097,175 @@ internal fun WifiMismatchView(
                 textContentColor = TextMuted
             )
         }
+    }
+}
+
+@Composable
+private fun WifiRepairProgressContent(
+    repairState: WifiRepairState,
+    onIgnore: () -> Unit
+) {
+    val phaseLabel = when (repairState) {
+        is WifiRepairState.SendingCredentials -> "正在发送 Wi-Fi 配置..."
+        is WifiRepairState.WaitingForBadgeNetworkSwitch -> "等待设备切换网络..."
+        is WifiRepairState.TransportConfirmed -> "网络切换成功，正在验证服务..."
+        is WifiRepairState.HttpCheckPending -> "正在验证服务连通性..."
+        is WifiRepairState.HttpReady -> "服务已就绪"
+        else -> "正在处理..."
+    }
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(modifier = Modifier.height(12.dp))
+        CircularProgressIndicator(color = AccentBlue, modifier = Modifier.size(36.dp))
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(phaseLabel, fontSize = 15.sp, color = TextPrimary, fontWeight = FontWeight.Medium)
+        Spacer(modifier = Modifier.height(24.dp))
+        ModalActionButton(text = "取消", color = TextSecondary, onClick = onIgnore)
+    }
+}
+
+@Composable
+private fun WifiRepairHttpDelayedContent(
+    badgeSsid: String?,
+    onDismiss: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.Start
+    ) {
+        Text(
+            "网络已切换成功",
+            fontSize = 20.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = ConnectedGreen
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        val detail = if (badgeSsid != null) {
+            "设备已接入 $badgeSsid，服务仍在启动中（通常需要 10–30 秒）"
+        } else {
+            "设备网络切换成功，服务仍在启动中（通常需要 10–30 秒）"
+        }
+        Text(detail, fontSize = 14.sp, color = TextSecondary)
+        Spacer(modifier = Modifier.height(24.dp))
+        ModalActionButton(text = "关闭", color = AccentBlue, onClick = onDismiss)
+    }
+}
+
+@Composable
+private fun WifiRepairIsolationContent(
+    badgeIp: String?,
+    triggerContext: IsolationTriggerContext? = null,
+    onRePair: () -> Unit,
+) {
+    val context = LocalContext.current
+
+    // 根据触发场景选择标题和说明文案
+    val titleText = when (triggerContext) {
+        IsolationTriggerContext.PRE_SYNC -> "同步暂停 — 网络可能隔离了设备"
+        IsolationTriggerContext.ON_DISCONNECT -> "设备断开 — 网络可能正在隔离设备"
+        IsolationTriggerContext.ON_CONNECT -> "连接后网络检测异常"
+        else -> "网络可能隔离了设备"  // POST_PAIRING 或未知
+    }
+    val bodyText = when (triggerContext) {
+        IsolationTriggerContext.PRE_SYNC ->
+            "录音无法上传。手机与徽章均已接入网络，但无法互相通信。" +
+            "尝试切换到个人热点后重新同步。"
+        IsolationTriggerContext.ON_DISCONNECT ->
+            "设备已断开连接，可能由网络隔离引起。" +
+            "请切换到其他 Wi-Fi 或开启个人热点后重新连接。"
+        IsolationTriggerContext.ON_CONNECT ->
+            "徽章已接入网络，但无法通过 HTTP 访问。" +
+            "可能是路由器隔离了设备间通信。尝试切换到个人热点。"
+        else ->
+            "手机和徽章均已接入同一网络，但无法互相通信。" +
+            "部分访客网络和企业 Wi-Fi 会隔离设备间的直接通信。"
+    }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.Start
+    ) {
+        Text(titleText, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = ReconnectingAmber)
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            bodyText,
+            fontSize = 14.sp,
+            color = TextSecondary,
+            lineHeight = 20.sp
+        )
+        if (badgeIp != null) {
+            Spacer(modifier = Modifier.height(8.dp))
+            Text("徽章 IP：$badgeIp", fontSize = 12.sp, color = TextMuted)
+        }
+        Spacer(modifier = Modifier.height(20.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            ModalActionButton(
+                text = "打开 WiFi 设置",
+                color = AccentBlue,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = {
+                    context.startActivity(
+                        Intent(Settings.ACTION_WIFI_SETTINGS)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    )
+                }
+            )
+            ModalActionButton(
+                text = "打开热点设置",
+                color = AccentBlue,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = {
+                    // 部分 OEM 隐藏 ACTION_TETHER_SETTINGS，回退到通用无线设置
+                    runCatching {
+                        context.startActivity(
+                            Intent(ACTION_TETHER_SETTINGS)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    }.onFailure {
+                        context.startActivity(
+                            Intent(Settings.ACTION_WIRELESS_SETTINGS)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    }
+                }
+            )
+            ModalActionButton(
+                text = "重新配对",
+                color = TextSecondary,
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onRePair
+            )
+        }
+    }
+}
+
+@Composable
+private fun WifiRepairHardFailureContent(
+    reason: WifiRepairState.HardFailure.HardFailureReason,
+    onRetry: () -> Unit
+) {
+    val detail = when (reason) {
+        WifiRepairState.HardFailure.HardFailureReason.SSID_MISMATCH ->
+            "设备接入的 Wi-Fi 与输入不符，请重新检查凭据后重试"
+        WifiRepairState.HardFailure.HardFailureReason.BADGE_OFFLINE ->
+            "设备未能接入网络，请确认 Wi-Fi 密码后重试"
+        WifiRepairState.HardFailure.HardFailureReason.CREDENTIAL_REPLAY_FAILED ->
+            "已保存凭据重播失败，请重新输入"
+        // SUSPECTED_ISOLATION 由 WifiMismatchView 路由到 WifiRepairIsolationContent，此处不可达
+        WifiRepairState.HardFailure.HardFailureReason.SUSPECTED_ISOLATION ->
+            "网络可能隔离了设备，请切换网络后重试"
+    }
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.Start
+    ) {
+        Text("网络配置失败", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = DangerRed)
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(detail, fontSize = 14.sp, color = TextSecondary)
+        Spacer(modifier = Modifier.height(24.dp))
+        ModalActionButton(text = "重新输入", color = AccentBlue, onClick = onRetry)
     }
 }
 

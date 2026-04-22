@@ -14,7 +14,6 @@ import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.smartsales.prism.AppFlavor
 import com.smartsales.prism.data.connectivity.registry.RegisteredDevice
 import com.smartsales.prism.domain.audio.BadgeAudioPipeline
 import com.smartsales.prism.ui.components.DynamicIslandItem
@@ -42,9 +41,9 @@ import com.smartsales.prism.ui.sim.handleBadgeSchedulerContinuityIngress
 import com.smartsales.prism.ui.sim.handleRuntimeConnectivityEntryRequest
 import com.smartsales.prism.ui.sim.initialRuntimeShellState
 import com.smartsales.prism.ui.sim.openRuntimeAudioDrawer
+import com.smartsales.prism.ui.sim.openRuntimeConnectivityModal
 import com.smartsales.prism.ui.sim.openRuntimeScheduler
 import com.smartsales.prism.ui.sim.rememberSimImeVisibility
-import com.smartsales.prism.ui.sim.scheduleAutoReconnect
 import com.smartsales.prism.ui.sim.shouldAutoOpenRuntimeSchedulerPostOnboardingHandoff
 import com.smartsales.prism.ui.sim.shouldAutoOpenRuntimeSchedulerStartupTeaser
 import com.smartsales.prism.ui.sim.shouldShowRuntimeIdleComposerHint
@@ -64,7 +63,7 @@ internal fun RuntimeShell(
     shouldAutoOpenSchedulerAfterOnboarding: Boolean = false,
     onPostOnboardingSchedulerAutoOpened: () -> Unit = {}
 ) {
-    val schedulerEnabled = AppFlavor.schedulerEnabled
+    val schedulerEnabled = true
     val chatViewModel: SimAgentViewModel = hiltViewModel()
     val schedulerViewModel: SimSchedulerViewModel = viewModel()
     val followUpOwner: SimBadgeFollowUpOwner = viewModel()
@@ -123,19 +122,12 @@ internal fun RuntimeShell(
         topUrgentTasks,
         shellState.showSchedulerIslandHint
     ) {
-        if (schedulerEnabled) {
-            buildSimDynamicIslandItems(
-                sessionTitle = sessionTitle,
-                sessionHasAudioContextHistory = currentSessionHasAudioContextHistory,
-                orderedTasks = topUrgentTasks,
-                showIdleTeachingHint = shellState.showSchedulerIslandHint
-            )
-        } else {
-            buildHarmonyCompatDynamicIslandItems(
-                sessionTitle = sessionTitle,
-                sessionHasAudioContextHistory = currentSessionHasAudioContextHistory
-            )
-        }
+        buildSimDynamicIslandItems(
+            sessionTitle = sessionTitle,
+            sessionHasAudioContextHistory = currentSessionHasAudioContextHistory,
+            orderedTasks = topUrgentTasks,
+            showIdleTeachingHint = shellState.showSchedulerIslandHint
+        )
     }
     val schedulerIslandItemsFlow = remember {
         MutableStateFlow(emptyList<DynamicIslandItem>())
@@ -182,12 +174,19 @@ internal fun RuntimeShell(
                 shellState.activeConnectivitySurface != null
     }
 
-    // 自动重连：当 shell 启动或连接状态回到 DISCONNECTED 时，调度退避重连
+    // 自动重连：仅在有效 UI 状态确认为 DISCONNECTED 时调度退避重连，
+    // 避免 WIFI_MISMATCH / 手动修复流程被后台重连覆盖。
     LaunchedEffect(connectivityViewModel) {
-        connectivityViewModel.connectionState.collect { state ->
+        connectivityViewModel.effectiveState.collect { state ->
             if (state == com.smartsales.prism.ui.components.connectivity.ConnectionState.DISCONNECTED) {
                 connectivityViewModel.scheduleAutoReconnect()
             }
+        }
+    }
+
+    LaunchedEffect(connectivityViewModel) {
+        connectivityViewModel.promptRequests.collectLatest {
+            shellState = openRuntimeConnectivityModal(shellState)
         }
     }
 
@@ -416,22 +415,5 @@ internal fun RuntimeShell(
         mutateShellState = { transform ->
             shellState = transform(shellState)
         }
-    )
-}
-
-private fun buildHarmonyCompatDynamicIslandItems(
-    sessionTitle: String,
-    sessionHasAudioContextHistory: Boolean
-): List<DynamicIslandItem> {
-    val normalizedTitle = sessionTitle.ifBlank { "智能销售" }
-    return listOf(
-        DynamicIslandItem(
-            sessionTitle = normalizedTitle,
-            displayText = normalizedTitle,
-            lane = DynamicIslandLane.CONNECTIVITY,
-            visualState = DynamicIslandVisualState.SESSION_TITLE_HIGHLIGHT,
-            showsAudioIndicator = sessionHasAudioContextHistory,
-            tapAction = DynamicIslandTapAction.OpenConnectivityEntry
-        )
     )
 }

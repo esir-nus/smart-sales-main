@@ -51,6 +51,7 @@ enum class DynamicIslandVisualState {
     SCHEDULER_IDLE,
     SESSION_TITLE_HIGHLIGHT,
     CONNECTIVITY_CONNECTED,
+    CONNECTIVITY_PARTIAL,
     CONNECTIVITY_DISCONNECTED,
     CONNECTIVITY_RECONNECTING,
     CONNECTIVITY_NEEDS_SETUP,
@@ -267,6 +268,10 @@ private fun DynamicIslandItem.resolveChroma(): DynamicIslandChroma {
         DynamicIslandVisualState.CONNECTIVITY_CONNECTED -> DynamicIslandChroma(
             dot = DynamicIslandConnectedColor,
             textGradient = listOf(Color(0xFFA4E38A), DynamicIslandConnectedColor)
+        )
+        DynamicIslandVisualState.CONNECTIVITY_PARTIAL -> DynamicIslandChroma(
+            dot = DynamicIslandReconnectColor,
+            textGradient = listOf(Color(0xFFFFD380), DynamicIslandReconnectColor)
         )
         DynamicIslandVisualState.CONNECTIVITY_DISCONNECTED -> DynamicIslandChroma(
             dot = Color.White.copy(alpha = 0.30f),

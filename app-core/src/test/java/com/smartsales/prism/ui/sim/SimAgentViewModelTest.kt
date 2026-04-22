@@ -21,11 +21,14 @@ import com.smartsales.prism.data.audio.SimRealtimeSpeechProfile
 import com.smartsales.prism.data.audio.SimRealtimeSpeechRecognitionResult
 import com.smartsales.prism.data.audio.SimRealtimeSpeechRecognizer
 import com.smartsales.prism.data.audio.simArtifactFilename
+import com.smartsales.prism.data.connectivity.BadgeEndpointRecoveryCoordinator
+import com.smartsales.prism.data.connectivity.legacy.FakePhoneWifiProvider
 import com.smartsales.prism.data.session.SimSessionRepository
 import com.smartsales.prism.domain.audio.AudioFile
 import com.smartsales.prism.domain.audio.AudioSource
 import com.smartsales.prism.domain.audio.TranscriptionStatus
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
+import com.smartsales.prism.domain.connectivity.ConnectivityPrompt
 import com.smartsales.prism.domain.model.ChatMessage
 import com.smartsales.prism.domain.model.SchedulerFollowUpTaskSummary
 import com.smartsales.prism.domain.model.SessionKind
@@ -1891,8 +1894,11 @@ class SimAgentViewModelTest {
             runtime = SimAudioRepositoryRuntime(
                 context = context,
                 connectivityBridge = mock<ConnectivityBridge>(),
+                endpointRecoveryCoordinator = BadgeEndpointRecoveryCoordinator(),
                 ossUploader = mock<OssUploader>(),
-                tingwuPipeline = mock<TingwuPipeline>()
+                tingwuPipeline = mock<TingwuPipeline>(),
+                connectivityPrompt = mock<ConnectivityPrompt>(),
+                phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest")
             ),
             orchestrator = mock<DownloadServiceOrchestrator>()
         )

@@ -42,6 +42,10 @@ class SimAudioRepository @Inject constructor(
         return syncSupport.syncFromBadge(trigger)
     }
 
+    internal suspend fun shouldSuppressAutoSync(): Boolean {
+        return syncSupport.shouldSuppressAutoSync()
+    }
+
     internal suspend fun syncFromBadgeAfterVerifiedReadiness(
         trigger: SimBadgeSyncTrigger
     ): SimBadgeSyncOutcome {

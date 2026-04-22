@@ -1,7 +1,10 @@
 package com.smartsales.prism.data.connectivity.legacy
 
 import com.smartsales.core.util.Result
+import com.smartsales.prism.domain.connectivity.WifiRepairEvent
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 
@@ -12,14 +15,23 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
     private val _state = MutableStateFlow<ConnectionState>(ConnectionState.Disconnected)
     override val state: StateFlow<ConnectionState> = _state
     
-    private val _recordingReadyEvents = kotlinx.coroutines.flow.MutableSharedFlow<String>(
+    private val _recordingReadyEvents = MutableSharedFlow<String>(
         replay = 0,
         extraBufferCapacity = 1
     )
-    override val recordingReadyEvents: kotlinx.coroutines.flow.SharedFlow<String> =
-        _recordingReadyEvents.asSharedFlow()
-    override val audioRecordingReadyEvents: kotlinx.coroutines.flow.SharedFlow<String> =
-        kotlinx.coroutines.flow.MutableSharedFlow<String>(replay = 0).asSharedFlow()
+    override val recordingReadyEvents: SharedFlow<String> = _recordingReadyEvents.asSharedFlow()
+    override val audioRecordingReadyEvents: SharedFlow<String> =
+        MutableSharedFlow<String>(replay = 0).asSharedFlow()
+
+    private val _wifiRepairEvents = MutableSharedFlow<WifiRepairEvent>(
+        replay = 0,
+        extraBufferCapacity = 16
+    )
+    override val wifiRepairEvents: SharedFlow<WifiRepairEvent> = _wifiRepairEvents.asSharedFlow()
+
+    suspend fun emitRepairEvent(event: WifiRepairEvent) {
+        _wifiRepairEvents.emit(event)
+    }
     
     var stubPairingResult: Result<Unit> = Result.Success(Unit)
     var stubRetryResult: Result<Unit> = Result.Success(Unit)
@@ -121,7 +133,7 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
         voiceVolumeCalls.add(level.coerceIn(0, 100))
         return setVoiceVolumeShouldSucceed
     }
-
+    
     fun setState(newState: ConnectionState) {
         _state.value = newState
     }

@@ -88,6 +88,9 @@ class RealBadgeAudioPipelineIngressTest {
 
         override suspend fun deleteRecording(filename: String): Boolean = true
 
+        override fun wifiRepairEvents(): Flow<com.smartsales.prism.domain.connectivity.WifiRepairEvent> =
+            emptyFlow()
+
         suspend fun emit(notification: RecordingNotification) {
             notifications.emit(notification)
         }

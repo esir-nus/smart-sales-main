@@ -90,7 +90,6 @@ If `POST_NOTIFICATIONS` is denied on Android 13+:
 
 - the pipeline still completes inside the foreground-service envelope
 - the outcome notification is skipped intentionally
-- the app sends one BLE badge chime via `DeviceConnectionManager.notifyTaskFired()`
 - the missed outcome summary is stored in an in-memory ring buffer
 - `MainActivity.onStart()` consumes that buffer and shows a toast once the user returns to foreground
 

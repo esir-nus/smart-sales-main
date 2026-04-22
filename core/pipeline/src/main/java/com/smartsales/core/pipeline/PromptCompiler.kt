@@ -422,7 +422,11 @@ $activeShortlist
 4. 如果当前输入没有明确说出要改的目标，必须输出 `NOT_SUPPORTED`；不能借助最近任务、UI 选中态、点开卡片、当前页面日期或“最像的那个任务”来补目标。
 5. `active_task_shortlist` 是当前活跃任务真相的边界；不要输出短名单之外的 `suggestedTaskId`。
 6. 如果你觉得目标仍然含糊或可能对应多个任务，就输出 `NOT_SUPPORTED`。
-7. `timeInstruction` 只能保留新的**明确时点**，例如 `明天早上8点`、`周五上午11点`、`2026-03-25 18:00`。像 `推迟1个小时`、`提前半小时` 这类 delta-only 改期不支持，必须输出 `NOT_SUPPORTED`。
+7. `timeInstruction` 必须只保留新的明确时间指令，可以是：
+   - 明确时点，例如 `明天早上8点`、`周五上午11点`、`2026-03-25 18:00`
+   - 明确相对偏移，例如 `推迟1个小时`、`提前半小时`
+   - 不要把目标线索混进 `timeInstruction`
+8. 模糊相对说法如 `待会儿`、`晚点`、`之后再说` 不支持，必须输出 `NOT_SUPPORTED`。
 8. 只能输出严格 JSON，禁止 Markdown 包裹。
 
 严格输出以下 Kotlin contract 对应的 JSON：

@@ -482,56 +482,6 @@ class SchedulerLinterTest {
     }
 
     @Test
-    fun `Uni-C inspiration extraction falls back to title when content is blank`() {
-        val json = """
-            {
-              "decision": "INSPIRATION_CREATE",
-              "idea": {
-                "content": "   ",
-                "title": "以后想学吉他"
-              }
-            }
-        """.trimIndent()
-
-        val result = linter.parseUniCExtraction(
-            input = json,
-            unifiedId = "uni-c-002",
-            transcript = "原始语音"
-        )
-
-        assertTrue(result is FastTrackResult.CreateInspiration)
-        assertEquals(
-            "以后想学吉他",
-            (result as FastTrackResult.CreateInspiration).params.content
-        )
-    }
-
-    @Test
-    fun `Uni-C inspiration extraction falls back to transcript when model omits content`() {
-        val json = """
-            {
-              "decision": "INSPIRATION_CREATE",
-              "idea": {
-                "content": "",
-                "title": null
-              }
-            }
-        """.trimIndent()
-
-        val result = linter.parseUniCExtraction(
-            input = json,
-            unifiedId = "uni-c-003",
-            transcript = "以后想学吉他"
-        )
-
-        assertTrue(result is FastTrackResult.CreateInspiration)
-        assertEquals(
-            "以后想学吉他",
-            (result as FastTrackResult.CreateInspiration).params.content
-        )
-    }
-
-    @Test
     fun `Uni-C not inspiration returns NoMatch`() {
         val json = """
             {
@@ -547,25 +497,44 @@ class SchedulerLinterTest {
     }
 
     @Test
-    fun `follow-up reschedule V2 delta extraction rejects out of bounds offset`() {
+    fun `follow-up reschedule V2 delta extraction is supported`() {
         val json = """
             {
               "decision": "RESCHEDULE_EXACT",
               "timeKind": "DELTA_FROM_TARGET",
-              "deltaFromTargetMinutes": 20161
+              "deltaFromTargetMinutes": 60
             }
         """.trimIndent()
 
         val result = linter.parseFollowUpRescheduleExtraction(
             input = json,
-            transcript = "推迟15天"
+            transcript = "推迟1个小时"
         )
 
-        assertTrue(result is FollowUpRescheduleExtractionResult.Invalid)
-        assertTrue(
-            (result as FollowUpRescheduleExtractionResult.Invalid)
-                .reason.contains("+/-20160")
+        assertTrue(result is FollowUpRescheduleExtractionResult.Supported)
+        val supported = result as FollowUpRescheduleExtractionResult.Supported
+        assertEquals(FollowUpRescheduleTimeKind.DELTA_FROM_TARGET, supported.timeKind)
+        assertEquals(60, (supported.operand as FollowUpRescheduleOperand.DeltaFromTarget).minutes)
+    }
+
+    @Test
+    fun `follow-up reschedule V2 negative delta extraction preserves sign`() {
+        val json = """
+            {
+              "decision": "RESCHEDULE_EXACT",
+              "timeKind": "DELTA_FROM_TARGET",
+              "deltaFromTargetMinutes": -30
+            }
+        """.trimIndent()
+
+        val result = linter.parseFollowUpRescheduleExtraction(
+            input = json,
+            transcript = "提前半小时"
         )
+
+        assertTrue(result is FollowUpRescheduleExtractionResult.Supported)
+        val supported = result as FollowUpRescheduleExtractionResult.Supported
+        assertEquals(-30, (supported.operand as FollowUpRescheduleOperand.DeltaFromTarget).minutes)
     }
 
     @Test

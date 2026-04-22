@@ -173,9 +173,8 @@ Current SIM-specific state and remaining gaps:
 - global means the resolver considers all non-done scheduler-owned tasks through a scheduler-owned active retrieval index; current selected/opened task state and current visible page/date must not bias semantic target choice
 - the active retrieval index is a derived read-model from canonical `ScheduledTask` rows, not a new persistent cache table and not a SIM/session memory lane
 - the retrieval index may build a bounded shortlist context pack for the extractor; the delivered cap is top 8 candidates
-- extractor-owned `suggestedTaskId` / `preferredTaskIds` remain advisory only; ids outside that active shortlist must be stripped before scheduler-owned resolution runs
 - no recent-task-set, selected-task, or visible-page heuristic is semantic authority for a reschedule mutation
-- after one target is resolved, explicit day+clock phrases such as `明天早上8点` must resolve through scheduler-owned deterministic parsing before falling back to model-led exact-time extraction; this same exact-time rule also applies to the task-scoped follow-up reschedule lane, and model-led relative-day dates must reject values beyond `anchor + 365d`
+- after one target is resolved, explicit day+clock phrases such as `明天早上8点` must resolve through scheduler-owned deterministic parsing before falling back to model-led exact-time extraction; this same exact-time rule also applies to the task-scoped follow-up reschedule lane
 - create-time extracted `keyPerson` / `location` may be persisted as retrieval hints so later global reschedule matching can use participant/location cues without re-parsing the entire schedule set from scratch
 - notes may participate only as weak retrieval context; notes-only overlap must not overpower stronger title/person/location evidence
 - SIM now reuses the shared reminder stack for persisted exact tasks only: create and conflict-create arm reminders, vague tasks do not, delete and mark-done cancel, reschedule cancels then rearms, and restore-from-done does not rearm in T4.8
@@ -243,8 +242,9 @@ Follow-up mutation ownership remains narrow:
 - shell/chat may host prompting, task selection, and follow-up input
 - scheduler-owned mutation truth still belongs to the scheduler task repository, conflict check, and reminder stack
 - task-scoped follow-up reschedule target resolution is now global across scheduler-owned tasks rather than selected-task authority
-- the current utterance must itself restate an explicit reschedule target plus either a new exact time or one explicit bounded delta from the resolved task; omitted-target follow-up mutation must safe-fail
-- delta-only phrasing such as `推迟1小时` or `提前半小时` is supported only when the extractor yields one non-zero `deltaFromTargetMinutes` within `+/-20160` minutes (14 days); zero or out-of-bounds delta must safe-fail
+- the current utterance must itself restate an explicit reschedule target plus a new exact time; omitted-target follow-up mutation must safe-fail
+- explicit signed delta phrasing such as `推迟1小时` or `提前半小时` is supported when the resolved task already has an exact start time
+- the same delta phrasing must still safe-fail for vague / `时间待定` tasks, which require a concrete new clock time instead
 - follow-up reschedule now also carries a narrow V2 shadow experiment: a dedicated reschedule-time extractor may run in parallel for observability after one task is globally resolved, but V1 remains the only execution/write path in this slice
 - the V2 shadow experiment is time-semantics-only: it must not resolve targets, change duration, or widen mutation authority outside the already-resolved task
 - selected-task UI state may still drive quick actions such as delete/done or prefill, but it must not override global reschedule resolution
@@ -310,7 +310,8 @@ Scheduler-drawer voice reschedule is supported only within approved SIM schedule
 - the same clause that asks for reschedule must contain both an explicit target and a new exact time; omitted-target mutation such as `改到3点` is unsupported
 - after one task is resolved, absolute exact-time phrasing should keep the delivered exact-time reschedule rules
 - explicit day+clock phrasing such as `明天早上8点` must remain valid even when the new-time tail does not restate the task title
-- explicit delta phrasing such as `推迟1小时` / `提前半小时` is unsupported and must safe-fail rather than mutate from the resolved task's current start time
+- explicit delta phrasing such as `推迟1小时` / `提前半小时` may mutate from the resolved task's current start time when that task already has an exact scheduled time
+- the same delta phrasing must still safe-fail for vague / `时间待定` tasks, and fuzzy phrases such as `待会儿` / `晚点` remain unsupported
 - one utterance with several valid explicit-target reschedule clauses is just decomposition into ordinary independent reschedules, not a special batch-reschedule mode
 - audio drawer, general SIM chat, and unrelated sessions must not reuse this lane as implicit scheduler authority
 

@@ -91,7 +91,6 @@ class SchedulerViewModel @Inject constructor(
     private val exactAlarmPrompted = AtomicBoolean(false)
 
     private val _tipsCache = mutableMapOf<String, List<String>>()
-    private val _refreshTrigger = MutableSharedFlow<Unit>(replay = 1).apply { tryEmit(Unit) }
 
     private val projectionSupport = SchedulerViewModelProjectionSupport(
         scope = viewModelScope,
@@ -109,7 +108,6 @@ class SchedulerViewModel @Inject constructor(
         getTipsLoading = { _tipsLoading.value },
         setTipsLoading = { _tipsLoading.value = it },
         tipsCache = _tipsCache,
-        emitRefresh = { _refreshTrigger.tryEmit(Unit) },
         getConflictedTaskIds = { _conflictedTaskIds.value },
         clearConflictState = {
             _conflictWarning.value = null
@@ -131,10 +129,7 @@ class SchedulerViewModel @Inject constructor(
     )
 
     override val timelineItems: StateFlow<List<SchedulerTimelineItem>> =
-        projectionSupport.buildTimelineItems(
-            activeDayOffset = _activeDayOffset,
-            refreshTrigger = _refreshTrigger.asSharedFlow()
-        )
+        projectionSupport.buildTimelineItems(activeDayOffset = _activeDayOffset)
 
     override val topUrgentTasks: StateFlow<List<ScheduledTask>> =
         projectionSupport.buildTopUrgentTasks()

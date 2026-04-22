@@ -14,7 +14,6 @@ internal class SchedulerViewModelLegacyActions(
     private val getTipsLoading: () -> Set<String>,
     private val setTipsLoading: (Set<String>) -> Unit,
     private val tipsCache: MutableMap<String, List<String>>,
-    private val emitRefresh: () -> Unit,
     private val getConflictedTaskIds: () -> Set<String>,
     private val clearConflictState: () -> Unit
 ) {
@@ -23,7 +22,6 @@ internal class SchedulerViewModelLegacyActions(
         taskRepository.deleteItem(id)
         tipsCache.remove(id)
         setTipsLoading(getTipsLoading() - id)
-        emitRefresh()
     }
 
     suspend fun toggleDone(taskId: String) {
@@ -34,7 +32,6 @@ internal class SchedulerViewModelLegacyActions(
             memoryRepository.save(memoryEntry)
             taskRepository.deleteItem(taskId)
             android.util.Log.d("SchedulerVM", "toggleDone: id=$taskId migrated to Factual Memory.")
-            emitRefresh()
         } else {
             android.util.Log.d(
                 "SchedulerVM",

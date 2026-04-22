@@ -5,23 +5,24 @@ import com.smartsales.prism.domain.mapper.TaskMemoryMapper
 import com.smartsales.prism.domain.memory.MemoryEntry
 import com.smartsales.prism.domain.memory.MemoryEntryType
 import com.smartsales.prism.domain.memory.MemoryRepository
+import com.smartsales.prism.domain.scheduler.SchedulerTimelineItem.CrossedOff
 import com.smartsales.prism.domain.scheduler.InspirationRepository
 import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.SchedulerTimelineItem
 import com.smartsales.prism.domain.time.TimeProvider
+import com.smartsales.prism.data.scheduler.SchedulerTelemetryDispatcher
 import java.time.Instant
-import java.time.LocalDate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 internal class SchedulerViewModelProjectionSupport(
     private val scope: CoroutineScope,
     private val taskRepository: ScheduledTaskRepository,
@@ -31,26 +32,23 @@ internal class SchedulerViewModelProjectionSupport(
 ) {
 
     fun buildTimelineItems(
-        activeDayOffset: StateFlow<Int>,
-        refreshTrigger: SharedFlow<Unit>
+        activeDayOffset: StateFlow<Int>
     ): StateFlow<List<SchedulerTimelineItem>> {
         return combine(
-            combine(activeDayOffset, refreshTrigger) { offset, _ -> offset }
-                .flatMapLatest { offset -> taskRepository.getTimelineItems(offset) },
-            combine(activeDayOffset, refreshTrigger) { offset, _ -> offset }
-                .flatMapLatest(::observeCompletedMemoriesForOffset),
+            activeDayOffset.flatMapLatest { offset -> taskRepository.getTimelineItems(offset) },
+            activeDayOffset.flatMapLatest(::observeCompletedMemoriesForOffset),
             inspirationRepository.getAll()
         ) { activeTasks, factualMemories, inspirations ->
-            val crossedOffTasks = factualMemories.map(::mapCompletedMemoryToTask)
-            val crossedOffIds = crossedOffTasks.map { it.id }.toSet()
+            val crossedOffItems = factualMemories.map(::mapCompletedMemoryToTimelineItem)
+            val crossedOffIds = crossedOffItems.map { it.id }.toSet()
             val filteredActiveTasks = activeTasks.filter { it.id !in crossedOffIds }
-            val combinedTasks = (filteredActiveTasks + crossedOffTasks).sortedWith(
+            val combinedTasks = (filteredActiveTasks + crossedOffItems).sortedWith(
                 compareByDescending<SchedulerTimelineItem> { it is ScheduledTask && it.isVague }
-                    .thenBy { if (it is ScheduledTask) it.startTime else Instant.MAX }
+                    .thenBy { it.sortInstantOrMax() }
             )
             val finalResult = inspirations + combinedTasks
 
-            PipelineValve.tag(
+            SchedulerTelemetryDispatcher.post(
                 checkpoint = PipelineValve.Checkpoint.UI_STATE_EMITTED,
                 payloadSize = finalResult.size,
                 summary = "Scheduler UI State Emitted (Active/Crossed/Insp)",
@@ -91,20 +89,22 @@ internal class SchedulerViewModelProjectionSupport(
         )
     }
 
-    private fun mapCompletedMemoryToTask(memory: MemoryEntry): ScheduledTask {
+    private fun mapCompletedMemoryToTimelineItem(memory: MemoryEntry): CrossedOff {
         val reminderCascade = TaskMemoryMapper.reminderCascadeFromOutcomeJson(memory.outcomeJson)
-        return ScheduledTask(
+        return CrossedOff(
             id = memory.entryId,
             timeDisplay = "已完成",
             title = memory.title ?: memory.content,
             urgencyLevel = TaskMemoryMapper.urgencyLevelFromOutcomeJson(memory.outcomeJson),
             startTime = Instant.ofEpochMilli(memory.scheduledAt ?: memory.createdAt),
-            endTime = null,
-            durationMinutes = 60,
-            isDone = true,
             hasAlarm = reminderCascade.isNotEmpty(),
-            alarmCascade = reminderCascade,
-            keyPersonEntityId = null
+            reminderCascade = reminderCascade
         )
+    }
+
+    private fun SchedulerTimelineItem.sortInstantOrMax(): Instant = when (this) {
+        is ScheduledTask -> startTime
+        is CrossedOff -> startTime
+        else -> Instant.MAX
     }
 }

@@ -69,6 +69,8 @@ Those belong to later universe work.
         v
 [ScheduledTaskRepository.upsertTask]
         |
+        +--> [Room canonical write; Room Flow invalidation drives scheduler timeline re-emission]
+        |
         v
 [PipelineResult.PathACommitted(task)]
         |

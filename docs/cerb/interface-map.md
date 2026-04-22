@@ -100,6 +100,8 @@ Orchestrates LLM-powered processing. Reads from Layer 2 data services.
 >
 > **Shared scheduler routing is now core-owned.** `IntentOrchestrator` voice routing and `UnifiedPipeline` `PATH_B_TEXT` routing both delegate to `SchedulerIntelligenceRouter` first; the legacy JSON mutation scheduler path remains a compatibility fallback only when the shared router is unavailable or does not match.
 >
+> **Scheduler persistence is canonical and flow-driven.** `ScheduledTaskRepository.upsertTask()` now collapses to one DAO upsert, and scheduler drawer timeline refresh is expected to come from Room Flow invalidation plus projection recompute rather than from a second manual refresh channel.
+>
 > **Later-lane scheduler suppression is now explicit.** After an early Path A scheduler commit, `IntentOrchestrator` records a terminal scheduler guard and suppresses later scheduler task-command / reschedule tool emissions for the same `unifiedId`.
 >
 > **ContextBuilder reads EntityRegistry for Entity Knowledge Context.** `ContextBuilder.buildEntityKnowledge()` calls `EntityRepository.getAll()` at session start to load the structured entity graph into the LLM prompt (RAM Section 1). This is a Kernel → SSD read.

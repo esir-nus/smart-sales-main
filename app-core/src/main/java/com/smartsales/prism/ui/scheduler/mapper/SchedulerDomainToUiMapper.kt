@@ -61,6 +61,41 @@ fun SchedulerTimelineItem.toUiState(
                 conflictSummary = normalizedTask.conflictSummary
             )
         }
+        is SchedulerTimelineItem.CrossedOff -> TimelineItem.Task(
+            id = id,
+            timeDisplay = timeDisplay,
+            renderKey = id,
+            title = title,
+            isDone = true,
+            isInteractive = true,
+            sortInstant = startTime,
+            hasAlarm = hasAlarm,
+            isSmartAlarm = false,
+            urgencyLevel = urgencyLevel,
+            dateRange = "",
+            location = null,
+            notes = null,
+            keyPerson = null,
+            highlights = null,
+            alarmCascade = reminderCascade,
+            reminderBells = reminderCascade.map { offset ->
+                ReminderBellVisual(
+                    offset = offset,
+                    state = ReminderBellState.FIRED
+                )
+            },
+            processingStatus = null,
+            isExiting = false,
+            exitDirection = ExitDirection.RIGHT,
+            conflictVisual = ConflictVisual.NONE,
+            keyPersonEntityId = null,
+            tips = emptyList(),
+            tipsLoading = false,
+            clarificationState = null,
+            isVague = false,
+            hasConflict = false,
+            conflictSummary = null
+        )
         is SchedulerTimelineItem.Inspiration -> TimelineItem.Inspiration(
             id = id,
             timeDisplay = timeDisplay,

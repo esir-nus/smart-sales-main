@@ -123,12 +123,16 @@ sealed class AsrResult {
   - [x] `data:oss` module created and receiving credentials
   - [x] `OssUploader` implementing `upload(File, objectKey)`
   - [x] `FunAsrService` switches to `Transcription` API
+  - [x] `FunAsrService` reads DashScope credentials through the shared provider seam rather than directly from test environment state
   - [x] End-to-end flow: Local WAV -> OSS -> Text
 
 - **Test Cases** (Verified via L1 Unit Tests):
   - [x] L1: Transcription error handling for invalid files
-  - [x] L1: Error: Invalid OSS auth -> OSS_UPLOAD_FAILED
+  - [x] L1: Error: OSS uploader failure -> OSS_UPLOAD_FAILED
+  - [x] L1: Error: Missing DashScope credentials -> AUTH_FAILED
   - [x] L1: Error: API error -> API_ERROR OR AUTH_FAILED
+  - [x] L1 unit tests stay hermetic and do not require `local.properties` or real DashScope access
+  - [x] Live DashScope verification remains opt-in integration coverage only
 
 ---
 
@@ -145,4 +149,3 @@ Requires both DashScope (for ASR) and Aliyun RAM (Cloud API, not OS Model RAM) f
 - `OSS_ACCESS_KEY_SECRET`
 - `OSS_BUCKET_NAME`
 - `OSS_ENDPOINT`
-

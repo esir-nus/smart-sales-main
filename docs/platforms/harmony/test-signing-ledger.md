@@ -347,6 +347,33 @@ Operator caution:
 - Harmony `uitest` transport and foreground focus remained unstable during the pass
 - do not claim raw IME automation reliability from this run; the deterministic form preset exists specifically to keep the harness on the real create pipeline without trusting Harmony text entry
 
+## 6b. Complete Native App Evidence Note: HS-006 Scheduler Harness Phase 2C
+
+This evidence slot applies to `platforms/harmony/smartsales-app` on branch `harmony/scheduler-phase-2c` or the Phase 2C continuation on `harmony/scheduler-phase-2b`.
+
+Planned operator chain for 2026-04-21:
+
+1. build the complete native app from `platforms/harmony/smartsales-app`
+2. sign the unsigned HAP against the active AGC-backed `smartsales.HOS.test` lane
+3. install on device `4NY0225613001090`
+4. launch `EntryAbility`
+5. run the Phase 2C mini-lab loop with screenshots plus `hilog | grep HS-006`
+
+Required evidence to append after the operator pass:
+
+- Scenario A: overlapping future tasks show conflict only on the later non-`FIRE_OFF` row
+- Scenario B: reschedule clears conflict on both rows while preserving the task `id` and bumping `updatedAt`
+- Scenario C: reschedule back onto the occupied slot restores the conflict banner on the later row
+- Scenario D: overlapping `FIRE_OFF` create bypasses conflict flags entirely
+- Scenario E: cold relaunch after Scenario B restores the rescheduled time and the cleared conflict state
+- Reminder seam proof stays honest through deferred HS-011 logs for both `cancelReminder` on the old slot and `publishReminder` on the new slot during reschedule
+
+Current status:
+
+- implementation landed in code and docs on 2026-04-21
+- local Harmony build proof still required for this exact revision
+- device screenshots and `hilog` proof still pending; do not mark Phase 2C device-verified until this section is filled with the actual log lines and operator artifacts
+
 ---
 
 ## 7. Drift Guardrail

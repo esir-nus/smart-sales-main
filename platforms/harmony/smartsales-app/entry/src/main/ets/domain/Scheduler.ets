@@ -79,6 +79,13 @@ export interface ScheduledTask {
   updatedAt: number;
 }
 
+export interface SchedulerRescheduleInput {
+  taskId: string;
+  newStart: number;
+  newDurationMinutes: number;
+  newUrgencyLevel?: UrgencyLevel;
+}
+
 // 日程仓库快照
 export interface SchedulerSnapshot {
   tasks: ScheduledTask[];
@@ -94,10 +101,10 @@ export function createEmptySchedulerSnapshot(): SchedulerSnapshot {
   };
 }
 
-export function buildAlarmCascade(level: UrgencyLevel): string[] {
+export function buildCascade(level: UrgencyLevel): string[] {
   switch (level) {
     case UrgencyLevel.L1_CRITICAL:
-      return ['-1h', '-10m', '0m'];
+      return ['-60m', '-10m', '0m'];
     case UrgencyLevel.L2_IMPORTANT:
       return ['-30m', '0m'];
     case UrgencyLevel.L3_NORMAL:
@@ -107,6 +114,10 @@ export function buildAlarmCascade(level: UrgencyLevel): string[] {
     default:
       return ['0m'];
   }
+}
+
+export function buildAlarmCascade(level: UrgencyLevel): string[] {
+  return buildCascade(level);
 }
 
 export function parseUrgencyLevel(value: Object | null | undefined): UrgencyLevel {

@@ -259,7 +259,7 @@ Every active Harmony program-summary entry must include:
 - `Platform Lane`: `harmony`
 - `Capability Class`: `complete-native`
 - `Owner`: Harmony-native complete app lane
-- `Status`: `Active` (Phase 2B device-verified)
+- `Status`: `Active` (Phase 2C implementation landed; Phase 2B device-verified, Phase 2C device evidence pending)
 - `Source of Truth`:
   - `docs/platforms/harmony/app-architecture.md`
   - `docs/platforms/harmony/native-development-framework.md`
@@ -277,16 +277,17 @@ Every active Harmony program-summary entry must include:
 - `Backend / Dataflow Evidence`:
   - state management follows the repository pub-sub shape proven in the Tingwu container
   - Phase 2B now includes manual exact-task create/list/complete/delete plus local JSON persistence
+  - Phase 2C now adds GUID-preserving reschedule, full-list conflict evaluation on add/reschedule/persist, and deterministic overlap seeding for the device harness
   - reminder publish/cancel is explicitly deferred to HS-011 when Harmony adapter provisioning is not yet ready
 - `Supported Set`:
   - Phase 1: app shell, navigation, lifecycle, config generation
   - Phase 2A: audio pipeline (import, upload, poll, artifacts)
   - Phase 2B: manual scheduler create/list/complete/delete with cold-launch restore
+  - Phase 2C: manual scheduler reschedule, conflict caution render, and deterministic conflict harness preset
 - `Disabled Set`:
   - LLM/voice scheduler extraction
-  - conflict/reschedule UI
   - real Harmony reminder adapter delivery
-  - Phase 2C/2D/2E surfaces beyond placeholders
+  - Phase 2D/2E surfaces beyond placeholders
 - `User-visible Limitation`:
   - the app only claims the slices that are locally implemented and verified; reminder adapter delivery remains deferred to HS-011 even though the reminder-attempt log now exists
 - `Does Not Own`:
@@ -298,15 +299,19 @@ Every active Harmony program-summary entry must include:
   - `Purpose`: complete native HarmonyOS app for phased parity delivery
   - `Capability Class`: `complete-native`
   - `Baseline Commit or Tag`: `platform/harmony` plus imported `smartsales-app` scaffold
-  - `Current Head Snapshot`: Phase 2B scheduler slice added on top of the complete app scaffold
+  - `Current Head Snapshot`: Phase 2C scheduler slice added on top of the complete app scaffold
   - `Restore Procedure Reference`: this tracker entry plus `docs/platforms/harmony/app-architecture.md`
   - `Current Restore Confidence`: local build plus AGC signing/install/device proof now exist for create -> restore -> complete -> delete using the shared `smartsales.HOS.test` lane
-- `Last Updated`: `2026-04-20`
+- `Last Updated`: `2026-04-21`
 - `Notes / Drift`:
   - the complete-native app scaffold was restored into this branch before HS-006 implementation because the current `platform/harmony` branch did not yet carry it as tracked content
   - `Scheduler.ets` now mirrors the Android task semantics with Harmony-owned `createdAt` / `updatedAt` metadata
   - `SchedulerRepository.ets` mirrors the audio repository persistence pattern and writes `smartsales_scheduler_tasks.json`
   - reminder registration is intentionally logged as deferred rather than faked until a real Harmony reminder adapter seam is available
   - the HS-006 device harness now uses a deterministic form preset button so the create path still flows through `handleCreate()` / `SchedulerRepository.addTask()` / `FileStore.saveTasks()` without relying on unstable Harmony IME automation
+  - the Phase 2C harness adds a second deterministic preset that seeds the overlap scenario directly through the Harmony repository so conflict/reschedule L3 proof can be repeated without fragile manual setup
+  - Phase 2C repository writes now normalize conflict flags inside the existing persist pipeline and rerun that evaluation on initialize so cold relaunch restores the latest conflict state without a second storage path
+  - Phase 2C reschedule currently emits honest deferred HS-011 stub logs for cancel-old and publish-new; this proves the adapter seam without claiming reminder delivery parity
   - the scheduler list row key now includes `updatedAt` and completion state because the first device pass exposed ArkUI row reuse that left the `Complete` button visually stale after a successful completion
   - on-device evidence on connect key `4NY0225613001090` now includes `loadTasks success count=1`, `initialize restored count=1`, `Completed · 2030-01-15 09:30`, `loadTasks success count=0`, and `initialize restored count=0`
+  - the new Phase 2C device loop for conflict create, conflict clear, cold relaunch, deferred reminder seam, and FIRE_OFF bypass is defined but still needs operator-run `hilog` plus screenshots before this row can claim Phase 2C device verification

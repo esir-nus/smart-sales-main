@@ -10,7 +10,7 @@ import {
   UrgencyLevel,
   DurationSource,
   ConflictPolicy,
-  buildAlarmCascade,
+  buildCascade,
   createEmptySchedulerSnapshot
 } from '../domain/Scheduler';
 import { fileStore } from './FileStore';
@@ -20,12 +20,23 @@ type SchedulerSnapshotListener = (snapshot: SchedulerSnapshot) => void;
 export interface SchedulerCreateInput {
   title: string;
   startTime: number;
+  durationMinutes: number;
   urgencyLevel: UrgencyLevel;
   notes?: string;
 }
 
 interface SchedulerTaskPatch {
   isDone?: boolean;
+  startTime?: number;
+  endTime?: number;
+  durationMinutes?: number;
+  urgencyLevel?: UrgencyLevel;
+  alarmCascade?: string[];
+  timeDisplay?: string;
+  dateRange?: string;
+  hasConflict?: boolean;
+  conflictWithTaskId?: string;
+  conflictSummary?: string;
   updatedAt?: number;
 }
 
@@ -40,7 +51,7 @@ class SchedulerRepository {
       return;
     }
     this.context = context;
-    this.tasks = this.sortTasks(fileStore.loadTasks(context));
+    this.tasks = this.sortTasks(this.evaluateConflicts(fileStore.loadTasks(context)));
     this.snapshot = this.buildSnapshot(this.cloneTasks(this.tasks), false, this.snapshot.lastErrorMessage);
     console.info(`[HS-006][SchedulerRepository] initialize restored count=${this.tasks.length}`);
     this.emit();
@@ -64,8 +75,47 @@ class SchedulerRepository {
     this.tasks = [task, ...this.tasks];
     console.info(`[HS-006][scheduler] addTask id=${task.id} title=${task.title} startTime=${task.startTime}`);
     this.persist();
-    this.publishReminderOrDefer(task);
-    return task;
+    const persisted = this.findTask(task.id);
+    if (!persisted) {
+      throw new Error(`Task missing after add: ${task.id}`);
+    }
+    this.publishReminderOrDefer(persisted, 'create');
+    return persisted;
+  }
+
+  async rescheduleTask(
+    taskId: string,
+    newStart: number,
+    newDurationMinutes: number,
+    newUrgencyLevel?: UrgencyLevel
+  ): Promise<ScheduledTask> {
+    const task = this.findTask(taskId);
+    if (!task) {
+      throw new Error(`Task not found: ${taskId}`);
+    }
+    const nextUrgency = newUrgencyLevel !== undefined ? newUrgencyLevel : task.urgencyLevel;
+    const nextEndTime = this.computeEndTime(newStart, newDurationMinutes);
+    const nextUpdatedAt = Date.now();
+    console.info(
+      `[HS-006][scheduler] rescheduleTask id=${taskId} oldStart=${task.startTime} newStart=${newStart} oldDuration=${task.durationMinutes} newDuration=${newDurationMinutes}`
+    );
+    this.cancelReminderOrDefer(taskId, 'reschedule-old', task.startTime);
+    this.patchTask(taskId, {
+      startTime: newStart,
+      endTime: nextEndTime,
+      durationMinutes: newDurationMinutes,
+      urgencyLevel: nextUrgency,
+      alarmCascade: buildCascade(nextUrgency),
+      timeDisplay: this.formatTimeDisplay(newStart),
+      dateRange: this.formatDateRange(newStart, nextEndTime),
+      updatedAt: nextUpdatedAt
+    });
+    const updated = this.findTask(taskId);
+    if (!updated) {
+      throw new Error(`Task missing after reschedule: ${taskId}`);
+    }
+    this.publishReminderOrDefer(updated, 'reschedule-new');
+    return updated;
   }
 
   async completeTask(taskId: string): Promise<void> {
@@ -93,15 +143,39 @@ class SchedulerRepository {
       return;
     }
     console.info(`[HS-006][scheduler] deleteTask id=${taskId}`);
-    this.cancelReminderOrDefer(taskId);
+    this.cancelReminderOrDefer(taskId, 'delete');
+    this.persist();
+  }
+
+  async loadConflictScenarioPreset(): Promise<void> {
+    const baseTime = new Date(2030, 0, 15, 9, 30, 0, 0).getTime();
+    const firstCreatedAt = baseTime - 10_000;
+    const secondCreatedAt = baseTime - 9_000;
+    this.tasks = [
+      this.buildTask({
+        title: 'HS-006 conflict anchor',
+        startTime: baseTime,
+        durationMinutes: 60,
+        urgencyLevel: UrgencyLevel.L2_IMPORTANT,
+        notes: 'Scenario A anchor task at 09:30 for 60 minutes.'
+      }, firstCreatedAt),
+      this.buildTask({
+        title: 'HS-006 conflict candidate',
+        startTime: new Date(2030, 0, 15, 10, 0, 0, 0).getTime(),
+        durationMinutes: 60,
+        urgencyLevel: UrgencyLevel.L2_IMPORTANT,
+        notes: 'Scenario A overlapping task at 10:00 for 60 minutes.'
+      }, secondCreatedAt)
+    ];
+    console.info('[HS-006][scheduler] loadConflictScenarioPreset seeded overlapping future tasks');
     this.persist();
   }
 
   private buildTask(input: SchedulerCreateInput, now: number): ScheduledTask {
     const startTime = input.startTime;
-    const endTime = undefined;
+    const endTime = this.computeEndTime(startTime, input.durationMinutes);
     const urgencyLevel = input.urgencyLevel;
-    const alarmCascade = buildAlarmCascade(urgencyLevel);
+    const alarmCascade = buildCascade(urgencyLevel);
     return {
       id: this.createTaskId(),
       timeDisplay: this.formatTimeDisplay(startTime),
@@ -112,8 +186,8 @@ class SchedulerRepository {
       isSmartAlarm: false,
       startTime,
       endTime,
-      durationMinutes: 0,
-      durationSource: DurationSource.DEFAULT,
+      durationMinutes: input.durationMinutes,
+      durationSource: input.durationMinutes > 0 ? DurationSource.USER_SET : DurationSource.DEFAULT,
       conflictPolicy: ConflictPolicy.EXCLUSIVE,
       dateRange: this.formatDateRange(startTime, endTime),
       location: undefined,
@@ -142,6 +216,13 @@ class SchedulerRepository {
 
   private createTaskId(): string {
     return `task_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  private computeEndTime(startTime: number, durationMinutes: number): number | undefined {
+    if (durationMinutes <= 0) {
+      return undefined;
+    }
+    return startTime + durationMinutes * 60_000;
   }
 
   private formatTimeDisplay(epochMillis: number): string {
@@ -183,27 +264,27 @@ class SchedulerRepository {
   private mergeTask(task: ScheduledTask, patch: SchedulerTaskPatch): ScheduledTask {
     return {
       id: task.id,
-      timeDisplay: task.timeDisplay,
+      timeDisplay: patch.timeDisplay !== undefined ? patch.timeDisplay : task.timeDisplay,
       title: task.title,
-      urgencyLevel: task.urgencyLevel,
+      urgencyLevel: patch.urgencyLevel !== undefined ? patch.urgencyLevel : task.urgencyLevel,
       isDone: patch.isDone !== undefined ? patch.isDone : task.isDone,
       hasAlarm: task.hasAlarm,
       isSmartAlarm: task.isSmartAlarm,
-      startTime: task.startTime,
-      endTime: task.endTime,
-      durationMinutes: task.durationMinutes,
-      durationSource: task.durationSource,
+      startTime: patch.startTime !== undefined ? patch.startTime : task.startTime,
+      endTime: patch.endTime !== undefined ? patch.endTime : task.endTime,
+      durationMinutes: patch.durationMinutes !== undefined ? patch.durationMinutes : task.durationMinutes,
+      durationSource: patch.durationMinutes !== undefined ? (patch.durationMinutes > 0 ? DurationSource.USER_SET : DurationSource.DEFAULT) : task.durationSource,
       conflictPolicy: task.conflictPolicy,
-      dateRange: task.dateRange,
+      dateRange: patch.dateRange !== undefined ? patch.dateRange : task.dateRange,
       location: task.location,
       notes: task.notes,
       keyPerson: task.keyPerson,
       keyPersonEntityId: task.keyPersonEntityId,
       highlights: task.highlights,
-      alarmCascade: task.alarmCascade,
-      hasConflict: task.hasConflict,
-      conflictWithTaskId: task.conflictWithTaskId,
-      conflictSummary: task.conflictSummary,
+      alarmCascade: patch.alarmCascade !== undefined ? patch.alarmCascade.slice() : task.alarmCascade,
+      hasConflict: patch.hasConflict !== undefined ? patch.hasConflict : task.hasConflict,
+      conflictWithTaskId: patch.conflictWithTaskId !== undefined ? patch.conflictWithTaskId : task.conflictWithTaskId,
+      conflictSummary: patch.conflictSummary !== undefined ? patch.conflictSummary : task.conflictSummary,
       isVague: task.isVague,
       clarificationState: task.clarificationState,
       createdAt: task.createdAt,
@@ -213,10 +294,63 @@ class SchedulerRepository {
 
   private persist(): void {
     const context = this.requireContext();
-    this.tasks = this.sortTasks(this.tasks);
+    this.tasks = this.sortTasks(this.evaluateConflicts(this.tasks));
     fileStore.saveTasks(context, this.tasks);
     this.snapshot = this.buildSnapshot(this.cloneTasks(this.tasks), false, '');
     this.emit();
+  }
+
+  private evaluateConflicts(tasks: ScheduledTask[]): ScheduledTask[] {
+    const next = this.cloneTasks(tasks).map((task: ScheduledTask) => ({
+      ...task,
+      hasConflict: false,
+      conflictWithTaskId: undefined,
+      conflictSummary: undefined
+    }));
+    const contenders = next
+      .filter((task: ScheduledTask) => !task.isDone && task.urgencyLevel !== UrgencyLevel.FIRE_OFF)
+      .sort((left: ScheduledTask, right: ScheduledTask) => {
+        if (left.createdAt !== right.createdAt) {
+          return left.createdAt - right.createdAt;
+        }
+        return left.startTime - right.startTime;
+      });
+    contenders.forEach((task: ScheduledTask, index: number) => {
+      const taskWindow = this.taskWindow(task);
+      if (!taskWindow) {
+        return;
+      }
+      for (let cursor = 0; cursor < index; cursor += 1) {
+        const earlier = contenders[cursor];
+        const earlierWindow = this.taskWindow(earlier);
+        if (!earlierWindow) {
+          continue;
+        }
+        if (!this.windowsOverlap(taskWindow.start, taskWindow.end, earlierWindow.start, earlierWindow.end)) {
+          continue;
+        }
+        task.hasConflict = true;
+        task.conflictWithTaskId = earlier.id;
+        task.conflictSummary = `与「${earlier.title}」时间冲突`;
+        console.info(`[HS-006][scheduler] evaluateConflicts conflict taskId=${task.id} withTaskId=${earlier.id}`);
+        return;
+      }
+    });
+    return next;
+  }
+
+  private taskWindow(task: ScheduledTask): { start: number; end: number } | undefined {
+    if (task.durationMinutes <= 0) {
+      return undefined;
+    }
+    return {
+      start: task.startTime,
+      end: task.startTime + task.durationMinutes * 60_000
+    };
+  }
+
+  private windowsOverlap(leftStart: number, leftEnd: number, rightStart: number, rightEnd: number): boolean {
+    return leftStart < rightEnd && rightStart < leftEnd;
   }
 
   private buildSnapshot(tasks: ScheduledTask[], isLoading: boolean, lastErrorMessage?: string): SchedulerSnapshot {
@@ -275,15 +409,19 @@ class SchedulerRepository {
     return copy;
   }
 
-  private publishReminderOrDefer(task: ScheduledTask): void {
+  private publishReminderOrDefer(task: ScheduledTask, reason: string): void {
     if (task.startTime <= Date.now()) {
       return;
     }
-    console.warn(`[HS-006][Reminder] deferred -> HS-011 publishReminder blocked taskId=${task.id}`);
+    console.warn(
+      `[HS-006][Reminder] deferred -> HS-011 publishReminder blocked taskId=${task.id} reason=${reason} startTime=${task.startTime}`
+    );
   }
 
-  private cancelReminderOrDefer(taskId: string): void {
-    console.warn(`[HS-006][Reminder] deferred -> HS-011 cancelReminder blocked taskId=${taskId}`);
+  private cancelReminderOrDefer(taskId: string, reason: string, oldStartTime?: number): void {
+    console.warn(
+      `[HS-006][Reminder] deferred -> HS-011 cancelReminder blocked taskId=${taskId} reason=${reason} oldStartTime=${oldStartTime || 0}`
+    );
   }
 
   private requireContext(): common.UIAbilityContext {

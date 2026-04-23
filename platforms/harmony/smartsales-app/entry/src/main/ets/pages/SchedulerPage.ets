@@ -17,8 +17,13 @@ export struct SchedulerPage {
   @State snapshot: SchedulerSnapshot = createEmptySchedulerSnapshot();
   @State titleInput: string = '';
   @State datetimeInput: string = '';
+  @State durationInput: string = '60';
   @State notesInput: string = '';
   @State selectedUrgency: UrgencyLevel = UrgencyLevel.L2_IMPORTANT;
+  @State rescheduleTaskId: string = '';
+  @State rescheduleDatetimeInput: string = '';
+  @State rescheduleDurationInput: string = '60';
+  @State rescheduleUrgency: UrgencyLevel = UrgencyLevel.L2_IMPORTANT;
   @State formErrorMessage: string = '';
   @State formSuccessMessage: string = '';
   private unsubscribe?: () => void;
@@ -52,15 +57,22 @@ export struct SchedulerPage {
       this.formErrorMessage = 'Start time must use YYYY-MM-DD HH:mm.';
       return;
     }
+    const durationMinutes = this.parseDurationMinutes(this.durationInput);
+    if (durationMinutes === undefined) {
+      this.formErrorMessage = 'Duration must be 0 or a positive integer.';
+      return;
+    }
     try {
       const task = await schedulerRepository.addTask({
         title,
         startTime: parsedStartTime,
+        durationMinutes,
         urgencyLevel: this.selectedUrgency,
         notes: this.notesInput
       });
       this.titleInput = '';
       this.datetimeInput = '';
+      this.durationInput = '60';
       this.notesInput = '';
       this.selectedUrgency = UrgencyLevel.L2_IMPORTANT;
       this.formSuccessMessage = `Task created: ${task.title}`;
@@ -72,11 +84,23 @@ export struct SchedulerPage {
   private applyHarnessPreset(): void {
     this.titleInput = 'HS-006 demo follow-up';
     this.datetimeInput = '2030-01-15 09:30';
+    this.durationInput = '60';
     this.notesInput = 'Device harness preset to prove create, restore, complete, and delete.';
     this.selectedUrgency = UrgencyLevel.L2_IMPORTANT;
     this.formErrorMessage = '';
     this.formSuccessMessage = 'HS-006 preset loaded.';
     console.info('[HS-006][SchedulerPage] preset loaded future demo task');
+  }
+
+  private async applyConflictScenarioPreset(): Promise<void> {
+    this.formErrorMessage = '';
+    this.formSuccessMessage = '';
+    try {
+      await schedulerRepository.loadConflictScenarioPreset();
+      this.formSuccessMessage = 'HS-006 Phase 2C conflict scenario loaded.';
+    } catch (error) {
+      this.formErrorMessage = error instanceof Error ? error.message : `${error}`;
+    }
   }
 
   private async handleComplete(taskId: string): Promise<void> {
@@ -96,6 +120,49 @@ export struct SchedulerPage {
     try {
       await schedulerRepository.deleteTask(taskId);
       this.formSuccessMessage = 'Task deleted.';
+    } catch (error) {
+      this.formErrorMessage = error instanceof Error ? error.message : `${error}`;
+    }
+  }
+
+  private openRescheduleEditor(task: ScheduledTask): void {
+    this.rescheduleTaskId = task.id;
+    this.rescheduleDatetimeInput = this.formatDateTimeInput(task.startTime);
+    this.rescheduleDurationInput = `${task.durationMinutes}`;
+    this.rescheduleUrgency = task.urgencyLevel;
+    this.formErrorMessage = '';
+    this.formSuccessMessage = '';
+  }
+
+  private closeRescheduleEditor(): void {
+    this.rescheduleTaskId = '';
+    this.rescheduleDatetimeInput = '';
+    this.rescheduleDurationInput = '60';
+    this.rescheduleUrgency = UrgencyLevel.L2_IMPORTANT;
+  }
+
+  private async handleReschedule(task: ScheduledTask): Promise<void> {
+    this.formErrorMessage = '';
+    this.formSuccessMessage = '';
+    const parsedStartTime = this.parseDateTime(this.rescheduleDatetimeInput);
+    if (!parsedStartTime) {
+      this.formErrorMessage = 'Reschedule time must use YYYY-MM-DD HH:mm.';
+      return;
+    }
+    const durationMinutes = this.parseDurationMinutes(this.rescheduleDurationInput);
+    if (durationMinutes === undefined) {
+      this.formErrorMessage = 'Reschedule duration must be 0 or a positive integer.';
+      return;
+    }
+    try {
+      const updated = await schedulerRepository.rescheduleTask(
+        task.id,
+        parsedStartTime,
+        durationMinutes,
+        this.rescheduleUrgency
+      );
+      this.formSuccessMessage = `Task rescheduled: ${updated.title}`;
+      this.closeRescheduleEditor();
     } catch (error) {
       this.formErrorMessage = error instanceof Error ? error.message : `${error}`;
     }
@@ -128,15 +195,45 @@ export struct SchedulerPage {
     return date.getTime();
   }
 
+  private parseDurationMinutes(value: string): number | undefined {
+    const normalized = value.trim();
+    if (!normalized.match(/^\d+$/)) {
+      return undefined;
+    }
+    const duration = Number(normalized);
+    if (!Number.isFinite(duration) || duration < 0) {
+      return undefined;
+    }
+    return Math.floor(duration);
+  }
+
+  private formatDateTimeInput(epochMillis: number): string {
+    const date = new Date(epochMillis);
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, '0');
+    const day = `${date.getDate()}`.padStart(2, '0');
+    const hour = `${date.getHours()}`.padStart(2, '0');
+    const minute = `${date.getMinutes()}`.padStart(2, '0');
+    return `${year}-${month}-${day} ${hour}:${minute}`;
+  }
+
   private urgencyChipBackground(level: UrgencyLevel): string {
-    if (this.selectedUrgency === level) {
+    return this.urgencyChipBackgroundFor(level, this.selectedUrgency);
+  }
+
+  private urgencyChipBackgroundFor(level: UrgencyLevel, selected: UrgencyLevel): string {
+    if (selected === level) {
       return this.urgencyColor(level);
     }
     return '#F4F0E8';
   }
 
   private urgencyChipTextColor(level: UrgencyLevel): string {
-    if (this.selectedUrgency === level) {
+    return this.urgencyChipTextColorFor(level, this.selectedUrgency);
+  }
+
+  private urgencyChipTextColorFor(level: UrgencyLevel, selected: UrgencyLevel): string {
+    if (selected === level) {
       return '#FFFFFF';
     }
     return this.urgencyColor(level);
@@ -184,6 +281,13 @@ export struct SchedulerPage {
     return task.isDone ? 'Completed' : 'Scheduled';
   }
 
+  private durationText(task: ScheduledTask): string {
+    if (task.durationMinutes <= 0) {
+      return 'No duration';
+    }
+    return `${task.durationMinutes} min`;
+  }
+
   build() {
     Scroll() {
       Column({ space: 18 }) {
@@ -208,6 +312,11 @@ export struct SchedulerPage {
         .fontWeight(FontWeight.Bold)
 
       Text('HS-006 manual exact-task flow: create, restore, complete, and delete tasks with local persistence.')
+        .fontSize(15)
+        .lineHeight(22)
+        .opacity(0.74)
+
+      Text('Phase 2C adds reschedule, conflict caution, and a deterministic overlap harness flow while reminder delivery remains honestly deferred to HS-011.')
         .fontSize(15)
         .lineHeight(22)
         .opacity(0.74)
@@ -248,6 +357,15 @@ export struct SchedulerPage {
           this.datetimeInput = value;
         })
 
+      TextInput({ placeholder: 'Duration minutes', text: this.durationInput })
+        .placeholderColor('#9A8E80')
+        .backgroundColor('#FFFFFF')
+        .borderRadius(16)
+        .padding({ left: 14, right: 14, top: 12, bottom: 12 })
+        .onChange((value: string) => {
+          this.durationInput = value;
+        })
+
       TextInput({ placeholder: 'Notes (optional)', text: this.notesInput })
         .placeholderColor('#9A8E80')
         .backgroundColor('#FFFFFF')
@@ -277,6 +395,15 @@ export struct SchedulerPage {
         .padding({ left: 18, right: 18, top: 12, bottom: 12 })
         .onClick(() => {
           this.applyHarnessPreset();
+        })
+
+      Button('Load HS-006 Phase 2C Conflict Scenario')
+        .backgroundColor('#E6D8C5')
+        .fontColor('#3D3328')
+        .borderRadius(18)
+        .padding({ left: 18, right: 18, top: 12, bottom: 12 })
+        .onClick(async () => {
+          await this.applyConflictScenarioPreset();
         })
 
       Button('Create Task')
@@ -361,6 +488,10 @@ export struct SchedulerPage {
                   Text(`${this.statusText(task)} · ${task.dateRange} ${task.timeDisplay}`)
                     .fontSize(12)
                     .fontColor('#6D645A')
+
+                  Text(this.durationText(task))
+                    .fontSize(12)
+                    .fontColor('#6D645A')
                 }
                 .layoutWeight(1)
                 .alignItems(HorizontalAlign.Start)
@@ -377,8 +508,35 @@ export struct SchedulerPage {
                   .fontColor('#5E554C')
               }
 
+              if (task.hasConflict) {
+                Row({ space: 8 }) {
+                  Text('Caution')
+                    .fontSize(12)
+                    .fontWeight(FontWeight.Medium)
+                    .fontColor('#9E4F00')
+
+                  Text(task.conflictSummary || 'Conflict detected')
+                    .fontSize(12)
+                    .fontColor('#9E4F00')
+                    .layoutWeight(1)
+                }
+                .width('100%')
+                .padding({ left: 12, right: 12, top: 10, bottom: 10 })
+                .backgroundColor('#FFF1D8')
+                .borderRadius(14)
+              }
+
               Row({ space: 10 }) {
                 if (!task.isDone) {
+                  Button(this.rescheduleTaskId === task.id ? 'Editing' : 'Reschedule')
+                    .backgroundColor('#D7E4F2')
+                    .fontColor('#214A72')
+                    .borderRadius(14)
+                    .padding({ left: 14, right: 14, top: 10, bottom: 10 })
+                    .onClick(() => {
+                      this.openRescheduleEditor(task);
+                    })
+
                   Button('Complete')
                     .backgroundColor('#2F6A4A')
                     .fontColor('#FFFFFF')
@@ -398,6 +556,74 @@ export struct SchedulerPage {
                     await this.handleDelete(task.id);
                   })
               }
+
+              if (this.rescheduleTaskId === task.id) {
+                Column({ space: 10 }) {
+                  Text('Reschedule task')
+                    .fontSize(14)
+                    .fontWeight(FontWeight.Medium)
+                    .fontColor('#214A72')
+
+                  TextInput({ placeholder: 'New time (YYYY-MM-DD HH:mm)', text: this.rescheduleDatetimeInput })
+                    .placeholderColor('#8AA0B4')
+                    .backgroundColor('#FFFFFF')
+                    .borderRadius(14)
+                    .padding({ left: 14, right: 14, top: 12, bottom: 12 })
+                    .onChange((value: string) => {
+                      this.rescheduleDatetimeInput = value;
+                    })
+
+                  TextInput({ placeholder: 'New duration minutes', text: this.rescheduleDurationInput })
+                    .placeholderColor('#8AA0B4')
+                    .backgroundColor('#FFFFFF')
+                    .borderRadius(14)
+                    .padding({ left: 14, right: 14, top: 12, bottom: 12 })
+                    .onChange((value: string) => {
+                      this.rescheduleDurationInput = value;
+                    })
+
+                  Row({ space: 8 }) {
+                    this.renderInlineUrgencyChip(UrgencyLevel.L1_CRITICAL, this.rescheduleUrgency, (level: UrgencyLevel) => {
+                      this.rescheduleUrgency = level;
+                    })
+                    this.renderInlineUrgencyChip(UrgencyLevel.L2_IMPORTANT, this.rescheduleUrgency, (level: UrgencyLevel) => {
+                      this.rescheduleUrgency = level;
+                    })
+                    this.renderInlineUrgencyChip(UrgencyLevel.L3_NORMAL, this.rescheduleUrgency, (level: UrgencyLevel) => {
+                      this.rescheduleUrgency = level;
+                    })
+                    this.renderInlineUrgencyChip(UrgencyLevel.FIRE_OFF, this.rescheduleUrgency, (level: UrgencyLevel) => {
+                      this.rescheduleUrgency = level;
+                    })
+                  }
+                  .width('100%')
+
+                  Row({ space: 10 }) {
+                    Button('Save Reschedule')
+                      .backgroundColor('#214A72')
+                      .fontColor('#FFFFFF')
+                      .borderRadius(14)
+                      .padding({ left: 14, right: 14, top: 10, bottom: 10 })
+                      .onClick(async () => {
+                        await this.handleReschedule(task);
+                      })
+
+                    Button('Cancel')
+                      .backgroundColor('#EEE7DC')
+                      .fontColor('#5E554C')
+                      .borderRadius(14)
+                      .padding({ left: 14, right: 14, top: 10, bottom: 10 })
+                      .onClick(() => {
+                        this.closeRescheduleEditor();
+                      })
+                  }
+                }
+                .width('100%')
+                .padding(14)
+                .backgroundColor('#EDF4FA')
+                .borderRadius(16)
+                .alignItems(HorizontalAlign.Start)
+              }
             }
             .padding(16)
             .layoutWeight(1)
@@ -414,5 +640,17 @@ export struct SchedulerPage {
     .backgroundColor('#FFF9F0')
     .width('100%')
     .alignItems(HorizontalAlign.Start)
+  }
+
+  @Builder
+  renderInlineUrgencyChip(level: UrgencyLevel, selected: UrgencyLevel, onSelect: (level: UrgencyLevel) => void) {
+    Button(this.urgencyLabel(level))
+      .backgroundColor(this.urgencyChipBackgroundFor(level, selected))
+      .fontColor(this.urgencyChipTextColorFor(level, selected))
+      .borderRadius(14)
+      .padding({ left: 12, right: 12, top: 10, bottom: 10 })
+      .onClick(() => {
+        onSelect(level);
+      })
   }
 }

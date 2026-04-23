@@ -1,7 +1,5 @@
 package com.smartsales.prism.ui.onboarding
 
-import com.smartsales.prism.AppFlavor
-
 /**
  * Onboarding 宿主类型。
  */
@@ -48,10 +46,8 @@ internal fun nextOnboardingStep(
     OnboardingStep.DEVICE_FOUND -> OnboardingStep.PROVISIONING
     OnboardingStep.PROVISIONING -> if (host == OnboardingHost.SIM_ADD_DEVICE) {
         OnboardingStep.COMPLETE
-    } else if (AppFlavor.schedulerEnabled) {
-        OnboardingStep.SCHEDULER_QUICK_START
     } else {
-        OnboardingStep.COMPLETE
+        OnboardingStep.SCHEDULER_QUICK_START
     }
     OnboardingStep.COMPLETE -> OnboardingStep.COMPLETE
 }

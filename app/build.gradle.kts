@@ -1,5 +1,3 @@
-import java.io.ByteArrayOutputStream
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -7,29 +5,18 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
-// 读取 git 分支与 commit 摘要，用于 debug 构建版本号自识别
-fun gitBranch(): String = runCatching {
-    val out = ByteArrayOutputStream()
-    exec {
-        commandLine("git", "rev-parse", "--abbrev-ref", "HEAD")
-        standardOutput = out
-        isIgnoreExitValue = true
-    }
-    out.toString().trim().ifEmpty { "unknown" }
-}.getOrDefault("unknown")
+apply(from = rootProject.file("gradle/android-app-versioning.gradle.kts"))
 
-fun gitDescribe(): String = runCatching {
-    val out = ByteArrayOutputStream()
-    exec {
-        commandLine("git", "describe", "--always", "--dirty", "--abbrev=7")
-        standardOutput = out
-        isIgnoreExitValue = true
-    }
-    out.toString().trim().ifEmpty { "unknown" }
-}.getOrDefault("unknown")
-
-val gitBranchValue = gitBranch()
-val gitDescribeValue = gitDescribe()
+@Suppress("UNCHECKED_CAST")
+val resolveAndroidAppVersion =
+    extra["resolveAndroidAppVersion"] as (String, Int) -> Map<String, Any>
+val aiTestVersioning = resolveAndroidAppVersion("0.1.0", 1)
+val aiTestBaseVersionCode = aiTestVersioning["baseVersionCode"] as Int
+val aiTestBaseVersionName = aiTestVersioning["baseVersionName"] as String
+val aiTestBuildStamp = aiTestVersioning["buildStamp"] as String
+val aiTestGitSha = aiTestVersioning["gitSha"] as String
+val aiTestDebugVersionSuffix = aiTestVersioning["debugVersionSuffix"] as String
+val aiTestDebugDisplayVersion = aiTestVersioning["debugDisplayVersion"] as String
 
 android {
     namespace = "com.smartsales.aitest"
@@ -39,18 +26,18 @@ android {
         applicationId = "com.smartsales.aitest"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = aiTestBaseVersionCode
+        versionName = aiTestBaseVersionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
-        buildConfigField("String", "GIT_BRANCH", "\"$gitBranchValue\"")
-        buildConfigField("String", "GIT_DESCRIBE", "\"$gitDescribeValue\"")
+        buildConfigField("String", "APP_BUILD_STAMP", "\"$aiTestBuildStamp\"")
+        buildConfigField("String", "APP_GIT_SHA", "\"$aiTestGitSha\"")
+        buildConfigField("String", "APP_DISPLAY_VERSION", "\"$aiTestDebugDisplayVersion\"")
     }
 
     buildTypes {
         debug {
-            // 在 versionName 末尾追加 +分支@commit，便于 QA 设备一眼识别构建来源
-            versionNameSuffix = "+$gitBranchValue@$gitDescribeValue"
+            versionNameSuffix = aiTestDebugVersionSuffix
         }
         release {
             isMinifyEnabled = false

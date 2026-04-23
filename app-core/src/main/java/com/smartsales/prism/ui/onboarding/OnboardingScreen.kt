@@ -8,7 +8,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.smartsales.prism.AppFlavor
 import com.smartsales.prism.domain.pairing.DiscoveredBadge
 import kotlinx.coroutines.launch
 
@@ -37,7 +36,7 @@ fun OnboardingCoordinator(
     pairingViewModel: PairingFlowViewModel = hiltViewModel(),
     interactionViewModel: OnboardingInteractionViewModel = hiltViewModel()
 ) {
-    val schedulerEnabled = AppFlavor.schedulerEnabled
+    val schedulerEnabled = true
     val skipButtonText = if (schedulerEnabled) {
         "跳过，直接体验日程"
     } else {
@@ -189,6 +188,7 @@ internal fun OnboardingStaticScreen(
     state: OnboardingVisualCaptureState,
     onExit: () -> Unit = {}
 ) {
+    val schedulerEnabled = true
     OnboardingFrame(
         host = state.host,
         currentStep = state.step,
@@ -211,7 +211,7 @@ internal fun OnboardingStaticScreen(
             )
             OnboardingStep.HARDWARE_WAKE -> HardwareWakeStep(
                 onContinue = {},
-                skipButtonText = if (AppFlavor.schedulerEnabled) {
+                skipButtonText = if (schedulerEnabled) {
                     "跳过，直接体验日程"
                 } else {
                     "跳过，直接进入首页"
@@ -240,7 +240,7 @@ internal fun OnboardingStaticScreen(
                 onBack = {},
                 onRetryScan = {},
                 onSkipToQuickStart = {},
-                skipButtonText = if (AppFlavor.schedulerEnabled) {
+                skipButtonText = if (schedulerEnabled) {
                     "跳过，直接体验日程"
                 } else {
                     "跳过，直接进入首页"
@@ -249,7 +249,7 @@ internal fun OnboardingStaticScreen(
                 onRetryProvisioning = {}
             )
             OnboardingStep.COMPLETE -> CompleteStep(
-                showSchedulerHandoff = AppFlavor.schedulerEnabled,
+                showSchedulerHandoff = schedulerEnabled,
                 onAcknowledge = {}
             )
         }

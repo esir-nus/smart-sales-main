@@ -286,6 +286,35 @@ class SchedulerCalendarTest {
             .assert(hasHandleAttentionKind("none"))
     }
 
+    @Test
+    fun selectedDateHighlight_survivesParentRecomposition() {
+        val today = LocalDate.now()
+        val targetOffset = if (today.dayOfMonth <= 26) 2 else -2
+        val targetLabel = today.plusDays(targetOffset.toLong()).dayOfMonth.toString()
+        lateinit var triggerParentUpdate: () -> Unit
+
+        composeTestRule.setContent {
+            var timelineVersion by remember { mutableStateOf(0) }
+            triggerParentUpdate = { timelineVersion += 1 }
+
+            SchedulerCalendar(
+                isExpanded = false,
+                onExpandChange = {},
+                activeDay = targetOffset,
+                onDateSelected = {},
+                unacknowledgedDates = if (timelineVersion > 0) setOf(targetOffset + 1) else emptySet()
+            )
+        }
+
+        composeTestRule.onNode(hasTextExactly(targetLabel)).assertIsSelected()
+
+        composeTestRule.runOnIdle {
+            triggerParentUpdate()
+        }
+
+        composeTestRule.onNode(hasTextExactly(targetLabel)).assertIsSelected()
+    }
+
     private fun hasDateAttentionKind(kind: String): SemanticsMatcher {
         return SemanticsMatcher.expectValue(SchedulerDateAttentionKindKey, kind)
     }

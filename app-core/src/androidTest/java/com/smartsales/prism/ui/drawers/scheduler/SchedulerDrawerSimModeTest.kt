@@ -377,6 +377,45 @@ class SchedulerDrawerSimModeTest {
         composeTestRule.onNodeWithText("17:00 - ...").assertExists()
     }
 
+    @Test
+    fun simModeRendersBatchRowsForAggregateBatchResult() {
+        val baseStart = LocalDateTime.of(2026, 3, 26, 14, 0).atZone(ZoneId.systemDefault()).toInstant()
+        val viewModel = FakeSchedulerViewModel().apply {
+            debugSetTimelineItems(
+                listOf(
+                    ScheduledTask(
+                        id = "batch_task_1",
+                        timeDisplay = "14:00",
+                        title = "客户拜访 A",
+                        startTime = baseStart,
+                        durationMinutes = 60
+                    ),
+                    ScheduledTask(
+                        id = "batch_task_2",
+                        timeDisplay = "15:00",
+                        title = "客户拜访 B",
+                        startTime = baseStart.plusSeconds(3600),
+                        durationMinutes = 60
+                    ),
+                    ScheduledTask(
+                        id = "batch_task_3",
+                        timeDisplay = "16:00",
+                        title = "客户拜访 C",
+                        startTime = baseStart.plusSeconds(7200),
+                        durationMinutes = 60
+                    )
+                )
+            )
+            debugSetPipelineStatus("✅ 已创建 3 项")
+        }
+
+        renderSimDrawer(viewModel)
+
+        composeTestRule.onNodeWithText("客户拜访 A").assertExists()
+        composeTestRule.onNodeWithText("客户拜访 B").assertExists()
+        composeTestRule.onNodeWithText("客户拜访 C").assertExists()
+    }
+
     private fun hasDateAttentionKind(kind: String): SemanticsMatcher {
         return SemanticsMatcher.expectValue(SchedulerDateAttentionKindKey, kind)
     }

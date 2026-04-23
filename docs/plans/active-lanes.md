@@ -18,4 +18,14 @@ Each entry is appended when a task passes the pre-flight scope conflict check, a
 
 ## Active Entries
 
-_(none)_
+- date: 2026-04-20
+  lane: android
+  title: scheduler-polish
+  scope:
+    - app-core/src/main/java/com/smartsales/prism/ui/drawers/SchedulerDrawer.kt
+    - app-core/src/main/java/com/smartsales/prism/ui/drawers/scheduler/**
+    - app-core/src/**/dev/**
+    - app-core/src/androidTest/java/com/smartsales/prism/ui/drawers/scheduler/**
+    - app-core/src/test/java/com/smartsales/prism/ui/drawers/scheduler/**
+    - app-core/src/main/AndroidManifest.xml
+    - app-core/build.gradle.kts

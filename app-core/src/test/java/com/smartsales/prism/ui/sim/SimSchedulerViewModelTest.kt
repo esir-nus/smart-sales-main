@@ -37,6 +37,7 @@ import com.smartsales.prism.domain.scheduler.TaskDefinition
 import com.smartsales.prism.domain.scheduler.UrgencyEnum
 import com.smartsales.prism.domain.scheduler.UrgencyLevel
 import com.smartsales.prism.domain.scheduler.fakes.FakeTimeProvider
+import com.smartsales.prism.ui.drawers.scheduler.DevInjectSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -246,6 +247,45 @@ class SimSchedulerViewModelTest {
         val tasks = taskRepository.queryByDateRange(timeProvider.today, timeProvider.today.plusDays(4)).snapshot()
             .filterIsInstance<ScheduledTask>()
         assertTrue(tasks.any { it.title == "回电话" && it.isVague })
+    }
+
+    @Test
+    fun `injectTranscript keeps explicit displayedDateIso in shared create prompts`() = runTest {
+        enqueueNotMultiResponse()
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "NOT_EXACT",
+                  "reason": "date only"
+                }
+                """.trimIndent()
+            )
+        )
+        fakeExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision": "VAGUE_CREATE",
+                  "task": {
+                    "title": "回电话",
+                    "anchorDateIso": "2026-03-26",
+                    "timeHint": "白天",
+                    "urgency": "L2"
+                  }
+                }
+                """.trimIndent()
+            )
+        )
+
+        viewModel.injectTranscript(
+            text = "后一天提醒我回电话",
+            displayedDateIso = "2026-03-25",
+            source = DevInjectSource.BROADCAST
+        )
+        advanceUntilIdle()
+
+        assertTrue(fakeExecutor.executedPrompts.any { it.contains("displayed_date_iso: 2026-03-25") })
     }
 
     @Test
@@ -1067,8 +1107,21 @@ class SimSchedulerViewModelTest {
         viewModel.processAudio(File("dummy.wav"))
         advanceUntilIdle()
 
-        assertEquals("目标不明确，未执行改动", viewModel.conflictWarning.value)
+        assertEquals("找到多个匹配的日程，请进入日程面板手动调整。", viewModel.conflictWarning.value)
         assertEquals(original.startTime, taskRepository.getTask("task-1")?.startTime)
+    }
+
+    @Test
+    fun `injectTranscript empty input uses scheduler owned copy`() = runTest {
+        viewModel.injectTranscript(
+            text = "   ",
+            displayedDateIso = "2026-03-22",
+            source = DevInjectSource.DEV_PANEL
+        )
+        advanceUntilIdle()
+
+        assertEquals("没有输入或无法理解，请重新说。", viewModel.conflictWarning.value)
+        assertEquals("没有输入或无法理解，请重新说。", viewModel.pipelineStatus.value)
     }
 
     @Test
@@ -1420,7 +1473,70 @@ class SimSchedulerViewModelTest {
         assertEquals(3, tasks.size)
         assertEquals(setOf(1), viewModel.unacknowledgedDates.value)
         assertEquals(setOf(1), viewModel.rescheduledDates.value)
-        assertEquals("已创建 3 个日程", viewModel.pipelineStatus.value)
+        assertEquals("⚠️  已创建 3 项，其中 1 项有冲突", viewModel.pipelineStatus.value)
+    }
+
+    @Test
+    fun `processAudio multi task mixed conflict uses aggregate warning copy`() = runTest {
+        val conflictBoard = SequenceScheduleBoard(
+            results = listOf(
+                ConflictResult.Clear,
+                ConflictResult.Conflict(
+                    overlaps = listOf(
+                        ScheduleItem(
+                            entryId = "other-task",
+                            title = "已存在会议",
+                            scheduledAt = Instant.parse("2026-03-21T07:00:00Z").toEpochMilli(),
+                            durationMinutes = 60,
+                            durationSource = com.smartsales.prism.domain.memory.DurationSource.DEFAULT,
+                            conflictPolicy = com.smartsales.prism.domain.memory.ConflictPolicy.EXCLUSIVE
+                        )
+                    )
+                ),
+                ConflictResult.Clear
+            )
+        )
+        viewModel = buildViewModel(conflictBoard)
+        asrService.nextResult = AsrResult.Success("周六上午九点、十点、十一点各加一个客户拜访")
+        enqueueMultiCreateResponse(
+            """
+            {
+              "decision": "MULTI_CREATE",
+              "fragments": [
+                {
+                  "title": "客户拜访 A",
+                  "mode": "EXACT",
+                  "anchorKind": "ABSOLUTE",
+                  "startTimeIso": "2026-03-21T01:00:00Z",
+                  "durationMinutes": 60,
+                  "urgency": "L2"
+                },
+                {
+                  "title": "客户拜访 B",
+                  "mode": "EXACT",
+                  "anchorKind": "ABSOLUTE",
+                  "startTimeIso": "2026-03-21T07:00:00Z",
+                  "durationMinutes": 60,
+                  "urgency": "L2"
+                },
+                {
+                  "title": "客户拜访 C",
+                  "mode": "EXACT",
+                  "anchorKind": "ABSOLUTE",
+                  "startTimeIso": "2026-03-21T03:00:00Z",
+                  "durationMinutes": 60,
+                  "urgency": "L2"
+                }
+              ]
+            }
+            """.trimIndent()
+        )
+
+        viewModel.processAudio(File("dummy.wav"))
+        advanceUntilIdle()
+
+        assertEquals("⚠️  已创建 3 项，其中 1 项有冲突", viewModel.pipelineStatus.value)
+        assertTrue(viewModel.conflictedTaskIds.value.contains("other-task"))
     }
 
     @Test
@@ -1459,7 +1575,7 @@ class SimSchedulerViewModelTest {
             .filterIsInstance<ScheduledTask>()
         assertEquals(2, tasks.size)
         assertTrue(tasks.any { it.title == "赶飞机" && it.isVague })
-        assertEquals("已创建 2 个日程，1 个片段已按待定处理", viewModel.pipelineStatus.value)
+        assertEquals("✅ 已创建 2 项", viewModel.pipelineStatus.value)
     }
 
     @Test
@@ -1499,7 +1615,7 @@ class SimSchedulerViewModelTest {
         assertEquals(2, tasks.size)
         assertTrue(tasks.any { it.title == "赶飞机" && it.isVague })
         assertTrue(fakeExecutor.executedPrompts.any { it.contains("规范化输入") && it.contains("三小时后赶飞机") })
-        assertEquals("已创建 2 个日程，1 个片段已按待定处理", viewModel.pipelineStatus.value)
+        assertEquals("✅ 已创建 2 项", viewModel.pipelineStatus.value)
     }
 
     @Test
@@ -1540,7 +1656,7 @@ class SimSchedulerViewModelTest {
         assertEquals(2, tasks.size)
         assertTrue(tasks.any { it.title == "开会" && it.startTime == Instant.parse("2026-03-20T12:00:00Z") })
         assertTrue(tasks.any { it.title == "汇报" && it.startTime == Instant.parse("2026-03-21T07:00:00Z") })
-        assertEquals("已创建 2 个日程", viewModel.pipelineStatus.value)
+        assertEquals("✅ 已创建 2 项", viewModel.pipelineStatus.value)
     }
 
     @Test
@@ -1580,7 +1696,7 @@ class SimSchedulerViewModelTest {
         assertEquals(1, tasks.size)
         assertEquals("开会", tasks.single().title)
         assertEquals(Instant.parse("2026-03-21T07:00:00Z"), tasks.single().startTime)
-        assertEquals("已创建 1 个日程，1 个片段未创建", viewModel.pipelineStatus.value)
+        assertEquals("❌ 共 2 项，1 项失败", viewModel.pipelineStatus.value)
     }
 
     @Test

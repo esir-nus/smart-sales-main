@@ -149,7 +149,7 @@ internal fun normalizeSimSchedulerDrawerFailureMessage(
                 "SIM 当前不支持语音删除，请在面板手动操作"
             SchedulerIntelligenceRouter.SchedulerIntentKind.CREATE,
             SchedulerIntelligenceRouter.SchedulerIntentKind.NONE ->
-                "未能解析为可创建日程，请换一种更明确的说法"
+                "没有输入或无法理解，请重新说。"
         }
     }
     if (
@@ -255,13 +255,16 @@ internal class SimSchedulerIngressCoordinator(
         )
     }
 
-    suspend fun processTranscript(transcript: String) {
+    suspend fun processTranscript(
+        transcript: String,
+        displayedDateIsoOverride: String? = null
+    ) {
         if (transcript.isBlank()) {
-            projectionSupport.emitFailure("未识别到有效日程内容")
+            projectionSupport.emitFailure("没有输入或无法理解，请重新说。")
             return
         }
 
-        val displayedDateIso = projectionSupport.displayedDateIso()
+        val displayedDateIso = displayedDateIsoOverride ?: projectionSupport.displayedDateIso()
         val mightReschedule = schedulerRouter.mightExpressReschedule(transcript)
         val shortlist = if (mightReschedule) {
             activeTaskRetrievalIndex.buildShortlist(transcript)
@@ -405,8 +408,8 @@ internal class SimSchedulerIngressCoordinator(
         projectionSupport.applyAggregatedConflictState(createdTasks)
         val summary = projectionSupport.buildMultiTaskStatus(
             createdCount = createdTasks.size,
-            unresolvedCount = unresolvedReasons.size,
-            downgradedCount = downgradedCount
+            conflictCount = createdTasks.count { it.hasConflict },
+            failureCount = unresolvedReasons.size
         )
         Log.d(
             "SimSchedulerMulti",
@@ -900,7 +903,7 @@ internal class SimSchedulerIngressCoordinator(
             }
 
             is ActiveTaskResolveResult.Ambiguous -> {
-                projectionSupport.emitFailure("目标不明确，未执行改动")
+                projectionSupport.emitFailure("找到多个匹配的日程，请进入日程面板手动调整。")
             }
 
             is ActiveTaskResolveResult.NoMatch -> {

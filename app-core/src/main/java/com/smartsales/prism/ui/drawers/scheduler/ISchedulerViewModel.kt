@@ -59,4 +59,9 @@ interface ISchedulerViewModel {
     
     // Pipeline & Audio routing hooks (UI triggers, backend executes)
     fun processAudio(file: java.io.File)
+    fun injectTranscript(
+        text: String,
+        displayedDateIso: String? = null,
+        source: DevInjectSource = DevInjectSource.DEV_PANEL
+    )
 }

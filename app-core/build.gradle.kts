@@ -31,6 +31,9 @@ fun gitDescribe(): String = runCatching {
 
 val gitBranchValue = gitBranch()
 val gitDescribeValue = gitDescribe()
+val schedulerDevToolsEnabled = providers
+    .gradleProperty("schedulerDevTools")
+    .orNull == "true"
 
 android {
     namespace = "com.smartsales.prism"
@@ -54,9 +57,15 @@ android {
         debug {
             // 在 versionName 末尾追加 +分支@commit，便于 QA 设备一眼识别构建来源
             versionNameSuffix = "+$gitBranchValue@$gitDescribeValue"
+            buildConfigField(
+                "boolean",
+                "ENABLE_SCHEDULER_DEV_TOOLS",
+                schedulerDevToolsEnabled.toString()
+            )
         }
         release {
             isMinifyEnabled = false
+            buildConfigField("boolean", "ENABLE_SCHEDULER_DEV_TOOLS", "false")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

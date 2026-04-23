@@ -39,24 +39,47 @@ internal class SchedulerViewModelAudioIngressCoordinator(
                 android.util.Log.e("SchedulerVM", "ProcessAudio crash: ", e)
                 bridge.setPipelineStatus("系统错误")
             } finally {
-                delay(2000)
-                bridge.setPipelineStatus(null)
+                clearPipelineStatusWithDelay()
             }
         }
     }
 
-    private suspend fun handleTranscript(text: String) {
+    fun injectTranscript(
+        text: String,
+        displayedDateIso: String? = null,
+        source: DevInjectSource = DevInjectSource.DEV_PANEL
+    ) {
+        scope.launch {
+            try {
+                android.util.Log.d(
+                    "SchedulerVM",
+                    "injectTranscript: source=$source displayedDateIso=${displayedDateIso ?: "null"} text=$text"
+                )
+                handleTranscript(text = text, displayedDateIso = displayedDateIso)
+            } catch (e: Exception) {
+                android.util.Log.e("SchedulerVM", "InjectTranscript crash: ", e)
+                bridge.setPipelineStatus("系统错误")
+            } finally {
+                clearPipelineStatusWithDelay()
+            }
+        }
+    }
+
+    private suspend fun handleTranscript(
+        text: String,
+        displayedDateIso: String? = null
+    ) {
         bridge.setPipelineStatus("处理意图...")
         var schedulerWriteProven = false
         var inspirationWriteProven = false
-        val displayedDateIso = LocalDate.now()
+        val effectiveDisplayedDateIso = displayedDateIso ?: LocalDate.now()
             .plusDays(bridge.getActiveDayOffset().toLong())
             .toString()
 
         intentOrchestrator.processInput(
             text,
             isVoice = true,
-            displayedDateIso = displayedDateIso
+            displayedDateIso = effectiveDisplayedDateIso
         ).collect { result ->
             when (result) {
                 is PipelineResult.PathACommitted -> {
@@ -128,5 +151,10 @@ internal class SchedulerViewModelAudioIngressCoordinator(
             bridge.setPipelineStatus("未创建日程")
             android.util.Log.d("SchedulerVM", "processAudio: pipeline completed without scheduler write proof")
         }
+    }
+
+    private suspend fun clearPipelineStatusWithDelay() {
+        delay(2000)
+        bridge.setPipelineStatus(null)
     }
 }

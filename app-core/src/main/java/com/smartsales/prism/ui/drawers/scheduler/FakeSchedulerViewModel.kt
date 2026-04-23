@@ -231,6 +231,14 @@ class FakeSchedulerViewModel : ISchedulerViewModel {
         _pipelineStatus.value = "🎙️ Fake 转写中..."
     }
 
+    override fun injectTranscript(
+        text: String,
+        displayedDateIso: String?,
+        source: DevInjectSource
+    ) {
+        _pipelineStatus.value = "DEV[$source]: $text"
+    }
+
     /**
      * L2 Simulated On-Device Protocol:
      * Sets specific Fake states based on scenario string for UI validation without backend.
@@ -285,6 +293,10 @@ class FakeSchedulerViewModel : ISchedulerViewModel {
     ) {
         _unacknowledgedDates.value = unacknowledgedDates
         _rescheduledDates.value = rescheduledDates
+    }
+
+    fun debugSetPipelineStatus(status: String?) {
+        _pipelineStatus.value = status
     }
 
     fun debugEmitExactAlarmPermissionNeeded() {

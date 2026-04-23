@@ -148,23 +148,14 @@ internal class SimSchedulerProjectionSupport(
 
     fun buildMultiTaskStatus(
         createdCount: Int,
-        unresolvedCount: Int,
-        downgradedCount: Int
+        conflictCount: Int,
+        failureCount: Int
     ): String {
-        return buildString {
-            append("已创建 ")
-            append(createdCount)
-            append(" 个日程")
-            if (unresolvedCount > 0) {
-                append("，")
-                append(unresolvedCount)
-                append(" 个片段未创建")
-            }
-            if (downgradedCount > 0) {
-                append("，")
-                append(downgradedCount)
-                append(" 个片段已按待定处理")
-            }
+        val totalCount = createdCount + failureCount
+        return when {
+            failureCount > 0 -> "❌ 共 $totalCount 项，$failureCount 项失败"
+            conflictCount > 0 -> "⚠️  已创建 $createdCount 项，其中 $conflictCount 项有冲突"
+            else -> "✅ 已创建 $createdCount 项"
         }
     }
 

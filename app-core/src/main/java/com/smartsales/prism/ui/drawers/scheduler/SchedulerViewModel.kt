@@ -137,6 +137,16 @@ class SchedulerViewModel @Inject constructor(
 
     init {
         viewModelScope.launch { coordinator.autoCompleteExpiredTasks() }
+        viewModelScope.launch {
+            SchedulerDevInjectionBridge.requests.collect { request ->
+                SchedulerDevInjectionBridge.consume(request)
+                injectTranscript(
+                    text = request.text,
+                    displayedDateIso = request.displayedDateIso,
+                    source = request.source
+                )
+            }
+        }
     }
 
     override fun onDateSelected(dayOffset: Int) {
@@ -206,5 +216,17 @@ class SchedulerViewModel @Inject constructor(
 
     override fun processAudio(file: File) {
         audioIngressCoordinator.processAudio(file)
+    }
+
+    override fun injectTranscript(
+        text: String,
+        displayedDateIso: String?,
+        source: DevInjectSource
+    ) {
+        audioIngressCoordinator.injectTranscript(
+            text = text,
+            displayedDateIso = displayedDateIso,
+            source = source
+        )
     }
 }

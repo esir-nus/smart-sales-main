@@ -23,8 +23,10 @@ import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.SchedulerTimelineItem
 import com.smartsales.prism.domain.scheduler.SchedulerReminderSurfaceBus
 import com.smartsales.prism.domain.time.TimeProvider
+import com.smartsales.prism.ui.drawers.scheduler.DevInjectSource
 import com.smartsales.prism.ui.drawers.scheduler.ISchedulerViewModel
 import com.smartsales.prism.ui.drawers.scheduler.RescheduleExitMotion
+import com.smartsales.prism.ui.drawers.scheduler.SchedulerDevInjectionBridge
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.io.File
 import javax.inject.Inject
@@ -169,6 +171,16 @@ class SimSchedulerViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
+            SchedulerDevInjectionBridge.requests.collect { request ->
+                SchedulerDevInjectionBridge.consume(request)
+                injectTranscript(
+                    text = request.text,
+                    displayedDateIso = request.displayedDateIso,
+                    source = request.source
+                )
+            }
+        }
+        viewModelScope.launch {
             SchedulerReminderSurfaceBus.events.collect { event ->
                 val task = taskRepository.getTask(event.taskId)
                 val entry = buildSimReminderBannerEntry(
@@ -290,6 +302,24 @@ class SimSchedulerViewModel @Inject constructor(
                 }
                 is AsrResult.Error -> projectionSupport.emitFailure("录音转写失败: ${transcriptResult.message}")
             }
+        }
+    }
+
+    override fun injectTranscript(
+        text: String,
+        displayedDateIso: String?,
+        source: DevInjectSource
+    ) {
+        viewModelScope.launch {
+            projectionSupport.clearFailureState()
+            Log.d(
+                "SimSchedulerViewModel",
+                "injectTranscript: source=$source displayedDateIso=${displayedDateIso ?: "null"} text=$text"
+            )
+            ingressCoordinator.processTranscript(
+                transcript = text,
+                displayedDateIsoOverride = displayedDateIso
+            )
         }
     }
 

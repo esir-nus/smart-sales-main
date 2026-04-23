@@ -1,6 +1,7 @@
 package com.smartsales.prism
 
 import android.graphics.Color.TRANSPARENT
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -92,13 +93,29 @@ class MainActivity : ComponentActivity() {
                         shouldShowFirstLaunchSchedulerTeaser = AppFlavor.schedulerEnabled &&
                             discoverabilityGate.shouldShowFirstLaunchSchedulerTeaser(),
                         onFirstLaunchSchedulerTeaserShown = discoverabilityGate::markFirstLaunchSchedulerTeaserSeen,
-                        shouldAutoOpenSchedulerAfterOnboarding = AppFlavor.schedulerEnabled &&
-                            onboardingHandoffGate.shouldAutoOpenSchedulerAfterOnboarding(),
+                        shouldAutoOpenSchedulerAfterOnboarding = AppFlavor.schedulerEnabled && (
+                            onboardingHandoffGate.shouldAutoOpenSchedulerAfterOnboarding() ||
+                                SchedulerDevMainIntentHandler.shouldOpenScheduler(intent)
+                            ),
+                        debugSchedulerAutoOpenTarget =
+                            SchedulerDevMainIntentHandler.schedulerAutoOpenTarget(intent),
                         onPostOnboardingSchedulerAutoOpened =
                             onboardingHandoffGate::consumeSchedulerAutoOpenPending
                     )
                 }
             }
+        }
+
+        window.decorView.post {
+            SchedulerDevMainIntentHandler.handleIntent(intent)
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        window.decorView.post {
+            SchedulerDevMainIntentHandler.handleIntent(intent)
         }
     }
 

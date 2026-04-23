@@ -18,6 +18,7 @@ import com.smartsales.prism.AppFlavor
 import com.smartsales.prism.data.connectivity.registry.RegisteredDevice
 import com.smartsales.prism.domain.audio.BadgeAudioPipeline
 import com.smartsales.prism.ui.components.DynamicIslandItem
+import com.smartsales.prism.ui.components.DynamicIslandSchedulerTarget
 import com.smartsales.prism.ui.components.DynamicIslandLane
 import com.smartsales.prism.ui.components.DynamicIslandTapAction
 import com.smartsales.prism.ui.components.DynamicIslandVisualState
@@ -62,6 +63,7 @@ internal fun RuntimeShell(
     shouldShowFirstLaunchSchedulerTeaser: Boolean = false,
     onFirstLaunchSchedulerTeaserShown: () -> Unit = {},
     shouldAutoOpenSchedulerAfterOnboarding: Boolean = false,
+    debugSchedulerAutoOpenTarget: DynamicIslandSchedulerTarget? = null,
     onPostOnboardingSchedulerAutoOpened: () -> Unit = {}
 ) {
     val schedulerEnabled = AppFlavor.schedulerEnabled
@@ -115,6 +117,9 @@ internal fun RuntimeShell(
     }
     var postOnboardingSchedulerAutoOpenPending by remember {
         mutableStateOf(schedulerEnabled && shouldAutoOpenSchedulerAfterOnboarding)
+    }
+    var pendingDebugSchedulerTarget by remember(debugSchedulerAutoOpenTarget) {
+        mutableStateOf(debugSchedulerAutoOpenTarget)
     }
     val schedulerIslandItems = remember(
         schedulerEnabled,
@@ -367,7 +372,11 @@ internal fun RuntimeShell(
                 startupSchedulerTeaserPending = false
                 onPostOnboardingSchedulerAutoOpened()
                 onFirstLaunchSchedulerTeaserShown()
-                openScheduler()
+                openScheduler(
+                    DynamicIslandTapAction.OpenSchedulerDrawer(
+                        target = debugSchedulerAutoOpenTarget
+                    )
+                )
             }
 
             shouldAutoOpenRuntimeSchedulerStartupTeaser(
@@ -377,9 +386,22 @@ internal fun RuntimeShell(
             ) -> {
                 startupSchedulerTeaserPending = false
                 onFirstLaunchSchedulerTeaserShown()
-                openScheduler()
+                openScheduler(
+                    DynamicIslandTapAction.OpenSchedulerDrawer(
+                        target = debugSchedulerAutoOpenTarget
+                    )
+                )
             }
         }
+    }
+
+    LaunchedEffect(shellState.activeDrawer, pendingDebugSchedulerTarget) {
+        if (shellState.activeDrawer != com.smartsales.prism.ui.sim.RuntimeDrawerType.SCHEDULER) {
+            return@LaunchedEffect
+        }
+        val targetOffset = pendingDebugSchedulerTarget?.toDayOffset() ?: return@LaunchedEffect
+        schedulerViewModel.onDateSelected(targetOffset)
+        pendingDebugSchedulerTarget = null
     }
 
     RuntimeShellContent(

@@ -39,6 +39,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Verify governance docs exist
         run: |
@@ -61,6 +63,33 @@ jobs:
         run: |
           grep -n "legacy Android-app compatibility path" docs/reference/harmonyos-platform-guide.md
           grep -n "does not define the native Harmony implementation strategy" docs/reference/harmonyos-platform-guide.md
+
+      - name: Enforce live Harmony sprint for Harmony path changes
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base_sha="${{ github.event.pull_request.base.sha }}"
+          else
+            base_sha="${{ github.event.before }}"
+          fi
+
+          if [ -z "$base_sha" ] || [ "$base_sha" = "0000000000000000000000000000000000000000" ]; then
+            echo "Skipping live-sprint diff check: no comparable base SHA."
+            exit 0
+          fi
+
+          changed_harmony_files="$(git diff --name-only "$base_sha" "$GITHUB_SHA" -- 'platforms/harmony/**')"
+          if [ -z "$changed_harmony_files" ]; then
+            echo "No Harmony path changes in this ref update."
+            exit 0
+          fi
+
+          echo "Harmony path changes detected:"
+          printf '%s\n' "$changed_harmony_files"
+
+          if ! grep -qE '^- Status: (Active|Blocked)\b' docs/plans/sprint-tracker.md; then
+            echo "Harmony path changes require at least one Active or Blocked sprint in docs/plans/sprint-tracker.md."
+            exit 1
+          fi
 
   android-tree-boundary:
     runs-on: ubuntu-latest

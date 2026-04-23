@@ -1,5 +1,3 @@
-import java.io.ByteArrayOutputStream
-
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -8,52 +6,40 @@ plugins {
     alias(libs.plugins.hilt)
 }
 
-// 读取 git 分支与 commit 摘要，用于 debug 构建版本号自识别
-fun gitBranch(): String = runCatching {
-    val out = ByteArrayOutputStream()
-    exec {
-        commandLine("git", "rev-parse", "--abbrev-ref", "HEAD")
-        standardOutput = out
-        isIgnoreExitValue = true
-    }
-    out.toString().trim().ifEmpty { "unknown" }
-}.getOrDefault("unknown")
+apply(from = rootProject.file("gradle/android-app-versioning.gradle.kts"))
 
-fun gitDescribe(): String = runCatching {
-    val out = ByteArrayOutputStream()
-    exec {
-        commandLine("git", "describe", "--always", "--dirty", "--abbrev=7")
-        standardOutput = out
-        isIgnoreExitValue = true
-    }
-    out.toString().trim().ifEmpty { "unknown" }
-}.getOrDefault("unknown")
-
-val gitBranchValue = gitBranch()
-val gitDescribeValue = gitDescribe()
+@Suppress("UNCHECKED_CAST")
+val resolveAndroidAppVersion =
+    extra["resolveAndroidAppVersion"] as (String, Int) -> Map<String, Any>
+val prismVersioning = resolveAndroidAppVersion("0.1.0-prism", 1)
+val prismBaseVersionCode = prismVersioning["baseVersionCode"] as Int
+val prismBaseVersionName = prismVersioning["baseVersionName"] as String
+val prismBuildStamp = prismVersioning["buildStamp"] as String
+val prismGitSha = prismVersioning["gitSha"] as String
+val prismDebugVersionSuffix = prismVersioning["debugVersionSuffix"] as String
+val prismDebugDisplayVersion = prismVersioning["debugDisplayVersion"] as String
 
 android {
     namespace = "com.smartsales.prism"
     compileSdk = 34
 
-    flavorDimensions += "distribution"
-
     defaultConfig {
         applicationId = "com.smartsales.prism"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0-prism"
+        versionCode = prismBaseVersionCode
+        versionName = prismBaseVersionName
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
-        buildConfigField("String", "GIT_BRANCH", "\"$gitBranchValue\"")
-        buildConfigField("String", "GIT_DESCRIBE", "\"$gitDescribeValue\"")
+        resValue("string", "app_name", "智能销售-安卓")
+        buildConfigField("String", "APP_BUILD_STAMP", "\"$prismBuildStamp\"")
+        buildConfigField("String", "APP_GIT_SHA", "\"$prismGitSha\"")
+        buildConfigField("String", "APP_DISPLAY_VERSION", "\"$prismDebugDisplayVersion\"")
     }
 
     buildTypes {
         debug {
-            // 在 versionName 末尾追加 +分支@commit，便于 QA 设备一眼识别构建来源
-            versionNameSuffix = "+$gitBranchValue@$gitDescribeValue"
+            versionNameSuffix = prismDebugVersionSuffix
         }
         release {
             isMinifyEnabled = false
@@ -61,23 +47,6 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-        }
-    }
-
-    productFlavors {
-        create("full") {
-            dimension = "distribution"
-            buildConfigField("boolean", "IS_HARMONY_COMPAT_FLAVOR", "false")
-            buildConfigField("boolean", "ENABLE_SCHEDULER", "true")
-            resValue("string", "app_name", "智能销售-安卓")
-        }
-        create("harmony") {
-            dimension = "distribution"
-            applicationIdSuffix = ".harmony"
-            versionNameSuffix = "-harmony"
-            buildConfigField("boolean", "IS_HARMONY_COMPAT_FLAVOR", "true")
-            buildConfigField("boolean", "ENABLE_SCHEDULER", "false")
-            resValue("string", "app_name", "智能销售-鸿蒙")
         }
     }
 

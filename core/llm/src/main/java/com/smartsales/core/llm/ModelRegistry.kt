@@ -18,6 +18,13 @@ object ModelRegistry {
         temperature = 0.0f
     )
 
+    /** 调度专用提取器 (Scheduler Extractor) — 调度解析专用硬钉住通道；未来重钉模型时只改这里，不改调用点。 */
+    val SCHEDULER_EXTRACTOR = LlmProfile(
+        modelId = "qwen-plus",
+        temperature = 0.0f,
+        skillTags = setOf("structured_output")
+    )
+
     /** 多任务提取器 (Multi Extractor) — 用于更复杂的有序结构拆解。 */
     val MULTI_EXTRACTOR = LlmProfile(
         modelId = "qwen3-max-2026-01-23",

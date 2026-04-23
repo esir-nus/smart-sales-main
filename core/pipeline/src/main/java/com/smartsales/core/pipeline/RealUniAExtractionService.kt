@@ -22,7 +22,7 @@ class RealUniAExtractionService @Inject constructor(
 
     suspend fun extract(request: UniAExtractionRequest): FastTrackResult {
         val prompt = promptCompiler.compileUniAExtractionPrompt(request)
-        return when (val result = executor.execute(ModelRegistry.EXTRACTOR, prompt)) {
+        return when (val result = executor.execute(ModelRegistry.SCHEDULER_EXTRACTOR, prompt)) {
             is ExecutorResult.Success -> schedulerLinter.parseUniAExtraction(
                 input = result.content,
                 unifiedId = request.unifiedId,

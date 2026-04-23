@@ -75,7 +75,7 @@ jobs:
           echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
 
       - name: Run lint
-        run: ./gradlew :app-core:lintFullDebug --continue
+        run: ./gradlew :app-core:lintDebug --continue
 
       - name: Upload lint reports on failure
         if: failure()

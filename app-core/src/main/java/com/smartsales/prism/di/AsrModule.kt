@@ -1,6 +1,8 @@
 package com.smartsales.prism.di
 
+import com.smartsales.prism.data.asr.FunAsrTranscriptionClient
 import com.smartsales.prism.data.asr.FunAsrService
+import com.smartsales.prism.data.asr.RealFunAsrTranscriptionClient
 import com.smartsales.prism.domain.asr.AsrService
 import dagger.Binds
 import dagger.Module
@@ -21,4 +23,10 @@ abstract class AsrModule {
     @Binds
     @Singleton
     abstract fun bindAsrService(impl: FunAsrService): AsrService
+
+    @Binds
+    @Singleton
+    abstract fun bindFunAsrTranscriptionClient(
+        impl: RealFunAsrTranscriptionClient
+    ): FunAsrTranscriptionClient
 }

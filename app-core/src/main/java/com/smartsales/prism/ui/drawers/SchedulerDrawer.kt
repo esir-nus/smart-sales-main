@@ -13,7 +13,6 @@ import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.zIndex
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -37,7 +36,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.smartsales.prism.ui.drawers.scheduler.SchedulerCalendar
@@ -440,134 +438,6 @@ fun SchedulerDrawer(
                                     fontSize = 16.sp,
                                     fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                                 )
-                            }
-                        }
-                    }
-
-                    if (com.smartsales.prism.BuildConfig.DEBUG) {
-                        val devContext = LocalContext.current
-                        var isRecordingMic by remember { mutableStateOf(false) }
-                        val recorder = remember { com.smartsales.prism.data.audio.PhoneAudioRecorder(devContext) }
-
-                        val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
-                        DisposableEffect(lifecycleOwner) {
-                            val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-                                if (event == androidx.lifecycle.Lifecycle.Event.ON_PAUSE && isRecordingMic) {
-                                    recorder.cancel()
-                                    isRecordingMic = false
-                                }
-                            }
-                            lifecycleOwner.lifecycle.addObserver(observer)
-                            onDispose {
-                                lifecycleOwner.lifecycle.removeObserver(observer)
-                                if (isRecordingMic) {
-                                    recorder.cancel()
-                                }
-                            }
-                        }
-
-                        val permissionLauncher = rememberLauncherForActivityResult(
-                            androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
-                        ) { granted ->
-                            if (granted && isSimVisualMode) {
-                                recorder.startRecording()
-                                isRecordingMic = true
-                            } else if (!granted) {
-                                Toast.makeText(devContext, "需要录音权限", Toast.LENGTH_SHORT).show()
-                            }
-                        }
-
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                            color = visuals.debugPanelColor,
-                            shape = RoundedCornerShape(10.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(
-                                            if (isRecordingMic) visuals.debugPanelButtonActiveColor else visuals.debugPanelButtonColor,
-                                            RoundedCornerShape(6.dp)
-                                        )
-                                        .then(
-                                            if (isSimVisualMode) {
-                                                Modifier.clickable {
-                                                    val hasPermission = androidx.core.content.ContextCompat
-                                                        .checkSelfPermission(
-                                                            devContext,
-                                                            android.Manifest.permission.RECORD_AUDIO
-                                                        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-
-                                                    if (!hasPermission) {
-                                                        permissionLauncher.launch(
-                                                            android.Manifest.permission.RECORD_AUDIO
-                                                        )
-                                                    } else if (isRecordingMic) {
-                                                        isRecordingMic = false
-                                                        val wavFile = runCatching { recorder.stopRecording() }.getOrNull()
-                                                        if (wavFile != null) {
-                                                            viewModel.processAudio(wavFile)
-                                                        } else {
-                                                            Toast.makeText(devContext, "停止录音失败", Toast.LENGTH_SHORT).show()
-                                                        }
-                                                    } else {
-                                                        recorder.startRecording()
-                                                        isRecordingMic = true
-                                                    }
-                                                }
-                                            } else {
-                                                Modifier.pointerInput(Unit) {
-                                                    detectTapGestures(
-                                                        onPress = {
-                                                            val hasPermission = androidx.core.content.ContextCompat
-                                                                .checkSelfPermission(
-                                                                    devContext,
-                                                                    android.Manifest.permission.RECORD_AUDIO
-                                                                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-
-                                                            if (!hasPermission) {
-                                                                permissionLauncher.launch(
-                                                                    android.Manifest.permission.RECORD_AUDIO
-                                                                )
-                                                                return@detectTapGestures
-                                                            }
-
-                                                            recorder.startRecording()
-                                                            isRecordingMic = true
-
-                                                            val released = tryAwaitRelease()
-
-                                                            isRecordingMic = false
-                                                            if (released) {
-                                                                val wavFile = recorder.stopRecording()
-                                                                viewModel.processAudio(wavFile)
-                                                            } else {
-                                                                recorder.cancel()
-                                                            }
-                                                        }
-                                                    )
-                                                }
-                                            }
-                                        )
-                                        .padding(12.dp),
-                                    horizontalArrangement = Arrangement.Center,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = when {
-                                            isSimVisualMode && isRecordingMic -> "停止测试录音"
-                                            isSimVisualMode -> "REC 测试录音"
-                                            isRecordingMic -> "松开结束录音..."
-                                            else -> "按住录音"
-                                        },
-                                        color = Color.White,
-                                        fontSize = 14.sp,
-                                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
-                                    )
-                                }
                             }
                         }
                     }

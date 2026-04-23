@@ -59,6 +59,8 @@ class RateLimitedBleGateway(
         delegate.sendBadgeSignal(session, payload)
     }
 
+
+
     override fun forget(peripheral: BlePeripheral) = delegate.forget(peripheral)
 
     // === Rate-limited method ===

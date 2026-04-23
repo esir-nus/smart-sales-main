@@ -84,6 +84,7 @@ class SchedulerDrawerSimModeTest {
         composeTestRule.onNodeWithTag(SCHEDULER_EMPTY_GUIDE_CARD_TEST_TAG).assertExists()
         composeTestRule.onNodeWithText("用工牌录音创建日程").assertExists()
         composeTestRule.onNodeWithText("长按工牌录音键，说出你的待办。处理完成后，日程会显示在这里。").assertExists()
+        composeTestRule.onNodeWithText("REC 测试录音").assertDoesNotExist()
     }
 
     @Test

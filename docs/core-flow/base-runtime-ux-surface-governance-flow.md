@@ -398,13 +398,14 @@ Purpose: calm setup lane that teaches the badge ritual, captures prerequisites, 
 
 ## UX.SETTINGS — Settings Surface
 
-Purpose: centered support surface for profile, preferences, storage, security, about, and logout.
+Purpose: centered support surface for profile, preferences, badge device control, storage, security, about, and logout.
 
 ```text
 ┌──────────────────────────────────────────────┐
 │ profile hero / edit                          │  UX.SETTINGS.PROFILE
 ├──────────────────────────────────────────────┤
 │ preferences                                  │  UX.SETTINGS.PREFERENCES
+│ badge device control                         │  UX.SETTINGS.DEVICE_CONTROL
 │ storage                                      │  UX.SETTINGS.STORAGE
 │ security / about                             │  UX.SETTINGS.ABOUT
 └──────────────────────────────────────────────┘
@@ -417,6 +418,7 @@ Purpose: centered support surface for profile, preferences, storage, security, a
 |---|---|---|
 | `UX.SETTINGS.PROFILE` | Profile | user identity summary and edit entry |
 | `UX.SETTINGS.PREFERENCES` | Preferences | theme and app toggles |
+| `UX.SETTINGS.DEVICE_CONTROL` | Device Control | badge-only controls that must not broaden into generic device management |
 | `UX.SETTINGS.STORAGE` | Storage | device-space awareness and cleanup |
 | `UX.SETTINGS.ABOUT` | About/Security | version/help/privacy routes |
 | `UX.SETTINGS.LOGOUT` | Logout | explicit session end |
@@ -427,6 +429,7 @@ Purpose: centered support surface for profile, preferences, storage, security, a
 |---|---|---|---|---|---|---|---|---|---|
 | `UX.SETTINGS.PROFILE.HERO_CARD` | Profile hero card | actionable | centered identity sheet | tap edit | visible | settings open | enters edit path | settings remains an overlay-style support surface, not a side drawer | `docs/specs/modules/UserCenter.md` |
 | `UX.SETTINGS.PREFERENCES.THEME_SELECTOR` | Theme selector | actionable | persisted single-choice setting | tap | dark, light, system | settings open | updates stored theme preference | theme choice must persist and apply immediately where implemented | `docs/specs/modules/UserCenter.md` |
+| `UX.SETTINGS.DEVICE_CONTROL.VOICE_VOLUME` | Badge voice volume slider | actionable | persisted slider | drag then release | 0..100 | badge control surface open | sends one best-effort BLE `volume#<0..100>` command on release only | drag must stay UI-only; duplicate sends are skipped only after a confirmed prior badge write | `docs/specs/modules/UserCenter.md` |
 | `UX.SETTINGS.STORAGE.CLEAR_CACHE` | Clear cache action | actionable | explicit maintenance row | tap | idle, running, completed | settings open | clears cache | destructive maintenance must remain explicit | `docs/specs/modules/UserCenter.md` |
 | `UX.SETTINGS.ABOUT.HELP_VERSION` | Help/version rows | actionable | support info group | tap if route exists | visible | settings open | opens help or shows version detail | informational support stays subordinate to core work surfaces | `docs/specs/modules/UserCenter.md` |
 | `UX.SETTINGS.LOGOUT.BUTTON` | Log out button | actionable | explicit session-end CTA | tap | idle | settings open | logs user out | logout must remain explicit, not hidden in unrelated menus | `docs/specs/modules/UserCenter.md` |

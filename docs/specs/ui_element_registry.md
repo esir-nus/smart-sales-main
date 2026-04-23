@@ -2,7 +2,7 @@
 
 > **Status:** Active / Governance
 > **Version:** 2.6 (Draft)
-> **Last Updated:** 2026-04-01
+> **Last Updated:** 2026-04-20
 > **Authority:** This document is a supporting registry for shared interaction, layering, and reusable UI behavior invariants. Current base-runtime surface behavior is owned first by `docs/core-flow/base-runtime-ux-surface-governance-flow.md`.
 
 Standalone-mode note:
@@ -103,6 +103,7 @@ Home empty-state composition note:
 |---------|--------|-------------|-----------|--------|--------|
 | **Profile Card** | Centered hero | Tap `Edit` | "Name / Position / metadata chips" | Edit Screen. | ✅ Verified |
 | **Preferences** | List | Tap | "Theme / AI Lab / Message Notifications" | `Theme` opens a persisted `Dark / Light / System` selector; AI Lab remains a toggle setting. | ✅ Verified |
+| **Device Control** | Slider row | Drag then release | "徽章语音音量" | Persists desired volume locally and sends one best-effort BLE `volume#<0..100>` command only on release. | ✅ Verified |
 | **Storage** | Two rows | Tap `Clear` | "Used Space / Clear Cache" | Clears Cache. | ✅ Verified |
 | **Security** | Row | Tap | "Change Password" | Nav Flow. | ✅ Verified |
 | **Footer** | Button | Tap | "Log Out" | Ends Session. | ✅ Verified |

@@ -3,7 +3,7 @@
 > **Cerb-compliant spec** — Prism-safe wrapper for legacy BLE + HTTP connectivity.
 > **OS Layer**: Infrastructure (Layer 1) — Leaf service, no upstream dependencies
 > **Status**: SHIPPED
-> **Last Updated**: 2026-04-02
+> **Last Updated**: 2026-04-20
 > **Behavioral UX Authority Above This Doc**: [`docs/core-flow/base-runtime-ux-surface-governance-flow.md`](../../core-flow/base-runtime-ux-surface-governance-flow.md) (`UX.CONNECTIVITY.*`)
 
 ---
@@ -187,7 +187,7 @@ sealed class WavDownloadResult {
 
 | State | Visual | Actions |
 |-------|--------|---------|
-| `CONNECTED` | ✅ Green pulsing BT icon<br>Active device header (name + MAC suffix + battery)<br>Registered device list | **⚡ 断开连接**<br>**🔄 检查更新**<br>Device list: **切换** / **重命名** / **设为默认** / **移除** |
+| `CONNECTED` | ✅ Green pulsing BT icon<br>Active device header (name + MAC suffix + battery)<br>Voice volume quick-entry slider<br>Registered device list | **⚡ 断开连接**<br>**🔄 检查更新**<br>Device volume: **语音音量**<br>Device list: **切换** / **重命名** / **设为默认** / **移除** |
 | `DISCONNECTED` | ⚫ Gray BT icon<br>"🔴 离线" | **重试连接** |
 | `BLE_PAIRED_NETWORK_UNKNOWN` | 🔵 BT icon<br>"已连接设备"<br>"蓝牙已连接，正在确认设备网络状态" | **重试连接** |
 | `BLE_PAIRED_NETWORK_OFFLINE` | 🔵 BT icon<br>"已连接设备"<br>"蓝牙已连接，但设备当前未接入可用网络" | **重试连接** |
@@ -205,6 +205,7 @@ sealed class WavDownloadResult {
 > Tapping "重试连接" from a disconnected manager state triggers auto-reconnect using persisted session.
 > Tapping `开始配网` from `NEEDS_SETUP` still enters the full shared onboarding coordinator with `host = SIM_CONNECTIVITY`.
 > Tapping the manager `添加设备` action enters the streamlined add-device coordinator with `host = SIM_ADD_DEVICE`, reusing pairing/provisioning runtime while skipping intro handshake and scheduler quick start.
+> `CONNECTED` may expose a badge voice-volume quick entry. Drag updates only local UI state; only `onValueChangeFinished` may send the BLE `volume#<0..100>` signal.
 > Tapping "更新配置" from `WIFI_MISMATCH` first performs local validation plus an explicit send-confirm dialog; only the confirmed valid submit enters reconnect/progress and runs the repair flow without requiring a second manual retry.
 > The richer `BLE_PAIRED_NETWORK_*` states are manager-only refinements derived from `ConnectivityBridge.managerStatus`; they must not redefine global transport readiness.
 > Debug builds may additionally expose a temporary `断开连接` action in `BLE_PAIRED_NETWORK_*` states for hardware testing convenience; that control must not be treated as a release-surface contract.
@@ -241,6 +242,8 @@ Reconnect rule:
 - manager-only BLE/Wi‑Fi diagnostics must not wait for a background poll tick to become visible
 - reconnect/setup/manual repair may use bounded foreground confirmation loops, but the runtime must not resume continuous BLE Wi‑Fi polling after those checks complete
 - connectivity UI must treat reconnect and manual Wi‑Fi repair as one exclusive foreground operation so duplicate taps do not stack concurrent repair attempts
+- badge voice volume uses its own best-effort write lane and must never send continuously while the slider is moving
+- badge voice volume de-duplication must key off the last confirmed badge-applied value, not merely the last locally stored preference
 
 Reconnect credential rule:
 

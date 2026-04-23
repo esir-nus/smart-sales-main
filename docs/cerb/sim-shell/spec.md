@@ -253,6 +253,7 @@ Expected navigation:
 - `Ask AI` from audio opens chat with that audio pre-attached
 - selecting audio from chat reopens the audio drawer instead of Android file picker
 - when the SIM scheduler drawer opens with no task items and no inspiration items, show one instructional badge-recording guide card instead of a fake scheduler item
+- the SIM scheduler drawer teaches badge-driven schedule creation and does not expose a local test-rec button
 - the same chat shell may move between empty, plain-chat, audio-grounded, and pending-audio presentation without changing top-level shell identity
 
 ### History Drawer Support Surface

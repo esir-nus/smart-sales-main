@@ -66,6 +66,7 @@ interface BleGateway {
      */
     suspend fun sendBadgeSignal(session: BleSession, payload: String)
 
+
     fun forget(peripheral: BlePeripheral)
 }
 
@@ -105,4 +106,5 @@ sealed interface ProvisioningAckResult {
     data object Accepted : ProvisioningAckResult
     data class Rejected(val reason: String) : ProvisioningAckResult
 }
+
 

@@ -243,20 +243,6 @@
 
 ---
 
-## Shipped Fix: Badge WAV Download Keepalive — Foreground Service During Background Queue Work
-> **Context**: Manual badge sync and `rec#` auto-download already queued WAV downloads in the SIM audio namespace, but Android had no foreground-service anchor to keep that work alive after the app was backgrounded or swiped away from recents.
-
-- **Status**: Shipped (2026-04-16)
-- **Scope**:
-  - `DownloadForegroundService` is now declared in `app-core` manifest with `dataSync` foreground-service type and explicit non-exported keepalive ownership
-  - manual queue enqueue in `SimAudioRepositorySyncSupport` and `rec#` auto-download in `SimBadgeAudioAutoDownloader` both trigger the same `DownloadServiceOrchestrator`
-  - keepalive notification uses low-priority `BADGE_DOWNLOAD_PROGRESS` channel and auto-stops after the queue stays idle through the 800ms debounce window
-  - service stop coordination now uses a real delayed idle debounce instead of depending on a second `StateFlow` emission after the queue becomes idle
-- **Focused Verification**:
-  - `:app-core:testFullDebugUnitTest --tests 'com.smartsales.prism.data.audio.SimAudioRepositorySyncSupportTest' --tests 'com.smartsales.prism.data.audio.SimBadgeAudioAutoDownloaderTest' --tests 'com.smartsales.prism.service.DownloadForegroundServiceContractTest' --tests 'com.smartsales.prism.service.DownloadServiceOrchestratorTest'`
-
----
-
 ## Deferred Enhancement: Download Progress Bar — File Size Support via `/list` Endpoint
 > **Context**: Next-gen progress bar shows determinate percentage when file size is available. Requires firmware team to add file size data to `/list` endpoint response.
 

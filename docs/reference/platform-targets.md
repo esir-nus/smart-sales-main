@@ -32,6 +32,7 @@ Meaning:
 
 - the app is still the Android app
 - Huawei/Honor/Harmony device support is a compatibility problem for that Android app
+- use the same canonical Android package/artifact as other Android devices unless a platform-owned release process explicitly requires otherwise
 - this path may require OEM guidance, launch-management handling, and Android-specific reminder hardening
 
 It is **not** the same thing as a native Harmony app.

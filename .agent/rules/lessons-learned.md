@@ -36,6 +36,7 @@ trigger: always_on
 ## Harmony Migration & Lane Hygiene
 - **Starting Harmony work from Android assumptions** → Translation-first still requires explicit platform evidence. Do not copy Android behavior into Harmony-native docs/code without checking the Harmony overlay and governance docs. (Ref: *Android Assumption Leakage into Harmony*)
 - **Mixing Android and Harmony artifacts in one lane** → Keep Harmony-native files and Android-mainline files in separate write scopes unless shared-truth docs explicitly require both. (Ref: *Lane Contamination Across Android and Harmony*)
+- **Rescuing a mixed Android/Harmony branch** → Split the rescue by lane before touching `develop`; only Android/shared-docs content belongs on the develop rescue branch. (Ref: *Rescue Branch Lane Split and Post-Merge Cleanup*)
 - **Claiming parity without platform proof** → Do not promise Harmony parity for reminders, background work, notifications, scheduler flows, or onboarding unless the Harmony lane has evidence. (Ref: *Fake Parity Without Harmony Evidence*)
 - **Using tracker intent as Harmony spec** → A Harmony migration note or tracker bullet is not enough to invent native behavior. Read the owning shared contract and the Harmony overlay first. (Ref: *Harmony Spec Invention from Migration Notes*)
 - **Greenfield Harmony scaffolding without doc sync** → New Harmony roots, containers, or native service seams must sync their ownership and contract docs in the same session. (Ref: *Harmony Greenfield Scaffolding Without Contract Sync*)
@@ -58,6 +59,7 @@ trigger: always_on
 
 ## 🔌 APIs & Network
 - **Pre-signed OSS URLs vs REST** → Aliyun V2 returns artifacts as URLs, not REST endpoints. (Ref: *Hallucinated REST Endpoint*)
+- **Unit tests need local credentials or real cloud access** → Refactor them to hermetic seams and move live-provider coverage into ignored integration tests. (Ref: *Hermetic ASR Unit Tests*)
 - **Silent Signature Crashes** → Check build script fallback logic for unified vs dedicated keys. (Ref: *OSS Credentials vs Unified Aliyun Key*)
 - **Reconnecting BLE** → Never fire-and-poll with fixed delays. Use suspend & await. (Ref: *Reconnect Race Condition*)
 - **Gating on HTTP** → Don't gate BLE connection success on HTTP server reachability. (Ref: *HTTP Gate Conflating Connection Concerns*)
@@ -65,4 +67,5 @@ trigger: always_on
 ## 🛠️ Tooling & Editor
 - **Compiler line number errors** → Do not ignore exact line numbers. Often caused by injecting markdown tags. (Ref: *Markdown Tag Injection & Ignoring Line Numbers*)
 - **NoClassDefFoundError on standalone interfaces** → D8 may drop them. Move declaration into consumer file. (Ref: *D8/R8 Silent Interface Dropping*)
+- **Rescue branch still looks ahead after squash merge** → Prove cleanup safety from PR state (`MERGED`), not from branch-ahead counts, then delete the stale rescue branch/worktree. (Ref: *Rescue Branch Lane Split and Post-Merge Cleanup*)
 - **Signature Changes vs Fakes** → When changing a core interface signature (e.g. adding a constructor dependency), failing to update the `TestFake` will silently kill the test suite compilation. Always grep for usages in `test-fakes`. (Ref: *Divergent Test Fakes*)

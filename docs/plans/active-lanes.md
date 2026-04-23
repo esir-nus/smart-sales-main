@@ -21,6 +21,7 @@ Each entry is appended when a task passes the pre-flight scope conflict check, a
 - date: 2026-04-21
   lane: android
   title: DTQ-03 scheduler hardening
+  status: deferred — will migrate to docs/projects/dtq-03-scheduler-hardening/ during renovation Phase 6
   scope:
     - docs/plans/active-lanes.md
     - app-core/src/main/java/com/smartsales/prism/data/memory/RealScheduleBoard.kt
@@ -47,6 +48,7 @@ Each entry is appended when a task passes the pre-flight scope conflict check, a
 - date: 2026-04-21
   lane: docs
   title: DTQ-03 scheduler hardening docs sync
+  status: deferred — will migrate to docs/projects/dtq-03-scheduler-hardening/ during renovation Phase 6
   scope:
     - docs/plans/active-lanes.md
     - docs/cerb/sim-scheduler/spec.md

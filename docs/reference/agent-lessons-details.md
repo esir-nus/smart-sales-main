@@ -24,6 +24,45 @@ When adding a new lesson (after USER confirms "problem fixed"):
 
 ## Lessons
 
+### Hermetic ASR Unit Tests — 2026-04-23
+
+**Symptom**: ASR unit coverage passed locally only when developer credentials were available, and CI failed or drifted because the test behavior depended on real DashScope setup.  
+**Root Cause**: `FunAsrService` reached directly into runtime credential state and live transcription behavior, so tests were not isolated from environment configuration.  
+**Wrong Approach**:  
+1. Treating a cloud-backed unit test as acceptable as long as one developer machine had the right keys  
+2. Encoding assertions around failure modes that only occur after live auth succeeds  
+3. Leaving live-network coverage inside the default unit-test task instead of separating it  
+**Correct Fix**:  
+1. Inject a transcription seam and shared credential provider so unit tests can supply hermetic fakes  
+2. Keep the runtime contract unchanged while making the unit path independent of `local.properties` and real network access  
+3. Move real DashScope verification into ignored integration coverage so live checks stay opt-in  
+**File(s)**:  
+- `app-core/src/main/java/com/smartsales/prism/data/asr/FunAsrService.kt`  
+- `app-core/src/main/java/com/smartsales/prism/data/asr/FunAsrTranscriptionClient.kt`  
+- `app-core/src/main/java/com/smartsales/prism/di/AsrModule.kt`  
+- `app-core/src/test/java/com/smartsales/prism/data/asr/FunAsrServiceTest.kt`  
+- `app-core/src/test/java/com/smartsales/prism/data/asr/FunAsrServiceIntegrationTest.kt`  
+- `docs/cerb/asr-service/spec.md`  
+**Pattern**: If a unit test needs real credentials or live cloud access, the seam is wrong. Make the unit path hermetic and keep provider-backed verification as opt-in integration coverage.
+
+### Rescue Branch Lane Split and Post-Merge Cleanup — 2026-04-23
+
+**Symptom**: Rescue work accumulated on mixed Android/Harmony branches, and already-merged rescue branches kept appearing “ahead” of `develop`, making cleanup look unsafe.  
+**Root Cause**: Rescue extraction and rescue cleanup were treated as one fuzzy git task instead of two separate governance rules: lane-safe transplanting before merge, then PR-state-based cleanup after squash merge.  
+**Wrong Approach**:  
+1. Trying to merge mixed Android/Harmony rescue content directly into `develop`  
+2. Using branch-ahead counts after squash merge as proof that the rescue branch still contained unlanded work  
+3. Leaving stale rescue worktrees attached because the local branch graph looked divergent  
+**Correct Fix**:  
+1. Split mixed branches by lane and transplant only Android/shared-docs content onto a develop-based rescue branch  
+2. Exclude Harmony-native files and Harmony-only evidence from the develop rescue branch  
+3. After merge, prove cleanup safety from PR state (`MERGED`) rather than commit-count comparisons, then delete the stale rescue branch and worktree  
+**File(s)**:  
+- `docs/specs/platform-governance.md`  
+- `docs/plans/active-lanes.md`  
+- `.codex/skills/merge/SKILL.md`  
+**Pattern**: Mixed rescue branches require two laws: split by lane before merge, and trust PR merge state rather than ahead/behind counts after squash merge.
+
 ### Harmony Build Proof Is Not Device Proof — 2026-04-11
 
 **Symptom**: A Harmony lane reaches `assembleHap` success, but on-device scheduler/backend verification is still blocked or misleading because signing, deployment, or launch does not line up with the same app identity.

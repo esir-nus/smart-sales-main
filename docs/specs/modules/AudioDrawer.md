@@ -343,7 +343,7 @@ The dual-mode contract from §Mode Variants and §Select-Mode Interaction Contra
 | `AudioDrawer.kt` (sheet-header) | Add `sheet-sub` text below title (10sp, uppercase, ink/45%); reflect sync state in sub copy |
 | Glass surface | Confirm `Modifier.background(...).blur(...)` or equivalent renders sheet at `surface.sheet` token. If current implementation uses a non-blurred translucent fill, switch to `androidx.compose.ui.graphics.BlurEffect` or platform `RenderEffect.createBlurEffect` |
 
-Implementation lands on a feature branch from `develop` (Android lane) per `docs/specs/declaration-first-shipping.md`. This contract itself ships on the `docs` lane.
+Implementation lands through the declared Android review path from `develop` per `docs/specs/ship-time-checks.md`. This contract itself ships on the `docs` lane.
 
 ### R.9 Verification
 

@@ -1,3 +1,5 @@
+Archived on 2026-04-23. Active governance moved to `docs/specs/ship-time-checks.md`.
+
 # Declaration-First Shipping Contract
 
 ## 0. Philosophy: Friction Upfront, Not Downstream

@@ -19,26 +19,29 @@ Read `SmartSales_PRD.md` for full product identity.
 master (protected, promotion-only — requires PR)
   └── develop (Android maintenance + shared contracts, daily trunk)
         └── platform/harmony (HarmonyOS integration trunk, daily Harmony work)
-              ├── harmony/feat-x (feature branches, PR back to platform/harmony)
-              └── harmony/feat-y
 ```
 
-- **develop**: Android maintenance and shared-contract work. Cerb-compliance applies.
-- **platform/harmony**: HarmonyOS-native integration trunk. Receives shared contracts from develop via merge. Never merges back into develop. All Harmony daily work lands here.
+- **develop**: Android maintenance and shared-contract trunk. Sprint-contract work closes here for Android and shared governance after review. `develop` is the canonical source for `adb` package/install flows.
+- **platform/harmony**: HarmonyOS-native integration trunk. Receives shared contracts from `develop` via merge and closes Harmony work here. `platform/harmony` is the canonical source for `hdc` package/install flows.
 - **master**: Protected. Receives promotions from develop via PR only. No direct commits.
-- Feature work: create branch from `develop` (for Android) or `platform/harmony` (for Harmony), PR back to origin branch.
-- Shared contracts flow: `develop → platform/harmony`, never the reverse. Sync at least weekly.
+- Default pattern: run the sprint contract, then commit on close to `develop` or `platform/harmony` through the declared review path.
+- Feature branches remain optional for ad-hoc isolation or review convenience; they are not the default governance model.
+- Shared contracts flow: `develop -> platform/harmony`, never the reverse. Sync at least weekly.
 - Harmony-native is the primary forward platform. Android is beta-maintenance.
+
+## Sprint Contract Workflow
+
+- Claude authors the sprint contract in `docs/projects/<slug>/sprints/NN-<slug>.md`.
+- Codex is the default operator at handoff unless the user explicitly picks another operator.
+- The operator executes one contract at a time, keeps the worktree dirty during iteration, and commits only at sprint close.
+- Read `docs/specs/sprint-contract.md` for the contract schema and `docs/specs/project-structure.md` for project/tracker layout.
+- The user is the final approval gate for close status, lesson proposals, and any CHANGELOG line.
 
 ## Declaration-First Shipping
 
-Every test/build/ship command must declare its **Lane** (`android`, `harmony`, or `docs`) and **Ship Scope** (explicit files/modules). Declarations are per-command, never sticky.
+Declaration happens in the sprint contract and its handoff, not through a separate always-on registry. Startup discipline, scope, stop criteria, and evidence requirements now live in `docs/specs/sprint-contract.md`.
 
-`android` and `harmony` are platform delivery lanes. `docs` is a shared-infrastructure lane — documentation and repo-root markdown always land on `develop` regardless of which platform they describe.
-
-Before starting a declared task, run the pre-flight scope conflict check against `docs/plans/active-lanes.md` and the dirty tree. File-level overlap with in-flight work refuses the task; same-directory overlap warns and asks.
-
-Branch name is advisory — the declared lane decides what ships, not the branch. Unrelated dirty files are reported, not blocked. See `docs/specs/declaration-first-shipping.md` for the full contract and philosophy (friction upfront, not downstream).
+Ship-time review is intentionally narrow. Use `docs/specs/ship-time-checks.md` for the remaining ship gate: scope review, lane-scope coherence, reverse-dependency checks, and final-state blocker rules.
 
 ## Source of Truth
 
@@ -64,6 +67,14 @@ Before writing code:
 4. Read `docs/plans/tracker.md` for campaign state
 
 After implementation, sync all docs touched by the change in the same session (Android/cerb-compliant work only).
+
+## Doc-Production Discipline
+
+Agents must not auto-proliferate doc artifacts. Before producing a non-code file, ask whether the information belongs in a commit message, an existing doc, or a sprint contract ledger. The default is not to create a new file.
+
+## Single Changelog
+
+There is one product changelog: `CHANGELOG.md`, rendered to `CHANGELOG.html`. No parallel product trace log should be maintained; `docs/plans/changelog.md` is deprecated and scheduled for cleanup elsewhere.
 
 ## Module Structure
 
@@ -135,12 +146,15 @@ If current logs are insufficient, add targeted tags/logging and rerun instead of
 |----------|------|
 | Product north star | `SmartSales_PRD.md` |
 | Main tracker | `docs/plans/tracker.md` |
+| Sprint contract schema | `docs/specs/sprint-contract.md` |
+| Project structure | `docs/specs/project-structure.md` |
 | Interface ownership | `docs/cerb/interface-map.md` |
 | UX contract | `docs/specs/prism-ui-ux-contract.md` |
 | Style guide | `docs/specs/style-guide.md` |
 | UI element registry | `docs/specs/ui_element_registry.md` |
 | Feature dev SOP | `docs/sops/feature-development.md` |
 | Debugging SOP | `docs/sops/debugging.md` |
+| Ship-time gate | `docs/specs/ship-time-checks.md` |
 | Code structure | `docs/specs/code-structure-contract.md` |
 | Platform governance | `docs/specs/platform-governance.md` |
 | Glossary | `docs/specs/GLOSSARY.md` |

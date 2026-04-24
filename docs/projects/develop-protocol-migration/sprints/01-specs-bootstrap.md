@@ -30,7 +30,7 @@ Holistic (per the project model — docs + code + UI together when relevant; thi
 
 **Out of scope** (explicit — do not touch):
 
-- `CLAUDE.md`, `AGENTS.md`, `docs/specs/declaration-first-shipping.md` — sprint 02 owns these
+- `CLAUDE.md`, `AGENTS.md`, `docs/specs/ship-time-checks.md` — sprint 02 owns these
 - `.claude/commands/*`, `.codex/skills/*` — sprint 03 owns these
 - `docs/plans/tracker.md`, `docs/plans/god-tracker.md`, `docs/plans/harmony-tracker.md`, `docs/plans/active-lanes.md`, `docs/reports/**` — sprint 04 / 05 own these
 - `.worktrees/task-route-gate/`, `feat/task-route-gate` branch — sprint 05 owns these

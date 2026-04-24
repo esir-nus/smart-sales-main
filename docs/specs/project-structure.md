@@ -67,7 +67,7 @@ This rule applies repo-wide; it is enforced by convention, reinforced in CLAUDE.
 
 ## Naming
 
-- Project slug: lower-kebab-case, short (e.g., `workflow-renovation`, `god-file-cleanup`, `harmony-native`).
+- Project slug: lower-kebab-case, short (e.g., `develop-protocol-migration`, `god-file-cleanup`, `harmony-native`).
 - Sprint slug: lower-kebab-case; sprint files are numbered `NN-<slug>.md` zero-padded to two digits.
 - Evidence folder: matches the sprint slug (`evidence/NN-<sprint-slug>/`).
 

@@ -1,132 +1,85 @@
-Ship current work on `develop` or a feature branch. Never touches `master` -- only `/merge` and `promote-to-master` touch master through PRs.
+Ship current work from an active sprint contract. Never touches `master`; only `/merge` and `promote-to-master` reach `master` through PRs.
 
-Primary path: produce a structured handoff block for Codex to execute git operations.
-Backup path: if Codex is unavailable, Claude executes the git operations directly.
+Primary path: produce a structured handoff block for Codex.
+Backup path: if Codex is unavailable, Claude executes the same git steps directly.
 
 ## Pipeline
 
-Execute these steps in order. Stop immediately if any gating step fails.
-
 ### Step 1: Preflight
 
-1. Run `git rev-parse --abbrev-ref HEAD` and `git status --porcelain`.
-2. Run `git diff --name-only` (unstaged) and `git diff --cached --name-only` (staged) to identify changed files.
-3. If no changes exist, stop: "Nothing to ship."
-4. Determine branch context and target action:
-   - **develop**: handoff = commit + push
-   - **feature/\***: handoff = commit + push + PR to develop
-   - **platform/harmony**: handoff = commit + push
-   - **master**: STOP. "Never commit directly to master. Switch to develop or a feature branch."
-   - **other**: warn, ask the user to confirm the target branch and action
+1. Read the active sprint contract file path first. If it is missing, stop.
+2. Read `docs/specs/sprint-contract.md` and `docs/specs/ship-time-checks.md`.
+3. Run:
+   - `git rev-parse --abbrev-ref HEAD`
+   - `git status --porcelain`
+   - `git diff --name-only`
+   - `git diff --cached --name-only`
+4. If the contract Closeout is not closeout-ready or any Success Exit Criterion is still open, stop: `/ship` does not run mid-sprint.
+5. If no in-scope changes exist, stop: "Nothing to ship."
 
-### Step 2: Classify Changes
+### Step 2: Derive ship scope from the contract
 
-For each changed file, determine:
+Use the contract's `Scope` block as the authoritative path set for this ship.
 
-1. **Module ownership**: `app/`, `app-core/`, `core/*`, `data/*`, `domain/*`, `platforms/harmony/`, `docs/`, `.github/`, `.claude/`, `.codex/`, build config
-2. **Commit prefix** (from diff analysis):
-   - New implementation files -> `feat`
-   - Bug-related fixes -> `fix`
-   - Structural changes -> `refactor`
-   - Test files only -> `test`
-   - Doc files only -> `docs`
-   - Config/governance only -> `chore`
-   - Mix of code + docs -> use the code prefix (docs travel with code in cerb-compliant work)
-3. **Scope string**: derive from file paths (e.g., `connectivity`, `scheduler`, `shell`, `pipeline`, `sim`, `harmony`)
+- Treat Scope entries as explicit paths, globs, or module slices per `docs/specs/sprint-contract.md`.
+- Stage only files matching that Scope set.
+- Never use `git add -A` or `git add .`.
+- Dirty files outside Scope remain unstaged out-of-scope dirt.
+- Out-of-scope dirt still participates in reverse-dependency review.
 
 ### Step 3: Validate
 
-Run targeted validation from repo root. Scope to what actually changed:
+Run the narrow ship-time review from `docs/specs/ship-time-checks.md`:
 
-| Changed path | Compile target | Test target |
-|---|---|---|
-| `app-core/` | `./gradlew :app-core:compileDebugKotlin` | `scripts/run-tests.sh app` |
-| `app/` | `./gradlew :app:assembleDebug` | -- |
-| `data/{sub}/` | `./gradlew :data:{sub}:compileDebugKotlin` | `./gradlew :data:{sub}:test` (if test sources exist) |
-| `domain/{sub}/` | -- (pure Kotlin) | `./gradlew :domain:{sub}:test` |
-| `core/pipeline/` | `./gradlew :core:pipeline:compileDebugKotlin` | `scripts/run-tests.sh pipeline` |
-| `core/{other}/` | `./gradlew :core:{other}:compileDebugKotlin` | -- |
-| `platforms/harmony/` | skip (uses hvigor) | skip |
-| `docs/` or config only | skip | skip |
-| build files (`*.gradle.kts`, `settings.gradle.kts`) | `./gradlew :app:assembleDebug` | skip |
+1. Secrets or credentials in staged scope: blocker.
+2. Broken imports or missing-file references inside staged scope: blocker.
+3. Reverse-dependency check from out-of-scope dirt into staged scope: blocker.
+4. Lane-scope coherence against the current branch and contract scope: blocker.
 
-If validation fails, stop and report errors. Do not produce the handoff.
+Branch action:
+- `develop`: commit + push
+- `feature/*`: commit + push + PR to `develop`
+- `platform/harmony`: commit + push
+- `master`: STOP
+- other: warn and ask the user to confirm
 
-### Step 4: Doc-Code Alignment Advisory
+### Step 4: Produce handoff block
 
-Check whether owning docs were updated alongside code changes:
+Output:
 
-1. If code under `data/{feature}/` changed, check whether `docs/cerb/{feature}/spec.md` or `docs/cerb/{feature}/interface.md` was also modified.
-2. If code under `app-core/` changed, check whether a relevant `docs/core-flow/*-flow.md` was also modified.
-3. If the owning doc exists and was NOT modified in this changeset, warn:
-   "Consider updating `{doc path}` before shipping."
-4. This is advisory only -- warn, do not block.
-
-### Step 5: Produce Handoff Block
-
-Output the following structured block:
-
-```
+```markdown
 ## Codex Ship Handoff
+
+### Contract
+- Path: {active contract path}
+- Scope: {contract Scope summary}
+- Closeout ready: yes
 
 ### Branch
 - Current: {branch name}
-- Action: {commit + push | commit + push + PR to develop | commit + push + PR to platform/harmony}
-- Base: {develop | platform/harmony | N/A for direct push}
+- Action: {commit + push | commit + push + PR to develop | commit + push}
 
 ### Changed Files
-{grouped by module}
-- app-core/src/main/.../File.kt
-- docs/cerb/.../spec.md
+{only files matching contract Scope}
 
-### Validation
-- Compile: {PASS | SKIP}
-- Tests: {PASS (N tests) | SKIP}
+### Review
+- Ship-time checks: {PASS | BLOCKED}
+- Out-of-scope dirt: {none | summary}
 
 ### Commit
-- Prefix: {feat|fix|refactor|docs|chore|test}
-- Scope: {e.g., connectivity}
-- Message: {conventional format first line, under 72 chars}
-
-### PR (if on feature branch)
-- Title: {from commit message, under 70 chars}
-- Base: develop
-- Body:
-  ## Summary
-  {2-3 bullets}
-
-  ## Test plan
-  - [ ] CI passes (android-tests, platform-governance-check)
-  - [ ] {feature-specific checks}
-
-### Doc Alignment
-- {OK | Advisory: consider updating {path}}
+- Message: {references the contract path}
 
 ### Instructions for Codex
-1. Stage these files: {explicit file list}
-2. Commit:
-   git commit -m "$(cat <<'EOF'
-   {prefix}({scope}): {description}
-
-   Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
-   EOF
-   )"
-3. Push: git push {-u origin {branch} if no upstream | origin}
-4. {If PR needed}: gh pr create --base {base} --head {branch} --title "{title}" --body "{body}"
+1. Stage only the Scope files.
+2. Commit once for sprint close.
+3. Push.
+4. If on a feature branch, open the PR to `develop`.
 ```
 
-### Step 6: User Instruction
+## Rules
 
-After the handoff block, print:
-
-> Copy the handoff block above to Codex. Codex will execute the git operations.
-> If doc alignment advisory was raised, consider addressing it before or after shipping.
-
-## Hard Rules
-
-- `/ship` never touches master. Only `/merge` and `promote-to-master` touch master through PRs.
-- Primary mode is READ-ONLY (produce handoff for Codex). Backup mode (Codex unavailable): Claude executes directly.
-- Never produce a handoff for direct commits to master. Never create PRs targeting master.
-- If validation fails, do not produce the handoff or execute.
-- The handoff block must contain enough context for Codex to execute without re-reading the codebase.
-- Always stage specific files -- never `git add -A` or `git add .`.
+- The active contract path is the primary input.
+- `/ship` runs only for a closeout-ready sprint.
+- Stage only files matching the contract Scope.
+- Never widen the commit beyond Scope.
+- Never touch `master`.

@@ -1,17 +1,16 @@
-Update the changelog to the latest state:
+Update the single product changelog.
 
-1. Run `bash scripts/changelog.sh` from the repo root to regenerate `CHANGELOG.html` from the current `CHANGELOG.md`.
+## Flow
 
-2. Then look at git commits since the most recent date already in `CHANGELOG.md` (check the latest `### YYYY-MM-DD` header). For any `feat:`, `fix:`, `ship:`, or significant `chore:`/`refactor:` commits not yet represented, append new dated sections to the top of the `## 最近更新` section in `CHANGELOG.md` — written in Chinese, with tech jargon kept in English (BLE, SIM, HarmonyOS, Tingwu, DashScope, FunASR, etc.), and 徽章 instead of Badge. Use the format:
+1. Run `bash scripts/changelog.sh` from repo root to regenerate `CHANGELOG.html` from `CHANGELOG.md`.
+2. Find commits since the latest `### YYYY-MM-DD` header already present in `CHANGELOG.md`.
+3. Append new dated sections to the top of `## 最近更新` in `CHANGELOG.md` for `feat:`, `fix:`, `ship:`, and significant `chore:` or `refactor:` commits not yet represented.
+4. Run `bash scripts/changelog.sh` again.
+5. Report how many entries were added and the covered date range.
 
-```
-### YYYY-MM-DD
+## Rules
 
-- **[新增] Title** — Description in Chinese.
-- **[修复] Title** — Description in Chinese.
-- **[发布] Title** — Description in Chinese.
-```
-
-3. After updating `CHANGELOG.md`, run `bash scripts/changelog.sh` again to regenerate `CHANGELOG.html` with the new content.
-
-4. Report how many new entries were added and the date range covered.
+- This command edits `CHANGELOG.md` only and regenerates `CHANGELOG.html`.
+- Single Changelog rule: there is one product changelog.
+- Do not maintain or update any parallel product trace log.
+- Write changelog prose in Chinese and keep technical jargon in English where the file already does so.

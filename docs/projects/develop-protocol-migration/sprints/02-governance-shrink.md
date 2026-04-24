@@ -26,7 +26,7 @@
 - `docs/archive/declaration-first-shipping-archive-20260423.md` — **new** (verbatim old file content + one-line archival header noting replacement path)
 - `CLAUDE.md` — **edit**:
   - Rewrite **Branch Model** section: drop per-task feature branches as default pattern; state commit-on-close-to-develop-or-platform-harmony; add `develop` as canonical adb-package source rule
-  - Rewrite **Declaration-First Shipping** section: point at sprint contracts + `ship-time-checks.md`; drop references to active-lanes / preflight refusal
+  - Rewrite **Declaration-First Shipping** section: point at sprint contracts + `ship-time-checks.md`; drop references to the retired lane registry / preflight refusal
   - **Add new section** "Sprint Contract Workflow" (≤15 lines): brief, pointer to `docs/specs/sprint-contract.md` + `docs/specs/project-structure.md`; names Claude-as-author + Codex-as-default-operator; notes user picks operator at handoff
   - **Add new rule** "Doc-Production Discipline" (can live as its own short section or bullet under an existing section): "Agents must not auto-proliferate doc artifacts. Before producing a non-code file, ask whether the information fits in a commit message, an existing doc, or a sprint contract's iteration ledger. Default is not to create a new file."
   - **Add new rule** "Single Changelog" (preserve from old declaration-first-shipping.md §6): "There is one product changelog: `CHANGELOG.md` (renders to `CHANGELOG.html`). No parallel trace log; `docs/plans/changelog.md` is deprecated (deletion handled in sprint 04)."
@@ -40,7 +40,7 @@
 **Out of scope** (explicit — do not touch):
 
 - `.claude/commands/**`, `.codex/skills/**` — sprint 03 owns these
-- `docs/plans/tracker.md`, `docs/plans/god-tracker.md`, `docs/plans/harmony-tracker.md`, `docs/plans/ui-tracker.md`, `docs/plans/bug-tracker.md`, `docs/plans/active-lanes.md` — sprint 04 / 05 own these
+- `docs/plans/tracker.md`, `docs/plans/god-tracker.md`, `docs/plans/harmony-tracker.md`, `docs/plans/ui-tracker.md`, `docs/plans/bug-tracker.md`, the retired lane-registry file — sprint 04 / 05 own these
 - `.worktrees/task-route-gate/`, `feat/task-route-gate` — sprint 05
 - Branch cleanup / merging — sprint 06
 - `docs/specs/sprint-contract.md` and `docs/specs/project-structure.md` — landed in sprint 01, do not re-edit
@@ -62,7 +62,7 @@
 - `ls docs/specs/declaration-first-shipping.md 2>&1` returns "No such file or directory"
 - `docs/specs/ship-time-checks.md` exists; `wc -l` < 100
 - `docs/archive/declaration-first-shipping-archive-20260423.md` exists; first line is an archival pointer header; body contains the dropped sections verbatim
-- `grep -c "docs/plans/active-lanes.md\|refuse to start\|--force-parallel" docs/specs/ship-time-checks.md` returns 0 (old-model residue excluded)
+- `grep -c "retired lane registry\|refuse to start\|--force-parallel" docs/specs/ship-time-checks.md` returns 0 (old-model residue excluded)
 
 **CLAUDE.md content:**
 - `grep -n "Branch Model" CLAUDE.md` shows the section; under it, the word "feature branch" appears only in the context of being optional/ad-hoc, not the default
@@ -70,7 +70,7 @@
 - `grep -n "Sprint Contract Workflow" CLAUDE.md` shows the new section header
 - `grep -n "sprint-contract.md\|project-structure.md" CLAUDE.md` shows both specs referenced
 - `grep -nE "auto-proliferate|Doc-Production Discipline|not to create a new file" CLAUDE.md` shows the doc-production rule present
-- `grep -n "active-lanes.md\|pre-flight scope conflict\|refuse to start" CLAUDE.md` returns 0 active-governance hits (permissible in historical-note form only if clearly marked)
+- `grep -n "retired lane registry\|pre-flight scope conflict\|refuse to start" CLAUDE.md` returns 0 active-governance hits (permissible in historical-note form only if clearly marked)
 - `grep -n "declaration-first-shipping.md" CLAUDE.md` returns 0 (replaced by `ship-time-checks.md`)
 
 **AGENTS.md content:**
@@ -79,7 +79,7 @@
 
 **Cross-reference hygiene (scoped — other-sprint territory is excluded):**
 - `git grep -l "declaration-first-shipping.md" -- ':!docs/archive/**' ':!docs/projects/develop-protocol-migration/sprints/02-governance-shrink.md' ':!.codex/skills/**' ':!.claude/commands/**' ':!docs/plans/**' ':!docs/reference/**'` returns 0 hits (sprint-03/04/05 territory and lessons-historical context intentionally excluded)
-- `grep -nE "active-lanes|pre-flight scope|refuse to start" CLAUDE.md AGENTS.md docs/specs/ship-time-checks.md` returns 0 hits (governance documents must not reference retired mechanisms)
+- `grep -nE "retired lane registry|pre-flight scope|refuse to start" CLAUDE.md AGENTS.md docs/specs/ship-time-checks.md` returns 0 hits (governance documents must not reference retired mechanisms)
 - `docs/specs/modules/AudioDrawer.md` line that previously named `declaration-first-shipping.md` now names `ship-time-checks.md`
 - `git grep -l "workflow-renovation" -- ':!docs/archive/**' ':!docs/projects/develop-protocol-migration/sprints/**' ':!docs/projects/develop-protocol-migration/tracker.md'` returns 0 hits (historical evidence inside sprint contract files + the rename note in the tracker are intentionally preserved)
 - `git log --follow docs/projects/develop-protocol-migration/tracker.md | head -5` shows the rename preserved history
@@ -118,7 +118,7 @@ At close, operator appends to the `Closeout` section:
    - `grep -n "sprint-contract.md" CLAUDE.md` (spec reference)
    - `grep -nE "Codex.*operator|operator.*Codex" AGENTS.md` (Codex-as-default)
    - `grep -n "ship-time-checks.md" docs/specs/modules/AudioDrawer.md` (AudioDrawer reference updated)
-6. **Active-model residue check** — output of `grep -nE "active-lanes|refuse to start|pre-flight scope" CLAUDE.md AGENTS.md docs/specs/ship-time-checks.md` (expected: empty)
+6. **Active-model residue check** — output of `grep -nE "retired lane registry|refuse to start|pre-flight scope" CLAUDE.md AGENTS.md docs/specs/ship-time-checks.md` (expected: empty)
 
 Agent narration is not acceptable in place of these artifacts.
 
@@ -204,7 +204,7 @@ Agent narration is not acceptable in place of these artifacts.
     ```
   - Active-model residue check:
     ```text
-    grep -nE "active-lanes|refuse to start|pre-flight scope" CLAUDE.md AGENTS.md docs/specs/ship-time-checks.md
+    grep -nE "retired lane registry|refuse to start|pre-flight scope" CLAUDE.md AGENTS.md docs/specs/ship-time-checks.md
     [no output]
     ```
 - **Lesson proposals** *(0-N; human-gated):* 0

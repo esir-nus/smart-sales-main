@@ -101,9 +101,9 @@ All others — triage per decision rule below:
 
 This is the project-level straggler sweep, not a per-sprint-scoped grep. It catches references to retired mechanisms that earlier sprints' narrower grep checks intentionally excluded (other-sprint territory). If earlier sprints completed cleanly, this should return empty. If it returns hits, those are real gaps — either fold into sprint 06's scope as small corrections or halt and surface to user.
 
-- `git grep -l -E "declaration-first-shipping\.md|docs/plans/active-lanes\.md|task-route-gate|pre-flight scope conflict|--force-parallel|/merge-harmony" -- ':!docs/archive/**' ':!docs/projects/develop-protocol-migration/sprints/**'` returns **0 hits**
+- `git grep -l -E "declaration-first-shipping\.md|retired lane registry|task-route-gate|pre-flight scope conflict|--force-parallel|/merge-harmony" -- ':!docs/archive/**' ':!docs/projects/develop-protocol-migration/sprints/**'` returns **0 hits**
 - Allowed exceptions (exclude paths if present): `docs/archive/**` (historical), `docs/projects/develop-protocol-migration/sprints/**` (contracts' own historical evidence), and any file the user explicitly retains with an archival note
-- If any hit falls under `docs/specs/**`, `docs/sops/**`, `docs/cerb/**`, or `docs/core-flow/**` — operator edits the reference in-sprint (rule: swap to `ship-time-checks.md` / remove `active-lanes.md` reference / rewrite sentence to match new model). Change remains within sprint 06 Scope because the end state ("clean repo per new protocol") logically covers it.
+- If any hit falls under `docs/specs/**`, `docs/sops/**`, `docs/cerb/**`, or `docs/core-flow/**` — operator edits the reference in-sprint (rule: swap to `ship-time-checks.md` / remove the retired lane-registry reference / rewrite sentence to match new model). Change remains within sprint 06 Scope because the end state ("clean repo per new protocol") logically covers it.
 - If a hit falls outside `docs/**` and isn't in an obvious archival path — halt and surface; don't guess at how to rewrite code-adjacent references
 
 ## Stop Exit Criteria
@@ -165,7 +165,7 @@ At close, operator appends to Closeout:
    - `git worktree prune --dry-run`
    - `git remote prune origin --dry-run`
 6. **Main worktree invariance proof** — `git -C /home/cslh-frank/main_app status --porcelain` output at iteration 1 start AND at sprint close; diff between them must be empty
-7. **Residual reference hygiene sweep** — output of `git grep -l -E "declaration-first-shipping\.md|docs/plans/active-lanes\.md|task-route-gate|pre-flight scope conflict|--force-parallel|/merge-harmony" -- ':!docs/archive/**' ':!docs/projects/develop-protocol-migration/sprints/**'` (expected: empty). If non-empty at first run, operator either fixed in-sprint or halted and surfaced; evidence shows both the initial run and the post-fix run.
+7. **Residual reference hygiene sweep** — output of `git grep -l -E "declaration-first-shipping\.md|retired lane registry|task-route-gate|pre-flight scope conflict|--force-parallel|/merge-harmony" -- ':!docs/archive/**' ':!docs/projects/develop-protocol-migration/sprints/**'` (expected: empty). If non-empty at first run, operator either fixed in-sprint or halted and surfaced; evidence shows both the initial run and the post-fix run.
 8. **Project-close markers** — `docs/projects/develop-protocol-migration/tracker.md` showing sprint 06 `done` + project `closed`; `CHANGELOG.md` new entry
 
 ## Iteration Ledger

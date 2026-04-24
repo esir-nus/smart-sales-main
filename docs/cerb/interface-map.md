@@ -144,7 +144,7 @@ The current base-runtime/SIM shell introduces one narrow shell-owned arbitration
 - scheduler content still arrives from scheduler-owned `buildSimDynamicIslandItems(...)` projection
 - connectivity takeover uses `ConnectivityViewModel.connectionState`, which is the shell-visible transport truth fed by `ConnectivityBridge`
 - tap routing follows the visible lane back into shell-owned entry handlers, while downstream scheduler drawer and connectivity manager behavior remain owned by their existing modules
-- the connected battery badge is still provisional and comes from `ConnectivityViewModel.batteryLevel`; real bridge-backed battery sourcing remains explicit follow-up debt
+- the connected battery badge is still provisional and comes from `ConnectivityViewModel.batteryLevel`; the firmware protocol is now defined as unsolicited `Bat#<0..100>` push (see `docs/specs/esp32-protocol.md` §9), and the remaining follow-up debt is wiring the `ConnectivityBridge` listener into the battery source (no longer the protocol itself)
 
 ### RuntimeShell foreground reminder-banner edge (2026-04-03)
 

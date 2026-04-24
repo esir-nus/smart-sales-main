@@ -2,7 +2,7 @@
 
 > **Purpose**: BLE + HTTP protocol between Android app and ESP32 badge  
 > **Source of Truth**: `reference-source/webserver-test.c` + `reference-source/bluetooch.py`  
-> **Last Updated**: 2026-04-02
+> **Last Updated**: 2026-04-24
 
 ---
 
@@ -26,6 +26,9 @@ Communication happens via:
 | 6 | Time Sync | ✅ Implemented | `GattBleGateway.listenForTimeSync()` |
 | 7 | Recording End (scheduler) | ✅ Implemented | BLE `log#...` -> `ConnectivityBridge.recordingNotifications()` -> `BadgeAudioPipeline` |
 | 8 | Audio Recording Ready (drawer) | ✅ Implemented | BLE `rec#...` -> `ConnectivityBridge.audioRecordingNotifications()` -> `SimBadgeAudioAutoDownloader` |
+| 9 | Voice Volume Control | ✅ Implemented | `DeviceConnectionManager.setBadgeVolume()` -> `badgeGateway.sendBadgeSignal(session, "volume#$clamped")` |
+| 10 | Battery Level Push | ⏳ Pending bridge wiring | Badge pushes periodically; replaces provisional `ConnectivityViewModel.batteryLevel` |
+| 11 | Firmware Version | 🔮 Reserved (format defined, trigger TBD) | ESP32 -> app push; trigger and app-side handler not yet specified |
 
 ---
 
@@ -146,6 +149,55 @@ App:          (downloads /download?file=rec_20260409_150000.wav, stores in audio
 - `/list` fallback on reconnection covers files recorded while app was disconnected
 
 **Filename convention**: `rec#YYYYMMDD_HHMMSS` → file stored as `rec_YYYYMMDD_HHMMSS.wav`
+
+### 8. Voice Volume Control
+
+> **Added**: 2026-04-24 (firmware update from hardware team)
+
+App-side control over the badge's voice-playback volume. Best-effort, fire-and-forget; the badge does not acknowledge.
+
+```
+App sends:  volume#<0..100>     (integer percent, app clamps out-of-range values)
+Badge:      (no response)
+```
+
+**App-side**:
+- Payload built in `DeviceConnectionManager.setBadgeVolume()` -> `badgeGateway.sendBadgeSignal(session, "volume#$clamped")`
+- Callers are `ConnectivityModal` and `UserCenter` per `docs/cerb/interface-map.md` §connectivity
+- UX rule: slider fires one command on finger-up only, not while scrubbing (avoids BLE flooding)
+
+### 9. Battery Level Push
+
+> **Added**: 2026-04-24 (firmware update from hardware team)
+
+Badge pushes its current battery level unsolicited while BLE is connected. No query command exists; app must not poll.
+
+```
+Badge sends:  Bat#<0..100>      (integer percent, unsolicited periodic push)
+```
+
+**App-side contract**:
+- Listener pattern mirrors `log#` / `rec#` notifications via `ConnectivityBridge`
+- Once wired, this replaces the provisional `ConnectivityViewModel.batteryLevel` source flagged in `docs/cerb/interface-map.md` and `docs/cerb-ui/dynamic-island/spec.md`
+- Status: protocol defined; bridge listener wiring is follow-up work
+
+### 10. Firmware Version (Reserved)
+
+> **Added**: 2026-04-24 (format reserved; trigger and app-side handler TBD)
+
+Firmware version reported from ESP32 to app. Format is fixed; the trigger timing (on-connect, on-boot, or query-reply) has not yet been defined by the firmware team.
+
+```
+Badge sends:  Ver:<project>.<major>.<minor>.<feature>    (e.g., Ver:1.0.0.1)
+```
+
+**Field semantics** (left to right):
+- `project` — project number; differentiates same codebase deployed across project variants
+- `major` — product-level function / overall architecture / intended use changed
+- `minor` — module-level functional enhancement
+- `feature` — small changes, typically defect fixes
+
+**Status**: Format reserved in spec. App-side handler and trigger contract will be added once firmware team finalizes when/how the badge emits this. Distinct from the HTTP `GET /` `version` field, which reports the webserver version and not the badge firmware version.
 
 ---
 

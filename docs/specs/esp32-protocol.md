@@ -27,7 +27,7 @@ Communication happens via:
 | 7 | Recording End (scheduler) | ✅ Implemented | BLE `log#...` -> `ConnectivityBridge.recordingNotifications()` -> `BadgeAudioPipeline` |
 | 8 | Audio Recording Ready (drawer) | ✅ Implemented | BLE `rec#...` -> `ConnectivityBridge.audioRecordingNotifications()` -> `SimBadgeAudioAutoDownloader` |
 | 9 | Voice Volume Control | ✅ Implemented | `DeviceConnectionManager.setBadgeVolume()` -> `badgeGateway.sendBadgeSignal(session, "volume#$clamped")` |
-| 10 | Battery Level Push | ⏳ Pending bridge wiring | Badge pushes periodically; replaces provisional `ConnectivityViewModel.batteryLevel` |
+| 10 | Battery Level Push | ✅ Implemented | BLE `Bat#...` -> `ConnectivityBridge.batteryNotifications()` -> `ConnectivityViewModel.batteryLevel` |
 | 11 | Firmware Version | 🔮 Reserved (format defined, trigger TBD) | ESP32 -> app push; trigger and app-side handler not yet specified |
 
 ---
@@ -178,8 +178,8 @@ Badge sends:  Bat#<0..100>      (integer percent, unsolicited periodic push)
 
 **App-side contract**:
 - Listener pattern mirrors `log#` / `rec#` notifications via `ConnectivityBridge`
-- Once wired, this replaces the provisional `ConnectivityViewModel.batteryLevel` source flagged in `docs/cerb/interface-map.md` and `docs/cerb-ui/dynamic-island/spec.md`
-- Status: protocol defined; bridge listener wiring is follow-up work
+- The shipped call chain is `GattBleGatewayProtocolSupport.parseBadgeNotificationPayload()` -> `DeviceConnectionManager.batteryEvents` -> `RealConnectivityBridge.batteryNotifications()` -> `ConnectivityViewModel.batteryLevel`
+- The UI still keeps the current seeded `85` initial value until the first push arrives; nullable/no-reading semantics remain a separate UI sprint
 
 ### 10. Firmware Version (Reserved)
 

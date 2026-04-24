@@ -2,7 +2,7 @@
 
 > **Blackbox contract** — For consumers (Scheduler, Badge Audio Pipeline). Don't read implementation.
 > **Status**: Active supporting interface
-> **Last Updated**: 2026-04-14
+> **Last Updated**: 2026-04-24
 
 ---
 
@@ -62,6 +62,18 @@ interface ConnectivityBridge {
      * @see esp32-protocol.md §6
      */
     fun recordingNotifications(): Flow<RecordingNotification>
+
+    /**
+     * Stream of battery notifications from badge.
+     *
+     * Current production path: BLE `Bat#<0..100>` notification on the
+     * persistent badge GATT session. Consumers receive the integer percent
+     * pushed by firmware without polling.
+     *
+     * @return Flow (hot, buffered, no replay)
+     * @see esp32-protocol.md §9
+     */
+    fun batteryNotifications(): Flow<Int>
     
     /**
      * Check if badge is connected and reachable.
@@ -177,6 +189,7 @@ sealed class WifiConfigResult {
 | `downloadRecording` | Rate-limited, max 1 concurrent download; `onProgress` callback (if provided) is invoked on the IO dispatcher with (bytesRead, totalBytes) — consumers must throttle UI updates themselves |
 | `listRecordings` | Reuses the active runtime endpoint; no repeated BLE Wi‑Fi query in the normal happy path |
 | `recordingNotifications` | Hot flow, buffered (1), no replay |
+| `batteryNotifications` | Hot flow, buffered, no replay; forwards unsolicited BLE `Bat#<0..100>` pushes as integer percent |
 | `isReady()` | Pre-flight check with 3s timeout; may refresh endpoint only when the active snapshot is missing or invalidated |
 | `deleteRecording` | Idempotent, returns true if file removed or didn't exist; reuses the active runtime endpoint when valid |
 | `updateWifiConfig` | Rejects blank/whitespace-only SSID or password before any BLE provision/write attempt |

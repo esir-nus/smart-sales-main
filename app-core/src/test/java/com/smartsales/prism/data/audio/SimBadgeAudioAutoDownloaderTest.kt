@@ -140,6 +140,8 @@ class SimBadgeAudioAutoDownloaderTest {
             return audioNotifications
         }
 
+        override fun batteryNotifications(): Flow<Int> = emptyFlow()
+
         override suspend fun isReady(): Boolean = true
 
         override suspend fun deleteRecording(filename: String): Boolean = true

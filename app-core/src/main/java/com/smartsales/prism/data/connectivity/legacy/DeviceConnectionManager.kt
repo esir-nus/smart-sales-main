@@ -38,6 +38,11 @@ interface DeviceConnectionManager {
     val audioRecordingReadyEvents: SharedFlow<String>
 
     /**
+     * Badge 电量通知流 — Badge 发送 Bat#<0..100> 时触发
+     */
+    val batteryEvents: SharedFlow<Int>
+
+    /**
      * Wi-Fi 修复流程细粒度事件流。
      * Hot flow，replay=0，仅在 confirmManualWifiProvision() 窗口内发射。
      */
@@ -130,6 +135,7 @@ class DefaultDeviceConnectionManager @Inject constructor(
     override val state: StateFlow<ConnectionState> = runtime.state.asStateFlow()
     override val recordingReadyEvents: SharedFlow<String> = runtime.recordingReadyEvents.asSharedFlow()
     override val audioRecordingReadyEvents: SharedFlow<String> = runtime.audioRecordingReadyEvents.asSharedFlow()
+    override val batteryEvents: SharedFlow<Int> = runtime.batteryEvents.asSharedFlow()
     override val wifiRepairEvents: SharedFlow<WifiRepairEvent> = runtime.repairEvents.asSharedFlow()
 
     init {

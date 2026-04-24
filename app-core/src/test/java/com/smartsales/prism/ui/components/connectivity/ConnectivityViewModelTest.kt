@@ -131,6 +131,20 @@ class ConnectivityViewModelTest {
     }
 
     @Test
+    fun `batteryLevel updates from bridge battery notifications`() = runTest {
+        val bridge = FakeConnectivityBridge()
+        val viewModel = createViewModel(bridge = bridge)
+        advanceUntilIdle()
+
+        assertEquals(85, viewModel.batteryLevel.value)
+
+        bridge.emitBatteryLevel(42)
+        advanceUntilIdle()
+
+        assertEquals(42, viewModel.batteryLevel.value)
+    }
+
+    @Test
     fun `managerState lets active reconnect override paired offline diagnostic state`() = runTest {
         val bridge = FakeConnectivityBridge(
             connection = BadgeConnectionState.Disconnected,
@@ -526,6 +540,10 @@ class ConnectivityViewModelTest {
             replay = 0,
             extraBufferCapacity = 16
         )
+        private val _batteryNotifications = MutableSharedFlow<Int>(
+            replay = 0,
+            extraBufferCapacity = 4
+        )
 
         override val connectionState: StateFlow<BadgeConnectionState> = _connectionState.asStateFlow()
         override val managerStatus: StateFlow<BadgeManagerStatus> = _managerStatus.asStateFlow()
@@ -544,6 +562,8 @@ class ConnectivityViewModelTest {
         override fun audioRecordingNotifications(): Flow<RecordingNotification.AudioRecordingReady> =
             emptyFlow()
 
+        override fun batteryNotifications(): Flow<Int> = _batteryNotifications
+
         override suspend fun isReady(): Boolean = false
 
         override suspend fun deleteRecording(filename: String): Boolean = false
@@ -551,6 +571,8 @@ class ConnectivityViewModelTest {
         override fun wifiRepairEvents(): Flow<WifiRepairEvent> = _repairEvents
 
         suspend fun emitRepairEvent(event: WifiRepairEvent) = _repairEvents.emit(event)
+
+        suspend fun emitBatteryLevel(level: Int) = _batteryNotifications.emit(level)
     }
 
     private class FakeConnectivityService(

@@ -26,6 +26,30 @@ class GattBleGatewayNotificationParsingTest {
     }
 
     @Test
+    fun `parseBadgeNotificationPayload maps valid Bat payloads to battery level`() {
+        val cases = listOf("Bat#50" to 50, "Bat#0" to 0, "Bat#100" to 100)
+
+        cases.forEach { (payload, expected) ->
+            assertEquals(
+                BadgeNotification.BatteryLevel(expected),
+                parseBadgeNotificationPayload(payload)
+            )
+        }
+    }
+
+    @Test
+    fun `parseBadgeNotificationPayload preserves invalid Bat payloads as unknown`() {
+        val cases = listOf("Bat#-1", "Bat#101", "Bat#abc", "Bat#")
+
+        cases.forEach { payload ->
+            assertEquals(
+                BadgeNotification.Unknown(payload),
+                parseBadgeNotificationPayload(payload)
+            )
+        }
+    }
+
+    @Test
     fun `parseBadgeNotificationPayload preserves unknown command`() {
         val notification = parseBadgeNotificationPayload("wifi#address#0.0.0.0")
         assertEquals(

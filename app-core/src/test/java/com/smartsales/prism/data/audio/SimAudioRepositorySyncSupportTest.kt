@@ -552,6 +552,8 @@ class SimAudioRepositorySyncSupportTest {
 
         override fun audioRecordingNotifications(): Flow<RecordingNotification.AudioRecordingReady> = emptyFlow()
 
+        override fun batteryNotifications(): Flow<Int> = emptyFlow()
+
         override suspend fun isReady(): Boolean {
             calls += "isReady"
             return isReadyResult

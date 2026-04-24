@@ -220,6 +220,8 @@ class RealConnectivityBridge @Inject constructor(
 
     override fun audioRecordingNotifications(): Flow<RecordingNotification.AudioRecordingReady> =
         audioRecordingNotificationsFlow.asSharedFlow()
+
+    override fun batteryNotifications(): Flow<Int> = deviceManager.batteryEvents
     
     
     override suspend fun isReady(): Boolean {

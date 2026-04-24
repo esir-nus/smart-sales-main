@@ -84,6 +84,8 @@ class RealBadgeAudioPipelineIngressTest {
 
         override fun audioRecordingNotifications(): Flow<RecordingNotification.AudioRecordingReady> = emptyFlow()
 
+        override fun batteryNotifications(): Flow<Int> = emptyFlow()
+
         override suspend fun isReady(): Boolean = true
 
         override suspend fun deleteRecording(filename: String): Boolean = true

@@ -70,9 +70,13 @@ class ConnectivityViewModel @Inject constructor(
             initialValue = mapToManagerUiState(connectivityBridge.managerStatus.value)
         )
 
-    // 电池电量 (Mock) — Wave 3: 从 Badge 查询真实电量
-    private val _batteryLevel = MutableStateFlow(85)
-    val batteryLevel: StateFlow<Int> = _batteryLevel.asStateFlow()
+    // 电池电量 — 保持 85 初始值以维持当前 UI 语义，真实值改为桥接自 Bat# 推送
+    val batteryLevel: StateFlow<Int> = connectivityBridge.batteryNotifications()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = 85
+        )
 
     private val _wifiMismatchSuggestedSsid = MutableStateFlow<String?>(null)
     val wifiMismatchSuggestedSsid: StateFlow<String?> = _wifiMismatchSuggestedSsid.asStateFlow()

@@ -114,6 +114,11 @@ internal fun parseBadgeNotificationPayload(rawPayload: String): BadgeNotificatio
             if (token.isBlank()) BadgeNotification.Unknown(raw)
             else BadgeNotification.AudioRecordingReady(token)
         }
+        raw.startsWith("Bat#", ignoreCase = true) -> {
+            val percent = raw.substringAfter('#', missingDelimiterValue = "").trim().toIntOrNull()
+            if (percent == null || percent !in 0..100) BadgeNotification.Unknown(raw)
+            else BadgeNotification.BatteryLevel(percent)
+        }
         else -> BadgeNotification.Unknown(raw)
     }
 }

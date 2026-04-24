@@ -32,6 +32,10 @@ internal class DeviceConnectionManagerIngressSupport(
                             ConnectivityLogger.i("📥 Badge audio recording ready: $filename")
                             runtime.audioRecordingReadyEvents.tryEmit(filename)
                         }
+                        is BadgeNotification.BatteryLevel -> {
+                            ConnectivityLogger.d("🔋 Badge battery update: ${event.percent}")
+                            runtime.batteryEvents.tryEmit(event.percent)
+                        }
                         is BadgeNotification.TimeSyncRequested -> {
                             ConnectivityLogger.d("⏰ Badge time sync requested")
                         }

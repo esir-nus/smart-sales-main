@@ -96,6 +96,9 @@ sealed class BadgeNotification {
     /** 徽章报告音频文件就绪，仅下载不转写 (rec#YYYYMMDD_HHMMSS) */
     data class AudioRecordingReady(val token: String) : BadgeNotification()
 
+    /** 徽章主动推送电量 (Bat#0..100) */
+    data class BatteryLevel(val percent: Int) : BadgeNotification()
+
     /** 未识别的命令 */
     data class Unknown(val raw: String) : BadgeNotification()
 }
@@ -105,4 +108,3 @@ sealed interface ProvisioningAckResult {
     data object Accepted : ProvisioningAckResult
     data class Rejected(val reason: String) : ProvisioningAckResult
 }
-

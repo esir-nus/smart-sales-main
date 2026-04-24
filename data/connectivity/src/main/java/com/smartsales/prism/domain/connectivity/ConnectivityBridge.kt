@@ -67,6 +67,13 @@ interface ConnectivityBridge {
      * Hot flow, buffered(3), 无历史回放
      */
     fun audioRecordingNotifications(): Flow<RecordingNotification.AudioRecordingReady>
+
+    /**
+     * 电量通知流。
+     *
+     * Badge 通过 BLE 发送 `Bat#<0..100>` 时触发。
+     */
+    fun batteryNotifications(): Flow<Int>
     
     /**
      * 检查 Badge 是否就绪

@@ -22,6 +22,8 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
     override val recordingReadyEvents: SharedFlow<String> = _recordingReadyEvents.asSharedFlow()
     override val audioRecordingReadyEvents: SharedFlow<String> =
         MutableSharedFlow<String>(replay = 0).asSharedFlow()
+    override val batteryEvents: SharedFlow<Int> =
+        MutableSharedFlow<Int>(replay = 0).asSharedFlow()
 
     private val _wifiRepairEvents = MutableSharedFlow<WifiRepairEvent>(
         replay = 0,

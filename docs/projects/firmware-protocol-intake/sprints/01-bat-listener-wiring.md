@@ -127,11 +127,30 @@ Agent narration without these artifacts is not acceptable evidence.
 ## Iteration Ledger
 
 - Authoring revision (2026-04-24, operator Claude): Codex review surfaced incomplete scope for interface implementer/test fallout, wrong sealed-type path, and unsafe initial battery value; all incorporated before handoff. Next action: execution iteration by Codex.
+- Iteration 1 (2026-04-24, operator Codex): implemented the `Bat#<0..100>` parser branch, `BadgeNotification.BatteryLevel` sealed variant, `DeviceConnectionManager.batteryEvents`, `ConnectivityBridge.batteryNotifications()`, and the `ConnectivityViewModel.batteryLevel` bridge-backed `stateIn(..., 85)` replacement; added parser/ingress/viewmodel tests and updated the protocol/interface-map/interface docs. Evaluator saw: initial local verification was blocked first by sandbox netlink limits, then by missing Java toolchain wiring in the escalated environment, and then by a real compile fallout in `GattBleGatewaySessionSupport.kt` where the new sealed variant made a `when` non-exhaustive. Next action: patch the session callback, rerun scoped tests with explicit Java 17, then rerun `:app:assembleDebug`.
+- Iteration 2 (2026-04-24, operator Codex): patched `GattBleGatewaySessionSupport.onCharacteristicChanged()` to forward `BadgeNotification.BatteryLevel`, reran the scoped tests with explicit `JAVA_HOME=/home/cslh-frank/jdks/jdk-17.0.11+9`, and reran `:app:assembleDebug`. Evaluator saw: `:app:assembleDebug` passed; the first scoped test rerun exposed the missing sealed-branch compile error; the second rerun passed cleanly once that branch was added. Next action: close sprint 01 as success, flip the project tracker row to `done`, and commit the sprint closeout.
 
 ## Closeout
 
-- **Status:** *(operator fills: `success` | `stopped` | `blocked`)*
-- **Summary for project tracker:** *(operator fills one line)*
-- **Evidence artifacts:** *(operator appends per Required Evidence Format above)*
+- **Status:** `success`
+- **Summary for project tracker:** Wired `Bat#<0..100>` through parser -> bridge -> `ConnectivityViewModel.batteryLevel`, added focused tests, and verified with scoped `testDebugUnitTest` plus `:app:assembleDebug`.
+- **Evidence artifacts:**
+  - Code-change evidence:
+    - `grep -n '"Bat#"\|BatteryLevel\|batteryNotifications' app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/gateway/GattBleGatewayProtocolSupport.kt app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/gateway/BleGateway.kt data/connectivity/src/main/java/com/smartsales/prism/domain/connectivity/ConnectivityBridge.kt app-core/src/main/java/com/smartsales/prism/data/connectivity/RealConnectivityBridge.kt docs/cerb/connectivity-bridge/interface.md`
+    - Hits included:
+      - `GattBleGatewayProtocolSupport.kt:117` `raw.startsWith("Bat#", ignoreCase = true)`
+      - `BleGateway.kt:100` `data class BatteryLevel(val percent: Int)`
+      - `ConnectivityBridge.kt:76` `fun batteryNotifications(): Flow<Int>`
+      - `RealConnectivityBridge.kt:224` `override fun batteryNotifications(): Flow<Int> = deviceManager.batteryEvents`
+    - `grep -c "MutableStateFlow(85)" app-core/src/main/java/com/smartsales/prism/ui/components/connectivity/ConnectivityViewModel.kt` -> `0`
+    - `git diff --stat` -> `22 files changed, 161 insertions(+), 11 deletions(-)` at close
+  - Test evidence:
+    - `JAVA_HOME=/home/cslh-frank/jdks/jdk-17.0.11+9 OPENSHIFT_INTERNAL_IP=127.0.0.1 GRADLE_USER_HOME=/tmp/gradle-user-home /home/cslh-frank/.gradle/wrapper/dists/gradle-8.13-bin/5xuhj0ry160q40clulazy9h7d/gradle-8.13/bin/gradle :app-core:testDebugUnitTest --tests "com.smartsales.prism.data.connectivity.legacy.gateway.GattBleGatewayNotificationParsingTest" --tests "com.smartsales.prism.data.connectivity.legacy.DefaultDeviceConnectionManagerIngressTest" --tests "com.smartsales.prism.ui.components.connectivity.ConnectivityViewModelTest"`
+    - Result: `BUILD SUCCESSFUL in 1m 52s`
+  - Build evidence:
+    - `JAVA_HOME=/home/cslh-frank/jdks/jdk-17.0.11+9 OPENSHIFT_INTERNAL_IP=127.0.0.1 GRADLE_USER_HOME=/tmp/gradle-user-home /home/cslh-frank/.gradle/wrapper/dists/gradle-8.13-bin/5xuhj0ry160q40clulazy9h7d/gradle-8.13/bin/gradle :app:assembleDebug`
+    - Result: `BUILD SUCCESSFUL in 1m 12s`
+  - Doc-change evidence:
+    - `git diff docs/cerb/interface-map.md docs/specs/esp32-protocol.md docs/cerb/connectivity-bridge/interface.md docs/projects/firmware-protocol-intake/tracker.md`
 - **Lesson proposals:** surface both candidate lessons at close for user approval: firmware drops often land docs-first while app-side wiring follows in a later sprint; `docs/cerb/connectivity-bridge/interface.md` staleness (missing `audioRecordingNotifications()` / `wifiRepairEvents()` method rows) should be a separate follow-up doc-sync sprint under an appropriate project (likely `firmware-protocol-intake` if future drops touch those seams, otherwise a one-off docs sprint under `develop-protocol-migration`)
 - **CHANGELOG line:** candidate `- **android / connectivity**: Battery level now sourced from real badge push (`Bat#<0..100>`) via ConnectivityBridge, replacing the provisional hardcoded value. Protocol contract: docs/specs/esp32-protocol.md §9.` — operator confirms with user at close before committing

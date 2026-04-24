@@ -14,7 +14,7 @@ open — authored 2026-04-24
 
 | # | Slug | Status | Summary | Contract |
 |---|------|--------|---------|----------|
-| 01 | bat-listener-wiring | authored (revised 2026-04-24 after Codex review) | Wire `Bat#<0..100>` BLE listener into `ConnectivityBridge` and replace provisional `ConnectivityViewModel.batteryLevel` source per `docs/specs/esp32-protocol.md` §9 | [01-bat-listener-wiring.md](sprints/01-bat-listener-wiring.md) |
+| 01 | bat-listener-wiring | done | Wired `Bat#<0..100>` through parser -> bridge -> `ConnectivityViewModel.batteryLevel`, added focused tests, and verified with scoped `testDebugUnitTest` plus `:app:assembleDebug` | [01-bat-listener-wiring.md](sprints/01-bat-listener-wiring.md) |
 | 02 | batlevel-nullable-ui | authored 2026-04-24 (blocked-by sprint 01) | Flip `ConnectivityViewModel.batteryLevel` to `StateFlow<Int?>` seeded `null`; propagate nullable through Modal / Drawer / Island coordinator; render `--%` placeholder until first `Bat#` push arrives | [02-batlevel-nullable-ui.md](sprints/02-batlevel-nullable-ui.md) |
 
 ## Genesis

@@ -15,7 +15,7 @@
 - Automated L1/L2 entrypoint: `scripts/run-tests.sh`
 - L3 device validation remains manual and follows `docs/cerb-e2e-test/testing-protocol.md`
 - `docs/plans/tracker.md` owns active open/closed status for testing waves
-- `docs/plans/changelog.md` is historical-only and cannot close a testing wave by itself
+- `CHANGELOG.md` is historical-only and cannot close a testing wave by itself
 - Ship gate: a testing wave is only truly closed when tracker status and this ledger are synced in the same session with linked evidence
 
 ## Status Sync Dry-Run
@@ -26,4 +26,4 @@
 - Governance dry-run sync date: 2026-03-18
 - Tracker meaning: Wave 7 is closed and explicitly annotated as synced later in `docs/plans/tracker.md`
 - Ledger meaning: this row keeps the live spec/evidence mirror for future audits
-- Changelog meaning: `docs/plans/changelog.md` remains the historical shipment record only
+- Changelog meaning: `CHANGELOG.md` remains the historical shipment record only

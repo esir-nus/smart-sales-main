@@ -27,7 +27,7 @@ class BaseRuntimeTruthLockGuardrailTest {
             "do not create a second non-Mono product truth"
         )
         assertFileContains(
-            "docs/plans/tracker.md",
+            "docs/specs/base-runtime-unification.md",
             "Future non-Mono work must not reintroduce separate SIM-vs-full product truth."
         )
         assertFileContains(

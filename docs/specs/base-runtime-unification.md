@@ -101,7 +101,7 @@ Current wrapper-debt hosts in code:
 - `app-core/.../drawers/scheduler/SchedulerViewModel.kt`
 
 These files may remain as compatibility hosts while shared base-runtime truth lives in current docs and lower support files.
-They must not remain the default owners for shared composables or production shell wiring.
+They must not remain the default owners for shared composables or production shell wiring. Future non-Mono work must not reintroduce separate SIM-vs-full product truth.
 
 ---
 

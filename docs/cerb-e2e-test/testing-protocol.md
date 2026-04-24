@@ -101,7 +101,7 @@ To prevent testing from becoming a monolithic diary, the `cerb-e2e-test` domain 
 ### 4. The Active Project Tracker (`docs/plans/tracker.md`)
 - **Active Status Owner**: The tracker owns whether a testing wave is still open, blocked, or closed in the live project plan. If a testing wave is still unchecked or marked open in `tracker.md`, it is not closed, even if a changelog line already says SHIPPED.
 
-### 5. The Historical Shipment Log (`docs/plans/changelog.md`)
+### 5. The Historical Shipment Log (`CHANGELOG.md`)
 - **History Only**: The changelog records that a shipment happened and links historical artifacts. It does **not** own active open/closed status for testing work, and it must never be used as the tie-breaker when tracker or ledger state drifts.
 
 ### Status Ownership & Drift Law
@@ -110,7 +110,7 @@ When the same testing wave appears in multiple places, ownership is:
 
 1. `docs/plans/tracker.md` owns active status and remaining work.
 2. `docs/cerb-e2e-test/tasklist_log.md` owns the operational mirror: spec path, evidence path, and the last synced test-wave record.
-3. `docs/plans/changelog.md` is append-only historical narrative.
+3. `CHANGELOG.md` is append-only historical narrative.
 
 If any of these disagree:
 
@@ -136,6 +136,6 @@ A testing wave may be marked `✅ SHIPPED` only when all of the following are tr
 1. The acceptance evidence exists and is linkable.
 2. `tasklist_log.md` mirrors the shipped wave with the active spec path and evidence path.
 3. `docs/plans/tracker.md` closes the corresponding testing wave or task without leaving contradictory open boxes.
-4. `docs/plans/changelog.md` is updated only as the historical shipment record, never as the active status owner.
+4. `CHANGELOG.md` is updated only as the historical shipment record, never as the active status owner.
 
 Failure of any one item means the wave remains open, even if the changelog already says SHIPPED.

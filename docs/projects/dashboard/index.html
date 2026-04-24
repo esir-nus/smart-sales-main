@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Harness Project Dashboard</title>
+  <style>
+    :root {
+      --bg: #f3efe4;
+      --bg-accent: #e5dcc7;
+      --ink: #1f2a2a;
+      --muted: #59656a;
+      --card: rgba(255, 251, 244, 0.88);
+      --card-strong: rgba(255, 248, 237, 0.96);
+      --line: rgba(31, 42, 42, 0.12);
+      --shadow: 0 20px 60px rgba(68, 56, 36, 0.12);
+      --status-open: #0f766e;
+      --status-closed: #64748b;
+      --status-planned: #8b5e34;
+      --status-authored: #2563eb;
+      --status-in-progress: #c2410c;
+      --status-done: #15803d;
+      --status-stopped: #7c3aed;
+      --status-blocked: #b91c1c;
+      --status-fallback: #475569;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(215, 177, 116, 0.18), transparent 32%),
+        radial-gradient(circle at top right, rgba(35, 127, 116, 0.12), transparent 24%),
+        linear-gradient(180deg, #f7f2e7 0%, #efe7d7 100%);
+      min-height: 100vh;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .shell {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 32px 20px 72px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 24px;
+      margin-bottom: 28px;
+    }
+
+    .hero-panel,
+    .summary-panel,
+    .project-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .hero-panel {
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-panel::before {
+      content: "";
+      position: absolute;
+      inset: auto -60px -60px auto;
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(15, 118, 110, 0.18), transparent 70%);
+      pointer-events: none;
+    }
+
+    .eyebrow {
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(2rem, 3vw, 3.4rem);
+      line-height: 0.94;
+      max-width: 12ch;
+    }
+
+    .hero-copy {
+      margin: 0;
+      max-width: 64ch;
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.6;
+    }
+
+    .generated-at {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .summary-panel {
+      padding: 22px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      align-content: start;
+    }
+
+    .metric {
+      background: var(--card-strong);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 16px;
+      min-height: 112px;
+    }
+
+    .metric-label {
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+
+    .metric-value {
+      font-size: 2rem;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .metric-meta {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
+
+    .status-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 0 0 28px;
+      padding: 0;
+      list-style: none;
+    }
+
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid currentColor;
+      background: rgba(255, 255, 255, 0.6);
+      font-size: 0.92rem;
+      white-space: nowrap;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .projects {
+      display: grid;
+      gap: 22px;
+    }
+
+    .project-card {
+      padding: 24px;
+    }
+
+    .project-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+
+    .project-title {
+      margin: 0 0 8px;
+      font-size: 1.55rem;
+      line-height: 1.1;
+    }
+
+    .project-title a {
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+    }
+
+    .project-title a:hover {
+      border-bottom-color: currentColor;
+    }
+
+    .project-objective {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.58;
+      max-width: 76ch;
+    }
+
+    .project-meta {
+      margin-top: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .meta-pill {
+      padding: 7px 11px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.56);
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .sprint-grid {
+      margin-top: 22px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+    }
+
+    .sprint-card {
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: var(--card-strong);
+      padding: 16px;
+      min-height: 220px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: transform 180ms ease, box-shadow 180ms ease;
+    }
+
+    .sprint-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 36px rgba(68, 56, 36, 0.12);
+    }
+
+    .sprint-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .sprint-label {
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .sprint-title {
+      margin: 0;
+      font-size: 1.05rem;
+      line-height: 1.35;
+    }
+
+    .sprint-title a {
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+    }
+
+    .sprint-title a:hover {
+      border-bottom-color: currentColor;
+    }
+
+    .sprint-summary {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.94rem;
+      line-height: 1.55;
+      flex: 1;
+    }
+
+    .sprint-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-top: auto;
+    }
+
+    .empty {
+      padding: 18px;
+      border-radius: 20px;
+      border: 1px dashed var(--line);
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    .status-open { color: var(--status-open); }
+    .status-closed { color: var(--status-closed); }
+    .status-planned { color: var(--status-planned); }
+    .status-authored { color: var(--status-authored); }
+    .status-in-progress { color: var(--status-in-progress); }
+    .status-done { color: var(--status-done); }
+    .status-stopped { color: var(--status-stopped); }
+    .status-blocked { color: var(--status-blocked); }
+    .status-fallback { color: var(--status-fallback); }
+
+    @media (max-width: 980px) {
+      .hero {
+        grid-template-columns: 1fr;
+      }
+
+      .summary-panel {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .shell {
+        padding: 18px 14px 42px;
+      }
+
+      .hero-panel,
+      .summary-panel,
+      .project-card {
+        border-radius: 22px;
+      }
+
+      .summary-panel {
+        grid-template-columns: 1fr;
+      }
+
+      .project-head,
+      .sprint-top,
+      .sprint-footer {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <article class="hero-panel">
+        <div class="eyebrow">Harness project dashboard</div>
+        <h1>Project hierarchy at a glance.</h1>
+        <p class="hero-copy">
+          This view is rebuilt from repo trackers under <code>docs/projects/**</code>. It is meant to answer three questions quickly:
+          what projects exist, what sprint tasks sit under them, and what state each one is in right now.
+        </p>
+        <div class="generated-at">Generated 2026-04-24 22:53 CST</div>
+      </article>
+      <section class="summary-panel">
+        <article class="metric">
+          <div class="metric-label">Projects</div>
+          <div class="metric-value">8</div>
+          <div class="metric-meta">1 open, 2 closed</div>
+        </article>
+        <article class="metric">
+          <div class="metric-label">Sprints</div>
+          <div class="metric-value">14</div>
+          <div class="metric-meta">1 active, 12 done</div>
+        </article>
+        <article class="metric">
+          <div class="metric-label">Blocked</div>
+          <div class="metric-value">1</div>
+          <div class="metric-meta">Sprints currently marked blocked</div>
+        </article>
+        <article class="metric">
+          <div class="metric-label">Authored</div>
+          <div class="metric-value">0</div>
+          <div class="metric-meta">Ready-to-run authored sprint contracts</div>
+        </article>
+      </section>
+    </section>
+
+    <ul class="status-strip">
+      <li class="status-chip status-open"><span class="status-dot"></span><span>Open projects: 1</span></li>
+<li class="status-chip status-closed"><span class="status-dot"></span><span>Closed projects: 2</span></li>
+<li class="status-chip status-planned"><span class="status-dot"></span><span>Planned: 0</span></li>
+<li class="status-chip status-authored"><span class="status-dot"></span><span>Authored: 0</span></li>
+<li class="status-chip status-in-progress"><span class="status-dot"></span><span>In progress: 0</span></li>
+<li class="status-chip status-done"><span class="status-dot"></span><span>Done: 12</span></li>
+<li class="status-chip status-stopped"><span class="status-dot"></span><span>Stopped: 0</span></li>
+<li class="status-chip status-blocked"><span class="status-dot"></span><span>Blocked: 1</span></li>
+<li class="status-chip status-fallback"><span class="status-dot"></span><span>Other: 6</span></li>
+    </ul>
+
+    <section class="projects">
+      <article class="project-card">
+  <div class="project-head">
+    <div>
+      <h2 class="project-title"><a href="../connectivity-bug-triage/tracker.md">connectivity-bug-triage</a></h2>
+      <p class="project-objective">No objective recorded.</p>
+      <div class="project-meta">
+        <span class="meta-pill">Project status: unknown</span><span class="meta-pill">0 sprints</span><span class="meta-pill">Folder: connectivity-bug-triage</span>
+      </div>
+    </div>
+    <span class="status-chip status-fallback">
+      <span class="status-dot"></span>
+      <span>unknown</span>
+    </span>
+  </div>
+  <div class="sprint-grid">
+    <div class="empty">No sprint index rows found in this tracker.</div>
+  </div>
+</article>
+
+<article class="project-card">
+  <div class="project-head">
+    <div>
+      <h2 class="project-title"><a href="../develop-protocol-migration/tracker.md">develop-protocol-migration</a></h2>
+      <p class="project-objective">Deliver the end state: clean remote repo (no dead branches, no orphan PRs), clean local repo (no stale worktrees/branches/tags), `develop` contains all latest useful updates, and full compliance with the new development model (sprint-contract workflow, two-trunk split, index+details docs, doc-production discipline). Replace per-task feature-branch / worktree isolation with a sprint-contract workflow. Every task runs inside one self-contained contract; projects own holistic scope (code + docs + UI together); context resets at sprint/project boundaries.</p>
+      <div class="project-meta">
+        <span class="meta-pill">Project status: closed — 2026-04-24 after sprint 08 localized tracker ownership, removed the legacy plans changelog, and closed the project</span><span class="meta-pill">8 sprints</span><span class="meta-pill">Folder: develop-protocol-migration</span>
+      </div>
+    </div>
+    <span class="status-chip status-closed">
+      <span class="status-dot"></span>
+      <span>closed — 2026-04-24 after sprint 08 localized tracker ownership, removed the legacy plans changelog, and closed the project</span>
+    </span>
+  </div>
+  <div class="sprint-grid">
+    <article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">specs-bootstrap</div>
+      <h3 class="sprint-title"><a href="../develop-protocol-migration/sprints/01-specs-bootstrap.md">Sprint 01 — specs-bootstrap</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Wrote sprint-contract.md (58 lines) + project-structure.md (81 lines); both under the 200-line ceiling; schema self-applies</p>
+  <div class="sprint-footer">
+    <span>develop-protocol-migration / sprint 01</span>
+    <span>sprints/01-specs-bootstrap.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">governance-shrink</div>
+      <h3 class="sprint-title"><a href="../develop-protocol-migration/sprints/02-governance-shrink.md">Sprint 02 — governance-shrink</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Replaced the old shipping spec with ship-time-checks.md, rewrote CLAUDE.md and AGENTS.md governance rules, and landed the project-folder rename</p>
+  <div class="sprint-footer">
+    <span>develop-protocol-migration / sprint 02</span>
+    <span>sprints/02-governance-shrink.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">skills-align</div>
+      <h3 class="sprint-title"><a href="#">Contract file missing</a></h3>
+    </div>
+    <span class="status-chip status-fallback">
+      <span class="status-dot"></span>
+      <span>cancelled</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Cancelled 2026-04-24 — agent-dir files (`.claude/`, `.codex/`, `.agent/`, `AGENTS.md`) moved to personal/untracked so repo-level skill-doc rewrite scope is moot. See Cross-Sprint Decisions below.</p>
+  <div class="sprint-footer">
+    <span>develop-protocol-migration / sprint 03</span>
+    <span>—</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">trackers-migrate</div>
+      <h3 class="sprint-title"><a href="../develop-protocol-migration/sprints/04-trackers-migrate.md">Sprint 04 — trackers-migrate</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Moved six trackers/briefs out of `docs/plans/` into per-project `docs/projects/&lt;slug&gt;/` folders via `git mv`; widened sweep updated the one Kotlin test + one harness settings hook and the guardrail test stayed green against the new tracker path</p>
+  <div class="sprint-footer">
+    <span>develop-protocol-migration / sprint 04</span>
+    <span>sprints/04-trackers-migrate.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">cleanup</div>
+      <h3 class="sprint-title"><a href="../workflow-renovation/sprints/05-cleanup.md">Sprint 05 - cleanup</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Executed under `docs/projects/workflow-renovation/` folder (rename-drift artifact): removed the task-route-gate worktree/branch and deleted `docs/plans/active-lanes.md`; widened residue sweep cleaned remaining doc references</p>
+  <div class="sprint-footer">
+    <span>develop-protocol-migration / sprint 05</span>
+    <span>../workflow-renovation/sprints/05-cleanup.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">branch-graveyard-sweep</div>
+      <h3 class="sprint-title"><a href="../workflow-renovation/sprints/06-branch-graveyard-sweep.md">Sprint 06 - branch-graveyard-sweep</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Executed under `docs/projects/workflow-renovation/` folder: harvested Harmony-native app commits onto `platform/harmony` via PR #30, archive-tagged the graveyard, deleted every bucket A/B branch while leaving sprint 04/05 deferred refs untouched</p>
+  <div class="sprint-footer">
+    <span>develop-protocol-migration / sprint 06</span>
+    <span>../workflow-renovation/sprints/06-branch-graveyard-sweep.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">dtq-03-carryover</div>
+      <h3 class="sprint-title"><a href="../develop-protocol-migration/sprints/07-dtq-03-carryover.md">Sprint 07 — dtq-03-carryover</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Classified `8883cf5a8`, user initially chose harvest, then pivoted to archive-only after the checkpoint cherry-pick correctly stopped on multi-hunk conflicts; iteration 4 archive-tagged both source tips, deleted `fix/scheduler-polish`, `parking/fix-scheduler-polish-20260423`, and the empty harvest helper, and removed both attached worktrees</p>
+  <div class="sprint-footer">
+    <span>develop-protocol-migration / sprint 07</span>
+    <span>sprints/07-dtq-03-carryover.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">main-tracker-shrink</div>
+      <h3 class="sprint-title"><a href="../develop-protocol-migration/sprints/08-main-tracker-shrink.md">Sprint 08 — main-tracker-shrink</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Finalized local-only ownership for `docs/plans/tracker.md`, removed `docs/plans/changelog.md`, repointed the runtime-truth guardrail to `docs/specs/base-runtime-unification.md`, and closed the project</p>
+  <div class="sprint-footer">
+    <span>develop-protocol-migration / sprint 08</span>
+    <span>sprints/08-main-tracker-shrink.md</span>
+  </div>
+</article>
+  </div>
+</article>
+
+<article class="project-card">
+  <div class="project-head">
+    <div>
+      <h2 class="project-title"><a href="../firmware-protocol-intake/tracker.md">firmware-protocol-intake</a></h2>
+      <p class="project-objective">Receive firmware protocol updates from the hardware team and reflect them in the app. The flow is always firmware-first, software-after: hardware team ships a new or revised BLE/HTTP protocol item, this project records the spec delta, then wires the app-side handler (connectivity module by default; may touch adjacent modules when a drop reaches further). The canonical protocol SOT is `docs/specs/esp32-protocol.md`; app-side module ownership is tracked through `docs/cerb/interface-map.md`.</p>
+      <div class="project-meta">
+        <span class="meta-pill">Project status: open — authored 2026-04-24</span><span class="meta-pill">4 sprints</span><span class="meta-pill">Folder: firmware-protocol-intake</span>
+      </div>
+    </div>
+    <span class="status-chip status-open">
+      <span class="status-dot"></span>
+      <span>open — authored 2026-04-24</span>
+    </span>
+  </div>
+  <div class="sprint-grid">
+    <article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">bat-listener-wiring</div>
+      <h3 class="sprint-title"><a href="../firmware-protocol-intake/sprints/01-bat-listener-wiring.md">Sprint 01 — bat-listener-wiring</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Wired `Bat#&lt;0..100&gt;` through parser -&gt; bridge -&gt; `ConnectivityViewModel.batteryLevel`, added focused tests, and verified with scoped `testDebugUnitTest` plus `:app:assembleDebug`</p>
+  <div class="sprint-footer">
+    <span>firmware-protocol-intake / sprint 01</span>
+    <span>sprints/01-bat-listener-wiring.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">batlevel-nullable-ui</div>
+      <h3 class="sprint-title"><a href="../firmware-protocol-intake/sprints/02-batlevel-nullable-ui.md">Sprint 02 — batlevel-nullable-ui</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Flipped `ConnectivityViewModel.batteryLevel` to `StateFlow&lt;Int?&gt;` seeded `null`, propagated nullable through Modal / Drawer / Island coordinator, and rendered `--%` / hidden ambient battery until first `Bat#` push</p>
+  <div class="sprint-footer">
+    <span>firmware-protocol-intake / sprint 02</span>
+    <span>sprints/02-batlevel-nullable-ui.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">wav-suffix-parser-fix</div>
+      <h3 class="sprint-title"><a href="../firmware-protocol-intake/sprints/03-wav-suffix-parser-fix.md">Sprint 03 — wav-suffix-parser-fix</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Normalized suffix-present and suffix-absent `log#` / `rec#` payloads to canonical `log_&lt;ts&gt;.wav` / `rec_&lt;ts&gt;.wav`, added focused filename tests, and closed the spec fallout note</p>
+  <div class="sprint-footer">
+    <span>firmware-protocol-intake / sprint 03</span>
+    <span>sprints/03-wav-suffix-parser-fix.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">ver-query-handler</div>
+      <h3 class="sprint-title"><a href="../firmware-protocol-intake/sprints/04-ver-query-handler.md">Sprint 04 — ver-query-handler</a></h3>
+    </div>
+    <span class="status-chip status-blocked">
+      <span class="status-dot"></span>
+      <span>blocked</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Implemented `Ver#get` -&gt; `Ver#...` through parser -&gt; bridge -&gt; `ConnectivityViewModel.firmwareVersion`, with auto-query-on-connect and a UserCenter refresh row; sandbox blocked Gradle verification and the close commit</p>
+  <div class="sprint-footer">
+    <span>firmware-protocol-intake / sprint 04</span>
+    <span>sprints/04-ver-query-handler.md</span>
+  </div>
+</article>
+  </div>
+</article>
+
+<article class="project-card">
+  <div class="project-head">
+    <div>
+      <h2 class="project-title"><a href="../god-file-cleanup/tracker.md">god-file-cleanup</a></h2>
+      <p class="project-objective">No objective recorded.</p>
+      <div class="project-meta">
+        <span class="meta-pill">Project status: unknown</span><span class="meta-pill">0 sprints</span><span class="meta-pill">Folder: god-file-cleanup</span>
+      </div>
+    </div>
+    <span class="status-chip status-fallback">
+      <span class="status-dot"></span>
+      <span>unknown</span>
+    </span>
+  </div>
+  <div class="sprint-grid">
+    <div class="empty">No sprint index rows found in this tracker.</div>
+  </div>
+</article>
+
+<article class="project-card">
+  <div class="project-head">
+    <div>
+      <h2 class="project-title"><a href="../harmony-native/tracker.md">harmony-native</a></h2>
+      <p class="project-objective">No objective recorded.</p>
+      <div class="project-meta">
+        <span class="meta-pill">Project status: unknown</span><span class="meta-pill">0 sprints</span><span class="meta-pill">Folder: harmony-native</span>
+      </div>
+    </div>
+    <span class="status-chip status-fallback">
+      <span class="status-dot"></span>
+      <span>unknown</span>
+    </span>
+  </div>
+  <div class="sprint-grid">
+    <div class="empty">No sprint index rows found in this tracker.</div>
+  </div>
+</article>
+
+<article class="project-card">
+  <div class="project-head">
+    <div>
+      <h2 class="project-title"><a href="../harmony-ui-translation/tracker.md">harmony-ui-translation</a></h2>
+      <p class="project-objective">No objective recorded.</p>
+      <div class="project-meta">
+        <span class="meta-pill">Project status: unknown</span><span class="meta-pill">0 sprints</span><span class="meta-pill">Folder: harmony-ui-translation</span>
+      </div>
+    </div>
+    <span class="status-chip status-fallback">
+      <span class="status-dot"></span>
+      <span>unknown</span>
+    </span>
+  </div>
+  <div class="sprint-grid">
+    <div class="empty">No sprint index rows found in this tracker.</div>
+  </div>
+</article>
+
+<article class="project-card">
+  <div class="project-head">
+    <div>
+      <h2 class="project-title"><a href="../ui-campaign/tracker.md">ui-campaign</a></h2>
+      <p class="project-objective">No objective recorded.</p>
+      <div class="project-meta">
+        <span class="meta-pill">Project status: unknown</span><span class="meta-pill">0 sprints</span><span class="meta-pill">Folder: ui-campaign</span>
+      </div>
+    </div>
+    <span class="status-chip status-fallback">
+      <span class="status-dot"></span>
+      <span>unknown</span>
+    </span>
+  </div>
+  <div class="sprint-grid">
+    <div class="empty">No sprint index rows found in this tracker.</div>
+  </div>
+</article>
+
+<article class="project-card">
+  <div class="project-head">
+    <div>
+      <h2 class="project-title"><a href="../workflow-renovation/tracker.md">workflow-renovation</a></h2>
+      <p class="project-objective">Replace per-task feature-branch / worktree isolation with a sprint-contract workflow. Every task runs inside one self-contained contract; projects own holistic scope (code + docs + UI together); context resets at sprint/project boundaries.</p>
+      <div class="project-meta">
+        <span class="meta-pill">Project status: closed - sprint 06 executed 2026-04-24</span><span class="meta-pill">2 sprints</span><span class="meta-pill">Folder: workflow-renovation</span>
+      </div>
+    </div>
+    <span class="status-chip status-closed">
+      <span class="status-dot"></span>
+      <span>closed - sprint 06 executed 2026-04-24</span>
+    </span>
+  </div>
+  <div class="sprint-grid">
+    <article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">cleanup</div>
+      <h3 class="sprint-title"><a href="../workflow-renovation/sprints/05-cleanup.md">Sprint 05 - cleanup</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Removed the task-route-gate worktree/branch and deleted `docs/plans/active-lanes.md`; widened the residue sweep cleaned the remaining doc references and opened the sprint PR</p>
+  <div class="sprint-footer">
+    <span>workflow-renovation / sprint 05</span>
+    <span>sprints/05-cleanup.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">branch-graveyard-sweep</div>
+      <h3 class="sprint-title"><a href="../workflow-renovation/sprints/06-branch-graveyard-sweep.md">Sprint 06 - branch-graveyard-sweep</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Harvested the Harmony-native app commits onto `platform/harmony` via PR #30, archive-tagged the graveyard, and deleted every bucket A/B branch while leaving sprint 04/05 deferred refs untouched</p>
+  <div class="sprint-footer">
+    <span>workflow-renovation / sprint 06</span>
+    <span>sprints/06-branch-graveyard-sweep.md</span>
+  </div>
+</article>
+  </div>
+</article>
+    </section>
+  </main>
+</body>
+</html>

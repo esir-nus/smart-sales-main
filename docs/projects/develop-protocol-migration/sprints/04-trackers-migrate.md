@@ -49,7 +49,7 @@ Also in scope:
 **Out of scope** (do not touch under any outcome):
 
 - `docs/plans/tracker.md` — shrink is sprint 08's territory
-- `docs/plans/changelog.md` — deprecated per CLAUDE.md "Single Changelog" rule; disposition handled elsewhere
+- `legacy plans changelog` — deprecated per CLAUDE.md "Single Changelog" rule; disposition handled elsewhere
 - `fix/scheduler-polish` / `parking/fix-scheduler-polish-20260423` branches — sprint 07 (DTQ-03 carry-over)
 - Content rewrites beyond path fixes (no restructuring, no status updates to the moved trackers, no adding or removing rows inside them)
 - `docs/projects/workflow-renovation/` — separate bookkeeping artifact; disposition handled in a follow-up, not this sprint
@@ -244,7 +244,7 @@ Agent narration without these artifacts is not acceptable evidence.
       ```
     - `find docs/plans -maxdepth 1 -name "*.md" | sort`
       ```
-      docs/plans/changelog.md
+      <legacy plans changelog>
       docs/plans/tracker.md
       ```
     - `find docs/projects -name "tracker.md" | sort`

@@ -89,10 +89,10 @@ Use this chain when a core-flow doc exists:
 
 | File | Purpose |
 |------|---------|
-| **[tracker.md](docs/plans/tracker.md)** | **Main tracker** — architecture, modules, milestones (Always start here) |
+| **[projects/](docs/projects/)** | **Project trackers** — shared campaign state and sprint history |
 | [interface-map.md](docs/cerb/interface-map.md) | **Interface boundaries** — what module owns what |
 | [pipeline-valves.md](docs/plans/telemetry/pipeline-valves.md) | **Telemetry Protocol** — OS GPS Checkpoints (Must be updated on new edges) |
-| [changelog.md](docs/plans/changelog.md) | History of completed epics |
+| [CHANGELOG.md](CHANGELOG.md) | History of completed epics |
 
 ---
 

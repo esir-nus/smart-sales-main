@@ -64,7 +64,7 @@ Before writing code:
 1. Read the owning `docs/core-flow/` doc if one exists
 2. Read the owning spec or SOP (`docs/cerb/**`, `docs/specs/**`, `docs/sops/**`)
 3. Read `docs/cerb/interface-map.md` if the change spans modules
-4. Read `docs/plans/tracker.md` for campaign state
+4. Read the relevant `docs/projects/<slug>/tracker.md` for shared campaign state; treat `docs/plans/tracker.md` as personal/local only
 
 After implementation, sync all docs touched by the change in the same session (Android/cerb-compliant work only).
 
@@ -74,7 +74,7 @@ Agents must not auto-proliferate doc artifacts. Before producing a non-code file
 
 ## Single Changelog
 
-There is one product changelog: `CHANGELOG.md`, rendered to `CHANGELOG.html`. No parallel product trace log should be maintained; `docs/plans/changelog.md` is deprecated and scheduled for cleanup elsewhere.
+There is one product changelog: `CHANGELOG.md`, rendered to `CHANGELOG.html`. No parallel product trace log should be maintained.
 
 ## Module Structure
 
@@ -145,7 +145,7 @@ If current logs are insufficient, add targeted tags/logging and rerun instead of
 | Resource | Path |
 |----------|------|
 | Product north star | `SmartSales_PRD.md` |
-| Main tracker | `docs/plans/tracker.md` |
+| Project trackers | `docs/projects/` |
 | Sprint contract schema | `docs/specs/sprint-contract.md` |
 | Project structure | `docs/specs/project-structure.md` |
 | Interface ownership | `docs/cerb/interface-map.md` |

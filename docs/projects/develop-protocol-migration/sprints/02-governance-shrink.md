@@ -29,7 +29,7 @@
   - Rewrite **Declaration-First Shipping** section: point at sprint contracts + `ship-time-checks.md`; drop references to the retired lane registry / preflight refusal
   - **Add new section** "Sprint Contract Workflow" (≤15 lines): brief, pointer to `docs/specs/sprint-contract.md` + `docs/specs/project-structure.md`; names Claude-as-author + Codex-as-default-operator; notes user picks operator at handoff
   - **Add new rule** "Doc-Production Discipline" (can live as its own short section or bullet under an existing section): "Agents must not auto-proliferate doc artifacts. Before producing a non-code file, ask whether the information fits in a commit message, an existing doc, or a sprint contract's iteration ledger. Default is not to create a new file."
-  - **Add new rule** "Single Changelog" (preserve from old declaration-first-shipping.md §6): "There is one product changelog: `CHANGELOG.md` (renders to `CHANGELOG.html`). No parallel trace log; `docs/plans/changelog.md` is deprecated (deletion handled in sprint 04)."
+  - **Add new rule** "Single Changelog" (preserve from old declaration-first-shipping.md §6): "There is one product changelog: `CHANGELOG.md` (renders to `CHANGELOG.html`). No parallel trace log; the legacy plans changelog is deprecated (deletion handled in sprint 04)."
   - Update **Key References** table: replace `declaration-first-shipping.md` row with `ship-time-checks.md`, add `sprint-contract.md` + `project-structure.md` rows
 - `AGENTS.md` — **edit** (mirror CLAUDE.md governance changes; emphasize Codex as default operator per the handoff model)
 - `docs/specs/modules/AudioDrawer.md` — **edit** (single reference at line 346: replace `docs/specs/declaration-first-shipping.md` with `docs/specs/ship-time-checks.md`; update surrounding sentence if the reference context assumed old-model lane semantics)
@@ -186,7 +186,7 @@ Agent narration is not acceptable in place of these artifacts.
 
     grep -nE "Single Changelog|one product changelog|CHANGELOG\.md.*single" CLAUDE.md
     75:## Single Changelog
-    77:There is one product changelog: `CHANGELOG.md`, rendered to `CHANGELOG.html`. No parallel product trace log should be maintained; `docs/plans/changelog.md` is deprecated and scheduled for cleanup elsewhere.
+    77:There is one product changelog: `CHANGELOG.md`, rendered to `CHANGELOG.html`. No parallel product trace log should be maintained; the legacy plans changelog is deprecated and scheduled for cleanup elsewhere.
 
     grep -n "Sprint Contract Workflow" CLAUDE.md
     32:## Sprint Contract Workflow

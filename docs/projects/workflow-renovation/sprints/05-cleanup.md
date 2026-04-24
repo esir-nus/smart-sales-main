@@ -36,7 +36,7 @@
 **Out of scope** (do not touch):
 
 - `.codex/skills/ship/SKILL.md`, `.codex/skills/merge/SKILL.md`, `.codex/skills/changelog/SKILL.md` (sprint 03)
-- `docs/plans/changelog.md` - historical mention intentionally retained
+- `legacy plans changelog` - historical mention intentionally retained
 - Any branch other than `feat/task-route-gate` (sprint 06 owns those)
 
 ## References
@@ -55,7 +55,7 @@ Literally checkable:
 - `git show-ref --verify --quiet refs/heads/feat/task-route-gate` exits non-zero
 - `git ls-remote origin refs/heads/feat/task-route-gate` emits no matching ref
 - `test ! -f docs/plans/active-lanes.md`
-- `grep -rln "active-lanes" --include="*.md" docs/ AGENTS.md CLAUDE.md 2>/dev/null | grep -v '^docs/plans/changelog.md$' | grep -v '^docs/projects/workflow-renovation/'` returns empty
+- `grep -rln "active-lanes" --include="*.md" docs/ AGENTS.md CLAUDE.md 2>/dev/null | grep -v '^<legacy-plans-changelog>$' | grep -v '^docs/projects/workflow-renovation/'` returns empty
 - `docs/projects/workflow-renovation/tracker.md` sprint 05 row shows status `done`
 - One PR to `develop` covers the file deletion + residue cleanup + tracker update + contract closeout
 
@@ -100,7 +100,7 @@ Agent narration without these artifacts is not acceptable evidence.
 
 - **Iteration 1 (2026-04-24, operator Claude, authoring):** verified preconditions - `.worktrees/task-route-gate` attached to `feat/task-route-gate` at clean tip `c055d7564`, `docs/plans/active-lanes.md` present on develop, sprint 02 already cleaned CLAUDE.md + AGENTS.md + the live shipping spec of `active-lanes` references. Wrote the narrow cleanup contract.
 - **Iteration 2 (2026-04-24, operator Codex, execution):** removed `.worktrees/task-route-gate`, deleted local branch `feat/task-route-gate`, deleted `docs/plans/active-lanes.md`, then ran the post-delete residue grep on fresh `origin/develop`. Evaluator saw unexpected surviving references in `docs/reference/agent-lessons-details.md`, `docs/archive/declaration-first-shipping-archive-20260423.md`, and `docs/projects/develop-protocol-migration/**`, so the original contract hit its stop condition before commit.
-- **Iteration 3 (2026-04-24, operator Codex, user-approved widening):** user approved widening sprint 05. Cleaned the newly-found archive/reference/project-history residue so the scoped `active-lanes` grep now returns only the intentionally-excluded `docs/plans/changelog.md`. Evaluator saw the local cleanup was coherent, but remote deletion/PR work was blocked because both `git push origin :refs/heads/feat/task-route-gate` and `gh auth status` failed on invalid GitHub auth.
+- **Iteration 3 (2026-04-24, operator Codex, user-approved widening):** user approved widening sprint 05. Cleaned the newly-found archive/reference/project-history residue so the scoped `active-lanes` grep now returns only the intentionally-excluded legacy plans changelog. Evaluator saw the local cleanup was coherent, but remote deletion/PR work was blocked because both `git push origin :refs/heads/feat/task-route-gate` and `gh auth status` failed on invalid GitHub auth.
 - **Iteration 4 (2026-04-24, operator Codex, auth repaired):** user repaired GitHub auth. Verified `gh auth status` is healthy, configured SSH-over-443 fallback, confirmed the remote `feat/task-route-gate` ref is absent, and prepared the branch for commit/push/PR. Next action: commit, push, and open the sprint 05 PR.
 - **Iteration 5 (2026-04-24, operator Codex, ship branch opened):** committed the widened cleanup, amended the contract evidence, pushed final commit `9e08d1a40` to `docs/sprint-05-cleanup`, and opened PR #28 to `develop`. Evaluator saw the contract evidence now has the required commit/PR artifacts. Next action: leave sprint 05 on review path and cut sprint 06 from fresh `origin/develop`.
 
@@ -187,7 +187,7 @@ Agent narration without these artifacts is not acceptable evidence.
     test -f docs/plans/active-lanes.md; echo file-exit=$?
     file-exit=1
 
-    grep -rln "active-lanes" --include="*.md" docs/ AGENTS.md CLAUDE.md 2>/dev/null | grep -v '^docs/plans/changelog.md$' | grep -v '^docs/projects/workflow-renovation/'
+    grep -rln "active-lanes" --include="*.md" docs/ AGENTS.md CLAUDE.md 2>/dev/null | grep -v '^<legacy-plans-changelog>$' | grep -v '^docs/projects/workflow-renovation/'
     [no output]
     ```
 - **Lesson proposals:** none

@@ -140,14 +140,14 @@ The Backend/Pipeline engine is the only proven engine. Other work is classified 
 | **cosmetic** | Pure aesthetic polish on UI elements already registered in `docs/specs/ui_element_registry.md`. Zero behavior change. | Interim UI workflow (engine not yet formally built) | `ui-visible` screenshots (authoritative) + registry compliance |
 | **hybrid** | Small tweak against an already-shipped surface that genuinely touches both, capped at ≤3 files. | Dataflow slice runs first, then cosmetic slice, within one contract. | Union of dataflow and cosmetic evidence; no bypass on either |
 
-Hard rules (enforced at `/sprint` planner time and `/ship` evaluator time):
+Hard rules (enforced at `/sprint` planner time and ship-time evaluator time):
 
 - Net-new feature work must be `dataflow`. `cosmetic` and `hybrid` cannot be the entry contract for a new surface.
 - `cosmetic` cannot create new UI elements. It restyles elements already registered in `ui_element_registry.md`.
 - `cosmetic` cannot touch dataflow files (ViewModel, Repository, flow, mapper, domain, UseCase, ArkTS state/service).
 - `cosmetic` that uncovers a behavior bug halts and hands off to a new `dataflow` contract. No mid-sprint scope change.
 - `hybrid` is capped at ≤3 files. Violation triggers split into `dataflow` + `cosmetic`.
-- Drift signal: if `hybrid` exceeds 30% of ships in a 20-ship rolling window (tracked via `docs/plans/changelog.md`), the next `/sprint` invocation rejects hybrid until the ratio returns below threshold.
+- Drift signal: if `hybrid` exceeds 30% of ships in a 20-ship rolling window (tracked via `CHANGELOG.md`), the next `/sprint` invocation rejects hybrid until the ratio returns below threshold.
 
 The planner/operator/evaluator role structure from §5 above is preserved across all three intents -- only the template fields, evidence class, and evaluator gates differ. Architecture, Governance, and Doc work route through the intent axis as well: module-boundary or interface-map changes are `dataflow` (they modify behavior contracts); SOP/tracker/registry edits are `cosmetic` when they only restyle existing structure and `dataflow` when they change governance behavior; new spec creation is `dataflow` (net-new artifact, new reading contract).
 

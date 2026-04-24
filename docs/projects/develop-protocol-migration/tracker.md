@@ -11,7 +11,7 @@ Baseline: tag `pre-renovation-baseline` at `origin/develop` SHA `c9d21be1b`.
 
 ## Status
 
-open — authored 2026-04-23 (renamed from workflow-renovation same day); rebudgeted to 8 sprints on 2026-04-24 after sprint 04 split
+closed — 2026-04-24 after sprint 08 localized tracker ownership, removed the legacy plans changelog, and closed the project
 
 ## Sprint Index
 
@@ -24,7 +24,7 @@ open — authored 2026-04-23 (renamed from workflow-renovation same day); rebudg
 | 05 | cleanup | done | Executed under `docs/projects/workflow-renovation/` folder (rename-drift artifact): removed the task-route-gate worktree/branch and deleted `docs/plans/active-lanes.md`; widened residue sweep cleaned remaining doc references | [workflow-renovation 05-cleanup.md](../workflow-renovation/sprints/05-cleanup.md) |
 | 06 | branch-graveyard-sweep | done | Executed under `docs/projects/workflow-renovation/` folder: harvested Harmony-native app commits onto `platform/harmony` via PR #30, archive-tagged the graveyard, deleted every bucket A/B branch while leaving sprint 04/05 deferred refs untouched | [workflow-renovation 06-branch-graveyard-sweep.md](../workflow-renovation/sprints/06-branch-graveyard-sweep.md) |
 | 07 | dtq-03-carryover | done | Classified `8883cf5a8`, user initially chose harvest, then pivoted to archive-only after the checkpoint cherry-pick correctly stopped on multi-hunk conflicts; iteration 4 archive-tagged both source tips, deleted `fix/scheduler-polish`, `parking/fix-scheduler-polish-20260423`, and the empty harvest helper, and removed both attached worktrees | [07-dtq-03-carryover.md](sprints/07-dtq-03-carryover.md) |
-| 08 | main-tracker-shrink | authored | Rewrite `docs/plans/tracker.md` (~1154 lines) to a thin project index per `docs/specs/project-structure.md`; archive active-epic narrative into the per-project trackers produced by sprint 04; handle `docs/plans/changelog.md` deprecation | [08-main-tracker-shrink.md](sprints/08-main-tracker-shrink.md) |
+| 08 | main-tracker-shrink | done | Finalized local-only ownership for `docs/plans/tracker.md`, removed `docs/plans/changelog.md`, repointed the runtime-truth guardrail to `docs/specs/base-runtime-unification.md`, and closed the project | [08-main-tracker-shrink.md](sprints/08-main-tracker-shrink.md) |
 
 Decomposition guideline: projects that don't close in ~6 sprints should decompose or justify staying open. See Ongoing Justification below for why this project now runs eight.
 
@@ -54,7 +54,7 @@ Per `docs/specs/project-structure.md` size discipline, projects running past spr
 
 - **Sprint 06 (branch-graveyard-sweep) — main worktree policy:** main worktree stays on `parking/develop-diverged-audio-drawer` with its dirty tree untouched; it is explicitly out of sprint 06 scope. End state: main worktree unchanged, all other worktrees either clean or removed.
 - **Sprint 08 (main-tracker-shrink) input from sprint 04:** the post-migration `docs/projects/<slug>/` folder list produced by sprint 04 is the input to the shrunk `docs/plans/tracker.md` project index. Sprint 08 cannot start before sprint 04 closes.
-- **Sprint 08 (main-tracker-shrink) — `docs/plans/changelog.md` disposition:** deprecated per CLAUDE.md "Single Changelog" rule. Decide at sprint 08 authoring time whether this file archives under a project folder or gets deleted outright with history preserved via git.
+- **Sprint 08 (main-tracker-shrink) — legacy plans changelog disposition:** deprecated per CLAUDE.md "Single Changelog" rule. Decide at sprint 08 authoring time whether this file archives under a project folder or gets deleted outright with history preserved via git.
 - **Sprint 07 (dtq-03-carryover) — pre-run inventory:** `fix/scheduler-polish` tip is `1d164a51f` with five commits (changelog updates, badge-wav audio fix, declaration-first-shipping docs, coalition-integration governance protocol). Each commit must be cherry-checked against `develop` at sprint authoring time because some may already have landed via other paths.
 
 ## Lessons Pointer

@@ -345,6 +345,6 @@ Use this document order when translating product intent toward implementation:
 3. `docs/core-flow/**` for detailed behavioral north star
 4. `docs/cerb/**` and `docs/cerb-ui/**` for implementation contracts and feature ownership
 5. `docs/specs/prism-ui-ux-contract.md`, `docs/specs/style-guide.md`, and `docs/specs/ui_element_registry.md` for UI system rules
-6. `docs/plans/tracker.md` and related trackers for campaign state and execution memory only
+6. `docs/projects/<slug>/tracker.md` and related project docs for shared campaign state and execution memory; `docs/plans/tracker.md` is personal/local only
 
 Practical rule: product identity starts here, details refine below, and lower layers must not silently redefine the user experience from the bottom up.

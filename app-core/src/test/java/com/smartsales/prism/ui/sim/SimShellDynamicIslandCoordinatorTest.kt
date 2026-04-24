@@ -225,8 +225,8 @@ class SimShellDynamicIslandCoordinatorTest {
     }
 
     @Test
-    fun `heartbeat surfaces connected lane for five seconds every thirty seconds with mock battery`() = runTest {
-        val batteryLevel = MutableStateFlow(85)
+    fun `heartbeat leaves connected battery null until first reading arrives`() = runTest {
+        val batteryLevel = MutableStateFlow<Int?>(null)
         val coordinator = createCoordinator(
             parentScope = this,
             schedulerItems = MutableStateFlow(listOf(schedulerItem("最近：客户回访 · 09:00"))),
@@ -242,7 +242,7 @@ class SimShellDynamicIslandCoordinatorTest {
             expectedLane = DynamicIslandLane.CONNECTIVITY,
             expectedText = "Badge 已连接"
         )
-        assertEquals(85, coordinator.presentation.value.visibleItem?.batteryPercentage)
+        assertEquals(null, coordinator.presentation.value.visibleItem?.batteryPercentage)
         assertEquals(
             DynamicIslandVisualState.CONNECTIVITY_CONNECTED,
             coordinator.presentation.value.visibleItem?.visualState
@@ -263,6 +263,31 @@ class SimShellDynamicIslandCoordinatorTest {
             expectedLane = DynamicIslandLane.SCHEDULER,
             expectedText = "最近：客户回访 · 09:00"
         )
+
+        coordinator.close()
+    }
+
+    @Test
+    fun `connected lane surfaces emitted battery value when reading arrives`() = runTest {
+        val batteryLevel = MutableStateFlow<Int?>(null)
+        val coordinator = createCoordinator(
+            parentScope = this,
+            schedulerItems = MutableStateFlow(listOf(schedulerItem("最近：客户回访 · 09:00"))),
+            connectivityState = MutableStateFlow(ConnectionState.CONNECTED),
+            batteryLevel = batteryLevel
+        )
+
+        runCurrent()
+        batteryLevel.value = 50
+        advanceTimeBy(30_000L)
+        runCurrent()
+
+        assertVisible(
+            coordinator = coordinator,
+            expectedLane = DynamicIslandLane.CONNECTIVITY,
+            expectedText = "Badge 已连接"
+        )
+        assertEquals(50, coordinator.presentation.value.visibleItem?.batteryPercentage)
 
         coordinator.close()
     }
@@ -431,7 +456,7 @@ class SimShellDynamicIslandCoordinatorTest {
         parentScope: kotlinx.coroutines.CoroutineScope,
         schedulerItems: MutableStateFlow<List<DynamicIslandItem>>,
         connectivityState: MutableStateFlow<ConnectionState>,
-        batteryLevel: MutableStateFlow<Int> = MutableStateFlow(85),
+        batteryLevel: MutableStateFlow<Int?> = MutableStateFlow(null),
         takeoverSuppressed: MutableStateFlow<Boolean> = MutableStateFlow(false)
     ): SimShellDynamicIslandCoordinator {
         return SimShellDynamicIslandCoordinator(

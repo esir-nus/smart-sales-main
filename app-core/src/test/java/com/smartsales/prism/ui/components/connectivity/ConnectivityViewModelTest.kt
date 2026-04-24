@@ -136,7 +136,7 @@ class ConnectivityViewModelTest {
         val viewModel = createViewModel(bridge = bridge)
         advanceUntilIdle()
 
-        assertEquals(85, viewModel.batteryLevel.value)
+        assertNull(viewModel.batteryLevel.value)
 
         bridge.emitBatteryLevel(42)
         advanceUntilIdle()

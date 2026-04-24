@@ -122,12 +122,47 @@ Agent narration without these artifacts is not acceptable evidence.
 
 ## Iteration Ledger
 
-- (empty at authoring; operator appends per iteration)
+- Iteration 1 (2026-04-24, operator Codex): implemented the nullable battery pass across `ConnectivityViewModel`, `SimShellDynamicIslandCoordinator`, `SimHomeHeroShell`, `ConnectivityModal`, `HistoryDrawer`, and the two scoped unit-test files; rewrote the dynamic-island battery rule block and tightened the interface-map battery edge. Evaluator saw: all grep-based code-shape checks passed (`StateFlow<Int?>`, `batteryLevel: Int?`, `"--%"`, and removal of `?: 78` / `85` seed), but Gradle verification is blocked in this sandbox because socket creation is forbidden during both file-lock listener startup and daemon bootstrap (`NetworkInterface.getNetworkInterfaces` / `DatagramSocket` / `ServerSocketChannel`). Next action: user-run or unsandboxed rerun of the required scoped tests and `:app:assembleDebug`, then close or resume based on real build output.
+- Iteration 2 (2026-04-24, operator Codex): user reran the required verification outside the sandbox. Evaluator saw: both the scoped unit test task and `:app:assembleDebug` completed successfully, satisfying the remaining stop condition. Next action: close sprint 02 as success and make the single develop commit once the user confirms the `CHANGELOG` choice.
 
 ## Closeout
 
-- **Status:** *(operator fills: `success` | `stopped` | `blocked`)*
-- **Summary for project tracker:** *(operator fills one line)*
-- **Evidence artifacts:** *(operator appends per Required Evidence Format above)*
+- **Status:** `success`
+- **Summary for project tracker:** Flipped `ConnectivityViewModel.batteryLevel` to `StateFlow<Int?>` seeded `null`, propagated nullable through Modal / Drawer / Island coordinator, and rendered `--%` / hidden ambient battery until first `Bat#` push.
+- **Evidence artifacts:**
+  - Code-change evidence:
+    - `grep -n "MutableStateFlow<Int?>\|StateFlow<Int?>" app-core/src/main/java/com/smartsales/prism/ui/components/connectivity/ConnectivityViewModel.kt`
+    - Result: `74:    val batteryLevel: StateFlow<Int?> = connectivityBridge.batteryNotifications()`
+    - `grep -c "initialValue = 85\|, 85)\|(85)" app-core/src/main/java/com/smartsales/prism/ui/components/connectivity/ConnectivityViewModel.kt`
+    - Result: `0`
+    - `grep -n "?: 78" app-core/src/main/java/com/smartsales/prism/ui/sim/SimHomeHeroShell.kt`
+    - Result: no hits
+    - `grep -n "batteryLevel: Int?" app-core/src/main/java/com/smartsales/prism/ui/components/ConnectivityModal.kt app-core/src/main/java/com/smartsales/prism/ui/drawers/HistoryDrawer.kt`
+    - Results:
+      - `ConnectivityModal.kt:228:    batteryLevel: Int?,`
+      - `ConnectivityModal.kt:287:    batteryLevel: Int?,`
+      - `HistoryDrawer.kt:154:    batteryLevel: Int?,`
+    - `grep -n 'StateFlow<Int?>' app-core/src/main/java/com/smartsales/prism/ui/sim/SimShellDynamicIslandCoordinator.kt`
+    - Result: `40:    batteryLevel: StateFlow<Int?>,`
+    - `grep -n '"--%"' app-core/src/main/java/com/smartsales/prism/ui/components/ConnectivityModal.kt app-core/src/main/java/com/smartsales/prism/ui/drawers/HistoryDrawer.kt`
+    - Results:
+      - `ConnectivityModal.kt:314:                text = batteryLevel?.let { "$it%" } ?: "--%",`
+      - `HistoryDrawer.kt:188:                    batteryLevel?.let { "$it%" } ?: "--%",`
+    - `git diff --stat`
+    - Result: `11 files changed, 111 insertions(+), 32 deletions(-)`
+  - Test evidence:
+    - Command:
+      - `./gradlew :app-core:testDebugUnitTest --tests "com.smartsales.prism.ui.sim.SimShellDynamicIslandCoordinatorTest" --tests "com.smartsales.prism.ui.components.connectivity.ConnectivityViewModelTest"`
+    - Result:
+      - `BUILD SUCCESSFUL in 10s`
+      - `367 actionable tasks: 44 executed, 323 up-to-date`
+  - Build evidence:
+    - Command:
+      - `./gradlew :app:assembleDebug`
+    - Result:
+      - `BUILD SUCCESSFUL in 4s`
+      - `109 actionable tasks: 24 executed, 85 up-to-date`
+  - Doc-change evidence:
+    - `git diff docs/cerb-ui/dynamic-island/spec.md docs/cerb/interface-map.md docs/projects/firmware-protocol-intake/tracker.md`
 - **Lesson proposals:** candidate for operator to surface at close: "firmware-drop follow-up sprints naturally split into two passes — first the data-plumbing pass (sprint 01 shape: wire the seam, keep the existing non-null type for binary compat), then the semantics pass (sprint 02 shape: widen the type to nullable once all consumers are mapped). The two-pass split is cheaper than trying to land both in one sprint because the consumer audit is done with the seam already in place."
 - **CHANGELOG line:** candidate `- **android / connectivity**: Battery level UI now distinguishes "no reading yet" from a real reading — ConnectivityViewModel.batteryLevel is StateFlow<Int?> seeded null; text surfaces render --% placeholder until the first Bat# push arrives.` — operator confirms with user at close before committing

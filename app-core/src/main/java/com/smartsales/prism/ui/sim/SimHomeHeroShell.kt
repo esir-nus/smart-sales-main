@@ -538,7 +538,8 @@ private fun SimHomeHeroTopCap(
     val isDarkTheme = PrismThemeDefaults.isDarkTheme
     val visibleItem = (dynamicIslandState as? DynamicIslandUiState.Visible)?.item
     val showAmbientFlanks = visibleItem?.visualState == DynamicIslandVisualState.CONNECTIVITY_CONNECTED
-    val ambientBatteryPercentage = visibleItem?.batteryPercentage ?: 78
+    val ambientBatteryPercentage = visibleItem?.batteryPercentage
+    val showAmbientBattery = showAmbientFlanks && ambientBatteryPercentage != null
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -634,14 +635,14 @@ private fun SimHomeHeroTopCap(
                             }
 
                             SimHomeHeroAmbientFlankIcon(
-                                visible = showAmbientFlanks,
+                                visible = showAmbientBattery,
                                 alignment = Alignment.CenterEnd,
                                 offsetX = -SimHomeHeroTokens.AmbientClusterInset,
                                 delayMillis = 0,
                                 testTag = SIM_HEADER_RIGHT_AMBIENT_ICON_TEST_TAG
                             ) {
                                 SimHomeHeroAmbientBatteryGlyph(
-                                    percentage = ambientBatteryPercentage,
+                                    percentage = ambientBatteryPercentage ?: 0,
                                     accentColor = Color(0xFF34C759)
                                 )
                             }

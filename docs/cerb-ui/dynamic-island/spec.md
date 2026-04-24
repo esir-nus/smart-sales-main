@@ -94,11 +94,11 @@ Current connectivity copy:
 
 Current battery rule:
 
-- the connected connectivity lane may expose provisional battery data through shell-owned ambient chrome
+- the connected connectivity lane may expose bridge-backed battery data through shell-owned ambient chrome
 - RuntimeShell/SIM may render decorative left/right ambient flank icons when the connected lane is visible
-- the right ambient flank may use the provisional battery value, but it must remain outside the one-line island body
-- the current battery value is still provisional and comes from `ConnectivityViewModel.batteryLevel`
-- real bridge-backed battery sourcing is deferred and must be tracked as follow-up debt rather than implied as shipped truth
+- the battery value comes from `ConnectivityViewModel.batteryLevel: StateFlow<Int?>`, seeded `null` until the first `Bat#` push arrives
+- the right ambient flank may use the battery value only when it is non-null, and it must remain outside the one-line island body
+- text surfaces that reuse the same battery source render a muted `--%` placeholder while the value is `null`
 
 Excluded from this lane:
 

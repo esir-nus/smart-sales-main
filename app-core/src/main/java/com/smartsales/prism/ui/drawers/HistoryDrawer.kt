@@ -151,7 +151,7 @@ fun HistoryDrawer(
 
 @Composable
 private fun FloatingCapsuleHeader(
-    batteryLevel: Int,
+    batteryLevel: Int?,
     connectionState: ConnectionState,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -185,9 +185,9 @@ private fun FloatingCapsuleHeader(
                     modifier = Modifier.size(16.dp)
                 )
                 Text(
-                    "$batteryLevel%",
+                    batteryLevel?.let { "$it%" } ?: "--%",
                     style = MaterialTheme.typography.labelMedium,
-                    color = colors.accentSecondary,
+                    color = if (batteryLevel == null) colors.textSecondary else colors.accentSecondary,
                     fontWeight = FontWeight.Bold
                 )
             }

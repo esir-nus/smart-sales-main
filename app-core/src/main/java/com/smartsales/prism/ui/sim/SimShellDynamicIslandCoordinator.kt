@@ -37,7 +37,7 @@ internal class SimShellDynamicIslandCoordinator(
     parentScope: CoroutineScope,
     schedulerItems: StateFlow<List<DynamicIslandItem>>,
     connectivityState: StateFlow<ConnectionState>,
-    batteryLevel: StateFlow<Int>,
+    batteryLevel: StateFlow<Int?>,
     takeoverSuppressed: StateFlow<Boolean>,
     activeDeviceName: StateFlow<String?> = MutableStateFlow(null)
 ) : AutoCloseable {
@@ -51,7 +51,7 @@ internal class SimShellDynamicIslandCoordinator(
     private var currentSchedulerItems: List<DynamicIslandItem> = schedulerItems.value
     private var currentSchedulerItemKey: String? = currentSchedulerItems.firstOrNull()?.stableKey
     private var currentConnectivityState: ConnectionState = connectivityState.value
-    private var currentBatteryLevel: Int = batteryLevel.value
+    private var currentBatteryLevel: Int? = batteryLevel.value
     private var isTakeoverSuppressed: Boolean = takeoverSuppressed.value
     private var activeConnectivityLane: ConnectionState? = resolvePersistentConnectivityLane(currentConnectivityState)
     private var activeConnectivityLanePersistent: Boolean = activeConnectivityLane != null
@@ -303,7 +303,7 @@ private fun resolvePersistentConnectivityLane(state: ConnectionState): Connectio
 
 private fun buildConnectivityLaneItem(
     state: ConnectionState,
-    batteryLevel: Int,
+    batteryLevel: Int?,
     deviceName: String? = null
 ): DynamicIslandItem {
     val label = deviceName?.let { name ->
@@ -317,14 +317,14 @@ private fun buildConnectivityLaneItem(
             displayText = "$label 已连接",
             lane = DynamicIslandLane.CONNECTIVITY,
             visualState = DynamicIslandVisualState.CONNECTIVITY_CONNECTED,
-            batteryPercentage = batteryLevel.coerceIn(0, 100),
+            batteryPercentage = batteryLevel,
             tapAction = DynamicIslandTapAction.OpenConnectivityEntry
         )
         ConnectionState.PARTIAL_WIFI_DOWN -> DynamicIslandItem(
             displayText = "$label WiFi 未连接",
             lane = DynamicIslandLane.CONNECTIVITY,
             visualState = DynamicIslandVisualState.CONNECTIVITY_PARTIAL,
-            batteryPercentage = batteryLevel.coerceIn(0, 100),
+            batteryPercentage = batteryLevel,
             tapAction = DynamicIslandTapAction.OpenConnectivityEntry
         )
         ConnectionState.DISCONNECTED -> DynamicIslandItem(

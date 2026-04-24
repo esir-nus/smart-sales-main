@@ -225,7 +225,7 @@ fun ConnectivityManagerScreen(
 private fun ActiveDeviceSection(
     device: RegisteredDevice?,
     state: ConnectivityManagerState,
-    batteryLevel: Int,
+    batteryLevel: Int?,
     onDisconnect: () -> Unit,
     onCheckUpdate: () -> Unit,
     onReconnect: () -> Unit,
@@ -284,7 +284,7 @@ private fun ActiveDeviceSection(
 @Composable
 private fun ConnectedView(
     device: RegisteredDevice?,
-    batteryLevel: Int,
+    batteryLevel: Int?,
     onDisconnect: () -> Unit,
     onCheckUpdate: () -> Unit,
     onRename: (String, String) -> Unit
@@ -310,7 +310,11 @@ private fun ConnectedView(
         Spacer(modifier = Modifier.height(6.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("$batteryLevel%", fontSize = 12.sp, color = TextMuted)
+            Text(
+                text = batteryLevel?.let { "$it%" } ?: "--%",
+                fontSize = 12.sp,
+                color = TextMuted
+            )
             Spacer(modifier = Modifier.width(12.dp))
             Text("v1.2.0", fontSize = 12.sp, color = TextSecondary)
         }

@@ -70,12 +70,12 @@ class ConnectivityViewModel @Inject constructor(
             initialValue = mapToManagerUiState(connectivityBridge.managerStatus.value)
         )
 
-    // 电池电量 — 保持 85 初始值以维持当前 UI 语义，真实值改为桥接自 Bat# 推送
-    val batteryLevel: StateFlow<Int> = connectivityBridge.batteryNotifications()
+    // 电池电量 — 在首个 Bat# 推送到达前保持 null，以区分“暂无读数”和真实电量
+    val batteryLevel: StateFlow<Int?> = connectivityBridge.batteryNotifications()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Eagerly,
-            initialValue = 85
+            initialValue = null
         )
 
     private val _wifiMismatchSuggestedSsid = MutableStateFlow<String?>(null)

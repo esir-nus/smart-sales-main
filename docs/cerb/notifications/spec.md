@@ -66,12 +66,12 @@ Centralizes all Android notification logic behind a single interface. Features c
 
 **Goal**: Migrate `TaskReminderReceiver` to use `NotificationService` instead of building notifications directly.
 
-**Ship Criteria**: `TaskReminderReceiver.showNotification()` delegates to `NotificationService.show()`. Reminder notification behavior remains unchanged, while the receiver may also emit a best-effort badge chime signal that never blocks reminder delivery. Scheduler create-success badge signaling is additive and is owned outside this receiver path.
+**Ship Criteria**: `TaskReminderReceiver.showNotification()` delegates to `NotificationService.show()`. Reminder notification behavior remains unchanged. Badge-processing completion signaling is now owned by the audio pipelines via `docs/specs/esp32-protocol.md` §11, not by this receiver path.
 
 ### Changes
 - `TaskReminderReceiver`: Replace inline `NotificationCompat.Builder` with `NotificationService.show()` call
-- `TaskReminderReceiver`: after the reminder path starts, optionally emit one best-effort badge chime (`commandend#1`) through `DeviceConnectionManager.notifyTaskFired()`
-- scheduler create-success paths may separately emit the same best-effort badge chime (`commandend#1`) through the pure `TaskCreationBadgeSignal` seam and Android `DeviceConnectionManager.notifyTaskCreated()`; this is not owned by `TaskReminderReceiver`
+- `TaskReminderReceiver`: keep reminder notification delivery independent of badge BLE side effects
+- pipeline-terminal `Command#end` signaling lives in the badge audio pipeline / drawer pipeline path per `docs/specs/esp32-protocol.md` §11; this receiver does not emit badge BLE commands
 - Challenge: `BroadcastReceiver` doesn't support constructor injection — use `@AndroidEntryPoint` or manual `EntryPointAccessors`
 
 ### Test Cases

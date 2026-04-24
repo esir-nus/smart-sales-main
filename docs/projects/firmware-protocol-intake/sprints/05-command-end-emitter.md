@@ -137,12 +137,70 @@ At close, operator appends to Closeout:
 
 ## Iteration Ledger
 
-- _Seed empty. Operator appends one bullet per iteration during execution._
+- Iteration 1 — replaced the legacy manager API with `notifyCommandEnd()`, kept `DefaultTaskCreationBadgeSignal` as a no-op seam after confirming it is still Hilt-bound into scheduler/onboarding, wired both audio pipelines at their terminal branches, updated the direct bridge/test fake surfaces, and synced the five owning docs plus tracker close state. Evaluator saw: source-level grep showed legacy manager symbols gone and new `notifyCommandEnd()` hooks present in the expected files; focused unit-test compilation failed on three new-test issues (`PipelineResult.InspirationCommitted` missing `content`, wrong `AsrResult.Error` constructor, and one `newManager(...)` call missing `gateway`). Next action: patch the deterministic test compile errors and rerun the focused unit slice.
+- Iteration 2 — fixed the focused test compile issues and reran the same `:app-core:testDebugUnitTest` slice. Evaluator saw: compilation passed, but two `SimBadgeAudioAutoDownloaderTest` assertions failed because the existing badge-filename normalization path does not preserve the raw `rec_...` filename in repository entries. Next action: narrow those assertions to the sprint-owned behavior (`SMARTBADGE` entry state + one `notifyCommandEnd()` emission) without widening scope into the pre-existing filename-normalization logic.
+- Iteration 3 — patched the two drawer-pipeline assertions, reran the focused unit slice successfully, then ran `:app:assembleDebug` successfully. Evaluator saw: focused tests passed, assemble passed, source-level grep confirmed the legacy manager API is gone, and doc diffs showed the protocol/interface/tracker state flipped to shipped. Next action: fill closeout evidence and commit the sprint implementation.
 
 ## Closeout
 
-- **Status:** `success` | `stopped` | `blocked`
-- **Summary for project tracker:** _(operator fills at exit)_
-- **Evidence artifacts:** _(operator fills at exit)_
-- **Lesson proposals:** _(optional; human-gated)_
-- **CHANGELOG line:** _(optional; human-gated)_
+- **Status:** `success`
+- **Summary for project tracker:** Retired legacy `commandend#1` task-chime wiring, added `notifyCommandEnd()` through both pipeline terminal states, and synced the protocol/interface docs with focused tests plus `:app:assembleDebug` verification.
+- **Evidence artifacts:**
+  1. **Code-change evidence**
+     - `git diff --stat`:
+       ```text
+       22 files changed, 310 insertions(+), 58 deletions(-)
+       ```
+     - `grep -n 'sendBadgeSignal(session, "Command#end")' app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/DeviceConnectionManager.kt`:
+       ```text
+       205:            badgeGateway.sendBadgeSignal(session, "Command#end")
+       ```
+     - `grep -n "notifyCommandEnd" data/connectivity/src/main/java/com/smartsales/prism/domain/connectivity/ConnectivityBridge.kt`:
+       ```text
+       116:    suspend fun notifyCommandEnd()
+       ```
+     - `grep -n "notifyCommandEnd" app-core/src/main/java/com/smartsales/prism/data/audio/RealBadgeAudioPipeline.kt`:
+       ```text
+       91:                notifyCommandEndAsync()
+       113:                notifyCommandEndAsync()
+       198:            notifyCommandEndAsync()
+       220:            notifyCommandEndAsync()
+       225:    private fun notifyCommandEndAsync() {
+       227:            connectivityBridge.notifyCommandEnd()
+       ```
+     - `grep -n "notifyCommandEnd" app-core/src/main/java/com/smartsales/prism/data/audio/SimBadgeAudioAutoDownloader.kt`:
+       ```text
+       79:                    notifyCommandEndAsync()
+       87:                notifyCommandEndAsync()
+       101:                notifyCommandEndAsync()
+       110:    private fun notifyCommandEndAsync() {
+       112:            connectivityBridge.notifyCommandEnd()
+       ```
+     - `rg -n "notifyTaskCreated|notifyTaskFired" app-core/src/main/java app-core/src/test/java data/connectivity/src/main/java docs/cerb/interface-map.md docs/cerb/notifications/spec.md` returned no hits.
+     - `rg -n "commandend#1" app-core/src/main/java app-core/src/test/java data/connectivity/src/main/java` returned no hits. Remaining mentions are historical/shipped-state prose in `docs/specs/esp32-protocol.md` and `docs/projects/firmware-protocol-intake/tracker.md`.
+  2. **Test evidence**
+     - Focused successful run:
+       ```text
+       JAVA_HOME=/home/cslh-frank/jdks/jdk-17.0.11+9 PATH=/home/cslh-frank/jdks/jdk-17.0.11+9/bin:$PATH GRADLE_USER_HOME=/tmp/gradle-home ./gradlew --no-daemon :app-core:testDebugUnitTest --tests "com.smartsales.prism.data.connectivity.RealConnectivityBridgeTest" --tests "com.smartsales.prism.data.connectivity.legacy.DefaultDeviceConnectionManagerIngressTest" --tests "com.smartsales.prism.data.audio.RealBadgeAudioPipelineIngressTest" --tests "com.smartsales.prism.data.audio.SimBadgeAudioAutoDownloaderTest"
+       BUILD SUCCESSFUL in 28s
+       367 actionable tasks: 44 executed, 323 up-to-date
+       ```
+  3. **Build evidence**
+     - Successful run:
+       ```text
+       JAVA_HOME=/home/cslh-frank/jdks/jdk-17.0.11+9 PATH=/home/cslh-frank/jdks/jdk-17.0.11+9/bin:$PATH GRADLE_USER_HOME=/tmp/gradle-home ./gradlew --no-daemon :app:assembleDebug
+       BUILD SUCCESSFUL in 14s
+       109 actionable tasks: 24 executed, 85 up-to-date
+       ```
+  4. **Doc-change evidence**
+     - `git diff docs/specs/esp32-protocol.md docs/cerb/interface-map.md docs/cerb/connectivity-bridge/interface.md docs/cerb/notifications/spec.md docs/projects/firmware-protocol-intake/tracker.md` shows:
+       - protocol row 12 flipped to `✅ Implemented`
+       - §11 now documents the shipped `notifyCommandEnd()` call chain
+       - interface-map ownership moved from legacy task chimes to pipeline-terminal completion signaling
+       - connectivity-bridge interface documents `notifyCommandEnd()`
+       - notifications spec removes the legacy reminder-chime BLE path
+       - tracker sprint 05 is `done`, the pending `Command#end` bullet is removed, and a Genesis note records legacy retirement
+- **Lesson proposals:** two candidates to surface at close:
+  1. When retiring a legacy side-effect wire format, search comments and gateway docstrings in addition to call sites; otherwise source-grep success criteria can fail late on non-executable text.
+  2. For pipeline tests, keep assertions on the sprint-owned contract surface first (terminal event emitted, side-effect fired once) and avoid over-coupling to unrelated pre-existing normalization helpers unless the sprint is explicitly changing that helper.
+- **CHANGELOG line:** candidate `- **connectivity / audio pipeline**: Replaced the legacy badge chime with spec-owned \`Command#end\` signaling from both scheduler and drawer pipeline terminal states.` 

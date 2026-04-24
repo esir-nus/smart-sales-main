@@ -614,6 +614,8 @@ class ConnectivityViewModelTest {
             return true
         }
 
+        override suspend fun notifyCommandEnd() = Unit
+
         override fun wifiRepairEvents(): Flow<WifiRepairEvent> = _repairEvents
 
         suspend fun emitRepairEvent(event: WifiRepairEvent) = _repairEvents.emit(event)

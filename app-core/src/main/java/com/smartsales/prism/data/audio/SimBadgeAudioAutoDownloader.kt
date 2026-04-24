@@ -76,6 +76,7 @@ class SimBadgeAudioAutoDownloader @Inject constructor(
                     // 空文件，移除占位符
                     result.localFile.delete()
                     storeSupport.removeBadgeAudioByFilename(filename)
+                    notifyCommandEndAsync()
                     Log.d(
                         TAG,
                         "rec# auto-download: removed empty placeholder filename=$filename sizeBytes=${result.sizeBytes}"
@@ -83,6 +84,7 @@ class SimBadgeAudioAutoDownloader @Inject constructor(
                     return
                 }
                 storeSupport.importDownloadedBadgeAudio(filename, result.localFile)
+                notifyCommandEndAsync()
                 Log.d(
                     TAG,
                     "rec# auto-download: success filename=$filename sizeBytes=${result.sizeBytes}"
@@ -96,11 +98,18 @@ class SimBadgeAudioAutoDownloader @Inject constructor(
                     availability = AudioLocalAvailability.FAILED,
                     errorMessage = result.message
                 )
+                notifyCommandEndAsync()
                 Log.e(
                     TAG,
                     "rec# auto-download: failed filename=$filename reason=${result.message}"
                 )
             }
+        }
+    }
+
+    private fun notifyCommandEndAsync() {
+        runtime.repositoryScope.launch {
+            connectivityBridge.notifyCommandEnd()
         }
     }
 }

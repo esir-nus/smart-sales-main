@@ -571,6 +571,10 @@ class SimAudioRepositorySyncSupportTest {
             return false
         }
 
+        override suspend fun notifyCommandEnd() {
+            calls += "notifyCommandEnd"
+        }
+
         override fun wifiRepairEvents(): kotlinx.coroutines.flow.Flow<com.smartsales.prism.domain.connectivity.WifiRepairEvent> =
             emptyFlow()
     }

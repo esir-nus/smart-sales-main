@@ -152,8 +152,8 @@ The current base-runtime/SIM shell introduces one narrow shell-owned arbitration
 The shared reminder lane now introduces one additional narrow shell-owned presentation edge for foreground reminder surfacing:
 
 - `TaskReminderReceiver` may emit lossy process-local `EARLY` reminder events through `SchedulerReminderSurfaceBus` after it posts the normal reminder notification
-- successful scheduler task creation may emit one best-effort badge chime through the pure `TaskCreationBadgeSignal` seam; Android currently binds that seam to `DeviceConnectionManager.notifyTaskCreated()` and uses BLE payload `commandend#1`
-- `TaskReminderReceiver` may also emit one best-effort badge chime through `DeviceConnectionManager.notifyTaskFired()`; this side effect must never block or downgrade reminder delivery
+- badge pipeline terminal states may emit one best-effort completion signal through `ConnectivityBridge.notifyCommandEnd()`; Android delegates to `DeviceConnectionManager.notifyCommandEnd()` and sends BLE payload `Command#end` per `docs/specs/esp32-protocol.md` §11
+- `TaskCreationBadgeSignal` remains a scheduler/onboarding seam only; it no longer owns or emits badge BLE signals
 - `SimSchedulerViewModel` owns banner-entry merge/de-duplication plus scheduler-target derivation from canonical task rows
 - `RuntimeShell` / `RuntimeShellContent` own banner visibility gating, auto-clear timing, and tap routing back into the existing scheduler drawer seam
 - `AlarmActivity` remains the owner of `DEADLINE` full-screen reminder presentation, including concurrent stacked alarm cards

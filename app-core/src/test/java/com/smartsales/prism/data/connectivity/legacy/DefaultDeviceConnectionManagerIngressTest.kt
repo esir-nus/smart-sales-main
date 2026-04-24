@@ -230,6 +230,57 @@ class DefaultDeviceConnectionManagerIngressTest {
     }
 
     @Test
+    fun `notifyCommandEnd sends Command end signal when ble is connected`() = runTest {
+        val badgeGateway = FakeBleGateway()
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("MstRobot", "secret")
+            )
+        }
+        val manager = newManager(
+            gateway = gateway,
+            badgeGateway = badgeGateway,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            networkResult = Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "192.168.0.9",
+                    deviceWifiName = "MstRobot",
+                    phoneWifiName = "MstRobot",
+                    rawResponse = "IP#192.168.0.9, SD#MstRobot"
+                )
+            )
+        )
+
+        manager.reconnectAndWait()
+        advanceUntilIdle()
+
+        manager.notifyCommandEnd()
+
+        assertEquals(1, badgeGateway.badgeSignalCalls.size)
+        assertEquals("Command#end", badgeGateway.badgeSignalCalls.single().second)
+    }
+
+    @Test
+    fun `notifyCommandEnd no ops when ble is disconnected`() = runTest {
+        val badgeGateway = FakeBleGateway()
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val manager = newManager(
+            gateway = gateway,
+            badgeGateway = badgeGateway,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler)
+        )
+
+        manager.notifyCommandEnd()
+
+        assertTrue(badgeGateway.badgeSignalCalls.isEmpty())
+    }
+
+    @Test
     fun `reconnectAndWait keeps ble held offline diagnostic when network reports no ip`() = runTest {
         val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
         val monitor = FakeBadgeStateMonitor()

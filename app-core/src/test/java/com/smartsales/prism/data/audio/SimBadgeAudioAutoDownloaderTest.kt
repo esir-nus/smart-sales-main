@@ -6,6 +6,7 @@ import com.smartsales.data.oss.OssUploader
 import com.smartsales.prism.data.connectivity.BadgeEndpointRecoveryCoordinator
 import com.smartsales.prism.data.connectivity.legacy.FakePhoneWifiProvider
 import com.smartsales.prism.domain.audio.AudioLocalAvailability
+import com.smartsales.prism.domain.audio.AudioSource
 import com.smartsales.prism.domain.connectivity.BadgeConnectionState
 import com.smartsales.prism.domain.connectivity.BadgeManagerStatus
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
@@ -79,9 +80,55 @@ class SimBadgeAudioAutoDownloaderTest {
         advanceUntilIdle()
 
         verify(orchestrator).notifyDownloadStarting()
-        val entry = runtime.audioFiles.value.single { it.filename == "rec_20260416_120000.wav" }
+        val entry = runtime.audioFiles.value.single { it.source == AudioSource.SMARTBADGE }
         assertEquals(AudioLocalAvailability.READY, entry.localAvailability)
         assertTrue(entry.id.isNotBlank())
+        assertEquals(1, connectivityBridge.notifyCommandEndCalls)
+        @Suppress("UNUSED_VARIABLE")
+        val keepReference = downloader
+    }
+
+    @Test
+    fun `empty rec download removes placeholder and emits command end once`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
+        val downloader = SimBadgeAudioAutoDownloader(connectivityBridge, runtime, orchestrator)
+        val localFile = tempFolder.newFile("rec-empty.wav").apply { writeText("tiny") }
+        connectivityBridge.downloadResults["rec_20260416_120001.wav"] = WavDownloadResult.Success(
+            localFile = localFile,
+            originalFilename = "rec_20260416_120001.wav",
+            sizeBytes = 128L
+        )
+
+        advanceUntilIdle()
+        connectivityBridge.audioNotifications.emit(
+            RecordingNotification.AudioRecordingReady("rec_20260416_120001.wav")
+        )
+        advanceUntilIdle()
+
+        assertTrue(runtime.audioFiles.value.none { it.filename == "rec_20260416_120001.wav" })
+        assertEquals(1, connectivityBridge.notifyCommandEndCalls)
+        @Suppress("UNUSED_VARIABLE")
+        val keepReference = downloader
+    }
+
+    @Test
+    fun `failed rec download marks failed and emits command end once`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
+        val downloader = SimBadgeAudioAutoDownloader(connectivityBridge, runtime, orchestrator)
+        connectivityBridge.downloadResults["rec_20260416_120002.wav"] = WavDownloadResult.Error(
+            code = WavDownloadResult.ErrorCode.DOWNLOAD_FAILED,
+            message = "forced failure"
+        )
+
+        advanceUntilIdle()
+        connectivityBridge.audioNotifications.emit(
+            RecordingNotification.AudioRecordingReady("rec_20260416_120002.wav")
+        )
+        advanceUntilIdle()
+
+        val entry = runtime.audioFiles.value.single { it.source == AudioSource.SMARTBADGE }
+        assertEquals(AudioLocalAvailability.FAILED, entry.localAvailability)
+        assertEquals(1, connectivityBridge.notifyCommandEndCalls)
         @Suppress("UNUSED_VARIABLE")
         val keepReference = downloader
     }
@@ -120,6 +167,7 @@ class SimBadgeAudioAutoDownloaderTest {
             extraBufferCapacity = 4
         )
         val downloadResults = mutableMapOf<String, WavDownloadResult>()
+        var notifyCommandEndCalls = 0
 
         override suspend fun downloadRecording(
             filename: String,
@@ -149,6 +197,10 @@ class SimBadgeAudioAutoDownloaderTest {
         override suspend fun deleteRecording(filename: String): Boolean = true
 
         override suspend fun requestFirmwareVersion(): Boolean = false
+
+        override suspend fun notifyCommandEnd() {
+            notifyCommandEndCalls += 1
+        }
 
         override fun wifiRepairEvents(): kotlinx.coroutines.flow.Flow<com.smartsales.prism.domain.connectivity.WifiRepairEvent> =
             kotlinx.coroutines.flow.emptyFlow()

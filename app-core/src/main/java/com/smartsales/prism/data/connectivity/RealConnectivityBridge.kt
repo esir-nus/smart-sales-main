@@ -227,6 +227,8 @@ class RealConnectivityBridge @Inject constructor(
 
     override suspend fun requestFirmwareVersion(): Boolean = deviceManager.requestFirmwareVersion()
 
+    override suspend fun notifyCommandEnd() = deviceManager.notifyCommandEnd()
+
     
     override suspend fun isReady(): Boolean {
         android.util.Log.d(TAG, "🔎 isReady preflight: start")

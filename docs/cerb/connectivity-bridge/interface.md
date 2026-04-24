@@ -107,6 +107,13 @@ interface ConnectivityBridge {
      * Sends `Ver#get` as a best-effort query on the active session.
      */
     suspend fun requestFirmwareVersion(): Boolean
+
+    /**
+     * Notify the badge that downstream processing finished.
+     *
+     * Sends fire-and-forget `Command#end` on the active BLE session.
+     */
+    suspend fun notifyCommandEnd()
 }
 ```
 
@@ -213,6 +220,7 @@ sealed class WifiConfigResult {
 | `isReady()` | Pre-flight check with 3s timeout; may refresh endpoint only when the active snapshot is missing or invalidated |
 | `deleteRecording` | Idempotent, returns true if file removed or didn't exist; reuses the active runtime endpoint when valid |
 | `requestFirmwareVersion()` | Best-effort BLE query; sends `Ver#get` on the active session and returns whether the request was queued successfully |
+| `notifyCommandEnd()` | Best-effort BLE completion signal; sends `Command#end` on the active session when a `log#` or `rec#` pipeline reaches a terminal state |
 | `updateWifiConfig` | Rejects blank/whitespace-only SSID or password before any BLE provision/write attempt |
 
 `BadgeConnectionState.Connected` means the badge session is actually usable:

@@ -29,7 +29,7 @@ Communication happens via:
 | 9 | Voice Volume Control | ✅ Implemented | `DeviceConnectionManager.setBadgeVolume()` -> `badgeGateway.sendBadgeSignal(session, "volume#$clamped")` |
 | 10 | Battery Level Push | ✅ Implemented | BLE `Bat#...` -> `ConnectivityBridge.batteryNotifications()` -> `ConnectivityViewModel.batteryLevel` |
 | 11 | Firmware Version Query | ✅ Implemented | `ConnectivityViewModel` auto-queries on connect and UserCenter refresh; reply flows via `ConnectivityBridge.firmwareVersionNotifications()` |
-| 12 | Task Completion Signal | ⏳ Pending app-side wiring | App -> badge `Command#end` after short/long recording transcription-analysis completes; emitter not yet wired |
+| 12 | Task Completion Signal | ✅ Implemented | `RealBadgeAudioPipeline` / `SimBadgeAudioAutoDownloader` terminal branches call `ConnectivityBridge.notifyCommandEnd()` -> `DeviceConnectionManager.notifyCommandEnd()` -> `Command#end` |
 | 13 | SD Card Space Query | ⏳ Pending app-side wiring | App-initiated query `SD#space` -> badge reply `SD#space#<size>` (e.g., `SD#space#27.23GB`); handler not yet implemented |
 
 ---
@@ -238,11 +238,12 @@ App sends:  Command#end
 Badge:      (no response)
 ```
 
-**App-side contract**: emitter not yet wired. The natural emission points are:
-- after the scheduler pipeline completes for a `log#` drop (download + transcribe + schedule finished, success or terminal-error)
-- after the drawer pipeline completes for a `rec#` drop (download finished, success or terminal-error)
-
-Exact placement (one site per pipeline vs a single sink driven by both pipelines) is a sprint-authoring decision; see `docs/projects/firmware-protocol-intake/tracker.md`. UX rule candidate: send exactly once per triggering command, do not retry on BLE failure (best-effort parity with `volume#`).
+**App-side contract**:
+- `RealBadgeAudioPipeline.processFile()` emits one best-effort `Command#end` after each terminal scheduler-pipeline branch for a `log#` drop, including terminal errors
+- `SimBadgeAudioAutoDownloader.downloadAndUpgrade()` emits one best-effort `Command#end` after each terminal drawer-pipeline branch for a `rec#` drop, including terminal errors
+- The shipped call chain is `ConnectivityBridge.notifyCommandEnd()` -> `DeviceConnectionManager.notifyCommandEnd()` -> `badgeGateway.sendBadgeSignal(session, "Command#end")`
+- Legacy Android-only `commandend#1` task-chime wiring was retired in favor of this pipeline-terminal contract
+- UX rule: send exactly once per pipeline run, do not retry on BLE failure (best-effort parity with `volume#`)
 
 ### 12. SD Card Space Query
 

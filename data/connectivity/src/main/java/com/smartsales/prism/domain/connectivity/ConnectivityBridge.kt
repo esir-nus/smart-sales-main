@@ -109,6 +109,13 @@ interface ConnectivityBridge {
     suspend fun requestFirmwareVersion(): Boolean
 
     /**
+     * 主动通知徽章流水线已结束处理。
+     *
+     * 发送 BLE `Command#end`，不等待响应。
+     */
+    suspend fun notifyCommandEnd()
+
+    /**
      * Wi-Fi 修复流程细粒度事件流。
      * Hot flow，replay=0，仅在修复窗口内发射。
      * UI 通过此流驱动修复状态机，而非推断 managerStatus。

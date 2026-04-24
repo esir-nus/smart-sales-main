@@ -276,7 +276,7 @@ internal class GattBleGatewaySessionSupport(
     }
 
     /**
-     * 直接向徽章写入一段 ASCII 命令（如 "commandend#1"）。
+     * 直接向徽章写入一段 ASCII 命令（如 "Command#end"）。
      * 不等待通知响应，失败时抛出异常由调用方处理。
      */
     suspend fun sendBadgeSignal(session: BleSession, payload: String) {

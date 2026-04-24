@@ -77,16 +77,10 @@ interface DeviceConnectionManager {
     suspend fun reconnectAndWait(): ConnectionState
 
     /**
-     * 向徽章发送一次"任务创建成功"信号（ASCII "commandend#1"）。
+     * 向徽章发送一次任务完成信号（ASCII "Command#end"）。
      * 若 BLE 未连接或写入失败，静默忽略；不影响调用方流程。
      */
-    suspend fun notifyTaskCreated()
-
-    /**
-     * 向徽章发送一次"任务闹钟触发"信号（ASCII "commandend#1"）。
-     * 若 BLE 未连接或写入失败，静默忽略；不影响调用方流程。
-     */
-    suspend fun notifyTaskFired()
+    suspend fun notifyCommandEnd()
 
     /**
      * 设置徽章语音播报音量，payload 为 "volume#<0..100>"。
@@ -204,25 +198,14 @@ class DefaultDeviceConnectionManager @Inject constructor(
         return reconnectSupport.reconnectAndWait()
     }
 
-    override suspend fun notifyTaskCreated() {
+    override suspend fun notifyCommandEnd() {
         val session = connectionSupport.currentSessionOrNull() ?: return
         if (!badgeStateMonitor.status.value.bleConnected) return
         try {
-            badgeGateway.sendBadgeSignal(session, "commandend#1")
-            ConnectivityLogger.i("🔔 Badge chime signal sent for task create")
+            badgeGateway.sendBadgeSignal(session, "Command#end")
+            ConnectivityLogger.i("✅ Badge command-end signal sent")
         } catch (ex: Exception) {
-            ConnectivityLogger.w("🔔 Badge chime send failed on task create (non-fatal): ${ex.message}")
-        }
-    }
-
-    override suspend fun notifyTaskFired() {
-        val session = connectionSupport.currentSessionOrNull() ?: return
-        if (!badgeStateMonitor.status.value.bleConnected) return
-        try {
-            badgeGateway.sendBadgeSignal(session, "commandend#1")
-            ConnectivityLogger.i("🔔 Badge chime signal sent for task fire")
-        } catch (ex: Exception) {
-            ConnectivityLogger.w("🔔 Badge chime send failed (non-fatal): ${ex.message}")
+            ConnectivityLogger.w("✅ Badge command-end send failed (non-fatal): ${ex.message}")
         }
     }
 

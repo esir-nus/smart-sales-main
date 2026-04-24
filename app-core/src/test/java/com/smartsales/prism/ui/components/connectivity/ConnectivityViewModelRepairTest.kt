@@ -212,6 +212,7 @@ class ConnectivityViewModelRepairTest {
         override suspend fun isReady(): Boolean = false
         override suspend fun deleteRecording(filename: String): Boolean = false
         override suspend fun requestFirmwareVersion(): Boolean = false
+        override suspend fun notifyCommandEnd() = Unit
         override fun wifiRepairEvents(): Flow<WifiRepairEvent> = _repairEvents
 
         suspend fun emitRepairEvent(event: WifiRepairEvent) = _repairEvents.emit(event)

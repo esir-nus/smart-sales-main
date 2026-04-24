@@ -135,6 +135,16 @@ class RealConnectivityBridgeTest {
     }
 
     @Test
+    fun `notifyCommandEnd delegates to device manager`() = runTest {
+        val manager = FakeDeviceConnectionManager()
+        val bridge = newBridge(manager, mock(), FakeBadgeStateMonitor())
+
+        bridge.notifyCommandEnd()
+
+        assertEquals(1, manager.notifyCommandEndCalls)
+    }
+
+    @Test
     fun `managerStatus refines disconnected into ble paired network unknown`() = runTest {
         val manager = FakeDeviceConnectionManager()
         val monitor = FakeBadgeStateMonitor()

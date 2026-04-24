@@ -286,6 +286,7 @@ class L2DualEngineBridgeTest {
             override suspend fun isReady() = true
             override suspend fun deleteRecording(filename: String) = true
             override suspend fun requestFirmwareVersion() = false
+            override suspend fun notifyCommandEnd() = Unit
             override fun wifiRepairEvents() =
                 kotlinx.coroutines.flow.emptyFlow<com.smartsales.prism.domain.connectivity.WifiRepairEvent>()
         }

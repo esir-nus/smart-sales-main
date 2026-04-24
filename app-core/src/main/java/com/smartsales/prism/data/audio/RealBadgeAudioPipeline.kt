@@ -88,6 +88,7 @@ class RealBadgeAudioPipeline @Inject constructor(
                     message = downloadResult.message,
                     filename = filename
                 ))
+                notifyCommandEndAsync()
                 android.util.Log.w(TAG, "Download failed: ${downloadResult.message}")
                 return
             }
@@ -109,6 +110,7 @@ class RealBadgeAudioPipeline @Inject constructor(
                     message = "转写失败: ${asrResult.message}",
                     filename = filename
                 ))
+                notifyCommandEndAsync()
                 android.util.Log.w(TAG, "Transcription failed: ${asrResult.message}")
                 localFile.delete()
                 return
@@ -193,6 +195,7 @@ class RealBadgeAudioPipeline @Inject constructor(
 
             _currentState.value = PipelineState.IDLE
             _events.emit(PipelineEvent.Complete(schedulerResult, filename, transcript))
+            notifyCommandEndAsync()
 
             val deleted = if (drawerIngested) {
                 connectivityBridge.deleteRecording(filename)
@@ -214,7 +217,14 @@ class RealBadgeAudioPipeline @Inject constructor(
                 message = e.message ?: "未知错误",
                 filename = filename
             ))
+            notifyCommandEndAsync()
             android.util.Log.e(TAG, "Pipeline error at stage $currentStage", e)
+        }
+    }
+
+    private fun notifyCommandEndAsync() {
+        scope.launch {
+            connectivityBridge.notifyCommandEnd()
         }
     }
 

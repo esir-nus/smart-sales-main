@@ -2,7 +2,7 @@
 
 > **Purpose**: BLE + HTTP protocol between Android app and ESP32 badge  
 > **Source of Truth**: `reference-source/webserver-test.c` + `reference-source/bluetooch.py`  
-> **Last Updated**: 2026-04-24
+> **Last Updated**: 2026-04-24 (second drop — Ver# query/reply, Command#end, SD#space, §§6-7 semantic reconciliation)
 
 ---
 
@@ -28,7 +28,9 @@ Communication happens via:
 | 8 | Audio Recording Ready (drawer) | ✅ Implemented | BLE `rec#...` -> `ConnectivityBridge.audioRecordingNotifications()` -> `SimBadgeAudioAutoDownloader` |
 | 9 | Voice Volume Control | ✅ Implemented | `DeviceConnectionManager.setBadgeVolume()` -> `badgeGateway.sendBadgeSignal(session, "volume#$clamped")` |
 | 10 | Battery Level Push | ✅ Implemented | BLE `Bat#...` -> `ConnectivityBridge.batteryNotifications()` -> `ConnectivityViewModel.batteryLevel` |
-| 11 | Firmware Version | 🔮 Reserved (format defined, trigger TBD) | ESP32 -> app push; trigger and app-side handler not yet specified |
+| 11 | Firmware Version Query | ⏳ Pending app-side wiring | App-initiated query `Ver#get` -> badge reply `Ver#<project>.<major>.<minor>.<feature>`; handler not yet implemented |
+| 12 | Task Completion Signal | ⏳ Pending app-side wiring | App -> badge `Command#end` after short/long recording transcription-analysis completes; emitter not yet wired |
+| 13 | SD Card Space Query | ⏳ Pending app-side wiring | App-initiated query `SD#space` -> badge reply `SD#space#<size>` (e.g., `SD#space#27.23GB`); handler not yet implemented |
 
 ---
 
@@ -111,16 +113,19 @@ Badge sends:  tim#get
 App returns:  tim#20260112175600   (YYYYMMDDHHMMSS)
 ```
 
+> **Re-confirmed**: 2026-04-24 firmware drop restated this contract unchanged (`tim#get` / `tim#YYYYMMDDHHMMSS`).
+
 ### 6. Recording End Notification (Scheduler Pipeline)
 
 > **Added**: 2026-02-05 (firmware update from hardware team)
 > **Updated**: 2026-02-08 — corrected command from `record#end` to `log#YYYYMMDD_HHMMSS`
+> **Updated**: 2026-04-24 — firmware team restated the payload with the `.wav` extension included (`log#YYYYMMDD_HHMMSS.wav`); firmware team also labels this notification as the **short-recording** path. See §6-7 Semantic Reconciliation note below.
 
 When user finishes recording on badge, ESP32 notifies app with the filename. Triggers the full download + transcribe + schedule pipeline.
 
 ```
-Badge sends:  log#20260208_201345    (YYYYMMDD_HHMMSS, ESP32 local time)
-App:          (downloads /download?file=log_20260208_201345.wav, transcribes, schedules)
+Badge sends:  log#20260423_111020.wav    (YYYYMMDD_HHMMSS.wav, ESP32 local time)
+App:          (downloads /download?file=log_20260423_111020.wav, transcribes, schedules)
 ```
 
 **Workflow**:
@@ -128,27 +133,43 @@ App:          (downloads /download?file=log_20260208_201345.wav, transcribes, sc
 2. Badge sends `tim#get` → App responds with timestamp following pattern `tim#YYYYMMDDHHMMSS` (used for calibrating the ESP32 local time)
 3. User records audio on the badge -> saved as `log_YYYYMMDD_HHMMSS.wav` (ESP32 local time; the timestamp sent by app is for clock calibration only, not prescriptive of the filename)
 4. User stops recording
-5. Badge sends `log#YYYYMMDD_HHMMSS` (ESP32 local time)
+5. Badge sends `log#YYYYMMDD_HHMMSS.wav` (ESP32 local time; `.wav` suffix per 2026-04-24 drop — older firmware shipped the token without the suffix)
 6. App downloads WAV via HTTP `/download?file=log_YYYYMMDD_HHMMSS.wav` (app learns filename from `log#` command)
 
 ### 7. Audio Recording Ready Notification (Drawer Pipeline)
 
 > **Added**: 2026-04-09
+> **Updated**: 2026-04-24 — firmware team restated the payload with the `.wav` extension included (`rec#YYYYMMDD_HHMMSS.wav`); firmware team also labels this notification as the **long-recording** path. See §6-7 Semantic Reconciliation note below.
 
-When user finishes recording on badge and the file is ready for download, ESP32 notifies app with a `rec#` command. This triggers audio-only download into the drawer — no transcription or scheduling.
+When user finishes recording on badge and the file is ready for download, ESP32 notifies app with a `rec#` command. The current app-side routing treats this as audio-only download into the drawer (no transcription, no scheduling).
 
 ```
-Badge sends:  rec#20260409_150000    (YYYYMMDD_HHMMSS, ESP32 local time)
-App:          (downloads /download?file=rec_20260409_150000.wav, stores in audio drawer)
+Badge sends:  rec#20260423_111020.wav    (YYYYMMDD_HHMMSS.wav, ESP32 local time)
+App:          (downloads /download?file=rec_20260423_111020.wav, stores in audio drawer)
 ```
 
-**Differences from `log#`**:
+**Differences from `log#`** (current app-side routing, subject to §6-7 Semantic Reconciliation):
 - `log#` → full scheduler pipeline (download + transcribe + schedule)
 - `rec#` → audio-only pipeline (download + drawer placeholder, no transcribe/schedule)
 - Both share the same `ConnectivityBridge.downloadRecording()` HTTP transport
 - `/list` fallback on reconnection covers files recorded while app was disconnected
 
-**Filename convention**: `rec#YYYYMMDD_HHMMSS` → file stored as `rec_YYYYMMDD_HHMMSS.wav`
+**Filename convention**: `rec#YYYYMMDD_HHMMSS.wav` → file stored as `rec_YYYYMMDD_HHMMSS.wav`
+
+---
+
+#### §6-7 Semantic Reconciliation (2026-04-24 drop)
+
+The 2026-04-24 firmware note labels the two notifications as:
+
+| Physical trigger (firmware label) | Command on wire |
+|-----------------------------------|-----------------|
+| **长录音** (long recording)        | `rec#<ts>.wav`  |
+| **短录音** (short recording)       | `log#<ts>.wav`  |
+
+The app-side routing above (log# → scheduler/transcribe; rec# → drawer/audio-only) was authored assuming the opposite physical-to-pipeline mapping (log# = full meeting transcription, rec# = short audio memo). The firmware team's labels may be describing different axes than the app assumed (e.g., short-button-press vs long-button-press on the hardware, independent of app intent) or may indicate a genuine semantic flip that the app has not yet caught up to.
+
+**Status**: unresolved. The wire-level commands are unchanged (`log#…` and `rec#…` both still flow); the open question is which physical badge action produces which command, and whether the app's pipeline-to-command mapping still matches user intent. Tracked as a pending sprint under `docs/projects/firmware-protocol-intake/tracker.md`. Do not swap the app-side routing based on this note alone — confirm with the firmware team first.
 
 ### 8. Voice Volume Control
 
@@ -181,14 +202,16 @@ Badge sends:  Bat#<0..100>      (integer percent, unsolicited periodic push)
 - The shipped call chain is `GattBleGatewayProtocolSupport.parseBadgeNotificationPayload()` -> `DeviceConnectionManager.batteryEvents` -> `RealConnectivityBridge.batteryNotifications()` -> `ConnectivityViewModel.batteryLevel`
 - The UI still keeps the current seeded `85` initial value until the first push arrives; nullable/no-reading semantics remain a separate UI sprint
 
-### 10. Firmware Version (Reserved)
+### 10. Firmware Version Query
 
-> **Added**: 2026-04-24 (format reserved; trigger and app-side handler TBD)
+> **Added**: 2026-04-24 (format reserved; trigger TBD)
+> **Updated**: 2026-04-24 (second drop, same day) — trigger finalized as app-initiated query/reply; delimiter changed from `:` to `#` to match the rest of the BLE protocol family (`tim#get` / `Ver#get`).
 
-Firmware version reported from ESP32 to app. Format is fixed; the trigger timing (on-connect, on-boot, or query-reply) has not yet been defined by the firmware team.
+App queries the badge for its firmware version; badge replies with the version string. This is a pull protocol — the badge does not push version unsolicited.
 
 ```
-Badge sends:  Ver:<project>.<major>.<minor>.<feature>    (e.g., Ver:1.0.0.1)
+App sends:    Ver#get
+Badge sends:  Ver#<project>.<major>.<minor>.<feature>    (e.g., Ver#1.0.0.1)
 ```
 
 **Field semantics** (left to right):
@@ -197,7 +220,45 @@ Badge sends:  Ver:<project>.<major>.<minor>.<feature>    (e.g., Ver:1.0.0.1)
 - `minor` — module-level functional enhancement
 - `feature` — small changes, typically defect fixes
 
-**Status**: Format reserved in spec. App-side handler and trigger contract will be added once firmware team finalizes when/how the badge emits this. Distinct from the HTTP `GET /` `version` field, which reports the webserver version and not the badge firmware version.
+**App-side contract**: handler not yet implemented. When wired, it should follow the `tim#get` query/reply pattern for BLE round-trips and store the resulting version on a badge-identity seam (likely `ConnectivityViewModel` or a new `BadgeFirmwareInfo` holder). Distinct from the HTTP `GET /` `version` field, which reports the webserver version and not the badge firmware version.
+
+### 11. Task Completion Signal
+
+> **Added**: 2026-04-24 (firmware update from hardware team)
+
+App tells the badge that the downstream work triggered by a short-recording command or long-recording transcription-analysis has finished. Fire-and-forget; the badge does not acknowledge. Used by the badge to exit a "processing" UX state (LED/tone/icon cue).
+
+```
+App sends:  Command#end
+Badge:      (no response)
+```
+
+**App-side contract**: emitter not yet wired. The natural emission points are:
+- after the scheduler pipeline completes for a `log#` drop (download + transcribe + schedule finished, success or terminal-error)
+- after the drawer pipeline completes for a `rec#` drop (download finished, success or terminal-error)
+
+Exact placement (one site per pipeline vs a single sink driven by both pipelines) is a sprint-authoring decision; see `docs/projects/firmware-protocol-intake/tracker.md`. UX rule candidate: send exactly once per triggering command, do not retry on BLE failure (best-effort parity with `volume#`).
+
+### 12. SD Card Space Query
+
+> **Added**: 2026-04-24 (firmware update from hardware team)
+
+App queries the badge for remaining SD card free space; badge replies with a human-readable size string. Pull protocol — the badge does not push SD space unsolicited.
+
+```
+App sends:    SD#space
+Badge sends:  SD#space#<size>      (e.g., SD#space#27.23GB)
+```
+
+**Size format**: the badge returns the value as a pre-formatted human string (`27.23GB`, `512MB`, etc.). The app must parse this defensively (no guarantee of unit, decimal precision, or whitespace). If parsing fails, surface the raw string rather than blocking on it.
+
+**Caveat — fragmented response shape**: this command shares the `SD#` prefix with the WiFi-status-query fragment (§1, where the badge emits `SD#<SSID>` as one of two notifications). The disambiguator is the `space` token after the first `#`:
+- `SD#<SSID>` — WiFi status fragment (legacy, §1)
+- `SD#space#<size>` — SD card space reply (this section)
+
+App-side parsers must check the second segment before routing.
+
+**App-side contract**: handler not yet implemented. When wired, the natural call site is a UserCenter / diagnostics surface (the value has no reactive-UI use case that would warrant a subscription-style listener).
 
 ---
 

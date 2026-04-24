@@ -65,25 +65,31 @@ internal class DeviceConnectionManagerIngressSupport(
 
 internal fun String.toBadgeDownloadFilename(): String {
     val trimmed = trim()
+    val normalized = trimmed.removeSuffix(".wav").removeSuffix(".WAV").trim()
     return when {
         trimmed.isBlank() -> ""
-        trimmed.endsWith(".wav", ignoreCase = true) -> trimmed
-        trimmed.startsWith("log_", ignoreCase = true) -> "$trimmed.wav"
-        trimmed.startsWith("log#", ignoreCase = true) -> {
-            val token = trimmed.removePrefix("log#").trim()
+        trimmed.startsWith("log_", ignoreCase = true) -> {
+            val token = normalized.removePrefix("log_").trim()
             "log_$token.wav"
         }
-        else -> "log_$trimmed.wav"
+        trimmed.startsWith("log#", ignoreCase = true) -> {
+            val token = normalized.removePrefix("log#").trim()
+            "log_$token.wav"
+        }
+        else -> "log_$normalized.wav"
     }
 }
 
-/** rec# 令牌 → rec_YYYYMMDD_HHMMSS.wav */
+/** rec# / rec_ 令牌统一归一化为 rec_YYYYMMDD_HHMMSS.wav */
 internal fun String.toBadgeAudioFilename(): String {
     val trimmed = trim()
+    val normalized = trimmed.removeSuffix(".wav").removeSuffix(".WAV").trim()
     return when {
         trimmed.isBlank() -> ""
-        trimmed.endsWith(".wav", ignoreCase = true) -> trimmed
-        trimmed.startsWith("rec_", ignoreCase = true) -> "$trimmed.wav"
-        else -> "rec_$trimmed.wav"
+        trimmed.startsWith("rec_", ignoreCase = true) -> {
+            val token = normalized.removePrefix("rec_").trim()
+            "rec_$token.wav"
+        }
+        else -> "rec_$normalized.wav"
     }
 }

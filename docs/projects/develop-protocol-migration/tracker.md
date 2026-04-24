@@ -21,7 +21,7 @@ open — authored 2026-04-23 (renamed from workflow-renovation same day)
 | 02 | governance-shrink | done | Replaced the old shipping spec with ship-time-checks.md, rewrote CLAUDE.md and AGENTS.md governance rules, and landed the project-folder rename | [02-governance-shrink.md](sprints/02-governance-shrink.md) |
 | 03 | skills-align | planned | Update `/sprint`, `/ship`, `/merge`, `/changelog` skills to contract model; retire `/merge-harmony`; `/ship` runs against contract scope | — |
 | 04 | trackers-migrate | planned | Migrate `god-tracker`, `harmony-tracker`, `ui-tracker`, `bug-tracker`, wave briefs into `docs/projects/<slug>/`; migrate DTQ-03 carry-over; shrink `docs/plans/tracker.md` to project index; archive `docs/plans/changelog.md` | — |
-| 05 | cleanup | planned | Delete `.worktrees/task-route-gate/`, `feat/task-route-gate` branch, `docs/plans/active-lanes.md`; grep-sweep residue | — |
+| 05 | cleanup | planned | Delete `.worktrees/task-route-gate/`, `feat/task-route-gate` branch, the retired lane registry file; grep-sweep residue | — |
 | 06 | branch-graveyard-sweep | authored | Triage all non-trunk branches: delete already-landed, merge usable work via one PR per lane (`cleanup/android-consolidation`, `cleanup/harmony-consolidation`), archive-as-tag the rest, delete branches, prune worktrees + remote refs | [06-branch-graveyard-sweep.md](sprints/06-branch-graveyard-sweep.md) |
 
 Decomposition guideline: projects that don't close in ~6 sprints should decompose or justify staying open. This project is budgeted at 6.

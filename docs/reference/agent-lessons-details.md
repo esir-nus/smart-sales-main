@@ -59,7 +59,7 @@ When adding a new lesson (after USER confirms "problem fixed"):
 3. After merge, prove cleanup safety from PR state (`MERGED`) rather than commit-count comparisons, then delete the stale rescue branch and worktree  
 **File(s)**:  
 - `docs/specs/platform-governance.md`  
-- `docs/plans/active-lanes.md`  
+- `docs/specs/ship-time-checks.md`  
 - `.codex/skills/merge/SKILL.md`  
 **Pattern**: Mixed rescue branches require two laws: split by lane before merge, and trust PR merge state rather than ahead/behind counts after squash merge.
 

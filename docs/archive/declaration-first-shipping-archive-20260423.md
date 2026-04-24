@@ -34,19 +34,19 @@ Lane semantics:
 Before starting any declared task, the agent computes the union of:
 
 - (a) currently dirty files in the worktree
-- (b) Ship Scopes of tasks listed in `docs/plans/active-lanes.md`
+- (b) Ship Scopes of tasks listed in the legacy in-flight lane registry
 
 Rules:
 
 - **File-level intersection** with that union → **refuse to start**. List the conflicting task(s) and recommend ship-or-abandon-first.
 - **Same-directory intersection, no file overlap** → warn, ask operator to confirm.
-- **No intersection** → proceed; append new task entry to `docs/plans/active-lanes.md`.
+- **No intersection** → proceed; append a new task entry to the legacy in-flight lane registry.
 
 Escape hatch: `--force-parallel "<reason>"` bypasses the gate and logs the reason to the trace.
 
 ## 3. Active Lane Registry
 
-`docs/plans/active-lanes.md` holds the in-flight task registry. Each entry: date, lane, ship scope (file/module list), short title.
+The legacy in-flight lane registry holds the task list. Each entry: date, lane, ship scope (file/module list), short title.
 
 Lifecycle:
 

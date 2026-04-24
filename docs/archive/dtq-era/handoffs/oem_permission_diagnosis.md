@@ -21,7 +21,7 @@ This handoff owns the transport/OEM seam for the current dirty tree: connectivit
 - `docs/cerb/sim-connectivity/spec.md`
 - `docs/specs/connectivity-spec.md`
 - `docs/cerb/notifications/spec.md` when the edit is OEM/reminder-delivery-specific
-- `docs/plans/bug-tracker.md`
+- `docs/projects/connectivity-bug-triage/tracker.md`
 - OEM SOP / plan docs such as `docs/sops/oem-alarm-notification-checklist.md`, `docs/sops/oem-alarm-notification-control-plane.md`, and `docs/plans/oem-alarm-hardening-plan.md`
 
 ## Current Repo State / Implementation Truth
@@ -50,7 +50,7 @@ The report below remains useful diagnostic evidence, but current truth must be t
   - `docs/cerb/connectivity-bridge/interface.md`
   - `docs/cerb/sim-connectivity/spec.md`
   - `docs/cerb/notifications/spec.md`
-  - `docs/plans/bug-tracker.md`
+  - `docs/projects/connectivity-bug-triage/tracker.md`
   - `docs/sops/oem-alarm-notification-checklist.md`
   - `docs/sops/oem-alarm-notification-control-plane.md`
   - `docs/plans/oem-alarm-hardening-plan.md`
@@ -67,7 +67,7 @@ The report below remains useful diagnostic evidence, but current truth must be t
   - `docs/cerb/connectivity-bridge/interface.md`
   - `docs/cerb/sim-connectivity/spec.md`
   - `docs/cerb/notifications/spec.md`
-  - `docs/plans/bug-tracker.md`
+  - `docs/projects/connectivity-bug-triage/tracker.md`
   - `docs/sops/oem-alarm-notification-checklist.md`
   - `docs/sops/oem-alarm-notification-control-plane.md`
   - `docs/plans/oem-alarm-hardening-plan.md`

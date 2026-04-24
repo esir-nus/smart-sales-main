@@ -288,7 +288,7 @@ Wave 1A now delivers two focused JVM structural checks inside:
 - `app-core/src/test/java/com/smartsales/prism/ui/GodStructureGuardrailTest.kt`
 
 1. **Tracker / Contract Validity Test**
-   - verifies `docs/plans/god-tracker.md` exists
+   - verifies `docs/projects/god-file-cleanup/tracker.md` exists
    - verifies `docs/specs/code-structure-contract.md` exists
    - verifies each pilot exception row has owner, sunset, required tests, target decomposition, and status
 
@@ -675,7 +675,7 @@ Wave 0 is accepted only when:
 ## Related Documents
 
 - `docs/plans/tracker.md`
-- `docs/plans/ui-tracker.md`
+- `docs/projects/ui-campaign/tracker.md`
 - `docs/plans/god-wave0-execution-brief.md`
 - `docs/specs/code-structure-contract.md`
 - `docs/sops/ui-dev-mode.md`

@@ -32,7 +32,7 @@ Holistic (per the project model — docs + code + UI together when relevant; thi
 
 - `CLAUDE.md`, `AGENTS.md`, `docs/specs/ship-time-checks.md` — sprint 02 owns these
 - `.claude/commands/*`, `.codex/skills/*` — sprint 03 owns these
-- `docs/plans/tracker.md`, `docs/plans/god-tracker.md`, `docs/plans/harmony-tracker.md`, the retired lane-registry file, `docs/reports/**` — sprint 04 / 05 own these
+- `docs/plans/tracker.md`, `docs/projects/god-file-cleanup/tracker.md`, `docs/projects/harmony-native/tracker.md`, the retired lane-registry file, `docs/reports/**` — sprint 04 / 05 own these
 - `.worktrees/task-route-gate/`, `feat/task-route-gate` branch — sprint 05 owns these
 - All source code under `app/`, `app-core/`, `core/`, `data/`, `domain/`, `platforms/`
 

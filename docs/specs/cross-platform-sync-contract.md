@@ -8,7 +8,7 @@
 > - `docs/platforms/harmony/native-development-framework.md`
 > - `docs/platforms/harmony/app-architecture.md`
 > - `docs/cerb/interface-map.md`
-> - `docs/plans/harmony-tracker.md`
+> - `docs/projects/harmony-native/tracker.md`
 > - `CLAUDE.md`
 
 ---

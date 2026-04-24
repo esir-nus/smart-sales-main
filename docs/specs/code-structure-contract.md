@@ -244,7 +244,7 @@ Good split outcome:
 
 If a file is above budget or violates a forbidden mix, it must appear in:
 
-- `docs/plans/god-tracker.md`
+- `docs/projects/god-file-cleanup/tracker.md`
 
 Required exception fields:
 
@@ -304,7 +304,7 @@ This rule exists because structural cleanup is meant to improve future delivery 
 
 The active pilot is the SIM / agent shared trunk cleanup tracked in:
 
-- `docs/plans/god-tracker.md`
+- `docs/projects/god-file-cleanup/tracker.md`
 
 Immediate pilot files:
 
@@ -319,9 +319,9 @@ Future budgets and role definitions may be tightened after that pilot proves the
 
 ## Related Documents
 
-- `docs/plans/god-tracker.md`
+- `docs/projects/god-file-cleanup/tracker.md`
 - `docs/plans/tracker.md`
-- `docs/plans/ui-tracker.md`
+- `docs/projects/ui-campaign/tracker.md`
 - `docs/sops/ui-dev-mode.md`
 - `docs/sops/ui-building.md`
 - `docs/specs/prism-ui-ux-contract.md`

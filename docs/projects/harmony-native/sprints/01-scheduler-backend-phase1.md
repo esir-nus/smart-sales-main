@@ -3,7 +3,7 @@
 > **Purpose**: Bounded execution brief for the first Harmony scheduler backend/dataflow verification slice.
 > **Status**: Active
 > **Date**: 2026-04-08
-> **Primary Tracker**: `docs/plans/harmony-tracker.md`
+> **Primary Tracker**: `docs/projects/harmony-native/tracker.md`
 > **Behavioral Authority**: `docs/core-flow/scheduler-fast-track-flow.md`
 > **Implementation Contract**: `docs/platforms/harmony/scheduler-backend-first.md`
 

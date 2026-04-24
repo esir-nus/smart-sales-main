@@ -50,9 +50,9 @@ Treating this as one batch would hide lane collisions instead of reducing them.
 
 The repo already has mature specialist trackers such as:
 
-- `docs/plans/god-tracker.md`
-- `docs/plans/ui-tracker.md`
-- `docs/plans/bug-tracker.md`
+- `docs/projects/god-file-cleanup/tracker.md`
+- `docs/projects/ui-campaign/tracker.md`
+- `docs/projects/connectivity-bug-triage/tracker.md`
 
 These trackers are useful but they do not answer the operational question:
 

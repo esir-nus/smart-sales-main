@@ -12,7 +12,7 @@ This wave closes the gap between the shipped full-app theme plumbing and the old
 - production seam: `app-core/src/main/java/com/smartsales/prism/ui/drawers/HistoryDrawer.kt`
 - host seam: `app-core/src/main/java/com/smartsales/prism/ui/AgentShell.kt`
 - behavior source of truth: `docs/specs/modules/HistoryDrawer.md`
-- workflow source of truth: `docs/plans/ui-tracker.md`, `docs/sops/ui-building.md`
+- workflow source of truth: `docs/projects/ui-campaign/tracker.md`, `docs/sops/ui-building.md`
 
 ## Objective
 

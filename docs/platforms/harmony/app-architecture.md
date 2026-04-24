@@ -8,7 +8,7 @@
 > - `docs/specs/cross-platform-sync-contract.md`
 > - `docs/platforms/harmony/native-development-framework.md`
 > **Related Docs**:
-> - `docs/plans/harmony-tracker.md` (H-04 entry)
+> - `docs/projects/harmony-native/tracker.md` (H-04 entry)
 > - `docs/platforms/harmony/tingwu-container.md` (pattern origin)
 > - `docs/specs/Architecture.md` (Android system laws)
 > - `docs/cerb/interface-map.md` (shared interface ownership)

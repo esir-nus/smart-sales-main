@@ -3,7 +3,7 @@
 ## 1. Contract Read
 
 - `docs/plans/history-drawer-wavec-execution-brief.md`
-- `docs/plans/ui-tracker.md`
+- `docs/projects/ui-campaign/tracker.md`
 - `docs/specs/modules/HistoryDrawer.md`
 - `docs/specs/ui_element_registry.md`
 - `docs/sops/ui-building.md`

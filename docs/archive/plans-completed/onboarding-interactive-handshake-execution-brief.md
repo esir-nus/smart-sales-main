@@ -25,7 +25,7 @@ This slice is not a retroactive reinterpretation of Wave A or the SIM intro-dark
 - pairing runtime source of truth: `docs/cerb/device-pairing/spec.md`
 - SIM routing source of truth: `docs/specs/flows/OnboardingFlow.md`
 - shared connectivity runtime source of truth: `docs/cerb/connectivity-bridge/spec.md` and `docs/cerb/connectivity-bridge/interface.md`
-- UI tracker: `docs/plans/ui-tracker.md`
+- UI tracker: `docs/projects/ui-campaign/tracker.md`
 
 ## Allowed Work
 

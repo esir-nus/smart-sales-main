@@ -8,8 +8,8 @@
 > - `docs/platforms/harmony/tingwu-container.md`
 > - `docs/specs/platform-governance.md`
 > **Related Docs**:
-> - `docs/plans/harmony-ui-translation-tracker.md` (HUI-02 row)
-> - `docs/plans/harmony-tracker.md` (H-01, H-03)
+> - `docs/projects/harmony-ui-translation/tracker.md` (HUI-02 row)
+> - `docs/projects/harmony-native/tracker.md` (H-01, H-03)
 
 ---
 

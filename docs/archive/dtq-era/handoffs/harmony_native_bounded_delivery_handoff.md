@@ -20,9 +20,9 @@ The lane is intentionally `Paused` in the registry. The source paths are now exp
 
 - `platforms/harmony/tingwu-container/**`
 - `platforms/harmony/ui-verification/**`
-- `docs/plans/harmony-tracker.md`
-- `docs/plans/harmony-ui-translation-tracker.md`
-- `docs/plans/harmony-scheduler-backend-phase1-brief.md`
+- `docs/projects/harmony-native/tracker.md`
+- `docs/projects/harmony-ui-translation/tracker.md`
+- `docs/projects/harmony-native/sprints/01-scheduler-backend-phase1.md`
 - `docs/platforms/harmony/tingwu-container.md`
 - `docs/platforms/harmony/scheduler-backend-first.md`
 - `docs/platforms/harmony/test-signing-ledger.md`
@@ -49,7 +49,7 @@ This lane stays paused to make that blocked state explicit. Registry ownership d
 ## Doc-Code Alignment
 
 - **Owning source-of-truth docs**:
-  - `docs/plans/harmony-tracker.md`
+  - `docs/projects/harmony-native/tracker.md`
   - `docs/platforms/harmony/tingwu-container.md`
   - `docs/platforms/harmony/scheduler-backend-first.md`
   - `docs/platforms/harmony/ui-verification.md`

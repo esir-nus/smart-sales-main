@@ -1,14 +1,14 @@
 # God Wave 2B Execution Brief
 
-**Status:** L1 Accepted  
-**Date:** 2026-03-24  
-**Wave:** 2B  
-**Mission:** `GattBleGateway.kt` and `DeviceConnectionManager.kt` structural cleanup  
-**Primary Tracker:** `docs/plans/god-tracker.md`  
-**Structure Law:** `docs/specs/code-structure-contract.md`  
-**Current Reading Priority:** Historical execution reference only; not current source of truth.  
-**Current Active Truth:** `docs/plans/god-tracker.md`, `docs/plans/tracker.md`, `docs/specs/code-structure-contract.md`, `docs/cerb/connectivity-bridge/spec.md`, `docs/cerb/connectivity-bridge/interface.md`, `docs/specs/flows/OnboardingFlow.md`  
-**Historical Deprecated Context:** `docs/cerb/sim-connectivity/spec.md`, `docs/cerb/sim-connectivity/interface.md`  
+**Status:** L1 Accepted
+**Date:** 2026-03-24
+**Wave:** 2B
+**Mission:** `GattBleGateway.kt` and `DeviceConnectionManager.kt` structural cleanup
+**Primary Tracker:** `docs/projects/god-file-cleanup/tracker.md`
+**Structure Law:** `docs/specs/code-structure-contract.md`
+**Current Reading Priority:** Historical execution reference only; not current source of truth.
+**Current Active Truth:** `docs/projects/god-file-cleanup/tracker.md`, `docs/plans/tracker.md`, `docs/specs/code-structure-contract.md`, `docs/cerb/connectivity-bridge/spec.md`, `docs/cerb/connectivity-bridge/interface.md`, `docs/specs/flows/OnboardingFlow.md`
+**Historical Deprecated Context:** `docs/cerb/sim-connectivity/spec.md`, `docs/cerb/sim-connectivity/interface.md`
 **Validation Report:** `docs/reports/tests/L1-20260324-god-wave2b-connectivity.md`
 
 ---
@@ -125,7 +125,7 @@ Wave 2B is complete only when:
 
 ## 7. Related Documents
 
-- `docs/plans/god-tracker.md`
+- `docs/projects/god-file-cleanup/tracker.md`
 - `docs/plans/tracker.md`
 - `docs/plans/god-wave2-execution-brief.md`
 - `docs/specs/code-structure-contract.md`

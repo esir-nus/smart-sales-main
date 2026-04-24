@@ -79,7 +79,7 @@ When adding a new lesson (after USER confirms "problem fixed"):
 **File(s)**:
 - `docs/platforms/harmony/test-signing-ledger.md`
 - `platforms/harmony/tingwu-container/hvigorfile.ts`
-- `docs/plans/harmony-tracker.md`
+- `docs/projects/harmony-native/tracker.md`
 **Pattern**: Harmony progress is only real when build proof, signing proof, deploy proof, and runtime proof all belong to the same app identity and the same lane.
 
 ---

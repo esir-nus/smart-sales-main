@@ -25,7 +25,7 @@ Inspected docs:
 - `docs/cerb/interface-map.md`
 - `docs/specs/Architecture.md`
 - `docs/specs/code-structure-contract.md`
-- `docs/plans/god-tracker.md`
+- `docs/projects/god-file-cleanup/tracker.md`
 
 Inspected code:
 

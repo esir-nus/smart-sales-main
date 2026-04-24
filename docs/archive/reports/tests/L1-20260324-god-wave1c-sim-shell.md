@@ -15,7 +15,7 @@ Validate the delivered Wave 1C structural cleanup slice:
 
 ## Source of Truth
 
-- `docs/plans/god-tracker.md`
+- `docs/projects/god-file-cleanup/tracker.md`
 - `docs/plans/god-wave1c-execution-brief.md`
 - `docs/specs/code-structure-contract.md`
 - `docs/core-flow/sim-shell-routing-flow.md`

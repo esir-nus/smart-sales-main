@@ -40,7 +40,7 @@
 **Out of scope** (explicit — do not touch):
 
 - `.claude/commands/**`, `.codex/skills/**` — sprint 03 owns these
-- `docs/plans/tracker.md`, `docs/plans/god-tracker.md`, `docs/plans/harmony-tracker.md`, `docs/plans/ui-tracker.md`, `docs/plans/bug-tracker.md`, the retired lane-registry file — sprint 04 / 05 own these
+- `docs/plans/tracker.md`, `docs/projects/god-file-cleanup/tracker.md`, `docs/projects/harmony-native/tracker.md`, `docs/projects/ui-campaign/tracker.md`, `docs/projects/connectivity-bug-triage/tracker.md`, the retired lane-registry file — sprint 04 / 05 own these
 - `.worktrees/task-route-gate/`, `feat/task-route-gate` — sprint 05
 - Branch cleanup / merging — sprint 06
 - `docs/specs/sprint-contract.md` and `docs/specs/project-structure.md` — landed in sprint 01, do not re-edit

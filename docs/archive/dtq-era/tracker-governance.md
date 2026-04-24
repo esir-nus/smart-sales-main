@@ -7,11 +7,11 @@
 > - `docs/plans/tracker.md`
 > - `docs/specs/platform-governance.md`
 > **Related Docs**:
-> - `docs/plans/harmony-tracker.md`
-> - `docs/plans/harmony-ui-translation-tracker.md`
-> - `docs/plans/god-tracker.md`
-> - `docs/plans/ui-tracker.md`
-> - `docs/plans/bug-tracker.md`
+> - `docs/projects/harmony-native/tracker.md`
+> - `docs/projects/harmony-ui-translation/tracker.md`
+> - `docs/projects/god-file-cleanup/tracker.md`
+> - `docs/projects/ui-campaign/tracker.md`
+> - `docs/projects/connectivity-bug-triage/tracker.md`
 > - `docs/plans/PU-tracker.md`
 > - `docs/plans/dirty-tree-quarantine.md`
 > - `docs/platforms/harmony/tingwu-container.md`
@@ -40,13 +40,13 @@ Rules:
 | Tracker | Owns | Does Not Own |
 |---|---|---|
 | `docs/plans/tracker.md` | Portfolio status, campaign index, branch/governance summary, cross-platform program posture | Feature-local implementation details, bug evidence logs, UI slice mechanics, dirty-lane operations |
-| `docs/plans/god-tracker.md` | Structure cleanup, anti-god-file waves, trunk-shape memory | Visual polish status, generic UI scope, bug triage, branch governance |
-| `docs/plans/ui-tracker.md` | UI campaign state, visual QA posture, active UI slice progress | Structural cleanup ownership, backend/dataflow proof, branch governance |
-| `docs/plans/bug-tracker.md` | Bug evidence, repro history, fix status for its owning bug domain | Generic project backlog or feature progress |
+| `docs/projects/god-file-cleanup/tracker.md` | Structure cleanup, anti-god-file waves, trunk-shape memory | Visual polish status, generic UI scope, bug triage, branch governance |
+| `docs/projects/ui-campaign/tracker.md` | UI campaign state, visual QA posture, active UI slice progress | Structural cleanup ownership, backend/dataflow proof, branch governance |
+| `docs/projects/connectivity-bug-triage/tracker.md` | Bug evidence, repro history, fix status for its owning bug domain | Generic project backlog or feature progress |
 | `docs/plans/PU-tracker.md` | Isolated validation universes and acceptance tasklists | Normal feature implementation progress or bug triage |
 | `docs/plans/dirty-tree-quarantine.md` | Dirty-lane ownership, write-scope quarantine, alignment gating before promotion | Normal shipped feature history |
-| `docs/plans/harmony-tracker.md` | Harmony program summary, bounded-lane capability limits, backend/dataflow evidence posture, restore state across active Harmony roots | Page-by-page ArkUI execution detail, shared product semantics, Android feature truth, generic branch governance outside the Harmony lane |
-| `docs/plans/harmony-ui-translation-tracker.md` | Page-by-page Harmony ArkUI rewrite progress, page pass/fail state, mock-vs-docked readiness, on-device UI evidence | Backend/dataflow proof, shared product-truth changes, branch governance outside the Harmony UI lane |
+| `docs/projects/harmony-native/tracker.md` | Harmony program summary, bounded-lane capability limits, backend/dataflow evidence posture, restore state across active Harmony roots | Page-by-page ArkUI execution detail, shared product semantics, Android feature truth, generic branch governance outside the Harmony lane |
+| `docs/projects/harmony-ui-translation/tracker.md` | Page-by-page Harmony ArkUI rewrite progress, page pass/fail state, mock-vs-docked readiness, on-device UI evidence | Backend/dataflow proof, shared product-truth changes, branch governance outside the Harmony UI lane |
 
 ---
 
@@ -92,13 +92,13 @@ Harmony UI page-lane entries must also carry:
 Route work by ownership question:
 
 - shared product-rule or journey change -> shared docs plus `docs/plans/tracker.md`
-- Android UI polish or transplant slice -> `docs/plans/ui-tracker.md`
-- structure refactor or anti-god-file cleanup -> `docs/plans/god-tracker.md`
-- active bug repro and fix evidence -> `docs/plans/bug-tracker.md`
+- Android UI polish or transplant slice -> `docs/projects/ui-campaign/tracker.md`
+- structure refactor or anti-god-file cleanup -> `docs/projects/god-file-cleanup/tracker.md`
+- active bug repro and fix evidence -> `docs/projects/connectivity-bug-triage/tracker.md`
 - isolated validation universe or acceptance matrix -> `docs/plans/PU-tracker.md`
 - dirty-worktree split, lane collision, or promotion hygiene -> `docs/plans/dirty-tree-quarantine.md`
-- Harmony backend/dataflow slice or Harmony program-summary update -> `docs/plans/harmony-tracker.md`
-- Harmony ArkUI page-native rewrite, page pass, or device UI verification -> `docs/plans/harmony-ui-translation-tracker.md`
+- Harmony backend/dataflow slice or Harmony program-summary update -> `docs/projects/harmony-native/tracker.md`
+- Harmony ArkUI page-native rewrite, page pass, or device UI verification -> `docs/projects/harmony-ui-translation/tracker.md`
 - branch/revert/restore posture -> `docs/plans/tracker.md` plus the owning governance or platform tracker
 
 Execution brief rule:
@@ -156,7 +156,7 @@ Stage 1 covered the first bounded Harmony lane while one tracker entry could sti
 
 Historical rule:
 
-- `docs/plans/harmony-tracker.md` acted as the one primary Harmony tracker
+- `docs/projects/harmony-native/tracker.md` acted as the one primary Harmony tracker
 - each active Harmony entry separated `UI Translation / Native Rewrite` from `Backend / Dataflow Evidence`
 - branch restore posture for the transient Harmony line stayed visible in the master tracker plus the Harmony tracker
 
@@ -171,8 +171,8 @@ Stage 2 is active because Harmony now has two independent active lanes:
 
 Active Stage 2 rule:
 
-- `docs/plans/harmony-tracker.md` stays the Harmony program-summary tracker
-- `docs/plans/harmony-ui-translation-tracker.md` owns ArkUI page execution and page-pass evidence
+- `docs/projects/harmony-native/tracker.md` stays the Harmony program-summary tracker
+- `docs/projects/harmony-ui-translation/tracker.md` owns ArkUI page execution and page-pass evidence
 - `docs/plans/harmony-dataflow-tracker.md` remains deferred until backend rewriting expands beyond the current bounded mini-lab and truly needs its own standing tracker
 - both trackers must keep supported and disabled capability honest and must not imply public parity before the platform can actually deliver it
 

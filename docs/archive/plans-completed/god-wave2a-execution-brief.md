@@ -1,14 +1,14 @@
 # God Wave 2A Execution Brief
 
-**Status:** L1 Accepted  
-**Date:** 2026-03-24  
-**Wave:** 2A  
-**Mission:** `SchedulerLinter.kt` structural cleanup  
-**Primary Tracker:** `docs/plans/god-tracker.md`  
-**Structure Law:** `docs/specs/code-structure-contract.md`  
-**Current Reading Priority:** Historical execution reference only; not current source of truth.  
-**Current Active Truth:** `docs/plans/god-tracker.md`, `docs/plans/tracker.md`, `docs/specs/code-structure-contract.md`, `docs/core-flow/scheduler-fast-track-flow.md`, `docs/core-flow/sim-scheduler-path-a-flow.md`, `docs/cerb/scheduler-path-a-spine/spec.md`, `docs/cerb/scheduler-path-a-uni-a/spec.md`, `docs/cerb/scheduler-path-a-uni-b/spec.md`, `docs/cerb/scheduler-path-a-uni-c/spec.md`, `docs/cerb/scheduler-path-a-uni-d/spec.md`, `docs/cerb-ui/scheduler/contract.md`, `docs/cerb/interface-map.md`  
-**Historical Deprecated Context:** `docs/cerb/sim-scheduler/spec.md`  
+**Status:** L1 Accepted
+**Date:** 2026-03-24
+**Wave:** 2A
+**Mission:** `SchedulerLinter.kt` structural cleanup
+**Primary Tracker:** `docs/projects/god-file-cleanup/tracker.md`
+**Structure Law:** `docs/specs/code-structure-contract.md`
+**Current Reading Priority:** Historical execution reference only; not current source of truth.
+**Current Active Truth:** `docs/projects/god-file-cleanup/tracker.md`, `docs/plans/tracker.md`, `docs/specs/code-structure-contract.md`, `docs/core-flow/scheduler-fast-track-flow.md`, `docs/core-flow/sim-scheduler-path-a-flow.md`, `docs/cerb/scheduler-path-a-spine/spec.md`, `docs/cerb/scheduler-path-a-uni-a/spec.md`, `docs/cerb/scheduler-path-a-uni-b/spec.md`, `docs/cerb/scheduler-path-a-uni-c/spec.md`, `docs/cerb/scheduler-path-a-uni-d/spec.md`, `docs/cerb-ui/scheduler/contract.md`, `docs/cerb/interface-map.md`
+**Historical Deprecated Context:** `docs/cerb/sim-scheduler/spec.md`
 **Validation Report:** `docs/reports/tests/L1-20260324-god-wave2a-scheduler-linter.md`
 
 ---
@@ -110,7 +110,7 @@ Wave 2A is complete only when:
 
 ## 7. Related Documents
 
-- `docs/plans/god-tracker.md`
+- `docs/projects/god-file-cleanup/tracker.md`
 - `docs/plans/tracker.md`
 - `docs/plans/god-wave2-execution-brief.md`
 - `docs/specs/code-structure-contract.md`

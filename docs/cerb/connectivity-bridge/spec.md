@@ -81,7 +81,7 @@ Reference SOP:
 
 Active issue tracker:
 
-- `docs/plans/bug-tracker.md`
+- `docs/projects/connectivity-bug-triage/tracker.md`
 
 Current known blocked hardware signature:
 

@@ -3,7 +3,7 @@
 ## 1. Contract Read
 
 - `docs/plans/user-center-waveb-execution-brief.md`
-- `docs/plans/ui-tracker.md`
+- `docs/projects/ui-campaign/tracker.md`
 - `docs/specs/modules/UserCenter.md`
 - `docs/sops/ui-building.md`
 

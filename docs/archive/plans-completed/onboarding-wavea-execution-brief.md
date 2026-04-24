@@ -75,4 +75,4 @@ If QA finds behavior or spec drift:
 
 ## Closeout Rule
 
-`docs/plans/ui-tracker.md` moves this row from `Visual QA` to `Shipped` only after both the `L1` logic report and the `L3` visual validation report exist.
+`docs/projects/ui-campaign/tracker.md` moves this row from `Visual QA` to `Shipped` only after both the `L1` logic report and the `L3` visual validation report exist.

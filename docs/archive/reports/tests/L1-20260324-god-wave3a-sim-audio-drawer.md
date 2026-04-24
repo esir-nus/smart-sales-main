@@ -3,7 +3,7 @@
 Date: 2026-03-24
 Wave: 3A
 Status: Accepted
-Primary Tracker: `docs/plans/god-tracker.md`
+Primary Tracker: `docs/projects/god-file-cleanup/tracker.md`
 Execution Brief: `docs/plans/god-wave3a-execution-brief.md`
 
 ## Scope
@@ -17,7 +17,7 @@ Validated the Wave 3A structural cleanup for:
 - `docs/core-flow/sim-audio-artifact-chat-flow.md`
 - `docs/cerb/sim-audio-chat/spec.md`
 - `docs/cerb/sim-audio-chat/interface.md`
-- `docs/plans/god-tracker.md`
+- `docs/projects/god-file-cleanup/tracker.md`
 - `docs/specs/code-structure-contract.md`
 
 ## Commands

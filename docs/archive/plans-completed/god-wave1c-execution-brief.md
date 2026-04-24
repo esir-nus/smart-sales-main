@@ -1,11 +1,11 @@
 # God Wave 1C Execution Brief
 
-**Status:** L1 Accepted  
-**Date:** 2026-03-24  
-**Wave:** 1C  
-**Mission:** `SimShell.kt` structural cleanup  
-**Primary Tracker:** `docs/plans/god-tracker.md`  
-**Structure Law:** `docs/specs/code-structure-contract.md`  
+**Status:** L1 Accepted
+**Date:** 2026-03-24
+**Wave:** 1C
+**Mission:** `SimShell.kt` structural cleanup
+**Primary Tracker:** `docs/projects/god-file-cleanup/tracker.md`
+**Structure Law:** `docs/specs/code-structure-contract.md`
 **Validation Report:** `docs/reports/tests/L1-20260324-god-wave1c-sim-shell.md`
 
 ---
@@ -106,8 +106,8 @@ Wave 1C is complete only when:
 
 ## 7. Related Documents
 
-- `docs/plans/god-tracker.md`
+- `docs/projects/god-file-cleanup/tracker.md`
 - `docs/plans/tracker.md`
-- `docs/plans/ui-tracker.md`
+- `docs/projects/ui-campaign/tracker.md`
 - `docs/specs/code-structure-contract.md`
 - `docs/reports/tests/L1-20260324-god-wave1c-sim-shell.md`

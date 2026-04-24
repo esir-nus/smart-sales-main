@@ -3,7 +3,7 @@
 Date: 2026-03-24
 Wave: 2C
 Status: Accepted
-Primary Tracker: `docs/plans/god-tracker.md`
+Primary Tracker: `docs/projects/god-file-cleanup/tracker.md`
 Execution Brief: `docs/plans/god-wave2c-execution-brief.md`
 
 ## Scope

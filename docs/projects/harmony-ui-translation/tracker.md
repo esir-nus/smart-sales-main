@@ -8,7 +8,7 @@
 > - `docs/platforms/harmony/ui-verification.md`
 > - `docs/specs/platform-governance.md`
 > **Related Docs**:
-> - `docs/plans/harmony-tracker.md`
+> - `docs/projects/harmony-native/tracker.md`
 > - `docs/specs/prism-ui-ux-contract.md`
 > - relevant shared `docs/cerb-ui/**` and `docs/core-flow/**` docs for each page
 

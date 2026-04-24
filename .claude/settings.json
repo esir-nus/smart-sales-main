@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "echo \"$CLAUDE_TOOL_INPUT\" | grep -q 'platforms/harmony/smartsales-app' && echo '[TRACKER] Harmony app file modified — check if docs/plans/harmony-tracker.md H-04 Notes/Drift needs updating.' || true"
+            "command": "echo \"$CLAUDE_TOOL_INPUT\" | grep -q 'platforms/harmony/smartsales-app' && echo '[TRACKER] Harmony app file modified — check if docs/projects/harmony-native/tracker.md H-04 Notes/Drift needs updating.' || true"
           }
         ]
       }

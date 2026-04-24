@@ -1,11 +1,11 @@
 # God Wave 2 Execution Brief
 
-**Status:** Wave 2A L1 Accepted / Wave 2B L1 Accepted / Wave 2C L1 Accepted  
-**Date:** 2026-03-24  
-**Wave:** 2  
-**Mission:** secondary business-logic god-file cleanup  
-**Primary Tracker:** `docs/plans/god-tracker.md`  
-**Structure Law:** `docs/specs/code-structure-contract.md`  
+**Status:** Wave 2A L1 Accepted / Wave 2B L1 Accepted / Wave 2C L1 Accepted
+**Date:** 2026-03-24
+**Wave:** 2
+**Mission:** secondary business-logic god-file cleanup
+**Primary Tracker:** `docs/projects/god-file-cleanup/tracker.md`
+**Structure Law:** `docs/specs/code-structure-contract.md`
 **Validation Report:** accepted per subwave
 
 ---
@@ -102,7 +102,7 @@ Planned local structure tests:
 
 Wave 2 is complete only when:
 
-- `docs/plans/god-tracker.md` shows all three Wave 2 targets as accepted rows
+- `docs/projects/god-file-cleanup/tracker.md` shows all three Wave 2 targets as accepted rows
 - `docs/plans/tracker.md` reflects Wave 2C L1 acceptance
 - this umbrella brief and the three subwave briefs remain synced to the delivered support-file shapes
 - each subwave keeps its focused structure test and tracker/contract guardrail coverage green
@@ -111,7 +111,7 @@ Wave 2 is complete only when:
 
 ## 7. Related Documents
 
-- `docs/plans/god-tracker.md`
+- `docs/projects/god-file-cleanup/tracker.md`
 - `docs/plans/tracker.md`
 - `docs/plans/god-wave2a-execution-brief.md`
 - `docs/plans/god-wave2b-execution-brief.md`

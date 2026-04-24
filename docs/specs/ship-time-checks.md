@@ -4,7 +4,7 @@ Sprint contracts own startup discipline and iteration control. This file keeps o
 
 ## 1. Ship-Time Review Scope
 
-`/ship` reviews only files in the declared ship scope for:
+The ship-time operator reviews only files in the declared ship scope for:
 
 - secrets
 - broken imports or missing required files

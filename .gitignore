@@ -154,8 +154,17 @@ AGENTS.md
 # Generated docs artifacts
 CHANGELOG.html
 docs/cerb/dashboard*.html
+docs/projects/dashboard/.serve_dashboard.pid
+.playwright-mcp/
 
 # Plans (internal)
+docs/plans/tracker.md
+
+# Local dashboard review captures
+/after-*.png
+/desktop-*.png
+/mobile-*.png
+/tablet-*.png
 
 # Temporary files
 *.tmp

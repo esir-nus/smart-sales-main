@@ -23,6 +23,9 @@
       --status-stopped: #7c3aed;
       --status-blocked: #b91c1c;
       --status-fallback: #475569;
+      --shell-gutter: clamp(14px, 2vw, 24px);
+      --section-gap: clamp(18px, 2.2vw, 28px);
+      --card-radius: clamp(20px, 2vw, 28px);
     }
 
     * {
@@ -45,16 +48,17 @@
     }
 
     .shell {
-      max-width: 1400px;
+      width: min(1440px, calc(100vw - (var(--shell-gutter) * 2)));
       margin: 0 auto;
-      padding: 32px 20px 72px;
+      padding: clamp(18px, 3vw, 32px) 0 clamp(40px, 7vw, 72px);
     }
 
     .hero {
       display: grid;
-      grid-template-columns: 1.4fr 1fr;
-      gap: 24px;
-      margin-bottom: 28px;
+      grid-template-columns: minmax(0, 1fr) minmax(300px, 1fr);
+      gap: var(--section-gap);
+      margin-bottom: var(--section-gap);
+      align-items: start;
     }
 
     .hero-panel,
@@ -62,13 +66,13 @@
     .project-card {
       background: var(--card);
       border: 1px solid var(--line);
-      border-radius: 28px;
+      border-radius: var(--card-radius);
       box-shadow: var(--shadow);
       backdrop-filter: blur(18px);
     }
 
     .hero-panel {
-      padding: 28px;
+      padding: clamp(20px, 3vw, 30px);
       position: relative;
       overflow: hidden;
     }
@@ -94,17 +98,18 @@
 
     h1 {
       margin: 0 0 10px;
-      font-size: clamp(2rem, 3vw, 3.4rem);
-      line-height: 0.94;
-      max-width: 12ch;
+      font-size: clamp(2rem, 3.6vw, 3.2rem);
+      line-height: 1.02;
+      max-width: 22ch;
+      text-wrap: balance;
     }
 
     .hero-copy {
       margin: 0;
       max-width: 64ch;
       color: var(--muted);
-      font-size: 1rem;
-      line-height: 1.6;
+      font-size: clamp(0.98rem, 1.2vw, 1.08rem);
+      line-height: 1.68;
     }
 
     .generated-at {
@@ -114,10 +119,10 @@
     }
 
     .summary-panel {
-      padding: 22px;
+      padding: clamp(16px, 2.2vw, 22px);
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
+      gap: clamp(12px, 1.6vw, 16px);
       align-content: start;
     }
 
@@ -125,8 +130,8 @@
       background: var(--card-strong);
       border: 1px solid var(--line);
       border-radius: 20px;
-      padding: 16px;
-      min-height: 112px;
+      padding: clamp(14px, 1.8vw, 18px);
+      min-height: 0;
     }
 
     .metric-label {
@@ -138,7 +143,7 @@
     }
 
     .metric-value {
-      font-size: 2rem;
+      font-size: clamp(1.7rem, 3vw, 2.2rem);
       line-height: 1;
       margin-bottom: 8px;
     }
@@ -153,7 +158,7 @@
       display: flex;
       flex-wrap: wrap;
       gap: 10px;
-      margin: 0 0 28px;
+      margin: 0 0 var(--section-gap);
       padding: 0;
       list-style: none;
     }
@@ -167,7 +172,8 @@
       border: 1px solid currentColor;
       background: rgba(255, 255, 255, 0.6);
       font-size: 0.92rem;
-      white-space: nowrap;
+      white-space: normal;
+      line-height: 1.35;
     }
 
     .status-dot {
@@ -179,25 +185,37 @@
 
     .projects {
       display: grid;
-      gap: 22px;
+      gap: var(--section-gap);
     }
 
     .project-card {
-      padding: 24px;
+      padding: clamp(18px, 2.4vw, 26px);
     }
 
     .project-head {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      gap: 16px;
+      gap: clamp(14px, 2vw, 18px);
       margin-bottom: 16px;
+    }
+
+    .project-head > :first-child {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .project-head .status-chip {
+      max-width: min(100%, 40ch);
+      text-align: left;
+      flex-shrink: 0;
     }
 
     .project-title {
       margin: 0 0 8px;
-      font-size: 1.55rem;
+      font-size: clamp(1.35rem, 2vw, 1.7rem);
       line-height: 1.1;
+      text-wrap: balance;
     }
 
     .project-title a {
@@ -214,6 +232,7 @@
       color: var(--muted);
       line-height: 1.58;
       max-width: 76ch;
+      overflow-wrap: anywhere;
     }
 
     .project-meta {
@@ -230,25 +249,27 @@
       background: rgba(255, 255, 255, 0.56);
       color: var(--muted);
       font-size: 0.9rem;
+      line-height: 1.35;
     }
 
     .sprint-grid {
       margin-top: 22px;
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+      gap: clamp(14px, 1.8vw, 18px);
     }
 
     .sprint-card {
       border: 1px solid var(--line);
       border-radius: 22px;
       background: var(--card-strong);
-      padding: 16px;
-      min-height: 220px;
+      padding: clamp(14px, 1.8vw, 18px);
+      min-height: 0;
       display: flex;
       flex-direction: column;
       gap: 12px;
       transition: transform 180ms ease, box-shadow 180ms ease;
+      min-width: 0;
     }
 
     .sprint-card:hover {
@@ -263,6 +284,11 @@
       gap: 12px;
     }
 
+    .sprint-top > :first-child {
+      min-width: 0;
+      flex: 1;
+    }
+
     .sprint-label {
       font-size: 0.76rem;
       text-transform: uppercase;
@@ -275,6 +301,7 @@
       margin: 0;
       font-size: 1.05rem;
       line-height: 1.35;
+      overflow-wrap: anywhere;
     }
 
     .sprint-title a {
@@ -292,16 +319,23 @@
       font-size: 0.94rem;
       line-height: 1.55;
       flex: 1;
+      overflow-wrap: anywhere;
     }
 
     .sprint-footer {
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-start;
       gap: 12px;
       color: var(--muted);
       font-size: 0.9rem;
       margin-top: auto;
+      flex-wrap: wrap;
+    }
+
+    .sprint-footer span {
+      min-width: 0;
+      overflow-wrap: anywhere;
     }
 
     .empty {
@@ -322,35 +356,59 @@
     .status-blocked { color: var(--status-blocked); }
     .status-fallback { color: var(--status-fallback); }
 
+    /* Hero side-by-side, summary-panel wide enough for a single 4-metric row */
+    @media (min-width: 1200px) {
+      .summary-panel {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+    }
+
+    /* Hero stacked; summary goes full-width so 4 metrics fit comfortably in one row */
+    @media (min-width: 560px) and (max-width: 980px) {
+      .summary-panel {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+    }
+
     @media (max-width: 980px) {
       .hero {
         grid-template-columns: 1fr;
       }
 
-      .summary-panel {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+      .project-head {
+        flex-direction: column;
+      }
+
+      .project-head .status-chip {
+        align-self: flex-start;
+        max-width: 100%;
       }
     }
 
     @media (max-width: 640px) {
-      .shell {
-        padding: 18px 14px 42px;
-      }
-
       .hero-panel,
       .summary-panel,
       .project-card {
         border-radius: 22px;
       }
 
-      .summary-panel {
-        grid-template-columns: 1fr;
-      }
-
-      .project-head,
       .sprint-top,
       .sprint-footer {
         flex-direction: column;
+      }
+    }
+
+    @media (max-width: 420px) {
+      h1 {
+        max-width: none;
+      }
+
+      .metric {
+        border-radius: 18px;
+      }
+
+      .sprint-card {
+        border-radius: 18px;
       }
     }
   </style>
@@ -365,7 +423,7 @@
           This view is rebuilt from repo trackers under <code>docs/projects/**</code>. It is meant to answer three questions quickly:
           what projects exist, what sprint tasks sit under them, and what state each one is in right now.
         </p>
-        <div class="generated-at">Generated 2026-04-24 22:53 CST</div>
+        <div class="generated-at">Generated 2026-04-24 23:07 CST</div>
       </article>
       <section class="summary-panel">
         <article class="metric">
@@ -376,11 +434,11 @@
         <article class="metric">
           <div class="metric-label">Sprints</div>
           <div class="metric-value">14</div>
-          <div class="metric-meta">1 active, 12 done</div>
+          <div class="metric-meta">0 active, 13 done</div>
         </article>
         <article class="metric">
           <div class="metric-label">Blocked</div>
-          <div class="metric-value">1</div>
+          <div class="metric-value">0</div>
           <div class="metric-meta">Sprints currently marked blocked</div>
         </article>
         <article class="metric">
@@ -397,9 +455,9 @@
 <li class="status-chip status-planned"><span class="status-dot"></span><span>Planned: 0</span></li>
 <li class="status-chip status-authored"><span class="status-dot"></span><span>Authored: 0</span></li>
 <li class="status-chip status-in-progress"><span class="status-dot"></span><span>In progress: 0</span></li>
-<li class="status-chip status-done"><span class="status-dot"></span><span>Done: 12</span></li>
+<li class="status-chip status-done"><span class="status-dot"></span><span>Done: 13</span></li>
 <li class="status-chip status-stopped"><span class="status-dot"></span><span>Stopped: 0</span></li>
-<li class="status-chip status-blocked"><span class="status-dot"></span><span>Blocked: 1</span></li>
+<li class="status-chip status-blocked"><span class="status-dot"></span><span>Blocked: 0</span></li>
 <li class="status-chip status-fallback"><span class="status-dot"></span><span>Other: 6</span></li>
     </ul>
 
@@ -649,12 +707,12 @@
       <div class="sprint-label">ver-query-handler</div>
       <h3 class="sprint-title"><a href="../firmware-protocol-intake/sprints/04-ver-query-handler.md">Sprint 04 — ver-query-handler</a></h3>
     </div>
-    <span class="status-chip status-blocked">
+    <span class="status-chip status-done">
       <span class="status-dot"></span>
-      <span>blocked</span>
+      <span>done</span>
     </span>
   </div>
-  <p class="sprint-summary">Implemented `Ver#get` -&gt; `Ver#...` through parser -&gt; bridge -&gt; `ConnectivityViewModel.firmwareVersion`, with auto-query-on-connect and a UserCenter refresh row; sandbox blocked Gradle verification and the close commit</p>
+  <p class="sprint-summary">Implemented `Ver#get` -&gt; `Ver#...` through parser -&gt; bridge -&gt; `ConnectivityViewModel.firmwareVersion`, with auto-query-on-connect and a UserCenter refresh row; verified with focused `:app-core:testDebugUnitTest` coverage plus `:app:assembleDebug`</p>
   <div class="sprint-footer">
     <span>firmware-protocol-intake / sprint 04</span>
     <span>sprints/04-ver-query-handler.md</span>

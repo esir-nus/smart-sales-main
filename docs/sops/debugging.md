@@ -49,7 +49,7 @@ Procedure:
 4. If missing: run `git branch -a --contains <commit>` to see where the commit actually lives.
 5. Check the device build's version stamp (`Settings → About`, or `adb shell dumpsys package <id> | grep versionName`) against the commit you expect. Divergence means the device is running a different branch than the user assumes.
 
-Only after confirming the commit is in HEAD should you start reading code for a regression. A "missing feature" with the commit not in HEAD is an integration gap, not a code bug — jump to the `/merge` or worktree path instead of writing new code.
+Only after confirming the commit is in HEAD should you start reading code for a regression. A "missing feature" with the commit not in HEAD is an integration gap, not a code bug — jump to the `/push` or worktree path instead of writing new code.
 
 Rationale: diagnosed 2026-04-20 when a user-reported missing Wi-Fi repair modal was traced to a coalition feature branch never merged into the installed branch. Eight hours of intermittent investigation shortened to thirty seconds once ancestry was checked first.
 

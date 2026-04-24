@@ -21,6 +21,10 @@ internal class DeviceConnectionManagerRuntime {
         replay = 0,
         extraBufferCapacity = 3
     )
+    val firmwareVersionEvents = MutableSharedFlow<String>(
+        replay = 0,
+        extraBufferCapacity = 3
+    )
     val repairEvents = MutableSharedFlow<WifiRepairEvent>(
         replay = 0,
         extraBufferCapacity = 16

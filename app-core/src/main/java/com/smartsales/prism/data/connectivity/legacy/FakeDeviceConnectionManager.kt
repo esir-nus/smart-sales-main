@@ -24,6 +24,11 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
         MutableSharedFlow<String>(replay = 0).asSharedFlow()
     override val batteryEvents: SharedFlow<Int> =
         MutableSharedFlow<Int>(replay = 0).asSharedFlow()
+    private val _firmwareVersionEvents = MutableSharedFlow<String>(
+        replay = 0,
+        extraBufferCapacity = 1
+    )
+    override val firmwareVersionEvents: SharedFlow<String> = _firmwareVersionEvents.asSharedFlow()
 
     private val _wifiRepairEvents = MutableSharedFlow<WifiRepairEvent>(
         replay = 0,
@@ -135,6 +140,13 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
         voiceVolumeCalls.add(level.coerceIn(0, 100))
         return setVoiceVolumeShouldSucceed
     }
+
+    var requestFirmwareVersionCalls = 0
+    var requestFirmwareVersionShouldSucceed = true
+    override suspend fun requestFirmwareVersion(): Boolean {
+        requestFirmwareVersionCalls++
+        return requestFirmwareVersionShouldSucceed
+    }
     
     fun setState(newState: ConnectionState) {
         _state.value = newState
@@ -142,6 +154,10 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
 
     suspend fun emitRecordingReadyEvent(filename: String) {
         _recordingReadyEvents.emit(filename)
+    }
+
+    suspend fun emitFirmwareVersion(version: String) {
+        _firmwareVersionEvents.emit(version)
     }
     
     fun reset() {
@@ -157,5 +173,6 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
         queryNetworkStatusCalls = 0
         notifyTaskCreatedCalls = 0
         notifyTaskFiredCalls = 0
+        requestFirmwareVersionCalls = 0
     }
 }

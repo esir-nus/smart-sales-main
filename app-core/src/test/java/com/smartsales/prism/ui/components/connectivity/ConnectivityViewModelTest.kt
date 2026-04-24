@@ -145,6 +145,40 @@ class ConnectivityViewModelTest {
     }
 
     @Test
+    fun `firmwareVersion auto-requests on connect and resets on disconnect`() = runTest {
+        val bridge = FakeConnectivityBridge()
+        val viewModel = createViewModel(bridge = bridge)
+        advanceUntilIdle()
+
+        assertNull(viewModel.firmwareVersion.value)
+        assertEquals(0, bridge.requestFirmwareVersionCalls)
+
+        bridge.setConnectionState(BadgeConnectionState.Connected("192.168.0.9", "MstRobot"))
+        advanceUntilIdle()
+        assertEquals(1, bridge.requestFirmwareVersionCalls)
+
+        bridge.emitFirmwareVersion("1.0.0.1")
+        advanceUntilIdle()
+        assertEquals("1.0.0.1", viewModel.firmwareVersion.value)
+
+        bridge.setConnectionState(BadgeConnectionState.Disconnected)
+        advanceUntilIdle()
+        assertNull(viewModel.firmwareVersion.value)
+    }
+
+    @Test
+    fun `requestFirmwareVersion forwards manual refresh to bridge`() = runTest {
+        val bridge = FakeConnectivityBridge()
+        val viewModel = createViewModel(bridge = bridge)
+        advanceUntilIdle()
+
+        viewModel.requestFirmwareVersion()
+        advanceUntilIdle()
+
+        assertEquals(1, bridge.requestFirmwareVersionCalls)
+    }
+
+    @Test
     fun `managerState lets active reconnect override paired offline diagnostic state`() = runTest {
         val bridge = FakeConnectivityBridge(
             connection = BadgeConnectionState.Disconnected,
@@ -544,9 +578,14 @@ class ConnectivityViewModelTest {
             replay = 0,
             extraBufferCapacity = 4
         )
+        private val _firmwareVersionNotifications = MutableSharedFlow<String>(
+            replay = 0,
+            extraBufferCapacity = 4
+        )
 
         override val connectionState: StateFlow<BadgeConnectionState> = _connectionState.asStateFlow()
         override val managerStatus: StateFlow<BadgeManagerStatus> = _managerStatus.asStateFlow()
+        var requestFirmwareVersionCalls = 0
 
         override suspend fun downloadRecording(
             filename: String,
@@ -564,15 +603,28 @@ class ConnectivityViewModelTest {
 
         override fun batteryNotifications(): Flow<Int> = _batteryNotifications
 
+        override fun firmwareVersionNotifications(): Flow<String> = _firmwareVersionNotifications
+
         override suspend fun isReady(): Boolean = false
 
         override suspend fun deleteRecording(filename: String): Boolean = false
+
+        override suspend fun requestFirmwareVersion(): Boolean {
+            requestFirmwareVersionCalls += 1
+            return true
+        }
 
         override fun wifiRepairEvents(): Flow<WifiRepairEvent> = _repairEvents
 
         suspend fun emitRepairEvent(event: WifiRepairEvent) = _repairEvents.emit(event)
 
         suspend fun emitBatteryLevel(level: Int) = _batteryNotifications.emit(level)
+
+        suspend fun emitFirmwareVersion(version: String) = _firmwareVersionNotifications.emit(version)
+
+        fun setConnectionState(state: BadgeConnectionState) {
+            _connectionState.value = state
+        }
     }
 
     private class FakeConnectivityService(

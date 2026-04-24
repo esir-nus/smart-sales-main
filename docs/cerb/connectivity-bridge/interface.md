@@ -74,6 +74,18 @@ interface ConnectivityBridge {
      * @see esp32-protocol.md §9
      */
     fun batteryNotifications(): Flow<Int>
+
+    /**
+     * Stream of firmware-version replies from badge.
+     *
+     * Current production path: app sends BLE `Ver#get`; badge replies
+     * `Ver#<project>.<major>.<minor>.<feature>` on the persistent
+     * notification characteristic.
+     *
+     * @return Flow (hot, buffered, no replay)
+     * @see esp32-protocol.md §10
+     */
+    fun firmwareVersionNotifications(): Flow<String>
     
     /**
      * Check if badge is connected and reachable.
@@ -88,6 +100,13 @@ interface ConnectivityBridge {
      * Reuses the current runtime endpoint unless that snapshot has been invalidated.
      */
     suspend fun deleteRecording(filename: String): Boolean
+
+    /**
+     * Request the badge firmware version over BLE.
+     *
+     * Sends `Ver#get` as a best-effort query on the active session.
+     */
+    suspend fun requestFirmwareVersion(): Boolean
 }
 ```
 
@@ -190,8 +209,10 @@ sealed class WifiConfigResult {
 | `listRecordings` | Reuses the active runtime endpoint; no repeated BLE Wi‑Fi query in the normal happy path |
 | `recordingNotifications` | Hot flow, buffered (1), no replay |
 | `batteryNotifications` | Hot flow, buffered, no replay; forwards unsolicited BLE `Bat#<0..100>` pushes as integer percent |
+| `firmwareVersionNotifications` | Hot flow, buffered, no replay; forwards `Ver#...` replies from the badge as display-ready strings |
 | `isReady()` | Pre-flight check with 3s timeout; may refresh endpoint only when the active snapshot is missing or invalidated |
 | `deleteRecording` | Idempotent, returns true if file removed or didn't exist; reuses the active runtime endpoint when valid |
+| `requestFirmwareVersion()` | Best-effort BLE query; sends `Ver#get` on the active session and returns whether the request was queued successfully |
 | `updateWifiConfig` | Rejects blank/whitespace-only SSID or password before any BLE provision/write attempt |
 
 `BadgeConnectionState.Connected` means the badge session is actually usable:

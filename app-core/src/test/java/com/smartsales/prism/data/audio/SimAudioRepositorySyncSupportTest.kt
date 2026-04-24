@@ -554,6 +554,8 @@ class SimAudioRepositorySyncSupportTest {
 
         override fun batteryNotifications(): Flow<Int> = emptyFlow()
 
+        override fun firmwareVersionNotifications(): Flow<String> = emptyFlow()
+
         override suspend fun isReady(): Boolean {
             calls += "isReady"
             return isReadyResult
@@ -562,6 +564,11 @@ class SimAudioRepositorySyncSupportTest {
         override suspend fun deleteRecording(filename: String): Boolean {
             calls += "deleteRecording:$filename"
             return deleteRecordingResults[filename] ?: true
+        }
+
+        override suspend fun requestFirmwareVersion(): Boolean {
+            calls += "requestFirmwareVersion"
+            return false
         }
 
         override fun wifiRepairEvents(): kotlinx.coroutines.flow.Flow<com.smartsales.prism.domain.connectivity.WifiRepairEvent> =

@@ -86,9 +86,13 @@ class RealBadgeAudioPipelineIngressTest {
 
         override fun batteryNotifications(): Flow<Int> = emptyFlow()
 
+        override fun firmwareVersionNotifications(): Flow<String> = emptyFlow()
+
         override suspend fun isReady(): Boolean = true
 
         override suspend fun deleteRecording(filename: String): Boolean = true
+
+        override suspend fun requestFirmwareVersion(): Boolean = false
 
         override fun wifiRepairEvents(): Flow<com.smartsales.prism.domain.connectivity.WifiRepairEvent> =
             emptyFlow()

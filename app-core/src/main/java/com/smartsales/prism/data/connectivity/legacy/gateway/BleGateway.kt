@@ -99,6 +99,9 @@ sealed class BadgeNotification {
     /** 徽章主动推送电量 (Bat#0..100) */
     data class BatteryLevel(val percent: Int) : BadgeNotification()
 
+    /** 徽章返回固件版本 (Ver#<project>.<major>.<minor>.<feature>) */
+    data class FirmwareVersion(val version: String) : BadgeNotification()
+
     /** 未识别的命令 */
     data class Unknown(val raw: String) : BadgeNotification()
 }

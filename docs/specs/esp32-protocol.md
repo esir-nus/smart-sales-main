@@ -28,7 +28,7 @@ Communication happens via:
 | 8 | Audio Recording Ready (drawer) | ✅ Implemented | BLE `rec#...` -> `ConnectivityBridge.audioRecordingNotifications()` -> `SimBadgeAudioAutoDownloader` |
 | 9 | Voice Volume Control | ✅ Implemented | `DeviceConnectionManager.setBadgeVolume()` -> `badgeGateway.sendBadgeSignal(session, "volume#$clamped")` |
 | 10 | Battery Level Push | ✅ Implemented | BLE `Bat#...` -> `ConnectivityBridge.batteryNotifications()` -> `ConnectivityViewModel.batteryLevel` |
-| 11 | Firmware Version Query | ⏳ Pending app-side wiring | App-initiated query `Ver#get` -> badge reply `Ver#<project>.<major>.<minor>.<feature>`; handler not yet implemented |
+| 11 | Firmware Version Query | ✅ Implemented | `ConnectivityViewModel` auto-queries on connect and UserCenter refresh; reply flows via `ConnectivityBridge.firmwareVersionNotifications()` |
 | 12 | Task Completion Signal | ⏳ Pending app-side wiring | App -> badge `Command#end` after short/long recording transcription-analysis completes; emitter not yet wired |
 | 13 | SD Card Space Query | ⏳ Pending app-side wiring | App-initiated query `SD#space` -> badge reply `SD#space#<size>` (e.g., `SD#space#27.23GB`); handler not yet implemented |
 
@@ -220,7 +220,12 @@ Badge sends:  Ver#<project>.<major>.<minor>.<feature>    (e.g., Ver#1.0.0.1)
 - `minor` — module-level functional enhancement
 - `feature` — small changes, typically defect fixes
 
-**App-side contract**: handler not yet implemented. When wired, it should follow the `tim#get` query/reply pattern for BLE round-trips and store the resulting version on a badge-identity seam (likely `ConnectivityViewModel` or a new `BadgeFirmwareInfo` holder). Distinct from the HTTP `GET /` `version` field, which reports the webserver version and not the badge firmware version.
+**App-side contract**:
+- App sends `Ver#get` through `DeviceConnectionManager.requestFirmwareVersion()`
+- Badge reply is parsed by `GattBleGatewayProtocolSupport.parseBadgeNotificationPayload()` as `BadgeNotification.FirmwareVersion`
+- The shipped call chain is `DeviceConnectionManager.firmwareVersionEvents` -> `RealConnectivityBridge.firmwareVersionNotifications()` -> `ConnectivityViewModel.firmwareVersion`
+- `ConnectivityViewModel` auto-requests on a fresh `Connected` transition, resets the state back to `null` on disconnect, and UserCenter exposes a manual refresh affordance
+- Distinct from the HTTP `GET /` `version` field, which reports the webserver version and not the badge firmware version
 
 ### 11. Task Completion Signal
 

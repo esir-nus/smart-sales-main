@@ -78,6 +78,10 @@ class ConnectivityViewModel @Inject constructor(
             initialValue = null
         )
 
+    // 固件版本 — 在首个 Ver# 响应前保持 null，以区分“尚未查询”和真实版本号
+    private val _firmwareVersion = MutableStateFlow<String?>(null)
+    val firmwareVersion: StateFlow<String?> = _firmwareVersion.asStateFlow()
+
     private val _wifiMismatchSuggestedSsid = MutableStateFlow<String?>(null)
     val wifiMismatchSuggestedSsid: StateFlow<String?> = _wifiMismatchSuggestedSsid.asStateFlow()
     private val _wifiMismatchErrorMessage = MutableStateFlow<String?>(null)
@@ -182,6 +186,23 @@ class ConnectivityViewModel @Inject constructor(
                     // TargetSsidObserved — 无独立 UI 状态变化，保持当前
                     else -> _repairState.value
                 }
+            }
+        }
+        viewModelScope.launch {
+            connectivityBridge.firmwareVersionNotifications().collect { version ->
+                _firmwareVersion.value = version
+            }
+        }
+        viewModelScope.launch {
+            var wasConnected = false
+            connectivityBridge.connectionState.collect { badgeState ->
+                val isConnected = badgeState is BadgeConnectionState.Connected
+                if (isConnected && !wasConnected) {
+                    requestFirmwareVersion()
+                } else if (!isConnected) {
+                    _firmwareVersion.value = null
+                }
+                wasConnected = isConnected
             }
         }
     }
@@ -296,6 +317,12 @@ class ConnectivityViewModel @Inject constructor(
         viewModelScope.launch {
             connectivityService.disconnect()
             // disconnectBle() keeps session → state naturally becomes Disconnected
+        }
+    }
+
+    fun requestFirmwareVersion() {
+        viewModelScope.launch {
+            connectivityBridge.requestFirmwareVersion()
         }
     }
 

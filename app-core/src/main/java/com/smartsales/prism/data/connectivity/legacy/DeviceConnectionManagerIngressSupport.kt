@@ -36,6 +36,10 @@ internal class DeviceConnectionManagerIngressSupport(
                             ConnectivityLogger.d("🔋 Badge battery update: ${event.percent}")
                             runtime.batteryEvents.tryEmit(event.percent)
                         }
+                        is BadgeNotification.FirmwareVersion -> {
+                            ConnectivityLogger.i("🧾 Badge firmware version: ${event.version}")
+                            runtime.firmwareVersionEvents.tryEmit(event.version)
+                        }
                         is BadgeNotification.TimeSyncRequested -> {
                             ConnectivityLogger.d("⏰ Badge time sync requested")
                         }

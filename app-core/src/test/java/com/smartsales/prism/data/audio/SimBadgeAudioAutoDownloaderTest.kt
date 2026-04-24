@@ -142,9 +142,13 @@ class SimBadgeAudioAutoDownloaderTest {
 
         override fun batteryNotifications(): Flow<Int> = emptyFlow()
 
+        override fun firmwareVersionNotifications(): Flow<String> = emptyFlow()
+
         override suspend fun isReady(): Boolean = true
 
         override suspend fun deleteRecording(filename: String): Boolean = true
+
+        override suspend fun requestFirmwareVersion(): Boolean = false
 
         override fun wifiRepairEvents(): kotlinx.coroutines.flow.Flow<com.smartsales.prism.domain.connectivity.WifiRepairEvent> =
             kotlinx.coroutines.flow.emptyFlow()

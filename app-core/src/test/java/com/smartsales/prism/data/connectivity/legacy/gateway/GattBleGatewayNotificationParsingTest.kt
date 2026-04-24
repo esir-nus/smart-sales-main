@@ -50,6 +50,30 @@ class GattBleGatewayNotificationParsingTest {
     }
 
     @Test
+    fun `parseBadgeNotificationPayload maps valid Ver payload to firmware version`() {
+        assertEquals(
+            BadgeNotification.FirmwareVersion("1.0.0.1"),
+            parseBadgeNotificationPayload(" Ver#1.0.0.1 ")
+        )
+        assertEquals(
+            BadgeNotification.FirmwareVersion("1.0.0"),
+            parseBadgeNotificationPayload("Ver#1.0.0")
+        )
+    }
+
+    @Test
+    fun `parseBadgeNotificationPayload preserves invalid Ver payloads as unknown`() {
+        val cases = listOf("Ver#", "Ver#get")
+
+        cases.forEach { payload ->
+            assertEquals(
+                BadgeNotification.Unknown(payload),
+                parseBadgeNotificationPayload(payload)
+            )
+        }
+    }
+
+    @Test
     fun `parseBadgeNotificationPayload preserves unknown command`() {
         val notification = parseBadgeNotificationPayload("wifi#address#0.0.0.0")
         assertEquals(

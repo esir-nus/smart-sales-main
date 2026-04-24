@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Public
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.HorizontalDivider
@@ -76,6 +77,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.smartsales.prism.domain.memory.UserProfile
+import com.smartsales.prism.ui.components.connectivity.ConnectivityViewModel
 import com.smartsales.prism.ui.components.PrismStatusBarTopSafeArea
 import com.smartsales.prism.ui.components.prismNavigationBarPadding
 import com.smartsales.prism.ui.theme.PrismThemeDefaults
@@ -87,12 +89,14 @@ import com.smartsales.prism.ui.theme.toDisplayLabel
 @Composable
 fun UserCenterScreen(
     onClose: () -> Unit,
-    viewModel: UserCenterViewModel = hiltViewModel()
+    viewModel: UserCenterViewModel = hiltViewModel(),
+    connectivityViewModel: ConnectivityViewModel = hiltViewModel()
 ) {
     val colors = PrismThemeDefaults.colors
     val isDarkTheme = PrismThemeDefaults.isDarkTheme
     val profile by viewModel.profile.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+    val firmwareVersion by connectivityViewModel.firmwareVersion.collectAsStateWithLifecycle()
     var isEditing by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
 
@@ -213,7 +217,13 @@ fun UserCenterScreen(
                                     value = voiceVolume,
                                     onValueChange = viewModel::onVoiceVolumeDrag,
                                     onValueChangeFinished = viewModel::onVoiceVolumeCommitted,
-                                    showDivider = false
+                                    showDivider = true
+                                )
+                                UserCenterRefreshInfoRow(
+                                    label = "Badge firmware",
+                                    value = firmwareVersion?.let { "Ver. $it" } ?: "Ver. —",
+                                    showDivider = false,
+                                    onRefresh = connectivityViewModel::requestFirmwareVersion
                                 )
                             }
                         }
@@ -673,6 +683,33 @@ private fun UserCenterInfoRow(
         value = value,
         onClick = null,
         showDivider = showDivider
+    )
+}
+
+@Composable
+private fun UserCenterRefreshInfoRow(
+    label: String,
+    value: String,
+    showDivider: Boolean,
+    onRefresh: () -> Unit
+) {
+    val colors = PrismThemeDefaults.colors
+    UserCenterRow(
+        label = label,
+        leadingIcon = Icons.Default.Info,
+        value = value,
+        onClick = null,
+        showDivider = showDivider,
+        rightContent = {
+            Icon(
+                imageVector = Icons.Default.Refresh,
+                contentDescription = "Refresh firmware version",
+                tint = colors.accentBlue,
+                modifier = Modifier
+                    .size(16.dp)
+                    .clickable(onClick = onRefresh)
+            )
+        }
     )
 }
 

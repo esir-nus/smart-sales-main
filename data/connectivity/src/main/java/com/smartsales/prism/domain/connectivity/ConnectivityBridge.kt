@@ -74,6 +74,13 @@ interface ConnectivityBridge {
      * Badge 通过 BLE 发送 `Bat#<0..100>` 时触发。
      */
     fun batteryNotifications(): Flow<Int>
+
+    /**
+     * 固件版本通知流。
+     *
+     * Badge 返回 `Ver#<project>.<major>.<minor>.<feature>` 时触发。
+     */
+    fun firmwareVersionNotifications(): Flow<String>
     
     /**
      * 检查 Badge 是否就绪
@@ -93,6 +100,13 @@ interface ConnectivityBridge {
      * @return true 如果文件已删除或不存在（幂等）
      */
     suspend fun deleteRecording(filename: String): Boolean
+
+    /**
+     * 主动请求徽章固件版本。
+     *
+     * 发送 BLE `Ver#get`，成功入队返回 true。
+     */
+    suspend fun requestFirmwareVersion(): Boolean
 
     /**
      * Wi-Fi 修复流程细粒度事件流。

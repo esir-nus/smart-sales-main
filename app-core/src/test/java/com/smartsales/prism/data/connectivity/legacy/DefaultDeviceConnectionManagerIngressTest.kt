@@ -160,6 +160,76 @@ class DefaultDeviceConnectionManagerIngressTest {
     }
 
     @Test
+    fun `firmware version event emits parsed version`() = runTest {
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("MstRobot", "secret")
+            )
+        }
+        val manager = newManager(
+            gateway = gateway,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            networkResult = Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "192.168.0.9",
+                    deviceWifiName = "MstRobot",
+                    phoneWifiName = "MstRobot",
+                    rawResponse = "IP#192.168.0.9, SD#MstRobot"
+                )
+            )
+        )
+        val recorded = backgroundScope.async {
+            manager.firmwareVersionEvents.first()
+        }
+
+        manager.reconnectAndWait()
+        advanceUntilIdle()
+        gateway.emit(BadgeNotification.FirmwareVersion("1.0.0.1"))
+        advanceUntilIdle()
+
+        assertEquals("1.0.0.1", recorded.await())
+    }
+
+    @Test
+    fun `requestFirmwareVersion sends Ver get signal when ble is connected`() = runTest {
+        val badgeGateway = FakeBleGateway()
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("MstRobot", "secret")
+            )
+        }
+        val manager = newManager(
+            gateway = gateway,
+            badgeGateway = badgeGateway,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            networkResult = Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "192.168.0.9",
+                    deviceWifiName = "MstRobot",
+                    phoneWifiName = "MstRobot",
+                    rawResponse = "IP#192.168.0.9, SD#MstRobot"
+                )
+            )
+        )
+
+        manager.reconnectAndWait()
+        advanceUntilIdle()
+
+        assertTrue(manager.requestFirmwareVersion())
+        assertEquals(1, badgeGateway.badgeSignalCalls.size)
+        assertEquals("badge-1", badgeGateway.badgeSignalCalls.single().first.peripheralId)
+        assertEquals("Ver#get", badgeGateway.badgeSignalCalls.single().second)
+    }
+
+    @Test
     fun `reconnectAndWait keeps ble held offline diagnostic when network reports no ip`() = runTest {
         val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
         val monitor = FakeBadgeStateMonitor()

@@ -222,7 +222,11 @@ class RealConnectivityBridge @Inject constructor(
         audioRecordingNotificationsFlow.asSharedFlow()
 
     override fun batteryNotifications(): Flow<Int> = deviceManager.batteryEvents
-    
+
+    override fun firmwareVersionNotifications(): Flow<String> = deviceManager.firmwareVersionEvents
+
+    override suspend fun requestFirmwareVersion(): Boolean = deviceManager.requestFirmwareVersion()
+
     
     override suspend fun isReady(): Boolean {
         android.util.Log.d(TAG, "🔎 isReady preflight: start")

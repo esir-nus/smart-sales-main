@@ -112,6 +112,29 @@ class RealConnectivityBridgeTest {
     }
 
     @Test
+    fun `firmwareVersionNotifications forwards manager version events`() = runTest {
+        val manager = FakeDeviceConnectionManager()
+        val bridge = newBridge(manager, mock(), FakeBadgeStateMonitor())
+        val recorded = backgroundScope.async(start = CoroutineStart.UNDISPATCHED) {
+            bridge.firmwareVersionNotifications().first()
+        }
+
+        manager.emitFirmwareVersion("1.0.0.1")
+        advanceUntilIdle()
+
+        assertEquals("1.0.0.1", recorded.await())
+    }
+
+    @Test
+    fun `requestFirmwareVersion delegates to device manager`() = runTest {
+        val manager = FakeDeviceConnectionManager()
+        val bridge = newBridge(manager, mock(), FakeBadgeStateMonitor())
+
+        assertEquals(true, bridge.requestFirmwareVersion())
+        assertEquals(1, manager.requestFirmwareVersionCalls)
+    }
+
+    @Test
     fun `managerStatus refines disconnected into ble paired network unknown`() = runTest {
         val manager = FakeDeviceConnectionManager()
         val monitor = FakeBadgeStateMonitor()

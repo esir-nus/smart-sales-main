@@ -43,6 +43,11 @@ interface DeviceConnectionManager {
     val batteryEvents: SharedFlow<Int>
 
     /**
+     * Badge 固件版本通知流 — Badge 返回 Ver#<project>.<major>.<minor>.<feature> 时触发
+     */
+    val firmwareVersionEvents: SharedFlow<String>
+
+    /**
      * Wi-Fi 修复流程细粒度事件流。
      * Hot flow，replay=0，仅在 confirmManualWifiProvision() 窗口内发射。
      */
@@ -89,6 +94,12 @@ interface DeviceConnectionManager {
      * 若 BLE 未连接或写入失败，静默忽略。
      */
     suspend fun setVoiceVolume(level: Int): Boolean
+
+    /**
+     * 请求徽章返回固件版本，payload 为 "Ver#get"。
+     * 若 BLE 未连接或写入失败，静默忽略。
+     */
+    suspend fun requestFirmwareVersion(): Boolean
 }
 
 @Singleton
@@ -136,6 +147,7 @@ class DefaultDeviceConnectionManager @Inject constructor(
     override val recordingReadyEvents: SharedFlow<String> = runtime.recordingReadyEvents.asSharedFlow()
     override val audioRecordingReadyEvents: SharedFlow<String> = runtime.audioRecordingReadyEvents.asSharedFlow()
     override val batteryEvents: SharedFlow<Int> = runtime.batteryEvents.asSharedFlow()
+    override val firmwareVersionEvents: SharedFlow<String> = runtime.firmwareVersionEvents.asSharedFlow()
     override val wifiRepairEvents: SharedFlow<WifiRepairEvent> = runtime.repairEvents.asSharedFlow()
 
     init {
@@ -224,6 +236,19 @@ class DefaultDeviceConnectionManager @Inject constructor(
             return true
         } catch (ex: Exception) {
             ConnectivityLogger.w("🔊 Badge volume send failed (non-fatal): ${ex.message}")
+            return false
+        }
+    }
+
+    override suspend fun requestFirmwareVersion(): Boolean {
+        val session = connectionSupport.currentSessionOrNull() ?: return false
+        if (!badgeStateMonitor.status.value.bleConnected) return false
+        try {
+            badgeGateway.sendBadgeSignal(session, "Ver#get")
+            ConnectivityLogger.i("🧾 Badge firmware version query sent")
+            return true
+        } catch (ex: Exception) {
+            ConnectivityLogger.w("🧾 Badge firmware version query failed (non-fatal): ${ex.message}")
             return false
         }
     }

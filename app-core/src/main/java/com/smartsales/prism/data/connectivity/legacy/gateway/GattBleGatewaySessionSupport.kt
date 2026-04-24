@@ -735,6 +735,7 @@ internal class GatewayGattCallback(
                 is BadgeNotification.RecordingReady -> flow.tryEmit(notification)
                 is BadgeNotification.AudioRecordingReady -> flow.tryEmit(notification)
                 is BadgeNotification.BatteryLevel -> flow.tryEmit(notification)
+                is BadgeNotification.FirmwareVersion -> flow.tryEmit(notification)
                 is BadgeNotification.Unknown -> flow.tryEmit(notification)
                 null -> Unit
             }

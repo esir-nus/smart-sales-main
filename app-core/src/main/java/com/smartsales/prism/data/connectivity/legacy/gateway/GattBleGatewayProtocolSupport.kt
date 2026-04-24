@@ -119,8 +119,17 @@ internal fun parseBadgeNotificationPayload(rawPayload: String): BadgeNotificatio
             if (percent == null || percent !in 0..100) BadgeNotification.Unknown(raw)
             else BadgeNotification.BatteryLevel(percent)
         }
+        raw.startsWith("Ver#", ignoreCase = true) -> {
+            val version = raw.substringAfter('#', missingDelimiterValue = "").trim()
+            if (isFirmwareVersionPayload(version)) BadgeNotification.FirmwareVersion(version)
+            else BadgeNotification.Unknown(raw)
+        }
         else -> BadgeNotification.Unknown(raw)
     }
+}
+
+private fun isFirmwareVersionPayload(version: String): Boolean {
+    return version.isNotBlank() && !version.equals("get", ignoreCase = true)
 }
 
 internal fun mergeNetworkFragments(rawResponses: List<String>): DeviceNetworkStatus {

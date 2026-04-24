@@ -282,8 +282,10 @@ class L2DualEngineBridgeTest {
             override fun audioRecordingNotifications() =
                 kotlinx.coroutines.flow.emptyFlow<com.smartsales.prism.domain.connectivity.RecordingNotification.AudioRecordingReady>()
             override fun batteryNotifications() = kotlinx.coroutines.flow.emptyFlow<Int>()
+            override fun firmwareVersionNotifications() = kotlinx.coroutines.flow.emptyFlow<String>()
             override suspend fun isReady() = true
             override suspend fun deleteRecording(filename: String) = true
+            override suspend fun requestFirmwareVersion() = false
             override fun wifiRepairEvents() =
                 kotlinx.coroutines.flow.emptyFlow<com.smartsales.prism.domain.connectivity.WifiRepairEvent>()
         }

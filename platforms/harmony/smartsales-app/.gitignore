@@ -1,0 +1,15 @@
+# Auto-generated config (built from local.properties by hvigorfile.ts)
+entry/src/main/ets/config/AppConfig.local.ets
+
+# Harmony build outputs
+build/
+.cxx/
+entry/build/
+
+# IDE files
+.idea/
+*.iml
+
+# Node modules (hvigor dependencies)
+node_modules/
+oh_modules/

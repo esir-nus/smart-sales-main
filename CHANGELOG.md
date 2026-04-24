@@ -5,6 +5,7 @@
 ### 2026-04-24
 
 - **[维护] workflow-renovation 治理收口完成** — 将剩余鸿蒙OS原生分支改动收拢到 `platform/harmony`，为历史分支打上 `archive/*-20260424` 标签，并清理已淘汰的分支与工作树引用。
+- **[维护] 固件协议 intake 文档建档** — 新建 `firmware-protocol-intake` 项目与 Bat# 监听、电量 UI 两个 sprint 合同，并同步更新 `docs/specs/esp32-protocol.md` 与接口图，补齐 Bat#、volume#、Ver# 协议文档基线。
 - **[新增] 徽章电量推送实时接入 (Bat#)** — 新增 `ConnectivityBridge.batteryNotifications(): Flow<Int>` 并接入 `ConnectivityViewModel.batteryLevel`，替换硬编码占位值；`Bat#<0..100>` 通知现在驱动真实电量读数。
 - **[新增] 电量 UI 区分"未收到"与真实读数** — `batteryLevel` 升为 `StateFlow<Int?>`，初始值 `null`；连接面板、历史抽屉和动态岛在首次推送前显示 `--%`，动态岛侧边栏电量芯片隐藏直至收到读数。
 - **[修复] 徽章录音文件名 .wav 后缀归一化** — 修复 `log#`/`rec#` 载荷含 `.wav` 后缀时遗漏磁盘前缀的问题；新旧固件两种格式均归一化为 `log_<ts>.wav` / `rec_<ts>.wav`，消除下载 URL 404。

@@ -144,11 +144,12 @@ docs/archived/
 workflows/
 !.github/workflows/
 !.github/workflows/**
-!.agent/
-!.agent/workflows/
 
-# Claude local working state
-.claude/plans/
+# Personal agent config (not tracked)
+.claude/
+.codex/
+.agent/
+AGENTS.md
 
 # Generated docs artifacts
 CHANGELOG.html

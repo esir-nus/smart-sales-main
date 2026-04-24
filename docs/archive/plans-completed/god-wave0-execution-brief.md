@@ -1,10 +1,10 @@
 # God Wave 0 Execution Brief
 
-**Status:** Implemented  
-**Date:** 2026-03-24  
-**Wave:** 0  
-**Mission:** God-file refactor-first campaign preflight  
-**Primary Tracker:** `docs/plans/god-tracker.md`  
+**Status:** Implemented
+**Date:** 2026-03-24
+**Wave:** 0
+**Mission:** God-file refactor-first campaign preflight
+**Primary Tracker:** `docs/projects/god-file-cleanup/tracker.md`
 **Structure Law:** `docs/specs/code-structure-contract.md`
 
 ---
@@ -61,7 +61,7 @@ While the active cleanup campaign targets the four pilot files:
 
 Leaf-level UI polish may continue only when it avoids these four files.
 
-If a freeze violation is unavoidable, log it in `docs/plans/god-tracker.md` with:
+If a freeze violation is unavoidable, log it in `docs/projects/god-file-cleanup/tracker.md` with:
 
 - reason
 - touched file
@@ -98,7 +98,7 @@ Wave 1A should add **two** focused JVM structural tests only.
 
 Checks:
 
-- `docs/plans/god-tracker.md` exists
+- `docs/projects/god-file-cleanup/tracker.md` exists
 - `docs/specs/code-structure-contract.md` exists
 - each pilot exception row includes owner, sunset, required tests, target decomposition, and status
 
@@ -126,7 +126,7 @@ Those stronger checks should be staged only after the corresponding cleanup wave
 Wave 0 is complete only when:
 
 - this brief exists
-- the four pilot files have valid exception rows in `docs/plans/god-tracker.md`
+- the four pilot files have valid exception rows in `docs/projects/god-file-cleanup/tracker.md`
 - owner policy is explicit and set to `Codex`
 - sunset waves are fixed to `1B / 1C / 1D / 1E`
 - required verification packs are listed
@@ -137,7 +137,7 @@ Wave 0 is complete only when:
 
 ## 8. Related Documents
 
-- `docs/plans/god-tracker.md`
+- `docs/projects/god-file-cleanup/tracker.md`
 - `docs/specs/code-structure-contract.md`
 - `docs/plans/tracker.md`
-- `docs/plans/ui-tracker.md`
+- `docs/projects/ui-campaign/tracker.md`

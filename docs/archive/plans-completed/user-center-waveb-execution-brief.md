@@ -12,7 +12,7 @@ This wave closes the gap between shipped theme plumbing and approved visual dire
 - overlay host seam: `app-core/src/main/java/com/smartsales/prism/ui/AgentShell.kt`
 - full-app screen seam: `app-core/src/main/java/com/smartsales/prism/ui/settings/UserCenterScreen.kt`
 - behavior source of truth: `docs/specs/modules/UserCenter.md`
-- workflow source of truth: `docs/plans/ui-tracker.md`, `docs/sops/ui-building.md`
+- workflow source of truth: `docs/projects/ui-campaign/tracker.md`, `docs/sops/ui-building.md`
 
 ## Objective
 

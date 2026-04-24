@@ -47,7 +47,7 @@ Operator reads these, not the full repo:
 1. `docs/specs/sprint-contract.md`
 2. `docs/specs/project-structure.md`
 3. `docs/specs/platform-governance.md`
-4. `docs/plans/harmony-tracker.md`
+4. `docs/projects/harmony-native/tracker.md`
 5. `.agent/rules/lessons-learned.md`
 6. `docs/reference/agent-lessons-details.md` - *Harmony Sprint Lane Misrouting*, *Lane Contamination Across Android and Harmony*
 7. `docs/projects/workflow-renovation/tracker.md`

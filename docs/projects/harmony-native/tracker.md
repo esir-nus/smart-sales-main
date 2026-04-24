@@ -11,7 +11,7 @@
 > - `docs/platforms/harmony/app-architecture.md`
 > - `docs/platforms/harmony/tingwu-container.md`
 > - `docs/platforms/harmony/test-signing-ledger.md`
-> - `docs/plans/harmony-ui-translation-tracker.md`
+> - `docs/projects/harmony-ui-translation/tracker.md`
 > - `docs/reference/platform-targets.md`
 > - `docs/plans/tracker.md`
 
@@ -29,7 +29,7 @@ Current rule:
 - the existing Tingwu container (`platforms/harmony/tingwu-container/`) is the pattern foundation being absorbed into the complete app
 - all Harmony work lands on `platform/harmony` branch; feature branches fork from it
 - shared contracts sync from `develop → platform/harmony` at least weekly per `docs/specs/cross-platform-sync-contract.md`
-- page-by-page ArkUI execution detail lives in `docs/plans/harmony-ui-translation-tracker.md`
+- page-by-page ArkUI execution detail lives in `docs/projects/harmony-ui-translation/tracker.md`
 
 ---
 
@@ -184,7 +184,7 @@ Every active Harmony program-summary entry must include:
   - `Capability Class`: `translation`
   - `Baseline Commit or Tag`: `adbecd0a`
   - `Current Head Snapshot`: working tree scaffold after scheduler backend-first slice
-  - `Restore Procedure Reference`: this tracker entry plus `docs/plans/harmony-scheduler-backend-phase1-brief.md`
+  - `Restore Procedure Reference`: this tracker entry plus `docs/projects/harmony-native/sprints/01-scheduler-backend-phase1.md`
   - `Current Restore Confidence`: source-level restore is straightforward; build/device confidence remains unverified until Harmony toolchain runs locally
 - `Last Updated`: `2026-04-11`
 - `Notes / Drift`:
@@ -204,7 +204,7 @@ Every active Harmony program-summary entry must include:
 - `Status`: `Active`
 - `Source of Truth`:
   - `docs/platforms/harmony/ui-verification.md`
-  - `docs/plans/harmony-ui-translation-tracker.md`
+  - `docs/projects/harmony-ui-translation/tracker.md`
   - `docs/specs/prism-ui-ux-contract.md`
   - relevant shared `docs/cerb-ui/**` and `docs/core-flow/**` docs for each page
 - `Required Evidence`:
@@ -247,7 +247,7 @@ Every active Harmony program-summary entry must include:
   - `Current Restore Confidence`: source-level restore is straightforward; local signed-HAP generation is now repeatable, the AGC preflight lane is wired, but full device-install confidence remains blocked until a real `smartsales.HOS.ui` AGC asset set exists
 - `Last Updated`: `2026-04-12`
 - `Notes / Drift`:
-  - page-pass detail is intentionally delegated to `docs/plans/harmony-ui-translation-tracker.md`
+  - page-pass detail is intentionally delegated to `docs/projects/harmony-ui-translation/tracker.md`
   - bundle identity is now separate from the mini-lab so later on-device UI checks can stay isolated
   - HUI-02 no longer uses inline mock cards; it now runs through a dedicated Tingwu page adapter seam
   - the HUI-02 docking contract defines a future direction toward shell evolution, contingent on signing gate clearance and successful docking

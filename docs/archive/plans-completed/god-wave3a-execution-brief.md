@@ -1,14 +1,14 @@
 # God Wave 3A Execution Brief
 
-**Status:** L1 Accepted  
-**Date:** 2026-03-24  
-**Wave:** 3A  
-**Mission:** `SimAudioDrawer.kt` structural cleanup  
-**Primary Tracker:** `docs/plans/god-tracker.md`  
-**Structure Law:** `docs/specs/code-structure-contract.md`  
-**Current Reading Priority:** Historical execution reference only; not current source of truth.  
-**Current Active Truth:** `docs/plans/god-tracker.md`, `docs/plans/tracker.md`, `docs/specs/code-structure-contract.md`, `docs/core-flow/sim-audio-artifact-chat-flow.md`, `docs/cerb/audio-management/spec.md`, `docs/cerb/audio-management/interface.md`, `docs/cerb/tingwu-pipeline/spec.md`, `docs/cerb/tingwu-pipeline/interface.md`  
-**Historical Deprecated Context:** `docs/cerb/sim-audio-chat/spec.md`, `docs/cerb/sim-audio-chat/interface.md`  
+**Status:** L1 Accepted
+**Date:** 2026-03-24
+**Wave:** 3A
+**Mission:** `SimAudioDrawer.kt` structural cleanup
+**Primary Tracker:** `docs/projects/god-file-cleanup/tracker.md`
+**Structure Law:** `docs/specs/code-structure-contract.md`
+**Current Reading Priority:** Historical execution reference only; not current source of truth.
+**Current Active Truth:** `docs/projects/god-file-cleanup/tracker.md`, `docs/plans/tracker.md`, `docs/specs/code-structure-contract.md`, `docs/core-flow/sim-audio-artifact-chat-flow.md`, `docs/cerb/audio-management/spec.md`, `docs/cerb/audio-management/interface.md`, `docs/cerb/tingwu-pipeline/spec.md`, `docs/cerb/tingwu-pipeline/interface.md`
+**Historical Deprecated Context:** `docs/cerb/sim-audio-chat/spec.md`, `docs/cerb/sim-audio-chat/interface.md`
 **Validation Report:** `docs/reports/tests/L1-20260324-god-wave3a-sim-audio-drawer.md`
 
 ---
@@ -33,7 +33,7 @@ Wave 3A should now be read against the shared audio and Tingwu docs:
 - `docs/cerb/tingwu-pipeline/spec.md`
 - `docs/cerb/tingwu-pipeline/interface.md`
 - `docs/plans/tracker.md`
-- `docs/plans/god-tracker.md`
+- `docs/projects/god-file-cleanup/tracker.md`
 - `docs/specs/code-structure-contract.md`
 
 Historical deprecated context at the time:
@@ -119,7 +119,7 @@ Wave 3A is complete only when:
 
 ## 7. Related Documents
 
-- `docs/plans/god-tracker.md`
+- `docs/projects/god-file-cleanup/tracker.md`
 - `docs/plans/tracker.md`
 - `docs/specs/code-structure-contract.md`
 - `docs/core-flow/sim-audio-artifact-chat-flow.md`

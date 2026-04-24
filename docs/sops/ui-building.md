@@ -104,7 +104,7 @@ Do not transplant visuals into Compose as freeform UI code detached from the con
    - relative placement rules
    - obvious product-role constraints
 2. Read relevant spec sections:
-   - `docs/plans/ui-tracker.md` — UI-specific status, approval, and drift tracking
+   - `docs/projects/ui-campaign/tracker.md` — UI-specific status, approval, and drift tracking
    - `prism-ui-ux-contract.md` — Surface contract and UI boundary
    - `style-guide.md` — Visual identity guide and tokens
    - `ui_element_registry.md` — Element registry and behavior contract
@@ -274,7 +274,7 @@ Phase 0: INTAKE -> Phase 1: STRUCTURE READ
 
 | Document | Purpose |
 |----------|---------|
-| [`docs/plans/ui-tracker.md`](file:///home/cslh-frank/main_app/docs/plans/ui-tracker.md) | Dedicated UI status tracker |
+| [`docs/projects/ui-campaign/tracker.md`](file:///home/cslh-frank/main_app/docs/projects/ui-campaign/tracker.md) | Dedicated UI status tracker |
 | [`ui-dev-mode.md`](file:///home/cslh-frank/main_app/docs/sops/ui-dev-mode.md) | Instruction doc for the overall UI dev model |
 | [`prism-ui-ux-contract.md`](file:///home/cslh-frank/main_app/docs/specs/prism-ui-ux-contract.md) | Surface contract and UI index |
 | [`style-guide.md`](file:///home/cslh-frank/main_app/docs/specs/style-guide.md) | Visual tokens |

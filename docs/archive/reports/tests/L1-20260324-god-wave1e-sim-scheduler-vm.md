@@ -1,8 +1,8 @@
 # L1 Validation Report: God Wave 1E SimSchedulerViewModel
 
-**Date:** 2026-03-24  
-**Scope:** `SimSchedulerViewModel.kt` structural cleanup acceptance  
-**Primary Tracker:** `docs/plans/god-tracker.md`  
+**Date:** 2026-03-24
+**Scope:** `SimSchedulerViewModel.kt` structural cleanup acceptance
+**Primary Tracker:** `docs/projects/god-file-cleanup/tracker.md`
 **Execution Brief:** `docs/plans/god-wave1e-execution-brief.md`
 
 ---

@@ -8,7 +8,7 @@
 > - `docs/sops/tracker-governance.md`
 > - `docs/specs/platform-governance.md`
 > **Working Tracker**:
-> - `docs/plans/harmony-tracker.md`
+> - `docs/projects/harmony-native/tracker.md`
 > **Related Docs**:
 > - `docs/plans/tracker.md`
 > - `docs/platforms/harmony/tingwu-container.md`
@@ -94,8 +94,8 @@ If Android code is the only clear behavior evidence, extract the behavior into d
 
 Current default:
 
-- use `docs/plans/harmony-tracker.md` for Harmony program-summary and backend/dataflow slices
-- use `docs/plans/harmony-ui-translation-tracker.md` for page-by-page ArkUI rewrite and page-pass evidence
+- use `docs/projects/harmony-native/tracker.md` for Harmony program-summary and backend/dataflow slices
+- use `docs/projects/harmony-ui-translation/tracker.md` for page-by-page ArkUI rewrite and page-pass evidence
 - use `docs/plans/tracker.md` only for portfolio, branch, and governance summary
 - create an execution brief only when one approved slice needs bounded execution detail
 
@@ -269,7 +269,7 @@ The correct default is:
 
 For the current transient Harmony lane:
 
-- keep branch and restore state visible in `docs/plans/harmony-tracker.md`
+- keep branch and restore state visible in `docs/projects/harmony-native/tracker.md`
 - keep portfolio/governance summary in `docs/plans/tracker.md`
 - do not let the Harmony branch become a hidden second trunk
 

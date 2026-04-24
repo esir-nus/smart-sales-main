@@ -11,7 +11,7 @@
 > - `docs/reference/harmonyos-platform-guide.md`
 > - `docs/cerb/interface-map.md`
 > - `docs/plans/tracker.md`
-> - `docs/plans/harmony-tracker.md`
+> - `docs/projects/harmony-native/tracker.md`
 > - `docs/specs/base-runtime-unification.md`
 
 ---
@@ -230,7 +230,7 @@ Rules:
 - `docs/plans/tracker.md` stays the campaign index and branch/governance summary only
 - specialist trackers own structure, UI, bugs, and Harmony-native delivery
 - execution briefs are temporary slice docs and must not replace a standing tracker
-- the Harmony program uses `docs/plans/harmony-tracker.md` for program-summary state and `docs/plans/harmony-ui-translation-tracker.md` for page-by-page ArkUI rewrite evidence
+- the Harmony program uses `docs/projects/harmony-native/tracker.md` for program-summary state and `docs/projects/harmony-ui-translation/tracker.md` for page-by-page ArkUI rewrite evidence
 
 ### 6.5 Historical note
 

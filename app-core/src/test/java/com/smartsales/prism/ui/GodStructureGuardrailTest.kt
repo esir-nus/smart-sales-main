@@ -45,7 +45,7 @@ class GodStructureGuardrailTest {
 
     @Test
     fun `tracked guardrail rows stay valid against structure contract`() {
-        val trackerFile = resolvePath("docs/plans/god-tracker.md")
+        val trackerFile = resolvePath("docs/projects/god-file-cleanup/tracker.md")
         val contractFile = resolvePath("docs/specs/code-structure-contract.md")
 
         assertTrue("Missing god tracker: ${trackerFile.absolutePath}", trackerFile.exists())
@@ -66,7 +66,7 @@ class GodStructureGuardrailTest {
             }
 
             assertEquals(
-                "Tracked file has unexpected structural status in docs/plans/god-tracker.md: $filePath",
+                "Tracked file has unexpected structural status in docs/projects/god-file-cleanup/tracker.md: $filePath",
                 expectation.status,
                 row["Status"]
             )
@@ -75,7 +75,7 @@ class GodStructureGuardrailTest {
 
     @Test
     fun `tracked files above budget must keep valid tracker exceptions`() {
-        val rowsByFile = parseTrackedFileRows(resolvePath("docs/plans/god-tracker.md"))
+        val rowsByFile = parseTrackedFileRows(resolvePath("docs/projects/god-file-cleanup/tracker.md"))
 
         trackedExpectations.forEach { (filePath, expectation) ->
             val sourceFile = resolvePath(filePath)

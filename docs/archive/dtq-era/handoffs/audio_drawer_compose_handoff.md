@@ -24,7 +24,7 @@ This handoff owns runtime shell chrome and SIM-only visual/presentation work in 
 - `docs/cerb/audio-management/spec.md`
 - `docs/cerb/audio-management/interface.md`
 - `docs/cerb-ui/dynamic-island/spec.md`
-- `docs/plans/ui-tracker.md`
+- `docs/projects/ui-campaign/tracker.md`
 - shell/audio prototypes under `prototypes/sim-shell-family/**`
 
 ## Current Repo State / Implementation Truth
@@ -56,7 +56,7 @@ The detailed Compose translation notes below remain useful historical implementa
   - `docs/cerb/audio-management/spec.md`
   - `docs/cerb/audio-management/interface.md`
   - `docs/cerb-ui/dynamic-island/spec.md`
-  - `docs/plans/ui-tracker.md`
+  - `docs/projects/ui-campaign/tracker.md`
   - `docs/plans/tracker.md`
 - **Current alignment state**: `Both pending`
 - **Docs still needing sync or final confirmation before `Accepted`**:
@@ -65,7 +65,7 @@ The detailed Compose translation notes below remain useful historical implementa
   - `docs/cerb/audio-management/spec.md`
   - `docs/cerb/audio-management/interface.md`
   - `docs/cerb-ui/dynamic-island/spec.md`
-  - `docs/plans/ui-tracker.md`
+  - `docs/projects/ui-campaign/tracker.md`
   - `docs/plans/tracker.md`
 - **Rule**: no shell/audio chrome in this lane should be treated as landed while these docs still trail or contradict the implementation.
 

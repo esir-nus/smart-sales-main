@@ -854,7 +854,7 @@ Wave 7 acceptance closed the SIM mission on **2026-03-22**. The remaining items 
 > - `docs/specs/esp32-protocol.md`
 > - `docs/cerb/connectivity-bridge/spec.md`
 > - `docs/cerb/connectivity-bridge/interface.md`
-> - `docs/plans/bug-tracker.md`
+> - `docs/projects/connectivity-bug-triage/tracker.md`
 > - `docs/reports/tests/L3-20260322-sim-wave9-hardware-validation.md`
 > **Execution Law**: fix ingress plus connection truth surgically; do not hide the defect behind polling fallback or debug surrogates.
 > **Validation Requirement**: restore BLE `log#...` ingress into the real bridge/pipeline path, freeze the full filename contract, and prove the bridge no longer reports healthy connected when notification listening is dead.
@@ -868,7 +868,7 @@ Wave 7 acceptance closed the SIM mission on **2026-03-22**. The remaining items 
   - [x] remove the false immediate provisioning-ack read fallback from Wi-Fi connect so pairing now follows `SD#...` -> `PD#...` plus later network query validation
   - [x] add focused L1 verification for parser, manager ingress, bridge gating, and pipeline notification-driven entry
   - [x] formalize the ESP32 live-capture debug path via `scripts/esp32_connectivity_debug.sh` and `docs/sops/esp32-connectivity-debug.md`
-  - [x] merge the connectivity evidence/history log into `docs/plans/bug-tracker.md` so one tracker owns both active bug state and dated bug evidence
+  - [x] merge the connectivity evidence/history log into `docs/projects/connectivity-bug-triage/tracker.md` so one tracker owns both active bug state and dated bug evidence
   - [x] record the current live capture evidence showing BLE traffic without recording-end ingress in `docs/reports/20260322-esp32-live-capture-findings.md`
   - [ ] run device-level re-entry validation to prove real badge recording again reaches connectivity ingress logs and `AudioPipeline`
   - [ ] reopen `T9.0` only after the re-entry gate is satisfied
@@ -945,7 +945,7 @@ Wave 7 acceptance closed the SIM mission on **2026-03-22**. The remaining items 
 > - `docs/plans/tracker.md`
 > - `docs/cerb/sim-shell/spec.md`
 > - `docs/specs/modules/UserCenter.md`
-> - `docs/plans/ui-tracker.md`
+> - `docs/projects/ui-campaign/tracker.md`
 > **Execution Law**: keep this slice local to `SimMainActivity` plus launcher-core UI seams. Home/chat shell, header, history drawer, and settings drawer may become theme-aware; scheduler/audio/connectivity/onboarding remain deferred and must not be silently widened into scope.
 > **Validation Requirement**: prove the default launcher host no longer hardcodes dark theme, prove SIM settings can immediately change launcher-core visuals, and keep the existing SIM ownership/routing seams intact.
 > **Follow-Up Clarification**: on a brand-new SIM install with no saved theme choice, the launcher path should still default to dark; only an explicit stored `Dark / Light / System` choice should override that SIM-first fallback.
@@ -954,7 +954,7 @@ Wave 7 acceptance closed the SIM mission on **2026-03-22**. The remaining items 
   - [x] log the mini-wave in `docs/plans/sim-tracker.md`
   - [x] register the mini-wave in `docs/plans/tracker.md`
   - [x] create `docs/plans/sim-wave13-execution-brief.md`
-  - [x] sync `docs/cerb/sim-shell/spec.md`, `docs/specs/modules/UserCenter.md`, and the companion rows in `docs/plans/ui-tracker.md`
+  - [x] sync `docs/cerb/sim-shell/spec.md`, `docs/specs/modules/UserCenter.md`, and the companion rows in `docs/projects/ui-campaign/tracker.md`
 - [x] **T13.1: SIM Host Theme Honor**
   - [x] stop hardcoding `PrismTheme(darkTheme = true)` in `SimMainActivity`
   - [x] collect the shared `ThemePreferenceStore` in the SIM host and resolve `LIGHT / DARK / SYSTEM`
@@ -983,14 +983,14 @@ Wave 7 acceptance closed the SIM mission on **2026-03-22**. The remaining items 
 > - `docs/cerb/sim-shell/spec.md`
 > - `docs/cerb/sim-audio-chat/spec.md`
 > - `docs/cerb/sim-audio-chat/interface.md`
-> - `docs/plans/ui-tracker.md`
+> - `docs/projects/ui-campaign/tracker.md`
 > **Execution Law**: keep this slice local to SIM home/chat composer state. SIM-owned FunASR realtime recognition may draft text into the field, but explicit send remains required and scheduler-follow-up voice mutation authority must not widen through this lane. Historical note: the early backend-issued short-lived DashScope auth experiment was later superseded on 2026-03-31; current auth authority uses direct `DASHSCOPE_API_KEY` at FunASR SDK init.
 > **Validation Requirement**: prove successful recognition drafts text without auto-send, prove failure/cancel paths do not mutate history, and prove updated Android-test/UI seams compile.
 
 - [x] **T14.0: Docs-First Scope Lock**
   - [x] register Wave 14 in `docs/plans/sim-tracker.md` and `docs/plans/tracker.md`
   - [x] create `docs/plans/sim-wave14-voice-draft-execution-brief.md`
-  - [x] sync `docs/cerb/sim-shell/spec.md`, `docs/cerb/sim-audio-chat/spec.md`, `docs/cerb/sim-audio-chat/interface.md`, and `docs/plans/ui-tracker.md`
+  - [x] sync `docs/cerb/sim-shell/spec.md`, `docs/cerb/sim-audio-chat/spec.md`, `docs/cerb/sim-audio-chat/interface.md`, and `docs/projects/ui-campaign/tracker.md`
 - [x] **T14.1: SIM Voice-Draft Runtime**
   - [x] keep voice-draft state SIM-owned in `SimAgentViewModel`
   - [x] replace the SIM composer draft lane with a SIM-owned FunASR realtime recognizer without widening main smart-agent chat or onboarding

@@ -159,7 +159,7 @@ If current logs are insufficient, add targeted tags/logging and rerun instead of
 | Platform governance | `docs/specs/platform-governance.md` |
 | Glossary | `docs/specs/GLOSSARY.md` |
 | Lessons learned | `docs/reference/agent-lessons-details.md` |
-| Harmony tracker | `docs/plans/harmony-tracker.md` |
+| Harmony tracker | `docs/projects/harmony-native/tracker.md` |
 | Harmony container spec | `docs/platforms/harmony/tingwu-container.md` |
 
 ## Multi-Agent Coexistence

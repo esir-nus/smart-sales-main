@@ -19,7 +19,7 @@ For connectivity-module troubleshooting, this SOP is mandatory.
 
 Working companion:
 
-- `docs/plans/bug-tracker.md`
+- `docs/projects/connectivity-bug-triage/tracker.md`
 
 ## Formal Tool
 
@@ -79,7 +79,7 @@ The summary reports:
 
 After any meaningful repro or validation attempt:
 
-1. append the dated evidence summary to the corresponding issue entry in `docs/plans/bug-tracker.md`
+1. append the dated evidence summary to the corresponding issue entry in `docs/projects/connectivity-bug-triage/tracker.md`
 2. if the issue is genuinely fixed and the user explicitly confirms it, extract only the critical reusable lesson into:
    - `.agent/rules/lessons-learned.md`
    - `docs/reference/agent-lessons-details.md`
@@ -120,7 +120,7 @@ Interpretation:
 See:
 
 - `docs/reports/20260322-esp32-live-capture-findings.md`
-- `docs/plans/bug-tracker.md`
+- `docs/projects/connectivity-bug-triage/tracker.md`
 
 ## Known Side Observation
 

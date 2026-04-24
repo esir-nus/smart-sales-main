@@ -1,8 +1,8 @@
 # L1 Validation Report: God Wave 1D SimAgentViewModel
 
-**Date:** 2026-03-24  
-**Scope:** `SimAgentViewModel.kt` structural cleanup acceptance  
-**Primary Tracker:** `docs/plans/god-tracker.md`  
+**Date:** 2026-03-24
+**Scope:** `SimAgentViewModel.kt` structural cleanup acceptance
+**Primary Tracker:** `docs/projects/god-file-cleanup/tracker.md`
 **Execution Brief:** `docs/plans/god-wave1d-execution-brief.md`
 
 ---

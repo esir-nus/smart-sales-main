@@ -1,11 +1,11 @@
 # God Wave 1A Execution Brief
 
-**Status:** L1 Accepted  
-**Date:** 2026-03-24  
-**Wave:** 1A  
-**Mission:** God-file shallow structural guardrails  
-**Primary Tracker:** `docs/plans/god-tracker.md`  
-**Structure Law:** `docs/specs/code-structure-contract.md`  
+**Status:** L1 Accepted
+**Date:** 2026-03-24
+**Wave:** 1A
+**Mission:** God-file shallow structural guardrails
+**Primary Tracker:** `docs/projects/god-file-cleanup/tracker.md`
+**Structure Law:** `docs/specs/code-structure-contract.md`
 **Validation Report:** `docs/reports/tests/L1-20260324-god-wave1a-guardrails.md`
 
 ---
@@ -47,7 +47,7 @@ Wave 1A delivers one JVM guardrail test class:
 That class contains exactly two checks:
 
 1. **Tracker / Contract Validity**
-   - `docs/plans/god-tracker.md` exists
+   - `docs/projects/god-file-cleanup/tracker.md` exists
    - `docs/specs/code-structure-contract.md` exists
    - each pilot exception row includes target decomposition, owner, sunset, required tests, and status
    - each pilot row remains explicitly tracked as `Exception`
@@ -88,7 +88,7 @@ Executed commands:
 Wave 1A is complete only when:
 
 - this brief exists
-- `docs/plans/god-tracker.md` records the delivered Wave 1A guardrail anchor
+- `docs/projects/god-file-cleanup/tracker.md` records the delivered Wave 1A guardrail anchor
 - the focused guardrail JVM test passes
 - the L1 validation report records the exact command and verdict
 - the four pilot files remain temporary exceptions until their cleanup waves land
@@ -97,7 +97,7 @@ Wave 1A is complete only when:
 
 ## 7. Related Documents
 
-- `docs/plans/god-tracker.md`
+- `docs/projects/god-file-cleanup/tracker.md`
 - `docs/specs/code-structure-contract.md`
 - `docs/plans/tracker.md`
 - `docs/reports/tests/L1-20260324-god-wave1a-guardrails.md`

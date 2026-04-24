@@ -34,7 +34,7 @@ This is a visual alignment audit for the shipped SIM shell family. No new behavi
 
 ### Verification evidence
 
-- prior same-day device validation already recorded in `docs/plans/ui-tracker.md`
+- prior same-day device validation already recorded in `docs/projects/ui-campaign/tracker.md`
 - `./gradlew :app-core:compileDebugKotlin` passed after the final polish pass
 
 ---

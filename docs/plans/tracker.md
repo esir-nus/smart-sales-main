@@ -53,7 +53,7 @@
 
 - **Status**: Wave 3C accepted; Wave 3D accepted; Wave 3E accepted; Wave E1 landed on 2026-03-31 with focused verification blocked by an unrelated `SimRealtimeSpeechRecognizer.kt` compile error
 - **Primary Tracker**:
-  - [`docs/plans/god-tracker.md`](./god-tracker.md)
+  - [`docs/projects/god-file-cleanup/tracker.md`](./god-tracker.md)
 - **Wave 0 Execution Brief**:
   - [`docs/plans/god-wave0-execution-brief.md`](./god-wave0-execution-brief.md)
 - **Wave 1A Execution Brief**:
@@ -382,7 +382,7 @@
   - [`docs/core-flow/sim-audio-artifact-chat-flow.md`](../core-flow/sim-audio-artifact-chat-flow.md)
   - [`docs/cerb/interface-map.md`](../cerb/interface-map.md)
 - **Evidence Rule**: acceptance/audit links below are historical evidence only; current product truth for this mission remains the `Current Active Truth` docs above.
-- **Connectivity Bug Tracker**: [`docs/plans/bug-tracker.md`](./bug-tracker.md)
+- **Connectivity Bug Tracker**: [`docs/projects/connectivity-bug-triage/tracker.md`](./bug-tracker.md)
 - **Implementation Brief**: [`docs/plans/sim_implementation_brief.md`](./sim_implementation_brief.md)
 - **Wave 1 Execution Brief**: [`docs/plans/sim-wave1-execution-brief.md`](./sim-wave1-execution-brief.md)
 - **Wave 2 Execution Brief**: [`docs/plans/sim-wave2-execution-brief.md`](./sim-wave2-execution-brief.md)

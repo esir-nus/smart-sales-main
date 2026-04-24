@@ -188,7 +188,7 @@ New field on each lane object. Enum: `ui-visible`, `runtime-telemetry`, `contrac
 Keep the artifact name "execution brief." Add two fields to the header block and a new section:
 
 ```diff
- **Primary Tracker:** `docs/plans/ui-tracker.md`
+ **Primary Tracker:** `docs/projects/ui-campaign/tracker.md`
 +**Lane Reference:** `DTQ-04`
 +**Evidence Class:** `ui-visible`
 

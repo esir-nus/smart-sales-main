@@ -109,7 +109,7 @@ Some existing files still use older naming. For this workflow, use the intuitive
 | Visual Identity Guide | `docs/specs/style-guide.md` | Global visual law, aesthetic standards, token intent |
 | UI Element Registry | `docs/specs/ui_element_registry.md` | Shared supporting invariants, layers, reusable behavior rules |
 | Prototype-First UI Workflow | `docs/sops/ui-building.md` | Prototype, approval, transplant sequence |
-| UI Tracker | `docs/plans/ui-tracker.md` | UI-specific execution tracking, approval state, visual drift |
+| UI Tracker | `docs/projects/ui-campaign/tracker.md` | UI-specific execution tracking, approval state, visual drift |
 
 Rule:
 
@@ -166,7 +166,7 @@ Default planning posture for `polishing ui`:
 - preserve the real product structure and behavior unless the user explicitly asks for structural change
 - identify the minimum production write scope needed to close the highest-value fidelity gaps
 - plan around transplant, tightening, and visual drift removal rather than fresh aesthetic invention
-- update `docs/plans/ui-tracker.md` for the owning page / surface so the active polish scope and gate stay explicit
+- update `docs/projects/ui-campaign/tracker.md` for the owning page / surface so the active polish scope and gate stay explicit
 
 Simple law:
 
@@ -193,7 +193,7 @@ For prototype-to-Compose transplant, treat the prototype status bar as a visual 
 
 Before doing major UI work, read in this order:
 
-1. `docs/plans/ui-tracker.md`
+1. `docs/projects/ui-campaign/tracker.md`
 2. `docs/core-flow/base-runtime-ux-surface-governance-flow.md`
 3. `docs/specs/prism-ui-ux-contract.md`
 4. `docs/specs/style-guide.md`
@@ -208,7 +208,7 @@ If a `docs/core-flow/**` doc exists for the feature, read it before treating low
 
 ## Tracking Model
 
-Use this tracking hierarchy in `docs/plans/ui-tracker.md`:
+Use this tracking hierarchy in `docs/projects/ui-campaign/tracker.md`:
 
 1. **Family**
    - the prototype/source container or campaign summary

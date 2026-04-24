@@ -1,12 +1,12 @@
 # SIM Scheduler Drawer First Slice Brief
 
-**Status:** In Progress  
-**Date:** 2026-03-24  
-**Owner:** UI transplant slice  
-**Primary Tracker:** `docs/plans/ui-tracker.md`  
+**Status:** In Progress
+**Date:** 2026-03-24
+**Owner:** UI transplant slice
+**Primary Tracker:** `docs/projects/ui-campaign/tracker.md`
 **Prototype Source:** `prototypes/sim-shell-family/sim_scheduler_drawer_shell.html`
 **Behavioral Authority:** `docs/core-flow/sim-scheduler-path-a-flow.md`
-**Current Active Truth:** `docs/plans/ui-tracker.md`, `docs/plans/tracker.md`, `docs/core-flow/sim-scheduler-path-a-flow.md`, `docs/core-flow/scheduler-fast-track-flow.md`, `docs/cerb/scheduler-path-a-spine/spec.md`, `docs/cerb/scheduler-path-a-spine/interface.md`, `docs/cerb-ui/scheduler/contract.md`, `docs/cerb/interface-map.md`
+**Current Active Truth:** `docs/projects/ui-campaign/tracker.md`, `docs/plans/tracker.md`, `docs/core-flow/sim-scheduler-path-a-flow.md`, `docs/core-flow/scheduler-fast-track-flow.md`, `docs/cerb/scheduler-path-a-spine/spec.md`, `docs/cerb/scheduler-path-a-spine/interface.md`, `docs/cerb-ui/scheduler/contract.md`, `docs/cerb/interface-map.md`
 
 ---
 

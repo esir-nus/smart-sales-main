@@ -18,6 +18,7 @@ open — authored 2026-04-24
 | 02 | batlevel-nullable-ui | done | Flipped `ConnectivityViewModel.batteryLevel` to `StateFlow<Int?>` seeded `null`, propagated nullable through Modal / Drawer / Island coordinator, and rendered `--%` / hidden ambient battery until first `Bat#` push | [02-batlevel-nullable-ui.md](sprints/02-batlevel-nullable-ui.md) |
 | 03 | wav-suffix-parser-fix | done | Normalized suffix-present and suffix-absent `log#` / `rec#` payloads to canonical `log_<ts>.wav` / `rec_<ts>.wav`, added focused filename tests, and closed the spec fallout note | [03-wav-suffix-parser-fix.md](sprints/03-wav-suffix-parser-fix.md) |
 | 04 | ver-query-handler | done | Implemented `Ver#get` -> `Ver#...` through parser -> bridge -> `ConnectivityViewModel.firmwareVersion`, with auto-query-on-connect and a UserCenter refresh row; verified with focused `:app-core:testDebugUnitTest` coverage plus `:app:assembleDebug` | [04-ver-query-handler.md](sprints/04-ver-query-handler.md) |
+| 05 | command-end-emitter | authored | Retire legacy commandend#1 emitter and wire Command#end through both pipeline terminal states per esp32-protocol.md §11 | [05-command-end-emitter.md](sprints/05-command-end-emitter.md) |
 
 ## Genesis
 

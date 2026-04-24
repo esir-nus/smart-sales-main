@@ -5,9 +5,25 @@
 ### 2026-04-24
 
 - **[维护] workflow-renovation 治理收口完成** — 将剩余鸿蒙OS原生分支改动收拢到 `platform/harmony`，为历史分支打上 `archive/*-20260424` 标签，并清理已淘汰的分支与工作树引用。
+- **[新增] 徽章电量推送实时接入 (Bat#)** — 新增 `ConnectivityBridge.batteryNotifications(): Flow<Int>` 并接入 `ConnectivityViewModel.batteryLevel`，替换硬编码占位值；`Bat#<0..100>` 通知现在驱动真实电量读数。
+- **[新增] 电量 UI 区分"未收到"与真实读数** — `batteryLevel` 升为 `StateFlow<Int?>`，初始值 `null`；连接面板、历史抽屉和动态岛在首次推送前显示 `--%`，动态岛侧边栏电量芯片隐藏直至收到读数。
+- **[修复] 徽章录音文件名 .wav 后缀归一化** — 修复 `log#`/`rec#` 载荷含 `.wav` 后缀时遗漏磁盘前缀的问题；新旧固件两种格式均归一化为 `log_<ts>.wav` / `rec_<ts>.wav`，消除下载 URL 404。
+- **[新增] 徽章固件版本查询 (Ver#)** — 实现 `Ver#get` 查询/回复链路；连接建立时自动查询，用户中心支持手动刷新；版本号以 `Ver. <project>.<major>.<minor>.<feature>` 形式展示，未收到响应时显示 `Ver. —`。
+- **[维护] 跟踪器目录迁移与文档治理收口** — 将 `docs/plans/` 下的跟踪器迁移至各项目文件夹；完成 develop-protocol-migration 治理收缩、分支墓地清扫及 DTQ-03 遗留文档移交；刷新仪表板与发布检查指引。
+
+### 2026-04-23
+
+- **[维护] Android 版本管理与调度路由治理** — 精简 `app-core/build.gradle.kts` 与 `app/build.gradle.kts`，移除 `AppFlavor` SIM/Full 分支，新增 `ModelRegistry` 与平台治理 CI 检查（`platform-governance-check.yml`）。
+- **[修复] ASR 服务单元测试隔离** — 将 `FunAsrService` 转录逻辑提取为可注入的 `FunAsrTranscriptionClient`，单元测试彻底脱离真实网络和 DashScope 凭据。
+- **[维护] 发布门控对齐与协议规范体系初始化** — 对齐 pre-renovation 发布门控规则；完成 develop-protocol-migration 规范 bootstrap（接口图、合约模板、分支策略文档）。
 
 ### 2026-04-22
 
+- **[新增] 日程管线前台服务与编排层** — 新增 `SchedulerPipelineForegroundService`、`SchedulerPipelineOrchestrator`、`SchedulerPipelineNotifications` 与 `SchedulerPipelineOutcomeStore`，将徽章音频处理链路接入系统前台保活；重构 `RealBadgeAudioPipeline` 初始落地版本。
+- **[重构] 徽章音频管线自驱动架构** — `RealBadgeAudioPipeline` 改为 init 协程监听连接通知自驱；移除 `runStages()` / `BadgeAudioPipelineRunOutcome`，以 `processFile()` + `SharedFlow<PipelineEvent>` 替代，前台服务改为收集事件流而非主动调用。
+- **[修复] 灵感管线防护与日程 Linter 加固** — 修复 `RealInspirationRepository` 边界处理，加固 `RealUniCExtractionService` 与 `SchedulerLinter` / `FastTrackMutationEngine` 解析稳定性，补充单元测试覆盖。
+- **[修复] 徽章端点连接恢复链路** — 新增 `BadgeEndpointRecoveryCoordinator` 与 `IsolationProbeHelper`，重构 `RealConnectivityBridge` 和 `DeviceConnectionManagerConnectionSupport` 断连恢复路径。
+- **[新增] 智能对话气泡长按复制** — 新增 `CopyableBubble` 组件与 `ClipboardHelper`，用户气泡和响应气泡均支持长按复制对话内容。
 - **[重构] 日程时间线数据流优化** — 合并日程写入 DAO 路径、移除手动刷新触发，并让划线完成项直接进入时间线投影，减少抽屉状态漂移并补齐异步 telemetry 与结构测试覆盖。
 - **[修复] 下载前台服务恢复 Lint-safe 生命周期接线** — 补回 `DownloadForegroundService.onStartCommand()` 的 `super` 调用，恢复 Android 安装与 CI Lint 链路稳定性。
 

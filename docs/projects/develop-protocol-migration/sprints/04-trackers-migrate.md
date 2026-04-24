@@ -163,7 +163,42 @@ Agent narration without these artifacts is not acceptable evidence.
     - `git mv docs/plans/bug-tracker.md docs/projects/connectivity-bug-triage/tracker.md` (no stdout)
     - `git mv docs/plans/harmony-ui-translation-tracker.md docs/projects/harmony-ui-translation/tracker.md` (no stdout)
     - `git mv docs/plans/harmony-scheduler-backend-phase1-brief.md docs/projects/harmony-native/sprints/01-scheduler-backend-phase1.md` (no stdout)
-    - `git log --follow --oneline -3 -- <destination>` to be captured after the shipping commit so the destination paths themselves exist in history
+    - `git log --follow --oneline -3 -- docs/projects/god-file-cleanup/tracker.md`
+      ```
+      5504d1347 docs(trackers): migrate plans trackers into project folders
+      81fb134a2 docs: close historical-report cleanup wave and finish doc cleanup backlog
+      09091955d Harden onboarding fast-lane LLM path and demote deterministic fallback to backup only
+      ```
+    - `git log --follow --oneline -3 -- docs/projects/harmony-native/tracker.md`
+      ```
+      5504d1347 docs(trackers): migrate plans trackers into project folders
+      83f68a26e update scheduler signals and Harmony lane support
+      37f48c4b9 docs(governance): establish Harmony native migration posture
+      ```
+    - `git log --follow --oneline -3 -- docs/projects/ui-campaign/tracker.md`
+      ```
+      5504d1347 docs(trackers): migrate plans trackers into project folders
+      23163aa0e ship: land quarantine lanes and harmony tingwu container
+      68e15bf93 feat: align runtime home shell with ambient island handoff
+      ```
+    - `git log --follow --oneline -3 -- docs/projects/connectivity-bug-triage/tracker.md`
+      ```
+      5504d1347 docs(trackers): migrate plans trackers into project folders
+      23163aa0e ship: land quarantine lanes and harmony tingwu container
+      9a384621f feat(runtime-shell): transplant SIM dynamic island connectivity lane and sync docs
+      ```
+    - `git log --follow --oneline -3 -- docs/projects/harmony-ui-translation/tracker.md`
+      ```
+      5504d1347 docs(trackers): migrate plans trackers into project folders
+      e3bee00df chore: land admin-path and governance residue from dirty-tree quarantine
+      3fbc25ffd chore: land admin-path and governance residue from dirty-tree quarantine
+      ```
+    - `git log --follow --oneline -3 -- docs/projects/harmony-native/sprints/01-scheduler-backend-phase1.md`
+      ```
+      5504d1347 docs(trackers): migrate plans trackers into project folders
+      e3bee00df chore: land admin-path and governance residue from dirty-tree quarantine
+      3fbc25ffd chore: land admin-path and governance residue from dirty-tree quarantine
+      ```
   - Cross-reference sweep:
     - `grep -rln "docs/plans/god-tracker\|docs/plans/harmony-tracker\|docs/plans/ui-tracker\|docs/plans/bug-tracker\|docs/plans/harmony-ui-translation-tracker\|docs/plans/harmony-scheduler-backend-phase1-brief" --exclude-dir=.git --exclude-dir=.worktrees --exclude-dir=node_modules . 2>/dev/null`
       ```
@@ -222,6 +257,6 @@ Agent narration without these artifacts is not acceptable evidence.
       docs/projects/ui-campaign/tracker.md
       docs/projects/workflow-renovation/tracker.md
       ```
-    - PR URL: pending `gh pr create`
+    - PR URL: `https://github.com/esir-nus/smart-sales-main/pull/31`
 - **Lesson proposals:** none at authoring time; at close, consider proposing "Residue sweep for repo-wide path moves must cover source + tests + harness config, not just docs" if the blocker re-occurs elsewhere.
 - **CHANGELOG line:** none. Internal-governance restructure; not user-visible.

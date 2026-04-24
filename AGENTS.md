@@ -59,6 +59,31 @@ Interpret this hierarchy strictly:
 
 `docs/core-flow/**` is the behavioral north-star layer when it exists for a feature.
 
+## Branch Model
+
+`master` is promotion-only. `develop` is the Android maintenance and shared-contract trunk; `platform/harmony` is the Harmony integration trunk below it.
+
+- Close Android and shared-governance sprint contracts onto `develop` through the declared review path.
+- Close Harmony sprint contracts onto `platform/harmony` through the declared review path.
+- `develop` is the canonical source for `adb` package/install flows.
+- `platform/harmony` is the canonical source for `hdc` package/install flows.
+- Feature branches are optional isolation tools, not the default governance model.
+- Shared contracts flow from `develop` to `platform/harmony`, never the reverse.
+
+## Sprint Contract Workflow
+
+Claude authors sprint contracts under `docs/projects/<slug>/sprints/`.
+Codex is the default operator unless the user explicitly overrides the handoff.
+The operator executes one contract at a time, keeps evidence in the contract file, and commits only at sprint close.
+Read `docs/specs/sprint-contract.md` for the contract schema and `docs/specs/project-structure.md` for project layout.
+The user remains the final approval gate for close status, lesson proposals, and any CHANGELOG line.
+
+## Declaration-First Shipping
+
+Startup declaration now lives in sprint contracts rather than a separate active-lane registry.
+Use `docs/specs/sprint-contract.md` for scope, stop criteria, iteration control, and evidence requirements.
+Use `docs/specs/ship-time-checks.md` for the remaining ship-time review gate: secrets, missing files, boundary violations, lane-scope coherence, and reverse-dependency blockers.
+
 ## Shared Project Rules
 
 ### Language
@@ -78,6 +103,17 @@ Interpret this hierarchy strictly:
 - If interfaces, states, ownership, or wave/status tracking change, update the corresponding docs.
 - When a `docs/core-flow/**` document exists, read it before treating specs as the final behavioral source.
 - Do not downgrade a Core Flow doc just because the codebase is behind it; instead, identify which lower layer must catch up.
+
+### Doc-Production Discipline
+
+- Agents must not auto-proliferate doc artifacts.
+- Before producing a non-code file, ask whether the information fits in a commit message, an existing doc, or a sprint contract ledger.
+- Default to not creating a new file.
+
+### Single Changelog
+
+- There is one product changelog: `CHANGELOG.md`, rendered to `CHANGELOG.html`.
+- Do not maintain a parallel product trace log; `docs/plans/changelog.md` is deprecated and scheduled for cleanup elsewhere.
 
 ### Lessons-Learned Discipline
 
@@ -171,9 +207,12 @@ If a workflow proves repeatedly useful in Codex, promote it deliberately into on
 ## Quick Reference
 
 - Main tracker: `docs/plans/tracker.md`
+- Sprint contract schema: `docs/specs/sprint-contract.md`
+- Project structure: `docs/specs/project-structure.md`
 - UX SOT: `docs/specs/prism-ui-ux-contract.md`
 - Interface ownership: `docs/cerb/interface-map.md`
 - Feature SOP: `docs/sops/feature-development.md`
+- Ship-time gate: `docs/specs/ship-time-checks.md`
 - Codex skill library: `.codex/skills/*/SKILL.md`
 - Human reference: `docs/AGENTS.md`
 - Antigravity runtime rules: `.agent/rules/*.md`

@@ -46,7 +46,7 @@ Agent prose ("I verified the tests pass") is not a substitute. The operator's jo
 
 This spec is template-is-the-spec: the section list above IS the contract template. A contract that uses these ten sections in this order conforms to the schema. No separate template file is needed.
 
-The first real instance of this schema lives at `docs/projects/workflow-renovation/sprints/01-specs-bootstrap.md` — read it as the worked exemplar.
+The first real instance of this schema lives at `docs/projects/develop-protocol-migration/sprints/01-specs-bootstrap.md` — read it as the worked exemplar.
 
 ## Size Discipline
 

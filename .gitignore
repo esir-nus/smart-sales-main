@@ -140,6 +140,9 @@ APIs.txt
 # Archived documentation (historical reference only)
 docs/archived/
 
+# Local sprint contracts (tracked historical files remain tracked)
+docs/projects/**/sprints/*.md
+
 # Workflow documentation (internal)
 workflows/
 !.github/workflows/

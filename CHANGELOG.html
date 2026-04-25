@@ -152,6 +152,10 @@
   <div class="date-header"><h3>2026-04-25</h3></div>
   <div class="entries">
       <div class="entry">
+        <span class="badge badge-修复">修复</span>
+        <span class="entry-msg"><strong>连接卡片重连状态归属</strong> — 多徽章连接面板点击另一张卡片时会取消旧重连任务，先切换活跃徽章再显示 `重连中…`，避免旧卡片继续动画或新卡片停在断开态；同时修正 SIM 音频同步中文件名如 `a.wav` 被误补成 `log_a.wav` 的归一化问题。</span>
+      </div>
+      <div class="entry">
         <span class="badge badge-新增">新增</span>
         <span class="entry-msg"><strong>多徽章连接卡片与手动断开意图</strong> — 连接管理面板改为等权设备卡片，用户手动断开的徽章会持久化 `manuallyDisconnected` 标记，抑制自动重连与启动恢复直到用户点击连接；同时补充 BLE_DETECTED / OUT_OF_RANGE 展示，让可连接但未连接的设备状态更清晰。</span>
       </div>

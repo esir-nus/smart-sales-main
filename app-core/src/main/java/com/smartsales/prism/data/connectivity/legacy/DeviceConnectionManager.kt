@@ -48,6 +48,11 @@ interface DeviceConnectionManager {
     val firmwareVersionEvents: SharedFlow<String>
 
     /**
+     * Badge SD 卡剩余空间通知流 — Badge 返回 SD#space#<size> 时触发
+     */
+    val sdCardSpaceEvents: SharedFlow<String>
+
+    /**
      * Wi-Fi 修复流程细粒度事件流。
      * Hot flow，replay=0，仅在 confirmManualWifiProvision() 窗口内发射。
      */
@@ -94,6 +99,12 @@ interface DeviceConnectionManager {
      * 若 BLE 未连接或写入失败，静默忽略。
      */
     suspend fun requestFirmwareVersion(): Boolean
+
+    /**
+     * 请求徽章返回 SD 卡剩余空间，payload 为 "SD#space"。
+     * 若 BLE 未连接或写入失败，静默忽略。
+     */
+    suspend fun requestSdCardSpace(): Boolean
 }
 
 @Singleton
@@ -142,6 +153,7 @@ class DefaultDeviceConnectionManager @Inject constructor(
     override val audioRecordingReadyEvents: SharedFlow<String> = runtime.audioRecordingReadyEvents.asSharedFlow()
     override val batteryEvents: SharedFlow<Int> = runtime.batteryEvents.asSharedFlow()
     override val firmwareVersionEvents: SharedFlow<String> = runtime.firmwareVersionEvents.asSharedFlow()
+    override val sdCardSpaceEvents: SharedFlow<String> = runtime.sdCardSpaceEvents.asSharedFlow()
     override val wifiRepairEvents: SharedFlow<WifiRepairEvent> = runtime.repairEvents.asSharedFlow()
 
     init {
@@ -232,6 +244,19 @@ class DefaultDeviceConnectionManager @Inject constructor(
             return true
         } catch (ex: Exception) {
             ConnectivityLogger.w("🧾 Badge firmware version query failed (non-fatal): ${ex.message}")
+            return false
+        }
+    }
+
+    override suspend fun requestSdCardSpace(): Boolean {
+        val session = connectionSupport.currentSessionOrNull() ?: return false
+        if (!badgeStateMonitor.status.value.bleConnected) return false
+        try {
+            badgeGateway.sendBadgeSignal(session, "SD#space")
+            ConnectivityLogger.i("💾 Badge SD card space query sent")
+            return true
+        } catch (ex: Exception) {
+            ConnectivityLogger.w("💾 Badge SD card space query failed (non-fatal): ${ex.message}")
             return false
         }
     }

@@ -192,11 +192,15 @@ class SimBadgeAudioAutoDownloaderTest {
 
         override fun firmwareVersionNotifications(): Flow<String> = emptyFlow()
 
+        override fun sdCardSpaceNotifications(): Flow<String> = emptyFlow()
+
         override suspend fun isReady(): Boolean = true
 
         override suspend fun deleteRecording(filename: String): Boolean = true
 
         override suspend fun requestFirmwareVersion(): Boolean = false
+
+        override suspend fun requestSdCardSpace(): Boolean = false
 
         override suspend fun notifyCommandEnd() {
             notifyCommandEndCalls += 1

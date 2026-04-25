@@ -179,6 +179,38 @@ class ConnectivityViewModelTest {
     }
 
     @Test
+    fun `sdCardSpace updates from bridge notifications and resets on disconnect`() = runTest {
+        val bridge = FakeConnectivityBridge()
+        val viewModel = createViewModel(bridge = bridge)
+        advanceUntilIdle()
+
+        assertNull(viewModel.sdCardSpace.value)
+
+        bridge.setConnectionState(BadgeConnectionState.Connected("192.168.0.9", "MstRobot"))
+        advanceUntilIdle()
+
+        bridge.emitSdCardSpace("27.23GB")
+        advanceUntilIdle()
+        assertEquals("27.23GB", viewModel.sdCardSpace.value)
+
+        bridge.setConnectionState(BadgeConnectionState.Disconnected)
+        advanceUntilIdle()
+        assertNull(viewModel.sdCardSpace.value)
+    }
+
+    @Test
+    fun `requestSdCardSpace forwards manual query to bridge`() = runTest {
+        val bridge = FakeConnectivityBridge()
+        val viewModel = createViewModel(bridge = bridge)
+        advanceUntilIdle()
+
+        viewModel.requestSdCardSpace()
+        advanceUntilIdle()
+
+        assertEquals(1, bridge.requestSdCardSpaceCalls)
+    }
+
+    @Test
     fun `managerState lets active reconnect override paired offline diagnostic state`() = runTest {
         val bridge = FakeConnectivityBridge(
             connection = BadgeConnectionState.Disconnected,
@@ -582,10 +614,15 @@ class ConnectivityViewModelTest {
             replay = 0,
             extraBufferCapacity = 4
         )
+        private val _sdCardSpaceNotifications = MutableSharedFlow<String>(
+            replay = 0,
+            extraBufferCapacity = 4
+        )
 
         override val connectionState: StateFlow<BadgeConnectionState> = _connectionState.asStateFlow()
         override val managerStatus: StateFlow<BadgeManagerStatus> = _managerStatus.asStateFlow()
         var requestFirmwareVersionCalls = 0
+        var requestSdCardSpaceCalls = 0
 
         override suspend fun downloadRecording(
             filename: String,
@@ -605,12 +642,19 @@ class ConnectivityViewModelTest {
 
         override fun firmwareVersionNotifications(): Flow<String> = _firmwareVersionNotifications
 
+        override fun sdCardSpaceNotifications(): Flow<String> = _sdCardSpaceNotifications
+
         override suspend fun isReady(): Boolean = false
 
         override suspend fun deleteRecording(filename: String): Boolean = false
 
         override suspend fun requestFirmwareVersion(): Boolean {
             requestFirmwareVersionCalls += 1
+            return true
+        }
+
+        override suspend fun requestSdCardSpace(): Boolean {
+            requestSdCardSpaceCalls += 1
             return true
         }
 
@@ -623,6 +667,8 @@ class ConnectivityViewModelTest {
         suspend fun emitBatteryLevel(level: Int) = _batteryNotifications.emit(level)
 
         suspend fun emitFirmwareVersion(version: String) = _firmwareVersionNotifications.emit(version)
+
+        suspend fun emitSdCardSpace(size: String) = _sdCardSpaceNotifications.emit(size)
 
         fun setConnectionState(state: BadgeConnectionState) {
             _connectionState.value = state

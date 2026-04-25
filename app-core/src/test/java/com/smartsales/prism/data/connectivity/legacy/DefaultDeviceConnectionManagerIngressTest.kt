@@ -195,6 +195,41 @@ class DefaultDeviceConnectionManagerIngressTest {
     }
 
     @Test
+    fun `sd card space event emits formatted size`() = runTest {
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("MstRobot", "secret")
+            )
+        }
+        val manager = newManager(
+            gateway = gateway,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            networkResult = Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "192.168.0.9",
+                    deviceWifiName = "MstRobot",
+                    phoneWifiName = "MstRobot",
+                    rawResponse = "IP#192.168.0.9, SD#MstRobot"
+                )
+            )
+        )
+        val recorded = backgroundScope.async {
+            manager.sdCardSpaceEvents.first()
+        }
+
+        manager.reconnectAndWait()
+        advanceUntilIdle()
+        gateway.emit(BadgeNotification.SdCardSpace("27.23GB"))
+        advanceUntilIdle()
+
+        assertEquals("27.23GB", recorded.await())
+    }
+
+    @Test
     fun `requestFirmwareVersion sends Ver get signal when ble is connected`() = runTest {
         val badgeGateway = FakeBleGateway()
         val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
@@ -227,6 +262,56 @@ class DefaultDeviceConnectionManagerIngressTest {
         assertEquals(1, badgeGateway.badgeSignalCalls.size)
         assertEquals("badge-1", badgeGateway.badgeSignalCalls.single().first.peripheralId)
         assertEquals("Ver#get", badgeGateway.badgeSignalCalls.single().second)
+    }
+
+    @Test
+    fun `requestSdCardSpace sends SD space signal when ble is connected`() = runTest {
+        val badgeGateway = FakeBleGateway()
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40)),
+                credentials = WifiCredentials("MstRobot", "secret")
+            )
+        }
+        val manager = newManager(
+            gateway = gateway,
+            badgeGateway = badgeGateway,
+            sessionStore = sessionStore,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            networkResult = Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "192.168.0.9",
+                    deviceWifiName = "MstRobot",
+                    phoneWifiName = "MstRobot",
+                    rawResponse = "IP#192.168.0.9, SD#MstRobot"
+                )
+            )
+        )
+
+        manager.reconnectAndWait()
+        advanceUntilIdle()
+
+        assertTrue(manager.requestSdCardSpace())
+        assertEquals(1, badgeGateway.badgeSignalCalls.size)
+        assertEquals("badge-1", badgeGateway.badgeSignalCalls.single().first.peripheralId)
+        assertEquals("SD#space", badgeGateway.badgeSignalCalls.single().second)
+    }
+
+    @Test
+    fun `requestSdCardSpace no ops when ble is disconnected`() = runTest {
+        val badgeGateway = FakeBleGateway()
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val manager = newManager(
+            gateway = gateway,
+            badgeGateway = badgeGateway,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler)
+        )
+
+        assertFalse(manager.requestSdCardSpace())
+        assertTrue(badgeGateway.badgeSignalCalls.isEmpty())
     }
 
     @Test

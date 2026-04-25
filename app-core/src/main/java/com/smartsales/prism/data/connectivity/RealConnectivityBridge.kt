@@ -225,7 +225,11 @@ class RealConnectivityBridge @Inject constructor(
 
     override fun firmwareVersionNotifications(): Flow<String> = deviceManager.firmwareVersionEvents
 
+    override fun sdCardSpaceNotifications(): Flow<String> = deviceManager.sdCardSpaceEvents
+
     override suspend fun requestFirmwareVersion(): Boolean = deviceManager.requestFirmwareVersion()
+
+    override suspend fun requestSdCardSpace(): Boolean = deviceManager.requestSdCardSpace()
 
     override suspend fun notifyCommandEnd() = deviceManager.notifyCommandEnd()
 

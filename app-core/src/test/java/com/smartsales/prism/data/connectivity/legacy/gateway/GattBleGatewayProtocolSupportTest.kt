@@ -3,6 +3,7 @@ package com.smartsales.prism.data.connectivity.legacy.gateway
 import com.smartsales.prism.data.connectivity.legacy.WifiCredentials
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -46,5 +47,29 @@ class GattBleGatewayProtocolSupportTest {
         )
 
         assertEquals(listOf("SD#Office-Wifi", "PD#sec-ret"), writes)
+    }
+
+    @Test
+    fun `parseBadgeNotificationPayload parses sd space response`() {
+        assertEquals(
+            BadgeNotification.SdCardSpace("27.23GB"),
+            parseBadgeNotificationPayload("SD#space#27.23GB")
+        )
+    }
+
+    @Test
+    fun `parseBadgeNotificationPayload preserves full trailing sd space string`() {
+        assertEquals(
+            BadgeNotification.SdCardSpace("1.5GB / free"),
+            parseBadgeNotificationPayload("SD#space#1.5GB / free")
+        )
+    }
+
+    @Test
+    fun `parseBadgeNotificationPayload does not route wifi ssid fragment to sd space`() {
+        val parsed = parseBadgeNotificationPayload("SD#MyHomeWiFi")
+
+        assertFalse(parsed is BadgeNotification.SdCardSpace)
+        assertEquals(BadgeNotification.Unknown("SD#MyHomeWiFi"), parsed)
     }
 }

@@ -8,7 +8,7 @@ This is a **persistent intake project**. It stays open as a long-lived funnel fo
 
 ## Status
 
-open — authored 2026-04-24
+open — updated 2026-04-25
 
 ## Sprint Index
 
@@ -19,6 +19,7 @@ open — authored 2026-04-24
 | 03 | wav-suffix-parser-fix | done | Normalized suffix-present and suffix-absent `log#` / `rec#` payloads to canonical `log_<ts>.wav` / `rec_<ts>.wav`, added focused filename tests, and closed the spec fallout note | [03-wav-suffix-parser-fix.md](sprints/03-wav-suffix-parser-fix.md) |
 | 04 | ver-query-handler | done | Implemented `Ver#get` -> `Ver#...` through parser -> bridge -> `ConnectivityViewModel.firmwareVersion`, with auto-query-on-connect and a UserCenter refresh row; verified with focused `:app-core:testDebugUnitTest` coverage plus `:app:assembleDebug` | [04-ver-query-handler.md](sprints/04-ver-query-handler.md) |
 | 05 | command-end-emitter | done | Retired legacy `commandend#1` task-chime wiring, added `notifyCommandEnd()` through both pipeline terminal states, and synced the protocol/interface docs with focused tests plus `:app:assembleDebug` verification | [05-command-end-emitter.md](sprints/05-command-end-emitter.md) |
+| 06 | sd-space-handler | done | Wired `SD#space` -> `SD#space#<size>` through parser -> bridge -> `ConnectivityViewModel.sdCardSpace`, added a UserCenter query-on-tap row with raw firmware string display, and flipped the owning docs to Implemented | [06-sd-space-handler.md](sprints/06-sd-space-handler.md) |
 
 ## Genesis
 
@@ -44,12 +45,13 @@ open — authored 2026-04-24
 
 This project is intentionally persistent. Per `docs/specs/project-structure.md` size discipline, projects running past sprint 6 must declare why. The justification here is scope: the hardware team's firmware drops are an open-ended upstream stream, not a bounded objective. Closing this project would force each drop to spawn a new project folder, which is bureaucratic overhead without information value. Re-evaluation at sprint 6 will consider whether the stream has slowed enough to close and migrate to ad-hoc docs-only updates, or whether the project is genuinely load-bearing.
 
+Dormancy Recommendation: keep the project tracker open but dormant until the next upstream firmware drop or the pending `log#` / `rec#` semantic clarification lands. Sprint 06 closes the last currently unblocked app-side wiring item from the 2026-04-24 second drop.
+
 ## Inputs Pending for Later Sprints
 
 - **Sprint 01 (`bat-listener-wiring`):** Listener pattern to mirror is the `log#` / `rec#` flow in `ConnectivityBridge.recordingNotifications()` / `audioRecordingNotifications()`. Replace the provisional `ConnectivityViewModel.batteryLevel` source flagged in `docs/cerb/interface-map.md:147` and `docs/cerb-ui/dynamic-island/spec.md:100`. Firmware push cadence is periodic but not yet specified; sprint authoring should clarify with hardware team or treat any receipt as authoritative.
 - **Sprint 02 (`batlevel-nullable-ui`):** UI follow-up pass once sprint 01 has shipped the bridge-backed `batteryLevel`. Flips the type to `StateFlow<Int?>` and propagates through `ConnectivityModal`, `HistoryDrawer`, `SimShellDynamicIslandCoordinator`, `SimHomeHeroShell` so "no `Bat#` push received yet" is distinguishable from a real low reading. Out of scope: Harmony-native port, new low-battery visual state, charging indicator.
 - **Sprint 04 (`ver-query-handler`):** Query/reply path now uses `DeviceConnectionManager.requestFirmwareVersion()` -> `ConnectivityBridge.firmwareVersionNotifications()` -> `ConnectivityViewModel.firmwareVersion: StateFlow<String?>`. The app auto-queries once per fresh connect, UserCenter exposes a manual refresh icon, and disconnect clears the value back to `null`.
-- **Future sprint — `SD#space` handler:** App-initiated pull for badge SD card free space (`SD#space` → `SD#space#<size>`). Authoring needs to decide (a) parse strategy — the size string is pre-formatted human-readable (`27.23GB`) with no guaranteed unit, so the app must parse defensively or display raw; (b) call site — UserCenter diagnostics panel is the natural home, no reactive-UI use case justifies a listener; (c) disambiguation from the legacy §1 `SD#<SSID>` WiFi-fragment notification (the `space` token in the second segment is the discriminator). Watch the `RateLimitedBleGateway` floor — this is a user-triggered query, not a periodic poll.
 - **Future sprint — log#/rec# semantic reconciliation (firmware-team coordination):** Firmware team's 2026-04-24 note labels `rec#` as long-recording and `log#` as short-recording, which is the opposite axis from the app's current pipeline routing (log# → scheduler/transcribe, rec# → drawer/audio-only). Spec delta is recorded in `docs/specs/esp32-protocol.md` §§6-7 Semantic Reconciliation note. This is NOT an app-side swap sprint — authoring requires a firmware-team clarification round first (are 长/短 physical button-press durations independent of app intent, or a genuine semantic flip?), then a decision on whether any app wiring changes at all. Do not spin this sprint up before the clarification exchange.
 - **Future sprint — Harmony-native battery port:** Mirror sprints 01 + 02 on `platform/harmony` once both ship on Android. Needs Harmony-side `AppState` surface for `batteryLevel: Int?` and hero-level island equivalent; authored separately under this project tracker when the Harmony connectivity seam is ready to consume `Bat#` pushes.
 

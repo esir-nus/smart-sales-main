@@ -30,7 +30,7 @@ Communication happens via:
 | 10 | Battery Level Push | ✅ Implemented | BLE `Bat#...` -> `ConnectivityBridge.batteryNotifications()` -> `ConnectivityViewModel.batteryLevel` |
 | 11 | Firmware Version Query | ✅ Implemented | `ConnectivityViewModel` auto-queries on connect and UserCenter refresh; reply flows via `ConnectivityBridge.firmwareVersionNotifications()` |
 | 12 | Task Completion Signal | ✅ Implemented | `RealBadgeAudioPipeline` / `SimBadgeAudioAutoDownloader` terminal branches call `ConnectivityBridge.notifyCommandEnd()` -> `DeviceConnectionManager.notifyCommandEnd()` -> `Command#end` |
-| 13 | SD Card Space Query | ⏳ Pending app-side wiring | App-initiated query `SD#space` -> badge reply `SD#space#<size>` (e.g., `SD#space#27.23GB`); handler not yet implemented |
+| 13 | SD Card Space Query | ✅ Implemented | UserCenter query-on-tap sends `SD#space`; reply flows through `ConnectivityBridge.sdCardSpaceNotifications()` -> `ConnectivityViewModel.sdCardSpace` |
 
 ---
 
@@ -256,7 +256,7 @@ App sends:    SD#space
 Badge sends:  SD#space#<size>      (e.g., SD#space#27.23GB)
 ```
 
-**Size format**: the badge returns the value as a pre-formatted human string (`27.23GB`, `512MB`, etc.). The app must parse this defensively (no guarantee of unit, decimal precision, or whitespace). If parsing fails, surface the raw string rather than blocking on it.
+**Size format**: the badge returns the value as a pre-formatted human string (`27.23GB`, `512MB`, etc.). The app displays this string verbatim; firmware owns units, precision, and spacing.
 
 **Caveat — fragmented response shape**: this command shares the `SD#` prefix with the WiFi-status-query fragment (§1, where the badge emits `SD#<SSID>` as one of two notifications). The disambiguator is the `space` token after the first `#`:
 - `SD#<SSID>` — WiFi status fragment (legacy, §1)
@@ -264,7 +264,12 @@ Badge sends:  SD#space#<size>      (e.g., SD#space#27.23GB)
 
 App-side parsers must check the second segment before routing.
 
-**App-side contract**: handler not yet implemented. When wired, the natural call site is a UserCenter / diagnostics surface (the value has no reactive-UI use case that would warrant a subscription-style listener).
+**App-side contract**:
+- App sends `SD#space` through `DeviceConnectionManager.requestSdCardSpace()`
+- Badge reply is parsed by `GattBleGatewayProtocolSupport.parseBadgeNotificationPayload()` as `BadgeNotification.SdCardSpace`
+- The shipped call chain is `DeviceConnectionManager.sdCardSpaceEvents` -> `RealConnectivityBridge.sdCardSpaceNotifications()` -> `ConnectivityViewModel.sdCardSpace`
+- UserCenter exposes a query-on-tap diagnostics row and displays the firmware-formatted string verbatim
+- `ConnectivityViewModel.sdCardSpace` stays in-memory only and resets back to `null` on disconnect
 
 ---
 

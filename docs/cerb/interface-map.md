@@ -4,7 +4,7 @@
 >
 > **Purpose**: Module ownership + data flow. Read this BEFORE any cross-module change.
 > **Rule**: If data belongs to Module B, query B's interface at runtime. Don't store B's data on A's model.
-> **Last Updated**: 2026-04-24 (Badge firmware version query/reply wired through parser -> bridge -> ConnectivityViewModel -> UserCenter; task-create/reminder chimes and persisted voice volume remain shipped)
+> **Last Updated**: 2026-04-25 (Badge SD-card-space query/reply wired through parser -> bridge -> ConnectivityViewModel -> UserCenter; firmware version, task-create/reminder chimes, and persisted voice volume remain shipped)
 >
 > **Status Legend**: ✅ = Shipped (Real impl) · 📐 = Interface only (Fake impl) · 🔲 = Not yet coded
 > **Platform Ownership Legend**: `shared` = same product contract across platforms · `android-only` = owned by the current Android lineage · `harmony-only` = owned by the future native Harmony root · `platform-adapter` = shared product contract, platform-specific delivery layer · `legacy-android-on-harmony` = Android app compatibility behavior on Huawei/Honor/Harmony devices
@@ -146,6 +146,7 @@ The current base-runtime/SIM shell introduces one narrow shell-owned arbitration
 - tap routing follows the visible lane back into shell-owned entry handlers, while downstream scheduler drawer and connectivity manager behavior remain owned by their existing modules
 - the connected battery badge now uses `ConnectivityViewModel.batteryLevel: StateFlow<Int?>`; live updates come from the shipped `ConnectivityBridge.batteryNotifications()` listener wired to unsolicited `Bat#<0..100>` BLE pushes, and `null` means no push has arrived yet (see `docs/specs/esp32-protocol.md` §9)
 - UserCenter now also reads `ConnectivityViewModel.firmwareVersion: StateFlow<String?>`; values come from the shipped `ConnectivityBridge.firmwareVersionNotifications()` query/reply path (`Ver#get` -> `Ver#...`), auto-refresh once per fresh connect, and clear back to `null` on disconnect (see `docs/specs/esp32-protocol.md` §10)
+- UserCenter also owns `ConnectivityViewModel.sdCardSpace: StateFlow<String?>`; values come from the user-initiated `ConnectivityBridge.requestSdCardSpace()` / `ConnectivityBridge.sdCardSpaceNotifications()` query/reply path (`SD#space` -> `SD#space#<size>`), render the firmware-formatted string verbatim, and clear back to `null` on disconnect (see `docs/specs/esp32-protocol.md` §12)
 
 ### RuntimeShell foreground reminder-banner edge (2026-04-03)
 

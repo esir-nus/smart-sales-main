@@ -97,6 +97,7 @@ fun UserCenterScreen(
     val profile by viewModel.profile.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
     val firmwareVersion by connectivityViewModel.firmwareVersion.collectAsStateWithLifecycle()
+    val sdCardSpace by connectivityViewModel.sdCardSpace.collectAsStateWithLifecycle()
     var isEditing by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
 
@@ -222,8 +223,14 @@ fun UserCenterScreen(
                                 UserCenterRefreshInfoRow(
                                     label = "Badge firmware",
                                     value = firmwareVersion?.let { "Ver. $it" } ?: "Ver. —",
-                                    showDivider = false,
+                                    showDivider = true,
                                     onRefresh = connectivityViewModel::requestFirmwareVersion
+                                )
+                                UserCenterSelectRow(
+                                    label = "Badge SD card free space",
+                                    value = sdCardSpace ?: "Tap to query",
+                                    onClick = connectivityViewModel::requestSdCardSpace,
+                                    showDivider = false
                                 )
                             }
                         }

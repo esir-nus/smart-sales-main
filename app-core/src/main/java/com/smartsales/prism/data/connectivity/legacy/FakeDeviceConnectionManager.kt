@@ -29,6 +29,11 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
         extraBufferCapacity = 1
     )
     override val firmwareVersionEvents: SharedFlow<String> = _firmwareVersionEvents.asSharedFlow()
+    private val _sdCardSpaceEvents = MutableSharedFlow<String>(
+        replay = 0,
+        extraBufferCapacity = 1
+    )
+    override val sdCardSpaceEvents: SharedFlow<String> = _sdCardSpaceEvents.asSharedFlow()
 
     private val _wifiRepairEvents = MutableSharedFlow<WifiRepairEvent>(
         replay = 0,
@@ -142,6 +147,13 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
         requestFirmwareVersionCalls++
         return requestFirmwareVersionShouldSucceed
     }
+
+    var requestSdCardSpaceCalls = 0
+    var requestSdCardSpaceShouldSucceed = true
+    override suspend fun requestSdCardSpace(): Boolean {
+        requestSdCardSpaceCalls++
+        return requestSdCardSpaceShouldSucceed
+    }
     
     fun setState(newState: ConnectionState) {
         _state.value = newState
@@ -153,6 +165,10 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
 
     suspend fun emitFirmwareVersion(version: String) {
         _firmwareVersionEvents.emit(version)
+    }
+
+    suspend fun emitSdCardSpace(size: String) {
+        _sdCardSpaceEvents.emit(size)
     }
     
     fun reset() {
@@ -168,5 +184,6 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
         queryNetworkStatusCalls = 0
         notifyCommandEndCalls = 0
         requestFirmwareVersionCalls = 0
+        requestSdCardSpaceCalls = 0
     }
 }

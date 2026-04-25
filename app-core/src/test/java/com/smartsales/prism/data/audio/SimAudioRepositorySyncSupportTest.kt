@@ -556,6 +556,8 @@ class SimAudioRepositorySyncSupportTest {
 
         override fun firmwareVersionNotifications(): Flow<String> = emptyFlow()
 
+        override fun sdCardSpaceNotifications(): Flow<String> = emptyFlow()
+
         override suspend fun isReady(): Boolean {
             calls += "isReady"
             return isReadyResult
@@ -568,6 +570,11 @@ class SimAudioRepositorySyncSupportTest {
 
         override suspend fun requestFirmwareVersion(): Boolean {
             calls += "requestFirmwareVersion"
+            return false
+        }
+
+        override suspend fun requestSdCardSpace(): Boolean {
+            calls += "requestSdCardSpace"
             return false
         }
 

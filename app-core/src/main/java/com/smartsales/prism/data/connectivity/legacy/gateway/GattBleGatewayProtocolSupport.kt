@@ -124,6 +124,20 @@ internal fun parseBadgeNotificationPayload(rawPayload: String): BadgeNotificatio
             if (isFirmwareVersionPayload(version)) BadgeNotification.FirmwareVersion(version)
             else BadgeNotification.Unknown(raw)
         }
+        raw.startsWith("SD#", ignoreCase = true) -> {
+            val parts = raw.split("#")
+            if (
+                parts.size >= 3 &&
+                parts[0].equals("SD", ignoreCase = true) &&
+                parts[1].equals("space", ignoreCase = true)
+            ) {
+                val formattedSize = parts.drop(2).joinToString("#").trim()
+                if (formattedSize.isBlank()) BadgeNotification.Unknown(raw)
+                else BadgeNotification.SdCardSpace(formattedSize)
+            } else {
+                BadgeNotification.Unknown(raw)
+            }
+        }
         else -> BadgeNotification.Unknown(raw)
     }
 }

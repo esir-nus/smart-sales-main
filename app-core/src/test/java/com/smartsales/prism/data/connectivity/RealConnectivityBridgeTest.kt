@@ -126,12 +126,35 @@ class RealConnectivityBridgeTest {
     }
 
     @Test
+    fun `sdCardSpaceNotifications forwards manager space events`() = runTest {
+        val manager = FakeDeviceConnectionManager()
+        val bridge = newBridge(manager, mock(), FakeBadgeStateMonitor())
+        val recorded = backgroundScope.async(start = CoroutineStart.UNDISPATCHED) {
+            bridge.sdCardSpaceNotifications().first()
+        }
+
+        manager.emitSdCardSpace("27.23GB")
+        advanceUntilIdle()
+
+        assertEquals("27.23GB", recorded.await())
+    }
+
+    @Test
     fun `requestFirmwareVersion delegates to device manager`() = runTest {
         val manager = FakeDeviceConnectionManager()
         val bridge = newBridge(manager, mock(), FakeBadgeStateMonitor())
 
         assertEquals(true, bridge.requestFirmwareVersion())
         assertEquals(1, manager.requestFirmwareVersionCalls)
+    }
+
+    @Test
+    fun `requestSdCardSpace delegates to device manager`() = runTest {
+        val manager = FakeDeviceConnectionManager()
+        val bridge = newBridge(manager, mock(), FakeBadgeStateMonitor())
+
+        assertEquals(true, bridge.requestSdCardSpace())
+        assertEquals(1, manager.requestSdCardSpaceCalls)
     }
 
     @Test

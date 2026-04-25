@@ -2,7 +2,7 @@
 
 > **Blackbox contract** — For consumers (Scheduler, Badge Audio Pipeline). Don't read implementation.
 > **Status**: Active supporting interface
-> **Last Updated**: 2026-04-24
+> **Last Updated**: 2026-04-25
 
 ---
 
@@ -86,6 +86,17 @@ interface ConnectivityBridge {
      * @see esp32-protocol.md §10
      */
     fun firmwareVersionNotifications(): Flow<String>
+
+    /**
+     * Stream of SD-card-space replies from badge.
+     *
+     * Current production path: app sends BLE `SD#space`; badge replies
+     * `SD#space#<size>` on the persistent notification characteristic.
+     *
+     * @return Flow (hot, buffered, no replay)
+     * @see esp32-protocol.md §12
+     */
+    fun sdCardSpaceNotifications(): Flow<String>
     
     /**
      * Check if badge is connected and reachable.
@@ -107,6 +118,13 @@ interface ConnectivityBridge {
      * Sends `Ver#get` as a best-effort query on the active session.
      */
     suspend fun requestFirmwareVersion(): Boolean
+
+    /**
+     * Request the badge SD-card free-space string over BLE.
+     *
+     * Sends `SD#space` as a best-effort query on the active session.
+     */
+    suspend fun requestSdCardSpace(): Boolean
 
     /**
      * Notify the badge that downstream processing finished.
@@ -217,9 +235,11 @@ sealed class WifiConfigResult {
 | `recordingNotifications` | Hot flow, buffered (1), no replay |
 | `batteryNotifications` | Hot flow, buffered, no replay; forwards unsolicited BLE `Bat#<0..100>` pushes as integer percent |
 | `firmwareVersionNotifications` | Hot flow, buffered, no replay; forwards `Ver#...` replies from the badge as display-ready strings |
+| `sdCardSpaceNotifications` | Hot flow, buffered, no replay; forwards `SD#space#<size>` replies from the badge as firmware-formatted display strings |
 | `isReady()` | Pre-flight check with 3s timeout; may refresh endpoint only when the active snapshot is missing or invalidated |
 | `deleteRecording` | Idempotent, returns true if file removed or didn't exist; reuses the active runtime endpoint when valid |
 | `requestFirmwareVersion()` | Best-effort BLE query; sends `Ver#get` on the active session and returns whether the request was queued successfully |
+| `requestSdCardSpace()` | Best-effort BLE query; sends `SD#space` on the active session and returns whether the request was queued successfully |
 | `notifyCommandEnd()` | Best-effort BLE completion signal; sends `Command#end` on the active session when a `log#` or `rec#` pipeline reaches a terminal state |
 | `updateWifiConfig` | Rejects blank/whitespace-only SSID or password before any BLE provision/write attempt |
 

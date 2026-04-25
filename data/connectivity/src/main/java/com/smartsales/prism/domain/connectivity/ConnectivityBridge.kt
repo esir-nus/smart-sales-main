@@ -81,6 +81,13 @@ interface ConnectivityBridge {
      * Badge 返回 `Ver#<project>.<major>.<minor>.<feature>` 时触发。
      */
     fun firmwareVersionNotifications(): Flow<String>
+
+    /**
+     * SD 卡剩余空间通知流。
+     *
+     * Badge 返回 `SD#space#<size>` 时触发。
+     */
+    fun sdCardSpaceNotifications(): Flow<String>
     
     /**
      * 检查 Badge 是否就绪
@@ -107,6 +114,13 @@ interface ConnectivityBridge {
      * 发送 BLE `Ver#get`，成功入队返回 true。
      */
     suspend fun requestFirmwareVersion(): Boolean
+
+    /**
+     * 主动请求徽章 SD 卡剩余空间。
+     *
+     * 发送 BLE `SD#space`，成功入队返回 true。
+     */
+    suspend fun requestSdCardSpace(): Boolean
 
     /**
      * 主动通知徽章流水线已结束处理。

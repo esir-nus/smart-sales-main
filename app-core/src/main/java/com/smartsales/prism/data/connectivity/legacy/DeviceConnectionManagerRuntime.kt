@@ -25,6 +25,10 @@ internal class DeviceConnectionManagerRuntime {
         replay = 0,
         extraBufferCapacity = 3
     )
+    val sdCardSpaceEvents = MutableSharedFlow<String>(
+        replay = 0,
+        extraBufferCapacity = 3
+    )
     val repairEvents = MutableSharedFlow<WifiRepairEvent>(
         replay = 0,
         extraBufferCapacity = 16

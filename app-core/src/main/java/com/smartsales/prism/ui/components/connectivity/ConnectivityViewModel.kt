@@ -82,6 +82,10 @@ class ConnectivityViewModel @Inject constructor(
     private val _firmwareVersion = MutableStateFlow<String?>(null)
     val firmwareVersion: StateFlow<String?> = _firmwareVersion.asStateFlow()
 
+    // SD 卡剩余空间 — 用户主动查询前保持 null，断开后清空
+    private val _sdCardSpace = MutableStateFlow<String?>(null)
+    val sdCardSpace: StateFlow<String?> = _sdCardSpace.asStateFlow()
+
     private val _wifiMismatchSuggestedSsid = MutableStateFlow<String?>(null)
     val wifiMismatchSuggestedSsid: StateFlow<String?> = _wifiMismatchSuggestedSsid.asStateFlow()
     private val _wifiMismatchErrorMessage = MutableStateFlow<String?>(null)
@@ -194,6 +198,11 @@ class ConnectivityViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
+            connectivityBridge.sdCardSpaceNotifications().collect { formattedSize ->
+                _sdCardSpace.value = formattedSize
+            }
+        }
+        viewModelScope.launch {
             var wasConnected = false
             connectivityBridge.connectionState.collect { badgeState ->
                 val isConnected = badgeState is BadgeConnectionState.Connected
@@ -201,6 +210,7 @@ class ConnectivityViewModel @Inject constructor(
                     requestFirmwareVersion()
                 } else if (!isConnected) {
                     _firmwareVersion.value = null
+                    _sdCardSpace.value = null
                 }
                 wasConnected = isConnected
             }
@@ -323,6 +333,12 @@ class ConnectivityViewModel @Inject constructor(
     fun requestFirmwareVersion() {
         viewModelScope.launch {
             connectivityBridge.requestFirmwareVersion()
+        }
+    }
+
+    fun requestSdCardSpace() {
+        viewModelScope.launch {
+            connectivityBridge.requestSdCardSpace()
         }
     }
 

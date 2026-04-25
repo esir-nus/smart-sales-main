@@ -209,9 +209,11 @@ class ConnectivityViewModelRepairTest {
         override fun audioRecordingNotifications(): Flow<RecordingNotification.AudioRecordingReady> = emptyFlow()
         override fun batteryNotifications(): Flow<Int> = emptyFlow()
         override fun firmwareVersionNotifications(): Flow<String> = emptyFlow()
+        override fun sdCardSpaceNotifications(): Flow<String> = emptyFlow()
         override suspend fun isReady(): Boolean = false
         override suspend fun deleteRecording(filename: String): Boolean = false
         override suspend fun requestFirmwareVersion(): Boolean = false
+        override suspend fun requestSdCardSpace(): Boolean = false
         override suspend fun notifyCommandEnd() = Unit
         override fun wifiRepairEvents(): Flow<WifiRepairEvent> = _repairEvents
 

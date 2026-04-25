@@ -102,6 +102,9 @@ sealed class BadgeNotification {
     /** 徽章返回固件版本 (Ver#<project>.<major>.<minor>.<feature>) */
     data class FirmwareVersion(val version: String) : BadgeNotification()
 
+    /** 徽章返回 SD 卡剩余空间 (SD#space#<size>) */
+    data class SdCardSpace(val formattedSize: String) : BadgeNotification()
+
     /** 未识别的命令 */
     data class Unknown(val raw: String) : BadgeNotification()
 }

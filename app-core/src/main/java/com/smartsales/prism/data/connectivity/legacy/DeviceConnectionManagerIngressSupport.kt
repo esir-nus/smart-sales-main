@@ -40,6 +40,10 @@ internal class DeviceConnectionManagerIngressSupport(
                             ConnectivityLogger.i("🧾 Badge firmware version: ${event.version}")
                             runtime.firmwareVersionEvents.tryEmit(event.version)
                         }
+                        is BadgeNotification.SdCardSpace -> {
+                            ConnectivityLogger.i("💾 Badge SD card free space: ${event.formattedSize}")
+                            runtime.sdCardSpaceEvents.tryEmit(event.formattedSize)
+                        }
                         is BadgeNotification.TimeSyncRequested -> {
                             ConnectivityLogger.d("⏰ Badge time sync requested")
                         }

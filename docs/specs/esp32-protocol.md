@@ -2,7 +2,7 @@
 
 > **Purpose**: BLE + HTTP protocol between Android app and ESP32 badge  
 > **Source of Truth**: `reference-source/webserver-test.c` + `reference-source/bluetooch.py`  
-> **Last Updated**: 2026-04-24 (second drop — Ver# query/reply, Command#end, SD#space, §§6-7 semantic reconciliation)
+> **Last Updated**: 2026-04-25 (SD#space query/reply app-side wiring shipped; second-drop Ver# / Command#end / semantic reconciliation notes remain current)
 
 ---
 

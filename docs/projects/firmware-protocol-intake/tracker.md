@@ -19,7 +19,7 @@ open — updated 2026-04-25
 | 03 | wav-suffix-parser-fix | done | Normalized suffix-present and suffix-absent `log#` / `rec#` payloads to canonical `log_<ts>.wav` / `rec_<ts>.wav`, added focused filename tests, and closed the spec fallout note | [03-wav-suffix-parser-fix.md](sprints/03-wav-suffix-parser-fix.md) |
 | 04 | ver-query-handler | done | Implemented `Ver#get` -> `Ver#...` through parser -> bridge -> `ConnectivityViewModel.firmwareVersion`, with auto-query-on-connect and a UserCenter refresh row; verified with focused `:app-core:testDebugUnitTest` coverage plus `:app:assembleDebug` | [04-ver-query-handler.md](sprints/04-ver-query-handler.md) |
 | 05 | command-end-emitter | done | Retired legacy `commandend#1` task-chime wiring, added `notifyCommandEnd()` through both pipeline terminal states, and synced the protocol/interface docs with focused tests plus `:app:assembleDebug` verification | [05-command-end-emitter.md](sprints/05-command-end-emitter.md) |
-| 06 | sd-space-handler | done | Wired `SD#space` -> `SD#space#<size>` through parser -> bridge -> `ConnectivityViewModel.sdCardSpace`, added a UserCenter query-on-tap row with raw firmware string display, and flipped the owning docs to Implemented | [06-sd-space-handler.md](sprints/06-sd-space-handler.md) |
+| 06 | sd-space-handler | done | Wired `SD#space` -> `SD#space#<size>` through parser -> bridge -> `ConnectivityViewModel.sdCardSpace`, added a UserCenter query-on-tap row with raw firmware string display, and flipped the owning docs to Implemented | local-only contract (ignored) |
 
 ## Genesis
 
@@ -32,6 +32,7 @@ open — updated 2026-04-25
   
   Decision not to bundle all four into a single sprint: item 1 (Ver#) and item 3 (SD#space) are independent pull-protocol handlers; item 2 (Command#end) needs to plug into two existing pipelines; item 4 is a two-part investigation (parser bug from the `.wav` suffix, plus a semantic question for the firmware team about the log/rec labeling). Each becomes its own sprint entry below. Spec delta itself was a single docs-only commit per the same ad-hoc-ops rule cited above.
 - **2026-04-24 (second drop follow-up)** — Sprint 05 retired the legacy Android-only `commandend#1` task-chime wiring and shipped the spec-owned `Command#end` emitter through both `log#` and `rec#` pipeline terminal states.
+- **2026-04-25 (second drop follow-up)** — Sprint 06 shipped the spec-owned `SD#space` query/reply handler through parser -> bridge -> `ConnectivityViewModel.sdCardSpace` -> UserCenter, keeping the firmware-formatted size string raw and user-initiated only.
 
 ## Cross-Sprint Decisions
 

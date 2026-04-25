@@ -38,9 +38,12 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -291,6 +294,20 @@ internal fun SimUserCenterDrawer(
                                 )
                                 SimNotificationSettingsRow(
                                     viewModel = viewModel,
+                                    showDivider = false
+                                )
+                            }
+                        }
+
+                        item {
+                            SimUserCenterSection(title = "设备控制") {
+                                val voiceVolume by viewModel.voiceVolume.collectAsStateWithLifecycle()
+                                SimUserCenterVolumeRow(
+                                    label = "徽章语音音量",
+                                    value = voiceVolume,
+                                    onValueChange = viewModel::onVoiceVolumeDrag,
+                                    onValueChangeFinished = viewModel::onVoiceVolumeCommitted,
+                                    palette = palette,
                                     showDivider = false
                                 )
                             }
@@ -609,6 +626,74 @@ private fun SimUserCenterToggleRow(
             )
         }
     )
+}
+
+@Composable
+private fun SimUserCenterVolumeRow(
+    label: String,
+    value: Int,
+    onValueChange: (Int) -> Unit,
+    onValueChangeFinished: () -> Unit,
+    palette: SimUserCenterPalette,
+    showDivider: Boolean
+) {
+    Column {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 11.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(11.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                        contentDescription = null,
+                        tint = palette.rowIconTint,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = label,
+                        color = palette.textPrimary,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontSize = 15.sp
+                    )
+                }
+                Text(
+                    text = value.toString(),
+                    color = palette.muted,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontSize = 13.sp
+                )
+            }
+            Slider(
+                value = value.toFloat(),
+                onValueChange = { onValueChange(it.toInt()) },
+                onValueChangeFinished = onValueChangeFinished,
+                valueRange = 0f..100f,
+                colors = SliderDefaults.colors(
+                    thumbColor = palette.accent,
+                    activeTrackColor = palette.accent,
+                    inactiveTrackColor = palette.divider
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        if (showDivider) {
+            HorizontalDivider(
+                color = palette.divider,
+                thickness = 0.5.dp,
+                modifier = Modifier.padding(horizontal = 14.dp)
+            )
+        }
+    }
 }
 
 @Composable

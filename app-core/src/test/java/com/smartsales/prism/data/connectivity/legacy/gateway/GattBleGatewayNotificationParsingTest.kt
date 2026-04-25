@@ -100,4 +100,44 @@ class GattBleGatewayNotificationParsingTest {
         assertEquals("", status.deviceWifiName)
         assertEquals("", status.phoneWifiName)
     }
+
+    @Test
+    fun `mergeNetworkFragments ignores unrelated badge notifications around network status`() {
+        val status = mergeNetworkFragments(
+            listOf(
+                "Bat#4095.00%",
+                "SD#space#0.94GB",
+                "IP#192.168.0.110",
+                "SD#MstRobot"
+            )
+        )
+
+        assertEquals("192.168.0.110", status.ipAddress)
+        assertEquals("MstRobot", status.deviceWifiName)
+        assertEquals("IP#192.168.0.110, SD#MstRobot", status.rawResponse)
+    }
+
+    @Test
+    fun `mergeNetworkFragments accepts network fragments in either order with noise`() {
+        val status = mergeNetworkFragments(
+            listOf(
+                "Ver#1.0.0.1",
+                "SD#MstRobot",
+                "Bat#50",
+                "IP#192.168.0.110"
+            )
+        )
+
+        assertEquals("192.168.0.110", status.ipAddress)
+        assertEquals("MstRobot", status.deviceWifiName)
+        assertEquals("SD#MstRobot, IP#192.168.0.110", status.rawResponse)
+    }
+
+    @Test
+    fun `toNetworkStatusFragment accepts wifi ssid fragment but rejects sd space`() {
+        assertEquals("IP" to "192.168.0.110", "IP#192.168.0.110".toNetworkStatusFragment())
+        assertEquals("SD" to "MstRobot", "SD#MstRobot".toNetworkStatusFragment())
+        assertNull("SD#space#0.94GB".toNetworkStatusFragment())
+        assertNull("Bat#4095.00%".toNetworkStatusFragment())
+    }
 }

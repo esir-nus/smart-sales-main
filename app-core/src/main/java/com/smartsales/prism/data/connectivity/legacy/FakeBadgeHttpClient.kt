@@ -24,6 +24,7 @@ class FakeBadgeHttpClient @Inject constructor() : BadgeHttpClient {
     private var downloadResult: Result<Unit> = Result.Success(Unit)
     private var deleteResult: Result<Unit> = Result.Success(Unit)
     private var isReachableResult: Boolean = true
+    private val reachableResults = ArrayDeque<Boolean>()
 
     // Call tracking for verification
     private val listCalls = mutableListOf<String>()
@@ -36,6 +37,10 @@ class FakeBadgeHttpClient @Inject constructor() : BadgeHttpClient {
     fun setDownloadResult(result: Result<Unit>) { downloadResult = result }
     fun setDeleteResult(result: Result<Unit>) { deleteResult = result }
     fun setReachable(reachable: Boolean) { isReachableResult = reachable }
+    fun setReachableResults(results: List<Boolean>) {
+        reachableResults.clear()
+        reachableResults.addAll(results)
+    }
 
     // Reset all state
     fun reset() {
@@ -43,6 +48,7 @@ class FakeBadgeHttpClient @Inject constructor() : BadgeHttpClient {
         downloadResult = Result.Success(Unit)
         deleteResult = Result.Success(Unit)
         isReachableResult = true
+        reachableResults.clear()
         listCalls.clear()
         downloadCalls.clear()
         deleteCalls.clear()
@@ -78,7 +84,7 @@ class FakeBadgeHttpClient @Inject constructor() : BadgeHttpClient {
 
     override suspend fun isReachable(baseUrl: String): Boolean {
         reachableCalls.add(baseUrl)
-        return isReachableResult
+        return reachableResults.removeFirstOrNull() ?: isReachableResult
     }
 
     // Data classes for call tracking

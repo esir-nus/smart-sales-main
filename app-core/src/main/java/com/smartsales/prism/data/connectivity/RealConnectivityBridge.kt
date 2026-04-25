@@ -239,7 +239,7 @@ class RealConnectivityBridge @Inject constructor(
         val runtimeKey = currentRuntimeKey()
         val hasGrace = endpointRecoveryCoordinator.hasPendingPostCredentialGrace(runtimeKey)
         if (!hasGrace) {
-            return probeReadyOnce()
+            return probeReadyOnce(allowRefreshRetry = true)
         }
         val activeRuntimeKey = runtimeKey ?: return probeReadyOnce()
 
@@ -253,7 +253,7 @@ class RealConnectivityBridge @Inject constructor(
                 "🛜 post-credential readiness grace wait=${delayMs}ms attempt=${attempt + 1} runtime=${activeRuntimeKey.toLogString()}"
             )
             delay(delayMs)
-            if (probeReadyOnce()) {
+            if (probeReadyOnce(allowRefreshRetry = false)) {
                 endpointRecoveryCoordinator.clearPostCredentialGrace(activeRuntimeKey)
                 return true
             }
@@ -502,7 +502,7 @@ class RealConnectivityBridge @Inject constructor(
         }
     }
 
-    private suspend fun probeReadyOnce(): Boolean {
+    private suspend fun probeReadyOnce(allowRefreshRetry: Boolean = false): Boolean {
         val baseUrl = resolveBaseUrl() ?: run {
             android.util.Log.d(TAG, "🔎 isReady preflight: result=not-ready reason=base-url-unresolved")
             return false
@@ -511,6 +511,10 @@ class RealConnectivityBridge @Inject constructor(
         val reachable = httpClient.isReachable(baseUrl)
         if (!reachable) {
             invalidateActiveEndpoint("http reachability failed")
+            if (allowRefreshRetry) {
+                android.util.Log.d(TAG, "🔎 isReady preflight: retrying after endpoint refresh")
+                return probeReadyOnce(allowRefreshRetry = false)
+            }
         }
         android.util.Log.d(
             TAG,

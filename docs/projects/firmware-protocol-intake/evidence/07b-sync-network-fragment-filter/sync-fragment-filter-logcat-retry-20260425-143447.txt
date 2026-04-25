@@ -1,0 +1,450 @@
+--------- beginning of main
+04-25 14:35:05.647 D/SmartSalesConn(19394): 🔌 Restored session: 14:C1:9F:D7:E3:F6 knownNetworks=1
+04-25 14:35:06.116 I/SmartSalesConn(19394): 📶 BLE disconnected
+04-25 14:35:06.116 D/SmartSalesConn(19394): 🔌 Soft disconnect (session preserved)
+04-25 14:35:06.116 D/SmartSalesConn(19394): 🔌 Persistent GATT session closed
+04-25 14:35:07.077 D/SmartSalesConn(19394): 📋 Service: 00001801-0000-1000-8000-00805f9b34fb
+04-25 14:35:07.078 D/SmartSalesConn(19394):   📋 Char: 00002a05-0000-1000-8000-00805f9b34fb [INDICATE ]
+04-25 14:35:07.078 D/SmartSalesConn(19394):     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-25 14:35:07.078 D/SmartSalesConn(19394): 📋 Service: 00001800-0000-1000-8000-00805f9b34fb
+04-25 14:35:07.078 D/SmartSalesConn(19394):   📋 Char: 00002a00-0000-1000-8000-00805f9b34fb [READ ]
+04-25 14:35:07.078 D/SmartSalesConn(19394):     📋 (no descriptors)
+04-25 14:35:07.078 D/SmartSalesConn(19394):   📋 Char: 00002a01-0000-1000-8000-00805f9b34fb [READ ]
+04-25 14:35:07.078 D/SmartSalesConn(19394):     📋 (no descriptors)
+04-25 14:35:07.078 D/SmartSalesConn(19394):   📋 Char: 00002aa6-0000-1000-8000-00805f9b34fb [READ ]
+04-25 14:35:07.078 D/SmartSalesConn(19394):     📋 (no descriptors)
+04-25 14:35:07.078 D/SmartSalesConn(19394): 📋 Service: 000000ff-0000-1000-8000-00805f9b34fb
+04-25 14:35:07.078 D/SmartSalesConn(19394):   📋 Char: 0000ff01-0000-1000-8000-00805f9b34fb [READ WRITE NOTIFY ]
+04-25 14:35:07.078 D/SmartSalesConn(19394):     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-25 14:35:07.078 D/SmartSalesConn(19394):   📋 Char: 0000ff02-0000-1000-8000-00805f9b34fb [READ ]
+04-25 14:35:07.078 D/SmartSalesConn(19394):     📋 (no descriptors)
+04-25 14:35:07.078 D/SmartSalesConn(19394):   📋 Char: 0000ff03-0000-1000-8000-00805f9b34fb [WRITE ]
+04-25 14:35:07.078 D/SmartSalesConn(19394):     📋 (no descriptors)
+04-25 14:35:07.098 D/SmartSalesConn(19394): No CCCD descriptor for 0000ff02-0000-1000-8000-00805f9b34fb, notifications not available (will poll)
+04-25 14:35:07.099 I/SmartSalesConn(19394): 🔌 Persistent GATT session established: 14:C1:9F:D7:E3:F6
+04-25 14:35:07.099 I/SmartSalesConn(19394): 📶 BLE connected, waiting for explicit network observation
+04-25 14:35:07.100 D/SmartSalesConn(19394): 📡 Starting persistent notification listener for 14:C1:9F:D7:E3:F6
+04-25 14:35:07.100 D/SmartSalesConn(19394): 🌐 network query device=CHLE_Intelligent
+04-25 14:35:07.101 I/SmartSalesConn(19394): 📡 queryNetwork ENTRY (in mutex)
+04-25 14:35:07.102 D/SmartSalesConn(19394): 📤 TX [NetworkQuery]: wifi#address#ip#name (77 69 66 69 23 61 64 64 72 65 73 73 23 69 70 23 6E 61 6D 65)
+04-25 14:35:07.136 D/SmartSalesConn(19394): 📥 RX [Notification]: IP#192.168.0.110 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 31 30)
+04-25 14:35:07.137 D/SmartSalesConn(19394): 📥 RX [Notification]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-25 14:35:07.137 D/SmartSalesConn(19394): 📥 RX [NetworkResponse]: IP#192.168.0.110 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 31 30)
+04-25 14:35:07.137 D/SmartSalesConn(19394): ❓ Badge unknown notification: IP#192.168.0.110
+04-25 14:35:07.137 D/SmartSalesConn(19394): ❓ Badge unknown notification: SD#MstRobot
+04-25 14:35:07.138 D/SmartSalesConn(19394): 📥 RX [NetworkResponse]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-25 14:35:07.139 D/SmartSalesConn(19394): 📡 fresh query, caching IP=192.168.0.110
+04-25 14:35:07.139 D/SmartSalesConn(19394): 📶 state=CONNECTED ip=192.168.0.110
+04-25 14:35:07.139 D/SmartSalesConn(19394): 🔌 connectUsingSession: connected, ip=192.168.0.110 ssid=MstRobot
+04-25 14:35:07.188 D/SmartSalesConn(19394): 📤 TX [BadgeSignal]: Ver#get (56 65 72 23 67 65 74)
+04-25 14:35:07.204 D/SmartSalesConn(19394): 📥 RX [Notification]: tim#get (74 69 6D 23 67 65 74)
+04-25 14:35:07.204 D/SmartSalesConn(19394): ⏰ Badge time sync requested
+04-25 14:35:07.234 D/SmartSalesConn(19394): 📥 RX [Notification]: Ver#1.0.0.1 (56 65 72 23 31 2E 30 2E 30 2E 31)
+04-25 14:35:07.235 I/SmartSalesConn(19394): 🧾 Badge firmware version: 1.0.0.1
+04-25 14:35:07.293 I/SmartSalesConn(19394): ⏰ Time sync responded: tim#20260425143507
+04-25 14:35:07.379 I/SmartSalesConn(19394): 🧾 Badge firmware version query sent
+04-25 14:35:07.383 D/SmartSalesConn(19394): 📥 RX [Notification]: Bat#4095.00% (42 61 74 23 34 30 39 35 2E 30 30 25)
+04-25 14:35:07.384 D/SmartSalesConn(19394): ❓ Badge unknown notification: Bat#4095.00%
+04-25 14:35:08.204 D/AudioPipeline(19394): SIM manual badge sync tapped availability=ready isSyncing=false
+04-25 14:35:08.204 D/AudioPipeline(19394): 🔎 isReady preflight: start
+04-25 14:35:08.205 D/AudioPipeline(19394): 🌐 resolveBaseUrl: seeded active endpoint http://192.168.0.110:8088
+04-25 14:35:08.205 D/AudioPipeline(19394): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.0.110:8088
+04-25 14:35:08.205 D/SmartSalesConn(19394): BadgeHttpClient.isReachable start url=http://192.168.0.110:8088/
+04-25 14:35:11.361 W/SmartSalesConn(19394): BadgeHttpClient.isReachable failure url=http://192.168.0.110:8088/ error=SocketTimeoutException:failed to connect to /192.168.0.110 (port 8088) from /192.168.0.101 (port 51606) after 3000ms
+04-25 14:35:11.361 W/AudioPipeline(19394): 🌐 invalidate active endpoint reason=http reachability failed
+04-25 14:35:11.361 D/AudioPipeline(19394): 🔎 isReady preflight: retrying after endpoint refresh
+04-25 14:35:11.361 D/AudioPipeline(19394): 🌐 resolveBaseUrl: querying badge network status
+04-25 14:35:11.362 D/SmartSalesConn(19394): 🌐 network query device=CHLE_Intelligent
+04-25 14:35:11.362 I/SmartSalesConn(19394): 📡 queryNetwork ENTRY (in mutex)
+04-25 14:35:11.362 D/SmartSalesConn(19394): 📡 CACHED (4261ms old)
+04-25 14:35:11.362 D/SmartSalesConn(19394): 📶 state=CONNECTED ip=192.168.0.110
+04-25 14:35:11.362 D/SmartSalesConn(19394): 🌐 Network status ok device=CHLE_Intelligent ip=192.168.0.110
+04-25 14:35:11.363 D/AudioPipeline(19394): 🌐 resolveBaseUrl: ip=192.168.0.110 badgeSsid=MstRobot phoneSsidForDiag=
+04-25 14:35:11.363 D/AudioPipeline(19394): 🌐 resolveBaseUrl: refreshed http://192.168.0.110:8088
+04-25 14:35:11.363 D/AudioPipeline(19394): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.0.110:8088
+04-25 14:35:11.363 D/SmartSalesConn(19394): BadgeHttpClient.isReachable start url=http://192.168.0.110:8088/
+04-25 14:35:12.437 D/SmartSalesConn(19394): 📥 RX [Notification]: Bat#4095.00% (42 61 74 23 34 30 39 35 2E 30 30 25)
+04-25 14:35:12.437 D/SmartSalesConn(19394): ❓ Badge unknown notification: Bat#4095.00%
+04-25 14:35:14.369 W/SmartSalesConn(19394): BadgeHttpClient.isReachable failure url=http://192.168.0.110:8088/ error=SocketTimeoutException:failed to connect to /192.168.0.110 (port 8088) from /192.168.0.101 (port 51620) after 3000ms
+04-25 14:35:14.369 W/AudioPipeline(19394): 🌐 invalidate active endpoint reason=http reachability failed
+04-25 14:35:14.369 D/AudioPipeline(19394): 🔎 isReady preflight: result=not-ready baseUrl=http://192.168.0.110:8088
+04-25 14:35:14.370 D/AudioPipeline(19394): SIM manual badge sync gate availability=ready branch=strict_precheck_blocked blocked=true
+04-25 14:35:17.433 D/SmartSalesConn(19394): 📥 RX [Notification]: Bat#4095.00% (42 61 74 23 34 30 39 35 2E 30 30 25)
+04-25 14:35:17.434 D/SmartSalesConn(19394): ❓ Badge unknown notification: Bat#4095.00%
+04-25 14:35:22.457 D/SmartSalesConn(19394): 📥 RX [Notification]: Bat#4095.00% (42 61 74 23 34 30 39 35 2E 30 30 25)
+04-25 14:35:22.458 D/SmartSalesConn(19394): ❓ Badge unknown notification: Bat#4095.00%
+04-25 14:35:27.498 D/SmartSalesConn(19394): 📥 RX [Notification]: Bat#4095.00% (42 61 74 23 34 30 39 35 2E 30 30 25)
+04-25 14:35:27.498 D/SmartSalesConn(19394): ❓ Badge unknown notification: Bat#4095.00%
+04-25 14:35:32.506 D/SmartSalesConn(19394): 📥 RX [Notification]: Bat#4095.00% (42 61 74 23 34 30 39 35 2E 30 30 25)
+04-25 14:35:32.507 D/SmartSalesConn(19394): ❓ Badge unknown notification: Bat#4095.00%
+04-25 14:35:35.806 I/SmartSalesConn(19394): 🛜 repair submit ssid=MstRobot
+04-25 14:35:35.807 I/SmartSalesConn(19394): 🔗 provision start device=CHLE_Intelligent ssid=MstRobot
+04-25 14:35:35.807 I/SmartSalesConn(19394): BLE Provision: Step 1 - sending SSID: SD#MstRobot
+04-25 14:35:35.807 D/SmartSalesConn(19394): 📤 TX [SSID]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-25 14:35:36.154 I/SmartSalesConn(19394): BLE Provision: Step 2 - sending password: PD#****
+04-25 14:35:36.154 D/SmartSalesConn(19394): 📤 TX [Password]: PD#Cai223456 (50 44 23 43 61 69 32 32 33 34 35 36)
+04-25 14:35:36.246 I/SmartSalesConn(19394): 🔗 provision finished status=success device=CHLE_Intelligent
+04-25 14:35:36.246 I/SmartSalesConn(19394): 🛜 repair write dispatched ssid=MstRobot
+04-25 14:35:36.249 I/SmartSalesConn(19394): 🛜 repair readiness grace wait=2000ms attempt=1 runtime=14:C1:9F:D7:E3:F6/d2f717
+04-25 14:35:37.637 D/SmartSalesConn(19394): 📥 RX [Notification]: Bat#4095.00% (42 61 74 23 34 30 39 35 2E 30 30 25)
+04-25 14:35:37.637 D/SmartSalesConn(19394): ❓ Badge unknown notification: Bat#4095.00%
+04-25 14:35:38.249 D/SmartSalesConn(19394): 🌐 network query device=CHLE_Intelligent
+04-25 14:35:38.250 I/SmartSalesConn(19394): 📡 queryNetwork ENTRY (in mutex)
+04-25 14:35:38.250 D/SmartSalesConn(19394): 📤 TX [NetworkQuery]: wifi#address#ip#name (77 69 66 69 23 61 64 64 72 65 73 73 23 69 70 23 6E 61 6D 65)
+04-25 14:35:38.314 D/SmartSalesConn(19394): 📥 RX [Notification]: IP#0.0.0.0 (49 50 23 30 2E 30 2E 30 2E 30)
+04-25 14:35:38.314 D/SmartSalesConn(19394): ⏭️ Network fragment ignored: tim#get
+04-25 14:35:38.314 D/SmartSalesConn(19394): ⏭️ Network fragment ignored: Ver#1.0.0.1
+04-25 14:35:38.314 D/SmartSalesConn(19394): 📥 RX [Notification]: SD#N/A (53 44 23 4E 2F 41)
+04-25 14:35:38.315 D/SmartSalesConn(19394): ❓ Badge unknown notification: IP#0.0.0.0
+04-25 14:35:38.315 D/SmartSalesConn(19394): ⏭️ Network fragment ignored: Bat#4095.00%
+04-25 14:35:38.315 D/SmartSalesConn(19394): ❓ Badge unknown notification: SD#N/A
+04-25 14:35:38.315 D/SmartSalesConn(19394): ⏭️ Network fragment ignored: Bat#4095.00%
+04-25 14:35:38.315 D/SmartSalesConn(19394): ⏭️ Network fragment ignored: Bat#4095.00%
+04-25 14:35:38.315 D/SmartSalesConn(19394): ⏭️ Network fragment ignored: Bat#4095.00%
+04-25 14:35:38.316 D/SmartSalesConn(19394): ⏭️ Network fragment ignored: Bat#4095.00%
+04-25 14:35:38.316 D/SmartSalesConn(19394): ⏭️ Network fragment ignored: Bat#4095.00%
+04-25 14:35:38.316 D/SmartSalesConn(19394): ⏭️ Network fragment ignored: Bat#4095.00%
+04-25 14:35:38.317 D/SmartSalesConn(19394): 📥 RX [NetworkResponse]: IP#0.0.0.0 (49 50 23 30 2E 30 2E 30 2E 30)
+04-25 14:35:38.318 D/SmartSalesConn(19394): 📥 RX [NetworkResponse]: SD#N/A (53 44 23 4E 2F 41)
+04-25 14:35:38.318 D/SmartSalesConn(19394): 📡 got 0.0.0.0, NOT caching (retry after 2000ms)
+04-25 14:35:38.319 D/SmartSalesConn(19394): 📶 state=OFFLINE ip=0.0.0.0
+04-25 14:35:38.319 D/SmartSalesConn(19394): 🛜 repair query attempt=1 ip=0.0.0.0 badgeSsid=null
+04-25 14:35:38.319 D/SmartSalesConn(19394): 🛜 manual repair confirm attempt=1: badge still offline ip=0.0.0.0
+04-25 14:35:38.319 I/SmartSalesConn(19394): 🛜 repair readiness grace wait=3000ms attempt=2 runtime=14:C1:9F:D7:E3:F6/d2f717
+04-25 14:35:41.320 D/SmartSalesConn(19394): 🌐 network query device=CHLE_Intelligent
+04-25 14:35:41.320 I/SmartSalesConn(19394): 📡 queryNetwork ENTRY (in mutex)
+04-25 14:35:41.321 D/SmartSalesConn(19394): 📤 TX [NetworkQuery]: wifi#address#ip#name (77 69 66 69 23 61 64 64 72 65 73 73 23 69 70 23 6E 61 6D 65)
+04-25 14:35:41.434 D/SmartSalesConn(19394): 📥 RX [Notification]: IP#0.0.0.0 (49 50 23 30 2E 30 2E 30 2E 30)
+04-25 14:35:41.435 D/SmartSalesConn(19394): ❓ Badge unknown notification: IP#0.0.0.0
+04-25 14:35:41.437 D/SmartSalesConn(19394): 📥 RX [NetworkResponse]: IP#0.0.0.0 (49 50 23 30 2E 30 2E 30 2E 30)
+04-25 14:35:41.464 D/SmartSalesConn(19394): 📥 RX [Notification]: SD#N/A (53 44 23 4E 2F 41)
+04-25 14:35:41.465 D/SmartSalesConn(19394): ❓ Badge unknown notification: SD#N/A
+04-25 14:35:41.466 D/SmartSalesConn(19394): 📥 RX [NetworkResponse]: SD#N/A (53 44 23 4E 2F 41)
+04-25 14:35:41.467 D/SmartSalesConn(19394): 📡 got 0.0.0.0, NOT caching (retry after 2000ms)
+04-25 14:35:41.467 D/SmartSalesConn(19394): 📶 state=OFFLINE ip=0.0.0.0
+04-25 14:35:41.468 D/SmartSalesConn(19394): 🛜 repair query attempt=2 ip=0.0.0.0 badgeSsid=null
+04-25 14:35:41.469 D/SmartSalesConn(19394): 🛜 manual repair confirm attempt=2: badge still offline ip=0.0.0.0
+04-25 14:35:41.469 I/SmartSalesConn(19394): 🛜 repair readiness grace wait=5000ms attempt=3 runtime=14:C1:9F:D7:E3:F6/d2f717
+04-25 14:35:42.677 D/SmartSalesConn(19394): 📥 RX [Notification]: Bat#4095.00% (42 61 74 23 34 30 39 35 2E 30 30 25)
+04-25 14:35:42.678 D/SmartSalesConn(19394): ❓ Badge unknown notification: Bat#4095.00%
+04-25 14:35:46.470 D/SmartSalesConn(19394): 🌐 network query device=CHLE_Intelligent
+04-25 14:35:46.470 I/SmartSalesConn(19394): 📡 queryNetwork ENTRY (in mutex)
+04-25 14:35:46.470 D/SmartSalesConn(19394): 📤 TX [NetworkQuery]: wifi#address#ip#name (77 69 66 69 23 61 64 64 72 65 73 73 23 69 70 23 6E 61 6D 65)
+04-25 14:35:46.535 D/SmartSalesConn(19394): 📥 RX [Notification]: IP#0.0.0.0 (49 50 23 30 2E 30 2E 30 2E 30)
+04-25 14:35:46.535 D/SmartSalesConn(19394): ⏭️ Network fragment ignored: Bat#4095.00%
+04-25 14:35:46.535 D/SmartSalesConn(19394): ❓ Badge unknown notification: IP#0.0.0.0
+04-25 14:35:46.536 D/SmartSalesConn(19394): 📥 RX [NetworkResponse]: IP#0.0.0.0 (49 50 23 30 2E 30 2E 30 2E 30)
+04-25 14:35:46.536 D/SmartSalesConn(19394): 📥 RX [Notification]: SD#N/A (53 44 23 4E 2F 41)
+04-25 14:35:46.537 D/SmartSalesConn(19394): ❓ Badge unknown notification: SD#N/A
+04-25 14:35:46.537 D/SmartSalesConn(19394): 📥 RX [NetworkResponse]: SD#N/A (53 44 23 4E 2F 41)
+04-25 14:35:46.537 D/SmartSalesConn(19394): 📡 got 0.0.0.0, NOT caching (retry after 2000ms)
+04-25 14:35:46.537 D/SmartSalesConn(19394): 📶 state=OFFLINE ip=0.0.0.0
+04-25 14:35:46.537 D/SmartSalesConn(19394): 🛜 repair query attempt=3 ip=0.0.0.0 badgeSsid=null
+04-25 14:35:46.537 D/SmartSalesConn(19394): 🛜 manual repair confirm attempt=3: badge still offline ip=0.0.0.0
+04-25 14:35:46.537 W/SmartSalesConn(19394): 🛜 repair outcome=badge_wifi_offline
+04-25 14:35:47.544 D/SmartSalesConn(19394): BadgeHttpClient.isReachable start url=http://192.168.0.110:8088/
+04-25 14:35:47.593 D/SmartSalesConn(19394): 📤 TX [BadgeSignal]: Ver#get (56 65 72 23 67 65 74)
+04-25 14:35:47.676 D/SmartSalesConn(19394): 📥 RX [Notification]: Ver#1.0.0.1 (56 65 72 23 31 2E 30 2E 30 2E 31)
+04-25 14:35:47.676 I/SmartSalesConn(19394): 🧾 Badge firmware version: 1.0.0.1
+04-25 14:35:47.677 I/SmartSalesConn(19394): 🧾 Badge firmware version query sent
+04-25 14:35:47.703 D/SmartSalesConn(19394): 📥 RX [Notification]: Bat#4095.00% (42 61 74 23 34 30 39 35 2E 30 30 25)
+04-25 14:35:47.704 D/SmartSalesConn(19394): ❓ Badge unknown notification: Bat#4095.00%
+04-25 14:35:50.549 W/SmartSalesConn(19394): BadgeHttpClient.isReachable failure url=http://192.168.0.110:8088/ error=SocketTimeoutException:failed to connect to /192.168.0.110 (port 8088) from /192.168.0.101 (port 43648) after 3000ms
+04-25 14:35:50.634 D/AudioPipeline(19394): SIM badge sync preflight start trigger=auto
+04-25 14:35:50.635 D/AudioPipeline(19394): 🔎 isReady preflight: start
+04-25 14:35:50.635 D/AudioPipeline(19394): 🌐 resolveBaseUrl: querying badge network status
+04-25 14:35:50.635 D/SmartSalesConn(19394): 🌐 network query device=CHLE_Intelligent
+04-25 14:35:50.635 I/SmartSalesConn(19394): 📡 queryNetwork ENTRY (in mutex)
+04-25 14:35:50.635 D/SmartSalesConn(19394): 📤 TX [NetworkQuery]: wifi#address#ip#name (77 69 66 69 23 61 64 64 72 65 73 73 23 69 70 23 6E 61 6D 65)
+04-25 14:35:50.765 D/SmartSalesConn(19394): 📥 RX [Notification]: IP#0.0.0.0 (49 50 23 30 2E 30 2E 30 2E 30)
+04-25 14:35:50.765 D/SmartSalesConn(19394): 📥 RX [Notification]: SD# (53 44 23)
+04-25 14:35:50.765 D/SmartSalesConn(19394): ❓ Badge unknown notification: IP#0.0.0.0
+04-25 14:35:50.766 D/SmartSalesConn(19394): ❓ Badge unknown notification: SD#
+04-25 14:35:50.767 D/SmartSalesConn(19394): ⏭️ Network fragment ignored: Ver#1.0.0.1
+04-25 14:35:50.767 D/SmartSalesConn(19394): ⏭️ Network fragment ignored: Bat#4095.00%
+04-25 14:35:50.769 D/SmartSalesConn(19394): 📥 RX [NetworkResponse]: IP#0.0.0.0 (49 50 23 30 2E 30 2E 30 2E 30)
+04-25 14:35:50.770 D/SmartSalesConn(19394): 📥 RX [NetworkResponse]: SD# (53 44 23)
+04-25 14:35:50.770 D/SmartSalesConn(19394): 📡 got 0.0.0.0, NOT caching (retry after 2000ms)
+04-25 14:35:50.770 D/SmartSalesConn(19394): 📶 state=OFFLINE ip=0.0.0.0
+04-25 14:35:50.770 W/SmartSalesConn(19394): ⚠️ Network status lost usable IP, demoting shared transport readiness
+04-25 14:35:50.770 D/AudioPipeline(19394): 🌐 resolveBaseUrl: ip=0.0.0.0 badgeSsid= phoneSsidForDiag=
+04-25 14:35:50.771 W/AudioPipeline(19394): ❌ resolveBaseUrl: Badge IP 无效 (0.0.0.0) — Badge 未连 WiFi 或不在同一网络
+04-25 14:35:50.771 D/AudioPipeline(19394): 🔎 isReady preflight: result=not-ready reason=base-url-unresolved
+04-25 14:35:50.771 D/AudioPipeline(19394): SIM badge sync preflight result trigger=auto isReady=false
+04-25 14:35:50.771 D/AudioPipeline(19394): SIM badge sync skipped trigger=auto stage=strict-preflight reason=not-ready
+04-25 14:35:52.787 D/SmartSalesConn(19394): 📥 RX [Notification]: Bat#4095.00% (42 61 74 23 34 30 39 35 2E 30 30 25)
+04-25 14:35:52.787 D/SmartSalesConn(19394): ❓ Badge unknown notification: Bat#4095.00%
+04-25 14:35:57.825 D/SmartSalesConn(19394): 📥 RX [Notification]: Bat#4095.00% (42 61 74 23 34 30 39 35 2E 30 30 25)
+04-25 14:35:57.827 D/SmartSalesConn(19394): ❓ Badge unknown notification: Bat#4095.00%
+04-25 14:36:02.807 D/SmartSalesConn(19394): 📥 RX [Notification]: Bat#4095.00% (42 61 74 23 34 30 39 35 2E 30 30 25)
+04-25 14:36:02.807 D/SmartSalesConn(19394): ❓ Badge unknown notification: Bat#4095.00%
+04-25 14:36:05.525 I/SmartSalesConn(19394): 📶 BLE disconnected
+04-25 14:36:05.525 D/SmartSalesConn(19394): 🔌 Soft disconnect (session preserved)
+04-25 14:36:05.533 D/SmartSalesConn(19394): 🔌 Persistent GATT session closed
+04-25 14:36:06.164 D/SmartSalesConn(19394): 📋 Service: 00001801-0000-1000-8000-00805f9b34fb
+04-25 14:36:06.164 D/SmartSalesConn(19394):   📋 Char: 00002a05-0000-1000-8000-00805f9b34fb [INDICATE ]
+04-25 14:36:06.164 D/SmartSalesConn(19394):     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-25 14:36:06.164 D/SmartSalesConn(19394): 📋 Service: 00001800-0000-1000-8000-00805f9b34fb
+04-25 14:36:06.164 D/SmartSalesConn(19394):   📋 Char: 00002a00-0000-1000-8000-00805f9b34fb [READ ]
+04-25 14:36:06.164 D/SmartSalesConn(19394):     📋 (no descriptors)
+04-25 14:36:06.164 D/SmartSalesConn(19394):   📋 Char: 00002a01-0000-1000-8000-00805f9b34fb [READ ]
+04-25 14:36:06.164 D/SmartSalesConn(19394):     📋 (no descriptors)
+04-25 14:36:06.165 D/SmartSalesConn(19394):   📋 Char: 00002aa6-0000-1000-8000-00805f9b34fb [READ ]
+04-25 14:36:06.165 D/SmartSalesConn(19394):     📋 (no descriptors)
+04-25 14:36:06.165 D/SmartSalesConn(19394): 📋 Service: 000000ff-0000-1000-8000-00805f9b34fb
+04-25 14:36:06.165 D/SmartSalesConn(19394):   📋 Char: 0000ff01-0000-1000-8000-00805f9b34fb [READ WRITE NOTIFY ]
+04-25 14:36:06.165 D/SmartSalesConn(19394):     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-25 14:36:06.165 D/SmartSalesConn(19394):   📋 Char: 0000ff02-0000-1000-8000-00805f9b34fb [READ ]
+04-25 14:36:06.165 D/SmartSalesConn(19394):     📋 (no descriptors)
+04-25 14:36:06.165 D/SmartSalesConn(19394):   📋 Char: 0000ff03-0000-1000-8000-00805f9b34fb [WRITE ]
+04-25 14:36:06.165 D/SmartSalesConn(19394):     📋 (no descriptors)
+04-25 14:36:06.241 D/SmartSalesConn(19394): No CCCD descriptor for 0000ff02-0000-1000-8000-00805f9b34fb, notifications not available (will poll)
+04-25 14:36:06.241 I/SmartSalesConn(19394): 🔌 Persistent GATT session established: 14:C1:9F:D7:E3:F6
+04-25 14:36:06.241 I/SmartSalesConn(19394): 📶 BLE connected, waiting for explicit network observation
+04-25 14:36:06.241 D/SmartSalesConn(19394): 🌐 network query device=CHLE_Intelligent
+04-25 14:36:06.241 I/SmartSalesConn(19394): 📡 queryNetwork ENTRY (in mutex)
+04-25 14:36:06.242 D/SmartSalesConn(19394): 📡 Starting persistent notification listener for 14:C1:9F:D7:E3:F6
+04-25 14:36:06.242 D/SmartSalesConn(19394): 📤 TX [NetworkQuery]: wifi#address#ip#name (77 69 66 69 23 61 64 64 72 65 73 73 23 69 70 23 6E 61 6D 65)
+04-25 14:36:06.267 D/SmartSalesConn(19394): 📥 RX [Notification]: IP#0.0.0.0 (49 50 23 30 2E 30 2E 30 2E 30)
+04-25 14:36:06.267 D/SmartSalesConn(19394): ❓ Badge unknown notification: IP#0.0.0.0
+04-25 14:36:06.267 D/SmartSalesConn(19394): 📥 RX [Notification]: SD# (53 44 23)
+04-25 14:36:06.268 D/SmartSalesConn(19394): ❓ Badge unknown notification: SD#
+04-25 14:36:06.268 D/SmartSalesConn(19394): 📥 RX [NetworkResponse]: IP#0.0.0.0 (49 50 23 30 2E 30 2E 30 2E 30)
+04-25 14:36:06.268 D/SmartSalesConn(19394): 📥 RX [NetworkResponse]: SD# (53 44 23)
+04-25 14:36:06.269 D/SmartSalesConn(19394): 📡 got 0.0.0.0, NOT caching (retry after 2000ms)
+04-25 14:36:06.269 D/SmartSalesConn(19394): 📶 state=OFFLINE ip=0.0.0.0
+04-25 14:36:06.269 D/SmartSalesConn(19394): 🔌 connectUsingSession: badge offline, ip=0.0.0.0, attempting credential replay
+04-25 14:36:06.269 I/SmartSalesConn(19394): 🔗 provision start device=CHLE_Intelligent ssid=MstRobot
+04-25 14:36:06.269 I/SmartSalesConn(19394): BLE Provision: Step 1 - sending SSID: SD#MstRobot
+04-25 14:36:06.269 D/SmartSalesConn(19394): 📤 TX [SSID]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-25 14:36:06.395 D/SmartSalesConn(19394): 📥 RX [Notification]: tim#get (74 69 6D 23 67 65 74)
+04-25 14:36:06.396 D/SmartSalesConn(19394): ⏰ Badge time sync requested
+04-25 14:36:06.516 I/SmartSalesConn(19394): ⏰ Time sync responded: tim#20260425143606
+04-25 14:36:06.583 I/SmartSalesConn(19394): BLE Provision: Step 2 - sending password: PD#****
+04-25 14:36:06.583 D/SmartSalesConn(19394): 📤 TX [Password]: PD#Cai223456 (50 44 23 43 61 69 32 32 33 34 35 36)
+04-25 14:36:06.787 I/SmartSalesConn(19394): 🔗 provision finished status=success device=CHLE_Intelligent
+04-25 14:36:07.909 D/SmartSalesConn(19394): 📥 RX [Notification]: Bat#4095.00% (42 61 74 23 34 30 39 35 2E 30 30 25)
+04-25 14:36:07.909 D/SmartSalesConn(19394): ❓ Badge unknown notification: Bat#4095.00%
+04-25 14:36:08.988 D/SmartSalesConn(19394): 🌐 network query device=CHLE_Intelligent
+04-25 14:36:08.988 I/SmartSalesConn(19394): 📡 queryNetwork ENTRY (in mutex)
+04-25 14:36:08.989 D/SmartSalesConn(19394): 📤 TX [NetworkQuery]: wifi#address#ip#name (77 69 66 69 23 61 64 64 72 65 73 73 23 69 70 23 6E 61 6D 65)
+04-25 14:36:09.035 D/SmartSalesConn(19394): 📥 RX [Notification]: IP#0.0.0.0 (49 50 23 30 2E 30 2E 30 2E 30)
+04-25 14:36:09.036 D/SmartSalesConn(19394): 📥 RX [Notification]: SD# (53 44 23)
+04-25 14:36:09.036 D/SmartSalesConn(19394): ⏭️ Network fragment ignored: tim#get
+04-25 14:36:09.036 D/SmartSalesConn(19394): ❓ Badge unknown notification: IP#0.0.0.0
+04-25 14:36:09.036 D/SmartSalesConn(19394): ❓ Badge unknown notification: SD#
+04-25 14:36:09.037 D/SmartSalesConn(19394): ⏭️ Network fragment ignored: Bat#4095.00%
+04-25 14:36:09.037 D/SmartSalesConn(19394): 📥 RX [NetworkResponse]: IP#0.0.0.0 (49 50 23 30 2E 30 2E 30 2E 30)
+04-25 14:36:09.037 D/SmartSalesConn(19394): 📥 RX [NetworkResponse]: SD# (53 44 23)
+04-25 14:36:09.038 D/SmartSalesConn(19394): 📡 got 0.0.0.0, NOT caching (retry after 2000ms)
+04-25 14:36:09.038 D/SmartSalesConn(19394): 📶 state=OFFLINE ip=0.0.0.0
+04-25 14:36:09.038 D/SmartSalesConn(19394): 🔁 replay confirm attempt=1: still offline ip=0.0.0.0
+04-25 14:36:11.039 D/SmartSalesConn(19394): 🌐 network query device=CHLE_Intelligent
+04-25 14:36:11.039 I/SmartSalesConn(19394): 📡 queryNetwork ENTRY (in mutex)
+04-25 14:36:11.040 D/SmartSalesConn(19394): 📤 TX [NetworkQuery]: wifi#address#ip#name (77 69 66 69 23 61 64 64 72 65 73 73 23 69 70 23 6E 61 6D 65)
+04-25 14:36:11.137 D/SmartSalesConn(19394): 📥 RX [Notification]: IP#0.0.0.0 (49 50 23 30 2E 30 2E 30 2E 30)
+04-25 14:36:11.137 D/SmartSalesConn(19394): ❓ Badge unknown notification: IP#0.0.0.0
+04-25 14:36:11.138 D/SmartSalesConn(19394): 📥 RX [NetworkResponse]: IP#0.0.0.0 (49 50 23 30 2E 30 2E 30 2E 30)
+04-25 14:36:11.138 D/SmartSalesConn(19394): 📥 RX [Notification]: SD#N/A (53 44 23 4E 2F 41)
+04-25 14:36:11.139 D/SmartSalesConn(19394): 📥 RX [NetworkResponse]: SD#N/A (53 44 23 4E 2F 41)
+04-25 14:36:11.139 D/SmartSalesConn(19394): ❓ Badge unknown notification: SD#N/A
+04-25 14:36:11.139 D/SmartSalesConn(19394): 📡 got 0.0.0.0, NOT caching (retry after 2000ms)
+04-25 14:36:11.139 D/SmartSalesConn(19394): 📶 state=OFFLINE ip=0.0.0.0
+04-25 14:36:11.139 D/SmartSalesConn(19394): 🔁 replay confirm attempt=2: still offline ip=0.0.0.0
+04-25 14:36:13.010 D/SmartSalesConn(19394): 📥 RX [Notification]: Bat#4095.00% (42 61 74 23 34 30 39 35 2E 30 30 25)
+04-25 14:36:13.010 D/SmartSalesConn(19394): ❓ Badge unknown notification: Bat#4095.00%
+04-25 14:36:13.140 D/SmartSalesConn(19394): 🌐 network query device=CHLE_Intelligent
+04-25 14:36:13.140 I/SmartSalesConn(19394): 📡 queryNetwork ENTRY (in mutex)
+04-25 14:36:13.141 D/SmartSalesConn(19394): 📤 TX [NetworkQuery]: wifi#address#ip#name (77 69 66 69 23 61 64 64 72 65 73 73 23 69 70 23 6E 61 6D 65)
+04-25 14:36:13.239 D/SmartSalesConn(19394): ⏭️ Network fragment ignored: Bat#4095.00%
+04-25 14:36:13.240 D/SmartSalesConn(19394): 📥 RX [Notification]: IP#0.0.0.0 (49 50 23 30 2E 30 2E 30 2E 30)
+04-25 14:36:13.241 D/SmartSalesConn(19394): 📥 RX [Notification]: SD#N/A (53 44 23 4E 2F 41)
+04-25 14:36:13.242 D/SmartSalesConn(19394): ❓ Badge unknown notification: IP#0.0.0.0
+04-25 14:36:13.242 D/SmartSalesConn(19394): ❓ Badge unknown notification: SD#N/A
+04-25 14:36:13.243 D/SmartSalesConn(19394): 📥 RX [NetworkResponse]: IP#0.0.0.0 (49 50 23 30 2E 30 2E 30 2E 30)
+04-25 14:36:13.243 D/SmartSalesConn(19394): 📥 RX [NetworkResponse]: SD#N/A (53 44 23 4E 2F 41)
+04-25 14:36:13.244 D/SmartSalesConn(19394): 📡 got 0.0.0.0, NOT caching (retry after 2000ms)
+04-25 14:36:13.244 D/SmartSalesConn(19394): 📶 state=OFFLINE ip=0.0.0.0
+04-25 14:36:13.244 D/SmartSalesConn(19394): 🔁 replay confirm attempt=3: still offline ip=0.0.0.0
+04-25 14:36:18.018 D/SmartSalesConn(19394): 📥 RX [Notification]: Bat#4095.00% (42 61 74 23 34 30 39 35 2E 30 30 25)
+04-25 14:36:18.019 D/SmartSalesConn(19394): ❓ Badge unknown notification: Bat#4095.00%
+04-25 14:36:23.058 D/SmartSalesConn(19394): 📥 RX [Notification]: Bat#4095.00% (42 61 74 23 34 30 39 35 2E 30 30 25)
+04-25 14:36:23.059 D/SmartSalesConn(19394): ❓ Badge unknown notification: Bat#4095.00%
+04-25 14:36:27.261 I/SmartSalesConn(19394): 🛜 repair submit ssid=MstRobot
+04-25 14:36:27.261 I/SmartSalesConn(19394): 🔗 provision start device=CHLE_Intelligent ssid=MstRobot
+04-25 14:36:27.263 I/SmartSalesConn(19394): BLE Provision: Step 1 - sending SSID: SD#MstRobot
+04-25 14:36:27.264 D/SmartSalesConn(19394): 📤 TX [SSID]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-25 14:36:27.637 I/SmartSalesConn(19394): BLE Provision: Step 2 - sending password: PD#****
+04-25 14:36:27.637 D/SmartSalesConn(19394): 📤 TX [Password]: PD#Cai123456 (50 44 23 43 61 69 31 32 33 34 35 36)
+04-25 14:36:27.697 I/SmartSalesConn(19394): 🔗 provision finished status=success device=CHLE_Intelligent
+04-25 14:36:27.698 I/SmartSalesConn(19394): 🛜 repair write dispatched ssid=MstRobot
+04-25 14:36:27.699 I/SmartSalesConn(19394): 🛜 repair readiness grace wait=2000ms attempt=1 runtime=14:C1:9F:D7:E3:F6/d2f717
+04-25 14:36:28.189 D/SmartSalesConn(19394): 📥 RX [Notification]: Bat#4095.00% (42 61 74 23 34 30 39 35 2E 30 30 25)
+04-25 14:36:28.189 D/SmartSalesConn(19394): ❓ Badge unknown notification: Bat#4095.00%
+04-25 14:36:29.495 D/SmartSalesConn(19394): 📥 RX [Notification]: wifi#connect#ok (77 69 66 69 23 63 6F 6E 6E 65 63 74 23 6F 6B)
+04-25 14:36:29.496 D/SmartSalesConn(19394): ❓ Badge unknown notification: wifi#connect#ok
+04-25 14:36:29.699 D/SmartSalesConn(19394): 🌐 network query device=CHLE_Intelligent
+04-25 14:36:29.699 I/SmartSalesConn(19394): 📡 queryNetwork ENTRY (in mutex)
+04-25 14:36:29.700 D/SmartSalesConn(19394): 📤 TX [NetworkQuery]: wifi#address#ip#name (77 69 66 69 23 61 64 64 72 65 73 73 23 69 70 23 6E 61 6D 65)
+04-25 14:36:29.797 D/SmartSalesConn(19394): 📥 RX [Notification]: IP#192.168.0.110 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 31 30)
+04-25 14:36:29.797 D/SmartSalesConn(19394): ❓ Badge unknown notification: IP#192.168.0.110
+04-25 14:36:29.797 D/SmartSalesConn(19394): 📥 RX [Notification]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-25 14:36:29.798 D/SmartSalesConn(19394): ❓ Badge unknown notification: SD#MstRobot
+04-25 14:36:29.798 D/SmartSalesConn(19394): ⏭️ Network fragment ignored: Bat#4095.00%
+04-25 14:36:29.798 D/SmartSalesConn(19394): ⏭️ Network fragment ignored: Bat#4095.00%
+04-25 14:36:29.798 D/SmartSalesConn(19394): ⏭️ Network fragment ignored: Bat#4095.00%
+04-25 14:36:29.799 D/SmartSalesConn(19394): ⏭️ Network fragment ignored: wifi#connect#ok
+04-25 14:36:29.799 D/SmartSalesConn(19394): 📥 RX [NetworkResponse]: IP#192.168.0.110 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 31 30)
+04-25 14:36:29.800 D/SmartSalesConn(19394): 📥 RX [NetworkResponse]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-25 14:36:29.800 D/SmartSalesConn(19394): 📡 fresh query, caching IP=192.168.0.110
+04-25 14:36:29.800 D/SmartSalesConn(19394): 📶 state=CONNECTED ip=192.168.0.110
+04-25 14:36:29.800 D/SmartSalesConn(19394): 🛜 repair query attempt=1 ip=192.168.0.110 badgeSsid=MstRobot
+04-25 14:36:29.801 I/SmartSalesConn(19394): 🛜 repair TRANSPORT_CONFIRMED ip=192.168.0.110 ssid=MstRobot runtime=14:C1:9F:D7:E3:F6/d2f717
+04-25 14:36:29.801 D/SmartSalesConn(19394): BadgeHttpClient.isReachable start url=http://192.168.0.110:8088/
+04-25 14:36:30.300 D/SmartSalesConn(19394): BadgeHttpClient.isReachable response url=http://192.168.0.110:8088/ code=200 reachable=true
+04-25 14:36:30.301 I/SmartSalesConn(19394): 🛜 repair probe attempt=1 url=http://192.168.0.110:8088 reachable=true
+04-25 14:36:30.301 D/SmartSalesConn(19394): 🔌 Session persisted: 14:C1:9F:D7:E3:F6
+04-25 14:36:30.301 I/SmartSalesConn(19394): 🛜 repair outcome=wifi_provisioned ip=192.168.0.110 ssid=MstRobot
+04-25 14:36:30.303 D/SmartSalesConn(19394): 📤 TX [BadgeSignal]: Ver#get (56 65 72 23 67 65 74)
+04-25 14:36:30.396 D/SmartSalesConn(19394): 📥 RX [Notification]: Ver#1.0.0.1 (56 65 72 23 31 2E 30 2E 30 2E 31)
+04-25 14:36:30.397 I/SmartSalesConn(19394): 🧾 Badge firmware version: 1.0.0.1
+04-25 14:36:30.399 I/SmartSalesConn(19394): 🧾 Badge firmware version query sent
+04-25 14:36:33.199 D/SmartSalesConn(19394): 📥 RX [Notification]: Bat#4095.00% (42 61 74 23 34 30 39 35 2E 30 30 25)
+04-25 14:36:33.200 D/SmartSalesConn(19394): ❓ Badge unknown notification: Bat#4095.00%
+04-25 14:36:33.308 D/AudioPipeline(19394): SIM badge sync preflight start trigger=auto
+04-25 14:36:33.308 D/AudioPipeline(19394): 🔎 isReady preflight: start
+04-25 14:36:33.308 D/AudioPipeline(19394): 🌐 resolveBaseUrl: querying badge network status
+04-25 14:36:33.309 D/SmartSalesConn(19394): 🌐 network query device=CHLE_Intelligent
+04-25 14:36:33.309 I/SmartSalesConn(19394): 📡 queryNetwork ENTRY (in mutex)
+04-25 14:36:33.309 D/SmartSalesConn(19394): 📡 CACHED (3610ms old)
+04-25 14:36:33.309 D/SmartSalesConn(19394): 📶 state=CONNECTED ip=192.168.0.110
+04-25 14:36:33.309 D/SmartSalesConn(19394): 🌐 Network status ok device=CHLE_Intelligent ip=192.168.0.110
+04-25 14:36:33.310 D/AudioPipeline(19394): 🌐 resolveBaseUrl: ip=192.168.0.110 badgeSsid=MstRobot phoneSsidForDiag=
+04-25 14:36:33.310 D/AudioPipeline(19394): 🌐 resolveBaseUrl: refreshed http://192.168.0.110:8088
+04-25 14:36:33.310 D/AudioPipeline(19394): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.0.110:8088
+04-25 14:36:33.310 D/SmartSalesConn(19394): BadgeHttpClient.isReachable start url=http://192.168.0.110:8088/
+04-25 14:36:34.042 D/AudioPipeline(19394): SIM manual badge sync tapped availability=ready isSyncing=false
+04-25 14:36:34.042 D/AudioPipeline(19394): 🔎 isReady preflight: start
+04-25 14:36:34.043 D/AudioPipeline(19394): 🌐 resolveBaseUrl: reusing active endpoint http://192.168.0.110:8088
+04-25 14:36:34.043 D/AudioPipeline(19394): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.0.110:8088
+04-25 14:36:34.043 D/SmartSalesConn(19394): BadgeHttpClient.isReachable start url=http://192.168.0.110:8088/
+04-25 14:36:36.949 W/SmartSalesConn(19394): BadgeHttpClient.isReachable failure url=http://192.168.0.110:8088/ error=SocketTimeoutException:timeout
+04-25 14:36:36.949 W/AudioPipeline(19394): 🌐 invalidate active endpoint reason=http reachability failed
+04-25 14:36:36.949 D/AudioPipeline(19394): 🔎 isReady preflight: retrying after endpoint refresh
+04-25 14:36:36.950 D/AudioPipeline(19394): 🌐 resolveBaseUrl: querying badge network status
+04-25 14:36:36.950 D/SmartSalesConn(19394): 🌐 network query device=CHLE_Intelligent
+04-25 14:36:36.950 I/SmartSalesConn(19394): 📡 queryNetwork ENTRY (in mutex)
+04-25 14:36:36.950 D/SmartSalesConn(19394): 📡 CACHED (7251ms old)
+04-25 14:36:36.950 D/SmartSalesConn(19394): 📶 state=CONNECTED ip=192.168.0.110
+04-25 14:36:36.950 D/SmartSalesConn(19394): 🌐 Network status ok device=CHLE_Intelligent ip=192.168.0.110
+04-25 14:36:36.951 D/AudioPipeline(19394): 🌐 resolveBaseUrl: ip=192.168.0.110 badgeSsid=MstRobot phoneSsidForDiag=
+04-25 14:36:36.951 D/AudioPipeline(19394): 🌐 resolveBaseUrl: refreshed http://192.168.0.110:8088
+04-25 14:36:36.951 D/AudioPipeline(19394): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.0.110:8088
+04-25 14:36:36.951 D/SmartSalesConn(19394): BadgeHttpClient.isReachable start url=http://192.168.0.110:8088/
+04-25 14:36:37.325 D/SmartSalesConn(19394): BadgeHttpClient.isReachable response url=http://192.168.0.110:8088/ code=200 reachable=true
+04-25 14:36:37.325 D/AudioPipeline(19394): 🔎 isReady preflight: result=ready baseUrl=http://192.168.0.110:8088
+04-25 14:36:37.343 D/AudioPipeline(19394): SIM manual badge sync gate availability=ready branch=strict_precheck_allowed blocked=false
+04-25 14:36:37.343 D/AudioPipeline(19394): SIM badge sync preflight accepted upstream trigger=manual
+04-25 14:36:37.345 D/AudioPipeline(19394): SIM audio badge sync requested: trigger=manual
+04-25 14:36:37.345 D/AudioPipeline(19394): 🌐 resolveBaseUrl: reusing active endpoint http://192.168.0.110:8088
+04-25 14:36:38.209 D/SmartSalesConn(19394): 📥 RX [Notification]: Bat#4095.00% (42 61 74 23 34 30 39 35 2E 30 30 25)
+04-25 14:36:38.210 D/SmartSalesConn(19394): ❓ Badge unknown notification: Bat#4095.00%
+04-25 14:36:38.864 D/AudioPipeline(19394): SIM badge sync listRecordings success count=2
+04-25 14:36:38.874 D/AudioPipeline(19394): SIM badge sync outcome badgeListCount=2 pendingDeleteCount=0 placeholderCount=0 queueCount=2 retryQueueCount=2 branch=queued
+04-25 14:36:38.875 D/AudioPipeline(19394): SIM audio badge sync completed: trigger=manual queuedCount=0 retryQueuedCount=2 branch=queued
+04-25 14:36:38.875 D/AudioPipeline(19394): SIM badge sync background queue started
+04-25 14:36:38.904 D/AudioPipeline(19394): SIM badge sync background download start filename=log_2speakerTesting.wav
+04-25 14:36:38.905 D/AudioPipeline(19394): 🌐 resolveBaseUrl: reusing active endpoint http://192.168.0.110:8088
+04-25 14:36:38.905 D/AudioPipeline(19394): ⬇️ Downloading: http://192.168.0.110:8088/download?file=log_2speakerTesting.wav
+04-25 14:36:38.920 D/SmartSalesConn(19394): BadgeHttpClient.isReachable response url=http://192.168.0.110:8088/ code=200 reachable=true
+04-25 14:36:38.920 D/AudioPipeline(19394): 🔎 isReady preflight: result=ready baseUrl=http://192.168.0.110:8088
+04-25 14:36:38.920 D/AudioPipeline(19394): SIM badge sync preflight result trigger=auto isReady=true
+04-25 14:36:38.920 D/AudioPipeline(19394): SIM audio badge sync requested: trigger=auto
+04-25 14:36:38.920 D/AudioPipeline(19394): 🌐 resolveBaseUrl: reusing active endpoint http://192.168.0.110:8088
+04-25 14:36:39.768 W/AudioPipeline(19394): 🌐 invalidate active endpoint reason=download failed
+04-25 14:36:39.768 W/AudioPipeline(19394): ❌ Download failed from http://192.168.0.110:8088: File not found: log_2speakerTesting.wav
+04-25 14:36:39.789 D/AudioPipeline(19394): SIM audio sync failed while connectivity unavailable: downloadRecording failed filename=log_2speakerTesting.wav reason=File not found: log_2speakerTesting.wav
+04-25 14:36:39.789 E/AudioPipeline(19394): SIM badge sync background download failed filename=log_2speakerTesting.wav reason=File not found: log_2speakerTesting.wav
+04-25 14:36:39.808 D/AudioPipeline(19394): SIM badge sync background download start filename=log_3speakertestings.wav
+04-25 14:36:39.809 D/AudioPipeline(19394): 🌐 resolveBaseUrl: querying badge network status
+04-25 14:36:39.809 D/SmartSalesConn(19394): 🌐 network query device=CHLE_Intelligent
+04-25 14:36:39.809 I/SmartSalesConn(19394): 📡 queryNetwork ENTRY (in mutex)
+04-25 14:36:39.811 D/SmartSalesConn(19394): 📤 TX [NetworkQuery]: wifi#address#ip#name (77 69 66 69 23 61 64 64 72 65 73 73 23 69 70 23 6E 61 6D 65)
+04-25 14:36:39.876 D/SmartSalesConn(19394): 📥 RX [Notification]: IP#192.168.0.110 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 31 30)
+04-25 14:36:39.877 D/SmartSalesConn(19394): ⏭️ Network fragment ignored: Ver#1.0.0.1
+04-25 14:36:39.877 D/SmartSalesConn(19394): ⏭️ Network fragment ignored: Bat#4095.00%
+04-25 14:36:39.877 D/SmartSalesConn(19394): ⏭️ Network fragment ignored: Bat#4095.00%
+04-25 14:36:39.878 D/SmartSalesConn(19394): ❓ Badge unknown notification: IP#192.168.0.110
+04-25 14:36:39.878 D/SmartSalesConn(19394): 📥 RX [Notification]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-25 14:36:39.880 D/SmartSalesConn(19394): 📥 RX [NetworkResponse]: IP#192.168.0.110 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 31 30)
+04-25 14:36:39.880 D/SmartSalesConn(19394): ❓ Badge unknown notification: SD#MstRobot
+04-25 14:36:39.881 D/SmartSalesConn(19394): 📥 RX [NetworkResponse]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-25 14:36:39.881 D/SmartSalesConn(19394): 📡 fresh query, caching IP=192.168.0.110
+04-25 14:36:39.882 D/SmartSalesConn(19394): 📶 state=CONNECTED ip=192.168.0.110
+04-25 14:36:39.882 D/SmartSalesConn(19394): 🌐 Network status ok device=CHLE_Intelligent ip=192.168.0.110
+04-25 14:36:39.882 D/AudioPipeline(19394): 🌐 resolveBaseUrl: ip=192.168.0.110 badgeSsid=MstRobot phoneSsidForDiag=
+04-25 14:36:39.882 D/AudioPipeline(19394): 🌐 resolveBaseUrl: refreshed http://192.168.0.110:8088
+04-25 14:36:39.882 D/AudioPipeline(19394): ⬇️ Downloading: http://192.168.0.110:8088/download?file=log_3speakertestings.wav
+04-25 14:36:40.320 D/AudioPipeline(19394): SIM badge sync listRecordings success count=2
+04-25 14:36:40.325 D/AudioPipeline(19394): SIM badge sync outcome badgeListCount=2 pendingDeleteCount=0 placeholderCount=0 queueCount=1 retryQueueCount=1 branch=queued
+04-25 14:36:40.325 D/AudioPipeline(19394): SIM audio badge sync completed: trigger=auto queuedCount=0 retryQueuedCount=1 branch=queued
+04-25 14:36:41.029 W/AudioPipeline(19394): 🌐 invalidate active endpoint reason=download failed
+04-25 14:36:41.029 W/AudioPipeline(19394): ❌ Download failed from http://192.168.0.110:8088: File not found: log_3speakertestings.wav
+04-25 14:36:41.050 D/AudioPipeline(19394): SIM audio sync failed while connectivity unavailable: downloadRecording failed filename=log_3speakertestings.wav reason=File not found: log_3speakertestings.wav
+04-25 14:36:41.050 E/AudioPipeline(19394): SIM badge sync background download failed filename=log_3speakertestings.wav reason=File not found: log_3speakertestings.wav
+04-25 14:36:41.062 D/AudioPipeline(19394): SIM badge sync background download start filename=log_2speakerTesting.wav
+04-25 14:36:41.063 D/AudioPipeline(19394): 🌐 resolveBaseUrl: querying badge network status
+04-25 14:36:41.063 D/SmartSalesConn(19394): 🌐 network query device=CHLE_Intelligent
+04-25 14:36:41.063 I/SmartSalesConn(19394): 📡 queryNetwork ENTRY (in mutex)
+04-25 14:36:41.063 D/SmartSalesConn(19394): 📡 CACHED (1254ms old)
+04-25 14:36:41.063 D/SmartSalesConn(19394): 📶 state=CONNECTED ip=192.168.0.110
+04-25 14:36:41.063 D/SmartSalesConn(19394): 🌐 Network status ok device=CHLE_Intelligent ip=192.168.0.110
+04-25 14:36:41.064 D/AudioPipeline(19394): 🌐 resolveBaseUrl: ip=192.168.0.110 badgeSsid=MstRobot phoneSsidForDiag=
+04-25 14:36:41.064 D/AudioPipeline(19394): 🌐 resolveBaseUrl: refreshed http://192.168.0.110:8088
+04-25 14:36:41.064 D/AudioPipeline(19394): ⬇️ Downloading: http://192.168.0.110:8088/download?file=log_2speakerTesting.wav
+04-25 14:36:41.559 W/AudioPipeline(19394): 🌐 invalidate active endpoint reason=download failed
+04-25 14:36:41.559 W/AudioPipeline(19394): ❌ Download failed from http://192.168.0.110:8088: File not found: log_2speakerTesting.wav
+04-25 14:36:41.574 D/AudioPipeline(19394): SIM audio sync failed while connectivity unavailable: downloadRecording failed filename=log_2speakerTesting.wav reason=File not found: log_2speakerTesting.wav
+04-25 14:36:41.574 E/AudioPipeline(19394): SIM badge sync background download failed filename=log_2speakerTesting.wav reason=File not found: log_2speakerTesting.wav
+04-25 14:36:41.574 D/AudioPipeline(19394): SIM badge sync background queue drained
+04-25 14:36:43.248 D/SmartSalesConn(19394): 📥 RX [Notification]: Bat#4095.00% (42 61 74 23 34 30 39 35 2E 30 30 25)
+04-25 14:36:43.249 D/SmartSalesConn(19394): ❓ Badge unknown notification: Bat#4095.00%
+04-25 14:36:44.041 D/AudioPipeline(19394): SIM manual badge sync tapped availability=ready isSyncing=false
+04-25 14:36:44.042 D/AudioPipeline(19394): 🔎 isReady preflight: start
+04-25 14:36:44.042 D/AudioPipeline(19394): 🌐 resolveBaseUrl: querying badge network status
+04-25 14:36:44.043 D/SmartSalesConn(19394): 🌐 network query device=CHLE_Intelligent
+04-25 14:36:44.043 I/SmartSalesConn(19394): 📡 queryNetwork ENTRY (in mutex)
+04-25 14:36:44.043 D/SmartSalesConn(19394): 📡 CACHED (4234ms old)
+04-25 14:36:44.043 D/SmartSalesConn(19394): 📶 state=CONNECTED ip=192.168.0.110
+04-25 14:36:44.043 D/SmartSalesConn(19394): 🌐 Network status ok device=CHLE_Intelligent ip=192.168.0.110
+04-25 14:36:44.045 D/AudioPipeline(19394): 🌐 resolveBaseUrl: ip=192.168.0.110 badgeSsid=MstRobot phoneSsidForDiag=
+04-25 14:36:44.046 D/AudioPipeline(19394): 🌐 resolveBaseUrl: refreshed http://192.168.0.110:8088
+04-25 14:36:44.046 D/AudioPipeline(19394): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.0.110:8088
+04-25 14:36:44.046 D/SmartSalesConn(19394): BadgeHttpClient.isReachable start url=http://192.168.0.110:8088/
+04-25 14:36:46.071 D/SmartSalesConn(19394): BadgeHttpClient.isReachable response url=http://192.168.0.110:8088/ code=200 reachable=true
+04-25 14:36:46.071 D/AudioPipeline(19394): 🔎 isReady preflight: result=ready baseUrl=http://192.168.0.110:8088
+04-25 14:36:46.072 D/AudioPipeline(19394): SIM manual badge sync gate availability=ready branch=strict_precheck_allowed blocked=false
+04-25 14:36:46.072 D/AudioPipeline(19394): SIM badge sync preflight accepted upstream trigger=manual
+04-25 14:36:46.072 D/AudioPipeline(19394): SIM audio badge sync requested: trigger=manual
+04-25 14:36:46.073 D/AudioPipeline(19394): 🌐 resolveBaseUrl: reusing active endpoint http://192.168.0.110:8088
+04-25 14:36:46.953 D/AudioPipeline(19394): SIM badge sync listRecordings success count=2
+04-25 14:36:46.957 D/AudioPipeline(19394): SIM badge sync outcome badgeListCount=2 pendingDeleteCount=0 placeholderCount=0 queueCount=2 retryQueueCount=2 branch=queued
+04-25 14:36:46.957 D/AudioPipeline(19394): SIM audio badge sync completed: trigger=manual queuedCount=0 retryQueuedCount=2 branch=queued
+04-25 14:36:46.958 D/AudioPipeline(19394): SIM badge sync background queue started
+04-25 14:36:46.971 D/AudioPipeline(19394): SIM badge sync background download start filename=log_2speakerTesting.wav
+04-25 14:36:46.972 D/AudioPipeline(19394): 🌐 resolveBaseUrl: reusing active endpoint http://192.168.0.110:8088
+04-25 14:36:46.972 D/AudioPipeline(19394): ⬇️ Downloading: http://192.168.0.110:8088/download?file=log_2speakerTesting.wav
+04-25 14:36:47.391 W/AudioPipeline(19394): 🌐 invalidate active endpoint reason=download failed
+04-25 14:36:47.391 W/AudioPipeline(19394): ❌ Download failed from http://192.168.0.110:8088: File not found: log_2speakerTesting.wav
+04-25 14:36:47.406 D/AudioPipeline(19394): SIM audio sync failed while connectivity unavailable: downloadRecording failed filename=log_2speakerTesting.wav reason=File not found: log_2speakerTesting.wav
+04-25 14:36:47.406 E/AudioPipeline(19394): SIM badge sync background download failed filename=log_2speakerTesting.wav reason=File not found: log_2speakerTesting.wav
+04-25 14:36:47.419 D/AudioPipeline(19394): SIM badge sync background download start filename=log_3speakertestings.wav
+04-25 14:36:47.420 D/AudioPipeline(19394): 🌐 resolveBaseUrl: querying badge network status
+04-25 14:36:47.421 D/SmartSalesConn(19394): 🌐 network query device=CHLE_Intelligent
+04-25 14:36:47.421 I/SmartSalesConn(19394): 📡 queryNetwork ENTRY (in mutex)
+04-25 14:36:47.421 D/SmartSalesConn(19394): 📡 CACHED (7612ms old)
+04-25 14:36:47.421 D/SmartSalesConn(19394): 📶 state=CONNECTED ip=192.168.0.110
+04-25 14:36:47.421 D/SmartSalesConn(19394): 🌐 Network status ok device=CHLE_Intelligent ip=192.168.0.110
+04-25 14:36:47.423 D/AudioPipeline(19394): 🌐 resolveBaseUrl: ip=192.168.0.110 badgeSsid=MstRobot phoneSsidForDiag=
+04-25 14:36:47.423 D/AudioPipeline(19394): 🌐 resolveBaseUrl: refreshed http://192.168.0.110:8088
+04-25 14:36:47.423 D/AudioPipeline(19394): ⬇️ Downloading: http://192.168.0.110:8088/download?file=log_3speakertestings.wav

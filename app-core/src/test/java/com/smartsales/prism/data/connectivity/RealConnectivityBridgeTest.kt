@@ -317,7 +317,10 @@ class RealConnectivityBridgeTest {
 
         assertFalse(bridge.isReady())
         assertEquals(
-            listOf("http://192.168.0.115:8088"),
+            listOf(
+                "http://192.168.0.115:8088",
+                "http://192.168.0.115:8088"
+            ),
             httpClient.getReachableCalls()
         )
     }
@@ -375,7 +378,7 @@ class RealConnectivityBridgeTest {
     }
 
     @Test
-    fun `http failure invalidates active endpoint and next retry refreshes network status once`() = runTest {
+    fun `http failure invalidates active endpoint and refreshes network status during readiness retry`() = runTest {
         val manager = FakeDeviceConnectionManager()
         val monitor = FakeBadgeStateMonitor()
         val httpClient = FakeBadgeHttpClient().apply {
@@ -406,11 +409,52 @@ class RealConnectivityBridgeTest {
         )
 
         assertFalse(bridge.isReady())
-        assertEquals(0, manager.queryNetworkStatusCalls)
+        assertEquals(1, manager.queryNetworkStatusCalls)
 
         bridge.listRecordings()
 
+        assertEquals(2, manager.queryNetworkStatusCalls)
+    }
+
+    @Test
+    fun `isReady retries once with fresh network status after transient http miss`() = runTest {
+        val manager = FakeDeviceConnectionManager()
+        val monitor = FakeBadgeStateMonitor()
+        val httpClient = FakeBadgeHttpClient().apply {
+            setReachableResults(listOf(false, true))
+        }
+        val bridge = newBridge(manager, httpClient, monitor)
+        manager.setState(
+            ConnectionState.WifiProvisioned(
+                session = BlePeripheral("badge-1", "Badge", -40).let { ble ->
+                    BleSession.fromPeripheral(ble)
+                },
+                status = ProvisioningStatus(
+                    wifiSsid = "MstRobot",
+                    handshakeId = "h1",
+                    credentialsHash = "c1"
+                )
+            )
+        )
+        monitor.simulateConnected(ip = "192.168.0.115", wifiName = "MstRobot")
+        manager.stubNetworkResult = Result.Success(
+            DeviceNetworkStatus(
+                ipAddress = "192.168.0.115",
+                deviceWifiName = "MstRobot",
+                phoneWifiName = "MstRobot",
+                rawResponse = "IP#192.168.0.115 SD#MstRobot"
+            )
+        )
+
+        assertEquals(true, bridge.isReady())
         assertEquals(1, manager.queryNetworkStatusCalls)
+        assertEquals(
+            listOf(
+                "http://192.168.0.115:8088",
+                "http://192.168.0.115:8088"
+            ),
+            httpClient.getReachableCalls()
+        )
     }
 
     @Test

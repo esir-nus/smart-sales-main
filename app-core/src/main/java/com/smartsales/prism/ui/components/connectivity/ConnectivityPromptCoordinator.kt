@@ -1,5 +1,6 @@
 package com.smartsales.prism.ui.components.connectivity
 
+import android.util.Log
 import com.smartsales.prism.domain.connectivity.ConnectivityPrompt
 import com.smartsales.prism.domain.connectivity.IsolationTriggerContext
 import javax.inject.Inject
@@ -34,6 +35,10 @@ class ConnectivityPromptCoordinator @Inject constructor() : ConnectivityPrompt {
         _suspectedIsolationRequests.asSharedFlow()
 
     override suspend fun promptWifiMismatch(suggestedSsid: String?) {
+        Log.d(
+            "SmartSalesConn",
+            "ConnectivityPrompt prompt=wifi_mismatch suggestedSsid=${suggestedSsid?.trim()?.takeIf(String::isNotEmpty) ?: "unknown"}"
+        )
         _wifiMismatchRequests.emit(
             WifiMismatchPromptRequest(
                 suggestedSsid = suggestedSsid
@@ -47,6 +52,10 @@ class ConnectivityPromptCoordinator @Inject constructor() : ConnectivityPrompt {
         badgeIp: String,
         triggerContext: IsolationTriggerContext
     ) {
+        Log.d(
+            "SmartSalesConn",
+            "ConnectivityPrompt prompt=suspected_isolation badgeIp=${badgeIp.trim()} trigger=${triggerContext.name.lowercase()}"
+        )
         _suspectedIsolationRequests.emit(
             SuspectedIsolationPromptRequest(
                 badgeIp = badgeIp.trim(),

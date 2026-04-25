@@ -238,6 +238,7 @@ Reconnect rule:
 
 - reconnect must feed `BadgeStateMonitor` immediately after persistent GATT reconnect succeeds
 - reconnect must publish the foreground network-query result into the monitor synchronously
+- `ConnectivityBridge.isReady()` may retry once after an HTTP reachability miss by invalidating the active endpoint and forcing a fresh BLE network-status resolution; repeated HTTP misses still return not-ready and may drive the existing manual isolation/mismatch prompt.
 - manager-only BLE/Wi‑Fi diagnostics must not wait for a background poll tick to become visible
 - reconnect/setup/manual repair may use bounded foreground confirmation loops, but the runtime must not resume continuous BLE Wi‑Fi polling after those checks complete
 - connectivity UI must treat reconnect and manual Wi‑Fi repair as one exclusive foreground operation so duplicate taps do not stack concurrent repair attempts

@@ -8,7 +8,7 @@ This is a **persistent intake project**. It stays open as a long-lived funnel fo
 
 ## Status
 
-open — updated 2026-04-25 (sprints 07–09 authored; active)
+open — updated 2026-04-25 (sprints 07–09 authored; 07B done)
 
 ## Sprint Index
 
@@ -22,6 +22,7 @@ open — updated 2026-04-25 (sprints 07–09 authored; active)
 | 06 | sd-space-handler | done | Wired `SD#space` -> `SD#space#<size>` through parser -> bridge -> `ConnectivityViewModel.sdCardSpace`, added a UserCenter query-on-tap row with raw firmware string display, and flipped the owning docs to Implemented | [06-sd-space-handler.md](sprints/06-sd-space-handler.md) |
 | 07A | add-device-registry-exit | done | Repaired post-onboarding `添加新设备` so successful provisioning closes back to connectivity after registration, with no quick-start requirement, skip-to-home shortcut, or onboarding `COMPLETE` wrapper | [07a-add-device-registry-exit.md](sprints/07a-add-device-registry-exit.md) |
 | 07 | badge-switching-lifecycle | done | Real-device two-badge lifecycle closed with app-core logcat evidence for switch A→B and B→A, explicit target reconnect, stale GATT close, and inline add-device discovery filtering so registered badges stay hidden from pairing | [07-badge-switching-lifecycle.md](sprints/07-badge-switching-lifecycle.md) |
+| 07B | sync-network-fragment-filter | done | Filtered noisy BLE pushes from WiFi-status collection so valid `IP#` / WiFi `SD#<SSID>` fragments survive interleaving; added prompt-path evidence so strict HTTP precheck blocks no longer masquerade as WiFi mismatch; focused tests, assemble, install, and on-device manual-sync evidence passed | [07b-sync-network-fragment-filter.md](sprints/07b-sync-network-fragment-filter.md) |
 | 08 | multi-device-audio-source-label | planned | Add per-badge source label to audio drawer cards (bottom-right text showing `RegisteredDevice.displayName`); persist `badgeMac` in `AudioFile`, resolve to label in `AudioViewModel`, render in `AudioCard` | [08-multi-device-audio-source-label.md](sprints/08-multi-device-audio-source-label.md) |
 | 09 | sync-polish | planned | Empty-file gate in real sync path, non-blocking in-memory retry queue (3 attempts before surfacing error card), friendly Chinese error messages on cards, sync summary toast after each `syncFromDevice()` | [09-sync-polish.md](sprints/09-sync-polish.md) |
 

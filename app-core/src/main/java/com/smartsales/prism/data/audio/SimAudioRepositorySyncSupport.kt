@@ -651,6 +651,10 @@ internal class SimAudioRepositorySyncSupport(
 
     private suspend fun promptWifiMismatchIfManual(trigger: SimBadgeSyncTrigger) {
         if (trigger != SimBadgeSyncTrigger.MANUAL) return
+        Log.d(
+            SIM_AUDIO_SYNC_LOG_TAG,
+            "SIM badge sync prompt wifi_mismatch requested source=repository_sync trigger=${trigger.name.lowercase()}"
+        )
         runtime.connectivityPrompt.promptWifiMismatch(
             runtime.phoneWifiProvider.currentNormalizedSsid()
         )

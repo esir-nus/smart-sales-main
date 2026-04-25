@@ -226,26 +226,29 @@ internal class GattBleGatewaySessionSupport(
             gattContext.writeCharacteristic(config.credentialCharacteristicUuid, command)
 
             val rawResponses = mutableListOf<String>()
-            val maxFragments = 3
-            val fragmentTimeout = 2000L
+            var deadlineMs = System.currentTimeMillis() + 2_000L
 
-            repeat(maxFragments) {
-                val response = try {
-                    kotlinx.coroutines.withTimeout(fragmentTimeout) {
-                        gattContext.awaitNotification(config.provisioningStatusCharacteristicUuid)
-                    }
-                } catch (_: kotlinx.coroutines.TimeoutCancellationException) {
-                    null
-                } catch (ex: IllegalStateException) {
-                    ConnectivityLogger.d("⏭️ Fragment skipped: ${ex.message}")
-                    null
-                }
-                if (response == null) return@repeat
+            while (System.currentTimeMillis() < deadlineMs) {
+                val remainingMs = (deadlineMs - System.currentTimeMillis()).coerceAtLeast(1L)
+                val response = kotlinx.coroutines.withTimeoutOrNull(remainingMs) {
+                    gattContext.awaitAnyNotification()
+                } ?: break
 
                 val raw = response.decodeToString().trim()
+                val fragment = raw.toNetworkStatusFragment()
+                if (fragment == null) {
+                    ConnectivityLogger.d("⏭️ Network fragment ignored: $raw")
+                    continue
+                }
+
                 ConnectivityLogger.rx("NetworkResponse", response)
                 rawResponses.add(raw)
-                if (raw.startsWith("IP#", ignoreCase = true)) return@repeat
+                if (
+                    rawResponses.hasNetworkStatusFragment("IP") &&
+                    rawResponses.hasNetworkStatusFragment("SD")
+                ) {
+                    break
+                }
             }
 
             mergeNetworkFragments(rawResponses)
@@ -589,6 +592,11 @@ internal class GattContext(
             callback.awaitNotification(uuid)
         }
 
+    suspend fun awaitAnyNotification(): ByteArray =
+        withTimeout(operationTimeoutMillis) {
+            callback.awaitAnyNotification()
+        }
+
     private fun findCharacteristic(uuid: UUID): BluetoothGattCharacteristic {
         val cfg = requireConfig()
         val service = gatt.getService(cfg.serviceUuid)
@@ -674,6 +682,11 @@ internal class GatewayGattCallback(
             if (characteristicUuid == uuid) return payload
             ConnectivityLogger.d("⏭️ Skipped notification from $characteristicUuid (waiting for $uuid)")
         }
+    }
+
+    suspend fun awaitAnyNotification(): ByteArray {
+        val (_, payload) = notificationChannel.receive()
+        return payload
     }
 
     override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {

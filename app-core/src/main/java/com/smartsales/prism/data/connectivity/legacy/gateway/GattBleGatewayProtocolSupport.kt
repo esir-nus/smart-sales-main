@@ -149,10 +149,8 @@ private fun isFirmwareVersionPayload(version: String): Boolean {
 internal fun mergeNetworkFragments(rawResponses: List<String>): DeviceNetworkStatus {
     val fragments = mutableMapOf<String, String>()
     for (raw in rawResponses) {
-        val parts = raw.split("#", limit = 2)
-        if (parts.size == 2) {
-            fragments[parts[0].uppercase()] = parts[1]
-        }
+        val fragment = raw.toNetworkStatusFragment() ?: continue
+        fragments[fragment.first] = fragment.second
     }
 
     val ip = fragments["IP"]
@@ -167,6 +165,29 @@ internal fun mergeNetworkFragments(rawResponses: List<String>): DeviceNetworkSta
         phoneWifiName = "",
         rawResponse = fragments.entries.joinToString(", ") { "${it.key}#${it.value}" }
     )
+}
+
+internal fun String.toNetworkStatusFragment(): Pair<String, String>? {
+    val raw = trim()
+    val parts = raw.split("#", limit = 3)
+    return when {
+        parts.size >= 2 && parts[0].equals("IP", ignoreCase = true) ->
+            "IP" to parts.drop(1).joinToString("#").trim()
+
+        parts.size >= 2 &&
+            parts[0].equals("SD", ignoreCase = true) &&
+            !parts[1].equals("space", ignoreCase = true) ->
+            "SD" to parts.drop(1).joinToString("#").trim()
+
+        else -> null
+    }
+}
+
+internal fun List<String>.hasNetworkStatusFragment(key: String): Boolean {
+    return any { raw ->
+        val fragment = raw.toNetworkStatusFragment()
+        fragment?.first == key
+    }
 }
 
 internal class CredentialRejectedException(message: String) : RuntimeException(message)

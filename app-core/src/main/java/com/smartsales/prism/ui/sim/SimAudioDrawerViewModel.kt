@@ -210,7 +210,18 @@ class SimAudioDrawerViewModel @Inject constructor(
                 )
                 val blockedMessage = gateDecision.blockedMessage
                 if (blockedMessage != null) {
-                    requestWifiMismatchPrompt()
+                    if (shouldPromptWifiMismatchForManualSyncBlock(gateDecision.branch)) {
+                        Log.d(
+                            SIM_AUDIO_DRAWER_SYNC_LOG_TAG,
+                            "SIM manual badge sync prompt wifi_mismatch requested source=drawer_gate branch=${gateDecision.branch.name.lowercase()}"
+                        )
+                        requestWifiMismatchPrompt()
+                    } else {
+                        Log.d(
+                            SIM_AUDIO_DRAWER_SYNC_LOG_TAG,
+                            "SIM manual badge sync prompt wifi_mismatch skipped source=drawer_gate branch=${gateDecision.branch.name.lowercase()}"
+                        )
+                    }
                     showSyncFeedback(SimAudioSyncFeedback.DENIED, durationMillis = 1200L)
                     _uiEvents.emit(blockedMessage)
                     return@launch
@@ -556,6 +567,12 @@ internal suspend fun resolveSimBadgeManualSyncGateDecision(
             }
         }
     }
+}
+
+internal fun shouldPromptWifiMismatchForManualSyncBlock(
+    branch: SimBadgeManualSyncGateBranch
+): Boolean {
+    return branch == SimBadgeManualSyncGateBranch.MANAGER_OFFLINE_BLOCK
 }
 
 data class SimAudioDiscussion(

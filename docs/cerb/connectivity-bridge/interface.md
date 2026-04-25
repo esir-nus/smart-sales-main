@@ -102,6 +102,8 @@ interface ConnectivityBridge {
      * Check if badge is connected and reachable.
      * Performs pre-flight check (BLE + HTTP).
      * Reuses the current runtime endpoint unless that snapshot has been invalidated.
+     * If HTTP reachability fails once, invalidates the endpoint and retries once
+     * after a fresh BLE network-status resolution before returning not-ready.
      */
     suspend fun isReady(): Boolean
     

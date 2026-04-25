@@ -130,4 +130,20 @@ class SimBadgeSyncAvailabilityTest {
                 ).branch
             )
         }
+
+    @Test
+    fun `strict precheck block does not open wifi mismatch prompt`() {
+        assertEquals(
+            false,
+            shouldPromptWifiMismatchForManualSyncBlock(
+                SimBadgeManualSyncGateBranch.STRICT_PRECHECK_BLOCKED
+            )
+        )
+        assertEquals(
+            true,
+            shouldPromptWifiMismatchForManualSyncBlock(
+                SimBadgeManualSyncGateBranch.MANAGER_OFFLINE_BLOCK
+            )
+        )
+    }
 }

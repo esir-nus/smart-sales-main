@@ -59,8 +59,9 @@ Badge sends:  SD#<SSID>                    (BLE notification 2)
 
 **Notes**:
 - Badge sends TWO separate BLE notifications (fragmented response)
-- Order may vary; app must collect both fragments
-- App implementation collects up to 3 fragments with 2s timeout per fragment
+- Order may vary; app must collect both fragments from the active notification stream
+- Unrelated badge notifications may interleave with the response, including `Bat#...`, `Ver#...`, and `SD#space#...`; app-side WiFi status parsing must ignore those and accept only `IP#...` plus WiFi-name `SD#<SSID>`
+- `SD#space#...` is not a WiFi SSID fragment even though it shares the `SD#` prefix
 
 **Example:**
 ```

@@ -172,7 +172,7 @@
 - Status: `Fix in progress`
 - Affected layer: onboarding pairing, provisioning, NUS notification/status handling
 - First seen: 2026-03-26
-- Last updated: 2026-04-02
+- Last updated: 2026-04-25
 - Current hypothesis:
   - The earlier failure was caused by app-side provisioning completion logic expecting an immediate BLE ack and falling back to a direct `6E400003...` read that the target firmware may not support.
 - Latest attempted fix:
@@ -210,6 +210,7 @@
   - Manual `WIFI_MISMATCH` repair now requires an explicit send-confirm dialog before valid credentials are written to the badge.
   - Badge network status is now passive/event-driven instead of background-polled, and HTTP `/list` / `/download` / `/delete` reuse the active runtime endpoint snapshot instead of re-querying BLE before every call.
   - Connected-vs-ready evidence diagnostics now log the manual-sync gate branch, `ConnectivityBridge.isReady()` preflight, badge network query result, resolved base URL, and HTTP reachability outcome under the existing `SmartSalesConn` / `AudioPipeline` capture tags.
+  - WiFi status query collection now ignores interleaved non-network badge pushes (`Bat#...`, `Ver#...`, `SD#space#...`) and accepts `IP#...` / WiFi-name `SD#<SSID>` from the active notification stream.
 - Next action:
   - Revalidate on device with `adb logcat` capture that:
     1. BLE reconnect succeeds
@@ -220,6 +221,7 @@
     6. closing and reopening badge connection no longer reopens on a stale `WIFI_MISMATCH` screen when live manager state has changed
     7. manual repair does not loop back to `网络环境已变更` unless the badge explicitly reports a different SSID than the submitted one
     8. one fresh failing manual-sync repro includes the manager gate decision, `isReady()` result, resolved base URL decision, and HTTP reachability result so app-vs-badge ownership can be assigned cleanly
+    9. badge `/list` entries that later return HTTP 404 are handled as sync/data consistency errors rather than connectivity mismatch
 - Linked evidence:
   - `docs/cerb/connectivity-bridge/spec.md`
   - `docs/cerb/device-pairing/spec.md`
@@ -227,6 +229,46 @@
   - `/tmp/esp32_connectivity_live.log`
 
 #### Evidence History
+
+##### 2026-04-25: Manual sync false network mismatch was caused by noisy BLE fragments
+
+- Scenario:
+  - User tapped SIM manual badge sync while phone and badge were on `MstRobot`.
+  - UI opened `网络环境已变更`, implying WiFi mismatch even though the badge was reachable on the same network.
+- Observed evidence:
+  - Before fix, logcat showed the badge returned valid `IP#192.168.0.110` and `SD#MstRobot`.
+  - The query collector saw interleaved `Bat#4095.00%` and `SD#space#0.94GB` as network-query responses and failed with `网络响应缺少 IP（收到: [BAT, SD]）`.
+  - Manual sync then returned `strict_precheck_blocked`, which triggered the connectivity repair prompt.
+- App interpretation:
+  - This was an app-side BLE response collection bug, not proof of subnet isolation or ESP32 HTTP overload.
+  - `SD#space#...` must be disambiguated from WiFi `SD#<SSID>` and ignored for WiFi status queries.
+- Patch sprint:
+  - Formalized as `docs/projects/firmware-protocol-intake/sprints/07b-sync-network-fragment-filter.md`.
+  - Candidate code change filters WiFi query fragments to `IP#...` plus WiFi-name `SD#<SSID>` and ignores noisy `Bat#...` / `SD#space#...` notifications.
+  - Focused parser coverage is required before close.
+- Remaining verification:
+  - Fresh post-contract on-device logcat must prove `IP#...` and `SD#<SSID>` are captured as `NetworkResponse`, `isReady preflight: result=ready`, manual sync reaches `listRecordings`, and `strict_precheck_blocked` is absent in the repro window.
+  - If sync then reaches HTTP `File not found`, treat that as separate `/list` versus `/download` consistency drift, not this false network mismatch branch.
+
+##### 2026-04-25: Post-patch manual sync reached listRecordings with noisy BLE pushes filtered
+
+- Scenario:
+  - Codex ran Sprint 07B on `fc8ede3e` and captured clean manual-sync plus prompt-path logcat windows after installing `app-core-debug.apk`.
+- Observed evidence:
+  - Evidence file: `docs/projects/firmware-protocol-intake/evidence/07b-sync-network-fragment-filter/sync-fragment-filter-logcat.txt`.
+  - The repro window includes `SIM manual badge sync tapped`, `NetworkResponse]: IP#192.168.0.110`, `NetworkResponse]: SD#MstRobot`, `isReady preflight: result=ready`, and `SIM badge sync listRecordings success count=2`.
+  - The same window shows noisy `Bat#4095.00%` notifications ignored before the valid network fragments.
+  - The clean window does not contain `strict_precheck_blocked`.
+  - Prompt-path evidence file: `docs/projects/firmware-protocol-intake/evidence/07b-sync-network-fragment-filter/sync-fragment-filter-logcat-prompt-evidence-20260425-144232.txt`.
+  - The prompt-evidence window includes repeated manual-sync taps where valid `IP#192.168.0.110` / `SD#MstRobot` fragments survive noisy `Bat#...`, `tim#get`, `Ver#...`, and `SD#space#...` pushes, then `isReady preflight: result=ready`, `branch=strict_precheck_allowed blocked=false`, and `SIM badge sync listRecordings success count=2`.
+  - The prompt-evidence window contains no `prompt=wifi_mismatch`, no explicit WiFi-mismatch prompt request from drawer or repository sync support, no `网络环境已变更`, and no `strict_precheck_blocked`.
+- App interpretation:
+  - The BLE WiFi-status fragment collector now accepts the valid IP/SSID pair despite interleaved badge pushes.
+  - A transient first HTTP reachability timeout can be recovered by endpoint refresh plus one retry when the badge then responds `200`.
+  - Generic strict HTTP precheck blocks no longer request the WiFi-mismatch prompt; the mismatch dialog should now be reserved for branches that actually identify WiFi mismatch or manager-offline repair.
+  - Subsequent `File not found` errors are `/list` versus `/download` drift and belong to the sync-data consistency path, not this WiFi-fragment false-negative branch.
+- Closure:
+  - Sprint 07B closed after focused Gradle tests, `:app-core:assembleDebug`, debug APK install, fresh on-device sync evidence, and prompt-path evidence all passed.
 
 ##### 2026-03-26: Live capture proved BLE reconnect and badge-offline split
 

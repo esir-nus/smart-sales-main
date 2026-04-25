@@ -83,6 +83,10 @@ BLE scanning requires runtime permissions on Android 12+. Permissions are reques
   - unrelated BLE devices must be ignored and scanning continues until a trusted badge appears or the scan times out
   - post-onboarding add-device discovery must hide devices already present in `DeviceRegistryManager.registeredDevices`; registered badges stay visible only in the connectivity manager, not in the pairing discovery card
   - the Android scanner may collect multiple trusted badge candidates during one scan window so one visible registered badge does not prevent discovery of a second unregistered badge
+- **Post-onboarding exit behavior**:
+  - `SIM_ADD_DEVICE` is an overlay launched from connectivity management, not mandatory first-run onboarding
+  - the add-device pairing sequence must expose a close affordance and route allowed Android back actions to the host `onExit`
+  - exiting the add-device sequence must call `PairingService.cancelPairing()` before closing the overlay
 - **Pairing**:
   1. Resolve the latest matching `BlePeripheral` from the scanner-owned snapshot using the selected `DiscoveredBadge.id`
   2. Call `connectionManager.selectPeripheral(...)`

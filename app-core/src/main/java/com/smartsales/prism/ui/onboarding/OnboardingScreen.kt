@@ -68,7 +68,7 @@ fun OnboardingCoordinator(
         host = host,
         currentStep = currentStep,
         exitPolicy = exitPolicy,
-        showExitAction = false,
+        showExitAction = shouldShowCoordinatorExitAction(host, exitPolicy),
         onExit = {
             interactionViewModel.resetInteractionState()
             pairingViewModel.cancelPairing()

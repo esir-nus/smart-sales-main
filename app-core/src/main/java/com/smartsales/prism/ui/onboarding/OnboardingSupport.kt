@@ -30,6 +30,14 @@ internal fun shouldShowOnboardingExitAction(exitPolicy: OnboardingExitPolicy): B
     return exitPolicy != OnboardingExitPolicy.BLOCK_EXIT
 }
 
+internal fun shouldShowCoordinatorExitAction(
+    host: OnboardingHost,
+    exitPolicy: OnboardingExitPolicy
+): Boolean {
+    return host == OnboardingHost.SIM_ADD_DEVICE &&
+        shouldShowOnboardingExitAction(exitPolicy)
+}
+
 internal fun shouldBlockOnboardingSystemBack(exitPolicy: OnboardingExitPolicy): Boolean {
     return exitPolicy != OnboardingExitPolicy.ALLOW_EXIT
 }

@@ -130,6 +130,28 @@ class OnboardingFlowTransitionTest {
     }
 
     @Test
+    fun `add device host exposes close affordance when exit is allowed`() {
+        assertTrue(
+            shouldShowCoordinatorExitAction(
+                OnboardingHost.SIM_ADD_DEVICE,
+                OnboardingExitPolicy.ALLOW_EXIT
+            )
+        )
+        assertFalse(
+            shouldShowCoordinatorExitAction(
+                OnboardingHost.SIM_ADD_DEVICE,
+                OnboardingExitPolicy.BLOCK_EXIT
+            )
+        )
+        assertFalse(
+            shouldShowCoordinatorExitAction(
+                OnboardingHost.SIM_CONNECTIVITY,
+                OnboardingExitPolicy.ALLOW_EXIT
+            )
+        )
+    }
+
+    @Test
     fun `explicit action only keeps skip affordance while back stays blocked`() {
         assertTrue(shouldShowOnboardingExitAction(OnboardingExitPolicy.EXPLICIT_ACTION_ONLY))
         assertTrue(shouldBlockOnboardingSystemBack(OnboardingExitPolicy.EXPLICIT_ACTION_ONLY))

@@ -37,7 +37,11 @@ internal fun OnboardingFrame(
     animateStepContent: Boolean = true,
     content: @Composable (OnboardingStep) -> Unit
 ) {
-    BackHandler(enabled = shouldBlockOnboardingSystemBack(exitPolicy)) {}
+    BackHandler(enabled = true) {
+        if (!shouldBlockOnboardingSystemBack(exitPolicy)) {
+            onExit()
+        }
+    }
 
     Box(
         modifier = Modifier

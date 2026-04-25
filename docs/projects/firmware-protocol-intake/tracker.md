@@ -8,7 +8,7 @@ This is a **persistent intake project**. It stays open as a long-lived funnel fo
 
 ## Status
 
-open — updated 2026-04-25
+open — updated 2026-04-25 (sprints 07–09 authored; active)
 
 ## Sprint Index
 
@@ -19,7 +19,11 @@ open — updated 2026-04-25
 | 03 | wav-suffix-parser-fix | done | Normalized suffix-present and suffix-absent `log#` / `rec#` payloads to canonical `log_<ts>.wav` / `rec_<ts>.wav`, added focused filename tests, and closed the spec fallout note | [03-wav-suffix-parser-fix.md](sprints/03-wav-suffix-parser-fix.md) |
 | 04 | ver-query-handler | done | Implemented `Ver#get` -> `Ver#...` through parser -> bridge -> `ConnectivityViewModel.firmwareVersion`, with auto-query-on-connect and a UserCenter refresh row; verified with focused `:app-core:testDebugUnitTest` coverage plus `:app:assembleDebug` | [04-ver-query-handler.md](sprints/04-ver-query-handler.md) |
 | 05 | command-end-emitter | done | Retired legacy `commandend#1` task-chime wiring, added `notifyCommandEnd()` through both pipeline terminal states, and synced the protocol/interface docs with focused tests plus `:app:assembleDebug` verification | [05-command-end-emitter.md](sprints/05-command-end-emitter.md) |
-| 06 | sd-space-handler | done | Wired `SD#space` -> `SD#space#<size>` through parser -> bridge -> `ConnectivityViewModel.sdCardSpace`, added a UserCenter query-on-tap row with raw firmware string display, and flipped the owning docs to Implemented | local-only contract (ignored) |
+| 06 | sd-space-handler | done | Wired `SD#space` -> `SD#space#<size>` through parser -> bridge -> `ConnectivityViewModel.sdCardSpace`, added a UserCenter query-on-tap row with raw firmware string display, and flipped the owning docs to Implemented | [06-sd-space-handler.md](sprints/06-sd-space-handler.md) |
+| 07A | add-device-registry-exit | done | Repaired post-onboarding `添加新设备` so successful provisioning closes back to connectivity after registration, with no quick-start requirement, skip-to-home shortcut, or onboarding `COMPLETE` wrapper | [07a-add-device-registry-exit.md](sprints/07a-add-device-registry-exit.md) |
+| 07 | badge-switching-lifecycle | planned | Depends on 07A. Real-device dataflow verification (two physical badges): register → switch A→B → reconnect → switch B→A; logcat evidence of registry switch log, BLE state transitions, and post-switch continuity; no production code changes | [07-badge-switching-lifecycle.md](sprints/07-badge-switching-lifecycle.md) |
+| 08 | multi-device-audio-source-label | planned | Add per-badge source label to audio drawer cards (bottom-right text showing `RegisteredDevice.displayName`); persist `badgeMac` in `AudioFile`, resolve to label in `AudioViewModel`, render in `AudioCard` | [08-multi-device-audio-source-label.md](sprints/08-multi-device-audio-source-label.md) |
+| 09 | sync-polish | planned | Empty-file gate in real sync path, non-blocking in-memory retry queue (3 attempts before surfacing error card), friendly Chinese error messages on cards, sync summary toast after each `syncFromDevice()` | [09-sync-polish.md](sprints/09-sync-polish.md) |
 
 ## Genesis
 
@@ -33,6 +37,7 @@ open — updated 2026-04-25
   Decision not to bundle all four into a single sprint: item 1 (Ver#) and item 3 (SD#space) are independent pull-protocol handlers; item 2 (Command#end) needs to plug into two existing pipelines; item 4 is a two-part investigation (parser bug from the `.wav` suffix, plus a semantic question for the firmware team about the log/rec labeling). Each becomes its own sprint entry below. Spec delta itself was a single docs-only commit per the same ad-hoc-ops rule cited above.
 - **2026-04-24 (second drop follow-up)** — Sprint 05 retired the legacy Android-only `commandend#1` task-chime wiring and shipped the spec-owned `Command#end` emitter through both `log#` and `rec#` pipeline terminal states.
 - **2026-04-25 (second drop follow-up)** — Sprint 06 shipped the spec-owned `SD#space` query/reply handler through parser -> bridge -> `ConnectivityViewModel.sdCardSpace` -> UserCenter, keeping the firmware-formatted size string raw and user-initiated only.
+- **2026-04-25 (multi-device UX cluster)** — User proposed extending the existing multi-badge device registry into a complete end-to-end UX: stable switching lifecycle coverage (sprint 07), per-badge audio attribution in the drawer (sprint 08), and sync robustness including non-blocking retry queue, empty-file filtering, friendly error cards, and sync summary toast (sprint 09). These do not require new firmware protocol changes; they build on the existing `RegisteredDevice` / `RealDeviceRegistryManager` / `RealAudioRepository` stack.
 
 ## Cross-Sprint Decisions
 
@@ -46,7 +51,7 @@ open — updated 2026-04-25
 
 This project is intentionally persistent. Per `docs/specs/project-structure.md` size discipline, projects running past sprint 6 must declare why. The justification here is scope: the hardware team's firmware drops are an open-ended upstream stream, not a bounded objective. Closing this project would force each drop to spawn a new project folder, which is bureaucratic overhead without information value. Re-evaluation at sprint 6 will consider whether the stream has slowed enough to close and migrate to ad-hoc docs-only updates, or whether the project is genuinely load-bearing.
 
-Dormancy Recommendation: keep the project tracker open but dormant until the next upstream firmware drop or the pending `log#` / `rec#` semantic clarification lands. Sprint 06 closes the last currently unblocked app-side wiring item from the 2026-04-24 second drop.
+Active queue: sprints 07–09 authored 2026-04-25 extend the project into multi-device UX and sync robustness. Post-09 dormancy recommendation: revert to dormant once these three close, pending the next firmware drop or `log#` / `rec#` semantic clarification.
 
 ## Inputs Pending for Later Sprints
 

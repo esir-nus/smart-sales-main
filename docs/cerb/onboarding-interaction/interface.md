@@ -235,7 +235,7 @@ interface RuntimeOnboardingHandoffGate {
 
 Rules:
 
-- `SCHEDULER_QUICK_START` is part of the canonical production onboarding sequence after successful `PROVISIONING`
+- `SCHEDULER_QUICK_START` is part of the canonical `FULL_APP` and `SIM_CONNECTIVITY` production onboarding sequence after successful `PROVISIONING`; `SIM_ADD_DEVICE` is a post-onboarding registry route and exits after successful provisioning instead
 - onboarding may also enter `SCHEDULER_QUICK_START` through the local `跳过，直接体验日程` shortcut on `HARDWARE_WAKE` and on the Wi-Fi entry / Wi-Fi recovery surfaces
 - onboarding must not expose a global top-right skip action for this shortcut
 - the step uses `DeviceSpeechRecognizer` realtime capture for transcript ingress, then reuses scheduler Path A create/update extraction seams through `OnboardingQuickStartService`; create routing must share the same deterministic-helper -> `Uni-M` -> `Uni-A` -> `Uni-B` interpreter as the main scheduler, while onboarding keeps `displayedDateIso = null`, excludes `Uni-C`, and bounds only the onboarding-local `Uni-M` hop

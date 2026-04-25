@@ -39,7 +39,7 @@ internal fun ProvisioningStep(
     onPasswordChange: (String) -> Unit,
     onBack: () -> Unit,
     onRetryScan: () -> Unit,
-    onSkipToQuickStart: () -> Unit,
+    onSkipToQuickStart: (() -> Unit)?,
     skipButtonText: String = "跳过，直接体验日程",
     onComplete: () -> Unit
 ) {
@@ -89,7 +89,7 @@ internal fun ProvisioningStepContent(
     onPasswordChange: (String) -> Unit,
     onBack: () -> Unit,
     onRetryScan: () -> Unit,
-    onSkipToQuickStart: () -> Unit,
+    onSkipToQuickStart: (() -> Unit)?,
     skipButtonText: String = "跳过，直接体验日程",
     onSubmit: () -> Unit,
     onRetryProvisioning: () -> Unit
@@ -126,7 +126,7 @@ internal fun ProvisioningStepContent(
                     },
                     secondaryLabel = presentation.secondaryLabel,
                     onSecondary = onBack,
-                    tertiaryLabel = skipButtonText,
+                    tertiaryLabel = if (onSkipToQuickStart != null) skipButtonText else null,
                     onTertiary = onSkipToQuickStart
                 )
             }
@@ -153,7 +153,7 @@ private fun ProvisioningForm(
     onPasswordChange: (String) -> Unit,
     onBack: () -> Unit,
     onSubmit: () -> Unit,
-    onSkipToQuickStart: () -> Unit,
+    onSkipToQuickStart: (() -> Unit)?,
     skipButtonText: String
 ) {
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -168,8 +168,10 @@ private fun ProvisioningForm(
                 PrimaryPillButton("开始写入", onSubmit, modifier = Modifier.fillMaxWidth(), enabled = ssid.isNotBlank() && password.isNotBlank())
                 Spacer(Modifier.height(10.dp))
                 SecondaryPillButton("返回设备卡片", onBack, modifier = Modifier.fillMaxWidth())
-                Spacer(Modifier.height(10.dp))
-                QuietGhostButton(skipButtonText, onSkipToQuickStart, modifier = Modifier.fillMaxWidth())
+                onSkipToQuickStart?.let {
+                    Spacer(Modifier.height(10.dp))
+                    QuietGhostButton(skipButtonText, it, modifier = Modifier.fillMaxWidth())
+                }
             }
         }
     }

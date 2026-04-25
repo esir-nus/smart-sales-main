@@ -36,11 +36,11 @@ fun OnboardingCoordinator(
     pairingViewModel: PairingFlowViewModel = hiltViewModel(),
     interactionViewModel: OnboardingInteractionViewModel = hiltViewModel()
 ) {
-    val schedulerEnabled = true
-    val skipButtonText = if (schedulerEnabled) {
+    val usesSchedulerQuickStart = host.usesSchedulerQuickStart()
+    val skipButtonText = if (usesSchedulerQuickStart) {
         "跳过，直接体验日程"
     } else {
-        "跳过，直接进入首页"
+        "跳过，完成添加"
     }
     var currentStep by remember(host) { mutableStateOf(initialOnboardingStep(host)) }
     var discoveredBadge by remember(host) { mutableStateOf<DiscoveredBadge?>(null) }
@@ -52,7 +52,7 @@ fun OnboardingCoordinator(
     val enterPostPairingFlow = {
         pairingViewModel.cancelPairing()
         completionError = null
-        currentStep = if (schedulerEnabled) {
+        currentStep = if (usesSchedulerQuickStart) {
             OnboardingStep.SCHEDULER_QUICK_START
         } else {
             OnboardingStep.COMPLETE
@@ -105,7 +105,7 @@ fun OnboardingCoordinator(
 
             OnboardingStep.HARDWARE_WAKE -> HardwareWakeStep(
                 onContinue = { currentStep = nextOnboardingStep(it, host) },
-                onSkipToQuickStart = enterPostPairingFlow,
+                onSkipToQuickStart = if (usesSchedulerQuickStart) enterPostPairingFlow else null,
                 skipButtonText = skipButtonText
             )
 
@@ -148,27 +148,28 @@ fun OnboardingCoordinator(
                     discoveredBadge = null
                     currentStep = OnboardingStep.SCAN
                 },
-                onSkipToQuickStart = enterPostPairingFlow,
+                onSkipToQuickStart = if (usesSchedulerQuickStart) enterPostPairingFlow else null,
                 skipButtonText = skipButtonText,
                 onComplete = {
-                    currentStep = nextOnboardingStep(it, host)
+                    if (host.closesAfterSuccessfulProvisioning()) {
+                        interactionViewModel.resetInteractionState()
+                        pairingViewModel.cancelPairing()
+                        onComplete()
+                    } else {
+                        currentStep = nextOnboardingStep(it, host)
+                    }
                 }
             )
 
             OnboardingStep.COMPLETE -> CompleteStep(
                 isFinalizing = isCompleting,
                 errorMessage = completionError,
-                showSchedulerHandoff = schedulerEnabled,
+                showSchedulerHandoff = usesSchedulerQuickStart,
                 onAcknowledge = {
                     completionError = null
                     scope.launch {
                         isCompleting = true
-                        val commitError = if (schedulerEnabled) {
-                            interactionViewModel.finalizeFullAppCompletion()
-                        } else {
-                            interactionViewModel.resetInteractionState()
-                            null
-                        }
+                        val commitError = interactionViewModel.finalizeFullAppCompletion()
                         isCompleting = false
                         if (commitError != null) {
                             completionError = commitError

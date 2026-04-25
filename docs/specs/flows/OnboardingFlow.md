@@ -25,14 +25,14 @@ Primary host paths:
 1. `FULL_APP` and `SIM_CONNECTIVITY`
    `WELCOME -> PERMISSIONS_PRIMER -> VOICE_HANDSHAKE_CONSULTATION -> VOICE_HANDSHAKE_PROFILE -> HARDWARE_WAKE -> SCAN -> DEVICE_FOUND -> PROVISIONING -> SCHEDULER_QUICK_START -> COMPLETE`
 2. `SIM_ADD_DEVICE`
-   `HARDWARE_WAKE -> SCAN -> DEVICE_FOUND -> PROVISIONING -> COMPLETE`
+   `HARDWARE_WAKE -> SCAN -> DEVICE_FOUND -> PROVISIONING -> close add-device surface`
 
 Rule:
 
 - `SIM_ADD_DEVICE` is the only lawful production shortcut host that skips the intro/handshake prefix
 - `SIM_ADD_DEVICE` reuses the same pairing and provisioning runtime as the other hosts
 - `SIM_ADD_DEVICE` must not stage or commit onboarding quick-start scheduler items
-- `SIM_ADD_DEVICE` completion closes back to the current connectivity-owned add-device surface rather than teaching home-first onboarding again
+- `SIM_ADD_DEVICE` must not show the onboarding `COMPLETE` wrapper; successful `PROVISIONING` closes back to the current connectivity-owned add-device surface after the pairing service has registered the badge
 
 ## Wave Intent
 
@@ -89,8 +89,9 @@ Rule:
 - `DEVICE_FOUND` requires explicit manual tap to connect
 - `PROVISIONING` combines Wi-Fi entry plus visible pairing/progress states
 - successful `PROVISIONING` now hands into `SCHEDULER_QUICK_START` instead of leaving onboarding immediately
-- the dedicated `SIM_ADD_DEVICE` host is the one exception: after successful `PROVISIONING`, it advances directly to `COMPLETE`
+- the dedicated `SIM_ADD_DEVICE` host is the one exception: after successful `PROVISIONING`, it exits the add-device surface directly
 - the local skip shortcut is visible on `HARDWARE_WAKE` and on the recoverable Wi-Fi entry / Wi-Fi failure surfaces only
+- the local skip shortcut is not visible for `SIM_ADD_DEVICE`, because post-onboarding registry must not close without registering a new badge
 - the local skip shortcut is not visible on `SCAN`, `DEVICE_FOUND`, or provisioning progress/success
 
 ### Wave 4: Recovery and Handoff
@@ -107,7 +108,7 @@ Rule:
 - after successful completion enters home, the shell auto-opens the real scheduler drawer once through the shell-owned drawer animation as the organic teaching handoff for the just-created quick-start items
 - on fresh install / reinstall, forced first-launch setup still boots directly into onboarding before ordinary shell use
 - later connectivity setup replay still reuses the same onboarding lane, but successful completion returns to home rather than opening connectivity manager
-- later add-device entry reuses the same coordinator through `SIM_ADD_DEVICE`, but successful completion closes the transient connectivity-owned add-device surface rather than routing through home or quick start
+- later add-device entry reuses the pairing/provisioning runtime through `SIM_ADD_DEVICE`, but successful provisioning closes the transient connectivity-owned add-device surface rather than routing through home, quick start, or the onboarding completion wrapper
 - forced first-launch setup keeps system-back blocked until the user finishes onboarding; the only intentional shortcut is the local pairing-step jump into `SCHEDULER_QUICK_START`
 
 ## Locked Invariants

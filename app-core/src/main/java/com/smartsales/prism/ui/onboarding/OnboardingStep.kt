@@ -59,3 +59,15 @@ internal fun OnboardingStep.isConnectivityPairingStep(): Boolean = when (this) {
     OnboardingStep.PROVISIONING -> true
     else -> false
 }
+
+internal fun OnboardingHost.usesSchedulerQuickStart(): Boolean = when (this) {
+    OnboardingHost.FULL_APP,
+    OnboardingHost.SIM_CONNECTIVITY -> true
+    OnboardingHost.SIM_ADD_DEVICE -> false
+}
+
+internal fun OnboardingHost.closesAfterSuccessfulProvisioning(): Boolean = when (this) {
+    OnboardingHost.SIM_ADD_DEVICE -> true
+    OnboardingHost.FULL_APP,
+    OnboardingHost.SIM_CONNECTIVITY -> false
+}

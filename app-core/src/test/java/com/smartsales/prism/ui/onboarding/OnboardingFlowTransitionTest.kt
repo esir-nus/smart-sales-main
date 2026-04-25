@@ -90,6 +90,33 @@ class OnboardingFlowTransitionTest {
     }
 
     @Test
+    fun `add device host skips intro quick start and closes after provisioning`() {
+        assertEquals(OnboardingStep.HARDWARE_WAKE, initialOnboardingStep(OnboardingHost.SIM_ADD_DEVICE))
+        assertEquals(
+            OnboardingStep.SCAN,
+            nextOnboardingStep(OnboardingStep.HARDWARE_WAKE, OnboardingHost.SIM_ADD_DEVICE)
+        )
+        assertEquals(
+            OnboardingStep.DEVICE_FOUND,
+            nextOnboardingStep(OnboardingStep.SCAN, OnboardingHost.SIM_ADD_DEVICE)
+        )
+        assertEquals(
+            OnboardingStep.PROVISIONING,
+            nextOnboardingStep(OnboardingStep.DEVICE_FOUND, OnboardingHost.SIM_ADD_DEVICE)
+        )
+        assertFalse(OnboardingHost.SIM_ADD_DEVICE.usesSchedulerQuickStart())
+        assertTrue(OnboardingHost.SIM_ADD_DEVICE.closesAfterSuccessfulProvisioning())
+    }
+
+    @Test
+    fun `full app and sim connectivity hosts require scheduler quick start`() {
+        assertTrue(OnboardingHost.FULL_APP.usesSchedulerQuickStart())
+        assertTrue(OnboardingHost.SIM_CONNECTIVITY.usesSchedulerQuickStart())
+        assertFalse(OnboardingHost.FULL_APP.closesAfterSuccessfulProvisioning())
+        assertFalse(OnboardingHost.SIM_CONNECTIVITY.closesAfterSuccessfulProvisioning())
+    }
+
+    @Test
     fun `allow exit policy keeps explicit exit affordance and back free`() {
         assertTrue(shouldShowOnboardingExitAction(OnboardingExitPolicy.ALLOW_EXIT))
         assertFalse(shouldBlockOnboardingSystemBack(OnboardingExitPolicy.ALLOW_EXIT))

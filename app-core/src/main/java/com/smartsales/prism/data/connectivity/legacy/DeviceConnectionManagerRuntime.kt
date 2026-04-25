@@ -43,4 +43,5 @@ internal class DeviceConnectionManagerRuntime {
     var autoRetryJob: Job? = null
     var autoRetryAttempts = 0
     var reconnectMeta = AutoReconnectMeta()
+    var activeDeviceManuallyDisconnected: Boolean = false
 }

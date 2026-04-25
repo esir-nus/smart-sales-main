@@ -423,7 +423,7 @@
           This view is rebuilt from repo trackers under <code>docs/projects/**</code>. It is meant to answer three questions quickly:
           what projects exist, what sprint tasks sit under them, and what state each one is in right now.
         </p>
-        <div class="generated-at">Generated 2026-04-25 14:08 CST</div>
+        <div class="generated-at">Generated 2026-04-25 15:00 CST</div>
       </article>
       <section class="summary-panel">
         <article class="metric">
@@ -433,8 +433,8 @@
         </article>
         <article class="metric">
           <div class="metric-label">Sprints</div>
-          <div class="metric-value">21</div>
-          <div class="metric-meta">0 active, 17 done</div>
+          <div class="metric-value">22</div>
+          <div class="metric-meta">0 active, 19 done</div>
         </article>
         <article class="metric">
           <div class="metric-label">Blocked</div>
@@ -455,10 +455,10 @@
 <li class="status-chip status-planned"><span class="status-dot"></span><span>Planned: 2</span></li>
 <li class="status-chip status-authored"><span class="status-dot"></span><span>Authored: 0</span></li>
 <li class="status-chip status-in-progress"><span class="status-dot"></span><span>In progress: 0</span></li>
-<li class="status-chip status-done"><span class="status-dot"></span><span>Done: 17</span></li>
+<li class="status-chip status-done"><span class="status-dot"></span><span>Done: 19</span></li>
 <li class="status-chip status-stopped"><span class="status-dot"></span><span>Stopped: 0</span></li>
 <li class="status-chip status-blocked"><span class="status-dot"></span><span>Blocked: 0</span></li>
-<li class="status-chip status-fallback"><span class="status-dot"></span><span>Other: 7</span></li>
+<li class="status-chip status-fallback"><span class="status-dot"></span><span>Other: 6</span></li>
     </ul>
 
     <section class="projects">
@@ -641,12 +641,12 @@
       <h2 class="project-title"><a href="../firmware-protocol-intake/tracker.md">firmware-protocol-intake</a></h2>
       <p class="project-objective">Receive firmware protocol updates from the hardware team and reflect them in the app. The flow is always firmware-first, software-after: hardware team ships a new or revised BLE/HTTP protocol item, this project records the spec delta, then wires the app-side handler (connectivity module by default; may touch adjacent modules when a drop reaches further). The canonical protocol SOT is `docs/specs/esp32-protocol.md`; app-side module ownership is tracked through `docs/cerb/interface-map.md`.</p>
       <div class="project-meta">
-        <span class="meta-pill">Project status: open — updated 2026-04-25 (sprint 07B patch active; sprints 08–09 planned)</span><span class="meta-pill">11 sprints</span><span class="meta-pill">Folder: firmware-protocol-intake</span>
+        <span class="meta-pill">Project status: open — updated 2026-04-25 (sprints 01-08 + 07A + 07B done; sprints 09–10 planned)</span><span class="meta-pill">12 sprints</span><span class="meta-pill">Folder: firmware-protocol-intake</span>
       </div>
     </div>
     <span class="status-chip status-open">
       <span class="status-dot"></span>
-      <span>open — updated 2026-04-25 (sprint 07B patch active; sprints 08–09 planned)</span>
+      <span>open — updated 2026-04-25 (sprints 01-08 + 07A + 07B done; sprints 09–10 planned)</span>
     </span>
   </div>
   <div class="sprint-grid">
@@ -792,12 +792,12 @@
       <div class="sprint-label">sync-network-fragment-filter</div>
       <h3 class="sprint-title"><a href="../firmware-protocol-intake/sprints/07b-sync-network-fragment-filter.md">Sprint 07B — sync-network-fragment-filter</a></h3>
     </div>
-    <span class="status-chip status-fallback">
+    <span class="status-chip status-done">
       <span class="status-dot"></span>
-      <span>active</span>
+      <span>done</span>
     </span>
   </div>
-  <p class="sprint-summary">Patch sprint for sync false negative: noisy `Bat#` / `SD#space` notifications must not hide valid `IP#` / WiFi `SD#&lt;SSID&gt;` network fragments or trigger `网络环境已变更` when phone and badge share WiFi</p>
+  <p class="sprint-summary">Filtered noisy BLE pushes from WiFi-status collection so valid `IP#` / WiFi `SD#&lt;SSID&gt;` fragments survive interleaving; added prompt-path evidence so strict HTTP precheck blocks no longer masquerade as WiFi mismatch; focused tests, assemble, install, and on-device manual-sync evidence passed</p>
   <div class="sprint-footer">
     <span>firmware-protocol-intake / sprint 07B</span>
     <span>sprints/07b-sync-network-fragment-filter.md</span>
@@ -809,12 +809,12 @@
       <div class="sprint-label">multi-device-audio-source-label</div>
       <h3 class="sprint-title"><a href="../firmware-protocol-intake/sprints/08-multi-device-audio-source-label.md">Sprint 08 — multi-device-audio-source-label</a></h3>
     </div>
-    <span class="status-chip status-planned">
+    <span class="status-chip status-done">
       <span class="status-dot"></span>
-      <span>planned</span>
+      <span>done</span>
     </span>
   </div>
-  <p class="sprint-summary">Add per-badge source label to audio drawer cards (bottom-right text showing `RegisteredDevice.displayName`); persist `badgeMac` in `AudioFile`, resolve to label in `AudioViewModel`, render in `AudioCard`</p>
+  <p class="sprint-summary">Added `badgeMac` to `AudioFile`, attached active device MAC at download in both Real and Sim paths, resolved to `badgeLabel` in `AudioViewModel` via `DeviceRegistry.findByMac()`, rendered as 10.sp `TextTertiary` text in `AudioIcon()` replacing the Cloud icon when label is known</p>
   <div class="sprint-footer">
     <span>firmware-protocol-intake / sprint 08</span>
     <span>sprints/08-multi-device-audio-source-label.md</span>
@@ -835,6 +835,23 @@
   <div class="sprint-footer">
     <span>firmware-protocol-intake / sprint 09</span>
     <span>sprints/09-sync-polish.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">multi-device-cards-and-disconnect-intent</div>
+      <h3 class="sprint-title"><a href="../firmware-protocol-intake/sprints/10-multi-device-cards-and-disconnect-intent.md">Sprint 10 — multi-device-cards-and-disconnect-intent</a></h3>
+    </div>
+    <span class="status-chip status-planned">
+      <span class="status-dot"></span>
+      <span>planned</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Replace active-on-top / others-below split in `ConnectivityModal` with equal-status `DeviceCard` rows (tap = connect/switch); add `manuallyDisconnected` flag on `RegisteredDevice` so user-initiated disconnect suppresses heartbeat-driven auto-reconnect and session-restore until the user taps Connect</p>
+  <div class="sprint-footer">
+    <span>firmware-protocol-intake / sprint 10</span>
+    <span>sprints/10-multi-device-cards-and-disconnect-intent.md</span>
   </div>
 </article>
   </div>

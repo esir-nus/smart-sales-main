@@ -31,6 +31,9 @@ sealed class BadgeManagerStatus {
         val ssid: String? = null
     ) : BadgeManagerStatus()
 
+    /** BLE 扫描已检测到设备（在范围内），但尚未建立连接 */
+    object BleDetected : BadgeManagerStatus()
+
     /** 显式连接错误；供 manager 端保留优先级，不被 paired/offline 覆盖 */
     data class Error(val message: String) : BadgeManagerStatus()
 }

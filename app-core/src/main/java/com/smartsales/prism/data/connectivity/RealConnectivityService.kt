@@ -7,6 +7,7 @@ import com.smartsales.prism.data.connectivity.legacy.SessionStore
 import com.smartsales.prism.data.connectivity.legacy.ConnectivityLogger
 import com.smartsales.prism.data.connectivity.legacy.WifiCredentials
 import com.smartsales.prism.data.connectivity.legacy.WifiProvisioner
+import com.smartsales.prism.data.connectivity.registry.DeviceRegistryManager
 import com.smartsales.prism.domain.connectivity.ConnectivityService
 import com.smartsales.prism.domain.connectivity.ReconnectResult
 import com.smartsales.prism.domain.connectivity.UpdateResult
@@ -31,7 +32,8 @@ private const val TAG = "ConnectivityService"
 class RealConnectivityService @Inject constructor(
     private val deviceManager: DeviceConnectionManager,
     private val wifiProvisioner: WifiProvisioner,
-    private val sessionStore: SessionStore
+    private val sessionStore: SessionStore,
+    private val registryManager: DeviceRegistryManager
 ) : ConnectivityService {
     
     override suspend fun checkForUpdate(): UpdateResult {
@@ -72,8 +74,19 @@ class RealConnectivityService @Inject constructor(
     
     override suspend fun disconnect() {
         Log.d(TAG, "disconnect() called (soft disconnect - session preserved)")
+        val activeMac = registryManager.activeDevice.value?.macAddress
+        if (activeMac != null) {
+            registryManager.markManuallyDisconnected(activeMac, true)
+        }
         deviceManager.disconnectBle()
         Log.d(TAG, "disconnect() completed")
+    }
+
+    override suspend fun connect(macAddress: String) {
+        Log.d(TAG, "connect() called for $macAddress")
+        registryManager.markManuallyDisconnected(macAddress, false)
+        registryManager.switchToDevice(macAddress)
+        Log.d(TAG, "connect() completed for $macAddress")
     }
     
     override suspend fun unpair() {

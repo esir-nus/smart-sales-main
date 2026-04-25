@@ -34,4 +34,10 @@ interface DeviceRegistryManager {
 
     /** 应用启动时调用。加载默认设备，执行迁移（如需），触发自动重连。 */
     fun initializeOnLaunch()
+
+    /** 标记设备手动断开状态。值为 true 时跳过所有自动重连；connect() 时清除为 false。 */
+    fun markManuallyDisconnected(macAddress: String, value: Boolean)
+
+    /** 标记设备 BLE 可检测状态（在扫描范围内但尚未连接）。connect() 时自动清除。 */
+    fun updateBleDetected(macAddress: String, value: Boolean)
 }

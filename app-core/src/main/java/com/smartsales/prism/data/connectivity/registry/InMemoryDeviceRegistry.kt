@@ -58,4 +58,16 @@ class InMemoryDeviceRegistry : DeviceRegistry {
     }
 
     override fun isEmpty(): Boolean = devices.isEmpty()
+
+    override fun updateManuallyDisconnected(macAddress: String, value: Boolean) {
+        val index = devices.indexOfFirst { it.macAddress == macAddress }
+        if (index < 0) return
+        devices[index] = devices[index].copy(manuallyDisconnected = value)
+    }
+
+    override fun updateBleDetected(macAddress: String, value: Boolean) {
+        val index = devices.indexOfFirst { it.macAddress == macAddress }
+        if (index < 0) return
+        devices[index] = devices[index].copy(bleDetected = value)
+    }
 }

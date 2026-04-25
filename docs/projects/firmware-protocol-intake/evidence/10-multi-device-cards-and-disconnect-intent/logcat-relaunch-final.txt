@@ -1,0 +1,16 @@
+--------- beginning of main
+04-25 15:48:00.626 D/ConnectivityService( 3839): reportNetworkConnectivity(130, false) by 1000
+04-25 15:48:00.700 D/ConnectivityService( 3839): [130 WIFI] validation passed
+04-25 15:48:10.489 D/ConnectivityService( 3839): releasing NetworkRequest [ REQUEST id=4524, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10129 RequestorUid: 10129 RequestorPkg: com.android.browser UnderlyingNetworks: Null] ] (release request)
+04-25 15:48:11.031 D/SmartSalesConn(13034): 🔌 Restored session: 14:C1:9F:D7:E3:F6 knownNetworks=1
+04-25 15:48:11.032 D/SmartSalesConn(13034): 🏠 Registry: default device CHLE_Intelligent (...8F:96)
+04-25 15:48:11.032 D/SmartSalesConn(13034): 🏠 Registry: session device manually disconnected (...E3:F6), skipping auto-reconnect
+04-25 15:48:11.592 D/ConnectivityVM(13034): scheduleAutoReconnect() delegating to service
+04-25 15:48:11.592 D/ConnectivityService(13034): scheduleAutoReconnect() delegating to deviceManager
+04-25 15:48:11.592 D/SmartSalesConn(13034): Skipping auto-reconnect: user manually disconnected
+04-25 15:48:20.724 D/ConnectivityService( 3839): Data stall detected with methods: 2
+04-25 15:48:20.859 D/ConnectivityService( 3839): [130 WIFI] validation passed
+04-25 15:48:36.876 D/ConnectivityService( 3839): reportNetworkConnectivity(130, false) by 1000
+04-25 15:48:36.964 D/ConnectivityService( 3839): [130 WIFI] validation passed
+04-25 15:49:10.135 D/ConnectivityService( 3839): reportNetworkConnectivity(130, false) by 1000
+04-25 15:49:10.200 D/ConnectivityService( 3839): [130 WIFI] validation passed

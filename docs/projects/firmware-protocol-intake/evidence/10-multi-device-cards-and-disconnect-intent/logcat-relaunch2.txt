@@ -1,0 +1,170 @@
+--------- beginning of main
+04-25 15:43:46.313 D/SmartSalesConn(10079): 🔌 Restored session: 1C:DB:D4:9B:8F:96 knownNetworks=1
+04-25 15:43:46.314 D/SmartSalesConn(10079): 🏠 Registry: default device CHLE_Intelligent (...8F:96)
+04-25 15:43:46.316 I/SmartSalesConn(10079): 📶 BLE disconnected
+04-25 15:43:46.316 D/SmartSalesConn(10079): 🔌 Soft disconnect (session preserved)
+04-25 15:43:46.316 D/SmartSalesConn(10079): 🔌 Persistent GATT session closed
+04-25 15:43:47.389 D/SmartSalesConn(10079): 📋 Service: 00001801-0000-1000-8000-00805f9b34fb
+04-25 15:43:47.389 D/SmartSalesConn(10079):   📋 Char: 00002a05-0000-1000-8000-00805f9b34fb [INDICATE ]
+04-25 15:43:47.390 D/SmartSalesConn(10079):     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-25 15:43:47.390 D/SmartSalesConn(10079): 📋 Service: 00001800-0000-1000-8000-00805f9b34fb
+04-25 15:43:47.390 D/SmartSalesConn(10079):   📋 Char: 00002a00-0000-1000-8000-00805f9b34fb [READ ]
+04-25 15:43:47.390 D/SmartSalesConn(10079):     📋 (no descriptors)
+04-25 15:43:47.390 D/SmartSalesConn(10079):   📋 Char: 00002a01-0000-1000-8000-00805f9b34fb [READ ]
+04-25 15:43:47.390 D/SmartSalesConn(10079):     📋 (no descriptors)
+04-25 15:43:47.390 D/SmartSalesConn(10079):   📋 Char: 00002aa6-0000-1000-8000-00805f9b34fb [READ ]
+04-25 15:43:47.390 D/SmartSalesConn(10079):     📋 (no descriptors)
+04-25 15:43:47.390 D/SmartSalesConn(10079): 📋 Service: 000000ff-0000-1000-8000-00805f9b34fb
+04-25 15:43:47.390 D/SmartSalesConn(10079):   📋 Char: 0000ff01-0000-1000-8000-00805f9b34fb [READ WRITE NOTIFY ]
+04-25 15:43:47.390 D/SmartSalesConn(10079):     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-25 15:43:47.390 D/SmartSalesConn(10079):   📋 Char: 0000ff02-0000-1000-8000-00805f9b34fb [READ ]
+04-25 15:43:47.390 D/SmartSalesConn(10079):     📋 (no descriptors)
+04-25 15:43:47.390 D/SmartSalesConn(10079):   📋 Char: 0000ff03-0000-1000-8000-00805f9b34fb [WRITE ]
+04-25 15:43:47.390 D/SmartSalesConn(10079):     📋 (no descriptors)
+04-25 15:43:47.411 D/SmartSalesConn(10079): No CCCD descriptor for 0000ff02-0000-1000-8000-00805f9b34fb, notifications not available (will poll)
+04-25 15:43:47.411 I/SmartSalesConn(10079): 🔌 Persistent GATT session established: 1C:DB:D4:9B:8F:96
+04-25 15:43:47.411 I/SmartSalesConn(10079): 📶 BLE connected, waiting for explicit network observation
+04-25 15:43:47.412 D/SmartSalesConn(10079): 📡 Starting persistent notification listener for 1C:DB:D4:9B:8F:96
+04-25 15:43:47.412 D/SmartSalesConn(10079): 🌐 network query device=CHLE_Intelligent
+04-25 15:43:47.412 I/SmartSalesConn(10079): 📡 queryNetwork ENTRY (in mutex)
+04-25 15:43:47.414 D/SmartSalesConn(10079): 📤 TX [NetworkQuery]: wifi#address#ip#name (77 69 66 69 23 61 64 64 72 65 73 73 23 69 70 23 6E 61 6D 65)
+04-25 15:43:47.441 D/SmartSalesConn(10079): 📥 RX [Notification]: IP#192.168.0.107 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 30 37)
+04-25 15:43:47.442 D/SmartSalesConn(10079): 📥 RX [NetworkResponse]: IP#192.168.0.107 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 30 37)
+04-25 15:43:47.443 D/SmartSalesConn(10079): ❓ Badge unknown notification: IP#192.168.0.107
+04-25 15:43:47.443 D/SmartSalesConn(10079): 📥 RX [Notification]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-25 15:43:47.443 D/SmartSalesConn(10079): ❓ Badge unknown notification: SD#MstRobot
+04-25 15:43:47.443 D/SmartSalesConn(10079): 📥 RX [NetworkResponse]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-25 15:43:47.444 D/SmartSalesConn(10079): 📡 fresh query, caching IP=192.168.0.107
+04-25 15:43:47.444 D/SmartSalesConn(10079): 📶 state=CONNECTED ip=192.168.0.107
+04-25 15:43:47.445 D/SmartSalesConn(10079): 🔌 connectUsingSession: connected, ip=192.168.0.107 ssid=MstRobot
+04-25 15:43:47.451 D/SmartSalesConn(10079): 📤 TX [BadgeSignal]: Ver#get (56 65 72 23 67 65 74)
+04-25 15:43:47.493 I/SmartSalesConn(10079): 🧾 Badge firmware version query sent
+04-25 15:43:47.509 D/SmartSalesConn(10079): 📥 RX [Notification]: tim#get (74 69 6D 23 67 65 74)
+04-25 15:43:47.509 D/SmartSalesConn(10079): ⏰ Badge time sync requested
+04-25 15:43:47.568 I/SmartSalesConn(10079): ⏰ Time sync responded: tim#20260425154347
+04-25 15:43:50.453 D/SmartSalesConn(10079): BadgeHttpClient.isReachable start url=http://192.168.0.107:8088/
+04-25 15:43:50.652 D/SmartSalesConn(10079): BadgeHttpClient.isReachable response url=http://192.168.0.107:8088/ code=200 reachable=true
+04-25 15:44:16.788 D/ConnectivityService( 3839): reportNetworkConnectivity(130, false) by 1000
+04-25 15:44:16.867 D/ConnectivityService( 3839): [130 WIFI] validation passed
+04-25 15:45:16.933 D/ConnectivityService( 3839): Data stall detected with methods: 2
+04-25 15:45:17.062 D/ConnectivityService( 3839): [130 WIFI] validation passed
+04-25 15:45:32.311 D/ConnectivityService( 3839): reportNetworkConnectivity(130, false) by 1000
+04-25 15:45:32.379 D/ConnectivityService( 3839): [130 WIFI] validation passed
+04-25 15:45:52.395 D/ConnectivityService( 3839): Data stall detected with methods: 2
+04-25 15:45:52.510 D/ConnectivityService( 3839): [130 WIFI] validation passed
+04-25 15:46:08.506 D/ConnectivityService( 3839): reportNetworkConnectivity(130, false) by 1000
+04-25 15:46:08.566 D/ConnectivityService( 3839): [130 WIFI] validation passed
+04-25 15:46:42.094 D/ConnectivityService( 3839): reportNetworkConnectivity(130, false) by 1000
+04-25 15:46:42.158 D/ConnectivityService( 3839): [130 WIFI] validation passed
+04-25 15:47:22.198 D/ConnectivityService( 3839): Data stall detected with methods: 2
+04-25 15:47:22.405 D/ConnectivityService( 3839): [130 WIFI] validation passed
+04-25 15:47:43.674 D/ConnectivityService(10079): disconnect() called (soft disconnect - session preserved)
+04-25 15:47:43.675 D/SmartSalesConn(10079): 🏠 Registry: manuallyDisconnected=true for 1C:DB:D4:9B:8F:96
+04-25 15:47:43.676 I/SmartSalesConn(10079): 📶 BLE disconnected
+04-25 15:47:43.676 D/SmartSalesConn(10079): 🔌 Soft disconnect (session preserved)
+04-25 15:47:43.676 D/ConnectivityService(10079): disconnect() completed
+04-25 15:47:43.679 D/SmartSalesConn(10079): 🔌 Persistent GATT session closed
+04-25 15:47:43.690 D/ConnectivityVM(10079): scheduleAutoReconnect() delegating to service
+04-25 15:47:43.690 D/ConnectivityService(10079): scheduleAutoReconnect() delegating to deviceManager
+04-25 15:47:43.690 D/SmartSalesConn(10079): Skipping auto-reconnect: user manually disconnected
+04-25 15:47:44.684 D/SmartSalesConn(10079): BadgeHttpClient.isReachable start url=http://192.168.0.107:8088/
+04-25 15:47:45.197 D/SmartSalesConn(10079): BadgeHttpClient.isReachable response url=http://192.168.0.107:8088/ code=200 reachable=true
+04-25 15:47:49.847 D/ConnectivityService(10079): connect() called for 14:C1:9F:D7:E3:F6
+04-25 15:47:49.848 D/SmartSalesConn(10079): 🏠 Registry: manuallyDisconnected=false for 14:C1:9F:D7:E3:F6
+04-25 15:47:49.848 I/SmartSalesConn(10079): 🏠 Registry: switching ...8F:96 → ...E3:F6
+04-25 15:47:49.852 D/SmartSalesConn(10079): 🏠 Registry: reconnecting target ...E3:F6
+04-25 15:47:49.852 D/SmartSalesConn(10079): 🔌 Restored session: 14:C1:9F:D7:E3:F6 knownNetworks=1
+04-25 15:47:49.852 D/SmartSalesConn(10079): 🔄 Force reconnect target=14:C1:9F:D7:E3:F6
+04-25 15:47:49.852 D/ConnectivityService(10079): connect() completed for 14:C1:9F:D7:E3:F6
+04-25 15:47:49.852 I/SmartSalesConn(10079): 📶 BLE disconnected
+04-25 15:47:49.852 D/SmartSalesConn(10079): 🔌 Soft disconnect (session preserved)
+04-25 15:47:49.852 D/SmartSalesConn(10079): 🔌 Persistent GATT session closed
+04-25 15:47:50.924 D/SmartSalesConn(10079): 📋 Service: 00001801-0000-1000-8000-00805f9b34fb
+04-25 15:47:50.924 D/SmartSalesConn(10079):   📋 Char: 00002a05-0000-1000-8000-00805f9b34fb [INDICATE ]
+04-25 15:47:50.924 D/SmartSalesConn(10079):     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-25 15:47:50.924 D/SmartSalesConn(10079): 📋 Service: 00001800-0000-1000-8000-00805f9b34fb
+04-25 15:47:50.924 D/SmartSalesConn(10079):   📋 Char: 00002a00-0000-1000-8000-00805f9b34fb [READ ]
+04-25 15:47:50.924 D/SmartSalesConn(10079):     📋 (no descriptors)
+04-25 15:47:50.924 D/SmartSalesConn(10079):   📋 Char: 00002a01-0000-1000-8000-00805f9b34fb [READ ]
+04-25 15:47:50.924 D/SmartSalesConn(10079):     📋 (no descriptors)
+04-25 15:47:50.924 D/SmartSalesConn(10079):   📋 Char: 00002aa6-0000-1000-8000-00805f9b34fb [READ ]
+04-25 15:47:50.924 D/SmartSalesConn(10079):     📋 (no descriptors)
+04-25 15:47:50.924 D/SmartSalesConn(10079): 📋 Service: 000000ff-0000-1000-8000-00805f9b34fb
+04-25 15:47:50.924 D/SmartSalesConn(10079):   📋 Char: 0000ff01-0000-1000-8000-00805f9b34fb [READ WRITE NOTIFY ]
+04-25 15:47:50.925 D/SmartSalesConn(10079):     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-25 15:47:50.925 D/SmartSalesConn(10079):   📋 Char: 0000ff02-0000-1000-8000-00805f9b34fb [READ ]
+04-25 15:47:50.925 D/SmartSalesConn(10079):     📋 (no descriptors)
+04-25 15:47:50.925 D/SmartSalesConn(10079):   📋 Char: 0000ff03-0000-1000-8000-00805f9b34fb [WRITE ]
+04-25 15:47:50.925 D/SmartSalesConn(10079):     📋 (no descriptors)
+04-25 15:47:50.946 D/SmartSalesConn(10079): No CCCD descriptor for 0000ff02-0000-1000-8000-00805f9b34fb, notifications not available (will poll)
+04-25 15:47:50.946 I/SmartSalesConn(10079): 🔌 Persistent GATT session established: 14:C1:9F:D7:E3:F6
+04-25 15:47:50.946 I/SmartSalesConn(10079): 📶 BLE connected, waiting for explicit network observation
+04-25 15:47:50.946 D/SmartSalesConn(10079): 🌐 network query device=CHLE_Intelligent
+04-25 15:47:50.946 I/SmartSalesConn(10079): 📡 queryNetwork ENTRY (in mutex)
+04-25 15:47:50.947 D/SmartSalesConn(10079): 📡 Starting persistent notification listener for 14:C1:9F:D7:E3:F6
+04-25 15:47:50.947 D/SmartSalesConn(10079): 📤 TX [NetworkQuery]: wifi#address#ip#name (77 69 66 69 23 61 64 64 72 65 73 73 23 69 70 23 6E 61 6D 65)
+04-25 15:47:50.968 D/SmartSalesConn(10079): 📥 RX [Notification]: IP#192.168.0.110 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 31 30)
+04-25 15:47:50.969 D/SmartSalesConn(10079): ❓ Badge unknown notification: IP#192.168.0.110
+04-25 15:47:50.969 D/SmartSalesConn(10079): 📥 RX [Notification]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-25 15:47:50.969 D/SmartSalesConn(10079): 📥 RX [NetworkResponse]: IP#192.168.0.110 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 31 30)
+04-25 15:47:50.969 D/SmartSalesConn(10079): ❓ Badge unknown notification: SD#MstRobot
+04-25 15:47:50.970 D/SmartSalesConn(10079): 📥 RX [NetworkResponse]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-25 15:47:50.970 D/SmartSalesConn(10079): 📡 fresh query, caching IP=192.168.0.110
+04-25 15:47:50.971 D/SmartSalesConn(10079): 📶 state=CONNECTED ip=192.168.0.110
+04-25 15:47:50.971 D/SmartSalesConn(10079): 🔌 connectUsingSession: connected, ip=192.168.0.110 ssid=MstRobot
+04-25 15:47:50.972 D/SmartSalesConn(10079): 📤 TX [BadgeSignal]: Ver#get (56 65 72 23 67 65 74)
+04-25 15:47:50.997 D/SmartSalesConn(10079): 📥 RX [Notification]: Ver#1.0.0.1 (56 65 72 23 31 2E 30 2E 30 2E 31)
+04-25 15:47:50.998 I/SmartSalesConn(10079): 🧾 Badge firmware version: 1.0.0.1
+04-25 15:47:51.018 I/SmartSalesConn(10079): 🧾 Badge firmware version query sent
+04-25 15:47:51.042 D/SmartSalesConn(10079): 📥 RX [Notification]: tim#get (74 69 6D 23 67 65 74)
+04-25 15:47:51.043 D/SmartSalesConn(10079): ⏰ Badge time sync requested
+04-25 15:47:51.102 I/SmartSalesConn(10079): ⏰ Time sync responded: tim#20260425154751
+04-25 15:47:53.974 D/SmartSalesConn(10079): 🌐 network query device=CHLE_Intelligent
+04-25 15:47:53.974 I/SmartSalesConn(10079): 📡 queryNetwork ENTRY (in mutex)
+04-25 15:47:53.974 D/SmartSalesConn(10079): 📡 CACHED (3028ms old)
+04-25 15:47:53.974 D/SmartSalesConn(10079): 📶 state=CONNECTED ip=192.168.0.110
+04-25 15:47:53.974 D/SmartSalesConn(10079): 🌐 Network status ok device=CHLE_Intelligent ip=192.168.0.110
+04-25 15:47:53.976 D/SmartSalesConn(10079): BadgeHttpClient.isReachable start url=http://192.168.0.110:8088/
+04-25 15:47:54.026 D/SmartSalesConn(10079): 📥 RX [Notification]: Bat#4095.00% (42 61 74 23 34 30 39 35 2E 30 30 25)
+04-25 15:47:54.027 D/SmartSalesConn(10079): ❓ Badge unknown notification: Bat#4095.00%
+04-25 15:47:54.569 D/ConnectivityService(10079): disconnect() called (soft disconnect - session preserved)
+04-25 15:47:54.570 D/SmartSalesConn(10079): 🏠 Registry: manuallyDisconnected=true for 14:C1:9F:D7:E3:F6
+04-25 15:47:54.571 I/SmartSalesConn(10079): 📶 BLE disconnected
+04-25 15:47:54.571 D/SmartSalesConn(10079): 🔌 Soft disconnect (session preserved)
+04-25 15:47:54.571 D/ConnectivityService(10079): disconnect() completed
+04-25 15:47:54.574 D/SmartSalesConn(10079): 🔌 Persistent GATT session closed
+04-25 15:47:54.583 D/ConnectivityVM(10079): scheduleAutoReconnect() delegating to service
+04-25 15:47:54.583 D/ConnectivityService(10079): scheduleAutoReconnect() delegating to deviceManager
+04-25 15:47:54.583 D/SmartSalesConn(10079): Skipping auto-reconnect: user manually disconnected
+04-25 15:47:54.663 D/SmartSalesConn(10079): BadgeHttpClient.isReachable response url=http://192.168.0.110:8088/ code=200 reachable=true
+04-25 15:47:54.664 D/SmartSalesConn(10079): 🌐 network query device=CHLE_Intelligent
+04-25 15:47:54.664 I/SmartSalesConn(10079): 📡 queryNetwork ENTRY (in mutex)
+04-25 15:47:54.664 D/SmartSalesConn(10079): 📡 CACHED (3718ms old)
+04-25 15:47:54.664 D/SmartSalesConn(10079): 📶 state=CONNECTED ip=192.168.0.110
+04-25 15:47:54.664 W/SmartSalesConn(10079): ⚠️ Skip connected-state promotion: notification listener inactive
+04-25 15:47:55.026 D/SmartSalesConn(10079): 🌐 network query device=CHLE_Intelligent
+04-25 15:47:55.027 I/SmartSalesConn(10079): 📡 queryNetwork ENTRY (in mutex)
+04-25 15:47:55.027 D/SmartSalesConn(10079): 📡 CACHED (4081ms old)
+04-25 15:47:55.027 D/SmartSalesConn(10079): 📶 state=CONNECTED ip=192.168.0.110
+04-25 15:47:55.027 W/SmartSalesConn(10079): ⚠️ Skip connected-state promotion: notification listener inactive
+04-25 15:47:55.414 D/SmartSalesConn(10079): 🌐 network query device=CHLE_Intelligent
+04-25 15:47:55.414 I/SmartSalesConn(10079): 📡 queryNetwork ENTRY (in mutex)
+04-25 15:47:55.414 D/SmartSalesConn(10079): 📡 CACHED (4468ms old)
+04-25 15:47:55.414 D/SmartSalesConn(10079): 📶 state=CONNECTED ip=192.168.0.110
+04-25 15:47:55.414 W/SmartSalesConn(10079): ⚠️ Skip connected-state promotion: notification listener inactive
+04-25 15:47:55.575 D/SmartSalesConn(10079): BadgeHttpClient.isReachable start url=http://192.168.0.110:8088/
+04-25 15:48:00.626 D/ConnectivityService( 3839): reportNetworkConnectivity(130, false) by 1000
+04-25 15:48:00.700 D/ConnectivityService( 3839): [130 WIFI] validation passed
+04-25 15:48:10.489 D/ConnectivityService( 3839): releasing NetworkRequest [ REQUEST id=4524, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10129 RequestorUid: 10129 RequestorPkg: com.android.browser UnderlyingNetworks: Null] ] (release request)
+04-25 15:48:11.031 D/SmartSalesConn(13034): 🔌 Restored session: 14:C1:9F:D7:E3:F6 knownNetworks=1
+04-25 15:48:11.032 D/SmartSalesConn(13034): 🏠 Registry: default device CHLE_Intelligent (...8F:96)
+04-25 15:48:11.032 D/SmartSalesConn(13034): 🏠 Registry: session device manually disconnected (...E3:F6), skipping auto-reconnect
+04-25 15:48:11.592 D/ConnectivityVM(13034): scheduleAutoReconnect() delegating to service
+04-25 15:48:11.592 D/ConnectivityService(13034): scheduleAutoReconnect() delegating to deviceManager
+04-25 15:48:11.592 D/SmartSalesConn(13034): Skipping auto-reconnect: user manually disconnected
+04-25 15:48:20.724 D/ConnectivityService( 3839): Data stall detected with methods: 2
+04-25 15:48:20.859 D/ConnectivityService( 3839): [130 WIFI] validation passed
+04-25 15:48:36.876 D/ConnectivityService( 3839): reportNetworkConnectivity(130, false) by 1000
+04-25 15:48:36.964 D/ConnectivityService( 3839): [130 WIFI] validation passed
+04-25 15:49:10.135 D/ConnectivityService( 3839): reportNetworkConnectivity(130, false) by 1000
+04-25 15:49:10.200 D/ConnectivityService( 3839): [130 WIFI] validation passed

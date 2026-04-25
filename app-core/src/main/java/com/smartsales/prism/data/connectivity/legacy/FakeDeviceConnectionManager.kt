@@ -110,6 +110,11 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
     override fun scheduleAutoReconnectIfNeeded() {
         autoReconnectCalls++
     }
+
+    var manuallyDisconnectedValue: Boolean = false
+    override fun setManuallyDisconnected(value: Boolean) {
+        manuallyDisconnectedValue = value
+    }
     
     override fun forceReconnectNow() {
         forceReconnectCalls++
@@ -191,5 +196,6 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
         notifyCommandEndCalls = 0
         requestFirmwareVersionCalls = 0
         requestSdCardSpaceCalls = 0
+        manuallyDisconnectedValue = false
     }
 }

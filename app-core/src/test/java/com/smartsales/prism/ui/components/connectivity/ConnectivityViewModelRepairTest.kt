@@ -229,6 +229,7 @@ class ConnectivityViewModelRepairTest {
         override suspend fun unpair() = Unit
         override suspend fun updateWifiConfig(ssid: String, password: String): WifiConfigResult = updateResult
         override fun scheduleAutoReconnect() = Unit
+        override suspend fun connect(macAddress: String) = Unit
     }
 
     private class NoOpDeviceRegistryManager : DeviceRegistryManager {
@@ -242,5 +243,7 @@ class ConnectivityViewModelRepairTest {
         override suspend fun switchToDevice(macAddress: String) = Unit
         override fun removeDevice(macAddress: String) = Unit
         override fun initializeOnLaunch() = Unit
+        override fun markManuallyDisconnected(macAddress: String, value: Boolean) = Unit
+        override fun updateBleDetected(macAddress: String, value: Boolean) = Unit
     }
 }

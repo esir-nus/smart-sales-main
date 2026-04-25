@@ -5,6 +5,7 @@ import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.prism.data.connectivity.legacy.ConnectivityScope
 import com.smartsales.prism.data.connectivity.legacy.DeviceConnectionManager
 import com.smartsales.prism.data.connectivity.legacy.SessionStore
+import com.smartsales.prism.data.connectivity.legacy.scan.BleScanner
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -30,12 +31,14 @@ object DeviceRegistryModule {
         sessionStore: SessionStore,
         deviceConnectionManager: DeviceConnectionManager,
         dispatchers: DispatcherProvider,
+        bleScanner: BleScanner,
         @ConnectivityScope scope: CoroutineScope
     ): DeviceRegistryManager = RealDeviceRegistryManager(
         registry = registry,
         sessionStore = sessionStore,
         deviceConnectionManager = deviceConnectionManager,
         dispatchers = dispatchers,
-        scope = scope
+        scope = scope,
+        bleScanner = bleScanner
     )
 }

@@ -15,7 +15,9 @@ data class RegisteredDevice(
     val profileId: String?,
     val registeredAtMillis: Long,
     val lastConnectedAtMillis: Long,
-    val isDefault: Boolean
+    val isDefault: Boolean,
+    val manuallyDisconnected: Boolean = false,
+    val bleDetected: Boolean = false
 ) {
     companion object {
         fun fromPairing(

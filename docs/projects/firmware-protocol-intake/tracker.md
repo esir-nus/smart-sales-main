@@ -8,7 +8,7 @@ This is a **persistent intake project**. It stays open as a long-lived funnel fo
 
 ## Status
 
-open — updated 2026-04-25 (sprints 01-08 + 07A + 07B done; sprints 09–10 planned)
+open — updated 2026-04-25 (sprints 01-10 done except sprint 09 still planned)
 
 ## Sprint Index
 
@@ -25,7 +25,7 @@ open — updated 2026-04-25 (sprints 01-08 + 07A + 07B done; sprints 09–10 pla
 | 07B | sync-network-fragment-filter | done | Filtered noisy BLE pushes from WiFi-status collection so valid `IP#` / WiFi `SD#<SSID>` fragments survive interleaving; added prompt-path evidence so strict HTTP precheck blocks no longer masquerade as WiFi mismatch; focused tests, assemble, install, and on-device manual-sync evidence passed | [07b-sync-network-fragment-filter.md](sprints/07b-sync-network-fragment-filter.md) |
 | 08 | multi-device-audio-source-label | done | Added `badgeMac` to `AudioFile`, attached active device MAC at download in both Real and Sim paths, resolved to `badgeLabel` in `AudioViewModel` via `DeviceRegistry.findByMac()`, rendered as 10.sp `TextTertiary` text in `AudioIcon()` replacing the Cloud icon when label is known | [08-multi-device-audio-source-label.md](sprints/08-multi-device-audio-source-label.md) |
 | 09 | sync-polish | planned | Empty-file gate in real sync path, non-blocking in-memory retry queue (3 attempts before surfacing error card), friendly Chinese error messages on cards, sync summary toast after each `syncFromDevice()` | [09-sync-polish.md](sprints/09-sync-polish.md) |
-| 10 | multi-device-cards-and-disconnect-intent | planned | Replace active-on-top / others-below split in `ConnectivityModal` with equal-status `DeviceCard` rows (tap = connect/switch); add `manuallyDisconnected` flag on `RegisteredDevice` so user-initiated disconnect suppresses heartbeat-driven auto-reconnect and session-restore until the user taps Connect | [10-multi-device-cards-and-disconnect-intent.md](sprints/10-multi-device-cards-and-disconnect-intent.md) |
+| 10 | multi-device-cards-and-disconnect-intent | done | Replaced `DeviceHeader`/`OtherDeviceCard` split with equal-status `DeviceCard` rows (tap = connect/switch); added `manuallyDisconnected: Boolean` to `RegisteredDevice` persisted via `SharedPrefsDeviceRegistry`; wired through `RealDeviceRegistryManager.markManuallyDisconnected`, `RealConnectivityService.disconnect/connect`, and `scheduleAutoReconnectIfNeeded` early-return guard so user-initiated disconnect suppresses all auto-reconnect and session-restore until user taps Connect | [10-multi-device-cards-and-disconnect-intent.md](sprints/10-multi-device-cards-and-disconnect-intent.md) |
 
 ## Genesis
 

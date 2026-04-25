@@ -722,6 +722,8 @@ class ConnectivityViewModelTest {
         override fun scheduleAutoReconnect() {
             scheduleAutoReconnectCalls += 1
         }
+
+        override suspend fun connect(macAddress: String) = Unit
     }
 
     private class FakeDeviceRegistryManager : DeviceRegistryManager {
@@ -737,5 +739,7 @@ class ConnectivityViewModelTest {
         override suspend fun switchToDevice(macAddress: String) = Unit
         override fun removeDevice(macAddress: String) = Unit
         override fun initializeOnLaunch() = Unit
+        override fun markManuallyDisconnected(macAddress: String, value: Boolean) = Unit
+        override fun updateBleDetected(macAddress: String, value: Boolean) = Unit
     }
 }

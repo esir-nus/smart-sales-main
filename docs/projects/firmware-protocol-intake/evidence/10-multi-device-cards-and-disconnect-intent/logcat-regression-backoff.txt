@@ -1,0 +1,23 @@
+=== REGRESSION: link-loss auto-reconnect backoff ===
+(From initial session before any manual disconnect — heartbeat failure triggers normal reconnect)
+
+04-25 15:33:30.654 D/ConnectivityVM( 1540): scheduleAutoReconnect() delegating to service
+04-25 15:33:30.654 D/ConnectivityService( 1540): scheduleAutoReconnect() delegating to deviceManager
+04-25 15:34:08.845 D/ConnectivityVM( 1540): scheduleAutoReconnect() delegating to service
+04-25 15:34:08.845 D/ConnectivityService( 1540): scheduleAutoReconnect() delegating to deviceManager
+04-25 15:34:08.847 D/ConnectivityVM( 1540): scheduleAutoReconnect() delegating to service
+04-25 15:34:08.847 D/ConnectivityService( 1540): scheduleAutoReconnect() delegating to deviceManager
+04-25 15:34:44.201 D/ConnectivityVM( 1540): scheduleAutoReconnect() delegating to service
+04-25 15:34:44.201 D/ConnectivityService( 1540): scheduleAutoReconnect() delegating to deviceManager
+04-25 15:35:16.512 D/ConnectivityVM( 1540): scheduleAutoReconnect() delegating to service
+04-25 15:35:16.512 D/ConnectivityService( 1540): scheduleAutoReconnect() delegating to deviceManager
+04-25 15:35:17.404 W/SmartSalesConn( 1540): 💔 Heartbeat: badge unreachable, transitioning to Disconnected
+04-25 15:35:19.346 D/SmartSalesConn( 1540): 🔄 Force reconnect target=1C:DB:D4:9B:8F:96
+04-25 15:35:28.181 D/SmartSalesConn( 1540): 🔄 Force reconnect target=14:C1:9F:D7:E3:F6
+04-25 15:35:31.114 D/SmartSalesConn( 1540): 🔄 Force reconnect target=1C:DB:D4:9B:8F:96
+04-25 15:35:34.178 D/SmartSalesConn( 1540): 🔄 Force reconnect target=14:C1:9F:D7:E3:F6
+04-25 15:35:50.255 D/SmartSalesConn( 1540): 🔄 Force reconnect target=1C:DB:D4:9B:8F:96
+04-25 15:36:04.006 D/SmartSalesConn( 1540): 🔄 Force reconnect target=14:C1:9F:D7:E3:F6
+04-25 15:37:11.444 D/ConnectivityVM( 1540): scheduleAutoReconnect() delegating to service
+04-25 15:37:11.444 D/ConnectivityService( 1540): scheduleAutoReconnect() delegating to deviceManager
+04-25 15:37:11.631 W/SmartSalesConn( 1540): 💔 Heartbeat: badge unreachable, transitioning to Disconnected

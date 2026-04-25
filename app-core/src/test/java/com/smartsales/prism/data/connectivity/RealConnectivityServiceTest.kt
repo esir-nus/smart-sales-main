@@ -11,8 +11,13 @@ import com.smartsales.prism.data.connectivity.legacy.InMemorySessionStore
 import com.smartsales.prism.data.connectivity.legacy.ProvisioningStatus
 import com.smartsales.prism.data.connectivity.legacy.WifiCredentials
 import com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason
+import com.smartsales.prism.data.connectivity.registry.DeviceRegistryManager
+import com.smartsales.prism.data.connectivity.registry.RegisteredDevice
 import com.smartsales.prism.domain.connectivity.ReconnectResult
 import com.smartsales.prism.domain.connectivity.WifiConfigResult
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -33,7 +38,8 @@ class RealConnectivityServiceTest {
         val service = RealConnectivityService(
             deviceManager = manager,
             wifiProvisioner = FakeWifiProvisioner(),
-            sessionStore = InMemorySessionStore()
+            sessionStore = InMemorySessionStore(),
+            registryManager = noOpRegistry()
         )
 
         val result = service.reconnect()
@@ -53,7 +59,8 @@ class RealConnectivityServiceTest {
         val service = RealConnectivityService(
             deviceManager = manager,
             wifiProvisioner = FakeWifiProvisioner(),
-            sessionStore = InMemorySessionStore()
+            sessionStore = InMemorySessionStore(),
+            registryManager = noOpRegistry()
         )
 
         val result = service.reconnect()
@@ -91,7 +98,8 @@ class RealConnectivityServiceTest {
         val service = RealConnectivityService(
             deviceManager = manager,
             wifiProvisioner = provisioner,
-            sessionStore = sessionStore
+            sessionStore = sessionStore,
+            registryManager = noOpRegistry()
         )
 
         val result = service.updateWifiConfig(ssid = "OfficeGuest", password = "secret-2")
@@ -119,7 +127,8 @@ class RealConnectivityServiceTest {
         val service = RealConnectivityService(
             deviceManager = manager,
             wifiProvisioner = provisioner,
-            sessionStore = sessionStore
+            sessionStore = sessionStore,
+            registryManager = noOpRegistry()
         )
 
         val result = service.updateWifiConfig(ssid = "   ", password = "secret-2")
@@ -145,7 +154,8 @@ class RealConnectivityServiceTest {
         val service = RealConnectivityService(
             deviceManager = manager,
             wifiProvisioner = provisioner,
-            sessionStore = sessionStore
+            sessionStore = sessionStore,
+            registryManager = noOpRegistry()
         )
 
         val result = service.updateWifiConfig(ssid = "OfficeGuest", password = "   ")
@@ -187,7 +197,8 @@ class RealConnectivityServiceTest {
         val service = RealConnectivityService(
             deviceManager = manager,
             wifiProvisioner = provisioner,
-            sessionStore = sessionStore
+            sessionStore = sessionStore,
+            registryManager = noOpRegistry()
         )
 
         val result = service.updateWifiConfig(ssid = "  OfficeGuest  ", password = "  secret-2  ")
@@ -228,7 +239,8 @@ class RealConnectivityServiceTest {
         val service = RealConnectivityService(
             deviceManager = manager,
             wifiProvisioner = provisioner,
-            sessionStore = sessionStore
+            sessionStore = sessionStore,
+            registryManager = noOpRegistry()
         )
 
         val result = service.updateWifiConfig(ssid = "OfficeGuest", password = "secret-2")
@@ -270,7 +282,8 @@ class RealConnectivityServiceTest {
         val service = RealConnectivityService(
             deviceManager = manager,
             wifiProvisioner = provisioner,
-            sessionStore = sessionStore
+            sessionStore = sessionStore,
+            registryManager = noOpRegistry()
         )
 
         val result = service.updateWifiConfig(ssid = "OfficeGuest", password = "secret-2")
@@ -309,7 +322,8 @@ class RealConnectivityServiceTest {
         val service = RealConnectivityService(
             deviceManager = manager,
             wifiProvisioner = provisioner,
-            sessionStore = sessionStore
+            sessionStore = sessionStore,
+            registryManager = noOpRegistry()
         )
 
         val result = service.updateWifiConfig(ssid = "OfficeGuest", password = "secret-2")
@@ -347,7 +361,8 @@ class RealConnectivityServiceTest {
         val service = RealConnectivityService(
             deviceManager = manager,
             wifiProvisioner = provisioner,
-            sessionStore = InMemorySessionStore().apply { saveSession(session) }
+            sessionStore = InMemorySessionStore().apply { saveSession(session) },
+            registryManager = noOpRegistry()
         )
 
         val result = service.updateWifiConfig(ssid = "OfficeGuest", password = "secret-2")
@@ -383,7 +398,8 @@ class RealConnectivityServiceTest {
         val service = RealConnectivityService(
             deviceManager = manager,
             wifiProvisioner = provisioner,
-            sessionStore = InMemorySessionStore().apply { saveSession(session) }
+            sessionStore = InMemorySessionStore().apply { saveSession(session) },
+            registryManager = noOpRegistry()
         )
 
         val result = service.updateWifiConfig(ssid = "OfficeGuest", password = "secret-2")
@@ -408,7 +424,8 @@ class RealConnectivityServiceTest {
         val service = RealConnectivityService(
             deviceManager = manager,
             wifiProvisioner = FakeWifiProvisioner(),
-            sessionStore = InMemorySessionStore()
+            sessionStore = InMemorySessionStore(),
+            registryManager = noOpRegistry()
         )
 
         val result = service.reconnect()
@@ -435,7 +452,8 @@ class RealConnectivityServiceTest {
         val service = RealConnectivityService(
             deviceManager = manager,
             wifiProvisioner = FakeWifiProvisioner(),
-            sessionStore = InMemorySessionStore()
+            sessionStore = InMemorySessionStore(),
+            registryManager = noOpRegistry()
         )
 
         val result = service.reconnect()
@@ -462,7 +480,8 @@ class RealConnectivityServiceTest {
         val service = RealConnectivityService(
             deviceManager = manager,
             wifiProvisioner = FakeWifiProvisioner(),
-            sessionStore = InMemorySessionStore()
+            sessionStore = InMemorySessionStore(),
+            registryManager = noOpRegistry()
         )
 
         val result = service.reconnect()
@@ -488,7 +507,8 @@ class RealConnectivityServiceTest {
         val service = RealConnectivityService(
             deviceManager = manager,
             wifiProvisioner = FakeWifiProvisioner(),
-            sessionStore = InMemorySessionStore()
+            sessionStore = InMemorySessionStore(),
+            registryManager = noOpRegistry()
         )
 
         val result = service.reconnect()
@@ -530,7 +550,8 @@ class RealConnectivityServiceTest {
         val service = RealConnectivityService(
             deviceManager = manager,
             wifiProvisioner = provisioner,
-            sessionStore = sessionStore
+            sessionStore = sessionStore,
+            registryManager = noOpRegistry()
         )
 
         val result = service.updateWifiConfig(ssid = "OfficeGuest", password = "secret-2")
@@ -572,11 +593,98 @@ class RealConnectivityServiceTest {
         val service = RealConnectivityService(
             deviceManager = manager,
             wifiProvisioner = provisioner,
-            sessionStore = sessionStore
+            sessionStore = sessionStore,
+            registryManager = noOpRegistry()
         )
 
         val result = service.updateWifiConfig(ssid = "OfficeGuest", password = "secret-2")
 
         assertEquals(WifiConfigResult.Success, result)
     }
+
+    @Test
+    fun `disconnect calls markManuallyDisconnected true for active device before disconnectBle`() = runTest {
+        val activeMac = "AA:BB:CC:DD:EE:FF"
+        val session = BleSession.fromPeripheral(BlePeripheral(activeMac, "Badge", -40))
+        val manager = FakeDeviceConnectionManager().apply {
+            setState(ConnectionState.Connected(session))
+        }
+        val trackingRegistry = TrackingDeviceRegistryManager(activeMac)
+        val service = RealConnectivityService(
+            deviceManager = manager,
+            wifiProvisioner = FakeWifiProvisioner(),
+            sessionStore = InMemorySessionStore(),
+            registryManager = trackingRegistry
+        )
+
+        service.disconnect()
+
+        val calls = trackingRegistry.markManuallyDisconnectedCalls
+        assertEquals(1, calls.size)
+        assertEquals(activeMac, calls[0].first)
+        assertEquals(true, calls[0].second)
+        assertEquals(1, manager.disconnectCalls)
+    }
+
+    @Test
+    fun `connect calls markManuallyDisconnected false before switching device`() = runTest {
+        val targetMac = "AA:BB:CC:DD:EE:FF"
+        val trackingRegistry = TrackingDeviceRegistryManager(targetMac)
+        val service = RealConnectivityService(
+            deviceManager = FakeDeviceConnectionManager(),
+            wifiProvisioner = FakeWifiProvisioner(),
+            sessionStore = InMemorySessionStore(),
+            registryManager = trackingRegistry
+        )
+
+        service.connect(targetMac)
+
+        val markCalls = trackingRegistry.markManuallyDisconnectedCalls
+        assertEquals(1, markCalls.size)
+        assertEquals(targetMac, markCalls[0].first)
+        assertEquals(false, markCalls[0].second)
+        assertEquals(1, trackingRegistry.switchToDeviceCalls)
+    }
+}
+
+private fun noOpRegistry(): DeviceRegistryManager = NoOpDeviceRegistryManager()
+
+private class NoOpDeviceRegistryManager : DeviceRegistryManager {
+    private val _devices = MutableStateFlow<List<RegisteredDevice>>(emptyList())
+    private val _active = MutableStateFlow<RegisteredDevice?>(null)
+    override val registeredDevices: StateFlow<List<RegisteredDevice>> = _devices.asStateFlow()
+    override val activeDevice: StateFlow<RegisteredDevice?> = _active.asStateFlow()
+    override fun registerDevice(p: com.smartsales.prism.data.connectivity.legacy.BlePeripheral, s: com.smartsales.prism.data.connectivity.legacy.BleSession) = Unit
+    override fun renameDevice(mac: String, name: String) = Unit
+    override fun setDefault(mac: String) = Unit
+    override suspend fun switchToDevice(mac: String) = Unit
+    override fun removeDevice(mac: String) = Unit
+    override fun initializeOnLaunch() = Unit
+    override fun markManuallyDisconnected(mac: String, value: Boolean) = Unit
+    override fun updateBleDetected(mac: String, value: Boolean) = Unit
+}
+
+private class TrackingDeviceRegistryManager(activeMac: String) : DeviceRegistryManager {
+    private val activeDevice0 = RegisteredDevice(
+        macAddress = activeMac, displayName = "Badge", profileId = null,
+        registeredAtMillis = 1_000L, lastConnectedAtMillis = 1_000L, isDefault = true
+    )
+    private val _devices = MutableStateFlow(listOf(activeDevice0))
+    private val _active = MutableStateFlow<RegisteredDevice?>(activeDevice0)
+    override val registeredDevices: StateFlow<List<RegisteredDevice>> = _devices.asStateFlow()
+    override val activeDevice: StateFlow<RegisteredDevice?> = _active.asStateFlow()
+
+    val markManuallyDisconnectedCalls = mutableListOf<Pair<String, Boolean>>()
+    var switchToDeviceCalls = 0
+
+    override fun registerDevice(p: com.smartsales.prism.data.connectivity.legacy.BlePeripheral, s: com.smartsales.prism.data.connectivity.legacy.BleSession) = Unit
+    override fun renameDevice(mac: String, name: String) = Unit
+    override fun setDefault(mac: String) = Unit
+    override suspend fun switchToDevice(mac: String) { switchToDeviceCalls++ }
+    override fun removeDevice(mac: String) = Unit
+    override fun initializeOnLaunch() = Unit
+    override fun markManuallyDisconnected(mac: String, value: Boolean) {
+        markManuallyDisconnectedCalls += mac to value
+    }
+    override fun updateBleDetected(mac: String, value: Boolean) = Unit
 }

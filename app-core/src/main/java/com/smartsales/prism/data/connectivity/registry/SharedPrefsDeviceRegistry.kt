@@ -98,6 +98,22 @@ class SharedPrefsDeviceRegistry(context: Context) : DeviceRegistry {
     override fun isEmpty(): Boolean =
         prefs.getString(KEY_DEVICES_JSON, null).isNullOrBlank()
 
+    override fun updateManuallyDisconnected(macAddress: String, value: Boolean) {
+        val devices = loadAllRaw().toMutableList()
+        val index = devices.indexOfFirst { it.macAddress == macAddress }
+        if (index < 0) return
+        devices[index] = devices[index].copy(manuallyDisconnected = value)
+        prefs.edit().putString(KEY_DEVICES_JSON, encodeDevices(devices)).apply()
+    }
+
+    override fun updateBleDetected(macAddress: String, value: Boolean) {
+        val devices = loadAllRaw().toMutableList()
+        val index = devices.indexOfFirst { it.macAddress == macAddress }
+        if (index < 0) return
+        devices[index] = devices[index].copy(bleDetected = value)
+        prefs.edit().putString(KEY_DEVICES_JSON, encodeDevices(devices)).apply()
+    }
+
     private fun loadAllRaw(): List<RegisteredDeviceRaw> {
         val raw = prefs.getString(KEY_DEVICES_JSON, null).orEmpty()
         if (raw.isBlank()) return emptyList()
@@ -116,7 +132,9 @@ private data class RegisteredDeviceRaw(
     val displayName: String,
     val profileId: String?,
     val registeredAtMillis: Long,
-    val lastConnectedAtMillis: Long
+    val lastConnectedAtMillis: Long,
+    val manuallyDisconnected: Boolean = false,
+    val bleDetected: Boolean = false
 )
 
 private fun RegisteredDevice.toRaw() = RegisteredDeviceRaw(
@@ -124,7 +142,9 @@ private fun RegisteredDevice.toRaw() = RegisteredDeviceRaw(
     displayName = displayName,
     profileId = profileId,
     registeredAtMillis = registeredAtMillis,
-    lastConnectedAtMillis = lastConnectedAtMillis
+    lastConnectedAtMillis = lastConnectedAtMillis,
+    manuallyDisconnected = manuallyDisconnected,
+    bleDetected = bleDetected
 )
 
 private fun encodeDevices(devices: List<RegisteredDeviceRaw>): String {
@@ -136,6 +156,8 @@ private fun encodeDevices(devices: List<RegisteredDeviceRaw>): String {
             put("profileId", device.profileId ?: JSONObject.NULL)
             put("registeredAtMillis", device.registeredAtMillis)
             put("lastConnectedAtMillis", device.lastConnectedAtMillis)
+            put("manuallyDisconnected", device.manuallyDisconnected)
+            put("bleDetected", device.bleDetected)
         })
     }
     return array.toString()
@@ -152,7 +174,9 @@ private fun decodeDevicesRaw(raw: String): List<RegisteredDeviceRaw> {
                 displayName = obj.optString("displayName", mac),
                 profileId = obj.optString("profileId").takeIf { it.isNotBlank() && it != "null" },
                 registeredAtMillis = obj.optLong("registeredAtMillis", 0L),
-                lastConnectedAtMillis = obj.optLong("lastConnectedAtMillis", 0L)
+                lastConnectedAtMillis = obj.optLong("lastConnectedAtMillis", 0L),
+                manuallyDisconnected = obj.optBoolean("manuallyDisconnected", false),
+                bleDetected = obj.optBoolean("bleDetected", false)
             ))
         }
     }
@@ -166,7 +190,9 @@ private fun decodeDevices(raw: String, defaultMac: String?): List<RegisteredDevi
             profileId = device.profileId,
             registeredAtMillis = device.registeredAtMillis,
             lastConnectedAtMillis = device.lastConnectedAtMillis,
-            isDefault = device.macAddress == defaultMac
+            isDefault = device.macAddress == defaultMac,
+            manuallyDisconnected = device.manuallyDisconnected,
+            bleDetected = device.bleDetected
         )
     }
 }

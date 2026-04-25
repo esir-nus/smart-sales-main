@@ -35,6 +35,12 @@ interface ConnectivityService {
      * 调度自动重连 — 非阻塞，尊重退避策略
      */
     fun scheduleAutoReconnect()
+
+    /**
+     * 用户主动连接指定设备（切换或重连手动断开的设备）。
+     * 清除该设备的手动断开标记，然后路由到 switchToDevice。
+     */
+    suspend fun connect(macAddress: String)
 }
 
 /**

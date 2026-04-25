@@ -108,6 +108,9 @@ interface DeviceConnectionManager {
      * 若 BLE 未连接或写入失败，静默忽略。
      */
     suspend fun requestSdCardSpace(): Boolean
+
+    /** 由 DeviceRegistryManager 在手动断开/重连时调用，控制是否跳过自动重连。 */
+    fun setManuallyDisconnected(value: Boolean)
 }
 
 @Singleton
@@ -203,6 +206,10 @@ class DefaultDeviceConnectionManager @Inject constructor(
 
     override fun scheduleAutoReconnectIfNeeded() {
         reconnectSupport.scheduleAutoReconnectIfNeeded()
+    }
+
+    override fun setManuallyDisconnected(value: Boolean) {
+        runtime.activeDeviceManuallyDisconnected = value
     }
 
     override fun forceReconnectNow() {

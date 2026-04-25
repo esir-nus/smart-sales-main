@@ -291,5 +291,7 @@ class RealPairingServiceTest {
         override suspend fun switchToDevice(macAddress: String) = Unit
         override fun removeDevice(macAddress: String) = Unit
         override fun initializeOnLaunch() = Unit
+        override fun markManuallyDisconnected(macAddress: String, value: Boolean) = Unit
+        override fun updateBleDetected(macAddress: String, value: Boolean) = Unit
     }
 }

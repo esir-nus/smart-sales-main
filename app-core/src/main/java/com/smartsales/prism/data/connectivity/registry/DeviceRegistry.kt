@@ -17,4 +17,6 @@ interface DeviceRegistry {
     fun setDefault(macAddress: String)
     fun remove(macAddress: String)
     fun isEmpty(): Boolean
+    fun updateManuallyDisconnected(macAddress: String, value: Boolean)
+    fun updateBleDetected(macAddress: String, value: Boolean)
 }

@@ -1,6 +1,7 @@
 package com.smartsales.prism
 
 import android.app.Application
+import com.smartsales.prism.data.connectivity.registry.DeviceRegistryManager
 import com.smartsales.prism.domain.audio.BadgeAudioPipeline
 import com.smartsales.prism.data.audio.SimAudioRepository
 import com.smartsales.prism.data.audio.SimBadgeAudioAutoDownloader
@@ -26,6 +27,11 @@ class PrismApplication : Application() {
             PrismApplicationEntryPoint::class.java
         )
 
+        // 加载设备注册表并初始化自动重连策略（包括手动断开标记）。
+        // 必须在 ViewModel 首次触发 scheduleAutoReconnect 之前完成，
+        // 否则已手动断开的设备在重启后会被意外自动重连。
+        entryPoint.deviceRegistryManager().initializeOnLaunch()
+
         // 预热 SIM 音频仓库，确保抽屉命名空间在应用期内可接收自动管道写入。
         entryPoint.simAudioRepository()
 
@@ -40,6 +46,7 @@ class PrismApplication : Application() {
 @EntryPoint
 @InstallIn(SingletonComponent::class)
 internal interface PrismApplicationEntryPoint {
+    fun deviceRegistryManager(): DeviceRegistryManager
     fun badgeAudioPipeline(): BadgeAudioPipeline
     fun simAudioRepository(): SimAudioRepository
     fun simBadgeAudioAutoDownloader(): SimBadgeAudioAutoDownloader

@@ -1,0 +1,39 @@
+04-25 15:33:30.654 D/ConnectivityVM( 1540): scheduleAutoReconnect() delegating to service
+04-25 15:33:30.654 D/ConnectivityService( 1540): scheduleAutoReconnect() delegating to deviceManager
+04-25 15:34:08.845 D/ConnectivityVM( 1540): scheduleAutoReconnect() delegating to service
+04-25 15:34:08.845 D/ConnectivityService( 1540): scheduleAutoReconnect() delegating to deviceManager
+04-25 15:34:08.847 D/ConnectivityVM( 1540): scheduleAutoReconnect() delegating to service
+04-25 15:34:08.847 D/ConnectivityService( 1540): scheduleAutoReconnect() delegating to deviceManager
+04-25 15:34:44.201 D/ConnectivityVM( 1540): scheduleAutoReconnect() delegating to service
+04-25 15:34:44.201 D/ConnectivityService( 1540): scheduleAutoReconnect() delegating to deviceManager
+04-25 15:35:16.494 D/ConnectivityService( 1540): disconnect() called (soft disconnect - session preserved)
+04-25 15:35:16.495 D/SmartSalesConn( 1540): 🏠 Registry: manuallyDisconnected=true for 14:C1:9F:D7:E3:F6
+04-25 15:35:16.496 D/ConnectivityService( 1540): disconnect() completed
+04-25 15:35:16.512 D/ConnectivityVM( 1540): scheduleAutoReconnect() delegating to service
+04-25 15:35:16.512 D/ConnectivityService( 1540): scheduleAutoReconnect() delegating to deviceManager
+04-25 15:35:16.512 D/SmartSalesConn( 1540): Skipping auto-reconnect: user manually disconnected
+04-25 15:35:17.404 D/SmartSalesConn( 1540): Skipping auto-reconnect: user manually disconnected
+04-25 15:35:19.341 D/ConnectivityService( 1540): connect() called for 1C:DB:D4:9B:8F:96
+04-25 15:35:19.341 D/SmartSalesConn( 1540): 🏠 Registry: manuallyDisconnected=false for 1C:DB:D4:9B:8F:96
+04-25 15:35:19.346 D/SmartSalesConn( 1540): 🔄 Force reconnect target=1C:DB:D4:9B:8F:96
+04-25 15:35:19.347 D/ConnectivityService( 1540): connect() completed for 1C:DB:D4:9B:8F:96
+04-25 15:35:28.177 D/ConnectivityService( 1540): connect() called for 14:C1:9F:D7:E3:F6
+04-25 15:35:28.177 D/SmartSalesConn( 1540): 🏠 Registry: manuallyDisconnected=false for 14:C1:9F:D7:E3:F6
+04-25 15:35:28.181 D/SmartSalesConn( 1540): 🔄 Force reconnect target=14:C1:9F:D7:E3:F6
+04-25 15:35:28.181 D/ConnectivityService( 1540): connect() completed for 14:C1:9F:D7:E3:F6
+04-25 15:35:31.110 D/ConnectivityService( 1540): connect() called for 1C:DB:D4:9B:8F:96
+04-25 15:35:31.111 D/SmartSalesConn( 1540): 🏠 Registry: manuallyDisconnected=false for 1C:DB:D4:9B:8F:96
+04-25 15:35:31.114 D/SmartSalesConn( 1540): 🔄 Force reconnect target=1C:DB:D4:9B:8F:96
+04-25 15:35:31.114 D/ConnectivityService( 1540): connect() completed for 1C:DB:D4:9B:8F:96
+04-25 15:35:34.173 D/ConnectivityService( 1540): connect() called for 14:C1:9F:D7:E3:F6
+04-25 15:35:34.174 D/SmartSalesConn( 1540): 🏠 Registry: manuallyDisconnected=false for 14:C1:9F:D7:E3:F6
+04-25 15:35:34.178 D/SmartSalesConn( 1540): 🔄 Force reconnect target=14:C1:9F:D7:E3:F6
+04-25 15:35:34.178 D/ConnectivityService( 1540): connect() completed for 14:C1:9F:D7:E3:F6
+04-25 15:35:50.250 D/ConnectivityService( 1540): connect() called for 1C:DB:D4:9B:8F:96
+04-25 15:35:50.250 D/SmartSalesConn( 1540): 🏠 Registry: manuallyDisconnected=false for 1C:DB:D4:9B:8F:96
+04-25 15:35:50.255 D/SmartSalesConn( 1540): 🔄 Force reconnect target=1C:DB:D4:9B:8F:96
+04-25 15:35:50.255 D/ConnectivityService( 1540): connect() completed for 1C:DB:D4:9B:8F:96
+04-25 15:36:04.002 D/ConnectivityService( 1540): connect() called for 14:C1:9F:D7:E3:F6
+04-25 15:36:04.003 D/SmartSalesConn( 1540): 🏠 Registry: manuallyDisconnected=false for 14:C1:9F:D7:E3:F6
+04-25 15:36:04.006 D/SmartSalesConn( 1540): 🔄 Force reconnect target=14:C1:9F:D7:E3:F6
+04-25 15:36:04.006 D/ConnectivityService( 1540): connect() completed for 14:C1:9F:D7:E3:F6

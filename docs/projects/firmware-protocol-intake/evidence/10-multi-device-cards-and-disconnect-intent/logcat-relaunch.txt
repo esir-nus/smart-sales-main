@@ -1,0 +1,29 @@
+--------- beginning of main
+04-25 15:36:41.272 D/SmartSalesConn( 1540): 📥 RX [Notification]: Bat#4095.00% (42 61 74 23 34 30 39 35 2E 30 30 25)
+04-25 15:36:41.273 D/SmartSalesConn( 1540): ❓ Badge unknown notification: Bat#4095.00%
+04-25 15:36:46.268 D/SmartSalesConn( 1540): 📥 RX [Notification]: Bat#4095.00% (42 61 74 23 34 30 39 35 2E 30 30 25)
+04-25 15:36:46.269 D/SmartSalesConn( 1540): ❓ Badge unknown notification: Bat#4095.00%
+04-25 15:36:51.321 D/SmartSalesConn( 1540): 📥 RX [Notification]: Bat#4095.00% (42 61 74 23 34 30 39 35 2E 30 30 25)
+04-25 15:36:51.322 D/SmartSalesConn( 1540): ❓ Badge unknown notification: Bat#4095.00%
+04-25 15:36:56.331 D/SmartSalesConn( 1540): 📥 RX [Notification]: Bat#4095.00% (42 61 74 23 34 30 39 35 2E 30 30 25)
+04-25 15:36:56.332 D/SmartSalesConn( 1540): ❓ Badge unknown notification: Bat#4095.00%
+04-25 15:37:01.328 D/SmartSalesConn( 1540): 📥 RX [Notification]: Bat#4095.00% (42 61 74 23 34 30 39 35 2E 30 30 25)
+04-25 15:37:01.328 D/SmartSalesConn( 1540): ❓ Badge unknown notification: Bat#4095.00%
+04-25 15:37:06.368 D/SmartSalesConn( 1540): 📥 RX [Notification]: Bat#4095.00% (42 61 74 23 34 30 39 35 2E 30 30 25)
+04-25 15:37:06.373 D/SmartSalesConn( 1540): ❓ Badge unknown notification: Bat#4095.00%
+04-25 15:37:11.389 D/SmartSalesConn( 1540): 📥 RX [Notification]: Bat#4095.00% (42 61 74 23 34 30 39 35 2E 30 30 25)
+04-25 15:37:11.389 D/SmartSalesConn( 1540): ❓ Badge unknown notification: Bat#4095.00%
+04-25 15:37:11.440 D/ConnectivityService( 1540): disconnect() called (soft disconnect - session preserved)
+04-25 15:37:11.441 D/SmartSalesConn( 1540): 🏠 Registry: manuallyDisconnected=true for 14:C1:9F:D7:E3:F6
+04-25 15:37:11.441 I/SmartSalesConn( 1540): 📶 BLE disconnected
+04-25 15:37:11.441 D/SmartSalesConn( 1540): 🔌 Soft disconnect (session preserved)
+04-25 15:37:11.441 D/ConnectivityService( 1540): disconnect() completed
+04-25 15:37:11.444 D/ConnectivityVM( 1540): scheduleAutoReconnect() delegating to service
+04-25 15:37:11.444 D/ConnectivityService( 1540): scheduleAutoReconnect() delegating to deviceManager
+04-25 15:37:11.444 D/SmartSalesConn( 1540): Skipping auto-reconnect: user manually disconnected
+04-25 15:37:11.482 D/SmartSalesConn( 1540): 🔌 Persistent GATT session closed
+04-25 15:37:11.631 W/SmartSalesConn( 1540): 💔 Heartbeat: badge unreachable, transitioning to Disconnected
+04-25 15:37:11.631 I/SmartSalesConn( 1540): 📶 BLE disconnected
+04-25 15:37:11.631 D/SmartSalesConn( 1540): Skipping auto-reconnect: user manually disconnected
+04-25 15:37:12.446 D/SmartSalesConn( 1540): BadgeHttpClient.isReachable start url=http://192.168.0.110:8088/
+04-25 15:37:13.437 D/SmartSalesConn( 1540): BadgeHttpClient.isReachable response url=http://192.168.0.110:8088/ code=200 reachable=true

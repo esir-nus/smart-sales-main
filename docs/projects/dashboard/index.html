@@ -423,7 +423,7 @@
           This view is rebuilt from repo trackers under <code>docs/projects/**</code>. It is meant to answer three questions quickly:
           what projects exist, what sprint tasks sit under them, and what state each one is in right now.
         </p>
-        <div class="generated-at">Generated 2026-04-24 23:07 CST</div>
+        <div class="generated-at">Generated 2026-04-25 13:36 CST</div>
       </article>
       <section class="summary-panel">
         <article class="metric">
@@ -433,8 +433,8 @@
         </article>
         <article class="metric">
           <div class="metric-label">Sprints</div>
-          <div class="metric-value">14</div>
-          <div class="metric-meta">0 active, 13 done</div>
+          <div class="metric-value">20</div>
+          <div class="metric-meta">0 active, 17 done</div>
         </article>
         <article class="metric">
           <div class="metric-label">Blocked</div>
@@ -452,10 +452,10 @@
     <ul class="status-strip">
       <li class="status-chip status-open"><span class="status-dot"></span><span>Open projects: 1</span></li>
 <li class="status-chip status-closed"><span class="status-dot"></span><span>Closed projects: 2</span></li>
-<li class="status-chip status-planned"><span class="status-dot"></span><span>Planned: 0</span></li>
+<li class="status-chip status-planned"><span class="status-dot"></span><span>Planned: 2</span></li>
 <li class="status-chip status-authored"><span class="status-dot"></span><span>Authored: 0</span></li>
 <li class="status-chip status-in-progress"><span class="status-dot"></span><span>In progress: 0</span></li>
-<li class="status-chip status-done"><span class="status-dot"></span><span>Done: 13</span></li>
+<li class="status-chip status-done"><span class="status-dot"></span><span>Done: 17</span></li>
 <li class="status-chip status-stopped"><span class="status-dot"></span><span>Stopped: 0</span></li>
 <li class="status-chip status-blocked"><span class="status-dot"></span><span>Blocked: 0</span></li>
 <li class="status-chip status-fallback"><span class="status-dot"></span><span>Other: 6</span></li>
@@ -641,12 +641,12 @@
       <h2 class="project-title"><a href="../firmware-protocol-intake/tracker.md">firmware-protocol-intake</a></h2>
       <p class="project-objective">Receive firmware protocol updates from the hardware team and reflect them in the app. The flow is always firmware-first, software-after: hardware team ships a new or revised BLE/HTTP protocol item, this project records the spec delta, then wires the app-side handler (connectivity module by default; may touch adjacent modules when a drop reaches further). The canonical protocol SOT is `docs/specs/esp32-protocol.md`; app-side module ownership is tracked through `docs/cerb/interface-map.md`.</p>
       <div class="project-meta">
-        <span class="meta-pill">Project status: open — authored 2026-04-24</span><span class="meta-pill">4 sprints</span><span class="meta-pill">Folder: firmware-protocol-intake</span>
+        <span class="meta-pill">Project status: open — updated 2026-04-25 (sprints 07–09 authored; active)</span><span class="meta-pill">10 sprints</span><span class="meta-pill">Folder: firmware-protocol-intake</span>
       </div>
     </div>
     <span class="status-chip status-open">
       <span class="status-dot"></span>
-      <span>open — authored 2026-04-24</span>
+      <span>open — updated 2026-04-25 (sprints 07–09 authored; active)</span>
     </span>
   </div>
   <div class="sprint-grid">
@@ -716,6 +716,108 @@
   <div class="sprint-footer">
     <span>firmware-protocol-intake / sprint 04</span>
     <span>sprints/04-ver-query-handler.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">command-end-emitter</div>
+      <h3 class="sprint-title"><a href="../firmware-protocol-intake/sprints/05-command-end-emitter.md">Sprint 05 — command-end-emitter</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Retired legacy `commandend#1` task-chime wiring, added `notifyCommandEnd()` through both pipeline terminal states, and synced the protocol/interface docs with focused tests plus `:app:assembleDebug` verification</p>
+  <div class="sprint-footer">
+    <span>firmware-protocol-intake / sprint 05</span>
+    <span>sprints/05-command-end-emitter.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">sd-space-handler</div>
+      <h3 class="sprint-title"><a href="../firmware-protocol-intake/sprints/06-sd-space-handler.md">Sprint 06 — sd-space-handler</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Wired `SD#space` -&gt; `SD#space#&lt;size&gt;` through parser -&gt; bridge -&gt; `ConnectivityViewModel.sdCardSpace`, added a UserCenter query-on-tap row with raw firmware string display, and flipped the owning docs to Implemented</p>
+  <div class="sprint-footer">
+    <span>firmware-protocol-intake / sprint 06</span>
+    <span>sprints/06-sd-space-handler.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">add-device-registry-exit</div>
+      <h3 class="sprint-title"><a href="../firmware-protocol-intake/sprints/07a-add-device-registry-exit.md">Sprint 07A — add-device-registry-exit</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Repaired post-onboarding `添加新设备` so successful provisioning closes back to connectivity after registration, with no quick-start requirement, skip-to-home shortcut, or onboarding `COMPLETE` wrapper</p>
+  <div class="sprint-footer">
+    <span>firmware-protocol-intake / sprint 07A</span>
+    <span>sprints/07a-add-device-registry-exit.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">badge-switching-lifecycle</div>
+      <h3 class="sprint-title"><a href="../firmware-protocol-intake/sprints/07-badge-switching-lifecycle.md">Sprint 07 — badge-switching-lifecycle</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Real-device two-badge lifecycle closed with app-core logcat evidence for switch A→B and B→A, explicit target reconnect, stale GATT close, and inline add-device discovery filtering so registered badges stay hidden from pairing</p>
+  <div class="sprint-footer">
+    <span>firmware-protocol-intake / sprint 07</span>
+    <span>sprints/07-badge-switching-lifecycle.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">multi-device-audio-source-label</div>
+      <h3 class="sprint-title"><a href="../firmware-protocol-intake/sprints/08-multi-device-audio-source-label.md">Sprint 08 — multi-device-audio-source-label</a></h3>
+    </div>
+    <span class="status-chip status-planned">
+      <span class="status-dot"></span>
+      <span>planned</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Add per-badge source label to audio drawer cards (bottom-right text showing `RegisteredDevice.displayName`); persist `badgeMac` in `AudioFile`, resolve to label in `AudioViewModel`, render in `AudioCard`</p>
+  <div class="sprint-footer">
+    <span>firmware-protocol-intake / sprint 08</span>
+    <span>sprints/08-multi-device-audio-source-label.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">sync-polish</div>
+      <h3 class="sprint-title"><a href="../firmware-protocol-intake/sprints/09-sync-polish.md">Sprint 09 — sync-polish</a></h3>
+    </div>
+    <span class="status-chip status-planned">
+      <span class="status-dot"></span>
+      <span>planned</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Empty-file gate in real sync path, non-blocking in-memory retry queue (3 attempts before surfacing error card), friendly Chinese error messages on cards, sync summary toast after each `syncFromDevice()`</p>
+  <div class="sprint-footer">
+    <span>firmware-protocol-intake / sprint 09</span>
+    <span>sprints/09-sync-polish.md</span>
   </div>
 </article>
   </div>

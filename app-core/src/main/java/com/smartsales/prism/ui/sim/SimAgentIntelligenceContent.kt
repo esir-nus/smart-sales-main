@@ -95,6 +95,7 @@ import com.smartsales.prism.domain.model.ChatMessage
 import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.ui.ProMaxAccent
 import com.smartsales.prism.ui.ProMaxDanger
+import com.smartsales.prism.ui.components.CopyableBubble
 import com.smartsales.prism.ui.components.prismNavigationBarPadding
 import com.smartsales.prism.ui.components.prismStatusBarPadding
 import com.smartsales.prism.ui.components.DynamicIsland
@@ -1130,26 +1131,28 @@ private fun SimUserBubble(text: String) {
             .padding(vertical = 1.dp),
         horizontalArrangement = Arrangement.End
     ) {
-        Box(
-            modifier = Modifier
-                .widthIn(max = 280.dp)
-                .background(
-                    color = SimHomeHeroTokens.OutgoingBlue,
-                    shape = RoundedCornerShape(
-                        topStart = 20.dp,
-                        topEnd = 20.dp,
-                        bottomEnd = 4.dp,
-                        bottomStart = 20.dp
+        CopyableBubble(textToCopy = text) {
+            Box(
+                modifier = Modifier
+                    .widthIn(max = 280.dp)
+                    .background(
+                        color = SimHomeHeroTokens.OutgoingBlue,
+                        shape = RoundedCornerShape(
+                            topStart = 20.dp,
+                            topEnd = 20.dp,
+                            bottomEnd = 4.dp,
+                            bottomStart = 20.dp
+                        )
                     )
+                    .padding(horizontal = 16.dp, vertical = 11.dp)
+            ) {
+                Text(
+                    text = text,
+                    color = Color.White,
+                    fontSize = 15.sp,
+                    lineHeight = 20.sp
                 )
-                .padding(horizontal = 16.dp, vertical = 11.dp)
-        ) {
-            Text(
-                text = text,
-                color = Color.White,
-                fontSize = 15.sp,
-                lineHeight = 20.sp
-            )
+            }
         }
     }
 }
@@ -1198,28 +1201,30 @@ private fun SimAssistantBubble(
             },
         horizontalArrangement = Arrangement.Start
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth(0.88f)
-                .background(palette.surface, shape)
-                .border(1.dp, resolvedBorderColor, shape)
-                .padding(horizontal = 16.dp, vertical = 11.dp)
-        ) {
-            if (!headline.isNullOrBlank()) {
-                Text(
-                    text = headline,
-                    color = resolvedAccent.copy(alpha = 0.88f),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold
+        CopyableBubble(textToCopy = content) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth(0.88f)
+                    .background(palette.surface, shape)
+                    .border(1.dp, resolvedBorderColor, shape)
+                    .padding(horizontal = 16.dp, vertical = 11.dp)
+            ) {
+                if (!headline.isNullOrBlank()) {
+                    Text(
+                        text = headline,
+                        color = resolvedAccent.copy(alpha = 0.88f),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Spacer(modifier = Modifier.height(5.dp))
+                }
+                MarkdownText(
+                    text = content,
+                    color = palette.body,
+                    fontSize = 15.sp,
+                    lineHeight = 20.sp
                 )
-                Spacer(modifier = Modifier.height(5.dp))
             }
-            MarkdownText(
-                text = content,
-                color = palette.body,
-                fontSize = 15.sp,
-                lineHeight = 20.sp
-            )
         }
     }
 }

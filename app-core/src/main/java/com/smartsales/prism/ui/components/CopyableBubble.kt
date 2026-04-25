@@ -6,7 +6,8 @@
 package com.smartsales.prism.ui.components
 
 import android.widget.Toast
-import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
@@ -19,15 +20,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.changedToUpIgnoreConsumed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.smartsales.prism.ui.util.ClipboardHelper
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * 长按聊天气泡弹出"复制"菜单。
- * 使用 pointerInput + detectTapGestures 替代 combinedClickable，
- * 避免在 LazyColumn 中与滚动手势竞争导致长按失效。
+ * 使用手动 awaitEachGesture 轮询替代 detectTapGestures，通过 changedToUpIgnoreConsumed
+ * 忽略父级 LazyColumn scrollable 对事件的消费，避免长按被滚动手势竞争取消。
  */
 @Composable
 fun CopyableBubble(
@@ -40,7 +43,19 @@ fun CopyableBubble(
 
     Box(
         modifier = modifier.pointerInput(textToCopy) {
-            detectTapGestures(onLongPress = { showMenu = true })
+            awaitEachGesture {
+                awaitFirstDown(requireUnconsumed = false)
+                // withTimeoutOrNull 返回 null = 超时且手指仍按下 = 长按
+                val liftedBeforeTimeout = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        // 忽略父级消费状态，仅判断手指是否抬起
+                        if (event.changes.any { it.changedToUpIgnoreConsumed() || !it.pressed }) break
+                    }
+                    true
+                }
+                if (liftedBeforeTimeout == null) showMenu = true
+            }
         }
     ) {
         content()

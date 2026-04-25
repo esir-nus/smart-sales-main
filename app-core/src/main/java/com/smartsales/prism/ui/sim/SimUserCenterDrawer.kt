@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -39,8 +40,10 @@ import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -48,6 +51,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -57,6 +63,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -78,6 +85,7 @@ import com.smartsales.prism.BuildConfig
 import com.smartsales.prism.domain.memory.UserProfile
 import com.smartsales.prism.ui.components.PrismStatusBarTopSafeArea
 import com.smartsales.prism.ui.components.prismNavigationBarPadding
+import com.smartsales.prism.ui.components.connectivity.ConnectivityViewModel
 import com.smartsales.prism.ui.settings.EditProfileScreen
 import com.smartsales.prism.ui.settings.ThemeModeDialog
 import com.smartsales.prism.ui.settings.UserCenterViewModel
@@ -181,17 +189,23 @@ private fun rememberSimUserCenterPalette(): SimUserCenterPalette {
 @Composable
 internal fun SimUserCenterDrawer(
     onClose: () -> Unit,
-    viewModel: UserCenterViewModel = hiltViewModel()
+    viewModel: UserCenterViewModel = hiltViewModel(),
+    connectivityViewModel: ConnectivityViewModel = hiltViewModel()
 ) {
     val palette = rememberSimUserCenterPalette()
     val profile by viewModel.profile.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+    val sdCardSpace by connectivityViewModel.sdCardSpace.collectAsStateWithLifecycle()
     var isEditing by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
     val versionLabel = remember {
         BuildConfig.VERSION_NAME
             .takeIf { it.isNotBlank() }
             ?.let { "v$it" }
+    }
+
+    LaunchedEffect(Unit) {
+        connectivityViewModel.requestSdCardSpace()
     }
 
     BackHandler {
@@ -308,6 +322,13 @@ internal fun SimUserCenterDrawer(
                                     onValueChange = viewModel::onVoiceVolumeDrag,
                                     onValueChangeFinished = viewModel::onVoiceVolumeCommitted,
                                     palette = palette,
+                                    showDivider = true
+                                )
+                                SimUserCenterStorageRow(
+                                    label = "徽章 SD 卡",
+                                    value = sdCardSpace ?: "查询中...",
+                                    palette = palette,
+                                    onClick = { connectivityViewModel.requestSdCardSpace() },
                                     showDivider = false
                                 )
                             }
@@ -693,6 +714,91 @@ private fun SimUserCenterVolumeRow(
                 modifier = Modifier.padding(horizontal = 14.dp)
             )
         }
+    }
+}
+
+@Composable
+private fun SimUserCenterStorageRow(
+    label: String,
+    value: String,
+    palette: SimUserCenterPalette,
+    onClick: () -> Unit,
+    showDivider: Boolean
+) {
+    val freeGb = parseFreeSpaceGb(value)
+    val totalGb = 32f
+    val targetFill = (freeGb / totalGb).coerceIn(0f, 1f)
+    val animatedFill by animateFloatAsState(
+        targetValue = targetFill,
+        animationSpec = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
+        label = "sd_card_fill"
+    )
+
+    Column {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onClick() }
+                .padding(horizontal = 14.dp, vertical = 11.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(11.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Storage,
+                        contentDescription = null,
+                        tint = palette.rowIconTint,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = label,
+                        color = palette.textPrimary,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontSize = 15.sp
+                    )
+                }
+                Text(
+                    text = value,
+                    color = palette.muted,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontSize = 13.sp
+                )
+            }
+            LinearProgressIndicator(
+                progress = animatedFill,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(3.dp)),
+                color = palette.accent,
+                trackColor = palette.divider
+            )
+        }
+        if (showDivider) {
+            HorizontalDivider(
+                color = palette.divider,
+                thickness = 0.5.dp,
+                modifier = Modifier.padding(horizontal = 14.dp)
+            )
+        }
+    }
+}
+
+private fun parseFreeSpaceGb(formatted: String): Float {
+    val match = Regex("""([\d.]+)\s*([GgMmKk])""").find(formatted) ?: return 0f
+    val value = match.groupValues[1].toFloatOrNull() ?: return 0f
+    return when (match.groupValues[2].uppercase()) {
+        "G" -> value
+        "M" -> value / 1024f
+        "K" -> value / (1024f * 1024f)
+        else -> 0f
     }
 }
 

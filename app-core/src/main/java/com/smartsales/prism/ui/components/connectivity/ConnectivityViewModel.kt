@@ -23,10 +23,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
 /**
@@ -306,11 +309,23 @@ class ConnectivityViewModel @Inject constructor(
     // --- 设备注册表操作 ---
 
     fun connectDevice(macAddress: String) {
-        launchExclusiveOperation("connectDevice") {
-            _uiOverride.value = ConnectionState.RECONNECTING
-            connectivityService.connect(macAddress)
-            clearTransientConnectivityUi()
+        // 用户点选其他卡片时，新的连接请求必须抢占旧的重连显示。
+        activeOperationJob?.cancel()
+        val job = viewModelScope.launch {
+            try {
+                connectivityService.connect(macAddress)
+                _uiOverride.value = ConnectionState.RECONNECTING
+                withTimeoutOrNull(30_000L) {
+                    managerBaseState.filter { it != ConnectivityManagerState.DISCONNECTED }.first()
+                }
+                clearTransientConnectivityUi()
+            } finally {
+                if (activeOperationJob === coroutineContext[Job]) {
+                    activeOperationJob = null
+                }
+            }
         }
+        activeOperationJob = job
     }
 
     fun switchToDevice(macAddress: String) {

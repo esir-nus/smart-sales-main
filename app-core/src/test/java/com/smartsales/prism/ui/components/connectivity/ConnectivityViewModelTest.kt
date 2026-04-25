@@ -236,6 +236,43 @@ class ConnectivityViewModelTest {
     }
 
     @Test
+    fun `connectDevice preempts active reconnect and shows reconnecting override`() = runTest {
+        val bridge = FakeConnectivityBridge()
+        val reconnectGate = CompletableDeferred<ReconnectResult>()
+        val service = FakeConnectivityService(reconnectResults = listOf(reconnectGate))
+        val viewModel = createViewModel(service = service, bridge = bridge)
+        advanceUntilIdle()
+
+        viewModel.reconnect()
+        advanceUntilIdle()
+        assertEquals(ConnectivityManagerState.RECONNECTING, viewModel.managerState.value)
+
+        viewModel.connectDevice("AA:BB:CC:DD:EE:02")
+
+        assertEquals(listOf("AA:BB:CC:DD:EE:02"), service.connectCalls)
+        assertEquals(1, service.reconnectCalls)
+        assertEquals(ConnectivityManagerState.RECONNECTING, viewModel.managerState.value)
+    }
+
+    @Test
+    fun `connectDevice holds reconnecting until manager state moves`() = runTest {
+        val bridge = FakeConnectivityBridge()
+        val service = FakeConnectivityService()
+        val viewModel = createViewModel(service = service, bridge = bridge)
+        advanceUntilIdle()
+
+        viewModel.connectDevice("AA:BB:CC:DD:EE:03")
+
+        assertEquals(listOf("AA:BB:CC:DD:EE:03"), service.connectCalls)
+        assertEquals(ConnectivityManagerState.RECONNECTING, viewModel.managerState.value)
+
+        bridge.setManagerStatus(BadgeManagerStatus.Connecting)
+        advanceUntilIdle()
+
+        assertEquals(ConnectivityManagerState.RECONNECTING, viewModel.managerState.value)
+    }
+
+    @Test
     fun `updateWifiConfig shows reconnecting while repair is in progress and clears on success`() = runTest {
         val bridge = FakeConnectivityBridge(
             connection = BadgeConnectionState.Disconnected,
@@ -673,6 +710,10 @@ class ConnectivityViewModelTest {
         fun setConnectionState(state: BadgeConnectionState) {
             _connectionState.value = state
         }
+
+        fun setManagerStatus(status: BadgeManagerStatus) {
+            _managerStatus.value = status
+        }
     }
 
     private class FakeConnectivityService(
@@ -693,6 +734,7 @@ class ConnectivityViewModelTest {
             private set
         var scheduleAutoReconnectCalls = 0
             private set
+        val connectCalls = mutableListOf<String>()
         val updateWifiConfigCalls = mutableListOf<Pair<String, String>>()
 
         override suspend fun checkForUpdate(): UpdateResult = UpdateResult.None
@@ -723,7 +765,9 @@ class ConnectivityViewModelTest {
             scheduleAutoReconnectCalls += 1
         }
 
-        override suspend fun connect(macAddress: String) = Unit
+        override suspend fun connect(macAddress: String) {
+            connectCalls += macAddress
+        }
     }
 
     private class FakeDeviceRegistryManager : DeviceRegistryManager {

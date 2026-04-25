@@ -64,8 +64,18 @@ internal fun simStoredAudioFile(context: Context, audioId: String, extension: St
 }
 
 internal fun simPendingBadgeDeleteFilename(filename: String): String {
-    val normalized = filename.toBadgeDownloadFilename()
-    return normalized.ifBlank { filename.trim() }
+    val trimmed = filename.trim()
+    if (trimmed.isBlank()) return ""
+
+    val token = trimmed.removeSuffix(".wav").removeSuffix(".WAV").trim()
+    // 仅固件时间戳/日志载荷补全 log_ 前缀；普通已命名文件保持原名。
+    val normalized = when {
+        token.matches(Regex("^\\d{8}_\\d{6}$")) ||
+            trimmed.startsWith("log_", ignoreCase = true) ||
+            trimmed.startsWith("log#", ignoreCase = true) -> trimmed.toBadgeDownloadFilename()
+        else -> trimmed
+    }
+    return normalized.ifBlank { trimmed }
 }
 
 internal fun resolveSimStoredAudioFile(context: Context, audioId: String): File? {

@@ -1,0 +1,8 @@
+Command:
+adb logcat -d | grep "connectDevice skipped"
+
+Exit code:
+1
+
+Output:
+<no matches>

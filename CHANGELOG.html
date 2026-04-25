@@ -146,9 +146,36 @@
   <div class="page-header">
     <h1>更新日志</h1>
     <p class="subtitle">产品功能与修复记录</p>
-    <span class="generated">生成于 2026年04月24日</span>
+    <span class="generated">生成于 2026年04月25日</span>
   </div>
   <div class="section-title">最近更新</div>
+  <div class="date-header"><h3>2026-04-25</h3></div>
+  <div class="entries">
+      <div class="entry">
+        <span class="badge badge-新增">新增</span>
+        <span class="entry-msg"><strong>徽章任务完成信号改为 Command#end</strong> — 音频管线在 `log#` / `rec#` 处理完成后通过 `ConnectivityBridge` 与 BLE 写入链路发送 `Command#end`，替代旧的 Android-only `commandend#1` 接线。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-新增">新增</span>
+        <span class="entry-msg"><strong>徽章 SD 卡空间查询与用户中心展示</strong> — 接入 `SD#space` 查询/回复链路，`ConnectivityViewModel` 暴露存储空间状态，用户中心新增 SD 卡容量行并保留固件返回的原始容量文本。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-修复">修复</span>
+        <span class="entry-msg"><strong>新增设备注册流程可完成与可退出</strong> — post-onboarding 添加新徽章流程在成功配网后直接关闭回到连接管理，不再要求日程 quick-start；新增配对 overlay 现在显示 `关闭` 并支持 Android back 退出，同时退出前取消配对任务。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-修复">修复</span>
+        <span class="entry-msg"><strong>双徽章切换生命周期稳定化</strong> — 真实设备验证 A→B / B→A 切换链路，修复切换时复用旧会话/GATT 的问题，强制按目标徽章 session 重连，并在新增设备扫描中隐藏已注册徽章。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-修复">修复</span>
+        <span class="entry-msg"><strong>对话气泡长按复制恢复</strong> — 调整 `CopyableBubble` 的长按处理，修复气泡位于 `LazyColumn` 中时复制手势失效的问题。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-other">维护</span>
+        <span class="entry-msg"><strong>固件 sprint 文档与本地合同忽略规则收口</strong> — 完成 Sprint 06 文档 closeout 清理，并将本地 sprint contract 文档加入忽略规则，减少工作树噪声。</span>
+      </div>
+  </div>
   <div class="date-header"><h3>2026-04-24</h3></div>
   <div class="entries">
       <div class="entry">

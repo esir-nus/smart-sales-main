@@ -2,6 +2,15 @@
 
 ## 最近更新
 
+### 2026-04-25
+
+- **[新增] 徽章任务完成信号改为 Command#end** — 音频管线在 `log#` / `rec#` 处理完成后通过 `ConnectivityBridge` 与 BLE 写入链路发送 `Command#end`，替代旧的 Android-only `commandend#1` 接线。
+- **[新增] 徽章 SD 卡空间查询与用户中心展示** — 接入 `SD#space` 查询/回复链路，`ConnectivityViewModel` 暴露存储空间状态，用户中心新增 SD 卡容量行并保留固件返回的原始容量文本。
+- **[修复] 新增设备注册流程可完成与可退出** — post-onboarding 添加新徽章流程在成功配网后直接关闭回到连接管理，不再要求日程 quick-start；新增配对 overlay 现在显示 `关闭` 并支持 Android back 退出，同时退出前取消配对任务。
+- **[修复] 双徽章切换生命周期稳定化** — 真实设备验证 A→B / B→A 切换链路，修复切换时复用旧会话/GATT 的问题，强制按目标徽章 session 重连，并在新增设备扫描中隐藏已注册徽章。
+- **[修复] 对话气泡长按复制恢复** — 调整 `CopyableBubble` 的长按处理，修复气泡位于 `LazyColumn` 中时复制手势失效的问题。
+- **[维护] 固件 sprint 文档与本地合同忽略规则收口** — 完成 Sprint 06 文档 closeout 清理，并将本地 sprint contract 文档加入忽略规则，减少工作树噪声。
+
 ### 2026-04-24
 
 - **[维护] workflow-renovation 治理收口完成** — 将剩余鸿蒙OS原生分支改动收拢到 `platform/harmony`，为历史分支打上 `archive/*-20260424` 标签，并清理已淘汰的分支与工作树引用。

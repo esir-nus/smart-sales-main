@@ -226,9 +226,9 @@ fun UserCenterScreen(
                                     showDivider = true,
                                     onRefresh = connectivityViewModel::requestFirmwareVersion
                                 )
-                                UserCenterSelectRow(
-                                    label = "Badge SD card free space",
-                                    value = sdCardSpace ?: "Tap to query",
+                                BadgeStorageRow(
+                                    label = "徽章 SD 卡剩余空间",
+                                    value = sdCardSpace ?: "轻触查询",
                                     onClick = connectivityViewModel::requestSdCardSpace,
                                     showDivider = false
                                 )
@@ -515,6 +515,23 @@ private fun UserCenterSelectRow(
     UserCenterRow(
         label = label,
         leadingIcon = Icons.Default.Public,
+        value = value,
+        showChevron = true,
+        onClick = onClick,
+        showDivider = showDivider
+    )
+}
+
+@Composable
+private fun BadgeStorageRow(
+    label: String,
+    value: String,
+    onClick: () -> Unit,
+    showDivider: Boolean
+) {
+    UserCenterRow(
+        label = label,
+        leadingIcon = Icons.Default.Storage,
         value = value,
         showChevron = true,
         onClick = onClick,

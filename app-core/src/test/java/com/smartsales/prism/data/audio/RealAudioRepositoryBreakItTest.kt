@@ -9,12 +9,14 @@ import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
 import java.io.File
 import com.smartsales.prism.domain.audio.TranscriptionStatus
+import com.smartsales.prism.data.connectivity.registry.DeviceRegistryManager
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.data.oss.OssUploader
 import com.smartsales.prism.domain.tingwu.TingwuPipeline
 import com.smartsales.prism.domain.connectivity.WavDownloadResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -29,10 +31,11 @@ class RealAudioRepositoryBreakItTest {
     val tempFolder = TemporaryFolder()
 
     private lateinit var context: Context
-    
+
     private lateinit var bridge: ConnectivityBridge
     private lateinit var ossUploader: OssUploader
     private lateinit var tingwuPipeline: TingwuPipeline
+    private lateinit var deviceRegistryManager: DeviceRegistryManager
     private lateinit var repository: RealAudioRepository
     private val testDispatcher = StandardTestDispatcher()
 
@@ -56,12 +59,15 @@ class RealAudioRepositoryBreakItTest {
         
         ossUploader = mock()
         tingwuPipeline = mock()
-        
+        deviceRegistryManager = mock<DeviceRegistryManager>()
+        whenever(deviceRegistryManager.activeDevice).thenReturn(MutableStateFlow(null))
+
         repository = RealAudioRepository(
             context = context,
             connectivityBridge = bridge,
             ossUploader = ossUploader,
-            tingwuPipeline = tingwuPipeline
+            tingwuPipeline = tingwuPipeline,
+            deviceRegistryManager = deviceRegistryManager
         )
     }
 

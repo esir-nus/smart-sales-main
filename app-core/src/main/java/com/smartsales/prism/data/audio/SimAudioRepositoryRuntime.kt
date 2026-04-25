@@ -4,6 +4,7 @@ import android.content.Context
 import com.smartsales.data.oss.OssUploader
 import com.smartsales.prism.data.connectivity.BadgeEndpointRecoveryCoordinator
 import com.smartsales.prism.data.connectivity.legacy.PhoneWifiProvider
+import com.smartsales.prism.data.connectivity.registry.DeviceRegistryManager
 import com.smartsales.prism.domain.audio.AudioFile
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.connectivity.ConnectivityPrompt
@@ -29,7 +30,8 @@ class SimAudioRepositoryRuntime @Inject constructor(
     val ossUploader: OssUploader,
     val tingwuPipeline: TingwuPipeline,
     val connectivityPrompt: ConnectivityPrompt,
-    val phoneWifiProvider: PhoneWifiProvider
+    val phoneWifiProvider: PhoneWifiProvider,
+    val deviceRegistryManager: DeviceRegistryManager
 ) {
     var ioDispatcher: CoroutineDispatcher = Dispatchers.IO
     var repositoryScope = CoroutineScope(SupervisorJob() + ioDispatcher)

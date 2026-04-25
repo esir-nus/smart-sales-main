@@ -7,6 +7,7 @@ import com.smartsales.prism.data.connectivity.legacy.FakePhoneWifiProvider
 import com.smartsales.prism.domain.audio.AudioFile
 import com.smartsales.prism.domain.audio.AudioSource
 import com.smartsales.prism.domain.audio.TranscriptionStatus
+import com.smartsales.prism.data.connectivity.registry.DeviceRegistryManager
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.connectivity.ConnectivityPrompt
 import com.smartsales.prism.domain.tingwu.TingwuPipeline
@@ -71,7 +72,8 @@ class SimAudioRepositoryNamespaceTest {
                 ossUploader = ossUploader,
                 tingwuPipeline = tingwuPipeline,
                 connectivityPrompt = mock<ConnectivityPrompt>(),
-                phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest")
+                phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest"),
+                deviceRegistryManager = mock<DeviceRegistryManager>()
             ),
             orchestrator = mock<DownloadServiceOrchestrator>()
         )
@@ -104,7 +106,8 @@ class SimAudioRepositoryNamespaceTest {
                 ossUploader = ossUploader,
                 tingwuPipeline = tingwuPipeline,
                 connectivityPrompt = mock<ConnectivityPrompt>(),
-                phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest")
+                phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest"),
+                deviceRegistryManager = mock<DeviceRegistryManager>()
             ),
             orchestrator = mock<DownloadServiceOrchestrator>()
         )
@@ -130,7 +133,8 @@ class SimAudioRepositoryNamespaceTest {
                 ossUploader = ossUploader,
                 tingwuPipeline = tingwuPipeline,
                 connectivityPrompt = mock<ConnectivityPrompt>(),
-                phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest")
+                phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest"),
+                deviceRegistryManager = mock<DeviceRegistryManager>()
             ),
             orchestrator = mock<DownloadServiceOrchestrator>()
         )

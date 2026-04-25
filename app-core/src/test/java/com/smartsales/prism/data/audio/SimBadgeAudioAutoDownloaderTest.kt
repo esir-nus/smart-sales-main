@@ -9,6 +9,7 @@ import com.smartsales.prism.domain.audio.AudioLocalAvailability
 import com.smartsales.prism.domain.audio.AudioSource
 import com.smartsales.prism.domain.connectivity.BadgeConnectionState
 import com.smartsales.prism.domain.connectivity.BadgeManagerStatus
+import com.smartsales.prism.data.connectivity.registry.DeviceRegistryManager
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.connectivity.ConnectivityPrompt
 import com.smartsales.prism.domain.connectivity.RecordingNotification
@@ -44,12 +45,15 @@ class SimBadgeAudioAutoDownloaderTest {
     private lateinit var connectivityBridge: FakeConnectivityBridge
     private lateinit var runtime: SimAudioRepositoryRuntime
     private lateinit var orchestrator: DownloadServiceOrchestrator
+    private lateinit var deviceRegistryManager: DeviceRegistryManager
 
     @Before
     fun setup() {
         context = mock()
         whenever(context.filesDir).thenReturn(tempFolder.root)
         connectivityBridge = FakeConnectivityBridge()
+        deviceRegistryManager = mock<DeviceRegistryManager>()
+        whenever(deviceRegistryManager.activeDevice).thenReturn(MutableStateFlow(null))
         runtime = SimAudioRepositoryRuntime(
             context = context,
             connectivityBridge = connectivityBridge,
@@ -57,7 +61,8 @@ class SimBadgeAudioAutoDownloaderTest {
             ossUploader = mock<OssUploader>(),
             tingwuPipeline = mock<TingwuPipeline>(),
             connectivityPrompt = mock<ConnectivityPrompt>(),
-            phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest")
+            phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest"),
+            deviceRegistryManager = deviceRegistryManager
         )
         orchestrator = mock()
     }

@@ -13,7 +13,8 @@ data class AudioItemState(
     val status: AudioStatus,
     val isStarred: Boolean = false,
     val summary: String? = null,
-    val progress: Float? = null // 0.0 - 1.0 (valid only for TRANSCRIBING)
+    val progress: Float? = null, // 0.0 - 1.0 (valid only for TRANSCRIBING)
+    val badgeLabel: String? = null
 )
 
 enum class AudioStatus {

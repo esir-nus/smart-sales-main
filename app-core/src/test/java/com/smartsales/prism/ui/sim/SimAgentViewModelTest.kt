@@ -27,6 +27,7 @@ import com.smartsales.prism.data.session.SimSessionRepository
 import com.smartsales.prism.domain.audio.AudioFile
 import com.smartsales.prism.domain.audio.AudioSource
 import com.smartsales.prism.domain.audio.TranscriptionStatus
+import com.smartsales.prism.data.connectivity.registry.DeviceRegistryManager
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.connectivity.ConnectivityPrompt
 import com.smartsales.prism.domain.model.ChatMessage
@@ -1898,7 +1899,8 @@ class SimAgentViewModelTest {
                 ossUploader = mock<OssUploader>(),
                 tingwuPipeline = mock<TingwuPipeline>(),
                 connectivityPrompt = mock<ConnectivityPrompt>(),
-                phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest")
+                phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest"),
+                deviceRegistryManager = mock<DeviceRegistryManager>()
             ),
             orchestrator = mock<DownloadServiceOrchestrator>()
         )

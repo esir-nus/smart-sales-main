@@ -88,7 +88,8 @@ data class AudioFile(
     val lastErrorMessage: String? = null,
     val downloadProgress: Float = 0f,
     val downloadedBytes: Long = 0L,
-    val downloadTotalBytes: Long = 0L
+    val downloadTotalBytes: Long = 0L,
+    val badgeMac: String? = null
 )
 
 @Serializable

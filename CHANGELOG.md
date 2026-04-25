@@ -4,6 +4,7 @@
 
 ### 2026-04-25
 
+- **[新增] 音频卡片显示来源徽章标签** — 录音卡片右下角新增来源徽章显示名称（如"Badge 1"），取代原有云图标；来源徽章已移除注册时退化为 MAC 后缀（如"...EE:FF"）；手机录音保持原有手机图标不变。
 - **[新增] 徽章任务完成信号改为 Command#end** — 音频管线在 `log#` / `rec#` 处理完成后通过 `ConnectivityBridge` 与 BLE 写入链路发送 `Command#end`，替代旧的 Android-only `commandend#1` 接线。
 - **[新增] 徽章 SD 卡空间查询与用户中心展示** — 接入 `SD#space` 查询/回复链路，`ConnectivityViewModel` 暴露存储空间状态，用户中心新增 SD 卡容量行并保留固件返回的原始容量文本。
 - **[修复] 新增设备注册流程可完成与可退出** — post-onboarding 添加新徽章流程在成功配网后直接关闭回到连接管理，不再要求日程 quick-start；新增配对 overlay 现在显示 `关闭` 并支持 Android back 退出，同时退出前取消配对任务。

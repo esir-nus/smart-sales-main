@@ -717,19 +717,29 @@ private fun AudioIcon(item: AudioItemState, onClick: () -> Unit) {
         }
         
         // 2. Source Badge
-        val sourceIcon = when (item.source) {
-            AudioSource.PHONE -> Icons.Outlined.Smartphone
-            AudioSource.SMARTBADGE -> Icons.Outlined.Cloud
+        if (item.source == AudioSource.SMARTBADGE && item.badgeLabel != null) {
+            Text(
+                text = item.badgeLabel,
+                fontSize = 10.sp,
+                color = TextTertiary,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .offset(x = (-4).dp, y = (4).dp)
+            )
+        } else {
+            val sourceIcon = when (item.source) {
+                AudioSource.PHONE -> Icons.Outlined.Smartphone
+                AudioSource.SMARTBADGE -> Icons.Outlined.Cloud
+            }
+            Icon(
+                imageVector = sourceIcon,
+                contentDescription = null,
+                tint = TextTertiary,
+                modifier = Modifier
+                    .size(14.dp)
+                    .align(Alignment.BottomEnd)
+                    .offset(x = (-4).dp, y = (4).dp)
+            )
         }
-        
-        Icon(
-            imageVector = sourceIcon,
-            contentDescription = null,
-            tint = TextTertiary,
-            modifier = Modifier
-                .size(14.dp)
-                .align(Alignment.BottomEnd)
-                .offset(x = (-4).dp, y = (4).dp)
-        )
     }
 }

@@ -8,7 +8,7 @@ This is a **persistent intake project**. It stays open as a long-lived funnel fo
 
 ## Status
 
-open — updated 2026-04-25 (sprints 07–09 authored; 07B done)
+open — updated 2026-04-25 (sprints 01-08 + 07A + 07B done; sprints 09–10 planned)
 
 ## Sprint Index
 
@@ -23,8 +23,9 @@ open — updated 2026-04-25 (sprints 07–09 authored; 07B done)
 | 07A | add-device-registry-exit | done | Repaired post-onboarding `添加新设备` so successful provisioning closes back to connectivity after registration, with no quick-start requirement, skip-to-home shortcut, or onboarding `COMPLETE` wrapper | [07a-add-device-registry-exit.md](sprints/07a-add-device-registry-exit.md) |
 | 07 | badge-switching-lifecycle | done | Real-device two-badge lifecycle closed with app-core logcat evidence for switch A→B and B→A, explicit target reconnect, stale GATT close, and inline add-device discovery filtering so registered badges stay hidden from pairing | [07-badge-switching-lifecycle.md](sprints/07-badge-switching-lifecycle.md) |
 | 07B | sync-network-fragment-filter | done | Filtered noisy BLE pushes from WiFi-status collection so valid `IP#` / WiFi `SD#<SSID>` fragments survive interleaving; added prompt-path evidence so strict HTTP precheck blocks no longer masquerade as WiFi mismatch; focused tests, assemble, install, and on-device manual-sync evidence passed | [07b-sync-network-fragment-filter.md](sprints/07b-sync-network-fragment-filter.md) |
-| 08 | multi-device-audio-source-label | planned | Add per-badge source label to audio drawer cards (bottom-right text showing `RegisteredDevice.displayName`); persist `badgeMac` in `AudioFile`, resolve to label in `AudioViewModel`, render in `AudioCard` | [08-multi-device-audio-source-label.md](sprints/08-multi-device-audio-source-label.md) |
+| 08 | multi-device-audio-source-label | done | Added `badgeMac` to `AudioFile`, attached active device MAC at download in both Real and Sim paths, resolved to `badgeLabel` in `AudioViewModel` via `DeviceRegistry.findByMac()`, rendered as 10.sp `TextTertiary` text in `AudioIcon()` replacing the Cloud icon when label is known | [08-multi-device-audio-source-label.md](sprints/08-multi-device-audio-source-label.md) |
 | 09 | sync-polish | planned | Empty-file gate in real sync path, non-blocking in-memory retry queue (3 attempts before surfacing error card), friendly Chinese error messages on cards, sync summary toast after each `syncFromDevice()` | [09-sync-polish.md](sprints/09-sync-polish.md) |
+| 10 | multi-device-cards-and-disconnect-intent | planned | Replace active-on-top / others-below split in `ConnectivityModal` with equal-status `DeviceCard` rows (tap = connect/switch); add `manuallyDisconnected` flag on `RegisteredDevice` so user-initiated disconnect suppresses heartbeat-driven auto-reconnect and session-restore until the user taps Connect | [10-multi-device-cards-and-disconnect-intent.md](sprints/10-multi-device-cards-and-disconnect-intent.md) |
 
 ## Genesis
 
@@ -39,6 +40,7 @@ open — updated 2026-04-25 (sprints 07–09 authored; 07B done)
 - **2026-04-24 (second drop follow-up)** — Sprint 05 retired the legacy Android-only `commandend#1` task-chime wiring and shipped the spec-owned `Command#end` emitter through both `log#` and `rec#` pipeline terminal states.
 - **2026-04-25 (second drop follow-up)** — Sprint 06 shipped the spec-owned `SD#space` query/reply handler through parser -> bridge -> `ConnectivityViewModel.sdCardSpace` -> UserCenter, keeping the firmware-formatted size string raw and user-initiated only.
 - **2026-04-25 (multi-device UX cluster)** — User proposed extending the existing multi-badge device registry into a complete end-to-end UX: stable switching lifecycle coverage (sprint 07), per-badge audio attribution in the drawer (sprint 08), and sync robustness including non-blocking retry queue, empty-file filtering, friendly error cards, and sync summary toast (sprint 09). These do not require new firmware protocol changes; they build on the existing `RegisteredDevice` / `RealDeviceRegistryManager` / `RealAudioRepository` stack.
+- **2026-04-25 (multi-device UX cluster — connection management)** — User proposed sprint 10 to fix two coupled defects in the connectivity surface: (a) `ConnectivityModal` buries device switching inside the `OtherDeviceCard` expand/collapse menu — replace with equal-status `DeviceCard` rows where tap = select/connect; (b) user-initiated `disconnect()` is indistinguishable from link loss, so heartbeat-driven `scheduleAutoReconnectIfNeeded()` and `initializeOnLaunch` session-restore both fight the user — add per-device `manuallyDisconnected` flag on `RegisteredDevice` that suppresses both paths until the user taps Connect. Wi-Fi teardown is app-side only (BLE drop already cancels HTTP/sync jobs); no firmware command in this sprint. No background scanner — tap-to-reconnect uses existing `connectUsingSession()`. Author = Claude; operator = Claude (explicit user override).
 
 ## Cross-Sprint Decisions
 
@@ -52,7 +54,7 @@ open — updated 2026-04-25 (sprints 07–09 authored; 07B done)
 
 This project is intentionally persistent. Per `docs/specs/project-structure.md` size discipline, projects running past sprint 6 must declare why. The justification here is scope: the hardware team's firmware drops are an open-ended upstream stream, not a bounded objective. Closing this project would force each drop to spawn a new project folder, which is bureaucratic overhead without information value. Re-evaluation at sprint 6 will consider whether the stream has slowed enough to close and migrate to ad-hoc docs-only updates, or whether the project is genuinely load-bearing.
 
-Active queue: sprints 07–09 authored 2026-04-25 extend the project into multi-device UX and sync robustness. Post-09 dormancy recommendation: revert to dormant once these three close, pending the next firmware drop or `log#` / `rec#` semantic clarification.
+Active queue: sprints 07/07A/07B/08 are closed. Sprints 09 (sync-polish) and 10 (multi-device-cards-and-disconnect-intent) are planned and independent of each other. Post-10 dormancy recommendation: revert to dormant once both close, pending the next firmware drop or `log#` / `rec#` semantic clarification.
 
 ## Inputs Pending for Later Sprints
 

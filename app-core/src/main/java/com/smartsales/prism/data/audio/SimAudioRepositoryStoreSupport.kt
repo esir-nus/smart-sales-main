@@ -295,7 +295,8 @@ internal class SimAudioRepositoryStoreSupport(
                     source = AudioSource.SMARTBADGE,
                     status = TranscriptionStatus.PENDING,
                     localAvailability = AudioLocalAvailability.QUEUED,
-                    isStarred = false
+                    isStarred = false,
+                    badgeMac = runtime.deviceRegistryManager.activeDevice.value?.macAddress
                 )
                 createdCount += 1
             }
@@ -398,7 +399,8 @@ internal class SimAudioRepositoryStoreSupport(
             },
             boundSessionId = existing?.boundSessionId,
             activeJobId = existing?.activeJobId,
-            lastErrorMessage = null
+            lastErrorMessage = null,
+            badgeMac = existing?.badgeMac ?: runtime.deviceRegistryManager.activeDevice.value?.macAddress
         )
         mutateAndSave { current ->
             if (existing == null) {

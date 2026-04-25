@@ -10,6 +10,7 @@ import com.smartsales.prism.domain.audio.AudioSource
 import com.smartsales.prism.domain.audio.TranscriptionStatus
 import com.smartsales.data.oss.OssUploadResult
 import com.smartsales.data.oss.OssUploader
+import com.smartsales.prism.data.connectivity.registry.DeviceRegistryManager
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.connectivity.WavDownloadResult
 import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
@@ -67,7 +68,8 @@ class RealAudioRepository @Inject constructor(
     @ApplicationContext private val context: Context,
     private val connectivityBridge: ConnectivityBridge,
     private val ossUploader: OssUploader,
-    private val tingwuPipeline: TingwuPipeline
+    private val tingwuPipeline: TingwuPipeline,
+    private val deviceRegistryManager: DeviceRegistryManager
 ) : AudioRepository {
     
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
@@ -125,7 +127,8 @@ class RealAudioRepository @Inject constructor(
                             timeDisplay = "Just now",
                             source = AudioSource.SMARTBADGE,
                             status = TranscriptionStatus.PENDING,
-                            isStarred = false
+                            isStarred = false,
+                            badgeMac = deviceRegistryManager.activeDevice.value?.macAddress
                         )
                         mutateAndSave { currentList ->
                             currentList + newFile

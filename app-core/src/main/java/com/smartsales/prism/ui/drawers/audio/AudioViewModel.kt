@@ -6,6 +6,7 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.smartsales.prism.data.audio.isBadgeOriginAudio
+import com.smartsales.prism.data.connectivity.registry.DeviceRegistry
 import com.smartsales.prism.domain.audio.AudioFile
 import com.smartsales.prism.domain.audio.AudioDeleteResult
 import com.smartsales.prism.domain.audio.AudioRepository
@@ -38,7 +39,8 @@ private const val AUDIO_BADGE_DELETE_LOG_TAG = "AudioDeleteGate"
 @HiltViewModel
 class AudioViewModel @Inject constructor(
     private val audioRepository: AudioRepository,
-    private val historyRepository: HistoryRepository
+    private val historyRepository: HistoryRepository,
+    private val deviceRegistry: DeviceRegistry
 ) : ViewModel() {
     
     private val _uiEvents = MutableSharedFlow<String>()
@@ -239,8 +241,17 @@ class AudioViewModel @Inject constructor(
         },
         isStarred = isStarred,
         summary = summary,
-        progress = if (status == TranscriptionStatus.TRANSCRIBING) progress else null
+        progress = if (status == TranscriptionStatus.TRANSCRIBING) progress else null,
+        badgeLabel = resolveBadgeLabel(source, badgeMac)
     )
+
+    private fun resolveBadgeLabel(source: DomainSource, badgeMac: String?): String? {
+        if (source != DomainSource.SMARTBADGE || badgeMac == null) return null
+        val device = deviceRegistry.findByMac(badgeMac)
+        if (device != null) return device.displayName
+        val parts = badgeMac.split(":")
+        return if (parts.size >= 2) "...${parts.takeLast(2).joinToString(":")}" else null
+    }
 
     private fun deleteAudioConfirmed(audioId: String) {
         viewModelScope.launch {

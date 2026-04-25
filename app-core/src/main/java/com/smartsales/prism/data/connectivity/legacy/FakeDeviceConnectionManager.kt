@@ -66,6 +66,7 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
     var forgetCalls = 0
     var autoReconnectCalls = 0
     var forceReconnectCalls = 0
+    var forceReconnectSession: BleSession? = null
     var queryNetworkStatusCalls = 0
     
     override fun selectPeripheral(peripheral: BlePeripheral) {
@@ -112,6 +113,11 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
     
     override fun forceReconnectNow() {
         forceReconnectCalls++
+    }
+
+    override fun forceReconnectToSession(session: BleSession) {
+        forceReconnectCalls++
+        forceReconnectSession = session
     }
 
     var stubReconnectAndWaitResult: ConnectionState = ConnectionState.WifiProvisioned(

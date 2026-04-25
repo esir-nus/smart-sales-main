@@ -137,12 +137,12 @@ class AndroidBleScanner @Inject constructor(
             "发现设备 ${peripheral.name} (${peripheral.id}) 匹配 profile=${profile.id}"
         )
         
-        // CRITICAL: Stop scan SYNCHRONOUSLY to prevent more callbacks
-        // The scope.launch was async, allowing 8+ callbacks before stop took effect
-        stop()
-        
         scope.launch {
-            _devices.value = listOf(peripheral)
+            val updated = _devices.value
+                .filterNot { it.id == peripheral.id }
+                .plus(peripheral)
+                .sortedByDescending { it.signalStrengthDbm }
+            _devices.value = updated
         }
     }
 

@@ -13,7 +13,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 
 class RealDeviceRegistryManager(
     private val registry: DeviceRegistry,
@@ -88,19 +87,16 @@ class RealDeviceRegistryManager(
 
         ConnectivityLogger.i("🏠 Registry: switching ${current?.macSuffix ?: "none"} → ${target.macSuffix}")
 
-        // Soft-disconnect current device (preserves session for future reconnect)
-        withContext(dispatchers.io) {
-            deviceConnectionManager.disconnectBle()
-        }
-
         // Seed session for the target device
-        seedSessionForDevice(target)
+        val targetSession = seedSessionForDevice(target)
+
         _activeDevice.value = target
         registry.updateLastConnected(macAddress)
         refreshDeviceList()
 
         // Trigger reconnect for the new device
-        deviceConnectionManager.forceReconnectNow()
+        ConnectivityLogger.d("🏠 Registry: reconnecting target ${target.macSuffix}")
+        deviceConnectionManager.forceReconnectToSession(targetSession)
     }
 
     override fun removeDevice(macAddress: String) {
@@ -146,7 +142,7 @@ class RealDeviceRegistryManager(
         _registeredDevices.value = registry.loadAll()
     }
 
-    private fun seedSessionForDevice(device: RegisteredDevice) {
+    private fun seedSessionForDevice(device: RegisteredDevice): BleSession {
         val session = BleSession(
             peripheralId = device.macAddress,
             peripheralName = device.displayName,
@@ -156,5 +152,6 @@ class RealDeviceRegistryManager(
             establishedAtMillis = device.registeredAtMillis
         )
         sessionStore.saveSession(session)
+        return session
     }
 }

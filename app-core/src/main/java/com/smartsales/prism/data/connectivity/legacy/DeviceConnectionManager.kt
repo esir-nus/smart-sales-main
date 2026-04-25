@@ -78,6 +78,9 @@ interface DeviceConnectionManager {
     /** 立即重连，跳过退避（需已有凭据）。 */
     fun forceReconnectNow()
 
+    /** 使用指定会话立即重连，用于注册表切换后避免读到旧运行时会话。 */
+    fun forceReconnectToSession(session: BleSession)
+
     /** 挂起式重连：等待 BLE GATT + 网络查询完成后返回实际结果。 */
     suspend fun reconnectAndWait(): ConnectionState
 
@@ -204,6 +207,10 @@ class DefaultDeviceConnectionManager @Inject constructor(
 
     override fun forceReconnectNow() {
         reconnectSupport.forceReconnectNow()
+    }
+
+    override fun forceReconnectToSession(session: BleSession) {
+        reconnectSupport.forceReconnectNow(session)
     }
 
     override suspend fun reconnectAndWait(): ConnectionState {

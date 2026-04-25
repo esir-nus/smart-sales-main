@@ -97,10 +97,11 @@ class RealPairingService @Inject constructor(
         scanJob = scope.launch {
             Log.d(TAG, "Starting to collect bleScanner.devices flow")
             bleScanner.devices.collectLatest { devices ->
-                replaceDiscoveredPeripherals(devices)
-                Log.d(TAG, "devices flow emitted: ${devices.size} devices")
-                if (devices.isNotEmpty() && _state.value is PairingState.Scanning) {
-                    val first = devices.first()
+                val pairableDevices = devices.filterNotRegistered()
+                replaceDiscoveredPeripherals(pairableDevices)
+                Log.d(TAG, "devices flow emitted: ${devices.size} devices, pairable=${pairableDevices.size}")
+                if (pairableDevices.isNotEmpty() && _state.value is PairingState.Scanning) {
+                    val first = pairableDevices.first()
                     Log.i(TAG, "Device found! id=${first.id}, name=${first.name}, rssi=${first.signalStrengthDbm}")
                     scanTimeoutJob?.cancel()
                     bleScanner.stop()
@@ -299,6 +300,19 @@ class RealPairingService @Inject constructor(
         discoveredPeripherals.clear()
         devices.forEach { peripheral ->
             discoveredPeripherals[peripheral.id] = peripheral
+        }
+    }
+
+    private fun List<BlePeripheral>.filterNotRegistered(): List<BlePeripheral> {
+        val registeredMacs = registryManager.registeredDevices.value
+            .map { it.macAddress.uppercase() }
+            .toSet()
+        return filterNot { peripheral ->
+            val alreadyRegistered = peripheral.id.uppercase() in registeredMacs
+            if (alreadyRegistered) {
+                Log.d(TAG, "Ignoring already registered badge during add-device scan: ${peripheral.id}")
+            }
+            alreadyRegistered
         }
     }
     

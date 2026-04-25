@@ -34,6 +34,10 @@ internal class DeviceConnectionManagerConnectionSupport(
 
     fun restoreSession() {
         val session = sessionStore.loadSession() ?: return
+        useSession(session)
+    }
+
+    fun useSession(session: BleSession) {
         runtime.currentSession = session
         runtime.lastCredentials = sessionStore.loadKnownNetworks()
             .maxByOrNull { it.lastUsedAtMillis }
@@ -48,6 +52,8 @@ internal class DeviceConnectionManagerConnectionSupport(
         runtime.heartbeatJob = null
         runtime.notificationListenerJob?.cancel()
         runtime.notificationListenerJob = null
+        runtime.reconnectJob?.cancel()
+        runtime.reconnectJob = null
         runtime.notificationListenerActive = false
         cancelAutoRetry()
     }
@@ -219,6 +225,11 @@ internal class DeviceConnectionManagerConnectionSupport(
     }
 
     suspend fun connectUsingSession(session: BleSession): ConnectionState {
+        // 切换设备时先同步清理旧 GATT，避免网关复用旧徽章会话。
+        cancelActiveTransportJobs()
+        badgeStateMonitor.onBleDisconnected()
+        ConnectivityLogger.d("🔌 Soft disconnect (session preserved)")
+        bleGateway.disconnect()
         val activeSession = connectOrRescan(session) ?: return ConnectionState.Error(
             ConnectivityError.DeviceNotFound(session.peripheralId)
         )
@@ -235,6 +246,14 @@ internal class DeviceConnectionManagerConnectionSupport(
                 ConnectionState.Error(error)
             }
         }
+    }
+
+    private fun cancelActiveTransportJobs() {
+        runtime.heartbeatJob?.cancel()
+        runtime.heartbeatJob = null
+        runtime.notificationListenerJob?.cancel()
+        runtime.notificationListenerJob = null
+        runtime.notificationListenerActive = false
     }
 
     private suspend fun connectOrRescan(session: BleSession): BleSession? {

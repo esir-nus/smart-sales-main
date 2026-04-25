@@ -33,11 +33,17 @@ internal class DeviceConnectionManagerReconnectSupport(
         launchReconnect()
     }
 
-    fun forceReconnectNow() {
+    fun forceReconnectNow(sessionOverride: BleSession? = null) {
+        if (sessionOverride != null) {
+            connectionSupport.useSession(sessionOverride)
+        } else {
+            connectionSupport.restoreSession()
+        }
         if (!connectionSupport.hasStoredSession()) {
             runtime.state.value = ConnectionState.NeedsSetup
             return
         }
+        ConnectivityLogger.d("🔄 Force reconnect target=${connectionSupport.currentSessionOrNull()?.peripheralId}")
         launchReconnect(ignoreBackoff = true)
     }
 
@@ -66,10 +72,11 @@ internal class DeviceConnectionManagerReconnectSupport(
         if (ignoreBackoff) {
             runtime.reconnectMeta = runtime.reconnectMeta.copy(lastAttemptMillis = 0L)
         }
+        runtime.reconnectJob?.cancel()
         val attempt = runtime.reconnectMeta.failureCount + 1
         runtime.state.value = ConnectionState.AutoReconnecting(attempt)
         val sessionSnapshot = connectionSupport.currentSessionOrNull()
-        scope.launch(dispatchers.io) {
+        runtime.reconnectJob = scope.launch(dispatchers.io) {
             runtime.reconnectMeta = runtime.reconnectMeta.copy(lastAttemptMillis = System.currentTimeMillis())
             if (sessionSnapshot == null) {
                 runtime.state.value = ConnectionState.NeedsSetup

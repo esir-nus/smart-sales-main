@@ -19,6 +19,7 @@ class SharedPrefsSessionStore(context: Context) : SessionStore {
     }
 
     override fun saveSession(session: BleSession) {
+        // 切换设备后会立即读取会话并重连；这里必须同步落盘，避免 apply() 读回旧徽章。
         prefs.edit().apply {
             // BLE Session fields
             putString(KEY_PERIPHERAL_ID, session.peripheralId)
@@ -27,8 +28,7 @@ class SharedPrefsSessionStore(context: Context) : SessionStore {
             putString(KEY_PROFILE_ID, session.profileId)
             putString(KEY_SECURE_TOKEN, session.secureToken)
             putLong(KEY_ESTABLISHED_AT, session.establishedAtMillis)
-            apply()
-        }
+        }.commit()
     }
     
     override fun loadSession(): BleSession? {

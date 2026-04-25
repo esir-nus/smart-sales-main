@@ -49,8 +49,17 @@ internal class GattBleGatewaySessionSupport(
 
     suspend fun connect(peripheralId: String): com.smartsales.core.util.Result<Unit> = withContext(dispatchers.io) {
         runtime.sessionLock.withLock {
-            if (runtime.persistentSession != null) {
-                return@withContext com.smartsales.core.util.Result.Success(Unit)
+            val existingSession = runtime.persistentSession
+            if (existingSession != null) {
+                if (runtime.persistentPeripheralId == peripheralId) {
+                    return@withContext com.smartsales.core.util.Result.Success(Unit)
+                }
+                ConnectivityLogger.d(
+                    "🔌 Closing stale persistent GATT ${runtime.persistentPeripheralId ?: "unknown"} before connecting $peripheralId"
+                )
+                existingSession.close()
+                runtime.persistentSession = null
+                runtime.persistentPeripheralId = null
             }
 
             val adapter = bluetoothManager.adapter
@@ -73,6 +82,7 @@ internal class GattBleGatewaySessionSupport(
                         runtime.sessionLock.withLock {
                             if (runtime.persistentSession?.callback === disconnectedCallback) {
                                 runtime.persistentSession = null
+                                runtime.persistentPeripheralId = null
                                 ConnectivityLogger.w("⚠️ Unexpected GATT disconnect -> Zombie session cleared")
                             }
                         }
@@ -127,10 +137,12 @@ internal class GattBleGatewaySessionSupport(
                 }
 
                 runtime.persistentSession = gattContext
+                runtime.persistentPeripheralId = peripheralId
                 ConnectivityLogger.i("🔌 Persistent GATT session established: $peripheralId")
                 com.smartsales.core.util.Result.Success(Unit)
             } catch (ex: Exception) {
                 gattContext.close()
+                runtime.persistentPeripheralId = null
                 com.smartsales.core.util.Result.Error(ex)
             }
         }
@@ -140,6 +152,7 @@ internal class GattBleGatewaySessionSupport(
         runtime.sessionLock.withLock {
             runtime.persistentSession?.close()
             runtime.persistentSession = null
+            runtime.persistentPeripheralId = null
             ConnectivityLogger.d("🔌 Persistent GATT session closed")
         }
     }

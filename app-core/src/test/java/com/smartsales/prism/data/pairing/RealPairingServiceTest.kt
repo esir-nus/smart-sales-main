@@ -79,6 +79,39 @@ class RealPairingServiceTest {
     }
 
     @Test
+    fun `startScan hides already registered badges and waits for new badge`() = runTest {
+        val registered = BlePeripheral("14:C1:9F:D7:E3:F6", "CHLE_Intelligent", -26, "bt311")
+        val newBadge = BlePeripheral("1C:DB:D4:9B:8F:96", "CHLE_Intelligent", -40, "bt311")
+        service = RealPairingService(
+            bleScanner,
+            connectionManager,
+            FakeDeviceRegistryManager(
+                initialDevices = listOf(
+                    RegisteredDevice.fromPairing(
+                        peripheral = registered,
+                        session = BleSession.fromPeripheral(registered),
+                        isDefault = true
+                    )
+                )
+            ),
+            httpClient,
+            wifiProvider,
+            connectivityPrompt
+        )
+
+        service.startScan()
+        bleScanner.setDevices(listOf(registered))
+        waitForBackgroundPropagation()
+
+        assertTrue(service.state.value is PairingState.Scanning)
+
+        bleScanner.setDevices(listOf(registered, newBadge))
+        val found = awaitDeviceFound()
+
+        assertEquals(newBadge.id, found.badge.id)
+    }
+
+    @Test
     fun `pairBadge resolves current peripheral from scanner snapshot`() = runTest {
         val peripheral = BlePeripheral("badge-1", "SmartBadge Pro", -42, "bt311")
         service.startScan()
@@ -243,9 +276,11 @@ class RealPairingServiceTest {
         }
     }
 
-    private class FakeDeviceRegistryManager : DeviceRegistryManager {
-        private val _registeredDevices = MutableStateFlow<List<RegisteredDevice>>(emptyList())
-        private val _activeDevice = MutableStateFlow<RegisteredDevice?>(null)
+    private class FakeDeviceRegistryManager(
+        initialDevices: List<RegisteredDevice> = emptyList()
+    ) : DeviceRegistryManager {
+        private val _registeredDevices = MutableStateFlow(initialDevices)
+        private val _activeDevice = MutableStateFlow<RegisteredDevice?>(initialDevices.firstOrNull())
 
         override val registeredDevices: StateFlow<List<RegisteredDevice>> = _registeredDevices.asStateFlow()
         override val activeDevice: StateFlow<RegisteredDevice?> = _activeDevice.asStateFlow()

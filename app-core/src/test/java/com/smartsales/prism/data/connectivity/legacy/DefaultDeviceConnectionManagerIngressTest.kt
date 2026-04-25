@@ -90,6 +90,83 @@ class DefaultDeviceConnectionManagerIngressTest {
     }
 
     @Test
+    fun `forceReconnectNow refreshes runtime session from session store before reconnect`() = runTest {
+        val oldSession = BleSession.fromPeripheral(BlePeripheral("badge-old", "Badge Old", -40))
+        val newSession = BleSession.fromPeripheral(BlePeripheral("badge-new", "Badge New", -35))
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val provisioner = FakeWifiProvisioner()
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val reconnectScope = CoroutineScope(dispatcher)
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = oldSession,
+                credentials = WifiCredentials("MstRobot", "secret")
+            )
+        }
+        val manager = newManager(
+            gateway = gateway,
+            provisioner = provisioner,
+            sessionStore = sessionStore,
+            scope = reconnectScope,
+            dispatcher = dispatcher,
+            networkResult = Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "192.168.0.9",
+                    deviceWifiName = "MstRobot",
+                    phoneWifiName = "MstRobot",
+                    rawResponse = "IP#192.168.0.9, SD#MstRobot"
+                )
+            )
+        )
+
+        sessionStore.saveSession(newSession)
+        manager.forceReconnectNow()
+        testScheduler.runCurrent()
+
+        assertEquals(listOf("badge-new"), gateway.connectCalls)
+        assertEquals(listOf("badge-new"), provisioner.networkCalls.map { it.peripheralId })
+        manager.close()
+    }
+
+    @Test
+    fun `forceReconnectToSession uses explicit switch target without reading stale runtime session`() = runTest {
+        val oldSession = BleSession.fromPeripheral(BlePeripheral("badge-old", "Badge Old", -40))
+        val switchTarget = BleSession.fromPeripheral(BlePeripheral("badge-target", "Badge Target", -35))
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val provisioner = FakeWifiProvisioner()
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        val reconnectScope = CoroutineScope(dispatcher)
+        val sessionStore = InMemorySessionStore().apply {
+            save(
+                session = oldSession,
+                credentials = WifiCredentials("MstRobot", "secret")
+            )
+        }
+        val manager = newManager(
+            gateway = gateway,
+            provisioner = provisioner,
+            sessionStore = sessionStore,
+            scope = reconnectScope,
+            dispatcher = dispatcher,
+            networkResult = Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "192.168.0.10",
+                    deviceWifiName = "MstRobot",
+                    phoneWifiName = "MstRobot",
+                    rawResponse = "IP#192.168.0.10, SD#MstRobot"
+                )
+            )
+        )
+
+        manager.forceReconnectToSession(switchTarget)
+        testScheduler.runCurrent()
+
+        assertEquals(listOf("badge-target"), gateway.connectCalls)
+        assertEquals(listOf("badge-target"), provisioner.networkCalls.map { it.peripheralId })
+        manager.close()
+    }
+
+    @Test
     fun `recording ready event emits full downloadable filename`() = runTest {
         val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
         val sessionStore = InMemorySessionStore().apply {
@@ -1194,12 +1271,16 @@ class DefaultDeviceConnectionManagerIngressTest {
         private val connectResult: Result<Unit>,
         var reachable: Boolean = true
     ) : GattSessionLifecycle {
+        val connectCalls = mutableListOf<String>()
         private val notifications = MutableSharedFlow<BadgeNotification>(
             replay = 1,
             extraBufferCapacity = 4
         )
 
-        override suspend fun connect(peripheralId: String): Result<Unit> = connectResult
+        override suspend fun connect(peripheralId: String): Result<Unit> {
+            connectCalls += peripheralId
+            return connectResult
+        }
 
         override suspend fun disconnect() = Unit
 

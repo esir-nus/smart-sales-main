@@ -221,6 +221,7 @@ The connectivity surface now supports multi-device management through `DeviceReg
 - `DeviceRegistryManager` orchestrates "which device" while `DeviceConnectionManager` continues to handle "how to connect"
 - `DeviceRegistry` (SharedPrefs-backed, Layer 2) persists the registered device list; `DeviceRegistryManager` (Layer 4) owns active device selection, switching, and legacy single-device migration
 - `RealPairingService` calls `registryManager.registerDevice()` after successful pairing; the first registered device automatically becomes the default
+- post-onboarding add-device discovery filters out `DeviceRegistryManager.registeredDevices`, so already registered badges remain managed only in `ConnectivityModal` and do not appear as pairable scan results
 - `ConnectivityModal` now displays active device + device list with inline rename, switch, remove, and set-default actions; frosted glass styling follows `SimHomeHeroTokens`
 - `ConnectivityModal` may expose a connected-only badge voice-volume quick entry that persists the desired slider value locally and sends one best-effort BLE `volume#<0..100>` command only on finger-up
 - `ConnectivityModal` now splits first-time setup from later add-device entry: `NEEDS_SETUP` continues to the full `SIM_CONNECTIVITY` onboarding route, while the manager `添加设备` action opens the shell-owned `ADD_DEVICE` surface backed by `OnboardingHost.SIM_ADD_DEVICE`

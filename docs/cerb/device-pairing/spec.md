@@ -81,6 +81,8 @@ BLE scanning requires runtime permissions on Android 12+. Permissions are reques
   - the accepted scan-name family is `CHLE_Intelligent` plus spacing/case variants such as `CHLE Intelligent`
   - generic UART/NUS service UUID presence alone is not enough to surface a pairable device
   - unrelated BLE devices must be ignored and scanning continues until a trusted badge appears or the scan times out
+  - post-onboarding add-device discovery must hide devices already present in `DeviceRegistryManager.registeredDevices`; registered badges stay visible only in the connectivity manager, not in the pairing discovery card
+  - the Android scanner may collect multiple trusted badge candidates during one scan window so one visible registered badge does not prevent discovery of a second unregistered badge
 - **Pairing**:
   1. Resolve the latest matching `BlePeripheral` from the scanner-owned snapshot using the selected `DiscoveredBadge.id`
   2. Call `connectionManager.selectPeripheral(...)`

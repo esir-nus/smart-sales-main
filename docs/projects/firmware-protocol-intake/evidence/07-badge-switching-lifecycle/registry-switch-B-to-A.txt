@@ -1,0 +1,7 @@
+04-25 11:35:35.574 I/SmartSalesConn( 7849): Registry: switching ...8F:96 -> ...E3:F6
+04-25 11:35:35.577 D/SmartSalesConn( 7849): Registry: reconnecting target ...E3:F6
+04-25 11:35:35.577 D/SmartSalesConn( 7849): Force reconnect target=...E3:F6
+04-25 11:35:35.578 D/SmartSalesConn( 7849): Soft disconnect (session preserved)
+04-25 11:35:35.583 D/SmartSalesConn( 7849): Persistent GATT session closed
+04-25 11:35:36.574 I/SmartSalesConn( 7849): Persistent GATT session established: ...E3:F6
+04-25 11:35:36.575 D/SmartSalesConn( 7849): connectUsingSession: connected, ip=192.168.0.107 ssid=MstRobot

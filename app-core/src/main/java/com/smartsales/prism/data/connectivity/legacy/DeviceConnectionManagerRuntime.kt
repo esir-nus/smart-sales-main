@@ -37,6 +37,7 @@ internal class DeviceConnectionManagerRuntime {
     var lastCredentials: WifiCredentials? = null
     var heartbeatJob: Job? = null
     var notificationListenerJob: Job? = null
+    var reconnectJob: Job? = null
     var notificationListenerActive = false
     var notificationListenerGeneration = 0L
     var autoRetryJob: Job? = null

@@ -9,6 +9,7 @@ internal class GattBleGatewayRuntime {
     val sessionLock = Mutex()
     val configCache = mutableMapOf<String, BleGatewayConfig>()
     var persistentSession: GattContext? = null
+    var persistentPeripheralId: String? = null
     val badgeNotifications = MutableSharedFlow<BadgeNotification>(
         extraBufferCapacity = 16,
         onBufferOverflow = BufferOverflow.DROP_OLDEST

@@ -123,9 +123,9 @@ private fun ScanRadarContent(onCancel: () -> Unit) {
     val pulseAlpha by transition.animateFloat(0.75f, 0f, infiniteRepeatable(animation = tween(2200), repeatMode = RepeatMode.Restart), label = "scanPulseAlpha")
 
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text("正在搜索设备", color = OnboardingText, fontSize = 29.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+        Text("添加新设备", color = OnboardingText, fontSize = 29.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
         Spacer(Modifier.size(14.dp))
-        Text("保持徽章靠近手机，连接将始终要求您手动确认。", color = OnboardingMuted, fontSize = 15.sp, lineHeight = 24.sp, textAlign = TextAlign.Center)
+        Text("仅显示尚未注册的徽章，已添加设备会保留在设备管理里。", color = OnboardingMuted, fontSize = 15.sp, lineHeight = 24.sp, textAlign = TextAlign.Center)
         Spacer(Modifier.size(42.dp))
         Box(modifier = Modifier.size(220.dp), contentAlignment = Alignment.Center) {
             Box(modifier = Modifier.size(172.dp).clip(CircleShape).border(1.dp, OnboardingBlue.copy(alpha = 0.18f), CircleShape))
@@ -150,7 +150,7 @@ internal fun DeviceFoundStep(
     }
 
     Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        TitleBlock("发现设备", "系统不会自动连接，必须由您手动点按设备卡片确认。")
+        TitleBlock("发现新设备", "系统不会自动连接，必须由您手动点按设备卡片确认。")
         Spacer(Modifier.size(26.dp))
         FrostedCard(
             modifier = Modifier.fillMaxWidth(),
@@ -168,7 +168,7 @@ internal fun DeviceFoundStep(
                     Spacer(Modifier.size(10.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(badge.name, color = OnboardingText, fontSize = 18.sp, fontWeight = FontWeight.Medium)
-                        Text("ID ${badge.id}", color = OnboardingMuted, fontSize = 13.sp)
+                        Text(badge.id.toMacSuffix(), color = OnboardingMuted, fontSize = 13.sp)
                     }
                     Text("${badge.signalStrengthDbm} dBm", color = OnboardingBlue, fontWeight = FontWeight.Medium)
                 }
@@ -179,4 +179,9 @@ internal fun DeviceFoundStep(
             }
         }
     }
+}
+
+private fun String.toMacSuffix(): String {
+    val parts = split(":")
+    return if (parts.size >= 2) "...${parts.takeLast(2).joinToString(":")}" else this
 }

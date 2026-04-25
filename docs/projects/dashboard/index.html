@@ -423,7 +423,7 @@
           This view is rebuilt from repo trackers under <code>docs/projects/**</code>. It is meant to answer three questions quickly:
           what projects exist, what sprint tasks sit under them, and what state each one is in right now.
         </p>
-        <div class="generated-at">Generated 2026-04-25 15:00 CST</div>
+        <div class="generated-at">Generated 2026-04-25 16:27 CST</div>
       </article>
       <section class="summary-panel">
         <article class="metric">
@@ -434,7 +434,7 @@
         <article class="metric">
           <div class="metric-label">Sprints</div>
           <div class="metric-value">22</div>
-          <div class="metric-meta">0 active, 19 done</div>
+          <div class="metric-meta">0 active, 20 done</div>
         </article>
         <article class="metric">
           <div class="metric-label">Blocked</div>
@@ -452,10 +452,10 @@
     <ul class="status-strip">
       <li class="status-chip status-open"><span class="status-dot"></span><span>Open projects: 1</span></li>
 <li class="status-chip status-closed"><span class="status-dot"></span><span>Closed projects: 2</span></li>
-<li class="status-chip status-planned"><span class="status-dot"></span><span>Planned: 2</span></li>
+<li class="status-chip status-planned"><span class="status-dot"></span><span>Planned: 1</span></li>
 <li class="status-chip status-authored"><span class="status-dot"></span><span>Authored: 0</span></li>
 <li class="status-chip status-in-progress"><span class="status-dot"></span><span>In progress: 0</span></li>
-<li class="status-chip status-done"><span class="status-dot"></span><span>Done: 19</span></li>
+<li class="status-chip status-done"><span class="status-dot"></span><span>Done: 20</span></li>
 <li class="status-chip status-stopped"><span class="status-dot"></span><span>Stopped: 0</span></li>
 <li class="status-chip status-blocked"><span class="status-dot"></span><span>Blocked: 0</span></li>
 <li class="status-chip status-fallback"><span class="status-dot"></span><span>Other: 6</span></li>
@@ -641,12 +641,12 @@
       <h2 class="project-title"><a href="../firmware-protocol-intake/tracker.md">firmware-protocol-intake</a></h2>
       <p class="project-objective">Receive firmware protocol updates from the hardware team and reflect them in the app. The flow is always firmware-first, software-after: hardware team ships a new or revised BLE/HTTP protocol item, this project records the spec delta, then wires the app-side handler (connectivity module by default; may touch adjacent modules when a drop reaches further). The canonical protocol SOT is `docs/specs/esp32-protocol.md`; app-side module ownership is tracked through `docs/cerb/interface-map.md`.</p>
       <div class="project-meta">
-        <span class="meta-pill">Project status: open — updated 2026-04-25 (sprints 01-08 + 07A + 07B done; sprints 09–10 planned)</span><span class="meta-pill">12 sprints</span><span class="meta-pill">Folder: firmware-protocol-intake</span>
+        <span class="meta-pill">Project status: open — updated 2026-04-25 (sprints 01-10 done except sprint 09 still planned)</span><span class="meta-pill">12 sprints</span><span class="meta-pill">Folder: firmware-protocol-intake</span>
       </div>
     </div>
     <span class="status-chip status-open">
       <span class="status-dot"></span>
-      <span>open — updated 2026-04-25 (sprints 01-08 + 07A + 07B done; sprints 09–10 planned)</span>
+      <span>open — updated 2026-04-25 (sprints 01-10 done except sprint 09 still planned)</span>
     </span>
   </div>
   <div class="sprint-grid">
@@ -843,12 +843,12 @@
       <div class="sprint-label">multi-device-cards-and-disconnect-intent</div>
       <h3 class="sprint-title"><a href="../firmware-protocol-intake/sprints/10-multi-device-cards-and-disconnect-intent.md">Sprint 10 — multi-device-cards-and-disconnect-intent</a></h3>
     </div>
-    <span class="status-chip status-planned">
+    <span class="status-chip status-done">
       <span class="status-dot"></span>
-      <span>planned</span>
+      <span>done</span>
     </span>
   </div>
-  <p class="sprint-summary">Replace active-on-top / others-below split in `ConnectivityModal` with equal-status `DeviceCard` rows (tap = connect/switch); add `manuallyDisconnected` flag on `RegisteredDevice` so user-initiated disconnect suppresses heartbeat-driven auto-reconnect and session-restore until the user taps Connect</p>
+  <p class="sprint-summary">Replaced `DeviceHeader`/`OtherDeviceCard` split with equal-status `DeviceCard` rows (tap = connect/switch); added `manuallyDisconnected: Boolean` to `RegisteredDevice` persisted via `SharedPrefsDeviceRegistry`; wired through `RealDeviceRegistryManager.markManuallyDisconnected`, `RealConnectivityService.disconnect/connect`, and `scheduleAutoReconnectIfNeeded` early-return guard so user-initiated disconnect suppresses all auto-reconnect and session-restore until user taps Connect</p>
   <div class="sprint-footer">
     <span>firmware-protocol-intake / sprint 10</span>
     <span>sprints/10-multi-device-cards-and-disconnect-intent.md</span>

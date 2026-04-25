@@ -54,7 +54,7 @@ open — updated 2026-04-25 (sprints 01-10 done except sprint 09 still planned)
 
 This project is intentionally persistent. Per `docs/specs/project-structure.md` size discipline, projects running past sprint 6 must declare why. The justification here is scope: the hardware team's firmware drops are an open-ended upstream stream, not a bounded objective. Closing this project would force each drop to spawn a new project folder, which is bureaucratic overhead without information value. Re-evaluation at sprint 6 will consider whether the stream has slowed enough to close and migrate to ad-hoc docs-only updates, or whether the project is genuinely load-bearing.
 
-Active queue: sprints 07/07A/07B/08 are closed. Sprints 09 (sync-polish) and 10 (multi-device-cards-and-disconnect-intent) are planned and independent of each other. Post-10 dormancy recommendation: revert to dormant once both close, pending the next firmware drop or `log#` / `rec#` semantic clarification.
+Active queue: sprints 07, 07A, 07B, 08, and 10 are closed. Sprint 09 (sync-polish) remains planned and independent. Post-10 dormancy recommendation: revert to dormant once sprint 09 closes, pending the next firmware drop or `log#` / `rec#` semantic clarification.
 
 ## Inputs Pending for Later Sprints
 

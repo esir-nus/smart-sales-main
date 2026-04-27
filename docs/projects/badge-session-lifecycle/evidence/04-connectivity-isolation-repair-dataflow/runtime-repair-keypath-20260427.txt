@@ -1,0 +1,17 @@
+89554:04-27 11:28:06.175 D/PairingService( 6296): startScan() called
+89959:04-27 11:28:06.254 I/PairingService( 6296): Device found! id=14:C1:9F:D7:E3:F6, name=CHLE_Intelligent, rssi=-43
+98706:04-27 11:28:24.562 D/PairingService( 6296): pairBadge() called for CHLE_Intelligent with SSID=qwe
+98712:04-27 11:28:24.565 I/SmartSalesConn( 6296): 🔗 provision start device=CHLE_Intelligent ssid=qwe
+101696:04-27 11:28:26.323 I/SmartSalesConn( 6296): 🔗 provision finished status=success device=CHLE_Intelligent
+101703:04-27 11:28:26.333 D/PairingService( 6296): WiFi provisioning successful!
+114858:04-27 11:28:30.022 D/PairingService( 6296): Network check success: IP=10.105.172.34
+114865:04-27 11:28:30.023 D/PairingService( 6296): Network check success: IP=10.105.172.34
+114971:04-27 11:28:30.583 I/PairingService( 6296): Device registered: CHLE_Intelligent (14:C1:9F:D7:E3:F6)
+124396:04-27 11:28:32.559 D/AudioPipeline( 6296): 🔎 isReady preflight: result=ready baseUrl=http://10.105.172.34:8088
+125676:04-27 11:28:33.686 D/AudioPipeline( 6296): SIM badge sync listRecordings success count=0
+125678:04-27 11:28:33.687 I/VALVE_PROTOCOL( 6296): 🚦 [UI_STATE_EMITTED] | Size: 65 | SIM audio badge sync completed
+125682:04-27 11:28:33.687 D/AudioPipeline( 6296): SIM audio badge sync completed: trigger=auto queuedCount=0 retryQueuedCount=0 branch=device_empty
+146278:04-27 11:28:50.712 I/VALVE_PROTOCOL( 6296): source=manager_add_device target=ADD_DEVICE
+146280:04-27 11:28:50.712 D/SimConnectivityRoute( 6296): SIM connectivity setup started: source=manager_add_device target=ADD_DEVICE
+146481:04-27 11:28:51.643 D/PairingService( 6296): startScan() called
+146970:04-27 11:28:51.811 I/PairingService( 6296): Device found! id=1C:DB:D4:9B:8F:96, name=CHLE_Intelligent, rssi=-30

@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.content.Intent
 import android.provider.Settings
+import android.util.Log
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.smartsales.prism.BuildConfig
@@ -173,6 +174,7 @@ fun ConnectivityModal(
                             onUpdate = viewModel::updateWifiConfig,
                             onInputChanged = viewModel::clearWifiMismatchError,
                             onIgnore = viewModel::cancel,
+                            onStartWifiRepair = viewModel::startIsolationWifiRepair,
                             isolationBadgeIp = isolationBadgeIp,
                             isolationTriggerContext = isolationTriggerContext
                         )
@@ -248,6 +250,7 @@ private fun WifiMismatchCard(
     onUpdate: (String, String) -> Unit,
     onInputChanged: () -> Unit,
     onIgnore: () -> Unit,
+    onStartWifiRepair: () -> Unit,
     isolationBadgeIp: String?,
     isolationTriggerContext: IsolationTriggerContext?,
 ) {
@@ -266,6 +269,7 @@ private fun WifiMismatchCard(
             onUpdate = onUpdate,
             onInputChanged = onInputChanged,
             onIgnore = onIgnore,
+            onStartWifiRepair = onStartWifiRepair,
             isolationBadgeIp = isolationBadgeIp,
             isolationTriggerContext = isolationTriggerContext
         )
@@ -566,12 +570,13 @@ private fun ModalActionButton(
 
 @Composable
 internal fun WifiMismatchView(
-    repairState: WifiRepairState,
+    repairState: WifiRepairState = WifiRepairState.Idle,
     suggestedSsid: String?,
     errorMessage: String?,
     onUpdate: (String, String) -> Unit,
     onInputChanged: () -> Unit,
     onIgnore: () -> Unit,
+    onStartWifiRepair: () -> Unit = onIgnore,
     isolationBadgeIp: String? = null,
     isolationTriggerContext: IsolationTriggerContext? = null,
 ) {
@@ -606,7 +611,7 @@ internal fun WifiMismatchView(
                 WifiRepairIsolationContent(
                     badgeIp = isolationBadgeIp,
                     triggerContext = isolationTriggerContext,
-                    onRePair = onIgnore
+                    onStartWifiRepair = onStartWifiRepair
                 )
             } else {
                 WifiRepairHardFailureContent(
@@ -842,7 +847,7 @@ private fun WifiRepairHttpDelayedContent(
 private fun WifiRepairIsolationContent(
     badgeIp: String?,
     triggerContext: IsolationTriggerContext? = null,
-    onRePair: () -> Unit,
+    onStartWifiRepair: () -> Unit,
 ) {
     val context = LocalContext.current
 
@@ -917,10 +922,13 @@ private fun WifiRepairIsolationContent(
                 }
             )
             ModalActionButton(
-                text = "重新配对",
+                text = "修复 Wi-Fi 配置",
                 color = TextSecondary,
                 modifier = Modifier.fillMaxWidth(),
-                onClick = onRePair
+                onClick = {
+                    Log.i("ConnectivityModal", "isolation wifi repair tapped")
+                    onStartWifiRepair()
+                }
             )
         }
     }

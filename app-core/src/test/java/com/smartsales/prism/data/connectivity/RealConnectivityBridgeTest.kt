@@ -555,7 +555,8 @@ class RealConnectivityBridgeTest {
 
         override suspend fun promptSuspectedIsolation(
             badgeIp: String,
-            triggerContext: IsolationTriggerContext
+            triggerContext: IsolationTriggerContext,
+            suggestedSsid: String?
         ) = Unit
     }
 

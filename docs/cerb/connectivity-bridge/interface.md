@@ -2,7 +2,7 @@
 
 > **Blackbox contract** — For consumers (Scheduler, Badge Audio Pipeline). Don't read implementation.
 > **Status**: Active supporting interface
-> **Last Updated**: 2026-04-25
+> **Last Updated**: 2026-04-27
 
 ---
 
@@ -220,6 +220,19 @@ sealed class ReconnectResult {
 sealed class WifiConfigResult {
     object Success : WifiConfigResult()
     data class Error(val message: String) : WifiConfigResult()
+}
+```
+
+### ConnectivityPrompt
+
+```kotlin
+interface ConnectivityPrompt {
+    suspend fun promptWifiMismatch(suggestedSsid: String?)
+    suspend fun promptSuspectedIsolation(
+        badgeIp: String,
+        triggerContext: IsolationTriggerContext = IsolationTriggerContext.POST_PAIRING,
+        suggestedSsid: String? = null
+    )
 }
 ```
 

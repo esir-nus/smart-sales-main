@@ -16,7 +16,8 @@ data class WifiMismatchPromptRequest(
 // 疑似客户端隔离提示请求 — 携带徽章 IP 和触发场景用于界面诊断展示及文案选择
 data class SuspectedIsolationPromptRequest(
     val badgeIp: String,
-    val triggerContext: IsolationTriggerContext = IsolationTriggerContext.POST_PAIRING
+    val triggerContext: IsolationTriggerContext = IsolationTriggerContext.POST_PAIRING,
+    val suggestedSsid: String? = null
 )
 
 @Singleton
@@ -50,16 +51,21 @@ class ConnectivityPromptCoordinator @Inject constructor() : ConnectivityPrompt {
 
     override suspend fun promptSuspectedIsolation(
         badgeIp: String,
-        triggerContext: IsolationTriggerContext
+        triggerContext: IsolationTriggerContext,
+        suggestedSsid: String?
     ) {
+        val normalizedSsid = suggestedSsid
+            ?.trim()
+            ?.takeIf(String::isNotEmpty)
         Log.d(
             "SmartSalesConn",
-            "ConnectivityPrompt prompt=suspected_isolation badgeIp=${badgeIp.trim()} trigger=${triggerContext.name.lowercase()}"
+            "ConnectivityPrompt prompt=suspected_isolation badgeIp=${badgeIp.trim()} trigger=${triggerContext.name.lowercase()} suggestedSsid=${normalizedSsid ?: "unknown"}"
         )
         _suspectedIsolationRequests.emit(
             SuspectedIsolationPromptRequest(
                 badgeIp = badgeIp.trim(),
-                triggerContext = triggerContext
+                triggerContext = triggerContext,
+                suggestedSsid = normalizedSsid
             )
         )
     }

@@ -225,10 +225,29 @@ Current implementation assessment:
 - `AudioViewModel.audioItems` still uses `SharingStarted.WhileSubscribed(5000)` for repository audio files.
 - These are the correct targets for Sprint 03 unless further investigation finds a composable-level collection bug.
 
+## Section 6 - Connectivity Isolation Repair
+
+Network isolation prompts are part of the badge session lifecycle because they decide whether the current active badge can remain usable after the phone changes Wi-Fi or hotspot transport.
+
+Invariants:
+
+- **MUST:** isolation prompts provide a real recovery action, not just a transient UI dismissal.
+- **MUST:** recovery for an already registered active badge repair Wi-Fi credentials without unregistering the badge.
+- **MUST NOT:** isolation recovery route an already registered active badge into full add-device pairing unless the user explicitly removes/unpairs it first.
+- **MUST:** the isolation CTA use wording that communicates Wi-Fi/network repair, not full pairing.
+- **MUST:** the Wi-Fi repair form prefill the current phone SSID when available while keeping the SSID editable and the password manual.
+- **MUST:** repair actions leave adb/logcat evidence that identifies the user action and the lifecycle transition taken.
+
+Implementation direction:
+
+The current add-device scan intentionally filters already registered badges. That is correct for adding a second device and must not drive isolation recovery for the active registered badge. Isolation recovery should keep the registry row and BLE/session material, enter the existing Wi-Fi credential repair form, and call the manual `updateWifiConfig()` repair path after explicit user confirmation.
+
 ## Implementing Sprints
 
-Sprint 02 and Sprint 03 are implementing against this contract.
+Sprint 02, Sprint 03, and Sprint 04 are implementing against this contract.
 
 Sprint 02 implements the audio sync teardown rule: queued and active badge downloads must not survive an active-device MAC change.
 
 Sprint 03 implements the UI observation rule: audio inventory/download-progress flows must stay hot enough to reflect badge-originated updates while drawers are closed.
+
+Sprint 04 implements the connectivity isolation repair rule: hotspot/network-isolation recovery must be tested with real adb evidence, and the isolation CTA must enter Wi-Fi credential repair for registered badges instead of clearing the prompt or starting full add-device pairing.

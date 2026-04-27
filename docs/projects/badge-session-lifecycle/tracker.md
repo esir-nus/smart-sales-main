@@ -19,6 +19,7 @@ open
 | 01 | lifecycle-design | done | Authored the badge session lifecycle core flow covering single-device states, multi-device switch teardown, audio sync binding, and UI observation rules. | [sprints/01-lifecycle-design.md](sprints/01-lifecycle-design.md) |
 | 02 | audio-download-device-scope | done | Audio repository now cancels queued and active badge downloads when the active device MAC changes, keeping old-device work from using the new connection. | [sprints/02-audio-download-device-scope.md](sprints/02-audio-download-device-scope.md) |
 | 03 | audio-drawer-live-observation | authored | — | [sprints/03-audio-drawer-live-observation.md](sprints/03-audio-drawer-live-observation.md) |
+| 04 | connectivity-isolation-repair-dataflow | in_progress | Runtime dataflow test/fix for hotspot/network isolation recovery; registered badges must enter Wi-Fi credential repair, not full re-pairing. | [sprints/04-connectivity-isolation-repair-dataflow.md](sprints/04-connectivity-isolation-repair-dataflow.md) |
 
 ## Cross-Sprint Decisions
 
@@ -26,6 +27,7 @@ open
 - Dependency direction: audio repository may observe `DeviceRegistryManager`, but the registry must not import audio types.
 - UI surfaces must use `SharingStarted.Eagerly` for flows that carry real-time badge state (audio files, download progress). `WhileSubscribed` is acceptable only for flows that are purely derived from user actions and can tolerate a snapshot.
 - All sprint contracts in this project are authored as starting hypotheses, not definitive prescriptions. The operator must evaluate each fix in context before executing.
+- Hardware/runtime lifecycle regressions discovered during a later sprint should become their own dataflow test/fix sprint when they cross feature boundaries. Do not hide connectivity repair work inside an audio-only sprint.
 
 ## Lessons Pointer
 

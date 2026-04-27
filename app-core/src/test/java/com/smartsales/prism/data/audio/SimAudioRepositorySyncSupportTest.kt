@@ -646,7 +646,8 @@ class SimAudioRepositorySyncSupportTest {
 
         override suspend fun promptSuspectedIsolation(
             badgeIp: String,
-            triggerContext: IsolationTriggerContext
+            triggerContext: IsolationTriggerContext,
+            suggestedSsid: String?
         ) {
             isolationPrompts += badgeIp to triggerContext
         }

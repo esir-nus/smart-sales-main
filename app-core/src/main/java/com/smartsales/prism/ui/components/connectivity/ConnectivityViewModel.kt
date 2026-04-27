@@ -173,6 +173,7 @@ class ConnectivityViewModel @Inject constructor(
             promptCoordinator.suspectedIsolationRequests.collect { request ->
                 _isolationBadgeIp.value = request.badgeIp
                 _isolationTriggerContext.value = request.triggerContext
+                _wifiMismatchSuggestedSsid.value = request.suggestedSsid
                 _repairState.value = WifiRepairState.HardFailure(
                     WifiRepairState.HardFailure.HardFailureReason.SUSPECTED_ISOLATION
                 )
@@ -342,6 +343,24 @@ class ConnectivityViewModel @Inject constructor(
 
     fun removeDevice(macAddress: String) {
         registryManager.removeDevice(macAddress)
+    }
+
+    fun startIsolationWifiRepair(): Boolean {
+        val activeMac = activeDevice.value?.macAddress ?: run {
+            Log.w("ConnectivityVM", "startIsolationWifiRepair skipped - no active device")
+            return false
+        }
+        val suggestedSsid = _wifiMismatchSuggestedSsid.value
+        Log.i(
+            "ConnectivityVM",
+            "startIsolationWifiRepair entering credential repair for active mac=$activeMac suggestedSsid=${suggestedSsid ?: "unknown"}"
+        )
+        activeOperationJob?.cancel()
+        activeOperationJob = null
+        _wifiMismatchErrorMessage.value = null
+        _repairState.value = WifiRepairState.EditCredentials(suggestedSsid)
+        _uiOverride.value = ConnectionState.WIFI_MISMATCH
+        return true
     }
 
     fun renameDevice(macAddress: String, newName: String) {

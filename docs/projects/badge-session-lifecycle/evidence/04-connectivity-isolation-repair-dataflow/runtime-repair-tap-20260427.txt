@@ -1,0 +1,491 @@
+--------- beginning of main
+04-27 11:19:04.427 D/SLM-SRV-SLAService( 3839): checktemp temperature = 48051 temperature_average = 48008 isPerformanceMode = false thermal_enable_slm = false
+04-27 11:19:04.440 D/JavaheapMonitor( 6071): Java heap used=3M max=256M, proc: com.xiaomi.aiasst.service
+04-27 11:19:04.441 V/JavaheapMonitor( 6071): Check java heap usage finished! Next check delay: 300000
+04-27 11:19:04.474 D/JavaheapMonitor(25900): Java heap used=4M max=256M, proc: android.process.media
+04-27 11:19:04.475 V/JavaheapMonitor(25900): Check java heap usage finished! Next check delay: 300000
+04-27 11:19:04.483 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-27 11:19:04.483 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-27 11:19:04.499 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-27 11:19:04.507 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa8140) status 0 for display-0.
+04-27 11:19:04.507 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-27 11:19:04.517 I/adbd    ( 3027): in ShellService: input tap 720 2030
+--------- beginning of system
+04-27 11:19:04.557 W/MIUIInput( 3839): Input motion event injection from package: null action ACTION_DOWN
+04-27 11:19:04.558 I/MiuiInputUtil( 3839): MiuiSpecialWindowInfo: af8676b com.smartsales.prism/com.smartsales.prism.MainActivity(15,0x0,0x0,[0,0,1440,3200],1.00);GestureStubLeft(8,0x104,0x0,[0,338,82,3109],1.00);GestureStubRight(7,0x104,0x0,[1358,338,1440,3109],1.00);GestureStubHome(9,0x104,0x0,[0,3109,1440,3200],1.00);GestureStub<none>;StatusBar1(14,0x104,0x0,[0,0,1440,169],1.00);StatusBar(23,0x106,0x0,[0,0,1440,169],0.00);
+04-27 11:19:04.558 I/MIUIInput( 3839): [MotionEvent] publisher action=0x0, deviceId=-1, 553122942, channel 'af8676b com.smartsales.prism/com.smartsales.prism.MainActivity'
+04-27 11:19:04.558 I/MIUIInput( 3839): [MotionEvent] publisher action=0x0, deviceId=-1, 553122942, channel '[Gesture Monitor] onehanded-touch'
+04-27 11:19:04.558 I/MIUIInput( 3839): [MotionEvent] publisher action=0x0, deviceId=-1, 553122942, channel '[Gesture Monitor] WMShell'
+04-27 11:19:04.558 I/MIUIInput( 3839): [MotionEvent] publisher action=0x0, deviceId=-1, 553122942, channel '[Gesture Monitor] miui-gesture'
+04-27 11:19:04.558 I/MIUIInput(17230): [MotionEvent] ViewRootImpl windowName 'com.smartsales.prism/com.smartsales.prism.MainActivity', { action=ACTION_DOWN, id[0]=0, pointerCount=1, eventTime=553122942, downTime=553122942, phoneEventTime=1777259944556 } moveCount:0
+04-27 11:19:04.559 D/VRI[MainActivity](17230): getMiuiFreeformStackInfo mTmpFrames.miuiFreeFormStackInfo: null
+04-27 11:19:04.559 D/SchedBoost( 3839): handleSceneBoost type: 17, active :true
+04-27 11:19:04.559 I/ProcessManager( 3839): getRenderThreadTidByPid, caller=3839
+04-27 11:19:04.560 D/SchedBoostThread( 3839): thread tid=17230, priority is set to 1
+04-27 11:19:04.560 D/SchedBoostThread( 3839): thread tid=32463, priority is set to 1
+04-27 11:19:04.560 I/SidebarCoverView( 5754): onTouch : 4
+04-27 11:19:04.561 I/MiuiSplitInputMethodImpl( 3839): Skip onPointerDownOutsideFocusLocked
+04-27 11:19:04.561 D/OneHandedTutorialHandler( 5963): resetDraggingState: false
+04-27 11:19:04.561 D/EventBus( 1255): No subscribers registered for event class com.xiaomi.xms.event.msg.SystemTouchMsg
+04-27 11:19:04.561 D/EventBus( 1255): No subscribers registered for event class xc.h
+04-27 11:19:04.561 D/MiuiFreeformModeGestureHandler( 5963): start handle MotionEvents:(720.0,2030.0)
+04-27 11:19:04.561 D/MiuiFreeformModeGestureHandler( 5963): handleMotionEvents mActiveMiuiFreeformTask null x: 720.0 y: 2030.0 current miuiFreeformModeTaskInfo: 
+04-27 11:19:04.561 I/MiuiSplitInputMethodImpl( 3839): Skip onPointerDownOutsideFocusLocked
+04-27 11:19:04.561 D/MultiTaskingTaskRepository( 5963): getTopFullscreenTaskInfo: taskId=28050 windowingMode=1 isVisible=true isTopActivityTransparent=false
+04-27 11:19:04.561 D/MiuiDecorationRootViewHost( 5963): isTouchedInTopCaption: taskId = 28050, tempViewHost = null
+04-27 11:19:04.561 I/MiuiSplitInputMethodImpl( 3839): Skip onPointerDownOutsideFocusLocked
+04-27 11:19:04.561 D/MiuiDecorationDot( 5963): isTouchedInTopCaption: taskId = 28050, mMulWinSwitchVIewHost is not ready for layout
+04-27 11:19:04.561 D/MulWinSwitchEventHandler( 5963): dispatchToFullOrSplitDecorationDot: touchedTaskId=-1
+04-27 11:19:04.561 D/MulWinSwitchEventHandler( 5963): handleReceivedMotionEvent: mTouchedBottomTaskId=-1
+04-27 11:19:04.561 I/MiuiSplitInputMethodImpl( 3839): Skip onPointerDownOutsideFocusLocked
+04-27 11:19:04.563 D/RefreshRateSelector( 1966): Touch Boost
+04-27 11:19:04.563 D/MI-SF   ( 1966): modeGroup41426432 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-27 11:19:04.563 D/RefreshRateSelector( 1966): fixedMode_group: 41426432, isFindModeGroup 1
+04-27 11:19:04.563 D/RefreshRateSelector( 1966): find max refresh rate:120, mode Group:41426432
+04-27 11:19:04.567 W/MIUIInput( 3839): Input motion event injection from package: null action ACTION_UP
+04-27 11:19:04.567 I/MIUIInput( 3839): [MotionEvent] publisher action=0x1, deviceId=-1, 553122942, channel 'af8676b com.smartsales.prism/com.smartsales.prism.MainActivity'
+04-27 11:19:04.567 I/MIUIInput( 3839): [MotionEvent] publisher action=0x1, deviceId=-1, 553122942, channel '[Gesture Monitor] onehanded-touch'
+04-27 11:19:04.567 I/MIUIInput( 3839): [MotionEvent] publisher action=0x1, deviceId=-1, 553122942, channel '[Gesture Monitor] WMShell'
+04-27 11:19:04.567 I/MIUIInput( 3839): [MotionEvent] publisher action=0x1, deviceId=-1, 553122942, channel '[Gesture Monitor] miui-gesture'
+04-27 11:19:04.568 I/MIUIInput(17230): [MotionEvent] ViewRootImpl windowName 'com.smartsales.prism/com.smartsales.prism.MainActivity', { action=ACTION_UP, id[0]=0, pointerCount=1, eventTime=553122942, downTime=553122942, phoneEventTime=1777259944556 } moveCount:0
+04-27 11:19:04.568 D/DisplayPolicyStubImpl( 3839): boost for touch up begin
+04-27 11:19:04.569 D/EventBus( 1255): No subscribers registered for event class com.xiaomi.xms.event.msg.SystemTouchMsg
+04-27 11:19:04.569 D/EventBus( 1255): No subscribers registered for event class xc.h
+04-27 11:19:04.569 I/DisplayPolicyStubImpl( 3839): boost for touch up, package:com.smartsales.prism
+04-27 11:19:04.571 D/AurogonBandwidthController( 3839): skinTemperature:48.051
+04-27 11:19:04.579 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-27 11:19:04.658 D/JavaheapMonitor( 5963): Java heap used=64M max=256M, proc: com.android.systemui
+04-27 11:19:04.658 V/JavaheapMonitor( 5963): Check java heap usage finished! Next check delay: 180000
+04-27 11:19:04.659 D/JavaheapMonitor(28001): Java heap used=10M max=256M, proc: com.android.bluetooth
+04-27 11:19:04.659 V/JavaheapMonitor(28001): Check java heap usage finished! Next check delay: 300000
+04-27 11:19:04.683 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-27 11:19:04.683 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-27 11:19:04.699 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-27 11:19:04.707 D/AurogonBandwidthController( 3839): skinTemperature:48.051
+04-27 11:19:04.708 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaaa9d0) status 0 for display-0.
+04-27 11:19:04.708 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-27 11:19:04.844 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-27 11:19:04.851 D/AurogonImmobulusMode( 3839):  update wallpaper pacakge name status mLockWallPaperPackageName =  mLockWallPaperUid = -1 mDeskWallPaperPackageName = com.miui.miwallpaper mDeskWallPaperUid = 10187
+04-27 11:19:04.851 D/PolicyMaker( 3839): fg uid=11335
+04-27 11:19:04.851 D/PolicyMaker( 3839): HasForegroundService pkgName=cn.zfs.bledebugger uid:11335
+04-27 11:19:04.851 D/PolicyMaker( 3839): uid =11335 pkg=cn.zfs.bledebugger reason=fgservice
+04-27 11:19:04.883 I/MiuiNetworkPolicy( 3839): updateUidState uid = 10207, uidState = 8
+04-27 11:19:04.890 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-27 11:19:04.890 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-27 11:19:04.907 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-27 11:19:04.915 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa9530) status 0 for display-0.
+04-27 11:19:04.916 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-27 11:19:04.964 I/NetworkAccelerateSwitchService( 3839): EVENT_RSSI_POLL. mRssiPoll=true
+04-27 11:19:04.964 I/WifiService( 3839): getConnectionInfo uid=1000
+04-27 11:19:04.964 V/WifiService( 3839): Clearing REDACT_FOR_LOCAL_MAC_ADDRESS for android(uid=1000)
+04-27 11:19:04.964 V/WifiService( 3839): Clearing REDACT_FOR_NETWORK_SETTINGS for android(uid=1000)
+04-27 11:19:04.964 V/WifiService( 3839): Clearing REDACT_FOR_ACCESS_FINE_LOCATION for android(uid=1000)
+04-27 11:19:04.964 I/WifiService( 3839): getVerboseLoggingLevel uid=1000
+04-27 11:19:04.964 I/NetworkAccelerateSwitchService( 3839): ================= checkWifiRssiAndLinkSpeed START ================
+04-27 11:19:04.964 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed mMinRssiFastFadeDifference:9 mMedRssiFastFadeDifference:13 mMaxRssiFastFadeDifference:15
+04-27 11:19:04.964 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed txBandwidthCapMbps:300
+04-27 11:19:04.964 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed rxBandwidthCapMbps:300
+04-27 11:19:04.964 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed mcsidx:-1
+04-27 11:19:04.964 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed rssi difference:-1
+04-27 11:19:04.964 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed txBandwidthCapMbps proportions:1.0
+04-27 11:19:04.964 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed rxBandwidthCapMbps proportions:1.0
+04-27 11:19:04.964 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed mcsidx difference:0
+04-27 11:19:04.964 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed FastFadeWeakNetThresholdAdjustment:0
+04-27 11:19:04.964 I/NetworkAccelerateSwitchService( 3839): ================= checkWifiRssiAndLinkSpeed END ================
+04-27 11:19:04.964 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed rssi:37
+04-27 11:19:04.964 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed mWifiFastFade:false mWifiFastFadeAdjustThreshold:false
+04-27 11:19:04.964 I/NetworkAccelerateSwitchService( 3839): getAverageWifiRssi:35
+04-27 11:19:04.965 D/NetworkAccelerateSwitchService( 3839): checkIntervalModeChange mMovementState:false mIntervalMode:0 mIsBadLinkLayerQoE:false mBadLinkLayerQoETimes = 0
+04-27 11:19:05.014 I/MiuiNetworkPolicy( 3839): updateUidState uid = 10142, uidState = 19
+04-27 11:19:05.048 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-27 11:19:05.057 I/SDM     ( 1810): DemuraTnCaptureIntfImpl::ProcessCapturePanelData: Screen capture status = 0
+04-27 11:19:05.070 E/ANDR-PERF( 1813): ExtendedPerfBoost: trigger_rearm_timer() 179: setthermalbreak req empty boostparam=boost:0
+04-27 11:19:05.072 D/AurogonBandwidthController( 3839): skinTemperature:48.051
+04-27 11:19:05.074 W/ActivityTaskManager( 3839): MANAGE_ACTIVITY_STACKS is deprecated, please use alternative permission: MANAGE_ACTIVITY_TASKS
+04-27 11:19:05.078 D/JavaheapMonitor(32464): Java heap used=4M max=256M, proc: com.xiaomi.xmsf
+04-27 11:19:05.079 V/JavaheapMonitor(32464): Check java heap usage finished! Next check delay: 300000
+04-27 11:19:05.079 D/JavaheapMonitor( 7088): Java heap used=17M max=256M, proc: com.android.settings
+04-27 11:19:05.079 V/JavaheapMonitor( 7088): Check java heap usage finished! Next check delay: 300000
+04-27 11:19:05.094 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-27 11:19:05.100 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-27 11:19:05.100 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-27 11:19:05.115 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-27 11:19:05.123 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa95e0) status 0 for display-0.
+04-27 11:19:05.123 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-27 11:19:05.127 W/ActivityManagerServiceImpl( 3839): Sending non-protected broadcast com.modemenhance.ACTION_MODEMWIFI_RSSI_POLL from system 5894:com.android.phone/1001 pkg com.android.phone. Callers=
+04-27 11:19:05.128 I/WifiService( 3839): getConnectionInfo uid=1001
+04-27 11:19:05.128 V/WifiService( 3839): Clearing REDACT_FOR_LOCAL_MAC_ADDRESS for com.android.phone(uid=1001)
+04-27 11:19:05.128 V/WifiService( 3839): Clearing REDACT_FOR_NETWORK_SETTINGS for com.android.phone(uid=1001)
+04-27 11:19:05.128 V/WifiService( 3839): Clearing REDACT_FOR_ACCESS_FINE_LOCATION for com.android.phone(uid=1001)
+04-27 11:19:05.129 D/SlaveWifiManager( 5894): getWifiSlaveConnectionInfo
+04-27 11:19:05.176 D/AurogonBandwidthController( 3839): skinTemperature:48.087
+04-27 11:19:05.176 D/AurogonBandwidthController( 3839): skinTemperature:48.087
+04-27 11:19:05.181 I/libsensor-boledalgo( 2925): dbv:1524,lux:276.7,cct:5449.0,hsv:-1.0, CWB R:306.8,G:438.0,B:995.5 Event C:6270.7,R:3377.0,G:2454.0,B:1358.4 Cali C:0.0,R:0.0,G:0.0,B:0.0 
+04-27 11:19:05.306 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-27 11:19:05.307 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-27 11:19:05.323 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-27 11:19:05.327 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-27 11:19:05.332 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa5c20) status 0 for display-0.
+04-27 11:19:05.332 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-27 11:19:05.381 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Received IBS_WAKE_IND: 0xFD
+04-27 11:19:05.381 D/vendor.qti.bluetooth@1.0-ibs_handler( 1781): SerialClockVote: vote for UART CLK ON
+04-27 11:19:05.382 D/vendor.qti.bluetooth@1.0-wake_lock( 1781): Acquire wakelock is acquired 
+04-27 11:19:05.382 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Writing IBS_WAKE_ACK
+04-27 11:19:05.385 D/bluetooth(28001): system/stack/arbiter/acl_arbiter.cc:67 InterceptAttPacket: Intercepting ATT packet and forwarding to Rust
+04-27 11:19:05.385 V/bluetooth(28001): system/stack/gatt/gatt_main.cc:1212 gatt_get_ch_state: xx:xx:xx:xx:e3:f6, transport BT_TRANSPORT_LE,  ch_state=GATT_CH_OPEN
+04-27 11:19:05.385 V/bluetooth(28001): system/stack/gatt/gatt_cl.cc:1219 gatt_client_handle_server_rsp: opcode: 0x1b cid4
+04-27 11:19:05.385 V/bluetooth(28001): system/stack/gatt/gatt_cl.cc:645 gatt_process_notification: 
+04-27 11:19:05.385 V/bluetooth(28001): system/stack/gatt/gatt_auth.cc:367 gatt_get_link_encrypt_status: gatt_get_link_encrypt_status status=0x8e
+04-27 11:19:05.385 V/bt_bta_gattc(28001): system/bta/gatt/bta_gattc_act.cc:1738 bta_gattc_cmpl_cback: conn_id:80 op:6 status:142
+04-27 11:19:05.385 V/gatt_api(28001): system/stack/gatt/gatt_api.cc:1660 GATT_GetConnectionInfor: conn_id=0x50
+04-27 11:19:05.385 V/bt_bta_gattc(28001): system/bta/gatt/bta_gattc_utils.cc:517 bta_gattc_check_notif_registry: Notification registered!
+04-27 11:19:05.385 V/bt_bta_gattc(28001): system/bta/gatt/bta_gattc_act.cc:1633 bta_gattc_proc_other_indication: check p_data->att_value.handle=42 p_data->handle=4
+04-27 11:19:05.385 V/bt_bta_gattc(28001): system/bta/gatt/bta_gattc_act.cc:1635 bta_gattc_proc_other_indication: is_notify false
+04-27 11:19:05.385 D/bt_btif_gattc(28001): system/btif/src/btif_gatt_client.cc:294 bta_gattc_cback: gatt client callback event:BTA_GATTC_NOTIF_EVT [10]
+04-27 11:19:05.385 V/bluetooth(28001): system/btif/src/btif_jni_task.cc:85 btif_transfer_context: btif_transfer_context event 10, len 528
+04-27 11:19:05.385 V/bt_bta_gattc(28001): system/bta/gatt/bta_gattc_act.cc:1738 bta_gattc_cmpl_cback: conn_id:55 op:6 status:142
+04-27 11:19:05.385 V/gatt_api(28001): system/stack/gatt/gatt_api.cc:1660 GATT_GetConnectionInfor: conn_id=0x37
+04-27 11:19:05.385 V/bt_bta_gattc(28001): system/bta/gatt/bta_gattc_act.cc:1738 bta_gattc_cmpl_cback: conn_id:53 op:6 status:142
+04-27 11:19:05.385 V/gatt_api(28001): system/stack/gatt/gatt_api.cc:1660 GATT_GetConnectionInfor: conn_id=0x35
+04-27 11:19:05.385 V/bt_bta_gattc(28001): system/bta/gatt/bta_gattc_act.cc:1738 bta_gattc_cmpl_cback: conn_id:50 op:6 status:142
+04-27 11:19:05.385 V/gatt_api(28001): system/stack/gatt/gatt_api.cc:1660 GATT_GetConnectionInfor: conn_id=0x32
+04-27 11:19:05.385 V/bt_bta_gattc(28001): system/bta/gatt/bta_gattc_act.cc:1738 bta_gattc_cmpl_cback: conn_id:49 op:6 status:142
+04-27 11:19:05.385 V/gatt_api(28001): system/stack/gatt/gatt_api.cc:1660 GATT_GetConnectionInfor: conn_id=0x31
+04-27 11:19:05.385 D/bt_btif_gattc(28001): system/btif/src/btif_gatt_client.cc:177 btif_gattc_upstreams_evt: Event BTA_GATTC_NOTIF_EVT [10]
+04-27 11:19:05.386 V/bt_bta_gattc(28001): system/bta/gatt/bta_gattc_act.cc:1738 bta_gattc_cmpl_cback: conn_id:48 op:6 status:142
+04-27 11:19:05.386 V/gatt_api(28001): system/stack/gatt/gatt_api.cc:1660 GATT_GetConnectionInfor: conn_id=0x30
+04-27 11:19:05.386 V/bt_bta_gattc(28001): system/bta/gatt/bta_gattc_act.cc:1738 bta_gattc_cmpl_cback: conn_id:47 op:6 status:142
+04-27 11:19:05.386 V/gatt_api(28001): system/stack/gatt/gatt_api.cc:1660 GATT_GetConnectionInfor: conn_id=0x2f
+04-27 11:19:05.386 V/bt_bta_gattc(28001): system/bta/gatt/bta_gattc_act.cc:1738 bta_gattc_cmpl_cback: conn_id:46 op:6 status:142
+04-27 11:19:05.386 V/gatt_api(28001): system/stack/gatt/gatt_api.cc:1660 GATT_GetConnectionInfor: conn_id=0x2e
+04-27 11:19:05.386 V/bt_bta_gattc(28001): system/bta/gatt/bta_gattc_act.cc:1738 bta_gattc_cmpl_cback: conn_id:44 op:6 status:142
+04-27 11:19:05.386 V/gatt_api(28001): system/stack/gatt/gatt_api.cc:1660 GATT_GetConnectionInfor: conn_id=0x2c
+04-27 11:19:05.386 V/bluetooth(28001): system/stack/gatt/gatt_attr.cc:617 gatt_cl_op_cmpl_cback: opcode: 0x6 status: 142 conn id: 0x29
+04-27 11:19:05.386 V/bluetooth(28001): system/stack/gatt/gatt_attr.cc:621 gatt_cl_op_cmpl_cback: Not interested in opcode 6
+04-27 11:19:05.386 V/bt_btif_gattc(28001): system/btif/src/btif_gatt_client.cc:214 btif_gattc_upstreams_evt: HAL callbacks->client->notify_cb
+04-27 11:19:05.386 V/BtGatt.GattService(28001): onNotify() - address=XX:XX:XX:XX:E3:F6, handle=42, length=10
+04-27 11:19:05.387 D/SmartSalesConn(17230): 📥 RX [Notification]: Bat#93.37% (42 61 74 23 39 33 2E 33 37 25)
+04-27 11:19:05.387 D/SmartSalesConn(17230): ❓ Badge unknown notification: Bat#93.37%
+04-27 11:19:05.411 D/JavaheapMonitor(32155): Java heap used=5M max=256M, proc: com.xiaomi.location.fused
+04-27 11:19:05.411 V/JavaheapMonitor(32155): Check java heap usage finished! Next check delay: 300000
+04-27 11:19:05.427 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Received IBS_SLEEP_IND: 0xFE
+04-27 11:19:05.427 D/vendor.qti.bluetooth@1.0-ibs_handler( 1781): SerialClockVote: vote for UART CLK OFF
+04-27 11:19:05.515 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-27 11:19:05.515 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-27 11:19:05.531 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-27 11:19:05.538 D/JavaheapMonitor( 5261): Java heap used=32M max=512M, proc: com.miui.home
+04-27 11:19:05.538 V/JavaheapMonitor( 5261): Check java heap usage finished! Next check delay: 300000
+04-27 11:19:05.539 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaab790) status 0 for display-0.
+04-27 11:19:05.540 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-27 11:19:05.559 D/SchedBoostThread( 3839): thread tid=17230, priority is set to -10
+04-27 11:19:05.559 D/SchedBoostThread( 3839): thread tid=32463, priority is set to -10
+04-27 11:19:05.577 D/vendor.qti.bluetooth@1.0-wake_lock( 1781): Release wakelock is released 
+04-27 11:19:05.619 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-27 11:19:05.706 I/MiuiNetworkPolicy( 3839): updateUidState uid = 99005, uidState = 8
+04-27 11:19:05.706 I/MiuiNetworkPolicy( 3839): updateUidState uid = 10168, uidState = 8
+04-27 11:19:05.706 I/MiuiNetworkPolicy( 3839): updateUidState uid = 6101, uidState = 19
+04-27 11:19:05.706 E/SSRU-RUS( 3839): Don't have packages for uid 99005
+04-27 11:19:05.722 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-27 11:19:05.723 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-27 11:19:05.739 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-27 11:19:05.747 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa7e80) status 0 for display-0.
+04-27 11:19:05.747 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-27 11:19:05.772 D/AurogonImmobulusMode( 3839):  update wallpaper pacakge name status mLockWallPaperPackageName =  mLockWallPaperUid = -1 mDeskWallPaperPackageName = com.miui.miwallpaper mDeskWallPaperUid = 10187
+04-27 11:19:05.777 D/InetDiagMessage( 3839): Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+04-27 11:19:05.779 D/InetDiagMessage( 3839): Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+04-27 11:19:05.779 D/InetDiagMessage( 3839): Destroyed live tcp sockets for uids={10353} in 5ms
+04-27 11:19:05.779 D/ActionExecute( 3839): frozen uid = 10353 reason=check binder
+04-27 11:19:05.779 D/ExternalInterface( 3839): setUidState, uid = 10353 allow = false
+04-27 11:19:05.779 D/MiSensorServiceImpl( 3839): PowerKeeperSensor stop iUid:10353 but app has Controlled
+04-27 11:19:05.843 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-27 11:19:05.930 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-27 11:19:05.931 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-27 11:19:05.947 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-27 11:19:05.955 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa9060) status 0 for display-0.
+04-27 11:19:05.955 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-27 11:19:05.979 D/JavaheapMonitor(28461): Java heap used=12M max=256M, proc: com.android.permissioncontroller
+04-27 11:19:05.979 V/JavaheapMonitor(28461): Check java heap usage finished! Next check delay: 300000
+04-27 11:19:06.060 D/MI-SF   ( 1966): isSupportLowBrightnessFpsSwitch current_setting_fps: 120
+04-27 11:19:06.060 D/MI-SF   ( 1966): isTpIdleScene ,mAverageFrameRate is 120, 0 
+04-27 11:19:06.061 D/MI-SF   ( 1966): modeGroup41426432 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-27 11:19:06.061 D/RefreshRateSelector( 1966): fixedMode_group: 41426432, isFindModeGroup 1
+04-27 11:19:06.061 D/RefreshRateSelector( 1966): find max refresh rate:120, mode Group:41426432
+04-27 11:19:06.072 D/JavaheapMonitor( 3839): Java heap used=213M max=512M, proc: system_server
+04-27 11:19:06.072 V/JavaheapMonitor( 3839): Check java heap usage finished! Next check delay: 60000
+04-27 11:19:06.078 W/ActivityTaskManager( 3839): MANAGE_ACTIVITY_STACKS is deprecated, please use alternative permission: MANAGE_ACTIVITY_TASKS
+04-27 11:19:06.103 I/MiuiNetworkPolicy( 3839): updateUidState uid = 10159, uidState = 19
+04-27 11:19:06.104 I/MiuiNetworkPolicy( 3839): updateUidState uid = 10088, uidState = 19
+04-27 11:19:06.139 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-27 11:19:06.139 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-27 11:19:06.155 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-27 11:19:06.159 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-27 11:19:06.163 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaaad40) status 0 for display-0.
+04-27 11:19:06.163 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-27 11:19:06.242 I/libsensor-boledalgo( 2925): dbv:1524,lux:277.7,cct:5389.1,hsv:-1.0, CWB R:306.8,G:438.0,B:995.5 Event C:6288.2,R:3386.5,G:2451.6,B:1351.7 Cali C:0.0,R:0.0,G:0.0,B:0.0 
+04-27 11:19:06.343 D/JavaheapMonitor(32572): Java heap used=9M max=256M, proc: com.miui.analytics
+04-27 11:19:06.343 V/JavaheapMonitor(32572): Check java heap usage finished! Next check delay: 300000
+04-27 11:19:06.347 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-27 11:19:06.347 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-27 11:19:06.363 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-27 11:19:06.365 D/AidlBufferPool(26992): bufferpool2 0xb400007bee8e7068 : 62(313935 size) total buffers - 1(4023 size) used buffers - 9549/17262 (recycle/alloc) - 8974/17261 (fetch/transfer)
+04-27 11:19:06.371 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaaa240) status 0 for display-0.
+04-27 11:19:06.372 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-27 11:19:06.384 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-27 11:19:06.499 D/JavaheapMonitor(12362): Java heap used=10M max=256M, proc: com.android.vending
+04-27 11:19:06.499 V/JavaheapMonitor(12362): Check java heap usage finished! Next check delay: 300000
+04-27 11:19:06.554 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-27 11:19:06.555 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-27 11:19:06.571 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-27 11:19:06.579 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa9d70) status 0 for display-0.
+04-27 11:19:06.579 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-27 11:19:06.600 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-27 11:19:06.709 D/AurogonBandwidthController( 3839): skinTemperature:48.087
+04-27 11:19:06.762 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-27 11:19:06.763 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-27 11:19:06.779 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-27 11:19:06.787 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaab840) status 0 for display-0.
+04-27 11:19:06.787 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-27 11:19:06.800 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-27 11:19:06.814 D/MiuiWifiCommonBase( 3839): band: 0, compensate: 0
+04-27 11:19:06.814 D/WifiClientModeImpl[678890515:wlan0]( 3839): updateLinkLayerStatsRssiSpeedFrequencyCapabilities rssi=-37 TxLinkspeed=300 freq=2462 RxLinkSpeed=300
+04-27 11:19:06.814 I/WifiService( 3839): getConnectionInfo uid=1000
+04-27 11:19:06.814 V/WifiService( 3839): Clearing REDACT_FOR_LOCAL_MAC_ADDRESS for android(uid=1000)
+04-27 11:19:06.814 V/WifiService( 3839): Clearing REDACT_FOR_NETWORK_SETTINGS for android(uid=1000)
+04-27 11:19:06.814 V/WifiService( 3839): Clearing REDACT_FOR_ACCESS_FINE_LOCATION for android(uid=1000)
+04-27 11:19:06.814 D/WifiDataStall( 3839): tx tput in kbps: 140250
+04-27 11:19:06.814 D/WifiDataStall( 3839): rx tput in kbps: 206250
+04-27 11:19:06.814 V/WifiConfigManager( 3839): Updating scan detail cache freq=2462 BSSID=74:39:89:2a:67:26 RSSI=-36 for "MstRobot"WPA_PSK
+04-27 11:19:06.814 D/WifiChannelUtilization( 3839):  freq: 2462 onTime: 1564936 busyTime: 844818 onTimeDiff: 1777 busyTimeDiff: 1078 utilization: 154 utilization t0: 137
+04-27 11:19:06.815 D/WifiDataStall( 3839):  ccaLevel = 80
+04-27 11:19:06.815 D/WifiDataStall( 3839): L2 txTputKbps: 195937, rxTputKbps: 206250, L3 txTputKbps: 0, rxTputKbps: 0, TxTrafficHigh: false, RxTrafficHigh: false, Throughput Sufficient: true
+04-27 11:19:06.815 D/WifiThroughputPredictor( 3839):  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+04-27 11:19:06.815 D/WifiThroughputPredictor( 3839):  BW: 1 RSSI: -37 Nss: 2 Mode: 4 symDur: 3600 snrDb 40 bitPerTone: 5000 rate: 300 throughput: 205
+04-27 11:19:06.815 D/WifiThroughputPredictor( 3839):  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+04-27 11:19:06.815 D/WifiThroughputPredictor( 3839):  BW: 1 RSSI: -37 Nss: 2 Mode: 4 symDur: 3600 snrDb 40 bitPerTone: 5000 rate: 300 throughput: 205
+04-27 11:19:06.815 D/WifiScoreCard( 3839): BSSID update SIGNAL_POLL ID: 404527809 SSID: "MstRobot", BSSID: 74:39:89:2a:67:26, MAC: fa:2c:a2:da:d1:aa, IP: /192.168.0.101, Security type: 2, Supplicant state: COMPLETED, Wi-Fi standard: 11n, RSSI: -37, Link speed: 300Mbps, Tx Link speed: 300Mbps, Max Supported Tx Link speed: 300Mbps, Rx Link speed: 300Mbps, Max Supported Rx Link speed: 300Mbps, Frequency: 2462MHz, Net ID: 6, Metered hint: false, score: 60, isUsable: true, CarrierMerged: false, SubscriptionId: -1, IsPrimary: 1, Trusted: true, Restricted: false, Ephemeral: false, OEM paid: false, OEM private: false, OSU AP: false, FQDN: <none>, Provider friendly name: <none>, Requesting package name: <none>"MstRobot"wpa2-pskMLO Information: , Is TID-To-Link negotiation supported by the AP: false, AP MLD Address: <none>, AP MLO Link Id: <none>, AP MLO Affiliated links: <none>, Vendor Data: <none>
+04-27 11:19:06.815 D/WifiScoreCard( 3839): txRate: 4 txSpeed: 300
+04-27 11:19:06.815 D/WifiScoreCard( 3839): network update SIGNAL_POLL "MstRobot" ID: 608343939 RSSI -37 txSpeed 300
+04-27 11:19:06.816 D/MiuiNM  ( 3839): rssi: -37, txPer: 5, rxPer: 5, ccaBr: 5, bcnLr: 13, tcpFr: 100, bcnRx: 26, txGood:4.97, txRetry:2.33, txBad:0.00
+04-27 11:19:06.816 D/WifiClientModeImpl[678890515:wlan0]( 3839):  ClientModeImpl$L2ConnectedState screen=on 4 0 "MstRobot" 74:39:89:2a:67:26 rssi=-37 f=2462 sc= 60, mSwithInWeakNet: true [updated score = 60,  failpercent=100 { out=13 in=10 lost=7 inretrans=7 total retrans=0 tmo=50 inflight=7}] link=300 tx=2.6, 0.8, 0.0 rx=2.6 bcn=128838 [on:87 tx:3 rx:3 period:3010] from screen [on:1321003 period:2936894] score=60
+04-27 11:19:06.817 I/WifiService( 3839): getVerboseLoggingLevel uid=1000
+04-27 11:19:06.818 E/PhoneAdapter( 5894): get ntnphones failed, exception: java.lang.IllegalStateException: not support satellite!
+04-27 11:19:06.819 I/WifiService( 3839): getScanResults uid=1000
+04-27 11:19:06.819 D/AmlWifiScoreReportInjector( 3839): getMaxRssiInWaeknet weaknetRssi = -72
+04-27 11:19:06.897 I/ScanManager(28001): msg.what = MSG_CHECK_SCAN_STATUS, msg.arg1 = CHECK_BACKGROUND_TIMEOUT
+04-27 11:19:06.935 D/JavaheapMonitor(25422): Java heap used=8M max=256M, proc: com.miui.cloudservice
+04-27 11:19:06.935 V/JavaheapMonitor(25422): Check java heap usage finished! Next check delay: 300000
+04-27 11:19:06.964 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-27 11:19:06.965 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-27 11:19:06.979 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-27 11:19:06.987 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa8980) status 0 for display-0.
+04-27 11:19:06.987 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-27 11:19:07.002 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-27 11:19:07.015 I/MediaCodec(28765): [mId: 0] [video-debug-enc] state 6 mFlags 2336 Stats 5002ms:Client:com.android.shell,Component:c2.android.vp8.encoder,Qin:0,DQin:0/0,Render:0,encode:192,DQout:192/192
+04-27 11:19:07.091 I/libsensor-boledalgo( 2925): dbv:1524,lux:276.9,cct:5440.5,hsv:-1.0, CWB R:306.8,G:438.0,B:995.5 Event C:6296.7,R:3398.7,G:2455.1,B:1362.7 Cali C:0.0,R:0.0,G:0.0,B:0.0 
+04-27 11:19:07.170 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-27 11:19:07.171 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-27 11:19:07.177 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Received IBS_WAKE_IND: 0xFD
+04-27 11:19:07.177 D/vendor.qti.bluetooth@1.0-ibs_handler( 1781): SerialClockVote: vote for UART CLK ON
+04-27 11:19:07.177 D/vendor.qti.bluetooth@1.0-wake_lock( 1781): Acquire wakelock is acquired 
+04-27 11:19:07.177 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Writing IBS_WAKE_ACK
+04-27 11:19:07.180 V/bluetooth(28001): system/gd/hci/le_scanning_reassembler.cc:67 ProcessAdvertisingReport: Dropping repeated legacy advertising data
+04-27 11:19:07.180 V/bluetooth(28001): system/gd/hci/le_scanning_reassembler.cc:90 ProcessAdvertisingReport: Ignoring advertising report when scan response is expected or current data is marked incomplete
+04-27 11:19:07.187 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-27 11:19:07.189 I/.milink.runtime(  503): This is non sticky GC, maxfree is 33554432 minfree is 8388608
+04-27 11:19:07.191 D/JavaheapMonitor(  503): Java heap used=2M max=256M, proc: com.milink.runtime
+04-27 11:19:07.191 V/JavaheapMonitor(  503): Check java heap usage finished! Next check delay: 300000
+04-27 11:19:07.195 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaab2c0) status 0 for display-0.
+04-27 11:19:07.195 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-27 11:19:07.207 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-27 11:19:07.221 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Received IBS_SLEEP_IND: 0xFE
+04-27 11:19:07.221 D/vendor.qti.bluetooth@1.0-ibs_handler( 1781): SerialClockVote: vote for UART CLK OFF
+04-27 11:19:07.286 D/JavaheapMonitor( 5754): Java heap used=12M max=256M, proc: com.miui.securitycenter:ui
+04-27 11:19:07.286 V/JavaheapMonitor( 5754): Check java heap usage finished! Next check delay: 300000
+04-27 11:19:07.371 D/vendor.qti.bluetooth@1.0-wake_lock( 1781): Release wakelock is released 
+04-27 11:19:07.378 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-27 11:19:07.378 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-27 11:19:07.394 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-27 11:19:07.403 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa5070) status 0 for display-0.
+04-27 11:19:07.403 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-27 11:19:07.405 I/MiuiNetworkPolicy( 3839): updateUidState uid = 10273, uidState = 19
+04-27 11:19:07.432 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-27 11:19:07.515 I/libsensor-boledalgo( 2925): dbv:1524,lux:277.3,cct:5379.1,hsv:-1.0, CWB R:306.8,G:438.0,B:995.5 Event C:6292.7,R:3386.5,G:2442.5,B:1350.4 Cali C:0.0,R:0.0,G:0.0,B:0.0 
+04-27 11:19:07.586 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-27 11:19:07.586 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-27 11:19:07.603 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-27 11:19:07.611 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa7dd0) status 0 for display-0.
+04-27 11:19:07.611 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-27 11:19:07.657 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-27 11:19:07.704 D/HANGTASK( 3839): IOCTL_HANG_MON_Kick IOCTL,cmd= 2147774474, lParam=120. 
+04-27 11:19:07.773 I/MiuiNetworkPolicy( 3839): updateUidState uid = 10149, uidState = 19
+04-27 11:19:07.795 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-27 11:19:07.795 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-27 11:19:07.811 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-27 11:19:07.818 D/HyperStabilitySdkService( 3839): checkDmabufStatus done, exceedLimitsList:[], totalDmabufSize:0
+04-27 11:19:07.819 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa7c70) status 0 for display-0.
+04-27 11:19:07.819 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-27 11:19:07.832 D/QLM-Service( 8670): check_headroom_zone: Timer EVT, Temp: 64253
+04-27 11:19:07.864 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-27 11:19:07.939 I/libsensor-boledalgo( 2925): dbv:1524,lux:279.4,cct:5314.5,hsv:-1.0, CWB R:306.8,G:438.0,B:995.5 Event C:6288.2,R:3377.0,G:2450.4,B:1338.1 Cali C:0.0,R:0.0,G:0.0,B:0.0 
+04-27 11:19:07.965 I/MiuiNetworkPolicy( 3839): updateUidState uid = 10139, uidState = 19
+04-27 11:19:07.968 I/NetworkAccelerateSwitchService( 3839): EVENT_RSSI_POLL. mRssiPoll=true
+04-27 11:19:07.968 I/WifiService( 3839): getConnectionInfo uid=1000
+04-27 11:19:07.968 V/WifiService( 3839): Clearing REDACT_FOR_LOCAL_MAC_ADDRESS for android(uid=1000)
+04-27 11:19:07.968 V/WifiService( 3839): Clearing REDACT_FOR_NETWORK_SETTINGS for android(uid=1000)
+04-27 11:19:07.968 V/WifiService( 3839): Clearing REDACT_FOR_ACCESS_FINE_LOCATION for android(uid=1000)
+04-27 11:19:07.968 I/WifiService( 3839): getVerboseLoggingLevel uid=1000
+04-27 11:19:07.968 I/NetworkAccelerateSwitchService( 3839): ================= checkWifiRssiAndLinkSpeed START ================
+04-27 11:19:07.968 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed mMinRssiFastFadeDifference:9 mMedRssiFastFadeDifference:13 mMaxRssiFastFadeDifference:15
+04-27 11:19:07.968 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed txBandwidthCapMbps:300
+04-27 11:19:07.968 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed rxBandwidthCapMbps:300
+04-27 11:19:07.968 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed mcsidx:-1
+04-27 11:19:07.968 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed rssi difference:0
+04-27 11:19:07.968 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed txBandwidthCapMbps proportions:1.0
+04-27 11:19:07.968 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed rxBandwidthCapMbps proportions:1.0
+04-27 11:19:07.968 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed mcsidx difference:0
+04-27 11:19:07.968 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed FastFadeWeakNetThresholdAdjustment:0
+04-27 11:19:07.968 I/NetworkAccelerateSwitchService( 3839): ================= checkWifiRssiAndLinkSpeed END ================
+04-27 11:19:07.968 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed rssi:37
+04-27 11:19:07.968 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed mWifiFastFade:false mWifiFastFadeAdjustThreshold:false
+04-27 11:19:07.968 I/NetworkAccelerateSwitchService( 3839): getAverageWifiRssi:36
+04-27 11:19:07.968 D/NetworkAccelerateSwitchService( 3839): checkIntervalModeChange mMovementState:false mIntervalMode:0 mIsBadLinkLayerQoE:false mBadLinkLayerQoETimes = 0
+04-27 11:19:08.002 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-27 11:19:08.002 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-27 11:19:08.019 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-27 11:19:08.027 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa9110) status 0 for display-0.
+04-27 11:19:08.027 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-27 11:19:08.148 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-27 11:19:08.151 I/libsensor-boledalgo( 2925): dbv:1524,lux:276.9,cct:5421.8,hsv:-1.0, CWB R:306.8,G:438.0,B:995.5 Event C:6266.2,R:3359.3,G:2443.7,B:1351.7 Cali C:0.0,R:0.0,G:0.0,B:0.0 
+04-27 11:19:08.182 W/ActivityManagerServiceImpl( 3839): Sending non-protected broadcast com.modemenhance.ACTION_MODEMWIFI_RSSI_POLL from system 5894:com.android.phone/1001 pkg com.android.phone. Callers=
+04-27 11:19:08.183 I/WifiService( 3839): getConnectionInfo uid=1001
+04-27 11:19:08.183 V/WifiService( 3839): Clearing REDACT_FOR_LOCAL_MAC_ADDRESS for com.android.phone(uid=1001)
+04-27 11:19:08.183 V/WifiService( 3839): Clearing REDACT_FOR_NETWORK_SETTINGS for com.android.phone(uid=1001)
+04-27 11:19:08.183 V/WifiService( 3839): Clearing REDACT_FOR_ACCESS_FINE_LOCATION for com.android.phone(uid=1001)
+04-27 11:19:08.183 D/SlaveWifiManager( 5894): getWifiSlaveConnectionInfo
+04-27 11:19:08.210 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-27 11:19:08.210 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-27 11:19:08.227 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-27 11:19:08.235 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa8610) status 0 for display-0.
+04-27 11:19:08.235 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-27 11:19:08.372 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-27 11:19:08.418 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-27 11:19:08.418 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-27 11:19:08.435 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-27 11:19:08.443 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa7f30) status 0 for display-0.
+04-27 11:19:08.443 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-27 11:19:08.543 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Received IBS_WAKE_IND: 0xFD
+04-27 11:19:08.543 D/vendor.qti.bluetooth@1.0-ibs_handler( 1781): SerialClockVote: vote for UART CLK ON
+04-27 11:19:08.543 D/vendor.qti.bluetooth@1.0-wake_lock( 1781): Acquire wakelock is acquired 
+04-27 11:19:08.543 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Writing IBS_WAKE_ACK
+04-27 11:19:08.547 V/bluetooth(28001): system/gd/hci/le_scanning_reassembler.cc:67 ProcessAdvertisingReport: Dropping repeated legacy advertising data
+04-27 11:19:08.547 V/bluetooth(28001): system/gd/hci/le_scanning_reassembler.cc:101 ProcessAdvertisingReport: Full advertising report has been reassembled
+04-27 11:19:08.547 V/bluetooth(28001): system/gd/hci/le_scanning_decrypter.cc:148 ContainsEncryptedData: enc_adv_data_map is empty
+04-27 11:19:08.547 V/bt_btm_ble(28001): system/stack/btm/btm_ble_gap.cc:2166 btm_ble_process_adv_addr: bda=xx:xx:xx:xx:c8:29
+04-27 11:19:08.547 V/bt_btm_ble(28001): system/stack/btm/btm_ble_gap.cc:2157 btm_ble_update_inq_result: NOT_BR/EDR support bit set, treat device as LE only
+04-27 11:19:08.548 V/ScanController(28001): onScanResult() - eventType=0x10, addressType=1, address=XX:XX:XX:XX:C8:29, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=-44, periodicAdvInt=0x0, originalAddress=F8:7D:F2:A1:C8:29
+04-27 11:19:08.548 V/ScanController(28001): Skipping client: permission=true matches=false
+04-27 11:19:08.549 V/ScanController(28001): Skipping client: permission=true matches=false
+04-27 11:19:08.550 V/ScanController(28001): Skipping client: permission=true matches=false
+04-27 11:19:08.588 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Received IBS_SLEEP_IND: 0xFE
+04-27 11:19:08.588 D/vendor.qti.bluetooth@1.0-ibs_handler( 1781): SerialClockVote: vote for UART CLK OFF
+04-27 11:19:08.618 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-27 11:19:08.618 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-27 11:19:08.634 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-27 11:19:08.643 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa74e0) status 0 for display-0.
+04-27 11:19:08.643 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-27 11:19:08.673 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-27 11:19:08.710 D/AurogonBandwidthController( 3839): skinTemperature:48.087
+04-27 11:19:08.738 D/vendor.qti.bluetooth@1.0-wake_lock( 1781): Release wakelock is released 
+04-27 11:19:08.826 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-27 11:19:08.826 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-27 11:19:08.842 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-27 11:19:08.851 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaaa710) status 0 for display-0.
+04-27 11:19:08.851 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-27 11:19:08.896 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-27 11:19:08.957 D/JavaheapMonitor(31509): Java heap used=18M max=256M, proc: com.android.nfc
+04-27 11:19:09.034 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-27 11:19:09.035 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-27 11:19:09.050 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-27 11:19:09.059 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa9b60) status 0 for display-0.
+04-27 11:19:09.059 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-27 11:19:09.121 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-27 11:19:09.242 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-27 11:19:09.242 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-27 11:19:09.258 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-27 11:19:09.266 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaab4d0) status 0 for display-0.
+04-27 11:19:09.267 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-27 11:19:09.269 D/AurogonImmobulusMode( 3839):  update wallpaper pacakge name status mLockWallPaperPackageName =  mLockWallPaperUid = -1 mDeskWallPaperPackageName = com.miui.miwallpaper mDeskWallPaperUid = 10187
+04-27 11:19:09.272 D/InetDiagMessage( 3839): Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET, states=14
+04-27 11:19:09.273 D/InetDiagMessage( 3839): Destroyed 0 sockets, proto=IPPROTO_TCP, family=AF_INET6, states=14
+04-27 11:19:09.273 D/InetDiagMessage( 3839): Destroyed live tcp sockets for uids={10355} in 3ms
+04-27 11:19:09.273 D/ActionExecute( 3839): frozen uid = 10355 reason=check binder
+04-27 11:19:09.273 D/ExternalInterface( 3839): setUidState, uid = 10355 allow = false
+04-27 11:19:09.273 D/MiSensorServiceImpl( 3839): PowerKeeperSensor stop iUid:10355 but app has Controlled
+04-27 11:19:09.345 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-27 11:19:09.450 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-27 11:19:09.450 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-27 11:19:09.466 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-27 11:19:09.475 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaaaea0) status 0 for display-0.
+04-27 11:19:09.475 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-27 11:19:09.491 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Received IBS_WAKE_IND: 0xFD
+04-27 11:19:09.492 D/vendor.qti.bluetooth@1.0-ibs_handler( 1781): SerialClockVote: vote for UART CLK ON
+04-27 11:19:09.492 D/vendor.qti.bluetooth@1.0-wake_lock( 1781): Acquire wakelock is acquired 
+04-27 11:19:09.492 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Writing IBS_WAKE_ACK
+04-27 11:19:09.495 D/bluetooth(28001): system/stack/arbiter/acl_arbiter.cc:67 InterceptAttPacket: Intercepting ATT packet and forwarding to Rust
+04-27 11:19:09.495 V/bluetooth(28001): system/stack/gatt/gatt_main.cc:1212 gatt_get_ch_state: xx:xx:xx:xx:e3:f6, transport BT_TRANSPORT_LE,  ch_state=GATT_CH_OPEN
+04-27 11:19:09.495 V/bluetooth(28001): system/stack/gatt/gatt_cl.cc:1219 gatt_client_handle_server_rsp: opcode: 0x1b cid4
+04-27 11:19:09.495 V/bluetooth(28001): system/stack/gatt/gatt_cl.cc:645 gatt_process_notification: 
+04-27 11:19:09.495 V/bluetooth(28001): system/stack/gatt/gatt_auth.cc:367 gatt_get_link_encrypt_status: gatt_get_link_encrypt_status status=0x8e
+04-27 11:19:09.495 V/bt_bta_gattc(28001): system/bta/gatt/bta_gattc_act.cc:1738 bta_gattc_cmpl_cback: conn_id:80 op:6 status:142
+04-27 11:19:09.495 V/gatt_api(28001): system/stack/gatt/gatt_api.cc:1660 GATT_GetConnectionInfor: conn_id=0x50
+04-27 11:19:09.495 V/bt_bta_gattc(28001): system/bta/gatt/bta_gattc_utils.cc:517 bta_gattc_check_notif_registry: Notification registered!
+04-27 11:19:09.495 V/bt_bta_gattc(28001): system/bta/gatt/bta_gattc_act.cc:1633 bta_gattc_proc_other_indication: check p_data->att_value.handle=42 p_data->handle=4
+04-27 11:19:09.495 V/bt_bta_gattc(28001): system/bta/gatt/bta_gattc_act.cc:1635 bta_gattc_proc_other_indication: is_notify false
+04-27 11:19:09.495 D/bt_btif_gattc(28001): system/btif/src/btif_gatt_client.cc:294 bta_gattc_cback: gatt client callback event:BTA_GATTC_NOTIF_EVT [10]
+04-27 11:19:09.495 V/bluetooth(28001): system/btif/src/btif_jni_task.cc:85 btif_transfer_context: btif_transfer_context event 10, len 528
+04-27 11:19:09.495 V/bt_bta_gattc(28001): system/bta/gatt/bta_gattc_act.cc:1738 bta_gattc_cmpl_cback: conn_id:55 op:6 status:142
+04-27 11:19:09.495 V/gatt_api(28001): system/stack/gatt/gatt_api.cc:1660 GATT_GetConnectionInfor: conn_id=0x37
+04-27 11:19:09.495 V/bt_bta_gattc(28001): system/bta/gatt/bta_gattc_act.cc:1738 bta_gattc_cmpl_cback: conn_id:53 op:6 status:142
+04-27 11:19:09.495 D/bt_btif_gattc(28001): system/btif/src/btif_gatt_client.cc:177 btif_gattc_upstreams_evt: Event BTA_GATTC_NOTIF_EVT [10]
+04-27 11:19:09.495 V/gatt_api(28001): system/stack/gatt/gatt_api.cc:1660 GATT_GetConnectionInfor: conn_id=0x35
+04-27 11:19:09.495 V/bt_bta_gattc(28001): system/bta/gatt/bta_gattc_act.cc:1738 bta_gattc_cmpl_cback: conn_id:50 op:6 status:142
+04-27 11:19:09.495 V/gatt_api(28001): system/stack/gatt/gatt_api.cc:1660 GATT_GetConnectionInfor: conn_id=0x32
+04-27 11:19:09.495 V/bt_bta_gattc(28001): system/bta/gatt/bta_gattc_act.cc:1738 bta_gattc_cmpl_cback: conn_id:49 op:6 status:142
+04-27 11:19:09.495 V/gatt_api(28001): system/stack/gatt/gatt_api.cc:1660 GATT_GetConnectionInfor: conn_id=0x31
+04-27 11:19:09.495 V/bt_bta_gattc(28001): system/bta/gatt/bta_gattc_act.cc:1738 bta_gattc_cmpl_cback: conn_id:48 op:6 status:142
+04-27 11:19:09.495 V/gatt_api(28001): system/stack/gatt/gatt_api.cc:1660 GATT_GetConnectionInfor: conn_id=0x30
+04-27 11:19:09.495 V/bt_bta_gattc(28001): system/bta/gatt/bta_gattc_act.cc:1738 bta_gattc_cmpl_cback: conn_id:47 op:6 status:142
+04-27 11:19:09.495 V/gatt_api(28001): system/stack/gatt/gatt_api.cc:1660 GATT_GetConnectionInfor: conn_id=0x2f
+04-27 11:19:09.495 V/bt_bta_gattc(28001): system/bta/gatt/bta_gattc_act.cc:1738 bta_gattc_cmpl_cback: conn_id:46 op:6 status:142
+04-27 11:19:09.495 V/gatt_api(28001): system/stack/gatt/gatt_api.cc:1660 GATT_GetConnectionInfor: conn_id=0x2e
+04-27 11:19:09.495 V/bt_bta_gattc(28001): system/bta/gatt/bta_gattc_act.cc:1738 bta_gattc_cmpl_cback: conn_id:44 op:6 status:142
+04-27 11:19:09.495 V/gatt_api(28001): system/stack/gatt/gatt_api.cc:1660 GATT_GetConnectionInfor: conn_id=0x2c
+04-27 11:19:09.495 V/bluetooth(28001): system/stack/gatt/gatt_attr.cc:617 gatt_cl_op_cmpl_cback: opcode: 0x6 status: 142 conn id: 0x29
+04-27 11:19:09.495 V/bluetooth(28001): system/stack/gatt/gatt_attr.cc:621 gatt_cl_op_cmpl_cback: Not interested in opcode 6
+04-27 11:19:09.495 V/bt_btif_gattc(28001): system/btif/src/btif_gatt_client.cc:214 btif_gattc_upstreams_evt: HAL callbacks->client->notify_cb
+04-27 11:19:09.495 V/BtGatt.GattService(28001): onNotify() - address=XX:XX:XX:XX:E3:F6, handle=42, length=10
+04-27 11:19:09.496 D/SmartSalesConn(17230): 📥 RX [Notification]: Bat#93.37% (42 61 74 23 39 33 2E 33 37 25)
+04-27 11:19:09.497 D/SmartSalesConn(17230): ❓ Badge unknown notification: Bat#93.37%
+04-27 11:19:09.536 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Received IBS_SLEEP_IND: 0xFE
+04-27 11:19:09.536 D/vendor.qti.bluetooth@1.0-ibs_handler( 1781): SerialClockVote: vote for UART CLK OFF
+04-27 11:19:09.542 D/powerkeeper.dfsobserve( 3271): board ready to handle temperature change
+04-27 11:19:09.542 D/powerkeeper.dfscpucol( 3271): handleTemperatureChange: temp=48087
+04-27 11:19:09.562 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-27 11:19:09.627 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Received IBS_WAKE_IND: 0xFD
+04-27 11:19:09.627 D/vendor.qti.bluetooth@1.0-ibs_handler( 1781): SerialClockVote: vote for UART CLK ON
+04-27 11:19:09.627 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Writing IBS_WAKE_ACK
+04-27 11:19:09.629 V/bluetooth(28001): system/gd/hci/le_scanning_reassembler.cc:67 ProcessAdvertisingReport: Dropping repeated legacy advertising data
+04-27 11:19:09.629 V/bluetooth(28001): system/gd/hci/le_scanning_reassembler.cc:90 ProcessAdvertisingReport: Ignoring advertising report when scan response is expected or current data is marked incomplete
+04-27 11:19:09.633 I/adbd    ( 3027): in ShellService: export ANDROID_LOG_TAGS="''"; exec logcat '-d' '-v' 'time'
+04-27 11:19:09.647 V/bluetooth(28001): system/gd/hci/le_scanning_reassembler.cc:67 ProcessAdvertisingReport: Dropping repeated legacy advertising data
+04-27 11:19:09.647 V/bluetooth(28001): system/gd/hci/le_scanning_reassembler.cc:101 ProcessAdvertisingReport: Full advertising report has been reassembled
+04-27 11:19:09.647 V/bluetooth(28001): system/gd/hci/le_scanning_decrypter.cc:148 ContainsEncryptedData: enc_adv_data_map is empty
+04-27 11:19:09.647 V/bt_btm_ble(28001): system/stack/btm/btm_ble_gap.cc:2166 btm_ble_process_adv_addr: bda=xx:xx:xx:xx:70:ec
+04-27 11:19:09.647 V/bt_btm_ble(28001): system/stack/btm/btm_ble_gap.cc:2157 btm_ble_update_inq_result: NOT_BR/EDR support bit set, treat device as LE only
+04-27 11:19:09.647 D/bt_btm_ble(28001): system/stack/btm/btm_ble_gap.cc:1961 btm_ble_is_discoverable: btm_ble_is_discoverable flag=0x6
+04-27 11:19:09.647 V/ScanController(28001): onScanResult() - eventType=0x10, addressType=1, address=XX:XX:XX:XX:70:EC, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=-60, periodicAdvInt=0x0, originalAddress=3D:E5:33:17:70:EC
+04-27 11:19:09.647 V/ScanController(28001): Skipping client: permission=true matches=false
+04-27 11:19:09.648 V/ScanController(28001): Skipping client: permission=true matches=false
+04-27 11:19:09.648 V/ScanController(28001): Skipping client: permission=true matches=false
+04-27 11:19:09.658 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-27 11:19:09.658 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0

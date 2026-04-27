@@ -1,0 +1,51 @@
+3025:04-27 11:18:07.409 D/SmartSalesConn(17230): 🏠 Registry: default device CHLE_Intelligent wuluyin (...E3:F6)
+6045:04-27 11:18:08.703 D/SmartSalesConn(17230): 📥 RX [Notification]: IP#192.168.43.94 (49 50 23 31 39 32 2E 31 36 38 2E 34 33 2E 39 34)
+6046:04-27 11:18:08.707 D/SmartSalesConn(17230): 📥 RX [Notification]: SD#MorningStar (53 44 23 4D 6F 72 6E 69 6E 67 53 74 61 72)
+6047:04-27 11:18:08.709 D/SmartSalesConn(17230): ❓ Badge unknown notification: IP#192.168.43.94
+6048:04-27 11:18:08.709 D/SmartSalesConn(17230): ❓ Badge unknown notification: SD#MorningStar
+6080:04-27 11:18:08.713 D/SmartSalesConn(17230): 📥 RX [NetworkResponse]: IP#192.168.43.94 (49 50 23 31 39 32 2E 31 36 38 2E 34 33 2E 39 34)
+6082:04-27 11:18:08.716 D/SmartSalesConn(17230): 📥 RX [NetworkResponse]: SD#MorningStar (53 44 23 4D 6F 72 6E 69 6E 67 53 74 61 72)
+6863:04-27 11:18:11.762 D/AudioPipeline(17230): SIM badge sync preflight start trigger=auto
+6864:04-27 11:18:11.762 D/AudioPipeline(17230): 🔎 isReady preflight: start
+6865:04-27 11:18:11.762 D/AudioPipeline(17230): 🌐 resolveBaseUrl: seeded active endpoint http://192.168.43.94:8088
+6866:04-27 11:18:11.763 D/AudioPipeline(17230): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.43.94:8088
+6867:04-27 11:18:11.763 D/SmartSalesConn(17230): BadgeHttpClient.isReachable start url=http://192.168.43.94:8088/
+7446:04-27 11:18:14.783 W/SmartSalesConn(17230): BadgeHttpClient.isReachable failure url=http://192.168.43.94:8088/ error=SocketTimeoutException:failed to connect to /192.168.43.94 (port 8088) from /192.168.0.101 (port 44702) after 3000ms
+7448:04-27 11:18:14.783 D/AudioPipeline(17230): 🔎 isReady preflight: retrying after endpoint refresh
+7449:04-27 11:18:14.784 D/AudioPipeline(17230): 🌐 resolveBaseUrl: querying badge network status
+7455:04-27 11:18:14.786 D/AudioPipeline(17230): 🌐 resolveBaseUrl: ip=192.168.43.94 badgeSsid=MorningStar phoneSsidForDiag=
+7456:04-27 11:18:14.786 D/AudioPipeline(17230): 🌐 resolveBaseUrl: refreshed http://192.168.43.94:8088
+7457:04-27 11:18:14.786 D/AudioPipeline(17230): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.43.94:8088
+7458:04-27 11:18:14.786 D/SmartSalesConn(17230): BadgeHttpClient.isReachable start url=http://192.168.43.94:8088/
+7600:04-27 11:18:15.642 D/AudioPipeline(17230): 🔎 isReady preflight: start
+7601:04-27 11:18:15.642 D/AudioPipeline(17230): 🌐 resolveBaseUrl: reusing active endpoint http://192.168.43.94:8088
+7602:04-27 11:18:15.642 D/AudioPipeline(17230): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.43.94:8088
+7603:04-27 11:18:15.642 D/SmartSalesConn(17230): BadgeHttpClient.isReachable start url=http://192.168.43.94:8088/
+7893:04-27 11:18:17.791 W/SmartSalesConn(17230): BadgeHttpClient.isReachable failure url=http://192.168.43.94:8088/ error=SocketTimeoutException:failed to connect to /192.168.43.94 (port 8088) from /192.168.0.101 (port 56488) after 3000ms
+7895:04-27 11:18:17.791 D/AudioPipeline(17230): 🔎 isReady preflight: result=not-ready baseUrl=http://192.168.43.94:8088
+7896:04-27 11:18:17.791 D/AudioPipeline(17230): SIM badge sync preflight result trigger=auto isReady=false
+7897:04-27 11:18:17.791 D/AudioPipeline(17230): SIM badge sync skipped trigger=auto stage=strict-preflight reason=not-ready
+7911:04-27 11:18:17.803 W/AudioPipeline(17230): SIM badge sync isolation suspected ip=192.168.43.94 context=on_connect — triggering isolation prompt
+7912:04-27 11:18:17.803 D/SmartSalesConn(17230): ConnectivityPrompt prompt=suspected_isolation badgeIp=192.168.43.94 trigger=on_connect
+8021:04-27 11:18:18.647 W/SmartSalesConn(17230): BadgeHttpClient.isReachable failure url=http://192.168.43.94:8088/ error=SocketTimeoutException:failed to connect to /192.168.43.94 (port 8088) from /192.168.0.101 (port 56504) after 3000ms
+8023:04-27 11:18:18.647 D/AudioPipeline(17230): 🔎 isReady preflight: retrying after endpoint refresh
+8024:04-27 11:18:18.647 D/AudioPipeline(17230): 🌐 resolveBaseUrl: querying badge network status
+8152:04-27 11:18:18.725 D/SmartSalesConn(17230): 📥 RX [Notification]: IP#192.168.43.94 (49 50 23 31 39 32 2E 31 36 38 2E 34 33 2E 39 34)
+8156:04-27 11:18:18.726 D/SmartSalesConn(17230): 📥 RX [Notification]: SD#MorningStar (53 44 23 4D 6F 72 6E 69 6E 67 53 74 61 72)
+8157:04-27 11:18:18.726 D/SmartSalesConn(17230): ❓ Badge unknown notification: IP#192.168.43.94
+8158:04-27 11:18:18.726 D/SmartSalesConn(17230): ❓ Badge unknown notification: SD#MorningStar
+8159:04-27 11:18:18.727 D/SmartSalesConn(17230): 📥 RX [NetworkResponse]: IP#192.168.43.94 (49 50 23 31 39 32 2E 31 36 38 2E 34 33 2E 39 34)
+8160:04-27 11:18:18.728 D/SmartSalesConn(17230): 📥 RX [NetworkResponse]: SD#MorningStar (53 44 23 4D 6F 72 6E 69 6E 67 53 74 61 72)
+8164:04-27 11:18:18.731 D/AudioPipeline(17230): 🌐 resolveBaseUrl: ip=192.168.43.94 badgeSsid=MorningStar phoneSsidForDiag=
+8165:04-27 11:18:18.732 D/AudioPipeline(17230): 🌐 resolveBaseUrl: refreshed http://192.168.43.94:8088
+8166:04-27 11:18:18.732 D/AudioPipeline(17230): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.43.94:8088
+8167:04-27 11:18:18.732 D/SmartSalesConn(17230): BadgeHttpClient.isReachable start url=http://192.168.43.94:8088/
+8451:04-27 11:18:21.737 W/SmartSalesConn(17230): BadgeHttpClient.isReachable failure url=http://192.168.43.94:8088/ error=SocketTimeoutException:failed to connect to /192.168.43.94 (port 8088) from /192.168.0.101 (port 56514) after 3000ms
+8453:04-27 11:18:21.738 D/AudioPipeline(17230): 🔎 isReady preflight: result=not-ready baseUrl=http://192.168.43.94:8088
+9492:04-27 11:18:27.094 W/SystemServiceRegistry(  373): No service published for: recovery
+10446:04-27 11:18:27.513 D/AudioPipeline(17230): 🔎 isReady preflight: start
+10447:04-27 11:18:27.513 D/AudioPipeline(17230): 🌐 resolveBaseUrl: querying badge network status
+10453:04-27 11:18:27.516 D/AudioPipeline(17230): 🌐 resolveBaseUrl: ip=192.168.43.94 badgeSsid=MorningStar phoneSsidForDiag=
+10454:04-27 11:18:27.516 D/AudioPipeline(17230): 🌐 resolveBaseUrl: refreshed http://192.168.43.94:8088
+10455:04-27 11:18:27.516 D/AudioPipeline(17230): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.43.94:8088
+10456:04-27 11:18:27.517 D/SmartSalesConn(17230): BadgeHttpClient.isReachable start url=http://192.168.43.94:8088/

@@ -268,7 +268,8 @@ class RealPairingServiceTest {
         override suspend fun promptWifiMismatch(suggestedSsid: String?) = Unit
         override suspend fun promptSuspectedIsolation(
             badgeIp: String,
-            triggerContext: IsolationTriggerContext
+            triggerContext: IsolationTriggerContext,
+            suggestedSsid: String?
         ) {
             isolationCallCount++
             lastIsolationIp = badgeIp

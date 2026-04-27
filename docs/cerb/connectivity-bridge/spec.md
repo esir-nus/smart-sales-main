@@ -3,7 +3,7 @@
 > **Cerb-compliant spec** — Prism-safe wrapper for legacy BLE + HTTP connectivity.
 > **OS Layer**: Infrastructure (Layer 1) — Leaf service, no upstream dependencies
 > **Status**: SHIPPED
-> **Last Updated**: 2026-04-02
+> **Last Updated**: 2026-04-27
 > **Behavioral UX Authority Above This Doc**: [`docs/core-flow/base-runtime-ux-surface-governance-flow.md`](../../core-flow/base-runtime-ux-surface-governance-flow.md) (`UX.CONNECTIVITY.*`)
 
 ---
@@ -196,7 +196,7 @@ sealed class WavDownloadResult {
 | `CHECKING_UPDATE` | Spinner |  (Auto) |
 | `UPDATE_FOUND` | 📥 Amber icon<br>"发现新版本" | **立即同步**<br>**稍后** |
 | `UPDATING` | Progress bar | (Auto) |
-| `WIFI_MISMATCH` | ⚠️ Warning<br>WiFi form | **忽略**<br>**更新配置** |
+| `WIFI_MISMATCH` | ⚠️ Warning<br>WiFi form or isolation repair prompt | **忽略**<br>**更新配置**<br>Isolation only: **修复 Wi-Fi 配置** |
 
 > [!NOTE]
 > After user taps "断开连接", soft disconnect preserves session.
@@ -206,6 +206,7 @@ sealed class WavDownloadResult {
 > Tapping `开始配网` from `NEEDS_SETUP` still enters the full shared onboarding coordinator with `host = SIM_CONNECTIVITY`.
 > Tapping the manager `添加设备` action enters the streamlined add-device coordinator with `host = SIM_ADD_DEVICE`, reusing pairing/provisioning runtime while skipping intro handshake, scheduler quick start, and the onboarding completion wrapper. The route closes back to the connectivity-owned surface only after successful provisioning/registration.
 > Tapping "更新配置" from `WIFI_MISMATCH` first performs local validation plus an explicit send-confirm dialog; only the confirmed valid submit enters reconnect/progress and runs the repair flow without requiring a second manual retry.
+> Tapping "修复 Wi-Fi 配置" from a suspected-isolation prompt for an already registered active badge enters the same `WIFI_MISMATCH` credential form. It must keep the active registry row and must not navigate to add-device pairing.
 > The richer `BLE_PAIRED_NETWORK_*` states are manager-only refinements derived from `ConnectivityBridge.managerStatus`; they must not redefine global transport readiness.
 > Debug builds may additionally expose a temporary `断开连接` action in `BLE_PAIRED_NETWORK_*` states for hardware testing convenience; that control must not be treated as a release-surface contract.
 > Closing the connectivity modal/manager clears transient reconnect or mismatch override state so later reopen reflects live manager truth rather than a retained stale repair screen.
@@ -254,7 +255,7 @@ Reconnect credential rule:
   - if the badge is online on a different SSID than the phone, silently replay the exact-match remembered credential when one exists so the badge switches to the phone's current network
   - if phone Wi‑Fi transport is connected but SSID is unreadable, route to `WIFI_MISMATCH` rather than blind-replaying a credential
   - otherwise route the manager UI to `WIFI_MISMATCH` so the user can re-enter credentials
-- reconnect-driven `WIFI_MISMATCH` must carry the current phone SSID suggestion when readable so the repair form can prefill it without locking the field
+- reconnect-driven and isolation-driven `WIFI_MISMATCH` must carry the current phone SSID suggestion when readable so the repair form can prefill it without locking the field
 - when the user submits manual SSID/password from `WIFI_MISMATCH`, the UI must trim both fields, reject blank values locally, require an explicit confirmation dialog, and only then show reconnect/progress while `updateWifiConfig()` runs its provision-plus-confirm repair path
 - manual repair must not fall back into the generic reconnect path after sending credentials
 - manual repair confirmation must:

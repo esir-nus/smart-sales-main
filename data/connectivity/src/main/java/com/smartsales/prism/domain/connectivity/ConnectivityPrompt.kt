@@ -14,9 +14,11 @@ interface ConnectivityPrompt {
      *
      * @param badgeIp 探测失败的徽章 IP，用于界面诊断展示
      * @param triggerContext 探测触发来源（配对后 / 同步前 / 断开时），决定界面文案
+     * @param suggestedSsid 当前手机 Wi-Fi SSID，可用于修复表单预填
      */
     suspend fun promptSuspectedIsolation(
         badgeIp: String,
-        triggerContext: IsolationTriggerContext = IsolationTriggerContext.POST_PAIRING
+        triggerContext: IsolationTriggerContext = IsolationTriggerContext.POST_PAIRING,
+        suggestedSsid: String? = null
     )
 }

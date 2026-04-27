@@ -283,7 +283,8 @@ internal class SimAudioRepositorySyncSupport(
                     )
                     runtime.connectivityPrompt.promptSuspectedIsolation(
                         badgeIp = latestIp,
-                        triggerContext = IsolationTriggerContext.ON_CONNECT
+                        triggerContext = IsolationTriggerContext.ON_CONNECT,
+                        suggestedSsid = (wifiSnapshot as? PhoneWifiSnapshot.Connected)?.normalizedSsid
                     )
                     maybeArmKnownHttpUnreachableLatch("on_connect_isolation", shouldArm = true)
                 }
@@ -315,7 +316,8 @@ internal class SimAudioRepositorySyncSupport(
                     )
                     runtime.connectivityPrompt.promptSuspectedIsolation(
                         badgeIp = latestIp,
-                        triggerContext = IsolationTriggerContext.PRE_SYNC
+                        triggerContext = IsolationTriggerContext.PRE_SYNC,
+                        suggestedSsid = (wifiSnapshot as? PhoneWifiSnapshot.Connected)?.normalizedSsid
                     )
                     throw IsolationBlockedSyncException(latestIp)
                 }

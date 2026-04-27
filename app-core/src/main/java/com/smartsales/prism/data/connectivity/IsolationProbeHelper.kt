@@ -55,11 +55,12 @@ internal suspend fun runIsolationProbeIfSuspected(
     )
 
     return if (!isReachable && isValidated) {
+        val suggestedSsid = (snapshot as? PhoneWifiSnapshot.Connected)?.normalizedSsid
         Log.w(
             ISOLATION_PROBE_TAG,
-            "Suspected AP isolation. ip=$badgeIp context=${triggerContext.name.lowercase()}"
+            "Suspected AP isolation. ip=$badgeIp context=${triggerContext.name.lowercase()} suggestedSsid=${suggestedSsid ?: "unknown"}"
         )
-        connectivityPrompt.promptSuspectedIsolation(badgeIp, triggerContext)
+        connectivityPrompt.promptSuspectedIsolation(badgeIp, triggerContext, suggestedSsid)
         true
     } else {
         false

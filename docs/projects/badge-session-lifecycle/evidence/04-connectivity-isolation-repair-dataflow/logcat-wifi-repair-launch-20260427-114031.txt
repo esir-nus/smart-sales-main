@@ -1,0 +1,62 @@
+--------- beginning of main
+04-27 11:40:40.342 D/ConnectivityService( 3839): releasing NetworkRequest [ REQUEST id=5391, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10122 RequestorUid: 10122 RequestorPkg: com.android.vending UnderlyingNetworks: Null] ] (release request)
+04-27 11:40:40.342 D/ConnectivityService( 3839): releasing NetworkRequest [ REQUEST id=5394, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10122 RequestorUid: 10122 RequestorPkg: com.android.vending UnderlyingNetworks: Null] ] (release request)
+04-27 11:40:41.005 D/SmartSalesConn( 9073): 🔌 Restored session: 14:C1:9F:D7:E3:F6 knownNetworks=1
+04-27 11:40:41.007 D/SmartSalesConn( 9073): 🏠 Registry: default device CHLE_Intelligent (...E3:F6)
+04-27 11:40:41.012 I/SmartSalesConn( 9073): 📶 BLE disconnected
+04-27 11:40:41.012 D/SmartSalesConn( 9073): 🔌 Soft disconnect (session preserved)
+04-27 11:40:41.012 D/SmartSalesConn( 9073): 🔌 Persistent GATT session closed
+04-27 11:40:42.186 D/SmartSalesConn( 9073): 📋 Service: 00001801-0000-1000-8000-00805f9b34fb
+04-27 11:40:42.186 D/SmartSalesConn( 9073):   📋 Char: 00002a05-0000-1000-8000-00805f9b34fb [INDICATE ]
+04-27 11:40:42.186 D/SmartSalesConn( 9073):     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-27 11:40:42.186 D/SmartSalesConn( 9073): 📋 Service: 00001800-0000-1000-8000-00805f9b34fb
+04-27 11:40:42.190 D/SmartSalesConn( 9073):   📋 Char: 00002a00-0000-1000-8000-00805f9b34fb [READ ]
+04-27 11:40:42.190 D/SmartSalesConn( 9073):     📋 (no descriptors)
+04-27 11:40:42.190 D/SmartSalesConn( 9073):   📋 Char: 00002a01-0000-1000-8000-00805f9b34fb [READ ]
+04-27 11:40:42.190 D/SmartSalesConn( 9073):     📋 (no descriptors)
+04-27 11:40:42.190 D/SmartSalesConn( 9073):   📋 Char: 00002aa6-0000-1000-8000-00805f9b34fb [READ ]
+04-27 11:40:42.190 D/SmartSalesConn( 9073):     📋 (no descriptors)
+04-27 11:40:42.191 D/SmartSalesConn( 9073): 📋 Service: 000000ff-0000-1000-8000-00805f9b34fb
+04-27 11:40:42.191 D/SmartSalesConn( 9073):   📋 Char: 0000ff01-0000-1000-8000-00805f9b34fb [READ WRITE NOTIFY ]
+04-27 11:40:42.191 D/SmartSalesConn( 9073):     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-27 11:40:42.191 D/SmartSalesConn( 9073):   📋 Char: 0000ff02-0000-1000-8000-00805f9b34fb [READ ]
+04-27 11:40:42.191 D/SmartSalesConn( 9073):     📋 (no descriptors)
+04-27 11:40:42.191 D/SmartSalesConn( 9073):   📋 Char: 0000ff03-0000-1000-8000-00805f9b34fb [WRITE ]
+04-27 11:40:42.191 D/SmartSalesConn( 9073):     📋 (no descriptors)
+04-27 11:40:42.225 D/SmartSalesConn( 9073): No CCCD descriptor for 0000ff02-0000-1000-8000-00805f9b34fb, notifications not available (will poll)
+04-27 11:40:42.225 I/SmartSalesConn( 9073): 🔌 Persistent GATT session established: 14:C1:9F:D7:E3:F6
+04-27 11:40:42.225 I/SmartSalesConn( 9073): 📶 BLE connected, waiting for explicit network observation
+04-27 11:40:42.228 D/SmartSalesConn( 9073): 📡 Starting persistent notification listener for 14:C1:9F:D7:E3:F6
+04-27 11:40:42.232 D/SmartSalesConn( 9073): 🌐 network query device=CHLE_Intelligent
+04-27 11:40:42.232 I/SmartSalesConn( 9073): 📡 queryNetwork ENTRY (in mutex)
+04-27 11:40:42.236 D/SmartSalesConn( 9073): 📤 TX [NetworkQuery]: wifi#address#ip#name (77 69 66 69 23 61 64 64 72 65 73 73 23 69 70 23 6E 61 6D 65)
+04-27 11:40:42.291 D/SmartSalesConn( 9073): 📥 RX [Notification]: IP#10.105.172.34 (49 50 23 31 30 2E 31 30 35 2E 31 37 32 2E 33 34)
+04-27 11:40:42.293 D/SmartSalesConn( 9073): 📥 RX [Notification]: SD#qwe (53 44 23 71 77 65)
+04-27 11:40:42.295 D/SmartSalesConn( 9073): ❓ Badge unknown notification: IP#10.105.172.34
+04-27 11:40:42.296 D/SmartSalesConn( 9073): 📥 RX [NetworkResponse]: IP#10.105.172.34 (49 50 23 31 30 2E 31 30 35 2E 31 37 32 2E 33 34)
+04-27 11:40:42.296 D/SmartSalesConn( 9073): ❓ Badge unknown notification: SD#qwe
+04-27 11:40:42.297 D/SmartSalesConn( 9073): 📥 RX [NetworkResponse]: SD#qwe (53 44 23 71 77 65)
+04-27 11:40:42.297 D/SmartSalesConn( 9073): 📡 fresh query, caching IP=10.105.172.34
+04-27 11:40:42.298 D/SmartSalesConn( 9073): 📶 state=CONNECTED ip=10.105.172.34
+04-27 11:40:42.298 D/SmartSalesConn( 9073): 🔌 connectUsingSession: connected, ip=10.105.172.34 ssid=qwe
+04-27 11:40:42.317 D/SmartSalesConn( 9073): 📥 RX [Notification]: tim#get (74 69 6D 23 67 65 74)
+04-27 11:40:42.319 D/SmartSalesConn( 9073): ⏰ Badge time sync requested
+04-27 11:40:42.410 I/SmartSalesConn( 9073): ⏰ Time sync responded: tim#20260427114042
+04-27 11:40:42.444 D/SmartSalesConn( 9073): 📤 TX [BadgeSignal]: Ver#get (56 65 72 23 67 65 74)
+04-27 11:40:42.499 D/SmartSalesConn( 9073): 📥 RX [Notification]: Ver#1.0.0.1 (56 65 72 23 31 2E 30 2E 30 2E 31)
+04-27 11:40:42.500 I/SmartSalesConn( 9073): 🧾 Badge firmware version: 1.0.0.1
+04-27 11:40:42.544 I/SmartSalesConn( 9073): 🧾 Badge firmware version query sent
+04-27 11:40:45.091 D/SmartSalesConn( 9073): 📥 RX [Notification]: Bat#92.68% (42 61 74 23 39 32 2E 36 38 25)
+04-27 11:40:45.092 D/SmartSalesConn( 9073): ❓ Badge unknown notification: Bat#92.68%
+04-27 11:40:45.446 D/SmartSalesConn( 9073): BadgeHttpClient.isReachable start url=http://10.105.172.34:8088/
+04-27 11:40:46.535 D/SmartSalesConn( 9073): BadgeHttpClient.isReachable response url=http://10.105.172.34:8088/ code=200 reachable=true
+04-27 11:40:49.230 D/SmartSalesConn( 9073): 📥 RX [Notification]: Bat#92.68% (42 61 74 23 39 32 2E 36 38 25)
+04-27 11:40:49.231 D/SmartSalesConn( 9073): ❓ Badge unknown notification: Bat#92.68%
+04-27 11:40:53.327 D/SmartSalesConn( 9073): 📥 RX [Notification]: Bat#92.68% (42 61 74 23 39 32 2E 36 38 25)
+04-27 11:40:53.327 D/SmartSalesConn( 9073): ❓ Badge unknown notification: Bat#92.68%
+04-27 11:40:57.437 D/SmartSalesConn( 9073): 📥 RX [Notification]: Bat#92.78% (42 61 74 23 39 32 2E 37 38 25)
+04-27 11:40:57.437 D/SmartSalesConn( 9073): ❓ Badge unknown notification: Bat#92.78%
+04-27 11:41:01.500 D/SmartSalesConn( 9073): 📥 RX [Notification]: Bat#92.68% (42 61 74 23 39 32 2E 36 38 25)
+04-27 11:41:01.501 D/SmartSalesConn( 9073): ❓ Badge unknown notification: Bat#92.68%
+04-27 11:41:03.892 D/ConnectivityService( 3839): reportNetworkConnectivity(157, false) by 1000
+04-27 11:41:04.016 D/ConnectivityService( 3839): [157 WIFI] validation passed

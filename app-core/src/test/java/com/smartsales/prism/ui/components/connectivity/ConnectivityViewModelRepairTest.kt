@@ -152,7 +152,7 @@ class ConnectivityViewModelRepairTest {
         )
         advanceUntilIdle()
 
-        coordinator.promptSuspectedIsolation("192.168.1.18")
+        coordinator.promptSuspectedIsolation("192.168.1.18", suggestedSsid = "OfficeGuest")
         advanceUntilIdle()
 
         assertEquals(
@@ -161,6 +161,57 @@ class ConnectivityViewModelRepairTest {
         )
         assertEquals(ConnectionState.WIFI_MISMATCH, viewModel.effectiveState.value)
         assertEquals("192.168.1.18", viewModel.isolationBadgeIp.value)
+        assertEquals("OfficeGuest", viewModel.wifiMismatchSuggestedSsid.value)
+    }
+
+    @Test
+    fun `startIsolationWifiRepair enters credential form without removing active device`() = runTest {
+        val registry = NoOpDeviceRegistryManager(
+            active = RegisteredDevice(
+                macAddress = "AA:BB:CC:DD:EE:FF",
+                displayName = "CHLE_Intelligent",
+                profileId = null,
+                registeredAtMillis = 1L,
+                lastConnectedAtMillis = 2L,
+                isDefault = true
+            )
+        )
+        val coordinator = ConnectivityPromptCoordinator()
+        val viewModel = ConnectivityViewModel(
+            connectivityService = StubConnectivityService(),
+            connectivityBridge = StubRepairBridge(),
+            registryManager = registry,
+            promptCoordinator = coordinator
+        )
+        coordinator.promptSuspectedIsolation("192.168.1.18", suggestedSsid = "OfficeGuest")
+        advanceUntilIdle()
+
+        val prepared = viewModel.startIsolationWifiRepair()
+        advanceUntilIdle()
+
+        assertEquals(true, prepared)
+        assertEquals(emptyList<String>(), registry.removedMacs)
+        assertEquals("AA:BB:CC:DD:EE:FF", registry.activeDevice.value?.macAddress)
+        assertEquals(WifiRepairState.EditCredentials("OfficeGuest"), viewModel.repairState.value)
+        assertEquals("192.168.1.18", viewModel.isolationBadgeIp.value)
+        assertEquals(ConnectionState.WIFI_MISMATCH, viewModel.effectiveState.value)
+    }
+
+    @Test
+    fun `startIsolationWifiRepair returns false when no active device exists`() = runTest {
+        val registry = NoOpDeviceRegistryManager()
+        val viewModel = ConnectivityViewModel(
+            connectivityService = StubConnectivityService(),
+            connectivityBridge = StubRepairBridge(),
+            registryManager = registry,
+            promptCoordinator = ConnectivityPromptCoordinator()
+        )
+        advanceUntilIdle()
+
+        val prepared = viewModel.startIsolationWifiRepair()
+
+        assertEquals(false, prepared)
+        assertEquals(emptyList<String>(), registry.removedMacs)
     }
 
     @Test
@@ -232,16 +283,25 @@ class ConnectivityViewModelRepairTest {
         override suspend fun connect(macAddress: String) = Unit
     }
 
-    private class NoOpDeviceRegistryManager : DeviceRegistryManager {
-        private val _registeredDevices = MutableStateFlow<List<RegisteredDevice>>(emptyList())
-        private val _activeDevice = MutableStateFlow<RegisteredDevice?>(null)
+    private class NoOpDeviceRegistryManager(
+        active: RegisteredDevice? = null
+    ) : DeviceRegistryManager {
+        val removedMacs = mutableListOf<String>()
+        private val _registeredDevices = MutableStateFlow<List<RegisteredDevice>>(listOfNotNull(active))
+        private val _activeDevice = MutableStateFlow(active)
         override val registeredDevices: StateFlow<List<RegisteredDevice>> = _registeredDevices.asStateFlow()
         override val activeDevice: StateFlow<RegisteredDevice?> = _activeDevice.asStateFlow()
         override fun registerDevice(peripheral: BlePeripheral, session: BleSession) = Unit
         override fun renameDevice(macAddress: String, newName: String) = Unit
         override fun setDefault(macAddress: String) = Unit
         override suspend fun switchToDevice(macAddress: String) = Unit
-        override fun removeDevice(macAddress: String) = Unit
+        override fun removeDevice(macAddress: String) {
+            removedMacs += macAddress
+            _registeredDevices.value = _registeredDevices.value.filterNot { it.macAddress == macAddress }
+            if (_activeDevice.value?.macAddress == macAddress) {
+                _activeDevice.value = null
+            }
+        }
         override fun initializeOnLaunch() = Unit
         override fun markManuallyDisconnected(macAddress: String, value: Boolean) = Unit
         override fun updateBleDetected(macAddress: String, value: Boolean) = Unit

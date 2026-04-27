@@ -102,13 +102,17 @@ What is the rule for choosing `SharingStarted.WhileSubscribed` vs `SharingStarte
 
 <!-- Operator appends one entry per iteration. Not committed mid-sprint. -->
 
+- 2026-04-27 iteration 1: Read the project tracker, sprint contract schema, project-structure spec, interface map, lessons index/details for architecture and Flow triggers, connectivity-bridge spec, badge-audio-pipeline spec, and the referenced Kotlin files. Confirmed the stop criteria do not trigger: `DeviceRegistryManager` owns active-device selection, `DeviceConnectionManager` owns transport, and audio can observe registry state without reversing the dependency. Authored `docs/core-flow/badge-session-lifecycle.md` as the lifecycle contract above the current code.
+
 ## Closeout
 
 <!-- Operator fills on exit. -->
 
-- Status:
-- Summary:
+- Status: success
+- Summary: Authored the badge session lifecycle core flow covering single-device states, multi-device switch teardown, audio sync binding, and UI observation rules.
 - Evidence:
-- Operator assessment of Sprints 02 and 03:
-- Lesson proposals:
-- CHANGELOG line:
+  - `ls -la docs/core-flow/badge-session-lifecycle.md` -> `-rw-rw-r-- 1 cslh-frank cslh-frank 11739 Apr 27 10:41 docs/core-flow/badge-session-lifecycle.md`
+  - `wc -l docs/core-flow/badge-session-lifecycle.md` -> `234 docs/core-flow/badge-session-lifecycle.md`
+- Operator assessment of Sprints 02 and 03: After reading the current registry, connection, audio repository, and drawer ViewModel code, the prescribed Sprint 02 and Sprint 03 directions still look correct, with one implementation adjustment to keep in mind. Sprint 02 should use the existing `SimAudioRepositoryRuntime.deviceRegistryManager` dependency rather than adding a duplicate constructor dependency directly to `SimAudioRepository`; audio can observe `activeDevice` from the runtime and cancel queued/active downloads on MAC change while keeping the registry audio-agnostic. Sprint 03 is still valid because `SimAudioDrawerViewModel.entries` and `AudioViewModel.audioItems` both use `SharingStarted.WhileSubscribed` for repository audio inventory/progress projections, while badge-originated updates can arrive when drawers are closed.
+- Lesson proposals: none
+- CHANGELOG line: none

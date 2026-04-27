@@ -16,7 +16,7 @@ open
 
 | # | Slug | Status | Summary | Contract |
 |---|------|--------|---------|----------|
-| 01 | lifecycle-design | authored | — | [sprints/01-lifecycle-design.md](sprints/01-lifecycle-design.md) |
+| 01 | lifecycle-design | done | Authored the badge session lifecycle core flow covering single-device states, multi-device switch teardown, audio sync binding, and UI observation rules. | [sprints/01-lifecycle-design.md](sprints/01-lifecycle-design.md) |
 | 02 | audio-download-device-scope | authored | — | [sprints/02-audio-download-device-scope.md](sprints/02-audio-download-device-scope.md) |
 | 03 | audio-drawer-live-observation | authored | — | [sprints/03-audio-drawer-live-observation.md](sprints/03-audio-drawer-live-observation.md) |
 

@@ -39,8 +39,7 @@ The audio repository should observe `DeviceRegistryManager.activeDevice` and can
 Files the operator may touch:
 
 - `app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepositorySyncSupport.kt` — add `cancelAllBadgeDownloads()`
-- `app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepository.kt` — inject `DeviceRegistryManager`, add `activeDevice` observer in `init`
-- The Hilt DI module that provides `SimAudioRepository` — add `DeviceRegistryManager` parameter
+- `app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepository.kt` — observe `runtime.deviceRegistryManager.activeDevice` in `init`
 - Any unit test files for `SimAudioRepository` or `SimAudioRepositorySyncSupport`
 - `docs/projects/badge-session-lifecycle/sprints/02-audio-download-device-scope.md` (this file)
 - `docs/projects/badge-session-lifecycle/tracker.md`
@@ -50,26 +49,26 @@ Files the operator may touch:
 - `RealDeviceRegistryManager.kt` — do not add any audio awareness here; dependency must stay one-directional
 - `domain/` — no domain model changes
 - `data/connectivity/` (other than reading for reference)
-- `SimAudioRepositoryRuntime.kt` — do not restructure the scope or queue shape; just add cancellation support
+- `SimAudioRepositoryRuntime.kt` — do not restructure the scope or queue shape; it already exposes `deviceRegistryManager`
 
 ## References
 
 - `docs/core-flow/badge-session-lifecycle.md` — produced by Sprint 01; defines the "audio sync teardown on device switch" invariant this sprint implements
-- `app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepositoryRuntime.kt:37,47-50` — `repositoryScope`, `queuedBadgeDownloads`, `badgeDownloadWorkerJob`, `activeBadgeDownloadJob`
+- `app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepositoryRuntime.kt:34,37,47-50` — `deviceRegistryManager`, `repositoryScope`, `queuedBadgeDownloads`, `badgeDownloadWorkerJob`, `activeBadgeDownloadJob`
 - `app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepositorySyncSupport.kt:429-443,486-495` — `cancelBadgeDownload()`, `enqueueBadgeDownloads()`
 - `app-core/src/main/java/com/smartsales/prism/data/connectivity/registry/RealDeviceRegistryManager.kt:169-195` — `switchToDevice()` — read to confirm what it does NOT cancel
 
 ## Success Exit Criteria
 
 1. **New method present:** `grep -n "cancelAllBadgeDownloads" SimAudioRepositorySyncSupport.kt` returns a hit.
-2. **Observer present:** `grep -n "registryManager.activeDevice" SimAudioRepository.kt` returns a hit inside `init`.
+2. **Observer present:** `grep -n "deviceRegistryManager.activeDevice\|activeDevice.collect" SimAudioRepository.kt` returns a hit inside `init`.
 3. **Tests green:** `./gradlew :app-core:testDebugUnitTest` exits 0. If any existing test breaks, fix it before declaring success.
 4. **Logcat evidence:** after switching devices while Badge B downloads are in-flight, `adb logcat -d | grep "SIM badge sync"` shows "all downloads cancelled (device switch)" followed by Badge A's sync starting (listing or enqueueing its own files).
 
 ## Stop Exit Criteria
 
-- `SimAudioRepository` is constructed without Hilt (e.g., manually in a test) in a way that makes adding a constructor parameter unworkable without a large refactor — stop and surface.
-- `processsBadgeDownloadQueue()` holds the mutex across the full download (not just queue access), making the cancel approach a deadlock risk — stop and surface.
+- `SimAudioRepositoryRuntime` no longer exposes `DeviceRegistryManager`, and adding a replacement dependency would require broad DI or test rewiring — stop and surface.
+- `processBadgeDownloadQueue()` holds the mutex across the full download (not just queue access), making the cancel approach a deadlock risk — stop and surface.
 - The connectivity bridge (`downloadRecording()`) is found to be device-agnostic already (routes to a queue internally) — in that case the device-switch problem may be different than hypothesized; stop and surface.
 
 ## Iteration Bound
@@ -101,13 +100,11 @@ suspend fun cancelAllBadgeDownloads() = withContext(runtime.ioDispatcher) {
 
 ### B. `SimAudioRepository.kt` — observe `activeDevice`, cancel on change
 
-Constructor injection: add `private val registryManager: DeviceRegistryManager`.
-
 In `init {}`:
 ```kotlin
 runtime.repositoryScope.launch {
     var previousMac: String? = null
-    registryManager.activeDevice.collect { device ->
+    runtime.deviceRegistryManager.activeDevice.collect { device ->
         val mac = device?.macAddress
         if (previousMac != null && mac != previousMac) {
             syncSupport.cancelAllBadgeDownloads()
@@ -117,7 +114,7 @@ runtime.repositoryScope.launch {
 }
 ```
 
-Update the Hilt module providing `SimAudioRepository` to inject `DeviceRegistryManager`.
+Use the existing `SimAudioRepositoryRuntime.deviceRegistryManager` dependency. Do not add a duplicate `DeviceRegistryManager` constructor parameter or Hilt provider edge unless code inspection shows the runtime dependency has been removed.
 
 ## Iteration Ledger
 

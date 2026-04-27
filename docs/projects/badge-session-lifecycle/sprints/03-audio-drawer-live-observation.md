@@ -32,7 +32,7 @@ The fundamental problem: `WhileSubscribed` was chosen as a resource-efficient de
 
 This is not just a UI bug — it reflects the incremental buildup pattern the user identified: the `WhileSubscribed` default was reasonable when audio was a simple list-on-open surface, but it became problematic once the feature added real-time download progress and badge-push notifications.
 
-**Note:** the user acknowledged their description may not be fully accurate. Before applying the fix, read the actual ViewModel code and the composable to verify that `WhileSubscribed` is indeed the culprit. If the issue is elsewhere (e.g., the composable uses `remember { }` instead of `collectAsState()`, or the StateFlow is never actually updated during downloads), diagnose and address the real cause. Document the actual finding in the ledger. This contract is a hypothesis based on static analysis, not a confirmed diagnosis.
+**Note:** the user acknowledged their description may not be fully accurate. Before applying the fix, read the actual ViewModel code and the composable to verify that `WhileSubscribed` is indeed the culprit. If the issue is elsewhere (e.g., the composable uses `remember { }` instead of `collectAsState()`, the StateFlow is never actually updated during downloads, or the only reproducible failure happens while the drawer is already open and actively collecting), diagnose and address the real cause. Document the actual finding in the ledger. This contract is a hypothesis based on static analysis, not a confirmed diagnosis.
 
 ## Scope
 

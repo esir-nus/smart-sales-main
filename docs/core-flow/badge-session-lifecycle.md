@@ -114,7 +114,7 @@ Valid transitions:
 
 ## Section 2 - Multi-Device: Pairing A Second Badge
 
-Pairing a second badge registers a new device and may make it the active runtime device after successful pairing. The currently active badge becomes a provisioned registered device unless the user explicitly removes it.
+Pairing a second badge registers a new device and makes that newly paired badge the active runtime device after successful pairing in the current Android flow. The previously active badge becomes a provisioned registered device unless the user explicitly removes it.
 
 Invariants:
 

@@ -15,12 +15,14 @@ import com.smartsales.prism.domain.connectivity.BadgeConnectionState
 import com.smartsales.prism.domain.connectivity.BadgeManagerStatus
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.data.connectivity.registry.DeviceRegistryManager
+import com.smartsales.prism.data.connectivity.registry.RegisteredDevice
 import com.smartsales.prism.domain.connectivity.ConnectivityPrompt
 import com.smartsales.prism.domain.connectivity.IsolationTriggerContext
 import com.smartsales.prism.domain.connectivity.RecordingNotification
 import com.smartsales.prism.domain.connectivity.WavDownloadResult
 import com.smartsales.prism.domain.tingwu.TingwuPipeline
 import com.smartsales.prism.service.DownloadServiceOrchestrator
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
@@ -57,6 +59,7 @@ class SimAudioRepositorySyncSupportTest {
     private lateinit var syncSupport: SimAudioRepositorySyncSupport
     private lateinit var connectivityPrompt: FakeConnectivityPrompt
     private lateinit var deviceRegistryManager: DeviceRegistryManager
+    private lateinit var activeDeviceFlow: MutableStateFlow<RegisteredDevice?>
 
     @Before
     fun setup() {
@@ -68,7 +71,8 @@ class SimAudioRepositorySyncSupportTest {
         connectivityPrompt = FakeConnectivityPrompt()
         phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest")
         deviceRegistryManager = mock<DeviceRegistryManager>()
-        whenever(deviceRegistryManager.activeDevice).thenReturn(MutableStateFlow(null))
+        activeDeviceFlow = MutableStateFlow(null)
+        whenever(deviceRegistryManager.activeDevice).thenReturn(activeDeviceFlow)
         runtime = SimAudioRepositoryRuntime(
             context = context,
             connectivityBridge = connectivityBridge,
@@ -495,6 +499,38 @@ class SimAudioRepositorySyncSupportTest {
         )
     }
 
+    @Test
+    fun `active device change cancels queued and active badge downloads`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
+        activeDeviceFlow.value = registeredDevice("AA:AA:AA:AA:AA:01")
+        val repository = SimAudioRepository(runtime, orchestrator)
+        connectivityBridge.isReadyResult = true
+        connectivityBridge.listResult = Result.Success(listOf("a.wav", "b.wav"))
+        connectivityBridge.downloadSuspender = { kotlinx.coroutines.awaitCancellation() }
+
+        advanceUntilIdle()
+        repository.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+        advanceUntilIdle()
+
+        assertEquals(
+            AudioLocalAvailability.DOWNLOADING,
+            runtime.audioFiles.value.single { it.filename == "a.wav" }.localAvailability
+        )
+        assertTrue(runtime.queuedBadgeDownloads.contains("b.wav"))
+
+        activeDeviceFlow.value = registeredDevice("BB:BB:BB:BB:BB:02")
+        advanceUntilIdle()
+
+        assertTrue(runtime.queuedBadgeDownloads.isEmpty())
+        assertTrue(runtime.badgeDownloadWorkerJob?.isActive != true)
+        assertEquals(
+            AudioLocalAvailability.FAILED,
+            runtime.audioFiles.value.single { it.filename == "a.wav" }.localAvailability
+        )
+        assertFalse(connectivityBridge.calls.contains("downloadRecording:b.wav"))
+        runtime.repositoryScope.cancel()
+    }
+
     private fun bindRuntimeToTestScheduler(scheduler: TestCoroutineScheduler) {
         val dispatcher = StandardTestDispatcher(scheduler)
         runtime.overrideConcurrencyForTests(
@@ -519,6 +555,15 @@ class SimAudioRepositorySyncSupportTest {
         )
         return runtimeKey
     }
+
+    private fun registeredDevice(macAddress: String): RegisteredDevice = RegisteredDevice(
+        macAddress = macAddress,
+        displayName = "Badge ${macAddress.takeLast(2)}",
+        profileId = null,
+        registeredAtMillis = 1L,
+        lastConnectedAtMillis = 1L,
+        isDefault = false
+    )
 
     private class FakeConnectivityBridge : ConnectivityBridge {
         override val connectionState = MutableStateFlow<BadgeConnectionState>(

@@ -442,6 +442,22 @@ internal class SimAudioRepositorySyncSupport(
         )
     }
 
+    suspend fun cancelAllBadgeDownloads() = withContext(runtime.ioDispatcher) {
+        runtime.badgeDownloadQueueMutex.withLock {
+            runtime.queuedBadgeDownloads.clear()
+            runtime.activeBadgeDownloadJob?.cancel(
+                CancellationException("device switched")
+            )
+            runtime.badgeDownloadWorkerJob?.cancel(
+                CancellationException("device switched")
+            )
+            runtime.activeBadgeDownloadFilename = null
+            runtime.activeBadgeDownloadJob = null
+            runtime.badgeDownloadWorkerJob = null
+        }
+        Log.d(SIM_AUDIO_SYNC_LOG_TAG, "SIM badge sync: all downloads cancelled (device switch)")
+    }
+
     private fun planBadgeDownloads(
         badgeFiles: List<String>,
         pendingDeleteFilenames: Set<String>

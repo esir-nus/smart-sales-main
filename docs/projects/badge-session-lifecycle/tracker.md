@@ -17,7 +17,7 @@ open
 | # | Slug | Status | Summary | Contract |
 |---|------|--------|---------|----------|
 | 01 | lifecycle-design | done | Authored the badge session lifecycle core flow covering single-device states, multi-device switch teardown, audio sync binding, and UI observation rules. | [sprints/01-lifecycle-design.md](sprints/01-lifecycle-design.md) |
-| 02 | audio-download-device-scope | authored | — | [sprints/02-audio-download-device-scope.md](sprints/02-audio-download-device-scope.md) |
+| 02 | audio-download-device-scope | done | Audio repository now cancels queued and active badge downloads when the active device MAC changes, keeping old-device work from using the new connection. | [sprints/02-audio-download-device-scope.md](sprints/02-audio-download-device-scope.md) |
 | 03 | audio-drawer-live-observation | authored | — | [sprints/03-audio-drawer-live-observation.md](sprints/03-audio-drawer-live-observation.md) |
 
 ## Cross-Sprint Decisions

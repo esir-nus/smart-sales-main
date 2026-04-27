@@ -120,12 +120,20 @@ Use the existing `SimAudioRepositoryRuntime.deviceRegistryManager` dependency. D
 
 <!-- Operator appends one entry per iteration. Not committed mid-sprint. -->
 
+- 2026-04-27 iteration 1: Read Sprint 02, the badge lifecycle core-flow, interface ownership, connectivity/audio specs, and the audio repository/sync code. Implemented `SimAudioRepository` observation of `runtime.deviceRegistryManager.activeDevice` and added `cancelAllBadgeDownloads()` in sync support. Initial focused test passed, but full `:app-core:testDebugUnitTest` exposed unrelated test mocks returning null for `activeDevice`; hardened the observer with a no-op fallback for missing test stubs and reran the full module test successfully. Attempted adb/logcat evidence; device state was visible, but no live two-badge sync trace was available in the log buffer.
+
 ## Closeout
 
 <!-- Operator fills on exit. -->
 
-- Status:
-- Summary:
+- Status: success
+- Summary: Audio repository now cancels queued and active badge downloads when the active device MAC changes, keeping old-device work from using the new connection.
 - Evidence:
-- Lesson proposals:
-- CHANGELOG line:
+  - `grep -n "cancelAllBadgeDownloads" app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepositorySyncSupport.kt` -> `445:    suspend fun cancelAllBadgeDownloads() = withContext(runtime.ioDispatcher) {`
+  - `grep -n "deviceRegistryManager.activeDevice\\|activeDevice.collect" app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepository.kt` -> `41:            val activeDevice = runCatching { runtime.deviceRegistryManager.activeDevice }.getOrNull()` and `44:            activeDevice.collect { device ->`
+  - `./gradlew :app-core:testDebugUnitTest --tests com.smartsales.prism.data.audio.SimAudioRepositorySyncSupportTest` -> `BUILD SUCCESSFUL in 57s`
+  - `./gradlew :app-core:testDebugUnitTest` -> `BUILD SUCCESSFUL in 10s`
+  - `adb get-state` -> `device`
+  - `timeout 15s adb logcat -d -t 1000 | grep "SIM badge sync" | tail -40 || true` -> no matching output in the current device log buffer; live two-badge in-flight switch reproduction was not captured in this session. The new unit test `active device change cancels queued and active badge downloads` covers the cancellation branch deterministically.
+- Lesson proposals: none
+- CHANGELOG line: none

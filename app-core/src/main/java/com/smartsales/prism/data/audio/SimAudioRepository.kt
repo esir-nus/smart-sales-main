@@ -5,6 +5,7 @@ import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
 import com.smartsales.prism.service.DownloadServiceOrchestrator
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asStateFlow
 
@@ -32,6 +33,22 @@ class SimAudioRepository @Inject constructor(
         storeSupport.loadPendingBadgeDeletes()
         storeSupport.backfillSeedInventory()
         transcriptionSupport.resumeTrackedJobs()
+        observeActiveDeviceChanges()
+    }
+
+    private fun observeActiveDeviceChanges() {
+        runtime.repositoryScope.launch {
+            val activeDevice = runCatching { runtime.deviceRegistryManager.activeDevice }.getOrNull()
+                ?: return@launch
+            var previousMac = activeDevice.value?.macAddress
+            activeDevice.collect { device ->
+                val currentMac = device?.macAddress
+                if (previousMac != null && currentMac != previousMac) {
+                    syncSupport.cancelAllBadgeDownloads()
+                }
+                previousMac = currentMac
+            }
+        }
     }
 
     fun getAudioFiles(): Flow<List<AudioFile>> = runtime.audioFiles.asStateFlow()

@@ -1,0 +1,162 @@
+Sprint 07 Connectivity Data-Flow Simplification Audit
+Date: 2026-04-27
+Operator: Codex
+Lane/branch: develop
+
+Scope Read
+- docs/core-flow/badge-connectivity-lifecycle.md
+- docs/core-flow/badge-session-lifecycle.md
+- docs/cerb/connectivity-bridge/spec.md
+- docs/cerb/connectivity-bridge/interface.md
+- docs/cerb/interface-map.md
+- docs/projects/badge-session-lifecycle/sprints/06-badge-wifi-recovery-state-machine.md
+- .agent/rules/lessons-learned.md
+- docs/reference/agent-lessons-details.md entries:
+  - ESP32 Active Download vs Readiness Probe
+  - Reconnect Race Condition: Fire-and-Poll
+  - HTTP Gate Conflating Connection Concerns
+  - Application-Level Coupling vs Transport-Level Serialization
+
+Removed / Simplified Branches
+
+1. Removed stale WifiDisconnectedReason values:
+   - HTTP_UNREACHABLE
+   - PHONE_WIFI_UNAVAILABLE
+   - PHONE_WIFI_SSID_UNREADABLE
+   - NO_KNOWN_CREDENTIAL_FOR_PHONE_WIFI
+
+   Files:
+   - app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/ConnectionModels.kt
+   - app-core/src/main/java/com/smartsales/prism/data/connectivity/RealConnectivityService.kt
+   - app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/setup/DeviceSetupViewModel.kt
+   - app-core/src/test/java/com/smartsales/prism/data/connectivity/RealConnectivityServiceTest.kt
+
+   Justification:
+   - Core Flow says badge Wi-Fi recovery must not depend on reading phone SSID and must branch from BLE state, badge-reported IP/SSID, active HTTP media readiness, and saved user-confirmed credentials.
+   - Production grep showed these four enum values were not produced by runtime reconnect/repair code after Sprint 06. The only production references were service/setup display mappings. Production producers now emit:
+     - BADGE_WIFI_OFFLINE for IP#0.0.0.0 / unusable badge IP.
+     - BADGE_PHONE_NETWORK_MISMATCH for manual repair target-SSID mismatch.
+     - CREDENTIAL_REPLAY_FAILED for bounded saved-credential replay exhaustion.
+   - Tests using the removed enum values were synthetic coverage for impossible branches, so keeping them made the data flow look larger and more phone-SSID-driven than current code.
+
+   Evidence commands:
+   - Before removal:
+     - `rg -n "WifiDisconnectedReason\\.(PHONE_WIFI_UNAVAILABLE|PHONE_WIFI_SSID_UNREADABLE|NO_KNOWN_CREDENTIAL_FOR_PHONE_WIFI|HTTP_UNREACHABLE)|WifiDisconnectedReason \\{|enum class WifiDisconnectedReason" app-core/src/main/java/com/smartsales/prism/data/connectivity app-core/src/test/java/com/smartsales/prism/data/connectivity/RealConnectivityServiceTest.kt`
+     - 19 references to those stale reasons across enum, service/setup mapping, and tests.
+   - After removal:
+     - `rg -n "PHONE_WIFI_UNAVAILABLE|PHONE_WIFI_SSID_UNREADABLE|NO_KNOWN_CREDENTIAL_FOR_PHONE_WIFI|HTTP_UNREACHABLE" app-core/src/main/java app-core/src/test/java docs/projects/badge-session-lifecycle/sprints/07-connectivity-dataflow-simplification.md || true`
+     - Remaining hits are only `KNOWN_HTTP_UNREACHABLE`, a SIM audio auto-sync latch name, not the removed connectivity reason.
+
+Line Count Evidence
+- Before:
+  - `wc -l app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/ConnectionModels.kt app-core/src/main/java/com/smartsales/prism/data/connectivity/RealConnectivityService.kt app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/setup/DeviceSetupViewModel.kt app-core/src/test/java/com/smartsales/prism/data/connectivity/RealConnectivityServiceTest.kt`
+  - 149 ConnectionModels.kt
+  - 223 RealConnectivityService.kt
+  - 691 DeviceSetupViewModel.kt
+  - 690 RealConnectivityServiceTest.kt
+  - 1753 total
+- After:
+  - Same command.
+  - 145 ConnectionModels.kt
+  - 203 RealConnectivityService.kt
+  - 683 DeviceSetupViewModel.kt
+  - 512 RealConnectivityServiceTest.kt
+  - 1543 total
+- Net reduction in this measured set: 210 lines.
+
+Phone Wi-Fi / SSID Classification
+Command:
+`rg -n "currentPhoneSsid|phoneSsid|PhoneWifi|PhoneWifiSnapshot|currentNormalizedSsid" app-core/src/main/java/com/smartsales/prism/data/connectivity app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepositorySyncSupport.kt app-core/src/main/java/com/smartsales/prism/ui/components/connectivity/ConnectivityViewModel.kt app-core/src/test/java/com/smartsales/prism/data/connectivity app-core/src/test/java/com/smartsales/prism/data/audio app-core/src/test/java/com/smartsales/prism/ui/components/connectivity`
+
+Remaining production uses:
+- Prompt prefill:
+  - ConnectivityViewModel consumes `ReconnectResult.WifiMismatch.currentPhoneSsid` to prefill the repair form.
+  - RealConnectivityService passes `error.phoneSsid` only for the remaining mismatch/offline/replay repair form path.
+  - SimAudioRepositorySyncSupport calls `currentNormalizedSsid()` only before manual `promptWifiMismatch`.
+- Isolation prompt gating/prefill:
+  - SimAudioRepositorySyncSupport and IsolationProbeHelper read `PhoneWifiSnapshot.Connected.isValidated` to classify suspected AP isolation after HTTP/media failure and pass `normalizedSsid` as editable prompt prefill.
+- Diagnostic:
+  - RealConnectivityBridge logs `phoneSsidForDiag=${result.data.phoneWifiName}` during endpoint resolution.
+  - PhoneWifiProvider and FakePhoneWifiProvider are provider/fake infrastructure for the above prompt/diagnostic uses.
+- Removable candidate not changed in this sprint:
+  - `ConnectivityError.WifiDisconnected.phoneSsid` and `ReconnectResult.WifiMismatch.currentPhoneSsid` are now poorly named because the remaining live producer for BADGE_PHONE_NETWORK_MISMATCH uses the user-submitted target SSID. Renaming those public/domain-facing fields would require a wider interface sync, so Sprint 07 did not alter that API.
+
+Registered-Badge Recovery Path Review
+- Removed code did not touch registry deletion, session clearing, pairing, or add-device routing.
+- `RealConnectivityService.updateWifiConfig()` still uses existing `updateWifiConfig()` repair path and `confirmManualWifiProvision()`.
+- `ConnectivityViewModel.startIsolationWifiRepair()` still enters `WifiRepairState.EditCredentials` and does not call `removeDevice`, `unpair`, or add-device routing.
+- `DeviceConnectionManagerConnectionSupport.resolveReconnectState()` still maps unusable badge IP to BADGE_WIFI_OFFLINE and logs manual Wi-Fi repair / no silent replay.
+
+Active-Download Guard
+Command:
+`rg -n "badge-download-active" app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepositorySyncSupport.kt app-core/src/test/java`
+
+Result:
+- SimAudioRepositorySyncSupport.kt logs:
+  - readiness probe skipped reason=badge-download-active
+  - sync skipped reason=badge-download-active
+- SimAudioRepositorySyncSupportTest still covers manual sync while active download is present.
+
+Single-Flight Media Recovery
+Command:
+`rg -n "mediaRecoveryInFlight|mediaRecoveryMutex|joining in-flight replay" app-core/src/main/java/com/smartsales/prism/data/connectivity/RealConnectivityBridge.kt`
+
+Result:
+- RealConnectivityBridge.kt still owns `mediaRecoveryMutex`, `mediaRecoveryInFlight`, and "joining in-flight replay" logging.
+- RealConnectivityBridgeTest still covers concurrent media failure credential replay joining.
+
+Public Connectivity API Diff Review
+- No new public connectivity API was added.
+- Domain `ConnectivityBridge`, domain `ConnectivityService`, and `DeviceConnectionManager` method signatures were not changed.
+- The edited enum is the app-core legacy runtime error reason model; removed values were stale internal reasons not emitted by current production reconnect/repair code.
+
+Verification
+- Focused tests:
+  - `./gradlew :app-core:testDebugUnitTest --tests 'com.smartsales.prism.data.connectivity.RealConnectivityServiceTest' --tests 'com.smartsales.prism.data.connectivity.RealConnectivityBridgeTest' --tests 'com.smartsales.prism.data.connectivity.legacy.DeviceConnectionManagerReconnectSupportTest' --tests 'com.smartsales.prism.data.connectivity.legacy.DefaultDeviceConnectionManagerIngressTest' --tests 'com.smartsales.prism.data.audio.SimAudioRepositorySyncSupportTest' --tests 'com.smartsales.prism.ui.components.connectivity.ConnectivityViewModelTest' --tests 'com.smartsales.prism.ui.components.connectivity.ConnectivityViewModelRepairTest'`
+  - Result: BUILD SUCCESSFUL in 15s.
+  - Final rerun after closeout doc updates: BUILD SUCCESSFUL in 10s.
+- Build:
+  - `./gradlew :app-core:assembleDebug`
+  - Result: BUILD SUCCESSFUL in 8s.
+  - Final rerun after focused tests: BUILD SUCCESSFUL in 3s.
+- Install:
+  - `adb install -r -d app-core/build/outputs/apk/debug/app-core-debug.apk`
+  - Result: Performing Streamed Install / Success.
+  - Final rerun after debug build: Performing Streamed Install / Success.
+- Device proof:
+  - `adb devices`
+  - Result: `fc8ede3e device`.
+- Filtered logcat artifact:
+  - `docs/projects/badge-session-lifecycle/evidence/07-connectivity-dataflow-simplification/logcat-install-smoke-20260427.txt`
+  - Captured 174 filtered lines after install.
+- One-badge reconnect artifact:
+  - `docs/projects/badge-session-lifecycle/evidence/07-connectivity-dataflow-simplification/l3-loop-20260427-184931.txt`
+  - Evidence highlights:
+    - `ConnectivityVM: scheduleAutoReconnect() delegating to service`
+    - `ConnectivityService: scheduleAutoReconnect() delegating to deviceManager`
+    - `BLE detected: CHLE_Intelligent (1C:DB:D4:9B:8F:96)`
+    - `Auto-reconnect triggered by BLE detection for 1C:DB:D4:9B:8F:96`
+    - `BLE 连接失败：Timed out waiting for 10000 ms`
+  - Interpretation: the registered one-badge path remained on auto-reconnect/BLE transport recovery and did not route through add-device pairing, registry deletion, or session clearing. The badge did not reach GATT/HTTP readiness during the bounded L3 window, so repair and HTTP-delayed recovery were not physically exercised.
+- Additional bounded captures:
+  - `docs/projects/badge-session-lifecycle/evidence/07-connectivity-dataflow-simplification/l3-one-badge-reconnect-20260427-185235.txt`
+  - `docs/projects/badge-session-lifecycle/evidence/07-connectivity-dataflow-simplification/l3-one-badge-loop-20260427-185459.txt`
+  - `docs/projects/badge-session-lifecycle/evidence/07-connectivity-dataflow-simplification/l3-package-audio-drawer-20260427-185812.txt`
+  - `docs/projects/badge-session-lifecycle/evidence/07-connectivity-dataflow-simplification/sprint07-current-screen.png`
+  - These captures prove adb/app availability and a non-destructive UI loop, but did not produce additional Smart Sales repair/download lines.
+- User-authorized hardware/manual skips:
+  - Multi-device switch: skipped because the user stated only one badge is available.
+  - Active-download manual sync: skipped because creating and timing an active badge download requires manual collaboration beyond the allowed autonomous loop. Code grep and `SimAudioRepositorySyncSupportTest` remain the acceptance evidence for the `badge-download-active` guard.
+  - Wi-Fi repair / HTTP-delayed recovery: skipped in L3 because the single available badge did not reach the prerequisite GATT/HTTP state during the bounded reconnect loop. Existing focused tests and preserved diagnostic logs remain the acceptance evidence.
+
+Diagnostic Log Coverage Review
+- Preserved tags/logs for:
+  - reconnect and network status: `connectUsingSession`, `badge IP#0.0.0.0 branch`, `repair outcome=...`.
+  - media recovery: `solid IP + HTTP readiness failure`, `media recovery joining in-flight replay`, `saved credential replay result after media failure`.
+  - active-download guard: `reason=badge-download-active`.
+  - active-device switch/download fencing: `all downloads cancelled (device switch)`, `discarded cross-device download`, and active badge MAC logging in SIM audio sync.
+
+Sprint Status From Evidence
+- Code/test/build/install gates passed.
+- One-badge L3 reconnect evidence was captured. Hardware/manual-only paths were skipped under the user's explicit constraints rather than inferred.
+- Sprint 07 can close as a same-surface cleanup sprint because the removed branches are proven stale by Core Flow, grep, focused tests, build/install, and the available one-badge L3 loop. No new public connectivity API or user-visible surface was added.

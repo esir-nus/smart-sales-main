@@ -1,0 +1,6 @@
+04-27 18:53:50.928 D/ConnectivityService( 3839): requestNetwork for uid/pid:10240/7187 activeRequest: null callbackRequest: 5871 [NetworkRequest [ REQUEST id=5872, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10240 RequestorUid: 10240 RequestorPkg: com.android.rkpdapp UnderlyingNetworks: Null] ]] callback flags: 0 order: 2147483647 isUidTracked: false declaredMethods: AVAIL|LOST|NC
+04-27 18:53:50.931 D/ConnectivityServiceImpl( 3839): teardown wifi type 1 state: CONNECTED primary: true
+04-27 18:53:50.931 D/ConnectivityServiceImpl( 3839): nai type 1 state: CONNECTED primary: true
+04-27 18:53:50.931 D/ConnectivityServiceImpl( 3839): teardown wifi type 1 state: CONNECTED primary: true
+04-27 18:53:50.931 D/ConnectivityServiceImpl( 3839): nai type 1 state: CONNECTED primary: true
+04-27 18:53:50.932 D/ConnectivityService( 3839): NetReassign [5872 : null → 161] [c 1] [a 1] [i 2]

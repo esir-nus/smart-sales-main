@@ -1,0 +1,316 @@
+04-27 18:49:30.973 W/OptProp ( 3839): Cannot read opt property android.window.PROPERTY_COMPAT_ALLOW_RESIZEABLE_ACTIVITY_OVERRIDES
+04-27 18:49:31.110 D/CompatChangeReporter(19293): Compat change id reported: 242716250; UID 10423; state: ENABLED
+04-27 18:49:31.239 D/CompatChangeReporter( 3839): Compat change id reported: 135754954; UID 10291; state: ENABLED
+04-27 18:49:31.239 D/CompatChangeReporter( 3839): Compat change id reported: 143937733; UID 10291; state: ENABLED
+04-27 18:49:31.293 D/ConnectivityService( 3839): requestNetwork for uid/pid:10291/5225 activeRequest: null callbackRequest: 5860 [NetworkRequest [ REQUEST id=5861, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10291 RequestorUid: 10291 RequestorPkg: com.dianping.v1 UnderlyingNetworks: Null] ]] callback flags: 0 order: 2147483647 isUidTracked: false declaredMethods: AVAIL
+04-27 18:49:31.301 D/ConnectivityServiceImpl( 3839): teardown wifi type 1 state: CONNECTED primary: true
+04-27 18:49:31.301 D/ConnectivityServiceImpl( 3839): nai type 1 state: CONNECTED primary: true
+04-27 18:49:31.301 D/ConnectivityServiceImpl( 3839): teardown wifi type 1 state: CONNECTED primary: true
+04-27 18:49:31.301 D/ConnectivityServiceImpl( 3839): nai type 1 state: CONNECTED primary: true
+04-27 18:49:31.304 D/ConnectivityService( 3839): NetReassign [5861 : null → 161] [c 0] [a 0] [i 3]
+04-27 18:49:31.698 D/ConnectivityService( 3839): requestNetwork for uid/pid:10291/5478 activeRequest: null callbackRequest: 5862 [NetworkRequest [ REQUEST id=5863, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10291 RequestorUid: 10291 RequestorPkg: com.dianping.v1 UnderlyingNetworks: Null] ]] callback flags: 0 order: 2147483647 isUidTracked: false declaredMethods: AVAIL
+04-27 18:49:31.706 D/ConnectivityServiceImpl( 3839): teardown wifi type 1 state: CONNECTED primary: true
+04-27 18:49:31.706 D/ConnectivityServiceImpl( 3839): nai type 1 state: CONNECTED primary: true
+04-27 18:49:31.706 D/ConnectivityServiceImpl( 3839): teardown wifi type 1 state: CONNECTED primary: true
+04-27 18:49:31.706 D/ConnectivityServiceImpl( 3839): nai type 1 state: CONNECTED primary: true
+04-27 18:49:31.719 D/ConnectivityService( 3839): NetReassign [5863 : null → 161] [c 6] [a 1] [i 13]
+04-27 18:49:31.811 D/CompatChangeReporter(19293): Compat change id reported: 263076149; UID 10423; state: ENABLED
+04-27 18:49:31.820 D/SmartSalesConn(19293): 🏠 Registry: default device 圆形CHLE_Intelligent (...8F:96)
+04-27 18:49:31.824 D/ConnectivityService( 3839): requestNetwork for uid/pid:10291/5478 activeRequest: null callbackRequest: 5864 [NetworkRequest [ REQUEST id=5865, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10291 RequestorUid: 10291 RequestorPkg: com.dianping.v1 UnderlyingNetworks: Null] ]] callback flags: 0 order: 2147483647 isUidTracked: false declaredMethods: AVAIL|LOST|NC|LP
+04-27 18:49:31.824 I/SmartSalesConn(19293): 📶 BLE disconnected
+04-27 18:49:31.827 D/ConnectivityServiceImpl( 3839): teardown wifi type 1 state: CONNECTED primary: true
+04-27 18:49:31.827 D/ConnectivityServiceImpl( 3839): nai type 1 state: CONNECTED primary: true
+04-27 18:49:31.840 D/ConnectivityServiceImpl( 3839): teardown wifi type 1 state: CONNECTED primary: true
+04-27 18:49:31.840 D/ConnectivityServiceImpl( 3839): nai type 1 state: CONNECTED primary: true
+04-27 18:49:31.856 D/CompatChangeReporter(19293): Compat change id reported: 265103382; UID 10423; state: ENABLED
+04-27 18:49:31.867 D/ConnectivityService( 3839): NetReassign [5865 : null → 161] [c 2] [a 13] [i 21]
+04-27 18:49:31.868 D/ConnectivityServiceImpl( 3839): teardown wifi type 1 state: CONNECTED primary: true
+04-27 18:49:31.868 D/ConnectivityServiceImpl( 3839): nai type 1 state: CONNECTED primary: true
+04-27 18:49:31.885 D/ConnectivityServiceImpl( 3839): teardown wifi type 1 state: CONNECTED primary: true
+04-27 18:49:31.885 D/ConnectivityServiceImpl( 3839): nai type 1 state: CONNECTED primary: true
+04-27 18:49:31.905 D/ConnectivityService( 3839): NetReassign [no changes] [c 0] [a 17] [i 20]
+04-27 18:49:31.905 D/ConnectivityService( 3839): releasing NetworkRequest [ REQUEST id=5851, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10129 RequestorUid: 10129 RequestorPkg: com.android.browser UnderlyingNetworks: Null] ] (release request)
+04-27 18:49:31.905 D/ConnectivityServiceImpl( 3839): teardown wifi type 1 state: CONNECTED primary: true
+04-27 18:49:31.905 D/ConnectivityServiceImpl( 3839): nai type 1 state: CONNECTED primary: true
+04-27 18:49:31.905 D/ConnectivityServiceImpl( 3839): teardown wifi type 1 state: CONNECTED primary: true
+04-27 18:49:31.905 D/ConnectivityServiceImpl( 3839): nai type 1 state: CONNECTED primary: true
+04-27 18:49:31.905 D/ConnectivityService( 3839): releasing NetworkRequest [ REQUEST id=5855, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10193 RequestorUid: 10193 RequestorPkg: com.miui.voiceassist UnderlyingNetworks: Null] ] (release request)
+04-27 18:49:31.905 D/ConnectivityServiceImpl( 3839): teardown wifi type 1 state: CONNECTED primary: true
+04-27 18:49:31.905 D/ConnectivityServiceImpl( 3839): nai type 1 state: CONNECTED primary: true
+04-27 18:49:31.905 D/ConnectivityServiceImpl( 3839): teardown wifi type 1 state: CONNECTED primary: true
+04-27 18:49:31.905 D/ConnectivityServiceImpl( 3839): nai type 1 state: CONNECTED primary: true
+04-27 18:49:31.980 D/bt_btif_dm(28001): system/btif/src/btif_dm.cc:4538 btif_get_device_type: bd_addr:xx:xx:xx:xx:8f:96 device_type:BLE
+04-27 18:49:31.980 I/bt_btif_gattc(28001): system/btif/src/btif_gatt_client.cc:415 btif_gattc_open_impl: Transport=BT_TRANSPORT_LE, device type=BLE, address=xx:xx:xx:xx:8f:96, address type=0, phy=1
+04-27 18:49:32.341 D/AudioPipeline(19293): SIM audio drawer entries emitted count=42 downloading=0 queued=0 maxDownloadProgress=0.0
+04-27 18:49:32.408 D/ConnectivityService( 3839): Returning UNBLOCKED NetworkInfo to uid=10291
+04-27 18:49:32.415 D/CompatChangeReporter( 3839): Compat change id reported: 151861875; UID 10232; state: ENABLED
+04-27 18:49:32.497 D/CompatChangeReporter( 6310): Compat change id reported: 202956589; UID 10232; state: ENABLED
+04-27 18:49:32.527 D/CompatChangeReporter(19293): Compat change id reported: 289878283; UID 10423; state: ENABLED
+04-27 18:49:32.532 E/HyperOSCustFeatureResolve( 6310): 	at com.miui.base.MiuiStubRegistry.get(MiuiStubRegistry.java:296)
+04-27 18:49:32.532 E/HyperOSCustFeatureResolve( 6310): 	at com.miui.base.MiuiStubRegistry.get(MiuiStubRegistry.java:287)
+04-27 18:49:32.532 E/HyperOSCustFeatureResolve( 6310): 	at com.miui.base.MiuiStubRegistry.get(MiuiStubRegistry.java:296)
+04-27 18:49:32.532 E/HyperOSCustFeatureResolve( 6310): 	at com.miui.base.MiuiStubRegistry.get(MiuiStubRegistry.java:287)
+04-27 18:49:32.580 D/CompatChangeReporter( 3839): Compat change id reported: 311208629; UID 6101; state: ENABLED
+04-27 18:49:32.632 D/CompatChangeReporter( 3839): Compat change id reported: 311208629; UID 10177; state: ENABLED
+04-27 18:49:32.721 D/CompatChangeReporter( 3839): Compat change id reported: 135754954; UID 10291; state: ENABLED
+04-27 18:49:32.721 D/CompatChangeReporter( 3839): Compat change id reported: 143937733; UID 10291; state: ENABLED
+04-27 18:49:33.099 D/ConnectivityService( 3839): requestNetwork for uid/pid:10291/6415 activeRequest: null callbackRequest: 5867 [NetworkRequest [ REQUEST id=5868, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10291 RequestorUid: 10291 RequestorPkg: com.dianping.v1 UnderlyingNetworks: Null] ]] callback flags: 0 order: 2147483647 isUidTracked: false declaredMethods: AVAIL
+04-27 18:49:33.103 D/ConnectivityServiceImpl( 3839): teardown wifi type 1 state: CONNECTED primary: true
+04-27 18:49:33.103 D/ConnectivityServiceImpl( 3839): nai type 1 state: CONNECTED primary: true
+04-27 18:49:33.103 D/ConnectivityServiceImpl( 3839): teardown wifi type 1 state: CONNECTED primary: true
+04-27 18:49:33.103 D/ConnectivityServiceImpl( 3839): nai type 1 state: CONNECTED primary: true
+04-27 18:49:33.104 D/ConnectivityService( 3839): NetReassign [5868 : null → 161] [c 0] [a 3] [i 2]
+04-27 18:49:33.104 D/ConnectivityService( 3839): releasing NetworkRequest [ REQUEST id=5861, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10291 RequestorUid: 10291 RequestorPkg: com.dianping.v1 UnderlyingNetworks: Null] ] (release request)
+04-27 18:49:33.105 D/ConnectivityServiceImpl( 3839): teardown wifi type 1 state: CONNECTED primary: true
+04-27 18:49:33.109 D/ConnectivityServiceImpl( 3839): nai type 1 state: CONNECTED primary: true
+04-27 18:49:33.109 D/ConnectivityServiceImpl( 3839): teardown wifi type 1 state: CONNECTED primary: true
+04-27 18:49:33.109 D/ConnectivityServiceImpl( 3839): nai type 1 state: CONNECTED primary: true
+04-27 18:49:33.152 D/ConnectivityService( 3839): Returning BLOCKED NetworkInfo to uid=10291
+04-27 18:49:34.712 D/ConnectivityService( 3839): requestNetwork for uid/pid:10291/5478 activeRequest: null callbackRequest: 5869 [NetworkRequest [ REQUEST id=5870, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10291 RequestorUid: 10291 RequestorPkg: com.dianping.v1 UnderlyingNetworks: Null] ]] callback flags: 0 order: 2147483647 isUidTracked: false declaredMethods: AVAIL|LOSING|LOST|UNAVAIL|NC|LP
+04-27 18:49:34.714 D/ConnectivityServiceImpl( 3839): teardown wifi type 1 state: CONNECTED primary: true
+04-27 18:49:34.714 D/ConnectivityServiceImpl( 3839): nai type 1 state: CONNECTED primary: true
+04-27 18:49:34.714 D/ConnectivityServiceImpl( 3839): teardown wifi type 1 state: CONNECTED primary: true
+04-27 18:49:34.714 D/ConnectivityServiceImpl( 3839): nai type 1 state: CONNECTED primary: true
+04-27 18:49:34.716 D/ConnectivityService( 3839): NetReassign [5870 : null → 161] [c 1] [a 1] [i 1]
+04-27 18:49:34.911 D/ConnectivityService( 3839): releasing NetworkRequest [ REQUEST id=5868, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10291 RequestorUid: 10291 RequestorPkg: com.dianping.v1 UnderlyingNetworks: Null] ] (release request)
+04-27 18:49:34.911 D/ConnectivityServiceImpl( 3839): teardown wifi type 1 state: CONNECTED primary: true
+04-27 18:49:34.911 D/ConnectivityServiceImpl( 3839): nai type 1 state: CONNECTED primary: true
+04-27 18:49:34.911 D/ConnectivityServiceImpl( 3839): teardown wifi type 1 state: CONNECTED primary: true
+04-27 18:49:34.911 D/ConnectivityServiceImpl( 3839): nai type 1 state: CONNECTED primary: true
+04-27 18:49:35.698 I/ScanManager(28001): msg.what = MSG_STOP_BLE_SCAN, msg.arg1 = None
+04-27 18:49:35.703 I/ScanManager(28001): msg.what = MSG_STOP_BLE_SCAN, msg.arg1 = None
+04-27 18:49:35.768 D/MiuiFastConnectService_Plugin( 6731): handleMessage: MSG_START_BLE_SCAN mode: 0
+04-27 18:49:35.777 I/ScanManager(28001): msg.what = MSG_START_BLE_SCAN, msg.arg1 = None
+04-27 18:49:35.786 I/ScanManager(28001): msg.what = MSG_START_BLE_SCAN, msg.arg1 = None
+04-27 18:49:37.913 D/PolicyMaker( 3839): uid =10140 pkg=com.miui.home reason=VISIBLE_APP
+04-27 18:49:39.943 W/System.err( 5478): 	at com.sankuai.statictunnel.download.f.g(DownloadManagerCore.java:5)
+04-27 18:49:39.943 W/System.err( 5478): 	at com.sankuai.statictunnel.download.f.run(DownloadManagerCore.java:6)
+04-27 18:49:39.946 W/System.err( 5478): 	at com.sankuai.statictunnel.download.f.g(DownloadManagerCore.java:5)
+04-27 18:49:39.946 W/System.err( 5478): 	at com.sankuai.statictunnel.download.f.run(DownloadManagerCore.java:6)
+04-27 18:49:41.884 W/SmartSalesConn(19293): BLE 连接失败：Timed out waiting for 10000 ms
+04-27 18:49:41.916 I/ScanManager(28001): msg.what = MSG_START_BLE_SCAN, msg.arg1 = None
+04-27 18:49:42.447 D/HyperRemoteDevicesAdapter(28001): Remote device name is: LED_BLE_A0F3BCC7 type = 2 43:BB:A0:F3:BC:C7
+04-27 18:49:42.447 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:BC:C7 type = 2 name = LED_BLE_A0F3BCC7 2
+04-27 18:49:42.458 D/SmartSalesConn(19293): 扫描到设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7) rssi=-89 uuids=
+04-27 18:49:42.458 D/SmartSalesConn(19293): 忽略设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7)：未匹配任何 profile
+04-27 18:49:42.578 D/HyperRemoteDevicesAdapter(28001): Remote device name is: LED_BLE_A0F3BCC7 type = 2 43:BB:A0:F3:BC:C7
+04-27 18:49:42.578 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:BC:C7 type = 2 name = LED_BLE_A0F3BCC7 2
+04-27 18:49:42.590 D/SmartSalesConn(19293): 扫描到设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7) rssi=-82 uuids=
+04-27 18:49:42.590 D/SmartSalesConn(19293): 忽略设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7)：未匹配任何 profile
+04-27 18:49:43.110 D/HyperRemoteDevicesAdapter(28001): Remote device name is: LED_BLE_A0F3BCC7 type = 2 43:BB:A0:F3:BC:C7
+04-27 18:49:43.110 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:BC:C7 type = 2 name = LED_BLE_A0F3BCC7 2
+04-27 18:49:43.120 D/SmartSalesConn(19293): 扫描到设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7) rssi=-87 uuids=
+04-27 18:49:43.121 D/SmartSalesConn(19293): 忽略设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7)：未匹配任何 profile
+04-27 18:49:43.246 D/HyperRemoteDevicesAdapter(28001): Remote device name is: LED_BLE_A0F3BCC7 type = 2 43:BB:A0:F3:BC:C7
+04-27 18:49:43.246 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:BC:C7 type = 2 name = LED_BLE_A0F3BCC7 2
+04-27 18:49:43.254 D/SmartSalesConn(19293): 扫描到设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7) rssi=-83 uuids=
+04-27 18:49:43.254 D/SmartSalesConn(19293): 忽略设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7)：未匹配任何 profile
+04-27 18:49:43.320 D/HyperRemoteDevicesAdapter(28001): Remote device name is: LED_BLE_A0F3BCC7 type = 2 43:BB:A0:F3:BC:C7
+04-27 18:49:43.320 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:BC:C7 type = 2 name = LED_BLE_A0F3BCC7 2
+04-27 18:49:43.335 D/SmartSalesConn(19293): 扫描到设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7) rssi=-89 uuids=
+04-27 18:49:43.336 D/SmartSalesConn(19293): 忽略设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7)：未匹配任何 profile
+04-27 18:49:43.513 D/HyperRemoteDevicesAdapter(28001): Remote device name is: LED_BLE_A0F3BCC7 type = 2 43:BB:A0:F3:BC:C7
+04-27 18:49:43.513 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:BC:C7 type = 2 name = LED_BLE_A0F3BCC7 2
+04-27 18:49:43.521 D/SmartSalesConn(19293): 扫描到设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7) rssi=-83 uuids=
+04-27 18:49:43.521 D/SmartSalesConn(19293): 忽略设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7)：未匹配任何 profile
+04-27 18:49:44.378 D/HyperRemoteDevicesAdapter(28001): Remote device name is: LED_BLE_A0F3BCC7 type = 2 43:BB:A0:F3:BC:C7
+04-27 18:49:44.378 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:BC:C7 type = 2 name = LED_BLE_A0F3BCC7 2
+04-27 18:49:44.384 D/SmartSalesConn(19293): 扫描到设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7) rssi=-83 uuids=
+04-27 18:49:44.385 D/SmartSalesConn(19293): 忽略设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7)：未匹配任何 profile
+04-27 18:49:45.858 D/HyperRemoteDevicesAdapter(28001): Remote device name is: LED_BLE_A0F3BCC7 type = 2 43:BB:A0:F3:BC:C7
+04-27 18:49:45.858 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:BC:C7 type = 2 name = LED_BLE_A0F3BCC7 2
+04-27 18:49:45.871 D/SmartSalesConn(19293): 扫描到设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7) rssi=-84 uuids=
+04-27 18:49:45.871 D/SmartSalesConn(19293): 忽略设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7)：未匹配任何 profile
+04-27 18:49:46.129 D/HyperRemoteDevicesAdapter(28001): Remote device name is: LED_BLE_A0F3BCC7 type = 2 43:BB:A0:F3:BC:C7
+04-27 18:49:46.129 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:BC:C7 type = 2 name = LED_BLE_A0F3BCC7 2
+04-27 18:49:46.140 D/SmartSalesConn(19293): 扫描到设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7) rssi=-87 uuids=
+04-27 18:49:46.140 D/SmartSalesConn(19293): 忽略设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7)：未匹配任何 profile
+04-27 18:49:46.313 D/HyperRemoteDevicesAdapter(28001): Remote device name is: BYD BLE3 type = 2 24:9F:89:30:79:7E
+04-27 18:49:46.313 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:79:7E type = 2 name = BYD BLE3 2
+04-27 18:49:46.330 D/SmartSalesConn(19293): 扫描到设备 24:9F:89:30:79:7E (BYD BLE3) rssi=-91 uuids=42594420-4155-544f-e0a9-e50e24dcca9e, 42594420-4155-544f-e0a9-e50e24dcca9e
+04-27 18:49:46.330 D/SmartSalesConn(19293): 忽略设备 24:9F:89:30:79:7E (BYD BLE3)：未匹配任何 profile
+04-27 18:49:46.682 D/HyperRemoteDevicesAdapter(28001): Remote device name is: LED_BLE_A0F3BCC7 type = 2 43:BB:A0:F3:BC:C7
+04-27 18:49:46.682 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:BC:C7 type = 2 name = LED_BLE_A0F3BCC7 2
+04-27 18:49:46.697 D/SmartSalesConn(19293): 扫描到设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7) rssi=-88 uuids=
+04-27 18:49:46.697 D/SmartSalesConn(19293): 忽略设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7)：未匹配任何 profile
+04-27 18:49:47.412 D/HyperRemoteDevicesAdapter(28001): Remote device name is: LED_BLE_A0F3BCC7 type = 2 43:BB:A0:F3:BC:C7
+04-27 18:49:47.412 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:BC:C7 type = 2 name = LED_BLE_A0F3BCC7 2
+04-27 18:49:47.427 D/SmartSalesConn(19293): 扫描到设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7) rssi=-83 uuids=
+04-27 18:49:47.427 D/SmartSalesConn(19293): 忽略设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7)：未匹配任何 profile
+04-27 18:49:47.749 D/HyperRemoteDevicesAdapter(28001): Remote device name is: LED_BLE_A0F3BCC7 type = 2 43:BB:A0:F3:BC:C7
+04-27 18:49:47.749 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:BC:C7 type = 2 name = LED_BLE_A0F3BCC7 2
+04-27 18:49:47.764 D/SmartSalesConn(19293): 扫描到设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7) rssi=-82 uuids=
+04-27 18:49:47.764 D/SmartSalesConn(19293): 忽略设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7)：未匹配任何 profile
+04-27 18:49:48.012 D/HyperRemoteDevicesAdapter(28001): Remote device name is: LED_BLE_A0F3BCC7 type = 2 43:BB:A0:F3:BC:C7
+04-27 18:49:48.012 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:BC:C7 type = 2 name = LED_BLE_A0F3BCC7 2
+04-27 18:49:48.018 D/SmartSalesConn(19293): 扫描到设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7) rssi=-83 uuids=
+04-27 18:49:48.018 D/SmartSalesConn(19293): 忽略设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7)：未匹配任何 profile
+04-27 18:49:48.149 D/HyperRemoteDevicesAdapter(28001): Remote device name is: LED_BLE_A0F3BCC7 type = 2 43:BB:A0:F3:BC:C7
+04-27 18:49:48.149 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:BC:C7 type = 2 name = LED_BLE_A0F3BCC7 2
+04-27 18:49:48.163 D/SmartSalesConn(19293): 扫描到设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7) rssi=-88 uuids=
+04-27 18:49:48.163 D/SmartSalesConn(19293): 忽略设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7)：未匹配任何 profile
+04-27 18:49:48.418 D/HyperRemoteDevicesAdapter(28001): Remote device name is: LED_BLE_A0F3BCC7 type = 2 43:BB:A0:F3:BC:C7
+04-27 18:49:48.418 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:BC:C7 type = 2 name = LED_BLE_A0F3BCC7 2
+04-27 18:49:48.429 D/SmartSalesConn(19293): 扫描到设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7) rssi=-89 uuids=
+04-27 18:49:48.429 D/SmartSalesConn(19293): 忽略设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7)：未匹配任何 profile
+04-27 18:49:48.892 D/HyperRemoteDevicesAdapter(28001): Remote device name is: LED_BLE_A0F3BCC7 type = 2 43:BB:A0:F3:BC:C7
+04-27 18:49:48.892 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:BC:C7 type = 2 name = LED_BLE_A0F3BCC7 2
+04-27 18:49:48.906 D/SmartSalesConn(19293): 扫描到设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7) rssi=-84 uuids=
+04-27 18:49:48.906 D/SmartSalesConn(19293): 忽略设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7)：未匹配任何 profile
+04-27 18:49:49.094 D/HyperRemoteDevicesAdapter(28001): Remote device name is: LED_BLE_A0F3BCC7 type = 2 43:BB:A0:F3:BC:C7
+04-27 18:49:49.094 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:BC:C7 type = 2 name = LED_BLE_A0F3BCC7 2
+04-27 18:49:49.100 D/SmartSalesConn(19293): 扫描到设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7) rssi=-88 uuids=
+04-27 18:49:49.100 D/SmartSalesConn(19293): 忽略设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7)：未匹配任何 profile
+04-27 18:49:49.157 D/HyperRemoteDevicesAdapter(28001): Remote device name is: LED_BLE_A0F3BCC7 type = 2 43:BB:A0:F3:BC:C7
+04-27 18:49:49.157 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:BC:C7 type = 2 name = LED_BLE_A0F3BCC7 2
+04-27 18:49:49.173 D/SmartSalesConn(19293): 扫描到设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7) rssi=-83 uuids=
+04-27 18:49:49.173 D/SmartSalesConn(19293): 忽略设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7)：未匹配任何 profile
+04-27 18:49:49.228 D/HyperRemoteDevicesAdapter(28001): Remote device name is: LED_BLE_A0F3BCC7 type = 2 43:BB:A0:F3:BC:C7
+04-27 18:49:49.228 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:BC:C7 type = 2 name = LED_BLE_A0F3BCC7 2
+04-27 18:49:49.235 D/SmartSalesConn(19293): 扫描到设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7) rssi=-83 uuids=
+04-27 18:49:49.235 D/SmartSalesConn(19293): 忽略设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7)：未匹配任何 profile
+04-27 18:49:49.293 D/HyperRemoteDevicesAdapter(28001): Remote device name is: LED_BLE_A0F3BCC7 type = 2 43:BB:A0:F3:BC:C7
+04-27 18:49:49.293 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:BC:C7 type = 2 name = LED_BLE_A0F3BCC7 2
+04-27 18:49:49.306 D/SmartSalesConn(19293): 扫描到设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7) rssi=-90 uuids=
+04-27 18:49:49.306 D/SmartSalesConn(19293): 忽略设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7)：未匹配任何 profile
+04-27 18:49:49.376 D/HyperRemoteDevicesAdapter(28001): Remote device name is: BYD BLE3 type = 2 00:60:37:F7:7C:E6
+04-27 18:49:49.376 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:7C:E6 type = 2 name = BYD BLE3 2
+04-27 18:49:49.386 D/SmartSalesConn(19293): 扫描到设备 00:60:37:F7:7C:E6 (BYD BLE3) rssi=-95 uuids=42594420-4155-544f-e0a9-e50e24dcca9e, 42594420-4155-544f-e0a9-e50e24dcca9e
+04-27 18:49:49.386 D/SmartSalesConn(19293): 忽略设备 00:60:37:F7:7C:E6 (BYD BLE3)：未匹配任何 profile
+04-27 18:49:49.920 I/ScanManager(28001): msg.what = MSG_STOP_BLE_SCAN, msg.arg1 = None
+04-27 18:49:49.924 I/ScanManager(28001): msg.what = MSG_STOP_BLE_SCAN, msg.arg1 = None
+04-27 18:49:49.926 D/SmartSalesConn(19293): 🔍 BLE detection scan started for 1C:DB:D4:9B:8F:96
+04-27 18:49:49.932 I/ScanManager(28001): msg.what = MSG_START_BLE_SCAN, msg.arg1 = None
+04-27 18:49:49.942 D/ConnectivityVM(19293): scheduleAutoReconnect() delegating to service
+04-27 18:49:49.942 D/ConnectivityService(19293): scheduleAutoReconnect() delegating to deviceManager
+04-27 18:49:49.945 I/SmartSalesConn(19293): 📶 BLE disconnected
+04-27 18:49:49.946 I/ScanManager(28001): msg.what = MSG_STOP_BLE_SCAN, msg.arg1 = None
+04-27 18:49:49.958 D/bt_btif_dm(28001): system/btif/src/btif_dm.cc:4538 btif_get_device_type: bd_addr:xx:xx:xx:xx:8f:96 device_type:BLE
+04-27 18:49:49.958 I/bt_btif_gattc(28001): system/btif/src/btif_gatt_client.cc:415 btif_gattc_open_impl: Transport=BT_TRANSPORT_LE, device type=BLE, address=xx:xx:xx:xx:8f:96, address type=0, phy=1
+04-27 18:49:51.032 D/PolicyMaker( 3839): uid =10423 pkg=com.smartsales.prism reason=VISIBLE_APP
+04-27 18:49:59.954 W/SmartSalesConn(19293): BLE 连接失败：Timed out waiting for 10000 ms
+04-27 18:49:59.975 I/ScanManager(28001): msg.what = MSG_START_BLE_SCAN, msg.arg1 = None
+04-27 18:50:04.944 D/ConnectivityService( 3839): reportNetworkConnectivity(161, false) by 1000
+04-27 18:50:05.199 D/ConnectivityService( 3839): [161 WIFI] validation passed
+04-27 18:50:07.979 I/ScanManager(28001): msg.what = MSG_STOP_BLE_SCAN, msg.arg1 = None
+04-27 18:50:07.982 D/SmartSalesConn(19293): 🔍 BLE detection scan started for 1C:DB:D4:9B:8F:96
+04-27 18:50:07.993 I/ScanManager(28001): msg.what = MSG_START_BLE_SCAN, msg.arg1 = None
+04-27 18:50:08.002 D/ConnectivityVM(19293): scheduleAutoReconnect() delegating to service
+04-27 18:50:08.002 D/ConnectivityService(19293): scheduleAutoReconnect() delegating to deviceManager
+04-27 18:50:08.007 I/ScanManager(28001): msg.what = MSG_STOP_BLE_SCAN, msg.arg1 = None
+04-27 18:50:08.007 I/SmartSalesConn(19293): 📶 BLE disconnected
+04-27 18:50:08.017 D/bt_btif_dm(28001): system/btif/src/btif_dm.cc:4538 btif_get_device_type: bd_addr:xx:xx:xx:xx:8f:96 device_type:BLE
+04-27 18:50:08.017 I/bt_btif_gattc(28001): system/btif/src/btif_gatt_client.cc:415 btif_gattc_open_impl: Transport=BT_TRANSPORT_LE, device type=BLE, address=xx:xx:xx:xx:8f:96, address type=0, phy=1
+04-27 18:50:18.014 W/SmartSalesConn(19293): BLE 连接失败：Timed out waiting for 10000 ms
+04-27 18:50:18.026 I/ScanManager(28001): msg.what = MSG_START_BLE_SCAN, msg.arg1 = None
+04-27 18:50:23.772 W/SystemServiceRegistry(27585): No service published for: wifirtt
+04-27 18:50:25.231 D/ConnectivityService( 3839): Data stall detected with methods: 2
+04-27 18:50:25.426 D/ConnectivityService( 3839): [161 WIFI] validation passed
+04-27 18:50:26.031 I/ScanManager(28001): msg.what = MSG_STOP_BLE_SCAN, msg.arg1 = None
+04-27 18:50:26.035 D/SmartSalesConn(19293): 🔍 BLE detection scan started for 1C:DB:D4:9B:8F:96
+04-27 18:50:26.045 I/ScanManager(28001): msg.what = MSG_START_BLE_SCAN, msg.arg1 = None
+04-27 18:50:26.053 D/ConnectivityVM(19293): scheduleAutoReconnect() delegating to service
+04-27 18:50:26.053 D/ConnectivityService(19293): scheduleAutoReconnect() delegating to deviceManager
+04-27 18:50:26.466 D/HyperRemoteDevicesAdapter(28001): Remote device name is: BYD BLE3 type = 2 24:9F:89:30:79:7E
+04-27 18:50:26.466 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:79:7E type = 2 name = BYD BLE3 2
+04-27 18:50:26.474 D/SmartSalesConn(19293): 扫描到设备 24:9F:89:30:79:7E (BYD BLE3) rssi=-90 uuids=42594420-4155-544f-e0a9-e50e24dcca9e, 42594420-4155-544f-e0a9-e50e24dcca9e
+04-27 18:50:26.474 D/SmartSalesConn(19293): 忽略设备 24:9F:89:30:79:7E (BYD BLE3)：未匹配任何 profile
+04-27 18:50:26.968 D/HyperRemoteDevicesAdapter(28001): Remote device name is: LED_BLE_A0F3BCC7 type = 2 43:BB:A0:F3:BC:C7
+04-27 18:50:26.968 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:BC:C7 type = 2 name = LED_BLE_A0F3BCC7 2
+04-27 18:50:26.980 D/SmartSalesConn(19293): 扫描到设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7) rssi=-79 uuids=
+04-27 18:50:26.980 D/SmartSalesConn(19293): 忽略设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7)：未匹配任何 profile
+04-27 18:50:27.034 D/HyperRemoteDevicesAdapter(28001): Remote device name is: LED_BLE_A0F3BCC7 type = 2 43:BB:A0:F3:BC:C7
+04-27 18:50:27.034 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:BC:C7 type = 2 name = LED_BLE_A0F3BCC7 2
+04-27 18:50:27.053 D/SmartSalesConn(19293): 扫描到设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7) rssi=-82 uuids=
+04-27 18:50:27.053 D/SmartSalesConn(19293): 忽略设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7)：未匹配任何 profile
+04-27 18:50:27.175 D/HyperRemoteDevicesAdapter(28001): Remote device name is: LED_BLE_A0F3BCC7 type = 2 43:BB:A0:F3:BC:C7
+04-27 18:50:27.175 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:BC:C7 type = 2 name = LED_BLE_A0F3BCC7 2
+04-27 18:50:27.191 D/SmartSalesConn(19293): 扫描到设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7) rssi=-79 uuids=
+04-27 18:50:27.191 D/SmartSalesConn(19293): 忽略设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7)：未匹配任何 profile
+04-27 18:50:27.430 D/HyperRemoteDevicesAdapter(28001): Remote device name is: LED_BLE_A0F3BCC7 type = 2 43:BB:A0:F3:BC:C7
+04-27 18:50:27.430 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:BC:C7 type = 2 name = LED_BLE_A0F3BCC7 2
+04-27 18:50:27.438 D/SmartSalesConn(19293): 扫描到设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7) rssi=-88 uuids=
+04-27 18:50:27.438 D/SmartSalesConn(19293): 忽略设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7)：未匹配任何 profile
+04-27 18:50:27.512 D/HyperRemoteDevicesAdapter(28001): Remote device name is: BYD BLE3 type = 2 24:9F:89:30:79:7E
+04-27 18:50:27.512 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:79:7E type = 2 name = BYD BLE3 2
+04-27 18:50:27.520 D/SmartSalesConn(19293): 扫描到设备 24:9F:89:30:79:7E (BYD BLE3) rssi=-93 uuids=42594420-4155-544f-e0a9-e50e24dcca9e, 42594420-4155-544f-e0a9-e50e24dcca9e
+04-27 18:50:27.520 D/SmartSalesConn(19293): 忽略设备 24:9F:89:30:79:7E (BYD BLE3)：未匹配任何 profile
+04-27 18:50:27.572 D/HyperRemoteDevicesAdapter(28001): Remote device name is: LED_BLE_A0F3BCC7 type = 2 43:BB:A0:F3:BC:C7
+04-27 18:50:27.572 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:BC:C7 type = 2 name = LED_BLE_A0F3BCC7 2
+04-27 18:50:27.582 D/SmartSalesConn(19293): 扫描到设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7) rssi=-79 uuids=
+04-27 18:50:27.582 D/SmartSalesConn(19293): 忽略设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7)：未匹配任何 profile
+04-27 18:50:27.638 D/HyperRemoteDevicesAdapter(28001): Remote device name is: LED_BLE_A0F3BCC7 type = 2 43:BB:A0:F3:BC:C7
+04-27 18:50:27.638 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:BC:C7 type = 2 name = LED_BLE_A0F3BCC7 2
+04-27 18:50:27.650 D/SmartSalesConn(19293): 扫描到设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7) rssi=-84 uuids=
+04-27 18:50:27.650 D/SmartSalesConn(19293): 忽略设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7)：未匹配任何 profile
+04-27 18:50:27.832 D/HyperRemoteDevicesAdapter(28001): Remote device name is: LED_BLE_A0F3BCC7 type = 2 43:BB:A0:F3:BC:C7
+04-27 18:50:27.832 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:BC:C7 type = 2 name = LED_BLE_A0F3BCC7 2
+04-27 18:50:27.850 D/SmartSalesConn(19293): 扫描到设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7) rssi=-80 uuids=
+04-27 18:50:27.850 D/SmartSalesConn(19293): 忽略设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7)：未匹配任何 profile
+04-27 18:50:27.957 D/HyperRemoteDevicesAdapter(28001): Remote device name is: LED_BLE_A0F3BCC7 type = 2 43:BB:A0:F3:BC:C7
+04-27 18:50:27.957 D/HyperRemoteDevicesAdapter(28001): update name for XX:XX:XX:XX:BC:C7 type = 2 name = LED_BLE_A0F3BCC7 2
+04-27 18:50:27.967 D/SmartSalesConn(19293): 扫描到设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7) rssi=-84 uuids=
+04-27 18:50:27.967 D/SmartSalesConn(19293): 忽略设备 43:BB:A0:F3:BC:C7 (LED_BLE_A0F3BCC7)：未匹配任何 profile
+04-27 18:50:28.047 I/ScanManager(28001): msg.what = MSG_STOP_BLE_SCAN, msg.arg1 = None
+04-27 18:50:28.049 I/SmartSalesConn(19293): 🔍 BLE detected: CHLE_Intelligent (1C:DB:D4:9B:8F:96)
+04-27 18:50:28.054 I/SmartSalesConn(19293): 🔍 Auto-reconnect triggered by BLE detection for 1C:DB:D4:9B:8F:96
+04-27 18:50:35.705 I/ScanManager(28001): msg.what = MSG_STOP_BLE_SCAN, msg.arg1 = None
+04-27 18:50:35.710 I/ScanManager(28001): msg.what = MSG_STOP_BLE_SCAN, msg.arg1 = None
+04-27 18:50:35.770 D/MiuiFastConnectService_Plugin( 6731): handleMessage: MSG_START_BLE_SCAN mode: 0
+04-27 18:50:35.782 I/ScanManager(28001): msg.what = MSG_START_BLE_SCAN, msg.arg1 = None
+04-27 18:50:35.793 I/ScanManager(28001): msg.what = MSG_START_BLE_SCAN, msg.arg1 = None
+04-27 18:50:40.980 D/ConnectivityService( 3839): reportNetworkConnectivity(161, false) by 1000
+04-27 18:50:41.071 D/ConnectivityService( 3839): [161 WIFI] validation passed
+04-27 18:51:05.542 W/Looper  ( 3839): Slow dispatch took 1004ms main app=system_server main=true group=DISABLED h=com.android.server.attention.AttentionManagerService$AttentionHandler c=com.android.server.attention.AttentionManagerService$$ExternalSyntheticLambda1@e746abe m=0
+04-27 18:51:17.034 D/ConnectivityService( 3839): reportNetworkConnectivity(161, false) by 1000
+04-27 18:51:17.118 D/ConnectivityService( 3839): [161 WIFI] validation passed
+04-27 18:51:19.615 D/CompatChangeReporter( 3839): Compat change id reported: 151861875; UID 10240; state: ENABLED
+04-27 18:51:19.738 D/CompatChangeReporter( 7187): Compat change id reported: 202956589; UID 10240; state: ENABLED
+04-27 18:51:19.766 E/HyperOSCustFeatureResolve( 7187): 	at com.miui.base.MiuiStubRegistry.get(MiuiStubRegistry.java:296)
+04-27 18:51:19.766 E/HyperOSCustFeatureResolve( 7187): 	at com.miui.base.MiuiStubRegistry.get(MiuiStubRegistry.java:287)
+04-27 18:51:19.767 E/HyperOSCustFeatureResolve( 7187): 	at com.miui.base.MiuiStubRegistry.get(MiuiStubRegistry.java:296)
+04-27 18:51:19.767 E/HyperOSCustFeatureResolve( 7187): 	at com.miui.base.MiuiStubRegistry.get(MiuiStubRegistry.java:287)
+04-27 18:51:32.708 D/CompatChangeReporter( 3839): Compat change id reported: 311208629; UID 10232; state: ENABLED
+04-27 18:51:35.711 I/ScanManager(28001): msg.what = MSG_STOP_BLE_SCAN, msg.arg1 = None
+04-27 18:51:35.716 I/ScanManager(28001): msg.what = MSG_STOP_BLE_SCAN, msg.arg1 = None
+04-27 18:51:35.779 D/MiuiFastConnectService_Plugin( 6731): handleMessage: MSG_START_BLE_SCAN mode: 0
+04-27 18:51:35.786 I/ScanManager(28001): msg.what = MSG_START_BLE_SCAN, msg.arg1 = None
+04-27 18:51:35.793 I/ScanManager(28001): msg.what = MSG_START_BLE_SCAN, msg.arg1 = None
+04-27 18:51:37.139 D/ConnectivityService( 3839): Data stall detected with methods: 2
+04-27 18:51:37.301 D/ConnectivityService( 3839): [161 WIFI] validation passed
+04-27 18:51:42.351 W/SystemServiceRegistry(32398): No service published for: recovery
+04-27 18:51:50.092 D/ConnectivityService( 3839): reportNetworkConnectivity(161, false) by 1000
+04-27 18:51:50.194 D/ConnectivityService( 3839): [161 WIFI] validation passed
+04-27 18:52:10.216 D/ConnectivityService( 3839): Data stall detected with methods: 2
+04-27 18:52:10.350 D/ConnectivityService( 3839): [161 WIFI] validation passed
+04-27 18:52:35.038 W/OptProp ( 3839): Cannot read opt property android.window.PROPERTY_COMPAT_ALLOW_RESIZEABLE_ACTIVITY_OVERRIDES
+04-27 18:52:35.710 I/ScanManager(28001): msg.what = MSG_STOP_BLE_SCAN, msg.arg1 = None
+04-27 18:52:35.714 I/ScanManager(28001): msg.what = MSG_STOP_BLE_SCAN, msg.arg1 = None
+04-27 18:52:35.774 D/MiuiFastConnectService_Plugin( 6731): handleMessage: MSG_START_BLE_SCAN mode: 0
+04-27 18:52:35.782 I/ScanManager(28001): msg.what = MSG_START_BLE_SCAN, msg.arg1 = None
+04-27 18:52:35.793 I/ScanManager(28001): msg.what = MSG_START_BLE_SCAN, msg.arg1 = None
+04-27 18:52:47.684 D/NavStubView( 5261): onTouch ACTION_DOWN sendMessageDelayed MSG_CHECK_GESTURE_STUB_TOUCHABLE
+04-27 18:52:47.695 V/WindowManagerShell( 5963): Directly starting a new transition type=TO_FRONT wct=WindowContainerTransaction { changes= {} hops= [{pendingIntent: options=Bundle[{android.activity.splashScreenStyle=-1, android.activity.sourceInfo=Supplier{VAL_PARCELABLE@148+104}, key_miui_config_flag=1, android:activity.animAbortListener=null, miui:activity.options.injector=Supplier{VAL_PARCELABLE@456+124}, android.activity.transientLaunch=true}]}] errorCallbackToken=null taskFragmentOrganizer=null willFinishToHome=true mFinishToHome=false } handler=com.android.wm.shell.recents.RecentsTransitionHandler@159e820
+04-27 18:52:47.761 D/SurfaceFlinger( 1966): bgDrawFirstFrame [4] clone:0 V:0 globalZ:4 Snapshot{TraversalPath{.id = 27369}com.miui.home/com.miui.home.launcher.Launcher#27369 isVisible=0 {hidden by parent or layer flag} changes=Hierarchy | Geometry | Content | Input | Metadata | Visibility | AffectsChildren | FrameRate layerStack=0 geomLayerBounds={0,0,3200,1440} geomLayerTransform={tx=0,ty=0}} input{(NOT_VISIBLE | DUPLICATE_TOUCH_TO_WALLPAPER) touchableRegion={0,0,0,0}} size:1
+04-27 18:52:48.461 D/NavStubView( 5261): ACTION_UP: mIsGestureStarted: true, currTime - mDownTime < MSG_CHECK_GESTURE_STUB_TOUCHABLE_TIMEOUT, updateViewLayout UnTouchable, diffX: 39.5 diffY: -78.0
+04-27 18:52:52.765 D/PolicyMaker( 3839): uid =10423 pkg=com.smartsales.prism reason=VISIBLE_APP
+04-27 18:52:54.218 D/PolicyMaker( 3839): uid =10140 pkg=com.miui.home reason=VISIBLE_APP
+04-27 18:53:18.008 E/InternalPeopleServiceGrpcClient(27399): ijpc: UNAVAILABLE: IOException when getting auth token
+04-27 18:53:18.008 E/FSA2_GroupSyncGrpc(27399): ijpc: UNAVAILABLE: IOException when getting auth token
+04-27 18:53:18.026 E/FSA2_ContactsSyncAdapter(27399): ijpc: UNAVAILABLE: IOException when getting auth token
+04-27 18:53:35.715 I/ScanManager(28001): msg.what = MSG_STOP_BLE_SCAN, msg.arg1 = None
+04-27 18:53:35.722 I/ScanManager(28001): msg.what = MSG_STOP_BLE_SCAN, msg.arg1 = None
+04-27 18:53:35.784 D/MiuiFastConnectService_Plugin( 6731): handleMessage: MSG_START_BLE_SCAN mode: 0
+04-27 18:53:35.791 I/ScanManager(28001): msg.what = MSG_START_BLE_SCAN, msg.arg1 = None
+04-27 18:53:35.804 I/ScanManager(28001): msg.what = MSG_START_BLE_SCAN, msg.arg1 = None
+04-27 18:53:50.906 D/CompatChangeReporter( 3839): Compat change id reported: 311208629; UID 10240; state: ENABLED
+04-27 18:53:50.920 D/CompatChangeReporter( 7187): Compat change id reported: 311402873; UID 10240; state: ENABLED
+04-27 18:53:50.920 D/CompatChangeReporter( 7187): Compat change id reported: 323349338; UID 10240; state: ENABLED
+04-27 18:53:50.920 D/CompatChangeReporter( 3839): Compat change id reported: 311402873; UID 10240; state: ENABLED
+04-27 18:53:50.920 D/CompatChangeReporter( 3839): Compat change id reported: 323349338; UID 10240; state: ENABLED
+04-27 18:53:50.928 D/ConnectivityService( 3839): requestNetwork for uid/pid:10240/7187 activeRequest: null callbackRequest: 5871 [NetworkRequest [ REQUEST id=5872, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10240 RequestorUid: 10240 RequestorPkg: com.android.rkpdapp UnderlyingNetworks: Null] ]] callback flags: 0 order: 2147483647 isUidTracked: false declaredMethods: AVAIL|LOST|NC
+04-27 18:53:50.931 D/ConnectivityServiceImpl( 3839): teardown wifi type 1 state: CONNECTED primary: true
+04-27 18:53:50.931 D/ConnectivityServiceImpl( 3839): nai type 1 state: CONNECTED primary: true
+04-27 18:53:50.931 D/ConnectivityServiceImpl( 3839): teardown wifi type 1 state: CONNECTED primary: true
+04-27 18:53:50.931 D/ConnectivityServiceImpl( 3839): nai type 1 state: CONNECTED primary: true
+04-27 18:53:50.932 D/ConnectivityService( 3839): NetReassign [5872 : null → 161] [c 1] [a 1] [i 2]

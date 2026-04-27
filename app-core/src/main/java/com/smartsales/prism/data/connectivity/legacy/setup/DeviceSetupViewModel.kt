@@ -544,14 +544,6 @@ class DeviceSetupViewModel @Inject constructor(
         is ConnectivityError.WifiDisconnected -> when (error.reason) {
             com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.BADGE_WIFI_OFFLINE ->
                 "设备当前未接入可用 Wi‑Fi，请重新配置网络"
-            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.HTTP_UNREACHABLE ->
-                "设备已接入 Wi‑Fi，但设备服务不可达，请确认手机与徽章处于同一局域网后重试"
-            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.PHONE_WIFI_UNAVAILABLE ->
-                "请先让手机连接 Wi‑Fi，再继续配网"
-            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.PHONE_WIFI_SSID_UNREADABLE ->
-                "手机已连接 Wi‑Fi，但无法读取网络名称，请重新输入 Wi‑Fi 配置"
-            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.NO_KNOWN_CREDENTIAL_FOR_PHONE_WIFI ->
-                "当前手机 Wi‑Fi 没有已保存配置，请重新输入 Wi‑Fi 密码"
             com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.BADGE_PHONE_NETWORK_MISMATCH ->
                 "设备与手机不在同一 Wi‑Fi，请重新配置网络"
             com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.CREDENTIAL_REPLAY_FAILED ->

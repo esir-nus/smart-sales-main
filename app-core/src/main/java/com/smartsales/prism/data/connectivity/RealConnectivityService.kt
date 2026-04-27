@@ -161,22 +161,10 @@ class RealConnectivityService @Inject constructor(
     private fun mapReconnectWifiError(
         error: com.smartsales.prism.data.connectivity.legacy.ConnectivityError.WifiDisconnected
     ): ReconnectResult {
-        // 蓝牙已配对但 Wi‑Fi 链路失败时统一引导用户回到凭据表单重新输入
+        // 蓝牙已配对但徽章网络链路失败时统一引导用户回到凭据表单重新输入
         return when (error.reason) {
-            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.NO_KNOWN_CREDENTIAL_FOR_PHONE_WIFI,
-            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.PHONE_WIFI_SSID_UNREADABLE,
             com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.BADGE_PHONE_NETWORK_MISMATCH ->
                 ReconnectResult.WifiMismatch(currentPhoneSsid = error.phoneSsid)
-            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.PHONE_WIFI_UNAVAILABLE ->
-                ReconnectResult.WifiMismatch(
-                    currentPhoneSsid = error.phoneSsid,
-                    errorMessage = wifiDisconnectedChineseMessage(error.reason)
-                )
-            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.HTTP_UNREACHABLE ->
-                ReconnectResult.WifiMismatch(
-                    currentPhoneSsid = error.phoneSsid,
-                    errorMessage = wifiDisconnectedChineseMessage(error.reason)
-                )
             com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.BADGE_WIFI_OFFLINE ->
                 ReconnectResult.WifiMismatch(
                     currentPhoneSsid = error.phoneSsid,
@@ -206,14 +194,6 @@ class RealConnectivityService @Inject constructor(
         return when (reason) {
             com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.BADGE_WIFI_OFFLINE ->
                 "设备当前未接入可用 Wi‑Fi，请重新输入凭据"
-            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.HTTP_UNREACHABLE ->
-                "设备已接入 Wi‑Fi，但设备服务不可达，请确认网络后重新输入"
-            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.PHONE_WIFI_UNAVAILABLE ->
-                "手机当前未连接可用 Wi‑Fi，请先连接 Wi‑Fi 后重新输入凭据"
-            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.PHONE_WIFI_SSID_UNREADABLE ->
-                "手机当前 Wi‑Fi 名称不可读，请确认手机已连接 Wi‑Fi 后重新输入凭据"
-            com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.NO_KNOWN_CREDENTIAL_FOR_PHONE_WIFI ->
-                "当前手机 Wi‑Fi 没有已保存凭据，请重新输入凭据"
             com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.BADGE_PHONE_NETWORK_MISMATCH ->
                 "设备与输入的 Wi‑Fi 不匹配，请重新检查配置"
             com.smartsales.prism.data.connectivity.legacy.WifiDisconnectedReason.CREDENTIAL_REPLAY_FAILED ->

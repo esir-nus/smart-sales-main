@@ -1,0 +1,227 @@
+04-27 11:03:30.097 D/SmartSalesConn(15454): 🏠 Registry: default device CHLE_Intelligent (...E3:F6)
+04-27 11:03:34.295 D/AudioPipeline(15454): SIM badge sync preflight start trigger=auto
+04-27 11:03:34.295 D/AudioPipeline(15454): 🔎 isReady preflight: start
+04-27 11:03:34.296 D/AudioPipeline(15454): 🌐 resolveBaseUrl: seeded active endpoint http://192.168.43.94:8088
+04-27 11:03:34.296 D/AudioPipeline(15454): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.43.94:8088
+04-27 11:03:37.306 W/AudioPipeline(15454): 🌐 invalidate active endpoint reason=http reachability failed
+04-27 11:03:37.306 D/AudioPipeline(15454): 🔎 isReady preflight: retrying after endpoint refresh
+04-27 11:03:37.306 D/AudioPipeline(15454): 🌐 resolveBaseUrl: querying badge network status
+04-27 11:03:37.309 D/AudioPipeline(15454): 🌐 resolveBaseUrl: ip=192.168.43.94 badgeSsid=MorningStar phoneSsidForDiag=
+04-27 11:03:37.309 D/AudioPipeline(15454): 🌐 resolveBaseUrl: refreshed http://192.168.43.94:8088
+04-27 11:03:37.309 D/AudioPipeline(15454): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.43.94:8088
+04-27 11:03:40.315 W/AudioPipeline(15454): 🌐 invalidate active endpoint reason=http reachability failed
+04-27 11:03:40.315 D/AudioPipeline(15454): 🔎 isReady preflight: result=not-ready baseUrl=http://192.168.43.94:8088
+04-27 11:03:40.315 D/AudioPipeline(15454): SIM badge sync preflight result trigger=auto isReady=false
+04-27 11:03:40.315 D/AudioPipeline(15454): SIM badge sync skipped trigger=auto stage=strict-preflight reason=not-ready
+04-27 11:03:40.322 W/AudioPipeline(15454): SIM badge sync isolation suspected ip=192.168.43.94 context=on_connect — triggering isolation prompt
+04-27 11:03:40.323 I/AudioPipeline(15454): SIM badge auto sync latch armed runtime=14:C1:9F:D7:E3:F6/3d1a1c baseUrl=http://192.168.43.94:8088 reason=on_connect_isolation
+04-27 11:04:03.090 D/AudioPipeline(15454): SIM manual badge sync tapped availability=ready isSyncing=false
+04-27 11:04:03.090 D/AudioPipeline(15454): 🔎 isReady preflight: start
+04-27 11:04:03.091 D/AudioPipeline(15454): 🌐 resolveBaseUrl: querying badge network status
+04-27 11:04:03.183 D/AudioPipeline(15454): 🌐 resolveBaseUrl: ip=192.168.43.94 badgeSsid=MorningStar phoneSsidForDiag=
+04-27 11:04:03.184 D/AudioPipeline(15454): 🌐 resolveBaseUrl: refreshed http://192.168.43.94:8088
+04-27 11:04:03.184 D/AudioPipeline(15454): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.43.94:8088
+04-27 11:04:06.187 W/AudioPipeline(15454): 🌐 invalidate active endpoint reason=http reachability failed
+04-27 11:04:06.187 D/AudioPipeline(15454): 🔎 isReady preflight: retrying after endpoint refresh
+04-27 11:04:06.187 D/AudioPipeline(15454): 🌐 resolveBaseUrl: querying badge network status
+04-27 11:04:06.189 D/AudioPipeline(15454): 🌐 resolveBaseUrl: ip=192.168.43.94 badgeSsid=MorningStar phoneSsidForDiag=
+04-27 11:04:06.189 D/AudioPipeline(15454): 🌐 resolveBaseUrl: refreshed http://192.168.43.94:8088
+04-27 11:04:06.189 D/AudioPipeline(15454): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.43.94:8088
+04-27 11:04:09.195 W/AudioPipeline(15454): 🌐 invalidate active endpoint reason=http reachability failed
+04-27 11:04:09.195 D/AudioPipeline(15454): 🔎 isReady preflight: result=not-ready baseUrl=http://192.168.43.94:8088
+04-27 11:04:09.195 D/AudioPipeline(15454): SIM manual badge sync gate availability=ready branch=strict_precheck_blocked blocked=true
+04-27 11:04:09.195 D/AudioPipeline(15454): SIM manual badge sync prompt wifi_mismatch skipped source=drawer_gate branch=strict_precheck_blocked
+04-27 11:04:15.271 D/SmartSalesConn(15454): 🏠 Registry: manuallyDisconnected=false for 1C:DB:D4:9B:8F:96
+04-27 11:04:15.271 I/SmartSalesConn(15454): 🏠 Registry: switching ...E3:F6 → ...8F:96
+04-27 11:04:15.274 D/AudioPipeline(15454): SIM badge sync: all downloads cancelled (device switch)
+04-27 11:04:15.274 D/SmartSalesConn(15454): 🏠 Registry: reconnecting target ...8F:96
+04-27 11:04:18.547 D/SmartSalesConn(15454): 🏠 Registry: manuallyDisconnected=false for 14:C1:9F:D7:E3:F6
+04-27 11:04:18.547 I/SmartSalesConn(15454): 🏠 Registry: switching ...8F:96 → ...E3:F6
+04-27 11:04:18.548 D/AudioPipeline(15454): SIM badge sync: all downloads cancelled (device switch)
+04-27 11:04:18.549 D/SmartSalesConn(15454): 🏠 Registry: reconnecting target ...E3:F6
+04-27 11:04:19.302 I/AudioPipeline(15454): SIM badge auto sync latch cleared runtime=14:C1:9F:D7:E3:F6/3d1a1c baseUrl=http://192.168.43.94:8088 reason=runtime_changed
+04-27 11:04:19.303 D/AudioPipeline(15454): SIM badge sync preflight start trigger=auto
+04-27 11:04:19.303 D/AudioPipeline(15454): 🔎 isReady preflight: start
+04-27 11:04:19.303 D/AudioPipeline(15454): 🌐 resolveBaseUrl: querying badge network status
+04-27 11:04:19.304 D/AudioPipeline(15454): 🌐 resolveBaseUrl: ip=192.168.0.107 badgeSsid=MstRobot phoneSsidForDiag=
+04-27 11:04:19.304 D/AudioPipeline(15454): 🌐 resolveBaseUrl: refreshed http://192.168.0.107:8088
+04-27 11:04:19.304 D/AudioPipeline(15454): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.0.107:8088
+04-27 11:04:19.574 D/AudioPipeline(15454): 🔎 isReady preflight: result=ready baseUrl=http://192.168.0.107:8088
+04-27 11:04:19.574 D/AudioPipeline(15454): SIM badge sync preflight result trigger=auto isReady=true
+04-27 11:04:19.574 D/AudioPipeline(15454): SIM audio badge sync requested: trigger=auto
+04-27 11:04:19.574 D/AudioPipeline(15454): 🌐 resolveBaseUrl: querying badge network status
+04-27 11:04:19.575 D/AudioPipeline(15454): 🌐 resolveBaseUrl: ip=192.168.0.107 badgeSsid=MstRobot phoneSsidForDiag=
+04-27 11:04:19.575 D/AudioPipeline(15454): 🌐 resolveBaseUrl: refreshed http://192.168.0.107:8088
+04-27 11:04:19.784 D/AudioPipeline(15454): SIM auto badge sync silent failure: StandaloneCoroutine was cancelled
+04-27 11:04:22.717 D/AudioPipeline(15454): SIM badge sync preflight start trigger=auto
+04-27 11:04:22.718 D/AudioPipeline(15454): 🔎 isReady preflight: start
+04-27 11:04:22.718 D/AudioPipeline(15454): 🌐 resolveBaseUrl: querying badge network status
+04-27 11:04:22.719 D/AudioPipeline(15454): 🌐 resolveBaseUrl: ip=192.168.0.107 badgeSsid=MstRobot phoneSsidForDiag=
+04-27 11:04:22.720 D/AudioPipeline(15454): 🌐 resolveBaseUrl: refreshed http://192.168.0.107:8088
+04-27 11:04:22.720 D/AudioPipeline(15454): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.0.107:8088
+04-27 11:04:23.091 D/AudioPipeline(15454): 🔎 isReady preflight: result=ready baseUrl=http://192.168.0.107:8088
+04-27 11:04:23.091 D/AudioPipeline(15454): SIM badge sync preflight result trigger=auto isReady=true
+04-27 11:04:23.091 D/AudioPipeline(15454): SIM audio badge sync requested: trigger=auto
+04-27 11:04:23.091 D/AudioPipeline(15454): 🌐 resolveBaseUrl: reusing active endpoint http://192.168.0.107:8088
+04-27 11:04:23.269 D/AudioPipeline(15454): SIM badge sync listRecordings success count=0
+04-27 11:04:23.271 D/AudioPipeline(15454): SIM badge sync outcome badgeListCount=0 pendingDeleteCount=0 placeholderCount=0 queueCount=0 retryQueueCount=0 branch=device_empty
+04-27 11:04:23.272 D/AudioPipeline(15454): SIM audio badge sync completed: trigger=auto queuedCount=0 retryQueuedCount=0 branch=device_empty
+04-27 11:04:26.110 D/AudioPipeline(15454): SIM manual badge sync tapped availability=ready isSyncing=false
+04-27 11:04:26.111 D/AudioPipeline(15454): 🔎 isReady preflight: start
+04-27 11:04:26.111 D/AudioPipeline(15454): 🌐 resolveBaseUrl: reusing active endpoint http://192.168.0.107:8088
+04-27 11:04:26.111 D/AudioPipeline(15454): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.0.107:8088
+04-27 11:04:26.349 D/AudioPipeline(15454): 🔎 isReady preflight: result=ready baseUrl=http://192.168.0.107:8088
+04-27 11:04:26.351 D/AudioPipeline(15454): SIM manual badge sync gate availability=ready branch=strict_precheck_allowed blocked=false
+04-27 11:04:26.352 D/AudioPipeline(15454): SIM badge sync preflight accepted upstream trigger=manual
+04-27 11:04:26.352 D/AudioPipeline(15454): SIM audio badge sync requested: trigger=manual
+04-27 11:04:26.352 D/AudioPipeline(15454): 🌐 resolveBaseUrl: reusing active endpoint http://192.168.0.107:8088
+04-27 11:04:26.540 D/AudioPipeline(15454): SIM badge sync listRecordings success count=0
+04-27 11:04:26.540 D/AudioPipeline(15454): SIM badge sync outcome badgeListCount=0 pendingDeleteCount=0 placeholderCount=0 queueCount=0 retryQueueCount=0 branch=device_empty
+04-27 11:04:26.540 D/AudioPipeline(15454): SIM audio badge sync completed: trigger=manual queuedCount=0 retryQueuedCount=0 branch=device_empty
+04-27 11:04:37.335 D/SmartSalesConn(15454): 🏠 Registry: renamed 14:C1:9F:D7:E3:F6 → CHLE_Intelligent wuluyin
+04-27 11:04:39.438 D/SmartSalesConn(15454): 🏠 Registry: manuallyDisconnected=false for 1C:DB:D4:9B:8F:96
+04-27 11:04:39.438 I/SmartSalesConn(15454): 🏠 Registry: switching ...E3:F6 → ...8F:96
+04-27 11:04:39.442 D/AudioPipeline(15454): SIM badge sync: all downloads cancelled (device switch)
+04-27 11:04:39.442 D/SmartSalesConn(15454): 🏠 Registry: reconnecting target ...8F:96
+04-27 11:04:43.475 D/AudioPipeline(15454): SIM badge sync preflight start trigger=auto
+04-27 11:04:43.476 D/AudioPipeline(15454): 🔎 isReady preflight: start
+04-27 11:04:43.476 D/AudioPipeline(15454): 🌐 resolveBaseUrl: querying badge network status
+04-27 11:04:43.477 D/AudioPipeline(15454): 🌐 resolveBaseUrl: ip=192.168.0.107 badgeSsid=MstRobot phoneSsidForDiag=
+04-27 11:04:43.477 D/AudioPipeline(15454): 🌐 resolveBaseUrl: refreshed http://192.168.0.107:8088
+04-27 11:04:43.477 D/AudioPipeline(15454): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.0.107:8088
+04-27 11:04:44.783 D/AudioPipeline(15454): 🔎 isReady preflight: result=ready baseUrl=http://192.168.0.107:8088
+04-27 11:04:44.783 D/AudioPipeline(15454): SIM badge sync preflight result trigger=auto isReady=true
+04-27 11:04:44.783 D/AudioPipeline(15454): SIM audio badge sync requested: trigger=auto
+04-27 11:04:44.783 D/AudioPipeline(15454): 🌐 resolveBaseUrl: reusing active endpoint http://192.168.0.107:8088
+04-27 11:04:44.975 D/AudioPipeline(15454): SIM badge sync listRecordings success count=0
+04-27 11:04:44.975 D/AudioPipeline(15454): SIM badge sync outcome badgeListCount=0 pendingDeleteCount=0 placeholderCount=0 queueCount=0 retryQueueCount=0 branch=device_empty
+04-27 11:04:44.975 D/AudioPipeline(15454): SIM audio badge sync completed: trigger=auto queuedCount=0 retryQueuedCount=0 branch=device_empty
+04-27 11:04:51.296 D/AudioPipeline(15454): SIM manual badge sync tapped availability=ready isSyncing=false
+04-27 11:04:51.296 D/AudioPipeline(15454): 🔎 isReady preflight: start
+04-27 11:04:51.296 D/AudioPipeline(15454): 🌐 resolveBaseUrl: reusing active endpoint http://192.168.0.107:8088
+04-27 11:04:51.296 D/AudioPipeline(15454): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.0.107:8088
+04-27 11:04:51.447 D/AudioPipeline(15454): 🔎 isReady preflight: result=ready baseUrl=http://192.168.0.107:8088
+04-27 11:04:51.447 D/AudioPipeline(15454): SIM manual badge sync gate availability=ready branch=strict_precheck_allowed blocked=false
+04-27 11:04:51.447 D/AudioPipeline(15454): SIM badge sync preflight accepted upstream trigger=manual
+04-27 11:04:51.447 D/AudioPipeline(15454): SIM audio badge sync requested: trigger=manual
+04-27 11:04:51.448 D/AudioPipeline(15454): 🌐 resolveBaseUrl: reusing active endpoint http://192.168.0.107:8088
+04-27 11:04:51.630 D/AudioPipeline(15454): SIM badge sync listRecordings success count=0
+04-27 11:04:51.631 D/AudioPipeline(15454): SIM badge sync outcome badgeListCount=0 pendingDeleteCount=0 placeholderCount=0 queueCount=0 retryQueueCount=0 branch=device_empty
+04-27 11:04:51.631 D/AudioPipeline(15454): SIM audio badge sync completed: trigger=manual queuedCount=0 retryQueuedCount=0 branch=device_empty
+04-27 11:05:03.828 D/SmartSalesConn(15454): 🏠 Registry: manuallyDisconnected=false for 14:C1:9F:D7:E3:F6
+04-27 11:05:03.828 I/SmartSalesConn(15454): 🏠 Registry: switching ...8F:96 → ...E3:F6
+04-27 11:05:03.833 D/AudioPipeline(15454): SIM badge sync: all downloads cancelled (device switch)
+04-27 11:05:03.833 D/SmartSalesConn(15454): 🏠 Registry: reconnecting target ...E3:F6
+04-27 11:05:08.155 D/AudioPipeline(15454): SIM badge sync preflight start trigger=auto
+04-27 11:05:08.155 D/AudioPipeline(15454): 🔎 isReady preflight: start
+04-27 11:05:08.155 D/AudioPipeline(15454): 🌐 resolveBaseUrl: querying badge network status
+04-27 11:05:08.158 D/AudioPipeline(15454): 🌐 resolveBaseUrl: ip=192.168.43.94 badgeSsid=MorningStar phoneSsidForDiag=
+04-27 11:05:08.159 D/AudioPipeline(15454): 🌐 resolveBaseUrl: refreshed http://192.168.43.94:8088
+04-27 11:05:08.159 D/AudioPipeline(15454): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.43.94:8088
+04-27 11:05:11.164 W/AudioPipeline(15454): 🌐 invalidate active endpoint reason=http reachability failed
+04-27 11:05:11.164 D/AudioPipeline(15454): 🔎 isReady preflight: retrying after endpoint refresh
+04-27 11:05:11.164 D/AudioPipeline(15454): 🌐 resolveBaseUrl: querying badge network status
+04-27 11:05:11.165 D/AudioPipeline(15454): 🌐 resolveBaseUrl: ip=192.168.43.94 badgeSsid=MorningStar phoneSsidForDiag=
+04-27 11:05:11.165 D/AudioPipeline(15454): 🌐 resolveBaseUrl: refreshed http://192.168.43.94:8088
+04-27 11:05:11.165 D/AudioPipeline(15454): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.43.94:8088
+04-27 11:05:14.171 W/AudioPipeline(15454): 🌐 invalidate active endpoint reason=http reachability failed
+04-27 11:05:14.171 D/AudioPipeline(15454): 🔎 isReady preflight: result=not-ready baseUrl=http://192.168.43.94:8088
+04-27 11:05:14.171 D/AudioPipeline(15454): SIM badge sync preflight result trigger=auto isReady=false
+04-27 11:05:14.173 D/AudioPipeline(15454): SIM badge sync skipped trigger=auto stage=strict-preflight reason=not-ready
+04-27 11:05:14.176 W/AudioPipeline(15454): SIM badge sync isolation suspected ip=192.168.43.94 context=on_connect — triggering isolation prompt
+04-27 11:05:14.177 I/AudioPipeline(15454): SIM badge auto sync latch armed runtime=14:C1:9F:D7:E3:F6/80bf48 baseUrl=http://192.168.43.94:8088 reason=on_connect_isolation
+04-27 11:06:19.023 I/Telephony( 5894): TelecomAccountRegistry$TelecomAccountTelephonyCallback: TelecomAccountRegistry: onServiceStateChanged: newState=0, mServiceState=0
+04-27 11:06:19.311 I/Telephony( 5894): TelecomAccountRegistry$TelecomAccountTelephonyCallback: TelecomAccountRegistry: onServiceStateChanged: newState=0, mServiceState=0
+04-27 11:06:19.358 I/Telephony( 5894): TelecomAccountRegistry$TelecomAccountTelephonyCallback: TelecomAccountRegistry: onServiceStateChanged: newState=0, mServiceState=0
+04-27 11:06:31.215 D/SmartSalesConn(15454): 🏠 Registry: manuallyDisconnected=false for 1C:DB:D4:9B:8F:96
+04-27 11:06:31.215 I/SmartSalesConn(15454): 🏠 Registry: switching ...E3:F6 → ...8F:96
+04-27 11:06:31.219 D/AudioPipeline(15454): SIM badge sync: all downloads cancelled (device switch)
+04-27 11:06:31.220 D/SmartSalesConn(15454): 🏠 Registry: reconnecting target ...8F:96
+04-27 11:06:34.382 D/SmartSalesConn(15454): 🏠 Registry: manuallyDisconnected=false for 14:C1:9F:D7:E3:F6
+04-27 11:06:34.382 I/SmartSalesConn(15454): 🏠 Registry: switching ...8F:96 → ...E3:F6
+04-27 11:06:34.387 D/AudioPipeline(15454): SIM badge sync: all downloads cancelled (device switch)
+04-27 11:06:34.387 D/SmartSalesConn(15454): 🏠 Registry: reconnecting target ...E3:F6
+04-27 11:06:35.271 I/AudioPipeline(15454): SIM badge auto sync latch cleared runtime=14:C1:9F:D7:E3:F6/80bf48 baseUrl=http://192.168.43.94:8088 reason=runtime_changed
+04-27 11:06:35.271 D/AudioPipeline(15454): SIM badge sync preflight start trigger=auto
+04-27 11:06:35.271 D/AudioPipeline(15454): 🔎 isReady preflight: start
+04-27 11:06:35.271 D/AudioPipeline(15454): 🌐 resolveBaseUrl: querying badge network status
+04-27 11:06:35.272 D/AudioPipeline(15454): 🌐 resolveBaseUrl: ip=192.168.0.107 badgeSsid=MstRobot phoneSsidForDiag=
+04-27 11:06:35.272 D/AudioPipeline(15454): 🌐 resolveBaseUrl: refreshed http://192.168.0.107:8088
+04-27 11:06:35.272 D/AudioPipeline(15454): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.0.107:8088
+04-27 11:06:35.466 D/AudioPipeline(15454): SIM auto badge sync silent failure: StandaloneCoroutine was cancelled
+04-27 11:06:38.439 D/AudioPipeline(15454): SIM badge sync preflight start trigger=auto
+04-27 11:06:38.440 D/AudioPipeline(15454): 🔎 isReady preflight: start
+04-27 11:06:38.440 D/AudioPipeline(15454): 🌐 resolveBaseUrl: querying badge network status
+04-27 11:06:38.441 D/AudioPipeline(15454): 🌐 resolveBaseUrl: ip=192.168.0.107 badgeSsid=MstRobot phoneSsidForDiag=
+04-27 11:06:38.441 D/AudioPipeline(15454): 🌐 resolveBaseUrl: refreshed http://192.168.0.107:8088
+04-27 11:06:38.441 D/AudioPipeline(15454): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.0.107:8088
+04-27 11:06:38.638 D/AudioPipeline(15454): 🔎 isReady preflight: result=ready baseUrl=http://192.168.0.107:8088
+04-27 11:06:38.638 D/AudioPipeline(15454): SIM badge sync preflight result trigger=auto isReady=true
+04-27 11:06:38.638 D/AudioPipeline(15454): SIM audio badge sync requested: trigger=auto
+04-27 11:06:38.638 D/AudioPipeline(15454): 🌐 resolveBaseUrl: reusing active endpoint http://192.168.0.107:8088
+04-27 11:06:38.864 D/AudioPipeline(15454): SIM badge sync listRecordings success count=0
+04-27 11:06:38.865 D/AudioPipeline(15454): SIM badge sync outcome badgeListCount=0 pendingDeleteCount=0 placeholderCount=0 queueCount=0 retryQueueCount=0 branch=device_empty
+04-27 11:06:38.865 D/AudioPipeline(15454): SIM audio badge sync completed: trigger=auto queuedCount=0 retryQueuedCount=0 branch=device_empty
+04-27 11:06:41.694 D/AudioPipeline(15454): SIM manual badge sync tapped availability=ready isSyncing=false
+04-27 11:06:41.694 D/AudioPipeline(15454): 🔎 isReady preflight: start
+04-27 11:06:41.694 D/AudioPipeline(15454): 🌐 resolveBaseUrl: reusing active endpoint http://192.168.0.107:8088
+04-27 11:06:41.694 D/AudioPipeline(15454): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.0.107:8088
+04-27 11:06:41.833 D/AudioPipeline(15454): 🔎 isReady preflight: result=ready baseUrl=http://192.168.0.107:8088
+04-27 11:06:41.833 D/AudioPipeline(15454): SIM manual badge sync gate availability=ready branch=strict_precheck_allowed blocked=false
+04-27 11:06:41.834 D/AudioPipeline(15454): SIM badge sync preflight accepted upstream trigger=manual
+04-27 11:06:41.834 D/AudioPipeline(15454): SIM audio badge sync requested: trigger=manual
+04-27 11:06:41.834 D/AudioPipeline(15454): 🌐 resolveBaseUrl: reusing active endpoint http://192.168.0.107:8088
+04-27 11:06:42.038 D/AudioPipeline(15454): SIM badge sync listRecordings success count=0
+04-27 11:06:42.038 D/AudioPipeline(15454): SIM badge sync outcome badgeListCount=0 pendingDeleteCount=0 placeholderCount=0 queueCount=0 retryQueueCount=0 branch=device_empty
+04-27 11:06:42.038 D/AudioPipeline(15454): SIM audio badge sync completed: trigger=manual queuedCount=0 retryQueuedCount=0 branch=device_empty
+04-27 11:06:47.601 D/SmartSalesConn(15454): 🏠 Registry: manuallyDisconnected=false for 1C:DB:D4:9B:8F:96
+04-27 11:06:47.602 I/SmartSalesConn(15454): 🏠 Registry: switching ...E3:F6 → ...8F:96
+04-27 11:06:47.606 D/AudioPipeline(15454): SIM badge sync: all downloads cancelled (device switch)
+04-27 11:06:47.606 D/SmartSalesConn(15454): 🏠 Registry: reconnecting target ...8F:96
+04-27 11:06:53.527 D/SmartSalesConn(15454): 🏠 Registry: manuallyDisconnected=false for 1C:DB:D4:9B:8F:96
+04-27 11:07:08.291 D/SmartSalesConn(15454): 🏠 Registry: manuallyDisconnected=false for 14:C1:9F:D7:E3:F6
+04-27 11:07:08.291 I/SmartSalesConn(15454): 🏠 Registry: switching ...8F:96 → ...E3:F6
+04-27 11:07:08.295 D/AudioPipeline(15454): SIM badge sync: all downloads cancelled (device switch)
+04-27 11:07:08.295 D/SmartSalesConn(15454): 🏠 Registry: reconnecting target ...E3:F6
+04-27 11:07:10.855 D/SmartSalesConn(15454): 🏠 Registry: manuallyDisconnected=false for 1C:DB:D4:9B:8F:96
+04-27 11:07:10.855 I/SmartSalesConn(15454): 🏠 Registry: switching ...E3:F6 → ...8F:96
+04-27 11:07:10.857 D/AudioPipeline(15454): SIM badge sync: all downloads cancelled (device switch)
+04-27 11:07:10.857 D/SmartSalesConn(15454): 🏠 Registry: reconnecting target ...8F:96
+04-27 11:07:14.981 D/AudioPipeline(15454): SIM badge sync preflight start trigger=auto
+04-27 11:07:14.981 D/AudioPipeline(15454): 🔎 isReady preflight: start
+04-27 11:07:14.981 D/AudioPipeline(15454): 🌐 resolveBaseUrl: querying badge network status
+04-27 11:07:14.985 D/AudioPipeline(15454): SIM manual badge sync tapped availability=ready isSyncing=false
+04-27 11:07:14.985 D/AudioPipeline(15454): 🔎 isReady preflight: start
+04-27 11:07:14.985 D/AudioPipeline(15454): 🌐 resolveBaseUrl: ip=192.168.43.94 badgeSsid=MorningStar phoneSsidForDiag=
+04-27 11:07:14.985 D/AudioPipeline(15454): 🌐 resolveBaseUrl: refreshed http://192.168.43.94:8088
+04-27 11:07:14.985 D/AudioPipeline(15454): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.43.94:8088
+04-27 11:07:14.985 D/AudioPipeline(15454): 🌐 resolveBaseUrl: reusing active endpoint http://192.168.43.94:8088
+04-27 11:07:14.985 D/AudioPipeline(15454): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.43.94:8088
+04-27 11:07:17.991 W/AudioPipeline(15454): 🌐 invalidate active endpoint reason=http reachability failed
+04-27 11:07:17.991 D/AudioPipeline(15454): 🔎 isReady preflight: retrying after endpoint refresh
+04-27 11:07:17.992 D/AudioPipeline(15454): 🌐 resolveBaseUrl: querying badge network status
+04-27 11:07:17.992 W/AudioPipeline(15454): 🌐 invalidate active endpoint reason=http reachability failed
+04-27 11:07:17.992 D/AudioPipeline(15454): 🔎 isReady preflight: retrying after endpoint refresh
+04-27 11:07:17.993 D/AudioPipeline(15454): 🌐 resolveBaseUrl: ip=192.168.43.94 badgeSsid=MorningStar phoneSsidForDiag=
+04-27 11:07:17.993 D/AudioPipeline(15454): 🌐 resolveBaseUrl: refreshed http://192.168.43.94:8088
+04-27 11:07:17.993 D/AudioPipeline(15454): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.43.94:8088
+04-27 11:07:17.993 D/AudioPipeline(15454): 🌐 resolveBaseUrl: reusing active endpoint http://192.168.43.94:8088
+04-27 11:07:17.993 D/AudioPipeline(15454): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.43.94:8088
+04-27 11:07:20.999 W/AudioPipeline(15454): 🌐 invalidate active endpoint reason=http reachability failed
+04-27 11:07:20.999 D/AudioPipeline(15454): 🔎 isReady preflight: result=not-ready baseUrl=http://192.168.43.94:8088
+04-27 11:07:20.999 W/AudioPipeline(15454): 🌐 invalidate active endpoint reason=http reachability failed
+04-27 11:07:20.999 D/AudioPipeline(15454): 🔎 isReady preflight: result=not-ready baseUrl=http://192.168.43.94:8088
+04-27 11:07:20.999 D/AudioPipeline(15454): SIM badge sync preflight result trigger=auto isReady=false
+04-27 11:07:20.999 D/AudioPipeline(15454): SIM badge sync skipped trigger=auto stage=strict-preflight reason=not-ready
+04-27 11:07:21.002 D/AudioPipeline(15454): SIM manual badge sync gate availability=ready branch=strict_precheck_blocked blocked=true
+04-27 11:07:21.002 D/AudioPipeline(15454): SIM manual badge sync prompt wifi_mismatch skipped source=drawer_gate branch=strict_precheck_blocked
+04-27 11:07:21.009 W/AudioPipeline(15454): SIM badge sync isolation suspected ip=192.168.43.94 context=on_connect — triggering isolation prompt
+04-27 11:07:21.010 I/AudioPipeline(15454): SIM badge auto sync latch armed runtime=1C:DB:D4:9B:8F:96/223653 baseUrl=http://192.168.43.94:8088 reason=on_connect_isolation
+04-27 11:08:05.616 D/SmartSalesConn(15454): 🏠 Registry: manuallyDisconnected=false for 14:C1:9F:D7:E3:F6
+04-27 11:08:05.616 I/SmartSalesConn(15454): 🏠 Registry: switching ...8F:96 → ...E3:F6
+04-27 11:08:05.620 D/SmartSalesConn(15454): 🏠 Registry: reconnecting target ...E3:F6
+04-27 11:08:05.621 D/AudioPipeline(15454): SIM badge sync: all downloads cancelled (device switch)
+04-27 11:08:10.160 D/SmartSalesConn(15454): 🏠 Registry: manuallyDisconnected=false for 1C:DB:D4:9B:8F:96
+04-27 11:08:10.160 I/SmartSalesConn(15454): 🏠 Registry: switching ...E3:F6 → ...8F:96
+04-27 11:08:10.164 D/AudioPipeline(15454): SIM badge sync: all downloads cancelled (device switch)
+04-27 11:08:10.164 D/SmartSalesConn(15454): 🏠 Registry: reconnecting target ...8F:96

@@ -121,6 +121,7 @@ Use the existing `SimAudioRepositoryRuntime.deviceRegistryManager` dependency. D
 <!-- Operator appends one entry per iteration. Not committed mid-sprint. -->
 
 - 2026-04-27 iteration 1: Read Sprint 02, the badge lifecycle core-flow, interface ownership, connectivity/audio specs, and the audio repository/sync code. Implemented `SimAudioRepository` observation of `runtime.deviceRegistryManager.activeDevice` and added `cancelAllBadgeDownloads()` in sync support. Initial focused test passed, but full `:app-core:testDebugUnitTest` exposed unrelated test mocks returning null for `activeDevice`; hardened the observer with a no-op fallback for missing test stubs and reran the full module test successfully. Attempted adb/logcat evidence; device state was visible, but no live two-badge sync trace was available in the log buffer.
+- 2026-04-27 iteration 2: Installed the latest `app-core-debug.apk` onto device `fc8ede3e` and captured a fresh runtime logcat while switching between the two registered badges. The log shows repeated `Registry: switching ...` events paired with `SIM badge sync: all downloads cancelled (device switch)`. The ready badge then reached sync preflight/listing and returned `listRecordings success count=0`; the other badge failed HTTP reachability before `/list`, so this runtime pass did not capture a non-empty queue or an actual `background download start` being cancelled. Kept the executable unit test as the proof for active-download/queued-download cancellation and attached the runtime log as hardware evidence for the switch hook.
 
 ## Closeout
 
@@ -133,7 +134,10 @@ Use the existing `SimAudioRepositoryRuntime.deviceRegistryManager` dependency. D
   - `grep -n "deviceRegistryManager.activeDevice\\|activeDevice.collect" app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepository.kt` -> `41:            val activeDevice = runCatching { runtime.deviceRegistryManager.activeDevice }.getOrNull()` and `44:            activeDevice.collect { device ->`
   - `./gradlew :app-core:testDebugUnitTest --tests com.smartsales.prism.data.audio.SimAudioRepositorySyncSupportTest` -> `BUILD SUCCESSFUL in 57s`
   - `./gradlew :app-core:testDebugUnitTest` -> `BUILD SUCCESSFUL in 10s`
-  - `adb get-state` -> `device`
-  - `timeout 15s adb logcat -d -t 1000 | grep "SIM badge sync" | tail -40 || true` -> no matching output in the current device log buffer; live two-badge in-flight switch reproduction was not captured in this session. The new unit test `active device change cancels queued and active badge downloads` covers the cancellation branch deterministically.
+  - `adb install -r app-core/build/outputs/apk/debug/app-core-debug.apk` -> `Success`
+  - Runtime logcat artifact: `docs/projects/badge-session-lifecycle/evidence/02-audio-download-device-scope/runtime-logcat-20260427.txt`
+  - `wc -l docs/projects/badge-session-lifecycle/evidence/02-audio-download-device-scope/runtime-logcat-20260427.txt` -> `227 docs/projects/badge-session-lifecycle/evidence/02-audio-download-device-scope/runtime-logcat-20260427.txt`
+  - `grep -n "all downloads cancelled\|SIM badge sync listRecordings success\|SIM audio badge sync completed" docs/projects/badge-session-lifecycle/evidence/02-audio-download-device-scope/runtime-logcat-20260427.txt` -> switch cancellation at lines 36, 40, 84, 113, 138, 142, 179, 184, 188, 223, 226; selected-badge listing/completion at lines 66/68, 78/80, 96/98, 108/110, 162/164, 174/176.
+  - Runtime limitation: the ready badge returned `listRecordings success count=0`, and the other badge failed HTTP reachability before `/list`; no live `background download start` cancellation was captured. The new unit test `active device change cancels queued and active badge downloads` covers the cancellation branch deterministically.
 - Lesson proposals: none
 - CHANGELOG line: none

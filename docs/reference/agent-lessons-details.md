@@ -24,6 +24,26 @@ When adding a new lesson (after USER confirms "problem fixed"):
 
 ## Lessons
 
+### Closed Drawer Hardware Updates Need Hot ViewModel Evidence — 2026-04-27
+
+**Symptom**: Badge audio drawer inventory and download progress appeared stale unless the user closed/reopened the drawer, and the first runtime pass risked accepting build/install plus a launch log as verification without proving the drawer-observation path.
+**Root Cause**: Badge-originated audio updates arrive from background hardware sync/download work. The drawer ViewModels used `SharingStarted.WhileSubscribed`, so the UI projection could stop observing repository `StateFlow` updates while the drawer was closed. Verification also initially looked at app launch and screenshots instead of the ViewModel observation seam.
+**Wrong Approach**:
+1. Treating an installed APK, app launch, or opened-drawer screenshot as sufficient runtime proof.
+2. Trying to infer live UI refresh from repository/download logs alone.
+3. Stopping the on-device loop before proving that the ViewModel projection emitted while the drawer collector was absent.
+**Correct Fix**:
+1. Use `SharingStarted.Eagerly` for ViewModel flows that project hardware/background-originated state such as badge audio inventory and download progress.
+2. Add focused structure tests that guard the hot observation policy.
+3. For runtime acceptance, capture logcat at the observation seam while the drawer is closed; the proof should show background sync/download entering an updated state and the eager ViewModel projection emitting that state before the drawer is reopened.
+4. Use screenshots as supporting evidence only; for this class of bug, logcat is the primary proof.
+**File(s)**:
+- `app-core/src/main/java/com/smartsales/prism/ui/sim/SimAudioDrawerViewModel.kt`
+- `app-core/src/main/java/com/smartsales/prism/ui/drawers/audio/AudioViewModel.kt`
+- `app-core/src/test/java/com/smartsales/prism/ui/sim/SimAudioDrawerLiveObservationTest.kt`
+- `docs/projects/badge-session-lifecycle/evidence/03-audio-drawer-live-observation/eager-observation-launch-20260427-175300.txt`
+**Pattern**: For closed-surface hardware updates, prove the data path at the hot ViewModel projection while the surface is closed. Screenshots after reopen are secondary evidence, not the root proof.
+
 ### ESP32 Active Download vs Readiness Probe — 2026-04-27
 
 **Symptom**: During multi-badge testing, tapping sync while a badge audio file was already downloading caused HTTP readiness probes to time out. The app then treated the timeout as Wi-Fi/media failure and started saved-credential recovery, even though the BLE transport and badge Wi-Fi were still valid.

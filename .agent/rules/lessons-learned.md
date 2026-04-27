@@ -45,6 +45,7 @@ trigger: always_on
 
 ## 🐛 Core Data & Kotlin
 - **Stale UI after update** → 90% chance it's a missing Flow trigger, not persistence. (Ref: *Ghost UI After Update*)
+- **Hardware drawer stale after background update** → Keep ViewModel projections hot and prove the observation seam while the drawer is closed. (Ref: *Closed Drawer Hardware Updates Need Hot ViewModel Evidence*)
 - **Unassigned Flow reference** → Calling `asSharedFlow()` without `combine/collect` does nothing. (Ref: *Dead Flow Reference*)
 - **Post-insert conflicts** → Insert + refresh = conflict with yourself. Add exclusion ID. (Ref: *Post-Insert Self-Conflict*)
 - **Data missing but logs show it** → Check sealed class parameters and Mapper (`toDomain`). (Ref: *Sealed Class Data Gap*, *Entity-Domain Mapping Gap*)

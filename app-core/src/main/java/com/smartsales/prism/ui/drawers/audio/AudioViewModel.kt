@@ -54,7 +54,7 @@ class AudioViewModel @Inject constructor(
         .map { files -> files.map { it.toUiState() } }
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Eagerly,
             initialValue = emptyList()
         )
     

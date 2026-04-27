@@ -18,10 +18,10 @@ open
 |---|------|--------|---------|----------|
 | 01 | lifecycle-design | done | Authored the badge session lifecycle core flow covering single-device states, multi-device switch teardown, audio sync binding, and UI observation rules. | [sprints/01-lifecycle-design.md](sprints/01-lifecycle-design.md) |
 | 02 | audio-download-device-scope | done | Audio repository now cancels queued and active badge downloads when the active device MAC changes, keeping old-device work from using the new connection. | [sprints/02-audio-download-device-scope.md](sprints/02-audio-download-device-scope.md) |
-| 03 | audio-drawer-live-observation | authored | — | [sprints/03-audio-drawer-live-observation.md](sprints/03-audio-drawer-live-observation.md) |
-| 04 | connectivity-isolation-repair-dataflow | in_progress | Runtime dataflow test/fix for hotspot/network isolation recovery; registered badges must enter Wi-Fi credential repair, not full re-pairing. | [sprints/04-connectivity-isolation-repair-dataflow.md](sprints/04-connectivity-isolation-repair-dataflow.md) |
-| 05 | connectivity-dataflow-monitoring-fixloop | authored | Connectivity north-star reset, spec sync, static gap map, and adb/logcat dataflow matrix before bounded implementation follow-ups. | [sprints/05-connectivity-dataflow-monitoring-fixloop.md](sprints/05-connectivity-dataflow-monitoring-fixloop.md) |
-| 06 | badge-wifi-recovery-state-machine | done | BLE disconnected remains a transport-reconnect branch; solid-IP HTTP media failure triggers bounded single-flight saved-credential replay, and multi-badge sync/download work is scoped to the active badge. | [sprints/06-badge-wifi-recovery-state-machine.md](sprints/06-badge-wifi-recovery-state-machine.md) |
+| 03 | audio-drawer-live-observation | done | Audio drawer inventory/progress flows now stay eagerly observed in both badge audio ViewModels so repository updates remain current while drawers are closed. | [sprints/03-audio-drawer-live-observation.md](sprints/03-audio-drawer-live-observation.md) |
+| 04 | connectivity-isolation-repair-dataflow | done | Runtime Wi-Fi isolation repair now enters registered-badge credential repair, with focused JVM, full unit, APK install, screenshot, and logcat evidence committed in `4d273192b`. | [sprints/04-connectivity-isolation-repair-dataflow.md](sprints/04-connectivity-isolation-repair-dataflow.md) |
+| 05 | connectivity-dataflow-monitoring-fixloop | cancelled | Superseded by Sprint 06 before operation; local Sprint 05 audit material is stale after `b7340f878` and is not current truth without re-audit. | — |
+| 06 | badge-wifi-recovery-state-machine | done | Superseded Sprint 05's connectivity north-star/spec/runtime recovery path; BLE disconnected remains transport recovery, solid-IP HTTP media failure triggers bounded single-flight saved-credential replay, and multi-badge sync/download work is scoped to the active badge. | [sprints/06-badge-wifi-recovery-state-machine.md](sprints/06-badge-wifi-recovery-state-machine.md) |
 
 ## Cross-Sprint Decisions
 
@@ -31,6 +31,8 @@ open
 - All sprint contracts in this project are authored as starting hypotheses, not definitive prescriptions. The operator must evaluate each fix in context before executing.
 - Hardware/runtime lifecycle regressions discovered during a later sprint should become their own dataflow test/fix sprint when they cross feature boundaries. Do not hide connectivity repair work inside an audio-only sprint.
 - Phone SSID is diagnostic only for this project. Badge Wi-Fi recovery branches from BLE state, badge-reported IP/SSID, active HTTP media readiness, and remembered user-confirmed credentials.
+- Sprint 06 absorbed Sprint 05's connectivity north-star, spec sync, and runtime recovery implementation direction, but it did not close Sprint 03's UI observation debt; Sprint 03 closed separately afterward.
+- The untracked Sprint 05 contract/evidence should be treated as pre-Sprint-06 stale audit material unless a later operator re-audits it against `b7340f878` or newer code.
 
 ## Lessons Pointer
 

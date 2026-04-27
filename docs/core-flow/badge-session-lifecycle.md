@@ -223,9 +223,9 @@ Invariants:
 
 Current implementation assessment:
 
-- `SimAudioDrawerViewModel.entries` still uses `SharingStarted.WhileSubscribed(5_000)` for repository audio files.
-- `AudioViewModel.audioItems` still uses `SharingStarted.WhileSubscribed(5000)` for repository audio files.
-- These are the correct targets for Sprint 03 unless further investigation finds a composable-level collection bug.
+- `SimAudioDrawerViewModel.entries` uses `SharingStarted.Eagerly` for repository audio files.
+- `AudioViewModel.audioItems` uses `SharingStarted.Eagerly` for repository audio files.
+- Sprint 03 closed this debt with a focused structure test and full `:app-core:testDebugUnitTest` verification.
 
 ## Section 6 - Connectivity Isolation Repair
 
@@ -248,14 +248,14 @@ The current add-device scan intentionally filters already registered badges. Tha
 
 ## Implementing Sprints
 
-Sprint 02, Sprint 03, Sprint 04, Sprint 05, and the bounded Badge Wi-Fi Recovery State Machine follow-up are implementing against this contract and the connectivity north-star.
+Sprint 02, Sprint 03, Sprint 04, Sprint 05, and the bounded Badge Wi-Fi Recovery State Machine follow-up implemented or were triaged against this contract and the connectivity north-star.
 
 Sprint 02 implements the audio sync teardown rule: queued and active badge downloads must not survive an active-device MAC change.
 
-Sprint 03 implements the UI observation rule: audio inventory/download-progress flows must stay hot enough to reflect badge-originated updates while drawers are closed.
+Sprint 03 implemented the UI observation rule: audio inventory/download-progress flows must stay hot enough to reflect badge-originated updates while drawers are closed.
 
-Sprint 04 implements the connectivity isolation repair rule: hotspot/network-isolation recovery must be tested with real adb evidence, and the isolation CTA must enter Wi-Fi credential repair for registered badges instead of clearing the prompt or starting full add-device pairing.
+Sprint 04 implemented the connectivity isolation repair rule: hotspot/network-isolation recovery must be tested with real adb evidence, and the isolation CTA must enter Wi-Fi credential repair for registered badges instead of clearing the prompt or starting full add-device pairing.
 
-Sprint 05 supersedes Sprint 04's unfinished connectivity follow-up by resetting the connectivity work around [`badge-connectivity-lifecycle.md`](badge-connectivity-lifecycle.md), spec sync, static gap mapping, and adb/logcat dataflow evidence before any broad fix or refactor sprint is authorized.
+Sprint 05 was cancelled as an unoperated contract after Sprint 06 absorbed its connectivity north-star, spec sync, and runtime recovery direction. Any local Sprint 05 gap map or matrix material is pre-Sprint-06 stale audit material unless re-audited.
 
 The Badge Wi-Fi Recovery State Machine follow-up implements the split between `TransportDisconnected` and `WifiMediaUnavailable`: BLE loss remains a BLE reconnect problem, while BLE-connected media failure keeps the active badge registered and tries bounded Wi-Fi/media recovery without add-device pairing.

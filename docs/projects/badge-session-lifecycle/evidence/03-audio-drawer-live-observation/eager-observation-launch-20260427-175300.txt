@@ -1,0 +1,105 @@
+04-27 17:52:39.510 D/SmartSalesConn(27494): 🔌 Restored session: 1C:DB:D4:9B:8F:96 knownNetworks=1
+04-27 17:52:39.513 D/SmartSalesConn(27494): 🏠 Registry: default device 圆形CHLE_Intelligent (...8F:96)
+04-27 17:52:39.520 I/SmartSalesConn(27494): 📶 BLE disconnected
+04-27 17:52:39.520 D/SmartSalesConn(27494): 🔌 Soft disconnect (session preserved)
+04-27 17:52:39.520 D/SmartSalesConn(27494): 🔌 Persistent GATT session closed
+04-27 17:52:40.115 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=0 queued=1 maxDownloadProgress=0.0
+04-27 17:52:40.576 D/SmartSalesConn(27494): 📋 Service: 00001801-0000-1000-8000-00805f9b34fb
+04-27 17:52:40.576 D/SmartSalesConn(27494):   📋 Char: 00002a05-0000-1000-8000-00805f9b34fb [INDICATE ]
+04-27 17:52:40.576 D/SmartSalesConn(27494):     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-27 17:52:40.576 D/SmartSalesConn(27494): 📋 Service: 00001800-0000-1000-8000-00805f9b34fb
+04-27 17:52:40.576 D/SmartSalesConn(27494):   📋 Char: 00002a00-0000-1000-8000-00805f9b34fb [READ ]
+04-27 17:52:40.577 D/SmartSalesConn(27494):     📋 (no descriptors)
+04-27 17:52:40.577 D/SmartSalesConn(27494):   📋 Char: 00002a01-0000-1000-8000-00805f9b34fb [READ ]
+04-27 17:52:40.577 D/SmartSalesConn(27494):     📋 (no descriptors)
+04-27 17:52:40.578 D/SmartSalesConn(27494):   📋 Char: 00002aa6-0000-1000-8000-00805f9b34fb [READ ]
+04-27 17:52:40.578 D/SmartSalesConn(27494):     📋 (no descriptors)
+04-27 17:52:40.578 D/SmartSalesConn(27494): 📋 Service: 000000ff-0000-1000-8000-00805f9b34fb
+04-27 17:52:40.578 D/SmartSalesConn(27494):   📋 Char: 0000ff01-0000-1000-8000-00805f9b34fb [READ WRITE NOTIFY ]
+04-27 17:52:40.578 D/SmartSalesConn(27494):     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-27 17:52:40.578 D/SmartSalesConn(27494):   📋 Char: 0000ff02-0000-1000-8000-00805f9b34fb [READ ]
+04-27 17:52:40.578 D/SmartSalesConn(27494):     📋 (no descriptors)
+04-27 17:52:40.578 D/SmartSalesConn(27494):   📋 Char: 0000ff03-0000-1000-8000-00805f9b34fb [WRITE ]
+04-27 17:52:40.578 D/SmartSalesConn(27494):     📋 (no descriptors)
+04-27 17:52:40.639 D/SmartSalesConn(27494): No CCCD descriptor for 0000ff02-0000-1000-8000-00805f9b34fb, notifications not available (will poll)
+04-27 17:52:40.639 I/SmartSalesConn(27494): 🔌 Persistent GATT session established: 1C:DB:D4:9B:8F:96
+04-27 17:52:40.640 I/SmartSalesConn(27494): 📶 BLE connected, waiting for explicit network observation
+04-27 17:52:40.641 D/SmartSalesConn(27494): 📡 Starting persistent notification listener for 1C:DB:D4:9B:8F:96
+04-27 17:52:40.641 D/SmartSalesConn(27494): 🌐 network query device=圆形CHLE_Intelligent
+04-27 17:52:40.641 I/SmartSalesConn(27494): 📡 queryNetwork ENTRY (in mutex)
+04-27 17:52:40.650 D/SmartSalesConn(27494): 📤 TX [NetworkQuery]: wifi#address#ip#name (77 69 66 69 23 61 64 64 72 65 73 73 23 69 70 23 6E 61 6D 65)
+04-27 17:52:40.762 D/SmartSalesConn(27494): 📥 RX [Notification]: tim#get (74 69 6D 23 67 65 74)
+04-27 17:52:40.764 D/SmartSalesConn(27494): ⏭️ Network fragment ignored: tim#get
+04-27 17:52:40.765 D/SmartSalesConn(27494): ⏰ Badge time sync requested
+04-27 17:52:40.765 D/SmartSalesConn(27494): 📥 RX [Notification]: IP#192.168.0.107 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 30 37)
+04-27 17:52:40.767 D/SmartSalesConn(27494): ❓ Badge unknown notification: IP#192.168.0.107
+04-27 17:52:40.767 D/SmartSalesConn(27494): 📥 RX [NetworkResponse]: IP#192.168.0.107 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 30 37)
+04-27 17:52:40.768 D/SmartSalesConn(27494): 📥 RX [Notification]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-27 17:52:40.768 D/SmartSalesConn(27494): ❓ Badge unknown notification: SD#MstRobot
+04-27 17:52:40.780 D/SmartSalesConn(27494): 📥 RX [NetworkResponse]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-27 17:52:40.782 D/SmartSalesConn(27494): 📡 fresh query, caching IP=192.168.0.107
+04-27 17:52:40.784 D/SmartSalesConn(27494): 📶 state=CONNECTED ip=192.168.0.107
+04-27 17:52:40.784 D/SmartSalesConn(27494): 🔌 connectUsingSession: connected, ip=192.168.0.107 ssid=MstRobot
+04-27 17:52:40.832 I/SmartSalesConn(27494): ⏰ Time sync responded: tim#20260427175240
+04-27 17:52:41.029 D/SmartSalesConn(27494): 📤 TX [BadgeSignal]: Ver#get (56 65 72 23 67 65 74)
+04-27 17:52:41.168 I/SmartSalesConn(27494): 🧾 Badge firmware version query sent
+04-27 17:52:44.087 D/AudioPipeline(27494): SIM badge sync preflight start trigger=auto
+04-27 17:52:44.088 D/AudioPipeline(27494): 🔎 isReady preflight: start
+04-27 17:52:44.089 D/AudioPipeline(27494): 🌐 resolveBaseUrl: seeded active endpoint http://192.168.0.107:8088
+04-27 17:52:44.091 D/AudioPipeline(27494): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.0.107:8088
+04-27 17:52:44.091 D/SmartSalesConn(27494): BadgeHttpClient.isReachable start url=http://192.168.0.107:8088/
+04-27 17:52:44.362 D/SmartSalesConn(27494): BadgeHttpClient.isReachable response url=http://192.168.0.107:8088/ code=200 reachable=true
+04-27 17:52:44.368 D/AudioPipeline(27494): 🔎 isReady preflight: result=ready baseUrl=http://192.168.0.107:8088
+04-27 17:52:44.368 D/AudioPipeline(27494): SIM badge sync preflight result trigger=auto isReady=true
+04-27 17:52:44.374 D/AudioPipeline(27494): SIM audio badge sync requested: trigger=auto
+04-27 17:52:44.375 D/AudioPipeline(27494): 🌐 resolveBaseUrl: reusing active endpoint http://192.168.0.107:8088
+04-27 17:52:44.559 D/AudioPipeline(27494): SIM badge sync listRecordings success count=1
+04-27 17:52:44.674 D/AudioPipeline(27494): SIM badge sync outcome badgeMac=1C:DB:D4:9B:8F:96 badgeListCount=1 pendingDeleteCount=0 placeholderCount=0 queueCount=1 retryQueueCount=1 branch=queued
+04-27 17:52:44.675 D/AudioPipeline(27494): SIM audio badge sync completed: trigger=auto queuedCount=0 retryQueuedCount=1 branch=queued
+04-27 17:52:44.676 D/AudioPipeline(27494): SIM badge sync background queue started
+04-27 17:52:44.755 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:44.770 D/AudioPipeline(27494): SIM badge sync background download start filename=2speakerTesting.wav badgeMac=1C:DB:D4:9B:8F:96
+04-27 17:52:44.772 D/AudioPipeline(27494): 🌐 resolveBaseUrl: reusing active endpoint http://192.168.0.107:8088
+04-27 17:52:44.772 D/AudioPipeline(27494): ⬇️ Downloading: http://192.168.0.107:8088/download?file=2speakerTesting.wav
+04-27 17:52:44.894 D/AudioPipeline(27494): ⬇️ download response Content-Length=-1 Transfer-Encoding=chunked filename=2speakerTesting.wav
+04-27 17:52:44.941 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:45.132 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:45.430 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:45.669 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:46.028 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:46.160 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:46.437 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:46.627 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:46.839 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:47.045 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:47.255 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:47.472 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:47.772 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:47.979 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:48.184 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:48.385 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:48.665 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:48.924 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:49.182 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:49.387 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:49.597 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:49.898 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:50.195 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:50.403 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:50.602 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:50.811 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:51.014 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:51.259 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:51.558 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:53.487 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:55.035 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:55.339 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:55.552 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:55.858 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:56.165 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:57.586 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:57.804 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:58.036 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:58.300 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:58.559 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0
+04-27 17:52:58.811 D/AudioPipeline(27494): SIM audio drawer entries emitted count=42 downloading=1 queued=0 maxDownloadProgress=0.0

@@ -479,7 +479,7 @@ class DefaultDeviceConnectionManagerIngressTest {
     }
 
     @Test
-    fun `reconnectAndWait replays known wifi credentials when badge is offline on exact phone ssid match`() = runTest {
+    fun `reconnectAndWait does not replay known wifi credentials when badge reports no ip`() = runTest {
         val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
         val monitor = FakeBadgeStateMonitor()
         val sessionStore = InMemorySessionStore().apply {
@@ -497,14 +497,6 @@ class DefaultDeviceConnectionManagerIngressTest {
                     rawResponse = "IP#0.0.0.0, SD#N/A"
                 )
             )
-            stubNetworkResults += Result.Success(
-                DeviceNetworkStatus(
-                    ipAddress = "192.168.0.9",
-                    deviceWifiName = "MstRobot",
-                    phoneWifiName = "",
-                    rawResponse = "IP#192.168.0.9, SD#MstRobot"
-                )
-            )
         }
         val manager = newManager(
             gateway = gateway,
@@ -518,11 +510,11 @@ class DefaultDeviceConnectionManagerIngressTest {
         val state = manager.reconnectAndWait()
         advanceUntilIdle()
 
-        assertTrue(state is ConnectionState.WifiProvisioned)
-        assertTrue(manager.state.value is ConnectionState.WifiProvisioned)
-        assertEquals(1, provisioner.provisionCalls.size)
-        assertEquals("MstRobot", provisioner.provisionCalls.single().second.ssid)
-        assertEquals(BadgeState.CONNECTED, monitor.status.value.state)
+        assertTrue(state is ConnectionState.Error)
+        assertTrue(manager.state.value is ConnectionState.Disconnected)
+        assertEquals(emptyList<Pair<String, WifiCredentials>>(), provisioner.provisionCalls)
+        assertEquals(BadgeState.OFFLINE, monitor.status.value.state)
+        assertTrue(monitor.status.value.bleConnected)
     }
 
     @Test

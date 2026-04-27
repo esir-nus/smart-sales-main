@@ -40,6 +40,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -119,9 +120,15 @@ class SimAudioDrawerViewModel @Inject constructor(
 
     val entries: StateFlow<List<SimAudioEntry>> = repository.getAudioFiles()
         .map { files -> files.map { it.toSimEntry() } }
+        .onEach { entries ->
+            Log.d(
+                SIM_AUDIO_DRAWER_SYNC_LOG_TAG,
+                "SIM audio drawer entries emitted count=${entries.size} downloading=${entries.count { it.localAvailability == AudioLocalAvailability.DOWNLOADING }} queued=${entries.count { it.localAvailability == AudioLocalAvailability.QUEUED }} maxDownloadProgress=${entries.maxOfOrNull { it.downloadProgress } ?: 0f}"
+            )
+        }
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
+            started = SharingStarted.Eagerly,
             initialValue = emptyList()
         )
 

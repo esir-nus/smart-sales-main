@@ -52,8 +52,8 @@ Files the operator may touch:
 ## References
 
 - `docs/core-flow/badge-session-lifecycle.md` (Sprint 01 output) — "UI observation contract" section defines when `Eagerly` vs `WhileSubscribed` is appropriate
-- `app-core/src/main/java/com/smartsales/prism/ui/sim/SimAudioDrawerViewModel.kt:57` — `SharingStarted.WhileSubscribed(5000)` line
-- `app-core/src/main/java/com/smartsales/prism/ui/drawers/audio/AudioViewModel.kt:57` — same
+- `app-core/src/main/java/com/smartsales/prism/ui/sim/SimAudioDrawerViewModel.kt:124` — pre-execution `SharingStarted.WhileSubscribed(5_000)` target, now `SharingStarted.Eagerly`
+- `app-core/src/main/java/com/smartsales/prism/ui/drawers/audio/AudioViewModel.kt:57` — pre-execution `SharingStarted.WhileSubscribed(5000)` target, now `SharingStarted.Eagerly`
 - `app-core/src/main/java/com/smartsales/prism/ui/sim/SimAudioDrawer.kt` — composable collection pattern
 - `app-core/src/main/java/com/smartsales/prism/ui/drawers/AudioDrawer.kt` — composable collection pattern
 
@@ -103,12 +103,25 @@ Do not change `WhileSubscribed` on other StateFlows that are not audio-file or d
 
 <!-- Operator appends one entry per iteration. Not committed mid-sprint. -->
 
+- 2026-04-27 iteration 1: Re-read the lifecycle core flow and the two audio drawer ViewModels. Confirmed the current evidence named by the core flow: `SimAudioDrawerViewModel.entries` and `AudioViewModel.audioItems` were the remaining repository audio-list projections using `SharingStarted.WhileSubscribed`, while `SimAudioDrawerViewModel.badgeSyncAvailability` was already `SharingStarted.Eagerly` and was not part of the drawer inventory/progress debt. Updated only the two audio inventory/progress `stateIn` policies to `SharingStarted.Eagerly`.
+- 2026-04-27 iteration 2: Added a focused source-structure test proving both badge audio drawer inventory flows use eager observation and neither target ViewModel still contains `SharingStarted.WhileSubscribed`. The first focused run failed because the structure assertion was overly format-sensitive; tightened the assertion and reran successfully. Full unit verification initially exposed a stale connectivity test that still expected saved-credential replay when a badge reports `IP#0.0.0.0`; aligned that test with the Sprint 06 contract that no-IP BLE-connected state prompts/holds for repair instead of silent replay. Full `:app-core:testDebugUnitTest` then passed.
+- 2026-04-27 iteration 3: User asked to stay in the on-device loop until the runtime exit criterion was met. Added a targeted `AudioPipeline` log on the eager `entries` projection, rebuilt, reinstalled, force-launched the app, and captured real badge auto-sync with the drawer closed. Logcat shows auto sync listing one badge file, entering `downloading=1`, and repeated `SIM audio drawer entries emitted ... downloading=1` emissions from the ViewModel while the home surface screenshot still shows the drawer closed. Opened the audio drawer afterward and captured a second screenshot plus UI dump. The active item was not visible in the first viewport, but the contract's logcat fallback criterion is met by the ViewModel emission evidence during the closed period. Full `:app-core:testDebugUnitTest` passed again after the logging change.
+
 ## Closeout
 
 <!-- Operator fills on exit. -->
 
-- Status:
-- Summary:
+- Status: success
+- Summary: Badge audio drawer inventory/progress projections now use `SharingStarted.Eagerly` in both SIM and shared audio drawer ViewModels, so repository updates remain hot while drawers are closed.
 - Evidence:
-- Lesson proposals:
-- CHANGELOG line:
+  - Static policy check after patch: `rg -n "WhileSubscribed|Eagerly" app-core/src/main/java/com/smartsales/prism/ui/sim/SimAudioDrawerViewModel.kt app-core/src/main/java/com/smartsales/prism/ui/drawers/audio/AudioViewModel.kt` returned only eager policies in the two target files: `AudioViewModel.kt:57`, `SimAudioDrawerViewModel.kt:101`, and `SimAudioDrawerViewModel.kt:124`.
+  - Focused tests passed after fixing the brittle assertion: `./gradlew :app-core:testDebugUnitTest --tests com.smartsales.prism.ui.sim.SimAudioDrawerLiveObservationTest --tests com.smartsales.prism.ui.sim.SimAudioDrawerViewModelTest`.
+  - Full unit suite passed after aligning the stale Sprint 06 no-IP connectivity assertion: `./gradlew :app-core:testDebugUnitTest`.
+  - Initial runtime artifact blocker: `adb devices` returned only `List of devices attached`, with no connected device, so screenshot/logcat evidence for closed-drawer live updates could not be captured during the first pass.
+  - Follow-up on-device evidence after device became available: `adb devices` showed `fc8ede3e	device`; `./gradlew :app-core:assembleDebug` passed; `adb install -r -d app-core/build/outputs/apk/debug/app-core-debug.apk` returned `Performing Streamed Install` / `Success`.
+  - Runtime launch/logcat artifact: `docs/projects/badge-session-lifecycle/evidence/03-audio-drawer-live-observation/runtime-launch-logcat-20260427-174803.txt` captured launch, session restore, BLE reconnect, badge IP/SSID observation, and no filtered fatal exception lines.
+  - Runtime exit-criterion evidence: `docs/projects/badge-session-lifecycle/evidence/03-audio-drawer-live-observation/eager-observation-launch-20260427-175300.txt` shows auto sync while the drawer was closed, `SIM badge sync background download start filename=2speakerTesting.wav`, and repeated `SIM audio drawer entries emitted count=42 downloading=1 queued=0` lines from the eager ViewModel projection.
+  - Screenshot artifacts: `docs/projects/badge-session-lifecycle/evidence/03-audio-drawer-live-observation/download-in-progress-drawer-closed-20260427-175300.png` and `docs/projects/badge-session-lifecycle/evidence/03-audio-drawer-live-observation/download-in-progress-drawer-opened-20260427-175300.png`.
+  - Post-runtime verification: `./gradlew :app-core:testDebugUnitTest --tests com.smartsales.prism.ui.sim.SimAudioDrawerLiveObservationTest --tests com.smartsales.prism.ui.sim.SimAudioDrawerViewModelTest`, `./gradlew :app-core:assembleDebug`, `adb install -r -d app-core/build/outputs/apk/debug/app-core-debug.apk`, and `./gradlew :app-core:testDebugUnitTest` all passed after the targeted observation log was added.
+- Lesson proposals: none.
+- CHANGELOG line: none.

@@ -89,6 +89,7 @@ fun ConnectivityModal(
     val repairState by viewModel.repairState.collectAsState()
     val isolationBadgeIp by viewModel.isolationBadgeIp.collectAsState()
     val isolationTriggerContext by viewModel.isolationTriggerContext.collectAsState()
+    val debugProbeText by viewModel.debugProbeText.collectAsState()
     val isWifiMismatchActive = managerState == ConnectivityManagerState.WIFI_MISMATCH
 
     Box(
@@ -177,6 +178,17 @@ fun ConnectivityModal(
                             onStartWifiRepair = viewModel::startIsolationWifiRepair,
                             isolationBadgeIp = isolationBadgeIp,
                             isolationTriggerContext = isolationTriggerContext
+                        )
+                    }
+                }
+
+                if (BuildConfig.DEBUG) {
+                    item {
+                        ConnectivityDebugProbeCard(
+                            debugProbeText = debugProbeText,
+                            onProbeMedia = viewModel::debugProbeMediaReadiness,
+                            onListRecordings = viewModel::debugListRecordings,
+                            onReconnect = viewModel::reconnect
                         )
                     }
                 }
@@ -272,6 +284,56 @@ private fun WifiMismatchCard(
             onStartWifiRepair = onStartWifiRepair,
             isolationBadgeIp = isolationBadgeIp,
             isolationTriggerContext = isolationTriggerContext
+        )
+    }
+}
+
+@Composable
+private fun ConnectivityDebugProbeCard(
+    debugProbeText: String?,
+    onProbeMedia: () -> Unit,
+    onListRecordings: () -> Unit,
+    onReconnect: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(CardFrost)
+            .border(1.dp, CardBorder, RoundedCornerShape(14.dp))
+            .padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Text("Debug probes", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextMuted)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            ModalActionButton(
+                text = "isReady",
+                color = AccentBlue,
+                modifier = Modifier.weight(1f),
+                onClick = onProbeMedia
+            )
+            ModalActionButton(
+                text = "/list",
+                color = AccentBlue,
+                modifier = Modifier.weight(1f),
+                onClick = onListRecordings
+            )
+            ModalActionButton(
+                text = "reconnect",
+                color = TextSecondary,
+                modifier = Modifier.weight(1f),
+                onClick = onReconnect
+            )
+        }
+        Text(
+            text = debugProbeText ?: "No probe run",
+            fontSize = 12.sp,
+            color = TextSecondary,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }

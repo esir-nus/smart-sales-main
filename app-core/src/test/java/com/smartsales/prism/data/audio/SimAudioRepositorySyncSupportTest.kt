@@ -119,6 +119,19 @@ class SimAudioRepositorySyncSupportTest {
     }
 
     @Test
+    fun `manual sync does not probe readiness while badge download is active`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
+        runtime.activeBadgeDownloadFilename = "active.wav"
+        connectivityBridge.isReadyResult = false
+
+        assertTrue(syncSupport.canSyncFromBadge())
+        val outcome = syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+
+        assertEquals(SimBadgeSyncSkippedReason.ALREADY_RUNNING, outcome.skippedReason)
+        assertTrue(connectivityBridge.calls.isEmpty())
+    }
+
+    @Test
     fun `auto sync prompts ON_CONNECT isolation and arms suppression when validated wifi and badge ip are known`() = runTest {
         bindRuntimeToTestScheduler(testScheduler)
         noteActiveEndpoint("badge-1", "token-1", "192.168.0.9")
@@ -527,8 +540,104 @@ class SimAudioRepositorySyncSupportTest {
             AudioLocalAvailability.FAILED,
             runtime.audioFiles.value.single { it.filename == "a.wav" }.localAvailability
         )
+        assertEquals(
+            AudioLocalAvailability.FAILED,
+            runtime.audioFiles.value.single { it.filename == "b.wav" }.localAvailability
+        )
         assertFalse(connectivityBridge.calls.contains("downloadRecording:b.wav"))
         runtime.repositoryScope.cancel()
+    }
+
+    @Test
+    fun `same remote filename is scoped separately per active badge`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
+        connectivityBridge.isReadyResult = true
+
+        activeDeviceFlow.value = registeredDevice("AA:AA:AA:AA:AA:01")
+        connectivityBridge.listResult = Result.Success(listOf("shared.wav"))
+        connectivityBridge.downloadResults["shared.wav"] = WavDownloadResult.Success(
+            localFile = tempFolder.newFile("shared-a.wav").apply { writeText("audio-a") },
+            originalFilename = "shared.wav",
+            sizeBytes = 2048L
+        )
+
+        val firstOutcome = syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+        advanceUntilIdle()
+
+        activeDeviceFlow.value = registeredDevice("BB:BB:BB:BB:BB:02")
+        connectivityBridge.downloadResults["shared.wav"] = WavDownloadResult.Success(
+            localFile = tempFolder.newFile("shared-b.wav").apply { writeText("audio-b") },
+            originalFilename = "shared.wav",
+            sizeBytes = 2048L
+        )
+
+        val secondOutcome = syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+        advanceUntilIdle()
+
+        val sharedEntries = runtime.audioFiles.value.filter { it.filename == "shared.wav" }
+        assertEquals(SimBadgeSyncResultBranch.QUEUED, firstOutcome.resultBranch)
+        assertEquals(SimBadgeSyncResultBranch.QUEUED, secondOutcome.resultBranch)
+        assertEquals(2, sharedEntries.size)
+        assertEquals(
+            setOf("AA:AA:AA:AA:AA:01", "BB:BB:BB:BB:BB:02"),
+            sharedEntries.map { it.badgeMac }.toSet()
+        )
+        assertTrue(sharedEntries.all { it.localAvailability == AudioLocalAvailability.READY })
+    }
+
+    @Test
+    fun `sync ownership follows connected runtime key when registry active lags`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
+        activeDeviceFlow.value = registeredDevice("AA:AA:AA:AA:AA:01")
+        endpointRecoveryCoordinator.noteCurrentRuntimeKey(
+            BadgeRuntimeKey(
+                peripheralId = "BB:BB:BB:BB:BB:02",
+                secureToken = "token-b"
+            )
+        )
+        connectivityBridge.isReadyResult = true
+        connectivityBridge.listResult = Result.Success(listOf("runtime-owned.wav"))
+        connectivityBridge.downloadResults["runtime-owned.wav"] = WavDownloadResult.Success(
+            localFile = tempFolder.newFile("runtime-owned.wav").apply { writeText("audio-b") },
+            originalFilename = "runtime-owned.wav",
+            sizeBytes = 2048L
+        )
+
+        syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+        advanceUntilIdle()
+
+        val entry = runtime.audioFiles.value.single { it.filename == "runtime-owned.wav" }
+        assertEquals("BB:BB:BB:BB:BB:02", entry.badgeMac)
+        assertEquals(AudioLocalAvailability.READY, entry.localAvailability)
+    }
+
+    @Test
+    fun `sync discards list result when active runtime changes before queueing`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
+        endpointRecoveryCoordinator.noteCurrentRuntimeKey(
+            BadgeRuntimeKey(
+                peripheralId = "BB:BB:BB:BB:BB:02",
+                secureToken = "token-b"
+            )
+        )
+        connectivityBridge.isReadyResult = true
+        connectivityBridge.listResult = Result.Success(listOf("stale-b.wav"))
+        connectivityBridge.onListRecordings = {
+            endpointRecoveryCoordinator.noteCurrentRuntimeKey(
+                BadgeRuntimeKey(
+                    peripheralId = "AA:AA:AA:AA:AA:01",
+                    secureToken = "token-a"
+                )
+            )
+        }
+
+        val outcome = syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+        advanceUntilIdle()
+
+        assertEquals(SimBadgeSyncResultBranch.ALREADY_PRESENT, outcome.resultBranch)
+        assertTrue(runtime.audioFiles.value.isEmpty())
+        assertTrue(runtime.queuedBadgeDownloads.isEmpty())
+        assertFalse(connectivityBridge.calls.any { it.startsWith("downloadRecording:") })
     }
 
     private fun bindRuntimeToTestScheduler(scheduler: TestCoroutineScheduler) {
@@ -578,6 +687,7 @@ class SimAudioRepositorySyncSupportTest {
         var downloadResults: MutableMap<String, WavDownloadResult> = mutableMapOf()
         var deleteRecordingResults: MutableMap<String, Boolean> = mutableMapOf()
         var downloadSuspender: (suspend () -> Unit)? = null
+        var onListRecordings: (suspend () -> Unit)? = null
         val calls = mutableListOf<String>()
 
         override suspend fun downloadRecording(
@@ -595,6 +705,7 @@ class SimAudioRepositorySyncSupportTest {
 
         override suspend fun listRecordings(): Result<List<String>> {
             calls += "listRecordings"
+            onListRecordings?.invoke()
             return listResult
         }
 

@@ -164,11 +164,9 @@ internal class SimAudioRepositoryStoreSupport(
 
     fun getAudio(audioId: String): AudioFile? = runtime.audioFiles.value.find { it.id == audioId }
 
-    fun getAudioByNormalizedBadgeFilename(filename: String): AudioFile? {
+    fun getAudioByNormalizedBadgeFilename(filename: String, badgeMac: String? = null): AudioFile? {
         val normalizedFilename = simPendingBadgeDeleteFilename(filename)
-        return runtime.audioFiles.value.firstOrNull {
-            simPendingBadgeDeleteFilename(it.filename) == normalizedFilename
-        }
+        return runtime.audioFiles.value.firstOrNull { matchesBadgeAudio(it, normalizedFilename, badgeMac) }
     }
 
     fun bindSession(audioId: String, sessionId: String) {
@@ -287,12 +285,13 @@ internal class SimAudioRepositoryStoreSupport(
         runtime.metadataFile.writeText(runtime.json.encodeToString(retainedFiles))
     }
 
-    suspend fun createQueuedBadgePlaceholders(filenames: List<String>): Int {
+    suspend fun createQueuedBadgePlaceholders(filenames: List<String>, badgeMac: String? = currentBadgeMac()): Int {
         if (filenames.isEmpty()) return 0
         val normalizedFilenames = filenames.map(::simPendingBadgeDeleteFilename)
         var createdCount = 0
         mutateAndSave { current ->
             val existingByFilename = current
+                .filter { badgeMac == null || it.badgeMac == badgeMac }
                 .map { simPendingBadgeDeleteFilename(it.filename) }
                 .toMutableSet()
             val updated = current.toMutableList()
@@ -306,7 +305,7 @@ internal class SimAudioRepositoryStoreSupport(
                     status = TranscriptionStatus.PENDING,
                     localAvailability = AudioLocalAvailability.QUEUED,
                     isStarred = false,
-                    badgeMac = runtime.deviceRegistryManager.activeDevice.value?.macAddress
+                    badgeMac = badgeMac
                 )
                 createdCount += 1
             }
@@ -318,12 +317,13 @@ internal class SimAudioRepositoryStoreSupport(
     suspend fun markBadgeDownloadAvailability(
         filename: String,
         availability: AudioLocalAvailability,
-        errorMessage: String? = null
+        errorMessage: String? = null,
+        badgeMac: String? = null
     ) {
         val normalizedFilename = simPendingBadgeDeleteFilename(filename)
         mutateAndSave { current ->
             current.map { audio ->
-                if (simPendingBadgeDeleteFilename(audio.filename) == normalizedFilename) {
+                if (matchesBadgeAudio(audio, normalizedFilename, badgeMac)) {
                     audio.copy(
                         localAvailability = availability,
                         lastErrorMessage = when {
@@ -348,12 +348,13 @@ internal class SimAudioRepositoryStoreSupport(
         filename: String,
         downloadProgress: Float,
         downloadedBytes: Long,
-        downloadTotalBytes: Long
+        downloadTotalBytes: Long,
+        badgeMac: String? = null
     ) {
         val normalizedFilename = simPendingBadgeDeleteFilename(filename)
         runtime.audioFiles.update { current ->
             current.map { audio ->
-                if (simPendingBadgeDeleteFilename(audio.filename) == normalizedFilename) {
+                if (matchesBadgeAudio(audio, normalizedFilename, badgeMac)) {
                     audio.copy(
                         downloadProgress = downloadProgress,
                         downloadedBytes = downloadedBytes,
@@ -366,12 +367,12 @@ internal class SimAudioRepositoryStoreSupport(
         }
     }
 
-    suspend fun removeBadgeAudioByFilename(filename: String): Boolean {
+    suspend fun removeBadgeAudioByFilename(filename: String, badgeMac: String? = null): Boolean {
         val normalizedFilename = simPendingBadgeDeleteFilename(filename)
         var removed = false
         mutateAndSave { current ->
             current.filterNot { audio ->
-                val matches = simPendingBadgeDeleteFilename(audio.filename) == normalizedFilename
+                val matches = matchesBadgeAudio(audio, normalizedFilename, badgeMac)
                 if (matches) {
                     removed = true
                     runtime.observationJobs.remove(audio.id)?.cancel()
@@ -384,8 +385,8 @@ internal class SimAudioRepositoryStoreSupport(
         return removed
     }
 
-    suspend fun importDownloadedBadgeAudio(filename: String, downloadedFile: File) {
-        val existing = getAudioByNormalizedBadgeFilename(filename)
+    suspend fun importDownloadedBadgeAudio(filename: String, downloadedFile: File, badgeMac: String? = currentBadgeMac()) {
+        val existing = getAudioByNormalizedBadgeFilename(filename, badgeMac)
         val audioId = existing?.id ?: UUID.randomUUID().toString()
         val destFile = simStoredAudioFile(runtime.context, audioId, "wav")
         downloadedFile.copyTo(destFile, overwrite = true)
@@ -410,7 +411,7 @@ internal class SimAudioRepositoryStoreSupport(
             boundSessionId = existing?.boundSessionId,
             activeJobId = existing?.activeJobId,
             lastErrorMessage = null,
-            badgeMac = existing?.badgeMac ?: runtime.deviceRegistryManager.activeDevice.value?.macAddress
+            badgeMac = existing?.badgeMac ?: badgeMac
         )
         mutateAndSave { current ->
             if (existing == null) {
@@ -428,6 +429,32 @@ internal class SimAudioRepositoryStoreSupport(
             if (updated == runtime.pendingBadgeDeletes.value) return@withLock
             runtime.pendingBadgeDeletes.value = updated
             writePendingBadgeDeletesLocked(updated)
+        }
+    }
+
+    suspend fun markInterruptedBadgeDownloadsForDevice(badgeMac: String?) {
+        if (badgeMac.isNullOrBlank()) return
+        mutateAndSave { current ->
+            current.map { audio ->
+                if (
+                    audio.source == AudioSource.SMARTBADGE &&
+                    audio.badgeMac == badgeMac &&
+                    (
+                        audio.localAvailability == AudioLocalAvailability.DOWNLOADING ||
+                            audio.localAvailability == AudioLocalAvailability.QUEUED
+                        )
+                ) {
+                    audio.copy(
+                        localAvailability = AudioLocalAvailability.FAILED,
+                        lastErrorMessage = "设备已切换，请重新同步",
+                        downloadProgress = 0f,
+                        downloadedBytes = 0L,
+                        downloadTotalBytes = 0L
+                    )
+                } else {
+                    audio
+                }
+            }
         }
     }
 
@@ -478,6 +505,13 @@ internal class SimAudioRepositoryStoreSupport(
                 android.util.Log.e("SimAudioRepository", "save metadata failed", it)
             }
         }
+    }
+
+    private fun currentBadgeMac(): String? = runtime.deviceRegistryManager.activeDevice.value?.macAddress
+
+    private fun matchesBadgeAudio(audio: AudioFile, normalizedFilename: String, badgeMac: String?): Boolean {
+        return simPendingBadgeDeleteFilename(audio.filename) == normalizedFilename &&
+            (badgeMac == null || audio.badgeMac == badgeMac)
     }
 
     private suspend fun writeMetadataLocked(entries: List<AudioFile>) {

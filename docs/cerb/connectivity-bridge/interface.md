@@ -3,6 +3,7 @@
 > **Blackbox contract** — For consumers (Scheduler, Badge Audio Pipeline). Don't read implementation.
 > **Status**: Active supporting interface
 > **Last Updated**: 2026-04-27
+> **Behavioral Source Above This Interface**: [`docs/core-flow/badge-connectivity-lifecycle.md`](../../core-flow/badge-connectivity-lifecycle.md)
 
 ---
 
@@ -103,7 +104,9 @@ interface ConnectivityBridge {
      * Performs pre-flight check (BLE + HTTP).
      * Reuses the current runtime endpoint unless that snapshot has been invalidated.
      * If HTTP reachability fails once, invalidates the endpoint and retries once
-     * after a fresh BLE network-status resolution before returning not-ready.
+     * after a fresh BLE network-status resolution. If usable IP/SSID still exists,
+     * may run one bounded latest-saved-credential replay sequence before returning
+     * not-ready.
      */
     suspend fun isReady(): Boolean
     
@@ -164,6 +167,7 @@ sealed class BadgeManagerStatus {
     object BlePairedNetworkUnknown : BadgeManagerStatus()
     object BlePairedNetworkOffline : BadgeManagerStatus()
     data class Ready(val badgeIp: String? = null, val ssid: String? = null) : BadgeManagerStatus()
+    object BleDetected : BadgeManagerStatus()
     data class Error(val message: String) : BadgeManagerStatus()
 }
 ```
@@ -251,39 +255,45 @@ interface ConnectivityPrompt {
 | `batteryNotifications` | Hot flow, buffered, no replay; forwards unsolicited BLE `Bat#<0..100>` pushes as integer percent |
 | `firmwareVersionNotifications` | Hot flow, buffered, no replay; forwards `Ver#...` replies from the badge as display-ready strings |
 | `sdCardSpaceNotifications` | Hot flow, buffered, no replay; forwards `SD#space#<size>` replies from the badge as firmware-formatted display strings |
-| `isReady()` | Pre-flight check with 3s timeout; may refresh endpoint only when the active snapshot is missing or invalidated |
+| `isReady()` | Pre-flight check with 3s timeout; may refresh endpoint only when the active snapshot is missing or invalidated, and may trigger one bounded saved-credential replay sequence after solid-IP HTTP failure |
 | `deleteRecording` | Idempotent, returns true if file removed or didn't exist; reuses the active runtime endpoint when valid |
 | `requestFirmwareVersion()` | Best-effort BLE query; sends `Ver#get` on the active session and returns whether the request was queued successfully |
 | `requestSdCardSpace()` | Best-effort BLE query; sends `SD#space` on the active session and returns whether the request was queued successfully |
 | `notifyCommandEnd()` | Best-effort BLE completion signal; sends `Command#end` on the active session when a `log#` or `rec#` pipeline reaches a terminal state |
 | `updateWifiConfig` | Rejects blank/whitespace-only SSID or password before any BLE provision/write attempt |
 
-`BadgeConnectionState.Connected` means the badge session is actually usable:
-persistent GATT notification listening is active and the badge has valid network reachability.
+`BadgeConnectionState.Connected` means shared transport readiness:
+persistent GATT notification listening is active and the badge has usable network status.
 
-Under the current reconnect contract, the bridge may surface this connected state as soon as BLE is restored and the badge reports a usable IP / transport-ready network result. Normal HTTP file work still performs its own preflight / endpoint validation without delaying shell state reflection.
+It does not mean HTTP `:8088` is ready. Normal HTTP file work still performs its own `isReady()` preflight / endpoint validation without delaying shell state reflection.
 
 `managerStatus` may refine a plain disconnected manager view into:
 
+- `BleDetected`: a registered badge was seen by scanning, but GATT is not established
 - `BlePairedNetworkUnknown`: BLE is still held, but Wi‑Fi readiness is not yet confirmed
 - `BlePairedNetworkOffline`: BLE is still held, but the badge reported no usable IP / network
+- `Ready`: manager transport readiness; must not be used as proof that `/list`, `/download`, or `/delete` is ready
+
+Internal `ConnectionState.WifiProvisionedHttpDelayed` means badge transport is confirmed, but HTTP `:8088` is still warming or unreachable inside the bounded grace window. It must not be semantically treated as full feature readiness. If a future UI needs to expose that state directly, add a public manager state in code and sync this interface in the same sprint.
 
 Normal badge HTTP work (`/list`, `/download`, `/delete`) should reuse the current runtime endpoint snapshot.
 Repeated BLE `wifi#address#ip#name` querying is not part of the normal sync path.
+
+If `/list` fails while the active badge has a usable runtime endpoint, the bridge may attempt one latest-saved-credential replay sequence before retrying `/list` once. This recovery branch must not use the phone's current SSID, must not unregister the badge, and must remain bounded to ESP32-safe foreground attempts.
 
 For `/download`, `totalBytes` is derived from HTTP `Content-Length`.
 When the badge omits that header or uses chunked/unknown-length transfer, the bridge must still invoke
 `onProgress(bytesRead, totalBytes)` with `totalBytes <= 0` so downstream consumers can render
 indeterminate download progress instead of suppressing progress updates entirely.
 
-`ConnectivityService.reconnect()` may return `WifiMismatch` in either of these deterministic reconnect cases:
+`ConnectivityService.reconnect()` may return `WifiMismatch` in these deterministic reconnect cases:
 
-- the phone's current Wi‑Fi SSID has no exact remembered credential to replay
-- the phone is on Wi‑Fi but the app cannot read the SSID, so exact-match replay cannot be proven safely
-- credential replay completes, but the badge confirms it is on a different Wi‑Fi than the phone
+- the badge reports offline and no latest saved user-confirmed credential is available
+- the badge reports an SSID different from the latest saved user-confirmed credential
+- credential replay completes, but the badge confirms it is on a different Wi‑Fi than the replayed/submitted credential
+- credential replay fails to produce usable badge Wi‑Fi transport
 
-When reconnect can read the phone's current Wi‑Fi SSID, `ReconnectResult.WifiMismatch.currentPhoneSsid`
-must carry that suggestion so the repair form can prefill it while keeping the SSID editable.
+Phone current SSID must not be used as a core reconnect or repair decision input. The `ReconnectResult.WifiMismatch.currentPhoneSsid` field is retained for compatibility, but new recovery behavior should treat it as an optional UI hint only. Prefer prefill from the latest saved user-confirmed credential when available.
 
 `ConnectivityService.updateWifiConfig()` must treat `trim().isEmpty()` on either field as an immediate local error.
 That rejection is a guard rail only: it must not call BLE provisioning, manual repair confirmation, or remembered-network persistence.

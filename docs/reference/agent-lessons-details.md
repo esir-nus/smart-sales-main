@@ -24,6 +24,26 @@ When adding a new lesson (after USER confirms "problem fixed"):
 
 ## Lessons
 
+### ESP32 Active Download vs Readiness Probe — 2026-04-27
+
+**Symptom**: During multi-badge testing, tapping sync while a badge audio file was already downloading caused HTTP readiness probes to time out. The app then treated the timeout as Wi-Fi/media failure and started saved-credential recovery, even though the BLE transport and badge Wi-Fi were still valid.
+**Root Cause**: The ESP32 HTTP server can be busy serving `/download`; probing `/` or starting recovery during that transfer overloads the same constrained media path and creates a false negative. The sync gate did not treat active badge downloads as an already-running state.
+**Wrong Approach**:
+1. Treating every solid-IP HTTP timeout as a Wi-Fi failure without checking whether the badge was already serving a download.
+2. Caching a completed recovery result and reusing it for later readiness failures, which hid fresh runtime context.
+3. Relying on the toast as proof of no recordings instead of checking logcat for `/list`, `/download`, active badge identity, and recovery branches.
+**Correct Fix**:
+1. Skip `canSyncFromBadge()` readiness probing while `activeBadgeDownloadFilename` or the badge download job is active.
+2. Return `ALREADY_RUNNING` for manual sync during an active badge download so the UI does not show false Wi-Fi or no-recording feedback.
+3. Keep saved-credential replay single-flight for the active runtime, but do not reuse stale completed recovery results.
+4. Verify with logcat that active-download sync taps log `badge-download-active` and do not emit `isReachable` failures or credential replay attempts.
+**File(s)**:
+- `app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepositorySyncSupport.kt`
+- `app-core/src/main/java/com/smartsales/prism/data/connectivity/RealConnectivityBridge.kt`
+- `app-core/src/test/java/com/smartsales/prism/data/audio/SimAudioRepositorySyncSupportTest.kt`
+- `docs/projects/badge-session-lifecycle/evidence/06-badge-wifi-recovery-state-machine/multi-badge-active-download-guard-check-20260427-172318.txt`
+**Pattern**: For constrained badge media paths, a busy `/download` is not evidence of Wi-Fi failure. Gate sync/recovery on active transfer state before probing HTTP readiness.
+
 ### Hermetic ASR Unit Tests — 2026-04-23
 
 **Symptom**: ASR unit coverage passed locally only when developer credentials were available, and CI failed or drifted because the test behavior depended on real DashScope setup.  

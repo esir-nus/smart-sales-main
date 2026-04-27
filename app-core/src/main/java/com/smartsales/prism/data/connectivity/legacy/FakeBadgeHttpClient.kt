@@ -21,6 +21,7 @@ class FakeBadgeHttpClient @Inject constructor() : BadgeHttpClient {
 
     // Configurable responses
     private var listResult: Result<List<String>> = Result.Success(emptyList())
+    private val listResults = ArrayDeque<Result<List<String>>>()
     private var downloadResult: Result<Unit> = Result.Success(Unit)
     private var deleteResult: Result<Unit> = Result.Success(Unit)
     private var isReachableResult: Boolean = true
@@ -34,6 +35,10 @@ class FakeBadgeHttpClient @Inject constructor() : BadgeHttpClient {
 
     // Configuration methods
     fun setListResult(result: Result<List<String>>) { listResult = result }
+    fun setListResults(results: List<Result<List<String>>>) {
+        listResults.clear()
+        listResults.addAll(results)
+    }
     fun setDownloadResult(result: Result<Unit>) { downloadResult = result }
     fun setDeleteResult(result: Result<Unit>) { deleteResult = result }
     fun setReachable(reachable: Boolean) { isReachableResult = reachable }
@@ -45,6 +50,7 @@ class FakeBadgeHttpClient @Inject constructor() : BadgeHttpClient {
     // Reset all state
     fun reset() {
         listResult = Result.Success(emptyList())
+        listResults.clear()
         downloadResult = Result.Success(Unit)
         deleteResult = Result.Success(Unit)
         isReachableResult = true
@@ -64,7 +70,7 @@ class FakeBadgeHttpClient @Inject constructor() : BadgeHttpClient {
 
     override suspend fun listWavFiles(baseUrl: String): Result<List<String>> {
         listCalls.add(baseUrl)
-        return listResult
+        return listResults.removeFirstOrNull() ?: listResult
     }
 
     override suspend fun downloadWav(

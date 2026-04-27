@@ -1,0 +1,72 @@
+---
+description: Quick triggers for known bugs. If symptom matches, read docs/reference/agent-lessons-details.md
+trigger: always_on
+---
+
+# Agent Lessons Learned (Index)
+
+> **🔴 Senior Engineer Checks**: Loading 400 lines of historical bugs into every prompt burns context and dilutes focus. 
+> Below are strictly **Symptoms & Triggers**.
+> 
+> **When to act**: If your current task hits a trigger below, you MUST read the full context in `docs/reference/agent-lessons-details.md` before writing code.
+> **When to update**: Only add to this index + the details doc AFTER the user confirms "problem fixed".
+
+## 🧠 LLM & Prompts
+- **Context is empty** → LLM will hallucinate. Add explicit guards. (Ref: *LLM Fabricates History*)
+- **Missing JSON fields** → Prompt is likely missing strict requirements. (Ref: *Prompt-Linter Data Gap*)
+- **Complex string matching** → Don't use Kotlin math. Let LLM route IDs. (Ref: *LLM Semantic Mapping vs Hardcoded Math*)
+- **Implementing "Concepts"** → Verify against `data class` schema, not the name. (Ref: *Conceptual Name → Wrong Implementation*)
+- **Forcing JSON for everything** → JSON is for routing (use native API), Markdown/Text is for context. (Ref: *JSON Schema Fragility vs Raw Markdown*)
+
+## 🏗️ Architecture & Specs
+- **Fixing without reading Docs (Superficial Fixes)** → DO NOT patch code based on an isolated symptom. ALWAYS read the relevant spec/tracker first, or your fix will be a "happy-path hallucination" that breaks the deeper contract. (Ref: *Docs-First Protocol Violation*)
+- **SIMPLE_QA Bypassing Pipeline** → Do not short-circuit factual questions. They must go through the Unified Pipeline to load database context. (Ref: *SIMPLE_QA Bypassing UnifiedPipeline*)
+- **Manual DX Choreography** → Don't make agents/users orchestrate strict SOPs manually. Build Paved Road orchestrators (like Planners) that enforce compliance dynamically. (Ref: *Intelligent Orchestration vs Manual Choreography*)
+- **Compiler-Driven Extraction** → Moving files + hacking build.gradle to pass compilation is NOT modularization. Check target architecture (interface-map) and invert dependencies instead. (Ref: *Physical vs Logical Modularization*)
+- **Reading multiple specs** → STOP. One task = ONE spec.md. (Ref: *Multi-Spec Drift*)
+- **Tracker wave titles** → These are NOT specs. Do not invent behavior from them. (Ref: *Spec Invention from Wave Titles*)
+- **Missing UI details** → Flag as spec gap. Do not invent gestures. (Ref: *Spec Drift: Inventing UI Features*)
+- **Inventing UI for Data Hubs** → Agentic apps have invisible data layers. The LLM is the "user" of the hub. (Ref: *Metaphor → Hallucinated UI*)
+- **Independent flows sharing a resource** → Serialize at the lowest transport level. (Ref: *Application-Level Coupling*)
+- **Fake → Real DB swap** → Fakes hide "empty state" bugs. Audit empty returns. (Ref: *Fake→Real Swap*)
+- **Soft-deprecated fields in core pipelines** → Rip them out. They confuse future agents/devs. (Ref: *Soft-Deprecation Rot ("memoryHits")*)
+- **Spec Drift from Component Extraction** → Extracting logic (like Session Renaming) from UI to pure Pipeline layers renders old specs inaccurate. ALWAYS update the `trigger` definitions in the matching spec. (Ref: *Architectural Extraction Spec Drift*)
+- **Bypassing Centralized Writers** → Bypassing the central `EntityWriter` for "quick" entity resolutions causes downstream ghosting (e.g., missing CRM account linkages). All state mutations must funnel through the unified writer. (Ref: *Bypassing Centralized Writers*)
+
+## Harmony Migration & Lane Hygiene
+- **Starting Harmony work from Android assumptions** → Translation-first still requires explicit platform evidence. Do not copy Android behavior into Harmony-native docs/code without checking the Harmony overlay and governance docs. (Ref: *Android Assumption Leakage into Harmony*)
+- **Mixing Android and Harmony artifacts in one lane** → Keep Harmony-native files and Android-mainline files in separate write scopes unless shared-truth docs explicitly require both. (Ref: *Lane Contamination Across Android and Harmony*)
+- **Rescuing a mixed Android/Harmony branch** → Split the rescue by lane before touching `develop`; only Android/shared-docs content belongs on the develop rescue branch. (Ref: *Rescue Branch Lane Split and Post-Merge Cleanup*)
+- **Claiming parity without platform proof** → Do not promise Harmony parity for reminders, background work, notifications, scheduler flows, or onboarding unless the Harmony lane has evidence. (Ref: *Fake Parity Without Harmony Evidence*)
+- **Using tracker intent as Harmony spec** → A Harmony migration note or tracker bullet is not enough to invent native behavior. Read the owning shared contract and the Harmony overlay first. (Ref: *Harmony Spec Invention from Migration Notes*)
+- **Greenfield Harmony scaffolding without doc sync** → New Harmony roots, containers, or native service seams must sync their ownership and contract docs in the same session. (Ref: *Harmony Greenfield Scaffolding Without Contract Sync*)
+- **Debugging Harmony by analogy only** → Do not diagnose Harmony-native failures from Android intuition alone. Gather Harmony-native logs, artifacts, or runtime evidence before claiming root cause. (Ref: *Harmony Evidence Gap*)
+- **Harmony build passes but device proof still fails** → Treat compile, signing/profile readiness, `hdc` deploy, bundle identity, and runtime logs as one lane contract. Unsigned build output is not device proof. (Ref: *Harmony Build Proof Is Not Device Proof*)
+
+## 🐛 Core Data & Kotlin
+- **Stale UI after update** → 90% chance it's a missing Flow trigger, not persistence. (Ref: *Ghost UI After Update*)
+- **Unassigned Flow reference** → Calling `asSharedFlow()` without `combine/collect` does nothing. (Ref: *Dead Flow Reference*)
+- **Post-insert conflicts** → Insert + refresh = conflict with yourself. Add exclusion ID. (Ref: *Post-Insert Self-Conflict*)
+- **Data missing but logs show it** → Check sealed class parameters and Mapper (`toDomain`). (Ref: *Sealed Class Data Gap*, *Entity-Domain Mapping Gap*)
+
+## 🎨 UI & Compose
+- **UI Element entirely missing** → Check upstream data pipeline logs first. (Ref: *UI Element Not Appearing*)
+- **Drawer looks broken after reinstall** → Verify cold-start seed data and explicit empty state before blaming layout. (Ref: *Cold-Start Empty State Masquerading as Layout Regression*)
+- **Drawer scrim issues** → Separate `AnimatedVisibility` for scrim and drawer. (Ref: *Compose Scrim Inside AnimatedVisibility*)
+- **Drawer click passthrough** → Modal content must explicitly `consume` pointer events. (Ref: *Modal Drawer Click Passthrough*)
+- **Swipe-to-dismiss background** → Use `targetValue != Settled`, not `dismissDirection`. (Ref: *SwipeToDismiss Background Visibility*)
+- **Date picker selection missing** → Ensure "selected" vs "today" UI states are distinct. (Ref: *Calendar Selected vs Today State*)
+
+## 🔌 APIs & Network
+- **Pre-signed OSS URLs vs REST** → Aliyun V2 returns artifacts as URLs, not REST endpoints. (Ref: *Hallucinated REST Endpoint*)
+- **Unit tests need local credentials or real cloud access** → Refactor them to hermetic seams and move live-provider coverage into ignored integration tests. (Ref: *Hermetic ASR Unit Tests*)
+- **Silent Signature Crashes** → Check build script fallback logic for unified vs dedicated keys. (Ref: *OSS Credentials vs Unified Aliyun Key*)
+- **Reconnecting BLE** → Never fire-and-poll with fixed delays. Use suspend & await. (Ref: *Reconnect Race Condition*)
+- **Gating on HTTP** → Don't gate BLE connection success on HTTP server reachability. (Ref: *HTTP Gate Conflating Connection Concerns*)
+- **ESP32 download active + sync tap** → Do not probe HTTP readiness or replay Wi-Fi while `/download` is active; treat sync as already-running. (Ref: *ESP32 Active Download vs Readiness Probe*)
+
+## 🛠️ Tooling & Editor
+- **Compiler line number errors** → Do not ignore exact line numbers. Often caused by injecting markdown tags. (Ref: *Markdown Tag Injection & Ignoring Line Numbers*)
+- **NoClassDefFoundError on standalone interfaces** → D8 may drop them. Move declaration into consumer file. (Ref: *D8/R8 Silent Interface Dropping*)
+- **Rescue branch still looks ahead after squash merge** → Prove cleanup safety from PR state (`MERGED`), not from branch-ahead counts, then delete the stale rescue branch/worktree. (Ref: *Rescue Branch Lane Split and Post-Merge Cleanup*)
+- **Signature Changes vs Fakes** → When changing a core interface signature (e.g. adding a constructor dependency), failing to update the `TestFake` will silently kill the test suite compilation. Always grep for usages in `test-fakes`. (Ref: *Divergent Test Fakes*)

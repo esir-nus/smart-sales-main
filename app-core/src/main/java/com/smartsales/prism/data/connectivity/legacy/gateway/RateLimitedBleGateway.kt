@@ -35,6 +35,7 @@ class RateLimitedBleGateway(
     private val networkQueryMutex = Mutex()
     private var lastQueryMs = 0L
     private var cachedResult: DeviceNetworkStatus? = null
+    private var cachedPeripheralId: String? = null
 
     // === Delegated methods (no rate limiting) ===
 
@@ -71,11 +72,20 @@ class RateLimitedBleGateway(
             
             // Rate limiting: return cached result if within TTL
             val cached = cachedResult
-            if (cached != null && timeSinceLastQuery < config.networkQueryTtlMs) {
+            if (
+                cached != null &&
+                cachedPeripheralId == session.peripheralId &&
+                timeSinceLastQuery < config.networkQueryTtlMs
+            ) {
                 ConnectivityLogger.d(
                     "📡 CACHED (${timeSinceLastQuery}ms old)"
                 )
                 return@withLock NetworkQueryResult.Success(cached)
+            }
+            if (cached != null && cachedPeripheralId != session.peripheralId) {
+                ConnectivityLogger.d(
+                    "📡 cache skipped for device switch cached=$cachedPeripheralId requested=${session.peripheralId}"
+                )
             }
 
             // Enforce minimum interval even for 0.0.0.0 to protect ESP32
@@ -84,7 +94,7 @@ class RateLimitedBleGateway(
                     "📡 THROTTLED (${timeSinceLastQuery}ms < ${MIN_QUERY_INTERVAL_MS}ms floor)"
                 )
                 // Return last result or timeout if none
-                val lastResult = cachedResult
+                val lastResult = cachedResult.takeIf { cachedPeripheralId == session.peripheralId }
                 return@withLock if (lastResult != null) {
                     NetworkQueryResult.Success(lastResult)
                 } else {
@@ -101,6 +111,7 @@ class RateLimitedBleGateway(
                     // Only cache valid IPs — don't cache 0.0.0.0 (device not connected yet)
                     if (!ip.isNullOrBlank() && ip != "0.0.0.0") {
                         cachedResult = result.status
+                        cachedPeripheralId = session.peripheralId
                         ConnectivityLogger.d(
                             "📡 fresh query, caching IP=$ip"
                         )
@@ -125,6 +136,7 @@ class RateLimitedBleGateway(
      */
     fun clearCache() {
         cachedResult = null
+        cachedPeripheralId = null
         lastQueryMs = 0L
     }
 

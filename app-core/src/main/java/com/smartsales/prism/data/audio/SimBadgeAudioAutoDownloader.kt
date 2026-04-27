@@ -49,33 +49,35 @@ class SimBadgeAudioAutoDownloader @Inject constructor(
             return
         }
 
-        Log.d(TAG, "rec# auto-download: notification received filename=$filename")
+        val ownerBadgeMac = currentRuntimeBadgeMac()
+        Log.d(TAG, "rec# auto-download: notification received filename=$filename badgeMac=$ownerBadgeMac")
 
         // 立即在抽屉创建 QUEUED 占位符
-        storeSupport.createQueuedBadgePlaceholders(listOf(filename))
+        storeSupport.createQueuedBadgePlaceholders(listOf(filename), ownerBadgeMac)
         Log.d(TAG, "rec# auto-download: placeholder created filename=$filename")
         orchestrator.notifyDownloadStarting()
 
         // 后台下载
         runtime.repositoryScope.launch {
-            downloadAndUpgrade(filename)
+            downloadAndUpgrade(filename, ownerBadgeMac)
         }
     }
 
-    private suspend fun downloadAndUpgrade(filename: String) {
+    private suspend fun downloadAndUpgrade(filename: String, ownerBadgeMac: String?) {
         storeSupport.markBadgeDownloadAvailability(
             filename = filename,
             availability = AudioLocalAvailability.DOWNLOADING,
-            errorMessage = null
+            errorMessage = null,
+            badgeMac = ownerBadgeMac
         )
-        Log.d(TAG, "rec# auto-download: downloading filename=$filename")
+        Log.d(TAG, "rec# auto-download: downloading filename=$filename badgeMac=$ownerBadgeMac")
 
         when (val result = connectivityBridge.downloadRecording(filename)) {
             is WavDownloadResult.Success -> {
                 if (result.sizeBytes < MIN_REC_WAV_SIZE_BYTES) {
                     // 空文件，移除占位符
                     result.localFile.delete()
-                    storeSupport.removeBadgeAudioByFilename(filename)
+                    storeSupport.removeBadgeAudioByFilename(filename, ownerBadgeMac)
                     notifyCommandEndAsync()
                     Log.d(
                         TAG,
@@ -83,11 +85,26 @@ class SimBadgeAudioAutoDownloader @Inject constructor(
                     )
                     return
                 }
-                storeSupport.importDownloadedBadgeAudio(filename, result.localFile)
+                if (currentRuntimeBadgeMac() != ownerBadgeMac) {
+                    result.localFile.delete()
+                    storeSupport.markBadgeDownloadAvailability(
+                        filename = filename,
+                        availability = AudioLocalAvailability.FAILED,
+                        errorMessage = "设备已切换，请重新同步",
+                        badgeMac = ownerBadgeMac
+                    )
+                    notifyCommandEndAsync()
+                    Log.d(
+                        TAG,
+                        "rec# auto-download: discarded cross-device download filename=$filename badgeMac=$ownerBadgeMac"
+                    )
+                    return
+                }
+                storeSupport.importDownloadedBadgeAudio(filename, result.localFile, ownerBadgeMac)
                 notifyCommandEndAsync()
                 Log.d(
                     TAG,
-                    "rec# auto-download: success filename=$filename sizeBytes=${result.sizeBytes}"
+                    "rec# auto-download: success filename=$filename badgeMac=$ownerBadgeMac sizeBytes=${result.sizeBytes}"
                 )
                 _syncIslandEvents.tryEmit(SimBadgeSyncIslandEvent.RecFileDownloaded(filename))
             }
@@ -96,7 +113,8 @@ class SimBadgeAudioAutoDownloader @Inject constructor(
                 storeSupport.markBadgeDownloadAvailability(
                     filename = filename,
                     availability = AudioLocalAvailability.FAILED,
-                    errorMessage = result.message
+                    errorMessage = result.message,
+                    badgeMac = ownerBadgeMac
                 )
                 notifyCommandEndAsync()
                 Log.e(
@@ -111,5 +129,10 @@ class SimBadgeAudioAutoDownloader @Inject constructor(
         runtime.repositoryScope.launch {
             connectivityBridge.notifyCommandEnd()
         }
+    }
+
+    private suspend fun currentRuntimeBadgeMac(): String? {
+        return runtime.endpointRecoveryCoordinator.currentRuntimeKey()?.peripheralId
+            ?: runtime.deviceRegistryManager.activeDevice.value?.macAddress
     }
 }

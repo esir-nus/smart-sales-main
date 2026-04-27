@@ -45,6 +45,41 @@ class RateLimitedBleGatewayTest {
     }
 
     @Test
+    fun `queryNetwork does not reuse cached IP for a different badge`() = runTest {
+        val fakeGateway = FakeBleGateway()
+        var currentTime = 5000L
+        val rateLimited = RateLimitedBleGateway(
+            delegate = fakeGateway,
+            config = RateLimitedBleGateway.RateLimitConfig(networkQueryTtlMs = 10_000L),
+            timeSource = { currentTime }
+        )
+        val firstSession = BleSession.fromPeripheral(BlePeripheral("id1", "name1", 0))
+        val secondSession = BleSession.fromPeripheral(BlePeripheral("id2", "name2", 0))
+
+        fakeGateway.stubNetworkResult = NetworkQueryResult.Success(
+            DeviceNetworkStatus("192.168.1.100", "SSID", "SSID", "raw")
+        )
+        rateLimited.queryNetwork(firstSession)
+
+        currentTime += 500L
+        val throttled = rateLimited.queryNetwork(secondSession)
+        assertEquals(1, fakeGateway.networkCalls.size)
+        assertTrue(throttled is NetworkQueryResult.Timeout)
+
+        currentTime += RateLimitedBleGateway.MIN_QUERY_INTERVAL_MS
+        fakeGateway.stubNetworkResult = NetworkQueryResult.Success(
+            DeviceNetworkStatus("192.168.1.101", "SSID", "SSID", "raw")
+        )
+        val secondResult = rateLimited.queryNetwork(secondSession)
+
+        assertEquals(2, fakeGateway.networkCalls.size)
+        assertEquals(
+            "192.168.1.101",
+            (secondResult as NetworkQueryResult.Success).status.ipAddress
+        )
+    }
+
+    @Test
     fun `queryNetwork does NOT cache 0_0_0_0 but enforces MIN_QUERY_INTERVAL floor`() = runTest {
         val fakeGateway = FakeBleGateway()
         var currentTime = 5000L

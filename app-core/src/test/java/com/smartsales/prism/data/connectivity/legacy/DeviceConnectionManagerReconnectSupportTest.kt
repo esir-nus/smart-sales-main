@@ -21,6 +21,8 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -96,8 +98,66 @@ class DeviceConnectionManagerReconnectSupportTest {
         )
     }
 
+    @Test
+    fun `reconnect with badge offline prompts repair without silent credential replay`() = runTest {
+        val session = BleSession.fromPeripheral(BlePeripheral("AA:BB:CC:DD:EE:FF", "Badge", -50))
+        val provisioner = FakeWifiProvisioner().apply {
+            stubNetworkResult = Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "0.0.0.0",
+                    deviceWifiName = "N/A",
+                    phoneWifiName = "",
+                    rawResponse = "IP#0.0.0.0 SD#N/A"
+                )
+            )
+        }
+        val sessionStore = InMemorySessionStore().apply {
+            save(session, WifiCredentials("Office", "secret"))
+        }
+        val manager = newManager(
+            gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit)),
+            provisioner = provisioner,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            sessionStore = sessionStore
+        )
+
+        val result = manager.reconnectAndWait()
+
+        assertTrue(result is ConnectionState.Error)
+        assertEquals(
+            WifiDisconnectedReason.BADGE_WIFI_OFFLINE,
+            ((result as ConnectionState.Error).error as ConnectivityError.WifiDisconnected).reason
+        )
+        assertTrue(provisioner.provisionCalls.isEmpty())
+    }
+
+    @Test
+    fun `media failure credential replay is bounded to three attempts`() = runTest {
+        val session = BleSession.fromPeripheral(BlePeripheral("AA:BB:CC:DD:EE:FF", "Badge", -50))
+        val provisioner = FakeWifiProvisioner().apply {
+            stubProvisionResult = Result.Error(IllegalStateException("write failed"))
+        }
+        val sessionStore = InMemorySessionStore().apply {
+            save(session, WifiCredentials("Office", "secret"))
+        }
+        val manager = newManager(
+            gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit)),
+            provisioner = provisioner,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            sessionStore = sessionStore
+        )
+
+        val result = manager.replayLatestSavedWifiCredentialForMediaFailure()
+
+        assertTrue(result is ConnectionState.Error)
+        assertEquals(3, provisioner.provisionCalls.size)
+    }
+
     private fun newManager(
         gateway: GattSessionLifecycle,
+        provisioner: WifiProvisioner = FakeWifiProvisioner(),
         scope: CoroutineScope,
         dispatcher: CoroutineDispatcher,
         sessionStore: SessionStore = InMemorySessionStore()
@@ -108,7 +168,7 @@ class DeviceConnectionManagerReconnectSupportTest {
             override val default = dispatcher
         }
         return DefaultDeviceConnectionManager(
-            provisioner = FakeWifiProvisioner(),
+            provisioner = provisioner,
             bleGateway = gateway,
             badgeGateway = FakeBleGateway(),
             badgeHttpClient = FakeBadgeHttpClient(),

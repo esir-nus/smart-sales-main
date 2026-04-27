@@ -85,6 +85,13 @@ interface DeviceConnectionManager {
     suspend fun reconnectAndWait(): ConnectionState
 
     /**
+     * HTTP 媒体链路失败后的受限凭据重播。
+     * 仅在 BLE/GATT 与可用 IP 已成立，但 `/list` / `/download` / `/delete`
+     * 或 HTTP readiness 失败时调用；最多 3 次，不能作为后台轮询入口。
+     */
+    suspend fun replayLatestSavedWifiCredentialForMediaFailure(): ConnectionState
+
+    /**
      * 向徽章发送一次任务完成信号（ASCII "Command#end"）。
      * 若 BLE 未连接或写入失败，静默忽略；不影响调用方流程。
      */
@@ -222,6 +229,10 @@ class DefaultDeviceConnectionManager @Inject constructor(
 
     override suspend fun reconnectAndWait(): ConnectionState {
         return reconnectSupport.reconnectAndWait()
+    }
+
+    override suspend fun replayLatestSavedWifiCredentialForMediaFailure(): ConnectionState {
+        return connectionSupport.replayLatestSavedWifiCredentialForMediaFailure()
     }
 
     override suspend fun notifyCommandEnd() {

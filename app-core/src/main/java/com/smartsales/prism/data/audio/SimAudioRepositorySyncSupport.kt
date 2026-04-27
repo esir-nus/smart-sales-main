@@ -223,6 +223,13 @@ internal class SimAudioRepositorySyncSupport(
     private var knownHttpUnreachableLatch: SimKnownHttpUnreachableLatch? = null
 
     suspend fun canSyncFromBadge(): Boolean = withContext(runtime.ioDispatcher) {
+        if (isBadgeDownloadActive()) {
+            Log.d(
+                SIM_AUDIO_SYNC_LOG_TAG,
+                "SIM badge sync readiness probe skipped reason=badge-download-active filename=${runtime.activeBadgeDownloadFilename}"
+            )
+            return@withContext true
+        }
         reconcileKnownHttpUnreachableLatch()
         val ready = runtime.connectivityBridge.isReady()
         if (ready) {
@@ -249,6 +256,17 @@ internal class SimAudioRepositorySyncSupport(
         trigger: SimBadgeSyncTrigger,
         requireStrictPreflight: Boolean
     ): SimBadgeSyncOutcome {
+        if (isBadgeDownloadActive()) {
+            Log.d(
+                SIM_AUDIO_SYNC_LOG_TAG,
+                "SIM badge sync skipped trigger=${trigger.name.lowercase()} reason=badge-download-active filename=${runtime.activeBadgeDownloadFilename}"
+            )
+            return SimBadgeSyncOutcome(
+                trigger = trigger,
+                skippedReason = SimBadgeSyncSkippedReason.ALREADY_RUNNING
+            )
+        }
+
         if (trigger == SimBadgeSyncTrigger.AUTO && shouldSuppressAutoSyncInternal(logSuppression = true)) {
             return SimBadgeSyncOutcome(
                 trigger = trigger,
@@ -372,6 +390,7 @@ internal class SimAudioRepositorySyncSupport(
     private suspend fun performBadgeSyncLocked(
         trigger: SimBadgeSyncTrigger
     ): SimBadgeSyncExecutionResult {
+        val ownerBadgeMac = currentRuntimeBadgeMac()
         val listResult = runtime.connectivityBridge.listRecordings()
         val badgeFiles = when (listResult) {
             is Result.Success -> {
@@ -398,6 +417,18 @@ internal class SimAudioRepositorySyncSupport(
                 throw Exception(buildSimBadgeSyncListFailureMessage(reason))
             }
         }
+        val currentBadgeMacAfterList = currentRuntimeBadgeMac()
+        if (ownerBadgeMac != currentBadgeMacAfterList) {
+            Log.d(
+                SIM_AUDIO_SYNC_LOG_TAG,
+                "SIM badge sync discarded stale list result ownerBadgeMac=$ownerBadgeMac currentBadgeMac=$currentBadgeMacAfterList"
+            )
+            return SimBadgeSyncExecutionResult(
+                queuedCount = 0,
+                retryQueuedCount = 0,
+                resultBranch = SimBadgeSyncResultBranch.ALREADY_PRESENT
+            )
+        }
 
         val suppressedPendingDeletes = reconcilePendingBadgeDeletes(badgeFiles)
         val pendingDeleteFilenames =
@@ -405,9 +436,13 @@ internal class SimAudioRepositorySyncSupport(
 
         val queuePlan = planBadgeDownloads(
             badgeFiles = badgeFiles,
-            pendingDeleteFilenames = pendingDeleteFilenames
+            pendingDeleteFilenames = pendingDeleteFilenames,
+            badgeMac = ownerBadgeMac
         )
-        val createdCount = storeSupport.createQueuedBadgePlaceholders(queuePlan.placeholderFilenames)
+        val createdCount = storeSupport.createQueuedBadgePlaceholders(
+            queuePlan.placeholderFilenames,
+            ownerBadgeMac
+        )
         enqueueBadgeDownloads(queuePlan.queueFilenames)
 
         val resultBranch = when {
@@ -418,7 +453,7 @@ internal class SimAudioRepositorySyncSupport(
 
         Log.d(
             SIM_AUDIO_SYNC_LOG_TAG,
-            "SIM badge sync outcome badgeListCount=${badgeFiles.size} pendingDeleteCount=${pendingDeleteFilenames.size} placeholderCount=$createdCount queueCount=${queuePlan.queueFilenames.size} retryQueueCount=${queuePlan.queueFilenames.size - createdCount} branch=${resultBranch.name.lowercase()}"
+            "SIM badge sync outcome badgeMac=$ownerBadgeMac badgeListCount=${badgeFiles.size} pendingDeleteCount=${pendingDeleteFilenames.size} placeholderCount=$createdCount queueCount=${queuePlan.queueFilenames.size} retryQueueCount=${queuePlan.queueFilenames.size - createdCount} branch=${resultBranch.name.lowercase()}"
         )
 
         return SimBadgeSyncExecutionResult(
@@ -444,7 +479,9 @@ internal class SimAudioRepositorySyncSupport(
         )
     }
 
-    suspend fun cancelAllBadgeDownloads() = withContext(runtime.ioDispatcher) {
+    suspend fun cancelAllBadgeDownloads(
+        outgoingBadgeMac: String? = runtime.deviceRegistryManager.activeDevice.value?.macAddress
+    ) = withContext(runtime.ioDispatcher) {
         runtime.badgeDownloadQueueMutex.withLock {
             runtime.queuedBadgeDownloads.clear()
             runtime.activeBadgeDownloadJob?.cancel(
@@ -457,18 +494,24 @@ internal class SimAudioRepositorySyncSupport(
             runtime.activeBadgeDownloadJob = null
             runtime.badgeDownloadWorkerJob = null
         }
-        Log.d(SIM_AUDIO_SYNC_LOG_TAG, "SIM badge sync: all downloads cancelled (device switch)")
+        storeSupport.markInterruptedBadgeDownloadsForDevice(outgoingBadgeMac)
+        Log.d(
+            SIM_AUDIO_SYNC_LOG_TAG,
+            "SIM badge sync: all downloads cancelled (device switch) outgoingBadgeMac=$outgoingBadgeMac"
+        )
     }
 
     private fun planBadgeDownloads(
         badgeFiles: List<String>,
-        pendingDeleteFilenames: Set<String>
+        pendingDeleteFilenames: Set<String>,
+        badgeMac: String?
     ): SimBadgeQueuePlan {
         val normalizedPendingDeletes = pendingDeleteFilenames
             .map(::normalizeSimBadgeFilename)
             .toSet()
         val currentEntries = runtime.audioFiles.value
             .filter { it.source == AudioSource.SMARTBADGE }
+            .filter { badgeMac == null || it.badgeMac == badgeMac }
             .associateBy { normalizeSimBadgeFilename(it.filename) }
 
         val placeholderFilenames = mutableListOf<String>()
@@ -520,11 +563,12 @@ internal class SimAudioRepositorySyncSupport(
                 runtime.queuedBadgeDownloads.firstOrNull()?.also { runtime.queuedBadgeDownloads.remove(it) }
             } ?: break
 
-            val placeholder = storeSupport.getAudioByNormalizedBadgeFilename(nextFilename)
+            val ownerBadgeMac = currentRuntimeBadgeMac()
+            val placeholder = storeSupport.getAudioByNormalizedBadgeFilename(nextFilename, ownerBadgeMac)
             if (placeholder == null) {
                 Log.d(
                     SIM_AUDIO_SYNC_LOG_TAG,
-                    "SIM badge sync skipped missing placeholder filename=$nextFilename"
+                    "SIM badge sync skipped missing placeholder filename=$nextFilename badgeMac=$ownerBadgeMac"
                 )
                 continue
             }
@@ -539,11 +583,12 @@ internal class SimAudioRepositorySyncSupport(
             storeSupport.markBadgeDownloadAvailability(
                 filename = nextFilename,
                 availability = AudioLocalAvailability.DOWNLOADING,
-                errorMessage = null
+                errorMessage = null,
+                badgeMac = ownerBadgeMac
             )
             Log.d(
                 SIM_AUDIO_SYNC_LOG_TAG,
-                "SIM badge sync background download start filename=$nextFilename"
+                "SIM badge sync background download start filename=$nextFilename badgeMac=$ownerBadgeMac"
             )
 
             try {
@@ -560,7 +605,8 @@ internal class SimAudioRepositorySyncSupport(
                                 -1f
                             },
                             downloadedBytes = bytesRead,
-                            downloadTotalBytes = totalBytes
+                            downloadTotalBytes = totalBytes,
+                            badgeMac = ownerBadgeMac
                         )
                     }
                 }
@@ -588,17 +634,31 @@ internal class SimAudioRepositorySyncSupport(
                     is WavDownloadResult.Success -> {
                         if (downloadResult.sizeBytes < MIN_BADGE_WAV_SIZE_BYTES) {
                             downloadResult.localFile.delete()
-                            storeSupport.removeBadgeAudioByFilename(nextFilename)
+                            storeSupport.removeBadgeAudioByFilename(nextFilename, ownerBadgeMac)
                             Log.d(
                                 SIM_AUDIO_SYNC_LOG_TAG,
                                 "SIM badge sync removed empty placeholder filename=$nextFilename sizeBytes=${downloadResult.sizeBytes}"
                             )
                             continue
                         }
-                        storeSupport.importDownloadedBadgeAudio(nextFilename, downloadResult.localFile)
+                        if (currentRuntimeBadgeMac() != ownerBadgeMac) {
+                            downloadResult.localFile.delete()
+                            storeSupport.markBadgeDownloadAvailability(
+                                filename = nextFilename,
+                                availability = AudioLocalAvailability.FAILED,
+                                errorMessage = "设备已切换，请重新同步",
+                                badgeMac = ownerBadgeMac
+                            )
+                            Log.d(
+                                SIM_AUDIO_SYNC_LOG_TAG,
+                                "SIM badge sync discarded cross-device download filename=$nextFilename ownerBadgeMac=$ownerBadgeMac"
+                            )
+                            continue
+                        }
+                        storeSupport.importDownloadedBadgeAudio(nextFilename, downloadResult.localFile, ownerBadgeMac)
                         Log.d(
                             SIM_AUDIO_SYNC_LOG_TAG,
-                            "SIM badge sync background download success filename=$nextFilename sizeBytes=${downloadResult.sizeBytes}"
+                            "SIM badge sync background download success filename=$nextFilename badgeMac=$ownerBadgeMac sizeBytes=${downloadResult.sizeBytes}"
                         )
                     }
 
@@ -611,7 +671,8 @@ internal class SimAudioRepositorySyncSupport(
                         storeSupport.markBadgeDownloadAvailability(
                             filename = nextFilename,
                             availability = AudioLocalAvailability.FAILED,
-                            errorMessage = downloadResult.message
+                            errorMessage = downloadResult.message,
+                            badgeMac = ownerBadgeMac
                         )
                         emitSimAudioSyncFailureWhileConnectivityUnavailableTelemetry(
                             detail = "downloadRecording failed filename=$nextFilename reason=${downloadResult.message}"
@@ -626,11 +687,12 @@ internal class SimAudioRepositorySyncSupport(
                 storeSupport.markBadgeDownloadAvailability(
                     filename = nextFilename,
                     availability = AudioLocalAvailability.FAILED,
-                    errorMessage = "下载被中断，请重试同步"
+                    errorMessage = "下载被中断，请重试同步",
+                    badgeMac = ownerBadgeMac
                 )
                 Log.d(
                     SIM_AUDIO_SYNC_LOG_TAG,
-                    "SIM badge sync background download canceled filename=$nextFilename"
+                    "SIM badge sync background download canceled filename=$nextFilename badgeMac=$ownerBadgeMac"
                 )
             } finally {
                 runtime.activeBadgeDownloadFilename = null
@@ -638,6 +700,11 @@ internal class SimAudioRepositorySyncSupport(
             }
         }
         Log.d(SIM_AUDIO_SYNC_LOG_TAG, "SIM badge sync background queue drained")
+    }
+
+    private fun isBadgeDownloadActive(): Boolean {
+        return runtime.activeBadgeDownloadFilename != null ||
+            runtime.activeBadgeDownloadJob?.isActive == true
     }
 
     private suspend fun reconcilePendingBadgeDeletes(badgeFiles: List<String>): Set<String> {
@@ -665,6 +732,11 @@ internal class SimAudioRepositorySyncSupport(
             }
         }
         return currentPendingDeletes.intersect(badgeFilenameSet)
+    }
+
+    private suspend fun currentRuntimeBadgeMac(): String? {
+        return runtime.endpointRecoveryCoordinator.currentRuntimeKey()?.peripheralId
+            ?: runtime.deviceRegistryManager.activeDevice.value?.macAddress
     }
 
     private suspend fun promptWifiMismatchIfManual(trigger: SimBadgeSyncTrigger) {

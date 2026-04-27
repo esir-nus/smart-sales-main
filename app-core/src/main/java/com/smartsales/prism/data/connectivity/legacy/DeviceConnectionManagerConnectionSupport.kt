@@ -198,6 +198,29 @@ internal class DeviceConnectionManagerConnectionSupport(
         outcome
     }
 
+    suspend fun replayLatestSavedWifiCredentialForMediaFailure(): ConnectionState =
+        withContext(dispatchers.io) {
+            val session = runtime.currentSession
+                ?: return@withContext ConnectionState.Error(ConnectivityError.MissingSession)
+            val latestCredentials = latestSavedCredentials()
+                ?: return@withContext ConnectionState.Error(
+                    ConnectivityError.WifiDisconnected(
+                        reason = WifiDisconnectedReason.CREDENTIAL_REPLAY_FAILED
+                    )
+                )
+            ConnectivityLogger.w(
+                "🛜 solid IP + media sync failure; replaying latest saved credential ssid=${latestCredentials.ssid}"
+            )
+            replaySavedCredential(
+                session = session,
+                credentials = latestCredentials,
+                initialDelayMs = MEDIA_REPLAY_FIRST_QUERY_DELAY_MS,
+                retryDelayMs = MEDIA_REPLAY_QUERY_DELAY_MS,
+                source = "media_failure",
+                failureBadgeSsid = normalizeWifiSsid(latestCredentials.ssid)
+            )
+        }
+
     fun hasStoredSession(): Boolean = runtime.currentSession != null
 
     fun currentSessionOrNull(): BleSession? = runtime.currentSession
@@ -465,45 +488,54 @@ internal class DeviceConnectionManagerConnectionSupport(
             )
         }
 
-        // Badge offline — replay last known credentials
-        ConnectivityLogger.d("🔌 connectUsingSession: badge offline, ip=$ip, attempting credential replay")
-        val lastCredentials = runtime.lastCredentials
-        if (lastCredentials == null) {
-            ConnectivityLogger.w("🔁 replay skipped: no stored credentials")
-            return ConnectionState.Error(
-                ConnectivityError.WifiDisconnected(
-                    reason = WifiDisconnectedReason.BADGE_WIFI_OFFLINE,
-                    badgeSsid = badgeSsid
-                )
+        ConnectivityLogger.w("🔌 badge reported IP#0.0.0.0 or unusable ip=$ip")
+        ConnectivityLogger.w(
+            "🛜 badge IP#0.0.0.0 branch: prompt manual Wi-Fi repair, skip silent replay"
+        )
+        return ConnectionState.Error(
+            ConnectivityError.WifiDisconnected(
+                reason = WifiDisconnectedReason.BADGE_WIFI_OFFLINE,
+                badgeSsid = badgeSsid
             )
-        }
-        return when (val provisionResult = provisioner.provision(session, lastCredentials)) {
-            is Result.Success -> {
-                endpointRecoveryCoordinator.armPostCredentialGrace(session.runtimeKey())
-                waitForReconnectReplayOnline(session, lastCredentials, normalizeWifiSsid(lastCredentials.ssid))
-            }
-            is Result.Error -> {
-                ConnectivityLogger.w("🔁 replay failed: ${provisionResult.throwable.message}")
-                ConnectionState.Error(
-                    ConnectivityError.WifiDisconnected(
-                        reason = WifiDisconnectedReason.CREDENTIAL_REPLAY_FAILED,
-                        badgeSsid = badgeSsid
-                    )
-                )
-            }
-        }
+        )
     }
 
-    private suspend fun waitForReconnectReplayOnline(
+    private suspend fun replaySavedCredential(
         session: BleSession,
         credentials: WifiCredentials,
-        expectedSsid: String?
+        initialDelayMs: Long,
+        retryDelayMs: Long,
+        source: String,
+        failureBadgeSsid: String?
     ): ConnectionState {
         repeat(RECONNECT_REPLAY_QUERY_ATTEMPTS) { attempt ->
+            val attemptNumber = attempt + 1
+            ConnectivityLogger.i(
+                "🔁 saved credential replay attempt=$attemptNumber/$RECONNECT_REPLAY_QUERY_ATTEMPTS source=$source ssid=${credentials.ssid}"
+            )
+            when (val provisionResult = provisioner.provision(session, credentials)) {
+                is Result.Success -> {
+                    endpointRecoveryCoordinator.armPostCredentialGrace(session.runtimeKey())
+                    ConnectivityLogger.i(
+                        "🔁 saved credential replay write ok attempt=$attemptNumber source=$source"
+                    )
+                }
+
+                is Result.Error -> {
+                    ConnectivityLogger.w(
+                        "🔁 saved credential replay write failed attempt=$attemptNumber source=$source error=${provisionResult.throwable.message}"
+                    )
+                    if (attempt < RECONNECT_REPLAY_QUERY_ATTEMPTS - 1) {
+                        delay(retryDelayMs)
+                    }
+                    return@repeat
+                }
+            }
+
             val delayMs = if (attempt == 0) {
-                RECONNECT_REPLAY_FIRST_QUERY_DELAY_MS
+                initialDelayMs
             } else {
-                RECONNECT_REPLAY_QUERY_DELAY_MS
+                retryDelayMs
             }
             delay(delayMs)
 
@@ -518,7 +550,9 @@ internal class DeviceConnectionManagerConnectionSupport(
 
                     val badgeSsid = normalizeWifiSsid(status.deviceWifiName)
                     persistSessionAndKnownNetwork(session, credentials)
-                    ConnectivityLogger.i("🔁 replay confirmed online ip=$ip ssid=$badgeSsid")
+                    ConnectivityLogger.i(
+                        "🔁 saved credential replay confirmed online attempt=$attemptNumber source=$source ip=$ip ssid=$badgeSsid"
+                    )
                     return ConnectionState.WifiProvisioned(
                         session,
                         ingressSupport.syntheticProvisioningStatus(status)
@@ -527,18 +561,26 @@ internal class DeviceConnectionManagerConnectionSupport(
 
                 is Result.Error -> {
                     ConnectivityLogger.w(
-                        "🔁 replay confirm query failed attempt=${attempt + 1}: ${result.throwable.message}"
+                        "🔁 replay confirm query failed attempt=$attemptNumber source=$source: ${result.throwable.message}"
                     )
                 }
             }
         }
 
+        ConnectivityLogger.w("🔁 saved credential replay exhausted source=$source")
         return ConnectionState.Error(
             ConnectivityError.WifiDisconnected(
                 reason = WifiDisconnectedReason.CREDENTIAL_REPLAY_FAILED,
-                badgeSsid = expectedSsid
+                badgeSsid = failureBadgeSsid
             )
         )
+    }
+
+    private fun latestSavedCredentials(): WifiCredentials? {
+        return runtime.lastCredentials ?: sessionStore.loadKnownNetworks()
+            .maxByOrNull { it.lastUsedAtMillis }
+            ?.credentials
+            ?.also { runtime.lastCredentials = it }
     }
 
     private suspend fun waitForManualProvisionOnline(
@@ -690,9 +732,9 @@ internal class DeviceConnectionManagerConnectionSupport(
         const val HEARTBEAT_INTERVAL_MS = 1_500L
         const val AUTO_RETRY_DELAY_MS = 2_000L
         const val AUTO_RETRY_MAX_ATTEMPTS = 2
-        const val RECONNECT_REPLAY_FIRST_QUERY_DELAY_MS = 2_200L
-        const val RECONNECT_REPLAY_QUERY_DELAY_MS = 2_000L
         const val RECONNECT_REPLAY_QUERY_ATTEMPTS = 3
+        const val MEDIA_REPLAY_FIRST_QUERY_DELAY_MS = 2_200L
+        const val MEDIA_REPLAY_QUERY_DELAY_MS = 2_000L
         const val MANUAL_PROVISION_QUERY_ATTEMPTS = 3
         const val QUERY_FLOOR_TIMEOUT_MS = RateLimitedBleGateway.MIN_QUERY_INTERVAL_MS
         const val QUERY_FLOOR_RETRY_DELAY_MS = RateLimitedBleGateway.MIN_QUERY_INTERVAL_MS + 100L

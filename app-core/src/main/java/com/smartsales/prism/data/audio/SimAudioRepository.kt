@@ -44,7 +44,7 @@ class SimAudioRepository @Inject constructor(
             activeDevice.collect { device ->
                 val currentMac = device?.macAddress
                 if (previousMac != null && currentMac != previousMac) {
-                    syncSupport.cancelAllBadgeDownloads()
+                    syncSupport.cancelAllBadgeDownloads(previousMac)
                 }
                 previousMac = currentMac
             }

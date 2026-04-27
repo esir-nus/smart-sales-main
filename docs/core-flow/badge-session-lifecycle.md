@@ -4,6 +4,8 @@
 
 This document defines the intended lifecycle for Smart Sales badge sessions across single-device and multi-device use. It is the behavioral contract above the current implementation, not a restatement of the current code.
 
+Connectivity readiness details live in [`badge-connectivity-lifecycle.md`](badge-connectivity-lifecycle.md). This document owns badge session, active-device, and audio-sync lifecycle rules; the connectivity north-star owns BLE, Wi-Fi, HTTP, repair, reconnect, and readiness semantics.
+
 The current architecture has clear owners:
 
 - `DeviceRegistryManager` owns which registered badge is active.
@@ -229,13 +231,15 @@ Current implementation assessment:
 
 Network isolation prompts are part of the badge session lifecycle because they decide whether the current active badge can remain usable after the phone changes Wi-Fi or hotspot transport.
 
+Detailed connectivity states and flows are owned by [`badge-connectivity-lifecycle.md`](badge-connectivity-lifecycle.md). The session-level contract remains:
+
 Invariants:
 
 - **MUST:** isolation prompts provide a real recovery action, not just a transient UI dismissal.
 - **MUST:** recovery for an already registered active badge repair Wi-Fi credentials without unregistering the badge.
 - **MUST NOT:** isolation recovery route an already registered active badge into full add-device pairing unless the user explicitly removes/unpairs it first.
 - **MUST:** the isolation CTA use wording that communicates Wi-Fi/network repair, not full pairing.
-- **MUST:** the Wi-Fi repair form prefill the current phone SSID when available while keeping the SSID editable and the password manual.
+- **MUST:** the Wi-Fi repair form prefill the latest saved user-confirmed SSID when available while keeping the SSID editable and the password manual.
 - **MUST:** repair actions leave adb/logcat evidence that identifies the user action and the lifecycle transition taken.
 
 Implementation direction:
@@ -244,10 +248,14 @@ The current add-device scan intentionally filters already registered badges. Tha
 
 ## Implementing Sprints
 
-Sprint 02, Sprint 03, and Sprint 04 are implementing against this contract.
+Sprint 02, Sprint 03, Sprint 04, Sprint 05, and the bounded Badge Wi-Fi Recovery State Machine follow-up are implementing against this contract and the connectivity north-star.
 
 Sprint 02 implements the audio sync teardown rule: queued and active badge downloads must not survive an active-device MAC change.
 
 Sprint 03 implements the UI observation rule: audio inventory/download-progress flows must stay hot enough to reflect badge-originated updates while drawers are closed.
 
 Sprint 04 implements the connectivity isolation repair rule: hotspot/network-isolation recovery must be tested with real adb evidence, and the isolation CTA must enter Wi-Fi credential repair for registered badges instead of clearing the prompt or starting full add-device pairing.
+
+Sprint 05 supersedes Sprint 04's unfinished connectivity follow-up by resetting the connectivity work around [`badge-connectivity-lifecycle.md`](badge-connectivity-lifecycle.md), spec sync, static gap mapping, and adb/logcat dataflow evidence before any broad fix or refactor sprint is authorized.
+
+The Badge Wi-Fi Recovery State Machine follow-up implements the split between `TransportDisconnected` and `WifiMediaUnavailable`: BLE loss remains a BLE reconnect problem, while BLE-connected media failure keeps the active badge registered and tries bounded Wi-Fi/media recovery without add-device pairing.

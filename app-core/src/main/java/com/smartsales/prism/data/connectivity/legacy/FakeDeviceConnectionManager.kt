@@ -140,6 +140,23 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
         return stubReconnectAndWaitResult
     }
 
+    var stubReplayLatestSavedWifiCredentialForMediaFailureResult: ConnectionState = ConnectionState.WifiProvisioned(
+        session = BleSession.fromPeripheral(BlePeripheral("fake-id", "FakeDevice", -50)),
+        status = ProvisioningStatus(
+            wifiSsid = "FakeWifi",
+            handshakeId = "fake-handshake",
+            credentialsHash = "fake-credentials"
+        )
+    )
+    var replayLatestSavedWifiCredentialForMediaFailureCalls = 0
+    var replayLatestSavedWifiCredentialForMediaFailureHandler: (suspend () -> ConnectionState)? = null
+
+    override suspend fun replayLatestSavedWifiCredentialForMediaFailure(): ConnectionState {
+        replayLatestSavedWifiCredentialForMediaFailureCalls++
+        replayLatestSavedWifiCredentialForMediaFailureHandler?.let { return it() }
+        return stubReplayLatestSavedWifiCredentialForMediaFailureResult
+    }
+
     var notifyCommandEndCalls = 0
     override suspend fun notifyCommandEnd() {
         notifyCommandEndCalls++
@@ -193,6 +210,8 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
         autoReconnectCalls = 0
         forceReconnectCalls = 0
         queryNetworkStatusCalls = 0
+        replayLatestSavedWifiCredentialForMediaFailureCalls = 0
+        replayLatestSavedWifiCredentialForMediaFailureHandler = null
         notifyCommandEndCalls = 0
         requestFirmwareVersionCalls = 0
         requestSdCardSpaceCalls = 0

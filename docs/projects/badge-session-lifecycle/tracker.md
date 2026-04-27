@@ -20,6 +20,8 @@ open
 | 02 | audio-download-device-scope | done | Audio repository now cancels queued and active badge downloads when the active device MAC changes, keeping old-device work from using the new connection. | [sprints/02-audio-download-device-scope.md](sprints/02-audio-download-device-scope.md) |
 | 03 | audio-drawer-live-observation | authored | — | [sprints/03-audio-drawer-live-observation.md](sprints/03-audio-drawer-live-observation.md) |
 | 04 | connectivity-isolation-repair-dataflow | in_progress | Runtime dataflow test/fix for hotspot/network isolation recovery; registered badges must enter Wi-Fi credential repair, not full re-pairing. | [sprints/04-connectivity-isolation-repair-dataflow.md](sprints/04-connectivity-isolation-repair-dataflow.md) |
+| 05 | connectivity-dataflow-monitoring-fixloop | authored | Connectivity north-star reset, spec sync, static gap map, and adb/logcat dataflow matrix before bounded implementation follow-ups. | [sprints/05-connectivity-dataflow-monitoring-fixloop.md](sprints/05-connectivity-dataflow-monitoring-fixloop.md) |
+| 06 | badge-wifi-recovery-state-machine | done | BLE disconnected remains a transport-reconnect branch; solid-IP HTTP media failure triggers bounded single-flight saved-credential replay, and multi-badge sync/download work is scoped to the active badge. | [sprints/06-badge-wifi-recovery-state-machine.md](sprints/06-badge-wifi-recovery-state-machine.md) |
 
 ## Cross-Sprint Decisions
 
@@ -28,6 +30,7 @@ open
 - UI surfaces must use `SharingStarted.Eagerly` for flows that carry real-time badge state (audio files, download progress). `WhileSubscribed` is acceptable only for flows that are purely derived from user actions and can tolerate a snapshot.
 - All sprint contracts in this project are authored as starting hypotheses, not definitive prescriptions. The operator must evaluate each fix in context before executing.
 - Hardware/runtime lifecycle regressions discovered during a later sprint should become their own dataflow test/fix sprint when they cross feature boundaries. Do not hide connectivity repair work inside an audio-only sprint.
+- Phone SSID is diagnostic only for this project. Badge Wi-Fi recovery branches from BLE state, badge-reported IP/SSID, active HTTP media readiness, and remembered user-confirmed credentials.
 
 ## Lessons Pointer
 

@@ -14,6 +14,7 @@ import com.smartsales.prism.domain.connectivity.ReconnectResult
 import com.smartsales.prism.domain.connectivity.UpdateResult
 import com.smartsales.prism.domain.connectivity.WifiConfigResult
 import com.smartsales.prism.domain.connectivity.WifiRepairEvent
+import com.smartsales.core.util.Result
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -128,6 +129,9 @@ class ConnectivityViewModel @Inject constructor(
     // Wi-Fi 修复流程专用状态机 — 独立于 ConnectivityManagerState
     private val _repairState = MutableStateFlow<WifiRepairState>(WifiRepairState.Idle)
     val repairState: StateFlow<WifiRepairState> = _repairState.asStateFlow()
+
+    private val _debugProbeText = MutableStateFlow<String?>(null)
+    val debugProbeText: StateFlow<String?> = _debugProbeText.asStateFlow()
 
     // 临时 UI 状态覆盖（用于非 Badge 状态的 UI 流程）
     private val _uiOverride = MutableStateFlow<ConnectionState?>(null)
@@ -405,6 +409,27 @@ class ConnectivityViewModel @Inject constructor(
     fun requestSdCardSpace() {
         viewModelScope.launch {
             connectivityBridge.requestSdCardSpace()
+        }
+    }
+
+    fun debugProbeMediaReadiness() {
+        viewModelScope.launch {
+            _debugProbeText.value = "media readiness: running"
+            val ready = connectivityBridge.isReady()
+            _debugProbeText.value = "media readiness: $ready"
+            Log.i("ConnectivityVM", "debug media readiness result=$ready")
+        }
+    }
+
+    fun debugListRecordings() {
+        viewModelScope.launch {
+            _debugProbeText.value = "/list: running"
+            val result = connectivityBridge.listRecordings()
+            _debugProbeText.value = when (result) {
+                is Result.Success -> "/list: success count=${result.data.size}"
+                is Result.Error -> "/list: error ${result.throwable.message ?: "unknown"}"
+            }
+            Log.i("ConnectivityVM", "debug list recordings result=${_debugProbeText.value}")
         }
     }
 

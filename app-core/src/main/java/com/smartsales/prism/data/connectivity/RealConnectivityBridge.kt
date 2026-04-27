@@ -21,6 +21,7 @@ import com.smartsales.prism.domain.connectivity.WavDownloadResult
 import com.smartsales.prism.domain.connectivity.WifiRepairEvent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
@@ -68,8 +69,10 @@ class RealConnectivityBridge @Inject constructor(
     
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val endpointMutex = Mutex()
+    private val mediaRecoveryMutex = Mutex()
     private var activeEndpointSnapshot: ActiveEndpointSnapshot? = null
     private var endpointRefreshRequired = false
+    private var mediaRecoveryInFlight: MediaRecoveryAttempt? = null
     // 保存最后已知的徽章 IP，用于断开时隔离探测
     @Volatile private var lastKnownBadgeIp: String? = null
     private val recordingNotificationsFlow = MutableSharedFlow<RecordingNotification>(
@@ -207,10 +210,20 @@ class RealConnectivityBridge @Inject constructor(
         val baseUrl = resolveBaseUrl() ?: return Result.Error(
             Exception("无法获取设备IP — 请确认 Badge 已连接 WiFi")
         )
-        return httpClient.listWavFiles(baseUrl).also { result ->
-            if (result is Result.Error) {
-                invalidateActiveEndpoint("list failed")
-            }
+        val firstResult = httpClient.listWavFiles(baseUrl)
+        if (firstResult is Result.Success) {
+            return firstResult
+        }
+
+        invalidateActiveEndpoint("list failed")
+        android.util.Log.w(TAG, "🛜 /list failed on solid endpoint; attempting saved credential replay")
+        if (!attemptSavedCredentialReplayAfterMediaFailure()) {
+            return firstResult
+        }
+
+        val recoveredBaseUrl = resolveBaseUrl() ?: return firstResult
+        return httpClient.listWavFiles(recoveredBaseUrl).also { result ->
+            if (result is Result.Error) invalidateActiveEndpoint("list failed after credential replay")
         }
     }
     
@@ -239,10 +252,28 @@ class RealConnectivityBridge @Inject constructor(
         val runtimeKey = currentRuntimeKey()
         val hasGrace = endpointRecoveryCoordinator.hasPendingPostCredentialGrace(runtimeKey)
         if (!hasGrace) {
-            return probeReadyOnce(allowRefreshRetry = true)
+            if (probeReadyOnce(allowRefreshRetry = true)) {
+                return true
+            }
+            if (!hasMediaEndpointCandidate()) {
+                android.util.Log.w(TAG, "🛜 media recovery skipped: no usable badge IP candidate")
+                return false
+            }
+            android.util.Log.w(TAG, "🛜 solid IP + HTTP readiness failure; attempting saved credential replay")
+            if (!attemptSavedCredentialReplayAfterMediaFailure()) {
+                return false
+            }
+            return probePostCredentialReadiness()
         }
         val activeRuntimeKey = runtimeKey ?: return probeReadyOnce()
 
+        return probePostCredentialReadiness(activeRuntimeKey)
+    }
+
+    private suspend fun probePostCredentialReadiness(
+        runtimeKey: BadgeRuntimeKey? = currentRuntimeKey()
+    ): Boolean {
+        val activeRuntimeKey = runtimeKey ?: return probeReadyOnce()
         repeat(POST_CREDENTIAL_GRACE_ATTEMPTS) { attempt ->
             val delayMs = endpointRecoveryCoordinator.consumePostCredentialProbeDelayMs(
                 runtimeKey = activeRuntimeKey,
@@ -523,6 +554,74 @@ class RealConnectivityBridge @Inject constructor(
         return reachable
     }
 
+    private suspend fun attemptSavedCredentialReplayAfterMediaFailure(): Boolean {
+        val runtimeKey = currentRuntimeKey() ?: return false
+        var owner = false
+        val attempt = mediaRecoveryMutex.withLock {
+            mediaRecoveryInFlight?.takeIf { it.runtimeKey == runtimeKey && it.result.isActive }?.let {
+                android.util.Log.d(
+                    TAG,
+                    "🛜 media recovery joining in-flight replay runtime=${runtimeKey.toLogString()}"
+                )
+                return@withLock it
+            }
+
+            owner = true
+            MediaRecoveryAttempt(runtimeKey, CompletableDeferred()).also {
+                mediaRecoveryInFlight = it
+            }
+        }
+
+        if (!owner) {
+            return attempt.result.await()
+        }
+
+        val recovered = try {
+            val replayState = deviceManager.replayLatestSavedWifiCredentialForMediaFailure()
+            android.util.Log.i(TAG, "🛜 saved credential replay result after media failure: $replayState")
+            when (replayState) {
+                is ConnectionState.WifiProvisioned,
+                is ConnectionState.WifiProvisionedHttpDelayed,
+                is ConnectionState.Syncing -> {
+                    val sameRuntime = currentRuntimeKey() == runtimeKey &&
+                        runtimeKeyForState(replayState) == runtimeKey
+                    if (sameRuntime) {
+                        endpointRecoveryCoordinator.armPostCredentialGrace(runtimeKey)
+                        endpointRefreshRequired = true
+                        activeEndpointSnapshot = null
+                    }
+                    sameRuntime
+                }
+
+                else -> false
+            }
+        } catch (throwable: Throwable) {
+            attempt.result.completeExceptionally(throwable)
+            mediaRecoveryMutex.withLock {
+                if (mediaRecoveryInFlight === attempt) {
+                    mediaRecoveryInFlight = null
+                }
+            }
+            throw throwable
+        }
+
+        mediaRecoveryMutex.withLock {
+            if (mediaRecoveryInFlight === attempt) {
+                mediaRecoveryInFlight = null
+            }
+        }
+        attempt.result.complete(recovered)
+        return recovered
+    }
+
+    private fun hasMediaEndpointCandidate(): Boolean {
+        val snapshotIp = activeEndpointSnapshot?.badgeIp
+        val monitorIp = badgeStateMonitor.status.value.ipAddress
+        return hasUsableBadgeIp(snapshotIp) ||
+            hasUsableBadgeIp(lastKnownBadgeIp) ||
+            hasUsableBadgeIp(monitorIp)
+    }
+
     override fun wifiRepairEvents(): Flow<WifiRepairEvent> = deviceManager.wifiRepairEvents
 
     private fun invalidateActiveEndpoint(reason: String) {
@@ -547,5 +646,10 @@ class RealConnectivityBridge @Inject constructor(
             return hasUsableBadgeIp(badgeIp)
         }
     }
+
+    private data class MediaRecoveryAttempt(
+        val runtimeKey: BadgeRuntimeKey,
+        val result: CompletableDeferred<Boolean>
+    )
 
 }

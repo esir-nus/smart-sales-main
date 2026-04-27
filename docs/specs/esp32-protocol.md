@@ -3,6 +3,7 @@
 > **Purpose**: BLE + HTTP protocol between Android app and ESP32 badge  
 > **Source of Truth**: `reference-source/webserver-test.c` + `reference-source/bluetooch.py`  
 > **Last Updated**: 2026-04-25 (SD#space query/reply app-side wiring shipped; second-drop Ver# / Command#end / semantic reconciliation notes remain current)
+> **App Lifecycle Semantics**: [`docs/core-flow/badge-connectivity-lifecycle.md`](../core-flow/badge-connectivity-lifecycle.md)
 
 ---
 
@@ -11,6 +12,8 @@
 Communication happens via:
 1. **BLE** — Command/control messages (text-based, `#`-delimited)
 2. **HTTP** — File transfers over shared WiFi network (port **8088**)
+
+This document owns wire-level facts only: command strings, response fragments, ordering tolerance, rate limits, and HTTP endpoint shapes. App-level lifecycle semantics such as `Connected`, `Ready`, reconnect, Wi-Fi repair, and feature readiness are owned by `docs/core-flow/badge-connectivity-lifecycle.md` and the Cerb connectivity bridge docs.
 
 ---
 
@@ -47,6 +50,8 @@ Communication happens via:
 
 **Offline detection**: Response of `wifi#address#0.0.0.0#...` indicates badge has no WiFi.
 
+Lifecycle boundary: a successful BLE query and fragmented Wi-Fi status response do not by themselves prove HTTP `:8088` readiness. `/list`, `/download`, and `/delete` readiness is an app feature preflight above this protocol layer.
+
 ## BLE Protocol
 
 ### 1. WiFi Status Query
@@ -62,6 +67,7 @@ Badge sends:  SD#<SSID>                    (BLE notification 2)
 - Order may vary; app must collect both fragments from the active notification stream
 - Unrelated badge notifications may interleave with the response, including `Bat#...`, `Ver#...`, and `SD#space#...`; app-side WiFi status parsing must ignore those and accept only `IP#...` plus WiFi-name `SD#<SSID>`
 - `SD#space#...` is not a WiFi SSID fragment even though it shares the `SD#` prefix
+- A usable `IP#<IP_ADDRESS>` plus Wi-Fi-name `SD#<SSID>` proves badge network transport status, not HTTP media-service readiness.
 
 **Example:**
 ```
@@ -318,6 +324,8 @@ GET /list
 - Returns `.wav` files from `/sdcard/` (line 375)
 - Max 50 files (line 28)
 - Returns `[]` if SD card not mounted (line 343-346)
+
+App lifecycle note: the app must call HTTP endpoints only after feature-level readiness confirms the active runtime endpoint. Normal HTTP media operations should reuse the current runtime endpoint instead of repeatedly sending BLE Wi-Fi status queries.
 
 ### GET `/download` — Download WAV File
 

@@ -23,17 +23,18 @@ internal object ConnectivityLogger {
 
     /** Log TX (app → device) with raw bytes */
     fun tx(label: String, data: ByteArray) {
-        val hex = data.joinToString(" ") { "%02X".format(it) }
-        val text = runCatching { data.decodeToString() }.getOrDefault("<binary>")
+        val rawHex = data.joinToString(" ") { "%02X".format(it) }
+        val rawText = runCatching { data.decodeToString() }.getOrDefault("<binary>")
+        val logged = redactTxPayload(label, rawText, rawHex)
         val event = BleTrafficEvent(
             direction = BleTrafficDirection.TX,
             label = label,
-            rawHex = hex,
-            rawText = text,
+            rawHex = logged.hex,
+            rawText = logged.text,
             timestampMs = System.currentTimeMillis()
         )
         _bleTrafficEvents.tryEmit(event)
-        d("📤 TX [$label]: $text ($hex)")
+        d("📤 TX [$label]: ${logged.text} (${logged.hex})")
     }
 
     /** Log RX (device → app) with raw bytes */
@@ -71,6 +72,20 @@ internal object ConnectivityLogger {
             }
         }
     }
+
+    private fun redactTxPayload(label: String, text: String, hex: String): LoggedPayload {
+        val isPassword = label.equals("Password", ignoreCase = true) || text.startsWith("PD#")
+        return if (isPassword) {
+            LoggedPayload(text = "PD#****", hex = "<redacted>")
+        } else {
+            LoggedPayload(text = text, hex = hex)
+        }
+    }
+
+    private data class LoggedPayload(
+        val text: String,
+        val hex: String
+    )
 }
 
 /** Public accessor for BLE traffic events (for debug HUD) */

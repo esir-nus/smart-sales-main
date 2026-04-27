@@ -21,6 +21,7 @@ import com.smartsales.prism.domain.connectivity.RecordingNotification
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
@@ -299,6 +300,7 @@ class RealConnectivityBridgeTest {
 
         assertFalse(bridge.isReady())
         assertEquals(emptyList<String>(), httpClient.getReachableCalls())
+        assertEquals(0, manager.replayLatestSavedWifiCredentialForMediaFailureCalls)
     }
 
     @Test
@@ -306,6 +308,17 @@ class RealConnectivityBridgeTest {
         val manager = FakeDeviceConnectionManager()
         val httpClient = FakeBadgeHttpClient().apply { setReachable(false) }
         val bridge = newBridge(manager, httpClient, FakeBadgeStateMonitor())
+        val session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40))
+        manager.setState(
+            ConnectionState.WifiProvisioned(
+                session = session,
+                status = ProvisioningStatus(
+                    wifiSsid = "MstRobot",
+                    handshakeId = "h1",
+                    credentialsHash = "c1"
+                )
+            )
+        )
         manager.stubNetworkResult = Result.Success(
             DeviceNetworkStatus(
                 ipAddress = "192.168.0.115",
@@ -314,15 +327,76 @@ class RealConnectivityBridgeTest {
                 rawResponse = "IP#192.168.0.115 SD#MstRobot"
             )
         )
+        manager.stubReplayLatestSavedWifiCredentialForMediaFailureResult =
+            ConnectionState.WifiProvisioned(
+                session = session,
+                status = ProvisioningStatus(
+                    wifiSsid = "MstRobot",
+                    handshakeId = "h1",
+                    credentialsHash = "c1"
+                )
+            )
 
         assertFalse(bridge.isReady())
         assertEquals(
             listOf(
                 "http://192.168.0.115:8088",
+                "http://192.168.0.115:8088",
+                "http://192.168.0.115:8088",
+                "http://192.168.0.115:8088",
                 "http://192.168.0.115:8088"
             ),
             httpClient.getReachableCalls()
         )
+        assertEquals(1, manager.replayLatestSavedWifiCredentialForMediaFailureCalls)
+    }
+
+    @Test
+    fun `isReady joins concurrent media failure credential replay for same runtime`() = runTest {
+        val manager = FakeDeviceConnectionManager()
+        val monitor = FakeBadgeStateMonitor()
+        val httpClient = FakeBadgeHttpClient().apply { setReachable(false) }
+        val bridge = newBridge(manager, httpClient, monitor)
+        val session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40))
+        manager.setState(
+            ConnectionState.WifiProvisioned(
+                session = session,
+                status = ProvisioningStatus(
+                    wifiSsid = "MstRobot",
+                    handshakeId = "h1",
+                    credentialsHash = "c1"
+                )
+            )
+        )
+        manager.stubNetworkResult = Result.Success(
+            DeviceNetworkStatus(
+                ipAddress = "192.168.0.115",
+                deviceWifiName = "MstRobot",
+                phoneWifiName = "MstRobot",
+                rawResponse = "IP#192.168.0.115 SD#MstRobot"
+            )
+        )
+        manager.stubReplayLatestSavedWifiCredentialForMediaFailureResult =
+            ConnectionState.WifiProvisioned(
+                session = session,
+                status = ProvisioningStatus(
+                    wifiSsid = "MstRobot",
+                    handshakeId = "h1",
+                    credentialsHash = "c1"
+                )
+            )
+        manager.replayLatestSavedWifiCredentialForMediaFailureHandler = {
+            delay(1_000L)
+            manager.stubReplayLatestSavedWifiCredentialForMediaFailureResult
+        }
+
+        val first = async { bridge.isReady() }
+        val second = async { bridge.isReady() }
+        advanceUntilIdle()
+
+        assertFalse(first.await())
+        assertFalse(second.await())
+        assertEquals(1, manager.replayLatestSavedWifiCredentialForMediaFailureCalls)
     }
 
     @Test
@@ -375,6 +449,57 @@ class RealConnectivityBridgeTest {
         assertEquals(listOf("http://192.168.0.115:8088"), httpClient.getListCalls())
         assertEquals(1, httpClient.getDownloadCalls().size)
         assertEquals("http://192.168.0.115:8088", httpClient.getDownloadCalls().single().baseUrl)
+    }
+
+    @Test
+    fun `list failure replays saved credential once and retries list without phone ssid`() = runTest {
+        val manager = FakeDeviceConnectionManager()
+        val monitor = FakeBadgeStateMonitor()
+        val httpClient = FakeBadgeHttpClient().apply {
+            setListResults(
+                listOf(
+                    Result.Error(IllegalStateException("route isolated")),
+                    Result.Success(listOf("log_20260402_094256.wav"))
+                )
+            )
+        }
+        val bridge = newBridge(manager, httpClient, monitor)
+        val session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40))
+        manager.setState(
+            ConnectionState.WifiProvisioned(
+                session = session,
+                status = ProvisioningStatus(
+                    wifiSsid = "MstRobot",
+                    handshakeId = "h1",
+                    credentialsHash = "c1"
+                )
+            )
+        )
+        monitor.simulateConnected(ip = "192.168.0.115", wifiName = "MstRobot")
+        manager.stubNetworkResult = Result.Success(
+            DeviceNetworkStatus(
+                ipAddress = "192.168.0.115",
+                deviceWifiName = "MstRobot",
+                phoneWifiName = "",
+                rawResponse = "IP#192.168.0.115 SD#MstRobot"
+            )
+        )
+        manager.stubReplayLatestSavedWifiCredentialForMediaFailureResult =
+            ConnectionState.WifiProvisioned(
+                session = session,
+                status = ProvisioningStatus(
+                    wifiSsid = "MstRobot",
+                    handshakeId = "h1",
+                    credentialsHash = "c1"
+                )
+            )
+
+        assertEquals(Result.Success(listOf("log_20260402_094256.wav")), bridge.listRecordings())
+        assertEquals(1, manager.replayLatestSavedWifiCredentialForMediaFailureCalls)
+        assertEquals(
+            listOf("http://192.168.0.115:8088", "http://192.168.0.115:8088"),
+            httpClient.getListCalls()
+        )
     }
 
     @Test

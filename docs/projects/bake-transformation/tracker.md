@@ -23,7 +23,7 @@ open
 | # | Slug | Status | Summary | Contract |
 |---|------|--------|---------|----------|
 | 01 | triage | done | Classified BAKE runtime domains, confirmed `docs/bake-contracts/`, and authored cluster-1 DBM/TCF contracts. | [sprints/01-triage.md](sprints/01-triage.md) |
-| 02 | connectivity-dbm | authored | Map delivered connectivity-bridge and badge-session behavior from current docs/code before target-flow edits. | [sprints/02-connectivity-dbm.md](sprints/02-connectivity-dbm.md) |
+| 02 | connectivity-dbm | done | Delivered behavior map created for connectivity-bridge plus badge-session, with HTTP readiness, active-device fencing, Wi-Fi repair, telemetry, and hardware-evidence gaps recorded. | [sprints/02-connectivity-dbm.md](sprints/02-connectivity-dbm.md) |
 | 03 | connectivity-tcf | authored | Update the cluster-1 target core-flow against the delivered-behavior map and author next BAKE contract sprint. | [sprints/03-connectivity-tcf.md](sprints/03-connectivity-tcf.md) |
 
 ## Domain Backlog

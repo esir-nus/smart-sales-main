@@ -92,5 +92,64 @@ Closeout must include:
 
 ## 9. Iteration Ledger
 
+- Iteration 1 — Read the sprint contract, BAKE tracker, sprint schema,
+  connectivity/session core-flow docs, connectivity Cerb spec/interface,
+  interface map, and current connectivity/audio code. Produced the delivered
+  behavior map at
+  `docs/projects/bake-transformation/evidence/02-connectivity-dbm/delivered-behavior-map.md`.
+  Initial section/file/line checks passed after correcting shell quoting for
+  the literal backtick citation regex. Next action: update tracker and closeout.
+
 ## 10. Closeout
 
+- **Status**: success
+- **Tracker summary**: Delivered behavior map created for connectivity-bridge
+  plus badge-session, with HTTP readiness, active-device fencing, Wi-Fi repair,
+  telemetry, and hardware-evidence gaps recorded.
+- **Files changed**:
+  - `docs/projects/bake-transformation/evidence/02-connectivity-dbm/delivered-behavior-map.md`
+  - `docs/projects/bake-transformation/sprints/02-connectivity-dbm.md`
+  - `docs/projects/bake-transformation/tracker.md`
+- **Evidence**:
+
+```text
+$ test -f docs/projects/bake-transformation/evidence/02-connectivity-dbm/delivered-behavior-map.md && echo exists
+exists
+
+$ rg -n "## (Current Inputs|Current Outputs|State Transitions|Active-Device Ownership|HTTP Media Readiness|Wi-Fi Repair|Audio Sync|Telemetry|Known Gaps)" docs/projects/bake-transformation/evidence/02-connectivity-dbm/delivered-behavior-map.md
+9:## Current Inputs
+19:## Current Outputs
+30:## State Transitions
+42:## Active-Device Ownership
+54:## HTTP Media Readiness
+65:## Wi-Fi Repair
+76:## Audio Sync
+87:## Telemetry
+95:## Known Gaps
+
+$ rg -c '`(docs|app-core|data)/' docs/projects/bake-transformation/evidence/02-connectivity-dbm/delivered-behavior-map.md
+11
+
+$ wc -l docs/projects/bake-transformation/evidence/02-connectivity-dbm/delivered-behavior-map.md
+104 docs/projects/bake-transformation/evidence/02-connectivity-dbm/delivered-behavior-map.md
+
+$ rg -n "Known Gaps|HTTP Media Readiness|Active-Device Ownership" docs/projects/bake-transformation/evidence/02-connectivity-dbm/delivered-behavior-map.md
+42:## Active-Device Ownership
+54:## HTTP Media Readiness
+95:## Known Gaps
+
+$ rg -n "\| 02 \| connectivity-dbm \| (done|blocked)" docs/projects/bake-transformation/tracker.md
+26:| 02 | connectivity-dbm | done | Delivered behavior map created for connectivity-bridge plus badge-session, with HTTP readiness, active-device fencing, Wi-Fi repair, telemetry, and hardware-evidence gaps recorded. | [sprints/02-connectivity-dbm.md](sprints/02-connectivity-dbm.md) |
+
+$ git diff --stat -- docs/projects/bake-transformation/tracker.md docs/projects/bake-transformation/sprints/02-connectivity-dbm.md docs/projects/bake-transformation/evidence/02-connectivity-dbm/
+ .../sprints/02-connectivity-dbm.md                 | 59 ++++++++++++++++++++++
+ docs/projects/bake-transformation/tracker.md       |  2 +-
+ 2 files changed, 60 insertions(+), 1 deletion(-)
+```
+
+- **Hardware evidence**: not claimed. Fresh `adb logcat` evidence remains a
+  known gap for runtime reconnect, Wi-Fi repair, BLE notifications, isolation,
+  and HTTP media readiness.
+- **Lesson proposals**: none.
+- **CHANGELOG line**: none; docs-only sprint evidence for an internal BAKE
+  transformation project.

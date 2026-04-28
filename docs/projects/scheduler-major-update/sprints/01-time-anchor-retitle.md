@@ -138,17 +138,42 @@ _Operator fills this section once per iteration._
 
 ### Iteration 2 - device evidence loop
 
-- Debug loop: added `sim_debug_time_anchor_retitle` launch support to seed a persisted 9:00 follow-up task, bypass first-launch onboarding for scheduler debug extras, select the seeded follow-up session, and submit `改成9点赶飞机`.
-- Evidence: installed `app-core-debug.apk` on device `fc8ede3e`, cleared app data, launched `com.smartsales.prism/.MainActivity --ez sim_debug_time_anchor_retitle true`, and captured the time-anchor branch plus Room reschedule write in logcat.
-- Evaluator result: on-device replay is green; evidence excerpt is saved at `docs/projects/scheduler-major-update/evidence/01-time-anchor-retitle/logcat-time-anchor.txt`.
+- Invalidated on 2026-04-28: the evidence loop used `sim_debug_time_anchor_retitle` to seed and drive a scheduler follow-up chat session. That path is not valid evidence for the required top-level voice/SIM rec-button behavior.
+- Invalidated evidence file: `docs/projects/scheduler-major-update/evidence/01-time-anchor-retitle/logcat-time-anchor.txt` currently shows `SIM badge scheduler follow-up action completed` / `action=retitle`, so it must not be accepted as closeout proof.
+
+### Iteration 3 - top-level voice correction
+
+- Removed the Sprint-01 time-anchor retitle debug/follow-up launch path from `MainActivity`, `RuntimeShell`, `SimShellActions`, and its shell handoff test.
+- Added scheduler commit kind metadata so create commits and reschedule commits are distinguishable; physical badge reschedules now map to `SchedulerResult.TaskRescheduled` and do not start a badge scheduler follow-up session.
+- Removed the time-anchor retitle mutation branch from `SimAgentFollowUpCoordinator`; unrelated badge-created follow-up session behavior remains in place.
+- Routed top-level SIM general sends that look scheduler-shaped through `IntentOrchestrator.processInput(..., isVoice = true)` before ordinary chat fallback. `PathACommitted` is silent in chat so Room/Scheduler UI owns the visible card update; explicit scheduler rejection appends short failure feedback.
+- Evaluator result: focused tests, `:app:assembleDebug`, and `:app-core:assembleDebug` are green. Device `fc8ede3e` was visible, but `adb install -r app-core-debug.apk` timed out after 60 seconds and a second `adb install --no-streaming` attempt was manually interrupted, so replacement L3 logcat evidence remains blocked.
+
+### Iteration 4 - scheduler drawer debug automation correction
+
+- Moved the quick automation surface into the scheduler drawer SIM debug panel instead of the chat session interface.
+- Added Chinese scheduler-drawer inputs for the intended human loop: `明天早上八点我要赶飞机`, `明早八点应该是要去开会`, and `不对，明早八点应该是去机场接人`.
+- Routed those buttons through scheduler transcript ingress (`source=scheduler_debug_button`) so they exercise scheduler create/reschedule behavior directly rather than follow-up chat actions.
+- Evaluator result: focused tests and `:app-core:assembleDebug` are green. Device `fc8ede3e` replay succeeded; the final visible scheduler state was `最近：去机场接人 · 08:00 - ...`, and the replacement logcat evidence contains no `SimBadgeFollowUpChat`, `SIM badge scheduler follow-up action completed`, or `action=retitle` lines.
+
+### Post-close verification - reusable device-loop rerun
+
+- 2026-04-28 rerun on device `fc8ede3e`: rebuilt and installed `app-core-debug.apk`, cleared app data, completed the known-entry onboarding path, opened the scheduler drawer, cleared logcat, and replayed the three scheduler debug buttons.
+- Observation: the first create action opened the exact-alarm permission guidance dialog, which covered the debug buttons and caused the first retitle tap attempt to miss. The loop treated this as a failed observation, dismissed `稍后`, and continued with the same log window.
+- Evidence result: `run-05-device-loop-logcat.txt` contains the create transcript plus two `SIM_SCHEDULER_GLOBAL_TIME_ANCHOR_RESOLVED_SUMMARY` / `Task Rescheduled (Room)` retitles; `run-05-device-loop-ui.xml` shows `最近：去机场接人 · 08:00 - ...`; negative grep found no `SimBadgeFollowUpChat`, `SIM badge scheduler follow-up action completed`, `action=retitle`, or chat follow-up action text.
 
 ## Closeout
 
 _Operator fills at exit._
 
 - **Status:** `done`
-- **One-liner for tracker:** Code, docs, focused tests, debug build, and on-device time-anchor retitle logcat evidence are complete.
+- **One-liner for tracker:** Scheduler-drawer Chinese debug inputs now exercise create and time-anchor retitle without follow-up chat; focused tests and replacement L3 logcat are green.
 - **Evidence artifacts:**
+  - Correction focused tests:
+    - `./gradlew :core:pipeline:testDebugUnitTest --tests "*IntentOrchestratorTest*"`: BUILD SUCCESSFUL; `IntentOrchestratorTest` tests=22, failures=0, errors=0.
+    - `./gradlew :app-core:testDebugUnitTest --tests "*SimAgentViewModelTest*" --tests "*SimShellHandoffTest*" --tests "*RealBadgeAudioPipelineIngressTest*" --tests "*SchedulerPipelineNotificationsTest*" --tests "*PipelineEventTest*"`: BUILD SUCCESSFUL; `SimAgentViewModelTest` tests=53, `SimShellHandoffTest` tests=33, `RealBadgeAudioPipelineIngressTest` tests=5, `SchedulerPipelineNotificationsTest` tests=3, `PipelineEventTest` tests=3; failures=0, errors=0.
+    - `./gradlew :app:assembleDebug`: BUILD SUCCESSFUL.
+    - `./gradlew :app-core:assembleDebug`: BUILD SUCCESSFUL.
   - Scoped `git diff --stat`: 24 files changed, 728 insertions(+), 12 deletions(-) across scheduler time-anchor files.
   - `./gradlew :domain:scheduler:test --tests "*SchedulerLinterTest*"`: BUILD SUCCESSFUL; `SchedulerLinterTest` tests=31, failures=0, errors=0.
   - `./gradlew :domain:scheduler:test --tests "*FastTrackMutationEngineTest*"`: BUILD SUCCESSFUL; `FastTrackMutationEngineTest` tests=12, failures=0, errors=0.
@@ -159,8 +184,9 @@ _Operator fills at exit._
   - `./gradlew :core:pipeline:testDebugUnitTest --tests "*GlobalRescheduleContractAlignmentTest*"`: BUILD SUCCESSFUL; `GlobalRescheduleContractAlignmentTest` tests=1, failures=0, errors=0.
   - `./gradlew :app:assembleDebug`: BUILD SUCCESSFUL.
   - `./gradlew :app-core:testDebugUnitTest --tests "*SimShellHandoffTest*"`: BUILD SUCCESSFUL; debug evidence scenario seed test passed.
-  - `./gradlew :app-core:assembleDebug`: BUILD SUCCESSFUL for the device replay APK.
-  - Device evidence: `docs/projects/scheduler-major-update/evidence/01-time-anchor-retitle/logcat-time-anchor.txt` has 21 lines from device `fc8ede3e`, showing `SIM_SCHEDULER_GLOBAL_TIME_ANCHOR_RESOLVED_SUMMARY`, `clockCue=9点`, `Task Rescheduled (Room)`, and `action=retitle`.
+  - `./gradlew :app-core:assembleDebug`: BUILD SUCCESSFUL for the scheduler-drawer replay APK; 441 actionable tasks, 39 executed, 402 up-to-date.
+  - Device evidence: replaced at `docs/projects/scheduler-major-update/evidence/01-time-anchor-retitle/logcat-time-anchor.txt`. Device `fc8ede3e` replayed scheduler-drawer buttons for `明天早上八点我要赶飞机`, `明早八点应该是要去开会`, and `不对，明早八点应该是去机场接人`; logcat shows `source=scheduler_debug_button`, `SIM_SCHEDULER_GLOBAL_TIME_ANCHOR_RESOLVED_SUMMARY`, and `Task Rescheduled (Room)` for the two retitles. Negative grep found no `SimBadgeFollowUpChat`, `SIM badge scheduler follow-up action completed`, or `action=retitle` lines in the replay log.
+  - UI evidence: `uiautomator` dump after replay showed final visible scheduler text `最近：去机场接人 · 08:00 - ...`; no chat follow-up action panel was visible.
   - Event-anchor regression: `shared scheduler router resolves top level voice global reschedule before path b` remains covered in `IntentOrchestratorTest` and passed in the focused command above.
 - **Lesson proposals:** none.
 - **CHANGELOG line (proposed; user gates landing):**

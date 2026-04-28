@@ -2,9 +2,9 @@
 
 > **Purpose**: A rigorous, repeatable process for debugging issues based on user-provided evidence and literal runtime proof.
 > **Status**: Active SOP
-> **Last Updated**: 2026-03-31
-> **Homepage**: [`docs/README.md`](../README.md)
-> **Control Plane**: [`docs/plans/doc-tracker.md`](../plans/doc-tracker.md)
+> **Last Updated**: 2026-04-28
+> **Repository Guide**: [`docs/AGENTS.md`](../AGENTS.md)
+> **Project Tracker**: [`docs/plans/tracker.md`](../plans/tracker.md)
 
 ---
 
@@ -28,8 +28,29 @@ Rule:
 
 - compile/build failures: compiler output is primary
 - pure unit-test failures: test output is primary
-- Android runtime/UI/device/lifecycle/service/BLE/network/notification/alarm/integration bugs: `adb logcat` is mandatory
+- Android runtime/UI/device/lifecycle/service/BLE/network/notification/alarm/integration bugs: the Deterministic Device-Loop Protocol in [`docs/specs/device-loop-protocol.md`](../specs/device-loop-protocol.md) is mandatory
 - if a test failure is only the surface symptom of an Android runtime issue, capture `adb logcat` for the runtime repro as well
+
+## Required Device Loop
+
+For Android runtime, UI, scheduler, lifecycle, background-work, BLE/connectivity,
+notification, alarm, networking, and device-integration issues, enter the
+Deterministic Device-Loop Protocol before diagnosing or optimizing:
+
+1. Build and install the exact debug APK.
+2. Clear app data unless the sprint explicitly requires preserved state.
+3. Set the known entry state.
+4. Clear `adb logcat`.
+5. Run one exact user scenario.
+6. Capture filtered `adb logcat`, `uiautomator dump`, and optional screenshot.
+7. Evaluate expected telemetry, expected UI, and negative logs/UI states.
+8. Save artifacts under `docs/projects/<project>/evidence/<sprint>/`.
+9. Record a short verdict and artifact paths in the sprint ledger.
+
+If the loop reveals a failure, write the Pre-Fix Report before code edits. If
+logs are insufficient, add targeted diagnostic logging and rerun the same loop
+before changing behavior. Each optimization must begin from a measured loop
+observation and close with focused L1/L2 tests plus fresh L3 device evidence.
 
 ## Small Feature Reality Rule
 
@@ -99,7 +120,7 @@ Rationale: diagnosed 2026-04-20 when a user-reported missing Wi-Fi repair modal 
 If it is an Android runtime bug:
 
 7. identify the relevant log tags before entering diagnosis
-8. prepare an `adb logcat` capture plan for the repro
+8. prepare a Deterministic Device-Loop Protocol capture plan for the repro
 
 **Checkpoint**: Can summarize bug in one sentence with severity.
 
@@ -121,10 +142,10 @@ If it is an Android runtime bug:
 ### Agent Actions
 1. Run `/06-audit` on affected files
 2. Trace data flow: `User Input → Pipeline → UI`
-3. For Android runtime bugs, clear/capture logcat with the relevant tags before reproducing
-4. Reproduce the issue while collecting `adb logcat`
-5. Quote the literal logcat evidence that proves the failing branch or missing event
-6. Compare screenshot to spec (Literal Alignment)
+3. For Android runtime bugs, run the Deterministic Device-Loop Protocol with the relevant tags before reproducing
+4. Reproduce exactly one user scenario while collecting `adb logcat` and `uiautomator dump`
+5. Quote the literal logcat and UI-dump evidence that proves the failing branch, missing event, or incorrect UI state
+6. Compare screenshot or UI dump to spec (Literal Alignment)
 
 ### Key Question
 > "At which layer does reality diverge from spec?"
@@ -225,8 +246,8 @@ Before touching code, you **MUST** present the following report to the user:
 | Build | `./gradlew :app:assembleDebug` |
 | Tests | `./gradlew testDebugUnitTest` |
 | New Test | Verify new test is included and passes |
-| Manual E2E | Reproduce STR → confirm fixed |
-| Screenshot | Capture fixed state |
+| Manual E2E | Repeat the same Deterministic Device-Loop Protocol scenario |
+| UI State | Capture `uiautomator dump`; screenshot is supporting evidence |
 
 **Checkpoint**: All checks pass, build green.
 

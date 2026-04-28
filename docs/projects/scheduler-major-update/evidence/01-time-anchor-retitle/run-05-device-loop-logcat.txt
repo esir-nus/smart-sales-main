@@ -1,0 +1,46 @@
+--------- beginning of main
+04-28 18:14:27.672 D/SimSchedulerViewModel(21985): transcript_ingress source=scheduler_debug_button length=11 text=明天早上八点我要赶飞机
+04-28 18:14:27.673 D/SimSchedulerIngress(21985): route_preflight length=11 displayedDateIso=2026-04-28 mightReschedule=false shortlistSize=0 transcript=明天早上八点我要赶飞机
+04-28 18:14:30.933 D/SimSchedulerIngress(21985): route_decision intent=CREATE shape=SINGLE_EXACT owner=UNI_A terminal=true reason=none
+04-28 18:14:30.934 D/SimSchedulerIngress(21985): create_result kind=CreateTasks routeStage=UNI_A uniM=NOT_MULTI itemCount=1 parseUnresolved=0 downgraded=0
+04-28 18:14:30.934 I/VALVE_PROTOCOL(21985): 🚦 [TASK_EXTRACTED] | Size: 1 | SIM scheduler single-task NOW_DAY_OFFSET extracted
+04-28 18:14:30.934 I/VALVE_PROTOCOL(21985): ================ PIPELINE PAYLOAD ================
+04-28 18:14:30.934 I/VALVE_PROTOCOL(21985): title=赶飞机, startTimeIso=2026-04-29T08:00:00+08:00, transcript=明天早上八点我要赶飞机
+04-28 18:14:30.934 I/VALVE_PROTOCOL(21985): ==================================================
+04-28 18:14:30.948 I/VALVE_PROTOCOL(21985): 🚦 [DB_WRITE_EXECUTED] | Size: -442723158 | Task Upserted (Fast-Track/Room)
+04-28 18:14:30.948 I/VALVE_PROTOCOL(21985): ================ PIPELINE PAYLOAD ================
+04-28 18:14:30.948 I/VALVE_PROTOCOL(21985): 667acf0e-39d3-4bb5-b68a-913214476a0a
+04-28 18:14:30.948 I/VALVE_PROTOCOL(21985): ==================================================
+04-28 18:14:30.955 W/RealAlarmScheduler(21985): ⚠️ 后台发送本地通知权限未授予 — 通知可能被 HyperOS 拦截
+04-28 18:14:30.956 W/RealAlarmScheduler(21985): 精确闹钟权限未授予，DEADLINE 降级为非精确闹钟
+04-28 18:14:30.957 D/RealAlarmScheduler(21985): 已设置提醒: taskId=667acf0e-39d3-4bb5-b68a-913214476a0a, title=赶飞机, offset=0m, at=2026-04-29T00:00:00Z
+04-28 18:15:28.716 D/SimSchedulerViewModel(21985): transcript_ingress source=scheduler_debug_button length=11 text=明早八点应该是要去开会
+04-28 18:15:28.735 D/SimSchedulerIngress(21985): route_preflight length=11 displayedDateIso=2026-04-28 mightReschedule=true shortlistSize=0 transcript=明早八点应该是要去开会
+04-28 18:15:29.879 D/SimSchedulerIngress(21985): route_decision intent=RESCHEDULE shape=TARGETED_UPDATE owner=GLOBAL_RESCHEDULE terminal=true reason=none
+04-28 18:15:29.901 I/VALVE_PROTOCOL(21985): 🚦 [UI_STATE_EMITTED] | Size: 1 | SIM_SCHEDULER_GLOBAL_TIME_ANCHOR_RESOLVED_SUMMARY
+04-28 18:15:29.901 I/VALVE_PROTOCOL(21985): ================ PIPELINE PAYLOAD ================
+04-28 18:15:29.901 I/VALVE_PROTOCOL(21985): taskId=667acf0e-39d3-4bb5-b68a-913214476a0a clockCue=明早八点
+04-28 18:15:29.901 I/VALVE_PROTOCOL(21985): ==================================================
+04-28 18:15:29.914 I/VALVE_PROTOCOL(21985): 🚦 [DB_WRITE_EXECUTED] | Size: -442723158 | Task Rescheduled (Room)
+04-28 18:15:29.914 I/VALVE_PROTOCOL(21985): ================ PIPELINE PAYLOAD ================
+04-28 18:15:29.914 I/VALVE_PROTOCOL(21985): 667acf0e-39d3-4bb5-b68a-913214476a0a
+04-28 18:15:29.914 I/VALVE_PROTOCOL(21985): ==================================================
+04-28 18:15:29.919 D/RealAlarmScheduler(21985): 已取消提醒: taskId=667acf0e-39d3-4bb5-b68a-913214476a0a
+04-28 18:15:29.920 W/RealAlarmScheduler(21985): ⚠️ 后台发送本地通知权限未授予 — 通知可能被 HyperOS 拦截
+04-28 18:15:29.925 D/RealAlarmScheduler(21985): DEADLINE 闹钟已设置 (setAlarmClock): 1777420800000
+04-28 18:15:29.925 D/RealAlarmScheduler(21985): 已设置提醒: taskId=667acf0e-39d3-4bb5-b68a-913214476a0a, title=开会, offset=0m, at=2026-04-29T00:00:00Z
+04-28 18:15:36.370 D/SimSchedulerViewModel(21985): transcript_ingress source=scheduler_debug_button length=15 text=不对，明早八点应该是去机场接人
+04-28 18:15:36.387 D/SimSchedulerIngress(21985): route_preflight length=15 displayedDateIso=2026-04-28 mightReschedule=true shortlistSize=0 transcript=不对，明早八点应该是去机场接人
+04-28 18:15:37.879 D/SimSchedulerIngress(21985): route_decision intent=RESCHEDULE shape=TARGETED_UPDATE owner=GLOBAL_RESCHEDULE terminal=true reason=none
+04-28 18:15:37.915 I/VALVE_PROTOCOL(21985): 🚦 [UI_STATE_EMITTED] | Size: 1 | SIM_SCHEDULER_GLOBAL_TIME_ANCHOR_RESOLVED_SUMMARY
+04-28 18:15:37.915 I/VALVE_PROTOCOL(21985): ================ PIPELINE PAYLOAD ================
+04-28 18:15:37.915 I/VALVE_PROTOCOL(21985): taskId=667acf0e-39d3-4bb5-b68a-913214476a0a clockCue=明早八点
+04-28 18:15:37.915 I/VALVE_PROTOCOL(21985): ==================================================
+04-28 18:15:37.944 I/VALVE_PROTOCOL(21985): 🚦 [DB_WRITE_EXECUTED] | Size: -442723158 | Task Rescheduled (Room)
+04-28 18:15:37.944 I/VALVE_PROTOCOL(21985): ================ PIPELINE PAYLOAD ================
+04-28 18:15:37.944 I/VALVE_PROTOCOL(21985): 667acf0e-39d3-4bb5-b68a-913214476a0a
+04-28 18:15:37.944 I/VALVE_PROTOCOL(21985): ==================================================
+04-28 18:15:37.953 D/RealAlarmScheduler(21985): 已取消提醒: taskId=667acf0e-39d3-4bb5-b68a-913214476a0a
+04-28 18:15:37.953 W/RealAlarmScheduler(21985): ⚠️ 后台发送本地通知权限未授予 — 通知可能被 HyperOS 拦截
+04-28 18:15:37.963 D/RealAlarmScheduler(21985): DEADLINE 闹钟已设置 (setAlarmClock): 1777420800000
+04-28 18:15:37.964 D/RealAlarmScheduler(21985): 已设置提醒: taskId=667acf0e-39d3-4bb5-b68a-913214476a0a, title=去机场接人, offset=0m, at=2026-04-29T00:00:00Z

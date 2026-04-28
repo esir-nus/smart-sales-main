@@ -4,6 +4,14 @@
 
 ### 2026-04-28
 
+- **[修复] 日程 Path A 改期与取消替换路由** — 顶层 SIM 对话与徽章音频管线接入 `IntentOrchestrator` 的 Path A 改期结果，新增 `TaskRescheduled` 事件与通知展示；取消旧调试改名入口，改用时间锚点改期/替换路径，并补充设备端 logcat 证据。
+- **[新增] 日程时间锚点改期能力** — 支持“改成9点”“明早八点应该是去开会/去机场接人”等时间锚点表达，通过活动任务检索、全局改期解析与 SIM 日程入口完成同一任务的标题和时间更新。
+- **[维护] 设备证据闭环工具化** — 新增并加固 Smart Sales device-loop Codex skill 与 `docs/specs/device-loop-protocol.md`，要求 Android 运行时调试在明确退出条件、logcat、UI XML 和截图证据下闭环。
+- **[维护] BAKE 后端契约项目推进** — 建立 BAKE protocol 与 transformation 项目，完成 triage、connectivity delivered-behavior map、target core-flow、connectivity BAKE contract，以及 Scheduler Path A delivered-behavior map。
+- **[新增] Tingwu 说话人分段展示** — Tingwu 转写链路解析段落级说话人信息，音频抽屉、转写详情与对话引用保留 speaker-aware 文本，并将数字占位说话人归一为可读标签。
+- **[新增] 徽章电量全局展示** — 动态岛、顶部环境侧栏、音频抽屉和连接面板补齐徽章电量百分比展示，并按低电量阈值切换颜色提示。
+- **[维护] 连接后端生命周期收口** — 精简 Sprint 08 连接后端支持文件，保留重连、修复与媒体就绪合同，并记录因缺少设备导致 adb install/logcat L3 证据阻塞。
+- **[维护] Sprint 合同 Codex skill** — 新增 sprint contract authoring skill，沉淀 Smart Sales sprint 合同撰写、审查与修复流程。
 - **[修复] 工牌下载断连恢复提示** — 工牌录音下载因断连暂停时，音频抽屉区分自动恢复中的“恢复中”和手动断开后的“等待手动重连”，避免用户误以为下载卡死。
 - **[修复] 工牌断连下载即时 HOLD 与定向续传** — 工牌音频下载中断连时立即取消 HTTP 下载，保留卡片等待恢复状态；同一工牌重连后只重新下载被中断的文件，避免等待 TCP 超时或全量同步。
 - **[修复] 工牌切换中断后音频卡过渡态** — 切换工牌导致音频下载暂停时，音频卡显示"等待恢复传输…"过渡态（缓慢脉动条），不再误导为正在下载。

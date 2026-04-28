@@ -26,6 +26,7 @@ open
 | 02 | connectivity-dbm | done | Delivered behavior map created for connectivity-bridge plus badge-session, with HTTP readiness, active-device fencing, Wi-Fi repair, telemetry, and hardware-evidence gaps recorded. | [sprints/02-connectivity-dbm.md](sprints/02-connectivity-dbm.md) |
 | 03 | connectivity-tcf | done | Added base-runtime scope metadata and delivered-vs-target gap notes to connectivity/session core flows, then authored the first BAKE contract sprint. | [sprints/03-connectivity-tcf.md](sprints/03-connectivity-tcf.md) |
 | 04 | connectivity-bake-contract | done | Wrote the connectivity-badge-session BAKE contract, synced interface-map authority, and demoted connectivity Cerb docs to supporting reference. | [sprints/04-connectivity-bake-contract.md](sprints/04-connectivity-bake-contract.md) |
+| 05 | scheduler-path-a-dbm | done | Delivered behavior map created for Scheduler Path A, covering shared routing, Uni-A/B/C/D, reschedule/delete, SIM overlay, telemetry, tests, and runtime-evidence gaps. | [sprints/05-scheduler-path-a-dbm.md](sprints/05-scheduler-path-a-dbm.md) |
 
 ## Domain Backlog
 
@@ -33,7 +34,7 @@ open
 |--------|---------|--------------|------------|---------------|--------|
 | connectivity-bridge | base-runtime-active | `docs/core-flow/badge-connectivity-lifecycle.md` | high | tier-1 | bake-contract-written |
 | badge-session | base-runtime-active | `docs/core-flow/badge-session-lifecycle.md` | high | tier-1 | bake-contract-written |
-| scheduler-path-a | base-runtime-active | `docs/core-flow/scheduler-fast-track-flow.md` | high | tier-1 | triaged |
+| scheduler-path-a | base-runtime-active | `docs/core-flow/scheduler-fast-track-flow.md` | high | tier-1 | dbm-written |
 | shell-routing | base-runtime-active | `docs/core-flow/sim-shell-routing-flow.md` | high | tier-1 | triaged |
 | audio-pipeline | base-runtime-active | `docs/core-flow/sim-audio-artifact-chat-flow.md` | high | tier-2 | triaged |
 | agent-chat-pipeline | partially-shipped | `docs/cerb/sim-audio-chat/spec.md` | high | tier-2 | triaged |

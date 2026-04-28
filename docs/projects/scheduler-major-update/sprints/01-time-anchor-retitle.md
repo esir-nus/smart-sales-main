@@ -54,6 +54,10 @@ Files the operator may touch:
 - `core/pipeline/src/test/java/com/smartsales/core/pipeline/GlobalRescheduleContractAlignmentTest.kt`
 - `core/pipeline/src/test/java/com/smartsales/core/pipeline/IntentOrchestratorTest.kt`
 - `app-core/src/test/java/com/smartsales/prism/ui/sim/SimSchedulerMutationCoordinatorTest.kt`
+- `app-core/src/main/java/com/smartsales/prism/MainActivity.kt` — debug-only evidence launch extra
+- `app-core/src/main/java/com/smartsales/prism/ui/RuntimeShell.kt` — debug-only evidence loop wiring
+- `app-core/src/main/java/com/smartsales/prism/ui/sim/SimShellActions.kt` — debug-only evidence seed
+- `app-core/src/test/java/com/smartsales/prism/ui/sim/SimShellHandoffTest.kt` — debug seed guard
 - `docs/core-flow/scheduler-fast-track-flow.md`
 - `docs/specs/scheduler-path-a-execution-prd.md`
 - `docs/projects/scheduler-major-update/tracker.md`
@@ -132,12 +136,18 @@ _Operator fills this section once per iteration._
 - Docs/tests: synced core-flow and PRD notes, updated project tracker, and added focused linter, resolver, mutation, extraction, and orchestrator tests.
 - Evaluator result: focused tests and debug assemble are green. Device replay is blocked because `adb devices` returned no attached devices.
 
+### Iteration 2 - device evidence loop
+
+- Debug loop: added `sim_debug_time_anchor_retitle` launch support to seed a persisted 9:00 follow-up task, bypass first-launch onboarding for scheduler debug extras, select the seeded follow-up session, and submit `改成9点赶飞机`.
+- Evidence: installed `app-core-debug.apk` on device `fc8ede3e`, cleared app data, launched `com.smartsales.prism/.MainActivity --ez sim_debug_time_anchor_retitle true`, and captured the time-anchor branch plus Room reschedule write in logcat.
+- Evaluator result: on-device replay is green; evidence excerpt is saved at `docs/projects/scheduler-major-update/evidence/01-time-anchor-retitle/logcat-time-anchor.txt`.
+
 ## Closeout
 
 _Operator fills at exit._
 
-- **Status:** `blocked`
-- **One-liner for tracker:** Code, docs, build, and focused tests are green; close is blocked only on missing adb device evidence for the real-input logcat replay.
+- **Status:** `done`
+- **One-liner for tracker:** Code, docs, focused tests, debug build, and on-device time-anchor retitle logcat evidence are complete.
 - **Evidence artifacts:**
   - Scoped `git diff --stat`: 24 files changed, 728 insertions(+), 12 deletions(-) across scheduler time-anchor files.
   - `./gradlew :domain:scheduler:test --tests "*SchedulerLinterTest*"`: BUILD SUCCESSFUL; `SchedulerLinterTest` tests=31, failures=0, errors=0.
@@ -148,7 +158,9 @@ _Operator fills at exit._
   - `./gradlew :core:pipeline:testDebugUnitTest --tests "*RealGlobalRescheduleExtractionServiceTest*"`: BUILD SUCCESSFUL; `RealGlobalRescheduleExtractionServiceTest` tests=2, failures=0, errors=0.
   - `./gradlew :core:pipeline:testDebugUnitTest --tests "*GlobalRescheduleContractAlignmentTest*"`: BUILD SUCCESSFUL; `GlobalRescheduleContractAlignmentTest` tests=1, failures=0, errors=0.
   - `./gradlew :app:assembleDebug`: BUILD SUCCESSFUL.
-  - Device evidence placeholder: `docs/projects/scheduler-major-update/evidence/01-time-anchor-retitle/logcat-time-anchor.txt` records `adb devices` with no attached devices; real input replay could not be executed.
+  - `./gradlew :app-core:testDebugUnitTest --tests "*SimShellHandoffTest*"`: BUILD SUCCESSFUL; debug evidence scenario seed test passed.
+  - `./gradlew :app-core:assembleDebug`: BUILD SUCCESSFUL for the device replay APK.
+  - Device evidence: `docs/projects/scheduler-major-update/evidence/01-time-anchor-retitle/logcat-time-anchor.txt` has 21 lines from device `fc8ede3e`, showing `SIM_SCHEDULER_GLOBAL_TIME_ANCHOR_RESOLVED_SUMMARY`, `clockCue=9点`, `Task Rescheduled (Room)`, and `action=retitle`.
   - Event-anchor regression: `shared scheduler router resolves top level voice global reschedule before path b` remains covered in `IntentOrchestratorTest` and passed in the focused command above.
 - **Lesson proposals:** none.
 - **CHANGELOG line (proposed; user gates landing):**

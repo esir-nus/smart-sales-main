@@ -51,6 +51,7 @@ import com.smartsales.prism.ui.sim.startRuntimeForcedFirstLaunchOnboarding
 import com.smartsales.prism.ui.onboarding.PairingFlowViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.delay
 
 @Composable
 internal fun RuntimeShell(
@@ -261,23 +262,26 @@ internal fun RuntimeShell(
     LaunchedEffect(debugFollowUpScenario) {
         if (!schedulerEnabled) return@LaunchedEffect
         val scenario = debugFollowUpScenario ?: return@LaunchedEffect
-        handleBadgeSchedulerContinuityIngress(
-            event = buildSimDebugFollowUpEvent(scenario),
-            startSession = { seed ->
-                chatViewModel.createBadgeSchedulerFollowUpSession(
-                    threadId = seed.threadId,
-                    transcript = seed.transcript,
-                    tasks = seed.tasks,
-                    batchId = seed.batchId
-                )
-            },
-            startOwner = { boundSessionId, threadId ->
-                followUpOwner.startBadgeSchedulerFollowUp(
-                    boundSessionId = boundSessionId,
-                    threadId = threadId
-                )
-            }
+        val seed = com.smartsales.prism.ui.sim.extractBadgeSchedulerContinuitySeed(
+            buildSimDebugFollowUpEvent(scenario)
+        ) ?: return@LaunchedEffect
+        com.smartsales.prism.ui.sim.emitBadgeSchedulerContinuityIngressTelemetry(seed.transcript)
+        val sessionId = chatViewModel.createDebugBadgeSchedulerFollowUpSession(
+            threadId = seed.threadId,
+            transcript = seed.transcript,
+            tasks = seed.tasks,
+            batchId = seed.batchId
+        ) ?: return@LaunchedEffect
+        chatViewModel.switchSession(sessionId)
+        followUpOwner.startBadgeSchedulerFollowUp(
+            boundSessionId = sessionId,
+            threadId = seed.threadId
         )
+        if (scenario == SimDebugFollowUpScenario.TIME_ANCHOR_RETITLE) {
+            delay(250)
+            chatViewModel.updateInput("改成9点赶飞机")
+            chatViewModel.send()
+        }
     }
 
     LaunchedEffect(shouldShowFirstLaunchSchedulerTeaser) {

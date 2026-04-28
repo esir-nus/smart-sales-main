@@ -12,7 +12,7 @@ open
 
 | # | Slug | Status | Summary | Contract |
 |---|------|--------|---------|----------|
-| 01 | time-anchor-retitle | blocked | Code, docs, build, and focused tests are green; close is blocked only on missing adb device evidence for the real-input logcat replay. | [sprints/01-time-anchor-retitle.md](sprints/01-time-anchor-retitle.md) |
+| 01 | time-anchor-retitle | done | Code, docs, focused tests, debug build, and on-device time-anchor retitle logcat evidence are complete. | [sprints/01-time-anchor-retitle.md](sprints/01-time-anchor-retitle.md) |
 
 ## Cross-Sprint Decisions
 

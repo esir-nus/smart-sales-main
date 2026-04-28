@@ -15,6 +15,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Instant
+import java.time.ZoneId
 
 class SimShellHandoffTest {
 
@@ -547,6 +548,23 @@ class SimShellHandoffTest {
         val result = event.result as SchedulerResult.MultiTaskCreated
         assertEquals(2, result.tasks.size)
         assertEquals("安排两个客户回访", event.transcript)
+    }
+
+    @Test
+    fun `buildSimDebugFollowUpEvent time anchor retitle creates nine oclock task`() {
+        val event = buildSimDebugFollowUpEvent(
+            scenario = SimDebugFollowUpScenario.TIME_ANCHOR_RETITLE
+        )
+
+        val result = event.result as SchedulerResult.TaskCreated
+        val localTime = Instant.ofEpochMilli(result.scheduledAtMillis)
+            .atZone(ZoneId.systemDefault())
+            .toLocalTime()
+        assertEquals("debug_time_anchor_retitle_0900", result.taskId)
+        assertEquals("起床", result.title)
+        assertEquals(9, localTime.hour)
+        assertEquals(0, localTime.minute)
+        assertEquals("提醒我9点起床", event.transcript)
     }
 
     @Test

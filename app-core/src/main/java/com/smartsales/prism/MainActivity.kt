@@ -39,6 +39,7 @@ class MainActivity : ComponentActivity() {
     companion object {
         private const val EXTRA_DEBUG_FOLLOW_UP_SINGLE = "sim_debug_followup_single"
         private const val EXTRA_DEBUG_FOLLOW_UP_MULTI = "sim_debug_followup_multi"
+        private const val EXTRA_DEBUG_TIME_ANCHOR_RETITLE = "sim_debug_time_anchor_retitle"
     }
 
     @Inject
@@ -71,6 +72,7 @@ class MainActivity : ComponentActivity() {
             val hasStoredThemeMode by themePreferenceStore.hasStoredThemeMode.collectAsStateWithLifecycle()
             val onboardingCompleted by onboardingGate.completedFlow.collectAsStateWithLifecycle()
             val systemDarkTheme = isSystemInDarkTheme()
+            val debugFollowUpScenario = remember { parseDebugFollowUpScenario() }
             val darkTheme = remember(themeMode, hasStoredThemeMode, systemDarkTheme) {
                 resolveBaseRuntimeDarkTheme(
                     themeMode = themeMode,
@@ -90,8 +92,8 @@ class MainActivity : ComponentActivity() {
                 ) {
                     RuntimeShell(
                         badgeAudioPipeline = badgeAudioPipeline,
-                        debugFollowUpScenario = parseDebugFollowUpScenario(),
-                        forceSetupOnLaunch = !onboardingCompleted,
+                        debugFollowUpScenario = debugFollowUpScenario,
+                        forceSetupOnLaunch = !onboardingCompleted && debugFollowUpScenario == null,
                         onForcedSetupCompleted = onboardingGate::markCompleted,
                         shouldShowFirstLaunchSchedulerTeaser =
                             discoverabilityGate.shouldShowFirstLaunchSchedulerTeaser(),
@@ -118,6 +120,8 @@ class MainActivity : ComponentActivity() {
         return when {
             intent?.getBooleanExtra(EXTRA_DEBUG_FOLLOW_UP_MULTI, false) == true ->
                 SimDebugFollowUpScenario.MULTI
+            intent?.getBooleanExtra(EXTRA_DEBUG_TIME_ANCHOR_RETITLE, false) == true ->
+                SimDebugFollowUpScenario.TIME_ANCHOR_RETITLE
             intent?.getBooleanExtra(EXTRA_DEBUG_FOLLOW_UP_SINGLE, false) == true ->
                 SimDebugFollowUpScenario.SINGLE
             else -> null

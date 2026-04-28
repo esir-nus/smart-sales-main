@@ -3,6 +3,8 @@ package com.smartsales.prism.ui.sim
 import com.smartsales.prism.domain.audio.PipelineEvent
 import com.smartsales.prism.domain.audio.SchedulerResult
 import com.smartsales.prism.domain.model.SchedulerFollowUpTaskSummary
+import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.util.UUID
 
 internal data class SimBadgeSchedulerFollowUpSeed(
@@ -14,7 +16,8 @@ internal data class SimBadgeSchedulerFollowUpSeed(
 
 internal enum class SimDebugFollowUpScenario {
     SINGLE,
-    MULTI
+    MULTI,
+    TIME_ANCHOR_RETITLE
 }
 
 internal fun buildSimDebugFollowUpEvent(
@@ -56,6 +59,25 @@ internal fun buildSimDebugFollowUpEvent(
             filename = "debug_follow_up_multi.wav",
             transcript = "安排两个客户回访"
         )
+
+        SimDebugFollowUpScenario.TIME_ANCHOR_RETITLE -> {
+            val nineToday = ZonedDateTime.now(ZoneId.systemDefault())
+                .withHour(9)
+                .withMinute(0)
+                .withSecond(0)
+                .withNano(0)
+            PipelineEvent.Complete(
+                result = SchedulerResult.TaskCreated(
+                    taskId = "debug_time_anchor_retitle_0900",
+                    title = "起床",
+                    dayOffset = 0,
+                    scheduledAtMillis = nineToday.toInstant().toEpochMilli(),
+                    durationMinutes = 30
+                ),
+                filename = "debug_time_anchor_retitle.wav",
+                transcript = "提醒我9点起床"
+            )
+        }
     }
 }
 

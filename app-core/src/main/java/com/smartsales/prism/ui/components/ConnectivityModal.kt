@@ -28,11 +28,14 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.content.Intent
@@ -455,7 +458,19 @@ private fun DeviceCard(
                                     )
                                 }
                             }
-                            Text(dot.subtitle, fontSize = 12.sp, color = TextSecondary)
+                            val subtitleAnnotated = if (isConnected && batteryLevel != null) {
+                                buildAnnotatedString {
+                                    append("已连接 · ")
+                                    withStyle(SpanStyle(color = batteryGlyphColor(batteryLevel))) {
+                                        append("$batteryLevel%")
+                                    }
+                                    if (firmwareVersion != null) append(" · $firmwareVersion")
+                                    else append(" · v?.?.?")
+                                }
+                            } else {
+                                buildAnnotatedString { append(dot.subtitle) }
+                            }
+                            Text(subtitleAnnotated, fontSize = 12.sp, color = TextSecondary)
                         }
                     }
 

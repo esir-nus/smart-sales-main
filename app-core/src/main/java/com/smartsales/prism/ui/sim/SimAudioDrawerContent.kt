@@ -56,6 +56,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.smartsales.prism.ui.components.SimBatteryGlyph
+import com.smartsales.prism.ui.components.batteryGlyphColor
 import com.smartsales.prism.ui.components.connectivity.ConnectionState
 import java.time.Instant
 import kotlin.math.abs
@@ -71,6 +73,7 @@ internal fun SimAudioDrawerContent(
     currentChatAudioId: String?,
     onDismiss: () -> Unit,
     connectionState: ConnectionState,
+    badgeBatteryLevel: Int?,
     isSyncing: Boolean,
     syncFeedback: SimAudioSyncFeedback?,
     lastSyncTimestamp: Instant?,
@@ -96,6 +99,7 @@ internal fun SimAudioDrawerContent(
         SimAudioBrowseHeader(
             entryCount = entries.size,
             connectionState = connectionState,
+            badgeBatteryLevel = badgeBatteryLevel,
             syncVisualState = syncVisualState,
             lastSyncTimestamp = lastSyncTimestamp,
             onDismiss = onDismiss,
@@ -201,6 +205,7 @@ internal fun SimAudioDrawerContent(
 private fun SimAudioBrowseHeader(
     entryCount: Int,
     connectionState: ConnectionState,
+    badgeBatteryLevel: Int?,
     syncVisualState: SimAudioSyncVisualState,
     lastSyncTimestamp: Instant?,
     onDismiss: () -> Unit,
@@ -255,6 +260,21 @@ private fun SimAudioBrowseHeader(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            if (badgeBatteryLevel != null && connectionState == ConnectionState.CONNECTED) {
+                SimBatteryGlyph(
+                    percentage = badgeBatteryLevel,
+                    barWidth = 16.dp,
+                    barHeight = 8.dp,
+                    nubWidth = 1.5.dp,
+                    nubHeight = 4.dp
+                )
+                Text(
+                    text = "$badgeBatteryLevel%",
+                    color = batteryGlyphColor(badgeBatteryLevel),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
             SimAudioSmartCapsule(
                 visualState = syncVisualState,
                 connectionState = connectionState,

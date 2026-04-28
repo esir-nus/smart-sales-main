@@ -94,6 +94,8 @@ import com.smartsales.prism.ui.components.DynamicIslandItem
 import com.smartsales.prism.ui.components.DynamicIslandUiState
 import com.smartsales.prism.ui.components.DynamicIslandVisualState
 import com.smartsales.prism.ui.components.DynamicIslandTapAction
+import com.smartsales.prism.ui.components.SimBatteryGlyph
+import com.smartsales.prism.ui.components.batteryGlyphColor
 import com.smartsales.prism.ui.components.prismNavigationBarPadding
 import com.smartsales.prism.ui.components.prismStatusBarPadding
 import com.smartsales.prism.ui.components.resolveShellLayoutMode
@@ -642,8 +644,7 @@ private fun SimHomeHeroTopCap(
                                 testTag = SIM_HEADER_RIGHT_AMBIENT_ICON_TEST_TAG
                             ) {
                                 SimHomeHeroAmbientBatteryGlyph(
-                                    percentage = ambientBatteryPercentage ?: 0,
-                                    accentColor = Color(0xFF34C759)
+                                    percentage = ambientBatteryPercentage ?: 0
                                 )
                             }
                         }
@@ -864,42 +865,25 @@ private fun SimHomeHeroDynamicIsland(
 
 @Composable
 private fun SimHomeHeroAmbientBatteryGlyph(
-    percentage: Int,
-    accentColor: Color
+    percentage: Int
 ) {
-    val boundedPercentage = percentage.coerceIn(0, 100)
+    val color = batteryGlyphColor(percentage)
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .size(
-                    width = SimHomeHeroTokens.AmbientBatteryWidth,
-                    height = SimHomeHeroTokens.AmbientBatteryHeight
-                )
-                .border(
-                    width = 1.5.dp,
-                    color = accentColor,
-                    shape = RoundedCornerShape(2.dp)
-                )
-                .drawBehind {
-                    drawRoundRect(
-                        color = accentColor,
-                        size = Size(width = size.width * (boundedPercentage / 100f), height = size.height),
-                        cornerRadius = CornerRadius(1.dp.toPx(), 1.dp.toPx())
-                    )
-                },
-            contentAlignment = Alignment.CenterStart
-        ) {}
-        Box(
-            modifier = Modifier
-                .padding(start = 2.dp)
-                .size(
-                    width = SimHomeHeroTokens.AmbientBatteryNubWidth,
-                    height = SimHomeHeroTokens.AmbientBatteryNubHeight
-                )
-                .background(
-                    color = accentColor,
-                    shape = RoundedCornerShape(topEnd = 1.dp, bottomEnd = 1.dp)
-                )
+        SimBatteryGlyph(
+            percentage = percentage,
+            barWidth = SimHomeHeroTokens.AmbientBatteryWidth,
+            barHeight = SimHomeHeroTokens.AmbientBatteryHeight,
+            nubWidth = SimHomeHeroTokens.AmbientBatteryNubWidth,
+            nubHeight = SimHomeHeroTokens.AmbientBatteryNubHeight
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = "$percentage%",
+            style = TextStyle(
+                color = color,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Medium
+            )
         )
     }
 }

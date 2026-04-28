@@ -39,6 +39,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
@@ -55,7 +56,10 @@ data class SimAudioEntry(
     val isBuiltInSeed: Boolean = false,
     val downloadProgress: Float = 0f,
     val downloadedBytes: Long = 0L,
-    val downloadTotalBytes: Long = 0L
+    val downloadTotalBytes: Long = 0L,
+    // 工牌切换中断后的过渡态：本地仍标记为 DOWNLOADING/QUEUED，但当前活动工牌
+    // 尚未恢复到 READY，意味着真实下载暂停中，UI 需展示等待恢复态而非伪装下载中。
+    val isHoldingForResume: Boolean = false
 )
 
 private const val SIM_AUDIO_DRAWER_SYNC_LOG_TAG = "AudioPipeline"
@@ -94,6 +98,12 @@ class SimAudioDrawerViewModel @Inject constructor(
         _pendingBadgeDeleteConfirmation
     private var syncFeedbackResetJob: Job? = null
     private var autoSyncDebounceJob: Job? = null
+    val badgeBatteryLevel: StateFlow<Int?> = connectivityBridge.batteryNotifications()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = null
+        )
     private val badgeSyncAvailability: StateFlow<SimBadgeSyncAvailability> =
         connectivityBridge.managerStatus
             .map(::resolveSimBadgeSyncAvailability)
@@ -118,12 +128,20 @@ class SimAudioDrawerViewModel @Inject constructor(
         }
     }
 
-    val entries: StateFlow<List<SimAudioEntry>> = repository.getAudioFiles()
-        .map { files -> files.map { it.toSimEntry() } }
+    val entries: StateFlow<List<SimAudioEntry>> = combine(
+        repository.getAudioFiles(),
+        badgeSyncAvailability
+    ) { files, availability ->
+        files.map { file ->
+            file.toSimEntry(
+                isHoldingForResume = isHoldingForResume(file, availability)
+            )
+        }
+    }
         .onEach { entries ->
             Log.d(
                 SIM_AUDIO_DRAWER_SYNC_LOG_TAG,
-                "SIM audio drawer entries emitted count=${entries.size} downloading=${entries.count { it.localAvailability == AudioLocalAvailability.DOWNLOADING }} queued=${entries.count { it.localAvailability == AudioLocalAvailability.QUEUED }} maxDownloadProgress=${entries.maxOfOrNull { it.downloadProgress } ?: 0f}"
+                "SIM audio drawer entries emitted count=${entries.size} downloading=${entries.count { it.localAvailability == AudioLocalAvailability.DOWNLOADING }} queued=${entries.count { it.localAvailability == AudioLocalAvailability.QUEUED }} holding=${entries.count { it.isHoldingForResume }} maxDownloadProgress=${entries.maxOfOrNull { it.downloadProgress } ?: 0f}"
             )
         }
         .stateIn(
@@ -383,7 +401,9 @@ class SimAudioDrawerViewModel @Inject constructor(
         }
     }
 
-    private fun AudioFile.toSimEntry(): SimAudioEntry {
+    private fun AudioFile.toSimEntry(
+        isHoldingForResume: Boolean = false
+    ): SimAudioEntry {
         return SimAudioEntry(
             item = AudioItemState(
                 id = id,
@@ -422,7 +442,8 @@ class SimAudioDrawerViewModel @Inject constructor(
             isBuiltInSeed = id == SIM_AUDIO_DEMO_SEED_ID,
             downloadProgress = downloadProgress,
             downloadedBytes = downloadedBytes,
-            downloadTotalBytes = downloadTotalBytes
+            downloadTotalBytes = downloadTotalBytes,
+            isHoldingForResume = isHoldingForResume
         )
     }
 
@@ -501,6 +522,20 @@ internal const val SIM_BADGE_SYNC_NETWORK_PENDING_MESSAGE =
 
 internal const val SIM_BADGE_SYNC_NETWORK_OFFLINE_MESSAGE =
     "徽章蓝牙已连接，但设备当前未接入可用网络，暂时不能同步录音。请检查徽章 Wi‑Fi 后重试。"
+
+// 工牌切换中断后的过渡态判定：
+// 文件本地仍标记为 DOWNLOADING/QUEUED，但当前活动工牌尚未恢复 READY，
+// 说明真实下载暂停在等待重连（grace 期 / Wi-Fi 重连等），UI 应展示等待恢复态。
+internal fun isHoldingForResume(
+    file: AudioFile,
+    availability: SimBadgeSyncAvailability
+): Boolean {
+    if (file.source != DomainAudioSource.SMARTBADGE) return false
+    val inFlight = file.localAvailability == AudioLocalAvailability.DOWNLOADING ||
+        file.localAvailability == AudioLocalAvailability.QUEUED
+    if (!inFlight) return false
+    return availability != SimBadgeSyncAvailability.READY
+}
 
 internal fun resolveSimBadgeSyncAvailability(
     managerStatus: BadgeManagerStatus

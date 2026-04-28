@@ -1,12 +1,17 @@
 package com.smartsales.prism.ui.components
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material3.Icon
@@ -14,11 +19,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.smartsales.prism.domain.scheduler.ScheduledTask
@@ -33,6 +42,46 @@ private val DynamicIslandConnectedColor = Color(0xFF34C759)
 private val DynamicIslandDisconnectedColor = Color(0xFF86868B)
 private val DynamicIslandReconnectColor = Color(0xFFFF9F0A)
 private val DynamicIslandTitleBlue = Color(0xFF0A84FF)
+
+internal const val BATTERY_LOW_THRESHOLD = 20
+private val BatteryNormalColor = Color(0xFF34C759)
+private val BatteryLowColor = Color(0xFFFF3B30)
+
+internal fun batteryGlyphColor(percentage: Int): Color =
+    if (percentage <= BATTERY_LOW_THRESHOLD) BatteryLowColor else BatteryNormalColor
+
+@Composable
+internal fun SimBatteryGlyph(
+    percentage: Int,
+    barWidth: Dp,
+    barHeight: Dp,
+    nubWidth: Dp = 2.dp,
+    nubHeight: Dp,
+    modifier: Modifier = Modifier
+) {
+    val color = batteryGlyphColor(percentage)
+    val bounded = percentage.coerceIn(0, 100)
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(width = barWidth, height = barHeight)
+                .border(width = 1.5.dp, color = color, shape = RoundedCornerShape(2.dp))
+                .drawBehind {
+                    drawRoundRect(
+                        color = color,
+                        size = Size(width = size.width * (bounded / 100f), height = size.height),
+                        cornerRadius = CornerRadius(1.dp.toPx(), 1.dp.toPx())
+                    )
+                }
+        )
+        Box(
+            modifier = Modifier
+                .padding(start = 2.dp)
+                .size(width = nubWidth, height = nubHeight)
+                .background(color = color, shape = RoundedCornerShape(topEnd = 1.dp, bottomEnd = 1.dp))
+        )
+    }
+}
 
 sealed interface DynamicIslandUiState {
     data object Hidden : DynamicIslandUiState
@@ -238,6 +287,26 @@ fun DynamicIsland(
                 softWrap = false,
                 overflow = TextOverflow.Ellipsis
             )
+            val battery = state.item.batteryPercentage
+            if (battery != null) {
+                Spacer(Modifier.width(6.dp))
+                SimBatteryGlyph(
+                    percentage = battery,
+                    barWidth = 14.dp,
+                    barHeight = 7.dp,
+                    nubWidth = 1.5.dp,
+                    nubHeight = 3.5.dp
+                )
+                Spacer(Modifier.width(3.dp))
+                Text(
+                    text = "$battery%",
+                    style = TextStyle(
+                        color = batteryGlyphColor(battery),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                )
+            }
         }
     }
 }

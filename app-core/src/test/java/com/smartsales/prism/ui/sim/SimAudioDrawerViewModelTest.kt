@@ -357,57 +357,41 @@ class SimAudioDrawerViewModelTest {
     }
 
     @Test
-    fun `isHoldingForResume true when file is in interrupted set and still in hold window`() {
-        val failed = audioFile(
-            source = DomainAudioSource.SMARTBADGE,
-            localAvailability = AudioLocalAvailability.FAILED
-        )
-        val queued = audioFile(
-            source = DomainAudioSource.SMARTBADGE,
-            localAvailability = AudioLocalAvailability.QUEUED
-        )
-        val downloadingNoBytes = audioFile(
-            source = DomainAudioSource.SMARTBADGE,
-            localAvailability = AudioLocalAvailability.DOWNLOADING,
-            downloadedBytes = 0L
-        )
-        assertTrue(isHoldingForResume(failed, setOf(failed.id)))
-        assertTrue(isHoldingForResume(queued, setOf(queued.id)))
-        assertTrue(isHoldingForResume(downloadingNoBytes, setOf(downloadingNoBytes.id)))
+    fun `isHoldingForResume scenario A - badge switch interrupted set covers hold window`() {
+        val failed = audioFile(DomainAudioSource.SMARTBADGE, AudioLocalAvailability.FAILED)
+        val queued = audioFile(DomainAudioSource.SMARTBADGE, AudioLocalAvailability.QUEUED)
+        val downloadingNoBytes = audioFile(DomainAudioSource.SMARTBADGE, AudioLocalAvailability.DOWNLOADING, 0L)
+        val downloadingWithBytes = audioFile(DomainAudioSource.SMARTBADGE, AudioLocalAvailability.DOWNLOADING, 1024L)
+        // In interrupted set: FAILED / QUEUED / DOWNLOADING-0bytes all HOLD
+        assertTrue(isHoldingForResume(failed, setOf(failed.id), badgeSyncReady = true))
+        assertTrue(isHoldingForResume(queued, setOf(queued.id), badgeSyncReady = true))
+        assertTrue(isHoldingForResume(downloadingNoBytes, setOf(downloadingNoBytes.id), badgeSyncReady = true))
+        // In interrupted set but bytes flowing → hold over
+        assertFalse(isHoldingForResume(downloadingWithBytes, setOf(downloadingWithBytes.id), badgeSyncReady = true))
+        // Not in interrupted set, badge ready → false
+        assertFalse(isHoldingForResume(downloadingNoBytes, emptySet(), badgeSyncReady = true))
     }
 
     @Test
-    fun `isHoldingForResume false when file not in interrupted set or bytes are flowing`() {
-        val downloading = audioFile(
-            source = DomainAudioSource.SMARTBADGE,
-            localAvailability = AudioLocalAvailability.DOWNLOADING,
-            downloadedBytes = 0L
-        )
-        val downloadingWithBytes = audioFile(
-            source = DomainAudioSource.SMARTBADGE,
-            localAvailability = AudioLocalAvailability.DOWNLOADING,
-            downloadedBytes = 1024L
-        )
-        val ready = audioFile(
-            source = DomainAudioSource.SMARTBADGE,
-            localAvailability = AudioLocalAvailability.READY
-        )
-        // Not in interrupted set → always false
-        assertFalse(isHoldingForResume(downloading, emptySet()))
-        // In interrupted set but bytes flowing → false
-        assertFalse(isHoldingForResume(downloadingWithBytes, setOf(downloadingWithBytes.id)))
-        // READY availability not in interrupted set → false
-        assertFalse(isHoldingForResume(ready, emptySet()))
+    fun `isHoldingForResume scenario B - badge offline file stuck in DOWNLOADING`() {
+        val stuck = audioFile(DomainAudioSource.SMARTBADGE, AudioLocalAvailability.DOWNLOADING, 0L)
+        val stuckWithBytes = audioFile(DomainAudioSource.SMARTBADGE, AudioLocalAvailability.DOWNLOADING, 1024L)
+        val ready = audioFile(DomainAudioSource.SMARTBADGE, AudioLocalAvailability.READY)
+        // Badge offline + DOWNLOADING → HOLD
+        assertTrue(isHoldingForResume(stuck, emptySet(), badgeSyncReady = false))
+        assertTrue(isHoldingForResume(stuckWithBytes, emptySet(), badgeSyncReady = false))
+        // Badge offline but not DOWNLOADING → no HOLD
+        assertFalse(isHoldingForResume(ready, emptySet(), badgeSyncReady = false))
+        // Badge online + not in interrupted set → no HOLD
+        assertFalse(isHoldingForResume(stuck, emptySet(), badgeSyncReady = true))
     }
 
     @Test
-    fun `isHoldingForResume false for phone-source audio regardless of interrupted set`() {
-        val phoneFile = audioFile(
-            source = DomainAudioSource.PHONE,
-            localAvailability = AudioLocalAvailability.DOWNLOADING
-        )
-        assertFalse(isHoldingForResume(phoneFile, setOf(phoneFile.id)))
-        assertFalse(isHoldingForResume(phoneFile, emptySet()))
+    fun `isHoldingForResume false for phone-source audio in all scenarios`() {
+        val phoneFile = audioFile(DomainAudioSource.PHONE, AudioLocalAvailability.DOWNLOADING)
+        assertFalse(isHoldingForResume(phoneFile, setOf(phoneFile.id), badgeSyncReady = false))
+        assertFalse(isHoldingForResume(phoneFile, emptySet(), badgeSyncReady = false))
+        assertFalse(isHoldingForResume(phoneFile, emptySet(), badgeSyncReady = true))
     }
 
     private fun audioFile(

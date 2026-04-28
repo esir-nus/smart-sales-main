@@ -133,7 +133,7 @@ class SimAudioDrawerViewModel @Inject constructor(
             }
         }
 
-        // 追踪工牌切换中断文件，驱动 HOLD 过渡态
+        // 追踪工牌切换中断文件，驱动 HOLD 过渡态（场景 A：切换工牌）
         viewModelScope.launch {
             repository.getAudioFiles().collect { files ->
                 _interruptedFileIds.update { ids ->
@@ -158,11 +158,13 @@ class SimAudioDrawerViewModel @Inject constructor(
 
     val entries: StateFlow<List<SimAudioEntry>> = combine(
         repository.getAudioFiles(),
-        _interruptedFileIds
-    ) { files, interruptedIds ->
+        _interruptedFileIds,
+        badgeSyncAvailability
+    ) { files, interruptedIds, availability ->
+        val badgeSyncReady = availability == SimBadgeSyncAvailability.READY
         files.map { file ->
             file.toSimEntry(
-                isHoldingForResume = isHoldingForResume(file, interruptedIds)
+                isHoldingForResume = isHoldingForResume(file, interruptedIds, badgeSyncReady)
             )
         }
     }
@@ -551,20 +553,24 @@ internal const val SIM_BADGE_SYNC_NETWORK_PENDING_MESSAGE =
 internal const val SIM_BADGE_SYNC_NETWORK_OFFLINE_MESSAGE =
     "徽章蓝牙已连接，但设备当前未接入可用网络，暂时不能同步录音。请检查徽章 Wi‑Fi 后重试。"
 
-// 工牌切换中断后的过渡态判定：
-// 文件必须曾被标记为"设备已切换"中断（ID 在 interruptedFileIds 中），
-// 且尚未恢复真实传输（localAvailability 仍在中断→排队→早期传输阶段，
-// 或 downloadedBytes == 0 说明字节还未开始流动）。
+// 工牌切换中断后的过渡态判定，覆盖两种中断场景：
+// 场景 A：切换工牌（A→B→A）— 文件曾被标记为切换中断，尚未恢复真实传输
+// 场景 B：工牌断连/断电 — 文件卡在 DOWNLOADING 但工牌已不可用
 internal fun isHoldingForResume(
     file: AudioFile,
-    interruptedFileIds: Set<String>
+    interruptedFileIds: Set<String>,
+    badgeSyncReady: Boolean
 ): Boolean {
     if (file.source != DomainAudioSource.SMARTBADGE) return false
-    if (file.id !in interruptedFileIds) return false
-    return file.localAvailability == AudioLocalAvailability.FAILED ||
-        file.localAvailability == AudioLocalAvailability.QUEUED ||
-        (file.localAvailability == AudioLocalAvailability.DOWNLOADING &&
-            file.downloadedBytes == 0L)
+    // 场景 A：切换中断窗口（FAILED / QUEUED / 早期传输 0 bytes）
+    if (file.id in interruptedFileIds) {
+        return file.localAvailability == AudioLocalAvailability.FAILED ||
+            file.localAvailability == AudioLocalAvailability.QUEUED ||
+            (file.localAvailability == AudioLocalAvailability.DOWNLOADING &&
+                file.downloadedBytes == 0L)
+    }
+    // 场景 B：工牌离线，文件卡死在 DOWNLOADING 状态
+    return !badgeSyncReady && file.localAvailability == AudioLocalAvailability.DOWNLOADING
 }
 
 internal fun resolveSimBadgeSyncAvailability(

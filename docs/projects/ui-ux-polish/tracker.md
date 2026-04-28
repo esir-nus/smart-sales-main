@@ -13,6 +13,7 @@ open
 | # | Slug | Status | Summary | Contract |
 |---|------|--------|---------|----------|
 | 01 | connectivity-modal-state | done | Connectivity card reconnect now preempts stale operations, shows reconnecting on the selected card, and passes app-core unit verification. | [sprints/01-connectivity-modal-state.md](sprints/01-connectivity-modal-state.md) |
+| 02 | audio-card-hold-state-fix | done | Audio card now shows "等待恢复传输…" + slow-pulse dim bar when badge is offline mid-download (disconnect/power-cut); logcat confirmed holding=1 during reconnect window; download resumes to active styling once bytes flow. | [sprints/02-audio-card-hold-state-fix.md](sprints/02-audio-card-hold-state-fix.md) |
 
 ## Cross-Sprint Decisions
 

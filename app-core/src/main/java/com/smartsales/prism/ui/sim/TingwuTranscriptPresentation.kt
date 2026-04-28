@@ -13,8 +13,7 @@ internal fun buildSpeakerAwareTranscript(artifacts: TingwuJobArtifacts?): String
                 val speakerKey = segment.speakerId ?: "speaker_${segment.speakerIndex}"
                 val label = artifacts.speakerLabels[speakerKey]
                     ?.takeIf { it.isNotBlank() }
-                    ?: segment.speakerId?.takeIf { it.isNotBlank() }
-                    ?: "说话人 ${segment.speakerIndex + 1}"
+                    ?: resolveFallbackSpeakerLabel(segment.speakerId, segment.speakerIndex)
                 "$label：$text"
             }
             .joinToString("\n")
@@ -32,4 +31,19 @@ internal fun buildSpeakerAwareTranscriptPreview(artifacts: TingwuJobArtifacts?):
         .replace(Regex("""\s+"""), " ")
         .trim()
         .takeIf { it.isNotBlank() }
+}
+
+private fun resolveFallbackSpeakerLabel(speakerId: String?, speakerIndex: Int): String {
+    val normalized = speakerId?.trim().orEmpty()
+    val numericId = normalized.toIntOrNull()
+        ?: Regex("""(?:speaker|spk|发言人)[_\-\s]*(\d+)""", RegexOption.IGNORE_CASE)
+            .matchEntire(normalized)
+            ?.groupValues
+            ?.getOrNull(1)
+            ?.toIntOrNull()
+    return if (numericId != null && numericId > 0) {
+        "发言人$numericId"
+    } else {
+        normalized.takeIf { it.isNotBlank() } ?: "发言人${speakerIndex + 1}"
+    }
 }

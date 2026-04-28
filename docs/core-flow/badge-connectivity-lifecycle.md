@@ -1,3 +1,7 @@
+---
+scope: base-runtime-active
+---
+
 # Badge Connectivity Lifecycle Core Flow
 
 ## Purpose
@@ -41,6 +45,29 @@ Shared and manager states must not overlap:
 - `ConnectivityBridge.isReady()`: feature preflight for HTTP media operations. It returns true only when the active runtime endpoint is available and HTTP `:8088` responds.
 
 `Connected` and `Ready` are not synonyms for all feature operations. Audio sync must still call `isReady()` or an equivalent feature preflight before HTTP work.
+
+## Delivered Behavior Alignment
+
+Sprint 02 delivered-behavior map:
+`docs/projects/bake-transformation/evidence/02-connectivity-dbm/delivered-behavior-map.md`
+
+Delivered behavior:
+
+- Current Android code keeps shared `Connected` separate from HTTP media readiness for feature work; `ConnectivityBridge.isReady()` is the HTTP media preflight for `/list`, `/download`, and `/delete`.
+- Runtime endpoint snapshots are in-memory and scoped to the current runtime; the app does not persist a last-known badge IP across app sessions.
+- Manual Wi-Fi repair rejects blank credentials locally, sends credentials through the registered-badge repair path, confirms usable IP plus submitted SSID, and treats transport-confirmed HTTP delay as non-fatal.
+- Solid-IP HTTP media failure can trigger bounded saved-credential replay; `IP#0.0.0.0` does not silently replay credentials and remains a repair-form branch.
+
+Target behavior:
+
+- `WifiProvisionedHttpDelayed` must remain visible as transport-confirmed/media-delayed and must not be flattened into feature readiness. If manager UI needs to communicate this state, code must add an explicit public manager state rather than overloading `Ready`.
+- Runtime identity used for endpoint reuse and media ownership must cover every transport-confirmed state, including HTTP-delayed states, so endpoint recovery does not become ambiguous during grace windows.
+- Public connectivity interfaces and supporting docs must list the notification and repair event streams that current code exposes, including `audioRecordingNotifications()` and `wifiRepairEvents()`.
+- Phone SSID may be passed only as presentation copy or diagnostic context. Core reconnect, repair, and media-readiness decisions must use badge-reported IP/SSID, active runtime endpoint evidence, and remembered user-confirmed credentials.
+
+Gap:
+
+- Current code still flattens internal `WifiProvisionedHttpDelayed` into manager `Ready`, and the Cerb interface doc lags the current bridge API. These are lower-layer sync targets for the BAKE contract and follow-up implementation sprints, not reasons to weaken this core-flow target.
 
 ## Lifecycle Flows
 

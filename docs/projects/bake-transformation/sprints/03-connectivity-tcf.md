@@ -86,5 +86,62 @@ Closeout must include:
 
 ## 9. Iteration Ledger
 
+- Iteration 1 — Read the sprint contract, repo rules, BAKE protocol,
+  sprint/project structure specs, lessons index/details for relevant
+  connectivity triggers, Sprint 02 delivered-behavior map, both cluster-1
+  core-flow docs, connectivity Cerb spec, and interface map. Added
+  `scope: base-runtime-active` metadata to both core-flow docs, inserted
+  delivered-vs-target gap alignment notes from Sprint 02, authored Sprint 04,
+  and updated the project tracker. Verification passed; new sprint files are
+  ignored by `.gitignore`, so Sprint 04 must be force-added on commit.
+
 ## 10. Closeout
 
+- **Status**: success
+- **Tracker summary**: Added base-runtime scope metadata and delivered-vs-target
+  gap notes to connectivity/session core flows, then authored the first BAKE
+  contract sprint.
+- **Files changed**:
+  - `docs/core-flow/badge-connectivity-lifecycle.md`
+  - `docs/core-flow/badge-session-lifecycle.md`
+  - `docs/projects/bake-transformation/tracker.md`
+  - `docs/projects/bake-transformation/sprints/03-connectivity-tcf.md`
+  - `docs/projects/bake-transformation/sprints/04-connectivity-bake-contract.md`
+- **Evidence**:
+
+```text
+$ git diff --stat -- docs/core-flow/badge-connectivity-lifecycle.md docs/core-flow/badge-session-lifecycle.md docs/projects/bake-transformation/
+ docs/core-flow/badge-connectivity-lifecycle.md     | 27 ++++++++++
+ docs/core-flow/badge-session-lifecycle.md          | 37 ++++++++++----
+ .../sprints/03-connectivity-tcf.md                 | 57 ++++++++++++++++++++++
+ docs/projects/bake-transformation/tracker.md       |  3 +-
+ 4 files changed, 114 insertions(+), 10 deletions(-)
+
+$ rg -n "scope: base-runtime-active|Delivered behavior|Target behavior|Gap" docs/core-flow/badge-connectivity-lifecycle.md docs/core-flow/badge-session-lifecycle.md
+docs/core-flow/badge-session-lifecycle.md:2:scope: base-runtime-active
+docs/core-flow/badge-session-lifecycle.md:135:- Delivered behavior: the registry remains audio-agnostic, and audio observes `DeviceRegistryManager.activeDevice` to cancel queued and active manual badge downloads when the active MAC changes.
+docs/core-flow/badge-session-lifecycle.md:136:- Gap: `rec#` auto-download is fenced after download success, but its own launched job is not explicitly cancelled by the manual badge-download queue cancellation path.
+docs/core-flow/badge-session-lifecycle.md:157:Delivered behavior:
+docs/core-flow/badge-session-lifecycle.md:167:Target behavior:
+docs/core-flow/badge-session-lifecycle.md:174:Gap:
+docs/core-flow/badge-session-lifecycle.md:216:Delivered behavior: Sprint 02 implementation now satisfies the minimal manual-sync cancellation/fencing rule for queued and active badge downloads. Target behavior keeps the stronger per-item MAC ownership rule open for the BAKE contract and follow-up implementation.
+docs/core-flow/badge-connectivity-lifecycle.md:2:scope: base-runtime-active
+docs/core-flow/badge-connectivity-lifecycle.md:54:Delivered behavior:
+docs/core-flow/badge-connectivity-lifecycle.md:61:Target behavior:
+docs/core-flow/badge-connectivity-lifecycle.md:68:Gap:
+
+$ wc -l docs/projects/bake-transformation/sprints/04-connectivity-bake-contract.md
+108 docs/projects/bake-transformation/sprints/04-connectivity-bake-contract.md
+
+$ rg -n "\| 03 \| connectivity-tcf \| (done|blocked)|\| 04 \| connectivity-bake-contract \| authored" docs/projects/bake-transformation/tracker.md
+27:| 03 | connectivity-tcf | done | Added base-runtime scope metadata and delivered-vs-target gap notes to connectivity/session core flows, then authored the first BAKE contract sprint. | [sprints/03-connectivity-tcf.md](sprints/03-connectivity-tcf.md) |
+28:| 04 | connectivity-bake-contract | authored | Write the cluster-1 BAKE implementation contract and sync supporting connectivity discovery docs. | [sprints/04-connectivity-bake-contract.md](sprints/04-connectivity-bake-contract.md) |
+```
+
+- **Notes**: `docs/projects/**/sprints/*.md` is ignored by `.gitignore`, so
+  `docs/projects/bake-transformation/sprints/04-connectivity-bake-contract.md`
+  requires `git add -f` during the success commit.
+- **Hardware evidence**: not applicable; this sprint was docs-only and made no
+  runtime claims.
+- **Lesson proposals**: none.
+- **CHANGELOG line**: none; internal BAKE transformation docs only.

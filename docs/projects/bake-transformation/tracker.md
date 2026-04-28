@@ -24,7 +24,8 @@ open
 |---|------|--------|---------|----------|
 | 01 | triage | done | Classified BAKE runtime domains, confirmed `docs/bake-contracts/`, and authored cluster-1 DBM/TCF contracts. | [sprints/01-triage.md](sprints/01-triage.md) |
 | 02 | connectivity-dbm | done | Delivered behavior map created for connectivity-bridge plus badge-session, with HTTP readiness, active-device fencing, Wi-Fi repair, telemetry, and hardware-evidence gaps recorded. | [sprints/02-connectivity-dbm.md](sprints/02-connectivity-dbm.md) |
-| 03 | connectivity-tcf | authored | Update the cluster-1 target core-flow against the delivered-behavior map and author next BAKE contract sprint. | [sprints/03-connectivity-tcf.md](sprints/03-connectivity-tcf.md) |
+| 03 | connectivity-tcf | done | Added base-runtime scope metadata and delivered-vs-target gap notes to connectivity/session core flows, then authored the first BAKE contract sprint. | [sprints/03-connectivity-tcf.md](sprints/03-connectivity-tcf.md) |
+| 04 | connectivity-bake-contract | authored | Write the cluster-1 BAKE implementation contract and sync supporting connectivity discovery docs. | [sprints/04-connectivity-bake-contract.md](sprints/04-connectivity-bake-contract.md) |
 
 ## Domain Backlog
 

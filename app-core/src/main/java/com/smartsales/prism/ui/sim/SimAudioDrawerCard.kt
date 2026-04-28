@@ -150,6 +150,16 @@ internal fun SimAudioCard(
     val isQueued = !isHolding &&
         entry.item.status == AudioStatus.PENDING &&
         entry.localAvailability == AudioLocalAvailability.QUEUED
+    val holdFilenameSuffix = when (entry.badgeDownloadRecoveryState) {
+        SimBadgeDownloadRecoveryState.AUTO_RECOVERY_PENDING -> "恢复中"
+        SimBadgeDownloadRecoveryState.MANUAL_RECONNECT_REQUIRED -> "等待手动重连"
+        SimBadgeDownloadRecoveryState.NONE -> "等待恢复"
+    }
+    val holdLabel = when (entry.badgeDownloadRecoveryState) {
+        SimBadgeDownloadRecoveryState.AUTO_RECOVERY_PENDING -> "恢复中，等待徽章自动重连…"
+        SimBadgeDownloadRecoveryState.MANUAL_RECONNECT_REQUIRED -> "等待手动重连"
+        SimBadgeDownloadRecoveryState.NONE -> "等待恢复传输…"
+    }
 
     val cardContent: @Composable ColumnScope.() -> Unit = {
         Row(
@@ -162,7 +172,7 @@ internal fun SimAudioCard(
             ) {
                 Text(
                     text = when {
-                        isHolding -> "${entry.item.filename} (等待恢复)"
+                        isHolding -> "${entry.item.filename} ($holdFilenameSuffix)"
                         isDownloading -> "${entry.item.filename} (传输中)"
                         isQueued -> "${entry.item.filename} (等待中)"
                         else -> entry.item.filename
@@ -316,7 +326,7 @@ internal fun SimAudioCard(
                 AudioStatus.PENDING -> {
                     if (isHolding) {
                         SimAudioCompactPreviewRow(
-                            text = "等待恢复传输…",
+                            text = holdLabel,
                             maxLines = 1
                         )
                         Spacer(modifier = Modifier.height(8.dp))

@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.smartsales.prism.data.connectivity.legacy.PhoneWifiProvider
 import com.smartsales.prism.data.connectivity.legacy.currentNormalizedSsid
+import com.smartsales.prism.data.connectivity.registry.DeviceRegistryManager
 import com.smartsales.prism.data.audio.isBadgeOriginAudio
 import com.smartsales.prism.data.audio.SimAudioDeleteResult
 import com.smartsales.prism.data.audio.SimAudioRepository
@@ -58,6 +59,8 @@ data class SimAudioEntry(
     val downloadProgress: Float = 0f,
     val downloadedBytes: Long = 0L,
     val downloadTotalBytes: Long = 0L,
+    val badgeDownloadRecoveryState: SimBadgeDownloadRecoveryState =
+        SimBadgeDownloadRecoveryState.NONE,
     // 工牌切换中断后的过渡态：本地仍标记为 DOWNLOADING/QUEUED，但当前活动工牌
     // 尚未恢复到 READY，意味着真实下载暂停中，UI 需展示等待恢复态而非伪装下载中。
     val isHoldingForResume: Boolean = false
@@ -69,6 +72,7 @@ private const val SIM_AUDIO_DRAWER_SYNC_LOG_TAG = "AudioPipeline"
 class SimAudioDrawerViewModel @Inject constructor(
     private val repository: SimAudioRepository,
     connectivityBridge: ConnectivityBridge,
+    deviceRegistryManager: DeviceRegistryManager,
     private val connectivityPrompt: ConnectivityPrompt,
     private val phoneWifiProvider: PhoneWifiProvider,
     @ApplicationContext context: Context
@@ -112,6 +116,15 @@ class SimAudioDrawerViewModel @Inject constructor(
                 scope = viewModelScope,
                 started = SharingStarted.Eagerly,
                 initialValue = resolveSimBadgeSyncAvailability(connectivityBridge.managerStatus.value)
+            )
+
+    private val activeBadgeManuallyDisconnected: StateFlow<Boolean> =
+        deviceRegistryManager.activeDevice
+            .map { it?.manuallyDisconnected == true }
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.Eagerly,
+                initialValue = deviceRegistryManager.activeDevice.value?.manuallyDisconnected == true
             )
 
     // 跟踪因工牌切换中断的文件 ID 集合，用于 HOLD 过渡态判定。
@@ -159,12 +172,20 @@ class SimAudioDrawerViewModel @Inject constructor(
     val entries: StateFlow<List<SimAudioEntry>> = combine(
         repository.getAudioFiles(),
         _interruptedFileIds,
-        badgeSyncAvailability
-    ) { files, interruptedIds, availability ->
+        badgeSyncAvailability,
+        activeBadgeManuallyDisconnected
+    ) { files, interruptedIds, availability, manuallyDisconnected ->
         val badgeSyncReady = availability == SimBadgeSyncAvailability.READY
         files.map { file ->
+            val recoveryState = resolveSimBadgeDownloadRecoveryState(
+                file = file,
+                badgeSyncReady = badgeSyncReady,
+                activeBadgeManuallyDisconnected = manuallyDisconnected
+            )
             file.toSimEntry(
-                isHoldingForResume = isHoldingForResume(file, interruptedIds, badgeSyncReady)
+                badgeDownloadRecoveryState = recoveryState,
+                isHoldingForResume = recoveryState != SimBadgeDownloadRecoveryState.NONE ||
+                    isHoldingForResume(file, interruptedIds, badgeSyncReady)
             )
         }
     }
@@ -432,6 +453,8 @@ class SimAudioDrawerViewModel @Inject constructor(
     }
 
     private fun AudioFile.toSimEntry(
+        badgeDownloadRecoveryState: SimBadgeDownloadRecoveryState =
+            SimBadgeDownloadRecoveryState.NONE,
         isHoldingForResume: Boolean = false
     ): SimAudioEntry {
         return SimAudioEntry(
@@ -473,6 +496,7 @@ class SimAudioDrawerViewModel @Inject constructor(
             downloadProgress = downloadProgress,
             downloadedBytes = downloadedBytes,
             downloadTotalBytes = downloadTotalBytes,
+            badgeDownloadRecoveryState = badgeDownloadRecoveryState,
             isHoldingForResume = isHoldingForResume
         )
     }
@@ -535,6 +559,12 @@ internal enum class SimBadgeSyncAvailability {
     UNAVAILABLE
 }
 
+enum class SimBadgeDownloadRecoveryState {
+    NONE,
+    AUTO_RECOVERY_PENDING,
+    MANUAL_RECONNECT_REQUIRED
+}
+
 internal enum class SimBadgeManualSyncGateBranch {
     MANAGER_PENDING_BLOCK,
     MANAGER_OFFLINE_BLOCK,
@@ -571,6 +601,23 @@ internal fun isHoldingForResume(
     }
     // 场景 B：工牌离线，文件卡死在 DOWNLOADING 状态
     return !badgeSyncReady && file.localAvailability == AudioLocalAvailability.DOWNLOADING
+}
+
+internal fun resolveSimBadgeDownloadRecoveryState(
+    file: AudioFile,
+    badgeSyncReady: Boolean,
+    activeBadgeManuallyDisconnected: Boolean
+): SimBadgeDownloadRecoveryState {
+    if (file.source != DomainAudioSource.SMARTBADGE) return SimBadgeDownloadRecoveryState.NONE
+    if (file.localAvailability != AudioLocalAvailability.DOWNLOADING) {
+        return SimBadgeDownloadRecoveryState.NONE
+    }
+    if (badgeSyncReady) return SimBadgeDownloadRecoveryState.NONE
+    return if (activeBadgeManuallyDisconnected) {
+        SimBadgeDownloadRecoveryState.MANUAL_RECONNECT_REQUIRED
+    } else {
+        SimBadgeDownloadRecoveryState.AUTO_RECOVERY_PENDING
+    }
 }
 
 internal fun resolveSimBadgeSyncAvailability(

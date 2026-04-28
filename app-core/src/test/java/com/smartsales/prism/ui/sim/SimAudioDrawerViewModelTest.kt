@@ -394,6 +394,71 @@ class SimAudioDrawerViewModelTest {
         assertFalse(isHoldingForResume(phoneFile, emptySet(), badgeSyncReady = true))
     }
 
+    @Test
+    fun `resolveSimBadgeDownloadRecoveryState maps automatic disconnect while badge download waits`() {
+        val badgeDownload = audioFile(DomainAudioSource.SMARTBADGE, AudioLocalAvailability.DOWNLOADING)
+
+        assertEquals(
+            SimBadgeDownloadRecoveryState.AUTO_RECOVERY_PENDING,
+            resolveSimBadgeDownloadRecoveryState(
+                file = badgeDownload,
+                badgeSyncReady = false,
+                activeBadgeManuallyDisconnected = false
+            )
+        )
+    }
+
+    @Test
+    fun `resolveSimBadgeDownloadRecoveryState maps manual disconnect while badge download waits`() {
+        val badgeDownload = audioFile(DomainAudioSource.SMARTBADGE, AudioLocalAvailability.DOWNLOADING)
+
+        assertEquals(
+            SimBadgeDownloadRecoveryState.MANUAL_RECONNECT_REQUIRED,
+            resolveSimBadgeDownloadRecoveryState(
+                file = badgeDownload,
+                badgeSyncReady = false,
+                activeBadgeManuallyDisconnected = true
+            )
+        )
+    }
+
+    @Test
+    fun `resolveSimBadgeDownloadRecoveryState clears when badge is ready again`() {
+        val badgeDownload = audioFile(DomainAudioSource.SMARTBADGE, AudioLocalAvailability.DOWNLOADING)
+
+        assertEquals(
+            SimBadgeDownloadRecoveryState.NONE,
+            resolveSimBadgeDownloadRecoveryState(
+                file = badgeDownload,
+                badgeSyncReady = true,
+                activeBadgeManuallyDisconnected = false
+            )
+        )
+    }
+
+    @Test
+    fun `resolveSimBadgeDownloadRecoveryState skips phone-source and non-downloading audio`() {
+        val phoneDownload = audioFile(DomainAudioSource.PHONE, AudioLocalAvailability.DOWNLOADING)
+        val badgeQueued = audioFile(DomainAudioSource.SMARTBADGE, AudioLocalAvailability.QUEUED)
+
+        assertEquals(
+            SimBadgeDownloadRecoveryState.NONE,
+            resolveSimBadgeDownloadRecoveryState(
+                file = phoneDownload,
+                badgeSyncReady = false,
+                activeBadgeManuallyDisconnected = false
+            )
+        )
+        assertEquals(
+            SimBadgeDownloadRecoveryState.NONE,
+            resolveSimBadgeDownloadRecoveryState(
+                file = badgeQueued,
+                badgeSyncReady = false,
+                activeBadgeManuallyDisconnected = true
+            )
+        )
+    }
+
     private fun audioFile(
         source: DomainAudioSource,
         localAvailability: AudioLocalAvailability,

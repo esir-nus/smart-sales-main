@@ -96,6 +96,35 @@ class SimSchedulerMutationCoordinatorTest {
         )
     }
 
+    @Test
+    fun `executeResolvedReschedule with newTitle preserves time and reschedules reminder`() = runTest {
+        val fixture = buildFixture()
+        val original = ScheduledTask(
+            id = "task-1",
+            timeDisplay = "09:00",
+            title = "起床",
+            urgencyLevel = com.smartsales.prism.domain.scheduler.UrgencyLevel.L2_IMPORTANT,
+            startTime = Instant.parse("2026-04-22T01:00:00Z"),
+            durationMinutes = 30,
+            alarmCascade = listOf("-10m", "0m")
+        )
+        fixture.repository.upsertTask(original)
+        fixture.alarmScheduler.scheduleCascade(original.id, original.title, original.startTime, original.alarmCascade)
+
+        fixture.coordinator.executeResolvedReschedule(
+            original = original,
+            timeInstruction = "9点",
+            newTitle = "赶飞机"
+        )
+
+        val updated = fixture.repository.tasks.single { it.id == "task-1" }
+        assertEquals("赶飞机", updated.title)
+        assertEquals(original.startTime, updated.startTime)
+        assertEquals(original.durationMinutes, updated.durationMinutes)
+        assertEquals("已改名", fixture.bridge.pipelineStatus)
+        assertTrue(fixture.alarmScheduler.getAlarmsForTask("task-1").isNotEmpty())
+    }
+
     private fun buildFixture(): Fixture {
         val scope = TestScope(UnconfinedTestDispatcher())
         val timeProvider = object : TimeProvider {

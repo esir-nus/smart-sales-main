@@ -24,6 +24,7 @@ data class GlobalRescheduleExtractionPayload(
     val targetPerson: String? = null,
     val targetLocation: String? = null,
     val timeInstruction: String? = null,
+    val newTitle: String? = null,
     val reason: String? = null
 )
 
@@ -31,10 +32,14 @@ sealed interface GlobalRescheduleExtractionResult {
     data class Supported(
         val target: TargetResolutionRequest,
         val timeInstruction: String,
+        val newTitle: String? = null,
         val suggestedTaskId: String? = null,
         val preferredTaskIds: List<String> = emptyList()
     ) : GlobalRescheduleExtractionResult {
         fun filterByOwnership(ownedIds: Set<String>): Supported {
+            if (newTitle != null) {
+                return copy(suggestedTaskId = null, preferredTaskIds = emptyList())
+            }
             val filteredPreferredTaskIds = preferredTaskIds
                 .mapNotNull { candidateId ->
                     candidateId.trim().takeIf { it.isNotBlank() && it in ownedIds }

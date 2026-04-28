@@ -4,8 +4,10 @@ import com.smartsales.prism.domain.memory.TargetResolutionRequest
 import com.smartsales.prism.domain.scheduler.ActiveTaskContext
 import com.smartsales.prism.domain.scheduler.ActiveTaskResolveResult
 import com.smartsales.prism.domain.scheduler.ActiveTaskRetrievalIndex
+import com.smartsales.prism.domain.scheduler.ExactTimeCueResolver
 import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -75,6 +77,34 @@ class RealActiveTaskRetrievalIndex @Inject constructor(
         }
 
         return ActiveTaskResolveResult.Resolved(top.first.id)
+    }
+
+    override suspend fun resolveTargetByClockAnchor(
+        clockCue: String,
+        nowIso: String,
+        timezone: String,
+        displayedDateIso: String?
+    ): ActiveTaskResolveResult {
+        val clock = ExactTimeCueResolver.parseClockCue(clockCue)
+            ?: return ActiveTaskResolveResult.NoMatch(clockCue)
+        val date = ExactTimeCueResolver.resolveClockAnchorDate(
+            transcript = clockCue,
+            nowIso = nowIso,
+            timezone = timezone,
+            displayedDateIso = displayedDateIso
+        ) ?: return ActiveTaskResolveResult.NoMatch(clockCue)
+        val zoneId = runCatching { ZoneId.of(timezone) }.getOrDefault(ZoneId.of("UTC"))
+        val matches = taskRepository.getActiveTasks()
+            .filter { !it.isVague }
+            .filter { task ->
+                val local = task.startTime.atZone(zoneId)
+                local.toLocalDate() == date && local.toLocalTime().withSecond(0).withNano(0) == clock
+            }
+        return when (matches.size) {
+            0 -> ActiveTaskResolveResult.NoMatch(clockCue)
+            1 -> ActiveTaskResolveResult.Resolved(matches.single().id)
+            else -> ActiveTaskResolveResult.Ambiguous(clockCue, matches.map { it.id })
+        }
     }
 
     private fun rankedTasks(

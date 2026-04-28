@@ -872,6 +872,42 @@ internal class SimSchedulerIngressCoordinator(
     private suspend fun handleResolvedGlobalReschedule(
         supported: GlobalRescheduleExtractionResult.Supported
     ) {
+        supported.newTitle?.let { newTitle ->
+            when (
+                val resolution = activeTaskRetrievalIndex.resolveTargetByClockAnchor(
+                    clockCue = supported.timeInstruction,
+                    nowIso = timeProvider.now.toString(),
+                    timezone = timeProvider.zoneId.id,
+                    displayedDateIso = projectionSupport.displayedDateIso()
+                )
+            ) {
+                is ActiveTaskResolveResult.Resolved -> {
+                    val original = taskRepository.getTask(resolution.taskId)
+                        ?: return projectionSupport.emitFailure("找不到要改名的日程")
+                    PipelineValve.tag(
+                        PipelineValve.Checkpoint.UI_STATE_EMITTED,
+                        1,
+                        SIM_SCHEDULER_GLOBAL_TIME_ANCHOR_RESOLVED_SUMMARY,
+                        "taskId=${original.id} clockCue=${supported.timeInstruction}"
+                    )
+                    mutationCoordinator.executeResolvedReschedule(
+                        original = original,
+                        timeInstruction = supported.timeInstruction,
+                        newTitle = newTitle
+                    )
+                }
+
+                is ActiveTaskResolveResult.Ambiguous -> {
+                    projectionSupport.emitFailure("该时间存在多个日程，无法确定改名目标")
+                }
+
+                is ActiveTaskResolveResult.NoMatch -> {
+                    projectionSupport.emitFailure("未找到该时间的日程，无法改名")
+                }
+            }
+            return
+        }
+
         val shortlist = activeTaskRetrievalIndex.buildShortlist(supported.target.targetQuery)
         PipelineValve.tag(
             PipelineValve.Checkpoint.UI_STATE_EMITTED,

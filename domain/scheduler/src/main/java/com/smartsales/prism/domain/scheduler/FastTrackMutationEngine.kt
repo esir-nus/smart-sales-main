@@ -171,12 +171,25 @@ class FastTrackMutationEngine @Inject constructor(
             
         // 2. Map old task entity id
         val oldTaskId = match.entryId
-        
-        // 3. Construct new target time
-        val newStartInst = Instant.parse(params.newStartTimeIso)
-        val newDuration = params.newDurationMinutes ?: match.durationMinutes
         val fullOldTask = taskRepository.getTask(oldTaskId)
             ?: return MutationResult.NoMatch(query, "Task matched in board but missing in DB")
+
+        params.newTitle?.trim()?.takeIf { it.isNotBlank() }?.let { newTitle ->
+            val newTask = fullOldTask.copy(
+                title = newTitle,
+                startTime = fullOldTask.startTime,
+                durationMinutes = fullOldTask.durationMinutes
+            ).withNormalizedReminderMetadata()
+            taskRepository.rescheduleTask(oldTaskId, newTask)
+            return MutationResult.Success(listOf(oldTaskId))
+        }
+        
+        // 3. Construct new target time
+        val newStartInst = Instant.parse(
+            params.newStartTimeIso
+                ?: return MutationResult.NoMatch(query, "Reschedule newStartTimeIso is blank")
+        )
+        val newDuration = params.newDurationMinutes ?: match.durationMinutes
         val effectiveConflictDurationMinutes = effectiveConflictOccupancyMinutes(
             title = fullOldTask.title,
             urgencyLevel = fullOldTask.urgencyLevel,

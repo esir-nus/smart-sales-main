@@ -68,6 +68,8 @@ internal const val SIM_SCHEDULER_GLOBAL_SHORTLIST_BUILT_SUMMARY =
     "SIM scheduler global shortlist built"
 internal const val SIM_SCHEDULER_GLOBAL_SUGGESTION_RECEIVED_SUMMARY =
     "SIM scheduler global suggestion received"
+internal const val SIM_SCHEDULER_GLOBAL_TIME_ANCHOR_RESOLVED_SUMMARY =
+    "SIM_SCHEDULER_GLOBAL_TIME_ANCHOR_RESOLVED_SUMMARY"
 internal const val SIM_AUDIO_CHAT_LOG_TAG = "SimAudioChat"
 internal const val SIM_SCHEDULER_SHELF_LOG_TAG = "SimSchedulerShelf"
 internal const val SIM_BADGE_FOLLOW_UP_CHAT_LOG_TAG = "SimBadgeFollowUpChat"

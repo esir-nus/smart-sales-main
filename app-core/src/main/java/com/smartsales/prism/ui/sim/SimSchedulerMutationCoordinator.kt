@@ -134,7 +134,24 @@ internal class SimSchedulerMutationCoordinator(
         }
     }
 
-    suspend fun executeResolvedReschedule(original: ScheduledTask, timeInstruction: String) {
+    suspend fun executeResolvedReschedule(
+        original: ScheduledTask,
+        timeInstruction: String,
+        newTitle: String? = null
+    ) {
+        newTitle?.trim()?.takeIf { it.isNotBlank() }?.let { title ->
+            val updatedTask = original.copy(
+                title = title,
+                startTime = original.startTime,
+                durationMinutes = original.durationMinutes
+            ).withNormalizedReminderMetadata()
+
+            taskRepository.rescheduleTask(original.id, updatedTask)
+            reminderSupport.cancelReminderSafely(original.id)
+            reminderSupport.scheduleReminderIfExact(updatedTask)
+            projectionSupport.emitStatus("已改名")
+            return
+        }
         val resolvedTime = SimRescheduleTimeInterpreter.resolve(
             originalTask = original,
             transcript = timeInstruction,

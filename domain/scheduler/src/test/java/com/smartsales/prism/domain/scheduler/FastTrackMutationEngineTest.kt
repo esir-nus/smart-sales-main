@@ -91,6 +91,65 @@ class FastTrackMutationEngineTest {
     }
 
     @Test
+    fun `Reschedule with newTitle replaces title and preserves time without conflict check`() = runTest {
+        val originalStart = Instant.parse("2026-03-20T01:00:00Z")
+        val generatedId = taskRepository.insertTask(
+            ScheduledTask(
+                id = "",
+                timeDisplay = "09:00",
+                title = "起床",
+                startTime = originalStart,
+                durationMinutes = 15
+            )
+        )
+
+        val result = engine.execute(
+            FastTrackResult.RescheduleTask(
+                RescheduleTaskParams(
+                    resolvedTaskId = generatedId,
+                    targetQuery = "9点",
+                    newTitle = "赶飞机"
+                )
+            )
+        )
+
+        assertTrue(result is MutationResult.Success)
+        val updated = taskRepository.getTask(generatedId)
+        assertEquals("赶飞机", updated?.title)
+        assertEquals(originalStart, updated?.startTime)
+        assertEquals(15, updated?.durationMinutes)
+        assertNull(scheduleBoard.lastProposedStart)
+    }
+
+    @Test
+    fun `Reschedule with newTitle ignores suggested query when resolved id is provided`() = runTest {
+        val originalStart = Instant.parse("2026-03-20T01:00:00Z")
+        val generatedId = taskRepository.insertTask(
+            ScheduledTask(
+                id = "",
+                timeDisplay = "09:00",
+                title = "起床",
+                startTime = originalStart,
+                durationMinutes = 15
+            )
+        )
+
+        val result = engine.execute(
+            FastTrackResult.RescheduleTask(
+                RescheduleTaskParams(
+                    resolvedTaskId = generatedId,
+                    targetQuery = "不会走词法匹配",
+                    newTitle = "赶飞机"
+                )
+            )
+        )
+
+        assertTrue(result is MutationResult.Success)
+        assertNull(scheduleBoard.lastTargetRequest)
+        assertEquals("赶飞机", taskRepository.getTask(generatedId)?.title)
+    }
+
+    @Test
     fun `CreateInspiration delegates to InspirationRepository`() = runTest {
         val intent = FastTrackResult.CreateInspiration(
             CreateInspirationParams(content = "Buy a guitar")

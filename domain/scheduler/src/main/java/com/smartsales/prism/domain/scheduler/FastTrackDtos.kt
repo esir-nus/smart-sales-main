@@ -47,7 +47,8 @@ data class RescheduleTaskParams(
     val targetTimeIso: String? = null,
     val resolvedTaskId: String? = null,
     val targetQuery: String? = null,
-    val newStartTimeIso: String,
+    val newStartTimeIso: String? = null,
+    val newTitle: String? = null,
     val newDurationMinutes: Int? = null 
 )
 

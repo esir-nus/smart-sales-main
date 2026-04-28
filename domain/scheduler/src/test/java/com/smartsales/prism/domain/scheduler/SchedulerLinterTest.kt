@@ -617,4 +617,58 @@ class SchedulerLinterTest {
         assertTrue(result is GlobalRescheduleExtractionResult.Invalid)
         assertTrue((result as GlobalRescheduleExtractionResult.Invalid).reason.contains("target clues"))
     }
+
+    @Test
+    fun `global reschedule extraction accepts blank target clues for time anchor retitle`() {
+        val json = """
+            {
+              "decision": "RESCHEDULE_TARGETED",
+              "timeInstruction": "9点",
+              "newTitle": "赶飞机"
+            }
+        """.trimIndent()
+
+        val result = linter.parseGlobalRescheduleExtraction(json)
+
+        assertTrue(result is GlobalRescheduleExtractionResult.Supported)
+        val supported = result as GlobalRescheduleExtractionResult.Supported
+        assertEquals("", supported.target.targetQuery)
+        assertEquals("9点", supported.timeInstruction)
+        assertEquals("赶飞机", supported.newTitle)
+    }
+
+    @Test
+    fun `global reschedule extraction accepts time anchor target query with new title`() {
+        val json = """
+            {
+              "decision": "RESCHEDULE_TARGETED",
+              "targetQuery": "9点的任务",
+              "timeInstruction": "9点",
+              "newTitle": "赶飞机"
+            }
+        """.trimIndent()
+
+        val result = linter.parseGlobalRescheduleExtraction(json)
+
+        assertTrue(result is GlobalRescheduleExtractionResult.Supported)
+        val supported = result as GlobalRescheduleExtractionResult.Supported
+        assertEquals("9点的任务", supported.target.targetQuery)
+        assertEquals("赶飞机", supported.newTitle)
+    }
+
+    @Test
+    fun `global reschedule extraction rejects old event target query with new title`() {
+        val json = """
+            {
+              "decision": "RESCHEDULE_TARGETED",
+              "targetQuery": "起床",
+              "timeInstruction": "9点",
+              "newTitle": "赶飞机"
+            }
+        """.trimIndent()
+
+        val result = linter.parseGlobalRescheduleExtraction(json)
+
+        assertTrue(result is GlobalRescheduleExtractionResult.Invalid)
+    }
 }

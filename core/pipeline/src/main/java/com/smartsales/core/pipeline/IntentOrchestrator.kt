@@ -814,6 +814,64 @@ class IntentOrchestrator @Inject constructor(
     ): VoiceSchedulerRoutingOutcome {
         val retrievalIndex = activeTaskRetrievalIndex
             ?: return VoiceSchedulerRoutingOutcome(stopPipeline = false)
+        extracted.newTitle?.let { newTitle ->
+            val task = when (
+                val resolution = retrievalIndex.resolveTargetByClockAnchor(
+                    clockCue = extracted.timeInstruction,
+                    nowIso = timeProvider.now.toString(),
+                    timezone = timeProvider.zoneId.id,
+                    displayedDateIso = null
+                )
+            ) {
+                is ActiveTaskResolveResult.Resolved -> {
+                    taskRepository.getTask(resolution.taskId)
+                        ?: run {
+                            emit(PipelineResult.ConversationalReply("找不到要改名的日程。"))
+                            return VoiceSchedulerRoutingOutcome(stopPipeline = true)
+                        }
+                }
+
+                is ActiveTaskResolveResult.Ambiguous -> {
+                    emit(PipelineResult.ConversationalReply("该时间存在多个日程，无法确定改名目标"))
+                    return VoiceSchedulerRoutingOutcome(stopPipeline = true)
+                }
+
+                is ActiveTaskResolveResult.NoMatch -> {
+                    emit(PipelineResult.ConversationalReply("未找到该时间的日程，无法改名"))
+                    return VoiceSchedulerRoutingOutcome(stopPipeline = true)
+                }
+            }
+
+            PipelineValve.tag(
+                checkpoint = PipelineValve.Checkpoint.MUTATION_COMMIT_REQUESTED,
+                payloadSize = 1,
+                summary = "SIM_SCHEDULER_GLOBAL_TIME_ANCHOR_RESOLVED_SUMMARY",
+                rawDataDump = "taskId=${task.id} clockCue=${extracted.timeInstruction}"
+            )
+            val command = FastTrackResult.RescheduleTask(
+                params = RescheduleTaskParams(
+                    unifiedId = unifiedId,
+                    resolvedTaskId = task.id,
+                    targetQuery = extracted.timeInstruction,
+                    newTitle = newTitle
+                )
+            )
+            val committed = commitVoiceSchedulerIntent(
+                intent = command,
+                source = "shared_global_time_anchor_retitle"
+            )
+            if (committed == null) {
+                emit(PipelineResult.ConversationalReply("改名失败，请稍后重试。"))
+                return VoiceSchedulerRoutingOutcome(stopPipeline = true)
+            }
+            for (committedTask in committed.tasks) {
+                emit(PipelineResult.PathACommitted(committedTask))
+            }
+            return VoiceSchedulerRoutingOutcome(
+                stopPipeline = false,
+                terminalCommit = committed.terminalCommit
+            )
+        }
         val task = when (
             val resolution = retrievalIndex.resolveTarget(
                 target = extracted.target,
@@ -877,8 +935,8 @@ class IntentOrchestrator @Inject constructor(
             emit(PipelineResult.ConversationalReply("改期失败，请稍后重试。"))
             return VoiceSchedulerRoutingOutcome(stopPipeline = true)
         }
-        for (task in committed.tasks) {
-            emit(PipelineResult.PathACommitted(task))
+        for (committedTask in committed.tasks) {
+            emit(PipelineResult.PathACommitted(committedTask))
         }
         return VoiceSchedulerRoutingOutcome(
             stopPipeline = false,

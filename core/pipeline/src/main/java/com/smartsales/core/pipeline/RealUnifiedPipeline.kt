@@ -463,6 +463,32 @@ class RealUnifiedPipeline @Inject constructor(
         val sharedTimeProvider = timeProvider ?: return SharedSchedulerCommandResult.NotMatchedOrUnavailable
         val uniA = uniAExtractionService ?: return SharedSchedulerCommandResult.NotMatchedOrUnavailable
 
+        extracted.newTitle?.let { newTitle ->
+            val task = when (
+                val resolution = retrievalIndex.resolveTargetByClockAnchor(
+                    clockCue = extracted.timeInstruction,
+                    nowIso = sharedTimeProvider.now.toString(),
+                    timezone = sharedTimeProvider.zoneId.id,
+                    displayedDateIso = null
+                )
+            ) {
+                is ActiveTaskResolveResult.Resolved -> tasks.getTask(resolution.taskId)
+                is ActiveTaskResolveResult.Ambiguous,
+                is ActiveTaskResolveResult.NoMatch -> return SharedSchedulerCommandResult.Reject
+            } ?: return SharedSchedulerCommandResult.Reject
+
+            return SharedSchedulerCommandResult.Command(
+                SchedulerTaskCommand.RescheduleTask(
+                    RescheduleTaskParams(
+                        unifiedId = unifiedId,
+                        resolvedTaskId = task.id,
+                        targetQuery = extracted.timeInstruction,
+                        newTitle = newTitle
+                    )
+                )
+            )
+        }
+
         val task = when (
             val resolution = retrievalIndex.resolveTarget(
                 target = extracted.target,

@@ -49,6 +49,9 @@ class GlobalRescheduleContractAlignmentTest {
         )
         assertTrue(prompt.contains("推迟1个小时"))
         assertTrue(prompt.contains("提前半小时"))
+        assertTrue(prompt.contains("newTitle"))
+        assertTrue(prompt.contains("改成9点赶飞机"))
+        assertTrue(prompt.contains("9点的任务"))
         assertTrue(prompt.contains("RESCHEDULE_TARGETED"))
         assertTrue(prompt.contains("待会儿"))
     }

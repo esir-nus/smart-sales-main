@@ -146,6 +146,16 @@ Path A fundamentally distrusts LLM-generated IDs for global targeting. When exec
 - **1 Exact Match**: Happy Path. The `@Transaction` (Delete old + Insert new, preserving GUID) proceeds atomically.
 - **2+ Matches (Ambiguity)**: Abort operations. System emits Toast/Voice prompt: *"⚠️ 找到多个匹配的日程，请进入日程面板手动调整。"* (Prevents destroying the wrong task).
 
+### A1. Time-Anchor Retitle Resolution
+Global reschedule also supports a narrow time-anchor retitle form such as "改成9点赶飞机". In this form the extractor emits `newTitle` plus an exact clock cue, and Kotlin resolves the cue against active tasks instead of treating the new title as a lexical old-target clue.
+
+Resolution rules:
+- Plain clock cues use today in the configured timezone unless the caller provides a displayed scheduler date.
+- Date-qualified clock cues use the qualified date.
+- Exactly one active task at the same local date and minute is replaced with the new title while preserving `startTime`, `durationMinutes`, GUID inheritance, and reminder semantics.
+- Zero matches reject with "未找到该时间的日程，无法改名"; multiple matches reject with "该时间存在多个日程，无法确定改名目标".
+- Inputs that change both event and time remain out of scope for reschedule and should route as a new schedule task or an explicit rejection.
+
 ### B. Auto-Expiry and Scope Limiting
 To ensure the Lexical Fuzzy Matcher remains lightning fast and accurate, the active search pool (`ScheduleBoard.upcomingItems`) must be aggressively pruned.
 - **Manual Completion**: User taps the checkbox on the UI. `isDone = true`. The task is immediately filtered out of the active voice scope.
@@ -187,7 +197,8 @@ data class RescheduleTaskParams(
     val targetQuery: String? = null,   // Path 2: Lexical scan over active Kanban (Fallback for timeless queries)
     
     // MUTATION
-    val newStartTimeIso: String,
+    val newStartTimeIso: String? = null,
+    val newTitle: String? = null,
     val newDurationMinutes: Int? = null 
 )
 ```

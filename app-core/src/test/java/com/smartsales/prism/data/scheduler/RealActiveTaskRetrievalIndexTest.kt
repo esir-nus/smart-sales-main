@@ -107,6 +107,90 @@ class RealActiveTaskRetrievalIndexTest {
         assertEquals(listOf("task-a", "task-b"), result.candidateIds.take(2))
     }
 
+    @Test
+    fun `resolveTargetByClockAnchor resolves one exact minute match on displayed date`() = runTest {
+        taskRepository.insertTask(task("task-9", "起床", Instant.parse("2026-03-20T01:00:00Z")))
+
+        val result = index.resolveTargetByClockAnchor(
+            clockCue = "9点",
+            nowIso = "2026-03-19T12:00:00Z",
+            timezone = "Asia/Shanghai",
+            displayedDateIso = "2026-03-20"
+        )
+
+        assertEquals(ActiveTaskResolveResult.Resolved("task-9"), result)
+    }
+
+    @Test
+    fun `resolveTargetByClockAnchor returns no match for missing clock slot`() = runTest {
+        taskRepository.insertTask(task("task-10", "起床", Instant.parse("2026-03-20T02:00:00Z")))
+
+        val result = index.resolveTargetByClockAnchor(
+            clockCue = "9点",
+            nowIso = "2026-03-20T00:00:00Z",
+            timezone = "Asia/Shanghai"
+        )
+
+        assertEquals(ActiveTaskResolveResult.NoMatch("9点"), result)
+    }
+
+    @Test
+    fun `resolveTargetByClockAnchor returns ambiguous for duplicate clock slot`() = runTest {
+        taskRepository.insertTask(task("task-a", "起床", Instant.parse("2026-03-20T01:00:00Z")))
+        taskRepository.insertTask(task("task-b", "赶车", Instant.parse("2026-03-20T01:00:00Z")))
+
+        val result = index.resolveTargetByClockAnchor(
+            clockCue = "9点",
+            nowIso = "2026-03-20T00:00:00Z",
+            timezone = "Asia/Shanghai"
+        )
+
+        assertTrue(result is ActiveTaskResolveResult.Ambiguous)
+        result as ActiveTaskResolveResult.Ambiguous
+        assertEquals(listOf("task-a", "task-b"), result.candidateIds)
+    }
+
+    @Test
+    fun `resolveTargetByClockAnchor plain clock uses today in timezone`() = runTest {
+        taskRepository.insertTask(task("today-9", "今天任务", Instant.parse("2026-03-20T01:00:00Z")))
+        taskRepository.insertTask(task("tomorrow-9", "明天任务", Instant.parse("2026-03-21T01:00:00Z")))
+
+        val result = index.resolveTargetByClockAnchor(
+            clockCue = "9点",
+            nowIso = "2026-03-20T00:30:00Z",
+            timezone = "Asia/Shanghai"
+        )
+
+        assertEquals(ActiveTaskResolveResult.Resolved("today-9"), result)
+    }
+
+    @Test
+    fun `resolveTargetByClockAnchor date-qualified cue uses qualified date`() = runTest {
+        taskRepository.insertTask(task("today-9", "今天任务", Instant.parse("2026-03-20T01:00:00Z")))
+        taskRepository.insertTask(task("tomorrow-9", "明天任务", Instant.parse("2026-03-21T01:00:00Z")))
+
+        val result = index.resolveTargetByClockAnchor(
+            clockCue = "明天9点",
+            nowIso = "2026-03-20T00:30:00Z",
+            timezone = "Asia/Shanghai"
+        )
+
+        assertEquals(ActiveTaskResolveResult.Resolved("tomorrow-9"), result)
+    }
+
+    @Test
+    fun `resolveTargetByClockAnchor compares exact minute`() = runTest {
+        taskRepository.insertTask(task("nine-thirty", "九点半任务", Instant.parse("2026-03-20T01:30:00Z")))
+
+        val result = index.resolveTargetByClockAnchor(
+            clockCue = "9点",
+            nowIso = "2026-03-20T00:30:00Z",
+            timezone = "Asia/Shanghai"
+        )
+
+        assertEquals(ActiveTaskResolveResult.NoMatch("9点"), result)
+    }
+
     private fun task(
         id: String,
         title: String,

@@ -8,9 +8,14 @@ import com.smartsales.prism.domain.scheduler.ActiveTaskRetrievalIndex
 class FakeActiveTaskRetrievalIndex : ActiveTaskRetrievalIndex {
     var nextShortlist: List<ActiveTaskContext> = emptyList()
     var nextResolveResult: ActiveTaskResolveResult? = null
+    var nextClockAnchorResolveResult: ActiveTaskResolveResult? = null
     var lastShortlistTranscript: String? = null
     var lastResolveTarget: TargetResolutionRequest? = null
     var lastSuggestedTaskId: String? = null
+    var lastClockCue: String? = null
+    var lastNowIso: String? = null
+    var lastTimezone: String? = null
+    var lastDisplayedDateIso: String? = null
 
     override suspend fun buildShortlist(
         transcript: String,
@@ -27,5 +32,18 @@ class FakeActiveTaskRetrievalIndex : ActiveTaskRetrievalIndex {
         lastResolveTarget = target
         lastSuggestedTaskId = suggestedTaskId
         return nextResolveResult ?: ActiveTaskResolveResult.NoMatch(target.describeForFailure())
+    }
+
+    override suspend fun resolveTargetByClockAnchor(
+        clockCue: String,
+        nowIso: String,
+        timezone: String,
+        displayedDateIso: String?
+    ): ActiveTaskResolveResult {
+        lastClockCue = clockCue
+        lastNowIso = nowIso
+        lastTimezone = timezone
+        lastDisplayedDateIso = displayedDateIso
+        return nextClockAnchorResolveResult ?: ActiveTaskResolveResult.NoMatch(clockCue)
     }
 }

@@ -113,6 +113,21 @@ object ExactTimeCueResolver {
         return runCatching { LocalTime.parse(raw.trim(), DateTimeFormatter.ofPattern("HH:mm")) }.getOrNull()
     }
 
+    fun parseClockCue(raw: String): LocalTime? {
+        return parseExplicitClockCue(raw)
+    }
+
+    fun resolveClockAnchorDate(
+        transcript: String?,
+        nowIso: String?,
+        timezone: String?,
+        displayedDateIso: String?
+    ): LocalDate? {
+        computeLawfulAnchorDate(transcript, nowIso, timezone, displayedDateIso)?.let { return it }
+        return displayedDateIso?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+            ?: resolveNowDate(nowIso, timezone)
+    }
+
     fun resolveExactDayClockStartTime(
         transcript: String?,
         nowIso: String?,

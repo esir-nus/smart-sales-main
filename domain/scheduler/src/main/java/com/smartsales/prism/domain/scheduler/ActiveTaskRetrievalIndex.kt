@@ -24,6 +24,16 @@ interface ActiveTaskRetrievalIndex {
         target: TargetResolutionRequest,
         suggestedTaskId: String? = null
     ): ActiveTaskResolveResult
+
+    /**
+     * 按输入里的钟点锚点解析唯一活跃任务；用于全局改期里的时间锚点改名。
+     */
+    suspend fun resolveTargetByClockAnchor(
+        clockCue: String,
+        nowIso: String,
+        timezone: String,
+        displayedDateIso: String? = null
+    ): ActiveTaskResolveResult
 }
 
 data class ActiveTaskContext(

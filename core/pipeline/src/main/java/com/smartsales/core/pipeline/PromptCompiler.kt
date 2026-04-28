@@ -405,6 +405,7 @@ ${transcriptForExtraction}
 
 你的任务不是直接选择最终任务，而是只回答一个问题：
 这句输入能否被表达成“一个已有日程的目标线索 + 一个新的时间指令”？
+或“一个已有钟点槽位 + 一个新的标题”？
 
 当前时间锚点：
 - now_iso: ${request.nowIso}
@@ -426,8 +427,20 @@ $activeShortlist
    - 明确时点，例如 `明天早上8点`、`周五上午11点`、`2026-03-25 18:00`
    - 明确相对偏移，例如 `推迟1个小时`、`提前半小时`
    - 不要把目标线索混进 `timeInstruction`
-8. 模糊相对说法如 `待会儿`、`晚点`、`之后再说` 不支持，必须输出 `NOT_SUPPORTED`。
-8. 只能输出严格 JSON，禁止 Markdown 包裹。
+8. 时间锚点改名模式：
+   - 当用户说类似 `改成9点赶飞机`、`9点应该是赶飞机` 时，输出 `newTitle = "赶飞机"`，`timeInstruction = "9点"`。
+   - 这种模式下 `targetQuery` 只能是空，或只包含钟点锚点的短语，例如 `9点的任务`；不要把旧事件名称放进 `targetQuery`。
+   - 如果用户同时表达新标题和新时间移动，例如 `把9点起床改成10点赶飞机`，输出 `NOT_SUPPORTED`，交给新建日程流程。
+9. 模糊相对说法如 `待会儿`、`晚点`、`之后再说` 不支持，必须输出 `NOT_SUPPORTED`。
+10. 只能输出严格 JSON，禁止 Markdown 包裹。
+
+示例：
+- 输入：`把拿合同推迟1个小时`
+  输出：`{"decision":"RESCHEDULE_TARGETED","targetQuery":"拿合同","timeInstruction":"推迟1个小时","newTitle":null}`
+- 输入：`改成9点赶飞机`
+  输出：`{"decision":"RESCHEDULE_TARGETED","targetQuery":"9点的任务","timeInstruction":"9点","newTitle":"赶飞机"}`
+- 输入：`把9点起床改成10点赶飞机`
+  输出：`{"decision":"NOT_SUPPORTED","reason":"time and event both changed"}`
 
 严格输出以下 Kotlin contract 对应的 JSON：
 ${

@@ -1,0 +1,5 @@
+adb devices output:
+List of devices attached
+
+
+logcat-time-anchor evidence unavailable: no adb device was attached, so the real input replay for 改成9点赶飞机 could not be executed.

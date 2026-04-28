@@ -1002,6 +1002,110 @@ class IntentOrchestratorTest {
     }
 
     @Test
+    fun `shared scheduler router resolves time anchor retitle with unchanged start time`() = runTest {
+        setup()
+        val sharedExecutor = FakeExecutor()
+        val sharedOrchestrator = buildSharedSchedulerOrchestrator(sharedExecutor)
+        val existing = ScheduledTask(
+            id = "task-9",
+            timeDisplay = "09:00",
+            title = "起床",
+            urgencyLevel = com.smartsales.prism.domain.scheduler.UrgencyLevel.L2_IMPORTANT,
+            startTime = Instant.parse("2026-03-18T01:00:00Z"),
+            durationMinutes = 30
+        )
+        fakeTaskRepository.upsertTask(existing)
+        fakeActiveTaskRetrievalIndex.nextClockAnchorResolveResult =
+            com.smartsales.prism.domain.scheduler.ActiveTaskResolveResult.Resolved("task-9")
+        fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.DEEP_ANALYSIS, true, ""))
+        sharedExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision":"RESCHEDULE_TARGETED",
+                  "targetQuery":"9点的任务",
+                  "timeInstruction":"9点",
+                  "newTitle":"赶飞机"
+                }
+                """.trimIndent()
+            )
+        )
+        fakeUnifiedPipeline.nextResultFlow = flowOf(PipelineResult.ConversationalReply("Path B reply"))
+
+        val results = sharedOrchestrator.processInput("改成9点赶飞机", isVoice = true).toList()
+
+        val committed = results.filterIsInstance<PipelineResult.PathACommitted>()
+        assertEquals(1, committed.size)
+        assertEquals("task-9", committed.first().task.id)
+        assertEquals("赶飞机", committed.first().task.title)
+        assertEquals(existing.startTime, committed.first().task.startTime)
+        assertEquals(existing.durationMinutes, committed.first().task.durationMinutes)
+        assertEquals("9点", fakeActiveTaskRetrievalIndex.lastClockCue)
+        assertTrue(results.any { it == PipelineResult.ConversationalReply("Path B reply") })
+    }
+
+    @Test
+    fun `shared scheduler router rejects ambiguous time anchor retitle`() = runTest {
+        setup()
+        val sharedExecutor = FakeExecutor()
+        val sharedOrchestrator = buildSharedSchedulerOrchestrator(sharedExecutor)
+        fakeActiveTaskRetrievalIndex.nextClockAnchorResolveResult =
+            com.smartsales.prism.domain.scheduler.ActiveTaskResolveResult.Ambiguous("9点", listOf("a", "b"))
+        fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.DEEP_ANALYSIS, true, ""))
+        sharedExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {"decision":"RESCHEDULE_TARGETED","targetQuery":"9点的任务","timeInstruction":"9点","newTitle":"赶飞机"}
+                """.trimIndent()
+            )
+        )
+
+        val results = sharedOrchestrator.processInput("改成9点赶飞机", isVoice = true).toList()
+
+        assertTrue(results.any { it == PipelineResult.ConversationalReply("该时间存在多个日程，无法确定改名目标") })
+        assertTrue(storedTasks.isEmpty())
+    }
+
+    @Test
+    fun `shared scheduler router rejects missing time anchor retitle without create fallback`() = runTest {
+        setup()
+        val sharedExecutor = FakeExecutor()
+        val sharedOrchestrator = buildSharedSchedulerOrchestrator(sharedExecutor)
+        fakeActiveTaskRetrievalIndex.nextClockAnchorResolveResult =
+            com.smartsales.prism.domain.scheduler.ActiveTaskResolveResult.NoMatch("9点")
+        fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.DEEP_ANALYSIS, true, ""))
+        sharedExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {"decision":"RESCHEDULE_TARGETED","targetQuery":"9点的任务","timeInstruction":"9点","newTitle":"赶飞机"}
+                """.trimIndent()
+            )
+        )
+        fakeUnifiedPipeline.nextResultFlow = flowOf(
+            PipelineResult.TaskCommandProposal(
+                SchedulerTaskCommand.CreateTasks(
+                    com.smartsales.prism.domain.scheduler.CreateTasksParams(
+                        tasks = listOf(
+                            com.smartsales.prism.domain.scheduler.TaskDefinition(
+                                title = "赶飞机",
+                                startTimeIso = "2026-03-18T01:00:00Z",
+                                durationMinutes = 30,
+                                urgency = com.smartsales.prism.domain.scheduler.UrgencyEnum.L2_IMPORTANT
+                            )
+                        )
+                    )
+                )
+            )
+        )
+
+        val results = sharedOrchestrator.processInput("改成9点赶飞机", isVoice = true).toList()
+
+        assertTrue(results.any { it == PipelineResult.ConversationalReply("未找到该时间的日程，无法改名") })
+        assertFalse(storedTasks.values.any { it.title == "赶飞机" })
+        assertTrue(results.none { it is PipelineResult.PathACommitted })
+    }
+
+    @Test
     fun `voice inspiration path does not trigger task creation badge signal`() = runTest {
         setup()
         val input = "记一下这个想法"

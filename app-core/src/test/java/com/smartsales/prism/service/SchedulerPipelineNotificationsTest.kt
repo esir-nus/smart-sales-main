@@ -73,8 +73,23 @@ class SchedulerPipelineNotificationsTest {
                 NotificationAction.OpenApp()
             ),
             PipelineEvent.Complete(
-                result = SchedulerResult.InspirationSaved(id = "insp_1"),
+                result = SchedulerResult.TaskRescheduled(
+                    taskId = "task_4",
+                    title = "客户A改期",
+                    dayOffset = 0,
+                    scheduledAtMillis = 1_745_000_120_000L,
+                    durationMinutes = 30
+                ),
                 filename = "file_2",
+                transcript = "把客户A改到三点"
+            ) to Triple(
+                PrismNotificationChannel.SCHEDULER_PIPELINE_OUTCOME,
+                NotificationPriority.HIGH,
+                NotificationAction.OpenApp()
+            ),
+            PipelineEvent.Complete(
+                result = SchedulerResult.InspirationSaved(id = "insp_1"),
+                filename = "file_3",
                 transcript = "灵感"
             ) to Triple(
                 PrismNotificationChannel.SCHEDULER_PIPELINE_OUTCOME,
@@ -83,7 +98,7 @@ class SchedulerPipelineNotificationsTest {
             ),
             PipelineEvent.Complete(
                 result = SchedulerResult.AwaitingClarification(question = "Which client did you mean?"),
-                filename = "file_3",
+                filename = "file_4",
                 transcript = "Follow up"
             ) to Triple(
                 PrismNotificationChannel.SCHEDULER_PIPELINE_OUTCOME,
@@ -92,7 +107,7 @@ class SchedulerPipelineNotificationsTest {
             ),
             PipelineEvent.Complete(
                 result = SchedulerResult.Ignored,
-                filename = "file_4",
+                filename = "file_5",
                 transcript = "Noise"
             ) to Triple(
                 PrismNotificationChannel.SCHEDULER_PIPELINE_PROGRESS,

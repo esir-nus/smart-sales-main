@@ -19,8 +19,6 @@ import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.domain.scheduler.ActiveTaskResolveResult
 import com.smartsales.prism.domain.scheduler.ActiveTaskRetrievalIndex
 import com.smartsales.prism.domain.scheduler.AlarmScheduler
-import com.smartsales.prism.domain.scheduler.GlobalRescheduleExtractionRequest
-import com.smartsales.prism.domain.scheduler.GlobalRescheduleExtractionResult
 import com.smartsales.prism.domain.scheduler.ScheduledTask
 import com.smartsales.prism.domain.scheduler.ScheduledTaskRepository
 import com.smartsales.prism.domain.scheduler.UrgencyLevel
@@ -218,11 +216,10 @@ internal class SimAgentFollowUpCoordinator(
     }
 
     private suspend fun handleSchedulerFollowUpReschedule(content: String) {
-        val context = bridge.getCurrentSchedulerFollowUpContext()
-            ?: run {
-                blockSchedulerFollowUpAction("当前没有可用于改期的跟进上下文。")
-                return
-            }
+        if (bridge.getCurrentSchedulerFollowUpContext() == null) {
+            blockSchedulerFollowUpAction("当前没有可用于改期的跟进上下文。")
+            return
+        }
         val shortlist = activeTaskRetrievalIndex.buildShortlist(
             transcript = content
         )
@@ -245,38 +242,6 @@ internal class SimAgentFollowUpCoordinator(
                     summary = SIM_SCHEDULER_GLOBAL_SUGGESTION_RECEIVED_SUMMARY,
                     detail = "suggestedTaskId=${decision.extracted.suggestedTaskId ?: "null"}"
                 )
-                decision.extracted.newTitle?.let { newTitle ->
-                    val task = when (
-                        val resolution = activeTaskRetrievalIndex.resolveTargetByClockAnchor(
-                            clockCue = decision.extracted.timeInstruction,
-                            nowIso = timeProvider.now.toString(),
-                            timezone = timeProvider.zoneId.id,
-                            displayedDateIso = null
-                        )
-                    ) {
-                        is ActiveTaskResolveResult.Resolved -> {
-                            taskRepository.getTask(resolution.taskId)
-                                ?: run {
-                                    blockSchedulerFollowUpAction("找不到要改名的日程。")
-                                    return
-                                }
-                        }
-                        is ActiveTaskResolveResult.Ambiguous -> {
-                            blockSchedulerFollowUpAction("该时间存在多个日程，无法确定改名目标")
-                            return
-                        }
-                        is ActiveTaskResolveResult.NoMatch -> {
-                            blockSchedulerFollowUpAction("未找到该时间的日程，无法改名")
-                            return
-                        }
-                    }
-                    emitSchedulerFollowUpTelemetry(
-                        summary = SIM_SCHEDULER_GLOBAL_TIME_ANCHOR_RESOLVED_SUMMARY,
-                        detail = "taskId=${task.id} clockCue=${decision.extracted.timeInstruction}"
-                    )
-                    applyFollowUpRetitle(task = task, newTitle = newTitle)
-                    return
-                }
                 val task = when (
                     val resolution = activeTaskRetrievalIndex.resolveTarget(
                         target = decision.extracted.target,
@@ -382,36 +347,6 @@ internal class SimAgentFollowUpCoordinator(
                 return
             }
         }
-    }
-
-    private suspend fun applyFollowUpRetitle(
-        task: ScheduledTask,
-        newTitle: String
-    ) {
-        val updatedTask = task.copy(title = newTitle)
-        taskRepository.rescheduleTask(task.id, updatedTask)
-        cancelReminderSafely(task.id)
-        scheduleReminderIfExact(updatedTask)
-        updateSchedulerFollowUpContext { current ->
-            current.updateTask(
-                taskId = task.id,
-                dayOffset = dayOffsetFor(updatedTask.startTime),
-                scheduledAtMillis = updatedTask.startTime.toEpochMilli(),
-                durationMinutes = updatedTask.durationMinutes
-            )
-        }
-        emitSchedulerFollowUpTelemetry(
-            summary = SIM_BADGE_SCHEDULER_FOLLOW_UP_ACTION_COMPLETED_SUMMARY,
-            detail = "action=retitle taskId=${task.id}"
-        )
-        appendSchedulerFollowUpResponse(
-            buildString {
-                append("已改名：")
-                append(updatedTask.title)
-                append("\n\n")
-                append(formatSchedulerTaskSummary(updatedTask))
-            }
-        )
     }
 
     private suspend fun applyFollowUpReschedule(

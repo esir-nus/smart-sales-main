@@ -153,7 +153,8 @@ object ExactTimeCueResolver {
             normalized.contains("后天") || normalized.contains("day after tomorrow") -> {
                 RelativeDayFamily.REAL_PLUS_2
             }
-            normalized.contains("明天") || normalized.contains("tomorrow") -> {
+            normalized.contains("明天") || normalized.contains("明早") || normalized.contains("明晚") ||
+                normalized.contains("tomorrow") -> {
                 RelativeDayFamily.REAL_PLUS_1
             }
             normalized.contains("今天") || normalized.contains("today") || normalized.contains("今晚") -> {

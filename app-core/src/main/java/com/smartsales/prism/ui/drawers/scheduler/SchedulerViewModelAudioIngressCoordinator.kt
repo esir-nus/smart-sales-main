@@ -46,6 +46,15 @@ internal class SchedulerViewModelAudioIngressCoordinator(
         }
     }
 
+    fun processTranscript(text: String) {
+        bridge.setPipelineStatus("处理意图...")
+        scope.launch {
+            handleTranscript(text)
+            delay(2000)
+            bridge.setPipelineStatus(null)
+        }
+    }
+
     private suspend fun handleTranscript(text: String) {
         bridge.setPipelineStatus("处理意图...")
         var schedulerWriteProven = false

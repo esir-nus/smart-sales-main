@@ -94,10 +94,6 @@ kapt {
     correctErrorTypes = true
 }
 
-configurations.all {
-    exclude(group = "com.google.guava", module = "listenablefuture")
-}
-
 dependencies {
     implementation(projects.data.aiCore)
     // REMOVED: projects.appPrism (is application module, not library)
@@ -121,6 +117,9 @@ dependencies {
     implementation(libs.gson)
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)
+    // ProfileInstaller 运行时依赖 concurrent-futures 与 ListenableFuture；保持 wrapper APK 可启动。
+    implementation("androidx.concurrent:concurrent-futures:1.1.0")
+    implementation("com.google.guava:guava:32.1.3-android")
     kapt(libs.hilt.compiler)
 
     testImplementation(libs.junit)

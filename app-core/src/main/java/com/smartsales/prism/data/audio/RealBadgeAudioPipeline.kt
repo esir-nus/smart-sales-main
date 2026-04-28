@@ -11,6 +11,7 @@ import com.smartsales.prism.domain.connectivity.RecordingNotification
 import com.smartsales.prism.domain.connectivity.WavDownloadResult
 import com.smartsales.core.pipeline.IntentOrchestrator
 import com.smartsales.core.pipeline.PipelineResult
+import com.smartsales.core.pipeline.SchedulerCommitKind
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -132,15 +133,23 @@ class RealBadgeAudioPipeline @Inject constructor(
                         when (result) {
                             is PipelineResult.PathACommitted -> {
                                 if (!pathACompletion.isCompleted) {
-                                    pathACompletion.complete(
-                                        SchedulerResult.TaskCreated(
+                                    val schedulerResult = when (result.commitKind) {
+                                        SchedulerCommitKind.CREATE -> SchedulerResult.TaskCreated(
                                             taskId = result.task.id,
                                             title = result.task.title,
                                             dayOffset = 0,
                                             scheduledAtMillis = result.task.startTime.toEpochMilli(),
                                             durationMinutes = result.task.durationMinutes
                                         )
-                                    )
+                                        SchedulerCommitKind.RESCHEDULE -> SchedulerResult.TaskRescheduled(
+                                            taskId = result.task.id,
+                                            title = result.task.title,
+                                            dayOffset = 0,
+                                            scheduledAtMillis = result.task.startTime.toEpochMilli(),
+                                            durationMinutes = result.task.durationMinutes
+                                        )
+                                    }
+                                    pathACompletion.complete(schedulerResult)
                                 }
                             }
                             is PipelineResult.InspirationCommitted -> {

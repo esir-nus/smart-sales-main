@@ -4,8 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.smartsales.core.llm.Executor
 import com.smartsales.core.pipeline.AgentActivity
+import com.smartsales.core.pipeline.IntentOrchestrator
 import com.smartsales.core.pipeline.MascotInteraction
 import com.smartsales.core.pipeline.MascotState
+import com.smartsales.core.pipeline.PipelineResult
 import com.smartsales.core.pipeline.RealFollowUpRescheduleExtractionService
 import com.smartsales.core.pipeline.RealGlobalRescheduleExtractionService
 import com.smartsales.core.pipeline.RealUniAExtractionService
@@ -98,6 +100,7 @@ class SimAgentViewModel @Inject constructor(
     uniAExtractionService: RealUniAExtractionService,
     globalRescheduleExtractionService: RealGlobalRescheduleExtractionService,
     followUpRescheduleExtractionService: RealFollowUpRescheduleExtractionService,
+    private val intentOrchestrator: IntentOrchestrator,
     executor: Executor,
     private val userProfileRepository: UserProfileRepository,
     timeProvider: TimeProvider
@@ -471,7 +474,9 @@ class SimAgentViewModel @Inject constructor(
             SessionKind.GENERAL -> {
                 _uiState.value = UiState.Thinking("SIM 正在确认当前支持的讨论范围")
                 viewModelScope.launch {
-                    chatCoordinator.handleGeneralSend(sessionId, content)
+                    if (!handleTopLevelSchedulerSend(sessionId, content)) {
+                        chatCoordinator.handleGeneralSend(sessionId, content)
+                    }
                 }
             }
 
@@ -487,6 +492,37 @@ class SimAgentViewModel @Inject constructor(
                 _uiState.value = UiState.Idle
             }
         }
+    }
+
+    private suspend fun handleTopLevelSchedulerSend(sessionId: String, content: String): Boolean {
+        if (!looksLikeTopLevelSchedulerInput(content)) return false
+
+        var handled = false
+        intentOrchestrator.processInput(content, isVoice = true).collect { result ->
+            when (result) {
+                is PipelineResult.PathACommitted -> {
+                    handled = true
+                }
+
+                is PipelineResult.ConversationalReply -> {
+                    if (!handled && isSchedulerPreRouteFeedback(result.text)) {
+                        sessionCoordinator.appendAiMessage(sessionId, UiState.Error(result.text))
+                        _uiState.value = UiState.Error(result.text)
+                        handled = true
+                    }
+                }
+
+                else -> Unit
+            }
+        }
+
+        if (handled) {
+            _isSending.value = false
+            if (_uiState.value !is UiState.Error) {
+                _uiState.value = UiState.Idle
+            }
+        }
+        return handled
     }
 
     override fun amendAnalystPlan() {
@@ -525,4 +561,62 @@ class SimAgentViewModel @Inject constructor(
 private fun formatSimHeroGreeting(displayName: String): String {
     val resolvedName = displayName.trim().ifBlank { SIM_EMPTY_HOME_GREETING_FALLBACK_NAME }
     return "你好, $resolvedName"
+}
+
+private fun looksLikeTopLevelSchedulerInput(content: String): Boolean {
+    val normalized = content.lowercase()
+    val hasSchedulerKeyword = listOf(
+        "提醒",
+        "日程",
+        "安排",
+        "预约",
+        "开会",
+        "会议",
+        "赶飞机",
+        "接孩子",
+        "改期",
+        "改到",
+        "改成",
+        "推迟",
+        "提前",
+        "reschedule",
+        "schedule",
+        "remind",
+        "meeting",
+        "flight",
+        "pick up"
+    ).any(normalized::contains)
+    if (hasSchedulerKeyword) return true
+
+    val hasClockCue = Regex("""\b([01]?\d|2[0-3])\s*(am|pm)\b""").containsMatchIn(normalized) ||
+        Regex("""\b([01]?\d|2[0-3]):[0-5]\d\b""").containsMatchIn(normalized) ||
+        Regex("""\d{1,2}\s*(点|點)""").containsMatchIn(normalized)
+    val hasDateCue = listOf(
+        "today",
+        "tomorrow",
+        "tonight",
+        "明天",
+        "今天",
+        "今晚",
+        "上午",
+        "下午",
+        "晚上"
+    ).any(normalized::contains)
+
+    return hasClockCue && hasDateCue
+}
+
+private fun isSchedulerPreRouteFeedback(text: String): Boolean {
+    return listOf(
+        "未找到该时间的日程",
+        "该时间存在多个日程",
+        "找不到要改名的日程",
+        "找不到要改期的日程",
+        "目标不明确",
+        "未找到匹配的日程",
+        "当前仅支持明确时间改期",
+        "改期时间格式无法解析",
+        "改名失败",
+        "改期失败"
+    ).any(text::contains)
 }

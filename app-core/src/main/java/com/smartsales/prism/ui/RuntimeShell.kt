@@ -51,7 +51,6 @@ import com.smartsales.prism.ui.sim.startRuntimeForcedFirstLaunchOnboarding
 import com.smartsales.prism.ui.onboarding.PairingFlowViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.delay
 
 @Composable
 internal fun RuntimeShell(
@@ -277,11 +276,6 @@ internal fun RuntimeShell(
             boundSessionId = sessionId,
             threadId = seed.threadId
         )
-        if (scenario == SimDebugFollowUpScenario.TIME_ANCHOR_RETITLE) {
-            delay(250)
-            chatViewModel.updateInput("改成9点赶飞机")
-            chatViewModel.send()
-        }
     }
 
     LaunchedEffect(shouldShowFirstLaunchSchedulerTeaser) {

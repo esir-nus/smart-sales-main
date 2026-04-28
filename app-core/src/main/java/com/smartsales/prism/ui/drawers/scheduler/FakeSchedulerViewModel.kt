@@ -231,6 +231,10 @@ class FakeSchedulerViewModel : ISchedulerViewModel {
         _pipelineStatus.value = "🎙️ Fake 转写中..."
     }
 
+    override fun submitDebugTranscript(transcript: String) {
+        _pipelineStatus.value = transcript
+    }
+
     /**
      * L2 Simulated On-Device Protocol:
      * Sets specific Fake states based on scenario string for UI validation without backend.

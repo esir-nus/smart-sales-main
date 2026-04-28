@@ -153,6 +153,7 @@ class SchedulerPipelineForegroundService : LifecycleService() {
         val variant = when (event) {
             is PipelineEvent.Complete -> when (event.result) {
                 is SchedulerResult.TaskCreated -> "TaskCreated"
+                is SchedulerResult.TaskRescheduled -> "TaskRescheduled"
                 is SchedulerResult.MultiTaskCreated -> "MultiTaskCreated"
                 is SchedulerResult.InspirationSaved -> "InspirationSaved"
                 is SchedulerResult.AwaitingClarification -> "AwaitingClarification"

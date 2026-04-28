@@ -206,4 +206,8 @@ class SchedulerViewModel @Inject constructor(
     override fun processAudio(file: File) {
         audioIngressCoordinator.processAudio(file)
     }
+
+    override fun submitDebugTranscript(transcript: String) {
+        audioIngressCoordinator.processTranscript(transcript)
+    }
 }

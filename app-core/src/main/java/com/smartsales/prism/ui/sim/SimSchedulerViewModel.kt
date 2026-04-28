@@ -296,6 +296,21 @@ class SimSchedulerViewModel @Inject constructor(
         }
     }
 
+    override fun submitDebugTranscript(transcript: String) {
+        viewModelScope.launch {
+            projectionSupport.clearFailureState()
+            projectionSupport.emitStatus("调试输入处理中...", autoClear = false)
+            Log.d(
+                "SimSchedulerViewModel",
+                buildSimSchedulerTranscriptLog(
+                    transcript = transcript,
+                    source = "scheduler_debug_button"
+                )
+            )
+            ingressCoordinator.processTranscript(transcript)
+        }
+    }
+
     internal suspend fun applyFastTrackResultForTesting(result: FastTrackResult) {
         mutationCoordinator.handleMutation(result)
     }

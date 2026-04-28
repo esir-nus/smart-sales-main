@@ -11,6 +11,7 @@ import com.smartsales.prism.domain.connectivity.RecordingNotification
 import com.smartsales.prism.domain.connectivity.WavDownloadResult
 import com.smartsales.core.pipeline.IntentOrchestrator
 import com.smartsales.core.pipeline.PipelineResult
+import com.smartsales.core.pipeline.SchedulerCommitKind
 import com.smartsales.core.util.Result
 import java.io.File
 import kotlinx.coroutines.flow.Flow
@@ -85,6 +86,52 @@ class RealBadgeAudioPipelineIngressTest {
                 it is PipelineEvent.Complete && it.result == SchedulerResult.InspirationSaved("insp-1")
             }
         )
+    }
+
+    @Test
+    fun `processFile maps reschedule commit to task rescheduled result`() = runTest {
+        val bridge = FakeConnectivityBridge().apply {
+            downloadResult = WavDownloadResult.Success(
+                localFile = createTempAudioFile(),
+                originalFilename = "log_20260322_170010.wav",
+                sizeBytes = 2048L
+            )
+        }
+        val asrService = mock<AsrService>()
+        whenever(asrService.transcribe(org.mockito.kotlin.any())).thenReturn(
+            AsrResult.Success("改成9点赶飞机")
+        )
+        val orchestrator = mock<IntentOrchestrator>()
+        whenever(orchestrator.processInput("改成9点赶飞机", true)).thenReturn(
+            flowOf(
+                PipelineResult.PathACommitted(
+                    task = com.smartsales.prism.domain.scheduler.ScheduledTask(
+                        id = "task-9",
+                        timeDisplay = "09:00",
+                        title = "赶飞机",
+                        startTime = java.time.Instant.parse("2026-03-22T01:00:00Z"),
+                        durationMinutes = 30
+                    ),
+                    commitKind = SchedulerCommitKind.RESCHEDULE
+                )
+            )
+        )
+        val ingestSupport = mock<SimBadgeAudioPipelineIngestSupport>()
+        whenever(
+            ingestSupport.ingestCompletedRecording(
+                org.mockito.kotlin.eq("log_20260322_170010.wav"),
+                org.mockito.kotlin.any(),
+                org.mockito.kotlin.eq("改成9点赶飞机")
+            )
+        ).thenReturn(true)
+        val pipeline = RealBadgeAudioPipeline(bridge, asrService, orchestrator, ingestSupport)
+
+        pipeline.processFile("log_20260322_170010.wav")
+        waitUntil { pipeline.events.replayCache.any { it is PipelineEvent.Complete } }
+
+        val complete = pipeline.events.replayCache.filterIsInstance<PipelineEvent.Complete>().last()
+        assertTrue(complete.result is SchedulerResult.TaskRescheduled)
+        assertEquals("赶飞机", (complete.result as SchedulerResult.TaskRescheduled).title)
     }
 
     @Test

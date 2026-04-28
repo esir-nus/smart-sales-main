@@ -115,6 +115,16 @@ class SchedulerPipelineNotifications @Inject constructor(
                 )
             }
 
+            is SchedulerResult.TaskRescheduled -> SchedulerPipelineOutcomeNotificationModel(
+                variant = "TaskRescheduled",
+                title = "Schedule updated",
+                body = "${result.title} - ${formatScheduledAt(result.scheduledAtMillis)}",
+                toastSummary = "Schedule updated: ${result.title}",
+                channel = PrismNotificationChannel.SCHEDULER_PIPELINE_OUTCOME,
+                priority = NotificationPriority.HIGH,
+                action = NotificationAction.OpenApp()
+            )
+
             is SchedulerResult.InspirationSaved -> SchedulerPipelineOutcomeNotificationModel(
                 variant = "InspirationSaved",
                 title = "Saved to inspirations",

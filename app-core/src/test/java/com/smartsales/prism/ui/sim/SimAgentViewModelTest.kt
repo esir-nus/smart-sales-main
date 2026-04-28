@@ -3,8 +3,11 @@ package com.smartsales.prism.ui.sim
 import android.content.Context
 import com.smartsales.core.pipeline.RealFollowUpRescheduleExtractionService
 import com.smartsales.core.pipeline.RealGlobalRescheduleExtractionService
+import com.smartsales.core.pipeline.IntentOrchestrator
+import com.smartsales.core.pipeline.PipelineResult
 import com.smartsales.core.pipeline.PromptCompiler
 import com.smartsales.core.pipeline.RealUniAExtractionService
+import com.smartsales.core.pipeline.SchedulerCommitKind
 import com.smartsales.core.telemetry.PipelineValve
 import com.smartsales.core.llm.ExecutorResult
 import com.smartsales.core.test.fakes.FakeActiveTaskRetrievalIndex
@@ -29,6 +32,9 @@ import com.smartsales.prism.domain.audio.AudioFile
 import com.smartsales.prism.domain.audio.AudioSource
 import com.smartsales.prism.domain.audio.TranscriptionStatus
 import com.smartsales.prism.data.connectivity.registry.DeviceRegistryManager
+import com.smartsales.prism.data.connectivity.registry.RegisteredDevice
+import com.smartsales.prism.domain.connectivity.BadgeConnectionState
+import com.smartsales.prism.domain.connectivity.BadgeManagerStatus
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.connectivity.ConnectivityPrompt
 import com.smartsales.prism.domain.model.ChatMessage
@@ -53,9 +59,13 @@ import java.io.File
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
@@ -73,6 +83,9 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.eq
 import org.mockito.kotlin.whenever
 import com.smartsales.core.test.fakes.FakeAlarmScheduler
 
@@ -95,6 +108,7 @@ class SimAgentViewModelTest {
     private lateinit var uniAExtractionService: RealUniAExtractionService
     private lateinit var globalRescheduleExtractionService: RealGlobalRescheduleExtractionService
     private lateinit var followUpRescheduleExtractionService: RealFollowUpRescheduleExtractionService
+    private lateinit var intentOrchestrator: IntentOrchestrator
 
     @Before
     fun setup() {
@@ -126,6 +140,10 @@ class SimAgentViewModelTest {
             PromptCompiler(),
             schedulerLinter
         )
+        intentOrchestrator = mock()
+        runBlocking {
+            whenever(intentOrchestrator.processInput(any(), eq(true), anyOrNull())).thenReturn(emptyFlow())
+        }
         SimFollowUpRescheduleShadowMetrics.resetForTest()
     }
 
@@ -736,7 +754,7 @@ class SimAgentViewModelTest {
     }
 
     @Test
-    fun `general send with reschedule wording does not mutate scheduler state`() = runTest {
+    fun `general send with reschedule wording routes through top level scheduler before chat fallback`() = runTest {
         taskRepository.insertTask(
             ScheduledTask(
                 id = "task_general_boundary",
@@ -747,19 +765,47 @@ class SimAgentViewModelTest {
                 durationMinutes = 30
             )
         )
-        val originalStartTime = taskRepository.getTask("task_general_boundary")!!.startTime
+        val updatedTask = taskRepository.getTask("task_general_boundary")!!.copy(title = "客户晚间会议")
+        whenever(intentOrchestrator.processInput(eq("把客户会议改到今晚九点"), eq(true), anyOrNull())).thenReturn(
+            flowOf(PipelineResult.PathACommitted(updatedTask, SchedulerCommitKind.RESCHEDULE))
+        )
         val viewModel = newViewModel()
-        fakeExecutor.enqueueResponse(ExecutorResult.Success("我可以帮你分析怎么改期，但当前普通聊天不会直接改日程。"))
-        fakeExecutor.enqueueResponse(ExecutorResult.Success("会议改期"))
 
         viewModel.updateInput("把客户会议改到今晚九点")
         viewModel.send()
         advanceUntilIdle()
 
-        assertEquals(originalStartTime, taskRepository.getTask("task_general_boundary")?.startTime)
-        assertTrue(fakeExecutor.executedPrompts[0].contains("把客户会议改到今晚九点"))
-        val lastMessage = viewModel.history.value.last() as ChatMessage.Ai
-        assertTrue((lastMessage.uiState as UiState.Response).content.contains("不会直接改日程"))
+        assertTrue(fakeExecutor.executedPrompts.isEmpty())
+        assertEquals(1, viewModel.history.value.filterIsInstance<ChatMessage.User>().size)
+        assertFalse(viewModel.history.value.any { it is ChatMessage.Ai })
+    }
+
+    @Test
+    fun `general send with natural chinese event time routes through top level scheduler`() = runTest {
+        val createdTask = ScheduledTask(
+            id = "task_debug_flight_8am",
+            timeDisplay = "08:00",
+            title = "赶飞机",
+            urgencyLevel = UrgencyLevel.L1_CRITICAL,
+            startTime = Instant.parse("2026-03-23T00:00:00Z"),
+            durationMinutes = 30
+        )
+        whenever(
+            intentOrchestrator.processInput(
+                eq("明天早上八点我要赶飞机"),
+                eq(true),
+                anyOrNull()
+            )
+        ).thenReturn(flowOf(PipelineResult.PathACommitted(createdTask)))
+        val viewModel = newViewModel()
+
+        viewModel.updateInput("明天早上八点我要赶飞机")
+        viewModel.send()
+        advanceUntilIdle()
+
+        assertTrue(fakeExecutor.executedPrompts.isEmpty())
+        assertEquals(1, viewModel.history.value.filterIsInstance<ChatMessage.User>().size)
+        assertFalse(viewModel.history.value.any { it is ChatMessage.Ai })
     }
 
     @Test
@@ -1769,6 +1815,7 @@ class SimAgentViewModelTest {
             uniAExtractionService = uniAExtractionService,
             globalRescheduleExtractionService = globalRescheduleExtractionService,
             followUpRescheduleExtractionService = followUpRescheduleExtractionService,
+            intentOrchestrator = intentOrchestrator,
             executor = executor,
             userProfileRepository = userProfileRepository,
             timeProvider = timeProvider
@@ -1891,17 +1938,26 @@ class SimAgentViewModelTest {
 
     private fun newAudioRepository(): SimAudioRepository {
         val context: Context = mock()
+        val connectivityBridge = mock<ConnectivityBridge>()
+        val deviceRegistryManager = mock<DeviceRegistryManager>()
         whenever(context.filesDir).thenReturn(tempFolder.root)
+        whenever(connectivityBridge.connectionState).thenReturn(
+            MutableStateFlow<BadgeConnectionState>(BadgeConnectionState.Disconnected)
+        )
+        whenever(connectivityBridge.managerStatus).thenReturn(
+            MutableStateFlow<BadgeManagerStatus>(BadgeManagerStatus.Disconnected)
+        )
+        whenever(deviceRegistryManager.activeDevice).thenReturn(MutableStateFlow<RegisteredDevice?>(null))
         return SimAudioRepository(
             runtime = SimAudioRepositoryRuntime(
                 context = context,
-                connectivityBridge = mock<ConnectivityBridge>(),
+                connectivityBridge = connectivityBridge,
                 endpointRecoveryCoordinator = BadgeEndpointRecoveryCoordinator(),
                 ossUploader = mock<OssUploader>(),
                 tingwuPipeline = mock<TingwuPipeline>(),
                 connectivityPrompt = mock<ConnectivityPrompt>(),
                 phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest"),
-                deviceRegistryManager = mock<DeviceRegistryManager>()
+                deviceRegistryManager = deviceRegistryManager
             ),
             orchestrator = mock<DownloadServiceOrchestrator>(),
             autoDownloader = mock<SimBadgeAudioAutoDownloader>()

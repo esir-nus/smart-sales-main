@@ -41,6 +41,13 @@ sealed class SchedulerResult {
         val scheduledAtMillis: Long,
         val durationMinutes: Int
     ) : SchedulerResult()
+    data class TaskRescheduled(
+        val taskId: String,
+        val title: String,
+        val dayOffset: Int,
+        val scheduledAtMillis: Long,
+        val durationMinutes: Int
+    ) : SchedulerResult()
     data class MultiTaskCreated(val tasks: List<TaskCreated>) : SchedulerResult()
     data class InspirationSaved(val id: String) : SchedulerResult()
     data class AwaitingClarification(val question: String) : SchedulerResult()

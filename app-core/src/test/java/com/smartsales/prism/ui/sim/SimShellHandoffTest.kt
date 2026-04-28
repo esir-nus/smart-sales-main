@@ -15,7 +15,6 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Instant
-import java.time.ZoneId
 
 class SimShellHandoffTest {
 
@@ -490,6 +489,17 @@ class SimShellHandoffTest {
                 transcript = "hello there"
             ),
             PipelineEvent.Complete(
+                result = SchedulerResult.TaskRescheduled(
+                    taskId = "task_rescheduled",
+                    title = "rescheduled",
+                    dayOffset = 0,
+                    scheduledAtMillis = 456L,
+                    durationMinutes = 30
+                ),
+                filename = "badge_rescheduled.wav",
+                transcript = "move the meeting"
+            ),
+            PipelineEvent.Complete(
                 result = SchedulerResult.MultiTaskCreated(tasks = emptyList()),
                 filename = "badge_7.wav",
                 transcript = "schedule several things"
@@ -550,24 +560,6 @@ class SimShellHandoffTest {
         assertEquals("安排两个客户回访", event.transcript)
     }
 
-    @Test
-    fun `buildSimDebugFollowUpEvent time anchor retitle creates nine oclock task`() {
-        val event = buildSimDebugFollowUpEvent(
-            scenario = SimDebugFollowUpScenario.TIME_ANCHOR_RETITLE
-        )
-
-        val result = event.result as SchedulerResult.TaskCreated
-        val localTime = Instant.ofEpochMilli(result.scheduledAtMillis)
-            .atZone(ZoneId.systemDefault())
-            .toLocalTime()
-        assertEquals("debug_time_anchor_retitle_0900", result.taskId)
-        assertEquals("起床", result.title)
-        assertEquals(9, localTime.hour)
-        assertEquals(0, localTime.minute)
-        assertEquals("提醒我9点起床", event.transcript)
-    }
-
-    @Test
     fun `handleSimNewSessionAction clears follow up before starting new session`() {
         val calls = mutableListOf<String>()
 

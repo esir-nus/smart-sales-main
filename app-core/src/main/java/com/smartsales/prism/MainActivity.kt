@@ -39,7 +39,6 @@ class MainActivity : ComponentActivity() {
     companion object {
         private const val EXTRA_DEBUG_FOLLOW_UP_SINGLE = "sim_debug_followup_single"
         private const val EXTRA_DEBUG_FOLLOW_UP_MULTI = "sim_debug_followup_multi"
-        private const val EXTRA_DEBUG_TIME_ANCHOR_RETITLE = "sim_debug_time_anchor_retitle"
     }
 
     @Inject
@@ -120,8 +119,6 @@ class MainActivity : ComponentActivity() {
         return when {
             intent?.getBooleanExtra(EXTRA_DEBUG_FOLLOW_UP_MULTI, false) == true ->
                 SimDebugFollowUpScenario.MULTI
-            intent?.getBooleanExtra(EXTRA_DEBUG_TIME_ANCHOR_RETITLE, false) == true ->
-                SimDebugFollowUpScenario.TIME_ANCHOR_RETITLE
             intent?.getBooleanExtra(EXTRA_DEBUG_FOLLOW_UP_SINGLE, false) == true ->
                 SimDebugFollowUpScenario.SINGLE
             else -> null

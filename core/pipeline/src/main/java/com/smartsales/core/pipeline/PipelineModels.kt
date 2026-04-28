@@ -44,6 +44,11 @@ sealed interface SchedulerTaskCommand {
     ) : SchedulerTaskCommand
 }
 
+enum class SchedulerCommitKind {
+    CREATE,
+    RESCHEDULE
+}
+
 /**
  * Raw input details from the user.
  */
@@ -75,7 +80,8 @@ sealed class PipelineResult {
      * Shared Path A optimistic write committed through the single scheduler spine.
      */
     data class PathACommitted(
-        val task: ScheduledTask
+        val task: ScheduledTask,
+        val commitKind: SchedulerCommitKind = SchedulerCommitKind.CREATE
     ) : PipelineResult()
 
     /**

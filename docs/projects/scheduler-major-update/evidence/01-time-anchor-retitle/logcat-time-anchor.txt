@@ -1,21 +1,15 @@
-04-28 16:41:51.996 31971 31971 I VALVE_PROTOCOL: 🚦 [UI_STATE_EMITTED] | Size: 7 | SIM badge scheduler continuity ingress accepted
-04-28 16:41:51.996 31971 31971 I VALVE_PROTOCOL: 提醒我9点起床
-04-28 16:41:51.996 31971 31971 D SimBadgeFollowUp: badge scheduler continuity ingress accepted: 提醒我9点起床
-04-28 16:41:52.030 31971 12666 I VALVE_PROTOCOL: 🚦 [DB_WRITE_EXECUTED] | Size: -1710898425 | Task Upserted (Fast-Track/Room)
-04-28 16:41:52.030 31971 12666 I VALVE_PROTOCOL: debug_time_anchor_retitle_0900
-04-28 16:41:52.976 31971 31971 I VALVE_PROTOCOL: 🚦 [UI_STATE_EMITTED] | Size: 15 | SIM scheduler global shortlist built
-04-28 16:41:52.976 31971 31971 D SimBadgeFollowUpChat: SIM scheduler global shortlist built: shortlistSize=0
-04-28 16:41:53.022 31971 31971 D SchedulerMapper: toUiState: id=debug_time_anchor_retitle_0900
-04-28 16:41:55.043 31971 31971 I VALVE_PROTOCOL: 🚦 [UI_STATE_EMITTED] | Size: 20 | SIM scheduler global suggestion received
-04-28 16:41:55.043 31971 31971 D SimBadgeFollowUpChat: SIM scheduler global suggestion received: suggestedTaskId=null
-04-28 16:41:55.057 31971 31971 I VALVE_PROTOCOL: 🚦 [UI_STATE_EMITTED] | Size: 49 | SIM_SCHEDULER_GLOBAL_TIME_ANCHOR_RESOLVED_SUMMARY
-04-28 16:41:55.057 31971 31971 I VALVE_PROTOCOL: taskId=debug_time_anchor_retitle_0900 clockCue=9点
-04-28 16:41:55.057 31971 31971 D SimBadgeFollowUpChat: SIM_SCHEDULER_GLOBAL_TIME_ANCHOR_RESOLVED_SUMMARY: taskId=debug_time_anchor_retitle_0900 clockCue=9点
-04-28 16:41:55.072 31971 12674 I VALVE_PROTOCOL: 🚦 [DB_WRITE_EXECUTED] | Size: -1710898425 | Task Rescheduled (Room)
-04-28 16:41:55.072 31971 12674 I VALVE_PROTOCOL: debug_time_anchor_retitle_0900
-04-28 16:41:55.075 31971 31971 D RealAlarmScheduler: 已取消提醒: taskId=debug_time_anchor_retitle_0900
-04-28 16:41:55.077 31971 31971 D RealAlarmScheduler: 跳过过期提醒: taskId=debug_time_anchor_retitle_0900, offset=0m (过期 27715077ms)
-04-28 16:41:55.081 31971 31971 I VALVE_PROTOCOL: 🚦 [UI_STATE_EMITTED] | Size: 52 | SIM badge scheduler follow-up action completed
-04-28 16:41:55.081 31971 31971 I VALVE_PROTOCOL: action=retitle taskId=debug_time_anchor_retitle_0900
-04-28 16:41:55.081 31971 31971 D SimBadgeFollowUpChat: SIM badge scheduler follow-up action completed: action=retitle taskId=debug_time_anchor_retitle_0900
-04-28 16:41:55.102 31971 31971 D SchedulerMapper: toUiState: id=debug_time_anchor_retitle_0900
+04-28 17:56:51.802 D/SimSchedulerViewModel(12747): transcript_ingress source=scheduler_debug_button length=11 text=明天早上八点我要赶飞机
+04-28 17:56:51.803 D/SimSchedulerIngress(12747): route_preflight length=11 displayedDateIso=2026-04-28 mightReschedule=false shortlistSize=0 transcript=明天早上八点我要赶飞机
+04-28 17:56:55.330 I/VALVE_PROTOCOL(12747): title=赶飞机, startTimeIso=2026-04-29T08:00:00+08:00, transcript=明天早上八点我要赶飞机
+04-28 17:56:55.330 D/SimSchedulerSingle(12747): anchor=NOW_DAY_OFFSET title=赶飞机 start=2026-04-29T08:00:00+08:00
+04-28 17:56:55.417 D/RealAlarmScheduler(12747): 已设置提醒: taskId=f242c428-a901-41c6-828b-b42eedf7c11a, title=赶飞机, offset=0m, at=2026-04-29T00:00:00Z
+04-28 17:57:40.925 D/SimSchedulerViewModel(12747): transcript_ingress source=scheduler_debug_button length=11 text=明早八点应该是要去开会
+04-28 17:57:40.932 D/SimSchedulerIngress(12747): route_preflight length=11 displayedDateIso=2026-04-28 mightReschedule=true shortlistSize=0 transcript=明早八点应该是要去开会
+04-28 17:57:42.520 I/VALVE_PROTOCOL(12747): 🚦 [UI_STATE_EMITTED] | Size: 1 | SIM_SCHEDULER_GLOBAL_TIME_ANCHOR_RESOLVED_SUMMARY
+04-28 17:57:42.538 I/VALVE_PROTOCOL(12747): 🚦 [DB_WRITE_EXECUTED] | Size: -1120644697 | Task Rescheduled (Room)
+04-28 17:57:42.556 D/RealAlarmScheduler(12747): 已设置提醒: taskId=f242c428-a901-41c6-828b-b42eedf7c11a, title=开会, offset=0m, at=2026-04-29T00:00:00Z
+04-28 17:57:53.109 D/SimSchedulerViewModel(12747): transcript_ingress source=scheduler_debug_button length=15 text=不对，明早八点应该是去机场接人
+04-28 17:57:53.136 D/SimSchedulerIngress(12747): route_preflight length=15 displayedDateIso=2026-04-28 mightReschedule=true shortlistSize=0 transcript=不对，明早八点应该是去机场接人
+04-28 17:57:54.439 I/VALVE_PROTOCOL(12747): 🚦 [UI_STATE_EMITTED] | Size: 1 | SIM_SCHEDULER_GLOBAL_TIME_ANCHOR_RESOLVED_SUMMARY
+04-28 17:57:54.454 I/VALVE_PROTOCOL(12747): 🚦 [DB_WRITE_EXECUTED] | Size: -1120644697 | Task Rescheduled (Room)
+04-28 17:57:54.460 D/RealAlarmScheduler(12747): 已设置提醒: taskId=f242c428-a901-41c6-828b-b42eedf7c11a, title=去机场接人, offset=0m, at=2026-04-29T00:00:00Z

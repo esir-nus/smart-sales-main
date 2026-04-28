@@ -2,7 +2,7 @@
 
 > **Cerb-compliant spec** — Audio file management: sync, transcription, UI interaction.
 > **Status**: SHIPPED
-> **Last Updated**: 2026-04-16
+> **Last Updated**: 2026-04-28
 > **Behavioral UX Authority Above This Doc**: [`docs/core-flow/base-runtime-ux-surface-governance-flow.md`](../../core-flow/base-runtime-ux-surface-governance-flow.md) (`UX.AUDIO.*`)
 
 ---
@@ -102,10 +102,14 @@ There is one active inventory rule for current non-Mono work:
 - when `BadgeManagerStatus` transitions from any non-Ready state to `Ready`, the app automatically fires `/list` sync after a 3s debounce
 - reconnection auto-sync failures are silent (no toast, no spinner) — only affects Dynamic Island
 - the 3s debounce prevents collision with the CONNECTIVITY "Badge 已连接" transient Dynamic Island item
+- when the same active badge moves from `Ready` to `Disconnected` or `Connecting` while manual queue downloads or `rec#` auto-downloads are active, audio cancels the active HTTP work immediately, preserves interrupted placeholder availability for HOLD rendering, and records only those interrupted filenames for targeted resume
+- when that same badge returns to `Ready`, audio drains the targeted resume set before the drawer debounce path runs and requeues only those filenames from byte 0; this is not HTTP Range resume
+- `BlePairedNetworkUnknown`, `BlePairedNetworkOffline`, and `BleDetected` are partial transport/diagnostic states and must not cancel active badge downloads by themselves
 
 **`rec#` push-based auto-download rule**:
 - badge sends `rec#YYYYMMDD_HHMMSS` when a recording finishes and the file is ready
 - app creates QUEUED placeholder immediately, downloads in background
+- active `rec#` jobs are tracked by `(badgeMac, filename)` so same-badge disconnect can cancel and target-resume them, and duplicate active notifications for the same badge/file do not launch a second download
 - sub-1KB files are discarded silently (same as `/list` sync)
 - no transcription or scheduling is triggered by the `rec#` path
 - Dynamic Island shows transient "已同步：rec_filename" for 3s on success

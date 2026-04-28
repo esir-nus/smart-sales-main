@@ -48,6 +48,10 @@ tracks gaps explicitly.
   creates a queued placeholder immediately, downloads in the background, fences
   successful import by current runtime badge MAC, and sends `Command#end` at
   terminal points.
+- Same-badge disconnect while manual queue or `rec#` auto-download work is
+  active cancels the current HTTP download job immediately, preserves interrupted
+  placeholder availability for HOLD rendering, and records only interrupted
+  filenames for targeted resume when the same badge returns to `Ready`.
 - `wifiRepairEvents()` exposes repair milestones so UI repair state is driven by
   explicit events instead of inferred manager state.
 
@@ -79,6 +83,11 @@ tracks gaps explicitly.
 - Active-device change during list/download: discard stale list results, cancel
   manual queue work where possible, and reject cross-device downloads before
   import.
+- Same active badge `Ready -> Disconnected/Connecting` during download: cancel
+  active HTTP work, keep interrupted entries visually held, then requeue only the
+  interrupted filenames on same-badge `Ready`; do not treat
+  `BlePairedNetworkUnknown`, `BlePairedNetworkOffline`, or `BleDetected` as
+  cancellation events.
 - Active badge download already running: skip readiness probing and return an
   already-running sync result instead of treating HTTP timeout as Wi-Fi failure.
 
@@ -125,9 +134,10 @@ connectivity and audio owners.
 - Gap: `queuedBadgeDownloads` stores filenames globally. Delivered manual sync
   fencing prevents known cross-device imports, but target behavior prefers queue
   items carrying badge identity.
-- Gap: `SimBadgeAudioAutoDownloader` fences successful `rec#` imports by
-  current runtime badge MAC, but it is not explicitly cancelled by the manual
-  queue cancellation path on active-device change.
+- Delivered behavior: `SimBadgeAudioAutoDownloader` now tracks active `rec#`
+  jobs by `(badgeMac, filename)`, suppresses duplicate active jobs, and exposes
+  disconnect cancellation so the repository can include active `rec#` filenames
+  in same-badge targeted resume.
 - Gap: current delivered behavior still lacks fresh hardware evidence for
   reconnect, Wi-Fi repair, isolation, BLE notifications, and HTTP media
   readiness. Do not claim L3 runtime proof without fresh `adb logcat`.

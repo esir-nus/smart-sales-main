@@ -13,6 +13,7 @@ import com.smartsales.core.test.fakes.FakeScheduleBoard
 import com.smartsales.core.test.fakes.FakeUserProfileRepository
 import com.smartsales.data.oss.OssUploader
 import com.smartsales.prism.data.audio.SIM_AUDIO_METADATA_FILENAME
+import com.smartsales.prism.data.audio.SimBadgeAudioAutoDownloader
 import com.smartsales.prism.data.audio.SimAudioRepository
 import com.smartsales.prism.data.audio.SimAudioRepositoryRuntime
 import com.smartsales.prism.data.audio.SimRealtimeSpeechEvent
@@ -1902,7 +1903,8 @@ class SimAgentViewModelTest {
                 phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest"),
                 deviceRegistryManager = mock<DeviceRegistryManager>()
             ),
-            orchestrator = mock<DownloadServiceOrchestrator>()
+            orchestrator = mock<DownloadServiceOrchestrator>(),
+            autoDownloader = mock<SimBadgeAudioAutoDownloader>()
         )
     }
 

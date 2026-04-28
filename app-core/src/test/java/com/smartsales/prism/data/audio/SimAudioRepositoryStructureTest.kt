@@ -18,6 +18,7 @@ class SimAudioRepositoryStructureTest {
         assertTrue(host.contains("class SimAudioRepository @Inject constructor("))
         assertTrue(host.contains("private val runtime: SimAudioRepositoryRuntime"))
         assertTrue(host.contains("private val orchestrator: DownloadServiceOrchestrator"))
+        assertTrue(host.contains("private val autoDownloader: SimBadgeAudioAutoDownloader"))
         assertTrue(host.contains("private val storeSupport = SimAudioRepositoryStoreSupport(runtime)"))
         assertTrue(host.contains("private val artifactSupport = SimAudioRepositoryArtifactSupport(runtime, storeSupport)"))
         assertTrue(host.contains("private val syncSupport = SimAudioRepositorySyncSupport(runtime, storeSupport, orchestrator)"))

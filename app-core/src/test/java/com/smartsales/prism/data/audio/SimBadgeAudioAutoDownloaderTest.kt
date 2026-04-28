@@ -10,6 +10,7 @@ import com.smartsales.prism.domain.audio.AudioSource
 import com.smartsales.prism.domain.connectivity.BadgeConnectionState
 import com.smartsales.prism.domain.connectivity.BadgeManagerStatus
 import com.smartsales.prism.data.connectivity.registry.DeviceRegistryManager
+import com.smartsales.prism.data.connectivity.registry.RegisteredDevice
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.connectivity.ConnectivityPrompt
 import com.smartsales.prism.domain.connectivity.RecordingNotification
@@ -46,6 +47,7 @@ class SimBadgeAudioAutoDownloaderTest {
     private lateinit var runtime: SimAudioRepositoryRuntime
     private lateinit var orchestrator: DownloadServiceOrchestrator
     private lateinit var deviceRegistryManager: DeviceRegistryManager
+    private lateinit var activeDeviceFlow: MutableStateFlow<RegisteredDevice?>
 
     @Before
     fun setup() {
@@ -53,7 +55,8 @@ class SimBadgeAudioAutoDownloaderTest {
         whenever(context.filesDir).thenReturn(tempFolder.root)
         connectivityBridge = FakeConnectivityBridge()
         deviceRegistryManager = mock<DeviceRegistryManager>()
-        whenever(deviceRegistryManager.activeDevice).thenReturn(MutableStateFlow(null))
+        activeDeviceFlow = MutableStateFlow(null)
+        whenever(deviceRegistryManager.activeDevice).thenReturn(activeDeviceFlow)
         runtime = SimAudioRepositoryRuntime(
             context = context,
             connectivityBridge = connectivityBridge,
@@ -153,6 +156,57 @@ class SimBadgeAudioAutoDownloaderTest {
         org.mockito.kotlin.verifyNoInteractions(orchestrator)
     }
 
+    @Test
+    fun `disconnect cancel returns all active rec downloads for badge`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
+        activeDeviceFlow.value = registeredDevice("AA:AA:AA:AA:AA:01")
+        val downloader = SimBadgeAudioAutoDownloader(connectivityBridge, runtime, orchestrator)
+        connectivityBridge.downloadSuspender = { kotlinx.coroutines.awaitCancellation() }
+
+        advanceUntilIdle()
+        connectivityBridge.audioNotifications.emit(
+            RecordingNotification.AudioRecordingReady("rec_20260416_120003.wav")
+        )
+        connectivityBridge.audioNotifications.emit(
+            RecordingNotification.AudioRecordingReady("rec_20260416_120004.wav")
+        )
+        advanceUntilIdle()
+
+        val canceled = downloader.cancelDownloadsForDisconnect("AA:AA:AA:AA:AA:01")
+        advanceUntilIdle()
+
+        assertEquals(
+            setOf("rec_20260416_120003.wav", "rec_20260416_120004.wav"),
+            canceled.toSet()
+        )
+        assertTrue(
+            runtime.audioFiles.value
+                .filter { it.source == AudioSource.SMARTBADGE }
+                .all { it.localAvailability == AudioLocalAvailability.DOWNLOADING }
+        )
+        assertEquals(0, connectivityBridge.notifyCommandEndCalls)
+    }
+
+    @Test
+    fun `duplicate active rec notification does not launch duplicate download`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
+        activeDeviceFlow.value = registeredDevice("AA:AA:AA:AA:AA:01")
+        SimBadgeAudioAutoDownloader(connectivityBridge, runtime, orchestrator)
+        connectivityBridge.downloadSuspender = { kotlinx.coroutines.awaitCancellation() }
+
+        advanceUntilIdle()
+        connectivityBridge.audioNotifications.emit(
+            RecordingNotification.AudioRecordingReady("rec_20260416_120005.wav")
+        )
+        connectivityBridge.audioNotifications.emit(
+            RecordingNotification.AudioRecordingReady("rec_20260416_120005.wav")
+        )
+        advanceUntilIdle()
+
+        assertEquals(1, connectivityBridge.downloadCalls.count { it == "rec_20260416_120005.wav" })
+        assertEquals(1, runtime.audioFiles.value.count { it.filename == "rec_20260416_120005.wav" })
+    }
+
     private fun bindRuntimeToTestScheduler(scheduler: TestCoroutineScheduler) {
         val dispatcher = StandardTestDispatcher(scheduler)
         runtime.overrideConcurrencyForTests(
@@ -160,6 +214,15 @@ class SimBadgeAudioAutoDownloaderTest {
             scope = CoroutineScope(SupervisorJob() + dispatcher)
         )
     }
+
+    private fun registeredDevice(macAddress: String): RegisteredDevice = RegisteredDevice(
+        macAddress = macAddress,
+        displayName = "Badge ${macAddress.takeLast(2)}",
+        profileId = null,
+        registeredAtMillis = 1L,
+        lastConnectedAtMillis = 1L,
+        isDefault = false
+    )
 
     private class FakeConnectivityBridge : ConnectivityBridge {
         override val connectionState = MutableStateFlow<BadgeConnectionState>(
@@ -172,12 +235,16 @@ class SimBadgeAudioAutoDownloaderTest {
             extraBufferCapacity = 4
         )
         val downloadResults = mutableMapOf<String, WavDownloadResult>()
+        val downloadCalls = mutableListOf<String>()
+        var downloadSuspender: (suspend () -> Unit)? = null
         var notifyCommandEndCalls = 0
 
         override suspend fun downloadRecording(
             filename: String,
             onProgress: ((bytesRead: Long, totalBytes: Long) -> Unit)?
         ): WavDownloadResult {
+            downloadCalls += filename
+            downloadSuspender?.invoke()
             return downloadResults[filename]
                 ?: WavDownloadResult.Error(
                     code = WavDownloadResult.ErrorCode.DOWNLOAD_FAILED,

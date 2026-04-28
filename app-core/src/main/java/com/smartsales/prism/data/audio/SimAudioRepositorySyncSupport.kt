@@ -80,6 +80,15 @@ private data class SimBadgeQueuePlan(
     val queueFilenames: List<String>
 )
 
+internal class BadgeDisconnectCancellationException(
+    val badgeMac: String
+) : CancellationException("badge disconnected: $badgeMac")
+
+private data class BadgeDownloadKey(
+    val badgeMac: String?,
+    val filename: String
+)
+
 private data class SimKnownHttpUnreachableLatch(
     val runtimeKey: BadgeRuntimeKey,
     val badgeIp: String,
@@ -221,6 +230,8 @@ internal class SimAudioRepositorySyncSupport(
     private val orchestrator: DownloadServiceOrchestrator
 ) {
     private var knownHttpUnreachableLatch: SimKnownHttpUnreachableLatch? = null
+    private val pendingResumeFilenames = mutableMapOf<String, LinkedHashSet<String>>()
+    private val disconnectPreservedFilenames = mutableSetOf<BadgeDownloadKey>()
 
     suspend fun canSyncFromBadge(): Boolean = withContext(runtime.ioDispatcher) {
         if (isBadgeDownloadActive()) {
@@ -483,6 +494,10 @@ internal class SimAudioRepositorySyncSupport(
         outgoingBadgeMac: String? = runtime.deviceRegistryManager.activeDevice.value?.macAddress
     ) = withContext(runtime.ioDispatcher) {
         runtime.badgeDownloadQueueMutex.withLock {
+            if (!outgoingBadgeMac.isNullOrBlank()) {
+                pendingResumeFilenames.remove(outgoingBadgeMac)
+                disconnectPreservedFilenames.removeAll { it.badgeMac == outgoingBadgeMac }
+            }
             runtime.queuedBadgeDownloads.clear()
             runtime.activeBadgeDownloadJob?.cancel(
                 CancellationException("device switched")
@@ -499,6 +514,56 @@ internal class SimAudioRepositorySyncSupport(
             SIM_AUDIO_SYNC_LOG_TAG,
             "SIM badge sync: all downloads cancelled (device switch) outgoingBadgeMac=$outgoingBadgeMac"
         )
+    }
+
+    suspend fun cancelDownloadsForDisconnect(
+        badgeMac: String,
+        extraResumeFilenames: List<String> = emptyList()
+    ) = withContext(runtime.ioDispatcher) {
+        val normalizedBadgeMac = badgeMac.takeIf { it.isNotBlank() } ?: return@withContext
+        val interruptedFilenames = runtime.badgeDownloadQueueMutex.withLock {
+            val filenames = LinkedHashSet<String>()
+            runtime.queuedBadgeDownloads.forEach { filenames += normalizeSimBadgeFilename(it) }
+            runtime.activeBadgeDownloadFilename?.let { filenames += normalizeSimBadgeFilename(it) }
+            extraResumeFilenames.forEach { filename ->
+                val normalized = normalizeSimBadgeFilename(filename)
+                if (normalized.isNotBlank()) filenames += normalized
+            }
+
+            if (filenames.isNotEmpty()) {
+                val pending = pendingResumeFilenames.getOrPut(normalizedBadgeMac) { LinkedHashSet() }
+                pending += filenames
+                filenames.forEach { filename ->
+                    disconnectPreservedFilenames += BadgeDownloadKey(normalizedBadgeMac, filename)
+                }
+            }
+
+            runtime.queuedBadgeDownloads.clear()
+            val cancellation = BadgeDisconnectCancellationException(normalizedBadgeMac)
+            runtime.activeBadgeDownloadJob?.cancel(cancellation)
+            runtime.badgeDownloadWorkerJob?.cancel(cancellation)
+            runtime.activeBadgeDownloadFilename = null
+            runtime.activeBadgeDownloadJob = null
+            runtime.badgeDownloadWorkerJob = null
+            filenames.toList()
+        }
+        Log.d(
+            SIM_AUDIO_SYNC_LOG_TAG,
+            "SIM badge sync: downloads cancelled for disconnect badgeMac=$normalizedBadgeMac pendingResume=${interruptedFilenames.size}"
+        )
+    }
+
+    suspend fun resumeDownloadsAfterReconnect(badgeMac: String) = withContext(runtime.ioDispatcher) {
+        val normalizedBadgeMac = badgeMac.takeIf { it.isNotBlank() } ?: return@withContext
+        val filenames = runtime.badgeDownloadQueueMutex.withLock {
+            pendingResumeFilenames.remove(normalizedBadgeMac)?.toList().orEmpty()
+        }
+        if (filenames.isEmpty()) return@withContext
+        Log.d(
+            SIM_AUDIO_SYNC_LOG_TAG,
+            "SIM badge sync: targeted resume after reconnect badgeMac=$normalizedBadgeMac count=${filenames.size}"
+        )
+        enqueueBadgeDownloads(filenames)
     }
 
     private fun planBadgeDownloads(
@@ -684,16 +749,22 @@ internal class SimAudioRepositorySyncSupport(
                     }
                 }
             } catch (cancelled: CancellationException) {
-                storeSupport.markBadgeDownloadAvailability(
-                    filename = nextFilename,
-                    availability = AudioLocalAvailability.FAILED,
-                    errorMessage = "下载被中断，请重试同步",
-                    badgeMac = ownerBadgeMac
-                )
+                val preserveDisconnectState = runtime.badgeDownloadQueueMutex.withLock {
+                    disconnectPreservedFilenames.remove(BadgeDownloadKey(ownerBadgeMac, nextFilename))
+                }
+                if (!preserveDisconnectState) {
+                    storeSupport.markBadgeDownloadAvailability(
+                        filename = nextFilename,
+                        availability = AudioLocalAvailability.FAILED,
+                        errorMessage = "下载被中断，请重试同步",
+                        badgeMac = ownerBadgeMac
+                    )
+                }
                 Log.d(
                     SIM_AUDIO_SYNC_LOG_TAG,
-                    "SIM badge sync background download canceled filename=$nextFilename badgeMac=$ownerBadgeMac"
+                    "SIM badge sync background download canceled filename=$nextFilename badgeMac=$ownerBadgeMac preservedForDisconnect=$preserveDisconnectState"
                 )
+                if (preserveDisconnectState) throw cancelled
             } finally {
                 runtime.activeBadgeDownloadFilename = null
                 runtime.activeBadgeDownloadJob = null

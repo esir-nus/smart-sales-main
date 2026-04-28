@@ -75,7 +75,8 @@ class SimAudioRepositoryNamespaceTest {
                 phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest"),
                 deviceRegistryManager = mock<DeviceRegistryManager>()
             ),
-            orchestrator = mock<DownloadServiceOrchestrator>()
+            orchestrator = mock<DownloadServiceOrchestrator>(),
+            autoDownloader = mock<SimBadgeAudioAutoDownloader>()
         )
 
         assertEquals("session-123", repository.getBoundSessionId("audio-1"))
@@ -109,7 +110,8 @@ class SimAudioRepositoryNamespaceTest {
                 phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest"),
                 deviceRegistryManager = mock<DeviceRegistryManager>()
             ),
-            orchestrator = mock<DownloadServiceOrchestrator>()
+            orchestrator = mock<DownloadServiceOrchestrator>(),
+            autoDownloader = mock<SimBadgeAudioAutoDownloader>()
         )
 
         repository.bindSession("audio-2", "session-456")
@@ -136,7 +138,8 @@ class SimAudioRepositoryNamespaceTest {
                 phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest"),
                 deviceRegistryManager = mock<DeviceRegistryManager>()
             ),
-            orchestrator = mock<DownloadServiceOrchestrator>()
+            orchestrator = mock<DownloadServiceOrchestrator>(),
+            autoDownloader = mock<SimBadgeAudioAutoDownloader>()
         )
 
         assertEquals("session-456", reloadedRepository.getBoundSessionId("audio-2"))

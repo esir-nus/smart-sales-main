@@ -1,6 +1,7 @@
 package com.smartsales.prism.data.audio
 
 import com.smartsales.prism.domain.audio.AudioFile
+import com.smartsales.prism.domain.connectivity.BadgeManagerStatus
 import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
 import com.smartsales.prism.service.DownloadServiceOrchestrator
 import javax.inject.Inject
@@ -16,7 +17,8 @@ import kotlinx.coroutines.flow.asStateFlow
 @Singleton
 class SimAudioRepository @Inject constructor(
     private val runtime: SimAudioRepositoryRuntime,
-    private val orchestrator: DownloadServiceOrchestrator
+    private val orchestrator: DownloadServiceOrchestrator,
+    private val autoDownloader: SimBadgeAudioAutoDownloader
 ) {
 
     private val storeSupport = SimAudioRepositoryStoreSupport(runtime)
@@ -34,6 +36,7 @@ class SimAudioRepository @Inject constructor(
         storeSupport.backfillSeedInventory()
         transcriptionSupport.resumeTrackedJobs()
         observeActiveDeviceChanges()
+        observeConnectivityStateChanges()
     }
 
     private fun observeActiveDeviceChanges() {
@@ -47,6 +50,40 @@ class SimAudioRepository @Inject constructor(
                     syncSupport.cancelAllBadgeDownloads(previousMac)
                 }
                 previousMac = currentMac
+            }
+        }
+    }
+
+    private fun observeConnectivityStateChanges() {
+        runtime.repositoryScope.launch {
+            var lastReadyMac: String? = null
+            var awaitingResumeMac: String? = null
+            runtime.connectivityBridge.managerStatus.collect { status ->
+                val activeMac = runtime.deviceRegistryManager.activeDevice.value?.macAddress
+                when (status) {
+                    is BadgeManagerStatus.Ready -> {
+                        if (activeMac != null && awaitingResumeMac == activeMac) {
+                            syncSupport.resumeDownloadsAfterReconnect(activeMac)
+                            awaitingResumeMac = null
+                        }
+                        lastReadyMac = activeMac
+                    }
+
+                    is BadgeManagerStatus.Disconnected,
+                    is BadgeManagerStatus.Connecting -> {
+                        if (activeMac != null && lastReadyMac == activeMac) {
+                            val autoFilenames = autoDownloader.cancelDownloadsForDisconnect(activeMac)
+                            syncSupport.cancelDownloadsForDisconnect(
+                                badgeMac = activeMac,
+                                extraResumeFilenames = autoFilenames
+                            )
+                            awaitingResumeMac = activeMac
+                            lastReadyMac = null
+                        }
+                    }
+
+                    else -> Unit
+                }
             }
         }
     }

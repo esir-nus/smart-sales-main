@@ -9,10 +9,15 @@ import com.smartsales.prism.domain.audio.AudioLocalAvailability
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.connectivity.WavDownloadResult
 import com.smartsales.prism.service.DownloadServiceOrchestrator
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -35,6 +40,9 @@ class SimBadgeAudioAutoDownloader @Inject constructor(
     )
     internal val syncIslandEvents: SharedFlow<SimBadgeSyncIslandEvent> = _syncIslandEvents.asSharedFlow()
 
+    private val activeJobMutex = Mutex()
+    private val activeJobs = mutableMapOf<AutoDownloadKey, Job>()
+
     init {
         runtime.repositoryScope.launch {
             connectivityBridge.audioRecordingNotifications().collect { notification ->
@@ -52,15 +60,35 @@ class SimBadgeAudioAutoDownloader @Inject constructor(
         val ownerBadgeMac = currentRuntimeBadgeMac()
         Log.d(TAG, "rec# auto-download: notification received filename=$filename badgeMac=$ownerBadgeMac")
 
+        val normalizedFilename = normalizeSimBadgeFilename(filename)
+        val key = AutoDownloadKey(ownerBadgeMac, normalizedFilename)
+        val shouldLaunch = activeJobMutex.withLock {
+            activeJobs[key]?.isActive != true
+        }
+        if (!shouldLaunch) {
+            Log.d(TAG, "rec# auto-download: duplicate active download skipped filename=$normalizedFilename badgeMac=$ownerBadgeMac")
+            return
+        }
+
         // 立即在抽屉创建 QUEUED 占位符
-        storeSupport.createQueuedBadgePlaceholders(listOf(filename), ownerBadgeMac)
-        Log.d(TAG, "rec# auto-download: placeholder created filename=$filename")
+        storeSupport.createQueuedBadgePlaceholders(listOf(normalizedFilename), ownerBadgeMac)
+        Log.d(TAG, "rec# auto-download: placeholder created filename=$normalizedFilename")
         orchestrator.notifyDownloadStarting()
 
         // 后台下载
-        runtime.repositoryScope.launch {
-            downloadAndUpgrade(filename, ownerBadgeMac)
+        val job = runtime.repositoryScope.launch(start = CoroutineStart.LAZY) {
+            try {
+                downloadAndUpgrade(normalizedFilename, ownerBadgeMac)
+            } finally {
+                activeJobMutex.withLock {
+                    activeJobs.remove(key)
+                }
+            }
         }
+        activeJobMutex.withLock {
+            activeJobs[key] = job
+        }
+        job.start()
     }
 
     private suspend fun downloadAndUpgrade(filename: String, ownerBadgeMac: String?) {
@@ -72,57 +100,80 @@ class SimBadgeAudioAutoDownloader @Inject constructor(
         )
         Log.d(TAG, "rec# auto-download: downloading filename=$filename badgeMac=$ownerBadgeMac")
 
-        when (val result = connectivityBridge.downloadRecording(filename)) {
-            is WavDownloadResult.Success -> {
-                if (result.sizeBytes < MIN_REC_WAV_SIZE_BYTES) {
-                    // 空文件，移除占位符
-                    result.localFile.delete()
-                    storeSupport.removeBadgeAudioByFilename(filename, ownerBadgeMac)
+        try {
+            when (val result = connectivityBridge.downloadRecording(filename)) {
+                is WavDownloadResult.Success -> {
+                    if (result.sizeBytes < MIN_REC_WAV_SIZE_BYTES) {
+                        // 空文件，移除占位符
+                        result.localFile.delete()
+                        storeSupport.removeBadgeAudioByFilename(filename, ownerBadgeMac)
+                        notifyCommandEndAsync()
+                        Log.d(
+                            TAG,
+                            "rec# auto-download: removed empty placeholder filename=$filename sizeBytes=${result.sizeBytes}"
+                        )
+                        return
+                    }
+                    if (currentRuntimeBadgeMac() != ownerBadgeMac) {
+                        result.localFile.delete()
+                        storeSupport.markBadgeDownloadAvailability(
+                            filename = filename,
+                            availability = AudioLocalAvailability.FAILED,
+                            errorMessage = "设备已切换，请重新同步",
+                            badgeMac = ownerBadgeMac
+                        )
+                        notifyCommandEndAsync()
+                        Log.d(
+                            TAG,
+                            "rec# auto-download: discarded cross-device download filename=$filename badgeMac=$ownerBadgeMac"
+                        )
+                        return
+                    }
+                    storeSupport.importDownloadedBadgeAudio(filename, result.localFile, ownerBadgeMac)
                     notifyCommandEndAsync()
                     Log.d(
                         TAG,
-                        "rec# auto-download: removed empty placeholder filename=$filename sizeBytes=${result.sizeBytes}"
+                        "rec# auto-download: success filename=$filename badgeMac=$ownerBadgeMac sizeBytes=${result.sizeBytes}"
                     )
-                    return
+                    _syncIslandEvents.tryEmit(SimBadgeSyncIslandEvent.RecFileDownloaded(filename))
                 }
-                if (currentRuntimeBadgeMac() != ownerBadgeMac) {
-                    result.localFile.delete()
+
+                is WavDownloadResult.Error -> {
                     storeSupport.markBadgeDownloadAvailability(
                         filename = filename,
                         availability = AudioLocalAvailability.FAILED,
-                        errorMessage = "设备已切换，请重新同步",
+                        errorMessage = result.message,
                         badgeMac = ownerBadgeMac
                     )
                     notifyCommandEndAsync()
-                    Log.d(
+                    Log.e(
                         TAG,
-                        "rec# auto-download: discarded cross-device download filename=$filename badgeMac=$ownerBadgeMac"
+                        "rec# auto-download: failed filename=$filename reason=${result.message}"
                     )
-                    return
                 }
-                storeSupport.importDownloadedBadgeAudio(filename, result.localFile, ownerBadgeMac)
-                notifyCommandEndAsync()
-                Log.d(
-                    TAG,
-                    "rec# auto-download: success filename=$filename badgeMac=$ownerBadgeMac sizeBytes=${result.sizeBytes}"
-                )
-                _syncIslandEvents.tryEmit(SimBadgeSyncIslandEvent.RecFileDownloaded(filename))
             }
-
-            is WavDownloadResult.Error -> {
-                storeSupport.markBadgeDownloadAvailability(
-                    filename = filename,
-                    availability = AudioLocalAvailability.FAILED,
-                    errorMessage = result.message,
-                    badgeMac = ownerBadgeMac
-                )
-                notifyCommandEndAsync()
-                Log.e(
-                    TAG,
-                    "rec# auto-download: failed filename=$filename reason=${result.message}"
-                )
-            }
+        } catch (cancelled: CancellationException) {
+            Log.d(TAG, "rec# auto-download: canceled filename=$filename badgeMac=$ownerBadgeMac")
+            throw cancelled
         }
+    }
+
+    suspend fun cancelDownloadsForDisconnect(badgeMac: String): List<String> {
+        if (badgeMac.isBlank()) return emptyList()
+        val canceledFilenames = activeJobMutex.withLock {
+            val matching = activeJobs
+                .filterKeys { it.badgeMac == badgeMac }
+                .toList()
+            matching.forEach { (key, job) ->
+                job.cancel(BadgeDisconnectCancellationException(badgeMac))
+                activeJobs.remove(key)
+            }
+            matching.map { (key, _) -> key.filename }
+        }
+        if (canceledFilenames.isNotEmpty()) {
+            Log.d(TAG, "rec# auto-download: disconnect cancel badgeMac=$badgeMac count=${canceledFilenames.size}")
+        }
+        return canceledFilenames
     }
 
     private fun notifyCommandEndAsync() {
@@ -135,4 +186,9 @@ class SimBadgeAudioAutoDownloader @Inject constructor(
         return runtime.endpointRecoveryCoordinator.currentRuntimeKey()?.peripheralId
             ?: runtime.deviceRegistryManager.activeDevice.value?.macAddress
     }
+
+    private data class AutoDownloadKey(
+        val badgeMac: String?,
+        val filename: String
+    )
 }

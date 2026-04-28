@@ -516,7 +516,8 @@ class SimAudioRepositorySyncSupportTest {
     fun `active device change cancels queued and active badge downloads`() = runTest {
         bindRuntimeToTestScheduler(testScheduler)
         activeDeviceFlow.value = registeredDevice("AA:AA:AA:AA:AA:01")
-        val repository = SimAudioRepository(runtime, orchestrator)
+        val autoDownloader = SimBadgeAudioAutoDownloader(connectivityBridge, runtime, orchestrator)
+        val repository = SimAudioRepository(runtime, orchestrator, autoDownloader)
         connectivityBridge.isReadyResult = true
         connectivityBridge.listResult = Result.Success(listOf("a.wav", "b.wav"))
         connectivityBridge.downloadSuspender = { kotlinx.coroutines.awaitCancellation() }
@@ -545,6 +546,179 @@ class SimAudioRepositorySyncSupportTest {
             runtime.audioFiles.value.single { it.filename == "b.wav" }.localAvailability
         )
         assertFalse(connectivityBridge.calls.contains("downloadRecording:b.wav"))
+        runtime.repositoryScope.cancel()
+    }
+
+    @Test
+    fun `disconnect cancel preserves active download and resumes targeted filenames only`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
+        val badgeMac = "AA:AA:AA:AA:AA:01"
+        activeDeviceFlow.value = registeredDevice(badgeMac)
+        connectivityBridge.isReadyResult = true
+        connectivityBridge.listResult = Result.Success(listOf("a.wav", "b.wav"))
+        connectivityBridge.downloadSuspender = { kotlinx.coroutines.awaitCancellation() }
+        storeSupport.createQueuedBadgePlaceholders(listOf("rec.wav"), badgeMac)
+
+        syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+        advanceUntilIdle()
+
+        assertEquals(
+            AudioLocalAvailability.DOWNLOADING,
+            runtime.audioFiles.value.single { it.filename == "a.wav" }.localAvailability
+        )
+
+        syncSupport.cancelDownloadsForDisconnect(badgeMac, extraResumeFilenames = listOf("rec.wav"))
+        advanceUntilIdle()
+
+        assertTrue(runtime.queuedBadgeDownloads.isEmpty())
+        assertTrue(runtime.badgeDownloadWorkerJob?.isActive != true)
+        assertEquals(
+            AudioLocalAvailability.DOWNLOADING,
+            runtime.audioFiles.value.single { it.filename == "a.wav" }.localAvailability
+        )
+        assertEquals(
+            AudioLocalAvailability.QUEUED,
+            runtime.audioFiles.value.single { it.filename == "b.wav" }.localAvailability
+        )
+
+        connectivityBridge.downloadSuspender = null
+        connectivityBridge.downloadResults["a.wav"] = WavDownloadResult.Success(
+            localFile = tempFolder.newFile("a-resume.wav").apply { writeText("audio-a") },
+            originalFilename = "a.wav",
+            sizeBytes = 2048L
+        )
+        connectivityBridge.downloadResults["b.wav"] = WavDownloadResult.Success(
+            localFile = tempFolder.newFile("b-resume.wav").apply { writeText("audio-b") },
+            originalFilename = "b.wav",
+            sizeBytes = 2048L
+        )
+        connectivityBridge.downloadResults["rec.wav"] = WavDownloadResult.Success(
+            localFile = tempFolder.newFile("rec-resume.wav").apply { writeText("audio-rec") },
+            originalFilename = "rec.wav",
+            sizeBytes = 2048L
+        )
+
+        syncSupport.resumeDownloadsAfterReconnect(badgeMac)
+        advanceUntilIdle()
+
+        assertEquals(
+            AudioLocalAvailability.READY,
+            runtime.audioFiles.value.single { it.filename == "a.wav" }.localAvailability
+        )
+        assertEquals(
+            AudioLocalAvailability.READY,
+            runtime.audioFiles.value.single { it.filename == "b.wav" }.localAvailability
+        )
+        assertEquals(
+            AudioLocalAvailability.READY,
+            runtime.audioFiles.value.single { it.filename == "rec.wav" }.localAvailability
+        )
+        assertEquals(2, connectivityBridge.calls.count { it == "downloadRecording:a.wav" })
+        assertEquals(1, connectivityBridge.calls.count { it == "downloadRecording:b.wav" })
+        assertEquals(1, connectivityBridge.calls.count { it == "downloadRecording:rec.wav" })
+    }
+
+    @Test
+    fun `device switch cancel clears pending disconnect resume and marks interrupted downloads failed`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
+        val badgeMac = "AA:AA:AA:AA:AA:01"
+        activeDeviceFlow.value = registeredDevice(badgeMac)
+        connectivityBridge.isReadyResult = true
+        connectivityBridge.listResult = Result.Success(listOf("a.wav"))
+        connectivityBridge.downloadSuspender = { kotlinx.coroutines.awaitCancellation() }
+
+        syncSupport.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+        advanceUntilIdle()
+
+        syncSupport.cancelDownloadsForDisconnect(badgeMac)
+        advanceUntilIdle()
+        syncSupport.cancelAllBadgeDownloads(badgeMac)
+        connectivityBridge.downloadSuspender = null
+        connectivityBridge.downloadResults["a.wav"] = WavDownloadResult.Success(
+            localFile = tempFolder.newFile("a-after-switch.wav").apply { writeText("audio-a") },
+            originalFilename = "a.wav",
+            sizeBytes = 2048L
+        )
+
+        syncSupport.resumeDownloadsAfterReconnect(badgeMac)
+        advanceUntilIdle()
+
+        val entry = runtime.audioFiles.value.single { it.filename == "a.wav" }
+        assertEquals(AudioLocalAvailability.FAILED, entry.localAvailability)
+        assertEquals(BADGE_SWITCH_INTERRUPTED_MESSAGE, entry.lastErrorMessage)
+        assertEquals(1, connectivityBridge.calls.count { it == "downloadRecording:a.wav" })
+    }
+
+    @Test
+    fun `repository observer cancels same badge disconnect and resumes on ready`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
+        val badgeMac = "AA:AA:AA:AA:AA:01"
+        activeDeviceFlow.value = registeredDevice(badgeMac)
+        val autoDownloader = SimBadgeAudioAutoDownloader(connectivityBridge, runtime, orchestrator)
+        val repository = SimAudioRepository(runtime, orchestrator, autoDownloader)
+        connectivityBridge.isReadyResult = true
+        connectivityBridge.listResult = Result.Success(listOf("a.wav"))
+        connectivityBridge.downloadSuspender = { kotlinx.coroutines.awaitCancellation() }
+
+        advanceUntilIdle()
+        connectivityBridge.managerStatus.value = BadgeManagerStatus.Ready("192.168.0.9", "Office")
+        advanceUntilIdle()
+        repository.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+        advanceUntilIdle()
+
+        connectivityBridge.managerStatus.value = BadgeManagerStatus.Disconnected
+        advanceUntilIdle()
+
+        assertEquals(
+            AudioLocalAvailability.DOWNLOADING,
+            runtime.audioFiles.value.single { it.filename == "a.wav" }.localAvailability
+        )
+        assertTrue(runtime.badgeDownloadWorkerJob?.isActive != true)
+
+        connectivityBridge.downloadSuspender = null
+        connectivityBridge.downloadResults["a.wav"] = WavDownloadResult.Success(
+            localFile = tempFolder.newFile("a-observer-resume.wav").apply { writeText("audio-a") },
+            originalFilename = "a.wav",
+            sizeBytes = 2048L
+        )
+        connectivityBridge.managerStatus.value = BadgeManagerStatus.Ready("192.168.0.9", "Office")
+        advanceUntilIdle()
+
+        assertEquals(
+            AudioLocalAvailability.READY,
+            runtime.audioFiles.value.single { it.filename == "a.wav" }.localAvailability
+        )
+        assertEquals(2, connectivityBridge.calls.count { it == "downloadRecording:a.wav" })
+        runtime.repositoryScope.cancel()
+    }
+
+    @Test
+    fun `repository observer keeps downloads active for partial BLE network states`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
+        val badgeMac = "AA:AA:AA:AA:AA:01"
+        activeDeviceFlow.value = registeredDevice(badgeMac)
+        val autoDownloader = SimBadgeAudioAutoDownloader(connectivityBridge, runtime, orchestrator)
+        val repository = SimAudioRepository(runtime, orchestrator, autoDownloader)
+        connectivityBridge.isReadyResult = true
+        connectivityBridge.listResult = Result.Success(listOf("a.wav"))
+        connectivityBridge.downloadSuspender = { kotlinx.coroutines.awaitCancellation() }
+
+        advanceUntilIdle()
+        connectivityBridge.managerStatus.value = BadgeManagerStatus.Ready("192.168.0.9", "Office")
+        advanceUntilIdle()
+        repository.syncFromBadge(SimBadgeSyncTrigger.MANUAL)
+        advanceUntilIdle()
+
+        connectivityBridge.managerStatus.value = BadgeManagerStatus.BlePairedNetworkUnknown
+        connectivityBridge.managerStatus.value = BadgeManagerStatus.BlePairedNetworkOffline
+        connectivityBridge.managerStatus.value = BadgeManagerStatus.BleDetected
+        advanceUntilIdle()
+
+        assertTrue(runtime.badgeDownloadWorkerJob?.isActive == true)
+        assertEquals(
+            AudioLocalAvailability.DOWNLOADING,
+            runtime.audioFiles.value.single { it.filename == "a.wav" }.localAvailability
+        )
         runtime.repositoryScope.cancel()
     }
 

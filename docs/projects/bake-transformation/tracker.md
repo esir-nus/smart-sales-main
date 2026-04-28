@@ -25,14 +25,14 @@ open
 | 01 | triage | done | Classified BAKE runtime domains, confirmed `docs/bake-contracts/`, and authored cluster-1 DBM/TCF contracts. | [sprints/01-triage.md](sprints/01-triage.md) |
 | 02 | connectivity-dbm | done | Delivered behavior map created for connectivity-bridge plus badge-session, with HTTP readiness, active-device fencing, Wi-Fi repair, telemetry, and hardware-evidence gaps recorded. | [sprints/02-connectivity-dbm.md](sprints/02-connectivity-dbm.md) |
 | 03 | connectivity-tcf | done | Added base-runtime scope metadata and delivered-vs-target gap notes to connectivity/session core flows, then authored the first BAKE contract sprint. | [sprints/03-connectivity-tcf.md](sprints/03-connectivity-tcf.md) |
-| 04 | connectivity-bake-contract | authored | Write the cluster-1 BAKE implementation contract and sync supporting connectivity discovery docs. | [sprints/04-connectivity-bake-contract.md](sprints/04-connectivity-bake-contract.md) |
+| 04 | connectivity-bake-contract | done | Wrote the connectivity-badge-session BAKE contract, synced interface-map authority, and demoted connectivity Cerb docs to supporting reference. | [sprints/04-connectivity-bake-contract.md](sprints/04-connectivity-bake-contract.md) |
 
 ## Domain Backlog
 
 | Domain | Runtime | Existing doc | Complexity | Priority tier | Status |
 |--------|---------|--------------|------------|---------------|--------|
-| connectivity-bridge | base-runtime-active | `docs/core-flow/badge-connectivity-lifecycle.md` | high | tier-1 | next |
-| badge-session | base-runtime-active | `docs/core-flow/badge-session-lifecycle.md` | high | tier-1 | next |
+| connectivity-bridge | base-runtime-active | `docs/core-flow/badge-connectivity-lifecycle.md` | high | tier-1 | bake-contract-written |
+| badge-session | base-runtime-active | `docs/core-flow/badge-session-lifecycle.md` | high | tier-1 | bake-contract-written |
 | scheduler-path-a | base-runtime-active | `docs/core-flow/scheduler-fast-track-flow.md` | high | tier-1 | triaged |
 | shell-routing | base-runtime-active | `docs/core-flow/sim-shell-routing-flow.md` | high | tier-1 | triaged |
 | audio-pipeline | base-runtime-active | `docs/core-flow/sim-audio-artifact-chat-flow.md` | high | tier-2 | triaged |

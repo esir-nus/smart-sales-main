@@ -1,8 +1,9 @@
 # Connectivity Bridge Interface
 
 > **Blackbox contract** — For consumers (Scheduler, Badge Audio Pipeline). Don't read implementation.
-> **Status**: Active supporting interface
-> **Last Updated**: 2026-04-27
+> **Status**: Supporting reference beneath BAKE
+> **Last Updated**: 2026-04-28
+> **BAKE Implementation Contract**: [`docs/bake-contracts/connectivity-badge-session.md`](../../bake-contracts/connectivity-badge-session.md)
 > **Behavioral Source Above This Interface**: [`docs/core-flow/badge-connectivity-lifecycle.md`](../../core-flow/badge-connectivity-lifecycle.md)
 
 ---
@@ -63,6 +64,17 @@ interface ConnectivityBridge {
      * @see esp32-protocol.md §6
      */
     fun recordingNotifications(): Flow<RecordingNotification>
+
+    /**
+     * Stream of audio-only recording notifications from badge.
+     *
+     * Current production path: BLE `rec#YYYYMMDD_HHMMSS` notification on the
+     * persistent badge GATT session. Consumers receive the full downloadable
+     * filename as `RecordingNotification.AudioRecordingReady`.
+     *
+     * @return Flow (hot, buffered, no replay)
+     */
+    fun audioRecordingNotifications(): Flow<RecordingNotification.AudioRecordingReady>
 
     /**
      * Stream of battery notifications from badge.
@@ -137,6 +149,16 @@ interface ConnectivityBridge {
      * Sends fire-and-forget `Command#end` on the active BLE session.
      */
     suspend fun notifyCommandEnd()
+
+    /**
+     * Stream of Wi-Fi repair milestones for the active manual repair window.
+     *
+     * UI repair state must consume these explicit events instead of inferring
+     * repair progress from `managerStatus`.
+     *
+     * @return Flow (hot, no replay)
+     */
+    fun wifiRepairEvents(): Flow<WifiRepairEvent>
 }
 ```
 
@@ -177,11 +199,15 @@ sealed class BadgeManagerStatus {
 ```kotlin
 sealed class RecordingNotification {
     data class RecordingReady(val filename: String) : RecordingNotification()
+    data class AudioRecordingReady(val filename: String) : RecordingNotification()
 }
 ```
 
 `RecordingReady.filename` uses the full downloadable badge filename:
 `log_YYYYMMDD_HHMMSS.wav`.
+
+`AudioRecordingReady.filename` uses the full downloadable badge filename for
+audio-only `rec#` notifications.
 
 ### WavDownloadResult
 
@@ -252,12 +278,14 @@ interface ConnectivityPrompt {
 | `downloadRecording` | Rate-limited, max 1 concurrent download; `onProgress` callback (if provided) is invoked on the IO dispatcher with (bytesRead, totalBytes) — consumers must throttle UI updates themselves |
 | `listRecordings` | Reuses the active runtime endpoint; no repeated BLE Wi‑Fi query in the normal happy path |
 | `recordingNotifications` | Hot flow, buffered (1), no replay |
+| `audioRecordingNotifications` | Hot flow, buffered, no replay; forwards audio-only `rec#...` recording-ready notifications |
 | `batteryNotifications` | Hot flow, buffered, no replay; forwards unsolicited BLE `Bat#<0..100>` pushes as integer percent |
 | `firmwareVersionNotifications` | Hot flow, buffered, no replay; forwards `Ver#...` replies from the badge as display-ready strings |
 | `sdCardSpaceNotifications` | Hot flow, buffered, no replay; forwards `SD#space#<size>` replies from the badge as firmware-formatted display strings |
 | `isReady()` | Pre-flight check with 3s timeout; may refresh endpoint only when the active snapshot is missing or invalidated, and may trigger one bounded saved-credential replay sequence after solid-IP HTTP failure |
 | `deleteRecording` | Idempotent, returns true if file removed or didn't exist; reuses the active runtime endpoint when valid |
 | `requestFirmwareVersion()` | Best-effort BLE query; sends `Ver#get` on the active session and returns whether the request was queued successfully |
+| `wifiRepairEvents` | Hot flow, no replay; emits manual Wi-Fi repair milestones during the active repair window |
 | `requestSdCardSpace()` | Best-effort BLE query; sends `SD#space` on the active session and returns whether the request was queued successfully |
 | `notifyCommandEnd()` | Best-effort BLE completion signal; sends `Command#end` on the active session when a `log#` or `rec#` pipeline reaches a terminal state |
 | `updateWifiConfig` | Rejects blank/whitespace-only SSID or password before any BLE provision/write attempt |

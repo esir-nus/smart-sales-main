@@ -4,7 +4,7 @@
 >
 > **Purpose**: Module ownership + data flow. Read this BEFORE any cross-module change.
 > **Rule**: If data belongs to Module B, query B's interface at runtime. Don't store B's data on A's model.
-> **Last Updated**: 2026-04-25 (Badge SD-card-space query/reply wired through parser -> bridge -> ConnectivityViewModel -> UserCenter; firmware version, task-create/reminder chimes, and persisted voice volume remain shipped)
+> **Last Updated**: 2026-04-28 (ConnectivityBridge plus badge-session BAKE contract is now the implementation record; Cerb connectivity bridge docs remain supporting/reference docs beneath it)
 >
 > **Status Legend**: ✅ = Shipped (Real impl) · 📐 = Interface only (Fake impl) · 🔲 = Not yet coded
 > **Platform Ownership Legend**: `shared` = same product contract across platforms · `android-only` = owned by the current Android lineage · `harmony-only` = owned by the future native Harmony root · `platform-adapter` = shared product contract, platform-specific delivery layer · `legacy-android-on-harmony` = Android app compatibility behavior on Huawei/Honor/Harmony devices
@@ -32,6 +32,18 @@ This overlay classifies the current repo's cross-platform-sensitive surfaces wit
 - platform overlays answer how Android or Harmony delivers it
 - native Harmony artifacts are forbidden in the current Android tree
 
+### BAKE implementation contract overlay (2026-04-28)
+
+- `docs/bake-contracts/connectivity-badge-session.md` is the verified BAKE
+  implementation contract for the ConnectivityBridge plus badge-session corridor.
+- `docs/core-flow/badge-connectivity-lifecycle.md` and
+  `docs/core-flow/badge-session-lifecycle.md` remain the behavioral north-star
+  docs above the BAKE contract.
+- `docs/cerb/connectivity-bridge/spec.md` and
+  `docs/cerb/connectivity-bridge/interface.md` remain supporting/reference docs
+  beneath the BAKE contract until a later archival sprint moves historical Cerb
+  material.
+
 ---
 
 ## Layer 1: Infrastructure
@@ -41,7 +53,7 @@ Leaf services with no upstream dependencies. They don't call other modules.
 
 | Module | Track | Owns (Writes) | Reads From | Key Interface | OS Layer | Status |
 |--------|-------|--------------|------------|---------------|----------|--------|
-| **[ConnectivityBridge](./connectivity-bridge/spec.md)** | Hardware & Audio | BLE + HTTP device state, manager-only BLE/Wi‑Fi diagnostic state | — | `connectionState: StateFlow`, `managerStatus: StateFlow`, `isReady()` | — | ✅ |
+| **[ConnectivityBridge](./connectivity-bridge/spec.md)** | Hardware & Audio | BLE + HTTP device state, manager-only BLE/Wi‑Fi diagnostic state; BAKE implementation record: [`connectivity-badge-session`](../bake-contracts/connectivity-badge-session.md) | — | `connectionState: StateFlow`, `managerStatus: StateFlow`, `isReady()`, notification and repair streams | — | ✅ |
 | **[NotificationService](./notifications/spec.md)** | System I & Ambient | System notification display | — | `show(id, title, body, channel...) -> Unit` | — | ✅ |
 | **[OSS](./oss-service/spec.md)** | Hardware & Audio | File upload/download | — | `upload(File, objectKey) -> OssUploadResult` | — | ✅ |
 | **[ASR](./asr-service/spec.md)** | Hardware & Audio | Transcription results | OSS (downloads audio files to transcribe) | `transcribe(File) -> AsrResult` | — | ✅ |

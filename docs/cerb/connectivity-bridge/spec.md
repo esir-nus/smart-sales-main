@@ -2,8 +2,9 @@
 
 > **Cerb-compliant spec** — Prism-safe wrapper for legacy BLE + HTTP connectivity.
 > **OS Layer**: Infrastructure (Layer 1) — Leaf service, no upstream dependencies
-> **Status**: SHIPPED
-> **Last Updated**: 2026-04-27
+> **Status**: Supporting reference beneath BAKE
+> **Last Updated**: 2026-04-28
+> **BAKE Implementation Contract**: [`docs/bake-contracts/connectivity-badge-session.md`](../../bake-contracts/connectivity-badge-session.md)
 > **Connectivity Lifecycle Authority Above This Doc**: [`docs/core-flow/badge-connectivity-lifecycle.md`](../../core-flow/badge-connectivity-lifecycle.md)
 > **Behavioral UX Authority Above This Doc**: [`docs/core-flow/base-runtime-ux-surface-governance-flow.md`](../../core-flow/base-runtime-ux-surface-governance-flow.md) (`UX.CONNECTIVITY.*`)
 
@@ -11,7 +12,7 @@
 
 ## Overview
 
-Connectivity Bridge provides a **thin, Prism-compatible interface** to legacy `feature:connectivity` module. Preserves ESP32 rate limiting and business logic while exposing clean interfaces for Prism domain code.
+Connectivity Bridge provides a **thin, Prism-compatible interface** to legacy `feature:connectivity` module. Preserves ESP32 rate limiting and business logic while exposing clean interfaces for Prism domain code. After Sprint 04 of the BAKE transformation, this Cerb document is a supporting/reference discovery doc; the BAKE contract is the authoritative implementation record for the connectivity-bridge plus badge-session corridor.
 
 **Key Principle**: Prism domain code MUST NOT import from `feature:connectivity` directly. All connectivity access goes through this bridge.
 

@@ -1,5 +1,6 @@
 package com.smartsales.prism.ui.sim
 
+import com.smartsales.prism.domain.tingwu.DiarizedSegment
 import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
 import com.smartsales.prism.domain.tingwu.TingwuQuestionAnswer
 import com.smartsales.prism.domain.tingwu.TingwuSpeakerSummary
@@ -92,6 +93,38 @@ class SimArtifactContentTest {
         assertEquals(
             "- 罗总：重点关注预算和交付节奏\n- 发言人：补充了试点范围",
             buildSimSpeakerSummarySection(artifacts)
+        )
+    }
+
+    @Test
+    fun `buildSimSpeakerSection normalizes numeric self labels`() {
+        val artifacts = TingwuJobArtifacts(
+            speakerLabels = mapOf(
+                "1" to "1",
+                "spk_2" to "spk_2",
+                "speaker_3" to "客户"
+            )
+        )
+
+        assertEquals(
+            "- 发言人1 (1)\n- 发言人2 (spk_2)\n- 客户 (speaker_3)",
+            buildSimSpeakerSection(artifacts)
+        )
+    }
+
+    @Test
+    fun `buildSimSpeakerSection normalizes diarized placeholder ids`() {
+        val artifacts = TingwuJobArtifacts(
+            diarizedSegments = listOf(
+                DiarizedSegment("spk_1", 0, 0, 900, "预算可以确认。"),
+                DiarizedSegment("spk_1", 0, 1_000, 1_900, "下周启动。"),
+                DiarizedSegment(null, 1, 2_000, 2_900, "我来补充。")
+            )
+        )
+
+        assertEquals(
+            "- 发言人1: 2 段\n- 发言人2: 1 段",
+            buildSimSpeakerSection(artifacts)
         )
     }
 

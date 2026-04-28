@@ -104,6 +104,7 @@ Interpretation:
 - transcript, chapters, summary, keywords, diarization, and speaker labels are source-led provider artifacts
 - `diarizedSegments` may be normalized from Tingwu `Segments` or paragraph-style `Paragraphs[].Words[]` speaker metadata
 - visible transcript consumers may render a speaker-aware transcript from `diarizedSegments + speakerLabels` when present, then fall back to `transcriptMarkdown`
+- visible transcript consumers may normalize numeric/provider placeholder speaker labels such as `1`, `spk_1`, and `speaker_2` to stable `发言人1/2/...` display text while preserving real provider labels such as `客户`, `销售顾问`, or named speakers
 - output paths and result URLs are provider-returned adjunct artifacts and may be absent independently
 - `meetingAssistanceRaw` is provider-returned raw structured output used by current consumers when present
 - optional fields may be absent without failing the whole job

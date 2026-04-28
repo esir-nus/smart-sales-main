@@ -459,10 +459,15 @@ internal fun resolveSimArtifactOverview(
         }
 }
 
-private fun buildSimSpeakerSection(artifacts: TingwuJobArtifacts): String? {
+internal fun buildSimSpeakerSection(artifacts: TingwuJobArtifacts): String? {
     if (artifacts.speakerLabels.isNotEmpty()) {
         return artifacts.speakerLabels.entries.joinToString("\n") { (speakerId, label) ->
-            "- ${label.ifBlank { speakerId }} (${speakerId})"
+            val displayLabel = resolveTingwuSpeakerDisplayLabel(
+                speakerId = speakerId,
+                speakerIndex = 0,
+                speakerLabels = mapOf(speakerId to label)
+            )
+            "- $displayLabel ($speakerId)"
         }
     }
 
@@ -470,8 +475,15 @@ private fun buildSimSpeakerSection(artifacts: TingwuJobArtifacts): String? {
     return diarized
         .groupBy { it.speakerId ?: "speaker_${it.speakerIndex}" }
         .entries
-        .joinToString("\n") { (speakerId, segments) ->
-            "- $speakerId: ${segments.size} 段"
+        .joinToString("\n") { (_, segments) ->
+            val speakerIndex = segments.firstOrNull()?.speakerIndex ?: 0
+            val explicitSpeakerId = segments.firstOrNull()?.speakerId
+            val displayLabel = resolveTingwuSpeakerDisplayLabel(
+                speakerId = explicitSpeakerId,
+                speakerIndex = speakerIndex,
+                speakerLabels = emptyMap()
+            )
+            "- $displayLabel: ${segments.size} 段"
         }
 }
 

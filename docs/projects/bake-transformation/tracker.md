@@ -22,42 +22,43 @@ open
 
 | # | Slug | Status | Summary | Contract |
 |---|------|--------|---------|----------|
-| 01 | triage | authored | Classify all domains, produce ordered sprint backlog, author cluster-1 DBM and TCF contracts. | [sprints/01-triage.md](sprints/01-triage.md) |
+| 01 | triage | done | Classified BAKE runtime domains, confirmed `docs/bake-contracts/`, and authored cluster-1 DBM/TCF contracts. | [sprints/01-triage.md](sprints/01-triage.md) |
+| 02 | connectivity-dbm | authored | Map delivered connectivity-bridge and badge-session behavior from current docs/code before target-flow edits. | [sprints/02-connectivity-dbm.md](sprints/02-connectivity-dbm.md) |
+| 03 | connectivity-tcf | authored | Update the cluster-1 target core-flow against the delivered-behavior map and author next BAKE contract sprint. | [sprints/03-connectivity-tcf.md](sprints/03-connectivity-tcf.md) |
 
 ## Domain Backlog
 
-> Triage sprint (01) fills and confirms this table. Entries below are seeded
-> from the plan and are non-binding until sprint 01 closes.
-
-| Domain | Runtime | Priority | Status |
-|--------|---------|----------|--------|
-| connectivity-bridge | base-runtime-active | tier-1 | pending |
-| badge-session | base-runtime-active | tier-1 | pending |
-| scheduler-path-a | base-runtime-active | tier-1 | pending |
-| shell-routing | base-runtime-active | tier-1 | pending |
-| audio-pipeline | base-runtime-active | tier-2 | pending |
-| agent-chat-pipeline | partially-shipped | tier-2 | pending |
-| entity-resolution | base-runtime-active | tier-2 | pending |
-| onboarding | base-runtime-active | tier-2 | pending |
-| typed-mutation | partially-shipped | tier-2 | pending |
-| session-continuity | partially-shipped | tier-2 | pending |
-| reinforcement-habit | partially-shipped | tier-2 | pending |
-| asr-service | base-runtime-active | tier-3 | pending |
-| oss-service | base-runtime-active | tier-3 | pending |
-| tingwu-pipeline | base-runtime-active | tier-3 | pending |
-| notification-service | base-runtime-active | tier-3 | pending |
-| pipeline-telemetry | base-runtime-active | tier-3 | pending |
-| device-pairing | base-runtime-active | tier-3 | pending |
-| conflict-resolver | base-runtime-active | tier-3 | pending |
-| ux-surface-governance | base-runtime-active | tier-3 | pending |
-| scheduler-path-b | mono-deferred | deferred | deferred |
-| plugin-gateway | mono-deferred | deferred | deferred |
-| memory-crm | mono-deferred | deferred | deferred |
+| Domain | Runtime | Existing doc | Complexity | Priority tier | Status |
+|--------|---------|--------------|------------|---------------|--------|
+| connectivity-bridge | base-runtime-active | `docs/core-flow/badge-connectivity-lifecycle.md` | high | tier-1 | next |
+| badge-session | base-runtime-active | `docs/core-flow/badge-session-lifecycle.md` | high | tier-1 | next |
+| scheduler-path-a | base-runtime-active | `docs/core-flow/scheduler-fast-track-flow.md` | high | tier-1 | triaged |
+| shell-routing | base-runtime-active | `docs/core-flow/sim-shell-routing-flow.md` | high | tier-1 | triaged |
+| audio-pipeline | base-runtime-active | `docs/core-flow/sim-audio-artifact-chat-flow.md` | high | tier-2 | triaged |
+| agent-chat-pipeline | partially-shipped | `docs/cerb/sim-audio-chat/spec.md` | high | tier-2 | triaged |
+| entity-resolution | base-runtime-active | `docs/cerb/entity-writer/spec.md` | high | tier-2 | triaged |
+| onboarding | base-runtime-active | `docs/cerb/onboarding-interaction/spec.md` | medium | tier-2 | triaged |
+| typed-mutation | partially-shipped | `docs/core-flow/system-typed-mutation-flow.md` | high | tier-2 | triaged |
+| session-continuity | partially-shipped | `docs/core-flow/system-session-memory-flow.md` | high | tier-2 | triaged |
+| reinforcement-habit | partially-shipped | `docs/core-flow/system-reinforcement-write-through-flow.md` | medium | tier-2 | triaged |
+| asr-service | base-runtime-active | `docs/cerb/asr-service/spec.md` | low | tier-3 | triaged |
+| oss-service | base-runtime-active | `docs/cerb/oss-service/spec.md` | low | tier-3 | triaged |
+| tingwu-pipeline | base-runtime-active | `docs/cerb/tingwu-pipeline/spec.md` | medium | tier-3 | triaged |
+| notification-service | base-runtime-active | `docs/cerb/notifications/spec.md` | low | tier-3 | triaged |
+| pipeline-telemetry | base-runtime-active | `docs/cerb/pipeline-telemetry/spec.md` | low | tier-3 | triaged |
+| device-pairing | base-runtime-active | `docs/cerb/device-pairing/spec.md` | medium | tier-3 | triaged |
+| conflict-resolver | base-runtime-active | `docs/cerb/conflict-resolver/spec.md` | medium | tier-3 | triaged |
+| ux-surface-governance | base-runtime-active | `docs/core-flow/base-runtime-ux-surface-governance-flow.md` | medium | tier-3 | triaged |
+| scheduler-path-b | mono-deferred | `docs/core-flow/scheduler-memory-highway-flow.md` | high | deferred | deferred |
+| plugin-gateway | mono-deferred | `docs/core-flow/system-plugin-gateway-flow.md` | high | deferred | deferred |
+| memory-crm | mono-deferred | `docs/core-flow/system-query-assembly-flow.md` | high | deferred | deferred |
 
 ## Decisions
 
-- bake-contracts/ location: to be confirmed by sprint 01 and registered in
-  `docs/specs/bake-protocol.md` before the first BAKE contract is written.
+- Canonical BAKE contract location is `docs/bake-contracts/`; create the
+  directory in the first sprint that writes an actual BAKE contract.
+- Sprint 01 registered the path here instead of `docs/specs/bake-protocol.md`
+  because the sprint write scope did not include the northstar doc.
 
 ## Cross-Project Notes
 

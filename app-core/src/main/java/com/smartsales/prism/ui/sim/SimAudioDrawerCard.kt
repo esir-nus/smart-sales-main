@@ -140,9 +140,15 @@ internal fun SimAudioCard(
         }
     }
 
-    val isDownloading = entry.item.status == AudioStatus.PENDING &&
+    // 工牌切换中断后处于等待恢复传输的过渡态，需要先于 isDownloading/isQueued 判定，
+    // 避免在工牌尚未就绪时把卡片伪装成"传输中"。
+    val isHolding = entry.item.status == AudioStatus.PENDING &&
+        entry.isHoldingForResume
+    val isDownloading = !isHolding &&
+        entry.item.status == AudioStatus.PENDING &&
         entry.localAvailability == AudioLocalAvailability.DOWNLOADING
-    val isQueued = entry.item.status == AudioStatus.PENDING &&
+    val isQueued = !isHolding &&
+        entry.item.status == AudioStatus.PENDING &&
         entry.localAvailability == AudioLocalAvailability.QUEUED
 
     val cardContent: @Composable ColumnScope.() -> Unit = {
@@ -156,6 +162,7 @@ internal fun SimAudioCard(
             ) {
                 Text(
                     text = when {
+                        isHolding -> "${entry.item.filename} (等待恢复)"
                         isDownloading -> "${entry.item.filename} (传输中)"
                         isQueued -> "${entry.item.filename} (等待中)"
                         else -> entry.item.filename
@@ -189,7 +196,7 @@ internal fun SimAudioCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 val metaText = if (
-                    (isDownloading || isQueued) && entry.downloadTotalBytes > 0
+                    (isDownloading || isQueued || isHolding) && entry.downloadTotalBytes > 0
                 ) {
                     val sizeStr = formatDownloadFileSize(entry.downloadTotalBytes)
                     if (entry.item.timeDisplay.isNotBlank()) {
@@ -307,7 +314,14 @@ internal fun SimAudioCard(
             Spacer(modifier = Modifier.height(8.dp))
             when (entry.item.status) {
                 AudioStatus.PENDING -> {
-                    if (isDownloading) {
+                    if (isHolding) {
+                        SimAudioCompactPreviewRow(
+                            text = "等待恢复传输…",
+                            maxLines = 1
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        SlowPulseHoldBar()
+                    } else if (isDownloading) {
                         var prevBytes by remember { mutableStateOf(0L) }
                         var prevTimeMs by remember { mutableStateOf(System.currentTimeMillis()) }
                         var speed by remember { mutableStateOf(0L) }
@@ -594,6 +608,31 @@ private fun SimAudioCompactPreviewRow(
             )
         }
     }
+}
+
+// 工牌切换中断后等待恢复传输的过渡条：缓慢脉动的暗色横条，
+// 明显区别于真实下载时的高亮进度条，避免误导用户以为正在下载。
+@Composable
+private fun SlowPulseHoldBar() {
+    val infiniteTransition = rememberInfiniteTransition(label = "sim_audio_hold_bar")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.15f,
+        targetValue = 0.45f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1500),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "sim_audio_hold_bar_alpha"
+    )
+
+    LinearProgressIndicator(
+        progress = { 1f },
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(3.dp),
+        color = SimDrawerTextSecondary.copy(alpha = alpha),
+        trackColor = SimDrawerDivider
+    )
 }
 
 @Composable

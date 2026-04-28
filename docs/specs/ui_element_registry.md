@@ -200,6 +200,7 @@ Home empty-state composition note:
 | **Waveform** | `Recording` | Audio In | Hertz | Visualizes **Phone Mic**. | Phone Source. | 🚧 In-Progress |
 | **Audio List** | `Syncing` | Event | Aurora-dot pulse on sync-pill | Mirror `storage`. | Badge + Local. Sync state encoded by aurora dot color (mint/blue/red), not pill chrome. | ❌ Pending |
 | **Audio Card** | `Idle` | Play | Toggle | Playback. | Stop others. | ❌ Pending |
+| **Audio Card** | `Holding for Resume` | Active badge not READY while file in DOWNLOADING/QUEUED (post A→B→A switch grace window) | Slow alpha pulse 1500ms reverse on dim bar | Filename suffix `(等待恢复)`, label `等待恢复传输…`, dim pulsing bar replaces fast indeterminate scroll | Mutually exclusive with active-download styling; never inherits success-green surface or border tint. | 🚧 In-Progress |
 | **Audio Card** | `Non-Transcribed` | Tap | Opacity dip 120ms | **Rejects Expansion**. | Replaces shake keyframes per `AudioDrawer.md` §R.5. | ❌ Pending |
 | **Audio Card** | `Transcribed` | Tap | Expand `spring(0.9, 500)` | Opens Hub. | Hub fades in with 4px Y-translation. | ❌ Pending |
 | **Audio Card** | `问AI` | Tap | Navigate | **Creates/Opens Analyst Session** | Session binding. Aurora glass `ask-ai` button with "✧ Ask AI" glyph. | ✅ Verified |

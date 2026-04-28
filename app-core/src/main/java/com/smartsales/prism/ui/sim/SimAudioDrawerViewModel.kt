@@ -14,6 +14,7 @@ import com.smartsales.prism.data.audio.IsolationBlockedSyncException
 import com.smartsales.prism.data.audio.SimBadgeSyncIslandEvent
 import com.smartsales.prism.data.audio.SimBadgeSyncSkippedReason
 import com.smartsales.prism.data.audio.SimBadgeSyncTrigger
+import com.smartsales.prism.data.audio.BADGE_SWITCH_INTERRUPTED_MESSAGE
 import com.smartsales.prism.data.audio.SIM_BADGE_SYNC_CONNECTIVITY_UNAVAILABLE_MESSAGE
 import com.smartsales.prism.data.audio.simBadgeSyncSuccessMessage
 import com.smartsales.prism.domain.audio.AudioFile
@@ -113,6 +114,11 @@ class SimAudioDrawerViewModel @Inject constructor(
                 initialValue = resolveSimBadgeSyncAvailability(connectivityBridge.managerStatus.value)
             )
 
+    // 跟踪因工牌切换中断的文件 ID 集合，用于 HOLD 过渡态判定。
+    // 文件进入集合：被标记为 FAILED + 设备已切换消息；
+    // 文件离开集合：downloadedBytes > 0（真实字节开始流动）或文件状态超出 PENDING。
+    private val _interruptedFileIds = MutableStateFlow<Set<String>>(emptySet())
+
     init {
         // 监听连接状态，非 Ready → Ready 时自动触发 /list 同步（3s 防抖）
         viewModelScope.launch {
@@ -126,15 +132,37 @@ class SimAudioDrawerViewModel @Inject constructor(
                 }
             }
         }
+
+        // 追踪工牌切换中断文件，驱动 HOLD 过渡态
+        viewModelScope.launch {
+            repository.getAudioFiles().collect { files ->
+                _interruptedFileIds.update { ids ->
+                    var updated = ids
+                    for (file in files) {
+                        when {
+                            file.localAvailability == AudioLocalAvailability.FAILED &&
+                            file.lastErrorMessage == BADGE_SWITCH_INTERRUPTED_MESSAGE ->
+                                updated = updated + file.id
+                            file.localAvailability == AudioLocalAvailability.DOWNLOADING &&
+                            file.downloadedBytes > 0L ->
+                                updated = updated - file.id
+                            file.status != TranscriptionStatus.PENDING ->
+                                updated = updated - file.id
+                        }
+                    }
+                    updated
+                }
+            }
+        }
     }
 
     val entries: StateFlow<List<SimAudioEntry>> = combine(
         repository.getAudioFiles(),
-        badgeSyncAvailability
-    ) { files, availability ->
+        _interruptedFileIds
+    ) { files, interruptedIds ->
         files.map { file ->
             file.toSimEntry(
-                isHoldingForResume = isHoldingForResume(file, availability)
+                isHoldingForResume = isHoldingForResume(file, interruptedIds)
             )
         }
     }
@@ -524,17 +552,19 @@ internal const val SIM_BADGE_SYNC_NETWORK_OFFLINE_MESSAGE =
     "徽章蓝牙已连接，但设备当前未接入可用网络，暂时不能同步录音。请检查徽章 Wi‑Fi 后重试。"
 
 // 工牌切换中断后的过渡态判定：
-// 文件本地仍标记为 DOWNLOADING/QUEUED，但当前活动工牌尚未恢复 READY，
-// 说明真实下载暂停在等待重连（grace 期 / Wi-Fi 重连等），UI 应展示等待恢复态。
+// 文件必须曾被标记为"设备已切换"中断（ID 在 interruptedFileIds 中），
+// 且尚未恢复真实传输（localAvailability 仍在中断→排队→早期传输阶段，
+// 或 downloadedBytes == 0 说明字节还未开始流动）。
 internal fun isHoldingForResume(
     file: AudioFile,
-    availability: SimBadgeSyncAvailability
+    interruptedFileIds: Set<String>
 ): Boolean {
     if (file.source != DomainAudioSource.SMARTBADGE) return false
-    val inFlight = file.localAvailability == AudioLocalAvailability.DOWNLOADING ||
-        file.localAvailability == AudioLocalAvailability.QUEUED
-    if (!inFlight) return false
-    return availability != SimBadgeSyncAvailability.READY
+    if (file.id !in interruptedFileIds) return false
+    return file.localAvailability == AudioLocalAvailability.FAILED ||
+        file.localAvailability == AudioLocalAvailability.QUEUED ||
+        (file.localAvailability == AudioLocalAvailability.DOWNLOADING &&
+            file.downloadedBytes == 0L)
 }
 
 internal fun resolveSimBadgeSyncAvailability(

@@ -21,6 +21,7 @@ internal const val ORPHANED_SIM_TRANSCRIPTION_MESSAGE =
 internal const val SIM_AUDIO_METADATA_FILENAME = "sim_audio_metadata.json"
 internal const val SIM_AUDIO_PENDING_BADGE_DELETE_FILENAME =
     "sim_audio_pending_badge_deletes.json"
+internal const val BADGE_SWITCH_INTERRUPTED_MESSAGE = "设备已切换，请重新同步"
 
 internal sealed interface SimAudioDeleteResult {
     data object NotFound : SimAudioDeleteResult
@@ -446,7 +447,7 @@ internal class SimAudioRepositoryStoreSupport(
                 ) {
                     audio.copy(
                         localAvailability = AudioLocalAvailability.FAILED,
-                        lastErrorMessage = "设备已切换，请重新同步",
+                        lastErrorMessage = BADGE_SWITCH_INTERRUPTED_MESSAGE,
                         downloadProgress = 0f,
                         downloadedBytes = 0L,
                         downloadTotalBytes = 0L

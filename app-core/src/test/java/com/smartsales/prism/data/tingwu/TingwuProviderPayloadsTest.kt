@@ -79,4 +79,65 @@ class TingwuProviderPayloadsTest {
             parseTranscriptionSpeakerLabels(root as kotlinx.serialization.json.JsonObject)
         )
     }
+
+    @Test
+    fun `parseTranscriptionDiarizedSegments reads paragraph word speaker ids`() {
+        val root = Json.parseToJsonElement(
+            """
+                {
+                  "Paragraphs": [
+                    {
+                      "Words": [
+                        {"SentenceId": 1, "Text": "你好", "Start": 0, "End": 250, "SpeakerId": "spk_1"},
+                        {"SentenceId": 1, "Text": "罗总", "Start": 250, "End": 600, "SpeakerId": "spk_1"},
+                        {"SentenceId": 2, "Text": "欢迎", "Start": 800, "End": 1100, "SpeakerId": "spk_2"}
+                      ]
+                    }
+                  ]
+                }
+            """.trimIndent()
+        ) as kotlinx.serialization.json.JsonObject
+
+        val segments = parseTranscriptionDiarizedSegments(root)
+
+        assertEquals(2, segments.size)
+        assertEquals("spk_1", segments[0].speakerId)
+        assertEquals(0, segments[0].speakerIndex)
+        assertEquals(0L, segments[0].startMs)
+        assertEquals(600L, segments[0].endMs)
+        assertEquals("你好罗总", segments[0].text)
+        assertEquals("spk_2", segments[1].speakerId)
+        assertEquals(1, segments[1].speakerIndex)
+        assertEquals(800L, segments[1].startMs)
+        assertEquals(1100L, segments[1].endMs)
+        assertEquals("欢迎", segments[1].text)
+    }
+
+    @Test
+    fun `parseTranscriptionDiarizedSegments uses paragraph speaker fallback`() {
+        val root = Json.parseToJsonElement(
+            """
+                {
+                  "Paragraphs": [
+                    {
+                      "SpeakerId": "spk_customer",
+                      "Words": [
+                        {"SentenceId": 7, "Text": "预算", "Start": 1000, "End": 1300},
+                        {"SentenceId": 7, "Text": "四百万", "Start": 1300, "End": 1900}
+                      ]
+                    }
+                  ]
+                }
+            """.trimIndent()
+        ) as kotlinx.serialization.json.JsonObject
+
+        val segments = parseTranscriptionDiarizedSegments(root)
+
+        assertEquals(1, segments.size)
+        assertEquals("spk_customer", segments[0].speakerId)
+        assertEquals(0, segments[0].speakerIndex)
+        assertEquals(1000L, segments[0].startMs)
+        assertEquals(1900L, segments[0].endMs)
+        assertEquals("预算四百万", segments[0].text)
+    }
 }

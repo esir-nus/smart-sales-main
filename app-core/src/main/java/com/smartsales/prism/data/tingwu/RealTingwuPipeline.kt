@@ -17,7 +17,6 @@ import com.smartsales.data.aicore.tingwu.api.TingwuSummarizationParameters
 import com.smartsales.data.aicore.tingwu.api.TingwuMeetingAssistanceParameters
 import com.smartsales.data.aicore.tingwu.api.TingwuTranscodingParameters
 import com.smartsales.data.aicore.tingwu.identity.TingwuIdentityHintResolver
-import com.smartsales.prism.domain.tingwu.DiarizedSegment
 import com.smartsales.prism.domain.tingwu.TingwuChapter
 import com.smartsales.prism.domain.tingwu.TingwuJobArtifacts
 import com.smartsales.prism.domain.tingwu.TingwuJobState
@@ -262,7 +261,6 @@ class RealTingwuPipeline @Inject constructor(
             val activeRoot = innerTranscription ?: innerDataTranscription ?: rootJson
 
             var textStr = activeRoot["Text"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
-            val segsArr = activeRoot["Segments"] as? kotlinx.serialization.json.JsonArray
             val paragraphsArr = activeRoot["Paragraphs"] as? kotlinx.serialization.json.JsonArray
             
             // Fallback for paragraph style if Text is missing
@@ -283,28 +281,7 @@ class RealTingwuPipeline @Inject constructor(
             
             val markdown = textStr?.ifBlank { null } ?: "转写结果为空。"
             
-            val diarizedSegments = mutableListOf<DiarizedSegment>()
-            if (segsArr != null) {
-                for (i in 0 until segsArr.size) {
-                    val seg = segsArr[i] as? kotlinx.serialization.json.JsonObject ?: continue
-                    
-                    val text = seg["Text"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null } ?: ""
-                    val speaker = seg["SpeakerId"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
-                        ?: seg["Speaker"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content else null }
-                    val startSec = seg["Start"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content.toDoubleOrNull() else null } ?: 0.0
-                    val endSec = seg["End"]?.let { if (it is kotlinx.serialization.json.JsonPrimitive) it.content.toDoubleOrNull() else null } ?: 0.0
-                    
-                    diarizedSegments.add(
-                        DiarizedSegment(
-                            speakerId = speaker,
-                            speakerIndex = i,
-                            startMs = (startSec * 1000).toLong(),
-                            endMs = (endSec * 1000).toLong(),
-                            text = text
-                        )
-                    )
-                }
-            }
+            val diarizedSegments = parseTranscriptionDiarizedSegments(activeRoot)
             val inlineIdentityLabels = parseIdentityRecognitionSpeakerLabels(responseBody)
             val fetchedIdentityLabels = if (inlineIdentityLabels.isNotEmpty()) {
                 emptyMap()
@@ -446,7 +423,7 @@ class RealTingwuPipeline @Inject constructor(
 
             android.util.Log.d(
                 "RealTingwuPipeline",
-                "Successfully parsed Tingwu artifacts for $jobId. Markdown length: ${markdown.length}, Summary length: ${finalSmartSummary.summary?.length ?: 0}"
+                "Successfully parsed Tingwu artifacts for $jobId. Markdown length: ${markdown.length}, Summary length: ${finalSmartSummary.summary?.length ?: 0}, diarizedSegments=${diarizedSegments.size}, speakerLabels=${speakerLabels.size}"
             )
 
             flow.value = TingwuJobState.Completed(

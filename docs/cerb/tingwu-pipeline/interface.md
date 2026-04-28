@@ -102,6 +102,7 @@ data class TingwuJobArtifacts(
 Interpretation:
 
 - transcript, chapters, summary, keywords, diarization, and speaker labels are source-led provider artifacts
+- `diarizedSegments` may be normalized from Tingwu `Segments` or paragraph-style `Paragraphs[].Words[]` speaker metadata
 - visible transcript consumers may render a speaker-aware transcript from `diarizedSegments + speakerLabels` when present, then fall back to `transcriptMarkdown`
 - output paths and result URLs are provider-returned adjunct artifacts and may be absent independently
 - `meetingAssistanceRaw` is provider-returned raw structured output used by current consumers when present

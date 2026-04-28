@@ -19,9 +19,18 @@ import com.smartsales.data.aicore.tingwu.api.TingwuStatusResponse
 import com.smartsales.data.aicore.tingwu.identity.TingwuIdentityContentHint
 import com.smartsales.data.aicore.tingwu.identity.TingwuIdentityHint
 import com.smartsales.data.aicore.tingwu.identity.TingwuIdentityHintResolver
+import com.smartsales.prism.domain.tingwu.TingwuJobState
 import com.smartsales.prism.domain.tingwu.TingwuRequest
+import com.smartsales.prism.ui.sim.buildSpeakerAwareTranscript
+import java.net.ServerSocket
+import kotlin.concurrent.thread
+import kotlinx.coroutines.async
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -43,6 +52,7 @@ class RealTingwuPipelineTest {
 
     private class LocalFakeTingwuApi : TingwuApi {
         var lastCreateRequest: TingwuCreateTaskRequest? = null
+        var statusResponse: TingwuStatusResponse? = null
 
         override suspend fun createTranscriptionTask(
             type: String,
@@ -64,6 +74,7 @@ class RealTingwuPipelineTest {
         }
 
         override suspend fun getTaskStatus(taskId: String, type: String): TingwuStatusResponse {
+            statusResponse?.let { return it }
             return TingwuStatusResponse(
                 requestId = "req-status",
                 code = "0",
@@ -213,6 +224,87 @@ class RealTingwuPipelineTest {
         assertTrue(!json.contains("\"IdentityRecognition\":{\"SceneIntroduction\""))
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    @Test
+    fun `completed paragraph transcription renders speaker-aware transcript`() = runTest(dispatcher) {
+        val server = startJsonServer(
+            """
+                {
+                  "Data": {
+                    "Transcription": {
+                      "Text": "你好罗总\n欢迎光临",
+                      "Paragraphs": [
+                        {
+                          "Words": [
+                            {"SentenceId": 1, "Text": "你好", "Start": 0, "End": 250, "SpeakerId": "spk_1"},
+                            {"SentenceId": 1, "Text": "罗总", "Start": 250, "End": 600, "SpeakerId": "spk_1"},
+                            {"SentenceId": 2, "Text": "欢迎", "Start": 800, "End": 1100, "SpeakerId": "spk_2"},
+                            {"SentenceId": 2, "Text": "光临", "Start": 1100, "End": 1500, "SpeakerId": "spk_2"}
+                          ]
+                        }
+                      ]
+                    },
+                    "IdentityRecognition": [
+                      {"SpeakerId": "spk_1", "Identity": {"Name": "客户"}},
+                      {"SpeakerId": "spk_2", "Identity": {"Name": "销售顾问"}}
+                    ]
+                  }
+                }
+            """.trimIndent()
+        )
+        try {
+            val api = LocalFakeTingwuApi()
+            api.statusResponse = TingwuStatusResponse(
+                requestId = "req-status",
+                code = "0",
+                message = "Success",
+                data = TingwuStatusData(
+                    taskId = "job-1",
+                    taskKey = "job-1",
+                    taskStatus = "COMPLETED",
+                    taskProgress = 100,
+                    errorCode = null,
+                    errorMessage = null,
+                    outputMp3Path = null,
+                    outputMp4Path = null,
+                    outputThumbnailPath = null,
+                    outputSpectrumPath = null,
+                    resultLinks = mapOf("Transcription" to server.url),
+                    meetingJoinUrl = null
+                )
+            )
+            val pipeline = createPipeline(api = api)
+
+            val result = pipeline.submit(
+                TingwuRequest(
+                    audioAssetName = "demo.wav",
+                    fileUrl = "https://oss.example.com/demo.wav"
+                )
+            )
+
+            assertTrue(result is Result.Success)
+            val jobId = (result as Result.Success).data
+            val completed = async {
+                pipeline.observeJob(jobId)
+                    .first { it is TingwuJobState.Completed } as TingwuJobState.Completed
+            }
+            advanceTimeBy(5_100)
+            advanceUntilIdle()
+
+            val artifacts = completed.await().artifacts
+            requireNotNull(artifacts)
+            assertEquals(2, artifacts.diarizedSegments?.size)
+            assertEquals("客户", artifacts.speakerLabels["spk_1"])
+            assertEquals("销售顾问", artifacts.speakerLabels["spk_2"])
+            assertEquals(
+                "客户：你好罗总\n销售顾问：欢迎光临",
+                buildSpeakerAwareTranscript(artifacts)
+            )
+        } finally {
+            server.stop()
+        }
+    }
+
     private fun createPipeline(
         api: TingwuApi = LocalFakeTingwuApi(),
         settingsProvider: AiParaSettingsProvider = LocalSettingsProvider(),
@@ -236,6 +328,42 @@ class RealTingwuPipelineTest {
             aiParaSettingsProvider = settingsProvider,
             identityHintResolver = identityHintResolver,
             dispatchers = dispatchers
+        )
+    }
+
+    private data class JsonServer(
+        val socket: ServerSocket,
+        val url: String
+    ) {
+        fun stop() {
+            runCatching { socket.close() }
+        }
+    }
+
+    private fun startJsonServer(body: String): JsonServer {
+        val socket = ServerSocket(0)
+        thread(start = true, isDaemon = true) {
+            runCatching {
+                socket.accept().use { client ->
+                    client.getInputStream().bufferedReader().readLine()
+                    val bytes = body.toByteArray(Charsets.UTF_8)
+                    val header = buildString {
+                        append("HTTP/1.1 200 OK\r\n")
+                        append("Content-Type: application/json; charset=utf-8\r\n")
+                        append("Content-Length: ${bytes.size}\r\n")
+                        append("Connection: close\r\n")
+                        append("\r\n")
+                    }.toByteArray(Charsets.UTF_8)
+                    client.getOutputStream().use { output ->
+                        output.write(header)
+                        output.write(bytes)
+                    }
+                }
+            }
+        }
+        return JsonServer(
+            socket = socket,
+            url = "http://127.0.0.1:${socket.localPort}/transcription.json"
         )
     }
 }

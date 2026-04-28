@@ -6,6 +6,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
+import java.util.LinkedHashMap
 
 private val tingwuProviderJson = Json { ignoreUnknownKeys = true }
 
@@ -36,6 +37,12 @@ internal fun parseTranscriptionSpeakerLabels(transcriptionRoot: JsonObject): Map
             }
         }
     }
+}
+
+internal fun parseTranscriptionDiarizedSegments(transcriptionRoot: JsonObject): List<DiarizedSegment> {
+    val segmentSegments = parseSegmentDiarizedSegments(transcriptionRoot)
+    if (segmentSegments.isNotEmpty()) return segmentSegments
+    return parseParagraphDiarizedSegments(transcriptionRoot)
 }
 
 internal fun parseIdentityRecognitionSpeakerLabels(payload: String?): Map<String, String> {
@@ -87,6 +94,79 @@ internal fun mergeTingwuSpeakerLabels(
 private fun String?.parseJsonObjectOrNull(): JsonObject? =
     parseJsonElementOrNull() as? JsonObject
 
+private fun parseSegmentDiarizedSegments(transcriptionRoot: JsonObject): List<DiarizedSegment> {
+    val segments = (transcriptionRoot["Segments"] as? JsonArray).orEmpty()
+    if (segments.isEmpty()) return emptyList()
+    val speakerIndexes = SpeakerIndexResolver()
+    return segments.mapNotNull { element ->
+        val segment = element as? JsonObject ?: return@mapNotNull null
+        val text = segment["Text"].primitiveContentOrNull() ?: return@mapNotNull null
+        val speaker = segment["SpeakerId"].primitiveContentOrNull()
+            ?: segment["Speaker"].primitiveContentOrNull()
+            ?: return@mapNotNull null
+        DiarizedSegment(
+            speakerId = speaker,
+            speakerIndex = speakerIndexes.indexFor(speaker),
+            startMs = (segment["Start"].primitiveDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0)
+                .secondsToMillis(),
+            endMs = (segment["End"].primitiveDoubleOrNull()?.coerceAtLeast(0.0) ?: 0.0)
+                .secondsToMillis(),
+            text = text.trim()
+        )
+    }
+}
+
+private fun parseParagraphDiarizedSegments(transcriptionRoot: JsonObject): List<DiarizedSegment> {
+    val paragraphs = (transcriptionRoot["Paragraphs"] as? JsonArray).orEmpty()
+    if (paragraphs.isEmpty()) return emptyList()
+    val speakerIndexes = SpeakerIndexResolver()
+    val segments = mutableListOf<DiarizedSegment>()
+
+    paragraphs.forEachIndexed { paragraphIndex, paragraphElement ->
+        val paragraph = paragraphElement as? JsonObject ?: return@forEachIndexed
+        val paragraphSpeaker = paragraph["SpeakerId"].primitiveContentOrNull()
+            ?: paragraph["Speaker"].primitiveContentOrNull()
+        val words = (paragraph["Words"] as? JsonArray).orEmpty()
+        if (words.isEmpty()) return@forEachIndexed
+
+        val grouped = linkedMapOf<String, MutableList<JsonObject>>()
+        for (wordIndex in 0 until words.size) {
+            val word = words[wordIndex] as? JsonObject ?: continue
+            val groupKey = word["SentenceId"].primitiveContentOrNull()
+                ?: word["Id"].primitiveContentOrNull()
+                ?: "${paragraphIndex}_$wordIndex"
+            grouped.getOrPut(groupKey) { mutableListOf() }.add(word)
+        }
+
+        grouped.values.forEach { sentenceWords ->
+            val sorted = sentenceWords.sortedBy { it["Start"].primitiveDoubleOrNull() ?: 0.0 }
+            val text = sorted.joinToString(separator = "") { word ->
+                word["Text"].primitiveContentOrNull().orEmpty()
+            }.trim()
+            if (text.isBlank()) return@forEach
+            val speaker = sorted.firstNotNullOfOrNull { word ->
+                word["SpeakerId"].primitiveContentOrNull()
+                    ?: word["Speaker"].primitiveContentOrNull()
+            } ?: paragraphSpeaker ?: return@forEach
+            val startMs = (sorted.firstOrNull()?.get("Start").primitiveDoubleOrNull() ?: 0.0)
+                .millisDoubleToLong()
+            val endMs = (sorted.lastOrNull()?.get("End").primitiveDoubleOrNull()
+                ?: sorted.lastOrNull()?.get("Start").primitiveDoubleOrNull()
+                ?: 0.0)
+                .millisDoubleToLong()
+            segments += DiarizedSegment(
+                speakerId = speaker,
+                speakerIndex = speakerIndexes.indexFor(speaker),
+                startMs = startMs,
+                endMs = endMs.coerceAtLeast(startMs),
+                text = text
+            )
+        }
+    }
+
+    return segments.sortedBy { it.startMs }
+}
+
 private fun String?.parseJsonElementOrNull(): JsonElement? {
     if (this.isNullOrBlank()) return null
     return runCatching { tingwuProviderJson.parseToJsonElement(this) }.getOrNull()
@@ -129,3 +209,19 @@ private fun JsonElement?.primitiveContentOrNull(): String? =
     (this as? JsonPrimitive)
         ?.let { primitive -> runCatching { primitive.content }.getOrNull() }
         ?.takeIf { value -> value.isNotBlank() }
+
+private fun JsonElement?.primitiveDoubleOrNull(): Double? =
+    (this as? JsonPrimitive)
+        ?.let { primitive -> runCatching { primitive.content.toDoubleOrNull() }.getOrNull() }
+
+private fun Double.secondsToMillis(): Long = (this * 1000.0).toLong()
+
+private fun Double.millisDoubleToLong(): Long = toLong().coerceAtLeast(0L)
+
+private class SpeakerIndexResolver {
+    private val indexes = LinkedHashMap<String, Int>()
+
+    fun indexFor(speakerId: String): Int {
+        return indexes.getOrPut(speakerId) { indexes.size }
+    }
+}

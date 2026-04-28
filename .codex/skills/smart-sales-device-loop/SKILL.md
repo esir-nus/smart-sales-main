@@ -1,6 +1,6 @@
 ---
 name: smart-sales-device-loop
-description: Deterministic on-device evidence workflow for the Smart Sales repository. Use when Codex needs to debug or verify Android/Harmony runtime behavior, UI/device/lifecycle/BLE/connectivity/notification/alarm/networking issues, scheduler drawer scenarios, adb logcat plus uiautomator evidence, L3 acceptance loops, or optimization claims that must be proven by fresh device artifacts.
+description: Enforced on-device evidence loop for the Smart Sales repository. Use when Codex must debug, optimize, or verify Android/Harmony runtime behavior, UI/device/lifecycle/BLE/connectivity/notification/alarm/networking issues, scheduler drawer scenarios, adb logcat plus uiautomator evidence, L3 acceptance loops, or any optimization claim that must stay in the loop until explicit exit criteria are met. Prioritize convenient debug buttons, debug panels, seeded actions, or other in-app simulation controls that faithfully replace repetitive user input for frictionless iteration.
 ---
 
 # Smart Sales Device Loop
@@ -23,6 +23,33 @@ Run one exact scenario per loop. Do not mix hypotheses, gestures, or user journe
 If a device/emulator is unavailable, mark the runtime gate blocked. Do not call the behavior verified.
 
 If the first loop reveals a failure, write the Pre-Fix Report from `docs/sops/debugging.md` before behavior edits. If logs are insufficient, add the smallest targeted diagnostic logging and rerun the same loop before changing behavior.
+
+Do not exit the loop because the implementation "looks right". Exit only when the sprint contract or active debugging task has explicit criteria and the latest loop meets them with saved artifacts. If criteria are absent or vague, define concrete criteria before claiming completion.
+
+## Exit Criteria
+
+Before running the loop, write down the exit criteria in the working notes or sprint ledger:
+
+- exact scenario or debug action sequence
+- required positive telemetry
+- required UI state in `uiautomator` XML
+- required negative logs/UI states
+- required L1/L2 tests after any code or diagnostic-log change
+- artifact paths to be saved
+
+Keep iterating until one of these is true:
+
+- **Pass**: latest artifacts satisfy every positive, UI, and negative criterion.
+- **Blocked**: device/emulator, install, permissions, account state, or hardware dependency prevents L3 evidence; record the blocker and lower confidence.
+- **Stop**: sprint stop criteria or iteration bound is hit; record the failed criterion and next required decision.
+
+## Debug Controls First
+
+Prefer in-app debug buttons, debug panels, seeded scenarios, launch extras, fixture import actions, or other convenient simulation controls when they exercise the same production path as the user action.
+
+Use debug controls to replace high-friction input such as repeated typing, voice recording, BLE badge actions, or long setup sequences only when the control preserves the route under test. The evidence must show the simulated source explicitly, for example `source=scheduler_debug_button`.
+
+Do not use a debug control if it bypasses the layer being tested. If a debug shortcut changes the behavioral path, treat that evidence as invalid and move the control closer to the real ingress before continuing.
 
 ## Android Loop
 
@@ -56,7 +83,7 @@ Use this shape unless the sprint contract declares a narrower command set:
    adb logcat -c
    ```
 
-6. Run one declared user scenario.
+6. Run one declared user scenario. Prefer the lowest-friction debug control that still hits the target route; otherwise perform the real gesture/input.
 
 7. Save filtered logcat, UI XML, and optional screenshot under:
 
@@ -82,6 +109,8 @@ Use this shape unless the sprint contract declares a narrower command set:
    - forbidden logs and UI states are absent
 
 9. Append a concise sprint-ledger verdict with commands, artifact paths, pass/fail, and any contamination such as permission dialogs.
+
+10. If any exit criterion fails, continue the loop: diagnose from the measured artifact, apply only the minimal diagnostic or behavior change, run focused L1/L2 checks, reinstall or cold relaunch as appropriate, and rerun the same L3 scenario.
 
 ## Scheduler Time-Anchor Retitle Loop
 
@@ -128,6 +157,8 @@ Every optimization iteration closes with:
 - reinstall or cold relaunch as appropriate
 - fresh L3 evidence from the same scenario
 - sprint ledger update with artifact paths
+
+If the optimization is about speed or friction, the loop must include the measurement or UI-state observation that proves the improvement, not just a subjective claim.
 
 ## Harmony Variant
 

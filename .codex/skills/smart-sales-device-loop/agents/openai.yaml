@@ -1,4 +1,4 @@
 interface:
   display_name: "Smart Sales Device Loop"
-  short_description: "Run deterministic on-device evidence loops"
-  default_prompt: "Use $smart-sales-device-loop to run an Android runtime evidence loop and save sprint artifacts."
+  short_description: "Enforce on-device debugging and optimization loops"
+  default_prompt: "Use $smart-sales-device-loop to stay in the Android runtime loop until evidence-based exit criteria pass."

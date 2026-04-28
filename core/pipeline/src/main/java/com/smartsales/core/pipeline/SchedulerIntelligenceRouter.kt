@@ -107,7 +107,8 @@ class SchedulerIntelligenceRouter(
 
     suspend fun routeGeneral(context: GeneralContext): Decision {
         val transcript = context.transcript.trim()
-        if (looksLikeDeletionTranscript(transcript)) {
+        val looksLikeReplacementCancel = looksLikeReplacementCancelTranscript(transcript)
+        if (!looksLikeReplacementCancel && looksLikeDeletionTranscript(transcript)) {
             return Decision.Reject(
                 message = deletionUnsupportedMessage(context.surface),
                 metadata = RouteMetadata(
@@ -121,7 +122,7 @@ class SchedulerIntelligenceRouter(
             )
         }
 
-        if (mightExpressReschedule(transcript) && globalRescheduleExtractionService != null) {
+        if ((mightExpressReschedule(transcript) || looksLikeReplacementCancel) && globalRescheduleExtractionService != null) {
             when (
                 val extracted = globalRescheduleExtractionService.extract(
                     GlobalRescheduleExtractionRequest(
@@ -334,6 +335,13 @@ class SchedulerIntelligenceRouter(
         return DELETE_KEYWORDS.any { normalized.contains(it) }
     }
 
+    fun looksLikeReplacementCancelTranscript(text: String): Boolean {
+        val normalized = text.lowercase()
+        if (!DELETE_KEYWORDS.any { normalized.contains(it) }) return false
+        if (!CLOCK_CUE_REGEX.containsMatchIn(normalized)) return false
+        return REPLACEMENT_AFTER_CANCEL_REGEX.containsMatchIn(normalized)
+    }
+
     private fun SchedulerPathACreateInterpreter.Result.toMetadata(
         surface: SchedulerSurface
     ): RouteMetadata {
@@ -451,6 +459,8 @@ class SchedulerIntelligenceRouter(
             "延期",
             "提前",
             "提早",
+            "应该是",
+            "不对",
             "reschedule to",
             "reschedule",
             "move to",
@@ -464,6 +474,12 @@ class SchedulerIntelligenceRouter(
             "delete",
             "cancel",
             "remove"
+        )
+        private val CLOCK_CUE_REGEX = Regex(
+            """(\d{1,2}:\d{2}|\d{1,2}\s*(am|pm|a\.m\.|p\.m\.)|[零一二两三四五六七八九十百\d]{1,3}点|上午|下午|晚上|早上|今晚|明早|明晚)"""
+        )
+        private val REPLACEMENT_AFTER_CANCEL_REGEX = Regex(
+            """(取消了|取消掉|取消|cancel(?:led|ed)?).*(得去|要去|应该是|改成|换成|变成|去[\p{IsHan}a-zA-Z])"""
         )
     }
 }

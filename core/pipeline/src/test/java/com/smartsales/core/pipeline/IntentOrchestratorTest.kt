@@ -1037,11 +1037,128 @@ class IntentOrchestratorTest {
         val committed = results.filterIsInstance<PipelineResult.PathACommitted>()
         assertEquals(1, committed.size)
         assertEquals("task-9", committed.first().task.id)
+        assertEquals(SchedulerCommitKind.RESCHEDULE, committed.first().commitKind)
         assertEquals("赶飞机", committed.first().task.title)
         assertEquals(existing.startTime, committed.first().task.startTime)
         assertEquals(existing.durationMinutes, committed.first().task.durationMinutes)
         assertEquals("9点", fakeActiveTaskRetrievalIndex.lastClockCue)
         assertTrue(results.any { it == PipelineResult.ConversationalReply("Path B reply") })
+    }
+
+    @Test
+    fun `shared scheduler router resolves chinese correction time anchor retitle`() = runTest {
+        setup()
+        val sharedExecutor = FakeExecutor()
+        val sharedOrchestrator = buildSharedSchedulerOrchestrator(sharedExecutor)
+        val existing = ScheduledTask(
+            id = "task-8",
+            timeDisplay = "08:00",
+            title = "catch a flight",
+            urgencyLevel = com.smartsales.prism.domain.scheduler.UrgencyLevel.L2_IMPORTANT,
+            startTime = Instant.parse("2026-03-18T00:00:00Z"),
+            durationMinutes = 30
+        )
+        fakeTaskRepository.upsertTask(existing)
+        fakeActiveTaskRetrievalIndex.nextClockAnchorResolveResult =
+            com.smartsales.prism.domain.scheduler.ActiveTaskResolveResult.Resolved("task-8")
+        fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.DEEP_ANALYSIS, true, ""))
+        sharedExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision":"RESCHEDULE_TARGETED",
+                  "targetQuery":"明早8点的任务",
+                  "timeInstruction":"明早八点",
+                  "newTitle":"开会"
+                }
+                """.trimIndent()
+            )
+        )
+        fakeUnifiedPipeline.nextResultFlow = flowOf(PipelineResult.ConversationalReply("Path B reply"))
+
+        val results = sharedOrchestrator
+            .processInput("明早八点应该是要去开会", isVoice = true)
+            .toList()
+
+        val committed = results.filterIsInstance<PipelineResult.PathACommitted>()
+        assertEquals(1, committed.size)
+        assertEquals("task-8", committed.first().task.id)
+        assertEquals(SchedulerCommitKind.RESCHEDULE, committed.first().commitKind)
+        assertEquals("开会", committed.first().task.title)
+        assertEquals(existing.startTime, committed.first().task.startTime)
+        assertEquals(existing.durationMinutes, committed.first().task.durationMinutes)
+        assertEquals("明早八点", fakeActiveTaskRetrievalIndex.lastClockCue)
+    }
+
+    @Test
+    fun `shared scheduler router resolves cancel phrase replacement time anchor retitle`() = runTest {
+        setup()
+        val sharedExecutor = FakeExecutor()
+        val sharedOrchestrator = buildSharedSchedulerOrchestrator(sharedExecutor)
+        val existing = ScheduledTask(
+            id = "task-20",
+            timeDisplay = "20:00",
+            title = "开会",
+            urgencyLevel = com.smartsales.prism.domain.scheduler.UrgencyLevel.L2_IMPORTANT,
+            startTime = Instant.parse("2026-03-18T12:00:00Z"),
+            durationMinutes = 30
+        )
+        fakeTaskRepository.upsertTask(existing)
+        fakeActiveTaskRetrievalIndex.nextShortlist = listOf(
+            com.smartsales.prism.domain.scheduler.ActiveTaskContext(
+                taskId = "task-20",
+                title = "开会",
+                timeSummary = "20:00",
+                isVague = false
+            )
+        )
+        fakeActiveTaskRetrievalIndex.nextClockAnchorResolveResult =
+            com.smartsales.prism.domain.scheduler.ActiveTaskResolveResult.Resolved("task-20")
+        fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.DEEP_ANALYSIS, true, ""))
+        sharedExecutor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision":"RESCHEDULE_TARGETED",
+                  "targetQuery":"晚上8点的任务",
+                  "timeInstruction":"晚上8点",
+                  "newTitle":"去机场接人"
+                }
+                """.trimIndent()
+            )
+        )
+        fakeUnifiedPipeline.nextResultFlow = flowOf(PipelineResult.ConversationalReply("Path B reply"))
+
+        val results = sharedOrchestrator
+            .processInput("晚上8点的开会取消了，得去机场接人。", isVoice = true)
+            .toList()
+
+        val committed = results.filterIsInstance<PipelineResult.PathACommitted>()
+        assertEquals(1, committed.size)
+        assertEquals("task-20", committed.first().task.id)
+        assertEquals(SchedulerCommitKind.RESCHEDULE, committed.first().commitKind)
+        assertEquals("去机场接人", committed.first().task.title)
+        assertEquals(existing.startTime, committed.first().task.startTime)
+        assertEquals(existing.durationMinutes, committed.first().task.durationMinutes)
+        assertEquals("晚上8点", fakeActiveTaskRetrievalIndex.lastClockCue)
+        assertEquals("晚上8点的开会取消了，得去机场接人。", fakeActiveTaskRetrievalIndex.lastShortlistTranscript)
+    }
+
+    @Test
+    fun `shared scheduler router keeps pure cancel unsupported`() = runTest {
+        setup()
+        val sharedExecutor = FakeExecutor()
+        val sharedOrchestrator = buildSharedSchedulerOrchestrator(sharedExecutor)
+        fakeLightningRouter.enqueueResult(RouterResult(QueryQuality.DEEP_ANALYSIS, true, ""))
+
+        val results = sharedOrchestrator
+            .processInput("取消晚上8点的开会", isVoice = true)
+            .toList()
+
+        assertTrue(results.any { it == PipelineResult.ConversationalReply("当前不支持语音删除，请在日程面板手动操作。") })
+        assertTrue(results.none { it is PipelineResult.PathACommitted })
+        assertTrue(sharedExecutor.executedPrompts.isEmpty())
+        assertEquals(null, fakeActiveTaskRetrievalIndex.lastShortlistTranscript)
     }
 
     @Test

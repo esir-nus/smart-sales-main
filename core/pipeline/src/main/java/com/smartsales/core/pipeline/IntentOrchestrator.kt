@@ -717,7 +717,10 @@ class IntentOrchestrator @Inject constructor(
         val router = sharedSchedulerIntelligenceRouter ?: return VoiceSchedulerRoutingOutcome(stopPipeline = false)
         val retrievalIndex = activeTaskRetrievalIndex ?: return VoiceSchedulerRoutingOutcome(stopPipeline = false)
 
-        val shortlist = if (router.mightExpressReschedule(input)) {
+        val shortlist = if (
+            router.mightExpressReschedule(input) ||
+            router.looksLikeReplacementCancelTranscript(input)
+        ) {
             retrievalIndex.buildShortlist(input)
         } else {
             emptyList()
@@ -865,7 +868,7 @@ class IntentOrchestrator @Inject constructor(
                 return VoiceSchedulerRoutingOutcome(stopPipeline = true)
             }
             for (committedTask in committed.tasks) {
-                emit(PipelineResult.PathACommitted(committedTask))
+                emit(PipelineResult.PathACommitted(committedTask, SchedulerCommitKind.RESCHEDULE))
             }
             return VoiceSchedulerRoutingOutcome(
                 stopPipeline = false,
@@ -936,7 +939,7 @@ class IntentOrchestrator @Inject constructor(
             return VoiceSchedulerRoutingOutcome(stopPipeline = true)
         }
         for (committedTask in committed.tasks) {
-            emit(PipelineResult.PathACommitted(committedTask))
+            emit(PipelineResult.PathACommitted(committedTask, SchedulerCommitKind.RESCHEDULE))
         }
         return VoiceSchedulerRoutingOutcome(
             stopPipeline = false,

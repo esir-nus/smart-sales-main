@@ -8,12 +8,14 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.zIndex
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -71,6 +73,34 @@ private val SCHEDULER_HANDLE_DISMISS_DISTANCE = 32.dp
 private val SCHEDULER_HANDLE_DISMISS_VELOCITY = 900.dp
 private val SCHEDULER_HANDLE_TAP_SLOP = 3.dp
 private const val SCHEDULER_HANDLE_VERTICAL_DOMINANCE_RATIO = 1.15f
+
+private data class SchedulerDebugTranscriptAction(
+    val label: String,
+    val transcript: String
+)
+
+private val SIM_SCHEDULER_DEBUG_TRANSCRIPTS = listOf(
+    SchedulerDebugTranscriptAction(
+        label = "S02建: 开会20",
+        transcript = "晚上8点我要开会"
+    ),
+    SchedulerDebugTranscriptAction(
+        label = "S02改: 接人20",
+        transcript = "晚上8点的开会取消了，得去机场接人。"
+    ),
+    SchedulerDebugTranscriptAction(
+        label = "创建: 赶飞机",
+        transcript = "明天早上八点我要赶飞机"
+    ),
+    SchedulerDebugTranscriptAction(
+        label = "改: 开会",
+        transcript = "明早八点应该是要去开会"
+    ),
+    SchedulerDebugTranscriptAction(
+        label = "改: 接人",
+        transcript = "不对，明早八点应该是去机场接人"
+    )
+)
 
 /**
  * Scheduler Drawer — Top-Down Glass Sheet
@@ -567,6 +597,27 @@ fun SchedulerDrawer(
                                         fontSize = 14.sp,
                                         fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                                     )
+                                }
+
+                                if (isSimVisualMode) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = 8.dp)
+                                            .horizontalScroll(rememberScrollState()),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        SIM_SCHEDULER_DEBUG_TRANSCRIPTS.forEach { action ->
+                                            Button(
+                                                onClick = {
+                                                    viewModel.submitDebugTranscript(action.transcript)
+                                                }
+                                            ) {
+                                                Text(action.label)
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }

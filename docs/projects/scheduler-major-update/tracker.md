@@ -12,12 +12,14 @@ open
 
 | # | Slug | Status | Summary | Contract |
 |---|------|--------|---------|----------|
-| 01 | time-anchor-retitle | done | Code, docs, focused tests, debug build, and on-device time-anchor retitle logcat evidence are complete. | [sprints/01-time-anchor-retitle.md](sprints/01-time-anchor-retitle.md) |
+| 01 | time-anchor-retitle | done | Scheduler-drawer Chinese debug inputs now exercise create and time-anchor retitle without follow-up chat; focused tests and replacement L3 logcat are green. | [sprints/01-time-anchor-retitle.md](sprints/01-time-anchor-retitle.md) |
+| 02 | cancel-phrase-reschedule-delta | done | Cancel wording plus a same-time replacement event now routes as replacement/reschedule; pure cancellation stays unsupported. | [sprints/02-cancel-phrase-reschedule-delta.md](sprints/02-cancel-phrase-reschedule-delta.md) |
 
 ## Cross-Sprint Decisions
 
 - Sprint 01 targets Android on `develop`; onboarding sandbox parity and Harmony delivery are deferred.
 - Replacement semantics are preserved: retitle uses `rescheduleTask(oldTaskId, newTask)` with the same time and duration, not a new field-patch path.
+- Sprint 02 keeps pure cancellation unsupported while treating cancel wording plus a replacement event at the same time anchor as replacement/reschedule.
 
 ## Lessons Pointer
 

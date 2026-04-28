@@ -1,0 +1,5 @@
+--------- beginning of main
+04-28 18:49:51.123 D/SimSchedulerViewModel(12133): transcript_ingress source=scheduler_debug_button length=18 text=晚上8点的开会取消了，得去机场接人。
+04-28 18:49:51.124 D/SimSchedulerIngress(12133): route_preflight length=18 displayedDateIso=2026-04-28 mightReschedule=false shortlistSize=0 transcript=晚上8点的开会取消了，得去机场接人。
+04-28 18:49:51.124 D/SimSchedulerIngress(12133): route_decision intent=DELETE_UNSUPPORTED shape=UNSUPPORTED owner=REJECT terminal=false reason=delete unsupported
+04-28 18:49:51.124 W/SimSchedulerIngress(12133): ui_failure branch=reject intent=DELETE_UNSUPPORTED owner=REJECT displayed=SIM 当前不支持语音删除，请在面板手动操作

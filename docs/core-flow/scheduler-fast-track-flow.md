@@ -42,7 +42,7 @@ These are behavioral laws. Lower layers may choose different types or DTO shapes
 5. **Null or meaningless input does not mutate state**: Empty or useless input must not write a task or inspiration record.
 6. **Bad target resolution does not mutate state**: No-match or ambiguous reschedule targeting must fail safely with explicit feedback.
 7. **Path A uses small session memory**: Follow-up utterances may rely on short-lived scheduling context from the active session.
-8. **Reschedule is replacement, not surgical edit**: Path A should prefer contextual recreate-then-retire semantics over field-by-field correction semantics. Time-anchor retitle keeps this rule: the old task is replaced with a same-time, same-duration task carrying the new title, not patched through a separate title-edit path.
+8. **Reschedule is replacement, not surgical edit**: Path A should prefer contextual recreate-then-retire semantics over field-by-field correction semantics. Time-anchor retitle keeps this rule: the old task is replaced with a same-time, same-duration task carrying the new title, not patched through a separate title-edit path. Cancel wording plus a replacement event at the same time anchor, such as `晚上8点的开会取消了，得去机场接人。`, is this same replacement behavior; pure cancellation without a replacement event remains unsupported unless a separate delete contract is approved.
 9. **Path A and Path B are decoupled**: They run independently and do not block each other.
 10. **Unified GUID is the bridge**: Path A and Path B share one pipeline GUID for mapping, correlation, and later status linkage.
 11. **Expanded scheduler card is read-only enrichment**: Path B may feed relevant memory context into the expanded card window, but that surface must not mutate CRM/entity memory.

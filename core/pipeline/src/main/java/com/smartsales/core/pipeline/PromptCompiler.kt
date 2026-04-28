@@ -414,7 +414,7 @@ $activeShortlist
 
 规则：
 1. 只有当用户明显在表达“改期/推迟/提前/挪动已有日程”时，才输出 `decision = "RESCHEDULE_TARGETED"`。
-2. 如果是创建、删除、闲聊、解释、或你没有把握，就输出 `decision = "NOT_SUPPORTED"`。
+2. 如果是创建、纯删除、闲聊、解释、或你没有把握，就输出 `decision = "NOT_SUPPORTED"`。
 3. `RESCHEDULE_TARGETED` 时：
    - 如果 `active_task_shortlist` 中有一个明确主候选，请输出它的 `suggestedTaskId`
    - `timeInstruction` 必须只保留新的时间指令
@@ -429,8 +429,11 @@ $activeShortlist
    - 不要把目标线索混进 `timeInstruction`
 8. 时间锚点改名模式：
    - 当用户说类似 `改成9点赶飞机`、`9点应该是赶飞机` 时，输出 `newTitle = "赶飞机"`，`timeInstruction = "9点"`。
+   - 中文纠正说法也适用，例如 `明早八点应该是要去开会`、`不对，明早八点应该是去机场接人`。
+   - 取消措辞加同一钟点的新事件也是改名/替换，不是删除。例如 `晚上8点的开会取消了，得去机场接人。` 应输出 `newTitle = "去机场接人"`，`timeInstruction = "晚上8点"`。
    - 这种模式下 `targetQuery` 只能是空，或只包含钟点锚点的短语，例如 `9点的任务`；不要把旧事件名称放进 `targetQuery`。
    - 如果用户同时表达新标题和新时间移动，例如 `把9点起床改成10点赶飞机`，输出 `NOT_SUPPORTED`，交给新建日程流程。
+   - 纯取消/删除没有替代事件时仍然不支持，例如 `取消晚上8点的开会` 必须输出 `NOT_SUPPORTED`。
 9. 模糊相对说法如 `待会儿`、`晚点`、`之后再说` 不支持，必须输出 `NOT_SUPPORTED`。
 10. 只能输出严格 JSON，禁止 Markdown 包裹。
 
@@ -439,6 +442,14 @@ $activeShortlist
   输出：`{"decision":"RESCHEDULE_TARGETED","targetQuery":"拿合同","timeInstruction":"推迟1个小时","newTitle":null}`
 - 输入：`改成9点赶飞机`
   输出：`{"decision":"RESCHEDULE_TARGETED","targetQuery":"9点的任务","timeInstruction":"9点","newTitle":"赶飞机"}`
+- 输入：`明早八点应该是要去开会`
+  输出：`{"decision":"RESCHEDULE_TARGETED","targetQuery":"明早8点的任务","timeInstruction":"明早八点","newTitle":"开会"}`
+- 输入：`不对，明早八点应该是去机场接人`
+  输出：`{"decision":"RESCHEDULE_TARGETED","targetQuery":"明早8点的任务","timeInstruction":"明早八点","newTitle":"去机场接人"}`
+- 输入：`晚上8点的开会取消了，得去机场接人。`
+  输出：`{"decision":"RESCHEDULE_TARGETED","targetQuery":"晚上8点的任务","timeInstruction":"晚上8点","newTitle":"去机场接人"}`
+- 输入：`取消晚上8点的开会`
+  输出：`{"decision":"NOT_SUPPORTED","reason":"pure deletion is unsupported"}`
 - 输入：`把9点起床改成10点赶飞机`
   输出：`{"decision":"NOT_SUPPORTED","reason":"time and event both changed"}`
 

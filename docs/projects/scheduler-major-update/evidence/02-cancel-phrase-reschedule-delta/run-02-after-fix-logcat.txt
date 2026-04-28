@@ -1,0 +1,12 @@
+--------- beginning of main
+04-28 19:00:09.934 D/SimSchedulerViewModel(24033): transcript_ingress source=scheduler_debug_button length=18 text=晚上8点的开会取消了，得去机场接人。
+04-28 19:00:09.959 D/SimSchedulerIngress(24033): route_preflight length=18 displayedDateIso=2026-04-28 mightReschedule=false looksLikeDeletionTranscript=true looksLikeReplacementCancelTranscript=true shortlistSize=1 transcript=晚上8点的开会取消了，得去机场接人。
+04-28 19:00:11.404 D/SimSchedulerIngress(24033): route_decision intent=RESCHEDULE shape=TARGETED_UPDATE owner=GLOBAL_RESCHEDULE terminal=true reason=none
+04-28 19:00:11.410 I/VALVE_PROTOCOL(24033): 🚦 [UI_STATE_EMITTED] | Size: 1 | SIM_SCHEDULER_GLOBAL_TIME_ANCHOR_RESOLVED_SUMMARY
+04-28 19:00:11.410 I/VALVE_PROTOCOL(24033): ================ PIPELINE PAYLOAD ================
+04-28 19:00:11.410 I/VALVE_PROTOCOL(24033): taskId=s02-meeting-20 clockCue=晚上8点
+04-28 19:00:11.410 I/VALVE_PROTOCOL(24033): ==================================================
+04-28 19:00:11.416 I/VALVE_PROTOCOL(24033): 🚦 [DB_WRITE_EXECUTED] | Size: 200374824 | Task Rescheduled (Room)
+04-28 19:00:11.416 I/VALVE_PROTOCOL(24033): ================ PIPELINE PAYLOAD ================
+04-28 19:00:11.416 I/VALVE_PROTOCOL(24033): s02-meeting-20
+04-28 19:00:11.416 I/VALVE_PROTOCOL(24033): ==================================================

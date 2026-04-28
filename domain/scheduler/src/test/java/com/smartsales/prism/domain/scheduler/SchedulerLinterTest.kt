@@ -657,6 +657,40 @@ class SchedulerLinterTest {
     }
 
     @Test
+    fun `global reschedule extraction accepts cancel phrase replacement time anchor`() {
+        val json = """
+            {
+              "decision": "RESCHEDULE_TARGETED",
+              "targetQuery": "晚上8点的任务",
+              "timeInstruction": "晚上8点",
+              "newTitle": "去机场接人"
+            }
+        """.trimIndent()
+
+        val result = linter.parseGlobalRescheduleExtraction(json)
+
+        assertTrue(result is GlobalRescheduleExtractionResult.Supported)
+        val supported = result as GlobalRescheduleExtractionResult.Supported
+        assertEquals("晚上8点的任务", supported.target.targetQuery)
+        assertEquals("晚上8点", supported.timeInstruction)
+        assertEquals("去机场接人", supported.newTitle)
+    }
+
+    @Test
+    fun `global reschedule extraction keeps pure cancellation unsupported`() {
+        val json = """
+            {
+              "decision": "NOT_SUPPORTED",
+              "reason": "pure deletion is unsupported"
+            }
+        """.trimIndent()
+
+        val result = linter.parseGlobalRescheduleExtraction(json)
+
+        assertTrue(result is GlobalRescheduleExtractionResult.Unsupported)
+    }
+
+    @Test
     fun `global reschedule extraction rejects old event target query with new title`() {
         val json = """
             {

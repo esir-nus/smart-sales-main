@@ -49,6 +49,8 @@ internal fun buildSimSchedulerRouterPreflightLog(
     transcript: String,
     displayedDateIso: String?,
     mightReschedule: Boolean,
+    looksLikeDeletion: Boolean,
+    looksLikeReplacementCancel: Boolean,
     shortlistSize: Int
 ): String {
     return buildString {
@@ -59,6 +61,10 @@ internal fun buildSimSchedulerRouterPreflightLog(
         append(displayedDateIso ?: "null")
         append(" mightReschedule=")
         append(mightReschedule)
+        append(" looksLikeDeletionTranscript=")
+        append(looksLikeDeletion)
+        append(" looksLikeReplacementCancelTranscript=")
+        append(looksLikeReplacementCancel)
         append(" shortlistSize=")
         append(shortlistSize)
         append(" transcript=")
@@ -263,7 +269,9 @@ internal class SimSchedulerIngressCoordinator(
 
         val displayedDateIso = projectionSupport.displayedDateIso()
         val mightReschedule = schedulerRouter.mightExpressReschedule(transcript)
-        val shortlist = if (mightReschedule) {
+        val looksLikeDeletion = schedulerRouter.looksLikeDeletionTranscript(transcript)
+        val looksLikeReplacementCancel = schedulerRouter.looksLikeReplacementCancelTranscript(transcript)
+        val shortlist = if (mightReschedule || looksLikeReplacementCancel) {
             activeTaskRetrievalIndex.buildShortlist(transcript)
         } else {
             emptyList()
@@ -274,6 +282,8 @@ internal class SimSchedulerIngressCoordinator(
                 transcript = transcript,
                 displayedDateIso = displayedDateIso,
                 mightReschedule = mightReschedule,
+                looksLikeDeletion = looksLikeDeletion,
+                looksLikeReplacementCancel = looksLikeReplacementCancel,
                 shortlistSize = shortlist.size
             )
         )

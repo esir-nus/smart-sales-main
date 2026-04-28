@@ -108,4 +108,49 @@ class RealGlobalRescheduleExtractionServiceTest {
         assertEquals(null, supported.suggestedTaskId)
         assertEquals(emptyList<String>(), supported.preferredTaskIds)
     }
+
+    @Test
+    fun `extract keeps cancel phrase replacement as time anchor retitle`() = runTest {
+        val executor = FakeExecutor()
+        val service = RealGlobalRescheduleExtractionService(
+            executor = executor,
+            promptCompiler = PromptCompiler(),
+            schedulerLinter = SchedulerLinter()
+        )
+        executor.enqueueResponse(
+            ExecutorResult.Success(
+                """
+                {
+                  "decision":"RESCHEDULE_TARGETED",
+                  "targetQuery":"晚上8点的任务",
+                  "timeInstruction":"晚上8点",
+                  "newTitle":"去机场接人"
+                }
+                """.trimIndent()
+            )
+        )
+
+        val result = service.extract(
+            GlobalRescheduleExtractionRequest(
+                transcript = "晚上8点的开会取消了，得去机场接人。",
+                nowIso = "2026-03-18T08:00:00Z",
+                timezone = "Asia/Shanghai",
+                activeTaskShortlist = listOf(
+                    ActiveTaskContext(
+                        taskId = "task-20",
+                        title = "开会",
+                        timeSummary = "20:00",
+                        isVague = false
+                    )
+                )
+            )
+        )
+
+        assertTrue(result is GlobalRescheduleExtractionResult.Supported)
+        val supported = result as GlobalRescheduleExtractionResult.Supported
+        assertEquals("晚上8点的任务", supported.target.targetQuery)
+        assertEquals("晚上8点", supported.timeInstruction)
+        assertEquals("去机场接人", supported.newTitle)
+        assertEquals(null, supported.suggestedTaskId)
+    }
 }

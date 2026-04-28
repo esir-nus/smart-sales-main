@@ -458,6 +458,23 @@ class SimSchedulerViewModelTest {
     }
 
     @Test
+    fun `buildSimSchedulerRouterPreflightLog includes deletion and replacement cancel signals`() {
+        val message = buildSimSchedulerRouterPreflightLog(
+            transcript = "晚上8点的开会取消了，得去机场接人。",
+            displayedDateIso = "2026-04-28",
+            mightReschedule = false,
+            looksLikeDeletion = true,
+            looksLikeReplacementCancel = true,
+            shortlistSize = 1
+        )
+
+        assertEquals(
+            "route_preflight length=18 displayedDateIso=2026-04-28 mightReschedule=false looksLikeDeletionTranscript=true looksLikeReplacementCancelTranscript=true shortlistSize=1 transcript=晚上8点的开会取消了，得去机场接人。",
+            message
+        )
+    }
+
+    @Test
     fun `buildSimSchedulerRouterDecisionLog includes owner and reason`() {
         val metadata = SchedulerIntelligenceRouter.RouteMetadata(
             surface = SchedulerIntelligenceRouter.SchedulerSurface.SCHEDULER_DRAWER,

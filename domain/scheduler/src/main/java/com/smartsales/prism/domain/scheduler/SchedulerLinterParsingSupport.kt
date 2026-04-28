@@ -496,7 +496,7 @@ internal class SchedulerLinterParsingSupport(
             .replace(Regex("""\b(?:at\s*)?\d{1,2}(?::\d{2})?\s*(?:am|pm|a\.m\.|p\.m\.)\b"""), "")
             .replace(Regex("""\b\d{1,2}:\d{2}\b"""), "")
             .replace(Regex("""(凌晨|早上|上午|中午|下午|晚上|今晚|午夜|半夜)?[零一二两三四五六七八九十百\d]{1,3}点(半|钟)?"""), "")
-            .replace(Regex("""(今天|今晚|明天|后天|下周[一二三四五六日天]|下星期[一二三四五六日天]|下礼拜[一二三四五六日天]|today|tomorrow|next\s+day|task|schedule|reminder)"""), "")
+            .replace(Regex("""(今天|今晚|明天|明早|明晚|后天|下周[一二三四五六日天]|下星期[一二三四五六日天]|下礼拜[一二三四五六日天]|today|tomorrow|next\s+day|task|schedule|reminder)"""), "")
             .replace(Regex("""[的\s,，。.\-_/：:在这这个那那个任务日程安排提醒]"""), "")
             .trim()
         return withoutClock.isBlank()

@@ -1,0 +1,1687 @@
+--------- beginning of main
+04-28 18:51:20.073 D/MI-SF   ( 1966): isSupportLowBrightnessFpsSwitch current_setting_fps: 120
+04-28 18:51:20.073 D/MI-SF   ( 1966): isTpIdleScene ,mAverageFrameRate is 4, 1
+04-28 18:51:20.073 D/MI-SF   ( 1966): modeGroup20709632 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:20.073 D/MI-SF   ( 1966): setTpIdleFps choose FPS:60, mode:37489152
+04-28 18:51:20.073 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=60.00 Hz, modePtr={id=7, vsyncRate=60.00 Hz, peakRefreshRate=60.00 Hz}}, emitEvent=true, force=false}
+04-28 18:51:20.073 E/DisplayModeController( 1966): setDesiredMode : Idle status skip setActiveMode, isDdicIdleMode: 1
+04-28 18:51:20.082 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 7, WxH 1440x3200, fps 60@auto@60:10
+04-28 18:51:20.083 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:20.083 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:20.083 I/SDM     ( 1810): PartialUpdateSrcSplit::SetCwbRoiForNonPU: CWB ROI Rect(699.000000 110.000000 940.000000 351.000000)
+04-28 18:51:20.088 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 10
+04-28 18:51:20.088 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 10
+04-28 18:51:20.096 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:20.106 D/MI-SF   ( 1966): isSupportLowBrightnessFpsSwitch current_setting_fps: 120
+04-28 18:51:20.107 D/MI-SF   ( 1966): isTpIdleScene ,mAverageFrameRate is 4, 1
+04-28 18:51:20.107 D/MI-SF   ( 1966): modeGroup37489152 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:20.107 D/MI-SF   ( 1966): setTpIdleFps choose FPS:60, mode:37489152
+04-28 18:51:20.108 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-28 18:51:20.112 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:20.120 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaaa710) status 0 for display-0.
+04-28 18:51:20.121 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-28 18:51:20.148 I/adbd    ( 3027): in ShellService: input tap 910 2560
+04-28 18:51:20.183 D/MI-SF   ( 1966): setIdleFps choose FPS:60, mode:20709632 mode_group 24641792
+04-28 18:51:20.183 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=60.00 Hz, modePtr={id=5, vsyncRate=60.00 Hz, peakRefreshRate=60.00 Hz}}, emitEvent=false, force=false}
+04-28 18:51:20.183 I/SDM     ( 1810): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+04-28 18:51:20.184 D/libsensor-parseRGB( 2925): CWB NotifyIdleStatus 1
+04-28 18:51:20.190 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 5, WxH 1440x3200, fps 60@idle@60:1
+04-28 18:51:20.191 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:20.191 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:20.196 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 1
+04-28 18:51:20.197 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 1
+--------- beginning of system
+04-28 18:51:20.206 W/MIUIInput( 3839): Input motion event injection from package: null action ACTION_DOWN
+04-28 18:51:20.207 I/MIUIInput( 3839): [MotionEvent] publisher action=0x0, deviceId=-1, 663189350, channel '13eaf2f com.smartsales.prism/com.smartsales.prism.MainActivity'
+04-28 18:51:20.207 I/MIUIInput( 3839): [MotionEvent] publisher action=0x0, deviceId=-1, 663189350, channel '[Gesture Monitor] onehanded-touch'
+04-28 18:51:20.207 I/MIUIInput( 3839): [MotionEvent] publisher action=0x0, deviceId=-1, 663189350, channel '[Gesture Monitor] WMShell'
+04-28 18:51:20.207 I/MIUIInput( 3839): [MotionEvent] publisher action=0x0, deviceId=-1, 663189350, channel '[Gesture Monitor] miui-gesture'
+04-28 18:51:20.208 D/OneHandedTutorialHandler( 5963): resetDraggingState: false
+04-28 18:51:20.208 D/SchedBoost( 3839): handleSceneBoost type: 17, active :true
+04-28 18:51:20.208 I/ProcessManager( 3839): getRenderThreadTidByPid, caller=3839
+04-28 18:51:20.208 D/SchedBoostThread( 3839): thread tid=14426, priority is set to 1
+04-28 18:51:20.208 D/MiuiFreeformModeGestureHandler( 5963): start handle MotionEvents:(910.0,2560.0)
+04-28 18:51:20.208 D/SchedBoostThread( 3839): thread tid=23832, priority is set to 1
+04-28 18:51:20.208 D/MiuiFreeformModeGestureHandler( 5963): handleMotionEvents mActiveMiuiFreeformTask null x: 910.0 y: 2560.0 current miuiFreeformModeTaskInfo:
+04-28 18:51:20.208 D/MultiTaskingTaskRepository( 5963): getTopFullscreenTaskInfo: taskId=28143 windowingMode=1 isVisible=true isTopActivityTransparent=false
+04-28 18:51:20.208 D/MiuiDecorationRootViewHost( 5963): isTouchedInTopCaption: taskId = 28143, tempViewHost = null
+04-28 18:51:20.208 D/MiuiDecorationDot( 5963): isTouchedInTopCaption: taskId = 28143, mMulWinSwitchVIewHost is not ready for layout
+04-28 18:51:20.208 D/MulWinSwitchEventHandler( 5963): dispatchToFullOrSplitDecorationDot: touchedTaskId=-1
+04-28 18:51:20.208 D/MulWinSwitchEventHandler( 5963): handleReceivedMotionEvent: mTouchedBottomTaskId=-1
+04-28 18:51:20.208 I/MIUIInput(14426): [MotionEvent] ViewRootImpl windowName 'com.smartsales.prism/com.smartsales.prism.MainActivity', { action=ACTION_DOWN, id[0]=0, pointerCount=1, eventTime=663189350, downTime=663189350, phoneEventTime=1777373480206 } moveCount:0
+04-28 18:51:20.209 D/VRI[MainActivity](14426): getMiuiFreeformStackInfo mTmpFrames.miuiFreeFormStackInfo: null
+04-28 18:51:20.209 I/SidebarCoverView(14048): onTouch : 4
+04-28 18:51:20.209 D/MI-SF   ( 1966): setIdleFps choose FPS:60, mode:20709632 mode_group 24641792
+04-28 18:51:20.209 I/MiuiSplitInputMethodImpl( 3839): Skip onPointerDownOutsideFocusLocked
+04-28 18:51:20.210 I/MiuiSplitInputMethodImpl( 3839): Skip onPointerDownOutsideFocusLocked
+04-28 18:51:20.210 I/MiuiSplitInputMethodImpl( 3839): Skip onPointerDownOutsideFocusLocked
+04-28 18:51:20.210 I/MiuiSplitInputMethodImpl( 3839): Skip onPointerDownOutsideFocusLocked
+04-28 18:51:20.212 D/EventBus( 1255): No subscribers registered for event class com.xiaomi.xms.event.msg.SystemTouchMsg
+04-28 18:51:20.212 D/EventBus( 1255): No subscribers registered for event class xc.h
+04-28 18:51:20.213 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:20.219 I/libsensor-boledalgo( 2925): dbv:1524,lux:205.6,cct:4926.0,hsv:2.6, CWB R:7.3,G:5.3,B:29.2 Event C:4297.2,R:2189.4,G:1727.1,B:857.7 Cali C:0.0,R:0.0,G:0.0,B:0.0
+04-28 18:51:20.222 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:20.223 D/RefreshRateSelector( 1966): Touch Boost
+04-28 18:51:20.223 D/MI-SF   ( 1966): modeGroup41426432 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:20.223 D/RefreshRateSelector( 1966): fixedMode_group: 41426432, isFindModeGroup 1
+04-28 18:51:20.223 D/RefreshRateSelector( 1966): find max refresh rate:120, mode Group:41426432
+04-28 18:51:20.223 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=120.00 Hz, modePtr={id=1, vsyncRate=120.00 Hz, peakRefreshRate=120.00 Hz}}, emitEvent=true, force=false}
+04-28 18:51:20.223 E/DisplayModeController( 1966): setDesiredMode : Idle status skip setActiveMode, isDdicIdleMode: 1
+04-28 18:51:20.225 W/MIUIInput( 3839): Input motion event injection from package: null action ACTION_UP
+04-28 18:51:20.225 I/MIUIInput( 3839): [MotionEvent] publisher action=0x1, deviceId=-1, 663189350, channel '13eaf2f com.smartsales.prism/com.smartsales.prism.MainActivity'
+04-28 18:51:20.225 I/MIUIInput( 3839): [MotionEvent] publisher action=0x1, deviceId=-1, 663189350, channel '[Gesture Monitor] onehanded-touch'
+04-28 18:51:20.226 I/MIUIInput( 3839): [MotionEvent] publisher action=0x1, deviceId=-1, 663189350, channel '[Gesture Monitor] WMShell'
+04-28 18:51:20.226 I/MIUIInput( 3839): [MotionEvent] publisher action=0x1, deviceId=-1, 663189350, channel '[Gesture Monitor] miui-gesture'
+04-28 18:51:20.226 D/DisplayPolicyStubImpl( 3839): boost for touch up begin
+04-28 18:51:20.226 I/MIUIInput(14426): [MotionEvent] ViewRootImpl windowName 'com.smartsales.prism/com.smartsales.prism.MainActivity', { action=ACTION_UP, id[0]=0, pointerCount=1, eventTime=663189350, downTime=663189350, phoneEventTime=1777373480206 } moveCount:0
+04-28 18:51:20.227 I/DisplayPolicyStubImpl( 3839): boost for touch up, package:com.smartsales.prism
+04-28 18:51:20.230 D/AurogonBandwidthController( 3839): skinTemperature:49.785
+04-28 18:51:20.231 D/EventBus( 1255): No subscribers registered for event class com.xiaomi.xms.event.msg.SystemTouchMsg
+04-28 18:51:20.233 D/EventBus( 1255): No subscribers registered for event class xc.h
+04-28 18:51:20.233 D/SimSchedulerViewModel(14426): transcript_ingress source=scheduler_debug_button length=18 text=晚上8点的开会取消了，得去机场接人。
+04-28 18:51:20.234 D/SimSchedulerIngress(14426): route_preflight length=18 displayedDateIso=2026-04-28 mightReschedule=false looksLikeDeletionTranscript=true shortlistSize=0 transcript=晚上8点的开会取消了，得去机场接人。
+04-28 18:51:20.235 D/SimSchedulerIngress(14426): route_decision intent=DELETE_UNSUPPORTED shape=UNSUPPORTED owner=REJECT terminal=false reason=delete unsupported
+04-28 18:51:20.235 W/SimSchedulerIngress(14426): ui_failure branch=reject intent=DELETE_UNSUPPORTED owner=REJECT displayed=SIM 当前不支持语音删除，请在面板手动操作
+04-28 18:51:20.237 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 1, WxH 1440x3200, fps 120@auto@120:30
+04-28 18:51:20.237 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:20.237 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:20.239 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-28 18:51:20.239 W/HWComposer( 1966): Ignoring duplicate VSYNC event from HWC for display 4630946654109872275 (t=663189382027000)
+04-28 18:51:20.239 D/AudioPipeline(14426): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-28 18:51:20.240 D/DownloadService(14426): Audio files state: downloading=1, queued=0, ready=1, queueSize=0
+04-28 18:51:20.240 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-28 18:51:20.240 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-28 18:51:20.242 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 30
+04-28 18:51:20.242 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 30
+04-28 18:51:20.243 W/DownloadService(14426): Notification permission missing, skip foreground notification update
+04-28 18:51:20.251 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:20.253 I/DisplayDeviceRepository( 3839): Display device changed render timings: "内置屏幕", renderFrameRate=120.00001, presentationDeadlineNanos=11333333, appVsyncOffsetNanos=1000000, frameRateOverrides=[]
+04-28 18:51:20.253 D/RefreshRateSelector( 1966): Touch Boost
+04-28 18:51:20.253 D/MI-SF   ( 1966): modeGroup41426432 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:20.253 D/RefreshRateSelector( 1966): fixedMode_group: 41426432, isFindModeGroup 1
+04-28 18:51:20.253 D/RefreshRateSelector( 1966): find max refresh rate:120, mode Group:41426432
+04-28 18:51:20.254 D/WindowManager( 3839): DeferredDisplayUpdater: partially applying DisplayInfo(1440 x 3200) immediately
+04-28 18:51:20.254 W/DisplayContentStubImpl( 3839):  displayMetricsChanged=false physicalDisplayChanged=false displayId=0 newUniqueId=local:4630946654109872275 currentUnique=local:4630946654109872275
+04-28 18:51:20.254 D/DisplayContentStubImpl( 3839): Display{#0 state=ON size=1440x3200 ROTATION_0} isActivityEmbeddingSplitEnable false
+04-28 18:51:20.254 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:20.254 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:20.254 I/SDM     ( 1810): PartialUpdateSrcSplit::SetCwbRoiForNonPU: CWB ROI Rect(699.000000 110.000000 940.000000 351.000000)
+04-28 18:51:20.255 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:20.255 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 138, only 0 and 1 are supported
+04-28 18:51:20.255 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:20.255 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 120, only 0 and 1 are supported
+04-28 18:51:20.255 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:20.255 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 76, only 0 and 1 are supported
+04-28 18:51:20.255 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:20.255 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 68, only 0 and 1 are supported
+04-28 18:51:20.255 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:20.255 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 64, only 0 and 1 are supported
+04-28 18:51:20.255 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:20.255 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 56, only 0 and 1 are supported
+04-28 18:51:20.255 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:20.255 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 42, only 0 and 1 are supported
+04-28 18:51:20.255 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:20.255 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 34, only 0 and 1 are supported
+04-28 18:51:20.255 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:20.255 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 24, only 0 and 1 are supported
+04-28 18:51:20.255 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:20.255 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 6, only 0 and 1 are supported
+04-28 18:51:20.255 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:20.255 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:20.255 D/BarFollowAnimation( 3839): pairAppearanceRegionAndWin win=Window{13eaf2f u0 com.smartsales.prism/com.smartsales.prism.MainActivity} 0
+04-28 18:51:20.256 D/BarFollowAnimation( 3839): isAppTaskBarOnTop win:Window{13eaf2f u0 com.smartsales.prism/com.smartsales.prism.MainActivity} (mCurrentTopTask:Task{4746c18 #28143 type=standard A=10433:com.smartsales.prism} : true); (mAssociatedTask:Task{4746c18 #28143 type=standard A=10433:com.smartsales.prism} : true); (mHomeTask:Task{39ded46 #1 type=home} : false); mReparentToOriginParent:false mLastAppBarVisible:true mLastHomeBarVisible:false
+04-28 18:51:20.256 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:20.256 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:20.256 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:20.257 W/HWComposer( 1966): Ignoring duplicate VSYNC event from HWC for display 4630946654109872275 (t=663189398664000)
+04-28 18:51:20.259 V/AutoDensityController( 5963): on display changed 0 context dpi:586 origin dpi:600 target dpi:586
+04-28 18:51:20.259 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:20.259 D/AudioFlingerImpl( 1930): setGameParameters keyvalue: screen_state=on
+04-28 18:51:20.259 D/DeviceHalAidl( 1930): [default] setParameters: parameters: "screen_state=on"
+04-28 18:51:20.259 D/ControlCenterWindowViewController( 5963): on display changed 0
+04-28 18:51:20.260 V/AODAutoDensityController( 5963): on display changed 0 context dpi:586 origin dpi:600 target dpi:586
+04-28 18:51:20.260 D/MiuiGxzwAnimView( 5963): onDisplayChanged: oldState = 2, newState = 2
+04-28 18:51:20.260 D/PAL: API( 1794): pal_set_param: 1497: Enter: param id 8 (PAL_PARAM_ID_SCREEN_STATE)
+04-28 18:51:20.260 D/PAL: ResourceManager( 1794): setParameter: 11845: Enter param id: 8 (PAL_PARAM_ID_SCREEN_STATE)
+04-28 18:51:20.260 I/PAL: ResourceManager( 1794): setParameter: 11872: Screen State:1
+04-28 18:51:20.260 D/PAL: ResourceManager( 1794): setParameter: 13545: Exit status: 0
+04-28 18:51:20.260 D/PAL: API( 1794): pal_set_param: 1514: Exit, status 0
+04-28 18:51:20.260 W/Launcher( 5261): onDisplayChanged: newRotation=0, mCurrentRotation=0
+04-28 18:51:20.260 D/DeviceHalAidl( 1930): [usb] setParameters: parameters: "screen_state=on"
+04-28 18:51:20.260 D/AHAL_Module( 1794): updateScreenState: usb: 1
+04-28 18:51:20.260 D/DeviceHalAidl( 1930): [r_submix] setParameters: parameters: "screen_state=on"
+04-28 18:51:20.260 D/AHAL_Module( 1794): updateScreenState: r_submix: 1
+04-28 18:51:20.260 D/DeviceHalAidl( 1930): [bluetooth] setParameters: parameters: "screen_state=on"
+04-28 18:51:20.260 D/AHAL_Module( 1794): updateScreenState: bluetooth: 1
+04-28 18:51:20.263 W/HWComposer( 1966): Ignoring duplicate VSYNC event from HWC for display 4630946654109872275 (t=663189406982000)
+04-28 18:51:20.266 W/GestureStubView_Left( 5261): onDisplayChanged
+04-28 18:51:20.266 W/GestureStubView_Left( 5261): adaptRotation   currentRotation=0   mRotation=0
+04-28 18:51:20.266 W/GestureStubView_Right( 5261): onDisplayChanged
+04-28 18:51:20.266 W/GestureStubView_Right( 5261): adaptRotation   currentRotation=0   mRotation=0
+04-28 18:51:20.267 W/InsetsSource(31883): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:20.267 W/InsetsSource(31883): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:20.267 W/InsetsSource(31883): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:20.267 W/InsetsSource(31883): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:20.267 W/InsetsSource(31883): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:20.267 W/InsetsSource(31883): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:20.270 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa72d0) status 0 for display-0.
+04-28 18:51:20.270 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-28 18:51:20.271 W/HWComposer( 1966): Ignoring duplicate VSYNC event from HWC for display 4630946654109872275 (t=663189415300000)
+04-28 18:51:20.279 W/HWComposer( 1966): Ignoring duplicate VSYNC event from HWC for display 4630946654109872275 (t=663189423619000)
+04-28 18:51:20.284 D/STUPP   ( 3839): SSI ls:false
+04-28 18:51:20.284 D/STUPP   ( 3839): CSI ls:false
+04-28 18:51:20.288 W/HWComposer( 1966): Ignoring duplicate VSYNC event from HWC for display 4630946654109872275 (t=663189431937000)
+04-28 18:51:20.293 I/SKIA    (14426): CreateGraphicsPipeline pipeline cache hit. elpased time: 0.54 ms.
+04-28 18:51:20.296 W/HWComposer( 1966): Ignoring duplicate VSYNC event from HWC for display 4630946654109872275 (t=663189440255000)
+04-28 18:51:20.305 D/HWUI    ( 5963): ImageDecoder_nDecodeBitmap: width = 388, height = 318, encodedFormat = 4
+04-28 18:51:20.310 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-28 18:51:20.312 W/HWUI    ( 5963): Image decoding logging dropped!
+04-28 18:51:20.315 D/HWUI    ( 5963): ImageDecoder_nDecodeBitmap: width = 1024, height = 1024, encodedFormat = 4
+04-28 18:51:20.326 W/BpBinder( 1966): Large outgoing transaction of 117236 bytes, interface descriptor android.gui.IWindowInfosListener, code 1 was sent
+04-28 18:51:20.345 W/BpBinder( 1966): Large outgoing transaction of 117236 bytes, interface descriptor android.gui.IWindowInfosListener, code 1 was sent
+04-28 18:51:20.358 D/RefreshRateSelector( 1966): Touch Boost
+04-28 18:51:20.358 D/MI-SF   ( 1966): modeGroup41426432 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:20.358 D/RefreshRateSelector( 1966): fixedMode_group: 41426432, isFindModeGroup 1
+04-28 18:51:20.358 D/RefreshRateSelector( 1966): find max refresh rate:120, mode Group:41426432
+04-28 18:51:20.404 W/HWUI    ( 5963): Image decoding logging dropped!
+04-28 18:51:20.448 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-28 18:51:20.449 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-28 18:51:20.460 D/AurogonImmobulusMode( 3839):  update wallpaper pacakge name status mLockWallPaperPackageName =  mLockWallPaperUid = -1 mDeskWallPaperPackageName = com.miui.miwallpaper mDeskWallPaperUid = 10187
+04-28 18:51:20.462 D/AudioPipeline(14426): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-28 18:51:20.462 D/DownloadService(14426): Audio files state: downloading=1, queued=0, ready=1, queueSize=0
+04-28 18:51:20.464 W/DownloadService(14426): Notification permission missing, skip foreground notification update
+04-28 18:51:20.474 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-28 18:51:20.479 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaaa500) status 0 for display-0.
+04-28 18:51:20.479 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-28 18:51:20.486 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-28 18:51:20.594 I/MiuiNetworkPolicy( 3839): updateUidState uid = 10173, uidState = 19
+04-28 18:51:20.619 D/QLM-Service( 8670): check_headroom_zone: Timer EVT, Temp: 62892
+04-28 18:51:20.642 I/libsensor-boledalgo( 2925): dbv:1524,lux:207.6,cct:4873.8,hsv:2.6, CWB R:7.3,G:5.3,B:29.2 Event C:4321.3,R:2192.2,G:1733.2,B:854.5 Cali C:0.0,R:0.0,G:0.0,B:0.0
+04-28 18:51:20.655 D/AudioPipeline(14426): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-28 18:51:20.655 D/DownloadService(14426): Audio files state: downloading=1, queued=0, ready=1, queueSize=0
+04-28 18:51:20.657 W/DownloadService(14426): Notification permission missing, skip foreground notification update
+04-28 18:51:20.661 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-28 18:51:20.661 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-28 18:51:20.678 I/SDM     ( 1810): DemuraTnCaptureIntfImpl::ProcessCapturePanelData: Screen capture status = 0
+04-28 18:51:20.684 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-28 18:51:20.686 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa7dd0) status 0 for display-0.
+04-28 18:51:20.686 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-28 18:51:20.727 E/ANDR-PERF( 1813): ExtendedPerfBoost: trigger_rearm_timer() 179: setthermalbreak req empty boostparam=boost:0
+04-28 18:51:20.728 D/AurogonBandwidthController( 3839): skinTemperature:49.785
+04-28 18:51:20.729 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-28 18:51:20.733 W/ActivityTaskManager( 3839): MANAGE_ACTIVITY_STACKS is deprecated, please use alternative permission: MANAGE_ACTIVITY_TASKS
+04-28 18:51:20.782 D/BluetoothGatt(14426): readRssi() - device: XX:XX:XX:XX:8F:96
+04-28 18:51:20.784 D/BtGatt.GattService(28530): readRemoteRssi() - address=XX:XX:XX:XX:8F:96
+04-28 18:51:20.784 D/bt_btif_gattc(28530): system/btif/src/btif_gatt_client.cc:644 btif_gattc_read_remote_rssi:
+04-28 18:51:20.784 D/ble_sec (28530): system/stack/btm/btm_ble_sec.cc:539 BTM_ReadDevInfo: Determined device_type:BLE addr_type:public
+04-28 18:51:20.784 D/bt_shim_hci(28530): system/main/shim/hci_layer.cc:233 transmit_command: Sending command READ_RSSI(0x1405)
+04-28 18:51:20.785 D/vendor.qti.bluetooth@1.0-ibs_handler( 1781): SerialClockVote: vote for UART CLK ON
+04-28 18:51:20.787 D/vendor.qti.bluetooth@1.0-wake_lock( 1781): Acquire wakelock is acquired
+04-28 18:51:20.787 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): DeviceWakeUp: Writing IBS_WAKE_IND
+04-28 18:51:20.789 I/android.browser(24354): This is non sticky GC, maxfree is 33554432 minfree is 8388608
+04-28 18:51:20.790 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Received IBS_WAKE_ACK: 0xFC
+04-28 18:51:20.790 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Signal wack_cond_
+04-28 18:51:20.790 D/vendor.qti.bluetooth@1.0-ibs_handler( 1781): DeviceWakeUp: Unblocked from waiting for FC, pthread_cond_timedwait ret = 0
+04-28 18:51:20.790 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Received IBS_WAKE_IND: 0xFD
+04-28 18:51:20.790 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Writing IBS_WAKE_ACK
+04-28 18:51:20.791 D/bt_shim_hci(28530): system/main/shim/hci_layer.cc:183 OnTransmitPacketCommandComplete: Received cmd complete for READ_RSSI(0x1405)
+04-28 18:51:20.791 D/btm_acl (28530): system/stack/acl/btm_acl.cc:1867 btm_read_rssi_complete: Read rrsi complete rssi:-52 hci status:HCI_SUCCESS
+04-28 18:51:20.791 V/bt_btif_gattc(28530): system/btif/src/btif_gatt_client.cc:308 btm_read_rssi_cb: HAL bt_gatt_callbacks->client->read_remote_rssi_cb
+04-28 18:51:20.791 D/BtGatt.GattService(28530): onReadRemoteRssi() - clientIf=80 address=XX:XX:XX:XX:8F:96, rssi=-52, status=0
+04-28 18:51:20.835 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Received IBS_SLEEP_IND: 0xFE
+04-28 18:51:20.866 D/AudioPipeline(14426): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-28 18:51:20.867 D/DownloadService(14426): Audio files state: downloading=1, queued=0, ready=1, queueSize=0
+04-28 18:51:20.869 W/DownloadService(14426): Notification permission missing, skip foreground notification update
+04-28 18:51:20.874 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-28 18:51:20.874 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-28 18:51:20.894 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa91c0) status 0 for display-0.
+04-28 18:51:20.894 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-28 18:51:20.895 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-28 18:51:20.896 D/JavaheapMonitor(24354): Java heap used=6M max=512M, proc: com.android.browser
+04-28 18:51:20.901 V/JavaheapMonitor(24354): Check java heap usage finished! Next check delay: 300000
+04-28 18:51:20.932 D/JavaheapMonitor(25900): Java heap used=8M max=256M, proc: android.process.media
+04-28 18:51:20.932 V/JavaheapMonitor(25900): Check java heap usage finished! Next check delay: 300000
+04-28 18:51:20.973 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-28 18:51:21.040 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): DeviceSleep: TX Awake, Sending SLEEP_IND
+04-28 18:51:21.040 D/vendor.qti.bluetooth@1.0-ibs_handler( 1781): SerialClockVote: vote for UART CLK OFF
+04-28 18:51:21.049 W/RenderInspector(14426): DequeueBuffer time out on com.smartsales.prism/com.smartsales.prism.MainActivity, count=1, avg=18 ms, max=18 ms.
+04-28 18:51:21.069 D/AudioPipeline(14426): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-28 18:51:21.070 D/DownloadService(14426): Audio files state: downloading=1, queued=0, ready=1, queueSize=0
+04-28 18:51:21.073 W/DownloadService(14426): Notification permission missing, skip foreground notification update
+04-28 18:51:21.079 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-28 18:51:21.079 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-28 18:51:21.100 D/JavaheapMonitor(26121): Java heap used=6M max=256M, proc: com.android.permissioncontroller
+04-28 18:51:21.100 V/JavaheapMonitor(26121): Check java heap usage finished! Next check delay: 300000
+04-28 18:51:21.106 I/ndroid.systemui( 5963): AssetManager2(0xb40000760033cdb8) locale list changing from [] to [zh-CN]
+04-28 18:51:21.109 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-28 18:51:21.110 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaaa5b0) status 0 for display-0.
+04-28 18:51:21.110 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-28 18:51:21.118 D/HWUI    ( 5963): TAG_DDRE, CanvasContext::setDdreActivities:
+04-28 18:51:21.119 I/ViewRootImpl( 5963): Toast use first frame acceleration
+04-28 18:51:21.122 D/MiuiMirrorInputMethodImpl( 3839): InsetsControlTarget invalid!:Window{13eaf2f u0 com.smartsales.prism/com.smartsales.prism.MainActivity}
+04-28 18:51:21.124 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.124 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.126 I/Choreographer( 5963): first vsync insert message into MessageQueue Head
+04-28 18:51:21.127 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.127 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.127 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.127 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.127 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.127 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.127 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.127 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.127 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.127 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.127 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =60 hasIntersection =false
+04-28 18:51:21.127 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =60 hasIntersection =false
+04-28 18:51:21.127 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.127 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.127 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =169 hasIntersection =false
+04-28 18:51:21.127 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =169 hasIntersection =false
+04-28 18:51:21.127 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.127 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.127 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =169 hasIntersection =false
+04-28 18:51:21.128 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =169 hasIntersection =false
+04-28 18:51:21.128 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.128 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =60 hasIntersection =false
+04-28 18:51:21.128 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =169 hasIntersection =false
+04-28 18:51:21.128 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =169 hasIntersection =false
+04-28 18:51:21.134 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.134 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 138, only 0 and 1 are supported
+04-28 18:51:21.134 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.134 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 120, only 0 and 1 are supported
+04-28 18:51:21.134 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.134 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 76, only 0 and 1 are supported
+04-28 18:51:21.134 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.134 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 68, only 0 and 1 are supported
+04-28 18:51:21.134 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.134 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 64, only 0 and 1 are supported
+04-28 18:51:21.134 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.134 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 56, only 0 and 1 are supported
+04-28 18:51:21.134 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.134 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 42, only 0 and 1 are supported
+04-28 18:51:21.134 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.134 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 34, only 0 and 1 are supported
+04-28 18:51:21.134 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.134 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 24, only 0 and 1 are supported
+04-28 18:51:21.134 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.134 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 6, only 0 and 1 are supported
+04-28 18:51:21.135 D/DisplayContentStubImpl( 3839): onNewImeFrame: isImeVisible = false, imeFrame = Rect(0, 0 - 0, 0)
+04-28 18:51:21.135 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.135 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.135 D/BarFollowAnimation( 3839): pairAppearanceRegionAndWin win=Window{13eaf2f u0 com.smartsales.prism/com.smartsales.prism.MainActivity} 0
+04-28 18:51:21.135 D/BarFollowAnimation( 3839): isAppTaskBarOnTop win:Window{13eaf2f u0 com.smartsales.prism/com.smartsales.prism.MainActivity} (mCurrentTopTask:Task{4746c18 #28143 type=standard A=10433:com.smartsales.prism} : true); (mAssociatedTask:Task{4746c18 #28143 type=standard A=10433:com.smartsales.prism} : true); (mHomeTask:Task{39ded46 #1 type=home} : false); mReparentToOriginParent:false mLastAppBarVisible:true mLastHomeBarVisible:false
+04-28 18:51:21.136 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.136 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.136 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.137 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.138 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.138 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.138 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.138 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.138 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =60 hasIntersection =false
+04-28 18:51:21.138 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.138 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =169 hasIntersection =false
+04-28 18:51:21.138 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.138 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =169 hasIntersection =false
+04-28 18:51:21.143 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.143 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.143 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.143 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.143 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.143 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.143 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.143 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.143 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.143 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.143 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =60 hasIntersection =false
+04-28 18:51:21.143 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =60 hasIntersection =false
+04-28 18:51:21.143 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.143 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.143 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =45 hasIntersection =false
+04-28 18:51:21.143 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =45 hasIntersection =false
+04-28 18:51:21.143 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =169 hasIntersection =false
+04-28 18:51:21.143 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =169 hasIntersection =false
+04-28 18:51:21.143 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.143 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.143 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =45 hasIntersection =false
+04-28 18:51:21.143 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =45 hasIntersection =false
+04-28 18:51:21.143 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =169 hasIntersection =false
+04-28 18:51:21.143 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =169 hasIntersection =false
+04-28 18:51:21.143 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.143 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =60 hasIntersection =false
+04-28 18:51:21.144 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =169 hasIntersection =false
+04-28 18:51:21.144 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =169 hasIntersection =false
+04-28 18:51:21.146 D/View    ( 5963): setBackgroundBlur blurRadius=375
+04-28 18:51:21.148 D/VRI[Toast]( 5963): vri.Setup new sync=wmsSync-VRI[Toast]#36
+04-28 18:51:21.148 W/LayerDrawable( 5963): Failed to obtain smooth corners because the drawable of the children in the layerstate is null
+04-28 18:51:21.156 W/BpBinder( 1966): Large outgoing transaction of 117236 bytes, interface descriptor android.gui.IWindowInfosListener, code 1 was sent
+04-28 18:51:21.174 W/BpBinder( 1966): Large outgoing transaction of 122272 bytes, interface descriptor android.gui.IWindowInfosListener, code 1 was sent
+04-28 18:51:21.191 D/vendor.qti.bluetooth@1.0-wake_lock( 1781): Release wakelock is released
+04-28 18:51:21.199 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-28 18:51:21.208 D/SchedBoostThread( 3839): thread tid=14426, priority is set to -10
+04-28 18:51:21.208 D/SchedBoostThread( 3839): thread tid=23832, priority is set to -10
+04-28 18:51:21.259 I/SDM     ( 1810): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+04-28 18:51:21.259 D/libsensor-parseRGB( 2925): CWB NotifyIdleStatus 1
+04-28 18:51:21.273 D/AudioPipeline(14426): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-28 18:51:21.273 D/DownloadService(14426): Audio files state: downloading=1, queued=0, ready=1, queueSize=0
+04-28 18:51:21.275 W/DownloadService(14426): Notification permission missing, skip foreground notification update
+04-28 18:51:21.284 D/MI-SF   ( 1966): setIdleFps choose FPS:60, mode:20709632 mode_group 24641792
+04-28 18:51:21.284 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=60.00 Hz, modePtr={id=5, vsyncRate=60.00 Hz, peakRefreshRate=60.00 Hz}}, emitEvent=false, force=false}
+04-28 18:51:21.288 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 5, WxH 1440x3200, fps 60@idle@60:1
+04-28 18:51:21.289 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:21.289 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:21.290 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-28 18:51:21.291 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-28 18:51:21.294 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 1
+04-28 18:51:21.294 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 1
+04-28 18:51:21.297 I/SDM     ( 1810): PartialUpdateSrcSplit::SetCwbRoiForNonPU: CWB ROI Rect(699.000000 110.000000 940.000000 351.000000)
+04-28 18:51:21.303 D/RefreshRateSelector( 1966): Touch Boost
+04-28 18:51:21.303 D/MI-SF   ( 1966): modeGroup41426432 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:21.303 D/RefreshRateSelector( 1966): fixedMode_group: 41426432, isFindModeGroup 1
+04-28 18:51:21.304 D/RefreshRateSelector( 1966): find max refresh rate:120, mode Group:41426432
+04-28 18:51:21.304 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=120.00 Hz, modePtr={id=1, vsyncRate=120.00 Hz, peakRefreshRate=120.00 Hz}}, emitEvent=true, force=false}
+04-28 18:51:21.304 E/DisplayModeController( 1966): setDesiredMode : Idle status skip setActiveMode, isDdicIdleMode: 1
+04-28 18:51:21.307 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:21.311 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 1, WxH 1440x3200, fps 120@auto@120:30
+04-28 18:51:21.312 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:21.312 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:21.313 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-28 18:51:21.316 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:21.326 D/RefreshRateSelector( 1966): Touch Boost
+04-28 18:51:21.326 D/MI-SF   ( 1966): modeGroup41426432 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:21.326 D/RefreshRateSelector( 1966): fixedMode_group: 41426432, isFindModeGroup 1
+04-28 18:51:21.326 D/RefreshRateSelector( 1966): find max refresh rate:120, mode Group:41426432
+04-28 18:51:21.330 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 30
+04-28 18:51:21.330 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 30
+04-28 18:51:21.335 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa1ef0) status 0 for display-0.
+04-28 18:51:21.335 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-28 18:51:21.352 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:21.369 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:21.414 D/MI-SF   ( 1966): setIdleFps choose FPS:60, mode:20709632 mode_group 24641792
+04-28 18:51:21.414 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=60.00 Hz, modePtr={id=5, vsyncRate=60.00 Hz, peakRefreshRate=60.00 Hz}}, emitEvent=false, force=false}
+04-28 18:51:21.414 I/SDM     ( 1810): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+04-28 18:51:21.414 D/libsensor-parseRGB( 2925): CWB NotifyIdleStatus 1
+04-28 18:51:21.418 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 5, WxH 1440x3200, fps 60@idle@60:1
+04-28 18:51:21.418 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:21.419 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:21.423 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-28 18:51:21.424 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 1
+04-28 18:51:21.424 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 1
+04-28 18:51:21.448 D/AurogonBandwidthController( 3839): skinTemperature:49.539
+04-28 18:51:21.448 D/AurogonBandwidthController( 3839): skinTemperature:49.539
+04-28 18:51:21.456 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:21.468 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:21.497 I/SDM     ( 1810): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+04-28 18:51:21.498 D/libsensor-parseRGB( 2925): CWB NotifyIdleStatus 1
+04-28 18:51:21.518 D/HWUI    ( 5963): DDRE Debug DrawPath: smoothCornerEnabled = true
+04-28 18:51:21.518 D/HWUI    ( 5963): DDRE Debug DrawPath: smoothCornerEnabled = true
+04-28 18:51:21.565 D/AudioPipeline(14426): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-28 18:51:21.565 D/DownloadService(14426): Audio files state: downloading=1, queued=0, ready=1, queueSize=0
+04-28 18:51:21.567 W/DownloadService(14426): Notification permission missing, skip foreground notification update
+04-28 18:51:21.575 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 1
+04-28 18:51:21.575 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-28 18:51:21.580 I/SDM     ( 1810): PartialUpdateSrcSplit::SetCwbRoiForNonPU: CWB ROI Rect(699.000000 110.000000 940.000000 351.000000)
+04-28 18:51:21.601 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaab8f0) status 0 for display-0.
+04-28 18:51:21.601 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-28 18:51:21.608 D/RefreshRateSelector( 1966): Touch Boost
+04-28 18:51:21.608 D/MI-SF   ( 1966): modeGroup41426432 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:21.608 D/RefreshRateSelector( 1966): fixedMode_group: 41426432, isFindModeGroup 1
+04-28 18:51:21.608 D/RefreshRateSelector( 1966): find max refresh rate:120, mode Group:41426432
+04-28 18:51:21.608 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=120.00 Hz, modePtr={id=1, vsyncRate=120.00 Hz, peakRefreshRate=120.00 Hz}}, emitEvent=true, force=false}
+04-28 18:51:21.608 E/DisplayModeController( 1966): setDesiredMode : Idle status skip setActiveMode, isDdicIdleMode: 1
+04-28 18:51:21.618 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 1, WxH 1440x3200, fps 120@auto@120:30
+04-28 18:51:21.619 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:21.619 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:21.620 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-28 18:51:21.623 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 30
+04-28 18:51:21.632 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 30
+04-28 18:51:21.634 D/RefreshRateSelector( 1966): Touch Boost
+04-28 18:51:21.634 D/MI-SF   ( 1966): modeGroup41426432 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:21.634 D/RefreshRateSelector( 1966): fixedMode_group: 41426432, isFindModeGroup 1
+04-28 18:51:21.634 D/RefreshRateSelector( 1966): find max refresh rate:120, mode Group:41426432
+04-28 18:51:21.637 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-28 18:51:21.643 D/VRI[Toast]( 5963): vri.reportDrawFinished 0 0 Rect(120, 2484 - 1320, 2765)
+04-28 18:51:21.644 D/HWUI    ( 5963): [HWUI] Flag vulkan_enhance_pipeline_cache enabled
+04-28 18:51:21.644 D/HWUI    ( 5963): [HWUI] EnhanceVkPipelineCache is enabled
+04-28 18:51:21.644 D/HWUI    ( 5963): [HWUI] Flag ddre enabled
+04-28 18:51:21.645 I/Choreographer( 5963): Skipped 62 frames!  The application may be doing too much work on its main thread.
+04-28 18:51:21.646 W/LayerDrawable( 5963): Failed to obtain smooth corners because the drawable of the children in the layerstate is null
+04-28 18:51:21.646 D/HWUI    ( 5963): DDRE Debug DrawPath: smoothCornerEnabled = true
+04-28 18:51:21.647 D/AurogonBandwidthController( 3839): skinTemperature:49.539
+04-28 18:51:21.651 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:21.660 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.660 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 138, only 0 and 1 are supported
+04-28 18:51:21.660 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.660 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 120, only 0 and 1 are supported
+04-28 18:51:21.660 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.660 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 76, only 0 and 1 are supported
+04-28 18:51:21.660 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.660 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 68, only 0 and 1 are supported
+04-28 18:51:21.660 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.660 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 64, only 0 and 1 are supported
+04-28 18:51:21.660 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.660 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 56, only 0 and 1 are supported
+04-28 18:51:21.660 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.660 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 42, only 0 and 1 are supported
+04-28 18:51:21.660 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.661 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 34, only 0 and 1 are supported
+04-28 18:51:21.661 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.661 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 24, only 0 and 1 are supported
+04-28 18:51:21.661 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.661 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 6, only 0 and 1 are supported
+04-28 18:51:21.661 D/DisplayContentStubImpl( 3839): onNewImeFrame: isImeVisible = false, imeFrame = Rect(0, 0 - 0, 0)
+04-28 18:51:21.661 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.661 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.661 D/BarFollowAnimation( 3839): pairAppearanceRegionAndWin win=Window{13eaf2f u0 com.smartsales.prism/com.smartsales.prism.MainActivity} 0
+04-28 18:51:21.662 D/BarFollowAnimation( 3839): isAppTaskBarOnTop win:Window{13eaf2f u0 com.smartsales.prism/com.smartsales.prism.MainActivity} (mCurrentTopTask:Task{4746c18 #28143 type=standard A=10433:com.smartsales.prism} : true); (mAssociatedTask:Task{4746c18 #28143 type=standard A=10433:com.smartsales.prism} : true); (mHomeTask:Task{39ded46 #1 type=home} : false); mReparentToOriginParent:false mLastAppBarVisible:true mLastHomeBarVisible:false
+04-28 18:51:21.662 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.663 I/PowerManagerServiceImpl( 3839): Acquire wakelock: SCREEN_BRIGHT_WAKE_LOCK           'WindowManager/displayId:0' ON_AFTER_RELEASE (uid=1000 pid=3839 pkg=android ws=WorkSource{1000 com.android.systemui})
+04-28 18:51:21.664 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.664 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.666 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:21.667 I/WindowManager( 3839): wms.showSurfaceRobustly mWin:Window{63b4de0 u0 Toast} in Surface(name=Toast#34945)/@0x1932555
+04-28 18:51:21.671 W/BpBinder( 1966): Large outgoing transaction of 122272 bytes, interface descriptor android.gui.IWindowInfosListener, code 1 was sent
+04-28 18:51:21.674 D/RefreshRateSelector( 1966): Touch Boost
+04-28 18:51:21.674 D/MI-SF   ( 1966): modeGroup41426432 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:21.674 D/RefreshRateSelector( 1966): fixedMode_group: 41426432, isFindModeGroup 1
+04-28 18:51:21.674 D/RefreshRateSelector( 1966): find max refresh rate:120, mode Group:41426432
+04-28 18:51:21.677 I/MiClstc ( 1810): StageLayers No adding layer_name[FramebufferSurface], layer_id 1
+04-28 18:51:21.677 I/MiClstc ( 1810): RetrieveConfig Unknown layer 1, skip
+04-28 18:51:21.692 W/BpBinder( 1966): Large outgoing transaction of 122272 bytes, interface descriptor android.gui.IWindowInfosListener, code 1 was sent
+04-28 18:51:21.701 I/libsensor-boledalgo( 2925): dbv:1524,lux:205.1,cct:4935.4,hsv:2.6, CWB R:7.3,G:5.3,B:29.2 Event C:4309.0,R:2187.7,G:1717.4,B:860.9 Cali C:0.0,R:0.0,G:0.0,B:0.0
+04-28 18:51:21.706 D/AidlBufferPool(26992): bufferpool2 0xb400007bee8efd78 : 66(624597 size) total buffers - 1(1246 size) used buffers - 12911/68641 (recycle/alloc) - 56716/68640 (fetch/transfer)
+04-28 18:51:21.708 I/libsensor-boledalgo( 2925): dbv:1524,lux:204.3,cct:5227.9,hsv:2.6, CWB R:7.3,G:5.3,B:29.2 Event C:4310.5,R:2198.9,G:1759.8,B:901.6 Cali C:0.0,R:0.0,G:0.0,B:0.0
+04-28 18:51:21.709 D/MI-SF   ( 1966): isSupportLowBrightnessFpsSwitch current_setting_fps: 120
+04-28 18:51:21.709 D/MI-SF   ( 1966): isTpIdleScene ,mAverageFrameRate is 4, 1
+04-28 18:51:21.709 D/MI-SF   ( 1966): modeGroup41426432 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:21.709 D/MI-SF   ( 1966): setTpIdleFps choose FPS:60, mode:37489152
+04-28 18:51:21.709 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=60.00 Hz, modePtr={id=7, vsyncRate=60.00 Hz, peakRefreshRate=60.00 Hz}}, emitEvent=true, force=false}
+04-28 18:51:21.712 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 7, WxH 1440x3200, fps 60@auto@60:10
+04-28 18:51:21.713 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:21.713 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:21.717 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 10
+04-28 18:51:21.717 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 10
+04-28 18:51:21.720 D/MI-SF   ( 1966): isSupportLowBrightnessFpsSwitch current_setting_fps: 120
+04-28 18:51:21.720 D/MI-SF   ( 1966): isTpIdleScene ,mAverageFrameRate is 4, 1
+04-28 18:51:21.720 D/MI-SF   ( 1966): modeGroup37489152 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:21.720 D/MI-SF   ( 1966): setTpIdleFps choose FPS:60, mode:37489152
+04-28 18:51:21.720 W/ActivityManagerServiceImpl( 3839): Sending non-protected broadcast com.modemenhance.ACTION_MODEMWIFI_RSSI_POLL from system 5894:com.android.phone/1001 pkg com.android.phone. Callers=
+04-28 18:51:21.720 I/DisplayDeviceRepository( 3839): Display device changed render timings: "内置屏幕", renderFrameRate=60.000004, presentationDeadlineNanos=16666666, appVsyncOffsetNanos=1000000, frameRateOverrides=[]
+04-28 18:51:21.722 I/WifiService( 3839): getConnectionInfo uid=1001
+04-28 18:51:21.723 V/WifiService( 3839): Clearing REDACT_FOR_LOCAL_MAC_ADDRESS for com.android.phone(uid=1001)
+04-28 18:51:21.723 V/WifiService( 3839): Clearing REDACT_FOR_NETWORK_SETTINGS for com.android.phone(uid=1001)
+04-28 18:51:21.723 V/WifiService( 3839): Clearing REDACT_FOR_ACCESS_FINE_LOCATION for com.android.phone(uid=1001)
+04-28 18:51:21.724 D/SlaveWifiManager( 5894): getWifiSlaveConnectionInfo
+04-28 18:51:21.724 D/AudioFlingerImpl( 1930): setGameParameters keyvalue: screen_state=on
+04-28 18:51:21.724 D/DeviceHalAidl( 1930): [default] setParameters: parameters: "screen_state=on"
+04-28 18:51:21.724 D/PAL: API( 1794): pal_set_param: 1497: Enter: param id 8 (PAL_PARAM_ID_SCREEN_STATE)
+04-28 18:51:21.724 D/PAL: ResourceManager( 1794): setParameter: 11845: Enter param id: 8 (PAL_PARAM_ID_SCREEN_STATE)
+04-28 18:51:21.724 I/PAL: ResourceManager( 1794): setParameter: 11872: Screen State:1
+04-28 18:51:21.724 D/PAL: ResourceManager( 1794): setParameter: 13545: Exit status: 0
+04-28 18:51:21.724 D/PAL: API( 1794): pal_set_param: 1514: Exit, status 0
+04-28 18:51:21.725 D/DeviceHalAidl( 1930): [usb] setParameters: parameters: "screen_state=on"
+04-28 18:51:21.725 D/AHAL_Module( 1794): updateScreenState: usb: 1
+04-28 18:51:21.725 D/DeviceHalAidl( 1930): [r_submix] setParameters: parameters: "screen_state=on"
+04-28 18:51:21.725 D/AHAL_Module( 1794): updateScreenState: r_submix: 1
+04-28 18:51:21.725 D/DeviceHalAidl( 1930): [bluetooth] setParameters: parameters: "screen_state=on"
+04-28 18:51:21.725 D/AHAL_Module( 1794): updateScreenState: bluetooth: 1
+04-28 18:51:21.726 D/WindowManager( 3839): DeferredDisplayUpdater: partially applying DisplayInfo(1440 x 3200) immediately
+04-28 18:51:21.726 W/DisplayContentStubImpl( 3839):  displayMetricsChanged=false physicalDisplayChanged=false displayId=0 newUniqueId=local:4630946654109872275 currentUnique=local:4630946654109872275
+04-28 18:51:21.726 D/DisplayContentStubImpl( 3839): Display{#0 state=ON size=1440x3200 ROTATION_0} isActivityEmbeddingSplitEnable false
+04-28 18:51:21.726 D/MiuiGxzwAnimView( 5963): onDisplayChanged: oldState = 2, newState = 2
+04-28 18:51:21.726 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.726 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.727 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.727 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 138, only 0 and 1 are supported
+04-28 18:51:21.727 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.727 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 120, only 0 and 1 are supported
+04-28 18:51:21.727 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.727 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 76, only 0 and 1 are supported
+04-28 18:51:21.727 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.727 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 68, only 0 and 1 are supported
+04-28 18:51:21.727 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.727 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 64, only 0 and 1 are supported
+04-28 18:51:21.727 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.727 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 56, only 0 and 1 are supported
+04-28 18:51:21.727 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.727 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 42, only 0 and 1 are supported
+04-28 18:51:21.727 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.727 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 34, only 0 and 1 are supported
+04-28 18:51:21.727 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.727 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 24, only 0 and 1 are supported
+04-28 18:51:21.727 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.727 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 6, only 0 and 1 are supported
+04-28 18:51:21.727 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.727 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.727 D/BarFollowAnimation( 3839): pairAppearanceRegionAndWin win=Window{13eaf2f u0 com.smartsales.prism/com.smartsales.prism.MainActivity} 0
+04-28 18:51:21.727 D/BarFollowAnimation( 3839): isAppTaskBarOnTop win:Window{13eaf2f u0 com.smartsales.prism/com.smartsales.prism.MainActivity} (mCurrentTopTask:Task{4746c18 #28143 type=standard A=10433:com.smartsales.prism} : true); (mAssociatedTask:Task{4746c18 #28143 type=standard A=10433:com.smartsales.prism} : true); (mHomeTask:Task{39ded46 #1 type=home} : false); mReparentToOriginParent:false mLastAppBarVisible:true mLastHomeBarVisible:false
+04-28 18:51:21.728 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:21.728 V/AutoDensityController( 5963): on display changed 0 context dpi:586 origin dpi:600 target dpi:586
+04-28 18:51:21.728 D/ControlCenterWindowViewController( 5963): on display changed 0
+04-28 18:51:21.728 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:21.728 V/AODAutoDensityController( 5963): on display changed 0 context dpi:586 origin dpi:600 target dpi:586
+04-28 18:51:21.728 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.728 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.729 W/Launcher( 5261): onDisplayChanged: newRotation=0, mCurrentRotation=0
+04-28 18:51:21.729 W/GestureStubView_Left( 5261): onDisplayChanged
+04-28 18:51:21.729 W/GestureStubView_Left( 5261): adaptRotation   currentRotation=0   mRotation=0
+04-28 18:51:21.729 W/GestureStubView_Right( 5261): onDisplayChanged
+04-28 18:51:21.729 W/GestureStubView_Right( 5261): adaptRotation   currentRotation=0   mRotation=0
+04-28 18:51:21.729 W/InsetsSource(31883): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.729 W/InsetsSource(31883): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.729 W/InsetsSource(31883): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.729 W/InsetsSource(31883): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.730 W/InsetsSource(31883): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.730 W/InsetsSource(31883): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:21.736 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:21.737 W/ActivityTaskManager( 3839): MANAGE_ACTIVITY_STACKS is deprecated, please use alternative permission: MANAGE_ACTIVITY_TASKS
+04-28 18:51:21.791 D/AudioPipeline(14426): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-28 18:51:21.792 D/DownloadService(14426): Audio files state: downloading=1, queued=0, ready=1, queueSize=0
+04-28 18:51:21.792 I/SDM     ( 1810): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+04-28 18:51:21.792 D/libsensor-parseRGB( 2925): CWB NotifyIdleStatus 1
+04-28 18:51:21.793 W/DownloadService(14426): Notification permission missing, skip foreground notification update
+04-28 18:51:21.812 D/JavaheapMonitor(31835): Java heap used=9M max=256M, proc: com.miui.personalassistant
+04-28 18:51:21.812 V/JavaheapMonitor(31835): Check java heap usage finished! Next check delay: 300000
+04-28 18:51:21.830 D/wpa_supplicant(25850): nl80211: Drv Event 81 (NL80211_CMD_TDLS_OPER) received for wlan0
+04-28 18:51:21.830 D/wpa_supplicant(25850): nl80211: TDLS operation event
+04-28 18:51:21.830 D/wpa_supplicant(25850): nl80211: TDLS discovery request for peer 1c:db:d4:9b:8f:94
+04-28 18:51:21.830 D/wpa_supplicant(25850): wlan0: Event TDLS (7) received
+04-28 18:51:21.831 D/wpa_supplicant(25850): nl80211: Drv Event 81 (NL80211_CMD_TDLS_OPER) received for wlan0
+04-28 18:51:21.831 D/wpa_supplicant(25850): nl80211: TDLS operation event
+04-28 18:51:21.831 D/wpa_supplicant(25850): nl80211: TDLS discovery request for peer b4:5f:84:de:d4:d0
+04-28 18:51:21.831 D/wpa_supplicant(25850): wlan0: Event TDLS (7) received
+04-28 18:51:21.832 D/wpa_supplicant(25850): nl80211: Drv Event 81 (NL80211_CMD_TDLS_OPER) received for wlan0
+04-28 18:51:21.832 D/wpa_supplicant(25850): nl80211: TDLS operation event
+04-28 18:51:21.832 D/wpa_supplicant(25850): nl80211: TDLS discovery request for peer 14:c1:9f:d7:e3:f4
+04-28 18:51:21.832 D/wpa_supplicant(25850): wlan0: Event TDLS (7) received
+04-28 18:51:21.839 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-28 18:51:21.839 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-28 18:51:21.855 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-28 18:51:21.907 D/AurogonImmobulusMode( 3839):  update wallpaper pacakge name status mLockWallPaperPackageName =  mLockWallPaperUid = -1 mDeskWallPaperPackageName = com.miui.miwallpaper mDeskWallPaperUid = 10187
+04-28 18:51:21.907 D/PolicyMaker( 3839): uid =10161 pkg=com.miui.micloudsync reason=systemblack
+04-28 18:51:21.909 I/SDM     ( 1810): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+04-28 18:51:21.910 D/libsensor-parseRGB( 2925): CWB NotifyIdleStatus 1
+04-28 18:51:21.913 I/libsensor-boledalgo( 2925): dbv:1524,lux:206.1,cct:4905.7,hsv:2.6, CWB R:7.3,G:5.3,B:29.2 Event C:4303.5,R:2176.3,G:1720.0,B:855.1 Cali C:0.0,R:0.0,G:0.0,B:0.0
+04-28 18:51:21.915 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Received IBS_WAKE_IND: 0xFD
+04-28 18:51:21.915 D/vendor.qti.bluetooth@1.0-ibs_handler( 1781): SerialClockVote: vote for UART CLK ON
+04-28 18:51:21.915 D/vendor.qti.bluetooth@1.0-wake_lock( 1781): Acquire wakelock is acquired
+04-28 18:51:21.915 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Writing IBS_WAKE_ACK
+04-28 18:51:21.916 V/bluetooth(28530): system/gd/hci/le_scanning_reassembler.cc:67 ProcessAdvertisingReport: Dropping repeated legacy advertising data
+04-28 18:51:21.916 V/bluetooth(28530): system/gd/hci/le_scanning_reassembler.cc:90 ProcessAdvertisingReport: Ignoring advertising report when scan response is expected or current data is marked incomplete
+04-28 18:51:21.916 V/bluetooth(28530): system/gd/hci/le_scanning_reassembler.cc:101 ProcessAdvertisingReport: Full advertising report has been reassembled
+04-28 18:51:21.916 V/bluetooth(28530): system/gd/hci/le_scanning_decrypter.cc:148 ContainsEncryptedData: enc_adv_data_map is empty
+04-28 18:51:21.916 V/bt_btm_ble(28530): system/stack/btm/btm_ble_gap.cc:2166 btm_ble_process_adv_addr: bda=xx:xx:xx:xx:3e:e2
+04-28 18:51:21.916 V/bt_btm_ble(28530): system/stack/btm/btm_ble_gap.cc:2154 btm_ble_update_inq_result: Random address, treat device as LE only
+04-28 18:51:21.916 D/bt_btm_ble(28530): system/stack/btm/btm_ble_gap.cc:1961 btm_ble_is_discoverable: btm_ble_is_discoverable flag=0x2
+04-28 18:51:21.918 V/ScanController(28530): onScanResult() - eventType=0x1b, addressType=1, address=XX:XX:XX:XX:3E:E2, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=-60, periodicAdvInt=0x0, originalAddress=78:52:20:B3:3E:E2
+04-28 18:51:21.918 V/ScanController(28530): Skipping client: permission=true matches=false
+04-28 18:51:21.918 V/ScanController(28530): Skipping client: permission=true matches=false
+04-28 18:51:21.919 V/ScanController(28530): Skipping client: permission=true matches=false
+04-28 18:51:21.919 D/DeviceNickName_Plugin( 6731): data type: SUPPORT_REDMI_KERBOARD_FAST, []
+04-28 18:51:21.919 E/MiuiFastConnectService_Plugin( 6731): check adv data not fast connect
+04-28 18:51:21.921 I/SDM     ( 1810): PartialUpdateSrcSplit::SetCwbRoiForNonPU: CWB ROI Rect(699.000000 110.000000 940.000000 351.000000)
+04-28 18:51:21.927 D/MiuiNetworkPolicy( 3839): updateLimit mLimitEnabled=true,enabled=false,mNetworkPriorityMode=2,mThermalForceMode=3
+04-28 18:51:21.928 D/MiuiNetworkPolicy( 3839): mode =  NETWORK_PRIORITY_MODE_FAST, set BackGroundLimitRate = 8000000
+04-28 18:51:21.936 D/MI-SF   ( 1966): setIdleFps choose FPS:60, mode:20709632 mode_group 24641792
+04-28 18:51:21.936 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=60.00 Hz, modePtr={id=5, vsyncRate=60.00 Hz, peakRefreshRate=60.00 Hz}}, emitEvent=false, force=false}
+04-28 18:51:21.942 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaab6e0) status 0 for display-0.
+04-28 18:51:21.942 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-28 18:51:21.953 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 5, WxH 1440x3200, fps 60@idle@60:1
+04-28 18:51:21.954 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:21.954 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:21.955 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-28 18:51:21.959 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 1
+04-28 18:51:21.959 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 1
+04-28 18:51:21.959 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Received IBS_SLEEP_IND: 0xFE
+04-28 18:51:21.959 D/vendor.qti.bluetooth@1.0-ibs_handler( 1781): SerialClockVote: vote for UART CLK OFF
+04-28 18:51:21.963 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:21.974 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:22.006 D/AudioPipeline(14426): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-28 18:51:22.006 D/DownloadService(14426): Audio files state: downloading=1, queued=0, ready=1, queueSize=0
+04-28 18:51:22.008 W/DownloadService(14426): Notification permission missing, skip foreground notification update
+04-28 18:51:22.047 I/SDM     ( 1810): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 69999 us
+04-28 18:51:22.051 D/MI-SF   ( 1966): isSupportLowBrightnessFpsSwitch current_setting_fps: 120
+04-28 18:51:22.051 D/MI-SF   ( 1966): isTpIdleScene ,mAverageFrameRate is 4, 1
+04-28 18:51:22.051 D/MI-SF   ( 1966): modeGroup20709632 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:22.051 D/MI-SF   ( 1966): setTpIdleFps choose FPS:60, mode:37489152
+04-28 18:51:22.051 D/libsensor-parseRGB( 2925): CWB NotifyIdleStatus 1
+04-28 18:51:22.051 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=60.00 Hz, modePtr={id=7, vsyncRate=60.00 Hz, peakRefreshRate=60.00 Hz}}, emitEvent=true, force=false}
+04-28 18:51:22.051 E/DisplayModeController( 1966): setDesiredMode : Idle status skip setActiveMode, isDdicIdleMode: 1
+04-28 18:51:22.051 W/RenderInspector(14426): DequeueBuffer time out on com.smartsales.prism/com.smartsales.prism.MainActivity, count=1, avg=17 ms, max=17 ms.
+04-28 18:51:22.054 D/MI-SF   ( 1966): isSupportLowBrightnessFpsSwitch current_setting_fps: 120
+04-28 18:51:22.054 D/MI-SF   ( 1966): isTpIdleScene ,mAverageFrameRate is 4, 1
+04-28 18:51:22.054 D/MI-SF   ( 1966): modeGroup20709632 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:22.054 D/MI-SF   ( 1966): setTpIdleFps choose FPS:60, mode:37489152
+04-28 18:51:22.054 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 7, WxH 1440x3200, fps 60@auto@60:10
+04-28 18:51:22.055 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:22.055 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:22.058 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-28 18:51:22.059 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-28 18:51:22.062 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 10
+04-28 18:51:22.064 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 10
+04-28 18:51:22.067 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:22.070 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-28 18:51:22.078 D/MI-SF   ( 1966): isSupportLowBrightnessFpsSwitch current_setting_fps: 120
+04-28 18:51:22.078 D/MI-SF   ( 1966): isTpIdleScene ,mAverageFrameRate is 4, 1
+04-28 18:51:22.078 D/MI-SF   ( 1966): modeGroup37489152 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:22.078 D/MI-SF   ( 1966): setTpIdleFps choose FPS:60, mode:37489152
+04-28 18:51:22.079 I/SDM     ( 1810): PartialUpdateSrcSplit::SetCwbRoiForNonPU: CWB ROI Rect(699.000000 110.000000 940.000000 351.000000)
+04-28 18:51:22.086 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:22.100 D/vendor.xiaomi.hardware.mimd2-service( 1622): psi 10 is triggered, settimer.
+04-28 18:51:22.101 D/vendor.xiaomi.hardware.mimd2-service( 1622): psi partial stall call back reclaimed -1 delay tasks
+04-28 18:51:22.108 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaaa2f0) status 0 for display-0.
+04-28 18:51:22.108 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-28 18:51:22.110 D/vendor.qti.bluetooth@1.0-wake_lock( 1781): Release wakelock is released
+04-28 18:51:22.155 I/SDM     ( 1810): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+04-28 18:51:22.155 D/libsensor-parseRGB( 2925): CWB NotifyIdleStatus 1
+04-28 18:51:22.161 D/MI-SF   ( 1966): setIdleFps choose FPS:60, mode:20709632 mode_group 24641792
+04-28 18:51:22.162 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=60.00 Hz, modePtr={id=5, vsyncRate=60.00 Hz, peakRefreshRate=60.00 Hz}}, emitEvent=false, force=false}
+04-28 18:51:22.168 I/id.thememanager(24854): This is non sticky GC, maxfree is 33554432 minfree is 8388608
+04-28 18:51:22.170 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 5, WxH 1440x3200, fps 60@idle@60:1
+04-28 18:51:22.170 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:22.170 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:22.171 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-28 18:51:22.179 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 1
+04-28 18:51:22.179 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 1
+04-28 18:51:22.182 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:22.188 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:22.205 W/System  (24854): A resource failed to call close.
+04-28 18:51:22.206 D/JavaheapMonitor(24854): Java heap used=4M max=512M, proc: com.android.thememanager
+04-28 18:51:22.206 V/JavaheapMonitor(24854): Check java heap usage finished! Next check delay: 300000
+04-28 18:51:22.212 D/AudioPipeline(14426): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-28 18:51:22.212 D/DownloadService(14426): Audio files state: downloading=1, queued=0, ready=1, queueSize=0
+04-28 18:51:22.220 W/DownloadService(14426): Notification permission missing, skip foreground notification update
+04-28 18:51:22.239 D/ActionExecute( 3839): delayFreeze true reason= new process uid=6110
+04-28 18:51:22.243 D/MI-SF   ( 1966): isSupportLowBrightnessFpsSwitch current_setting_fps: 120
+04-28 18:51:22.243 D/MI-SF   ( 1966): isTpIdleScene ,mAverageFrameRate is 4, 1
+04-28 18:51:22.243 D/MI-SF   ( 1966): modeGroup20709632 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:22.243 D/MI-SF   ( 1966): setTpIdleFps choose FPS:60, mode:37489152
+04-28 18:51:22.243 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=60.00 Hz, modePtr={id=7, vsyncRate=60.00 Hz, peakRefreshRate=60.00 Hz}}, emitEvent=true, force=false}
+04-28 18:51:22.243 E/DisplayModeController( 1966): setDesiredMode : Idle status skip setActiveMode, isDdicIdleMode: 1
+04-28 18:51:22.253 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 7, WxH 1440x3200, fps 60@auto@60:10
+04-28 18:51:22.254 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:22.254 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:22.260 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 10
+04-28 18:51:22.261 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 10
+04-28 18:51:22.266 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:22.269 D/MI-SF   ( 1966): isSupportLowBrightnessFpsSwitch current_setting_fps: 120
+04-28 18:51:22.269 D/MI-SF   ( 1966): isTpIdleScene ,mAverageFrameRate is 4, 1
+04-28 18:51:22.269 D/MI-SF   ( 1966): modeGroup37489152 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:22.269 D/MI-SF   ( 1966): setTpIdleFps choose FPS:60, mode:37489152
+04-28 18:51:22.271 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-28 18:51:22.273 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-28 18:51:22.273 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-28 18:51:22.286 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:22.296 D/BluetoothGatt(14426): readRssi() - device: XX:XX:XX:XX:8F:96
+04-28 18:51:22.297 D/BtGatt.GattService(28530): readRemoteRssi() - address=XX:XX:XX:XX:8F:96
+04-28 18:51:22.297 D/bt_btif_gattc(28530): system/btif/src/btif_gatt_client.cc:644 btif_gattc_read_remote_rssi:
+04-28 18:51:22.298 D/ble_sec (28530): system/stack/btm/btm_ble_sec.cc:539 BTM_ReadDevInfo: Determined device_type:BLE addr_type:public
+04-28 18:51:22.298 D/bt_shim_hci(28530): system/main/shim/hci_layer.cc:233 transmit_command: Sending command READ_RSSI(0x1405)
+04-28 18:51:22.298 D/vendor.qti.bluetooth@1.0-ibs_handler( 1781): SerialClockVote: vote for UART CLK ON
+04-28 18:51:22.299 D/vendor.qti.bluetooth@1.0-wake_lock( 1781): Acquire wakelock is acquired
+04-28 18:51:22.299 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): DeviceWakeUp: Writing IBS_WAKE_IND
+04-28 18:51:22.302 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Received IBS_WAKE_ACK: 0xFC
+04-28 18:51:22.302 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Signal wack_cond_
+04-28 18:51:22.302 D/vendor.qti.bluetooth@1.0-ibs_handler( 1781): DeviceWakeUp: Unblocked from waiting for FC, pthread_cond_timedwait ret = 0
+04-28 18:51:22.304 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Received IBS_WAKE_IND: 0xFD
+04-28 18:51:22.304 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Writing IBS_WAKE_ACK
+04-28 18:51:22.307 D/bt_shim_hci(28530): system/main/shim/hci_layer.cc:183 OnTransmitPacketCommandComplete: Received cmd complete for READ_RSSI(0x1405)
+04-28 18:51:22.307 D/btm_acl (28530): system/stack/acl/btm_acl.cc:1867 btm_read_rssi_complete: Read rrsi complete rssi:-50 hci status:HCI_SUCCESS
+04-28 18:51:22.307 V/bt_btif_gattc(28530): system/btif/src/btif_gatt_client.cc:308 btm_read_rssi_cb: HAL bt_gatt_callbacks->client->read_remote_rssi_cb
+04-28 18:51:22.307 D/BtGatt.GattService(28530): onReadRemoteRssi() - clientIf=80 address=XX:XX:XX:XX:8F:96, rssi=-50, status=0
+04-28 18:51:22.342 I/SDM     ( 1810): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+04-28 18:51:22.342 D/libsensor-parseRGB( 2925): CWB NotifyIdleStatus 1
+04-28 18:51:22.346 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Received IBS_SLEEP_IND: 0xFE
+04-28 18:51:22.353 I/SDM     ( 1810): PartialUpdateSrcSplit::SetCwbRoiForNonPU: CWB ROI Rect(699.000000 110.000000 940.000000 351.000000)
+04-28 18:51:22.356 D/MI-SF   ( 1966): setIdleFps choose FPS:60, mode:20709632 mode_group 24641792
+04-28 18:51:22.356 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=60.00 Hz, modePtr={id=5, vsyncRate=60.00 Hz, peakRefreshRate=60.00 Hz}}, emitEvent=false, force=false}
+04-28 18:51:22.369 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 5, WxH 1440x3200, fps 60@idle@60:1
+04-28 18:51:22.370 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:22.370 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:22.371 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-28 18:51:22.376 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa6510) status 0 for display-0.
+04-28 18:51:22.376 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-28 18:51:22.377 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 1
+04-28 18:51:22.377 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 1
+04-28 18:51:22.381 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:22.390 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:22.462 I/SDM     ( 1810): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+04-28 18:51:22.463 D/libsensor-parseRGB( 2925): CWB NotifyIdleStatus 1
+04-28 18:51:22.489 D/AudioPipeline(14426): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-28 18:51:22.490 D/DownloadService(14426): Audio files state: downloading=1, queued=0, ready=1, queueSize=0
+04-28 18:51:22.491 W/DownloadService(14426): Notification permission missing, skip foreground notification update
+04-28 18:51:22.529 D/MI-SF   ( 1966): isSupportLowBrightnessFpsSwitch current_setting_fps: 120
+04-28 18:51:22.529 D/MI-SF   ( 1966): isTpIdleScene ,mAverageFrameRate is 8, 1
+04-28 18:51:22.529 D/MI-SF   ( 1966): modeGroup20709632 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:22.529 D/MI-SF   ( 1966): setTpIdleFps choose FPS:60, mode:37489152
+04-28 18:51:22.529 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=60.00 Hz, modePtr={id=7, vsyncRate=60.00 Hz, peakRefreshRate=60.00 Hz}}, emitEvent=true, force=false}
+04-28 18:51:22.529 E/DisplayModeController( 1966): setDesiredMode : Idle status skip setActiveMode, isDdicIdleMode: 1
+04-28 18:51:22.536 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 7, WxH 1440x3200, fps 60@auto@60:10
+04-28 18:51:22.537 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:22.537 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:22.538 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 1
+04-28 18:51:22.538 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-28 18:51:22.543 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 10
+04-28 18:51:22.543 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 10
+04-28 18:51:22.549 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:22.552 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): DeviceSleep: TX Awake, Sending SLEEP_IND
+04-28 18:51:22.553 D/vendor.qti.bluetooth@1.0-ibs_handler( 1781): SerialClockVote: vote for UART CLK OFF
+04-28 18:51:22.553 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:22.555 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-28 18:51:22.561 D/MI-SF   ( 1966): isSupportLowBrightnessFpsSwitch current_setting_fps: 120
+04-28 18:51:22.561 D/MI-SF   ( 1966): isTpIdleScene ,mAverageFrameRate is 0, 1
+04-28 18:51:22.561 D/MI-SF   ( 1966): modeGroup37489152 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:22.561 D/MI-SF   ( 1966): setTpIdleFps choose FPS:60, mode:37489152
+04-28 18:51:22.562 I/SDM     ( 1810): PartialUpdateSrcSplit::SetCwbRoiForNonPU: CWB ROI Rect(699.000000 110.000000 940.000000 351.000000)
+04-28 18:51:22.591 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa70c0) status 0 for display-0.
+04-28 18:51:22.596 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-28 18:51:22.637 I/SDM     ( 1810): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+04-28 18:51:22.637 D/libsensor-parseRGB( 2925): CWB NotifyIdleStatus 1
+04-28 18:51:22.639 D/MI-SF   ( 1966): setIdleFps choose FPS:60, mode:20709632 mode_group 24641792
+04-28 18:51:22.640 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=60.00 Hz, modePtr={id=5, vsyncRate=60.00 Hz, peakRefreshRate=60.00 Hz}}, emitEvent=false, force=false}
+04-28 18:51:22.644 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 5, WxH 1440x3200, fps 60@idle@60:1
+04-28 18:51:22.645 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:22.645 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:22.646 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-28 18:51:22.654 I/NetworkAccelerateSwitchService( 3839): EVENT_RSSI_POLL. mRssiPoll=true
+04-28 18:51:22.654 I/WifiService( 3839): getConnectionInfo uid=1000
+04-28 18:51:22.654 V/WifiService( 3839): Clearing REDACT_FOR_LOCAL_MAC_ADDRESS for android(uid=1000)
+04-28 18:51:22.654 V/WifiService( 3839): Clearing REDACT_FOR_NETWORK_SETTINGS for android(uid=1000)
+04-28 18:51:22.654 V/WifiService( 3839): Clearing REDACT_FOR_ACCESS_FINE_LOCATION for android(uid=1000)
+04-28 18:51:22.655 I/WifiService( 3839): getVerboseLoggingLevel uid=1000
+04-28 18:51:22.655 I/NetworkAccelerateSwitchService( 3839): ================= checkWifiRssiAndLinkSpeed START ================
+04-28 18:51:22.655 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed mMinRssiFastFadeDifference:9 mMedRssiFastFadeDifference:13 mMaxRssiFastFadeDifference:15
+04-28 18:51:22.655 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed txBandwidthCapMbps:300
+04-28 18:51:22.655 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed rxBandwidthCapMbps:300
+04-28 18:51:22.655 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed mcsidx:-1
+04-28 18:51:22.655 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed rssi difference:-1
+04-28 18:51:22.655 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed txBandwidthCapMbps proportions:1.0
+04-28 18:51:22.655 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed rxBandwidthCapMbps proportions:1.0
+04-28 18:51:22.655 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed mcsidx difference:0
+04-28 18:51:22.655 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed FastFadeWeakNetThresholdAdjustment:0
+04-28 18:51:22.655 I/NetworkAccelerateSwitchService( 3839): ================= checkWifiRssiAndLinkSpeed END ================
+04-28 18:51:22.655 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed rssi:35
+04-28 18:51:22.655 I/NetworkAccelerateSwitchService( 3839): checkWifiRssiAndLinkSpeed mWifiFastFade:false mWifiFastFadeAdjustThreshold:false
+04-28 18:51:22.655 I/NetworkAccelerateSwitchService( 3839): getAverageWifiRssi:34
+04-28 18:51:22.655 D/NetworkAccelerateSwitchService( 3839): checkIntervalModeChange mMovementState:false mIntervalMode:0 mIsBadLinkLayerQoE:false mBadLinkLayerQoETimes = 0
+04-28 18:51:22.656 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 1
+04-28 18:51:22.656 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 1
+04-28 18:51:22.661 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:22.665 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:22.672 D/MI-SF   ( 1966): isSupportLowBrightnessFpsSwitch current_setting_fps: 120
+04-28 18:51:22.672 D/MI-SF   ( 1966): isTpIdleScene ,mAverageFrameRate is 0, 1
+04-28 18:51:22.672 D/MI-SF   ( 1966): modeGroup20709632 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:22.672 D/MI-SF   ( 1966): setTpIdleFps choose FPS:60, mode:37489152
+04-28 18:51:22.672 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=60.00 Hz, modePtr={id=7, vsyncRate=60.00 Hz, peakRefreshRate=60.00 Hz}}, emitEvent=true, force=false}
+04-28 18:51:22.672 E/DisplayModeController( 1966): setDesiredMode : Idle status skip setActiveMode, isDdicIdleMode: 1
+04-28 18:51:22.672 W/LayerDrawable( 5963): Failed to obtain smooth corners because the drawable of the children in the layerstate is null
+04-28 18:51:22.690 D/MiuiWifiCommonBase( 3839): band: 0, compensate: 0
+04-28 18:51:22.690 D/WifiClientModeImpl[719075603:wlan0]( 3839): updateLinkLayerStatsRssiSpeedFrequencyCapabilities rssi=-34 TxLinkspeed=300 freq=2462 RxLinkSpeed=300
+04-28 18:51:22.690 I/WifiService( 3839): getConnectionInfo uid=1000
+04-28 18:51:22.690 V/WifiService( 3839): Clearing REDACT_FOR_LOCAL_MAC_ADDRESS for android(uid=1000)
+04-28 18:51:22.690 V/WifiService( 3839): Clearing REDACT_FOR_NETWORK_SETTINGS for android(uid=1000)
+04-28 18:51:22.690 V/WifiService( 3839): Clearing REDACT_FOR_ACCESS_FINE_LOCATION for android(uid=1000)
+04-28 18:51:22.692 W/HWComposer( 1966): Ignoring duplicate VSYNC event from HWC for display 4630946654109872275 (t=663191835993000)
+04-28 18:51:22.692 D/WifiDataStall( 3839): tx tput in kbps: 125812
+04-28 18:51:22.692 D/WifiDataStall( 3839): rx tput in kbps: 206250
+04-28 18:51:22.692 V/WifiConfigManager( 3839): Updating scan detail cache freq=2462 BSSID=74:39:89:2a:67:26 RSSI=-34 for "MstRobot"WPA_PSK
+04-28 18:51:22.692 D/WifiChannelUtilization( 3839):  freq: 2462 onTime: 17671810 busyTime: 10698637 onTimeDiff: 2774 busyTimeDiff: 1517 utilization: 139 utilization t0: -88
+04-28 18:51:22.693 D/WifiDataStall( 3839):  ccaLevel = 80
+04-28 18:51:22.693 D/WifiDataStall( 3839): L2 txTputKbps: 136125, rxTputKbps: 206250, L3 txTputKbps: 12, rxTputKbps: 712, TxTrafficHigh: true, RxTrafficHigh: true, Throughput Sufficient: true
+04-28 18:51:22.693 D/WifiThroughputPredictor( 3839):  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+04-28 18:51:22.693 D/WifiThroughputPredictor( 3839):  BW: 1 RSSI: -34 Nss: 2 Mode: 4 symDur: 3600 snrDb 43 bitPerTone: 5000 rate: 300 throughput: 205
+04-28 18:51:22.693 D/WifiThroughputPredictor( 3839):  utilization (LLS) 80 isBluetoothConnected: false final utilization: 80
+04-28 18:51:22.693 D/WifiThroughputPredictor( 3839):  BW: 1 RSSI: -34 Nss: 2 Mode: 4 symDur: 3600 snrDb 43 bitPerTone: 5000 rate: 300 throughput: 205
+04-28 18:51:22.693 I/WifiService( 3839): getVerboseLoggingLevel uid=1000
+04-28 18:51:22.693 D/WifiScoreCard( 3839): BSSID update SIGNAL_POLL ID: 404527809 SSID: "MstRobot", BSSID: 74:39:89:2a:67:26, MAC: fa:2c:a2:da:d1:aa, IP: /192.168.0.106, Security type: 2, Supplicant state: COMPLETED, Wi-Fi standard: 11n, RSSI: -34, Link speed: 300Mbps, Tx Link speed: 300Mbps, Max Supported Tx Link speed: 300Mbps, Rx Link speed: 300Mbps, Max Supported Rx Link speed: 300Mbps, Frequency: 2462MHz, Net ID: 6, Metered hint: false, score: 60, isUsable: true, CarrierMerged: false, SubscriptionId: -1, IsPrimary: 1, Trusted: true, Restricted: false, Ephemeral: false, OEM paid: false, OEM private: false, OSU AP: false, FQDN: <none>, Provider friendly name: <none>, Requesting package name: <none>"MstRobot"wpa2-pskMLO Information: , Is TID-To-Link negotiation supported by the AP: false, AP MLD Address: <none>, AP MLO Link Id: <none>, AP MLO Affiliated links: <none>, Vendor Data: <none>
+04-28 18:51:22.693 D/WifiScoreCard( 3839): txRate: 47 txSpeed: 300
+04-28 18:51:22.693 D/WifiScoreCard( 3839): network update SIGNAL_POLL "MstRobot" ID: 608343939 RSSI -34 txSpeed 300
+04-28 18:51:22.693 D/MiuiNM  ( 3839): rssi: -34, txPer: 34, rxPer: 0, ccaBr: 54, bcnLr: 13, tcpFr: 43, bcnRx: 26, txGood:23.36, txRetry:12.10, txBad:0.00
+04-28 18:51:22.694 D/WifiClientModeImpl[719075603:wlan0]( 3839):  ClientModeImpl$L2ConnectedState screen=on 24 0 "MstRobot" 74:39:89:2a:67:26 rssi=-34 f=2462 sc= 60, mSwithInWeakNet: true [updated score = 60,  failpercent=43 { out=69 in=126 lost=3 inretrans=3 total retrans=0 tmo=21 inflight=3}] link=300 tx=30.6, 16.1, 0.0 rx=58.0 bcn=308054 [on:2773 tx:76 rx:85 period:3007] from screen [on:2933400 period:8954043] score=60
+04-28 18:51:22.695 W/LayerDrawable( 5963): Failed to obtain smooth corners because the drawable of the children in the layerstate is null
+04-28 18:51:22.695 D/AmlWifiScoreReportInjector( 3839): onWifiUsabilityStats: channelUtilization=139 seqNum = 160437 bssidChanged = 0 isQcomPlatform = true
+04-28 18:51:22.697 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 7, WxH 1440x3200, fps 60@auto@60:10
+04-28 18:51:22.697 D/AudioPipeline(14426): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-28 18:51:22.697 D/DownloadService(14426): Audio files state: downloading=1, queued=0, ready=1, queueSize=0
+04-28 18:51:22.698 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:22.698 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:22.699 W/DownloadService(14426): Notification permission missing, skip foreground notification update
+04-28 18:51:22.699 I/MiClstc ( 1810): DropLayers erase layer 6948
+04-28 18:51:22.699 I/MiClstc ( 1810): DropLayers erase layer 6951
+04-28 18:51:22.699 I/MiClstc ( 1810): DropLayers erase layer 6952
+04-28 18:51:22.700 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:1440x3200 blurRect:1200x281
+04-28 18:51:22.703 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:432x960 blurRect:360x84
+04-28 18:51:22.704 D/vendor.qti.bluetooth@1.0-wake_lock( 1781): Release wakelock is released
+04-28 18:51:22.705 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.707 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.707 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 10
+04-28 18:51:22.707 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 10
+04-28 18:51:22.708 W/HWComposer( 1966): Ignoring duplicate VSYNC event from HWC for display 4630946654109872275 (t=663191852629000)
+04-28 18:51:22.709 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.710 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.711 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.713 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.715 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.717 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.717 I/WifiService( 3839): getVerboseLoggingLevel uid=1000
+04-28 18:51:22.717 D/AmlWifiScoreReportInjector( 3839): probabilityOfFailedTx = 0.3459922795603371
+04-28 18:51:22.717 D/AmlWifiScoreReportInjector( 3839): mSwitchBackWifiThresholdAdjustment = 0
+04-28 18:51:22.718 W/LayerDrawable( 5963): Failed to obtain smooth corners because the drawable of the children in the layerstate is null
+04-28 18:51:22.719 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.722 E/PhoneAdapter( 5894): get ntnphones failed, exception: java.lang.IllegalStateException: not support satellite!
+04-28 18:51:22.724 W/BpBinder( 1966): Large outgoing transaction of 122272 bytes, interface descriptor android.gui.IWindowInfosListener, code 1 was sent
+04-28 18:51:22.724 I/WifiService( 3839): getScanResults uid=1000
+04-28 18:51:22.725 W/HWComposer( 1966): Ignoring duplicate VSYNC event from HWC for display 4630946654109872275 (t=663191869266000)
+04-28 18:51:22.725 D/AmlWifiScoreReportInjector( 3839): getMaxRssiInWaeknet weaknetRssi = -72
+04-28 18:51:22.725 D/MI-SF   ( 1966): isSupportLowBrightnessFpsSwitch current_setting_fps: 120
+04-28 18:51:22.725 D/MI-SF   ( 1966): isTpIdleScene ,mAverageFrameRate is 0, 1
+04-28 18:51:22.726 D/MI-SF   ( 1966): modeGroup37489152 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:22.726 D/MI-SF   ( 1966): setTpIdleFps choose FPS:60, mode:37489152
+04-28 18:51:22.728 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:22.729 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:1440x3200 blurRect:1200x281
+04-28 18:51:22.730 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:432x960 blurRect:360x84
+04-28 18:51:22.732 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.733 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:22.733 W/LayerDrawable( 5963): Failed to obtain smooth corners because the drawable of the children in the layerstate is null
+04-28 18:51:22.734 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.736 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.737 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.739 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.740 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.742 W/HWComposer( 1966): Ignoring duplicate VSYNC event from HWC for display 4630946654109872275 (t=663191885902000)
+04-28 18:51:22.742 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.743 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.744 W/LayerDrawable( 5963): Failed to obtain smooth corners because the drawable of the children in the layerstate is null
+04-28 18:51:22.752 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.756 W/BpBinder( 1966): Large outgoing transaction of 122272 bytes, interface descriptor android.gui.IWindowInfosListener, code 1 was sent
+04-28 18:51:22.758 W/HWComposer( 1966): Ignoring duplicate VSYNC event from HWC for display 4630946654109872275 (t=663191902538000)
+04-28 18:51:22.761 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-28 18:51:22.761 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-28 18:51:22.761 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:1440x3200 blurRect:1200x281
+04-28 18:51:22.762 W/LayerDrawable( 5963): Failed to obtain smooth corners because the drawable of the children in the layerstate is null
+04-28 18:51:22.762 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:432x960 blurRect:360x84
+04-28 18:51:22.765 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.767 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.768 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.769 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.771 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.773 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.774 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.775 W/HWComposer( 1966): Ignoring duplicate VSYNC event from HWC for display 4630946654109872275 (t=663191919174000)
+04-28 18:51:22.776 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.778 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.782 W/BpBinder( 1966): Large outgoing transaction of 122272 bytes, interface descriptor android.gui.IWindowInfosListener, code 1 was sent
+04-28 18:51:22.786 I/SDM     ( 1810): PartialUpdateSrcSplit::SetCwbRoiForNonPU: CWB ROI Rect(699.000000 110.000000 940.000000 351.000000)
+04-28 18:51:22.786 W/LayerDrawable( 5963): Failed to obtain smooth corners because the drawable of the children in the layerstate is null
+04-28 18:51:22.787 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:1440x3200 blurRect:1200x281
+04-28 18:51:22.789 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:432x960 blurRect:360x84
+04-28 18:51:22.791 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.792 W/HWComposer( 1966): Ignoring duplicate VSYNC event from HWC for display 4630946654109872275 (t=663191935811000)
+04-28 18:51:22.792 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.794 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.795 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.796 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.798 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.800 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.802 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.803 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.807 W/BpBinder( 1966): Large outgoing transaction of 122272 bytes, interface descriptor android.gui.IWindowInfosListener, code 1 was sent
+04-28 18:51:22.809 W/HWComposer( 1966): Ignoring duplicate VSYNC event from HWC for display 4630946654109872275 (t=663191952447000)
+04-28 18:51:22.810 D/MiuiInputManagerService( 3839): unregisterSrollToTopListener, windowId: 103556998
+04-28 18:51:22.811 D/View    ( 5963): removeBackgroundBlurDrawable
+04-28 18:51:22.812 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-28 18:51:22.813 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:1440x3200 blurRect:1200x281
+04-28 18:51:22.814 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:432x960 blurRect:360x84
+04-28 18:51:22.815 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa9270) status 0 for display-0.
+04-28 18:51:22.815 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-28 18:51:22.816 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.818 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.819 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.821 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.822 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.824 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.825 W/HWComposer( 1966): Ignoring duplicate VSYNC event from HWC for display 4630946654109872275 (t=663191969083000)
+04-28 18:51:22.826 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.827 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.829 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.833 W/BpBinder( 1966): Large outgoing transaction of 122272 bytes, interface descriptor android.gui.IWindowInfosListener, code 1 was sent
+04-28 18:51:22.836 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:1440x3200 blurRect:1200x281
+04-28 18:51:22.838 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:432x960 blurRect:360x84
+04-28 18:51:22.839 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.841 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.842 W/HWComposer( 1966): Ignoring duplicate VSYNC event from HWC for display 4630946654109872275 (t=663191985719000)
+04-28 18:51:22.842 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.843 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.845 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.847 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.847 D/BufferQueueProducer( 5963): [VRI[Toast]#1962(BLAST Consumer)1962](id:174b00000901,api:1,p:5963,c:5963) disconnect: api 1 (caller=5963)
+04-28 18:51:22.848 W/ndroid.systemui( 5963): Binder 0xb4000075f0130180 destroyed after setInheritRt before being parceled.
+04-28 18:51:22.848 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.849 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:22.849 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 138, only 0 and 1 are supported
+04-28 18:51:22.849 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:22.849 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 120, only 0 and 1 are supported
+04-28 18:51:22.849 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:22.849 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 76, only 0 and 1 are supported
+04-28 18:51:22.849 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:22.849 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 68, only 0 and 1 are supported
+04-28 18:51:22.849 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:22.849 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 64, only 0 and 1 are supported
+04-28 18:51:22.849 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:22.850 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 56, only 0 and 1 are supported
+04-28 18:51:22.850 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.850 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:22.850 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 42, only 0 and 1 are supported
+04-28 18:51:22.850 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:22.850 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 34, only 0 and 1 are supported
+04-28 18:51:22.850 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:22.850 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 24, only 0 and 1 are supported
+04-28 18:51:22.850 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:22.850 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 6, only 0 and 1 are supported
+04-28 18:51:22.850 D/DisplayContentStubImpl( 3839): onNewImeFrame: isImeVisible = false, imeFrame = Rect(0, 0 - 0, 0)
+04-28 18:51:22.850 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:22.850 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:22.850 D/BarFollowAnimation( 3839): pairAppearanceRegionAndWin win=Window{13eaf2f u0 com.smartsales.prism/com.smartsales.prism.MainActivity} 0
+04-28 18:51:22.850 D/BarFollowAnimation( 3839): isAppTaskBarOnTop win:Window{13eaf2f u0 com.smartsales.prism/com.smartsales.prism.MainActivity} (mCurrentTopTask:Task{4746c18 #28143 type=standard A=10433:com.smartsales.prism} : true); (mAssociatedTask:Task{4746c18 #28143 type=standard A=10433:com.smartsales.prism} : true); (mHomeTask:Task{39ded46 #1 type=home} : false); mReparentToOriginParent:false mLastAppBarVisible:true mLastHomeBarVisible:false
+04-28 18:51:22.851 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:22.851 I/PowerManagerServiceImpl( 3839): Release wakelock: SCREEN_BRIGHT_WAKE_LOCK           'WindowManager/displayId:0' ON_AFTER_RELEASE DISABLED ACQ=-1s188ms (uid=1000 pid=3839 pkg=android ws=WorkSource{1000 com.android.systemui})
+04-28 18:51:22.851 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.852 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:22.852 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:22.852 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:22.852 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:22.852 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:22.852 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:22.852 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:22.852 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =60 hasIntersection =false
+04-28 18:51:22.852 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:22.852 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =45 hasIntersection =false
+04-28 18:51:22.852 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =169 hasIntersection =false
+04-28 18:51:22.852 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:22.853 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =45 hasIntersection =false
+04-28 18:51:22.853 W/InsetsSource( 5963): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =169 hasIntersection =false
+04-28 18:51:22.854 W/NotificationService( 3839): Toast already killed. pkg=com.smartsales.prism token=android.os.BinderProxy@2ddee2f
+04-28 18:51:22.858 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-28 18:51:22.859 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:1440x3200 blurRect:1200x281
+04-28 18:51:22.860 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:432x960 blurRect:360x84
+04-28 18:51:22.868 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.870 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.871 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.873 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.874 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.876 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.877 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.879 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.881 D/RenderEngine( 1966): drawLayersInternal layername:Toast#34945 regionblurRadius:375 blurInput:816x1814 blurRect:680x159
+04-28 18:51:22.882 D/RefreshRateSelector( 1966): Touch Boost
+04-28 18:51:22.882 D/MI-SF   ( 1966): modeGroup41426432 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:22.882 D/RefreshRateSelector( 1966): fixedMode_group: 41426432, isFindModeGroup 1
+04-28 18:51:22.882 D/RefreshRateSelector( 1966): find max refresh rate:120, mode Group:41426432
+04-28 18:51:22.883 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=120.00 Hz, modePtr={id=1, vsyncRate=120.00 Hz, peakRefreshRate=120.00 Hz}}, emitEvent=true, force=false}
+04-28 18:51:22.883 D/BufferQueueConsumer( 5963): [VRI[Toast]#1962(BLAST Consumer)1962](id:174b00000901,api:0,p:-1,c:5963) disconnect: caller 0
+04-28 18:51:22.888 D/RefreshRateSelector( 1966): Touch Boost
+04-28 18:51:22.888 D/MI-SF   ( 1966): modeGroup41426432 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:22.888 D/RefreshRateSelector( 1966): fixedMode_group: 41426432, isFindModeGroup 1
+04-28 18:51:22.888 D/RefreshRateSelector( 1966): find max refresh rate:120, mode Group:41426432
+04-28 18:51:22.888 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 1, WxH 1440x3200, fps 120@auto@120:30
+04-28 18:51:22.890 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:22.890 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:22.891 I/MiClstc ( 1810): simplifyLayerName Unknown layer 1, skip
+04-28 18:51:22.891 I/MiClstc ( 1810): DropLayers erase layer 1
+04-28 18:51:22.895 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 30
+04-28 18:51:22.896 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 30
+04-28 18:51:22.905 W/BpBinder( 1966): Large outgoing transaction of 117236 bytes, interface descriptor android.gui.IWindowInfosListener, code 1 was sent
+04-28 18:51:22.905 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:22.908 I/DisplayDeviceRepository( 3839): Display device changed render timings: "内置屏幕", renderFrameRate=120.00001, presentationDeadlineNanos=11333333, appVsyncOffsetNanos=1000000, frameRateOverrides=[]
+04-28 18:51:22.909 D/RefreshRateSelector( 1966): Touch Boost
+04-28 18:51:22.909 D/MI-SF   ( 1966): modeGroup41426432 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:22.909 D/RefreshRateSelector( 1966): fixedMode_group: 41426432, isFindModeGroup 1
+04-28 18:51:22.909 D/RefreshRateSelector( 1966): find max refresh rate:120, mode Group:41426432
+04-28 18:51:22.910 D/AudioPipeline(14426): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-28 18:51:22.910 D/DownloadService(14426): Audio files state: downloading=1, queued=0, ready=1, queueSize=0
+04-28 18:51:22.912 W/DownloadService(14426): Notification permission missing, skip foreground notification update
+04-28 18:51:22.916 D/WindowManager( 3839): DeferredDisplayUpdater: partially applying DisplayInfo(1440 x 3200) immediately
+04-28 18:51:22.916 W/DisplayContentStubImpl( 3839):  displayMetricsChanged=false physicalDisplayChanged=false displayId=0 newUniqueId=local:4630946654109872275 currentUnique=local:4630946654109872275
+04-28 18:51:22.916 D/DisplayContentStubImpl( 3839): Display{#0 state=ON size=1440x3200 ROTATION_0} isActivityEmbeddingSplitEnable false
+04-28 18:51:22.917 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:22.917 D/AudioFlingerImpl( 1930): setGameParameters keyvalue: screen_state=on
+04-28 18:51:22.917 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:22.917 D/DeviceHalAidl( 1930): [default] setParameters: parameters: "screen_state=on"
+04-28 18:51:22.917 D/PAL: API( 1794): pal_set_param: 1497: Enter: param id 8 (PAL_PARAM_ID_SCREEN_STATE)
+04-28 18:51:22.917 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:22.917 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 138, only 0 and 1 are supported
+04-28 18:51:22.917 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:22.917 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 120, only 0 and 1 are supported
+04-28 18:51:22.917 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:22.917 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 76, only 0 and 1 are supported
+04-28 18:51:22.917 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:22.917 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 68, only 0 and 1 are supported
+04-28 18:51:22.917 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:22.917 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 64, only 0 and 1 are supported
+04-28 18:51:22.917 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:22.917 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 56, only 0 and 1 are supported
+04-28 18:51:22.917 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:22.917 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 42, only 0 and 1 are supported
+04-28 18:51:22.917 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:22.917 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 34, only 0 and 1 are supported
+04-28 18:51:22.917 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:22.917 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 24, only 0 and 1 are supported
+04-28 18:51:22.917 D/PAL: ResourceManager( 1794): setParameter: 11845: Enter param id: 8 (PAL_PARAM_ID_SCREEN_STATE)
+04-28 18:51:22.917 I/PAL: ResourceManager( 1794): setParameter: 11872: Screen State:1
+04-28 18:51:22.917 D/PAL: ResourceManager( 1794): setParameter: 13545: Exit status: 0
+04-28 18:51:22.917 D/PAL: API( 1794): pal_set_param: 1514: Exit, status 0
+04-28 18:51:22.917 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:22.917 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 6, only 0 and 1 are supported
+04-28 18:51:22.918 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:22.918 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:22.918 D/BarFollowAnimation( 3839): pairAppearanceRegionAndWin win=Window{13eaf2f u0 com.smartsales.prism/com.smartsales.prism.MainActivity} 0
+04-28 18:51:22.918 D/BarFollowAnimation( 3839): isAppTaskBarOnTop win:Window{13eaf2f u0 com.smartsales.prism/com.smartsales.prism.MainActivity} (mCurrentTopTask:Task{4746c18 #28143 type=standard A=10433:com.smartsales.prism} : true); (mAssociatedTask:Task{4746c18 #28143 type=standard A=10433:com.smartsales.prism} : true); (mHomeTask:Task{39ded46 #1 type=home} : false); mReparentToOriginParent:false mLastAppBarVisible:true mLastHomeBarVisible:false
+04-28 18:51:22.918 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:22.918 D/MiuiGxzwAnimView( 5963): onDisplayChanged: oldState = 2, newState = 2
+04-28 18:51:22.919 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:22.919 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:22.920 D/DeviceHalAidl( 1930): [usb] setParameters: parameters: "screen_state=on"
+04-28 18:51:22.920 D/AHAL_Module( 1794): updateScreenState: usb: 1
+04-28 18:51:22.920 D/DeviceHalAidl( 1930): [r_submix] setParameters: parameters: "screen_state=on"
+04-28 18:51:22.920 D/AHAL_Module( 1794): updateScreenState: r_submix: 1
+04-28 18:51:22.921 V/AutoDensityController( 5963): on display changed 0 context dpi:586 origin dpi:600 target dpi:586
+04-28 18:51:22.921 D/DeviceHalAidl( 1930): [bluetooth] setParameters: parameters: "screen_state=on"
+04-28 18:51:22.921 D/AHAL_Module( 1794): updateScreenState: bluetooth: 1
+04-28 18:51:22.921 W/InsetsSource(31883): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:22.921 W/InsetsSource(31883): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:22.921 W/InsetsSource(31883): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:22.921 W/InsetsSource(31883): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:22.921 W/InsetsSource(31883): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:22.922 W/InsetsSource(31883): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:22.923 W/GestureStubView_Left( 5261): onDisplayChanged
+04-28 18:51:22.923 W/Launcher( 5261): onDisplayChanged: newRotation=0, mCurrentRotation=0
+04-28 18:51:22.923 W/GestureStubView_Left( 5261): adaptRotation   currentRotation=0   mRotation=0
+04-28 18:51:22.923 W/GestureStubView_Right( 5261): onDisplayChanged
+04-28 18:51:22.923 W/GestureStubView_Right( 5261): adaptRotation   currentRotation=0   mRotation=0
+04-28 18:51:22.924 D/ControlCenterWindowViewController( 5963): on display changed 0
+04-28 18:51:22.924 V/AODAutoDensityController( 5963): on display changed 0 context dpi:586 origin dpi:600 target dpi:586
+04-28 18:51:22.925 W/BpBinder( 1966): Large outgoing transaction of 117236 bytes, interface descriptor android.gui.IWindowInfosListener, code 1 was sent
+04-28 18:51:22.937 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:23.021 I/SDM     ( 1810): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+04-28 18:51:23.021 D/libsensor-parseRGB( 2925): CWB NotifyIdleStatus 1
+04-28 18:51:23.056 D/MI-SF   ( 1966): setIdleFps choose FPS:60, mode:20709632 mode_group 24641792
+04-28 18:51:23.056 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=60.00 Hz, modePtr={id=5, vsyncRate=60.00 Hz, peakRefreshRate=60.00 Hz}}, emitEvent=false, force=false}
+04-28 18:51:23.060 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 5, WxH 1440x3200, fps 60@idle@60:1
+04-28 18:51:23.060 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:23.060 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:23.063 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-28 18:51:23.063 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-28 18:51:23.063 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-28 18:51:23.068 I/SDM     ( 1810): PartialUpdateSrcSplit::SetCwbRoiForNonPU: CWB ROI Rect(699.000000 110.000000 940.000000 351.000000)
+04-28 18:51:23.069 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 1
+04-28 18:51:23.071 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 1
+04-28 18:51:23.080 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:23.083 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:23.098 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa8610) status 0 for display-0.
+04-28 18:51:23.098 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-28 18:51:23.128 D/JavaheapMonitor(18033): Java heap used=7M max=256M, proc: com.android.vending
+04-28 18:51:23.128 V/JavaheapMonitor(18033): Check java heap usage finished! Next check delay: 300000
+04-28 18:51:23.145 I/SDM     ( 1810): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+04-28 18:51:23.145 D/libsensor-parseRGB( 2925): CWB NotifyIdleStatus 1
+04-28 18:51:23.148 D/AudioPipeline(14426): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-28 18:51:23.152 D/DownloadService(14426): Audio files state: downloading=1, queued=0, ready=1, queueSize=0
+04-28 18:51:23.155 W/DownloadService(14426): Notification permission missing, skip foreground notification update
+04-28 18:51:23.157 I/iui.mediaeditor(25851): This is non sticky GC, maxfree is 33554432 minfree is 8388608
+04-28 18:51:23.186 D/RefreshRateSelector( 1966): Touch Boost
+04-28 18:51:23.186 D/MI-SF   ( 1966): modeGroup41426432 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:23.186 D/RefreshRateSelector( 1966): fixedMode_group: 41426432, isFindModeGroup 1
+04-28 18:51:23.186 D/RefreshRateSelector( 1966): find max refresh rate:120, mode Group:41426432
+04-28 18:51:23.186 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=120.00 Hz, modePtr={id=1, vsyncRate=120.00 Hz, peakRefreshRate=120.00 Hz}}, emitEvent=true, force=false}
+04-28 18:51:23.186 E/DisplayModeController( 1966): setDesiredMode : Idle status skip setActiveMode, isDdicIdleMode: 1
+04-28 18:51:23.188 D/JavaheapMonitor(25851): Java heap used=3M max=512M, proc: com.miui.mediaeditor
+04-28 18:51:23.189 V/JavaheapMonitor(25851): Check java heap usage finished! Next check delay: 300000
+04-28 18:51:23.198 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 1, WxH 1440x3200, fps 120@auto@120:30
+04-28 18:51:23.199 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:23.199 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:23.200 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-28 18:51:23.206 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 30
+04-28 18:51:23.206 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 30
+04-28 18:51:23.213 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:23.215 D/RefreshRateSelector( 1966): Touch Boost
+04-28 18:51:23.215 D/MI-SF   ( 1966): modeGroup41426432 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:23.215 D/RefreshRateSelector( 1966): fixedMode_group: 41426432, isFindModeGroup 1
+04-28 18:51:23.215 D/RefreshRateSelector( 1966): find max refresh rate:120, mode Group:41426432
+04-28 18:51:23.222 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:23.236 D/JavaheapMonitor( 5536): Java heap used=12M max=256M, proc: com.android.networkstack.process
+04-28 18:51:23.236 V/JavaheapMonitor( 5536): Check java heap usage finished! Next check delay: 300000
+04-28 18:51:23.288 I/SDM     ( 1810): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+04-28 18:51:23.288 D/libsensor-parseRGB( 2925): CWB NotifyIdleStatus 1
+04-28 18:51:23.297 D/MI-SF   ( 1966): setIdleFps choose FPS:60, mode:20709632 mode_group 24641792
+04-28 18:51:23.297 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=60.00 Hz, modePtr={id=5, vsyncRate=60.00 Hz, peakRefreshRate=60.00 Hz}}, emitEvent=false, force=false}
+04-28 18:51:23.302 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 5, WxH 1440x3200, fps 60@idle@60:1
+04-28 18:51:23.303 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:23.303 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:23.305 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-28 18:51:23.306 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-28 18:51:23.310 I/SDM     ( 1810): PartialUpdateSrcSplit::SetCwbRoiForNonPU: CWB ROI Rect(699.000000 110.000000 940.000000 351.000000)
+04-28 18:51:23.310 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 1
+04-28 18:51:23.311 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 1
+04-28 18:51:23.312 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-28 18:51:23.317 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:23.320 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:23.338 D/JavaheapMonitor( 5261): Java heap used=29M max=512M, proc: com.miui.home
+04-28 18:51:23.338 V/JavaheapMonitor( 5261): Check java heap usage finished! Next check delay: 300000
+04-28 18:51:23.340 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaaa9d0) status 0 for display-0.
+04-28 18:51:23.340 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-28 18:51:23.345 I/MediaCodec(30120): [mId: 3] [video-debug-enc] state 6 mFlags 2336 Stats 5027ms:Client:com.android.shell,Component:c2.android.vp8.encoder,Qin:0,DQin:0/0,Render:0,encode:91,DQout:91/91
+04-28 18:51:23.368 D/JavaheapMonitor(15795): Java heap used=10M max=256M, proc: com.xiaomi.misettings
+04-28 18:51:23.368 V/JavaheapMonitor(15795): Check java heap usage finished! Next check delay: 300000
+04-28 18:51:23.386 I/SDM     ( 1810): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+04-28 18:51:23.386 D/libsensor-parseRGB( 2925): CWB NotifyIdleStatus 1
+04-28 18:51:23.411 D/AudioPipeline(14426): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-28 18:51:23.411 D/DownloadService(14426): Audio files state: downloading=1, queued=0, ready=1, queueSize=0
+04-28 18:51:23.413 W/DownloadService(14426): Notification permission missing, skip foreground notification update
+04-28 18:51:23.421 D/JavaheapMonitor(27399): Java heap used=20M max=256M, proc: com.google.android.gms
+04-28 18:51:23.421 V/JavaheapMonitor(27399): Check java heap usage finished! Next check delay: 300000
+04-28 18:51:23.442 D/RefreshRateSelector( 1966): Touch Boost
+04-28 18:51:23.442 D/MI-SF   ( 1966): modeGroup41426432 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:23.442 D/RefreshRateSelector( 1966): fixedMode_group: 41426432, isFindModeGroup 1
+04-28 18:51:23.442 D/RefreshRateSelector( 1966): find max refresh rate:120, mode Group:41426432
+04-28 18:51:23.442 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=120.00 Hz, modePtr={id=1, vsyncRate=120.00 Hz, peakRefreshRate=120.00 Hz}}, emitEvent=true, force=false}
+04-28 18:51:23.442 E/DisplayModeController( 1966): setDesiredMode : Idle status skip setActiveMode, isDdicIdleMode: 1
+04-28 18:51:23.456 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 1, WxH 1440x3200, fps 120@auto@120:30
+04-28 18:51:23.457 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:23.457 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:23.458 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-28 18:51:23.464 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 30
+04-28 18:51:23.464 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 30
+04-28 18:51:23.473 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:23.477 D/RefreshRateSelector( 1966): Touch Boost
+04-28 18:51:23.477 D/MI-SF   ( 1966): modeGroup41426432 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:23.477 D/RefreshRateSelector( 1966): fixedMode_group: 41426432, isFindModeGroup 1
+04-28 18:51:23.477 D/RefreshRateSelector( 1966): find max refresh rate:120, mode Group:41426432
+04-28 18:51:23.481 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:23.496 D/JavaheapMonitor(14704): Java heap used=8M max=256M, proc: com.android.settings
+04-28 18:51:23.496 V/JavaheapMonitor(14704): Check java heap usage finished! Next check delay: 300000
+04-28 18:51:23.549 I/SDM     ( 1810): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+04-28 18:51:23.549 D/libsensor-parseRGB( 2925): CWB NotifyIdleStatus 1
+04-28 18:51:23.554 D/MI-SF   ( 1966): setIdleFps choose FPS:60, mode:20709632 mode_group 24641792
+04-28 18:51:23.554 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=60.00 Hz, modePtr={id=5, vsyncRate=60.00 Hz, peakRefreshRate=60.00 Hz}}, emitEvent=false, force=false}
+04-28 18:51:23.556 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 5, WxH 1440x3200, fps 60@idle@60:1
+04-28 18:51:23.557 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:23.557 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:23.563 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-28 18:51:23.564 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-28 18:51:23.564 I/SDM     ( 1810): PartialUpdateSrcSplit::SetCwbRoiForNonPU: CWB ROI Rect(699.000000 110.000000 940.000000 351.000000)
+04-28 18:51:23.566 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-28 18:51:23.568 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 1
+04-28 18:51:23.568 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 1
+04-28 18:51:23.576 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:23.578 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:23.593 I/MiuiNetworkPolicy( 3839): updateUidState uid = 99141, uidState = 19
+04-28 18:51:23.594 I/MiuiNetworkPolicy( 3839): updateUidState uid = 10169, uidState = 19
+04-28 18:51:23.594 I/MiuiNetworkPolicy( 3839): updateUidState uid = 10131, uidState = 19
+04-28 18:51:23.594 I/MiuiNetworkPolicy( 3839): updateUidState uid = 10129, uidState = 19
+04-28 18:51:23.594 E/SSRU-RUS( 3839): Don't have packages for uid 99141
+04-28 18:51:23.597 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa8fb0) status 0 for display-0.
+04-28 18:51:23.597 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-28 18:51:23.644 I/SDM     ( 1810): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+04-28 18:51:23.644 D/libsensor-parseRGB( 2925): CWB NotifyIdleStatus 1
+04-28 18:51:23.650 D/AurogonBandwidthController( 3839): skinTemperature:49.539
+04-28 18:51:23.652 D/JavaheapMonitor( 3271): Java heap used=9M max=256M, proc: com.miui.powerkeeper
+04-28 18:51:23.652 V/JavaheapMonitor( 3271): Check java heap usage finished! Next check delay: 300000
+04-28 18:51:23.716 D/AudioPipeline(14426): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-28 18:51:23.716 D/DownloadService(14426): Audio files state: downloading=1, queued=0, ready=1, queueSize=0
+04-28 18:51:23.718 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 1
+04-28 18:51:23.718 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-28 18:51:23.718 W/DownloadService(14426): Notification permission missing, skip foreground notification update
+04-28 18:51:23.727 I/SDM     ( 1810): PartialUpdateSrcSplit::SetCwbRoiForNonPU: CWB ROI Rect(699.000000 110.000000 940.000000 351.000000)
+04-28 18:51:23.747 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa8da0) status 0 for display-0.
+04-28 18:51:23.748 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-28 18:51:23.751 D/RefreshRateSelector( 1966): Touch Boost
+04-28 18:51:23.751 D/MI-SF   ( 1966): modeGroup41426432 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:23.751 D/RefreshRateSelector( 1966): fixedMode_group: 41426432, isFindModeGroup 1
+04-28 18:51:23.751 D/RefreshRateSelector( 1966): find max refresh rate:120, mode Group:41426432
+04-28 18:51:23.751 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=120.00 Hz, modePtr={id=1, vsyncRate=120.00 Hz, peakRefreshRate=120.00 Hz}}, emitEvent=true, force=false}
+04-28 18:51:23.751 E/DisplayModeController( 1966): setDesiredMode : Idle status skip setActiveMode, isDdicIdleMode: 1
+04-28 18:51:23.764 D/RefreshRateSelector( 1966): Touch Boost
+04-28 18:51:23.764 D/MI-SF   ( 1966): modeGroup41426432 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:23.764 D/RefreshRateSelector( 1966): fixedMode_group: 41426432, isFindModeGroup 1
+04-28 18:51:23.764 D/RefreshRateSelector( 1966): find max refresh rate:120, mode Group:41426432
+04-28 18:51:23.764 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 1, WxH 1440x3200, fps 120@auto@120:30
+04-28 18:51:23.765 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:23.765 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:23.766 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-28 18:51:23.767 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-28 18:51:23.767 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-28 18:51:23.772 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 30
+04-28 18:51:23.772 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 30
+04-28 18:51:23.781 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:23.784 D/RefreshRateSelector( 1966): Touch Boost
+04-28 18:51:23.784 D/MI-SF   ( 1966): modeGroup41426432 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:23.784 D/RefreshRateSelector( 1966): fixedMode_group: 41426432, isFindModeGroup 1
+04-28 18:51:23.784 D/RefreshRateSelector( 1966): find max refresh rate:120, mode Group:41426432
+04-28 18:51:23.787 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-28 18:51:23.788 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:23.809 D/BluetoothGatt(14426): readRssi() - device: XX:XX:XX:XX:8F:96
+04-28 18:51:23.810 D/BtGatt.GattService(28530): readRemoteRssi() - address=XX:XX:XX:XX:8F:96
+04-28 18:51:23.810 D/bt_btif_gattc(28530): system/btif/src/btif_gatt_client.cc:644 btif_gattc_read_remote_rssi:
+04-28 18:51:23.811 D/ble_sec (28530): system/stack/btm/btm_ble_sec.cc:539 BTM_ReadDevInfo: Determined device_type:BLE addr_type:public
+04-28 18:51:23.811 D/bt_shim_hci(28530): system/main/shim/hci_layer.cc:233 transmit_command: Sending command READ_RSSI(0x1405)
+04-28 18:51:23.811 D/vendor.qti.bluetooth@1.0-ibs_handler( 1781): SerialClockVote: vote for UART CLK ON
+04-28 18:51:23.812 D/vendor.qti.bluetooth@1.0-wake_lock( 1781): Acquire wakelock is acquired
+04-28 18:51:23.812 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): DeviceWakeUp: Writing IBS_WAKE_IND
+04-28 18:51:23.816 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Received IBS_WAKE_ACK: 0xFC
+04-28 18:51:23.816 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Signal wack_cond_
+04-28 18:51:23.816 D/vendor.qti.bluetooth@1.0-ibs_handler( 1781): DeviceWakeUp: Unblocked from waiting for FC, pthread_cond_timedwait ret = 0
+04-28 18:51:23.817 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Received IBS_WAKE_IND: 0xFD
+04-28 18:51:23.817 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Writing IBS_WAKE_ACK
+04-28 18:51:23.821 D/bt_shim_hci(28530): system/main/shim/hci_layer.cc:183 OnTransmitPacketCommandComplete: Received cmd complete for READ_RSSI(0x1405)
+04-28 18:51:23.821 D/btm_acl (28530): system/stack/acl/btm_acl.cc:1867 btm_read_rssi_complete: Read rrsi complete rssi:-49 hci status:HCI_SUCCESS
+04-28 18:51:23.821 V/bt_btif_gattc(28530): system/btif/src/btif_gatt_client.cc:308 btm_read_rssi_cb: HAL bt_gatt_callbacks->client->read_remote_rssi_cb
+04-28 18:51:23.822 D/BtGatt.GattService(28530): onReadRemoteRssi() - clientIf=80 address=XX:XX:XX:XX:8F:96, rssi=-49, status=0
+04-28 18:51:23.844 D/wpa_supplicant(25850): nl80211: Drv Event 81 (NL80211_CMD_TDLS_OPER) received for wlan0
+04-28 18:51:23.844 D/wpa_supplicant(25850): nl80211: TDLS operation event
+04-28 18:51:23.844 D/wpa_supplicant(25850): nl80211: TDLS discovery request for peer 1c:db:d4:9b:8f:94
+04-28 18:51:23.844 D/wpa_supplicant(25850): wlan0: Event TDLS (7) received
+04-28 18:51:23.844 D/wpa_supplicant(25850): nl80211: Drv Event 81 (NL80211_CMD_TDLS_OPER) received for wlan0
+04-28 18:51:23.844 D/wpa_supplicant(25850): nl80211: TDLS operation event
+04-28 18:51:23.844 D/wpa_supplicant(25850): nl80211: TDLS discovery request for peer b4:5f:84:de:d4:d0
+04-28 18:51:23.844 D/wpa_supplicant(25850): wlan0: Event TDLS (7) received
+04-28 18:51:23.844 D/wpa_supplicant(25850): nl80211: Drv Event 81 (NL80211_CMD_TDLS_OPER) received for wlan0
+04-28 18:51:23.844 D/wpa_supplicant(25850): nl80211: TDLS operation event
+04-28 18:51:23.844 D/wpa_supplicant(25850): nl80211: TDLS discovery request for peer 14:c1:9f:d7:e3:f4
+04-28 18:51:23.844 D/wpa_supplicant(25850): wlan0: Event TDLS (7) received
+04-28 18:51:23.856 I/SDM     ( 1810): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+04-28 18:51:23.857 D/libsensor-parseRGB( 2925): CWB NotifyIdleStatus 1
+04-28 18:51:23.862 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Received IBS_SLEEP_IND: 0xFE
+04-28 18:51:23.862 D/MI-SF   ( 1966): setIdleFps choose FPS:60, mode:20709632 mode_group 24641792
+04-28 18:51:23.862 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=60.00 Hz, modePtr={id=5, vsyncRate=60.00 Hz, peakRefreshRate=60.00 Hz}}, emitEvent=false, force=false}
+04-28 18:51:23.864 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 5, WxH 1440x3200, fps 60@idle@60:1
+04-28 18:51:23.864 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:23.865 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:23.865 I/SDM     ( 1810): PartialUpdateSrcSplit::SetCwbRoiForNonPU: CWB ROI Rect(699.000000 110.000000 940.000000 351.000000)
+04-28 18:51:23.871 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 1
+04-28 18:51:23.871 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 1
+04-28 18:51:23.874 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:23.876 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:23.880 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa7dd0) status 0 for display-0.
+04-28 18:51:23.880 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-28 18:51:23.885 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-28 18:51:23.926 D/AudioPipeline(14426): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-28 18:51:23.927 D/DownloadService(14426): Audio files state: downloading=1, queued=0, ready=1, queueSize=0
+04-28 18:51:23.928 W/DownloadService(14426): Notification permission missing, skip foreground notification update
+04-28 18:51:23.955 I/SDM     ( 1810): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+04-28 18:51:23.956 D/libsensor-parseRGB( 2925): CWB NotifyIdleStatus 1
+04-28 18:51:23.966 D/RefreshRateSelector( 1966): Touch Boost
+04-28 18:51:23.966 D/MI-SF   ( 1966): modeGroup41426432 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:23.966 D/RefreshRateSelector( 1966): fixedMode_group: 41426432, isFindModeGroup 1
+04-28 18:51:23.966 D/RefreshRateSelector( 1966): find max refresh rate:120, mode Group:41426432
+04-28 18:51:23.966 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=120.00 Hz, modePtr={id=1, vsyncRate=120.00 Hz, peakRefreshRate=120.00 Hz}}, emitEvent=true, force=false}
+04-28 18:51:23.966 E/DisplayModeController( 1966): setDesiredMode : Idle status skip setActiveMode, isDdicIdleMode: 1
+04-28 18:51:23.980 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 1, WxH 1440x3200, fps 120@auto@120:30
+04-28 18:51:23.981 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:23.981 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:23.984 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-28 18:51:23.985 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-28 18:51:23.987 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 30
+04-28 18:51:23.987 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 30
+04-28 18:51:23.998 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:24.000 D/RefreshRateSelector( 1966): Touch Boost
+04-28 18:51:24.000 D/MI-SF   ( 1966): modeGroup41426432 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:24.000 D/RefreshRateSelector( 1966): fixedMode_group: 41426432, isFindModeGroup 1
+04-28 18:51:24.000 D/RefreshRateSelector( 1966): find max refresh rate:120, mode Group:41426432
+04-28 18:51:24.001 I/SDM     ( 1810): PartialUpdateSrcSplit::SetCwbRoiForNonPU: CWB ROI Rect(699.000000 110.000000 940.000000 351.000000)
+04-28 18:51:24.003 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-28 18:51:24.008 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:24.013 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaaa500) status 0 for display-0.
+04-28 18:51:24.013 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-28 18:51:24.040 D/JavaheapMonitor(32343): Java heap used=16M max=256M, proc: com.miui.securitycenter.remote
+04-28 18:51:24.040 V/JavaheapMonitor(32343): Check java heap usage finished! Next check delay: 300000
+04-28 18:51:24.066 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): DeviceSleep: TX Awake, Sending SLEEP_IND
+04-28 18:51:24.066 D/vendor.qti.bluetooth@1.0-ibs_handler( 1781): SerialClockVote: vote for UART CLK OFF
+04-28 18:51:24.073 I/SDM     ( 1810): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+04-28 18:51:24.073 D/libsensor-parseRGB( 2925): CWB NotifyIdleStatus 1
+04-28 18:51:24.076 D/MI-SF   ( 1966): setIdleFps choose FPS:60, mode:20709632 mode_group 24641792
+04-28 18:51:24.076 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=60.00 Hz, modePtr={id=5, vsyncRate=60.00 Hz, peakRefreshRate=60.00 Hz}}, emitEvent=false, force=false}
+04-28 18:51:24.080 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 5, WxH 1440x3200, fps 60@idle@60:1
+04-28 18:51:24.081 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:24.081 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:24.082 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-28 18:51:24.086 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 1
+04-28 18:51:24.087 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 1
+04-28 18:51:24.090 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:24.092 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:24.129 D/AudioPipeline(14426): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-28 18:51:24.129 D/DownloadService(14426): Audio files state: downloading=1, queued=0, ready=1, queueSize=0
+04-28 18:51:24.131 W/DownloadService(14426): Notification permission missing, skip foreground notification update
+04-28 18:51:24.164 D/RefreshRateSelector( 1966): Touch Boost
+04-28 18:51:24.164 D/MI-SF   ( 1966): modeGroup41426432 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:24.164 D/RefreshRateSelector( 1966): fixedMode_group: 41426432, isFindModeGroup 1
+04-28 18:51:24.164 D/RefreshRateSelector( 1966): find max refresh rate:120, mode Group:41426432
+04-28 18:51:24.164 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=120.00 Hz, modePtr={id=1, vsyncRate=120.00 Hz, peakRefreshRate=120.00 Hz}}, emitEvent=true, force=false}
+04-28 18:51:24.164 E/DisplayModeController( 1966): setDesiredMode : Idle status skip setActiveMode, isDdicIdleMode: 1
+04-28 18:51:24.171 I/SDM     ( 1810): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+04-28 18:51:24.172 D/libsensor-parseRGB( 2925): CWB NotifyIdleStatus 1
+04-28 18:51:24.180 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 1, WxH 1440x3200, fps 120@auto@120:30
+04-28 18:51:24.181 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:24.181 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:24.186 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 30
+04-28 18:51:24.186 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 30
+04-28 18:51:24.190 D/JavaheapMonitor(32529): Java heap used=12M max=512M, proc: com.xiaomi.aicr:cognitionService
+04-28 18:51:24.190 V/JavaheapMonitor(32529): Check java heap usage finished! Next check delay: 300000
+04-28 18:51:24.194 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:24.197 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:24.199 D/RefreshRateSelector( 1966): Touch Boost
+04-28 18:51:24.199 D/MI-SF   ( 1966): modeGroup41426432 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:24.199 D/RefreshRateSelector( 1966): fixedMode_group: 41426432, isFindModeGroup 1
+04-28 18:51:24.199 D/RefreshRateSelector( 1966): find max refresh rate:120, mode Group:41426432
+04-28 18:51:24.201 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-28 18:51:24.201 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-28 18:51:24.202 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-28 18:51:24.216 D/vendor.qti.bluetooth@1.0-wake_lock( 1781): Release wakelock is released
+04-28 18:51:24.271 I/SDM     ( 1810): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+04-28 18:51:24.271 D/libsensor-parseRGB( 2925): CWB NotifyIdleStatus 1
+04-28 18:51:24.274 D/MI-SF   ( 1966): setIdleFps choose FPS:60, mode:20709632 mode_group 24641792
+04-28 18:51:24.275 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=60.00 Hz, modePtr={id=5, vsyncRate=60.00 Hz, peakRefreshRate=60.00 Hz}}, emitEvent=false, force=false}
+04-28 18:51:24.279 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 5, WxH 1440x3200, fps 60@idle@60:1
+04-28 18:51:24.280 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:24.280 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:24.281 I/SDM     ( 1810): PartialUpdateSrcSplit::SetCwbRoiForNonPU: CWB ROI Rect(699.000000 110.000000 940.000000 351.000000)
+04-28 18:51:24.286 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 1
+04-28 18:51:24.286 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 1
+04-28 18:51:24.290 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:24.296 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa72d0) status 0 for display-0.
+04-28 18:51:24.296 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-28 18:51:24.297 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:24.301 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-28 18:51:24.351 D/MI-SF   ( 1966): setIdleFps choose FPS:60, mode:20709632 mode_group 24641792
+04-28 18:51:24.371 I/SDM     ( 1810): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+04-28 18:51:24.372 D/libsensor-parseRGB( 2925): CWB NotifyIdleStatus 1
+04-28 18:51:24.372 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Received IBS_WAKE_IND: 0xFD
+04-28 18:51:24.372 D/vendor.qti.bluetooth@1.0-ibs_handler( 1781): SerialClockVote: vote for UART CLK ON
+04-28 18:51:24.372 D/vendor.qti.bluetooth@1.0-wake_lock( 1781): Acquire wakelock is acquired
+04-28 18:51:24.372 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Writing IBS_WAKE_ACK
+04-28 18:51:24.376 V/bluetooth(28530): system/gd/hci/le_scanning_reassembler.cc:67 ProcessAdvertisingReport: Dropping repeated legacy advertising data
+04-28 18:51:24.376 V/bluetooth(28530): system/gd/hci/le_scanning_reassembler.cc:101 ProcessAdvertisingReport: Full advertising report has been reassembled
+04-28 18:51:24.376 V/bluetooth(28530): system/gd/hci/le_scanning_decrypter.cc:148 ContainsEncryptedData: enc_adv_data_map is empty
+04-28 18:51:24.376 V/bt_btm_ble(28530): system/stack/btm/btm_ble_gap.cc:2166 btm_ble_process_adv_addr: bda=xx:xx:xx:xx:89:71
+04-28 18:51:24.376 V/bt_btm_ble(28530): system/stack/btm/btm_ble_gap.cc:2157 btm_ble_update_inq_result: NOT_BR/EDR support bit set, treat device as LE only
+04-28 18:51:24.376 D/bt_btm_ble(28530): system/stack/btm/btm_ble_gap.cc:1961 btm_ble_is_discoverable: btm_ble_is_discoverable flag=0x6
+04-28 18:51:24.376 V/ScanController(28530): onScanResult() - eventType=0x10, addressType=1, address=XX:XX:XX:XX:89:71, primaryPhy=1, secondaryPhy=0, advertisingSid=0xff, txPower=127, rssi=127, periodicAdvInt=0x0, originalAddress=05:49:35:9B:89:71
+04-28 18:51:24.377 V/ScanController(28530): Skipping data matching denylist: ScanRecord [mAdvertiseFlags=6, mServiceUuids=null, mServiceSolicitationUuids=[], mManufacturerSpecificData={76=[2, 21, 38, -122, -13, -100, -70, -38, 70, 88, -123, 74, -90, 46, 126, 94, -117, -115, 0, 1, 0, 0, 11]}, mServiceData={}, mTxPowerLevel=-2147483648, mDeviceName=null, mTransportDiscoveryData=null]
+04-28 18:51:24.377 I/ScanController(28530): Skipping client 1 for location deny list
+04-28 18:51:24.377 V/ScanController(28530): Skipping client: permission=true matches=false
+04-28 18:51:24.378 V/ScanController(28530): Skipping client: permission=true matches=false
+04-28 18:51:24.416 I/vendor.qti.bluetooth@1.0-ibs_handler( 1781): ProcessIbsCmd: Received IBS_SLEEP_IND: 0xFE
+04-28 18:51:24.416 D/vendor.qti.bluetooth@1.0-ibs_handler( 1781): SerialClockVote: vote for UART CLK OFF
+04-28 18:51:24.424 D/AudioPipeline(14426): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-28 18:51:24.424 D/DownloadService(14426): Audio files state: downloading=1, queued=0, ready=1, queueSize=0
+04-28 18:51:24.426 W/DownloadService(14426): Notification permission missing, skip foreground notification update
+04-28 18:51:24.441 D/IdProviderImpl(14149): getOAID from com.miui.analytics
+04-28 18:51:24.456 D/MI-SF   ( 1966): isSupportLowBrightnessFpsSwitch current_setting_fps: 120
+04-28 18:51:24.456 D/MI-SF   ( 1966): isTpIdleScene ,mAverageFrameRate is 4, 1
+04-28 18:51:24.456 D/MI-SF   ( 1966): modeGroup20709632 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:24.456 D/MI-SF   ( 1966): setTpIdleFps choose FPS:60, mode:37489152
+04-28 18:51:24.456 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=60.00 Hz, modePtr={id=7, vsyncRate=60.00 Hz, peakRefreshRate=60.00 Hz}}, emitEvent=true, force=false}
+04-28 18:51:24.456 E/DisplayModeController( 1966): setDesiredMode : Idle status skip setActiveMode, isDdicIdleMode: 1
+04-28 18:51:24.458 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 7, WxH 1440x3200, fps 60@auto@60:10
+04-28 18:51:24.459 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:24.459 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:24.459 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 1
+04-28 18:51:24.461 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-28 18:51:24.465 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 10
+04-28 18:51:24.465 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 10
+04-28 18:51:24.472 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-28 18:51:24.474 D/MI-SF   ( 1966): isSupportLowBrightnessFpsSwitch current_setting_fps: 120
+04-28 18:51:24.474 D/MI-SF   ( 1966): isTpIdleScene ,mAverageFrameRate is 4, 1
+04-28 18:51:24.474 D/MI-SF   ( 1966): modeGroup37489152 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:24.474 D/MI-SF   ( 1966): setTpIdleFps choose FPS:60, mode:37489152
+04-28 18:51:24.475 I/DisplayDeviceRepository( 3839): Display device changed render timings: "内置屏幕", renderFrameRate=60.000004, presentationDeadlineNanos=16666666, appVsyncOffsetNanos=1000000, frameRateOverrides=[]
+04-28 18:51:24.475 I/SDM     ( 1810): PartialUpdateSrcSplit::SetCwbRoiForNonPU: CWB ROI Rect(699.000000 110.000000 940.000000 351.000000)
+04-28 18:51:24.478 D/WindowManager( 3839): DeferredDisplayUpdater: partially applying DisplayInfo(1440 x 3200) immediately
+04-28 18:51:24.478 W/DisplayContentStubImpl( 3839):  displayMetricsChanged=false physicalDisplayChanged=false displayId=0 newUniqueId=local:4630946654109872275 currentUnique=local:4630946654109872275
+04-28 18:51:24.478 D/DisplayContentStubImpl( 3839): Display{#0 state=ON size=1440x3200 ROTATION_0} isActivityEmbeddingSplitEnable false
+04-28 18:51:24.478 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:24.478 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:24.479 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:24.479 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 138, only 0 and 1 are supported
+04-28 18:51:24.479 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:24.479 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 120, only 0 and 1 are supported
+04-28 18:51:24.479 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:24.479 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 76, only 0 and 1 are supported
+04-28 18:51:24.479 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:24.479 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 68, only 0 and 1 are supported
+04-28 18:51:24.479 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:24.479 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 64, only 0 and 1 are supported
+04-28 18:51:24.479 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:24.479 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 56, only 0 and 1 are supported
+04-28 18:51:24.479 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:24.479 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 42, only 0 and 1 are supported
+04-28 18:51:24.479 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:24.479 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 34, only 0 and 1 are supported
+04-28 18:51:24.479 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:24.479 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 24, only 0 and 1 are supported
+04-28 18:51:24.479 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:24.479 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 6, only 0 and 1 are supported
+04-28 18:51:24.479 D/AudioFlingerImpl( 1930): setGameParameters keyvalue: screen_state=on
+04-28 18:51:24.479 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:24.479 D/MiuiGxzwAnimView( 5963): onDisplayChanged: oldState = 2, newState = 2
+04-28 18:51:24.479 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:24.479 D/DeviceHalAidl( 1930): [default] setParameters: parameters: "screen_state=on"
+04-28 18:51:24.479 D/BarFollowAnimation( 3839): pairAppearanceRegionAndWin win=Window{13eaf2f u0 com.smartsales.prism/com.smartsales.prism.MainActivity} 0
+04-28 18:51:24.479 D/PAL: API( 1794): pal_set_param: 1497: Enter: param id 8 (PAL_PARAM_ID_SCREEN_STATE)
+04-28 18:51:24.479 D/PAL: ResourceManager( 1794): setParameter: 11845: Enter param id: 8 (PAL_PARAM_ID_SCREEN_STATE)
+04-28 18:51:24.479 I/PAL: ResourceManager( 1794): setParameter: 11872: Screen State:1
+04-28 18:51:24.479 D/PAL: ResourceManager( 1794): setParameter: 13545: Exit status: 0
+04-28 18:51:24.479 D/PAL: API( 1794): pal_set_param: 1514: Exit, status 0
+04-28 18:51:24.479 D/BarFollowAnimation( 3839): isAppTaskBarOnTop win:Window{13eaf2f u0 com.smartsales.prism/com.smartsales.prism.MainActivity} (mCurrentTopTask:Task{4746c18 #28143 type=standard A=10433:com.smartsales.prism} : true); (mAssociatedTask:Task{4746c18 #28143 type=standard A=10433:com.smartsales.prism} : true); (mHomeTask:Task{39ded46 #1 type=home} : false); mReparentToOriginParent:false mLastAppBarVisible:true mLastHomeBarVisible:false
+04-28 18:51:24.480 D/DeviceHalAidl( 1930): [usb] setParameters: parameters: "screen_state=on"
+04-28 18:51:24.480 V/AutoDensityController( 5963): on display changed 0 context dpi:586 origin dpi:600 target dpi:586
+04-28 18:51:24.480 D/AHAL_Module( 1794): updateScreenState: usb: 1
+04-28 18:51:24.480 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:24.480 D/DeviceHalAidl( 1930): [r_submix] setParameters: parameters: "screen_state=on"
+04-28 18:51:24.480 D/AHAL_Module( 1794): updateScreenState: r_submix: 1
+04-28 18:51:24.480 D/DeviceHalAidl( 1930): [bluetooth] setParameters: parameters: "screen_state=on"
+04-28 18:51:24.480 D/AHAL_Module( 1794): updateScreenState: bluetooth: 1
+04-28 18:51:24.480 D/ControlCenterWindowViewController( 5963): on display changed 0
+04-28 18:51:24.480 V/AODAutoDensityController( 5963): on display changed 0 context dpi:586 origin dpi:600 target dpi:586
+04-28 18:51:24.480 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:24.480 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:24.484 W/GestureStubView_Left( 5261): onDisplayChanged
+04-28 18:51:24.484 W/GestureStubView_Left( 5261): adaptRotation   currentRotation=0   mRotation=0
+04-28 18:51:24.484 W/GestureStubView_Right( 5261): onDisplayChanged
+04-28 18:51:24.484 W/GestureStubView_Right( 5261): adaptRotation   currentRotation=0   mRotation=0
+04-28 18:51:24.484 W/Launcher( 5261): onDisplayChanged: newRotation=0, mCurrentRotation=0
+04-28 18:51:24.489 W/InsetsSource(31883): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:24.489 W/InsetsSource(31883): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:24.489 W/InsetsSource(31883): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:24.489 W/InsetsSource(31883): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:24.489 W/InsetsSource(31883): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:24.489 W/InsetsSource(31883): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:24.496 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa8090) status 0 for display-0.
+04-28 18:51:24.500 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-28 18:51:24.519 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:24.525 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:24.547 I/SDM     ( 1810): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+04-28 18:51:24.547 D/libsensor-parseRGB( 2925): CWB NotifyIdleStatus 1
+04-28 18:51:24.566 D/vendor.qti.bluetooth@1.0-wake_lock( 1781): Release wakelock is released
+04-28 18:51:24.593 I/MiuiNetworkPolicy( 3839): updateUidState uid = 10276, uidState = 19
+04-28 18:51:24.600 D/MI-SF   ( 1966): setIdleFps choose FPS:60, mode:20709632 mode_group 24641792
+04-28 18:51:24.600 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=60.00 Hz, modePtr={id=5, vsyncRate=60.00 Hz, peakRefreshRate=60.00 Hz}}, emitEvent=false, force=false}
+04-28 18:51:24.607 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 5, WxH 1440x3200, fps 60@idle@60:1
+04-28 18:51:24.608 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:24.608 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:24.609 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-28 18:51:24.613 I/.quicksearchbox(31883): This is non sticky GC, maxfree is 33554432 minfree is 8388608
+04-28 18:51:24.613 I/.quicksearchbox(31883): Explicit concurrent copying GC freed 11MB AllocSpace bytes, 38(6876KB) LOS objects, 46% free, 36MB/68MB, paused 593us,353us total 162.354ms
+04-28 18:51:24.613 I/.quicksearchbox(31883): WaitForGcToComplete blocked Background on Explicit for 34.212ms
+04-28 18:51:24.613 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 1
+04-28 18:51:24.615 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 1
+04-28 18:51:24.618 D/JavaheapMonitor(31883): Java heap used=37M max=256M, proc: com.android.quicksearchbox
+04-28 18:51:24.620 V/JavaheapMonitor(31883): Check java heap usage finished! Next check delay: 300000
+04-28 18:51:24.622 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:24.626 D/AudioPipeline(14426): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-28 18:51:24.627 D/DownloadService(14426): Audio files state: downloading=1, queued=0, ready=1, queueSize=0
+04-28 18:51:24.629 W/DownloadService(14426): Notification permission missing, skip foreground notification update
+04-28 18:51:24.630 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:24.668 D/MI-SF   ( 1966): isSupportLowBrightnessFpsSwitch current_setting_fps: 120
+04-28 18:51:24.668 D/MI-SF   ( 1966): isTpIdleScene ,mAverageFrameRate is 4, 1
+04-28 18:51:24.668 D/MI-SF   ( 1966): modeGroup20709632 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:24.668 D/MI-SF   ( 1966): setTpIdleFps choose FPS:60, mode:37489152
+04-28 18:51:24.668 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=60.00 Hz, modePtr={id=7, vsyncRate=60.00 Hz, peakRefreshRate=60.00 Hz}}, emitEvent=true, force=false}
+04-28 18:51:24.668 E/DisplayModeController( 1966): setDesiredMode : Idle status skip setActiveMode, isDdicIdleMode: 1
+04-28 18:51:24.674 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 7, WxH 1440x3200, fps 60@auto@60:10
+04-28 18:51:24.675 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:24.675 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:24.676 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-28 18:51:24.676 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-28 18:51:24.679 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 10
+04-28 18:51:24.679 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 10
+04-28 18:51:24.680 I/WM-WorkerWrapper(31883): Worker result SUCCESS for Work [ id=b22413e2-488e-4272-8fed-f55e3ce7cecd, tags={ com.android.quicksearchbox.settings.UpdateSettingsWorker } ]
+04-28 18:51:24.690 D/MI-SF   ( 1966): isSupportLowBrightnessFpsSwitch current_setting_fps: 120
+04-28 18:51:24.690 D/MI-SF   ( 1966): isTpIdleScene ,mAverageFrameRate is 4, 1
+04-28 18:51:24.690 D/MI-SF   ( 1966): modeGroup37489152 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:24.690 D/MI-SF   ( 1966): setTpIdleFps choose FPS:60, mode:37489152
+04-28 18:51:24.691 I/SDM     ( 1810): PartialUpdateSrcSplit::SetCwbRoiForNonPU: CWB ROI Rect(699.000000 110.000000 940.000000 351.000000)
+04-28 18:51:24.698 D/PackageManager( 3839): set app component=ComponentInfo{com.android.quicksearchbox/androidx.work.impl.background.systemalarm.RescheduleReceiver} enabled state: 2 from com.android.quicksearchbox,uid=10135,pid=31883
+04-28 18:51:24.698 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-28 18:51:24.720 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa8770) status 0 for display-0.
+04-28 18:51:24.720 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-28 18:51:24.728 I/.quicksearchbox(31883): This is non sticky GC, maxfree is 33554432 minfree is 8388608
+04-28 18:51:24.729 I/.quicksearchbox(31883): Explicit concurrent copying GC freed 2972KB AllocSpace bytes, 30(4848KB) LOS objects, 50% free, 30MB/61MB, paused 75us,102us total 110.705ms
+04-28 18:51:24.732 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:24.736 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:24.768 I/SDM     ( 1810): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+04-28 18:51:24.768 D/libsensor-parseRGB( 2925): CWB NotifyIdleStatus 1
+04-28 18:51:24.778 D/MI-SF   ( 1966): setIdleFps choose FPS:60, mode:20709632 mode_group 24641792
+04-28 18:51:24.778 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=60.00 Hz, modePtr={id=5, vsyncRate=60.00 Hz, peakRefreshRate=60.00 Hz}}, emitEvent=false, force=false}
+04-28 18:51:24.778 W/ActivityManagerServiceImpl( 3839): Sending non-protected broadcast com.modemenhance.ACTION_MODEMWIFI_RSSI_POLL from system 5894:com.android.phone/1001 pkg com.android.phone. Callers=
+04-28 18:51:24.779 I/WifiService( 3839): getConnectionInfo uid=1001
+04-28 18:51:24.779 V/WifiService( 3839): Clearing REDACT_FOR_LOCAL_MAC_ADDRESS for com.android.phone(uid=1001)
+04-28 18:51:24.779 V/WifiService( 3839): Clearing REDACT_FOR_NETWORK_SETTINGS for com.android.phone(uid=1001)
+04-28 18:51:24.779 V/WifiService( 3839): Clearing REDACT_FOR_ACCESS_FINE_LOCATION for com.android.phone(uid=1001)
+04-28 18:51:24.779 D/SlaveWifiManager( 5894): getWifiSlaveConnectionInfo
+04-28 18:51:24.783 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 5, WxH 1440x3200, fps 60@idle@60:1
+04-28 18:51:24.784 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:24.784 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:24.785 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-28 18:51:24.791 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 1
+04-28 18:51:24.791 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 1
+04-28 18:51:24.821 I/.quicksearchbox(31883): This is non sticky GC, maxfree is 33554432 minfree is 8388608
+04-28 18:51:24.821 I/.quicksearchbox(31883): Explicit concurrent copying GC freed 2113KB AllocSpace bytes, 14(1480KB) LOS objects, 50% free, 27MB/55MB, paused 58us,90us total 90.492ms
+04-28 18:51:24.825 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:24.827 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:24.830 D/AudioPipeline(14426): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-28 18:51:24.830 D/DownloadService(14426): Audio files state: downloading=1, queued=0, ready=1, queueSize=0
+04-28 18:51:24.833 W/DownloadService(14426): Notification permission missing, skip foreground notification update
+04-28 18:51:24.856 D/MI-SF   ( 1966): isSupportLowBrightnessFpsSwitch current_setting_fps: 120
+04-28 18:51:24.857 D/MI-SF   ( 1966): isTpIdleScene ,mAverageFrameRate is 4, 1
+04-28 18:51:24.857 D/MI-SF   ( 1966): modeGroup20709632 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:24.857 D/MI-SF   ( 1966): setTpIdleFps choose FPS:60, mode:37489152
+04-28 18:51:24.857 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=60.00 Hz, modePtr={id=7, vsyncRate=60.00 Hz, peakRefreshRate=60.00 Hz}}, emitEvent=true, force=false}
+04-28 18:51:24.857 E/DisplayModeController( 1966): setDesiredMode : Idle status skip setActiveMode, isDdicIdleMode: 1
+04-28 18:51:24.865 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 7, WxH 1440x3200, fps 60@auto@60:10
+04-28 18:51:24.866 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:24.866 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:24.873 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 10
+04-28 18:51:24.874 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 10
+04-28 18:51:24.881 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:24.882 I/libsensor-boledalgo( 2925): dbv:1524,lux:206.7,cct:4829.1,hsv:2.6, CWB R:7.3,G:5.3,B:29.2 Event C:4305.1,R:2174.7,G:1712.7,B:844.4 Cali C:0.0,R:0.0,G:0.0,B:0.0
+04-28 18:51:24.883 D/MI-SF   ( 1966): isSupportLowBrightnessFpsSwitch current_setting_fps: 120
+04-28 18:51:24.883 D/MI-SF   ( 1966): isTpIdleScene ,mAverageFrameRate is 4, 1
+04-28 18:51:24.883 D/MI-SF   ( 1966): modeGroup37489152 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:24.883 D/MI-SF   ( 1966): setTpIdleFps choose FPS:60, mode:37489152
+04-28 18:51:24.885 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-28 18:51:24.886 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-28 18:51:24.887 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:24.919 W/NetworkStats( 3839): High-frequency openSessionForUsageStats detected (window 30ms):
+04-28 18:51:24.919 W/NetworkStats( 3839):   pkg=android, count=30
+04-28 18:51:24.955 I/SDM     ( 1810): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+04-28 18:51:24.955 D/libsensor-parseRGB( 2925): CWB NotifyIdleStatus 1
+04-28 18:51:24.960 D/JavaheapMonitor(32464): Java heap used=7M max=256M, proc: com.xiaomi.xmsf
+04-28 18:51:24.960 V/JavaheapMonitor(32464): Check java heap usage finished! Next check delay: 300000
+04-28 18:51:24.966 I/SDM     ( 1810): PartialUpdateSrcSplit::SetCwbRoiForNonPU: CWB ROI Rect(699.000000 110.000000 940.000000 351.000000)
+04-28 18:51:24.967 D/MI-SF   ( 1966): setIdleFps choose FPS:60, mode:20709632 mode_group 24641792
+04-28 18:51:24.968 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=60.00 Hz, modePtr={id=5, vsyncRate=60.00 Hz, peakRefreshRate=60.00 Hz}}, emitEvent=false, force=false}
+04-28 18:51:24.968 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-28 18:51:24.981 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 5, WxH 1440x3200, fps 60@idle@60:1
+04-28 18:51:24.982 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:24.982 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:24.983 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-28 18:51:24.986 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 1
+04-28 18:51:24.987 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa30d0) status 0 for display-0.
+04-28 18:51:24.987 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-28 18:51:24.987 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 1
+04-28 18:51:24.992 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:24.995 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:25.046 D/AudioPipeline(14426): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-28 18:51:25.046 D/DownloadService(14426): Audio files state: downloading=1, queued=0, ready=1, queueSize=0
+04-28 18:51:25.048 W/DownloadService(14426): Notification permission missing, skip foreground notification update
+04-28 18:51:25.073 D/MI-SF   ( 1966): isSupportLowBrightnessFpsSwitch current_setting_fps: 120
+04-28 18:51:25.073 D/MI-SF   ( 1966): isTpIdleScene ,mAverageFrameRate is 4, 1
+04-28 18:51:25.073 D/MI-SF   ( 1966): modeGroup20709632 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:25.074 D/MI-SF   ( 1966): setTpIdleFps choose FPS:60, mode:37489152
+04-28 18:51:25.074 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=60.00 Hz, modePtr={id=7, vsyncRate=60.00 Hz, peakRefreshRate=60.00 Hz}}, emitEvent=true, force=false}
+04-28 18:51:25.074 E/DisplayModeController( 1966): setDesiredMode : Idle status skip setActiveMode, isDdicIdleMode: 1
+04-28 18:51:25.074 I/SDM     ( 1810): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+04-28 18:51:25.075 D/libsensor-parseRGB( 2925): CWB NotifyIdleStatus 1
+04-28 18:51:25.081 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 7, WxH 1440x3200, fps 60@auto@60:10
+04-28 18:51:25.082 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:25.082 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:25.087 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 10
+04-28 18:51:25.087 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 10
+04-28 18:51:25.093 I/libsensor-boledalgo( 2925): dbv:1524,lux:205.7,cct:4904.7,hsv:2.6, CWB R:7.3,G:5.3,B:29.2 Event C:4297.0,R:2178.5,G:1719.2,B:854.0 Cali C:0.0,R:0.0,G:0.0,B:0.0
+04-28 18:51:25.094 D/JavaheapMonitor( 5714): Java heap used=8M max=256M, proc: com.st.android.nfc_extensions_16
+04-28 18:51:25.094 V/JavaheapMonitor( 5714): Check java heap usage finished! Next check delay: 300000
+04-28 18:51:25.099 D/MI-SF   ( 1966): isSupportLowBrightnessFpsSwitch current_setting_fps: 120
+04-28 18:51:25.099 D/MI-SF   ( 1966): isTpIdleScene ,mAverageFrameRate is 4, 1
+04-28 18:51:25.099 D/MI-SF   ( 1966): modeGroup37489152 mIsSupportAutomodeForMaxFpsSetting is 1(1), getCurrentBrightness() = 1366(0), mIsKeepAutoMode 0 isAutoModeAllowed() 1
+04-28 18:51:25.099 D/MI-SF   ( 1966): setTpIdleFps choose FPS:60, mode:37489152
+04-28 18:51:25.101 I/vendor.qti.hardware.display.composer-service( 1810): Sensor: notify citsensorservice to trigger cwb, misForced = 0
+04-28 18:51:25.102 I/SDM     ( 1810): CWB config passed by cwb_client : tappoint 1  CWB_ROI : (699.000000 110.000000 940.000000 351.000000) for display-0
+04-28 18:51:25.106 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:25.109 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:25.121 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:25.122 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 138, only 0 and 1 are supported
+04-28 18:51:25.122 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:25.122 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 120, only 0 and 1 are supported
+04-28 18:51:25.122 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:25.122 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 76, only 0 and 1 are supported
+04-28 18:51:25.122 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:25.122 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 68, only 0 and 1 are supported
+04-28 18:51:25.122 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:25.122 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 64, only 0 and 1 are supported
+04-28 18:51:25.122 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:25.122 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 56, only 0 and 1 are supported
+04-28 18:51:25.122 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:25.122 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 42, only 0 and 1 are supported
+04-28 18:51:25.122 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:25.122 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 34, only 0 and 1 are supported
+04-28 18:51:25.122 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:25.122 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 24, only 0 and 1 are supported
+04-28 18:51:25.122 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:25.122 E/DisplayModeDirectorImpl( 3839): Invalid displayId: 6, only 0 and 1 are supported
+04-28 18:51:25.122 D/DisplayContentStubImpl( 3839): onNewImeFrame: isImeVisible = false, imeFrame = Rect(0, 0 - 0, 0)
+04-28 18:51:25.122 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:25.122 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:25.122 D/BarFollowAnimation( 3839): pairAppearanceRegionAndWin win=Window{13eaf2f u0 com.smartsales.prism/com.smartsales.prism.MainActivity} 0
+04-28 18:51:25.123 D/BarFollowAnimation( 3839): isAppTaskBarOnTop win:Window{13eaf2f u0 com.smartsales.prism/com.smartsales.prism.MainActivity} (mCurrentTopTask:Task{4746c18 #28143 type=standard A=10433:com.smartsales.prism} : true); (mAssociatedTask:Task{4746c18 #28143 type=standard A=10433:com.smartsales.prism} : true); (mHomeTask:Task{39ded46 #1 type=home} : false); mReparentToOriginParent:false mLastAppBarVisible:true mLastHomeBarVisible:false
+04-28 18:51:25.123 D/MiuiRefreshRatePolicy( 3839): reset
+04-28 18:51:25.123 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:25.123 W/InsetsSource( 3839): Has no intersection or mTmpFrame.height(), return Insets.NONE mTmpFrame.height() =0 hasIntersection =false
+04-28 18:51:25.153 D/JavaheapMonitor( 5894): Java heap used=36M max=256M, proc: com.android.phone
+04-28 18:51:25.153 V/JavaheapMonitor( 5894): Check java heap usage finished! Next check delay: 300000
+04-28 18:51:25.174 I/SDM     ( 1810): DisplayBase::CommitThread: Received Idle Timeout, panel: cmd, timeout: 70000 us
+04-28 18:51:25.174 D/libsensor-parseRGB( 2925): CWB NotifyIdleStatus 1
+04-28 18:51:25.190 I/SDM     ( 1810): PartialUpdateSrcSplit::SetCwbRoiForNonPU: CWB ROI Rect(699.000000 110.000000 940.000000 351.000000)
+04-28 18:51:25.192 E/HwcComposer( 1966): getLuts failed Status(-129, EX_TRANSACTION_FAILED): 'UNKNOWN_TRANSACTION: '
+04-28 18:51:25.216 I/SDM     ( 1810): NotifyCWBStatus: Notify the client about buffer (0xefaa0c60) status 0 for display-0.
+04-28 18:51:25.216 I/SDM     ( 1810): SDMConcurrentWriteBack::ProcessCWBStatus: CWB queue is empty. Display: 0
+04-28 18:51:25.249 D/MI-SF   ( 1966): setIdleFps choose FPS:60, mode:20709632 mode_group 24641792
+04-28 18:51:25.249 D/DisplayModeController( 1966): setDesiredMode 4630946654109872275 {mode={fps=60.00 Hz, modePtr={id=5, vsyncRate=60.00 Hz, peakRefreshRate=60.00 Hz}}, emitEvent=false, force=false}
+04-28 18:51:25.255 I/SDM     ( 1810): SDMDisplay::SetActiveConfigWithConstraints: display = 0, config: 5, WxH 1440x3200, fps 60@idle@60:1
+04-28 18:51:25.256 W/SDM     ( 1810): HWDeviceDRM::GetSupportedBitClkRate: Requested rate not supported: 1286000000
+04-28 18:51:25.256 I/SDM     ( 1810): HWDeviceDRM::UpdateMixerAttributes: Mixer WxH 1440x3200-1 for Peripheral
+04-28 18:51:25.257 I/SDM     ( 1810): HWDeviceDRM::SetupConcurrentWriteback: Tear down the Concurrent Writeback topology
+04-28 18:51:25.261 D/libsensor-D2SNotifier( 2925): DisplayId 0 Displayinfo2SlpiNotifier to type 8 displayFrequency = 1
+04-28 18:51:25.261 D/FPSMonitor( 1841): threadFuncFpsMonitor display 0, fps 1
+04-28 18:51:25.264 I/sensors ( 2925): qsh_qmi:41, qsh_qmi
+04-28 18:51:25.266 I/sensors ( 2925): ~qsh_qmi:68, ~qsh_qmi
+04-28 18:51:25.270 I/adbd    ( 3027): in ShellService: export ANDROID_LOG_TAGS="''"; exec logcat '-d' '-v' 'time'

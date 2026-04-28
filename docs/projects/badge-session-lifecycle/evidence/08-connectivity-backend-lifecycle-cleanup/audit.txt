@@ -1,0 +1,70 @@
+Sprint 08 Connectivity Backend Lifecycle Cleanup Audit
+Date: 2026-04-27
+Lane: develop
+
+Scope
+
+- Primary target: app-core/src/main/java/com/smartsales/prism/data/connectivity/legacy/DeviceConnectionManagerConnectionSupport.kt
+- Primary target: app-core/src/main/java/com/smartsales/prism/data/connectivity/RealConnectivityBridge.kt
+- Secondary target unchanged: app-core/src/main/java/com/smartsales/prism/data/connectivity/RealConnectivityService.kt
+- Public connectivity API docs unchanged: docs/cerb/connectivity-bridge/spec.md, docs/cerb/connectivity-bridge/interface.md
+
+Core Flow Alignment
+
+- Reconnect remains suspend/result-driven through DeviceConnectionManagerReconnectSupport.reconnectAndWait().
+- No fixed-delay reconnect fire-and-poll path was added.
+- BLE/shared connected state remains separate from HTTP media readiness:
+  - DeviceConnectionManagerConnectionSupport.connectUsingSession() resolves BLE + badge network status only.
+  - RealConnectivityBridge.isReady() remains the HTTP media preflight path.
+- Registered-badge repair remains on RealConnectivityService.updateWifiConfig() -> WifiProvisioner.provision() -> DeviceConnectionManager.confirmManualWifiProvision().
+- Manual repair still preserves session/registry material and does not route through add-device pairing.
+- Media recovery remains single-flight through RealConnectivityBridge.mediaRecoveryMutex and mediaRecoveryInFlight.
+- Active-download protection is unchanged; this sprint did not touch SimAudioRepositorySyncSupport.kt.
+
+Private/Internal Cleanup
+
+- DeviceConnectionManagerConnectionSupport.kt:
+  - Collapsed repeated pairing-state construction into private BlePeripheral.toPairingState() and BleSession.toPairingState() helpers.
+  - Collapsed duplicate WifiDisconnected error construction into private wifiDisconnectedError().
+  - Simplified requestHotspotCredentials(), queryNetworkStatus(), reconnect network-query handling, retry scheduling, saved-credential replay logging, and manual-repair confirmation branches.
+  - Preserved existing state outcomes, repair events, endpoint grace handling, heartbeat behavior, and session/known-network persistence.
+- RealConnectivityBridge.kt:
+  - Removed stale/duplicative comments and blank-line churn only.
+  - Preserved endpoint reuse, HTTP readiness preflight, isolation probe, recording notification gating, and single-flight media recovery behavior.
+
+Line Counts
+
+- Before:
+  - DeviceConnectionManagerConnectionSupport.kt: 742
+  - RealConnectivityBridge.kt: 655
+  - RealConnectivityService.kt: 203
+- After:
+  - DeviceConnectionManagerConnectionSupport.kt: 601
+  - RealConnectivityBridge.kt: 634
+  - RealConnectivityService.kt: 203
+
+Public API / Contract Review
+
+- No domain connectivity interface signatures changed.
+- DeviceConnectionManager.kt was not edited.
+- docs/cerb/connectivity-bridge/spec.md and docs/cerb/connectivity-bridge/interface.md did not require sync because the sprint preserved behavior and public contracts.
+
+Verification
+
+- Focused tests passed:
+  ./gradlew :app-core:testDebugUnitTest --tests 'com.smartsales.prism.data.connectivity.ConnectivityStructureTest' --tests 'com.smartsales.prism.ui.GodStructureGuardrailTest' --tests 'com.smartsales.prism.data.connectivity.RealConnectivityBridgeTest' --tests 'com.smartsales.prism.data.connectivity.RealConnectivityServiceTest' --tests 'com.smartsales.prism.data.connectivity.legacy.DefaultDeviceConnectionManagerIngressTest' --tests 'com.smartsales.prism.data.connectivity.legacy.DeviceConnectionManagerReconnectSupportTest'
+  Result: BUILD SUCCESSFUL
+- Compile passed:
+  ./gradlew :app-core:compileDebugUnitTestKotlin
+  Result: BUILD SUCCESSFUL
+- Debug build passed:
+  ./gradlew :app-core:assembleDebug
+  Result: BUILD SUCCESSFUL
+- adb blocker:
+  adb devices -> no attached devices
+  adb install -r -d app-core/build/outputs/apk/debug/app-core-debug.apk -> adb: no devices/emulators found
+
+Blocked Evidence
+
+- L3 install/logcat evidence could not be captured because no Android device or emulator was attached.
+- Runtime claims remain lowered-confidence until adb install and filtered logcat evidence are captured.

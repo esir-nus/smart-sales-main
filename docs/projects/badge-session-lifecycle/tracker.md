@@ -23,6 +23,7 @@ open
 | 05 | connectivity-dataflow-monitoring-fixloop | cancelled | Superseded by Sprint 06 before operation; local Sprint 05 audit material is stale after `b7340f878` and is not current truth without re-audit. | — |
 | 06 | badge-wifi-recovery-state-machine | done | Superseded Sprint 05's connectivity north-star/spec/runtime recovery path; BLE disconnected remains transport recovery, solid-IP HTTP media failure triggers bounded single-flight saved-credential replay, and multi-badge sync/download work is scoped to the active badge. | [sprints/06-badge-wifi-recovery-state-machine.md](sprints/06-badge-wifi-recovery-state-machine.md) |
 | 07 | connectivity-dataflow-simplification | done | Removed stale phone-Wi-Fi-derived and HTTP-unreachable reconnect error branches with green focused tests/build/install and constrained one-badge L3 reconnect evidence; multi-badge and hard manual-collaboration paths were explicitly skipped. | [sprints/07-connectivity-dataflow-simplification.md](sprints/07-connectivity-dataflow-simplification.md) |
+| 08 | connectivity-backend-lifecycle-cleanup | blocked | Backend lifecycle cleanup met local structure/test/build gates and reduced target files below 650 LOC, but adb install and filtered logcat L3 evidence could not be captured because no device/emulator was attached. | [sprints/08-connectivity-backend-lifecycle-cleanup.md](sprints/08-connectivity-backend-lifecycle-cleanup.md) |
 
 ## Cross-Sprint Decisions
 
@@ -41,4 +42,4 @@ open
 
 ## Ongoing Justification
 
-Sprint 07 continues this project past the six-sprint guideline because Sprint 06 closed the recovery model but intentionally left a same-surface cleanup question: duplicated and deprecated connectivity data-flow branches must now be audited against the new Core Flow-aligned behavior before they can be removed safely. Keeping this work in the same project preserves the evidence chain for registered-badge recovery, active-device ownership, and active-download guards without expanding product scope.
+Sprint 08 continues this project past the six-sprint guideline because Sprint 06 closed the recovery model and Sprint 07 removed stale same-surface branches, but the backend reconnect, registered-badge repair, and HTTP media-readiness corridor still has lifecycle-sensitive support-code debt. Keeping this work in the same project preserves the evidence chain for registered-badge recovery, active-device ownership, and active-download guards without expanding into audio sync, BLE GATT internals, setup ViewModels, or UI redesign.

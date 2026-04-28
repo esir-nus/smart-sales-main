@@ -61,19 +61,17 @@ class RealConnectivityBridge @Inject constructor(
     private val phoneWifiProvider: PhoneWifiProvider,
     private val connectivityPrompt: ConnectivityPrompt,
 ) : ConnectivityBridge {
-    
     companion object {
         private const val TAG = "AudioPipeline"
         private const val POST_CREDENTIAL_GRACE_ATTEMPTS = 3
     }
-    
+
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private val endpointMutex = Mutex()
     private val mediaRecoveryMutex = Mutex()
     private var activeEndpointSnapshot: ActiveEndpointSnapshot? = null
     private var endpointRefreshRequired = false
     private var mediaRecoveryInFlight: MediaRecoveryAttempt? = null
-    // 保存最后已知的徽章 IP，用于断开时隔离探测
     @Volatile private var lastKnownBadgeIp: String? = null
     private val recordingNotificationsFlow = MutableSharedFlow<RecordingNotification>(
         replay = 0,
@@ -121,9 +119,6 @@ class RealConnectivityBridge @Inject constructor(
                 )
             }
         }
-
-        // 断开时隔离探测：当徽章从已配网状态意外断开时，延迟 1s 检查是否为 AP 客户端隔离
-        // 探测仅使用单次 HTTP 请求，不触发 BLE 查询，满足 ESP32 280K RAM 约束
         scope.launch {
             var prevLegacyState: ConnectionState = deviceManager.state.value
             deviceManager.state.collect { current ->
@@ -136,7 +131,7 @@ class RealConnectivityBridge @Inject constructor(
                     val ip = lastKnownBadgeIp
                     lastKnownBadgeIp = null
                     if (ip != null) {
-                        delay(1_000L) // 等待断开状态稳定后再探测
+                        delay(1_000L)
                         runIsolationProbeIfSuspected(
                             badgeIp = ip,
                             httpClient = httpClient,
@@ -149,8 +144,6 @@ class RealConnectivityBridge @Inject constructor(
             }
         }
     }
-    
-    
     override val connectionState: StateFlow<BadgeConnectionState> = combine(
         deviceManager.state,
         badgeStateMonitor.status
@@ -180,7 +173,6 @@ class RealConnectivityBridge @Inject constructor(
             badgeStatus = badgeStateMonitor.status.value
         )
     )
-    
     override suspend fun downloadRecording(
         filename: String,
         onProgress: ((bytesRead: Long, totalBytes: Long) -> Unit)?
@@ -205,7 +197,6 @@ class RealConnectivityBridge @Inject constructor(
             }
         }
     }
-    
     override suspend fun listRecordings(): Result<List<String>> {
         val baseUrl = resolveBaseUrl() ?: return Result.Error(
             Exception("无法获取设备IP — 请确认 Badge 已连接 WiFi")
@@ -226,8 +217,6 @@ class RealConnectivityBridge @Inject constructor(
             if (result is Result.Error) invalidateActiveEndpoint("list failed after credential replay")
         }
     }
-    
-    
     override fun recordingNotifications(): Flow<RecordingNotification> =
         recordingNotificationsFlow.asSharedFlow()
 
@@ -245,8 +234,6 @@ class RealConnectivityBridge @Inject constructor(
     override suspend fun requestSdCardSpace(): Boolean = deviceManager.requestSdCardSpace()
 
     override suspend fun notifyCommandEnd() = deviceManager.notifyCommandEnd()
-
-    
     override suspend fun isReady(): Boolean {
         android.util.Log.d(TAG, "🔎 isReady preflight: start")
         val runtimeKey = currentRuntimeKey()
@@ -293,7 +280,6 @@ class RealConnectivityBridge @Inject constructor(
         endpointRecoveryCoordinator.clearPostCredentialGrace(activeRuntimeKey)
         return false
     }
-    
     override suspend fun deleteRecording(filename: String): Boolean {
         val baseUrl = resolveBaseUrl() ?: return false
         return when (httpClient.deleteWav(baseUrl, filename)) {
@@ -304,7 +290,6 @@ class RealConnectivityBridge @Inject constructor(
             }
         }
     }
-    
     private fun mapToPrismState(
         legacy: ConnectionState,
         badgeStatus: BadgeStatus
@@ -395,7 +380,6 @@ class RealConnectivityBridge @Inject constructor(
             else -> false
         }
     }
-    
     private fun mapHttpError(throwable: Throwable): WavDownloadResult {
         return when (throwable) {
             is BadgeHttpException.NotFoundException -> WavDownloadResult.Error(
@@ -412,11 +396,6 @@ class RealConnectivityBridge @Inject constructor(
             )
         }
     }
-    
-    /**
-     * Reuses the active runtime endpoint whenever possible so HTTP sync work
-     * does not repeatedly trigger BLE Wi‑Fi status queries on ESP32.
-     */
     private suspend fun resolveBaseUrl(): String? {
         return endpointMutex.withLock {
             activeEndpointSnapshot

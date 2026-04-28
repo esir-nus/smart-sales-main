@@ -8,6 +8,7 @@ import com.smartsales.prism.domain.audio.AudioRepository
 import com.smartsales.prism.domain.model.ChatMessage
 import com.smartsales.prism.domain.model.UiState
 import com.smartsales.prism.domain.repository.HistoryRepository
+import com.smartsales.prism.ui.sim.buildSpeakerAwareTranscript
 import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -137,7 +138,7 @@ internal class AgentSessionCoordinator(
                     append(it)
                     append("\n\n")
                 }
-                val transcript = artifacts.transcriptMarkdown ?: ""
+                val transcript = buildSpeakerAwareTranscript(artifacts) ?: ""
                 if (transcript.isNotBlank()) {
                     append("**详细转写原文**\n")
                     append(transcript)

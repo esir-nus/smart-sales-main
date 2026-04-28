@@ -48,6 +48,7 @@ import com.smartsales.prism.ui.components.PrismButton
 import com.smartsales.prism.ui.components.PrismButtonStyle
 import com.smartsales.prism.ui.components.PrismSurfaceSubtle
 import com.smartsales.prism.ui.drawers.audio.AudioViewModel
+import com.smartsales.prism.ui.sim.buildSpeakerAwareTranscript
 import com.smartsales.prism.ui.theme.*
 
 /**
@@ -513,7 +514,7 @@ private fun ExpandedAudioHub(
             AudioCardAccordion(
                 title = "转写 (Transcription)",
                 icon = "TR",
-                markdownContent = artifacts?.transcriptMarkdown,
+                markdownContent = buildSpeakerAwareTranscript(artifacts),
                 status = item.status,
                 initiallyExpanded = true
             )

@@ -373,7 +373,7 @@ internal class SimAgentChatCoordinator(
         latestUserInput: String
     ): String {
         val title = record.preview.clientName
-        val transcript = truncateForPrompt(artifacts.transcriptMarkdown, 6_000)
+        val transcript = truncateForPrompt(buildSpeakerAwareTranscript(artifacts), 6_000)
         val summary = truncateForPrompt(artifacts.smartSummary?.summary, 1_200)
         val highlights = artifacts.smartSummary?.keyPoints
             ?.take(8)

@@ -3,6 +3,7 @@ package com.smartsales.prism.data.tingwu
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.util.Result
 import com.smartsales.data.aicore.TingwuCredentialsProvider
+import com.smartsales.data.aicore.params.AiParaSettingsProvider
 import com.smartsales.data.aicore.tingwu.api.TingwuApi
 import com.smartsales.data.aicore.tingwu.api.TingwuCreateTaskRequest
 import com.smartsales.data.aicore.tingwu.api.TingwuStatusResponse
@@ -46,6 +47,7 @@ import javax.inject.Singleton
 class RealTingwuPipeline @Inject constructor(
     private val api: TingwuApi,
     private val credentialsProvider: TingwuCredentialsProvider,
+    private val aiParaSettingsProvider: AiParaSettingsProvider,
     private val identityHintResolver: TingwuIdentityHintResolver,
     private val dispatchers: DispatcherProvider
 ) : TingwuPipeline {
@@ -58,10 +60,13 @@ class RealTingwuPipeline @Inject constructor(
         try {
             val credentials = credentialsProvider.obtain()
             val fileUrl = request.fileUrl ?: throw IllegalArgumentException("fileUrl must be provided for Tingwu submission")
+            val tingwuSettings = aiParaSettingsProvider.snapshot().tingwu
             val identityHint = identityHintResolver.resolveCurrentHint()
             val identityRecognitionEnabled = identityHint.enabled &&
                 !identityHint.sceneIntroduction.isNullOrBlank() &&
                 identityHint.identityContents.isNotEmpty()
+            val diarizationEnabled = request.diarizationEnabled &&
+                tingwuSettings.transcription.diarizationEnabled
             
             val taskKey = "${request.audioAssetName}_${System.currentTimeMillis()}".replace(Regex("[^a-zA-Z0-9]"), "_")
 
@@ -74,8 +79,15 @@ class RealTingwuPipeline @Inject constructor(
                 ),
                 parameters = TingwuTaskParameters(
                     transcription = TingwuTranscriptionParameters(
-                        diarizationEnabled = request.diarizationEnabled,
-                        diarization = if (request.diarizationEnabled) TingwuDiarizationParameters(outputLevel = 1) else null
+                        diarizationEnabled = diarizationEnabled,
+                        diarization = if (diarizationEnabled) {
+                            TingwuDiarizationParameters(
+                                speakerCount = tingwuSettings.transcription.diarizationSpeakerCount,
+                                outputLevel = tingwuSettings.transcription.diarizationOutputLevel
+                            )
+                        } else {
+                            null
+                        }
                     ),
                     autoChaptersEnabled = true, // We always want chapters for Analyst
                     summarizationEnabled = true, // We always want summaries for Analyst

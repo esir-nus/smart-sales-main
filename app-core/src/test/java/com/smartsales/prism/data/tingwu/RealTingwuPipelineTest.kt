@@ -5,6 +5,10 @@ import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.core.util.Result
 import com.smartsales.data.aicore.TingwuCredentials
 import com.smartsales.data.aicore.TingwuCredentialsProvider
+import com.smartsales.data.aicore.params.AiParaSettingsProvider
+import com.smartsales.data.aicore.params.AiParaSettingsSnapshot
+import com.smartsales.data.aicore.params.TingwuSettings
+import com.smartsales.data.aicore.params.TingwuTranscriptionSettings
 import com.smartsales.data.aicore.tingwu.api.TingwuApi
 import com.smartsales.data.aicore.tingwu.api.TingwuCreateTaskData
 import com.smartsales.data.aicore.tingwu.api.TingwuCreateTaskRequest
@@ -29,6 +33,12 @@ class RealTingwuPipelineTest {
         override val io: CoroutineDispatcher = dispatcher
         override val main: CoroutineDispatcher = dispatcher
         override val default: CoroutineDispatcher = dispatcher
+    }
+
+    private class LocalSettingsProvider(
+        private val snapshot: AiParaSettingsSnapshot = AiParaSettingsSnapshot()
+    ) : AiParaSettingsProvider {
+        override fun snapshot(): AiParaSettingsSnapshot = snapshot
     }
 
     private class LocalFakeTingwuApi : TingwuApi {
@@ -99,6 +109,7 @@ class RealTingwuPipelineTest {
                     model = "tingwu-test"
                 )
             },
+            aiParaSettingsProvider = LocalSettingsProvider(),
             identityHintResolver = object : TingwuIdentityHintResolver {
                 override suspend fun resolveCurrentHint(): TingwuIdentityHint = TingwuIdentityHint(
                     enabled = true,
@@ -138,6 +149,93 @@ class RealTingwuPipelineTest {
         )
         val json = Gson().toJson(request)
         assertTrue(json.contains("\"IdentityRecognitionEnabled\":true"))
+        assertTrue(json.contains("\"DiarizationEnabled\":true"))
+        assertTrue(json.contains("\"SpeakerCount\":0"))
         assertTrue(json.contains("\"MeetingAssistance\":{\"Types\":[\"Actions\",\"KeyInformation\"]}"))
+    }
+
+    @Test
+    fun `submit omits diarization when central settings disable speaker separation`() = runTest(dispatcher) {
+        val api = LocalFakeTingwuApi()
+        val pipeline = createPipeline(
+            api = api,
+            settingsProvider = LocalSettingsProvider(
+                AiParaSettingsSnapshot(
+                    tingwu = TingwuSettings(
+                        transcription = TingwuTranscriptionSettings(diarizationEnabled = false)
+                    )
+                )
+            )
+        )
+
+        val result = pipeline.submit(
+            TingwuRequest(
+                audioAssetName = "demo.wav",
+                fileUrl = "https://oss.example.com/demo.wav"
+            )
+        )
+
+        assertTrue(result is Result.Success)
+        val transcription = api.lastCreateRequest?.parameters?.transcription
+        assertEquals(false, transcription?.diarizationEnabled)
+        assertEquals(null, transcription?.diarization)
+        val json = Gson().toJson(api.lastCreateRequest)
+        assertTrue(!json.contains("\"Diarization\":{\"SpeakerCount\""))
+    }
+
+    @Test
+    fun `submit omits incomplete identity recognition hints`() = runTest(dispatcher) {
+        val api = LocalFakeTingwuApi()
+        val pipeline = createPipeline(
+            api = api,
+            identityHintResolver = object : TingwuIdentityHintResolver {
+                override suspend fun resolveCurrentHint(): TingwuIdentityHint = TingwuIdentityHint(
+                    enabled = true,
+                    sceneIntroduction = "",
+                    identityContents = listOf(TingwuIdentityContentHint("客户", "提出需求"))
+                )
+            }
+        )
+
+        val result = pipeline.submit(
+            TingwuRequest(
+                audioAssetName = "demo.wav",
+                fileUrl = "https://oss.example.com/demo.wav"
+            )
+        )
+
+        assertTrue(result is Result.Success)
+        val request = api.lastCreateRequest
+        assertEquals(false, request?.parameters?.identityRecognitionEnabled)
+        assertEquals(null, request?.parameters?.identityRecognition)
+        val json = Gson().toJson(request)
+        assertTrue(json.contains("\"IdentityRecognitionEnabled\":false"))
+        assertTrue(!json.contains("\"IdentityRecognition\":{\"SceneIntroduction\""))
+    }
+
+    private fun createPipeline(
+        api: TingwuApi = LocalFakeTingwuApi(),
+        settingsProvider: AiParaSettingsProvider = LocalSettingsProvider(),
+        identityHintResolver: TingwuIdentityHintResolver = object : TingwuIdentityHintResolver {
+            override suspend fun resolveCurrentHint(): TingwuIdentityHint = TingwuIdentityHint(enabled = false)
+        }
+    ): RealTingwuPipeline {
+        return RealTingwuPipeline(
+            api = api,
+            credentialsProvider = object : TingwuCredentialsProvider {
+                override fun obtain(): TingwuCredentials = TingwuCredentials(
+                    apiKey = "api-key",
+                    baseUrl = "https://tingwu.test/",
+                    appKey = "app-key",
+                    accessKeyId = "id",
+                    accessKeySecret = "secret",
+                    securityToken = null,
+                    model = "tingwu-test"
+                )
+            },
+            aiParaSettingsProvider = settingsProvider,
+            identityHintResolver = identityHintResolver,
+            dispatchers = dispatchers
+        )
     }
 }

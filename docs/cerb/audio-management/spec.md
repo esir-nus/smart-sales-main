@@ -187,6 +187,7 @@ See [interface.md](./interface.md) for:
 - [x] storage-backed audio repositories ship in `app-core/src/main/java/com/smartsales/prism/data/audio/`
 - [x] current SIM path is list-first: `/list` creates placeholder cards immediately and one background queue downloads badge WAVs sequentially
 - [x] transcription uses `TingwuPipeline.submit()` plus job observation
+- [x] visible transcript presentation prefers Tingwu diarization/identity data when available, rendering speaker-prefixed transcript lines from `diarizedSegments + speakerLabels` before falling back to the raw `transcriptMarkdown`
 - [x] drawer delete requires one-time per drawer-open confirmation before the first `SMARTBADGE` delete
 - [x] persisted legacy badge-like filenames (`log_YYYYMMDD_HHMMSS.wav`) are normalized back to `SMARTBADGE` on load, and delete-confirm/delete-sync fallback also treats them as badge-origin before reload normalization finishes
 - [x] SmartBadge delete persists tombstones keyed by exact badge filename before remote cleanup finishes

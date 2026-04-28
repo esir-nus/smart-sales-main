@@ -16,6 +16,7 @@ import com.smartsales.prism.domain.repository.HistoryRepository
 import com.smartsales.prism.ui.drawers.AudioItemState
 import com.smartsales.prism.ui.drawers.AudioSource
 import com.smartsales.prism.ui.drawers.AudioStatus
+import com.smartsales.prism.ui.sim.buildSpeakerAwareTranscript
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -218,7 +219,7 @@ class AudioViewModel @Inject constructor(
         }
         appendLine()
         appendLine("**详细讲演转写**")
-        val transcript = artifacts.transcriptMarkdown
+        val transcript = buildSpeakerAwareTranscript(artifacts)
         if (!transcript.isNullOrBlank()) {
             appendLine(transcript)
         } else {

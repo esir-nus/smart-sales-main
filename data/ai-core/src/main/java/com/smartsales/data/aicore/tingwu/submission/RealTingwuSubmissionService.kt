@@ -93,7 +93,7 @@ class RealTingwuSubmissionService @Inject constructor(
                 val model = credentials.model
                 val identityHint = identityHintResolver.resolveCurrentHint()
                 val identityRecognition = identityHint.sceneIntroduction
-                    ?.takeIf { identityHint.enabled && identityHint.identityContents.isNotEmpty() }
+                    ?.takeIf { identityHint.enabled && it.isNotBlank() && identityHint.identityContents.isNotEmpty() }
                     ?.let { sceneIntroduction ->
                         TingwuIdentityRecognitionParameters(
                             sceneIntroduction = sceneIntroduction,
@@ -125,7 +125,7 @@ class RealTingwuSubmissionService @Inject constructor(
                         summarization = TingwuSummarizationParameters(
                             types = tingwuSettings.summarization.types
                         ),
-                        identityRecognitionEnabled = identityHint.enabled,
+                        identityRecognitionEnabled = identityRecognition != null,
                         identityRecognition = identityRecognition,
                         meetingAssistanceEnabled = tingwuSettings.meetingAssistance.enabled,
                         meetingAssistance = TingwuMeetingAssistanceParameters(

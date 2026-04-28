@@ -106,7 +106,7 @@ fun SimArtifactContent(
     modifier: Modifier = Modifier
 ) {
     val palette = rememberSimConversationSurfacePalette()
-    val transcript = artifacts.transcriptMarkdown?.takeIf { it.isNotBlank() }
+    val transcript = buildSpeakerAwareTranscript(artifacts)
     val summary = buildSimSummarySection(artifacts)
     val highlights = artifacts.smartSummary?.keyPoints?.takeIf { it.isNotEmpty() }
         ?.joinToString("\n") { "• $it" }
@@ -447,11 +447,7 @@ internal fun resolveSimArtifactOverview(
     if (artifacts == null) return fallbackOverview?.trim()?.takeIf { it.isNotBlank() }
     val summary = buildSimSummarySection(artifacts)
     val keyPoint = artifacts.smartSummary?.keyPoints?.firstOrNull()?.takeIf { it.isNotBlank() }
-    val transcriptPreview = artifacts.transcriptMarkdown
-        ?.replace(Regex("[#*>`*_\\-]+"), " ")
-        ?.replace(Regex("\\s+"), " ")
-        ?.trim()
-        ?.takeIf { it.isNotBlank() }
+    val transcriptPreview = buildSpeakerAwareTranscriptPreview(artifacts)
         ?.take(90)
     return listOf(summary, keyPoint, transcriptPreview, fallbackOverview)
         .firstNotNullOfOrNull { candidate ->

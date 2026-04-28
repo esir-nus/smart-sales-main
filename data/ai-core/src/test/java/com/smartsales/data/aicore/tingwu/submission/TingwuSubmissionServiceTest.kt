@@ -175,6 +175,13 @@ class TingwuSubmissionServiceTest {
         assertEquals(true, request.parameters.identityRecognitionEnabled)
         assertEquals("汽车销售沟通场景，围绕车型介绍、价格和成交推进展开。", request.parameters.identityRecognition?.sceneIntroduction)
         assertEquals(listOf("销售顾问", "客户", "其他参会人"), request.parameters.identityRecognition?.identityContents?.map { it.name })
+        assertEquals(true, request.parameters.transcription?.diarizationEnabled)
+        assertEquals(0, request.parameters.transcription?.diarization?.speakerCount)
+        val json = gson.toJson(request)
+        assertTrue(json.contains("\"DiarizationEnabled\":true"))
+        assertTrue(json.contains("\"SpeakerCount\":0"))
+        assertTrue(json.contains("\"IdentityRecognitionEnabled\":true"))
+        assertTrue(json.contains("\"SceneIntroduction\":\"汽车销售沟通场景"))
     }
     
     @Test
@@ -294,6 +301,7 @@ class TingwuSubmissionServiceTest {
         assertEquals(1, api.createCalls.size)
         val params = api.createCalls[0].parameters
         assertEquals(false, params.transcription?.diarizationEnabled)
+        assertEquals(null, params.transcription?.diarization)
     }
 
     @Test
@@ -321,5 +329,33 @@ class TingwuSubmissionServiceTest {
         val json = gson.toJson(request)
         assertTrue(json.contains("\"IdentityRecognitionEnabled\":false"))
         assertTrue(!json.contains("\"IdentityRecognition\":{\"SceneIntroduction\""))
+    }
+
+    @Test
+    fun submit_whenIdentityHintMissingScene_omitsIdentityRecognitionObject() = runTest(dispatcher) {
+        val api = FakeTingwuApiForSubmission()
+        val identityResolver = FakeIdentityHintResolver(
+            hint = TingwuIdentityHint(
+                enabled = true,
+                sceneIntroduction = "",
+                identityContents = listOf(TingwuIdentityContentHint("客户", "提出需求"))
+            )
+        )
+        val service = createService(
+            api = api,
+            identityHintResolver = identityResolver
+        )
+
+        service.submit(
+            SubmissionInput(
+                fileUrl = "https://oss.example.com/audio.wav",
+                taskKey = "key",
+                sourceLanguage = "cn"
+            )
+        )
+
+        val request = api.createCalls.single()
+        assertEquals(false, request.parameters.identityRecognitionEnabled)
+        assertEquals(null, request.parameters.identityRecognition)
     }
 }

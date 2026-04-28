@@ -166,12 +166,7 @@ internal fun shouldShowSimAudioBrowseHelperDeck(
 }
 
 internal fun buildSimAudioTranscriptPreview(artifacts: TingwuJobArtifacts?): String? {
-    val markdown = artifacts?.transcriptMarkdown?.takeIf { it.isNotBlank() } ?: return null
-    return markdown
-        .replace(Regex("""[#>*`_\-\[\]\(\)]"""), " ")
-        .replace(Regex("""\s+"""), " ")
-        .trim()
-        .takeIf { it.isNotBlank() }
+    return buildSpeakerAwareTranscriptPreview(artifacts)
 }
 
 internal fun buildTransparentStateLabel(progress: Float): String {

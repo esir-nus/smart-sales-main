@@ -1,0 +1,160 @@
+--------- beginning of main
+04-29 22:01:57.254 D/SmartSalesConn(31401): 📥 RX [Notification]: Bat#59.45% (42 61 74 23 35 39 2E 34 35 25)
+04-29 22:01:57.255 D/SmartSalesConn(31401): ❓ Badge unknown notification: Bat#59.45%
+04-29 22:02:17.281 D/SmartSalesConn(31401): 📥 RX [Notification]: Bat#58.18% (42 61 74 23 35 38 2E 31 38 25)
+04-29 22:02:17.282 D/SmartSalesConn(31401): ❓ Badge unknown notification: Bat#58.18%
+04-29 22:02:37.335 D/SmartSalesConn(31401): 📥 RX [Notification]: Bat#54.18% (42 61 74 23 35 34 2E 31 38 25)
+04-29 22:02:37.335 D/SmartSalesConn(31401): ❓ Badge unknown notification: Bat#54.18%
+04-29 22:02:57.344 D/SmartSalesConn(31401): 📥 RX [Notification]: Bat#53.82% (42 61 74 23 35 33 2E 38 32 25)
+04-29 22:02:57.345 D/SmartSalesConn(31401): ❓ Badge unknown notification: Bat#53.82%
+04-29 22:03:17.385 D/SmartSalesConn(31401): 📥 RX [Notification]: Bat#53.64% (42 61 74 23 35 33 2E 36 34 25)
+04-29 22:03:17.387 D/SmartSalesConn(31401): ❓ Badge unknown notification: Bat#53.64%
+04-29 22:03:37.414 D/SmartSalesConn(31401): 📥 RX [Notification]: Bat#53.27% (42 61 74 23 35 33 2E 32 37 25)
+04-29 22:03:37.415 D/SmartSalesConn(31401): ❓ Badge unknown notification: Bat#53.27%
+04-29 22:03:57.454 D/SmartSalesConn(31401): 📥 RX [Notification]: Bat#52.73% (42 61 74 23 35 32 2E 37 33 25)
+04-29 22:03:57.455 D/SmartSalesConn(31401): ❓ Badge unknown notification: Bat#52.73%
+04-29 22:04:05.170 D/ConnectivityService(31401): connect() called for 14:C1:9F:D7:E3:EE
+04-29 22:04:05.170 D/SmartSalesConn(31401): 🏠 Registry: manuallyDisconnected=false for 14:C1:9F:D7:E3:EE
+04-29 22:04:05.170 I/SmartSalesConn(31401): 🏠 Registry: switching ...E4:06 → ...E3:EE
+04-29 22:04:05.175 D/SmartSalesConn(31401): 🏠 Registry: reconnecting target ...E3:EE
+04-29 22:04:05.175 D/SmartSalesConn(31401): 🔌 Restored session: 14:C1:9F:D7:E3:EE knownNetworks=1
+04-29 22:04:05.175 D/SmartSalesConn(31401): 🔄 Force reconnect target=14:C1:9F:D7:E3:EE
+04-29 22:04:05.176 D/ConnectivityService(31401): connect() completed for 14:C1:9F:D7:E3:EE
+04-29 22:04:05.176 I/SmartSalesConn(31401): 📶 BLE disconnected
+04-29 22:04:05.176 D/SmartSalesConn(31401): 🔌 Soft disconnect (session preserved)
+04-29 22:04:05.180 D/SmartSalesConn(31401): 🔌 Persistent GATT session closed
+04-29 22:04:06.376 D/SmartSalesConn(31401): 📋 Service: 00001801-0000-1000-8000-00805f9b34fb
+04-29 22:04:06.376 D/SmartSalesConn(31401):   📋 Char: 00002a05-0000-1000-8000-00805f9b34fb [INDICATE ]
+04-29 22:04:06.376 D/SmartSalesConn(31401):     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-29 22:04:06.376 D/SmartSalesConn(31401): 📋 Service: 00001800-0000-1000-8000-00805f9b34fb
+04-29 22:04:06.376 D/SmartSalesConn(31401):   📋 Char: 00002a00-0000-1000-8000-00805f9b34fb [READ ]
+04-29 22:04:06.376 D/SmartSalesConn(31401):     📋 (no descriptors)
+04-29 22:04:06.376 D/SmartSalesConn(31401):   📋 Char: 00002a01-0000-1000-8000-00805f9b34fb [READ ]
+04-29 22:04:06.376 D/SmartSalesConn(31401):     📋 (no descriptors)
+04-29 22:04:06.376 D/SmartSalesConn(31401):   📋 Char: 00002aa6-0000-1000-8000-00805f9b34fb [READ ]
+04-29 22:04:06.376 D/SmartSalesConn(31401):     📋 (no descriptors)
+04-29 22:04:06.376 D/SmartSalesConn(31401): 📋 Service: 000000ff-0000-1000-8000-00805f9b34fb
+04-29 22:04:06.376 D/SmartSalesConn(31401):   📋 Char: 0000ff01-0000-1000-8000-00805f9b34fb [READ WRITE NOTIFY ]
+04-29 22:04:06.376 D/SmartSalesConn(31401):     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-29 22:04:06.376 D/SmartSalesConn(31401):   📋 Char: 0000ff02-0000-1000-8000-00805f9b34fb [READ ]
+04-29 22:04:06.376 D/SmartSalesConn(31401):     📋 (no descriptors)
+04-29 22:04:06.376 D/SmartSalesConn(31401):   📋 Char: 0000ff03-0000-1000-8000-00805f9b34fb [WRITE ]
+04-29 22:04:06.376 D/SmartSalesConn(31401):     📋 (no descriptors)
+04-29 22:04:06.390 D/SmartSalesConn(31401): No CCCD descriptor for 0000ff02-0000-1000-8000-00805f9b34fb, notifications not available (will poll)
+04-29 22:04:06.390 I/SmartSalesConn(31401): 🔌 Persistent GATT session established: 14:C1:9F:D7:E3:EE
+04-29 22:04:06.391 I/SmartSalesConn(31401): 📶 BLE connected, waiting for explicit network observation
+04-29 22:04:06.391 D/SmartSalesConn(31401): 📡 Starting persistent notification listener for 14:C1:9F:D7:E3:EE
+04-29 22:04:06.391 D/SmartSalesConn(31401): 🌐 network query device=CHLE_Intelligent
+04-29 22:04:06.391 I/SmartSalesConn(31401): 📡 queryNetwork ENTRY (in mutex)
+04-29 22:04:06.391 D/SmartSalesConn(31401): 📡 cache skipped for device switch cached=14:C1:9F:D7:E4:06 requested=14:C1:9F:D7:E3:EE
+04-29 22:04:06.392 D/SmartSalesConn(31401): 📤 TX [NetworkQuery]: wifi#address#ip#name (77 69 66 69 23 61 64 64 72 65 73 73 23 69 70 23 6E 61 6D 65)
+04-29 22:04:06.419 D/SmartSalesConn(31401): 📥 RX [Notification]: IP#192.168.0.102 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 30 32)
+04-29 22:04:06.420 D/SmartSalesConn(31401): ❓ Badge unknown notification: IP#192.168.0.102
+04-29 22:04:06.420 D/SmartSalesConn(31401): 📥 RX [NetworkResponse]: IP#192.168.0.102 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 30 32)
+04-29 22:04:06.420 D/SmartSalesConn(31401): 📥 RX [Notification]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-29 22:04:06.421 D/SmartSalesConn(31401): ❓ Badge unknown notification: SD#MstRobot
+04-29 22:04:06.421 D/SmartSalesConn(31401): 📥 RX [NetworkResponse]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-29 22:04:06.421 D/SmartSalesConn(31401): 📡 fresh query, caching IP=192.168.0.102
+04-29 22:04:06.421 D/SmartSalesConn(31401): 📶 state=CONNECTED ip=192.168.0.102
+04-29 22:04:06.421 D/SmartSalesConn(31401): 🔌 connectUsingSession: connected, ip=192.168.0.102 ssid=MstRobot
+04-29 22:04:06.422 D/SmartSalesConn(31401): 📤 TX [BadgeSignal]: Ver#get (56 65 72 23 67 65 74)
+04-29 22:04:06.450 D/SmartSalesConn(31401): 📥 RX [Notification]: Ver#1.0.0.1 (56 65 72 23 31 2E 30 2E 30 2E 31)
+04-29 22:04:06.450 I/SmartSalesConn(31401): 🧾 Badge firmware version: 1.0.0.1
+04-29 22:04:06.451 I/SmartSalesConn(31401): 🧾 Badge firmware version query sent
+04-29 22:04:06.519 D/SmartSalesConn(31401): 📥 RX [Notification]: tim#get (74 69 6D 23 67 65 74)
+04-29 22:04:06.519 D/SmartSalesConn(31401): ⏰ Badge time sync requested
+04-29 22:04:06.579 I/SmartSalesConn(31401): ⏰ Time sync responded: tim#20260429220406
+04-29 22:04:07.305 D/ConnectivityService(31401): connect() called for 14:C1:9F:D7:E4:06
+04-29 22:04:07.305 D/SmartSalesConn(31401): 🏠 Registry: manuallyDisconnected=false for 14:C1:9F:D7:E4:06
+04-29 22:04:07.306 I/SmartSalesConn(31401): 🏠 Registry: switching ...E3:EE → ...E4:06
+04-29 22:04:07.310 D/SmartSalesConn(31401): 🏠 Registry: reconnecting target ...E4:06
+04-29 22:04:07.311 D/SmartSalesConn(31401): 🔌 Restored session: 14:C1:9F:D7:E4:06 knownNetworks=1
+04-29 22:04:07.311 D/SmartSalesConn(31401): 🔄 Force reconnect target=14:C1:9F:D7:E4:06
+04-29 22:04:07.311 D/ConnectivityService(31401): connect() completed for 14:C1:9F:D7:E4:06
+04-29 22:04:07.312 I/SmartSalesConn(31401): 📶 BLE disconnected
+04-29 22:04:07.312 D/SmartSalesConn(31401): 🔌 Soft disconnect (session preserved)
+04-29 22:04:07.316 D/SmartSalesConn(31401): 🔌 Persistent GATT session closed
+04-29 22:04:08.438 D/SmartSalesConn(31401): 📋 Service: 00001801-0000-1000-8000-00805f9b34fb
+04-29 22:04:08.438 D/SmartSalesConn(31401):   📋 Char: 00002a05-0000-1000-8000-00805f9b34fb [INDICATE ]
+04-29 22:04:08.438 D/SmartSalesConn(31401):     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-29 22:04:08.438 D/SmartSalesConn(31401): 📋 Service: 00001800-0000-1000-8000-00805f9b34fb
+04-29 22:04:08.438 D/SmartSalesConn(31401):   📋 Char: 00002a00-0000-1000-8000-00805f9b34fb [READ ]
+04-29 22:04:08.438 D/SmartSalesConn(31401):     📋 (no descriptors)
+04-29 22:04:08.439 D/SmartSalesConn(31401):   📋 Char: 00002a01-0000-1000-8000-00805f9b34fb [READ ]
+04-29 22:04:08.439 D/SmartSalesConn(31401):     📋 (no descriptors)
+04-29 22:04:08.439 D/SmartSalesConn(31401):   📋 Char: 00002aa6-0000-1000-8000-00805f9b34fb [READ ]
+04-29 22:04:08.439 D/SmartSalesConn(31401):     📋 (no descriptors)
+04-29 22:04:08.439 D/SmartSalesConn(31401): 📋 Service: 000000ff-0000-1000-8000-00805f9b34fb
+04-29 22:04:08.439 D/SmartSalesConn(31401):   📋 Char: 0000ff01-0000-1000-8000-00805f9b34fb [READ WRITE NOTIFY ]
+04-29 22:04:08.439 D/SmartSalesConn(31401):     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-29 22:04:08.439 D/SmartSalesConn(31401):   📋 Char: 0000ff02-0000-1000-8000-00805f9b34fb [READ ]
+04-29 22:04:08.439 D/SmartSalesConn(31401):     📋 (no descriptors)
+04-29 22:04:08.439 D/SmartSalesConn(31401):   📋 Char: 0000ff03-0000-1000-8000-00805f9b34fb [WRITE ]
+04-29 22:04:08.439 D/SmartSalesConn(31401):     📋 (no descriptors)
+04-29 22:04:08.453 D/SmartSalesConn(31401): No CCCD descriptor for 0000ff02-0000-1000-8000-00805f9b34fb, notifications not available (will poll)
+04-29 22:04:08.453 I/SmartSalesConn(31401): 🔌 Persistent GATT session established: 14:C1:9F:D7:E4:06
+04-29 22:04:08.453 I/SmartSalesConn(31401): 📶 BLE connected, waiting for explicit network observation
+04-29 22:04:08.453 D/SmartSalesConn(31401): 🌐 network query device=CHLE_Intelligent
+04-29 22:04:08.453 I/SmartSalesConn(31401): 📡 queryNetwork ENTRY (in mutex)
+04-29 22:04:08.453 D/SmartSalesConn(31401): 📡 cache skipped for device switch cached=14:C1:9F:D7:E3:EE requested=14:C1:9F:D7:E4:06
+04-29 22:04:08.453 D/SmartSalesConn(31401): 📡 Starting persistent notification listener for 14:C1:9F:D7:E4:06
+04-29 22:04:08.454 D/SmartSalesConn(31401): 📤 TX [NetworkQuery]: wifi#address#ip#name (77 69 66 69 23 61 64 64 72 65 73 73 23 69 70 23 6E 61 6D 65)
+04-29 22:04:08.505 D/SmartSalesConn(31401): 📥 RX [Notification]: IP#192.168.0.101 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 30 31)
+04-29 22:04:08.505 D/SmartSalesConn(31401): ❓ Badge unknown notification: IP#192.168.0.101
+04-29 22:04:08.505 D/SmartSalesConn(31401): 📥 RX [NetworkResponse]: IP#192.168.0.101 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 30 31)
+04-29 22:04:08.505 D/SmartSalesConn(31401): 📥 RX [Notification]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-29 22:04:08.506 D/SmartSalesConn(31401): ❓ Badge unknown notification: SD#MstRobot
+04-29 22:04:08.506 D/SmartSalesConn(31401): 📥 RX [NetworkResponse]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-29 22:04:08.506 D/SmartSalesConn(31401): 📡 fresh query, caching IP=192.168.0.101
+04-29 22:04:08.506 D/SmartSalesConn(31401): 📶 state=CONNECTED ip=192.168.0.101
+04-29 22:04:08.506 D/SmartSalesConn(31401): 🔌 connectUsingSession: connected, ip=192.168.0.101 ssid=MstRobot
+04-29 22:04:08.508 D/SmartSalesConn(31401): 📤 TX [BadgeSignal]: Ver#get (56 65 72 23 67 65 74)
+04-29 22:04:08.552 I/SmartSalesConn(31401): 🧾 Badge firmware version query sent
+04-29 22:04:08.554 D/SmartSalesConn(31401): 📥 RX [Notification]: Ver#1.0.0.1 (56 65 72 23 31 2E 30 2E 30 2E 31)
+04-29 22:04:08.554 I/SmartSalesConn(31401): 🧾 Badge firmware version: 1.0.0.1
+04-29 22:04:08.614 D/SmartSalesConn(31401): 📥 RX [Notification]: tim#get (74 69 6D 23 67 65 74)
+04-29 22:04:08.615 D/SmartSalesConn(31401): ⏰ Badge time sync requested
+04-29 22:04:08.672 I/SmartSalesConn(31401): ⏰ Time sync responded: tim#20260429220408
+04-29 22:04:11.510 D/SmartSalesConn(31401): 🌐 network query device=CHLE_Intelligent
+04-29 22:04:11.510 I/SmartSalesConn(31401): 📡 queryNetwork ENTRY (in mutex)
+04-29 22:04:11.510 D/SmartSalesConn(31401): 📡 CACHED (3057ms old)
+04-29 22:04:11.510 D/SmartSalesConn(31401): 📶 state=CONNECTED ip=192.168.0.101
+04-29 22:04:11.510 D/SmartSalesConn(31401): 🌐 Network status ok device=CHLE_Intelligent ip=192.168.0.101
+04-29 22:04:11.511 D/SmartSalesConn(31401): BadgeHttpClient.isReachable start url=http://192.168.0.101:8088/
+04-29 22:04:11.585 D/SmartSalesConn(31401): BadgeHttpClient.isReachable response url=http://192.168.0.101:8088/ code=200 reachable=true
+04-29 22:04:17.536 D/SmartSalesConn(31401): 📥 RX [Notification]: Bat#52.73% (42 61 74 23 35 32 2E 37 33 25)
+04-29 22:04:17.536 D/SmartSalesConn(31401): ❓ Badge unknown notification: Bat#52.73%
+04-29 22:04:22.762 D/ConnectivityService( 4381): Returning UNBLOCKED NetworkInfo to uid=10350
+04-29 22:04:33.841 D/ConnectivityService( 4381): Returning BLOCKED NetworkInfo to uid=10350
+04-29 22:04:37.505 D/SmartSalesConn(31401): 📥 RX [Notification]: Bat#52.36% (42 61 74 23 35 32 2E 33 36 25)
+04-29 22:04:37.505 D/SmartSalesConn(31401): ❓ Badge unknown notification: Bat#52.36%
+04-29 22:04:57.526 D/SmartSalesConn(31401): 📥 RX [Notification]: Bat#52.73% (42 61 74 23 35 32 2E 37 33 25)
+04-29 22:04:57.527 D/SmartSalesConn(31401): ❓ Badge unknown notification: Bat#52.73%
+04-29 22:05:17.566 D/SmartSalesConn(31401): 📥 RX [Notification]: Bat#51.64% (42 61 74 23 35 31 2E 36 34 25)
+04-29 22:05:17.567 D/SmartSalesConn(31401): ❓ Badge unknown notification: Bat#51.64%
+04-29 22:05:37.636 D/SmartSalesConn(31401): 📥 RX [Notification]: Bat#52.18% (42 61 74 23 35 32 2E 31 38 25)
+04-29 22:05:37.636 D/SmartSalesConn(31401): ❓ Badge unknown notification: Bat#52.18%
+04-29 22:05:57.607 D/SmartSalesConn(31401): 📥 RX [Notification]: Bat#52.18% (42 61 74 23 35 32 2E 31 38 25)
+04-29 22:05:57.607 D/SmartSalesConn(31401): ❓ Badge unknown notification: Bat#52.18%
+04-29 22:06:17.656 D/SmartSalesConn(31401): 📥 RX [Notification]: Bat#52.18% (42 61 74 23 35 32 2E 31 38 25)
+04-29 22:06:17.657 D/SmartSalesConn(31401): ❓ Badge unknown notification: Bat#52.18%
+04-29 22:06:37.726 D/SmartSalesConn(31401): 📥 RX [Notification]: Bat#51.64% (42 61 74 23 35 31 2E 36 34 25)
+04-29 22:06:37.726 D/SmartSalesConn(31401): ❓ Badge unknown notification: Bat#51.64%
+04-29 22:06:57.707 D/SmartSalesConn(31401): 📥 RX [Notification]: Bat#51.64% (42 61 74 23 35 31 2E 36 34 25)
+04-29 22:06:57.707 D/SmartSalesConn(31401): ❓ Badge unknown notification: Bat#51.64%
+04-29 22:07:17.766 D/SmartSalesConn(31401): 📥 RX [Notification]: Bat#51.64% (42 61 74 23 35 31 2E 36 34 25)
+04-29 22:07:17.767 D/SmartSalesConn(31401): ❓ Badge unknown notification: Bat#51.64%
+04-29 22:07:27.870 D/ConnectivityService( 4381): NetReassign [no changes] [c 0] [a 2] [i 1]
+04-29 22:07:29.827 D/ConnectivityService( 4381): NetReassign [no changes] [c 1] [a 0] [i 1]
+04-29 22:07:37.788 D/SmartSalesConn(31401): 📥 RX [Notification]: Bat#51.64% (42 61 74 23 35 31 2E 36 34 25)
+04-29 22:07:37.788 D/SmartSalesConn(31401): ❓ Badge unknown notification: Bat#51.64%
+04-29 22:07:57.797 D/SmartSalesConn(31401): 📥 RX [Notification]: Bat#51.09% (42 61 74 23 35 31 2E 30 39 25)
+04-29 22:07:57.798 D/SmartSalesConn(31401): ❓ Badge unknown notification: Bat#51.09%
+04-29 22:08:17.854 D/SmartSalesConn(31401): 📥 RX [Notification]: Bat#51.64% (42 61 74 23 35 31 2E 36 34 25)
+04-29 22:08:17.854 D/SmartSalesConn(31401): ❓ Badge unknown notification: Bat#51.64%
+04-29 22:08:37.877 D/SmartSalesConn(31401): 📥 RX [Notification]: Bat#51.45% (42 61 74 23 35 31 2E 34 35 25)
+04-29 22:08:37.877 D/SmartSalesConn(31401): ❓ Badge unknown notification: Bat#51.45%
+04-29 22:08:57.887 D/SmartSalesConn(31401): 📥 RX [Notification]: Bat#50.73% (42 61 74 23 35 30 2E 37 33 25)
+04-29 22:08:57.887 D/SmartSalesConn(31401): ❓ Badge unknown notification: Bat#50.73%
+04-29 22:09:17.927 D/SmartSalesConn(31401): 📥 RX [Notification]: Bat#51.45% (42 61 74 23 35 31 2E 34 35 25)
+04-29 22:09:17.927 D/SmartSalesConn(31401): ❓ Badge unknown notification: Bat#51.45%

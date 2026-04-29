@@ -7,8 +7,10 @@ package com.smartsales.prism.data.connectivity.registry
 import com.smartsales.core.util.DispatcherProvider
 import com.smartsales.prism.data.connectivity.legacy.BlePeripheral
 import com.smartsales.prism.data.connectivity.legacy.BleSession
+import com.smartsales.prism.data.connectivity.legacy.ConnectionState
 import com.smartsales.prism.data.connectivity.legacy.FakeDeviceConnectionManager
 import com.smartsales.prism.data.connectivity.legacy.InMemorySessionStore
+import com.smartsales.prism.data.connectivity.legacy.ProvisioningStatus
 import com.smartsales.prism.data.connectivity.legacy.scan.FakeBleScanner
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -247,6 +249,30 @@ class RealDeviceRegistryManagerTest {
         assertEquals(defaultMac, manager.activeDevice.value?.macAddress)
         assertEquals(defaultMac, sessionStore.loadSession()?.peripheralId)
         assertEquals(reconnectCallsAfterLaunch, deviceManager.forceReconnectCalls)
+    }
+
+    @Test
+    fun `active device follows registered runtime session without changing default`() = runTest(dispatcher) {
+        val defaultMac = "AA:AA:AA:AA:AA:01"
+        val otherMac = "BB:BB:BB:BB:BB:02"
+        registry.register(device(defaultMac, "Default", isDefault = true, lastConnectedAtMillis = 1_000L))
+        registry.register(device(otherMac, "Other", isDefault = false, lastConnectedAtMillis = 2_000L))
+        manager.initializeOnLaunch()
+        manager.switchToDevice(otherMac)
+        sessionStore.saveSession(BleSession.fromPeripheral(BlePeripheral(defaultMac, "Default", -40)))
+
+        manager.syncActiveDeviceToConnectionState(ConnectionState.WifiProvisioned(
+            session = BleSession.fromPeripheral(BlePeripheral(defaultMac, "Default", -40)),
+            status = ProvisioningStatus(
+                wifiSsid = "Office",
+                handshakeId = "handshake",
+                credentialsHash = "credentials"
+            )
+        ))
+
+        assertEquals(defaultMac, manager.activeDevice.value?.macAddress)
+        assertEquals(defaultMac, registry.getDefault()?.macAddress)
+        assertEquals(defaultMac, sessionStore.loadSession()?.peripheralId)
     }
 
     @Test

@@ -80,12 +80,12 @@ class RealDeviceRegistryManager(
     }
 
     private fun startBleDetectionMonitor() {
-        val scanner = bleScanner ?: return
         scope.launch(dispatchers.io) {
             deviceConnectionManager.state
                 .collect { state ->
                     when (state) {
                         is ConnectionState.Disconnected -> {
+                            val scanner = bleScanner ?: return@collect
                             val active = _activeDevice.value ?: return@collect
                             if (!active.manuallyDisconnected) {
                                 scheduleBleDetectionScan(scanner, active.macAddress)
@@ -93,7 +93,11 @@ class RealDeviceRegistryManager(
                                 stopBleDetectionScan()
                             }
                         }
+                        is ConnectionState.Connected -> {
+                            syncActiveDeviceToConnectionState(state)
+                        }
                         is ConnectionState.WifiProvisioned,
+                        is ConnectionState.WifiProvisionedHttpDelayed,
                         is ConnectionState.Syncing,
                         is ConnectionState.AutoReconnecting,
                         is ConnectionState.Pairing -> {
@@ -103,6 +107,7 @@ class RealDeviceRegistryManager(
                                 registry.updateBleDetected(device.macAddress, false)
                             }
                             if (_registeredDevices.value.any { it.bleDetected }) refreshDeviceList()
+                            syncActiveDeviceToConnectionState(state)
                         }
                         else -> Unit
                     }
@@ -418,6 +423,29 @@ class RealDeviceRegistryManager(
 
     private fun refreshDeviceList() {
         _registeredDevices.value = registry.loadAll()
+    }
+
+    internal fun syncActiveDeviceToConnectionState(state: ConnectionState) {
+        val runtimeSession = when (state) {
+            is ConnectionState.Connected -> state.session
+            is ConnectionState.WifiProvisioned -> state.session
+            is ConnectionState.WifiProvisionedHttpDelayed -> state.session
+            is ConnectionState.Syncing -> state.session
+            else -> null
+        } ?: return
+        syncActiveDeviceToRuntimeSession(runtimeSession, "runtime")
+    }
+
+    private fun syncActiveDeviceToRuntimeSession(session: BleSession, source: String) {
+        val runtimeDevice = registry.findByMac(session.peripheralId) ?: return
+        if (_activeDevice.value?.macAddress == runtimeDevice.macAddress) return
+
+        _activeDevice.value = runtimeDevice
+        registry.updateLastConnected(runtimeDevice.macAddress)
+        refreshDeviceList()
+        ConnectivityLogger.i(
+            "🏠 Registry: active device synced from $source session → ${runtimeDevice.macSuffix}"
+        )
     }
 
     private fun seedSessionForDevice(device: RegisteredDevice): BleSession {

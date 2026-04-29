@@ -1,0 +1,3 @@
+--------- beginning of main
+04-29 22:59:38.897 D/ConnectivityVM( 2607): managerStatus=Connecting managerState=RECONNECTING
+04-29 22:59:39.714 D/ConnectivityVM( 2607): managerStatus=Ready managerState=CONNECTED

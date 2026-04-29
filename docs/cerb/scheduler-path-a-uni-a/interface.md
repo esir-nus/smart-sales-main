@@ -1,6 +1,7 @@
 # Scheduler Path A Uni-A Interface
 
 > **Blackbox contract** — For the `Uni-A` exact-create branch built on top of the shared Path A spine.
+> **BAKE Authority Notice**: `docs/bake-contracts/scheduler-path-a.md` is the Scheduler Path A implementation record. This interface doc remains supporting/reference history beneath the core-flow docs and BAKE contract.
 
 ---
 

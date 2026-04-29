@@ -4,7 +4,7 @@
 >
 > **Purpose**: Module ownership + data flow. Read this BEFORE any cross-module change.
 > **Rule**: If data belongs to Module B, query B's interface at runtime. Don't store B's data on A's model.
-> **Last Updated**: 2026-04-28 (ConnectivityBridge plus badge-session BAKE contract is now the implementation record; Cerb connectivity bridge docs remain supporting/reference docs beneath it)
+> **Last Updated**: 2026-04-29 (Scheduler Path A BAKE contract is now the implementation record; Scheduler Path A Cerb docs remain supporting/reference docs beneath it)
 >
 > **Status Legend**: ✅ = Shipped (Real impl) · 📐 = Interface only (Fake impl) · 🔲 = Not yet coded
 > **Platform Ownership Legend**: `shared` = same product contract across platforms · `android-only` = owned by the current Android lineage · `harmony-only` = owned by the future native Harmony root · `platform-adapter` = shared product contract, platform-specific delivery layer · `legacy-android-on-harmony` = Android app compatibility behavior on Huawei/Honor/Harmony devices
@@ -32,7 +32,7 @@ This overlay classifies the current repo's cross-platform-sensitive surfaces wit
 - platform overlays answer how Android or Harmony delivers it
 - native Harmony artifacts are forbidden in the current Android tree
 
-### BAKE implementation contract overlay (2026-04-28)
+### BAKE implementation contract overlay (2026-04-29)
 
 - `docs/bake-contracts/connectivity-badge-session.md` is the verified BAKE
   implementation contract for the ConnectivityBridge plus badge-session corridor.
@@ -43,6 +43,16 @@ This overlay classifies the current repo's cross-platform-sensitive surfaces wit
   `docs/cerb/connectivity-bridge/interface.md` remain supporting/reference docs
   beneath the BAKE contract until a later archival sprint moves historical Cerb
   material.
+- `docs/bake-contracts/scheduler-path-a.md` is the verified BAKE
+  implementation contract for Scheduler Path A.
+- `docs/core-flow/scheduler-fast-track-flow.md` and
+  `docs/core-flow/sim-scheduler-path-a-flow.md` remain the behavioral
+  north-star docs above the Scheduler Path A BAKE contract.
+- `docs/cerb/scheduler-path-a-spine/spec.md`,
+  `docs/cerb/scheduler-path-a-spine/interface.md`, and the
+  `docs/cerb/scheduler-path-a-uni-*` docs remain supporting/reference docs
+  beneath the Scheduler Path A BAKE contract until a later archival sprint moves
+  historical Cerb material.
 
 ---
 
@@ -103,9 +113,9 @@ Orchestrates LLM-powered processing. Reads from Layer 2 data services.
 | **ModelRegistry** | System II & Routing | Static LLM Profiles (models, temps, skills) | — | `ModelRegistry` | OS: App | ✅ |
 | **[Executor](./model-routing/spec.md)** | System II & Routing | Raw LLM output (stateless — no storage) | ModelRouter | `suspend execute(LlmProfile, String) -> ExecutorResult` | — | ✅ |
 | **[PluginRegistry](./plugin-registry/spec.md)** | System II & Routing | Executable pure-Kotlin workflows (Tools), semantic plugin entry-lane dispatch, runtime capability-gateway routing | SessionContext / Kernel (read-only via PluginGateway), future bounded OS capabilities | `executeTool(ToolId, PluginRequest, PluginGateway) -> Flow<UiState>` | OS: App | ✅ |
-| **[SchedulerLinter](./scheduler-path-a-spine/spec.md)** | Intelligent Scheduler | Intent parsing to DTOs | — | `suspend parseFastTrackIntent(String) -> FastTrackResult` | OS: App | ✅ |
+| **[SchedulerLinter](./scheduler-path-a-spine/spec.md)** | Intelligent Scheduler | Intent parsing to DTOs; Scheduler Path A BAKE implementation record: [`scheduler-path-a`](../bake-contracts/scheduler-path-a.md) | — | `suspend parseFastTrackIntent(String) -> FastTrackResult` | OS: App | ✅ |
 | **[UnifiedPipeline](./unified-pipeline/spec.md)** | System II & Routing | System II context ETL, typed profile proposals, typed scheduler task-command proposals | ContextBuilder, InputParser, EntityDisambiguator | `suspend processInput(PipelineInput) -> Flow<PipelineResult>` | OS: App | ✅ |
-| **[IntentOrchestrator](./scheduler-path-a-spine/spec.md)** | System II & Routing | High-level intent routing (Phase 0) and shared Path A scheduler spine | AgentViewModel, LightningRouter, UnifiedPipeline, PluginRegistry | `suspend processInput(String, isVoice) -> Flow<PipelineResult>` | OS: App | ✅ |
+| **[IntentOrchestrator](./scheduler-path-a-spine/spec.md)** | System II & Routing | High-level intent routing (Phase 0) and shared Path A scheduler spine; Scheduler Path A BAKE implementation record: [`scheduler-path-a`](../bake-contracts/scheduler-path-a.md) | AgentViewModel, LightningRouter, UnifiedPipeline, PluginRegistry | `suspend processInput(String, isVoice) -> Flow<PipelineResult>` | OS: App | ✅ |
 | **SchedulerIntelligenceRouter** | Intelligent Scheduler | Shared scheduler intent routing across voice, Path B text, drawer, follow-up, and onboarding surfaces | `SchedulerPathACreateInterpreter`, `RealGlobalRescheduleExtractionService`, `RealFollowUpRescheduleExtractionService`, `TimeProvider` | `suspend routeGeneral(...)`, `suspend routeFollowUp(...)` | OS: App | ✅ |
 
 > **UnifiedPipeline emits typed proposals; IntentOrchestrator owns commit handoff.** Profile/entity proposals commit through `EntityWriter`. Scheduler create/delete/reschedule proposals commit through scheduler-owned paths (`FastTrackMutationEngine`, `ScheduledTaskRepository`, `ScheduleBoard`). Feature modules still receive results; they do not own these writes.

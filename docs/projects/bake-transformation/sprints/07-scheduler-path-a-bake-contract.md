@@ -176,8 +176,125 @@ human-observed UI state.
 
 ## 9. Iteration Ledger
 
-Operator fills this section during execution.
+- Iteration 1 - Read the sprint contract, project tracker, sprint-contract
+  schema, BAKE protocol, existing connectivity BAKE contract, Sprint 05
+  delivered-behavior map, Sprint 06 closeout, scheduler core-flow docs,
+  interface map, and Scheduler Path A Cerb docs. Wrote the Scheduler Path A
+  BAKE contract, updated interface-map authority, added supporting/reference
+  notices to the scoped Cerb docs, updated the tracker, and ran the required
+  static verification checks.
 
 ## 10. Closeout
 
-Operator fills this section at exit.
+- **Status**: success
+- **Tracker summary**: Wrote the Scheduler Path A BAKE contract, synced
+  interface-map authority, and demoted Scheduler Path A Cerb docs to supporting
+  reference.
+- **Files changed**:
+  - `docs/bake-contracts/scheduler-path-a.md`
+  - `docs/cerb/interface-map.md`
+  - `docs/cerb/scheduler-path-a-spine/spec.md`
+  - `docs/cerb/scheduler-path-a-spine/interface.md`
+  - `docs/cerb/scheduler-path-a-uni-a/spec.md`
+  - `docs/cerb/scheduler-path-a-uni-a/interface.md`
+  - `docs/cerb/scheduler-path-a-uni-b/spec.md`
+  - `docs/cerb/scheduler-path-a-uni-b/interface.md`
+  - `docs/cerb/scheduler-path-a-uni-c/spec.md`
+  - `docs/cerb/scheduler-path-a-uni-c/interface.md`
+  - `docs/cerb/scheduler-path-a-uni-d/spec.md`
+  - `docs/cerb/scheduler-path-a-uni-d/interface.md`
+  - `docs/projects/bake-transformation/tracker.md`
+  - `docs/projects/bake-transformation/sprints/07-scheduler-path-a-bake-contract.md`
+- **Evidence**:
+
+```text
+$ test -f docs/bake-contracts/scheduler-path-a.md && wc -l docs/bake-contracts/scheduler-path-a.md
+177 docs/bake-contracts/scheduler-path-a.md
+
+$ rg -n "^protocol: BAKE$|^version: 1.0$|^domain: scheduler-path-a$|^runtime: base-runtime-active$|^last-verified:" docs/bake-contracts/scheduler-path-a.md
+2:protocol: BAKE
+3:version: 1.0
+4:domain: scheduler-path-a
+6:runtime: base-runtime-active
+11:last-verified: 2026-04-29
+
+$ rg -n "^## Pipeline Contract$|^## Telemetry Joints$|^## UI Docking Surface$|^## Core-Flow Gap$|^## Test Contract$|^## Cross-Platform Notes$" docs/bake-contracts/scheduler-path-a.md
+20:## Pipeline Contract
+77:## Telemetry Joints
+107:## UI Docking Surface
+123:## Core-Flow Gap
+146:## Test Contract
+166:## Cross-Platform Notes
+
+$ rg -n "alarm arming|pre-fork candidate entity|deterministic exact-create|voice delete|undated vague|canonical valve|SIM-local create routing" docs/bake-contracts/scheduler-path-a.md
+72:- Fully undated vague create is not proven delivered and must not be treated as
+85:  extraction, including deterministic exact-create branches and Uni-A fallback.
+102:Current gaps: canonical valve names in the core-flow docs do not fully match
+104:captured for L3 runtime delivery. Future evidence must converge canonical valve
+125:- Gap: alarm arming is proven for SIM exact creates and reschedules through SIM
+126:  UI coordinators, but top-level voice alarm arming is not proven in the
+128:- Gap: the shared pre-fork candidate entity envelope is incomplete; delivered
+131:- Gap: deterministic exact-create shortcuts run before semantic extraction
+134:- Gap: voice delete is rejected while SIM manual delete by canonical ID is
+136:- Gap: fully undated vague create is not proven delivered; current Uni-B
+138:- Gap: canonical valve names are not fully aligned with delivered
+141:  diverge; SIM-local create routing must either remain explicitly justified or
+
+$ rg -n "scheduler-path-a\\.md|BAKE|Scheduler Path A" docs/cerb/interface-map.md
+7:> **Last Updated**: 2026-04-29 (Scheduler Path A BAKE contract is now the implementation record; Scheduler Path A Cerb docs remain supporting/reference docs beneath it)
+35:### BAKE implementation contract overlay (2026-04-29)
+46:- `docs/bake-contracts/scheduler-path-a.md` is the verified BAKE
+47:  implementation contract for Scheduler Path A.
+50:  north-star docs above the Scheduler Path A BAKE contract.
+54:  beneath the Scheduler Path A BAKE contract until a later archival sprint moves
+
+$ rg -n "BAKE|supporting|reference" docs/cerb/scheduler-path-a-spine/spec.md docs/cerb/scheduler-path-a-spine/interface.md docs/cerb/scheduler-path-a-uni-a/spec.md docs/cerb/scheduler-path-a-uni-a/interface.md docs/cerb/scheduler-path-a-uni-b/spec.md docs/cerb/scheduler-path-a-uni-b/interface.md docs/cerb/scheduler-path-a-uni-c/spec.md docs/cerb/scheduler-path-a-uni-c/interface.md docs/cerb/scheduler-path-a-uni-d/spec.md docs/cerb/scheduler-path-a-uni-d/interface.md
+docs/cerb/scheduler-path-a-uni-d/interface.md:4:> **BAKE Authority Notice**: `docs/bake-contracts/scheduler-path-a.md` is the Scheduler Path A implementation record. This interface doc remains supporting/reference history beneath the core-flow docs and BAKE contract.
+docs/cerb/scheduler-path-a-uni-c/interface.md:4:> **BAKE Authority Notice**: `docs/bake-contracts/scheduler-path-a.md` is the Scheduler Path A implementation record. This interface doc remains supporting/reference history beneath the core-flow docs and BAKE contract.
+docs/cerb/scheduler-path-a-uni-d/spec.md:8:> **BAKE Authority Notice**: `docs/bake-contracts/scheduler-path-a.md` is the Scheduler Path A implementation record. This Cerb shard is supporting/reference history beneath the core-flow docs and BAKE contract.
+docs/cerb/scheduler-path-a-uni-c/spec.md:8:> **BAKE Authority Notice**: `docs/bake-contracts/scheduler-path-a.md` is the Scheduler Path A implementation record. This Cerb shard is supporting/reference history beneath the core-flow docs and BAKE contract.
+docs/cerb/scheduler-path-a-uni-b/interface.md:4:> **BAKE Authority Notice**: `docs/bake-contracts/scheduler-path-a.md` is the Scheduler Path A implementation record. This interface doc remains supporting/reference history beneath the core-flow docs and BAKE contract.
+docs/cerb/scheduler-path-a-uni-b/spec.md:8:> **BAKE Authority Notice**: `docs/bake-contracts/scheduler-path-a.md` is the Scheduler Path A implementation record. This Cerb shard is supporting/reference history beneath the core-flow docs and BAKE contract.
+docs/cerb/scheduler-path-a-uni-a/interface.md:4:> **BAKE Authority Notice**: `docs/bake-contracts/scheduler-path-a.md` is the Scheduler Path A implementation record. This interface doc remains supporting/reference history beneath the core-flow docs and BAKE contract.
+docs/cerb/scheduler-path-a-uni-a/spec.md:8:> **BAKE Authority Notice**: `docs/bake-contracts/scheduler-path-a.md` is the Scheduler Path A implementation record. This Cerb shard is supporting/reference history beneath the core-flow docs and BAKE contract.
+docs/cerb/scheduler-path-a-spine/interface.md:4:> **BAKE Authority Notice**: `docs/bake-contracts/scheduler-path-a.md` is the Scheduler Path A implementation record. This interface doc remains supporting/reference history beneath the core-flow docs and BAKE contract.
+docs/cerb/scheduler-path-a-spine/spec.md:7:> **BAKE Authority Notice**: `docs/bake-contracts/scheduler-path-a.md` is the Scheduler Path A implementation record. This Cerb shard is supporting/reference history beneath the core-flow docs and BAKE contract.
+
+$ rg -n "Debug HUD|Debug Lab|L2DebugHud|feature-local debug buttons|Scheduler Path A|Connectivity / Badge Session|Audio Pipeline|Shell Routing|Pipeline Telemetry|real pipeline paths|real execution" docs/bake-contracts/scheduler-path-a.md
+14:# Scheduler Path A BAKE Contract
+115:Future L3/runtime scenario controls must be centralized under Debug HUD /
+116:Debug Lab direction, with `L2DebugHud` as the current anchor. Do not add
+117:scattered feature-local debug buttons for Scheduler Path A, Connectivity /
+118:Badge Session, Audio Pipeline, Shell Routing, Pipeline Telemetry, or adjacent
+120:valid only as controlled entrypoints into real pipeline paths or realistic
+121:upstream module I/O simulation; evidence still comes from real execution.
+
+$ rg -n "\\| 07 \\| scheduler-path-a-bake-contract \\| (done|stopped|blocked)" docs/projects/bake-transformation/tracker.md
+31:| 07 | scheduler-path-a-bake-contract | done | Wrote the Scheduler Path A BAKE contract, synced interface-map authority, and demoted Scheduler Path A Cerb docs to supporting reference. | [sprints/07-scheduler-path-a-bake-contract.md](sprints/07-scheduler-path-a-bake-contract.md) |
+
+$ git diff --stat -- docs/bake-contracts/scheduler-path-a.md docs/cerb/interface-map.md docs/cerb/scheduler-path-a-spine/spec.md docs/cerb/scheduler-path-a-spine/interface.md docs/cerb/scheduler-path-a-uni-a/spec.md docs/cerb/scheduler-path-a-uni-a/interface.md docs/cerb/scheduler-path-a-uni-b/spec.md docs/cerb/scheduler-path-a-uni-b/interface.md docs/cerb/scheduler-path-a-uni-c/spec.md docs/cerb/scheduler-path-a-uni-c/interface.md docs/cerb/scheduler-path-a-uni-d/spec.md docs/cerb/scheduler-path-a-uni-d/interface.md docs/projects/bake-transformation/
+ docs/cerb/interface-map.md                         |  18 ++-
+ docs/cerb/scheduler-path-a-spine/interface.md      |  1 +
+ docs/cerb/scheduler-path-a-spine/spec.md           |  1 +
+ docs/cerb/scheduler-path-a-uni-a/interface.md      |  1 +
+ docs/cerb/scheduler-path-a-uni-a/spec.md           |  1 +
+ docs/cerb/scheduler-path-a-uni-b/interface.md      |  1 +
+ docs/cerb/scheduler-path-a-uni-b/spec.md           |  1 +
+ docs/cerb/scheduler-path-a-uni-c/interface.md      |  1 +
+ docs/cerb/scheduler-path-a-uni-c/spec.md           |  1 +
+ docs/cerb/scheduler-path-a-uni-d/interface.md      |  1 +
+ docs/cerb/scheduler-path-a-uni-d/spec.md           |  1 +
+ .../sprints/07-scheduler-path-a-bake-contract.md   | 121 ++++++++++++++++++++-
+ docs/projects/bake-transformation/tracker.md       |   4 +-
+ 13 files changed, 145 insertions(+), 8 deletions(-)
+
+$ git diff --check -- docs/cerb/interface-map.md docs/cerb/scheduler-path-a-spine/spec.md docs/cerb/scheduler-path-a-spine/interface.md docs/cerb/scheduler-path-a-uni-a/spec.md docs/cerb/scheduler-path-a-uni-a/interface.md docs/cerb/scheduler-path-a-uni-b/spec.md docs/cerb/scheduler-path-a-uni-b/interface.md docs/cerb/scheduler-path-a-uni-c/spec.md docs/cerb/scheduler-path-a-uni-c/interface.md docs/cerb/scheduler-path-a-uni-d/spec.md docs/cerb/scheduler-path-a-uni-d/interface.md docs/projects/bake-transformation/
+# no output
+
+$ git diff --no-index --check /dev/null docs/bake-contracts/scheduler-path-a.md
+# no whitespace output; command exits non-zero because --no-index compares different files
+```
+- **Hardware evidence**: not applicable; this sprint was docs-only and made no
+  runtime or L3 claims.
+- **Lesson proposals**: none.
+- **CHANGELOG line**: none; internal BAKE transformation docs only.

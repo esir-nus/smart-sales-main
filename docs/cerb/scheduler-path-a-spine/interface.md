@@ -1,6 +1,7 @@
 # Scheduler Path A Spine Interface
 
 > **Blackbox contract** — For callers and adjacent modules that depend on the shared Path A scheduler spine.
+> **BAKE Authority Notice**: `docs/bake-contracts/scheduler-path-a.md` is the Scheduler Path A implementation record. This interface doc remains supporting/reference history beneath the core-flow docs and BAKE contract.
 
 ---
 

@@ -4,6 +4,7 @@
 > **Scope**: Shared Path A entry routing and early optimistic commit for scheduler voice input
 > **Status**: SHIPPED for T0
 > **Behavioral Authority Above This Doc**: `docs/core-flow/scheduler-fast-track-flow.md`
+> **BAKE Authority Notice**: `docs/bake-contracts/scheduler-path-a.md` is the Scheduler Path A implementation record. This Cerb shard is supporting/reference history beneath the core-flow docs and BAKE contract.
 
 ## Overview
 

@@ -45,6 +45,7 @@ internal fun SimShell(
 
     var shellState by remember { mutableStateOf(initialRuntimeShellState(forceSetupOnLaunch = false)) }
     val connectivityState by connectivityViewModel.connectionState.collectAsStateWithLifecycle()
+    val debugModeEnabled by connectivityViewModel.debugModeEnabled.collectAsStateWithLifecycle()
     val trackedPendingAudioIds = remember { SnapshotStateMap<String, String>() }
     val isImeVisible = rememberSimImeVisibility()
     val currentSessionId by chatViewModel.currentSessionId.collectAsStateWithLifecycle()
@@ -61,6 +62,7 @@ internal fun SimShell(
         pairingViewModel = pairingViewModel,
         connectivityViewModel = connectivityViewModel,
         connectivityState = connectivityState,
+        debugModeEnabled = debugModeEnabled,
         shellState = shellState,
         activeReminderBanner = null,
         activeFollowUp = activeFollowUp,

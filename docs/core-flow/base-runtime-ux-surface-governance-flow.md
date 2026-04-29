@@ -92,6 +92,7 @@ Element rows use this schema:
 6. Ambient/system guidance may appear inline or as support surfaces, but it must not become a second competing conversation thread.
 7. Status-bar and navigation-bar handling must follow real inset ownership, not prototype hardcoding.
 8. Shared shell surfaces take explicit shared contracts and shell-owned adjunct state; they must not recover runtime-specific behavior by defaulting to legacy wrapper owners or by downcasting to a concrete SIM/base-runtime ViewModel.
+9. Debug controls are debug-build-only support affordances. They must be hidden unless the persisted app debug-mode toggle is enabled, and an enabled debug mode must show a visible grey runtime-shell overlay so operators can distinguish synthetic/test controls from normal product use.
 
 Sprint 08 shell-routing target note:
 

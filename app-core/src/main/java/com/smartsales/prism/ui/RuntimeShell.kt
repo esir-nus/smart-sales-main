@@ -82,6 +82,7 @@ internal fun RuntimeShell(
     }
     var shellState by remember { mutableStateOf(initialRuntimeShellState(forceSetupOnLaunch)) }
     val connectivityState by connectivityViewModel.connectionState.collectAsStateWithLifecycle()
+    val debugModeEnabled by connectivityViewModel.debugModeEnabled.collectAsStateWithLifecycle()
     val activeFollowUp by followUpOwner.activeFollowUp.collectAsStateWithLifecycle()
     val currentSessionId by chatViewModel.currentSessionId.collectAsStateWithLifecycle()
     val sessionTitle by chatViewModel.sessionTitle.collectAsStateWithLifecycle()
@@ -394,6 +395,7 @@ internal fun RuntimeShell(
         pairingViewModel = pairingViewModel,
         connectivityViewModel = connectivityViewModel,
         connectivityState = connectivityState,
+        debugModeEnabled = debugModeEnabled,
         shellState = shellState,
         activeReminderBanner = activeReminderBanner,
         activeFollowUp = activeFollowUp,

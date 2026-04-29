@@ -117,6 +117,7 @@ fun SchedulerDrawer(
     onInspirationAskAi: ((String) -> Unit)? = null,
     enableInspirationMultiSelect: Boolean = true,
     viewModel: ISchedulerViewModel,
+    showDebugControls: Boolean = com.smartsales.prism.BuildConfig.DEBUG,
     reminderGuideProvider: (android.content.Context) -> ReminderReliabilityAdvisor.ReminderReliabilityGuide? =
         ReminderReliabilityAdvisor::fromContext,
     reminderActionOpener: (android.content.Context, ReminderReliabilityAdvisor.Action) -> Boolean =
@@ -474,7 +475,7 @@ fun SchedulerDrawer(
                         }
                     }
 
-                    if (com.smartsales.prism.BuildConfig.DEBUG) {
+                    if (com.smartsales.prism.BuildConfig.DEBUG && showDebugControls) {
                         val devContext = LocalContext.current
                         var isRecordingMic by remember { mutableStateOf(false) }
                         val recorder = remember { com.smartsales.prism.data.audio.PhoneAudioRecorder(devContext) }

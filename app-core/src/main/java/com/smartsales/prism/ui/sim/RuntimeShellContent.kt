@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
@@ -61,6 +62,7 @@ internal fun RuntimeShellContent(
     pairingViewModel: PairingFlowViewModel,
     connectivityViewModel: ConnectivityViewModel,
     connectivityState: ConnectionState,
+    debugModeEnabled: Boolean,
     shellState: RuntimeShellState,
     activeReminderBanner: SimReminderBannerState?,
     activeFollowUp: SimBadgeFollowUpState?,
@@ -106,6 +108,7 @@ internal fun RuntimeShellContent(
     val showSimHeaderNewSessionButton = !schedulerEnabled ||
         shellState.activeDrawer != RuntimeDrawerType.SCHEDULER
     val showSimBottomComposer = shellState.activeDrawer != RuntimeDrawerType.SCHEDULER
+    val showDebugSurfaces = BuildConfig.DEBUG && debugModeEnabled
     val showReminderBanner = schedulerEnabled && activeReminderBanner != null &&
         shellState.activeDrawer != RuntimeDrawerType.SCHEDULER &&
         shellState.activeDrawer != RuntimeDrawerType.AUDIO
@@ -141,8 +144,10 @@ internal fun RuntimeShellContent(
             onProfileClick = {
                 mutateShellState(::openRuntimeSettings)
             },
-            onDebugClick = {},
-            showDebugButton = false,
+            onDebugClick = {
+                dependencies.chatViewModel.debugRunScenario("MARKDOWN_BUBBLE")
+            },
+            showDebugButton = showDebugSurfaces,
             visualMode = AgentIntelligenceVisualMode.SIM,
             simDynamicIslandState = dynamicIslandState,
             showSimHeaderMenuButton = showSimHeaderMenuButton,
@@ -320,6 +325,7 @@ internal fun RuntimeShellContent(
                         )
                     },
                     enableInspirationMultiSelect = false,
+                    showDebugControls = showDebugSurfaces,
                     viewModel = dependencies.schedulerViewModel
                 )
             }
@@ -339,7 +345,8 @@ internal fun RuntimeShellContent(
                 mode = shellState.audioDrawerMode,
                 currentChatAudioId = currentChatAudioId,
                 connectionState = connectivityState,
-                showTestImportAction = BuildConfig.DEBUG && shellState.audioDrawerMode == RuntimeAudioDrawerMode.BROWSE,
+                showTestImportAction = showDebugSurfaces &&
+                    shellState.audioDrawerMode == RuntimeAudioDrawerMode.BROWSE,
                 viewModel = audioViewModel,
                 onOpenConnectivity = {
                     mutateShellState { state ->
@@ -596,5 +603,21 @@ internal fun RuntimeShellContent(
                 )
             }
         }
+
+        AnimatedVisibility(
+            visible = showDebugSurfaces,
+            enter = fadeIn(animationSpec = tween(durationMillis = 160)),
+            exit = fadeOut(animationSpec = tween(durationMillis = 160)),
+            modifier = Modifier.zIndex(PrismElevation.Drawer + 4f)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .testTag(DEBUG_MODE_GLOBAL_SCRIM_TEST_TAG)
+                    .background(Color.Gray.copy(alpha = 0.14f))
+            )
+        }
     }
 }
+
+internal const val DEBUG_MODE_GLOBAL_SCRIM_TEST_TAG = "debug_mode_global_scrim"

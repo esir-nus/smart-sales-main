@@ -17,6 +17,7 @@ open
 | 03 | registry-gated-reconnect | done | Registry/session reconnect now refuses removed MACs, reseeds stale sessions to the remaining registered device, and revalidates BLE candidates before reconnect. | [sprints/03-registry-gated-reconnect.md](sprints/03-registry-gated-reconnect.md) |
 | 04 | default-first-priority | blocked | Implementation, L1/L2, and fresh L2.5 app-side verification are green; physical L3 re-entry now requires explicit human manual-collaboration items before another dual-badge scanner window can close. | [sprints/04-default-first-priority.md](sprints/04-default-first-priority.md) |
 | 05 | connectivity-card-stable-order | done | Connectivity manager cards keep the default badge pinned first while non-default badges stay in oldest successful-pairing order; active selection is visual only. | [sprints/05-connectivity-card-stable-order.md](sprints/05-connectivity-card-stable-order.md) |
+| 06 | debug-mode-global-gate | done | The persisted debug-mode toggle gates debug controls across main, audio, scheduler, and connectivity surfaces and applies a grey debug-mode overlay while enabled. | [sprints/06-debug-mode-global-gate.md](sprints/06-debug-mode-global-gate.md) |
 
 ## Cross-Sprint Decisions
 

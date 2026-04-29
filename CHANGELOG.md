@@ -2,6 +2,11 @@
 
 ## 最近更新
 
+### 2026-04-29
+
+- **[维护] 日程 Path A 目标流程与 BAKE 契约收口** — 将 Scheduler Path A TCF 同步到 `scheduler-fast-track` 与 SIM core-flow，新增 `docs/bake-contracts/scheduler-path-a.md`，并在接口图和 Cerb 文档中标记 BAKE contract authority。
+- **[维护] Shell routing BAKE 转换推进** — 新增 shell-routing delivered-behavior map，闭合 DBM sprint，授权 TCF sprint，将 first-launch handoff、dynamic-island Wi-Fi authority、telemetry valves、smart-only blocking、drawer conflict 和 new-session 覆盖差距转为后续 BAKE 合同输入。
+
 ### 2026-04-28
 
 - **[修复] 日程 Path A 改期与取消替换路由** — 顶层 SIM 对话与徽章音频管线接入 `IntentOrchestrator` 的 Path A 改期结果，新增 `TaskRescheduled` 事件与通知展示；取消旧调试改名入口，改用时间锚点改期/替换路径，并补充设备端 logcat 证据。

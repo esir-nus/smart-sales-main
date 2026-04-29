@@ -149,8 +149,11 @@ connectivity and audio owners.
   auto-download jobs on active-device change before cancelling manual badge
   queue work. Focused L1/L2 coverage proves a suspended `rec#` download becomes
   a failed outgoing placeholder and does not send `Command#end` after the badge
-  switch. Physical L3 for a live `rec#` notification interrupted by a switch
-  remains blocked by hardware event availability.
+  switch. Run 33 L3-debug evidence proves the app-side
+  `audioRecordingNotifications()` route starts the outgoing `rec#` job and
+  cancels it during active-device switch. Physical L3 for a firmware-emitted
+  live `rec#` notification interrupted by a switch remains blocked by hardware
+  event availability.
 - Closed 2026-04-29: Sprint 04-a L3 evidence now includes direct runtime
   telemetry for transport-confirmed HTTP delay:
   `managerStatus=HttpDelayed(...) managerState=HTTP_DELAYED`, followed by

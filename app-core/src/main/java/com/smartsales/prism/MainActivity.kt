@@ -39,6 +39,7 @@ class MainActivity : ComponentActivity() {
     companion object {
         private const val EXTRA_DEBUG_FOLLOW_UP_SINGLE = "sim_debug_followup_single"
         private const val EXTRA_DEBUG_FOLLOW_UP_MULTI = "sim_debug_followup_multi"
+        private const val EXTRA_DEBUG_CONNECTIVITY_MANAGER = "sim_debug_connectivity_manager"
     }
 
     @Inject
@@ -72,6 +73,7 @@ class MainActivity : ComponentActivity() {
             val onboardingCompleted by onboardingGate.completedFlow.collectAsStateWithLifecycle()
             val systemDarkTheme = isSystemInDarkTheme()
             val debugFollowUpScenario = remember { parseDebugFollowUpScenario() }
+            val debugOpenConnectivityManager = remember { parseDebugOpenConnectivityManager() }
             val darkTheme = remember(themeMode, hasStoredThemeMode, systemDarkTheme) {
                 resolveBaseRuntimeDarkTheme(
                     themeMode = themeMode,
@@ -92,6 +94,7 @@ class MainActivity : ComponentActivity() {
                     RuntimeShell(
                         badgeAudioPipeline = badgeAudioPipeline,
                         debugFollowUpScenario = debugFollowUpScenario,
+                        debugOpenConnectivityManager = debugOpenConnectivityManager,
                         forceSetupOnLaunch = !onboardingCompleted && debugFollowUpScenario == null,
                         onForcedSetupCompleted = onboardingGate::markCompleted,
                         shouldShowFirstLaunchSchedulerTeaser =
@@ -123,6 +126,11 @@ class MainActivity : ComponentActivity() {
                 SimDebugFollowUpScenario.SINGLE
             else -> null
         }
+    }
+
+    private fun parseDebugOpenConnectivityManager(): Boolean {
+        if (!BuildConfig.DEBUG) return false
+        return intent?.getBooleanExtra(EXTRA_DEBUG_CONNECTIVITY_MANAGER, false) == true
     }
 }
 

@@ -179,10 +179,11 @@ and session persistence.
 - Gap: canonical valves remain ahead of delivered telemetry. Delivered logs do
   not yet prove every core-flow checkpoint or provider boundary.
 - Gap: runtime evidence has proven physical badge manual sync/list/download
-  ingress and installed drawer terminal import in Sprint 04-a, but is still
-  missing for live `rec#` notification auto-download, `log#`, BLE
-  disconnect/resume, foreground download survival, provider-network Tingwu
-  behavior, and installed drawer/chat UI beyond the badge-sync surface.
+  ingress, installed drawer terminal import, and L3-debug app-side `rec#`
+  switch cancellation in Sprint 04-a, but is still missing for firmware-emitted
+  live `rec#` notification ingress, `log#`, BLE disconnect/resume, foreground
+  download survival, provider-network Tingwu behavior, and installed
+  drawer/chat UI beyond the badge-sync surface.
 
 ## Test Contract
 

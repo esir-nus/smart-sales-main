@@ -1,0 +1,208 @@
+--------- beginning of main
+04-29 19:09:48.908 D/SmartSalesConn( 7705): 📥 RX [Notification]: Bat#42.73% (42 61 74 23 34 32 2E 37 33 25)
+04-29 19:09:48.909 D/SmartSalesConn( 7705): ❓ Badge unknown notification: Bat#42.73%
+04-29 19:10:08.938 D/SmartSalesConn( 7705): 📥 RX [Notification]: Bat#42.73% (42 61 74 23 34 32 2E 37 33 25)
+04-29 19:10:08.938 D/SmartSalesConn( 7705): ❓ Badge unknown notification: Bat#42.73%
+04-29 19:10:28.346 D/ConnectivityService( 4381): Data stall detected with methods: 2
+04-29 19:10:28.546 D/ConnectivityService( 4381): [100 WIFI] validation passed
+04-29 19:10:28.979 D/SmartSalesConn( 7705): 📥 RX [Notification]: Bat#43.09% (42 61 74 23 34 33 2E 30 39 25)
+04-29 19:10:28.979 D/SmartSalesConn( 7705): ❓ Badge unknown notification: Bat#43.09%
+04-29 19:10:48.999 D/SmartSalesConn( 7705): 📥 RX [Notification]: Bat#42.91% (42 61 74 23 34 32 2E 39 31 25)
+04-29 19:10:49.000 D/SmartSalesConn( 7705): ❓ Badge unknown notification: Bat#42.91%
+04-29 19:11:09.040 D/SmartSalesConn( 7705): 📥 RX [Notification]: Bat#43.09% (42 61 74 23 34 33 2E 30 39 25)
+04-29 19:11:09.041 D/SmartSalesConn( 7705): ❓ Badge unknown notification: Bat#43.09%
+04-29 19:11:29.078 D/SmartSalesConn( 7705): 📥 RX [Notification]: Bat#43.45% (42 61 74 23 34 33 2E 34 35 25)
+04-29 19:11:29.079 D/SmartSalesConn( 7705): ❓ Badge unknown notification: Bat#43.45%
+04-29 19:11:49.109 D/SmartSalesConn( 7705): 📥 RX [Notification]: Bat#43.45% (42 61 74 23 34 33 2E 34 35 25)
+04-29 19:11:49.110 D/SmartSalesConn( 7705): ❓ Badge unknown notification: Bat#43.45%
+04-29 19:12:08.650 D/ConnectivityService( 4381): Data stall detected with methods: 2
+04-29 19:12:08.801 D/ConnectivityService( 4381): [100 WIFI] validation passed
+04-29 19:12:09.189 D/SmartSalesConn( 7705): 📥 RX [Notification]: Bat#43.45% (42 61 74 23 34 33 2E 34 35 25)
+04-29 19:12:09.191 D/SmartSalesConn( 7705): ❓ Badge unknown notification: Bat#43.45%
+04-29 19:12:29.169 D/SmartSalesConn( 7705): 📥 RX [Notification]: Bat#43.27% (42 61 74 23 34 33 2E 32 37 25)
+04-29 19:12:29.170 D/SmartSalesConn( 7705): ❓ Badge unknown notification: Bat#43.27%
+04-29 19:12:49.180 D/SmartSalesConn( 7705): 📥 RX [Notification]: Bat#43.27% (42 61 74 23 34 33 2E 32 37 25)
+04-29 19:12:49.181 D/SmartSalesConn( 7705): ❓ Badge unknown notification: Bat#43.27%
+04-29 19:13:08.827 D/ConnectivityService( 4381): Data stall detected with methods: 2
+04-29 19:13:08.948 D/ConnectivityService( 4381): [100 WIFI] validation passed
+04-29 19:13:09.240 D/SmartSalesConn( 7705): 📥 RX [Notification]: Bat#43.27% (42 61 74 23 34 33 2E 32 37 25)
+04-29 19:13:09.241 D/SmartSalesConn( 7705): ❓ Badge unknown notification: Bat#43.27%
+04-29 19:13:29.261 D/SmartSalesConn( 7705): 📥 RX [Notification]: Bat#43.27% (42 61 74 23 34 33 2E 32 37 25)
+04-29 19:13:29.261 D/SmartSalesConn( 7705): ❓ Badge unknown notification: Bat#43.27%
+04-29 19:13:48.995 D/ConnectivityService( 4381): Data stall detected with methods: 2
+04-29 19:13:49.271 D/SmartSalesConn( 7705): 📥 RX [Notification]: Bat#43.27% (42 61 74 23 34 33 2E 32 37 25)
+04-29 19:13:49.272 D/SmartSalesConn( 7705): ❓ Badge unknown notification: Bat#43.27%
+04-29 19:13:49.297 D/ConnectivityService( 4381): [100 WIFI] validation passed
+04-29 19:14:09.297 D/SmartSalesConn( 7705): 📥 RX [Notification]: Bat#43.27% (42 61 74 23 34 33 2E 32 37 25)
+04-29 19:14:09.298 D/SmartSalesConn( 7705): ❓ Badge unknown notification: Bat#43.27%
+04-29 19:14:19.245 D/ConnectivityService( 4381): reportNetworkConnectivity(100, false) by 1000
+04-29 19:14:19.338 D/ConnectivityService( 4381): [100 WIFI] validation passed
+04-29 19:14:22.764 D/ConnectivityService( 4381): releasing NetworkRequest [ REQUEST id=863, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10122 RequestorUid: 10122 RequestorPkg: com.android.vending UnderlyingNetworks: Null] ] (release request)
+04-29 19:14:23.370 D/SmartSalesConn( 9417): 🔌 Restored session: 14:C1:9F:D7:E4:06 knownNetworks=1
+04-29 19:14:23.371 D/SmartSalesConn( 9417): 🏠 Registry: default device CHLE_Intelligent (...E4:06)
+04-29 19:14:23.376 I/SmartSalesConn( 9417): 📶 BLE disconnected
+04-29 19:14:23.376 D/SmartSalesConn( 9417): 🔌 Soft disconnect (session preserved)
+04-29 19:14:23.376 D/SmartSalesConn( 9417): 🔌 Persistent GATT session closed
+04-29 19:14:23.757 D/AudioPipeline( 9417): SIM audio drawer entries emitted count=32 downloading=0 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 19:14:23.760 D/ConnectivityVM( 9417): managerStatus=Connecting managerState=RECONNECTING
+04-29 19:14:23.963 D/ConnectivityService( 4381): NetReassign [no changes] [c 0] [a 0] [i 2]
+04-29 19:14:24.583 D/SmartSalesConn( 9417): 📋 Service: 00001801-0000-1000-8000-00805f9b34fb
+04-29 19:14:24.583 D/SmartSalesConn( 9417):   📋 Char: 00002a05-0000-1000-8000-00805f9b34fb [INDICATE ]
+04-29 19:14:24.583 D/SmartSalesConn( 9417):     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-29 19:14:24.584 D/SmartSalesConn( 9417): 📋 Service: 00001800-0000-1000-8000-00805f9b34fb
+04-29 19:14:24.584 D/SmartSalesConn( 9417):   📋 Char: 00002a00-0000-1000-8000-00805f9b34fb [READ ]
+04-29 19:14:24.584 D/SmartSalesConn( 9417):     📋 (no descriptors)
+04-29 19:14:24.584 D/SmartSalesConn( 9417):   📋 Char: 00002a01-0000-1000-8000-00805f9b34fb [READ ]
+04-29 19:14:24.584 D/SmartSalesConn( 9417):     📋 (no descriptors)
+04-29 19:14:24.584 D/SmartSalesConn( 9417):   📋 Char: 00002aa6-0000-1000-8000-00805f9b34fb [READ ]
+04-29 19:14:24.584 D/SmartSalesConn( 9417):     📋 (no descriptors)
+04-29 19:14:24.584 D/SmartSalesConn( 9417): 📋 Service: 000000ff-0000-1000-8000-00805f9b34fb
+04-29 19:14:24.584 D/SmartSalesConn( 9417):   📋 Char: 0000ff01-0000-1000-8000-00805f9b34fb [READ WRITE NOTIFY ]
+04-29 19:14:24.584 D/SmartSalesConn( 9417):     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-29 19:14:24.584 D/SmartSalesConn( 9417):   📋 Char: 0000ff02-0000-1000-8000-00805f9b34fb [READ ]
+04-29 19:14:24.584 D/SmartSalesConn( 9417):     📋 (no descriptors)
+04-29 19:14:24.584 D/SmartSalesConn( 9417):   📋 Char: 0000ff03-0000-1000-8000-00805f9b34fb [WRITE ]
+04-29 19:14:24.584 D/SmartSalesConn( 9417):     📋 (no descriptors)
+04-29 19:14:24.607 D/SmartSalesConn( 9417): No CCCD descriptor for 0000ff02-0000-1000-8000-00805f9b34fb, notifications not available (will poll)
+04-29 19:14:24.607 I/SmartSalesConn( 9417): 🔌 Persistent GATT session established: 14:C1:9F:D7:E4:06
+04-29 19:14:24.608 I/SmartSalesConn( 9417): 📶 BLE connected, waiting for explicit network observation
+04-29 19:14:24.609 D/SmartSalesConn( 9417): 📡 Starting persistent notification listener for 14:C1:9F:D7:E4:06
+04-29 19:14:24.609 D/SmartSalesConn( 9417): 🌐 network query device=CHLE_Intelligent
+04-29 19:14:24.609 I/SmartSalesConn( 9417): 📡 queryNetwork ENTRY (in mutex)
+04-29 19:14:24.611 D/SmartSalesConn( 9417): 📤 TX [NetworkQuery]: wifi#address#ip#name (77 69 66 69 23 61 64 64 72 65 73 73 23 69 70 23 6E 61 6D 65)
+04-29 19:14:24.658 D/SmartSalesConn( 9417): 📥 RX [Notification]: IP#192.168.0.101 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 30 31)
+04-29 19:14:24.659 D/SmartSalesConn( 9417): ❓ Badge unknown notification: IP#192.168.0.101
+04-29 19:14:24.659 D/SmartSalesConn( 9417): 📥 RX [Notification]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-29 19:14:24.659 D/SmartSalesConn( 9417): 📥 RX [NetworkResponse]: IP#192.168.0.101 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 30 31)
+04-29 19:14:24.660 D/SmartSalesConn( 9417): ❓ Badge unknown notification: SD#MstRobot
+04-29 19:14:24.660 D/SmartSalesConn( 9417): 📥 RX [NetworkResponse]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-29 19:14:24.661 D/SmartSalesConn( 9417): 📡 fresh query, caching IP=192.168.0.101
+04-29 19:14:24.661 D/SmartSalesConn( 9417): 📶 state=CONNECTED ip=192.168.0.101
+04-29 19:14:24.662 D/SmartSalesConn( 9417): 🔌 connectUsingSession: connected, ip=192.168.0.101 ssid=MstRobot
+04-29 19:14:24.668 D/SmartSalesConn( 9417): 📤 TX [BadgeSignal]: Ver#get (56 65 72 23 67 65 74)
+04-29 19:14:24.707 D/AudioPipeline( 9417): SIM audio drawer entries emitted count=32 downloading=0 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 19:14:24.707 D/ConnectivityVM( 9417): managerStatus=Ready managerState=CONNECTED
+04-29 19:14:24.717 D/SmartSalesConn( 9417): 📥 RX [Notification]: tim#get (74 69 6D 23 67 65 74)
+04-29 19:14:24.718 D/SmartSalesConn( 9417): ⏰ Badge time sync requested
+04-29 19:14:24.719 D/SmartSalesConn( 9417): 📥 RX [Notification]: Ver#1.0.0.1 (56 65 72 23 31 2E 30 2E 30 2E 31)
+04-29 19:14:24.719 I/SmartSalesConn( 9417): 🧾 Badge firmware version: 1.0.0.1
+04-29 19:14:24.723 I/SmartSalesConn( 9417): 🧾 Badge firmware version query sent
+04-29 19:14:24.777 I/SmartSalesConn( 9417): ⏰ Time sync responded: tim#20260429191424
+04-29 19:14:27.708 D/AudioPipeline( 9417): SIM badge sync preflight start trigger=auto
+04-29 19:14:27.708 D/AudioPipeline( 9417): 🔎 isReady preflight: start
+04-29 19:14:27.708 D/AudioPipeline( 9417): 🌐 resolveBaseUrl: seeded active endpoint http://192.168.0.101:8088
+04-29 19:14:27.708 D/AudioPipeline( 9417): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.0.101:8088
+04-29 19:14:27.709 D/SmartSalesConn( 9417): BadgeHttpClient.isReachable start url=http://192.168.0.101:8088/
+04-29 19:14:28.012 D/SmartSalesConn( 9417): BadgeHttpClient.isReachable response url=http://192.168.0.101:8088/ code=200 reachable=true
+04-29 19:14:28.012 D/AudioPipeline( 9417): 🔎 isReady preflight: result=ready baseUrl=http://192.168.0.101:8088
+04-29 19:14:28.012 D/AudioPipeline( 9417): SIM badge sync preflight result trigger=auto isReady=true
+04-29 19:14:28.012 D/AudioPipeline( 9417): SIM audio badge sync requested: trigger=auto
+04-29 19:14:28.013 D/AudioPipeline( 9417): 🌐 resolveBaseUrl: reusing active endpoint http://192.168.0.101:8088
+04-29 19:14:28.219 D/AudioPipeline( 9417): SIM badge sync listRecordings success count=13
+04-29 19:14:28.228 D/AudioPipeline( 9417): SIM audio drawer entries emitted count=33 downloading=0 queued=1 holding=0 maxDownloadProgress=0.0
+04-29 19:14:28.244 D/AudioPipeline( 9417): SIM badge sync outcome badgeMac=14:C1:9F:D7:E4:06 badgeListCount=13 pendingDeleteCount=0 placeholderCount=1 queueCount=1 retryQueueCount=0 branch=queued
+04-29 19:14:28.244 D/AudioPipeline( 9417): SIM audio badge sync completed: trigger=auto queuedCount=1 retryQueuedCount=0 branch=queued
+04-29 19:14:28.245 D/AudioPipeline( 9417): SIM badge sync background queue started
+04-29 19:14:28.263 D/AudioPipeline( 9417): SIM badge sync background download start filename=rec_19700101_000145.wav badgeMac=14:C1:9F:D7:E4:06
+04-29 19:14:28.263 D/AudioPipeline( 9417): 🌐 resolveBaseUrl: reusing active endpoint http://192.168.0.101:8088
+04-29 19:14:28.263 D/AudioPipeline( 9417): ⬇️ Downloading: http://192.168.0.101:8088/download?file=rec_19700101_000145.wav
+04-29 19:14:28.273 D/AudioPipeline( 9417): SIM audio drawer entries emitted count=33 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 19:14:28.422 D/AudioPipeline( 9417): ⬇️ download response Content-Length=-1 Transfer-Encoding=chunked filename=rec_19700101_000145.wav
+04-29 19:14:28.431 D/AudioPipeline( 9417): SIM audio drawer entries emitted count=32 downloading=0 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 19:14:28.438 D/AudioPipeline( 9417): SIM badge sync removed empty placeholder filename=rec_19700101_000145.wav sizeBytes=0
+04-29 19:14:28.438 D/AudioPipeline( 9417): SIM badge sync background queue drained
+04-29 19:14:29.367 D/SmartSalesConn( 9417): 📥 RX [Notification]: Bat#43.64% (42 61 74 23 34 33 2E 36 34 25)
+04-29 19:14:29.368 D/SmartSalesConn( 9417): ❓ Badge unknown notification: Bat#43.64%
+04-29 19:14:49.361 D/SmartSalesConn( 9417): 📥 RX [Notification]: Bat#43.64% (42 61 74 23 34 33 2E 36 34 25)
+04-29 19:14:49.362 D/SmartSalesConn( 9417): ❓ Badge unknown notification: Bat#43.64%
+04-29 19:15:09.390 D/SmartSalesConn( 9417): 📥 RX [Notification]: Bat#43.64% (42 61 74 23 34 33 2E 36 34 25)
+04-29 19:15:09.390 D/SmartSalesConn( 9417): ❓ Badge unknown notification: Bat#43.64%
+04-29 19:15:29.441 D/SmartSalesConn( 9417): 📥 RX [Notification]: Bat#43.82% (42 61 74 23 34 33 2E 38 32 25)
+04-29 19:15:29.442 D/SmartSalesConn( 9417): ❓ Badge unknown notification: Bat#43.82%
+04-29 19:15:39.399 D/ConnectivityService( 4381): Data stall detected with methods: 2
+04-29 19:15:39.530 D/ConnectivityService( 4381): [100 WIFI] validation passed
+04-29 19:15:49.440 D/SmartSalesConn( 9417): 📥 RX [Notification]: Bat#43.64% (42 61 74 23 34 33 2E 36 34 25)
+04-29 19:15:49.441 D/SmartSalesConn( 9417): ❓ Badge unknown notification: Bat#43.64%
+04-29 19:16:09.526 D/SmartSalesConn( 9417): 📥 RX [Notification]: Bat#43.64% (42 61 74 23 34 33 2E 36 34 25)
+04-29 19:16:09.528 D/SmartSalesConn( 9417): ❓ Badge unknown notification: Bat#43.64%
+04-29 19:16:15.361 D/ConnectivityService( 4381): requestNetwork for uid/pid:1000/15268 activeRequest: null callbackRequest: 887 [NetworkRequest [ REQUEST id=888, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 1000 RequestorUid: 1000 RequestorPkg: com.xiaomi.misettings UnderlyingNetworks: Null] ]] callback flags: 0 order: 2147483647 isUidTracked: false declaredMethods: AVAIL|LOST|NC
+04-29 19:16:15.364 D/ConnectivityService( 4381): NetReassign [888 : null → 100] [c 0] [a 0] [i 2]
+04-29 19:16:15.736 D/ConnectivityService( 4381): NetReassign [no changes] [c 0] [a 2] [i 1]
+04-29 19:16:29.538 D/SmartSalesConn( 9417): 📥 RX [Notification]: Bat#43.82% (42 61 74 23 34 33 2E 38 32 25)
+04-29 19:16:29.539 D/SmartSalesConn( 9417): ❓ Badge unknown notification: Bat#43.82%
+04-29 19:16:41.097 D/ConnectivityService( 4381): reportNetworkConnectivity(100, false) by 1000
+04-29 19:16:41.205 D/ConnectivityService( 4381): [100 WIFI] validation passed
+04-29 19:16:49.544 D/SmartSalesConn( 9417): 📥 RX [Notification]: Bat#43.82% (42 61 74 23 34 33 2E 38 32 25)
+04-29 19:16:49.545 D/SmartSalesConn( 9417): ❓ Badge unknown notification: Bat#43.82%
+04-29 19:18:09.909 D/SmartSalesConn(17600): 🔌 Restored session: 14:C1:9F:D7:E4:06 knownNetworks=1
+04-29 19:18:09.909 D/SmartSalesConn(17600): 🏠 Registry: default device CHLE_Intelligent (...E4:06)
+04-29 19:18:09.912 I/SmartSalesConn(17600): 📶 BLE disconnected
+04-29 19:18:09.912 D/SmartSalesConn(17600): 🔌 Soft disconnect (session preserved)
+04-29 19:18:09.912 D/SmartSalesConn(17600): 🔌 Persistent GATT session closed
+04-29 19:18:10.234 D/AudioPipeline(17600): SIM audio drawer entries emitted count=32 downloading=0 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 19:18:10.237 D/ConnectivityVM(17600): managerStatus=Connecting managerState=RECONNECTING
+04-29 19:18:10.912 D/SmartSalesConn(17600): 📋 Service: 00001801-0000-1000-8000-00805f9b34fb
+04-29 19:18:10.912 D/SmartSalesConn(17600):   📋 Char: 00002a05-0000-1000-8000-00805f9b34fb [INDICATE ]
+04-29 19:18:10.912 D/SmartSalesConn(17600):     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-29 19:18:10.912 D/SmartSalesConn(17600): 📋 Service: 00001800-0000-1000-8000-00805f9b34fb
+04-29 19:18:10.912 D/SmartSalesConn(17600):   📋 Char: 00002a00-0000-1000-8000-00805f9b34fb [READ ]
+04-29 19:18:10.912 D/SmartSalesConn(17600):     📋 (no descriptors)
+04-29 19:18:10.912 D/SmartSalesConn(17600):   📋 Char: 00002a01-0000-1000-8000-00805f9b34fb [READ ]
+04-29 19:18:10.912 D/SmartSalesConn(17600):     📋 (no descriptors)
+04-29 19:18:10.912 D/SmartSalesConn(17600):   📋 Char: 00002aa6-0000-1000-8000-00805f9b34fb [READ ]
+04-29 19:18:10.912 D/SmartSalesConn(17600):     📋 (no descriptors)
+04-29 19:18:10.912 D/SmartSalesConn(17600): 📋 Service: 000000ff-0000-1000-8000-00805f9b34fb
+04-29 19:18:10.912 D/SmartSalesConn(17600):   📋 Char: 0000ff01-0000-1000-8000-00805f9b34fb [READ WRITE NOTIFY ]
+04-29 19:18:10.912 D/SmartSalesConn(17600):     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-29 19:18:10.912 D/SmartSalesConn(17600):   📋 Char: 0000ff02-0000-1000-8000-00805f9b34fb [READ ]
+04-29 19:18:10.912 D/SmartSalesConn(17600):     📋 (no descriptors)
+04-29 19:18:10.912 D/SmartSalesConn(17600):   📋 Char: 0000ff03-0000-1000-8000-00805f9b34fb [WRITE ]
+04-29 19:18:10.912 D/SmartSalesConn(17600):     📋 (no descriptors)
+04-29 19:18:10.949 D/SmartSalesConn(17600): No CCCD descriptor for 0000ff02-0000-1000-8000-00805f9b34fb, notifications not available (will poll)
+04-29 19:18:10.950 I/SmartSalesConn(17600): 🔌 Persistent GATT session established: 14:C1:9F:D7:E4:06
+04-29 19:18:10.950 I/SmartSalesConn(17600): 📶 BLE connected, waiting for explicit network observation
+04-29 19:18:10.950 D/SmartSalesConn(17600): 📡 Starting persistent notification listener for 14:C1:9F:D7:E4:06
+04-29 19:18:10.950 D/SmartSalesConn(17600): 🌐 network query device=CHLE_Intelligent
+04-29 19:18:10.950 I/SmartSalesConn(17600): 📡 queryNetwork ENTRY (in mutex)
+04-29 19:18:10.952 D/SmartSalesConn(17600): 📤 TX [NetworkQuery]: wifi#address#ip#name (77 69 66 69 23 61 64 64 72 65 73 73 23 69 70 23 6E 61 6D 65)
+04-29 19:18:11.002 D/SmartSalesConn(17600): 📥 RX [Notification]: IP#192.168.0.101 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 30 31)
+04-29 19:18:11.003 D/SmartSalesConn(17600): ❓ Badge unknown notification: IP#192.168.0.101
+04-29 19:18:11.003 D/SmartSalesConn(17600): 📥 RX [Notification]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-29 19:18:11.003 D/SmartSalesConn(17600): 📥 RX [NetworkResponse]: IP#192.168.0.101 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 30 31)
+04-29 19:18:11.004 D/SmartSalesConn(17600): ❓ Badge unknown notification: SD#MstRobot
+04-29 19:18:11.005 D/SmartSalesConn(17600): 📥 RX [NetworkResponse]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-29 19:18:11.005 D/SmartSalesConn(17600): 📡 fresh query, caching IP=192.168.0.101
+04-29 19:18:11.005 D/SmartSalesConn(17600): 📶 state=CONNECTED ip=192.168.0.101
+04-29 19:18:11.005 D/SmartSalesConn(17600): 🔌 connectUsingSession: connected, ip=192.168.0.101 ssid=MstRobot
+04-29 19:18:11.017 D/SmartSalesConn(17600): 📤 TX [BadgeSignal]: Ver#get (56 65 72 23 67 65 74)
+04-29 19:18:11.017 D/AudioPipeline(17600): SIM audio drawer entries emitted count=32 downloading=0 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 19:18:11.018 D/ConnectivityVM(17600): managerStatus=Ready managerState=CONNECTED
+04-29 19:18:11.069 D/SmartSalesConn(17600): 📥 RX [Notification]: tim#get (74 69 6D 23 67 65 74)
+04-29 19:18:11.070 D/SmartSalesConn(17600): ⏰ Badge time sync requested
+04-29 19:18:11.072 D/SmartSalesConn(17600): 📥 RX [Notification]: Ver#1.0.0.1 (56 65 72 23 31 2E 30 2E 30 2E 31)
+04-29 19:18:11.073 I/SmartSalesConn(17600): 🧾 Badge firmware version: 1.0.0.1
+04-29 19:18:11.075 I/SmartSalesConn(17600): 🧾 Badge firmware version query sent
+04-29 19:18:11.159 I/SmartSalesConn(17600): ⏰ Time sync responded: tim#20260429191811
+04-29 19:18:14.017 D/AudioPipeline(17600): SIM badge sync preflight start trigger=auto
+04-29 19:18:14.017 D/AudioPipeline(17600): 🔎 isReady preflight: start
+04-29 19:18:14.017 D/AudioPipeline(17600): 🌐 resolveBaseUrl: seeded active endpoint http://192.168.0.101:8088
+04-29 19:18:14.018 D/AudioPipeline(17600): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.0.101:8088
+04-29 19:18:14.018 D/SmartSalesConn(17600): BadgeHttpClient.isReachable start url=http://192.168.0.101:8088/
+04-29 19:18:14.216 D/SmartSalesConn(17600): BadgeHttpClient.isReachable response url=http://192.168.0.101:8088/ code=200 reachable=true
+04-29 19:18:14.216 D/AudioPipeline(17600): 🔎 isReady preflight: result=ready baseUrl=http://192.168.0.101:8088
+04-29 19:18:14.216 D/AudioPipeline(17600): SIM badge sync preflight result trigger=auto isReady=true
+04-29 19:18:14.217 D/AudioPipeline(17600): SIM audio badge sync requested: trigger=auto
+04-29 19:18:14.217 D/AudioPipeline(17600): 🌐 resolveBaseUrl: reusing active endpoint http://192.168.0.101:8088
+04-29 19:18:14.424 D/AudioPipeline(17600): SIM badge sync listRecordings success count=13
+04-29 19:18:14.429 D/AudioPipeline(17600): SIM audio drawer entries emitted count=33 downloading=0 queued=1 holding=0 maxDownloadProgress=0.0
+04-29 19:18:14.443 D/AudioPipeline(17600): SIM badge sync outcome badgeMac=14:C1:9F:D7:E4:06 badgeListCount=13 pendingDeleteCount=0 placeholderCount=1 queueCount=1 retryQueueCount=0 branch=queued
+04-29 19:18:14.443 D/AudioPipeline(17600): SIM audio badge sync completed: trigger=auto queuedCount=1 retryQueuedCount=0 branch=queued
+04-29 19:18:14.444 D/AudioPipeline(17600): SIM badge sync background queue started
+04-29 19:18:14.459 D/AudioPipeline(17600): SIM badge sync background download start filename=rec_19700101_000145.wav badgeMac=14:C1:9F:D7:E4:06
+04-29 19:18:14.460 D/AudioPipeline(17600): 🌐 resolveBaseUrl: reusing active endpoint http://192.168.0.101:8088
+04-29 19:18:14.460 D/AudioPipeline(17600): ⬇️ Downloading: http://192.168.0.101:8088/download?file=rec_19700101_000145.wav
+04-29 19:18:14.481 D/AudioPipeline(17600): SIM audio drawer entries emitted count=33 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 19:18:14.622 D/AudioPipeline(17600): ⬇️ download response Content-Length=-1 Transfer-Encoding=chunked filename=rec_19700101_000145.wav
+04-29 19:18:14.628 D/AudioPipeline(17600): SIM audio drawer entries emitted count=32 downloading=0 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 19:18:14.635 D/AudioPipeline(17600): SIM badge sync removed empty placeholder filename=rec_19700101_000145.wav sizeBytes=0
+04-29 19:18:14.635 D/AudioPipeline(17600): SIM badge sync background queue drained

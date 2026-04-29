@@ -69,6 +69,14 @@ interface ConnectivityBridge {
     fun audioRecordingNotifications(): Flow<RecordingNotification.AudioRecordingReady>
 
     /**
+     * 设备循环验证专用的调试入口。
+     *
+     * 生产徽章固件通过 BLE 发出 `rec#...`。这个入口允许调试面板注入同一条
+     * 归一化后的应用侧通知，不伪造仓库、HTTP 或 UI 状态。
+     */
+    suspend fun debugEmitAudioRecordingReady(filename: String): Boolean = false
+
+    /**
      * 电量通知流。
      *
      * Badge 通过 BLE 发送 `Bat#<0..100>` 时触发。

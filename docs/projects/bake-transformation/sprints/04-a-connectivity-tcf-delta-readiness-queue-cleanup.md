@@ -217,6 +217,20 @@ Closeout must include:
   `rec_19700101_000145.wav`; the exact live `rec#` notification interrupted by
   active-device switch was not available in this hardware window, so that
   physical branch remains blocked rather than claimed.
+- Device-loop debug ingress closure — Added a debug-only app-side `rec#`
+  ingress at the `ConnectivityBridge.audioRecordingNotifications()` boundary
+  and a connectivity-manager debug button that selects a real badge `/list`
+  recording. Run 32 rebuilt/installed the APK without clearing badge state and
+  opened the connectivity manager with one connected default badge and a second
+  registered badge row. Run 33 tapped `debug rec#`, then switched active badge.
+  Logcat proves `source=debug_rec_button`, `rec# auto-download` notification
+  receipt/download start for outgoing badge `14:C1:9F:D7:E4:06`, registry
+  switch to `14:C1:9F:D7:E3:EE`, `rec# auto-download: disconnect cancel
+  badgeMac=14:C1:9F:D7:E4:06 count=1`, and terminal
+  `rec# auto-download: canceled filename=rec_19700101_000154.wav
+  badgeMac=14:C1:9F:D7:E4:06`. Subsequent downloads use the incoming badge MAC.
+  This closes the app-side cancellation path with L3-debug evidence. It does
+  not claim that physical firmware emitted the original `rec#` notification.
 
 ## 10. Closeout
 
@@ -225,11 +239,17 @@ Closeout must include:
   deltas with focused/full unit tests; L3 restored-badge, terminal import,
   active-device switch fencing, HTTP-abnormal UI, reconnect-vs-media fencing,
   direct `HTTP_DELAYED` manager enum evidence captured, and code-level active
-  `rec#` switch cancellation added with focused tests. Physical L3 for live
-  `rec#`-during-switch remains blocked by hardware event availability.
+  `rec#` switch cancellation added with focused tests. L3-debug now proves the
+  app-side `rec#` notification route cancels on active-device switch; physical
+  firmware-emitted `rec#`-during-switch remains blocked by hardware event
+  availability.
 - **Files changed**:
   - `data/connectivity/src/main/java/com/smartsales/prism/domain/connectivity/BadgeManagerStatus.kt`
+  - `data/connectivity/src/main/java/com/smartsales/prism/domain/connectivity/ConnectivityBridge.kt`
+  - `app-core/src/main/java/com/smartsales/prism/MainActivity.kt`
   - `app-core/src/main/java/com/smartsales/prism/data/connectivity/RealConnectivityBridge.kt`
+  - `app-core/src/main/java/com/smartsales/prism/ui/RuntimeShell.kt`
+  - `app-core/src/main/java/com/smartsales/prism/ui/components/ConnectivityModal.kt`
   - `app-core/src/main/java/com/smartsales/prism/ui/components/connectivity/ConnectivityViewModel.kt`
   - `app-core/src/main/java/com/smartsales/prism/ui/sim/SimAudioDrawerViewModel.kt`
   - `app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepository.kt`
@@ -373,7 +393,13 @@ run-10-l3-verdict.md
   `14:C1:9F:D7:E4:06`, BLE/GATT, firmware `1.0.0.1`, HTTP-ready auto sync,
   `/list`, and a badge-owned auto download attempt for
   `rec_19700101_000145.wav`; they do not prove a live `rec#` notification
-  interrupted by active-device switch.
+  interrupted by active-device switch. `run-32-*` and `run-33-*` prove the
+  debug-only app-side `rec#` ingress route from connectivity manager through
+  `audioRecordingNotifications()`: the app emitted
+  `rec_19700101_000154.wav`, started a `rec#` auto-download under
+  `badgeMac=14:C1:9F:D7:E4:06`, switched to `14:C1:9F:D7:E3:EE`, cancelled the
+  outgoing active `rec#` job, and only then started incoming-badge downloads.
+  This is L3-debug evidence, not firmware BLE `rec#` emission evidence.
 - **Code delta transparency**:
 
 | Area | Summary |
@@ -386,8 +412,8 @@ run-10-l3-verdict.md
 | Duplication/dead code | No dead-code removal claim is made. Filename-only queue identity was replaced, but no broad sync dedupe rewrite or reachability sweep was attempted. |
 | Blast radius | Touched the connectivity domain/bridge/ViewModel and SIM audio repository sync path plus focused tests. Large-file pressure was contained, not decomposed; `SimAudioRepositorySyncSupport.kt` grew to make ownership explicit. |
 | Tests added/changed | Bridge test protects HTTP-delayed mapping; ViewModel test protects shell-connected plus manager-HTTP-delayed coexistence; sync-support tests protect wrong-badge manual queue fencing and active `rec#` cancellation on badge switch; namespace/live-observation tests were repaired to match current harness behavior. |
-| Runtime evidence | L3 proved restored badge session, BLE/GATT, HTTP-ready `/list`, badge-owned download start, duplicate manual re-sync fencing, terminal UI import, active-device switch fencing, HTTP-abnormal UI, reconnect-vs-media fencing, and direct `HTTP_DELAYED` manager mapping. Follow-up L3 proved the rebuilt APK still restores the badge and runs auto sync/download, but did not produce the exact live `rec#` switch-cancel event. |
-| Residual risk/debt | Physical L3 for live `rec#` notification interrupted by active-device switch remains blocked by hardware event availability. Large-file pressure remains in the SIM audio sync support tests and repository support classes. |
+| Runtime evidence | L3 proved restored badge session, BLE/GATT, HTTP-ready `/list`, badge-owned download start, duplicate manual re-sync fencing, terminal UI import, active-device switch fencing, HTTP-abnormal UI, reconnect-vs-media fencing, and direct `HTTP_DELAYED` manager mapping. Follow-up L3-debug proved the app-side `rec#` notification path starts and cancels the outgoing active job during badge switch. |
+| Residual risk/debt | Physical L3 for firmware-emitted live `rec#` notification interrupted by active-device switch remains blocked by hardware event availability. Large-file pressure remains in the SIM audio sync support tests and repository support classes. |
 | Net judgment | Cleaner: three implicit runtime contracts were made explicit with focused tests and real device evidence where hardware allowed, without widening into a broad connectivity/audio rewrite. |
 
 - **Pre-BAKE codebase score**: 3/5. The incoming connectivity/audio slice was
@@ -398,8 +424,9 @@ run-10-l3-verdict.md
   L3-revealed adjacent `rec#` teardown gap with focused code changes, targeted
   tests, full unit regression, build verification, and bounded L3 evidence
   including terminal import, active switch, HTTP-abnormal UI, direct
-  `HTTP_DELAYED` mapping, and reconnect fencing; not 5/5 because the exact live
-  `rec#` switch-cancel branch could not be physically produced.
+  `HTTP_DELAYED` mapping, reconnect fencing, and L3-debug `rec#` switch
+  cancellation; not 5/5 because the exact firmware-emitted live `rec#`
+  switch-cancel branch could not be physically produced.
 - **Baked-codebase score**: 4/5. The resulting connectivity/audio slice is
   cleaner because readiness, queue ownership, and active `rec#` teardown are
   explicit, but it is not 5/5 because large-file pressure remains and live

@@ -228,6 +228,23 @@ class ConnectivityViewModelTest {
     }
 
     @Test
+    fun `debug rec notification picks rec file from list and emits bridge ingress`() = runTest {
+        val bridge = FakeConnectivityBridge(
+            listResult = Result.Success(
+                listOf("log_20260429_120000.wav", "rec_20260429_120001.wav")
+            )
+        )
+        val viewModel = createViewModel(bridge = bridge)
+        advanceUntilIdle()
+
+        viewModel.debugEmitRecNotification()
+        advanceUntilIdle()
+
+        assertEquals(listOf("rec_20260429_120001.wav"), bridge.debugRecEmits)
+        assertEquals("debug rec emitted: rec_20260429_120001.wav", viewModel.debugProbeText.value)
+    }
+
+    @Test
     fun `managerState lets active reconnect override paired offline diagnostic state`() = runTest {
         val bridge = FakeConnectivityBridge(
             connection = BadgeConnectionState.Disconnected,
@@ -652,7 +669,8 @@ class ConnectivityViewModelTest {
 
     private class FakeConnectivityBridge(
         connection: BadgeConnectionState = BadgeConnectionState.Disconnected,
-        manager: BadgeManagerStatus = BadgeManagerStatus.Disconnected
+        manager: BadgeManagerStatus = BadgeManagerStatus.Disconnected,
+        private val listResult: Result<List<String>> = Result.Success(emptyList())
     ) : ConnectivityBridge {
         private val _connectionState = MutableStateFlow(connection)
         private val _managerStatus = MutableStateFlow(manager)
@@ -677,6 +695,7 @@ class ConnectivityViewModelTest {
         override val managerStatus: StateFlow<BadgeManagerStatus> = _managerStatus.asStateFlow()
         var requestFirmwareVersionCalls = 0
         var requestSdCardSpaceCalls = 0
+        val debugRecEmits = mutableListOf<String>()
 
         override suspend fun downloadRecording(
             filename: String,
@@ -685,12 +704,17 @@ class ConnectivityViewModelTest {
             error("Not used in ConnectivityViewModelTest")
         }
 
-        override suspend fun listRecordings(): Result<List<String>> = Result.Success(emptyList())
+        override suspend fun listRecordings(): Result<List<String>> = listResult
 
         override fun recordingNotifications(): Flow<RecordingNotification> = emptyFlow()
 
         override fun audioRecordingNotifications(): Flow<RecordingNotification.AudioRecordingReady> =
             emptyFlow()
+
+        override suspend fun debugEmitAudioRecordingReady(filename: String): Boolean {
+            debugRecEmits += filename
+            return true
+        }
 
         override fun batteryNotifications(): Flow<Int> = _batteryNotifications
 

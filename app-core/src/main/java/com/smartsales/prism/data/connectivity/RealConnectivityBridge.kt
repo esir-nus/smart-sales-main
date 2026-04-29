@@ -227,6 +227,29 @@ class RealConnectivityBridge @Inject constructor(
     override fun audioRecordingNotifications(): Flow<RecordingNotification.AudioRecordingReady> =
         audioRecordingNotificationsFlow.asSharedFlow()
 
+    override suspend fun debugEmitAudioRecordingReady(filename: String): Boolean {
+        val normalized = filename.trim()
+        if (normalized.isBlank()) {
+            android.util.Log.w(TAG, "debug rec ingress skipped: blank filename")
+            return false
+        }
+        if (!isTransportReadyForRecordingNotifications()) {
+            android.util.Log.w(
+                TAG,
+                "debug rec ingress skipped: transport not ready filename=$normalized"
+            )
+            return false
+        }
+        android.util.Log.i(
+            TAG,
+            "debug rec ingress emit source=debug_rec_button filename=$normalized"
+        )
+        audioRecordingNotificationsFlow.emit(
+            RecordingNotification.AudioRecordingReady(normalized)
+        )
+        return true
+    }
+
     override fun batteryNotifications(): Flow<Int> = deviceManager.batteryEvents
 
     override fun firmwareVersionNotifications(): Flow<String> = deviceManager.firmwareVersionEvents

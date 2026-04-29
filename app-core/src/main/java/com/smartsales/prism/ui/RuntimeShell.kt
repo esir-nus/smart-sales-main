@@ -41,6 +41,7 @@ import com.smartsales.prism.ui.sim.handleBadgeSchedulerContinuityIngress
 import com.smartsales.prism.ui.sim.handleRuntimeConnectivityEntryRequest
 import com.smartsales.prism.ui.sim.initialRuntimeShellState
 import com.smartsales.prism.ui.sim.openRuntimeAudioDrawer
+import com.smartsales.prism.ui.sim.openRuntimeConnectivityManager
 import com.smartsales.prism.ui.sim.openRuntimeConnectivityModal
 import com.smartsales.prism.ui.sim.openRuntimeScheduler
 import com.smartsales.prism.ui.sim.rememberSimImeVisibility
@@ -56,6 +57,7 @@ import kotlinx.coroutines.flow.collectLatest
 internal fun RuntimeShell(
     badgeAudioPipeline: BadgeAudioPipeline,
     debugFollowUpScenario: SimDebugFollowUpScenario? = null,
+    debugOpenConnectivityManager: Boolean = false,
     forceSetupOnLaunch: Boolean = false,
     onForcedSetupCompleted: () -> Unit = {},
     shouldShowFirstLaunchSchedulerTeaser: Boolean = false,
@@ -172,6 +174,12 @@ internal fun RuntimeShell(
         islandTakeoverSuppressedFlow.value =
             shellState.activeDrawer == com.smartsales.prism.ui.sim.RuntimeDrawerType.SCHEDULER ||
                 shellState.activeConnectivitySurface != null
+    }
+
+    LaunchedEffect(debugOpenConnectivityManager) {
+        if (debugOpenConnectivityManager) {
+            shellState = openRuntimeConnectivityManager(shellState)
+        }
     }
 
     // 自动重连：仅在有效 UI 状态确认为 DISCONNECTED 时调度退避重连，

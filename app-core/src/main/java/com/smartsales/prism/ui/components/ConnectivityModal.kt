@@ -191,6 +191,7 @@ fun ConnectivityModal(
                             debugProbeText = debugProbeText,
                             onProbeMedia = viewModel::debugProbeMediaReadiness,
                             onListRecordings = viewModel::debugListRecordings,
+                            onDebugRec = viewModel::debugEmitRecNotification,
                             onReconnect = viewModel::reconnect
                         )
                     }
@@ -296,6 +297,7 @@ private fun ConnectivityDebugProbeCard(
     debugProbeText: String?,
     onProbeMedia: () -> Unit,
     onListRecordings: () -> Unit,
+    onDebugRec: () -> Unit,
     onReconnect: () -> Unit
 ) {
     Column(
@@ -323,6 +325,17 @@ private fun ConnectivityDebugProbeCard(
                 color = AccentBlue,
                 modifier = Modifier.weight(1f),
                 onClick = onListRecordings
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            ModalActionButton(
+                text = "debug rec#",
+                color = AccentBlue,
+                modifier = Modifier.weight(1f),
+                onClick = onDebugRec
             )
             ModalActionButton(
                 text = "reconnect",

@@ -449,6 +449,43 @@ class ConnectivityViewModel @Inject constructor(
         }
     }
 
+    fun debugEmitRecNotification() {
+        viewModelScope.launch {
+            _debugProbeText.value = "debug rec: listing"
+            val result = connectivityBridge.listRecordings()
+            val filename = when (result) {
+                is Result.Success -> result.data
+                    .map { it.trim() }
+                    .firstOrNull { it.startsWith("rec_", ignoreCase = true) && it.endsWith(".wav", ignoreCase = true) }
+                    ?: result.data.map { it.trim() }.firstOrNull { it.isNotBlank() }
+                is Result.Error -> {
+                    _debugProbeText.value = "debug rec: list error ${result.throwable.message ?: "unknown"}"
+                    Log.w("ConnectivityVM", "debug rec source=debug_rec_button list failed", result.throwable)
+                    null
+                }
+            }
+            if (filename == null) {
+                if (result is Result.Success) {
+                    _debugProbeText.value = "debug rec: no files"
+                    Log.i("ConnectivityVM", "debug rec source=debug_rec_button no files")
+                }
+                return@launch
+            }
+
+            _debugProbeText.value = "debug rec: emitting $filename"
+            val emitted = connectivityBridge.debugEmitAudioRecordingReady(filename)
+            _debugProbeText.value = if (emitted) {
+                "debug rec emitted: $filename"
+            } else {
+                "debug rec blocked: $filename"
+            }
+            Log.i(
+                "ConnectivityVM",
+                "debug rec source=debug_rec_button filename=$filename emitted=$emitted"
+            )
+        }
+    }
+
     /**
      * 重新连接 — 显示 RECONNECTING 状态并处理结果
      */

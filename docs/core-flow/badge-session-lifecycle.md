@@ -133,7 +133,10 @@ Current implementation assessment:
 
 - `RealDeviceRegistryManager.registerDevice()` does register the new badge and sets `_activeDevice` to the new row.
 - Delivered behavior: the registry remains audio-agnostic, and audio observes `DeviceRegistryManager.activeDevice` to cancel queued and active manual badge downloads plus active `rec#` auto-download jobs when the active MAC changes.
-- Gap: physical L3 evidence for a live `rec#` notification interrupted by active-device switch remains blocked until the hardware can produce that exact event during a switch window.
+- Evidence note: Sprint 04-a run 33 proves the app-side `rec#` notification path
+  from `audioRecordingNotifications()` starts and cancels the outgoing active
+  job during active-device switch. Physical firmware-emitted `rec#` L3 remains
+  blocked until hardware can produce that exact event during a switch window.
 
 The correct behavior is that pairing completion chooses one active badge and all device-bound workers either bind to that badge or cancel before the next active badge is used.
 
@@ -174,7 +177,7 @@ Target behavior:
 
 Gap:
 
-- Manual queued downloads now carry badge ownership, and active `rec#` auto-download jobs are explicitly cancelled on active-device switch. Current registry session seeding still creates a fresh secure token for the target device, so durable session identity remains the open target-flow gap. Physical L3 evidence for live `rec#` switch cancellation is also still blocked by hardware event availability.
+- Manual queued downloads now carry badge ownership, and active `rec#` auto-download jobs are explicitly cancelled on active-device switch. Current registry session seeding still creates a fresh secure token for the target device, so durable session identity remains the open target-flow gap. L3-debug evidence proves app-side `rec#` switch cancellation; physical firmware-emitted `rec#` evidence is still blocked by hardware event availability.
 
 Invariants:
 
@@ -214,7 +217,7 @@ Implementation direction:
 
 Audio should observe `DeviceRegistryManager.activeDevice` through the existing runtime-level dependency and cancel all queued/active badge downloads on MAC change. A later stronger implementation may carry the MAC in each queue item, but the minimal contract for Sprint 02 is cancellation on active-device change plus clear logging. This preserves the dependency direction: audio reads registry state, registry does not import audio.
 
-Delivered behavior: Sprint 04-a implementation now satisfies manual-sync queue ownership, queued/active manual cancellation, and active `rec#` auto-download cancellation on active-device change. The remaining target-flow gap is durable session identity plus physical L3 proof for a live `rec#` notification interrupted by a switch.
+Delivered behavior: Sprint 04-a implementation now satisfies manual-sync queue ownership, queued/active manual cancellation, and active `rec#` auto-download cancellation on active-device change. Run 33 proves app-side `rec#` switch cancellation through the debug ingress at the production notification boundary. The remaining target-flow gap is durable session identity plus physical L3 proof for a firmware-emitted live `rec#` notification interrupted by a switch.
 
 ## Section 5 - UI Observation Contract
 

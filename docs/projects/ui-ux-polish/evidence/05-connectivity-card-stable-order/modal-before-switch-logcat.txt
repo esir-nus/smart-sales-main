@@ -1,0 +1,60 @@
+--------- beginning of main
+04-29 21:49:09.463 29300 29300 D SmartSalesConn: 🔌 Restored session: 14:C1:9F:D7:E4:06 knownNetworks=1
+04-29 21:49:09.464 29300 29300 D SmartSalesConn: 🏠 Registry: default device CHLE_Intelligent (...E3:EE)
+04-29 21:49:09.467 29300 29300 D SmartSalesConn: 🔌 Restored session: 14:C1:9F:D7:E3:EE knownNetworks=1
+04-29 21:49:09.470 29300 31224 I SmartSalesConn: 📶 BLE disconnected
+04-29 21:49:09.470 29300 31224 D SmartSalesConn: 🔌 Soft disconnect (session preserved)
+04-29 21:49:09.470 29300 31224 D SmartSalesConn: 🔌 Persistent GATT session closed
+04-29 21:49:09.709 29300 29300 D ConnectivityVM: managerStatus=Connecting managerState=RECONNECTING
+04-29 21:49:10.526 29300 31224 D SmartSalesConn: 📋 Service: 00001801-0000-1000-8000-00805f9b34fb
+04-29 21:49:10.526 29300 31224 D SmartSalesConn:   📋 Char: 00002a05-0000-1000-8000-00805f9b34fb [INDICATE ]
+04-29 21:49:10.526 29300 31224 D SmartSalesConn:     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-29 21:49:10.526 29300 31224 D SmartSalesConn: 📋 Service: 00001800-0000-1000-8000-00805f9b34fb
+04-29 21:49:10.526 29300 31224 D SmartSalesConn:   📋 Char: 00002a00-0000-1000-8000-00805f9b34fb [READ ]
+04-29 21:49:10.526 29300 31224 D SmartSalesConn:     📋 (no descriptors)
+04-29 21:49:10.526 29300 31224 D SmartSalesConn:   📋 Char: 00002a01-0000-1000-8000-00805f9b34fb [READ ]
+04-29 21:49:10.526 29300 31224 D SmartSalesConn:     📋 (no descriptors)
+04-29 21:49:10.526 29300 31224 D SmartSalesConn:   📋 Char: 00002aa6-0000-1000-8000-00805f9b34fb [READ ]
+04-29 21:49:10.526 29300 31224 D SmartSalesConn:     📋 (no descriptors)
+04-29 21:49:10.526 29300 31224 D SmartSalesConn: 📋 Service: 000000ff-0000-1000-8000-00805f9b34fb
+04-29 21:49:10.526 29300 31224 D SmartSalesConn:   📋 Char: 0000ff01-0000-1000-8000-00805f9b34fb [READ WRITE NOTIFY ]
+04-29 21:49:10.526 29300 31224 D SmartSalesConn:     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-29 21:49:10.526 29300 31224 D SmartSalesConn:   📋 Char: 0000ff02-0000-1000-8000-00805f9b34fb [READ ]
+04-29 21:49:10.526 29300 31224 D SmartSalesConn:     📋 (no descriptors)
+04-29 21:49:10.526 29300 31224 D SmartSalesConn:   📋 Char: 0000ff03-0000-1000-8000-00805f9b34fb [WRITE ]
+04-29 21:49:10.526 29300 31224 D SmartSalesConn:     📋 (no descriptors)
+04-29 21:49:10.553 29300 31224 D SmartSalesConn: No CCCD descriptor for 0000ff02-0000-1000-8000-00805f9b34fb, notifications not available (will poll)
+04-29 21:49:10.553 29300 31224 I SmartSalesConn: 🔌 Persistent GATT session established: 14:C1:9F:D7:E3:EE
+04-29 21:49:10.553 29300 31224 I SmartSalesConn: 📶 BLE connected, waiting for explicit network observation
+04-29 21:49:10.554 29300 31234 D SmartSalesConn: 📡 Starting persistent notification listener for 14:C1:9F:D7:E3:EE
+04-29 21:49:10.554 29300 31224 D SmartSalesConn: 🌐 network query device=CHLE_Intelligent
+04-29 21:49:10.555 29300 31224 I SmartSalesConn: 📡 queryNetwork ENTRY (in mutex)
+04-29 21:49:10.556 29300 31224 D SmartSalesConn: 📤 TX [NetworkQuery]: wifi#address#ip#name (77 69 66 69 23 61 64 64 72 65 73 73 23 69 70 23 6E 61 6D 65)
+04-29 21:49:10.590 29300 31150 D SmartSalesConn: 📥 RX [Notification]: IP#192.168.0.102 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 30 32)
+04-29 21:49:10.591 29300 31224 D SmartSalesConn: 📥 RX [NetworkResponse]: IP#192.168.0.102 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 30 32)
+04-29 21:49:10.591 29300 31150 D SmartSalesConn: 📥 RX [Notification]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-29 21:49:10.591 29300 31226 D SmartSalesConn: ❓ Badge unknown notification: IP#192.168.0.102
+04-29 21:49:10.591 29300 31226 D SmartSalesConn: ❓ Badge unknown notification: SD#MstRobot
+04-29 21:49:10.591 29300 31224 D SmartSalesConn: 📥 RX [NetworkResponse]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-29 21:49:10.592 29300 31224 D SmartSalesConn: 📡 fresh query, caching IP=192.168.0.102
+04-29 21:49:10.592 29300 31224 D SmartSalesConn: 📶 state=CONNECTED ip=192.168.0.102
+04-29 21:49:10.592 29300 31224 D SmartSalesConn: 🔌 connectUsingSession: connected, ip=192.168.0.102 ssid=MstRobot
+04-29 21:49:10.598 29300 31393 D SmartSalesConn: 📤 TX [BadgeSignal]: Ver#get (56 65 72 23 67 65 74)
+04-29 21:49:10.599 29300 29300 D ConnectivityVM: managerStatus=Ready managerState=CONNECTED
+04-29 21:49:10.613 29300 31150 D SmartSalesConn: 📥 RX [Notification]: Ver#1.0.0.1 (56 65 72 23 31 2E 30 2E 30 2E 31)
+04-29 21:49:10.614 29300 31393 I SmartSalesConn: 🧾 Badge firmware version: 1.0.0.1
+04-29 21:49:10.644 29300 29300 I SmartSalesConn: 🧾 Badge firmware version query sent
+04-29 21:49:10.657 29300 31146 D SmartSalesConn: 📥 RX [Notification]: tim#get (74 69 6D 23 67 65 74)
+04-29 21:49:10.658 29300 31393 D SmartSalesConn: ⏰ Badge time sync requested
+04-29 21:49:10.717 29300 31228 I SmartSalesConn: ⏰ Time sync responded: tim#20260429214910
+04-29 21:49:13.609 29300 31225 D SmartSalesConn: BadgeHttpClient.isReachable start url=http://192.168.0.102:8088/
+04-29 21:49:16.619 29300 31225 W SmartSalesConn: BadgeHttpClient.isReachable failure url=http://192.168.0.102:8088/ error=SocketTimeoutException:failed to connect to /192.168.0.102 (port 8088) from /192.168.0.106 (port 33436) after 3000ms
+04-29 21:49:16.620 29300 31225 D SmartSalesConn: 🌐 network query device=CHLE_Intelligent
+04-29 21:49:16.620 29300 31225 I SmartSalesConn: 📡 queryNetwork ENTRY (in mutex)
+04-29 21:49:16.620 29300 31225 D SmartSalesConn: 📡 CACHED (6065ms old)
+04-29 21:49:16.620 29300 31225 D SmartSalesConn: 📶 state=CONNECTED ip=192.168.0.102
+04-29 21:49:16.621 29300 31225 D SmartSalesConn: 🌐 Network status ok device=CHLE_Intelligent ip=192.168.0.102
+04-29 21:49:16.622 29300 31225 D SmartSalesConn: BadgeHttpClient.isReachable start url=http://192.168.0.102:8088/
+04-29 21:49:16.628 29300 29300 D ConnectivityVM: managerStatus=HttpDelayed(badgeIp=192.168.0.102, ssid=MstRobot, baseUrl=http://192.168.0.102:8088) managerState=HTTP_DELAYED
+04-29 21:49:17.820 29300 31225 D SmartSalesConn: BadgeHttpClient.isReachable response url=http://192.168.0.102:8088/ code=200 reachable=true
+04-29 21:49:17.822 29300 29300 D ConnectivityVM: managerStatus=Ready managerState=CONNECTED

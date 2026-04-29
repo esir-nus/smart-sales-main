@@ -58,11 +58,12 @@ class ConnectivityViewModelTest {
     private fun createViewModel(
         service: ConnectivityService = FakeConnectivityService(),
         bridge: ConnectivityBridge = FakeConnectivityBridge(),
+        registryManager: DeviceRegistryManager = FakeDeviceRegistryManager(),
         promptCoordinator: ConnectivityPromptCoordinator = ConnectivityPromptCoordinator(),
     ) = ConnectivityViewModel(
         connectivityService = service,
         connectivityBridge = bridge,
-        registryManager = FakeDeviceRegistryManager(),
+        registryManager = registryManager,
         promptCoordinator = promptCoordinator,
         debugModeStore = DebugModeStore(InMemorySharedPreferences())
     )
@@ -228,6 +229,136 @@ class ConnectivityViewModelTest {
         advanceUntilIdle()
 
         assertEquals(1, bridge.requestSdCardSpaceCalls)
+    }
+
+    @Test
+    fun `sortedDevices keeps default first when active device is non-default`() = runTest {
+        val defaultDevice = registeredDevice(
+            macAddress = "AA:BB:CC:DD:EE:01",
+            registeredAtMillis = 1_000L,
+            lastConnectedAtMillis = 10_000L,
+            isDefault = true
+        )
+        val activeNonDefault = registeredDevice(
+            macAddress = "AA:BB:CC:DD:EE:02",
+            registeredAtMillis = 500L,
+            lastConnectedAtMillis = 20_000L
+        )
+        val registryManager = FakeDeviceRegistryManager(
+            devices = listOf(activeNonDefault, defaultDevice),
+            active = activeNonDefault
+        )
+
+        val viewModel = createViewModel(registryManager = registryManager)
+        advanceUntilIdle()
+
+        assertEquals(
+            listOf(defaultDevice.macAddress, activeNonDefault.macAddress),
+            viewModel.sortedDevices.value.map { it.macAddress }
+        )
+        assertEquals(activeNonDefault.macAddress, viewModel.activeDevice.value?.macAddress)
+    }
+
+    @Test
+    fun `switching active selection does not change sortedDevices order`() = runTest {
+        val defaultDevice = registeredDevice(
+            macAddress = "AA:BB:CC:DD:EE:01",
+            registeredAtMillis = 1_000L,
+            isDefault = true
+        )
+        val middleDevice = registeredDevice(
+            macAddress = "AA:BB:CC:DD:EE:02",
+            registeredAtMillis = 2_000L,
+            lastConnectedAtMillis = 5_000L
+        )
+        val newestDevice = registeredDevice(
+            macAddress = "AA:BB:CC:DD:EE:03",
+            registeredAtMillis = 3_000L,
+            lastConnectedAtMillis = 9_000L
+        )
+        val registryManager = FakeDeviceRegistryManager(
+            devices = listOf(newestDevice, middleDevice, defaultDevice),
+            active = defaultDevice
+        )
+        val viewModel = createViewModel(registryManager = registryManager)
+        advanceUntilIdle()
+        val initialOrder = viewModel.sortedDevices.value.map { it.macAddress }
+
+        registryManager.setActive(newestDevice.copy(lastConnectedAtMillis = 30_000L))
+        advanceUntilIdle()
+
+        assertEquals(initialOrder, viewModel.sortedDevices.value.map { it.macAddress })
+        assertEquals(newestDevice.macAddress, viewModel.activeDevice.value?.macAddress)
+    }
+
+    @Test
+    fun `changing default moves new default first without switching active device`() = runTest {
+        val firstDevice = registeredDevice(
+            macAddress = "AA:BB:CC:DD:EE:01",
+            registeredAtMillis = 1_000L,
+            isDefault = true
+        )
+        val secondDevice = registeredDevice(
+            macAddress = "AA:BB:CC:DD:EE:02",
+            registeredAtMillis = 2_000L
+        )
+        val registryManager = FakeDeviceRegistryManager(
+            devices = listOf(firstDevice, secondDevice),
+            active = firstDevice
+        )
+        val viewModel = createViewModel(registryManager = registryManager)
+        advanceUntilIdle()
+
+        viewModel.setDefault(secondDevice.macAddress)
+        advanceUntilIdle()
+
+        assertEquals(
+            listOf(secondDevice.macAddress, firstDevice.macAddress),
+            viewModel.sortedDevices.value.map { it.macAddress }
+        )
+        assertEquals(firstDevice.macAddress, viewModel.activeDevice.value?.macAddress)
+        assertEquals(listOf(secondDevice.macAddress), registryManager.setDefaultCalls)
+    }
+
+    @Test
+    fun `non-default cards stay oldest paired first with mac tie breaker`() = runTest {
+        val defaultDevice = registeredDevice(
+            macAddress = "AA:BB:CC:DD:EE:03",
+            registeredAtMillis = 3_000L,
+            isDefault = true
+        )
+        val newerDevice = registeredDevice(
+            macAddress = "AA:BB:CC:DD:EE:04",
+            registeredAtMillis = 4_000L,
+            lastConnectedAtMillis = 40_000L
+        )
+        val tiedLaterMac = registeredDevice(
+            macAddress = "AA:BB:CC:DD:EE:02",
+            registeredAtMillis = 2_000L,
+            lastConnectedAtMillis = 20_000L
+        )
+        val tiedEarlierMac = registeredDevice(
+            macAddress = "AA:BB:CC:DD:EE:01",
+            registeredAtMillis = 2_000L,
+            lastConnectedAtMillis = 30_000L
+        )
+        val registryManager = FakeDeviceRegistryManager(
+            devices = listOf(newerDevice, tiedLaterMac, defaultDevice, tiedEarlierMac),
+            active = newerDevice
+        )
+
+        val viewModel = createViewModel(registryManager = registryManager)
+        advanceUntilIdle()
+
+        assertEquals(
+            listOf(
+                defaultDevice.macAddress,
+                tiedEarlierMac.macAddress,
+                tiedLaterMac.macAddress,
+                newerDevice.macAddress
+            ),
+            viewModel.sortedDevices.value.map { it.macAddress }
+        )
     }
 
     @Test
@@ -814,20 +945,51 @@ class ConnectivityViewModelTest {
         }
     }
 
-    private class FakeDeviceRegistryManager : DeviceRegistryManager {
-        private val _registeredDevices = MutableStateFlow<List<RegisteredDevice>>(emptyList())
-        private val _activeDevice = MutableStateFlow<RegisteredDevice?>(null)
+    private fun registeredDevice(
+        macAddress: String,
+        registeredAtMillis: Long,
+        lastConnectedAtMillis: Long = registeredAtMillis,
+        isDefault: Boolean = false
+    ) = RegisteredDevice(
+        macAddress = macAddress,
+        displayName = "Badge ${macAddress.takeLast(2)}",
+        profileId = null,
+        registeredAtMillis = registeredAtMillis,
+        lastConnectedAtMillis = lastConnectedAtMillis,
+        isDefault = isDefault
+    )
+
+    private class FakeDeviceRegistryManager(
+        devices: List<RegisteredDevice> = emptyList(),
+        active: RegisteredDevice? = null
+    ) : DeviceRegistryManager {
+        private val _registeredDevices = MutableStateFlow(devices)
+        private val _activeDevice = MutableStateFlow(active)
+        val setDefaultCalls = mutableListOf<String>()
 
         override val registeredDevices: StateFlow<List<RegisteredDevice>> = _registeredDevices.asStateFlow()
         override val activeDevice: StateFlow<RegisteredDevice?> = _activeDevice.asStateFlow()
 
         override fun registerDevice(peripheral: BlePeripheral, session: BleSession) = Unit
         override fun renameDevice(macAddress: String, newName: String) = Unit
-        override fun setDefault(macAddress: String) = Unit
-        override suspend fun switchToDevice(macAddress: String) = Unit
+        override fun setDefault(macAddress: String) {
+            setDefaultCalls += macAddress
+            _registeredDevices.value = _registeredDevices.value.map { device ->
+                device.copy(isDefault = device.macAddress == macAddress)
+            }
+        }
+
+        override suspend fun switchToDevice(macAddress: String) {
+            setActive(_registeredDevices.value.firstOrNull { it.macAddress == macAddress })
+        }
+
         override fun removeDevice(macAddress: String) = Unit
         override fun initializeOnLaunch() = Unit
         override fun markManuallyDisconnected(macAddress: String, value: Boolean) = Unit
         override fun updateBleDetected(macAddress: String, value: Boolean) = Unit
+
+        fun setActive(device: RegisteredDevice?) {
+            _activeDevice.value = device
+        }
     }
 }

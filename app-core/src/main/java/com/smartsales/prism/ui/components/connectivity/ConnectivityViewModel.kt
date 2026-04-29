@@ -56,16 +56,18 @@ class ConnectivityViewModel @Inject constructor(
     val activeDevice: StateFlow<RegisteredDevice?> = registryManager.activeDevice
     val debugModeEnabled: StateFlow<Boolean> = debugModeStore.enabled
 
-    // 排序后的设备列表：活跃设备置顶，其余按注册时间排序
-    val sortedDevices: StateFlow<List<RegisteredDevice>> = combine(
-        registryManager.registeredDevices,
-        registryManager.activeDevice
-    ) { devices, active ->
-        devices.sortedWith(compareBy(
-            { it.macAddress != active?.macAddress },
-            { -it.lastConnectedAtMillis }
-        ))
-    }.stateIn(
+    // 排序后的设备列表：默认设备置顶，其余保持最早成功配对优先；活跃态只影响卡片样式。
+    val sortedDevices: StateFlow<List<RegisteredDevice>> = registryManager.registeredDevices
+        .map { devices ->
+            devices.sortedWith(
+                compareBy<RegisteredDevice>(
+                    { !it.isDefault },
+                    { it.registeredAtMillis },
+                    { it.macAddress }
+                )
+            )
+        }
+        .stateIn(
         scope = viewModelScope,
         started = SharingStarted.Eagerly,
         initialValue = emptyList()

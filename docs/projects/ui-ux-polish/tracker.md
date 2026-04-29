@@ -16,6 +16,7 @@ open
 | 02 | audio-card-hold-state-fix | done | Audio card now shows "等待恢复传输…" + slow-pulse dim bar when badge is offline mid-download (disconnect/power-cut); logcat confirmed holding=1 during reconnect window; download resumes to active styling once bytes flow. | [sprints/02-audio-card-hold-state-fix.md](sprints/02-audio-card-hold-state-fix.md) |
 | 03 | registry-gated-reconnect | done | Registry/session reconnect now refuses removed MACs, reseeds stale sessions to the remaining registered device, and revalidates BLE candidates before reconnect. | [sprints/03-registry-gated-reconnect.md](sprints/03-registry-gated-reconnect.md) |
 | 04 | default-first-priority | blocked | Implementation, L1/L2, and fresh L2.5 app-side verification are green; physical L3 re-entry now requires explicit human manual-collaboration items before another dual-badge scanner window can close. | [sprints/04-default-first-priority.md](sprints/04-default-first-priority.md) |
+| 05 | connectivity-card-stable-order | done | Connectivity manager cards keep the default badge pinned first while non-default badges stay in oldest successful-pairing order; active selection is visual only. | [sprints/05-connectivity-card-stable-order.md](sprints/05-connectivity-card-stable-order.md) |
 
 ## Cross-Sprint Decisions
 

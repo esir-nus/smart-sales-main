@@ -231,6 +231,7 @@ sealed class WavDownloadResult {
 > Debug builds may additionally expose a temporary `断开连接` action in `BLE_PAIRED_NETWORK_*` states for hardware testing convenience; that control must not be treated as a release-surface contract.
 > Closing the connectivity modal/manager clears transient reconnect or mismatch override state so later reopen reflects live manager truth rather than a retained stale repair screen.
 > The modal now renders a frosted glass overlay (matching `SimHomeHeroTokens`) with active device header, registered device list, and per-device management actions. `ConnectivityViewModel` sources device state from `DeviceRegistryManager.registeredDevices` and `DeviceRegistryManager.activeDevice`. Inline rename uses a `DeviceHeader` component with editable text field. Device switch is mutex-protected and routes through `DeviceRegistryManager.switchToDevice()`.
+> Device cards are ordered for wayfinding stability: the default registered badge is pinned first, all non-default badges follow the successful-pairing timeline using `RegisteredDevice.registeredAtMillis` ascending, and `macAddress` breaks ties. Active selection is visual only through the selected card border and active-card content; switching active badges or updating `lastConnectedAtMillis` must not move the card.
 
 #### Data Flow
 

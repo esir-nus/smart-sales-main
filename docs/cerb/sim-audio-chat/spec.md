@@ -5,8 +5,17 @@
 > **Current Reading Priority**: Historical context only; not current source of truth.
 > **Interpretation Rule**: Read this shard as preserved migration memory for the old SIM audio/chat lane, not as active product truth.
 > **Unification Note**: The old audio/chat contract is retained only as a historical base-runtime audio/chat baseline while active truth lives in shared audio and Tingwu docs.
+> **BAKE Supporting Reference Notice**: Supporting reference beneath
+> `docs/bake-contracts/audio-pipeline.md` for audio-specific behavior and
+> beneath `docs/bake-contracts/agent-chat-pipeline.md` for blank/general SIM
+> chat, local session history, SIM-only persistence, composer send, FunASR
+> voice draft, scheduler-shaped pre-route, and badge scheduler follow-up
+> hosting. It is not implementation authority for either verified BAKE
+> contract.
 > **Current Active Truth**:
 > - `docs/core-flow/sim-audio-artifact-chat-flow.md`
+> - `docs/bake-contracts/audio-pipeline.md`
+> - `docs/bake-contracts/agent-chat-pipeline.md`
 > - `docs/cerb/audio-management/spec.md`
 > - `docs/cerb/audio-management/interface.md`
 > - `docs/cerb/tingwu-pipeline/spec.md`

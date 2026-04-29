@@ -4,7 +4,7 @@
 >
 > **Purpose**: Module ownership + data flow. Read this BEFORE any cross-module change.
 > **Rule**: If data belongs to Module B, query B's interface at runtime. Don't store B's data on A's model.
-> **Last Updated**: 2026-04-29 (Audio Pipeline BAKE contract is now the implementation record; scoped audio Cerb docs remain supporting/reference docs beneath it)
+> **Last Updated**: 2026-04-29 (Agent Chat Pipeline BAKE contract is now the implementation record for the base SIM chat/session/voice/follow-up slice)
 >
 > **Status Legend**: ✅ = Shipped (Real impl) · 📐 = Interface only (Fake impl) · 🔲 = Not yet coded
 > **Platform Ownership Legend**: `shared` = same product contract across platforms · `android-only` = owned by the current Android lineage · `harmony-only` = owned by the future native Harmony root · `platform-adapter` = shared product contract, platform-specific delivery layer · `legacy-android-on-harmony` = Android app compatibility behavior on Huawei/Honor/Harmony devices
@@ -77,6 +77,20 @@ This overlay classifies the current repo's cross-platform-sensitive surfaces wit
   `docs/cerb/pipeline-telemetry/spec.md` remain supporting/reference docs
   beneath the Audio Pipeline BAKE contract until a later archival sprint moves
   historical Cerb material.
+- `docs/bake-contracts/agent-chat-pipeline.md` is the verified BAKE
+  implementation contract for the base agent-chat-pipeline slice: blank/general
+  SIM chat, persona/user metadata context, local session history, SIM-only
+  session persistence, durable message types, composer send, FunASR voice
+  draft, scheduler-shaped pre-route, and badge scheduler follow-up hosting.
+- Audio-specific artifact/Tingwu behavior remains under
+  `docs/bake-contracts/audio-pipeline.md`; shell route arbitration remains
+  under `docs/bake-contracts/shell-routing.md`.
+- `docs/cerb/sim-audio-chat/spec.md`,
+  `docs/cerb/sim-audio-chat/interface.md`,
+  `docs/cerb/sim-shell/spec.md`, and
+  `docs/cerb/sim-shell/interface.md` remain supporting reference beneath the
+  Agent Chat Pipeline BAKE contract for the scoped agent-chat behavior until a
+  later archival sprint moves historical Cerb material.
 
 ---
 
@@ -169,7 +183,7 @@ User-facing features. Each receives processed results from Orchestrator (Layer 3
 | **ActiveTaskRetrievalIndex** | Intelligent Scheduler | Global follow-up active-task shortlist + final target gate | ScheduledTaskRepository (all non-done tasks) | `buildShortlist(...)`, `resolveTarget(...)` | OS: App | ✅ |
 | **[BadgeAudioPipeline](./badge-audio-pipeline/spec.md)** | Hardware & Audio | Audio recording lifecycle; `log#` boundary recorded by [`audio-pipeline`](../bake-contracts/audio-pipeline.md) | ASR, OSS, ConnectivityBridge | Uses `AsrService` for the scheduler fast path; automatic `log#` ingress executes inside `SchedulerPipelineForegroundService` via `SchedulerPipelineOrchestrator`; on successful completion also ingests the recording into SIM audio storage before badge cleanup | — | ✅ |
 | **[AudioManagement](./audio-management/spec.md)** | Hardware & Audio | Drawer-visible audio inventory, manual sync/transcribe/delete states, persisted artifacts; audio-pipeline BAKE implementation record: [`audio-pipeline`](../bake-contracts/audio-pipeline.md) | ConnectivityBridge, TingwuPipeline | Receives completed badge recordings through the shared SIM audio namespace owned by `SimAudioRepository` | OS: App | ✅ |
-| **[SIM Audio Chat Lane](../core-flow/sim-audio-artifact-chat-flow.md)** | Hardware & Audio | SIM-local chat composer draft state, audio-grounded discussion continuity, FunASR realtime draft bridge; behavioral north star above [`audio-pipeline`](../bake-contracts/audio-pipeline.md) | SimAudioRepository, SimSessionRepository, SimRealtimeSpeechRecognizer, UserProfileRepository | `SimAgentViewModel`, durable chat/session projections; implementation authority routes through the audio-pipeline BAKE record while scoped audio Cerb docs remain supporting reference | OS: App | 🚧 |
+| **[SIM Audio Chat Lane](../core-flow/sim-audio-artifact-chat-flow.md)** | Hardware & Audio | SIM-local chat composer draft state, audio-grounded discussion continuity, FunASR realtime draft bridge; behavioral north star above [`audio-pipeline`](../bake-contracts/audio-pipeline.md) and [`agent-chat-pipeline`](../bake-contracts/agent-chat-pipeline.md) | SimAudioRepository, SimSessionRepository, SimRealtimeSpeechRecognizer, UserProfileRepository | `SimAgentViewModel`, durable chat/session projections; agent-chat implementation authority routes through the [`agent-chat-pipeline`](../bake-contracts/agent-chat-pipeline.md) BAKE record, audio-specific behavior routes through [`audio-pipeline`](../bake-contracts/audio-pipeline.md), and shell routing stays under [`shell-routing`](../bake-contracts/shell-routing.md); scoped audio/chat and shell Cerb docs remain supporting reference | OS: App | 🚧 |
 | **[OnboardingInteraction](./onboarding-interaction/spec.md)** | Hardware & Audio | Pre-pairing phone-mic onboarding interaction state, consultation reply, typed profile draft, scheduler quick-start sandbox, CTA-gated profile save, post-completion shell handoff request | DeviceSpeechRecognizer, UserProfileRepository, scheduler Path A extraction services, FastTrackMutationEngine, ExactAlarmPermissionGate, Calendar provider/permission bridge, `RuntimeOnboardingHandoffGate` | `OnboardingInteractionService`, `OnboardingQuickStartService`, `OnboardingSchedulerQuickStartCommitter`, `OnboardingQuickStartCalendarExporter`, `OnboardingInteractionViewModel` | OS: App | 🚧 |
 | **[ConflictResolver](./conflict-resolver/spec.md)** | Intelligent Scheduler | Conflict resolution actions | ScheduleBoard | `resolve(...) -> ConflictResolution` | OS: App | ✅ |
 | **[AgentIntelligenceUI](../cerb-ui/agent-intelligence/spec.md)** | System II & Routing | Wait-state UI components | — | `StateFlow<UiState>` | OS: App | 📐 |

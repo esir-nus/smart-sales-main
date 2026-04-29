@@ -3,7 +3,16 @@
 > **Blackbox contract** - Historical SIM audio/chat contract retained in place for campaign memory.
 > **Status**: Historical redirect
 > **Current Reading Priority**: Historical context only; not current source of truth.
+> **BAKE Supporting Reference Notice**: Supporting reference beneath
+> `docs/bake-contracts/audio-pipeline.md` for audio-specific behavior and
+> beneath `docs/bake-contracts/agent-chat-pipeline.md` for blank/general SIM
+> chat, local session history, SIM-only persistence, composer send, FunASR
+> voice draft, scheduler-shaped pre-route, and badge scheduler follow-up
+> hosting. It is not implementation authority for either verified BAKE
+> contract.
 > **Current Active Truth**:
+> - `docs/bake-contracts/agent-chat-pipeline.md`
+> - `docs/bake-contracts/audio-pipeline.md`
 > - `docs/cerb/audio-management/interface.md`
 > - `docs/cerb/audio-management/spec.md`
 > - `docs/cerb/tingwu-pipeline/interface.md`

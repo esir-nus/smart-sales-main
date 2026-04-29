@@ -6,9 +6,14 @@
 > **BAKE Authority Notice**: Supporting/reference historical interface shard
 > beneath `docs/bake-contracts/shell-routing.md` for delivered shell-routing
 > implementation truth. Core-flow docs remain the behavioral north stars.
+> **Agent Chat BAKE Notice**: Supporting reference beneath
+> `docs/bake-contracts/agent-chat-pipeline.md` for base SIM chat/session/voice
+> draft/follow-up behavior. This notice does not replace the shell-routing BAKE
+> authority above.
 > **Current Active Truth**:
 > - `docs/specs/prism-ui-ux-contract.md`
 > - `docs/bake-contracts/shell-routing.md`
+> - `docs/bake-contracts/agent-chat-pipeline.md`
 > - `docs/cerb-ui/home-shell/spec.md`
 > - `docs/cerb-ui/dynamic-island/spec.md`
 > - `docs/cerb/interface-map.md`

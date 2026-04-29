@@ -37,7 +37,7 @@ open
 | 13 | audio-pipeline-bake-contract | done | Wrote the audio-pipeline BAKE contract, synced interface-map authority, and demoted scoped audio Cerb docs to supporting reference. | [sprints/13-audio-pipeline-bake-contract.md](sprints/13-audio-pipeline-bake-contract.md) |
 | 14 | agent-chat-pipeline-dbm | done | Delivered behavior map created for agent-chat-pipeline, covering blank/general SIM chat, composer send, persona/user context, local session history and persistence, FunASR voice draft, scheduler and follow-up boundaries, telemetry, tests, and runtime-evidence gaps. | [sprints/14-agent-chat-pipeline-dbm.md](sprints/14-agent-chat-pipeline-dbm.md) |
 | 15 | agent-chat-pipeline-tcf | done | Aligned existing SIM chat/shell target docs with Sprint 14 gaps and authored the agent-chat-pipeline BAKE contract sprint. | [sprints/15-agent-chat-pipeline-tcf.md](sprints/15-agent-chat-pipeline-tcf.md) |
-| 16 | agent-chat-pipeline-bake-contract | authored | Write the agent-chat-pipeline BAKE contract, sync interface-map authority, and demote scoped historical/supporting docs to supporting reference. | [sprints/16-agent-chat-pipeline-bake-contract.md](sprints/16-agent-chat-pipeline-bake-contract.md) |
+| 16 | agent-chat-pipeline-bake-contract | done | Wrote the agent-chat-pipeline BAKE contract, synced interface-map authority, and demoted scoped historical/supporting docs to supporting reference. | [sprints/16-agent-chat-pipeline-bake-contract.md](sprints/16-agent-chat-pipeline-bake-contract.md) |
 
 ## Domain Backlog
 
@@ -48,7 +48,7 @@ open
 | scheduler-path-a | base-runtime-active | `docs/core-flow/scheduler-fast-track-flow.md` | high | tier-1 | bake-contract-written |
 | shell-routing | base-runtime-active | `docs/core-flow/sim-shell-routing-flow.md` | high | tier-1 | bake-contract-written |
 | audio-pipeline | base-runtime-active | `docs/core-flow/sim-audio-artifact-chat-flow.md` | high | tier-2 | bake-contract-written |
-| agent-chat-pipeline | partially-shipped | `docs/cerb/sim-audio-chat/spec.md` | high | tier-2 | tcf-written |
+| agent-chat-pipeline | partially-shipped | `docs/cerb/sim-audio-chat/spec.md` | high | tier-2 | bake-contract-written |
 | entity-resolution | base-runtime-active | `docs/cerb/entity-writer/spec.md` | high | tier-2 | triaged |
 | onboarding | base-runtime-active | `docs/cerb/onboarding-interaction/spec.md` | medium | tier-2 | triaged |
 | typed-mutation | partially-shipped | `docs/core-flow/system-typed-mutation-flow.md` | high | tier-2 | triaged |

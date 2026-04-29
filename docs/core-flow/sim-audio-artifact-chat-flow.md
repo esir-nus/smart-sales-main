@@ -156,6 +156,33 @@ The exact telemetry names in code may differ today, but they should converge tow
 - `AUDIO_RESELECT_REQUESTED`
 - `AUDIO_RESELECT_RETURNED`
 
+## Sprint 11 Delivered-Vs-Target Alignment
+
+Sprint 11 (`docs/projects/bake-transformation/sprints/11-audio-pipeline-dbm.md`)
+mapped current delivered audio behavior against this target. The target flow
+remains ahead of delivered telemetry and runtime proof in these areas:
+
+- BAKE gap: successful `log#` scheduler-pipeline drawer ingest currently writes
+  minimal ASR transcript artifacts into the SIM audio namespace. This keeps the
+  drawer inventory coherent, but it is not proven equivalent to source-led
+  long-form Tingwu artifacts. Sprint 13 must decide whether this boundary is an
+  accepted scheduler-ingest contract or a convergence gap.
+- BAKE gap: the manual sync empty-file skip count shape exists, including
+  `empty-file` outcome language, but Sprint 11 did not prove it is wired into
+  manual sync counts after sub-1KB downloads are skipped.
+- BAKE gap: pending chat-side completion has durable artifact-history helpers,
+  but Sprint 11 did not prove the full repository-completion-to-chat-history
+  path for a pending selection. The target still requires completed pending
+  chat-side audio to become durable artifact history.
+- BAKE gap: canonical valves in this doc remain ahead of delivered telemetry.
+  Delivered logs are partial and do not yet prove all audio pipeline checkpoints
+  such as `TRANSCRIPTION_REQUESTED`, `RAW_TINGWU_RESULT_READY`,
+  `ARTIFACTS_RENDERED`, or `AUDIO_CHAT_CONTEXT_BOUND`.
+- BAKE gap: runtime evidence remains missing for physical badge manual sync,
+  `rec#`, `log#`, BLE disconnect/resume, provider-network Tingwu behavior, and
+  installed drawer/chat UI. These stay unproven unless a future sprint captures
+  fresh filtered `adb logcat` and relevant command evidence.
+
 ---
 
 ## Master Routing Flow

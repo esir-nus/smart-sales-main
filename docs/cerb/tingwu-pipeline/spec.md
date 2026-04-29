@@ -36,6 +36,9 @@ Contract notes:
 - metadata-derived scene/identity hints are advisory request context only
 - provider-returned identity labels remain the upstream truth when present
 - missing optional payloads must degrade back to transcript/diarization behavior instead of failing the whole job
+- when provider summary is absent, fallback copy must be honest degradation
+  language derived from transcript availability, not a claim that a provider
+  summary or smart summary exists
 
 ## Logical Flow
 
@@ -73,6 +76,22 @@ This spec does **not** require:
 - Mono-only augmentation to explain normal non-Mono audio behavior
 
 Mono may later augment this lane, but the augmentation must remain downstream of the source-led Tingwu contract defined here.
+
+## Sprint 11 Alignment Notes
+
+Sprint 11 confirmed the delivered Tingwu path is source-led in shape, but left
+these BAKE gaps for the follow-on contract:
+
+- BAKE gap: delivered summary fallback copy can currently imply a summary exists
+  even when the provider did not return one. Target behavior requires honest
+  summary fallback copy that clearly degrades to transcript/diarization context
+  when provider summary payloads are absent.
+- BAKE gap: live provider submit, polling, result-link download, and optional
+  artifact absence behavior remain unproven because Sprint 11 did not capture
+  provider-network evidence or fresh `adb logcat`.
+- BAKE gap: the `log#` scheduler-pipeline drawer ingest path writes minimal ASR
+  transcript artifacts and does not prove full long-form Tingwu processing. The
+  BAKE contract must preserve that boundary explicitly if it remains accepted.
 
 ## Wave Summary
 

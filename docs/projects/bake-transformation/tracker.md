@@ -33,6 +33,8 @@ open
 | 09 | shell-routing-tcf | done | Aligned shell-routing target core flows from Sprint 08 DBM gaps and authored the shell-routing BAKE contract sprint. | [sprints/09-shell-routing-tcf.md](sprints/09-shell-routing-tcf.md) |
 | 10 | shell-routing-bake-contract | done | Wrote the shell-routing BAKE contract, synced interface-map authority, and demoted shell Cerb docs to supporting reference. | [sprints/10-shell-routing-bake-contract.md](sprints/10-shell-routing-bake-contract.md) |
 | 11 | audio-pipeline-dbm | done | Delivered behavior map created for the audio pipeline, covering badge/manual ingress, SIM repository, Tingwu artifacts, drawer UI, Ask AI, audio reselect, audio-bound chat state, telemetry, and evidence gaps. | [sprints/11-audio-pipeline-dbm.md](sprints/11-audio-pipeline-dbm.md) |
+| 12 | audio-pipeline-tcf | done | Aligned audio target/supporting docs with Sprint 11 gaps and authored the audio pipeline BAKE contract sprint. | [sprints/12-audio-pipeline-tcf.md](sprints/12-audio-pipeline-tcf.md) |
+| 13 | audio-pipeline-bake-contract | authored | Write the audio-pipeline BAKE contract, sync interface-map authority, and demote scoped audio Cerb docs to supporting reference. | [sprints/13-audio-pipeline-bake-contract.md](sprints/13-audio-pipeline-bake-contract.md) |
 
 ## Domain Backlog
 
@@ -42,7 +44,7 @@ open
 | badge-session | base-runtime-active | `docs/core-flow/badge-session-lifecycle.md` | high | tier-1 | bake-contract-written |
 | scheduler-path-a | base-runtime-active | `docs/core-flow/scheduler-fast-track-flow.md` | high | tier-1 | bake-contract-written |
 | shell-routing | base-runtime-active | `docs/core-flow/sim-shell-routing-flow.md` | high | tier-1 | bake-contract-written |
-| audio-pipeline | base-runtime-active | `docs/core-flow/sim-audio-artifact-chat-flow.md` | high | tier-2 | dbm-written |
+| audio-pipeline | base-runtime-active | `docs/core-flow/sim-audio-artifact-chat-flow.md` | high | tier-2 | tcf-written |
 | agent-chat-pipeline | partially-shipped | `docs/cerb/sim-audio-chat/spec.md` | high | tier-2 | triaged |
 | entity-resolution | base-runtime-active | `docs/cerb/entity-writer/spec.md` | high | tier-2 | triaged |
 | onboarding | base-runtime-active | `docs/cerb/onboarding-interaction/spec.md` | medium | tier-2 | triaged |

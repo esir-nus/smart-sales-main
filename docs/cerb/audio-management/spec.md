@@ -140,6 +140,34 @@ Empty recording filter rule:
 - the skip count is logged and shown in the sync outcome message when nonzero
 - constant: `MIN_BADGE_WAV_SIZE_BYTES = 1024L` in `SimAudioRepositorySyncSupport.kt`
 
+## Sprint 11 Alignment Notes
+
+Sprint 11 mapped delivered audio behavior before this target-flow alignment.
+The following notes constrain the next BAKE contract sprint without changing
+runtime behavior in this sprint:
+
+- BAKE gap: `log#` / `BadgeAudioPipeline` remains scheduler-owned, but its
+  successful drawer ingest currently persists minimal ASR transcript artifacts.
+  That path is allowed as delivered behavior only as an explicit
+  scheduler-pipeline boundary until Sprint 13 writes the audio pipeline BAKE
+  contract. It must not be silently described as full Tingwu artifact
+  processing.
+- BAKE gap: the empty-file skip count shape exists for manual sync outcome
+  messaging, but Sprint 11 did not prove the count is incremented from actual
+  `empty-file` removals. Keep the target requirement that skip copy appears
+  only after observed empty-file evidence.
+- BAKE gap: pending chat-side completion still requires durable artifact
+  history proof. The current spec can describe the storage and binding target,
+  but a future implementation/contract sprint must prove the complete
+  pending-selection completion path before treating it as fully verified.
+- BAKE gap: canonical audio valves remain ahead of delivered telemetry. Current
+  audio-management evidence proves some manual sync and route telemetry, not
+  the complete canonical valve set required by the core flow.
+- BAKE gap: runtime evidence for badge hardware, BLE reconnect/resume, provider
+  network behavior, and installed UI remains unproven without fresh filtered
+  `adb logcat` and command evidence. Static source and JVM tests are not enough
+  to claim those runtime branches.
+
 ---
 
 ## Domain Models

@@ -1,3 +1,7 @@
+---
+scope: base-runtime-active
+---
+
 # Core Flow: Scheduler Fast-Track (Path A)
 
 > **Role**: Core Flow
@@ -28,6 +32,38 @@ This file is allowed to be ahead of the codebase.
 | **Spec** | How the behavior is encoded | `docs/specs/scheduler-path-a-execution-prd.md`, future/updated scheduler specs, UI specs, interface docs |
 | **Code** | Delivered behavior | Fast-track parser/linter, mutation engine, repositories, schedule board, scheduler UI |
 | **PU Test** | Behavioral validation | `docs/plans/PU-tracker.md`, L2 scenario runner, acceptance flows, relevant domain/UI tests |
+
+---
+
+## Delivered Behavior Alignment
+
+Sprint 05 delivered-behavior map:
+`docs/projects/bake-transformation/evidence/05-scheduler-path-a-dbm/delivered-behavior-map.md`
+
+Delivered behavior:
+
+- top-level voice and SIM drawer text have direct Path A routing before or outside heavy Path B; terminal voice Path A commits suppress later scheduler writes for the same unified thread.
+- exact create, vague create, inspiration capture, conflict-visible create, global reschedule, SIM manual delete, and SIM manual done have delivered source/test coverage.
+- `IntentOrchestrator`, `SchedulerIntelligenceRouter`, `SchedulerPathACreateInterpreter`, `FastTrackMutationEngine`, `ScheduledTaskRepository`, and SIM scheduler coordinators are the current implementation spine.
+- SIM exact creates and reschedules visibly arm reminder cascades through SIM UI coordinators; top-level voice commits do not have equivalent arming proof in the inspected commit path.
+
+Target behavior:
+
+- Path A must preserve the behavioral laws in this file even when current code is behind: no fabricated time, no silent drops, explicit fast failure, visible conflict persistence, replacement-oriented reschedule, shared GUID, and separate card signals.
+- the pre-fork scheduling envelope should include unified GUID, schedulable classification, urgency, and first-pass candidate entity once, then feed Path A and any Path B enrichment without rediscovering the same entity.
+- exact-create routing should converge on the agreed semantic extraction contract while keeping any deterministic shortcuts explicitly justified as scheduler-owned safety branches.
+- delete support must be resolved as product behavior before a BAKE contract claims voice delete parity; manual delete is delivered, but shared voice delete is currently rejected.
+- canonical valve vocabulary should converge with delivered telemetry names so runtime evidence can prove each declared joint without translation ambiguity.
+
+Gap:
+
+- Top-level voice alarm arming is not proven like SIM exact create/reschedule arming.
+- The shared pre-fork candidate entity envelope is incomplete in delivered Path A.
+- Deterministic exact-create shortcuts run before semantic extraction fallback and need an explicit target-flow decision.
+- Voice delete is rejected while SIM manual delete is delivered.
+- Fully undated vague create is not proven as delivered.
+- Canonical valve names are not fully aligned to delivered telemetry checkpoint names.
+- Shared and SIM-local create routing helpers may represent implementation drift if they diverge.
 
 ---
 

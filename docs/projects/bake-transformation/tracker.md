@@ -27,6 +27,8 @@ open
 | 03 | connectivity-tcf | done | Added base-runtime scope metadata and delivered-vs-target gap notes to connectivity/session core flows, then authored the first BAKE contract sprint. | [sprints/03-connectivity-tcf.md](sprints/03-connectivity-tcf.md) |
 | 04 | connectivity-bake-contract | done | Wrote the connectivity-badge-session BAKE contract, synced interface-map authority, and demoted connectivity Cerb docs to supporting reference. | [sprints/04-connectivity-bake-contract.md](sprints/04-connectivity-bake-contract.md) |
 | 05 | scheduler-path-a-dbm | done | Delivered behavior map created for Scheduler Path A, covering shared routing, Uni-A/B/C/D, reschedule/delete, SIM overlay, telemetry, tests, and runtime-evidence gaps. | [sprints/05-scheduler-path-a-dbm.md](sprints/05-scheduler-path-a-dbm.md) |
+| 06 | scheduler-path-a-tcf | done | Added base-runtime scope metadata and Sprint 05 delivered-vs-target gap notes to Scheduler Path A core flows, then authored the Scheduler Path A BAKE contract sprint. | [sprints/06-scheduler-path-a-tcf.md](sprints/06-scheduler-path-a-tcf.md) |
+| 07 | scheduler-path-a-bake-contract | authored | Write the Scheduler Path A BAKE contract, sync interface-map authority, and demote Scheduler Path A Cerb docs to supporting reference. | [sprints/07-scheduler-path-a-bake-contract.md](sprints/07-scheduler-path-a-bake-contract.md) |
 
 ## Domain Backlog
 
@@ -34,7 +36,7 @@ open
 |--------|---------|--------------|------------|---------------|--------|
 | connectivity-bridge | base-runtime-active | `docs/core-flow/badge-connectivity-lifecycle.md` | high | tier-1 | bake-contract-written |
 | badge-session | base-runtime-active | `docs/core-flow/badge-session-lifecycle.md` | high | tier-1 | bake-contract-written |
-| scheduler-path-a | base-runtime-active | `docs/core-flow/scheduler-fast-track-flow.md` | high | tier-1 | dbm-written |
+| scheduler-path-a | base-runtime-active | `docs/core-flow/scheduler-fast-track-flow.md` | high | tier-1 | tcf-written |
 | shell-routing | base-runtime-active | `docs/core-flow/sim-shell-routing-flow.md` | high | tier-1 | triaged |
 | audio-pipeline | base-runtime-active | `docs/core-flow/sim-audio-artifact-chat-flow.md` | high | tier-2 | triaged |
 | agent-chat-pipeline | partially-shipped | `docs/cerb/sim-audio-chat/spec.md` | high | tier-2 | triaged |
@@ -74,3 +76,11 @@ open
 
 Project expected to exceed six sprints. Ongoing-justification entry required
 when sprint 07 is authored, per `docs/specs/project-structure.md`.
+
+## Ongoing Justification
+
+Sprint 07 is authored because BAKE transformation intentionally proceeds
+domain-by-domain through DBM, TCF, and BAKE contract stages. The project remains
+open past six sprints to keep base-runtime contracts coherent while avoiding
+one oversized sprint that would mix delivered-behavior mapping, target-flow
+alignment, authority sync, and contract writing across unrelated domains.

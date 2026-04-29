@@ -1,3 +1,7 @@
+---
+scope: base-runtime-active
+---
+
 # Core Flow: SIM Scheduler Path A Overlay
 
 > **Role**: Core Flow
@@ -31,6 +35,34 @@ If this file conflicts with lower specs or code, treat the lower layers as drift
 | **Spec** | How the behavior is encoded | `docs/cerb/scheduler-path-a-spine/spec.md`, `docs/cerb/scheduler-path-a-spine/interface.md`, related `scheduler-path-a-uni-*` docs, and `docs/cerb-ui/scheduler/contract.md` |
 | **Code** | Delivered behavior | `SimSchedulerViewModel`, SIM scheduler wiring, Path A-only scheduler integration |
 | **PU Test** | Behavioral validation | future SIM Path A scheduler tests and isolation checks |
+
+---
+
+## Delivered Behavior Alignment
+
+Sprint 05 delivered-behavior map:
+`docs/projects/bake-transformation/evidence/05-scheduler-path-a-dbm/delivered-behavior-map.md`
+
+Delivered behavior:
+
+- SIM scheduler drawer routes transcripts through Path A-backed scheduler collaborators rather than Path B, CRM, or plugin memory.
+- SIM exact create, vague create, conflict-visible create, inspiration capture, global reschedule, manual delete, and done actions mutate scheduler-owned truth or fail inside scheduler-scoped copy.
+- SIM exact creates and reschedules re-arm scheduler reminders through SIM mutation coordinators.
+- SIM voice delete through the shared router is currently rejected with scheduler-scoped failure copy; manual delete by canonical ID is delivered.
+
+Target behavior:
+
+- SIM keeps the approved Path A branch set without importing smart-only runtime dependencies.
+- SIM delete behavior must be stated precisely before lower layers claim parity: manual delete is delivered today, while voice delete remains a target/gap unless explicitly approved and implemented.
+- SIM target resolution must keep using scheduler-owned active task truth and must not let selected UI state, visible date windows, or chat follow-up context become mutation authority.
+- any deterministic SIM-local create helper must stay aligned with shared Scheduler Path A routing or be folded into a shared scheduler-owned implementation.
+
+Gap:
+
+- Voice delete is rejected while SIM manual delete is delivered.
+- Fully undated vague create is not proven as delivered.
+- Shared and SIM-local create routing helpers may represent drift.
+- Canonical SIM valve names and delivered log/telemetry names still need alignment before L3 evidence can be checked mechanically.
 
 ---
 

@@ -20,6 +20,25 @@ Historical note:
 - the remainder of this file is a frozen snapshot of the older SIM-shell interface framing
 - it must not be used as active shell fallback ownership
 
+Sprint 14 agent-chat alignment note:
+
+- blank/general SIM chat is a supported shell surface before audio attachment.
+- composer send creates or reuses SIM-local session history; FunASR voice draft
+  is draft-only and explicit send remains required.
+- persona, user metadata, and local session history are allowed prompt context;
+  Mono/smart-agent memory, CRM/entity loading, plugin/tool runtime, mascot, and
+  task-board state are excluded from base chat.
+- session persistence remains SIM-only. Durable message types are user text, AI
+  response, AI audio artifacts, and AI error; transient voice draft, thinking,
+  streaming, and presentation state are not persisted as durable messages.
+- scheduler-shaped pre-route and badge scheduler follow-up are hosted
+  boundaries only. Scheduler mutation truth and follow-up task authority stay
+  scheduler-owned, while the shell may expose prompt/chip and task-scoped chat
+  surfaces.
+- telemetry, installed UI, provider/network behavior, live voice draft/FunASR,
+  scheduler side effects, follow-up prompt/action strip, and logcat runtime
+  evidence remain gaps from Sprint 14 until a later sprint proves them.
+
 ---
 
 ## Entry Surface

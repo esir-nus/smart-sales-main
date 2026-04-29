@@ -33,6 +33,32 @@ Sprint 08 alignment note:
 - Delivered gap: Sprint 08 found current telemetry does not prove the canonical valves `SIM_ENTRY_STARTED`, `SIM_SHELL_MOUNTED`, drawer-open/close valves, or `SMART_SURFACE_BLOCKED`.
 - Test target: the BAKE contract must require direct Drawer Conflict proof and new-session follow-up-clear coverage; static source checks alone are not sufficient runtime proof.
 
+Sprint 14 agent-chat alignment note:
+
+- Target behavior remains general-chat-first: blank/general SIM chat is a real
+  shell surface before any audio is attached. Composer send creates or reuses a
+  SIM-local session and may later receive audio through drawer-based `Ask AI` or
+  audio reselect.
+- User-facing chat context may use system persona, user metadata, and local SIM
+  session history, but shell routing must not depend on Mono/smart-agent memory,
+  CRM/entity loading, plugin/tool runtime, mascot, or task-board surfaces.
+- Session persistence is SIM-only. Durable message types are bounded to user
+  text, AI response, AI audio artifacts, and AI error; voice draft, thinking,
+  streaming, and transient presentation state are not durable shell truth.
+- FunASR voice draft is draft-only. The shell may host mic capture and editable
+  draft text in the composer, but explicit send remains required.
+- Scheduler-shaped pre-route is a boundary, not shell ownership of scheduler
+  truth. The shell may pass eligible general-chat input to scheduler-owned
+  routing before LLM fallback while task storage, alarm/reminder behavior, and
+  mutation authority remain scheduler-owned.
+- Badge scheduler follow-up is hosted by the shell as prompt-first,
+  task-scoped follow-up. It must not force-switch chat, become generic SIM
+  chat, or create a second memory lane.
+- BAKE gap: telemetry and runtime evidence remain incomplete for blank chat,
+  composer send, provider/network behavior, voice draft/FunASR, scheduler
+  pre-route, follow-up prompt/action strip, and logcat delivery. Sprint 16 must
+  record these as contract gaps unless fresh runtime evidence exists.
+
 ---
 
 ## Downstream Sync Targets

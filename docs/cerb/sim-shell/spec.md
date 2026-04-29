@@ -33,6 +33,32 @@ Its only remaining value is historical context for the former SIM-owned shell la
 Use the current active docs above for implementation and review.
 The remainder of this file is retained only as a historical snapshot of the older SIM-shell framing.
 
+## Sprint 14 Agent Chat Alignment Note
+
+Sprint 14 (`docs/projects/bake-transformation/sprints/14-agent-chat-pipeline-dbm.md`)
+mapped delivered agent-chat-pipeline behavior. Because this shard is historical,
+the notes below are supporting reference only beneath current core-flow and
+future BAKE contract authority:
+
+- blank/general SIM chat is a supported shell state before audio attachment,
+  backed by composer send and local SIM session creation.
+- persona, user metadata, and local session history may shape general chat
+  context; hidden tool execution, smart-agent capability, and Mono memory must
+  not be implied.
+- session persistence is SIM-only. Durable message types are user text, AI
+  response, AI audio artifacts, and AI error; transient thinking, streaming,
+  voice draft, and transcript-reveal state stay memory-only.
+- composer send is explicit. FunASR voice draft remains draft-only and must not
+  auto-send or append durable history.
+- scheduler-shaped general-chat input may pre-route to scheduler-owned logic,
+  but scheduler storage, reminders, conflict truth, and mutation authority stay
+  outside generic SIM chat.
+- badge scheduler follow-up is prompt-first and task-scoped. The shell may host
+  the follow-up surface, but it must not create a second memory lane.
+- Sprint 14 left telemetry, installed runtime evidence, provider/network
+  behavior, live voice draft/FunASR, scheduler side effects, follow-up prompt
+  behavior, and logcat delivery as gaps for Sprint 16.
+
 ---
 
 ## 1. Historical Purpose At The Time

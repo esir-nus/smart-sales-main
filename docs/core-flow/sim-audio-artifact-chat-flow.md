@@ -183,6 +183,47 @@ remains ahead of delivered telemetry and runtime proof in these areas:
   installed drawer/chat UI. These stay unproven unless a future sprint captures
   fresh filtered `adb logcat` and relevant command evidence.
 
+## Sprint 14 Agent Chat Alignment
+
+Sprint 14 (`docs/projects/bake-transformation/sprints/14-agent-chat-pipeline-dbm.md`)
+mapped current delivered agent-chat-pipeline behavior outside the audio-specific
+pipeline. The target flow keeps these delivered-vs-target notes for the
+follow-on BAKE contract:
+
+- BAKE target: blank/general SIM chat is a first-class entry before audio. It
+  may start with no selected audio, becomes durable after a non-empty composer
+  send, and may accept audio context later through `Ask AI` or drawer-based
+  audio reselect.
+- BAKE target: general SIM chat is grounded in system persona, user metadata,
+  and local SIM session history. It must not imply hidden tools, database
+  writes, task execution, smart-agent capability, or Mono memory access.
+- BAKE target: local session history and session persistence stay SIM-only.
+  Durable message types remain bounded to user text, AI response, AI audio
+  artifacts, and AI error; transient thinking, streaming, voice draft, and
+  transcript-reveal UI state remain memory-only.
+- BAKE target: composer send is explicit. FunASR voice draft is draft-only:
+  partial/final realtime text may fill editable composer input, but it must not
+  append durable history or auto-send without user action.
+- BAKE boundary: scheduler-shaped text in a general SIM chat may pre-route to
+  scheduler-owned Path A behavior before LLM fallback, but scheduler storage,
+  alarm/reminder side effects, conflict truth, and mutation authority stay
+  scheduler-owned.
+- BAKE boundary: badge scheduler follow-up may be hosted in the normal SIM chat
+  surface through a prompt/chip and task-scoped follow-up session, but it is not
+  generic general chat, not audio attachment, and not a second memory lane.
+- BAKE exclusion: Mono/smart-agent memory stays outside this target. Kernel
+  session memory, CRM/entity loading, Path B enrichment, plugin/tool runtime,
+  mascot, and task-board surfaces are not required for base SIM chat.
+- BAKE gap: agent-chat-pipeline telemetry is incomplete. General chat input,
+  session create/restore/persist, executor request/success/error, title
+  generation, voice draft lifecycle, scheduler pre-route, follow-up prompt, and
+  provider/network failure need a unified valve family in Sprint 16.
+- BAKE gap: runtime evidence remains missing for installed blank chat,
+  composer send, provider/network general LLM behavior, live voice draft and
+  FunASR callbacks, scheduler pre-route side effects, follow-up prompt/action
+  strip, and logcat telemetry. These remain unproven until a future sprint
+  captures fresh filtered `adb logcat` and relevant command evidence.
+
 ---
 
 ## Master Routing Flow

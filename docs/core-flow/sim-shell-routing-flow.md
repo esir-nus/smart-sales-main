@@ -25,6 +25,14 @@ Authority note:
 
 This file is allowed to be ahead of the codebase.
 
+Sprint 08 alignment note:
+
+- Target behavior remains governed by this flow and the UX governance flow, not by delivered code drift.
+- Delivered gap: Sprint 08 found first-launch code returns to home after forced onboarding, with a shell-owned scheduler handoff gate possibly auto-opening the real scheduler drawer; this matches `docs/core-flow/base-runtime-ux-surface-governance-flow.md`.
+- BAKE gap: Sprint 08 found delivered `PARTIAL_WIFI_DOWN` persistent dynamic-island takeover, but Wi-Fi mismatch and manager-only diagnostic states remain excluded from the target island takeover rules.
+- Delivered gap: Sprint 08 found current telemetry does not prove the canonical valves `SIM_ENTRY_STARTED`, `SIM_SHELL_MOUNTED`, drawer-open/close valves, or `SMART_SURFACE_BLOCKED`.
+- Test target: the BAKE contract must require direct Drawer Conflict proof and new-session follow-up-clear coverage; static source checks alone are not sufficient runtime proof.
+
 ---
 
 ## Downstream Sync Targets
@@ -72,7 +80,7 @@ Support surfaces/actions:
 Permitted shell transitions:
 
 - app launch with completed SIM first-launch gate -> discussion chat
-- app launch after fresh install / reinstall -> forced SIM onboarding setup -> connectivity manager -> discussion chat
+- app launch after fresh install / reinstall -> forced SIM onboarding setup blocks normal shell use -> normal home shell; post-onboarding scheduler auto-open may occur only through the shell-owned handoff gate
 - discussion chat -> normal message send/receive without any audio precondition
 - discussion chat -> scheduler drawer
 - discussion chat -> audio drawer
@@ -104,7 +112,9 @@ The RuntimeShell-owned dynamic island in SIM follows these shell-routing rules:
 - connectivity takeover is suppressed while the scheduler drawer is open or while any connectivity-owned surface (`MODAL`, `SETUP`, `MANAGER`) is already visible
 - island tap routes to the currently visible lane: scheduler-visible tap opens scheduler, connectivity-visible tap opens connectivity entry
 - downward drag on the island remains scheduler-only and is lawful only when the scheduler lane is visible
-- update-check, updating, Wi-Fi mismatch, and other manager-only refinements are excluded from island takeover in this slice
+- update-check, updating, `PARTIAL_WIFI_DOWN`, Wi-Fi mismatch, and other manager-only refinements are excluded from island takeover in this slice
+
+Target behavior: the island takeover list above remains the target. Delivered gap: Sprint 08 found `PARTIAL_WIFI_DOWN` currently renders as a persistent connectivity takeover in delivered code. That is a BAKE gap to repair or justify in the implementation sprint, not permission to widen the target island authority.
 
 ---
 
@@ -112,6 +122,7 @@ The RuntimeShell-owned dynamic island in SIM follows these shell-routing rules:
 
 These valve names are the behavioral checkpoints for downstream specs and tests.
 The exact telemetry names in code may differ today, but they should converge toward this model.
+Delivered gap from Sprint 08: current static evidence did not prove these canonical valves by name for `SIM_ENTRY_STARTED`, `SIM_SHELL_MOUNTED`, drawer open/close coverage, or `SMART_SURFACE_BLOCKED`; convergence remains the target.
 
 - `SIM_ENTRY_STARTED`
 - `SIM_SHELL_MOUNTED`
@@ -201,6 +212,7 @@ If SIM code attempts to route into a smart-only shell surface:
 - that route must be blocked
 - the shell must remain on a valid SIM surface
 - the product must not silently degrade into the smart shell
+- the block must emit or record the `SMART_SURFACE_BLOCKED` checkpoint so the attempted route is auditable
 
 ### Branch-S2: Drawer Conflict
 
@@ -208,6 +220,7 @@ If a second drawer is triggered while one is already open:
 
 - the shell must atomically switch active drawers or keep the current one
 - it must not render overlapping drawers
+- the BAKE contract must require direct Drawer Conflict proof rather than relying only on reducer source shape
 
 ### Branch-S3: Chat Audio Reselect
 
@@ -240,7 +253,7 @@ When badge-origin completion created a follow-up session with multiple bound tas
 The SIM shell is behaviorally ready only when:
 
 - fresh SIM install / reinstall bootstraps the shell into forced onboarding before ordinary shell use
-- forced first-launch onboarding completion enters the contained connectivity manager first and only then allows ordinary shell use
+- forced first-launch onboarding completion returns to normal shell use; if the scheduler quick-start completion armed a handoff, the real scheduler drawer may auto-open once through the shell-owned gate
 - SIM launch mounts a standalone shell
 - blank/new SIM chat is directly usable from the home surface
 - scheduler and audio drawers route correctly
@@ -250,3 +263,5 @@ The SIM shell is behaviorally ready only when:
 - ordinary SIM shell practices remain available without reviving the smart runtime
 - smart-only shell surfaces are not required for normal SIM use
 - the RuntimeShell dynamic island defaults to scheduler, applies the approved connectivity interrupt/heartbeat rules, routes tap to the visible lane, and keeps downward drag scheduler-only
+- Wi-Fi mismatch, `PARTIAL_WIFI_DOWN`, update, and manager-only diagnostic refinements must not take over the dynamic island unless a later target-flow update explicitly expands the authority boundary
+- new-session behavior clears active badge scheduler follow-up prompts when appropriate and remains covered by executable tests

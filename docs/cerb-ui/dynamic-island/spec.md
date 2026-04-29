@@ -57,6 +57,12 @@ Current composition:
 
 ## 3. Lane Arbitration Rules
 
+Sprint 08 alignment note:
+
+- Target behavior remains the transport-truth connectivity lane defined here.
+- `PARTIAL_WIFI_DOWN`, Wi-Fi mismatch, update, and manager-only diagnostic states remain excluded from target island takeover.
+- Delivered gap: Sprint 08 found current delivered code renders `PARTIAL_WIFI_DOWN` as a persistent takeover. That is a BAKE gap for the shell-routing implementation contract, not a new target rule.
+
 ### Scheduler lane
 
 Scheduler remains the base lane and uses the existing scheduler-backed summaries:
@@ -103,7 +109,7 @@ Current battery rule:
 Excluded from this lane:
 
 - update-check / update-found / updating refinements
-- Wi-Fi mismatch and manager-only diagnostic states
+- `PARTIAL_WIFI_DOWN`, Wi-Fi mismatch, and manager-only diagnostic states
 - extra connectivity sub-lanes that do not map to the transport-truth shell contract above
 
 ## 4. Integration Rules

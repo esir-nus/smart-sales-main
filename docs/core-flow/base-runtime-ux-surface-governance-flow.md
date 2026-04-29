@@ -93,6 +93,13 @@ Element rows use this schema:
 7. Status-bar and navigation-bar handling must follow real inset ownership, not prototype hardcoding.
 8. Shared shell surfaces take explicit shared contracts and shell-owned adjunct state; they must not recover runtime-specific behavior by defaulting to legacy wrapper owners or by downcasting to a concrete SIM/base-runtime ViewModel.
 
+Sprint 08 shell-routing target note:
+
+- Target behavior: onboarding completion returns to normal shell use, not a mandatory connectivity-manager stop before the user can reach home or discussion.
+- Dynamic-island connectivity takeover remains limited to approved transport-truth shell states; `PARTIAL_WIFI_DOWN`, Wi-Fi mismatch, update, and manager-only diagnostic refinements must not take over the island unless this UX authority is deliberately revised.
+- Drawer exclusivity remains a one-active-surface UX invariant. Delivered gaps from Sprint 08, including incomplete Drawer Conflict runtime proof, are BAKE gaps rather than weakened UX rules.
+- The smart-only route block remains the target: attempted smart-only surfaces must leave the user on a valid shell surface and record `SMART_SURFACE_BLOCKED`.
+
 ---
 
 ## UX.HOME — Home Surface

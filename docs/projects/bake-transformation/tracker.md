@@ -35,6 +35,7 @@ open
 | 11 | audio-pipeline-dbm | done | Delivered behavior map created for the audio pipeline, covering badge/manual ingress, SIM repository, Tingwu artifacts, drawer UI, Ask AI, audio reselect, audio-bound chat state, telemetry, and evidence gaps. | [sprints/11-audio-pipeline-dbm.md](sprints/11-audio-pipeline-dbm.md) |
 | 12 | audio-pipeline-tcf | done | Aligned audio target/supporting docs with Sprint 11 gaps and authored the audio pipeline BAKE contract sprint. | [sprints/12-audio-pipeline-tcf.md](sprints/12-audio-pipeline-tcf.md) |
 | 13 | audio-pipeline-bake-contract | done | Wrote the audio-pipeline BAKE contract, synced interface-map authority, and demoted scoped audio Cerb docs to supporting reference. | [sprints/13-audio-pipeline-bake-contract.md](sprints/13-audio-pipeline-bake-contract.md) |
+| 14 | agent-chat-pipeline-dbm | done | Delivered behavior map created for agent-chat-pipeline, covering blank/general SIM chat, composer send, persona/user context, local session history and persistence, FunASR voice draft, scheduler and follow-up boundaries, telemetry, tests, and runtime-evidence gaps. | [sprints/14-agent-chat-pipeline-dbm.md](sprints/14-agent-chat-pipeline-dbm.md) |
 
 ## Domain Backlog
 
@@ -45,7 +46,7 @@ open
 | scheduler-path-a | base-runtime-active | `docs/core-flow/scheduler-fast-track-flow.md` | high | tier-1 | bake-contract-written |
 | shell-routing | base-runtime-active | `docs/core-flow/sim-shell-routing-flow.md` | high | tier-1 | bake-contract-written |
 | audio-pipeline | base-runtime-active | `docs/core-flow/sim-audio-artifact-chat-flow.md` | high | tier-2 | bake-contract-written |
-| agent-chat-pipeline | partially-shipped | `docs/cerb/sim-audio-chat/spec.md` | high | tier-2 | triaged |
+| agent-chat-pipeline | partially-shipped | `docs/cerb/sim-audio-chat/spec.md` | high | tier-2 | dbm-written |
 | entity-resolution | base-runtime-active | `docs/cerb/entity-writer/spec.md` | high | tier-2 | triaged |
 | onboarding | base-runtime-active | `docs/cerb/onboarding-interaction/spec.md` | medium | tier-2 | triaged |
 | typed-mutation | partially-shipped | `docs/core-flow/system-typed-mutation-flow.md` | high | tier-2 | triaged |

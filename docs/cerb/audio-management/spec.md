@@ -1,9 +1,10 @@
 # Audio Management
 
 > **Cerb-compliant spec** — Audio file management: sync, transcription, UI interaction.
-> **Status**: SHIPPED
-> **Last Updated**: 2026-04-28
+> **Status**: Supporting reference under verified BAKE contract
+> **Last Updated**: 2026-04-29
 > **Behavioral UX Authority Above This Doc**: [`docs/core-flow/base-runtime-ux-surface-governance-flow.md`](../../core-flow/base-runtime-ux-surface-governance-flow.md) (`UX.AUDIO.*`)
+> **Implementation Authority Above This Doc**: [`docs/bake-contracts/audio-pipeline.md`](../../bake-contracts/audio-pipeline.md)
 
 ---
 
@@ -12,6 +13,14 @@
 ## Overview
 
 Audio Management owns the drawer-visible audio inventory, manual sync/download/delete/transcription behavior, and persisted artifact access for badge recordings and phone/test audio.
+
+Authority note: after Sprint 13, this Cerb spec is supporting reference under
+the verified Audio Pipeline BAKE contract at
+`docs/bake-contracts/audio-pipeline.md`. It preserves historical design and
+implementation context, but pipeline authority for delivered audio behavior now
+routes through the BAKE contract, with
+`docs/core-flow/sim-audio-artifact-chat-flow.md` remaining the behavioral north
+star above it.
 
 Users manually trigger drawer-side sync and deletion through the Audio Drawer UI.
 
@@ -37,7 +46,7 @@ These paths are parallel and independent. `log#` / `BadgeAudioPipeline` remains 
 Deprecated-shard rule:
 
 - the retired SIM audio/chat shard is now historical redirect material only
-- active non-Mono audio truth lives in this spec, this interface, `docs/core-flow/sim-audio-artifact-chat-flow.md`, and `docs/cerb/tingwu-pipeline/*`
+- active non-Mono audio behavior is governed by `docs/core-flow/sim-audio-artifact-chat-flow.md` and the verified BAKE contract at `docs/bake-contracts/audio-pipeline.md`; this spec, this interface, and `docs/cerb/tingwu-pipeline/*` remain supporting reference
 - opening the drawer must **not** trigger browse-open auto-sync as active product behavior
 
 ---

@@ -4,7 +4,7 @@
 >
 > **Purpose**: Module ownership + data flow. Read this BEFORE any cross-module change.
 > **Rule**: If data belongs to Module B, query B's interface at runtime. Don't store B's data on A's model.
-> **Last Updated**: 2026-04-29 (Shell Routing BAKE contract is now the implementation record; shell Cerb docs remain supporting/reference docs beneath it)
+> **Last Updated**: 2026-04-29 (Audio Pipeline BAKE contract is now the implementation record; scoped audio Cerb docs remain supporting/reference docs beneath it)
 >
 > **Status Legend**: ✅ = Shipped (Real impl) · 📐 = Interface only (Fake impl) · 🔲 = Not yet coded
 > **Platform Ownership Legend**: `shared` = same product contract across platforms · `android-only` = owned by the current Android lineage · `harmony-only` = owned by the future native Harmony root · `platform-adapter` = shared product contract, platform-specific delivery layer · `legacy-android-on-harmony` = Android app compatibility behavior on Huawei/Honor/Harmony devices
@@ -64,6 +64,19 @@ This overlay classifies the current repo's cross-platform-sensitive surfaces wit
   `docs/cerb/sim-shell/interface.md` remain supporting/reference docs beneath
   the Shell Routing BAKE contract until a later archival sprint moves
   historical Cerb material.
+- `docs/bake-contracts/audio-pipeline.md` is the verified BAKE implementation
+  contract for the audio-pipeline corridor.
+- `docs/core-flow/sim-audio-artifact-chat-flow.md` remains the behavioral
+  north-star doc above the Audio Pipeline BAKE contract.
+- `docs/cerb/audio-management/spec.md`,
+  `docs/cerb/audio-management/interface.md`,
+  `docs/cerb/tingwu-pipeline/spec.md`,
+  `docs/cerb/tingwu-pipeline/interface.md`,
+  `docs/cerb/badge-audio-pipeline/spec.md`,
+  `docs/cerb/badge-audio-pipeline/interface.md`, and
+  `docs/cerb/pipeline-telemetry/spec.md` remain supporting/reference docs
+  beneath the Audio Pipeline BAKE contract until a later archival sprint moves
+  historical Cerb material.
 
 ---
 
@@ -78,8 +91,8 @@ Leaf services with no upstream dependencies. They don't call other modules.
 | **[NotificationService](./notifications/spec.md)** | System I & Ambient | System notification display | — | `show(id, title, body, channel...) -> Unit` | — | ✅ |
 | **[OSS](./oss-service/spec.md)** | Hardware & Audio | File upload/download | — | `upload(File, objectKey) -> OssUploadResult` | — | ✅ |
 | **[ASR](./asr-service/spec.md)** | Hardware & Audio | Transcription results | OSS (downloads audio files to transcribe) | `transcribe(File) -> AsrResult` | — | ✅ |
-| **[TingwuPipeline](./tingwu-pipeline/spec.md)** | Hardware & Audio | Transcription & Audio Intelligence | OSS (reads `fileUrl`) | `submit(TingwuRequest) -> Result<String>` | OS: SSD | ✅ |
-| **[PipelineTelemetry](./pipeline-telemetry/spec.md)** | System II & Routing | Pipeline logs (to Logcat) | — | `recordEvent(PipelinePhase, String) -> Unit` | OS: RAM | ✅ |
+| **[TingwuPipeline](./tingwu-pipeline/spec.md)** | Hardware & Audio | Transcription & Audio Intelligence; audio-pipeline BAKE implementation record: [`audio-pipeline`](../bake-contracts/audio-pipeline.md) | OSS (reads `fileUrl`) | `submit(TingwuRequest) -> Result<String>` | OS: SSD | ✅ |
+| **[PipelineTelemetry](./pipeline-telemetry/spec.md)** | System II & Routing | Pipeline logs (to Logcat); audio canonical-valve target remains supporting reference under [`audio-pipeline`](../bake-contracts/audio-pipeline.md) | — | `recordEvent(PipelinePhase, String) -> Unit` | OS: RAM | ✅ |
 | **[TestFakesDomain](./test-infrastructure/spec.md)** | Testing | Pure JVM Domain Fakes | All Pure Domain Interfaces | `FakeMemoryRepository`, `FakeEntityRepository` | OS: JVM | ✅ |
 | **[TestFakesPlatform](./test-infrastructure/spec.md)** | Testing | Android/Platform State | test-fakes-domain, App-Core | `FakeExecutor`, `FakeContextBuilder`, `FakeToolRegistry` | OS: Android | ✅ |
 
@@ -154,9 +167,9 @@ User-facing features. Each receives processed results from Orchestrator (Layer 3
 | **[SchedulerDrawer](./scheduler/spec.md)** | Intelligent Scheduler | Visual UI states | Scheduler, ScheduleBoard | `ISchedulerViewModel` | OS: App | ✅ |
 | **[ScheduleBoard](./scheduler/spec.md)** | Intelligent Scheduler | Conflict index (in-memory cache) | ScheduledTaskRepository (populates index) | — | OS: SSD | ✅ |
 | **ActiveTaskRetrievalIndex** | Intelligent Scheduler | Global follow-up active-task shortlist + final target gate | ScheduledTaskRepository (all non-done tasks) | `buildShortlist(...)`, `resolveTarget(...)` | OS: App | ✅ |
-| **[BadgeAudioPipeline](./badge-audio-pipeline/spec.md)** | Hardware & Audio | Audio recording lifecycle | ASR, OSS, ConnectivityBridge | Uses `AsrService` for the scheduler fast path; automatic `log#` ingress executes inside `SchedulerPipelineForegroundService` via `SchedulerPipelineOrchestrator`; on successful completion also ingests the recording into SIM audio storage before badge cleanup | — | ✅ |
-| **[AudioManagement](./audio-management/spec.md)** | Hardware & Audio | Drawer-visible audio inventory, manual sync/transcribe/delete states, persisted artifacts | ConnectivityBridge, TingwuPipeline | Receives completed badge recordings through the shared SIM audio namespace owned by `SimAudioRepository` | OS: App | ✅ |
-| **[SIM Audio Chat Lane](../core-flow/sim-audio-artifact-chat-flow.md)** | Hardware & Audio | SIM-local chat composer draft state, audio-grounded discussion continuity, FunASR realtime draft bridge | SimAudioRepository, SimSessionRepository, SimRealtimeSpeechRecognizer, UserProfileRepository | `SimAgentViewModel`, durable chat/session projections; active behavior authority routes through shared audio-management, Tingwu, and core-flow docs | OS: App | 🚧 |
+| **[BadgeAudioPipeline](./badge-audio-pipeline/spec.md)** | Hardware & Audio | Audio recording lifecycle; `log#` boundary recorded by [`audio-pipeline`](../bake-contracts/audio-pipeline.md) | ASR, OSS, ConnectivityBridge | Uses `AsrService` for the scheduler fast path; automatic `log#` ingress executes inside `SchedulerPipelineForegroundService` via `SchedulerPipelineOrchestrator`; on successful completion also ingests the recording into SIM audio storage before badge cleanup | — | ✅ |
+| **[AudioManagement](./audio-management/spec.md)** | Hardware & Audio | Drawer-visible audio inventory, manual sync/transcribe/delete states, persisted artifacts; audio-pipeline BAKE implementation record: [`audio-pipeline`](../bake-contracts/audio-pipeline.md) | ConnectivityBridge, TingwuPipeline | Receives completed badge recordings through the shared SIM audio namespace owned by `SimAudioRepository` | OS: App | ✅ |
+| **[SIM Audio Chat Lane](../core-flow/sim-audio-artifact-chat-flow.md)** | Hardware & Audio | SIM-local chat composer draft state, audio-grounded discussion continuity, FunASR realtime draft bridge; behavioral north star above [`audio-pipeline`](../bake-contracts/audio-pipeline.md) | SimAudioRepository, SimSessionRepository, SimRealtimeSpeechRecognizer, UserProfileRepository | `SimAgentViewModel`, durable chat/session projections; implementation authority routes through the audio-pipeline BAKE record while scoped audio Cerb docs remain supporting reference | OS: App | 🚧 |
 | **[OnboardingInteraction](./onboarding-interaction/spec.md)** | Hardware & Audio | Pre-pairing phone-mic onboarding interaction state, consultation reply, typed profile draft, scheduler quick-start sandbox, CTA-gated profile save, post-completion shell handoff request | DeviceSpeechRecognizer, UserProfileRepository, scheduler Path A extraction services, FastTrackMutationEngine, ExactAlarmPermissionGate, Calendar provider/permission bridge, `RuntimeOnboardingHandoffGate` | `OnboardingInteractionService`, `OnboardingQuickStartService`, `OnboardingSchedulerQuickStartCommitter`, `OnboardingQuickStartCalendarExporter`, `OnboardingInteractionViewModel` | OS: App | 🚧 |
 | **[ConflictResolver](./conflict-resolver/spec.md)** | Intelligent Scheduler | Conflict resolution actions | ScheduleBoard | `resolve(...) -> ConflictResolution` | OS: App | ✅ |
 | **[AgentIntelligenceUI](../cerb-ui/agent-intelligence/spec.md)** | System II & Routing | Wait-state UI components | — | `StateFlow<UiState>` | OS: App | 📐 |

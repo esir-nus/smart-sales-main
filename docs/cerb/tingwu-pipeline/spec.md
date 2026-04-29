@@ -1,15 +1,24 @@
 # Tingwu Pipeline Spec
 
 > **Role**: Long-form audio artifact processing
-> **Status**: Active supporting spec
-> **Last Updated**: 2026-03-31
+> **Status**: Supporting reference under verified BAKE contract
+> **Last Updated**: 2026-04-29
 > **Purpose**: Define the source-led Tingwu processing lane used by audio management and optional audio-grounded chat context.
 > **Base-Runtime Rule**: Tingwu belongs to the shared non-Mono audio lane. Deeper memory/entity/plugin augmentation remains Mono-only and must not redefine the source-led Tingwu contract.
+> **Implementation Authority Above This Doc**: [`docs/bake-contracts/audio-pipeline.md`](../../bake-contracts/audio-pipeline.md)
 
 ## Overview
 
 The Tingwu Pipeline is the long-form audio artifact engine.
 It is separate from `asr-service`.
+
+Authority note: after Sprint 13, this Cerb spec is supporting reference under
+the verified Audio Pipeline BAKE contract at
+`docs/bake-contracts/audio-pipeline.md`. It preserves the source-led Tingwu
+lane details used by audio management and chat attachment, but delivered
+audio-pipeline implementation authority now routes through the BAKE contract,
+with `docs/core-flow/sim-audio-artifact-chat-flow.md` remaining the behavioral
+north star above it.
 
 - `asr-service` is the short, fast speech-to-text lane used by flows such as scheduler voice ingress
 - `tingwu-pipeline` is the long-form artifact lane used for transcript, chapters, summaries, speaker separation, keywords, and adjacent provider-returned structure

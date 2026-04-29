@@ -9,6 +9,7 @@
 - **[维护] Shell routing BAKE 契约落地** — 闭合 shell-routing TCF sprint，新增 `docs/bake-contracts/shell-routing.md`，同步 interface-map authority，并将 dynamic-island、home-shell 与 SIM shell Cerb 文档降级为 supporting reference。
 - **[维护] Audio pipeline BAKE 转换收口** — 完成 audio-pipeline DBM、TCF 与 BAKE contract sprint，新增 `docs/bake-contracts/audio-pipeline.md`，对齐徽章/手动音频入口、Tingwu artifacts、Ask AI、audio reselect、durable chat state 与 canonical telemetry 缺口。
 - **[维护] Agent chat pipeline 目标流程对齐** — 完成 agent-chat-pipeline DBM 与 TCF sprint，补齐 blank/general SIM chat、composer send、persona/user context、local session persistence、FunASR voice draft、scheduler/follow-up boundary 与 telemetry gaps，并授权后续 BAKE contract。
+- **[维护] Agent chat pipeline BAKE 契约落地** — 新增 `docs/bake-contracts/agent-chat-pipeline.md`，同步 interface-map authority，并将 SIM audio chat 与 SIM shell 相关 Cerb 文档降级为 supporting reference，明确 blank/general chat、SIM-only persistence、voice draft、scheduler pre-route、task-scoped follow-up 与 Mono extension surface。
 
 ### 2026-04-28
 

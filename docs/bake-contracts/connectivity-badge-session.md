@@ -71,6 +71,9 @@ tracks gaps explicitly.
   saved user-confirmed credentials.
 - MUST avoid repeated background BLE Wi-Fi polling during normal HTTP media
   traffic; endpoint reuse is current-runtime only.
+- MUST keep default-device selection passive. `setDefault()` changes registry
+  metadata only; BLE detection may use default-first priority only when live
+  registered candidates are observed.
 
 ### Error Paths
 
@@ -96,6 +99,10 @@ tracks gaps explicitly.
   cancellation events.
 - Active badge download already running: skip readiness probing and return an
   already-running sync result instead of treating HTTP timeout as Wi-Fi failure.
+- BLE detection sees multiple registered candidates: mark all live registered
+  candidates as BLE detected, prefer an eligible default badge first, skip a
+  manually disconnected default, then fall back to the active or single eligible
+  candidate.
 
 ## Telemetry Joints
 

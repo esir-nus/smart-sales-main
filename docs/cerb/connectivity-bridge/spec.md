@@ -246,6 +246,13 @@ ConnectivityViewModel → DeviceRegistryManager → DeviceRegistry (SharedPrefs)
                                               → DeviceConnectionManager (reconnect)
 ```
 
+BLE detection monitor priority:
+
+- live registered scan candidates are marked `bleDetected`
+- an eligible default registered badge is preferred over the active badge when both advertise
+- a `manuallyDisconnected=true` default is skipped
+- `setDefault()` itself remains passive and must not switch active device, reseed `SessionStore`, or reconnect
+
 Manager-only refinement path:
 
 ```

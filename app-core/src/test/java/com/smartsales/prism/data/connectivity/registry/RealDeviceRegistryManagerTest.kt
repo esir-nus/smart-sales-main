@@ -172,11 +172,89 @@ class RealDeviceRegistryManagerTest {
         assertEquals(0, deviceManager.forceReconnectCalls)
     }
 
+    @Test
+    fun `BLE detection prefers eligible default over active non-default when both advertise`() = runTest {
+        val defaultMac = "AA:AA:AA:AA:AA:01"
+        val activeMac = "BB:BB:BB:BB:BB:02"
+        registry.register(device(defaultMac, "Default", isDefault = true, lastConnectedAtMillis = 1_000L))
+        registry.register(device(activeMac, "Active", isDefault = false, lastConnectedAtMillis = 2_000L))
+        manager.initializeOnLaunch()
+        manager.switchToDevice(activeMac)
+        deviceManager.reset()
+
+        manager.handleBleDetectionCandidates(listOf(
+            BlePeripheral(defaultMac, "Default", -44),
+            BlePeripheral(activeMac, "Active", -40)
+        ))
+
+        assertEquals(defaultMac, manager.activeDevice.value?.macAddress)
+        assertEquals(defaultMac, deviceManager.forceReconnectSession?.peripheralId)
+        assertTrue(registry.findByMac(defaultMac)!!.bleDetected)
+        assertTrue(registry.findByMac(activeMac)!!.bleDetected)
+    }
+
+    @Test
+    fun `BLE detection skips manually disconnected default and keeps active candidate`() = runTest {
+        val defaultMac = "AA:AA:AA:AA:AA:01"
+        val activeMac = "BB:BB:BB:BB:BB:02"
+        registry.register(device(defaultMac, "Default", isDefault = true))
+        registry.register(device(activeMac, "Active", isDefault = false, lastConnectedAtMillis = 2_000L))
+        manager.initializeOnLaunch()
+        manager.switchToDevice(activeMac)
+        manager.markManuallyDisconnected(defaultMac, true)
+        deviceManager.reset()
+
+        manager.handleBleDetectionCandidates(listOf(
+            BlePeripheral(defaultMac, "Default", -44),
+            BlePeripheral(activeMac, "Active", -40)
+        ))
+
+        assertEquals(activeMac, manager.activeDevice.value?.macAddress)
+        assertEquals(1, deviceManager.forceReconnectCalls)
+        assertTrue(registry.findByMac(defaultMac)!!.bleDetected)
+    }
+
+    @Test
+    fun `BLE detection reconnects single eligible registered candidate`() = runTest {
+        val defaultMac = "AA:AA:AA:AA:AA:01"
+        val activeMac = "BB:BB:BB:BB:BB:02"
+        registry.register(device(defaultMac, "Default", isDefault = true))
+        registry.register(device(activeMac, "Active", isDefault = false, lastConnectedAtMillis = 2_000L))
+        manager.initializeOnLaunch()
+        manager.switchToDevice(activeMac)
+        manager.markManuallyDisconnected(defaultMac, true)
+        deviceManager.reset()
+
+        manager.handleBleDetectionCandidates(listOf(BlePeripheral(activeMac, "Active", -40)))
+
+        assertEquals(activeMac, manager.activeDevice.value?.macAddress)
+        assertEquals(1, deviceManager.forceReconnectCalls)
+        assertTrue(registry.findByMac(activeMac)!!.bleDetected)
+    }
+
+    @Test
+    fun `setDefault remains passive and does not switch seed session or reconnect`() = runTest(dispatcher) {
+        val defaultMac = "AA:AA:AA:AA:AA:01"
+        val otherMac = "BB:BB:BB:BB:BB:02"
+        registry.register(device(defaultMac, "Default", isDefault = true, lastConnectedAtMillis = 1_000L))
+        registry.register(device(otherMac, "Other", isDefault = false, lastConnectedAtMillis = 2_000L))
+        manager.initializeOnLaunch()
+        val reconnectCallsAfterLaunch = deviceManager.forceReconnectCalls
+
+        manager.setDefault(otherMac)
+
+        assertEquals(otherMac, registry.getDefault()?.macAddress)
+        assertEquals(defaultMac, manager.activeDevice.value?.macAddress)
+        assertEquals(defaultMac, sessionStore.loadSession()?.peripheralId)
+        assertEquals(reconnectCallsAfterLaunch, deviceManager.forceReconnectCalls)
+    }
+
     private fun device(
         macAddress: String,
         name: String,
         isDefault: Boolean,
-        lastConnectedAtMillis: Long = 1_000L
+        lastConnectedAtMillis: Long = 1_000L,
+        manuallyDisconnected: Boolean = false
     ) = RegisteredDevice(
         macAddress = macAddress,
         displayName = name,
@@ -184,6 +262,6 @@ class RealDeviceRegistryManagerTest {
         registeredAtMillis = 1_000L,
         lastConnectedAtMillis = lastConnectedAtMillis,
         isDefault = isDefault,
-        manuallyDisconnected = false
+        manuallyDisconnected = manuallyDisconnected
     )
 }

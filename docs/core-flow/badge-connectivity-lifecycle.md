@@ -118,13 +118,16 @@ Rules:
 
 ### Auto Reconnect After Disconnect, Heartbeat, Or BLE Detection
 
-Auto reconnect may start after heartbeat failure, BLE detection of the registered active badge, or allowed app relaunch restore.
+Auto reconnect may start after heartbeat failure, BLE detection of a registered badge, or allowed app relaunch restore.
 
 Rules:
 
 - **MUST:** respect soft manual disconnect.
-- **MUST:** target the current active badge only.
-- **MUST:** stop when the active device changes.
+- **MUST:** heartbeat failure and app relaunch restore target the current active badge session snapshot.
+- **MUST:** BLE detection may prefer the eligible registered default badge over the active badge when both advertise in the same scan window.
+- **MUST:** a manually disconnected default badge is not auto-selected by BLE detection.
+- **MUST:** `setDefault()` remains passive; default priority applies only inside the BLE detection monitor and must not switch active device, reseed session, or reconnect by itself.
+- **MUST:** reconnect work must stop when the active device changes.
 - **MUST:** surface BLE-detected as proximity only until GATT and network status catch up.
 
 ### Network Change, Hotspot Switch, Or Subnet Isolation

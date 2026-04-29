@@ -114,14 +114,41 @@ The excerpt must include `[DefaultPriority] switch` for the dual-candidate case 
 
 ## Iteration Ledger
 
-_Operator fills this section once per iteration._
+### Iteration 1 - 2026-04-29
+
+- Confirmed dependency: Sprint 03 is closed on `develop` at `d423437fa`.
+- Re-read Core Flow active-only reconnect wording and found doc sync required.
+- Implemented BLE detection candidate handling in `RealDeviceRegistryManager`: live registered candidates are marked `bleDetected`, eligible default candidate wins first, manually disconnected default is skipped, active or single eligible candidate remains the fallback, and active same-device detection calls reconnect directly.
+- Added focused `RealDeviceRegistryManagerTest` coverage for default-first dual candidate, manually disconnected default suppression, single eligible candidate reconnect, and passive `setDefault()`.
+- Ran focused and full app-core unit verification plus `:app:assembleDebug`; all passed.
+- Installed updated `app-core-debug.apk` on `fc8ede3e` and captured a cleared SmartSalesConn launch window. The device showed only one restored registered badge (`Remaining Badge (...55:66)`) and no `[DefaultPriority] switch`, so the required dual-badge L3 branch remains blocked.
 
 ## Closeout
 
-_Operator fills at exit._
-
-- Status: `success` | `stopped` | `blocked`
-- One-liner for tracker:
+- Status: `blocked`
+- One-liner for tracker: Implementation and L1/L2 verification are green, but L3 dual-badge proof is blocked because device `fc8ede3e` currently exposes only one restored registered badge in cleared SmartSalesConn logs.
 - Evidence artifacts:
-- Lesson proposals:
-- CHANGELOG line:
+  - Focused test: `./gradlew :app-core:testDebugUnitTest --tests "*RealDeviceRegistryManagerTest*"` -> `BUILD SUCCESSFUL in 10s`, 12 registry-manager tests passed.
+  - Full app-core unit suite: `./gradlew :app-core:testDebugUnitTest` -> `BUILD SUCCESSFUL in 14s`.
+  - App debug build: `./gradlew :app:assembleDebug` -> `BUILD SUCCESSFUL in 2s`.
+  - Device visibility: `adb devices` -> `fc8ede3e device`.
+  - Updated APK install: `adb -s fc8ede3e install -r app-core/build/outputs/apk/debug/app-core-debug.apk` -> `Success`.
+  - Cleared runtime log attempt:
+
+```text
+adb -s fc8ede3e logcat -c
+adb -s fc8ede3e shell monkey -p com.smartsales.prism -c android.intent.category.LAUNCHER 1
+sleep 30
+adb -s fc8ede3e logcat -d -s SmartSalesConn
+
+04-29 19:56:39.939 26471 26471 D SmartSalesConn: Restored session: 11:22:33:44:55:66 knownNetworks=0
+04-29 19:56:39.940 26471 26471 D SmartSalesConn: Registry: default device Remaining Badge (...55:66)
+04-29 19:56:39.940 26471 26471 D SmartSalesConn: Restored session: 11:22:33:44:55:66 knownNetworks=0
+04-29 19:56:39.942 26471 28961 I SmartSalesConn: BLE disconnected
+04-29 19:56:39.942 26471 28961 D SmartSalesConn: Soft disconnect (session preserved)
+04-29 19:56:39.943 26471 28961 D SmartSalesConn: Persistent GATT session closed
+```
+
+  - Negative evidence: the cleared log does not contain `[DefaultPriority] switch` because only one restored registered badge appeared; no dual-candidate advertising window was available to prove the branch.
+- Lesson proposals: none.
+- CHANGELOG line: none while blocked; user approval required before any product changelog entry.

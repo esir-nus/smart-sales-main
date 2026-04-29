@@ -16,6 +16,8 @@
 - **[维护] UI polish 连接治理 sprint 启动** — 新增 registry-gated reconnect 与 default-first BLE priority sprint 合同，闭合 Sprint 03 并用注册表状态阻止陈旧连接在重启后误触发重连。
 - **[新增] 默认优先 BLE 与 L2.5 调试入口** — 默认优先徽章选择策略落地到注册表管理，新增确定性的 L2.5 BLE debug ingress、debug mode store 与 device-loop 证据记录，覆盖 stale launch、manual/default priority 与双徽章切换场景。
 - **[修复] 连接卡片顺序与调试面板可见性** — 稳定连接面板卡片排序，避免切换徽章时卡片位置跳动；调试入口统一受 debug mode gate 控制，并补充 Compose 结构测试、logcat、UI XML 与截图证据。
+- **[修复] 连接面板活跃徽章幽灵态** — `RealDeviceRegistryManager` 现在会根据 `Connected`、`WifiProvisioned`、`WifiProvisionedHttpDelayed` 与 `Syncing` 的真实 session 同步 active device，避免扫描回退或会话切换后连接面板仍把旧注册行显示为已连接。
+- **[维护] 测试证据层级收口** — 明确 L2 作为 SIL scenario / model scenario 的开发与回归用途，L2.5 作为 installed synthetic runtime 的 app-side closeout，L3 作为 physical runtime 的 BLE scanner、GATT、firmware、power-state 与真实上游证据门槛。
 
 ### 2026-04-28
 

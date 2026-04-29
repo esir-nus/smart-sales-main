@@ -199,6 +199,14 @@
         <span class="badge badge-修复">修复</span>
         <span class="entry-msg"><strong>连接卡片顺序与调试面板可见性</strong> — 稳定连接面板卡片排序，避免切换徽章时卡片位置跳动；调试入口统一受 debug mode gate 控制，并补充 Compose 结构测试、logcat、UI XML 与截图证据。</span>
       </div>
+      <div class="entry">
+        <span class="badge badge-修复">修复</span>
+        <span class="entry-msg"><strong>连接面板活跃徽章幽灵态</strong> — `RealDeviceRegistryManager` 现在会根据 `Connected`、`WifiProvisioned`、`WifiProvisionedHttpDelayed` 与 `Syncing` 的真实 session 同步 active device，避免扫描回退或会话切换后连接面板仍把旧注册行显示为已连接。</span>
+      </div>
+      <div class="entry">
+        <span class="badge badge-other">维护</span>
+        <span class="entry-msg"><strong>测试证据层级收口</strong> — 明确 L2 作为 SIL scenario / model scenario 的开发与回归用途，L2.5 作为 installed synthetic runtime 的 app-side closeout，L3 作为 physical runtime 的 BLE scanner、GATT、firmware、power-state 与真实上游证据门槛。</span>
+      </div>
   </div>
   <div class="date-header"><h3>2026-04-28</h3></div>
   <div class="entries">

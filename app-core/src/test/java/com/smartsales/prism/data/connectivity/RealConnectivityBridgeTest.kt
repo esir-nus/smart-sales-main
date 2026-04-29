@@ -376,6 +376,21 @@ class RealConnectivityBridgeTest {
 
         assertFalse(bridge.isReady())
         assertEquals(
+            BadgeManagerStatus.HttpDelayed(
+                badgeIp = "192.168.0.115",
+                ssid = "MstRobot",
+                baseUrl = "http://192.168.0.115:8088"
+            ),
+            awaitManagerStatus(
+                bridge,
+                BadgeManagerStatus.HttpDelayed(
+                    badgeIp = "192.168.0.115",
+                    ssid = "MstRobot",
+                    baseUrl = "http://192.168.0.115:8088"
+                )
+            )
+        )
+        assertEquals(
             listOf(
                 "http://192.168.0.115:8088",
                 "http://192.168.0.115:8088",
@@ -386,6 +401,42 @@ class RealConnectivityBridgeTest {
             httpClient.getReachableCalls()
         )
         assertEquals(1, manager.replayLatestSavedWifiCredentialForMediaFailureCalls)
+    }
+
+    @Test
+    fun `isReady marks connected transport as http delayed when media endpoint is unreachable`() = runTest {
+        val manager = FakeDeviceConnectionManager()
+        val monitor = FakeBadgeStateMonitor()
+        val httpClient = FakeBadgeHttpClient().apply { setReachable(false) }
+        val bridge = newBridge(manager, httpClient, monitor)
+        val session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40))
+        manager.setState(ConnectionState.Connected(session))
+        monitor.simulateConnected(ip = "192.168.0.115", wifiName = "MstRobot")
+        manager.stubNetworkResult = Result.Success(
+            DeviceNetworkStatus(
+                ipAddress = "192.168.0.115",
+                deviceWifiName = "MstRobot",
+                phoneWifiName = "MstRobot",
+                rawResponse = "IP#192.168.0.115 SD#MstRobot"
+            )
+        )
+
+        assertFalse(bridge.isReady())
+        assertEquals(
+            BadgeManagerStatus.HttpDelayed(
+                badgeIp = "192.168.0.115",
+                ssid = "MstRobot",
+                baseUrl = "http://192.168.0.115:8088"
+            ),
+            awaitManagerStatus(
+                bridge,
+                BadgeManagerStatus.HttpDelayed(
+                    badgeIp = "192.168.0.115",
+                    ssid = "MstRobot",
+                    baseUrl = "http://192.168.0.115:8088"
+                )
+            )
+        )
     }
 
     @Test

@@ -84,7 +84,14 @@ class ConnectivityViewModel @Inject constructor(
 
     // 连接管理界面专用状态 — richer BLE / Wi‑Fi 诊断，但不影响 shell 路由
     private val managerBaseState: StateFlow<ConnectivityManagerState> = connectivityBridge.managerStatus
-        .map { managerStatus -> mapToManagerUiState(managerStatus) }
+        .map { managerStatus ->
+            val uiState = mapToManagerUiState(managerStatus)
+            Log.d(
+                "ConnectivityVM",
+                "managerStatus=${managerStatus.toLogLabel()} managerState=$uiState"
+            )
+            uiState
+        }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.Eagerly,
@@ -293,6 +300,14 @@ class ConnectivityViewModel @Inject constructor(
             is BadgeManagerStatus.HttpDelayed -> ConnectivityManagerState.HTTP_DELAYED
             is BadgeManagerStatus.Ready -> ConnectivityManagerState.CONNECTED
             is BadgeManagerStatus.Error -> ConnectivityManagerState.DISCONNECTED
+        }
+    }
+
+    private fun BadgeManagerStatus.toLogLabel(): String {
+        return when (this) {
+            is BadgeManagerStatus.HttpDelayed ->
+                "HttpDelayed(badgeIp=$badgeIp, ssid=$ssid, baseUrl=$baseUrl)"
+            else -> this::class.simpleName ?: this.toString()
         }
     }
 

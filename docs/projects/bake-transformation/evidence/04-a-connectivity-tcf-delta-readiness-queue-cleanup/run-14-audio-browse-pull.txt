@@ -1,0 +1,1 @@
+/sdcard/window.xml: 1 file pulled, 0 skipped. 8.2 MB/s (18560 bytes in 0.002s)

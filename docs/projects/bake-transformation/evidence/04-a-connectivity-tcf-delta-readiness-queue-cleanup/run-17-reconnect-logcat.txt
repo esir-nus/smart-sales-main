@@ -1,0 +1,23 @@
+--------- beginning of main
+04-29 17:41:59.543 D/ConnectivityService(21979): connect() called for 14:C1:9F:D7:E3:F6
+04-29 17:41:59.547 D/ConnectivityService(21979): connect() completed for 14:C1:9F:D7:E3:F6
+04-29 17:41:59.547 W/SmartSalesConn(21979): BLE 连接失败：StandaloneCoroutine was cancelled
+04-29 17:42:01.505 W/SmartSalesConn(21979): BadgeHttpClient.isReachable failure url=http://192.168.0.100:8088/ error=SocketTimeoutException:failed to connect to /192.168.0.100 (port 8088) from /192.168.0.106 (port 33474) after 3000ms
+04-29 17:42:09.561 W/SmartSalesConn(21979): BLE 连接失败：Timed out waiting for 10000 ms
+04-29 17:42:09.566 W/SmartSalesConn(21979): 🔌 Stored MAC 14:C1:9F:D7:E3:F6 unreachable, attempting scan fallback
+04-29 17:42:09.574 D/BT311Scan(21979): start() called, isScanning=false
+04-29 17:42:09.574 D/BT311Scan(21979): Calling startScan on scanner=android.bluetooth.le.BluetoothLeScanner@4c81b86
+04-29 17:42:09.581 D/BT311Scan(21979): startScan() success
+04-29 17:42:09.581 D/BT311Scan(21979): start() completed, isScanning=true
+04-29 17:42:09.593 D/BT311Scan(21979): addr=40:41:3F:07:AD:E5, name=Unknown, uuids=, matches=false
+04-29 17:42:09.599 D/BT311Scan(21979): addr=5A:CD:C9:61:D5:7C, name=Unknown, uuids=0000fe78-0000-1000-8000-00805f9b34fb, 0000fe78-0000-1000-8000-00805f9b34fb, matches=false
+04-29 17:42:09.607 D/BT311Scan(21979): addr=76:E4:73:C7:76:C3, name=Unknown, uuids=, matches=false
+04-29 17:42:09.621 D/BT311Scan(21979): addr=1A:A1:A4:20:2B:71, name=Unknown, uuids=, matches=false
+04-29 17:42:09.650 D/BT311Scan(21979): addr=71:43:39:93:C8:58, name=Unknown, uuids=, matches=false
+04-29 17:42:09.661 D/BT311Scan(21979): addr=28:7E:80:7E:3F:AE, name=tcl_AC_t*ap_hanging, uuids=0000f100-0000-1000-8000-00805f9b34fb, 0000f100-0000-1000-8000-00805f9b34fb, matches=false
+04-29 17:42:09.661 D/BT311Scan(21979): addr=1A:AA:E2:97:F5:34, name=Unknown, uuids=, matches=false
+04-29 17:42:09.690 D/BT311Scan(21979): addr=27:99:0B:AD:43:3E, name=Unknown, uuids=, matches=false
+04-29 17:42:09.700 D/BT311Scan(21979): addr=5B:67:A1:B5:67:D5, name=Unknown, uuids=0000fdaa-0000-1000-8000-00805f9b34fb, 0000fdaa-0000-1000-8000-00805f9b34fb, matches=false
+04-29 17:42:09.706 D/BT311Scan(21979): addr=57:37:A1:04:9A:ED, name=Unknown, uuids=, matches=false
+04-29 17:42:09.720 D/BT311Scan(21979): addr=14:C1:9F:D7:E3:EE, name=CHLE_Intelligent, uuids=000000ff-0000-1000-8000-00805f9b34fb, 000000ff-0000-1000-8000-00805f9b34fb, 000000ff-0000-1000-8000-00805f9b34fb, 000000ff-0000-1000-8000-00805f9b34fb, matches=true
+04-29 17:42:10.757 D/ConnectivityVM(21979): managerStatus=Ready managerState=CONNECTED

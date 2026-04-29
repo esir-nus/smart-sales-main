@@ -1,0 +1,8 @@
+--------- beginning of main
+04-29 18:00:14.072 W/SmartSalesConn(21979): BadgeHttpClient.isReachable failure url=http://192.168.0.101:8088/ error=SocketTimeoutException:timeout
+04-29 18:00:14.074 W/AudioPipeline(21979): 🌐 invalidate active endpoint reason=http reachability failed
+04-29 18:00:17.145 W/SmartSalesConn(21979): BadgeHttpClient.isReachable failure url=http://192.168.0.101:8088/ error=SocketTimeoutException:timeout
+04-29 18:00:17.145 W/AudioPipeline(21979): 🌐 invalidate active endpoint reason=http reachability failed
+04-29 18:00:17.146 W/AudioPipeline(21979): 🛜 solid IP + HTTP readiness failure; attempting saved credential replay
+04-29 18:00:17.146 W/SmartSalesConn(21979): 🛜 solid IP + media sync failure; replaying latest saved credential ssid=MstRobot
+04-29 18:00:19.890 I/ConnectivityVM(21979): debug media readiness result=false

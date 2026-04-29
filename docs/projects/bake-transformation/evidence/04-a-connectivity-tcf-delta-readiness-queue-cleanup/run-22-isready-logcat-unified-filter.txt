@@ -1,0 +1,114 @@
+--------- beginning of main
+04-29 18:08:10.200 D/AudioPipeline(32675): SIM audio drawer entries emitted count=33 downloading=1 queued=0 holding=12 maxDownloadProgress=0.0
+04-29 18:08:10.242 D/AudioPipeline(32675): 🔎 isReady preflight: start
+04-29 18:08:10.242 D/AudioPipeline(32675): 🌐 resolveBaseUrl: reusing active endpoint http://192.168.0.101:8088
+04-29 18:08:10.243 D/AudioPipeline(32675): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.0.101:8088
+04-29 18:08:10.243 D/SmartSalesConn(32675): BadgeHttpClient.isReachable start url=http://192.168.0.101:8088/
+04-29 18:08:10.395 D/AudioPipeline(32675): SIM audio drawer entries emitted count=33 downloading=1 queued=0 holding=12 maxDownloadProgress=0.0
+04-29 18:08:10.614 D/AudioPipeline(32675): SIM audio drawer entries emitted count=33 downloading=1 queued=0 holding=12 maxDownloadProgress=0.0
+04-29 18:08:10.927 D/AudioPipeline(32675): SIM audio drawer entries emitted count=33 downloading=1 queued=0 holding=12 maxDownloadProgress=0.0
+04-29 18:08:11.131 D/AudioPipeline(32675): SIM audio drawer entries emitted count=33 downloading=1 queued=0 holding=12 maxDownloadProgress=0.0
+04-29 18:08:11.337 D/AudioPipeline(32675): SIM audio drawer entries emitted count=33 downloading=1 queued=0 holding=12 maxDownloadProgress=0.0
+04-29 18:08:11.536 D/AudioPipeline(32675): SIM audio drawer entries emitted count=33 downloading=1 queued=0 holding=12 maxDownloadProgress=0.0
+04-29 18:08:11.770 D/AudioPipeline(32675): SIM audio drawer entries emitted count=33 downloading=1 queued=0 holding=12 maxDownloadProgress=0.0
+04-29 18:08:12.033 D/AudioPipeline(32675): SIM audio drawer entries emitted count=33 downloading=1 queued=0 holding=12 maxDownloadProgress=0.0
+04-29 18:08:12.270 D/AudioPipeline(32675): SIM audio drawer entries emitted count=33 downloading=1 queued=0 holding=12 maxDownloadProgress=0.0
+04-29 18:08:12.550 D/AudioPipeline(32675): SIM audio drawer entries emitted count=33 downloading=1 queued=0 holding=12 maxDownloadProgress=0.0
+04-29 18:08:13.296 W/SmartSalesConn(32675): BadgeHttpClient.isReachable failure url=http://192.168.0.101:8088/ error=SocketTimeoutException:timeout
+04-29 18:08:13.297 I/AudioPipeline(32675): 🛜 manager media endpoint delayed runtime=14:C1:9F:D7:E4:06/6c7ac2 baseUrl=http://192.168.0.101:8088
+04-29 18:08:13.297 W/AudioPipeline(32675): 🌐 invalidate active endpoint reason=http reachability failed
+04-29 18:08:13.297 D/AudioPipeline(32675): 🔎 isReady preflight: retrying after endpoint refresh
+04-29 18:08:13.297 D/AudioPipeline(32675): 🌐 resolveBaseUrl: querying badge network status
+04-29 18:08:13.298 D/SmartSalesConn(32675): 🌐 network query device=CHLE_Intelligent
+04-29 18:08:13.298 I/SmartSalesConn(32675): 📡 queryNetwork ENTRY (in mutex)
+04-29 18:08:13.299 D/SmartSalesConn(32675): 📤 TX [NetworkQuery]: wifi#address#ip#name (77 69 66 69 23 61 64 64 72 65 73 73 23 69 70 23 6E 61 6D 65)
+04-29 18:08:13.299 D/AudioPipeline(32675): SIM audio drawer entries emitted count=33 downloading=1 queued=0 holding=13 maxDownloadProgress=0.0
+04-29 18:08:13.299 D/ConnectivityVM(32675): managerStatus=HttpDelayed(badgeIp=192.168.0.101, ssid=MstRobot, baseUrl=http://192.168.0.101:8088) managerState=HTTP_DELAYED
+04-29 18:08:13.353 D/SmartSalesConn(32675): 📥 RX [Notification]: IP#192.168.0.101 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 30 31)
+04-29 18:08:13.353 D/SmartSalesConn(32675): ⏭️ Network fragment ignored: tim#get
+04-29 18:08:13.353 D/SmartSalesConn(32675): ⏭️ Network fragment ignored: Ver#1.0.0.1
+04-29 18:08:13.353 D/SmartSalesConn(32675): 📥 RX [Notification]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-29 18:08:13.354 D/SmartSalesConn(32675): ❓ Badge unknown notification: IP#192.168.0.101
+04-29 18:08:13.354 D/SmartSalesConn(32675): ❓ Badge unknown notification: SD#MstRobot
+04-29 18:08:13.354 D/SmartSalesConn(32675): ⏭️ Network fragment ignored: Bat#23.09%
+04-29 18:08:13.354 D/SmartSalesConn(32675): 📥 RX [NetworkResponse]: IP#192.168.0.101 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 30 31)
+04-29 18:08:13.355 D/SmartSalesConn(32675): 📥 RX [NetworkResponse]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-29 18:08:13.355 D/SmartSalesConn(32675): 📡 fresh query, caching IP=192.168.0.101
+04-29 18:08:13.355 D/SmartSalesConn(32675): 📶 state=CONNECTED ip=192.168.0.101
+04-29 18:08:13.356 D/SmartSalesConn(32675): 🌐 Network status ok device=CHLE_Intelligent ip=192.168.0.101
+04-29 18:08:13.357 D/AudioPipeline(32675): 🌐 resolveBaseUrl: ip=192.168.0.101 badgeSsid=MstRobot phoneSsidForDiag=
+04-29 18:08:13.357 D/AudioPipeline(32675): 🌐 resolveBaseUrl: refreshed http://192.168.0.101:8088
+04-29 18:08:13.357 D/AudioPipeline(32675): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.0.101:8088
+04-29 18:08:13.357 D/SmartSalesConn(32675): BadgeHttpClient.isReachable start url=http://192.168.0.101:8088/
+04-29 18:08:13.692 D/AudioPipeline(32675): SIM audio drawer entries emitted count=33 downloading=1 queued=0 holding=13 maxDownloadProgress=0.0
+04-29 18:08:13.894 D/AudioPipeline(32675): SIM audio drawer entries emitted count=33 downloading=1 queued=0 holding=13 maxDownloadProgress=0.0
+04-29 18:08:14.097 D/AudioPipeline(32675): SIM audio drawer entries emitted count=33 downloading=1 queued=0 holding=13 maxDownloadProgress=0.0
+04-29 18:08:14.300 D/AudioPipeline(32675): SIM audio drawer entries emitted count=33 downloading=1 queued=0 holding=13 maxDownloadProgress=0.0
+04-29 18:08:14.511 D/AudioPipeline(32675): SIM audio drawer entries emitted count=33 downloading=1 queued=0 holding=13 maxDownloadProgress=0.0
+04-29 18:08:14.713 D/AudioPipeline(32675): SIM audio drawer entries emitted count=33 downloading=1 queued=0 holding=13 maxDownloadProgress=0.0
+04-29 18:08:14.919 D/AudioPipeline(32675): SIM audio drawer entries emitted count=33 downloading=1 queued=0 holding=13 maxDownloadProgress=0.0
+04-29 18:08:15.123 D/AudioPipeline(32675): SIM audio drawer entries emitted count=33 downloading=1 queued=0 holding=13 maxDownloadProgress=0.0
+04-29 18:08:15.326 D/AudioPipeline(32675): SIM audio drawer entries emitted count=33 downloading=1 queued=0 holding=13 maxDownloadProgress=0.0
+04-29 18:08:15.537 D/AudioPipeline(32675): SIM audio drawer entries emitted count=33 downloading=1 queued=0 holding=13 maxDownloadProgress=0.0
+04-29 18:08:15.868 D/AudioPipeline(32675): SIM audio drawer entries emitted count=33 downloading=1 queued=0 holding=13 maxDownloadProgress=0.0
+04-29 18:08:16.173 D/AudioPipeline(32675): SIM audio drawer entries emitted count=33 downloading=1 queued=0 holding=13 maxDownloadProgress=0.0
+04-29 18:08:16.376 W/SmartSalesConn(32675): BadgeHttpClient.isReachable failure url=http://192.168.0.101:8088/ error=SocketTimeoutException:timeout
+04-29 18:08:16.376 I/AudioPipeline(32675): 🛜 manager media endpoint delayed runtime=14:C1:9F:D7:E4:06/6c7ac2 baseUrl=http://192.168.0.101:8088
+04-29 18:08:16.376 W/AudioPipeline(32675): 🌐 invalidate active endpoint reason=http reachability failed
+04-29 18:08:16.376 D/AudioPipeline(32675): 🔎 isReady preflight: result=not-ready baseUrl=http://192.168.0.101:8088
+04-29 18:08:16.376 W/AudioPipeline(32675): 🛜 solid IP + HTTP readiness failure; attempting saved credential replay
+04-29 18:08:16.377 W/SmartSalesConn(32675): 🛜 solid IP + media sync failure; replaying latest saved credential ssid=MstRobot
+04-29 18:08:16.377 I/SmartSalesConn(32675): 🔁 saved credential replay attempt=1/3 source=media_failure ssid=MstRobot
+04-29 18:08:16.377 I/SmartSalesConn(32675): 🔗 provision start device=CHLE_Intelligent ssid=MstRobot
+04-29 18:08:16.381 I/SmartSalesConn(32675): BLE Provision: Step 1 - sending SSID: SD#MstRobot
+04-29 18:08:16.382 D/SmartSalesConn(32675): 📤 TX [SSID]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-29 18:08:16.408 D/AudioPipeline(32675): SIM audio drawer entries emitted count=33 downloading=1 queued=0 holding=13 maxDownloadProgress=0.0
+04-29 18:08:16.652 D/AudioPipeline(32675): SIM audio drawer entries emitted count=33 downloading=1 queued=0 holding=13 maxDownloadProgress=0.0
+04-29 18:08:16.772 I/SmartSalesConn(32675): BLE Provision: Step 2 - sending password: PD#****
+04-29 18:08:16.773 D/SmartSalesConn(32675): 📤 TX [Password]: PD#**** (<redacted>)
+04-29 18:08:16.865 I/SmartSalesConn(32675): 🔗 provision finished status=success device=CHLE_Intelligent
+04-29 18:08:16.865 I/SmartSalesConn(32675): 🔁 saved credential replay write ok attempt=1 source=media_failure
+04-29 18:08:17.784 D/AudioPipeline(32675): SIM audio drawer entries emitted count=33 downloading=1 queued=0 holding=13 maxDownloadProgress=0.0
+04-29 18:08:18.465 D/SmartSalesConn(32675): 📥 RX [Notification]: wifi#connect#ok (77 69 66 69 23 63 6F 6E 6E 65 63 74 23 6F 6B)
+04-29 18:08:18.466 D/SmartSalesConn(32675): ❓ Badge unknown notification: wifi#connect#ok
+04-29 18:08:19.066 D/SmartSalesConn(32675): 🌐 network query device=CHLE_Intelligent
+04-29 18:08:19.066 I/SmartSalesConn(32675): 📡 queryNetwork ENTRY (in mutex)
+04-29 18:08:19.067 D/SmartSalesConn(32675): 📤 TX [NetworkQuery]: wifi#address#ip#name (77 69 66 69 23 61 64 64 72 65 73 73 23 69 70 23 6E 61 6D 65)
+04-29 18:08:19.112 D/SmartSalesConn(32675): ⏭️ Network fragment ignored: wifi#connect#ok
+04-29 18:08:19.115 D/SmartSalesConn(32675): 📥 RX [Notification]: IP#192.168.0.101 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 30 31)
+04-29 18:08:19.116 D/SmartSalesConn(32675): ❓ Badge unknown notification: IP#192.168.0.101
+04-29 18:08:19.116 D/SmartSalesConn(32675): 📥 RX [Notification]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-29 18:08:19.116 D/SmartSalesConn(32675): ❓ Badge unknown notification: SD#MstRobot
+04-29 18:08:19.116 D/SmartSalesConn(32675): 📥 RX [NetworkResponse]: IP#192.168.0.101 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 30 31)
+04-29 18:08:19.117 D/SmartSalesConn(32675): 📥 RX [NetworkResponse]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-29 18:08:19.117 D/SmartSalesConn(32675): 📡 fresh query, caching IP=192.168.0.101
+04-29 18:08:19.117 D/SmartSalesConn(32675): 📶 state=CONNECTED ip=192.168.0.101
+04-29 18:08:19.119 D/SmartSalesConn(32675): 🔌 Session persisted: 14:C1:9F:D7:E4:06
+04-29 18:08:19.119 I/SmartSalesConn(32675): 🔁 saved credential replay confirmed online attempt=1 source=media_failure ip=192.168.0.101 ssid=MstRobot
+04-29 18:08:19.120 I/AudioPipeline(32675): 🛜 saved credential replay result after media failure: WifiProvisioned(session=BleSession(peripheralId=14:C1:9F:D7:E4:06, peripheralName=CHLE_Intelligent, signalStrengthDbm=0, profileId=chle, secureToken=bc308781-bc66-4ba9-89b7-c300636c7ac2, establishedAtMillis=1777456720345), status=ProvisioningStatus(wifiSsid=MstRobot, handshakeId=network-160642113, credentialsHash=-797596188))
+04-29 18:08:19.120 I/AudioPipeline(32675): 🛜 post-credential readiness grace wait=2000ms attempt=1 runtime=14:C1:9F:D7:E4:06/6c7ac2
+04-29 18:08:20.145 D/SmartSalesConn(32675): 📥 RX [Notification]: Bat#23.82% (42 61 74 23 32 33 2E 38 32 25)
+04-29 18:08:20.146 D/SmartSalesConn(32675): ❓ Badge unknown notification: Bat#23.82%
+04-29 18:08:21.120 D/AudioPipeline(32675): 🌐 resolveBaseUrl: querying badge network status
+04-29 18:08:21.121 D/SmartSalesConn(32675): 🌐 network query device=CHLE_Intelligent
+04-29 18:08:21.121 I/SmartSalesConn(32675): 📡 queryNetwork ENTRY (in mutex)
+04-29 18:08:21.121 D/SmartSalesConn(32675): 📡 CACHED (2055ms old)
+04-29 18:08:21.122 D/SmartSalesConn(32675): 📶 state=CONNECTED ip=192.168.0.101
+04-29 18:08:21.122 D/SmartSalesConn(32675): 🌐 Network status ok device=CHLE_Intelligent ip=192.168.0.101
+04-29 18:08:21.124 D/AudioPipeline(32675): 🌐 resolveBaseUrl: ip=192.168.0.101 badgeSsid=MstRobot phoneSsidForDiag=
+04-29 18:08:21.124 D/AudioPipeline(32675): 🌐 resolveBaseUrl: refreshed http://192.168.0.101:8088
+04-29 18:08:21.124 D/AudioPipeline(32675): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.0.101:8088
+04-29 18:08:21.124 D/SmartSalesConn(32675): BadgeHttpClient.isReachable start url=http://192.168.0.101:8088/
+04-29 18:08:22.070 D/SmartSalesConn(32675): BadgeHttpClient.isReachable response url=http://192.168.0.101:8088/ code=200 reachable=true
+04-29 18:08:22.072 I/AudioPipeline(32675): 🛜 manager media endpoint ready baseUrl=http://192.168.0.101:8088
+04-29 18:08:22.072 D/AudioPipeline(32675): 🔎 isReady preflight: result=ready baseUrl=http://192.168.0.101:8088
+04-29 18:08:22.072 I/ConnectivityVM(32675): debug media readiness result=true
+04-29 18:08:22.074 D/AudioPipeline(32675): SIM audio drawer entries emitted count=33 downloading=1 queued=0 holding=12 maxDownloadProgress=0.0
+04-29 18:08:22.074 D/ConnectivityVM(32675): managerStatus=Ready managerState=CONNECTED
+04-29 18:08:25.075 D/AudioPipeline(32675): SIM badge sync skipped trigger=auto reason=badge-download-active filename=res_20260413_173030.wav
+04-29 18:08:30.734 D/ConnectivityService( 4381): reportNetworkConnectivity(100, false) by 1000
+04-29 18:08:30.827 D/ConnectivityService( 4381): [100 WIFI] validation passed
+04-29 18:08:40.155 D/SmartSalesConn(32675): 📥 RX [Notification]: Bat#23.82% (42 61 74 23 32 33 2E 38 32 25)
+04-29 18:08:40.155 D/SmartSalesConn(32675): ❓ Badge unknown notification: Bat#23.82%
+04-29 18:09:00.195 D/SmartSalesConn(32675): 📥 RX [Notification]: Bat#24.36% (42 61 74 23 32 34 2E 33 36 25)
+04-29 18:09:00.195 D/SmartSalesConn(32675): ❓ Badge unknown notification: Bat#24.36%

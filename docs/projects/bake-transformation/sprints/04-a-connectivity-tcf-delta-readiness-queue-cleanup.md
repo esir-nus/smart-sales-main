@@ -196,15 +196,22 @@ Closeout must include:
   with `effective=CONNECTED`. Audio sync stayed fenced with
   `reason=known_http_unreachable`, proving shell reconnection and HTTP media
   readiness stay separate during recovery.
+- Device evidence HTTP-delayed enum closure — Rebuilt and installed the updated
+  APK without clearing badge state, opened badge management with a connected
+  row (`已连接 · 1.0.0.1`), and tapped the `isReady` debug probe. Run 22 proves
+  HTTP failure at `http://192.168.0.101:8088`, bridge emission of
+  `manager media endpoint delayed`, ViewModel mapping
+  `managerStatus=HttpDelayed(...) managerState=HTTP_DELAYED`, saved-credential
+  replay, and final HTTP-ready recovery. This closes the previous L3 caveat
+  that the manager enum name was only L1/L2-proven.
 
 ## 10. Closeout
 
 - **Status**: success
 - **Tracker summary**: Closed HTTP-delayed readiness and badge-owned manual queue
   deltas with focused/full unit tests; L3 restored-badge, terminal import,
-  active-device switch fencing, HTTP-abnormal UI, and reconnect-vs-media
-  fencing evidence captured. The exact on-device manager enum name remains
-  covered by L1/L2 tests rather than direct runtime telemetry.
+  active-device switch fencing, HTTP-abnormal UI, reconnect-vs-media fencing,
+  and direct `HTTP_DELAYED` manager enum evidence captured.
 - **Files changed**:
   - `data/connectivity/src/main/java/com/smartsales/prism/domain/connectivity/BadgeManagerStatus.kt`
   - `app-core/src/main/java/com/smartsales/prism/data/connectivity/RealConnectivityBridge.kt`

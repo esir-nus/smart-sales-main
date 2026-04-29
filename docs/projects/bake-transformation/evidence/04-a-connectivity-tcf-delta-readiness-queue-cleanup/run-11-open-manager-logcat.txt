@@ -1,0 +1,3 @@
+--------- beginning of main
+04-29 17:35:11.494 D/ConnectivityService( 4381): Data stall detected with methods: 2
+04-29 17:35:11.668 D/ConnectivityService( 4381): [100 WIFI] validation passed

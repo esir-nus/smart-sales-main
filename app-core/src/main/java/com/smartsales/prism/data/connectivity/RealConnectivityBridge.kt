@@ -28,6 +28,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -72,6 +73,7 @@ class RealConnectivityBridge @Inject constructor(
     private var activeEndpointSnapshot: ActiveEndpointSnapshot? = null
     private var endpointRefreshRequired = false
     private var mediaRecoveryInFlight: MediaRecoveryAttempt? = null
+    private val mediaEndpointDelay = MutableStateFlow<MediaEndpointDelay?>(null)
     @Volatile private var lastKnownBadgeIp: String? = null
     private val recordingNotificationsFlow = MutableSharedFlow<RecordingNotification>(
         replay = 0,
@@ -162,15 +164,17 @@ class RealConnectivityBridge @Inject constructor(
 
     override val managerStatus: StateFlow<BadgeManagerStatus> = combine(
         deviceManager.state,
-        badgeStateMonitor.status
-    ) { legacyState, badgeStatus ->
-        mapToManagerStatus(legacyState, badgeStatus)
+        badgeStateMonitor.status,
+        mediaEndpointDelay
+    ) { legacyState, badgeStatus, mediaDelay ->
+        mapToManagerStatus(legacyState, badgeStatus, mediaDelay)
     }.stateIn(
         scope = scope,
         started = SharingStarted.Eagerly,
         initialValue = mapToManagerStatus(
             legacy = deviceManager.state.value,
-            badgeStatus = badgeStateMonitor.status.value
+            badgeStatus = badgeStateMonitor.status.value,
+            mediaDelay = mediaEndpointDelay.value
         )
     )
     override suspend fun downloadRecording(
@@ -327,7 +331,8 @@ class RealConnectivityBridge @Inject constructor(
 
     private fun mapToManagerStatus(
         legacy: ConnectionState,
-        badgeStatus: BadgeStatus
+        badgeStatus: BadgeStatus,
+        mediaDelay: MediaEndpointDelay?
     ): BadgeManagerStatus {
         return when (legacy) {
             is ConnectionState.NeedsSetup -> BadgeManagerStatus.NeedsSetup
@@ -341,11 +346,12 @@ class RealConnectivityBridge @Inject constructor(
                 else -> BadgeManagerStatus.Disconnected
             }
             is ConnectionState.Pairing,
-            is ConnectionState.Connected,
             is ConnectionState.AutoReconnecting -> BadgeManagerStatus.Connecting
+            is ConnectionState.Connected ->
+                mediaDelayedStatus(legacy, mediaDelay, badgeStatus) ?: BadgeManagerStatus.Connecting
             is ConnectionState.WifiProvisioned -> BadgeManagerStatus.Ready(
                 ssid = legacy.status.wifiSsid
-            )
+            ).unlessMediaDelayed(legacy, mediaDelay, badgeStatus)
             is ConnectionState.WifiProvisionedHttpDelayed -> BadgeManagerStatus.HttpDelayed(
                 badgeIp = badgeStatus.ipAddress,
                 ssid = legacy.status.wifiSsid,
@@ -353,9 +359,33 @@ class RealConnectivityBridge @Inject constructor(
             )
             is ConnectionState.Syncing -> BadgeManagerStatus.Ready(
                 ssid = legacy.status.wifiSsid
-            )
+            ).unlessMediaDelayed(legacy, mediaDelay, badgeStatus)
             is ConnectionState.Error -> BadgeManagerStatus.Error(legacy.error.toString())
         }
+    }
+
+    private fun mediaDelayedStatus(
+        legacy: ConnectionState,
+        mediaDelay: MediaEndpointDelay?,
+        badgeStatus: BadgeStatus
+    ): BadgeManagerStatus.HttpDelayed? {
+        val runtimeKey = runtimeKeyForState(legacy)
+        if (mediaDelay == null || !mediaDelay.matches(runtimeKey, badgeStatus)) {
+            return null
+        }
+        return BadgeManagerStatus.HttpDelayed(
+            badgeIp = mediaDelay.badgeIp ?: badgeStatus.ipAddress,
+            ssid = badgeStatus.wifiName,
+            baseUrl = mediaDelay.baseUrl
+        )
+    }
+
+    private fun BadgeManagerStatus.Ready.unlessMediaDelayed(
+        legacy: ConnectionState,
+        mediaDelay: MediaEndpointDelay?,
+        badgeStatus: BadgeStatus
+    ): BadgeManagerStatus {
+        return mediaDelayedStatus(legacy, mediaDelay, badgeStatus)?.copy(ssid = this.ssid) ?: this
     }
     
     private fun extractSsid(state: ConnectionState): String {
@@ -503,6 +533,10 @@ class RealConnectivityBridge @Inject constructor(
 
     private fun runtimeKeyForState(state: ConnectionState): BadgeRuntimeKey? {
         return when (state) {
+            is ConnectionState.Connected -> BadgeRuntimeKey(
+                peripheralId = state.session.peripheralId,
+                secureToken = state.session.secureToken
+            )
             is ConnectionState.WifiProvisioned -> BadgeRuntimeKey(
                 peripheralId = state.session.peripheralId,
                 secureToken = state.session.secureToken
@@ -527,11 +561,14 @@ class RealConnectivityBridge @Inject constructor(
         android.util.Log.d(TAG, "🔎 isReady preflight: checking reachability baseUrl=$baseUrl")
         val reachable = httpClient.isReachable(baseUrl)
         if (!reachable) {
+            noteMediaEndpointDelay(baseUrl)
             invalidateActiveEndpoint("http reachability failed")
             if (allowRefreshRetry) {
                 android.util.Log.d(TAG, "🔎 isReady preflight: retrying after endpoint refresh")
                 return probeReadyOnce(allowRefreshRetry = false)
             }
+        } else {
+            clearMediaEndpointDelay(baseUrl)
         }
         android.util.Log.d(
             TAG,
@@ -616,6 +653,29 @@ class RealConnectivityBridge @Inject constructor(
         endpointRefreshRequired = true
     }
 
+    private fun noteMediaEndpointDelay(baseUrl: String) {
+        val snapshot = activeEndpointSnapshot
+        val runtimeKey = currentRuntimeKey() ?: snapshot?.runtimeKey
+        val badgeIp = snapshot?.badgeIp ?: badgeStateMonitor.status.value.ipAddress
+        mediaEndpointDelay.value = MediaEndpointDelay(
+            runtimeKey = runtimeKey,
+            badgeIp = badgeIp,
+            baseUrl = baseUrl
+        )
+        android.util.Log.i(
+            TAG,
+            "🛜 manager media endpoint delayed runtime=${runtimeKey?.toLogString() ?: "endpoint-snapshot"} baseUrl=$baseUrl"
+        )
+    }
+
+    private fun clearMediaEndpointDelay(baseUrl: String) {
+        val delay = mediaEndpointDelay.value ?: return
+        if (delay.matches(currentRuntimeKey(), badgeStateMonitor.status.value) && delay.baseUrl == baseUrl) {
+            mediaEndpointDelay.value = null
+            android.util.Log.i(TAG, "🛜 manager media endpoint ready baseUrl=$baseUrl")
+        }
+    }
+
     private data class ActiveEndpointSnapshot(
         val runtimeKey: BadgeRuntimeKey,
         val badgeIp: String,
@@ -630,6 +690,26 @@ class RealConnectivityBridge @Inject constructor(
                 return false
             }
             return hasUsableBadgeIp(badgeIp)
+        }
+    }
+
+    private data class MediaEndpointDelay(
+        val runtimeKey: BadgeRuntimeKey?,
+        val badgeIp: String?,
+        val baseUrl: String
+    ) {
+        fun matches(
+            currentRuntimeKey: BadgeRuntimeKey?,
+            badgeStatus: BadgeStatus
+        ): Boolean {
+            if (runtimeKey != null && currentRuntimeKey != null) {
+                return runtimeKey == currentRuntimeKey
+            }
+
+            val statusIp = badgeStatus.ipAddress
+            return badgeStatus.state == BadgeState.CONNECTED &&
+                hasUsableBadgeIp(badgeIp) &&
+                badgeIp == statusIp
         }
     }
 

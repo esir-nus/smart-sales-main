@@ -141,9 +141,12 @@ connectivity and audio owners.
   jobs by `(badgeMac, filename)`, suppresses duplicate active jobs, and exposes
   disconnect cancellation so the repository can include active `rec#` filenames
   in same-badge targeted resume.
-- Gap: current delivered behavior still lacks fresh hardware evidence for
-  reconnect, Wi-Fi repair, isolation, BLE notifications, and HTTP media
-  readiness. Do not claim L3 runtime proof without fresh `adb logcat`.
+- Closed 2026-04-29: Sprint 04-a L3 evidence now includes direct runtime
+  telemetry for transport-confirmed HTTP delay:
+  `managerStatus=HttpDelayed(...) managerState=HTTP_DELAYED`, followed by
+  saved-credential replay and HTTP-ready recovery. Hardware evidence still
+  remains per-branch; do not claim unexercised BLE notification or Wi-Fi repair
+  branches without fresh `adb logcat`.
 
 ## Test Contract
 

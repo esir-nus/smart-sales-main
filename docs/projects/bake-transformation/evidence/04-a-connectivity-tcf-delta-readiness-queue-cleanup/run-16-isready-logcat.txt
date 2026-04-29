@@ -1,0 +1,9 @@
+--------- beginning of main
+04-29 17:38:39.420 W/SmartSalesConn(21206): BadgeHttpClient.isReachable failure url=http://192.168.0.100:8088/ error=ConnectException:Failed to connect to /192.168.0.100:8088
+04-29 17:38:39.420 W/AudioPipeline(21206): 🌐 invalidate active endpoint reason=http reachability failed
+04-29 17:38:39.530 W/SmartSalesConn(21206): BadgeHttpClient.isReachable failure url=http://192.168.0.100:8088/ error=ConnectException:Failed to connect to /192.168.0.100:8088
+04-29 17:38:39.530 W/AudioPipeline(21206): 🌐 invalidate active endpoint reason=http reachability failed
+04-29 17:38:39.530 W/AudioPipeline(21206): 🛜 solid IP + HTTP readiness failure; attempting saved credential replay
+04-29 17:38:39.530 W/SmartSalesConn(21206): 🛜 solid IP + media sync failure; replaying latest saved credential ssid=MstRobot
+04-29 17:38:44.438 W/SmartSalesConn(21206): BadgeHttpClient.isReachable failure url=http://192.168.0.100:8088/ error=ConnectException:Failed to connect to /192.168.0.100:8088
+04-29 17:38:44.439 W/AudioPipeline(21206): 🌐 invalidate active endpoint reason=http reachability failed

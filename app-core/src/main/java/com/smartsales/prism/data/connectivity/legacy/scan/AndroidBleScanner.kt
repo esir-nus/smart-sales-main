@@ -98,9 +98,16 @@ class AndroidBleScanner @Inject constructor(
 
     @SuppressLint("MissingPermission")
     override fun stop() {
-        if (!_isScanning.value) return
+        Log.d("BT311Scan", "stop() called, isScanning=${_isScanning.value}")
+        if (!_isScanning.value) {
+            Log.d("BT311Scan", "stop() ignored because scanner is not active")
+            return
+        }
         runCatching { scanner?.stopScan(callback) }
+            .onSuccess { Log.d("BT311Scan", "stopScan() success") }
+            .onFailure { e -> Log.e("BT311Scan", "stopScan() FAILED: ${e.message}", e) }
         _isScanning.value = false
+        Log.d("BT311Scan", "stop() completed, delivered=${_devices.value.joinToString { it.id }}")
     }
 
     @SuppressLint("MissingPermission") // 仅在已授权时读取 device.name
@@ -143,6 +150,7 @@ class AndroidBleScanner @Inject constructor(
                 .plus(peripheral)
                 .sortedByDescending { it.signalStrengthDbm }
             _devices.value = updated
+            Log.d("BT311Scan", "delivered matched devices=${updated.joinToString { "${it.id}@${it.signalStrengthDbm}" }}")
         }
     }
 
@@ -156,6 +164,18 @@ class AndroidBleScanner @Inject constructor(
         }
         stop()
         return result?.firstOrNull()
+    }
+
+    @SuppressLint("MissingPermission")
+    override suspend fun scanForMac(macAddress: String, timeoutMs: Long): BlePeripheral? {
+        val alreadyScanning = _isScanning.value
+        if (!alreadyScanning) start()
+        if (!_isScanning.value) return null
+        val result = withTimeoutOrNull(timeoutMs) {
+            _devices.first { devices -> devices.any { it.id == macAddress } }
+        }
+        if (!alreadyScanning) stop()
+        return result?.firstOrNull { it.id == macAddress }
     }
 
     private fun hasConnectPermission(): Boolean {

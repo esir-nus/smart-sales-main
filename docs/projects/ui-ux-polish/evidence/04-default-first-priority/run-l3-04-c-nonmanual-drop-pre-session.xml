@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding='utf-8' standalone='yes' ?>
+<map>
+    <string name="wifi_ssid">MstRobot</string>
+    <string name="secure_token">REDACTED</string>
+    <string name="profile_id">chle</string>
+    <string name="wifi_password">REDACTED</string>
+    <string name="known_networks_json">[{&quot;ssid&quot;:&quot;MstRobot&quot;,&quot;password&quot;:&quot;REDACTED&quot;,&quot;security&quot;:&quot;WPA2&quot;,&quot;normalizedSsid&quot;:&quot;MstRobot&quot;,&quot;lastUsedAtMillis&quot;:1777473571038}]</string>
+    <string name="peripheral_name">B_06</string>
+    <long name="established_at_millis" value="1777472951744" />
+    <string name="peripheral_id">14:C1:9F:D7:E4:06</string>
+    <int name="signal_strength_dbm" value="0" />
+</map>

@@ -326,7 +326,7 @@ Phone current SSID must not be used as a core reconnect or repair decision input
 `ConnectivityService.updateWifiConfig()` must treat `trim().isEmpty()` on either field as an immediate local error.
 That rejection is a guard rail only: it must not call BLE provisioning, manual repair confirmation, or remembered-network persistence.
 
-`DeviceRegistryManager.setDefault()` is passive registry metadata. The BLE detection monitor may prefer an eligible default registered badge only after live scan evidence sees it; a manually disconnected default must be skipped, and all live registered candidates should remain marked `bleDetected` until connection-state cleanup clears proximity.
+`DeviceRegistryManager.setDefault()` is passive/cosmetic registry metadata. The BLE detection monitor may mark each live registered candidate's own `bleDetected` proximity flag, and it must clear missing candidates after a short grace window, but automatic reconnect may target only the latest connected/current active badge after non-manual loss. A non-active/default badge must not become active, reseed `SessionStore`, or reconnect unless the user explicitly switches to it. Manual disconnect of the active badge suppresses both auto-reconnect to that badge and auto-connect to any nearby non-active badge until explicit user action.
 
 This richer state is for connectivity manager presentation only. Shared shell/history routing must continue to use `connectionState`.
 

@@ -249,10 +249,13 @@ ConnectivityViewModel → DeviceRegistryManager → DeviceRegistry (SharedPrefs)
 
 BLE detection monitor priority:
 
-- live registered scan candidates are marked `bleDetected`
-- an eligible default registered badge is preferred over the active badge when both advertise
-- a `manuallyDisconnected=true` default is skipped
-- `setDefault()` itself remains passive and must not switch active device, reseed `SessionStore`, or reconnect
+- passive registered-MAC scanning marks each registered badge's own `bleDetected` proximity flag independently
+- a registered badge missing from scan evidence clears `bleDetected=false` after a short grace window so stale ready copy does not stick
+- only the latest connected/current active badge may trigger automatic reconnect after non-manual loss such as distance loss or power cut
+- non-active registered badges, including the default badge, remain proximity/card state only until the user manually taps/switches to them
+- a `manuallyDisconnected=true` badge is skipped for automatic reconnect
+- `setDefault()` itself remains cosmetic/passive and must not switch active device, reseed `SessionStore`, or reconnect
+- manual disconnect of active badge B suppresses both auto-reconnect to B and auto-connect to nearby badge A until explicit user action
 
 Manager-only refinement path:
 

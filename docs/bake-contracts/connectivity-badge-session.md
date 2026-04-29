@@ -71,9 +71,16 @@ tracks gaps explicitly.
   saved user-confirmed credentials.
 - MUST avoid repeated background BLE Wi-Fi polling during normal HTTP media
   traffic; endpoint reuse is current-runtime only.
-- MUST keep default-device selection passive. `setDefault()` changes registry
-  metadata only; BLE detection may use default-first priority only when live
-  registered candidates are observed.
+- MUST keep default-device selection passive/cosmetic. `setDefault()` changes
+  registry metadata only. BLE detection/reconnect may auto-select only the
+  latest connected/current active badge after non-manual loss; non-active
+  registered badges may be marked `bleDetected` for UI
+  proximity but must not become active without explicit user action. Proximity
+  is live and per badge MAC: missing scan evidence clears the affected
+  registered badge after a short grace window.
+- MUST treat manual disconnect as explicit user intent: manually disconnecting
+  active badge B suppresses auto-reconnect to B and suppresses auto-connect to
+  nearby badge A until the user explicitly reconnects or switches.
 
 ### Error Paths
 
@@ -99,10 +106,11 @@ tracks gaps explicitly.
   cancellation events.
 - Active badge download already running: skip readiness probing and return an
   already-running sync result instead of treating HTTP timeout as Wi-Fi failure.
-- BLE detection sees multiple registered candidates: mark all live registered
-  candidates as BLE detected, prefer an eligible default badge first, skip a
-  manually disconnected default, then fall back to the active or single eligible
-  candidate.
+- BLE detection sees multiple registered candidates: mark each live registered
+  candidate as BLE detected, clear missing registered candidates after the
+  proximity grace window, reconnect only when the latest connected/current
+  active badge is one of the eligible candidates, and never switch to a
+  non-active/default badge without an explicit user action.
 
 ## Telemetry Joints
 
@@ -167,6 +175,11 @@ connectivity and audio owners.
   saved-credential replay and HTTP-ready recovery. Hardware evidence still
   remains per-branch; do not claim unexercised BLE notification or Wi-Fi repair
   branches without fresh `adb logcat`.
+- Superseded 2026-04-29: Sprint 04 default-first BLE priority is
+  product-rejected for automatic recovery. The current contract is active-only:
+  non-manual disconnect of active badge B must not silently switch or reconnect
+  to default badge A. Reconnect fallback scans for B's active session MAC for up
+  to 60 seconds and leaves the session on B if only A is found.
 
 ## Test Contract
 

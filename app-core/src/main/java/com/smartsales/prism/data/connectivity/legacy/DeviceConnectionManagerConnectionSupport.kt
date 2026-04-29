@@ -250,36 +250,30 @@ internal class DeviceConnectionManagerConnectionSupport(
         val directResult = bleGateway.connect(session.peripheralId)
         if (directResult is Result.Success) return session
 
-        ConnectivityLogger.w("🔌 Stored MAC ${session.peripheralId} unreachable, attempting scan fallback")
+        ConnectivityLogger.w("🔌 Stored MAC ${session.peripheralId} unreachable, attempting active-target scan fallback")
         runtime.notificationListenerActive = false
 
-        val peripheral = bleScanner?.scanForFirst() ?: run {
-            ConnectivityLogger.w("🔌 Scan fallback: no matching device found")
+        val peripheral = bleScanner?.scanForMac(session.peripheralId, RECONNECT_TARGET_SCAN_TIMEOUT_MS) ?: run {
+            ConnectivityLogger.w("🔌 Active-target scan fallback: ${session.peripheralId} not found")
             return null
         }
 
-        if (peripheral.id == session.peripheralId) {
-            ConnectivityLogger.w("🔌 Scan fallback: same MAC found but connect failed earlier")
-            return null
-        }
-
-        ConnectivityLogger.i("🔌 Scan fallback: found ${peripheral.name} at new MAC ${peripheral.id}")
-        val updatedSession = session.copy(
-            peripheralId = peripheral.id,
+        ConnectivityLogger.i("🔌 Active-target scan fallback: found ${peripheral.name} at ${peripheral.id}")
+        val refreshedSession = session.copy(
             peripheralName = peripheral.name,
             signalStrengthDbm = peripheral.signalStrengthDbm
         )
 
-        val retryResult = bleGateway.connect(updatedSession.peripheralId)
+        val retryResult = bleGateway.connect(refreshedSession.peripheralId)
         if (retryResult is Result.Error) {
-            ConnectivityLogger.w("🔌 Scan fallback: connect to new MAC also failed: ${retryResult.throwable.message}")
+            ConnectivityLogger.w("🔌 Active-target scan fallback: reconnect failed: ${retryResult.throwable.message}")
             return null
         }
 
-        runtime.currentSession = updatedSession
-        sessionStore.saveSession(updatedSession)
-        ConnectivityLogger.i("🔌 Session updated to new MAC ${updatedSession.peripheralId}")
-        return updatedSession
+        runtime.currentSession = refreshedSession
+        sessionStore.saveSession(refreshedSession)
+        ConnectivityLogger.i("🔌 Session refreshed for active MAC ${refreshedSession.peripheralId}")
+        return refreshedSession
     }
 
     private fun launchProvisioning() {
@@ -596,6 +590,7 @@ internal class DeviceConnectionManagerConnectionSupport(
         const val AUTO_RETRY_DELAY_MS = 2_000L
         const val AUTO_RETRY_MAX_ATTEMPTS = 2
         const val RECONNECT_REPLAY_QUERY_ATTEMPTS = 3
+        const val RECONNECT_TARGET_SCAN_TIMEOUT_MS = 60_000L
         const val MEDIA_REPLAY_FIRST_QUERY_DELAY_MS = 2_200L
         const val MEDIA_REPLAY_QUERY_DELAY_MS = 2_000L
         const val MANUAL_PROVISION_QUERY_ATTEMPTS = 3

@@ -362,7 +362,7 @@ private fun ConnectivityDebugProbeCard(
                 onClick = onDebugSeedDefault
             )
             ModalActionButton(
-                text = "L2.5 default",
+                text = "L2.5 active-only",
                 color = TextSecondary,
                 modifier = Modifier.weight(1f),
                 onClick = onDebugDefaultDetect
@@ -385,6 +385,33 @@ private fun ConnectivityDebugProbeCard(
 }
 
 // ── Device Card (expanded for connected, compact for others) ──────
+
+internal fun connectivityDeviceCardSubtitle(
+    isConnected: Boolean,
+    batteryLevel: Int?,
+    firmwareVersion: String?,
+    isCheckingUpdate: Boolean,
+    isUpdateFound: Boolean,
+    isUpdating: Boolean,
+    isReconnecting: Boolean,
+    isBlePaired: Boolean,
+    bleDetected: Boolean,
+    manuallyDisconnected: Boolean,
+    isActive: Boolean
+): String = when {
+    isConnected || isCheckingUpdate || isUpdateFound || isUpdating -> buildString {
+        append("已连接")
+        if (batteryLevel != null) append(" · $batteryLevel%")
+        if (firmwareVersion != null) append(" · $firmwareVersion")
+        else append(" · v?.?.?")
+    }
+    isReconnecting -> "重连中…"
+    isBlePaired -> "蓝牙已连接，Wi-Fi 未就绪"
+    bleDetected -> "已检测到 · 点击连接"
+    manuallyDisconnected -> "已断开 · 点击重连"
+    isActive -> "不在范围内"
+    else -> "点击连接"
+}
 
 @Composable
 private fun DeviceCard(
@@ -416,26 +443,34 @@ private fun DeviceCard(
     val isUpdateFound = isActive && managerState == ConnectivityManagerState.UPDATE_FOUND
 
     data class DotStyle(val color: Color, val filled: Boolean, val subtitle: String)
+    val subtitle = connectivityDeviceCardSubtitle(
+        isConnected = isConnected,
+        batteryLevel = batteryLevel,
+        firmwareVersion = firmwareVersion,
+        isCheckingUpdate = isCheckingUpdate,
+        isUpdateFound = isUpdateFound,
+        isUpdating = isUpdating,
+        isReconnecting = isReconnecting,
+        isBlePaired = isBlePaired,
+        bleDetected = device.bleDetected,
+        manuallyDisconnected = device.manuallyDisconnected,
+        isActive = isActive
+    )
     val dot = when {
         isConnected || isCheckingUpdate || isUpdateFound || isUpdating ->
-            DotStyle(ConnectedGreen, true, buildString {
-                append("已连接")
-                if (batteryLevel != null) append(" · $batteryLevel%")
-                if (firmwareVersion != null) append(" · $firmwareVersion")
-                else append(" · v?.?.?")
-            })
+            DotStyle(ConnectedGreen, true, subtitle)
         isReconnecting ->
-            DotStyle(ReconnectingAmber, false, "重连中…")
+            DotStyle(ReconnectingAmber, false, subtitle)
         isBlePaired ->
-            DotStyle(ReconnectingAmber, false, "蓝牙已连接，Wi-Fi 未就绪")
+            DotStyle(ReconnectingAmber, false, subtitle)
         device.bleDetected ->
-            DotStyle(CyanDetected, false, "已检测到 · 点击连接")
+            DotStyle(CyanDetected, false, subtitle)
         device.manuallyDisconnected ->
-            DotStyle(DisconnectedGrey, false, "已断开 · 点击重连")
+            DotStyle(DisconnectedGrey, false, subtitle)
         isActive ->
-            DotStyle(DisconnectedGrey.copy(alpha = 0.5f), false, "不在范围内")
+            DotStyle(DisconnectedGrey.copy(alpha = 0.5f), false, subtitle)
         else ->
-            DotStyle(DisconnectedGrey.copy(alpha = 0.5f), false, "不在范围内")
+            DotStyle(DisconnectedGrey.copy(alpha = 0.5f), false, subtitle)
     }
 
     val cardBorder = if (isActive) AccentBlue else CardBorder

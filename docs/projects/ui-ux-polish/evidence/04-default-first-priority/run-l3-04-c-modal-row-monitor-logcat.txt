@@ -1,0 +1,12 @@
+--------- beginning of main
+04-29 23:07:17.167 D/SmartSalesConn( 2607): 📥 RX [Notification]: Bat#92.73% (42 61 74 23 39 32 2E 37 33 25)
+04-29 23:07:17.168 D/SmartSalesConn( 2607): ❓ Badge unknown notification: Bat#92.73%
+04-29 23:07:25.171 D/ConnectivityService( 4381): Returning BLOCKED NetworkInfo to uid=10350
+04-29 23:07:37.284 D/SmartSalesConn( 2607): 📥 RX [Notification]: Bat#93.09% (42 61 74 23 39 33 2E 30 39 25)
+04-29 23:07:37.285 D/SmartSalesConn( 2607): ❓ Badge unknown notification: Bat#93.09%
+04-29 23:07:57.296 D/SmartSalesConn( 2607): 📥 RX [Notification]: Bat#92.36% (42 61 74 23 39 32 2E 33 36 25)
+04-29 23:07:57.296 D/SmartSalesConn( 2607): ❓ Badge unknown notification: Bat#92.36%
+04-29 23:08:17.437 D/SmartSalesConn( 2607): 📥 RX [Notification]: Bat#93.09% (42 61 74 23 39 33 2E 30 39 25)
+04-29 23:08:17.438 D/SmartSalesConn( 2607): ❓ Badge unknown notification: Bat#93.09%
+04-29 23:08:37.497 D/SmartSalesConn( 2607): 📥 RX [Notification]: Bat#92.00% (42 61 74 23 39 32 2E 30 30 25)
+04-29 23:08:37.497 D/SmartSalesConn( 2607): ❓ Badge unknown notification: Bat#92.00%

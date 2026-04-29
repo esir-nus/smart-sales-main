@@ -8,8 +8,8 @@ enum class DebugBleDetectionL25Scenario(
     val scenarioId: String,
     val manuallyDisconnectDefault: Boolean
 ) {
-    DefaultPriorityDualAdvertise(
-        scenarioId = "CONNECTIVITY_DEFAULT_PRIORITY_DUAL_ADVERTISE",
+    ActiveOnlyDualAdvertise(
+        scenarioId = "CONNECTIVITY_ACTIVE_ONLY_DUAL_ADVERTISE",
         manuallyDisconnectDefault = false
     ),
     ManualDefaultSuppression(
@@ -60,7 +60,7 @@ interface DeviceRegistryManager {
     /** 移除已注册设备。若为活跃设备，先断开。若为默认设备，自动提升其他设备。 */
     fun removeDevice(macAddress: String)
 
-    /** 应用启动时调用。加载默认设备，执行迁移（如需），触发自动重连。 */
+    /** 应用启动时调用。优先加载已注册的存储会话设备，执行迁移（如需），触发自动重连。 */
     fun initializeOnLaunch()
 
     /** 标记设备手动断开状态。值为 true 时跳过所有自动重连；connect() 时清除为 false。 */
@@ -69,7 +69,7 @@ interface DeviceRegistryManager {
     /** 标记设备 BLE 可检测状态（在扫描范围内但尚未连接）。connect() 时自动清除。 */
     fun updateBleDetected(macAddress: String, value: Boolean)
 
-    /** Debug：种子化默认优先级验证场景；正式路径不应调用。 */
+    /** Debug：种子化历史默认优先级验证场景；正式路径不应调用。 */
     fun debugSeedDefaultPriorityScenario(): Boolean = false
 
     /** Debug：通过注册表候选选择路径模拟 BLE 检测；正式路径不应调用。 */

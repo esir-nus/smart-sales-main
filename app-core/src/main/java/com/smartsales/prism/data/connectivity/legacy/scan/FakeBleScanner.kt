@@ -18,6 +18,8 @@ class FakeBleScanner : BleScanner {
     var startCalls = 0
     var stopCalls = 0
     var scanForFirstResult: BlePeripheral? = null
+    var scanForMacResult: BlePeripheral? = null
+    val scanForMacCalls = mutableListOf<Pair<String, Long>>()
 
     override fun start() {
         startCalls++
@@ -31,6 +33,11 @@ class FakeBleScanner : BleScanner {
 
     override suspend fun scanForFirst(timeoutMs: Long): BlePeripheral? = scanForFirstResult
 
+    override suspend fun scanForMac(macAddress: String, timeoutMs: Long): BlePeripheral? {
+        scanForMacCalls += macAddress to timeoutMs
+        return scanForMacResult?.takeIf { it.id == macAddress }
+    }
+
     fun setDevices(list: List<BlePeripheral>) {
         _devices.value = list
     }
@@ -41,5 +48,7 @@ class FakeBleScanner : BleScanner {
         startCalls = 0
         stopCalls = 0
         scanForFirstResult = null
+        scanForMacResult = null
+        scanForMacCalls.clear()
     }
 }

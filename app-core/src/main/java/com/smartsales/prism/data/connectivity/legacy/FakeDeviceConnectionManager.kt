@@ -209,6 +209,7 @@ class FakeDeviceConnectionManager : DeviceConnectionManager {
         forgetCalls = 0
         autoReconnectCalls = 0
         forceReconnectCalls = 0
+        forceReconnectSession = null
         queryNetworkStatusCalls = 0
         replayLatestSavedWifiCredentialForMediaFailureCalls = 0
         replayLatestSavedWifiCredentialForMediaFailureHandler = null

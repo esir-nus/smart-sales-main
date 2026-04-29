@@ -16,4 +16,6 @@ interface BleScanner {
     fun stop()
 
     suspend fun scanForFirst(timeoutMs: Long = 8_000L): BlePeripheral?
+
+    suspend fun scanForMac(macAddress: String, timeoutMs: Long = 60_000L): BlePeripheral?
 }

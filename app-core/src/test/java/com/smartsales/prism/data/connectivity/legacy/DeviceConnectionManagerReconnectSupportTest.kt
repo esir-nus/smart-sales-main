@@ -153,6 +153,70 @@ class DeviceConnectionManagerReconnectSupportTest {
     }
 
     @Test
+    fun `reconnect fallback does not rewrite session when only another badge is found`() = runTest {
+        val activeSession = BleSession.fromPeripheral(BlePeripheral("BB:BB:BB:BB:BB:02", "Active", -50))
+        val defaultPeripheral = BlePeripheral("AA:AA:AA:AA:AA:01", "Default", -40)
+        val sessionStore = InMemorySessionStore().apply { saveSession(activeSession) }
+        val scanner = FakeBleScanner().apply {
+            scanForFirstResult = defaultPeripheral
+            scanForMacResult = defaultPeripheral
+        }
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Error(IllegalStateException("active absent")))
+        val manager = newManager(
+            gateway = gateway,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            sessionStore = sessionStore,
+            bleScanner = scanner
+        )
+
+        val result = manager.reconnectAndWait()
+
+        assertTrue(result is ConnectionState.Error)
+        assertEquals(activeSession.peripheralId, sessionStore.loadSession()?.peripheralId)
+        assertEquals(listOf(activeSession.peripheralId to 60_000L), scanner.scanForMacCalls)
+        assertEquals(listOf(activeSession.peripheralId), gateway.connectCalls)
+    }
+
+    @Test
+    fun `reconnect fallback reconnects active badge when it appears within target scan window`() = runTest {
+        val activeSession = BleSession.fromPeripheral(BlePeripheral("BB:BB:BB:BB:BB:02", "Active", -50))
+        val returnedActive = BlePeripheral(activeSession.peripheralId, "Active Fresh", -36)
+        val sessionStore = InMemorySessionStore().apply { saveSession(activeSession) }
+        val scanner = FakeBleScanner().apply { scanForMacResult = returnedActive }
+        val gateway = SequenceGattSessionLifecycle(
+            Result.Error(IllegalStateException("initial miss")),
+            Result.Success(Unit)
+        )
+        val provisioner = FakeWifiProvisioner().apply {
+            stubNetworkResult = Result.Success(
+                DeviceNetworkStatus(
+                    ipAddress = "192.168.0.101",
+                    deviceWifiName = "Office",
+                    phoneWifiName = "",
+                    rawResponse = "IP#192.168.0.101 SD#Office"
+                )
+            )
+        }
+        val manager = newManager(
+            gateway = gateway,
+            provisioner = provisioner,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            sessionStore = sessionStore,
+            bleScanner = scanner
+        )
+
+        val result = manager.reconnectAndWait()
+
+        assertTrue(result is ConnectionState.WifiProvisioned)
+        assertEquals(activeSession.peripheralId, sessionStore.loadSession()?.peripheralId)
+        assertEquals("Active Fresh", sessionStore.loadSession()?.peripheralName)
+        assertEquals(listOf(activeSession.peripheralId to 60_000L), scanner.scanForMacCalls)
+        assertEquals(listOf(activeSession.peripheralId, activeSession.peripheralId), gateway.connectCalls)
+    }
+
+    @Test
     fun `media failure credential replay is bounded to three attempts`() = runTest {
         val session = BleSession.fromPeripheral(BlePeripheral("AA:BB:CC:DD:EE:FF", "Badge", -50))
         val provisioner = FakeWifiProvisioner().apply {
@@ -180,7 +244,8 @@ class DeviceConnectionManagerReconnectSupportTest {
         provisioner: WifiProvisioner = FakeWifiProvisioner(),
         scope: CoroutineScope,
         dispatcher: CoroutineDispatcher,
-        sessionStore: SessionStore = InMemorySessionStore()
+        sessionStore: SessionStore = InMemorySessionStore(),
+        bleScanner: FakeBleScanner = FakeBleScanner()
     ): DefaultDeviceConnectionManager {
         val dispatchers = object : DispatcherProvider {
             override val io = dispatcher
@@ -196,7 +261,7 @@ class DeviceConnectionManagerReconnectSupportTest {
             dispatchers = dispatchers,
             badgeStateMonitor = FakeBadgeStateMonitor(),
             sessionStore = sessionStore,
-            bleScanner = FakeBleScanner(),
+            bleScanner = bleScanner,
             scope = scope
         )
     }
@@ -209,6 +274,21 @@ class DeviceConnectionManagerReconnectSupportTest {
         override suspend fun connect(peripheralId: String): Result<Unit> {
             connectCalls += peripheralId
             return connectResult
+        }
+        override suspend fun disconnect() = Unit
+        override fun listenForBadgeNotifications(): Flow<BadgeNotification> = notifications
+        override suspend fun isReachable(): Boolean = false
+    }
+
+    private class SequenceGattSessionLifecycle(
+        private vararg val results: Result<Unit>
+    ) : GattSessionLifecycle {
+        private val notifications = MutableSharedFlow<BadgeNotification>()
+        val connectCalls = mutableListOf<String>()
+        private var index = 0
+        override suspend fun connect(peripheralId: String): Result<Unit> {
+            connectCalls += peripheralId
+            return results.getOrElse(index++) { results.last() }
         }
         override suspend fun disconnect() = Unit
         override fun listenForBadgeNotifications(): Flow<BadgeNotification> = notifications

@@ -1,0 +1,5 @@
+<?xml version='1.0' encoding='utf-8' standalone='yes' ?>
+<map>
+    <string name="registered_devices_json">[{&quot;macAddress&quot;:&quot;14:C1:9F:D7:E4:06&quot;,&quot;displayName&quot;:&quot;B_06&quot;,&quot;profileId&quot;:&quot;chle&quot;,&quot;registeredAtMillis&quot;:1777472951744,&quot;lastConnectedAtMillis&quot;:1777477217667,&quot;manuallyDisconnected&quot;:false,&quot;bleDetected&quot;:false},{&quot;macAddress&quot;:&quot;14:C1:9F:D7:E3:EE&quot;,&quot;displayName&quot;:&quot;A_ee&quot;,&quot;profileId&quot;:&quot;chle&quot;,&quot;registeredAtMillis&quot;:1777473012672,&quot;lastConnectedAtMillis&quot;:1777476009937,&quot;manuallyDisconnected&quot;:false,&quot;bleDetected&quot;:true}]</string>
+    <string name="default_device_mac">14:C1:9F:D7:E3:EE</string>
+</map>

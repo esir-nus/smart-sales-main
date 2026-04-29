@@ -505,7 +505,7 @@ class ConnectivityViewModel @Inject constructor(
 
     fun debugSimulateDefaultPriorityDetection() {
         viewModelScope.launch {
-            runBleDetectionL25Scenario(DebugBleDetectionL25Scenario.DefaultPriorityDualAdvertise)
+            runBleDetectionL25Scenario(DebugBleDetectionL25Scenario.ActiveOnlyDualAdvertise)
         }
     }
 

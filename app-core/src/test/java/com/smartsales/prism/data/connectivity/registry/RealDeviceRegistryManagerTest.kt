@@ -18,6 +18,7 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -120,6 +121,22 @@ class RealDeviceRegistryManagerTest {
     }
 
     @Test
+    fun `initializeOnLaunch keeps registered stored session active instead of reseeding default`() = runTest(dispatcher) {
+        val defaultMac = "AA:AA:AA:AA:AA:01"
+        val storedActiveMac = "BB:BB:BB:BB:BB:02"
+        registry.register(device(defaultMac, "Default", isDefault = true, lastConnectedAtMillis = 1_000L))
+        registry.register(device(storedActiveMac, "Stored Active", isDefault = false, lastConnectedAtMillis = 2_000L))
+        sessionStore.saveSession(BleSession.fromPeripheral(BlePeripheral(storedActiveMac, "Stored Active", -45)))
+
+        manager.initializeOnLaunch()
+
+        assertEquals(storedActiveMac, manager.activeDevice.value?.macAddress)
+        assertEquals(storedActiveMac, sessionStore.loadSession()?.peripheralId)
+        assertEquals(defaultMac, registry.getDefault()?.macAddress)
+        assertEquals(1, deviceManager.autoReconnectCalls)
+    }
+
+    @Test
     fun `remove non-active device reseeds stale stored session to remaining default`() = runTest(dispatcher) {
         val activeMac = "11:22:33:44:55:66"
         registry.register(device(activeMac, "Active", isDefault = true, lastConnectedAtMillis = 2_000L))
@@ -175,7 +192,7 @@ class RealDeviceRegistryManagerTest {
     }
 
     @Test
-    fun `BLE detection prefers eligible default over active non-default when both advertise`() = runTest {
+    fun `BLE detection marks non-active default but reconnects only active non-default when both advertise`() = runTest {
         val defaultMac = "AA:AA:AA:AA:AA:01"
         val activeMac = "BB:BB:BB:BB:BB:02"
         registry.register(device(defaultMac, "Default", isDefault = true, lastConnectedAtMillis = 1_000L))
@@ -189,31 +206,141 @@ class RealDeviceRegistryManagerTest {
             BlePeripheral(activeMac, "Active", -40)
         ))
 
-        assertEquals(defaultMac, manager.activeDevice.value?.macAddress)
-        assertEquals(defaultMac, deviceManager.forceReconnectSession?.peripheralId)
+        assertEquals(activeMac, manager.activeDevice.value?.macAddress)
+        assertEquals(1, deviceManager.forceReconnectCalls)
+        assertNull(deviceManager.forceReconnectSession)
+        assertEquals(activeMac, sessionStore.loadSession()?.peripheralId)
         assertTrue(registry.findByMac(defaultMac)!!.bleDetected)
         assertTrue(registry.findByMac(activeMac)!!.bleDetected)
     }
 
     @Test
-    fun `BLE detection skips manually disconnected default and keeps active candidate`() = runTest {
+    fun `BLE detection of non-active default only marks proximity when active is absent`() = runTest {
         val defaultMac = "AA:AA:AA:AA:AA:01"
         val activeMac = "BB:BB:BB:BB:BB:02"
         registry.register(device(defaultMac, "Default", isDefault = true))
         registry.register(device(activeMac, "Active", isDefault = false, lastConnectedAtMillis = 2_000L))
         manager.initializeOnLaunch()
         manager.switchToDevice(activeMac)
-        manager.markManuallyDisconnected(defaultMac, true)
         deviceManager.reset()
 
-        manager.handleBleDetectionCandidates(listOf(
-            BlePeripheral(defaultMac, "Default", -44),
-            BlePeripheral(activeMac, "Active", -40)
-        ))
+        manager.handleBleDetectionCandidates(listOf(BlePeripheral(defaultMac, "Default", -44)))
 
         assertEquals(activeMac, manager.activeDevice.value?.macAddress)
-        assertEquals(1, deviceManager.forceReconnectCalls)
+        assertEquals(0, deviceManager.forceReconnectCalls)
+        assertEquals(activeMac, sessionStore.loadSession()?.peripheralId)
         assertTrue(registry.findByMac(defaultMac)!!.bleDetected)
+    }
+
+    @Test
+    fun `passive proximity seeing inactive badge only marks that badge without active reconnect`() = runTest {
+        val schedulerDispatcher = StandardTestDispatcher(testScheduler)
+        val scanner = FakeBleScanner()
+        val scopedManager = RealDeviceRegistryManager(
+            registry = registry,
+            sessionStore = sessionStore,
+            deviceConnectionManager = deviceManager,
+            dispatchers = object : DispatcherProvider {
+                override val io: CoroutineDispatcher = schedulerDispatcher
+                override val main: CoroutineDispatcher = schedulerDispatcher
+                override val default: CoroutineDispatcher = schedulerDispatcher
+            },
+            scope = backgroundScope,
+            bleScanner = scanner
+        )
+        val inactiveMac = "AA:AA:AA:AA:AA:01"
+        val activeMac = "BB:BB:BB:BB:BB:02"
+        registry.register(device(inactiveMac, "Inactive", isDefault = true))
+        registry.register(device(activeMac, "Active", isDefault = false, lastConnectedAtMillis = 2_000L))
+        scopedManager.initializeOnLaunch()
+        runCurrent()
+        scopedManager.switchToDevice(activeMac)
+        deviceManager.reset()
+
+        scanner.setDevices(listOf(BlePeripheral(inactiveMac, "Inactive", -44)))
+        advanceTimeBy(2_001L)
+        advanceUntilIdle()
+
+        assertEquals(activeMac, scopedManager.activeDevice.value?.macAddress)
+        assertEquals(activeMac, sessionStore.loadSession()?.peripheralId)
+        assertEquals(0, deviceManager.forceReconnectCalls)
+        assertTrue(registry.findByMac(inactiveMac)!!.bleDetected)
+        assertFalse(registry.findByMac(activeMac)!!.bleDetected)
+    }
+
+    @Test
+    fun `passive proximity seeing active badge can reconnect only active target`() = runTest {
+        val schedulerDispatcher = StandardTestDispatcher(testScheduler)
+        val scanner = FakeBleScanner()
+        val scopedManager = RealDeviceRegistryManager(
+            registry = registry,
+            sessionStore = sessionStore,
+            deviceConnectionManager = deviceManager,
+            dispatchers = object : DispatcherProvider {
+                override val io: CoroutineDispatcher = schedulerDispatcher
+                override val main: CoroutineDispatcher = schedulerDispatcher
+                override val default: CoroutineDispatcher = schedulerDispatcher
+            },
+            scope = backgroundScope,
+            bleScanner = scanner
+        )
+        val inactiveMac = "AA:AA:AA:AA:AA:01"
+        val activeMac = "BB:BB:BB:BB:BB:02"
+        registry.register(device(inactiveMac, "Inactive", isDefault = true))
+        registry.register(device(activeMac, "Active", isDefault = false, lastConnectedAtMillis = 2_000L))
+        scopedManager.initializeOnLaunch()
+        runCurrent()
+        scopedManager.switchToDevice(activeMac)
+        deviceManager.reset()
+
+        scanner.setDevices(listOf(BlePeripheral(activeMac, "Active", -40)))
+        advanceTimeBy(2_001L)
+        advanceUntilIdle()
+
+        assertEquals(activeMac, scopedManager.activeDevice.value?.macAddress)
+        assertEquals(activeMac, sessionStore.loadSession()?.peripheralId)
+        assertEquals(1, deviceManager.forceReconnectCalls)
+        assertTrue(registry.findByMac(activeMac)!!.bleDetected)
+        assertFalse(registry.findByMac(inactiveMac)!!.bleDetected)
+    }
+
+    @Test
+    fun `passive proximity clears missing badge after grace window`() = runTest {
+        val schedulerDispatcher = StandardTestDispatcher(testScheduler)
+        val scanner = FakeBleScanner()
+        val scopedManager = RealDeviceRegistryManager(
+            registry = registry,
+            sessionStore = sessionStore,
+            deviceConnectionManager = deviceManager,
+            dispatchers = object : DispatcherProvider {
+                override val io: CoroutineDispatcher = schedulerDispatcher
+                override val main: CoroutineDispatcher = schedulerDispatcher
+                override val default: CoroutineDispatcher = schedulerDispatcher
+            },
+            scope = backgroundScope,
+            bleScanner = scanner
+        )
+        val inactiveMac = "AA:AA:AA:AA:AA:01"
+        val activeMac = "BB:BB:BB:BB:BB:02"
+        registry.register(device(inactiveMac, "Inactive", isDefault = true))
+        registry.register(device(activeMac, "Active", isDefault = false, lastConnectedAtMillis = 2_000L))
+        scopedManager.initializeOnLaunch()
+        runCurrent()
+        scopedManager.switchToDevice(activeMac)
+        deviceManager.reset()
+
+        scanner.setDevices(listOf(BlePeripheral(inactiveMac, "Inactive", -44)))
+        advanceTimeBy(2_001L)
+        advanceUntilIdle()
+        assertTrue(registry.findByMac(inactiveMac)!!.bleDetected)
+
+        scanner.setDevices(emptyList())
+        advanceTimeBy(8_000L)
+        advanceUntilIdle()
+
+        assertFalse(registry.findByMac(inactiveMac)!!.bleDetected)
+        assertEquals(activeMac, scopedManager.activeDevice.value?.macAddress)
+        assertEquals(activeMac, sessionStore.loadSession()?.peripheralId)
     }
 
     @Test
@@ -278,20 +405,21 @@ class RealDeviceRegistryManagerTest {
     @Test
     fun `debug L25 default-priority scenario returns deterministic pass result`() = runTest(dispatcher) {
         val result = manager.debugRunBleDetectionL25Scenario(
-            DebugBleDetectionL25Scenario.DefaultPriorityDualAdvertise
+            DebugBleDetectionL25Scenario.ActiveOnlyDualAdvertise
         )
 
         requireNotNull(result)
         assertEquals("L2.5", result.evidenceClass)
-        assertEquals("CONNECTIVITY_DEFAULT_PRIORITY_DUAL_ADVERTISE", result.scenarioId)
-        assertEquals(result.defaultMac, result.expectedSelectedMac)
-        assertEquals(result.defaultMac, result.selectedMac)
+        assertEquals("CONNECTIVITY_ACTIVE_ONLY_DUAL_ADVERTISE", result.scenarioId)
+        assertEquals(result.activeMac, result.expectedSelectedMac)
+        assertEquals(result.activeMac, result.selectedMac)
         assertTrue(result.defaultBleDetected)
         assertTrue(result.activeBleDetected)
         assertFalse(result.manuallyDisconnectedDefault)
         assertTrue(result.passed)
-        assertEquals(result.defaultMac, manager.activeDevice.value?.macAddress)
-        assertEquals(result.defaultMac, deviceManager.forceReconnectSession?.peripheralId)
+        assertEquals(result.activeMac, manager.activeDevice.value?.macAddress)
+        assertEquals(1, deviceManager.forceReconnectCalls)
+        assertNull(deviceManager.forceReconnectSession)
     }
 
     @Test

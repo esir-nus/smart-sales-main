@@ -123,12 +123,14 @@ Auto reconnect may start after heartbeat failure, BLE detection of a registered 
 Rules:
 
 - **MUST:** respect soft manual disconnect.
-- **MUST:** heartbeat failure and app relaunch restore target the current active badge session snapshot.
-- **MUST:** BLE detection may prefer the eligible registered default badge over the active badge when both advertise in the same scan window.
-- **MUST:** a manually disconnected default badge is not auto-selected by BLE detection.
-- **MUST:** `setDefault()` remains passive; default priority applies only inside the BLE detection monitor and must not switch active device, reseed session, or reconnect by itself.
+- **MUST:** heartbeat failure, app relaunch restore, power loss, distance loss, and other non-manual disconnect recovery target the latest connected active badge session snapshot.
+- **MUST:** BLE detection and reconnect may auto-select only that current/latest active badge. Non-active registered badges may be marked as nearby/reconnectable for UI proximity, but they must not become active without explicit user action.
+- **MUST:** proximity is per registered badge identity: seeing badge A can mark only A as nearby, seeing badge B can mark only B as nearby, and a badge missing from scan evidence must clear back to not-detected after a short grace window.
+- **MUST:** a manually disconnected badge is not auto-selected by BLE detection.
+- **MUST:** `setDefault()` remains passive/cosmetic UI metadata; default priority must not switch active device, reseed session, or reconnect by itself.
 - **MUST:** reconnect work must stop when the active device changes.
 - **MUST:** surface BLE-detected as proximity only until GATT and network status catch up.
+- **MUST:** manually disconnecting active badge B must not auto-connect nearby badge A and must not auto-reconnect B until the user explicitly reconnects or switches.
 
 ### Network Change, Hotspot Switch, Or Subnet Isolation
 

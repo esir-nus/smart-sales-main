@@ -31,6 +31,13 @@ sealed class BadgeManagerStatus {
         val ssid: String? = null
     ) : BadgeManagerStatus()
 
+    /** 传输已确认，但 HTTP 媒体服务仍在预热或暂不可达 */
+    data class HttpDelayed(
+        val badgeIp: String? = null,
+        val ssid: String? = null,
+        val baseUrl: String
+    ) : BadgeManagerStatus()
+
     /** BLE 扫描已检测到设备（在范围内），但尚未建立连接 */
     object BleDetected : BadgeManagerStatus()
 

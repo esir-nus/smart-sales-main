@@ -25,6 +25,50 @@ Every contract contains these ten sections in order. Sections 9 and 10 are fille
 9. **Iteration Ledger** — appended by the operator once per iteration: what was tried, what the evaluator saw, next action. Not committed mid-sprint.
 10. **Closeout** — filled at exit: status (`success` | `stopped` | `blocked`), one-line summary for the project tracker, the required evidence artifacts, optional lesson proposals, optional CHANGELOG line. Lesson proposals and CHANGELOG line are human-gated.
 
+For BAKE implementation or BAKE delta sprints that change code, Closeout must
+also include a code-delta transparency table. The table is a plain-language
+engineering account of whether the change made system truth clearer. Required
+rows:
+
+| Area | Closeout question |
+|---|---|
+| Contract delta | What state, ownership, interface, invariant, or pipeline contract became explicit? |
+| Behavior delta | What runtime behavior changed for users, devices, queues, retries, errors, or UI? |
+| Simplification delta | What became easier to reason about: branches, late checks, global state, ownership, or state machine shape? |
+| Drift corrected | Which doc-code, test-code, state-machine, telemetry, or UI drift was corrected? |
+| Assumption killed | Which happy-path, single-device, always-ready, always-online, or current-active-thing assumption was removed? |
+| Duplication/dead code | What duplicate or dead logic was removed, merged, or intentionally left? |
+| Blast radius | Which modules/files were touched, and did the sprint reduce, increase, or contain large-file/module pressure? |
+| Tests added/changed | What exact invariant does each new or changed test protect? |
+| Runtime evidence | What L3/device evidence proved, what did it not prove, and why? |
+| Residual risk/debt | What remains risky, deferred, partially proven, or only covered below L3? |
+| Net judgment | Is the result cleaner, neutral, or worse, and why? |
+
+If a row does not apply, write `None in this sprint` and explain why. Do not
+omit rows.
+
+The same Closeout must include three 1-5 scores after the table:
+
+1. **Pre-BAKE codebase score** — the quality of the incoming codebase slice
+   before this sprint's changes.
+2. **Work score** — how well this sprint was executed.
+3. **Baked-codebase score** — the quality of the resulting codebase slice after
+   this sprint, independent of execution effort.
+
+| Score | Meaning |
+|---|---|
+| 5 | Excellent: explicit contracts, simple ownership, low drift, focused blast radius, strong negative coverage, and L3 proof where runtime matters. |
+| 4 | Good: clear improvement and solid tests/evidence, with limited unproven branches or remaining structural debt. |
+| 3 | Adequate: useful and mostly correct, but simplification, evidence, or codebase quality remains meaningfully incomplete. |
+| 2 | Weak: behavior moved, but complexity, drift, weak tests, or broad blast radius make the outcome questionable. |
+| 1 | Poor: contract truth is still unclear, code became harder to reason about, or verification is insufficient for the claim. |
+
+All scores must include one-sentence justifications. Do not round up for green
+tests alone. Penalize hidden assumptions, broad blast radius, missing negative
+cases, god-file worsening, and unproven hardware branches. The three scores may
+differ; a well-run sprint can start from a 2/5 slice and still leave inherited
+structural debt after improvement.
+
 ## Commit Discipline
 
 - **No mid-sprint commits.** The working tree stays dirty across iterations within a sprint. Evidence and ledger entries accumulate in the contract file uncommitted.

@@ -118,6 +118,23 @@ class ConnectivityViewModelTest {
     }
 
     @Test
+    fun `managerState maps http delayed while shell transport remains connected`() = runTest {
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Connected(badgeIp = "192.168.1.10", ssid = "OfficeGuest"),
+            manager = BadgeManagerStatus.HttpDelayed(
+                badgeIp = "192.168.1.10",
+                ssid = "OfficeGuest",
+                baseUrl = "http://192.168.1.10:8088"
+            )
+        )
+        val viewModel = createViewModel(bridge = bridge)
+        advanceUntilIdle()
+
+        assertEquals(ConnectionState.CONNECTED, viewModel.connectionState.value)
+        assertEquals(ConnectivityManagerState.HTTP_DELAYED, viewModel.managerState.value)
+    }
+
+    @Test
     fun `managerState keeps needs setup semantics when bridge says setup is required`() = runTest {
         val bridge = FakeConnectivityBridge(
             connection = BadgeConnectionState.NeedsSetup,

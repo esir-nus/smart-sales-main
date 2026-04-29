@@ -77,7 +77,7 @@ private data class SimBadgeSyncExecutionResult(
 
 private data class SimBadgeQueuePlan(
     val placeholderFilenames: List<String>,
-    val queueFilenames: List<String>
+    val queueItems: List<SimBadgeQueuedDownload>
 )
 
 internal class BadgeDisconnectCancellationException(
@@ -454,22 +454,22 @@ internal class SimAudioRepositorySyncSupport(
             queuePlan.placeholderFilenames,
             ownerBadgeMac
         )
-        enqueueBadgeDownloads(queuePlan.queueFilenames)
+        enqueueBadgeDownloads(queuePlan.queueItems)
 
         val resultBranch = when {
             badgeFiles.isEmpty() -> SimBadgeSyncResultBranch.DEVICE_EMPTY
-            createdCount > 0 || queuePlan.queueFilenames.isNotEmpty() -> SimBadgeSyncResultBranch.QUEUED
+            createdCount > 0 || queuePlan.queueItems.isNotEmpty() -> SimBadgeSyncResultBranch.QUEUED
             else -> SimBadgeSyncResultBranch.ALREADY_PRESENT
         }
 
         Log.d(
             SIM_AUDIO_SYNC_LOG_TAG,
-            "SIM badge sync outcome badgeMac=$ownerBadgeMac badgeListCount=${badgeFiles.size} pendingDeleteCount=${pendingDeleteFilenames.size} placeholderCount=$createdCount queueCount=${queuePlan.queueFilenames.size} retryQueueCount=${queuePlan.queueFilenames.size - createdCount} branch=${resultBranch.name.lowercase()}"
+            "SIM badge sync outcome badgeMac=$ownerBadgeMac badgeListCount=${badgeFiles.size} pendingDeleteCount=${pendingDeleteFilenames.size} placeholderCount=$createdCount queueCount=${queuePlan.queueItems.size} retryQueueCount=${queuePlan.queueItems.size - createdCount} branch=${resultBranch.name.lowercase()}"
         )
 
         return SimBadgeSyncExecutionResult(
             queuedCount = createdCount,
-            retryQueuedCount = (queuePlan.queueFilenames.size - createdCount).coerceAtLeast(0),
+            retryQueuedCount = (queuePlan.queueItems.size - createdCount).coerceAtLeast(0),
             resultBranch = resultBranch
         )
     }
@@ -477,7 +477,7 @@ internal class SimAudioRepositorySyncSupport(
     suspend fun cancelBadgeDownload(filename: String) = withContext(runtime.ioDispatcher) {
         val normalizedFilename = normalizeSimBadgeFilename(filename)
         runtime.badgeDownloadQueueMutex.withLock {
-            runtime.queuedBadgeDownloads.remove(normalizedFilename)
+            runtime.queuedBadgeDownloads.removeAll { it.filename == normalizedFilename }
             if (runtime.activeBadgeDownloadFilename == normalizedFilename) {
                 runtime.activeBadgeDownloadJob?.cancel(
                     CancellationException("badge audio deleted")
@@ -523,7 +523,9 @@ internal class SimAudioRepositorySyncSupport(
         val normalizedBadgeMac = badgeMac.takeIf { it.isNotBlank() } ?: return@withContext
         val interruptedFilenames = runtime.badgeDownloadQueueMutex.withLock {
             val filenames = LinkedHashSet<String>()
-            runtime.queuedBadgeDownloads.forEach { filenames += normalizeSimBadgeFilename(it) }
+            runtime.queuedBadgeDownloads
+                .filter { it.ownerBadgeMac == normalizedBadgeMac }
+                .forEach { filenames += it.filename }
             runtime.activeBadgeDownloadFilename?.let { filenames += normalizeSimBadgeFilename(it) }
             extraResumeFilenames.forEach { filename ->
                 val normalized = normalizeSimBadgeFilename(filename)
@@ -563,7 +565,7 @@ internal class SimAudioRepositorySyncSupport(
             SIM_AUDIO_SYNC_LOG_TAG,
             "SIM badge sync: targeted resume after reconnect badgeMac=$normalizedBadgeMac count=${filenames.size}"
         )
-        enqueueBadgeDownloads(filenames)
+        enqueueBadgeDownloads(filenames.map { SimBadgeQueuedDownload(it, normalizedBadgeMac) })
     }
 
     private fun planBadgeDownloads(
@@ -580,7 +582,7 @@ internal class SimAudioRepositorySyncSupport(
             .associateBy { normalizeSimBadgeFilename(it.filename) }
 
         val placeholderFilenames = mutableListOf<String>()
-        val queueFilenames = mutableListOf<String>()
+        val queueItems = mutableListOf<SimBadgeQueuedDownload>()
 
         badgeFiles.forEach { filename ->
             val normalizedFilename = normalizeSimBadgeFilename(filename)
@@ -590,11 +592,11 @@ internal class SimAudioRepositorySyncSupport(
             when {
                 existing == null -> {
                     placeholderFilenames += normalizedFilename
-                    queueFilenames += normalizedFilename
+                    queueItems += SimBadgeQueuedDownload(normalizedFilename, badgeMac)
                 }
                 existing.localAvailability == AudioLocalAvailability.QUEUED ||
                     existing.localAvailability == AudioLocalAvailability.FAILED -> {
-                    queueFilenames += normalizedFilename
+                    queueItems += SimBadgeQueuedDownload(normalizedFilename, badgeMac)
                 }
                 else -> Unit
             }
@@ -602,16 +604,25 @@ internal class SimAudioRepositorySyncSupport(
 
         return SimBadgeQueuePlan(
             placeholderFilenames = placeholderFilenames.distinct(),
-            queueFilenames = queueFilenames.distinct()
+            queueItems = queueItems.distinct()
         )
     }
 
-    private fun enqueueBadgeDownloads(filenames: List<String>) {
-        if (filenames.isEmpty()) return
+    private fun enqueueBadgeDownloads(items: List<SimBadgeQueuedDownload>) {
+        val normalizedItems = items
+            .map { item ->
+                SimBadgeQueuedDownload(
+                    filename = normalizeSimBadgeFilename(item.filename),
+                    ownerBadgeMac = item.ownerBadgeMac
+                )
+            }
+            .filter { it.filename.isNotBlank() }
+            .distinct()
+        if (normalizedItems.isEmpty()) return
         orchestrator.notifyDownloadStarting()
         runtime.repositoryScope.launch {
             runtime.badgeDownloadQueueMutex.withLock {
-                filenames.forEach { runtime.queuedBadgeDownloads.add(normalizeSimBadgeFilename(it)) }
+                normalizedItems.forEach { runtime.queuedBadgeDownloads.add(it) }
                 if (runtime.badgeDownloadWorkerJob?.isActive != true) {
                     runtime.badgeDownloadWorkerJob = runtime.repositoryScope.launch {
                         processBadgeDownloadQueue()
@@ -624,11 +635,25 @@ internal class SimAudioRepositorySyncSupport(
     private suspend fun processBadgeDownloadQueue() {
         Log.d(SIM_AUDIO_SYNC_LOG_TAG, "SIM badge sync background queue started")
         while (true) {
-            val nextFilename = runtime.badgeDownloadQueueMutex.withLock {
+            val nextItem = runtime.badgeDownloadQueueMutex.withLock {
                 runtime.queuedBadgeDownloads.firstOrNull()?.also { runtime.queuedBadgeDownloads.remove(it) }
             } ?: break
 
-            val ownerBadgeMac = currentRuntimeBadgeMac()
+            val nextFilename = nextItem.filename
+            val ownerBadgeMac = nextItem.ownerBadgeMac
+            if (ownerBadgeMac != null && currentRuntimeBadgeMac() != ownerBadgeMac) {
+                Log.d(
+                    SIM_AUDIO_SYNC_LOG_TAG,
+                    "SIM badge sync skipped stale queued download filename=$nextFilename ownerBadgeMac=$ownerBadgeMac currentBadgeMac=${currentRuntimeBadgeMac()}"
+                )
+                storeSupport.markBadgeDownloadAvailability(
+                    filename = nextFilename,
+                    availability = AudioLocalAvailability.FAILED,
+                    errorMessage = "设备已切换，请重新同步",
+                    badgeMac = ownerBadgeMac
+                )
+                continue
+            }
             val placeholder = storeSupport.getAudioByNormalizedBadgeFilename(nextFilename, ownerBadgeMac)
             if (placeholder == null) {
                 Log.d(

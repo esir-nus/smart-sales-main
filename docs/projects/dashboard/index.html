@@ -118,6 +118,29 @@
       font-size: 0.92rem;
     }
 
+    .nav {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: var(--section-gap);
+    }
+
+    .nav a {
+      text-decoration: none;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 8px 12px;
+      background: rgba(255, 255, 255, 0.64);
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .nav a.active {
+      color: var(--ink);
+      background: var(--card-strong);
+      box-shadow: var(--shadow);
+    }
+
     .summary-panel {
       padding: clamp(16px, 2.2vw, 22px);
       display: grid;
@@ -415,6 +438,11 @@
 </head>
 <body>
   <main class="shell">
+    <nav class="nav" aria-label="Dashboard navigation">
+      <a class="active" href="index.html">Project Dashboard</a>
+      <a href="bake-scores.html">BAKE Score Trends</a>
+    </nav>
+
     <section class="hero">
       <article class="hero-panel">
         <div class="eyebrow">Harness project dashboard</div>
@@ -423,22 +451,22 @@
           This view is rebuilt from repo trackers under <code>docs/projects/**</code>. It is meant to answer three questions quickly:
           what projects exist, what sprint tasks sit under them, and what state each one is in right now.
         </p>
-        <div class="generated-at">Generated 2026-04-25 16:27 CST</div>
+        <div class="generated-at">Generated 2026-04-29 16:23 CST</div>
       </article>
       <section class="summary-panel">
         <article class="metric">
           <div class="metric-label">Projects</div>
-          <div class="metric-value">8</div>
-          <div class="metric-meta">1 open, 2 closed</div>
+          <div class="metric-value">12</div>
+          <div class="metric-meta">5 open, 2 closed</div>
         </article>
         <article class="metric">
           <div class="metric-label">Sprints</div>
-          <div class="metric-value">22</div>
-          <div class="metric-meta">0 active, 20 done</div>
+          <div class="metric-value">53</div>
+          <div class="metric-meta">2 active, 48 done</div>
         </article>
         <article class="metric">
           <div class="metric-label">Blocked</div>
-          <div class="metric-value">0</div>
+          <div class="metric-value">2</div>
           <div class="metric-meta">Sprints currently marked blocked</div>
         </article>
         <article class="metric">
@@ -450,19 +478,514 @@
     </section>
 
     <ul class="status-strip">
-      <li class="status-chip status-open"><span class="status-dot"></span><span>Open projects: 1</span></li>
+      <li class="status-chip status-open"><span class="status-dot"></span><span>Open projects: 5</span></li>
 <li class="status-chip status-closed"><span class="status-dot"></span><span>Closed projects: 2</span></li>
 <li class="status-chip status-planned"><span class="status-dot"></span><span>Planned: 1</span></li>
 <li class="status-chip status-authored"><span class="status-dot"></span><span>Authored: 0</span></li>
 <li class="status-chip status-in-progress"><span class="status-dot"></span><span>In progress: 0</span></li>
-<li class="status-chip status-done"><span class="status-dot"></span><span>Done: 20</span></li>
+<li class="status-chip status-done"><span class="status-dot"></span><span>Done: 48</span></li>
 <li class="status-chip status-stopped"><span class="status-dot"></span><span>Stopped: 0</span></li>
-<li class="status-chip status-blocked"><span class="status-dot"></span><span>Blocked: 0</span></li>
-<li class="status-chip status-fallback"><span class="status-dot"></span><span>Other: 6</span></li>
+<li class="status-chip status-blocked"><span class="status-dot"></span><span>Blocked: 2</span></li>
+<li class="status-chip status-fallback"><span class="status-dot"></span><span>Other: 7</span></li>
     </ul>
 
     <section class="projects">
       <article class="project-card">
+  <div class="project-head">
+    <div>
+      <h2 class="project-title"><a href="../badge-session-lifecycle/tracker.md">badge-session-lifecycle</a></h2>
+      <p class="project-objective">Establish a correct, holistically-designed lifecycle for multi-device badge session management and audio sync. The audio and connectivity features in this app were built incrementally — each sprint added a capability assuming a single active device at a time, without considering what should happen when the active device changes. The result is architectural debt: in-flight work from one device leaks into another device&#x27;s session, and UI surfaces can&#x27;t observe live updates because the observation chain breaks when surfaces close.</p>
+      <div class="project-meta">
+        <span class="meta-pill">Project status: open</span><span class="meta-pill">10 sprints</span><span class="meta-pill">Folder: badge-session-lifecycle</span>
+      </div>
+    </div>
+    <span class="status-chip status-open">
+      <span class="status-dot"></span>
+      <span>open</span>
+    </span>
+  </div>
+  <div class="sprint-grid">
+    <article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">lifecycle-design</div>
+      <h3 class="sprint-title"><a href="../badge-session-lifecycle/sprints/01-lifecycle-design.md">Sprint 01 — lifecycle-design</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Authored the badge session lifecycle core flow covering single-device states, multi-device switch teardown, audio sync binding, and UI observation rules.</p>
+  <div class="sprint-footer">
+    <span>badge-session-lifecycle / sprint 01</span>
+    <span>sprints/01-lifecycle-design.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">audio-download-device-scope</div>
+      <h3 class="sprint-title"><a href="../badge-session-lifecycle/sprints/02-audio-download-device-scope.md">Sprint 02 — audio-download-device-scope</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Audio repository now cancels queued and active badge downloads when the active device MAC changes, keeping old-device work from using the new connection.</p>
+  <div class="sprint-footer">
+    <span>badge-session-lifecycle / sprint 02</span>
+    <span>sprints/02-audio-download-device-scope.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">audio-drawer-live-observation</div>
+      <h3 class="sprint-title"><a href="../badge-session-lifecycle/sprints/03-audio-drawer-live-observation.md">Sprint 03 — audio-drawer-live-observation</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Audio drawer inventory/progress flows now stay eagerly observed in both badge audio ViewModels so repository updates remain current while drawers are closed.</p>
+  <div class="sprint-footer">
+    <span>badge-session-lifecycle / sprint 03</span>
+    <span>sprints/03-audio-drawer-live-observation.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">connectivity-isolation-repair-dataflow</div>
+      <h3 class="sprint-title"><a href="../badge-session-lifecycle/sprints/04-connectivity-isolation-repair-dataflow.md">Sprint 04 — connectivity-isolation-repair-dataflow</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Runtime Wi-Fi isolation repair now enters registered-badge credential repair, with focused JVM, full unit, APK install, screenshot, and logcat evidence committed in `4d273192b`.</p>
+  <div class="sprint-footer">
+    <span>badge-session-lifecycle / sprint 04</span>
+    <span>sprints/04-connectivity-isolation-repair-dataflow.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">connectivity-dataflow-monitoring-fixloop</div>
+      <h3 class="sprint-title"><a href="#">Contract file missing</a></h3>
+    </div>
+    <span class="status-chip status-fallback">
+      <span class="status-dot"></span>
+      <span>cancelled</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Superseded by Sprint 06 before operation; local Sprint 05 audit material is stale after `b7340f878` and is not current truth without re-audit.</p>
+  <div class="sprint-footer">
+    <span>badge-session-lifecycle / sprint 05</span>
+    <span>—</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">badge-wifi-recovery-state-machine</div>
+      <h3 class="sprint-title"><a href="../badge-session-lifecycle/sprints/06-badge-wifi-recovery-state-machine.md">Sprint 06 — badge-wifi-recovery-state-machine</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Superseded Sprint 05&#x27;s connectivity north-star/spec/runtime recovery path; BLE disconnected remains transport recovery, solid-IP HTTP media failure triggers bounded single-flight saved-credential replay, and multi-badge sync/download work is scoped to the active badge.</p>
+  <div class="sprint-footer">
+    <span>badge-session-lifecycle / sprint 06</span>
+    <span>sprints/06-badge-wifi-recovery-state-machine.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">connectivity-dataflow-simplification</div>
+      <h3 class="sprint-title"><a href="../badge-session-lifecycle/sprints/07-connectivity-dataflow-simplification.md">Sprint 07 - connectivity-dataflow-simplification</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Removed stale phone-Wi-Fi-derived and HTTP-unreachable reconnect error branches with green focused tests/build/install and constrained one-badge L3 reconnect evidence; multi-badge and hard manual-collaboration paths were explicitly skipped.</p>
+  <div class="sprint-footer">
+    <span>badge-session-lifecycle / sprint 07</span>
+    <span>sprints/07-connectivity-dataflow-simplification.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">connectivity-backend-lifecycle-cleanup</div>
+      <h3 class="sprint-title"><a href="../badge-session-lifecycle/sprints/08-connectivity-backend-lifecycle-cleanup.md">Sprint 08 - connectivity-backend-lifecycle-cleanup</a></h3>
+    </div>
+    <span class="status-chip status-blocked">
+      <span class="status-dot"></span>
+      <span>blocked</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Backend lifecycle cleanup met local structure/test/build gates and reduced target files below 650 LOC, but adb install and filtered logcat L3 evidence could not be captured because no device/emulator was attached. Unresolved connectivity-contract and evidence follow-up absorbed by bake-transformation project (tier-1 connectivity-bridge cluster).</p>
+  <div class="sprint-footer">
+    <span>badge-session-lifecycle / sprint 08</span>
+    <span>sprints/08-connectivity-backend-lifecycle-cleanup.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">audio-card-hold-state</div>
+      <h3 class="sprint-title"><a href="../badge-session-lifecycle/sprints/09-audio-card-hold-state.md">Sprint 09 - audio-card-hold-state</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Audio cards now render a calm HOLD state during badge-switch resume windows instead of showing active download animation while transport is not ready.</p>
+  <div class="sprint-footer">
+    <span>badge-session-lifecycle / sprint 09</span>
+    <span>sprints/09-audio-card-hold-state.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">download-reconnect-dependency</div>
+      <h3 class="sprint-title"><a href="../badge-session-lifecycle/sprints/10-download-reconnect-dependency.md">Sprint 10 - download-reconnect-dependency</a></h3>
+    </div>
+    <span class="status-chip status-blocked">
+      <span class="status-dot"></span>
+      <span>blocked</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Same-badge disconnect now cancels manual and active `rec#` HTTP download jobs, preserves interrupted entries for HOLD, and targeted-resumes only those filenames after the same badge returns to `Ready`; hardware L3 and full unit-test proof remain blocked in this environment.</p>
+  <div class="sprint-footer">
+    <span>badge-session-lifecycle / sprint 10</span>
+    <span>sprints/10-download-reconnect-dependency.md</span>
+  </div>
+</article>
+  </div>
+</article>
+
+<article class="project-card">
+  <div class="project-head">
+    <div>
+      <h2 class="project-title"><a href="../bake-transformation/tracker.md">bake-transformation</a></h2>
+      <p class="project-objective">Establish verified BAKE pipeline contracts for all active base-runtime domains in the Smart Sales codebase. For each domain: produce a delivered-behavior map (what the battle-tested code actually does), an optimized target core-flow (the post-transformation behavioral north star), code transformation sprints that close the gap, and a verified BAKE contract as the durable implementation record.</p>
+      <div class="project-meta">
+        <span class="meta-pill">Project status: open</span><span class="meta-pill">17 sprints</span><span class="meta-pill">Folder: bake-transformation</span>
+      </div>
+    </div>
+    <span class="status-chip status-open">
+      <span class="status-dot"></span>
+      <span>open</span>
+    </span>
+  </div>
+  <div class="sprint-grid">
+    <article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">triage</div>
+      <h3 class="sprint-title"><a href="../bake-transformation/sprints/01-triage.md">Sprint Contract: 01-triage</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Classified BAKE runtime domains, confirmed `docs/bake-contracts/`, and authored cluster-1 DBM/TCF contracts.</p>
+  <div class="sprint-footer">
+    <span>bake-transformation / sprint 01</span>
+    <span>sprints/01-triage.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">connectivity-dbm</div>
+      <h3 class="sprint-title"><a href="../bake-transformation/sprints/02-connectivity-dbm.md">Sprint Contract: 02-connectivity-dbm</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Delivered behavior map created for connectivity-bridge plus badge-session, with HTTP readiness, active-device fencing, Wi-Fi repair, telemetry, and hardware-evidence gaps recorded.</p>
+  <div class="sprint-footer">
+    <span>bake-transformation / sprint 02</span>
+    <span>sprints/02-connectivity-dbm.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">connectivity-tcf</div>
+      <h3 class="sprint-title"><a href="../bake-transformation/sprints/03-connectivity-tcf.md">Sprint Contract: 03-connectivity-tcf</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Added base-runtime scope metadata and delivered-vs-target gap notes to connectivity/session core flows, then authored the first BAKE contract sprint.</p>
+  <div class="sprint-footer">
+    <span>bake-transformation / sprint 03</span>
+    <span>sprints/03-connectivity-tcf.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">connectivity-bake-contract</div>
+      <h3 class="sprint-title"><a href="../bake-transformation/sprints/04-connectivity-bake-contract.md">Sprint Contract: 04-connectivity-bake-contract</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Wrote the connectivity-badge-session BAKE contract, synced interface-map authority, and demoted connectivity Cerb docs to supporting reference.</p>
+  <div class="sprint-footer">
+    <span>bake-transformation / sprint 04</span>
+    <span>sprints/04-connectivity-bake-contract.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">connectivity-tcf-delta-readiness-queue-cleanup</div>
+      <h3 class="sprint-title"><a href="../bake-transformation/sprints/04-a-connectivity-tcf-delta-readiness-queue-cleanup.md">Sprint Contract: 04-a-connectivity-tcf-delta-readiness-queue-cleanup</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Closed HTTP-delayed readiness and badge-owned manual queue deltas with focused/full unit tests; L3 restored-badge, HTTP-ready, and badge-owned audio-sync ingress evidence captured.</p>
+  <div class="sprint-footer">
+    <span>bake-transformation / sprint 04-a</span>
+    <span>sprints/04-a-connectivity-tcf-delta-readiness-queue-cleanup.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">scheduler-path-a-dbm</div>
+      <h3 class="sprint-title"><a href="../bake-transformation/sprints/05-scheduler-path-a-dbm.md">Sprint Contract: 05-scheduler-path-a-dbm</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Delivered behavior map created for Scheduler Path A, covering shared routing, Uni-A/B/C/D, reschedule/delete, SIM overlay, telemetry, tests, and runtime-evidence gaps.</p>
+  <div class="sprint-footer">
+    <span>bake-transformation / sprint 05</span>
+    <span>sprints/05-scheduler-path-a-dbm.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">scheduler-path-a-tcf</div>
+      <h3 class="sprint-title"><a href="../bake-transformation/sprints/06-scheduler-path-a-tcf.md">Sprint Contract: 06-scheduler-path-a-tcf</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Added base-runtime scope metadata and Sprint 05 delivered-vs-target gap notes to Scheduler Path A core flows, then authored the Scheduler Path A BAKE contract sprint.</p>
+  <div class="sprint-footer">
+    <span>bake-transformation / sprint 06</span>
+    <span>sprints/06-scheduler-path-a-tcf.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">scheduler-path-a-bake-contract</div>
+      <h3 class="sprint-title"><a href="../bake-transformation/sprints/07-scheduler-path-a-bake-contract.md">Sprint Contract: 07-scheduler-path-a-bake-contract</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Wrote the Scheduler Path A BAKE contract, synced interface-map authority, and demoted Scheduler Path A Cerb docs to supporting reference.</p>
+  <div class="sprint-footer">
+    <span>bake-transformation / sprint 07</span>
+    <span>sprints/07-scheduler-path-a-bake-contract.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">shell-routing-dbm</div>
+      <h3 class="sprint-title"><a href="../bake-transformation/sprints/08-shell-routing-dbm.md">Sprint Contract: 08-shell-routing-dbm</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Delivered behavior map created for shell routing, covering launch, first-launch setup, RuntimeShell ownership, drawer routes, dynamic-island/connectivity arbitration, smart-only blocking, telemetry, tests, and gaps.</p>
+  <div class="sprint-footer">
+    <span>bake-transformation / sprint 08</span>
+    <span>sprints/08-shell-routing-dbm.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">shell-routing-tcf</div>
+      <h3 class="sprint-title"><a href="../bake-transformation/sprints/09-shell-routing-tcf.md">Sprint Contract: 09-shell-routing-tcf</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Aligned shell-routing target core flows from Sprint 08 DBM gaps and authored the shell-routing BAKE contract sprint.</p>
+  <div class="sprint-footer">
+    <span>bake-transformation / sprint 09</span>
+    <span>sprints/09-shell-routing-tcf.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">shell-routing-bake-contract</div>
+      <h3 class="sprint-title"><a href="../bake-transformation/sprints/10-shell-routing-bake-contract.md">Sprint Contract: 10-shell-routing-bake-contract</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Wrote the shell-routing BAKE contract, synced interface-map authority, and demoted shell Cerb docs to supporting reference.</p>
+  <div class="sprint-footer">
+    <span>bake-transformation / sprint 10</span>
+    <span>sprints/10-shell-routing-bake-contract.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">audio-pipeline-dbm</div>
+      <h3 class="sprint-title"><a href="../bake-transformation/sprints/11-audio-pipeline-dbm.md">Sprint Contract: 11-audio-pipeline-dbm</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Delivered behavior map created for the audio pipeline, covering badge/manual ingress, SIM repository, Tingwu artifacts, drawer UI, Ask AI, audio reselect, audio-bound chat state, telemetry, and evidence gaps.</p>
+  <div class="sprint-footer">
+    <span>bake-transformation / sprint 11</span>
+    <span>sprints/11-audio-pipeline-dbm.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">audio-pipeline-tcf</div>
+      <h3 class="sprint-title"><a href="../bake-transformation/sprints/12-audio-pipeline-tcf.md">Sprint Contract: 12-audio-pipeline-tcf</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Aligned audio target/supporting docs with Sprint 11 gaps and authored the audio pipeline BAKE contract sprint.</p>
+  <div class="sprint-footer">
+    <span>bake-transformation / sprint 12</span>
+    <span>sprints/12-audio-pipeline-tcf.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">audio-pipeline-bake-contract</div>
+      <h3 class="sprint-title"><a href="../bake-transformation/sprints/13-audio-pipeline-bake-contract.md">Sprint Contract: 13-audio-pipeline-bake-contract</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Wrote the audio-pipeline BAKE contract, synced interface-map authority, and demoted scoped audio Cerb docs to supporting reference.</p>
+  <div class="sprint-footer">
+    <span>bake-transformation / sprint 13</span>
+    <span>sprints/13-audio-pipeline-bake-contract.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">agent-chat-pipeline-dbm</div>
+      <h3 class="sprint-title"><a href="../bake-transformation/sprints/14-agent-chat-pipeline-dbm.md">Sprint Contract: 14-agent-chat-pipeline-dbm</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Delivered behavior map created for agent-chat-pipeline, covering blank/general SIM chat, composer send, persona/user context, local session history and persistence, FunASR voice draft, scheduler and follow-up boundaries, telemetry, tests, and runtime-evidence gaps.</p>
+  <div class="sprint-footer">
+    <span>bake-transformation / sprint 14</span>
+    <span>sprints/14-agent-chat-pipeline-dbm.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">agent-chat-pipeline-tcf</div>
+      <h3 class="sprint-title"><a href="../bake-transformation/sprints/15-agent-chat-pipeline-tcf.md">Sprint Contract: 15-agent-chat-pipeline-tcf</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Aligned existing SIM chat/shell target docs with Sprint 14 gaps and authored the agent-chat-pipeline BAKE contract sprint.</p>
+  <div class="sprint-footer">
+    <span>bake-transformation / sprint 15</span>
+    <span>sprints/15-agent-chat-pipeline-tcf.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">agent-chat-pipeline-bake-contract</div>
+      <h3 class="sprint-title"><a href="../bake-transformation/sprints/16-agent-chat-pipeline-bake-contract.md">Sprint Contract: 16-agent-chat-pipeline-bake-contract</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Wrote the agent-chat-pipeline BAKE contract, synced interface-map authority, and demoted scoped historical/supporting docs to supporting reference.</p>
+  <div class="sprint-footer">
+    <span>bake-transformation / sprint 16</span>
+    <span>sprints/16-agent-chat-pipeline-bake-contract.md</span>
+  </div>
+</article>
+  </div>
+</article>
+
+<article class="project-card">
   <div class="project-head">
     <div>
       <h2 class="project-title"><a href="../connectivity-bug-triage/tracker.md">connectivity-bug-triage</a></h2>
@@ -917,6 +1440,58 @@
 <article class="project-card">
   <div class="project-head">
     <div>
+      <h2 class="project-title"><a href="../scheduler-major-update/tracker.md">scheduler-major-update</a></h2>
+      <p class="project-objective">Bring global rescheduling to feature-completeness against the user&#x27;s mental model: support time-anchor retitle alongside the existing event-anchor time-shift, then handle follow-on parity sprints for onboarding sandbox, Harmony, and prompt/resolver hardening as evidence demands.</p>
+      <div class="project-meta">
+        <span class="meta-pill">Project status: open</span><span class="meta-pill">2 sprints</span><span class="meta-pill">Folder: scheduler-major-update</span>
+      </div>
+    </div>
+    <span class="status-chip status-open">
+      <span class="status-dot"></span>
+      <span>open</span>
+    </span>
+  </div>
+  <div class="sprint-grid">
+    <article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">time-anchor-retitle</div>
+      <h3 class="sprint-title"><a href="../scheduler-major-update/sprints/01-time-anchor-retitle.md">Sprint 01 - time-anchor-retitle</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Scheduler-drawer Chinese debug inputs now exercise create and time-anchor retitle without follow-up chat; focused tests and replacement L3 logcat are green.</p>
+  <div class="sprint-footer">
+    <span>scheduler-major-update / sprint 01</span>
+    <span>sprints/01-time-anchor-retitle.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">cancel-phrase-reschedule-delta</div>
+      <h3 class="sprint-title"><a href="../scheduler-major-update/sprints/02-cancel-phrase-reschedule-delta.md">Sprint 02 - cancel-phrase-reschedule-delta</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Cancel wording plus a same-time replacement event now routes as replacement/reschedule; pure cancellation stays unsupported.</p>
+  <div class="sprint-footer">
+    <span>scheduler-major-update / sprint 02</span>
+    <span>sprints/02-cancel-phrase-reschedule-delta.md</span>
+  </div>
+</article>
+  </div>
+</article>
+
+<article class="project-card">
+  <div class="project-head">
+    <div>
       <h2 class="project-title"><a href="../ui-campaign/tracker.md">ui-campaign</a></h2>
       <p class="project-objective">No objective recorded.</p>
       <div class="project-meta">
@@ -930,6 +1505,58 @@
   </div>
   <div class="sprint-grid">
     <div class="empty">No sprint index rows found in this tracker.</div>
+  </div>
+</article>
+
+<article class="project-card">
+  <div class="project-head">
+    <div>
+      <h2 class="project-title"><a href="../ui-ux-polish/tracker.md">ui-ux-polish</a></h2>
+      <p class="project-objective">Iterative UI/UX polish across modal surfaces and per-screen interactions. Baseline commit `620d3136f` (connectivity cards-first modal). Covers visual correctness, state fidelity, and interaction responsiveness — not architectural rewrites.</p>
+      <div class="project-meta">
+        <span class="meta-pill">Project status: open</span><span class="meta-pill">2 sprints</span><span class="meta-pill">Folder: ui-ux-polish</span>
+      </div>
+    </div>
+    <span class="status-chip status-open">
+      <span class="status-dot"></span>
+      <span>open</span>
+    </span>
+  </div>
+  <div class="sprint-grid">
+    <article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">connectivity-modal-state</div>
+      <h3 class="sprint-title"><a href="../ui-ux-polish/sprints/01-connectivity-modal-state.md">Sprint 01 — connectivity-modal-state</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Connectivity card reconnect now preempts stale operations, shows reconnecting on the selected card, and passes app-core unit verification.</p>
+  <div class="sprint-footer">
+    <span>ui-ux-polish / sprint 01</span>
+    <span>sprints/01-connectivity-modal-state.md</span>
+  </div>
+</article>
+<article class="sprint-card">
+  <div class="sprint-top">
+    <div>
+      <div class="sprint-label">audio-card-hold-state-fix</div>
+      <h3 class="sprint-title"><a href="../ui-ux-polish/sprints/02-audio-card-hold-state-fix.md">Sprint 02 - audio-card-hold-state-fix</a></h3>
+    </div>
+    <span class="status-chip status-done">
+      <span class="status-dot"></span>
+      <span>done</span>
+    </span>
+  </div>
+  <p class="sprint-summary">Audio card now shows &quot;等待恢复传输…&quot; + slow-pulse dim bar when badge is offline mid-download (disconnect/power-cut); logcat confirmed holding=1 during reconnect window; download resumes to active styling once bytes flow.</p>
+  <div class="sprint-footer">
+    <span>ui-ux-polish / sprint 02</span>
+    <span>sprints/02-audio-card-hold-state-fix.md</span>
+  </div>
+</article>
   </div>
 </article>
 

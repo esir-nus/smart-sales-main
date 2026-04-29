@@ -530,7 +530,14 @@ class SimAudioRepositorySyncSupportTest {
             AudioLocalAvailability.DOWNLOADING,
             runtime.audioFiles.value.single { it.filename == "a.wav" }.localAvailability
         )
-        assertTrue(runtime.queuedBadgeDownloads.contains("b.wav"))
+        assertTrue(
+            runtime.queuedBadgeDownloads.contains(
+                SimBadgeQueuedDownload(
+                    filename = "b.wav",
+                    ownerBadgeMac = "AA:AA:AA:AA:AA:01"
+                )
+            )
+        )
 
         activeDeviceFlow.value = registeredDevice("BB:BB:BB:BB:BB:02")
         advanceUntilIdle()
@@ -547,6 +554,26 @@ class SimAudioRepositorySyncSupportTest {
         )
         assertFalse(connectivityBridge.calls.contains("downloadRecording:b.wav"))
         runtime.repositoryScope.cancel()
+    }
+
+    @Test
+    fun `queued badge download owner prevents wrong badge download after active switch`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
+        val oldBadgeMac = "AA:AA:AA:AA:AA:01"
+        activeDeviceFlow.value = registeredDevice(oldBadgeMac)
+        storeSupport.createQueuedBadgePlaceholders(listOf("a.wav"), oldBadgeMac)
+        syncSupport.cancelDownloadsForDisconnect(oldBadgeMac, extraResumeFilenames = listOf("a.wav"))
+        advanceUntilIdle()
+
+        activeDeviceFlow.value = registeredDevice("BB:BB:BB:BB:BB:02")
+        syncSupport.resumeDownloadsAfterReconnect(oldBadgeMac)
+        advanceUntilIdle()
+
+        assertFalse(connectivityBridge.calls.contains("downloadRecording:a.wav"))
+        assertEquals(
+            AudioLocalAvailability.FAILED,
+            runtime.audioFiles.value.single { it.filename == "a.wav" }.localAvailability
+        )
     }
 
     @Test

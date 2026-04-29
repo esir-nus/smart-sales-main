@@ -1,0 +1,7 @@
+--------- beginning of main
+04-29 15:43:55.235 D/ConnectivityService( 4381): releasing NetworkRequest [ REQUEST id=667, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10344 RequestorUid: 10344 RequestorPkg: com.eg.android.AlipayGphone UnderlyingNetworks: Null] ] (release request)
+04-29 15:43:55.235 D/ConnectivityService( 4381): releasing NetworkRequest [ REQUEST id=663, [ Capabilities: INTERNET&NOT_RESTRICTED&TRUSTED&NOT_VCN_MANAGED&NOT_BANDWIDTH_CONSTRAINED Uid: 10344 RequestorUid: 10344 RequestorPkg: com.eg.android.AlipayGphone UnderlyingNetworks: Null] ] (release request)
+04-29 15:43:55.534 D/SmartSalesConn( 8789): 🏠 Registry: no devices registered
+04-29 15:43:55.721 D/AudioPipeline( 8789): SIM audio drawer entries emitted count=1 downloading=0 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 15:43:55.956 D/ConnectivityVM( 8789): scheduleAutoReconnect() delegating to service
+04-29 15:43:55.956 D/ConnectivityService( 8789): scheduleAutoReconnect() delegating to deviceManager

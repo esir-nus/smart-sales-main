@@ -232,6 +232,43 @@ class RealConnectivityBridgeTest {
     }
 
     @Test
+    fun `managerStatus exposes wifi provisioned http delayed separately from ready`() = runTest {
+        val manager = FakeDeviceConnectionManager()
+        val monitor = FakeBadgeStateMonitor()
+        val bridge = newBridge(manager, mock(), monitor)
+        val session = BleSession.fromPeripheral(BlePeripheral("badge-1", "Badge", -40))
+
+        manager.setState(
+            ConnectionState.WifiProvisionedHttpDelayed(
+                session = session,
+                status = ProvisioningStatus(
+                    wifiSsid = "MstRobot",
+                    handshakeId = "h1",
+                    credentialsHash = "c1"
+                ),
+                baseUrl = "http://192.168.0.115:8088"
+            )
+        )
+        monitor.simulateConnected(ip = "192.168.0.115", wifiName = "MstRobot")
+
+        assertEquals(
+            BadgeManagerStatus.HttpDelayed(
+                badgeIp = "192.168.0.115",
+                ssid = "MstRobot",
+                baseUrl = "http://192.168.0.115:8088"
+            ),
+            awaitManagerStatus(
+                bridge,
+                BadgeManagerStatus.HttpDelayed(
+                    badgeIp = "192.168.0.115",
+                    ssid = "MstRobot",
+                    baseUrl = "http://192.168.0.115:8088"
+                )
+            )
+        )
+    }
+
+    @Test
     fun `connectionState promotes reconnect success to connected as soon as monitor reports transport ready`() = runTest {
         val manager = FakeDeviceConnectionManager()
         val monitor = FakeBadgeStateMonitor()

@@ -1,0 +1,27 @@
+--------- beginning of main
+04-29 15:58:19.447 D/AudioPipeline(21113): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 15:58:19.473 D/AudioPipeline(21113): SIM manual badge sync tapped availability=ready isSyncing=false
+04-29 15:58:19.473 D/AudioPipeline(21113): SIM badge sync readiness probe skipped reason=badge-download-active filename=2speakerTesting.wav
+04-29 15:58:19.474 D/AudioPipeline(21113): SIM manual badge sync gate availability=ready branch=strict_precheck_allowed blocked=false
+04-29 15:58:19.474 D/AudioPipeline(21113): SIM badge sync skipped trigger=manual reason=badge-download-active filename=2speakerTesting.wav
+04-29 15:58:19.650 D/AudioPipeline(21113): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 15:58:19.928 D/AudioPipeline(21113): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 15:58:20.134 D/AudioPipeline(21113): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 15:58:20.337 D/AudioPipeline(21113): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 15:58:20.546 D/AudioPipeline(21113): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 15:58:20.777 D/AudioPipeline(21113): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 15:58:21.023 D/AudioPipeline(21113): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 15:58:21.467 D/AudioPipeline(21113): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 15:58:21.669 D/AudioPipeline(21113): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 15:58:21.927 D/AudioPipeline(21113): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 15:58:22.182 D/AudioPipeline(21113): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 15:58:22.394 D/AudioPipeline(21113): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 15:58:22.595 D/AudioPipeline(21113): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 15:58:22.806 D/AudioPipeline(21113): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 15:58:23.013 D/AudioPipeline(21113): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 15:58:23.212 D/AudioPipeline(21113): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 15:58:23.412 D/AudioPipeline(21113): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 15:58:23.615 D/AudioPipeline(21113): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 15:58:23.820 D/AudioPipeline(21113): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 15:58:24.131 D/AudioPipeline(21113): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 15:58:24.335 D/AudioPipeline(21113): SIM audio drawer entries emitted count=2 downloading=1 queued=0 holding=0 maxDownloadProgress=0.0

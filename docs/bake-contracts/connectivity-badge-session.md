@@ -8,7 +8,7 @@ owner: data/connectivity, app-core connectivity, app-core audio
 core-flow-doc:
   - docs/core-flow/badge-connectivity-lifecycle.md
   - docs/core-flow/badge-session-lifecycle.md
-last-verified: 2026-04-28
+last-verified: 2026-04-29
 ---
 
 # Connectivity Badge Session BAKE Contract
@@ -38,12 +38,14 @@ tracks gaps explicitly.
   `Connected` means active GATT, notification listener, and usable badge network
   status; it does not prove HTTP media readiness.
 - `ConnectivityBridge.managerStatus` emits manager-only diagnostics for setup,
-  BLE-held network unknown/offline, BLE detected, ready, and errors.
+  BLE-held network unknown/offline, BLE detected, HTTP-delayed, ready, and
+  errors.
 - `ConnectivityBridge.isReady()` is the feature-level HTTP media preflight and
   must pass before normal `/list`, `/download`, or `/delete` work.
-- Manual badge sync creates badge-scoped placeholders, queues downloads,
-  imports valid WAV files, removes empty WAV placeholders, records failures, and
-  fences results by runtime badge identity.
+- Manual badge sync creates badge-scoped placeholders, queues badge-owned
+  download items, imports valid WAV files, removes empty WAV placeholders,
+  records failures, and fences results by runtime badge identity before a
+  queued item can call `downloadRecording()`.
 - `audioRecordingNotifications()` feeds `rec#` auto-download. Auto-download
   creates a queued placeholder immediately, downloads in the background, fences
   successful import by current runtime badge MAC, and sends `Command#end` at
@@ -81,8 +83,8 @@ tracks gaps explicitly.
   readiness.
 - Blank Wi-Fi credentials: reject locally before BLE writes.
 - Active-device change during list/download: discard stale list results, cancel
-  manual queue work where possible, and reject cross-device downloads before
-  import.
+  manual queue work where possible, reject queued cross-device work before it
+  calls `downloadRecording()`, and reject cross-device downloads before import.
 - Same active badge `Ready -> Disconnected/Connecting` during download: cancel
   active HTTP work, keep interrupted entries visually held, then requeue only the
   interrupted filenames on same-badge `Ready`; do not treat
@@ -122,18 +124,19 @@ connectivity and audio owners.
 
 ## Core-Flow Gap
 
-- Gap: `WifiProvisionedHttpDelayed` is currently flattened to
-  `BadgeManagerStatus.Ready`, so manager UI cannot directly distinguish
-  transport-confirmed/media-delayed from ready unless it consumes repair events
-  or feature preflight.
-- Gap: runtime identity for endpoint reuse covers `WifiProvisioned` and
-  `Syncing`, but not every transport-confirmed HTTP-delayed state.
+- Closed 2026-04-29: `WifiProvisionedHttpDelayed` now maps to
+  `BadgeManagerStatus.HttpDelayed`, and connectivity manager UI maps that to
+  `ConnectivityManagerState.HTTP_DELAYED`. Shared shell `Connected` remains
+  transport-only and separate from HTTP media readiness.
+- Closed 2026-04-29: runtime identity for endpoint reuse now covers
+  `WifiProvisionedHttpDelayed` as well as `WifiProvisioned` and `Syncing`.
 - Gap: the previous Cerb interface doc lagged the code by omitting
   `audioRecordingNotifications()` and `wifiRepairEvents()`; this sprint syncs it
   as a supporting reference beneath this BAKE contract.
-- Gap: `queuedBadgeDownloads` stores filenames globally. Delivered manual sync
-  fencing prevents known cross-device imports, but target behavior prefers queue
-  items carrying badge identity.
+- Closed 2026-04-29: `queuedBadgeDownloads` now stores
+  `SimBadgeQueuedDownload(filename, ownerBadgeMac)` items. Queue processing
+  checks owner MAC before `downloadRecording()` so a stale queued manual
+  download fails locally instead of using the new active badge connection.
 - Delivered behavior: `SimBadgeAudioAutoDownloader` now tracks active `rec#`
   jobs by `(badgeMac, filename)`, suppresses duplicate active jobs, and exposes
   disconnect cancellation so the repository can include active `rec#` filenames
@@ -149,6 +152,13 @@ connectivity and audio owners.
 - Existing local coverage includes connectivity bridge tests, connection manager
   ingress/reconnect tests, device registry manager tests, manual sync support
   tests, and `SimBadgeAudioAutoDownloader` tests.
+- Sprint 04-a focused coverage includes:
+  `RealConnectivityBridgeTest.managerStatus exposes wifi provisioned http
+  delayed separately from ready`,
+  `ConnectivityViewModelTest.managerState maps http delayed while shell
+  transport remains connected`, and
+  `SimAudioRepositorySyncSupportTest.queued badge download owner prevents wrong
+  badge download after active switch`.
 - Minimum verification for this contract: prove the BAKE sections exist, prove
   the Sprint 02 gaps are recorded, prove the Cerb docs and interface map cite
   this contract, and capture `git diff --stat` for the scoped docs.

@@ -346,8 +346,10 @@ class RealConnectivityBridge @Inject constructor(
             is ConnectionState.WifiProvisioned -> BadgeManagerStatus.Ready(
                 ssid = legacy.status.wifiSsid
             )
-            is ConnectionState.WifiProvisionedHttpDelayed -> BadgeManagerStatus.Ready(
-                ssid = legacy.status.wifiSsid
+            is ConnectionState.WifiProvisionedHttpDelayed -> BadgeManagerStatus.HttpDelayed(
+                badgeIp = badgeStatus.ipAddress,
+                ssid = legacy.status.wifiSsid,
+                baseUrl = legacy.baseUrl
             )
             is ConnectionState.Syncing -> BadgeManagerStatus.Ready(
                 ssid = legacy.status.wifiSsid
@@ -360,6 +362,7 @@ class RealConnectivityBridge @Inject constructor(
         return when (state) {
             is ConnectionState.Connected -> state.session.peripheralName
             is ConnectionState.WifiProvisioned -> state.status.wifiSsid
+            is ConnectionState.WifiProvisionedHttpDelayed -> state.status.wifiSsid
             is ConnectionState.Syncing -> state.status.wifiSsid
             else -> "Unknown"
         }
@@ -501,6 +504,10 @@ class RealConnectivityBridge @Inject constructor(
     private fun runtimeKeyForState(state: ConnectionState): BadgeRuntimeKey? {
         return when (state) {
             is ConnectionState.WifiProvisioned -> BadgeRuntimeKey(
+                peripheralId = state.session.peripheralId,
+                secureToken = state.session.secureToken
+            )
+            is ConnectionState.WifiProvisionedHttpDelayed -> BadgeRuntimeKey(
                 peripheralId = state.session.peripheralId,
                 secureToken = state.session.secureToken
             )

@@ -106,7 +106,7 @@ class SimAudioDrawerViewModel @Inject constructor(
     val badgeBatteryLevel: StateFlow<Int?> = connectivityBridge.batteryNotifications()
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
+            started = SharingStarted.Eagerly,
             initialValue = null
         )
     private val badgeSyncAvailability: StateFlow<SimBadgeSyncAvailability> =

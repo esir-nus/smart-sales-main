@@ -188,6 +188,58 @@ this section may say so explicitly and be otherwise empty.
 
 The northstar doc defines the target state. Getting there is a separate transformation project run through the harness: sprint contracts authored by Claude, operated by Codex, evidenced per harness evidence classes, gated by the user at close.
 
+### 6.1 Code Delta Transparency
+
+Any BAKE sprint that changes code must close with an explicit code-delta
+transparency table. This is required even when the implementation is small.
+
+The table exists to make the engineering effect visible, not to restate the
+diff. It must identify what system truth became explicit, what hidden
+assumption was killed, whether the code actually became simpler, and what debt
+or unverified branch remains.
+
+Minimum rows:
+
+| Area | Required disclosure |
+|---|---|
+| Contract delta | What state, ownership, interface, invariant, or pipeline contract became explicit that was previously implicit, flattened, or wrong. |
+| Behavior delta | What runtime behavior changed for users, devices, queues, retries, errors, or UI. |
+| Simplification delta | What became easier to reason about: fewer branches, fewer late checks, less global state, clearer ownership, or a narrower state machine. |
+| Drift corrected | Which doc-code, test-code, state-machine, telemetry, or UI drift was corrected. |
+| Assumption killed | Which happy-path, single-device, always-ready, always-online, or "current active thing is correct" assumption was removed. |
+| Duplication/dead code | What duplicate or dead logic was removed, merged, or intentionally left because removing it would exceed scope. |
+| Blast radius | Which modules/files were touched, and whether the sprint reduced, increased, or contained large-file/module pressure. |
+| Tests added/changed | What exact invariant each new or changed test protects. |
+| Runtime evidence | What L3/device evidence proved, what it did not prove, and why. |
+| Residual risk/debt | What remains risky, deferred, partially proven, or only covered below L3. |
+| Net judgment | One plain-language sentence: cleaner, neutral, or worse, and why. |
+
+If a row does not apply, write `None in this sprint` plus the reason. Do not
+omit rows because the answer is uncomfortable or uneventful.
+
+Each BAKE sprint that changes code must also receive three 1-5 scores after the
+code-delta table:
+
+1. **Pre-BAKE codebase score** — the quality of the incoming codebase slice
+   before this sprint's changes.
+2. **Work score** — how well this sprint was executed.
+3. **Baked-codebase score** — the quality of the resulting codebase slice after
+   this sprint, regardless of whether the sprint itself was well executed.
+
+| Score | Meaning |
+|---|---|
+| 5 | Excellent: explicit contracts, simple ownership, low drift, focused blast radius, strong negative coverage, and L3 proof where runtime matters. |
+| 4 | Good: clear improvement and solid tests/evidence, with limited unproven branches or remaining structural debt. |
+| 3 | Adequate: useful and mostly correct, but simplification, evidence, or codebase quality remains meaningfully incomplete. |
+| 2 | Weak: behavior moved, but complexity, drift, weak tests, or broad blast radius make the outcome questionable. |
+| 1 | Poor: contract truth is still unclear, code became harder to reason about, or verification is insufficient for the claim. |
+
+All scores must include one-sentence justifications. Do not round up for green
+tests alone. Penalize hidden assumptions, broad blast radius, missing negative
+cases, god-file worsening, and unproven hardware branches. It is valid for the
+scores to differ; for example, a sprint can start from a 2/5 slice, execute at
+4/5, and leave a 3/5 baked codebase if inherited structural debt remains.
+
 The transformation project follows this pattern:
 
 - **Triage sprint first**: classify all active domains using §3.1's runtime classification and §7's triage seed as a starting point. Produce a prioritized backlog. No code or doc changes in this sprint.

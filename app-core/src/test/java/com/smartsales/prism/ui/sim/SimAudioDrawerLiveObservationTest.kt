@@ -37,7 +37,11 @@ class SimAudioDrawerLiveObservationTest {
     private fun String.hasEagerAudioStateIn(propertyName: String, sourceCall: String): Boolean {
         val compact = filterNot { it.isWhitespace() }
         return compact.contains("val$propertyName:") &&
-            compact.contains("=$sourceCall.map") &&
+            (
+                compact.contains("=$sourceCall.map") ||
+                    compact.contains("=$sourceCall,") ||
+                    compact.contains("=combine($sourceCall,")
+                ) &&
             compact.contains("started=SharingStarted.Eagerly")
     }
 

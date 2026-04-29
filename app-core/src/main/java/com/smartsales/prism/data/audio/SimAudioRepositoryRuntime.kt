@@ -44,7 +44,7 @@ class SimAudioRepositoryRuntime @Inject constructor(
     val audioFiles = MutableStateFlow<List<AudioFile>>(emptyList())
     val pendingBadgeDeletes = MutableStateFlow<Set<String>>(emptySet())
     val observationJobs = mutableMapOf<String, Job>()
-    val queuedBadgeDownloads = LinkedHashSet<String>()
+    internal val queuedBadgeDownloads = LinkedHashSet<SimBadgeQueuedDownload>()
     var badgeDownloadWorkerJob: Job? = null
     var activeBadgeDownloadFilename: String? = null
     var activeBadgeDownloadJob: Job? = null
@@ -75,4 +75,9 @@ internal data class SimSeedDefinition(
     val assetName: String,
     val filename: String,
     val isStarred: Boolean = false
+)
+
+internal data class SimBadgeQueuedDownload(
+    val filename: String,
+    val ownerBadgeMac: String?
 )

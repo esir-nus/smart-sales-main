@@ -8,11 +8,14 @@ import com.smartsales.prism.domain.audio.AudioFile
 import com.smartsales.prism.domain.audio.AudioSource
 import com.smartsales.prism.domain.audio.TranscriptionStatus
 import com.smartsales.prism.data.connectivity.registry.DeviceRegistryManager
+import com.smartsales.prism.domain.connectivity.BadgeConnectionState
+import com.smartsales.prism.domain.connectivity.BadgeManagerStatus
 import com.smartsales.prism.domain.connectivity.ConnectivityBridge
 import com.smartsales.prism.domain.connectivity.ConnectivityPrompt
 import com.smartsales.prism.domain.tingwu.TingwuPipeline
 import com.smartsales.prism.service.DownloadServiceOrchestrator
 import java.io.File
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.junit.Assert.assertEquals
@@ -39,6 +42,12 @@ class SimAudioRepositoryNamespaceTest {
         context = mock()
         whenever(context.filesDir).thenReturn(tempFolder.root)
         connectivityBridge = mock()
+        whenever(connectivityBridge.connectionState).thenReturn(
+            MutableStateFlow<BadgeConnectionState>(BadgeConnectionState.Disconnected)
+        )
+        whenever(connectivityBridge.managerStatus).thenReturn(
+            MutableStateFlow<BadgeManagerStatus>(BadgeManagerStatus.Disconnected)
+        )
         ossUploader = mock()
         tingwuPipeline = mock()
     }
@@ -73,7 +82,7 @@ class SimAudioRepositoryNamespaceTest {
                 tingwuPipeline = tingwuPipeline,
                 connectivityPrompt = mock<ConnectivityPrompt>(),
                 phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest"),
-                deviceRegistryManager = mock<DeviceRegistryManager>()
+                deviceRegistryManager = fakeDeviceRegistryManager()
             ),
             orchestrator = mock<DownloadServiceOrchestrator>(),
             autoDownloader = mock<SimBadgeAudioAutoDownloader>()
@@ -108,7 +117,7 @@ class SimAudioRepositoryNamespaceTest {
                 tingwuPipeline = tingwuPipeline,
                 connectivityPrompt = mock<ConnectivityPrompt>(),
                 phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest"),
-                deviceRegistryManager = mock<DeviceRegistryManager>()
+                deviceRegistryManager = fakeDeviceRegistryManager()
             ),
             orchestrator = mock<DownloadServiceOrchestrator>(),
             autoDownloader = mock<SimBadgeAudioAutoDownloader>()
@@ -136,12 +145,20 @@ class SimAudioRepositoryNamespaceTest {
                 tingwuPipeline = tingwuPipeline,
                 connectivityPrompt = mock<ConnectivityPrompt>(),
                 phoneWifiProvider = FakePhoneWifiProvider("OfficeGuest"),
-                deviceRegistryManager = mock<DeviceRegistryManager>()
+                deviceRegistryManager = fakeDeviceRegistryManager()
             ),
             orchestrator = mock<DownloadServiceOrchestrator>(),
             autoDownloader = mock<SimBadgeAudioAutoDownloader>()
         )
 
         assertEquals("session-456", reloadedRepository.getBoundSessionId("audio-2"))
+    }
+
+    private fun fakeDeviceRegistryManager(): DeviceRegistryManager {
+        return mock<DeviceRegistryManager>().also { manager ->
+            whenever(manager.activeDevice).thenReturn(
+                MutableStateFlow<com.smartsales.prism.data.connectivity.registry.RegisteredDevice?>(null)
+            )
+        }
     }
 }

@@ -290,6 +290,7 @@ class ConnectivityViewModel @Inject constructor(
             is BadgeManagerStatus.BlePairedNetworkOffline ->
                 ConnectivityManagerState.BLE_PAIRED_NETWORK_OFFLINE
             is BadgeManagerStatus.BleDetected -> ConnectivityManagerState.BLE_DETECTED
+            is BadgeManagerStatus.HttpDelayed -> ConnectivityManagerState.HTTP_DELAYED
             is BadgeManagerStatus.Ready -> ConnectivityManagerState.CONNECTED
             is BadgeManagerStatus.Error -> ConnectivityManagerState.DISCONNECTED
         }
@@ -598,6 +599,7 @@ enum class ConnectionState {
 
 enum class ConnectivityManagerState {
     CONNECTED,
+    HTTP_DELAYED,
     DISCONNECTED,
     BLE_PAIRED_NETWORK_UNKNOWN,
     BLE_PAIRED_NETWORK_OFFLINE,

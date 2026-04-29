@@ -165,8 +165,119 @@ but they do not replace logcat.
 
 ## 9. Iteration Ledger
 
-Operator fills this section during Sprint 10 operation.
+- **Iteration 1 — 2026-04-29**
+  - Read the Sprint 10 contract, Sprint 08 DBM evidence, Sprint 09 TCF
+    closeout, BAKE protocol, sprint-contract schema, project tracker, current
+    shell-routing core flows, interface map, and scoped shell Cerb docs.
+  - Wrote `docs/bake-contracts/shell-routing.md` from delivered Sprint 08
+    behavior and Sprint 09 target-flow alignment.
+  - Synced the interface-map BAKE overlay and added concise BAKE authority
+    notices to the scoped home-shell, dynamic-island, and historical sim-shell
+    docs.
+  - Updated the project tracker: Sprint 10 is `done` and `shell-routing` is
+    `bake-contract-written`.
+  - Evaluator result: static BAKE frontmatter, section, required-term,
+    authority-sync, tracker, and whitespace checks passed. No runtime/L3 claims
+    were made.
 
 ## 10. Closeout
 
-Operator fills this section at Sprint 10 exit.
+**Status**: success
+
+**Tracker summary**: Wrote the shell-routing BAKE contract, synced interface-map
+authority, and demoted shell Cerb docs to supporting reference.
+
+**Changed files**:
+
+- `docs/bake-contracts/shell-routing.md`
+- `docs/cerb/interface-map.md`
+- `docs/cerb-ui/home-shell/spec.md`
+- `docs/cerb-ui/dynamic-island/spec.md`
+- `docs/cerb/sim-shell/spec.md`
+- `docs/cerb/sim-shell/interface.md`
+- `docs/projects/bake-transformation/tracker.md`
+- `docs/projects/bake-transformation/sprints/10-shell-routing-bake-contract.md`
+
+**Evidence command outputs**:
+
+```text
+$ test -f docs/bake-contracts/shell-routing.md && wc -l docs/bake-contracts/shell-routing.md
+181 docs/bake-contracts/shell-routing.md
+```
+
+```text
+$ rg -n "^protocol: BAKE$|^## Pipeline Contract$|^## Telemetry Joints$|^## UI Docking Surface$|^## Core-Flow Gap$|^## Test Contract$|^## Cross-Platform Notes$" docs/bake-contracts/shell-routing.md
+2:protocol: BAKE
+20:## Pipeline Contract
+98:## Telemetry Joints
+123:## UI Docking Surface
+131:## Core-Flow Gap
+153:## Test Contract
+171:## Cross-Platform Notes
+```
+
+```text
+$ rg -n "first-launch|PARTIAL_WIFI_DOWN|SIM_ENTRY_STARTED|SIM_SHELL_MOUNTED|SMART_SURFACE_BLOCKED|Drawer Conflict|new-session|follow-up" docs/bake-contracts/shell-routing.md
+25:- Onboarding completion state and the forced first-launch setup flag.
+27:  handles, history, settings, new-session, connectivity, scheduler, and audio
+33:  follow-up prompts.
+48:  badge scheduler follow-up state when appropriate.
+56:  follow-up session and show a prompt/chip, but it must not force-switch chat.
+73:- MUST record smart-only route blocks through `SMART_SURFACE_BLOCKED` or an
+100:- [INPUT_RECEIVED]: app launch, first-launch setup gate, header action,
+102:  settings/history entry, new-session request, and badge scheduler completion.
+117:canonical valves for `SIM_ENTRY_STARTED`, `SIM_SHELL_MOUNTED`, `CHAT_VISIBLE`,
+120:`SMART_SURFACE_BLOCKED`. Future work must converge delivered logs with these
+137:- Gap: delivered dynamic-island code treats `PARTIAL_WIFI_DOWN` as a persistent
+141:  including `SIM_ENTRY_STARTED`, `SIM_SHELL_MOUNTED`, drawer open/close valves,
+142:  and `SMART_SURFACE_BLOCKED`.
+143:- Gap: Drawer Conflict proof remains static/source-backed and historical L3 was
+146:- Gap: new-session follow-up-clear behavior exists in source/test helpers, but
+150:  file-picker escape, current telemetry delivery, and badge-origin follow-up
+167:  claimed branch, including launch/mount, first-launch onboarding, Drawer
+169:  new-session follow-up clear, and badge follow-up prompt where applicable.
+```
+
+```text
+$ rg -n "shell-routing\.md|BAKE|Shell Routing|supporting|reference" docs/cerb/interface-map.md docs/cerb-ui/home-shell/spec.md docs/cerb-ui/dynamic-island/spec.md docs/cerb/sim-shell/spec.md docs/cerb/sim-shell/interface.md
+docs/cerb/interface-map.md:7:> **Last Updated**: 2026-04-29 (Shell Routing BAKE contract is now the implementation record; shell Cerb docs remain supporting/reference docs beneath it)
+docs/cerb/interface-map.md:56:- `docs/bake-contracts/shell-routing.md` is the verified BAKE implementation
+docs/cerb/interface-map.md:57:  contract for Shell Routing.
+docs/cerb/interface-map.md:60:  behavioral north-star docs above the Shell Routing BAKE contract.
+docs/cerb/interface-map.md:65:  the Shell Routing BAKE contract until a later archival sprint moves
+docs/cerb-ui/home-shell/spec.md:6:> **BAKE Authority Notice**: Supporting/reference UI shard beneath
+docs/cerb-ui/dynamic-island/spec.md:7:> **BAKE Authority Notice**: Supporting/reference UI shard beneath
+docs/cerb/sim-shell/spec.md:8:> **BAKE Authority Notice**: Supporting/reference historical shard beneath
+docs/cerb/sim-shell/interface.md:6:> **BAKE Authority Notice**: Supporting/reference historical interface shard
+```
+
+```text
+$ rg -n "\| 10 \| shell-routing-bake-contract \| (done|stopped|blocked)|shell-routing \| base-runtime-active .* bake-contract-written" docs/projects/bake-transformation/tracker.md
+34:| 10 | shell-routing-bake-contract | done | Wrote the shell-routing BAKE contract, synced interface-map authority, and demoted shell Cerb docs to supporting reference. | [sprints/10-shell-routing-bake-contract.md](sprints/10-shell-routing-bake-contract.md) |
+43:| shell-routing | base-runtime-active | `docs/core-flow/sim-shell-routing-flow.md` | high | tier-1 | bake-contract-written |
+```
+
+```text
+$ git diff --check -- docs/bake-contracts/shell-routing.md docs/cerb/interface-map.md docs/cerb-ui/home-shell/spec.md docs/cerb-ui/dynamic-island/spec.md docs/cerb/sim-shell/spec.md docs/cerb/sim-shell/interface.md docs/projects/bake-transformation/tracker.md docs/projects/bake-transformation/sprints/10-shell-routing-bake-contract.md
+<no output>
+```
+
+```text
+$ git diff --stat --cached -- docs/bake-contracts/shell-routing.md docs/cerb/interface-map.md docs/cerb-ui/home-shell/spec.md docs/cerb-ui/dynamic-island/spec.md docs/cerb/sim-shell/spec.md docs/cerb/sim-shell/interface.md docs/projects/bake-transformation/
+ docs/bake-contracts/shell-routing.md               | 181 +++++++++++++++++++++
+ docs/cerb-ui/dynamic-island/spec.md                |   3 +
+ docs/cerb-ui/home-shell/spec.md                    |   3 +
+ docs/cerb/interface-map.md                         |  13 +-
+ docs/cerb/sim-shell/interface.md                   |   4 +
+ docs/cerb/sim-shell/spec.md                        |   4 +
+ .../sprints/10-shell-routing-bake-contract.md      | 115 ++++++++++++-
+ docs/projects/bake-transformation/tracker.md       |   4 +-
+ 8 files changed, 322 insertions(+), 5 deletions(-)
+```
+
+Runtime/L3 validation was not attempted. No installed-device behavior is claimed
+without fresh filtered `adb logcat`.
+
+**Lesson proposals**: none.
+
+**CHANGELOG line**: none.

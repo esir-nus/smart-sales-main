@@ -4,6 +4,9 @@
 > **Status**: Active
 > **Visual Role**: Sticky top-header ambient summary surface
 > **Behavioral UX Authority Above This Doc**: [`docs/core-flow/base-runtime-ux-surface-governance-flow.md`](../../core-flow/base-runtime-ux-surface-governance-flow.md) (`UX.HOME.HEADER.DYNAMIC_ISLAND`, `UX.SCHEDULER.ENTRY.DYNAMIC_ISLAND_ENTRY`)
+> **BAKE Authority Notice**: Supporting/reference UI shard beneath
+> `docs/bake-contracts/shell-routing.md` for delivered shell-routing
+> implementation truth. Core-flow docs remain the behavioral north stars.
 
 ## 1. Ownership
 

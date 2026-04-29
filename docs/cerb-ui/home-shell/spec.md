@@ -3,6 +3,9 @@
 > **Context Boundary**: `docs/cerb-ui/home-shell/`
 > **Status**: Active
 > **Visual Source of Truth**: Local home-shell contract beneath `docs/core-flow/base-runtime-ux-surface-governance-flow.md`
+> **BAKE Authority Notice**: Supporting/reference UI shard beneath
+> `docs/bake-contracts/shell-routing.md` for delivered shell-routing
+> implementation truth. Core-flow docs remain the behavioral north stars.
 
 ## 1. Ownership
 

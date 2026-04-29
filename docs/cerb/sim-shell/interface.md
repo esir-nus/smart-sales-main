@@ -3,8 +3,12 @@
 > **Blackbox contract** - Historical SIM shell contract retained in place for campaign memory.
 > **Status**: Historical redirect
 > **Current Reading Priority**: Historical context only; not current source of truth.
+> **BAKE Authority Notice**: Supporting/reference historical interface shard
+> beneath `docs/bake-contracts/shell-routing.md` for delivered shell-routing
+> implementation truth. Core-flow docs remain the behavioral north stars.
 > **Current Active Truth**:
 > - `docs/specs/prism-ui-ux-contract.md`
+> - `docs/bake-contracts/shell-routing.md`
 > - `docs/cerb-ui/home-shell/spec.md`
 > - `docs/cerb-ui/dynamic-island/spec.md`
 > - `docs/cerb/interface-map.md`

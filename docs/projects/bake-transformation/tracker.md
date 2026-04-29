@@ -31,7 +31,7 @@ open
 | 07 | scheduler-path-a-bake-contract | done | Wrote the Scheduler Path A BAKE contract, synced interface-map authority, and demoted Scheduler Path A Cerb docs to supporting reference. | [sprints/07-scheduler-path-a-bake-contract.md](sprints/07-scheduler-path-a-bake-contract.md) |
 | 08 | shell-routing-dbm | done | Delivered behavior map created for shell routing, covering launch, first-launch setup, RuntimeShell ownership, drawer routes, dynamic-island/connectivity arbitration, smart-only blocking, telemetry, tests, and gaps. | [sprints/08-shell-routing-dbm.md](sprints/08-shell-routing-dbm.md) |
 | 09 | shell-routing-tcf | done | Aligned shell-routing target core flows from Sprint 08 DBM gaps and authored the shell-routing BAKE contract sprint. | [sprints/09-shell-routing-tcf.md](sprints/09-shell-routing-tcf.md) |
-| 10 | shell-routing-bake-contract | authored | Write the shell-routing BAKE implementation contract from Sprint 08 DBM and Sprint 09 target alignment. | [sprints/10-shell-routing-bake-contract.md](sprints/10-shell-routing-bake-contract.md) |
+| 10 | shell-routing-bake-contract | done | Wrote the shell-routing BAKE contract, synced interface-map authority, and demoted shell Cerb docs to supporting reference. | [sprints/10-shell-routing-bake-contract.md](sprints/10-shell-routing-bake-contract.md) |
 
 ## Domain Backlog
 
@@ -40,7 +40,7 @@ open
 | connectivity-bridge | base-runtime-active | `docs/core-flow/badge-connectivity-lifecycle.md` | high | tier-1 | bake-contract-written |
 | badge-session | base-runtime-active | `docs/core-flow/badge-session-lifecycle.md` | high | tier-1 | bake-contract-written |
 | scheduler-path-a | base-runtime-active | `docs/core-flow/scheduler-fast-track-flow.md` | high | tier-1 | bake-contract-written |
-| shell-routing | base-runtime-active | `docs/core-flow/sim-shell-routing-flow.md` | high | tier-1 | tcf-written |
+| shell-routing | base-runtime-active | `docs/core-flow/sim-shell-routing-flow.md` | high | tier-1 | bake-contract-written |
 | audio-pipeline | base-runtime-active | `docs/core-flow/sim-audio-artifact-chat-flow.md` | high | tier-2 | triaged |
 | agent-chat-pipeline | partially-shipped | `docs/cerb/sim-audio-chat/spec.md` | high | tier-2 | triaged |
 | entity-resolution | base-runtime-active | `docs/cerb/entity-writer/spec.md` | high | tier-2 | triaged |

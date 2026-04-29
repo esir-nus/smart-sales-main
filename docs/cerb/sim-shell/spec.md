@@ -5,8 +5,12 @@
 > **Current Reading Priority**: Historical context only; not current source of truth.
 > **Interpretation Rule**: Read this shard as preserved migration memory for the old SIM lane, not as a second non-Mono shell truth.
 > **Unification Note**: The old shell contract is retained only as a historical base-runtime shell baseline while active shell truth lives in shared docs.
+> **BAKE Authority Notice**: Supporting/reference historical shard beneath
+> `docs/bake-contracts/shell-routing.md` for delivered shell-routing
+> implementation truth. Core-flow docs remain the behavioral north stars.
 > **Current Active Truth**:
 > - `docs/core-flow/sim-shell-routing-flow.md`
+> - `docs/bake-contracts/shell-routing.md`
 > - `docs/specs/prism-ui-ux-contract.md`
 > - `docs/cerb-ui/home-shell/spec.md`
 > - `docs/cerb-ui/dynamic-island/spec.md`

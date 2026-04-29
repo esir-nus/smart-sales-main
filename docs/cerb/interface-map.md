@@ -4,7 +4,7 @@
 >
 > **Purpose**: Module ownership + data flow. Read this BEFORE any cross-module change.
 > **Rule**: If data belongs to Module B, query B's interface at runtime. Don't store B's data on A's model.
-> **Last Updated**: 2026-04-29 (Scheduler Path A BAKE contract is now the implementation record; Scheduler Path A Cerb docs remain supporting/reference docs beneath it)
+> **Last Updated**: 2026-04-29 (Shell Routing BAKE contract is now the implementation record; shell Cerb docs remain supporting/reference docs beneath it)
 >
 > **Status Legend**: ✅ = Shipped (Real impl) · 📐 = Interface only (Fake impl) · 🔲 = Not yet coded
 > **Platform Ownership Legend**: `shared` = same product contract across platforms · `android-only` = owned by the current Android lineage · `harmony-only` = owned by the future native Harmony root · `platform-adapter` = shared product contract, platform-specific delivery layer · `legacy-android-on-harmony` = Android app compatibility behavior on Huawei/Honor/Harmony devices
@@ -52,6 +52,17 @@ This overlay classifies the current repo's cross-platform-sensitive surfaces wit
   `docs/cerb/scheduler-path-a-spine/interface.md`, and the
   `docs/cerb/scheduler-path-a-uni-*` docs remain supporting/reference docs
   beneath the Scheduler Path A BAKE contract until a later archival sprint moves
+  historical Cerb material.
+- `docs/bake-contracts/shell-routing.md` is the verified BAKE implementation
+  contract for Shell Routing.
+- `docs/core-flow/sim-shell-routing-flow.md` and
+  `docs/core-flow/base-runtime-ux-surface-governance-flow.md` remain the
+  behavioral north-star docs above the Shell Routing BAKE contract.
+- `docs/cerb-ui/home-shell/spec.md`,
+  `docs/cerb-ui/dynamic-island/spec.md`,
+  `docs/cerb/sim-shell/spec.md`, and
+  `docs/cerb/sim-shell/interface.md` remain supporting/reference docs beneath
+  the Shell Routing BAKE contract until a later archival sprint moves
   historical Cerb material.
 
 ---

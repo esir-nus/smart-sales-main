@@ -26,6 +26,13 @@ Before teleporting into a universe, ensure the environment is instrumented to ca
 ## 4. Execute the L2 Scenario Runner
 Build debug runners or L2 simulated paths to drop the system straight into the isolated timeline.
 - **Rule**: Reset pipeline state entirely before executing the next universe. Avoid bleeding context.
+- **Closeout boundary**: L2 is for shaping incomplete business logic and keeping
+  deterministic regression coverage. Once the implementation path exists and the
+  work is only awaiting runtime confidence, L2 fakes must not close the testing
+  gate. Promote app-side runtime proof to L2.5 when a deterministic installed
+  debug ingress can enter the same production boundary, and use physical L3 for
+  BLE scanner, GATT, firmware, power-state, or other real upstream-source
+  claims.
 
 ```kotlin
 // Example L2 Teleportation

@@ -21,6 +21,22 @@ proof.
 If a device or emulator is unavailable, record the runtime gate as blocked. Do
 not downgrade the requirement to "verified".
 
+## L2 Role
+
+L2 is a deterministic business-logic and dataflow development scaffold. Use it
+while a behavior path is being designed or repaired, when the business rules are
+not yet complete enough for installed runtime evidence. L2 may define a
+parallel universe, seed fixed state, inject fixed input, and assert DTO,
+repository, domain, or UI-state outputs with fakes.
+
+After the implementation path exists and the remaining question is runtime
+confidence, L2 becomes regression support only. It must not close an awaiting-
+testing state for installed UI, lifecycle, background work, BLE/connectivity,
+notification, alarm, networking, or device-integration claims. At that point,
+use L2.5 for app-side installed-debug-APK dataflow closure when deterministic
+ingress exists, and use physical L3 for authentic hardware or upstream-source
+truth.
+
 ## Evidence Folder
 
 Save artifacts under the active sprint:
@@ -149,7 +165,7 @@ capture window.
    adb exec-out screencap -p > docs/projects/<project>/evidence/<sprint>/run-01-baseline.png
    ```
 
-9. Evaluate the loop against three evidence classes:
+9. Evaluate the loop against three evidence checks:
 
    - expected telemetry is present
    - expected UI state is present in the UI dump
@@ -165,7 +181,9 @@ If the baseline loop shows a failure:
 2. If logs are insufficient, add the smallest targeted diagnostic log and rerun
    the same loop before changing behavior.
 3. Apply the minimal fix only after the failure branch is proven.
-4. Run focused L1/L2 tests for the touched area.
+4. Run focused L1/L2 regression tests for the touched area. These tests support
+   the fix but do not replace L2.5 or L3 runtime evidence after implementation
+   exists.
 5. Rebuild, reinstall or cold relaunch as appropriate, and repeat the same L3
    scenario.
 6. Save after-fix artifacts with the next run number.

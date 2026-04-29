@@ -16,6 +16,8 @@ Read these before operating the loop:
 
 The protocol is mandatory for runtime claims. Unit tests, screenshots, and agent narration are supporting evidence only.
 
+L2 is useful while building or repairing incomplete business logic. Once an implementation path exists and is only awaiting runtime confidence, L2 fakes are regression support only; they must not close installed UI, lifecycle, BLE/connectivity, notification, alarm, networking, background-work, or device-integration claims. Prefer L2.5 for app-side installed-debug-APK closure when deterministic ingress can enter the production boundary, and physical L3 for authentic hardware/source truth.
+
 ## Core Rule
 
 Run one exact scenario per loop. Do not mix hypotheses, gestures, or user journeys in the same capture window.
@@ -65,7 +67,7 @@ Before running the loop, write down the exit criteria in the working notes or sp
 - required positive telemetry
 - required UI state in `uiautomator` XML
 - required negative logs/UI states
-- required L1/L2 tests after any code or diagnostic-log change
+- required L1/L2 regression tests after any code or diagnostic-log change
 - artifact paths to be saved
 
 Keep iterating until one of these is true:
@@ -144,7 +146,7 @@ Use this shape unless the sprint contract declares a narrower command set:
 
 9. Append a concise sprint-ledger verdict with commands, artifact paths, pass/fail, and any contamination such as permission dialogs.
 
-10. If any exit criterion fails, continue the loop: diagnose from the measured artifact, apply only the minimal diagnostic or behavior change, run focused L1/L2 checks, reinstall or cold relaunch as appropriate, and rerun the same scenario with the declared evidence class.
+10. If any exit criterion fails, continue the loop: diagnose from the measured artifact, apply only the minimal diagnostic or behavior change, run focused L1/L2 regression checks, reinstall or cold relaunch as appropriate, and rerun the same scenario with the declared evidence class.
 
 ## Scheduler Time-Anchor Retitle Loop
 
@@ -187,7 +189,7 @@ Do not optimize from intuition. Start each optimization iteration from a measure
 
 Every optimization iteration closes with:
 
-- focused L1/L2 tests for the touched area
+- focused L1/L2 regression tests for the touched area
 - reinstall or cold relaunch as appropriate
 - fresh `platform-runtime/L2.5` or physical `L3` evidence from the same scenario according to the declared evidence class
 - sprint ledger update with artifact paths

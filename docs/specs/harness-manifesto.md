@@ -129,6 +129,11 @@ The first proven engine, grounded in the Harmony scheduler slice experiment (`do
 - `contract-test`: agent runs test suite, verifies typed mutations match contract
 - `ui-visible`: agent requests human operator to supply real-device screenshots -- the agent cannot see phone pixels, the operator is the evaluator's eyes
 
+L2 scenario tests are development and regression scaffolds for incomplete
+business logic. After an implementation path exists, L2 fakes cannot close a
+runtime gate; use `platform-runtime/L2.5` for deterministic app-side installed
+proof or physical `L3` for real upstream-source truth.
+
 The evaluator rejects evidence of the wrong modality. A passing test is not runtime proof. An agent's assertion is not visual evidence.
 
 ### Future engines (declared, not yet proven)

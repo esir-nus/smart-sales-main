@@ -74,8 +74,9 @@ Complete Fix and Backfill rule:
 
 - L3/device-loop evidence is not only a documentation gate. If it reveals a bug
   in the behavior the sprint claims, the sprint remains open until the bug is
-  fixed, covered by focused L1/L2 tests, rebuilt/reinstalled where relevant,
-  and re-proven with the same L3 scenario.
+  fixed, covered by focused L1/L2 regression tests, rebuilt/reinstalled where
+  relevant, and re-proven with the same L2.5 or L3 scenario required by the
+  declared evidence class.
 - If the L3 finding affects a shared behavior that future BAKE contracts will
   rely on, fix it in the current sprint or stop and ask the user to approve a
   named catch-up sprint. Do not bury it as vague residual debt.

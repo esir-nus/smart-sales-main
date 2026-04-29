@@ -50,7 +50,9 @@ Deterministic Device-Loop Protocol before diagnosing or optimizing:
 If the loop reveals a failure, write the Pre-Fix Report before code edits. If
 logs are insufficient, add targeted diagnostic logging and rerun the same loop
 before changing behavior. Each optimization must begin from a measured loop
-observation and close with focused L1/L2 tests plus fresh L3 device evidence.
+observation and close with focused L1/L2 regression tests plus fresh L2.5 or L3
+device evidence according to the declared evidence class. Plain L2 fakes do not
+close runtime claims once implementation exists.
 
 ## Small Feature Reality Rule
 

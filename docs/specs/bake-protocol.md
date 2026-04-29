@@ -202,7 +202,9 @@ The close path is:
 2. If logs are insufficient, add the smallest targeted telemetry and rerun the
    same L3 scenario before changing behavior.
 3. Fix the implementation branch that caused the failed runtime claim.
-4. Add or update focused L1/L2 tests for the corrected branch.
+4. Add or update focused L1/L2 regression tests for the corrected branch. These
+   tests support the repair but do not close runtime confidence after the
+   implementation path exists.
 5. Rebuild, reinstall or cold-launch as appropriate, and rerun the same L3
    scenario until it passes, blocks on hardware, or hits the declared stop
    criteria.

@@ -29,6 +29,7 @@ open
 | 05 | scheduler-path-a-dbm | done | Delivered behavior map created for Scheduler Path A, covering shared routing, Uni-A/B/C/D, reschedule/delete, SIM overlay, telemetry, tests, and runtime-evidence gaps. | [sprints/05-scheduler-path-a-dbm.md](sprints/05-scheduler-path-a-dbm.md) |
 | 06 | scheduler-path-a-tcf | done | Added base-runtime scope metadata and Sprint 05 delivered-vs-target gap notes to Scheduler Path A core flows, then authored the Scheduler Path A BAKE contract sprint. | [sprints/06-scheduler-path-a-tcf.md](sprints/06-scheduler-path-a-tcf.md) |
 | 07 | scheduler-path-a-bake-contract | done | Wrote the Scheduler Path A BAKE contract, synced interface-map authority, and demoted Scheduler Path A Cerb docs to supporting reference. | [sprints/07-scheduler-path-a-bake-contract.md](sprints/07-scheduler-path-a-bake-contract.md) |
+| 08 | shell-routing-dbm | authored | Map delivered shell-routing behavior across launch, shell state ownership, drawer routes, island arbitration, connectivity takeover, smart-only blocking, telemetry, tests, and gaps. | [sprints/08-shell-routing-dbm.md](sprints/08-shell-routing-dbm.md) |
 
 ## Domain Backlog
 

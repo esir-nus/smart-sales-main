@@ -174,8 +174,147 @@ Closeout must include:
 
 ## 9. Iteration Ledger
 
-Operator fills this section during Sprint 08 operation.
+- **Iteration 1 — 2026-04-29**
+  - Read the sprint contract, BAKE tracker, top-level tracker, sprint-contract
+    schema, BAKE protocol, project-structure spec, lessons index, shell-routing
+    core flow, UX governance flow, base-runtime unification spec, home-shell and
+    dynamic-island shards, interface map, historical L3 reports, and the
+    execution-critical Kotlin/test paths.
+  - Wrote
+    `docs/projects/bake-transformation/evidence/08-shell-routing-dbm/delivered-behavior-map.md`
+    with delivered-vs-target/gap/historical/unknown sections and evidence
+    commands.
+  - Updated the Sprint 08 tracker row to `done` and the `shell-routing` domain
+    status to `dbm-written`.
+  - Evaluator result: static acceptance checks passed. No runtime/L3 claims were
+    made without fresh `adb logcat`; missing runtime proof is recorded as Gap or
+    Unknown in the DBM.
 
 ## 10. Closeout
 
-Operator fills this section at Sprint 08 exit.
+**Status**: success
+
+**Tracker summary**: Delivered behavior map created for shell routing, covering
+launch, first-launch setup, RuntimeShell ownership, drawer routes,
+dynamic-island/connectivity arbitration, smart-only blocking, telemetry, tests,
+and gaps.
+
+**Changed files**:
+
+- `docs/projects/bake-transformation/tracker.md`
+- `docs/projects/bake-transformation/sprints/08-shell-routing-dbm.md`
+- `docs/projects/bake-transformation/evidence/08-shell-routing-dbm/delivered-behavior-map.md`
+
+**Evidence command outputs**:
+
+```text
+$ test -f docs/projects/bake-transformation/evidence/08-shell-routing-dbm/delivered-behavior-map.md && echo exists
+exists
+```
+
+```text
+$ rg -n "^## [0-9]+\. Header|^## [0-9]+\. Demand|^## [0-9]+\. Scope|^## [0-9]+\. References|^## [0-9]+\. Success Exit Criteria|^## [0-9]+\. Stop Exit Criteria|^## [0-9]+\. Iteration Bound|^## [0-9]+\. Required Evidence Format|^## [0-9]+\. Iteration Ledger|^## [0-9]+\. Closeout" docs/projects/bake-transformation/sprints/08-shell-routing-dbm.md
+3:## 1. Header
+14:## 2. Demand
+26:## 3. Scope
+46:## 4. References
+96:## 5. Success Exit Criteria
+145:## 6. Stop Exit Criteria
+159:## 7. Iteration Bound
+163:## 8. Required Evidence Format
+175:## 9. Iteration Ledger
+189:## 10. Closeout
+```
+
+```text
+$ wc -l docs/projects/bake-transformation/evidence/08-shell-routing-dbm/delivered-behavior-map.md
+249 docs/projects/bake-transformation/evidence/08-shell-routing-dbm/delivered-behavior-map.md
+```
+
+```text
+$ rg -n "Launch|RuntimeShell|RuntimeShellContent|RuntimeShellState|Scheduler Drawer|Audio Drawer|Connectivity|New Session" docs/projects/bake-transformation/evidence/08-shell-routing-dbm/delivered-behavior-map.md
+55:Delivered behavior: production launch mounts `MainActivity`, which injects `BadgeAudioPipeline`, onboarding/discoverability gates, theme state, and then renders `RuntimeShell(...)` inside `PrismTheme` and `PrismSystemBarsEffect`.
+65:## First-Launch And Onboarding
+77:## RuntimeShell Ownership
+97:## Scheduler Drawer
+107:## Audio Drawer
+133:## Connectivity
+143:## New Session
+```
+
+```text
+$ rg -n "Drawer Exclusivity|Audio Reselect|Ask AI|Badge Scheduler Follow-Up|Dynamic Island Arbitration|Connectivity Takeover|Smart-Only Surface Blocking|Known Gaps" docs/projects/bake-transformation/evidence/08-shell-routing-dbm/delivered-behavior-map.md
+151:## Drawer Exclusivity
+161:## Audio Reselect
+171:## Ask AI
+179:## Badge Scheduler Follow-Up
+189:## Dynamic Island Arbitration
+199:## Connectivity Takeover
+209:## Smart-Only Surface Blocking
+237:## Known Gaps
+```
+
+```text
+$ rg -n "Delivered behavior|Target behavior|Gap|Historical reference|Unknown|adb logcat" docs/projects/bake-transformation/evidence/08-shell-routing-dbm/delivered-behavior-map.md
+5:Evidence class: static DBM from docs, Kotlin source, and JVM tests. No fresh `adb logcat` was captured in this sprint, so runtime/L3 behavior is marked as Historical reference, Gap, or Unknown unless it is proven by current source/test evidence.
+55:Delivered behavior: production launch mounts `MainActivity`...
+57:Target behavior: `docs/core-flow/sim-shell-routing-flow.md` requires standalone base-runtime shell launch...
+59:Gap: none for the static root ownership claim...
+61:Historical reference: `docs/archive/reports/tests/L3-20260404-single-runtime-shell-acceptance.md` recorded an L3 launch...
+63:Unknown: current installed-device launch state on 2026-04-29 because no fresh `adb logcat` or `dumpsys` was collected.
+```
+
+```text
+$ rg -n "RuntimeShell.kt|RuntimeShellContent.kt|RuntimeShellState.kt|RuntimeShellReducer.kt|BaseRuntimeShellCore.kt|SimShellDynamicIslandCoordinator.kt|SimShellHandoffTest|SimConnectivityRoutingTest" docs/projects/bake-transformation/evidence/08-shell-routing-dbm/delivered-behavior-map.md
+23:- `sed -n '1,620p' app-core/src/main/java/com/smartsales/prism/ui/RuntimeShell.kt`
+24:- `sed -n '1,620p' app-core/src/main/java/com/smartsales/prism/ui/sim/RuntimeShellContent.kt`
+25:- `sed -n '1,260p' app-core/src/main/java/com/smartsales/prism/ui/sim/RuntimeShellState.kt`
+26:- `sed -n '1,280p' app-core/src/main/java/com/smartsales/prism/ui/sim/RuntimeShellReducer.kt`
+27:- `sed -n '1,260p' app-core/src/main/java/com/smartsales/prism/ui/shell/BaseRuntimeShellCore.kt`
+28:- `sed -n '1,640p' app-core/src/main/java/com/smartsales/prism/ui/sim/SimShellDynamicIslandCoordinator.kt`
+33:- `sed -n '1,260p' app-core/src/test/java/com/smartsales/prism/ui/sim/SimConnectivityRoutingTest.kt`
+38:- `sed -n '1,860p' app-core/src/test/java/com/smartsales/prism/ui/sim/SimShellHandoffTest.kt`
+```
+
+```text
+$ rg -o '`(docs|app-core)/[^`]+`' docs/projects/bake-transformation/evidence/08-shell-routing-dbm/delivered-behavior-map.md | sort -u | wc -l
+31
+
+$ rg -o '`docs/[^`]+`' docs/projects/bake-transformation/evidence/08-shell-routing-dbm/delivered-behavior-map.md | sort -u | wc -l
+11
+
+$ rg -o '`app-core/[^`]+\.kt`' docs/projects/bake-transformation/evidence/08-shell-routing-dbm/delivered-behavior-map.md | sort -u | wc -l
+20
+```
+
+```text
+$ rg -n "\| 08 \| shell-routing-dbm \| (done|stopped|blocked)|shell-routing \| base-runtime-active .* (dbm-written|triaged)" docs/projects/bake-transformation/tracker.md
+32:| 08 | shell-routing-dbm | done | Delivered behavior map created for shell routing, covering launch, first-launch setup, RuntimeShell ownership, drawer routes, dynamic-island/connectivity arbitration, smart-only blocking, telemetry, tests, and gaps. | [sprints/08-shell-routing-dbm.md](sprints/08-shell-routing-dbm.md) |
+41:| shell-routing | base-runtime-active | `docs/core-flow/sim-shell-routing-flow.md` | high | tier-1 | dbm-written |
+```
+
+```text
+$ git diff --check -- docs/projects/bake-transformation/tracker.md docs/projects/bake-transformation/sprints/08-shell-routing-dbm.md docs/projects/bake-transformation/evidence/08-shell-routing-dbm/
+<no output>
+```
+
+```text
+$ git diff --stat -- docs/projects/bake-transformation/tracker.md docs/projects/bake-transformation/sprints/08-shell-routing-dbm.md docs/projects/bake-transformation/evidence/08-shell-routing-dbm/
+ .../sprints/08-shell-routing-dbm.md                | 143 ++++++++++++++++++++-
+ docs/projects/bake-transformation/tracker.md       |   4 +-
+ 2 files changed, 143 insertions(+), 4 deletions(-)
+
+$ git status --short -- docs/projects/bake-transformation/tracker.md docs/projects/bake-transformation/sprints/08-shell-routing-dbm.md docs/projects/bake-transformation/evidence/08-shell-routing-dbm/
+ M docs/projects/bake-transformation/tracker.md
+ M docs/projects/bake-transformation/sprints/08-shell-routing-dbm.md
+?? docs/projects/bake-transformation/evidence/08-shell-routing-dbm/
+```
+
+Note: `git diff --stat` does not list the new evidence file while it is
+untracked. `git status --short` is included to show the new artifact in the
+dirty tree.
+
+**Lesson proposals**: none.
+
+**CHANGELOG line**: none. This was docs-only DBM work with no user-visible
+product behavior change.

@@ -17,6 +17,7 @@ internal class DeviceConnectionManagerReconnectSupport(
             ConnectivityLogger.d("Skipping auto-reconnect: user manually disconnected")
             return
         }
+        connectionSupport.restoreSession()
         val credsReady = connectionSupport.hasStoredSession()
         if (!credsReady) {
             runtime.state.value = ConnectionState.NeedsSetup

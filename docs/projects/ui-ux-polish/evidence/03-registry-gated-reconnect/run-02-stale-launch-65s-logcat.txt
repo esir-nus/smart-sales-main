@@ -1,0 +1,9 @@
+--------- beginning of main
+04-29 19:42:08.881 D/SmartSalesConn(22367): 🔌 Restored session: AA:BB:CC:DD:EE:FF knownNetworks=0
+04-29 19:42:08.882 D/SmartSalesConn(22367): 🏠 Registry: default device Remaining Badge (...55:66)
+04-29 19:42:08.882 W/SmartSalesConn(22367): [ReconnectGuard] aborted stale launch session AA:BB:CC:DD:EE:FF; reseeded ...55:66
+04-29 19:42:08.885 D/SmartSalesConn(22367): 🔌 Restored session: 11:22:33:44:55:66 knownNetworks=0
+04-29 19:42:08.888 I/SmartSalesConn(22367): 📶 BLE disconnected
+04-29 19:42:08.888 D/SmartSalesConn(22367): 🔌 Soft disconnect (session preserved)
+04-29 19:42:08.888 D/SmartSalesConn(22367): 🔌 Persistent GATT session closed
+04-29 19:43:13.357 I/SmartSalesConn(26612): Sprint03 operator window-end marker after 65s

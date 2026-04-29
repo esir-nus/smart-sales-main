@@ -99,6 +99,26 @@ class DeviceConnectionManagerReconnectSupportTest {
     }
 
     @Test
+    fun `scheduleAutoReconnectIfNeeded refreshes cleared SessionStore before connecting`() = runTest {
+        val staleSession = BleSession.fromPeripheral(BlePeripheral("AA:BB:CC:DD:EE:FF", "Removed", -50))
+        val sessionStore = InMemorySessionStore().apply { saveSession(staleSession) }
+        val gateway = FakeGattSessionLifecycle(connectResult = Result.Success(Unit))
+        val manager = newManager(
+            gateway = gateway,
+            scope = backgroundScope,
+            dispatcher = StandardTestDispatcher(testScheduler),
+            sessionStore = sessionStore
+        )
+        sessionStore.clear()
+
+        manager.scheduleAutoReconnectIfNeeded()
+        advanceUntilIdle()
+
+        assertEquals(ConnectionState.NeedsSetup, manager.state.value)
+        assertTrue(gateway.connectCalls.isEmpty())
+    }
+
+    @Test
     fun `reconnect with badge offline prompts repair without silent credential replay`() = runTest {
         val session = BleSession.fromPeripheral(BlePeripheral("AA:BB:CC:DD:EE:FF", "Badge", -50))
         val provisioner = FakeWifiProvisioner().apply {
@@ -185,7 +205,11 @@ class DeviceConnectionManagerReconnectSupportTest {
         private val connectResult: Result<Unit>
     ) : GattSessionLifecycle {
         private val notifications = MutableSharedFlow<BadgeNotification>()
-        override suspend fun connect(peripheralId: String) = connectResult
+        val connectCalls = mutableListOf<String>()
+        override suspend fun connect(peripheralId: String): Result<Unit> {
+            connectCalls += peripheralId
+            return connectResult
+        }
         override suspend fun disconnect() = Unit
         override fun listenForBadgeNotifications(): Flow<BadgeNotification> = notifications
         override suspend fun isReachable(): Boolean = false

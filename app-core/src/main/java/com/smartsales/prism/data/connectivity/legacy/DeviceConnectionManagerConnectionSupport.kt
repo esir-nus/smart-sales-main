@@ -32,9 +32,13 @@ internal class DeviceConnectionManagerConnectionSupport(
 
     internal var reconnectSupport: DeviceConnectionManagerReconnectSupport? = null
 
-    fun restoreSession() {
-        val session = sessionStore.loadSession() ?: return
+    fun restoreSession(): Boolean {
+        val session = sessionStore.loadSession() ?: run {
+            runtime.currentSession = null
+            return false
+        }
         useSession(session)
+        return true
     }
 
     fun useSession(session: BleSession) {

@@ -55,6 +55,14 @@ class RealDeviceRegistryManager(
                 return
             }
 
+            if (currentSession?.peripheralId != null &&
+                currentSession.peripheralId != defaultDevice.macAddress &&
+                registry.findByMac(currentSession.peripheralId) == null
+            ) {
+                ConnectivityLogger.w(
+                    "[ReconnectGuard] aborted stale launch session ${currentSession.peripheralId}; reseeded ${defaultDevice.macSuffix}"
+                )
+            }
             if (currentSession?.peripheralId != defaultDevice.macAddress) {
                 seedSessionForDevice(defaultDevice)
             }
@@ -114,17 +122,28 @@ class RealDeviceRegistryManager(
                 val found = scanner.devices.value.filter { it.id in knownMacs }
                 if (found.isNotEmpty()) {
                     scanner.stop()
-                    found.forEach { peripheral ->
+                    val registeredFound = found.mapNotNull { peripheral ->
+                        val registered = registry.findByMac(peripheral.id)
+                        if (registered == null) {
+                            ConnectivityLogger.w("[ReconnectGuard] aborted stale BLE detection candidate ${peripheral.id}")
+                            null
+                        } else {
+                            peripheral
+                        }
+                    }
+                    registeredFound.forEach { peripheral ->
                         ConnectivityLogger.i("🔍 BLE detected: ${peripheral.name} (${peripheral.id})")
                         registry.updateBleDetected(peripheral.id, true)
                     }
                     refreshDeviceList()
                     // 如果检测到的是当前活跃设备且未手动断开 → 自动重连
-                    val activeMac = _activeDevice.value?.macAddress
-                    val activeDetected = found.any { it.id == activeMac }
-                    if (activeDetected && _activeDevice.value?.manuallyDisconnected == false) {
+                    val active = _activeDevice.value
+                    val activeMac = active?.macAddress
+                    val activeStillRegistered = activeMac?.let { registry.findByMac(it) }
+                    val activeDetected = registeredFound.any { it.id == activeMac }
+                    if (activeDetected && activeStillRegistered?.manuallyDisconnected == false) {
                         ConnectivityLogger.i("🔍 Auto-reconnect triggered by BLE detection for $activeMac")
-                        switchToDevice(activeMac!!)
+                        switchToDevice(activeMac)
                     }
                     return@launch
                 }
@@ -197,6 +216,7 @@ class RealDeviceRegistryManager(
     override fun removeDevice(macAddress: String) {
         val wasActive = _activeDevice.value?.macAddress == macAddress
         val wasDefault = registry.findByMac(macAddress)?.isDefault == true
+        val removedStoredSession = sessionStore.loadSession()?.peripheralId == macAddress
 
         if (wasActive) {
             deviceConnectionManager.forgetDevice()
@@ -205,14 +225,26 @@ class RealDeviceRegistryManager(
         registry.remove(macAddress)
         refreshDeviceList()
 
+        val fallbackDevice = registry.getDefault() ?: _registeredDevices.value.maxByOrNull { it.lastConnectedAtMillis }
         if (wasActive) {
-            val newDefault = registry.getDefault()
+            val newDefault = fallbackDevice
             _activeDevice.value = newDefault
             if (newDefault != null) {
                 seedSessionForDevice(newDefault)
                 ConnectivityLogger.i("🏠 Registry: removed active device, promoted ${newDefault.macSuffix}")
             } else {
+                sessionStore.clear()
                 ConnectivityLogger.i("🏠 Registry: removed last device, NeedsSetup")
+            }
+        } else if (removedStoredSession) {
+            if (fallbackDevice != null) {
+                seedSessionForDevice(fallbackDevice)
+                ConnectivityLogger.w("[ReconnectGuard] aborted stale removed session $macAddress; reseeded ${fallbackDevice.macSuffix}")
+            } else {
+                deviceConnectionManager.forgetDevice()
+                sessionStore.clear()
+                _activeDevice.value = null
+                ConnectivityLogger.w("[ReconnectGuard] aborted stale removed session $macAddress; no registered devices remain")
             }
         } else if (wasDefault) {
             // Default was removed but it wasn't active — just refresh

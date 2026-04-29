@@ -113,14 +113,47 @@ The excerpt must include `[ReconnectGuard] aborted` and must show no connect att
 
 ## Iteration Ledger
 
-_Operator fills this section once per iteration._
+- Iteration 1:
+  - Baseline: code review found `removeDevice()` only cleared `SessionStore` when the removed device was active, while `DeviceConnectionManagerReconnectSupport.scheduleAutoReconnectIfNeeded()` trusted its in-memory `currentSession`.
+  - Change: made registry removal reseed stale stored sessions to the remaining default/active device, clear the session when no device remains, refresh reconnect runtime from `SessionStore` before auto reconnect, and revalidate BLE detection candidates against the live registry before `bleDetected` or `switchToDevice`.
+  - Focused evaluator: `./gradlew :app-core:testDebugUnitTest --tests "*RealDeviceRegistryManagerTest*"` first failed because the fake connection manager did not clear `SessionStore` on hard disconnect; fixed by making last-device removal explicitly call `sessionStore.clear()`.
+  - Result: focused registry and reconnect support tests passed.
+- Iteration 2:
+  - Runtime evaluator: installed `app-core-debug.apk` on `fc8ede3e`, seeded registry default `11:22:33:44:55:66` plus stale stored session `AA:BB:CC:DD:EE:FF`, cleared logcat, launched `com.smartsales.prism/.MainActivity`, waited 65 seconds, and dumped `adb logcat -d -v time -s SmartSalesConn`.
+  - Finding: the first runtime dump had `[ReconnectGuard] aborted` and no removed-MAC connect attempt, but the file only contained startup timestamps. Added an explicit startup guard log for stale launch sessions and reran with an operator window-end marker after 65 seconds.
+  - Result: `docs/projects/ui-ux-polish/evidence/03-registry-gated-reconnect/run-02-stale-launch-65s-logcat.txt` contains the guard marker at `19:42:08` and the 65-second window marker at `19:43:13`, with no forbidden connect attempt to `AA:BB:CC:DD:EE:FF`.
 
 ## Closeout
 
-_Operator fills at exit._
-
-- Status: `success` | `stopped` | `blocked`
-- One-liner for tracker:
+- Status: `success`
+- One-liner for tracker: Registry/session reconnect now refuses removed MACs, reseeds stale sessions to the remaining registered device, and revalidates BLE candidates before reconnect.
 - Evidence artifacts:
-- Lesson proposals:
-- CHANGELOG line:
+  - `./gradlew :app-core:testDebugUnitTest --tests "*RealDeviceRegistryManagerTest*"`: `BUILD SUCCESSFUL`
+  - `./gradlew :app-core:testDebugUnitTest --tests "*DeviceConnectionManagerReconnectSupportTest*"`: `BUILD SUCCESSFUL`
+  - `./gradlew :app-core:testDebugUnitTest`: `BUILD SUCCESSFUL`
+  - `./gradlew :app:assembleDebug`: `BUILD SUCCESSFUL`
+  - Supporting device build/install: `./gradlew :app-core:assembleDebug` and `adb install -r app-core/build/outputs/apk/debug/app-core-debug.apk`: `BUILD SUCCESSFUL`, `Success`
+  - Runtime artifact: `docs/projects/ui-ux-polish/evidence/03-registry-gated-reconnect/run-02-stale-launch-65s-logcat.txt`
+  - Runtime grep: `[ReconnectGuard] aborted stale launch session AA:BB:CC:DD:EE:FF; reseeded ...55:66` present; forbidden patterns `Force reconnect target=AA:BB:CC:DD:EE:FF`, `Stored MAC AA:BB:CC:DD:EE:FF`, and `connectUsingSession.*AA:BB:CC:DD:EE:FF` returned no matches.
+- Code-delta transparency:
+
+| Area | Closeout answer |
+|---|---|
+| Contract delta | Removed-MAC reconnect refusal is now explicit at registry removal, launch restore, reconnect scheduling, and BLE-detection candidate promotion. |
+| Behavior delta | A removed stored MAC is reseeded to the remaining registered default/active badge, or cleared when the registry is empty; stale BLE candidates are skipped before `bleDetected` or `switchToDevice`. |
+| Simplification delta | `scheduleAutoReconnectIfNeeded()` now refreshes from `SessionStore` before connecting, so the runtime does not carry a stale in-memory session after registry cleanup. |
+| Drift corrected | Tests now cover stale non-active session cleanup, last-device clearing, cleared `SessionStore` reconnect refusal, and stale BLE candidate skipping. |
+| Assumption killed | Removed the assumption that `DeviceConnectionManager.currentSession` and scanner snapshots are automatically fresher than the registry. |
+| Duplication/dead code | None removed; the change keeps the existing registry/session/reconnect owners. |
+| Blast radius | Contained to registry manager, reconnect support, connection support session restore, and focused tests. |
+| Tests added/changed | Added negative tests for stale stored session reseeding, last-device session clearing, cleared-session auto reconnect refusal, and removed BLE candidate skipping before switch. |
+| Runtime evidence | Device `fc8ede3e` proved the stale launch-session guard logs `[ReconnectGuard] aborted` and no removed-MAC connect attempt appears across the 65-second cleared window; it does not prove every physical scanner race branch beyond the unit-covered stale-candidate path. |
+| Residual risk/debt | Physical BLE scanner stale-candidate timing is still hard to force without firmware/device choreography; unit coverage exercises the live-registry revalidation branch. |
+| Net judgment | Cleaner: registry membership now gates each stale reconnect ingress without changing public APIs or widening module ownership. |
+
+- Scores:
+  - Pre-BAKE codebase score: 3/5. Multi-device ownership existed, but stale `SessionStore`, runtime session, and scanner snapshot assumptions were spread across owners.
+  - Work score: 4/5. The sprint stayed scoped, added focused negative coverage, and captured L3 logcat; physical scanner-race proof remains partially simulated.
+  - Baked-codebase score: 4/5. The resulting slice has clearer registry authority and reconnect refresh behavior with contained blast radius.
+- Lesson proposals: None.
+- CHANGELOG line: None proposed.

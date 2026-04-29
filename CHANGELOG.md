@@ -6,6 +6,9 @@
 
 - **[维护] 日程 Path A 目标流程与 BAKE 契约收口** — 将 Scheduler Path A TCF 同步到 `scheduler-fast-track` 与 SIM core-flow，新增 `docs/bake-contracts/scheduler-path-a.md`，并在接口图和 Cerb 文档中标记 BAKE contract authority。
 - **[维护] Shell routing BAKE 转换推进** — 新增 shell-routing delivered-behavior map，闭合 DBM sprint，授权 TCF sprint，将 first-launch handoff、dynamic-island Wi-Fi authority、telemetry valves、smart-only blocking、drawer conflict 和 new-session 覆盖差距转为后续 BAKE 合同输入。
+- **[维护] Shell routing BAKE 契约落地** — 闭合 shell-routing TCF sprint，新增 `docs/bake-contracts/shell-routing.md`，同步 interface-map authority，并将 dynamic-island、home-shell 与 SIM shell Cerb 文档降级为 supporting reference。
+- **[维护] Audio pipeline BAKE 转换收口** — 完成 audio-pipeline DBM、TCF 与 BAKE contract sprint，新增 `docs/bake-contracts/audio-pipeline.md`，对齐徽章/手动音频入口、Tingwu artifacts、Ask AI、audio reselect、durable chat state 与 canonical telemetry 缺口。
+- **[维护] Agent chat pipeline 目标流程对齐** — 完成 agent-chat-pipeline DBM 与 TCF sprint，补齐 blank/general SIM chat、composer send、persona/user context、local session persistence、FunASR voice draft、scheduler/follow-up boundary 与 telemetry gaps，并授权后续 BAKE contract。
 
 ### 2026-04-28
 

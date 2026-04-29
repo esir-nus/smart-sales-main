@@ -30,6 +30,7 @@ open
 | 06 | scheduler-path-a-tcf | done | Added base-runtime scope metadata and Sprint 05 delivered-vs-target gap notes to Scheduler Path A core flows, then authored the Scheduler Path A BAKE contract sprint. | [sprints/06-scheduler-path-a-tcf.md](sprints/06-scheduler-path-a-tcf.md) |
 | 07 | scheduler-path-a-bake-contract | done | Wrote the Scheduler Path A BAKE contract, synced interface-map authority, and demoted Scheduler Path A Cerb docs to supporting reference. | [sprints/07-scheduler-path-a-bake-contract.md](sprints/07-scheduler-path-a-bake-contract.md) |
 | 08 | shell-routing-dbm | done | Delivered behavior map created for shell routing, covering launch, first-launch setup, RuntimeShell ownership, drawer routes, dynamic-island/connectivity arbitration, smart-only blocking, telemetry, tests, and gaps. | [sprints/08-shell-routing-dbm.md](sprints/08-shell-routing-dbm.md) |
+| 09 | shell-routing-tcf | authored | Align shell-routing target core flows from Sprint 08 DBM gaps, then author the shell-routing BAKE contract sprint if target authority is stable. | [sprints/09-shell-routing-tcf.md](sprints/09-shell-routing-tcf.md) |
 
 ## Domain Backlog
 

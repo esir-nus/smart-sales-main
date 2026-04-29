@@ -10,6 +10,9 @@
 - **[维护] Audio pipeline BAKE 转换收口** — 完成 audio-pipeline DBM、TCF 与 BAKE contract sprint，新增 `docs/bake-contracts/audio-pipeline.md`，对齐徽章/手动音频入口、Tingwu artifacts、Ask AI、audio reselect、durable chat state 与 canonical telemetry 缺口。
 - **[维护] Agent chat pipeline 目标流程对齐** — 完成 agent-chat-pipeline DBM 与 TCF sprint，补齐 blank/general SIM chat、composer send、persona/user context、local session persistence、FunASR voice draft、scheduler/follow-up boundary 与 telemetry gaps，并授权后续 BAKE contract。
 - **[维护] Agent chat pipeline BAKE 契约落地** — 新增 `docs/bake-contracts/agent-chat-pipeline.md`，同步 interface-map authority，并将 SIM audio chat 与 SIM shell 相关 Cerb 文档降级为 supporting reference，明确 blank/general chat、SIM-only persistence、voice draft、scheduler pre-route、task-scoped follow-up 与 Mono extension surface。
+- **[修复] 徽章切换时 rec 自动下载取消链路** — 修复切换徽章时旧 rec 自动下载仍可能继续执行的问题，补充 device-loop 入口、连接调试卡片、logcat/UI 证据，并同步 audio-pipeline、connectivity-badge-session 与 badge session core-flow 契约。
+- **[维护] Connectivity BAKE delta L3 证据闭环** — 闭合 connectivity TCF delta readiness queue cleanup，补充终端导入、徽章管理、`isReady` 探测、活跃徽章切换、HTTP delayed 探测与重连等 L3 logcat/UI 证据，并更新 BAKE protocol、sprint contract 与 connectivity 合同。
+- **[新增] BAKE score trend dashboard** — 仪表板渲染脚本新增 BAKE score 趋势输出，生成 `docs/projects/dashboard/bake-scores.html`，在项目 dashboard 中加入 score view 链接与趋势展示。
 
 ### 2026-04-28
 

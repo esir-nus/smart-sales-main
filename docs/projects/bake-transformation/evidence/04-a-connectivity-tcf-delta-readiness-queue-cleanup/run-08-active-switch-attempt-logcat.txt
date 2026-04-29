@@ -1,0 +1,130 @@
+--------- beginning of main
+04-29 17:26:41.624 D/ConnectivityService(21113): connect() called for 14:C1:9F:D7:E3:F6
+04-29 17:26:41.624 D/SmartSalesConn(21113): 🏠 Registry: manuallyDisconnected=false for 14:C1:9F:D7:E3:F6
+04-29 17:26:41.625 I/SmartSalesConn(21113): 🏠 Registry: switching ...8F:96 → ...E3:F6
+04-29 17:26:41.628 D/SmartSalesConn(21113): 🏠 Registry: reconnecting target ...E3:F6
+04-29 17:26:41.628 D/SmartSalesConn(21113): 🔌 Restored session: 14:C1:9F:D7:E3:F6 knownNetworks=1
+04-29 17:26:41.628 D/SmartSalesConn(21113): 🔄 Force reconnect target=14:C1:9F:D7:E3:F6
+04-29 17:26:41.628 D/ConnectivityService(21113): connect() completed for 14:C1:9F:D7:E3:F6
+04-29 17:26:41.629 I/SmartSalesConn(21113): 📶 BLE disconnected
+04-29 17:26:41.629 D/SmartSalesConn(21113): 🔌 Soft disconnect (session preserved)
+04-29 17:26:41.631 D/AudioPipeline(21113): SIM badge sync: all downloads cancelled (device switch) outgoingBadgeMac=1C:DB:D4:9B:8F:96
+04-29 17:26:41.631 D/SmartSalesConn(21113): 🔌 Persistent GATT session closed
+04-29 17:26:41.639 D/AudioPipeline(21113): SIM audio drawer entries emitted count=20 downloading=0 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 17:26:42.604 D/SmartSalesConn(21113): 📋 Service: 00001801-0000-1000-8000-00805f9b34fb
+04-29 17:26:42.605 D/SmartSalesConn(21113):   📋 Char: 00002a05-0000-1000-8000-00805f9b34fb [INDICATE ]
+04-29 17:26:42.605 D/SmartSalesConn(21113):     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-29 17:26:42.605 D/SmartSalesConn(21113): 📋 Service: 00001800-0000-1000-8000-00805f9b34fb
+04-29 17:26:42.605 D/SmartSalesConn(21113):   📋 Char: 00002a00-0000-1000-8000-00805f9b34fb [READ ]
+04-29 17:26:42.605 D/SmartSalesConn(21113):     📋 (no descriptors)
+04-29 17:26:42.605 D/SmartSalesConn(21113):   📋 Char: 00002a01-0000-1000-8000-00805f9b34fb [READ ]
+04-29 17:26:42.605 D/SmartSalesConn(21113):     📋 (no descriptors)
+04-29 17:26:42.605 D/SmartSalesConn(21113):   📋 Char: 00002aa6-0000-1000-8000-00805f9b34fb [READ ]
+04-29 17:26:42.605 D/SmartSalesConn(21113):     📋 (no descriptors)
+04-29 17:26:42.605 D/SmartSalesConn(21113): 📋 Service: 000000ff-0000-1000-8000-00805f9b34fb
+04-29 17:26:42.605 D/SmartSalesConn(21113):   📋 Char: 0000ff01-0000-1000-8000-00805f9b34fb [READ WRITE NOTIFY ]
+04-29 17:26:42.605 D/SmartSalesConn(21113):     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-29 17:26:42.605 D/SmartSalesConn(21113):   📋 Char: 0000ff02-0000-1000-8000-00805f9b34fb [READ ]
+04-29 17:26:42.605 D/SmartSalesConn(21113):     📋 (no descriptors)
+04-29 17:26:42.605 D/SmartSalesConn(21113):   📋 Char: 0000ff03-0000-1000-8000-00805f9b34fb [WRITE ]
+04-29 17:26:42.605 D/SmartSalesConn(21113):     📋 (no descriptors)
+04-29 17:26:42.626 D/SmartSalesConn(21113): No CCCD descriptor for 0000ff02-0000-1000-8000-00805f9b34fb, notifications not available (will poll)
+04-29 17:26:42.626 I/SmartSalesConn(21113): 🔌 Persistent GATT session established: 14:C1:9F:D7:E3:F6
+04-29 17:26:42.626 I/SmartSalesConn(21113): 📶 BLE connected, waiting for explicit network observation
+04-29 17:26:42.626 D/SmartSalesConn(21113): 🌐 network query device=CHLE_Intelligent
+04-29 17:26:42.626 I/SmartSalesConn(21113): 📡 queryNetwork ENTRY (in mutex)
+04-29 17:26:42.626 D/SmartSalesConn(21113): 📡 cache skipped for device switch cached=14:C1:9F:D7:E3:EE requested=14:C1:9F:D7:E3:F6
+04-29 17:26:42.627 D/SmartSalesConn(21113): 📡 Starting persistent notification listener for 14:C1:9F:D7:E3:F6
+04-29 17:26:42.627 D/SmartSalesConn(21113): 📤 TX [NetworkQuery]: wifi#address#ip#name (77 69 66 69 23 61 64 64 72 65 73 73 23 69 70 23 6E 61 6D 65)
+04-29 17:26:42.660 D/SmartSalesConn(21113): 📥 RX [Notification]: IP#192.168.0.100 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 30 30)
+04-29 17:26:42.661 D/SmartSalesConn(21113): 📥 RX [Notification]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-29 17:26:42.661 D/SmartSalesConn(21113): ❓ Badge unknown notification: IP#192.168.0.100
+04-29 17:26:42.662 D/SmartSalesConn(21113): 📥 RX [NetworkResponse]: IP#192.168.0.100 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 30 30)
+04-29 17:26:42.662 D/SmartSalesConn(21113): ❓ Badge unknown notification: SD#MstRobot
+04-29 17:26:42.664 D/SmartSalesConn(21113): 📥 RX [NetworkResponse]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-29 17:26:42.665 D/SmartSalesConn(21113): 📡 fresh query, caching IP=192.168.0.100
+04-29 17:26:42.665 D/SmartSalesConn(21113): 📶 state=CONNECTED ip=192.168.0.100
+04-29 17:26:42.665 D/SmartSalesConn(21113): 🔌 connectUsingSession: connected, ip=192.168.0.100 ssid=MstRobot
+04-29 17:26:42.666 D/AudioPipeline(21113): SIM audio drawer entries emitted count=20 downloading=0 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 17:26:42.668 D/SmartSalesConn(21113): 📤 TX [BadgeSignal]: Ver#get (56 65 72 23 67 65 74)
+04-29 17:26:42.688 I/SmartSalesConn(21113): 🧾 Badge firmware version query sent
+04-29 17:26:42.722 D/SmartSalesConn(21113): 📥 RX [Notification]: Ver#1.0.0.1 (56 65 72 23 31 2E 30 2E 30 2E 31)
+04-29 17:26:42.723 I/SmartSalesConn(21113): 🧾 Badge firmware version: 1.0.0.1
+04-29 17:26:42.753 D/SmartSalesConn(21113): 📥 RX [Notification]: tim#get (74 69 6D 23 67 65 74)
+04-29 17:26:42.753 D/SmartSalesConn(21113): ⏰ Badge time sync requested
+04-29 17:26:42.813 I/SmartSalesConn(21113): ⏰ Time sync responded: tim#20260429172642
+04-29 17:26:45.668 D/AudioPipeline(21113): SIM badge sync preflight start trigger=auto
+04-29 17:26:45.668 D/AudioPipeline(21113): 🔎 isReady preflight: start
+04-29 17:26:45.668 D/AudioPipeline(21113): 🌐 resolveBaseUrl: querying badge network status
+04-29 17:26:45.668 D/SmartSalesConn(21113): 🌐 network query device=CHLE_Intelligent
+04-29 17:26:45.668 I/SmartSalesConn(21113): 📡 queryNetwork ENTRY (in mutex)
+04-29 17:26:45.668 D/SmartSalesConn(21113): 📡 CACHED (3042ms old)
+04-29 17:26:45.668 D/SmartSalesConn(21113): 📶 state=CONNECTED ip=192.168.0.100
+04-29 17:26:45.668 D/SmartSalesConn(21113): 🌐 Network status ok device=CHLE_Intelligent ip=192.168.0.100
+04-29 17:26:45.669 D/AudioPipeline(21113): 🌐 resolveBaseUrl: ip=192.168.0.100 badgeSsid=MstRobot phoneSsidForDiag=
+04-29 17:26:45.669 D/AudioPipeline(21113): 🌐 resolveBaseUrl: refreshed http://192.168.0.100:8088
+04-29 17:26:45.669 D/AudioPipeline(21113): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.0.100:8088
+04-29 17:26:45.669 D/SmartSalesConn(21113): BadgeHttpClient.isReachable start url=http://192.168.0.100:8088/
+04-29 17:26:45.876 W/SmartSalesConn(21113): BadgeHttpClient.isReachable failure url=http://192.168.0.100:8088/ error=ConnectException:Failed to connect to /192.168.0.100:8088
+04-29 17:26:45.876 W/AudioPipeline(21113): 🌐 invalidate active endpoint reason=http reachability failed
+04-29 17:26:45.876 D/AudioPipeline(21113): 🔎 isReady preflight: retrying after endpoint refresh
+04-29 17:26:45.876 D/AudioPipeline(21113): 🌐 resolveBaseUrl: querying badge network status
+04-29 17:26:45.877 D/SmartSalesConn(21113): 🌐 network query device=CHLE_Intelligent
+04-29 17:26:45.877 I/SmartSalesConn(21113): 📡 queryNetwork ENTRY (in mutex)
+04-29 17:26:45.877 D/SmartSalesConn(21113): 📡 CACHED (3251ms old)
+04-29 17:26:45.877 D/SmartSalesConn(21113): 📶 state=CONNECTED ip=192.168.0.100
+04-29 17:26:45.877 D/SmartSalesConn(21113): 🌐 Network status ok device=CHLE_Intelligent ip=192.168.0.100
+04-29 17:26:45.877 D/AudioPipeline(21113): 🌐 resolveBaseUrl: ip=192.168.0.100 badgeSsid=MstRobot phoneSsidForDiag=
+04-29 17:26:45.877 D/AudioPipeline(21113): 🌐 resolveBaseUrl: refreshed http://192.168.0.100:8088
+04-29 17:26:45.877 D/AudioPipeline(21113): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.0.100:8088
+04-29 17:26:45.877 D/SmartSalesConn(21113): BadgeHttpClient.isReachable start url=http://192.168.0.100:8088/
+04-29 17:26:45.892 W/SmartSalesConn(21113): BadgeHttpClient.isReachable failure url=http://192.168.0.100:8088/ error=ConnectException:Failed to connect to /192.168.0.100:8088
+04-29 17:26:45.892 W/AudioPipeline(21113): 🌐 invalidate active endpoint reason=http reachability failed
+04-29 17:26:45.892 D/AudioPipeline(21113): 🔎 isReady preflight: result=not-ready baseUrl=http://192.168.0.100:8088
+04-29 17:26:45.892 W/AudioPipeline(21113): 🛜 solid IP + HTTP readiness failure; attempting saved credential replay
+04-29 17:26:45.892 W/SmartSalesConn(21113): 🛜 solid IP + media sync failure; replaying latest saved credential ssid=MstRobot
+04-29 17:26:45.893 I/SmartSalesConn(21113): 🔁 saved credential replay attempt=1/3 source=media_failure ssid=MstRobot
+04-29 17:26:45.893 I/SmartSalesConn(21113): 🔗 provision start device=CHLE_Intelligent ssid=MstRobot
+04-29 17:26:45.893 I/SmartSalesConn(21113): BLE Provision: Step 1 - sending SSID: SD#MstRobot
+04-29 17:26:45.893 D/SmartSalesConn(21113): 📤 TX [SSID]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-29 17:26:46.233 I/SmartSalesConn(21113): BLE Provision: Step 2 - sending password: PD#****
+04-29 17:26:46.234 D/SmartSalesConn(21113): 📤 TX [Password]: PD#**** (<redacted>)
+04-29 17:26:46.324 I/SmartSalesConn(21113): 🔗 provision finished status=success device=CHLE_Intelligent
+04-29 17:26:46.324 I/SmartSalesConn(21113): 🔁 saved credential replay write ok attempt=1 source=media_failure
+04-29 17:26:47.236 D/SmartSalesConn(21113): 📥 RX [Notification]: Bat#71.09% (42 61 74 23 37 31 2E 30 39 25)
+04-29 17:26:47.237 D/SmartSalesConn(21113): ❓ Badge unknown notification: Bat#71.09%
+04-29 17:26:47.955 D/SmartSalesConn(21113): 📥 RX [Notification]: wifi#connect#ok (77 69 66 69 23 63 6F 6E 6E 65 63 74 23 6F 6B)
+04-29 17:26:47.955 D/SmartSalesConn(21113): ❓ Badge unknown notification: wifi#connect#ok
+04-29 17:26:48.526 D/SmartSalesConn(21113): 🌐 network query device=CHLE_Intelligent
+04-29 17:26:48.526 I/SmartSalesConn(21113): 📡 queryNetwork ENTRY (in mutex)
+04-29 17:26:48.527 D/SmartSalesConn(21113): 📤 TX [NetworkQuery]: wifi#address#ip#name (77 69 66 69 23 61 64 64 72 65 73 73 23 69 70 23 6E 61 6D 65)
+04-29 17:26:48.572 D/SmartSalesConn(21113): ⏭️ Network fragment ignored: Ver#1.0.0.1
+04-29 17:26:48.573 D/SmartSalesConn(21113): ⏭️ Network fragment ignored: tim#get
+04-29 17:26:48.573 D/SmartSalesConn(21113): ⏭️ Network fragment ignored: Bat#71.09%
+04-29 17:26:48.573 D/SmartSalesConn(21113): 📥 RX [Notification]: IP#192.168.0.100 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 30 30)
+04-29 17:26:48.573 D/SmartSalesConn(21113): ⏭️ Network fragment ignored: wifi#connect#ok
+04-29 17:26:48.573 D/SmartSalesConn(21113): ❓ Badge unknown notification: IP#192.168.0.100
+04-29 17:26:48.573 D/SmartSalesConn(21113): 📥 RX [Notification]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-29 17:26:48.573 D/SmartSalesConn(21113): 📥 RX [NetworkResponse]: IP#192.168.0.100 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 30 30)
+04-29 17:26:48.573 D/SmartSalesConn(21113): ❓ Badge unknown notification: SD#MstRobot
+04-29 17:26:48.574 D/SmartSalesConn(21113): 📥 RX [NetworkResponse]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-29 17:26:48.574 D/SmartSalesConn(21113): 📡 fresh query, caching IP=192.168.0.100
+04-29 17:26:48.574 D/SmartSalesConn(21113): 📶 state=CONNECTED ip=192.168.0.100
+04-29 17:26:48.575 D/SmartSalesConn(21113): 🔌 Session persisted: 14:C1:9F:D7:E3:F6
+04-29 17:26:48.575 I/SmartSalesConn(21113): 🔁 saved credential replay confirmed online attempt=1 source=media_failure ip=192.168.0.100 ssid=MstRobot
+04-29 17:26:48.575 I/AudioPipeline(21113): 🛜 saved credential replay result after media failure: WifiProvisioned(session=BleSession(peripheralId=14:C1:9F:D7:E3:F6, peripheralName=CHLE_Intelligent, signalStrengthDbm=0, profileId=chle, secureToken=2ba3de2c-6610-4e2e-adc8-a2c7f1efaec4, establishedAtMillis=1777454710263), status=ProvisioningStatus(wifiSsid=MstRobot, handshakeId=network-666200738, credentialsHash=-797596189))
+04-29 17:26:48.575 I/AudioPipeline(21113): 🛜 post-credential readiness grace wait=2000ms attempt=1 runtime=14:C1:9F:D7:E3:F6/efaec4
+04-29 17:26:50.576 D/AudioPipeline(21113): 🌐 resolveBaseUrl: querying badge network status
+04-29 17:26:50.576 D/SmartSalesConn(21113): 🌐 network query device=CHLE_Intelligent
+04-29 17:26:50.576 I/SmartSalesConn(21113): 📡 queryNetwork ENTRY (in mutex)
+04-29 17:26:50.576 D/SmartSalesConn(21113): 📡 CACHED (2050ms old)
+04-29 17:26:50.576 D/SmartSalesConn(21113): 📶 state=CONNECTED ip=192.168.0.100
+04-29 17:26:50.576 D/SmartSalesConn(21113): 🌐 Network status ok device=CHLE_Intelligent ip=192.168.0.100
+04-29 17:26:50.577 D/AudioPipeline(21113): 🌐 resolveBaseUrl: ip=192.168.0.100 badgeSsid=MstRobot phoneSsidForDiag=
+04-29 17:26:50.577 D/AudioPipeline(21113): 🌐 resolveBaseUrl: refreshed http://192.168.0.100:8088
+04-29 17:26:50.577 D/AudioPipeline(21113): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.0.100:8088
+04-29 17:26:50.577 D/SmartSalesConn(21113): BadgeHttpClient.isReachable start url=http://192.168.0.100:8088/
+04-29 17:26:50.810 W/SmartSalesConn(21113): BadgeHttpClient.isReachable failure url=http://192.168.0.100:8088/ error=ConnectException:Failed to connect to /192.168.0.100:8088
+04-29 17:26:50.810 W/AudioPipeline(21113): 🌐 invalidate active endpoint reason=http reachability failed
+04-29 17:26:50.810 D/AudioPipeline(21113): 🔎 isReady preflight: result=not-ready baseUrl=http://192.168.0.100:8088
+04-29 17:26:50.810 I/AudioPipeline(21113): 🛜 post-credential readiness grace wait=3000ms attempt=2 runtime=14:C1:9F:D7:E3:F6/efaec4

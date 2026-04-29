@@ -175,13 +175,36 @@ Closeout must include:
   rendered `media readiness: true`. This confirms the current hardware state is
   HTTP-ready, not HTTP-delayed, so the HTTP-delayed branch remains unproven
   rather than failed.
+- Device evidence active-switch closure — After the user restored two badges,
+  attempted the active-device switch path. Logcat proves registry switch from
+  `...8F:96` to `...E3:F6`, cancellation of outgoing badge downloads for
+  `1C:DB:D4:9B:8F:96`, restored target session
+  `14:C1:9F:D7:E3:F6`, persistent GATT, and transport-connected
+  `ip=192.168.0.100 ssid=MstRobot`. This closes active-device switch L3 and
+  confirms the badge-owned queue cleanup is not only a unit-test claim.
+- Device evidence HTTP-abnormal follow-up — The same switch exposed a real
+  transport-confirmed/HTTP-failed state: network status was connected with
+  `192.168.0.100`, but HTTP reachability to `http://192.168.0.100:8088` failed
+  and audio sync entered saved-credential replay/grace handling. A later UI dump
+  showed `连接后网络检测异常`, `徽章已接入网络，但无法通过 HTTP 访问`, and
+  `徽章 IP：192.168.0.100`. This gives L3 evidence for the user-facing
+  HTTP-abnormal branch, while the exact manager enum `HTTP_DELAYED` remains
+  L1/L2-proven rather than directly logged on-device.
+- Device evidence reconnect after HTTP-abnormal — From the HTTP-abnormal surface,
+  tapped `reconnect`. The ViewModel started at `effectiveState=WIFI_MISMATCH`,
+  `ConnectivityService.reconnect()` returned connected, and the ViewModel ended
+  with `effective=CONNECTED`. Audio sync stayed fenced with
+  `reason=known_http_unreachable`, proving shell reconnection and HTTP media
+  readiness stay separate during recovery.
 
 ## 10. Closeout
 
 - **Status**: success
 - **Tracker summary**: Closed HTTP-delayed readiness and badge-owned manual queue
-  deltas with focused/full unit tests; L3 restored-badge, HTTP-ready, and
-  badge-owned audio-sync ingress evidence captured.
+  deltas with focused/full unit tests; L3 restored-badge, terminal import,
+  active-device switch fencing, HTTP-abnormal UI, and reconnect-vs-media
+  fencing evidence captured. The exact on-device manager enum name remains
+  covered by L1/L2 tests rather than direct runtime telemetry.
 - **Files changed**:
   - `data/connectivity/src/main/java/com/smartsales/prism/domain/connectivity/BadgeManagerStatus.kt`
   - `app-core/src/main/java/com/smartsales/prism/data/connectivity/RealConnectivityBridge.kt`
@@ -279,6 +302,27 @@ run-07-isready-probe-pull.txt
 run-07-isready-probe-ui.xml
 run-07-isready-probe.png
 run-07-l3-verdict.md
+run-08-active-switch-attempt-dump.txt
+run-08-active-switch-attempt-logcat.txt
+run-08-active-switch-attempt-pull.txt
+run-08-active-switch-attempt-ui.xml
+run-08-active-switch-attempt.png
+run-08-l3-verdict.md
+run-09-post-switch-isready-dump.txt
+run-09-post-switch-isready-logcat.txt
+run-09-post-switch-isready-pull.txt
+run-09-post-switch-isready-ui.xml
+run-09-post-switch-isready.png
+run-09-l3-verdict.md
+run-10-adb-devices.txt
+run-10-entry-pull.txt
+run-10-entry-ui.xml
+run-10-entry.png
+run-10-reconnect-logcat.txt
+run-10-reconnect-pull.txt
+run-10-reconnect-ui.xml
+run-10-reconnect.png
+run-10-l3-verdict.md
 ```
 
 - **Hardware evidence**: Resumed and partially accepted. `run-01-*` proves clean
@@ -290,11 +334,14 @@ run-07-l3-verdict.md
   download was detected, and duplicate sync/download work was skipped.
   `run-04-*` proves the active transfer remained in progress after another
   bounded wait. `run-05-*` proves terminal UI import for `2speakerTesting.wav`.
-  `run-06-*` proves active-device switch is blocked in the current hardware
-  state because only one registered badge is present. `run-07-*` proves the
-  current badge HTTP endpoint is ready (`code=200`, `media readiness: true`),
-  so the HTTP-delayed branch remains unproven because the hardware state is not
-  delayed.
+  `run-06-*` records an earlier active-switch blocker with one registered row.
+  `run-07-*` proves the earlier current badge endpoint was HTTP-ready
+  (`code=200`, `media readiness: true`). `run-08-*` closes the active-device
+  switch branch after the user restored two badges, including outgoing-download
+  cancellation and target reconnect. `run-09-*` captures the human-visible
+  HTTP-abnormal panel for badge IP `192.168.0.100`. `run-10-*` proves reconnect
+  can restore shell connectivity while audio sync remains fenced by
+  `known_http_unreachable`.
 - **Code delta transparency**:
 
 | Area | Summary |
@@ -307,8 +354,8 @@ run-07-l3-verdict.md
 | Duplication/dead code | No dead-code removal claim is made. Filename-only queue identity was replaced, but no broad sync dedupe rewrite or reachability sweep was attempted. |
 | Blast radius | Touched the connectivity domain/bridge/ViewModel and SIM audio repository sync path plus focused tests. Large-file pressure was contained, not decomposed; `SimAudioRepositorySyncSupport.kt` grew to make ownership explicit. |
 | Tests added/changed | Bridge test protects HTTP-delayed mapping; ViewModel test protects shell-connected plus manager-HTTP-delayed coexistence; sync-support test protects wrong-badge fencing; namespace/live-observation tests were repaired to match current harness behavior. |
-| Runtime evidence | L3 proved restored badge session, BLE/GATT, HTTP-ready `/list`, badge-owned download start, duplicate manual re-sync fencing, and terminal UI import. L3 did not prove HTTP-delayed readiness or active-device switch fencing because those branches did not naturally occur. |
-| Residual risk/debt | HTTP-delayed remains unproven on hardware. Active-device switch is blocked by the current one-registered-badge state and remains L1/L2-covered, not full hardware proof. |
+| Runtime evidence | L3 proved restored badge session, BLE/GATT, HTTP-ready `/list`, badge-owned download start, duplicate manual re-sync fencing, terminal UI import, active-device switch fencing, HTTP-abnormal UI, and reconnect-vs-media fencing. |
+| Residual risk/debt | The exact `HTTP_DELAYED` manager enum is still L1/L2-proven rather than directly logged on-device. The HTTP-abnormal UI and reachability-failure logs prove the branch behavior, but not the internal enum name at runtime. |
 | Net judgment | Cleaner: two implicit runtime contracts were made explicit with focused tests and partial-but-real device evidence, without widening into a broad connectivity/audio rewrite. |
 
 - **Pre-BAKE codebase score**: 3/5. The incoming connectivity/audio slice was
@@ -317,11 +364,12 @@ run-07-l3-verdict.md
   identity plus late active-device checks.
 - **Work score**: 4/5. The sprint closed the two intended deltas with focused
   code changes, targeted tests, full unit regression, build verification, and
-  bounded L3 evidence including terminal import; not 5/5 because HTTP-delayed
-  and active-device switch hardware branches remained unexercised.
+  bounded L3 evidence including terminal import, active switch, HTTP-abnormal UI,
+  and reconnect fencing; not 5/5 because the exact `HTTP_DELAYED` manager enum
+  was not directly logged on-device.
 - **Baked-codebase score**: 4/5. The resulting connectivity/audio slice is
   cleaner because readiness and queue ownership are explicit, but it is not
-  5/5 because large-file pressure remains and some important branches are still
-  test-proven rather than hardware-proven.
+  5/5 because large-file pressure remains and the internal manager enum still
+  needs easier runtime observability.
 - **Lesson proposals**: none
 - **CHANGELOG line**: none proposed; internal BAKE validation sprint.

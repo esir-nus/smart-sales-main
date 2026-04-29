@@ -1,0 +1,11 @@
+--------- beginning of main
+04-29 17:28:52.744 D/ConnectivityVM(21113): reconnect() called, current effectiveState=WIFI_MISMATCH
+04-29 17:28:52.744 D/ConnectivityVM(21113): Set override=RECONNECTING, calling service.reconnect()
+04-29 17:28:52.744 D/ConnectivityService(21113): reconnect() called, initial state: Syncing(session=BleSession(peripheralId=14:C1:9F:D7:E3:F6, peripheralName=CHLE_Intelligent, signalStrengthDbm=0, profileId=chle, secureToken=2ba3de2c-6610-4e2e-adc8-a2c7f1efaec4, establishedAtMillis=1777454710263), status=ProvisioningStatus(wifiSsid=MstRobot, handshakeId=network-666200738, credentialsHash=-797596189), lastHeartbeatAtMillis=1777454932488)
+04-29 17:28:52.747 D/AudioPipeline(21113): SIM badge sync: downloads cancelled for disconnect badgeMac=14:C1:9F:D7:E3:F6 pendingResume=0
+04-29 17:28:52.756 D/AudioPipeline(21113): SIM audio drawer entries emitted count=20 downloading=0 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 17:28:53.422 D/AudioPipeline(21113): SIM audio drawer entries emitted count=20 downloading=0 queued=0 holding=0 maxDownloadProgress=0.0
+04-29 17:28:53.422 D/ConnectivityService(21113): reconnect() result: com.smartsales.prism.domain.connectivity.ReconnectResult$Connected@e77ed6b, current state: WifiProvisioned(session=BleSession(peripheralId=14:C1:9F:D7:E3:F6, peripheralName=CHLE_Intelligent, signalStrengthDbm=0, profileId=chle, secureToken=2ba3de2c-6610-4e2e-adc8-a2c7f1efaec4, establishedAtMillis=1777454710263), status=ProvisioningStatus(wifiSsid=MstRobot, handshakeId=network-666200738, credentialsHash=-797596189))
+04-29 17:28:53.422 D/ConnectivityVM(21113): service.reconnect() returned: com.smartsales.prism.domain.connectivity.ReconnectResult$Connected@e77ed6b
+04-29 17:28:53.422 D/ConnectivityVM(21113): After reconnect: override=null, effective=CONNECTED
+04-29 17:28:56.423 I/AudioPipeline(21113): SIM badge auto sync suppressed runtime=14:C1:9F:D7:E3:F6/efaec4 baseUrl=http://192.168.0.100:8088 reason=known_http_unreachable

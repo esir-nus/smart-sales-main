@@ -1,0 +1,3 @@
+--------- beginning of main
+04-29 17:27:27.286 D/SmartSalesConn(21113): 📥 RX [Notification]: Bat#71.45% (42 61 74 23 37 31 2E 34 35 25)
+04-29 17:27:27.287 D/SmartSalesConn(21113): ❓ Badge unknown notification: Bat#71.45%

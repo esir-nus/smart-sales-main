@@ -85,6 +85,10 @@ tracks gaps explicitly.
 - Active-device change during list/download: discard stale list results, cancel
   manual queue work where possible, reject queued cross-device work before it
   calls `downloadRecording()`, and reject cross-device downloads before import.
+- Active-device change during active `rec#` auto-download: cancel the outgoing
+  badge's active auto-download job before the incoming badge media path can use
+  the bridge; do not send `Command#end` for the cancelled outgoing job through
+  the incoming badge connection.
 - Same active badge `Ready -> Disconnected/Connecting` during download: cancel
   active HTTP work, keep interrupted entries visually held, then requeue only the
   interrupted filenames on same-badge `Ready`; do not treat
@@ -141,6 +145,12 @@ connectivity and audio owners.
   jobs by `(badgeMac, filename)`, suppresses duplicate active jobs, and exposes
   disconnect cancellation so the repository can include active `rec#` filenames
   in same-badge targeted resume.
+- Closed 2026-04-29: `SimAudioRepository` now cancels outgoing active `rec#`
+  auto-download jobs on active-device change before cancelling manual badge
+  queue work. Focused L1/L2 coverage proves a suspended `rec#` download becomes
+  a failed outgoing placeholder and does not send `Command#end` after the badge
+  switch. Physical L3 for a live `rec#` notification interrupted by a switch
+  remains blocked by hardware event availability.
 - Closed 2026-04-29: Sprint 04-a L3 evidence now includes direct runtime
   telemetry for transport-confirmed HTTP delay:
   `managerStatus=HttpDelayed(...) managerState=HTTP_DELAYED`, followed by
@@ -161,7 +171,9 @@ connectivity and audio owners.
   `ConnectivityViewModelTest.managerState maps http delayed while shell
   transport remains connected`, and
   `SimAudioRepositorySyncSupportTest.queued badge download owner prevents wrong
-  badge download after active switch`.
+  badge download after active switch`, and
+  `SimAudioRepositorySyncSupportTest.active device change cancels active rec
+  auto download`.
 - Minimum verification for this contract: prove the BAKE sections exist, prove
   the Sprint 02 gaps are recorded, prove the Cerb docs and interface map cite
   this contract, and capture `git diff --stat` for the scoped docs.

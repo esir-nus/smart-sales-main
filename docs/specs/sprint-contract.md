@@ -69,6 +69,22 @@ cases, god-file worsening, and unproven hardware branches. The three scores may
 differ; a well-run sprint can start from a 2/5 slice and still leave inherited
 structural debt after improvement.
 
+For BAKE implementation or BAKE delta sprints with runtime behavior, apply the
+Complete Fix and Backfill rule:
+
+- L3/device-loop evidence is not only a documentation gate. If it reveals a bug
+  in the behavior the sprint claims, the sprint remains open until the bug is
+  fixed, covered by focused L1/L2 tests, rebuilt/reinstalled where relevant,
+  and re-proven with the same L3 scenario.
+- If the L3 finding affects a shared behavior that future BAKE contracts will
+  rely on, fix it in the current sprint or stop and ask the user to approve a
+  named catch-up sprint. Do not bury it as vague residual debt.
+- If the finding is truly adjacent and does not invalidate the sprint's claim,
+  record it explicitly as an unverified or deferred branch with artifact paths.
+- After the fix, backfill the BAKE contract, sprint ledger, tracker, core-flow
+  gap notes, and relevant interface-map/supporting docs so the docs reflect the
+  repaired code path.
+
 ## Commit Discipline
 
 - **No mid-sprint commits.** The working tree stays dirty across iterations within a sprint. Evidence and ledger entries accumulate in the contract file uncommitted.

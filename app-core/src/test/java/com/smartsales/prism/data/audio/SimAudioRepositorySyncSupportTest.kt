@@ -24,6 +24,7 @@ import com.smartsales.prism.domain.tingwu.TingwuPipeline
 import com.smartsales.prism.service.DownloadServiceOrchestrator
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.CoroutineScope
@@ -557,6 +558,40 @@ class SimAudioRepositorySyncSupportTest {
     }
 
     @Test
+    fun `active device change cancels active rec auto download`() = runTest {
+        bindRuntimeToTestScheduler(testScheduler)
+        val oldBadgeMac = "AA:AA:AA:AA:AA:01"
+        activeDeviceFlow.value = registeredDevice(oldBadgeMac)
+        val autoDownloader = SimBadgeAudioAutoDownloader(connectivityBridge, runtime, orchestrator)
+        SimAudioRepository(runtime, orchestrator, autoDownloader)
+        connectivityBridge.downloadSuspender = { kotlinx.coroutines.awaitCancellation() }
+
+        advanceUntilIdle()
+        connectivityBridge.audioNotifications.emit(
+            RecordingNotification.AudioRecordingReady("rec_20260416_120006.wav")
+        )
+        advanceUntilIdle()
+
+        assertEquals(
+            AudioLocalAvailability.DOWNLOADING,
+            runtime.audioFiles.value.single { it.filename == "rec_20260416_120006.wav" }.localAvailability
+        )
+
+        activeDeviceFlow.value = registeredDevice("BB:BB:BB:BB:BB:02")
+        advanceUntilIdle()
+        connectivityBridge.downloadSuspender = null
+        advanceUntilIdle()
+
+        assertEquals(
+            AudioLocalAvailability.FAILED,
+            runtime.audioFiles.value.single { it.filename == "rec_20260416_120006.wav" }.localAvailability
+        )
+        assertEquals(1, connectivityBridge.calls.count { it == "downloadRecording:rec_20260416_120006.wav" })
+        assertFalse(connectivityBridge.calls.contains("notifyCommandEnd"))
+        runtime.repositoryScope.cancel()
+    }
+
+    @Test
     fun `queued badge download owner prevents wrong badge download after active switch`() = runTest {
         bindRuntimeToTestScheduler(testScheduler)
         val oldBadgeMac = "AA:AA:AA:AA:AA:01"
@@ -889,6 +924,10 @@ class SimAudioRepositorySyncSupportTest {
         var deleteRecordingResults: MutableMap<String, Boolean> = mutableMapOf()
         var downloadSuspender: (suspend () -> Unit)? = null
         var onListRecordings: (suspend () -> Unit)? = null
+        val audioNotifications = MutableSharedFlow<RecordingNotification.AudioRecordingReady>(
+            replay = 0,
+            extraBufferCapacity = 4
+        )
         val calls = mutableListOf<String>()
 
         override suspend fun downloadRecording(
@@ -912,7 +951,8 @@ class SimAudioRepositorySyncSupportTest {
 
         override fun recordingNotifications(): Flow<RecordingNotification> = emptyFlow()
 
-        override fun audioRecordingNotifications(): Flow<RecordingNotification.AudioRecordingReady> = emptyFlow()
+        override fun audioRecordingNotifications(): Flow<RecordingNotification.AudioRecordingReady> =
+            audioNotifications
 
         override fun batteryNotifications(): Flow<Int> = emptyFlow()
 

@@ -132,8 +132,8 @@ Invariants:
 Current implementation assessment:
 
 - `RealDeviceRegistryManager.registerDevice()` does register the new badge and sets `_activeDevice` to the new row.
-- Delivered behavior: the registry remains audio-agnostic, and audio observes `DeviceRegistryManager.activeDevice` to cancel queued and active manual badge downloads when the active MAC changes.
-- Gap: `rec#` auto-download is fenced after download success, but its own launched job is not explicitly cancelled by the manual badge-download queue cancellation path.
+- Delivered behavior: the registry remains audio-agnostic, and audio observes `DeviceRegistryManager.activeDevice` to cancel queued and active manual badge downloads plus active `rec#` auto-download jobs when the active MAC changes.
+- Gap: physical L3 evidence for a live `rec#` notification interrupted by active-device switch remains blocked until the hardware can produce that exact event during a switch window.
 
 The correct behavior is that pairing completion chooses one active badge and all device-bound workers either bind to that badge or cancel before the next active badge is used.
 
@@ -156,8 +156,9 @@ Item status:
 
 Delivered behavior:
 
-- Audio download queue: current manual sync cancellation clears queued filenames on active-device change; target behavior still prefers queue items that carry device identity.
-- Active badge download job: current manual sync cancellation cancels the active badge download job on active-device change.
+- Audio download queue: manual sync queue items carry filename plus owner badge MAC, and active-device change cancels queued work for the outgoing badge.
+- Active badge download job: manual sync cancellation cancels the active badge download job on active-device change.
+- Active `rec#` auto-download job: audio observes active-device change and cancels active `rec#` jobs for the outgoing badge before the incoming badge media path can use the bridge.
 - Ongoing sync preflight/list operation: current sync captures owner badge MAC, discards stale list results if runtime identity changes before queueing, and checks owner MAC again before importing a successful download.
 - BLE heartbeat: handled by `connectUsingSession()` through active transport job cancellation.
 - Notification listener: handled by `connectUsingSession()` through active transport job cancellation.
@@ -167,13 +168,13 @@ Delivered behavior:
 Target behavior:
 
 - Every badge-originated worker, including manual sync queue workers and `rec#` auto-download workers, must bind to a badge MAC/runtime identity from start to terminal state.
-- A stronger queue model should carry badge identity per queued item rather than relying on a global filename set plus runtime checks.
+- Manual queue items carry badge identity per queued item rather than relying on a global filename set plus runtime checks.
 - Active-device switch must cancel or fence all outgoing feature workers before incoming badge media operations can start.
 - Session seeding must preserve durable per-device identity material where that identity is used for runtime ownership or endpoint reuse; generating transient identity material is not a target-state substitute.
 
 Gap:
 
-- `queuedBadgeDownloads` still stores filenames globally, `rec#` auto-download is not explicitly cancelled by active-device switch, and current registry session seeding creates a fresh secure token for the target device. The delivered fences prevent known cross-device imports, but the target flow requires explicit device identity across worker queues and session ownership.
+- Manual queued downloads now carry badge ownership, and active `rec#` auto-download jobs are explicitly cancelled on active-device switch. Current registry session seeding still creates a fresh secure token for the target device, so durable session identity remains the open target-flow gap. Physical L3 evidence for live `rec#` switch cancellation is also still blocked by hardware event availability.
 
 Invariants:
 
@@ -213,7 +214,7 @@ Implementation direction:
 
 Audio should observe `DeviceRegistryManager.activeDevice` through the existing runtime-level dependency and cancel all queued/active badge downloads on MAC change. A later stronger implementation may carry the MAC in each queue item, but the minimal contract for Sprint 02 is cancellation on active-device change plus clear logging. This preserves the dependency direction: audio reads registry state, registry does not import audio.
 
-Delivered behavior: Sprint 02 implementation now satisfies the minimal manual-sync cancellation/fencing rule for queued and active badge downloads. Target behavior keeps the stronger per-item MAC ownership rule open for the BAKE contract and follow-up implementation.
+Delivered behavior: Sprint 04-a implementation now satisfies manual-sync queue ownership, queued/active manual cancellation, and active `rec#` auto-download cancellation on active-device change. The remaining target-flow gap is durable session identity plus physical L3 proof for a live `rec#` notification interrupted by a switch.
 
 ## Section 5 - UI Observation Contract
 

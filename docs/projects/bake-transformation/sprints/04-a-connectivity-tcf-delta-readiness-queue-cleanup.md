@@ -204,6 +204,19 @@ Closeout must include:
   `managerStatus=HttpDelayed(...) managerState=HTTP_DELAYED`, saved-credential
   replay, and final HTTP-ready recovery. This closes the previous L3 caveat
   that the manager enum name was only L1/L2-proven.
+- Complete-fix follow-up — Code/spec audit after the L3 finding found one
+  adjacent bug in the same badge-session boundary: active `rec#` auto-download
+  jobs were cancellable on same-badge disconnect, but not proactively cancelled
+  on active-device switch. Fixed `SimAudioRepository` to cancel the outgoing
+  badge's active `rec#` jobs before manual queue cancellation, and added
+  `SimAudioRepositorySyncSupportTest.active device change cancels active rec
+  auto download`. Focused and adjacent audio regression tests pass. Fresh
+  device loop run 23-26 rebuilt/installed the APK, restored badge
+  `14:C1:9F:D7:E4:06`, proved BLE/GATT, `Ready`, firmware `1.0.0.1`,
+  `/list`, and an auto sync/download attempt for
+  `rec_19700101_000145.wav`; the exact live `rec#` notification interrupted by
+  active-device switch was not available in this hardware window, so that
+  physical branch remains blocked rather than claimed.
 
 ## 10. Closeout
 
@@ -211,12 +224,15 @@ Closeout must include:
 - **Tracker summary**: Closed HTTP-delayed readiness and badge-owned manual queue
   deltas with focused/full unit tests; L3 restored-badge, terminal import,
   active-device switch fencing, HTTP-abnormal UI, reconnect-vs-media fencing,
-  and direct `HTTP_DELAYED` manager enum evidence captured.
+  direct `HTTP_DELAYED` manager enum evidence captured, and code-level active
+  `rec#` switch cancellation added with focused tests. Physical L3 for live
+  `rec#`-during-switch remains blocked by hardware event availability.
 - **Files changed**:
   - `data/connectivity/src/main/java/com/smartsales/prism/domain/connectivity/BadgeManagerStatus.kt`
   - `app-core/src/main/java/com/smartsales/prism/data/connectivity/RealConnectivityBridge.kt`
   - `app-core/src/main/java/com/smartsales/prism/ui/components/connectivity/ConnectivityViewModel.kt`
   - `app-core/src/main/java/com/smartsales/prism/ui/sim/SimAudioDrawerViewModel.kt`
+  - `app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepository.kt`
   - `app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepositoryRuntime.kt`
   - `app-core/src/main/java/com/smartsales/prism/data/audio/SimAudioRepositorySyncSupport.kt`
   - `app-core/src/test/java/com/smartsales/prism/data/connectivity/RealConnectivityBridgeTest.kt`
@@ -225,6 +241,10 @@ Closeout must include:
   - `app-core/src/test/java/com/smartsales/prism/data/audio/SimAudioRepositoryNamespaceTest.kt`
   - `app-core/src/test/java/com/smartsales/prism/ui/sim/SimAudioDrawerLiveObservationTest.kt`
   - `docs/bake-contracts/connectivity-badge-session.md`
+  - `docs/bake-contracts/audio-pipeline.md`
+  - `docs/core-flow/badge-session-lifecycle.md`
+  - `docs/specs/bake-protocol.md`
+  - `docs/specs/sprint-contract.md`
   - `docs/projects/bake-transformation/tracker.md`
   - `docs/projects/bake-transformation/sprints/04-a-connectivity-tcf-delta-readiness-queue-cleanup.md`
   - `docs/projects/bake-transformation/evidence/04-a-connectivity-tcf-delta-readiness-queue-cleanup/`
@@ -348,35 +368,41 @@ run-10-l3-verdict.md
   cancellation and target reconnect. `run-09-*` captures the human-visible
   HTTP-abnormal panel for badge IP `192.168.0.100`. `run-10-*` proves reconnect
   can restore shell connectivity while audio sync remains fenced by
-  `known_http_unreachable`.
+  `known_http_unreachable`. `run-23-*` through `run-26-*` prove the follow-up
+  APK rebuild/install with preserved badge state, restored badge
+  `14:C1:9F:D7:E4:06`, BLE/GATT, firmware `1.0.0.1`, HTTP-ready auto sync,
+  `/list`, and a badge-owned auto download attempt for
+  `rec_19700101_000145.wav`; they do not prove a live `rec#` notification
+  interrupted by active-device switch.
 - **Code delta transparency**:
 
 | Area | Summary |
 |---|---|
-| Contract delta | HTTP-delayed readiness became an explicit domain/UI state instead of being flattened into ready; manual queued downloads now carry explicit badge ownership instead of relying on filename-only identity. |
-| Behavior delta | UI can distinguish transport-connected/media-delayed from fully ready; manual badge sync fences duplicate work while a badge-owned download is already active. |
-| Simplification delta | Queue identity is easier to reason about because owner MAC travels with the queued filename. The readiness model is clearer because HTTP delay is a named state rather than a hidden variant of ready. |
-| Drift corrected | Corrected TCF/contract drift for HTTP-delayed readiness and manual queue ownership. Also repaired test-harness drift around repository mock flows and live drawer observation. |
-| Assumption killed | Killed "transport connected means manager ready" and "filename alone identifies queued badge work." |
+| Contract delta | HTTP-delayed readiness became an explicit domain/UI state instead of being flattened into ready; manual queued downloads now carry explicit badge ownership; active `rec#` auto-download jobs are now explicitly part of active-device switch teardown. |
+| Behavior delta | UI can distinguish transport-connected/media-delayed from fully ready; manual badge sync fences duplicate work while a badge-owned download is already active; switching badges now cancels outgoing active `rec#` jobs before the incoming badge can be used for media work. |
+| Simplification delta | Queue identity is easier to reason about because owner MAC travels with the queued filename. Readiness is clearer because HTTP delay is a named state. `rec#` teardown now uses the same active-device boundary instead of relying only on late success-time fencing. |
+| Drift corrected | Corrected TCF/contract drift for HTTP-delayed readiness, manual queue ownership, and active `rec#` switch cancellation. Also repaired test-harness drift around repository mock flows and live drawer observation. |
+| Assumption killed | Killed "transport connected means manager ready", "filename alone identifies queued badge work", and "late import fencing is enough for active `rec#` work during badge switch." |
 | Duplication/dead code | No dead-code removal claim is made. Filename-only queue identity was replaced, but no broad sync dedupe rewrite or reachability sweep was attempted. |
 | Blast radius | Touched the connectivity domain/bridge/ViewModel and SIM audio repository sync path plus focused tests. Large-file pressure was contained, not decomposed; `SimAudioRepositorySyncSupport.kt` grew to make ownership explicit. |
-| Tests added/changed | Bridge test protects HTTP-delayed mapping; ViewModel test protects shell-connected plus manager-HTTP-delayed coexistence; sync-support test protects wrong-badge fencing; namespace/live-observation tests were repaired to match current harness behavior. |
-| Runtime evidence | L3 proved restored badge session, BLE/GATT, HTTP-ready `/list`, badge-owned download start, duplicate manual re-sync fencing, terminal UI import, active-device switch fencing, HTTP-abnormal UI, and reconnect-vs-media fencing. |
-| Residual risk/debt | The exact `HTTP_DELAYED` manager enum is still L1/L2-proven rather than directly logged on-device. The HTTP-abnormal UI and reachability-failure logs prove the branch behavior, but not the internal enum name at runtime. |
-| Net judgment | Cleaner: two implicit runtime contracts were made explicit with focused tests and partial-but-real device evidence, without widening into a broad connectivity/audio rewrite. |
+| Tests added/changed | Bridge test protects HTTP-delayed mapping; ViewModel test protects shell-connected plus manager-HTTP-delayed coexistence; sync-support tests protect wrong-badge manual queue fencing and active `rec#` cancellation on badge switch; namespace/live-observation tests were repaired to match current harness behavior. |
+| Runtime evidence | L3 proved restored badge session, BLE/GATT, HTTP-ready `/list`, badge-owned download start, duplicate manual re-sync fencing, terminal UI import, active-device switch fencing, HTTP-abnormal UI, reconnect-vs-media fencing, and direct `HTTP_DELAYED` manager mapping. Follow-up L3 proved the rebuilt APK still restores the badge and runs auto sync/download, but did not produce the exact live `rec#` switch-cancel event. |
+| Residual risk/debt | Physical L3 for live `rec#` notification interrupted by active-device switch remains blocked by hardware event availability. Large-file pressure remains in the SIM audio sync support tests and repository support classes. |
+| Net judgment | Cleaner: three implicit runtime contracts were made explicit with focused tests and real device evidence where hardware allowed, without widening into a broad connectivity/audio rewrite. |
 
 - **Pre-BAKE codebase score**: 3/5. The incoming connectivity/audio slice was
   functional and battle-tested enough to map, but it hid important contract
   truth by flattening HTTP-delayed readiness and relying on filename-only queue
   identity plus late active-device checks.
-- **Work score**: 4/5. The sprint closed the two intended deltas with focused
-  code changes, targeted tests, full unit regression, build verification, and
-  bounded L3 evidence including terminal import, active switch, HTTP-abnormal UI,
-  and reconnect fencing; not 5/5 because the exact `HTTP_DELAYED` manager enum
-  was not directly logged on-device.
+- **Work score**: 4/5. The sprint closed the two intended deltas and one
+  L3-revealed adjacent `rec#` teardown gap with focused code changes, targeted
+  tests, full unit regression, build verification, and bounded L3 evidence
+  including terminal import, active switch, HTTP-abnormal UI, direct
+  `HTTP_DELAYED` mapping, and reconnect fencing; not 5/5 because the exact live
+  `rec#` switch-cancel branch could not be physically produced.
 - **Baked-codebase score**: 4/5. The resulting connectivity/audio slice is
-  cleaner because readiness and queue ownership are explicit, but it is not
-  5/5 because large-file pressure remains and the internal manager enum still
-  needs easier runtime observability.
+  cleaner because readiness, queue ownership, and active `rec#` teardown are
+  explicit, but it is not 5/5 because large-file pressure remains and live
+  hardware coverage still has event-dependent holes.
 - **Lesson proposals**: none
 - **CHANGELOG line**: none proposed; internal BAKE validation sprint.

@@ -188,7 +188,33 @@ this section may say so explicitly and be otherwise empty.
 
 The northstar doc defines the target state. Getting there is a separate transformation project run through the harness: sprint contracts authored by Claude, operated by Codex, evidenced per harness evidence classes, gated by the user at close.
 
-### 6.1 Code Delta Transparency
+### 6.1 Complete Fix and Backfill Rule
+
+BAKE transformation does not use runtime evidence only to label gaps. When L3
+device-loop evidence reveals a real bug in the behavior a BAKE sprint claims or
+future BAKE contracts will rely on, the operator must treat the bug as part of
+the sprint's completion work unless the user explicitly splits it into a new
+catch-up sprint.
+
+The close path is:
+
+1. Capture the failing branch with the deterministic device-loop protocol.
+2. If logs are insufficient, add the smallest targeted telemetry and rerun the
+   same L3 scenario before changing behavior.
+3. Fix the implementation branch that caused the failed runtime claim.
+4. Add or update focused L1/L2 tests for the corrected branch.
+5. Rebuild, reinstall or cold-launch as appropriate, and rerun the same L3
+   scenario until it passes, blocks on hardware, or hits the declared stop
+   criteria.
+6. Backfill the BAKE contract, core-flow gap notes, sprint ledger, tracker, and
+   any relevant interface-map or supporting docs so the documents describe the
+   repaired behavior, not the pre-fix assumption.
+
+Adjacent findings that do not affect the sprint's claim may still become
+follow-up work, but they must be named as unverified or deferred branches. A
+known product-path bug must not be hidden as a harmless documentation gap.
+
+### 6.2 Code Delta Transparency
 
 Any BAKE sprint that changes code must close with an explicit code-delta
 transparency table. This is required even when the implementation is small.

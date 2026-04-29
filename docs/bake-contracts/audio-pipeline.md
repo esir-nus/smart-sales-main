@@ -102,8 +102,9 @@ beneath this verified BAKE implementation record.
 - Same-badge disconnect during manual or `rec#` download: cancel active HTTP
   work, keep interrupted placeholder recovery state, and target-resume from
   byte zero after reconnect.
-- Device switch during download: cancel active badge downloads and mark
-  interrupted placeholders as failed for the old active badge.
+- Device switch during manual or `rec#` download: cancel active outgoing badge
+  downloads and mark interrupted placeholders as failed for the old active
+  badge.
 - Transcription requested for non-ready audio: fail safely without a Tingwu job.
 - Tingwu submit, observe, upload, result-link fetch, or provider payload failure:
   preserve explicit failure/degraded state and do not fabricate artifacts.
@@ -177,9 +178,11 @@ and session persistence.
   transcript-derived degradation language.
 - Gap: canonical valves remain ahead of delivered telemetry. Delivered logs do
   not yet prove every core-flow checkpoint or provider boundary.
-- Gap: runtime evidence is missing for physical badge manual sync, `rec#`,
-  `log#`, BLE disconnect/resume, foreground download survival, provider-network
-  Tingwu behavior, and installed drawer/chat UI.
+- Gap: runtime evidence has proven physical badge manual sync/list/download
+  ingress and installed drawer terminal import in Sprint 04-a, but is still
+  missing for live `rec#` notification auto-download, `log#`, BLE
+  disconnect/resume, foreground download survival, provider-network Tingwu
+  behavior, and installed drawer/chat UI beyond the badge-sync surface.
 
 ## Test Contract
 

@@ -46,8 +46,10 @@ class SimAudioRepository @Inject constructor(
             var previousMac = activeDevice.value?.macAddress
             activeDevice.collect { device ->
                 val currentMac = device?.macAddress
-                if (previousMac != null && currentMac != previousMac) {
-                    syncSupport.cancelAllBadgeDownloads(previousMac)
+                val previousBadgeMac = previousMac
+                if (previousBadgeMac != null && currentMac != previousBadgeMac) {
+                    autoDownloader.cancelDownloadsForDisconnect(previousBadgeMac)
+                    syncSupport.cancelAllBadgeDownloads(previousBadgeMac)
                 }
                 previousMac = currentMac
             }

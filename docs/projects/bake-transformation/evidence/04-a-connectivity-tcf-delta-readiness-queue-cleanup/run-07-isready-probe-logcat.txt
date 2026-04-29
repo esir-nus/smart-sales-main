@@ -1,0 +1,8 @@
+--------- beginning of main
+04-29 17:22:02.816 D/AudioPipeline(21113): 🔎 isReady preflight: start
+04-29 17:22:02.817 D/AudioPipeline(21113): 🌐 resolveBaseUrl: reusing active endpoint http://192.168.0.102:8088
+04-29 17:22:02.817 D/AudioPipeline(21113): 🔎 isReady preflight: checking reachability baseUrl=http://192.168.0.102:8088
+04-29 17:22:02.817 D/SmartSalesConn(21113): BadgeHttpClient.isReachable start url=http://192.168.0.102:8088/
+04-29 17:22:05.713 D/SmartSalesConn(21113): BadgeHttpClient.isReachable response url=http://192.168.0.102:8088/ code=200 reachable=true
+04-29 17:22:05.714 D/AudioPipeline(21113): 🔎 isReady preflight: result=ready baseUrl=http://192.168.0.102:8088
+04-29 17:22:05.714 I/ConnectivityVM(21113): debug media readiness result=true

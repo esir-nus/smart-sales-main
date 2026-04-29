@@ -158,6 +158,23 @@ Closeout must include:
   original active transfer (`downloading=1 queued=0 holding=0`) and no terminal
   import success/failure; terminal import remains unverified rather than
   claimed.
+- Device evidence terminal-import follow-up — Rechecked the drawer after the
+  long-running badge download. `2speakerTesting.wav` now appears as a normal
+  imported row with `右滑开始转写 >>>`, and the drawer count is `20 项`. The exact
+  terminal import log line had aged out of filtered logcat, so the proof is UI
+  terminal state plus the prior run-02 through run-04 lineage for the same file.
+- Device evidence switch-branch check — Opened badge management to see whether
+  active-device switch could be exercised. The surface shows only one registered
+  badge row (`CHLE_Intelligent`, `默认`) and no second registered badge to switch
+  to; it also shows disconnected/isolation state (`不在范围内`, `设备断开 — 网络可能正在隔离设备`).
+  Active-device switch remains blocked without pairing/restoring a second badge.
+  HTTP-delayed remains unproven because the visible state is disconnected, not
+  transport-confirmed/media-delayed.
+- Device evidence HTTP-readiness probe — Ran the badge-management `isReady`
+  debug probe. It checked `http://192.168.0.102:8088`, received HTTP 200, and
+  rendered `media readiness: true`. This confirms the current hardware state is
+  HTTP-ready, not HTTP-delayed, so the HTTP-delayed branch remains unproven
+  rather than failed.
 
 ## 10. Closeout
 
@@ -244,6 +261,24 @@ run-04-post-resync-wait-logcat.txt
 run-04-post-resync-wait-pull.txt
 run-04-post-resync-wait-ui.xml
 run-04-post-resync-wait.png
+run-05-l3-verdict.md
+run-05-terminal-import-dump.txt
+run-05-terminal-import-logcat.txt
+run-05-terminal-import-pull.txt
+run-05-terminal-import-ui.xml
+run-05-terminal-import.png
+run-06-badge-management-open-dump.txt
+run-06-badge-management-open-logcat.txt
+run-06-badge-management-open-pull.txt
+run-06-badge-management-open-ui.xml
+run-06-badge-management-open.png
+run-06-l3-verdict.md
+run-07-isready-probe-dump.txt
+run-07-isready-probe-logcat.txt
+run-07-isready-probe-pull.txt
+run-07-isready-probe-ui.xml
+run-07-isready-probe.png
+run-07-l3-verdict.md
 ```
 
 - **Hardware evidence**: Resumed and partially accepted. `run-01-*` proves clean
@@ -254,9 +289,12 @@ run-04-post-resync-wait.png
   the badge download is already active: the ingress was tapped, the active
   download was detected, and duplicate sync/download work was skipped.
   `run-04-*` proves the active transfer remained in progress after another
-  bounded wait. Terminal audio import was not observed before the bounded
-  captures ended, and the HTTP-delayed branch did not occur because badge HTTP
-  was ready.
+  bounded wait. `run-05-*` proves terminal UI import for `2speakerTesting.wav`.
+  `run-06-*` proves active-device switch is blocked in the current hardware
+  state because only one registered badge is present. `run-07-*` proves the
+  current badge HTTP endpoint is ready (`code=200`, `media readiness: true`),
+  so the HTTP-delayed branch remains unproven because the hardware state is not
+  delayed.
 - **Code delta transparency**:
 
 | Area | Summary |
@@ -269,8 +307,8 @@ run-04-post-resync-wait.png
 | Duplication/dead code | No dead-code removal claim is made. Filename-only queue identity was replaced, but no broad sync dedupe rewrite or reachability sweep was attempted. |
 | Blast radius | Touched the connectivity domain/bridge/ViewModel and SIM audio repository sync path plus focused tests. Large-file pressure was contained, not decomposed; `SimAudioRepositorySyncSupport.kt` grew to make ownership explicit. |
 | Tests added/changed | Bridge test protects HTTP-delayed mapping; ViewModel test protects shell-connected plus manager-HTTP-delayed coexistence; sync-support test protects wrong-badge fencing; namespace/live-observation tests were repaired to match current harness behavior. |
-| Runtime evidence | L3 proved restored badge session, BLE/GATT, HTTP-ready `/list`, badge-owned download start, and duplicate manual re-sync fencing. L3 did not prove HTTP-delayed readiness or active-device switch fencing because those branches did not naturally occur. |
-| Residual risk/debt | Terminal audio import was still in progress during bounded captures. HTTP-delayed and active-device switch branches remain L1/L2-covered or bounded-L3-unverified, not full hardware proof. |
+| Runtime evidence | L3 proved restored badge session, BLE/GATT, HTTP-ready `/list`, badge-owned download start, duplicate manual re-sync fencing, and terminal UI import. L3 did not prove HTTP-delayed readiness or active-device switch fencing because those branches did not naturally occur. |
+| Residual risk/debt | HTTP-delayed remains unproven on hardware. Active-device switch is blocked by the current one-registered-badge state and remains L1/L2-covered, not full hardware proof. |
 | Net judgment | Cleaner: two implicit runtime contracts were made explicit with focused tests and partial-but-real device evidence, without widening into a broad connectivity/audio rewrite. |
 
 - **Pre-BAKE codebase score**: 3/5. The incoming connectivity/audio slice was
@@ -279,8 +317,8 @@ run-04-post-resync-wait.png
   identity plus late active-device checks.
 - **Work score**: 4/5. The sprint closed the two intended deltas with focused
   code changes, targeted tests, full unit regression, build verification, and
-  bounded L3 evidence; not 5/5 because key hardware branches remained
-  unexercised.
+  bounded L3 evidence including terminal import; not 5/5 because HTTP-delayed
+  and active-device switch hardware branches remained unexercised.
 - **Baked-codebase score**: 4/5. The resulting connectivity/audio slice is
   cleaner because readiness and queue ownership are explicit, but it is not
   5/5 because large-file pressure remains and some important branches are still

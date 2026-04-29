@@ -13,6 +13,9 @@
 - **[修复] 徽章切换时 rec 自动下载取消链路** — 修复切换徽章时旧 rec 自动下载仍可能继续执行的问题，补充 device-loop 入口、连接调试卡片、logcat/UI 证据，并同步 audio-pipeline、connectivity-badge-session 与 badge session core-flow 契约。
 - **[维护] Connectivity BAKE delta L3 证据闭环** — 闭合 connectivity TCF delta readiness queue cleanup，补充终端导入、徽章管理、`isReady` 探测、活跃徽章切换、HTTP delayed 探测与重连等 L3 logcat/UI 证据，并更新 BAKE protocol、sprint contract 与 connectivity 合同。
 - **[新增] BAKE score trend dashboard** — 仪表板渲染脚本新增 BAKE score 趋势输出，生成 `docs/projects/dashboard/bake-scores.html`，在项目 dashboard 中加入 score view 链接与趋势展示。
+- **[维护] UI polish 连接治理 sprint 启动** — 新增 registry-gated reconnect 与 default-first BLE priority sprint 合同，闭合 Sprint 03 并用注册表状态阻止陈旧连接在重启后误触发重连。
+- **[新增] 默认优先 BLE 与 L2.5 调试入口** — 默认优先徽章选择策略落地到注册表管理，新增确定性的 L2.5 BLE debug ingress、debug mode store 与 device-loop 证据记录，覆盖 stale launch、manual/default priority 与双徽章切换场景。
+- **[修复] 连接卡片顺序与调试面板可见性** — 稳定连接面板卡片排序，避免切换徽章时卡片位置跳动；调试入口统一受 debug mode gate 控制，并补充 Compose 结构测试、logcat、UI XML 与截图证据。
 
 ### 2026-04-28
 

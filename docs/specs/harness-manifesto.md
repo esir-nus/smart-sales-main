@@ -125,6 +125,7 @@ The first proven engine, grounded in the Harmony scheduler slice experiment (`do
 
 **Evaluator verifies** (by evidence class):
 - `platform-runtime`: agent operates the **Deterministic Device-Loop Protocol** (`docs/specs/device-loop-protocol.md`) on the declared lane. Compile success is not runtime proof; cold-relaunch plus per-joint log capture (Android `adb logcat` or HarmonyOS `hdc shell hilog`) is the minimum bar.
+- `platform-runtime/L2.5`: deterministic synthetic ingress on an installed debug build. The debug control must enter the same internal boundary as the real upstream signal, use fixed fixtures, and emit `[L2.5][BEGIN]`, `[L2.5][ASSERT]`, and `[L2.5][END] result=PASS` telemetry. This can validate app-side dataflow with near-L3 fidelity, but it is not authentic physical hardware evidence.
 - `contract-test`: agent runs test suite, verifies typed mutations match contract
 - `ui-visible`: agent requests human operator to supply real-device screenshots -- the agent cannot see phone pixels, the operator is the evaluator's eyes
 

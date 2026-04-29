@@ -249,6 +249,44 @@ class RealDeviceRegistryManagerTest {
         assertEquals(reconnectCallsAfterLaunch, deviceManager.forceReconnectCalls)
     }
 
+    @Test
+    fun `debug L25 default-priority scenario returns deterministic pass result`() = runTest(dispatcher) {
+        val result = manager.debugRunBleDetectionL25Scenario(
+            DebugBleDetectionL25Scenario.DefaultPriorityDualAdvertise
+        )
+
+        requireNotNull(result)
+        assertEquals("L2.5", result.evidenceClass)
+        assertEquals("CONNECTIVITY_DEFAULT_PRIORITY_DUAL_ADVERTISE", result.scenarioId)
+        assertEquals(result.defaultMac, result.expectedSelectedMac)
+        assertEquals(result.defaultMac, result.selectedMac)
+        assertTrue(result.defaultBleDetected)
+        assertTrue(result.activeBleDetected)
+        assertFalse(result.manuallyDisconnectedDefault)
+        assertTrue(result.passed)
+        assertEquals(result.defaultMac, manager.activeDevice.value?.macAddress)
+        assertEquals(result.defaultMac, deviceManager.forceReconnectSession?.peripheralId)
+    }
+
+    @Test
+    fun `debug L25 manual-default scenario suppresses default deterministically`() = runTest(dispatcher) {
+        val result = manager.debugRunBleDetectionL25Scenario(
+            DebugBleDetectionL25Scenario.ManualDefaultSuppression
+        )
+
+        requireNotNull(result)
+        assertEquals("L2.5", result.evidenceClass)
+        assertEquals("CONNECTIVITY_MANUAL_DEFAULT_SUPPRESSION", result.scenarioId)
+        assertEquals(result.activeMac, result.expectedSelectedMac)
+        assertEquals(result.activeMac, result.selectedMac)
+        assertTrue(result.defaultBleDetected)
+        assertTrue(result.activeBleDetected)
+        assertTrue(result.manuallyDisconnectedDefault)
+        assertTrue(result.passed)
+        assertEquals(result.activeMac, manager.activeDevice.value?.macAddress)
+        assertEquals(1, deviceManager.forceReconnectCalls)
+    }
+
     private fun device(
         macAddress: String,
         name: String,

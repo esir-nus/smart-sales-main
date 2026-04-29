@@ -15,6 +15,8 @@ import com.smartsales.prism.domain.connectivity.UpdateResult
 import com.smartsales.prism.domain.connectivity.WavDownloadResult
 import com.smartsales.prism.domain.connectivity.WifiConfigResult
 import com.smartsales.prism.domain.connectivity.WifiRepairEvent
+import com.smartsales.prism.ui.debug.DebugModeStore
+import com.smartsales.prism.ui.theme.InMemorySharedPreferences
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -61,7 +63,8 @@ class ConnectivityViewModelTest {
         connectivityService = service,
         connectivityBridge = bridge,
         registryManager = FakeDeviceRegistryManager(),
-        promptCoordinator = promptCoordinator
+        promptCoordinator = promptCoordinator,
+        debugModeStore = DebugModeStore(InMemorySharedPreferences())
     )
 
     @Test

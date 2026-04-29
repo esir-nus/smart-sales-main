@@ -29,6 +29,7 @@ Full-app settings and profile management overlay. Accessed from the main profile
 │  § Preferences                                      │
 │    [ Theme: Dark / Light / System ]                 │
 │    [ AI Lab ]                                       │
+│    [ Debug Mode ] (debug builds only)               │
 │    [ Message Notifications ]                        │
 ├─────────────────────────────────────────────────────┤
 │  § Device Control                                   │
@@ -54,7 +55,7 @@ Full-app settings and profile management overlay. Accessed from the main profile
 | Section | Contents |
 |---------|----------|
 | **Profile Card** | Avatar, Name, Position, Metadata Chips, Edit |
-| **Preferences** | Theme, AI Lab, Message Notifications |
+| **Preferences** | Theme, AI Lab, Debug Mode in debug builds, Message Notifications |
 | **Device Control** | Badge Voice Volume |
 | **Storage** | Used Space, Clear Cache |
 | **Security** | Change Password |
@@ -70,6 +71,8 @@ Full-app settings and profile management overlay. Accessed from the main profile
 - `Device Control` currently contains one real row: `徽章语音音量`
 - badge voice volume is persisted locally, but the badge command is sent only when the user releases the slider
 - duplicate voice-volume writes are skipped only after the same value was confirmed as written to the badge; a disconnected/no-op attempt must remain retryable
+- debug builds expose a persisted `调试模式` preference that controls whether page-local debug and simulation controls are visible; release builds must not show the toggle or the controls
+- debug controls that claim L2.5 must show deterministic scenario labels and emit assertion telemetry; they validate app-side dataflow only and must not be described as authentic physical badge evidence
 
 ## Theme Behavior
 

@@ -9,6 +9,7 @@ import com.smartsales.prism.domain.notification.NotificationPriority
 import com.smartsales.prism.domain.notification.NotificationService
 import com.smartsales.prism.domain.notification.PrismNotificationChannel
 import com.smartsales.prism.domain.repository.UserProfileRepository
+import com.smartsales.prism.ui.debug.DebugModeStore
 import com.smartsales.prism.ui.theme.PrismThemeMode
 import com.smartsales.prism.ui.theme.ThemePreferenceStore
 import kotlinx.coroutines.Dispatchers
@@ -56,6 +57,7 @@ class UserCenterViewModelTest {
             notificationService,
             themeStore,
             voiceVolumeStore,
+            DebugModeStore(InMemorySharedPreferences()),
             connectionManager
         )
 
@@ -74,12 +76,35 @@ class UserCenterViewModelTest {
             notificationService,
             themeStore,
             voiceVolumeStore,
+            DebugModeStore(InMemorySharedPreferences()),
             connectionManager
         )
 
         viewModel.setThemeMode(PrismThemeMode.LIGHT)
 
         assertEquals(PrismThemeMode.LIGHT, viewModel.themeMode.value)
+    }
+
+    @Test
+    fun `setDebugModeEnabled updates debug mode flow`() {
+        val repository = FakeUserProfileRepository()
+        val notificationService = FakeNotificationService()
+        val themeStore = ThemePreferenceStore(InMemorySharedPreferences())
+        val voiceVolumeStore = VoiceVolumePreferenceStore(InMemorySharedPreferences())
+        val debugModeStore = DebugModeStore(InMemorySharedPreferences())
+        val connectionManager = FakeDeviceConnectionManager()
+        val viewModel = UserCenterViewModel(
+            repository,
+            notificationService,
+            themeStore,
+            voiceVolumeStore,
+            debugModeStore,
+            connectionManager
+        )
+
+        viewModel.setDebugModeEnabled(true)
+
+        assertEquals(true, viewModel.debugModeEnabled.value)
     }
 
     @Test
@@ -94,6 +119,7 @@ class UserCenterViewModelTest {
             notificationService,
             themeStore,
             voiceVolumeStore,
+            DebugModeStore(InMemorySharedPreferences()),
             connectionManager
         )
         val collectionJob = backgroundScope.launch { viewModel.profile.collect { } }
@@ -132,6 +158,7 @@ class UserCenterViewModelTest {
             notificationService,
             themeStore,
             voiceVolumeStore,
+            DebugModeStore(InMemorySharedPreferences()),
             connectionManager
         )
 
@@ -159,6 +186,7 @@ class UserCenterViewModelTest {
             notificationService,
             themeStore,
             voiceVolumeStore,
+            DebugModeStore(InMemorySharedPreferences()),
             connectionManager
         )
 

@@ -1,0 +1,56 @@
+--------- beginning of main
+04-29 20:41:23.592 I/SmartSalesConn( 5644): [DebugSim] seeded default-first registry default=14:C1:9F:D7:E3:EE active=14:C1:9F:D7:E4:06
+04-29 20:41:23.592 I/ConnectivityVM( 5644): debug default seed source=debug_default_seed_button seeded=true
+04-29 20:41:24.694 D/ConnectivityVM( 5644): reconnect() called, current effectiveState=CONNECTED
+04-29 20:41:24.694 D/ConnectivityVM( 5644): Set override=RECONNECTING, calling service.reconnect()
+04-29 20:41:24.696 I/SmartSalesConn( 5644): 📶 BLE disconnected
+04-29 20:41:24.696 D/SmartSalesConn( 5644): 🔌 Soft disconnect (session preserved)
+04-29 20:41:24.699 D/SmartSalesConn( 5644): 🔌 Persistent GATT session closed
+04-29 20:41:24.708 D/ConnectivityVM( 5644): managerStatus=Connecting managerState=RECONNECTING
+04-29 20:41:25.238 D/SmartSalesConn( 5644): 📋 Service: 00001801-0000-1000-8000-00805f9b34fb
+04-29 20:41:25.239 D/SmartSalesConn( 5644):   📋 Char: 00002a05-0000-1000-8000-00805f9b34fb [INDICATE ]
+04-29 20:41:25.239 D/SmartSalesConn( 5644):     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-29 20:41:25.239 D/SmartSalesConn( 5644): 📋 Service: 00001800-0000-1000-8000-00805f9b34fb
+04-29 20:41:25.239 D/SmartSalesConn( 5644):   📋 Char: 00002a00-0000-1000-8000-00805f9b34fb [READ ]
+04-29 20:41:25.239 D/SmartSalesConn( 5644):     📋 (no descriptors)
+04-29 20:41:25.239 D/SmartSalesConn( 5644):   📋 Char: 00002a01-0000-1000-8000-00805f9b34fb [READ ]
+04-29 20:41:25.239 D/SmartSalesConn( 5644):     📋 (no descriptors)
+04-29 20:41:25.239 D/SmartSalesConn( 5644):   📋 Char: 00002aa6-0000-1000-8000-00805f9b34fb [READ ]
+04-29 20:41:25.239 D/SmartSalesConn( 5644):     📋 (no descriptors)
+04-29 20:41:25.239 D/SmartSalesConn( 5644): 📋 Service: 000000ff-0000-1000-8000-00805f9b34fb
+04-29 20:41:25.239 D/SmartSalesConn( 5644):   📋 Char: 0000ff01-0000-1000-8000-00805f9b34fb [READ WRITE NOTIFY ]
+04-29 20:41:25.239 D/SmartSalesConn( 5644):     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-29 20:41:25.239 D/SmartSalesConn( 5644):   📋 Char: 0000ff02-0000-1000-8000-00805f9b34fb [READ ]
+04-29 20:41:25.239 D/SmartSalesConn( 5644):     📋 (no descriptors)
+04-29 20:41:25.239 D/SmartSalesConn( 5644):   📋 Char: 0000ff03-0000-1000-8000-00805f9b34fb [WRITE ]
+04-29 20:41:25.239 D/SmartSalesConn( 5644):     📋 (no descriptors)
+04-29 20:41:25.261 D/SmartSalesConn( 5644): No CCCD descriptor for 0000ff02-0000-1000-8000-00805f9b34fb, notifications not available (will poll)
+04-29 20:41:25.261 I/SmartSalesConn( 5644): 🔌 Persistent GATT session established: 14:C1:9F:D7:E4:06
+04-29 20:41:25.261 I/SmartSalesConn( 5644): 📶 BLE connected, waiting for explicit network observation
+04-29 20:41:25.262 D/SmartSalesConn( 5644): 🌐 network query device=CHLE_Intelligent
+04-29 20:41:25.262 I/SmartSalesConn( 5644): 📡 queryNetwork ENTRY (in mutex)
+04-29 20:41:25.262 D/SmartSalesConn( 5644): 📤 TX [NetworkQuery]: wifi#address#ip#name (77 69 66 69 23 61 64 64 72 65 73 73 23 69 70 23 6E 61 6D 65)
+04-29 20:41:25.263 D/SmartSalesConn( 5644): 📡 Starting persistent notification listener for 14:C1:9F:D7:E4:06
+04-29 20:41:25.291 D/SmartSalesConn( 5644): 📥 RX [Notification]: IP#192.168.0.101 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 30 31)
+04-29 20:41:25.291 D/SmartSalesConn( 5644): ❓ Badge unknown notification: IP#192.168.0.101
+04-29 20:41:25.292 D/SmartSalesConn( 5644): 📥 RX [Notification]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-29 20:41:25.292 D/SmartSalesConn( 5644): 📥 RX [NetworkResponse]: IP#192.168.0.101 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 30 31)
+04-29 20:41:25.292 D/SmartSalesConn( 5644): ❓ Badge unknown notification: SD#MstRobot
+04-29 20:41:25.293 D/SmartSalesConn( 5644): 📥 RX [NetworkResponse]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-29 20:41:25.293 D/SmartSalesConn( 5644): 📡 fresh query, caching IP=192.168.0.101
+04-29 20:41:25.293 D/SmartSalesConn( 5644): 📶 state=CONNECTED ip=192.168.0.101
+04-29 20:41:25.293 D/SmartSalesConn( 5644): 🔌 connectUsingSession: connected, ip=192.168.0.101 ssid=MstRobot
+04-29 20:41:25.297 D/ConnectivityVM( 5644): service.reconnect() returned: com.smartsales.prism.domain.connectivity.ReconnectResult$Connected@88a28d
+04-29 20:41:25.298 D/ConnectivityVM( 5644): After reconnect: override=null, effective=RECONNECTING
+04-29 20:41:25.299 D/ConnectivityVM( 5644): managerStatus=Ready managerState=CONNECTED
+04-29 20:41:25.301 D/SmartSalesConn( 5644): 📤 TX [BadgeSignal]: Ver#get (56 65 72 23 67 65 74)
+04-29 20:41:25.320 D/SmartSalesConn( 5644): 📥 RX [Notification]: Ver#1.0.0.1 (56 65 72 23 31 2E 30 2E 30 2E 31)
+04-29 20:41:25.320 I/SmartSalesConn( 5644): 🧾 Badge firmware version: 1.0.0.1
+04-29 20:41:25.335 I/SmartSalesConn( 5644): 🧾 Badge firmware version query sent
+04-29 20:41:25.403 D/SmartSalesConn( 5644): 📥 RX [Notification]: tim#get (74 69 6D 23 67 65 74)
+04-29 20:41:25.403 D/SmartSalesConn( 5644): ⏰ Badge time sync requested
+04-29 20:41:25.463 I/SmartSalesConn( 5644): ⏰ Time sync responded: tim#20260429204125
+04-29 20:41:28.299 D/SmartSalesConn( 5644): BadgeHttpClient.isReachable start url=http://192.168.0.101:8088/
+04-29 20:41:28.364 D/SmartSalesConn( 5644): BadgeHttpClient.isReachable response url=http://192.168.0.101:8088/ code=200 reachable=true
+04-29 20:41:30.023 D/SmartSalesConn( 5644): 📥 RX [Notification]: Bat#51.45% (42 61 74 23 35 31 2E 34 35 25)
+04-29 20:41:30.024 D/SmartSalesConn( 5644): ❓ Badge unknown notification: Bat#51.45%

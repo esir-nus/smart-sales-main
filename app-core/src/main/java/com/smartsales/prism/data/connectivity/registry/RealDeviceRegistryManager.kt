@@ -306,6 +306,105 @@ class RealDeviceRegistryManager(
         ConnectivityLogger.d("🏠 Registry: bleDetected=$value for $macAddress")
     }
 
+    override fun debugSeedDefaultPriorityScenario(): Boolean {
+        val now = System.currentTimeMillis()
+        val defaultDevice = registry.findByMac(DEBUG_DEFAULT_MAC) ?: RegisteredDevice(
+            macAddress = DEBUG_DEFAULT_MAC,
+            displayName = DEBUG_CHLE_NAME,
+            profileId = DEBUG_CHLE_PROFILE,
+            registeredAtMillis = now,
+            lastConnectedAtMillis = now - 1_000L,
+            isDefault = true
+        )
+        val activeDevice = registry.findByMac(DEBUG_ACTIVE_MAC) ?: RegisteredDevice(
+            macAddress = DEBUG_ACTIVE_MAC,
+            displayName = DEBUG_CHLE_NAME,
+            profileId = DEBUG_CHLE_PROFILE,
+            registeredAtMillis = now,
+            lastConnectedAtMillis = now,
+            isDefault = false
+        )
+
+        registry.register(defaultDevice.copy(manuallyDisconnected = false, bleDetected = false))
+        registry.register(activeDevice.copy(manuallyDisconnected = false, bleDetected = false))
+        registry.setDefault(DEBUG_DEFAULT_MAC)
+        val active = registry.findByMac(DEBUG_ACTIVE_MAC) ?: return false
+        seedSessionForDevice(active)
+        _activeDevice.value = active
+        refreshDeviceList()
+        ConnectivityLogger.i("[DebugSim] seeded default-first registry default=$DEBUG_DEFAULT_MAC active=$DEBUG_ACTIVE_MAC")
+        return true
+    }
+
+    override suspend fun debugSimulateBleDetection(manuallyDisconnectDefault: Boolean): Boolean {
+        val scenario = if (manuallyDisconnectDefault) {
+            DebugBleDetectionL25Scenario.ManualDefaultSuppression
+        } else {
+            DebugBleDetectionL25Scenario.DefaultPriorityDualAdvertise
+        }
+        return debugRunBleDetectionL25Scenario(scenario)?.passed == true
+    }
+
+    override suspend fun debugRunBleDetectionL25Scenario(
+        scenario: DebugBleDetectionL25Scenario
+    ): DebugBleDetectionL25Result? {
+        if (!debugSeedDefaultPriorityScenario()) return null
+        val expectedSelectedMac = when (scenario) {
+            DebugBleDetectionL25Scenario.DefaultPriorityDualAdvertise -> DEBUG_DEFAULT_MAC
+            DebugBleDetectionL25Scenario.ManualDefaultSuppression -> DEBUG_ACTIVE_MAC
+        }
+        registry.updateManuallyDisconnected(DEBUG_DEFAULT_MAC, scenario.manuallyDisconnectDefault)
+        registry.updateManuallyDisconnected(DEBUG_ACTIVE_MAC, false)
+        refreshDeviceList()
+        ConnectivityLogger.i(
+            "[L2.5][BEGIN] scenario=${scenario.scenarioId} source=connectivity_debug_button " +
+                "ingress=DeviceRegistryManager.handleBleDetectionCandidates authenticity=synthetic_not_physical_ble"
+        )
+        ConnectivityLogger.i(
+            "[DebugSim] BLE detection candidates default=$DEBUG_DEFAULT_MAC active=$DEBUG_ACTIVE_MAC " +
+                "manuallyDisconnectedDefault=${scenario.manuallyDisconnectDefault}"
+        )
+        handleBleDetectionCandidates(
+            listOf(
+                BlePeripheral(DEBUG_DEFAULT_MAC, DEBUG_CHLE_NAME, -35, profileId = DEBUG_CHLE_PROFILE),
+                BlePeripheral(DEBUG_ACTIVE_MAC, DEBUG_CHLE_NAME, -36, profileId = DEBUG_CHLE_PROFILE)
+            )
+        )
+        val defaultDevice = registry.findByMac(DEBUG_DEFAULT_MAC)
+        val activeDevice = registry.findByMac(DEBUG_ACTIVE_MAC)
+        val selectedMac = _activeDevice.value?.macAddress
+        val defaultBleDetected = defaultDevice?.bleDetected == true
+        val activeBleDetected = activeDevice?.bleDetected == true
+        val passed = selectedMac == expectedSelectedMac &&
+            defaultBleDetected &&
+            activeBleDetected &&
+            defaultDevice?.manuallyDisconnected == scenario.manuallyDisconnectDefault
+        val result = DebugBleDetectionL25Result(
+            scenarioId = scenario.scenarioId,
+            evidenceClass = "L2.5",
+            source = "connectivity_debug_button",
+            defaultMac = DEBUG_DEFAULT_MAC,
+            activeMac = DEBUG_ACTIVE_MAC,
+            manuallyDisconnectedDefault = scenario.manuallyDisconnectDefault,
+            expectedSelectedMac = expectedSelectedMac,
+            selectedMac = selectedMac,
+            defaultBleDetected = defaultBleDetected,
+            activeBleDetected = activeBleDetected,
+            passed = passed
+        )
+        ConnectivityLogger.i(
+            "[L2.5][ASSERT] scenario=${result.scenarioId} expected=${result.expectedSelectedMac} " +
+                "selected=${result.selectedMac ?: "none"} defaultBleDetected=${result.defaultBleDetected} " +
+                "activeBleDetected=${result.activeBleDetected} manuallyDisconnectedDefault=${result.manuallyDisconnectedDefault} " +
+                "pass=${result.passed}"
+        )
+        ConnectivityLogger.i(
+            "[L2.5][END] scenario=${result.scenarioId} result=${if (result.passed) "PASS" else "FAIL"} " +
+                "evidenceClass=${result.evidenceClass} authenticity=synthetic_not_physical_ble"
+        )
+        return result
+    }
+
     private fun migrateIfNeeded() {
         if (!registry.isEmpty()) return
         val session = sessionStore.loadSession() ?: return
@@ -332,5 +431,12 @@ class RealDeviceRegistryManager(
         )
         sessionStore.saveSession(session)
         return session
+    }
+
+    private companion object {
+        const val DEBUG_DEFAULT_MAC = "14:C1:9F:D7:E3:EE"
+        const val DEBUG_ACTIVE_MAC = "14:C1:9F:D7:E4:06"
+        const val DEBUG_CHLE_NAME = "CHLE_Intelligent"
+        const val DEBUG_CHLE_PROFILE = "chle"
     }
 }

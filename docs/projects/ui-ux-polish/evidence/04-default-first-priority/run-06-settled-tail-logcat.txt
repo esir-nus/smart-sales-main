@@ -1,0 +1,80 @@
+04-29 20:28:47.859 D/SmartSalesConn( 5487): 忽略设备 9C:12:21:4F:67:35 (Unknown)：未匹配任何 profile
+04-29 20:28:47.861 D/SmartSalesConn( 5487): 扫描到设备 C1:26:56:18:00:50 (YD56180050) rssi=-80 uuids=e7810bd2-73ae-499d-8c15-faa9aef0c3f2, e7810bd2-73ae-499d-8c15-faa9aef0c3f2
+04-29 20:28:47.861 D/SmartSalesConn( 5487): 忽略设备 C1:26:56:18:00:50 (YD56180050)：未匹配任何 profile
+04-29 20:28:47.880 D/SmartSalesConn( 5487): 扫描到设备 C8:0A:35:41:3F:AF (HIS-3fb0) rssi=-79 uuids=
+04-29 20:28:47.880 D/SmartSalesConn( 5487): 忽略设备 C8:0A:35:41:3F:AF (HIS-3fb0)：未匹配任何 profile
+04-29 20:28:47.894 D/SmartSalesConn( 5487): 扫描到设备 C7:52:50:BA:BE:5A (MCHOSE G3 A) rssi=-74 uuids=00001812-0000-1000-8000-00805f9b34fb, 00001812-0000-1000-8000-00805f9b34fb
+04-29 20:28:47.894 D/SmartSalesConn( 5487): 忽略设备 C7:52:50:BA:BE:5A (MCHOSE G3 A)：未匹配任何 profile
+04-29 20:28:47.918 D/SmartSalesConn( 5487): 扫描到设备 C7:52:50:BA:BE:5A (MCHOSE G3 A) rssi=-74 uuids=00001812-0000-1000-8000-00805f9b34fb, 00001812-0000-1000-8000-00805f9b34fb
+04-29 20:28:47.918 D/SmartSalesConn( 5487): 忽略设备 C7:52:50:BA:BE:5A (MCHOSE G3 A)：未匹配任何 profile
+04-29 20:28:47.919 D/SmartSalesConn( 5487): 扫描到设备 75:0C:7F:8E:83:38 (Unknown) rssi=-59 uuids=
+04-29 20:28:47.919 D/SmartSalesConn( 5487): 忽略设备 75:0C:7F:8E:83:38 (Unknown)：未匹配任何 profile
+04-29 20:28:47.927 D/SmartSalesConn( 5487): 扫描到设备 C1:16:63:15:9C:EC (YD63159CEC) rssi=-80 uuids=00001812-0000-1000-8000-00805f9b34fb, d20b81e7-0000-1000-8000-00805f9b34fb, 00001812-0000-1000-8000-00805f9b34fb
+04-29 20:28:47.927 D/SmartSalesConn( 5487): 忽略设备 C1:16:63:15:9C:EC (YD63159CEC)：未匹配任何 profile
+04-29 20:28:47.936 D/SmartSalesConn( 5487): 扫描到设备 C7:52:50:BA:BE:5A (MCHOSE G3 A) rssi=-74 uuids=00001812-0000-1000-8000-00805f9b34fb, 00001812-0000-1000-8000-00805f9b34fb
+04-29 20:28:47.936 D/SmartSalesConn( 5487): 忽略设备 C7:52:50:BA:BE:5A (MCHOSE G3 A)：未匹配任何 profile
+04-29 20:28:47.942 D/SmartSalesConn( 5487): 扫描到设备 05:49:35:9B:89:71 (Unknown) rssi=-70 uuids=
+04-29 20:28:47.942 D/SmartSalesConn( 5487): 忽略设备 05:49:35:9B:89:71 (Unknown)：未匹配任何 profile
+04-29 20:28:47.942 D/SmartSalesConn( 5487): 扫描到设备 14:C1:9F:D7:E4:06 (CHLE_Intelligent) rssi=-32 uuids=000000ff-0000-1000-8000-00805f9b34fb, 000000ff-0000-1000-8000-00805f9b34fb, 000000ff-0000-1000-8000-00805f9b34fb, 000000ff-0000-1000-8000-00805f9b34fb
+04-29 20:28:47.943 I/SmartSalesConn( 5487): 发现设备 CHLE_Intelligent (14:C1:9F:D7:E4:06) 匹配 profile=chle
+04-29 20:28:47.952 D/SmartSalesConn( 5487): 扫描到设备 5A:CD:C9:61:D5:7C (Unknown) rssi=-69 uuids=0000fe78-0000-1000-8000-00805f9b34fb, 0000fe78-0000-1000-8000-00805f9b34fb
+04-29 20:28:47.952 D/SmartSalesConn( 5487): 忽略设备 5A:CD:C9:61:D5:7C (Unknown)：未匹配任何 profile
+04-29 20:28:47.960 D/SmartSalesConn( 5487): 扫描到设备 28:7E:80:7E:3F:AE (tcl_AC_t*ap_hanging) rssi=-41 uuids=0000f100-0000-1000-8000-00805f9b34fb, 0000f100-0000-1000-8000-00805f9b34fb
+04-29 20:28:47.960 D/SmartSalesConn( 5487): 忽略设备 28:7E:80:7E:3F:AE (tcl_AC_t*ap_hanging)：未匹配任何 profile
+04-29 20:28:47.968 D/SmartSalesConn( 5487): 扫描到设备 DB:43:95:63:91:9E (Unknown) rssi=-80 uuids=
+04-29 20:28:47.968 D/SmartSalesConn( 5487): 忽略设备 DB:43:95:63:91:9E (Unknown)：未匹配任何 profile
+04-29 20:28:47.978 D/SmartSalesConn( 5487): 扫描到设备 3D:E5:33:17:70:EC (Unknown) rssi=-69 uuids=
+04-29 20:28:47.978 D/SmartSalesConn( 5487): 忽略设备 3D:E5:33:17:70:EC (Unknown)：未匹配任何 profile
+04-29 20:28:47.984 D/SmartSalesConn( 5487): 扫描到设备 72:6E:7E:F9:5A:11 (Unknown) rssi=-46 uuids=
+04-29 20:28:47.985 D/SmartSalesConn( 5487): 忽略设备 72:6E:7E:F9:5A:11 (Unknown)：未匹配任何 profile
+04-29 20:28:47.986 D/SmartSalesConn( 5487): 扫描到设备 14:C1:9F:D7:E4:06 (CHLE_Intelligent) rssi=-35 uuids=000000ff-0000-1000-8000-00805f9b34fb, 000000ff-0000-1000-8000-00805f9b34fb, 000000ff-0000-1000-8000-00805f9b34fb, 000000ff-0000-1000-8000-00805f9b34fb
+04-29 20:28:47.986 I/SmartSalesConn( 5487): 发现设备 CHLE_Intelligent (14:C1:9F:D7:E4:06) 匹配 profile=chle
+04-29 20:28:48.011 D/SmartSalesConn( 5487): 扫描到设备 C7:52:50:BA:BE:5A (MCHOSE G3 A) rssi=-87 uuids=00001812-0000-1000-8000-00805f9b34fb, 00001812-0000-1000-8000-00805f9b34fb
+04-29 20:28:48.011 D/SmartSalesConn( 5487): 忽略设备 C7:52:50:BA:BE:5A (MCHOSE G3 A)：未匹配任何 profile
+04-29 20:28:48.013 D/SmartSalesConn( 5487): 扫描到设备 C1:26:56:18:00:50 (YD56180050) rssi=-82 uuids=e7810bd2-73ae-499d-8c15-faa9aef0c3f2, e7810bd2-73ae-499d-8c15-faa9aef0c3f2
+04-29 20:28:48.013 D/SmartSalesConn( 5487): 忽略设备 C1:26:56:18:00:50 (YD56180050)：未匹配任何 profile
+04-29 20:28:48.030 I/SmartSalesConn( 5487): 🔍 BLE detected: CHLE_Intelligent (14:C1:9F:D7:E4:06)
+04-29 20:28:48.031 I/SmartSalesConn( 5487): [DefaultPriority] switch 14:C1:9F:D7:E3:EE → 14:C1:9F:D7:E4:06
+04-29 20:28:48.031 I/SmartSalesConn( 5487): 🔍 Auto-reconnect triggered by BLE detection for 14:C1:9F:D7:E4:06
+04-29 20:28:48.032 I/SmartSalesConn( 5487): 🏠 Registry: switching ...E3:EE → ...E4:06
+04-29 20:28:48.037 D/SmartSalesConn( 5487): 🏠 Registry: reconnecting target ...E4:06
+04-29 20:28:48.039 D/SmartSalesConn( 5487): 🔌 Restored session: 14:C1:9F:D7:E4:06 knownNetworks=1
+04-29 20:28:48.039 D/SmartSalesConn( 5487): 🔄 Force reconnect target=14:C1:9F:D7:E4:06
+04-29 20:28:48.040 I/SmartSalesConn( 5487): 📶 BLE disconnected
+04-29 20:28:48.040 D/SmartSalesConn( 5487): 🔌 Soft disconnect (session preserved)
+04-29 20:28:48.043 D/SmartSalesConn( 5487): 🔌 Persistent GATT session closed
+04-29 20:28:48.051 D/ConnectivityVM( 5487): managerStatus=Connecting managerState=RECONNECTING
+04-29 20:28:49.058 D/SmartSalesConn( 5487): 📋 Service: 00001801-0000-1000-8000-00805f9b34fb
+04-29 20:28:49.058 D/SmartSalesConn( 5487):   📋 Char: 00002a05-0000-1000-8000-00805f9b34fb [INDICATE ]
+04-29 20:28:49.058 D/SmartSalesConn( 5487):     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-29 20:28:49.058 D/SmartSalesConn( 5487): 📋 Service: 00001800-0000-1000-8000-00805f9b34fb
+04-29 20:28:49.058 D/SmartSalesConn( 5487):   📋 Char: 00002a00-0000-1000-8000-00805f9b34fb [READ ]
+04-29 20:28:49.058 D/SmartSalesConn( 5487):     📋 (no descriptors)
+04-29 20:28:49.058 D/SmartSalesConn( 5487):   📋 Char: 00002a01-0000-1000-8000-00805f9b34fb [READ ]
+04-29 20:28:49.058 D/SmartSalesConn( 5487):     📋 (no descriptors)
+04-29 20:28:49.058 D/SmartSalesConn( 5487):   📋 Char: 00002aa6-0000-1000-8000-00805f9b34fb [READ ]
+04-29 20:28:49.058 D/SmartSalesConn( 5487):     📋 (no descriptors)
+04-29 20:28:49.058 D/SmartSalesConn( 5487): 📋 Service: 000000ff-0000-1000-8000-00805f9b34fb
+04-29 20:28:49.058 D/SmartSalesConn( 5487):   📋 Char: 0000ff01-0000-1000-8000-00805f9b34fb [READ WRITE NOTIFY ]
+04-29 20:28:49.058 D/SmartSalesConn( 5487):     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-29 20:28:49.058 D/SmartSalesConn( 5487):   📋 Char: 0000ff02-0000-1000-8000-00805f9b34fb [READ ]
+04-29 20:28:49.058 D/SmartSalesConn( 5487):     📋 (no descriptors)
+04-29 20:28:49.058 D/SmartSalesConn( 5487):   📋 Char: 0000ff03-0000-1000-8000-00805f9b34fb [WRITE ]
+04-29 20:28:49.058 D/SmartSalesConn( 5487):     📋 (no descriptors)
+04-29 20:28:49.073 D/SmartSalesConn( 5487): No CCCD descriptor for 0000ff02-0000-1000-8000-00805f9b34fb, notifications not available (will poll)
+04-29 20:28:49.073 I/SmartSalesConn( 5487): 🔌 Persistent GATT session established: 14:C1:9F:D7:E4:06
+04-29 20:28:49.073 I/SmartSalesConn( 5487): 📶 BLE connected, waiting for explicit network observation
+04-29 20:28:49.073 D/SmartSalesConn( 5487): 📡 Starting persistent notification listener for 14:C1:9F:D7:E4:06
+04-29 20:28:49.073 D/SmartSalesConn( 5487): 🌐 network query device=CHLE_Intelligent
+04-29 20:28:49.073 I/SmartSalesConn( 5487): 📡 queryNetwork ENTRY (in mutex)
+04-29 20:28:49.073 D/SmartSalesConn( 5487): 📡 CACHED (3104ms old)
+04-29 20:28:49.073 D/SmartSalesConn( 5487): 📶 state=CONNECTED ip=192.168.0.101
+04-29 20:28:49.074 D/SmartSalesConn( 5487): 🔌 connectUsingSession: connected, ip=192.168.0.101 ssid=MstRobot
+04-29 20:28:49.075 D/SmartSalesConn( 5487): 📤 TX [BadgeSignal]: Ver#get (56 65 72 23 67 65 74)
+04-29 20:28:49.075 D/ConnectivityVM( 5487): managerStatus=Ready managerState=CONNECTED
+04-29 20:28:49.094 D/SmartSalesConn( 5487): 📥 RX [Notification]: Ver#1.0.0.1 (56 65 72 23 31 2E 30 2E 30 2E 31)
+04-29 20:28:49.094 I/SmartSalesConn( 5487): 🧾 Badge firmware version: 1.0.0.1
+04-29 20:28:49.095 I/SmartSalesConn( 5487): 🧾 Badge firmware version query sent
+04-29 20:28:49.186 D/SmartSalesConn( 5487): 📥 RX [Notification]: tim#get (74 69 6D 23 67 65 74)
+04-29 20:28:49.187 D/SmartSalesConn( 5487): ⏰ Badge time sync requested
+04-29 20:28:49.246 I/SmartSalesConn( 5487): ⏰ Time sync responded: tim#20260429202849

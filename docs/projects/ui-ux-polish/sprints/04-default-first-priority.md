@@ -123,6 +123,76 @@ The excerpt must include `[DefaultPriority] switch` for the dual-candidate case 
 - Ran focused and full app-core unit verification plus `:app:assembleDebug`; all passed.
 - Installed updated `app-core-debug.apk` on `fc8ede3e` and captured a cleared SmartSalesConn launch window. The device showed only one restored registered badge (`Remaining Badge (...55:66)`) and no `[DefaultPriority] switch`, so the required dual-badge L3 branch remains blocked.
 
+### L3 Device Loop Attempt - 2026-04-29
+
+- Preserved app data because this sprint requires existing badge pairing and registry state.
+- Captured multiple `fc8ede3e` manual-collaboration loops under `docs/projects/ui-ux-polish/evidence/04-default-first-priority/`.
+- User-reported stale connected/power-cut behavior was not proven in a clean loop: `run-03-stale-after-powercut-logcat.txt` and `run-04-powercut-card-tap-logcat.txt` still showed live `Bat#...` notifications from the connected badge after the declared power-cut window.
+- `run-05-adb-tap-powercut-card-logcat.txt` proved manual card switching was landing, but both badges answered with fresh `IP#192.168.0.102` and `IP#192.168.0.101`; no powered-off false positive was captured.
+- `run-06-settled-tail-logcat.txt` captured a `[DefaultPriority] switch`, followed by reconnect and fresh `IP#192.168.0.101`, but this cannot close the sprint because `run-as com.smartsales.prism cat shared_prefs/device_registry.xml` showed only one persisted registered device: `14:C1:9F:D7:E4:06`.
+- Negative manually-disconnected-default L3 evidence was not attempted after discovering the missing second persisted registry row; the branch remains covered only by unit tests until two registered physical badges are restored.
+
+### Debug Simulation Loop - 2026-04-29
+
+- Added debug-only connectivity modal controls: `seed dual`, `sim default`, and `sim manual default`.
+- The controls are visible only in debug builds and route through the same registry BLE detection candidate handler used by the production monitor. Logs are prefixed with `[DebugSim]` so simulated evidence cannot be mistaken for physical scanner evidence.
+- Built and installed `app-core-debug.apk` on `fc8ede3e`; first `adb install` attempt hung until `adb kill-server`, second install completed with `Success`.
+- `run-07-debug-buttons-ui.xml` shows the debug controls rendered in the connectivity modal.
+- `run-08-debug-sim-logcat.txt` and `run-08-debug-sim-registry.xml` prove the seed control created the two CHLE registry rows.
+- `run-09-debug-sim-detect-logcat.txt` proves the simulated positive and negative selector branches:
+  - `[DebugSim] BLE detection candidates default=14:C1:9F:D7:E3:EE active=14:C1:9F:D7:E4:06 manuallyDisconnectedDefault=false`
+  - `[DefaultPriority] switch 14:C1:9F:D7:E4:06 -> 14:C1:9F:D7:E3:EE`
+  - `[DebugSim] BLE detection candidates default=14:C1:9F:D7:E3:EE active=14:C1:9F:D7:E4:06 manuallyDisconnectedDefault=true`
+  - `[DefaultPriority] skipped manuallyDisconnected default ...E3:EE`
+- `run-10-debug-reset-registry.xml` confirms the debug seed reset both rows to `manuallyDisconnected=false` after the negative simulation.
+- Verification after debug-button implementation:
+  - `./gradlew :app-core:testDebugUnitTest --tests "*RealDeviceRegistryManagerTest*" --tests "*ConnectivityViewModelTest*"` -> `BUILD SUCCESSFUL in 18s`.
+  - `./gradlew :app-core:assembleDebug` -> `BUILD SUCCESSFUL in 10s`.
+  - `./gradlew :app-core:testDebugUnitTest` -> `BUILD SUCCESSFUL in 14s`.
+- Status remains blocked for formal Sprint 04 close: debug simulation validates the selection path, but it is not physical dual-advertising L3 evidence from the BLE scanner.
+
+### Debug Mode Visibility Slice - 2026-04-29
+
+- Added a persisted debug-build-only `调试模式` toggle in the full-app User Center and SIM User Center drawer.
+- Connectivity modal simulation controls now require both `BuildConfig.DEBUG` and the persisted debug mode to be enabled before rendering.
+- The toggle only changes debug UI visibility; it does not seed registry state, switch active devices, reconnect, or alter release-build behavior.
+- Focused verification after the toggle slice:
+  - `./gradlew :app-core:testDebugUnitTest --tests "*DebugModeStoreTest*" --tests "*ConnectivityViewModelTest*" --tests "*ConnectivityViewModelRepairTest*" --tests "*UserCenterViewModelTest*"` -> `BUILD SUCCESSFUL in 17s`.
+  - `./gradlew :app-core:testDebugUnitTest --tests "*UserCenterViewModelTest*"` -> `BUILD SUCCESSFUL in 10s` after adding the setter coverage.
+  - `./gradlew :app-core:testDebugUnitTest` -> `BUILD SUCCESSFUL in 7s`.
+  - `./gradlew :app-core:assembleDebug :app:assembleDebug` -> `BUILD SUCCESSFUL in 4s`.
+- Installed `app-core-debug.apk` on `fc8ede3e` with preserved app data.
+- Cleared-window device-loop evidence for the visibility gate:
+  - `run-13-debug-mode-off-ui.xml` contains no `Debug probes`, `seed dual`, `sim default`, or `sim manual default`; `run-13-debug-mode-off-logcat.txt` captured the same launch window.
+  - `run-14-debug-mode-on-ui.xml` contains `Debug probes`, `seed dual`, `sim default`, and `sim manual default`; `run-14-debug-mode-on-logcat.txt` captured the same launch window.
+
+### L2.5 Deterministic Debug Ingress - 2026-04-29
+
+- Escalated the connectivity debug-button approach to L2.5: deterministic device-installed synthetic ingress that enters the same `DeviceRegistryManager.handleBleDetectionCandidates` boundary as the BLE detection monitor.
+- Added fixed scenario IDs and structured pass/fail results:
+  - `CONNECTIVITY_DEFAULT_PRIORITY_DUAL_ADVERTISE`
+  - `CONNECTIVITY_MANUAL_DEFAULT_SUPPRESSION`
+- Renamed the UI buttons to `L2.5 default` and `L2.5 manual default`.
+- Added required L2.5 telemetry:
+  - `[L2.5][BEGIN]`
+  - `[L2.5][ASSERT]`
+  - `[L2.5][END] ... result=PASS evidenceClass=L2.5 authenticity=synthetic_not_physical_ble`
+- Added focused unit coverage for both deterministic L2.5 scenarios.
+- Synced the L2.5 evidence-class contract into `docs/specs/device-loop-protocol.md` and `docs/specs/harness-manifesto.md`.
+- Verification:
+  - `./gradlew :app-core:testDebugUnitTest --tests "*RealDeviceRegistryManagerTest*"` -> `BUILD SUCCESSFUL in 15s`.
+  - `./gradlew :app-core:testDebugUnitTest` -> `BUILD SUCCESSFUL in 7s`.
+  - `./gradlew :app-core:assembleDebug` -> `BUILD SUCCESSFUL in 4s`.
+  - `./gradlew :app:assembleDebug` -> `BUILD SUCCESSFUL in 2s`.
+- Installed `app-core-debug.apk` on `fc8ede3e` with preserved app data.
+- L2.5 device-loop evidence:
+  - `run-15-l25-before-ui.xml` proves the debug modal exposed `L2.5 default` and `L2.5 manual default`.
+  - `run-20-l25-default-logcat.txt` proves `CONNECTIVITY_DEFAULT_PRIORITY_DUAL_ADVERTISE` entered the production candidate handler, emitted `[DefaultPriority] switch`, and ended with `[L2.5][END] ... result=PASS`.
+  - `run-20-l25-default-ui.xml` shows `L2.5 CONNECTIVITY_DEFAULT_PRIORITY_DUAL_ADVERTISE: PASS selected=14:C1:9F:D7:E3:EE`.
+  - `run-19-l25-manual-logcat.txt` proves `CONNECTIVITY_MANUAL_DEFAULT_SUPPRESSION` entered the production candidate handler, skipped the manually disconnected default, and ended with `[L2.5][END] ... result=PASS`.
+  - `run-19-l25-manual-ui.xml` shows `L2.5 CONNECTIVITY_MANUAL_DEFAULT_SUPPRESSION: PASS selected=14:C1:9F:D7:E4:06`.
+- Boundary: L2.5 now closes the app-side deterministic dataflow branch, but it remains synthetic ingress and does not replace physical dual-advertising BLE L3 evidence.
+
 ## Closeout
 
 - Status: `blocked`

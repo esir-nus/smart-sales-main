@@ -93,6 +93,7 @@ fun ConnectivityModal(
     val isolationBadgeIp by viewModel.isolationBadgeIp.collectAsState()
     val isolationTriggerContext by viewModel.isolationTriggerContext.collectAsState()
     val debugProbeText by viewModel.debugProbeText.collectAsState()
+    val debugModeEnabled by viewModel.debugModeEnabled.collectAsState()
     val isWifiMismatchActive = managerState == ConnectivityManagerState.WIFI_MISMATCH
 
     Box(
@@ -185,14 +186,17 @@ fun ConnectivityModal(
                     }
                 }
 
-                if (BuildConfig.DEBUG) {
+                if (BuildConfig.DEBUG && debugModeEnabled) {
                     item {
                         ConnectivityDebugProbeCard(
                             debugProbeText = debugProbeText,
                             onProbeMedia = viewModel::debugProbeMediaReadiness,
                             onListRecordings = viewModel::debugListRecordings,
                             onDebugRec = viewModel::debugEmitRecNotification,
-                            onReconnect = viewModel::reconnect
+                            onReconnect = viewModel::reconnect,
+                            onDebugSeedDefault = viewModel::debugSeedDefaultPriorityScenario,
+                            onDebugDefaultDetect = viewModel::debugSimulateDefaultPriorityDetection,
+                            onDebugManualDefault = viewModel::debugSimulateManualDefaultSuppression
                         )
                     }
                 }
@@ -298,7 +302,10 @@ private fun ConnectivityDebugProbeCard(
     onProbeMedia: () -> Unit,
     onListRecordings: () -> Unit,
     onDebugRec: () -> Unit,
-    onReconnect: () -> Unit
+    onReconnect: () -> Unit,
+    onDebugSeedDefault: () -> Unit,
+    onDebugDefaultDetect: () -> Unit,
+    onDebugManualDefault: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -344,6 +351,29 @@ private fun ConnectivityDebugProbeCard(
                 onClick = onReconnect
             )
         }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            ModalActionButton(
+                text = "seed dual",
+                color = TextSecondary,
+                modifier = Modifier.weight(1f),
+                onClick = onDebugSeedDefault
+            )
+            ModalActionButton(
+                text = "L2.5 default",
+                color = TextSecondary,
+                modifier = Modifier.weight(1f),
+                onClick = onDebugDefaultDetect
+            )
+        }
+        ModalActionButton(
+            text = "L2.5 manual default",
+            color = TextSecondary,
+            modifier = Modifier.fillMaxWidth(),
+            onClick = onDebugManualDefault
+        )
         Text(
             text = debugProbeText ?: "No probe run",
             fontSize = 12.sp,

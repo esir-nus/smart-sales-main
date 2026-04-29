@@ -4,6 +4,34 @@ import com.smartsales.prism.data.connectivity.legacy.BlePeripheral
 import com.smartsales.prism.data.connectivity.legacy.BleSession
 import kotlinx.coroutines.flow.StateFlow
 
+enum class DebugBleDetectionL25Scenario(
+    val scenarioId: String,
+    val manuallyDisconnectDefault: Boolean
+) {
+    DefaultPriorityDualAdvertise(
+        scenarioId = "CONNECTIVITY_DEFAULT_PRIORITY_DUAL_ADVERTISE",
+        manuallyDisconnectDefault = false
+    ),
+    ManualDefaultSuppression(
+        scenarioId = "CONNECTIVITY_MANUAL_DEFAULT_SUPPRESSION",
+        manuallyDisconnectDefault = true
+    )
+}
+
+data class DebugBleDetectionL25Result(
+    val scenarioId: String,
+    val evidenceClass: String,
+    val source: String,
+    val defaultMac: String,
+    val activeMac: String,
+    val manuallyDisconnectedDefault: Boolean,
+    val expectedSelectedMac: String,
+    val selectedMac: String?,
+    val defaultBleDetected: Boolean,
+    val activeBleDetected: Boolean,
+    val passed: Boolean
+)
+
 /**
  * 设备注册表管理器 — 多设备编排层
  *
@@ -40,4 +68,15 @@ interface DeviceRegistryManager {
 
     /** 标记设备 BLE 可检测状态（在扫描范围内但尚未连接）。connect() 时自动清除。 */
     fun updateBleDetected(macAddress: String, value: Boolean)
+
+    /** Debug：种子化默认优先级验证场景；正式路径不应调用。 */
+    fun debugSeedDefaultPriorityScenario(): Boolean = false
+
+    /** Debug：通过注册表候选选择路径模拟 BLE 检测；正式路径不应调用。 */
+    suspend fun debugSimulateBleDetection(manuallyDisconnectDefault: Boolean): Boolean = false
+
+    /** Debug L2.5：确定性模拟 BLE 候选输入，并返回可断言结果；正式路径不应调用。 */
+    suspend fun debugRunBleDetectionL25Scenario(
+        scenario: DebugBleDetectionL25Scenario
+    ): DebugBleDetectionL25Result? = null
 }

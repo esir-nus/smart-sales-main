@@ -20,6 +20,8 @@ import com.smartsales.prism.domain.connectivity.UpdateResult
 import com.smartsales.prism.domain.connectivity.WavDownloadResult
 import com.smartsales.prism.domain.connectivity.WifiConfigResult
 import com.smartsales.prism.domain.connectivity.WifiRepairEvent
+import com.smartsales.prism.ui.debug.DebugModeStore
+import com.smartsales.prism.ui.theme.InMemorySharedPreferences
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -62,7 +64,8 @@ class ConnectivityViewModelRepairTest {
         connectivityService = service,
         connectivityBridge = bridge,
         registryManager = NoOpDeviceRegistryManager(),
-        promptCoordinator = ConnectivityPromptCoordinator()
+        promptCoordinator = ConnectivityPromptCoordinator(),
+        debugModeStore = DebugModeStore(InMemorySharedPreferences())
     )
 
     @Test
@@ -148,7 +151,8 @@ class ConnectivityViewModelRepairTest {
             connectivityService = StubConnectivityService(),
             connectivityBridge = StubRepairBridge(),
             registryManager = NoOpDeviceRegistryManager(),
-            promptCoordinator = coordinator
+            promptCoordinator = coordinator,
+            debugModeStore = DebugModeStore(InMemorySharedPreferences())
         )
         advanceUntilIdle()
 
@@ -181,7 +185,8 @@ class ConnectivityViewModelRepairTest {
             connectivityService = StubConnectivityService(),
             connectivityBridge = StubRepairBridge(),
             registryManager = registry,
-            promptCoordinator = coordinator
+            promptCoordinator = coordinator,
+            debugModeStore = DebugModeStore(InMemorySharedPreferences())
         )
         coordinator.promptSuspectedIsolation("192.168.1.18", suggestedSsid = "OfficeGuest")
         advanceUntilIdle()
@@ -204,7 +209,8 @@ class ConnectivityViewModelRepairTest {
             connectivityService = StubConnectivityService(),
             connectivityBridge = StubRepairBridge(),
             registryManager = registry,
-            promptCoordinator = ConnectivityPromptCoordinator()
+            promptCoordinator = ConnectivityPromptCoordinator(),
+            debugModeStore = DebugModeStore(InMemorySharedPreferences())
         )
         advanceUntilIdle()
 

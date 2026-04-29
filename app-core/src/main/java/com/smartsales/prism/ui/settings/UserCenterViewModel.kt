@@ -10,6 +10,7 @@ import androidx.lifecycle.viewModelScope
 import com.smartsales.prism.data.connectivity.legacy.DeviceConnectionManager
 import com.smartsales.prism.domain.memory.UserProfile
 import com.smartsales.prism.domain.repository.UserProfileRepository
+import com.smartsales.prism.ui.debug.DebugModeStore
 import com.smartsales.prism.ui.theme.PrismThemeMode
 import com.smartsales.prism.ui.theme.ThemePreferenceStore
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,6 +29,7 @@ class UserCenterViewModel @Inject constructor(
     private val notificationService: com.smartsales.prism.domain.notification.NotificationService,
     private val themePreferenceStore: ThemePreferenceStore,
     private val voiceVolumeStore: VoiceVolumePreferenceStore,
+    private val debugModeStore: DebugModeStore,
     private val connectionManager: DeviceConnectionManager
 ) : ViewModel() {
 
@@ -39,6 +41,7 @@ class UserCenterViewModel @Inject constructor(
         )
 
     val themeMode: StateFlow<PrismThemeMode> = themePreferenceStore.themeMode
+    val debugModeEnabled: StateFlow<Boolean> = debugModeStore.enabled
 
     // 滑块当前显示值（跟手）。拖动期间只更新该 UI 状态，不触发 BLE 写入。
     private val _voiceVolume = MutableStateFlow(voiceVolumeStore.desiredVolume.value)
@@ -52,6 +55,10 @@ class UserCenterViewModel @Inject constructor(
 
     fun setThemeMode(mode: PrismThemeMode) {
         themePreferenceStore.setThemeMode(mode)
+    }
+
+    fun setDebugModeEnabled(enabled: Boolean) {
+        debugModeStore.setEnabled(enabled)
     }
 
     // 拖动中调用：仅更新 UI 显示，禁止发 BLE（ESP32 无法承受高频写入）

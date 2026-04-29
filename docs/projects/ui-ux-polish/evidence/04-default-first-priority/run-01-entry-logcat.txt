@@ -1,0 +1,7 @@
+--------- beginning of main
+04-29 20:10:37.103 D/SmartSalesConn(26873): 🔌 Restored session: 11:22:33:44:55:66 knownNetworks=0
+04-29 20:10:37.104 D/SmartSalesConn(26873): 🏠 Registry: default device Remaining Badge (...55:66)
+04-29 20:10:37.104 D/SmartSalesConn(26873): 🔌 Restored session: 11:22:33:44:55:66 knownNetworks=0
+04-29 20:10:37.110 I/SmartSalesConn(26873): 📶 BLE disconnected
+04-29 20:10:37.110 D/SmartSalesConn(26873): 🔌 Soft disconnect (session preserved)
+04-29 20:10:37.110 D/SmartSalesConn(26873): 🔌 Persistent GATT session closed

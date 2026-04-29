@@ -4,6 +4,8 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.smartsales.prism.data.connectivity.registry.DeviceRegistryManager
+import com.smartsales.prism.data.connectivity.registry.DebugBleDetectionL25Result
+import com.smartsales.prism.data.connectivity.registry.DebugBleDetectionL25Scenario
 import com.smartsales.prism.data.connectivity.registry.RegisteredDevice
 import com.smartsales.prism.domain.connectivity.BadgeConnectionState
 import com.smartsales.prism.domain.connectivity.BadgeManagerStatus
@@ -15,6 +17,7 @@ import com.smartsales.prism.domain.connectivity.UpdateResult
 import com.smartsales.prism.domain.connectivity.WifiConfigResult
 import com.smartsales.prism.domain.connectivity.WifiRepairEvent
 import com.smartsales.core.util.Result
+import com.smartsales.prism.ui.debug.DebugModeStore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -44,12 +47,14 @@ class ConnectivityViewModel @Inject constructor(
     private val connectivityService: ConnectivityService,
     private val connectivityBridge: ConnectivityBridge,
     private val registryManager: DeviceRegistryManager,
-    private val promptCoordinator: ConnectivityPromptCoordinator
+    private val promptCoordinator: ConnectivityPromptCoordinator,
+    private val debugModeStore: DebugModeStore
 ) : ViewModel() {
 
     // 设备注册表 — 多设备管理
     val registeredDevices: StateFlow<List<RegisteredDevice>> = registryManager.registeredDevices
     val activeDevice: StateFlow<RegisteredDevice?> = registryManager.activeDevice
+    val debugModeEnabled: StateFlow<Boolean> = debugModeStore.enabled
 
     // 排序后的设备列表：活跃设备置顶，其余按注册时间排序
     val sortedDevices: StateFlow<List<RegisteredDevice>> = combine(
@@ -484,6 +489,46 @@ class ConnectivityViewModel @Inject constructor(
                 "debug rec source=debug_rec_button filename=$filename emitted=$emitted"
             )
         }
+    }
+
+    fun debugSeedDefaultPriorityScenario() {
+        val seeded = registryManager.debugSeedDefaultPriorityScenario()
+        _debugProbeText.value = if (seeded) {
+            "debug default seed: ready"
+        } else {
+            "debug default seed: unavailable"
+        }
+        Log.i("ConnectivityVM", "debug default seed source=debug_default_seed_button seeded=$seeded")
+    }
+
+    fun debugSimulateDefaultPriorityDetection() {
+        viewModelScope.launch {
+            runBleDetectionL25Scenario(DebugBleDetectionL25Scenario.DefaultPriorityDualAdvertise)
+        }
+    }
+
+    fun debugSimulateManualDefaultSuppression() {
+        viewModelScope.launch {
+            runBleDetectionL25Scenario(DebugBleDetectionL25Scenario.ManualDefaultSuppression)
+        }
+    }
+
+    private suspend fun runBleDetectionL25Scenario(scenario: DebugBleDetectionL25Scenario) {
+        _debugProbeText.value = "L2.5 ${scenario.scenarioId}: running"
+        val result = registryManager.debugRunBleDetectionL25Scenario(scenario)
+        _debugProbeText.value = result?.toDebugProbeText() ?: "L2.5 ${scenario.scenarioId}: unavailable"
+        Log.i(
+            "ConnectivityVM",
+            "[L2.5][UI] scenario=${scenario.scenarioId} " +
+                "result=${if (result?.passed == true) "PASS" else "FAIL"} " +
+                "selected=${result?.selectedMac ?: "none"} expected=${result?.expectedSelectedMac ?: "none"} " +
+                "source=connectivity_debug_button authenticity=synthetic_not_physical_ble"
+        )
+    }
+
+    private fun DebugBleDetectionL25Result.toDebugProbeText(): String {
+        val status = if (passed) "PASS" else "FAIL"
+        return "L2.5 $scenarioId: $status selected=${selectedMac ?: "none"}"
     }
 
     /**

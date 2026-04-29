@@ -76,6 +76,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.smartsales.prism.BuildConfig
 import com.smartsales.prism.domain.memory.UserProfile
 import com.smartsales.prism.ui.components.connectivity.ConnectivityViewModel
 import com.smartsales.prism.ui.components.PrismStatusBarTopSafeArea
@@ -96,6 +97,7 @@ fun UserCenterScreen(
     val isDarkTheme = PrismThemeDefaults.isDarkTheme
     val profile by viewModel.profile.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+    val debugModeEnabled by viewModel.debugModeEnabled.collectAsStateWithLifecycle()
     val firmwareVersion by connectivityViewModel.firmwareVersion.collectAsStateWithLifecycle()
     val sdCardSpace by connectivityViewModel.sdCardSpace.collectAsStateWithLifecycle()
     var isEditing by remember { mutableStateOf(false) }
@@ -203,6 +205,14 @@ fun UserCenterScreen(
                                     showDivider = true,
                                     onCheckedChange = {}
                                 )
+                                if (BuildConfig.DEBUG) {
+                                    UserCenterToggleRow(
+                                        label = "调试模式",
+                                        checked = debugModeEnabled,
+                                        showDivider = true,
+                                        onCheckedChange = viewModel::setDebugModeEnabled
+                                    )
+                                }
                                 NotificationSettingsRow(
                                     viewModel = viewModel,
                                     showDivider = false
@@ -621,6 +631,7 @@ private fun UserCenterToggleRow(
         leadingIcon = when (label) {
             "AI 实验室" -> Icons.Default.Psychology
             "消息通知" -> Icons.Default.NotificationsNone
+            "调试模式" -> Icons.Default.Info
             else -> Icons.Default.Person
         },
         onClick = null,

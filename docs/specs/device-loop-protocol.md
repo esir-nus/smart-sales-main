@@ -43,6 +43,29 @@ run-02-after-fix.png
 If an existing sprint already declares narrower names, keep the sprint's names
 and preserve the same baseline/after-fix distinction in the ledger.
 
+## L2.5 Synthetic Ingress
+
+L2.5 is the deterministic device-installed synthetic ingress class. It is
+allowed when a debug control enters the same app boundary as the real upstream
+signal, uses fixed fixtures, emits scenario IDs and assertion telemetry, and is
+captured with the Android loop on an installed debug APK.
+
+Rules:
+
+- the debug control must be debug-build gated
+- the scenario must seed a fixed pre-state or prove the required pre-state
+- the injected input must enter the same internal boundary as the real signal
+- logcat must include `[L2.5][BEGIN]`, `[L2.5][ASSERT]`, and `[L2.5][END]`
+- `[L2.5][END]` must state `result=PASS` before the branch can be counted
+- UI XML or other state evidence must prove the control was available only in
+  debug mode when UI gating is part of the claim
+- L2.5 may close app-side dataflow uncertainty, but it must not be reported as
+  authentic physical hardware evidence
+
+L2.5 is intentionally close to L3 dataflow fidelity, but it is not L3. For BLE
+or firmware claims, physical scanner, GATT, firmware emission, and power-state
+evidence remain L3-only.
+
 ## Android Loop
 
 Run one exact scenario per loop. Do not mix multiple hypotheses in the same

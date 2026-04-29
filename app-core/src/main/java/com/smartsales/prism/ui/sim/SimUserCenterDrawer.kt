@@ -195,6 +195,7 @@ internal fun SimUserCenterDrawer(
     val palette = rememberSimUserCenterPalette()
     val profile by viewModel.profile.collectAsStateWithLifecycle()
     val themeMode by viewModel.themeMode.collectAsStateWithLifecycle()
+    val debugModeEnabled by viewModel.debugModeEnabled.collectAsStateWithLifecycle()
     val sdCardSpace by connectivityViewModel.sdCardSpace.collectAsStateWithLifecycle()
     var isEditing by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
@@ -306,6 +307,14 @@ internal fun SimUserCenterDrawer(
                                     leadingIcon = Icons.Default.Psychology,
                                     showDivider = true
                                 )
+                                if (BuildConfig.DEBUG) {
+                                    SimUserCenterToggleRow(
+                                        label = "调试模式",
+                                        checked = debugModeEnabled,
+                                        showDivider = true,
+                                        onCheckedChange = viewModel::setDebugModeEnabled
+                                    )
+                                }
                                 SimNotificationSettingsRow(
                                     viewModel = viewModel,
                                     showDivider = false
@@ -629,7 +638,11 @@ private fun SimUserCenterToggleRow(
     SimUserCenterRow(
         presentation = SimUserCenterRowPresentation.Interactive,
         label = label,
-        leadingIcon = if (label == "消息通知") Icons.Default.NotificationsNone else Icons.Default.Person,
+        leadingIcon = when (label) {
+            "消息通知" -> Icons.Default.NotificationsNone
+            "调试模式" -> Icons.Default.Info
+            else -> Icons.Default.Person
+        },
         onClick = null,
         showDivider = showDivider,
         rightContent = {

@@ -448,26 +448,47 @@ def format_average(value: float | None) -> str:
     return f"{value:.1f}"
 
 
-def render_score_metric(label: str, value: str, meta: str) -> str:
+def render_score_metric(label: str, value: str, meta: str, value_class: str = "") -> str:
+    value_cls = f" {value_class}" if value_class else ""
     return f"""
 <article class="metric">
   <div class="metric-label">{escape(label)}</div>
-  <div class="metric-value">{escape(value)}</div>
+  <div class="metric-value{value_cls}">{escape(value)}</div>
   <div class="metric-meta">{escape(meta)}</div>
 </article>
 """.strip()
 
 
-def svg_point(x: float, y: float, label: str, color: str) -> str:
-    return f'<circle cx="{x:.2f}" cy="{y:.2f}" r="4.5" fill="{color}"><title>{escape(label)}</title></circle>'
+def direction_class(value: float | None) -> str:
+    # 正向/负向/平移分类，供指标值与改进数值上色
+    if value is None:
+        return "flat"
+    if value > 0:
+        return "positive"
+    if value < 0:
+        return "negative"
+    return "flat"
+
+
+def svg_point(x: float, y: float, label: str, color: str, radius: float = 4.5, halo: bool = False) -> str:
+    halo_layer = (
+        f'<circle cx="{x:.2f}" cy="{y:.2f}" r="{radius + 4:.2f}" fill="{color}" fill-opacity="0.18"></circle>'
+        if halo
+        else ""
+    )
+    return (
+        f'{halo_layer}'
+        f'<circle cx="{x:.2f}" cy="{y:.2f}" r="{radius:.2f}" fill="{color}" stroke="#fffdf8" stroke-width="1.5">'
+        f'<title>{escape(label)}</title></circle>'
+    )
 
 
 def svg_path(points: list[tuple[float, float]], color: str) -> str:
     if not points:
         return ""
     if len(points) == 1:
-        x, y = points[0]
-        return f'<circle cx="{x:.2f}" cy="{y:.2f}" r="4.5" fill="{color}"></circle>'
+        # 单点情况下不再单独画圆,数据点由 svg_point 单独负责
+        return ""
     commands = [f"M {points[0][0]:.2f} {points[0][1]:.2f}"]
     commands.extend(f"L {x:.2f} {y:.2f}" for x, y in points[1:])
     return f'<path d="{" ".join(commands)}" fill="none" stroke="{color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>'
@@ -478,62 +499,148 @@ def render_trend_svg(records: list[ScoreRecord]) -> str:
         return '<div class="empty">No score-bearing BAKE sprint contracts found yet.</div>'
     width = 920
     height = 280
-    left = 48
-    right = 24
-    top = 24
+    left = 56
+    right = 28
+    top = 36
     bottom = 44
     plot_w = width - left - right
     plot_h = height - top - bottom
     denominator = max(1, len(records) - 1)
+    is_first_reading = len(records) == 1
 
     def x_at(index: int) -> float:
+        if is_first_reading:
+            # 单一首读放在画布中段,周围保留呼吸感
+            return left + plot_w * 0.5
         return left + (plot_w * index / denominator)
 
     def y_at(score: float) -> float:
         return top + ((5 - score) / 4) * plot_h
+
+    # 分数区域底色:1-2 红 / 3 棕 / 4-5 绿,低不透明度避免抢主体
+    zone_bands = "".join(
+        [
+            f'<rect x="{left}" y="{y_at(2):.2f}" width="{plot_w}" height="{(y_at(1) - y_at(2)):.2f}" fill="#b91c1c" fill-opacity="0.06"></rect>',
+            f'<rect x="{left}" y="{y_at(3):.2f}" width="{plot_w}" height="{(y_at(2) - y_at(3)):.2f}" fill="#8b5e34" fill-opacity="0.06"></rect>',
+            f'<rect x="{left}" y="{y_at(5):.2f}" width="{plot_w}" height="{(y_at(3) - y_at(5)):.2f}" fill="#15803d" fill-opacity="0.06"></rect>',
+        ]
+    )
+
+    # 网格:1/3/5 锚线实线,2/4 虚线,作为辅助参照
+    anchor_scores = {1, 3, 5}
+    grid = []
+    for score in range(1, 6):
+        y = y_at(score)
+        cls = "grid-line" if score in anchor_scores else "grid-line dashed"
+        grid.append(
+            f'<line x1="{left}" y1="{y:.2f}" x2="{width - right}" y2="{y:.2f}" class="{cls}"></line>'
+        )
+        grid.append(f'<text x="{left - 12:.2f}" y="{y + 4:.2f}" class="axis-label" text-anchor="end">{score}</text>')
 
     series = [
         ("Pre", "Pre-BAKE codebase score", "#8b5e34"),
         ("Work", "Work score", "#2563eb"),
         ("Baked", "Baked-codebase score", "#15803d"),
     ]
-    grid = []
-    for score in range(1, 6):
-        y = y_at(score)
-        grid.append(f'<line x1="{left}" y1="{y:.2f}" x2="{width - right}" y2="{y:.2f}" class="grid-line"></line>')
-        grid.append(f'<text x="14" y="{y + 4:.2f}" class="axis-label">{score}</text>')
-    rendered_series = []
-    rendered_points = []
+
+    # 计算每条曲线在每个 sprint 的 (x, y, value),用于叠点错位与首读高亮
+    series_points: list[tuple[str, str, str, list[tuple[int, float, float, float]]]] = []
     for short_label, score_label, color in series:
         points = []
         for index, record in enumerate(records):
             value = record.scores[score_label].value
             if value is None:
                 continue
-            x = x_at(index)
-            y = y_at(value)
-            points.append((x, y))
-            rendered_points.append(svg_point(x, y, f"{record.sprint_slug}: {short_label} {value:g}/5", color))
-        rendered_series.append(svg_path(points, color))
+            points.append((index, x_at(index), y_at(value), value))
+        series_points.append((short_label, score_label, color, points))
+
+    # 同一 sprint 同一 y 上的圆点做横向错位,避免遮挡
+    dx_offsets = [-7.0, 0.0, 7.0]
+
+    rendered_series = []
+    for (_short, _label, color, points), _dx in zip(series_points, dx_offsets):
+        rendered_series.append(svg_path([(p[1], p[2]) for p in points], color))
+
+    rendered_points: list[str] = []
+    rendered_value_labels: list[str] = []
+    spotlight_lines: list[str] = []
+    for (short_label, _score_label, color, points), dx in zip(series_points, dx_offsets):
+        for sprint_index, x, y, value in points:
+            if is_first_reading:
+                px = x + dx
+                py = y
+                rendered_points.append(
+                    svg_point(
+                        px,
+                        py,
+                        f"{records[sprint_index].sprint_slug}: {short_label} {value:g}/5",
+                        color,
+                        radius=6,
+                        halo=True,
+                    )
+                )
+                rendered_value_labels.append(
+                    f'<text x="{px:.2f}" y="{py - 14:.2f}" class="value-label" '
+                    f'text-anchor="middle" fill="{color}">{value:g}</text>'
+                )
+                spotlight_lines.append(
+                    f'<line x1="{left}" y1="{py:.2f}" x2="{width - right}" y2="{py:.2f}" '
+                    f'class="spotlight-line" stroke="{color}"></line>'
+                )
+            else:
+                rendered_points.append(
+                    svg_point(
+                        x,
+                        y,
+                        f"{records[sprint_index].sprint_slug}: {short_label} {value:g}/5",
+                        color,
+                    )
+                )
+
     x_labels = []
     for index, record in enumerate(records):
         x = x_at(index)
         label = record.sprint_number
-        x_labels.append(f'<text x="{x:.2f}" y="{height - 14}" class="axis-label" text-anchor="middle">{escape(label)}</text>')
-    legend = """
-<g class="legend" transform="translate(610, 18)">
+        x_labels.append(
+            f'<text x="{x:.2f}" y="{height - 14}" class="axis-label" text-anchor="middle">{escape(label)}</text>'
+        )
+
+    # 图例居中悬浮在绘图区上方,自适应于不同图宽
+    legend_x = (left + (width - right)) / 2 - 90
+    legend = f"""
+<g class="legend" transform="translate({legend_x:.2f}, 18)">
   <circle cx="0" cy="0" r="5" fill="#8b5e34"></circle><text x="12" y="4">Pre</text>
   <circle cx="70" cy="0" r="5" fill="#2563eb"></circle><text x="82" y="4">Work</text>
   <circle cx="150" cy="0" r="5" fill="#15803d"></circle><text x="162" y="4">Baked</text>
 </g>
 """.strip()
+
+    defs = """
+<defs>
+  <linearGradient id="trend-plot-bg" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0%" stop-color="#fffdf8" stop-opacity="0.95"/>
+    <stop offset="100%" stop-color="#f3ecdc" stop-opacity="0.85"/>
+  </linearGradient>
+</defs>
+""".strip()
+
+    plot_bg = (
+        f'<rect x="{left}" y="{top}" width="{plot_w}" height="{plot_h}" '
+        f'fill="url(#trend-plot-bg)" rx="10" ry="10"></rect>'
+    )
+
     return f"""
 <svg class="trend-svg" viewBox="0 0 {width} {height}" role="img" aria-label="BAKE score trend chart">
+  {defs}
+  {plot_bg}
+  {zone_bands}
   {''.join(grid)}
+  {''.join(spotlight_lines)}
   {''.join(x_labels)}
   {legend}
   {''.join(rendered_series)}
   {''.join(rendered_points)}
+  {''.join(rendered_value_labels)}
 </svg>
 """.strip()
 
@@ -547,13 +654,17 @@ def render_improvement_bars(records: list[ScoreRecord]) -> str:
     for record in scored:
         improvement = record.improvement or 0
         width = abs(improvement) / max_abs * 100
-        direction_class = "positive" if improvement >= 0 else "negative"
+        fill_class = "positive" if improvement > 0 else ("negative" if improvement < 0 else "flat")
+        value_class = direction_class(improvement)
         bars.append(
             f"""
 <div class="bar-row">
-  <div class="bar-label">{escape(record.sprint_number)} · {escape(record.sprint_slug)}</div>
-  <div class="bar-track"><span class="bar-fill {direction_class}" style="width: {width:.1f}%"></span></div>
-  <div class="bar-value">{improvement:+.1f}</div>
+  <div class="bar-label">
+    <span class="bar-kicker">{escape(record.sprint_number)}</span>
+    <span class="bar-slug">{escape(record.sprint_slug)}</span>
+  </div>
+  <div class="bar-track"><span class="bar-fill {fill_class}" style="width: {width:.1f}%"></span></div>
+  <div class="bar-value {value_class}">{improvement:+.1f}</div>
 </div>
 """.strip()
         )
@@ -588,11 +699,12 @@ def render_score_card(record: ScoreRecord, output_path: Path) -> str:
     href = relative_link(record.contract_path, output_path)
     improvement = record.improvement
     improvement_text = "n/a" if improvement is None else f"{improvement:+.1f}"
+    improvement_dir = direction_class(improvement)
     net_judgment = record.delta_rows.get("Net judgment", "No net judgment recorded.")
     assumption = record.delta_rows.get("Assumption killed", "No assumption row recorded.")
     residual = record.delta_rows.get("Residual risk/debt", "No residual risk row recorded.")
     return f"""
-<article class="score-card">
+<article class="score-card direction-{improvement_dir}">
   <div class="score-card-head">
     <div>
       <div class="score-kicker">{escape(record.project_slug)} / sprint {escape(record.sprint_number)}</div>
@@ -600,13 +712,13 @@ def render_score_card(record: ScoreRecord, output_path: Path) -> str:
       <p>{escape(record.sprint_summary)}</p>
     </div>
     <div class="score-triplet" aria-label="Score triplet">
-      <span><b>{escape(format_score(record.pre_score))}</b><small>pre</small></span>
-      <span><b>{escape(format_score(record.work_score))}</b><small>work</small></span>
-      <span><b>{escape(format_score(record.baked_score))}</b><small>baked</small></span>
+      <span class="triplet-pre"><b>{escape(format_score(record.pre_score))}</b><small>pre</small></span>
+      <span class="triplet-work"><b>{escape(format_score(record.work_score))}</b><small>work</small></span>
+      <span class="triplet-baked"><b>{escape(format_score(record.baked_score))}</b><small>baked</small></span>
     </div>
   </div>
   <div class="insight-grid">
-    <div><strong>Improvement</strong><span>{escape(improvement_text)}</span></div>
+    <div class="insight-improvement"><strong>Improvement</strong><span class="improvement-pill {improvement_dir}">{escape(improvement_text)}</span></div>
     <div><strong>Net judgment</strong><span>{escape(net_judgment)}</span></div>
     <div><strong>Assumption killed</strong><span>{escape(assumption)}</span></div>
     <div><strong>Residual risk</strong><span>{escape(residual)}</span></div>
@@ -623,13 +735,19 @@ def render_score_dashboard(projects: list[Project], output_path: Path) -> str:
     work_values = [record.work_score for record in records if record.work_score is not None]
     baked_values = [record.baked_score for record in records if record.baked_score is not None]
     improvements = [record.improvement for record in records if record.improvement is not None]
+    avg_improvement = average(improvements)
     metric_cards = "\n".join(
         [
             render_score_metric("Scored sprints", str(len(records)), "Contracts with any BAKE score"),
             render_score_metric("Avg pre", format_average(average(pre_values)), "Incoming codebase quality"),
             render_score_metric("Avg work", format_average(average(work_values)), "Sprint execution quality"),
             render_score_metric("Avg baked", format_average(average(baked_values)), "Resulting codebase quality"),
-            render_score_metric("Avg improvement", format_average(average(improvements)), "Baked minus pre"),
+            render_score_metric(
+                "Avg improvement",
+                format_average(avg_improvement),
+                "Baked minus pre",
+                value_class=direction_class(avg_improvement),
+            ),
         ]
     )
     trend_note = (
@@ -649,89 +767,373 @@ def render_score_dashboard(projects: list[Project], output_path: Path) -> str:
   <title>BAKE Score Trends</title>
   <style>
     :root {{
-      --bg: #f6f4ee;
-      --ink: #202426;
-      --muted: #5e686f;
-      --card: #fffdf8;
-      --card-soft: #f8f2e8;
-      --line: rgba(32, 36, 38, 0.12);
+      --bg: #f3efe4;
+      --bg-accent: #e5dcc7;
+      --ink: #1f2a2a;
+      --muted: #59656a;
+      --card: rgba(255, 251, 244, 0.88);
+      --card-strong: rgba(255, 248, 237, 0.96);
+      --card-soft: rgba(245, 235, 218, 0.7);
+      --line: rgba(31, 42, 42, 0.12);
+      --shadow: 0 20px 60px rgba(68, 56, 36, 0.12);
+      --shadow-lift: 0 14px 36px rgba(68, 56, 36, 0.16);
+      --shell-gutter: clamp(14px, 2vw, 24px);
+      --section-gap: clamp(18px, 2.2vw, 28px);
+      --card-radius: clamp(20px, 2vw, 28px);
       --green: #15803d;
       --blue: #2563eb;
       --amber: #8b5e34;
       --red: #b91c1c;
-      --shadow: 0 16px 44px rgba(54, 48, 36, 0.10);
     }}
     * {{ box-sizing: border-box; }}
     body {{
       margin: 0;
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-family: Georgia, "Times New Roman", serif;
       color: var(--ink);
-      background: linear-gradient(180deg, #faf7ef 0%, #ece8df 100%);
+      background:
+        radial-gradient(circle at top left, rgba(215, 177, 116, 0.18), transparent 32%),
+        radial-gradient(circle at top right, rgba(35, 127, 116, 0.12), transparent 24%),
+        linear-gradient(180deg, #f7f2e7 0%, #efe7d7 100%);
       min-height: 100vh;
     }}
     a {{ color: inherit; }}
-    .shell {{ width: min(1320px, calc(100vw - 32px)); margin: 0 auto; padding: 24px 0 64px; }}
-    .nav {{ display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 18px; }}
-    .nav a {{ text-decoration: none; border: 1px solid var(--line); border-radius: 999px; padding: 8px 12px; background: rgba(255,255,255,0.72); color: var(--muted); }}
-    .nav a.active {{ color: var(--ink); background: var(--card); box-shadow: var(--shadow); }}
-    .hero, .panel, .score-card {{ background: var(--card); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }}
-    .hero {{ padding: clamp(18px, 3vw, 30px); margin-bottom: 18px; }}
-    .eyebrow {{ text-transform: uppercase; letter-spacing: .12em; font-size: .76rem; color: var(--muted); margin-bottom: 10px; }}
-    h1 {{ margin: 0 0 8px; font-size: clamp(2rem, 4vw, 3.4rem); line-height: 1.02; letter-spacing: 0; }}
-    .hero p, .generated-at {{ color: var(--muted); max-width: 78ch; line-height: 1.6; }}
-    .generated-at {{ font-size: .92rem; margin-top: 12px; }}
-    .metrics {{ display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); gap: 12px; margin-bottom: 18px; }}
-    .metric {{ background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; min-width: 0; }}
-    .metric-label {{ font-size: .76rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 8px; }}
+    .shell {{
+      width: min(1320px, calc(100vw - (var(--shell-gutter) * 2)));
+      margin: 0 auto;
+      padding: clamp(18px, 3vw, 32px) 0 clamp(40px, 7vw, 72px);
+    }}
+    .nav {{ display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: var(--section-gap); }}
+    .nav a {{
+      text-decoration: none;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 8px 14px;
+      background: rgba(255, 255, 255, 0.64);
+      color: var(--muted);
+      line-height: 1.35;
+      transition: background 180ms ease, color 180ms ease;
+    }}
+    .nav a:hover {{ background: rgba(255, 255, 255, 0.85); color: var(--ink); }}
+    .nav a.active {{ color: var(--ink); background: var(--card-strong); box-shadow: var(--shadow); }}
+    .hero, .panel, .score-card, .metric {{
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--card-radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }}
+    .hero {{
+      padding: clamp(20px, 3vw, 32px);
+      margin-bottom: var(--section-gap);
+      position: relative;
+      overflow: hidden;
+    }}
+    .hero::before {{
+      content: "";
+      position: absolute;
+      inset: auto -60px -60px auto;
+      width: 240px;
+      height: 240px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(15, 118, 110, 0.18), transparent 70%);
+      pointer-events: none;
+    }}
+    .hero::after {{
+      content: "";
+      position: absolute;
+      inset: -80px auto auto -80px;
+      width: 220px;
+      height: 220px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(215, 177, 116, 0.22), transparent 70%);
+      pointer-events: none;
+    }}
+    .hero > * {{ position: relative; z-index: 1; }}
+    .eyebrow {{
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      font-size: 0.75rem;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }}
+    h1 {{
+      margin: 0 0 10px;
+      font-size: clamp(2rem, 3.6vw, 3.2rem);
+      line-height: 1.05;
+      max-width: 22ch;
+      text-wrap: balance;
+    }}
+    .hero p {{
+      margin: 0;
+      color: var(--muted);
+      max-width: 64ch;
+      line-height: 1.68;
+      font-size: clamp(0.98rem, 1.2vw, 1.08rem);
+    }}
+    .generated-at {{
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 18px;
+      padding: 6px 14px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.55);
+      color: var(--muted);
+      font-size: 0.85rem;
+      letter-spacing: 0.02em;
+    }}
+    .metrics {{
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0,1fr));
+      gap: clamp(12px, 1.6vw, 16px);
+      margin-bottom: var(--section-gap);
+    }}
+    .metric {{
+      background: var(--card-strong);
+      padding: clamp(14px, 1.8vw, 20px);
+      min-width: 0;
+      transition: transform 180ms ease, box-shadow 180ms ease;
+    }}
+    .metric:hover {{ transform: translateY(-2px); box-shadow: var(--shadow-lift); }}
+    .metric-label {{
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }}
     .metric-value {{ font-size: clamp(1.7rem, 3vw, 2.4rem); line-height: 1; }}
-    .metric-meta {{ color: var(--muted); margin-top: 8px; font-size: .9rem; line-height: 1.35; }}
-    .panel {{ padding: 18px; margin-bottom: 18px; overflow: hidden; }}
-    .panel h2 {{ margin: 0 0 6px; font-size: 1.2rem; }}
-    .panel-note {{ margin: 0 0 12px; color: var(--muted); }}
-    .trend-svg {{ width: 100%; height: auto; display: block; background: var(--card-soft); border: 1px solid var(--line); border-radius: 14px; }}
-    .grid-line {{ stroke: rgba(32,36,38,.14); stroke-width: 1; }}
-    .axis-label, .legend text {{ fill: var(--muted); font-size: 12px; }}
-    .bars {{ display: grid; gap: 10px; }}
-    .bar-row {{ display: grid; grid-template-columns: minmax(150px, 280px) minmax(120px, 1fr) 56px; gap: 10px; align-items: center; }}
-    .bar-label, .bar-value {{ color: var(--muted); font-size: .9rem; overflow-wrap: anywhere; }}
-    .bar-track {{ height: 14px; background: var(--card-soft); border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }}
+    .metric-value.positive {{ color: var(--green); }}
+    .metric-value.negative {{ color: var(--red); }}
+    .metric-value.flat {{ color: var(--ink); }}
+    .metric-meta {{ color: var(--muted); margin-top: 10px; font-size: 0.92rem; line-height: 1.45; }}
+    .panel {{ padding: clamp(18px, 2.2vw, 24px); margin-bottom: var(--section-gap); overflow: hidden; }}
+    .panel h2 {{ margin: 0 0 6px; font-size: 1.3rem; letter-spacing: 0; }}
+    .panel-note {{ margin: 0 0 14px; color: var(--muted); line-height: 1.55; }}
+    .trend-svg {{
+      width: 100%;
+      height: auto;
+      display: block;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255, 251, 244, 0.45);
+    }}
+    .grid-line {{ stroke: rgba(31, 42, 42, 0.18); stroke-width: 1; }}
+    .grid-line.dashed {{ stroke: rgba(31, 42, 42, 0.12); stroke-dasharray: 3 5; }}
+    .spotlight-line {{ stroke-width: 1.25; stroke-opacity: 0.32; stroke-dasharray: 2 6; }}
+    .axis-label, .legend text {{ fill: var(--muted); font-size: 12px; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }}
+    .value-label {{ font-size: 13px; font-weight: 700; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }}
+    .bars {{ display: grid; gap: 12px; }}
+    .bar-row {{
+      display: grid;
+      grid-template-columns: minmax(160px, 300px) minmax(120px, 1fr) 64px;
+      gap: 14px;
+      align-items: center;
+    }}
+    .bar-label {{ display: flex; flex-direction: column; gap: 4px; min-width: 0; }}
+    .bar-kicker {{
+      align-self: flex-start;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: rgba(31, 42, 42, 0.06);
+      border: 1px solid var(--line);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      font-size: 0.74rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }}
+    .bar-slug {{
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.4;
+      overflow-wrap: anywhere;
+    }}
+    .bar-track {{
+      height: 16px;
+      background: var(--card-soft);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      overflow: hidden;
+      box-shadow: inset 0 1px 2px rgba(31, 42, 42, 0.08);
+    }}
     .bar-fill {{ display: block; height: 100%; border-radius: inherit; }}
-    .bar-fill.positive {{ background: var(--green); }}
-    .bar-fill.negative {{ background: var(--red); }}
-    .score-list {{ display: grid; gap: 14px; }}
-    .score-card {{ padding: 18px; }}
-    .score-card-head {{ display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 18px; align-items: start; }}
-    .score-kicker {{ color: var(--muted); text-transform: uppercase; letter-spacing: .08em; font-size: .76rem; margin-bottom: 7px; }}
-    .score-card h2 {{ margin: 0 0 8px; line-height: 1.25; font-size: 1.18rem; overflow-wrap: anywhere; }}
+    .bar-fill.positive {{ background: linear-gradient(90deg, #15803d 0%, #1aa84e 100%); }}
+    .bar-fill.negative {{ background: linear-gradient(90deg, #b91c1c 0%, #d2453d 100%); }}
+    .bar-fill.flat {{ background: rgba(31, 42, 42, 0.18); }}
+    .bar-value {{
+      font-size: 1rem;
+      font-weight: 700;
+      text-align: right;
+      letter-spacing: 0.02em;
+    }}
+    .bar-value.positive {{ color: var(--green); }}
+    .bar-value.negative {{ color: var(--red); }}
+    .bar-value.flat {{ color: var(--muted); }}
+    .score-list {{ display: grid; gap: var(--section-gap); }}
+    .score-card {{
+      padding: clamp(18px, 2.4vw, 26px);
+      border-left: 4px solid var(--amber);
+      transition: transform 180ms ease, box-shadow 180ms ease;
+    }}
+    .score-card:hover {{ transform: translateY(-2px); box-shadow: var(--shadow-lift); }}
+    .score-card.direction-positive {{ border-left-color: var(--green); }}
+    .score-card.direction-negative {{ border-left-color: var(--red); }}
+    .score-card.direction-flat {{ border-left-color: var(--amber); }}
+    .score-card-head {{ display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 22px; align-items: start; }}
+    .score-kicker {{
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-size: 0.76rem;
+      margin-bottom: 8px;
+    }}
+    .score-card h2 {{ margin: 0 0 10px; line-height: 1.25; font-size: clamp(1.15rem, 1.6vw, 1.35rem); overflow-wrap: anywhere; text-wrap: balance; }}
     .score-card h2 a {{ text-decoration: none; border-bottom: 1px solid transparent; }}
     .score-card h2 a:hover {{ border-bottom-color: currentColor; }}
-    .score-card p {{ margin: 0; color: var(--muted); line-height: 1.55; overflow-wrap: anywhere; }}
-    .score-triplet {{ display: grid; grid-template-columns: repeat(3, 82px); gap: 8px; }}
-    .score-triplet span {{ border: 1px solid var(--line); border-radius: 14px; padding: 10px; background: var(--card-soft); text-align: center; }}
-    .score-triplet b {{ display: block; font-size: 1.25rem; }}
-    .score-triplet small {{ color: var(--muted); text-transform: uppercase; font-size: .72rem; letter-spacing: .08em; }}
-    .insight-grid {{ display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; margin-top: 14px; }}
-    .insight-grid div {{ background: var(--card-soft); border: 1px solid var(--line); border-radius: 14px; padding: 12px; min-width: 0; }}
-    .insight-grid strong {{ display: block; font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 6px; }}
-    .insight-grid span {{ line-height: 1.45; overflow-wrap: anywhere; }}
-    .delta-details {{ margin-top: 12px; border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; background: rgba(255,255,255,.52); }}
-    .delta-details summary {{ cursor: pointer; font-weight: 700; }}
-    .delta-details dl {{ margin: 12px 0 0; display: grid; gap: 8px; }}
-    .delta-row {{ display: grid; grid-template-columns: 180px minmax(0,1fr); gap: 12px; }}
-    .delta-row dt {{ color: var(--muted); font-weight: 700; }}
-    .delta-row dd {{ margin: 0; line-height: 1.45; overflow-wrap: anywhere; }}
-    .empty {{ padding: 16px; border: 1px dashed var(--line); border-radius: 14px; color: var(--muted); background: rgba(255,255,255,.55); }}
+    .score-card p {{ margin: 0; color: var(--muted); line-height: 1.6; overflow-wrap: anywhere; }}
+    .score-triplet {{ display: grid; grid-template-columns: repeat(3, 88px); gap: 10px; }}
+    .score-triplet span {{
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px 8px;
+      background: var(--card-soft);
+      text-align: center;
+    }}
+    .score-triplet .triplet-pre {{
+      background: rgba(139, 94, 52, 0.10);
+      border-color: rgba(139, 94, 52, 0.30);
+    }}
+    .score-triplet .triplet-work {{
+      background: rgba(37, 99, 235, 0.08);
+      border-color: rgba(37, 99, 235, 0.28);
+    }}
+    .score-triplet .triplet-baked {{
+      background: rgba(21, 128, 61, 0.10);
+      border-color: rgba(21, 128, 61, 0.30);
+    }}
+    .score-triplet b {{ display: block; font-size: 1.4rem; line-height: 1.1; }}
+    .score-triplet small {{
+      color: var(--muted);
+      text-transform: uppercase;
+      font-size: 0.72rem;
+      letter-spacing: 0.1em;
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    }}
+    .insight-grid {{
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }}
+    .insight-grid > div {{
+      background: var(--card-soft);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+      min-width: 0;
+    }}
+    .insight-grid strong {{
+      display: block;
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      margin-bottom: 8px;
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    }}
+    .insight-grid span {{ line-height: 1.5; overflow-wrap: anywhere; }}
+    .insight-improvement .improvement-pill {{
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 1.05rem;
+      letter-spacing: 0.02em;
+    }}
+    .improvement-pill.positive {{ background: rgba(21, 128, 61, 0.12); color: var(--green); border: 1px solid rgba(21, 128, 61, 0.35); }}
+    .improvement-pill.negative {{ background: rgba(185, 28, 28, 0.12); color: var(--red); border: 1px solid rgba(185, 28, 28, 0.35); }}
+    .improvement-pill.flat {{ background: rgba(31, 42, 42, 0.06); color: var(--muted); border: 1px solid var(--line); }}
+    .delta-details {{
+      margin-top: 16px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 12px 16px;
+      background: rgba(255, 255, 255, 0.52);
+    }}
+    .delta-details summary {{
+      cursor: pointer;
+      font-weight: 700;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }}
+    .delta-details summary::-webkit-details-marker {{ display: none; }}
+    .delta-details summary::before {{
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-right: 2px solid currentColor;
+      border-bottom: 2px solid currentColor;
+      transform: rotate(-45deg);
+      transition: transform 180ms ease;
+    }}
+    .delta-details[open] summary::before {{ transform: rotate(45deg); }}
+    .delta-details[open] dl {{ border-top: 1px solid var(--line); padding-top: 14px; }}
+    .delta-details dl {{ margin: 14px 0 0; display: grid; gap: 10px; }}
+    .delta-row {{
+      display: grid;
+      grid-template-columns: clamp(140px, 22%, 200px) minmax(0,1fr);
+      gap: 14px;
+    }}
+    .delta-row dt {{
+      color: var(--muted);
+      font-weight: 700;
+      font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+      font-size: 0.92rem;
+      letter-spacing: 0.02em;
+    }}
+    .delta-row dd {{ margin: 0; line-height: 1.55; overflow-wrap: anywhere; }}
+    .empty {{
+      padding: 18px;
+      border: 1px dashed var(--line);
+      border-radius: 18px;
+      color: var(--muted);
+      background: rgba(255, 255, 255, 0.5);
+    }}
     .compact-empty {{ margin-top: 12px; }}
+    :focus-visible {{
+      outline: 2px solid var(--blue);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }}
+    @media (prefers-reduced-motion: reduce) {{
+      .metric, .score-card, .nav a {{ transition: none; }}
+      .metric:hover, .score-card:hover {{ transform: none; }}
+    }}
+    @media (min-width: 1200px) {{
+      .metrics {{ grid-template-columns: repeat(5, minmax(0,1fr)); }}
+    }}
+    @media (max-width: 1100px) {{
+      .metrics {{ grid-template-columns: repeat(3, minmax(0,1fr)); }}
+    }}
     @media (max-width: 980px) {{
-      .metrics {{ grid-template-columns: repeat(2, minmax(0,1fr)); }}
-      .score-card-head, .insight-grid {{ grid-template-columns: 1fr; }}
+      .score-card-head {{ grid-template-columns: 1fr; }}
+      .insight-grid {{ grid-template-columns: 1fr; }}
       .score-triplet {{ grid-template-columns: repeat(3, minmax(0,1fr)); }}
       .bar-row {{ grid-template-columns: 1fr; }}
+      .bar-value {{ text-align: left; }}
       .delta-row {{ grid-template-columns: 1fr; gap: 4px; }}
+    }}
+    @media (max-width: 640px) {{
+      .metrics {{ grid-template-columns: repeat(2, minmax(0,1fr)); }}
     }}
     @media (max-width: 520px) {{
       .metrics {{ grid-template-columns: 1fr; }}
-      .score-triplet {{ grid-template-columns: 1fr; }}
+      .score-triplet {{ grid-template-columns: repeat(3, minmax(0,1fr)); }}
     }}
   </style>
 </head>

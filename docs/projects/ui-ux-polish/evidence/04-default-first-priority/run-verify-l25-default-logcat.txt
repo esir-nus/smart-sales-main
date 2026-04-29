@@ -1,0 +1,60 @@
+--------- beginning of main
+04-29 21:22:48.488 I/SmartSalesConn(18686): [DebugSim] seeded default-first registry default=14:C1:9F:D7:E3:EE active=14:C1:9F:D7:E4:06
+04-29 21:22:48.489 I/SmartSalesConn(18686): [L2.5][BEGIN] scenario=CONNECTIVITY_DEFAULT_PRIORITY_DUAL_ADVERTISE source=connectivity_debug_button ingress=DeviceRegistryManager.handleBleDetectionCandidates authenticity=synthetic_not_physical_ble
+04-29 21:22:48.489 I/SmartSalesConn(18686): [DebugSim] BLE detection candidates default=14:C1:9F:D7:E3:EE active=14:C1:9F:D7:E4:06 manuallyDisconnectedDefault=false
+04-29 21:22:48.489 I/SmartSalesConn(18686): 🔍 BLE detected: CHLE_Intelligent (14:C1:9F:D7:E3:EE)
+04-29 21:22:48.489 I/SmartSalesConn(18686): 🔍 BLE detected: CHLE_Intelligent (14:C1:9F:D7:E4:06)
+04-29 21:22:48.490 I/SmartSalesConn(18686): [DefaultPriority] switch 14:C1:9F:D7:E4:06 → 14:C1:9F:D7:E3:EE
+04-29 21:22:48.490 I/SmartSalesConn(18686): 🔍 Auto-reconnect triggered by BLE detection for 14:C1:9F:D7:E3:EE
+04-29 21:22:48.490 I/SmartSalesConn(18686): 🏠 Registry: switching ...E4:06 → ...E3:EE
+04-29 21:22:48.491 D/SmartSalesConn(18686): 🏠 Registry: reconnecting target ...E3:EE
+04-29 21:22:48.492 D/SmartSalesConn(18686): 🔌 Restored session: 14:C1:9F:D7:E3:EE knownNetworks=1
+04-29 21:22:48.492 D/SmartSalesConn(18686): 🔄 Force reconnect target=14:C1:9F:D7:E3:EE
+04-29 21:22:48.492 I/SmartSalesConn(18686): 📶 BLE disconnected
+04-29 21:22:48.492 D/SmartSalesConn(18686): 🔌 Soft disconnect (session preserved)
+04-29 21:22:48.492 D/SmartSalesConn(18686): 🔌 Persistent GATT session closed
+04-29 21:22:48.493 I/SmartSalesConn(18686): [L2.5][ASSERT] scenario=CONNECTIVITY_DEFAULT_PRIORITY_DUAL_ADVERTISE expected=14:C1:9F:D7:E3:EE selected=14:C1:9F:D7:E3:EE defaultBleDetected=true activeBleDetected=true manuallyDisconnectedDefault=false pass=true
+04-29 21:22:48.493 I/SmartSalesConn(18686): [L2.5][END] scenario=CONNECTIVITY_DEFAULT_PRIORITY_DUAL_ADVERTISE result=PASS evidenceClass=L2.5 authenticity=synthetic_not_physical_ble
+04-29 21:22:48.493 I/ConnectivityVM(18686): [L2.5][UI] scenario=CONNECTIVITY_DEFAULT_PRIORITY_DUAL_ADVERTISE result=PASS selected=14:C1:9F:D7:E3:EE expected=14:C1:9F:D7:E3:EE source=connectivity_debug_button authenticity=synthetic_not_physical_ble
+04-29 21:22:48.513 D/ConnectivityVM(18686): managerStatus=Connecting managerState=RECONNECTING
+04-29 21:22:49.523 D/SmartSalesConn(18686): 📋 Service: 00001801-0000-1000-8000-00805f9b34fb
+04-29 21:22:49.523 D/SmartSalesConn(18686):   📋 Char: 00002a05-0000-1000-8000-00805f9b34fb [INDICATE ]
+04-29 21:22:49.523 D/SmartSalesConn(18686):     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-29 21:22:49.523 D/SmartSalesConn(18686): 📋 Service: 00001800-0000-1000-8000-00805f9b34fb
+04-29 21:22:49.523 D/SmartSalesConn(18686):   📋 Char: 00002a00-0000-1000-8000-00805f9b34fb [READ ]
+04-29 21:22:49.523 D/SmartSalesConn(18686):     📋 (no descriptors)
+04-29 21:22:49.523 D/SmartSalesConn(18686):   📋 Char: 00002a01-0000-1000-8000-00805f9b34fb [READ ]
+04-29 21:22:49.523 D/SmartSalesConn(18686):     📋 (no descriptors)
+04-29 21:22:49.523 D/SmartSalesConn(18686):   📋 Char: 00002aa6-0000-1000-8000-00805f9b34fb [READ ]
+04-29 21:22:49.523 D/SmartSalesConn(18686):     📋 (no descriptors)
+04-29 21:22:49.524 D/SmartSalesConn(18686): 📋 Service: 000000ff-0000-1000-8000-00805f9b34fb
+04-29 21:22:49.524 D/SmartSalesConn(18686):   📋 Char: 0000ff01-0000-1000-8000-00805f9b34fb [READ WRITE NOTIFY ]
+04-29 21:22:49.524 D/SmartSalesConn(18686):     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-29 21:22:49.524 D/SmartSalesConn(18686):   📋 Char: 0000ff02-0000-1000-8000-00805f9b34fb [READ ]
+04-29 21:22:49.524 D/SmartSalesConn(18686):     📋 (no descriptors)
+04-29 21:22:49.524 D/SmartSalesConn(18686):   📋 Char: 0000ff03-0000-1000-8000-00805f9b34fb [WRITE ]
+04-29 21:22:49.524 D/SmartSalesConn(18686):     📋 (no descriptors)
+04-29 21:22:49.545 D/SmartSalesConn(18686): No CCCD descriptor for 0000ff02-0000-1000-8000-00805f9b34fb, notifications not available (will poll)
+04-29 21:22:49.545 I/SmartSalesConn(18686): 🔌 Persistent GATT session established: 14:C1:9F:D7:E3:EE
+04-29 21:22:49.545 I/SmartSalesConn(18686): 📶 BLE connected, waiting for explicit network observation
+04-29 21:22:49.546 D/SmartSalesConn(18686): 📡 Starting persistent notification listener for 14:C1:9F:D7:E3:EE
+04-29 21:22:49.546 D/SmartSalesConn(18686): 🌐 network query device=CHLE_Intelligent
+04-29 21:22:49.546 I/SmartSalesConn(18686): 📡 queryNetwork ENTRY (in mutex)
+04-29 21:22:49.549 D/SmartSalesConn(18686): 📤 TX [NetworkQuery]: wifi#address#ip#name (77 69 66 69 23 61 64 64 72 65 73 73 23 69 70 23 6E 61 6D 65)
+04-29 21:22:49.582 D/SmartSalesConn(18686): 📥 RX [Notification]: IP#192.168.0.102 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 30 32)
+04-29 21:22:49.583 D/SmartSalesConn(18686): ❓ Badge unknown notification: IP#192.168.0.102
+04-29 21:22:49.583 D/SmartSalesConn(18686): 📥 RX [NetworkResponse]: IP#192.168.0.102 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 30 32)
+04-29 21:22:49.584 D/SmartSalesConn(18686): 📥 RX [Notification]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-29 21:22:49.584 D/SmartSalesConn(18686): ❓ Badge unknown notification: SD#MstRobot
+04-29 21:22:49.584 D/SmartSalesConn(18686): 📥 RX [NetworkResponse]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-29 21:22:49.585 D/SmartSalesConn(18686): 📡 fresh query, caching IP=192.168.0.102
+04-29 21:22:49.585 D/SmartSalesConn(18686): 📶 state=CONNECTED ip=192.168.0.102
+04-29 21:22:49.585 D/SmartSalesConn(18686): 🔌 connectUsingSession: connected, ip=192.168.0.102 ssid=MstRobot
+04-29 21:22:49.589 D/SmartSalesConn(18686): 📤 TX [BadgeSignal]: Ver#get (56 65 72 23 67 65 74)
+04-29 21:22:49.591 D/ConnectivityVM(18686): managerStatus=Ready managerState=CONNECTED
+04-29 21:22:49.605 D/SmartSalesConn(18686): 📥 RX [Notification]: Ver#1.0.0.1 (56 65 72 23 31 2E 30 2E 30 2E 31)
+04-29 21:22:49.605 I/SmartSalesConn(18686): 🧾 Badge firmware version: 1.0.0.1
+04-29 21:22:49.627 I/SmartSalesConn(18686): 🧾 Badge firmware version query sent
+04-29 21:22:49.656 D/SmartSalesConn(18686): 📥 RX [Notification]: tim#get (74 69 6D 23 67 65 74)
+04-29 21:22:49.656 D/SmartSalesConn(18686): ⏰ Badge time sync requested
+04-29 21:22:49.716 I/SmartSalesConn(18686): ⏰ Time sync responded: tim#20260429212249

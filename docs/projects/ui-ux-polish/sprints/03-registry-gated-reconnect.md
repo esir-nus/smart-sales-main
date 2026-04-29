@@ -157,3 +157,19 @@ The excerpt must include `[ReconnectGuard] aborted` and must show no connect att
   - Baked-codebase score: 4/5. The resulting slice has clearer registry authority and reconnect refresh behavior with contained blast radius.
 - Lesson proposals: None.
 - CHANGELOG line: None proposed.
+
+### Verification Pass - 2026-04-29
+
+- Operator: Codex, using `smart-sales-device-loop` plus acceptance review.
+- Verification gates:
+  - `./gradlew :app-core:testDebugUnitTest --tests "*RealDeviceRegistryManagerTest*" --tests "*DeviceConnectionManagerReconnectSupportTest*"` -> `BUILD SUCCESSFUL in 16s`.
+  - `./gradlew :app-core:testDebugUnitTest` -> `BUILD SUCCESSFUL in 8s`.
+  - `./gradlew :app-core:assembleDebug` -> `BUILD SUCCESSFUL in 16s`.
+  - `./gradlew :app:assembleDebug` -> `BUILD SUCCESSFUL in 7s`.
+  - `adb -s fc8ede3e install -r app-core/build/outputs/apk/debug/app-core-debug.apk` -> `Success` after restarting adb for one hung install attempt.
+- Fresh device-loop evidence:
+  - `docs/projects/ui-ux-polish/evidence/03-registry-gated-reconnect/run-verify-pref-before-device-registry.xml`
+  - `docs/projects/ui-ux-polish/evidence/03-registry-gated-reconnect/run-verify-pref-before-ble-session-store.xml`
+  - `docs/projects/ui-ux-polish/evidence/03-registry-gated-reconnect/run-verify-stale-launch-65s-logcat.txt`
+  - `docs/projects/ui-ux-polish/evidence/03-registry-gated-reconnect/run-verify-stale-launch-ui.xml`
+- Verdict: still `success`. Fresh logcat contains `[ReconnectGuard] aborted stale launch session AA:BB:CC:DD:EE:FF; reseeded ...55:66` and the 65-second marker. Forbidden removed-MAC patterns `Force reconnect target=AA:BB:CC:DD:EE:FF`, `Stored MAC AA:BB:CC:DD:EE:FF`, and `connectUsingSession.*AA:BB:CC:DD:EE:FF` returned no matches.

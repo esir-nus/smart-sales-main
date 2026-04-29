@@ -1,6 +1,6 @@
 ---
 name: smart-sales-device-loop
-description: Enforced on-device evidence loop for the Smart Sales repository. Use when Codex must debug, optimize, or verify Android/Harmony runtime behavior, UI/device/lifecycle/BLE/connectivity/notification/alarm/networking issues, scheduler drawer scenarios, adb logcat plus uiautomator evidence, L3 acceptance loops, or any optimization claim that must stay in the loop until explicit exit criteria are met. Prioritize convenient debug buttons, debug panels, seeded actions, or other in-app simulation controls that faithfully replace repetitive user input for frictionless iteration.
+description: Enforced device-loop evidence workflow for the Smart Sales repository. Use when Codex must debug, optimize, or verify Android/Harmony runtime behavior, UI/device/lifecycle/BLE/connectivity/notification/alarm/networking issues, scheduler drawer scenarios, adb logcat plus uiautomator evidence, platform-runtime/L2.5 synthetic ingress, physical L3 boundary claims, or any optimization claim that must stay in the loop until explicit exit criteria are met. Prefer debug buttons, debug panels, seeded actions, or other deterministic controls as the L2.5 route when they enter the same production boundary; keep physical L3 mandatory for authentic hardware, BLE scanner, GATT, firmware, power-state, and real-device emission claims.
 ---
 
 # Smart Sales Device Loop
@@ -26,10 +26,41 @@ If the first loop reveals a failure, write the Pre-Fix Report from `docs/sops/de
 
 Do not exit the loop because the implementation "looks right". Exit only when the sprint contract or active debugging task has explicit criteria and the latest loop meets them with saved artifacts. If criteria are absent or vague, define concrete criteria before claiming completion.
 
+## Evidence Class Selection
+
+Declare the evidence class before the loop starts:
+
+- `platform-runtime/L2.5`: default for deterministic installed-debug-APK app-side dataflow verification when a debug control or fixture ingress exists.
+- physical `L3`: required for authentic hardware, BLE scanner, GATT, firmware, power-state, real-device emission, or any claim that the physical upstream source itself behaved correctly.
+
+Use L2.5 only when all of these hold:
+
+- the injected input enters the same internal boundary as the real signal
+- the scenario uses fixed fixtures or proves the required pre-state
+- logcat includes `[L2.5][BEGIN]`, `[L2.5][ASSERT]`, and `[L2.5][END] result=PASS`
+- UI XML, telemetry, or saved debug-state evidence proves debug gating when the control's availability is part of the claim
+
+L2.5 can close app-side dataflow uncertainty, but it is not physical evidence. Do not report L2.5 as proof of BLE discovery, GATT exchange, firmware emission, badge power state, or real-device emission.
+
+## Physical L3 Manual Collaboration
+
+For physical L3, do not leave human or hardware choreography implicit. Before the loop starts, declare each manual collaboration item in the working notes or sprint ledger:
+
+- human action owner
+- exact physical device or badge identity
+- action to perform
+- timing relative to `adb logcat -c` or `hdc shell hilog -r`
+- expected app telemetry, UI state, or hardware observation
+- pass/fail/block condition
+
+If the L3 branch requires a person to power a badge on or off, move it in range, start advertising, tap a card, pair a device, disconnect networking, or create a dual-device state, that action must be an explicit test item. If the item is not performed or cannot be confirmed, mark the L3 branch blocked rather than inferred.
+
 ## Exit Criteria
 
 Before running the loop, write down the exit criteria in the working notes or sprint ledger:
 
+- declared evidence class: `platform-runtime/L2.5` or physical `L3`
+- physical L3 manual collaboration items when hardware or human action is needed
 - exact scenario or debug action sequence
 - required positive telemetry
 - required UI state in `uiautomator` XML
@@ -40,12 +71,12 @@ Before running the loop, write down the exit criteria in the working notes or sp
 Keep iterating until one of these is true:
 
 - **Pass**: latest artifacts satisfy every positive, UI, and negative criterion.
-- **Blocked**: device/emulator, install, permissions, account state, or hardware dependency prevents L3 evidence; record the blocker and lower confidence.
+- **Blocked**: device/emulator, install, permissions, account state, deterministic ingress, or hardware dependency prevents the declared evidence class; record the blocker and lower confidence.
 - **Stop**: sprint stop criteria or iteration bound is hit; record the failed criterion and next required decision.
 
 ## Debug Controls First
 
-Prefer in-app debug buttons, debug panels, seeded scenarios, launch extras, fixture import actions, or other convenient simulation controls when they exercise the same production path as the user action.
+Prefer in-app debug buttons, debug panels, seeded scenarios, launch extras, fixture import actions, or other deterministic controls when they exercise the same production path as the user action or upstream signal. These controls are not merely convenience helpers: when they faithfully enter the production boundary, they are the preferred `platform-runtime/L2.5` route for app-side dataflow verification.
 
 Use debug controls to replace high-friction input such as repeated typing, voice recording, BLE badge actions, or long setup sequences only when the control preserves the route under test. The evidence must show the simulated source explicitly, for example `source=scheduler_debug_button`.
 
@@ -83,7 +114,7 @@ Use this shape unless the sprint contract declares a narrower command set:
    adb logcat -c
    ```
 
-6. Run one declared user scenario. Prefer the lowest-friction debug control that still hits the target route; otherwise perform the real gesture/input.
+6. Run one declared scenario according to the evidence class. For `platform-runtime/L2.5`, trigger the deterministic debug ingress that enters the production boundary. For physical `L3`, perform only the declared real gesture, hardware action, BLE scanner/GATT path, firmware emission, or device-state transition required by the claim, and record whether each manual collaboration item was performed.
 
 7. Save filtered logcat, UI XML, and optional screenshot under:
 
@@ -104,13 +135,16 @@ Use this shape unless the sprint contract declares a narrower command set:
 
 8. Evaluate:
 
+   - declared evidence class was actually exercised
+   - physical L3 manual collaboration items were performed or explicitly blocked
    - expected telemetry is present
+   - L2.5 telemetry includes `[L2.5][BEGIN]`, `[L2.5][ASSERT]`, and `[L2.5][END] result=PASS` when the declared class is `platform-runtime/L2.5`
    - expected UI state is present in UI XML
    - forbidden logs and UI states are absent
 
 9. Append a concise sprint-ledger verdict with commands, artifact paths, pass/fail, and any contamination such as permission dialogs.
 
-10. If any exit criterion fails, continue the loop: diagnose from the measured artifact, apply only the minimal diagnostic or behavior change, run focused L1/L2 checks, reinstall or cold relaunch as appropriate, and rerun the same L3 scenario.
+10. If any exit criterion fails, continue the loop: diagnose from the measured artifact, apply only the minimal diagnostic or behavior change, run focused L1/L2 checks, reinstall or cold relaunch as appropriate, and rerun the same scenario with the declared evidence class.
 
 ## Scheduler Time-Anchor Retitle Loop
 
@@ -155,7 +189,7 @@ Every optimization iteration closes with:
 
 - focused L1/L2 tests for the touched area
 - reinstall or cold relaunch as appropriate
-- fresh L3 evidence from the same scenario
+- fresh `platform-runtime/L2.5` or physical `L3` evidence from the same scenario according to the declared evidence class
 - sprint ledger update with artifact paths
 
 If the optimization is about speed or friction, the loop must include the measurement or UI-state observation that proves the improvement, not just a subjective claim.

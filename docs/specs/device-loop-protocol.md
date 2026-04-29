@@ -2,7 +2,7 @@
 
 > **Purpose**: Reusable runtime evidence loop for Android and Harmony device claims.
 > **Status**: Active spec
-> **Last Updated**: 2026-04-28
+> **Last Updated**: 2026-04-29
 > **Repository Guide**: [`docs/AGENTS.md`](../AGENTS.md)
 > **Related SOP**: [`docs/sops/debugging.md`](../sops/debugging.md)
 
@@ -66,6 +66,26 @@ L2.5 is intentionally close to L3 dataflow fidelity, but it is not L3. For BLE
 or firmware claims, physical scanner, GATT, firmware emission, and power-state
 evidence remain L3-only.
 
+## Physical L3 Manual Collaboration
+
+Physical L3 tests that depend on real-world hardware state or human action must
+declare the manual collaboration items before the capture window starts.
+
+Each manual collaboration item must name:
+
+- the human action owner
+- the exact physical device or badge identity
+- the action to perform
+- the timing relative to `adb logcat -c` / `hdc shell hilog -r`
+- the expected app telemetry, UI state, or hardware observation
+- the pass/fail/block condition
+
+Do not leave hardware choreography implicit. If a human must power a badge on or
+off, move it in range, start advertising, tap a card, pair a device, disconnect
+networking, or create a dual-device state, write that item in the sprint ledger
+or working notes before running the loop. If the item is not performed or cannot
+be confirmed, the L3 branch is blocked, not passed.
+
 ## Android Loop
 
 Run one exact scenario per loop. Do not mix multiple hypotheses in the same
@@ -109,7 +129,9 @@ capture window.
    adb logcat -c
    ```
 
-6. Run exactly one declared user scenario.
+6. Run exactly one declared user scenario. For physical L3 that needs human or
+   hardware collaboration, execute only the declared manual collaboration items
+   for that scenario and record whether each item was performed.
 
 7. Capture filtered logcat.
 

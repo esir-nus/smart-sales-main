@@ -1,0 +1,6 @@
+--------- beginning of main
+04-29 21:23:37.795 D/SmartSalesConn(20568): 🔌 Restored session: 14:C1:9F:D7:E4:06 knownNetworks=1
+04-29 21:23:37.797 D/SmartSalesConn(20568): 🏠 Registry: default device CHLE_Intelligent (...E3:EE)
+04-29 21:23:37.802 D/SmartSalesConn(20568): 🏠 Registry: skipping auto-reconnect — user manually disconnected ...E3:EE
+04-29 21:23:38.194 D/ConnectivityVM(20568): managerStatus=Unknown managerState=DISCONNECTED
+04-29 21:25:07.214 I/SmartSalesConn(21838): [VERIFY] sprint04 physical-l3-window-end after 90s

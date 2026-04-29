@@ -1,4 +1,4 @@
 interface:
   display_name: "Smart Sales Device Loop"
-  short_description: "Enforce on-device debugging and optimization loops"
-  default_prompt: "Use $smart-sales-device-loop to stay in the Android runtime loop until evidence-based exit criteria pass."
+  short_description: "Enforce L2.5/L3 runtime debugging and optimization loops"
+  default_prompt: "Use $smart-sales-device-loop to stay in the Android runtime evidence loop until the declared L2.5 or L3 exit criteria pass."

@@ -1,0 +1,67 @@
+--------- beginning of main
+04-29 21:19:50.538 D/SmartSalesConn(17823): 🔌 Restored session: AA:BB:CC:DD:EE:FF knownNetworks=0
+04-29 21:19:50.539 D/SmartSalesConn(17823): 🏠 Registry: default device Remaining Badge (...55:66)
+04-29 21:19:50.539 W/SmartSalesConn(17823): [ReconnectGuard] aborted stale launch session AA:BB:CC:DD:EE:FF; reseeded ...55:66
+04-29 21:19:50.541 D/SmartSalesConn(17823): 🔌 Restored session: 11:22:33:44:55:66 knownNetworks=0
+04-29 21:19:50.543 I/SmartSalesConn(17823): 📶 BLE disconnected
+04-29 21:19:50.543 D/SmartSalesConn(17823): 🔌 Soft disconnect (session preserved)
+04-29 21:19:50.543 D/SmartSalesConn(17823): 🔌 Persistent GATT session closed
+04-29 21:20:00.558 W/SmartSalesConn(17823): BLE 连接失败：Timed out waiting for 10000 ms
+04-29 21:20:00.561 W/SmartSalesConn(17823): 🔌 Stored MAC 11:22:33:44:55:66 unreachable, attempting scan fallback
+04-29 21:20:00.589 D/SmartSalesConn(17823): 扫描到设备 33:E3:90:A0:90:28 (Unknown) rssi=-62 uuids=
+04-29 21:20:00.590 D/SmartSalesConn(17823): 忽略设备 33:E3:90:A0:90:28 (Unknown)：未匹配任何 profile
+04-29 21:20:00.596 D/SmartSalesConn(17823): 扫描到设备 7B:87:25:38:DB:81 (Unknown) rssi=-70 uuids=0000fdaa-0000-1000-8000-00805f9b34fb, 0000fdaa-0000-1000-8000-00805f9b34fb
+04-29 21:20:00.596 D/SmartSalesConn(17823): 忽略设备 7B:87:25:38:DB:81 (Unknown)：未匹配任何 profile
+04-29 21:20:00.597 D/SmartSalesConn(17823): 扫描到设备 C7:52:50:BA:BE:5A (MCHOSE G3 A) rssi=-73 uuids=00001812-0000-1000-8000-00805f9b34fb, 00001812-0000-1000-8000-00805f9b34fb
+04-29 21:20:00.597 D/SmartSalesConn(17823): 忽略设备 C7:52:50:BA:BE:5A (MCHOSE G3 A)：未匹配任何 profile
+04-29 21:20:00.612 D/SmartSalesConn(17823): 扫描到设备 14:C1:9F:D7:E3:EE (CHLE_Intelligent) rssi=-38 uuids=000000ff-0000-1000-8000-00805f9b34fb, 000000ff-0000-1000-8000-00805f9b34fb, 000000ff-0000-1000-8000-00805f9b34fb, 000000ff-0000-1000-8000-00805f9b34fb
+04-29 21:20:00.612 I/SmartSalesConn(17823): 发现设备 CHLE_Intelligent (14:C1:9F:D7:E3:EE) 匹配 profile=chle
+04-29 21:20:00.615 I/SmartSalesConn(17823): 🔌 Scan fallback: found CHLE_Intelligent at new MAC 14:C1:9F:D7:E3:EE
+04-29 21:20:01.598 D/SmartSalesConn(17823): 📋 Service: 00001801-0000-1000-8000-00805f9b34fb
+04-29 21:20:01.598 D/SmartSalesConn(17823):   📋 Char: 00002a05-0000-1000-8000-00805f9b34fb [INDICATE ]
+04-29 21:20:01.598 D/SmartSalesConn(17823):     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-29 21:20:01.598 D/SmartSalesConn(17823): 📋 Service: 00001800-0000-1000-8000-00805f9b34fb
+04-29 21:20:01.598 D/SmartSalesConn(17823):   📋 Char: 00002a00-0000-1000-8000-00805f9b34fb [READ ]
+04-29 21:20:01.598 D/SmartSalesConn(17823):     📋 (no descriptors)
+04-29 21:20:01.598 D/SmartSalesConn(17823):   📋 Char: 00002a01-0000-1000-8000-00805f9b34fb [READ ]
+04-29 21:20:01.598 D/SmartSalesConn(17823):     📋 (no descriptors)
+04-29 21:20:01.598 D/SmartSalesConn(17823):   📋 Char: 00002aa6-0000-1000-8000-00805f9b34fb [READ ]
+04-29 21:20:01.598 D/SmartSalesConn(17823):     📋 (no descriptors)
+04-29 21:20:01.598 D/SmartSalesConn(17823): 📋 Service: 000000ff-0000-1000-8000-00805f9b34fb
+04-29 21:20:01.598 D/SmartSalesConn(17823):   📋 Char: 0000ff01-0000-1000-8000-00805f9b34fb [READ WRITE NOTIFY ]
+04-29 21:20:01.598 D/SmartSalesConn(17823):     📋 Descriptor: 00002902-0000-1000-8000-00805f9b34fb ← CCCD ✅
+04-29 21:20:01.598 D/SmartSalesConn(17823):   📋 Char: 0000ff02-0000-1000-8000-00805f9b34fb [READ ]
+04-29 21:20:01.598 D/SmartSalesConn(17823):     📋 (no descriptors)
+04-29 21:20:01.598 D/SmartSalesConn(17823):   📋 Char: 0000ff03-0000-1000-8000-00805f9b34fb [WRITE ]
+04-29 21:20:01.598 D/SmartSalesConn(17823):     📋 (no descriptors)
+04-29 21:20:01.618 D/SmartSalesConn(17823): No CCCD descriptor for 0000ff02-0000-1000-8000-00805f9b34fb, notifications not available (will poll)
+04-29 21:20:01.618 I/SmartSalesConn(17823): 🔌 Persistent GATT session established: 14:C1:9F:D7:E3:EE
+04-29 21:20:01.621 I/SmartSalesConn(17823): 🔌 Session updated to new MAC 14:C1:9F:D7:E3:EE
+04-29 21:20:01.621 I/SmartSalesConn(17823): 📶 BLE connected, waiting for explicit network observation
+04-29 21:20:01.621 D/SmartSalesConn(17823): 📡 Starting persistent notification listener for 14:C1:9F:D7:E3:EE
+04-29 21:20:01.621 D/SmartSalesConn(17823): 🌐 network query device=CHLE_Intelligent
+04-29 21:20:01.622 I/SmartSalesConn(17823): 📡 queryNetwork ENTRY (in mutex)
+04-29 21:20:01.623 D/SmartSalesConn(17823): 📤 TX [NetworkQuery]: wifi#address#ip#name (77 69 66 69 23 61 64 64 72 65 73 73 23 69 70 23 6E 61 6D 65)
+04-29 21:20:01.663 D/SmartSalesConn(17823): 📥 RX [Notification]: IP#192.168.0.102 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 30 32)
+04-29 21:20:01.664 D/SmartSalesConn(17823): 📥 RX [NetworkResponse]: IP#192.168.0.102 (49 50 23 31 39 32 2E 31 36 38 2E 30 2E 31 30 32)
+04-29 21:20:01.664 D/SmartSalesConn(17823): ❓ Badge unknown notification: IP#192.168.0.102
+04-29 21:20:01.664 D/SmartSalesConn(17823): 📥 RX [Notification]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-29 21:20:01.665 D/SmartSalesConn(17823): ❓ Badge unknown notification: SD#MstRobot
+04-29 21:20:01.665 D/SmartSalesConn(17823): 📥 RX [NetworkResponse]: SD#MstRobot (53 44 23 4D 73 74 52 6F 62 6F 74)
+04-29 21:20:01.666 D/SmartSalesConn(17823): 📡 fresh query, caching IP=192.168.0.102
+04-29 21:20:01.666 D/SmartSalesConn(17823): 📶 state=CONNECTED ip=192.168.0.102
+04-29 21:20:01.666 D/SmartSalesConn(17823): 🔌 connectUsingSession: connected, ip=192.168.0.102 ssid=MstRobot
+04-29 21:20:01.671 D/SmartSalesConn(17823): 📤 TX [BadgeSignal]: Ver#get (56 65 72 23 67 65 74)
+04-29 21:20:01.715 D/SmartSalesConn(17823): 📥 RX [Notification]: Ver#1.0.0.1 (56 65 72 23 31 2E 30 2E 30 2E 31)
+04-29 21:20:01.716 I/SmartSalesConn(17823): 🧾 Badge firmware version: 1.0.0.1
+04-29 21:20:01.716 I/SmartSalesConn(17823): 🧾 Badge firmware version query sent
+04-29 21:20:01.745 D/SmartSalesConn(17823): 📥 RX [Notification]: tim#get (74 69 6D 23 67 65 74)
+04-29 21:20:01.745 D/SmartSalesConn(17823): ⏰ Badge time sync requested
+04-29 21:20:01.805 I/SmartSalesConn(17823): ⏰ Time sync responded: tim#20260429212001
+04-29 21:20:04.674 D/SmartSalesConn(17823): BadgeHttpClient.isReachable start url=http://192.168.0.102:8088/
+04-29 21:20:04.942 D/SmartSalesConn(17823): BadgeHttpClient.isReachable response url=http://192.168.0.102:8088/ code=200 reachable=true
+04-29 21:20:17.870 D/SmartSalesConn(17823): 📥 RX [Notification]: Bat#99.09% (42 61 74 23 39 39 2E 30 39 25)
+04-29 21:20:17.870 D/SmartSalesConn(17823): ❓ Badge unknown notification: Bat#99.09%
+04-29 21:20:37.910 D/SmartSalesConn(17823): 📥 RX [Notification]: Bat#98.73% (42 61 74 23 39 38 2E 37 33 25)
+04-29 21:20:37.911 D/SmartSalesConn(17823): ❓ Badge unknown notification: Bat#98.73%
+04-29 21:20:55.041 I/SmartSalesConn(20655): [VERIFY] sprint03 stale-window-end after 65s

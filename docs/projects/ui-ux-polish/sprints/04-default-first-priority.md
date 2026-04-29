@@ -193,10 +193,50 @@ The excerpt must include `[DefaultPriority] switch` for the dual-candidate case 
   - `run-19-l25-manual-ui.xml` shows `L2.5 CONNECTIVITY_MANUAL_DEFAULT_SUPPRESSION: PASS selected=14:C1:9F:D7:E4:06`.
 - Boundary: L2.5 now closes the app-side deterministic dataflow branch, but it remains synthetic ingress and does not replace physical dual-advertising BLE L3 evidence.
 
+### Verification Pass - 2026-04-29
+
+- Operator: Codex, using `smart-sales-device-loop` plus acceptance review.
+- Verification gates:
+  - `./gradlew :app-core:testDebugUnitTest --tests "*RealDeviceRegistryManagerTest*" --tests "*DeviceConnectionManagerReconnectSupportTest*"` -> `BUILD SUCCESSFUL in 16s`.
+  - `./gradlew :app-core:testDebugUnitTest` -> `BUILD SUCCESSFUL in 8s`.
+  - `./gradlew :app-core:assembleDebug` -> `BUILD SUCCESSFUL in 16s`.
+  - `./gradlew :app:assembleDebug` -> `BUILD SUCCESSFUL in 7s`.
+  - `adb -s fc8ede3e install -r app-core/build/outputs/apk/debug/app-core-debug.apk` -> `Success` after restarting adb for one hung install attempt.
+- Fresh L2.5 evidence:
+  - `run-verify-l25-before-ui.xml` proves `Debug probes`, `seed dual`, `L2.5 default`, and `L2.5 manual default` were visible in the installed debug APK.
+  - `run-verify-l25-default-logcat.txt` contains `[L2.5][BEGIN]`, `[DefaultPriority] switch 14:C1:9F:D7:E4:06 -> 14:C1:9F:D7:E3:EE`, `[L2.5][ASSERT] ... pass=true`, and `[L2.5][END] ... result=PASS`.
+  - `run-verify-l25-default-ui.xml` shows `L2.5 CONNECTIVITY_DEFAULT_PRIORITY_DUAL_ADVERTISE: PASS selected=14:C1:9F:D7:E3:EE`.
+  - `run-verify-l25-manual-logcat.txt` contains `[L2.5][BEGIN]`, `[DefaultPriority] skipped manuallyDisconnected default ...E3:EE`, `[L2.5][ASSERT] ... pass=true`, and `[L2.5][END] ... result=PASS`.
+  - `run-verify-l25-manual-ui.xml` shows `L2.5 CONNECTIVITY_MANUAL_DEFAULT_SUPPRESSION: PASS selected=14:C1:9F:D7:E4:06`.
+- Fresh physical L3 attempt:
+  - `run-verify-l3-pre-registry.xml` and `run-verify-l3-pre-session.xml` captured the restored real registry/session before the physical attempt.
+  - `run-verify-l3-dual-badge-attempt-logcat.txt`, `run-verify-l3-dual-badge-attempt-ui.xml`, and `run-verify-l3-dual-badge-attempt.png` captured a 90-second physical window. The log contains no `[DefaultPriority] switch` and no `[DebugSim]`/`[L2.5]` contamination.
+  - `run-verify-l3-card-switch-attempt-logcat.txt`, `run-verify-l3-card-switch-attempt-ui.xml`, and `run-verify-l3-card-switch-attempt.png` captured a second 90-second physical window after selecting the non-default card. The log proves both physical badges can establish GATT and HTTP-ready sessions (`14:C1:9F:D7:E3:EE` at `192.168.0.102`, `14:C1:9F:D7:E4:06` at `192.168.0.101`), but it still contains no scanner-monitor `[DefaultPriority] switch`.
+  - `run-verify-l3-card-switch-post-registry.xml` and `run-verify-l3-card-switch-post-session.xml` show both badges registered, both `manuallyDisconnected=false`, and the final stored session on `14:C1:9F:D7:E4:06`.
+- Verdict: app-side `platform-runtime/L2.5` is accepted, but formal Sprint 04 remains `blocked` because fresh physical L3 did not prove the required scanner-monitor default-priority branch.
+
+### L3 Manual Collaboration Re-entry - 2026-04-29
+
+- Rule consolidation: physical L3 cannot rely on implicit hardware choreography. The operator must declare the human manual collaboration test items before the capture window, then record whether each item was performed or blocked.
+- Evidence class: physical `L3`.
+- Scenario: default-first BLE scanner priority, with the production BLE scanner observing the default badge A and active badge B in the same scan window while active B is disconnected.
+- Manual collaboration test items:
+
+| Item | Human action owner | Device identity | Action and timing | Expected evidence | Pass/fail/block condition |
+|---|---|---|---|---|---|
+| L3-04-A | Human operator | Default badge A `14:C1:9F:D7:E3:EE` | Before `adb logcat -c`, ensure badge A is registered, powered on, advertising, in range, and not manually disconnected. | Registry shows A as `default_device_mac`; logcat or UI shows A eligible/in range. | Block if A cannot be powered/advertising/in range or remains `manuallyDisconnected=true`. |
+| L3-04-B | Human operator | Active badge B `14:C1:9F:D7:E4:06` | Before `adb logcat -c`, ensure badge B is registered, powered on, advertising, in range, active, and not manually disconnected. | Registry/session shows B as active/stored session; logcat or UI shows B eligible/in range. | Block if B cannot be active, advertising, or in range. |
+| L3-04-C | Human operator | Badges A + B | Immediately after `adb logcat -c`, keep both badges advertising in the same physical scan window and do not tap debug controls. If needed, physically bring both badges near the phone and wait up to 90 seconds. | `SmartSalesConn` contains real scanner/GATT evidence with no `[DebugSim]` or `[L2.5]`. | Pass only if the same window emits scanner-monitor `[DefaultPriority] switch ...E4:06 -> ...E3:EE`; block if the same-window dual-advertising condition cannot be confirmed. |
+| L3-04-D | Human operator | App connectivity modal | During the capture window, only use real app controls needed to expose the connectivity surface; do not press `seed dual`, `L2.5 default`, or `L2.5 manual default`. | UI XML/screenshot shows physical device rows; logcat has no debug-sim markers. | Fail if debug controls are used; block if the physical device rows cannot be surfaced. |
+
+- Re-entry verdict: blocked pending a human-confirmed L3 run that performs items L3-04-A through L3-04-D. Existing `run-verify-l3-*` artifacts remain valid negative attempts, but they did not declare these manual items before capture and therefore cannot close the physical L3 branch.
+- L3-04-A check, 2026-04-29: blocked before capture. Device `fc8ede3e` registry shows default badge A `14:C1:9F:D7:E3:EE` as `default_device_mac` and `bleDetected=true`, but still `manuallyDisconnected=true`; session remains on active badge B `14:C1:9F:D7:E4:06`. Saved evidence: `run-l3-04-a-blocked-registry.xml`, `run-l3-04-a-blocked-session.xml`. Human operator must clear the manual-disconnect state through real app/device flow and confirm A is powered, advertising, and in range before rerunning `adb logcat -c`.
+- L3-04-A recheck, 2026-04-29: performed with human confirmation that all badges were powered on and badge A was tapped through the real UI, which showed A connected. Evidence: `run-l3-04-a-confirmed-registry.xml` shows default badge A `14:C1:9F:D7:E3:EE` as `default_device_mac` with `manuallyDisconnected=false`; `run-l3-04-a-confirmed-session.xml` stores active session `peripheral_id=14:C1:9F:D7:E3:EE`; `run-l3-04-a-confirmed-ui.xml` shows the default row connected. Status: `L3-04-A` passed as a manual-collaboration precondition. Next blocker: `L3-04-B` still needs active badge B `14:C1:9F:D7:E4:06` restored through the real app/device flow before the dual-badge capture.
+
 ## Closeout
 
 - Status: `blocked`
-- One-liner for tracker: Implementation and L1/L2 verification are green, but L3 dual-badge proof is blocked because device `fc8ede3e` currently exposes only one restored registered badge in cleared SmartSalesConn logs.
+- One-liner for tracker: Implementation, L1/L2, and fresh L2.5 app-side verification are green, but formal L3 remains blocked because fresh physical dual-badge windows did not emit scanner-monitor `[DefaultPriority] switch`.
 - Evidence artifacts:
   - Focused test: `./gradlew :app-core:testDebugUnitTest --tests "*RealDeviceRegistryManagerTest*"` -> `BUILD SUCCESSFUL in 10s`, 12 registry-manager tests passed.
   - Full app-core unit suite: `./gradlew :app-core:testDebugUnitTest` -> `BUILD SUCCESSFUL in 14s`.

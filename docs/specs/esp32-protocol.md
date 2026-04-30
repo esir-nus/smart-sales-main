@@ -34,6 +34,7 @@ This document owns wire-level facts only: command strings, response fragments, o
 | 11 | Firmware Version Query | ✅ Implemented | `ConnectivityViewModel` auto-queries on connect and UserCenter refresh; reply flows via `ConnectivityBridge.firmwareVersionNotifications()` |
 | 12 | Task Completion Signal | ✅ Implemented | `RealBadgeAudioPipeline` / `SimBadgeAudioAutoDownloader` terminal branches call `ConnectivityBridge.notifyCommandEnd()` -> `DeviceConnectionManager.notifyCommandEnd()` -> `Command#end` |
 | 13 | SD Card Space Query | ✅ Implemented | UserCenter query-on-tap sends `SD#space`; reply flows through `ConnectivityBridge.sdCardSpaceNotifications()` -> `ConnectivityViewModel.sdCardSpace` |
+| 14 | Media Gate Commands | Soft-deprecated wire facts | `download#ready`, `download#ok`, `download#end`, and `wifi#off` remain documented as legacy/firmware facts only; new app runtime work must not use them as Wi-Fi, media-readiness, reconnect, or repair gates |
 
 ---
 
@@ -112,6 +113,33 @@ App: PD#Cai123456
 4. App sends:     wav#end
 5. Badge returns: wav#ok
 ```
+
+### 4a. Media Gate Commands (Soft-Deprecated Wire Facts)
+
+The following command names are soft-deprecated for app-side runtime behavior.
+They remain documented as ESP32/legacy wire facts so older firmware traces and
+operator logs can be interpreted. App lifecycle semantics, readiness gates,
+reconnect behavior, Wi-Fi repair, and feature-level media ownership remain
+governed by `docs/core-flow/badge-connectivity-lifecycle.md`.
+
+```
+App sends:     download#ready
+Badge returns: download#ok
+App sends:     download#end
+Badge sends:   wifi#off
+```
+
+Rules:
+
+- `download#ready` and `download#ok` may appear in firmware media-gate traces,
+  but new app code must not use them as proof of media-safe readiness.
+- `download#end` may appear as a legacy media-gate completion token, but new app
+  code must not treat it as a reconnect, repair, or registration signal.
+- `wifi#off` may appear as a firmware/media protocol signal, but new app code
+  must not use it by itself to trigger reconnect, saved-credential replay,
+  Wi-Fi repair, or BLE disconnect handling.
+- This protocol section is intentionally non-authoritative for restored Android
+  production runtime ownership of any media-window runner.
 
 ### 5. Time Sync
 

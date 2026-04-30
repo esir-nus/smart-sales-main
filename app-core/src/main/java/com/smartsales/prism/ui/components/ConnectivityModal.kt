@@ -333,7 +333,7 @@ private fun NeedsSetupCard(onStartSetup: () -> Unit) {
     }
 }
 
-// ── Auto Popup Intro Card ─────────────────────────────────────
+// ── 自动弹出引导卡片 ─────────────────────────────────────────
 
 @Composable
 private fun AutoPopupIntroCard(
@@ -632,7 +632,6 @@ private fun DeviceCard(
 ) {
     var showMenu by remember { mutableStateOf(false) }
     var showRemoveDialog by remember { mutableStateOf(false) }
-    var isRenaming by remember { mutableStateOf(device.displayName) }
     var renameText by remember(device.displayName) { mutableStateOf(device.displayName) }
     var renamingActive by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }

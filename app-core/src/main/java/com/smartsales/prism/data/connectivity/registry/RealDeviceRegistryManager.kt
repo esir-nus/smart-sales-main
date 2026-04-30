@@ -43,15 +43,11 @@ class RealDeviceRegistryManager(
         refreshDeviceList()
         startBleDetectionMonitor()
 
-        val defaultDevice = registry.getDefault()
-        if (defaultDevice != null) {
+        val registeredDevices = registry.loadAll()
+        val launchDevice = selectLaunchDevice(registeredDevices)
+        if (launchDevice != null) {
             val currentSession = sessionStore.loadSession()
             val sessionDevice = currentSession?.peripheralId?.let { registry.findByMac(it) }
-
-            val launchDevice = when {
-                sessionDevice != null -> sessionDevice
-                else -> defaultDevice
-            }
             _activeDevice.value = launchDevice
             ConnectivityLogger.d("🏠 Registry: launch active ${launchDevice.displayName} (${launchDevice.macSuffix})")
 
@@ -83,6 +79,18 @@ class RealDeviceRegistryManager(
             ConnectivityLogger.d("🏠 Registry: no devices registered")
         }
 
+    }
+
+    private fun selectLaunchDevice(registeredDevices: List<RegisteredDevice>): RegisteredDevice? {
+        val sessionDevice = sessionStore.loadSession()
+            ?.peripheralId
+            ?.let { registry.findByMac(it) }
+        if (sessionDevice != null) return sessionDevice
+        return registeredDevices.maxWithOrNull(
+            compareBy<RegisteredDevice> { it.lastConnectedAtMillis }
+                .thenBy { it.registeredAtMillis }
+                .thenBy { it.macAddress }
+        )
     }
 
     private fun startBleDetectionMonitor() {

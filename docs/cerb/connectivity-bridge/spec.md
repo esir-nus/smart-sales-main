@@ -116,7 +116,7 @@ sealed class BadgeConnectionState {
 }
 ```
 
-`BadgeConnectionState.Connected` means shared transport readiness for shell/history routing: active GATT, active notification listener, and usable badge network status. It does not mean HTTP `:8088` is reachable.
+`BadgeConnectionState.Connected` means shared transport readiness for shell/history routing: active registered-badge GATT, active notification listener, and usable badge IP/SSID from badge-reported status. It does not mean HTTP `:8088` is reachable.
 
 ### BadgeManagerStatus
 
@@ -144,7 +144,7 @@ State meanings must not overlap:
 | `BleDetected` | A registered badge was detected by BLE scanning. | GATT, notification listener, Wi-Fi, or HTTP readiness. |
 | `BlePairedNetworkUnknown` | BLE is held and the app is waiting for usable badge network evidence. | Offline or HTTP failure. |
 | `BlePairedNetworkOffline` | BLE is held, but badge Wi-Fi has no usable IP/network. | Session invalidation, registry removal, or full pairing. |
-| `Connected` | Shared transport readiness: GATT + listener + usable badge network status. | HTTP media readiness. |
+| `Connected` | Shared transport readiness: registered-badge GATT + listener + usable badge IP/SSID. | HTTP media readiness. |
 | internal `ConnectionState.WifiProvisionedHttpDelayed` | Badge transport confirmed, but HTTP `:8088` is still delayed/unreachable inside bounded grace. | Full feature readiness for `/list`, `/download`, or `/delete`. |
 | `Ready` | Manager transport-ready state after BLE/listener/network status are usable. | That `isReady()` has passed for media work. |
 | `isReady()` | Feature preflight for HTTP media operations on the active runtime endpoint. | Global connection state changes or pairing state. |
@@ -232,6 +232,7 @@ sealed class WavDownloadResult {
 > Closing the connectivity modal/manager clears transient reconnect or mismatch override state so later reopen reflects live manager truth rather than a retained stale repair screen.
 > The modal now renders a frosted glass overlay (matching `SimHomeHeroTokens`) with active device header, registered device list, and per-device management actions. `ConnectivityViewModel` sources device state from `DeviceRegistryManager.registeredDevices` and `DeviceRegistryManager.activeDevice`. Inline rename uses a `DeviceHeader` component with editable text field. Device switch is mutex-protected and routes through `DeviceRegistryManager.switchToDevice()`.
 > Device cards are ordered for wayfinding stability: the default registered badge is pinned first, all non-default badges follow the successful-pairing timeline using `RegisteredDevice.registeredAtMillis` ascending, and `macAddress` breaks ties. Active selection is visual only through the selected card border and active-card content; switching active badges or updating `lastConnectedAtMillis` must not move the card.
+> Registered-badge availability prompts are separate from Wi-Fi mismatch prompts. When BLE proximity detects registered candidates while no badge is fully active, `RuntimeShell` opens the existing `ConnectivityModal`. If the latest active badge is among detected eligible candidates, only that badge may auto reconnect and the modal shows it as connecting. If the latest active badge is absent, the modal opens as a chooser and waits for an explicit card tap.
 
 #### Data Flow
 
@@ -251,11 +252,27 @@ BLE detection monitor priority:
 
 - passive registered-MAC scanning marks each registered badge's own `bleDetected` proximity flag independently
 - a registered badge missing from scan evidence clears `bleDetected=false` after a short grace window so stale ready copy does not stick
-- only the latest connected/current active badge may trigger automatic reconnect after non-manual loss such as distance loss or power cut
+- only the latest user-selected active registered badge may trigger automatic reconnect after non-manual loss such as distance loss or power cut
+- latest active badge selection is seeded by successful onboarding pairing, successful add-device pairing, or explicit user card tap/switch; launch fallback uses `SessionStore` first, then `lastConnectedAtMillis`, never `default`
 - non-active registered badges, including the default badge, remain proximity/card state only until the user manually taps/switches to them
 - a `manuallyDisconnected=true` badge is skipped for automatic reconnect
 - `setDefault()` itself remains cosmetic/passive and must not switch active device, reseed `SessionStore`, or reconnect
 - manual disconnect of active badge B suppresses both auto-reconnect to B and auto-connect to nearby badge A until explicit user action
+
+Registered availability prompt flow:
+
+```
+DeviceRegistryManager.registeredDevices + activeDevice + ConnectivityBridge.connectionState
+    → ConnectivityViewModel.registeredBadgeAvailabilityRequests
+    → RuntimeShell opens ConnectivityModal
+```
+
+Prompt rules:
+
+- latest detected and not manually disconnected: emit prompt, show latest badge as reconnecting, and reconnect only the latest badge
+- latest absent but another non-manually-disconnected registered badge detected: emit prompt as chooser; no auto-connect
+- only manually disconnected badges detected: do not emit availability prompt
+- default badge detection must not reseed `SessionStore`, switch `activeDevice`, or start reconnect by itself
 
 Manager-only refinement path:
 

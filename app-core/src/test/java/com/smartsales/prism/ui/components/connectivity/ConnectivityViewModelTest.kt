@@ -31,6 +31,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -784,6 +785,114 @@ class ConnectivityViewModelTest {
     }
 
     @Test
+    fun `latest detected registered badge emits availability prompt and schedules reconnect`() = runTest {
+        val latest = registeredDevice(
+            macAddress = "BB:BB:BB:BB:BB:02",
+            registeredAtMillis = 2_000L,
+            lastConnectedAtMillis = 2_000L
+        )
+        val default = registeredDevice(
+            macAddress = "AA:AA:AA:AA:AA:01",
+            registeredAtMillis = 1_000L,
+            lastConnectedAtMillis = 1_000L,
+            isDefault = true
+        )
+        val registryManager = FakeDeviceRegistryManager(
+            devices = listOf(default, latest),
+            active = latest
+        )
+        val service = FakeConnectivityService()
+        val viewModel = createViewModel(service = service, registryManager = registryManager)
+        val receivedRequests = mutableListOf<RegisteredBadgeAvailabilityPromptRequest>()
+        val collectJob = launch {
+            viewModel.registeredBadgeAvailabilityRequests.collect { request ->
+                receivedRequests += request
+            }
+        }
+        advanceUntilIdle()
+        registryManager.setDevices(listOf(default, latest.copy(bleDetected = true)))
+        runCurrent()
+
+        assertEquals(1, receivedRequests.size)
+        assertEquals(latest.macAddress, receivedRequests.single().latestBadgeMac)
+        assertEquals(listOf(latest.macAddress), receivedRequests.single().detectedBadgeMacs)
+        assertTrue(receivedRequests.single().shouldAutoReconnectLatest)
+        assertEquals(1, service.scheduleAutoReconnectCalls)
+        assertEquals(ConnectivityManagerState.RECONNECTING, viewModel.managerState.value)
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun `non-latest detected badge emits chooser prompt without reconnect`() = runTest {
+        val defaultDetected = registeredDevice(
+            macAddress = "AA:AA:AA:AA:AA:01",
+            registeredAtMillis = 1_000L,
+            lastConnectedAtMillis = 1_000L,
+            isDefault = true
+        )
+        val latest = registeredDevice(
+            macAddress = "BB:BB:BB:BB:BB:02",
+            registeredAtMillis = 2_000L,
+            lastConnectedAtMillis = 2_000L
+        )
+        val registryManager = FakeDeviceRegistryManager(
+            devices = listOf(defaultDetected, latest),
+            active = latest
+        )
+        val service = FakeConnectivityService()
+        val viewModel = createViewModel(service = service, registryManager = registryManager)
+        val receivedRequests = mutableListOf<RegisteredBadgeAvailabilityPromptRequest>()
+        val collectJob = launch {
+            viewModel.registeredBadgeAvailabilityRequests.collect { request ->
+                receivedRequests += request
+            }
+        }
+        advanceUntilIdle()
+        registryManager.setDevices(listOf(defaultDetected.copy(bleDetected = true), latest))
+        advanceUntilIdle()
+
+        assertEquals(1, receivedRequests.size)
+        assertEquals(latest.macAddress, receivedRequests.single().latestBadgeMac)
+        assertEquals(listOf(defaultDetected.macAddress), receivedRequests.single().detectedBadgeMacs)
+        assertEquals(false, receivedRequests.single().shouldAutoReconnectLatest)
+        assertEquals(0, service.scheduleAutoReconnectCalls)
+        assertEquals(ConnectivityManagerState.DISCONNECTED, viewModel.managerState.value)
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun `manual disconnected detected badge alone does not emit availability prompt`() = runTest {
+        val latest = registeredDevice(
+            macAddress = "BB:BB:BB:BB:BB:02",
+            registeredAtMillis = 2_000L,
+            lastConnectedAtMillis = 2_000L,
+            manuallyDisconnected = true
+        )
+        val registryManager = FakeDeviceRegistryManager(
+            devices = listOf(latest),
+            active = latest
+        )
+        val service = FakeConnectivityService()
+        val viewModel = createViewModel(service = service, registryManager = registryManager)
+        val receivedRequests = mutableListOf<RegisteredBadgeAvailabilityPromptRequest>()
+        val collectJob = launch {
+            viewModel.registeredBadgeAvailabilityRequests.collect { request ->
+                receivedRequests += request
+            }
+        }
+        advanceUntilIdle()
+        registryManager.setDevices(listOf(latest.copy(bleDetected = true)))
+        advanceUntilIdle()
+
+        assertTrue(receivedRequests.isEmpty())
+        assertEquals(0, service.scheduleAutoReconnectCalls)
+
+        collectJob.cancel()
+    }
+
+    @Test
     fun `clearWifiMismatchError clears current repair error message`() = runTest {
         val bridge = FakeConnectivityBridge(
             connection = BadgeConnectionState.Disconnected,
@@ -949,14 +1058,18 @@ class ConnectivityViewModelTest {
         macAddress: String,
         registeredAtMillis: Long,
         lastConnectedAtMillis: Long = registeredAtMillis,
-        isDefault: Boolean = false
+        isDefault: Boolean = false,
+        manuallyDisconnected: Boolean = false,
+        bleDetected: Boolean = false
     ) = RegisteredDevice(
         macAddress = macAddress,
         displayName = "Badge ${macAddress.takeLast(2)}",
         profileId = null,
         registeredAtMillis = registeredAtMillis,
         lastConnectedAtMillis = lastConnectedAtMillis,
-        isDefault = isDefault
+        isDefault = isDefault,
+        manuallyDisconnected = manuallyDisconnected,
+        bleDetected = bleDetected
     )
 
     private class FakeDeviceRegistryManager(
@@ -990,6 +1103,10 @@ class ConnectivityViewModelTest {
 
         fun setActive(device: RegisteredDevice?) {
             _activeDevice.value = device
+        }
+
+        fun setDevices(devices: List<RegisteredDevice>) {
+            _registeredDevices.value = devices
         }
     }
 }

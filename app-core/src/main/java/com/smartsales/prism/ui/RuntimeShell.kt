@@ -199,6 +199,12 @@ internal fun RuntimeShell(
         }
     }
 
+    LaunchedEffect(connectivityViewModel) {
+        connectivityViewModel.registeredBadgeAvailabilityRequests.collectLatest {
+            shellState = openRuntimeConnectivityModal(shellState)
+        }
+    }
+
 
     LaunchedEffect(audioEntries, trackedPendingAudioIds.keys.toSet()) {
         val completedAudioIds = mutableListOf<String>()

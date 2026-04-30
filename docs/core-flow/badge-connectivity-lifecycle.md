@@ -38,13 +38,13 @@ Shared and manager states must not overlap:
 
 - `BleDetected`: scanner saw a registered badge in range; no GATT/session readiness is implied.
 - `BlePairedNetworkUnknown`: BLE is held and notifications may be active, but badge Wi-Fi status is not yet confirmed.
-- `BlePairedNetworkOffline`: BLE is held, but the badge reports no usable IP or no usable Wi-Fi transport.
-- `Connected`: shared transport readiness for shell/history routing. It requires active GATT, active notification listener, and usable badge network status. It does not prove HTTP `:8088`.
+- `BlePairedNetworkOffline`: BLE is held, but the registered badge reports no usable IP/SSID or no usable Wi-Fi transport.
+- `Connected`: shared transport readiness for shell/history routing. It requires active registered-badge GATT, active notification listener, and usable badge IP/SSID from badge-reported status. It does not prove HTTP `:8088`.
 - `WifiProvisionedHttpDelayed`: internal service state where BLE plus badge Wi-Fi transport are confirmed, but HTTP `:8088` is still warming or unreachable inside a bounded grace window.
 - `Ready`: connectivity-manager state for transport-ready operation. It must mean at least the same transport readiness as `Connected`; it must not hide an HTTP-delayed state when the UI needs to communicate that media service readiness is pending.
 - `ConnectivityBridge.isReady()`: feature preflight for HTTP media operations. It returns true only when the active runtime endpoint is available and HTTP `:8088` responds.
 
-`Connected` and `Ready` are not synonyms for all feature operations. Audio sync must still call `isReady()` or an equivalent feature preflight before HTTP work.
+`Connected` and `Ready` are not synonyms for all feature operations. Media-safe readiness requires `Connected` plus HTTP `:8088` readiness before `/list`, `/download`, `/delete`, auto-sync, or background badge media work can begin.
 
 ## Delivered Behavior Alignment
 
@@ -56,7 +56,7 @@ Delivered behavior:
 - Current Android code keeps shared `Connected` separate from HTTP media readiness for feature work; `ConnectivityBridge.isReady()` is the HTTP media preflight for `/list`, `/download`, and `/delete`.
 - Runtime endpoint snapshots are in-memory and scoped to the current runtime; the app does not persist a last-known badge IP across app sessions.
 - Manual Wi-Fi repair rejects blank credentials locally, sends credentials through the registered-badge repair path, confirms usable IP plus submitted SSID, and treats transport-confirmed HTTP delay as non-fatal.
-- Solid-IP HTTP media failure can trigger bounded saved-credential replay; `IP#0.0.0.0` does not silently replay credentials and remains a repair-form branch.
+- Solid-IP HTTP media failure can trigger bounded saved-credential replay; registered-badge `IP#0.0.0.0` is Wi-Fi/media unsafe, does not mean unregistered, does not mean BLE disconnected, does not silently replay credentials, and remains a repair-form branch.
 
 Target behavior:
 
@@ -94,16 +94,22 @@ Rules:
 
 ### App Relaunch Restore
 
-1. Registry loads the default or active badge.
-2. SessionStore is seeded for that badge before reconnect.
-3. Manual-disconnect intent suppresses auto reconnect.
-4. Auto reconnect targets the active badge session snapshot.
-5. Reconnect establishes GATT, starts notifications, then performs foreground Wi-Fi status resolution.
+1. Registry loads the stored active session badge when the stored session still
+   belongs to a registered badge.
+2. If stored session state is missing or stale, registry falls back to the
+   latest explicitly connected active badge by `lastConnectedAtMillis`. Default
+   badge status is not an automatic reconnect target.
+3. SessionStore is seeded for that latest active badge before reconnect.
+4. Manual-disconnect intent suppresses auto reconnect.
+5. Auto reconnect targets the active badge session snapshot.
+6. Reconnect establishes GATT, starts notifications, then performs foreground Wi-Fi status resolution.
 
 Rules:
 
 - **MUST NOT:** relaunch restore route a registered badge through first-time pairing.
 - **MUST NOT:** reuse a persisted badge IP across process/session boundaries.
+- **MUST NOT:** use `default` as a reconnect target when no valid active session
+  exists; default may affect card order only.
 
 ### Manual Reconnect
 
@@ -123,6 +129,9 @@ Auto reconnect may start after heartbeat failure, BLE detection of a registered 
 Rules:
 
 - **MUST:** respect soft manual disconnect.
+- **MUST:** successful onboarding pairing, successful add-device pairing, and
+  explicit user card tap/switch are the only sources that can mark a badge as
+  the latest active reconnect target.
 - **MUST:** heartbeat failure, app relaunch restore, power loss, distance loss, and other non-manual disconnect recovery target the latest connected active badge session snapshot.
 - **MUST:** BLE detection and reconnect may auto-select only that current/latest active badge. Non-active registered badges may be marked as nearby/reconnectable for UI proximity, but they must not become active without explicit user action.
 - **MUST:** proximity is per registered badge identity: seeing badge A can mark only A as nearby, seeing badge B can mark only B as nearby, and a badge missing from scan evidence must clear back to not-detected after a short grace window.
@@ -131,6 +140,19 @@ Rules:
 - **MUST:** reconnect work must stop when the active device changes.
 - **MUST:** surface BLE-detected as proximity only until GATT and network status catch up.
 - **MUST:** manually disconnecting active badge B must not auto-connect nearby badge A and must not auto-reconnect B until the user explicitly reconnects or switches.
+
+Connectivity modal prompting is deterministic:
+
+- If no badge is fully active and detected registered candidates include the
+  latest active badge, the app may auto reconnect only that latest badge and
+  opens the existing `ConnectivityModal` with the latest badge shown as
+  connecting.
+- If detected registered candidates do not include the latest active badge, the
+  app opens the existing `ConnectivityModal` as a chooser and no badge
+  auto-connects until the user taps a card.
+- A manually disconnected badge cannot trigger auto reconnect. By default, it
+  also must not trigger the modal by itself, though it may still appear in the
+  device list when the modal opens for another eligible detected badge.
 
 ### Network Change, Hotspot Switch, Or Subnet Isolation
 
@@ -142,12 +164,25 @@ Rules:
 
 - **MUST NOT:** require, trust, or branch core recovery logic on the phone's current SSID.
 - **MUST:** use the latest user-confirmed pairing/repair credential as the default recovery candidate.
-- **MUST:** if the badge reports `IP#0.0.0.0`, classify the branch as `WifiMediaUnavailable` and prompt for editable Wi-Fi repair credentials; do not treat the badge as unregistered and do not silently replay credentials first.
+- **MUST:** if the registered badge reports `IP#0.0.0.0`, classify the branch as `WifiMediaUnavailable` and prompt for editable Wi-Fi repair credentials; do not treat the badge as unregistered, do not treat BLE as disconnected, and do not silently replay credentials first.
 - **MUST:** if the badge reports an SSID different from the latest saved credential, route to editable Wi-Fi repair with saved credentials as a hint.
-- **MUST:** if the badge reports usable IP/SSID but HTTP `:8088` is unreachable or `/list` fails, silently replay the latest saved user-confirmed credential up to 3 bounded attempts, then re-check HTTP readiness through the active runtime endpoint.
-- **MUST:** if saved credential replay does not restore HTTP media readiness, route to editable Wi-Fi repair with a network-switch hint.
+- **MUST:** if the badge reports usable IP/SSID but HTTP `:8088` is unreachable or `/list` fails, run bounded endpoint recovery first; eligible recovery may replay the latest saved user-confirmed credential up to 3 ESP32-safe attempts, then re-check HTTP readiness through the active runtime endpoint.
+- **MUST:** if bounded endpoint recovery does not restore HTTP media readiness, route to editable Wi-Fi repair with a network-switch hint.
 - **MUST:** recognize that badge and phone can share the same Wi-Fi credential/SSID while receiving different subnet addresses or AP/client-isolated routing that prevents direct HTTP reachability.
 - **MUST:** never interpret HTTP isolation, subnet separation, or AP client isolation as proof that BLE/session registration is invalid.
+
+### Badge Media Readiness
+
+Badge media work must be gated more strictly than shell connectivity.
+
+Rules:
+
+- **MUST:** require media-safe readiness before `/list`, `/download`, `/delete`, auto-sync, or background badge media work starts.
+- **MUST:** define media-safe readiness as shared `Connected` plus HTTP `:8088` readiness on the active runtime endpoint.
+- **MUST:** run bounded saved-credential and endpoint recovery when usable badge IP/SSID exists but HTTP readiness fails, then surface editable Wi-Fi repair if the badge is still unsafe.
+- **MUST NOT:** start badge media work from BLE-only, listener-only, network-unknown, `IP#0.0.0.0`, or HTTP-delayed states.
+- **MUST NOT:** claim a production app-side media-window runner until a separate safe design is approved and shipped.
+- **MUST:** treat `download#ready`, `download#ok`, `download#end`, and `wifi#off` as ESP32 wire-level protocol facts only. They do not by themselves define app lifecycle state, reconnect eligibility, repair state, or media readiness.
 
 ### Registered-Badge Wi-Fi Repair
 

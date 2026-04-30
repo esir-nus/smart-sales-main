@@ -127,6 +127,11 @@ class ConnectivityViewModel @Inject constructor(
     val wifiMismatchErrorMessage: StateFlow<String?> = _wifiMismatchErrorMessage.asStateFlow()
     private val _promptRequests = MutableSharedFlow<WifiMismatchPromptRequest>(extraBufferCapacity = 1)
     val promptRequests: SharedFlow<WifiMismatchPromptRequest> = _promptRequests.asSharedFlow()
+    private val _registeredBadgeAvailabilityRequests =
+        MutableSharedFlow<RegisteredBadgeAvailabilityPromptRequest>(extraBufferCapacity = 1)
+    val registeredBadgeAvailabilityRequests: SharedFlow<RegisteredBadgeAvailabilityPromptRequest> =
+        _registeredBadgeAvailabilityRequests.asSharedFlow()
+    private var lastRegisteredAvailabilityPromptKey: String? = null
 
     // 疑似隔离时记录徽章 IP，用于界面诊断展示
     private val _isolationBadgeIp = MutableStateFlow<String?>(null)
@@ -248,6 +253,9 @@ class ConnectivityViewModel @Inject constructor(
                 val isConnected = badgeState is BadgeConnectionState.Connected
                 if (isConnected && !wasConnected) {
                     requestFirmwareVersion()
+                    if (_uiOverride.value == ConnectionState.RECONNECTING) {
+                        clearTransientConnectivityUi()
+                    }
                 } else if (!isConnected) {
                     _firmwareVersion.value = null
                     _sdCardSpace.value = null
@@ -255,6 +263,65 @@ class ConnectivityViewModel @Inject constructor(
                 wasConnected = isConnected
             }
         }
+        viewModelScope.launch {
+            combine(
+                registryManager.registeredDevices,
+                registryManager.activeDevice,
+                connectivityBridge.connectionState
+            ) { devices, active, badgeState ->
+                buildRegisteredBadgeAvailabilityPrompt(devices, active, badgeState)
+            }.collect { request ->
+                if (request == null) {
+                    lastRegisteredAvailabilityPromptKey = null
+                    return@collect
+                }
+                val key = request.promptKey()
+                if (lastRegisteredAvailabilityPromptKey == key) return@collect
+                lastRegisteredAvailabilityPromptKey = key
+                if (request.shouldAutoReconnectLatest) {
+                    _uiOverride.value = ConnectionState.RECONNECTING
+                    connectivityService.scheduleAutoReconnect()
+                    viewModelScope.launch {
+                        withTimeoutOrNull(30_000L) {
+                            connectivityBridge.connectionState
+                                .filter { it !is BadgeConnectionState.Disconnected }
+                                .first()
+                        }
+                        if (_uiOverride.value == ConnectionState.RECONNECTING) {
+                            _uiOverride.value = null
+                        }
+                    }
+                }
+                _registeredBadgeAvailabilityRequests.emit(request)
+            }
+        }
+    }
+
+    private fun buildRegisteredBadgeAvailabilityPrompt(
+        devices: List<RegisteredDevice>,
+        active: RegisteredDevice?,
+        badgeState: BadgeConnectionState
+    ): RegisteredBadgeAvailabilityPromptRequest? {
+        if (badgeState is BadgeConnectionState.Connected) return null
+        val eligibleDetected = devices
+            .filter { it.bleDetected && !it.manuallyDisconnected }
+            .map { it.macAddress }
+            .sorted()
+        if (eligibleDetected.isEmpty()) return null
+        val activeMac = active?.macAddress
+        val latest = devices.firstOrNull { it.macAddress == activeMac }
+            ?: devices.maxWithOrNull(
+                compareBy<RegisteredDevice> { it.lastConnectedAtMillis }
+                    .thenBy { it.registeredAtMillis }
+                    .thenBy { it.macAddress }
+            )
+            ?: return null
+        val latestDetected = latest.macAddress in eligibleDetected
+        return RegisteredBadgeAvailabilityPromptRequest(
+            latestBadgeMac = latest.macAddress,
+            detectedBadgeMacs = eligibleDetected,
+            shouldAutoReconnectLatest = latestDetected && !latest.manuallyDisconnected
+        )
     }
     
     /**
@@ -679,6 +746,15 @@ class ConnectivityViewModel @Inject constructor(
 }
 
 internal const val WIFI_MISMATCH_EMPTY_CREDENTIALS_ERROR = "Wi-Fi 名称和密码不能为空"
+
+data class RegisteredBadgeAvailabilityPromptRequest(
+    val latestBadgeMac: String,
+    val detectedBadgeMacs: List<String>,
+    val shouldAutoReconnectLatest: Boolean
+) {
+    fun promptKey(): String =
+        "$latestBadgeMac|${detectedBadgeMacs.joinToString(",")}|$shouldAutoReconnectLatest"
+}
 
 /**
  * 连接模态框状态枚举

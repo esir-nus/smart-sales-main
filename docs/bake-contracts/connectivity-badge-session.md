@@ -8,7 +8,7 @@ owner: data/connectivity, app-core connectivity, app-core audio
 core-flow-doc:
   - docs/core-flow/badge-connectivity-lifecycle.md
   - docs/core-flow/badge-session-lifecycle.md
-last-verified: 2026-04-29
+last-verified: 2026-04-30
 ---
 
 # Connectivity Badge Session BAKE Contract
@@ -35,13 +35,15 @@ tracks gaps explicitly.
 ### Outputs / Guarantees
 
 - `ConnectivityBridge.connectionState` emits shared shell transport state.
-  `Connected` means active GATT, notification listener, and usable badge network
-  status; it does not prove HTTP media readiness.
+  `Connected` means active registered-badge GATT, active notification listener,
+  and usable badge IP/SSID from badge-reported status; it does not prove HTTP
+  media readiness.
 - `ConnectivityBridge.managerStatus` emits manager-only diagnostics for setup,
   BLE-held network unknown/offline, BLE detected, HTTP-delayed, ready, and
   errors.
 - `ConnectivityBridge.isReady()` is the feature-level HTTP media preflight and
-  must pass before normal `/list`, `/download`, or `/delete` work.
+  must pass before `/list`, `/download`, `/delete`, auto-sync, or background
+  badge media work begins.
 - Manual badge sync creates badge-scoped placeholders, queues badge-owned
   download items, imports valid WAV files, removes empty WAV placeholders,
   records failures, and fences results by runtime badge identity before a
@@ -56,10 +58,16 @@ tracks gaps explicitly.
   filenames for targeted resume when the same badge returns to `Ready`.
 - `wifiRepairEvents()` exposes repair milestones so UI repair state is driven by
   explicit events instead of inferred manager state.
+- `ConnectivityViewModel.registeredBadgeAvailabilityRequests` exposes
+  registered BLE proximity availability to `RuntimeShell` separately from
+  Wi-Fi mismatch prompts, so the existing `ConnectivityModal` can open as a
+  connecting surface or chooser without changing registry ownership.
 
 ### Invariants
 
 - MUST keep BLE/session transport readiness separate from HTTP media readiness.
+- MUST keep badge media work gated by media-safe readiness: shared `Connected`
+  plus HTTP `:8088` readiness on the active runtime endpoint.
 - MUST keep registry ownership audio-agnostic: audio observes active-device
   changes and cancels or fences its own work; registry must not import audio.
 - MUST bind badge media work to the active runtime badge identity before
@@ -71,13 +79,23 @@ tracks gaps explicitly.
   saved user-confirmed credentials.
 - MUST avoid repeated background BLE Wi-Fi polling during normal HTTP media
   traffic; endpoint reuse is current-runtime only.
+- MUST treat `download#ready`, `download#ok`, `download#end`, and `wifi#off` as
+  ESP32 wire-level protocol facts only. This BAKE contract does not claim that
+  the restored Android runtime owns a production media-window runner.
 - MUST keep default-device selection passive/cosmetic. `setDefault()` changes
   registry metadata only. BLE detection/reconnect may auto-select only the
-  latest connected/current active badge after non-manual loss; non-active
+  latest user-selected active registered badge after non-manual loss; non-active
   registered badges may be marked `bleDetected` for UI
   proximity but must not become active without explicit user action. Proximity
   is live and per badge MAC: missing scan evidence clears the affected
   registered badge after a short grace window.
+- MUST derive launch restore target from the stored active `SessionStore` badge
+  first, then from the registered badge with the highest
+  `lastConnectedAtMillis` if session state is missing or stale. `default` must
+  not be used as an automatic reconnect target.
+- MUST treat successful onboarding pairing, successful add-device pairing, and
+  explicit user card tap/switch as the only sources that make a badge the
+  latest active automatic reconnect target.
 - MUST treat manual disconnect as explicit user intent: manually disconnecting
   active badge B suppresses auto-reconnect to B and suppresses auto-connect to
   nearby badge A until the user explicitly reconnects or switches.
@@ -86,11 +104,14 @@ tracks gaps explicitly.
 
 - No active or resolvable endpoint: media calls return not-ready or
   not-connected without claiming session invalidation.
-- Badge reports `IP#0.0.0.0` or no usable network: route to registered-badge
-  Wi-Fi repair, not saved-credential replay or full pairing.
+- Registered badge reports `IP#0.0.0.0` or no usable network: classify as
+  Wi-Fi/media unsafe and route to registered-badge Wi-Fi repair, not BLE
+  disconnect, unregistered state, saved-credential replay, or full pairing.
 - Solid-IP HTTP failure or `/list` failure: invalidate the active endpoint,
   attempt bounded saved-credential replay when eligible, then re-check media
   readiness.
+- `wifi#off` after a badge media protocol sequence: do not treat it as a
+  reconnect, repair, saved-credential replay, or disconnect trigger by itself.
 - Blank Wi-Fi credentials: reject locally before BLE writes.
 - Active-device change during list/download: discard stale list results, cancel
   manual queue work where possible, reject queued cross-device work before it
@@ -108,9 +129,15 @@ tracks gaps explicitly.
   already-running sync result instead of treating HTTP timeout as Wi-Fi failure.
 - BLE detection sees multiple registered candidates: mark each live registered
   candidate as BLE detected, clear missing registered candidates after the
-  proximity grace window, reconnect only when the latest connected/current
-  active badge is one of the eligible candidates, and never switch to a
+  proximity grace window, reconnect only when the latest user-selected active
+  registered badge is one of the eligible candidates, and never switch to a
   non-active/default badge without an explicit user action.
+- BLE detection sees eligible registered candidates while no badge is fully
+  active: if candidates include the latest active badge, open the connectivity
+  modal and reconnect only that latest badge; if candidates exclude the latest
+  active badge, open the modal as a chooser and do not auto-connect any badge.
+- BLE detection sees only manually disconnected registered badges: do not
+  auto-reconnect and do not open the modal by default.
 
 ## Telemetry Joints
 
@@ -180,6 +207,10 @@ connectivity and audio owners.
   non-manual disconnect of active badge B must not silently switch or reconnect
   to default badge A. Reconnect fallback scans for B's active session MAC for up
   to 60 seconds and leaves the session on B if only A is found.
+- Updated 2026-04-30: post-backup app-side media-runner and fake-media
+  blackbox claims are not part of active BAKE truth. Media-gate command names
+  remain protocol facts only until a separate safe production design is approved
+  and implemented.
 
 ## Test Contract
 

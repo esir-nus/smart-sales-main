@@ -91,11 +91,13 @@ tracks gaps explicitly.
   registered badge after a short grace window.
 - MUST derive launch restore target from the stored active `SessionStore` badge
   first, then from the registered badge with the highest
-  `lastConnectedAtMillis` if session state is missing or stale. `default` must
-  not be used as an automatic reconnect target.
+  `lastUserIntentAtMillis` if session state is missing or stale. Persisted
+  registry rows migrate missing `lastUserIntentAtMillis` values by falling back
+  to `lastConnectedAtMillis`, while `default` remains non-authoritative for
+  automatic reconnect.
 - MUST treat successful onboarding pairing, successful add-device pairing, and
-  explicit user card tap/switch as the only sources that make a badge the
-  latest active automatic reconnect target.
+  explicit user connect/tap or device switch as the only sources that make a
+  badge the latest intended automatic reconnect target.
 - MUST treat manual disconnect as explicit user intent: manually disconnecting
   active badge B suppresses auto-reconnect to B and suppresses auto-connect to
   nearby badge A until the user explicitly reconnects or switches.
@@ -211,6 +213,32 @@ connectivity and audio owners.
   blackbox claims are not part of active BAKE truth. Media-gate command names
   remain protocol facts only until a separate safe production design is approved
   and implemented.
+- Closed 2026-04-30 (local verification): reconnect-owner persistence now
+  uses `lastUserIntentAtMillis` separately from transport-success
+  `lastConnectedAtMillis`. Successful onboarding pairing, successful add-device
+  pairing, explicit user connect/tap, and explicit device switch are the only
+  owner-stamping paths. Launch restore fallback and modal latest-intent choice
+  now use `lastUserIntentAtMillis`, and focused/full unit tests pass.
+- Closed 2026-04-30 (local verification): manual disconnect suppression now
+  holds across both registry-manager auto-reconnect selection and modal
+  auto-takeover selection. A manually disconnected badge stays suppressed until
+  explicit reconnect/switch; focused/full unit tests pass.
+- Closed 2026-04-30 (local verification): when no badge is fully active, the
+  reducer now prompts from eligible `bleDetected && !manuallyDisconnected`
+  changes, auto-reconnects only the latest intended badge when present, and
+  otherwise opens chooser mode with no auto-connect; focused/full unit tests
+  pass.
+- Closed 2026-04-30 (local verification): active BLE-only cards now stay
+  disconnected-first and hide connected-only metadata/actions unless shared
+  `BadgeConnectionState.Connected` is live. Focused modal/ViewModel tests pass.
+- Closed 2026-04-30 (local verification): stale mismatch/isolation/repair UI
+  now clears on active shared `Connected`, active badge identity change from any
+  owner, explicit dismiss/reset, and successful repair completion. Focused/full
+  unit tests pass.
+- Remaining blocker 2026-04-30: Sprint 04-b still lacks fresh L3 loop A-D
+  runtime artifacts for these reconnect-law branches. `adb devices` proves the
+  attached device is reachable (`fc8ede3e device`), but this session did not
+  execute the bounded hardware loop set, so do not claim runtime closure yet.
 
 ## Test Contract
 
@@ -231,6 +259,10 @@ connectivity and audio owners.
 - Minimum verification for this contract: prove the BAKE sections exist, prove
   the Sprint 02 gaps are recorded, prove the Cerb docs and interface map cite
   this contract, and capture `git diff --stat` for the scoped docs.
+- Connectivity intent-law delta implementation is now assigned to
+  `docs/projects/bake-transformation/sprints/04-b-connectivity-intent-driven-reconnect-modal-law.md`,
+  which must close the listed reconnect-owner, modal, active-card, and prompt
+  lifetime gaps with focused tests plus L3 evidence.
 - Minimum verification for future runtime closure: `adb devices` plus filtered
   `adb logcat` for launch restore, reconnect, Wi-Fi repair, notification ingress,
   HTTP readiness, active-device switch, and badge audio sync/download branches.

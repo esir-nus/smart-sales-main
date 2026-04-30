@@ -86,11 +86,7 @@ class RealDeviceRegistryManager(
             ?.peripheralId
             ?.let { registry.findByMac(it) }
         if (sessionDevice != null) return sessionDevice
-        return registeredDevices.maxWithOrNull(
-            compareBy<RegisteredDevice> { it.lastConnectedAtMillis }
-                .thenBy { it.registeredAtMillis }
-                .thenBy { it.macAddress }
-        )
+        return selectLatestIntendedDevice(registeredDevices)
     }
 
     private fun startBleDetectionMonitor() {
@@ -146,6 +142,7 @@ class RealDeviceRegistryManager(
                     found.forEach { peripheral ->
                         lastSeenAt[peripheral.id] = scanClockMs
                     }
+                    logNonActiveBleCandidates(found.map { it.id }, source = "passive")
                     updatePassiveBleProximity(found.map { it.id }.toSet(), lastSeenAt, scanClockMs)
                     maybeTriggerActiveReconnect(found.map { it.id }, lastReconnectTriggerMac)?.let {
                         lastReconnectTriggerMac = it
@@ -187,7 +184,7 @@ class RealDeviceRegistryManager(
     ): String? {
         val state = deviceConnectionManager.state.value
         if (state !is ConnectionState.Disconnected) return null
-        val target = selectBleDetectionTarget(foundMacs) ?: return null
+        val target = selectBleDetectionTarget(foundMacs, source = "passive") ?: return null
         if (lastReconnectTriggerMac == target.macAddress) return lastReconnectTriggerMac
 
         ConnectivityLogger.i("🔍 Auto-reconnect triggered by passive BLE proximity for ${target.macAddress}")
@@ -215,7 +212,7 @@ class RealDeviceRegistryManager(
         }
         refreshDeviceList()
 
-        val target = selectBleDetectionTarget(registeredFound.map { it.id })
+        val target = selectBleDetectionTarget(registeredFound.map { it.id }, source = "direct-candidate")
         if (target != null) {
             ConnectivityLogger.i("🔍 Auto-reconnect triggered by BLE detection for ${target.macAddress}")
             deviceConnectionManager.forceReconnectNow()
@@ -227,22 +224,44 @@ class RealDeviceRegistryManager(
         }
     }
 
-    private fun selectBleDetectionTarget(candidateMacs: List<String>): RegisteredDevice? {
+    private fun selectBleDetectionTarget(candidateMacs: List<String>, source: String): RegisteredDevice? {
         val candidateSet = candidateMacs.toSet()
         val candidates = candidateSet.mapNotNull { registry.findByMac(it) }
         ConnectivityLogger.i(
             "[ActiveOnly][Selector] active=${_activeDevice.value?.macAddress ?: "none"} " +
                 "candidates=${candidates.joinToString { "${it.macAddress}(default=${it.isDefault},manual=${it.manuallyDisconnected})" }}"
         )
+        if (source != "passive") {
+            logNonActiveBleCandidates(candidateSet, source)
+        }
         val activeMac = _activeDevice.value?.macAddress
         val activeCandidate = candidates.firstOrNull { it.macAddress == activeMac }
         if (activeCandidate?.manuallyDisconnected == false) {
             return activeCandidate
         }
-        if (candidates.any { it.macAddress != activeMac }) {
-            ConnectivityLogger.i("[ActiveOnly] non-active BLE candidates marked only; active remains ${activeMac ?: "none"}")
-        }
         return null
+    }
+
+    internal fun nonActiveBleCandidatesEvidenceLine(
+        candidateMacs: Collection<String>,
+        source: String
+    ): String? {
+        val activeMac = _activeDevice.value?.macAddress
+        val registeredCandidates = candidateMacs
+            .toSet()
+            .mapNotNull { registry.findByMac(it) }
+            .map { it.macAddress }
+            .sorted()
+        val nonActiveCandidates = registeredCandidates
+            .filter { it != activeMac }
+        if (nonActiveCandidates.isEmpty()) return null
+        return "[ActiveOnly] non-active BLE candidates marked only; active remains ${activeMac ?: "none"} " +
+            "source=$source candidates=${registeredCandidates.joinToString(",")} " +
+            "nonActiveCandidates=${nonActiveCandidates.joinToString(",")}"
+    }
+
+    private fun logNonActiveBleCandidates(candidateMacs: Collection<String>, source: String) {
+        nonActiveBleCandidatesEvidenceLine(candidateMacs, source)?.let { ConnectivityLogger.i(it) }
     }
 
     private fun stopBleDetectionScan() {
@@ -280,29 +299,34 @@ class RealDeviceRegistryManager(
 
     override suspend fun switchToDevice(macAddress: String) = switchMutex.withLock {
         val current = _activeDevice.value
-        if (current?.macAddress == macAddress) return@withLock
-
         val target = registry.findByMac(macAddress) ?: run {
             ConnectivityLogger.w("🏠 Registry: switch target not found: $macAddress")
             return@withLock
         }
 
-        ConnectivityLogger.i("🏠 Registry: switching ${current?.macSuffix ?: "none"} → ${target.macSuffix}")
+        val intentTimestamp = System.currentTimeMillis()
+        ConnectivityLogger.i(
+            if (current?.macAddress == macAddress) {
+                "🏠 Registry: reconnecting explicit target ${target.macSuffix}"
+            } else {
+                "🏠 Registry: switching ${current?.macSuffix ?: "none"} → ${target.macSuffix}"
+            }
+        )
 
-        // 用户主动连接，清除 BLE 检测标记
         if (target.bleDetected) {
             registry.updateBleDetected(macAddress, false)
         }
+        registry.updateManuallyDisconnected(macAddress, false)
+        registry.updateLastUserIntent(macAddress, intentTimestamp)
+        val refreshedTarget = registry.findByMac(macAddress) ?: target
 
-        // Seed session for the target device
-        val targetSession = seedSessionForDevice(target)
+        val targetSession = seedSessionForDevice(refreshedTarget)
 
-        _activeDevice.value = target
-        registry.updateLastConnected(macAddress)
+        _activeDevice.value = refreshedTarget
         refreshDeviceList()
+        deviceConnectionManager.setManuallyDisconnected(false)
 
-        // Trigger reconnect for the new device
-        ConnectivityLogger.d("🏠 Registry: reconnecting target ${target.macSuffix}")
+        ConnectivityLogger.d("🏠 Registry: reconnecting target ${refreshedTarget.macSuffix}")
         deviceConnectionManager.forceReconnectToSession(targetSession)
     }
 
@@ -374,6 +398,7 @@ class RealDeviceRegistryManager(
             profileId = DEBUG_CHLE_PROFILE,
             registeredAtMillis = now,
             lastConnectedAtMillis = now - 1_000L,
+            lastUserIntentAtMillis = now - 1_000L,
             isDefault = true
         )
         val activeDevice = registry.findByMac(DEBUG_ACTIVE_MAC) ?: RegisteredDevice(
@@ -382,6 +407,7 @@ class RealDeviceRegistryManager(
             profileId = DEBUG_CHLE_PROFILE,
             registeredAtMillis = now,
             lastConnectedAtMillis = now,
+            lastUserIntentAtMillis = now,
             isDefault = false
         )
 
@@ -478,6 +504,10 @@ class RealDeviceRegistryManager(
         _registeredDevices.value = registry.loadAll()
     }
 
+    private fun selectLatestIntendedDevice(
+        devices: List<RegisteredDevice>
+    ): RegisteredDevice? = devices.maxWithOrNull(LATEST_INTENDED_DEVICE_COMPARATOR)
+
     internal fun syncActiveDeviceToConnectionState(state: ConnectionState) {
         val runtimeSession = when (state) {
             is ConnectionState.Connected -> state.session
@@ -524,5 +554,9 @@ class RealDeviceRegistryManager(
         const val DEBUG_ACTIVE_MAC = "14:C1:9F:D7:E4:06"
         const val DEBUG_CHLE_NAME = "CHLE_Intelligent"
         const val DEBUG_CHLE_PROFILE = "chle"
+        val LATEST_INTENDED_DEVICE_COMPARATOR =
+            compareBy<RegisteredDevice> { it.lastUserIntentAtMillis }
+                .thenBy { it.registeredAtMillis }
+                .thenBy { it.macAddress }
     }
 }

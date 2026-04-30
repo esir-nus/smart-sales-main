@@ -44,6 +44,25 @@ class ConnectivityModalDeviceCardSubtitleTest {
     }
 
     @Test
+    fun `ble detected active registered card stays disconnected first`() {
+        val subtitle = connectivityDeviceCardSubtitle(
+            isConnected = false,
+            batteryLevel = null,
+            firmwareVersion = null,
+            isCheckingUpdate = false,
+            isUpdateFound = false,
+            isUpdating = false,
+            isReconnecting = false,
+            isBlePaired = false,
+            bleDetected = true,
+            manuallyDisconnected = false,
+            isActive = true
+        )
+
+        assertEquals("已断开 · 点击重连", subtitle)
+    }
+
+    @Test
     fun `active disconnected card keeps out of range copy`() {
         val subtitle = connectivityDeviceCardSubtitle(
             isConnected = false,

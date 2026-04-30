@@ -137,11 +137,27 @@ class RealDeviceRegistryManagerTest {
     }
 
     @Test
-    fun `initializeOnLaunch falls back to latest connected badge instead of default when session is missing`() = runTest(dispatcher) {
+    fun `initializeOnLaunch falls back to latest intended badge instead of default when session is missing`() = runTest(dispatcher) {
         val defaultMac = "AA:AA:AA:AA:AA:01"
         val latestMac = "BB:BB:BB:BB:BB:02"
-        registry.register(device(defaultMac, "Default", isDefault = true, lastConnectedAtMillis = 1_000L))
-        registry.register(device(latestMac, "Latest", isDefault = false, lastConnectedAtMillis = 2_000L))
+        registry.register(
+            device(
+                defaultMac,
+                "Default",
+                isDefault = true,
+                lastConnectedAtMillis = 9_000L,
+                lastUserIntentAtMillis = 1_000L
+            )
+        )
+        registry.register(
+            device(
+                latestMac,
+                "Latest",
+                isDefault = false,
+                lastConnectedAtMillis = 2_000L,
+                lastUserIntentAtMillis = 8_000L
+            )
+        )
 
         manager.initializeOnLaunch()
 
@@ -149,6 +165,32 @@ class RealDeviceRegistryManagerTest {
         assertEquals(latestMac, sessionStore.loadSession()?.peripheralId)
         assertEquals(defaultMac, registry.getDefault()?.macAddress)
         assertEquals(1, deviceManager.autoReconnectCalls)
+    }
+
+    @Test
+    fun `switchToDevice stamps explicit intent without mutating last transport success`() = runTest(dispatcher) {
+        val targetMac = "BB:BB:BB:BB:BB:02"
+        registry.register(
+            device(
+                macAddress = targetMac,
+                name = "Target",
+                isDefault = true,
+                lastConnectedAtMillis = 1_000L,
+                lastUserIntentAtMillis = 500L,
+                manuallyDisconnected = true
+            )
+        )
+        manager.initializeOnLaunch()
+        val before = registry.findByMac(targetMac)!!
+
+        manager.switchToDevice(targetMac)
+
+        val after = registry.findByMac(targetMac)!!
+        assertFalse(after.manuallyDisconnected)
+        assertEquals(before.lastConnectedAtMillis, after.lastConnectedAtMillis)
+        assertTrue(after.lastUserIntentAtMillis > before.lastUserIntentAtMillis)
+        assertEquals(false, deviceManager.manuallyDisconnectedValue)
+        assertEquals(targetMac, deviceManager.forceReconnectSession?.peripheralId)
     }
 
     @Test
@@ -227,6 +269,15 @@ class RealDeviceRegistryManagerTest {
         assertEquals(activeMac, sessionStore.loadSession()?.peripheralId)
         assertTrue(registry.findByMac(defaultMac)!!.bleDetected)
         assertTrue(registry.findByMac(activeMac)!!.bleDetected)
+        assertEquals(
+            "[ActiveOnly] non-active BLE candidates marked only; active remains $activeMac " +
+                "source=direct-candidate candidates=$defaultMac,$activeMac " +
+                "nonActiveCandidates=$defaultMac",
+            manager.nonActiveBleCandidatesEvidenceLine(
+                candidateMacs = listOf(defaultMac, activeMac),
+                source = "direct-candidate"
+            )
+        )
     }
 
     @Test
@@ -303,10 +354,18 @@ class RealDeviceRegistryManagerTest {
         assertEquals(0, deviceManager.forceReconnectCalls)
         assertTrue(registry.findByMac(inactiveMac)!!.bleDetected)
         assertFalse(registry.findByMac(activeMac)!!.bleDetected)
+        assertEquals(
+            "[ActiveOnly] non-active BLE candidates marked only; active remains $activeMac " +
+                "source=passive candidates=$inactiveMac nonActiveCandidates=$inactiveMac",
+            scopedManager.nonActiveBleCandidatesEvidenceLine(
+                candidateMacs = listOf(inactiveMac),
+                source = "passive"
+            )
+        )
     }
 
     @Test
-    fun `passive proximity seeing active badge can reconnect only active target`() = runTest {
+    fun `passive proximity seeing active and inactive badges can reconnect only active target`() = runTest {
         val schedulerDispatcher = StandardTestDispatcher(testScheduler)
         val scanner = FakeBleScanner()
         val scopedManager = RealDeviceRegistryManager(
@@ -330,7 +389,10 @@ class RealDeviceRegistryManagerTest {
         scopedManager.switchToDevice(activeMac)
         deviceManager.reset()
 
-        scanner.setDevices(listOf(BlePeripheral(activeMac, "Active", -40)))
+        scanner.setDevices(listOf(
+            BlePeripheral(inactiveMac, "Inactive", -44),
+            BlePeripheral(activeMac, "Active", -40)
+        ))
         advanceTimeBy(2_001L)
         advanceUntilIdle()
 
@@ -338,7 +400,15 @@ class RealDeviceRegistryManagerTest {
         assertEquals(activeMac, sessionStore.loadSession()?.peripheralId)
         assertEquals(1, deviceManager.forceReconnectCalls)
         assertTrue(registry.findByMac(activeMac)!!.bleDetected)
-        assertFalse(registry.findByMac(inactiveMac)!!.bleDetected)
+        assertTrue(registry.findByMac(inactiveMac)!!.bleDetected)
+        assertEquals(
+            "[ActiveOnly] non-active BLE candidates marked only; active remains $activeMac " +
+                "source=passive candidates=$inactiveMac,$activeMac nonActiveCandidates=$inactiveMac",
+            scopedManager.nonActiveBleCandidatesEvidenceLine(
+                candidateMacs = listOf(inactiveMac, activeMac),
+                source = "passive"
+            )
+        )
     }
 
     @Test
@@ -402,10 +472,27 @@ class RealDeviceRegistryManagerTest {
     fun `setDefault remains passive and does not switch seed session or reconnect`() = runTest(dispatcher) {
         val defaultMac = "AA:AA:AA:AA:AA:01"
         val otherMac = "BB:BB:BB:BB:BB:02"
-        registry.register(device(defaultMac, "Default", isDefault = true, lastConnectedAtMillis = 1_000L))
-        registry.register(device(otherMac, "Other", isDefault = false, lastConnectedAtMillis = 2_000L))
+        registry.register(
+            device(
+                defaultMac,
+                "Default",
+                isDefault = true,
+                lastConnectedAtMillis = 1_000L,
+                lastUserIntentAtMillis = 1_000L
+            )
+        )
+        registry.register(
+            device(
+                otherMac,
+                "Other",
+                isDefault = false,
+                lastConnectedAtMillis = 2_000L,
+                lastUserIntentAtMillis = 2_000L
+            )
+        )
         manager.initializeOnLaunch()
         val reconnectCallsAfterLaunch = deviceManager.forceReconnectCalls
+        val lastUserIntentBefore = registry.findByMac(otherMac)?.lastUserIntentAtMillis
 
         manager.setDefault(defaultMac)
 
@@ -413,6 +500,7 @@ class RealDeviceRegistryManagerTest {
         assertEquals(otherMac, manager.activeDevice.value?.macAddress)
         assertEquals(otherMac, sessionStore.loadSession()?.peripheralId)
         assertEquals(reconnectCallsAfterLaunch, deviceManager.forceReconnectCalls)
+        assertEquals(lastUserIntentBefore, registry.findByMac(otherMac)?.lastUserIntentAtMillis)
     }
 
     @Test
@@ -483,6 +571,7 @@ class RealDeviceRegistryManagerTest {
         name: String,
         isDefault: Boolean,
         lastConnectedAtMillis: Long = 1_000L,
+        lastUserIntentAtMillis: Long = lastConnectedAtMillis,
         manuallyDisconnected: Boolean = false
     ) = RegisteredDevice(
         macAddress = macAddress,
@@ -490,6 +579,7 @@ class RealDeviceRegistryManagerTest {
         profileId = null,
         registeredAtMillis = 1_000L,
         lastConnectedAtMillis = lastConnectedAtMillis,
+        lastUserIntentAtMillis = lastUserIntentAtMillis,
         isDefault = isDefault,
         manuallyDisconnected = manuallyDisconnected
     )

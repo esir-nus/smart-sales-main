@@ -15,6 +15,7 @@ data class RegisteredDevice(
     val profileId: String?,
     val registeredAtMillis: Long,
     val lastConnectedAtMillis: Long,
+    val lastUserIntentAtMillis: Long = lastConnectedAtMillis,
     val isDefault: Boolean,
     val manuallyDisconnected: Boolean = false,
     val bleDetected: Boolean = false
@@ -30,20 +31,25 @@ data class RegisteredDevice(
             profileId = peripheral.profileId,
             registeredAtMillis = session.establishedAtMillis,
             lastConnectedAtMillis = session.establishedAtMillis,
+            lastUserIntentAtMillis = session.establishedAtMillis,
             isDefault = isDefault
         )
 
         fun fromSession(
             session: BleSession,
             isDefault: Boolean = true
-        ): RegisteredDevice = RegisteredDevice(
-            macAddress = session.peripheralId,
-            displayName = session.peripheralName,
-            profileId = session.profileId,
-            registeredAtMillis = session.establishedAtMillis,
-            lastConnectedAtMillis = System.currentTimeMillis(),
-            isDefault = isDefault
-        )
+        ): RegisteredDevice {
+            val now = System.currentTimeMillis()
+            return RegisteredDevice(
+                macAddress = session.peripheralId,
+                displayName = session.peripheralName,
+                profileId = session.profileId,
+                registeredAtMillis = session.establishedAtMillis,
+                lastConnectedAtMillis = now,
+                lastUserIntentAtMillis = now,
+                isDefault = isDefault
+            )
+        }
     }
 
     val macSuffix: String

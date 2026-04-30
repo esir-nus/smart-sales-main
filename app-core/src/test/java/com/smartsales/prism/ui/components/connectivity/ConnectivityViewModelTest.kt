@@ -123,6 +123,80 @@ class ConnectivityViewModelTest {
     }
 
     @Test
+    fun `device card presentation does not use stale ready when shared state is disconnected`() = runTest {
+        val defaultDetected = registeredDevice(
+            macAddress = "14:C1:9F:D7:E3:EE",
+            registeredAtMillis = 1_000L,
+            lastConnectedAtMillis = 1_000L,
+            isDefault = true,
+            bleDetected = true
+        )
+        val activeUnavailable = registeredDevice(
+            macAddress = "14:C1:9F:D7:E4:06",
+            registeredAtMillis = 2_000L,
+            lastConnectedAtMillis = 2_000L,
+            bleDetected = false
+        )
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Disconnected,
+            manager = BadgeManagerStatus.Ready(badgeIp = "192.168.1.10", ssid = "OfficeGuest")
+        )
+        val service = FakeConnectivityService()
+        val registryManager = FakeDeviceRegistryManager(
+            devices = listOf(defaultDetected, activeUnavailable),
+            active = activeUnavailable
+        )
+        val viewModel = createViewModel(
+            service = service,
+            bridge = bridge,
+            registryManager = registryManager
+        )
+        advanceUntilIdle()
+
+        val activeCard = viewModel.deviceCardPresentations.value.single {
+            it.device.macAddress == activeUnavailable.macAddress
+        }
+        val defaultCard = viewModel.deviceCardPresentations.value.single {
+            it.device.macAddress == defaultDetected.macAddress
+        }
+
+        assertEquals(ConnectivityManagerState.CONNECTED, viewModel.managerState.value)
+        assertEquals(ConnectivityManagerState.DISCONNECTED, activeCard.managerState)
+        assertNull(activeCard.batteryLevel)
+        assertNull(activeCard.firmwareVersion)
+        assertEquals(null, defaultCard.managerState)
+        assertEquals(0, service.scheduleAutoReconnectCalls)
+        assertEquals(activeUnavailable.macAddress, viewModel.activeDevice.value?.macAddress)
+    }
+
+    @Test
+    fun `connected card presentation includes live firmware and battery only with shared connected state`() = runTest {
+        val activeDevice = registeredDevice(
+            macAddress = "14:C1:9F:D7:E4:06",
+            registeredAtMillis = 2_000L,
+            lastConnectedAtMillis = 2_000L
+        )
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Connected("192.168.1.10", "OfficeGuest"),
+            manager = BadgeManagerStatus.Ready("192.168.1.10", "OfficeGuest")
+        )
+        val viewModel = createViewModel(
+            bridge = bridge,
+            registryManager = FakeDeviceRegistryManager(devices = listOf(activeDevice), active = activeDevice)
+        )
+        advanceUntilIdle()
+
+        bridge.emitBatteryLevel(64)
+        bridge.emitFirmwareVersion("1.0.0.1")
+        advanceUntilIdle()
+
+        val card = viewModel.deviceCardPresentations.value.single()
+        assertEquals(ConnectivityManagerState.CONNECTED, card.managerState)
+        assertEquals(64, card.batteryLevel)
+        assertEquals("1.0.0.1", card.firmwareVersion)
+    }
+
+    @Test
     fun `managerState maps http delayed while shell transport remains connected`() = runTest {
         val bridge = FakeConnectivityBridge(
             connection = BadgeConnectionState.Connected(badgeIp = "192.168.1.10", ssid = "OfficeGuest"),
@@ -137,6 +211,63 @@ class ConnectivityViewModelTest {
 
         assertEquals(ConnectionState.CONNECTED, viewModel.connectionState.value)
         assertEquals(ConnectivityManagerState.HTTP_DELAYED, viewModel.managerState.value)
+    }
+
+    @Test
+    fun `http delayed card presentation does not expose connected affordance metadata`() = runTest {
+        val activeDevice = registeredDevice(
+            macAddress = "14:C1:9F:D7:E4:06",
+            registeredAtMillis = 2_000L,
+            lastConnectedAtMillis = 2_000L
+        )
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Connected(badgeIp = "192.168.1.10", ssid = "OfficeGuest"),
+            manager = BadgeManagerStatus.HttpDelayed(
+                badgeIp = "192.168.1.10",
+                ssid = "OfficeGuest",
+                baseUrl = "http://192.168.1.10:8088"
+            )
+        )
+        val viewModel = createViewModel(
+            bridge = bridge,
+            registryManager = FakeDeviceRegistryManager(devices = listOf(activeDevice), active = activeDevice)
+        )
+        advanceUntilIdle()
+        bridge.emitBatteryLevel(64)
+        bridge.emitFirmwareVersion("1.0.0.1")
+        advanceUntilIdle()
+
+        val card = viewModel.deviceCardPresentations.value.single()
+        assertEquals(ConnectivityManagerState.HTTP_DELAYED, card.managerState)
+        assertNull(card.batteryLevel)
+        assertNull(card.firmwareVersion)
+    }
+
+    @Test
+    fun `active ble only card stays disconnected first and hides connected metadata`() = runTest {
+        val activeDevice = registeredDevice(
+            macAddress = "14:C1:9F:D7:E4:06",
+            registeredAtMillis = 2_000L,
+            lastConnectedAtMillis = 2_000L,
+            bleDetected = true
+        )
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Disconnected,
+            manager = BadgeManagerStatus.BleDetected
+        )
+        val viewModel = createViewModel(
+            bridge = bridge,
+            registryManager = FakeDeviceRegistryManager(devices = listOf(activeDevice), active = activeDevice)
+        )
+        advanceUntilIdle()
+        bridge.emitBatteryLevel(64)
+        bridge.emitFirmwareVersion("1.0.0.1")
+        advanceUntilIdle()
+
+        val card = viewModel.deviceCardPresentations.value.single()
+        assertEquals(ConnectivityManagerState.DISCONNECTED, card.managerState)
+        assertNull(card.batteryLevel)
+        assertNull(card.firmwareVersion)
     }
 
     @Test
@@ -385,16 +516,26 @@ class ConnectivityViewModelTest {
             connection = BadgeConnectionState.Disconnected,
             manager = BadgeManagerStatus.BlePairedNetworkOffline
         )
+        val activeDevice = registeredDevice(
+            macAddress = "14:C1:9F:D7:E4:06",
+            registeredAtMillis = 2_000L,
+            lastConnectedAtMillis = 2_000L
+        )
         val reconnectGate = CompletableDeferred<ReconnectResult>()
         val viewModel = createViewModel(
             service = FakeConnectivityService(reconnectResults = listOf(reconnectGate)),
-            bridge = bridge
+            bridge = bridge,
+            registryManager = FakeDeviceRegistryManager(devices = listOf(activeDevice), active = activeDevice)
         )
         advanceUntilIdle()
 
         viewModel.reconnect()
         advanceUntilIdle()
         assertEquals(ConnectivityManagerState.RECONNECTING, viewModel.managerState.value)
+        assertEquals(
+            ConnectivityManagerState.RECONNECTING,
+            viewModel.deviceCardPresentations.value.single().managerState
+        )
 
         reconnectGate.complete(ReconnectResult.DeviceNotFound)
         advanceUntilIdle()
@@ -765,7 +906,15 @@ class ConnectivityViewModelTest {
     @Test
     fun `external wifi mismatch prompt updates modal state and emits shell prompt effect`() = runTest {
         val promptCoordinator = ConnectivityPromptCoordinator()
-        val viewModel = createViewModel(promptCoordinator = promptCoordinator)
+        val activeDevice = registeredDevice(
+            macAddress = "14:C1:9F:D7:E4:06",
+            registeredAtMillis = 2_000L,
+            lastConnectedAtMillis = 2_000L
+        )
+        val viewModel = createViewModel(
+            promptCoordinator = promptCoordinator,
+            registryManager = FakeDeviceRegistryManager(devices = listOf(activeDevice), active = activeDevice)
+        )
         val receivedRequests = mutableListOf<WifiMismatchPromptRequest>()
         val collectJob = launch {
             viewModel.promptRequests.collect { request ->
@@ -778,8 +927,136 @@ class ConnectivityViewModelTest {
         advanceUntilIdle()
 
         assertEquals(ConnectivityManagerState.WIFI_MISMATCH, viewModel.managerState.value)
+        assertEquals(
+            ConnectivityManagerState.WIFI_MISMATCH,
+            viewModel.deviceCardPresentations.value.single().managerState
+        )
         assertEquals("OfficeGuest", viewModel.wifiMismatchSuggestedSsid.value)
         assertEquals(listOf(WifiMismatchPromptRequest("OfficeGuest")), receivedRequests)
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun `shared connected clears stale mismatch and isolation prompt state`() = runTest {
+        val promptCoordinator = ConnectivityPromptCoordinator()
+        val activeDevice = registeredDevice(
+            macAddress = "14:C1:9F:D7:E4:06",
+            registeredAtMillis = 2_000L
+        )
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Disconnected,
+            manager = BadgeManagerStatus.BlePairedNetworkOffline
+        )
+        val viewModel = createViewModel(
+            bridge = bridge,
+            promptCoordinator = promptCoordinator,
+            registryManager = FakeDeviceRegistryManager(devices = listOf(activeDevice), active = activeDevice)
+        )
+        advanceUntilIdle()
+
+        promptCoordinator.promptSuspectedIsolation("192.168.1.18", suggestedSsid = "OfficeGuest")
+        advanceUntilIdle()
+        assertEquals(ConnectivityManagerState.WIFI_MISMATCH, viewModel.managerState.value)
+        assertEquals("192.168.1.18", viewModel.isolationBadgeIp.value)
+
+        bridge.setManagerStatus(BadgeManagerStatus.Ready("192.168.1.18", "OfficeGuest"))
+        bridge.setConnectionState(BadgeConnectionState.Connected("192.168.1.18", "OfficeGuest"))
+        advanceUntilIdle()
+
+        assertEquals(ConnectivityManagerState.CONNECTED, viewModel.managerState.value)
+        assertNull(viewModel.wifiMismatchSuggestedSsid.value)
+        assertNull(viewModel.wifiMismatchErrorMessage.value)
+        assertNull(viewModel.isolationBadgeIp.value)
+        assertNull(viewModel.isolationTriggerContext.value)
+        assertEquals(WifiRepairState.Idle, viewModel.repairState.value)
+    }
+
+    @Test
+    fun `active badge change clears stale mismatch prompt from registry side updates`() = runTest {
+        val promptCoordinator = ConnectivityPromptCoordinator()
+        val firstDevice = registeredDevice(
+            macAddress = "14:C1:9F:D7:E4:06",
+            registeredAtMillis = 2_000L
+        )
+        val secondDevice = registeredDevice(
+            macAddress = "14:C1:9F:D7:E3:EE",
+            registeredAtMillis = 1_000L
+        )
+        val registryManager = FakeDeviceRegistryManager(
+            devices = listOf(firstDevice, secondDevice),
+            active = firstDevice
+        )
+        val bridge = FakeConnectivityBridge(
+            connection = BadgeConnectionState.Disconnected,
+            manager = BadgeManagerStatus.BlePairedNetworkOffline
+        )
+        val viewModel = createViewModel(
+            bridge = bridge,
+            promptCoordinator = promptCoordinator,
+            registryManager = registryManager
+        )
+        advanceUntilIdle()
+
+        promptCoordinator.promptWifiMismatch("OfficeGuest")
+        advanceUntilIdle()
+        assertEquals(ConnectivityManagerState.WIFI_MISMATCH, viewModel.managerState.value)
+
+        registryManager.setActive(secondDevice)
+        advanceUntilIdle()
+
+        assertEquals(ConnectivityManagerState.BLE_PAIRED_NETWORK_OFFLINE, viewModel.managerState.value)
+        assertNull(viewModel.wifiMismatchSuggestedSsid.value)
+        assertNull(viewModel.wifiMismatchErrorMessage.value)
+        assertEquals(WifiRepairState.Idle, viewModel.repairState.value)
+    }
+
+    @Test
+    fun `latest intent timestamp drives availability auto reconnect when active badge is missing`() = runTest {
+        val defaultDetected = registeredDevice(
+            macAddress = "AA:AA:AA:AA:AA:01",
+            registeredAtMillis = 1_000L,
+            lastConnectedAtMillis = 9_000L,
+            lastUserIntentAtMillis = 1_000L,
+            isDefault = true,
+            bleDetected = false
+        )
+        val latestIntendedDetected = registeredDevice(
+            macAddress = "BB:BB:BB:BB:BB:02",
+            registeredAtMillis = 2_000L,
+            lastConnectedAtMillis = 2_000L,
+            lastUserIntentAtMillis = 8_000L,
+            bleDetected = false
+        )
+        val registryManager = FakeDeviceRegistryManager(
+            devices = listOf(defaultDetected, latestIntendedDetected),
+            active = null
+        )
+        val service = FakeConnectivityService()
+        val viewModel = createViewModel(service = service, registryManager = registryManager)
+        val receivedRequests = mutableListOf<RegisteredBadgeAvailabilityPromptRequest>()
+        val collectJob = launch {
+            viewModel.registeredBadgeAvailabilityRequests.collect { request ->
+                receivedRequests += request
+            }
+        }
+        advanceUntilIdle()
+        registryManager.setDevices(
+            listOf(
+                defaultDetected.copy(bleDetected = true),
+                latestIntendedDetected.copy(bleDetected = true)
+            )
+        )
+        advanceUntilIdle()
+
+        assertEquals(1, receivedRequests.size)
+        assertEquals(latestIntendedDetected.macAddress, receivedRequests.single().latestBadgeMac)
+        assertEquals(
+            listOf(defaultDetected.macAddress, latestIntendedDetected.macAddress),
+            receivedRequests.single().detectedBadgeMacs
+        )
+        assertTrue(receivedRequests.single().shouldAutoReconnectLatest)
+        assertEquals(1, service.scheduleAutoReconnectCalls)
 
         collectJob.cancel()
     }
@@ -819,6 +1096,52 @@ class ConnectivityViewModelTest {
         assertTrue(receivedRequests.single().shouldAutoReconnectLatest)
         assertEquals(1, service.scheduleAutoReconnectCalls)
         assertEquals(ConnectivityManagerState.RECONNECTING, viewModel.managerState.value)
+
+        collectJob.cancel()
+    }
+
+    @Test
+    fun `manually disconnected latest badge yields chooser prompt without auto reconnect takeover`() = runTest {
+        val latestSuppressed = registeredDevice(
+            macAddress = "BB:BB:BB:BB:BB:02",
+            registeredAtMillis = 2_000L,
+            lastConnectedAtMillis = 2_000L,
+            manuallyDisconnected = true,
+            bleDetected = false
+        )
+        val otherDetected = registeredDevice(
+            macAddress = "AA:AA:AA:AA:AA:01",
+            registeredAtMillis = 1_000L,
+            lastConnectedAtMillis = 1_000L,
+            isDefault = true,
+            bleDetected = false
+        )
+        val registryManager = FakeDeviceRegistryManager(
+            devices = listOf(otherDetected, latestSuppressed),
+            active = latestSuppressed
+        )
+        val service = FakeConnectivityService()
+        val viewModel = createViewModel(service = service, registryManager = registryManager)
+        val receivedRequests = mutableListOf<RegisteredBadgeAvailabilityPromptRequest>()
+        val collectJob = launch {
+            viewModel.registeredBadgeAvailabilityRequests.collect { request ->
+                receivedRequests += request
+            }
+        }
+        advanceUntilIdle()
+        registryManager.setDevices(
+            listOf(
+                otherDetected.copy(bleDetected = true),
+                latestSuppressed.copy(bleDetected = true)
+            )
+        )
+        advanceUntilIdle()
+
+        assertEquals(1, receivedRequests.size)
+        assertEquals(latestSuppressed.macAddress, receivedRequests.single().latestBadgeMac)
+        assertEquals(listOf(otherDetected.macAddress), receivedRequests.single().detectedBadgeMacs)
+        assertEquals(false, receivedRequests.single().shouldAutoReconnectLatest)
+        assertEquals(0, service.scheduleAutoReconnectCalls)
 
         collectJob.cancel()
     }
@@ -1058,6 +1381,7 @@ class ConnectivityViewModelTest {
         macAddress: String,
         registeredAtMillis: Long,
         lastConnectedAtMillis: Long = registeredAtMillis,
+        lastUserIntentAtMillis: Long = lastConnectedAtMillis,
         isDefault: Boolean = false,
         manuallyDisconnected: Boolean = false,
         bleDetected: Boolean = false
@@ -1067,6 +1391,7 @@ class ConnectivityViewModelTest {
         profileId = null,
         registeredAtMillis = registeredAtMillis,
         lastConnectedAtMillis = lastConnectedAtMillis,
+        lastUserIntentAtMillis = lastUserIntentAtMillis,
         isDefault = isDefault,
         manuallyDisconnected = manuallyDisconnected,
         bleDetected = bleDetected

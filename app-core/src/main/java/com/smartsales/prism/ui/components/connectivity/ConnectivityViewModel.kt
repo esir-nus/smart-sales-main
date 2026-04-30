@@ -182,6 +182,45 @@ class ConnectivityViewModel @Inject constructor(
         mapToManagerUiState(connectivityBridge.managerStatus.value)
     )
 
+    private val badgeCardMetadata: StateFlow<Pair<Int?, String?>> = combine(
+        batteryLevel,
+        firmwareVersion
+    ) { batteryLevel, firmwareVersion ->
+        batteryLevel to firmwareVersion
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        batteryLevel.value to firmwareVersion.value
+    )
+
+    val deviceCardPresentations: StateFlow<List<ConnectivityDeviceCardPresentation>> = combine(
+        sortedDevices,
+        activeDevice,
+        connectivityBridge.connectionState,
+        managerState,
+        badgeCardMetadata
+    ) { devices, active, badgeState, managerState, metadata ->
+        buildDeviceCardPresentations(
+            devices = devices,
+            active = active,
+            badgeState = badgeState,
+            managerState = managerState,
+            batteryLevel = metadata.first,
+            firmwareVersion = metadata.second
+        )
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        buildDeviceCardPresentations(
+            devices = sortedDevices.value,
+            active = activeDevice.value,
+            badgeState = connectivityBridge.connectionState.value,
+            managerState = managerState.value,
+            batteryLevel = batteryLevel.value,
+            firmwareVersion = firmwareVersion.value
+        )
+    )
+
     init {
         viewModelScope.launch {
             promptCoordinator.wifiMismatchRequests.collect { request ->
@@ -253,15 +292,28 @@ class ConnectivityViewModel @Inject constructor(
                 val isConnected = badgeState is BadgeConnectionState.Connected
                 if (isConnected && !wasConnected) {
                     requestFirmwareVersion()
-                    if (_uiOverride.value == ConnectionState.RECONNECTING) {
-                        clearTransientConnectivityUi()
-                    }
+                }
+                if (isConnected && shouldClearTransientStateOnConnected()) {
+                    clearTransientConnectivityUi()
                 } else if (!isConnected) {
                     _firmwareVersion.value = null
                     _sdCardSpace.value = null
                 }
                 wasConnected = isConnected
             }
+        }
+        viewModelScope.launch {
+            var previousActiveMac: String? = null
+            var initialized = false
+            activeDevice
+                .map { it?.macAddress }
+                .collect { activeMac ->
+                    if (initialized && previousActiveMac != activeMac && hasRepairPromptTransientState()) {
+                        clearTransientConnectivityUi()
+                    }
+                    previousActiveMac = activeMac
+                    initialized = true
+                }
         }
         viewModelScope.launch {
             combine(
@@ -311,7 +363,7 @@ class ConnectivityViewModel @Inject constructor(
         val activeMac = active?.macAddress
         val latest = devices.firstOrNull { it.macAddress == activeMac }
             ?: devices.maxWithOrNull(
-                compareBy<RegisteredDevice> { it.lastConnectedAtMillis }
+                compareBy<RegisteredDevice> { it.lastUserIntentAtMillis }
                     .thenBy { it.registeredAtMillis }
                     .thenBy { it.macAddress }
             )
@@ -397,6 +449,65 @@ class ConnectivityViewModel @Inject constructor(
             ConnectionState.UPDATING -> ConnectivityManagerState.UPDATING
             ConnectionState.RECONNECTING -> ConnectivityManagerState.RECONNECTING
             ConnectionState.WIFI_MISMATCH -> ConnectivityManagerState.WIFI_MISMATCH
+        }
+    }
+
+    private fun buildDeviceCardPresentations(
+        devices: List<RegisteredDevice>,
+        active: RegisteredDevice?,
+        badgeState: BadgeConnectionState,
+        managerState: ConnectivityManagerState,
+        batteryLevel: Int?,
+        firmwareVersion: String?
+    ): List<ConnectivityDeviceCardPresentation> {
+        return devices.map { device ->
+            val isActive = device.macAddress == active?.macAddress
+            val cardManagerState = if (isActive) {
+                coerceActiveCardManagerState(
+                    badgeState = badgeState,
+                    managerState = managerState,
+                    activeDevice = device
+                )
+            } else {
+                null
+            }
+            val mayShowConnectedMetadata =
+                badgeState is BadgeConnectionState.Connected &&
+                    cardManagerState in CONNECTED_CARD_STATES
+            ConnectivityDeviceCardPresentation(
+                device = device,
+                isActive = isActive,
+                managerState = cardManagerState,
+                batteryLevel = if (mayShowConnectedMetadata) batteryLevel else null,
+                firmwareVersion = if (mayShowConnectedMetadata) firmwareVersion else null
+            )
+        }
+    }
+
+    private fun coerceActiveCardManagerState(
+        badgeState: BadgeConnectionState,
+        managerState: ConnectivityManagerState,
+        activeDevice: RegisteredDevice
+    ): ConnectivityManagerState {
+        if (badgeState is BadgeConnectionState.Connected) return managerState
+        return when (managerState) {
+            ConnectivityManagerState.CONNECTED,
+            ConnectivityManagerState.CHECKING_UPDATE,
+            ConnectivityManagerState.UPDATE_FOUND,
+            ConnectivityManagerState.UPDATING,
+            ConnectivityManagerState.BLE_DETECTED -> liveDisconnectedCardState(badgeState, activeDevice)
+            else -> managerState
+        }
+    }
+
+    private fun liveDisconnectedCardState(
+        badgeState: BadgeConnectionState,
+        @Suppress("UNUSED_PARAMETER") activeDevice: RegisteredDevice
+    ): ConnectivityManagerState {
+        return when {
+            badgeState is BadgeConnectionState.NeedsSetup -> ConnectivityManagerState.NEEDS_SETUP
+            badgeState is BadgeConnectionState.Connecting -> ConnectivityManagerState.RECONNECTING
+            else -> ConnectivityManagerState.DISCONNECTED
         }
     }
 
@@ -743,6 +854,19 @@ class ConnectivityViewModel @Inject constructor(
         _repairState.value = WifiRepairState.Idle
         _uiOverride.value = null
     }
+
+    private fun hasRepairPromptTransientState(): Boolean {
+        return _uiOverride.value == ConnectionState.WIFI_MISMATCH ||
+            _wifiMismatchSuggestedSsid.value != null ||
+            _wifiMismatchErrorMessage.value != null ||
+            _isolationBadgeIp.value != null ||
+            _isolationTriggerContext.value != null ||
+            _repairState.value != WifiRepairState.Idle
+    }
+
+    private fun shouldClearTransientStateOnConnected(): Boolean {
+        return _uiOverride.value == ConnectionState.RECONNECTING || hasRepairPromptTransientState()
+    }
 }
 
 internal const val WIFI_MISMATCH_EMPTY_CREDENTIALS_ERROR = "Wi-Fi 名称和密码不能为空"
@@ -755,6 +879,21 @@ data class RegisteredBadgeAvailabilityPromptRequest(
     fun promptKey(): String =
         "$latestBadgeMac|${detectedBadgeMacs.joinToString(",")}|$shouldAutoReconnectLatest"
 }
+
+data class ConnectivityDeviceCardPresentation(
+    val device: RegisteredDevice,
+    val isActive: Boolean,
+    val managerState: ConnectivityManagerState?,
+    val batteryLevel: Int?,
+    val firmwareVersion: String?
+)
+
+private val CONNECTED_CARD_STATES = setOf(
+    ConnectivityManagerState.CONNECTED,
+    ConnectivityManagerState.CHECKING_UPDATE,
+    ConnectivityManagerState.UPDATE_FOUND,
+    ConnectivityManagerState.UPDATING
+)
 
 /**
  * 连接模态框状态枚举

@@ -83,10 +83,7 @@ fun ConnectivityModal(
     viewModel: ConnectivityViewModel = hiltViewModel()
 ) {
     val managerState by viewModel.managerState.collectAsState()
-    val batteryLevel by viewModel.batteryLevel.collectAsState()
-    val firmwareVersion by viewModel.firmwareVersion.collectAsState()
-    val activeDevice by viewModel.activeDevice.collectAsState()
-    val sortedDevices by viewModel.sortedDevices.collectAsState()
+    val deviceCardPresentations by viewModel.deviceCardPresentations.collectAsState()
     val wifiMismatchSuggestedSsid by viewModel.wifiMismatchSuggestedSsid.collectAsState()
     val wifiMismatchErrorMessage by viewModel.wifiMismatchErrorMessage.collectAsState()
     val repairState by viewModel.repairState.collectAsState()
@@ -143,7 +140,7 @@ fun ConnectivityModal(
                 }
 
                 // Empty state
-                if (sortedDevices.isEmpty()) {
+                if (deviceCardPresentations.isEmpty()) {
                     item {
                         NeedsSetupCard(onStartSetup = {
                             viewModel.resetTransientState()
@@ -154,23 +151,22 @@ fun ConnectivityModal(
                 }
 
                 // Device cards — active device first, expanded
-                items(sortedDevices, key = { it.macAddress }) { device ->
-                    val isActive = device.macAddress == activeDevice?.macAddress
+                items(deviceCardPresentations, key = { it.device.macAddress }) { card ->
                     DeviceCard(
-                        device = device,
-                        isActive = isActive,
-                        managerState = if (isActive) managerState else null,
-                        batteryLevel = if (isActive) batteryLevel else null,
-                        firmwareVersion = if (isActive) firmwareVersion else null,
-                        onConnect = { viewModel.connectDevice(device.macAddress) },
+                        device = card.device,
+                        isActive = card.isActive,
+                        managerState = card.managerState,
+                        batteryLevel = card.batteryLevel,
+                        firmwareVersion = card.firmwareVersion,
+                        onConnect = { viewModel.connectDevice(card.device.macAddress) },
                         onDisconnect = viewModel::disconnect,
                         onCheckUpdate = viewModel::checkForUpdate,
-                        onSetDefault = { viewModel.setDefault(device.macAddress) },
-                        onRemove = { viewModel.removeDevice(device.macAddress) },
-                        onRename = { newName -> viewModel.renameDevice(device.macAddress, newName) }
+                        onSetDefault = { viewModel.setDefault(card.device.macAddress) },
+                        onRemove = { viewModel.removeDevice(card.device.macAddress) },
+                        onRename = { newName -> viewModel.renameDevice(card.device.macAddress, newName) }
                     )
                     // WiFi mismatch inline below active card
-                    if (isActive && isWifiMismatchActive) {
+                    if (card.isActive && isWifiMismatchActive) {
                         Spacer(modifier = Modifier.height(0.dp))
                         WifiMismatchCard(
                             repairState = repairState,
@@ -407,8 +403,8 @@ internal fun connectivityDeviceCardSubtitle(
     }
     isReconnecting -> "重连中…"
     isBlePaired -> "蓝牙已连接，Wi-Fi 未就绪"
-    bleDetected -> "已检测到 · 点击连接"
     manuallyDisconnected -> "已断开 · 点击重连"
+    bleDetected -> if (isActive) "已断开 · 点击重连" else "已检测到 · 点击连接"
     isActive -> "不在范围内"
     else -> "点击连接"
 }
@@ -463,10 +459,10 @@ private fun DeviceCard(
             DotStyle(ReconnectingAmber, false, subtitle)
         isBlePaired ->
             DotStyle(ReconnectingAmber, false, subtitle)
-        device.bleDetected ->
-            DotStyle(CyanDetected, false, subtitle)
         device.manuallyDisconnected ->
             DotStyle(DisconnectedGrey, false, subtitle)
+        device.bleDetected ->
+            DotStyle(CyanDetected, false, subtitle)
         isActive ->
             DotStyle(DisconnectedGrey.copy(alpha = 0.5f), false, subtitle)
         else ->

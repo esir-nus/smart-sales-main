@@ -27,6 +27,7 @@ open
 | 03 | connectivity-tcf | done | Added base-runtime scope metadata and delivered-vs-target gap notes to connectivity/session core flows, then authored the first BAKE contract sprint. | [sprints/03-connectivity-tcf.md](sprints/03-connectivity-tcf.md) |
 | 04 | connectivity-bake-contract | done | Wrote the connectivity-badge-session BAKE contract, synced interface-map authority, and demoted connectivity Cerb docs to supporting reference. | [sprints/04-connectivity-bake-contract.md](sprints/04-connectivity-bake-contract.md) |
 | 04-a | connectivity-tcf-delta-readiness-queue-cleanup | done | Closed HTTP-delayed readiness, badge-owned manual queue, and active `rec#` switch-cancel deltas with focused/full unit tests; L3 restored-badge, terminal import, active-device switch fencing, HTTP-abnormal UI, reconnect-vs-media fencing, direct `HTTP_DELAYED` manager enum evidence, and L3-debug app-side `rec#` switch cancellation captured. | [sprints/04-a-connectivity-tcf-delta-readiness-queue-cleanup.md](sprints/04-a-connectivity-tcf-delta-readiness-queue-cleanup.md) |
+| 04-b | connectivity-intent-driven-reconnect-modal-law | in-progress | Landed the reconnect-owner/prompt/card/prompt-lifetime code delta with focused and full `:app-core:testDebugUnitTest` green; L3 loop A-D runtime evidence is still pending before factual closeout. | [sprints/04-b-connectivity-intent-driven-reconnect-modal-law.md](sprints/04-b-connectivity-intent-driven-reconnect-modal-law.md) |
 | 05 | scheduler-path-a-dbm | done | Delivered behavior map created for Scheduler Path A, covering shared routing, Uni-A/B/C/D, reschedule/delete, SIM overlay, telemetry, tests, and runtime-evidence gaps. | [sprints/05-scheduler-path-a-dbm.md](sprints/05-scheduler-path-a-dbm.md) |
 | 06 | scheduler-path-a-tcf | done | Added base-runtime scope metadata and Sprint 05 delivered-vs-target gap notes to Scheduler Path A core flows, then authored the Scheduler Path A BAKE contract sprint. | [sprints/06-scheduler-path-a-tcf.md](sprints/06-scheduler-path-a-tcf.md) |
 | 07 | scheduler-path-a-bake-contract | done | Wrote the Scheduler Path A BAKE contract, synced interface-map authority, and demoted Scheduler Path A Cerb docs to supporting reference. | [sprints/07-scheduler-path-a-bake-contract.md](sprints/07-scheduler-path-a-bake-contract.md) |
@@ -73,6 +74,13 @@ open
   directory in the first sprint that writes an actual BAKE contract.
 - Sprint 01 registered the path here instead of `docs/specs/bake-protocol.md`
   because the sprint write scope did not include the northstar doc.
+- Connectivity reconnect law now follows updated user-intent ownership:
+  successful onboarding pairing, successful add-device pairing, explicit user
+  connect/tap, and explicit device switch are the only reconnect-owner sources;
+  default badge metadata remains cosmetic. Sprint 04-b has landed the local
+  code/test enforcement for reconnect ownership, modal prompting,
+  disconnected-first active cards, and prompt-lifetime clearing, while fresh
+  L3 loop A-D runtime evidence remains pending.
 
 ## Cross-Project Notes
 

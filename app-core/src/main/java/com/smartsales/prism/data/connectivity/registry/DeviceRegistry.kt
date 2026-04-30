@@ -13,6 +13,7 @@ interface DeviceRegistry {
     fun register(device: RegisteredDevice)
     fun rename(macAddress: String, newDisplayName: String)
     fun updateLastConnected(macAddress: String, timestampMillis: Long = System.currentTimeMillis())
+    fun updateLastUserIntent(macAddress: String, timestampMillis: Long = System.currentTimeMillis())
     fun updateMacAddress(oldMac: String, newMac: String)
     fun setDefault(macAddress: String)
     fun remove(macAddress: String)

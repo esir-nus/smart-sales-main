@@ -37,6 +37,12 @@ class InMemoryDeviceRegistry : DeviceRegistry {
         devices[index] = devices[index].copy(lastConnectedAtMillis = timestampMillis)
     }
 
+    override fun updateLastUserIntent(macAddress: String, timestampMillis: Long) {
+        val index = devices.indexOfFirst { it.macAddress == macAddress }
+        if (index < 0) return
+        devices[index] = devices[index].copy(lastUserIntentAtMillis = timestampMillis)
+    }
+
     override fun updateMacAddress(oldMac: String, newMac: String) {
         val index = devices.indexOfFirst { it.macAddress == oldMac }
         if (index < 0) return

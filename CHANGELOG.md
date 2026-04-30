@@ -2,6 +2,12 @@
 
 ## 最近更新
 
+### 2026-04-30
+
+- **[修复] 连接重连意图与自动弹窗收口** — 连接注册表新增最新意图徽章与自动重连所有权，连接面板只对目标徽章自动重连，非目标徽章保持选择器状态；同步自动弹窗入口样式、L2.5/logcat/UI 证据、核心流程、BAKE contract 与 Cerb 接口文档。
+- **[维护] ESP32 媒体门控命令软废弃** — `download#ready`、`download#ok`、`download#end` 与 `wifi#off` 保留为旧固件 wire facts，但新运行时不得再将其作为 Wi-Fi、媒体就绪、重连或修复门控。
+- **[维护] BAKE sprint contract 默认纳入跟踪** — `.gitignore` 放开 `docs/projects/bake-transformation/sprints/*.md`，确保 BAKE sprint contract 随仓库提交并参与后续治理审查。
+
 ### 2026-04-29
 
 - **[维护] 日程 Path A 目标流程与 BAKE 契约收口** — 将 Scheduler Path A TCF 同步到 `scheduler-fast-track` 与 SIM core-flow，新增 `docs/bake-contracts/scheduler-path-a.md`，并在接口图和 Cerb 文档中标记 BAKE contract authority。

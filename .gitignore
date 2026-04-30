@@ -142,6 +142,8 @@ docs/archived/
 
 # Local sprint contracts (tracked historical files remain tracked)
 docs/projects/**/sprints/*.md
+!docs/projects/bake-transformation/sprints/
+!docs/projects/bake-transformation/sprints/*.md
 
 # Workflow documentation (internal)
 workflows/
